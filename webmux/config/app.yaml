@@ -1,0 +1,14 @@
+app:
+  name: webmux
+  listen_host: 0.0.0.0
+  http_port: 8080
+  https_port: 8443
+  secure_mode: false
+  trusted_http_allowed: true
+  default_term:
+    cols: 80
+    rows: 24
+    font_size: 14
+  transport:
+    prefer_mosh: false
+    ssh_fallback: true

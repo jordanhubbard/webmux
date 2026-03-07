@@ -1,0 +1,7 @@
+hosts:
+  - id: example-host
+    hostname: example.com
+    port: 22
+    tags:
+      - linux
+    mosh_allowed: false
