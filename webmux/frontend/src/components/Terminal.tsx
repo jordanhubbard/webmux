@@ -1,0 +1,207 @@
+import { useEffect, useRef, useCallback } from 'react';
+import { Terminal as XTerm } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { WebLinksAddon } from '@xterm/addon-web-links';
+import '@xterm/xterm/css/xterm.css';
+import type { WebSocketMessage, ConnectionState } from '../types';
+import { useWebSocket } from '../hooks/useWebSocket';
+
+interface TerminalProps {
+  sessionId: string;
+  fontSize: number;
+  state: ConnectionState;
+  onStateChange: (state: ConnectionState) => void;
+  onViewerUpdate: (count: number, focusOwner?: string) => void;
+  hasFocus: boolean;
+  onFocusRequest: () => void;
+}
+
+export function Terminal({
+  sessionId,
+  fontSize,
+  state,
+  onStateChange,
+  onViewerUpdate,
+  hasFocus,
+  onFocusRequest,
+}: TerminalProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const termRef = useRef<XTerm | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+  const wsHandleRef = useRef<ReturnType<typeof useWebSocket> | null>(null);
+
+  // Keep latest callbacks in refs so xterm/WS handlers never capture stale closures.
+  const onStateChangeRef = useRef(onStateChange);
+  const onViewerUpdateRef = useRef(onViewerUpdate);
+  const onFocusRequestRef = useRef(onFocusRequest);
+  useEffect(() => { onStateChangeRef.current = onStateChange; }, [onStateChange]);
+  useEffect(() => { onViewerUpdateRef.current = onViewerUpdate; }, [onViewerUpdate]);
+  useEffect(() => { onFocusRequestRef.current = onFocusRequest; }, [onFocusRequest]);
+
+  const handleMessage = useCallback((msg: WebSocketMessage) => {
+    switch (msg.type) {
+      case 'output':
+        if (msg.data && termRef.current) {
+          termRef.current.write(msg.data);
+        }
+        break;
+      case 'status':
+        if (msg.state) onStateChangeRef.current(msg.state);
+        break;
+      case 'viewer_join':
+      case 'viewer_leave':
+        onViewerUpdateRef.current(msg.viewer_count ?? 0, msg.focus_owner);
+        break;
+      case 'focus':
+        onViewerUpdateRef.current(msg.viewer_count ?? 0, msg.focus_owner);
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  const wsHandle = useWebSocket({
+    sessionId,
+    onMessage: handleMessage,
+    onOpen: () => onStateChangeRef.current('connected'),
+    onClose: () => onStateChangeRef.current('disconnected'),
+  });
+
+  useEffect(() => {
+    wsHandleRef.current = wsHandle;
+  }, [wsHandle]);
+
+  // Initialize xterm
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const term = new XTerm({
+      theme: {
+        background: '#0d0d1a',
+        foreground: '#e0e0e0',
+        cursor: '#7c6af7',
+        selectionBackground: 'rgba(124, 106, 247, 0.3)',
+        black: '#1a1a2e',
+        brightBlack: '#333333',
+        red: '#ff5555',
+        brightRed: '#ff8080',
+        green: '#50fa7b',
+        brightGreen: '#80ffaa',
+        yellow: '#f1fa8c',
+        brightYellow: '#ffff80',
+        blue: '#6272a4',
+        brightBlue: '#8080ff',
+        magenta: '#ff79c6',
+        brightMagenta: '#ffaadd',
+        cyan: '#8be9fd',
+        brightCyan: '#aaeeff',
+        white: '#f8f8f2',
+        brightWhite: '#ffffff',
+      },
+      fontFamily: 'Consolas, Menlo, "DejaVu Sans Mono", monospace',
+      fontSize,
+      cursorBlink: true,
+      allowTransparency: false,
+      scrollback: 5000,
+      linkHandler: {
+        activate: (_event: MouseEvent, uri: string) => {
+          window.open(uri, '_blank', 'noopener,noreferrer');
+        },
+      },
+    });
+
+    const fitAddon = new FitAddon();
+    const webLinksAddon = new WebLinksAddon();
+    term.loadAddon(fitAddon);
+    term.loadAddon(webLinksAddon);
+    term.open(containerRef.current);
+    fitAddon.fit();
+
+    termRef.current = term;
+    fitAddonRef.current = fitAddon;
+
+    const dataListener = term.onData((data: string) => {
+      wsHandleRef.current?.send({ type: 'input', data });
+    });
+
+    const resizeListener = term.onResize(({ cols, rows }: { cols: number; rows: number }) => {
+      wsHandleRef.current?.send({ type: 'resize', cols, rows });
+    });
+
+    const el = containerRef.current;
+    // Use ref so click handler always calls the latest onFocusRequest.
+    const clickHandler = () => onFocusRequestRef.current();
+    el.addEventListener('click', clickHandler);
+
+    return () => {
+      dataListener.dispose();
+      resizeListener.dispose();
+      el.removeEventListener('click', clickHandler);
+      term.dispose();
+      termRef.current = null;
+      fitAddonRef.current = null;
+    };
+    // Re-run only when the session changes; all live callbacks are accessed via refs.
+  }, [sessionId]);
+
+  // Update font size
+  useEffect(() => {
+    if (termRef.current) {
+      termRef.current.options.fontSize = fontSize;
+      fitAddonRef.current?.fit();
+    }
+  }, [fontSize]);
+
+  // Notify server when this tile gains focus; wsHandle is stable (memoised send).
+  useEffect(() => {
+    if (hasFocus) {
+      wsHandleRef.current?.send({ type: 'focus' });
+    }
+  }, [hasFocus]);
+
+  // Refit on container resize
+  useEffect(() => {
+    const observer = new ResizeObserver(() => {
+      fitAddonRef.current?.fit();
+    });
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  const overlayColor = state === 'disconnected' ? 'rgba(13,13,26,0.85)' :
+    state === 'error' ? 'rgba(60,13,13,0.85)' :
+    state === 'connecting' ? 'rgba(13,13,26,0.6)' : 'transparent';
+  const showOverlay = state !== 'connected';
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
+          height: '100%',
+          opacity: state === 'connected' ? 1 : 0.4,
+        }}
+      />
+      {showOverlay && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: overlayColor,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#aaa',
+          fontSize: 13,
+          pointerEvents: 'none',
+        }}>
+          {state === 'connecting' && '⟳ Connecting…'}
+          {state === 'disconnected' && '⊘ Disconnected'}
+          {state === 'error' && '✗ Connection error'}
+        </div>
+      )}
+    </div>
+  );
+}
