@@ -12,11 +12,11 @@ const mockAuth = {
   logout: vi.fn(),
 };
 
-vi.mock('../hooks/useAuth', () => ({
+vi.mock('@frontend/hooks/useAuth', () => ({
   useAuth: () => mockAuth,
 }));
 
-vi.mock('../utils/api', () => ({
+vi.mock('@frontend/utils/api', () => ({
   api: {
     getConfig: vi.fn().mockResolvedValue({
       app: {
@@ -36,11 +36,11 @@ vi.mock('../utils/api', () => ({
 }));
 
 // Mock Terminal
-vi.mock('../components/Terminal', () => ({
+vi.mock('@frontend/components/Terminal', () => ({
   Terminal: () => <div>Terminal Mock</div>,
 }));
 
-import App from '../App';
+import App from '@frontend/App';
 
 describe('App', () => {
   beforeEach(() => {

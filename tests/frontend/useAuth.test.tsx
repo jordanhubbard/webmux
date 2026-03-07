@@ -7,11 +7,11 @@ const mockApi = vi.hoisted(() => ({
   bootstrap: vi.fn(),
 }));
 
-vi.mock('../utils/api', () => ({
+vi.mock('@frontend/utils/api', () => ({
   api: mockApi,
 }));
 
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '@frontend/hooks/useAuth';
 
 describe('useAuth', () => {
   beforeEach(() => {

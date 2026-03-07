@@ -5,7 +5,7 @@ import * as os from 'os';
 describe('SessionBroker', () => {
   let tmpDir: string;
   let originalRoot: string | undefined;
-  let SessionBroker: typeof import('../services/sessionBroker').SessionBroker;
+  let SessionBroker: typeof import('@backend/services/sessionBroker').SessionBroker;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-broker-'));
@@ -21,7 +21,7 @@ describe('SessionBroker', () => {
     fs.writeFileSync(path.join(configDir, 'app.yaml'), 'app:\n  name: webmux\n  listen_host: 0.0.0.0\n  http_port: 8080\n  https_port: 8443\n  secure_mode: false\n  trusted_http_allowed: true\n  default_term:\n    cols: 80\n    rows: 24\n    font_size: 14\n  transport:\n    prefer_mosh: false\n    ssh_fallback: true\n');
 
     jest.resetModules();
-    ({ SessionBroker } = require('../services/sessionBroker'));
+    ({ SessionBroker } = require('@backend/services/sessionBroker'));
   });
 
   afterEach(() => {

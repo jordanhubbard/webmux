@@ -24,7 +24,7 @@ describe('PersistenceManager', () => {
   it('creates config and data directories on construction', () => {
     // Re-import to trigger constructor with new WEBMUX_ROOT
     jest.resetModules();
-    const { PersistenceManager } = require('../services/persistenceManager');
+    const { PersistenceManager } = require('@backend/services/persistenceManager');
     const pm = new PersistenceManager();
 
     expect(fs.existsSync(path.join(tmpDir, 'config'))).toBe(true);
@@ -34,7 +34,7 @@ describe('PersistenceManager', () => {
 
   it('writes and reads YAML files atomically', () => {
     jest.resetModules();
-    const { PersistenceManager } = require('../services/persistenceManager');
+    const { PersistenceManager } = require('@backend/services/persistenceManager');
     const pm = new PersistenceManager();
 
     // Create config dir with a yaml file
@@ -56,7 +56,7 @@ describe('PersistenceManager', () => {
 
   it('appends events to JSONL file', () => {
     jest.resetModules();
-    const { PersistenceManager } = require('../services/persistenceManager');
+    const { PersistenceManager } = require('@backend/services/persistenceManager');
     const pm = new PersistenceManager();
 
     pm.appendEvent({ type: 'test_event', data: 'hello' });

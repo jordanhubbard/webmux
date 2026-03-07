@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { Tile } from '../components/Tile';
-import { InputBroadcastProvider } from '../contexts/InputBroadcastContext';
-import type { Session } from '../types';
+import { Tile } from '@frontend/components/Tile';
+import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
+import type { Session } from '@frontend/types';
 import type { ReactNode } from 'react';
 
 // Mock Terminal which needs xterm.js
-vi.mock('../components/Terminal', () => ({
+vi.mock('@frontend/components/Terminal', () => ({
   Terminal: ({ sessionId }: { sessionId: string }) => (
     <div data-testid={`terminal-${sessionId}`}>Terminal Mock</div>
   ),

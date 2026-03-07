@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ConnectionDialog } from '../components/ConnectionDialog';
+import { ConnectionDialog } from '@frontend/components/ConnectionDialog';
 
-vi.mock('../utils/api', () => ({
+vi.mock('@frontend/utils/api', () => ({
   api: {
     getHosts: vi.fn().mockResolvedValue([
       { id: 'h1', hostname: 'host1.example.com', port: 22, tags: ['linux'], mosh_allowed: false },

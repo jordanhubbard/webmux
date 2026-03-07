@@ -30,12 +30,12 @@ describe('API Routes', () => {
 
     jest.resetModules();
 
-    const { default: hostsRouter } = require('../api/hosts');
-    const { default: configRouter } = require('../api/config');
-    const { default: sessionsRouter } = require('../api/sessions');
-    const { default: keysRouter } = require('../api/keys');
-    const { default: authRouter } = require('../api/auth');
-    const { sessionBroker } = require('../services/sessionBroker');
+    const { default: hostsRouter } = require('@backend/api/hosts');
+    const { default: configRouter } = require('@backend/api/config');
+    const { default: sessionsRouter } = require('@backend/api/sessions');
+    const { default: keysRouter } = require('@backend/api/keys');
+    const { default: authRouter } = require('@backend/api/auth');
+    const { sessionBroker } = require('@backend/services/sessionBroker');
 
     await sessionBroker.initialize();
 

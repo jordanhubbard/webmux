@@ -1,4 +1,4 @@
-import { PresenceService } from '../services/presenceService';
+import { PresenceService } from '@backend/services/presenceService';
 import WebSocket from 'ws';
 
 function mockWs(readyState: number = WebSocket.OPEN): WebSocket {

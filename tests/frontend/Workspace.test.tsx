@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { Workspace } from '../components/Workspace';
-import { InputBroadcastProvider } from '../contexts/InputBroadcastContext';
+import { Workspace } from '@frontend/components/Workspace';
+import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
 import type { ReactNode } from 'react';
 
 const mockSessions = [
@@ -12,7 +12,7 @@ const mockSessions = [
   },
 ];
 
-vi.mock('../utils/api', () => ({
+vi.mock('@frontend/utils/api', () => ({
   api: {
     getSessions: vi.fn().mockResolvedValue([]),
     createSession: vi.fn(),
@@ -26,7 +26,7 @@ vi.mock('../utils/api', () => ({
 }));
 
 // Mock Terminal which needs xterm.js
-vi.mock('../components/Terminal', () => ({
+vi.mock('@frontend/components/Terminal', () => ({
   Terminal: ({ sessionId }: { sessionId: string }) => (
     <div data-testid={`terminal-${sessionId}`}>Terminal Mock</div>
   ),
@@ -54,7 +54,7 @@ describe('Workspace', () => {
   });
 
   it('renders sessions as tiles', async () => {
-    const { api } = await import('../utils/api');
+    const { api } = await import('@frontend/utils/api');
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue(mockSessions);
 
     render(<Workspace fontSize={14} showAddDialog={false} onDialogClose={vi.fn()} />, { wrapper });

@@ -1,5 +1,5 @@
-import { TransportLauncher } from '../services/transportLauncher';
-import { Session } from '../types';
+import { TransportLauncher } from '@backend/services/transportLauncher';
+import { Session } from '@backend/types';
 
 // node-pty is mocked via jest.config.js moduleNameMapper
 

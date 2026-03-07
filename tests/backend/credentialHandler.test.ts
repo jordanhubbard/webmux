@@ -1,4 +1,4 @@
-import { CredentialHandler } from '../services/credentialHandler';
+import { CredentialHandler } from '@backend/services/credentialHandler';
 
 describe('CredentialHandler', () => {
   let handler: CredentialHandler;

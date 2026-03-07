@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { InputBroadcastProvider, useInputBroadcast } from '../contexts/InputBroadcastContext';
+import { InputBroadcastProvider, useInputBroadcast } from '@frontend/contexts/InputBroadcastContext';
 
 // Test component that exposes context state and actions
 function TestHarness({ sessionIds }: { sessionIds: string[] }) {

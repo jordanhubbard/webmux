@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { TopBar } from '../components/TopBar';
-import { InputBroadcastProvider } from '../contexts/InputBroadcastContext';
-import type { AuthState } from '../hooks/useAuth';
+import { TopBar } from '@frontend/components/TopBar';
+import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
+import type { AuthState } from '@frontend/hooks/useAuth';
 import type { ReactNode } from 'react';
 
 const wrapper = ({ children }: { children: ReactNode }) => (

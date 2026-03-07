@@ -1,0 +1,17 @@
+{
+  "extends": "../../webmux/backend/tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": null,
+    "declaration": false,
+    "declarationMap": false,
+    "noEmit": true,
+    "types": ["jest", "node"],
+    "typeRoots": ["../../webmux/backend/node_modules/@types", "../../webmux/node_modules/@types"],
+    "baseUrl": ".",
+    "paths": {
+      "@backend/*": ["../../webmux/backend/src/*"]
+    }
+  },
+  "include": ["./**/*.test.ts", "../../webmux/backend/src/**/*.ts"]
+}

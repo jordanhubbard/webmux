@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { LoginPage } from '../components/LoginPage';
-import type { AuthState } from '../hooks/useAuth';
+import { LoginPage } from '@frontend/components/LoginPage';
+import type { AuthState } from '@frontend/hooks/useAuth';
 
 function makeAuth(overrides: Partial<AuthState> = {}): AuthState {
   return {
