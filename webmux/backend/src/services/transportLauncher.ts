@@ -139,6 +139,7 @@ export class TransportLauncher {
   }
 
   private findBinary(name: string): string | null {
+    if (!/^[a-zA-Z0-9_-]+$/.test(name)) return null;
     try {
       const { execSync } = require('child_process');
       execSync(`which ${name}`, { stdio: 'ignore' });

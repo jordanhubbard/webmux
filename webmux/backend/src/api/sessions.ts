@@ -30,7 +30,7 @@ router.post('/', async (req: Request, res: Response) => {
     res.status(201).json(session);
   } catch (err) {
     console.error('Create session error:', err);
-    res.status(500).json({ error: String(err) });
+    res.status(500).json({ error: 'Failed to create session' });
   }
 });
 
@@ -40,26 +40,27 @@ router.post('/:id/reconnect', async (req: Request, res: Response) => {
     const session = await sessionBroker.reconnect(req.params.id, password);
     res.json(session);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error('Reconnect error:', err);
+    res.status(500).json({ error: 'Failed to reconnect session' });
   }
 });
 
 router.post('/:id/split-right', (req: Request, res: Response) => {
-  try {
-    const pos = sessionBroker.splitRight(req.params.id);
-    res.json(pos);
-  } catch (err) {
-    res.status(404).json({ error: String(err) });
+  const session = sessionBroker.get(req.params.id);
+  if (!session) {
+    res.status(404).json({ error: 'Session not found' });
+    return;
   }
+  res.json(sessionBroker.splitRight(req.params.id));
 });
 
 router.post('/:id/split-below', (req: Request, res: Response) => {
-  try {
-    const pos = sessionBroker.splitBelow(req.params.id);
-    res.json(pos);
-  } catch (err) {
-    res.status(404).json({ error: String(err) });
+  const session = sessionBroker.get(req.params.id);
+  if (!session) {
+    res.status(404).json({ error: 'Session not found' });
+    return;
   }
+  res.json(sessionBroker.splitBelow(req.params.id));
 });
 
 router.delete('/:id', async (req: Request, res: Response) => {
@@ -67,7 +68,8 @@ router.delete('/:id', async (req: Request, res: Response) => {
     await sessionBroker.delete(req.params.id);
     res.status(204).send();
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    console.error('Delete session error:', err);
+    res.status(500).json({ error: 'Failed to delete session' });
   }
 });
 

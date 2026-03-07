@@ -5,6 +5,10 @@ import { persistence } from '../services/persistenceManager';
 const JWT_SECRET = process.env.JWT_SECRET || 'webmux-dev-secret-change-in-production';
 const TOKEN_TTL = '8h';
 
+if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'test') {
+  console.warn('WARNING: JWT_SECRET is not set. Using insecure default. Set JWT_SECRET in production.');
+}
+
 export interface AuthPayload {
   sub: string;
   iat: number;

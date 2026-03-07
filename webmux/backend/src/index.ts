@@ -15,6 +15,7 @@ import configRouter from './api/config';
 import { setupWebSocket } from './websocket/handler';
 import { sessionBroker } from './services/sessionBroker';
 import { persistence } from './services/persistenceManager';
+import { transportLauncher } from './services/transportLauncher';
 
 const WEBMUX_ROOT = process.env.WEBMUX_ROOT || path.join(__dirname, '../..');
 
@@ -41,9 +42,15 @@ async function main(): Promise<void> {
   await sessionBroker.initialize();
 
   const app = express();
-  app.use(cors({ origin: true, credentials: true }));
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+
+  // CORS: restrict to same-origin in secure mode, permissive in trusted mode
+  if (appConfig.app.secure_mode) {
+    app.use(cors({ origin: false }));
+  } else {
+    app.use(cors({ origin: true, credentials: true }));
+  }
+
+  app.use(express.json({ limit: '1mb' }));
 
   // General rate limit: 300 requests per minute per IP (applied globally)
   const apiLimiter = rateLimit({
@@ -68,11 +75,12 @@ async function main(): Promise<void> {
   });
 
   // Serve frontend static files in production
-  const webDir = path.join(WEBMUX_ROOT, 'web');
+  const webDir = path.resolve(WEBMUX_ROOT, 'web');
   if (fs.existsSync(webDir)) {
     app.use(express.static(webDir));
+    const indexFile = path.join(webDir, 'index.html');
     app.get('*', (_req, res) => {
-      res.sendFile(path.join(webDir, 'index.html'));
+      res.sendFile(indexFile);
     });
   }
 
@@ -87,6 +95,8 @@ async function main(): Promise<void> {
   });
 
   // Start HTTPS server if TLS cert exists
+  let httpsServer: https.Server | undefined;
+  let wssSecure: WebSocketServer | undefined;
   const certFile = path.join(WEBMUX_ROOT, 'config/tls/cert.pem');
   const keyFile = path.join(WEBMUX_ROOT, 'config/tls/key.pem');
   if (fs.existsSync(certFile) && fs.existsSync(keyFile)) {
@@ -95,23 +105,48 @@ async function main(): Promise<void> {
       key: fs.readFileSync(keyFile),
     };
     const httpsPort = Number(process.env.HTTPS_PORT) || appConfig.app.https_port;
-    const httpsServer = https.createServer(tlsOptions, app);
-    const wssSecure = new WebSocketServer({ server: httpsServer, path: '/api/term' });
+    httpsServer = https.createServer(tlsOptions, app);
+    wssSecure = new WebSocketServer({ server: httpsServer, path: '/api/term' });
     setupWebSocket(wssSecure);
     httpsServer.listen(httpsPort, appConfig.app.listen_host, () => {
       console.log(`WebMux HTTPS server listening on ${appConfig.app.listen_host}:${httpsPort}`);
     });
   }
 
-  // Graceful shutdown
+  // Graceful shutdown: close WebSockets, kill PTY processes, persist state
   const shutdown = (): void => {
     console.log('Shutting down...');
+
+    // Close all WebSocket connections
+    wss.clients.forEach(ws => ws.close(1001, 'Server shutting down'));
+    wss.close();
+    if (wssSecure) {
+      wssSecure.clients.forEach(ws => ws.close(1001, 'Server shutting down'));
+      wssSecure.close();
+    }
+
+    // Kill all PTY processes
+    for (const session of sessionBroker.list()) {
+      transportLauncher.kill(session.id);
+    }
+
+    // Close file watchers and persist
     persistence.close();
+
+    // Close HTTP(S) servers
+    httpServer.close();
+    httpsServer?.close();
+
     process.exit(0);
   };
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 }
+
+// Catch unhandled rejections globally
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection:', reason);
+});
 
 main().catch(err => {
   console.error('Fatal error:', err);

@@ -14,13 +14,26 @@ router.get('/', (_req: Request, res: Response) => {
   }
 });
 
+// Only allow updating safe fields — not listen_host, ports, or secure_mode at runtime
+const MUTABLE_APP_FIELDS = ['name', 'default_term', 'transport'];
+
 router.put('/', (req: Request, res: Response) => {
   try {
     const current = persistence.loadApp();
-    // Deep merge top-level keys
-    const updated = { ...current, ...req.body };
-    persistence.saveApp(updated);
-    res.json(updated);
+    const updates = req.body?.app;
+    if (!updates || typeof updates !== 'object') {
+      res.status(400).json({ error: 'Request body must contain an app object' });
+      return;
+    }
+    for (const key of Object.keys(updates)) {
+      if (!MUTABLE_APP_FIELDS.includes(key)) {
+        res.status(400).json({ error: `Field '${key}' cannot be changed at runtime` });
+        return;
+      }
+    }
+    const merged = { app: { ...current.app, ...updates } };
+    persistence.saveApp(merged);
+    res.json(merged);
   } catch {
     res.status(500).json({ error: 'Failed to save config' });
   }
@@ -37,6 +50,10 @@ router.get('/layout', (_req: Request, res: Response) => {
 
 router.put('/layout', (req: Request, res: Response) => {
   try {
+    if (!req.body?.layout) {
+      res.status(400).json({ error: 'Request body must contain a layout object' });
+      return;
+    }
     persistence.saveLayout(req.body);
     res.json(req.body);
   } catch {

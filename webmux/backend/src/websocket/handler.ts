@@ -62,7 +62,8 @@ export function setupWebSocket(wss: WebSocketServer): void {
           break;
 
         case 'resize':
-          if (msg.cols && msg.rows) {
+          if (typeof msg.cols === 'number' && typeof msg.rows === 'number' &&
+              msg.cols > 0 && msg.cols <= 500 && msg.rows > 0 && msg.rows <= 200) {
             sessionBroker.resize(sessionId, msg.cols, msg.rows);
           }
           break;
