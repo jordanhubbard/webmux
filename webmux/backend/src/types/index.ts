@@ -74,6 +74,7 @@ export interface Session {
   hostname: string;
   port: number;
   username: string;
+  key_id: string;
   cols: number;
   rows: number;
   row: number;

@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { api } from '../utils/api';
-import type { HostEntry, CreateSessionRequest } from '../types';
+import type { HostEntry, KeyEntry, CreateSessionRequest } from '../types';
 
 interface ConnectionDialogProps {
   onConnect: (req: CreateSessionRequest) => void;
@@ -11,6 +11,7 @@ interface ConnectionDialogProps {
 
 export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCol }: ConnectionDialogProps) {
   const [hosts, setHosts] = useState<HostEntry[]>([]);
+  const [keys, setKeys] = useState<Pick<KeyEntry, 'id' | 'type' | 'encrypted' | 'description'>[]>([]);
   const [mode, setMode] = useState<'host' | 'adhoc'>('host');
   const [selectedHostId, setSelectedHostId] = useState('');
   const [adhocHostname, setAdhocHostname] = useState('');
@@ -18,12 +19,14 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [authMode, setAuthMode] = useState<'password' | 'key'>('password');
-  const [transport, setTransport] = useState<'ssh' | 'auto'>('ssh');
+  const [selectedKeyId, setSelectedKeyId] = useState('');
+  const [transport, setTransport] = useState<'ssh' | 'mosh'>('ssh');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     api.getHosts().then(setHosts).catch(() => {});
+    api.getKeys().then(setKeys).catch(() => {});
   }, []);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -45,7 +48,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
     try {
       const req: CreateSessionRequest = {
         username,
-        transport: transport === 'auto' ? 'ssh' : 'ssh',
+        transport,
         row: suggestedRow ?? 0,
         col: suggestedCol ?? 0,
       };
@@ -59,6 +62,8 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
 
       if (authMode === 'password' && password) {
         req.password = password;
+      } else if (authMode === 'key' && selectedKeyId) {
+        req.key_id = selectedKeyId;
       }
 
       onConnect(req);
@@ -173,7 +178,21 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
                 autoComplete="current-password"
               />
             ) : (
-              <p style={styles.hint}>SSH key auth uses the jump box&apos;s default key identity.</p>
+              <>
+                <select
+                  style={styles.input}
+                  value={selectedKeyId}
+                  onChange={e => setSelectedKeyId(e.target.value)}
+                >
+                  <option value="">Default key (agent / ~/.ssh/id_*)</option>
+                  {keys.map(k => (
+                    <option key={k.id} value={k.id}>
+                      {k.description || k.id} ({k.type}{k.encrypted ? ', encrypted' : ''})
+                    </option>
+                  ))}
+                </select>
+                <p style={styles.hint}>Select a key from keys.yaml or use the jump box&apos;s default identity.</p>
+              </>
             )}
           </div>
 
@@ -183,10 +202,10 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
             <select
               style={styles.input}
               value={transport}
-              onChange={e => setTransport(e.target.value as 'ssh' | 'auto')}
+              onChange={e => setTransport(e.target.value as 'ssh' | 'mosh')}
             >
               <option value="ssh">SSH</option>
-              <option value="auto">Auto (SSH + Mosh if available)</option>
+              <option value="mosh">Mosh (requires mosh on jump box &amp; remote)</option>
             </select>
           </div>
 

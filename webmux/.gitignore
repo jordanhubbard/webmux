@@ -18,6 +18,12 @@ npm-debug.log*
 .env.local
 .env.*.local
 
+# Test coverage
+coverage/
+
+# PID file
+.webmux.pid
+
 # Editor
 .DS_Store
 .vscode/

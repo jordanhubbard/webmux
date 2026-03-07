@@ -9,6 +9,7 @@ import { WebSocketServer } from 'ws';
 
 import authRouter from './api/auth';
 import hostsRouter from './api/hosts';
+import keysRouter from './api/keys';
 import sessionsRouter from './api/sessions';
 import configRouter from './api/config';
 import { setupWebSocket } from './websocket/handler';
@@ -57,6 +58,7 @@ async function main(): Promise<void> {
   // API routes
   app.use('/api/auth', authRouter);
   app.use('/api/hosts', hostsRouter);
+  app.use('/api/keys', keysRouter);
   app.use('/api/sessions', sessionsRouter);
   app.use('/api/config', configRouter);
 

@@ -7,6 +7,7 @@ export interface Session {
   host_id: string;
   hostname: string;
   username: string;
+  key_id: string;
   cols: number;
   rows: number;
   row: number;
@@ -56,6 +57,14 @@ export interface CreateSessionRequest {
   rows?: number;
   row?: number;
   col?: number;
+}
+
+export interface KeyEntry {
+  id: string;
+  type: string;
+  private_key_path: string;
+  encrypted: boolean;
+  description: string;
 }
 
 export interface AppConfig {

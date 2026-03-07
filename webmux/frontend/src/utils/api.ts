@@ -1,4 +1,4 @@
-import type { Session, HostEntry, AuthStatus, AppConfig, CreateSessionRequest } from '../types';
+import type { Session, HostEntry, KeyEntry, AuthStatus, AppConfig, CreateSessionRequest } from '../types';
 
 const API_BASE = '/api';
 
@@ -65,6 +65,9 @@ export const api = {
     request<HostEntry>('/hosts', { method: 'POST', body: JSON.stringify(host) }),
   deleteHost: (id: string) =>
     request<void>(`/hosts/${id}`, { method: 'DELETE' }),
+
+  // Keys
+  getKeys: () => request<Pick<KeyEntry, 'id' | 'type' | 'encrypted' | 'description'>[]>('/keys'),
 
   // Config
   getConfig: () => request<AppConfig>('/config'),

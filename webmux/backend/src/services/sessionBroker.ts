@@ -46,13 +46,29 @@ export class SessionBroker extends EventEmitter {
     // Determine layout position
     const { row, col } = this.nextPosition(req.row, req.col);
 
+    // Determine transport: use mosh if host allows it and config prefers it
+    let transport = req.transport || 'ssh';
+    if (transport === 'ssh' && req.host_id) {
+      try {
+        const appConfig = persistence.loadApp();
+        const hostsConfig = persistence.loadHosts();
+        const hostEntry = hostsConfig.hosts.find(h => h.id === req.host_id);
+        if (appConfig.app.transport.prefer_mosh && hostEntry?.mosh_allowed) {
+          transport = 'mosh';
+        }
+      } catch {
+        // config not available, stick with ssh
+      }
+    }
+
     const session: Session = {
       id,
-      transport: req.transport || 'ssh',
+      transport,
       host_id: req.host_id || '',
       hostname,
       port,
       username: req.username,
+      key_id: req.key_id || '',
       cols: req.cols || 80,
       rows: req.rows || 24,
       row,
@@ -68,7 +84,7 @@ export class SessionBroker extends EventEmitter {
 
     // Launch the PTY process
     try {
-      const ptyProcess = transportLauncher.launch(session, req.password);
+      const ptyProcess = transportLauncher.launch(session, req.password, req.key_id);
       this.wireEvents(session, ptyProcess);
       session.state = 'connected';
       session.updated_at = new Date().toISOString();
@@ -119,7 +135,7 @@ export class SessionBroker extends EventEmitter {
     session.updated_at = new Date().toISOString();
 
     try {
-      const ptyProcess = transportLauncher.launch(session, password);
+      const ptyProcess = transportLauncher.launch(session, password, session.key_id || undefined);
       this.wireEvents(session, ptyProcess);
       session.state = 'connected';
       session.updated_at = new Date().toISOString();
