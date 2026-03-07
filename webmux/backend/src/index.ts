@@ -4,6 +4,7 @@ import https from 'https';
 import * as fs from 'fs';
 import * as path from 'path';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { WebSocketServer } from 'ws';
 
 import authRouter from './api/auth';
@@ -42,6 +43,16 @@ async function main(): Promise<void> {
   app.use(cors({ origin: true, credentials: true }));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  // General API rate limit: 300 requests per minute per IP
+  const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests, please try again later.' },
+  });
+  app.use('/api/', apiLimiter);
 
   // API routes
   app.use('/api/auth', authRouter);

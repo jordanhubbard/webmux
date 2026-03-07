@@ -1,9 +1,21 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import argon2 from 'argon2';
 import { persistence } from '../services/persistenceManager';
 import { signToken } from '../middleware/auth';
 
 const router = Router();
+
+// Strict rate limit for auth endpoints: 10 requests per 15 minutes per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
+router.use(authLimiter);
 
 router.post('/login', async (req: Request, res: Response) => {
   const { username, password } = req.body as { username?: string; password?: string };
