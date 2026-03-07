@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+backend/dist/
+frontend/dist/
+web/
+
+# Logs
+logs/*.log
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
+.DS_Store
+.vscode/
+*.swp
+*.swo
+
+# TLS certificates (generate locally)
+config/tls/cert.pem
+config/tls/key.pem
+
+# Runtime data (created at runtime, not source)
+data/sessions/
+data/events/
+data/cache/
+
+# SSH keys (sensitive)
+config/keys/

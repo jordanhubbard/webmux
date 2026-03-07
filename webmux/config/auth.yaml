@@ -1,0 +1,5 @@
+auth:
+  mode: local
+  bootstrap_required: true
+  username_pattern: username-or-email
+  password_hash: ''
