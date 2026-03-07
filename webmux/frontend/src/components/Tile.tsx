@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Terminal } from './Terminal';
+import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import type { Session, ConnectionState } from '../types';
 
 interface TileProps {
@@ -14,32 +15,46 @@ interface TileProps {
 export function Tile({ session, fontSize, onClose, onSplitRight, onSplitBelow, onReconnect }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
-  const [focusOwner, setFocusOwner] = useState<string | undefined>(undefined);
-  const [hasFocus, setHasFocus] = useState(false);
+  const { focusedSessionId, broadcastMode } = useInputBroadcast();
+
+  const isFocused = focusedSessionId === session.id;
 
   const handleStateChange = useCallback((newState: ConnectionState) => {
     setState(newState);
   }, []);
 
-  const handleViewerUpdate = useCallback((count: number, owner?: string) => {
+  const handleViewerUpdate = useCallback((count: number, _owner?: string) => {
     setViewerCount(count);
-    setFocusOwner(owner);
   }, []);
 
-  const handleFocusRequest = useCallback(() => {
-    setHasFocus(true);
+  const handleFocusGained = useCallback(() => {
+    // Terminal handles setting focusedSessionId via context
   }, []);
 
   const stateColor = state === 'connected' ? '#4aaa6a' :
     state === 'connecting' ? '#caaa4a' :
     state === 'error' ? '#ff5555' : '#888888';
 
-  const stateIcon = state === 'connected' ? '●' :
-    state === 'connecting' ? '◐' :
-    state === 'error' ? '✗' : '○';
+  const stateIcon = state === 'connected' ? '\u25cf' :
+    state === 'connecting' ? '\u25d0' :
+    state === 'error' ? '\u2717' : '\u25cb';
+
+  const borderColor = broadcastMode
+    ? '#e8a030'  // orange when broadcasting to all
+    : isFocused
+      ? '#7c6af7' // purple highlight when focused
+      : '#333366'; // default dim border
 
   return (
-    <div style={styles.tile}>
+    <div style={{
+      ...styles.tile,
+      borderColor,
+      boxShadow: broadcastMode
+        ? '0 0 8px rgba(232, 160, 48, 0.4)'
+        : isFocused
+          ? '0 0 8px rgba(124, 106, 247, 0.4)'
+          : 'none',
+    }}>
       {/* Chrome header */}
       <div style={styles.chrome}>
         <div style={styles.chromeLeft}>
@@ -50,18 +65,15 @@ export function Tile({ session, fontSize, onClose, onSplitRight, onSplitBelow, o
         <div style={styles.chromeRight}>
           {viewerCount > 1 && (
             <span style={styles.viewers} title={`${viewerCount} viewers`}>
-              👁 {viewerCount}
+              {viewerCount}
             </span>
           )}
-          {focusOwner && (
-            <span style={styles.focusBadge} title={`Focus: ${focusOwner}`}>🔏</span>
-          )}
-          <button style={styles.chromeBtn} onClick={() => onSplitRight(session.id)} title="Split right">⊢</button>
-          <button style={styles.chromeBtn} onClick={() => onSplitBelow(session.id)} title="Split below">⊤</button>
+          <button style={styles.chromeBtn} onClick={() => onSplitRight(session.id)} title="Split right">{'\u22a2'}</button>
+          <button style={styles.chromeBtn} onClick={() => onSplitBelow(session.id)} title="Split below">{'\u22a4'}</button>
           {(state === 'disconnected' || state === 'error') && (
-            <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onReconnect(session.id)} title="Reconnect">↺</button>
+            <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onReconnect(session.id)} title="Reconnect">{'\u21ba'}</button>
           )}
-          <button style={{ ...styles.chromeBtn, color: '#ff8888' }} onClick={() => onClose(session.id)} title="Close">✕</button>
+          <button style={{ ...styles.chromeBtn, color: '#ff8888' }} onClick={() => onClose(session.id)} title="Close">{'\u2715'}</button>
         </div>
       </div>
 
@@ -73,8 +85,7 @@ export function Tile({ session, fontSize, onClose, onSplitRight, onSplitBelow, o
           state={state}
           onStateChange={handleStateChange}
           onViewerUpdate={handleViewerUpdate}
-          hasFocus={hasFocus}
-          onFocusRequest={handleFocusRequest}
+          onFocusGained={handleFocusGained}
         />
       </div>
     </div>
@@ -90,11 +101,12 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     width: TILE_W,
     height: TILE_H,
-    border: '1px solid #333366',
+    border: '2px solid #333366',
     borderRadius: 6,
     overflow: 'hidden',
     background: '#0d0d1a',
     flexShrink: 0,
+    transition: 'border-color 0.15s, box-shadow 0.15s',
   },
   chrome: {
     display: 'flex',
@@ -141,10 +153,6 @@ const styles: Record<string, React.CSSProperties> = {
   viewers: {
     fontSize: 10,
     color: '#888',
-    marginRight: 4,
-  },
-  focusBadge: {
-    fontSize: 10,
     marginRight: 4,
   },
   chromeBtn: {

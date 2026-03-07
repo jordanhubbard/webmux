@@ -1,7 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TopBar } from '../components/TopBar';
+import { InputBroadcastProvider } from '../contexts/InputBroadcastContext';
 import type { AuthState } from '../hooks/useAuth';
+import type { ReactNode } from 'react';
+
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <InputBroadcastProvider>{children}</InputBroadcastProvider>
+);
 
 function makeAuth(overrides: Partial<AuthState> = {}): AuthState {
   return {
@@ -25,7 +31,8 @@ describe('TopBar', () => {
         onFontSizeChange={vi.fn()}
         onAddSession={vi.fn()}
         secureMode={true}
-      />
+      />,
+      { wrapper },
     );
     expect(screen.getAllByText(/WebMux/i).length).toBeGreaterThan(0);
     expect(screen.getByText('+ New Session')).toBeDefined();
@@ -41,7 +48,8 @@ describe('TopBar', () => {
         onFontSizeChange={vi.fn()}
         onAddSession={onAddSession}
         secureMode={true}
-      />
+      />,
+      { wrapper },
     );
     fireEvent.click(screen.getByText('+ New Session'));
     expect(onAddSession).toHaveBeenCalled();
@@ -55,7 +63,8 @@ describe('TopBar', () => {
         onFontSizeChange={vi.fn()}
         onAddSession={vi.fn()}
         secureMode={true}
-      />
+      />,
+      { wrapper },
     );
     expect(screen.getByText(/Secure/)).toBeDefined();
   });
@@ -68,7 +77,8 @@ describe('TopBar', () => {
         onFontSizeChange={vi.fn()}
         onAddSession={vi.fn()}
         secureMode={false}
-      />
+      />,
+      { wrapper },
     );
     expect(screen.getByText(/Trusted/)).toBeDefined();
   });
@@ -82,11 +92,41 @@ describe('TopBar', () => {
         onFontSizeChange={onFontSizeChange}
         onAddSession={vi.fn()}
         secureMode={true}
-      />
+      />,
+      { wrapper },
     );
     fireEvent.click(screen.getByText('A+'));
     expect(onFontSizeChange).toHaveBeenCalledWith(15);
     fireEvent.click(screen.getByText('A-'));
     expect(onFontSizeChange).toHaveBeenCalledWith(13);
+  });
+
+  it('shows Type to All button', () => {
+    render(
+      <TopBar
+        auth={makeAuth()}
+        fontSize={14}
+        onFontSizeChange={vi.fn()}
+        onAddSession={vi.fn()}
+        secureMode={true}
+      />,
+      { wrapper },
+    );
+    expect(screen.getByText('Type to All')).toBeDefined();
+  });
+
+  it('toggles Type to All button on click', () => {
+    render(
+      <TopBar
+        auth={makeAuth()}
+        fontSize={14}
+        onFontSizeChange={vi.fn()}
+        onAddSession={vi.fn()}
+        secureMode={true}
+      />,
+      { wrapper },
+    );
+    fireEvent.click(screen.getByText('Type to All'));
+    expect(screen.getByText('Type to All: ON')).toBeDefined();
   });
 });

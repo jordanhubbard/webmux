@@ -56,7 +56,7 @@ export function setupWebSocket(wss: WebSocketServer): void {
 
       switch (msg.type) {
         case 'input':
-          if (presenceService.hasFocus(viewerId, sessionId) && msg.data) {
+          if (msg.data) {
             sessionBroker.sendInput(sessionId, msg.data);
           }
           break;

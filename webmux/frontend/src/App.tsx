@@ -3,6 +3,7 @@ import { useAuth } from './hooks/useAuth';
 import { LoginPage } from './components/LoginPage';
 import { TopBar } from './components/TopBar';
 import { Workspace } from './components/Workspace';
+import { InputBroadcastProvider } from './contexts/InputBroadcastContext';
 import { api } from './utils/api';
 
 export default function App() {
@@ -35,20 +36,22 @@ export default function App() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <TopBar
-        auth={auth}
-        fontSize={fontSize}
-        onFontSizeChange={setFontSize}
-        onAddSession={() => setShowAddDialog(true)}
-        secureMode={secureMode}
-      />
+    <InputBroadcastProvider>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <TopBar
+          auth={auth}
+          fontSize={fontSize}
+          onFontSizeChange={setFontSize}
+          onAddSession={() => setShowAddDialog(true)}
+          secureMode={secureMode}
+        />
 
-      <Workspace
-        fontSize={fontSize}
-        showAddDialog={showAddDialog}
-        onDialogClose={handleDialogClose}
-      />
-    </div>
+        <Workspace
+          fontSize={fontSize}
+          showAddDialog={showAddDialog}
+          onDialogClose={handleDialogClose}
+        />
+      </div>
+    </InputBroadcastProvider>
   );
 }

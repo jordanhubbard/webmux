@@ -5,6 +5,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 import type { WebSocketMessage, ConnectionState } from '../types';
 import { useWebSocket } from '../hooks/useWebSocket';
+import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 
 interface TerminalProps {
   sessionId: string;
@@ -12,8 +13,7 @@ interface TerminalProps {
   state: ConnectionState;
   onStateChange: (state: ConnectionState) => void;
   onViewerUpdate: (count: number, focusOwner?: string) => void;
-  hasFocus: boolean;
-  onFocusRequest: () => void;
+  onFocusGained: () => void;
 }
 
 export function Terminal({
@@ -22,21 +22,26 @@ export function Terminal({
   state,
   onStateChange,
   onViewerUpdate,
-  hasFocus,
-  onFocusRequest,
+  onFocusGained,
 }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsHandleRef = useRef<ReturnType<typeof useWebSocket> | null>(null);
 
+  const { registerSend, unregisterSend, routeInput, setFocusedSessionId } = useInputBroadcast();
+
   // Keep latest callbacks in refs so xterm/WS handlers never capture stale closures.
   const onStateChangeRef = useRef(onStateChange);
   const onViewerUpdateRef = useRef(onViewerUpdate);
-  const onFocusRequestRef = useRef(onFocusRequest);
+  const onFocusGainedRef = useRef(onFocusGained);
   useEffect(() => { onStateChangeRef.current = onStateChange; }, [onStateChange]);
   useEffect(() => { onViewerUpdateRef.current = onViewerUpdate; }, [onViewerUpdate]);
-  useEffect(() => { onFocusRequestRef.current = onFocusRequest; }, [onFocusRequest]);
+  useEffect(() => { onFocusGainedRef.current = onFocusGained; }, [onFocusGained]);
+
+  // Keep routeInput in a ref so the xterm onData handler always uses the latest
+  const routeInputRef = useRef(routeInput);
+  useEffect(() => { routeInputRef.current = routeInput; }, [routeInput]);
 
   const handleMessage = useCallback((msg: WebSocketMessage) => {
     switch (msg.type) {
@@ -70,6 +75,15 @@ export function Terminal({
   useEffect(() => {
     wsHandleRef.current = wsHandle;
   }, [wsHandle]);
+
+  // Register this terminal's send function with the broadcast context
+  useEffect(() => {
+    const sendInput = (data: string) => {
+      wsHandleRef.current?.send({ type: 'input', data });
+    };
+    registerSend(sessionId, sendInput);
+    return () => unregisterSend(sessionId);
+  }, [sessionId, registerSend, unregisterSend]);
 
   // Initialize xterm
   useEffect(() => {
@@ -120,8 +134,9 @@ export function Terminal({
     termRef.current = term;
     fitAddonRef.current = fitAddon;
 
+    // Route input through the broadcast context instead of sending directly
     const dataListener = term.onData((data: string) => {
-      wsHandleRef.current?.send({ type: 'input', data });
+      routeInputRef.current(sessionId, data);
     });
 
     const resizeListener = term.onResize(({ cols, rows }: { cols: number; rows: number }) => {
@@ -129,20 +144,24 @@ export function Terminal({
     });
 
     const el = containerRef.current;
-    // Use ref so click handler always calls the latest onFocusRequest.
-    const clickHandler = () => onFocusRequestRef.current();
-    el.addEventListener('click', clickHandler);
+    // Click to focus this terminal
+    const clickHandler = () => {
+      setFocusedSessionId(sessionId);
+      onFocusGainedRef.current();
+      term.focus();
+    };
+    el.addEventListener('mousedown', clickHandler);
 
     return () => {
       dataListener.dispose();
       resizeListener.dispose();
-      el.removeEventListener('click', clickHandler);
+      el.removeEventListener('mousedown', clickHandler);
       term.dispose();
       termRef.current = null;
       fitAddonRef.current = null;
     };
     // Re-run only when the session changes; all live callbacks are accessed via refs.
-  }, [sessionId]);
+  }, [sessionId, setFocusedSessionId]);
 
   // Update font size
   useEffect(() => {
@@ -151,13 +170,6 @@ export function Terminal({
       fitAddonRef.current?.fit();
     }
   }, [fontSize]);
-
-  // Notify server when this tile gains focus; wsHandle is stable (memoised send).
-  useEffect(() => {
-    if (hasFocus) {
-      wsHandleRef.current?.send({ type: 'focus' });
-    }
-  }, [hasFocus]);
 
   // Refit on container resize
   useEffect(() => {
@@ -197,9 +209,9 @@ export function Terminal({
           fontSize: 13,
           pointerEvents: 'none',
         }}>
-          {state === 'connecting' && '⟳ Connecting…'}
-          {state === 'disconnected' && '⊘ Disconnected'}
-          {state === 'error' && '✗ Connection error'}
+          {state === 'connecting' && 'Connecting...'}
+          {state === 'disconnected' && 'Disconnected'}
+          {state === 'error' && 'Connection error'}
         </div>
       )}
     </div>

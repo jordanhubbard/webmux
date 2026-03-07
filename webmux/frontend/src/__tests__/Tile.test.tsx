@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Tile } from '../components/Tile';
+import { InputBroadcastProvider } from '../contexts/InputBroadcastContext';
 import type { Session } from '../types';
+import type { ReactNode } from 'react';
 
 // Mock Terminal which needs xterm.js
 vi.mock('../components/Terminal', () => ({
@@ -9,6 +11,10 @@ vi.mock('../components/Terminal', () => ({
     <div data-testid={`terminal-${sessionId}`}>Terminal Mock</div>
   ),
 }));
+
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <InputBroadcastProvider>{children}</InputBroadcastProvider>
+);
 
 function makeSession(overrides: Partial<Session> = {}): Session {
   return {
@@ -41,7 +47,8 @@ describe('Tile', () => {
         onSplitRight={vi.fn()}
         onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
-      />
+      />,
+      { wrapper },
     );
     expect(screen.getByText('user@example.com')).toBeDefined();
     expect(screen.getByText('SSH')).toBeDefined();
@@ -56,7 +63,8 @@ describe('Tile', () => {
         onSplitRight={vi.fn()}
         onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
-      />
+      />,
+      { wrapper },
     );
     expect(screen.getByText('MOSH')).toBeDefined();
   });
@@ -71,7 +79,8 @@ describe('Tile', () => {
         onSplitRight={vi.fn()}
         onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
-      />
+      />,
+      { wrapper },
     );
     fireEvent.click(screen.getByTitle('Close'));
     expect(onClose).toHaveBeenCalledWith('s1');
@@ -87,7 +96,8 @@ describe('Tile', () => {
         onSplitRight={onSplitRight}
         onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
-      />
+      />,
+      { wrapper },
     );
     fireEvent.click(screen.getByTitle('Split right'));
     expect(onSplitRight).toHaveBeenCalledWith('s1');
@@ -103,7 +113,8 @@ describe('Tile', () => {
         onSplitRight={vi.fn()}
         onSplitBelow={onSplitBelow}
         onReconnect={vi.fn()}
-      />
+      />,
+      { wrapper },
     );
     fireEvent.click(screen.getByTitle('Split below'));
     expect(onSplitBelow).toHaveBeenCalledWith('s1');
@@ -118,7 +129,8 @@ describe('Tile', () => {
         onSplitRight={vi.fn()}
         onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
-      />
+      />,
+      { wrapper },
     );
     expect(screen.getByTitle('Reconnect')).toBeDefined();
   });
@@ -133,7 +145,8 @@ describe('Tile', () => {
         onSplitRight={vi.fn()}
         onSplitBelow={vi.fn()}
         onReconnect={onReconnect}
-      />
+      />,
+      { wrapper },
     );
     fireEvent.click(screen.getByTitle('Reconnect'));
     expect(onReconnect).toHaveBeenCalledWith('s1');
@@ -148,7 +161,8 @@ describe('Tile', () => {
         onSplitRight={vi.fn()}
         onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
-      />
+      />,
+      { wrapper },
     );
     expect(screen.queryByTitle('Reconnect')).toBeNull();
   });
@@ -162,7 +176,8 @@ describe('Tile', () => {
         onSplitRight={vi.fn()}
         onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
-      />
+      />,
+      { wrapper },
     );
     expect(screen.getByTitle('Reconnect')).toBeDefined();
   });
@@ -176,7 +191,8 @@ describe('Tile', () => {
         onSplitRight={vi.fn()}
         onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
-      />
+      />,
+      { wrapper },
     );
     expect(screen.getByTestId('terminal-s1')).toBeDefined();
   });

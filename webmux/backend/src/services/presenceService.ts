@@ -30,6 +30,12 @@ export class PresenceService extends EventEmitter {
     }
     this.sessionViewers.get(sessionId)!.add(viewerId);
 
+    // Auto-grant focus to the first viewer (or if no one holds focus)
+    if (!this.focusOwners.has(sessionId)) {
+      this.focusOwners.set(sessionId, viewerId);
+      this.viewers.get(viewerId)!.has_focus = true;
+    }
+
     this.broadcastToSession(sessionId, {
       type: 'viewer_join',
       session_id: sessionId,

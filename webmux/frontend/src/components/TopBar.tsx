@@ -1,4 +1,5 @@
 import type { AuthState } from '../hooks/useAuth';
+import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 
 interface TopBarProps {
   auth: AuthState;
@@ -9,12 +10,26 @@ interface TopBarProps {
 }
 
 export function TopBar({ auth, fontSize, onFontSizeChange, onAddSession, secureMode }: TopBarProps) {
+  const { broadcastMode, setBroadcastMode } = useInputBroadcast();
+
   return (
     <div style={styles.bar}>
       <div style={styles.left}>
-        <span style={styles.logo}>▦ WebMux</span>
+        <span style={styles.logo}>{'\u25a6'} WebMux</span>
         <button style={styles.addBtn} onClick={onAddSession} title="Add new session">
           + New Session
+        </button>
+        <button
+          style={{
+            ...styles.broadcastBtn,
+            background: broadcastMode ? '#e8a030' : '#1a1a3a',
+            color: broadcastMode ? '#000' : '#aaa',
+            borderColor: broadcastMode ? '#e8a030' : '#333366',
+          }}
+          onClick={() => setBroadcastMode(!broadcastMode)}
+          title={broadcastMode ? 'Type to All: ON — input goes to every pane' : 'Type to All: OFF — input goes to focused pane only'}
+        >
+          {broadcastMode ? 'Type to All: ON' : 'Type to All'}
         </button>
       </div>
 
@@ -43,7 +58,7 @@ export function TopBar({ auth, fontSize, onFontSizeChange, onAddSession, secureM
           borderColor: secureMode ? '#2a6a4a' : '#8a6a0a',
           color: secureMode ? '#4aaa6a' : '#caaa4a',
         }}>
-          {secureMode ? '🔒 Secure' : '⚠ Trusted'}
+          {secureMode ? 'Secure' : 'Trusted'}
         </div>
 
         {auth.isAuthenticated && auth.authStatus?.mode !== 'none' && (
@@ -88,6 +103,15 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     fontWeight: 600,
     cursor: 'pointer',
+  },
+  broadcastBtn: {
+    border: '1px solid',
+    borderRadius: 4,
+    padding: '5px 12px',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'background 0.15s, color 0.15s, border-color 0.15s',
   },
   right: {
     display: 'flex',
