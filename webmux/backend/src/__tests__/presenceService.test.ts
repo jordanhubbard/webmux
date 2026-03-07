@@ -53,6 +53,31 @@ describe('PresenceService', () => {
     expect(() => ps.leave('nonexistent')).not.toThrow();
   });
 
+  it('auto-grants focus to first viewer on join', () => {
+    const ws = mockWs();
+    ps.join('v1', 'sess1', ws);
+    expect(ps.getFocusOwner('sess1')).toBe('v1');
+    expect(ps.hasFocus('v1', 'sess1')).toBe(true);
+  });
+
+  it('does not steal focus from existing owner when second viewer joins', () => {
+    ps.join('v1', 'sess1', mockWs());
+    ps.join('v2', 'sess1', mockWs());
+    // v1 still has focus
+    expect(ps.getFocusOwner('sess1')).toBe('v1');
+    expect(ps.hasFocus('v2', 'sess1')).toBe(false);
+  });
+
+  it('auto-grants focus to next joiner after focus owner leaves', () => {
+    ps.join('v1', 'sess1', mockWs());
+    ps.leave('v1');
+    // Focus released
+    expect(ps.getFocusOwner('sess1')).toBeUndefined();
+    // New joiner gets auto-focus
+    ps.join('v2', 'sess1', mockWs());
+    expect(ps.getFocusOwner('sess1')).toBe('v2');
+  });
+
   it('takeFocus sets focus owner', () => {
     ps.join('v1', 'sess1', mockWs());
     ps.join('v2', 'sess1', mockWs());
