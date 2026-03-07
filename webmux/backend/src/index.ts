@@ -44,7 +44,7 @@ async function main(): Promise<void> {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // General API rate limit: 300 requests per minute per IP
+  // General rate limit: 300 requests per minute per IP (applied globally)
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 300,
@@ -52,7 +52,7 @@ async function main(): Promise<void> {
     legacyHeaders: false,
     message: { error: 'Too many requests, please try again later.' },
   });
-  app.use('/api/', apiLimiter);
+  app.use(apiLimiter);
 
   // API routes
   app.use('/api/auth', authRouter);
