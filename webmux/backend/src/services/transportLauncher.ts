@@ -7,10 +7,26 @@ export interface PtyHandle {
   sessionId: string;
 }
 
+const HOSTNAME_RE = /^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9.])?$|^\[[0-9a-fA-F:]+\]$/;
+
 export class TransportLauncher {
   private handles = new Map<string, pty.IPty>();
 
+  static validateHostname(hostname: string): void {
+    if (!hostname) {
+      throw new Error('Hostname is required');
+    }
+    if (hostname.length > 255) {
+      throw new Error('Hostname too long');
+    }
+    if (!HOSTNAME_RE.test(hostname)) {
+      throw new Error(`Invalid hostname: ${hostname}`);
+    }
+  }
+
   launch(session: Session, password?: string, keyId?: string): pty.IPty {
+    TransportLauncher.validateHostname(session.hostname);
+
     if (session.transport === 'mosh') {
       if (!this.findBinary('mosh')) {
         throw new Error('mosh is not installed on this system');
@@ -28,23 +44,20 @@ export class TransportLauncher {
     };
 
     if (password) {
-      // Use sshpass for password auth if available
       const sshpass = this.findBinary('sshpass');
-      if (sshpass) {
-        env['SSHPASS'] = password;
-        const ptyProcess = pty.spawn('sshpass', ['-e', 'ssh', ...args], {
-          name: 'xterm-256color',
-          cols: session.cols,
-          rows: session.rows,
-          cwd: process.env.HOME || '/',
-          env,
-        });
-        this.handles.set(session.id, ptyProcess);
-        return ptyProcess;
+      if (!sshpass) {
+        throw new Error('Password authentication requires sshpass to be installed on the jump box');
       }
-      // Fall back to SSH_ASKPASS
-      env['SSH_ASKPASS'] = 'echo';
-      env['SSH_ASKPASS_REQUIRE'] = 'force';
+      env['SSHPASS'] = password;
+      const ptyProcess = pty.spawn('sshpass', ['-e', 'ssh', ...args], {
+        name: 'xterm-256color',
+        cols: session.cols,
+        rows: session.rows,
+        cwd: process.env.HOME || '/',
+        env,
+      });
+      this.handles.set(session.id, ptyProcess);
+      return ptyProcess;
     }
 
     const ptyProcess = pty.spawn('ssh', args, {

@@ -46,6 +46,16 @@ export function setupWebSocket(wss: WebSocketServer): void {
       viewer_id: viewerId,
     }));
 
+    // Replay scrollback so late-joining viewers see prior output
+    const scrollback = sessionBroker.getScrollback(sessionId);
+    if (scrollback) {
+      ws.send(JSON.stringify({
+        type: 'output',
+        session_id: sessionId,
+        data: scrollback,
+      }));
+    }
+
     ws.on('message', (raw: Buffer) => {
       let msg: WebSocketMessage;
       try {

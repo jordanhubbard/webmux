@@ -28,6 +28,7 @@ describe('ConnectionDialog', () => {
     });
     expect(screen.getByText('Saved Host')).toBeDefined();
     expect(screen.getByText('Ad-hoc')).toBeDefined();
+    expect(screen.getByText('Agent')).toBeDefined();
     expect(screen.getByText('Password')).toBeDefined();
     expect(screen.getByText('Key')).toBeDefined();
     expect(screen.getByText('Connect')).toBeDefined();
@@ -67,7 +68,8 @@ describe('ConnectionDialog', () => {
 
     fireEvent.change(screen.getByPlaceholderText('hostname or IP'), { target: { value: 'myhost.com' } });
     fireEvent.change(screen.getByPlaceholderText('user'), { target: { value: 'admin' } });
-    fireEvent.change(screen.getByPlaceholderText('Remote password (not stored)'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByText('Password'));
+    fireEvent.change(screen.getByPlaceholderText('Remote password (requires sshpass)'), { target: { value: 'secret' } });
     fireEvent.click(screen.getByText('Connect'));
 
     await waitFor(() => {
@@ -79,6 +81,27 @@ describe('ConnectionDialog', () => {
           transport: 'ssh',
         })
       );
+    });
+  });
+
+  it('calls onConnect without credentials in agent mode', async () => {
+    render(<ConnectionDialog onConnect={onConnect} onClose={onClose} />);
+    fireEvent.click(screen.getByText('Ad-hoc'));
+
+    fireEvent.change(screen.getByPlaceholderText('hostname or IP'), { target: { value: 'sparky.local' } });
+    fireEvent.change(screen.getByPlaceholderText('user'), { target: { value: 'admin' } });
+    fireEvent.click(screen.getByText('Connect'));
+
+    await waitFor(() => {
+      expect(onConnect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          username: 'admin',
+          hostname: 'sparky.local',
+        })
+      );
+      const req = onConnect.mock.calls[0][0];
+      expect(req.password).toBeUndefined();
+      expect(req.key_id).toBeUndefined();
     });
   });
 

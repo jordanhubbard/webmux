@@ -3,7 +3,7 @@ import { api } from '../utils/api';
 import type { HostEntry, KeyEntry, CreateSessionRequest } from '../types';
 
 interface ConnectionDialogProps {
-  onConnect: (req: CreateSessionRequest) => void;
+  onConnect: (req: CreateSessionRequest) => Promise<void>;
   onClose: () => void;
   suggestedRow?: number;
   suggestedCol?: number;
@@ -18,7 +18,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
   const [adhocPort, setAdhocPort] = useState(22);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [authMode, setAuthMode] = useState<'password' | 'key'>('password');
+  const [authMode, setAuthMode] = useState<'agent' | 'password' | 'key'>('agent');
   const [selectedKeyId, setSelectedKeyId] = useState('');
   const [transport, setTransport] = useState<'ssh' | 'mosh'>('ssh');
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
         req.key_id = selectedKeyId;
       }
 
-      onConnect(req);
+      await onConnect(req);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -154,10 +154,10 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
             <div style={styles.tabs}>
               <button
                 type="button"
-                style={{ ...styles.tab, ...(authMode === 'password' ? styles.tabActive : {}) }}
-                onClick={() => setAuthMode('password')}
+                style={{ ...styles.tab, ...(authMode === 'agent' ? styles.tabActive : {}) }}
+                onClick={() => setAuthMode('agent')}
               >
-                Password
+                Agent
               </button>
               <button
                 type="button"
@@ -166,18 +166,19 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
               >
                 Key
               </button>
+              <button
+                type="button"
+                style={{ ...styles.tab, ...(authMode === 'password' ? styles.tabActive : {}) }}
+                onClick={() => setAuthMode('password')}
+              >
+                Password
+              </button>
             </div>
 
-            {authMode === 'password' ? (
-              <input
-                style={styles.input}
-                type="password"
-                placeholder="Remote password (not stored)"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            ) : (
+            {authMode === 'agent' && (
+              <p style={styles.hint}>Uses the SSH agent or default keys (~/.ssh/id_*). No credentials needed.</p>
+            )}
+            {authMode === 'key' && (
               <>
                 <select
                   style={styles.input}
@@ -191,8 +192,18 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
                     </option>
                   ))}
                 </select>
-                <p style={styles.hint}>Select a key from keys.yaml or use the jump box&apos;s default identity.</p>
+                <p style={styles.hint}>Select a specific key from keys.yaml.</p>
               </>
+            )}
+            {authMode === 'password' && (
+              <input
+                style={styles.input}
+                type="password"
+                placeholder="Remote password (requires sshpass)"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
             )}
           </div>
 

@@ -14,12 +14,17 @@ export interface WebSocketHandle {
   close: () => void;
 }
 
+const INITIAL_DELAY_MS = 1000;
+const MAX_DELAY_MS = 30_000;
+
 export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const attemptRef = useRef(0);
+  const closedRef = useRef(false);
+
   const { sessionId, onMessage, onOpen, onClose } = options;
 
-  // Store callbacks in refs so the WebSocket handlers always call the latest
-  // version without needing to recreate the socket when they change.
   const onMessageRef = useRef(onMessage);
   const onOpenRef = useRef(onOpen);
   const onCloseRef = useRef(onClose);
@@ -28,24 +33,52 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
-    const url = buildWsUrl(sessionId);
-    const ws = new WebSocket(url);
-    wsRef.current = ws;
+    closedRef.current = false;
+    attemptRef.current = 0;
 
-    ws.onopen = () => onOpenRef.current?.();
-    ws.onclose = () => onCloseRef.current?.();
-    ws.onerror = (e) => console.error('WebSocket error', e);
-    ws.onmessage = (event: MessageEvent<string>) => {
-      try {
-        const msg = JSON.parse(event.data) as WebSocketMessage;
-        onMessageRef.current(msg);
-      } catch {
-        // ignore malformed messages
-      }
-    };
+    function connect() {
+      if (closedRef.current) return;
+
+      const url = buildWsUrl(sessionId);
+      const ws = new WebSocket(url);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        attemptRef.current = 0;
+        onOpenRef.current?.();
+      };
+
+      ws.onclose = (event) => {
+        if (closedRef.current) return;
+        onCloseRef.current?.();
+        // 1000 = intentional close (component unmount, session deleted)
+        if (event.code === 1000) return;
+        const delay = Math.min(INITIAL_DELAY_MS * Math.pow(2, attemptRef.current), MAX_DELAY_MS);
+        attemptRef.current++;
+        reconnectTimerRef.current = setTimeout(connect, delay);
+      };
+
+      ws.onerror = (e) => console.error('WebSocket error', e);
+
+      ws.onmessage = (event: MessageEvent<string>) => {
+        try {
+          const msg = JSON.parse(event.data) as WebSocketMessage;
+          onMessageRef.current(msg);
+        } catch {
+          // ignore malformed messages
+        }
+      };
+    }
+
+    connect();
 
     return () => {
-      ws.close();
+      closedRef.current = true;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      wsRef.current?.close(1000);
       wsRef.current = null;
     };
   }, [sessionId]);
@@ -57,7 +90,12 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
   }, []);
 
   const close = useCallback(() => {
-    wsRef.current?.close();
+    closedRef.current = true;
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    wsRef.current?.close(1000);
   }, []);
 
   return { send, close };

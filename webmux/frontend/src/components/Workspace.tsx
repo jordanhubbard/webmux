@@ -27,14 +27,11 @@ export function Workspace({ fontSize, showAddDialog, onDialogClose }: WorkspaceP
       .finally(() => setLoading(false));
   }, []);
 
-  const handleAddSession = useCallback((req: CreateSessionRequest) => {
-    api.createSession(req).then(session => {
-      setSessions(prev => [...prev, session]);
-      onDialogClose();
-      setSplitPos(null);
-    }).catch(err => {
-      console.error('Failed to create session:', err);
-    });
+  const handleAddSession = useCallback(async (req: CreateSessionRequest) => {
+    const session = await api.createSession(req);
+    setSessions(prev => [...prev, session]);
+    onDialogClose();
+    setSplitPos(null);
   }, [onDialogClose]);
 
   const handleClose = useCallback((id: string) => {

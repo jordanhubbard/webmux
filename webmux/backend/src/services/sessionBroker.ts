@@ -8,6 +8,8 @@ import { persistence } from './persistenceManager';
 
 export class SessionBroker extends EventEmitter {
   private sessions = new Map<string, Session>();
+  private scrollback = new Map<string, string>();
+  private static readonly SCROLLBACK_SIZE = 64 * 1024;
 
   constructor() {
     super();
@@ -82,12 +84,10 @@ export class SessionBroker extends EventEmitter {
 
     this.sessions.set(id, session);
 
-    // Launch the PTY process
+    // Launch the PTY process (state stays 'connecting' until first data arrives)
     try {
       const ptyProcess = transportLauncher.launch(session, req.password, req.key_id);
       this.wireEvents(session, ptyProcess);
-      session.state = 'connected';
-      session.updated_at = new Date().toISOString();
     } catch (err) {
       session.state = 'error';
       session.updated_at = new Date().toISOString();
@@ -101,7 +101,28 @@ export class SessionBroker extends EventEmitter {
   }
 
   private wireEvents(session: Session, ptyProcess: pty.IPty): void {
+    let firstData = true;
+
     ptyProcess.onData((data: string) => {
+      if (firstData) {
+        firstData = false;
+        session.state = 'connected';
+        session.updated_at = new Date().toISOString();
+        presenceService.broadcastToSession(session.id, {
+          type: 'status',
+          session_id: session.id,
+          state: 'connected',
+        });
+        this.persistSessions();
+      }
+
+      // Accumulate scrollback for late-joining viewers
+      let buf = (this.scrollback.get(session.id) || '') + data;
+      if (buf.length > SessionBroker.SCROLLBACK_SIZE) {
+        buf = buf.slice(buf.length - SessionBroker.SCROLLBACK_SIZE);
+      }
+      this.scrollback.set(session.id, buf);
+
       presenceService.broadcastToSession(session.id, {
         type: 'output',
         session_id: session.id,
@@ -135,10 +156,9 @@ export class SessionBroker extends EventEmitter {
     session.updated_at = new Date().toISOString();
 
     try {
+      this.scrollback.delete(session.id);
       const ptyProcess = transportLauncher.launch(session, password, session.key_id || undefined);
       this.wireEvents(session, ptyProcess);
-      session.state = 'connected';
-      session.updated_at = new Date().toISOString();
     } catch (err) {
       session.state = 'error';
       session.updated_at = new Date().toISOString();
@@ -149,9 +169,14 @@ export class SessionBroker extends EventEmitter {
     return session;
   }
 
+  getScrollback(sessionId: string): string {
+    return this.scrollback.get(sessionId) || '';
+  }
+
   async delete(sessionId: string): Promise<void> {
     transportLauncher.kill(sessionId);
     this.sessions.delete(sessionId);
+    this.scrollback.delete(sessionId);
     this.persistSessions();
     this.updateLayout(sessionId);
     persistence.appendEvent({ type: 'session_deleted', session_id: sessionId });
