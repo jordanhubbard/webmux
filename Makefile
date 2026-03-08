@@ -99,7 +99,7 @@ start: build
 		echo "webmux is already running (pid $$(cat $(PIDFILE)))"; \
 		exit 1; \
 	fi
-	@cd $(WEBMUX_DIR) && $(RUNTIME_ENV) $(NODE) backend/dist/index.js >> $(LOGFILE) 2>&1 & echo $$! > $(PIDFILE)
+	@cd $(WEBMUX_DIR) && $(RUNTIME_ENV) exec $(NODE) backend/dist/index.js >> $(LOGFILE) 2>&1 & echo $$! > $(PIDFILE)
 	@sleep 0.5
 	@if kill -0 $$(cat $(PIDFILE)) 2>/dev/null; then \
 		echo "webmux started (pid $$(cat $(PIDFILE)))"; \
@@ -117,6 +117,15 @@ stop:
 		PID=$$(cat $(PIDFILE)); \
 		if kill -0 $$PID 2>/dev/null; then \
 			kill $$PID; \
+			for i in 1 2 3 4 5 6 7 8 9 10; do \
+				kill -0 $$PID 2>/dev/null || break; \
+				sleep 0.5; \
+			done; \
+			if kill -0 $$PID 2>/dev/null; then \
+				echo "webmux did not stop gracefully, sending SIGKILL"; \
+				kill -9 $$PID 2>/dev/null; \
+				sleep 0.5; \
+			fi; \
 			echo "webmux stopped (pid $$PID)"; \
 		else \
 			echo "webmux was not running (stale pidfile)"; \
