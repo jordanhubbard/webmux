@@ -1,3 +1,9 @@
 layout:
   font_size: 14
-  tiles: []
+  tiles:
+    - session_id: 29c52f50-db7f-4647-9d2d-2fb225dc769f
+      row: 0
+      col: 0
+    - session_id: 55205107-720d-4ad6-a93c-edb21074f4f9
+      row: 0
+      col: 0

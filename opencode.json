@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "responsible-vibe-mcp": {
+      "type": "local",
+      "command": [
+        "npx",
+        "@codemcp/workflows@latest"
+      ]
+    }
+  }
+}

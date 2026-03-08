@@ -1,5 +1,5 @@
 auth:
   mode: local
-  bootstrap_required: true
+  bootstrap_required: false
   username_pattern: username-or-email
-  password_hash: ''
+  password_hash: $argon2id$v=19$m=65536,t=3,p=4$/vA+zWJN007FxlVDz35Xrg$o3NLlb9qbHYwwTr57DCFw95jTi7FzeHux3+d/zHkhl8
