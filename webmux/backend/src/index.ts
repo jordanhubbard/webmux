@@ -87,8 +87,19 @@ async function main(): Promise<void> {
   // Start HTTP server
   const httpPort = Number(process.env.HTTP_PORT) || appConfig.app.http_port;
   const httpServer = http.createServer(app);
-  const wss = new WebSocketServer({ server: httpServer, path: '/api/term' });
+  const wss = new WebSocketServer({ noServer: true });
   setupWebSocket(wss);
+
+  httpServer.on('upgrade', (request, socket, head) => {
+    const pathname = (request.url || '').split('?')[0];
+    if (pathname.startsWith('/api/term/')) {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    } else {
+      socket.destroy();
+    }
+  });
 
   httpServer.listen(httpPort, appConfig.app.listen_host, () => {
     console.log(`WebMux HTTP server listening on ${appConfig.app.listen_host}:${httpPort}`);
@@ -106,8 +117,18 @@ async function main(): Promise<void> {
     };
     const httpsPort = Number(process.env.HTTPS_PORT) || appConfig.app.https_port;
     httpsServer = https.createServer(tlsOptions, app);
-    wssSecure = new WebSocketServer({ server: httpsServer, path: '/api/term' });
+    wssSecure = new WebSocketServer({ noServer: true });
     setupWebSocket(wssSecure);
+    httpsServer.on('upgrade', (request, socket, head) => {
+      const pathname = (request.url || '').split('?')[0];
+      if (pathname.startsWith('/api/term/')) {
+        wssSecure!.handleUpgrade(request, socket, head, (ws) => {
+          wssSecure!.emit('connection', ws, request);
+        });
+      } else {
+        socket.destroy();
+      }
+    });
     httpsServer.listen(httpsPort, appConfig.app.listen_host, () => {
       console.log(`WebMux HTTPS server listening on ${appConfig.app.listen_host}:${httpsPort}`);
     });
