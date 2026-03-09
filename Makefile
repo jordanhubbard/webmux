@@ -151,7 +151,7 @@ test:
 lint:
 	@cd $(WEBMUX_DIR) && $(NPM) run lint
 
-clean:
+clean: stop
 	@echo "Cleaning build artifacts…"
 	@rm -rf $(WEBMUX_DIR)/backend/dist $(WEBMUX_DIR)/web
 	@rm -rf $(WEBMUX_DIR)/node_modules $(WEBMUX_DIR)/backend/node_modules $(WEBMUX_DIR)/frontend/node_modules

@@ -34,6 +34,7 @@ export interface HostEntry {
   id: string;
   hostname: string;
   port: number;
+  username: string;
   tags: string[];
   mosh_allowed: boolean;
 }

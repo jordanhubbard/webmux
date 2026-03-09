@@ -69,6 +69,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
       const saved = await api.createHost({
         hostname: hostname.trim(),
         port,
+        username: username.trim(),
         tags: [],
         mosh_allowed: transport === 'mosh',
       });
@@ -83,7 +84,8 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
   };
 
   const handleQuickConnect = async (host: HostEntry) => {
-    if (!username.trim()) {
+    const user = host.username || username.trim();
+    if (!user) {
       setError('Enter a username first, then click a saved host to connect');
       return;
     }
@@ -91,7 +93,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
     setError(null);
     try {
       await onConnect({
-        username: username.trim(),
+        username: user,
         host_id: host.id,
         hostname: host.hostname,
         port: host.port,
@@ -115,7 +117,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
     }
   };
 
-  const alreadySaved = hosts.some(h => h.hostname === hostname.trim() && h.port === port);
+  const alreadySaved = hosts.some(h => h.hostname === hostname.trim() && h.port === port && (!h.username || h.username === username.trim()));
 
   return (
     <div style={styles.backdrop} onClick={e => e.target === e.currentTarget && onClose()}>
@@ -137,9 +139,10 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
                       type="button"
                       style={styles.hostCardBtn}
                       onClick={() => handleQuickConnect(h)}
-                      title={`Connect to ${h.hostname}`}
+                      title={`Connect to ${h.username ? h.username + '@' : ''}${h.hostname}`}
                       disabled={submitting}
                     >
+                      {h.username && <span style={styles.hostCardUser}>{h.username}@</span>}
                       <span style={styles.hostCardName}>{h.hostname}</span>
                       {h.port !== 22 && <span style={styles.hostCardPort}>:{h.port}</span>}
                     </button>
@@ -340,6 +343,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 2,
+  },
+  hostCardUser: {
+    color: '#888',
+    fontSize: 12,
   },
   hostCardName: {
     fontWeight: 500,

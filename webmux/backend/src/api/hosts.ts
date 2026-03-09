@@ -30,6 +30,7 @@ router.post('/', (req: Request, res: Response) => {
       id: id || uuidv4(),
       hostname,
       port: port || 22,
+      username: (req.body as Partial<HostEntry>).username || '',
       tags: tags || [],
       mosh_allowed: mosh_allowed ?? false,
     };
