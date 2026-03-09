@@ -1,15 +1,17 @@
 # WebMux — web-native terminal multiplexer
 #
 # Usage:
-#   make              Build the application
-#   make start        Build and start the server (background)
-#   make stop         Stop the running server
-#   make restart      Restart the server
-#   make status       Check if the server is running
-#   make test         Run all tests
-#   make lint         Lint all code
-#   make clean        Remove build artifacts and dependencies
-#   make help         Show this help
+#   make                  Build the application
+#   make start            Build and start the server (background)
+#   make stop             Stop the running server
+#   make restart          Restart the server
+#   make status           Check if the server is running
+#   make test             Run all tests
+#   make lint             Lint all code
+#   make clean            Remove build artifacts and dependencies
+#   make install          Install as OS service (launchd/systemd)
+#   make uninstall        Remove OS service
+#   make help             Show this help
 #
 # Configuration (override via environment or make args):
 #   HTTP_PORT          HTTP listen port        (default: 8080)
@@ -55,17 +57,18 @@ ifneq ($(JWT_SECRET),)
 endif
 
 # ── Targets ────────────────────────────────────────────────────────
-.PHONY: all build install start stop restart status test lint clean configure help
+.PHONY: all build deps start stop restart status test lint clean configure help \
+       install uninstall
 
 all: build
 
 help:
 	@sed -n '/^# /s/^# //p' $(MAKEFILE_LIST) | grep -v '^──' | head -22
 
-install:
+deps:
 	@cd $(WEBMUX_DIR) && $(NPM) install --silent
 
-build: install
+build: deps
 	@echo "Building webmux…"
 	@cd $(WEBMUX_DIR) && $(NPM) run build --silent
 	@echo "Build complete."
@@ -157,3 +160,55 @@ clean: stop
 	@rm -rf $(WEBMUX_DIR)/node_modules $(WEBMUX_DIR)/backend/node_modules $(WEBMUX_DIR)/frontend/node_modules
 	@rm -f $(PIDFILE)
 	@echo "Clean."
+
+# ── Service management ──────────────────────────────────────────
+SERVICE_DIR     := $(WEBMUX_DIR)/service
+NODE_PATH       := $(shell which node)
+CURRENT_PATH    := $(shell echo $$PATH)
+
+install: build
+	@mkdir -p $(WEBMUX_DIR)/logs
+ifeq ($(shell uname),Darwin)
+	@echo "Installing launchd service…"
+	@sed \
+		-e 's|__NODE_PATH__|$(NODE_PATH)|g' \
+		-e 's|__WEBMUX_DIR__|$(WEBMUX_DIR)|g' \
+		-e 's|__PATH__|$(CURRENT_PATH)|g' \
+		$(SERVICE_DIR)/com.webmux.server.plist.template \
+		> $(HOME)/Library/LaunchAgents/com.webmux.server.plist
+	@launchctl load $(HOME)/Library/LaunchAgents/com.webmux.server.plist 2>/dev/null || true
+	@launchctl start com.webmux.server 2>/dev/null || true
+	@echo "Installed: ~/Library/LaunchAgents/com.webmux.server.plist"
+	@echo "WebMux will start automatically on login."
+else
+	@echo "Installing systemd user service…"
+	@mkdir -p $(HOME)/.config/systemd/user
+	@sed \
+		-e 's|__NODE_PATH__|$(NODE_PATH)|g' \
+		-e 's|__WEBMUX_DIR__|$(WEBMUX_DIR)|g' \
+		-e 's|__PATH__|$(CURRENT_PATH)|g' \
+		$(SERVICE_DIR)/webmux.service.template \
+		> $(HOME)/.config/systemd/user/webmux.service
+	@systemctl --user daemon-reload
+	@systemctl --user enable webmux.service
+	@systemctl --user start webmux.service
+	@echo "Installed: ~/.config/systemd/user/webmux.service"
+	@echo "WebMux will start automatically on login."
+	@echo "Hint: run 'loginctl enable-linger $(USER)' to start without logging in."
+endif
+
+uninstall:
+ifeq ($(shell uname),Darwin)
+	@echo "Removing launchd service…"
+	@launchctl stop com.webmux.server 2>/dev/null || true
+	@launchctl unload $(HOME)/Library/LaunchAgents/com.webmux.server.plist 2>/dev/null || true
+	@rm -f $(HOME)/Library/LaunchAgents/com.webmux.server.plist
+	@echo "Uninstalled."
+else
+	@echo "Removing systemd user service…"
+	@systemctl --user stop webmux.service 2>/dev/null || true
+	@systemctl --user disable webmux.service 2>/dev/null || true
+	@rm -f $(HOME)/.config/systemd/user/webmux.service
+	@systemctl --user daemon-reload
+	@echo "Uninstalled."
+endif

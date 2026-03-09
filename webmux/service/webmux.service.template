@@ -1,0 +1,21 @@
+[Unit]
+Description=WebMux SSH Terminal Multiplexer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=WEBMUX_ROOT=__WEBMUX_DIR__
+Environment=PATH=__PATH__
+WorkingDirectory=__WEBMUX_DIR__
+ExecStart=__NODE_PATH__ __WEBMUX_DIR__/backend/dist/index.js
+Restart=on-failure
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+StandardOutput=append:__WEBMUX_DIR__/logs/webmux.log
+StandardError=append:__WEBMUX_DIR__/logs/webmux.log
+
+[Install]
+WantedBy=default.target

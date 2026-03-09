@@ -70,7 +70,7 @@ describe('App', () => {
     mockAuth.authStatus = { mode: 'none', bootstrap_required: false };
     render(<App />);
     await waitFor(() => {
-      expect(screen.getByText('+ New Session')).toBeDefined();
+      expect(screen.getByText('Click to add a session')).toBeDefined();
     });
   });
 });

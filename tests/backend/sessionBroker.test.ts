@@ -178,4 +178,35 @@ describe('SessionBroker', () => {
     const session = await broker.create({ username: 'u', hostname: 'h', key_id: 'mykey' });
     expect(session.key_id).toBe('mykey');
   });
+
+  it('shutdown persists session state and kills PTYs', async () => {
+    const broker = new SessionBroker();
+    await broker.initialize();
+    await broker.create({ username: 'u', hostname: 'h' });
+    broker.shutdown();
+
+    // Verify sessions are persisted as disconnected
+    const sessFile = path.join(tmpDir, 'data', 'sessions', 'sessions.yaml');
+    const content = fs.readFileSync(sessFile, 'utf-8');
+    expect(content).toContain('hostname: h');
+  });
+
+  it('auto-reconnects persistent sessions on initialize', async () => {
+    const broker1 = new SessionBroker();
+    await broker1.initialize();
+    const session = await broker1.create({ username: 'u', hostname: 'h' });
+    broker1.shutdown();
+
+    // Re-initialize a fresh broker — it should load and attempt reconnect
+    jest.resetModules();
+    const { SessionBroker: SessionBroker2 } = require('@backend/services/sessionBroker');
+    const broker2 = new SessionBroker2();
+    await broker2.initialize();
+
+    const sessions = broker2.list();
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].id).toBe(session.id);
+    // State should be 'connecting' or 'error' (error since hostname 'h' is not resolvable)
+    expect(['connecting', 'error']).toContain(sessions[0].state);
+  });
 });

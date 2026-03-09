@@ -18,12 +18,42 @@ export class SessionBroker extends EventEmitter {
   async initialize(): Promise<void> {
     const saved = persistence.loadSessions();
     saved.forEach(s => {
-      // Mark persistent sessions as disconnected on startup
-      s.state = 'disconnected';
-      s.updated_at = new Date().toISOString();
       this.sessions.set(s.id, s);
     });
     console.log(`Loaded ${saved.length} sessions from persistence`);
+
+    // Auto-reconnect persistent sessions that were previously active
+    const reconnectable = saved.filter(s => s.persistent && s.hostname);
+    if (reconnectable.length > 0) {
+      console.log(`Auto-reconnecting ${reconnectable.length} persistent sessions...`);
+      for (const session of reconnectable) {
+        try {
+          session.state = 'connecting';
+          session.updated_at = new Date().toISOString();
+          this.scrollback.delete(session.id);
+          const ptyProcess = transportLauncher.launch(session, undefined, session.key_id || undefined);
+          this.wireEvents(session, ptyProcess);
+          console.log(`  reconnected: ${session.title} (${session.id})`);
+        } catch (err) {
+          session.state = 'error';
+          session.updated_at = new Date().toISOString();
+          console.error(`  failed to reconnect ${session.title}: ${(err as Error).message}`);
+        }
+      }
+      this.persistSessions();
+    }
+  }
+
+  shutdown(): void {
+    console.log('Persisting session state before shutdown...');
+    for (const session of this.sessions.values()) {
+      if (session.state === 'connected' || session.state === 'connecting') {
+        session.state = 'disconnected';
+        session.updated_at = new Date().toISOString();
+      }
+      transportLauncher.kill(session.id);
+    }
+    this.persistSessions();
   }
 
   async create(req: CreateSessionRequest, owner: string = 'anonymous'): Promise<Session> {

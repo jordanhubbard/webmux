@@ -5,7 +5,6 @@ import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext
 import type { Session } from '@frontend/types';
 import type { ReactNode } from 'react';
 
-// Mock Terminal which needs xterm.js
 vi.mock('@frontend/components/Terminal', () => ({
   Terminal: ({ sessionId }: { sessionId: string }) => (
     <div data-testid={`terminal-${sessionId}`}>Terminal Mock</div>
@@ -45,8 +44,6 @@ describe('Tile', () => {
         session={makeSession()}
         fontSize={14}
         onClose={vi.fn()}
-        onSplitRight={vi.fn()}
-        onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
       />,
       { wrapper },
@@ -61,8 +58,6 @@ describe('Tile', () => {
         session={makeSession({ transport: 'mosh' })}
         fontSize={14}
         onClose={vi.fn()}
-        onSplitRight={vi.fn()}
-        onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
       />,
       { wrapper },
@@ -77,8 +72,6 @@ describe('Tile', () => {
         session={makeSession()}
         fontSize={14}
         onClose={onClose}
-        onSplitRight={vi.fn()}
-        onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
       />,
       { wrapper },
@@ -87,48 +80,12 @@ describe('Tile', () => {
     expect(onClose).toHaveBeenCalledWith('s1');
   });
 
-  it('calls onSplitRight when split right button clicked', () => {
-    const onSplitRight = vi.fn();
-    render(
-      <Tile
-        session={makeSession()}
-        fontSize={14}
-        onClose={vi.fn()}
-        onSplitRight={onSplitRight}
-        onSplitBelow={vi.fn()}
-        onReconnect={vi.fn()}
-      />,
-      { wrapper },
-    );
-    fireEvent.click(screen.getByTitle('Split right'));
-    expect(onSplitRight).toHaveBeenCalledWith('s1');
-  });
-
-  it('calls onSplitBelow when split below button clicked', () => {
-    const onSplitBelow = vi.fn();
-    render(
-      <Tile
-        session={makeSession()}
-        fontSize={14}
-        onClose={vi.fn()}
-        onSplitRight={vi.fn()}
-        onSplitBelow={onSplitBelow}
-        onReconnect={vi.fn()}
-      />,
-      { wrapper },
-    );
-    fireEvent.click(screen.getByTitle('Split below'));
-    expect(onSplitBelow).toHaveBeenCalledWith('s1');
-  });
-
   it('shows reconnect button for disconnected sessions', () => {
     render(
       <Tile
         session={makeSession({ state: 'disconnected' })}
         fontSize={14}
         onClose={vi.fn()}
-        onSplitRight={vi.fn()}
-        onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
       />,
       { wrapper },
@@ -143,8 +100,6 @@ describe('Tile', () => {
         session={makeSession({ state: 'disconnected' })}
         fontSize={14}
         onClose={vi.fn()}
-        onSplitRight={vi.fn()}
-        onSplitBelow={vi.fn()}
         onReconnect={onReconnect}
       />,
       { wrapper },
@@ -159,8 +114,6 @@ describe('Tile', () => {
         session={makeSession({ state: 'connected' })}
         fontSize={14}
         onClose={vi.fn()}
-        onSplitRight={vi.fn()}
-        onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
       />,
       { wrapper },
@@ -174,8 +127,6 @@ describe('Tile', () => {
         session={makeSession({ state: 'error' })}
         fontSize={14}
         onClose={vi.fn()}
-        onSplitRight={vi.fn()}
-        onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
       />,
       { wrapper },
@@ -189,8 +140,6 @@ describe('Tile', () => {
         session={makeSession()}
         fontSize={14}
         onClose={vi.fn()}
-        onSplitRight={vi.fn()}
-        onSplitBelow={vi.fn()}
         onReconnect={vi.fn()}
       />,
       { wrapper },

@@ -134,11 +134,9 @@ async function main(): Promise<void> {
     });
   }
 
-  // Graceful shutdown: close WebSockets, kill PTY processes, persist state
   const shutdown = (): void => {
     console.log('Shutting down...');
 
-    // Close all WebSocket connections
     wss.clients.forEach(ws => ws.close(1001, 'Server shutting down'));
     wss.close();
     if (wssSecure) {
@@ -146,15 +144,9 @@ async function main(): Promise<void> {
       wssSecure.close();
     }
 
-    // Kill all PTY processes
-    for (const session of sessionBroker.list()) {
-      transportLauncher.kill(session.id);
-    }
-
-    // Close file watchers and persist
+    sessionBroker.shutdown();
     persistence.close();
 
-    // Close HTTP(S) servers
     httpServer.close();
     httpsServer?.close();
 

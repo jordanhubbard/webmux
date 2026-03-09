@@ -5,22 +5,18 @@ interface TopBarProps {
   auth: AuthState;
   fontSize: number;
   onFontSizeChange: (size: number) => void;
-  onAddSession: () => void;
   onNewAccount: () => void;
   secureMode: boolean;
   currentUser: string | null;
 }
 
-export function TopBar({ auth, fontSize, onFontSizeChange, onAddSession, onNewAccount, secureMode, currentUser }: TopBarProps) {
+export function TopBar({ auth, fontSize, onFontSizeChange, onNewAccount, secureMode, currentUser }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
 
   return (
     <div style={styles.bar}>
       <div style={styles.left}>
         <span style={styles.logo}>{'\u25a6'} WebMux</span>
-        <button style={styles.addBtn} onClick={onAddSession} title="Add new session">
-          + New Session
-        </button>
         <button
           style={{
             ...styles.broadcastBtn,
@@ -102,16 +98,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     color: '#7c6af7',
     letterSpacing: 1,
-  },
-  addBtn: {
-    background: '#7c6af7',
-    border: 'none',
-    borderRadius: 4,
-    padding: '5px 12px',
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
   },
   broadcastBtn: {
     border: '1px solid',

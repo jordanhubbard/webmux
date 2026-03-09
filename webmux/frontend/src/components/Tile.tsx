@@ -7,12 +7,10 @@ interface TileProps {
   session: Session;
   fontSize: number;
   onClose: (id: string) => void;
-  onSplitRight: (id: string) => void;
-  onSplitBelow: (id: string) => void;
   onReconnect: (id: string) => void;
 }
 
-export function Tile({ session, fontSize, onClose, onSplitRight, onSplitBelow, onReconnect }: TileProps) {
+export function Tile({ session, fontSize, onClose, onReconnect }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
   const { focusedSessionId, broadcastMode } = useInputBroadcast();
@@ -40,10 +38,10 @@ export function Tile({ session, fontSize, onClose, onSplitRight, onSplitBelow, o
     state === 'error' ? '\u2717' : '\u25cb';
 
   const borderColor = broadcastMode
-    ? '#e8a030'  // orange when broadcasting to all
+    ? '#e8a030'
     : isFocused
-      ? '#7c6af7' // purple highlight when focused
-      : '#333366'; // default dim border
+      ? '#7c6af7'
+      : '#333366';
 
   return (
     <div style={{
@@ -55,7 +53,6 @@ export function Tile({ session, fontSize, onClose, onSplitRight, onSplitBelow, o
           ? '0 0 8px rgba(124, 106, 247, 0.4)'
           : 'none',
     }}>
-      {/* Chrome header */}
       <div style={styles.chrome}>
         <div style={styles.chromeLeft}>
           <span style={{ ...styles.stateIndicator, color: stateColor }}>{stateIcon}</span>
@@ -68,8 +65,6 @@ export function Tile({ session, fontSize, onClose, onSplitRight, onSplitBelow, o
               {viewerCount}
             </span>
           )}
-          <button style={styles.chromeBtn} onClick={() => onSplitRight(session.id)} title="Split right">{'\u22a2'}</button>
-          <button style={styles.chromeBtn} onClick={() => onSplitBelow(session.id)} title="Split below">{'\u22a4'}</button>
           {(state === 'disconnected' || state === 'error') && (
             <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onReconnect(session.id)} title="Reconnect">{'\u21ba'}</button>
           )}
@@ -77,7 +72,6 @@ export function Tile({ session, fontSize, onClose, onSplitRight, onSplitBelow, o
         </div>
       </div>
 
-      {/* Terminal body */}
       <div style={styles.termContainer}>
         <Terminal
           sessionId={session.id}
@@ -92,21 +86,18 @@ export function Tile({ session, fontSize, onClose, onSplitRight, onSplitBelow, o
   );
 }
 
-const TILE_W = 660;
-const TILE_H = 440;
-
 const styles: Record<string, React.CSSProperties> = {
   tile: {
     display: 'flex',
     flexDirection: 'column',
-    width: TILE_W,
-    height: TILE_H,
+    width: '100%',
+    height: '100%',
     border: '2px solid #333366',
     borderRadius: 6,
     overflow: 'hidden',
     background: '#0d0d1a',
-    flexShrink: 0,
     transition: 'border-color 0.15s, box-shadow 0.15s',
+    boxSizing: 'border-box',
   },
   chrome: {
     display: 'flex',

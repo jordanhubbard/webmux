@@ -21,7 +21,6 @@ function parseTokenUser(): string | null {
 export default function App() {
   const auth = useAuth();
   const [fontSize, setFontSize] = useState(14);
-  const [showAddDialog, setShowAddDialog] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [secureMode, setSecureMode] = useState(true);
 
@@ -32,10 +31,6 @@ export default function App() {
       setSecureMode(config.app.secure_mode);
       setFontSize(config.app.default_term.font_size);
     }).catch(() => {});
-  }, []);
-
-  const handleDialogClose = useCallback(() => {
-    setShowAddDialog(false);
   }, []);
 
   const handleAccountCreated = useCallback((username: string) => {
@@ -62,17 +57,12 @@ export default function App() {
           auth={auth}
           fontSize={fontSize}
           onFontSizeChange={setFontSize}
-          onAddSession={() => setShowAddDialog(true)}
           onNewAccount={() => setShowRegister(true)}
           secureMode={secureMode}
           currentUser={currentUser}
         />
 
-        <Workspace
-          fontSize={fontSize}
-          showAddDialog={showAddDialog}
-          onDialogClose={handleDialogClose}
-        />
+        <Workspace fontSize={fontSize} />
 
         {showRegister && (
           <RegisterDialog
