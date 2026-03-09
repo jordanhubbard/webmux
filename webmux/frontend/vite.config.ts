@@ -22,6 +22,13 @@ export default defineConfig({
   build: {
     outDir: '../web',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          xterm: ['@xterm/xterm', '@xterm/addon-fit', '@xterm/addon-web-links'],
+        },
+      },
+    },
   },
   test: {
     globals: true,
