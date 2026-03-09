@@ -30,7 +30,7 @@ describe('LoginPage', () => {
       authStatus: { mode: 'local', bootstrap_required: true },
     });
     render(<LoginPage auth={auth} />);
-    expect(screen.getByText('Create your admin account')).toBeDefined();
+    expect(screen.getByText('Create your first account to get started')).toBeDefined();
     expect(screen.getByLabelText('Confirm Password')).toBeDefined();
   });
 

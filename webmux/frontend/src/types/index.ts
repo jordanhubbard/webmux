@@ -3,6 +3,7 @@ export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'err
 
 export interface Session {
   id: string;
+  owner: string;
   transport: TransportType;
   host_id: string;
   hostname: string;

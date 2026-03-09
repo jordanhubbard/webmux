@@ -53,7 +53,7 @@ describe('App', () => {
 
   it('shows loading state', () => {
     render(<App />);
-    expect(screen.getByText('Loading…')).toBeDefined();
+    expect(screen.getByText('Loading...')).toBeDefined();
   });
 
   it('shows login page when not authenticated', () => {

@@ -18,12 +18,15 @@ export interface AppConfig {
   };
 }
 
+export interface AuthUser {
+  username: string;
+  password_hash: string;
+}
+
 export interface AuthConfig {
   auth: {
     mode: 'none' | 'local';
-    bootstrap_required: boolean;
-    username_pattern: string;
-    password_hash: string;
+    users: AuthUser[];
   };
 }
 
@@ -69,6 +72,7 @@ export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'err
 
 export interface Session {
   id: string;
+  owner: string;
   transport: TransportType;
   host_id: string;
   hostname: string;

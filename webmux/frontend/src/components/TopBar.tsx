@@ -6,10 +6,12 @@ interface TopBarProps {
   fontSize: number;
   onFontSizeChange: (size: number) => void;
   onAddSession: () => void;
+  onNewAccount: () => void;
   secureMode: boolean;
+  currentUser: string | null;
 }
 
-export function TopBar({ auth, fontSize, onFontSizeChange, onAddSession, secureMode }: TopBarProps) {
+export function TopBar({ auth, fontSize, onFontSizeChange, onAddSession, onNewAccount, secureMode, currentUser }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
 
   return (
@@ -26,6 +28,7 @@ export function TopBar({ auth, fontSize, onFontSizeChange, onAddSession, secureM
             color: broadcastMode ? '#000' : '#aaa',
             borderColor: broadcastMode ? '#e8a030' : '#333366',
           }}
+          onMouseDown={e => e.preventDefault()}
           onClick={() => setBroadcastMode(!broadcastMode)}
           title={broadcastMode ? 'Type to All: ON — input goes to every pane' : 'Type to All: OFF — input goes to focused pane only'}
         >
@@ -62,9 +65,15 @@ export function TopBar({ auth, fontSize, onFontSizeChange, onAddSession, secureM
         </div>
 
         {auth.isAuthenticated && auth.authStatus?.mode !== 'none' && (
-          <button style={styles.iconBtn} onClick={auth.logout} title="Sign out">
-            Sign out
-          </button>
+          <>
+            {currentUser && <span style={styles.userBadge}>{currentUser}</span>}
+            <button style={styles.iconBtn} onClick={onNewAccount} title="Create a new account / session collection">
+              + Account
+            </button>
+            <button style={styles.iconBtn} onClick={auth.logout} title="Sign out">
+              Sign out
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -145,5 +154,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     fontWeight: 600,
     letterSpacing: 0.3,
+  },
+  userBadge: {
+    color: '#7c6af7',
+    fontSize: 12,
+    fontWeight: 600,
   },
 };

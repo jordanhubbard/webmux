@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useRef, useState } from 'react';
+import { createContext, useContext, useCallback, useRef, useState, useMemo, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
 type SendFn = (data: string) => void;
@@ -20,10 +20,12 @@ export function InputBroadcastProvider({ children }: { children: ReactNode }) {
   const [broadcastMode, setBroadcastMode] = useState(false);
   const [focusedSessionId, setFocusedSessionIdState] = useState<string | null>(null);
   const sendFns = useRef(new Map<string, SendFn>());
+  const broadcastModeRef = useRef(broadcastMode);
+
+  useEffect(() => { broadcastModeRef.current = broadcastMode; }, [broadcastMode]);
 
   const registerSend = useCallback((sessionId: string, send: SendFn) => {
     sendFns.current.set(sessionId, send);
-    // Auto-focus first registered session if nothing focused
   }, []);
 
   const unregisterSend = useCallback((sessionId: string) => {
@@ -35,26 +37,26 @@ export function InputBroadcastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const routeInput = useCallback((fromSessionId: string, data: string) => {
-    if (broadcastMode) {
-      // Send to ALL registered sessions
+    if (broadcastModeRef.current) {
       sendFns.current.forEach(send => send(data));
     } else {
-      // Send only to the originating session's WebSocket
       const send = sendFns.current.get(fromSessionId);
       if (send) send(data);
     }
-  }, [broadcastMode]);
+  }, []);
+
+  const value = useMemo(() => ({
+    broadcastMode,
+    setBroadcastMode,
+    focusedSessionId,
+    setFocusedSessionId,
+    registerSend,
+    unregisterSend,
+    routeInput,
+  }), [broadcastMode, focusedSessionId, setFocusedSessionId, registerSend, unregisterSend, routeInput]);
 
   return (
-    <InputBroadcastContext.Provider value={{
-      broadcastMode,
-      setBroadcastMode,
-      focusedSessionId,
-      setFocusedSessionId,
-      registerSend,
-      unregisterSend,
-      routeInput,
-    }}>
+    <InputBroadcastContext.Provider value={value}>
       {children}
     </InputBroadcastContext.Provider>
   );

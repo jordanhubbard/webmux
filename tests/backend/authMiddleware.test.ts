@@ -26,10 +26,10 @@ describe('Auth Middleware', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  function writeAuthConfig(mode: string, bootstrapRequired = false) {
+  function writeAuthConfig(mode: string) {
     fs.writeFileSync(
       path.join(tmpDir, 'config', 'auth.yaml'),
-      `auth:\n  mode: ${mode}\n  bootstrap_required: ${bootstrapRequired}\n  username_pattern: ""\n  password_hash: ""\n`
+      `auth:\n  mode: ${mode}\n  users: []\n`
     );
   }
 

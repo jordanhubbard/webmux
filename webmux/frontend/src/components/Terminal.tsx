@@ -39,9 +39,9 @@ export function Terminal({
   useEffect(() => { onViewerUpdateRef.current = onViewerUpdate; }, [onViewerUpdate]);
   useEffect(() => { onFocusGainedRef.current = onFocusGained; }, [onFocusGained]);
 
-  // Keep routeInput in a ref so the xterm onData handler always uses the latest
+  // routeInput is a stable callback that reads broadcastMode from a ref internally,
+  // so no ref-wrapper needed here.
   const routeInputRef = useRef(routeInput);
-  useEffect(() => { routeInputRef.current = routeInput; }, [routeInput]);
 
   const handleMessage = useCallback((msg: WebSocketMessage) => {
     switch (msg.type) {

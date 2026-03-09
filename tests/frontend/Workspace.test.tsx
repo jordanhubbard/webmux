@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 
 const mockSessions = [
   {
-    id: 's1', transport: 'ssh' as const, host_id: '', hostname: 'h1', username: 'u1',
+    id: 's1', owner: 'u1', transport: 'ssh' as const, host_id: '', hostname: 'h1', username: 'u1',
     key_id: '', cols: 80, rows: 24, row: 0, col: 0,
     state: 'connected' as const, created_at: '', updated_at: '', title: 'u1@h1', persistent: true,
   },
@@ -66,7 +66,7 @@ describe('Workspace', () => {
   it('shows connection dialog when showAddDialog is true', async () => {
     render(<Workspace fontSize={14} showAddDialog={true} onDialogClose={vi.fn()} />, { wrapper });
     await waitFor(() => {
-      expect(screen.getByText('New SSH Session')).toBeDefined();
+      expect(screen.getByText('Connect to Host')).toBeDefined();
     });
   });
 });

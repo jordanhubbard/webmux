@@ -23,17 +23,18 @@ function makeAuth(overrides: Partial<AuthState> = {}): AuthState {
 }
 
 describe('TopBar', () => {
+  const defaultTopBarProps = () => ({
+    auth: makeAuth(),
+    fontSize: 14,
+    onFontSizeChange: vi.fn(),
+    onAddSession: vi.fn(),
+    onNewAccount: vi.fn(),
+    secureMode: true,
+    currentUser: 'admin',
+  });
+
   it('renders logo and controls', () => {
-    render(
-      <TopBar
-        auth={makeAuth()}
-        fontSize={14}
-        onFontSizeChange={vi.fn()}
-        onAddSession={vi.fn()}
-        secureMode={true}
-      />,
-      { wrapper },
-    );
+    render(<TopBar {...defaultTopBarProps()} />, { wrapper });
     expect(screen.getAllByText(/WebMux/i).length).toBeGreaterThan(0);
     expect(screen.getByText('+ New Session')).toBeDefined();
     expect(screen.getByText('14px')).toBeDefined();
@@ -41,43 +42,19 @@ describe('TopBar', () => {
 
   it('calls onAddSession when clicking + New Session', () => {
     const onAddSession = vi.fn();
-    render(
-      <TopBar
-        auth={makeAuth()}
-        fontSize={14}
-        onFontSizeChange={vi.fn()}
-        onAddSession={onAddSession}
-        secureMode={true}
-      />,
-      { wrapper },
-    );
+    render(<TopBar {...defaultTopBarProps()} onAddSession={onAddSession} />, { wrapper });
     fireEvent.click(screen.getByText('+ New Session'));
     expect(onAddSession).toHaveBeenCalled();
   });
 
   it('shows secure badge in secure mode', () => {
-    render(
-      <TopBar
-        auth={makeAuth()}
-        fontSize={14}
-        onFontSizeChange={vi.fn()}
-        onAddSession={vi.fn()}
-        secureMode={true}
-      />,
-      { wrapper },
-    );
+    render(<TopBar {...defaultTopBarProps()} />, { wrapper });
     expect(screen.getByText(/Secure/)).toBeDefined();
   });
 
   it('shows trusted badge in trusted mode', () => {
     render(
-      <TopBar
-        auth={makeAuth({ authStatus: { mode: 'none', bootstrap_required: false } })}
-        fontSize={14}
-        onFontSizeChange={vi.fn()}
-        onAddSession={vi.fn()}
-        secureMode={false}
-      />,
+      <TopBar {...defaultTopBarProps()} auth={makeAuth({ authStatus: { mode: 'none', bootstrap_required: false } })} secureMode={false} />,
       { wrapper },
     );
     expect(screen.getByText(/Trusted/)).toBeDefined();
@@ -85,16 +62,7 @@ describe('TopBar', () => {
 
   it('calls onFontSizeChange when clicking A- or A+', () => {
     const onFontSizeChange = vi.fn();
-    render(
-      <TopBar
-        auth={makeAuth()}
-        fontSize={14}
-        onFontSizeChange={onFontSizeChange}
-        onAddSession={vi.fn()}
-        secureMode={true}
-      />,
-      { wrapper },
-    );
+    render(<TopBar {...defaultTopBarProps()} onFontSizeChange={onFontSizeChange} />, { wrapper });
     fireEvent.click(screen.getByText('A+'));
     expect(onFontSizeChange).toHaveBeenCalledWith(15);
     fireEvent.click(screen.getByText('A-'));
@@ -102,31 +70,30 @@ describe('TopBar', () => {
   });
 
   it('shows Type to All button', () => {
-    render(
-      <TopBar
-        auth={makeAuth()}
-        fontSize={14}
-        onFontSizeChange={vi.fn()}
-        onAddSession={vi.fn()}
-        secureMode={true}
-      />,
-      { wrapper },
-    );
+    render(<TopBar {...defaultTopBarProps()} />, { wrapper });
     expect(screen.getByText('Type to All')).toBeDefined();
   });
 
   it('toggles Type to All button on click', () => {
-    render(
-      <TopBar
-        auth={makeAuth()}
-        fontSize={14}
-        onFontSizeChange={vi.fn()}
-        onAddSession={vi.fn()}
-        secureMode={true}
-      />,
-      { wrapper },
-    );
+    render(<TopBar {...defaultTopBarProps()} />, { wrapper });
     fireEvent.click(screen.getByText('Type to All'));
     expect(screen.getByText('Type to All: ON')).toBeDefined();
+  });
+
+  it('shows current user badge', () => {
+    render(<TopBar {...defaultTopBarProps()} currentUser="admin" />, { wrapper });
+    expect(screen.getByText('admin')).toBeDefined();
+  });
+
+  it('shows + Account button', () => {
+    render(<TopBar {...defaultTopBarProps()} />, { wrapper });
+    expect(screen.getByText('+ Account')).toBeDefined();
+  });
+
+  it('calls onNewAccount when + Account clicked', () => {
+    const onNewAccount = vi.fn();
+    render(<TopBar {...defaultTopBarProps()} onNewAccount={onNewAccount} />, { wrapper });
+    fireEvent.click(screen.getByText('+ Account'));
+    expect(onNewAccount).toHaveBeenCalled();
   });
 });

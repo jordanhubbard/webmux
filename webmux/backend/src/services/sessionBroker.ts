@@ -26,7 +26,7 @@ export class SessionBroker extends EventEmitter {
     console.log(`Loaded ${saved.length} sessions from persistence`);
   }
 
-  async create(req: CreateSessionRequest): Promise<Session> {
+  async create(req: CreateSessionRequest, owner: string = 'anonymous'): Promise<Session> {
     const id = uuidv4();
 
     // Determine hostname
@@ -45,8 +45,9 @@ export class SessionBroker extends EventEmitter {
       }
     }
 
-    // Determine layout position
-    const { row, col } = this.nextPosition(req.row, req.col);
+    // Determine layout position (scoped to this owner's sessions)
+    const ownerSessions = Array.from(this.sessions.values()).filter(s => s.owner === owner);
+    const { row, col } = this.nextPositionFor(ownerSessions, req.row, req.col);
 
     // Determine transport: use mosh if host allows it and config prefers it
     let transport = req.transport || 'ssh';
@@ -65,6 +66,7 @@ export class SessionBroker extends EventEmitter {
 
     const session: Session = {
       id,
+      owner,
       transport,
       host_id: req.host_id || '',
       hostname,
@@ -191,6 +193,10 @@ export class SessionBroker extends EventEmitter {
     return Array.from(this.sessions.values());
   }
 
+  listByOwner(owner: string): Session[] {
+    return Array.from(this.sessions.values()).filter(s => s.owner === owner);
+  }
+
   resize(sessionId: string, cols: number, rows: number): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
@@ -219,15 +225,13 @@ export class SessionBroker extends EventEmitter {
     return { row: session.row + 1, col: session.col };
   }
 
-  private nextPosition(requestedRow?: number, requestedCol?: number): { row: number; col: number } {
+  private nextPositionFor(sessions: Session[], requestedRow?: number, requestedCol?: number): { row: number; col: number } {
     if (requestedRow !== undefined && requestedCol !== undefined) {
       return { row: requestedRow, col: requestedCol };
     }
 
-    const sessions = Array.from(this.sessions.values());
     if (sessions.length === 0) return { row: 0, col: 0 };
 
-    // Find max col in last row
     const maxRow = Math.max(...sessions.map(s => s.row));
     const rowSessions = sessions.filter(s => s.row === maxRow);
     const maxCol = Math.max(...rowSessions.map(s => s.col));

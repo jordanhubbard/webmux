@@ -25,8 +25,17 @@ export function useAuth(): AuthState {
         setAuthStatus(status);
         if (status.mode === 'none') {
           setIsAuthenticated(true);
-        } else if (localStorage.getItem('webmux_token')) {
-          setIsAuthenticated(true);
+        } else {
+          const token = localStorage.getItem('webmux_token');
+          if (token) {
+            // Validate token by making an authenticated request
+            try {
+              await api.getSessions();
+              setIsAuthenticated(true);
+            } catch {
+              localStorage.removeItem('webmux_token');
+            }
+          }
         }
       } catch {
         setError('Failed to reach server');

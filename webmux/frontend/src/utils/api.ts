@@ -42,6 +42,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),
+  register: (username: string, password: string) =>
+    request<{ username: string }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    }),
 
   // Sessions
   getSessions: () => request<Session[]>('/sessions'),

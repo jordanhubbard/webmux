@@ -19,7 +19,7 @@ describe('API Routes', () => {
 
     // Auth mode none so we don't need tokens
     fs.writeFileSync(path.join(configDir, 'auth.yaml'),
-      'auth:\n  mode: none\n  bootstrap_required: false\n  username_pattern: ""\n  password_hash: ""\n');
+      'auth:\n  mode: none\n  users: []\n');
     fs.writeFileSync(path.join(configDir, 'hosts.yaml'),
       'hosts:\n  - id: h1\n    hostname: host1.example.com\n    port: 22\n    tags: [linux]\n    mosh_allowed: false\n');
     fs.writeFileSync(path.join(configDir, 'keys.yaml'), 'keys: []\n');
@@ -291,10 +291,19 @@ describe('API Routes', () => {
   });
 
   describe('POST /api/auth/bootstrap', () => {
-    it('returns 403 when bootstrap not required', async () => {
+    it('creates first user when no users exist', async () => {
       const res = await request(app)
         .post('/api/auth/bootstrap')
         .send({ username: 'admin', password: 'pass' });
+      expect(res.status).toBe(200);
+      expect(res.body.token).toBeDefined();
+    });
+
+    it('returns 403 when users already exist', async () => {
+      await request(app).post('/api/auth/bootstrap').send({ username: 'admin', password: 'pass' });
+      const res = await request(app)
+        .post('/api/auth/bootstrap')
+        .send({ username: 'other', password: 'pass2' });
       expect(res.status).toBe(403);
     });
 

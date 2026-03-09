@@ -5,3 +5,8 @@ hosts:
     tags:
       - linux
     mosh_allowed: false
+  - id: 4de55209-4d7d-4695-8a5e-ba165ec45b35
+    hostname: sparky.local
+    port: 22
+    tags: []
+    mosh_allowed: false

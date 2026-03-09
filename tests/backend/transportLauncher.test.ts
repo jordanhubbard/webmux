@@ -6,6 +6,7 @@ import { Session } from '@backend/types';
 function makeSession(overrides: Partial<Session> = {}): Session {
   return {
     id: 'sess-001',
+    owner: 'testuser',
     transport: 'ssh',
     host_id: '',
     hostname: 'example.com',

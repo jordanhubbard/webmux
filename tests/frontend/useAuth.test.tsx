@@ -3,6 +3,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 
 const mockApi = vi.hoisted(() => ({
   getAuthStatus: vi.fn(),
+  getSessions: vi.fn().mockResolvedValue([]),
   login: vi.fn(),
   bootstrap: vi.fn(),
 }));

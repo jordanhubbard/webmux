@@ -47,11 +47,11 @@ export function LoginPage({ auth }: LoginPageProps) {
     <div style={styles.overlay}>
       <div style={styles.card}>
         <div style={styles.logo}>
-          <span style={styles.logoIcon}>▦</span>
+          <span style={styles.logoIcon}>{'\u25a6'}</span>
           <span style={styles.logoText}>WebMux</span>
         </div>
         <p style={styles.subtitle}>
-          {isBootstrap ? 'Create your admin account' : 'Sign in to your terminal wall'}
+          {isBootstrap ? 'Create your first account to get started' : 'Sign in to your session'}
         </p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -102,7 +102,7 @@ export function LoginPage({ auth }: LoginPageProps) {
           )}
 
           <button type="submit" style={styles.button} disabled={submitting}>
-            {submitting ? 'Please wait…' : isBootstrap ? 'Create Account' : 'Sign In'}
+            {submitting ? 'Please wait\u2026' : isBootstrap ? 'Create Account' : 'Sign In'}
           </button>
         </form>
       </div>

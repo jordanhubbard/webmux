@@ -24,7 +24,7 @@ describe('WebSocket Integration', () => {
     fs.mkdirSync(configDir, { recursive: true });
 
     fs.writeFileSync(path.join(configDir, 'auth.yaml'),
-      'auth:\n  mode: none\n  bootstrap_required: false\n  username_pattern: ""\n  password_hash: ""\n');
+      'auth:\n  mode: none\n  users: []\n');
     fs.writeFileSync(path.join(configDir, 'hosts.yaml'), 'hosts: []\n');
     fs.writeFileSync(path.join(configDir, 'keys.yaml'), 'keys: []\n');
     fs.writeFileSync(path.join(configDir, 'layout.yaml'), 'layout:\n  font_size: 14\n  tiles: []\n');
