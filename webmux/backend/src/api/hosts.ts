@@ -17,9 +17,9 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 router.post('/', (req: Request, res: Response) => {
-  const { hostname, port, tags, mosh_allowed, id } = req.body as Partial<HostEntry>;
+  const body = req.body as Partial<HostEntry>;
 
-  if (!hostname) {
+  if (!body.hostname) {
     res.status(400).json({ error: 'hostname is required' });
     return;
   }
@@ -27,12 +27,14 @@ router.post('/', (req: Request, res: Response) => {
   try {
     const config = persistence.loadHosts();
     const host: HostEntry = {
-      id: id || uuidv4(),
-      hostname,
-      port: port || 22,
-      username: (req.body as Partial<HostEntry>).username || '',
-      tags: tags || [],
-      mosh_allowed: mosh_allowed ?? false,
+      id: body.id || uuidv4(),
+      hostname: body.hostname,
+      port: body.port || 22,
+      username: body.username || '',
+      transport: body.transport || 'ssh',
+      key_id: body.key_id || '',
+      tags: body.tags || [],
+      mosh_allowed: body.mosh_allowed ?? false,
     };
     config.hosts.push(host);
     persistence.saveHosts(config);

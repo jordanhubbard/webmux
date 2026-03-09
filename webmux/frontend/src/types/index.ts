@@ -25,6 +25,8 @@ export interface HostEntry {
   hostname: string;
   port: number;
   username: string;
+  transport: TransportType;
+  key_id: string;
   tags: string[];
   mosh_allowed: boolean;
 }

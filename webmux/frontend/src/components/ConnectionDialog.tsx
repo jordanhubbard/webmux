@@ -70,6 +70,8 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
         hostname: hostname.trim(),
         port,
         username: username.trim(),
+        transport,
+        key_id: authMode === 'key' ? selectedKeyId : '',
         tags: [],
         mosh_allowed: transport === 'mosh',
       });
@@ -92,15 +94,17 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
     setSubmitting(true);
     setError(null);
     try {
-      await onConnect({
+      const req: CreateSessionRequest = {
         username: user,
         host_id: host.id,
         hostname: host.hostname,
         port: host.port,
-        transport,
+        transport: host.transport || 'ssh',
         row: suggestedRow ?? 0,
         col: suggestedCol ?? 0,
-      });
+      };
+      if (host.key_id) req.key_id = host.key_id;
+      await onConnect(req);
     } catch (err) {
       setError((err as Error).message);
     } finally {

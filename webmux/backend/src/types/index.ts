@@ -30,11 +30,16 @@ export interface AuthConfig {
   };
 }
 
+export type TransportType = 'ssh' | 'mosh';
+export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
+
 export interface HostEntry {
   id: string;
   hostname: string;
   port: number;
   username: string;
+  transport: TransportType;
+  key_id: string;
   tags: string[];
   mosh_allowed: boolean;
 }
@@ -67,9 +72,6 @@ export interface KeyEntry {
 export interface KeysConfig {
   keys: KeyEntry[];
 }
-
-export type TransportType = 'ssh' | 'mosh';
-export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 export interface Session {
   id: string;
