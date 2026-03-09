@@ -58,26 +58,6 @@ router.post('/:id/reconnect', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/:id/split-right', (req: Request, res: Response) => {
-  const owner = getOwner(req);
-  const session = sessionBroker.get(req.params.id);
-  if (!session || session.owner !== owner) {
-    res.status(404).json({ error: 'Session not found' });
-    return;
-  }
-  res.json(sessionBroker.splitRight(req.params.id));
-});
-
-router.post('/:id/split-below', (req: Request, res: Response) => {
-  const owner = getOwner(req);
-  const session = sessionBroker.get(req.params.id);
-  if (!session || session.owner !== owner) {
-    res.status(404).json({ error: 'Session not found' });
-    return;
-  }
-  res.json(sessionBroker.splitBelow(req.params.id));
-});
-
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const owner = getOwner(req);

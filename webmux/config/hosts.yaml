@@ -1,9 +1,0 @@
-hosts:
-  - id: 4de55209-4d7d-4695-8a5e-ba165ec45b35
-    hostname: sparky.local
-    port: 22
-    username: jkh
-    transport: ssh
-    key_id: ''
-    tags: []
-    mosh_allowed: false

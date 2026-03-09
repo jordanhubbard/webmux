@@ -14,6 +14,7 @@
 #   make help             Show this help
 #
 # Configuration (override via environment or make args):
+#   WEBMUX_HOME        Runtime config/data dir  (default: ~/.config/webmux)
 #   HTTP_PORT          HTTP listen port        (default: 8080)
 #   HTTPS_PORT         HTTPS listen port       (default: 8443)
 #   LISTEN_HOST        Bind address            (default: 0.0.0.0)
@@ -26,15 +27,29 @@
 #   make start AUTH_MODE=none
 #   make start SECURE_MODE=true JWT_SECRET=$(openssl rand -hex 32)
 
+# ── Colors ────────────────────────────────────────────────────────
+C_RST  := \033[0m
+C_BLD  := \033[1m
+C_DIM  := \033[2m
+C_GRN  := \033[32m
+C_YLW  := \033[33m
+C_BLU  := \033[34m
+C_MAG  := \033[35m
+C_CYN  := \033[36m
+C_RED  := \033[31m
+C_WHT  := \033[37m
+
 # ── Paths ──────────────────────────────────────────────────────────
 WEBMUX_DIR   := $(CURDIR)/webmux
 WEBMUX_ROOT  := $(WEBMUX_DIR)
-PIDFILE      := $(WEBMUX_DIR)/.webmux.pid
-LOGFILE      := $(WEBMUX_DIR)/logs/webmux.log
+WEBMUX_HOME  ?= $(HOME)/.config/webmux
+PIDFILE      := $(WEBMUX_HOME)/.webmux.pid
+LOGFILE      := $(WEBMUX_HOME)/logs/webmux.log
 NODE         := node
 NPM          := npm
 
 export WEBMUX_ROOT
+export WEBMUX_HOME
 
 # ── Tunables (override on command line or env) ─────────────────────
 HTTP_PORT    ?=
@@ -63,53 +78,74 @@ endif
 all: build
 
 help:
-	@sed -n '/^# /s/^# //p' $(MAKEFILE_LIST) | grep -v '^──' | head -22
+	@printf "$(C_BLD)$(C_MAG)▦ WebMux$(C_RST)$(C_DIM) — web-native terminal multiplexer$(C_RST)\n\n"
+	@printf "$(C_BLD)Targets:$(C_RST)\n"
+	@printf "  $(C_CYN)make$(C_RST)               Build the application\n"
+	@printf "  $(C_CYN)make start$(C_RST)          Build and start the server\n"
+	@printf "  $(C_CYN)make stop$(C_RST)           Stop the running server\n"
+	@printf "  $(C_CYN)make restart$(C_RST)        Restart the server\n"
+	@printf "  $(C_CYN)make status$(C_RST)         Check if the server is running\n"
+	@printf "  $(C_CYN)make test$(C_RST)           Run all tests\n"
+	@printf "  $(C_CYN)make lint$(C_RST)           Lint all code\n"
+	@printf "  $(C_CYN)make clean$(C_RST)          Remove build artifacts\n"
+	@printf "  $(C_CYN)make install$(C_RST)        Install as OS service (launchd/systemd)\n"
+	@printf "  $(C_CYN)make uninstall$(C_RST)      Remove OS service\n"
+	@printf "  $(C_CYN)make configure$(C_RST)      Update runtime configuration\n"
+	@printf "  $(C_CYN)make help$(C_RST)           Show this help\n"
+	@printf "\n$(C_BLD)Configuration:$(C_RST)\n"
+	@printf "  $(C_YLW)WEBMUX_HOME$(C_RST)=$(C_DIM)~/.config/webmux$(C_RST)   Runtime config/data directory\n"
+	@printf "  $(C_YLW)HTTP_PORT$(C_RST)=$(C_DIM)8080$(C_RST)              HTTP listen port\n"
+	@printf "  $(C_YLW)HTTPS_PORT$(C_RST)=$(C_DIM)8443$(C_RST)             HTTPS listen port\n"
+	@printf "  $(C_YLW)LISTEN_HOST$(C_RST)=$(C_DIM)0.0.0.0$(C_RST)          Bind address\n"
 
 deps:
 	@cd $(WEBMUX_DIR) && $(NPM) install --silent
 
 build: deps
-	@echo "Building webmux…"
+	@printf "$(C_BLU)▸$(C_RST) Building webmux…\n"
 	@cd $(WEBMUX_DIR) && $(NPM) run build --silent
-	@echo "Build complete."
+	@printf "$(C_GRN)✓$(C_RST) Build complete.\n"
 
 configure:
-	@echo "Configuring webmux…"
+	@printf "$(C_BLU)▸$(C_RST) Configuring webmux…\n"
+	@mkdir -p $(WEBMUX_HOME)/config
 ifneq ($(LISTEN_HOST),)
-	@cd $(WEBMUX_DIR) && sed -i.bak 's/listen_host:.*/listen_host: $(LISTEN_HOST)/' config/app.yaml && rm -f config/app.yaml.bak
+	@sed -i.bak 's/listen_host:.*/listen_host: $(LISTEN_HOST)/' $(WEBMUX_HOME)/config/app.yaml && rm -f $(WEBMUX_HOME)/config/app.yaml.bak
 endif
 ifneq ($(HTTP_PORT),)
-	@cd $(WEBMUX_DIR) && sed -i.bak 's/http_port:.*/http_port: $(HTTP_PORT)/' config/app.yaml && rm -f config/app.yaml.bak
+	@sed -i.bak 's/http_port:.*/http_port: $(HTTP_PORT)/' $(WEBMUX_HOME)/config/app.yaml && rm -f $(WEBMUX_HOME)/config/app.yaml.bak
 endif
 ifneq ($(HTTPS_PORT),)
-	@cd $(WEBMUX_DIR) && sed -i.bak 's/https_port:.*/https_port: $(HTTPS_PORT)/' config/app.yaml && rm -f config/app.yaml.bak
+	@sed -i.bak 's/https_port:.*/https_port: $(HTTPS_PORT)/' $(WEBMUX_HOME)/config/app.yaml && rm -f $(WEBMUX_HOME)/config/app.yaml.bak
 endif
 ifneq ($(SECURE_MODE),)
-	@cd $(WEBMUX_DIR) && sed -i.bak 's/secure_mode:.*/secure_mode: $(SECURE_MODE)/' config/app.yaml && rm -f config/app.yaml.bak
+	@sed -i.bak 's/secure_mode:.*/secure_mode: $(SECURE_MODE)/' $(WEBMUX_HOME)/config/app.yaml && rm -f $(WEBMUX_HOME)/config/app.yaml.bak
 endif
 ifneq ($(AUTH_MODE),)
-	@cd $(WEBMUX_DIR) && sed -i.bak 's/mode:.*/mode: $(AUTH_MODE)/' config/auth.yaml && rm -f config/auth.yaml.bak
+	@sed -i.bak 's/mode:.*/mode: $(AUTH_MODE)/' $(WEBMUX_HOME)/config/auth.yaml && rm -f $(WEBMUX_HOME)/config/auth.yaml.bak
 endif
-	@echo "Current configuration:"
-	@echo "  app.yaml:"
-	@grep -E '(listen_host|http_port|https_port|secure_mode):' $(WEBMUX_DIR)/config/app.yaml | sed 's/^/    /'
-	@echo "  auth.yaml:"
-	@grep -E 'mode:' $(WEBMUX_DIR)/config/auth.yaml | sed 's/^/    /'
+	@printf "\n$(C_BLD)Current configuration:$(C_RST)\n"
+	@printf "  $(C_DIM)app.yaml:$(C_RST)\n"
+	@grep -E '(listen_host|http_port|https_port|secure_mode):' $(WEBMUX_HOME)/config/app.yaml | sed 's/^/    /'
+	@printf "  $(C_DIM)auth.yaml:$(C_RST)\n"
+	@grep -E 'mode:' $(WEBMUX_HOME)/config/auth.yaml | sed 's/^/    /'
 
 start: build
-	@mkdir -p $(WEBMUX_DIR)/logs
+	@mkdir -p $(WEBMUX_HOME)/logs
 	@if [ -f $(PIDFILE) ] && kill -0 $$(cat $(PIDFILE)) 2>/dev/null; then \
-		echo "webmux is already running (pid $$(cat $(PIDFILE)))"; \
+		printf "$(C_YLW)●$(C_RST) webmux is already running $(C_DIM)(pid $$(cat $(PIDFILE)))$(C_RST)\n"; \
 		exit 1; \
 	fi
-	@cd $(WEBMUX_DIR) && $(RUNTIME_ENV) exec $(NODE) backend/dist/index.js >> $(LOGFILE) 2>&1 & echo $$! > $(PIDFILE)
+	@cd $(WEBMUX_DIR) && $(RUNTIME_ENV) WEBMUX_ROOT=$(WEBMUX_ROOT) WEBMUX_HOME=$(WEBMUX_HOME) \
+		exec $(NODE) backend/dist/index.js >> $(LOGFILE) 2>&1 & echo $$! > $(PIDFILE)
 	@sleep 0.5
 	@if kill -0 $$(cat $(PIDFILE)) 2>/dev/null; then \
-		echo "webmux started (pid $$(cat $(PIDFILE)))"; \
-		echo "  logs: $(LOGFILE)"; \
+		printf "$(C_GRN)●$(C_RST) webmux started $(C_DIM)(pid $$(cat $(PIDFILE)))$(C_RST)\n"; \
+		printf "  $(C_DIM)config:$(C_RST) $(WEBMUX_HOME)\n"; \
+		printf "  $(C_DIM)logs:$(C_RST)   $(LOGFILE)\n"; \
 		grep -E '(listening|http|https)' $(LOGFILE) 2>/dev/null | tail -3 | sed 's/^/  /'; \
 	else \
-		echo "webmux failed to start — check $(LOGFILE)"; \
+		printf "$(C_RED)✗$(C_RST) webmux failed to start — check $(LOGFILE)\n"; \
 		tail -5 $(LOGFILE) 2>/dev/null; \
 		rm -f $(PIDFILE); \
 		exit 1; \
@@ -125,17 +161,17 @@ stop:
 				sleep 0.5; \
 			done; \
 			if kill -0 $$PID 2>/dev/null; then \
-				echo "webmux did not stop gracefully, sending SIGKILL"; \
+				printf "$(C_YLW)!$(C_RST) webmux did not stop gracefully, sending SIGKILL\n"; \
 				kill -9 $$PID 2>/dev/null; \
 				sleep 0.5; \
 			fi; \
-			echo "webmux stopped (pid $$PID)"; \
+			printf "$(C_DIM)●$(C_RST) webmux stopped $(C_DIM)(pid $$PID)$(C_RST)\n"; \
 		else \
-			echo "webmux was not running (stale pidfile)"; \
+			printf "$(C_DIM)●$(C_RST) webmux was not running $(C_DIM)(stale pidfile)$(C_RST)\n"; \
 		fi; \
 		rm -f $(PIDFILE); \
 	else \
-		echo "webmux is not running"; \
+		printf "$(C_DIM)●$(C_RST) webmux is not running\n"; \
 	fi
 
 restart: stop
@@ -143,9 +179,9 @@ restart: stop
 
 status:
 	@if [ -f $(PIDFILE) ] && kill -0 $$(cat $(PIDFILE)) 2>/dev/null; then \
-		echo "webmux is running (pid $$(cat $(PIDFILE)))"; \
+		printf "$(C_GRN)●$(C_RST) webmux is running $(C_DIM)(pid $$(cat $(PIDFILE)))$(C_RST)\n"; \
 	else \
-		echo "webmux is not running"; \
+		printf "$(C_DIM)●$(C_RST) webmux is not running\n"; \
 	fi
 
 test:
@@ -155,60 +191,68 @@ lint:
 	@cd $(WEBMUX_DIR) && $(NPM) run lint
 
 clean: stop
-	@echo "Cleaning build artifacts…"
+	@printf "$(C_BLU)▸$(C_RST) Cleaning build artifacts…\n"
 	@rm -rf $(WEBMUX_DIR)/backend/dist $(WEBMUX_DIR)/web
 	@rm -rf $(WEBMUX_DIR)/node_modules $(WEBMUX_DIR)/backend/node_modules $(WEBMUX_DIR)/frontend/node_modules
 	@rm -f $(PIDFILE)
-	@echo "Clean."
+	@printf "$(C_GRN)✓$(C_RST) Clean.\n"
 
 # ── Service management ──────────────────────────────────────────
 SERVICE_DIR     := $(WEBMUX_DIR)/service
 NODE_PATH       := $(shell which node)
 CURRENT_PATH    := $(shell echo $$PATH)
 
-install: build
-	@mkdir -p $(WEBMUX_DIR)/logs
+PLIST       := $(HOME)/Library/LaunchAgents/com.webmux.server.plist
+UNIT        := $(HOME)/.config/systemd/user/webmux.service
+LAUNCHD_SVC := gui/$(shell id -u)/com.webmux.server
+
+install: stop build
+	@mkdir -p $(WEBMUX_HOME)/logs
 ifeq ($(shell uname),Darwin)
-	@echo "Installing launchd service…"
+	@printf "$(C_BLU)▸$(C_RST) Installing launchd service…\n"
+	@launchctl bootout $(LAUNCHD_SVC) 2>/dev/null || true
 	@sed \
 		-e 's|__NODE_PATH__|$(NODE_PATH)|g' \
 		-e 's|__WEBMUX_DIR__|$(WEBMUX_DIR)|g' \
+		-e 's|__WEBMUX_HOME__|$(WEBMUX_HOME)|g' \
 		-e 's|__PATH__|$(CURRENT_PATH)|g' \
 		$(SERVICE_DIR)/com.webmux.server.plist.template \
-		> $(HOME)/Library/LaunchAgents/com.webmux.server.plist
-	@launchctl load $(HOME)/Library/LaunchAgents/com.webmux.server.plist 2>/dev/null || true
-	@launchctl start com.webmux.server 2>/dev/null || true
-	@echo "Installed: ~/Library/LaunchAgents/com.webmux.server.plist"
-	@echo "WebMux will start automatically on login."
+		> $(PLIST)
+	@launchctl bootstrap gui/$$(id -u) $(PLIST)
+	@launchctl kickstart -k $(LAUNCHD_SVC) 2>/dev/null || true
+	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)$(PLIST)$(C_RST)\n"
+	@printf "  $(C_DIM)config:$(C_RST) $(WEBMUX_HOME)\n"
+	@printf "  $(C_DIM)logs:$(C_RST)   $(WEBMUX_HOME)/logs/webmux.log\n"
+	@printf "$(C_GRN)●$(C_RST) WebMux will start automatically on login.\n"
 else
-	@echo "Installing systemd user service…"
-	@mkdir -p $(HOME)/.config/systemd/user
+	@printf "$(C_BLU)▸$(C_RST) Installing systemd user service…\n"
+	@mkdir -p $(dir $(UNIT))
 	@sed \
 		-e 's|__NODE_PATH__|$(NODE_PATH)|g' \
 		-e 's|__WEBMUX_DIR__|$(WEBMUX_DIR)|g' \
+		-e 's|__WEBMUX_HOME__|$(WEBMUX_HOME)|g' \
 		-e 's|__PATH__|$(CURRENT_PATH)|g' \
 		$(SERVICE_DIR)/webmux.service.template \
-		> $(HOME)/.config/systemd/user/webmux.service
+		> $(UNIT)
 	@systemctl --user daemon-reload
-	@systemctl --user enable webmux.service
-	@systemctl --user start webmux.service
-	@echo "Installed: ~/.config/systemd/user/webmux.service"
-	@echo "WebMux will start automatically on login."
-	@echo "Hint: run 'loginctl enable-linger $(USER)' to start without logging in."
+	@systemctl --user enable --now webmux.service
+	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)$(UNIT)$(C_RST)\n"
+	@printf "  $(C_DIM)config:$(C_RST) $(WEBMUX_HOME)\n"
+	@printf "  $(C_DIM)logs:$(C_RST)   $(WEBMUX_HOME)/logs/webmux.log\n"
+	@printf "$(C_GRN)●$(C_RST) WebMux will start automatically on login.\n"
+	@printf "  $(C_DIM)Hint: run$(C_RST) loginctl enable-linger $(USER) $(C_DIM)to start without logging in.$(C_RST)\n"
 endif
 
 uninstall:
 ifeq ($(shell uname),Darwin)
-	@echo "Removing launchd service…"
-	@launchctl stop com.webmux.server 2>/dev/null || true
-	@launchctl unload $(HOME)/Library/LaunchAgents/com.webmux.server.plist 2>/dev/null || true
-	@rm -f $(HOME)/Library/LaunchAgents/com.webmux.server.plist
-	@echo "Uninstalled."
+	@printf "$(C_BLU)▸$(C_RST) Removing launchd service…\n"
+	@launchctl bootout $(LAUNCHD_SVC) 2>/dev/null || true
+	@rm -f $(PLIST)
+	@printf "$(C_GRN)✓$(C_RST) Uninstalled.\n"
 else
-	@echo "Removing systemd user service…"
-	@systemctl --user stop webmux.service 2>/dev/null || true
-	@systemctl --user disable webmux.service 2>/dev/null || true
-	@rm -f $(HOME)/.config/systemd/user/webmux.service
+	@printf "$(C_BLU)▸$(C_RST) Removing systemd user service…\n"
+	@systemctl --user disable --now webmux.service 2>/dev/null || true
+	@rm -f $(UNIT)
 	@systemctl --user daemon-reload
-	@echo "Uninstalled."
+	@printf "$(C_GRN)✓$(C_RST) Uninstalled.\n"
 endif

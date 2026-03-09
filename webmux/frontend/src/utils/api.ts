@@ -59,11 +59,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ password }),
     }),
-  splitRight: (id: string) =>
-    request<{ row: number; col: number }>(`/sessions/${id}/split-right`, { method: 'POST' }),
-  splitBelow: (id: string) =>
-    request<{ row: number; col: number }>(`/sessions/${id}/split-below`, { method: 'POST' }),
-
   // Hosts
   getHosts: () => request<HostEntry[]>('/hosts'),
   createHost: (host: Partial<HostEntry>) =>

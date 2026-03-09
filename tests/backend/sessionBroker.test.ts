@@ -4,13 +4,13 @@ import * as os from 'os';
 
 describe('SessionBroker', () => {
   let tmpDir: string;
-  let originalRoot: string | undefined;
+  let originalHome: string | undefined;
   let SessionBroker: typeof import('@backend/services/sessionBroker').SessionBroker;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-broker-'));
-    originalRoot = process.env.WEBMUX_ROOT;
-    process.env.WEBMUX_ROOT = tmpDir;
+    originalHome = process.env.WEBMUX_HOME;
+    process.env.WEBMUX_HOME = tmpDir;
 
     // Create config files
     const configDir = path.join(tmpDir, 'config');
@@ -25,10 +25,10 @@ describe('SessionBroker', () => {
   });
 
   afterEach(() => {
-    if (originalRoot === undefined) {
-      delete process.env.WEBMUX_ROOT;
+    if (originalHome === undefined) {
+      delete process.env.WEBMUX_HOME;
     } else {
-      process.env.WEBMUX_ROOT = originalRoot;
+      process.env.WEBMUX_HOME = originalHome;
     }
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -86,34 +86,6 @@ describe('SessionBroker', () => {
     await broker.delete(session.id);
     expect(broker.list()).toHaveLength(0);
     expect(broker.get(session.id)).toBeUndefined();
-  });
-
-  it('splitRight returns correct position', async () => {
-    const broker = new SessionBroker();
-    await broker.initialize();
-    const session = await broker.create({ username: 'u', hostname: 'h', row: 0, col: 0 });
-    const pos = broker.splitRight(session.id);
-    expect(pos).toEqual({ row: 0, col: 1 });
-  });
-
-  it('splitBelow returns correct position', async () => {
-    const broker = new SessionBroker();
-    await broker.initialize();
-    const session = await broker.create({ username: 'u', hostname: 'h', row: 0, col: 0 });
-    const pos = broker.splitBelow(session.id);
-    expect(pos).toEqual({ row: 1, col: 0 });
-  });
-
-  it('splitRight throws for unknown session', async () => {
-    const broker = new SessionBroker();
-    await broker.initialize();
-    expect(() => broker.splitRight('nonexistent')).toThrow();
-  });
-
-  it('splitBelow throws for unknown session', async () => {
-    const broker = new SessionBroker();
-    await broker.initialize();
-    expect(() => broker.splitBelow('nonexistent')).toThrow();
   });
 
   it('auto-assigns position when not specified', async () => {

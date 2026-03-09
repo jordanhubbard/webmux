@@ -14,8 +14,7 @@ import sessionsRouter from './api/sessions';
 import configRouter from './api/config';
 import { setupWebSocket } from './websocket/handler';
 import { sessionBroker } from './services/sessionBroker';
-import { persistence } from './services/persistenceManager';
-import { transportLauncher } from './services/transportLauncher';
+import { persistence, LOGS_DIR } from './services/persistenceManager';
 
 const WEBMUX_ROOT = process.env.WEBMUX_ROOT || path.join(__dirname, '../..');
 
@@ -108,8 +107,8 @@ async function main(): Promise<void> {
   // Start HTTPS server if TLS cert exists
   let httpsServer: https.Server | undefined;
   let wssSecure: WebSocketServer | undefined;
-  const certFile = path.join(WEBMUX_ROOT, 'config/tls/cert.pem');
-  const keyFile = path.join(WEBMUX_ROOT, 'config/tls/key.pem');
+  const certFile = persistence.configPath('tls/cert.pem');
+  const keyFile = persistence.configPath('tls/key.pem');
   if (fs.existsSync(certFile) && fs.existsSync(keyFile)) {
     const tlsOptions = {
       cert: fs.readFileSync(certFile),

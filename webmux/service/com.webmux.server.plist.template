@@ -18,6 +18,8 @@
     <dict>
         <key>WEBMUX_ROOT</key>
         <string>__WEBMUX_DIR__</string>
+        <key>WEBMUX_HOME</key>
+        <string>__WEBMUX_HOME__</string>
         <key>PATH</key>
         <string>__PATH__</string>
     </dict>
@@ -35,9 +37,9 @@
     <integer>10</integer>
 
     <key>StandardOutPath</key>
-    <string>__WEBMUX_DIR__/logs/webmux.log</string>
+    <string>__WEBMUX_HOME__/logs/webmux.log</string>
 
     <key>StandardErrorPath</key>
-    <string>__WEBMUX_DIR__/logs/webmux.log</string>
+    <string>__WEBMUX_HOME__/logs/webmux.log</string>
 </dict>
 </plist>

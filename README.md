@@ -4,15 +4,18 @@ A web-native terminal multiplexer — think tmux-on-a-jump-box, but it runs in y
 
 ## Features
 
-- **2D tiled terminal workspace** — scrollable grid of live sessions, split right or below like a tiling WM
+- **2D tiled terminal workspace** — CSS Grid layout that fills the viewport; click "+" placeholders to add sessions to the right or below any existing tile
 - **Full terminal emulation** — xterm.js with 256-color, clickable links, 5000-line scrollback
 - **SSH and mosh transports** — proper PTY via node-pty, with keepalive and auto-reconnect
-- **Persistent sessions** — sessions survive browser closes; reconnect from any tab
+- **Persistent sessions** — sessions survive browser closes and server reboots; auto-reconnected on startup
+- **Saved hosts** — save connection profiles for one-click connect; stored with hostname, port, username, transport, and key
+- **Multi-user accounts** — multiple users with separate session collections; Argon2id password hashing
 - **Multi-viewer presence** — multiple tabs can watch the same session; click-to-focus controls who has keyboard input
 - **Type to All** — broadcast mode sends keystrokes to every open session simultaneously
 - **SSH key and password auth** — managed keys via `keys.yaml`, password-based via `sshpass`
 - **Two security modes** — local auth (Argon2id + JWT + HTTPS) or trusted mode for isolated networks
-- **YAML configuration** — human-editable config files; copy the directory to deploy
+- **OS service integration** — `make install` sets up launchd (macOS) or systemd (Linux) for auto-start on boot
+- **YAML configuration** — human-editable config in `~/.config/webmux/`, separate from the source tree
 - **Audit log** — append-only JSONL event log (logins, session lifecycle)
 - **Global font size control** — resize all terminals at once
 
@@ -32,16 +35,19 @@ make            # install deps + build
 make start      # start in background
 ```
 
-Or manually:
+Open `http://localhost:8080`. On first run with local auth, you'll be prompted to create an account.
+
+### Install as a Service
 
 ```bash
-cd webmux
-npm install
-npm run build
-WEBMUX_ROOT=$(pwd) npm start
+make install    # installs launchd (macOS) or systemd (Linux) service
 ```
 
-Open `http://localhost:8080`. On first run with local auth, you'll be prompted to create an admin account.
+WebMux will start automatically on login and auto-reconnect any persistent sessions after a reboot.
+
+```bash
+make uninstall  # remove the OS service
+```
 
 ### Makefile Targets
 
@@ -52,11 +58,13 @@ Open `http://localhost:8080`. On first run with local auth, you'll be prompted t
 | `make stop` | Stop the running server |
 | `make restart` | Restart the server |
 | `make status` | Check if the server is running |
+| `make install` | Install as OS service (launchd/systemd) |
+| `make uninstall` | Remove the OS service |
 | `make test` | Run all tests |
 | `make lint` | Lint all code |
-| `make clean` | Remove build artifacts and dependencies |
-| `make configure` | Update YAML config from env/args |
-| `make help` | Show help |
+| `make clean` | Stop and remove build artifacts |
+| `make configure` | Update runtime config from env/args |
+| `make help` | Show help with colors |
 
 Override settings on the command line:
 
@@ -68,7 +76,7 @@ make start SECURE_MODE=true JWT_SECRET=$(openssl rand -hex 32)
 
 ## Configuration
 
-All config lives in `webmux/config/` as YAML files.
+Runtime configuration lives in `~/.config/webmux/` (override with `WEBMUX_HOME`). On first run, default config files are copied from `config.defaults/` in the source tree.
 
 ### `app.yaml` — Application Settings
 
@@ -93,7 +101,7 @@ app:
 ```yaml
 auth:
   mode: local          # 'none' (trusted) or 'local'
-  bootstrap_required: true
+  users: []            # populated on first login via bootstrap
 ```
 
 ### `hosts.yaml` — Saved Hosts
@@ -103,6 +111,9 @@ hosts:
   - id: build01
     hostname: build01.example.com
     port: 22
+    username: deploy
+    transport: ssh
+    key_id: ''
     tags: [linux, build]
     mosh_allowed: false
 ```
@@ -130,25 +141,34 @@ Set `auth.mode: none` and `secure_mode: false`. Only use on a network you fully 
 
 ### Secure Mode (local auth + HTTPS)
 
-Set `auth.mode: local` and `secure_mode: true`. Place your TLS cert at `config/tls/cert.pem` and `config/tls/key.pem`. Passwords are stored as Argon2id hashes — plaintext is never written to disk.
+Set `auth.mode: local` and `secure_mode: true`. Place your TLS cert at `~/.config/webmux/config/tls/cert.pem` and key at `tls/key.pem`. Passwords are stored as Argon2id hashes — plaintext is never written to disk.
+
+### Multi-User
+
+Each user gets their own session collection. The first user is created via the bootstrap prompt on first login. Additional accounts can be created via the "+ Account" button in the top bar. Sign out and sign in as a different user to switch session collections.
 
 ## Directory Layout
 
 ```
-webmux/
+~/.config/webmux/               Runtime home (WEBMUX_HOME)
   config/
-    app.yaml            Application settings
-    auth.yaml           Auth mode + hashed password
-    hosts.yaml          Saved SSH hosts
-    keys.yaml           SSH key references
-    layout.yaml         Tile positions (auto-managed)
-    tls/                TLS cert and key (for secure mode)
+    app.yaml                    Application settings
+    auth.yaml                   Auth mode + user credentials
+    hosts.yaml                  Saved SSH host profiles
+    keys.yaml                   SSH key references
+    layout.yaml                 Tile positions (auto-managed)
+    tls/                        TLS cert and key (for secure mode)
   data/
-    sessions/           Persisted session metadata
-    events/             JSONL audit log (one file per day)
-  logs/                 Server log output
-  backend/              Node.js / TypeScript backend (Express + ws)
-  frontend/             React / TypeScript frontend (Vite + xterm.js)
+    sessions/                   Persisted session metadata
+    events/                     JSONL audit log (one file per day)
+  logs/
+    webmux.log                  Server log output
+
+webmux/                          Source / install directory (WEBMUX_ROOT)
+  config.defaults/               Default config templates (copied on first run)
+  backend/                       Node.js / TypeScript backend (Express + ws)
+  frontend/                      React / TypeScript frontend (Vite + xterm.js)
+  service/                       launchd / systemd service templates
 ```
 
 ## API Reference
@@ -160,18 +180,19 @@ webmux/
 | `GET` | `/api/health` | Health check |
 | `POST` | `/api/auth/bootstrap` | First-run account creation |
 | `POST` | `/api/auth/login` | Login (returns JWT) |
+| `POST` | `/api/auth/register` | Create additional account (requires auth) |
 | `GET` | `/api/auth/status` | Auth mode + bootstrap status |
-| `GET` | `/api/sessions` | List sessions |
+| `GET` | `/api/sessions` | List sessions (scoped to current user) |
 | `POST` | `/api/sessions` | Create session |
 | `DELETE` | `/api/sessions/:id` | Delete session |
 | `POST` | `/api/sessions/:id/reconnect` | Reconnect a disconnected session |
-| `POST` | `/api/sessions/:id/split-right` | Suggest position to the right |
-| `POST` | `/api/sessions/:id/split-below` | Suggest position below |
 | `GET` | `/api/hosts` | List saved hosts |
-| `POST` | `/api/hosts` | Add host |
+| `POST` | `/api/hosts` | Save a host profile |
 | `PUT` | `/api/hosts/:id` | Update host |
 | `DELETE` | `/api/hosts/:id` | Delete host |
 | `GET` | `/api/keys` | List SSH keys |
+| `POST` | `/api/keys` | Add SSH key reference |
+| `DELETE` | `/api/keys/:id` | Delete SSH key |
 | `GET` | `/api/config` | Get app config |
 | `PUT` | `/api/config` | Update app config |
 | `GET` | `/api/config/layout` | Get layout |
@@ -183,14 +204,14 @@ Connect to `/api/term/:sessionId?token=<jwt>` for terminal I/O.
 
 | Type | Direction | Fields |
 |------|-----------|--------|
-| `input` | client → server | `data` |
-| `resize` | client → server | `cols`, `rows` |
-| `focus` | client → server | — |
-| `output` | server → client | `data` |
-| `status` | server → client | `state`, `message` |
-| `viewer_join` | server → client | `viewer_id`, `viewer_count`, `focus_owner` |
-| `viewer_leave` | server → client | `viewer_id`, `viewer_count`, `focus_owner` |
-| `focus` | server → client | `focus_owner`, `viewer_count` |
+| `input` | client -> server | `data` |
+| `resize` | client -> server | `cols`, `rows` |
+| `focus` | client -> server | -- |
+| `output` | server -> client | `data` |
+| `status` | server -> client | `state`, `message` |
+| `viewer_join` | server -> client | `viewer_id`, `viewer_count`, `focus_owner` |
+| `viewer_leave` | server -> client | `viewer_id`, `viewer_count`, `focus_owner` |
+| `focus` | server -> client | `focus_owner`, `viewer_count` |
 
 ## Development
 
@@ -222,29 +243,23 @@ make lint
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WEBMUX_ROOT` | `../..` relative to `backend/dist` | Root directory |
+| `WEBMUX_HOME` | `~/.config/webmux` | Runtime config, data, and log directory |
+| `WEBMUX_ROOT` | source tree `webmux/` | Install directory (frontend assets, default configs) |
 | `HTTP_PORT` | from `app.yaml` | Override HTTP port |
 | `HTTPS_PORT` | from `app.yaml` | Override HTTPS port |
 | `JWT_SECRET` | dev default | **Change in production** |
 
-### systemd
+### Service Management
 
-```ini
-[Unit]
-Description=WebMux Terminal Wall
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=/opt/webmux/webmux
-Environment=WEBMUX_ROOT=/opt/webmux/webmux
-Environment=JWT_SECRET=<your-secret>
-ExecStart=/usr/bin/node backend/dist/index.js
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
+```bash
+make install      # build + install launchd (macOS) or systemd (Linux) user service
+make uninstall    # stop + remove the service
+make status       # check if running
 ```
+
+The service auto-starts on login and restarts on crash. On startup, all persistent sessions with key/agent-based auth are automatically reconnected. Password-only sessions require manual reconnect since passwords are not persisted.
+
+On Linux, run `loginctl enable-linger $USER` to start the service at boot without logging in.
 
 ## The Totally True and Not At All Embellished History of WebMux
 

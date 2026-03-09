@@ -147,8 +147,6 @@ Passwords are stored as Argon2id hashes. Plain-text passwords are never written 
 | `POST` | `/api/sessions` | Create session |
 | `DELETE` | `/api/sessions/:id` | Delete session |
 | `POST` | `/api/sessions/:id/reconnect` | Reconnect session |
-| `POST` | `/api/sessions/:id/split-right` | Get suggested position (same row, next col) |
-| `POST` | `/api/sessions/:id/split-below` | Get suggested position (next row, same col) |
 | `GET` | `/api/hosts` | List saved hosts |
 | `POST` | `/api/hosts` | Add host |
 | `PUT` | `/api/hosts/:id` | Update host |

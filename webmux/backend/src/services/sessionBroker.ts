@@ -243,18 +243,6 @@ export class SessionBroker extends EventEmitter {
     }
   }
 
-  splitRight(sessionId: string): { row: number; col: number } {
-    const session = this.sessions.get(sessionId);
-    if (!session) throw new Error(`Session ${sessionId} not found`);
-    return { row: session.row, col: session.col + 1 };
-  }
-
-  splitBelow(sessionId: string): { row: number; col: number } {
-    const session = this.sessions.get(sessionId);
-    if (!session) throw new Error(`Session ${sessionId} not found`);
-    return { row: session.row + 1, col: session.col };
-  }
-
   private nextPositionFor(sessions: Session[], requestedRow?: number, requestedCol?: number): { row: number; col: number } {
     if (requestedRow !== undefined && requestedCol !== undefined) {
       return { row: requestedRow, col: requestedCol };

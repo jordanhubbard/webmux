@@ -8,7 +8,7 @@ import { EventEmitter } from 'events';
 
 describe('WebSocket Integration', () => {
   let tmpDir: string;
-  let originalRoot: string | undefined;
+  let originalHome: string | undefined;
   let server: http.Server;
   let wss: WebSocketServer;
   let port: number;
@@ -17,8 +17,8 @@ describe('WebSocket Integration', () => {
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-ws-'));
-    originalRoot = process.env.WEBMUX_ROOT;
-    process.env.WEBMUX_ROOT = tmpDir;
+    originalHome = process.env.WEBMUX_HOME;
+    process.env.WEBMUX_HOME = tmpDir;
 
     const configDir = path.join(tmpDir, 'config');
     fs.mkdirSync(configDir, { recursive: true });
@@ -78,10 +78,10 @@ describe('WebSocket Integration', () => {
     wss.close();
     await new Promise<void>((resolve) => server.close(() => resolve()));
 
-    if (originalRoot === undefined) {
-      delete process.env.WEBMUX_ROOT;
+    if (originalHome === undefined) {
+      delete process.env.WEBMUX_HOME;
     } else {
-      process.env.WEBMUX_ROOT = originalRoot;
+      process.env.WEBMUX_HOME = originalHome;
     }
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });

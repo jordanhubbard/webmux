@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build output
+webmux/backend/dist/
+webmux/web/
+
+# Runtime config, data, and logs (live in ~/.config/webmux at runtime)
+webmux/config/
+webmux/data/
+webmux/logs/
+
+# OS / editor
+.DS_Store
+*.swp
+*.swo
+*~

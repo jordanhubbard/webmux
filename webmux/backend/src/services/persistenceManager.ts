@@ -1,20 +1,41 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import * as yaml from 'js-yaml';
 import chokidar, { FSWatcher } from 'chokidar';
 import {
   AppConfig, AuthConfig, HostsConfig, LayoutConfig, KeysConfig, Session
 } from '../types';
 
-const CONFIG_DIR = path.join(process.env.WEBMUX_ROOT || path.join(__dirname, '../../..'), 'config');
-const DATA_DIR = path.join(process.env.WEBMUX_ROOT || path.join(__dirname, '../../..'), 'data');
+const WEBMUX_ROOT = process.env.WEBMUX_ROOT || path.join(__dirname, '../../..');
+const WEBMUX_HOME = process.env.WEBMUX_HOME || path.join(os.homedir(), '.config', 'webmux');
+const DEFAULTS_DIR = path.join(WEBMUX_ROOT, 'config.defaults');
+const CONFIG_DIR = path.join(WEBMUX_HOME, 'config');
+const DATA_DIR = path.join(WEBMUX_HOME, 'data');
 const SESSIONS_DIR = path.join(DATA_DIR, 'sessions');
 const EVENTS_DIR = path.join(DATA_DIR, 'events');
 
+export const LOGS_DIR = path.join(WEBMUX_HOME, 'logs');
+
 function ensureDirs(): void {
-  [CONFIG_DIR, DATA_DIR, SESSIONS_DIR, EVENTS_DIR].forEach(d => {
+  [CONFIG_DIR, DATA_DIR, SESSIONS_DIR, EVENTS_DIR, LOGS_DIR].forEach(d => {
     if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
   });
+
+  // Ensure TLS directory exists
+  const tlsDir = path.join(CONFIG_DIR, 'tls');
+  if (!fs.existsSync(tlsDir)) fs.mkdirSync(tlsDir, { recursive: true });
+
+  // Copy default config files if they don't exist yet
+  if (fs.existsSync(DEFAULTS_DIR)) {
+    for (const entry of fs.readdirSync(DEFAULTS_DIR)) {
+      const src = path.join(DEFAULTS_DIR, entry);
+      const dest = path.join(CONFIG_DIR, entry);
+      if (fs.statSync(src).isFile() && !fs.existsSync(dest)) {
+        fs.copyFileSync(src, dest);
+      }
+    }
+  }
 }
 
 function readYaml<T>(file: string): T {

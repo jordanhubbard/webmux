@@ -6,13 +6,13 @@ import request from 'supertest';
 
 describe('API Routes', () => {
   let tmpDir: string;
-  let originalRoot: string | undefined;
+  let originalHome: string | undefined;
   let app: express.Express;
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-api-'));
-    originalRoot = process.env.WEBMUX_ROOT;
-    process.env.WEBMUX_ROOT = tmpDir;
+    originalHome = process.env.WEBMUX_HOME;
+    process.env.WEBMUX_HOME = tmpDir;
 
     const configDir = path.join(tmpDir, 'config');
     fs.mkdirSync(configDir, { recursive: true });
@@ -49,10 +49,10 @@ describe('API Routes', () => {
   });
 
   afterEach(() => {
-    if (originalRoot === undefined) {
-      delete process.env.WEBMUX_ROOT;
+    if (originalHome === undefined) {
+      delete process.env.WEBMUX_HOME;
     } else {
-      process.env.WEBMUX_ROOT = originalRoot;
+      process.env.WEBMUX_HOME = originalHome;
     }
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -200,24 +200,6 @@ describe('API Routes', () => {
       const created = await request(app).post('/api/sessions').send({ username: 'u', hostname: 'h' });
       const res = await request(app).delete(`/api/sessions/${created.body.id}`);
       expect(res.status).toBe(204);
-    });
-  });
-
-  describe('POST /api/sessions/:id/split-right', () => {
-    it('returns suggested position', async () => {
-      const created = await request(app).post('/api/sessions').send({ username: 'u', hostname: 'h', row: 0, col: 0 });
-      const res = await request(app).post(`/api/sessions/${created.body.id}/split-right`);
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({ row: 0, col: 1 });
-    });
-  });
-
-  describe('POST /api/sessions/:id/split-below', () => {
-    it('returns suggested position', async () => {
-      const created = await request(app).post('/api/sessions').send({ username: 'u', hostname: 'h', row: 0, col: 0 });
-      const res = await request(app).post(`/api/sessions/${created.body.id}/split-below`);
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({ row: 1, col: 0 });
     });
   });
 

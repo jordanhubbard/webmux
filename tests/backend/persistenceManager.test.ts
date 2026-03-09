@@ -4,19 +4,19 @@ import * as os from 'os';
 
 describe('PersistenceManager', () => {
   let tmpDir: string;
-  let originalRoot: string | undefined;
+  let originalHome: string | undefined;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-test-'));
-    originalRoot = process.env.WEBMUX_ROOT;
-    process.env.WEBMUX_ROOT = tmpDir;
+    originalHome = process.env.WEBMUX_HOME;
+    process.env.WEBMUX_HOME = tmpDir;
   });
 
   afterEach(() => {
-    if (originalRoot === undefined) {
-      delete process.env.WEBMUX_ROOT;
+    if (originalHome === undefined) {
+      delete process.env.WEBMUX_HOME;
     } else {
-      process.env.WEBMUX_ROOT = originalRoot;
+      process.env.WEBMUX_HOME = originalHome;
     }
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
