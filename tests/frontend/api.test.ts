@@ -130,5 +130,29 @@ describe('api utilities', () => {
         expect.any(Object)
       );
     });
+
+    it('updateConfig sends PUT with config body', async () => {
+      const returnedConfig = {
+        app: { name: 'webmux', default_term: { cols: 100, rows: 30, font_size: 16 } },
+      };
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(returnedConfig),
+      });
+
+      const { api } = await import('@frontend/utils/api');
+      const result = await api.updateConfig({
+        app: { default_term: { cols: 100, rows: 30, font_size: 16 } },
+      } as any);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        '/api/config',
+        expect.objectContaining({
+          method: 'PUT',
+          body: expect.stringContaining('"cols":100'),
+        })
+      );
+      expect(result.app.default_term.cols).toBe(100);
+    });
   });
 });
