@@ -184,7 +184,7 @@ status:
 		printf "$(C_DIM)●$(C_RST) webmux is not running\n"; \
 	fi
 
-test:
+test: deps
 	@cd $(WEBMUX_DIR) && $(NPM) test
 
 lint:
