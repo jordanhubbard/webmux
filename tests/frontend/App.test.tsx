@@ -32,6 +32,7 @@ vi.mock('@frontend/utils/api', () => ({
     getHosts: vi.fn().mockResolvedValue([]),
     getKeys: vi.fn().mockResolvedValue([]),
     getAuthStatus: vi.fn().mockResolvedValue({ mode: 'none', bootstrap_required: false }),
+    updateConfig: vi.fn().mockResolvedValue({}),
   },
 }));
 

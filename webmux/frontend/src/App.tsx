@@ -18,9 +18,15 @@ function parseTokenUser(): string | null {
   }
 }
 
+function saveTermSettings(fs: number, cols: number, rows: number) {
+  api.updateConfig({ app: { default_term: { font_size: fs, cols, rows } } }).catch(() => {});
+}
+
 export default function App() {
   const auth = useAuth();
   const [fontSize, setFontSize] = useState(14);
+  const [termCols, setTermCols] = useState(80);
+  const [termRows, setTermRows] = useState(24);
   const [showRegister, setShowRegister] = useState(false);
   const [secureMode, setSecureMode] = useState(true);
 
@@ -30,8 +36,21 @@ export default function App() {
     api.getConfig().then(config => {
       setSecureMode(config.app.secure_mode);
       setFontSize(config.app.default_term.font_size);
+      setTermCols(config.app.default_term.cols);
+      setTermRows(config.app.default_term.rows);
     }).catch(() => {});
   }, []);
+
+  const handleFontSizeChange = useCallback((size: number) => {
+    setFontSize(size);
+    saveTermSettings(size, termCols, termRows);
+  }, [termCols, termRows]);
+
+  const handleTermSizeChange = useCallback((cols: number, rows: number) => {
+    setTermCols(cols);
+    setTermRows(rows);
+    saveTermSettings(fontSize, cols, rows);
+  }, [fontSize]);
 
   const handleAccountCreated = useCallback((username: string) => {
     setShowRegister(false);
@@ -56,13 +75,16 @@ export default function App() {
         <TopBar
           auth={auth}
           fontSize={fontSize}
-          onFontSizeChange={setFontSize}
+          onFontSizeChange={handleFontSizeChange}
+          termCols={termCols}
+          termRows={termRows}
+          onTermSizeChange={handleTermSizeChange}
           onNewAccount={() => setShowRegister(true)}
           secureMode={secureMode}
           currentUser={currentUser}
         />
 
-        <Workspace fontSize={fontSize} />
+        <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} />
 
         {showRegister && (
           <RegisterDialog

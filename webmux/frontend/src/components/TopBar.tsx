@@ -5,12 +5,15 @@ interface TopBarProps {
   auth: AuthState;
   fontSize: number;
   onFontSizeChange: (size: number) => void;
+  termCols: number;
+  termRows: number;
+  onTermSizeChange: (cols: number, rows: number) => void;
   onNewAccount: () => void;
   secureMode: boolean;
   currentUser: string | null;
 }
 
-export function TopBar({ auth, fontSize, onFontSizeChange, onNewAccount, secureMode, currentUser }: TopBarProps) {
+export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
 
   return (
@@ -48,6 +51,38 @@ export function TopBar({ auth, fontSize, onFontSizeChange, onNewAccount, secureM
             title="Increase font size"
           >
             A+
+          </button>
+        </div>
+
+        <div style={styles.termSizeControls}>
+          <button
+            style={styles.iconBtn}
+            onClick={() => onTermSizeChange(Math.max(40, termCols - 10), termRows)}
+            title="Decrease columns"
+          >
+            C-
+          </button>
+          <span style={styles.termSize}>{termCols}×{termRows}</span>
+          <button
+            style={styles.iconBtn}
+            onClick={() => onTermSizeChange(Math.min(240, termCols + 10), termRows)}
+            title="Increase columns"
+          >
+            C+
+          </button>
+          <button
+            style={styles.iconBtn}
+            onClick={() => onTermSizeChange(termCols, Math.max(10, termRows - 5))}
+            title="Decrease rows"
+          >
+            R-
+          </button>
+          <button
+            style={styles.iconBtn}
+            onClick={() => onTermSizeChange(termCols, Math.min(80, termRows + 5))}
+            title="Increase rows"
+          >
+            R+
           </button>
         </div>
 
@@ -132,6 +167,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     minWidth: 36,
     textAlign: 'center',
+  },
+  termSizeControls: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+  },
+  termSize: {
+    color: '#aaa',
+    fontSize: 12,
+    minWidth: 48,
+    textAlign: 'center',
+    fontFamily: 'monospace',
   },
   modeBadge: {
     border: '1px solid',

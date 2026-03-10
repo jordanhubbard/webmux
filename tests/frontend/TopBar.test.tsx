@@ -27,6 +27,9 @@ describe('TopBar', () => {
     auth: makeAuth(),
     fontSize: 14,
     onFontSizeChange: vi.fn(),
+    termCols: 80,
+    termRows: 24,
+    onTermSizeChange: vi.fn(),
     onNewAccount: vi.fn(),
     secureMode: true,
     currentUser: 'admin',
@@ -86,5 +89,19 @@ describe('TopBar', () => {
     render(<TopBar {...defaultTopBarProps()} onNewAccount={onNewAccount} />, { wrapper });
     fireEvent.click(screen.getByText('+ Account'));
     expect(onNewAccount).toHaveBeenCalled();
+  });
+
+  it('shows term size and responds to C+/C-/R+/R-', () => {
+    const onTermSizeChange = vi.fn();
+    render(<TopBar {...defaultTopBarProps()} onTermSizeChange={onTermSizeChange} />, { wrapper });
+    expect(screen.getByText('80×24')).toBeDefined();
+    fireEvent.click(screen.getByText('C+'));
+    expect(onTermSizeChange).toHaveBeenCalledWith(90, 24);
+    fireEvent.click(screen.getByText('C-'));
+    expect(onTermSizeChange).toHaveBeenCalledWith(70, 24);
+    fireEvent.click(screen.getByText('R+'));
+    expect(onTermSizeChange).toHaveBeenCalledWith(80, 29);
+    fireEvent.click(screen.getByText('R-'));
+    expect(onTermSizeChange).toHaveBeenCalledWith(80, 19);
   });
 });

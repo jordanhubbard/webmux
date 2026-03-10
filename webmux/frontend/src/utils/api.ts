@@ -71,6 +71,8 @@ export const api = {
 
   // Config
   getConfig: () => request<AppConfig>('/config'),
+  updateConfig: (config: Partial<AppConfig>) =>
+    request<AppConfig>('/config', { method: 'PUT', body: JSON.stringify(config) }),
 };
 
 export function buildWsUrl(sessionId: string): string {

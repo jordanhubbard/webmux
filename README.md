@@ -4,7 +4,8 @@ A web-native terminal multiplexer — think tmux-on-a-jump-box, but it runs in y
 
 ## Features
 
-- **2D tiled terminal workspace** — CSS Grid layout that fills the viewport; click "+" placeholders to add sessions to the right or below any existing tile
+- **2D tiled terminal workspace** — scrollable CSS Grid of fixed-size terminals; click "+" placeholders to add sessions to the right or below any existing tile
+- **Configurable terminal size** — default 80×24; adjust columns, rows, and font size from the top bar (persisted to config)
 - **Full terminal emulation** — xterm.js with 256-color, clickable links, 5000-line scrollback
 - **SSH and mosh transports** — proper PTY via node-pty, with keepalive and auto-reconnect
 - **Persistent sessions** — sessions survive browser closes and server reboots; auto-reconnected on startup
@@ -17,7 +18,6 @@ A web-native terminal multiplexer — think tmux-on-a-jump-box, but it runs in y
 - **OS service integration** — `make install` sets up launchd (macOS) or systemd (Linux) for auto-start on boot
 - **YAML configuration** — human-editable config in `~/.config/webmux/`, separate from the source tree
 - **Audit log** — append-only JSONL event log (logins, session lifecycle)
-- **Global font size control** — resize all terminals at once
 
 ## Quick Start
 
@@ -88,13 +88,15 @@ app:
   secure_mode: false
   trusted_http_allowed: true
   default_term:
-    cols: 80
-    rows: 24
-    font_size: 14
+    cols: 80            # terminal width in characters
+    rows: 24            # terminal height in characters
+    font_size: 14       # font size in pixels
   transport:
     prefer_mosh: false
     ssh_fallback: true
 ```
+
+The `default_term` settings control the size of every terminal tile. Each tile is rendered at a fixed pixel size derived from `cols`, `rows`, and `font_size`. When tiles exceed the browser viewport, the workspace scrolls horizontally and vertically. All three values can also be adjusted live from the top bar — changes are saved back to `app.yaml` automatically.
 
 ### `auth.yaml` — Authentication
 

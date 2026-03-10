@@ -126,6 +126,3 @@ export interface CreateSessionRequest {
   col?: number;
 }
 
-export interface SplitRequest {
-  direction: 'right' | 'below';
-}

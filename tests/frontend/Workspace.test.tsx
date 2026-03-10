@@ -40,8 +40,10 @@ describe('Workspace', () => {
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   });
 
+  const defaultProps = { fontSize: 14, termCols: 80, termRows: 24 };
+
   it('shows add cell when no sessions', async () => {
-    render(<Workspace fontSize={14} />, { wrapper });
+    render(<Workspace {...defaultProps} />, { wrapper });
     await waitFor(() => {
       expect(screen.getByText('Click to add a session')).toBeDefined();
     });
@@ -51,7 +53,7 @@ describe('Workspace', () => {
     const { api } = await import('@frontend/utils/api');
     (api.getSessions as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}));
 
-    render(<Workspace fontSize={14} />, { wrapper });
+    render(<Workspace {...defaultProps} />, { wrapper });
     expect(screen.getByText(/Loading sessions/)).toBeDefined();
   });
 
@@ -59,7 +61,7 @@ describe('Workspace', () => {
     const { api } = await import('@frontend/utils/api');
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue(mockSessions);
 
-    render(<Workspace fontSize={14} />, { wrapper });
+    render(<Workspace {...defaultProps} />, { wrapper });
     await waitFor(() => {
       expect(screen.getByText('u1@h1')).toBeDefined();
     });
@@ -69,7 +71,7 @@ describe('Workspace', () => {
     const { api } = await import('@frontend/utils/api');
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue(mockSessions);
 
-    render(<Workspace fontSize={14} />, { wrapper });
+    render(<Workspace {...defaultProps} />, { wrapper });
     await waitFor(() => {
       expect(screen.getByTestId('add-cell-0-1')).toBeDefined();
       expect(screen.getByTestId('add-cell-1-0')).toBeDefined();
@@ -80,7 +82,7 @@ describe('Workspace', () => {
     const { api } = await import('@frontend/utils/api');
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
-    render(<Workspace fontSize={14} />, { wrapper });
+    render(<Workspace {...defaultProps} />, { wrapper });
     await waitFor(() => {
       expect(screen.getByTestId('add-cell-0-0')).toBeDefined();
     });

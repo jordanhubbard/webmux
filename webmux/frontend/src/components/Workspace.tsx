@@ -6,11 +6,21 @@ import type { Session, CreateSessionRequest } from '../types';
 
 interface WorkspaceProps {
   fontSize: number;
+  termCols: number;
+  termRows: number;
 }
 
 const GAP = 8;
-const MIN_CELL_W = 400;
-const MIN_CELL_H = 280;
+const CHAR_W_RATIO = 0.602;
+const CHAR_H_RATIO = 1.2;
+const CHROME_H = 30;
+const TILE_PADDING = 24;
+
+function tilePixelSize(cols: number, rows: number, fontSize: number) {
+  const w = Math.ceil(cols * fontSize * CHAR_W_RATIO) + TILE_PADDING;
+  const h = Math.ceil(rows * fontSize * CHAR_H_RATIO) + CHROME_H + TILE_PADDING;
+  return { w, h };
+}
 
 function getAddPositions(sessions: Session[]): { row: number; col: number }[] {
   if (sessions.length === 0) return [{ row: 0, col: 0 }];
@@ -85,7 +95,7 @@ function AddCell({ row, col, isEmpty, onClick }: {
   );
 }
 
-export function Workspace({ fontSize }: WorkspaceProps) {
+export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
@@ -123,6 +133,7 @@ export function Workspace({ fontSize }: WorkspaceProps) {
   ];
   const numCols = allPositions.length > 0 ? Math.max(...allPositions.map(p => p.col)) + 1 : 1;
   const numRows = allPositions.length > 0 ? Math.max(...allPositions.map(p => p.row)) + 1 : 1;
+  const tile = tilePixelSize(termCols, termRows, fontSize);
 
   if (loading) {
     return (
@@ -136,8 +147,8 @@ export function Workspace({ fontSize }: WorkspaceProps) {
     <div style={styles.outer}>
       <div style={{
         ...styles.grid,
-        gridTemplateColumns: `repeat(${numCols}, minmax(${MIN_CELL_W}px, 1fr))`,
-        gridTemplateRows: `repeat(${numRows}, minmax(${MIN_CELL_H}px, 1fr))`,
+        gridTemplateColumns: `repeat(${numCols}, ${tile.w}px)`,
+        gridTemplateRows: `repeat(${numRows}, ${tile.h}px)`,
       }}>
         {sessions.map(session => (
           <div
