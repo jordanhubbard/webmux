@@ -10,8 +10,13 @@
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "build": "npm run build --workspace=backend && npm run build --workspace=frontend",
+    "typecheck": "tsc --noEmit --project backend/tsconfig.json && tsc --noEmit --project frontend/tsconfig.json",
+    "test:e2e": "NODE_PATH=$PWD/node_modules npx playwright test",
     "start": "WEBMUX_ROOT=$(pwd) npm run start --workspace=backend",
     "lint": "npm run lint --workspace=backend && npm run lint --workspace=frontend",
     "test": "npm run test --workspace=backend && npm run test --workspace=frontend"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
   }
 }

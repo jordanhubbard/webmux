@@ -14,4 +14,9 @@ webmux/logs/
 .DS_Store
 *.swp
 *.swo
+
+# E2E test artifacts
+tests/e2e/.test-home/
+test-results/
+playwright-report/
 *~

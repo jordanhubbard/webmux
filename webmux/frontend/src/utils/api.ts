@@ -1,4 +1,4 @@
-import type { Session, HostEntry, KeyEntry, AuthStatus, AppConfig, CreateSessionRequest } from '../types';
+import type { Session, HostEntry, KeyEntry, AuthStatus, AppConfig, DeepPartial, CreateSessionRequest } from '../types';
 
 const API_BASE = '/api';
 
@@ -71,7 +71,7 @@ export const api = {
 
   // Config
   getConfig: () => request<AppConfig>('/config'),
-  updateConfig: (config: Partial<AppConfig>) =>
+  updateConfig: (config: DeepPartial<AppConfig>) =>
     request<AppConfig>('/config', { method: 'PUT', body: JSON.stringify(config) }),
 };
 

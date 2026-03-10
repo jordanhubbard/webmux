@@ -144,7 +144,7 @@ describe('api utilities', () => {
       const { api } = await import('@frontend/utils/api');
       const result = await api.updateConfig({
         app: { default_term: { cols: 100, rows: 30, font_size: 16 } },
-      } as any);
+      });
       expect(fetchSpy).toHaveBeenCalledWith(
         '/api/config',
         expect.objectContaining({

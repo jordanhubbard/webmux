@@ -184,8 +184,15 @@ status:
 		printf "$(C_DIM)●$(C_RST) webmux is not running\n"; \
 	fi
 
-test: deps
+test: build
+	@printf "$(C_BLU)▸$(C_RST) Type-checking…\n"
+	@cd $(WEBMUX_DIR) && $(NPM) run typecheck --silent
+	@printf "$(C_GRN)✓$(C_RST) Types OK.\n"
+	@printf "$(C_BLU)▸$(C_RST) Running unit tests…\n"
 	@cd $(WEBMUX_DIR) && $(NPM) test
+	@printf "$(C_BLU)▸$(C_RST) Running E2E tests…\n"
+	@cd $(WEBMUX_DIR) && $(NPM) run test:e2e
+	@printf "$(C_GRN)✓$(C_RST) All tests passed.\n"
 
 lint:
 	@cd $(WEBMUX_DIR) && $(NPM) run lint
