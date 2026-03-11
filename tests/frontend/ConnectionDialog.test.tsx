@@ -117,14 +117,22 @@ describe('ConnectionDialog', () => {
     });
   });
 
-  it('calls onClose when cancel clicked', () => {
+  it('calls onClose when cancel clicked', async () => {
     render(<ConnectionDialog onConnect={onConnect} onClose={onClose} />);
+    // Wait for useEffect (getHosts/getKeys) to settle
+    await waitFor(() => {
+      expect(screen.getByText('Saved Hosts')).toBeDefined();
+    });
     fireEvent.click(screen.getByText('Cancel'));
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('calls onClose when backdrop clicked', () => {
+  it('calls onClose when backdrop clicked', async () => {
     render(<ConnectionDialog onConnect={onConnect} onClose={onClose} />);
+    // Wait for useEffect (getHosts/getKeys) to settle
+    await waitFor(() => {
+      expect(screen.getByText('Saved Hosts')).toBeDefined();
+    });
     const backdrop = screen.getByText('Connect to Host').closest('div')!.parentElement!.parentElement!;
     fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalled();
@@ -270,8 +278,12 @@ describe('ConnectionDialog', () => {
     expect(screen.queryByText('Save & Connect')).toBeNull();
   });
 
-  it('shows mosh transport in advanced options', () => {
+  it('shows mosh transport in advanced options', async () => {
     render(<ConnectionDialog onConnect={onConnect} onClose={onClose} />);
+    // Wait for useEffect (getHosts/getKeys) to settle
+    await waitFor(() => {
+      expect(screen.getByText('Saved Hosts')).toBeDefined();
+    });
     fireEvent.click(screen.getByText(/Advanced options/));
     expect(screen.getByText('Mosh')).toBeDefined();
   });

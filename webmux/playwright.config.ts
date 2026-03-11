@@ -32,6 +32,7 @@ export default defineConfig({
       WEBMUX_HOME: TEST_HOME,
       HTTP_PORT: String(TEST_PORT),
       NODE_ENV: 'test',
+      NODE_OPTIONS: '--no-deprecation',
     },
   },
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 
 // Mock useAuth before importing App
 const mockAuth = {
@@ -52,17 +52,21 @@ describe('App', () => {
     mockAuth.error = null;
   });
 
-  it('shows loading state', () => {
+  it('shows loading state', async () => {
     render(<App />);
     expect(screen.getByText('Loading...')).toBeDefined();
+    // Let the useEffect (api.getConfig) settle to avoid act() warnings
+    await act(async () => {});
   });
 
-  it('shows login page when not authenticated', () => {
+  it('shows login page when not authenticated', async () => {
     mockAuth.isLoading = false;
     mockAuth.authStatus = { mode: 'local', bootstrap_required: false };
     render(<App />);
     expect(screen.getByText('WebMux')).toBeDefined();
     expect(screen.getByRole('button', { name: /sign in/i })).toBeDefined();
+    // Let the useEffect (api.getConfig) settle to avoid act() warnings
+    await act(async () => {});
   });
 
   it('shows workspace when authenticated', async () => {

@@ -387,7 +387,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   tab: {
     background: '#0d0d1a',
-    border: '1px solid #333',
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: '#333',
     borderRadius: 4,
     padding: '4px 12px',
     color: '#888',
