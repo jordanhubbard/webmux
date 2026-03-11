@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import type { AuthState } from '../hooks/useAuth';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
+import { HelpDialog } from './HelpDialog';
 
 interface TopBarProps {
   auth: AuthState;
@@ -15,8 +17,11 @@ interface TopBarProps {
 
 export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
+  const [showHelp, setShowHelp] = useState(false);
 
   return (
+    <>
+    {showHelp && <HelpDialog onClose={() => setShowHelp(false)} />}
     <div style={styles.bar}>
       <div style={styles.left}>
         <span style={styles.logo}>{'\u25a6'} WebMux</span>
@@ -106,8 +111,10 @@ export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, o
             </button>
           </>
         )}
+        <button style={styles.helpBtn} onClick={() => setShowHelp(true)} title="Usage help">?</button>
       </div>
     </div>
+    </>
   );
 }
 
@@ -192,5 +199,22 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#7c6af7',
     fontSize: 12,
     fontWeight: 600,
+  },
+  helpBtn: {
+    background: '#1a1a3a',
+    border: '1px solid #333366',
+    borderRadius: '50%',
+    width: 22,
+    height: 22,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#7c6af7',
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
+    flexShrink: 0,
+    padding: 0,
+    lineHeight: 1,
   },
 };

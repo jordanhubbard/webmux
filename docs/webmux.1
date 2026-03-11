@@ -1,0 +1,297 @@
+.TH WEBMUX 1 "2026-03-10" "WebMux" "User Commands"
+.SH NAME
+webmux \- web\-native terminal multiplexer
+.SH SYNOPSIS
+.B webmux
+.RI [ OPTION ]...
+.SH DESCRIPTION
+.B webmux
+is a browser\-based terminal multiplexer.
+It runs as a Node.js server on a jump box and exposes a React/xterm.js
+frontend that presents a scrollable 2D grid of live SSH (or mosh)
+terminal sessions.
+.PP
+Multiple browser clients can connect simultaneously.
+Each terminal tile supports shared viewing and click\-to\-focus input
+ownership.
+Sessions are persistent: they survive browser closes and server restarts
+and are reconnected automatically on the next startup.
+.SH OPTIONS
+.B webmux
+reads all configuration from YAML files (see
+.B FILES
+below).
+There are no command\-line flags; runtime behaviour is controlled entirely
+through the config files and the environment variables below.
+.SH ENVIRONMENT
+.TP
+.B WEBMUX_ROOT
+Path to the directory that contains the compiled frontend
+.I web/
+subtree and the
+.I config/
+directory.
+Defaults to the directory two levels above the compiled backend entry
+point.
+.TP
+.B HTTP_PORT
+Override the HTTP port at runtime.
+Takes precedence over
+.I app.yaml
+.BR http_port .
+.TP
+.B HTTPS_PORT
+Override the HTTPS port at runtime.
+Takes precedence over
+.I app.yaml
+.BR https_port .
+.SH CONFIGURATION
+All configuration files live under
+.I $WEBMUX_ROOT/config/
+(typically
+.IR ~/.config/webmux/ ).
+Files are YAML and are watched for changes at runtime where applicable.
+.TP
+.B app.yaml
+Primary server configuration.
+.RS
+.TP
+.B app.listen_host
+Interface to bind (default
+.IR 0.0.0.0 ).
+.TP
+.B app.http_port
+HTTP port (default
+.IR 8080 ).
+.TP
+.B app.https_port
+HTTPS port used when TLS certificates are present (default
+.IR 8443 ).
+.TP
+.B app.secure_mode
+Boolean.
+When
+.BR true ,
+CORS is restricted to same\-origin and JWT authentication is required.
+When
+.BR false ,
+the server runs in
+.I Trusted
+mode (no auth, permissive CORS) — suitable for isolated networks only.
+.TP
+.B app.default_term.cols / .rows / .font_size
+Default terminal dimensions and font size for new sessions.
+Users can adjust these at runtime from the top bar; changes are
+persisted back to this file.
+.TP
+.B app.transport.prefer_mosh
+When
+.BR true ,
+sessions on hosts that have
+.B mosh_allowed: true
+in
+.I hosts.yaml
+will use mosh instead of SSH.
+.TP
+.B app.transport.ssh_fallback
+When
+.BR true ,
+fall back to SSH if mosh is unavailable.
+.RE
+.TP
+.B hosts.yaml
+Saved connection profiles.
+Each entry has
+.BR id ,
+.BR hostname ,
+.BR port ,
+.BR username ,
+.BR transport ,
+.BR key_id ,
+.BR tags ,
+and
+.BR mosh_allowed .
+Hosts appear in the connection dialog for one\-click connect.
+.TP
+.B auth.yaml
+User accounts for secure mode.
+Passwords are hashed with Argon2id.
+Managed via the
+.I + Account
+button in the UI.
+.TP
+.B keys.yaml
+SSH key identities.
+Each entry maps a
+.B key_id
+to the path of a private key file.
+Keys are selected per\-session in the connection dialog.
+.TP
+.B layout.yaml
+Current tile layout (session\-id to grid row/col mapping).
+Written automatically by the server; do not edit by hand.
+.TP
+.B tls/cert.pem, tls/key.pem
+If both files exist, the server enables HTTPS/WSS on
+.I https_port
+in addition to plain HTTP.
+Create a self\-signed certificate with:
+.PP
+.RS
+.EX
+openssl req -x509 -newkey rsa:4096 -keyout tls/key.pem \\
+        -out tls/cert.pem -days 365 -nodes
+.EE
+.RE
+.SH FILES
+.TP
+.I $WEBMUX_ROOT/config/app.yaml
+Server and terminal defaults.
+.TP
+.I $WEBMUX_ROOT/config/hosts.yaml
+Saved host profiles.
+.TP
+.I $WEBMUX_ROOT/config/auth.yaml
+User accounts (secure mode only).
+.TP
+.I $WEBMUX_ROOT/config/keys.yaml
+SSH key identities.
+.TP
+.I $WEBMUX_ROOT/config/layout.yaml
+Persistent tile layout (auto\-managed).
+.TP
+.I $WEBMUX_ROOT/config/tls/cert.pem
+TLS certificate (enables HTTPS when present alongside key.pem).
+.TP
+.I $WEBMUX_ROOT/config/tls/key.pem
+TLS private key.
+.TP
+.I $WEBMUX_ROOT/logs/audit.jsonl
+Append\-only JSONL audit log: login events, session create/delete/exit.
+.SH USAGE
+After starting the server, open a browser to
+.I http://localhost:8080
+(or the configured port).
+.SS Adding a session
+Click any
+.B +
+placeholder cell in the workspace grid.
+The connection dialog lets you choose a saved host or enter
+connection details manually, select SSH/mosh transport, and
+provide credentials.
+.SS Navigating the workspace
+The workspace is a scrollable 2D grid.
+.TP
+.B Wheel (over empty area)
+Scrolls the workspace view.
+.TP
+.B Shift + Wheel (over any area)
+Scrolls the workspace view even when the pointer is over a terminal tile.
+.TP
+.B Drag scrollbar
+The persistent vertical scrollbar on the right of the workspace always
+scrolls the workspace view.
+.TP
+.B Wheel (over terminal, no modifier)
+Scrolls that terminal's scrollback buffer (5,000 lines).
+.SS Input broadcast
+The
+.B Type to All
+button in the top bar toggles broadcast mode.
+When active (highlighted in orange), every keystroke is sent to all
+open sessions simultaneously — useful for running the same command on
+multiple hosts at once.
+.SS Terminal controls (top bar)
+.TP
+.B A\- / A+
+Decrease or increase font size (8\(en32 px).
+Changes are persisted to
+.IR app.yaml .
+.TP
+.B C\- / C+
+Decrease or increase terminal column count in steps of 10 (40\(en240).
+.TP
+.B R\- / R+
+Decrease or increase terminal row count in steps of 5 (10\(en80).
+.SH SIGNALS
+.TP
+.B SIGTERM, SIGINT
+Graceful shutdown: disconnects all WebSocket clients, persists session
+state to YAML, and exits.
+.SH EXAMPLES
+.PP
+Build and start in the foreground:
+.PP
+.RS
+.EX
+make
+node dist/index.js
+.EE
+.RE
+.PP
+Build and start in the background via
+.BR make (1):
+.PP
+.RS
+.EX
+make start
+make status
+make stop
+.EE
+.RE
+.PP
+Install as a system service (launchd on macOS, systemd on Linux):
+.PP
+.RS
+.EX
+make install
+.EE
+.RE
+.PP
+Override ports without editing the config file:
+.PP
+.RS
+.EX
+HTTP_PORT=9090 HTTPS_PORT=9443 node dist/index.js
+.EE
+.RE
+.SH SECURITY
+In
+.B secure mode
+.RI ( secure_mode:\ true ),
+the server requires JWT authentication (Argon2id\-hashed passwords),
+restricts CORS to same\-origin, and should be accessed over HTTPS.
+.PP
+In
+.B trusted mode
+.RI ( secure_mode:\ false ),
+no authentication is required.
+Use this only on isolated networks or localhost.
+The UI displays a
+.I Trusted
+badge as a reminder.
+.PP
+Passwords provided during session creation are held in memory for at most
+five minutes and then zeroed; they are never written to disk.
+.SH DIAGNOSTICS
+.TP
+.B Could not load app.yaml, using defaults
+The config file was missing or unreadable at startup.
+The server continues with built\-in defaults.
+.TP
+.B Failed to launch session
+The
+.BR ssh (1)
+or
+.BR mosh (1)
+binary was not found, or the host was unreachable.
+Check that the required binaries are on
+.BR PATH .
+.SH SEE ALSO
+.BR ssh (1),
+.BR mosh (1),
+.BR sshpass (1),
+.BR tmux (1),
+.BR node (1)
+.SH AUTHORS
+WebMux was written by the WebMux contributors.

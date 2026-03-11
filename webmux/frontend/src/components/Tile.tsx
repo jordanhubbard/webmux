@@ -44,10 +44,12 @@ export function Tile({ session, fontSize, onClose, onReconnect }: TileProps) {
       : '#333366';
 
   return (
-    <div style={{
-      ...styles.tile,
-      borderColor,
-      boxShadow: broadcastMode
+    <div
+      onWheel={e => { if (!e.shiftKey) e.stopPropagation(); }}
+      style={{
+        ...styles.tile,
+        borderColor,
+        boxShadow: broadcastMode
         ? '0 0 8px rgba(232, 160, 48, 0.4)'
         : isFocused
           ? '0 0 8px rgba(124, 106, 247, 0.4)'

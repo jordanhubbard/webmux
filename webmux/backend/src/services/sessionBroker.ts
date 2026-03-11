@@ -206,9 +206,12 @@ export class SessionBroker extends EventEmitter {
   }
 
   async delete(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    const owner = session?.owner;
     transportLauncher.kill(sessionId);
     this.sessions.delete(sessionId);
     this.scrollback.delete(sessionId);
+    if (owner) this.compactPositions(owner);
     this.persistSessions();
     this.updateLayout(sessionId);
     persistence.appendEvent({ type: 'session_deleted', session_id: sessionId });
@@ -240,6 +243,27 @@ export class SessionBroker extends EventEmitter {
     const handle = transportLauncher.getHandle(sessionId);
     if (handle) {
       handle.write(data);
+    }
+  }
+
+  private compactPositions(owner: string): void {
+    const ownerSessions = Array.from(this.sessions.values()).filter(s => s.owner === owner);
+    // Group by row, sort within each row by col
+    const rowMap = new Map<number, Session[]>();
+    for (const s of ownerSessions) {
+      const row = rowMap.get(s.row) || [];
+      row.push(s);
+      rowMap.set(s.row, row);
+    }
+    const sortedRows = Array.from(rowMap.keys()).sort((a, b) => a - b);
+    let newRow = 0;
+    for (const oldRow of sortedRows) {
+      const rowSessions = rowMap.get(oldRow)!.sort((a, b) => a.col - b.col);
+      rowSessions.forEach((s, newCol) => {
+        s.row = newRow;
+        s.col = newCol;
+      });
+      newRow++;
     }
   }
 

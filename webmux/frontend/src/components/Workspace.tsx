@@ -114,9 +114,10 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
   }, []);
 
   const handleClose = useCallback((id: string) => {
-    api.deleteSession(id).then(() => {
-      setSessions(prev => prev.filter(s => s.id !== id));
-    }).catch(err => console.error('Failed to delete session:', err));
+    api.deleteSession(id)
+      .then(() => api.getSessions())
+      .then(setSessions)
+      .catch(err => console.error('Failed to delete session:', err));
   }, []);
 
   const handleReconnect = useCallback((id: string) => {
@@ -196,7 +197,8 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
 const styles: Record<string, React.CSSProperties> = {
   outer: {
     flex: 1,
-    overflow: 'auto',
+    overflowX: 'auto',
+    overflowY: 'scroll',
     background: '#0d0d1a',
   },
   grid: {
