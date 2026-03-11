@@ -18,15 +18,16 @@ vi.mock('@frontend/utils/api', () => ({
     createSession: vi.fn(),
     deleteSession: vi.fn(),
     reconnectSession: vi.fn(),
+    moveSession: vi.fn().mockResolvedValue({}),
     getHosts: vi.fn().mockResolvedValue([]),
     getKeys: vi.fn().mockResolvedValue([]),
   },
 }));
 
 vi.mock('@frontend/components/Terminal', () => ({
-  Terminal: ({ sessionId }: { sessionId: string }) => (
+  Terminal: vi.fn().mockImplementation(({ sessionId }: { sessionId: string }) => (
     <div data-testid={`terminal-${sessionId}`}>Terminal Mock</div>
-  ),
+  )),
 }));
 
 const wrapper = ({ children }: { children: ReactNode }) => (

@@ -58,6 +58,22 @@ router.post('/:id/reconnect', async (req: Request, res: Response) => {
   }
 });
 
+router.patch('/:id', (req: Request, res: Response) => {
+  const owner = getOwner(req);
+  const session = sessionBroker.get(req.params.id);
+  if (!session || session.owner !== owner) {
+    res.status(404).json({ error: 'Session not found' });
+    return;
+  }
+  const { row, col } = req.body as { row?: number; col?: number };
+  if (row === undefined || col === undefined) {
+    res.status(400).json({ error: 'row and col are required' });
+    return;
+  }
+  const updated = sessionBroker.move(req.params.id, row, col);
+  res.json(updated);
+});
+
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const owner = getOwner(req);

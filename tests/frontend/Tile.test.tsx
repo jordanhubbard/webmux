@@ -6,9 +6,9 @@ import type { Session } from '@frontend/types';
 import type { ReactNode } from 'react';
 
 vi.mock('@frontend/components/Terminal', () => ({
-  Terminal: ({ sessionId }: { sessionId: string }) => (
+  Terminal: vi.fn().mockImplementation(({ sessionId }: { sessionId: string }) => (
     <div data-testid={`terminal-${sessionId}`}>Terminal Mock</div>
-  ),
+  )),
 }));
 
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -145,5 +145,36 @@ describe('Tile', () => {
       { wrapper },
     );
     expect(screen.getByTestId('terminal-s1')).toBeDefined();
+  });
+
+  it('renders scroll-to-bottom button', () => {
+    render(
+      <Tile
+        session={makeSession()}
+        fontSize={14}
+        onClose={vi.fn()}
+        onReconnect={vi.fn()}
+      />,
+      { wrapper },
+    );
+    expect(screen.getByTitle('Scroll to bottom')).toBeDefined();
+  });
+
+  it('calls onTitleMouseDown when chrome dragged', () => {
+    const onTitleMouseDown = vi.fn();
+    render(
+      <Tile
+        session={makeSession()}
+        fontSize={14}
+        onClose={vi.fn()}
+        onReconnect={vi.fn()}
+        onTitleMouseDown={onTitleMouseDown}
+      />,
+      { wrapper },
+    );
+    // Fire mousedown on the chrome (not a button)
+    const chrome = screen.getByTitle('user@example.com').closest('[style]')!.parentElement!;
+    fireEvent.mouseDown(chrome);
+    expect(onTitleMouseDown).toHaveBeenCalledWith('s1', expect.any(Object));
   });
 });

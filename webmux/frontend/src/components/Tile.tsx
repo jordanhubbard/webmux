@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Terminal } from './Terminal';
+import { useState, useCallback, useRef } from 'react';
+import { Terminal, type TerminalHandle } from './Terminal';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import type { Session, ConnectionState } from '../types';
 
@@ -8,12 +8,16 @@ interface TileProps {
   fontSize: number;
   onClose: (id: string) => void;
   onReconnect: (id: string) => void;
+  onTitleMouseDown?: (sessionId: string, e: React.MouseEvent) => void;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
 }
 
-export function Tile({ session, fontSize, onClose, onReconnect }: TileProps) {
+export function Tile({ session, fontSize, onClose, onReconnect, onTitleMouseDown, isDragging, isDropTarget }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
   const { focusedSessionId, broadcastMode } = useInputBroadcast();
+  const termHandleRef = useRef<TerminalHandle>(null);
 
   const isFocused = focusedSessionId === session.id;
 
@@ -29,6 +33,11 @@ export function Tile({ session, fontSize, onClose, onReconnect }: TileProps) {
     // Terminal handles setting focusedSessionId via context
   }, []);
 
+  const handleChromeMouseDown = useCallback((e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+    onTitleMouseDown?.(session.id, e);
+  }, [onTitleMouseDown, session.id]);
+
   const stateColor = state === 'connected' ? '#4aaa6a' :
     state === 'connecting' ? '#caaa4a' :
     state === 'error' ? '#ff5555' : '#888888';
@@ -37,11 +46,13 @@ export function Tile({ session, fontSize, onClose, onReconnect }: TileProps) {
     state === 'connecting' ? '\u25d0' :
     state === 'error' ? '\u2717' : '\u25cb';
 
-  const borderColor = broadcastMode
-    ? '#e8a030'
-    : isFocused
-      ? '#7c6af7'
-      : '#333366';
+  const borderColor = isDropTarget
+    ? '#7c6af7'
+    : broadcastMode
+      ? '#e8a030'
+      : isFocused
+        ? '#7c6af7'
+        : '#333366';
 
   return (
     <div
@@ -49,13 +60,22 @@ export function Tile({ session, fontSize, onClose, onReconnect }: TileProps) {
       style={{
         ...styles.tile,
         borderColor,
-        boxShadow: broadcastMode
-        ? '0 0 8px rgba(232, 160, 48, 0.4)'
-        : isFocused
-          ? '0 0 8px rgba(124, 106, 247, 0.4)'
-          : 'none',
-    }}>
-      <div style={styles.chrome}>
+        boxShadow: isDropTarget
+          ? '0 0 12px rgba(124, 106, 247, 0.6)'
+          : broadcastMode
+            ? '0 0 8px rgba(232, 160, 48, 0.4)'
+            : isFocused
+              ? '0 0 8px rgba(124, 106, 247, 0.4)'
+              : 'none',
+        opacity: isDragging ? 0.35 : 1,
+      }}>
+      <div
+        style={{
+          ...styles.chrome,
+          cursor: onTitleMouseDown ? 'grab' : 'default',
+        }}
+        onMouseDown={handleChromeMouseDown}
+      >
         <div style={styles.chromeLeft}>
           <span style={{ ...styles.stateIndicator, color: stateColor }}>{stateIcon}</span>
           <span style={styles.title} title={session.title}>{session.title}</span>
@@ -67,6 +87,11 @@ export function Tile({ session, fontSize, onClose, onReconnect }: TileProps) {
               {viewerCount}
             </span>
           )}
+          <button
+            style={{ ...styles.chromeBtn, color: '#8888cc' }}
+            onClick={() => termHandleRef.current?.scrollToBottom()}
+            title="Scroll to bottom"
+          >&#8595;</button>
           {(state === 'disconnected' || state === 'error') && (
             <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onReconnect(session.id)} title="Reconnect">{'\u21ba'}</button>
           )}
@@ -76,6 +101,7 @@ export function Tile({ session, fontSize, onClose, onReconnect }: TileProps) {
 
       <div style={styles.termContainer}>
         <Terminal
+          ref={termHandleRef}
           sessionId={session.id}
           fontSize={fontSize}
           state={state}
@@ -98,7 +124,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 6,
     overflow: 'hidden',
     background: '#0d0d1a',
-    transition: 'border-color 0.15s, box-shadow 0.15s',
+    transition: 'border-color 0.15s, box-shadow 0.15s, opacity 0.15s',
     boxSizing: 'border-box',
   },
   chrome: {
@@ -110,6 +136,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#16163a',
     borderBottom: '1px solid #2a2a5a',
     flexShrink: 0,
+    userSelect: 'none',
   },
   chromeLeft: {
     display: 'flex',

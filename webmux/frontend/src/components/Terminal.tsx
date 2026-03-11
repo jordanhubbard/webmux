@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -6,6 +6,10 @@ import '@xterm/xterm/css/xterm.css';
 import type { WebSocketMessage, ConnectionState } from '../types';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
+
+export interface TerminalHandle {
+  scrollToBottom: () => void;
+}
 
 interface TerminalProps {
   sessionId: string;
@@ -16,20 +20,24 @@ interface TerminalProps {
   onFocusGained: () => void;
 }
 
-export function Terminal({
+export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal({
   sessionId,
   fontSize,
   state,
   onStateChange,
   onViewerUpdate,
   onFocusGained,
-}: TerminalProps) {
+}: TerminalProps, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsHandleRef = useRef<ReturnType<typeof useWebSocket> | null>(null);
 
   const { registerSend, unregisterSend, routeInput, setFocusedSessionId, broadcastMode, focusedSessionId } = useInputBroadcast();
+
+  useImperativeHandle(ref, () => ({
+    scrollToBottom: () => { termRef.current?.scrollToBottom(); },
+  }));
 
   // Keep latest callbacks in refs so xterm/WS handlers never capture stale closures.
   const onStateChangeRef = useRef(onStateChange);
@@ -226,4 +234,4 @@ export function Terminal({
       )}
     </div>
   );
-}
+});

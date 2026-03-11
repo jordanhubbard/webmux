@@ -230,6 +230,16 @@ export class SessionBroker extends EventEmitter {
     return Array.from(this.sessions.values()).filter(s => s.owner === owner);
   }
 
+  move(sessionId: string, row: number, col: number): Session {
+    const session = this.sessions.get(sessionId);
+    if (!session) throw new Error(`Session ${sessionId} not found`);
+    session.row = row;
+    session.col = col;
+    session.updated_at = new Date().toISOString();
+    this.persistSessions();
+    return session;
+  }
+
   resize(sessionId: string, cols: number, rows: number): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;

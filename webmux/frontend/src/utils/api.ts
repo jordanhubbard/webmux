@@ -59,6 +59,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ password }),
     }),
+  moveSession: (id: string, row: number, col: number) =>
+    request<Session>(`/sessions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ row, col }),
+    }),
   // Hosts
   getHosts: () => request<HostEntry[]>('/hosts'),
   createHost: (host: Partial<HostEntry>) =>
