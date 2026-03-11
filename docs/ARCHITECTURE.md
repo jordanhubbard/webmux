@@ -41,7 +41,7 @@ Browser                          Jump Box (WebMux Server)
 | Component | Responsibility |
 |-----------|---------------|
 | **App** | Auth routing, config loading, top-level state |
-| **TopBar** | Navigation, font size controls, broadcast toggle, auth badge |
+| **TopBar** | Navigation, font/terminal size controls, broadcast toggle, auth badge |
 | **Workspace** | 2D tile grid, session CRUD, split positioning |
 | **Tile** | Terminal chrome (title, status, controls), border/focus styling |
 | **Terminal** | xterm.js instance, WebSocket connection, resize handling |
