@@ -29,7 +29,7 @@ export function Terminal({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsHandleRef = useRef<ReturnType<typeof useWebSocket> | null>(null);
 
-  const { registerSend, unregisterSend, routeInput, setFocusedSessionId } = useInputBroadcast();
+  const { registerSend, unregisterSend, routeInput, setFocusedSessionId, broadcastMode, focusedSessionId } = useInputBroadcast();
 
   // Keep latest callbacks in refs so xterm/WS handlers never capture stale closures.
   const onStateChangeRef = useRef(onStateChange);
@@ -39,8 +39,8 @@ export function Terminal({
   useEffect(() => { onViewerUpdateRef.current = onViewerUpdate; }, [onViewerUpdate]);
   useEffect(() => { onFocusGainedRef.current = onFocusGained; }, [onFocusGained]);
 
-  // routeInput is a stable callback that reads broadcastMode from a ref internally,
-  // so no ref-wrapper needed here.
+  // routeInput is a stable callback (useCallback with [] deps) that reads
+  // broadcastMode from a ref internally — use it directly without a wrapper ref.
   const routeInputRef = useRef(routeInput);
 
   const handleMessage = useCallback((msg: WebSocketMessage) => {
@@ -170,6 +170,16 @@ export function Terminal({
       fitAddonRef.current?.fit();
     }
   }, [fontSize]);
+
+  // When broadcast mode is enabled, re-focus the active terminal so keyboard
+  // input flows immediately without requiring the user to click again.
+  // (Clicking the TopBar button can cause xterm to lose focus before
+  // React's event delegation fires preventDefault.)
+  useEffect(() => {
+    if (broadcastMode && focusedSessionId === sessionId && termRef.current) {
+      termRef.current.focus();
+    }
+  }, [broadcastMode, focusedSessionId, sessionId]);
 
   // Refit on container resize
   useEffect(() => {
