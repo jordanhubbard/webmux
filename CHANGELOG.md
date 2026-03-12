@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-03-11
+
+### Other
+- Fix release script to include package-lock.json in version bumps
+
 ## [1.1.1] - 2026-03-11
 
 ### Other
