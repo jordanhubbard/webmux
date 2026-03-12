@@ -72,7 +72,18 @@ bump_package_versions() {
     info "Bumping package.json versions to $version..."
     sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$version\"/" webmux/frontend/package.json && rm -f webmux/frontend/package.json.bak
     sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$version\"/" webmux/backend/package.json  && rm -f webmux/backend/package.json.bak
-    sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$version\"/" webmux/package-lock.json     && rm -f webmux/package-lock.json.bak
+    node -e "
+      const fs = require('fs');
+      const lock = JSON.parse(fs.readFileSync('webmux/package-lock.json', 'utf8'));
+      lock.version = '$version';
+      if (lock.packages) {
+        ['', 'backend', 'frontend'].forEach(function(pkg) {
+          var key = pkg ? 'packages/' + pkg : 'packages/';
+          if (lock.packages[key]) lock.packages[key].version = '$version';
+        });
+      }
+      fs.writeFileSync('webmux/package-lock.json', JSON.stringify(lock, null, 2) + '\n');
+    "
     success "package.json files updated to $version"
 }
 
