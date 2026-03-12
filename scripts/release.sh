@@ -72,6 +72,7 @@ bump_package_versions() {
     info "Bumping package.json versions to $version..."
     sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$version\"/" webmux/frontend/package.json && rm -f webmux/frontend/package.json.bak
     sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$version\"/" webmux/backend/package.json  && rm -f webmux/backend/package.json.bak
+    sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$version\"/" webmux/package-lock.json     && rm -f webmux/package-lock.json.bak
     success "package.json files updated to $version"
 }
 
@@ -178,7 +179,7 @@ EOF
 
     # Commit changelog + version bump
     info "Committing changelog and version bump..."
-    git add CHANGELOG.md webmux/frontend/package.json webmux/backend/package.json
+    git add CHANGELOG.md webmux/frontend/package.json webmux/backend/package.json webmux/package-lock.json
     if ! git diff --cached --quiet; then
         git commit -m "Release v$version
 
