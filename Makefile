@@ -11,6 +11,9 @@
 #   make clean            Remove build artifacts and dependencies
 #   make install          Install as OS service (launchd/systemd)
 #   make uninstall        Remove OS service
+#   make release          Test, bump patch version, tag, push, create GitHub release
+#   make release-minor    Same as release but bumps the minor version
+#   make release-major    Same as release but bumps the major version
 #   make help             Show this help
 #
 # Configuration (override via environment or make args):
@@ -73,7 +76,7 @@ endif
 
 # ── Targets ────────────────────────────────────────────────────────
 .PHONY: all build deps start stop restart status test lint clean configure help \
-       install uninstall
+       install uninstall release release-minor release-major changelog-init
 
 all: build
 
@@ -91,6 +94,9 @@ help:
 	@printf "  $(C_CYN)make install$(C_RST)        Install as OS service (launchd/systemd)\n"
 	@printf "  $(C_CYN)make uninstall$(C_RST)      Remove OS service\n"
 	@printf "  $(C_CYN)make configure$(C_RST)      Update runtime configuration\n"
+	@printf "  $(C_CYN)make release$(C_RST)        Bump patch version, test, tag, push, GitHub release\n"
+	@printf "  $(C_CYN)make release-minor$(C_RST)  Bump minor version and release\n"
+	@printf "  $(C_CYN)make release-major$(C_RST)  Bump major version and release\n"
 	@printf "  $(C_CYN)make help$(C_RST)           Show this help\n"
 	@printf "\n$(C_BLD)Configuration:$(C_RST)\n"
 	@printf "  $(C_YLW)WEBMUX_HOME$(C_RST)=$(C_DIM)~/.config/webmux$(C_RST)   Runtime config/data directory\n"
@@ -263,3 +269,30 @@ else
 	@systemctl --user daemon-reload
 	@printf "$(C_GRN)✓$(C_RST) Uninstalled.\n"
 endif
+
+# ── Release management ──────────────────────────────────────────────
+# Checks prerequisites, runs tests, bumps version in package.json files,
+# updates CHANGELOG.md, commits, tags, pushes, and creates a GitHub release.
+#
+#   make release          Bump patch version (x.y.Z → x.y.Z+1)
+#   make release-minor    Bump minor version (x.Y.z → x.Y+1.0)
+#   make release-major    Bump major version (X.y.z → X+1.0.0)
+#
+# Non-interactive batch mode: BATCH=yes make release
+
+release:
+	@BATCH=$(BATCH) ./scripts/release.sh patch
+
+release-minor:
+	@BATCH=$(BATCH) ./scripts/release.sh minor
+
+release-major:
+	@BATCH=$(BATCH) ./scripts/release.sh major
+
+changelog-init:
+	@if [ -f CHANGELOG.md ]; then \
+		printf "$(C_YLW)!$(C_RST) CHANGELOG.md already exists\n"; \
+	else \
+		printf '# Changelog\n\nAll notable changes to WebMux are documented here.\nFormat follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).\n\n## [Unreleased]\n' > CHANGELOG.md; \
+		printf "$(C_GRN)✓$(C_RST) CHANGELOG.md created\n"; \
+	fi
