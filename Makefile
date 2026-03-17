@@ -223,6 +223,7 @@ install: stop build
 	@mkdir -p "$(WEBMUX_HOME)/logs"
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Installing launchd service…\n"
+	@mkdir -p "$(HOME)/Library/LaunchAgents"
 	@launchctl bootout $(LAUNCHD_SVC) 2>/dev/null || true
 	@sed \
 		-e 's|__NODE_PATH__|$(NODE_PATH)|g' \
