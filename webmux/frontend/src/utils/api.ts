@@ -69,6 +69,26 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ title }),
     }),
+  // Upload
+  uploadFile: async (file: File): Promise<{ path: string; name: string; size: number }> => {
+    const token = getToken();
+    const headers: HeadersInit = {
+      'Content-Type': 'application/octet-stream',
+      'X-Filename': file.name,
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      headers,
+      body: file,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error((err as { error?: string }).error || res.statusText);
+    }
+    return res.json();
+  },
+
   // Hosts
   getHosts: () => request<HostEntry[]>('/hosts'),
   createHost: (host: Partial<HostEntry>) =>

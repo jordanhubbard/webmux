@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { Terminal, type TerminalHandle } from './Terminal';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
+import { api } from '../utils/api';
 import type { Session, ConnectionState } from '../types';
 
 interface TileProps {
@@ -61,6 +62,22 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
     setTimeout(() => inputRef.current?.select(), 0);
   }, [session.title]);
 
+  const [fileDragOver, setFileDragOver] = useState(false);
+
+  const handleFileDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFileDragOver(false);
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+    try {
+      const result = await api.uploadFile(files[0]);
+      termHandleRef.current?.sendInput(result.path + ' ');
+    } catch (err) {
+      console.error('File upload failed:', err);
+    }
+  }, []);
+
   const stateColor = state === 'connected' ? '#4aaa6a' :
     state === 'connecting' ? '#caaa4a' :
     state === 'error' ? '#ff5555' : '#888888';
@@ -80,10 +97,15 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
   return (
     <div
       onWheel={e => { if (!e.shiftKey) e.stopPropagation(); }}
+      onDragOver={e => { e.preventDefault(); e.stopPropagation(); setFileDragOver(true); }}
+      onDragLeave={e => { e.preventDefault(); e.stopPropagation(); setFileDragOver(false); }}
+      onDrop={handleFileDrop}
       style={{
         ...styles.tile,
-        borderColor,
-        boxShadow: isDropTarget
+        borderColor: fileDragOver ? '#50fa7b' : borderColor,
+        boxShadow: fileDragOver
+          ? '0 0 12px rgba(80, 250, 123, 0.6)'
+          : isDropTarget
           ? '0 0 12px rgba(124, 106, 247, 0.6)'
           : broadcastMode
             ? (isExcluded ? 'none' : '0 0 8px rgba(232, 160, 48, 0.4)')
