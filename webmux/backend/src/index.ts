@@ -33,7 +33,7 @@ async function main(): Promise<void> {
         secure_mode: false,
         trusted_http_allowed: true,
         default_term: { cols: 80, rows: 24, font_size: 14 },
-        transport: { prefer_mosh: false, ssh_fallback: true },
+        transport: { prefer_mosh: false, ssh_fallback: true, mosh_server_path: '' },
       },
     };
   }

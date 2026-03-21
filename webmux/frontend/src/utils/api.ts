@@ -64,6 +64,11 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ row, col }),
     }),
+  renameSession: (id: string, title: string) =>
+    request<Session>(`/sessions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title }),
+    }),
   // Hosts
   getHosts: () => request<HostEntry[]>('/hosts'),
   createHost: (host: Partial<HostEntry>) =>

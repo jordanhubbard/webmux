@@ -9,6 +9,7 @@ import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 
 export interface TerminalHandle {
   scrollToBottom: () => void;
+  isAtBottom: () => boolean;
 }
 
 interface TerminalProps {
@@ -32,11 +33,16 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const termRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsHandleRef = useRef<ReturnType<typeof useWebSocket> | null>(null);
+  const userScrolledRef = useRef(false);
 
   const { registerSend, unregisterSend, routeInput, setFocusedSessionId, broadcastMode, focusedSessionId } = useInputBroadcast();
 
   useImperativeHandle(ref, () => ({
-    scrollToBottom: () => { termRef.current?.scrollToBottom(); },
+    scrollToBottom: () => {
+      userScrolledRef.current = false;
+      termRef.current?.scrollToBottom();
+    },
+    isAtBottom: () => !userScrolledRef.current,
   }));
 
   // Keep latest callbacks in refs so xterm/WS handlers never capture stale closures.
@@ -55,7 +61,14 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     switch (msg.type) {
       case 'output':
         if (msg.data && termRef.current) {
-          termRef.current.write(msg.data);
+          if (userScrolledRef.current) {
+            const savedY = termRef.current.buffer.active.viewportY;
+            termRef.current.write(msg.data, () => {
+              termRef.current?.scrollToLine(savedY);
+            });
+          } else {
+            termRef.current.write(msg.data);
+          }
         }
         break;
       case 'status':
@@ -123,6 +136,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       fontFamily: 'Consolas, Menlo, "DejaVu Sans Mono", monospace',
       fontSize,
       cursorBlink: true,
+      macOptionIsMeta: /Mac|iPhone|iPad/.test(navigator.platform),
       allowTransparency: false,
       scrollback: 5000,
       linkHandler: {
@@ -151,6 +165,20 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       wsHandleRef.current?.send({ type: 'resize', cols, rows });
     });
 
+    const scrollListener = term.onScroll(() => {
+      if (userScrolledRef.current && term.buffer.active.viewportY >= term.buffer.active.baseY) {
+        userScrolledRef.current = false;
+      }
+    });
+
+    const termEl = containerRef.current!;
+    const wheelHandler = (e: WheelEvent) => {
+      if (e.deltaY < 0) {
+        userScrolledRef.current = true;
+      }
+    };
+    termEl.addEventListener('wheel', wheelHandler);
+
     const el = containerRef.current;
     // Click to focus this terminal
     const clickHandler = () => {
@@ -163,6 +191,8 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     return () => {
       dataListener.dispose();
       resizeListener.dispose();
+      scrollListener.dispose();
+      termEl.removeEventListener('wheel', wheelHandler);
       el.removeEventListener('mousedown', clickHandler);
       term.dispose();
       termRef.current = null;

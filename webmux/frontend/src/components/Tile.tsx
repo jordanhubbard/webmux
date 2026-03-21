@@ -8,16 +8,21 @@ interface TileProps {
   fontSize: number;
   onClose: (id: string) => void;
   onReconnect: (id: string) => void;
+  onRename: (id: string, title: string) => void;
   onTitleMouseDown?: (sessionId: string, e: React.MouseEvent) => void;
   isDragging?: boolean;
   isDropTarget?: boolean;
 }
 
-export function Tile({ session, fontSize, onClose, onReconnect, onTitleMouseDown, isDragging, isDropTarget }: TileProps) {
+export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitleMouseDown, isDragging, isDropTarget }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
-  const { focusedSessionId, broadcastMode } = useInputBroadcast();
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(session.title);
+  const { focusedSessionId, broadcastMode, broadcastExcluded, toggleBroadcastExclude } = useInputBroadcast();
+  const isExcluded = broadcastExcluded.has(session.id);
   const termHandleRef = useRef<TerminalHandle>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const isFocused = focusedSessionId === session.id;
 
@@ -35,8 +40,26 @@ export function Tile({ session, fontSize, onClose, onReconnect, onTitleMouseDown
 
   const handleChromeMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
+    if ((e.target as HTMLElement).closest('input')) return;
     onTitleMouseDown?.(session.id, e);
   }, [onTitleMouseDown, session.id]);
+
+  const commitRename = useCallback(() => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== session.title) {
+      onRename(session.id, trimmed);
+    } else {
+      setEditValue(session.title);
+    }
+    setEditing(false);
+  }, [editValue, session.id, session.title, onRename]);
+
+  const handleTitleDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditValue(session.title);
+    setEditing(true);
+    setTimeout(() => inputRef.current?.select(), 0);
+  }, [session.title]);
 
   const stateColor = state === 'connected' ? '#4aaa6a' :
     state === 'connecting' ? '#caaa4a' :
@@ -49,7 +72,7 @@ export function Tile({ session, fontSize, onClose, onReconnect, onTitleMouseDown
   const borderColor = isDropTarget
     ? '#7c6af7'
     : broadcastMode
-      ? '#e8a030'
+      ? (isExcluded ? '#333366' : '#e8a030')
       : isFocused
         ? '#7c6af7'
         : '#333366';
@@ -63,7 +86,7 @@ export function Tile({ session, fontSize, onClose, onReconnect, onTitleMouseDown
         boxShadow: isDropTarget
           ? '0 0 12px rgba(124, 106, 247, 0.6)'
           : broadcastMode
-            ? '0 0 8px rgba(232, 160, 48, 0.4)'
+            ? (isExcluded ? 'none' : '0 0 8px rgba(232, 160, 48, 0.4)')
             : isFocused
               ? '0 0 8px rgba(124, 106, 247, 0.4)'
               : 'none',
@@ -78,10 +101,41 @@ export function Tile({ session, fontSize, onClose, onReconnect, onTitleMouseDown
       >
         <div style={styles.chromeLeft}>
           <span style={{ ...styles.stateIndicator, color: stateColor }}>{stateIcon}</span>
-          <span style={styles.title} title={session.title}>{session.title}</span>
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={editValue}
+              onChange={e => setEditValue(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitRename();
+                if (e.key === 'Escape') { setEditValue(session.title); setEditing(false); }
+                e.stopPropagation();
+              }}
+              style={styles.titleInput}
+              maxLength={128}
+            />
+          ) : (
+            <span
+              style={styles.title}
+              title={`${session.title} (double-click to rename)`}
+              onDoubleClick={handleTitleDoubleClick}
+            >{session.title}</span>
+          )}
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
         </div>
         <div style={styles.chromeRight}>
+          {broadcastMode && (
+            <button
+              style={{
+                ...styles.chromeBtn,
+                color: isExcluded ? '#666' : '#e8a030',
+                fontSize: 10,
+              }}
+              onClick={() => toggleBroadcastExclude(session.id)}
+              title={isExcluded ? 'Excluded from broadcast (click to include)' : 'Included in broadcast (click to exclude)'}
+            >{isExcluded ? '\u25cb' : '\u25cf'}</button>
+          )}
           {viewerCount > 1 && (
             <span style={styles.viewers} title={`${viewerCount} viewers`}>
               {viewerCount}
@@ -155,6 +209,18 @@ const styles: Record<string, React.CSSProperties> = {
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
     maxWidth: 300,
+    cursor: 'text',
+  },
+  titleInput: {
+    fontSize: 12,
+    color: '#fff',
+    background: '#0d0d1a',
+    border: '1px solid #7c6af7',
+    borderRadius: 2,
+    padding: '0 4px',
+    outline: 'none',
+    maxWidth: 300,
+    fontFamily: 'inherit',
   },
   transport: {
     fontSize: 9,
