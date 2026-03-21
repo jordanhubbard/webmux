@@ -172,7 +172,8 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
       const cell = getGridCell(e.clientX, e.clientY);
       if (cell) {
         const sessionAtCell = sessionsRef.current.find(s => s.row === cell.row && s.col === cell.col);
-        const newTarget = (sessionAtCell && sessionAtCell.id !== draggingIdRef.current) ? cell : null;
+        const isSelf = sessionAtCell && sessionAtCell.id === draggingIdRef.current;
+        const newTarget = isSelf ? null : cell;
         setDropTarget(newTarget);
         dropTargetRef.current = newTarget;
       } else {
@@ -190,27 +191,29 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
         const dragged = currentSessions.find(s => s.id === dragId);
         const targetSession = currentSessions.find(s => s.row === target.row && s.col === target.col);
 
-        if (dragged && targetSession) {
+        if (dragged) {
           const srcRow = dragged.row;
           const srcCol = dragged.col;
 
           // Optimistic update
           setSessions(prev => prev.map(s => {
             if (s.id === dragId) return { ...s, row: target.row, col: target.col };
-            if (s.id === targetSession.id) return { ...s, row: srcRow, col: srcCol };
+            if (targetSession && s.id === targetSession.id) return { ...s, row: srcRow, col: srcCol };
             return s;
           }));
 
           // Persist to backend
           try {
             await api.moveSession(dragId, target.row, target.col);
-            await api.moveSession(targetSession.id, srcRow, srcCol);
+            if (targetSession) {
+              await api.moveSession(targetSession.id, srcRow, srcCol);
+            }
           } catch (err) {
             console.error('Move failed:', err);
             // Revert on failure
             setSessions(prev => prev.map(s => {
               if (s.id === dragId) return { ...s, row: srcRow, col: srcCol };
-              if (s.id === targetSession.id) return { ...s, row: target.row, col: target.col };
+              if (targetSession && s.id === targetSession.id) return { ...s, row: target.row, col: target.col };
               return s;
             }));
           }
