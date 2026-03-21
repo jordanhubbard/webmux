@@ -33,17 +33,16 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const termRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsHandleRef = useRef<ReturnType<typeof useWebSocket> | null>(null);
-  const atBottomRef = useRef(true);
+  const userScrolledRef = useRef(false);
 
   const { registerSend, unregisterSend, routeInput, setFocusedSessionId, broadcastMode, focusedSessionId } = useInputBroadcast();
 
   useImperativeHandle(ref, () => ({
-    scrollToBottom: () => { termRef.current?.scrollToBottom(); },
-    isAtBottom: () => {
-      const term = termRef.current;
-      if (!term) return true;
-      return term.buffer.active.viewportY >= term.buffer.active.baseY;
+    scrollToBottom: () => {
+      userScrolledRef.current = false;
+      termRef.current?.scrollToBottom();
     },
+    isAtBottom: () => !userScrolledRef.current,
   }));
 
   // Keep latest callbacks in refs so xterm/WS handlers never capture stale closures.
@@ -62,10 +61,13 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     switch (msg.type) {
       case 'output':
         if (msg.data && termRef.current) {
-          const wasAtBottom = atBottomRef.current;
-          termRef.current.write(msg.data);
-          if (wasAtBottom) {
-            termRef.current.scrollToBottom();
+          if (userScrolledRef.current) {
+            const savedY = termRef.current.buffer.active.viewportY;
+            termRef.current.write(msg.data, () => {
+              termRef.current?.scrollToLine(savedY);
+            });
+          } else {
+            termRef.current.write(msg.data);
           }
         }
         break;
@@ -164,8 +166,18 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     });
 
     const scrollListener = term.onScroll(() => {
-      atBottomRef.current = term.buffer.active.viewportY >= term.buffer.active.baseY;
+      if (userScrolledRef.current && term.buffer.active.viewportY >= term.buffer.active.baseY) {
+        userScrolledRef.current = false;
+      }
     });
+
+    const termEl = containerRef.current!;
+    const wheelHandler = (e: WheelEvent) => {
+      if (e.deltaY < 0) {
+        userScrolledRef.current = true;
+      }
+    };
+    termEl.addEventListener('wheel', wheelHandler);
 
     const el = containerRef.current;
     // Click to focus this terminal
@@ -180,6 +192,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       dataListener.dispose();
       resizeListener.dispose();
       scrollListener.dispose();
+      termEl.removeEventListener('wheel', wheelHandler);
       el.removeEventListener('mousedown', clickHandler);
       term.dispose();
       termRef.current = null;
