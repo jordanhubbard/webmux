@@ -12,6 +12,9 @@ interface InputBroadcastState {
   unregisterSend: (sessionId: string) => void;
   /** Route input: if broadcast mode, send to all; otherwise send to focused only. */
   routeInput: (fromSessionId: string, data: string) => void;
+  /** Sessions excluded from broadcast */
+  broadcastExcluded: Set<string>;
+  toggleBroadcastExclude: (sessionId: string) => void;
 }
 
 const InputBroadcastContext = createContext<InputBroadcastState | null>(null);
@@ -19,10 +22,13 @@ const InputBroadcastContext = createContext<InputBroadcastState | null>(null);
 export function InputBroadcastProvider({ children }: { children: ReactNode }) {
   const [broadcastMode, setBroadcastMode] = useState(false);
   const [focusedSessionId, setFocusedSessionIdState] = useState<string | null>(null);
+  const [broadcastExcluded, setBroadcastExcluded] = useState<Set<string>>(new Set());
   const sendFns = useRef(new Map<string, SendFn>());
   const broadcastModeRef = useRef(broadcastMode);
+  const broadcastExcludedRef = useRef(broadcastExcluded);
 
   useEffect(() => { broadcastModeRef.current = broadcastMode; }, [broadcastMode]);
+  useEffect(() => { broadcastExcludedRef.current = broadcastExcluded; }, [broadcastExcluded]);
 
   const registerSend = useCallback((sessionId: string, send: SendFn) => {
     sendFns.current.set(sessionId, send);
@@ -36,9 +42,24 @@ export function InputBroadcastProvider({ children }: { children: ReactNode }) {
     setFocusedSessionIdState(id);
   }, []);
 
+  const toggleBroadcastExclude = useCallback((sessionId: string) => {
+    setBroadcastExcluded(prev => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) {
+        next.delete(sessionId);
+      } else {
+        next.add(sessionId);
+      }
+      return next;
+    });
+  }, []);
+
   const routeInput = useCallback((fromSessionId: string, data: string) => {
     if (broadcastModeRef.current) {
-      sendFns.current.forEach(send => send(data));
+      const excluded = broadcastExcludedRef.current;
+      sendFns.current.forEach((send, id) => {
+        if (!excluded.has(id)) send(data);
+      });
     } else {
       const send = sendFns.current.get(fromSessionId);
       if (send) send(data);
@@ -53,7 +74,9 @@ export function InputBroadcastProvider({ children }: { children: ReactNode }) {
     registerSend,
     unregisterSend,
     routeInput,
-  }), [broadcastMode, focusedSessionId, setFocusedSessionId, registerSend, unregisterSend, routeInput]);
+    broadcastExcluded,
+    toggleBroadcastExclude,
+  }), [broadcastMode, focusedSessionId, setFocusedSessionId, registerSend, unregisterSend, routeInput, broadcastExcluded, toggleBroadcastExclude]);
 
   return (
     <InputBroadcastContext.Provider value={value}>
