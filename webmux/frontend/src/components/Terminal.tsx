@@ -123,6 +123,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       fontFamily: 'Consolas, Menlo, "DejaVu Sans Mono", monospace',
       fontSize,
       cursorBlink: true,
+      macOptionIsMeta: /Mac|iPhone|iPad/.test(navigator.platform),
       allowTransparency: false,
       scrollback: 5000,
       linkHandler: {
