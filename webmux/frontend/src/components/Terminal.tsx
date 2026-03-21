@@ -9,6 +9,7 @@ import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 
 export interface TerminalHandle {
   scrollToBottom: () => void;
+  isAtBottom: () => boolean;
 }
 
 interface TerminalProps {
@@ -32,11 +33,17 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const termRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsHandleRef = useRef<ReturnType<typeof useWebSocket> | null>(null);
+  const atBottomRef = useRef(true);
 
   const { registerSend, unregisterSend, routeInput, setFocusedSessionId, broadcastMode, focusedSessionId } = useInputBroadcast();
 
   useImperativeHandle(ref, () => ({
     scrollToBottom: () => { termRef.current?.scrollToBottom(); },
+    isAtBottom: () => {
+      const term = termRef.current;
+      if (!term) return true;
+      return term.buffer.active.viewportY >= term.buffer.active.baseY;
+    },
   }));
 
   // Keep latest callbacks in refs so xterm/WS handlers never capture stale closures.
@@ -55,7 +62,11 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     switch (msg.type) {
       case 'output':
         if (msg.data && termRef.current) {
+          const wasAtBottom = atBottomRef.current;
           termRef.current.write(msg.data);
+          if (wasAtBottom) {
+            termRef.current.scrollToBottom();
+          }
         }
         break;
       case 'status':
@@ -152,6 +163,10 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       wsHandleRef.current?.send({ type: 'resize', cols, rows });
     });
 
+    const scrollListener = term.onScroll(() => {
+      atBottomRef.current = term.buffer.active.viewportY >= term.buffer.active.baseY;
+    });
+
     const el = containerRef.current;
     // Click to focus this terminal
     const clickHandler = () => {
@@ -164,6 +179,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     return () => {
       dataListener.dispose();
       resizeListener.dispose();
+      scrollListener.dispose();
       el.removeEventListener('mousedown', clickHandler);
       term.dispose();
       termRef.current = null;
