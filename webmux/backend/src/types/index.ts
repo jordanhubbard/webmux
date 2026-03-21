@@ -14,6 +14,7 @@ export interface AppConfig {
     transport: {
       prefer_mosh: boolean;
       ssh_fallback: boolean;
+      mosh_server_path: string;
     };
   };
 }

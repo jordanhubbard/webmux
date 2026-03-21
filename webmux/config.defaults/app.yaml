@@ -12,3 +12,4 @@ app:
   transport:
     prefer_mosh: false
     ssh_fallback: true
+    mosh_server_path: ""
