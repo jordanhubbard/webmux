@@ -65,7 +65,19 @@ router.patch('/:id', (req: Request, res: Response) => {
     res.status(404).json({ error: 'Session not found' });
     return;
   }
-  const { row, col } = req.body as { row?: number; col?: number };
+  const { row, col, title } = req.body as { row?: number; col?: number; title?: string };
+
+  if (title !== undefined) {
+    const trimmed = title.trim();
+    if (trimmed.length === 0 || trimmed.length > 128) {
+      res.status(400).json({ error: 'title must be 1-128 characters' });
+      return;
+    }
+    const updated = sessionBroker.rename(req.params.id, trimmed);
+    res.json(updated);
+    return;
+  }
+
   if (row === undefined || col === undefined) {
     res.status(400).json({ error: 'row and col are required' });
     return;

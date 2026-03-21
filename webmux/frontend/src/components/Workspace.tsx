@@ -142,6 +142,14 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
     }).catch(err => console.error('Reconnect error:', err));
   }, []);
 
+  const handleRename = useCallback((id: string, title: string) => {
+    setSessions(prev => prev.map(s => s.id === id ? { ...s, title } : s));
+    api.renameSession(id, title).catch(err => {
+      console.error('Rename error:', err);
+      api.getSessions().then(setSessions);
+    });
+  }, []);
+
   const tile = tilePixelSize(termCols, termRows, fontSize);
 
   const getGridCell = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
@@ -275,6 +283,7 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
               fontSize={fontSize}
               onClose={handleClose}
               onReconnect={handleReconnect}
+              onRename={handleRename}
               onTitleMouseDown={handleTitleMouseDown}
               isDragging={draggingId === session.id}
               isDropTarget={dropTarget?.row === session.row && dropTarget?.col === session.col}
