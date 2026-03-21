@@ -16,7 +16,8 @@ interface TileProps {
 export function Tile({ session, fontSize, onClose, onReconnect, onTitleMouseDown, isDragging, isDropTarget }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
-  const { focusedSessionId, broadcastMode } = useInputBroadcast();
+  const { focusedSessionId, broadcastMode, broadcastExcluded, toggleBroadcastExclude } = useInputBroadcast();
+  const isExcluded = broadcastExcluded.has(session.id);
   const termHandleRef = useRef<TerminalHandle>(null);
 
   const isFocused = focusedSessionId === session.id;
@@ -49,7 +50,7 @@ export function Tile({ session, fontSize, onClose, onReconnect, onTitleMouseDown
   const borderColor = isDropTarget
     ? '#7c6af7'
     : broadcastMode
-      ? '#e8a030'
+      ? (isExcluded ? '#333366' : '#e8a030')
       : isFocused
         ? '#7c6af7'
         : '#333366';
@@ -63,7 +64,7 @@ export function Tile({ session, fontSize, onClose, onReconnect, onTitleMouseDown
         boxShadow: isDropTarget
           ? '0 0 12px rgba(124, 106, 247, 0.6)'
           : broadcastMode
-            ? '0 0 8px rgba(232, 160, 48, 0.4)'
+            ? (isExcluded ? 'none' : '0 0 8px rgba(232, 160, 48, 0.4)')
             : isFocused
               ? '0 0 8px rgba(124, 106, 247, 0.4)'
               : 'none',
@@ -82,6 +83,17 @@ export function Tile({ session, fontSize, onClose, onReconnect, onTitleMouseDown
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
         </div>
         <div style={styles.chromeRight}>
+          {broadcastMode && (
+            <button
+              style={{
+                ...styles.chromeBtn,
+                color: isExcluded ? '#666' : '#e8a030',
+                fontSize: 10,
+              }}
+              onClick={() => toggleBroadcastExclude(session.id)}
+              title={isExcluded ? 'Excluded from broadcast (click to include)' : 'Included in broadcast (click to exclude)'}
+            >{isExcluded ? '\u25cb' : '\u25cf'}</button>
+          )}
           {viewerCount > 1 && (
             <span style={styles.viewers} title={`${viewerCount} viewers`}>
               {viewerCount}
