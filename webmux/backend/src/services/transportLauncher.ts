@@ -133,9 +133,13 @@ export class TransportLauncher {
       const appConfig = persistence.loadApp();
       const serverPath = appConfig.app.transport.mosh_server_path;
       if (serverPath) {
+        if (!/^[a-zA-Z0-9/_.\-]+$/.test(serverPath)) {
+          throw new Error(`Invalid mosh_server_path: ${serverPath}`);
+        }
         args.push('--server=' + serverPath);
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith('Invalid mosh_server_path')) throw err;
       // config not available
     }
 
