@@ -12,6 +12,7 @@ import hostsRouter from './api/hosts';
 import keysRouter from './api/keys';
 import sessionsRouter from './api/sessions';
 import configRouter from './api/config';
+import uploadRouter from './api/upload';
 import { setupWebSocket } from './websocket/handler';
 import { sessionBroker } from './services/sessionBroker';
 import { persistence, LOGS_DIR } from './services/persistenceManager';
@@ -67,6 +68,7 @@ async function main(): Promise<void> {
   app.use('/api/keys', keysRouter);
   app.use('/api/sessions', sessionsRouter);
   app.use('/api/config', configRouter);
+  app.use('/api/upload', uploadRouter);
 
   // Health check
   app.get('/api/health', (_req, res) => {

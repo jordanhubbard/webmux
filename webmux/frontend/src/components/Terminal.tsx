@@ -10,6 +10,7 @@ import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 export interface TerminalHandle {
   scrollToBottom: () => void;
   isAtBottom: () => boolean;
+  sendInput: (data: string) => void;
 }
 
 interface TerminalProps {
@@ -43,6 +44,9 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       termRef.current?.scrollToBottom();
     },
     isAtBottom: () => !userScrolledRef.current,
+    sendInput: (data: string) => {
+      wsHandleRef.current?.send({ type: 'input', data });
+    },
   }));
 
   // Keep latest callbacks in refs so xterm/WS handlers never capture stale closures.
