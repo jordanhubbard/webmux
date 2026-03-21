@@ -124,9 +124,20 @@ export class TransportLauncher {
     sshParts.push('-p', String(session.port || 22));
     const keyPath = this.resolveKeyPath(keyId);
     if (keyPath) {
-      sshParts.push('-i', keyPath);
+      sshParts.push('-i', '"' + keyPath + '"');
     }
     args.push('--ssh=' + sshParts.join(' '));
+
+    // Use configured mosh-server path if set (for hosts where it's not in PATH)
+    try {
+      const appConfig = persistence.loadApp();
+      const serverPath = appConfig.app.transport.mosh_server_path;
+      if (serverPath) {
+        args.push('--server=' + serverPath);
+      }
+    } catch {
+      // config not available
+    }
 
     if (session.username) {
       args.push(session.username + '@' + session.hostname);
