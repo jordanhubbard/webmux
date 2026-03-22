@@ -11,6 +11,7 @@ export interface TerminalHandle {
   scrollToBottom: () => void;
   isAtBottom: () => boolean;
   sendInput: (data: string) => void;
+  getScrollback: (lines: number) => string;
 }
 
 interface TerminalProps {
@@ -20,6 +21,8 @@ interface TerminalProps {
   onStateChange: (state: ConnectionState) => void;
   onViewerUpdate: (count: number, focusOwner?: string) => void;
   onFocusGained: () => void;
+  onClaudeAuthUrl?: (url: string) => void;
+  onClaudeAuthComplete?: () => void;
 }
 
 export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal({
@@ -29,6 +32,8 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   onStateChange,
   onViewerUpdate,
   onFocusGained,
+  onClaudeAuthUrl,
+  onClaudeAuthComplete,
 }: TerminalProps, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
@@ -36,7 +41,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const wsHandleRef = useRef<ReturnType<typeof useWebSocket> | null>(null);
   const userScrolledRef = useRef(false);
 
-  const { registerSend, unregisterSend, routeInput, setFocusedSessionId, broadcastMode, focusedSessionId } = useInputBroadcast();
+  const { registerSend, unregisterSend, routeInput, setFocusedSessionId, broadcastMode, focusedSessionId, registerScrollback, unregisterScrollback } = useInputBroadcast();
 
   useImperativeHandle(ref, () => ({
     scrollToBottom: () => {
@@ -47,15 +52,32 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     sendInput: (data: string) => {
       wsHandleRef.current?.send({ type: 'input', data });
     },
+    getScrollback: (lines: number): string => {
+      const term = termRef.current;
+      if (!term) return '';
+      const buffer = term.buffer.active;
+      const totalLines = buffer.length;
+      const start = Math.max(0, totalLines - lines);
+      const result: string[] = [];
+      for (let i = start; i < totalLines; i++) {
+        const line = buffer.getLine(i);
+        if (line) result.push(line.translateToString(true));
+      }
+      return result.join('\n');
+    },
   }));
 
   // Keep latest callbacks in refs so xterm/WS handlers never capture stale closures.
   const onStateChangeRef = useRef(onStateChange);
   const onViewerUpdateRef = useRef(onViewerUpdate);
   const onFocusGainedRef = useRef(onFocusGained);
+  const onClaudeAuthUrlRef = useRef(onClaudeAuthUrl);
+  const onClaudeAuthCompleteRef = useRef(onClaudeAuthComplete);
   useEffect(() => { onStateChangeRef.current = onStateChange; }, [onStateChange]);
   useEffect(() => { onViewerUpdateRef.current = onViewerUpdate; }, [onViewerUpdate]);
   useEffect(() => { onFocusGainedRef.current = onFocusGained; }, [onFocusGained]);
+  useEffect(() => { onClaudeAuthUrlRef.current = onClaudeAuthUrl; }, [onClaudeAuthUrl]);
+  useEffect(() => { onClaudeAuthCompleteRef.current = onClaudeAuthComplete; }, [onClaudeAuthComplete]);
 
   // routeInput is a stable callback (useCallback with [] deps) that reads
   // broadcastMode from a ref internally — use it directly without a wrapper ref.
@@ -85,6 +107,12 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       case 'focus':
         onViewerUpdateRef.current(msg.viewer_count ?? 0, msg.focus_owner);
         break;
+      case 'claude:auth-url':
+        if (msg.url) onClaudeAuthUrlRef.current?.(msg.url);
+        break;
+      case 'claude:auth-complete':
+        onClaudeAuthCompleteRef.current?.();
+        break;
       default:
         break;
     }
@@ -109,6 +137,25 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     registerSend(sessionId, sendInput);
     return () => unregisterSend(sessionId);
   }, [sessionId, registerSend, unregisterSend]);
+
+  // Register scrollback getter so AiSidebar can access terminal context
+  useEffect(() => {
+    const getScrollback = (lines: number): string => {
+      const term = termRef.current;
+      if (!term) return '';
+      const buffer = term.buffer.active;
+      const totalLines = buffer.length;
+      const start = Math.max(0, totalLines - lines);
+      const result: string[] = [];
+      for (let i = start; i < totalLines; i++) {
+        const line = buffer.getLine(i);
+        if (line) result.push(line.translateToString(true));
+      }
+      return result.join('\n');
+    };
+    registerScrollback(sessionId, getScrollback);
+    return () => unregisterScrollback(sessionId);
+  }, [sessionId, registerScrollback, unregisterScrollback]);
 
   // Initialize xterm
   useEffect(() => {

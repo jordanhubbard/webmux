@@ -103,6 +103,13 @@ export const api = {
   getConfig: () => request<AppConfig>('/config'),
   updateConfig: (config: DeepPartial<AppConfig>) =>
     request<AppConfig>('/config', { method: 'PUT', body: JSON.stringify(config) }),
+
+  // AI assistant
+  askAi: (prompt: string, context?: string) =>
+    request<{ response?: string; [key: string]: unknown }>('/ai/ask', {
+      method: 'POST',
+      body: JSON.stringify({ prompt, context }),
+    }),
 };
 
 export function buildWsUrl(sessionId: string): string {

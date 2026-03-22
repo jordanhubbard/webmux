@@ -4,6 +4,7 @@ import { LoginPage } from './components/LoginPage';
 import { TopBar } from './components/TopBar';
 import { Workspace } from './components/Workspace';
 import { RegisterDialog } from './components/RegisterDialog';
+import { AiSidebar } from './components/AiSidebar';
 import { InputBroadcastProvider } from './contexts/InputBroadcastContext';
 import { api } from './utils/api';
 
@@ -29,6 +30,7 @@ export default function App() {
   const [termRows, setTermRows] = useState(24);
   const [showRegister, setShowRegister] = useState(false);
   const [secureMode, setSecureMode] = useState(true);
+  const [aiSidebarOpen, setAiSidebarOpen] = useState(false);
 
   const currentUser = useMemo(() => auth.isAuthenticated ? parseTokenUser() : null, [auth.isAuthenticated]);
 
@@ -82,9 +84,14 @@ export default function App() {
           onNewAccount={() => setShowRegister(true)}
           secureMode={secureMode}
           currentUser={currentUser}
+          aiSidebarOpen={aiSidebarOpen}
+          onToggleAiSidebar={() => setAiSidebarOpen(o => !o)}
         />
 
-        <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} />
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} />
+          {aiSidebarOpen && <AiSidebar onClose={() => setAiSidebarOpen(false)} />}
+        </div>
 
         {showRegister && (
           <RegisterDialog

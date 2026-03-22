@@ -177,6 +177,26 @@ export class TransportLauncher {
     }
   }
 
+  launchLocal(sessionId: string, command: string, args: string[], cols: number, rows: number): pty.IPty {
+    // Only allow safe command names (no path traversal, no injection)
+    if (!/^[a-zA-Z0-9_-]+$/.test(command)) {
+      throw new Error(`Invalid command name: ${command}`);
+    }
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      TERM: 'xterm-256color',
+    };
+    const ptyProcess = pty.spawn(command, args, {
+      name: 'xterm-256color',
+      cols,
+      rows,
+      cwd: process.env.HOME || '/',
+      env,
+    });
+    this.handles.set(sessionId, ptyProcess);
+    return ptyProcess;
+  }
+
   resize(sessionId: string, cols: number, rows: number): void {
     const handle = this.handles.get(sessionId);
     if (handle) {

@@ -1,3 +1,10 @@
+export interface AiConfig {
+  enabled: boolean;
+  rcc_url: string;
+  rcc_token: string;
+  context_lines: number;
+}
+
 export interface AppConfig {
   app: {
     name: string;
@@ -17,6 +24,7 @@ export interface AppConfig {
       mosh_server_path: string;
     };
   };
+  ai?: AiConfig;
 }
 
 export interface AuthUser {
@@ -32,6 +40,7 @@ export interface AuthConfig {
 }
 
 export type TransportType = 'ssh' | 'mosh';
+export type SessionType = 'ssh' | 'mosh' | 'claude';
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 export interface HostEntry {
@@ -78,6 +87,7 @@ export interface Session {
   id: string;
   owner: string;
   transport: TransportType;
+  session_type?: SessionType;
   host_id: string;
   hostname: string;
   port: number;
@@ -101,7 +111,7 @@ export interface Viewer {
 }
 
 export interface WebSocketMessage {
-  type: 'input' | 'resize' | 'output' | 'status' | 'focus' | 'viewer_join' | 'viewer_leave' | 'error';
+  type: 'input' | 'resize' | 'output' | 'status' | 'focus' | 'viewer_join' | 'viewer_leave' | 'error' | 'claude:auth-url' | 'claude:auth-complete';
   session_id?: string;
   data?: string;
   cols?: number;
@@ -111,16 +121,18 @@ export interface WebSocketMessage {
   viewer_count?: number;
   focus_owner?: string;
   message?: string;
+  url?: string;
 }
 
 export interface CreateSessionRequest {
   host_id?: string;
   hostname?: string;
   port?: number;
-  username: string;
+  username?: string;
   password?: string;
   key_id?: string;
   transport?: TransportType;
+  session_type?: SessionType;
   cols?: number;
   rows?: number;
   row?: number;

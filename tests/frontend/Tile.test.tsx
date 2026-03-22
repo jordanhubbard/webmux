@@ -173,7 +173,7 @@ describe('Tile', () => {
       { wrapper },
     );
     // Fire mousedown on the chrome (not a button)
-    const chrome = screen.getByTitle('user@example.com').closest('[style]')!.parentElement!;
+    const chrome = screen.getByTitle('user@example.com (double-click to rename)').closest('[style]')!.parentElement!;
     fireEvent.mouseDown(chrome);
     expect(onTitleMouseDown).toHaveBeenCalledWith('s1', expect.any(Object));
   });

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Terminal, type TerminalHandle } from './Terminal';
+import { ClaudeAuthOverlay } from './ClaudeAuthOverlay';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { api } from '../utils/api';
 import type { Session, ConnectionState } from '../types';
@@ -63,6 +64,17 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
   }, [session.title]);
 
   const [fileDragOver, setFileDragOver] = useState(false);
+  const [claudeAuthUrl, setClaudeAuthUrl] = useState<string | null>(null);
+
+  const handleClaudeAuthUrl = useCallback((url: string) => {
+    setClaudeAuthUrl(url);
+  }, []);
+
+  const handleClaudeAuthComplete = useCallback(() => {
+    setClaudeAuthUrl(null);
+  }, []);
+
+  const isClaude = session.session_type === 'claude';
 
   const handleFileDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
@@ -144,7 +156,11 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
               onDoubleClick={handleTitleDoubleClick}
             >{session.title}</span>
           )}
-          <span style={styles.transport}>{session.transport.toUpperCase()}</span>
+          {isClaude ? (
+            <span style={{ ...styles.transport, color: '#f8d030', borderColor: '#7a6000', background: '#2a2000' }}>🤖 Claude</span>
+          ) : (
+            <span style={styles.transport}>{session.transport.toUpperCase()}</span>
+          )}
         </div>
         <div style={styles.chromeRight}>
           {broadcastMode && (
@@ -184,7 +200,15 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
           onStateChange={handleStateChange}
           onViewerUpdate={handleViewerUpdate}
           onFocusGained={handleFocusGained}
+          onClaudeAuthUrl={isClaude ? handleClaudeAuthUrl : undefined}
+          onClaudeAuthComplete={isClaude ? handleClaudeAuthComplete : undefined}
         />
+        {isClaude && claudeAuthUrl && (
+          <ClaudeAuthOverlay
+            authUrl={claudeAuthUrl}
+            onSendInput={(data) => termHandleRef.current?.sendInput(data)}
+          />
+        )}
       </div>
     </div>
   );

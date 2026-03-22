@@ -13,3 +13,8 @@ app:
     prefer_mosh: false
     ssh_fallback: true
     mosh_server_path: ""
+ai:
+  enabled: true
+  rcc_url: http://146.190.134.110:8789
+  rcc_token: ""
+  context_lines: 50

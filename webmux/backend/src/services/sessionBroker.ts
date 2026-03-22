@@ -6,6 +6,16 @@ import { transportLauncher } from './transportLauncher';
 import { presenceService } from './presenceService';
 import { persistence } from './persistenceManager';
 
+// Matches URLs from `claude login` output (e.g. https://claude.ai/oauth/...)
+// eslint-disable-next-line no-control-regex
+const CLAUDE_AUTH_URL_RE = /https:\/\/[a-zA-Z0-9._-]*claude\.ai\/[^\s\x1b\r\n]+/;
+const CLAUDE_AUTH_DONE_RE = /logged in|login successful|successfully logged in/i;
+
+function stripAnsi(str: string): string {
+  // eslint-disable-next-line no-control-regex
+  return str.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07\x1b]*(\x07|\x1b\\)/g, '');
+}
+
 export class SessionBroker extends EventEmitter {
   private sessions = new Map<string, Session>();
   private scrollback = new Map<string, string>();
@@ -59,6 +69,11 @@ export class SessionBroker extends EventEmitter {
   async create(req: CreateSessionRequest, owner: string = 'anonymous'): Promise<Session> {
     const id = uuidv4();
 
+    // Handle Claude CLI session type
+    if (req.session_type === 'claude') {
+      return this.createClaudeSession(id, req, owner);
+    }
+
     // Determine hostname
     let hostname = req.hostname || '';
     let port = req.port || 22;
@@ -94,6 +109,7 @@ export class SessionBroker extends EventEmitter {
       }
     }
 
+    const username = req.username || '';
     const session: Session = {
       id,
       owner,
@@ -101,7 +117,7 @@ export class SessionBroker extends EventEmitter {
       host_id: req.host_id || '',
       hostname,
       port,
-      username: req.username,
+      username,
       key_id: req.key_id || '',
       cols: req.cols || 80,
       rows: req.rows || 24,
@@ -110,7 +126,7 @@ export class SessionBroker extends EventEmitter {
       state: 'connecting',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      title: `${req.username}@${hostname}`,
+      title: `${username}@${hostname}`,
       persistent: true,
     };
 
@@ -127,13 +143,56 @@ export class SessionBroker extends EventEmitter {
     }
 
     this.persistSessions();
-    persistence.appendEvent({ type: 'session_created', session_id: id, hostname, username: req.username });
+    persistence.appendEvent({ type: 'session_created', session_id: id, hostname, username });
+    this.emit('session_created', session);
+    return session;
+  }
+
+  private async createClaudeSession(id: string, req: CreateSessionRequest, owner: string): Promise<Session> {
+    const ownerSessions = Array.from(this.sessions.values()).filter(s => s.owner === owner);
+    const { row, col } = this.nextPositionFor(ownerSessions, req.row, req.col);
+
+    const session: Session = {
+      id,
+      owner,
+      transport: 'ssh', // not used for claude, but satisfies the type
+      session_type: 'claude',
+      host_id: '',
+      hostname: 'localhost',
+      port: 0,
+      username: req.username || 'claude',
+      key_id: '',
+      cols: req.cols || 80,
+      rows: req.rows || 24,
+      row,
+      col,
+      state: 'connecting',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      title: 'Claude CLI',
+      persistent: false,
+    };
+
+    this.sessions.set(id, session);
+
+    try {
+      const ptyProcess = transportLauncher.launchLocal(id, 'claude', [], session.cols, session.rows);
+      this.wireEvents(session, ptyProcess);
+    } catch (err) {
+      session.state = 'error';
+      session.updated_at = new Date().toISOString();
+      console.error(`Failed to launch Claude CLI session ${id}:`, err);
+    }
+
+    this.persistSessions();
+    persistence.appendEvent({ type: 'session_created', session_id: id, hostname: 'localhost', username: 'claude' });
     this.emit('session_created', session);
     return session;
   }
 
   private wireEvents(session: Session, ptyProcess: pty.IPty): void {
     let firstData = true;
+    let claudeAuthDone = false;
 
     ptyProcess.onData((data: string) => {
       if (firstData) {
@@ -160,6 +219,26 @@ export class SessionBroker extends EventEmitter {
         session_id: session.id,
         data,
       });
+
+      // For Claude sessions, watch for auth URL and login completion
+      if (session.session_type === 'claude') {
+        const visible = stripAnsi(data);
+        const urlMatch = visible.match(CLAUDE_AUTH_URL_RE);
+        if (urlMatch) {
+          presenceService.broadcastToSession(session.id, {
+            type: 'claude:auth-url',
+            session_id: session.id,
+            url: urlMatch[0],
+          });
+        }
+        if (!claudeAuthDone && CLAUDE_AUTH_DONE_RE.test(visible)) {
+          claudeAuthDone = true;
+          presenceService.broadcastToSession(session.id, {
+            type: 'claude:auth-complete',
+            session_id: session.id,
+          });
+        }
+      }
     });
 
     ptyProcess.onExit(({ exitCode }: { exitCode: number }) => {
@@ -189,8 +268,13 @@ export class SessionBroker extends EventEmitter {
 
     try {
       this.scrollback.delete(session.id);
-      const ptyProcess = transportLauncher.launch(session, password, session.key_id || undefined);
-      this.wireEvents(session, ptyProcess);
+      if (session.session_type === 'claude') {
+        const ptyProcess = transportLauncher.launchLocal(sessionId, 'claude', [], session.cols, session.rows);
+        this.wireEvents(session, ptyProcess);
+      } else {
+        const ptyProcess = transportLauncher.launch(session, password, session.key_id || undefined);
+        this.wireEvents(session, ptyProcess);
+      }
     } catch (err) {
       session.state = 'error';
       session.updated_at = new Date().toISOString();

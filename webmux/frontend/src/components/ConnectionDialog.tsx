@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { api } from '../utils/api';
-import type { HostEntry, KeyEntry, CreateSessionRequest } from '../types';
+import type { HostEntry, KeyEntry, CreateSessionRequest, SessionType } from '../types';
 
 interface ConnectionDialogProps {
   onConnect: (req: CreateSessionRequest) => Promise<void>;
@@ -20,6 +20,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
   const [selectedKeyId, setSelectedKeyId] = useState('');
   const [transport, setTransport] = useState<'ssh' | 'mosh'>('ssh');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [sessionKind, setSessionKind] = useState<SessionType>('ssh');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -30,12 +31,20 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
 
   const validate = (): boolean => {
     setError(null);
+    if (sessionKind === 'claude') return true;
     if (!hostname.trim()) { setError('Hostname is required'); return false; }
     if (!username.trim()) { setError('Username is required'); return false; }
     return true;
   };
 
   const buildRequest = (): CreateSessionRequest => {
+    if (sessionKind === 'claude') {
+      return {
+        session_type: 'claude',
+        row: suggestedRow ?? 0,
+        col: suggestedCol ?? 0,
+      };
+    }
     const req: CreateSessionRequest = {
       username: username.trim(),
       hostname: hostname.trim(),
@@ -132,135 +141,160 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
         </div>
 
         <form onSubmit={handleConnect} style={styles.form}>
-          {/* Saved hosts as quick-connect cards */}
-          {hosts.length > 0 && (
-            <div style={styles.field}>
-              <label style={styles.label}>Saved Hosts</label>
-              <div style={styles.hostGrid}>
-                {hosts.map(h => (
-                  <div key={h.id} style={styles.hostCard}>
-                    <button
-                      type="button"
-                      style={styles.hostCardBtn}
-                      onClick={() => handleQuickConnect(h)}
-                      title={`Connect to ${h.username ? h.username + '@' : ''}${h.hostname}`}
-                      disabled={submitting}
-                    >
-                      {h.username && <span style={styles.hostCardUser}>{h.username}@</span>}
-                      <span style={styles.hostCardName}>{h.hostname}</span>
-                      {h.port !== 22 && <span style={styles.hostCardPort}>:{h.port}</span>}
-                    </button>
-                    <button
-                      type="button"
-                      style={styles.hostDeleteBtn}
-                      onClick={() => handleDeleteHost(h.id)}
-                      title="Remove saved host"
-                    >
-                      {'\u2715'}
-                    </button>
+          {/* Session kind selector */}
+          <div style={styles.field}>
+            <label style={styles.label}>Session Type</label>
+            <div style={styles.tabs}>
+              <button type="button" style={{ ...styles.tab, ...(sessionKind !== 'claude' ? styles.tabActive : {}) }} onClick={() => setSessionKind('ssh')}>SSH / Mosh</button>
+              <button type="button" style={{ ...styles.tab, ...(sessionKind === 'claude' ? styles.tabActive : {}) }} onClick={() => setSessionKind('claude')}>🤖 Claude CLI</button>
+            </div>
+          </div>
+
+          {sessionKind === 'claude' && (
+            <div style={styles.claudeInfo}>
+              <p style={{ margin: 0, fontSize: 13, color: '#c0c0d0', lineHeight: 1.5 }}>
+                Launches a <strong style={{ color: '#f8d030' }}>Claude CLI</strong> session in a local terminal pane. You can interact with Claude directly from your workspace.
+              </p>
+              <p style={{ margin: '8px 0 0', fontSize: 12, color: '#888' }}>
+                If not yet authenticated, an auth URL will appear automatically.
+              </p>
+            </div>
+          )}
+
+          {/* SSH form — only shown for non-Claude sessions */}
+          {sessionKind !== 'claude' && (
+            <>
+              {/* Saved hosts as quick-connect cards */}
+              {hosts.length > 0 && (
+                <div style={styles.field}>
+                  <label style={styles.label}>Saved Hosts</label>
+                  <div style={styles.hostGrid}>
+                    {hosts.map(h => (
+                      <div key={h.id} style={styles.hostCard}>
+                        <button
+                          type="button"
+                          style={styles.hostCardBtn}
+                          onClick={() => handleQuickConnect(h)}
+                          title={`Connect to ${h.username ? h.username + '@' : ''}${h.hostname}`}
+                          disabled={submitting}
+                        >
+                          {h.username && <span style={styles.hostCardUser}>{h.username}@</span>}
+                          <span style={styles.hostCardName}>{h.hostname}</span>
+                          {h.port !== 22 && <span style={styles.hostCardPort}>:{h.port}</span>}
+                        </button>
+                        <button
+                          type="button"
+                          style={styles.hostDeleteBtn}
+                          onClick={() => handleDeleteHost(h.id)}
+                          title="Remove saved host"
+                        >
+                          {'\u2715'}
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Divider when hosts exist */}
-          {hosts.length > 0 && (
-            <div style={styles.divider}>
-              <span style={styles.dividerText}>or connect to a new host</span>
-            </div>
-          )}
-
-          {/* Hostname + Port */}
-          <div style={styles.field}>
-            <label style={styles.label}>Host</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                style={{ ...styles.input, flex: 1 }}
-                type="text"
-                placeholder="hostname or IP"
-                value={hostname}
-                onChange={e => setHostname(e.target.value)}
-                autoFocus
-              />
-              <input
-                style={{ ...styles.input, width: 70 }}
-                type="number"
-                placeholder="22"
-                value={port}
-                onChange={e => setPort(Number(e.target.value))}
-                min={1}
-                max={65535}
-              />
-            </div>
-          </div>
-
-          {/* Username */}
-          <div style={styles.field}>
-            <label style={styles.label}>Username</label>
-            <input
-              style={styles.input}
-              type="text"
-              placeholder="user"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              autoComplete="username"
-            />
-          </div>
-
-          {/* Advanced toggle */}
-          <button
-            type="button"
-            style={styles.advancedToggle}
-            onClick={() => setShowAdvanced(!showAdvanced)}
-          >
-            {showAdvanced ? '\u25be' : '\u25b8'} Advanced options
-          </button>
-
-          {showAdvanced && (
-            <div style={styles.advanced}>
-              <div style={styles.field}>
-                <label style={styles.label}>Authentication</label>
-                <div style={styles.tabs}>
-                  <button type="button" style={{ ...styles.tab, ...(authMode === 'agent' ? styles.tabActive : {}) }} onClick={() => setAuthMode('agent')}>Agent</button>
-                  <button type="button" style={{ ...styles.tab, ...(authMode === 'key' ? styles.tabActive : {}) }} onClick={() => setAuthMode('key')}>Key</button>
-                  <button type="button" style={{ ...styles.tab, ...(authMode === 'password' ? styles.tabActive : {}) }} onClick={() => setAuthMode('password')}>Password</button>
                 </div>
-                {authMode === 'agent' && <p style={styles.hint}>Uses the SSH agent or default keys (~/.ssh/id_*). No credentials needed.</p>}
-                {authMode === 'key' && (
-                  <>
-                    <select style={styles.input} value={selectedKeyId} onChange={e => setSelectedKeyId(e.target.value)}>
-                      <option value="">Default key (agent / ~/.ssh/id_*)</option>
-                      {keys.map(k => <option key={k.id} value={k.id}>{k.description || k.id} ({k.type}{k.encrypted ? ', encrypted' : ''})</option>)}
-                    </select>
-                    <p style={styles.hint}>Select a specific key from keys.yaml.</p>
-                  </>
-                )}
-                {authMode === 'password' && (
-                  <input style={styles.input} type="password" placeholder="Remote password (requires sshpass)" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
-                )}
-              </div>
+              )}
+
+              {/* Divider when hosts exist */}
+              {hosts.length > 0 && (
+                <div style={styles.divider}>
+                  <span style={styles.dividerText}>or connect to a new host</span>
+                </div>
+              )}
+
+              {/* Hostname + Port */}
               <div style={styles.field}>
-                <label style={styles.label}>Transport</label>
-                <select style={styles.input} value={transport} onChange={e => setTransport(e.target.value as 'ssh' | 'mosh')}>
-                  <option value="ssh">SSH</option>
-                  <option value="mosh">Mosh</option>
-                </select>
+                <label style={styles.label}>Host</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    style={{ ...styles.input, flex: 1 }}
+                    type="text"
+                    placeholder="hostname or IP"
+                    value={hostname}
+                    onChange={e => setHostname(e.target.value)}
+                    autoFocus
+                  />
+                  <input
+                    style={{ ...styles.input, width: 70 }}
+                    type="number"
+                    placeholder="22"
+                    value={port}
+                    onChange={e => setPort(Number(e.target.value))}
+                    min={1}
+                    max={65535}
+                  />
+                </div>
               </div>
-            </div>
+
+              {/* Username */}
+              <div style={styles.field}>
+                <label style={styles.label}>Username</label>
+                <input
+                  style={styles.input}
+                  type="text"
+                  placeholder="user"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  autoComplete="username"
+                />
+              </div>
+
+              {/* Advanced toggle */}
+              <button
+                type="button"
+                style={styles.advancedToggle}
+                onClick={() => setShowAdvanced(!showAdvanced)}
+              >
+                {showAdvanced ? '\u25be' : '\u25b8'} Advanced options
+              </button>
+
+              {showAdvanced && (
+                <div style={styles.advanced}>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Authentication</label>
+                    <div style={styles.tabs}>
+                      <button type="button" style={{ ...styles.tab, ...(authMode === 'agent' ? styles.tabActive : {}) }} onClick={() => setAuthMode('agent')}>Agent</button>
+                      <button type="button" style={{ ...styles.tab, ...(authMode === 'key' ? styles.tabActive : {}) }} onClick={() => setAuthMode('key')}>Key</button>
+                      <button type="button" style={{ ...styles.tab, ...(authMode === 'password' ? styles.tabActive : {}) }} onClick={() => setAuthMode('password')}>Password</button>
+                    </div>
+                    {authMode === 'agent' && <p style={styles.hint}>Uses the SSH agent or default keys (~/.ssh/id_*). No credentials needed.</p>}
+                    {authMode === 'key' && (
+                      <>
+                        <select style={styles.input} value={selectedKeyId} onChange={e => setSelectedKeyId(e.target.value)}>
+                          <option value="">Default key (agent / ~/.ssh/id_*)</option>
+                          {keys.map(k => <option key={k.id} value={k.id}>{k.description || k.id} ({k.type}{k.encrypted ? ', encrypted' : ''})</option>)}
+                        </select>
+                        <p style={styles.hint}>Select a specific key from keys.yaml.</p>
+                      </>
+                    )}
+                    {authMode === 'password' && (
+                      <input style={styles.input} type="password" placeholder="Remote password (requires sshpass)" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
+                    )}
+                  </div>
+                  <div style={styles.field}>
+                    <label style={styles.label}>Transport</label>
+                    <select style={styles.input} value={transport} onChange={e => setTransport(e.target.value as 'ssh' | 'mosh')}>
+                      <option value="ssh">SSH</option>
+                      <option value="mosh">Mosh</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {error && <div style={styles.error}>{error}</div>}
 
           <div style={styles.actions}>
             <button type="button" style={styles.cancelBtn} onClick={onClose}>Cancel</button>
-            {!alreadySaved && hostname.trim() && (
+            {sessionKind !== 'claude' && !alreadySaved && hostname.trim() && (
               <button type="button" style={styles.saveBtn} onClick={handleSaveAndConnect} disabled={submitting}>
                 {submitting ? 'Saving\u2026' : 'Save & Connect'}
               </button>
             )}
             <button type="submit" style={styles.connectBtn} disabled={submitting}>
-              {submitting ? 'Connecting\u2026' : 'Connect'}
+              {submitting ? 'Connecting\u2026' : sessionKind === 'claude' ? 'Launch Claude CLI' : 'Connect'}
             </button>
           </div>
         </form>
@@ -426,6 +460,12 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 12,
     paddingLeft: 8,
     borderLeft: '2px solid #2a2a4a',
+  },
+  claudeInfo: {
+    background: '#1a1a0a',
+    border: '1px solid #5a5000',
+    borderRadius: 6,
+    padding: '10px 12px',
   },
   hint: {
     color: '#888',

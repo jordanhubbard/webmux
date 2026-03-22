@@ -13,9 +13,11 @@ interface TopBarProps {
   onNewAccount: () => void;
   secureMode: boolean;
   currentUser: string | null;
+  aiSidebarOpen: boolean;
+  onToggleAiSidebar: () => void;
 }
 
-export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser }: TopBarProps) {
+export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser, aiSidebarOpen, onToggleAiSidebar }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
   const [showHelp, setShowHelp] = useState(false);
 
@@ -111,6 +113,19 @@ export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, o
             </button>
           </>
         )}
+        <button
+          style={{
+            ...styles.iconBtn,
+            background: aiSidebarOpen ? '#2a2a5a' : '#1a1a3a',
+            borderColor: aiSidebarOpen ? '#7c6af7' : '#333366',
+            color: aiSidebarOpen ? '#c0b0ff' : '#aaa',
+          }}
+          onMouseDown={e => e.preventDefault()}
+          onClick={onToggleAiSidebar}
+          title={aiSidebarOpen ? 'Close AI sidebar' : 'Open AI assistant sidebar'}
+        >
+          🤖 AI
+        </button>
         <button style={styles.helpBtn} onClick={() => setShowHelp(true)} title="Usage help">?</button>
       </div>
     </div>

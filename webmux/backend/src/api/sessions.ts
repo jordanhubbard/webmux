@@ -28,7 +28,8 @@ router.get('/:id', (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const body = req.body as CreateSessionRequest;
-    if (!body.username) {
+    // Claude sessions don't require username; all others do
+    if (!body.username && body.session_type !== 'claude') {
       res.status(400).json({ error: 'username is required' });
       return;
     }
