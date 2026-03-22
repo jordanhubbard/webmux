@@ -11,6 +11,7 @@ export interface TerminalHandle {
   scrollToBottom: () => void;
   isAtBottom: () => boolean;
   sendInput: (data: string) => void;
+  getLines: (n: number) => string;
 }
 
 interface TerminalProps {
@@ -46,6 +47,19 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     isAtBottom: () => !userScrolledRef.current,
     sendInput: (data: string) => {
       wsHandleRef.current?.send({ type: 'input', data });
+    },
+    getLines: (n: number) => {
+      const term = termRef.current;
+      if (!term) return '';
+      const buffer = term.buffer.active;
+      const total = buffer.length;
+      const start = Math.max(0, total - n);
+      const lines: string[] = [];
+      for (let i = start; i < total; i++) {
+        const line = buffer.getLine(i);
+        if (line) lines.push(line.translateToString(true));
+      }
+      return lines.join('\n');
     },
   }));
 

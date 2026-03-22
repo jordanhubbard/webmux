@@ -103,6 +103,13 @@ export const api = {
   getConfig: () => request<AppConfig>('/config'),
   updateConfig: (config: DeepPartial<AppConfig>) =>
     request<AppConfig>('/config', { method: 'PUT', body: JSON.stringify(config) }),
+
+  // AI
+  explainTerminal: (context: string, question?: string) =>
+    request<{ response: string }>('/ai/explain', {
+      method: 'POST',
+      body: JSON.stringify({ context, question }),
+    }),
 };
 
 export function buildWsUrl(sessionId: string): string {

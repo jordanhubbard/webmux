@@ -13,9 +13,11 @@ interface TopBarProps {
   onNewAccount: () => void;
   secureMode: boolean;
   currentUser: string | null;
+  aiPanelOpen: boolean;
+  onToggleAiPanel: () => void;
 }
 
-export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser }: TopBarProps) {
+export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser, aiPanelOpen, onToggleAiPanel }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
   const [showHelp, setShowHelp] = useState(false);
 
@@ -111,6 +113,18 @@ export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, o
             </button>
           </>
         )}
+        <button
+          style={{
+            ...styles.iconBtn,
+            background: aiPanelOpen ? '#2a1a5a' : '#1a1a3a',
+            borderColor: aiPanelOpen ? '#7c6af7' : '#333366',
+            color: aiPanelOpen ? '#7c6af7' : '#aaa',
+          }}
+          onClick={onToggleAiPanel}
+          title={aiPanelOpen ? 'Hide AI assistant' : 'Show AI assistant'}
+        >
+          AI
+        </button>
         <button style={styles.helpBtn} onClick={() => setShowHelp(true)} title="Usage help">?</button>
       </div>
     </div>

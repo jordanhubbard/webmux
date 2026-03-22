@@ -8,6 +8,7 @@ interface WorkspaceProps {
   fontSize: number;
   termCols: number;
   termRows: number;
+  onExplain?: (context: string) => void;
 }
 
 const GAP = 8;
@@ -95,7 +96,7 @@ function AddCell({ row, col, isEmpty, onClick }: {
   );
 }
 
-export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
+export function Workspace({ fontSize, termCols, termRows, onExplain }: WorkspaceProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
@@ -290,6 +291,7 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
               onTitleMouseDown={handleTitleMouseDown}
               isDragging={draggingId === session.id}
               isDropTarget={dropTarget?.row === session.row && dropTarget?.col === session.col}
+              onExplain={onExplain}
             />
           </div>
         ))}

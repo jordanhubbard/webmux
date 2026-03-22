@@ -13,9 +13,10 @@ interface TileProps {
   onTitleMouseDown?: (sessionId: string, e: React.MouseEvent) => void;
   isDragging?: boolean;
   isDropTarget?: boolean;
+  onExplain?: (context: string) => void;
 }
 
-export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitleMouseDown, isDragging, isDropTarget }: TileProps) {
+export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitleMouseDown, isDragging, isDropTarget, onExplain }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
   const [editing, setEditing] = useState(false);
@@ -62,7 +63,13 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
     setTimeout(() => inputRef.current?.select(), 0);
   }, [session.title]);
 
+  const [hovered, setHovered] = useState(false);
   const [fileDragOver, setFileDragOver] = useState(false);
+
+  const handleExplain = useCallback(() => {
+    const context = termHandleRef.current?.getLines(50) ?? '';
+    onExplain?.(context);
+  }, [onExplain]);
 
   const handleFileDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
@@ -97,6 +104,8 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
   return (
     <div
       onWheel={e => { if (!e.shiftKey) e.stopPropagation(); }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onDragOver={e => { e.preventDefault(); e.stopPropagation(); setFileDragOver(true); }}
       onDragLeave={e => { e.preventDefault(); e.stopPropagation(); setFileDragOver(false); }}
       onDrop={handleFileDrop}
@@ -162,6 +171,13 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
             <span style={styles.viewers} title={`${viewerCount} viewers`}>
               {viewerCount}
             </span>
+          )}
+          {hovered && onExplain && (
+            <button
+              style={{ ...styles.chromeBtn, color: '#7c6af7', fontSize: 10, fontWeight: 600 }}
+              onClick={handleExplain}
+              title="Explain last 50 lines with AI"
+            >Explain</button>
           )}
           <button
             style={{ ...styles.chromeBtn, color: '#8888cc' }}
