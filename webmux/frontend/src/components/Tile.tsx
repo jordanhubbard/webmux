@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { Terminal, type TerminalHandle } from './Terminal';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { api } from '../utils/api';
-import type { Session, ConnectionState } from '../types';
+import type { Session, ConnectionState, ClaudeAuthState } from '../types';
 
 interface TileProps {
   session: Session;
@@ -24,6 +24,10 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
   const isExcluded = broadcastExcluded.has(session.id);
   const termHandleRef = useRef<TerminalHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isClaude = session.session_type === 'claude' || session.transport === 'claude';
+  const [claudeAuthState, setClaudeAuthState] = useState<ClaudeAuthState | undefined>(session.claude_auth_state);
+  const [claudeAuthUrl, setClaudeAuthUrl] = useState<string | undefined>();
+  const [authCodeInput, setAuthCodeInput] = useState('');
 
   const isFocused = focusedSessionId === session.id;
 
@@ -37,6 +41,16 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
 
   const handleFocusGained = useCallback(() => {
     // Terminal handles setting focusedSessionId via context
+  }, []);
+
+  const handleTerminalMessage = useCallback((msg: import('../types').WebSocketMessage) => {
+    if (msg.type === 'claude:auth-url' && msg.url) {
+      setClaudeAuthState('awaiting_code');
+      setClaudeAuthUrl(msg.url);
+    } else if (msg.type === 'claude:auth-complete') {
+      setClaudeAuthState('authenticated');
+      setClaudeAuthUrl(undefined);
+    }
   }, []);
 
   const handleChromeMouseDown = useCallback((e: React.MouseEvent) => {
@@ -144,7 +158,11 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
               onDoubleClick={handleTitleDoubleClick}
             >{session.title}</span>
           )}
-          <span style={styles.transport}>{session.transport.toUpperCase()}</span>
+          {isClaude ? (
+            <span style={{ ...styles.transport, background: '#2a1a4a', color: '#b899ff' }}>🤖 CLAUDE</span>
+          ) : (
+            <span style={styles.transport}>{session.transport.toUpperCase()}</span>
+          )}
         </div>
         <div style={styles.chromeRight}>
           {broadcastMode && (
@@ -184,7 +202,61 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
           onStateChange={handleStateChange}
           onViewerUpdate={handleViewerUpdate}
           onFocusGained={handleFocusGained}
+          onMessage={isClaude ? handleTerminalMessage : undefined}
         />
+        {/* Claude SSO auth overlay */}
+        {isClaude && claudeAuthState === 'awaiting_code' && claudeAuthUrl && (
+          <div style={styles.claudeAuthOverlay}>
+            <div style={styles.claudeAuthCard}>
+              <div style={styles.claudeAuthTitle}>🤖 Claude Authentication Required</div>
+              <p style={styles.claudeAuthDesc}>
+                Open this URL in your browser to authenticate with Claude:
+              </p>
+              <a
+                href={claudeAuthUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={styles.claudeAuthLink}
+              >{claudeAuthUrl}</a>
+              <p style={styles.claudeAuthDesc}>
+                After authenticating, paste the code from the browser here:
+              </p>
+              <div style={styles.claudeAuthInputRow}>
+                <input
+                  style={styles.claudeAuthInput}
+                  type="text"
+                  placeholder="Paste code here…"
+                  value={authCodeInput}
+                  onChange={e => setAuthCodeInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && authCodeInput.trim()) {
+                      termHandleRef.current?.sendInput(authCodeInput.trim() + '\n');
+                      setAuthCodeInput('');
+                      setClaudeAuthUrl(undefined);
+                      setClaudeAuthState('pending');
+                    }
+                  }}
+                  autoFocus
+                />
+                <button
+                  style={styles.claudeAuthSubmitBtn}
+                  onClick={() => {
+                    if (authCodeInput.trim()) {
+                      termHandleRef.current?.sendInput(authCodeInput.trim() + '\n');
+                      setAuthCodeInput('');
+                      setClaudeAuthUrl(undefined);
+                      setClaudeAuthState('pending');
+                    }
+                  }}
+                >Submit</button>
+              </div>
+              <button
+                style={styles.claudeAuthDismiss}
+                onClick={() => setClaudeAuthUrl(undefined)}
+              >Dismiss (type in terminal manually)</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -276,5 +348,80 @@ const styles: Record<string, React.CSSProperties> = {
   termContainer: {
     flex: 1,
     overflow: 'hidden',
+    position: 'relative',
+  },
+  claudeAuthOverlay: {
+    position: 'absolute',
+    inset: 0,
+    background: 'rgba(10, 8, 24, 0.88)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    backdropFilter: 'blur(2px)',
+  },
+  claudeAuthCard: {
+    background: '#1a1530',
+    border: '1px solid #5a3fa0',
+    borderRadius: 8,
+    padding: '20px 24px',
+    maxWidth: 480,
+    width: '90%',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 10,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+  },
+  claudeAuthTitle: {
+    fontWeight: 700,
+    fontSize: 15,
+    color: '#e0d8ff',
+  },
+  claudeAuthDesc: {
+    fontSize: 12,
+    color: '#aaa',
+    margin: 0,
+    lineHeight: 1.5,
+  },
+  claudeAuthLink: {
+    fontSize: 11,
+    color: '#9d7bff',
+    wordBreak: 'break-all' as const,
+    textDecoration: 'underline',
+  },
+  claudeAuthInputRow: {
+    display: 'flex',
+    gap: 8,
+  },
+  claudeAuthInput: {
+    flex: 1,
+    background: '#0d0d1a',
+    border: '1px solid #5a3fa0',
+    borderRadius: 4,
+    padding: '7px 10px',
+    color: '#e0e0e0',
+    fontSize: 13,
+    outline: 'none',
+    fontFamily: 'monospace',
+  },
+  claudeAuthSubmitBtn: {
+    background: '#7c6af7',
+    border: 'none',
+    borderRadius: 4,
+    padding: '7px 14px',
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  claudeAuthDismiss: {
+    background: 'none',
+    border: 'none',
+    color: '#666',
+    fontSize: 11,
+    cursor: 'pointer',
+    textAlign: 'left' as const,
+    padding: 0,
+    textDecoration: 'underline',
   },
 };

@@ -6,6 +6,10 @@ import { transportLauncher } from './transportLauncher';
 import { presenceService } from './presenceService';
 import { persistence } from './persistenceManager';
 
+// Matches claude.ai / Anthropic OAuth URLs in PTY output
+const CLAUDE_AUTH_URL_RE = /https:\/\/(?:claude\.ai|auth\.anthropic\.com|console\.anthropic\.com)\/[^\s\x1b\x07\r\n]*/;
+const CLAUDE_AUTH_SUCCESS_RE = /authentication successful|logged in successfully|successfully authenticated/i;
+
 export class SessionBroker extends EventEmitter {
   private sessions = new Map<string, Session>();
   private scrollback = new Map<string, string>();
@@ -94,14 +98,16 @@ export class SessionBroker extends EventEmitter {
       }
     }
 
+    const isClaude = req.session_type === 'claude';
+
     const session: Session = {
       id,
       owner,
-      transport,
+      transport: isClaude ? 'claude' : transport,
       host_id: req.host_id || '',
-      hostname,
-      port,
-      username: req.username,
+      hostname: isClaude ? 'localhost' : hostname,
+      port: isClaude ? 0 : port,
+      username: req.username || '',
       key_id: req.key_id || '',
       cols: req.cols || 80,
       rows: req.rows || 24,
@@ -110,15 +116,22 @@ export class SessionBroker extends EventEmitter {
       state: 'connecting',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      title: `${req.username}@${hostname}`,
+      title: isClaude ? '🤖 Claude' : `${req.username || 'user'}@${hostname}`,
       persistent: true,
+      session_type: req.session_type,
+      claude_auth_state: isClaude ? 'pending' : undefined,
     };
 
     this.sessions.set(id, session);
 
     // Launch the PTY process (state stays 'connecting' until first data arrives)
     try {
-      const ptyProcess = transportLauncher.launch(session, req.password, req.key_id);
+      let ptyProcess;
+      if (isClaude) {
+        ptyProcess = transportLauncher.launchClaude(session);
+      } else {
+        ptyProcess = transportLauncher.launch(session, req.password, req.key_id);
+      }
       this.wireEvents(session, ptyProcess);
     } catch (err) {
       session.state = 'error';
@@ -160,6 +173,29 @@ export class SessionBroker extends EventEmitter {
         session_id: session.id,
         data,
       });
+
+      // Claude-specific: scan output for auth URL or success message
+      if (session.session_type === 'claude' || session.transport === 'claude') {
+        const urlMatch = CLAUDE_AUTH_URL_RE.exec(data);
+        if (urlMatch) {
+          session.claude_auth_state = 'awaiting_code';
+          session.updated_at = new Date().toISOString();
+          presenceService.broadcastToSession(session.id, {
+            type: 'claude:auth-url',
+            session_id: session.id,
+            url: urlMatch[0],
+          });
+          this.persistSessions();
+        } else if (CLAUDE_AUTH_SUCCESS_RE.test(data) && session.claude_auth_state !== 'authenticated') {
+          session.claude_auth_state = 'authenticated';
+          session.updated_at = new Date().toISOString();
+          presenceService.broadcastToSession(session.id, {
+            type: 'claude:auth-complete',
+            session_id: session.id,
+          });
+          this.persistSessions();
+        }
+      }
     });
 
     ptyProcess.onExit(({ exitCode }: { exitCode: number }) => {

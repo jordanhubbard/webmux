@@ -2,6 +2,8 @@ import { useState, useEffect, FormEvent } from 'react';
 import { api } from '../utils/api';
 import type { HostEntry, KeyEntry, CreateSessionRequest } from '../types';
 
+type DialogMode = 'ssh' | 'claude';
+
 interface ConnectionDialogProps {
   onConnect: (req: CreateSessionRequest) => Promise<void>;
   onClose: () => void;
@@ -10,6 +12,7 @@ interface ConnectionDialogProps {
 }
 
 export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCol }: ConnectionDialogProps) {
+  const [mode, setMode] = useState<DialogMode>('ssh');
   const [hosts, setHosts] = useState<HostEntry[]>([]);
   const [keys, setKeys] = useState<Pick<KeyEntry, 'id' | 'type' | 'encrypted' | 'description'>[]>([]);
   const [hostname, setHostname] = useState('');
@@ -121,15 +124,66 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
     }
   };
 
+  const handleClaudeConnect = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const req: CreateSessionRequest = {
+        username: 'claude',
+        session_type: 'claude',
+        row: suggestedRow ?? 0,
+        col: suggestedCol ?? 0,
+      };
+      await onConnect(req);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const alreadySaved = hosts.some(h => h.hostname === hostname.trim() && h.port === port && (!h.username || h.username === username.trim()));
 
   return (
     <div style={styles.backdrop} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={styles.dialog}>
         <div style={styles.header}>
-          <span style={styles.title}>Connect to Host</span>
+          <span style={styles.title}>{mode === 'claude' ? '🤖 Launch Claude' : 'Connect to Host'}</span>
           <button style={styles.closeBtn} onClick={onClose}>{'\u2715'}</button>
         </div>
+
+        {/* Mode tabs */}
+        <div style={styles.modeTabs}>
+          <button
+            type="button"
+            style={{ ...styles.modeTab, ...(mode === 'ssh' ? styles.modeTabActive : {}) }}
+            onClick={() => { setMode('ssh'); setError(null); }}
+          >SSH / Mosh</button>
+          <button
+            type="button"
+            style={{ ...styles.modeTab, ...(mode === 'claude' ? styles.modeTabActive : {}) }}
+            onClick={() => { setMode('claude'); setError(null); }}
+          >🤖 Claude</button>
+        </div>
+
+        {mode === 'claude' ? (
+          <div style={styles.claudePane}>
+            <p style={styles.claudeDesc}>
+              Launch a local <strong>Claude CLI</strong> session. If you haven't authenticated yet,
+              an SSO link will appear — click it and paste the code back into the terminal.
+            </p>
+            {error && <div style={styles.error}>{error}</div>}
+            <div style={styles.actions}>
+              <button type="button" style={styles.cancelBtn} onClick={onClose}>Cancel</button>
+              <button
+                type="button"
+                style={styles.connectBtn}
+                disabled={submitting}
+                onClick={handleClaudeConnect}
+              >{submitting ? 'Launching…' : 'Launch Claude'}</button>
+            </div>
+          </div>
+        ) : (
 
         <form onSubmit={handleConnect} style={styles.form}>
           {/* Saved hosts as quick-connect cards */}
@@ -264,12 +318,45 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  modeTabs: {
+    display: 'flex',
+    borderBottom: '1px solid #333366',
+    background: '#12122a',
+  },
+  modeTab: {
+    background: 'none',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    padding: '8px 18px',
+    color: '#888',
+    fontSize: 13,
+    cursor: 'pointer',
+    fontWeight: 500,
+    transition: 'color 0.15s, border-color 0.15s',
+  },
+  modeTabActive: {
+    color: '#e0e0e0',
+    borderBottomColor: '#7c6af7',
+  },
+  claudePane: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 14,
+    padding: 16,
+  },
+  claudeDesc: {
+    color: '#aaa',
+    fontSize: 13,
+    lineHeight: 1.5,
+    margin: 0,
+  },
   backdrop: {
     position: 'fixed',
     inset: 0,

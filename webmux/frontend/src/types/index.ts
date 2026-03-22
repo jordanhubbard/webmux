@@ -1,5 +1,6 @@
-export type TransportType = 'ssh' | 'mosh';
+export type TransportType = 'ssh' | 'mosh' | 'claude';
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
+export type ClaudeAuthState = 'pending' | 'awaiting_code' | 'authenticated';
 
 export interface Session {
   id: string;
@@ -18,6 +19,8 @@ export interface Session {
   updated_at: string;
   title: string;
   persistent: boolean;
+  session_type?: 'ssh' | 'mosh' | 'claude';
+  claude_auth_state?: ClaudeAuthState;
 }
 
 export interface HostEntry {
@@ -37,7 +40,7 @@ export interface AuthStatus {
 }
 
 export interface WebSocketMessage {
-  type: 'input' | 'resize' | 'output' | 'status' | 'focus' | 'viewer_join' | 'viewer_leave' | 'error';
+  type: 'input' | 'resize' | 'output' | 'status' | 'focus' | 'viewer_join' | 'viewer_leave' | 'error' | 'claude:auth-url' | 'claude:auth-complete';
   session_id?: string;
   data?: string;
   cols?: number;
@@ -47,6 +50,7 @@ export interface WebSocketMessage {
   viewer_count?: number;
   focus_owner?: string;
   message?: string;
+  url?: string;
 }
 
 export interface CreateSessionRequest {
@@ -61,6 +65,7 @@ export interface CreateSessionRequest {
   rows?: number;
   row?: number;
   col?: number;
+  session_type?: 'ssh' | 'mosh' | 'claude';
 }
 
 export interface KeyEntry {

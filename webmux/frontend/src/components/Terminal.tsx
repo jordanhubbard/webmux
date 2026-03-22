@@ -20,6 +20,7 @@ interface TerminalProps {
   onStateChange: (state: ConnectionState) => void;
   onViewerUpdate: (count: number, focusOwner?: string) => void;
   onFocusGained: () => void;
+  onMessage?: (msg: WebSocketMessage) => void;
 }
 
 export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal({
@@ -29,6 +30,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   onStateChange,
   onViewerUpdate,
   onFocusGained,
+  onMessage,
 }: TerminalProps, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
@@ -53,9 +55,11 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const onStateChangeRef = useRef(onStateChange);
   const onViewerUpdateRef = useRef(onViewerUpdate);
   const onFocusGainedRef = useRef(onFocusGained);
+  const onMessageRef = useRef(onMessage);
   useEffect(() => { onStateChangeRef.current = onStateChange; }, [onStateChange]);
   useEffect(() => { onViewerUpdateRef.current = onViewerUpdate; }, [onViewerUpdate]);
   useEffect(() => { onFocusGainedRef.current = onFocusGained; }, [onFocusGained]);
+  useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
 
   // routeInput is a stable callback (useCallback with [] deps) that reads
   // broadcastMode from a ref internally — use it directly without a wrapper ref.
@@ -86,6 +90,8 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
         onViewerUpdateRef.current(msg.viewer_count ?? 0, msg.focus_owner);
         break;
       default:
+        // Forward unhandled messages (e.g. claude:auth-url) to parent
+        onMessageRef.current?.(msg);
         break;
     }
   }, []);

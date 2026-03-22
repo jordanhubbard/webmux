@@ -25,6 +25,11 @@ export class TransportLauncher {
   }
 
   launch(session: Session, password?: string, keyId?: string): pty.IPty {
+    // Claude sessions don't need a remote hostname
+    if (session.transport === 'claude' || session.session_type === 'claude') {
+      return this.launchClaude(session);
+    }
+
     TransportLauncher.validateHostname(session.hostname);
 
     if (session.transport === 'mosh') {
@@ -34,6 +39,25 @@ export class TransportLauncher {
       return this.launchMosh(session, keyId);
     }
     return this.launchSsh(session, password, keyId);
+  }
+
+  launchClaude(session: Session): pty.IPty {
+    const claudeBin = this.findBinary('claude') || 'claude';
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      TERM: 'xterm-256color',
+    };
+
+    const ptyProcess = pty.spawn(claudeBin, [], {
+      name: 'xterm-256color',
+      cols: session.cols,
+      rows: session.rows,
+      cwd: process.env.HOME || '/',
+      env,
+    });
+
+    this.handles.set(session.id, ptyProcess);
+    return ptyProcess;
   }
 
   private launchSsh(session: Session, password?: string, keyId?: string): pty.IPty {

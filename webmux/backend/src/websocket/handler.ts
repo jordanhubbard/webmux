@@ -6,6 +6,8 @@ import { presenceService } from '../services/presenceService';
 import { requireAuthWs } from '../middleware/auth';
 import { WebSocketMessage } from '../types';
 
+
+
 export function setupWebSocket(wss: WebSocketServer): void {
   wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     // Extract session ID from path /api/term/:id
