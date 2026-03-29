@@ -1,4 +1,5 @@
 import * as pty from 'node-pty';
+import { execSync } from 'child_process';
 import { Session } from '../types';
 import { persistence } from './persistenceManager';
 
@@ -133,7 +134,7 @@ export class TransportLauncher {
       const appConfig = persistence.loadApp();
       const serverPath = appConfig.app.transport.mosh_server_path;
       if (serverPath) {
-        if (!/^[a-zA-Z0-9/_.\-]+$/.test(serverPath)) {
+        if (!/^[a-zA-Z0-9/_.-]+$/.test(serverPath)) {
           throw new Error(`Invalid mosh_server_path: ${serverPath}`);
         }
         args.push('--server=' + serverPath);
@@ -169,7 +170,6 @@ export class TransportLauncher {
   private findBinary(name: string): string | null {
     if (!/^[a-zA-Z0-9_-]+$/.test(name)) return null;
     try {
-      const { execSync } = require('child_process');
       execSync(`which ${name}`, { stdio: 'ignore' });
       return name;
     } catch {
