@@ -113,6 +113,16 @@ export interface WebSocketMessage {
   message?: string;
 }
 
+// Session template — pre-configured session setup (e.g. "claude-cli")
+export interface SessionTemplate {
+  id:           string;
+  name:         string;
+  description:  string;
+  icon:         string;
+  initialCmd?:  string;  // command to run after connection is established
+  setupSteps:   string[];  // human-readable setup guide steps
+}
+
 export interface CreateSessionRequest {
   host_id?: string;
   hostname?: string;
@@ -125,5 +135,9 @@ export interface CreateSessionRequest {
   rows?: number;
   row?: number;
   col?: number;
+  // Optional: session template ID (e.g. "claude-cli")
+  template_id?: string;
+  // Optional: command to run immediately after connection (injected into PTY)
+  initial_cmd?: string;
 }
 

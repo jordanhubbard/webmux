@@ -119,7 +119,15 @@ export class SessionBroker extends EventEmitter {
     // Launch the PTY process (state stays 'connecting' until first data arrives)
     try {
       const ptyProcess = transportLauncher.launch(session, req.password, req.key_id);
-      this.wireEvents(session, ptyProcess);
+      // Resolve initial command: explicit > template lookup
+      let initialCmd = req.initial_cmd;
+      if (!initialCmd && req.template_id) {
+        // Lazy import to avoid circular dep
+        const { TEMPLATES } = await import('../api/templates.js');
+        const tpl = TEMPLATES.find(t => t.id === req.template_id);
+        if (tpl?.initialCmd) initialCmd = tpl.initialCmd;
+      }
+      this.wireEvents(session, ptyProcess, initialCmd);
     } catch (err) {
       session.state = 'error';
       session.updated_at = new Date().toISOString();
@@ -132,14 +140,23 @@ export class SessionBroker extends EventEmitter {
     return session;
   }
 
-  private wireEvents(session: Session, ptyProcess: pty.IPty): void {
+  private wireEvents(session: Session, ptyProcess: pty.IPty, initialCmd?: string): void {
     let firstData = true;
+    let cmdInjected = false;
 
     ptyProcess.onData((data: string) => {
       if (firstData) {
         firstData = false;
         session.state = 'connected';
         session.updated_at = new Date().toISOString();
+        // Inject initial command after a brief delay so the shell prompt is ready
+        if (initialCmd && !cmdInjected) {
+          cmdInjected = true;
+          setTimeout(() => {
+            try { ptyProcess.write(`${initialCmd}\r`); }
+            catch { /* session may have closed */ }
+          }, 800);
+        }
         presenceService.broadcastToSession(session.id, {
           type: 'status',
           session_id: session.id,
