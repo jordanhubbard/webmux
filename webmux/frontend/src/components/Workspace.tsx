@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Tile } from './Tile';
 import { ConnectionDialog } from './ConnectionDialog';
+import { AISidebar } from './AISidebar';
 import { api } from '../utils/api';
 import type { Session, CreateSessionRequest } from '../types';
 
@@ -99,6 +100,9 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
+  // Ref to get terminal scrollback for AI context
+  const termContextRef = useRef<() => string>(() => '');
 
   // Drag state
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -260,7 +264,23 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
   }
 
   return (
-    <div style={styles.outer}>
+    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', height: '100%' }}>
+      <div style={{ ...styles.outer, flex: 1 }}>
+      {/* AI toggle button (bottom-right of workspace) */}
+      <button
+        onClick={() => setAiOpen(o => !o)}
+        title={aiOpen ? 'Close AI assistant' : 'Open AI assistant'}
+        style={{
+          position: 'fixed', bottom: 16, right: aiOpen ? 400 : 16,
+          zIndex: 1000, background: '#4a9eff', border: 'none', borderRadius: '50%',
+          width: 44, height: 44, fontSize: 20, cursor: 'pointer',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'right 0.2s ease',
+        }}
+      >
+        🤖
+      </button>
       <div
         ref={gridRef}
         style={{
@@ -329,6 +349,12 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
           suggestedCol={dialogPos.col}
         />
       )}
+      </div>{/* end scrollable grid wrapper */}
+      <AISidebar
+        getTerminalContext={termContextRef.current}
+        isOpen={aiOpen}
+        onClose={() => setAiOpen(false)}
+      />
     </div>
   );
 }
