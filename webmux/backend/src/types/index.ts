@@ -16,6 +16,8 @@ export interface AppConfig {
       ssh_fallback: boolean;
       mosh_server_path: string;
     };
+    // Populated from WEBMUX_EXEC_COMMAND env var at runtime; not persisted to app.yaml.
+    exec_command?: string;
   };
 }
 
@@ -31,7 +33,7 @@ export interface AuthConfig {
   };
 }
 
-export type TransportType = 'ssh' | 'mosh';
+export type TransportType = 'ssh' | 'mosh' | 'exec';
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 export interface HostEntry {
@@ -83,6 +85,7 @@ export interface Session {
   port: number;
   username: string;
   key_id: string;
+  exec_command?: string;
   cols: number;
   rows: number;
   row: number;
@@ -131,6 +134,9 @@ export interface CreateSessionRequest {
   password?: string;
   key_id?: string;
   transport?: TransportType;
+  // For exec transport: command template with {host}, {port}, {user} substitutions.
+  // Falls back to WEBMUX_EXEC_COMMAND env var if not set.
+  exec_command?: string;
   cols?: number;
   rows?: number;
   row?: number;

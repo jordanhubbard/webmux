@@ -1,4 +1,4 @@
-export type TransportType = 'ssh' | 'mosh';
+export type TransportType = 'ssh' | 'mosh' | 'exec';
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 export interface Session {
@@ -9,6 +9,7 @@ export interface Session {
   hostname: string;
   username: string;
   key_id: string;
+  exec_command?: string;
   cols: number;
   rows: number;
   row: number;
@@ -57,6 +58,9 @@ export interface CreateSessionRequest {
   password?: string;
   key_id?: string;
   transport?: TransportType;
+  // For exec transport: command template with {host}, {port}, {user} substitutions.
+  // Falls back to WEBMUX_EXEC_COMMAND env var on the server if not set.
+  exec_command?: string;
   cols?: number;
   rows?: number;
   row?: number;
@@ -83,6 +87,8 @@ export interface AppConfig {
       rows: number;
       font_size: number;
     };
+    // Set by WEBMUX_EXEC_COMMAND on the server; drives exec-transport defaults in the UI.
+    exec_command?: string;
   };
 }
 

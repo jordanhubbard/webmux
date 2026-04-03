@@ -26,6 +26,10 @@ export class TransportLauncher {
   }
 
   launch(session: Session, password?: string, keyId?: string): pty.IPty {
+    if (session.transport === 'exec') {
+      return this.launchExec(session);
+    }
+
     TransportLauncher.validateHostname(session.hostname);
 
     if (session.transport === 'mosh') {
@@ -35,6 +39,28 @@ export class TransportLauncher {
       return this.launchMosh(session, keyId);
     }
     return this.launchSsh(session, password, keyId);
+  }
+
+  private launchExec(session: Session): pty.IPty {
+    const template = session.exec_command || process.env.WEBMUX_EXEC_COMMAND || '';
+    if (!template) {
+      throw new Error('exec transport requires exec_command or WEBMUX_EXEC_COMMAND env var');
+    }
+    const cmd = template
+      .replace(/\{host\}/g, session.hostname)
+      .replace(/\{port\}/g, String(session.port))
+      .replace(/\{user\}/g, session.username);
+
+    const ptyProcess = pty.spawn('/bin/sh', ['-c', cmd], {
+      name: 'xterm-256color',
+      cols: session.cols,
+      rows: session.rows,
+      cwd: process.env.HOME || '/',
+      env: { ...process.env, TERM: 'xterm-256color' },
+    });
+
+    this.handles.set(session.id, ptyProcess);
+    return ptyProcess;
   }
 
   private launchSsh(session: Session, password?: string, keyId?: string): pty.IPty {

@@ -8,6 +8,10 @@ router.use(requireAuth);
 router.get('/', (_req: Request, res: Response) => {
   try {
     const app = persistence.loadApp();
+    const execCommand = process.env.WEBMUX_EXEC_COMMAND;
+    if (execCommand) {
+      app.app.exec_command = execCommand;
+    }
     res.json(app);
   } catch {
     res.status(500).json({ error: 'Failed to load config' });

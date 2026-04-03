@@ -29,6 +29,7 @@ export default function App() {
   const [termRows, setTermRows] = useState(24);
   const [showRegister, setShowRegister] = useState(false);
   const [secureMode, setSecureMode] = useState(true);
+  const [execCommand, setExecCommand] = useState<string | undefined>(undefined);
 
   const currentUser = useMemo(() => auth.isAuthenticated ? parseTokenUser() : null, [auth.isAuthenticated]);
 
@@ -38,6 +39,7 @@ export default function App() {
       setFontSize(config.app.default_term.font_size);
       setTermCols(config.app.default_term.cols);
       setTermRows(config.app.default_term.rows);
+      setExecCommand(config.app.exec_command);
     }).catch(() => {});
   }, []);
 
@@ -84,7 +86,7 @@ export default function App() {
           currentUser={currentUser}
         />
 
-        <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} />
+        <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} execCommand={execCommand} />
 
         {showRegister && (
           <RegisterDialog

@@ -103,6 +103,7 @@ export class SessionBroker extends EventEmitter {
       port,
       username: req.username,
       key_id: req.key_id || '',
+      exec_command: req.exec_command,
       cols: req.cols || 80,
       rows: req.rows || 24,
       row,
@@ -110,7 +111,7 @@ export class SessionBroker extends EventEmitter {
       state: 'connecting',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      title: `${req.username}@${hostname}`,
+      title: transport === 'exec' ? `${hostname}:${port}` : `${req.username}@${hostname}`,
       persistent: true,
     };
 

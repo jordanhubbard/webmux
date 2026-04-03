@@ -7,18 +7,20 @@ interface ConnectionDialogProps {
   onClose: () => void;
   suggestedRow?: number;
   suggestedCol?: number;
+  defaultExecCommand?: string;
 }
 
-export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCol }: ConnectionDialogProps) {
+export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCol, defaultExecCommand }: ConnectionDialogProps) {
   const [hosts, setHosts] = useState<HostEntry[]>([]);
   const [keys, setKeys] = useState<Pick<KeyEntry, 'id' | 'type' | 'encrypted' | 'description'>[]>([]);
   const [hostname, setHostname] = useState('');
-  const [port, setPort] = useState(22);
+  const [port, setPort] = useState(defaultExecCommand ? 0 : 22);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [authMode, setAuthMode] = useState<'agent' | 'password' | 'key'>('agent');
   const [selectedKeyId, setSelectedKeyId] = useState('');
-  const [transport, setTransport] = useState<'ssh' | 'mosh'>('ssh');
+  const [transport, setTransport] = useState<'ssh' | 'mosh' | 'exec'>(defaultExecCommand ? 'exec' : 'ssh');
+  const [execCommand, setExecCommand] = useState(defaultExecCommand || '');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -31,7 +33,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
   const validate = (): boolean => {
     setError(null);
     if (!hostname.trim()) { setError('Hostname is required'); return false; }
-    if (!username.trim()) { setError('Username is required'); return false; }
+    if (transport !== 'exec' && !username.trim()) { setError('Username is required'); return false; }
     return true;
   };
 
@@ -44,8 +46,12 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
       row: suggestedRow ?? 0,
       col: suggestedCol ?? 0,
     };
-    if (authMode === 'password' && password) req.password = password;
-    else if (authMode === 'key' && selectedKeyId) req.key_id = selectedKeyId;
+    if (transport === 'exec') {
+      if (execCommand.trim()) req.exec_command = execCommand.trim();
+    } else {
+      if (authMode === 'password' && password) req.password = password;
+      else if (authMode === 'key' && selectedKeyId) req.key_id = selectedKeyId;
+    }
     return req;
   };
 
@@ -127,7 +133,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
     <div style={styles.backdrop} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={styles.dialog}>
         <div style={styles.header}>
-          <span style={styles.title}>Connect to Host</span>
+          <span style={styles.title}>{transport === 'exec' && defaultExecCommand ? 'Connect to Session' : 'Connect to Host'}</span>
           <button style={styles.closeBtn} onClick={onClose}>{'\u2715'}</button>
         </div>
 
@@ -173,7 +179,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
 
           {/* Hostname + Port */}
           <div style={styles.field}>
-            <label style={styles.label}>Host</label>
+            <label style={styles.label}>{transport === 'exec' ? 'Target' : 'Host'}</label>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 style={{ ...styles.input, flex: 1 }}
@@ -186,27 +192,47 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
               <input
                 style={{ ...styles.input, width: 70 }}
                 type="number"
-                placeholder="22"
-                value={port}
+                placeholder={transport === 'exec' ? 'slot' : '22'}
+                value={port || ''}
                 onChange={e => setPort(Number(e.target.value))}
-                min={1}
+                min={0}
                 max={65535}
               />
             </div>
           </div>
 
-          {/* Username */}
-          <div style={styles.field}>
-            <label style={styles.label}>Username</label>
-            <input
-              style={styles.input}
-              type="text"
-              placeholder="user"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              autoComplete="username"
-            />
-          </div>
+          {/* Exec command — shown inline when exec transport is active */}
+          {transport === 'exec' && (
+            <div style={styles.field}>
+              <label style={styles.label}>Command</label>
+              <input
+                style={styles.input}
+                type="text"
+                placeholder="agentos-attach {host} {port}"
+                value={execCommand}
+                onChange={e => setExecCommand(e.target.value)}
+              />
+              <p style={styles.hint}>
+                {'{host}'} and {'{port}'} are substituted from the fields above.
+                {defaultExecCommand && ' Leave blank to use the server default.'}
+              </p>
+            </div>
+          )}
+
+          {/* Username — only needed for SSH/Mosh */}
+          {transport !== 'exec' && (
+            <div style={styles.field}>
+              <label style={styles.label}>Username</label>
+              <input
+                style={styles.input}
+                type="text"
+                placeholder="user"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                autoComplete="username"
+              />
+            </div>
+          )}
 
           {/* Advanced toggle */}
           <button
@@ -220,33 +246,36 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
           {showAdvanced && (
             <div style={styles.advanced}>
               <div style={styles.field}>
-                <label style={styles.label}>Authentication</label>
-                <div style={styles.tabs}>
-                  <button type="button" style={{ ...styles.tab, ...(authMode === 'agent' ? styles.tabActive : {}) }} onClick={() => setAuthMode('agent')}>Agent</button>
-                  <button type="button" style={{ ...styles.tab, ...(authMode === 'key' ? styles.tabActive : {}) }} onClick={() => setAuthMode('key')}>Key</button>
-                  <button type="button" style={{ ...styles.tab, ...(authMode === 'password' ? styles.tabActive : {}) }} onClick={() => setAuthMode('password')}>Password</button>
-                </div>
-                {authMode === 'agent' && <p style={styles.hint}>Uses the SSH agent or default keys (~/.ssh/id_*). No credentials needed.</p>}
-                {authMode === 'key' && (
-                  <>
-                    <select style={styles.input} value={selectedKeyId} onChange={e => setSelectedKeyId(e.target.value)}>
-                      <option value="">Default key (agent / ~/.ssh/id_*)</option>
-                      {keys.map(k => <option key={k.id} value={k.id}>{k.description || k.id} ({k.type}{k.encrypted ? ', encrypted' : ''})</option>)}
-                    </select>
-                    <p style={styles.hint}>Select a specific key from keys.yaml.</p>
-                  </>
-                )}
-                {authMode === 'password' && (
-                  <input style={styles.input} type="password" placeholder="Remote password (requires sshpass)" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
-                )}
-              </div>
-              <div style={styles.field}>
                 <label style={styles.label}>Transport</label>
-                <select style={styles.input} value={transport} onChange={e => setTransport(e.target.value as 'ssh' | 'mosh')}>
+                <select style={styles.input} value={transport} onChange={e => setTransport(e.target.value as 'ssh' | 'mosh' | 'exec')}>
+                  <option value="exec">Exec (custom command)</option>
                   <option value="ssh">SSH</option>
                   <option value="mosh">Mosh</option>
                 </select>
               </div>
+              {transport !== 'exec' && (
+                <div style={styles.field}>
+                  <label style={styles.label}>Authentication</label>
+                  <div style={styles.tabs}>
+                    <button type="button" style={{ ...styles.tab, ...(authMode === 'agent' ? styles.tabActive : {}) }} onClick={() => setAuthMode('agent')}>Agent</button>
+                    <button type="button" style={{ ...styles.tab, ...(authMode === 'key' ? styles.tabActive : {}) }} onClick={() => setAuthMode('key')}>Key</button>
+                    <button type="button" style={{ ...styles.tab, ...(authMode === 'password' ? styles.tabActive : {}) }} onClick={() => setAuthMode('password')}>Password</button>
+                  </div>
+                  {authMode === 'agent' && <p style={styles.hint}>Uses the SSH agent or default keys (~/.ssh/id_*). No credentials needed.</p>}
+                  {authMode === 'key' && (
+                    <>
+                      <select style={styles.input} value={selectedKeyId} onChange={e => setSelectedKeyId(e.target.value)}>
+                        <option value="">Default key (agent / ~/.ssh/id_*)</option>
+                        {keys.map(k => <option key={k.id} value={k.id}>{k.description || k.id} ({k.type}{k.encrypted ? ', encrypted' : ''})</option>)}
+                      </select>
+                      <p style={styles.hint}>Select a specific key from keys.yaml.</p>
+                    </>
+                  )}
+                  {authMode === 'password' && (
+                    <input style={styles.input} type="password" placeholder="Remote password (requires sshpass)" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -254,7 +283,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
 
           <div style={styles.actions}>
             <button type="button" style={styles.cancelBtn} onClick={onClose}>Cancel</button>
-            {!alreadySaved && hostname.trim() && (
+            {transport !== 'exec' && !alreadySaved && hostname.trim() && (
               <button type="button" style={styles.saveBtn} onClick={handleSaveAndConnect} disabled={submitting}>
                 {submitting ? 'Saving\u2026' : 'Save & Connect'}
               </button>
