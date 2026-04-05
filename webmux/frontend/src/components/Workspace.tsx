@@ -160,8 +160,7 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
   // Clear all per-window overrides when user explicitly clicks global toggle
   useEffect(() => {
     setAutoScrollOverrides(new Map());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [globalAutoScrollVersion]);
+  }, [globalAutoScrollVersion]); // intentionally only depends on version counter
 
   const handleAutoScrollToggle = useCallback((sessionId: string) => {
     setAutoScrollOverrides(prev => {
