@@ -96,10 +96,11 @@ function AddCell({ row, col, isEmpty, onClick }: {
   );
 }
 
-export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
+export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, globalAutoScrollVersion, onGlobalAutoScrollChange }: WorkspaceProps & { globalAutoScroll: boolean; globalAutoScrollVersion: number; onGlobalAutoScrollChange: (on: boolean) => void }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
+  const [autoScrollOverrides, setAutoScrollOverrides] = useState<Map<string, boolean>>(new Map());
   const [aiOpen, setAiOpen] = useState(false);
   // Ref to get terminal scrollback for AI context
   const termContextRef = useRef<() => string>(() => '');
@@ -155,6 +156,38 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
   }, []);
 
   const tile = tilePixelSize(termCols, termRows, fontSize);
+
+  // Clear all per-window overrides when user explicitly clicks global toggle
+  useEffect(() => {
+    setAutoScrollOverrides(new Map());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globalAutoScrollVersion]);
+
+  const handleAutoScrollToggle = useCallback((sessionId: string) => {
+    setAutoScrollOverrides(prev => {
+      const next = new Map(prev);
+      for (const s of sessionsRef.current) {
+        if (!next.has(s.id)) {
+          next.set(s.id, globalAutoScroll);
+        }
+      }
+      const current = next.get(sessionId)!;
+      next.set(sessionId, !current);
+      return next;
+    });
+  }, [globalAutoScroll]);
+
+  // Sync global indicator with per-window overrides
+  useEffect(() => {
+    if (sessions.length === 0 || autoScrollOverrides.size === 0) return;
+    const allOn = sessions.every(s => (autoScrollOverrides.get(s.id) ?? globalAutoScroll) === true);
+    const anyOff = sessions.some(s => (autoScrollOverrides.get(s.id) ?? globalAutoScroll) === false);
+    if (globalAutoScroll && anyOff) {
+      onGlobalAutoScrollChange(false);
+    } else if (!globalAutoScroll && allOn) {
+      onGlobalAutoScrollChange(true);
+    }
+  }, [autoScrollOverrides, sessions, globalAutoScroll, onGlobalAutoScrollChange]);
 
   const getGridCell = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
     if (!gridRef.current) return null;
@@ -304,6 +337,8 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
             <Tile
               session={session}
               fontSize={fontSize}
+              autoScroll={autoScrollOverrides.get(session.id) ?? globalAutoScroll}
+              onAutoScrollToggle={handleAutoScrollToggle}
               onClose={handleClose}
               onReconnect={handleReconnect}
               onRename={handleRename}

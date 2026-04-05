@@ -13,9 +13,11 @@ interface TopBarProps {
   onNewAccount: () => void;
   secureMode: boolean;
   currentUser: string | null;
+  globalAutoScroll: boolean;
+  onGlobalAutoScrollChange: (on: boolean) => void;
 }
 
-export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser }: TopBarProps) {
+export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser, globalAutoScroll, onGlobalAutoScrollChange }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
   const [showHelp, setShowHelp] = useState(false);
 
@@ -37,6 +39,19 @@ export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, o
           title={broadcastMode ? 'Type to All: ON — input goes to every pane' : 'Type to All: OFF — input goes to focused pane only'}
         >
           {broadcastMode ? 'Type to All: ON' : 'Type to All'}
+        </button>
+        <button
+          style={{
+            ...styles.broadcastBtn,
+            background: globalAutoScroll ? '#1a3a2a' : '#1a1a3a',
+            color: globalAutoScroll ? '#50fa7b' : '#aaa',
+            borderColor: globalAutoScroll ? '#50fa7b' : '#333366',
+          }}
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => onGlobalAutoScrollChange(!globalAutoScroll)}
+          title={globalAutoScroll ? 'Auto-scroll: ON — terminals follow output' : 'Auto-scroll: OFF — terminals stay in place'}
+        >
+          {globalAutoScroll ? 'Auto-scroll: ON' : 'Auto-scroll: OFF'}
         </button>
       </div>
 
