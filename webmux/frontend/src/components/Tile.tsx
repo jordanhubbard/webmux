@@ -13,6 +13,8 @@ interface TileProps {
   onLockToggle: (id: string) => void;
   collapsed: boolean;
   onToggleCollapse: (id: string) => void;
+  onBell: (id: string) => void;
+  onFocus?: () => void;
   onClose: (id: string) => void;
   onReconnect: (id: string) => void;
   onRename: (id: string, title: string) => void;
@@ -21,7 +23,7 @@ interface TileProps {
   isDropTarget?: boolean;
 }
 
-export function Tile({ session, fontSize, autoScroll, onAutoScrollToggle, locked, onLockToggle, collapsed, onToggleCollapse, onClose, onReconnect, onRename, onTitleMouseDown, isDragging, isDropTarget }: TileProps) {
+export function Tile({ session, fontSize, autoScroll, onAutoScrollToggle, locked, onLockToggle, collapsed, onToggleCollapse, onBell, onFocus: onTileFocus, onClose, onReconnect, onRename, onTitleMouseDown, isDragging, isDropTarget }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
   const [editing, setEditing] = useState(false);
@@ -42,8 +44,8 @@ export function Tile({ session, fontSize, autoScroll, onAutoScrollToggle, locked
   }, []);
 
   const handleFocusGained = useCallback(() => {
-    // Terminal handles setting focusedSessionId via context
-  }, []);
+    onTileFocus?.();
+  }, [onTileFocus]);
 
   const handleChromeMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
@@ -199,7 +201,7 @@ export function Tile({ session, fontSize, autoScroll, onAutoScrollToggle, locked
         </div>
       </div>
 
-      {!collapsed && <div style={styles.termContainer}>
+      <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
         <Terminal
           ref={termHandleRef}
           sessionId={session.id}
@@ -209,8 +211,9 @@ export function Tile({ session, fontSize, autoScroll, onAutoScrollToggle, locked
           onStateChange={handleStateChange}
           onViewerUpdate={handleViewerUpdate}
           onFocusGained={handleFocusGained}
+          onBell={() => onBell(session.id)}
         />
-      </div>}
+      </div>
     </div>
   );
 }
