@@ -110,7 +110,12 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
   const [autoScrollOverrides, setAutoScrollOverrides] = useState<Map<string, boolean>>(new Map());
   const [lockOverrides, setLockOverrides] = useState<Map<string, boolean>>(new Map());
-  const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(new Set());
+  const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('webmux_collapsed');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
 
   // Drag state
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -230,6 +235,7 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
     setCollapsedSessions(prev => {
       const next = new Set(prev);
       if (next.has(sessionId)) { next.delete(sessionId); } else { next.add(sessionId); }
+      localStorage.setItem('webmux_collapsed', JSON.stringify([...next]));
       return next;
     });
   }, []);
@@ -406,7 +412,7 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
               onAutoScrollToggle={handleAutoScrollToggle}
               locked={lockOverrides.get(session.id) ?? globalLock}
               onLockToggle={handleLockToggle}
-              collapsed={false}
+              collapsed={collapsedSessions.has(session.id)}
               onToggleCollapse={handleToggleCollapse}
               onClose={handleClose}
               onReconnect={handleReconnect}
