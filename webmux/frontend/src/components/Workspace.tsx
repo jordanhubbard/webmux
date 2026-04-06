@@ -111,6 +111,7 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
   const [autoScrollOverrides, setAutoScrollOverrides] = useState<Map<string, boolean>>(new Map());
   const [lockOverrides, setLockOverrides] = useState<Map<string, boolean>>(new Map());
+  const [bellSessions, setBellSessions] = useState<Set<string>>(new Set());
   const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(() => {
     try {
       const saved = localStorage.getItem('webmux_collapsed');
@@ -235,10 +236,24 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
     }
   }, [lockOverrides, sessions, globalLock, onGlobalLockChange]);
 
+  const handleBell = useCallback((sessionId: string) => {
+    setBellSessions(prev => {
+      const next = new Set(prev);
+      next.add(sessionId);
+      return next;
+    });
+  }, []);
+
   const handleToggleCollapse = useCallback((sessionId: string) => {
     setCollapsedSessions(prev => {
       const next = new Set(prev);
-      if (next.has(sessionId)) { next.delete(sessionId); } else { next.add(sessionId); }
+      if (next.has(sessionId)) {
+        next.delete(sessionId);
+        // Clear bell when restoring
+        setBellSessions(b => { const nb = new Set(b); nb.delete(sessionId); return nb; });
+      } else {
+        next.add(sessionId);
+      }
       localStorage.setItem('webmux_collapsed', JSON.stringify([...next]));
       return next;
     });
@@ -310,7 +325,6 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
             }
           } catch (err) {
             console.error('Move failed:', err);
-            // Revert on failure
             setSessions(prev => prev.map(s => {
               if (s.id === dragId) return { ...s, row: srcRow, col: srcCol };
               if (targetSession && s.id === targetSession.id) return { ...s, row: target.row, col: target.col };
@@ -336,20 +350,10 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
 
   const visibleSessions = sessions.filter(s => !collapsedSessions.has(s.id));
 
-  // Use full session set for column count so grid width stays stable
-  const baseCols = sessions.length > 0 ? Math.max(...sessions.map(s => s.col)) + 1 : 1;
-
-  // Compact visible sessions: maintain relative order (row,col) but pack into consecutive cells
-  const sorted = [...visibleSessions].sort((a, b) => a.row - b.row || a.col - b.col);
-  const compactPositions = new Map<string, { row: number; col: number }>();
-  sorted.forEach((s, i) => {
-    compactPositions.set(s.id, { row: Math.floor(i / baseCols), col: i % baseCols });
-  });
-
-  const addPositions = getAddPositions(sorted.map(s => ({ ...s, ...compactPositions.get(s.id)! })));
+  const addPositions = getAddPositions(visibleSessions);
 
   const allPositions = [
-    ...Array.from(compactPositions.values()),
+    ...visibleSessions.map(s => ({ row: s.row, col: s.col })),
     ...addPositions,
   ];
   const numCols = allPositions.length > 0 ? Math.max(...allPositions.map(p => p.col)) + 1 : 1;
@@ -386,18 +390,19 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
         <div style={styles.dock}>
           {[...sessions].sort((a, b) => a.title.localeCompare(b.title)).map(session => {
             const isMinimized = collapsedSessions.has(session.id);
+            const hasBell = bellSessions.has(session.id);
             return (
               <button
                 key={session.id}
                 style={{
                   ...styles.dockItem,
-                  opacity: isMinimized ? 0.5 : 1,
-                  borderColor: isMinimized ? '#222244' : '#333366',
+                  opacity: isMinimized && !hasBell ? 0.5 : 1,
+                  borderColor: hasBell ? '#f1fa8c' : isMinimized ? '#222244' : '#333366',
                 }}
-                onClick={() => handleToggleCollapse(session.id)}
+                onClick={() => { handleToggleCollapse(session.id); setBellSessions(prev => { const next = new Set(prev); next.delete(session.id); return next; }); }}
                 title={isMinimized ? `Show: ${session.title}` : `Minimize: ${session.title}`}
               >
-                <span style={{ color: isMinimized ? '#666' : '#4aaa6a', fontSize: 8 }}>{'\u25cf'}</span>
+                <span style={{ color: hasBell ? '#f1fa8c' : isMinimized ? '#666' : '#4aaa6a', fontSize: 8 }}>{'\u25cf'}</span>
                 <span style={styles.dockTitle}>{session.title}</span>
               </button>
             );
@@ -413,13 +418,22 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
           cursor: draggingId ? 'grabbing' : undefined,
         }}
       >
-        {visibleSessions.map(session => {
-          const pos = compactPositions.get(session.id)!;
+        {/* Render all sessions — minimized ones are hidden but stay mounted for bell events */}
+        {sessions.map(session => {
+          const isMinimized = collapsedSessions.has(session.id);
           return (<div
             key={session.id}
-            style={{
-              gridColumn: pos.col + 1,
-              gridRow: pos.row + 1,
+            style={isMinimized ? {
+              position: 'fixed',
+              left: -9999,
+              top: -9999,
+              width: tile.w,
+              height: tile.h,
+              pointerEvents: 'none',
+              visibility: 'hidden' as const,
+            } : {
+              gridColumn: session.col + 1,
+              gridRow: session.row + 1,
               minHeight: 0,
               minWidth: 0,
               display: 'flex',
@@ -434,6 +448,8 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
               onLockToggle={handleLockToggle}
               collapsed={collapsedSessions.has(session.id)}
               onToggleCollapse={handleToggleCollapse}
+              onBell={handleBell}
+              onFocus={() => setBellSessions(prev => { if (!prev.has(session.id)) return prev; const next = new Set(prev); next.delete(session.id); return next; })}
               onClose={handleClose}
               onReconnect={handleReconnect}
               onRename={handleRename}
@@ -515,6 +531,9 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '6px 8px',
     background: '#12122a',
     borderBottom: '1px solid #2a2a5a',
+    position: 'sticky' as const,
+    top: 0,
+    zIndex: 100,
   },
   dockItem: {
     display: 'flex',
