@@ -26,6 +26,9 @@ interface AuthenticatedAppProps {
   globalAutoScroll: boolean;
   onGlobalAutoScrollChange: (on: boolean) => void;
   globalAutoScrollVersion: number;
+  globalLock: boolean;
+  onGlobalLockChange: (on: boolean) => void;
+  globalLockVersion: number;
 }
 
 function AuthenticatedApp({
@@ -44,6 +47,9 @@ function AuthenticatedApp({
   globalAutoScroll,
   onGlobalAutoScrollChange,
   globalAutoScrollVersion,
+  globalLock,
+  onGlobalLockChange,
+  globalLockVersion,
 }: AuthenticatedAppProps) {
   const { activePane } = useWorkspacePane();
 
@@ -61,6 +67,8 @@ function AuthenticatedApp({
         currentUser={currentUser}
         globalAutoScroll={globalAutoScroll}
         onGlobalAutoScrollChange={onGlobalAutoScrollChange}
+        globalLock={globalLock}
+        onGlobalLockChange={onGlobalLockChange}
       />
 
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
@@ -72,6 +80,9 @@ function AuthenticatedApp({
             globalAutoScroll={globalAutoScroll}
             globalAutoScrollVersion={globalAutoScrollVersion}
             onGlobalAutoScrollChange={onGlobalAutoScrollChange}
+            globalLock={globalLock}
+            globalLockVersion={globalLockVersion}
+            onGlobalLockChange={onGlobalLockChange}
           />
         </div>
         <div style={{ display: activePane === 'desktops' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
@@ -113,6 +124,8 @@ export default function App() {
   const [secureMode, setSecureMode] = useState(true);
   const [globalAutoScroll, setGlobalAutoScroll] = useState(true);
   const [globalAutoScrollVersion, setGlobalAutoScrollVersion] = useState(0);
+  const [globalLock, setGlobalLock] = useState(false);
+  const [globalLockVersion, setGlobalLockVersion] = useState(0);
 
   const currentUser = useMemo(() => auth.isAuthenticated ? parseTokenUser() : null, [auth.isAuthenticated]);
 
@@ -175,6 +188,12 @@ export default function App() {
             setGlobalAutoScrollVersion(v => v + 1);
           }}
           globalAutoScrollVersion={globalAutoScrollVersion}
+          globalLock={globalLock}
+          onGlobalLockChange={(on: boolean) => {
+            setGlobalLock(on);
+            setGlobalLockVersion(v => v + 1);
+          }}
+          globalLockVersion={globalLockVersion}
         />
       </WorkspacePaneProvider>
     </InputBroadcastProvider>
