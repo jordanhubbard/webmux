@@ -278,6 +278,8 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     const observer = new ResizeObserver(() => {
       if (containerRef.current && containerRef.current.offsetWidth > 0 && containerRef.current.offsetHeight > 0) {
         fitAddonRef.current?.fit();
+        // Force re-render of buffer after restoring from minimized
+        termRef.current?.refresh(0, termRef.current.rows - 1);
       }
     });
     if (containerRef.current) {
