@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { AuthState } from '../hooks/useAuth';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { HelpDialog } from './HelpDialog';
@@ -22,6 +22,19 @@ interface TopBarProps {
 export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser, globalAutoScroll, onGlobalAutoScrollChange, globalLock, onGlobalLockChange }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
   const [showHelp, setShowHelp] = useState(false);
+  const [editingSize, setEditingSize] = useState(false);
+  const [sizeInput, setSizeInput] = useState('');
+  const sizeInputRef = useRef<HTMLInputElement>(null);
+
+  const commitSize = () => {
+    const match = sizeInput.match(/^\s*(\d+)\s*[x×]\s*(\d+)\s*$/i);
+    if (match) {
+      const cols = Math.max(40, Math.min(240, parseInt(match[1], 10)));
+      const rows = Math.max(10, Math.min(80, parseInt(match[2], 10)));
+      onTermSizeChange(cols, rows);
+    }
+    setEditingSize(false);
+  };
 
   return (
     <>
@@ -97,7 +110,25 @@ export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, o
           >
             C-
           </button>
-          <span style={styles.termSize}>{termCols}×{termRows}</span>
+          {editingSize ? (
+            <input
+              ref={sizeInputRef}
+              value={sizeInput}
+              onChange={e => setSizeInput(e.target.value)}
+              onBlur={commitSize}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitSize();
+                if (e.key === 'Escape') setEditingSize(false);
+              }}
+              style={{ ...styles.termSize, background: '#0d0d1a', border: '1px solid #7c6af7', borderRadius: 2, color: '#fff', outline: 'none', width: 70, textAlign: 'center', padding: '0 4px' }}
+            />
+          ) : (
+            <span
+              style={{ ...styles.termSize, cursor: 'pointer' }}
+              onClick={() => { setSizeInput(`${termCols}x${termRows}`); setEditingSize(true); setTimeout(() => sizeInputRef.current?.select(), 0); }}
+              title="Click to set size (e.g. 120x40)"
+            >{termCols}×{termRows}</span>
+          )}
           <button
             style={styles.iconBtn}
             onClick={() => onTermSizeChange(Math.min(240, termCols + 10), termRows)}
