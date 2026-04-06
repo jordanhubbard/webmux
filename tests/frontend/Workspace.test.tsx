@@ -41,7 +41,7 @@ describe('Workspace', () => {
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   });
 
-  const defaultProps = { fontSize: 14, termCols: 80, termRows: 24 };
+  const defaultProps = { fontSize: 14, termCols: 80, termRows: 24, globalAutoScroll: true, globalAutoScrollVersion: 0, onGlobalAutoScrollChange: vi.fn(), globalLock: false, globalLockVersion: 0, onGlobalLockChange: vi.fn() };
 
   it('shows add cell when no sessions', async () => {
     render(<Workspace {...defaultProps} />, { wrapper });
@@ -64,7 +64,7 @@ describe('Workspace', () => {
 
     render(<Workspace {...defaultProps} />, { wrapper });
     await waitFor(() => {
-      expect(screen.getByText('u1@h1')).toBeDefined();
+      expect(screen.getAllByText('u1@h1').length).toBeGreaterThan(0);
     });
   });
 
