@@ -11,6 +11,8 @@ interface TileProps {
   onAutoScrollToggle: (id: string) => void;
   locked: boolean;
   onLockToggle: (id: string) => void;
+  collapsed: boolean;
+  onToggleCollapse: (id: string) => void;
   onClose: (id: string) => void;
   onReconnect: (id: string) => void;
   onRename: (id: string, title: string) => void;
@@ -19,7 +21,7 @@ interface TileProps {
   isDropTarget?: boolean;
 }
 
-export function Tile({ session, fontSize, autoScroll, onAutoScrollToggle, locked, onLockToggle, onClose, onReconnect, onRename, onTitleMouseDown, isDragging, isDropTarget }: TileProps) {
+export function Tile({ session, fontSize, autoScroll, onAutoScrollToggle, locked, onLockToggle, collapsed, onToggleCollapse, onClose, onReconnect, onRename, onTitleMouseDown, isDragging, isDropTarget }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
   const [editing, setEditing] = useState(false);
@@ -126,7 +128,11 @@ export function Tile({ session, fontSize, autoScroll, onAutoScrollToggle, locked
         onMouseDown={handleChromeMouseDown}
       >
         <div style={styles.chromeLeft}>
-          <span style={{ ...styles.stateIndicator, color: stateColor }}>{stateIcon}</span>
+          <span
+            style={{ ...styles.stateIndicator, color: stateColor, cursor: 'pointer' }}
+            onClick={(e) => { e.stopPropagation(); onToggleCollapse(session.id); }}
+            title="Minimize"
+          >{stateIcon}</span>
           {editing ? (
             <input
               ref={inputRef}
@@ -193,7 +199,7 @@ export function Tile({ session, fontSize, autoScroll, onAutoScrollToggle, locked
         </div>
       </div>
 
-      <div style={styles.termContainer}>
+      {!collapsed && <div style={styles.termContainer}>
         <Terminal
           ref={termHandleRef}
           sessionId={session.id}
@@ -204,7 +210,7 @@ export function Tile({ session, fontSize, autoScroll, onAutoScrollToggle, locked
           onViewerUpdate={handleViewerUpdate}
           onFocusGained={handleFocusGained}
         />
-      </div>
+      </div>}
     </div>
   );
 }

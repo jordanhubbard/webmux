@@ -110,6 +110,7 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
   const [autoScrollOverrides, setAutoScrollOverrides] = useState<Map<string, boolean>>(new Map());
   const [lockOverrides, setLockOverrides] = useState<Map<string, boolean>>(new Map());
+  const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(new Set());
 
   // Drag state
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -225,6 +226,14 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
     }
   }, [lockOverrides, sessions, globalLock, onGlobalLockChange]);
 
+  const handleToggleCollapse = useCallback((sessionId: string) => {
+    setCollapsedSessions(prev => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) { next.delete(sessionId); } else { next.add(sessionId); }
+      return next;
+    });
+  }, []);
+
   const getGridCell = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
     if (!gridRef.current) return null;
     const rect = gridRef.current.getBoundingClientRect();
@@ -315,10 +324,22 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
     };
   }, [draggingId, getGridCell]);
 
-  const addPositions = getAddPositions(sessions);
+  const visibleSessions = sessions.filter(s => !collapsedSessions.has(s.id));
+
+  // Use full session set for column count so grid width stays stable
+  const baseCols = sessions.length > 0 ? Math.max(...sessions.map(s => s.col)) + 1 : 1;
+
+  // Compact visible sessions: maintain relative order (row,col) but pack into consecutive cells
+  const sorted = [...visibleSessions].sort((a, b) => a.row - b.row || a.col - b.col);
+  const compactPositions = new Map<string, { row: number; col: number }>();
+  sorted.forEach((s, i) => {
+    compactPositions.set(s.id, { row: Math.floor(i / baseCols), col: i % baseCols });
+  });
+
+  const addPositions = getAddPositions(sorted.map(s => ({ ...s, ...compactPositions.get(s.id)! })));
 
   const allPositions = [
-    ...sessions.map(s => ({ row: s.row, col: s.col })),
+    ...Array.from(compactPositions.values()),
     ...addPositions,
   ];
   const numCols = allPositions.length > 0 ? Math.max(...allPositions.map(p => p.col)) + 1 : 1;
@@ -335,6 +356,28 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
   return (
     <div style={styles.outer}>
       <div style={styles.hint}>Hold Shift to scroll</div>
+      {sessions.length > 0 && (
+        <div style={styles.dock}>
+          {sessions.map(session => {
+            const isMinimized = collapsedSessions.has(session.id);
+            return (
+              <button
+                key={session.id}
+                style={{
+                  ...styles.dockItem,
+                  opacity: isMinimized ? 0.5 : 1,
+                  borderColor: isMinimized ? '#222244' : '#333366',
+                }}
+                onClick={() => handleToggleCollapse(session.id)}
+                title={isMinimized ? `Show: ${session.title}` : `Minimize: ${session.title}`}
+              >
+                <span style={{ color: isMinimized ? '#666' : '#4aaa6a', fontSize: 8 }}>{'●'}</span>
+                <span style={styles.dockTitle}>{session.title}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div
         ref={gridRef}
         style={{
@@ -344,12 +387,13 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
           cursor: draggingId ? 'grabbing' : undefined,
         }}
       >
-        {sessions.map(session => (
-          <div
+        {visibleSessions.map(session => {
+          const pos = compactPositions.get(session.id)!;
+          return (<div
             key={session.id}
             style={{
-              gridColumn: session.col + 1,
-              gridRow: session.row + 1,
+              gridColumn: pos.col + 1,
+              gridRow: pos.row + 1,
               minHeight: 0,
               minWidth: 0,
               display: 'flex',
@@ -362,6 +406,8 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
               onAutoScrollToggle={handleAutoScrollToggle}
               locked={lockOverrides.get(session.id) ?? globalLock}
               onLockToggle={handleLockToggle}
+              collapsed={false}
+              onToggleCollapse={handleToggleCollapse}
               onClose={handleClose}
               onReconnect={handleReconnect}
               onRename={handleRename}
@@ -369,8 +415,8 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
               isDragging={draggingId === session.id}
               isDropTarget={dropTarget?.row === session.row && dropTarget?.col === session.col}
             />
-          </div>
-        ))}
+          </div>);
+        })}
 
         {addPositions.map(pos => (
           <AddCell
@@ -422,7 +468,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'grid',
     gap: GAP,
     padding: GAP,
-    minHeight: '100%',
     boxSizing: 'border-box',
   },
   hint: {
@@ -437,5 +482,31 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     padding: 32,
     textAlign: 'center',
+  },
+  dock: {
+    display: 'flex',
+    flexWrap: 'wrap' as const,
+    gap: 4,
+    padding: '6px 8px',
+    background: '#12122a',
+    borderBottom: '1px solid #2a2a5a',
+  },
+  dockItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '4px 10px',
+    background: '#1a1a3a',
+    border: '1px solid #333366',
+    borderRadius: 4,
+    cursor: 'pointer',
+    color: '#ccc',
+    fontSize: 12,
+  },
+  dockTitle: {
+    maxWidth: 150,
+    overflow: 'hidden' as const,
+    textOverflow: 'ellipsis' as const,
+    whiteSpace: 'nowrap' as const,
   },
 };
