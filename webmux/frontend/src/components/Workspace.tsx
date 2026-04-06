@@ -358,7 +358,7 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
       <div style={styles.hint}>Hold Shift to scroll</div>
       {sessions.length > 0 && (
         <div style={styles.dock}>
-          {sessions.map(session => {
+          {[...sessions].sort((a, b) => a.title.localeCompare(b.title)).map(session => {
             const isMinimized = collapsedSessions.has(session.id);
             return (
               <button
