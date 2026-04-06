@@ -15,9 +15,11 @@ interface TopBarProps {
   currentUser: string | null;
   globalAutoScroll: boolean;
   onGlobalAutoScrollChange: (on: boolean) => void;
+  globalLock: boolean;
+  onGlobalLockChange: (on: boolean) => void;
 }
 
-export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser, globalAutoScroll, onGlobalAutoScrollChange }: TopBarProps) {
+export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser, globalAutoScroll, onGlobalAutoScrollChange, globalLock, onGlobalLockChange }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
   const [showHelp, setShowHelp] = useState(false);
 
@@ -52,6 +54,19 @@ export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, o
           title={globalAutoScroll ? 'Auto-scroll: ON — terminals follow output' : 'Auto-scroll: OFF — terminals stay in place'}
         >
           {globalAutoScroll ? 'Auto-scroll: ON' : 'Auto-scroll: OFF'}
+        </button>
+        <button
+          style={{
+            ...styles.broadcastBtn,
+            background: globalLock ? '#3a2a1a' : '#1a1a3a',
+            color: globalLock ? '#e8a030' : '#aaa',
+            borderColor: globalLock ? '#e8a030' : '#333366',
+          }}
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => onGlobalLockChange(!globalLock)}
+          title={globalLock ? 'Lock: ON — close buttons disabled' : 'Lock: OFF — windows can be closed'}
+        >
+          {globalLock ? '\ud83d\udd12 Locked' : '\ud83d\udd13 Unlocked'}
         </button>
       </div>
 
