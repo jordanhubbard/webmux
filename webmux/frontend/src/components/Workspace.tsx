@@ -96,10 +96,21 @@ function AddCell({ row, col, isEmpty, onClick }: {
   );
 }
 
-export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
+interface WorkspaceExtraProps {
+  globalAutoScroll: boolean;
+  globalAutoScrollVersion: number;
+  onGlobalAutoScrollChange: (on: boolean) => void;
+  globalLock: boolean;
+  globalLockVersion: number;
+  onGlobalLockChange: (on: boolean) => void;
+}
+
+export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, globalAutoScrollVersion, onGlobalAutoScrollChange, globalLock, globalLockVersion, onGlobalLockChange }: WorkspaceProps & WorkspaceExtraProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
+  const [autoScrollOverrides, setAutoScrollOverrides] = useState<Map<string, boolean>>(new Map());
+  const [lockOverrides, setLockOverrides] = useState<Map<string, boolean>>(new Map());
   const [aiOpen, setAiOpen] = useState(false);
   // Ref to get terminal scrollback for AI context
   const termContextRef = useRef<() => string>(() => '');
@@ -155,6 +166,68 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
   }, []);
 
   const tile = tilePixelSize(termCols, termRows, fontSize);
+
+  // Clear all per-window overrides when user explicitly clicks global toggle
+  useEffect(() => {
+    setAutoScrollOverrides(new Map());
+  }, [globalAutoScrollVersion]); // intentionally only depends on version counter
+
+  const handleAutoScrollToggle = useCallback((sessionId: string) => {
+    setAutoScrollOverrides(prev => {
+      const next = new Map(prev);
+      for (const s of sessionsRef.current) {
+        if (!next.has(s.id)) {
+          next.set(s.id, globalAutoScroll);
+        }
+      }
+      const current = next.get(sessionId)!;
+      next.set(sessionId, !current);
+      return next;
+    });
+  }, [globalAutoScroll]);
+
+  // Sync global indicator with per-window overrides
+  useEffect(() => {
+    if (sessions.length === 0 || autoScrollOverrides.size === 0) return;
+    const allOn = sessions.every(s => (autoScrollOverrides.get(s.id) ?? globalAutoScroll) === true);
+    const anyOff = sessions.some(s => (autoScrollOverrides.get(s.id) ?? globalAutoScroll) === false);
+    if (globalAutoScroll && anyOff) {
+      onGlobalAutoScrollChange(false);
+    } else if (!globalAutoScroll && allOn) {
+      onGlobalAutoScrollChange(true);
+    }
+  }, [autoScrollOverrides, sessions, globalAutoScroll, onGlobalAutoScrollChange]);
+
+  // Clear lock overrides when user explicitly clicks global lock toggle
+  useEffect(() => {
+    setLockOverrides(new Map());
+  }, [globalLockVersion]); // intentionally only depends on version counter
+
+  const handleLockToggle = useCallback((sessionId: string) => {
+    setLockOverrides(prev => {
+      const next = new Map(prev);
+      for (const s of sessionsRef.current) {
+        if (!next.has(s.id)) {
+          next.set(s.id, globalLock);
+        }
+      }
+      const current = next.get(sessionId)!;
+      next.set(sessionId, !current);
+      return next;
+    });
+  }, [globalLock]);
+
+  // Sync global lock indicator with per-window overrides
+  useEffect(() => {
+    if (sessions.length === 0 || lockOverrides.size === 0) return;
+    const allLocked = sessions.every(s => (lockOverrides.get(s.id) ?? globalLock) === true);
+    const anyUnlocked = sessions.some(s => (lockOverrides.get(s.id) ?? globalLock) === false);
+    if (globalLock && anyUnlocked) {
+      onGlobalLockChange(false);
+    } else if (!globalLock && allLocked) {
+      onGlobalLockChange(true);
+    }
+  }, [lockOverrides, sessions, globalLock, onGlobalLockChange]);
 
   const getGridCell = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
     if (!gridRef.current) return null;
@@ -304,6 +377,10 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
             <Tile
               session={session}
               fontSize={fontSize}
+              autoScroll={autoScrollOverrides.get(session.id) ?? globalAutoScroll}
+              onAutoScrollToggle={handleAutoScrollToggle}
+              locked={lockOverrides.get(session.id) ?? globalLock}
+              onLockToggle={handleLockToggle}
               onClose={handleClose}
               onReconnect={handleReconnect}
               onRename={handleRename}

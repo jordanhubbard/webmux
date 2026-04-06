@@ -29,6 +29,10 @@ export default function App() {
   const [termRows, setTermRows] = useState(24);
   const [showRegister, setShowRegister] = useState(false);
   const [secureMode, setSecureMode] = useState(true);
+  const [globalAutoScroll, setGlobalAutoScroll] = useState(true);
+  const [globalAutoScrollVersion, setGlobalAutoScrollVersion] = useState(0);
+  const [globalLock, setGlobalLock] = useState(false);
+  const [globalLockVersion, setGlobalLockVersion] = useState(0);
 
   const currentUser = useMemo(() => auth.isAuthenticated ? parseTokenUser() : null, [auth.isAuthenticated]);
 
@@ -82,9 +86,19 @@ export default function App() {
           onNewAccount={() => setShowRegister(true)}
           secureMode={secureMode}
           currentUser={currentUser}
+          globalAutoScroll={globalAutoScroll}
+          onGlobalAutoScrollChange={(on: boolean) => {
+            setGlobalAutoScroll(on);
+            setGlobalAutoScrollVersion(v => v + 1);
+          }}
+          globalLock={globalLock}
+          onGlobalLockChange={(on: boolean) => {
+            setGlobalLock(on);
+            setGlobalLockVersion(v => v + 1);
+          }}
         />
 
-        <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} />
+        <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} globalAutoScroll={globalAutoScroll} globalAutoScrollVersion={globalAutoScrollVersion} onGlobalAutoScrollChange={setGlobalAutoScroll} globalLock={globalLock} globalLockVersion={globalLockVersion} onGlobalLockChange={setGlobalLock} />
 
         {showRegister && (
           <RegisterDialog

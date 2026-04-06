@@ -87,7 +87,7 @@ describe('useAuth', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {
-      try { await result.current.login('admin', 'wrong'); } catch {}
+      try { await result.current.login('admin', 'wrong'); } catch { /* expected */ }
     });
     expect(result.current.error).toBe('Invalid credentials');
     expect(result.current.isAuthenticated).toBe(false);
