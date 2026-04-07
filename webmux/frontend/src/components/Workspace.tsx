@@ -249,8 +249,37 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
       const next = new Set(prev);
       if (next.has(sessionId)) {
         next.delete(sessionId);
-        // Clear bell when restoring
         setBellSessions(b => { const nb = new Set(b); nb.delete(sessionId); return nb; });
+
+        // Move restored tile to nearest empty cell adjacent to visible tiles
+        const current = sessionsRef.current;
+        const visible = current.filter(s => s.id !== sessionId && !next.has(s.id));
+        const occupied = new Set(visible.map(s => `${s.row},${s.col}`));
+
+        // Collect candidate cells: all cells adjacent to visible tiles
+        const candidates: { row: number; col: number; dist: number }[] = [];
+        for (const s of visible) {
+          for (const [dr, dc] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
+            const r = s.row + dr;
+            const c = s.col + dc;
+            if (r >= 0 && c >= 0 && !occupied.has(`${r},${c}`)) {
+              // Distance from center of visible tiles
+              const avgRow = visible.reduce((a, v) => a + v.row, 0) / (visible.length || 1);
+              const avgCol = visible.reduce((a, v) => a + v.col, 0) / (visible.length || 1);
+              candidates.push({ row: r, col: c, dist: Math.abs(r - avgRow) + Math.abs(c - avgCol) });
+            }
+          }
+        }
+        // Sort by distance, pick closest
+        candidates.sort((a, b) => a.dist - b.dist);
+        const target = candidates[0];
+        if (target) {
+          const session = current.find(s => s.id === sessionId);
+          if (session && (session.row !== target.row || session.col !== target.col)) {
+            setSessions(p => p.map(s => s.id === sessionId ? { ...s, row: target.row, col: target.col } : s));
+            api.moveSession(sessionId, target.row, target.col).catch(() => {});
+          }
+        }
       } else {
         next.add(sessionId);
       }
