@@ -113,6 +113,7 @@ export class SessionBroker extends EventEmitter {
       updated_at: new Date().toISOString(),
       title: transport === 'exec' ? `${hostname}:${port}` : `${req.username}@${hostname}`,
       persistent: true,
+      minimized: false,
     };
 
     this.sessions.set(id, session);
@@ -262,6 +263,15 @@ export class SessionBroker extends EventEmitter {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error(`Session ${sessionId} not found`);
     session.title = title;
+    session.updated_at = new Date().toISOString();
+    this.persistSessions();
+    return session;
+  }
+
+  setMinimized(sessionId: string, minimized: boolean): Session {
+    const session = this.sessions.get(sessionId);
+    if (!session) throw new Error(`Session ${sessionId} not found`);
+    session.minimized = minimized;
     session.updated_at = new Date().toISOString();
     this.persistSessions();
     return session;

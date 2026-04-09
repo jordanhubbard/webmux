@@ -69,6 +69,11 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ title }),
     }),
+  setMinimized: (id: string, minimized: boolean) =>
+    request<Session>(`/sessions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ minimized }),
+    }),
   // Upload
   uploadFile: async (file: File): Promise<{ path: string; name: string; size: number }> => {
     const token = getToken();

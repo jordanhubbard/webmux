@@ -112,12 +112,7 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
   const [autoScrollOverrides, setAutoScrollOverrides] = useState<Map<string, boolean>>(new Map());
   const [lockOverrides, setLockOverrides] = useState<Map<string, boolean>>(new Map());
   const [bellSessions, setBellSessions] = useState<Set<string>>(new Set());
-  const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(() => {
-    try {
-      const saved = localStorage.getItem('webmux_collapsed');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    } catch { return new Set(); }
-  });
+  const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(new Set());
   const [aiOpen, setAiOpen] = useState(false);
   // Ref to get terminal scrollback for AI context
   const termContextRef = useRef<() => string>(() => '');
@@ -140,7 +135,10 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
 
   useEffect(() => {
     api.getSessions()
-      .then(setSessions)
+      .then(loaded => {
+        setSessions(loaded);
+        setCollapsedSessions(new Set(loaded.filter(s => s.minimized).map(s => s.id)));
+      })
       .catch(err => console.error('Failed to load sessions:', err))
       .finally(() => setLoading(false));
   }, []);
@@ -280,10 +278,11 @@ export function Workspace({ fontSize, termCols, termRows, globalAutoScroll, glob
             api.moveSession(sessionId, target.row, target.col).catch(() => {});
           }
         }
+        api.setMinimized(sessionId, false).catch(() => {});
       } else {
         next.add(sessionId);
+        api.setMinimized(sessionId, true).catch(() => {});
       }
-      localStorage.setItem('webmux_collapsed', JSON.stringify([...next]));
       return next;
     });
   }, []);
