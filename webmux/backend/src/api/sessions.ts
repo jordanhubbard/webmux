@@ -65,7 +65,13 @@ router.patch('/:id', (req: Request, res: Response) => {
     res.status(404).json({ error: 'Session not found' });
     return;
   }
-  const { row, col, title } = req.body as { row?: number; col?: number; title?: string };
+  const { row, col, title, minimized } = req.body as { row?: number; col?: number; title?: string; minimized?: boolean };
+
+  if (minimized !== undefined) {
+    const updated = sessionBroker.setMinimized(req.params.id, minimized);
+    res.json(updated);
+    return;
+  }
 
   if (title !== undefined) {
     const trimmed = title.trim();

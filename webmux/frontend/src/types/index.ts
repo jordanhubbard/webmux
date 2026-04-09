@@ -21,6 +21,7 @@ export interface Session {
   updated_at: string;
   title: string;
   persistent: boolean;
+  minimized: boolean;
 }
 
 export interface HostEntry {
