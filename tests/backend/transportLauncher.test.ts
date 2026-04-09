@@ -22,6 +22,7 @@ function makeSession(overrides: Partial<Session> = {}): Session {
     updated_at: new Date().toISOString(),
     title: 'testuser@example.com',
     persistent: true,
+    minimized: false,
     ...overrides,
   };
 }

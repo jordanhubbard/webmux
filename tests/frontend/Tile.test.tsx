@@ -43,6 +43,13 @@ describe('Tile', () => {
       <Tile
         session={makeSession()}
         fontSize={14}
+        autoScroll={true}
+        onAutoScrollToggle={vi.fn()}
+        locked={false}
+        onLockToggle={vi.fn()}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+        onBell={vi.fn()}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
       />,
@@ -57,6 +64,13 @@ describe('Tile', () => {
       <Tile
         session={makeSession({ transport: 'mosh' })}
         fontSize={14}
+        autoScroll={true}
+        onAutoScrollToggle={vi.fn()}
+        locked={false}
+        onLockToggle={vi.fn()}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+        onBell={vi.fn()}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
       />,
@@ -85,6 +99,13 @@ describe('Tile', () => {
       <Tile
         session={makeSession({ state: 'disconnected' })}
         fontSize={14}
+        autoScroll={true}
+        onAutoScrollToggle={vi.fn()}
+        locked={false}
+        onLockToggle={vi.fn()}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+        onBell={vi.fn()}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
       />,
@@ -113,6 +134,13 @@ describe('Tile', () => {
       <Tile
         session={makeSession({ state: 'connected' })}
         fontSize={14}
+        autoScroll={true}
+        onAutoScrollToggle={vi.fn()}
+        locked={false}
+        onLockToggle={vi.fn()}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+        onBell={vi.fn()}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
       />,
@@ -126,6 +154,13 @@ describe('Tile', () => {
       <Tile
         session={makeSession({ state: 'error' })}
         fontSize={14}
+        autoScroll={true}
+        onAutoScrollToggle={vi.fn()}
+        locked={false}
+        onLockToggle={vi.fn()}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+        onBell={vi.fn()}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
       />,
@@ -139,6 +174,13 @@ describe('Tile', () => {
       <Tile
         session={makeSession()}
         fontSize={14}
+        autoScroll={true}
+        onAutoScrollToggle={vi.fn()}
+        locked={false}
+        onLockToggle={vi.fn()}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+        onBell={vi.fn()}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
       />,
@@ -152,6 +194,13 @@ describe('Tile', () => {
       <Tile
         session={makeSession()}
         fontSize={14}
+        autoScroll={true}
+        onAutoScrollToggle={vi.fn()}
+        locked={false}
+        onLockToggle={vi.fn()}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+        onBell={vi.fn()}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
       />,
@@ -166,6 +215,13 @@ describe('Tile', () => {
       <Tile
         session={makeSession()}
         fontSize={14}
+        autoScroll={true}
+        onAutoScrollToggle={vi.fn()}
+        locked={false}
+        onLockToggle={vi.fn()}
+        collapsed={false}
+        onToggleCollapse={vi.fn()}
+        onBell={vi.fn()}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
         onTitleMouseDown={onTitleMouseDown}
@@ -173,7 +229,7 @@ describe('Tile', () => {
       { wrapper },
     );
     // Fire mousedown on the chrome (not a button)
-    const chrome = screen.getByTitle('user@example.com').closest('[style]')!.parentElement!;
+    const chrome = screen.getByTitle('user@example.com (double-click to rename)').closest('[style]')!.parentElement!;
     fireEvent.mouseDown(chrome);
     expect(onTitleMouseDown).toHaveBeenCalledWith('s1', expect.any(Object));
   });

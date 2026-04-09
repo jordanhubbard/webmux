@@ -7,6 +7,14 @@ import type { Session, ConnectionState } from '../types';
 interface TileProps {
   session: Session;
   fontSize: number;
+  autoScroll: boolean;
+  onAutoScrollToggle: (id: string) => void;
+  locked: boolean;
+  onLockToggle: (id: string) => void;
+  collapsed: boolean;
+  onToggleCollapse: (id: string) => void;
+  onBell: (id: string) => void;
+  onFocus?: () => void;
   onClose: (id: string) => void;
   onReconnect: (id: string) => void;
   onRename: (id: string, title: string) => void;
@@ -15,7 +23,7 @@ interface TileProps {
   isDropTarget?: boolean;
 }
 
-export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitleMouseDown, isDragging, isDropTarget }: TileProps) {
+export function Tile({ session, fontSize, autoScroll, onAutoScrollToggle, locked, onLockToggle, collapsed, onToggleCollapse, onBell, onFocus: onTileFocus, onClose, onReconnect, onRename, onTitleMouseDown, isDragging, isDropTarget }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
   const [editing, setEditing] = useState(false);
@@ -36,8 +44,8 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
   }, []);
 
   const handleFocusGained = useCallback(() => {
-    // Terminal handles setting focusedSessionId via context
-  }, []);
+    onTileFocus?.();
+  }, [onTileFocus]);
 
   const handleChromeMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
@@ -122,7 +130,11 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
         onMouseDown={handleChromeMouseDown}
       >
         <div style={styles.chromeLeft}>
-          <span style={{ ...styles.stateIndicator, color: stateColor }}>{stateIcon}</span>
+          <span
+            style={{ ...styles.stateIndicator, color: stateColor, cursor: 'pointer' }}
+            onClick={(e) => { e.stopPropagation(); onToggleCollapse(session.id); }}
+            title="Minimize"
+          >{stateIcon}</span>
           {editing ? (
             <input
               ref={inputRef}
@@ -164,26 +176,42 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
             </span>
           )}
           <button
+            style={{ ...styles.chromeBtn, color: autoScroll ? '#50fa7b' : '#666', fontSize: 10 }}
+            onClick={() => onAutoScrollToggle(session.id)}
+            title={autoScroll ? 'Auto-scroll: ON (click to disable)' : 'Auto-scroll: OFF (click to enable)'}
+          >{'\u21d3'}</button>
+          <button
             style={{ ...styles.chromeBtn, color: '#8888cc' }}
             onClick={() => termHandleRef.current?.scrollToBottom()}
             title="Scroll to bottom"
           >&#8595;</button>
+          <button
+            style={{ ...styles.chromeBtn, color: locked ? '#e8a030' : '#666', fontSize: 10 }}
+            onClick={() => onLockToggle(session.id)}
+            title={locked ? 'Locked (click to unlock)' : 'Unlocked (click to lock)'}
+          >{locked ? '\ud83d\udd12' : '\ud83d\udd13'}</button>
           {(state === 'disconnected' || state === 'error') && (
             <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onReconnect(session.id)} title="Reconnect">{'\u21ba'}</button>
           )}
-          <button style={{ ...styles.chromeBtn, color: '#ff8888' }} onClick={() => onClose(session.id)} title="Close">{'\u2715'}</button>
+          <button
+            style={{ ...styles.chromeBtn, color: locked ? '#444' : '#ff8888', cursor: locked ? 'not-allowed' : 'pointer' }}
+            onClick={() => { if (!locked) onClose(session.id); }}
+            title={locked ? 'Window is locked' : 'Close'}
+          >{'\u2715'}</button>
         </div>
       </div>
 
-      <div style={styles.termContainer}>
+      <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
         <Terminal
           ref={termHandleRef}
           sessionId={session.id}
           fontSize={fontSize}
           state={state}
+          autoScroll={autoScroll}
           onStateChange={handleStateChange}
           onViewerUpdate={handleViewerUpdate}
           onFocusGained={handleFocusGained}
+          onBell={() => onBell(session.id)}
         />
       </div>
     </div>

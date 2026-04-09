@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { AuthState } from '../hooks/useAuth';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { HelpDialog } from './HelpDialog';
@@ -13,11 +13,28 @@ interface TopBarProps {
   onNewAccount: () => void;
   secureMode: boolean;
   currentUser: string | null;
+  globalAutoScroll: boolean;
+  onGlobalAutoScrollChange: (on: boolean) => void;
+  globalLock: boolean;
+  onGlobalLockChange: (on: boolean) => void;
 }
 
-export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser }: TopBarProps) {
+export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser, globalAutoScroll, onGlobalAutoScrollChange, globalLock, onGlobalLockChange }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
   const [showHelp, setShowHelp] = useState(false);
+  const [editingSize, setEditingSize] = useState(false);
+  const [sizeInput, setSizeInput] = useState('');
+  const sizeInputRef = useRef<HTMLInputElement>(null);
+
+  const commitSize = () => {
+    const match = sizeInput.match(/^\s*(\d+)\s*[x×]\s*(\d+)\s*$/i);
+    if (match) {
+      const cols = Math.max(40, Math.min(240, parseInt(match[1], 10)));
+      const rows = Math.max(10, Math.min(80, parseInt(match[2], 10)));
+      onTermSizeChange(cols, rows);
+    }
+    setEditingSize(false);
+  };
 
   return (
     <>
@@ -37,6 +54,32 @@ export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, o
           title={broadcastMode ? 'Type to All: ON — input goes to every pane' : 'Type to All: OFF — input goes to focused pane only'}
         >
           {broadcastMode ? 'Type to All: ON' : 'Type to All'}
+        </button>
+        <button
+          style={{
+            ...styles.broadcastBtn,
+            background: globalAutoScroll ? '#1a3a2a' : '#1a1a3a',
+            color: globalAutoScroll ? '#50fa7b' : '#aaa',
+            borderColor: globalAutoScroll ? '#50fa7b' : '#333366',
+          }}
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => onGlobalAutoScrollChange(!globalAutoScroll)}
+          title={globalAutoScroll ? 'Auto-scroll: ON — terminals follow output' : 'Auto-scroll: OFF — terminals stay in place'}
+        >
+          {globalAutoScroll ? 'Auto-scroll: ON' : 'Auto-scroll: OFF'}
+        </button>
+        <button
+          style={{
+            ...styles.broadcastBtn,
+            background: globalLock ? '#3a2a1a' : '#1a1a3a',
+            color: globalLock ? '#e8a030' : '#aaa',
+            borderColor: globalLock ? '#e8a030' : '#333366',
+          }}
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => onGlobalLockChange(!globalLock)}
+          title={globalLock ? 'Lock: ON — close buttons disabled' : 'Lock: OFF — windows can be closed'}
+        >
+          {globalLock ? '\ud83d\udd12 Locked' : '\ud83d\udd13 Unlocked'}
         </button>
       </div>
 
@@ -67,7 +110,25 @@ export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, o
           >
             C-
           </button>
-          <span style={styles.termSize}>{termCols}×{termRows}</span>
+          {editingSize ? (
+            <input
+              ref={sizeInputRef}
+              value={sizeInput}
+              onChange={e => setSizeInput(e.target.value)}
+              onBlur={commitSize}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitSize();
+                if (e.key === 'Escape') setEditingSize(false);
+              }}
+              style={{ ...styles.termSize, background: '#0d0d1a', border: '1px solid #7c6af7', borderRadius: 2, color: '#fff', outline: 'none', width: 70, textAlign: 'center', padding: '0 4px' }}
+            />
+          ) : (
+            <span
+              style={{ ...styles.termSize, cursor: 'pointer' }}
+              onClick={() => { setSizeInput(`${termCols}x${termRows}`); setEditingSize(true); setTimeout(() => sizeInputRef.current?.select(), 0); }}
+              title="Click to set size (e.g. 120x40)"
+            >{termCols}×{termRows}</span>
+          )}
           <button
             style={styles.iconBtn}
             onClick={() => onTermSizeChange(Math.min(240, termCols + 10), termRows)}
