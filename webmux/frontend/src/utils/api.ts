@@ -1,4 +1,4 @@
-import type { Session, HostEntry, KeyEntry, AuthStatus, AppConfig, DeepPartial, CreateSessionRequest } from '../types';
+import type { Session, HostEntry, KeyEntry, AuthStatus, AppConfig, DeepPartial, CreateSessionRequest, VncSession, CreateVncSessionRequest } from '../types';
 
 const API_BASE = '/api';
 
@@ -88,6 +88,19 @@ export const api = {
     }
     return res.json();
   },
+  // VNC Sessions
+  getVncSessions: () => request<VncSession[]>('/vnc/sessions'),
+  createVncSession: (req: CreateVncSessionRequest) =>
+    request<VncSession>('/vnc/sessions', { method: 'POST', body: JSON.stringify(req) }),
+  deleteVncSession: (id: string) =>
+    request<void>(`/vnc/sessions/${id}`, { method: 'DELETE' }),
+  reconnectVncSession: (id: string) =>
+    request<VncSession>(`/vnc/sessions/${id}/reconnect`, { method: 'POST' }),
+  moveVncSession: (id: string, row: number, col: number) =>
+    request<VncSession>(`/vnc/sessions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ row, col }),
+    }),
 
   // Hosts
   getHosts: () => request<HostEntry[]>('/hosts'),
@@ -111,4 +124,12 @@ export function buildWsUrl(sessionId: string): string {
   const host = window.location.host;
   const query = token ? `?token=${encodeURIComponent(token)}` : '';
   return `${proto}//${host}/api/term/${sessionId}${query}`;
+}
+
+export function buildVncWsUrl(sessionId: string): string {
+  const token = getToken();
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  const query = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${proto}//${host}/api/vnc/ws/${sessionId}${query}`;
 }

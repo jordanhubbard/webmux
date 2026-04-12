@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { AuthState } from '../hooks/useAuth';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
+import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
 import { HelpDialog } from './HelpDialog';
 
 interface TopBarProps {
@@ -17,6 +18,7 @@ interface TopBarProps {
 
 export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
+  const { activePane, setActivePane } = useWorkspacePane();
   const [showHelp, setShowHelp] = useState(false);
 
   return (
@@ -38,58 +40,90 @@ export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, o
         >
           {broadcastMode ? 'Type to All: ON' : 'Type to All'}
         </button>
+        <button
+          onClick={() => setActivePane('terminals')}
+          style={{
+            background: activePane === 'terminals' ? '#7c6af7' : '#1a1a3a',
+            color: '#fff',
+            border: '1px solid #333366',
+            borderRadius: 4,
+            padding: '4px 12px',
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
+        >
+          Terminals
+        </button>
+        <button
+          onClick={() => setActivePane('desktops')}
+          style={{
+            background: activePane === 'desktops' ? '#5a9af7' : '#1a1a3a',
+            color: '#fff',
+            border: '1px solid #333366',
+            borderRadius: 4,
+            padding: '4px 12px',
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
+        >
+          Desktops
+        </button>
       </div>
 
       <div style={styles.right}>
-        <div style={styles.fontControls}>
-          <button
-            style={styles.iconBtn}
-            onClick={() => onFontSizeChange(Math.max(8, fontSize - 1))}
-            title="Decrease font size"
-          >
-            A-
-          </button>
-          <span style={styles.fontSize}>{fontSize}px</span>
-          <button
-            style={styles.iconBtn}
-            onClick={() => onFontSizeChange(Math.min(32, fontSize + 1))}
-            title="Increase font size"
-          >
-            A+
-          </button>
-        </div>
+        {activePane === 'terminals' && (
+          <div style={styles.fontControls}>
+            <button
+              style={styles.iconBtn}
+              onClick={() => onFontSizeChange(Math.max(8, fontSize - 1))}
+              title="Decrease font size"
+            >
+              A-
+            </button>
+            <span style={styles.fontSize}>{fontSize}px</span>
+            <button
+              style={styles.iconBtn}
+              onClick={() => onFontSizeChange(Math.min(32, fontSize + 1))}
+              title="Increase font size"
+            >
+              A+
+            </button>
+          </div>
+        )}
 
-        <div style={styles.termSizeControls}>
-          <button
-            style={styles.iconBtn}
-            onClick={() => onTermSizeChange(Math.max(40, termCols - 10), termRows)}
-            title="Decrease columns"
-          >
-            C-
-          </button>
-          <span style={styles.termSize}>{termCols}×{termRows}</span>
-          <button
-            style={styles.iconBtn}
-            onClick={() => onTermSizeChange(Math.min(240, termCols + 10), termRows)}
-            title="Increase columns"
-          >
-            C+
-          </button>
-          <button
-            style={styles.iconBtn}
-            onClick={() => onTermSizeChange(termCols, Math.max(10, termRows - 5))}
-            title="Decrease rows"
-          >
-            R-
-          </button>
-          <button
-            style={styles.iconBtn}
-            onClick={() => onTermSizeChange(termCols, Math.min(80, termRows + 5))}
-            title="Increase rows"
-          >
-            R+
-          </button>
-        </div>
+        {activePane === 'terminals' && (
+          <div style={styles.termSizeControls}>
+            <button
+              style={styles.iconBtn}
+              onClick={() => onTermSizeChange(Math.max(40, termCols - 10), termRows)}
+              title="Decrease columns"
+            >
+              C-
+            </button>
+            <span style={styles.termSize}>{termCols}×{termRows}</span>
+            <button
+              style={styles.iconBtn}
+              onClick={() => onTermSizeChange(Math.min(240, termCols + 10), termRows)}
+              title="Increase columns"
+            >
+              C+
+            </button>
+            <button
+              style={styles.iconBtn}
+              onClick={() => onTermSizeChange(termCols, Math.max(10, termRows - 5))}
+              title="Decrease rows"
+            >
+              R-
+            </button>
+            <button
+              style={styles.iconBtn}
+              onClick={() => onTermSizeChange(termCols, Math.min(80, termRows + 5))}
+              title="Increase rows"
+            >
+              R+
+            </button>
+          </div>
+        )}
 
         <div style={{
           ...styles.modeBadge,

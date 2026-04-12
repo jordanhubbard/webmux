@@ -1,8 +1,10 @@
 export type TransportType = 'ssh' | 'mosh' | 'exec';
+export type SessionKind = 'terminal' | 'vnc';
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 export interface Session {
   id: string;
+  kind: 'terminal';
   owner: string;
   transport: TransportType;
   host_id: string;
@@ -30,6 +32,8 @@ export interface HostEntry {
   key_id: string;
   tags: string[];
   mosh_allowed: boolean;
+  vnc_enabled: boolean;
+  vnc_port: number;
 }
 
 export interface AuthStatus {
@@ -95,3 +99,28 @@ export interface AppConfig {
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
 };
+
+export interface VncSession {
+  id: string;
+  kind: 'vnc';
+  owner: string;
+  host_id: string;
+  hostname: string;
+  vnc_port: number;
+  row: number;
+  col: number;
+  state: ConnectionState;
+  created_at: string;
+  updated_at: string;
+  title: string;
+  persistent: boolean;
+}
+
+export interface CreateVncSessionRequest {
+  host_id?: string;
+  hostname?: string;
+  vnc_port?: number;
+  vnc_password?: string;
+  row?: number;
+  col?: number;
+}

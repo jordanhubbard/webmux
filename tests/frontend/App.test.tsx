@@ -41,6 +41,12 @@ vi.mock('@frontend/components/Terminal', () => ({
   Terminal: () => <div>Terminal Mock</div>,
 }));
 
+// VncWorkspace pulls in @novnc/novnc which uses top-level await incompatible
+// with Vitest's Node.js loader; mock it out at the App test level.
+vi.mock('@frontend/components/VncWorkspace', () => ({
+  VncWorkspace: () => <div>VncWorkspace Mock</div>,
+}));
+
 import App from '@frontend/App';
 
 describe('App', () => {

@@ -116,6 +116,62 @@ describe('API Routes', () => {
     });
   });
 
+  describe('VNC fields on hosts', () => {
+    it('POST /api/hosts with vnc fields stores and returns them', async () => {
+      const res = await request(app)
+        .post('/api/hosts')
+        .send({ hostname: 'vnc-host.example.com', vnc_enabled: true, vnc_port: 5910 });
+      expect(res.status).toBe(201);
+      expect(res.body.vnc_enabled).toBe(true);
+      expect(res.body.vnc_port).toBe(5910);
+
+      const list = await request(app).get('/api/hosts');
+      const created = list.body.find((h: { hostname: string }) => h.hostname === 'vnc-host.example.com');
+      expect(created).toBeDefined();
+      expect(created.vnc_enabled).toBe(true);
+      expect(created.vnc_port).toBe(5910);
+    });
+
+    it('POST /api/hosts without vnc fields defaults vnc_enabled to false and vnc_port to 5900', async () => {
+      const res = await request(app)
+        .post('/api/hosts')
+        .send({ hostname: 'no-vnc.example.com' });
+      expect(res.status).toBe(201);
+      expect(res.body.vnc_enabled).toBe(false);
+      expect(res.body.vnc_port).toBe(5900);
+    });
+
+    it('PUT /api/hosts/:id updates vnc fields', async () => {
+      const res = await request(app)
+        .put('/api/hosts/h1')
+        .send({ vnc_enabled: true, vnc_port: 5901 });
+      expect(res.status).toBe(200);
+      expect(res.body.vnc_enabled).toBe(true);
+      expect(res.body.vnc_port).toBe(5901);
+
+      const list = await request(app).get('/api/hosts');
+      const updated = list.body.find((h: { id: string }) => h.id === 'h1');
+      expect(updated.vnc_enabled).toBe(true);
+      expect(updated.vnc_port).toBe(5901);
+    });
+
+    it('PUT /api/hosts/:id preserves existing vnc values when not sent', async () => {
+      // First set explicit VNC values
+      await request(app)
+        .put('/api/hosts/h1')
+        .send({ vnc_enabled: true, vnc_port: 5905 });
+
+      // Update an unrelated field — vnc values must be preserved
+      const res = await request(app)
+        .put('/api/hosts/h1')
+        .send({ port: 2222 });
+      expect(res.status).toBe(200);
+      expect(res.body.port).toBe(2222);
+      expect(res.body.vnc_enabled).toBe(true);
+      expect(res.body.vnc_port).toBe(5905);
+    });
+  });
+
   // --- Config ---
 
   describe('GET /api/config', () => {

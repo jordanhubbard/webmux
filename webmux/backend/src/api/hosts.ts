@@ -35,6 +35,8 @@ router.post('/', (req: Request, res: Response) => {
       key_id: body.key_id || '',
       tags: body.tags || [],
       mosh_allowed: body.mosh_allowed ?? false,
+      vnc_enabled: body.vnc_enabled ?? false,
+      vnc_port: body.vnc_port ?? 5900,
     };
     config.hosts.push(host);
     persistence.saveHosts(config);
@@ -55,7 +57,10 @@ router.put('/:id', (req: Request, res: Response) => {
       res.status(404).json({ error: 'Host not found' });
       return;
     }
-    config.hosts[idx] = { ...config.hosts[idx], ...updates, id };
+    const merged = { ...config.hosts[idx], ...updates, id };
+    merged.vnc_enabled = merged.vnc_enabled ?? false;
+    merged.vnc_port = merged.vnc_port ?? 5900;
+    config.hosts[idx] = merged;
     persistence.saveHosts(config);
     res.json(config.hosts[idx]);
   } catch {

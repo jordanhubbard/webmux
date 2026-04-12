@@ -15,8 +15,11 @@ import configRouter from './api/config';
 import uploadRouter from './api/upload';
 import aiRouter from './api/ai';
 import templatesRouter from './api/templates';
+import vncRouter from './api/vnc';
 import { setupWebSocket } from './websocket/handler';
+import { setupVncWebSocket } from './websocket/vncHandler';
 import { sessionBroker } from './services/sessionBroker';
+import { vncBroker } from './services/vncBroker';
 import { persistence, LOGS_DIR } from './services/persistenceManager';
 
 const WEBMUX_ROOT = process.env.WEBMUX_ROOT || path.join(__dirname, '../..');
@@ -42,6 +45,31 @@ async function main(): Promise<void> {
   }
 
   await sessionBroker.initialize();
+  await vncBroker.initialize();
+
+  // Slave mode: auto-create an exec session on startup if WEBMUX_SLAVE_HOST is set.
+  // Used by agentOS to connect to the local agent console with no user interaction.
+  // In slave mode we own the session list entirely — clear any saved state first.
+  const slaveHost = process.env.WEBMUX_SLAVE_HOST;
+  if (slaveHost) {
+    for (const s of sessionBroker.list()) {
+      await sessionBroker.delete(s.id);
+    }
+    const slavePort = process.env.WEBMUX_SLAVE_PORT ? Number(process.env.WEBMUX_SLAVE_PORT) : 0;
+    try {
+      await sessionBroker.create({
+        hostname: slaveHost,
+        port: slavePort,
+        username: 'console',
+        transport: 'exec',
+        row: 0,
+        col: 0,
+      }, 'system');
+      console.log(`Slave mode: auto-connected to ${slaveHost}:${slavePort}`);
+    } catch (err) {
+      console.error('Slave mode: failed to create exec session:', (err as Error).message);
+    }
+  }
 
   const app = express();
 
@@ -73,6 +101,7 @@ async function main(): Promise<void> {
   app.use('/api/upload', uploadRouter);
   app.use('/api/ai', aiRouter);
   app.use('/api/sessions/templates', templatesRouter);
+  app.use('/api/vnc', vncRouter);
 
   // Health check
   app.get('/api/health', (_req, res) => {
@@ -94,12 +123,18 @@ async function main(): Promise<void> {
   const httpServer = http.createServer(app);
   const wss = new WebSocketServer({ noServer: true });
   setupWebSocket(wss);
+  const wssVnc = new WebSocketServer({ noServer: true });
+  setupVncWebSocket(wssVnc);
 
   httpServer.on('upgrade', (request, socket, head) => {
     const pathname = (request.url || '').split('?')[0];
     if (pathname.startsWith('/api/term/')) {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
+      });
+    } else if (pathname.startsWith('/api/vnc/ws/')) {
+      wssVnc.handleUpgrade(request, socket, head, (ws) => {
+        wssVnc.emit('connection', ws, request);
       });
     } else {
       socket.destroy();
@@ -130,6 +165,10 @@ async function main(): Promise<void> {
         wssSecure!.handleUpgrade(request, socket, head, (ws) => {
           wssSecure!.emit('connection', ws, request);
         });
+      } else if (pathname.startsWith('/api/vnc/ws/')) {
+        wssVnc.handleUpgrade(request, socket, head, (ws) => {
+          wssVnc.emit('connection', ws, request);
+        });
       } else {
         socket.destroy();
       }
@@ -144,12 +183,15 @@ async function main(): Promise<void> {
 
     wss.clients.forEach(ws => ws.close(1001, 'Server shutting down'));
     wss.close();
+    wssVnc.clients.forEach(ws => ws.close(1001, 'Server shutting down'));
+    wssVnc.close();
     if (wssSecure) {
       wssSecure.clients.forEach(ws => ws.close(1001, 'Server shutting down'));
       wssSecure.close();
     }
 
     sessionBroker.shutdown();
+    vncBroker.shutdown();
     persistence.close();
 
     httpServer.close();

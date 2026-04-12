@@ -34,6 +34,7 @@ export interface AuthConfig {
 }
 
 export type TransportType = 'ssh' | 'mosh' | 'exec';
+export type SessionKind = 'terminal' | 'vnc';
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 export interface HostEntry {
@@ -45,6 +46,8 @@ export interface HostEntry {
   key_id: string;
   tags: string[];
   mosh_allowed: boolean;
+  vnc_enabled: boolean;
+  vnc_port: number;
 }
 
 export interface HostsConfig {
@@ -78,6 +81,7 @@ export interface KeysConfig {
 
 export interface Session {
   id: string;
+  kind: 'terminal';
   owner: string;
   transport: TransportType;
   host_id: string;
@@ -145,5 +149,30 @@ export interface CreateSessionRequest {
   template_id?: string;
   // Optional: command to run immediately after connection (injected into PTY)
   initial_cmd?: string;
+}
+
+export interface VncSession {
+  id: string;
+  kind: 'vnc';
+  owner: string;
+  host_id: string;
+  hostname: string;
+  vnc_port: number;
+  row: number;
+  col: number;
+  state: ConnectionState;
+  created_at: string;
+  updated_at: string;
+  title: string;
+  persistent: boolean;
+}
+
+export interface CreateVncSessionRequest {
+  host_id?: string;
+  hostname?: string;
+  vnc_port?: number;
+  vnc_password?: string;
+  row?: number;
+  col?: number;
 }
 

@@ -1,11 +1,78 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './hooks/useAuth';
+import type { AuthState } from './hooks/useAuth';
 import { LoginPage } from './components/LoginPage';
 import { TopBar } from './components/TopBar';
 import { Workspace } from './components/Workspace';
+import { VncWorkspace } from './components/VncWorkspace';
 import { RegisterDialog } from './components/RegisterDialog';
 import { InputBroadcastProvider } from './contexts/InputBroadcastContext';
+import { WorkspacePaneProvider, useWorkspacePane } from './contexts/WorkspacePaneContext';
 import { api } from './utils/api';
+
+interface AuthenticatedAppProps {
+  auth: AuthState;
+  fontSize: number;
+  onFontSizeChange: (size: number) => void;
+  termCols: number;
+  termRows: number;
+  onTermSizeChange: (cols: number, rows: number) => void;
+  onNewAccount: () => void;
+  secureMode: boolean;
+  currentUser: string | null;
+  showRegister: boolean;
+  onRegisterClose: () => void;
+  onAccountCreated: (username: string) => void;
+}
+
+function AuthenticatedApp({
+  auth,
+  fontSize,
+  onFontSizeChange,
+  termCols,
+  termRows,
+  onTermSizeChange,
+  onNewAccount,
+  secureMode,
+  currentUser,
+  showRegister,
+  onRegisterClose,
+  onAccountCreated,
+}: AuthenticatedAppProps) {
+  const { activePane } = useWorkspacePane();
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <TopBar
+        auth={auth}
+        fontSize={fontSize}
+        onFontSizeChange={onFontSizeChange}
+        termCols={termCols}
+        termRows={termRows}
+        onTermSizeChange={onTermSizeChange}
+        onNewAccount={onNewAccount}
+        secureMode={secureMode}
+        currentUser={currentUser}
+      />
+
+      <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
+          <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} />
+        </div>
+        <div style={{ display: activePane === 'desktops' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
+          <VncWorkspace />
+        </div>
+      </div>
+
+      {showRegister && (
+        <RegisterDialog
+          onClose={onRegisterClose}
+          onCreated={onAccountCreated}
+        />
+      )}
+    </div>
+  );
+}
 
 function parseTokenUser(): string | null {
   const token = localStorage.getItem('webmux_token');
@@ -71,8 +138,8 @@ export default function App() {
 
   return (
     <InputBroadcastProvider>
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <TopBar
+      <WorkspacePaneProvider>
+        <AuthenticatedApp
           auth={auth}
           fontSize={fontSize}
           onFontSizeChange={handleFontSizeChange}
@@ -82,17 +149,11 @@ export default function App() {
           onNewAccount={() => setShowRegister(true)}
           secureMode={secureMode}
           currentUser={currentUser}
+          showRegister={showRegister}
+          onRegisterClose={() => setShowRegister(false)}
+          onAccountCreated={handleAccountCreated}
         />
-
-        <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} />
-
-        {showRegister && (
-          <RegisterDialog
-            onClose={() => setShowRegister(false)}
-            onCreated={handleAccountCreated}
-          />
-        )}
-      </div>
+      </WorkspacePaneProvider>
     </InputBroadcastProvider>
   );
 }

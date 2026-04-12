@@ -5,6 +5,7 @@ import { Session, CreateSessionRequest } from '../types';
 import { transportLauncher } from './transportLauncher';
 import { presenceService } from './presenceService';
 import { persistence } from './persistenceManager';
+import { nextPositionFor, compactPositions } from './gridLayout';
 
 export class SessionBroker extends EventEmitter {
   private sessions = new Map<string, Session>();
@@ -77,7 +78,7 @@ export class SessionBroker extends EventEmitter {
 
     // Determine layout position (scoped to this owner's sessions)
     const ownerSessions = Array.from(this.sessions.values()).filter(s => s.owner === owner);
-    const { row, col } = this.nextPositionFor(ownerSessions, req.row, req.col);
+    const { row, col } = nextPositionFor(ownerSessions, req.row, req.col);
 
     // Determine transport: use mosh if host allows it and config prefers it
     let transport = req.transport || 'ssh';
@@ -96,6 +97,7 @@ export class SessionBroker extends EventEmitter {
 
     const session: Session = {
       id,
+      kind: 'terminal',
       owner,
       transport,
       host_id: req.host_id || '',
@@ -229,7 +231,10 @@ export class SessionBroker extends EventEmitter {
     transportLauncher.kill(sessionId);
     this.sessions.delete(sessionId);
     this.scrollback.delete(sessionId);
-    if (owner) this.compactPositions(owner);
+    if (owner) {
+      const ownerSessions = Array.from(this.sessions.values()).filter(s => s.owner === owner);
+      compactPositions(ownerSessions);
+    }
     this.persistSessions();
     this.updateLayout(sessionId);
     persistence.appendEvent({ type: 'session_deleted', session_id: sessionId });
@@ -281,40 +286,6 @@ export class SessionBroker extends EventEmitter {
     if (handle) {
       handle.write(data);
     }
-  }
-
-  private compactPositions(owner: string): void {
-    const ownerSessions = Array.from(this.sessions.values()).filter(s => s.owner === owner);
-    // Group by row, sort within each row by col
-    const rowMap = new Map<number, Session[]>();
-    for (const s of ownerSessions) {
-      const row = rowMap.get(s.row) || [];
-      row.push(s);
-      rowMap.set(s.row, row);
-    }
-    const sortedRows = Array.from(rowMap.keys()).sort((a, b) => a - b);
-    let newRow = 0;
-    for (const oldRow of sortedRows) {
-      const rowSessions = rowMap.get(oldRow)!.sort((a, b) => a.col - b.col);
-      rowSessions.forEach((s, newCol) => {
-        s.row = newRow;
-        s.col = newCol;
-      });
-      newRow++;
-    }
-  }
-
-  private nextPositionFor(sessions: Session[], requestedRow?: number, requestedCol?: number): { row: number; col: number } {
-    if (requestedRow !== undefined && requestedCol !== undefined) {
-      return { row: requestedRow, col: requestedCol };
-    }
-
-    if (sessions.length === 0) return { row: 0, col: 0 };
-
-    const maxRow = Math.max(...sessions.map(s => s.row));
-    const rowSessions = sessions.filter(s => s.row === maxRow);
-    const maxCol = Math.max(...rowSessions.map(s => s.col));
-    return { row: maxRow, col: maxCol + 1 };
   }
 
   private persistSessions(): void {

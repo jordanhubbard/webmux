@@ -25,12 +25,14 @@ test.describe('UI loads', () => {
 
   test('skips login in no-auth mode and shows workspace', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Click to add a session')).toBeVisible({ timeout: 10_000 });
+    // Both panes render in DOM (one hidden via display:none); .first() picks the
+    // active terminals pane which is always rendered first.
+    await expect(page.locator('text=Click to add a session').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('top bar renders with logo and controls', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Click to add a session')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('text=Click to add a session').first()).toBeVisible({ timeout: 10_000 });
 
     await expect(page.locator('text=WebMux').first()).toBeVisible();
     await expect(page.locator('text=Type to All')).toBeVisible();
@@ -38,7 +40,8 @@ test.describe('UI loads', () => {
 
   test('add cell opens connection dialog on click', async ({ page }) => {
     await page.goto('/');
-    const addCell = page.getByTestId('add-cell-0-0');
+    // Both panes render add-cell-0-0; .first() targets the terminals pane.
+    const addCell = page.getByTestId('add-cell-0-0').first();
     await expect(addCell).toBeVisible({ timeout: 10_000 });
 
     await addCell.click();

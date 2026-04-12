@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as yaml from 'js-yaml';
 import chokidar, { FSWatcher } from 'chokidar';
 import {
-  AppConfig, AuthConfig, HostsConfig, LayoutConfig, KeysConfig, Session
+  AppConfig, AuthConfig, HostsConfig, LayoutConfig, KeysConfig, Session, VncSession
 } from '../types';
 
 const WEBMUX_ROOT = process.env.WEBMUX_ROOT || path.join(__dirname, '../../..');
@@ -111,6 +111,21 @@ export class PersistenceManager {
     try {
       const data = readYaml<{ sessions: Session[] }>(file);
       return data.sessions || [];
+    } catch {
+      return [];
+    }
+  }
+
+  saveVncSessions(sessions: VncSession[]): void {
+    writeYaml(path.join(SESSIONS_DIR, 'vnc-sessions.yaml'), { vnc_sessions: sessions });
+  }
+
+  loadVncSessions(): VncSession[] {
+    const file = path.join(SESSIONS_DIR, 'vnc-sessions.yaml');
+    if (!fs.existsSync(file)) return [];
+    try {
+      const data = readYaml<{ vnc_sessions: VncSession[] }>(file);
+      return data.vnc_sessions || [];
     } catch {
       return [];
     }
