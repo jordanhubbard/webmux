@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-04-12
+
+### Other
+- Add VNC desktop session support with dual-pane workspace
+- Fix release script clobbering dependency versions in package-lock.json
+
 ## [1.1.2] - 2026-03-11
 
 ### Other
