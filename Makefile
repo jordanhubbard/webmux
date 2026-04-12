@@ -62,14 +62,10 @@ AUTH_MODE    ?=
 JWT_SECRET   ?=
 SECURE_MODE  ?=
 
-# Build the env-var exports only for values that are set
+# Build the env-var exports only for values that are set.
+# HTTP_PORT and HTTPS_PORT are resolved at start time (with port-conflict check)
+# and passed explicitly; only JWT_SECRET needs to be forwarded here.
 RUNTIME_ENV :=
-ifneq ($(HTTP_PORT),)
-  RUNTIME_ENV += HTTP_PORT=$(HTTP_PORT)
-endif
-ifneq ($(HTTPS_PORT),)
-  RUNTIME_ENV += HTTPS_PORT=$(HTTPS_PORT)
-endif
 ifneq ($(JWT_SECRET),)
   RUNTIME_ENV += JWT_SECRET=$(JWT_SECRET)
 endif
@@ -142,7 +138,20 @@ start: build
 		printf "$(C_YLW)●$(C_RST) webmux is already running $(C_DIM)(pid $$(cat "$(PIDFILE)"))$(C_RST)\n"; \
 		exit 1; \
 	fi
-	@cd "$(WEBMUX_DIR)" && $(RUNTIME_ENV) WEBMUX_ROOT="$(WEBMUX_ROOT)" WEBMUX_HOME="$(WEBMUX_HOME)" \
+	@WANT_HTTP="$(HTTP_PORT)"; [ -z "$$WANT_HTTP" ] && WANT_HTTP=8080; \
+	WANT_HTTPS="$(HTTPS_PORT)"; [ -z "$$WANT_HTTPS" ] && WANT_HTTPS=8443; \
+	if command -v python3 >/dev/null 2>&1; then PYTHON=python3; \
+	elif command -v python >/dev/null 2>&1; then PYTHON=python; \
+	else PYTHON=""; fi; \
+	if [ -n "$$PYTHON" ]; then \
+		ACTUAL_HTTP=$$($$PYTHON "$(CURDIR)/scripts/find_free_port.py" "$$WANT_HTTP") || exit 1; \
+		ACTUAL_HTTPS=$$($$PYTHON "$(CURDIR)/scripts/find_free_port.py" "$$WANT_HTTPS") || exit 1; \
+	else \
+		printf "$(C_YLW)!$(C_RST) python3/python not found — skipping port availability check\n"; \
+		ACTUAL_HTTP=$$WANT_HTTP; ACTUAL_HTTPS=$$WANT_HTTPS; \
+	fi; \
+	cd "$(WEBMUX_DIR)" && $(RUNTIME_ENV) HTTP_PORT=$$ACTUAL_HTTP HTTPS_PORT=$$ACTUAL_HTTPS \
+		WEBMUX_ROOT="$(WEBMUX_ROOT)" WEBMUX_HOME="$(WEBMUX_HOME)" \
 		exec $(NODE) backend/dist/index.js >> "$(LOGFILE)" 2>&1 & echo $$! > "$(PIDFILE)"
 	@sleep 0.5
 	@if kill -0 $$(cat "$(PIDFILE)") 2>/dev/null; then \
