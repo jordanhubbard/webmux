@@ -67,6 +67,7 @@ export function VncViewer({ sessionId, vncPassword, mode, onStateChange, rfbRef 
       <div style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
         <div
           ref={containerRef}
+          data-1p-ignore
           style={{
             position: 'absolute',
             top: 0,
@@ -83,6 +84,6 @@ export function VncViewer({ sessionId, vncPassword, mode, onStateChange, rfbRef 
   }
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+    <div ref={containerRef} data-1p-ignore style={{ width: '100%', height: '100%' }} />
   );
 }

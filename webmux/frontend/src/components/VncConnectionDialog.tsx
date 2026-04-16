@@ -116,6 +116,7 @@ export function VncConnectionDialog({ onConnect, onClose, suggestedRow, suggeste
                 value={hostname}
                 onChange={e => setHostname(e.target.value)}
                 autoFocus
+                data-1p-ignore
               />
               <input
                 style={{ ...styles.input, width: 80 }}
@@ -139,6 +140,7 @@ export function VncConnectionDialog({ onConnect, onClose, suggestedRow, suggeste
               value={password}
               onChange={e => setPassword(e.target.value)}
               autoComplete="off"
+              data-1p-ignore
             />
           </div>
 

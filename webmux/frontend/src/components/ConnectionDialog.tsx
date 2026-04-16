@@ -182,6 +182,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
                 value={hostname}
                 onChange={e => setHostname(e.target.value)}
                 autoFocus
+                data-1p-ignore
               />
               <input
                 style={{ ...styles.input, width: 70 }}
@@ -204,7 +205,8 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
               placeholder="user"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              autoComplete="username"
+              autoComplete="off"
+              data-1p-ignore
             />
           </div>
 
@@ -237,7 +239,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
                   </>
                 )}
                 {authMode === 'password' && (
-                  <input style={styles.input} type="password" placeholder="Remote password (requires sshpass)" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
+                  <input style={styles.input} type="password" placeholder="Remote password (requires sshpass)" value={password} onChange={e => setPassword(e.target.value)} autoComplete="off" data-1p-ignore />
                 )}
               </div>
               <div style={styles.field}>

@@ -243,6 +243,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <div
         ref={containerRef}
+        data-1p-ignore
         style={{
           width: '100%',
           height: '100%',
