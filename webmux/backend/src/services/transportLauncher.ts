@@ -206,7 +206,12 @@ export class TransportLauncher {
   resize(sessionId: string, cols: number, rows: number): void {
     const handle = this.handles.get(sessionId);
     if (handle) {
-      handle.resize(cols, rows);
+      try {
+        handle.resize(cols, rows);
+      } catch {
+        // PTY may have already exited; remove stale handle
+        this.handles.delete(sessionId);
+      }
     }
   }
 

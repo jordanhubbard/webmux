@@ -75,7 +75,7 @@ export function VncConnectionDialog({ onConnect, onClose, suggestedRow, suggeste
           <button style={styles.closeBtn} onClick={onClose}>{'\u2715'}</button>
         </div>
 
-        <form onSubmit={handleConnect} style={styles.form}>
+        <form onSubmit={handleConnect} style={styles.form} autoComplete="off">
           {/* Saved VNC-enabled hosts as quick-connect cards */}
           {vncHosts.length > 0 && (
             <div style={styles.field}>
@@ -138,7 +138,7 @@ export function VncConnectionDialog({ onConnect, onClose, suggestedRow, suggeste
               placeholder="Leave blank if none"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              autoComplete="current-password"
+              autoComplete="off"
             />
           </div>
 
