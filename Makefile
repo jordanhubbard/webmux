@@ -150,15 +150,16 @@ start: build
 		printf "$(C_YLW)!$(C_RST) python3/python not found — skipping port availability check\n"; \
 		ACTUAL_HTTP=$$WANT_HTTP; ACTUAL_HTTPS=$$WANT_HTTPS; \
 	fi; \
+	LOG_START=$$(wc -l < "$(LOGFILE)" 2>/dev/null || echo 0); \
 	cd "$(WEBMUX_DIR)" && $(RUNTIME_ENV) HTTP_PORT=$$ACTUAL_HTTP HTTPS_PORT=$$ACTUAL_HTTPS \
 		WEBMUX_ROOT="$(WEBMUX_ROOT)" WEBMUX_HOME="$(WEBMUX_HOME)" \
-		exec $(NODE) backend/dist/index.js >> "$(LOGFILE)" 2>&1 & echo $$! > "$(PIDFILE)"
-	@sleep 0.5
-	@if kill -0 $$(cat "$(PIDFILE)") 2>/dev/null; then \
+		exec $(NODE) backend/dist/index.js >> "$(LOGFILE)" 2>&1 & echo $$! > "$(PIDFILE)"; \
+	sleep 0.5; \
+	if kill -0 $$(cat "$(PIDFILE)") 2>/dev/null; then \
 		printf "$(C_GRN)●$(C_RST) webmux started $(C_DIM)(pid $$(cat "$(PIDFILE)"))$(C_RST)\n"; \
 		printf "  $(C_DIM)config:$(C_RST) $(WEBMUX_HOME)\n"; \
 		printf "  $(C_DIM)logs:$(C_RST)   $(LOGFILE)\n"; \
-		grep -E '(listening|http|https)' "$(LOGFILE)" 2>/dev/null | tail -3 | sed 's/^/  /'; \
+		tail -n +$$(($$LOG_START + 1)) "$(LOGFILE)" 2>/dev/null | grep -E '(listening|http|https)' | tail -3 | sed 's/^/  /'; \
 	else \
 		printf "$(C_RED)✗$(C_RST) webmux failed to start — check $(LOGFILE)\n"; \
 		tail -5 "$(LOGFILE)" 2>/dev/null; \

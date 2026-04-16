@@ -37,7 +37,8 @@ router.post('/sessions', async (req: Request, res: Response) => {
     res.status(201).json(session);
   } catch (err) {
     console.error('Create VNC session error:', err);
-    res.status(500).json({ error: 'Failed to create VNC session' });
+    const msg = err instanceof Error ? err.message : 'Failed to create VNC session';
+    res.status(500).json({ error: msg });
   }
 });
 

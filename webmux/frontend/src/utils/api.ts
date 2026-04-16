@@ -12,17 +12,22 @@ function authHeaders(): HeadersInit {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      ...authHeaders(),
-      ...(options.headers || {}),
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        ...authHeaders(),
+        ...(options.headers || {}),
+      },
+    });
+  } catch {
+    throw new Error('Cannot reach server');
+  }
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error((err as { error?: string }).error || res.statusText);
+    const err = await res.json().catch(() => ({ error: `${res.status} ${res.statusText}` }));
+    throw new Error((err as { error?: string }).error || `${res.status} ${res.statusText}`);
   }
 
   if (res.status === 204) return undefined as T;
