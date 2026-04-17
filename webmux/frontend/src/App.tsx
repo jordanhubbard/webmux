@@ -4,7 +4,7 @@ import type { AuthState } from './hooks/useAuth';
 import { LoginPage } from './components/LoginPage';
 import { TopBar } from './components/TopBar';
 import { Workspace } from './components/Workspace';
-import { VncWorkspace } from './components/VncWorkspace';
+import { GraphicsWorkspace } from './components/GraphicsWorkspace';
 import { RegisterDialog } from './components/RegisterDialog';
 import { InputBroadcastProvider } from './contexts/InputBroadcastContext';
 import { WorkspacePaneProvider, useWorkspacePane } from './contexts/WorkspacePaneContext';
@@ -60,7 +60,7 @@ function AuthenticatedApp({
           <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} />
         </div>
         <div style={{ display: activePane === 'desktops' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
-          <VncWorkspace />
+          <GraphicsWorkspace />
         </div>
       </div>
 

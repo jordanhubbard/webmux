@@ -16,6 +16,10 @@ export interface AppConfig {
       ssh_fallback: boolean;
       mosh_server_path: string;
     };
+    guacd?: {
+      host: string;
+      port: number;
+    };
     // Populated from WEBMUX_EXEC_COMMAND env var at runtime; not persisted to app.yaml.
     exec_command?: string;
   };
@@ -34,7 +38,7 @@ export interface AuthConfig {
 }
 
 export type TransportType = 'ssh' | 'mosh' | 'exec';
-export type SessionKind = 'terminal' | 'vnc';
+export type SessionKind = 'terminal' | 'vnc' | 'rdp';
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 export interface HostEntry {
@@ -48,6 +52,8 @@ export interface HostEntry {
   mosh_allowed: boolean;
   vnc_enabled: boolean;
   vnc_port: number;
+  rdp_enabled: boolean;
+  rdp_port: number;
 }
 
 export interface HostsConfig {
@@ -172,6 +178,35 @@ export interface CreateVncSessionRequest {
   hostname?: string;
   vnc_port?: number;
   vnc_password?: string;
+  row?: number;
+  col?: number;
+}
+
+export interface RdpSession {
+  id: string;
+  kind: 'rdp';
+  owner: string;
+  host_id: string;
+  hostname: string;
+  rdp_port: number;
+  rdp_username: string;
+  rdp_domain: string;
+  row: number;
+  col: number;
+  state: ConnectionState;
+  created_at: string;
+  updated_at: string;
+  title: string;
+  persistent: boolean;
+}
+
+export interface CreateRdpSessionRequest {
+  host_id?: string;
+  hostname?: string;
+  rdp_port?: number;
+  rdp_username?: string;
+  rdp_password?: string;
+  rdp_domain?: string;
   row?: number;
   col?: number;
 }

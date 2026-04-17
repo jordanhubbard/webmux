@@ -13,3 +13,6 @@ app:
     prefer_mosh: false
     ssh_fallback: true
     mosh_server_path: ""
+  guacd:
+    host: 127.0.0.1
+    port: 4822

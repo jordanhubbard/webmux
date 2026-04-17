@@ -16,10 +16,13 @@ import uploadRouter from './api/upload';
 import aiRouter from './api/ai';
 import templatesRouter from './api/templates';
 import vncRouter from './api/vnc';
+import rdpRouter from './api/rdp';
 import { setupWebSocket } from './websocket/handler';
 import { setupVncWebSocket } from './websocket/vncHandler';
+import { setupRdpWebSocket } from './websocket/rdpHandler';
 import { sessionBroker } from './services/sessionBroker';
 import { vncBroker } from './services/vncBroker';
+import { rdpBroker } from './services/rdpBroker';
 import { persistence, LOGS_DIR } from './services/persistenceManager';
 
 const WEBMUX_ROOT = process.env.WEBMUX_ROOT || path.join(__dirname, '../..');
@@ -46,6 +49,7 @@ async function main(): Promise<void> {
 
   await sessionBroker.initialize();
   await vncBroker.initialize();
+  await rdpBroker.initialize();
 
   // Slave mode: auto-create an exec session on startup if WEBMUX_SLAVE_HOST is set.
   // Used by agentOS to connect to the local agent console with no user interaction.
@@ -102,6 +106,7 @@ async function main(): Promise<void> {
   app.use('/api/ai', aiRouter);
   app.use('/api/sessions/templates', templatesRouter);
   app.use('/api/vnc', vncRouter);
+  app.use('/api/rdp', rdpRouter);
 
   // Health check
   app.get('/api/health', (_req, res) => {
@@ -125,6 +130,8 @@ async function main(): Promise<void> {
   setupWebSocket(wss);
   const wssVnc = new WebSocketServer({ noServer: true });
   setupVncWebSocket(wssVnc);
+  const wssRdp = new WebSocketServer({ noServer: true });
+  setupRdpWebSocket(wssRdp);
 
   httpServer.on('upgrade', (request, socket, head) => {
     const pathname = (request.url || '').split('?')[0];
@@ -135,6 +142,10 @@ async function main(): Promise<void> {
     } else if (pathname.startsWith('/api/vnc/ws/')) {
       wssVnc.handleUpgrade(request, socket, head, (ws) => {
         wssVnc.emit('connection', ws, request);
+      });
+    } else if (pathname.startsWith('/api/rdp/ws/')) {
+      wssRdp.handleUpgrade(request, socket, head, (ws) => {
+        wssRdp.emit('connection', ws, request);
       });
     } else {
       socket.destroy();
@@ -169,6 +180,10 @@ async function main(): Promise<void> {
         wssVnc.handleUpgrade(request, socket, head, (ws) => {
           wssVnc.emit('connection', ws, request);
         });
+      } else if (pathname.startsWith('/api/rdp/ws/')) {
+        wssRdp.handleUpgrade(request, socket, head, (ws) => {
+          wssRdp.emit('connection', ws, request);
+        });
       } else {
         socket.destroy();
       }
@@ -185,6 +200,8 @@ async function main(): Promise<void> {
     wss.close();
     wssVnc.clients.forEach(ws => ws.close(1001, 'Server shutting down'));
     wssVnc.close();
+    wssRdp.clients.forEach(ws => ws.close(1001, 'Server shutting down'));
+    wssRdp.close();
     if (wssSecure) {
       wssSecure.clients.forEach(ws => ws.close(1001, 'Server shutting down'));
       wssSecure.close();
@@ -192,6 +209,7 @@ async function main(): Promise<void> {
 
     sessionBroker.shutdown();
     vncBroker.shutdown();
+    rdpBroker.shutdown();
     persistence.close();
 
     httpServer.close();

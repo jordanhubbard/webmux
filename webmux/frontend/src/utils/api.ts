@@ -1,4 +1,4 @@
-import type { Session, HostEntry, KeyEntry, AuthStatus, AppConfig, DeepPartial, CreateSessionRequest, VncSession, CreateVncSessionRequest } from '../types';
+import type { Session, HostEntry, KeyEntry, AuthStatus, AppConfig, DeepPartial, CreateSessionRequest, VncSession, CreateVncSessionRequest, RdpSession, CreateRdpSessionRequest } from '../types';
 
 const API_BASE = '/api';
 
@@ -107,6 +107,20 @@ export const api = {
       body: JSON.stringify({ row, col }),
     }),
 
+  // RDP Sessions
+  getRdpSessions: () => request<RdpSession[]>('/rdp/sessions'),
+  createRdpSession: (req: CreateRdpSessionRequest) =>
+    request<RdpSession>('/rdp/sessions', { method: 'POST', body: JSON.stringify(req) }),
+  deleteRdpSession: (id: string) =>
+    request<void>(`/rdp/sessions/${id}`, { method: 'DELETE' }),
+  reconnectRdpSession: (id: string) =>
+    request<RdpSession>(`/rdp/sessions/${id}/reconnect`, { method: 'POST' }),
+  moveRdpSession: (id: string, row: number, col: number) =>
+    request<RdpSession>(`/rdp/sessions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ row, col }),
+    }),
+
   // Hosts
   getHosts: () => request<HostEntry[]>('/hosts'),
   createHost: (host: Partial<HostEntry>) =>
@@ -137,4 +151,12 @@ export function buildVncWsUrl(sessionId: string): string {
   const host = window.location.host;
   const query = token ? `?token=${encodeURIComponent(token)}` : '';
   return `${proto}//${host}/api/vnc/ws/${sessionId}${query}`;
+}
+
+export function buildRdpWsUrl(sessionId: string): string {
+  const token = getToken();
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  const query = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${proto}//${host}/api/rdp/ws/${sessionId}${query}`;
 }

@@ -37,6 +37,8 @@ router.post('/', (req: Request, res: Response) => {
       mosh_allowed: body.mosh_allowed ?? false,
       vnc_enabled: body.vnc_enabled ?? false,
       vnc_port: body.vnc_port ?? 5900,
+      rdp_enabled: body.rdp_enabled ?? false,
+      rdp_port: body.rdp_port ?? 3389,
     };
     config.hosts.push(host);
     persistence.saveHosts(config);

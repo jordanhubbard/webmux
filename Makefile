@@ -71,7 +71,7 @@ ifneq ($(JWT_SECRET),)
 endif
 
 # ── Targets ────────────────────────────────────────────────────────
-.PHONY: all build deps start stop restart status test lint clean configure help \
+.PHONY: all build deps check-guacd start stop restart status test lint clean configure help \
        install uninstall release release-minor release-major changelog-init
 
 all: build
@@ -93,12 +93,24 @@ help:
 	@printf "  $(C_CYN)make release$(C_RST)        Bump patch version, test, tag, push, GitHub release\n"
 	@printf "  $(C_CYN)make release-minor$(C_RST)  Bump minor version and release\n"
 	@printf "  $(C_CYN)make release-major$(C_RST)  Bump major version and release\n"
+	@printf "  $(C_CYN)make check-guacd$(C_RST)    Check guacd (RDP proxy) installation\n"
 	@printf "  $(C_CYN)make help$(C_RST)           Show this help\n"
 	@printf "\n$(C_BLD)Configuration:$(C_RST)\n"
 	@printf "  $(C_YLW)WEBMUX_HOME$(C_RST)=$(C_DIM)~/.config/webmux$(C_RST)   Runtime config/data directory\n"
 	@printf "  $(C_YLW)HTTP_PORT$(C_RST)=$(C_DIM)8080$(C_RST)              HTTP listen port\n"
 	@printf "  $(C_YLW)HTTPS_PORT$(C_RST)=$(C_DIM)8443$(C_RST)             HTTPS listen port\n"
 	@printf "  $(C_YLW)LISTEN_HOST$(C_RST)=$(C_DIM)0.0.0.0$(C_RST)          Bind address\n"
+
+check-guacd:
+	@if command -v guacd >/dev/null 2>&1; then \
+		printf "$(C_GRN)✓$(C_RST) guacd found: $$(command -v guacd)\n"; \
+	else \
+		printf "$(C_YLW)!$(C_RST) guacd not found — RDP connections will fail.\n"; \
+		printf "  $(C_DIM)Install:$(C_RST)\n"; \
+		printf "  $(C_DIM)  macOS:$(C_RST)  brew install guacamole-server\n"; \
+		printf "  $(C_DIM)  Ubuntu:$(C_RST) sudo apt install guacd\n"; \
+		printf "  $(C_DIM)  RHEL:$(C_RST)   sudo dnf install guacd\n"; \
+	fi
 
 deps:
 	@cd "$(WEBMUX_DIR)" && $(NPM) install --silent
@@ -132,7 +144,7 @@ endif
 	@printf "  $(C_DIM)auth.yaml:$(C_RST)\n"
 	@grep -E 'mode:' "$(WEBMUX_HOME)/config/auth.yaml" | sed 's/^/    /'
 
-start: build
+start: build check-guacd
 	@mkdir -p "$(WEBMUX_HOME)/logs"
 	@if [ -f "$(PIDFILE)" ] && kill -0 $$(cat "$(PIDFILE)") 2>/dev/null; then \
 		printf "$(C_YLW)●$(C_RST) webmux is already running $(C_DIM)(pid $$(cat "$(PIDFILE)"))$(C_RST)\n"; \

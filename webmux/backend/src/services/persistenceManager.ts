@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as yaml from 'js-yaml';
 import chokidar, { FSWatcher } from 'chokidar';
 import {
-  AppConfig, AuthConfig, HostsConfig, LayoutConfig, KeysConfig, Session, VncSession
+  AppConfig, AuthConfig, HostsConfig, LayoutConfig, KeysConfig, Session, VncSession, RdpSession
 } from '../types';
 
 const WEBMUX_ROOT = process.env.WEBMUX_ROOT || path.join(__dirname, '../../..');
@@ -126,6 +126,21 @@ export class PersistenceManager {
     try {
       const data = readYaml<{ vnc_sessions: VncSession[] }>(file);
       return data.vnc_sessions || [];
+    } catch {
+      return [];
+    }
+  }
+
+  saveRdpSessions(sessions: RdpSession[]): void {
+    writeYaml(path.join(SESSIONS_DIR, 'rdp-sessions.yaml'), { rdp_sessions: sessions });
+  }
+
+  loadRdpSessions(): RdpSession[] {
+    const file = path.join(SESSIONS_DIR, 'rdp-sessions.yaml');
+    if (!fs.existsSync(file)) return [];
+    try {
+      const data = readYaml<{ rdp_sessions: RdpSession[] }>(file);
+      return data.rdp_sessions || [];
     } catch {
       return [];
     }
