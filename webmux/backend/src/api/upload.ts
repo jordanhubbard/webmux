@@ -33,18 +33,21 @@ router.post('/', (req: Request, res: Response) => {
   const chunks: Buffer[] = [];
   let size = 0;
 
+  let rejected = false;
   req.on('data', (chunk: Buffer) => {
+    if (rejected) return;
     size += chunk.length;
     if (size > MAX_SIZE) {
+      rejected = true;
       res.status(413).json({ error: 'File too large (max 10 MB)' });
-      req.destroy();
+      req.resume(); // drain remaining data so client receives the 413 response
       return;
     }
     chunks.push(chunk);
   });
 
   req.on('end', () => {
-    if (res.writableEnded) return;
+    if (rejected || res.writableEnded) return;
     fs.writeFileSync(filePath, Buffer.concat(chunks));
     res.status(201).json({ path: filePath, name: safeName, size });
   });

@@ -45,6 +45,7 @@ describe('Tile', () => {
         fontSize={14}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
+        onRename={vi.fn()}
       />,
       { wrapper },
     );
@@ -59,6 +60,7 @@ describe('Tile', () => {
         fontSize={14}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
+        onRename={vi.fn()}
       />,
       { wrapper },
     );
@@ -73,6 +75,7 @@ describe('Tile', () => {
         fontSize={14}
         onClose={onClose}
         onReconnect={vi.fn()}
+        onRename={vi.fn()}
       />,
       { wrapper },
     );
@@ -87,6 +90,7 @@ describe('Tile', () => {
         fontSize={14}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
+        onRename={vi.fn()}
       />,
       { wrapper },
     );
@@ -101,6 +105,7 @@ describe('Tile', () => {
         fontSize={14}
         onClose={vi.fn()}
         onReconnect={onReconnect}
+        onRename={vi.fn()}
       />,
       { wrapper },
     );
@@ -115,6 +120,7 @@ describe('Tile', () => {
         fontSize={14}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
+        onRename={vi.fn()}
       />,
       { wrapper },
     );
@@ -128,6 +134,7 @@ describe('Tile', () => {
         fontSize={14}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
+        onRename={vi.fn()}
       />,
       { wrapper },
     );
@@ -141,6 +148,7 @@ describe('Tile', () => {
         fontSize={14}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
+        onRename={vi.fn()}
       />,
       { wrapper },
     );
@@ -154,6 +162,7 @@ describe('Tile', () => {
         fontSize={14}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
+        onRename={vi.fn()}
       />,
       { wrapper },
     );
@@ -168,12 +177,13 @@ describe('Tile', () => {
         fontSize={14}
         onClose={vi.fn()}
         onReconnect={vi.fn()}
+        onRename={vi.fn()}
         onTitleMouseDown={onTitleMouseDown}
       />,
       { wrapper },
     );
-    // Fire mousedown on the chrome (not a button)
-    const chrome = screen.getByTitle('user@example.com').closest('[style]')!.parentElement!;
+    // Fire mousedown on the chrome (not a button) — title includes rename hint
+    const chrome = screen.getByTitle('user@example.com (double-click to rename)').closest('[style]')!.parentElement!;
     fireEvent.mouseDown(chrome);
     expect(onTitleMouseDown).toHaveBeenCalledWith('s1', expect.any(Object));
   });
