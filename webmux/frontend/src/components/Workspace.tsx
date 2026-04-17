@@ -262,6 +262,7 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
 
   return (
     <div style={styles.outer}>
+      <div style={styles.hint}>Hold Shift to scroll</div>
       <div
         ref={gridRef}
         style={{
@@ -347,6 +348,13 @@ const styles: Record<string, React.CSSProperties> = {
     padding: GAP,
     minHeight: '100%',
     boxSizing: 'border-box',
+  },
+  hint: {
+    padding: '3px 10px',
+    fontSize: 11,
+    color: '#444',
+    userSelect: 'none',
+    pointerEvents: 'none',
   },
   loading: {
     color: '#888',
