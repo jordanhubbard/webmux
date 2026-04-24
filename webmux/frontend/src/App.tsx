@@ -23,6 +23,12 @@ interface AuthenticatedAppProps {
   showRegister: boolean;
   onRegisterClose: () => void;
   onAccountCreated: (username: string) => void;
+  globalAutoScroll: boolean;
+  onGlobalAutoScrollChange: (on: boolean) => void;
+  globalAutoScrollVersion: number;
+  globalLock: boolean;
+  onGlobalLockChange: (on: boolean) => void;
+  globalLockVersion: number;
 }
 
 function AuthenticatedApp({
@@ -38,6 +44,12 @@ function AuthenticatedApp({
   showRegister,
   onRegisterClose,
   onAccountCreated,
+  globalAutoScroll,
+  onGlobalAutoScrollChange,
+  globalAutoScrollVersion,
+  globalLock,
+  onGlobalLockChange,
+  globalLockVersion,
 }: AuthenticatedAppProps) {
   const { activePane } = useWorkspacePane();
 
@@ -53,11 +65,25 @@ function AuthenticatedApp({
         onNewAccount={onNewAccount}
         secureMode={secureMode}
         currentUser={currentUser}
+        globalAutoScroll={globalAutoScroll}
+        onGlobalAutoScrollChange={onGlobalAutoScrollChange}
+        globalLock={globalLock}
+        onGlobalLockChange={onGlobalLockChange}
       />
 
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
-          <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} />
+          <Workspace
+            fontSize={fontSize}
+            termCols={termCols}
+            termRows={termRows}
+            globalAutoScroll={globalAutoScroll}
+            globalAutoScrollVersion={globalAutoScrollVersion}
+            onGlobalAutoScrollChange={onGlobalAutoScrollChange}
+            globalLock={globalLock}
+            globalLockVersion={globalLockVersion}
+            onGlobalLockChange={onGlobalLockChange}
+          />
         </div>
         <div style={{ display: activePane === 'desktops' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
           <GraphicsWorkspace />
@@ -96,6 +122,10 @@ export default function App() {
   const [termRows, setTermRows] = useState(24);
   const [showRegister, setShowRegister] = useState(false);
   const [secureMode, setSecureMode] = useState(true);
+  const [globalAutoScroll, setGlobalAutoScroll] = useState(true);
+  const [globalAutoScrollVersion, setGlobalAutoScrollVersion] = useState(0);
+  const [globalLock, setGlobalLock] = useState(false);
+  const [globalLockVersion, setGlobalLockVersion] = useState(0);
 
   const currentUser = useMemo(() => auth.isAuthenticated ? parseTokenUser() : null, [auth.isAuthenticated]);
 
@@ -152,6 +182,18 @@ export default function App() {
           showRegister={showRegister}
           onRegisterClose={() => setShowRegister(false)}
           onAccountCreated={handleAccountCreated}
+          globalAutoScroll={globalAutoScroll}
+          onGlobalAutoScrollChange={(on: boolean) => {
+            setGlobalAutoScroll(on);
+            setGlobalAutoScrollVersion(v => v + 1);
+          }}
+          globalAutoScrollVersion={globalAutoScrollVersion}
+          globalLock={globalLock}
+          onGlobalLockChange={(on: boolean) => {
+            setGlobalLock(on);
+            setGlobalLockVersion(v => v + 1);
+          }}
+          globalLockVersion={globalLockVersion}
         />
       </WorkspacePaneProvider>
     </InputBroadcastProvider>
