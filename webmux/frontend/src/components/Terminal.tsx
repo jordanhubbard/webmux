@@ -3,9 +3,32 @@ import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
-import type { WebSocketMessage, ConnectionState } from '../types';
+import type { WebSocketMessage, ConnectionState, TerminalTheme } from '../types';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
+
+export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
+  background: '#0d0d1a',
+  foreground: '#e0e0e0',
+  cursor: '#7c6af7',
+  selectionBackground: 'rgba(124, 106, 247, 0.3)' as unknown as string,
+  black: '#1a1a2e',
+  brightBlack: '#333333',
+  red: '#ff5555',
+  brightRed: '#ff8080',
+  green: '#50fa7b',
+  brightGreen: '#80ffaa',
+  yellow: '#f1fa8c',
+  brightYellow: '#ffff80',
+  blue: '#6272a4',
+  brightBlue: '#8080ff',
+  magenta: '#ff79c6',
+  brightMagenta: '#ffaadd',
+  cyan: '#8be9fd',
+  brightCyan: '#aaeeff',
+  white: '#f8f8f2',
+  brightWhite: '#ffffff',
+};
 
 export interface TerminalHandle {
   scrollToBottom: () => void;
@@ -20,6 +43,7 @@ interface TerminalProps {
   onStateChange: (state: ConnectionState) => void;
   onViewerUpdate: (count: number, focusOwner?: string) => void;
   onFocusGained: () => void;
+  theme?: TerminalTheme | null;
 }
 
 export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal({
@@ -29,6 +53,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   onStateChange,
   onViewerUpdate,
   onFocusGained,
+  theme,
 }: TerminalProps, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
@@ -115,28 +140,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     if (!containerRef.current) return;
 
     const term = new XTerm({
-      theme: {
-        background: '#0d0d1a',
-        foreground: '#e0e0e0',
-        cursor: '#7c6af7',
-        selectionBackground: 'rgba(124, 106, 247, 0.3)',
-        black: '#1a1a2e',
-        brightBlack: '#333333',
-        red: '#ff5555',
-        brightRed: '#ff8080',
-        green: '#50fa7b',
-        brightGreen: '#80ffaa',
-        yellow: '#f1fa8c',
-        brightYellow: '#ffff80',
-        blue: '#6272a4',
-        brightBlue: '#8080ff',
-        magenta: '#ff79c6',
-        brightMagenta: '#ffaadd',
-        cyan: '#8be9fd',
-        brightCyan: '#aaeeff',
-        white: '#f8f8f2',
-        brightWhite: '#ffffff',
-      },
+      theme: { ...DEFAULT_TERMINAL_THEME, ...(theme || {}) },
       fontFamily: 'Consolas, Menlo, "DejaVu Sans Mono", monospace',
       fontSize,
       cursorBlink: true,
@@ -212,6 +216,13 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       fitAddonRef.current?.fit();
     }
   }, [fontSize]);
+
+  // Apply theme changes without tearing down the terminal (preserves scrollback).
+  useEffect(() => {
+    if (termRef.current) {
+      termRef.current.options.theme = { ...DEFAULT_TERMINAL_THEME, ...(theme || {}) };
+    }
+  }, [theme]);
 
   // When broadcast mode is enabled, re-focus the active terminal so keyboard
   // input flows immediately without requiring the user to click again.
