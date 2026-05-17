@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "webmux",
+  "project_id": "0aacc52e-d954-4854-bc94-f4c9309b7f5c"
+}
