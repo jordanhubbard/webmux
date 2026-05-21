@@ -3,7 +3,9 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { rdpBroker } from '../services/rdpBroker';
 import { TransportLauncher } from '../services/transportLauncher';
+import { resolveAndValidateTarget } from '../services/networkGuard';
 import { verifyToken } from '../middleware/auth';
+import { consumeTicket } from '../api/auth';
 import { persistence } from '../services/persistenceManager';
 
 const DEFAULT_GUACD_HOST = '127.0.0.1';
@@ -79,12 +81,13 @@ function rdpParamValue(
 }
 
 export function setupRdpWebSocket(wss: WebSocketServer): void {
-  wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+  wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
     const match = req.url?.match(/\/api\/rdp\/ws\/([^/?]+)/);
     if (!match) { ws.close(1008, 'Invalid path'); return; }
     const sessionId = match[1];
 
     const url = new URL(req.url!, `http://${req.headers.host}`);
+    const ticket = url.searchParams.get('ticket') || undefined;
     const token = url.searchParams.get('token') || undefined;
 
     let owner = 'anonymous';
@@ -94,7 +97,11 @@ export function setupRdpWebSocket(wss: WebSocketServer): void {
       if (authConfig.auth.mode === 'none') authRequired = false;
     } catch { /* default to requiring auth */ }
 
-    if (authRequired) {
+    if (ticket) {
+      const username = consumeTicket(ticket);
+      if (!username) { ws.close(1008, 'Unauthorized'); return; }
+      owner = username;
+    } else if (authRequired) {
       if (!token) { ws.close(1008, 'Unauthorized'); return; }
       try {
         const payload = verifyToken(token);
@@ -111,6 +118,18 @@ export function setupRdpWebSocket(wss: WebSocketServer): void {
     try {
       TransportLauncher.validateHostname(session.hostname);
     } catch { ws.close(1008, 'Invalid hostname'); return; }
+
+    // Resolve to IP and reject loopback/link-local/reserved (SSRF guard).
+    // Pass the resolved IP to guacd so guacd can't be DNS-rebound to a blocked target.
+    let targetIp: string;
+    try {
+      targetIp = await resolveAndValidateTarget(session.hostname);
+    } catch (err) {
+      console.warn(`RDP SSRF block for session ${sessionId}: ${(err as Error).message}`);
+      rdpBroker.setState(sessionId, 'error');
+      ws.close(1008, 'Target blocked');
+      return;
+    }
 
     const password = rdpBroker.getPassword(sessionId) || '';
 
@@ -152,9 +171,11 @@ export function setupRdpWebSocket(wss: WebSocketServer): void {
         if (!parsed) continue;
 
         if (parsed.opcode === 'args') {
-          // guacd is telling us what parameters it needs; respond with connect
+          // guacd is telling us what parameters it needs; respond with connect.
+          // We pass the pre-resolved target IP rather than the hostname so guacd
+          // can't be DNS-rebound to a blocked address.
           const paramValues = parsed.args.map(p =>
-            rdpParamValue(p, session.hostname, session.rdp_port,
+            rdpParamValue(p, targetIp, session.rdp_port,
               session.rdp_username, password, session.rdp_domain)
           );
           socket.write(encodeGuac('connect', ...paramValues));

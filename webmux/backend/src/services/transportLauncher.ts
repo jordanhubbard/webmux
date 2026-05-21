@@ -9,6 +9,7 @@ export interface PtyHandle {
 }
 
 const HOSTNAME_RE = /^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9.])?$|^\[[0-9a-fA-F:]+\]$/;
+const USERNAME_RE = /^[a-zA-Z0-9._-]+$/;
 
 export class TransportLauncher {
   private handles = new Map<string, pty.IPty>();
@@ -25,12 +26,42 @@ export class TransportLauncher {
     }
   }
 
+  static validateUsername(username: string): void {
+    if (username.length > 64) {
+      throw new Error('Username too long');
+    }
+    if (!USERNAME_RE.test(username)) {
+      throw new Error(`Invalid username: ${username}`);
+    }
+  }
+
+  static validateMoshServerPath(p: string): void {
+    if (!p.startsWith('/')) {
+      throw new Error('Invalid mosh_server_path: must be an absolute path');
+    }
+    if (p.length > 4096) {
+      throw new Error('Invalid mosh_server_path: too long');
+    }
+    if (!/^[a-zA-Z0-9/_.-]+$/.test(p)) {
+      throw new Error(`Invalid mosh_server_path: ${p}`);
+    }
+    // Reject ".." as a path component to block traversal (e.g. /usr/bin/../../etc/passwd)
+    if (p.split('/').some(seg => seg === '..')) {
+      throw new Error(`Invalid mosh_server_path: ${p}`);
+    }
+  }
+
   launch(session: Session, password?: string, keyId?: string): pty.IPty {
+    // Validate inputs that flow into shell/command lines for every transport,
+    // including exec (where {host}/{user} are substituted into a shell template).
+    TransportLauncher.validateHostname(session.hostname);
+    if (session.username) {
+      TransportLauncher.validateUsername(session.username);
+    }
+
     if (session.transport === 'exec') {
       return this.launchExec(session);
     }
-
-    TransportLauncher.validateHostname(session.hostname);
 
     if (session.transport === 'mosh') {
       if (!this.findBinary('mosh')) {
@@ -160,9 +191,7 @@ export class TransportLauncher {
       const appConfig = persistence.loadApp();
       const serverPath = appConfig.app.transport.mosh_server_path;
       if (serverPath) {
-        if (!/^[a-zA-Z0-9/_.-]+$/.test(serverPath)) {
-          throw new Error(`Invalid mosh_server_path: ${serverPath}`);
-        }
+        TransportLauncher.validateMoshServerPath(serverPath);
         args.push('--server=' + serverPath);
       }
     } catch (err) {

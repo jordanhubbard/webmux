@@ -1,10 +1,34 @@
 import { Router, Request, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import argon2 from 'argon2';
+import * as crypto from 'crypto';
 import { persistence } from '../services/persistenceManager';
 import { signToken, requireAuth, AuthPayload } from '../middleware/auth';
 
 const router = Router();
+
+// One-time WebSocket tickets. The browser exchanges its bearer token for a
+// short-lived single-use ticket via POST /api/auth/ticket, then passes the
+// ticket in the WS upgrade URL. Tickets never appear in HTTP access logs for
+// the long-lived auth token, and are invalidated after one use.
+const TICKET_TTL_MS = 60_000;
+const tickets = new Map<string, { username: string; expires: number }>();
+
+function purgeExpiredTickets(): void {
+  const now = Date.now();
+  for (const [id, t] of tickets) {
+    if (t.expires < now) tickets.delete(id);
+  }
+}
+
+export function consumeTicket(ticket: string): string | null {
+  purgeExpiredTickets();
+  const t = tickets.get(ticket);
+  if (!t) return null;
+  tickets.delete(ticket);
+  if (t.expires < Date.now()) return null;
+  return t.username;
+}
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -127,6 +151,17 @@ router.post('/register', requireAuth, async (req: Request, res: Response) => {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+router.post('/ticket', requireAuth, (req: Request, res: Response) => {
+  purgeExpiredTickets();
+  const payload = (req as Request & { user?: AuthPayload }).user;
+  // requireAuth guarantees payload exists for mode: local; in mode: none we
+  // record 'anonymous' so the consumer still gets a usable owner.
+  const username = payload?.sub || 'anonymous';
+  const ticket = crypto.randomBytes(24).toString('hex');
+  tickets.set(ticket, { username, expires: Date.now() + TICKET_TTL_MS });
+  res.json({ ticket, expires_in: Math.floor(TICKET_TTL_MS / 1000) });
 });
 
 router.get('/status', (_req: Request, res: Response) => {

@@ -1,12 +1,48 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
 import { persistence } from '../services/persistenceManager';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'webmux-dev-secret-change-in-production';
 const TOKEN_TTL = '8h';
 
-if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'test') {
-  console.warn('WARNING: JWT_SECRET is not set. Using insecure default. Set JWT_SECRET in production.');
+let cachedSecret: string | null = null;
+
+// Resolves the JWT signing secret in this order:
+//   1. JWT_SECRET env var
+//   2. auth.yaml's `jwt_secret` field (generated and persisted on first read if absent)
+//   3. ephemeral random (only if auth.yaml is unavailable, e.g. pre-bootstrap)
+// Tokens issued under (3) won't survive a restart, which is acceptable for the
+// brief pre-bootstrap window.
+function getJwtSecret(): string {
+  if (cachedSecret) return cachedSecret;
+
+  if (process.env.JWT_SECRET) {
+    cachedSecret = process.env.JWT_SECRET;
+    return cachedSecret;
+  }
+
+  if (process.env.NODE_ENV === 'test') {
+    cachedSecret = 'test-secret';
+    return cachedSecret;
+  }
+
+  try {
+    const cfg = persistence.loadAuth();
+    if (cfg.auth.jwt_secret) {
+      cachedSecret = cfg.auth.jwt_secret;
+      return cachedSecret;
+    }
+    const generated = crypto.randomBytes(32).toString('hex');
+    cfg.auth.jwt_secret = generated;
+    persistence.saveAuth(cfg);
+    cachedSecret = generated;
+    console.log('Generated and saved new JWT signing secret to auth.yaml');
+    return cachedSecret;
+  } catch {
+    cachedSecret = crypto.randomBytes(32).toString('hex');
+    console.warn('JWT secret could not be persisted; using ephemeral random. Tokens will be invalidated on restart.');
+    return cachedSecret;
+  }
 }
 
 export interface AuthPayload {
@@ -15,11 +51,11 @@ export interface AuthPayload {
 }
 
 export function signToken(username: string): string {
-  return jwt.sign({ sub: username }, JWT_SECRET, { expiresIn: TOKEN_TTL });
+  return jwt.sign({ sub: username }, getJwtSecret(), { expiresIn: TOKEN_TTL });
 }
 
 export function verifyToken(token: string): AuthPayload {
-  return jwt.verify(token, JWT_SECRET) as AuthPayload;
+  return jwt.verify(token, getJwtSecret()) as AuthPayload;
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
@@ -34,7 +70,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   }
 
   const authHeader = req.headers['authorization'];
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : (req as Request & { cookies?: Record<string, string> }).cookies?.token;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
 
   if (!token) {
     res.status(401).json({ error: 'Unauthorized' });

@@ -34,6 +34,8 @@ export interface AuthConfig {
   auth: {
     mode: 'none' | 'local';
     users: AuthUser[];
+    // Persistent JWT signing secret. Generated on first boot when JWT_SECRET env is unset.
+    jwt_secret?: string;
   };
 }
 
