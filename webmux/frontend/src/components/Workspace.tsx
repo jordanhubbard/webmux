@@ -57,6 +57,12 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return Boolean(target.closest('input, textarea, select, [role="textbox"]'));
 }
 
+function terminalCycleDirectionFromKey(e: KeyboardEvent): 1 | -1 | null {
+  if (e.code === 'Period' || e.key === '>' || e.key === '.') return 1;
+  if (e.code === 'Comma' || e.key === '<' || e.key === ',') return -1;
+  return null;
+}
+
 function AddCell({ row, col, isEmpty, onClick }: {
   row: number;
   col: number;
@@ -159,13 +165,14 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented || !e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return;
-      if (e.code !== 'Comma' && e.code !== 'Period') return;
+      const direction = terminalCycleDirectionFromKey(e);
+      if (direction === null) return;
       if (isEditableTarget(e.target)) return;
       if (!gridRef.current || gridRef.current.offsetParent === null) return;
 
       e.preventDefault();
       e.stopPropagation();
-      cycleFocusedSession(e.code === 'Period' ? 1 : -1);
+      cycleFocusedSession(direction);
     };
 
     window.addEventListener('keydown', onKeyDown, true);

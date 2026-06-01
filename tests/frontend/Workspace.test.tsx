@@ -155,6 +155,16 @@ describe('Workspace', () => {
       await waitFor(() => {
         expect(terminalFocusFns.get('s3')).toHaveBeenCalledTimes(2);
       });
+
+      fireEvent.keyDown(window, { key: '>', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s2')).toHaveBeenCalledTimes(3);
+      });
+
+      fireEvent.keyDown(window, { key: '<', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s3')).toHaveBeenCalledTimes(3);
+      });
     } finally {
       if (originalOffsetParent) {
         Object.defineProperty(HTMLElement.prototype, 'offsetParent', originalOffsetParent);
