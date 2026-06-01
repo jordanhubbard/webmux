@@ -42,6 +42,7 @@ async function main(): Promise<void> {
         secure_mode: false,
         trusted_http_allowed: true,
         default_term: { cols: 80, rows: 24, font_size: 14 },
+        terminal_grid: { max_cols: null, max_rows: null },
         transport: { prefer_mosh: false, ssh_fallback: true, mosh_server_path: '' },
       },
     };

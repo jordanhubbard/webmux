@@ -8,6 +8,10 @@ interface WorkspaceProps {
   fontSize: number;
   termCols: number;
   termRows: number;
+  terminalGridLimit?: {
+    maxCols?: number | null;
+    maxRows?: number | null;
+  };
 }
 
 const GAP = 8;
@@ -22,8 +26,28 @@ function tilePixelSize(cols: number, rows: number, fontSize: number) {
   return { w, h };
 }
 
-function getAddPositions(sessions: Session[]): { row: number; col: number }[] {
-  if (sessions.length === 0) return [{ row: 0, col: 0 }];
+function normalizedLimit(value?: number | null): number | undefined {
+  if (typeof value !== 'number') return undefined;
+  return Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
+function isWithinTerminalGridLimit(
+  row: number,
+  col: number,
+  terminalGridLimit?: WorkspaceProps['terminalGridLimit'],
+): boolean {
+  const maxCols = normalizedLimit(terminalGridLimit?.maxCols);
+  const maxRows = normalizedLimit(terminalGridLimit?.maxRows);
+  return (maxCols === undefined || col < maxCols) && (maxRows === undefined || row < maxRows);
+}
+
+function getAddPositions(
+  sessions: Session[],
+  terminalGridLimit?: WorkspaceProps['terminalGridLimit'],
+): { row: number; col: number }[] {
+  if (sessions.length === 0) {
+    return isWithinTerminalGridLimit(0, 0, terminalGridLimit) ? [{ row: 0, col: 0 }] : [];
+  }
 
   const occupied = new Set(sessions.map(s => `${s.row},${s.col}`));
   const positions: { row: number; col: number }[] = [];
@@ -31,12 +55,12 @@ function getAddPositions(sessions: Session[]): { row: number; col: number }[] {
 
   for (const s of sessions) {
     const right = `${s.row},${s.col + 1}`;
-    if (!occupied.has(right) && !seen.has(right)) {
+    if (!occupied.has(right) && !seen.has(right) && isWithinTerminalGridLimit(s.row, s.col + 1, terminalGridLimit)) {
       positions.push({ row: s.row, col: s.col + 1 });
       seen.add(right);
     }
     const below = `${s.row + 1},${s.col}`;
-    if (!occupied.has(below) && !seen.has(below)) {
+    if (!occupied.has(below) && !seen.has(below) && isWithinTerminalGridLimit(s.row + 1, s.col, terminalGridLimit)) {
       positions.push({ row: s.row + 1, col: s.col });
       seen.add(below);
     }
@@ -95,11 +119,10 @@ function AddCell({ row, col, isEmpty, onClick }: {
   );
 }
 
-export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
+export function Workspace({ fontSize, termCols, termRows, terminalGridLimit }: WorkspaceProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
-
 
   // Drag state
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -179,7 +202,7 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
     const onMouseMove = (e: MouseEvent) => {
       setGhostPos({ x: e.clientX, y: e.clientY });
       const cell = getGridCell(e.clientX, e.clientY);
-      if (cell) {
+      if (cell && isWithinTerminalGridLimit(cell.row, cell.col, terminalGridLimit)) {
         const sessionAtCell = sessionsRef.current.find(s => s.row === cell.row && s.col === cell.col);
         const isSelf = sessionAtCell && sessionAtCell.id === draggingIdRef.current;
         const newTarget = isSelf ? null : cell;
@@ -241,9 +264,9 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
     };
-  }, [draggingId, getGridCell]);
+  }, [draggingId, getGridCell, terminalGridLimit]);
 
-  const addPositions = getAddPositions(sessions);
+  const addPositions = getAddPositions(sessions, terminalGridLimit);
 
   const allPositions = [
     ...sessions.map(s => ({ row: s.row, col: s.col })),

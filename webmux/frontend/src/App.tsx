@@ -17,6 +17,10 @@ interface AuthenticatedAppProps {
   termCols: number;
   termRows: number;
   onTermSizeChange: (cols: number, rows: number) => void;
+  terminalGridLimit: {
+    maxCols: number | null;
+    maxRows: number | null;
+  };
   onNewAccount: () => void;
   secureMode: boolean;
   currentUser: string | null;
@@ -32,6 +36,7 @@ function AuthenticatedApp({
   termCols,
   termRows,
   onTermSizeChange,
+  terminalGridLimit,
   onNewAccount,
   secureMode,
   currentUser,
@@ -57,7 +62,7 @@ function AuthenticatedApp({
 
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
-          <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} />
+          <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} terminalGridLimit={terminalGridLimit} />
         </div>
         <div style={{ display: activePane === 'desktops' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
           <GraphicsWorkspace />
@@ -94,6 +99,10 @@ export default function App() {
   const [fontSize, setFontSize] = useState(14);
   const [termCols, setTermCols] = useState(80);
   const [termRows, setTermRows] = useState(24);
+  const [terminalGridLimit, setTerminalGridLimit] = useState<{ maxCols: number | null; maxRows: number | null }>({
+    maxCols: null,
+    maxRows: null,
+  });
   const [showRegister, setShowRegister] = useState(false);
   const [secureMode, setSecureMode] = useState(true);
 
@@ -105,6 +114,10 @@ export default function App() {
       setFontSize(config.app.default_term.font_size);
       setTermCols(config.app.default_term.cols);
       setTermRows(config.app.default_term.rows);
+      setTerminalGridLimit({
+        maxCols: config.app.terminal_grid?.max_cols ?? null,
+        maxRows: config.app.terminal_grid?.max_rows ?? null,
+      });
     }).catch(() => {});
   }, []);
 
@@ -146,6 +159,7 @@ export default function App() {
           termCols={termCols}
           termRows={termRows}
           onTermSizeChange={handleTermSizeChange}
+          terminalGridLimit={terminalGridLimit}
           onNewAccount={() => setShowRegister(true)}
           secureMode={secureMode}
           currentUser={currentUser}

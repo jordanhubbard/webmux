@@ -48,7 +48,12 @@ app:
     cols: 80
     rows: 24
     font_size: 14
+  terminal_grid:
+    max_cols: null      # null, 0, or omitted = unlimited
+    max_rows: null      # null, 0, or omitted = unlimited
 ```
+
+`WEBMUX_TERMINAL_GRID_MAX_COLS` and `WEBMUX_TERMINAL_GRID_MAX_ROWS` can override those YAML values at runtime.
 
 Add hosts to `config/hosts.yaml`:
 

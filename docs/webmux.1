@@ -84,6 +84,19 @@ Default terminal dimensions and font size for new sessions.
 Users can adjust these at runtime from the top bar; changes are
 persisted back to this file.
 .TP
+.B app.terminal_grid.max_cols / .max_rows
+Optional maximum column and row count for the terminals workspace.
+Unset,
+.BR null ,
+or
+.B 0
+means unlimited.
+The environment variables
+.B WEBMUX_TERMINAL_GRID_MAX_COLS
+and
+.B WEBMUX_TERMINAL_GRID_MAX_ROWS
+override these values at runtime.
+.TP
 .B app.transport.prefer_mosh
 When
 .BR true ,

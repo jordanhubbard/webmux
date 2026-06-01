@@ -2,13 +2,18 @@ import { Router, Request, Response } from 'express';
 import { persistence } from '../services/persistenceManager';
 import { requireAuth } from '../middleware/auth';
 import { TransportLauncher } from '../services/transportLauncher';
+import {
+  appConfigWithEffectiveTerminalGridLimits,
+  isTerminalGridLimitError,
+  terminalGridLimitsFromApp,
+} from '../services/terminalGridLimits';
 
 const router = Router();
 router.use(requireAuth);
 
 router.get('/', (_req: Request, res: Response) => {
   try {
-    const app = persistence.loadApp();
+    const app = appConfigWithEffectiveTerminalGridLimits(persistence.loadApp());
     const execCommand = process.env.WEBMUX_EXEC_COMMAND;
     if (execCommand) {
       app.app.exec_command = execCommand;
@@ -20,7 +25,7 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 // Only allow updating safe fields — not listen_host, ports, or secure_mode at runtime
-const MUTABLE_APP_FIELDS = ['name', 'default_term', 'transport'];
+const MUTABLE_APP_FIELDS = ['name', 'default_term', 'terminal_grid', 'transport'];
 
 router.put('/', (req: Request, res: Response) => {
   try {
@@ -45,8 +50,17 @@ router.put('/', (req: Request, res: Response) => {
       }
     }
     const merged = { app: { ...current.app, ...updates } };
+    try {
+      terminalGridLimitsFromApp(merged);
+    } catch (err) {
+      if (isTerminalGridLimitError(err)) {
+        res.status(400).json({ error: (err as Error).message });
+        return;
+      }
+      throw err;
+    }
     persistence.saveApp(merged);
-    res.json(merged);
+    res.json(appConfigWithEffectiveTerminalGridLimits(merged));
   } catch {
     res.status(500).json({ error: 'Failed to save config' });
   }

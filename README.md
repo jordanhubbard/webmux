@@ -91,12 +91,17 @@ app:
     cols: 80            # terminal width in characters
     rows: 24            # terminal height in characters
     font_size: 14       # font size in pixels
+  terminal_grid:
+    max_cols: null      # null, 0, or omitted = unlimited
+    max_rows: null      # null, 0, or omitted = unlimited
   transport:
     prefer_mosh: false
     ssh_fallback: true
 ```
 
 The `default_term` settings control the size of every terminal tile. Each tile is rendered at a fixed pixel size derived from `cols`, `rows`, and `font_size`. When tiles exceed the browser viewport, the workspace scrolls horizontally and vertically. All three values can also be adjusted live from the top bar — changes are saved back to `app.yaml` automatically.
+
+The optional `terminal_grid` settings cap the number of columns and rows available in the terminals workspace. By default both directions are unlimited. `WEBMUX_TERMINAL_GRID_MAX_COLS` and `WEBMUX_TERMINAL_GRID_MAX_ROWS` override the YAML values at runtime; set either variable to a positive integer, or to `0`/`unlimited` for no limit.
 
 ### `auth.yaml` — Authentication
 
