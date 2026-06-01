@@ -138,7 +138,7 @@ export class SessionBroker extends EventEmitter {
     }
 
     this.persistSessions();
-    persistence.appendEvent({ type: 'session_created', session_id: id, hostname, username: req.username });
+    await persistence.appendEvent({ type: 'session_created', session_id: id, hostname, username: req.username });
     this.emit('session_created', session);
     return session;
   }
@@ -243,7 +243,7 @@ export class SessionBroker extends EventEmitter {
     }
     this.persistSessions();
     this.updateLayout(sessionId);
-    persistence.appendEvent({ type: 'session_deleted', session_id: sessionId });
+    await persistence.appendEvent({ type: 'session_deleted', session_id: sessionId });
     this.emit('session_deleted', sessionId);
   }
 
