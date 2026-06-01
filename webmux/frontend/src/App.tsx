@@ -109,7 +109,11 @@ export default function App() {
   const currentUser = useMemo(() => auth.isAuthenticated ? parseTokenUser() : null, [auth.isAuthenticated]);
 
   useEffect(() => {
+    if (auth.isLoading || !auth.isAuthenticated) return;
+
+    let cancelled = false;
     api.getConfig().then(config => {
+      if (cancelled) return;
       setSecureMode(config.app.secure_mode);
       setFontSize(config.app.default_term.font_size);
       setTermCols(config.app.default_term.cols);
@@ -119,7 +123,8 @@ export default function App() {
         maxRows: config.app.terminal_grid?.max_rows ?? null,
       });
     }).catch(() => {});
-  }, []);
+    return () => { cancelled = true; };
+  }, [auth.isAuthenticated, auth.isLoading]);
 
   const handleFontSizeChange = useCallback((size: number) => {
     setFontSize(size);
