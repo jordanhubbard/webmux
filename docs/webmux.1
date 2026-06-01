@@ -194,6 +194,12 @@ scrolls the workspace view.
 .TP
 .B Wheel (over terminal, no modifier)
 Scrolls that terminal's scrollback buffer (5,000 lines).
+.TP
+.B Ctrl + Shift + < / >
+Focuses the previous or next terminal tile, ordered left to right and
+then top to bottom. Navigation wraps at either end and skips
+.B +
+placeholder cells.
 .SS Input broadcast
 The
 .B Type to All
