@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { Workspace } from '@frontend/components/Workspace';
 import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 const mockSessions = [
   {
@@ -24,15 +24,48 @@ vi.mock('@frontend/utils/api', () => ({
   },
 }));
 
-vi.mock('@frontend/components/Terminal', () => ({
-  Terminal: vi.fn().mockImplementation(({ sessionId }: { sessionId: string }) => (
-    <div data-testid={`terminal-${sessionId}`}>Terminal Mock</div>
-  )),
-}));
+vi.mock('@frontend/components/Terminal', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+  const { useInputBroadcast } = await vi.importActual<typeof import('@frontend/contexts/InputBroadcastContext')>(
+    '@frontend/contexts/InputBroadcastContext',
+  );
+  return {
+    Terminal: React.forwardRef(function TerminalMock(
+      { sessionId }: { sessionId: string },
+      ref: Ref<unknown>,
+    ) {
+      const { setFocusedSessionId } = useInputBroadcast();
+      React.useImperativeHandle(ref, () => ({
+        scrollToBottom: vi.fn(),
+        isAtBottom: () => true,
+        sendInput: vi.fn(),
+      }));
+      return (
+        <div data-testid={`terminal-${sessionId}`} onMouseDown={() => setFocusedSessionId(sessionId)}>
+          Terminal Mock
+        </div>
+      );
+    }),
+  };
+});
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <InputBroadcastProvider>{children}</InputBroadcastProvider>
 );
+
+function rect(left: number, top: number, right: number, bottom: number): DOMRect {
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    x: left,
+    y: top,
+    width: right - left,
+    height: bottom - top,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
 
 describe('Workspace', () => {
   beforeEach(async () => {
@@ -91,5 +124,78 @@ describe('Workspace', () => {
     await waitFor(() => {
       expect(screen.getByText('Connect to Host')).toBeDefined();
     });
+  });
+
+  it('scrolls the focused terminal tile fully into view', async () => {
+    const { api } = await import('@frontend/utils/api');
+    const sessions = [
+      { ...mockSessions[0], id: 's1', title: 'one', row: 0, col: 0 },
+      { ...mockSessions[0], id: 's2', title: 'two', row: 0, col: 1 },
+    ];
+    (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue(sessions);
+
+    render(<Workspace {...defaultProps} />, { wrapper });
+    await waitFor(() => {
+      expect(screen.getByTestId('tile-cell-s2')).toBeDefined();
+    });
+
+    const workspace = screen.getByTestId('workspace-scroll');
+    const tile = screen.getByTestId('tile-cell-s2');
+    workspace.scrollLeft = 10;
+    workspace.scrollTop = 5;
+
+    const workspaceRect = vi.spyOn(workspace, 'getBoundingClientRect')
+      .mockReturnValue(rect(0, 0, 100, 100));
+    const tileRect = vi.spyOn(tile, 'getBoundingClientRect')
+      .mockImplementation(() => rect(
+        130 - workspace.scrollLeft,
+        135 - workspace.scrollTop,
+        230 - workspace.scrollLeft,
+        235 - workspace.scrollTop,
+      ));
+
+    fireEvent.mouseDown(screen.getByTestId('terminal-s2'));
+
+    await waitFor(() => {
+      expect(workspace.scrollLeft).toBe(130);
+      expect(workspace.scrollTop).toBe(135);
+    });
+
+    workspaceRect.mockRestore();
+    tileRect.mockRestore();
+  });
+
+  it('does not scroll when the focused terminal tile is already fully visible', async () => {
+    const { api } = await import('@frontend/utils/api');
+    const sessions = [
+      { ...mockSessions[0], id: 's1', title: 'one', row: 0, col: 0 },
+      { ...mockSessions[0], id: 's2', title: 'two', row: 0, col: 1 },
+    ];
+    (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue(sessions);
+
+    render(<Workspace {...defaultProps} />, { wrapper });
+    await waitFor(() => {
+      expect(screen.getByTestId('tile-cell-s2')).toBeDefined();
+    });
+
+    const workspace = screen.getByTestId('workspace-scroll');
+    const tile = screen.getByTestId('tile-cell-s2');
+    workspace.scrollLeft = 40;
+    workspace.scrollTop = 55;
+
+    const workspaceRect = vi.spyOn(workspace, 'getBoundingClientRect')
+      .mockReturnValue(rect(0, 0, 100, 100));
+    const tileRect = vi.spyOn(tile, 'getBoundingClientRect')
+      .mockReturnValue(rect(10, 15, 90, 95));
+
+    fireEvent.mouseDown(screen.getByTestId('terminal-s2'));
+
+    await waitFor(() => {
+      expect(workspace.scrollLeft).toBe(40);
+      expect(workspace.scrollTop).toBe(55);
+    });
+
+    workspaceRect.mockRestore();
+    tileRect.mockRestore();
   });
 });

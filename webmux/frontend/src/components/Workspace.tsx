@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Tile } from './Tile';
 import { ConnectionDialog } from './ConnectionDialog';
 import { api } from '../utils/api';
+import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import type { Session, CreateSessionRequest } from '../types';
 
 interface WorkspaceProps {
@@ -20,6 +21,31 @@ function tilePixelSize(cols: number, rows: number, fontSize: number) {
   const w = Math.ceil(cols * fontSize * CHAR_W_RATIO) + TILE_PADDING;
   const h = Math.ceil(rows * fontSize * CHAR_H_RATIO) + CHROME_H + TILE_PADDING;
   return { w, h };
+}
+
+function scrollElementFullyIntoView(container: HTMLElement, element: HTMLElement): void {
+  const containerRect = container.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+  let nextScrollLeft = container.scrollLeft;
+  let nextScrollTop = container.scrollTop;
+
+  if (elementRect.left < containerRect.left) {
+    nextScrollLeft -= containerRect.left - elementRect.left;
+  } else if (elementRect.right > containerRect.right) {
+    nextScrollLeft += elementRect.right - containerRect.right;
+  }
+
+  if (elementRect.top < containerRect.top) {
+    nextScrollTop -= containerRect.top - elementRect.top;
+  } else if (elementRect.bottom > containerRect.bottom) {
+    nextScrollTop += elementRect.bottom - containerRect.bottom;
+  }
+
+  nextScrollLeft = Math.max(0, nextScrollLeft);
+  nextScrollTop = Math.max(0, nextScrollTop);
+
+  if (nextScrollLeft !== container.scrollLeft) container.scrollLeft = nextScrollLeft;
+  if (nextScrollTop !== container.scrollTop) container.scrollTop = nextScrollTop;
 }
 
 function getAddPositions(sessions: Session[]): { row: number; col: number }[] {
@@ -99,18 +125,20 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
-
+  const { focusedSessionId } = useInputBroadcast();
 
   // Drag state
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ row: number; col: number } | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
+  const outerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Refs for use in event handlers (avoid stale closures)
   const sessionsRef = useRef<Session[]>([]);
   const draggingIdRef = useRef<string | null>(null);
   const dropTargetRef = useRef<{ row: number; col: number } | null>(null);
+  const tileElementRefs = useRef(new Map<string, HTMLDivElement>());
   useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
   useEffect(() => { draggingIdRef.current = draggingId; }, [draggingId]);
   useEffect(() => {
@@ -123,6 +151,14 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
       .catch(err => console.error('Failed to load sessions:', err))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!focusedSessionId) return;
+    const outer = outerRef.current;
+    const tileElement = tileElementRefs.current.get(focusedSessionId);
+    if (!outer || !tileElement) return;
+    scrollElementFullyIntoView(outer, tileElement);
+  }, [focusedSessionId]);
 
   const handleAddSession = useCallback(async (req: CreateSessionRequest) => {
     const session = await api.createSession(req);
@@ -261,7 +297,7 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
   }
 
   return (
-    <div style={styles.outer}>
+    <div ref={outerRef} style={styles.outer} data-testid="workspace-scroll">
       <div style={styles.hint}>Hold Shift to scroll</div>
       <div
         ref={gridRef}
@@ -275,6 +311,11 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
         {sessions.map(session => (
           <div
             key={session.id}
+            ref={element => {
+              if (element) tileElementRefs.current.set(session.id, element);
+              else tileElementRefs.current.delete(session.id);
+            }}
+            data-testid={`tile-cell-${session.id}`}
             style={{
               gridColumn: session.col + 1,
               gridRow: session.row + 1,
