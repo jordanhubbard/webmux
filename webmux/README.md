@@ -10,6 +10,7 @@ A web-native tmux-on-a-jump-box: a persistent shared terminal wall that runs in 
 - **Persistent sessions** — sessions survive browser tab closes; reconnect from any tab
 - **Multi-viewer** — multiple browser tabs can watch the same session; one has keyboard focus at a time
 - **Split right / split below** — tile your workspace like a tiling window manager
+- **Keyboard terminal cycling** — `Ctrl+Shift+<` and `Ctrl+Shift+>` focus previous/next terminal tiles
 - **Global font size** — resize all terminals at once
 - **Two auth modes**:
   - **Secure mode** — local login + HTTPS, Argon2id password hashing
