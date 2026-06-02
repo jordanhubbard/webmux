@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useState, useCallback, useRef } from 'react';
 import { Terminal, type TerminalHandle } from './Terminal';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { api } from '../utils/api';
@@ -19,7 +19,20 @@ interface TileProps {
   onThemeChange?: (id: string, theme: string | null) => void;
 }
 
-export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitleMouseDown, isDragging, isDropTarget, themes = [], globalTheme = null, themeOverride = null, onThemeChange }: TileProps) {
+export interface TileHandle {
+  focusTerminal: () => void;
+}
+
+export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
+  session,
+  fontSize,
+  onClose,
+  onReconnect,
+  onRename,
+  onTitleMouseDown,
+  isDragging,
+  isDropTarget,
+}: TileProps, ref) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
   const [editing, setEditing] = useState(false);
@@ -30,6 +43,12 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isFocused = focusedSessionId === session.id;
+
+  useImperativeHandle(ref, () => ({
+    focusTerminal: () => {
+      termHandleRef.current?.focus();
+    },
+  }));
 
   const handleStateChange = useCallback((newState: ConnectionState) => {
     setState(newState);
@@ -207,7 +226,7 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
       </div>
     </div>
   );
-}
+});
 
 const styles: Record<string, React.CSSProperties> = {
   tile: {

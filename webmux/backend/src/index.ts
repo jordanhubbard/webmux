@@ -12,7 +12,7 @@ import hostsRouter from './api/hosts';
 import keysRouter from './api/keys';
 import sessionsRouter from './api/sessions';
 import configRouter from './api/config';
-import uploadRouter from './api/upload';
+import uploadRouter, { startPurgeTimer, stopPurgeTimer } from './api/upload';
 import aiRouter from './api/ai';
 import templatesRouter from './api/templates';
 import vncRouter from './api/vnc';
@@ -23,7 +23,7 @@ import { setupRdpWebSocket } from './websocket/rdpHandler';
 import { sessionBroker } from './services/sessionBroker';
 import { vncBroker } from './services/vncBroker';
 import { rdpBroker } from './services/rdpBroker';
-import { persistence, LOGS_DIR } from './services/persistenceManager';
+import { persistence } from './services/persistenceManager';
 
 const WEBMUX_ROOT = process.env.WEBMUX_ROOT || path.join(__dirname, '../..');
 
@@ -50,6 +50,7 @@ async function main(): Promise<void> {
   await sessionBroker.initialize();
   await vncBroker.initialize();
   await rdpBroker.initialize();
+  startPurgeTimer();
 
   // Slave mode: auto-create an exec session on startup if WEBMUX_SLAVE_HOST is set.
   // Used by agentOS to connect to the local agent console with no user interaction.
@@ -86,13 +87,15 @@ async function main(): Promise<void> {
 
   app.use(express.json({ limit: '1mb' }));
 
-  // General rate limit: 300 requests per minute per IP (applied globally)
+  // General rate limit: 300 requests per minute per IP (applied globally,
+  // except /api/health which monitoring may poll frequently).
   const apiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 300,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests, please try again later.' },
+    skip: req => req.path === '/api/health',
   });
   app.use(apiLimiter);
 
@@ -210,6 +213,7 @@ async function main(): Promise<void> {
     sessionBroker.shutdown();
     vncBroker.shutdown();
     rdpBroker.shutdown();
+    stopPurgeTimer();
     persistence.close();
 
     httpServer.close();

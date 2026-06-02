@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Tile } from './Tile';
+import { Tile, type TileHandle } from './Tile';
 import { ConnectionDialog } from './ConnectionDialog';
 import { api } from '../utils/api';
-import type { Session, CreateSessionRequest, NamedTheme } from '../types';
-import { loadSessionThemeOverrides, saveSessionThemeOverrides } from '../utils/themes';
+import { useInputBroadcast } from '../contexts/InputBroadcastContext';
+import type { Session, CreateSessionRequest } from '../types';
 
 interface WorkspaceProps {
   fontSize: number;
@@ -46,6 +46,23 @@ function getAddPositions(sessions: Session[]): { row: number; col: number }[] {
   }
 
   return positions;
+}
+
+function orderedSessions(sessions: Session[]): Session[] {
+  return [...sessions].sort((a, b) => a.row - b.row || a.col - b.col);
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.closest('.xterm')) return false;
+  if (target.isContentEditable) return true;
+  return Boolean(target.closest('input, textarea, select, [role="textbox"]'));
+}
+
+function terminalCycleDirectionFromKey(e: KeyboardEvent): 1 | -1 | null {
+  if (e.code === 'Period' || e.key === '>' || e.key === '.') return 1;
+  if (e.code === 'Comma' || e.key === '<' || e.key === ',') return -1;
+  return null;
 }
 
 function AddCell({ row, col, isEmpty, onClick }: {
@@ -102,21 +119,24 @@ export function Workspace({ fontSize, termCols, termRows, themes = [], globalThe
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
-  const [themeOverrides, setThemeOverrides] = useState<Map<string, string>>(() => loadSessionThemeOverrides());
-
+  const { focusedSessionId, setFocusedSessionId } = useInputBroadcast();
 
   // Drag state
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ row: number; col: number } | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
   const gridRef = useRef<HTMLDivElement>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
 
   // Refs for use in event handlers (avoid stale closures)
   const sessionsRef = useRef<Session[]>([]);
   const draggingIdRef = useRef<string | null>(null);
   const dropTargetRef = useRef<{ row: number; col: number } | null>(null);
+  const tileRefs = useRef(new Map<string, TileHandle>());
+  const focusedSessionIdRef = useRef<string | null>(null);
   useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
   useEffect(() => { draggingIdRef.current = draggingId; }, [draggingId]);
+  useEffect(() => { focusedSessionIdRef.current = focusedSessionId; }, [focusedSessionId]);
   useEffect(() => {
     dropTargetRef.current = dropTarget;
   }, [dropTarget]);
@@ -127,6 +147,40 @@ export function Workspace({ fontSize, termCols, termRows, themes = [], globalThe
       .catch(err => console.error('Failed to load sessions:', err))
       .finally(() => setLoading(false));
   }, []);
+
+  const focusSession = useCallback((sessionId: string) => {
+    focusedSessionIdRef.current = sessionId;
+    setFocusedSessionId(sessionId);
+    tileRefs.current.get(sessionId)?.focusTerminal();
+  }, [setFocusedSessionId]);
+
+  const cycleFocusedSession = useCallback((direction: 1 | -1) => {
+    const ordered = orderedSessions(sessionsRef.current);
+    if (ordered.length === 0) return;
+
+    const currentIndex = ordered.findIndex(session => session.id === focusedSessionIdRef.current);
+    const nextIndex = currentIndex === -1
+      ? (direction === 1 ? 0 : ordered.length - 1)
+      : (currentIndex + direction + ordered.length) % ordered.length;
+    focusSession(ordered[nextIndex].id);
+  }, [focusSession]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || !e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return;
+      const direction = terminalCycleDirectionFromKey(e);
+      if (direction === null) return;
+      if (isEditableTarget(e.target)) return;
+      if (!gridRef.current || gridRef.current.offsetParent === null) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      cycleFocusedSession(direction);
+    };
+
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [cycleFocusedSession]);
 
   const handleAddSession = useCallback(async (req: CreateSessionRequest) => {
     const session = await api.createSession(req);
@@ -275,7 +329,8 @@ export function Workspace({ fontSize, termCols, termRows, themes = [], globalThe
   }
 
   return (
-    <div style={styles.outer}>
+    <div style={styles.shell}>
+    <div ref={outerRef} style={styles.outer}>
       <div style={styles.hint}>Hold Shift to scroll</div>
       <div
         ref={gridRef}
@@ -298,6 +353,10 @@ export function Workspace({ fontSize, termCols, termRows, themes = [], globalThe
             }}
           >
             <Tile
+              ref={handle => {
+                if (handle) tileRefs.current.set(session.id, handle);
+                else tileRefs.current.delete(session.id);
+              }}
               session={session}
               fontSize={fontSize}
               onClose={handleClose}
@@ -350,10 +409,27 @@ export function Workspace({ fontSize, termCols, termRows, themes = [], globalThe
         />
       )}
     </div>
+    <WorkspaceMinimap
+      scrollRef={outerRef}
+      sessions={sessions}
+      numCols={numCols}
+      numRows={numRows}
+      tileWidth={tile.w}
+      tileHeight={tile.h}
+      gap={GAP}
+    />
+    </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  shell: {
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    minHeight: 0,
+  },
   outer: {
     flex: 1,
     overflowX: 'auto',

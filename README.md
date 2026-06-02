@@ -13,6 +13,7 @@ A web-native terminal multiplexer — think tmux-on-a-jump-box, but it runs in y
 - **Multi-user accounts** — multiple users with separate session collections; Argon2id password hashing
 - **Multi-viewer presence** — multiple tabs can watch the same session; click-to-focus controls who has keyboard input
 - **Type to All** — broadcast mode sends keystrokes to every open session simultaneously
+- **Keyboard terminal cycling** — `Ctrl+Shift+<` and `Ctrl+Shift+>` focus previous/next terminal tiles
 - **SSH key and password auth** — managed keys via `keys.yaml`, password-based via `sshpass`
 - **Two security modes** — local auth (Argon2id + JWT + HTTPS) or trusted mode for isolated networks
 - **OS service integration** — `make install` sets up launchd (macOS) or systemd (Linux) for auto-start on boot

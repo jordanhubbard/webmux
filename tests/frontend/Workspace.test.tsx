@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { Workspace } from '@frontend/components/Workspace';
 import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 const mockSessions = [
   {
@@ -11,6 +11,8 @@ const mockSessions = [
     state: 'connected' as const, created_at: '', updated_at: '', title: 'u1@h1', persistent: true,
   },
 ];
+
+const terminalFocusFns = vi.hoisted(() => new Map<string, ReturnType<typeof vi.fn>>());
 
 vi.mock('@frontend/utils/api', () => ({
   api: {
@@ -24,11 +26,25 @@ vi.mock('@frontend/utils/api', () => ({
   },
 }));
 
-vi.mock('@frontend/components/Terminal', () => ({
-  Terminal: vi.fn().mockImplementation(({ sessionId }: { sessionId: string }) => (
-    <div data-testid={`terminal-${sessionId}`}>Terminal Mock</div>
-  )),
-}));
+vi.mock('@frontend/components/Terminal', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+  return {
+    Terminal: React.forwardRef(function TerminalMock(
+      { sessionId }: { sessionId: string },
+      ref: Ref<unknown>,
+    ) {
+      const focus = terminalFocusFns.get(sessionId) ?? vi.fn();
+      terminalFocusFns.set(sessionId, focus);
+      React.useImperativeHandle(ref, () => ({
+        scrollToBottom: vi.fn(),
+        isAtBottom: () => true,
+        sendInput: vi.fn(),
+        focus,
+      }));
+      return <div data-testid={`terminal-${sessionId}`}>Terminal Mock</div>;
+    }),
+  };
+});
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <InputBroadcastProvider>{children}</InputBroadcastProvider>
@@ -37,6 +53,7 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 describe('Workspace', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    terminalFocusFns.clear();
     const { api } = await import('@frontend/utils/api');
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   });
@@ -91,5 +108,69 @@ describe('Workspace', () => {
     await waitFor(() => {
       expect(screen.getByText('Connect to Host')).toBeDefined();
     });
+  });
+
+  it('cycles terminal focus left-to-right then down and wraps', async () => {
+    const { api } = await import('@frontend/utils/api');
+    const sessions = [
+      { ...mockSessions[0], id: 's1', title: 'one', row: 0, col: 1 },
+      { ...mockSessions[0], id: 's2', title: 'two', row: 0, col: 0 },
+      { ...mockSessions[0], id: 's3', title: 'three', row: 1, col: 0 },
+    ];
+    (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue(sessions);
+
+    const originalOffsetParent = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetParent');
+    Object.defineProperty(HTMLElement.prototype, 'offsetParent', {
+      configurable: true,
+      get() { return document.body; },
+    });
+
+    try {
+      render(<Workspace {...defaultProps} />, { wrapper });
+      await waitFor(() => {
+        expect(screen.getByText('three')).toBeDefined();
+      });
+
+      fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s2')).toHaveBeenCalledTimes(1);
+      });
+
+      fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s1')).toHaveBeenCalledTimes(1);
+      });
+
+      fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s3')).toHaveBeenCalledTimes(1);
+      });
+
+      fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s2')).toHaveBeenCalledTimes(2);
+      });
+
+      fireEvent.keyDown(window, { code: 'Comma', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s3')).toHaveBeenCalledTimes(2);
+      });
+
+      fireEvent.keyDown(window, { key: '>', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s2')).toHaveBeenCalledTimes(3);
+      });
+
+      fireEvent.keyDown(window, { key: '<', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s3')).toHaveBeenCalledTimes(3);
+      });
+    } finally {
+      if (originalOffsetParent) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetParent', originalOffsetParent);
+      } else {
+        delete (HTMLElement.prototype as unknown as Record<string, unknown>).offsetParent;
+      }
+    }
   });
 });

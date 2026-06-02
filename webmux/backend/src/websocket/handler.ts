@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { sessionBroker } from '../services/sessionBroker';
 import { presenceService } from '../services/presenceService';
 import { requireAuthWs } from '../middleware/auth';
+import { consumeTicket } from '../api/auth';
 import { WebSocketMessage } from '../types';
 
 export function setupWebSocket(wss: WebSocketServer): void {
@@ -16,11 +17,20 @@ export function setupWebSocket(wss: WebSocketServer): void {
     }
     const sessionId = match[1];
 
-    // Authenticate via query param token
+    // Authenticate via short-lived ticket (preferred) or query-param token.
+    // The ticket flow keeps the bearer token out of HTTP access logs.
     const url = new URL(req.url!, `http://${req.headers.host}`);
+    const ticket = url.searchParams.get('ticket') || undefined;
     const token = url.searchParams.get('token') || undefined;
 
-    if (!requireAuthWs(token)) {
+    if (ticket) {
+      const username = consumeTicket(ticket);
+      if (!username) {
+        ws.send(JSON.stringify({ type: 'error', message: 'Unauthorized' }));
+        ws.close(1008, 'Unauthorized');
+        return;
+      }
+    } else if (!requireAuthWs(token)) {
       ws.send(JSON.stringify({ type: 'error', message: 'Unauthorized' }));
       ws.close(1008, 'Unauthorized');
       return;

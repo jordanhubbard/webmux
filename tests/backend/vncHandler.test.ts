@@ -20,6 +20,12 @@ jest.mock('net', () => ({
   createConnection: jest.fn(() => mockSocketInstance),
 }));
 
+// dns/promises is used by the SSRF guard; return a non-blocked address so tests
+// reach the net.createConnection path. Individual tests can override per case.
+jest.mock('dns/promises', () => ({
+  lookup: jest.fn(async () => ({ address: '203.0.113.10', family: 4 })),
+}));
+
 // ---------------------------------------------------------------------------
 // WebSocket readyState constants
 // ---------------------------------------------------------------------------
@@ -109,11 +115,14 @@ describe('VncHandler (TCP proxy)', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  // Helper: trigger a "connection" event on a fake WSS
-  function triggerConnection(ws: any, req: any): void {
+  // Helper: trigger a "connection" event on a fake WSS.
+  // Returns a promise that resolves after the handler's async DNS lookup completes
+  // and socket listeners have been attached, so callers can safely emit events.
+  async function triggerConnection(ws: any, req: any): Promise<void> {
     const fakeWss = new EventEmitter();
     setupVncWebSocket(fakeWss);
     fakeWss.emit('connection', ws, req);
+    await new Promise(resolve => setImmediate(resolve));
   }
 
   // ---------------------------------------------------------------------------
@@ -134,24 +143,24 @@ describe('VncHandler (TCP proxy)', () => {
       (netModule.createConnection as jest.Mock).mockReturnValue(mockSocketInstance);
     });
 
-    it('closes with 1008 when no token is provided', () => {
+    it('closes with 1008 when no token is provided', async () => {
       const ws = makeMockWs();
       const req = makeReq('/api/vnc/ws/some-session-id');
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
       expect(ws.close).toHaveBeenCalledWith(1008, 'Unauthorized');
     });
 
-    it('closes with 1008 when an invalid token is provided', () => {
+    it('closes with 1008 when an invalid token is provided', async () => {
       const ws = makeMockWs();
       const req = makeReq('/api/vnc/ws/some-session-id?token=bad.jwt.here');
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
       expect(ws.close).toHaveBeenCalledWith(1008, 'Unauthorized');
     });
 
-    it('closes with 1008 for missing path segments', () => {
+    it('closes with 1008 for missing path segments', async () => {
       const ws = makeMockWs();
       const req = makeReq('/api/vnc/ws/');
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
       // No token → auth failure fires first (or invalid path)
       expect(ws.close).toHaveBeenCalledWith(1008, expect.any(String));
     });
@@ -175,17 +184,17 @@ describe('VncHandler (TCP proxy)', () => {
       (netModule.createConnection as jest.Mock).mockReturnValue(mockSocketInstance);
     });
 
-    it('closes with 1008 for invalid path', () => {
+    it('closes with 1008 for invalid path', async () => {
       const ws = makeMockWs();
       const req = makeReq('/api/invalid-path');
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
       expect(ws.close).toHaveBeenCalledWith(1008, 'Invalid path');
     });
 
-    it('closes with 1008 when session not found', () => {
+    it('closes with 1008 when session not found', async () => {
       const ws = makeMockWs();
       const req = makeReq('/api/vnc/ws/nonexistent-session');
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
       expect(ws.close).toHaveBeenCalledWith(1008, 'Session not found');
     });
 
@@ -200,7 +209,7 @@ describe('VncHandler (TCP proxy)', () => {
 
       const ws = makeMockWs();
       const req = makeReq(`/api/vnc/ws/${session.id}?token=${token}`);
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
       expect(ws.close).toHaveBeenCalledWith(1008, 'Forbidden');
     });
 
@@ -210,7 +219,7 @@ describe('VncHandler (TCP proxy)', () => {
 
       const ws = makeMockWs();
       const req = makeReq(`/api/vnc/ws/${session.id}`);
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
 
       // Emit TCP data
       const chunk = Buffer.from('RFB 003.008\n');
@@ -225,7 +234,7 @@ describe('VncHandler (TCP proxy)', () => {
 
       const ws = makeMockWs();
       const req = makeReq(`/api/vnc/ws/${session.id}`);
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
 
       const data = Buffer.from('client handshake');
       ws.emit('message', data);
@@ -239,7 +248,7 @@ describe('VncHandler (TCP proxy)', () => {
 
       const ws = makeMockWs();
       const req = makeReq(`/api/vnc/ws/${session.id}`);
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
 
       mockSocketInstance.writable = false;
       ws.emit('message', Buffer.from('data'));
@@ -254,7 +263,7 @@ describe('VncHandler (TCP proxy)', () => {
 
       const ws = makeMockWs();
       const req = makeReq(`/api/vnc/ws/${session.id}`);
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
 
       mockSocketInstance.emit('close');
 
@@ -269,7 +278,7 @@ describe('VncHandler (TCP proxy)', () => {
 
       const ws = makeMockWs();
       const req = makeReq(`/api/vnc/ws/${session.id}`);
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
 
       mockSocketInstance.emit('error', new Error('ECONNREFUSED'));
 
@@ -283,7 +292,7 @@ describe('VncHandler (TCP proxy)', () => {
 
       const ws = makeMockWs();
       const req = makeReq(`/api/vnc/ws/${session.id}`);
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
 
       ws.emit('close');
 
@@ -297,7 +306,7 @@ describe('VncHandler (TCP proxy)', () => {
 
       const ws = makeMockWs();
       const req = makeReq(`/api/vnc/ws/${session.id}`);
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
 
       mockSocketInstance.emit('connect');
 
@@ -311,7 +320,7 @@ describe('VncHandler (TCP proxy)', () => {
       // ws.readyState is CLOSING (2) — not OPEN
       const ws = makeMockWs(2);
       const req = makeReq(`/api/vnc/ws/${session.id}`);
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
 
       mockSocketInstance.emit('data', Buffer.from('hello'));
 
@@ -325,7 +334,7 @@ describe('VncHandler (TCP proxy)', () => {
 
       const ws = makeMockWs();
       const req = makeReq(`/api/vnc/ws/${session.id}`);
-      triggerConnection(ws, req);
+      await triggerConnection(ws, req);
 
       expect(ws.close).toHaveBeenCalledWith(1008, 'Invalid hostname');
       // net.createConnection should NOT have been called

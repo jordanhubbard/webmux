@@ -138,7 +138,7 @@ export class SessionBroker extends EventEmitter {
     }
 
     this.persistSessions();
-    persistence.appendEvent({ type: 'session_created', session_id: id, hostname, username: req.username });
+    await persistence.appendEvent({ type: 'session_created', session_id: id, hostname, username: req.username });
     this.emit('session_created', session);
     return session;
   }
@@ -168,10 +168,16 @@ export class SessionBroker extends EventEmitter {
         this.persistSessions();
       }
 
-      // Accumulate scrollback for late-joining viewers
+      // Accumulate scrollback for late-joining viewers. When trimming, advance
+      // past the next newline so a replay doesn't begin in the middle of an ANSI
+      // escape sequence or a multi-byte UTF-8 codepoint.
       let buf = (this.scrollback.get(session.id) || '') + data;
       if (buf.length > SessionBroker.SCROLLBACK_SIZE) {
         buf = buf.slice(buf.length - SessionBroker.SCROLLBACK_SIZE);
+        const nl = buf.indexOf('\n');
+        if (nl !== -1 && nl < 4096) {
+          buf = buf.slice(nl + 1);
+        }
       }
       this.scrollback.set(session.id, buf);
 
@@ -237,7 +243,7 @@ export class SessionBroker extends EventEmitter {
     }
     this.persistSessions();
     this.updateLayout(sessionId);
-    persistence.appendEvent({ type: 'session_deleted', session_id: sessionId });
+    await persistence.appendEvent({ type: 'session_deleted', session_id: sessionId });
     this.emit('session_deleted', sessionId);
   }
 
