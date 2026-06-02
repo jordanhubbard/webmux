@@ -123,6 +123,10 @@ export interface AppConfig {
       rows: number;
       font_size: number;
     };
+    terminal_grid?: {
+      max_cols?: number | null;
+      max_rows?: number | null;
+    };
     // Set by WEBMUX_EXEC_COMMAND on the server; drives exec-transport defaults in the UI.
     exec_command?: string;
   };

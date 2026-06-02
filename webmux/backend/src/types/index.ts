@@ -11,6 +11,10 @@ export interface AppConfig {
       rows: number;
       font_size: number;
     };
+    terminal_grid?: {
+      max_cols?: number | null;
+      max_rows?: number | null;
+    };
     transport: {
       prefer_mosh: boolean;
       ssh_fallback: boolean;
@@ -213,4 +217,3 @@ export interface CreateRdpSessionRequest {
   row?: number;
   col?: number;
 }
-

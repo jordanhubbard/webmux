@@ -118,6 +118,18 @@ describe('Workspace', () => {
     });
   });
 
+  it('hides add cells outside the terminal grid limit', async () => {
+    const { api } = await import('@frontend/utils/api');
+    (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue(mockSessions);
+
+    render(<Workspace {...defaultProps} terminalGridLimit={{ maxCols: 1, maxRows: 1 }} />, { wrapper });
+    await waitFor(() => {
+      expect(screen.getAllByText('u1@h1').length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByTestId('add-cell-0-1')).toBeNull();
+    expect(screen.queryByTestId('add-cell-1-0')).toBeNull();
+  });
+
   it('opens connection dialog when add cell clicked', async () => {
     const { api } = await import('@frontend/utils/api');
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
@@ -223,7 +235,7 @@ describe('Workspace', () => {
     try {
       render(<Workspace {...defaultProps} />, { wrapper });
       await waitFor(() => {
-        expect(screen.getByText('three')).toBeDefined();
+        expect(screen.getAllByText('three').length).toBeGreaterThan(0);
       });
 
       fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });

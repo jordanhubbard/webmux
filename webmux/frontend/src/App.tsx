@@ -19,6 +19,10 @@ interface AuthenticatedAppProps {
   termCols: number;
   termRows: number;
   onTermSizeChange: (cols: number, rows: number) => void;
+  terminalGridLimit: {
+    maxCols: number | null;
+    maxRows: number | null;
+  };
   onNewAccount: () => void;
   secureMode: boolean;
   currentUser: string | null;
@@ -45,6 +49,7 @@ function AuthenticatedApp({
   termCols,
   termRows,
   onTermSizeChange,
+  terminalGridLimit,
   onNewAccount,
   secureMode,
   currentUser,
@@ -92,6 +97,7 @@ function AuthenticatedApp({
             fontSize={fontSize}
             termCols={termCols}
             termRows={termRows}
+            terminalGridLimit={terminalGridLimit}
             themes={themes}
             globalTheme={globalTheme}
             globalAutoScroll={globalAutoScroll}
@@ -137,6 +143,10 @@ export default function App() {
   const [fontSize, setFontSize] = useState(14);
   const [termCols, setTermCols] = useState(80);
   const [termRows, setTermRows] = useState(24);
+  const [terminalGridLimit, setTerminalGridLimit] = useState<{ maxCols: number | null; maxRows: number | null }>({
+    maxCols: null,
+    maxRows: null,
+  });
   const [showRegister, setShowRegister] = useState(false);
   const [secureMode, setSecureMode] = useState(true);
   const [themes, setThemes] = useState<NamedTheme[]>([]);
@@ -149,12 +159,24 @@ export default function App() {
   const currentUser = useMemo(() => auth.isAuthenticated ? parseTokenUser() : null, [auth.isAuthenticated]);
 
   useEffect(() => {
+    if (auth.isLoading || !auth.isAuthenticated) return;
+
+    let cancelled = false;
     api.getConfig().then(config => {
+      if (cancelled) return;
       setSecureMode(config.app.secure_mode);
       setFontSize(config.app.default_term.font_size);
       setTermCols(config.app.default_term.cols);
       setTermRows(config.app.default_term.rows);
+      setTerminalGridLimit({
+        maxCols: config.app.terminal_grid?.max_cols ?? null,
+        maxRows: config.app.terminal_grid?.max_rows ?? null,
+      });
     }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [auth.isAuthenticated, auth.isLoading]);
+
+  useEffect(() => {
     loadBundledThemes().then(setThemes).catch(() => {});
   }, []);
 
@@ -201,6 +223,7 @@ export default function App() {
           termCols={termCols}
           termRows={termRows}
           onTermSizeChange={handleTermSizeChange}
+          terminalGridLimit={terminalGridLimit}
           onNewAccount={() => setShowRegister(true)}
           secureMode={secureMode}
           currentUser={currentUser}

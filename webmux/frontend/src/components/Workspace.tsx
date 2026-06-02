@@ -13,6 +13,10 @@ interface WorkspaceProps {
   termRows: number;
   themes?: NamedTheme[];
   globalTheme?: string | null;
+  terminalGridLimit?: {
+    maxCols?: number | null;
+    maxRows?: number | null;
+  };
   globalAutoScroll: boolean;
   globalAutoScrollVersion: number;
   onGlobalAutoScrollChange: (on: boolean) => void;
@@ -31,6 +35,21 @@ function tilePixelSize(cols: number, rows: number, fontSize: number) {
   const w = Math.ceil(cols * fontSize * CHAR_W_RATIO) + TILE_PADDING;
   const h = Math.ceil(rows * fontSize * CHAR_H_RATIO) + CHROME_H + TILE_PADDING;
   return { w, h };
+}
+
+function normalizedLimit(value?: number | null): number | undefined {
+  if (typeof value !== 'number') return undefined;
+  return Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
+function isWithinTerminalGridLimit(
+  row: number,
+  col: number,
+  terminalGridLimit?: WorkspaceProps['terminalGridLimit'],
+): boolean {
+  const maxCols = normalizedLimit(terminalGridLimit?.maxCols);
+  const maxRows = normalizedLimit(terminalGridLimit?.maxRows);
+  return (maxCols === undefined || col < maxCols) && (maxRows === undefined || row < maxRows);
 }
 
 function scrollElementFullyIntoView(container: HTMLElement, element: HTMLElement): void {
@@ -58,8 +77,13 @@ function scrollElementFullyIntoView(container: HTMLElement, element: HTMLElement
   if (nextScrollTop !== container.scrollTop) container.scrollTop = nextScrollTop;
 }
 
-function getAddPositions(sessions: Session[]): { row: number; col: number }[] {
-  if (sessions.length === 0) return [{ row: 0, col: 0 }];
+function getAddPositions(
+  sessions: Session[],
+  terminalGridLimit?: WorkspaceProps['terminalGridLimit'],
+): { row: number; col: number }[] {
+  if (sessions.length === 0) {
+    return isWithinTerminalGridLimit(0, 0, terminalGridLimit) ? [{ row: 0, col: 0 }] : [];
+  }
 
   const occupied = new Set(sessions.map(s => `${s.row},${s.col}`));
   const positions: { row: number; col: number }[] = [];
@@ -67,12 +91,12 @@ function getAddPositions(sessions: Session[]): { row: number; col: number }[] {
 
   for (const s of sessions) {
     const right = `${s.row},${s.col + 1}`;
-    if (!occupied.has(right) && !seen.has(right)) {
+    if (!occupied.has(right) && !seen.has(right) && isWithinTerminalGridLimit(s.row, s.col + 1, terminalGridLimit)) {
       positions.push({ row: s.row, col: s.col + 1 });
       seen.add(right);
     }
     const below = `${s.row + 1},${s.col}`;
-    if (!occupied.has(below) && !seen.has(below)) {
+    if (!occupied.has(below) && !seen.has(below) && isWithinTerminalGridLimit(s.row + 1, s.col, terminalGridLimit)) {
       positions.push({ row: s.row + 1, col: s.col });
       seen.add(below);
     }
@@ -154,6 +178,7 @@ export function Workspace({
   termRows,
   themes = [],
   globalTheme = null,
+  terminalGridLimit,
   globalAutoScroll,
   globalAutoScrollVersion,
   onGlobalAutoScrollChange,
@@ -373,7 +398,7 @@ export function Workspace({
           for (const [dr, dc] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
             const r = s.row + dr;
             const c = s.col + dc;
-            if (r >= 0 && c >= 0 && !occupied.has(`${r},${c}`)) {
+            if (r >= 0 && c >= 0 && !occupied.has(`${r},${c}`) && isWithinTerminalGridLimit(r, c, terminalGridLimit)) {
               // Distance from center of visible tiles
               const avgRow = visible.reduce((a, v) => a + v.row, 0) / (visible.length || 1);
               const avgCol = visible.reduce((a, v) => a + v.col, 0) / (visible.length || 1);
@@ -398,7 +423,7 @@ export function Workspace({
       }
       return next;
     });
-  }, []);
+  }, [terminalGridLimit]);
 
   const getGridCell = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
     if (!gridRef.current) return null;
@@ -426,7 +451,7 @@ export function Workspace({
     const onMouseMove = (e: MouseEvent) => {
       setGhostPos({ x: e.clientX, y: e.clientY });
       const cell = getGridCell(e.clientX, e.clientY);
-      if (cell) {
+      if (cell && isWithinTerminalGridLimit(cell.row, cell.col, terminalGridLimit)) {
         const sessionAtCell = sessionsRef.current.find(s =>
           s.row === cell.row &&
           s.col === cell.col &&
@@ -449,7 +474,11 @@ export function Workspace({
       if (dragId && target) {
         const currentSessions = sessionsRef.current;
         const dragged = currentSessions.find(s => s.id === dragId);
-        const targetSession = currentSessions.find(s => s.row === target.row && s.col === target.col);
+        const targetSession = currentSessions.find(s =>
+          s.row === target.row &&
+          s.col === target.col &&
+          !collapsedSessionsRef.current.has(s.id)
+        );
 
         if (dragged) {
           const srcRow = dragged.row;
@@ -491,11 +520,11 @@ export function Workspace({
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
     };
-  }, [draggingId, getGridCell]);
+  }, [draggingId, getGridCell, terminalGridLimit]);
 
   const visibleSessions = sessions.filter(s => !collapsedSessions.has(s.id));
 
-  const addPositions = getAddPositions(visibleSessions);
+  const addPositions = getAddPositions(visibleSessions, terminalGridLimit);
 
   const allPositions = [
     ...visibleSessions.map(s => ({ row: s.row, col: s.col })),

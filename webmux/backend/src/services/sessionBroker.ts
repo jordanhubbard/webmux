@@ -5,7 +5,8 @@ import { Session, CreateSessionRequest } from '../types';
 import { transportLauncher } from './transportLauncher';
 import { presenceService } from './presenceService';
 import { persistence } from './persistenceManager';
-import { nextPositionFor, compactPositions } from './gridLayout';
+import { compactPositions } from './gridLayout';
+import { assertTerminalGridPosition, nextTerminalGridPosition } from './terminalGridLimits';
 
 export class SessionBroker extends EventEmitter {
   private sessions = new Map<string, Session>();
@@ -78,7 +79,7 @@ export class SessionBroker extends EventEmitter {
 
     // Determine layout position (scoped to this owner's sessions)
     const ownerSessions = Array.from(this.sessions.values()).filter(s => s.owner === owner);
-    const { row, col } = nextPositionFor(ownerSessions, req.row, req.col);
+    const { row, col } = nextTerminalGridPosition(ownerSessions, req.row, req.col);
 
     // Determine transport: use mosh if host allows it and config prefers it
     let transport = req.transport || 'ssh';
@@ -263,6 +264,7 @@ export class SessionBroker extends EventEmitter {
   move(sessionId: string, row: number, col: number): Session {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error(`Session ${sessionId} not found`);
+    assertTerminalGridPosition(row, col);
     session.row = row;
     session.col = col;
     session.updated_at = new Date().toISOString();

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { sessionBroker } from '../services/sessionBroker';
 import { requireAuth, AuthPayload } from '../middleware/auth';
 import { CreateSessionRequest } from '../types';
+import { isTerminalGridLimitError } from '../services/terminalGridLimits';
 
 const router = Router();
 router.use(requireAuth);
@@ -36,6 +37,10 @@ router.post('/', async (req: Request, res: Response) => {
     const session = await sessionBroker.create(body, owner);
     res.status(201).json(session);
   } catch (err) {
+    if (isTerminalGridLimitError(err)) {
+      res.status(400).json({ error: (err as Error).message });
+      return;
+    }
     console.error('Create session error:', err);
     res.status(500).json({ error: 'Failed to create session' });
   }
@@ -88,8 +93,16 @@ router.patch('/:id', (req: Request, res: Response) => {
     res.status(400).json({ error: 'row and col are required' });
     return;
   }
-  const updated = sessionBroker.move(req.params.id, row, col);
-  res.json(updated);
+  try {
+    const updated = sessionBroker.move(req.params.id, row, col);
+    res.json(updated);
+  } catch (err) {
+    if (isTerminalGridLimitError(err)) {
+      res.status(400).json({ error: (err as Error).message });
+      return;
+    }
+    throw err;
+  }
 });
 
 router.delete('/:id', async (req: Request, res: Response) => {

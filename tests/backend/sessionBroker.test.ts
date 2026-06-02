@@ -100,6 +100,43 @@ describe('SessionBroker', () => {
     expect(s2.col).toBe(1);
   });
 
+  it('wraps automatic terminal positions when max_cols is set', async () => {
+    const configDir = path.join(tmpDir, 'config');
+    fs.writeFileSync(path.join(configDir, 'app.yaml'), 'app:\n  name: webmux\n  listen_host: 0.0.0.0\n  http_port: 8080\n  https_port: 8443\n  secure_mode: false\n  trusted_http_allowed: true\n  default_term:\n    cols: 80\n    rows: 24\n    font_size: 14\n  terminal_grid:\n    max_cols: 1\n    max_rows: 2\n  transport:\n    prefer_mosh: false\n    ssh_fallback: true\n');
+
+    const broker = new SessionBroker();
+    await broker.initialize();
+    const s1 = await broker.create({ username: 'u', hostname: 'h' });
+    const s2 = await broker.create({ username: 'u', hostname: 'h' });
+
+    expect(s1.row).toBe(0);
+    expect(s1.col).toBe(0);
+    expect(s2.row).toBe(1);
+    expect(s2.col).toBe(0);
+  });
+
+  it('rejects terminal sessions when the configured grid is full', async () => {
+    const configDir = path.join(tmpDir, 'config');
+    fs.writeFileSync(path.join(configDir, 'app.yaml'), 'app:\n  name: webmux\n  listen_host: 0.0.0.0\n  http_port: 8080\n  https_port: 8443\n  secure_mode: false\n  trusted_http_allowed: true\n  default_term:\n    cols: 80\n    rows: 24\n    font_size: 14\n  terminal_grid:\n    max_cols: 1\n    max_rows: 1\n  transport:\n    prefer_mosh: false\n    ssh_fallback: true\n');
+
+    const broker = new SessionBroker();
+    await broker.initialize();
+    await broker.create({ username: 'u', hostname: 'h' });
+
+    await expect(broker.create({ username: 'u', hostname: 'h' })).rejects.toThrow('Terminal grid is full');
+  });
+
+  it('rejects moves outside the configured terminal grid', async () => {
+    const configDir = path.join(tmpDir, 'config');
+    fs.writeFileSync(path.join(configDir, 'app.yaml'), 'app:\n  name: webmux\n  listen_host: 0.0.0.0\n  http_port: 8080\n  https_port: 8443\n  secure_mode: false\n  trusted_http_allowed: true\n  default_term:\n    cols: 80\n    rows: 24\n    font_size: 14\n  terminal_grid:\n    max_cols: 1\n    max_rows: 1\n  transport:\n    prefer_mosh: false\n    ssh_fallback: true\n');
+
+    const broker = new SessionBroker();
+    await broker.initialize();
+    const session = await broker.create({ username: 'u', hostname: 'h' });
+
+    expect(() => broker.move(session.id, 0, 1)).toThrow('exceeds max_cols 1');
+  });
+
   it('persists sessions to disk', async () => {
     const broker = new SessionBroker();
     await broker.initialize();

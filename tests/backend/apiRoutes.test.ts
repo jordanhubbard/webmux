@@ -180,6 +180,25 @@ describe('API Routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.app.name).toBe('webmux');
     });
+
+    it('returns environment-overridden terminal grid limits', async () => {
+      const originalMaxCols = process.env.WEBMUX_TERMINAL_GRID_MAX_COLS;
+      const originalMaxRows = process.env.WEBMUX_TERMINAL_GRID_MAX_ROWS;
+      process.env.WEBMUX_TERMINAL_GRID_MAX_COLS = '2';
+      process.env.WEBMUX_TERMINAL_GRID_MAX_ROWS = '3';
+
+      try {
+        const res = await request(app).get('/api/config');
+        expect(res.status).toBe(200);
+        expect(res.body.app.terminal_grid.max_cols).toBe(2);
+        expect(res.body.app.terminal_grid.max_rows).toBe(3);
+      } finally {
+        if (originalMaxCols === undefined) delete process.env.WEBMUX_TERMINAL_GRID_MAX_COLS;
+        else process.env.WEBMUX_TERMINAL_GRID_MAX_COLS = originalMaxCols;
+        if (originalMaxRows === undefined) delete process.env.WEBMUX_TERMINAL_GRID_MAX_ROWS;
+        else process.env.WEBMUX_TERMINAL_GRID_MAX_ROWS = originalMaxRows;
+      }
+    });
   });
 
   describe('PUT /api/config', () => {
@@ -189,6 +208,15 @@ describe('API Routes', () => {
         .send({ app: { name: 'updated' } });
       expect(res.status).toBe(200);
       expect(res.body.app.name).toBe('updated');
+    });
+
+    it('updates terminal grid limits', async () => {
+      const res = await request(app)
+        .put('/api/config')
+        .send({ app: { terminal_grid: { max_cols: 4, max_rows: 3 } } });
+      expect(res.status).toBe(200);
+      expect(res.body.app.terminal_grid.max_cols).toBe(4);
+      expect(res.body.app.terminal_grid.max_rows).toBe(3);
     });
   });
 
@@ -225,6 +253,19 @@ describe('API Routes', () => {
         .post('/api/sessions')
         .send({ hostname: 'box.example.com' });
       expect(res.status).toBe(400);
+    });
+
+    it('returns 400 when requested terminal position exceeds grid limits', async () => {
+      await request(app)
+        .put('/api/config')
+        .send({ app: { terminal_grid: { max_cols: 1, max_rows: 1 } } });
+
+      const res = await request(app)
+        .post('/api/sessions')
+        .send({ username: 'user', hostname: 'box.example.com', row: 0, col: 1 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('exceeds max_cols 1');
     });
   });
 
