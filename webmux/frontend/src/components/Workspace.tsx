@@ -124,6 +124,7 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
   const [dropTarget, setDropTarget] = useState<{ row: number; col: number } | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
   const gridRef = useRef<HTMLDivElement>(null);
+  const outerRef = useRef<HTMLDivElement>(null);
 
   // Refs for use in event handlers (avoid stale closures)
   const sessionsRef = useRef<Session[]>([]);
@@ -316,7 +317,8 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
   }
 
   return (
-    <div style={styles.outer}>
+    <div style={styles.shell}>
+    <div ref={outerRef} style={styles.outer}>
       <div style={styles.hint}>Hold Shift to scroll</div>
       <div
         ref={gridRef}
@@ -391,10 +393,27 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
         />
       )}
     </div>
+    <WorkspaceMinimap
+      scrollRef={outerRef}
+      sessions={sessions}
+      numCols={numCols}
+      numRows={numRows}
+      tileWidth={tile.w}
+      tileHeight={tile.h}
+      gap={GAP}
+    />
+    </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  shell: {
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    minHeight: 0,
+  },
   outer: {
     flex: 1,
     overflowX: 'auto',
