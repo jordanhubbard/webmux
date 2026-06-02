@@ -52,6 +52,8 @@ function writeYaml(file: string, data: unknown): void {
 export class PersistenceManager {
   private watchers: FSWatcher[] = [];
   private changeHandlers: Map<string, (() => void)[]> = new Map();
+  private eventStream: fs.WriteStream | null = null;
+  private eventStreamDate: string | null = null;
 
   constructor() {
     ensureDirs();
@@ -146,11 +148,25 @@ export class PersistenceManager {
     }
   }
 
-  appendEvent(event: Record<string, unknown>): void {
+  // Non-blocking append to the day's events-YYYY-MM-DD.jsonl. Reuses a single
+  // write stream per day so we don't open/close an fd on every event.
+  // Returns a promise that resolves when the line has been flushed to the OS;
+  // most callers fire-and-forget, but tests and shutdown can await it.
+  appendEvent(event: Record<string, unknown>): Promise<void> {
     const today = new Date().toISOString().slice(0, 10);
-    const file = path.join(EVENTS_DIR, `events-${today}.jsonl`);
+    if (this.eventStreamDate !== today) {
+      if (this.eventStream) {
+        this.eventStream.end();
+      }
+      const file = path.join(EVENTS_DIR, `events-${today}.jsonl`);
+      this.eventStream = fs.createWriteStream(file, { flags: 'a', encoding: 'utf-8' });
+      this.eventStream.on('error', err => console.error('Event stream error:', err));
+      this.eventStreamDate = today;
+    }
     const line = JSON.stringify({ ...event, ts: new Date().toISOString() }) + '\n';
-    fs.appendFileSync(file, line, 'utf-8');
+    return new Promise(resolve => {
+      this.eventStream!.write(line, () => resolve());
+    });
   }
 
   watchConfig(filename: string, handler: () => void): void {
@@ -172,6 +188,11 @@ export class PersistenceManager {
 
   close(): void {
     this.watchers.forEach(w => w.close());
+    if (this.eventStream) {
+      this.eventStream.end();
+      this.eventStream = null;
+      this.eventStreamDate = null;
+    }
   }
 }
 

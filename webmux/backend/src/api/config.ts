@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { persistence } from '../services/persistenceManager';
 import { requireAuth } from '../middleware/auth';
+import { TransportLauncher } from '../services/transportLauncher';
 
 const router = Router();
 router.use(requireAuth);
@@ -32,6 +33,14 @@ router.put('/', (req: Request, res: Response) => {
     for (const key of Object.keys(updates)) {
       if (!MUTABLE_APP_FIELDS.includes(key)) {
         res.status(400).json({ error: `Field '${key}' cannot be changed at runtime` });
+        return;
+      }
+    }
+    if (updates.transport?.mosh_server_path) {
+      try {
+        TransportLauncher.validateMoshServerPath(updates.transport.mosh_server_path);
+      } catch (err) {
+        res.status(400).json({ error: (err as Error).message });
         return;
       }
     }

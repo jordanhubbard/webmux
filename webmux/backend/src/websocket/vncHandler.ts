@@ -3,11 +3,13 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import { vncBroker } from '../services/vncBroker';
 import { TransportLauncher } from '../services/transportLauncher';
+import { resolveAndValidateTarget } from '../services/networkGuard';
 import { verifyToken } from '../middleware/auth';
+import { consumeTicket } from '../api/auth';
 import { persistence } from '../services/persistenceManager';
 
 export function setupVncWebSocket(wss: WebSocketServer): void {
-  wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+  wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
     // Extract session ID from path /api/vnc/ws/:id
     const match = req.url?.match(/\/api\/vnc\/ws\/([^/?]+)/);
     if (!match) {
@@ -16,8 +18,9 @@ export function setupVncWebSocket(wss: WebSocketServer): void {
     }
     const sessionId = match[1];
 
-    // Authenticate via query param token
+    // Authenticate via short-lived ticket (preferred) or query-param token.
     const url = new URL(req.url!, `http://${req.headers.host}`);
+    const ticket = url.searchParams.get('ticket') || undefined;
     const token = url.searchParams.get('token') || undefined;
 
     let owner = 'anonymous';
@@ -31,7 +34,14 @@ export function setupVncWebSocket(wss: WebSocketServer): void {
       // Default to requiring auth if config can't be loaded
     }
 
-    if (authRequired) {
+    if (ticket) {
+      const username = consumeTicket(ticket);
+      if (!username) {
+        ws.close(1008, 'Unauthorized');
+        return;
+      }
+      owner = username;
+    } else if (authRequired) {
       if (!token) {
         ws.close(1008, 'Unauthorized');
         return;
@@ -65,7 +75,7 @@ export function setupVncWebSocket(wss: WebSocketServer): void {
       return;
     }
 
-    // Validate hostname (SSRF prevention)
+    // Validate hostname syntactically (SSRF prevention)
     try {
       TransportLauncher.validateHostname(session.hostname);
     } catch (err) {
@@ -73,8 +83,20 @@ export function setupVncWebSocket(wss: WebSocketServer): void {
       return;
     }
 
+    // Resolve to IP and reject loopback/link-local/reserved (SSRF guard).
+    // Connect by IP to avoid DNS-rebinding between check and connect.
+    let targetIp: string;
+    try {
+      targetIp = await resolveAndValidateTarget(session.hostname);
+    } catch (err) {
+      console.warn(`VNC SSRF block for session ${sessionId}: ${(err as Error).message}`);
+      vncBroker.setState(sessionId, 'error');
+      ws.close(1008, 'Target blocked');
+      return;
+    }
+
     // Open TCP connection to VNC server
-    const socket = net.createConnection(session.vnc_port, session.hostname);
+    const socket = net.createConnection(session.vnc_port, targetIp);
 
     // TCP → WebSocket (binary)
     socket.on('data', (chunk: Buffer) => {

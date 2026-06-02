@@ -8,6 +8,10 @@ module.exports = {
   testEnvironment: 'node',
   roots: [testsDir],
   testMatch: ['**/*.test.ts'],
+  // Test suites share filesystem state via the `persistence` module-level singleton
+  // and per-test process.env.WEBMUX_HOME swaps. Running in a single worker avoids
+  // cross-suite races; a proper fix would inject persistence rather than singleton.
+  maxWorkers: 1,
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   modulePathIgnorePatterns: ['<rootDir>/dist/'],
   modulePaths: [path.resolve(__dirname, 'node_modules'), path.resolve(__dirname, '../node_modules')],

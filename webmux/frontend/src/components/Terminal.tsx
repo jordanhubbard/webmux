@@ -11,6 +11,7 @@ export interface TerminalHandle {
   scrollToBottom: () => void;
   isAtBottom: () => boolean;
   sendInput: (data: string) => void;
+  focus: () => void;
 }
 
 interface TerminalProps {
@@ -46,6 +47,9 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     isAtBottom: () => !userScrolledRef.current,
     sendInput: (data: string) => {
       wsHandleRef.current?.send({ type: 'input', data });
+    },
+    focus: () => {
+      termRef.current?.focus();
     },
   }));
 

@@ -54,12 +54,12 @@ describe('PersistenceManager', () => {
     pm.close();
   });
 
-  it('appends events to JSONL file', () => {
+  it('appends events to JSONL file', async () => {
     jest.resetModules();
     const { PersistenceManager } = require('@backend/services/persistenceManager');
     const pm = new PersistenceManager();
 
-    pm.appendEvent({ type: 'test_event', data: 'hello' });
+    await pm.appendEvent({ type: 'test_event', data: 'hello' });
 
     const eventsDir = path.join(tmpDir, 'data', 'events');
     const files = fs.readdirSync(eventsDir);
