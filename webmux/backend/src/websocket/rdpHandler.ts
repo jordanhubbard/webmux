@@ -160,7 +160,7 @@ export function setupRdpWebSocket(wss: WebSocketServer): void {
       tcpBuf += chunk.toString('utf-8');
 
       // Process all complete instructions in buffer
-      while (true) {
+      for (;;) {
         const semi = tcpBuf.indexOf(';');
         if (semi === -1) break;
 

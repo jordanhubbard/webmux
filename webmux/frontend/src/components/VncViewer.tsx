@@ -59,7 +59,6 @@ export function VncViewer({ sessionId, vncPassword, mode, onStateChange, rfbRef 
       }
     };
     // Re-run when the session or display mode changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, mode]);
 
   if (mode === 'thumbnail') {

@@ -185,7 +185,7 @@ export function GraphicsWorkspace() {
   const dropTargetRef = useRef<{ row: number; col: number } | null>(null);
 
   const allSessions: AnySession[] = [...vncSessions, ...rdpSessions];
-  useEffect(() => { allSessionsRef.current = allSessions; }, [vncSessions, rdpSessions]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { allSessionsRef.current = allSessions; }, [vncSessions, rdpSessions]);
   useEffect(() => { draggingIdRef.current = draggingId; }, [draggingId]);
   useEffect(() => { dropTargetRef.current = dropTarget; }, [dropTarget]);
 

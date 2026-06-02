@@ -62,7 +62,6 @@ export function RdpViewer({ sessionId, mode, onStateChange, clientRef }: RdpView
       }
       if (clientRef) clientRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, mode]);
 
   if (mode === 'thumbnail') {

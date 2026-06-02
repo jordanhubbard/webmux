@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Tile, type TileHandle } from './Tile';
 import { ConnectionDialog } from './ConnectionDialog';
+import { WorkspaceMinimap } from './WorkspaceMinimap';
 import { api } from '../utils/api';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
-import type { Session, CreateSessionRequest } from '../types';
+import type { Session, CreateSessionRequest, NamedTheme } from '../types';
+import { loadSessionThemeOverrides, saveSessionThemeOverrides } from '../utils/themes';
 
 interface WorkspaceProps {
   fontSize: number;
@@ -144,6 +146,7 @@ export function Workspace({ fontSize, termCols, termRows, themes = [], globalThe
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
+  const [themeOverrides, setThemeOverrides] = useState<Map<string, string>>(() => loadSessionThemeOverrides());
   const { focusedSessionId, setFocusedSessionId } = useInputBroadcast();
 
   // Drag state
@@ -152,13 +155,13 @@ export function Workspace({ fontSize, termCols, termRows, themes = [], globalThe
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
   const outerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  const outerRef = useRef<HTMLDivElement>(null);
 
   // Refs for use in event handlers (avoid stale closures)
   const sessionsRef = useRef<Session[]>([]);
   const draggingIdRef = useRef<string | null>(null);
   const dropTargetRef = useRef<{ row: number; col: number } | null>(null);
   const tileRefs = useRef(new Map<string, TileHandle>());
+  const tileElementRefs = useRef(new Map<string, HTMLDivElement>());
   const focusedSessionIdRef = useRef<string | null>(null);
   useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
   useEffect(() => { draggingIdRef.current = draggingId; }, [draggingId]);
@@ -173,6 +176,14 @@ export function Workspace({ fontSize, termCols, termRows, themes = [], globalThe
       .catch(err => console.error('Failed to load sessions:', err))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!focusedSessionId) return;
+    const outer = outerRef.current;
+    const tileElement = tileElementRefs.current.get(focusedSessionId);
+    if (!outer || !tileElement) return;
+    scrollElementFullyIntoView(outer, tileElement);
+  }, [focusedSessionId]);
 
   const focusSession = useCallback((sessionId: string) => {
     focusedSessionIdRef.current = sessionId;
@@ -356,99 +367,99 @@ export function Workspace({ fontSize, termCols, termRows, themes = [], globalThe
 
   return (
     <div style={styles.shell}>
-    <div ref={outerRef} style={styles.outer}>
-      <div style={styles.hint}>Hold Shift to scroll</div>
-      <div
-        ref={gridRef}
-        style={{
-          ...styles.grid,
-          gridTemplateColumns: `repeat(${numCols}, ${tile.w}px)`,
-          gridTemplateRows: `repeat(${numRows}, ${tile.h}px)`,
-          cursor: draggingId ? 'grabbing' : undefined,
-        }}
-      >
-        {sessions.map(session => (
-          <div
-            key={session.id}
-            ref={element => {
-              if (element) tileElementRefs.current.set(session.id, element);
-              else tileElementRefs.current.delete(session.id);
-            }}
-            data-testid={`tile-cell-${session.id}`}
-            style={{
-              gridColumn: session.col + 1,
-              gridRow: session.row + 1,
-              minHeight: 0,
-              minWidth: 0,
-              display: 'flex',
-            }}
-          >
-            <Tile
-              ref={handle => {
-                if (handle) tileRefs.current.set(session.id, handle);
-                else tileRefs.current.delete(session.id);
+      <div ref={outerRef} style={styles.outer} data-testid="workspace-scroll">
+        <div style={styles.hint}>Hold Shift to scroll</div>
+        <div
+          ref={gridRef}
+          style={{
+            ...styles.grid,
+            gridTemplateColumns: `repeat(${numCols}, ${tile.w}px)`,
+            gridTemplateRows: `repeat(${numRows}, ${tile.h}px)`,
+            cursor: draggingId ? 'grabbing' : undefined,
+          }}
+        >
+          {sessions.map(session => (
+            <div
+              key={session.id}
+              ref={element => {
+                if (element) tileElementRefs.current.set(session.id, element);
+                else tileElementRefs.current.delete(session.id);
               }}
-              session={session}
-              fontSize={fontSize}
-              onClose={handleClose}
-              onReconnect={handleReconnect}
-              onRename={handleRename}
-              onTitleMouseDown={handleTitleMouseDown}
-              isDragging={draggingId === session.id}
-              isDropTarget={dropTarget?.row === session.row && dropTarget?.col === session.col}
-              themes={themes}
-              globalTheme={globalTheme}
-              themeOverride={themeOverrides.get(session.id) ?? null}
-              onThemeChange={handleThemeChange}
+              data-testid={`tile-cell-${session.id}`}
+              style={{
+                gridColumn: session.col + 1,
+                gridRow: session.row + 1,
+                minHeight: 0,
+                minWidth: 0,
+                display: 'flex',
+              }}
+            >
+              <Tile
+                ref={handle => {
+                  if (handle) tileRefs.current.set(session.id, handle);
+                  else tileRefs.current.delete(session.id);
+                }}
+                session={session}
+                fontSize={fontSize}
+                onClose={handleClose}
+                onReconnect={handleReconnect}
+                onRename={handleRename}
+                onTitleMouseDown={handleTitleMouseDown}
+                isDragging={draggingId === session.id}
+                isDropTarget={dropTarget?.row === session.row && dropTarget?.col === session.col}
+                themes={themes}
+                globalTheme={globalTheme}
+                themeOverride={themeOverrides.get(session.id) ?? null}
+                onThemeChange={handleThemeChange}
+              />
+            </div>
+          ))}
+
+          {addPositions.map(pos => (
+            <AddCell
+              key={`add-${pos.row}-${pos.col}`}
+              row={pos.row}
+              col={pos.col}
+              isEmpty={sessions.length === 0}
+              onClick={() => setDialogPos(pos)}
             />
-          </div>
-        ))}
+          ))}
+        </div>
 
-        {addPositions.map(pos => (
-          <AddCell
-            key={`add-${pos.row}-${pos.col}`}
-            row={pos.row}
-            col={pos.col}
-            isEmpty={sessions.length === 0}
-            onClick={() => setDialogPos(pos)}
+        {/* Drag ghost */}
+        {draggingId && (
+          <div style={{
+            position: 'fixed',
+            left: ghostPos.x - tile.w / 2,
+            top: ghostPos.y - CHROME_H / 2,
+            width: tile.w,
+            height: tile.h,
+            border: '2px solid #7c6af7',
+            borderRadius: 6,
+            background: 'rgba(124, 106, 247, 0.12)',
+            pointerEvents: 'none',
+            zIndex: 1000,
+          }} />
+        )}
+
+        {dialogPos && (
+          <ConnectionDialog
+            onConnect={handleAddSession}
+            onClose={() => setDialogPos(null)}
+            suggestedRow={dialogPos.row}
+            suggestedCol={dialogPos.col}
           />
-        ))}
+        )}
       </div>
-
-      {/* Drag ghost */}
-      {draggingId && (
-        <div style={{
-          position: 'fixed',
-          left: ghostPos.x - tile.w / 2,
-          top: ghostPos.y - CHROME_H / 2,
-          width: tile.w,
-          height: tile.h,
-          border: '2px solid #7c6af7',
-          borderRadius: 6,
-          background: 'rgba(124, 106, 247, 0.12)',
-          pointerEvents: 'none',
-          zIndex: 1000,
-        }} />
-      )}
-
-      {dialogPos && (
-        <ConnectionDialog
-          onConnect={handleAddSession}
-          onClose={() => setDialogPos(null)}
-          suggestedRow={dialogPos.row}
-          suggestedCol={dialogPos.col}
-        />
-      )}
-    </div>
-    <WorkspaceMinimap
-      scrollRef={outerRef}
-      sessions={sessions}
-      numCols={numCols}
-      numRows={numRows}
-      tileWidth={tile.w}
-      tileHeight={tile.h}
-      gap={GAP}
-    />
+      <WorkspaceMinimap
+        scrollRef={outerRef}
+        sessions={sessions}
+        numCols={numCols}
+        numRows={numRows}
+        tileWidth={tile.w}
+        tileHeight={tile.h}
+        gap={GAP}
+      />
     </div>
   );
 }

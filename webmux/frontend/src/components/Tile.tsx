@@ -32,6 +32,10 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
   onTitleMouseDown,
   isDragging,
   isDropTarget,
+  themes = [],
+  globalTheme = null,
+  themeOverride = null,
+  onThemeChange,
 }: TileProps, ref) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
