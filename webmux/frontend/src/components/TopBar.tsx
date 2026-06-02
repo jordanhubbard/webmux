@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { AuthState } from '../hooks/useAuth';
+import type { NamedTheme } from '../types';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
 import { HelpDialog } from './HelpDialog';
@@ -14,9 +15,12 @@ interface TopBarProps {
   onNewAccount: () => void;
   secureMode: boolean;
   currentUser: string | null;
+  themes?: NamedTheme[];
+  globalTheme?: string | null;
+  onGlobalThemeChange?: (name: string | null) => void;
 }
 
-export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser }: TopBarProps) {
+export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, onTermSizeChange, onNewAccount, secureMode, currentUser, themes = [], globalTheme = null, onGlobalThemeChange }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
   const { activePane, setActivePane } = useWorkspacePane();
   const [showHelp, setShowHelp] = useState(false);
@@ -89,6 +93,20 @@ export function TopBar({ auth, fontSize, onFontSizeChange, termCols, termRows, o
               A+
             </button>
           </div>
+        )}
+
+        {activePane === 'terminals' && themes.length > 0 && onGlobalThemeChange && (
+          <select
+            style={styles.themeSelect}
+            value={globalTheme ?? ''}
+            onChange={e => onGlobalThemeChange(e.target.value || null)}
+            title="Global terminal theme (per-session override available on each tile)"
+          >
+            <option value="">Default</option>
+            {themes.map(t => (
+              <option key={t.name} value={t.name}>{t.name}</option>
+            ))}
+          </select>
         )}
 
         {activePane === 'terminals' && (
@@ -213,6 +231,16 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 4,
+  },
+  themeSelect: {
+    background: '#1a1a3a',
+    color: '#aaa',
+    border: '1px solid #333366',
+    borderRadius: 4,
+    fontSize: 12,
+    padding: '3px 6px',
+    cursor: 'pointer',
+    maxWidth: 140,
   },
   termSize: {
     color: '#aaa',

@@ -12,6 +12,8 @@ const mockSessions = [
   },
 ];
 
+const terminalFocusFns = vi.hoisted(() => new Map<string, ReturnType<typeof vi.fn>>());
+
 vi.mock('@frontend/utils/api', () => ({
   api: {
     getSessions: vi.fn().mockResolvedValue([]),
@@ -26,25 +28,20 @@ vi.mock('@frontend/utils/api', () => ({
 
 vi.mock('@frontend/components/Terminal', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
-  const { useInputBroadcast } = await vi.importActual<typeof import('@frontend/contexts/InputBroadcastContext')>(
-    '@frontend/contexts/InputBroadcastContext',
-  );
   return {
     Terminal: React.forwardRef(function TerminalMock(
       { sessionId }: { sessionId: string },
       ref: Ref<unknown>,
     ) {
-      const { setFocusedSessionId } = useInputBroadcast();
+      const focus = terminalFocusFns.get(sessionId) ?? vi.fn();
+      terminalFocusFns.set(sessionId, focus);
       React.useImperativeHandle(ref, () => ({
         scrollToBottom: vi.fn(),
         isAtBottom: () => true,
         sendInput: vi.fn(),
+        focus,
       }));
-      return (
-        <div data-testid={`terminal-${sessionId}`} onMouseDown={() => setFocusedSessionId(sessionId)}>
-          Terminal Mock
-        </div>
-      );
+      return <div data-testid={`terminal-${sessionId}`}>Terminal Mock</div>;
     }),
   };
 });
@@ -70,6 +67,7 @@ function rect(left: number, top: number, right: number, bottom: number): DOMRect
 describe('Workspace', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    terminalFocusFns.clear();
     const { api } = await import('@frontend/utils/api');
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   });
@@ -126,76 +124,67 @@ describe('Workspace', () => {
     });
   });
 
-  it('scrolls the focused terminal tile fully into view', async () => {
+  it('cycles terminal focus left-to-right then down and wraps', async () => {
     const { api } = await import('@frontend/utils/api');
     const sessions = [
-      { ...mockSessions[0], id: 's1', title: 'one', row: 0, col: 0 },
-      { ...mockSessions[0], id: 's2', title: 'two', row: 0, col: 1 },
+      { ...mockSessions[0], id: 's1', title: 'one', row: 0, col: 1 },
+      { ...mockSessions[0], id: 's2', title: 'two', row: 0, col: 0 },
+      { ...mockSessions[0], id: 's3', title: 'three', row: 1, col: 0 },
     ];
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue(sessions);
 
-    render(<Workspace {...defaultProps} />, { wrapper });
-    await waitFor(() => {
-      expect(screen.getByTestId('tile-cell-s2')).toBeDefined();
+    const originalOffsetParent = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetParent');
+    Object.defineProperty(HTMLElement.prototype, 'offsetParent', {
+      configurable: true,
+      get() { return document.body; },
     });
 
-    const workspace = screen.getByTestId('workspace-scroll');
-    const tile = screen.getByTestId('tile-cell-s2');
-    workspace.scrollLeft = 10;
-    workspace.scrollTop = 5;
+    try {
+      render(<Workspace {...defaultProps} />, { wrapper });
+      await waitFor(() => {
+        expect(screen.getByText('three')).toBeDefined();
+      });
 
-    const workspaceRect = vi.spyOn(workspace, 'getBoundingClientRect')
-      .mockReturnValue(rect(0, 0, 100, 100));
-    const tileRect = vi.spyOn(tile, 'getBoundingClientRect')
-      .mockImplementation(() => rect(
-        130 - workspace.scrollLeft,
-        135 - workspace.scrollTop,
-        230 - workspace.scrollLeft,
-        235 - workspace.scrollTop,
-      ));
+      fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s2')).toHaveBeenCalledTimes(1);
+      });
 
-    fireEvent.mouseDown(screen.getByTestId('terminal-s2'));
+      fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s1')).toHaveBeenCalledTimes(1);
+      });
 
-    await waitFor(() => {
-      expect(workspace.scrollLeft).toBe(130);
-      expect(workspace.scrollTop).toBe(135);
-    });
+      fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s3')).toHaveBeenCalledTimes(1);
+      });
 
-    workspaceRect.mockRestore();
-    tileRect.mockRestore();
-  });
+      fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s2')).toHaveBeenCalledTimes(2);
+      });
 
-  it('does not scroll when the focused terminal tile is already fully visible', async () => {
-    const { api } = await import('@frontend/utils/api');
-    const sessions = [
-      { ...mockSessions[0], id: 's1', title: 'one', row: 0, col: 0 },
-      { ...mockSessions[0], id: 's2', title: 'two', row: 0, col: 1 },
-    ];
-    (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue(sessions);
+      fireEvent.keyDown(window, { code: 'Comma', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s3')).toHaveBeenCalledTimes(2);
+      });
 
-    render(<Workspace {...defaultProps} />, { wrapper });
-    await waitFor(() => {
-      expect(screen.getByTestId('tile-cell-s2')).toBeDefined();
-    });
+      fireEvent.keyDown(window, { key: '>', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s2')).toHaveBeenCalledTimes(3);
+      });
 
-    const workspace = screen.getByTestId('workspace-scroll');
-    const tile = screen.getByTestId('tile-cell-s2');
-    workspace.scrollLeft = 40;
-    workspace.scrollTop = 55;
-
-    const workspaceRect = vi.spyOn(workspace, 'getBoundingClientRect')
-      .mockReturnValue(rect(0, 0, 100, 100));
-    const tileRect = vi.spyOn(tile, 'getBoundingClientRect')
-      .mockReturnValue(rect(10, 15, 90, 95));
-
-    fireEvent.mouseDown(screen.getByTestId('terminal-s2'));
-
-    await waitFor(() => {
-      expect(workspace.scrollLeft).toBe(40);
-      expect(workspace.scrollTop).toBe(55);
-    });
-
-    workspaceRect.mockRestore();
-    tileRect.mockRestore();
+      fireEvent.keyDown(window, { key: '<', ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(terminalFocusFns.get('s3')).toHaveBeenCalledTimes(3);
+      });
+    } finally {
+      if (originalOffsetParent) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetParent', originalOffsetParent);
+      } else {
+        delete (HTMLElement.prototype as unknown as Record<string, unknown>).offsetParent;
+      }
+    }
   });
 });

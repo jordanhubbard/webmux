@@ -9,6 +9,8 @@ import { RegisterDialog } from './components/RegisterDialog';
 import { InputBroadcastProvider } from './contexts/InputBroadcastContext';
 import { WorkspacePaneProvider, useWorkspacePane } from './contexts/WorkspacePaneContext';
 import { api } from './utils/api';
+import type { NamedTheme } from './types';
+import { loadBundledThemes, loadGlobalTheme, saveGlobalTheme } from './utils/themes';
 
 interface AuthenticatedAppProps {
   auth: AuthState;
@@ -23,6 +25,9 @@ interface AuthenticatedAppProps {
   showRegister: boolean;
   onRegisterClose: () => void;
   onAccountCreated: (username: string) => void;
+  themes: NamedTheme[];
+  globalTheme: string | null;
+  onGlobalThemeChange: (name: string | null) => void;
 }
 
 function AuthenticatedApp({
@@ -38,6 +43,9 @@ function AuthenticatedApp({
   showRegister,
   onRegisterClose,
   onAccountCreated,
+  themes,
+  globalTheme,
+  onGlobalThemeChange,
 }: AuthenticatedAppProps) {
   const { activePane } = useWorkspacePane();
 
@@ -53,11 +61,14 @@ function AuthenticatedApp({
         onNewAccount={onNewAccount}
         secureMode={secureMode}
         currentUser={currentUser}
+        themes={themes}
+        globalTheme={globalTheme}
+        onGlobalThemeChange={onGlobalThemeChange}
       />
 
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
-          <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} />
+          <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} themes={themes} globalTheme={globalTheme} />
         </div>
         <div style={{ display: activePane === 'desktops' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
           <GraphicsWorkspace />
@@ -96,6 +107,8 @@ export default function App() {
   const [termRows, setTermRows] = useState(24);
   const [showRegister, setShowRegister] = useState(false);
   const [secureMode, setSecureMode] = useState(true);
+  const [themes, setThemes] = useState<NamedTheme[]>([]);
+  const [globalTheme, setGlobalTheme] = useState<string | null>(() => loadGlobalTheme());
 
   const currentUser = useMemo(() => auth.isAuthenticated ? parseTokenUser() : null, [auth.isAuthenticated]);
 
@@ -106,6 +119,12 @@ export default function App() {
       setTermCols(config.app.default_term.cols);
       setTermRows(config.app.default_term.rows);
     }).catch(() => {});
+    loadBundledThemes().then(setThemes).catch(() => {});
+  }, []);
+
+  const handleGlobalThemeChange = useCallback((name: string | null) => {
+    setGlobalTheme(name);
+    saveGlobalTheme(name);
   }, []);
 
   const handleFontSizeChange = useCallback((size: number) => {
@@ -152,6 +171,9 @@ export default function App() {
           showRegister={showRegister}
           onRegisterClose={() => setShowRegister(false)}
           onAccountCreated={handleAccountCreated}
+          themes={themes}
+          globalTheme={globalTheme}
+          onGlobalThemeChange={handleGlobalThemeChange}
         />
       </WorkspacePaneProvider>
     </InputBroadcastProvider>

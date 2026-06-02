@@ -1,8 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useState, useCallback, useRef } from 'react';
 import { Terminal, type TerminalHandle } from './Terminal';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { api } from '../utils/api';
-import type { Session, ConnectionState } from '../types';
+import type { Session, ConnectionState, NamedTheme } from '../types';
 
 interface TileProps {
   session: Session;
@@ -13,9 +13,26 @@ interface TileProps {
   onTitleMouseDown?: (sessionId: string, e: React.MouseEvent) => void;
   isDragging?: boolean;
   isDropTarget?: boolean;
+  themes?: NamedTheme[];
+  globalTheme?: string | null;
+  themeOverride?: string | null;
+  onThemeChange?: (id: string, theme: string | null) => void;
 }
 
-export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitleMouseDown, isDragging, isDropTarget }: TileProps) {
+export interface TileHandle {
+  focusTerminal: () => void;
+}
+
+export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
+  session,
+  fontSize,
+  onClose,
+  onReconnect,
+  onRename,
+  onTitleMouseDown,
+  isDragging,
+  isDropTarget,
+}: TileProps, ref) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
   const [editing, setEditing] = useState(false);
@@ -26,6 +43,12 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isFocused = focusedSessionId === session.id;
+
+  useImperativeHandle(ref, () => ({
+    focusTerminal: () => {
+      termHandleRef.current?.focus();
+    },
+  }));
 
   const handleStateChange = useCallback((newState: ConnectionState) => {
     setState(newState);
@@ -168,6 +191,20 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
             onClick={() => termHandleRef.current?.scrollToBottom()}
             title="Scroll to bottom"
           >&#8595;</button>
+          {themes.length > 0 && onThemeChange && (
+            <select
+              style={styles.themeSelect}
+              value={themeOverride ?? ''}
+              onChange={e => onThemeChange(session.id, e.target.value || null)}
+              title={themeOverride ? `Theme override: ${themeOverride}` : `Using global theme${globalTheme ? ` (${globalTheme})` : ''}`}
+              onMouseDown={e => e.stopPropagation()}
+            >
+              <option value="">{globalTheme ? `\u25bd ${globalTheme}` : '\u25bd (default)'}</option>
+              {themes.map(t => (
+                <option key={t.name} value={t.name}>{t.name}</option>
+              ))}
+            </select>
+          )}
           {(state === 'disconnected' || state === 'error') && (
             <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onReconnect(session.id)} title="Reconnect">{'\u21ba'}</button>
           )}
@@ -184,11 +221,12 @@ export function Tile({ session, fontSize, onClose, onReconnect, onRename, onTitl
           onStateChange={handleStateChange}
           onViewerUpdate={handleViewerUpdate}
           onFocusGained={handleFocusGained}
+          theme={themes.find(t => t.name === (themeOverride ?? globalTheme))?.theme}
         />
       </div>
     </div>
   );
-}
+});
 
 const styles: Record<string, React.CSSProperties> = {
   tile: {
@@ -272,6 +310,16 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '2px 4px',
     borderRadius: 2,
     lineHeight: 1,
+  },
+  themeSelect: {
+    background: '#1a1a3a',
+    color: '#aaa',
+    border: '1px solid #333366',
+    borderRadius: 3,
+    fontSize: 10,
+    padding: '1px 4px',
+    cursor: 'pointer',
+    maxWidth: 100,
   },
   termContainer: {
     flex: 1,
