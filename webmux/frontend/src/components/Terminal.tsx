@@ -47,6 +47,7 @@ interface TerminalProps {
   onViewerUpdate: (count: number, focusOwner?: string) => void;
   onFocusGained: () => void;
   theme?: TerminalTheme | null;
+  onBell?: () => void;
 }
 
 export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal({
@@ -58,6 +59,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   onViewerUpdate,
   onFocusGained,
   theme,
+  onBell,
 }: TerminalProps, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
@@ -94,9 +96,11 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const onStateChangeRef = useRef(onStateChange);
   const onViewerUpdateRef = useRef(onViewerUpdate);
   const onFocusGainedRef = useRef(onFocusGained);
+  const onBellRef = useRef(onBell);
   useEffect(() => { onStateChangeRef.current = onStateChange; }, [onStateChange]);
   useEffect(() => { onViewerUpdateRef.current = onViewerUpdate; }, [onViewerUpdate]);
   useEffect(() => { onFocusGainedRef.current = onFocusGained; }, [onFocusGained]);
+  useEffect(() => { onBellRef.current = onBell; }, [onBell]);
 
   // routeInput is a stable callback (useCallback with [] deps) that reads
   // broadcastMode from a ref internally — use it directly without a wrapper ref.
@@ -199,6 +203,10 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       wsHandleRef.current?.send({ type: 'resize', cols, rows });
     });
 
+    const bellListener = term.onBell(() => {
+      onBellRef.current?.();
+    });
+
     const termEl = containerRef.current!;
     const wheelHandler = (e: WheelEvent) => {
       if (e.deltaY < 0) {
@@ -236,6 +244,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     return () => {
       dataListener.dispose();
       resizeListener.dispose();
+      bellListener.dispose();
       termEl.removeEventListener('wheel', wheelHandler);
       el.removeEventListener('mousedown', clickHandler);
       term.dispose();
@@ -279,10 +288,14 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     }
   }, [autoScroll]);
 
-  // Refit on container resize
+  // Refit on container resize (skip if container is hidden/off-screen)
   useEffect(() => {
     const observer = new ResizeObserver(() => {
-      fitAddonRef.current?.fit();
+      if (containerRef.current && containerRef.current.offsetWidth > 0 && containerRef.current.offsetHeight > 0) {
+        fitAddonRef.current?.fit();
+        // Force re-render of buffer after restoring from minimized
+        termRef.current?.refresh(0, termRef.current.rows - 1);
+      }
     });
     if (containerRef.current) {
       observer.observe(containerRef.current);

@@ -11,6 +11,10 @@ interface TileProps {
   onAutoScrollToggle?: (id: string) => void;
   locked?: boolean;
   onLockToggle?: (id: string) => void;
+  collapsed?: boolean;
+  onToggleCollapse?: (id: string) => void;
+  onBell?: (id: string) => void;
+  onFocus?: () => void;
   onClose: (id: string) => void;
   onReconnect: (id: string) => void;
   onRename: (id: string, title: string) => void;
@@ -34,6 +38,10 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
   onAutoScrollToggle,
   locked = false,
   onLockToggle,
+  collapsed = false,
+  onToggleCollapse,
+  onBell,
+  onFocus: onTileFocus,
   onClose,
   onReconnect,
   onRename,
@@ -71,8 +79,8 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
   }, []);
 
   const handleFocusGained = useCallback(() => {
-    // Terminal handles setting focusedSessionId via context
-  }, []);
+    onTileFocus?.();
+  }, [onTileFocus]);
 
   const handleChromeMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
@@ -158,7 +166,11 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
         onMouseDown={handleChromeMouseDown}
       >
         <div style={styles.chromeLeft}>
-          <span style={{ ...styles.stateIndicator, color: stateColor }}>{stateIcon}</span>
+          <span
+            style={{ ...styles.stateIndicator, color: stateColor, cursor: onToggleCollapse ? 'pointer' : 'default' }}
+            onClick={(e) => { e.stopPropagation(); onToggleCollapse?.(session.id); }}
+            title={onToggleCollapse ? (collapsed ? 'Restore' : 'Minimize') : undefined}
+          >{stateIcon}</span>
           {editing ? (
             <input
               ref={inputRef}
@@ -239,7 +251,7 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
         </div>
       </div>
 
-      <div style={styles.termContainer}>
+      <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
         <Terminal
           ref={termHandleRef}
           sessionId={session.id}
@@ -250,6 +262,7 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
           onViewerUpdate={handleViewerUpdate}
           onFocusGained={handleFocusGained}
           theme={themes.find(t => t.name === (themeOverride ?? globalTheme))?.theme}
+          onBell={() => onBell?.(session.id)}
         />
       </div>
     </div>
