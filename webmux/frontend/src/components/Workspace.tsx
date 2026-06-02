@@ -9,6 +9,8 @@ interface WorkspaceProps {
   fontSize: number;
   termCols: number;
   termRows: number;
+  themes?: NamedTheme[];
+  globalTheme?: string | null;
 }
 
 const GAP = 8;
@@ -113,7 +115,7 @@ function AddCell({ row, col, isEmpty, onClick }: {
   );
 }
 
-export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
+export function Workspace({ fontSize, termCols, termRows, themes = [], globalTheme = null }: WorkspaceProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
@@ -204,6 +206,16 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
     api.renameSession(id, title).catch(err => {
       console.error('Rename error:', err);
       api.getSessions().then(setSessions);
+    });
+  }, []);
+
+  const handleThemeChange = useCallback((id: string, theme: string | null) => {
+    setThemeOverrides(prev => {
+      const next = new Map(prev);
+      if (theme) next.set(id, theme);
+      else next.delete(id);
+      saveSessionThemeOverrides(next);
+      return next;
     });
   }, []);
 
@@ -353,6 +365,10 @@ export function Workspace({ fontSize, termCols, termRows }: WorkspaceProps) {
               onTitleMouseDown={handleTitleMouseDown}
               isDragging={draggingId === session.id}
               isDropTarget={dropTarget?.row === session.row && dropTarget?.col === session.col}
+              themes={themes}
+              globalTheme={globalTheme}
+              themeOverride={themeOverrides.get(session.id) ?? null}
+              onThemeChange={handleThemeChange}
             />
           </div>
         ))}

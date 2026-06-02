@@ -1,0 +1,6 @@
+{
+  "themes": [
+    { "name": "Amber", "file": "Amber.itermcolors" },
+    { "name": "Borland", "file": "Borland.itermcolors" }
+  ]
+}
