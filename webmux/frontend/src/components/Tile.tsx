@@ -7,6 +7,10 @@ import type { Session, ConnectionState, NamedTheme } from '../types';
 interface TileProps {
   session: Session;
   fontSize: number;
+  autoScroll?: boolean;
+  onAutoScrollToggle?: (id: string) => void;
+  locked?: boolean;
+  onLockToggle?: (id: string) => void;
   onClose: (id: string) => void;
   onReconnect: (id: string) => void;
   onRename: (id: string, title: string) => void;
@@ -26,6 +30,10 @@ export interface TileHandle {
 export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
   session,
   fontSize,
+  autoScroll = true,
+  onAutoScrollToggle,
+  locked = false,
+  onLockToggle,
   onClose,
   onReconnect,
   onRename,
@@ -69,6 +77,7 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
   const handleChromeMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
     if ((e.target as HTMLElement).closest('input')) return;
+    if ((e.target as HTMLElement).closest('select')) return;
     onTitleMouseDown?.(session.id, e);
   }, [onTitleMouseDown, session.id]);
 
@@ -191,6 +200,11 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
             </span>
           )}
           <button
+            style={{ ...styles.chromeBtn, color: autoScroll ? '#50fa7b' : '#666', fontSize: 10 }}
+            onClick={() => onAutoScrollToggle?.(session.id)}
+            title={autoScroll ? 'Auto-scroll: ON (click to disable)' : 'Auto-scroll: OFF (click to enable)'}
+          >{'\u21d3'}</button>
+          <button
             style={{ ...styles.chromeBtn, color: '#8888cc' }}
             onClick={() => termHandleRef.current?.scrollToBottom()}
             title="Scroll to bottom"
@@ -209,10 +223,19 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
               ))}
             </select>
           )}
+          <button
+            style={{ ...styles.chromeBtn, color: locked ? '#e8a030' : '#666', fontSize: 10 }}
+            onClick={() => onLockToggle?.(session.id)}
+            title={locked ? 'Locked (click to unlock)' : 'Unlocked (click to lock)'}
+          >{locked ? '\ud83d\udd12' : '\ud83d\udd13'}</button>
           {(state === 'disconnected' || state === 'error') && (
             <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onReconnect(session.id)} title="Reconnect">{'\u21ba'}</button>
           )}
-          <button style={{ ...styles.chromeBtn, color: '#ff8888' }} onClick={() => onClose(session.id)} title="Close">{'\u2715'}</button>
+          <button
+            style={{ ...styles.chromeBtn, color: locked ? '#444' : '#ff8888', cursor: locked ? 'not-allowed' : 'pointer' }}
+            onClick={() => { if (!locked) onClose(session.id); }}
+            title={locked ? 'Window is locked' : 'Close'}
+          >{'\u2715'}</button>
         </div>
       </div>
 
@@ -222,6 +245,7 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
           sessionId={session.id}
           fontSize={fontSize}
           state={state}
+          autoScroll={autoScroll}
           onStateChange={handleStateChange}
           onViewerUpdate={handleViewerUpdate}
           onFocusGained={handleFocusGained}

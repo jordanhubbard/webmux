@@ -18,5 +18,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2"
+  },
+  "dependencies": {
+    "@xterm/addon-search": "^0.16.0"
   }
 }

@@ -28,6 +28,14 @@ interface AuthenticatedAppProps {
   themes: NamedTheme[];
   globalTheme: string | null;
   onGlobalThemeChange: (name: string | null) => void;
+  globalAutoScroll: boolean;
+  onGlobalAutoScrollChange: (on: boolean) => void;
+  onGlobalAutoScrollSync: (on: boolean) => void;
+  globalAutoScrollVersion: number;
+  globalLock: boolean;
+  onGlobalLockChange: (on: boolean) => void;
+  onGlobalLockSync: (on: boolean) => void;
+  globalLockVersion: number;
 }
 
 function AuthenticatedApp({
@@ -46,6 +54,14 @@ function AuthenticatedApp({
   themes,
   globalTheme,
   onGlobalThemeChange,
+  globalAutoScroll,
+  onGlobalAutoScrollChange,
+  onGlobalAutoScrollSync,
+  globalAutoScrollVersion,
+  globalLock,
+  onGlobalLockChange,
+  onGlobalLockSync,
+  globalLockVersion,
 }: AuthenticatedAppProps) {
   const { activePane } = useWorkspacePane();
 
@@ -64,11 +80,27 @@ function AuthenticatedApp({
         themes={themes}
         globalTheme={globalTheme}
         onGlobalThemeChange={onGlobalThemeChange}
+        globalAutoScroll={globalAutoScroll}
+        onGlobalAutoScrollChange={onGlobalAutoScrollChange}
+        globalLock={globalLock}
+        onGlobalLockChange={onGlobalLockChange}
       />
 
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
-          <Workspace fontSize={fontSize} termCols={termCols} termRows={termRows} themes={themes} globalTheme={globalTheme} />
+          <Workspace
+            fontSize={fontSize}
+            termCols={termCols}
+            termRows={termRows}
+            themes={themes}
+            globalTheme={globalTheme}
+            globalAutoScroll={globalAutoScroll}
+            globalAutoScrollVersion={globalAutoScrollVersion}
+            onGlobalAutoScrollChange={onGlobalAutoScrollSync}
+            globalLock={globalLock}
+            globalLockVersion={globalLockVersion}
+            onGlobalLockChange={onGlobalLockSync}
+          />
         </div>
         <div style={{ display: activePane === 'desktops' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
           <GraphicsWorkspace />
@@ -109,6 +141,10 @@ export default function App() {
   const [secureMode, setSecureMode] = useState(true);
   const [themes, setThemes] = useState<NamedTheme[]>([]);
   const [globalTheme, setGlobalTheme] = useState<string | null>(() => loadGlobalTheme());
+  const [globalAutoScroll, setGlobalAutoScroll] = useState(true);
+  const [globalAutoScrollVersion, setGlobalAutoScrollVersion] = useState(0);
+  const [globalLock, setGlobalLock] = useState(false);
+  const [globalLockVersion, setGlobalLockVersion] = useState(0);
 
   const currentUser = useMemo(() => auth.isAuthenticated ? parseTokenUser() : null, [auth.isAuthenticated]);
 
@@ -174,6 +210,20 @@ export default function App() {
           themes={themes}
           globalTheme={globalTheme}
           onGlobalThemeChange={handleGlobalThemeChange}
+          globalAutoScroll={globalAutoScroll}
+          onGlobalAutoScrollChange={(on: boolean) => {
+            setGlobalAutoScroll(on);
+            setGlobalAutoScrollVersion(v => v + 1);
+          }}
+          onGlobalAutoScrollSync={setGlobalAutoScroll}
+          globalAutoScrollVersion={globalAutoScrollVersion}
+          globalLock={globalLock}
+          onGlobalLockChange={(on: boolean) => {
+            setGlobalLock(on);
+            setGlobalLockVersion(v => v + 1);
+          }}
+          onGlobalLockSync={setGlobalLock}
+          globalLockVersion={globalLockVersion}
         />
       </WorkspacePaneProvider>
     </InputBroadcastProvider>
