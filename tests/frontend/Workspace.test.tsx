@@ -50,6 +50,20 @@ const wrapper = ({ children }: { children: ReactNode }) => (
   <InputBroadcastProvider>{children}</InputBroadcastProvider>
 );
 
+function rect(left: number, top: number, right: number, bottom: number): DOMRect {
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    x: left,
+    y: top,
+    width: right - left,
+    height: bottom - top,
+    toJSON: () => ({}),
+  } as DOMRect;
+}
+
 describe('Workspace', () => {
   beforeEach(async () => {
     vi.clearAllMocks();

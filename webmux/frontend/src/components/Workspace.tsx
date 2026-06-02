@@ -25,6 +25,31 @@ function tilePixelSize(cols: number, rows: number, fontSize: number) {
   return { w, h };
 }
 
+function scrollElementFullyIntoView(container: HTMLElement, element: HTMLElement): void {
+  const containerRect = container.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+  let nextScrollLeft = container.scrollLeft;
+  let nextScrollTop = container.scrollTop;
+
+  if (elementRect.left < containerRect.left) {
+    nextScrollLeft -= containerRect.left - elementRect.left;
+  } else if (elementRect.right > containerRect.right) {
+    nextScrollLeft += elementRect.right - containerRect.right;
+  }
+
+  if (elementRect.top < containerRect.top) {
+    nextScrollTop -= containerRect.top - elementRect.top;
+  } else if (elementRect.bottom > containerRect.bottom) {
+    nextScrollTop += elementRect.bottom - containerRect.bottom;
+  }
+
+  nextScrollLeft = Math.max(0, nextScrollLeft);
+  nextScrollTop = Math.max(0, nextScrollTop);
+
+  if (nextScrollLeft !== container.scrollLeft) container.scrollLeft = nextScrollLeft;
+  if (nextScrollTop !== container.scrollTop) container.scrollTop = nextScrollTop;
+}
+
 function getAddPositions(sessions: Session[]): { row: number; col: number }[] {
   if (sessions.length === 0) return [{ row: 0, col: 0 }];
 
@@ -125,6 +150,7 @@ export function Workspace({ fontSize, termCols, termRows, themes = [], globalThe
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ row: number; col: number } | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
+  const outerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const outerRef = useRef<HTMLDivElement>(null);
 
@@ -344,6 +370,11 @@ export function Workspace({ fontSize, termCols, termRows, themes = [], globalThe
         {sessions.map(session => (
           <div
             key={session.id}
+            ref={element => {
+              if (element) tileElementRefs.current.set(session.id, element);
+              else tileElementRefs.current.delete(session.id);
+            }}
+            data-testid={`tile-cell-${session.id}`}
             style={{
               gridColumn: session.col + 1,
               gridRow: session.row + 1,
