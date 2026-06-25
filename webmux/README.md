@@ -18,6 +18,7 @@ A web-native tmux-on-a-jump-box: a persistent shared terminal wall that runs in 
 - **YAML configuration** — human-editable, lift-and-shift deployment
 - **SSH with keepalive** — `ServerAliveInterval`, `ServerAliveCountMax`, `ConnectTimeout`
 - **Audit log** — JSONL append-only event log
+- **Optional agent views** — disabled-by-default tmux-backed agent session browser
 
 ## Quick Start
 
@@ -55,6 +56,8 @@ app:
 ```
 
 `WEBMUX_TERMINAL_GRID_MAX_COLS` and `WEBMUX_TERMINAL_GRID_MAX_ROWS` can override those YAML values at runtime.
+
+Agent views are configured under `app.agents` and are disabled by default. See `../docs/agent-views.md` and `examples/agent-views/app.yaml` for setup, security notes, optional status hooks, and host-switcher examples.
 
 Add hosts to `config/hosts.yaml`:
 
@@ -161,6 +164,10 @@ Passwords are stored as Argon2id hashes. Plain-text passwords are never written 
 | `PUT` | `/api/config` | Update app config |
 | `GET` | `/api/config/layout` | Get layout |
 | `PUT` | `/api/config/layout` | Update layout |
+| `GET` | `/api/agents/config` | Get normalized agent-view config |
+| `GET` | `/api/agents/sessions` | List configured agent tmux sessions |
+| `POST` | `/api/agents/:agentId/attach` | Attach to a validated tmux session |
+| `POST` | `/api/agents/:agentId/scratch` | Open or reuse an agent scratch shell |
 | `WS` | `/api/term/:id?token=<jwt>` | Terminal WebSocket |
 
 ### WebSocket Message Types
