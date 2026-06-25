@@ -1,4 +1,18 @@
-import type { Session, HostEntry, KeyEntry, AuthStatus, AppConfig, DeepPartial, CreateSessionRequest, VncSession, CreateVncSessionRequest, RdpSession, CreateRdpSessionRequest } from '../types';
+import type {
+  AgentTmuxSession,
+  AppConfig,
+  AuthStatus,
+  CreateRdpSessionRequest,
+  CreateSessionRequest,
+  CreateVncSessionRequest,
+  DeepPartial,
+  HostEntry,
+  KeyEntry,
+  AgentsConfig,
+  RdpSession,
+  Session,
+  VncSession,
+} from '../types';
 
 const API_BASE = '/api';
 
@@ -140,6 +154,15 @@ export const api = {
   getConfig: () => request<AppConfig>('/config'),
   updateConfig: (config: DeepPartial<AppConfig>) =>
     request<AppConfig>('/config', { method: 'PUT', body: JSON.stringify(config) }),
+
+  // Agent sessions
+  getAgentConfig: () => request<AgentsConfig>('/agents/config'),
+  getAllAgentSessions: () => request<AgentTmuxSession[]>('/agents/sessions'),
+  getAgentSessions: (agentId: string) => request<AgentTmuxSession[]>(`/agents/${agentId}/sessions`),
+  attachAgentSession: (agentId: string, req: { name: string; cols: number; rows: number }) =>
+    request<Session>(`/agents/${agentId}/attach`, { method: 'POST', body: JSON.stringify(req) }),
+  createAgentScratch: (agentId: string, req: { selectedName?: string; cols: number; rows: number }) =>
+    request<Session>(`/agents/${agentId}/scratch`, { method: 'POST', body: JSON.stringify(req) }),
 };
 
 export function buildWsUrl(sessionId: string): string {

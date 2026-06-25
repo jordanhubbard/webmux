@@ -1,7 +1,10 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import type { WorkspaceName } from '../types';
 
-export type WorkspacePane = 'terminals' | 'desktops';
+export type WorkspacePane = WorkspaceName;
+
+export const DEFAULT_WORKSPACE_PANE: WorkspacePane = 'terminals';
 
 interface WorkspacePaneContextValue {
   activePane: WorkspacePane;
@@ -9,12 +12,39 @@ interface WorkspacePaneContextValue {
 }
 
 const WorkspacePaneContext = createContext<WorkspacePaneContextValue>({
-  activePane: 'terminals',
+  activePane: DEFAULT_WORKSPACE_PANE,
   setActivePane: () => {},
 });
 
-export function WorkspacePaneProvider({ children }: { children: ReactNode }) {
-  const [activePane, setActivePane] = useState<WorkspacePane>('terminals');
+export function WorkspacePaneProvider({
+  children,
+  defaultPane = DEFAULT_WORKSPACE_PANE,
+  availablePanes = ['terminals', 'desktops'],
+}: {
+  children: ReactNode;
+  defaultPane?: WorkspacePane;
+  availablePanes?: WorkspacePane[];
+}) {
+  const availableKey = availablePanes.join('\0');
+  const available = useMemo(() => new Set(availablePanes), [availableKey]);
+  const [activePane, setActivePaneState] = useState<WorkspacePane>(defaultPane);
+  const userSelectedPane = useRef(false);
+
+  useEffect(() => {
+    if (!available.has(activePane)) {
+      setActivePaneState(available.has(defaultPane) ? defaultPane : DEFAULT_WORKSPACE_PANE);
+      return;
+    }
+    if (!userSelectedPane.current && activePane !== defaultPane && available.has(defaultPane)) {
+      setActivePaneState(defaultPane);
+    }
+  }, [activePane, available, defaultPane]);
+
+  const setActivePane = useCallback((pane: WorkspacePane) => {
+    userSelectedPane.current = true;
+    setActivePaneState(pane);
+  }, []);
+
   return (
     <WorkspacePaneContext.Provider value={{ activePane, setActivePane }}>
       {children}

@@ -23,10 +23,16 @@ export default defineConfig({
   resolve: {
     alias: {
       '@frontend': path.resolve(__dirname, 'src'),
+      '@testing-library/react': path.resolve(__dirname, '../node_modules/@testing-library/react'),
+      react: path.resolve(__dirname, '../node_modules/react'),
+      'react-dom': path.resolve(__dirname, '../node_modules/react-dom'),
     },
     preserveSymlinks: true,
   },
   server: {
+    fs: {
+      allow: [path.resolve(__dirname, '../..')],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
@@ -54,6 +60,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    include: ['../../tests/frontend/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
     setupFiles: './src/test/setup.ts',
     server: {
       deps: {
