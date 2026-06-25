@@ -12,6 +12,17 @@ app:
   terminal_grid:
     max_cols: null
     max_rows: null
+  ui:
+    default_pane: terminals
+    host_switcher:
+      enabled: false
+      suffixes: []
+      hosts: []
+  agents:
+    enabled: false
+    combined_pane: true
+    disable_in_multi_user_mode: true
+    definitions: []
   transport:
     prefer_mosh: false
     ssh_fallback: true

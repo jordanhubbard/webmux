@@ -73,6 +73,27 @@ export class TransportLauncher {
   }
 
   private launchExec(session: Session): pty.IPty {
+    if (session.exec_argv && session.exec_argv.length > 0) {
+      const [command, ...args] = session.exec_argv;
+      if (!command || command.includes('\0')) {
+        throw new Error('Invalid exec argv command');
+      }
+      if (args.some(arg => arg.includes('\0'))) {
+        throw new Error('Invalid exec argv argument');
+      }
+
+      const ptyProcess = pty.spawn(command, args, {
+        name: 'xterm-256color',
+        cols: session.cols,
+        rows: session.rows,
+        cwd: session.exec_cwd || process.env.HOME || '/',
+        env: { ...process.env, TERM: 'xterm-256color' },
+      });
+
+      this.handles.set(session.id, ptyProcess);
+      return ptyProcess;
+    }
+
     const template = session.exec_command || process.env.WEBMUX_EXEC_COMMAND || '';
     if (!template) {
       throw new Error('exec transport requires exec_command or WEBMUX_EXEC_COMMAND env var');
@@ -86,7 +107,7 @@ export class TransportLauncher {
       name: 'xterm-256color',
       cols: session.cols,
       rows: session.rows,
-      cwd: process.env.HOME || '/',
+      cwd: session.exec_cwd || process.env.HOME || '/',
       env: { ...process.env, TERM: 'xterm-256color' },
     });
 

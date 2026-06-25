@@ -17,6 +17,7 @@ import aiRouter from './api/ai';
 import templatesRouter from './api/templates';
 import vncRouter from './api/vnc';
 import rdpRouter from './api/rdp';
+import agentsRouter from './api/agents';
 import { setupWebSocket } from './websocket/handler';
 import { setupVncWebSocket } from './websocket/vncHandler';
 import { setupRdpWebSocket } from './websocket/rdpHandler';
@@ -24,13 +25,14 @@ import { sessionBroker } from './services/sessionBroker';
 import { vncBroker } from './services/vncBroker';
 import { rdpBroker } from './services/rdpBroker';
 import { persistence } from './services/persistenceManager';
+import { normalizeAppConfig } from './services/appConfig';
 
 const WEBMUX_ROOT = process.env.WEBMUX_ROOT || path.join(__dirname, '../..');
 
 async function main(): Promise<void> {
   let appConfig;
   try {
-    appConfig = persistence.loadApp();
+    appConfig = normalizeAppConfig(persistence.loadApp());
   } catch {
     console.warn('Could not load app.yaml, using defaults');
     appConfig = {
@@ -43,6 +45,8 @@ async function main(): Promise<void> {
         trusted_http_allowed: true,
         default_term: { cols: 80, rows: 24, font_size: 14 },
         terminal_grid: { max_cols: null, max_rows: null },
+        ui: { default_pane: 'terminals', host_switcher: { enabled: false, suffixes: [], hosts: [] } },
+        agents: { enabled: false, combined_pane: true, disable_in_multi_user_mode: true, definitions: [] },
         transport: { prefer_mosh: false, ssh_fallback: true, mosh_server_path: '' },
       },
     };
@@ -111,6 +115,7 @@ async function main(): Promise<void> {
   app.use('/api/sessions/templates', templatesRouter);
   app.use('/api/vnc', vncRouter);
   app.use('/api/rdp', rdpRouter);
+  app.use('/api/agents', agentsRouter);
 
   // Health check
   app.get('/api/health', (_req, res) => {
