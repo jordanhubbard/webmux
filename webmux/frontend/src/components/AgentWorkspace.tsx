@@ -284,12 +284,12 @@ export function AgentWorkspace({
   }, [availableDefinitions.length, loadSessions]);
 
   useEffect(() => {
-    if (!combined || availableDefinitions.length === 0) return;
+    if (availableDefinitions.length === 0) return;
     const interval = window.setInterval(() => {
       loadSessions({ showLoading: false });
     }, 10000);
     return () => window.clearInterval(interval);
-  }, [availableDefinitions.length, combined, loadSessions]);
+  }, [availableDefinitions.length, loadSessions]);
 
   const attachSelected = useCallback(async (agentId: string, name: string) => {
     const requestId = ++attachRequestRef.current;

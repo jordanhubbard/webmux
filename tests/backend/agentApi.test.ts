@@ -245,6 +245,23 @@ describe('Agent API Routes', () => {
     expect(res.body.error).toBe('Codex session not found');
   });
 
+  it('purges existing agent sessions when generic reconnect is denied', async () => {
+    mockTmux('codex-a\t1\t0\t1781474936\t1781725677\n');
+    const attach = await request(app)
+      .post('/api/agents/codex/attach')
+      .send({ name: 'codex-a' });
+    expect(attach.status).toBe(201);
+
+    writeAppConfig(false);
+    const res = await request(app)
+      .post(`/api/sessions/${attach.body.id}/reconnect`)
+      .send({});
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('Agent sessions are not enabled');
+    expect(sessionBroker.get(attach.body.id)).toBeUndefined();
+  });
+
   it('opens scratch shells in the selected tmux pane cwd when available', async () => {
     mockTmux('codex-a\t1\t0\t1781474936\t1781725677\n');
 

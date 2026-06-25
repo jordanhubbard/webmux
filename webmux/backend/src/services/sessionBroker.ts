@@ -8,9 +8,10 @@ import { persistence } from './persistenceManager';
 import { compactPositions } from './gridLayout';
 import { assertTerminalGridPosition, nextTerminalGridPosition } from './terminalGridLimits';
 import { agentService } from './agentService';
+import { AgentAccessError, getAgentAccess } from './agentAccess';
 import type { AgentSessionRole, WorkspaceName } from '../types';
 
-function isAgentSession(session?: Session): boolean {
+export function isAgentSession(session?: Session): boolean {
   return !!session?.agent_id && !!session.agent_role;
 }
 
@@ -67,6 +68,11 @@ interface InternalCreateSessionOptions {
   agentSessionName?: string;
 }
 
+interface DeleteSessionOptions {
+  closeCode?: number;
+  closeReason?: string;
+}
+
 export class SessionBroker extends EventEmitter {
   private sessions = new Map<string, Session>();
   private scrollback = new Map<string, string>();
@@ -88,6 +94,7 @@ export class SessionBroker extends EventEmitter {
       this.sessions.set(s.id, s);
     });
     console.log(`Loaded ${saved.length} sessions from persistence`);
+    await this.enforceAgentAccessPolicy();
 
     // Auto-reconnect persistent sessions that were previously active
     const reconnectable = saved.filter(s => s.persistent && s.hostname && !isAgentSession(s));
@@ -316,6 +323,15 @@ export class SessionBroker extends EventEmitter {
   async reconnect(sessionId: string, password?: string): Promise<Session> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error(`Session ${sessionId} not found`);
+    if (isAgentSession(session)) {
+      const access = getAgentAccess(session.agent_id);
+      if (!access.allowed) {
+        if (access.status !== 500) {
+          await this.delete(sessionId, { closeCode: 1008, closeReason: access.error });
+        }
+        throw new AgentAccessError(access);
+      }
+    }
 
     if (transportLauncher.isAlive(sessionId)) {
       this.bumpLaunchGeneration(sessionId);
@@ -344,11 +360,12 @@ export class SessionBroker extends EventEmitter {
     return this.scrollback.get(sessionId) || '';
   }
 
-  async delete(sessionId: string): Promise<void> {
+  async delete(sessionId: string, options: DeleteSessionOptions = {}): Promise<void> {
     const session = this.sessions.get(sessionId);
     const owner = session?.owner;
     const wasAgentSession = isAgentSession(session);
     this.bumpLaunchGeneration(sessionId);
+    presenceService.closeSession(sessionId, options.closeCode ?? 1000, options.closeReason ?? 'Session deleted');
     transportLauncher.kill(sessionId);
     this.sessions.delete(sessionId);
     this.launchGenerations.delete(sessionId);
@@ -382,6 +399,23 @@ export class SessionBroker extends EventEmitter {
     });
   }
 
+  async deleteAgentSessions(reason = 'Agent sessions are no longer allowed'): Promise<void> {
+    const sessions = Array.from(this.sessions.values()).filter(isAgentSession);
+    for (const session of sessions) {
+      await this.delete(session.id, { closeCode: 1008, closeReason: reason });
+    }
+  }
+
+  async enforceAgentAccessPolicy(): Promise<void> {
+    const sessions = Array.from(this.sessions.values()).filter(isAgentSession);
+    for (const session of sessions) {
+      const access = getAgentAccess(session.agent_id);
+      if (!access.allowed && access.status !== 500) {
+        await this.delete(session.id, { closeCode: 1008, closeReason: access.error });
+      }
+    }
+  }
+
   findAgentAttach(owner: string, agentId: string, name?: string): Session | undefined {
     const attachSessions = this.listAgentByOwner(owner, agentId).filter(s => s.agent_role === 'attach');
     if (name) {
@@ -408,14 +442,16 @@ export class SessionBroker extends EventEmitter {
     if (existing) {
       const shouldRelaunch = existing.agent_session_name !== name;
       const shouldResize = existing.cols !== cols || existing.rows !== rows;
+      const commandChanged = !argvEqual(existing.exec_argv, execArgv);
       const metadataChanged =
         existing.title !== name ||
         existing.workspace !== workspace ||
-        !argvEqual(existing.exec_argv, execArgv) ||
+        commandChanged ||
         existing.agent_id !== agentId ||
         existing.agent_role !== 'attach' ||
         existing.agent_session_name !== name;
-      const needsRelaunch = shouldRelaunch || !transportLauncher.isAlive(existing.id) || existing.state === 'disconnected' || existing.state === 'error';
+      const needsRelaunch = shouldRelaunch || commandChanged || !transportLauncher.isAlive(existing.id) ||
+        existing.state === 'disconnected' || existing.state === 'error';
       for (const stale of attachSessions) {
         if (stale.id !== existing.id) {
           await this.delete(stale.id);

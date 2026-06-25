@@ -2,8 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { requireAuth, AuthPayload } from '../middleware/auth';
 import { agentService } from '../services/agentService';
 import { sessionBroker } from '../services/sessionBroker';
-import { persistence } from '../services/persistenceManager';
-import type { NormalizedAgentsConfig } from '../types';
+import { getAgentAccess } from '../services/agentAccess';
 
 const router = Router();
 
@@ -20,41 +19,23 @@ function parseTermSize(body: { cols?: unknown; rows?: unknown }) {
   };
 }
 
-function loadAgentRuntimeConfig(): NormalizedAgentsConfig {
-  return agentService.getRuntimeConfig();
-}
-
-function requireAgentAccess(_req: Request, res: Response, next: NextFunction): void {
-  let agentConfig: NormalizedAgentsConfig;
+async function requireAgentAccess(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    agentConfig = loadAgentRuntimeConfig();
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-    return;
-  }
-
-  if (!agentConfig.enabled || agentConfig.definitions.length === 0) {
-    res.status(404).json({ error: 'Agent sessions are not enabled' });
-    return;
-  }
-
-  if (!agentConfig.disable_in_multi_user_mode) {
-    next();
-    return;
-  }
-
-  try {
-    const authConfig = persistence.loadAuth();
-    const userCount = authConfig.auth.users?.length ?? 0;
-    if (authConfig.auth.mode === 'none' || userCount <= 1) {
-      next();
+    const access = getAgentAccess();
+    if (!access.allowed) {
+      if (access.status !== 500) {
+        await sessionBroker.deleteAgentSessions(access.error);
+      }
+      res.status(access.status).json({ error: access.error });
       return;
     }
-  } catch (err) {
-    console.error('Agent access check failed:', err);
-  }
 
-  res.status(403).json({ error: 'Agent sessions are disabled in multi-user mode' });
+    await sessionBroker.enforceAgentAccessPolicy();
+    next();
+  } catch (err) {
+    console.error('Agent access cleanup failed:', err);
+    res.status(500).json({ error: 'Failed to enforce agent access policy' });
+  }
 }
 
 function sendInvalidAgent(res: Response): void {
@@ -65,7 +46,7 @@ router.use(requireAuth);
 
 router.get('/config', (_req: Request, res: Response) => {
   try {
-    res.json(loadAgentRuntimeConfig());
+    res.json(agentService.getRuntimeConfig());
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }

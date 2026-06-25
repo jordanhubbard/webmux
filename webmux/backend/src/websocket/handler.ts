@@ -1,11 +1,12 @@
 import WebSocket, { WebSocketServer } from 'ws';
 import { IncomingMessage } from 'http';
 import { v4 as uuidv4 } from 'uuid';
-import { sessionBroker } from '../services/sessionBroker';
+import { isAgentSession, sessionBroker } from '../services/sessionBroker';
 import { presenceService } from '../services/presenceService';
 import { requireAuthWs } from '../middleware/auth';
 import { consumeTicket } from '../api/auth';
 import { WebSocketMessage } from '../types';
+import { getAgentAccess } from '../services/agentAccess';
 
 export function setupWebSocket(wss: WebSocketServer): void {
   wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
@@ -44,6 +45,19 @@ export function setupWebSocket(wss: WebSocketServer): void {
       ws.send(JSON.stringify({ type: 'error', message: 'Session not found' }));
       ws.close(1008, 'Session not found');
       return;
+    }
+    if (isAgentSession(session)) {
+      const access = getAgentAccess(session.agent_id);
+      if (!access.allowed) {
+        ws.send(JSON.stringify({ type: 'error', message: access.error }));
+        ws.close(1008, access.error);
+        if (access.status !== 500) {
+          sessionBroker.delete(session.id, { closeCode: 1008, closeReason: access.error }).catch(err => {
+            console.error(`Failed to delete denied agent session ${session.id}:`, err);
+          });
+        }
+        return;
+      }
     }
 
     presenceService.join(viewerId, sessionId, ws);

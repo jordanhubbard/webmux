@@ -239,6 +239,43 @@ describe('SessionBroker', () => {
     expect(second.session.updated_at).toBe('2026-06-17T20:00:00.000Z');
   });
 
+  it('relaunches a live agent attach when the exec argv changes', async () => {
+    const broker = new SessionBroker();
+    await broker.initialize();
+    const first = await broker.ensureAgentAttach(
+      'anonymous',
+      'codex',
+      'agent-codex',
+      'codex-a',
+      80,
+      24,
+      ['tmux', '-L', 'codex', 'attach-session', '-t', 'codex-a'],
+    );
+    const staleHandle = transportLauncher.getHandle(first.session.id) as unknown as {
+      emit: (event: string, data: unknown) => void;
+      kill: () => void;
+    };
+    const killSpy = jest.spyOn(staleHandle, 'kill');
+
+    const second = await broker.ensureAgentAttach(
+      'anonymous',
+      'codex',
+      'agent-codex',
+      'codex-a',
+      80,
+      24,
+      ['tmux', '-L', 'codex-alt', 'attach-session', '-t', 'codex-a'],
+    );
+
+    expect(second.session.id).toBe(first.session.id);
+    expect(second.session.exec_argv).toEqual(['tmux', '-L', 'codex-alt', 'attach-session', '-t', 'codex-a']);
+    expect(killSpy).toHaveBeenCalledTimes(1);
+    expect(transportLauncher.getHandle(first.session.id)).not.toBe(staleHandle);
+
+    staleHandle.emit('exit', { exitCode: 0 });
+    expect(broker.get(first.session.id)!.state).toBe('connected');
+  });
+
   it('ignores stale PTY exit events after relaunching an agent attach session', async () => {
     const broker = new SessionBroker();
     await broker.initialize();

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import type { AgentDefinition, Session } from '@frontend/types';
 import { AgentWorkspace } from '@frontend/components/AgentWorkspace';
 
@@ -201,5 +201,32 @@ describe('AgentWorkspace', () => {
     expect(screen.getByText('+ Shell')).toBeDisabled();
     expect(apiMock.attachAgentSession).not.toHaveBeenCalled();
     expect(apiMock.createAgentScratch).not.toHaveBeenCalled();
+  });
+
+  it('refreshes per-agent panes on an interval', async () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <AgentWorkspace
+          agent={codexDefinition}
+          agentDefinitions={[codexDefinition]}
+          {...defaultProps}
+        />,
+      );
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(apiMock.getAgentSessions).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        vi.advanceTimersByTime(10000);
+        await Promise.resolve();
+      });
+
+      expect(apiMock.getAgentSessions).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

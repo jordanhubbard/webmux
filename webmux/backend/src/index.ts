@@ -55,6 +55,13 @@ async function main(): Promise<void> {
   await sessionBroker.initialize();
   await vncBroker.initialize();
   await rdpBroker.initialize();
+  const enforceAgentAccessPolicy = (): void => {
+    sessionBroker.enforceAgentAccessPolicy().catch(err => {
+      console.error('Agent access policy enforcement failed:', err);
+    });
+  };
+  persistence.watchConfig('app.yaml', enforceAgentAccessPolicy);
+  persistence.watchConfig('auth.yaml', enforceAgentAccessPolicy);
   startPurgeTimer();
 
   // Slave mode: auto-create an exec session on startup if WEBMUX_SLAVE_HOST is set.
