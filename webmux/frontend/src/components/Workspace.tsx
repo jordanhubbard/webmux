@@ -9,6 +9,7 @@ import { loadSessionThemeOverrides, saveSessionThemeOverrides } from '../utils/t
 
 interface WorkspaceProps {
   fontSize: number;
+  fontFamily?: string;
   termCols: number;
   termRows: number;
   themes?: NamedTheme[];
@@ -174,6 +175,7 @@ function AddCell({ row, col, isEmpty, onClick }: {
 
 export function Workspace({
   fontSize,
+  fontFamily,
   termCols,
   termRows,
   themes = [],
@@ -617,6 +619,7 @@ export function Workspace({
                   }}
                   session={session}
                   fontSize={fontSize}
+                  fontFamily={fontFamily}
                   autoScroll={autoScrollOverrides.get(session.id) ?? globalAutoScroll}
                   onAutoScrollToggle={handleAutoScrollToggle}
                   locked={lockOverrides.get(session.id) ?? globalLock}

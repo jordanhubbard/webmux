@@ -25,7 +25,7 @@ import { sessionBroker } from './services/sessionBroker';
 import { vncBroker } from './services/vncBroker';
 import { rdpBroker } from './services/rdpBroker';
 import { persistence } from './services/persistenceManager';
-import { normalizeAppConfig } from './services/appConfig';
+import { DEFAULT_TERMINAL_FONT_FAMILY, normalizeAppConfig } from './services/appConfig';
 
 const WEBMUX_ROOT = process.env.WEBMUX_ROOT || path.join(__dirname, '../..');
 
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
         https_port: 8443,
         secure_mode: false,
         trusted_http_allowed: true,
-        default_term: { cols: 80, rows: 24, font_size: 14 },
+        default_term: { cols: 80, rows: 24, font_size: 14, font_family: DEFAULT_TERMINAL_FONT_FAMILY },
         terminal_grid: { max_cols: null, max_rows: null },
         ui: { default_pane: 'terminals', host_switcher: { enabled: false, suffixes: [], hosts: [] } },
         agents: { enabled: false, combined_pane: true, disable_in_multi_user_mode: true, definitions: [] },

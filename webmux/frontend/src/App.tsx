@@ -12,10 +12,16 @@ import { WorkspacePaneProvider, useWorkspacePane, type WorkspacePane } from './c
 import { api } from './utils/api';
 import type { AgentDefinition, AgentsConfig, HostSwitcherConfig, NamedTheme } from './types';
 import { loadBundledThemes, loadGlobalTheme, saveGlobalTheme } from './utils/themes';
+import {
+  DEFAULT_TERMINAL_FONT_FAMILY,
+  TERMINAL_FONT_CSS_VARIABLE,
+  normalizeTerminalFontFamily,
+} from './utils/terminalFont';
 
 interface AuthenticatedAppProps {
   auth: AuthState;
   fontSize: number;
+  fontFamily: string;
   onFontSizeChange: (size: number) => void;
   termCols: number;
   termRows: number;
@@ -65,6 +71,7 @@ function enabledAgentDefinitions(config: AgentsConfig): AgentDefinition[] {
 function AuthenticatedApp({
   auth,
   fontSize,
+  fontFamily,
   onFontSizeChange,
   termCols,
   termRows,
@@ -146,6 +153,7 @@ function AuthenticatedApp({
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
           <Workspace
             fontSize={fontSize}
+            fontFamily={fontFamily}
             termCols={termCols}
             termRows={termRows}
             terminalGridLimit={terminalGridLimit}
@@ -167,6 +175,7 @@ function AuthenticatedApp({
             <AgentWorkspace
               agentDefinitions={agentDefinitions}
               fontSize={fontSize}
+              fontFamily={fontFamily}
               termCols={termCols}
               termRows={termRows}
               themes={themes}
@@ -182,6 +191,7 @@ function AuthenticatedApp({
                 agent={definition}
                 agentDefinitions={agentDefinitions}
                 fontSize={fontSize}
+                fontFamily={fontFamily}
                 termCols={termCols}
                 termRows={termRows}
                 themes={themes}
@@ -214,13 +224,14 @@ function parseTokenUser(): string | null {
   }
 }
 
-function saveTermSettings(fs: number, cols: number, rows: number) {
-  api.updateConfig({ app: { default_term: { font_size: fs, cols, rows } } }).catch(() => {});
+function saveTermSettings(fs: number, cols: number, rows: number, fontFamily: string) {
+  api.updateConfig({ app: { default_term: { font_size: fs, cols, rows, font_family: fontFamily } } }).catch(() => {});
 }
 
 export default function App() {
   const auth = useAuth();
   const [fontSize, setFontSize] = useState(14);
+  const [fontFamily, setFontFamily] = useState(DEFAULT_TERMINAL_FONT_FAMILY);
   const [termCols, setTermCols] = useState(80);
   const [termRows, setTermRows] = useState(24);
   const [terminalGridLimit, setTerminalGridLimit] = useState<{ maxCols: number | null; maxRows: number | null }>({
@@ -249,6 +260,7 @@ export default function App() {
       if (cancelled) return;
       setSecureMode(config.app.secure_mode);
       setFontSize(config.app.default_term.font_size);
+      setFontFamily(normalizeTerminalFontFamily(config.app.default_term.font_family));
       setTermCols(config.app.default_term.cols);
       setTermRows(config.app.default_term.rows);
       setTerminalGridLimit({
@@ -266,6 +278,10 @@ export default function App() {
     loadBundledThemes().then(setThemes).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    document.documentElement.style.setProperty(TERMINAL_FONT_CSS_VARIABLE, fontFamily);
+  }, [fontFamily]);
+
   const handleGlobalThemeChange = useCallback((name: string | null) => {
     setGlobalTheme(name);
     saveGlobalTheme(name);
@@ -273,14 +289,14 @@ export default function App() {
 
   const handleFontSizeChange = useCallback((size: number) => {
     setFontSize(size);
-    saveTermSettings(size, termCols, termRows);
-  }, [termCols, termRows]);
+    saveTermSettings(size, termCols, termRows, fontFamily);
+  }, [fontFamily, termCols, termRows]);
 
   const handleTermSizeChange = useCallback((cols: number, rows: number) => {
     setTermCols(cols);
     setTermRows(rows);
-    saveTermSettings(fontSize, cols, rows);
-  }, [fontSize]);
+    saveTermSettings(fontSize, cols, rows, fontFamily);
+  }, [fontFamily, fontSize]);
 
   const handleAccountCreated = useCallback((username: string) => {
     setShowRegister(false);
@@ -318,6 +334,7 @@ export default function App() {
         <AuthenticatedApp
           auth={auth}
           fontSize={fontSize}
+          fontFamily={fontFamily}
           onFontSizeChange={handleFontSizeChange}
           termCols={termCols}
           termRows={termRows}

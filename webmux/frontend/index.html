@@ -7,6 +7,9 @@
     <title>WebMux</title>
     <style>
       *, *::before, *::after { box-sizing: border-box; }
+      :root {
+        --webmux-mono-font: Consolas, Menlo, "DejaVu Sans Mono", monospace;
+      }
       html, body, #root {
         margin: 0;
         padding: 0;
@@ -14,7 +17,7 @@
         height: 100%;
         background: #1a1a2e;
         color: #e0e0e0;
-        font-family: 'Consolas', 'Menlo', 'DejaVu Sans Mono', monospace;
+        font-family: var(--webmux-mono-font);
         overflow: hidden;
       }
     </style>

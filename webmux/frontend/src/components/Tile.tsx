@@ -7,6 +7,7 @@ import type { Session, ConnectionState, NamedTheme } from '../types';
 interface TileProps {
   session: Session;
   fontSize: number;
+  fontFamily?: string;
   autoScroll?: boolean;
   onAutoScrollToggle?: (id: string) => void;
   locked?: boolean;
@@ -34,6 +35,7 @@ export interface TileHandle {
 export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
   session,
   fontSize,
+  fontFamily,
   autoScroll = true,
   onAutoScrollToggle,
   locked = false,
@@ -256,6 +258,7 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
           ref={termHandleRef}
           sessionId={session.id}
           fontSize={fontSize}
+          fontFamily={fontFamily}
           state={state}
           autoScroll={autoScroll}
           onStateChange={handleStateChange}

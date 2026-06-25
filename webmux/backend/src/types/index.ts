@@ -10,6 +10,7 @@ export interface AppConfig {
       cols: number;
       rows: number;
       font_size: number;
+      font_family?: string;
     };
     terminal_grid?: {
       max_cols?: number | null;

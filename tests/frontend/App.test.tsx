@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 
 // Mock useAuth before importing App
 const mockAuth = {
@@ -100,6 +100,7 @@ const mockSession = {
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    document.documentElement.style.removeProperty('--webmux-mono-font');
     (api.getConfig as ReturnType<typeof vi.fn>).mockResolvedValue(defaultConfig);
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     mockAuth.isAuthenticated = false;
@@ -219,6 +220,38 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByTestId('add-cell-0-1')).toBeDefined();
       expect(screen.queryByTestId('add-cell-1-0')).toBeNull();
+    });
+  });
+
+  it('applies configured terminal font family and keeps it when saving font size', async () => {
+    mockAuth.isLoading = false;
+    mockAuth.isAuthenticated = true;
+    mockAuth.authStatus = { mode: 'none', bootstrap_required: false };
+    (api.getConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+      app: {
+        ...defaultConfig.app,
+        default_term: { cols: 80, rows: 24, font_size: 14, font_family: '"Test Fixture Sans"' },
+      },
+    });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(document.documentElement.style.getPropertyValue('--webmux-mono-font')).toBe('"Test Fixture Sans"');
+    });
+
+    fireEvent.click(screen.getByText('A+'));
+    await waitFor(() => {
+      expect(api.updateConfig).toHaveBeenCalledWith({
+        app: {
+          default_term: {
+            cols: 80,
+            rows: 24,
+            font_size: 15,
+            font_family: '"Test Fixture Sans"',
+          },
+        },
+      });
     });
   });
 });

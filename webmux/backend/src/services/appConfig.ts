@@ -10,6 +10,22 @@ import type {
 
 const AGENT_ID_RE = /^[a-z][a-z0-9_-]{0,63}$/;
 const TMUX_SOCKET_RE = /^[a-zA-Z0-9_.-]+$/;
+export const DEFAULT_TERMINAL_FONT_FAMILY = 'Consolas, Menlo, "DejaVu Sans Mono", monospace';
+const GENERIC_FONT_FAMILIES = new Set([
+  'serif',
+  'sans-serif',
+  'monospace',
+  'cursive',
+  'fantasy',
+  'system-ui',
+  'ui-serif',
+  'ui-sans-serif',
+  'ui-monospace',
+  'ui-rounded',
+  'emoji',
+  'math',
+  'fangsong',
+]);
 
 function stringOrDefault(value: unknown, fallback: string): string {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
@@ -17,6 +33,63 @@ function stringOrDefault(value: unknown, fallback: string): string {
 
 function booleanOrDefault(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
+}
+
+function splitFontFamilyList(fontFamily: string): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let quote: '"' | "'" | null = null;
+
+  for (let i = 0; i < fontFamily.length; i += 1) {
+    const char = fontFamily[i];
+    if (quote) {
+      current += char;
+      if (char === '\\' && i + 1 < fontFamily.length) {
+        i += 1;
+        current += fontFamily[i];
+      } else if (char === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === ',') {
+      parts.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  if (quote) throw new Error('Invalid app.default_term.font_family');
+  parts.push(current.trim());
+  if (parts.some(part => !part)) throw new Error('Invalid app.default_term.font_family');
+  return parts;
+}
+
+function normalizeFontFamilyPart(part: string): string {
+  const quote = part[0];
+  if ((quote === '"' || quote === "'") && part[part.length - 1] === quote) return part;
+  if (part.includes('"') || part.includes("'") || part.includes('\\')) {
+    throw new Error('Invalid app.default_term.font_family');
+  }
+  if (GENERIC_FONT_FAMILIES.has(part.toLowerCase()) || !/\s/.test(part)) return part;
+  return `"${part}"`;
+}
+
+function normalizeFontFamily(value: unknown): string {
+  const fontFamily = stringOrDefault(value, DEFAULT_TERMINAL_FONT_FAMILY);
+  if (fontFamily.length > 256 || /[\0\r\n;{}]/.test(fontFamily)) {
+    throw new Error('Invalid app.default_term.font_family');
+  }
+  const normalized = splitFontFamilyList(fontFamily).map(normalizeFontFamilyPart).join(', ');
+  if (normalized.length > 256) {
+    throw new Error('Invalid app.default_term.font_family');
+  }
+  return normalized;
 }
 
 function normalizeWorkspace(value: unknown, id: string): WorkspaceName {
@@ -103,6 +176,10 @@ export function normalizeAppConfig(config: AppConfig): AppConfig {
         ...config.app.terminal_grid,
         max_cols: config.app.terminal_grid?.max_cols ?? null,
         max_rows: config.app.terminal_grid?.max_rows ?? null,
+      },
+      default_term: {
+        ...config.app.default_term,
+        font_family: normalizeFontFamily(config.app.default_term?.font_family),
       },
       ui: {
         default_pane: stringOrDefault(ui.default_pane, 'terminals'),
