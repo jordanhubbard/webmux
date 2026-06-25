@@ -1,0 +1,55 @@
+app:
+  name: webmux
+  listen_host: 0.0.0.0
+  http_port: 8080
+  https_port: 8443
+  secure_mode: false
+  trusted_http_allowed: true
+  default_term:
+    cols: 120
+    rows: 40
+    font_size: 14
+  terminal_grid:
+    max_cols: null
+    max_rows: null
+  ui:
+    default_pane: terminals
+    host_switcher:
+      enabled: true
+      suffixes:
+        - example.net
+      hosts:
+        - id: lab-a
+          label: Lab A
+          hostname: lab-a-webmux.example.net
+        - id: lab-b
+          label: Lab B
+          hostname: lab-b-webmux.example.net
+        - id: gpu-box
+          label: GPU Box
+          hostname: gpu-box-webmux.example.net
+        - id: workstation
+          label: Workstation
+          hostname: workstation-webmux.example.net
+  agents:
+    enabled: true
+    combined_pane: true
+    disable_in_multi_user_mode: true
+    definitions:
+      - id: codex
+        label: Codex
+        plural_label: Codex Sessions
+        badge: CODEX
+        tmux_socket: codex
+      - id: helper
+        label: Helper
+        plural_label: Helper Sessions
+        badge: HELP
+        tmux_socket: helper
+  transport:
+    prefer_mosh: false
+    ssh_fallback: true
+    mosh_server_path: ""
+  guacd:
+    host: 127.0.0.1
+    port: 4822

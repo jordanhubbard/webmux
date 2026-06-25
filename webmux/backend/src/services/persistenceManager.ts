@@ -11,7 +11,7 @@ const WEBMUX_ROOT = process.env.WEBMUX_ROOT || path.join(__dirname, '../../..');
 const WEBMUX_HOME = process.env.WEBMUX_HOME || path.join(os.homedir(), '.config', 'webmux');
 const DEFAULTS_DIR = path.join(WEBMUX_ROOT, 'config.defaults');
 const CONFIG_DIR = path.join(WEBMUX_HOME, 'config');
-const DATA_DIR = path.join(WEBMUX_HOME, 'data');
+export const DATA_DIR = path.join(WEBMUX_HOME, 'data');
 const SESSIONS_DIR = path.join(DATA_DIR, 'sessions');
 const EVENTS_DIR = path.join(DATA_DIR, 'events');
 

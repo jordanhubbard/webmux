@@ -7,13 +7,14 @@ import {
   isTerminalGridLimitError,
   terminalGridLimitsFromApp,
 } from '../services/terminalGridLimits';
+import { normalizeAppConfig } from '../services/appConfig';
 
 const router = Router();
 router.use(requireAuth);
 
 router.get('/', (_req: Request, res: Response) => {
   try {
-    const app = appConfigWithEffectiveTerminalGridLimits(persistence.loadApp());
+    const app = normalizeAppConfig(appConfigWithEffectiveTerminalGridLimits(persistence.loadApp()));
     const execCommand = process.env.WEBMUX_EXEC_COMMAND;
     if (execCommand) {
       app.app.exec_command = execCommand;
@@ -25,7 +26,7 @@ router.get('/', (_req: Request, res: Response) => {
 });
 
 // Only allow updating safe fields — not listen_host, ports, or secure_mode at runtime
-const MUTABLE_APP_FIELDS = ['name', 'default_term', 'terminal_grid', 'transport'];
+const MUTABLE_APP_FIELDS = ['name', 'default_term', 'terminal_grid', 'transport', 'ui'];
 
 router.put('/', (req: Request, res: Response) => {
   try {
@@ -60,7 +61,7 @@ router.put('/', (req: Request, res: Response) => {
       throw err;
     }
     persistence.saveApp(merged);
-    res.json(appConfigWithEffectiveTerminalGridLimits(merged));
+    res.json(normalizeAppConfig(appConfigWithEffectiveTerminalGridLimits(merged)));
   } catch {
     res.status(500).json({ error: 'Failed to save config' });
   }

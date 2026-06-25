@@ -33,6 +33,11 @@ vi.mock('@frontend/utils/api', () => ({
     getKeys: vi.fn().mockResolvedValue([]),
     getAuthStatus: vi.fn().mockResolvedValue({ mode: 'none', bootstrap_required: false }),
     updateConfig: vi.fn().mockResolvedValue({}),
+    getAllAgentSessions: vi.fn().mockResolvedValue([]),
+    getAgentSessions: vi.fn().mockResolvedValue([]),
+    attachAgentSession: vi.fn(),
+    createAgentScratch: vi.fn(),
+    deleteSession: vi.fn(),
   },
 }));
 
@@ -59,6 +64,16 @@ const defaultConfig = {
     trusted_http_allowed: true,
     default_term: { cols: 80, rows: 24, font_size: 14 },
     terminal_grid: { max_cols: null, max_rows: null },
+    ui: {
+      default_pane: 'terminals',
+      host_switcher: { enabled: false, suffixes: [], hosts: [] },
+    },
+    agents: {
+      enabled: false,
+      combined_pane: true,
+      disable_in_multi_user_mode: true,
+      definitions: [],
+    },
   },
 };
 
@@ -118,6 +133,62 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByText('Click to add a session')).toBeDefined();
     });
+  });
+
+  it('hides the Agents pane by default', async () => {
+    mockAuth.isLoading = false;
+    mockAuth.isAuthenticated = true;
+    mockAuth.authStatus = { mode: 'none', bootstrap_required: false };
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Click to add a session')).toBeDefined();
+    });
+    expect(screen.queryByText('Agents')).toBeNull();
+    expect(api.getAllAgentSessions).not.toHaveBeenCalled();
+  });
+
+  it('shows configured Agents pane when app.agents is enabled', async () => {
+    mockAuth.isLoading = false;
+    mockAuth.isAuthenticated = true;
+    mockAuth.authStatus = { mode: 'none', bootstrap_required: false };
+    (api.getConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
+      app: {
+        ...defaultConfig.app,
+        ui: {
+          default_pane: 'agents',
+          host_switcher: { enabled: false, suffixes: [], hosts: [] },
+        },
+        agents: {
+          enabled: true,
+          combined_pane: true,
+          disable_in_multi_user_mode: true,
+          definitions: [
+            {
+              id: 'codex',
+              label: 'Codex',
+              plural_label: 'Codex Sessions',
+              badge: 'CODEX',
+              tmux_socket: 'codex',
+              workspace: 'agent-codex',
+              enabled: true,
+            },
+          ],
+        },
+      },
+    });
+    (api.getAllAgentSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Agents')).toBeDefined();
+    });
+    await waitFor(() => {
+      expect(api.getAllAgentSessions).toHaveBeenCalledTimes(1);
+    });
+    expect(await screen.findByText('No agent sessions')).toBeDefined();
   });
 
   it('loads config after authentication and applies terminal grid limits', async () => {

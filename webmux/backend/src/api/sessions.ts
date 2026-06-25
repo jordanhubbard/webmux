@@ -3,6 +3,7 @@ import { sessionBroker } from '../services/sessionBroker';
 import { requireAuth, AuthPayload } from '../middleware/auth';
 import { CreateSessionRequest } from '../types';
 import { isTerminalGridLimitError } from '../services/terminalGridLimits';
+import { AgentAccessError } from '../services/agentAccess';
 
 const router = Router();
 router.use(requireAuth);
@@ -58,6 +59,10 @@ router.post('/:id/reconnect', async (req: Request, res: Response) => {
     const updated = await sessionBroker.reconnect(req.params.id, password);
     res.json(updated);
   } catch (err) {
+    if (err instanceof AgentAccessError) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
     console.error('Reconnect error:', err);
     res.status(500).json({ error: 'Failed to reconnect session' });
   }

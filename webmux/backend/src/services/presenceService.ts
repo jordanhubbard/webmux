@@ -126,6 +126,19 @@ export class PresenceService extends EventEmitter {
     });
   }
 
+  closeSession(sessionId: string, code = 1000, reason = 'Session closed'): void {
+    const sv = this.sessionViewers.get(sessionId);
+    if (!sv) return;
+
+    for (const viewerId of Array.from(sv)) {
+      const viewer = this.viewers.get(viewerId);
+      if (viewer?.ws.readyState === WebSocket.OPEN || viewer?.ws.readyState === WebSocket.CONNECTING) {
+        viewer.ws.close(code, reason);
+      }
+      this.leave(viewerId);
+    }
+  }
+
   sendToViewer(viewerId: string, message: Record<string, unknown>): void {
     const viewer = this.viewers.get(viewerId);
     if (viewer?.ws.readyState === WebSocket.OPEN) {

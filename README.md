@@ -19,6 +19,7 @@ A web-native terminal multiplexer — think tmux-on-a-jump-box, but it runs in y
 - **OS service integration** — `make install` sets up launchd (macOS) or systemd (Linux) for auto-start on boot
 - **YAML configuration** — human-editable config in `~/.config/webmux/`, separate from the source tree
 - **Audit log** — append-only JSONL event log (logins, session lifecycle)
+- **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
 
 ## Quick Start
 
@@ -103,6 +104,8 @@ app:
 The `default_term` settings control the size of every terminal tile. Each tile is rendered at a fixed pixel size derived from `cols`, `rows`, and `font_size`. When tiles exceed the browser viewport, the workspace scrolls horizontally and vertically. All three values can also be adjusted live from the top bar — changes are saved back to `app.yaml` automatically.
 
 The optional `terminal_grid` settings cap the number of columns and rows available in the terminals workspace. By default both directions are unlimited. `WEBMUX_TERMINAL_GRID_MAX_COLS` and `WEBMUX_TERMINAL_GRID_MAX_ROWS` override the YAML values at runtime; set either variable to a positive integer, or to `0`/`unlimited` for no limit.
+
+Optional tmux-backed agent views are configured under `app.agents` and are disabled by default. See [Agent Views](docs/agent-views.md) and the sample config at [webmux/examples/agent-views/app.yaml](webmux/examples/agent-views/app.yaml).
 
 ### `auth.yaml` — Authentication
 
@@ -205,6 +208,11 @@ webmux/                          Source / install directory (WEBMUX_ROOT)
 | `PUT` | `/api/config` | Update app config |
 | `GET` | `/api/config/layout` | Get layout |
 | `PUT` | `/api/config/layout` | Update layout |
+| `GET` | `/api/agents/config` | Get normalized agent-view config |
+| `GET` | `/api/agents/sessions` | List configured agent tmux sessions |
+| `GET` | `/api/agents/:agentId/sessions` | List sessions for one configured agent |
+| `POST` | `/api/agents/:agentId/attach` | Attach to a validated tmux session |
+| `POST` | `/api/agents/:agentId/scratch` | Open or reuse an agent scratch shell |
 
 ### WebSocket
 

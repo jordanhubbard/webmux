@@ -24,9 +24,60 @@ export interface AppConfig {
       host: string;
       port: number;
     };
+    ui?: {
+      default_pane?: WorkspaceName;
+      host_switcher?: HostSwitcherConfig;
+    };
+    agents?: AgentsConfig;
     // Populated from WEBMUX_EXEC_COMMAND env var at runtime; not persisted to app.yaml.
     exec_command?: string;
   };
+}
+
+export interface HostSwitcherConfig {
+  enabled?: boolean;
+  suffixes?: string[];
+  hosts?: HostSwitcherHost[];
+}
+
+export interface HostSwitcherHost {
+  id: string;
+  label?: string;
+  hostname: string;
+}
+
+export interface AgentsConfig {
+  enabled?: boolean;
+  combined_pane?: boolean;
+  disable_in_multi_user_mode?: boolean;
+  definitions?: AgentDefinitionConfig[];
+}
+
+export interface AgentDefinitionConfig {
+  id: string;
+  label: string;
+  plural_label?: string;
+  badge?: string;
+  tmux_socket: string;
+  workspace?: WorkspaceName;
+  enabled?: boolean;
+}
+
+export interface NormalizedAgentsConfig {
+  enabled: boolean;
+  combined_pane: boolean;
+  disable_in_multi_user_mode: boolean;
+  definitions: AgentDefinition[];
+}
+
+export interface AgentDefinition {
+  id: string;
+  label: string;
+  plural_label: string;
+  badge: string;
+  tmux_socket: string;
+  workspace: WorkspaceName;
+  enabled: boolean;
 }
 
 export interface AuthUser {
@@ -46,6 +97,10 @@ export interface AuthConfig {
 export type TransportType = 'ssh' | 'mosh' | 'exec';
 export type SessionKind = 'terminal' | 'vnc' | 'rdp';
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
+export type WorkspaceName = 'terminals' | 'desktops' | 'agents' | string;
+export type AgentSessionRole = 'attach' | 'scratch';
+export type AgentRuntimeStatus = 'waiting' | 'working' | 'unknown' | 'stale';
+export type AgentStatusSource = 'hook' | 'tmux' | 'webmux' | 'none';
 
 export interface HostEntry {
   id: string;
@@ -102,6 +157,8 @@ export interface Session {
   username: string;
   key_id: string;
   exec_command?: string;
+  exec_argv?: string[];
+  exec_cwd?: string;
   cols: number;
   rows: number;
   row: number;
@@ -112,6 +169,22 @@ export interface Session {
   title: string;
   persistent: boolean;
   minimized: boolean;
+  workspace?: WorkspaceName;
+  agent_id?: string;
+  agent_role?: AgentSessionRole;
+  agent_session_name?: string;
+}
+
+export interface AgentTmuxSession {
+  name: string;
+  agent_id: string;
+  display_name: string;
+  windows: number;
+  attached: number;
+  created_at?: string;
+  last_output_at?: string;
+  status: AgentRuntimeStatus;
+  status_source: AgentStatusSource;
 }
 
 export interface Viewer {

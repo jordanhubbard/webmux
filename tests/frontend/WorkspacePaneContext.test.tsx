@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { WorkspacePaneProvider, useWorkspacePane } from '@frontend/contexts/WorkspacePaneContext';
 
 function TestConsumer() {
@@ -9,6 +9,7 @@ function TestConsumer() {
       <span data-testid="pane">{activePane}</span>
       <button onClick={() => setActivePane('desktops')}>go desktops</button>
       <button onClick={() => setActivePane('terminals')}>go terminals</button>
+      <button onClick={() => setActivePane('agents')}>go agents</button>
     </div>
   );
 }
@@ -53,5 +54,32 @@ describe('WorkspacePaneContext', () => {
     );
     // Initial render reflects provider default
     expect(screen.getByTestId('pane').textContent).toBe('terminals');
+  });
+
+  it('uses a configured default pane when it is available', () => {
+    render(
+      <WorkspacePaneProvider defaultPane="agents" availablePanes={['terminals', 'desktops', 'agents']}>
+        <TestConsumer />
+      </WorkspacePaneProvider>,
+    );
+    expect(screen.getByTestId('pane').textContent).toBe('agents');
+  });
+
+  it('falls back when the active pane is removed from available panes', async () => {
+    const { rerender } = render(
+      <WorkspacePaneProvider defaultPane="agents" availablePanes={['terminals', 'desktops', 'agents']}>
+        <TestConsumer />
+      </WorkspacePaneProvider>,
+    );
+    expect(screen.getByTestId('pane').textContent).toBe('agents');
+
+    rerender(
+      <WorkspacePaneProvider defaultPane="agents" availablePanes={['terminals', 'desktops']}>
+        <TestConsumer />
+      </WorkspacePaneProvider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId('pane').textContent).toBe('terminals');
+    });
   });
 });

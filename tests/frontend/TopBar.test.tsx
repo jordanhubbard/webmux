@@ -33,6 +33,10 @@ describe('TopBar', () => {
     onNewAccount: vi.fn(),
     secureMode: true,
     currentUser: 'admin',
+    globalAutoScroll: true,
+    onGlobalAutoScrollChange: vi.fn(),
+    globalLock: false,
+    onGlobalLockChange: vi.fn(),
   });
 
   it('renders logo and controls', () => {
@@ -103,5 +107,72 @@ describe('TopBar', () => {
     expect(onTermSizeChange).toHaveBeenCalledWith(80, 29);
     fireEvent.click(screen.getByText('R-'));
     expect(onTermSizeChange).toHaveBeenCalledWith(80, 19);
+  });
+
+  it('does not show agent buttons without configured definitions', () => {
+    render(<TopBar {...defaultTopBarProps()} />, { wrapper });
+    expect(screen.queryByText('Agents')).toBeNull();
+  });
+
+  it('shows a combined Agents button for configured agents', () => {
+    render(
+      <TopBar
+        {...defaultTopBarProps()}
+        agentDefinitions={[{
+          id: 'codex',
+          label: 'Codex',
+          plural_label: 'Codex Sessions',
+          badge: 'CODEX',
+          tmux_socket: 'codex',
+          workspace: 'agent-codex',
+          enabled: true,
+        }]}
+        combinedAgentPane={true}
+      />,
+      { wrapper },
+    );
+    expect(screen.getByText('Agents')).toBeDefined();
+    expect(screen.queryByText('Codex Sessions')).toBeNull();
+  });
+
+  it('shows configured per-agent buttons when combined pane is disabled', () => {
+    render(
+      <TopBar
+        {...defaultTopBarProps()}
+        agentDefinitions={[{
+          id: 'codex',
+          label: 'Codex',
+          plural_label: 'Codex Sessions',
+          badge: 'CODEX',
+          tmux_socket: 'codex',
+          workspace: 'agent-codex',
+          enabled: true,
+        }]}
+        combinedAgentPane={false}
+      />,
+      { wrapper },
+    );
+    expect(screen.queryByText('Agents')).toBeNull();
+    expect(screen.getByText('Codex Sessions')).toBeDefined();
+  });
+
+  it('renders a config-driven host switcher only when enabled', () => {
+    render(
+      <TopBar
+        {...defaultTopBarProps()}
+        hostSwitcher={{
+          enabled: true,
+          suffixes: [],
+          hosts: [
+            { id: 'lab-a', label: 'Lab A', hostname: 'lab-a-webmux.example.net' },
+            { id: 'lab-b', label: 'Lab B', hostname: 'lab-b-webmux.example.net' },
+          ],
+        }}
+      />,
+      { wrapper },
+    );
+    expect(screen.getByTestId('host-switcher')).toBeDefined();
+    expect(screen.getByText('Lab A')).toBeDefined();
+    expect(screen.getByText('Lab B')).toBeDefined();
   });
 });

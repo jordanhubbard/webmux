@@ -1,9 +1,27 @@
 import { useState, useRef } from 'react';
 import type { AuthState } from '../hooks/useAuth';
-import type { NamedTheme } from '../types';
+import type { AgentDefinition, HostSwitcherConfig, NamedTheme } from '../types';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
 import { HelpDialog } from './HelpDialog';
+
+function getHostSwitchContext(hostSwitcher?: HostSwitcherConfig) {
+  if (!hostSwitcher?.enabled || hostSwitcher.hosts.length === 0) return null;
+  const hostname = window.location.hostname.toLowerCase();
+  const suffixes = hostSwitcher.suffixes.map(suffix => suffix.toLowerCase());
+  if (suffixes.length > 0 && !suffixes.some(suffix => hostname === suffix || hostname.endsWith(`.${suffix}`))) {
+    return null;
+  }
+  const protocol = window.location.protocol || 'https:';
+  const current = hostSwitcher.hosts.find(host => host.hostname.toLowerCase() === hostname);
+  return {
+    currentId: current?.id ?? null,
+    hosts: hostSwitcher.hosts.map(host => ({
+      ...host,
+      href: `${protocol}//${host.hostname}/`,
+    })),
+  };
+}
 
 interface TopBarProps {
   auth: AuthState;
@@ -22,6 +40,9 @@ interface TopBarProps {
   onGlobalAutoScrollChange: (on: boolean) => void;
   globalLock: boolean;
   onGlobalLockChange: (on: boolean) => void;
+  agentDefinitions?: AgentDefinition[];
+  combinedAgentPane?: boolean;
+  hostSwitcher?: HostSwitcherConfig;
 }
 
 export function TopBar({
@@ -41,6 +62,9 @@ export function TopBar({
   onGlobalAutoScrollChange,
   globalLock,
   onGlobalLockChange,
+  agentDefinitions = [],
+  combinedAgentPane = true,
+  hostSwitcher,
 }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
   const { activePane, setActivePane } = useWorkspacePane();
@@ -48,6 +72,7 @@ export function TopBar({
   const [editingSize, setEditingSize] = useState(false);
   const [sizeInput, setSizeInput] = useState('');
   const sizeInputRef = useRef<HTMLInputElement>(null);
+  const hostSwitchContext = getHostSwitchContext(hostSwitcher);
 
   const commitSize = () => {
     const match = sizeInput.match(/^\s*(\d+)\s*[x×]\s*(\d+)\s*$/i);
@@ -106,6 +131,39 @@ export function TopBar({
         >
           Desktops
         </button>
+        {agentDefinitions.length > 0 && combinedAgentPane && (
+          <button
+            onClick={() => setActivePane('agents')}
+            style={{
+              background: activePane === 'agents' ? '#4aaa6a' : '#1a1a3a',
+              color: '#fff',
+              border: '1px solid #333366',
+              borderRadius: 4,
+              padding: '4px 12px',
+              cursor: 'pointer',
+              fontSize: 13,
+            }}
+          >
+            Agents
+          </button>
+        )}
+        {agentDefinitions.length > 0 && !combinedAgentPane && agentDefinitions.map(definition => (
+          <button
+            key={definition.id}
+            onClick={() => setActivePane(definition.workspace)}
+            style={{
+              background: activePane === definition.workspace ? '#4aaa6a' : '#1a1a3a',
+              color: '#fff',
+              border: '1px solid #333366',
+              borderRadius: 4,
+              padding: '4px 12px',
+              cursor: 'pointer',
+              fontSize: 13,
+            }}
+          >
+            {definition.plural_label}
+          </button>
+        ))}
         <button
           style={{
             ...styles.broadcastBtn,
@@ -242,6 +300,32 @@ export function TopBar({
           </>
         )}
         <button style={styles.helpBtn} onClick={() => setShowHelp(true)} title="Usage help">?</button>
+        {hostSwitchContext && (
+          <div style={styles.hostSwitcher} data-testid="host-switcher" aria-label="Switch WebMux host">
+            {hostSwitchContext.hosts.map(host => (
+              host.id === hostSwitchContext.currentId ? (
+                <span
+                  key={host.id}
+                  style={{ ...styles.hostSwitchButton, ...styles.hostSwitchCurrent }}
+                  data-testid="host-switch-current"
+                  title={`${host.label ?? host.id} is the current host`}
+                >
+                  {host.label ?? host.id}
+                </span>
+              ) : (
+                <a
+                  key={host.id}
+                  href={host.href}
+                  style={styles.hostSwitchButton}
+                  data-testid="host-switch-link"
+                  title={`Open ${host.label ?? host.id}`}
+                >
+                  {host.label ?? host.id}
+                </a>
+              )
+            ))}
+          </div>
+        )}
       </div>
     </div>
     </>
@@ -356,5 +440,29 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
     padding: 0,
     lineHeight: 1,
+  },
+  hostSwitcher: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    borderLeft: '1px solid #333366',
+    paddingLeft: 8,
+  },
+  hostSwitchButton: {
+    background: '#1a1a3a',
+    border: '1px solid #333366',
+    borderRadius: 4,
+    color: '#aaa',
+    fontSize: 11,
+    fontWeight: 600,
+    lineHeight: 1,
+    padding: '4px 7px',
+    textDecoration: 'none',
+    whiteSpace: 'nowrap',
+  },
+  hostSwitchCurrent: {
+    background: '#1f3f2c',
+    borderColor: '#4aaa6a',
+    color: '#f2fff5',
   },
 };

@@ -149,6 +149,32 @@ describe('WebSocket Integration', () => {
     expect(code).toBe(1008);
   });
 
+  it('rejects WebSocket for denied agent session and purges it', async () => {
+    const { session } = await sessionBroker.ensureAgentAttach(
+      'anonymous',
+      'codex',
+      'agent-codex',
+      'codex-a',
+      80,
+      24,
+      ['tmux', '-L', 'codex', 'attach-session', '-t', 'codex-a'],
+    );
+    const messages: any[] = [];
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/api/term/${session.id}`);
+    ws.on('message', (raw: Buffer) => {
+      messages.push(JSON.parse(raw.toString()));
+    });
+    const closePromise = new Promise<number>((resolve) => {
+      ws.on('close', (code: number) => resolve(code));
+    });
+
+    const code = await closePromise;
+
+    expect(code).toBe(1008);
+    expect(messages).toContainEqual({ type: 'error', message: 'Agent sessions are not enabled' });
+    expect(sessionBroker.get(session.id)).toBeUndefined();
+  });
+
   it('rejects WebSocket for invalid path', async () => {
     const ws = new WebSocket(`ws://127.0.0.1:${port}/api/health`);
     await new Promise<void>((resolve) => {
