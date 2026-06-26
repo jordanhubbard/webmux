@@ -7,6 +7,7 @@ import '@xterm/xterm/css/xterm.css';
 import type { WebSocketMessage, ConnectionState, TerminalTheme } from '../types';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
+import { normalizeTerminalFontFamily } from '../utils/terminalFont';
 
 export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
   background: '#0d0d1a',
@@ -41,6 +42,7 @@ export interface TerminalHandle {
 interface TerminalProps {
   sessionId: string;
   fontSize: number;
+  fontFamily?: string;
   state: ConnectionState;
   autoScroll: boolean;
   onStateChange: (state: ConnectionState) => void;
@@ -53,6 +55,7 @@ interface TerminalProps {
 export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal({
   sessionId,
   fontSize,
+  fontFamily,
   state,
   autoScroll,
   onStateChange,
@@ -164,7 +167,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
 
     const term = new XTerm({
       theme: { ...DEFAULT_TERMINAL_THEME, ...(theme || {}) },
-      fontFamily: 'Consolas, Menlo, "DejaVu Sans Mono", monospace',
+      fontFamily: normalizeTerminalFontFamily(fontFamily),
       fontSize,
       cursorBlink: true,
       macOptionIsMeta: /Mac|iPhone|iPad/.test(navigator.platform),
@@ -255,13 +258,14 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     // Re-run only when the session changes; all live callbacks are accessed via refs.
   }, [sessionId, setFocusedSessionId]);
 
-  // Update font size
+  // Update font settings
   useEffect(() => {
     if (termRef.current) {
       termRef.current.options.fontSize = fontSize;
+      termRef.current.options.fontFamily = normalizeTerminalFontFamily(fontFamily);
       fitAddonRef.current?.fit();
     }
-  }, [fontSize]);
+  }, [fontFamily, fontSize]);
 
   // Apply theme changes without tearing down the terminal (preserves scrollback).
   useEffect(() => {

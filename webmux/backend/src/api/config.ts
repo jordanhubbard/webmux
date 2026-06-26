@@ -50,18 +50,47 @@ router.put('/', (req: Request, res: Response) => {
         return;
       }
     }
-    const merged = { app: { ...current.app, ...updates } };
+    const merged = {
+      app: {
+        ...current.app,
+        ...updates,
+        default_term: updates.default_term
+          ? { ...current.app.default_term, ...updates.default_term }
+          : current.app.default_term,
+        terminal_grid: updates.terminal_grid
+          ? { ...current.app.terminal_grid, ...updates.terminal_grid }
+          : current.app.terminal_grid,
+        transport: updates.transport
+          ? { ...current.app.transport, ...updates.transport }
+          : current.app.transport,
+        ui: updates.ui
+          ? { ...current.app.ui, ...updates.ui }
+          : current.app.ui,
+      },
+    };
+    let normalized;
     try {
       terminalGridLimitsFromApp(merged);
+      normalized = normalizeAppConfig(merged);
     } catch (err) {
       if (isTerminalGridLimitError(err)) {
         res.status(400).json({ error: (err as Error).message });
         return;
       }
+      if ((err as Error).message === 'Invalid app.default_term.font_family') {
+        res.status(400).json({ error: (err as Error).message });
+        return;
+      }
       throw err;
     }
-    persistence.saveApp(merged);
-    res.json(normalizeAppConfig(appConfigWithEffectiveTerminalGridLimits(merged)));
+    const persisted = {
+      app: {
+        ...merged.app,
+        default_term: normalized.app.default_term,
+      },
+    };
+    persistence.saveApp(persisted);
+    res.json(normalizeAppConfig(appConfigWithEffectiveTerminalGridLimits(persisted)));
   } catch {
     res.status(500).json({ error: 'Failed to save config' });
   }

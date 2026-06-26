@@ -14,6 +14,7 @@ interface AgentWorkspaceProps {
   agent?: AgentDefinition;
   agentDefinitions: AgentDefinition[];
   fontSize: number;
+  fontFamily?: string;
   termCols: number;
   termRows: number;
   themes: NamedTheme[];
@@ -142,13 +143,14 @@ function fallbackDefinition(agentId: string): AgentDefinition {
 interface TerminalPanelProps {
   session: Session;
   fontSize: number;
+  fontFamily?: string;
   theme?: NamedTheme;
   agent: AgentDefinition;
   onClose?: () => void;
   closeTitle?: string;
 }
 
-function TerminalPanel({ session, fontSize, theme, agent, onClose, closeTitle }: TerminalPanelProps) {
+function TerminalPanel({ session, fontSize, fontFamily, theme, agent, onClose, closeTitle }: TerminalPanelProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
 
   useEffect(() => {
@@ -174,6 +176,7 @@ function TerminalPanel({ session, fontSize, theme, agent, onClose, closeTitle }:
         <Terminal
           sessionId={session.id}
           fontSize={fontSize}
+          fontFamily={fontFamily}
           state={state}
           autoScroll={true}
           onStateChange={setState}
@@ -190,6 +193,7 @@ export function AgentWorkspace({
   agent,
   agentDefinitions,
   fontSize,
+  fontFamily,
   termCols,
   termRows,
   themes,
@@ -459,6 +463,7 @@ export function AgentWorkspace({
             <TerminalPanel
               session={attachedSession}
               fontSize={fontSize}
+              fontFamily={fontFamily}
               theme={activeTheme}
               agent={attachedAgent}
             />
@@ -469,6 +474,7 @@ export function AgentWorkspace({
             <TerminalPanel
               session={scratchSession}
               fontSize={fontSize}
+              fontFamily={fontFamily}
               theme={activeTheme}
               agent={scratchAgent}
               onClose={closeScratch}

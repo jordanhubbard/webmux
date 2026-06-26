@@ -179,6 +179,7 @@ describe('API Routes', () => {
       const res = await request(app).get('/api/config');
       expect(res.status).toBe(200);
       expect(res.body.app.name).toBe('webmux');
+      expect(res.body.app.default_term.font_family).toBe('Consolas, Menlo, "DejaVu Sans Mono", monospace');
     });
 
     it('returns environment-overridden terminal grid limits', async () => {
@@ -208,6 +209,30 @@ describe('API Routes', () => {
         .send({ app: { name: 'updated' } });
       expect(res.status).toBe(200);
       expect(res.body.app.name).toBe('updated');
+    });
+
+    it('quotes terminal font family and preserves it across size-only updates', async () => {
+      const fontRes = await request(app)
+        .put('/api/config')
+        .send({ app: { default_term: { font_family: 'Test Fixture Sans' } } });
+      expect(fontRes.status).toBe(200);
+      expect(fontRes.body.app.default_term.font_family).toBe('"Test Fixture Sans"');
+      expect(fontRes.body.app.default_term.font_size).toBe(14);
+
+      const sizeRes = await request(app)
+        .put('/api/config')
+        .send({ app: { default_term: { font_size: 18 } } });
+      expect(sizeRes.status).toBe(200);
+      expect(sizeRes.body.app.default_term.font_family).toBe('"Test Fixture Sans"');
+      expect(sizeRes.body.app.default_term.font_size).toBe(18);
+    });
+
+    it('rejects unsafe terminal font family values', async () => {
+      const res = await request(app)
+        .put('/api/config')
+        .send({ app: { default_term: { font_family: 'Test Fixture Sans; color: red' } } });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Invalid app.default_term.font_family');
     });
 
     it('updates terminal grid limits', async () => {

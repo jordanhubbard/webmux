@@ -9,6 +9,7 @@ app:
     cols: 120
     rows: 40
     font_size: 14
+    font_family: Consolas, Menlo, "DejaVu Sans Mono", monospace
   terminal_grid:
     max_cols: null
     max_rows: null

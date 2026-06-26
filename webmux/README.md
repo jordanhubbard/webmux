@@ -50,12 +50,15 @@ app:
     cols: 80
     rows: 24
     font_size: 14
+    font_family: Consolas, Menlo, "DejaVu Sans Mono", monospace
   terminal_grid:
     max_cols: null      # null, 0, or omitted = unlimited
     max_rows: null      # null, 0, or omitted = unlimited
 ```
 
 `WEBMUX_TERMINAL_GRID_MAX_COLS` and `WEBMUX_TERMINAL_GRID_MAX_ROWS` can override those YAML values at runtime.
+
+Multi-word `default_term.font_family` values such as `Comic Mono` are normalized to quoted CSS family names, so `Comic Mono` is returned and saved as `"Comic Mono"`.
 
 Agent views are configured under `app.agents` and are disabled by default. See `../docs/agent-views.md` and `examples/agent-views/app.yaml` for setup, security notes, optional status hooks, and host-switcher examples.
 

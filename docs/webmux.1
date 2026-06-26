@@ -79,9 +79,10 @@ the server runs in
 .I Trusted
 mode (no auth, permissive CORS) — suitable for isolated networks only.
 .TP
-.B app.default_term.cols / .rows / .font_size
-Default terminal dimensions and font size for new sessions.
-Users can adjust these at runtime from the top bar; changes are
+.B app.default_term.cols / .rows / .font_size / .font_family
+Default terminal dimensions, font size, and CSS font-family for new sessions.
+Multi-word font family names are normalized to quoted CSS family names.
+Users can adjust the size values at runtime from the top bar; changes are
 persisted back to this file.
 .TP
 .B app.terminal_grid.max_cols / .max_rows

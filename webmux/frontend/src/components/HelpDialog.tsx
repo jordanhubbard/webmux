@@ -160,7 +160,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     fontWeight: 600,
     color: '#ccc',
-    fontFamily: 'Consolas, Menlo, monospace',
+    fontFamily: 'var(--webmux-mono-font)',
   },
   desc: {
     fontSize: 12,

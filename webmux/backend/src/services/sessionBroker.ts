@@ -660,8 +660,7 @@ export class SessionBroker extends EventEmitter {
     this.pendingAgentStatusUpdates.delete(key);
 
     const previousWrite = this.agentStatusWrites.get(key) ?? Promise.resolve();
-    let write: Promise<void>;
-    write = previousWrite
+    const write = previousWrite
       .catch(() => undefined)
       .then(() => agentService.recordStatus(pending.agentId, pending.name, pending.update))
       .catch(err => console.error(`Failed to record ${pending.agentId} agent status:`, err))
