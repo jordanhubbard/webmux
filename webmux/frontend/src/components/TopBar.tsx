@@ -343,11 +343,17 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0 16px',
     flexShrink: 0,
     zIndex: 100,
+    gap: 16,
+    minWidth: 0,
+    overflowX: 'auto',
+    overflowY: 'hidden',
+    WebkitOverflowScrolling: 'touch',
   },
   left: {
     display: 'flex',
     alignItems: 'center',
     gap: 16,
+    flex: '0 0 auto',
   },
   logo: {
     fontSize: 16,
@@ -368,6 +374,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 12,
+    flex: '0 0 auto',
   },
   fontControls: {
     display: 'flex',

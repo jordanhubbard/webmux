@@ -7,6 +7,7 @@ import '@xterm/xterm/css/xterm.css';
 import type { WebSocketMessage, ConnectionState, TerminalTheme } from '../types';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
+import { isTerminalIdentityResponse } from '../utils/terminalInput';
 import { normalizeTerminalFontFamily } from '../utils/terminalFont';
 
 export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
@@ -183,6 +184,10 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon();
     const searchAddon = new SearchAddon();
+    const terminalIdentityQueryHandlers = [
+      term.parser.registerCsiHandler({ final: 'c' }, () => true),
+      term.parser.registerCsiHandler({ prefix: '>', final: 'c' }, () => true),
+    ];
     term.loadAddon(fitAddon);
     term.loadAddon(webLinksAddon);
     term.loadAddon(searchAddon);
@@ -199,6 +204,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
 
     // Route input through the broadcast context instead of sending directly
     const dataListener = term.onData((data: string) => {
+      if (isTerminalIdentityResponse(data)) return;
       routeInputRef.current(sessionId, data);
     });
 
@@ -248,6 +254,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       dataListener.dispose();
       resizeListener.dispose();
       bellListener.dispose();
+      terminalIdentityQueryHandlers.forEach(disposable => disposable.dispose());
       termEl.removeEventListener('wheel', wheelHandler);
       el.removeEventListener('mousedown', clickHandler);
       term.dispose();
