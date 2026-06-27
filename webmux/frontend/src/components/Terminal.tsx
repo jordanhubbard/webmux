@@ -7,7 +7,7 @@ import '@xterm/xterm/css/xterm.css';
 import type { WebSocketMessage, ConnectionState, TerminalTheme } from '../types';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
-import { normalizeTerminalFontFamily } from '../utils/terminalFont';
+import { TERMINAL_FONTS_LOADED_EVENT, loadTerminalFontFamily, normalizeTerminalFontFamily } from '../utils/terminalFont';
 
 export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
   background: '#0d0d1a',
@@ -165,9 +165,10 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const normalizedFontFamily = normalizeTerminalFontFamily(fontFamily);
     const term = new XTerm({
       theme: { ...DEFAULT_TERMINAL_THEME, ...(theme || {}) },
-      fontFamily: normalizeTerminalFontFamily(fontFamily),
+      fontFamily: normalizedFontFamily,
       fontSize,
       cursorBlink: true,
       macOptionIsMeta: /Mac|iPhone|iPad/.test(navigator.platform),
@@ -192,6 +193,11 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     termRef.current = term;
     fitAddonRef.current = fitAddon;
     searchAddonRef.current = searchAddon;
+    void loadTerminalFontFamily(normalizedFontFamily, fontSize).then(() => {
+      if (termRef.current !== term) return;
+      fitAddon.fit();
+      term.refresh(0, Math.max(0, term.rows - 1));
+    });
     searchAddon.onDidChangeResults(({ resultIndex, resultCount }) => {
       setSearchIndex(resultIndex);
       setSearchCount(resultCount);
@@ -260,11 +266,36 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
 
   // Update font settings
   useEffect(() => {
-    if (termRef.current) {
-      termRef.current.options.fontSize = fontSize;
-      termRef.current.options.fontFamily = normalizeTerminalFontFamily(fontFamily);
+    const term = termRef.current;
+    if (!term) return;
+
+    const normalizedFontFamily = normalizeTerminalFontFamily(fontFamily);
+    let cancelled = false;
+    term.options.fontSize = fontSize;
+    term.options.fontFamily = normalizedFontFamily;
+    fitAddonRef.current?.fit();
+
+    void loadTerminalFontFamily(normalizedFontFamily, fontSize).then(() => {
+      if (cancelled || termRef.current !== term) return;
       fitAddonRef.current?.fit();
-    }
+      term.refresh(0, Math.max(0, term.rows - 1));
+    });
+
+    return () => { cancelled = true; };
+  }, [fontFamily, fontSize]);
+
+  useEffect(() => {
+    const refreshFontMetrics = () => {
+      const term = termRef.current;
+      if (!term) return;
+      void loadTerminalFontFamily(fontFamily, fontSize).then(() => {
+        if (termRef.current !== term) return;
+        fitAddonRef.current?.fit();
+        term.refresh(0, Math.max(0, term.rows - 1));
+      });
+    };
+    window.addEventListener(TERMINAL_FONTS_LOADED_EVENT, refreshFontMetrics);
+    return () => window.removeEventListener(TERMINAL_FONTS_LOADED_EVENT, refreshFontMetrics);
   }, [fontFamily, fontSize]);
 
   // Apply theme changes without tearing down the terminal (preserves scrollback).

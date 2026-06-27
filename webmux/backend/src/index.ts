@@ -44,6 +44,7 @@ async function main(): Promise<void> {
         secure_mode: false,
         trusted_http_allowed: true,
         default_term: { cols: 80, rows: 24, font_size: 14, font_family: DEFAULT_TERMINAL_FONT_FAMILY },
+        font_faces: [],
         terminal_grid: { max_cols: null, max_rows: null },
         ui: { default_pane: 'terminals', host_switcher: { enabled: false, suffixes: [], hosts: [] } },
         agents: { enabled: false, combined_pane: true, disable_in_multi_user_mode: true, definitions: [] },

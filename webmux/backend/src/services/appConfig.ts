@@ -3,6 +3,7 @@ import type {
   AgentDefinition,
   AgentDefinitionConfig,
   AppConfig,
+  AppFontFaceConfig,
   HostSwitcherConfig,
   NormalizedAgentsConfig,
   WorkspaceName,
@@ -10,7 +11,10 @@ import type {
 
 const AGENT_ID_RE = /^[a-z][a-z0-9_-]{0,63}$/;
 const TMUX_SOCKET_RE = /^[a-zA-Z0-9_.-]+$/;
-export const DEFAULT_TERMINAL_FONT_FAMILY = 'Consolas, Menlo, "DejaVu Sans Mono", monospace';
+export const DEFAULT_TERMINAL_FONT_FAMILY = 'ui-monospace, "SFMono-Regular", Monaco, Menlo, Consolas, "Liberation Mono", "DejaVu Sans Mono", monospace';
+export const FONT_FACE_CONFIG_ERROR = 'Invalid app.font_faces';
+const SUPPORTED_FONT_EXTENSIONS = new Set(['.otf', '.ttf', '.woff', '.woff2']);
+const FONT_DISPLAY_VALUES = new Set(['auto', 'block', 'swap', 'fallback', 'optional']);
 const GENERIC_FONT_FAMILIES = new Set([
   'serif',
   'sans-serif',
@@ -90,6 +94,85 @@ function normalizeFontFamily(value: unknown): string {
     throw new Error('Invalid app.default_term.font_family');
   }
   return normalized;
+}
+
+function stripMatchingQuotes(value: string): string {
+  const quote = value[0];
+  if ((quote === '"' || quote === "'") && value[value.length - 1] === quote) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
+function normalizeFontFaceFamily(value: unknown): string {
+  const family = stringOrDefault(value, '');
+  if (!family || family.length > 128 || /[\0\r\n;{}\\]/.test(family)) {
+    throw new Error(FONT_FACE_CONFIG_ERROR);
+  }
+  return stripMatchingQuotes(normalizeFontFamilyPart(family));
+}
+
+function normalizeFontFaceSource(value: unknown): string {
+  const source = stringOrDefault(value, '');
+  if (
+    !source ||
+    source.length > 512 ||
+    path.isAbsolute(source) ||
+    /[\0\r\n]/.test(source) ||
+    /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(source)
+  ) {
+    throw new Error(FONT_FACE_CONFIG_ERROR);
+  }
+  const extension = path.extname(source).toLowerCase();
+  if (!SUPPORTED_FONT_EXTENSIONS.has(extension)) {
+    throw new Error(FONT_FACE_CONFIG_ERROR);
+  }
+  return source;
+}
+
+function normalizeFontFaceWeight(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const weight = typeof value === 'number' ? String(value) : stringOrDefault(value, '');
+  if (/^(normal|bold|[1-9]00)$/.test(weight)) return weight;
+  throw new Error(FONT_FACE_CONFIG_ERROR);
+}
+
+function normalizeFontFaceStyle(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const style = stringOrDefault(value, '').toLowerCase();
+  if (style === 'normal' || style === 'italic' || style === 'oblique') return style;
+  throw new Error(FONT_FACE_CONFIG_ERROR);
+}
+
+function normalizeFontFaceDisplay(value: unknown): AppFontFaceConfig['display'] | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const display = stringOrDefault(value, '').toLowerCase();
+  if (FONT_DISPLAY_VALUES.has(display)) return display as AppFontFaceConfig['display'];
+  throw new Error(FONT_FACE_CONFIG_ERROR);
+}
+
+export function normalizeFontFaces(value: unknown): AppFontFaceConfig[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > 32) {
+    throw new Error(FONT_FACE_CONFIG_ERROR);
+  }
+  return value.map(face => {
+    if (!face || typeof face !== 'object') {
+      throw new Error(FONT_FACE_CONFIG_ERROR);
+    }
+    const raw = face as Record<string, unknown>;
+    const normalized: AppFontFaceConfig = {
+      family: normalizeFontFaceFamily(raw.family),
+      source: normalizeFontFaceSource(raw.source),
+    };
+    const weight = normalizeFontFaceWeight(raw.weight);
+    const style = normalizeFontFaceStyle(raw.style);
+    const display = normalizeFontFaceDisplay(raw.display);
+    if (weight) normalized.weight = weight;
+    if (style) normalized.style = style;
+    if (display) normalized.display = display;
+    return normalized;
+  });
 }
 
 function normalizeWorkspace(value: unknown, id: string): WorkspaceName {
@@ -181,6 +264,7 @@ export function normalizeAppConfig(config: AppConfig): AppConfig {
         ...config.app.default_term,
         font_family: normalizeFontFamily(config.app.default_term?.font_family),
       },
+      font_faces: normalizeFontFaces(config.app.font_faces),
       ui: {
         default_pane: stringOrDefault(ui.default_pane, 'terminals'),
         host_switcher: normalizeHostSwitcher(ui.host_switcher),

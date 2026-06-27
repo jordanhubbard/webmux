@@ -6,6 +6,7 @@ import request from 'supertest';
 
 describe('API Routes', () => {
   let tmpDir: string;
+  let configDir: string;
   let originalHome: string | undefined;
   let app: express.Express;
 
@@ -14,7 +15,7 @@ describe('API Routes', () => {
     originalHome = process.env.WEBMUX_HOME;
     process.env.WEBMUX_HOME = tmpDir;
 
-    const configDir = path.join(tmpDir, 'config');
+    configDir = path.join(tmpDir, 'config');
     fs.mkdirSync(configDir, { recursive: true });
 
     // Auth mode none so we don't need tokens
@@ -179,7 +180,7 @@ describe('API Routes', () => {
       const res = await request(app).get('/api/config');
       expect(res.status).toBe(200);
       expect(res.body.app.name).toBe('webmux');
-      expect(res.body.app.default_term.font_family).toBe('Consolas, Menlo, "DejaVu Sans Mono", monospace');
+      expect(res.body.app.default_term.font_family).toBe('ui-monospace, "SFMono-Regular", Monaco, Menlo, Consolas, "Liberation Mono", "DejaVu Sans Mono", monospace');
     });
 
     it('returns environment-overridden terminal grid limits', async () => {
@@ -200,6 +201,48 @@ describe('API Routes', () => {
         else process.env.WEBMUX_TERMINAL_GRID_MAX_ROWS = originalMaxRows;
       }
     });
+
+    it('returns configured font face URLs and serves configured font files', async () => {
+      const fontDir = path.join(configDir, 'fonts');
+      const fontFile = path.join(fontDir, 'TestFont.woff2');
+      fs.mkdirSync(fontDir, { recursive: true });
+      fs.writeFileSync(fontFile, Buffer.from([0x77, 0x4f, 0x46, 0x32]));
+      fs.writeFileSync(path.join(configDir, 'app.yaml'),
+        'app:\n' +
+        '  name: webmux\n' +
+        '  listen_host: 0.0.0.0\n' +
+        '  http_port: 8080\n' +
+        '  https_port: 8443\n' +
+        '  secure_mode: false\n' +
+        '  trusted_http_allowed: true\n' +
+        '  default_term:\n' +
+        '    cols: 80\n' +
+        '    rows: 24\n' +
+        '    font_size: 14\n' +
+        '  font_faces:\n' +
+        '    - family: Test Fixture Mono\n' +
+        '      source: fonts/TestFont.woff2\n' +
+        '      weight: 400\n' +
+        '      style: normal\n' +
+        '  transport:\n' +
+        '    prefer_mosh: false\n' +
+        '    ssh_fallback: true\n');
+
+      const configRes = await request(app).get('/api/config');
+      expect(configRes.status).toBe(200);
+      expect(configRes.body.app.font_faces).toEqual([{
+        family: 'Test Fixture Mono',
+        source: 'fonts/TestFont.woff2',
+        weight: '400',
+        style: 'normal',
+        url: '/api/config/fonts/0',
+      }]);
+
+      const fontRes = await request(app).get('/api/config/fonts/0');
+      expect(fontRes.status).toBe(200);
+      expect(fontRes.header['content-type']).toContain('font/woff2');
+      expect(fontRes.body).toEqual(Buffer.from([0x77, 0x4f, 0x46, 0x32]));
+    });
   });
 
   describe('PUT /api/config', () => {
@@ -211,19 +254,21 @@ describe('API Routes', () => {
       expect(res.body.app.name).toBe('updated');
     });
 
-    it('quotes terminal font family and preserves it across size-only updates', async () => {
+    it('normalizes a terminal font stack and preserves it across size-only updates', async () => {
+      const fontStack = 'Test Fixture Mono, Monaco, ui-monospace, Menlo, Consolas, "Liberation Mono", monospace';
+      const normalizedFontStack = '"Test Fixture Mono", Monaco, ui-monospace, Menlo, Consolas, "Liberation Mono", monospace';
       const fontRes = await request(app)
         .put('/api/config')
-        .send({ app: { default_term: { font_family: 'Test Fixture Sans' } } });
+        .send({ app: { default_term: { font_family: fontStack } } });
       expect(fontRes.status).toBe(200);
-      expect(fontRes.body.app.default_term.font_family).toBe('"Test Fixture Sans"');
+      expect(fontRes.body.app.default_term.font_family).toBe(normalizedFontStack);
       expect(fontRes.body.app.default_term.font_size).toBe(14);
 
       const sizeRes = await request(app)
         .put('/api/config')
         .send({ app: { default_term: { font_size: 18 } } });
       expect(sizeRes.status).toBe(200);
-      expect(sizeRes.body.app.default_term.font_family).toBe('"Test Fixture Sans"');
+      expect(sizeRes.body.app.default_term.font_family).toBe(normalizedFontStack);
       expect(sizeRes.body.app.default_term.font_size).toBe(18);
     });
 
@@ -233,6 +278,14 @@ describe('API Routes', () => {
         .send({ app: { default_term: { font_family: 'Test Fixture Sans; color: red' } } });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('Invalid app.default_term.font_family');
+    });
+
+    it('rejects invalid configured font faces', async () => {
+      const res = await request(app)
+        .put('/api/config')
+        .send({ app: { font_faces: [{ family: 'Bad Font', source: 'https://example.com/font.woff2' }] } });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Invalid app.font_faces');
     });
 
     it('updates terminal grid limits', async () => {
