@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Terminal } from './Terminal';
 import { api } from '../utils/api';
+import { fitTerminalSizeToPixels } from '../utils/terminalSizing';
+import { useTouchLikeViewport, useVisualViewportSize } from '../utils/viewport';
 import type {
   AgentDefinition,
   AgentRuntimeStatus,
@@ -32,6 +34,12 @@ const SORT_LABELS: Record<SortMode, string> = {
   'created-newest': 'Created newest',
   'created-oldest': 'Created oldest',
 };
+
+const TOP_BAR_HEIGHT = 44;
+const SIDEBAR_WIDTH = 280;
+const PANEL_CHROME_HEIGHT = 30;
+const PANEL_PADDING = 16;
+const PANEL_GAP = 8;
 
 function sessionKey(session: AgentTmuxSession): string {
   return `${session.agent_id}:${session.name}`;
@@ -221,9 +229,12 @@ export function AgentWorkspace({
   const [scratchLoading, setScratchLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('recently-ready');
+  const reserveScratch = scratchVisible || scratchLoading;
   const attachRequestRef = useRef(0);
   const listRef = useRef<HTMLDivElement | null>(null);
   const sortModeRef = useRef<SortMode>(sortMode);
+  const viewportSize = useVisualViewportSize();
+  const touchLikeViewport = useTouchLikeViewport();
   sortModeRef.current = sortMode;
 
   const activeTheme = themes.find(theme => theme.name === globalTheme);
@@ -232,6 +243,17 @@ export function AgentWorkspace({
   const selectedAgentName = selectedSession?.name;
   const sortedSessions = useMemo(() => sortSessions(agentSessions, sortMode), [agentSessions, sortMode]);
   const sortedKeys = useMemo(() => sortedSessions.map(sessionKey), [sortedSessions]);
+  const effectiveTermSize = useMemo(() => {
+    if (!touchLikeViewport) return { cols: termCols, rows: termRows };
+    const mainWidth = Math.max(0, viewportSize.width - SIDEBAR_WIDTH - PANEL_PADDING);
+    const primaryPanelWidth = Math.max(0, reserveScratch ? ((mainWidth - PANEL_GAP) * 2) / 3 : mainWidth);
+    const panelHeight = Math.max(0, viewportSize.height - TOP_BAR_HEIGHT - PANEL_CHROME_HEIGHT - PANEL_PADDING);
+    return fitTerminalSizeToPixels(termCols, termRows, fontSize, primaryPanelWidth, panelHeight);
+  }, [fontSize, reserveScratch, termCols, termRows, touchLikeViewport, viewportSize.height, viewportSize.width]);
+  const effectiveTermSizeRef = useRef(effectiveTermSize);
+  useEffect(() => {
+    effectiveTermSizeRef.current = effectiveTermSize;
+  }, [effectiveTermSize]);
   useFlipListAnimation(listRef, sortedKeys, sortMode === 'recently-ready' || sortMode === 'waiting-longest');
 
   const deleteAgentSession = useCallback((sessionId: string) => {
@@ -300,7 +322,12 @@ export function AgentWorkspace({
     setAttachLoading(true);
     setError(null);
     try {
-      const session = await api.attachAgentSession(agentId, { name, cols: termCols, rows: termRows });
+      const size = effectiveTermSizeRef.current;
+      const session = await api.attachAgentSession(agentId, {
+        name,
+        cols: size.cols,
+        rows: size.rows,
+      });
       if (attachRequestRef.current === requestId) {
         setAttachedSession(current => {
           if (current && current.id !== session.id) {
@@ -320,7 +347,7 @@ export function AgentWorkspace({
         setAttachLoading(false);
       }
     }
-  }, [clearAttachedSession, deleteAgentSession, loadSessions, termCols, termRows]);
+  }, [clearAttachedSession, deleteAgentSession, loadSessions]);
 
   useEffect(() => {
     if (selectedAgentId && selectedAgentName) {
@@ -338,10 +365,11 @@ export function AgentWorkspace({
     setScratchLoading(true);
     setError(null);
     try {
+      const size = effectiveTermSizeRef.current;
       const session = await api.createAgentScratch(scratchAgentId, {
         selectedName: selectedSession?.agent_id === scratchAgentId ? selectedSession.name : undefined,
-        cols: Math.max(40, Math.floor(termCols / 2)),
-        rows: termRows,
+        cols: Math.max(40, Math.floor(size.cols / 2)),
+        rows: size.rows,
       });
       setScratchSession(session);
     } catch (err) {
@@ -351,7 +379,7 @@ export function AgentWorkspace({
     } finally {
       setScratchLoading(false);
     }
-  }, [agent, scratchLoading, selectedSession, termCols, termRows]);
+  }, [agent, scratchLoading, selectedSession]);
 
   const closeScratch = useCallback(async () => {
     const session = scratchSession;
@@ -368,7 +396,6 @@ export function AgentWorkspace({
   }, [scratchSession]);
 
   const showScratch = scratchVisible && scratchSession;
-  const reserveScratch = scratchVisible || scratchLoading;
   const attachedAgent = attachedSession?.agent_id
     ? agentById.get(attachedSession.agent_id) ?? fallbackDefinition(attachedSession.agent_id)
     : selectedSession

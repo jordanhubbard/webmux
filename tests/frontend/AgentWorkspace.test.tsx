@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import type { AgentDefinition, Session } from '@frontend/types';
 import { AgentWorkspace } from '@frontend/components/AgentWorkspace';
@@ -91,6 +91,50 @@ const defaultProps = {
   globalTheme: null,
 };
 
+const originalMatchMedia = window.matchMedia;
+const originalVisualViewport = Object.getOwnPropertyDescriptor(window, 'visualViewport');
+const originalMaxTouchPoints = Object.getOwnPropertyDescriptor(Navigator.prototype, 'maxTouchPoints');
+
+function setTouchViewport(width: number, height: number) {
+  Object.defineProperty(window, 'visualViewport', {
+    configurable: true,
+    value: {
+      width,
+      height,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    },
+  });
+  Object.defineProperty(Navigator.prototype, 'maxTouchPoints', {
+    configurable: true,
+    value: 5,
+  });
+  window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+    matches: query === '(pointer: coarse)',
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+}
+
+function restoreViewport() {
+  window.matchMedia = originalMatchMedia;
+  if (originalVisualViewport) {
+    Object.defineProperty(window, 'visualViewport', originalVisualViewport);
+  } else {
+    delete (window as Partial<Window>).visualViewport;
+  }
+  if (originalMaxTouchPoints) {
+    Object.defineProperty(Navigator.prototype, 'maxTouchPoints', originalMaxTouchPoints);
+  } else {
+    delete (Navigator.prototype as Partial<Navigator>).maxTouchPoints;
+  }
+}
+
 describe('AgentWorkspace', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -104,6 +148,10 @@ describe('AgentWorkspace', () => {
       agent_session_name: undefined,
     }));
     apiMock.deleteSession.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    restoreViewport();
   });
 
   it('auto-selects the first configured agent session and requests attach', async () => {
@@ -121,6 +169,31 @@ describe('AgentWorkspace', () => {
     expect(await screen.findByTestId('terminal-agent-session-1')).toBeDefined();
     expect(screen.getByTestId('agent-layout-codex')).toHaveStyle('grid-template-columns: minmax(0, 1fr)');
     expect(apiMock.createAgentScratch).not.toHaveBeenCalled();
+  });
+
+  it('uses a viewport-sized attach request on touch devices', async () => {
+    setTouchViewport(780, 650);
+
+    render(
+      <AgentWorkspace
+        agent={codexDefinition}
+        agentDefinitions={[codexDefinition]}
+        {...defaultProps}
+        termCols={190}
+        termRows={44}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(apiMock.attachAgentSession).toHaveBeenCalled();
+    });
+
+    const [, request] = apiMock.attachAgentSession.mock.calls[0];
+    expect(request.name).toBe('codex-a');
+    expect(request.cols).toBeLessThan(190);
+    expect(request.cols).toBeGreaterThanOrEqual(40);
+    expect(request.rows).toBeLessThanOrEqual(44);
+    expect(request.rows).toBeGreaterThanOrEqual(10);
   });
 
   it('opens and closes a scratch shell beside the selected agent session', async () => {
