@@ -81,9 +81,33 @@ mode (no auth, permissive CORS) — suitable for isolated networks only.
 .TP
 .B app.default_term.cols / .rows / .font_size / .font_family
 Default terminal dimensions, font size, and CSS font-family for new sessions.
-Multi-word font family names are normalized to quoted CSS family names.
+The font family accepts a comma-separated CSS font-family list. Multi-word font
+family names are normalized to quoted CSS family names.
 Users can adjust the size values at runtime from the top bar; changes are
 persisted back to this file.
+.TP
+.B app.font_faces
+Optional list of local font files to host for browser clients. Each entry
+contains a
+.B family
+name and relative
+.B source
+path, plus optional
+.BR weight ,
+.BR style ,
+and
+.BR display .
+Source paths resolve relative to the real
+.I app.yaml
+path and may point to
+.IR .otf ,
+.IR .ttf ,
+.IR .woff ,
+or
+.I .woff2
+files. Configured fonts are served through authenticated same-origin routes and
+can be referenced from
+.BR app.default_term.font_family .
 .TP
 .B app.terminal_grid.max_cols / .max_rows
 Optional maximum column and row count for the terminals workspace.

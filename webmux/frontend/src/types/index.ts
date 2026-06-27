@@ -154,6 +154,15 @@ export interface HostSwitcherConfig {
   hosts: HostSwitcherHost[];
 }
 
+export interface AppFontFaceConfig {
+  family: string;
+  source: string;
+  weight?: string | number;
+  style?: string;
+  display?: 'auto' | 'block' | 'swap' | 'fallback' | 'optional';
+  url?: string;
+}
+
 export interface KeyEntry {
   id: string;
   type: string;
@@ -175,6 +184,7 @@ export interface AppConfig {
       font_size: number;
       font_family?: string;
     };
+    font_faces?: AppFontFaceConfig[];
     terminal_grid?: {
       max_cols?: number | null;
       max_rows?: number | null;
