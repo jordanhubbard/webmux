@@ -10,11 +10,12 @@ import { RegisterDialog } from './components/RegisterDialog';
 import { InputBroadcastProvider } from './contexts/InputBroadcastContext';
 import { WorkspacePaneProvider, useWorkspacePane, type WorkspacePane } from './contexts/WorkspacePaneContext';
 import { api } from './utils/api';
-import type { AgentDefinition, AgentsConfig, HostSwitcherConfig, NamedTheme } from './types';
+import type { AgentDefinition, AgentsConfig, AppFontFaceConfig, HostSwitcherConfig, NamedTheme } from './types';
 import { loadBundledThemes, loadGlobalTheme, saveGlobalTheme } from './utils/themes';
 import {
   DEFAULT_TERMINAL_FONT_FAMILY,
   TERMINAL_FONT_CSS_VARIABLE,
+  installConfiguredFontFaces,
   normalizeTerminalFontFamily,
 } from './utils/terminalFont';
 
@@ -249,6 +250,7 @@ export default function App() {
   const [defaultPane, setDefaultPane] = useState<WorkspacePane>('terminals');
   const [agentConfig, setAgentConfig] = useState<AgentsConfig>(DEFAULT_AGENT_CONFIG);
   const [hostSwitcher, setHostSwitcher] = useState<HostSwitcherConfig>(DEFAULT_HOST_SWITCHER);
+  const [fontFaces, setFontFaces] = useState<AppFontFaceConfig[]>([]);
 
   const currentUser = useMemo(() => auth.isAuthenticated ? parseTokenUser() : null, [auth.isAuthenticated]);
 
@@ -270,6 +272,7 @@ export default function App() {
       setDefaultPane(config.app.ui?.default_pane ?? 'terminals');
       setAgentConfig(config.app.agents ?? DEFAULT_AGENT_CONFIG);
       setHostSwitcher(config.app.ui?.host_switcher ?? DEFAULT_HOST_SWITCHER);
+      setFontFaces(config.app.font_faces ?? []);
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [auth.isAuthenticated, auth.isLoading]);
@@ -281,6 +284,10 @@ export default function App() {
   useEffect(() => {
     document.documentElement.style.setProperty(TERMINAL_FONT_CSS_VARIABLE, fontFamily);
   }, [fontFamily]);
+
+  useEffect(() => {
+    installConfiguredFontFaces(fontFaces).catch(() => {});
+  }, [fontFaces]);
 
   const handleGlobalThemeChange = useCallback((name: string | null) => {
     setGlobalTheme(name);

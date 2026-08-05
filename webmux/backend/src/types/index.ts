@@ -12,6 +12,7 @@ export interface AppConfig {
       font_size: number;
       font_family?: string;
     };
+    font_faces?: AppFontFaceConfig[];
     terminal_grid?: {
       max_cols?: number | null;
       max_rows?: number | null;
@@ -33,6 +34,16 @@ export interface AppConfig {
     // Populated from WEBMUX_EXEC_COMMAND env var at runtime; not persisted to app.yaml.
     exec_command?: string;
   };
+}
+
+export interface AppFontFaceConfig {
+  family: string;
+  source: string;
+  weight?: string | number;
+  style?: string;
+  display?: 'auto' | 'block' | 'swap' | 'fallback' | 'optional';
+  // Populated in API responses; not persisted to app.yaml.
+  url?: string;
 }
 
 export interface HostSwitcherConfig {
