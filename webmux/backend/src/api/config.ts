@@ -47,9 +47,14 @@ function configuredFontFile(index: number): { file: string; contentType: string 
   const app = normalizeAppConfig(appConfigWithEffectiveTerminalGridLimits(persistence.loadApp()));
   const face = app.app.font_faces?.[index];
   if (!face) return null;
-  const file = path.resolve(appConfigDir(), face.source);
+  const configDir = appConfigDir();
+  const file = fs.realpathSync(path.resolve(configDir, face.source));
+  const relativeFile = path.relative(configDir, file);
+  if (!relativeFile || relativeFile === '..' || relativeFile.startsWith(`..${path.sep}`) || path.isAbsolute(relativeFile)) {
+    return null;
+  }
   const contentType = FONT_CONTENT_TYPES[path.extname(file).toLowerCase()];
-  if (!contentType) return null;
+  if (!contentType || !fs.statSync(file).isFile()) return null;
   return { file, contentType };
 }
 
@@ -74,7 +79,7 @@ router.get('/fonts/:index', (req: Request, res: Response) => {
   }
   try {
     const fontFile = configuredFontFile(index);
-    if (!fontFile || !fs.existsSync(fontFile.file) || !fs.statSync(fontFile.file).isFile()) {
+    if (!fontFile) {
       res.status(404).json({ error: 'Font not found' });
       return;
     }

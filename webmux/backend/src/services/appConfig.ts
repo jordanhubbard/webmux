@@ -114,10 +114,12 @@ function normalizeFontFaceFamily(value: unknown): string {
 
 function normalizeFontFaceSource(value: unknown): string {
   const source = stringOrDefault(value, '');
+  const pathSegments = source.split(/[\\/]/);
   if (
     !source ||
     source.length > 512 ||
     path.isAbsolute(source) ||
+    pathSegments.includes('..') ||
     /[\0\r\n]/.test(source) ||
     /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(source)
   ) {

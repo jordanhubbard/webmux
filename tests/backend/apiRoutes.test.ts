@@ -243,6 +243,27 @@ describe('API Routes', () => {
       expect(fontRes.header['content-type']).toContain('font/woff2');
       expect(fontRes.body).toEqual(Buffer.from([0x77, 0x4f, 0x46, 0x32]));
     });
+
+    it('does not serve a configured font symlink outside the config directory', async () => {
+      const fontDir = path.join(configDir, 'fonts');
+      const outsideFont = path.join(tmpDir, 'OutsideFont.woff2');
+      fs.mkdirSync(fontDir, { recursive: true });
+      fs.writeFileSync(outsideFont, Buffer.from([0x77, 0x4f, 0x46, 0x32]));
+      fs.symlinkSync(outsideFont, path.join(fontDir, 'LinkedFont.woff2'));
+      fs.writeFileSync(path.join(configDir, 'app.yaml'),
+        'app:\n' +
+        '  name: webmux\n' +
+        '  default_term:\n' +
+        '    cols: 80\n' +
+        '    rows: 24\n' +
+        '    font_size: 14\n' +
+        '  font_faces:\n' +
+        '    - family: Linked Font\n' +
+        '      source: fonts/LinkedFont.woff2\n');
+
+      const fontRes = await request(app).get('/api/config/fonts/0');
+      expect(fontRes.status).toBe(404);
+    });
   });
 
   describe('PUT /api/config', () => {
@@ -284,6 +305,14 @@ describe('API Routes', () => {
       const res = await request(app)
         .put('/api/config')
         .send({ app: { font_faces: [{ family: 'Bad Font', source: 'https://example.com/font.woff2' }] } });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Invalid app.font_faces');
+    });
+
+    it('rejects configured font paths that escape the config directory', async () => {
+      const res = await request(app)
+        .put('/api/config')
+        .send({ app: { font_faces: [{ family: 'Outside Font', source: '../OutsideFont.woff2' }] } });
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('Invalid app.font_faces');
     });
