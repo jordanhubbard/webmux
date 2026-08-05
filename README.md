@@ -93,7 +93,14 @@ app:
     cols: 80            # terminal width in characters
     rows: 24            # terminal height in characters
     font_size: 14       # font size in pixels
-    font_family: Consolas, Menlo, "DejaVu Sans Mono", monospace
+    font_family: ui-monospace, "SFMono-Regular", Monaco, Menlo, Consolas, "Liberation Mono", "DejaVu Sans Mono", monospace
+  font_faces:
+    # Optional local fonts to make available to browser clients.
+    # source paths are relative to this app.yaml file's real path.
+    # - family: Custom Mono
+    #   source: fonts/CustomMono.woff2
+    #   weight: 400
+    #   style: normal
   terminal_grid:
     max_cols: null      # null, 0, or omitted = unlimited
     max_rows: null      # null, 0, or omitted = unlimited
@@ -102,7 +109,9 @@ app:
     ssh_fallback: true
 ```
 
-The `default_term` settings control every terminal tile's dimensions and fixed-width font. Each tile is rendered at a fixed pixel size derived from `cols`, `rows`, and `font_size`. `font_family` accepts a normal CSS font-family list and is applied across terminal and monospace UI text. Multi-word family names such as `Comic Mono` are normalized to quoted CSS family names, so `Comic Mono` is returned and saved as `"Comic Mono"`. The size values can also be adjusted live from the top bar; changes are saved back to `app.yaml` automatically.
+The `default_term` settings control every terminal tile's dimensions and fixed-width font. Each tile is rendered at a fixed pixel size derived from `cols`, `rows`, and `font_size`. `font_family` accepts a normal comma-separated CSS font-family list and is applied across terminal and monospace UI text. Multi-word family names such as `Custom Mono` are normalized to quoted CSS family names, so `Custom Mono, Monaco, monospace` is returned and saved as `"Custom Mono", Monaco, monospace`. The size values can also be adjusted live from the top bar; changes are saved back to `app.yaml` automatically.
+
+Optional `font_faces` entries let WebMux host local font files for browser clients. `source` paths must be relative paths to `.otf`, `.ttf`, `.woff`, or `.woff2` files; they are resolved relative to the real `app.yaml` path, so symlinked config files can keep fonts beside the shared config. The frontend fetches configured font files through authenticated same-origin routes and registers them before refitting terminals. Once a face is declared, reference its `family` name from `default_term.font_family`.
 
 The optional `terminal_grid` settings cap the number of columns and rows available in the terminals workspace. By default both directions are unlimited. `WEBMUX_TERMINAL_GRID_MAX_COLS` and `WEBMUX_TERMINAL_GRID_MAX_ROWS` override the YAML values at runtime; set either variable to a positive integer, or to `0`/`unlimited` for no limit.
 

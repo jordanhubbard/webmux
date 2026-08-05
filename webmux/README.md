@@ -50,7 +50,12 @@ app:
     cols: 80
     rows: 24
     font_size: 14
-    font_family: Consolas, Menlo, "DejaVu Sans Mono", monospace
+    font_family: ui-monospace, "SFMono-Regular", Monaco, Menlo, Consolas, "Liberation Mono", "DejaVu Sans Mono", monospace
+  font_faces:
+    # - family: Custom Mono
+    #   source: fonts/CustomMono.woff2
+    #   weight: 400
+    #   style: normal
   terminal_grid:
     max_cols: null      # null, 0, or omitted = unlimited
     max_rows: null      # null, 0, or omitted = unlimited
@@ -58,7 +63,9 @@ app:
 
 `WEBMUX_TERMINAL_GRID_MAX_COLS` and `WEBMUX_TERMINAL_GRID_MAX_ROWS` can override those YAML values at runtime.
 
-Multi-word `default_term.font_family` values such as `Comic Mono` are normalized to quoted CSS family names, so `Comic Mono` is returned and saved as `"Comic Mono"`.
+`default_term.font_family` accepts a normal comma-separated CSS font-family list. Multi-word family names such as `Custom Mono` are normalized to quoted CSS family names, so `Custom Mono, Monaco, monospace` is returned and saved as `"Custom Mono", Monaco, monospace`.
+
+Optional `app.font_faces` entries let WebMux host local font files for browser clients. `source` paths must be relative paths to `.otf`, `.ttf`, `.woff`, or `.woff2` files; they are resolved relative to the real `app.yaml` path, so symlinked config files can keep fonts beside the shared config. The frontend fetches configured font files through authenticated same-origin routes and registers them before refitting terminals. Once a face is declared, reference its `family` name from `default_term.font_family`.
 
 Agent views are configured under `app.agents` and are disabled by default. See `../docs/agent-views.md` and `examples/agent-views/app.yaml` for setup, security notes, optional status hooks, and host-switcher examples.
 

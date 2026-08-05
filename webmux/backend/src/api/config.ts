@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
 import { persistence } from '../services/persistenceManager';
 import { requireAuth } from '../middleware/auth';
 import { TransportLauncher } from '../services/transportLauncher';
@@ -7,14 +9,58 @@ import {
   isTerminalGridLimitError,
   terminalGridLimitsFromApp,
 } from '../services/terminalGridLimits';
-import { normalizeAppConfig } from '../services/appConfig';
+import { FONT_FACE_CONFIG_ERROR, normalizeAppConfig } from '../services/appConfig';
+import type { AppConfig } from '../types';
 
 const router = Router();
 router.use(requireAuth);
 
+const FONT_CONTENT_TYPES: Record<string, string> = {
+  '.otf': 'font/otf',
+  '.ttf': 'font/ttf',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+};
+
+function appConfigDir(): string {
+  const appConfigFile = persistence.configPath('app.yaml');
+  try {
+    return path.dirname(fs.realpathSync(appConfigFile));
+  } catch {
+    return path.dirname(appConfigFile);
+  }
+}
+
+function withFontFaceUrls(config: AppConfig): AppConfig {
+  return {
+    app: {
+      ...config.app,
+      font_faces: (config.app.font_faces ?? []).map((face, index) => ({
+        ...face,
+        url: `/api/config/fonts/${index}`,
+      })),
+    },
+  };
+}
+
+function configuredFontFile(index: number): { file: string; contentType: string } | null {
+  const app = normalizeAppConfig(appConfigWithEffectiveTerminalGridLimits(persistence.loadApp()));
+  const face = app.app.font_faces?.[index];
+  if (!face) return null;
+  const configDir = appConfigDir();
+  const file = fs.realpathSync(path.resolve(configDir, face.source));
+  const relativeFile = path.relative(configDir, file);
+  if (!relativeFile || relativeFile === '..' || relativeFile.startsWith(`..${path.sep}`) || path.isAbsolute(relativeFile)) {
+    return null;
+  }
+  const contentType = FONT_CONTENT_TYPES[path.extname(file).toLowerCase()];
+  if (!contentType || !fs.statSync(file).isFile()) return null;
+  return { file, contentType };
+}
+
 router.get('/', (_req: Request, res: Response) => {
   try {
-    const app = normalizeAppConfig(appConfigWithEffectiveTerminalGridLimits(persistence.loadApp()));
+    const app = withFontFaceUrls(normalizeAppConfig(appConfigWithEffectiveTerminalGridLimits(persistence.loadApp())));
     const execCommand = process.env.WEBMUX_EXEC_COMMAND;
     if (execCommand) {
       app.app.exec_command = execCommand;
@@ -25,8 +71,28 @@ router.get('/', (_req: Request, res: Response) => {
   }
 });
 
+router.get('/fonts/:index', (req: Request, res: Response) => {
+  const index = Number(req.params.index);
+  if (!Number.isInteger(index) || index < 0) {
+    res.status(404).json({ error: 'Font not found' });
+    return;
+  }
+  try {
+    const fontFile = configuredFontFile(index);
+    if (!fontFile) {
+      res.status(404).json({ error: 'Font not found' });
+      return;
+    }
+    res.type(fontFile.contentType);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.sendFile(fontFile.file);
+  } catch {
+    res.status(404).json({ error: 'Font not found' });
+  }
+});
+
 // Only allow updating safe fields — not listen_host, ports, or secure_mode at runtime
-const MUTABLE_APP_FIELDS = ['name', 'default_term', 'terminal_grid', 'transport', 'ui'];
+const MUTABLE_APP_FIELDS = ['name', 'default_term', 'font_faces', 'terminal_grid', 'transport', 'ui'];
 
 router.put('/', (req: Request, res: Response) => {
   try {
@@ -57,6 +123,7 @@ router.put('/', (req: Request, res: Response) => {
         default_term: updates.default_term
           ? { ...current.app.default_term, ...updates.default_term }
           : current.app.default_term,
+        font_faces: updates.font_faces !== undefined ? updates.font_faces : current.app.font_faces,
         terminal_grid: updates.terminal_grid
           ? { ...current.app.terminal_grid, ...updates.terminal_grid }
           : current.app.terminal_grid,
@@ -81,16 +148,21 @@ router.put('/', (req: Request, res: Response) => {
         res.status(400).json({ error: (err as Error).message });
         return;
       }
+      if ((err as Error).message === FONT_FACE_CONFIG_ERROR) {
+        res.status(400).json({ error: (err as Error).message });
+        return;
+      }
       throw err;
     }
-    const persisted = {
+    const persisted: AppConfig = {
       app: {
         ...merged.app,
         default_term: normalized.app.default_term,
+        font_faces: normalized.app.font_faces,
       },
     };
     persistence.saveApp(persisted);
-    res.json(normalizeAppConfig(appConfigWithEffectiveTerminalGridLimits(persisted)));
+    res.json(withFontFaceUrls(normalizeAppConfig(appConfigWithEffectiveTerminalGridLimits(persisted))));
   } catch {
     res.status(500).json({ error: 'Failed to save config' });
   }

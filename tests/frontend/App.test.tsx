@@ -224,20 +224,21 @@ describe('App', () => {
   });
 
   it('applies configured terminal font family and keeps it when saving font size', async () => {
+    const fontStack = '"Test Fixture Mono", Monaco, ui-monospace, Menlo, Consolas, "Liberation Mono", monospace';
     mockAuth.isLoading = false;
     mockAuth.isAuthenticated = true;
     mockAuth.authStatus = { mode: 'none', bootstrap_required: false };
     (api.getConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
       app: {
         ...defaultConfig.app,
-        default_term: { cols: 80, rows: 24, font_size: 14, font_family: '"Test Fixture Sans"' },
+        default_term: { cols: 80, rows: 24, font_size: 14, font_family: fontStack },
       },
     });
 
     render(<App />);
 
     await waitFor(() => {
-      expect(document.documentElement.style.getPropertyValue('--webmux-mono-font')).toBe('"Test Fixture Sans"');
+      expect(document.documentElement.style.getPropertyValue('--webmux-mono-font')).toBe(fontStack);
     });
 
     fireEvent.click(screen.getByText('A+'));
@@ -248,7 +249,7 @@ describe('App', () => {
             cols: 80,
             rows: 24,
             font_size: 15,
-            font_family: '"Test Fixture Sans"',
+            font_family: fontStack,
           },
         },
       });
