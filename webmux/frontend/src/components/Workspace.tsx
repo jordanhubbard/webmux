@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Tile, type TileHandle } from './Tile';
 import { ConnectionDialog } from './ConnectionDialog';
 import { WorkspaceMinimap } from './WorkspaceMinimap';
@@ -6,6 +6,7 @@ import { api } from '../utils/api';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import type { Session, CreateSessionRequest, NamedTheme } from '../types';
 import { loadSessionThemeOverrides, saveSessionThemeOverrides } from '../utils/themes';
+import { useElementSize, useTouchLikeViewport } from '../utils/viewport';
 
 interface WorkspaceProps {
   fontSize: number;
@@ -204,6 +205,8 @@ export function Workspace({
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
   const outerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const outerSize = useElementSize(outerRef);
+  const touchLikeViewport = useTouchLikeViewport();
 
   // Refs for use in event handlers (avoid stale closures)
   const sessionsRef = useRef<Session[]>([]);
@@ -310,7 +313,14 @@ export function Workspace({
     });
   }, []);
 
-  const tile = tilePixelSize(termCols, termRows, fontSize);
+  const desiredTile = tilePixelSize(termCols, termRows, fontSize);
+  const tile = useMemo(() => {
+    if (!touchLikeViewport || outerSize.width <= 0 || outerSize.height <= 0) return desiredTile;
+    return {
+      w: Math.min(desiredTile.w, Math.max(240, outerSize.width - GAP * 2)),
+      h: Math.min(desiredTile.h, Math.max(180, outerSize.height - GAP * 4 - 30)),
+    };
+  }, [desiredTile.h, desiredTile.w, outerSize.height, outerSize.width, touchLikeViewport]);
 
   // Clear all per-window overrides when user explicitly clicks global toggle
   useEffect(() => {
