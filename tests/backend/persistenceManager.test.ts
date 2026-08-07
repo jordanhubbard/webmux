@@ -21,7 +21,7 @@ describe('PersistenceManager', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
-  it('creates config and data directories on construction', () => {
+  it('creates config and data directories on construction', async () => {
     // Re-import to trigger constructor with new WEBMUX_ROOT
     jest.resetModules();
     const { PersistenceManager } = require('@backend/services/persistenceManager');
@@ -29,10 +29,10 @@ describe('PersistenceManager', () => {
 
     expect(fs.existsSync(path.join(tmpDir, 'config'))).toBe(true);
     expect(fs.existsSync(path.join(tmpDir, 'data'))).toBe(true);
-    pm.close();
+    await pm.close();
   });
 
-  it('writes and reads YAML files atomically', () => {
+  it('writes and reads YAML files atomically', async () => {
     jest.resetModules();
     const { PersistenceManager } = require('@backend/services/persistenceManager');
     const pm = new PersistenceManager();
@@ -51,7 +51,7 @@ describe('PersistenceManager', () => {
     const loaded = pm.loadHosts();
     expect(loaded.hosts).toHaveLength(1);
     expect(loaded.hosts[0].hostname).toBe('test01.example.com');
-    pm.close();
+    await pm.close();
   });
 
   it('appends events to JSONL file', async () => {
@@ -69,6 +69,6 @@ describe('PersistenceManager', () => {
     const parsed = JSON.parse(content.trim());
     expect(parsed.type).toBe('test_event');
     expect(parsed.ts).toBeDefined();
-    pm.close();
+    await pm.close();
   });
 });

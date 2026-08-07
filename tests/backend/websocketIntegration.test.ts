@@ -14,6 +14,7 @@ describe('WebSocket Integration', () => {
   let port: number;
   let sessionBroker: any;
   let transportLauncher: any;
+  let persistence: any;
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-ws-'));
@@ -38,6 +39,7 @@ describe('WebSocket Integration', () => {
     const { setupWebSocket } = require('@backend/websocket/handler');
     sessionBroker = require('@backend/services/sessionBroker').sessionBroker;
     transportLauncher = require('@backend/services/transportLauncher').transportLauncher;
+    persistence = require('@backend/services/persistenceManager').persistence;
 
     await sessionBroker.initialize();
 
@@ -77,6 +79,7 @@ describe('WebSocket Integration', () => {
     wss.clients.forEach(ws => ws.close());
     wss.close();
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    await persistence.close();
 
     if (originalHome === undefined) {
       delete process.env.WEBMUX_HOME;

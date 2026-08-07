@@ -20,6 +20,7 @@ describe('Agent API Routes', () => {
   let app: express.Express;
   let sessionBroker: any;
   let transportLauncher: any;
+  let persistence: any;
   let dateNowSpy: jest.SpyInstance<number, []>;
 
   beforeEach(async () => {
@@ -46,6 +47,7 @@ describe('Agent API Routes', () => {
     const { default: sessionsRouter } = require('@backend/api/sessions');
     sessionBroker = require('@backend/services/sessionBroker').sessionBroker;
     transportLauncher = require('@backend/services/transportLauncher').transportLauncher;
+    persistence = require('@backend/services/persistenceManager').persistence;
 
     await sessionBroker.initialize();
 
@@ -55,12 +57,13 @@ describe('Agent API Routes', () => {
     app.use('/api/sessions', sessionsRouter);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     if (sessionBroker && transportLauncher) {
       for (const session of sessionBroker.list()) {
         transportLauncher.kill(session.id);
       }
     }
+    await persistence.close();
     if (originalHome === undefined) {
       delete process.env.WEBMUX_HOME;
     } else {

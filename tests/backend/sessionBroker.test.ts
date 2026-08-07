@@ -7,6 +7,7 @@ describe('SessionBroker', () => {
   let originalHome: string | undefined;
   let SessionBroker: typeof import('@backend/services/sessionBroker').SessionBroker;
   let transportLauncher: typeof import('@backend/services/transportLauncher').transportLauncher;
+  let persistence: typeof import('@backend/services/persistenceManager').persistence;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-broker-'));
@@ -24,11 +25,13 @@ describe('SessionBroker', () => {
     jest.resetModules();
     ({ SessionBroker } = require('@backend/services/sessionBroker'));
     ({ transportLauncher } = require('@backend/services/transportLauncher'));
+    ({ persistence } = require('@backend/services/persistenceManager'));
     (SessionBroker as unknown as Record<string, number>).AGENT_ATTACH_REPLAY_SUPPRESS_MS = 1500;
     (SessionBroker as unknown as Record<string, number>).AGENT_STATUS_FLUSH_DEBOUNCE_MS = 1;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await persistence.close();
     if (originalHome === undefined) {
       delete process.env.WEBMUX_HOME;
     } else {

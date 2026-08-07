@@ -197,12 +197,19 @@ export class PersistenceManager {
     this.watchers.push(watcher);
   }
 
-  close(): void {
-    this.watchers.forEach(w => w.close());
-    if (this.eventStream) {
-      this.eventStream.end();
-      this.eventStream = null;
-      this.eventStreamDate = null;
+  async close(): Promise<void> {
+    const watchers = this.watchers;
+    this.watchers = [];
+    await Promise.all(watchers.map(w => w.close()));
+
+    const stream = this.eventStream;
+    this.eventStream = null;
+    this.eventStreamDate = null;
+    if (stream && !stream.closed) {
+      await new Promise<void>(resolve => {
+        stream.once('close', resolve);
+        stream.end();
+      });
     }
   }
 }

@@ -9,6 +9,7 @@ describe('API Routes', () => {
   let configDir: string;
   let originalHome: string | undefined;
   let app: express.Express;
+  let persistence: any;
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-api-'));
@@ -37,6 +38,7 @@ describe('API Routes', () => {
     const { default: keysRouter } = require('@backend/api/keys');
     const { default: authRouter } = require('@backend/api/auth');
     const { sessionBroker } = require('@backend/services/sessionBroker');
+    persistence = require('@backend/services/persistenceManager').persistence;
 
     await sessionBroker.initialize();
 
@@ -49,7 +51,8 @@ describe('API Routes', () => {
     app.use('/api/auth', authRouter);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await persistence.close();
     if (originalHome === undefined) {
       delete process.env.WEBMUX_HOME;
     } else {
