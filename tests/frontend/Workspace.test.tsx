@@ -236,7 +236,11 @@ describe('Workspace', () => {
       render(<Workspace {...defaultProps} />, { wrapper });
       await waitFor(() => {
         expect(screen.getAllByText('three').length).toBeGreaterThan(0);
+        expect(terminalFocusFns.size).toBe(3);
       });
+      // Session ordering is mirrored into a ref from an effect. Give that
+      // effect one task turn before dispatching the global keyboard event.
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
       await waitFor(() => {
