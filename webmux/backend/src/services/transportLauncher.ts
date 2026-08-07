@@ -1,7 +1,8 @@
 import * as pty from 'node-pty';
-import { execSync } from 'child_process';
+import * as path from 'path';
 import { Session } from '../types';
 import { persistence } from './persistenceManager';
+import { commandShell, homeDirectory, resolveExecutable } from './platform';
 
 export interface PtyHandle {
   pty: pty.IPty;
@@ -13,6 +14,11 @@ const USERNAME_RE = /^[a-zA-Z0-9._-]+$/;
 
 export class TransportLauncher {
   private handles = new Map<string, pty.IPty>();
+
+  constructor(
+    private readonly platform: NodeJS.Platform = process.platform,
+    private readonly executableResolver: typeof resolveExecutable = resolveExecutable,
+  ) {}
 
   static validateHostname(hostname: string): void {
     if (!hostname) {
@@ -64,7 +70,7 @@ export class TransportLauncher {
     }
 
     if (session.transport === 'mosh') {
-      if (!this.findBinary('mosh')) {
+      if (!this.executableResolver('mosh', process.env, this.platform)) {
         throw new Error('mosh is not installed on this system');
       }
       return this.launchMosh(session, keyId);
@@ -82,11 +88,16 @@ export class TransportLauncher {
         throw new Error('Invalid exec argv argument');
       }
 
-      const ptyProcess = pty.spawn(command, args, {
+      // ConPTY needs absolute executable paths. Resolve bare commands when they
+      // are installed, but let node-pty report the launch error for optional
+      // commands (for example a configured tmux binary) that are unavailable.
+      const executable = this.resolvePtyExecutable(command);
+
+      const ptyProcess = pty.spawn(executable, args, {
         name: 'xterm-256color',
         cols: session.cols,
         rows: session.rows,
-        cwd: session.exec_cwd || process.env.HOME || '/',
+        cwd: session.exec_cwd || homeDirectory(),
         env: { ...process.env, TERM: 'xterm-256color' },
       });
 
@@ -103,11 +114,12 @@ export class TransportLauncher {
       .replace(/\{port\}/g, String(session.port))
       .replace(/\{user\}/g, session.username);
 
-    const ptyProcess = pty.spawn('/bin/sh', ['-c', cmd], {
+    const shell = commandShell(this.platform, process.env, this.executableResolver);
+    const ptyProcess = pty.spawn(shell.command, [...shell.args, cmd], {
       name: 'xterm-256color',
       cols: session.cols,
       rows: session.rows,
-      cwd: session.exec_cwd || process.env.HOME || '/',
+      cwd: session.exec_cwd || homeDirectory(),
       env: { ...process.env, TERM: 'xterm-256color' },
     });
 
@@ -117,33 +129,34 @@ export class TransportLauncher {
 
   private launchSsh(session: Session, password?: string, keyId?: string): pty.IPty {
     const args = this.buildSshArgs(session, keyId);
+    const ssh = this.requireExecutable('ssh');
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       TERM: 'xterm-256color',
     };
 
     if (password) {
-      const sshpass = this.findBinary('sshpass');
+      const sshpass = this.executableResolver('sshpass', process.env, this.platform);
       if (!sshpass) {
         throw new Error('Password authentication requires sshpass to be installed on the jump box');
       }
       env['SSHPASS'] = password;
-      const ptyProcess = pty.spawn('sshpass', ['-e', 'ssh', ...args], {
+      const ptyProcess = pty.spawn(sshpass, ['-e', ssh, ...args], {
         name: 'xterm-256color',
         cols: session.cols,
         rows: session.rows,
-        cwd: process.env.HOME || '/',
+        cwd: homeDirectory(),
         env,
       });
       this.handles.set(session.id, ptyProcess);
       return ptyProcess;
     }
 
-    const ptyProcess = pty.spawn('ssh', args, {
+    const ptyProcess = pty.spawn(ssh, args, {
       name: 'xterm-256color',
       cols: session.cols,
       rows: session.rows,
-      cwd: process.env.HOME || '/',
+      cwd: homeDirectory(),
       env,
     });
 
@@ -153,16 +166,17 @@ export class TransportLauncher {
 
   private launchMosh(session: Session, keyId?: string): pty.IPty {
     const args = this.buildMoshArgs(session, keyId);
+    const mosh = this.requireExecutable('mosh');
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       TERM: 'xterm-256color',
     };
 
-    const ptyProcess = pty.spawn('mosh', args, {
+    const ptyProcess = pty.spawn(mosh, args, {
       name: 'xterm-256color',
       cols: session.cols,
       rows: session.rows,
-      cwd: process.env.HOME || '/',
+      cwd: homeDirectory(),
       env,
     });
 
@@ -243,14 +257,18 @@ export class TransportLauncher {
     return null;
   }
 
-  private findBinary(name: string): string | null {
-    if (!/^[a-zA-Z0-9_-]+$/.test(name)) return null;
-    try {
-      execSync(`which ${name}`, { stdio: 'ignore' });
-      return name;
-    } catch {
-      return null;
-    }
+  private requireExecutable(name: string): string {
+    const pathImpl = this.platform === 'win32' ? path.win32 : path.posix;
+    if (pathImpl.isAbsolute(name)) return name;
+    const executable = this.executableResolver(name, process.env, this.platform);
+    if (executable) return executable;
+    throw new Error(`${name} is not installed or is not available on PATH`);
+  }
+
+  private resolvePtyExecutable(name: string): string {
+    const pathImpl = this.platform === 'win32' ? path.win32 : path.posix;
+    if (pathImpl.isAbsolute(name)) return name;
+    return this.executableResolver(name, process.env, this.platform) || name;
   }
 
   resize(sessionId: string, cols: number, rows: number): void {

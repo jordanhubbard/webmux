@@ -25,8 +25,9 @@ A web-native tmux-on-a-jump-box: a persistent shared terminal wall that runs in 
 ### Prerequisites
 
 - Node.js ≥ 20
-- `ssh` available on the jump box
+- `ssh` available on the jump box (`ssh.exe` on `PATH` when running on Windows)
 - (Optional) `sshpass` for password-based SSH auth
+- (Optional) `mosh` on both ends for mosh transport
 
 ### Install & Build
 
@@ -83,12 +84,45 @@ hosts:
 ### Run
 
 ```bash
-WEBMUX_ROOT=$(pwd) npm start
+npm start
 ```
 
 Open `http://localhost:8080` in your browser.
 
 On first run with `auth.mode: local`, you will be prompted to create an admin account.
+
+### Windows
+
+Native Windows hosting requires a current Windows release with ConPTY, Node.js 20 or newer, and Microsoft OpenSSH Client. The service installer also uses .NET Framework 4.6.1 or newer, which is included with supported Windows releases. From an elevated PowerShell prompt, missing prerequisites can be installed with:
+
+```powershell
+winget install OpenJS.NodeJS.LTS
+winget install Git.Git
+Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+```
+
+Open a new PowerShell window, verify `ssh -V`, then install and start WebMux:
+
+```powershell
+git clone https://github.com/jordanhubbard/webmux.git
+cd webmux\webmux
+npm ci
+npm run build
+npm start
+```
+
+Runtime data defaults to `%USERPROFILE%\.config\webmux`. `ssh.exe` must remain on `PATH`; WebMux resolves it to an absolute path before launching ConPTY. Key-based SSH is recommended because native Windows does not normally provide `sshpass`. Mosh and tmux-backed agent views require their respective executables and remain optional; agent views are intended for macOS/Linux hosts.
+
+For automatic startup through Windows Service Control Manager, keep the elevated PowerShell window open and run:
+
+```powershell
+npm run service:install
+npm run service:status
+```
+
+The installer prompts for the current account's password so the service retains access to that user's runtime configuration, SSH keys, and known-hosts data. It downloads and checksum-verifies the stable WinSW 2.12.0 wrapper, enables automatic delayed startup and failure recovery, and starts the service. Manage it with `npm run service:start`, `service:stop`, `service:restart`, and `service:uninstall`; uninstalling preserves data and logs. The one-time wrapper download requires access to GitHub.
+
+`npm run service:install -- -LocalSystem` is available for isolated installations that do not need user SSH credentials. The repository-level `make install` target continues to support launchd and systemd only. See the root README's **Hosting on Windows** section for firewall, environment-variable, service-account, and native build fallback instructions.
 
 ## Directory Layout
 
@@ -205,8 +239,18 @@ npm run dev:frontend
 # Run tests
 npm test
 
+# Run browser tests (install Chromium first if needed)
+npx playwright install chromium
+npm run test:e2e
+
 # Lint
 npm run lint
+```
+
+If Playwright does not publish a bundled Chromium build for the host OS, point the tests at a compatible installed Chrome or Chromium executable. For example:
+
+```bash
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/google-chrome npm run test:e2e
 ```
 
 ## Security Notes
@@ -224,6 +268,7 @@ npm run lint
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `WEBMUX_ROOT` | `../..` relative to `backend/dist` | Root directory |
+| `WEBMUX_HOME` | `~/.config/webmux` | Runtime data (`%USERPROFILE%\.config\webmux` on Windows) |
 | `HTTP_PORT` | from `app.yaml` | Override HTTP port |
 | `HTTPS_PORT` | from `app.yaml` | Override HTTPS port |
 | `JWT_SECRET` | `webmux-dev-secret-change-in-production` | **Change in production** |

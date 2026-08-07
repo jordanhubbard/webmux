@@ -176,13 +176,24 @@ export class PersistenceManager {
     }
     this.changeHandlers.get(file)!.push(handler);
 
-    const watcher = chokidar.watch(file, { persistent: false, ignoreInitial: true });
+    const watcher = chokidar.watch(file, {
+      persistent: false,
+      ignoreInitial: true,
+      // Native Windows FSWatcher throws EPERM when Playwright replaces its
+      // generated config directory. Polling two small YAML files is reliable
+      // and keeps runtime config reloads available on Windows.
+      usePolling: process.platform === 'win32',
+      interval: 1000,
+    });
     watcher.on('change', () => {
       const handlers = this.changeHandlers.get(file) || [];
       handlers.forEach(h => {
         try { h(); } catch (e) { console.error('Config change handler error:', e); }
       });
     });
+    // Windows can emit EPERM when a watched config directory is removed during
+    // shutdown or test teardown. A watcher failure should not crash the server.
+    watcher.on('error', err => console.error(`Config watcher error for ${filename}:`, err));
     this.watchers.push(watcher);
   }
 

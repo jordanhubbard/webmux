@@ -117,8 +117,9 @@ describe('File Upload API (/api/upload)', () => {
         expect(res.status).toBe(413);
         expect(res.body.error).toMatch(/too large/i);
       } catch (err: any) {
-        // Server may reset connection mid-stream (EPIPE/ECONNRESET) — that also means upload was rejected
-        expect(['EPIPE', 'ECONNRESET', 'ECONNREFUSED']).toContain(err.code);
+        // Server may cancel/reset the connection mid-stream — that also means upload was rejected.
+        // Windows reports this as ECANCELED while POSIX commonly uses EPIPE/ECONNRESET.
+        expect(['ECANCELED', 'EPIPE', 'ECONNRESET', 'ECONNREFUSED']).toContain(err.code);
       }
     });
   });

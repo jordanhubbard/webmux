@@ -4,6 +4,7 @@ import path from 'path';
 const TEST_PORT = 18080;
 const TEST_HOME = path.resolve(__dirname, '../tests/e2e/.test-home');
 const WEBMUX_DIR = path.resolve(__dirname);
+const CHROMIUM_EXECUTABLE = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: '../tests/e2e',
@@ -17,7 +18,13 @@ export default defineConfig({
     headless: true,
   },
   projects: [
-    { name: 'chromium', use: { browserName: 'chromium' } },
+    {
+      name: 'chromium',
+      use: {
+        browserName: 'chromium',
+        launchOptions: CHROMIUM_EXECUTABLE ? { executablePath: CHROMIUM_EXECUTABLE } : undefined,
+      },
+    },
   ],
   globalSetup: '../tests/e2e/global-setup.ts',
   globalTeardown: '../tests/e2e/global-teardown.ts',

@@ -16,6 +16,6 @@ class MockPty extends EventEmitter {
   }
 }
 
-export function spawn(_cmd: string, _args: string[], _opts: Record<string, unknown>): MockPty {
+export const spawn = jest.fn((_cmd: string, _args: string[], _opts: Record<string, unknown>): MockPty => {
   return new MockPty();
-}
+});

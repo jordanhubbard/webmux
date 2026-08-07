@@ -4,11 +4,12 @@ import { persistence } from '../services/persistenceManager';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { homeDirectory } from '../services/platform';
 
 const router = Router();
 router.use(requireAuth);
 
-const UPLOAD_DIR = path.join(process.env.WEBMUX_HOME || path.join(process.env.HOME || '/tmp', '.config/webmux'), 'uploads');
+const UPLOAD_DIR = path.join(process.env.WEBMUX_HOME || path.join(homeDirectory(), '.config', 'webmux'), 'uploads');
 const MAX_FILE_SIZE = 10 * 1024 * 1024;       // 10 MB per file
 const QUOTA_BYTES = 500 * 1024 * 1024;        // 500 MB total across all uploads
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;  // purge unreferenced files older than 30 days

@@ -1,5 +1,7 @@
 import { TransportLauncher } from '@backend/services/transportLauncher';
 import { Session } from '@backend/types';
+import * as pty from 'node-pty';
+import * as os from 'os';
 
 // node-pty is mocked via jest.config.js moduleNameMapper
 
@@ -32,7 +34,8 @@ describe('TransportLauncher', () => {
   let launcher: TransportLauncher;
 
   beforeEach(() => {
-    launcher = new TransportLauncher();
+    jest.clearAllMocks();
+    launcher = new TransportLauncher('linux', name => `/usr/bin/${name}`);
   });
 
   afterEach(() => {
@@ -83,13 +86,36 @@ describe('TransportLauncher', () => {
 
   it('launches mosh transport when binary is available', () => {
     const session = makeSession({ transport: 'mosh' });
-    // This will either succeed (mosh installed) or throw (mosh not installed)
-    // We test both paths
+    expect(launcher.launch(session)).toBeDefined();
+    expect(pty.spawn).toHaveBeenCalledWith('/usr/bin/mosh', expect.any(Array), expect.any(Object));
+  });
+
+  it('reports a missing SSH client clearly', () => {
+    launcher = new TransportLauncher('win32', () => null);
+    expect(() => launcher.launch(makeSession())).toThrow('ssh is not installed or is not available on PATH');
+  });
+
+  it('passes an absolute ssh.exe path to node-pty on Windows', () => {
+    const ssh = 'C:\\Windows\\System32\\OpenSSH\\ssh.exe';
+    launcher = new TransportLauncher('win32', name => name === 'ssh' ? ssh : null);
+    launcher.launch(makeSession());
+    expect(pty.spawn).toHaveBeenCalledWith(ssh, expect.any(Array), expect.objectContaining({ cwd: os.homedir() }));
+  });
+
+  it('uses cmd.exe for command-template exec sessions on Windows', () => {
+    const originalComSpec = process.env.COMSPEC;
+    process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';
     try {
-      const pty = launcher.launch(session);
-      expect(pty).toBeDefined();
-    } catch (err) {
-      expect((err as Error).message).toContain('mosh is not installed');
+      launcher = new TransportLauncher('win32', () => null);
+      launcher.launch(makeSession({ transport: 'exec', exec_command: 'echo hello' }));
+      expect(pty.spawn).toHaveBeenCalledWith(
+        'C:\\Windows\\System32\\cmd.exe',
+        ['/d', '/s', '/c', 'echo hello'],
+        expect.any(Object),
+      );
+    } finally {
+      if (originalComSpec === undefined) delete process.env.COMSPEC;
+      else process.env.COMSPEC = originalComSpec;
     }
   });
 

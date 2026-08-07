@@ -1,7 +1,4 @@
-import fs from 'fs';
-import path from 'path';
-
 export default function globalTeardown() {
-  const testHome = path.resolve(__dirname, '.test-home');
-  fs.rmSync(testHome, { recursive: true, force: true });
+  // Test-home cleanup happens in global setup, before the next web server is
+  // started. Removing watched files here crashes Node's Windows FSWatcher.
 }

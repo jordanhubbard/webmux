@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as os from 'os';
 import express from 'express';
 import request from 'supertest';
+import { interactiveShell } from '@backend/services/platform';
 
 const mockExecFile = jest.fn();
 const mockExecSync = jest.fn();
@@ -270,6 +271,7 @@ describe('Agent API Routes', () => {
       .send({ selectedName: 'codex-a', cols: 80, rows: 24 });
 
     expect(res.status).toBe(201);
+    const shell = interactiveShell();
     expect(res.body).toMatchObject({
       transport: 'exec',
       title: 'Scratch shell',
@@ -277,7 +279,7 @@ describe('Agent API Routes', () => {
       workspace: 'agent-codex',
       agent_id: 'codex',
       agent_role: 'scratch',
-      exec_argv: ['/bin/test-shell', '-l'],
+      exec_argv: [shell.command, ...shell.args],
       exec_cwd: tmpDir,
     });
   });

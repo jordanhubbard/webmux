@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import * as pty from 'node-pty';
+import { interactiveShell } from './platform';
 import { Session, CreateSessionRequest } from '../types';
 import { transportLauncher } from './transportLauncher';
 import { presenceService } from './presenceService';
@@ -513,8 +514,8 @@ export class SessionBroker extends EventEmitter {
     rows: number,
     cwd?: string,
   ): Promise<{ session: Session; created: boolean }> {
-    const shell = process.env.SHELL?.trim() || '/bin/sh';
-    const execArgv = [shell, '-l'];
+    const shell = interactiveShell();
+    const execArgv = [shell.command, ...shell.args];
     const existing = this.findAgentScratch(owner, agentId);
     if (existing) {
       existing.cols = cols;

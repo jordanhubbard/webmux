@@ -16,7 +16,7 @@ A web-native terminal multiplexer — think tmux-on-a-jump-box, but it runs in y
 - **Keyboard terminal cycling** — `Ctrl+Shift+<` and `Ctrl+Shift+>` focus previous/next terminal tiles
 - **SSH key and password auth** — managed keys via `keys.yaml`, password-based via `sshpass`
 - **Two security modes** — local auth (Argon2id + JWT + HTTPS) or trusted mode for isolated networks
-- **OS service integration** — `make install` sets up launchd (macOS) or systemd (Linux) for auto-start on boot
+- **OS service integration** — launchd (macOS), systemd (Linux), and Windows Service Control Manager support
 - **YAML configuration** — human-editable config in `~/.config/webmux/`, separate from the source tree
 - **Audit log** — append-only JSONL event log (logins, session lifecycle)
 - **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
@@ -26,7 +26,7 @@ A web-native terminal multiplexer — think tmux-on-a-jump-box, but it runs in y
 ### Prerequisites
 
 - Node.js >= 20
-- `ssh` on the jump box
+- OpenSSH client (`ssh` on macOS/Linux, `ssh.exe` on `PATH` on Windows)
 - (Optional) `sshpass` for password-based SSH auth
 - (Optional) `mosh` on both ends for mosh transport
 
@@ -50,6 +50,8 @@ WebMux will start automatically on login and auto-reconnect any persistent sessi
 ```bash
 make uninstall  # remove the OS service
 ```
+
+`make install` supports macOS and Linux. See [Hosting on Windows](#hosting-on-windows) for native Windows setup and startup options.
 
 ### Makefile Targets
 
@@ -75,6 +77,99 @@ make start HTTP_PORT=9090
 make start AUTH_MODE=none
 make start SECURE_MODE=true JWT_SECRET=$(openssl rand -hex 32)
 ```
+
+## Hosting on Windows
+
+WebMux runs natively on modern Windows using ConPTY through `node-pty`. The backend resolves `ssh.exe` from `PATH`, uses `cmd.exe` for local command templates and scratch shells, and stores runtime state under the hosting user's profile by default.
+
+### Required software
+
+1. **64-bit or ARM64 Windows with ConPTY support.** Keep Windows current; unsupported legacy Windows releases cannot provide the required pseudoterminal API. Installing the Windows service also requires .NET Framework 4.6.1 or newer, which is included with supported Windows releases.
+2. **Node.js 20 or newer.** Install the current LTS release from [nodejs.org](https://nodejs.org/) or from an elevated PowerShell prompt:
+
+   ```powershell
+   winget install OpenJS.NodeJS.LTS
+   ```
+
+3. **Microsoft OpenSSH Client.** Check whether it is already installed:
+
+   ```powershell
+   ssh -V
+   ```
+
+   If it is missing, install the Windows capability from an elevated PowerShell prompt, then open a new terminal:
+
+   ```powershell
+   Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+   ssh -V
+   ```
+
+   `ssh.exe` must be visible through `PATH`. WebMux resolves it to an absolute path before starting a ConPTY session.
+
+4. **Git**, when installing from a source checkout. Install it from [git-scm.com](https://git-scm.com/download/win) or with:
+
+   ```powershell
+   winget install Git.Git
+   ```
+
+The published dependencies normally provide prebuilt Windows binaries. If npm reports that it must compile `node-pty` or `argon2`, install Visual Studio Build Tools with the **Desktop development with C++** workload and rerun `npm ci`.
+
+### Install and run from PowerShell
+
+```powershell
+git clone https://github.com/jordanhubbard/webmux.git
+cd webmux\webmux
+npm ci
+npm run build
+npm start
+```
+
+Open `http://localhost:8080`. The default Windows runtime directory is `%USERPROFILE%\.config\webmux`. Override runtime settings for the current PowerShell session when needed:
+
+```powershell
+$env:WEBMUX_HOME = 'D:\WebMuxData'
+$env:HTTP_PORT = '8080'
+$env:JWT_SECRET = '<strong-random-secret>'
+npm start
+```
+
+For access from other machines, allow the selected port through Windows Defender Firewall and keep WebMux's authentication/TLS configuration appropriate for the network. For example, from elevated PowerShell:
+
+```powershell
+New-NetFirewallRule -DisplayName 'WebMux 8080' -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow
+```
+
+### Install as a Windows service
+
+From an elevated PowerShell window in the inner `webmux` directory, install WebMux with Windows Service Control Manager:
+
+```powershell
+npm run service:install
+npm run service:status
+```
+
+The installer prompts for the current Windows account's password, grants that account the **Log on as a service** right, configures automatic delayed startup and failure recovery, and starts WebMux. Using the same account preserves access to that user's SSH keys and known-hosts data. The password is passed to Windows during registration and is not retained in WebMux's service configuration.
+
+Service commands are available for normal administration:
+
+```powershell
+npm run service:stop
+npm run service:start
+npm run service:restart
+npm run service:uninstall
+```
+
+The installer downloads the stable [WinSW 2.12.0 service wrapper](https://github.com/winsw/winsw/releases/tag/v2.12.0) into `%ProgramData%\WebMux` and verifies its SHA-256 checksum. An internet connection to GitHub is therefore required for the first installation. Service output is written under `%WEBMUX_HOME%\logs`; uninstalling preserves runtime data and logs.
+
+For an isolated test installation that does not need user SSH credentials, `npm run service:install -- -LocalSystem` is also supported. LocalSystem cannot use the interactive user's SSH keys or known-hosts file and is not recommended for normal WebMux hosting.
+
+### Windows feature notes
+
+- Key-based OpenSSH sessions are the recommended native Windows configuration.
+- Password-based remote SSH requires `sshpass`, which is not normally available on native Windows. Without it, use SSH keys.
+- Mosh requires compatible `mosh` executables and remains optional.
+- tmux-backed agent views require tmux and are intended for macOS/Linux hosts. They are disabled by default.
+- `make`, `make start`, and `make install` are macOS/Linux administration conveniences. Use the npm and PowerShell service commands above on Windows.
 
 ## Configuration
 
@@ -251,9 +346,17 @@ npm run dev:frontend
 # Run tests
 make test
 
+# Run browser tests from the application workspace
+cd webmux
+npx playwright install chromium
+npm run test:e2e
+
 # Lint
+cd ..
 make lint
 ```
+
+If Playwright does not publish a bundled Chromium build for the host OS, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a compatible installed Chrome or Chromium executable before running `npm run test:e2e`.
 
 ## Security Notes
 
@@ -269,7 +372,7 @@ make lint
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WEBMUX_HOME` | `~/.config/webmux` | Runtime config, data, and log directory |
+| `WEBMUX_HOME` | `~/.config/webmux` | Runtime config, data, and log directory (`%USERPROFILE%\.config\webmux` on Windows) |
 | `WEBMUX_ROOT` | source tree `webmux/` | Install directory (frontend assets, default configs) |
 | `HTTP_PORT` | from `app.yaml` | Override HTTP port |
 | `HTTPS_PORT` | from `app.yaml` | Override HTTPS port |
