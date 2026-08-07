@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-08-07
+
+### Other
+- test: wait for terminal cycle state
+
 ## [1.2.2] - 2026-08-07
 
 ### Fixed
