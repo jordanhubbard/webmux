@@ -27,7 +27,7 @@ check_prerequisites() {
         error "GitHub CLI (gh) is not installed. Install with: brew install gh"
     fi
 
-    if ! gh auth status &>/dev/null; then
+    if ! gh auth status --active &>/dev/null; then
         error "GitHub CLI is not authenticated. Run: gh auth login"
     fi
 
@@ -192,9 +192,7 @@ EOF
     info "Committing changelog and version bump..."
     git add CHANGELOG.md webmux/frontend/package.json webmux/backend/package.json webmux/package-lock.json
     if ! git diff --cached --quiet; then
-        git commit -m "Release v$version
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+        git commit -m "Release v$version"
     fi
 
     # Tag, push, GitHub release
