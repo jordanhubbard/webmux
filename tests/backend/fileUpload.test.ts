@@ -33,7 +33,7 @@ describe('File Upload API (/api/upload)', () => {
     } else {
       delete process.env.WEBMUX_HOME;
     }
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     jest.resetModules();
   });
 

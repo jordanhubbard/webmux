@@ -25,7 +25,7 @@ describe('platform helpers', () => {
       expect(resolveExecutable(command, { PATH: dir }, process.platform)).toBe(executable);
       expect(resolveExecutable('missing-command', { PATH: dir }, process.platform)).toBeNull();
     } finally {
-      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 

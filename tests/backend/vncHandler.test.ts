@@ -112,7 +112,7 @@ describe('VncHandler (TCP proxy)', () => {
     } else {
       process.env.WEBMUX_HOME = originalHome;
     }
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   // Helper: trigger a "connection" event on a fake WSS.

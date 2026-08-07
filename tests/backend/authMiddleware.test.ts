@@ -23,7 +23,7 @@ describe('Auth Middleware', () => {
     } else {
       process.env.WEBMUX_HOME = originalHome;
     }
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   function writeAuthConfig(mode: string) {

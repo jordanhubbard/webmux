@@ -72,7 +72,7 @@ describe('Agent API Routes', () => {
       process.env.SHELL = originalShell;
     }
     dateNowSpy.mockRestore();
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   function writeAppConfig(enabled: boolean, disableInMultiUserMode = true) {
