@@ -5,6 +5,64 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-07
+
+### Added
+- add native Windows hosting support
+- add terminal prompt favicon
+- scroll focused terminal into view
+- add keyboard terminal cycling
+- add terminal grid limits
+- add workspace minimap for quick navigation
+- add client-side color themes from .itermcolors files
+- add shift-to-scroll hint in terminal workspace
+- add RDP support via Apache Guacamole (guacd)
+- check port availability before binding to avoid collisions
+
+### Fixed
+- validate active GitHub account for releases
+- await session event writes
+- await session event writes
+- recognize shifted terminal cycling keys
+- load terminal grid config after auth
+- add comment to empty catch block in useAuth test
+- remove eslint-disable for missing react-hooks plugin
+- repair test suite after RDP/rename feature additions
+- prevent server crash on PTY resize and stop 1Password triggering
+- improve diagnostics for startup port display and VNC connect errors
+- correct MCP server config schema in .mcp.json
+- add comment to empty catch block in useAuth test
+- remove eslint-disable for missing react-hooks plugin
+
+### Other
+- Confine hosted fonts to config directory
+- Improve touch terminal sizing and input handling
+- Add config-directed terminal font hosting
+- Add configurable terminal font family
+- Fix agent session access enforcement
+- Document agent views setup
+- Add optional agent status hook
+- Add configurable agent workspace UI
+- Add configurable agent session backend
+- Fix upstream PR integration issues
+- test: clean up frontend renders
+- test: clean up frontend renders
+- security: code-review pass — auth, SSRF guard, input validation
+- Persist minimize state on server for cross-device sync
+- Restore minimized tiles to nearest empty cell instead of original position
+- Force terminal re-render on restore from minimized
+- Fix CI: update tests for new props, fix upload size limit handling
+- Fix drag-and-drop, sticky tab bar, visual bell, and content preservation
+- Persist minimize state across reloads and add direct geometry input
+- Sort tab bar alphabetically by session title
+- Add minimize/restore for terminal tiles with tab bar
+- Add window lock/delete protection with global and per-window toggles
+- Add configurable auto-scroll with global and per-window toggles
+- Remove AI sidebar, suppress 1Password doorhanger
+- Fix CI: update tests for new props, fix upload size limit handling
+- Add window lock/delete protection with global and per-window toggles
+- Add configurable auto-scroll with global and per-window toggles
+
 ## [1.2.0] - 2026-04-12
 
 ### Other
