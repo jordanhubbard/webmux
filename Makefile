@@ -50,6 +50,7 @@ PIDFILE      := $(WEBMUX_HOME)/.webmux.pid
 LOGFILE      := $(WEBMUX_HOME)/logs/webmux.log
 NODE         := node
 NPM          := npm
+OS           := $(shell uname)
 
 export WEBMUX_ROOT
 export WEBMUX_HOME
@@ -72,7 +73,8 @@ endif
 
 # ── Targets ────────────────────────────────────────────────────────
 .PHONY: all build deps check-guacd start stop restart status test lint clean configure help \
-       install uninstall release release-minor release-major changelog-init
+       install uninstall release release-minor release-major changelog-init \
+       _start_manual _stop_manual
 
 all: build
 
@@ -144,7 +146,10 @@ endif
 	@printf "  $(C_DIM)auth.yaml:$(C_RST)\n"
 	@grep -E 'mode:' "$(WEBMUX_HOME)/config/auth.yaml" | sed 's/^/    /'
 
-start: build check-guacd
+# ── Manual (non-service) process control ────────────────────────────
+# Direct pidfile-based start/stop used for dev runs and hosts where webmux is
+# NOT installed as an OS service. Dispatched from start/stop below.
+_start_manual:
 	@mkdir -p "$(WEBMUX_HOME)/logs"
 	@if [ -f "$(PIDFILE)" ] && kill -0 $$(cat "$(PIDFILE)") 2>/dev/null; then \
 		printf "$(C_YLW)●$(C_RST) webmux is already running $(C_DIM)(pid $$(cat "$(PIDFILE)"))$(C_RST)\n"; \
@@ -179,7 +184,7 @@ start: build check-guacd
 		exit 1; \
 	fi
 
-stop:
+_stop_manual:
 	@if [ -f "$(PIDFILE)" ]; then \
 		PID=$$(cat "$(PIDFILE)"); \
 		if kill -0 $$PID 2>/dev/null; then \
@@ -202,11 +207,50 @@ stop:
 		printf "$(C_DIM)●$(C_RST) webmux is not running\n"; \
 	fi
 
-restart: stop
-	@$(MAKE) --no-print-directory start
+# ── Service-aware start/stop/restart/status ─────────────────────────
+# When webmux is installed as an OS service, drive the platform's service
+# manager so a restart is a *deliberate* restart (not a crash the manager
+# would auto-recover or count as a failure). Otherwise fall back to the
+# manual pidfile helpers above.
+start: build check-guacd
+	@mkdir -p "$(WEBMUX_HOME)/logs"
+	@if $(SVC_INSTALLED); then \
+		printf "$(C_BLU)▸$(C_RST) Starting webmux via $(SVC_MGR)…\n"; \
+		$(SVC_START); \
+		sleep 1; \
+		$(SVC_STATUS) 2>/dev/null | sed 's/^/  /' || true; \
+		printf "$(C_GRN)●$(C_RST) webmux started $(C_DIM)(managed by $(SVC_MGR))$(C_RST)\n"; \
+	else \
+		$(MAKE) --no-print-directory _start_manual; \
+	fi
+
+stop:
+	@if $(SVC_INSTALLED); then \
+		printf "$(C_BLU)▸$(C_RST) Stopping webmux via $(SVC_MGR)…\n"; \
+		$(SVC_STOP) 2>/dev/null || true; \
+		printf "$(C_DIM)●$(C_RST) webmux stopped $(C_DIM)(managed by $(SVC_MGR))$(C_RST)\n"; \
+	else \
+		$(MAKE) --no-print-directory _stop_manual; \
+	fi
+
+restart:
+	@if $(SVC_INSTALLED); then \
+		$(MAKE) --no-print-directory build; \
+		printf "$(C_BLU)▸$(C_RST) Restarting webmux via $(SVC_MGR) $(C_DIM)(deliberate restart)$(C_RST)…\n"; \
+		$(SVC_RESTART); \
+		sleep 1; \
+		$(SVC_STATUS) 2>/dev/null | sed 's/^/  /' || true; \
+		printf "$(C_GRN)●$(C_RST) webmux restarted $(C_DIM)(managed by $(SVC_MGR))$(C_RST)\n"; \
+	else \
+		$(MAKE) --no-print-directory stop; \
+		$(MAKE) --no-print-directory start; \
+	fi
 
 status:
-	@if [ -f "$(PIDFILE)" ] && kill -0 $$(cat "$(PIDFILE)") 2>/dev/null; then \
+	@if $(SVC_INSTALLED); then \
+		printf "$(C_BLD)webmux$(C_RST) $(C_DIM)(managed by $(SVC_MGR))$(C_RST)\n"; \
+		$(SVC_STATUS) 2>/dev/null | sed 's/^/  /' || printf "  $(C_DIM)●$(C_RST) not running\n"; \
+	elif [ -f "$(PIDFILE)" ] && kill -0 $$(cat "$(PIDFILE)") 2>/dev/null; then \
 		printf "$(C_GRN)●$(C_RST) webmux is running $(C_DIM)(pid $$(cat "$(PIDFILE)"))$(C_RST)\n"; \
 	else \
 		printf "$(C_DIM)●$(C_RST) webmux is not running\n"; \
@@ -240,6 +284,32 @@ CURRENT_PATH    := $(shell echo $$PATH)
 PLIST       := $(HOME)/Library/LaunchAgents/com.webmux.server.plist
 UNIT        := $(HOME)/.config/systemd/user/webmux.service
 LAUNCHD_SVC := gui/$(shell id -u)/com.webmux.server
+
+# ── Service-manager awareness ───────────────────────────────────────
+# When webmux is installed as an OS service, start/stop/restart must drive the
+# platform's service manager so a restart is a *deliberate* restart rather than
+# a process kill the manager treats as a crash (launchd KeepAlive / systemd
+# Restart=on-failure would otherwise fight us or count failures). When no
+# service is installed (typical dev use), we fall back to direct pidfile-based
+# process control. Windows drives the SCM via `npm run service:*`
+# (service/windows-service.ps1) and is already deliberate.
+#
+# SVC_INSTALLED is a shell test: true (exit 0) when the service unit exists.
+ifeq ($(OS),Darwin)
+  SVC_MGR       := launchd
+  SVC_INSTALLED := [ -f "$(PLIST)" ]
+  SVC_START     := launchctl kickstart "$(LAUNCHD_SVC)" 2>/dev/null || launchctl bootstrap gui/$$(id -u) "$(PLIST)"
+  SVC_STOP      := launchctl kill TERM "$(LAUNCHD_SVC)"
+  SVC_RESTART   := launchctl kickstart -k "$(LAUNCHD_SVC)"
+  SVC_STATUS    := launchctl print "$(LAUNCHD_SVC)" 2>/dev/null | grep -E 'state = |pid = '
+else
+  SVC_MGR       := systemd
+  SVC_INSTALLED := [ -f "$(UNIT)" ]
+  SVC_START     := systemctl --user start webmux.service
+  SVC_STOP      := systemctl --user stop webmux.service
+  SVC_RESTART   := systemctl --user restart webmux.service
+  SVC_STATUS    := systemctl --user --no-pager --lines=0 status webmux.service
+endif
 
 install: stop build
 	@mkdir -p "$(WEBMUX_HOME)/logs"
