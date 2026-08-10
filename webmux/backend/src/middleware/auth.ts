@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 import { persistence } from '../services/persistenceManager';
+import { AuthUser } from '../types';
 
 const TOKEN_TTL = '8h';
 
@@ -83,6 +84,45 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+// Resolves whether a username is an admin (owner). A user is an admin when their
+// entry has `admin: true`. For backward compatibility with configs created before
+// the admin flag existed, if NO user carries an explicit admin flag the first user
+// in the list is treated as the admin/owner.
+export function resolveIsAdmin(users: AuthUser[], username: string): boolean {
+  if (users.length === 0) return false;
+  const anyExplicitAdmin = users.some(u => u.admin === true);
+  if (!anyExplicitAdmin) {
+    return users[0].username === username;
+  }
+  const user = users.find(u => u.username === username);
+  return user?.admin === true;
+}
+
+// Requires an authenticated admin. Must run after requireAuth. In mode 'none'
+// there are no accounts to manage, so access is denied.
+export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  const payload = (req as Request & { user?: AuthPayload }).user;
+  const username = payload?.sub;
+  if (!username) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  try {
+    const authConfig = persistence.loadAuth();
+    if (authConfig.auth.mode === 'none') {
+      res.status(403).json({ error: 'User management is unavailable when auth is disabled' });
+      return;
+    }
+    if (!resolveIsAdmin(authConfig.auth.users || [], username)) {
+      res.status(403).json({ error: 'Admin privileges required' });
+      return;
+    }
+    next();
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
 

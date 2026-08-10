@@ -15,6 +15,8 @@ function makeAuth(overrides: Partial<AuthState> = {}): AuthState {
     isLoading: false,
     authStatus: { mode: 'local', bootstrap_required: false },
     error: null,
+    username: 'admin',
+    isAdmin: true,
     login: vi.fn(),
     bootstrap: vi.fn(),
     logout: vi.fn(),
@@ -30,7 +32,7 @@ describe('TopBar', () => {
     termCols: 80,
     termRows: 24,
     onTermSizeChange: vi.fn(),
-    onNewAccount: vi.fn(),
+    onManageUsers: vi.fn(),
     secureMode: true,
     currentUser: 'admin',
     globalAutoScroll: true,
@@ -83,16 +85,21 @@ describe('TopBar', () => {
     expect(screen.getByText('admin')).toBeDefined();
   });
 
-  it('shows + Account button', () => {
+  it('shows Users button for admins', () => {
     render(<TopBar {...defaultTopBarProps()} />, { wrapper });
-    expect(screen.getByText('+ Account')).toBeDefined();
+    expect(screen.getByText('Users')).toBeDefined();
   });
 
-  it('calls onNewAccount when + Account clicked', () => {
-    const onNewAccount = vi.fn();
-    render(<TopBar {...defaultTopBarProps()} onNewAccount={onNewAccount} />, { wrapper });
-    fireEvent.click(screen.getByText('+ Account'));
-    expect(onNewAccount).toHaveBeenCalled();
+  it('hides Users button for non-admins', () => {
+    render(<TopBar {...defaultTopBarProps()} auth={makeAuth({ isAdmin: false })} />, { wrapper });
+    expect(screen.queryByText('Users')).toBeNull();
+  });
+
+  it('calls onManageUsers when Users clicked', () => {
+    const onManageUsers = vi.fn();
+    render(<TopBar {...defaultTopBarProps()} onManageUsers={onManageUsers} />, { wrapper });
+    fireEvent.click(screen.getByText('Users'));
+    expect(onManageUsers).toHaveBeenCalled();
   });
 
   it('shows term size and responds to C+/C-/R+/R-', () => {

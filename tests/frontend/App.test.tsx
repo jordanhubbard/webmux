@@ -7,6 +7,8 @@ const mockAuth = {
   isLoading: true,
   authStatus: null as { mode: string; bootstrap_required: boolean } | null,
   error: null as string | null,
+  username: null as string | null,
+  isAdmin: false,
   login: vi.fn(),
   bootstrap: vi.fn(),
   logout: vi.fn(),

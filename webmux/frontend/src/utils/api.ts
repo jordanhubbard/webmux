@@ -1,7 +1,9 @@
 import type {
   AgentTmuxSession,
   AppConfig,
+  AuthMe,
   AuthStatus,
+  AuthUserInfo,
   CreateRdpSessionRequest,
   CreateSessionRequest,
   CreateVncSessionRequest,
@@ -61,11 +63,15 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),
-  register: (username: string, password: string) =>
-    request<{ username: string }>('/auth/register', {
+  register: (username: string, password: string, admin = false) =>
+    request<{ username: string; admin: boolean }>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, admin }),
     }),
+  getMe: () => request<AuthMe>('/auth/me'),
+  getUsers: () => request<AuthUserInfo[]>('/auth/users'),
+  deleteUser: (username: string) =>
+    request<void>(`/auth/users/${encodeURIComponent(username)}`, { method: 'DELETE' }),
 
   // Sessions
   getSessions: () => request<Session[]>('/sessions'),

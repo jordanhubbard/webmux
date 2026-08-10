@@ -95,6 +95,9 @@ export interface AgentDefinition {
 export interface AuthUser {
   username: string;
   password_hash: string;
+  // Admins (owners) may add and remove other accounts. The bootstrap account is
+  // an admin. Legacy configs without this flag treat the first user as the admin.
+  admin?: boolean;
 }
 
 export interface AuthConfig {
