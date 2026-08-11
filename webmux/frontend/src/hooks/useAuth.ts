@@ -95,6 +95,11 @@ export function useAuth(): AuthState {
     setIsAuthenticated(false);
     setUsername(null);
     setIsAdmin(false);
+    // Re-check server auth status so the login screen reflects reality after a
+    // same-session sign-out. Without this, signing out right after first-run
+    // setup would keep the stale bootstrap flag and wrongly show the
+    // "First-time setup / Create Account" screen even though an account exists.
+    api.getAuthStatus().then(setAuthStatus).catch(() => {});
   }, []);
 
   return { isAuthenticated, isLoading, authStatus, error, username, isAdmin, login, bootstrap, logout };

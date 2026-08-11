@@ -122,4 +122,21 @@ describe('useAuth', () => {
     expect(result.current.isAuthenticated).toBe(false);
     expect(localStorage.getItem('webmux_token')).toBeNull();
   });
+
+  it('logout re-fetches auth status so a stale bootstrap flag is cleared', async () => {
+    // Mount with bootstrap_required:true (no accounts yet), then the server
+    // reports an account exists after bootstrap. Signing out must refresh the
+    // flag so the login screen shows sign-in, not the first-run setup.
+    mockApi.getAuthStatus
+      .mockResolvedValueOnce({ mode: 'local', bootstrap_required: true })
+      .mockResolvedValue({ mode: 'local', bootstrap_required: false });
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.authStatus?.bootstrap_required).toBe(true);
+
+    await act(async () => {
+      result.current.logout();
+    });
+    await waitFor(() => expect(result.current.authStatus?.bootstrap_required).toBe(false));
+  });
 });
