@@ -5,6 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-08-11
+
+### Added
+- admin-managed multi-user accounts with richer login UI
+
+### Fixed
+- refresh auth status on logout so login screen shows correct mode
+- make start/stop/restart service-manager aware
+
+### Other
+- chore: make e2e test harness provision its own browser
+
 ## [1.2.3] - 2026-08-07
 
 ### Other
