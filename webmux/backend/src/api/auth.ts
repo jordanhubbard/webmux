@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 import argon2 from 'argon2';
 import * as crypto from 'crypto';
 import { persistence } from '../services/persistenceManager';
-import { signToken, requireAuth, AuthPayload } from '../middleware/auth';
+import { signToken, requireAuth, requireAdmin, resolveIsAdmin, AuthPayload } from '../middleware/auth';
 
 const router = Router();
 
@@ -101,7 +101,8 @@ router.post('/bootstrap', async (req: Request, res: Response) => {
     }
 
     const hash = await argon2.hash(password, { type: argon2.argon2id });
-    authConfig.auth.users = [{ username, password_hash: hash }];
+    // The first account is the owner and is granted admin privileges.
+    authConfig.auth.users = [{ username, password_hash: hash, admin: true }];
     persistence.saveAuth(authConfig);
 
     const token = signToken(username);
@@ -113,8 +114,9 @@ router.post('/bootstrap', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/register', requireAuth, async (req: Request, res: Response) => {
-  const { username, password } = req.body as { username?: string; password?: string };
+// Creating accounts is restricted to admins (owners).
+router.post('/register', requireAuth, requireAdmin, async (req: Request, res: Response) => {
+  const { username, password, admin } = req.body as { username?: string; password?: string; admin?: boolean };
 
   if (!username || !password) {
     res.status(400).json({ error: 'Username and password required' });
@@ -141,14 +143,76 @@ router.post('/register', requireAuth, async (req: Request, res: Response) => {
     }
 
     const hash = await argon2.hash(password, { type: argon2.argon2id });
-    users.push({ username, password_hash: hash });
+    users.push({ username, password_hash: hash, admin: admin === true });
     authConfig.auth.users = users;
     persistence.saveAuth(authConfig);
 
-    persistence.appendEvent({ type: 'account_created', username, created_by: (req as Request & { user?: AuthPayload }).user?.sub });
-    res.status(201).json({ username });
+    persistence.appendEvent({ type: 'account_created', username, admin: admin === true, created_by: (req as Request & { user?: AuthPayload }).user?.sub });
+    res.status(201).json({ username, admin: admin === true });
   } catch (err) {
     console.error('Register error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Returns the current authenticated user and whether they are an admin. The UI
+// uses this to decide whether to surface user-management controls.
+router.get('/me', requireAuth, (req: Request, res: Response) => {
+  const username = (req as Request & { user?: AuthPayload }).user?.sub;
+  try {
+    const authConfig = persistence.loadAuth();
+    if (authConfig.auth.mode === 'none') {
+      res.json({ username: username || 'anonymous', admin: false });
+      return;
+    }
+    if (!username) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    res.json({ username, admin: resolveIsAdmin(authConfig.auth.users || [], username) });
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Lists all accounts (admin only). Password hashes are never returned.
+router.get('/users', requireAuth, requireAdmin, (_req: Request, res: Response) => {
+  try {
+    const authConfig = persistence.loadAuth();
+    const users = authConfig.auth.users || [];
+    res.json(users.map(u => ({ username: u.username, admin: resolveIsAdmin(users, u.username) })));
+  } catch {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Removes an account (admin only). An admin cannot remove their own account,
+// which also guarantees at least one admin always remains.
+router.delete('/users/:username', requireAuth, requireAdmin, (req: Request, res: Response) => {
+  const target = req.params.username;
+  const actor = (req as Request & { user?: AuthPayload }).user?.sub;
+
+  if (target === actor) {
+    res.status(400).json({ error: 'You cannot remove your own account' });
+    return;
+  }
+
+  try {
+    const authConfig = persistence.loadAuth();
+    const users = authConfig.auth.users || [];
+    const user = users.find(u => u.username === target);
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    authConfig.auth.users = users.filter(u => u.username !== target);
+    persistence.saveAuth(authConfig);
+
+    persistence.appendEvent({ type: 'account_deleted', username: target, deleted_by: actor });
+    res.status(204).end();
+  } catch (err) {
+    console.error('Delete user error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

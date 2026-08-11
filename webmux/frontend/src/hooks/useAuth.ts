@@ -7,6 +7,8 @@ export interface AuthState {
   isLoading: boolean;
   authStatus: AuthStatus | null;
   error: string | null;
+  username: string | null;
+  isAdmin: boolean;
   login: (username: string, password: string) => Promise<void>;
   bootstrap: (username: string, password: string) => Promise<void>;
   logout: () => void;
@@ -17,6 +19,21 @@ export function useAuth(): AuthState {
   const [isLoading, setIsLoading] = useState(true);
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Loads the current user's identity and admin status. Failure is non-fatal —
+  // the user stays authenticated but simply without management controls.
+  const refreshMe = useCallback(async () => {
+    try {
+      const me = await api.getMe();
+      setUsername(me.username);
+      setIsAdmin(me.admin);
+    } catch {
+      setUsername(null);
+      setIsAdmin(false);
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -25,6 +42,7 @@ export function useAuth(): AuthState {
         setAuthStatus(status);
         if (status.mode === 'none') {
           setIsAuthenticated(true);
+          await refreshMe();
         } else {
           const token = localStorage.getItem('webmux_token');
           if (token) {
@@ -32,6 +50,7 @@ export function useAuth(): AuthState {
             try {
               await api.getSessions();
               setIsAuthenticated(true);
+              await refreshMe();
             } catch {
               localStorage.removeItem('webmux_token');
             }
@@ -43,36 +62,40 @@ export function useAuth(): AuthState {
         setIsLoading(false);
       }
     })();
-  }, []);
+  }, [refreshMe]);
 
-  const login = useCallback(async (username: string, password: string) => {
+  const login = useCallback(async (user: string, password: string) => {
     setError(null);
     try {
-      const { token } = await api.login(username, password);
+      const { token } = await api.login(user, password);
       localStorage.setItem('webmux_token', token);
       setIsAuthenticated(true);
+      await refreshMe();
     } catch (err) {
       setError((err as Error).message);
       throw err;
     }
-  }, []);
+  }, [refreshMe]);
 
-  const bootstrap = useCallback(async (username: string, password: string) => {
+  const bootstrap = useCallback(async (user: string, password: string) => {
     setError(null);
     try {
-      const { token } = await api.bootstrap(username, password);
+      const { token } = await api.bootstrap(user, password);
       localStorage.setItem('webmux_token', token);
       setIsAuthenticated(true);
+      await refreshMe();
     } catch (err) {
       setError((err as Error).message);
       throw err;
     }
-  }, []);
+  }, [refreshMe]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('webmux_token');
     setIsAuthenticated(false);
+    setUsername(null);
+    setIsAdmin(false);
   }, []);
 
-  return { isAuthenticated, isLoading, authStatus, error, login, bootstrap, logout };
+  return { isAuthenticated, isLoading, authStatus, error, username, isAdmin, login, bootstrap, logout };
 }

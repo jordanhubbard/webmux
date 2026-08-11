@@ -502,3 +502,132 @@ describe('API Routes', () => {
     });
   });
 });
+
+describe('User management (mode: local)', () => {
+  let tmpDir: string;
+  let configDir: string;
+  let originalHome: string | undefined;
+  let app: express.Express;
+  let persistence: any;
+  let adminToken: string;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-users-'));
+    originalHome = process.env.WEBMUX_HOME;
+    process.env.WEBMUX_HOME = tmpDir;
+
+    configDir = path.join(tmpDir, 'config');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(path.join(configDir, 'auth.yaml'), 'auth:\n  mode: local\n  users: []\n');
+
+    jest.resetModules();
+    const { default: authRouter } = require('@backend/api/auth');
+    persistence = require('@backend/services/persistenceManager').persistence;
+
+    app = express();
+    app.use(express.json());
+    app.use('/api/auth', authRouter);
+
+    // Bootstrap the owner (admin) account and capture its token.
+    const res = await request(app).post('/api/auth/bootstrap').send({ username: 'owner', password: 'ownerpass' });
+    adminToken = res.body.token;
+  });
+
+  afterEach(async () => {
+    await persistence.close();
+    if (originalHome === undefined) {
+      delete process.env.WEBMUX_HOME;
+    } else {
+      process.env.WEBMUX_HOME = originalHome;
+    }
+    fs.rmSync(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  });
+
+  const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
+
+  it('bootstrap grants the owner admin privileges', async () => {
+    const res = await request(app).get('/api/auth/me').set(auth(adminToken));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ username: 'owner', admin: true });
+  });
+
+  it('admin can register a normal guest and an admin', async () => {
+    const guest = await request(app).post('/api/auth/register').set(auth(adminToken))
+      .send({ username: 'guest', password: 'guestpass' });
+    expect(guest.status).toBe(201);
+    expect(guest.body).toEqual({ username: 'guest', admin: false });
+
+    const admin2 = await request(app).post('/api/auth/register').set(auth(adminToken))
+      .send({ username: 'admin2', password: 'admin2pass', admin: true });
+    expect(admin2.status).toBe(201);
+    expect(admin2.body.admin).toBe(true);
+  });
+
+  it('non-admin guest cannot register or list users', async () => {
+    await request(app).post('/api/auth/register').set(auth(adminToken))
+      .send({ username: 'guest', password: 'guestpass' });
+    const login = await request(app).post('/api/auth/login').send({ username: 'guest', password: 'guestpass' });
+    const guestToken = login.body.token;
+
+    const me = await request(app).get('/api/auth/me').set(auth(guestToken));
+    expect(me.body).toEqual({ username: 'guest', admin: false });
+
+    const reg = await request(app).post('/api/auth/register').set(auth(guestToken))
+      .send({ username: 'x', password: 'xxxx' });
+    expect(reg.status).toBe(403);
+
+    const list = await request(app).get('/api/auth/users').set(auth(guestToken));
+    expect(list.status).toBe(403);
+  });
+
+  it('lists users with admin flags', async () => {
+    await request(app).post('/api/auth/register').set(auth(adminToken))
+      .send({ username: 'guest', password: 'guestpass' });
+    const res = await request(app).get('/api/auth/users').set(auth(adminToken));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.arrayContaining([
+        { username: 'owner', admin: true },
+        { username: 'guest', admin: false },
+      ]),
+    );
+  });
+
+  it('admin can delete a guest account', async () => {
+    await request(app).post('/api/auth/register').set(auth(adminToken))
+      .send({ username: 'guest', password: 'guestpass' });
+    const del = await request(app).delete('/api/auth/users/guest').set(auth(adminToken));
+    expect(del.status).toBe(204);
+    const list = await request(app).get('/api/auth/users').set(auth(adminToken));
+    expect(list.body.map((u: { username: string }) => u.username)).not.toContain('guest');
+  });
+
+  it('rejects deleting your own account', async () => {
+    const res = await request(app).delete('/api/auth/users/owner').set(auth(adminToken));
+    expect(res.status).toBe(400);
+  });
+
+  it('one admin can remove another admin when more than one exists', async () => {
+    await request(app).post('/api/auth/register').set(auth(adminToken))
+      .send({ username: 'admin2', password: 'admin2pass', admin: true });
+    const login = await request(app).post('/api/auth/login').send({ username: 'admin2', password: 'admin2pass' });
+    const admin2Token = login.body.token;
+
+    // admin2 removes the owner; two admins existed, so this is allowed.
+    const del = await request(app).delete('/api/auth/users/owner').set(auth(admin2Token));
+    expect(del.status).toBe(204);
+    const list = await request(app).get('/api/auth/users').set(auth(admin2Token));
+    const admins = list.body.filter((u: { admin: boolean }) => u.admin);
+    expect(admins).toEqual([{ username: 'admin2', admin: true }]);
+  });
+
+  it('returns 404 deleting a missing user', async () => {
+    const res = await request(app).delete('/api/auth/users/nobody').set(auth(adminToken));
+    expect(res.status).toBe(404);
+  });
+
+  it('requires auth for user endpoints', async () => {
+    expect((await request(app).get('/api/auth/users')).status).toBe(401);
+    expect((await request(app).delete('/api/auth/users/owner')).status).toBe(401);
+  });
+});

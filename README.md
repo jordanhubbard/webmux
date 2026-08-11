@@ -384,9 +384,12 @@ If Playwright does not publish a bundled Chromium build for the host OS, set `PL
 make install      # build + install launchd (macOS) or systemd (Linux) user service
 make uninstall    # stop + remove the service
 make status       # check if running
+make restart      # rebuild + deliberate restart via the service manager
 ```
 
 The service auto-starts on login and restarts on crash. On startup, all persistent sessions with key/agent-based auth are automatically reconnected. Password-only sessions require manual reconnect since passwords are not persisted.
+
+Once the service is installed, `make start` / `make stop` / `make restart` are **service-manager aware**: they drive `launchctl` (macOS) or `systemctl --user` (Linux) rather than killing the process directly, so a restart is a *deliberate* restart and the service manager does not treat it as a crash. On a host where the service is *not* installed, the same targets fall back to direct pidfile-based process control for development use. On Windows, use the deliberate SCM commands `npm run service:start|stop|restart` (see the Windows hosting section).
 
 On Linux, run `loginctl enable-linger $USER` to start the service at boot without logging in.
 

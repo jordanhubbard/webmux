@@ -51,8 +51,17 @@ export function LoginPage({ auth }: LoginPageProps) {
           <span style={styles.logoText}>WebMux</span>
         </div>
         <p style={styles.subtitle}>
-          {isBootstrap ? 'Create your first account to get started' : 'Sign in to your session'}
+          {isBootstrap ? 'First-time setup' : 'Sign in to your session'}
         </p>
+
+        {isBootstrap && (
+          <div style={styles.setupBanner}>
+            <strong style={styles.setupBannerTitle}>Welcome to WebMux</strong>
+            No accounts exist yet. Choose a username and password below to create the
+            <strong> owner account</strong> — you'll use these same credentials to sign in from now on.
+            You can add more accounts later.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.field}>
@@ -147,6 +156,22 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#888',
     fontSize: 13,
     margin: '0 0 1.5rem',
+  },
+  setupBanner: {
+    background: '#16213e',
+    border: '1px solid #2a3a6a',
+    borderRadius: 6,
+    padding: '12px 14px',
+    color: '#b8c0e0',
+    fontSize: 12.5,
+    lineHeight: 1.55,
+    margin: '0 0 1.25rem',
+  },
+  setupBannerTitle: {
+    display: 'block',
+    color: '#9d8cff',
+    fontSize: 13.5,
+    marginBottom: 4,
   },
   form: {
     display: 'flex',

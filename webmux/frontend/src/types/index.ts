@@ -83,6 +83,16 @@ export interface AuthStatus {
   bootstrap_required: boolean;
 }
 
+export interface AuthMe {
+  username: string;
+  admin: boolean;
+}
+
+export interface AuthUserInfo {
+  username: string;
+  admin: boolean;
+}
+
 export interface WebSocketMessage {
   type: 'input' | 'resize' | 'output' | 'status' | 'focus' | 'viewer_join' | 'viewer_leave' | 'error';
   session_id?: string;

@@ -30,7 +30,7 @@ interface TopBarProps {
   termCols: number;
   termRows: number;
   onTermSizeChange: (cols: number, rows: number) => void;
-  onNewAccount: () => void;
+  onManageUsers: () => void;
   secureMode: boolean;
   currentUser: string | null;
   themes?: NamedTheme[];
@@ -52,7 +52,7 @@ export function TopBar({
   termCols,
   termRows,
   onTermSizeChange,
-  onNewAccount,
+  onManageUsers,
   secureMode,
   currentUser,
   themes = [],
@@ -291,9 +291,11 @@ export function TopBar({
         {auth.isAuthenticated && auth.authStatus?.mode !== 'none' && (
           <>
             {currentUser && <span style={styles.userBadge}>{currentUser}</span>}
-            <button style={styles.iconBtn} onClick={onNewAccount} title="Create a new account / session collection">
-              + Account
-            </button>
+            {auth.isAdmin && (
+              <button style={styles.iconBtn} onClick={onManageUsers} title="Add or remove accounts">
+                Users
+              </button>
+            )}
             <button style={styles.iconBtn} onClick={auth.logout} title="Sign out">
               Sign out
             </button>

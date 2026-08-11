@@ -4,6 +4,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 const mockApi = vi.hoisted(() => ({
   getAuthStatus: vi.fn(),
   getSessions: vi.fn().mockResolvedValue([]),
+  getMe: vi.fn().mockResolvedValue({ username: 'admin', admin: true }),
   login: vi.fn(),
   bootstrap: vi.fn(),
 }));
@@ -45,6 +46,8 @@ describe('useAuth', () => {
       expect(result.current.isLoading).toBe(false);
     });
     expect(result.current.isAuthenticated).toBe(true);
+    await waitFor(() => expect(result.current.username).toBe('admin'));
+    expect(result.current.isAdmin).toBe(true);
     localStorage.removeItem('webmux_token');
   });
 

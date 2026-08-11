@@ -9,6 +9,8 @@ function makeAuth(overrides: Partial<AuthState> = {}): AuthState {
     isLoading: false,
     authStatus: { mode: 'local', bootstrap_required: false },
     error: null,
+    username: null,
+    isAdmin: false,
     login: vi.fn().mockResolvedValue(undefined),
     bootstrap: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn(),
@@ -30,7 +32,8 @@ describe('LoginPage', () => {
       authStatus: { mode: 'local', bootstrap_required: true },
     });
     render(<LoginPage auth={auth} />);
-    expect(screen.getByText('Create your first account to get started')).toBeDefined();
+    expect(screen.getByText('First-time setup')).toBeDefined();
+    expect(screen.getByText(/owner account/i)).toBeDefined();
     expect(screen.getByLabelText('Confirm Password')).toBeDefined();
   });
 

@@ -6,7 +6,7 @@ import { TopBar } from './components/TopBar';
 import { Workspace } from './components/Workspace';
 import { GraphicsWorkspace } from './components/GraphicsWorkspace';
 import { AgentWorkspace } from './components/AgentWorkspace';
-import { RegisterDialog } from './components/RegisterDialog';
+import { UsersDialog } from './components/UsersDialog';
 import { InputBroadcastProvider } from './contexts/InputBroadcastContext';
 import { WorkspacePaneProvider, useWorkspacePane, type WorkspacePane } from './contexts/WorkspacePaneContext';
 import { api } from './utils/api';
@@ -31,12 +31,11 @@ interface AuthenticatedAppProps {
     maxCols: number | null;
     maxRows: number | null;
   };
-  onNewAccount: () => void;
+  onManageUsers: () => void;
   secureMode: boolean;
   currentUser: string | null;
-  showRegister: boolean;
-  onRegisterClose: () => void;
-  onAccountCreated: (username: string) => void;
+  showUsers: boolean;
+  onUsersClose: () => void;
   themes: NamedTheme[];
   globalTheme: string | null;
   onGlobalThemeChange: (name: string | null) => void;
@@ -78,12 +77,11 @@ function AuthenticatedApp({
   termRows,
   onTermSizeChange,
   terminalGridLimit,
-  onNewAccount,
+  onManageUsers,
   secureMode,
   currentUser,
-  showRegister,
-  onRegisterClose,
-  onAccountCreated,
+  showUsers,
+  onUsersClose,
   themes,
   globalTheme,
   onGlobalThemeChange,
@@ -135,7 +133,7 @@ function AuthenticatedApp({
         termCols={termCols}
         termRows={termRows}
         onTermSizeChange={onTermSizeChange}
-        onNewAccount={onNewAccount}
+        onManageUsers={onManageUsers}
         secureMode={secureMode}
         currentUser={currentUser}
         themes={themes}
@@ -204,10 +202,10 @@ function AuthenticatedApp({
         ))}
       </div>
 
-      {showRegister && (
-        <RegisterDialog
-          onClose={onRegisterClose}
-          onCreated={onAccountCreated}
+      {showUsers && (
+        <UsersDialog
+          currentUser={currentUser}
+          onClose={onUsersClose}
         />
       )}
     </div>
@@ -239,7 +237,7 @@ export default function App() {
     maxCols: null,
     maxRows: null,
   });
-  const [showRegister, setShowRegister] = useState(false);
+  const [showUsers, setShowUsers] = useState(false);
   const [secureMode, setSecureMode] = useState(true);
   const [themes, setThemes] = useState<NamedTheme[]>([]);
   const [globalTheme, setGlobalTheme] = useState<string | null>(() => loadGlobalTheme());
@@ -252,7 +250,10 @@ export default function App() {
   const [hostSwitcher, setHostSwitcher] = useState<HostSwitcherConfig>(DEFAULT_HOST_SWITCHER);
   const [fontFaces, setFontFaces] = useState<AppFontFaceConfig[]>([]);
 
-  const currentUser = useMemo(() => auth.isAuthenticated ? parseTokenUser() : null, [auth.isAuthenticated]);
+  const currentUser = useMemo(
+    () => (auth.isAuthenticated ? (auth.username ?? parseTokenUser()) : null),
+    [auth.isAuthenticated, auth.username],
+  );
 
   useEffect(() => {
     if (auth.isLoading || !auth.isAuthenticated) return;
@@ -305,11 +306,6 @@ export default function App() {
     saveTermSettings(fontSize, cols, rows, fontFamily);
   }, [fontFamily, fontSize]);
 
-  const handleAccountCreated = useCallback((username: string) => {
-    setShowRegister(false);
-    alert(`Account "${username}" created. You can sign out and sign in as "${username}" to use it.`);
-  }, []);
-
   const availablePanes = useMemo<WorkspacePane[]>(() => {
     const agentDefinitions = enabledAgentDefinitions(agentConfig);
     const panes: WorkspacePane[] = ['terminals', 'desktops'];
@@ -347,12 +343,11 @@ export default function App() {
           termRows={termRows}
           onTermSizeChange={handleTermSizeChange}
           terminalGridLimit={terminalGridLimit}
-          onNewAccount={() => setShowRegister(true)}
+          onManageUsers={() => setShowUsers(true)}
           secureMode={secureMode}
           currentUser={currentUser}
-          showRegister={showRegister}
-          onRegisterClose={() => setShowRegister(false)}
-          onAccountCreated={handleAccountCreated}
+          showUsers={showUsers}
+          onUsersClose={() => setShowUsers(false)}
           themes={themes}
           globalTheme={globalTheme}
           onGlobalThemeChange={handleGlobalThemeChange}
