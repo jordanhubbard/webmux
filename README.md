@@ -64,7 +64,9 @@ make uninstall  # remove the OS service
 | `make status` | Check if the server is running |
 | `make install` | Install as OS service (launchd/systemd) |
 | `make uninstall` | Remove the OS service |
-| `make test` | Run all tests |
+| `make test` | Run all tests (unit + e2e) |
+| `make test-unit` | Typecheck + unit tests (no browser needed) |
+| `make test-e2e` | E2E tests (auto-provisions a Chromium, falls back to system Chrome) |
 | `make lint` | Lint all code |
 | `make clean` | Stop and remove build artifacts |
 | `make configure` | Update runtime config from env/args |

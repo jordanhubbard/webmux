@@ -72,7 +72,7 @@ ifneq ($(JWT_SECRET),)
 endif
 
 # ── Targets ────────────────────────────────────────────────────────
-.PHONY: all build deps check-guacd start stop restart status test lint clean configure help \
+.PHONY: all build deps check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
        install uninstall release release-minor release-major changelog-init \
        _start_manual _stop_manual
 
@@ -86,7 +86,9 @@ help:
 	@printf "  $(C_CYN)make stop$(C_RST)           Stop the running server\n"
 	@printf "  $(C_CYN)make restart$(C_RST)        Restart the server\n"
 	@printf "  $(C_CYN)make status$(C_RST)         Check if the server is running\n"
-	@printf "  $(C_CYN)make test$(C_RST)           Run all tests\n"
+	@printf "  $(C_CYN)make test$(C_RST)           Run all tests (unit + e2e)\n"
+	@printf "  $(C_CYN)make test-unit$(C_RST)      Typecheck + unit tests (no browser needed)\n"
+	@printf "  $(C_CYN)make test-e2e$(C_RST)       E2E tests (auto-provisions a browser)\n"
 	@printf "  $(C_CYN)make lint$(C_RST)           Lint all code\n"
 	@printf "  $(C_CYN)make clean$(C_RST)          Remove build artifacts\n"
 	@printf "  $(C_CYN)make install$(C_RST)        Install as OS service (launchd/systemd)\n"
@@ -256,15 +258,33 @@ status:
 		printf "$(C_DIM)●$(C_RST) webmux is not running\n"; \
 	fi
 
-test: build
+# ── Testing ─────────────────────────────────────────────────────────
+# Split so a browser/environment problem in e2e can't mask passing unit tests,
+# and so `make test-unit` is a fast, dependency-light gate.
+#   make test        typecheck + unit + e2e
+#   make test-unit   typecheck + unit only (no browser required)
+#   make test-e2e    e2e only (provisions a Chromium first)
+test: test-unit test-e2e
+	@printf "$(C_GRN)✓$(C_RST) All tests passed.\n"
+
+test-unit: build
 	@printf "$(C_BLU)▸$(C_RST) Type-checking…\n"
 	@cd "$(WEBMUX_DIR)" && $(NPM) run typecheck --silent
 	@printf "$(C_GRN)✓$(C_RST) Types OK.\n"
 	@printf "$(C_BLU)▸$(C_RST) Running unit tests…\n"
 	@cd "$(WEBMUX_DIR)" && $(NPM) test
-	@printf "$(C_BLU)▸$(C_RST) Running E2E tests…\n"
-	@cd "$(WEBMUX_DIR)" && $(NPM) run test:e2e
-	@printf "$(C_GRN)✓$(C_RST) All tests passed.\n"
+	@printf "$(C_GRN)✓$(C_RST) Unit tests passed.\n"
+
+# E2E needs a Playwright Chromium. ensure-e2e-browser.sh provisions the managed
+# browser, verifies it actually launches (catching partial/corrupt downloads),
+# and otherwise falls back to a system Chrome — turning the old cryptic
+# "download browsers" failure into a resolved, clearly-reported browser.
+test-e2e: build
+	@EXE="$$("$(CURDIR)/scripts/ensure-e2e-browser.sh")" || { \
+		printf "$(C_RED)✗$(C_RST) E2E skipped — no usable browser (see message above).\n"; exit 1; }; \
+	printf "$(C_BLU)▸$(C_RST) Running E2E tests…\n"; \
+	cd "$(WEBMUX_DIR)" && PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$$EXE" $(NPM) run test:e2e
+	@printf "$(C_GRN)✓$(C_RST) E2E tests passed.\n"
 
 lint:
 	@cd "$(WEBMUX_DIR)" && $(NPM) run lint
