@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-08-21
+
+### Fixed
+- handle expired login sessions
+
 ## [1.2.4] - 2026-08-11
 
 ### Added
