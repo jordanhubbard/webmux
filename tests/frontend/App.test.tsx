@@ -9,8 +9,12 @@ const mockAuth = {
   error: null as string | null,
   username: null as string | null,
   isAdmin: false,
+  sessionExpiresAt: null as number | null,
+  sessionExpired: false,
+  isRefreshing: false,
   login: vi.fn(),
   bootstrap: vi.fn(),
+  refreshSession: vi.fn(),
   logout: vi.fn(),
 };
 
@@ -109,6 +113,8 @@ describe('App', () => {
     mockAuth.isLoading = true;
     mockAuth.authStatus = null;
     mockAuth.error = null;
+    mockAuth.sessionExpiresAt = null;
+    mockAuth.sessionExpired = false;
   });
 
   it('shows loading state', async () => {
@@ -136,6 +142,18 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByText('Click to add a session')).toBeDefined();
     });
+  });
+
+  it('shows a blocking timeout dialog and returns to sign in', async () => {
+    mockAuth.isLoading = false;
+    mockAuth.isAuthenticated = true;
+    mockAuth.authStatus = { mode: 'local', bootstrap_required: false };
+    mockAuth.sessionExpired = true;
+    render(<App />);
+
+    expect(await screen.findByRole('dialog', { name: 'Session timed out' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Return to sign in' }));
+    expect(mockAuth.logout).toHaveBeenCalledTimes(1);
   });
 
   it('hides the Agents pane by default', async () => {

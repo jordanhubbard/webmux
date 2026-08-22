@@ -15,6 +15,7 @@ import type {
   Session,
   VncSession,
 } from '../types';
+import { signalAuthExpired } from './authSession';
 
 const API_BASE = '/api';
 
@@ -42,6 +43,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
+    if (res.status === 401 && getToken()) signalAuthExpired();
     const err = await res.json().catch(() => ({ error: `${res.status} ${res.statusText}` }));
     throw new Error((err as { error?: string }).error || `${res.status} ${res.statusText}`);
   }
@@ -63,6 +65,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),
+  refreshToken: () => request<{ token: string; mode: string }>('/auth/refresh', { method: 'POST' }),
   register: (username: string, password: string, admin = false) =>
     request<{ username: string; admin: boolean }>('/auth/register', {
       method: 'POST',

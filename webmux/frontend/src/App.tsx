@@ -368,7 +368,33 @@ export default function App() {
           agentConfig={agentConfig}
           hostSwitcher={hostSwitcher}
         />
+        {auth.sessionExpired && (
+          <div style={timeoutStyles.backdrop} role="dialog" aria-modal="true" aria-labelledby="session-timeout-title">
+            <div style={timeoutStyles.dialog}>
+              <h2 id="session-timeout-title" style={timeoutStyles.title}>Session timed out</h2>
+              <p style={timeoutStyles.message}>Your WebMux login session has expired. Sign in again to reconnect to your running sessions.</p>
+              <button style={timeoutStyles.button} onClick={auth.logout}>Return to sign in</button>
+            </div>
+          </div>
+        )}
       </WorkspacePaneProvider>
     </InputBroadcastProvider>
   );
 }
+
+const timeoutStyles: Record<string, React.CSSProperties> = {
+  backdrop: {
+    position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: 'rgba(5, 5, 15, 0.82)', backdropFilter: 'blur(4px)', padding: 24,
+  },
+  dialog: {
+    width: 'min(420px, 100%)', background: '#12122a', border: '1px solid #7c6af7', borderRadius: 8,
+    boxShadow: '0 18px 60px rgba(0, 0, 0, 0.55)', padding: 28, color: '#eee',
+  },
+  title: { margin: '0 0 12px', color: '#fff', fontSize: 22 },
+  message: { margin: '0 0 22px', color: '#bbb', lineHeight: 1.5 },
+  button: {
+    width: '100%', border: 0, borderRadius: 5, background: '#7c6af7', color: '#fff', cursor: 'pointer',
+    fontSize: 14, fontWeight: 700, padding: '10px 16px',
+  },
+};

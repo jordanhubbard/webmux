@@ -7,6 +7,7 @@ const mockApi = vi.hoisted(() => ({
   getMe: vi.fn().mockResolvedValue({ username: 'admin', admin: true }),
   login: vi.fn(),
   bootstrap: vi.fn(),
+  refreshToken: vi.fn(),
 }));
 
 vi.mock('@frontend/utils/api', () => ({
@@ -16,6 +17,10 @@ vi.mock('@frontend/utils/api', () => ({
 import { useAuth } from '@frontend/hooks/useAuth';
 
 describe('useAuth', () => {
+  function tokenExpiringAt(expiresAt: number): string {
+    return `header.${btoa(JSON.stringify({ sub: 'admin', exp: Math.floor(expiresAt / 1000) }))}.signature`;
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.removeItem('webmux_token');
@@ -108,6 +113,33 @@ describe('useAuth', () => {
     expect(result.current.isAuthenticated).toBe(true);
     expect(localStorage.getItem('webmux_token')).toBe('bootstrap-token');
     localStorage.removeItem('webmux_token');
+  });
+
+  it('refreshes the token and updates its expiration', async () => {
+    mockApi.getAuthStatus.mockResolvedValue({ mode: 'local', bootstrap_required: false });
+    const initialToken = tokenExpiringAt(Date.now() + 60_000);
+    const expectedExpiration = Math.floor((Date.now() + 8 * 60 * 60 * 1000) / 1000) * 1000;
+    const refreshedToken = tokenExpiringAt(expectedExpiration);
+    localStorage.setItem('webmux_token', initialToken);
+    mockApi.refreshToken.mockResolvedValue({ token: refreshedToken, mode: 'local' });
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => result.current.refreshSession());
+
+    expect(localStorage.getItem('webmux_token')).toBe(refreshedToken);
+    expect(result.current.sessionExpiresAt).toBe(expectedExpiration);
+  });
+
+  it('marks the session expired when notified of an authentication failure', async () => {
+    mockApi.getAuthStatus.mockResolvedValue({ mode: 'local', bootstrap_required: false });
+    localStorage.setItem('webmux_token', tokenExpiringAt(Date.now() + 60_000));
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    act(() => window.dispatchEvent(new Event('webmux:auth-expired')));
+
+    expect(result.current.sessionExpired).toBe(true);
   });
 
   it('logout clears token and sets unauthenticated', async () => {

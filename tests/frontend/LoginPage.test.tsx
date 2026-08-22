@@ -11,8 +11,12 @@ function makeAuth(overrides: Partial<AuthState> = {}): AuthState {
     error: null,
     username: null,
     isAdmin: false,
+    sessionExpiresAt: null,
+    sessionExpired: false,
+    isRefreshing: false,
     login: vi.fn().mockResolvedValue(undefined),
     bootstrap: vi.fn().mockResolvedValue(undefined),
+    refreshSession: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn(),
     ...overrides,
   };

@@ -14,7 +14,7 @@ class MockWebSocket {
   url: string;
   readyState = MockWebSocket.OPEN;
   onopen: (() => void) | null = null;
-  onclose: ((event: { code: number }) => void) | null = null;
+  onclose: ((event: { code: number; reason: string }) => void) | null = null;
   onerror: ((e: unknown) => void) | null = null;
   onmessage: ((event: { data: string }) => void) | null = null;
   closeCalled = false;
@@ -38,7 +38,7 @@ class MockWebSocket {
 
   // Helpers for tests
   simulateOpen() { this.onopen?.(); }
-  simulateClose(code = 1006) { this.onclose?.({ code }); }
+  simulateClose(code = 1006, reason = '') { this.onclose?.({ code, reason }); }
   simulateMessage(data: object) { this.onmessage?.({ data: JSON.stringify(data) }); }
 }
 
@@ -149,6 +149,31 @@ describe('useWebSocket', () => {
     });
     act(() => { vi.advanceTimersByTime(5000); });
     expect(MockWebSocket.instances.length).toBe(1);
+  });
+
+  it('reports an authentication rejection and does not reconnect', async () => {
+    const useWebSocket = await importHook();
+    const onUnauthorized = vi.fn();
+    renderHook(() =>
+      useWebSocket({ sessionId: 's1', onMessage: vi.fn(), onUnauthorized })
+    );
+
+    act(() => MockWebSocket.instances[0].simulateClose(1008, 'Unauthorized'));
+    act(() => { vi.advanceTimersByTime(5000); });
+
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+    expect(MockWebSocket.instances.length).toBe(1);
+  });
+
+  it('closes the active connection when the login session expires', async () => {
+    const useWebSocket = await importHook();
+    renderHook(() => useWebSocket({ sessionId: 's1', onMessage: vi.fn() }));
+    const ws = MockWebSocket.instances[0];
+
+    act(() => window.dispatchEvent(new Event('webmux:auth-expired')));
+
+    expect(ws.closeCalled).toBe(true);
+    expect(ws.closeCode).toBe(1000);
   });
 
   it('closes with code 1000 on unmount', async () => {

@@ -72,6 +72,15 @@ describe('API Routes', () => {
     });
   });
 
+  describe('POST /api/auth/refresh', () => {
+    it('issues a fresh token for an authenticated session', async () => {
+      const res = await request(app).post('/api/auth/refresh');
+      expect(res.status).toBe(200);
+      expect(res.body.mode).toBe('none');
+      expect(typeof res.body.token).toBe('string');
+    });
+  });
+
   describe('POST /api/hosts', () => {
     it('creates a new host', async () => {
       const res = await request(app)

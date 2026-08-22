@@ -114,6 +114,11 @@ router.post('/bootstrap', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/refresh', requireAuth, (req: Request, res: Response) => {
+  const username = (req as Request & { user?: AuthPayload }).user?.sub || 'anonymous';
+  res.json({ token: signToken(username), mode: username === 'anonymous' ? 'none' : 'local' });
+});
+
 // Creating accounts is restricted to admins (owners).
 router.post('/register', requireAuth, requireAdmin, async (req: Request, res: Response) => {
   const { username, password, admin } = req.body as { username?: string; password?: string; admin?: boolean };

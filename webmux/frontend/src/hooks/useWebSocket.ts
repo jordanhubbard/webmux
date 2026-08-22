@@ -1,12 +1,14 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { buildWsUrl } from '../utils/api';
 import type { WebSocketMessage } from '../types';
+import { signalAuthExpired } from '../utils/authSession';
 
 interface UseWebSocketOptions {
   sessionId: string;
   onMessage: (msg: WebSocketMessage) => void;
   onOpen?: () => void;
   onClose?: () => void;
+  onUnauthorized?: () => void;
 }
 
 export interface WebSocketHandle {
@@ -23,14 +25,27 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
   const attemptRef = useRef(0);
   const closedRef = useRef(false);
 
-  const { sessionId, onMessage, onOpen, onClose } = options;
+  const { sessionId, onMessage, onOpen, onClose, onUnauthorized } = options;
 
   const onMessageRef = useRef(onMessage);
   const onOpenRef = useRef(onOpen);
   const onCloseRef = useRef(onClose);
+  const onUnauthorizedRef = useRef(onUnauthorized);
   useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
   useEffect(() => { onOpenRef.current = onOpen; }, [onOpen]);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  useEffect(() => { onUnauthorizedRef.current = onUnauthorized; }, [onUnauthorized]);
+
+  useEffect(() => {
+    const closeExpiredConnection = () => {
+      closedRef.current = true;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+      wsRef.current?.close(1000);
+    };
+    window.addEventListener('webmux:auth-expired', closeExpiredConnection);
+    return () => window.removeEventListener('webmux:auth-expired', closeExpiredConnection);
+  }, []);
 
   useEffect(() => {
     closedRef.current = false;
@@ -51,6 +66,12 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
       ws.onclose = (event) => {
         if (closedRef.current) return;
         onCloseRef.current?.();
+        if (event.code === 1008 && event.reason === 'Unauthorized') {
+          closedRef.current = true;
+          onUnauthorizedRef.current?.();
+          signalAuthExpired();
+          return;
+        }
         // 1000 = intentional close (component unmount, session deleted)
         if (event.code === 1000) return;
         const delay = Math.min(INITIAL_DELAY_MS * Math.pow(2, attemptRef.current), MAX_DELAY_MS);

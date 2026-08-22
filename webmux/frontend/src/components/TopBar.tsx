@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import type { AuthState } from '../hooks/useAuth';
 import type { AgentDefinition, HostSwitcherConfig, NamedTheme } from '../types';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
@@ -73,6 +73,20 @@ export function TopBar({
   const [sizeInput, setSizeInput] = useState('');
   const sizeInputRef = useRef<HTMLInputElement>(null);
   const hostSwitchContext = getHostSwitchContext(hostSwitcher);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (!auth.sessionExpiresAt) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [auth.sessionExpiresAt]);
+
+  const remainingSeconds = auth.sessionExpiresAt
+    ? Math.max(0, Math.ceil((auth.sessionExpiresAt - now) / 1000))
+    : null;
+  const remainingLabel = remainingSeconds === null
+    ? null
+    : `${Math.floor(remainingSeconds / 3600).toString().padStart(2, '0')}:${Math.floor((remainingSeconds % 3600) / 60).toString().padStart(2, '0')}:${(remainingSeconds % 60).toString().padStart(2, '0')}`;
 
   const commitSize = () => {
     const match = sizeInput.match(/^\s*(\d+)\s*[x×]\s*(\d+)\s*$/i);
@@ -290,6 +304,19 @@ export function TopBar({
 
         {auth.isAuthenticated && auth.authStatus?.mode !== 'none' && (
           <>
+            {remainingLabel && (
+              <span style={styles.sessionTimer} title="Time remaining in this login session">
+                Session {remainingLabel}
+              </span>
+            )}
+            <button
+              style={styles.iconBtn}
+              onClick={() => auth.refreshSession().catch(() => {})}
+              disabled={auth.isRefreshing}
+              title="Refresh login session"
+            >
+              {auth.isRefreshing ? 'Refreshing...' : 'Refresh session'}
+            </button>
             {currentUser && <span style={styles.userBadge}>{currentUser}</span>}
             {auth.isAdmin && (
               <button style={styles.iconBtn} onClick={onManageUsers} title="Add or remove accounts">
@@ -432,6 +459,12 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#7c6af7',
     fontSize: 12,
     fontWeight: 600,
+  },
+  sessionTimer: {
+    color: '#aaa',
+    fontFamily: 'var(--webmux-mono-font)',
+    fontSize: 12,
+    whiteSpace: 'nowrap',
   },
   helpBtn: {
     background: '#1a1a3a',

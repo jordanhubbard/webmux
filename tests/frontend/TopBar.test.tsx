@@ -17,8 +17,12 @@ function makeAuth(overrides: Partial<AuthState> = {}): AuthState {
     error: null,
     username: 'admin',
     isAdmin: true,
+    sessionExpiresAt: null,
+    sessionExpired: false,
+    isRefreshing: false,
     login: vi.fn(),
     bootstrap: vi.fn(),
+    refreshSession: vi.fn(),
     logout: vi.fn(),
     ...overrides,
   };
@@ -83,6 +87,17 @@ describe('TopBar', () => {
   it('shows current user badge', () => {
     render(<TopBar {...defaultTopBarProps()} currentUser="admin" />, { wrapper });
     expect(screen.getByText('admin')).toBeDefined();
+  });
+
+  it('shows the session countdown and refreshes it on request', () => {
+    const refreshSession = vi.fn().mockResolvedValue(undefined);
+    render(
+      <TopBar {...defaultTopBarProps()} auth={makeAuth({ sessionExpiresAt: Date.now() + 60_000, refreshSession })} />,
+      { wrapper },
+    );
+    expect(screen.getByText(/Session 00:01:00/)).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh session' }));
+    expect(refreshSession).toHaveBeenCalledTimes(1);
   });
 
   it('shows Users button for admins', () => {
