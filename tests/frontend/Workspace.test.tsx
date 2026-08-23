@@ -183,6 +183,38 @@ describe('Workspace', () => {
     tileRect.mockRestore();
   });
 
+  it('highlights the dock icon for the focused terminal', async () => {
+    const { api } = await import('@frontend/utils/api');
+    const sessions = [
+      { ...mockSessions[0], id: 's1', title: 'one', row: 0, col: 0 },
+      { ...mockSessions[0], id: 's2', title: 'two', row: 0, col: 1 },
+    ];
+    (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue(sessions);
+
+    render(<Workspace {...defaultProps} />, { wrapper });
+    await waitFor(() => {
+      expect(screen.getByTestId('dock-s1')).toBeDefined();
+      expect(screen.getByTestId('dock-s2')).toBeDefined();
+    });
+
+    expect(screen.getByTestId('dock-s1').getAttribute('data-focused')).toBe('false');
+    expect(screen.getByTestId('dock-s2').getAttribute('data-focused')).toBe('false');
+
+    fireEvent.mouseDown(screen.getByTestId('terminal-s2'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dock-s2').getAttribute('data-focused')).toBe('true');
+    });
+    expect(screen.getByTestId('dock-s1').getAttribute('data-focused')).toBe('false');
+
+    fireEvent.mouseDown(screen.getByTestId('terminal-s1'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dock-s1').getAttribute('data-focused')).toBe('true');
+    });
+    expect(screen.getByTestId('dock-s2').getAttribute('data-focused')).toBe('false');
+  });
+
   it('does not scroll when the focused terminal tile is already fully visible', async () => {
     const { api } = await import('@frontend/utils/api');
     const sessions = [

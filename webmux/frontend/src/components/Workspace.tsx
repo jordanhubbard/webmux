@@ -562,13 +562,19 @@ export function Workspace({
             {[...sessions].sort((a, b) => a.title.localeCompare(b.title)).map(session => {
               const isMinimized = collapsedSessions.has(session.id);
               const hasBell = bellSessions.has(session.id);
+              const isFocused = focusedSessionId === session.id;
               return (
                 <button
                   key={session.id}
+                  data-testid={`dock-${session.id}`}
+                  data-focused={isFocused ? 'true' : 'false'}
+                  aria-current={isFocused ? 'true' : undefined}
                   style={{
                     ...styles.dockItem,
                     opacity: isMinimized && !hasBell ? 0.5 : 1,
-                    borderColor: hasBell ? '#f1fa8c' : isMinimized ? '#222244' : '#333366',
+                    background: isFocused ? '#7c6af7' : '#1a1a3a',
+                    borderColor: hasBell ? '#f1fa8c' : isFocused ? '#9b8cff' : isMinimized ? '#222244' : '#333366',
+                    color: isFocused ? '#fff' : '#ccc',
                   }}
                   onClick={() => {
                     handleToggleCollapse(session.id);
@@ -580,7 +586,7 @@ export function Workspace({
                   }}
                   title={isMinimized ? `Show: ${session.title}` : `Minimize: ${session.title}`}
                 >
-                  <span style={{ color: hasBell ? '#f1fa8c' : isMinimized ? '#666' : '#4aaa6a', fontSize: 8 }}>{'\u25cf'}</span>
+                  <span style={{ color: hasBell ? '#f1fa8c' : isFocused ? '#fff' : isMinimized ? '#666' : '#4aaa6a', fontSize: 8 }}>{'\u25cf'}</span>
                   <span style={styles.dockTitle}>{session.title}</span>
                 </button>
               );
