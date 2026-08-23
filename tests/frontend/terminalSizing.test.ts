@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { isTerminalIdentityResponse } from '@frontend/utils/terminalInput';
+import {
+  isTerminalIdentityResponse,
+  shouldSuppressTerminalInput,
+} from '@frontend/utils/terminalInput';
 import { fitTerminalSizeToPixels } from '@frontend/utils/terminalSizing';
 
 describe('terminal sizing', () => {
@@ -26,5 +29,17 @@ describe('terminal input filtering', () => {
   it('does not treat visible text as a terminal identity response', () => {
     expect(isTerminalIdentityResponse('0;276;0c')).toBe(false);
     expect(isTerminalIdentityResponse('printf "\\x1b[>c"')).toBe(false);
+  });
+
+  it('suppresses OSC and CPR replies that break remote interactive prompts', () => {
+    expect(shouldSuppressTerminalInput('\x1b]11;rgb:1e1e/1e1e/1e1e\x1b\\')).toBe(true);
+    expect(shouldSuppressTerminalInput('\x1b[24;80R')).toBe(true);
+    expect(shouldSuppressTerminalInput('\x1b[0n')).toBe(true);
+  });
+
+  it('does not suppress normal keyboard input', () => {
+    expect(shouldSuppressTerminalInput('\x1b[A')).toBe(false);
+    expect(shouldSuppressTerminalInput('hello')).toBe(false);
+    expect(shouldSuppressTerminalInput('\r')).toBe(false);
   });
 });

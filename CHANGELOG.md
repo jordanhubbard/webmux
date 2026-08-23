@@ -5,6 +5,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- suppress xterm.js OSC/CPR query replies in SSH sessions so interactive
+  programs like `gh auth login` no longer fail with unexpected `\x1b]` escapes
+
 ## [1.2.6] - 2026-08-23
 
 ### Fixed
