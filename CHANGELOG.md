@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-23
+
+### Added
+- upgrade terminal stack to xterm.js 6
+
 ## [1.2.7] - 2026-08-23
 
 ### Other
