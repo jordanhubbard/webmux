@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.7] - 2026-08-23
+
+### Other
+- Fix SSH sessions receiving xterm query escape replies.
+- bd init: initialize beads issue tracking
+
 ### Fixed
 - suppress xterm.js OSC/CPR query replies in SSH sessions so interactive
   programs like `gh auth login` no longer fail with unexpected `\x1b]` escapes
