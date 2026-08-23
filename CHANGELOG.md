@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.6] - 2026-08-23
+
+### Fixed
+- highlight the dock icon for the focused terminal
+
 ## [1.2.5] - 2026-08-21
 
 ### Fixed
