@@ -1,5 +1,6 @@
-import { forwardRef, useImperativeHandle, useState, useCallback, useRef } from 'react';
+import { forwardRef, useImperativeHandle, useState, useCallback, useEffect, useRef } from 'react';
 import { Terminal, type TerminalHandle } from './Terminal';
+import { ReconnectOverlay } from './ReconnectOverlay';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { api } from '../utils/api';
 import type { Session, ConnectionState, NamedTheme } from '../types';
@@ -65,6 +66,10 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isFocused = focusedSessionId === session.id;
+
+  useEffect(() => {
+    setState(session.state);
+  }, [session.state]);
 
   useImperativeHandle(ref, () => ({
     focusTerminal: () => {
@@ -254,6 +259,9 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
       </div>
 
       <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
+        {(state === 'disconnected' || state === 'error') && (
+          <ReconnectOverlay onReconnect={() => onReconnect(session.id)} />
+        )}
         <Terminal
           ref={termHandleRef}
           sessionId={session.id}
@@ -366,6 +374,7 @@ const styles: Record<string, React.CSSProperties> = {
     maxWidth: 100,
   },
   termContainer: {
+    position: 'relative',
     flex: 1,
     overflow: 'hidden',
   },

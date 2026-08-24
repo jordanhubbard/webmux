@@ -96,6 +96,35 @@ describe('VncTile', () => {
     expect(onReconnect).toHaveBeenCalledTimes(1);
   });
 
+  it('shows a prominent reconnect action in a disconnected VNC window', () => {
+    const onReconnect = vi.fn();
+    render(
+      <VncTile
+        session={makeVncSession({ state: 'disconnected' })}
+        onDoubleClick={vi.fn()}
+        onClose={vi.fn()}
+        onReconnect={onReconnect}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('Reconnect'));
+    expect(onReconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides the prominent reconnect action when VNC reconnection starts', () => {
+    const props = {
+      onDoubleClick: vi.fn(),
+      onClose: vi.fn(),
+      onReconnect: vi.fn(),
+    };
+    const { rerender } = render(
+      <VncTile session={makeVncSession({ state: 'disconnected' })} {...props} />,
+    );
+
+    rerender(<VncTile session={makeVncSession({ state: 'connecting' })} {...props} />);
+    expect(screen.queryByText('Reconnect')).toBeNull();
+  });
+
   it('does not show the reconnect button when state is connected', () => {
     render(
       <VncTile

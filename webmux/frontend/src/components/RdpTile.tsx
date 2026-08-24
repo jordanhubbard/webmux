@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { RdpViewer } from './RdpViewer';
+import { ReconnectOverlay } from './ReconnectOverlay';
 import type { RdpSession, ConnectionState } from '../types';
 
 interface RdpTileProps {
@@ -25,6 +26,14 @@ export function RdpTile({
   onTitleMouseDown,
 }: RdpTileProps) {
   const [localState, setLocalState] = useState<ConnectionState>(session.state);
+  const previousSessionStateRef = useRef(session.state);
+
+  useEffect(() => {
+    if (previousSessionStateRef.current !== session.state) {
+      previousSessionStateRef.current = session.state;
+      setLocalState(session.state);
+    }
+  }, [session.state]);
 
   const handleStateChange = useCallback((state: ConnectionState) => {
     setLocalState(state);
@@ -119,9 +128,12 @@ export function RdpTile({
 
       {/* Body */}
       <div
-        style={{ flex: 1, overflow: 'hidden', cursor: 'pointer' }}
+        style={{ position: 'relative', flex: 1, overflow: 'hidden', cursor: 'pointer' }}
         onDoubleClick={onDoubleClick}
       >
+        {(localState === 'disconnected' || localState === 'error') && (
+          <ReconnectOverlay onReconnect={onReconnect} />
+        )}
         <RdpViewer
           sessionId={session.id}
           mode="thumbnail"

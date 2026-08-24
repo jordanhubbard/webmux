@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { VncViewer } from './VncViewer';
+import { ReconnectOverlay } from './ReconnectOverlay';
 import type { VncSession, ConnectionState } from '../types';
 
 interface VncTileProps {
@@ -27,6 +28,14 @@ export function VncTile({
   onTitleMouseDown,
 }: VncTileProps) {
   const [localState, setLocalState] = useState<ConnectionState>(session.state);
+  const previousSessionStateRef = useRef(session.state);
+
+  useEffect(() => {
+    if (previousSessionStateRef.current !== session.state) {
+      previousSessionStateRef.current = session.state;
+      setLocalState(session.state);
+    }
+  }, [session.state]);
 
   const handleStateChange = useCallback((state: ConnectionState) => {
     setLocalState(state);
@@ -121,9 +130,12 @@ export function VncTile({
 
       {/* Body */}
       <div
-        style={{ flex: 1, overflow: 'hidden', cursor: 'pointer' }}
+        style={{ position: 'relative', flex: 1, overflow: 'hidden', cursor: 'pointer' }}
         onDoubleClick={onDoubleClick}
       >
+        {(localState === 'disconnected' || localState === 'error') && (
+          <ReconnectOverlay onReconnect={onReconnect} />
+        )}
         <VncViewer
           sessionId={session.id}
           vncPassword={vncPassword}

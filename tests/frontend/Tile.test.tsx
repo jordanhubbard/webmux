@@ -134,6 +134,39 @@ describe('Tile', () => {
     expect(onReconnect).toHaveBeenCalledWith('s1');
   });
 
+  it('shows a prominent reconnect action in a disconnected terminal', () => {
+    const onReconnect = vi.fn();
+    render(
+      <Tile
+        session={makeSession({ state: 'disconnected' })}
+        fontSize={14}
+        onClose={vi.fn()}
+        onReconnect={onReconnect}
+        onRename={vi.fn()}
+      />,
+      { wrapper },
+    );
+
+    fireEvent.click(screen.getByText('Reconnect'));
+    expect(onReconnect).toHaveBeenCalledWith('s1');
+  });
+
+  it('hides the prominent reconnect action when reconnection starts', () => {
+    const props = {
+      fontSize: 14,
+      onClose: vi.fn(),
+      onReconnect: vi.fn(),
+      onRename: vi.fn(),
+    };
+    const { rerender } = render(
+      <Tile session={makeSession({ state: 'disconnected' })} {...props} />,
+      { wrapper },
+    );
+
+    rerender(<Tile session={makeSession({ state: 'connecting' })} {...props} />);
+    expect(screen.queryByText('Reconnect')).toBeNull();
+  });
+
   it('does not show reconnect for connected sessions', () => {
     render(
       <Tile
