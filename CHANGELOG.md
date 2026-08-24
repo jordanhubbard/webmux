@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-08-23
+
+### Fixed
+- roll back xterm.js 6 mouse regression
+
 ## [1.3.0] - 2026-08-23
 
 ### Added
