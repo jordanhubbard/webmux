@@ -1,10 +1,14 @@
 import type { IDisposable, Terminal } from '@xterm/xterm';
 
 const ESC = String.fromCharCode(0x1b);
+const ESC_PATTERN = '\\x1b';
+const BEL_PATTERN = '\\x07';
 const TERMINAL_IDENTITY_RESPONSE_BODY_PATTERN = /^(?:[?>]?[0-9;]*)$/;
-const CURSOR_POSITION_REPORT_PATTERN = /^\x1b\[\d+;\d+R$/;
-const DEVICE_STATUS_REPORT_PATTERN = /^\x1b\[\d+n$/;
-const OSC_RESPONSE_PATTERN = /^\x1b\][\s\S]*(?:\x07|\x1b\\)$/;
+const CURSOR_POSITION_REPORT_PATTERN = new RegExp(`^${ESC_PATTERN}\\[\\d+;\\d+R$`);
+const DEVICE_STATUS_REPORT_PATTERN = new RegExp(`^${ESC_PATTERN}\\[\\d+n$`);
+const OSC_RESPONSE_PATTERN = new RegExp(
+  `^${ESC_PATTERN}\\][\\s\\S]*(?:${BEL_PATTERN}|${ESC_PATTERN}\\\\)$`,
+);
 
 /** OSC identifiers used by termenv/gh for color and palette queries. */
 const OSC_COLOR_QUERY_IDS = [4, 10, 11, 12, 104, 110, 111] as const;
