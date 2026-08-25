@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-08-25
+
+### Added
+- add prominent reconnect overlays
+
+### Other
+- bd: update sync.remote
+
 ## [1.3.1] - 2026-08-23
 
 ### Fixed
