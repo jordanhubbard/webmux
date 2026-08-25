@@ -8,11 +8,14 @@ vi.mock('@frontend/utils/api', () => ({
 
 // Minimal WebSocket mock
 class MockWebSocket {
+  static CONNECTING = 0;
   static OPEN = 1;
   static instances: MockWebSocket[] = [];
 
   url: string;
-  readyState = MockWebSocket.OPEN;
+  // Real WebSockets start CONNECTING and only reach OPEN once the handshake
+  // completes — matches that here so tests can exercise the pre-open window.
+  readyState = MockWebSocket.CONNECTING;
   onopen: (() => void) | null = null;
   onclose: ((event: { code: number; reason: string }) => void) | null = null;
   onerror: ((e: unknown) => void) | null = null;
@@ -37,7 +40,10 @@ class MockWebSocket {
   }
 
   // Helpers for tests
-  simulateOpen() { this.onopen?.(); }
+  simulateOpen() {
+    this.readyState = MockWebSocket.OPEN;
+    this.onopen?.();
+  }
   simulateClose(code = 1006, reason = '') { this.onclose?.({ code, reason }); }
   simulateMessage(data: object) { this.onmessage?.({ data: JSON.stringify(data) }); }
 }
@@ -118,6 +124,66 @@ describe('useWebSocket', () => {
     expect(MockWebSocket.instances[0].sentMessages).toEqual([
       JSON.stringify({ type: 'input', data: 'test' }),
     ]);
+  });
+
+  it('queues a message sent before OPEN and flushes it once the connection opens', async () => {
+    const useWebSocket = await importHook();
+    const { result } = renderHook(() =>
+      useWebSocket({ sessionId: 's1', onMessage: vi.fn() })
+    );
+    const ws = MockWebSocket.instances[0];
+    expect(ws.readyState).toBe(MockWebSocket.CONNECTING);
+
+    // e.g. the terminal's initial fitAddon.fit() firing a resize before the
+    // WebSocket handshake has completed — must not be silently dropped.
+    act(() => result.current.send({ type: 'resize', cols: 100, rows: 44 }));
+    expect(ws.sentMessages).toEqual([]);
+
+    act(() => ws.simulateOpen());
+    expect(ws.sentMessages).toEqual([
+      JSON.stringify({ type: 'resize', cols: 100, rows: 44 }),
+    ]);
+  });
+
+  it('preserves order when multiple messages are queued before OPEN', async () => {
+    const useWebSocket = await importHook();
+    const { result } = renderHook(() =>
+      useWebSocket({ sessionId: 's1', onMessage: vi.fn() })
+    );
+    const ws = MockWebSocket.instances[0];
+
+    act(() => {
+      result.current.send({ type: 'resize', cols: 80, rows: 24 });
+      result.current.send({ type: 'resize', cols: 100, rows: 44 });
+      result.current.send({ type: 'input', data: 'ls\n' });
+    });
+    expect(ws.sentMessages).toEqual([]);
+
+    act(() => ws.simulateOpen());
+    expect(ws.sentMessages).toEqual([
+      JSON.stringify({ type: 'resize', cols: 80, rows: 24 }),
+      JSON.stringify({ type: 'resize', cols: 100, rows: 44 }),
+      JSON.stringify({ type: 'input', data: 'ls\n' }),
+    ]);
+  });
+
+  it('does not replay queued messages into a later connection after unmount', async () => {
+    const useWebSocket = await importHook();
+    const { result, unmount } = renderHook(() =>
+      useWebSocket({ sessionId: 's1', onMessage: vi.fn() })
+    );
+    const ws = MockWebSocket.instances[0];
+
+    act(() => result.current.send({ type: 'resize', cols: 100, rows: 44 }));
+    expect(ws.sentMessages).toEqual([]);
+
+    unmount();
+
+    // A torn-down component's pending queue must not leak into whatever
+    // socket a future mount for this session opens next.
+    const ws2 = new MockWebSocket('ws://localhost/api/term/s1');
+    act(() => ws2.simulateOpen());
+    expect(ws2.sentMessages).toEqual([]);
   });
 
   it('calls onClose and reconnects with backoff on abnormal close', async () => {
