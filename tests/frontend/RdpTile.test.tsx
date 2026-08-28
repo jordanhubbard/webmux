@@ -44,7 +44,9 @@ describe('RdpTile', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('Reconnect'));
+    const reconnect = screen.getByRole('button', { name: 'Reconnect' });
+    expect(reconnect.textContent).toBe('\u21bb');
+    fireEvent.click(reconnect);
     expect(onReconnect).toHaveBeenCalledTimes(1);
   });
 
@@ -58,7 +60,7 @@ describe('RdpTile', () => {
       />,
     );
 
-    expect(screen.getByText('Reconnect')).toBeDefined();
+    expect(screen.getByText('\u21bb')).toBeDefined();
   });
 
   it('hides the prominent reconnect action when RDP reconnection starts', () => {
@@ -72,7 +74,7 @@ describe('RdpTile', () => {
     );
 
     rerender(<RdpTile session={makeRdpSession({ state: 'connecting' })} {...props} />);
-    expect(screen.queryByText('Reconnect')).toBeNull();
+    expect(screen.queryByText('\u21bb')).toBeNull();
   });
 
   it('does not show the prominent reconnect action while connected', () => {
@@ -85,6 +87,6 @@ describe('RdpTile', () => {
       />,
     );
 
-    expect(screen.queryByText('Reconnect')).toBeNull();
+    expect(screen.queryByText('\u21bb')).toBeNull();
   });
 });

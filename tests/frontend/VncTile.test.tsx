@@ -107,7 +107,9 @@ describe('VncTile', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('Reconnect'));
+    const reconnect = screen.getByRole('button', { name: 'Reconnect' });
+    expect(reconnect.textContent).toBe('\u21bb');
+    fireEvent.click(reconnect);
     expect(onReconnect).toHaveBeenCalledTimes(1);
   });
 
@@ -122,7 +124,7 @@ describe('VncTile', () => {
     );
 
     rerender(<VncTile session={makeVncSession({ state: 'connecting' })} {...props} />);
-    expect(screen.queryByText('Reconnect')).toBeNull();
+    expect(screen.queryByText('\u21bb')).toBeNull();
   });
 
   it('does not show the reconnect button when state is connected', () => {

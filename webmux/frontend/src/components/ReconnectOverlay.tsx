@@ -6,9 +6,13 @@ interface ReconnectOverlayProps {
 export function ReconnectOverlay({ onReconnect }: ReconnectOverlayProps) {
   return (
     <div style={styles.overlay}>
-      <button type="button" style={styles.button} onClick={onReconnect}>
-        <span aria-hidden="true" style={styles.icon}>{'\u21ba'}</span>
-        <span>Reconnect</span>
+      <button
+        type="button"
+        style={styles.button}
+        onClick={onReconnect}
+        aria-label="Reconnect"
+      >
+        <span aria-hidden="true">{'\u21bb'}</span>
       </button>
     </div>
   );
@@ -25,25 +29,15 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'rgba(13, 13, 26, 0.72)',
   },
   button: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 8,
-    minWidth: 140,
-    padding: '18px 28px',
-    color: '#f8f8f2',
-    background: '#252555',
-    border: '1px solid #7c6af7',
-    borderRadius: 8,
-    boxShadow: '0 0 20px rgba(124, 106, 247, 0.35)',
+    padding: 8,
+    color: '#caaa4a',
+    background: 'transparent',
+    border: 0,
     cursor: 'pointer',
     font: 'inherit',
-    fontSize: 15,
-    fontWeight: 600,
-  },
-  icon: {
-    color: '#caaa4a',
-    fontSize: 36,
+    fontSize: 64,
+    fontWeight: 300,
     lineHeight: 1,
+    textShadow: '0 0 20px rgba(202, 170, 74, 0.45)',
   },
 };
