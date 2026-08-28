@@ -24,6 +24,11 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const attemptRef = useRef(0);
   const closedRef = useRef(false);
+  // Messages sent before the socket reaches OPEN (e.g. the initial terminal
+  // fit/resize, which fires synchronously on mount while the handshake is
+  // still in flight) are queued here and flushed in order once onopen fires,
+  // instead of being silently dropped.
+  const pendingRef = useRef<WebSocketMessage[]>([]);
 
   const { sessionId, onMessage, onOpen, onClose, onUnauthorized } = options;
 
@@ -60,6 +65,11 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
 
       ws.onopen = () => {
         attemptRef.current = 0;
+        const queued = pendingRef.current;
+        pendingRef.current = [];
+        for (const msg of queued) {
+          ws.send(JSON.stringify(msg));
+        }
         onOpenRef.current?.();
       };
 
@@ -101,12 +111,17 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
       }
       wsRef.current?.close(1000);
       wsRef.current = null;
+      // Drop anything still queued so a torn-down component can't leak
+      // sends into a future socket (new session, or a remount).
+      pendingRef.current = [];
     };
   }, [sessionId]);
 
   const send = useCallback((msg: WebSocketMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(msg));
+    } else if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+      pendingRef.current.push(msg);
     }
   }, []);
 
