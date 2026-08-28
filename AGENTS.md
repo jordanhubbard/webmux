@@ -1,16 +1,25 @@
 # Agent Instructions
 
-This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
+This project uses GitHub Issues for task tracking and pull requests for changes.
 
 ## Quick Reference
 
 ```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work atomically
-bd close <id>         # Complete work
-bd dolt push          # Push beads data to remote
+gh issue list                         # Find available work
+gh issue view <number>                # View issue details
+gh issue edit <number> --add-assignee @me
+gh pr create --fill                   # Open a pull request
+gh pr checks                          # Verify CI
 ```
+
+## GitHub Workflow
+
+- Track planned work and follow-ups in GitHub Issues. Create an issue before substantial code changes when one does not already exist.
+- Work on a branch and reference the issue in commits and the pull request body.
+- Use pull requests for code and documentation changes. Do not push feature work directly to `main`.
+- Run relevant tests, linters, and builds before opening a pull request.
+- Merge only after required checks pass. Use `Closes #<number>` in the pull request body when merging should close an issue.
+- Releases are cut from a clean, up-to-date `main` branch after the release changes have been reviewed and merged.
 
 ## Non-Interactive Shell Commands
 
@@ -36,26 +45,6 @@ cp -rf source dest          # NOT: cp -r source dest
 - `apt-get` - use `-y` flag
 - `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
-## Beads Issue Tracker
-
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
-
-### Quick Reference
-
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
-```
-
-### Rules
-
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
-
 ## Session Completion
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
@@ -64,11 +53,10 @@ bd close <id>         # Complete work
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
+3. **Update issue status** - Close finished work through the PR or update open issues
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -81,4 +69,3 @@ bd close <id>         # Complete work
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
-<!-- END BEADS INTEGRATION -->

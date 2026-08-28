@@ -70,25 +70,26 @@ When a skill applies to the current task, use it. Key skills:
 - The top-level `Makefile` delegates to `npm` scripts inside `webmux/`.
 
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
-## Beads Issue Tracker
+## GitHub Workflow
 
-This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+This project uses GitHub Issues for task tracking and pull requests for changes.
 
 ### Quick Reference
 
 ```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --claim  # Claim work
-bd close <id>         # Complete work
+gh issue list                         # Find available work
+gh issue view <number>                # View issue details
+gh issue edit <number> --add-assignee @me
+gh pr create --fill                   # Open a pull request
+gh pr checks                          # Verify CI
 ```
 
 ### Rules
 
-- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
-- Run `bd prime` for detailed command reference and session close protocol
-- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+- Track planned work and follow-ups in GitHub Issues.
+- Work on a branch and submit changes through a pull request instead of pushing feature work directly to `main`.
+- Reference the issue in commits and use `Closes #<number>` in the pull request body when appropriate.
+- Run relevant tests, linters, and builds before opening a pull request, and merge only after required checks pass.
 
 ## Session Completion
 
@@ -102,7 +103,6 @@ bd close <id>         # Complete work
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd dolt push
    git push
    git status  # MUST show "up to date with origin"
    ```
@@ -115,4 +115,3 @@ bd close <id>         # Complete work
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
-<!-- END BEADS INTEGRATION -->
