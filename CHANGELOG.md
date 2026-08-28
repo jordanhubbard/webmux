@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-08-27
+
+### Added
+- show a prominent refresh action in disconnected terminal, VNC, and RDP windows
+- add GitHub issue forms and a pull request template
+
+### Changed
+- replace beads task management with GitHub Issues and pull requests
+
 ## [1.3.2] - 2026-08-25
 
 ### Added
