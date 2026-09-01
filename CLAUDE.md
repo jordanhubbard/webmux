@@ -72,7 +72,7 @@ When a skill applies to the current task, use it. Key skills:
 
 ## GitHub Workflow
 
-This project uses GitHub Issues for task tracking and pull requests for changes.
+Public work enters through GitHub Issues and pull requests. Maintainers use [mac](https://github.com/jordanhubbard/mac) for internal task tracking and work dispatch. This repository does not use beads.
 
 ### Quick Reference
 

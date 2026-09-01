@@ -36,6 +36,14 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 - (Optional) a VNC target for VNC sessions
 - (Optional) Apache Guacamole's `guacd` for RDP sessions
 
+### Supported Platforms
+
+WebMux runs natively on all three major desktop/server platforms. Each platform guide covers prerequisites, native terminal support, service installation, and platform-specific limitations:
+
+- **macOS**: [README-macOS.md](README-macOS.md) (Unix PTYs and launchd)
+- **Linux**: [README-Linux.md](README-Linux.md) (Unix PTYs and systemd user services)
+- **Windows**: [README-Windows.md](README-Windows.md) (ConPTY and Windows Service Control Manager)
+
 ### Build and Run
 
 ```bash
@@ -59,7 +67,7 @@ WebMux will start automatically on login and auto-reconnect any persistent sessi
 make uninstall  # remove the OS service
 ```
 
-`make install` supports macOS and Linux. See [Hosting on Windows](#hosting-on-windows) for native Windows setup and startup options.
+`make install` supports macOS and Linux. Windows uses the npm service commands documented in [README-Windows.md](README-Windows.md).
 
 ### Makefile Targets
 
@@ -87,99 +95,6 @@ make start HTTP_PORT=9090
 make start AUTH_MODE=none
 make start SECURE_MODE=true JWT_SECRET=$(openssl rand -hex 32)
 ```
-
-## Hosting on Windows
-
-WebMux runs natively on modern Windows using ConPTY through `node-pty`. The backend resolves `ssh.exe` from `PATH`, uses `cmd.exe` for local command templates and scratch shells, and stores runtime state under the hosting user's profile by default.
-
-### Required software
-
-1. **64-bit or ARM64 Windows with ConPTY support.** Keep Windows current; unsupported legacy Windows releases cannot provide the required pseudoterminal API. Installing the Windows service also requires .NET Framework 4.6.1 or newer, which is included with supported Windows releases.
-2. **Node.js 20 or newer.** Install the current LTS release from [nodejs.org](https://nodejs.org/) or from an elevated PowerShell prompt:
-
-   ```powershell
-   winget install OpenJS.NodeJS.LTS
-   ```
-
-3. **Microsoft OpenSSH Client.** Check whether it is already installed:
-
-   ```powershell
-   ssh -V
-   ```
-
-   If it is missing, install the Windows capability from an elevated PowerShell prompt, then open a new terminal:
-
-   ```powershell
-   Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
-   ssh -V
-   ```
-
-   `ssh.exe` must be visible through `PATH`. WebMux resolves it to an absolute path before starting a ConPTY session.
-
-4. **Git**, when installing from a source checkout. Install it from [git-scm.com](https://git-scm.com/download/win) or with:
-
-   ```powershell
-   winget install Git.Git
-   ```
-
-The published dependencies normally provide prebuilt Windows binaries. If npm reports that it must compile `node-pty` or `argon2`, install Visual Studio Build Tools with the **Desktop development with C++** workload and rerun `npm ci`.
-
-### Install and run from PowerShell
-
-```powershell
-git clone https://github.com/jordanhubbard/webmux.git
-cd webmux\webmux
-npm ci
-npm run build
-npm start
-```
-
-Open `http://localhost:8080`. The default Windows runtime directory is `%USERPROFILE%\.config\webmux`. Override runtime settings for the current PowerShell session when needed:
-
-```powershell
-$env:WEBMUX_HOME = 'D:\WebMuxData'
-$env:HTTP_PORT = '8080'
-$env:JWT_SECRET = '<strong-random-secret>'
-npm start
-```
-
-For access from other machines, allow the selected port through Windows Defender Firewall and keep WebMux's authentication/TLS configuration appropriate for the network. For example, from elevated PowerShell:
-
-```powershell
-New-NetFirewallRule -DisplayName 'WebMux 8080' -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow
-```
-
-### Install as a Windows service
-
-From an elevated PowerShell window in the inner `webmux` directory, install WebMux with Windows Service Control Manager:
-
-```powershell
-npm run service:install
-npm run service:status
-```
-
-The installer prompts for the current Windows account's password, grants that account the **Log on as a service** right, configures automatic delayed startup and failure recovery, and starts WebMux. Using the same account preserves access to that user's SSH keys and known-hosts data. The password is passed to Windows during registration and is not retained in WebMux's service configuration.
-
-Service commands are available for normal administration:
-
-```powershell
-npm run service:stop
-npm run service:start
-npm run service:restart
-npm run service:uninstall
-```
-
-The installer downloads the stable [WinSW 2.12.0 service wrapper](https://github.com/winsw/winsw/releases/tag/v2.12.0) into `%ProgramData%\WebMux` and verifies its SHA-256 checksum. An internet connection to GitHub is therefore required for the first installation. Service output is written under `%WEBMUX_HOME%\logs`; uninstalling preserves runtime data and logs.
-
-For an isolated test installation that does not need user SSH credentials, `npm run service:install -- -LocalSystem` is also supported. LocalSystem cannot use the interactive user's SSH keys or known-hosts file and is not recommended for normal WebMux hosting.
-
-### Windows feature notes
-
-- Key-based OpenSSH sessions are the recommended native Windows configuration.
-- Password-based remote SSH requires `sshpass`, which is not normally available on native Windows. Without it, use SSH keys.
-- Mosh requires compatible `mosh` executables and remains optional.
-- tmux-backed agent views require tmux and are intended for macOS/Linux hosts. They are disabled by default.
-- `make`, `make start`, and `make install` are macOS/Linux administration conveniences. Use the npm and PowerShell service commands above on Windows.
 
 ## Configuration
 
@@ -388,7 +303,9 @@ If Playwright does not publish a bundled Chromium build for the host OS, set `PL
 
 ## Contributing
 
-WebMux is maintained through [GitHub Issues](https://github.com/jordanhubbard/webmux/issues) and pull requests. Before opening a pull request, run `make test` and `make lint`; describe the user-visible change and link the issue it addresses.
+Public bug reports, feature requests, and proposed changes belong in [GitHub Issues](https://github.com/jordanhubbard/webmux/issues) and pull requests. The project does not use beads. Maintainers use [mac](https://github.com/jordanhubbard/mac) for internal task tracking and work dispatch; contributors do not need mac to file an issue or submit a pull request.
+
+Before opening a pull request, run `make test` and `make lint`; describe the user-visible change and link the issue it addresses.
 
 Thanks to the people who have contributed code and reviews as WebMux grew beyond its original one-person experiment, including [Isaiah Weiner](https://github.com/zoratu), [Shawn Edwards](https://github.com/lesserevil), and [Trent Nelson](https://github.com/tpn). GitHub's [contributors page](https://github.com/jordanhubbard/webmux/graphs/contributors) is the canonical, evolving record.
 
@@ -423,7 +340,7 @@ make restart      # rebuild + deliberate restart via the service manager
 
 The service auto-starts on login and restarts on crash. On startup, all persistent sessions with key/agent-based auth are automatically reconnected. Password-only sessions require manual reconnect since passwords are not persisted.
 
-Once the service is installed, `make start` / `make stop` / `make restart` are **service-manager aware**: they drive `launchctl` (macOS) or `systemctl --user` (Linux) rather than killing the process directly, so a restart is a *deliberate* restart and the service manager does not treat it as a crash. On a host where the service is *not* installed, the same targets fall back to direct pidfile-based process control for development use. On Windows, use the deliberate SCM commands `npm run service:start|stop|restart` (see the Windows hosting section).
+Once the service is installed, `make start` / `make stop` / `make restart` are **service-manager aware**: they drive `launchctl` (macOS) or `systemctl --user` (Linux) rather than killing the process directly, so a restart is a *deliberate* restart and the service manager does not treat it as a crash. On a host where the service is *not* installed, the same targets fall back to direct pidfile-based process control for development use. On Windows, use the deliberate SCM commands `npm run service:start|stop|restart` described in [README-Windows.md](README-Windows.md).
 
 On Linux, run `loginctl enable-linger $USER` to start the service at boot without logging in.
 
