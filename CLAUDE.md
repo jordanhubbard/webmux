@@ -66,7 +66,7 @@ When a skill applies to the current task, use it. Key skills:
 
 - The application source lives under `webmux/` (backend + frontend workspaces).
 - Backend: Express + ws + node-pty (TypeScript). Frontend: React + xterm.js (TypeScript, Vite).
-- Configuration is YAML-based in `webmux/config/`.
+- Runtime configuration is YAML-based under `WEBMUX_HOME/config/` (default `~/.config/webmux/config/`); `webmux/config.defaults/` contains first-run templates.
 - The top-level `Makefile` delegates to `npm` scripts inside `webmux/`.
 
 

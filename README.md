@@ -1,6 +1,6 @@
 # WebMux
 
-A web-native terminal multiplexer — think tmux-on-a-jump-box, but it runs in your browser. WebMux gives you a persistent, shared terminal wall: a scrollable 2D grid of live SSH (or mosh) sessions with full terminal emulation, multi-viewer presence, and input broadcast.
+A browser-based remote workspace for persistent terminal and desktop sessions. WebMux started as tmux-on-a-jump-box: a shared, scrollable wall of SSH and mosh terminals. It now also brings VNC, RDP, and optional tmux-backed coding-agent sessions into the same web interface.
 
 ## Features
 
@@ -9,17 +9,21 @@ A web-native terminal multiplexer — think tmux-on-a-jump-box, but it runs in y
 - **Full terminal emulation** — xterm.js with 256-color, clickable links, 5000-line scrollback
 - **SSH and mosh transports** — proper PTY via node-pty, with keepalive and auto-reconnect
 - **Persistent sessions** — sessions survive browser closes and server reboots; auto-reconnected on startup
+- **Remote desktop workspace** — arrange VNC and RDP sessions in a second tiled workspace, with fullscreen viewing and reconnect controls
 - **Saved hosts** — save connection profiles for one-click connect; stored with hostname, port, username, transport, and key
 - **Multi-user accounts** — multiple users with separate session collections; Argon2id password hashing
 - **Multi-viewer presence** — multiple tabs can watch the same session; click-to-focus controls who has keyboard input
 - **Type to All** — broadcast mode sends keystrokes to every open session simultaneously
 - **Keyboard terminal cycling** — `Ctrl+Shift+<` and `Ctrl+Shift+>` focus previous/next terminal tiles
+- **Workspace navigation** — switch among terminals, desktops, and configured agent views; use the minimap and minimized-session dock to navigate larger layouts
+- **Per-window controls** — rename, move, minimize, lock, theme, and control auto-scroll for individual terminal sessions or globally
 - **SSH key and password auth** — managed keys via `keys.yaml`, password-based via `sshpass`
 - **Two security modes** — local auth (Argon2id + JWT + HTTPS) or trusted mode for isolated networks
 - **OS service integration** — launchd (macOS), systemd (Linux), and Windows Service Control Manager support
 - **YAML configuration** — human-editable config in `~/.config/webmux/`, separate from the source tree
 - **Audit log** — append-only JSONL event log (logins, session lifecycle)
 - **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
+- **Session expiry handling** — visible JWT countdown and refresh controls prevent expired browser sessions from entering reconnect loops
 
 ## Quick Start
 
@@ -29,6 +33,8 @@ A web-native terminal multiplexer — think tmux-on-a-jump-box, but it runs in y
 - OpenSSH client (`ssh` on macOS/Linux, `ssh.exe` on `PATH` on Windows)
 - (Optional) `sshpass` for password-based SSH auth
 - (Optional) `mosh` on both ends for mosh transport
+- (Optional) a VNC target for VNC sessions
+- (Optional) Apache Guacamole's `guacd` for RDP sessions
 
 ### Build and Run
 
@@ -37,7 +43,9 @@ make            # install deps + build
 make start      # start in background
 ```
 
-Open `http://localhost:8080`. On first run with local auth, you'll be prompted to create an account.
+Open `http://localhost:8080`. On first run with local auth, you'll be prompted to create the first administrator account.
+
+Runtime configuration and state are created under `~/.config/webmux/` by default; the source checkout remains disposable.
 
 ### Install as a Service
 
@@ -204,6 +212,9 @@ app:
   transport:
     prefer_mosh: false
     ssh_fallback: true
+  guacd:
+    host: 127.0.0.1
+    port: 4822
 ```
 
 The `default_term` settings control every terminal tile's dimensions and fixed-width font. Each tile is rendered at a fixed pixel size derived from `cols`, `rows`, and `font_size`. `font_family` accepts a normal comma-separated CSS font-family list and is applied across terminal and monospace UI text. Multi-word family names such as `Custom Mono` are normalized to quoted CSS family names, so `Custom Mono, Monaco, monospace` is returned and saved as `"Custom Mono", Monaco, monospace`. The size values can also be adjusted live from the top bar; changes are saved back to `app.yaml` automatically.
@@ -213,6 +224,8 @@ Optional `font_faces` entries let WebMux host local font files for browser clien
 The optional `terminal_grid` settings cap the number of columns and rows available in the terminals workspace. By default both directions are unlimited. `WEBMUX_TERMINAL_GRID_MAX_COLS` and `WEBMUX_TERMINAL_GRID_MAX_ROWS` override the YAML values at runtime; set either variable to a positive integer, or to `0`/`unlimited` for no limit.
 
 Optional tmux-backed agent views are configured under `app.agents` and are disabled by default. See [Agent Views](docs/agent-views.md) and the sample config at [webmux/examples/agent-views/app.yaml](webmux/examples/agent-views/app.yaml).
+
+RDP sessions are proxied through Apache Guacamole's `guacd`; use `make check-guacd` to check the local installation. VNC sessions connect through WebMux's authenticated WebSocket proxy. Enable either protocol per saved host with its configured port.
 
 ### `auth.yaml` — Authentication
 
@@ -234,6 +247,10 @@ hosts:
     key_id: ''
     tags: [linux, build]
     mosh_allowed: false
+    vnc_enabled: false
+    vnc_port: 5900
+    rdp_enabled: false
+    rdp_port: 3389
 ```
 
 ### `keys.yaml` — SSH Keys
@@ -263,7 +280,7 @@ Set `auth.mode: local` and `secure_mode: true`. Place your TLS cert at `~/.confi
 
 ### Multi-User
 
-Each user gets their own session collection. The first user is created via the bootstrap prompt on first login. Additional accounts can be created via the "+ Account" button in the top bar. Sign out and sign in as a different user to switch session collections.
+Each user gets their own session collection. The first user is created via the bootstrap prompt on first login and becomes an administrator. Administrators can manage additional accounts from the top bar; sign out and sign in as another user to switch session collections.
 
 ## Directory Layout
 
@@ -298,8 +315,13 @@ webmux/                          Source / install directory (WEBMUX_ROOT)
 | `GET` | `/api/health` | Health check |
 | `POST` | `/api/auth/bootstrap` | First-run account creation |
 | `POST` | `/api/auth/login` | Login (returns JWT) |
+| `POST` | `/api/auth/refresh` | Refresh an authenticated JWT |
+| `POST` | `/api/auth/ticket` | Create a short-lived WebSocket ticket |
 | `POST` | `/api/auth/register` | Create additional account (requires auth) |
 | `GET` | `/api/auth/status` | Auth mode + bootstrap status |
+| `GET` | `/api/auth/me` | Get the current account |
+| `GET` | `/api/auth/users` | List accounts (administrator only) |
+| `DELETE` | `/api/auth/users/:username` | Delete an account (administrator only) |
 | `GET` | `/api/sessions` | List sessions (scoped to current user) |
 | `POST` | `/api/sessions` | Create session |
 | `DELETE` | `/api/sessions/:id` | Delete session |
@@ -320,10 +342,14 @@ webmux/                          Source / install directory (WEBMUX_ROOT)
 | `GET` | `/api/agents/:agentId/sessions` | List sessions for one configured agent |
 | `POST` | `/api/agents/:agentId/attach` | Attach to a validated tmux session |
 | `POST` | `/api/agents/:agentId/scratch` | Open or reuse an agent scratch shell |
+| `GET` | `/api/vnc/sessions` | List VNC sessions |
+| `POST` | `/api/vnc/sessions` | Create a VNC session |
+| `GET` | `/api/rdp/sessions` | List RDP sessions |
+| `POST` | `/api/rdp/sessions` | Create an RDP session |
 
 ### WebSocket
 
-Connect to `/api/term/:sessionId?token=<jwt>` for terminal I/O.
+The browser obtains a short-lived WebSocket ticket and connects to `/api/term/:sessionId?ticket=<ticket>` for terminal I/O. Token query parameters remain a compatibility fallback. VNC and RDP use `/api/vnc/ws/:sessionId` and `/api/rdp/ws/:sessionId` respectively.
 
 | Type | Direction | Fields |
 |------|-----------|--------|
@@ -359,6 +385,12 @@ make lint
 ```
 
 If Playwright does not publish a bundled Chromium build for the host OS, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a compatible installed Chrome or Chromium executable before running `npm run test:e2e`.
+
+## Contributing
+
+WebMux is maintained through [GitHub Issues](https://github.com/jordanhubbard/webmux/issues) and pull requests. Before opening a pull request, run `make test` and `make lint`; describe the user-visible change and link the issue it addresses.
+
+Thanks to the people who have contributed code and reviews as WebMux grew beyond its original one-person experiment, including [Isaiah Weiner](https://github.com/zoratu), [Shawn Edwards](https://github.com/lesserevil), and [Trent Nelson](https://github.com/tpn). GitHub's [contributors page](https://github.com/jordanhubbard/webmux/graphs/contributors) is the canonical, evolving record.
 
 ## Security Notes
 
@@ -399,7 +431,7 @@ On Linux, run `loginctl enable-linger $USER` to start the service at boot withou
 
 ### The continuing adventures of Jordan Hubbard and Sir Reginald von Fluffington III
 
-> *Part 5 of an ongoing chronicle.  [<-- Part 4: Aviation](https://github.com/jordanhubbard/Aviation#the-totally-true-and-not-at-all-embellished-history-of-aviation) | [Part 6: Rocky -->](https://github.com/jordanhubbard/rocky#the-totally-true-and-not-at-all-embellished-history-of-rocky)*
+> *Part 5 of an ongoing chronicle.  [<-- Part 4: Aviation](https://github.com/jordanhubbard/Aviation#the-totally-true-and-not-at-all-embellished-history-of-aviation) | [The story continues in mac -->](https://github.com/jordanhubbard/mac)*
 > *Sir Reginald von Fluffington III appears throughout.  He does not endorse any of it.*
 
 The programmer had, at various points, built a shell extension language, a Scheme interpreter, a programming language from scratch, and eight aviation applications in three languages.  What he had not done, until now, was stare at a wall of terminals and think, "This should be a website."
@@ -430,9 +462,9 @@ The security model was, by the programmer's standards, restrained.  Passwords he
 
 Sir Reginald had, by this point, migrated from the keyboard to the sectional chart that was still on the kitchen table from the Aviation project.  He was lying on the part that showed Class B airspace around SFO, which he considered his territory, and which was now covered in cat hair in a pattern that, if you squinted, resembled a denial-of-service attack on the programmer's ability to plan approaches.
 
-What the programmer did next is documented in [Part 6: Rocky](https://github.com/jordanhubbard/rocky#the-totally-true-and-not-at-all-embellished-history-of-rocky) -- specifically, what happens when the programmer deploys a persistent autonomous agent to a remote server in New Jersey and gives it a SOUL.md.
+What the programmer did next eventually became [mac](https://github.com/jordanhubbard/mac), a multi-agent coordinator control plane. The route from one wall of terminals to a fleet of durable agents was neither direct nor sensible, but it is documented there for anyone determined to follow it.
 
-As of this writing, WebMux has been used in production by exactly one person, who also wrote it.  Sir Reginald continues to withhold his endorsement across all six projects, citing "procedural concerns," "insufficient tuna," "a general atmosphere of hubris," "aviation," and, in a new filing delivered by walking across every open terminal session simultaneously in what can only be described as an analog implementation of broadcast mode, "multiplexing."
+WebMux did not remain a one-person production experiment. Other humans now contribute code, reviews, bug reports, and operating experience. Sir Reginald continues to withhold his endorsement, citing "procedural concerns," "insufficient tuna," "a general atmosphere of hubris," "aviation," and, in a filing delivered by walking across every open terminal session simultaneously in what can only be described as an analog implementation of broadcast mode, "multiplexing."
 
 ## License
 

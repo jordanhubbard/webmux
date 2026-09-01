@@ -1,293 +1,35 @@
-# WebMux
+# WebMux Application Workspace
 
-A web-native tmux-on-a-jump-box: a persistent shared terminal wall that runs in your browser.
+This directory contains the WebMux application workspaces:
 
-## Features
+- `backend/`: Express, WebSocket, and `node-pty` services
+- `frontend/`: React, Vite, xterm.js, VNC, and RDP clients
+- `config.defaults/`: templates copied to `WEBMUX_HOME` on first run
+- `examples/`: optional configuration examples
+- `scripts/`: application build and runtime helpers
+- `service/`: Windows service support and macOS/Linux service templates
 
-- **2D tiled terminal workspace** — scrollable grid of live SSH sessions
-- **xterm.js** — full terminal emulation in the browser (256-colour, ligatures, clipboard)
-- **node-pty** — proper PTY semantics on the jump box
-- **Persistent sessions** — sessions survive browser tab closes; reconnect from any tab
-- **Multi-viewer** — multiple browser tabs can watch the same session; one has keyboard focus at a time
-- **Split right / split below** — tile your workspace like a tiling window manager
-- **Keyboard terminal cycling** — `Ctrl+Shift+<` and `Ctrl+Shift+>` focus previous/next terminal tiles
-- **Global font size** — resize all terminals at once
-- **Two auth modes**:
-  - **Secure mode** — local login + HTTPS, Argon2id password hashing
-  - **Trusted mode** — no auth, HTTP only, for protected internal networks
-- **YAML configuration** — human-editable, lift-and-shift deployment
-- **SSH with keepalive** — `ServerAliveInterval`, `ServerAliveCountMax`, `ConnectTimeout`
-- **Audit log** — JSONL append-only event log
-- **Optional agent views** — disabled-by-default tmux-backed agent session browser
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js ≥ 20
-- `ssh` available on the jump box (`ssh.exe` on `PATH` when running on Windows)
-- (Optional) `sshpass` for password-based SSH auth
-- (Optional) `mosh` on both ends for mosh transport
-
-### Install & Build
-
-```bash
-cd webmux
-npm install
-npm run build
-```
-
-### Configure
-
-Edit `config/app.yaml`:
-
-```yaml
-app:
-  listen_host: 0.0.0.0
-  http_port: 8080
-  secure_mode: false        # true = require login + HTTPS
-  trusted_http_allowed: true
-  default_term:
-    cols: 80
-    rows: 24
-    font_size: 14
-    font_family: ui-monospace, "SFMono-Regular", Monaco, Menlo, Consolas, "Liberation Mono", "DejaVu Sans Mono", monospace
-  font_faces:
-    # - family: Custom Mono
-    #   source: fonts/CustomMono.woff2
-    #   weight: 400
-    #   style: normal
-  terminal_grid:
-    max_cols: null      # null, 0, or omitted = unlimited
-    max_rows: null      # null, 0, or omitted = unlimited
-```
-
-`WEBMUX_TERMINAL_GRID_MAX_COLS` and `WEBMUX_TERMINAL_GRID_MAX_ROWS` can override those YAML values at runtime.
-
-`default_term.font_family` accepts a normal comma-separated CSS font-family list. Multi-word family names such as `Custom Mono` are normalized to quoted CSS family names, so `Custom Mono, Monaco, monospace` is returned and saved as `"Custom Mono", Monaco, monospace`.
-
-Optional `app.font_faces` entries let WebMux host local font files for browser clients. `source` paths must be relative paths to `.otf`, `.ttf`, `.woff`, or `.woff2` files; they are resolved relative to the real `app.yaml` path, so symlinked config files can keep fonts beside the shared config. The frontend fetches configured font files through authenticated same-origin routes and registers them before refitting terminals. Once a face is declared, reference its `family` name from `default_term.font_family`.
-
-Agent views are configured under `app.agents` and are disabled by default. See `../docs/agent-views.md` and `examples/agent-views/app.yaml` for setup, security notes, optional status hooks, and host-switcher examples.
-
-Add hosts to `config/hosts.yaml`:
-
-```yaml
-hosts:
-  - id: build01
-    hostname: build01.example.com
-    port: 22
-    tags: [linux, build]
-    mosh_allowed: false
-```
-
-### Run
-
-```bash
-npm start
-```
-
-Open `http://localhost:8080` in your browser.
-
-On first run with `auth.mode: local`, you will be prompted to create an admin account.
-
-### Windows
-
-Native Windows hosting requires a current Windows release with ConPTY, Node.js 20 or newer, and Microsoft OpenSSH Client. The service installer also uses .NET Framework 4.6.1 or newer, which is included with supported Windows releases. From an elevated PowerShell prompt, missing prerequisites can be installed with:
-
-```powershell
-winget install OpenJS.NodeJS.LTS
-winget install Git.Git
-Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
-```
-
-Open a new PowerShell window, verify `ssh -V`, then install and start WebMux:
-
-```powershell
-git clone https://github.com/jordanhubbard/webmux.git
-cd webmux\webmux
-npm ci
-npm run build
-npm start
-```
-
-Runtime data defaults to `%USERPROFILE%\.config\webmux`. `ssh.exe` must remain on `PATH`; WebMux resolves it to an absolute path before launching ConPTY. Key-based SSH is recommended because native Windows does not normally provide `sshpass`. Mosh and tmux-backed agent views require their respective executables and remain optional; agent views are intended for macOS/Linux hosts.
-
-For automatic startup through Windows Service Control Manager, keep the elevated PowerShell window open and run:
-
-```powershell
-npm run service:install
-npm run service:status
-```
-
-The installer prompts for the current account's password so the service retains access to that user's runtime configuration, SSH keys, and known-hosts data. It downloads and checksum-verifies the stable WinSW 2.12.0 wrapper, enables automatic delayed startup and failure recovery, and starts the service. Manage it with `npm run service:start`, `service:stop`, `service:restart`, and `service:uninstall`; uninstalling preserves data and logs. The one-time wrapper download requires access to GitHub.
-
-`npm run service:install -- -LocalSystem` is available for isolated installations that do not need user SSH credentials. The repository-level `make install` target continues to support launchd and systemd only. See the root README's **Hosting on Windows** section for firewall, environment-variable, service-account, and native build fallback instructions.
-
-## Directory Layout
-
-```
-webmux/
-  config/
-    app.yaml          # Application settings
-    auth.yaml         # Auth mode + hashed password
-    hosts.yaml        # Known SSH hosts
-    layout.yaml       # Tile positions
-    keys.yaml         # Saved key references
-    tls/
-      cert.pem        # TLS certificate (generate separately)
-      key.pem         # TLS private key
-  data/
-    sessions/         # Persisted session metadata
-    events/           # JSONL audit log
-    cache/
-  logs/
-  backend/            # Node.js/TypeScript backend
-  frontend/           # React/TypeScript frontend
-  web/                # Built frontend (served by backend)
-```
-
-Everything lives under one root. Copy the directory to another machine, run `npm install && npm run build`, and start the service.
-
-## Authentication Modes
-
-### Trusted Mode (no auth)
-
-```yaml
-# config/auth.yaml
-auth:
-  mode: none
-```
-
-```yaml
-# config/app.yaml
-app:
-  secure_mode: false
-  trusted_http_allowed: true
-```
-
-Only use on a network you fully control. The UI displays a "⚠ Trusted" badge.
-
-### Secure Mode (local auth + HTTPS)
-
-```yaml
-# config/auth.yaml
-auth:
-  mode: local
-  bootstrap_required: true   # becomes false after first login
-```
-
-```yaml
-# config/app.yaml
-app:
-  secure_mode: true
-  https_port: 8443
-```
-
-Place your TLS certificate at `config/tls/cert.pem` and `config/tls/key.pem`.
-
-Passwords are stored as Argon2id hashes. Plain-text passwords are never written to disk.
-
-## API Reference
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/health` | Health check |
-| `POST` | `/api/auth/login` | Login (returns JWT) |
-| `POST` | `/api/auth/bootstrap` | First-run account creation |
-| `GET` | `/api/auth/status` | Auth mode + bootstrap status |
-| `GET` | `/api/sessions` | List sessions |
-| `POST` | `/api/sessions` | Create session |
-| `DELETE` | `/api/sessions/:id` | Delete session |
-| `POST` | `/api/sessions/:id/reconnect` | Reconnect session |
-| `GET` | `/api/hosts` | List saved hosts |
-| `POST` | `/api/hosts` | Add host |
-| `PUT` | `/api/hosts/:id` | Update host |
-| `DELETE` | `/api/hosts/:id` | Delete host |
-| `GET` | `/api/config` | Get app config |
-| `PUT` | `/api/config` | Update app config |
-| `GET` | `/api/config/layout` | Get layout |
-| `PUT` | `/api/config/layout` | Update layout |
-| `GET` | `/api/agents/config` | Get normalized agent-view config |
-| `GET` | `/api/agents/sessions` | List configured agent tmux sessions |
-| `POST` | `/api/agents/:agentId/attach` | Attach to a validated tmux session |
-| `POST` | `/api/agents/:agentId/scratch` | Open or reuse an agent scratch shell |
-| `WS` | `/api/term/:id?token=<jwt>` | Terminal WebSocket |
-
-### WebSocket Message Types
-
-| Type | Direction | Fields |
-|------|-----------|--------|
-| `input` | client→server | `data` (string) |
-| `resize` | client→server | `cols`, `rows` |
-| `focus` | client→server | — |
-| `output` | server→client | `data` (string) |
-| `status` | server→client | `state`, `message` |
-| `viewer_join` | server→client | `viewer_id`, `viewer_count`, `focus_owner` |
-| `viewer_leave` | server→client | `viewer_id`, `viewer_count`, `focus_owner` |
-| `focus` | server→client | `focus_owner`, `viewer_count` |
+The repository-level [README](../README.md) is the canonical guide for features, configuration, security, installation, and deployment. Agent workspace setup is documented in [Agent Views](../docs/agent-views.md).
 
 ## Development
 
+From this directory:
+
 ```bash
-# Run backend in watch mode
-npm run dev:backend
-
-# Run frontend dev server (proxies /api to localhost:8080)
-npm run dev:frontend
-
-# Run tests
+npm install
+npm run build
+npm run typecheck
 npm test
-
-# Run browser tests (install Chromium first if needed)
-npx playwright install chromium
-npm run test:e2e
-
-# Lint
 npm run lint
 ```
 
-If Playwright does not publish a bundled Chromium build for the host OS, point the tests at a compatible installed Chrome or Chromium executable. For example:
+Run the development servers separately when working on the UI and API:
 
 ```bash
-PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/google-chrome npm run test:e2e
+npm run dev:backend
+npm run dev:frontend
 ```
 
-## Security Notes
+The frontend development server proxies API requests to the backend. For browser tests, install Playwright Chromium with `npx playwright install chromium`, then run `npm run test:e2e`. Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` when using an existing compatible Chrome or Chromium installation.
 
-- Remote **passwords** are never written to disk. They are held in memory only for the duration of session setup (TTL: 5 minutes), then zeroed and discarded.
-- **Remote usernames** entered for password-based logins are not persisted.
-- **JWT tokens** are signed with `JWT_SECRET` (set via environment variable in production).
-- In secure mode, use HTTPS and set `JWT_SECRET` to a strong random value.
-- Rate limiting is applied globally (300 req/min) and to the auth endpoints (10 req/15 min).
-
-## Deployment
-
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `WEBMUX_ROOT` | `../..` relative to `backend/dist` | Root directory |
-| `WEBMUX_HOME` | `~/.config/webmux` | Runtime data (`%USERPROFILE%\.config\webmux` on Windows) |
-| `HTTP_PORT` | from `app.yaml` | Override HTTP port |
-| `HTTPS_PORT` | from `app.yaml` | Override HTTPS port |
-| `JWT_SECRET` | `webmux-dev-secret-change-in-production` | **Change in production** |
-
-### systemd
-
-```ini
-[Unit]
-Description=WebMux Terminal Wall
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=/opt/webmux
-Environment=WEBMUX_ROOT=/opt/webmux
-Environment=JWT_SECRET=<your-secret>
-ExecStart=/usr/bin/node backend/dist/index.js
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-```
+Runtime files do not belong in this directory. WebMux reads configuration and stores state under `~/.config/webmux/` by default; set `WEBMUX_HOME` to use another location.
