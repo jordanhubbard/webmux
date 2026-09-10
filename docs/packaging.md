@@ -123,10 +123,10 @@ To test an extracted bundle:
 node scripts/smoke-package.cjs /absolute/path/to/extracted/webmux-version-platform-arch-node24
 ```
 
-On Windows, install WiX 7 and build both the ZIP and MSI from PowerShell:
+On Windows, install WiX 5 and build both the ZIP and MSI from PowerShell:
 
 ```powershell
-dotnet tool install --global wix --version 7.0.0
+dotnet tool install --global wix --version 5.0.2
 .\scripts\package-windows.ps1
 ```
 

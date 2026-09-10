@@ -16,7 +16,7 @@ if ((node -p 'process.arch') -ne 'x64') {
   throw 'The published Windows installer currently supports x64 only.'
 }
 if (-not (Get-Command $WixCommand -ErrorAction SilentlyContinue)) {
-  throw "WiX was not found. Install it with: dotnet tool install --global wix --version 7.0.0"
+  throw "WiX was not found. Install it with: dotnet tool install --global wix --version 5.0.2"
 }
 
 $Repository = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
