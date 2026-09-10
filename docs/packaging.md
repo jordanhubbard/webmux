@@ -3,6 +3,7 @@
 The same formula supports macOS and Linux. Install [Homebrew](https://brew.sh/), then:
 
 ```bash
+brew trust --formula jordanhubbard/webmux/webmux
 brew tap jordanhubbard/webmux https://github.com/jordanhubbard/webmux
 brew install jordanhubbard/webmux/webmux
 brew services start jordanhubbard/webmux/webmux
@@ -19,8 +20,10 @@ Tools on macOS, or a C/C++ toolchain on Linux); Python is supplied by Homebrew.
 There are no prebuilt Homebrew bottles yet.
 
 The repository itself is the tap; no separate `homebrew-webmux` repository is
-required. The explicit URL in `brew tap` is necessary. Fully qualified install
-commands also grant trust to this specific formula on Homebrew 6 and newer.
+required. The explicit URL in `brew tap` is necessary. Homebrew 6 validates tap
+contents immediately after cloning, so record formula-specific trust before the
+tap command. Trusting only `jordanhubbard/webmux/webmux` is narrower than
+trusting every current and future formula in the tap.
 
 ## Services, configuration, and upgrades
 
@@ -82,12 +85,13 @@ needs `sshpass`; see the platform guide for installation instructions. The WebMu
 launcher includes Homebrew's bin and sbin directories in PATH so service-launched
 sessions can find these tools.
 
-## Runtime release bundles
+## Runtime release bundles and Windows installer
 
 Releases also build `.tar.gz` runtime bundles for macOS ARM64 and Linux x86-64,
-with a `.sha256` file for each archive. They contain the compiled application,
-default configuration, license, and native production dependencies. Node.js 24 and
-OpenSSH must be installed separately; these are not standalone executables.
+plus a Windows x64 runtime `.zip` and per-user `.msi`, with a `.sha256` file for
+each artifact. They contain the compiled application, default configuration,
+license, and native production dependencies. Node.js 24 and OpenSSH must be
+installed separately; these are not standalone executables.
 `bundle.json` records the build platform, CPU, Node ABI, and Linux glibc version.
 Linux bundles target glibc systems at least as new as the build environment;
 use Homebrew/source builds for other architectures or libc implementations.
@@ -96,6 +100,14 @@ Verify the checksum with `shasum -a 256 -c <archive>.sha256` on macOS or
 `sha256sum -c <archive>.sha256` on Linux, extract the archive, and run its
 `bin/webmux`. Keep the extracted directory intact. Bundles use the same runtime
 state directory as the Homebrew package; stop the previous instance before switching.
+
+On Windows, verify a checksum with `Get-FileHash`, then install the MSI by
+double-clicking it or running `msiexec.exe /i <installer>.msi`. It installs under
+`%LOCALAPPDATA%\Programs\WebMux` and adds `webmux` and `webmux-service` to the
+user `PATH`. The MSI is currently unsigned, so verify its checksum before
+accepting the unknown-publisher warning. Windows ARM64 remains buildable from
+source; release installers are x64 until an ARM64 CI runner can build and test
+the native dependencies.
 
 To build a bundle locally using Node.js 24:
 
@@ -111,14 +123,22 @@ To test an extracted bundle:
 node scripts/smoke-package.cjs /absolute/path/to/extracted/webmux-version-platform-arch-node24
 ```
 
+On Windows, install WiX 7 and build both the ZIP and MSI from PowerShell:
+
+```powershell
+dotnet tool install --global wix --version 7.0.0
+.\scripts\package-windows.ps1
+```
+
 ## Maintaining releases
 
-The packaging workflow tests both macOS and Linux on pull requests. It builds and
-tests an extracted runtime bundle, then installs and tests the Homebrew formula
-against the PR revision. Published releases receive bundles and checksums only
-after both platforms pass. Release publication must trigger GitHub Actions (a
-release created using another workflow's default `GITHUB_TOKEN` does not trigger
-new workflows).
+The packaging workflow tests macOS, Linux, and Windows on pull requests. It
+builds and tests extracted runtime bundles, installs and tests the Homebrew
+formula against the PR revision, and installs, tests, and removes the Windows
+MSI. Published releases receive bundles, the MSI, and checksums only after all
+platforms pass. Release publication must trigger GitHub Actions (a release
+created using another workflow's default `GITHUB_TOKEN` does not trigger new
+workflows).
 
 After publishing a reviewed release, update the formula on a branch:
 
@@ -129,4 +149,5 @@ node scripts/update-homebrew.cjs vX.Y.Z
 This downloads the tagged source archive and updates its URL and SHA-256. Commit
 the formula update through a pull request; after merging, users receive it through
 `brew update` and `brew upgrade`. Do not point the stable formula at an unpublished
-tag. Runtime bundles are published starting with v1.3.9.
+tag. Runtime bundles are published starting with v1.3.9; the Windows MSI starts
+with v1.3.10.

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+      Name="WebMux"
+      Manufacturer="WebMux"
+      Version="$(var.Version)"
+      Language="1033"
+      Scope="perUser"
+      Compressed="yes"
+      UpgradeCode="1E20A25F-F940-4B0B-8AC0-7E785279F7C5">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of WebMux is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <SummaryInformation Description="Browser-based workspace for persistent terminals and remote desktops" />
+
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/jordanhubbard/webmux" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/jordanhubbard/webmux/issues" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="WebMux" />
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="WebMux" Level="1">
+      <ComponentGroupRef Id="Payload" />
+      <ComponentRef Id="PathEnvironment" />
+    </Feature>
+
+    <ComponentGroup Id="Payload" Directory="INSTALLFOLDER">
+      <Files Include="!(bindpath.Stage)\**" />
+    </ComponentGroup>
+
+    <Component Id="PathEnvironment" Directory="INSTALLFOLDER">
+      <Environment
+          Id="WebMuxPath"
+          Name="PATH"
+          Value="[INSTALLFOLDER]bin"
+          Action="set"
+          Part="last"
+          System="no" />
+      <RegistryValue
+          Root="HKCU"
+          Key="Software\WebMux"
+          Name="InstallDirectory"
+          Type="string"
+          Value="[INSTALLFOLDER]"
+          KeyPath="yes" />
+    </Component>
+  </Package>
+</Wix>

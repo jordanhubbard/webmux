@@ -4,16 +4,15 @@ WebMux runs natively on modern Windows using ConPTY through `node-pty`. The back
 
 ## Prerequisites
 
-1. A current 64-bit or ARM64 Windows release with ConPTY support. Installing the Windows service also requires .NET Framework 4.6.1 or newer, included with supported Windows releases.
+1. A current 64-bit Windows release with ConPTY support. Windows ARM64 remains supported from source, but the published MSI is currently x64 only. Installing the Windows service also requires .NET Framework 4.6.1 or newer, included with supported Windows releases.
 2. Node.js 24 LTS or newer.
 3. Microsoft OpenSSH Client, with `ssh.exe` available through `PATH`.
-4. Git when installing from a source checkout.
+4. Git only when installing from a source checkout.
 
 Install the common prerequisites from an elevated PowerShell prompt:
 
 ```powershell
 winget install OpenJS.NodeJS.LTS
-winget install Git.Git
 Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
 ```
 
@@ -22,20 +21,52 @@ Open a new PowerShell window and verify the installation:
 ```powershell
 node --version
 ssh -V
-git --version
 ```
 
-Published dependencies normally provide prebuilt Windows binaries. If npm must compile `node-pty` or `argon2`, install Visual Studio Build Tools with the **Desktop development with C++** workload and rerun `npm ci`.
+## Install the MSI
 
-## Build and Run
+Download `webmux-<version>-windows-x64.msi` and its `.sha256` file from the
+[latest release](https://github.com/jordanhubbard/webmux/releases/latest). Verify
+the download from PowerShell, substituting the downloaded filenames:
 
 ```powershell
+$expected = (Get-Content .\webmux-<version>-windows-x64.msi.sha256).Split()[0]
+$actual = (Get-FileHash .\webmux-<version>-windows-x64.msi -Algorithm SHA256).Hash
+if ($actual -ne $expected) { throw 'WebMux MSI checksum mismatch' }
+```
+
+Double-click the MSI or install it from PowerShell:
+
+```powershell
+msiexec.exe /i .\webmux-<version>-windows-x64.msi
+```
+
+The per-user installer does not require elevation. It installs under
+`%LOCALAPPDATA%\Programs\WebMux`, adds the `webmux` and `webmux-service`
+launchers to the user `PATH`, and creates an Add/Remove Programs entry. Open a
+new PowerShell window, run `webmux`, and browse to `http://localhost:8080`.
+Upgrades replace the application in place; uninstalling preserves configuration
+and state under `%USERPROFILE%\.config\webmux`.
+
+The MSI is not yet code-signed, so Windows identifies the publisher as unknown.
+Verify the SHA-256 file before accepting that warning.
+
+## Build and Run from Source
+
+Install Git, then clone and build:
+
+```powershell
+winget install Git.Git
 git clone https://github.com/jordanhubbard/webmux.git
 cd webmux\webmux
 npm ci
 npm run build
 npm start
 ```
+
+Published dependencies normally provide prebuilt Windows binaries. If npm must
+compile `node-pty` or `argon2`, install Visual Studio Build Tools with the
+**Desktop development with C++** workload and rerun `npm ci`.
 
 Open `http://localhost:8080`. Runtime configuration and state default to `%USERPROFILE%\.config\webmux`.
 
@@ -50,7 +81,14 @@ npm start
 
 ## Install as a Service
 
-From an elevated PowerShell window in the inner `webmux` directory:
+From an elevated PowerShell window, use the MSI-installed launcher:
+
+```powershell
+webmux-service install
+webmux-service status
+```
+
+From a source checkout in the inner `webmux` directory, use the npm scripts:
 
 ```powershell
 npm run service:install
@@ -62,15 +100,21 @@ The installer prompts for the current Windows account's password, grants that ac
 Manage the service with:
 
 ```powershell
-npm run service:stop
-npm run service:start
-npm run service:restart
-npm run service:uninstall
+webmux-service stop
+webmux-service start
+webmux-service restart
+webmux-service uninstall
 ```
+
+Use the corresponding `npm run service:<action>` command for a source checkout.
 
 The installer downloads and checksum-verifies the stable [WinSW 2.12.0 service wrapper](https://github.com/winsw/winsw/releases/tag/v2.12.0) under `%ProgramData%\WebMux`. The first service installation therefore requires access to GitHub. Service output is written under `%WEBMUX_HOME%\logs`; uninstalling preserves runtime data and logs.
 
-For an isolated test installation that does not need user SSH credentials, use `npm run service:install -- -LocalSystem`. LocalSystem cannot use the interactive user's SSH keys or known-hosts file and is not recommended for normal hosting.
+For an isolated test installation that does not need user SSH credentials, use
+`webmux-service install -LocalSystem` (or
+`npm run service:install -- -LocalSystem` from source). LocalSystem cannot use
+the interactive user's SSH keys or known-hosts file and is not recommended for
+normal hosting.
 
 ## Network Access
 

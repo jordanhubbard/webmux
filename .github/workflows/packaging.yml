@@ -46,6 +46,21 @@ jobs:
           path: dist/*
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@3b81d438eda92ee13b5849940d993be027717ecf
+      - name: Verify documented tap bootstrap
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          XDG_CONFIG_HOME: ${{ runner.temp }}/homebrew-bootstrap-config
+        run: |
+          brew trust --formula jordanhubbard/webmux/webmux
+          brew tap jordanhubbard/webmux "$GITHUB_WORKSPACE"
+          brew info jordanhubbard/webmux/webmux --json=v2 > "$RUNNER_TEMP/webmux-tap-info.json"
+          node - <<'JS'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const formula = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/webmux-tap-info.json`)).formulae[0];
+          assert.equal(formula.full_name, 'jordanhubbard/webmux/webmux');
+          JS
+          brew untap jordanhubbard/webmux
       - name: Install formula from this revision
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
@@ -79,10 +94,82 @@ jobs:
           assert(service.log_path.endsWith('/var/log/webmux.log'));
           JS
 
+  windows-package:
+    name: Package (windows-2022)
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: webmux/package-lock.json
+      - name: Verify release version
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          node -e 'if (process.env.RELEASE_TAG !== "v" + require("./webmux/backend/package.json").version) process.exit(1)'
+      - name: Install WiX
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 7.0.0
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Build Windows bundle and MSI
+        shell: pwsh
+        run: ./scripts/package-windows.ps1
+      - name: Test extracted Windows bundle
+        shell: pwsh
+        run: |
+          $archive = Get-ChildItem dist -Filter 'webmux-*-windows-x64-node24.zip' | Select-Object -First 1
+          if (-not $archive) { throw 'Windows runtime bundle was not created.' }
+          $extract = Join-Path $env:RUNNER_TEMP 'webmux-windows-bundle'
+          Expand-Archive -LiteralPath $archive.FullName -DestinationPath $extract
+          $root = Get-ChildItem $extract -Directory | Select-Object -First 1
+          node scripts/smoke-package.cjs $root.FullName
+      - name: Install, test, and uninstall MSI
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem dist -Filter 'webmux-*-windows-x64.msi' | Select-Object -First 1
+          if (-not $msi) { throw 'Windows MSI was not created.' }
+          $installLog = Join-Path $env:RUNNER_TEMP 'webmux-msi-install.log'
+          $uninstallLog = Join-Path $env:RUNNER_TEMP 'webmux-msi-uninstall.log'
+          $installRoot = Join-Path $env:LOCALAPPDATA 'Programs\WebMux'
+          try {
+            $process = Start-Process msiexec.exe -ArgumentList @('/i', $msi.FullName, '/qn', '/norestart', '/l*v', $installLog) -Wait -PassThru
+            if ($process.ExitCode -ne 0) {
+              Get-Content -LiteralPath $installLog
+              throw "MSI installation failed with exit code $($process.ExitCode)."
+            }
+            if (-not (Test-Path -LiteralPath (Join-Path $installRoot 'bin\webmux.cmd'))) {
+              throw 'MSI did not install the WebMux launcher.'
+            }
+            node scripts/smoke-package.cjs $installRoot
+          } finally {
+            if (Test-Path -LiteralPath $installRoot) {
+              $process = Start-Process msiexec.exe -ArgumentList @('/x', $msi.FullName, '/qn', '/norestart', '/l*v', $uninstallLog) -Wait -PassThru
+              if ($process.ExitCode -ne 0) {
+                Get-Content -LiteralPath $uninstallLog
+                throw "MSI uninstall failed with exit code $($process.ExitCode)."
+              }
+            }
+          }
+          if (Test-Path -LiteralPath (Join-Path $installRoot 'bin\webmux.cmd')) {
+            throw 'MSI uninstall left the WebMux launcher behind.'
+          }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: webmux-windows-2022
+          path: |
+            dist/*.zip
+            dist/*.zip.sha256
+            dist/*.msi
+            dist/*.msi.sha256
+
   publish:
     name: Attach release bundles
     if: github.event_name == 'release'
-    needs: package
+    needs: [package, windows-package]
     runs-on: ubuntu-22.04
     permissions:
       contents: write

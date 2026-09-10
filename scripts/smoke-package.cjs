@@ -14,7 +14,10 @@ async function main() {
   const pty = require(path.join(root, 'node_modules/node-pty'));
   assert(await argon2.verify(await argon2.hash('package-test'), 'package-test'));
   await new Promise((resolve, reject) => {
-    const terminal = pty.spawn('/bin/sh', ['-c', 'printf webmux-pty-ok'], { env: process.env });
+    const windows = process.platform === 'win32';
+    const terminal = pty.spawn(windows ? (process.env.ComSpec || 'cmd.exe') : '/bin/sh',
+      windows ? ['/d', '/s', '/c', 'echo webmux-pty-ok'] : ['-c', 'printf webmux-pty-ok'],
+      { env: process.env });
     let output = '';
     const timeout = setTimeout(() => { terminal.kill(); reject(new Error('PTY timed out')); }, 10000);
     terminal.onData(data => { output += data; });
@@ -40,7 +43,10 @@ async function main() {
   let logs = '';
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
-      child = spawn(path.join(root, 'bin/webmux'), [], {
+      const windows = process.platform === 'win32';
+      const command = windows ? process.execPath : path.join(root, 'bin/webmux');
+      const args = windows ? [path.join(root, 'bin/webmux.js')] : [];
+      child = spawn(command, args, {
         cwd: home,
         env: { ...process.env, WEBMUX_HOME: home, WEBMUX_ROOT: '/nonexistent', HTTP_PORT: String(port) },
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -68,9 +74,10 @@ async function main() {
       assert(fs.existsSync(path.join(config, 'auth.yaml')));
       child.kill('SIGTERM');
       const timer = setTimeout(() => child.kill('SIGKILL'), 10000);
-      const [code] = await exited;
+      const [code, signal] = await exited;
       clearTimeout(timer);
-      assert.equal(code, 0, logs);
+      if (windows) assert(code !== null || signal, logs);
+      else assert.equal(code, 0, logs);
       child = undefined;
     }
     assert(!fs.existsSync(path.join(root, 'node_modules/typescript')), 'Bundle includes development dependencies');
