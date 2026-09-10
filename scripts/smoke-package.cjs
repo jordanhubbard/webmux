@@ -88,4 +88,9 @@ async function main() {
     fs.rmSync(home, { recursive: true, force: true });
   }
 }
-main().catch(error => { console.error(error); process.exitCode = 1; });
+// ConPTY may retain an internal pipe handle after onExit fires. This is a bounded
+// command-line smoke test, so exit explicitly after every assertion and cleanup.
+main().then(
+  () => process.exit(0),
+  error => { console.error(error); process.exit(1); },
+);
