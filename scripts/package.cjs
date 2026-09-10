@@ -29,7 +29,8 @@ try {
     fs.cpSync(path.join(source, entry), destination, { recursive: true });
   }
   fs.copyFileSync(path.join(repo, 'LICENSE'), path.join(stage, 'LICENSE'));
-  execFileSync('npm', ['ci', '--omit=dev', '--workspace=backend', '--no-audit', '--no-fund'], {
+  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  execFileSync(npm, ['ci', '--omit=dev', '--workspace=backend', '--no-audit', '--no-fund'], {
     cwd: stage, stdio: 'inherit',
   });
   fs.mkdirSync(path.join(stage, 'bin'));
