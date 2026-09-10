@@ -29,10 +29,14 @@ try {
     fs.cpSync(path.join(source, entry), destination, { recursive: true });
   }
   fs.copyFileSync(path.join(repo, 'LICENSE'), path.join(stage, 'LICENSE'));
-  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  execFileSync(npm, ['ci', '--omit=dev', '--workspace=backend', '--no-audit', '--no-fund'], {
-    cwd: stage, stdio: 'inherit',
-  });
+  const npmArgs = ['ci', '--omit=dev', '--workspace=backend', '--no-audit', '--no-fund'];
+  if (process.platform === 'win32') {
+    execFileSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', `npm.cmd ${npmArgs.join(' ')}`], {
+      cwd: stage, stdio: 'inherit',
+    });
+  } else {
+    execFileSync('npm', npmArgs, { cwd: stage, stdio: 'inherit' });
+  }
   fs.mkdirSync(path.join(stage, 'bin'));
   if (process.platform === 'win32') {
     fs.writeFileSync(path.join(stage, 'bin/webmux.js'), `const path = require('node:path');
