@@ -1,3 +1,4 @@
+import { Dialog } from './Dialog';
 import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { api } from '../utils/api';
 import type { AuthUserInfo } from '../types';
@@ -76,127 +77,93 @@ export function UsersDialog({ currentUser, onClose }: UsersDialogProps) {
   };
 
   return (
-    <div style={styles.backdrop} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={styles.dialog}>
-        <div style={styles.header}>
-          <span style={styles.title}>Manage Accounts</span>
-          <button style={styles.closeBtn} onClick={onClose}>{'✕'}</button>
-        </div>
+    <Dialog title="Manage Accounts" onClose={onClose} dismissible={!submitting && !busy}>
 
-        <p style={styles.hint}>
-          Each account has its own collection of sessions. Admins can add and remove
-          accounts. Guests can sign in but cannot manage accounts.
-        </p>
+      <p style={styles.hint}>
+        Each account has its own collection of sessions. Admins can add and remove
+        accounts. Guests can sign in but cannot manage accounts.
+      </p>
 
-        <div style={styles.listWrap}>
-          {loading ? (
-            <div style={styles.muted}>Loading…</div>
-          ) : users.length === 0 ? (
-            <div style={styles.muted}>No accounts.</div>
-          ) : (
-            users.map(u => {
-              const isSelf = u.username === currentUser;
-              const disabled = isSelf || busy === u.username;
-              const reason = isSelf ? 'This is you' : '';
-              return (
-                <div key={u.username} style={styles.row}>
-                  <div style={styles.rowMain}>
-                    <span style={styles.rowName}>{u.username}</span>
-                    {u.admin && <span style={styles.adminBadge}>admin</span>}
-                    {isSelf && <span style={styles.selfBadge}>you</span>}
-                  </div>
-                  <button
-                    style={{ ...styles.removeBtn, ...(disabled ? styles.removeBtnDisabled : {}) }}
-                    onClick={() => handleRemove(u.username)}
-                    disabled={disabled}
-                    title={reason || `Remove ${u.username}`}
-                  >
-                    {busy === u.username ? 'Removing…' : reason || 'Remove'}
-                  </button>
+      <div style={styles.listWrap}>
+        {loading ? (
+          <div style={styles.muted}>Loading…</div>
+        ) : users.length === 0 ? (
+          <div style={styles.muted}>No accounts.</div>
+        ) : (
+          users.map(u => {
+            const isSelf = u.username === currentUser;
+            const disabled = isSelf || busy === u.username;
+            const reason = isSelf ? 'This is you' : '';
+            return (
+              <div key={u.username} style={styles.row}>
+                <div style={styles.rowMain}>
+                  <span style={styles.rowName}>{u.username}</span>
+                  {u.admin && <span style={styles.adminBadge}>admin</span>}
+                  {isSelf && <span style={styles.selfBadge}>you</span>}
                 </div>
-              );
-            })
-          )}
-        </div>
-
-        <form onSubmit={handleAdd} style={styles.form}>
-          <div style={styles.formTitle}>Add account</div>
-          <div style={styles.fieldRow}>
-            <input
-              style={styles.input}
-              type="text"
-              placeholder="username"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              autoComplete="off"
-            />
-          </div>
-          <div style={styles.fieldRow}>
-            <input
-              style={styles.input}
-              type="password"
-              placeholder="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              autoComplete="new-password"
-            />
-            <input
-              style={styles.input}
-              type="password"
-              placeholder="confirm"
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              autoComplete="new-password"
-            />
-          </div>
-          <label style={styles.checkRow}>
-            <input type="checkbox" checked={makeAdmin} onChange={e => setMakeAdmin(e.target.checked)} />
-            Grant admin (can manage accounts)
-          </label>
-
-          {error && <div style={styles.error}>{error}</div>}
-
-          <div style={styles.actions}>
-            <button type="button" style={styles.cancelBtn} onClick={onClose}>Close</button>
-            <button type="submit" style={styles.submitBtn} disabled={submitting}>
-              {submitting ? 'Adding…' : 'Add Account'}
-            </button>
-          </div>
-        </form>
+                <button
+                  style={{ ...styles.removeBtn, ...(disabled ? styles.removeBtnDisabled : {}) }}
+                  onClick={() => handleRemove(u.username)}
+                  disabled={disabled}
+                  title={reason || `Remove ${u.username}`}
+                >
+                  {busy === u.username ? 'Removing…' : reason || 'Remove'}
+                </button>
+              </div>
+            );
+          })
+        )}
       </div>
-    </div>
+
+      <form onSubmit={handleAdd} style={styles.form}>
+        <div style={styles.formTitle}>Add account</div>
+        <div style={styles.fieldRow}>
+          <input
+            style={styles.input}
+            type="text"
+            placeholder="username"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+        <div style={styles.fieldRow}>
+          <input
+            style={styles.input}
+            type="password"
+            placeholder="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+          <input
+            style={styles.input}
+            type="password"
+            placeholder="confirm"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+        </div>
+        <label style={styles.checkRow}>
+          <input type="checkbox" checked={makeAdmin} onChange={e => setMakeAdmin(e.target.checked)} />
+          Grant admin (can manage accounts)
+        </label>
+
+        {error && <div style={styles.error}>{error}</div>}
+
+        <div style={styles.actions}>
+          <button type="button" style={styles.cancelBtn} onClick={onClose} disabled={submitting || !!busy}>Close</button>
+          <button type="submit" style={styles.submitBtn} disabled={submitting}>
+            {submitting ? 'Adding…' : 'Add Account'}
+          </button>
+        </div>
+      </form>
+    </Dialog>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  backdrop: {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0,0,0,0.7)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  dialog: {
-    background: '#1a1a2e',
-    border: '1px solid #333366',
-    borderRadius: 8,
-    width: 420,
-    maxHeight: '85vh',
-    display: 'flex',
-    flexDirection: 'column',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px 16px',
-    borderBottom: '1px solid #333366',
-  },
-  title: { fontWeight: 700, fontSize: 15, color: '#e0e0e0' },
-  closeBtn: { background: 'none', border: 'none', color: '#888', fontSize: 14, cursor: 'pointer' },
   hint: { color: '#777', fontSize: 12, margin: 0, padding: '10px 16px 0', lineHeight: 1.5 },
   listWrap: {
     padding: '10px 16px',

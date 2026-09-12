@@ -249,71 +249,20 @@ describe('Workspace', () => {
     tileRect.mockRestore();
   });
 
-  it('cycles terminal focus left-to-right then down and wraps', async () => {
+  it('leaves application control keys untouched and keeps click-to-focus available', async () => {
     const { api } = await import('@frontend/utils/api');
-    const sessions = [
-      { ...mockSessions[0], id: 's1', title: 'one', row: 0, col: 1 },
-      { ...mockSessions[0], id: 's2', title: 'two', row: 0, col: 0 },
-      { ...mockSessions[0], id: 's3', title: 'three', row: 1, col: 0 },
-    ];
-    (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue(sessions);
+    (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue(mockSessions);
+    render(<Workspace {...defaultProps} />, { wrapper });
+    const terminal = await screen.findByTestId('terminal-s1');
+    await waitFor(() => expect(terminalFocusFns.has('s1')).toBe(true));
 
-    const originalOffsetParent = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetParent');
-    Object.defineProperty(HTMLElement.prototype, 'offsetParent', {
-      configurable: true,
-      get() { return document.body; },
-    });
-
-    try {
-      render(<Workspace {...defaultProps} />, { wrapper });
-      await waitFor(() => {
-        expect(screen.getAllByText('three').length).toBeGreaterThan(0);
-        expect(terminalFocusFns.size).toBe(3);
-      });
-      // Session ordering is mirrored into a ref from an effect. Give that
-      // effect one task turn before dispatching the global keyboard event.
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
-      await waitFor(() => {
-        expect(terminalFocusFns.get('s2')).toHaveBeenCalledTimes(1);
-      });
-
-      fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
-      await waitFor(() => {
-        expect(terminalFocusFns.get('s1')).toHaveBeenCalledTimes(1);
-      });
-
-      fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
-      await waitFor(() => {
-        expect(terminalFocusFns.get('s3')).toHaveBeenCalledTimes(1);
-      });
-
-      fireEvent.keyDown(window, { code: 'Period', ctrlKey: true, shiftKey: true });
-      await waitFor(() => {
-        expect(terminalFocusFns.get('s2')).toHaveBeenCalledTimes(2);
-      });
-
-      fireEvent.keyDown(window, { code: 'Comma', ctrlKey: true, shiftKey: true });
-      await waitFor(() => {
-        expect(terminalFocusFns.get('s3')).toHaveBeenCalledTimes(2);
-      });
-
-      fireEvent.keyDown(window, { key: '>', ctrlKey: true, shiftKey: true });
-      await waitFor(() => {
-        expect(terminalFocusFns.get('s2')).toHaveBeenCalledTimes(3);
-      });
-
-      fireEvent.keyDown(window, { key: '<', ctrlKey: true, shiftKey: true });
-      await waitFor(() => {
-        expect(terminalFocusFns.get('s3')).toHaveBeenCalledTimes(3);
-      });
-    } finally {
-      if (originalOffsetParent) {
-        Object.defineProperty(HTMLElement.prototype, 'offsetParent', originalOffsetParent);
-      } else {
-        delete (HTMLElement.prototype as unknown as Record<string, unknown>).offsetParent;
-      }
+    for (const code of ['KeyF', 'KeyL', 'Comma', 'Period']) {
+      const event = new KeyboardEvent('keydown', { code, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true });
+      fireEvent(terminal, event);
+      expect(event.defaultPrevented).toBe(false);
     }
+    expect(terminalFocusFns.get('s1')).not.toHaveBeenCalled();
+    fireEvent.mouseDown(terminal);
+    expect(screen.getByTestId('dock-s1')).toHaveAttribute('data-focused', 'true');
   });
 });

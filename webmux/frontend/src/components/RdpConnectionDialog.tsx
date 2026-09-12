@@ -1,3 +1,4 @@
+import { Dialog } from './Dialog';
 import { useState, useEffect, FormEvent } from 'react';
 import { api } from '../utils/api';
 import type { HostEntry, CreateRdpSessionRequest } from '../types';
@@ -75,154 +76,111 @@ export function RdpConnectionDialog({ onConnect, onClose, suggestedRow, suggeste
   };
 
   return (
-    <div style={styles.backdrop} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={styles.dialog}>
-        <div style={styles.header}>
-          <span style={styles.title}>Connect to RDP Desktop</span>
-          <button style={styles.closeBtn} onClick={onClose}>{'\u2715'}</button>
+    <Dialog title="Connect to RDP Desktop" onClose={onClose} dismissible={!submitting}>
+
+      <form onSubmit={handleConnect} style={styles.form} autoComplete="off">
+        {rdpHosts.length > 0 && (
+          <div style={styles.field}>
+            <label style={styles.label}>Saved RDP Hosts</label>
+            <div style={styles.hostGrid}>
+              {rdpHosts.map(h => (
+                <button
+                  key={h.id}
+                  type="button"
+                  style={styles.hostCard}
+                  onClick={() => handleQuickConnect(h)}
+                  title={`RDP connect to ${h.hostname}:${h.rdp_port || 3389}`}
+                  disabled={submitting}
+                >
+                  <span style={styles.hostCardName}>{h.hostname}</span>
+                  <span style={styles.hostCardPort}>:{h.rdp_port || 3389}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {rdpHosts.length > 0 && (
+          <div style={styles.divider}>
+            <span style={styles.dividerText}>or connect manually</span>
+          </div>
+        )}
+
+        <div style={styles.field}>
+          <label style={styles.label}>Host</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              style={{ ...styles.input, flex: 1 }}
+              type="text"
+              placeholder="hostname or IP"
+              value={hostname}
+              onChange={e => setHostname(e.target.value)}
+              data-dialog-autofocus
+              data-1p-ignore
+            />
+            <input
+              style={{ ...styles.input, width: 80 }}
+              type="number"
+              placeholder="3389"
+              value={rdpPort}
+              onChange={e => setRdpPort(Number(e.target.value))}
+              min={1}
+              max={65535}
+            />
+          </div>
         </div>
 
-        <form onSubmit={handleConnect} style={styles.form} autoComplete="off">
-          {rdpHosts.length > 0 && (
-            <div style={styles.field}>
-              <label style={styles.label}>Saved RDP Hosts</label>
-              <div style={styles.hostGrid}>
-                {rdpHosts.map(h => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    style={styles.hostCard}
-                    onClick={() => handleQuickConnect(h)}
-                    title={`RDP connect to ${h.hostname}:${h.rdp_port || 3389}`}
-                    disabled={submitting}
-                  >
-                    <span style={styles.hostCardName}>{h.hostname}</span>
-                    <span style={styles.hostCardPort}>:{h.rdp_port || 3389}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+        <div style={styles.field}>
+          <label style={styles.label}>Username</label>
+          <input
+            style={styles.input}
+            type="text"
+            placeholder="e.g. Administrator"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            data-1p-ignore
+          />
+        </div>
 
-          {rdpHosts.length > 0 && (
-            <div style={styles.divider}>
-              <span style={styles.dividerText}>or connect manually</span>
-            </div>
-          )}
+        <div style={styles.field}>
+          <label style={styles.label}>Password</label>
+          <input
+            style={styles.input}
+            type="password"
+            placeholder="Windows password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            autoComplete="off"
+            data-1p-ignore
+          />
+        </div>
 
-          <div style={styles.field}>
-            <label style={styles.label}>Host</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                style={{ ...styles.input, flex: 1 }}
-                type="text"
-                placeholder="hostname or IP"
-                value={hostname}
-                onChange={e => setHostname(e.target.value)}
-                autoFocus
-                data-1p-ignore
-              />
-              <input
-                style={{ ...styles.input, width: 80 }}
-                type="number"
-                placeholder="3389"
-                value={rdpPort}
-                onChange={e => setRdpPort(Number(e.target.value))}
-                min={1}
-                max={65535}
-              />
-            </div>
-          </div>
+        <div style={styles.field}>
+          <label style={styles.label}>Domain (optional)</label>
+          <input
+            style={styles.input}
+            type="text"
+            placeholder="e.g. CORP"
+            value={domain}
+            onChange={e => setDomain(e.target.value)}
+            data-1p-ignore
+          />
+        </div>
 
-          <div style={styles.field}>
-            <label style={styles.label}>Username</label>
-            <input
-              style={styles.input}
-              type="text"
-              placeholder="e.g. Administrator"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              data-1p-ignore
-            />
-          </div>
+        {error && <div style={styles.error}>{error}</div>}
 
-          <div style={styles.field}>
-            <label style={styles.label}>Password</label>
-            <input
-              style={styles.input}
-              type="password"
-              placeholder="Windows password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              autoComplete="off"
-              data-1p-ignore
-            />
-          </div>
-
-          <div style={styles.field}>
-            <label style={styles.label}>Domain (optional)</label>
-            <input
-              style={styles.input}
-              type="text"
-              placeholder="e.g. CORP"
-              value={domain}
-              onChange={e => setDomain(e.target.value)}
-              data-1p-ignore
-            />
-          </div>
-
-          {error && <div style={styles.error}>{error}</div>}
-
-          <div style={styles.actions}>
-            <button type="button" style={styles.cancelBtn} onClick={onClose}>Cancel</button>
-            <button type="submit" style={styles.connectBtn} disabled={submitting}>
-              {submitting ? 'Connecting\u2026' : 'Connect'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div style={styles.actions}>
+          <button type="button" style={styles.cancelBtn} onClick={onClose} disabled={submitting}>Cancel</button>
+          <button type="submit" style={styles.connectBtn} disabled={submitting}>
+            {submitting ? 'Connecting\u2026' : 'Connect'}
+          </button>
+        </div>
+      </form>
+    </Dialog>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  backdrop: {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0,0,0,0.7)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  dialog: {
-    background: '#1a1a2e',
-    border: '1px solid #1a2a66',
-    borderRadius: 8,
-    width: 400,
-    maxHeight: '90vh',
-    overflow: 'auto',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px 16px',
-    borderBottom: '1px solid #1a2a66',
-  },
-  title: {
-    fontWeight: 700,
-    fontSize: 15,
-    color: '#e0e0e0',
-  },
-  closeBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#888',
-    fontSize: 14,
-    cursor: 'pointer',
-  },
   form: {
     display: 'flex',
     flexDirection: 'column',

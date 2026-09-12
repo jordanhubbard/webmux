@@ -1,3 +1,4 @@
+import { Dialog } from './Dialog';
 import { FormEvent, useEffect, useState } from 'react';
 import type { AppConfig, WorkspaceName } from '../types';
 import { api } from '../utils/api';
@@ -135,14 +136,6 @@ export function SettingsDialog({ workspaceOptions, onClose, onSaved }: SettingsD
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !saving) onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, saving]);
-
   const update = <K extends keyof SettingsForm>(key: K, value: SettingsForm[K]) => {
     setForm(current => current ? { ...current, [key]: value } : current);
     setNotice(null);
@@ -264,157 +257,132 @@ export function SettingsDialog({ workspaceOptions, onClose, onSaved }: SettingsD
     : workspaceOptions;
 
   return (
-    <div style={styles.backdrop} onClick={event => event.target === event.currentTarget && !saving && onClose()}>
-      <div style={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="settings-title">
-        <div style={styles.header}>
-          <div>
-            <div id="settings-title" style={styles.title}>Settings</div>
-            <div style={styles.subtitle}>Runtime-safe application configuration</div>
-          </div>
-          <button type="button" style={styles.closeButton} onClick={onClose} disabled={saving} aria-label="Close settings">✕</button>
-        </div>
+    <Dialog title="Settings" subtitle="Customize your workspace and terminal defaults"
+      onClose={onClose} dismissible={!saving} width={720}>
+      {loading ? (
+        <div style={styles.loading}>Loading settings…</div>
+      ) : !form ? (
+        <div style={styles.loading}>{error ?? 'Settings could not be loaded.'}</div>
+      ) : (
+        <form onSubmit={handleSubmit} style={styles.form}>
+          <div style={styles.body}>
+            <Section title="General">
+              <Field label="Application name">
+                <input style={styles.input} value={form.name} onChange={event => update('name', event.target.value)} />
+              </Field>
+              <Field label="Default workspace" hint="The workspace selected when a browser first opens WebMux.">
+                <select style={styles.input} value={form.defaultPane} onChange={event => update('defaultPane', event.target.value)}>
+                  {paneOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </Field>
+            </Section>
 
-        {loading ? (
-          <div style={styles.loading}>Loading settings…</div>
-        ) : !form ? (
-          <div style={styles.loading}>{error ?? 'Settings could not be loaded.'}</div>
-        ) : (
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <div style={styles.body}>
-              <Section title="General">
-                <Field label="Application name">
-                  <input style={styles.input} value={form.name} onChange={event => update('name', event.target.value)} />
+            <Section title="Terminal defaults">
+              <div style={styles.gridThree}>
+                <Field label="Columns"><input aria-label="Default columns" style={styles.input} inputMode="numeric" value={form.cols} onChange={event => update('cols', event.target.value)} /></Field>
+                <Field label="Rows"><input aria-label="Default rows" style={styles.input} inputMode="numeric" value={form.rows} onChange={event => update('rows', event.target.value)} /></Field>
+                <Field label="Font size"><input aria-label="Default font size" style={styles.input} inputMode="numeric" value={form.fontSize} onChange={event => update('fontSize', event.target.value)} /></Field>
+              </div>
+              <Field label="Font family" hint="CSS font-family list used by newly opened terminals.">
+                <input style={styles.input} value={form.fontFamily} onChange={event => update('fontFamily', event.target.value)} />
+              </Field>
+            </Section>
+
+            <Section title="Terminal workspace limits">
+              <div style={styles.gridTwo}>
+                <Field label="Maximum columns" hint="Blank means unlimited.">
+                  <input style={styles.input} inputMode="numeric" value={form.maxCols} onChange={event => update('maxCols', event.target.value)} />
                 </Field>
-                <Field label="Default workspace" hint="The workspace selected when a browser first opens WebMux.">
-                  <select style={styles.input} value={form.defaultPane} onChange={event => update('defaultPane', event.target.value)}>
-                    {paneOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                <Field label="Maximum rows" hint="Blank means unlimited.">
+                  <input style={styles.input} inputMode="numeric" value={form.maxRows} onChange={event => update('maxRows', event.target.value)} />
+                </Field>
+              </div>
+            </Section>
+
+            <Section title="Session transcripts">
+              <label style={styles.checkRow}>
+                <input type="checkbox" checked={form.sessionLogging} onChange={event => update('sessionLogging', event.target.checked)} />
+                <span>
+                  <strong>Log terminal sessions to disk</strong>
+                  <span style={styles.hint}>Applies to new and reconnected terminals. Logs may contain commands, output, tokens, and other secrets.</span>
+                </span>
+              </label>
+            </Section>
+
+            <Section title="Transport">
+              <label style={styles.checkRow}>
+                <input type="checkbox" checked={form.preferMosh} onChange={event => update('preferMosh', event.target.checked)} />
+                Prefer mosh for hosts that allow it
+              </label>
+              <label style={styles.checkRow}>
+                <input type="checkbox" checked={form.sshFallback} onChange={event => update('sshFallback', event.target.checked)} />
+                Fall back to SSH when mosh cannot connect
+              </label>
+              <Field label="Mosh server path" hint="Optional absolute path to mosh-server; leave blank to use PATH.">
+                <input style={styles.input} value={form.moshServerPath} onChange={event => update('moshServerPath', event.target.value)} placeholder="/usr/local/bin/mosh-server" />
+              </Field>
+            </Section>
+
+            <Section title="Hosted terminal fonts">
+              <span style={styles.hint}>Font source paths are relative to the server's app.yaml file.</span>
+              {form.fontFaces.map((face, index) => (
+                <div key={index} style={styles.dynamicRow}>
+                  <input aria-label={`Font ${index + 1} family`} style={styles.input} value={face.family} onChange={event => updateFontFace(index, 'family', event.target.value)} placeholder="Family" />
+                  <input aria-label={`Font ${index + 1} source`} style={styles.input} value={face.source} onChange={event => updateFontFace(index, 'source', event.target.value)} placeholder="fonts/MyFont.woff2" />
+                  <input aria-label={`Font ${index + 1} weight`} style={styles.input} value={face.weight} onChange={event => updateFontFace(index, 'weight', event.target.value)} placeholder="Weight" />
+                  <select aria-label={`Font ${index + 1} style`} style={styles.input} value={face.style} onChange={event => updateFontFace(index, 'style', event.target.value)}>
+                    <option value="">Default style</option><option value="normal">Normal</option><option value="italic">Italic</option><option value="oblique">Oblique</option>
                   </select>
-                </Field>
-              </Section>
-
-              <Section title="Terminal defaults">
-                <div style={styles.gridThree}>
-                  <Field label="Columns"><input aria-label="Default columns" style={styles.input} inputMode="numeric" value={form.cols} onChange={event => update('cols', event.target.value)} /></Field>
-                  <Field label="Rows"><input aria-label="Default rows" style={styles.input} inputMode="numeric" value={form.rows} onChange={event => update('rows', event.target.value)} /></Field>
-                  <Field label="Font size"><input aria-label="Default font size" style={styles.input} inputMode="numeric" value={form.fontSize} onChange={event => update('fontSize', event.target.value)} /></Field>
+                  <select aria-label={`Font ${index + 1} display`} style={styles.input} value={face.display} onChange={event => updateFontFace(index, 'display', event.target.value)}>
+                    <option value="">Default display</option><option value="auto">Auto</option><option value="block">Block</option><option value="swap">Swap</option><option value="fallback">Fallback</option><option value="optional">Optional</option>
+                  </select>
+                  <button type="button" style={styles.removeButton} onClick={() => update('fontFaces', form.fontFaces.filter((_, faceIndex) => faceIndex !== index))} aria-label={`Remove font ${index + 1}`}>Remove</button>
                 </div>
-                <Field label="Font family" hint="CSS font-family list used by newly opened terminals.">
-                  <input style={styles.input} value={form.fontFamily} onChange={event => update('fontFamily', event.target.value)} />
-                </Field>
-              </Section>
+              ))}
+              <button type="button" style={styles.addButton} onClick={() => update('fontFaces', [...form.fontFaces, { family: '', source: '', weight: '', style: '', display: '' }])}>Add font face</button>
+            </Section>
 
-              <Section title="Terminal workspace limits">
-                <div style={styles.gridTwo}>
-                  <Field label="Maximum columns" hint="Blank means unlimited.">
-                    <input style={styles.input} inputMode="numeric" value={form.maxCols} onChange={event => update('maxCols', event.target.value)} />
-                  </Field>
-                  <Field label="Maximum rows" hint="Blank means unlimited.">
-                    <input style={styles.input} inputMode="numeric" value={form.maxRows} onChange={event => update('maxRows', event.target.value)} />
-                  </Field>
+            <Section title="Host switcher">
+              <label style={styles.checkRow}>
+                <input type="checkbox" checked={form.hostSwitcherEnabled} onChange={event => update('hostSwitcherEnabled', event.target.checked)} />
+                Show configured WebMux hosts in the top bar
+              </label>
+              <Field label="Allowed hostname suffixes" hint="Comma-separated. Leave blank to show the switcher on every hostname.">
+                <input style={styles.input} value={form.hostSwitcherSuffixes} onChange={event => update('hostSwitcherSuffixes', event.target.value)} placeholder="example.com, lab.example.net" />
+              </Field>
+              {form.hostSwitcherHosts.map((host, index) => (
+                <div key={index} style={styles.hostRow}>
+                  <input aria-label={`Host ${index + 1} ID`} style={styles.input} value={host.id} onChange={event => updateHost(index, 'id', event.target.value)} placeholder="ID" />
+                  <input aria-label={`Host ${index + 1} label`} style={styles.input} value={host.label} onChange={event => updateHost(index, 'label', event.target.value)} placeholder="Label" />
+                  <input aria-label={`Host ${index + 1} hostname`} style={styles.input} value={host.hostname} onChange={event => updateHost(index, 'hostname', event.target.value)} placeholder="webmux.example.com" />
+                  <button type="button" style={styles.removeButton} onClick={() => update('hostSwitcherHosts', form.hostSwitcherHosts.filter((_, hostIndex) => hostIndex !== index))} aria-label={`Remove host ${index + 1}`}>Remove</button>
                 </div>
-              </Section>
+              ))}
+              <button type="button" style={styles.addButton} onClick={() => update('hostSwitcherHosts', [...form.hostSwitcherHosts, { id: '', label: '', hostname: '' }])}>Add host</button>
+            </Section>
 
-              <Section title="Session transcripts">
-                <label style={styles.checkRow}>
-                  <input type="checkbox" checked={form.sessionLogging} onChange={event => update('sessionLogging', event.target.checked)} />
-                  <span>
-                    <strong>Log terminal sessions to disk</strong>
-                    <span style={styles.hint}>Applies to new and reconnected terminals. Logs may contain commands, output, tokens, and other secrets.</span>
-                  </span>
-                </label>
-              </Section>
-
-              <Section title="Transport">
-                <label style={styles.checkRow}>
-                  <input type="checkbox" checked={form.preferMosh} onChange={event => update('preferMosh', event.target.checked)} />
-                  Prefer mosh for hosts that allow it
-                </label>
-                <label style={styles.checkRow}>
-                  <input type="checkbox" checked={form.sshFallback} onChange={event => update('sshFallback', event.target.checked)} />
-                  Fall back to SSH when mosh cannot connect
-                </label>
-                <Field label="Mosh server path" hint="Optional absolute path to mosh-server; leave blank to use PATH.">
-                  <input style={styles.input} value={form.moshServerPath} onChange={event => update('moshServerPath', event.target.value)} placeholder="/usr/local/bin/mosh-server" />
-                </Field>
-              </Section>
-
-              <Section title="Hosted terminal fonts">
-                <span style={styles.hint}>Font source paths are relative to the server's app.yaml file.</span>
-                {form.fontFaces.map((face, index) => (
-                  <div key={index} style={styles.dynamicRow}>
-                    <input aria-label={`Font ${index + 1} family`} style={styles.input} value={face.family} onChange={event => updateFontFace(index, 'family', event.target.value)} placeholder="Family" />
-                    <input aria-label={`Font ${index + 1} source`} style={styles.input} value={face.source} onChange={event => updateFontFace(index, 'source', event.target.value)} placeholder="fonts/MyFont.woff2" />
-                    <input aria-label={`Font ${index + 1} weight`} style={styles.input} value={face.weight} onChange={event => updateFontFace(index, 'weight', event.target.value)} placeholder="Weight" />
-                    <select aria-label={`Font ${index + 1} style`} style={styles.input} value={face.style} onChange={event => updateFontFace(index, 'style', event.target.value)}>
-                      <option value="">Default style</option><option value="normal">Normal</option><option value="italic">Italic</option><option value="oblique">Oblique</option>
-                    </select>
-                    <select aria-label={`Font ${index + 1} display`} style={styles.input} value={face.display} onChange={event => updateFontFace(index, 'display', event.target.value)}>
-                      <option value="">Default display</option><option value="auto">Auto</option><option value="block">Block</option><option value="swap">Swap</option><option value="fallback">Fallback</option><option value="optional">Optional</option>
-                    </select>
-                    <button type="button" style={styles.removeButton} onClick={() => update('fontFaces', form.fontFaces.filter((_, faceIndex) => faceIndex !== index))} aria-label={`Remove font ${index + 1}`}>Remove</button>
-                  </div>
-                ))}
-                <button type="button" style={styles.addButton} onClick={() => update('fontFaces', [...form.fontFaces, { family: '', source: '', weight: '', style: '', display: '' }])}>Add font face</button>
-              </Section>
-
-              <Section title="Host switcher">
-                <label style={styles.checkRow}>
-                  <input type="checkbox" checked={form.hostSwitcherEnabled} onChange={event => update('hostSwitcherEnabled', event.target.checked)} />
-                  Show configured WebMux hosts in the top bar
-                </label>
-                <Field label="Allowed hostname suffixes" hint="Comma-separated. Leave blank to show the switcher on every hostname.">
-                  <input style={styles.input} value={form.hostSwitcherSuffixes} onChange={event => update('hostSwitcherSuffixes', event.target.value)} placeholder="example.com, lab.example.net" />
-                </Field>
-                {form.hostSwitcherHosts.map((host, index) => (
-                  <div key={index} style={styles.hostRow}>
-                    <input aria-label={`Host ${index + 1} ID`} style={styles.input} value={host.id} onChange={event => updateHost(index, 'id', event.target.value)} placeholder="ID" />
-                    <input aria-label={`Host ${index + 1} label`} style={styles.input} value={host.label} onChange={event => updateHost(index, 'label', event.target.value)} placeholder="Label" />
-                    <input aria-label={`Host ${index + 1} hostname`} style={styles.input} value={host.hostname} onChange={event => updateHost(index, 'hostname', event.target.value)} placeholder="webmux.example.com" />
-                    <button type="button" style={styles.removeButton} onClick={() => update('hostSwitcherHosts', form.hostSwitcherHosts.filter((_, hostIndex) => hostIndex !== index))} aria-label={`Remove host ${index + 1}`}>Remove</button>
-                  </div>
-                ))}
-                <button type="button" style={styles.addButton} onClick={() => update('hostSwitcherHosts', [...form.hostSwitcherHosts, { id: '', label: '', hostname: '' }])}>Add host</button>
-              </Section>
-
-              <div style={styles.safetyNote}>
-                Startup and security settings—including ports, bind addresses, authentication mode, and secrets—remain file-managed and require a restart when applicable.
-              </div>
+            <div style={styles.safetyNote}>
+              Startup and security settings—including ports, bind addresses, authentication mode, and secrets—remain file-managed and require a restart when applicable.
             </div>
+          </div>
 
-            <div style={styles.footer}>
-              <div aria-live="polite">
-                {error && <span style={styles.error}>{error}</span>}
-                {!error && notice && <span style={styles.notice}>{notice}</span>}
-              </div>
-              <div style={styles.actions}>
-                <button type="button" style={styles.secondaryButton} onClick={onClose} disabled={saving}>Close</button>
-                <button type="submit" style={styles.primaryButton} disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button>
-              </div>
+          <div style={styles.footer}>
+            <div aria-live="polite">
+              {error && <span style={styles.error}>{error}</span>}
+              {!error && notice && <span style={styles.notice}>{notice}</span>}
             </div>
-          </form>
-        )}
-      </div>
-    </div>
+            <div style={styles.actions}>
+              <button type="button" style={styles.secondaryButton} onClick={onClose} disabled={saving}>Close</button>
+              <button type="submit" style={styles.primaryButton} disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button>
+            </div>
+          </div>
+        </form>
+      )}
+    </Dialog>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  backdrop: {
-    position: 'fixed', inset: 0, zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    padding: 20, background: 'rgba(0,0,0,0.72)',
-  },
-  dialog: {
-    width: 'min(720px, 100%)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-    color: '#e8e8ef', background: '#17172b', border: '1px solid #3a3a68', borderRadius: 10,
-    boxShadow: '0 16px 48px rgba(0,0,0,0.65)',
-  },
-  header: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px',
-    borderBottom: '1px solid #303052',
-  },
-  title: { fontSize: 18, fontWeight: 700 },
-  subtitle: { marginTop: 3, color: '#8888a4', fontSize: 12 },
-  closeButton: { border: 0, background: 'transparent', color: '#aaa', cursor: 'pointer', fontSize: 16, padding: 6 },
   loading: { minHeight: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' },
   form: { minHeight: 0, display: 'flex', flexDirection: 'column' },
   body: { padding: 18, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 },

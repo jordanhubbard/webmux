@@ -1,0 +1,87 @@
+.webmux-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 16px;
+  box-sizing: border-box;
+  border: 0;
+  background: transparent;
+  color: #e8e8ef;
+}
+
+.webmux-dialog[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.webmux-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.webmux-dialog-panel {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 0;
+  overflow: auto;
+  background: #17172b;
+  border: 1px solid #3a3a68;
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65);
+}
+
+.webmux-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid #303052;
+}
+
+.webmux-dialog-title {
+  margin: 0;
+  color: #e8e8ef;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.webmux-dialog-subtitle {
+  margin: 4px 0 0;
+  color: #aaaac0;
+  font-size: 12px;
+}
+
+.webmux-dialog-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #bbb;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.webmux-dialog-close:hover:not(:disabled) {
+  background: #2a2a44;
+  color: #fff;
+}
+
+.webmux-dialog-close:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.webmux-dialog :is(button, input, select, textarea, summary, a):focus-visible {
+  outline: 2px solid #a99cff !important;
+  outline-offset: 2px;
+}

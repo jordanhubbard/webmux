@@ -9,7 +9,6 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { installTerminalQuerySuppressors, shouldSuppressTerminalInput } from '../utils/terminalInput';
 import { TERMINAL_FONTS_LOADED_EVENT, loadTerminalFontFamily, normalizeTerminalFontFamily } from '../utils/terminalFont';
-import { isTranscriptToggleKey } from '../utils/terminalShortcuts';
 
 export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
   background: '#0d0d1a',
@@ -34,11 +33,15 @@ export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
   brightWhite: '#ffffff',
 };
 
+const SEARCH_OPTIONS = { caseSensitive: false, decorations: { matchOverviewRuler: '#7c6af7', activeMatchColorOverviewRuler: '#50fa7b', matchBackground: '#7c6af733', activeMatchBackground: '#50fa7b55' } };
+
 export interface TerminalHandle {
   scrollToBottom: () => void;
   isAtBottom: () => boolean;
   sendInput: (data: string) => void;
   focus: () => void;
+  openSearch: () => void;
+  toggleTranscript: () => void;
 }
 
 interface TerminalProps {
@@ -52,6 +55,7 @@ interface TerminalProps {
   onFocusGained: () => void;
   theme?: TerminalTheme | null;
   onBell?: () => void;
+  onTranscriptChange?: (enabled: boolean) => void;
 }
 
 export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal({
@@ -65,6 +69,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   onFocusGained,
   theme,
   onBell,
+  onTranscriptChange,
 }: TerminalProps, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
@@ -94,7 +99,22 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     focus: () => {
       termRef.current?.focus();
     },
+    openSearch: () => {
+      setFocusedSessionId(sessionId);
+      onFocusGainedRef.current();
+      setShowSearch(true);
+      searchInputRef.current?.focus();
+    },
+    toggleTranscript: () => wsHandleRef.current?.send({ type: 'transcript_toggle' }),
   }));
+
+  useEffect(() => {
+    if (showSearch) searchInputRef.current?.focus();
+  }, [showSearch]);
+
+  useEffect(() => {
+    onTranscriptChange?.(transcriptEnabled);
+  }, [onTranscriptChange, transcriptEnabled]);
 
   useEffect(() => { autoScrollRef.current = autoScroll; }, [autoScroll]);
 
@@ -181,6 +201,8 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       cursorBlink: true,
       macOptionIsMeta: /Mac|iPhone|iPad/.test(navigator.platform),
       allowTransparency: false,
+      // Search highlighting uses xterm's proposed decoration API.
+      allowProposedApi: true,
       scrollback: 5000,
       linkHandler: {
         activate: (_event: MouseEvent, uri: string) => {
@@ -239,22 +261,6 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       }
     };
     termEl.addEventListener('wheel', wheelHandler, { passive: true });
-
-    // Cmd/Ctrl+F opens search; Ctrl+Shift+L toggles this session's transcript.
-    term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'f' && e.type === 'keydown') {
-        e.preventDefault();
-        setShowSearch(true);
-        setTimeout(() => searchInputRef.current?.focus(), 0);
-        return false;
-      }
-      if (isTranscriptToggleKey(e)) {
-        e.preventDefault();
-        wsHandleRef.current?.send({ type: 'transcript_toggle' });
-        return false;
-      }
-      return true;
-    });
 
     const el = containerRef.current;
     // Click to focus this terminal
@@ -326,10 +332,10 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   // (Clicking the TopBar button can cause xterm to lose focus before
   // React's event delegation fires preventDefault.)
   useEffect(() => {
-    if (broadcastMode && focusedSessionId === sessionId && termRef.current) {
+    if (broadcastMode && !showSearch && focusedSessionId === sessionId && termRef.current) {
       termRef.current.focus();
     }
-  }, [broadcastMode, focusedSessionId, sessionId]);
+  }, [broadcastMode, focusedSessionId, sessionId, showSearch]);
 
   // When autoScroll is re-enabled, snap to bottom
   useEffect(() => {
@@ -354,6 +360,21 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     return () => observer.disconnect();
   }, []);
 
+  const findMatch = (direction: 'next' | 'previous') => {
+    if (!searchQuery) return;
+    if (direction === 'next') searchAddonRef.current?.findNext(searchQuery, SEARCH_OPTIONS);
+    else searchAddonRef.current?.findPrevious(searchQuery, SEARCH_OPTIONS);
+  };
+
+  const closeSearch = () => {
+    searchAddonRef.current?.clearDecorations();
+    setShowSearch(false);
+    setSearchQuery('');
+    setSearchIndex(-1);
+    setSearchCount(0);
+    termRef.current?.focus();
+  };
+
   const overlayColor = state === 'disconnected' ? 'rgba(13,13,26,0.85)' :
     state === 'error' ? 'rgba(60,13,13,0.85)' :
     state === 'connecting' ? 'rgba(13,13,26,0.6)' : 'transparent';
@@ -371,39 +392,38 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
         }}
       />
       {showSearch && (
-        <div style={{ position: 'absolute', top: 4, right: 4, display: 'flex', gap: 4, zIndex: 10 }}>
+        <div role="search" aria-label="Terminal scrollback" style={{ position: 'absolute', top: 4, right: 4, maxWidth: 'calc(100% - 8px)', display: 'flex', gap: 4, zIndex: 10 }}>
           <input
             ref={searchInputRef}
+            aria-label="Search terminal scrollback"
             value={searchQuery}
             onChange={e => {
               setSearchQuery(e.target.value);
-              const opts = { caseSensitive: false, decorations: { matchOverviewRuler: '#7c6af7', activeMatchColorOverviewRuler: '#50fa7b', matchBackground: '#7c6af733', activeMatchBackground: '#50fa7b55' } };
-              if (e.target.value) { searchAddonRef.current?.findNext(e.target.value, opts); } else { searchAddonRef.current?.clearDecorations(); }
+              if (e.target.value) { searchAddonRef.current?.findNext(e.target.value, SEARCH_OPTIONS); } else { searchAddonRef.current?.clearDecorations(); }
             }}
             onKeyDown={e => {
-              const opts = { caseSensitive: false, decorations: { matchOverviewRuler: '#7c6af7', activeMatchColorOverviewRuler: '#50fa7b', matchBackground: '#7c6af733', activeMatchBackground: '#50fa7b55' } };
-              if (e.key === 'Enter') { if (e.shiftKey) { searchAddonRef.current?.findPrevious(searchQuery, opts); } else { searchAddonRef.current?.findNext(searchQuery, opts); } }
-              if (e.key === 'Escape') { searchAddonRef.current?.clearDecorations(); setShowSearch(false); setSearchQuery(''); setSearchIndex(-1); setSearchCount(0); termRef.current?.focus(); }
+              if (e.key === 'Enter') { e.preventDefault(); findMatch(e.shiftKey ? 'previous' : 'next'); }
+              if (e.key === 'Escape') { e.preventDefault(); closeSearch(); }
               e.stopPropagation();
             }}
             placeholder="Search..."
-            style={{ background: '#0d0d1a', border: '1px solid #7c6af7', borderRadius: 3, color: '#e0e0e0', fontSize: 12, padding: '3px 8px', outline: 'none', width: 180 }}
+            style={{ background: '#0d0d1a', border: '1px solid #7c6af7', borderRadius: 3, color: '#e0e0e0', fontSize: 12, padding: '3px 8px', outline: 'none', width: 180, minWidth: 0 }}
           />
           {searchQuery && (
             <span style={{ color: searchCount > 0 ? '#888' : '#ff5555', fontSize: 11, alignSelf: 'center', whiteSpace: 'nowrap' }}>
               {searchCount > 0 ? `${searchIndex + 1}/${searchCount}` : 'No results'}
             </span>
           )}
-          <button onClick={() => { const opts = { caseSensitive: false, decorations: { matchOverviewRuler: '#7c6af7', activeMatchColorOverviewRuler: '#50fa7b', matchBackground: '#7c6af733', activeMatchBackground: '#50fa7b55' } }; searchAddonRef.current?.findPrevious(searchQuery, opts); }} style={{ background: '#1a1a3a', border: '1px solid #333', borderRadius: 3, color: '#aaa', fontSize: 11, cursor: 'pointer', padding: '2px 6px' }} title="Previous (Shift+Enter)">{'\u25b2'}</button>
-          <button onClick={() => { const opts = { caseSensitive: false, decorations: { matchOverviewRuler: '#7c6af7', activeMatchColorOverviewRuler: '#50fa7b', matchBackground: '#7c6af733', activeMatchBackground: '#50fa7b55' } }; searchAddonRef.current?.findNext(searchQuery, opts); }} style={{ background: '#1a1a3a', border: '1px solid #333', borderRadius: 3, color: '#aaa', fontSize: 11, cursor: 'pointer', padding: '2px 6px' }} title="Next (Enter)">{'\u25bc'}</button>
-          <button onClick={() => { searchAddonRef.current?.clearDecorations(); setShowSearch(false); setSearchQuery(''); setSearchIndex(-1); setSearchCount(0); termRef.current?.focus(); }} style={{ background: '#1a1a3a', border: '1px solid #333', borderRadius: 3, color: '#ff8888', fontSize: 11, cursor: 'pointer', padding: '2px 6px' }} title="Close (Escape)">{'\u2715'}</button>
+          <button aria-label="Previous match" disabled={!searchQuery} onClick={() => findMatch('previous')} style={{ background: '#1a1a3a', border: '1px solid #333', borderRadius: 3, color: '#aaa', fontSize: 11, cursor: 'pointer', padding: '2px 6px' }} title="Previous (Shift+Enter)">{'\u25b2'}</button>
+          <button aria-label="Next match" disabled={!searchQuery} onClick={() => findMatch('next')} style={{ background: '#1a1a3a', border: '1px solid #333', borderRadius: 3, color: '#aaa', fontSize: 11, cursor: 'pointer', padding: '2px 6px' }} title="Next (Enter)">{'\u25bc'}</button>
+          <button aria-label="Close terminal search" onClick={closeSearch} style={{ background: '#1a1a3a', border: '1px solid #333', borderRadius: 3, color: '#ff8888', fontSize: 11, cursor: 'pointer', padding: '2px 6px' }} title="Close (Escape)">{'\u2715'}</button>
         </div>
       )}
       {transcriptEnabled && (
         <div
           role="status"
           aria-label="Session transcript logging active"
-          title="Session transcript logging active (Ctrl+Shift+L to pause)"
+          title="Session transcript logging active (use Log in the toolbar to pause)"
           style={{ position: 'absolute', right: 8, bottom: 6, zIndex: 9, color: '#ff6666', background: 'rgba(13,13,26,0.8)', borderRadius: 3, padding: '2px 5px', fontSize: 10, fontWeight: 700, pointerEvents: 'none' }}
         >REC</div>
       )}

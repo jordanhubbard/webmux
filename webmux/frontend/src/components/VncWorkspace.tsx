@@ -1,3 +1,4 @@
+import { AddSessionCell } from './AddSessionCell';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { VncTile } from './VncTile';
 import { VncConnectionDialog } from './VncConnectionDialog';
@@ -31,56 +32,6 @@ function getAddPositions(sessions: VncSession[]): { row: number; col: number }[]
   }
 
   return positions;
-}
-
-function AddCell({ row, col, isEmpty, onClick }: {
-  row: number;
-  col: number;
-  isEmpty: boolean;
-  onClick: () => void;
-}) {
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <div
-      style={{
-        gridColumn: col + 1,
-        gridRow: row + 1,
-        border: `2px dashed ${hovered ? '#7c6af7' : '#1e1e3a'}`,
-        borderRadius: 6,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        transition: 'border-color 0.2s, background 0.2s',
-        background: hovered ? 'rgba(124, 106, 247, 0.06)' : 'transparent',
-        gap: 12,
-        minHeight: 0,
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={onClick}
-      data-testid={`add-cell-${row}-${col}`}
-    >
-      <span style={{
-        fontSize: isEmpty ? 64 : 36,
-        fontWeight: 300,
-        color: hovered ? '#7c6af7' : '#2a2a4a',
-        transition: 'color 0.2s',
-        lineHeight: 1,
-        userSelect: 'none',
-      }}>+</span>
-      {isEmpty && (
-        <span style={{
-          fontSize: 14,
-          color: hovered ? '#7c6af7' : '#3a3a5a',
-          transition: 'color 0.2s',
-          userSelect: 'none',
-        }}>Click to add a session</span>
-      )}
-    </div>
-  );
 }
 
 export function VncWorkspace() {
@@ -293,7 +244,7 @@ export function VncWorkspace() {
         ))}
 
         {addPositions.map(pos => (
-          <AddCell
+          <AddSessionCell
             key={`add-${pos.row}-${pos.col}`}
             row={pos.row}
             col={pos.col}

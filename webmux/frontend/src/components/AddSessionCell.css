@@ -1,0 +1,28 @@
+.add-session-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 2px dashed #333352;
+  border-radius: 6px;
+  background: transparent;
+  color: #777790;
+  font: inherit;
+  font-weight: 300;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.add-session-cell:hover,
+.add-session-cell:focus-visible {
+  border-color: #a99cff;
+  color: #a99cff;
+  background: rgba(124, 106, 247, 0.06);
+}
+
+.add-session-cell:focus-visible { outline: 2px solid #a99cff; outline-offset: 2px; }
+.add-session-cell-hint { font-size: 14px; }
