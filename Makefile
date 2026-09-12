@@ -73,7 +73,7 @@ endif
 
 # ── Targets ────────────────────────────────────────────────────────
 .PHONY: all build deps check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
-       install uninstall release release-minor release-major changelog-init \
+       install uninstall release release-minor release-major release-publish changelog-init \
        package _start_manual _stop_manual
 
 all: build
@@ -102,9 +102,10 @@ help:
 	@printf "  $(C_CYN)make install$(C_RST)        Install as OS service (launchd/systemd)\n"
 	@printf "  $(C_CYN)make uninstall$(C_RST)      Remove OS service\n"
 	@printf "  $(C_CYN)make configure$(C_RST)      Update runtime configuration\n"
-	@printf "  $(C_CYN)make release$(C_RST)        Bump patch version, test, tag, push, GitHub release\n"
-	@printf "  $(C_CYN)make release-minor$(C_RST)  Bump minor version and release\n"
-	@printf "  $(C_CYN)make release-major$(C_RST)  Bump major version and release\n"
+	@printf "  $(C_CYN)make release$(C_RST)        Bump patch version, test, open release PR\n"
+	@printf "  $(C_CYN)make release-minor$(C_RST)  Bump minor version, test, open release PR\n"
+	@printf "  $(C_CYN)make release-major$(C_RST)  Bump major version, test, open release PR\n"
+	@printf "  $(C_CYN)make release-publish$(C_RST) Tag and publish after the release PR is merged\n"
 	@printf "  $(C_CYN)make check-guacd$(C_RST)    Check guacd (RDP proxy) installation\n"
 	@printf "  $(C_CYN)make help$(C_RST)           Show this help\n"
 	@printf "\n$(C_BLD)Configuration:$(C_RST)\n"
@@ -393,22 +394,28 @@ endif
 
 # ── Release management ──────────────────────────────────────────────
 # Checks prerequisites, runs tests, bumps version in package.json files,
-# updates CHANGELOG.md, commits, tags, pushes, and creates a GitHub release.
+# updates CHANGELOG.md, commits, and opens a release pull request.
+# Run `make release-publish` after that PR is reviewed and merged to
+# tag the merge commit and create the GitHub release.
 #
-#   make release          Bump patch version (x.y.Z → x.y.Z+1)
-#   make release-minor    Bump minor version (x.Y.z → x.Y+1.0)
-#   make release-major    Bump major version (X.y.z → X+1.0.0)
+#   make release          Bump patch version (x.y.Z → x.y.Z+1) and open a PR
+#   make release-minor    Bump minor version (x.Y.z → x.Y+1.0) and open a PR
+#   make release-major    Bump major version (X.y.z → X+1.0.0) and open a PR
+#   make release-publish  Tag and publish after the release PR is merged
 #
 # Non-interactive batch mode: BATCH=yes make release
 
 release:
-	@BATCH=$(BATCH) ./scripts/release.sh patch
+	@BATCH=$(BATCH) ./scripts/release.sh prepare patch
 
 release-minor:
-	@BATCH=$(BATCH) ./scripts/release.sh minor
+	@BATCH=$(BATCH) ./scripts/release.sh prepare minor
 
 release-major:
-	@BATCH=$(BATCH) ./scripts/release.sh major
+	@BATCH=$(BATCH) ./scripts/release.sh prepare major
+
+release-publish:
+	@BATCH=$(BATCH) ./scripts/release.sh publish
 
 changelog-init:
 	@if [ -f CHANGELOG.md ]; then \
