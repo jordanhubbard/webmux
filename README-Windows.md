@@ -4,7 +4,7 @@ WebMux runs natively on modern Windows using ConPTY through `node-pty`. The back
 
 ## Prerequisites
 
-1. A current 64-bit Windows release with ConPTY support. Windows ARM64 remains supported from source, but the published MSI is currently x64 only. Installing the Windows service also requires .NET Framework 4.6.1 or newer, included with supported Windows releases.
+1. A current Windows release with ConPTY support, on x64 or ARM64. Published MSIs are available for both architectures. Installing the Windows service also requires .NET Framework 4.6.1 or newer, included with supported Windows releases.
 2. Node.js 24 LTS or newer.
 3. Microsoft OpenSSH Client, with `ssh.exe` available through `PATH`.
 4. Git only when installing from a source checkout.
@@ -25,7 +25,8 @@ ssh -V
 
 ## Install the MSI
 
-Download `webmux-<version>-windows-x64.msi` and its `.sha256` file from the
+Download `webmux-<version>-windows-x64.msi` (or `webmux-<version>-windows-arm64.msi`
+on ARM64 Windows) and its `.sha256` file from the
 [latest release](https://github.com/jordanhubbard/webmux/releases/latest). Verify
 the download from PowerShell, substituting the downloaded filenames:
 

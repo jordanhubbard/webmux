@@ -105,7 +105,6 @@ jobs:
           - runner: windows-11-arm
             arch: arm64
     runs-on: ${{ matrix.runner }}
-    continue-on-error: ${{ matrix.arch == 'arm64' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -167,7 +166,6 @@ jobs:
             throw 'MSI uninstall left the WebMux launcher behind.'
           }
       - uses: actions/upload-artifact@v7
-        if: success()
         with:
           name: webmux-${{ matrix.runner }}
           path: |
