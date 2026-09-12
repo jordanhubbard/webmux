@@ -88,8 +88,8 @@ sessions can find these tools.
 ## Runtime release bundles and Windows installer
 
 Releases also build `.tar.gz` runtime bundles for macOS ARM64 and Linux x86-64,
-plus a Windows x64 runtime `.zip` and per-user `.msi`, with a `.sha256` file for
-each artifact. They contain the compiled application, default configuration,
+plus Windows x64 and ARM64 runtime `.zip` bundles and per-user `.msi` installers,
+with a `.sha256` file for each artifact. They contain the compiled application, default configuration,
 license, and native production dependencies. Node.js 24 and OpenSSH must be
 installed separately; these are not standalone executables.
 `bundle.json` records the build platform, CPU, Node ABI, and Linux glibc version.
@@ -105,9 +105,7 @@ On Windows, verify a checksum with `Get-FileHash`, then install the MSI by
 double-clicking it or running `msiexec.exe /i <installer>.msi`. It installs under
 `%LOCALAPPDATA%\Programs\WebMux` and adds `webmux` and `webmux-service` to the
 user `PATH`. The MSI is currently unsigned, so verify its checksum before
-accepting the unknown-publisher warning. Windows ARM64 remains buildable from
-source; release installers are x64 until an ARM64 CI runner can build and test
-the native dependencies.
+accepting the unknown-publisher warning.
 
 To build a bundle locally using Node.js 24:
 

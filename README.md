@@ -42,10 +42,10 @@ your SSH keys. The formula-specific trust must be recorded before Homebrew 6
 validates the custom-URL tap. See [packaging](docs/packaging.md) for upgrades,
 migration from a checkout, optional tools, and runtime release bundles.
 
-### Windows x64
+### Windows (x64 and ARM64)
 
 Install Node.js 24 and Microsoft OpenSSH Client, then download the
-`webmux-<version>-windows-x64.msi` asset from the latest
+`webmux-<version>-windows-x64.msi` (or `-arm64.msi` on ARM64 Windows) asset from the latest
 [GitHub release](https://github.com/jordanhubbard/webmux/releases/latest). Open
 a new PowerShell window after installation and run `webmux`, or run
 `webmux-service install` from an elevated terminal to register the Windows
