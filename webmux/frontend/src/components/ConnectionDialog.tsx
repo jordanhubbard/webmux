@@ -1,3 +1,4 @@
+import { Dialog } from './Dialog';
 import { useState, useEffect, FormEvent } from 'react';
 import { api } from '../utils/api';
 import type { HostEntry, KeyEntry, CreateSessionRequest } from '../types';
@@ -124,191 +125,148 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
   const alreadySaved = hosts.some(h => h.hostname === hostname.trim() && h.port === port && (!h.username || h.username === username.trim()));
 
   return (
-    <div style={styles.backdrop} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={styles.dialog}>
-        <div style={styles.header}>
-          <span style={styles.title}>Connect to Host</span>
-          <button style={styles.closeBtn} onClick={onClose}>{'\u2715'}</button>
-        </div>
+    <Dialog title="Connect to Host" onClose={onClose} dismissible={!submitting}>
 
-        <form onSubmit={handleConnect} style={styles.form}>
-          {/* Saved hosts as quick-connect cards */}
-          {hosts.length > 0 && (
-            <div style={styles.field}>
-              <label style={styles.label}>Saved Hosts</label>
-              <div style={styles.hostGrid}>
-                {hosts.map(h => (
-                  <div key={h.id} style={styles.hostCard}>
-                    <button
-                      type="button"
-                      style={styles.hostCardBtn}
-                      onClick={() => handleQuickConnect(h)}
-                      title={`Connect to ${h.username ? h.username + '@' : ''}${h.hostname}`}
-                      disabled={submitting}
-                    >
-                      {h.username && <span style={styles.hostCardUser}>{h.username}@</span>}
-                      <span style={styles.hostCardName}>{h.hostname}</span>
-                      {h.port !== 22 && <span style={styles.hostCardPort}>:{h.port}</span>}
-                    </button>
-                    <button
-                      type="button"
-                      style={styles.hostDeleteBtn}
-                      onClick={() => handleDeleteHost(h.id)}
-                      title="Remove saved host"
-                    >
-                      {'\u2715'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Divider when hosts exist */}
-          {hosts.length > 0 && (
-            <div style={styles.divider}>
-              <span style={styles.dividerText}>or connect to a new host</span>
-            </div>
-          )}
-
-          {/* Hostname + Port */}
+      <form onSubmit={handleConnect} style={styles.form}>
+        {/* Saved hosts as quick-connect cards */}
+        {hosts.length > 0 && (
           <div style={styles.field}>
-            <label style={styles.label}>Host</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                style={{ ...styles.input, flex: 1 }}
-                type="text"
-                placeholder="hostname or IP"
-                value={hostname}
-                onChange={e => setHostname(e.target.value)}
-                autoFocus
-                data-1p-ignore
-              />
-              <input
-                style={{ ...styles.input, width: 70 }}
-                type="number"
-                placeholder="22"
-                value={port}
-                onChange={e => setPort(Number(e.target.value))}
-                min={1}
-                max={65535}
-              />
+            <label style={styles.label}>Saved Hosts</label>
+            <div style={styles.hostGrid}>
+              {hosts.map(h => (
+                <div key={h.id} style={styles.hostCard}>
+                  <button
+                    type="button"
+                    style={styles.hostCardBtn}
+                    onClick={() => handleQuickConnect(h)}
+                    title={`Connect to ${h.username ? h.username + '@' : ''}${h.hostname}`}
+                    disabled={submitting}
+                  >
+                    {h.username && <span style={styles.hostCardUser}>{h.username}@</span>}
+                    <span style={styles.hostCardName}>{h.hostname}</span>
+                    {h.port !== 22 && <span style={styles.hostCardPort}>:{h.port}</span>}
+                  </button>
+                  <button
+                    type="button"
+                    style={styles.hostDeleteBtn}
+                    onClick={() => handleDeleteHost(h.id)}
+                    title="Remove saved host"
+                  >
+                    {'\u2715'}
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
+        )}
 
-          {/* Username */}
-          <div style={styles.field}>
-            <label style={styles.label}>Username</label>
+        {/* Divider when hosts exist */}
+        {hosts.length > 0 && (
+          <div style={styles.divider}>
+            <span style={styles.dividerText}>or connect to a new host</span>
+          </div>
+        )}
+
+        {/* Hostname + Port */}
+        <div style={styles.field}>
+          <label style={styles.label}>Host</label>
+          <div style={{ display: 'flex', gap: 8 }}>
             <input
-              style={styles.input}
+              style={{ ...styles.input, flex: 1 }}
               type="text"
-              placeholder="user"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              autoComplete="off"
+              placeholder="hostname or IP"
+              value={hostname}
+              onChange={e => setHostname(e.target.value)}
+              data-dialog-autofocus
               data-1p-ignore
             />
+            <input
+              style={{ ...styles.input, width: 70 }}
+              type="number"
+              placeholder="22"
+              value={port}
+              onChange={e => setPort(Number(e.target.value))}
+              min={1}
+              max={65535}
+            />
           </div>
+        </div>
 
-          {/* Advanced toggle */}
-          <button
-            type="button"
-            style={styles.advancedToggle}
-            onClick={() => setShowAdvanced(!showAdvanced)}
-          >
-            {showAdvanced ? '\u25be' : '\u25b8'} Advanced options
-          </button>
+        {/* Username */}
+        <div style={styles.field}>
+          <label style={styles.label}>Username</label>
+          <input
+            style={styles.input}
+            type="text"
+            placeholder="user"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            autoComplete="off"
+            data-1p-ignore
+          />
+        </div>
 
-          {showAdvanced && (
-            <div style={styles.advanced}>
-              <div style={styles.field}>
-                <label style={styles.label}>Authentication</label>
-                <div style={styles.tabs}>
-                  <button type="button" style={{ ...styles.tab, ...(authMode === 'agent' ? styles.tabActive : {}) }} onClick={() => setAuthMode('agent')}>Agent</button>
-                  <button type="button" style={{ ...styles.tab, ...(authMode === 'key' ? styles.tabActive : {}) }} onClick={() => setAuthMode('key')}>Key</button>
-                  <button type="button" style={{ ...styles.tab, ...(authMode === 'password' ? styles.tabActive : {}) }} onClick={() => setAuthMode('password')}>Password</button>
-                </div>
-                {authMode === 'agent' && <p style={styles.hint}>Uses the SSH agent or default keys (~/.ssh/id_*). No credentials needed.</p>}
-                {authMode === 'key' && (
-                  <>
-                    <select style={styles.input} value={selectedKeyId} onChange={e => setSelectedKeyId(e.target.value)}>
-                      <option value="">Default key (agent / ~/.ssh/id_*)</option>
-                      {keys.map(k => <option key={k.id} value={k.id}>{k.description || k.id} ({k.type}{k.encrypted ? ', encrypted' : ''})</option>)}
-                    </select>
-                    <p style={styles.hint}>Select a specific key from keys.yaml.</p>
-                  </>
-                )}
-                {authMode === 'password' && (
-                  <input style={styles.input} type="password" placeholder="Remote password (requires sshpass)" value={password} onChange={e => setPassword(e.target.value)} autoComplete="off" data-1p-ignore />
-                )}
+        {/* Advanced toggle */}
+        <button
+          type="button"
+          style={styles.advancedToggle}
+          onClick={() => setShowAdvanced(!showAdvanced)}
+        >
+          {showAdvanced ? '\u25be' : '\u25b8'} Advanced options
+        </button>
+
+        {showAdvanced && (
+          <div style={styles.advanced}>
+            <div style={styles.field}>
+              <label style={styles.label}>Authentication</label>
+              <div style={styles.tabs}>
+                <button type="button" style={{ ...styles.tab, ...(authMode === 'agent' ? styles.tabActive : {}) }} onClick={() => setAuthMode('agent')}>Agent</button>
+                <button type="button" style={{ ...styles.tab, ...(authMode === 'key' ? styles.tabActive : {}) }} onClick={() => setAuthMode('key')}>Key</button>
+                <button type="button" style={{ ...styles.tab, ...(authMode === 'password' ? styles.tabActive : {}) }} onClick={() => setAuthMode('password')}>Password</button>
               </div>
-              <div style={styles.field}>
-                <label style={styles.label}>Transport</label>
-                <select style={styles.input} value={transport} onChange={e => setTransport(e.target.value as 'ssh' | 'mosh')}>
-                  <option value="ssh">SSH</option>
-                  <option value="mosh">Mosh</option>
-                </select>
-              </div>
+              {authMode === 'agent' && <p style={styles.hint}>Uses the SSH agent or default keys (~/.ssh/id_*). No credentials needed.</p>}
+              {authMode === 'key' && (
+                <>
+                  <select style={styles.input} value={selectedKeyId} onChange={e => setSelectedKeyId(e.target.value)}>
+                    <option value="">Default key (agent / ~/.ssh/id_*)</option>
+                    {keys.map(k => <option key={k.id} value={k.id}>{k.description || k.id} ({k.type}{k.encrypted ? ', encrypted' : ''})</option>)}
+                  </select>
+                  <p style={styles.hint}>Select a specific key from keys.yaml.</p>
+                </>
+              )}
+              {authMode === 'password' && (
+                <input style={styles.input} type="password" placeholder="Remote password (requires sshpass)" value={password} onChange={e => setPassword(e.target.value)} autoComplete="off" data-1p-ignore />
+              )}
             </div>
-          )}
-
-          {error && <div style={styles.error}>{error}</div>}
-
-          <div style={styles.actions}>
-            <button type="button" style={styles.cancelBtn} onClick={onClose}>Cancel</button>
-            {!alreadySaved && hostname.trim() && (
-              <button type="button" style={styles.saveBtn} onClick={handleSaveAndConnect} disabled={submitting}>
-                {submitting ? 'Saving\u2026' : 'Save & Connect'}
-              </button>
-            )}
-            <button type="submit" style={styles.connectBtn} disabled={submitting}>
-              {submitting ? 'Connecting\u2026' : 'Connect'}
-            </button>
+            <div style={styles.field}>
+              <label style={styles.label}>Transport</label>
+              <select style={styles.input} value={transport} onChange={e => setTransport(e.target.value as 'ssh' | 'mosh')}>
+                <option value="ssh">SSH</option>
+                <option value="mosh">Mosh</option>
+              </select>
+            </div>
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+
+        {error && <div style={styles.error}>{error}</div>}
+
+        <div style={styles.actions}>
+          <button type="button" style={styles.cancelBtn} onClick={onClose} disabled={submitting}>Cancel</button>
+          {!alreadySaved && hostname.trim() && (
+            <button type="button" style={styles.saveBtn} onClick={handleSaveAndConnect} disabled={submitting}>
+              {submitting ? 'Saving\u2026' : 'Save & Connect'}
+            </button>
+          )}
+          <button type="submit" style={styles.connectBtn} disabled={submitting}>
+            {submitting ? 'Connecting\u2026' : 'Connect'}
+          </button>
+        </div>
+      </form>
+    </Dialog>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  backdrop: {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0,0,0,0.7)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  dialog: {
-    background: '#1a1a2e',
-    border: '1px solid #333366',
-    borderRadius: 8,
-    width: 420,
-    maxHeight: '90vh',
-    overflow: 'auto',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px 16px',
-    borderBottom: '1px solid #333366',
-  },
-  title: {
-    fontWeight: 700,
-    fontSize: 15,
-    color: '#e0e0e0',
-  },
-  closeBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#888',
-    fontSize: 14,
-    cursor: 'pointer',
-  },
   form: {
     display: 'flex',
     flexDirection: 'column',

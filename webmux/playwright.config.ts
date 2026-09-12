@@ -26,10 +26,8 @@ export default defineConfig({
       },
     },
   ],
-  globalSetup: '../tests/e2e/global-setup.ts',
-  globalTeardown: '../tests/e2e/global-teardown.ts',
   webServer: {
-    command: `node backend/dist/index.js`,
+    command: 'node ../tests/e2e/start-server.cjs',
     port: TEST_PORT,
     cwd: WEBMUX_DIR,
     reuseExistingServer: false,

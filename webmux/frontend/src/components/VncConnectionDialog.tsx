@@ -1,3 +1,4 @@
+import { Dialog } from './Dialog';
 import { useState, useEffect, FormEvent } from 'react';
 import { api } from '../utils/api';
 import type { HostEntry, CreateVncSessionRequest } from '../types';
@@ -68,134 +69,91 @@ export function VncConnectionDialog({ onConnect, onClose, suggestedRow, suggeste
   };
 
   return (
-    <div style={styles.backdrop} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={styles.dialog}>
-        <div style={styles.header}>
-          <span style={styles.title}>Connect to VNC Desktop</span>
-          <button style={styles.closeBtn} onClick={onClose}>{'\u2715'}</button>
-        </div>
+    <Dialog title="Connect to VNC Desktop" onClose={onClose} dismissible={!submitting}>
 
-        <form onSubmit={handleConnect} style={styles.form} autoComplete="off">
-          {/* Saved VNC-enabled hosts as quick-connect cards */}
-          {vncHosts.length > 0 && (
-            <div style={styles.field}>
-              <label style={styles.label}>Saved VNC Hosts</label>
-              <div style={styles.hostGrid}>
-                {vncHosts.map(h => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    style={styles.hostCard}
-                    onClick={() => handleQuickConnect(h)}
-                    title={`VNC connect to ${h.hostname}:${h.vnc_port || 5900}`}
-                    disabled={submitting}
-                  >
-                    <span style={styles.hostCardName}>{h.hostname}</span>
-                    <span style={styles.hostCardPort}>:{h.vnc_port || 5900}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Divider when saved hosts exist */}
-          {vncHosts.length > 0 && (
-            <div style={styles.divider}>
-              <span style={styles.dividerText}>or connect manually</span>
-            </div>
-          )}
-
-          {/* Hostname */}
+      <form onSubmit={handleConnect} style={styles.form} autoComplete="off">
+        {/* Saved VNC-enabled hosts as quick-connect cards */}
+        {vncHosts.length > 0 && (
           <div style={styles.field}>
-            <label style={styles.label}>Host</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                style={{ ...styles.input, flex: 1 }}
-                type="text"
-                placeholder="hostname or IP"
-                value={hostname}
-                onChange={e => setHostname(e.target.value)}
-                autoFocus
-                data-1p-ignore
-              />
-              <input
-                style={{ ...styles.input, width: 80 }}
-                type="number"
-                placeholder="5900"
-                value={vncPort}
-                onChange={e => setVncPort(Number(e.target.value))}
-                min={1}
-                max={65535}
-              />
+            <label style={styles.label}>Saved VNC Hosts</label>
+            <div style={styles.hostGrid}>
+              {vncHosts.map(h => (
+                <button
+                  key={h.id}
+                  type="button"
+                  style={styles.hostCard}
+                  onClick={() => handleQuickConnect(h)}
+                  title={`VNC connect to ${h.hostname}:${h.vnc_port || 5900}`}
+                  disabled={submitting}
+                >
+                  <span style={styles.hostCardName}>{h.hostname}</span>
+                  <span style={styles.hostCardPort}>:{h.vnc_port || 5900}</span>
+                </button>
+              ))}
             </div>
           </div>
+        )}
 
-          {/* VNC Password */}
-          <div style={styles.field}>
-            <label style={styles.label}>VNC Password (optional)</label>
+        {/* Divider when saved hosts exist */}
+        {vncHosts.length > 0 && (
+          <div style={styles.divider}>
+            <span style={styles.dividerText}>or connect manually</span>
+          </div>
+        )}
+
+        {/* Hostname */}
+        <div style={styles.field}>
+          <label style={styles.label}>Host</label>
+          <div style={{ display: 'flex', gap: 8 }}>
             <input
-              style={styles.input}
-              type="password"
-              placeholder="Leave blank if none"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              autoComplete="off"
+              style={{ ...styles.input, flex: 1 }}
+              type="text"
+              placeholder="hostname or IP"
+              value={hostname}
+              onChange={e => setHostname(e.target.value)}
+              data-dialog-autofocus
               data-1p-ignore
             />
+            <input
+              style={{ ...styles.input, width: 80 }}
+              type="number"
+              placeholder="5900"
+              value={vncPort}
+              onChange={e => setVncPort(Number(e.target.value))}
+              min={1}
+              max={65535}
+            />
           </div>
+        </div>
 
-          {error && <div style={styles.error}>{error}</div>}
+        {/* VNC Password */}
+        <div style={styles.field}>
+          <label style={styles.label}>VNC Password (optional)</label>
+          <input
+            style={styles.input}
+            type="password"
+            placeholder="Leave blank if none"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            autoComplete="off"
+            data-1p-ignore
+          />
+        </div>
 
-          <div style={styles.actions}>
-            <button type="button" style={styles.cancelBtn} onClick={onClose}>Cancel</button>
-            <button type="submit" style={styles.connectBtn} disabled={submitting}>
-              {submitting ? 'Connecting\u2026' : 'Connect'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        {error && <div style={styles.error}>{error}</div>}
+
+        <div style={styles.actions}>
+          <button type="button" style={styles.cancelBtn} onClick={onClose} disabled={submitting}>Cancel</button>
+          <button type="submit" style={styles.connectBtn} disabled={submitting}>
+            {submitting ? 'Connecting\u2026' : 'Connect'}
+          </button>
+        </div>
+      </form>
+    </Dialog>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  backdrop: {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0,0,0,0.7)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  dialog: {
-    background: '#1a1a2e',
-    border: '1px solid #333366',
-    borderRadius: 8,
-    width: 400,
-    maxHeight: '90vh',
-    overflow: 'auto',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px 16px',
-    borderBottom: '1px solid #333366',
-  },
-  title: {
-    fontWeight: 700,
-    fontSize: 15,
-    color: '#e0e0e0',
-  },
-  closeBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#888',
-    fontSize: 14,
-    cursor: 'pointer',
-  },
   form: {
     display: 'flex',
     flexDirection: 'column',

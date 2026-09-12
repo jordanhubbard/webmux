@@ -14,7 +14,7 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 - **Multi-user accounts** — multiple users with separate session collections; Argon2id password hashing
 - **Multi-viewer presence** — multiple tabs can watch the same session; click-to-focus controls who has keyboard input
 - **Type to All** — broadcast mode sends keystrokes to every open session simultaneously
-- **Keyboard terminal cycling** — `Ctrl+Shift+<` and `Ctrl+Shift+>` focus previous/next terminal tiles
+- **Application-owned terminal keys** — control and function keys reach the terminal application; search and logging have visible toolbar controls
 - **Workspace navigation** — switch among terminals, desktops, and configured agent views; use the minimap and minimized-session dock to navigate larger layouts
 - **Per-window controls** — rename, move, minimize, lock, theme, and control auto-scroll for individual terminal sessions or globally
 - **SSH key and password auth** — managed keys via `keys.yaml`, password-based via `sshpass`
@@ -169,7 +169,9 @@ The optional `terminal_grid` settings cap the number of columns and rows availab
 
 Set `session_logging.enabled: true` to record every newly launched SSH, mosh, exec, and agent terminal under `WEBMUX_HOME/logs/sessions/`. Logging begins when WebMux attaches to the PTY and continues while browser viewers detach and reattach. Each initial connection or reconnect receives a separate `session-<id>-<UTC timestamp>-g<generation>-<nonce>.log` file with owner-only permissions on POSIX systems. Start, stop, and error records are also written to the daily JSONL audit stream.
 
-Press `Ctrl+Shift+L` in a focused terminal to pause or resume transcript logging for that session. This per-session control works regardless of the global default. Pausing preserves the transcript; resuming the same session launch appends to that file, or recreates it at the same path if it was removed. A reconnect is a new launch and receives a new transcript file.
+Click **Log** in a terminal's toolbar to pause or resume transcript logging for that session. The control turns red while logging is active. This per-session control works regardless of the global default. Pausing preserves the transcript; resuming the same session launch appends to that file, or recreates it at the same path if it was removed. A reconnect is a new launch and receives a new transcript file.
+
+Use the magnifying glass in the terminal toolbar to search scrollback. WebMux does not intercept `Ctrl+F`, `Ctrl+Shift+L`, terminal-cycling chords, or function keys; those remain available to editors and other terminal applications. Enter, Shift+Enter, and Escape operate the search UI only while its input has focus.
 
 Transcripts contain raw terminal output, including ANSI control sequences and commands echoed by the remote shell. They can contain paths, tokens, and other secrets; access and retention are the operator's responsibility. WebMux does not rotate or delete transcript files. Changing this setting affects newly launched or reconnected terminals, not PTYs that are already running. VNC and RDP pixel streams are not recorded.
 

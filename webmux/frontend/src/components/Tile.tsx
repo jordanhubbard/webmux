@@ -1,5 +1,6 @@
-import { forwardRef, useImperativeHandle, useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Terminal, type TerminalHandle } from './Terminal';
+import { TerminalActions } from './TerminalActions';
 import { ReconnectOverlay } from './ReconnectOverlay';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { api } from '../utils/api';
@@ -29,11 +30,7 @@ interface TileProps {
   onThemeChange?: (id: string, theme: string | null) => void;
 }
 
-export interface TileHandle {
-  focusTerminal: () => void;
-}
-
-export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
+export function Tile({
   session,
   fontSize,
   fontFamily,
@@ -55,9 +52,10 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
   globalTheme = null,
   themeOverride = null,
   onThemeChange,
-}: TileProps, ref) {
+}: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [viewerCount, setViewerCount] = useState(1);
+  const [transcriptEnabled, setTranscriptEnabled] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(session.title);
   const { focusedSessionId, broadcastMode, broadcastExcluded, toggleBroadcastExclude } = useInputBroadcast();
@@ -70,12 +68,6 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
   useEffect(() => {
     setState(session.state);
   }, [session.state]);
-
-  useImperativeHandle(ref, () => ({
-    focusTerminal: () => {
-      termHandleRef.current?.focus();
-    },
-  }));
 
   const handleStateChange = useCallback((newState: ConnectionState) => {
     setState(newState);
@@ -202,6 +194,7 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
         </div>
         <div style={styles.chromeRight}>
+          <TerminalActions terminalRef={termHandleRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
           {broadcastMode && (
             <button
               style={{
@@ -274,11 +267,12 @@ export const Tile = forwardRef<TileHandle, TileProps>(function Tile({
           onFocusGained={handleFocusGained}
           theme={themes.find(t => t.name === (themeOverride ?? globalTheme))?.theme}
           onBell={() => onBell?.(session.id)}
+          onTranscriptChange={setTranscriptEnabled}
         />
       </div>
     </div>
   );
-});
+}
 
 const styles: Record<string, React.CSSProperties> = {
   tile: {

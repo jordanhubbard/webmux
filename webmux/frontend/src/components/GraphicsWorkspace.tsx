@@ -1,3 +1,5 @@
+import { Dialog } from './Dialog';
+import { AddSessionCell } from './AddSessionCell';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { VncTile } from './VncTile';
 import { RdpTile } from './RdpTile';
@@ -48,78 +50,14 @@ function getAddPositions(sessions: AnySession[]): { row: number; col: number }[]
   return positions;
 }
 
-function AddCell({ row, col, isEmpty, onClick }: {
-  row: number; col: number; isEmpty: boolean; onClick: () => void;
-}) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      style={{
-        gridColumn: col + 1,
-        gridRow: row + 1,
-        border: `2px dashed ${hovered ? '#7c6af7' : '#1e1e3a'}`,
-        borderRadius: 6,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        transition: 'border-color 0.2s, background 0.2s',
-        background: hovered ? 'rgba(124, 106, 247, 0.06)' : 'transparent',
-        gap: 12,
-        minHeight: 0,
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={onClick}
-      data-testid={`add-cell-${row}-${col}`}
-    >
-      <span style={{
-        fontSize: isEmpty ? 64 : 36,
-        fontWeight: 300,
-        color: hovered ? '#7c6af7' : '#2a2a4a',
-        transition: 'color 0.2s',
-        lineHeight: 1,
-        userSelect: 'none',
-      }}>+</span>
-      {isEmpty && (
-        <span style={{
-          fontSize: 14,
-          color: hovered ? '#7c6af7' : '#3a3a5a',
-          transition: 'color 0.2s',
-          userSelect: 'none',
-        }}>Click to add a session</span>
-      )}
-    </div>
-  );
-}
-
 function ProtocolPicker({ row, col, onPick, onClose }: {
   row: number; col: number;
   onPick: (proto: 'vnc' | 'rdp') => void;
   onClose: () => void;
 }) {
   return (
-    <div
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.7)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000,
-      }}
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
-      <div style={{
-        background: '#1a1a2e',
-        border: '1px solid #333366',
-        borderRadius: 8,
-        padding: 24,
-        width: 340,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-      }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: '#e0e0e0', marginBottom: 20, textAlign: 'center' }}>
-          Add Graphics Session
-        </div>
+    <Dialog title="Add Graphics Session" onClose={onClose} width={380}>
+      <div style={{ padding: 20 }}>
         <div style={{ display: 'flex', gap: 12 }}>
           <button
             style={pickerBtnStyle('#333366')}
@@ -146,7 +84,7 @@ function ProtocolPicker({ row, col, onPick, onClose }: {
           Position: row {row}, col {col}
         </div>
       </div>
-    </div>
+    </Dialog>
   );
 }
 
@@ -418,7 +356,7 @@ export function GraphicsWorkspace() {
         ))}
 
         {addPositions.map(pos => (
-          <AddCell
+          <AddSessionCell
             key={`add-${pos.row}-${pos.col}`}
             row={pos.row}
             col={pos.col}

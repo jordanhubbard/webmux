@@ -133,7 +133,8 @@ describe('ConnectionDialog', () => {
     await waitFor(() => {
       expect(screen.getByText('Saved Hosts')).toBeDefined();
     });
-    const backdrop = screen.getByText('Connect to Host').closest('div')!.parentElement!.parentElement!;
+    const backdrop = screen.getByRole('dialog', { name: 'Connect to Host' });
+    fireEvent.pointerDown(backdrop);
     fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalled();
   });

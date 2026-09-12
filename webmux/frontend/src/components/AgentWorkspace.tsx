@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Terminal } from './Terminal';
+import { Terminal, type TerminalHandle } from './Terminal';
+import { TerminalActions } from './TerminalActions';
 import { api } from '../utils/api';
 import { fitTerminalSizeToPixels } from '../utils/terminalSizing';
 import { useTouchLikeViewport, useVisualViewportSize } from '../utils/viewport';
@@ -160,6 +161,8 @@ interface TerminalPanelProps {
 
 function TerminalPanel({ session, fontSize, fontFamily, theme, agent, onClose, closeTitle }: TerminalPanelProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
+  const [transcriptEnabled, setTranscriptEnabled] = useState(false);
+  const terminalRef = useRef<TerminalHandle>(null);
 
   useEffect(() => {
     setState(session.state);
@@ -174,14 +177,18 @@ function TerminalPanel({ session, fontSize, fontFamily, theme, agent, onClose, c
           {session.agent_role === 'attach' && <span style={styles.roleBadge}>{agent.badge}</span>}
           {session.agent_role === 'scratch' && <span style={styles.roleBadge}>SHELL</span>}
         </div>
-        {onClose && (
-          <button style={styles.closeButton} onClick={onClose} title={closeTitle || 'Close'}>
-            x
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <TerminalActions terminalRef={terminalRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
+          {onClose && (
+            <button style={styles.closeButton} onClick={onClose} title={closeTitle || 'Close'}>
+              x
+            </button>
+          )}
+        </div>
       </div>
       <div style={styles.terminalBody}>
         <Terminal
+          ref={terminalRef}
           sessionId={session.id}
           fontSize={fontSize}
           fontFamily={fontFamily}
@@ -191,6 +198,7 @@ function TerminalPanel({ session, fontSize, fontFamily, theme, agent, onClose, c
           onViewerUpdate={() => {}}
           onFocusGained={() => {}}
           theme={theme?.theme}
+          onTranscriptChange={setTranscriptEnabled}
         />
       </div>
     </div>

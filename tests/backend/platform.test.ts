@@ -31,16 +31,22 @@ describe('platform helpers', () => {
 
   it('selects cmd.exe for Windows command and interactive shells', () => {
     const env = { COMSPEC: 'C:\\Windows\\System32\\cmd.exe' };
-    expect(commandShell('win32', env)).toEqual({
+    expect(commandShell('echo hello', 'win32', env)).toEqual({
       command: env.COMSPEC,
-      args: ['/d', '/s', '/c'],
+      args: '/d /s /c "echo hello"',
     });
     expect(interactiveShell('win32', env)).toEqual({ command: env.COMSPEC, args: [] });
   });
 
   it('selects the configured POSIX shell', () => {
     const env = { SHELL: '/bin/zsh' };
-    expect(commandShell('darwin', env)).toEqual({ command: '/bin/zsh', args: ['-c'] });
+    expect(commandShell('echo "hello world"', 'darwin', env)).toEqual({ command: '/bin/zsh', args: ['-c', 'echo "hello world"'] });
     expect(interactiveShell('darwin', env)).toEqual({ command: '/bin/zsh', args: ['-l'] });
+  });
+
+  it('preserves quoted Windows executable paths and arguments without argv escaping', () => {
+    const commandLine = '"C:\\Program Files\\nodejs\\node.exe" -e "console.log(\'hello world\')"';
+    const shell = commandShell(commandLine, 'win32', { COMSPEC: 'cmd.exe' });
+    expect(shell.args).toBe(`/d /s /c "${commandLine}"`);
   });
 });

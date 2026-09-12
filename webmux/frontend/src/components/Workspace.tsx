@@ -1,5 +1,6 @@
+import { AddSessionCell } from './AddSessionCell';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Tile, type TileHandle } from './Tile';
+import { Tile } from './Tile';
 import { ConnectionDialog } from './ConnectionDialog';
 import { WorkspaceMinimap } from './WorkspaceMinimap';
 import { api } from '../utils/api';
@@ -107,73 +108,6 @@ function getAddPositions(
   return positions;
 }
 
-function orderedSessions(sessions: Session[]): Session[] {
-  return [...sessions].sort((a, b) => a.row - b.row || a.col - b.col);
-}
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.closest('.xterm')) return false;
-  if (target.isContentEditable) return true;
-  return Boolean(target.closest('input, textarea, select, [role="textbox"]'));
-}
-
-function terminalCycleDirectionFromKey(e: KeyboardEvent): 1 | -1 | null {
-  if (e.code === 'Period' || e.key === '>' || e.key === '.') return 1;
-  if (e.code === 'Comma' || e.key === '<' || e.key === ',') return -1;
-  return null;
-}
-
-function AddCell({ row, col, isEmpty, onClick }: {
-  row: number;
-  col: number;
-  isEmpty: boolean;
-  onClick: () => void;
-}) {
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <div
-      style={{
-        gridColumn: col + 1,
-        gridRow: row + 1,
-        border: `2px dashed ${hovered ? '#7c6af7' : '#1e1e3a'}`,
-        borderRadius: 6,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        transition: 'border-color 0.2s, background 0.2s',
-        background: hovered ? 'rgba(124, 106, 247, 0.06)' : 'transparent',
-        gap: 12,
-        minHeight: 0,
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={onClick}
-      data-testid={`add-cell-${row}-${col}`}
-    >
-      <span style={{
-        fontSize: isEmpty ? 64 : 36,
-        fontWeight: 300,
-        color: hovered ? '#7c6af7' : '#2a2a4a',
-        transition: 'color 0.2s',
-        lineHeight: 1,
-        userSelect: 'none',
-      }}>+</span>
-      {isEmpty && (
-        <span style={{
-          fontSize: 14,
-          color: hovered ? '#7c6af7' : '#3a3a5a',
-          transition: 'color 0.2s',
-          userSelect: 'none',
-        }}>Click to add a session</span>
-      )}
-    </div>
-  );
-}
-
 export function Workspace({
   fontSize,
   fontFamily,
@@ -197,7 +131,7 @@ export function Workspace({
   const [lockOverrides, setLockOverrides] = useState<Map<string, boolean>>(new Map());
   const [bellSessions, setBellSessions] = useState<Set<string>>(new Set());
   const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(new Set());
-  const { focusedSessionId, setFocusedSessionId } = useInputBroadcast();
+  const { focusedSessionId } = useInputBroadcast();
 
   // Drag state
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -212,13 +146,10 @@ export function Workspace({
   const sessionsRef = useRef<Session[]>([]);
   const draggingIdRef = useRef<string | null>(null);
   const dropTargetRef = useRef<{ row: number; col: number } | null>(null);
-  const tileRefs = useRef(new Map<string, TileHandle>());
   const tileElementRefs = useRef(new Map<string, HTMLDivElement>());
-  const focusedSessionIdRef = useRef<string | null>(null);
   const collapsedSessionsRef = useRef<Set<string>>(new Set());
   useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
   useEffect(() => { draggingIdRef.current = draggingId; }, [draggingId]);
-  useEffect(() => { focusedSessionIdRef.current = focusedSessionId; }, [focusedSessionId]);
   useEffect(() => { collapsedSessionsRef.current = collapsedSessions; }, [collapsedSessions]);
   useEffect(() => {
     dropTargetRef.current = dropTarget;
@@ -241,40 +172,6 @@ export function Workspace({
     if (!outer || !tileElement) return;
     scrollElementFullyIntoView(outer, tileElement);
   }, [focusedSessionId]);
-
-  const focusSession = useCallback((sessionId: string) => {
-    focusedSessionIdRef.current = sessionId;
-    setFocusedSessionId(sessionId);
-    tileRefs.current.get(sessionId)?.focusTerminal();
-  }, [setFocusedSessionId]);
-
-  const cycleFocusedSession = useCallback((direction: 1 | -1) => {
-    const ordered = orderedSessions(sessionsRef.current.filter(s => !collapsedSessionsRef.current.has(s.id)));
-    if (ordered.length === 0) return;
-
-    const currentIndex = ordered.findIndex(session => session.id === focusedSessionIdRef.current);
-    const nextIndex = currentIndex === -1
-      ? (direction === 1 ? 0 : ordered.length - 1)
-      : (currentIndex + direction + ordered.length) % ordered.length;
-    focusSession(ordered[nextIndex].id);
-  }, [focusSession]);
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || !e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return;
-      const direction = terminalCycleDirectionFromKey(e);
-      if (direction === null) return;
-      if (isEditableTarget(e.target)) return;
-      if (!gridRef.current || gridRef.current.offsetParent === null) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-      cycleFocusedSession(direction);
-    };
-
-    window.addEventListener('keydown', onKeyDown, true);
-    return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [cycleFocusedSession]);
 
   const handleAddSession = useCallback(async (req: CreateSessionRequest) => {
     const session = await api.createSession(req);
@@ -629,10 +526,6 @@ export function Workspace({
                 }}
               >
                 <Tile
-                  ref={handle => {
-                    if (handle) tileRefs.current.set(session.id, handle);
-                    else tileRefs.current.delete(session.id);
-                  }}
                   session={session}
                   fontSize={fontSize}
                   fontFamily={fontFamily}
@@ -665,7 +558,7 @@ export function Workspace({
           })}
 
           {addPositions.map(pos => (
-            <AddCell
+            <AddSessionCell
               key={`add-${pos.row}-${pos.col}`}
               row={pos.row}
               col={pos.col}
