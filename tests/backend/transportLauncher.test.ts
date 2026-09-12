@@ -110,7 +110,7 @@ describe('TransportLauncher', () => {
       launcher.launch(makeSession({ transport: 'exec', exec_command: 'echo hello' }));
       expect(pty.spawn).toHaveBeenCalledWith(
         'C:\\Windows\\System32\\cmd.exe',
-        ['/d', '/s', '/c', 'echo hello'],
+        '/d /s /c "echo hello"',
         expect.any(Object),
       );
     } finally {

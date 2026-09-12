@@ -2,9 +2,9 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-export interface ShellCommand {
+export interface ShellCommand<Args = string[]> {
   command: string;
-  args: string[];
+  args: Args;
 }
 
 function isExecutable(file: string, platform: NodeJS.Platform): boolean {
@@ -55,16 +55,19 @@ export function tempDirectory(): string {
 }
 
 export function commandShell(
+  commandLine: string,
   platform: NodeJS.Platform = process.platform,
   env: NodeJS.ProcessEnv = process.env,
   resolver: typeof resolveExecutable = resolveExecutable,
-): ShellCommand {
+): ShellCommand<string | string[]> {
   if (platform === 'win32') {
     const command = env.COMSPEC || resolver('cmd.exe', env, platform);
     if (!command) throw new Error('Windows command shell (cmd.exe) was not found');
-    return { command, args: ['/d', '/s', '/c'] };
+    // node-pty escapes argv quotes with backslashes, but cmd.exe does not.
+    // Pass a raw command line: /s strips only our enclosing pair of quotes.
+    return { command, args: `/d /s /c "${commandLine}"` };
   }
-  return { command: env.SHELL?.trim() || '/bin/sh', args: ['-c'] };
+  return { command: env.SHELL?.trim() || '/bin/sh', args: ['-c', commandLine] };
 }
 
 export function interactiveShell(

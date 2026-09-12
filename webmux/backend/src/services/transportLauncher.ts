@@ -114,8 +114,8 @@ export class TransportLauncher {
       .replace(/\{port\}/g, String(session.port))
       .replace(/\{user\}/g, session.username);
 
-    const shell = commandShell(this.platform, process.env, this.executableResolver);
-    const ptyProcess = pty.spawn(shell.command, [...shell.args, cmd], {
+    const shell = commandShell(cmd, this.platform, process.env, this.executableResolver);
+    const ptyProcess = pty.spawn(shell.command, shell.args, {
       name: 'xterm-256color',
       cols: session.cols,
       rows: session.rows,
