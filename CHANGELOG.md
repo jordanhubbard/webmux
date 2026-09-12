@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.11] - 2026-09-12
+
+### Other
+- Unify dialogs and preserve terminal application shortcuts (#70)
+- Add Windows ARM64 packaging job (best-effort) (#67)
+- Fix vulnerable dependencies and switch release helper to PR-based flow (#66)
+- Update Homebrew formula for v1.3.10 (#58) (#62)
+
 ## [1.3.10] - 2026-09-10
 
 ### Added
