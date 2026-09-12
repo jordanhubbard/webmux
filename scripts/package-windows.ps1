@@ -12,8 +12,11 @@ if ($env:OS -ne 'Windows_NT') {
 if ((node -p "process.versions.node.split('.')[0]") -ne '24') {
   throw 'The Windows installer must be built with Node.js 24.'
 }
-if ((node -p 'process.arch') -ne 'x64') {
-  throw 'The published Windows installer currently supports x64 only.'
+$NodeArch = node -p 'process.arch'
+$WixArch = switch ($NodeArch) {
+  'x64'   { 'x64' }
+  'arm64' { 'arm64' }
+  default { throw "The published Windows installer supports x64 and arm64 only (got: $NodeArch)." }
 }
 if (-not (Get-Command $WixCommand -ErrorAction SilentlyContinue)) {
   throw "WiX was not found. Install it with: dotnet tool install --global wix --version 5.0.2"
@@ -26,9 +29,9 @@ if (-not $OutputDirectory) {
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 $Version = (Get-Content -LiteralPath (Join-Path $Repository 'webmux/backend/package.json') -Raw |
   ConvertFrom-Json).version
-$BundleName = "webmux-$Version-windows-x64-node24"
+$BundleName = "webmux-$Version-windows-$NodeArch-node24"
 $Archive = Join-Path $OutputDirectory "$BundleName.zip"
-$Installer = Join-Path $OutputDirectory "webmux-$Version-windows-x64.msi"
+$Installer = Join-Path $OutputDirectory "webmux-$Version-windows-$NodeArch.msi"
 $Temporary = Join-Path ([IO.Path]::GetTempPath()) "webmux-msi-$([Guid]::NewGuid())"
 
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
@@ -54,7 +57,7 @@ try {
   if (-not (Test-Path -LiteralPath $Stage)) { throw "MSI staging directory was not created at $Stage." }
 
   & $WixCommand build (Join-Path $Repository 'packaging/windows/webmux.wxs') `
-    -arch x64 `
+    -arch $WixArch `
     -d "Version=$Version" `
     -bindpath "Stage=$Stage" `
     -out $Installer

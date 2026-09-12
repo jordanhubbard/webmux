@@ -95,8 +95,17 @@ jobs:
           JS
 
   windows-package:
-    name: Package (windows-2022)
-    runs-on: windows-2022
+    name: Package (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            arch: x64
+          - runner: windows-11-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.arch == 'arm64' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -121,7 +130,7 @@ jobs:
       - name: Test extracted Windows bundle
         shell: pwsh
         run: |
-          $archive = Get-ChildItem dist -Filter 'webmux-*-windows-x64-node24.zip' | Select-Object -First 1
+          $archive = Get-ChildItem dist -Filter 'webmux-*-windows-${{ matrix.arch }}-node24.zip' | Select-Object -First 1
           if (-not $archive) { throw 'Windows runtime bundle was not created.' }
           $extract = Join-Path $env:RUNNER_TEMP 'webmux-windows-bundle'
           Expand-Archive -LiteralPath $archive.FullName -DestinationPath $extract
@@ -130,7 +139,7 @@ jobs:
       - name: Install, test, and uninstall MSI
         shell: pwsh
         run: |
-          $msi = Get-ChildItem dist -Filter 'webmux-*-windows-x64.msi' | Select-Object -First 1
+          $msi = Get-ChildItem dist -Filter 'webmux-*-windows-${{ matrix.arch }}.msi' | Select-Object -First 1
           if (-not $msi) { throw 'Windows MSI was not created.' }
           $installLog = Join-Path $env:RUNNER_TEMP 'webmux-msi-install.log'
           $uninstallLog = Join-Path $env:RUNNER_TEMP 'webmux-msi-uninstall.log'
@@ -158,8 +167,9 @@ jobs:
             throw 'MSI uninstall left the WebMux launcher behind.'
           }
       - uses: actions/upload-artifact@v7
+        if: success()
         with:
-          name: webmux-windows-2022
+          name: webmux-${{ matrix.runner }}
           path: |
             dist/*.zip
             dist/*.zip.sha256
