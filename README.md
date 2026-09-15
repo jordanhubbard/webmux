@@ -386,7 +386,8 @@ On Linux, run `loginctl enable-linger $USER` to start the service at boot withou
 
 ### The continuing adventures of Jordan Hubbard and Sir Reginald von Fluffington III
 
-> *Part 5 of an ongoing chronicle.  [<-- Part 4: Aviation](https://github.com/jordanhubbard/Aviation#the-totally-true-and-not-at-all-embellished-history-of-aviation) | [The story continues in mac -->](https://github.com/jordanhubbard/mac)*
+> *Part 10 of an ongoing chronicle. [← Part 9: sheme](https://github.com/jordanhubbard/sheme#the-totally-true-and-not-at-all-embellished-history-of-sheme) | [Part 11: usdagent →](https://github.com/jordanhubbard/usdagent#the-totally-true-and-not-at-all-embellished-history-of-usdagent)*
+> *[Chronicle index](https://github.com/jordanhubbard/ai-template/blob/main/CHRONICLE.md) · Ordered by first recorded AI-assisted commit.*
 > *Sir Reginald von Fluffington III appears throughout.  He does not endorse any of it.*
 
 The programmer had, at various points, built a shell extension language, a Scheme interpreter, a programming language from scratch, and eight aviation applications in three languages.  What he had not done, until now, was stare at a wall of terminals and think, "This should be a website."
@@ -417,7 +418,7 @@ The security model was, by the programmer's standards, restrained.  Passwords he
 
 Sir Reginald had, by this point, migrated from the keyboard to the sectional chart that was still on the kitchen table from the Aviation project.  He was lying on the part that showed Class B airspace around SFO, which he considered his territory, and which was now covered in cat hair in a pattern that, if you squinted, resembled a denial-of-service attack on the programmer's ability to plan approaches.
 
-What the programmer did next eventually became [mac](https://github.com/jordanhubbard/mac), a multi-agent coordinator control plane. The route from one wall of terminals to a fleet of durable agents was neither direct nor sensible, but it is documented there for anyone determined to follow it.
+A later adventure became [mac](https://github.com/jordanhubbard/mac#the-totally-true-and-not-at-all-embellished-history-of-mac), a multi-agent coordinator control plane. The route from one wall of terminals to a fleet of durable agents was neither direct nor sensible, but it is documented there for anyone determined to follow it.
 
 WebMux did not remain a one-person production experiment. Other humans now contribute code, reviews, bug reports, and operating experience. Sir Reginald continues to withhold his endorsement, citing "procedural concerns," "insufficient tuna," "a general atmosphere of hubris," "aviation," and, in a filing delivered by walking across every open terminal session simultaneously in what can only be described as an analog implementation of broadcast mode, "multiplexing."
 
