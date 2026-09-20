@@ -21,6 +21,10 @@ for (const entry of fs.readdirSync(defaultsDir, { withFileTypes: true })) {
   if (entry.isDirectory()) continue;
   let content = fs.readFileSync(path.join(defaultsDir, entry.name), 'utf8');
   if (entry.name === 'auth.yaml') content = content.replace('mode: local', `mode: ${authMode}`);
+  if (entry.name === 'app.yaml' && process.env.WEBMUX_VISUAL_PARITY === '1') {
+    if (!content.includes('    port: 4822')) throw new Error('Expected the default guacd port in the visual fixture');
+    content = content.replace('    port: 4822', '    port: 14822');
+  }
   fs.writeFileSync(path.join(testHome, 'config', entry.name), content);
 }
 process.env.WEBMUX_HOME = testHome;

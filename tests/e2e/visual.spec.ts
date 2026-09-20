@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { startVisualVnc } from './visual-vnc-fixture.mts';
+import { startVisualRdp } from './visual-rdp-fixture.mts';
 
 test.skip(process.env.WEBMUX_VISUAL_PARITY !== '1', 'Run through test:visual-parity to create the Node baseline first');
 test.use({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, locale: 'en-US', timezoneId: 'UTC', colorScheme: 'dark', contextOptions: { reducedMotion: 'reduce' } });
@@ -164,6 +165,9 @@ test('active terminal, search and reconnect match Node exactly', async ({ page, 
     await page.keyboard.type('hello');
     await page.keyboard.press('Enter');
     await expect(rows).toContainText('input: hello');
+    // Both the tile and overview must reflect the live connection state.
+    const overview = page.getByTitle('Workspace overview — click or drag to jump').locator('rect').first();
+    await expect(overview).toHaveAttribute('fill', '#4aaa6a');
     await captureBoth(page, info, 'terminal-active');
     await tile.getByRole('button', { name: 'Search terminal', exact: true }).click();
     const search = tile.getByRole('textbox', { name: 'Search terminal scrollback' });
@@ -176,6 +180,7 @@ test('active terminal, search and reconnect match Node exactly', async ({ page, 
     await page.keyboard.press('Enter');
     const reconnect = tile.getByRole('button', { name: 'Reconnect', exact: true }).last();
     await expect(reconnect).toBeVisible();
+    await expect(overview).toHaveAttribute('fill', '#555');
     await captureBoth(page, info, 'terminal-disconnected');
     await reconnect.click();
     await expect(tile.getByRole('button', { name: 'Reconnect', exact: true })).toHaveCount(0);
@@ -221,5 +226,54 @@ test('active VNC pixels and input match Node exactly', async ({ page, request },
     } finally {
       await desktop.close();
     }
+  }
+});
+
+test('active RDP pixels and input match Node exactly', async ({ page, request }, info) => {
+  test.skip(process.env.WEBMUX_E2E_AUTH === 'local', 'Desktop uses the trusted fixture');
+  page.setDefaultTimeout(5000);
+  const desktop = await startVisualRdp();
+  let id: string | undefined;
+  try {
+    const response = await request.post('/api/rdp/sessions', { data: {
+      hostname: '127.0.0.1', rdp_port: 3389, rdp_username: 'visual-user',
+    } });
+    expect(response.ok()).toBe(true);
+    id = (await response.json() as { id: string }).id;
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Desktops', exact: true }).click();
+    const canvas = page.locator('canvas[width="640"]').filter({ visible: true }).first();
+    const pixel = () => canvas.evaluate(node => Array.from((node as HTMLCanvasElement).getContext('2d')!.getImageData(0, 0, 1, 1).data));
+    await expect.poll(pixel).toEqual([48, 80, 112, 255]);
+    await captureBoth(page, info, 'rdp-active');
+    // Click the tile's body, outside the scaled display's disabled pointer events.
+    await canvas.locator('xpath=ancestor::div[@data-1p-ignore]/..').dblclick({ position: { x: 100, y: 100 }, timeout: 5000 });
+    await expect(page.getByTitle('Back to grid', { exact: true })).toBeVisible();
+    const viewer = page.locator('div[data-1p-ignore][tabindex="0"]');
+    const fullscreen = viewer.locator('canvas[width="640"]');
+    await expect.poll(() => fullscreen.evaluate(node => Array.from((node as HTMLCanvasElement).getContext('2d')!.getImageData(0, 0, 1, 1).data))).toEqual([48, 80, 112, 255]);
+    // Assert composited screen pixels too: a painted canvas can sit behind an
+    // opaque background and still pass getImageData() and baseline comparisons.
+    await expect.poll(async () => {
+      const bounds = await viewer.boundingBox();
+      if (!bounds) return [];
+      const screen = await page.screenshot({ clip: { x: bounds.x + 10, y: bounds.y + 10, width: 1, height: 1 } });
+      return page.evaluate(async encoded => {
+        const image = new Image(); image.src = `data:image/png;base64,${encoded}`; await image.decode();
+        const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;
+        const context = canvas.getContext('2d')!; context.drawImage(image, 0, 0);
+        return Array.from(context.getImageData(0, 0, 1, 1).data);
+      }, screen.toString('base64'));
+    }).toEqual([48, 80, 112, 255]);
+    await viewer.click({ position: { x: 20, y: 20 } });
+    await page.keyboard.press('a');
+    await expect.poll(() => desktop.keys.some(args => args[0] === '97' && args[1] === '1')).toBe(true);
+    await expect.poll(() => desktop.pointers.some(args => (Number(args[2]) & 1) !== 0)).toBe(true);
+    await page.mouse.move(0, 0);
+    await captureBoth(page, info, 'rdp-fullscreen');
+    expect(desktop.errors).toEqual([]);
+  } finally {
+    try { if (id) expect((await request.delete(`/api/rdp/sessions/${id}`)).ok()).toBe(true); }
+    finally { await desktop.close(); }
   }
 });

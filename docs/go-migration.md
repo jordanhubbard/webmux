@@ -321,8 +321,30 @@ also reach the RFB server. The complete 26-state Node baseline/control/Go sequen
 passes locally and on Linux and Windows CI at beb7d95. This fixture
 covers raw encoding and unauthenticated RFB only.
 
+Four further captures cover the real Guacamole browser client receiving a fixed
+desktop from a loopback protocol fixture through each backend. The fixture
+validates the RDP handshake and records keyboard and mouse instructions; it is
+not a real guacd daemon or RDP host. Thumbnail/fullscreen views are exercised at
+both viewport sizes. This exposed an existing fullscreen bug: Guacamole's
+negative-z-index canvas rendered behind the viewer's black background, while
+the thumbnail's transform kept its pixels visible. The fullscreen viewer now
+creates an isolated stacking context. A screenshot-pixel assertion verifies the
+actual composited screen independently of the canvas buffer and visual baseline,
+so two equally blank backends cannot pass this check. This is an intentional
+shared UI correction, not a backend-specific styling adjustment.
+
+The extended run also caught a terminal minimap race: the tile received live
+WebSocket state while the overview retained the initial catalog state, sometimes
+remaining yellow after connection. Tile state changes now update the workspace's
+session state, and the visual test requires both connected and disconnected
+overview colors before capturing. This corrects stale UI state without masking
+the minimap, delaying for an arbitrary duration, or relaxing pixel comparisons.
+The complete 30-state Node baseline/control/Go sequence, strict TypeScript checks,
+183 frontend tests and frontend production build pass locally with these fixes.
+Hosted validation of the RDP additions and UI corrections is pending.
+
 This is scoped rendering evidence, not proof of every state or platform. Active
-RDP rendering, agent panes, remaining failure states, real guacd/RDP
+agent panes, remaining failure states, real guacd/RDP
 and VNC hosts, and performance gates still need coverage before replacement.
 
 `npm run typecheck` now checks source coverage before running all seven strict

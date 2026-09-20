@@ -124,6 +124,11 @@ export function Workspace({
   onGlobalLockChange,
 }: WorkspaceProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const handleSessionStateChange = useCallback((id: string, state: Session['state']) => {
+    setSessions(previous => previous.some(session => session.id === id && session.state !== state)
+      ? previous.map(session => session.id === id ? { ...session, state } : session)
+      : previous);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
   const [themeOverrides, setThemeOverrides] = useState<Map<string, string>>(() => loadSessionThemeOverrides());
@@ -527,6 +532,7 @@ export function Workspace({
               >
                 <Tile
                   session={session}
+                  onStateChange={handleSessionStateChange}
                   fontSize={fontSize}
                   fontFamily={fontFamily}
                   autoScroll={autoScrollOverrides.get(session.id) ?? globalAutoScroll}

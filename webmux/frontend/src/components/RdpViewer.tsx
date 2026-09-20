@@ -87,7 +87,9 @@ export function RdpViewer({ sessionId, mode, onStateChange, clientRef }: RdpView
     <div
       ref={containerRef}
       data-1p-ignore
-      style={{ width: '100%', height: '100%', overflow: 'auto', background: '#000' }}
+      // Guacamole places canvas layers at z-index -1. Keep them above this
+      // viewer's background while preserving their ordering below child layers.
+      style={{ width: '100%', height: '100%', overflow: 'auto', background: '#000', isolation: 'isolate' }}
       tabIndex={0}
     />
   );
