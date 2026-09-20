@@ -27,6 +27,7 @@ const domain = launch(['print', `gui/${uid}`], false) ? `gui/${uid}` : `user/${u
 const target = `${domain}/${label}`;
 const plist = path.join(temporary, 'fixture.plist');
 let registered = false;
+let socket: WebSocket | undefined;
 async function waitFor(check: () => Promise<boolean>, description: string): Promise<void> {
   const until = Date.now() + 15000;
   while (!await check()) {
@@ -44,7 +45,8 @@ try {
   const appFile = path.join(home, 'config/app.yaml');
   const app = (await fs.readFile(appFile, 'utf8')).replace('name: webmux', `name: ${label}`)
     .replace('listen_host: 0.0.0.0', 'listen_host: 127.0.0.1')
-    .replace('http_port: 8080', `http_port: ${address.port}`).replace('https_port: 8443', 'https_port: 0');
+    .replace('http_port: 8080', `http_port: ${address.port}`).replace('https_port: 8443', 'https_port: 0')
+    .replace('session_logging:\n    enabled: false', 'session_logging:\n    enabled: true');
   await fs.writeFile(appFile, app);
   await fs.writeFile(path.join(home, 'config/auth.yaml'), 'auth:\n  mode: none\n  users: []\n');
   const xml = (value: string) => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;');
@@ -90,15 +92,53 @@ try {
     assert.match(current, /jwt_secret:/);
     if (round) assert.equal(current, auth, 'Signing secret changed across service restart');
     auth = current;
+    const created = await fetch(`${base}/api/sessions`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000),
+      body: JSON.stringify({ hostname: 'localhost', username: 'fixture', transport: 'exec', exec_command: '/bin/sh' }),
+    });
+    assert(created.ok, `Session creation: ${created.status}`);
+    const session: unknown = await created.json();
+    assert(session && typeof session === 'object' && 'id' in session && typeof session.id === 'string');
+    let output = '';
+    let socketError = false;
+    socket = new WebSocket(`ws://127.0.0.1:${address.port}/api/term/${session.id}`);
+    socket.addEventListener('error', () => { socketError = true; });
+    socket.addEventListener('message', event => {
+      const value: unknown = JSON.parse(String(event.data));
+      if (value && typeof value === 'object' && 'type' in value && value.type === 'output'
+        && 'data' in value && typeof value.data === 'string') output += value.data;
+    });
+    await waitFor(async () => { assert(!socketError); return socket?.readyState === WebSocket.OPEN; }, 'terminal connection');
+    // The resulting marker and PID are absent from input, so input echo cannot satisfy the check.
+    const marker = `launchd-${round}-${randomBytes(8).toString('hex')}`;
+    socket.send(JSON.stringify({ type: 'input', data: `printf 'child:%s\\n' "$$"; i=0; while [ "$i" -lt 128 ]; do printf '%s:%s\\n' '${marker}' "$i"; i=$((i+1)); done\r` }));
+    const expected = Array.from({ length: 128 }, (_, index) => `${marker}:${index}\n`).join('');
+    await waitFor(async () => output.replaceAll('\r', '').includes(expected), 'complete terminal output');
+    const childPID = Number(output.match(/child:([1-9][0-9]*)/)?.[1]);
+    assert(Number.isSafeInteger(childPID) && childPID > 1);
+    process.kill(childPID, 0);
     launch(['kill', 'SIGTERM', target]);
     await waitFor(async () => !await healthy(), 'service listener shutdown');
     await waitFor(async () => {
       const stopped = launch(['print', target]);
       return /last exit code = 0/.test(stopped) && !/\bpid = [1-9]/.test(stopped) && !/state = running/.test(stopped);
     }, 'graceful native exit');
+    await waitFor(async () => socket?.readyState === WebSocket.CLOSED, 'terminal socket shutdown');
+    socket = undefined;
+    await waitFor(async () => {
+      try { process.kill(childPID, 0); return false; }
+      catch (error) { assert(error instanceof Error && 'code' in error && error.code === 'ESRCH'); return true; }
+    }, 'PTY child exit');
+    const directory = path.join(home, 'logs/sessions');
+    const files = (await fs.readdir(directory)).filter(name => name.startsWith(`session-${session.id}-`));
+    assert.equal(files.length, 1);
+    const transcript = await fs.readFile(path.join(directory, files[0]!), 'utf8');
+    assert(transcript.replaceAll('\r', '').includes(expected), 'Shutdown lost acknowledged terminal output');
+    assert.match(transcript, /\[webmux transcript stopped .* reason=shutdown\]\r?\n$/);
   }
-  console.log(`Native launchd template passed startup, UI, graceful stop and restart in ${domain}`);
+  console.log(`Native launchd template passed startup, UI, active PTY shutdown, transcript drain and restart in ${domain}`);
 } finally {
+  socket?.close();
   if (registered && launch(['print', target], false)) {
     launch(['bootout', target]);
     assert.equal(launch(['print', target], false), '', 'Fixture service remains registered');

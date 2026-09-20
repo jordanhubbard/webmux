@@ -439,11 +439,16 @@ Native source build and process checks now run in Linux/macOS packaging CI.
 temporary service label, private configuration and loopback port. It checks real
 launchd startup, UI serving, unchanged app configuration, signing-secret
 preservation and two graceful stop cycles with zero exit status, followed by a
-new process on restart. It removes the registered fixture afterward. The local
+new process on restart. Each cycle leaves an exec PTY active at shutdown and
+checks that its child exits, its WebSocket closes, and all 128 acknowledged
+output lines reach the transcript before its shutdown footer. It removes the
+registered fixture afterward. The local
 macOS GUI-domain run passes; macOS packaging CI now runs this check too (using
 the user domain if no GUI domain exists). Operator service labels are untouched.
 This verifies the template's lifecycle, not the full Make installer. End-to-end
-installer/systemd coverage and upgrade/drain checks remain pending.
+installer/systemd coverage, upgrade checks and Windows service transcript-drain
+checks remain pending. The macOS check covers output already acknowledged over
+the WebSocket; it does not promise to preserve output produced after shutdown begins.
 
 The Make installer now delegates service serialization to checked TypeScript in
 `scripts/render-service.mts`. It escapes launchd XML values, quotes systemd
