@@ -18,6 +18,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/agent"
 	"github.com/jordanhubbard/webmux/server/internal/config"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
+	"github.com/jordanhubbard/webmux/server/internal/templates"
 	"github.com/jordanhubbard/webmux/server/internal/terminal"
 )
 
@@ -255,7 +256,7 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 	b.order = append(b.order, id)
 	initial := request.InitialCommand
 	if initial == "" {
-		initial = templateCommands[request.TemplateID]
+		initial = templates.Command(request.TemplateID)
 	}
 	// A failed launch is a created session in state=error, matching the browser's
 	// reconnect flow. The transient password is never copied into session state.
@@ -275,8 +276,6 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 	b.audit(map[string]any{"type": "session_created", "session_id": id, "hostname": s.Hostname, "username": s.Username})
 	return e.value.clone(), nil
 }
-
-var templateCommands = map[string]string{"claude-cli": "claude", "htop": "htop", "python-repl": "python3", "nano-repl": "nano --repl", "ssh-agent": `eval $(ssh-agent -s) && ssh-add ~/.ssh/id_rsa && echo "SSH agent ready"`}
 
 func (b *Broker) startLocked(e *entry, password, initial string) error {
 	e.generation++

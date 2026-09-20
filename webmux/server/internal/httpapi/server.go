@@ -103,6 +103,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PUT /api/config/layout", s.protected(false, s.updateLayout))
 	mux.Handle("GET /api/config/fonts/{index}", s.protected(false, s.getFont))
 	mux.Handle("GET /api/sessions", s.protected(false, s.listSessions))
+	mux.Handle("GET /api/sessions/templates", s.protected(false, s.listTemplates))
+	mux.Handle("GET /api/sessions/templates/{id}", s.protected(false, s.getTemplate))
 	mux.Handle("POST /api/sessions", s.protected(false, s.createSession))
 	mux.Handle("GET /api/sessions/{id}", s.protected(false, s.getSession))
 	mux.Handle("PATCH /api/sessions/{id}", s.protected(false, s.patchSession))

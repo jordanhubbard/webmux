@@ -380,6 +380,17 @@ async function sessionContract(backend: Backend): Promise<void> {
     owner = stringField((await server.request('POST', '/api/auth/bootstrap', { username: 'owner', password: 'password' })).body, 'token');
     assert.equal((await server.request('POST', '/api/auth/register', { username: 'member', password: 'password' }, owner)).status, 201);
     const member = stringField((await server.request('POST', '/api/auth/login', { username: 'member', password: 'password' })).body, 'token');
+    const templateCatalog: unknown = JSON.parse(await readFile(path.join(root, 'server', 'internal', 'templates', 'builtin.json'), 'utf8'));
+    assert.ok(Array.isArray(templateCatalog));
+    assert.equal((await server.request('GET', '/api/sessions/templates')).status, 401);
+    assert.equal((await server.request('GET', '/api/sessions/templates/htop')).status, 401);
+    assert.deepEqual(await server.request('GET', '/api/sessions/templates/', undefined, member), {
+      status: 200, body: { templates: templateCatalog, count: templateCatalog.length },
+    });
+    for (const template of templateCatalog) {
+      assert.deepEqual(await server.request('GET', `/api/sessions/templates/${stringField(template, 'id')}`, undefined, owner), { status: 200, body: template });
+    }
+    assert.deepEqual(await server.request('GET', '/api/sessions/templates/unknown', undefined, owner), { status: 404, body: { error: "Template 'unknown' not found" } });
     assert.equal((await server.request('GET', '/api/sessions')).status, 401);
     assert.equal((await server.request('POST', '/api/sessions', { hostname: 'localhost' }, owner)).status, 400);
     // Missing exec commands fail locally without opening a remote connection.
@@ -601,6 +612,77 @@ async function vncContract(backend: Backend): Promise<void> {
   }
 }
 
+async function rdpContract(backend: Backend): Promise<void> {
+  // ASCII fixture instructions isolate shared legacy behavior. Fragmented
+  // Unicode and embedded separators have dedicated Go protocol tests.
+  const instruction = (...values: string[]): string => values.map(value => `${value.length}.${value}`).join(',') + ';';
+  const upstreams = new Set<Socket>();
+  const requests: string[] = [];
+  const ready = instruction('ready', 'fixture-connection');
+  const output = instruction('sync', '123');
+  const input = instruction('key', '65293', '1');
+  const daemon = createServer(socket => {
+    upstreams.add(socket);
+    socket.on('close', () => upstreams.delete(socket));
+    socket.on('error', () => {});
+    let buffered = '';
+    socket.on('data', data => {
+      buffered += data.toString('utf8');
+      let boundary: number;
+      while ((boundary = buffered.indexOf(';')) >= 0) {
+        const message = buffered.slice(0, boundary + 1);
+        buffered = buffered.slice(boundary + 1);
+        requests.push(message);
+        if (requests.length === 1) socket.write(instruction('args', 'hostname', 'port', 'username', 'password', 'domain', 'resize-method', 'unknown'));
+        else if (requests.length === 2) socket.write(ready + output);
+        else socket.write(message);
+      }
+    });
+  });
+  daemon.listen(0, '127.0.0.1'); await once(daemon, 'listening');
+  const address = daemon.address(); assert.ok(address && typeof address !== 'string');
+  const server = await start(backend, 'local').catch((error: unknown) => { daemon.close(); throw error; });
+  const clients: WebSocket[] = [];
+  const open = (route: string): WebSocket => { const socket = server.socket(route); clients.push(socket); socket.on('error', () => {}); return socket; };
+  try {
+    const appPath = path.join(server.home, 'config', 'app.yaml');
+    const config = record(yaml.load(await readFile(appPath, 'utf8')));
+    record(config.app).guacd = { host: '127.0.0.1', port: address.port };
+    await writeFile(appPath, yaml.dump(config));
+    const owner = stringField((await server.request('POST', '/api/auth/bootstrap', { username: 'owner', password: 'password' })).body, 'token');
+    const created = await server.request('POST', '/api/rdp/sessions', { hostname: '192.0.2.1', rdp_port: 3390, rdp_username: 'desktop-user', rdp_password: 'password', rdp_domain: 'domain' }, owner);
+    assert.equal(created.status, 201);
+    const id = stringField(created.body, 'id'); const route = `/api/rdp/ws/${id}`;
+    const denied = open(route); assert.equal((await once(denied, 'close'))[0], 1008);
+    const ticket = stringField((await server.request('POST', '/api/auth/ticket', {}, owner)).body, 'ticket');
+    const client = open(`${route}?ticket=${ticket}`);
+    let received = '';
+    client.on('message', (data: WebSocket.RawData, binary: boolean) => {
+      assert.equal(binary, false);
+      received += (Array.isArray(data) ? Buffer.concat(data) : Buffer.isBuffer(data) ? data : Buffer.from(data)).toString('utf8');
+    });
+    const waitText = async (text: string): Promise<void> => {
+      const deadline = Date.now() + 10_000;
+      while (received.length < text.length) { assert.ok(Date.now() < deadline, 'RDP fixture data timeout'); await delay(10); }
+      assert.equal(received, text);
+    };
+    await waitText(ready + output);
+    assert.deepEqual(requests, [instruction('select', 'rdp'), instruction('connect', '192.0.2.1', '3390', 'desktop-user', 'password', 'domain', 'display-update', '')]);
+    const reused = open(`${route}?ticket=${ticket}`); assert.equal((await once(reused, 'close'))[0], 1008);
+    client.send(input);
+    await waitText(ready + output + input);
+    assert.equal(requests[2], input);
+    assert.equal(record((await server.request('GET', `/api/rdp/sessions/${id}`, undefined, owner)).body).state, 'connected');
+    const close = once(client, 'close'); for (const upstream of upstreams) upstream.end();
+    assert.equal((await close)[0], 1001);
+  } finally {
+    for (const client of clients) client.terminate();
+    await server.close();
+    for (const upstream of upstreams) upstream.destroy();
+    await new Promise<void>((resolve, reject) => daemon.close(error => error ? reject(error) : resolve()));
+  }
+}
+
 async function desktopContract(backend: Backend): Promise<void> {
   const server = await start(backend, 'local');
   let owner = '';
@@ -759,7 +841,8 @@ try {
     await agentContract(backend);
     await desktopContract(backend);
     await vncContract(backend);
-    console.log(`${backend}: HTTP, terminal WebSocket, agent, desktop session/VNC and cross-backend restart contracts passed`);
+    await rdpContract(backend);
+    console.log(`${backend}: HTTP, templates, terminal WebSocket, agent, VNC/RDP and cross-backend restart contracts passed`);
   }
 } finally {
   await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

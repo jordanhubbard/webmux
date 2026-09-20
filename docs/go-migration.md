@@ -60,8 +60,17 @@ processes. Terminal WebSockets now support ticket/token authentication, atomic
 scrollback-to-live delivery, input, resize, viewer presence/focus and deletion.
 Transcript logging now follows the configured launch default, supports manual
 pause/resume into the same file, and rotates files across launches. It preserves
-headers/footers, audit event fields and owner-only POSIX permissions. Other
-application routes and static UI serving remain pending.
+headers/footers, audit event fields and owner-only POSIX permissions. Template
+list/detail routes expose all five built-in templates with their existing text,
+icons, setup steps and launch commands. The Go broker uses the same catalog as
+the API. Other application routes and static UI serving remain pending.
+
+The existing Node route order accidentally intercepted the template list as a
+session ID. Both implementations now expose the intended authenticated list;
+Node registers templates before the generic session route and explicitly applies
+the existing auth middleware. Differential tests compare the entire catalog and
+each detail response, missing IDs and unauthenticated access. This is an
+intentional routing correction, not preservation of the previous list's 404.
 
 The internal agent service now normalizes agent configuration independently,
 checks the multi-user access policy, discovers tmux sessions, assigns duplicate
@@ -97,9 +106,11 @@ The RDP proxy now shares the authenticated desktop transport lifecycle and
 connects through the operator-configured guacd endpoint. Its handshake preserves
 the existing parameter defaults and sends only the validated destination IP.
 Local fake-guacd tests cover credentials, Unicode framing, bidirectional text,
-protocol errors and deletion during the handshake. A real guacd/RDP server,
-Node/Go RDP differential coverage and full browser-based VNC/RDP rendering parity
-remain required before switching the default backend.
+protocol errors and deletion during the handshake. Node/Go differential fixtures
+also compare the RDP handshake parameters, ticket authentication/reuse, text in
+both directions, connected state and upstream closure. A real guacd/RDP server
+and full browser-based VNC/RDP rendering parity remain required before switching
+the default backend.
 
 The internal terminal process layer now supports Unix PTYs and Windows ConPTY,
 with independent process lifetime, serialized input, resize, exit status,
@@ -263,3 +274,6 @@ Linux's full Go and differential job passed at 9b80338. Windows then exposed an
 agent test that assumed record deletion and process shutdown were simultaneous;
 the process deliberately closes outside the broker lock to allow output to drain.
 That assertion now waits up to five seconds for process shutdown as well.
+The complete Linux and Windows Go jobs passed at 5a6df28, including the race
+suite, vet and differential contracts. macOS CI remains queued; local macOS
+checks pass. Real remote desktop rendering remains outside these fixture checks.
