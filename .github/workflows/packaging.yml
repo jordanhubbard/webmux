@@ -40,6 +40,11 @@ jobs:
       - name: Package native server
         if: runner.os != 'Windows'
         run: node scripts/package-native.mts
+      - name: Verify native source build and manual controls
+        if: runner.os != 'Windows'
+        run: |
+          make -o deps build WEBMUX_BACKEND=go
+          node scripts/smoke-source.mts go
       - name: Install WiX for native MSI
         if: runner.os == 'Windows'
         shell: pwsh

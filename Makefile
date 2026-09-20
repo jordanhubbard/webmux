@@ -50,7 +50,21 @@ PIDFILE      := $(WEBMUX_HOME)/.webmux.pid
 LOGFILE      := $(WEBMUX_HOME)/logs/webmux.log
 NODE         := node
 NPM          := npm
+GO           := go
+WEBMUX_BACKEND ?= node
 OS           := $(shell uname)
+
+ifeq ($(WEBMUX_BACKEND),go)
+  SERVER_COMMAND := "$(WEBMUX_DIR)/bin/webmux"
+  SERVICE_TEMPLATE := native.template
+  E2E_SCRIPT := test:e2e:go
+else ifeq ($(WEBMUX_BACKEND),node)
+  SERVER_COMMAND := $(NODE) backend/dist/index.js
+  SERVICE_TEMPLATE := template
+  E2E_SCRIPT := test:e2e
+else
+  $(error WEBMUX_BACKEND must be node or go)
+endif
 
 export WEBMUX_ROOT
 export WEBMUX_HOME
@@ -80,10 +94,17 @@ all: build
 
 # Platform-specific runtime bundle; use Node.js 24 and build from the lockfile.
 package:
-	@$(NODE) -e 'if (process.versions.node.split(".")[0] !== "24" || !["darwin", "linux"].includes(process.platform)) { console.error("Packaging requires Node.js 24 on macOS or Linux"); process.exit(1); }'
+ifeq ($(WEBMUX_BACKEND),node)
+	@$(NODE) scripts/packaging-checks.mts legacy-platform
+endif
 	@cd "$(WEBMUX_DIR)" && $(NPM) ci --no-audit --no-fund
+ifeq ($(WEBMUX_BACKEND),go)
+	@cd "$(WEBMUX_DIR)" && $(NPM) run build --workspace=frontend
+	@$(NODE) scripts/package-native.mts
+else
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build
 	@$(NODE) scripts/package.mts
+endif
 
 help:
 	@printf "$(C_BLD)$(C_MAG)▦ WebMux$(C_RST)$(C_DIM) — web-native terminal multiplexer$(C_RST)\n\n"
@@ -109,6 +130,7 @@ help:
 	@printf "  $(C_CYN)make check-guacd$(C_RST)    Check guacd (RDP proxy) installation\n"
 	@printf "  $(C_CYN)make help$(C_RST)           Show this help\n"
 	@printf "\n$(C_BLD)Configuration:$(C_RST)\n"
+	@printf "  $(C_YLW)WEBMUX_BACKEND$(C_RST)=$(C_DIM)node|go$(C_RST)          Backend (Go migration preview)\n"
 	@printf "  $(C_YLW)WEBMUX_HOME$(C_RST)=$(C_DIM)~/.config/webmux$(C_RST)   Runtime config/data directory\n"
 	@printf "  $(C_YLW)HTTP_PORT$(C_RST)=$(C_DIM)8080$(C_RST)              HTTP listen port\n"
 	@printf "  $(C_YLW)HTTPS_PORT$(C_RST)=$(C_DIM)8443$(C_RST)             HTTPS listen port\n"
@@ -130,7 +152,13 @@ deps:
 
 build: deps
 	@printf "$(C_BLU)▸$(C_RST) Building webmux…\n"
+ifeq ($(WEBMUX_BACKEND),go)
+	@cd "$(WEBMUX_DIR)" && $(NPM) run build:helpers --silent && $(NPM) run build --workspace=frontend --silent
+	@mkdir -p "$(WEBMUX_DIR)/bin"
+	@cd "$(WEBMUX_DIR)/server" && $(GO) build -trimpath -o ../bin/webmux ./cmd/webmux
+else
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build --silent
+endif
 	@printf "$(C_GRN)✓$(C_RST) Build complete.\n"
 
 configure:
@@ -181,7 +209,7 @@ _start_manual:
 	LOG_START=$$(wc -l < "$(LOGFILE)" 2>/dev/null || echo 0); \
 	cd "$(WEBMUX_DIR)" && $(RUNTIME_ENV) HTTP_PORT=$$ACTUAL_HTTP HTTPS_PORT=$$ACTUAL_HTTPS \
 		WEBMUX_ROOT="$(WEBMUX_ROOT)" WEBMUX_HOME="$(WEBMUX_HOME)" \
-		exec $(NODE) backend/dist/index.js >> "$(LOGFILE)" 2>&1 & echo $$! > "$(PIDFILE)"; \
+		exec $(SERVER_COMMAND) >> "$(LOGFILE)" 2>&1 & echo $$! > "$(PIDFILE)"; \
 	sleep 0.5; \
 	if kill -0 $$(cat "$(PIDFILE)") 2>/dev/null; then \
 		printf "$(C_GRN)●$(C_RST) webmux started $(C_DIM)(pid $$(cat "$(PIDFILE)"))$(C_RST)\n"; \
@@ -277,6 +305,9 @@ test: test-unit test-e2e
 	@printf "$(C_GRN)✓$(C_RST) All tests passed.\n"
 
 test-unit: build
+ifeq ($(WEBMUX_BACKEND),go)
+	@cd "$(WEBMUX_DIR)/server" && $(GO) test -race ./...
+endif
 	@printf "$(C_BLU)▸$(C_RST) Type-checking…\n"
 	@cd "$(WEBMUX_DIR)" && $(NPM) run typecheck --silent
 	@printf "$(C_GRN)✓$(C_RST) Types OK.\n"
@@ -292,15 +323,18 @@ test-e2e: build
 	@EXE="$$("$(CURDIR)/scripts/ensure-e2e-browser.sh")" || { \
 		printf "$(C_RED)✗$(C_RST) E2E skipped — no usable browser (see message above).\n"; exit 1; }; \
 	printf "$(C_BLU)▸$(C_RST) Running E2E tests…\n"; \
-	cd "$(WEBMUX_DIR)" && PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$$EXE" $(NPM) run test:e2e
+	cd "$(WEBMUX_DIR)" && PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$$EXE" $(NPM) run $(E2E_SCRIPT)
 	@printf "$(C_GRN)✓$(C_RST) E2E tests passed.\n"
 
 lint:
 	@cd "$(WEBMUX_DIR)" && $(NPM) run lint
+ifeq ($(WEBMUX_BACKEND),go)
+	@cd "$(WEBMUX_DIR)/server" && $(GO) vet ./...
+endif
 
 clean: stop
 	@printf "$(C_BLU)▸$(C_RST) Cleaning build artifacts…\n"
-	@rm -rf "$(WEBMUX_DIR)/backend/dist" "$(WEBMUX_DIR)/scripts/dist" "$(WEBMUX_DIR)/web"
+	@rm -rf "$(WEBMUX_DIR)/backend/dist" "$(WEBMUX_DIR)/scripts/dist" "$(WEBMUX_DIR)/web" "$(WEBMUX_DIR)/bin"
 	@rm -rf "$(WEBMUX_DIR)/node_modules" "$(WEBMUX_DIR)/backend/node_modules" "$(WEBMUX_DIR)/frontend/node_modules"
 	@rm -f "$(PIDFILE)"
 	@printf "$(C_GRN)✓$(C_RST) Clean.\n"
@@ -351,7 +385,7 @@ ifeq ($(shell uname),Darwin)
 		-e 's|__WEBMUX_DIR__|$(WEBMUX_DIR)|g' \
 		-e 's|__WEBMUX_HOME__|$(WEBMUX_HOME)|g' \
 		-e 's|__PATH__|$(CURRENT_PATH)|g' \
-		"$(SERVICE_DIR)/com.webmux.server.plist.template" \
+		"$(SERVICE_DIR)/com.webmux.server.plist.$(SERVICE_TEMPLATE)" \
 		> "$(PLIST)"
 	@launchctl bootstrap gui/$$(id -u) "$(PLIST)"
 	@launchctl kickstart -k $(LAUNCHD_SVC) 2>/dev/null || true
@@ -367,7 +401,7 @@ else
 		-e 's|__WEBMUX_DIR__|$(WEBMUX_DIR)|g' \
 		-e 's|__WEBMUX_HOME__|$(WEBMUX_HOME)|g' \
 		-e 's|__PATH__|$(CURRENT_PATH)|g' \
-		"$(SERVICE_DIR)/webmux.service.template" \
+		"$(SERVICE_DIR)/webmux.service.$(SERVICE_TEMPLATE)" \
 		> "$(UNIT)"
 	@systemctl --user daemon-reload
 	@systemctl --user enable --now webmux.service

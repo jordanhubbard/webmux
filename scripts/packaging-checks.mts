@@ -18,6 +18,11 @@ function first(value: unknown): unknown {
 }
 const repo = path.resolve(import.meta.dirname, '..');
 switch (process.argv[2]) {
+  case 'legacy-platform': {
+    assert.equal(process.versions.node.split('.')[0], '24', 'Legacy packaging requires Node.js 24');
+    assert(['darwin', 'linux'].includes(process.platform), 'Use the Windows packaging script on Windows');
+    break;
+  }
   case 'node-runtime': {
     console.log(JSON.stringify({ major: Number(process.versions.node.split('.')[0]), arch: process.arch }));
     break;
@@ -52,5 +57,5 @@ switch (process.argv[2]) {
     assert(typeof value.log_path === 'string' && value.log_path.endsWith('/var/log/webmux.log'));
     break;
   }
-  default: throw new Error('Usage: node scripts/packaging-checks.mts <node-runtime|release-version|tap|formula|service>');
+  default: throw new Error('Usage: node scripts/packaging-checks.mts <legacy-platform|node-runtime|release-version|tap|formula|service>');
 }

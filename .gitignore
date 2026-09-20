@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 webmux/backend/dist/
+webmux/bin/
 webmux/scripts/dist/
 webmux/web/
 

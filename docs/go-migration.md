@@ -362,7 +362,31 @@ An isolated macOS checkout passed the frontend-only install/build, native archiv
 creation and full artifact smoke pipeline. Ruby syntax, TypeScript and workflow
 checks pass. Linux/macOS native packaging CI now installs the formula from this
 revision, runs `brew test`, exercises the installed native payload and verifies
-the service definition. Actual Homebrew installation results remain pending.
+the service definition. At 559c4e0, Linux passed this complete Homebrew path,
+including installed-runtime smoke and the service-definition check. macOS
+hosted verification remains queued.
+
+### Source builds and process control
+
+The Makefile accepts `WEBMUX_BACKEND=go` for native builds, packaging, manual
+start/stop, tests and source service installation. For example,
+`make build WEBMUX_BACKEND=go` writes `webmux/bin/webmux` and builds the existing
+frontend and checked helpers. `make install WEBMUX_BACKEND=go` uses native
+launchd/systemd templates; their executable is the source tree's Go binary.
+Changing the backend of an already installed service requires reinstalling its
+definition. Normal service-aware start/stop continues to operate the installed
+definition. Node remains the default until the full migration gates pass.
+
+Go unit/race tests and vet join the native Make test/lint targets, and browser
+tests select the Go runner. The root Makefile's remaining inline Node expression
+now delegates to checked TypeScript; broader searches include the Makefile.
+`scripts/smoke-source.mts` exercises manual controls in isolated state without
+touching installed services. Both Node and Go pass local start/stop/restart,
+HTTP, pidfile cleanup and byte-preserved configuration checks. The fixture uses
+fresh candidate ports because the existing port selector avoids TIME_WAIT ports.
+Native source build and process checks now run in Linux/macOS packaging CI.
+The native launchd template parses locally with the expected executable and
+state path; actual source-installed OS-service lifecycle coverage remains pending.
 
 ### Deliberate security differences
 
