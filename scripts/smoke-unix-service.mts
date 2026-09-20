@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Exercise the shipped native launchd template under a private, temporary label.
+// Exercise shipped native Unix service templates under a private, temporary label.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -10,12 +10,14 @@ import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { renderService } from './render-service.mts';
 
-assert.equal(process.platform, 'darwin', 'launchd smoke requires macOS');
+assert(process.platform === 'darwin' || process.platform === 'linux', 'Unix service smoke requires macOS or Linux');
+const darwin = process.platform === 'darwin';
 const root = path.resolve(import.meta.dirname, '../webmux');
 await fs.access(path.join(root, 'bin/webmux'));
-const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'webmux-launchd-'));
+const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'webmux-unix-service-'));
 const home = path.join(temporary, 'state & config');
-const label = `com.webmux.smoke.${process.pid}.${randomBytes(6).toString('hex')}`;
+const nonce = `${process.pid}-${randomBytes(6).toString('hex')}`;
+const label = darwin ? `com.webmux.smoke.${nonce}` : `webmux-smoke-${nonce}.service`;
 const uid = process.getuid!();
 function launch(args: string[], required = true): string {
   const result = spawnSync('launchctl', args, { encoding: 'utf8', timeout: 15000 });
@@ -23,9 +25,22 @@ function launch(args: string[], required = true): string {
   if (required) assert.equal(result.status, 0, `launchctl ${args.join(' ')}: ${result.stderr}`);
   return result.status === 0 ? result.stdout : '';
 }
-const domain = launch(['print', `gui/${uid}`], false) ? `gui/${uid}` : `user/${uid}`;
+// Linux uses the system manager because hosted runners may have no user bus.
+// Only manager commands need sudo; the service runs as the invoking user.
+function systemctl(args: string[], required = true): string {
+  const result = spawnSync('sudo', ['-n', 'systemctl', '--no-pager', ...args], { encoding: 'utf8', timeout: 45000 });
+  if (result.error) throw result.error;
+  if (required) assert.equal(result.status, 0, `systemctl ${args.join(' ')}: ${result.stderr}`);
+  return result.stdout;
+}
+function property(name: string): string {
+  // A missing unit can produce a nonzero status; still require its explicit
+  // not-found value at the call site, rather than treating any failure as absence.
+  return systemctl(['show', label, `--property=${name}`, '--value'], name !== 'LoadState').trim();
+}
+const domain = darwin ? (launch(['print', `gui/${uid}`], false) ? `gui/${uid}` : `user/${uid}`) : 'system';
 const target = `${domain}/${label}`;
-const plist = path.join(temporary, 'fixture.plist');
+const definition = path.join(temporary, darwin ? 'fixture.plist' : label);
 let registered = false;
 let socket: WebSocket | undefined;
 async function waitFor(check: () => Promise<boolean>, description: string): Promise<void> {
@@ -36,7 +51,11 @@ async function waitFor(check: () => Promise<boolean>, description: string): Prom
   }
 }
 try {
-  assert.equal(launch(['print', target], false), '', 'Fixture service label already exists');
+  if (darwin) assert.equal(launch(['print', target], false), '', 'Fixture service label already exists');
+  else {
+    assert(uid > 0, 'Run the Linux fixture as an unprivileged user with noninteractive sudo');
+    assert.equal(property('LoadState'), 'not-found', 'Fixture unit already exists');
+  }
   await fs.cp(path.join(root, 'config.defaults'), path.join(home, 'config'), { recursive: true });
   await fs.mkdir(path.join(home, 'logs'), { recursive: true });
   const listener = net.createServer(); listener.listen(0, '127.0.0.1'); await once(listener, 'listening');
@@ -49,22 +68,30 @@ try {
     .replace('session_logging:\n    enabled: false', 'session_logging:\n    enabled: true');
   await fs.writeFile(appFile, app);
   await fs.writeFile(path.join(home, 'config/auth.yaml'), 'auth:\n  mode: none\n  users: []\n');
-  const xml = (value: string) => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;');
-  let template = renderService(await fs.readFile(path.join(root, 'service/com.webmux.server.plist.native.template'), 'utf8'), 'darwin', {
-    root, home, node: process.execPath, searchPath: process.env.PATH ?? '/usr/bin:/bin',
-  }).replace('<string>com.webmux.server</string>', `<string>${label}</string>`);
-  // Prevent launchd's environment from selecting operator ports or slave mode.
   const environment = { HTTP_PORT: String(address.port), HTTPS_PORT: '0', JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' };
-  template = template.replace('<key>EnvironmentVariables</key>\n    <dict>', '<key>EnvironmentVariables</key>\n    <dict>\n' +
-    Object.entries(environment).map(([key, value]) => `<key>${key}</key><string>${xml(value)}</string>`).join('\n'));
-  await fs.writeFile(plist, template);
-  const lint = spawnSync('plutil', ['-lint', plist], { encoding: 'utf8' });
-  assert.equal(lint.status, 0, lint.stdout + lint.stderr);
-  // Fail before registration if a template edit stopped any isolation rewrite.
-  for (const [key, expected] of Object.entries({ Label: label, 'EnvironmentVariables.WEBMUX_HOME': home,
-    'EnvironmentVariables.HTTP_PORT': String(address.port), 'EnvironmentVariables.WEBMUX_SLAVE_HOST': '' })) {
-    const extracted = spawnSync('plutil', ['-extract', key, 'raw', '-o', '-', plist], { encoding: 'utf8' });
-    assert.equal(extracted.status, 0, extracted.stderr); assert.equal(extracted.stdout.trim(), expected);
+  const templateName = darwin ? 'com.webmux.server.plist.native.template' : 'webmux.service.native.template';
+  let template = renderService(await fs.readFile(path.join(root, 'service', templateName), 'utf8'), darwin ? 'darwin' : 'linux', {
+    root, home, node: process.execPath, searchPath: process.env.PATH ?? '/usr/bin:/bin',
+  });
+  if (darwin) {
+    template = template.replace('<string>com.webmux.server</string>', `<string>${label}</string>`)
+      .replace('<key>EnvironmentVariables</key>\n    <dict>', '<key>EnvironmentVariables</key>\n    <dict>\n' +
+        Object.entries(environment).map(([key, value]) => `<key>${key}</key><string>${value}</string>`).join('\n'));
+    await fs.writeFile(definition, template);
+    const lint = spawnSync('plutil', ['-lint', definition], { encoding: 'utf8' });
+    assert.equal(lint.status, 0, lint.stdout + lint.stderr);
+    // Fail before registration if a template edit stopped any isolation rewrite.
+    for (const [key, expected] of Object.entries({ Label: label, 'EnvironmentVariables.WEBMUX_HOME': home,
+      'EnvironmentVariables.HTTP_PORT': String(address.port), 'EnvironmentVariables.WEBMUX_SLAVE_HOST': '' })) {
+      const extracted = spawnSync('plutil', ['-extract', key, 'raw', '-o', '-', definition], { encoding: 'utf8' });
+      assert.equal(extracted.status, 0, extracted.stderr); assert.equal(extracted.stdout.trim(), expected);
+    }
+  } else {
+    // Appending a Service section overrides inherited manager environment.
+    // Identity overrides adapt the user-service template to the system manager.
+    template += `\n[Service]\nUser=${uid}\nGroup=${process.getgid!()}\n` +
+      Object.entries(environment).map(([key, value]) => `Environment="${key}=${value}"`).join('\n') + '\n';
+    await fs.writeFile(definition, template, { mode: 0o600 });
   }
   const base = `http://127.0.0.1:${address.port}`;
   async function healthy(): Promise<boolean> {
@@ -75,15 +102,29 @@ try {
     } catch { return false; }
   }
   registered = true;
-  launch(['bootstrap', domain, plist]);
+  if (darwin) launch(['bootstrap', domain, definition]);
+  else {
+    systemctl(['link', '--runtime', definition]);
+    systemctl(['daemon-reload']);
+  }
   let auth = '';
   let previousPID = '';
   for (let round = 0; round < 2; round++) {
-    if (round) launch(['kickstart', target]);
-    await waitFor(healthy, 'native launchd startup');
-    const service = launch(['print', target]);
-    assert.match(service, /state = running/);
-    const pid = service.match(/\bpid = ([1-9][0-9]*)/)?.[1];
+    if (darwin) { if (round) launch(['kickstart', target]); }
+    else systemctl(['start', label]);
+    await waitFor(healthy, 'native service startup');
+    let pid: string | undefined;
+    if (darwin) {
+      const service = launch(['print', target]);
+      assert.match(service, /state = running/);
+      pid = service.match(/\bpid = ([1-9][0-9]*)/)?.[1];
+    } else {
+      assert.equal(property('ActiveState'), 'active');
+      assert.equal(property('User'), String(uid));
+      assert.equal(property('KillMode'), 'mixed');
+      pid = property('MainPID');
+      assert.match(pid, /^[1-9][0-9]*$/);
+    }
     assert(pid); assert.notEqual(pid, previousPID, 'Restart reused the prior process'); previousPID = pid;
     const response = await fetch(base, { signal: AbortSignal.timeout(5000) });
     assert(response.ok); assert.match(await response.text(), /<html/i);
@@ -110,16 +151,19 @@ try {
     });
     await waitFor(async () => { assert(!socketError); return socket?.readyState === WebSocket.OPEN; }, 'terminal connection');
     // The resulting marker and PID are absent from input, so input echo cannot satisfy the check.
-    const marker = `launchd-${round}-${randomBytes(8).toString('hex')}`;
+    const marker = `service-${round}-${randomBytes(8).toString('hex')}`;
     socket.send(JSON.stringify({ type: 'input', data: `printf 'child:%s\\n' "$$"; i=0; while [ "$i" -lt 128 ]; do printf '%s:%s\\n' '${marker}' "$i"; i=$((i+1)); done\r` }));
     const expected = Array.from({ length: 128 }, (_, index) => `${marker}:${index}\n`).join('');
     await waitFor(async () => output.replaceAll('\r', '').includes(expected), 'complete terminal output');
     const childPID = Number(output.match(/child:([1-9][0-9]*)/)?.[1]);
     assert(Number.isSafeInteger(childPID) && childPID > 1);
     process.kill(childPID, 0);
-    launch(['kill', 'SIGTERM', target]);
+    if (darwin) launch(['kill', 'SIGTERM', target]);
+    else systemctl(['stop', label]);
     await waitFor(async () => !await healthy(), 'service listener shutdown');
     await waitFor(async () => {
+      if (!darwin) return property('ActiveState') === 'inactive' && property('MainPID') === '0' &&
+        property('Result') === 'success' && property('ExecMainStatus') === '0';
       const stopped = launch(['print', target]);
       return /last exit code = 0/.test(stopped) && !/\bpid = [1-9]/.test(stopped) && !/state = running/.test(stopped);
     }, 'graceful native exit');
@@ -136,10 +180,16 @@ try {
     assert(transcript.replaceAll('\r', '').includes(expected), 'Shutdown lost acknowledged terminal output');
     assert.match(transcript, /\[webmux transcript stopped .* reason=shutdown\]\r?\n$/);
   }
-  console.log(`Native launchd template passed startup, UI, active PTY shutdown, transcript drain and restart in ${domain}`);
+  console.log(`Native Unix service template passed startup, UI, active PTY shutdown, transcript drain and restart in ${darwin ? domain : 'systemd (unprivileged service)'}`);
 } finally {
   socket?.close();
-  if (registered && launch(['print', target], false)) {
+  if (registered && !darwin) {
+    systemctl(['stop', label]);
+    systemctl(['disable', '--runtime', label]);
+    systemctl(['daemon-reload']);
+    assert.equal(property('LoadState'), 'not-found', 'Fixture unit remains registered');
+  }
+  if (registered && darwin && launch(['print', target], false)) {
     launch(['bootout', target]);
     assert.equal(launch(['print', target], false), '', 'Fixture service remains registered');
   }

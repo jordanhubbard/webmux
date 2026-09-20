@@ -45,9 +45,9 @@ jobs:
         run: |
           make -o deps build WEBMUX_BACKEND=go
           node scripts/smoke-source.mts go
-      - name: Verify native launchd lifecycle
-        if: runner.os == 'macOS'
-        run: node scripts/smoke-launchd.mts
+      - name: Verify native Unix service lifecycle
+        if: runner.os != 'Windows'
+        run: node scripts/smoke-unix-service.mts
       - name: Install WiX for native MSI
         if: runner.os == 'Windows'
         shell: pwsh

@@ -440,7 +440,7 @@ touching installed services. Both Node and Go pass local start/stop/restart,
 HTTP, pidfile cleanup and byte-preserved configuration checks. The fixture uses
 fresh candidate ports because the existing port selector avoids TIME_WAIT ports.
 Native source build and process checks now run in Linux/macOS packaging CI.
-`scripts/smoke-launchd.mts` now loads the shipped native template under a random
+`scripts/smoke-unix-service.mts` loads the shipped native template under a random
 temporary service label, private configuration and loopback port. It checks real
 launchd startup, UI serving, unchanged app configuration, signing-secret
 preservation and two graceful stop cycles with zero exit status, followed by a
@@ -450,8 +450,19 @@ output lines reach the transcript before its shutdown footer. It removes the
 registered fixture afterward. The local
 macOS GUI-domain run passes; macOS packaging CI now runs this check too (using
 the user domain if no GUI domain exists). Operator service labels are untouched.
-This verifies the template's lifecycle, not the full Make installer. End-to-end
-installer/systemd coverage, upgrade checks and Windows service transcript-drain
+The same fixture now runs in Linux packaging CI against systemd. It links a
+temporary runtime-only unit under a random name, supplies the invoking user's
+UID/GID, and uses noninteractive sudo only for manager commands. It checks the
+same HTTP/UI, configuration, PID, PTY and transcript assertions, plus clean
+systemd exit status and removal of the runtime unit. Linux execution of this
+new lifecycle branch remains pending. The native unit uses
+[`KillMode=mixed`](https://github.com/systemd/systemd/blob/main/man/systemd.kill.xml)
+so the server receives SIGTERM first and manages PTY/transcript shutdown, while
+systemd still kills remaining processes after server exit or the stop timeout.
+The shared macOS branch and TypeScript
+checks pass locally. A system-manager unit with an explicit user does not verify
+availability of a login user's systemd bus. This verifies template lifecycle,
+not the full Make installer. End-to-end installer coverage, upgrade checks and Windows service transcript-drain
 checks remain pending. The macOS check covers output already acknowledged over
 the WebSocket; it does not promise to preserve output produced after shutdown begins.
 
@@ -476,9 +487,9 @@ test expectations on Windows. Rendering now normalizes checkout line endings;
 parser diagnostics are scoped to the fixture while retaining the exit-status
 check. Local tests also execute special-character paths through env. All seven
 helper tests and TypeScript checks pass locally; the corrected Linux parser and
-Windows checks await CI. At 3708235 Linux Go/browser/visual checks and Linux and
+helper job passed CI at 652d7ee. Windows checks are still running. At 3708235 Linux Go/browser/visual checks and Linux and
 Windows native packaging passed; macOS hosted jobs remain queued. These
-serialization checks do not replace an actual systemd lifecycle test.
+serialization checks do not replace the pending systemd lifecycle result.
 
 ### Backend performance measurements
 

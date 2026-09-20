@@ -13,6 +13,8 @@ ExecStart=:/usr/bin/env -- "__WEBMUX_DIR__/bin/webmux"
 Restart=on-failure
 RestartSec=10
 KillSignal=SIGTERM
+# Let the server close PTYs and flush transcripts before cgroup cleanup.
+KillMode=mixed
 TimeoutStopSec=30
 
 StandardOutput=append:__WEBMUX_HOME__/logs/webmux.log
