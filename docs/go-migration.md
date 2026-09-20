@@ -52,14 +52,18 @@ and private metadata from API responses. Settings enforce administrator/trusted
 access, preserve nested defaults and disabled agent definitions, and keep
 environment overrides out of YAML. Font serving follows the real app.yaml
 directory and confines file opens to that root, with range/conditional requests
-and the existing cache headers. Other application routes, static UI serving and
-WebSocket/session transports are not implemented yet.
+and the existing cache headers. Terminal session HTTP routes now support
+owner-scoped CRUD, patch precedence, reconnect and saved-session recovery. The
+broker serializes grid allocation and persistence, rebuilds layout tiles while
+preserving layout metadata, and rejects stale output/exit events from replaced
+processes. Other application routes, static UI serving and WebSocket delivery
+are not implemented yet; transcript and agent-service integration remain pending.
 
 The internal terminal process layer now supports Unix PTYs and Windows ConPTY,
 with independent process lifetime, serialized input, resize, exit status,
 output draining and idempotent cancellation. SSH/mosh/exec command planning
 preserves the existing keepalive, host-key, key-path, shell-template and password
-environment behavior. This layer is not connected to session routes yet. Its
+environment behavior. Session routes now launch through this process layer. Its
 tests launch a local fixture in a real terminal and check dimensions, Unicode,
 large final output, exit codes and blocked-I/O cleanup. Windows runtime results
 must be verified in CI; cross-compilation alone does not establish ConPTY parity.
@@ -76,8 +80,11 @@ From `webmux`, `npm run test:contract` builds both servers, runs the same
 authentication, catalog and settings expectations against each, then restarts the
 opposite server against persisted credentials, catalogs, settings and font files.
 This verifies these formats across both migration directions. The settings-only
-layout restart fixture has no sessions and therefore no tiles; session-driven
-layout reconciliation and recovery remain part of the pending transport work.
+layout restart fixture has no sessions and therefore no tiles. A separate session
+contract checks ownership, defaults, patch precedence, grid limits, reconnect
+failure, layout reconciliation and cross-backend session recovery. These HTTP
+fixtures deliberately use failed local exec launches; a real Go PTY test covers
+initial-command injection, input, resize, reconnect, Unicode and process exit.
 Fixtures use temporary homes and never
 connect to real terminal or desktop hosts. `npm run typecheck` checks the
 TypeScript contract harness as well as the application.
@@ -120,5 +127,11 @@ still need conversion or removal as the Go deployment tooling replaces them.
 - Mosh key paths use complete shell quoting, including spaces and apostrophes.
   Unix terminal descriptors remain pollable so cancellation can release blocked
   I/O; Windows launch failures release pipes, attribute lists and native handles.
+- Corrupt or duplicate saved terminal-session records fail startup instead of
+  silently becoming an empty session list. Failed session writes roll back
+  in-memory CRUD changes and close any process created by the failed request.
+- Grid allocation searches occupied cells instead of iterating through the
+  configured grid dimensions. Reconnect launch failures are saved as errors so
+  disk state agrees with the failed request.
 
 These are intentional changes, not claims of byte-for-byte error compatibility.

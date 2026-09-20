@@ -367,6 +367,60 @@ async function settingsContract(backend: Backend): Promise<void> {
   } finally { await other.close(); }
 }
 
+async function sessionContract(backend: Backend): Promise<void> {
+  const server = await start(backend, 'local', undefined, { WEBMUX_TERMINAL_GRID_MAX_COLS: '2', WEBMUX_TERMINAL_GRID_MAX_ROWS: '2' });
+  let id = '';
+  let owner = '';
+  try {
+    owner = stringField((await server.request('POST', '/api/auth/bootstrap', { username: 'owner', password: 'password' })).body, 'token');
+    assert.equal((await server.request('POST', '/api/auth/register', { username: 'member', password: 'password' }, owner)).status, 201);
+    const member = stringField((await server.request('POST', '/api/auth/login', { username: 'member', password: 'password' })).body, 'token');
+    assert.equal((await server.request('GET', '/api/sessions')).status, 401);
+    assert.equal((await server.request('POST', '/api/sessions', { hostname: 'localhost' }, owner)).status, 400);
+    // Missing exec commands fail locally without opening a remote connection.
+    const created = await server.request('POST', '/api/sessions/', { hostname: 'localhost', username: 'alice', transport: 'exec', password: 'transient-only' }, owner);
+    assert.equal(created.status, 201);
+    const session = record(created.body);
+    id = stringField(session, 'id');
+    assert.deepEqual(Object.fromEntries(['kind', 'owner', 'hostname', 'username', 'transport', 'port', 'cols', 'rows', 'row', 'col', 'state', 'title', 'persistent', 'minimized', 'host_id', 'key_id'].map(key => [key, session[key]])), {
+      kind: 'terminal', owner: 'owner', hostname: 'localhost', username: 'alice', transport: 'exec', port: 22, cols: 80, rows: 24, row: 0, col: 0, state: 'error', title: 'localhost:22', persistent: true, minimized: false, host_id: '', key_id: '',
+    });
+    assert.equal(session.password, undefined);
+    const route = `/api/sessions/${id}`;
+    for (const method of ['GET', 'PATCH', 'DELETE']) assert.equal((await server.request(method, route, method === 'PATCH' ? {} : undefined, member)).status, 404);
+    assert.equal((await server.request('POST', `${route}/reconnect`, {}, member)).status, 404);
+    assert.deepEqual((await server.request('GET', '/api/sessions', undefined, member)).body, []);
+    let changed = await server.request('PATCH', route, { minimized: true, title: 'ignored', row: 1, col: 1 }, owner);
+    assert.equal(changed.status, 200);
+    assert.equal(record(changed.body).title, 'localhost:22');
+    assert.equal(record(changed.body).row, 0);
+    assert.equal(record(changed.body).minimized, true);
+    for (const body of [{ title: ' ' }, { row: -1, col: 0 }, { row: 2, col: 0 }, { row: 0, col: 2 }, { row: 1.5, col: 0 }]) assert.equal((await server.request('PATCH', route, body, owner)).status, 400);
+    changed = await server.request('PATCH', route, { title: ' renamed ' }, owner);
+    assert.equal(record(changed.body).title, 'renamed');
+    assert.equal((await server.request('PATCH', route, { row: 1, col: 1 }, owner)).status, 200);
+    assert.equal((await server.request('POST', `${route}/reconnect`, {}, owner)).status, 500);
+    const layout = record(record((await server.request('GET', '/api/config/layout', undefined, owner)).body).layout);
+    assert.deepEqual(layout.tiles, [{ session_id: id, row: 1, col: 1 }]);
+  } finally { await server.close(); }
+  const saved = await readFile(path.join(server.home, 'data', 'sessions', 'sessions.yaml'), 'utf8');
+  assert.ok(!saved.includes('transient-only') && !saved.includes('password'));
+  const other = await start(backend === 'go' ? 'node' : 'go', 'local', server.home);
+  try {
+    const restored = await other.request('GET', `/api/sessions/${id}`, undefined, owner);
+    assert.equal(restored.status, 200);
+    const value = record(restored.body);
+    assert.equal(value.title, 'renamed');
+    assert.equal(value.minimized, true);
+    assert.equal(value.row, 1);
+    assert.equal(value.col, 1);
+    assert.equal(value.state, 'error');
+    assert.equal((await other.request('DELETE', `/api/sessions/${id}`, undefined, owner)).status, 204);
+    assert.deepEqual((await other.request('GET', '/api/sessions', undefined, owner)).body, []);
+    assert.deepEqual(record(record((await other.request('GET', '/api/config/layout', undefined, owner)).body).layout).tiles, []);
+  } finally { await other.close(); }
+}
+
 try {
   const build = spawnSync('go', ['build', '-o', binary, './cmd/webmux'], { cwd: path.join(root, 'server'), stdio: 'inherit' });
   if (build.error) throw build.error;
@@ -376,7 +430,8 @@ try {
     await trustedContract(backend);
     await catalogContract(backend);
     await settingsContract(backend);
-    console.log(`${backend}: authentication/catalog/settings contracts and cross-backend restarts passed`);
+    await sessionContract(backend);
+    console.log(`${backend}: authentication/catalog/settings/session contracts and cross-backend restarts passed`);
   }
 } finally {
   await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

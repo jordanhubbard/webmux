@@ -74,6 +74,20 @@ func (s *Store) WriteConfig(name string, value any) error {
 	return writeYAML(s.ConfigPath(name), value)
 }
 
+// ReadSessions and WriteSessions use the legacy terminal session document.
+// The filename is fixed; session IDs never become filesystem paths.
+func (s *Store) ReadSessions(out any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return readYAML(filepath.Join(s.Home, "data", "sessions", "sessions.yaml"), out)
+}
+
+func (s *Store) WriteSessions(value any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return writeYAML(filepath.Join(s.Home, "data", "sessions", "sessions.yaml"), value)
+}
+
 // UpdateConfig keeps the read, validation, mutation and atomic replacement in
 // one critical section, preventing concurrent bootstrap or account updates
 // from overwriting each other. Returning an error aborts the write.

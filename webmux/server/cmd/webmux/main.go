@@ -29,7 +29,7 @@ func main() {
 	}
 }
 
-func run() error {
+func run() (resultErr error) {
 	root := flag.String("root", envDefault("WEBMUX_ROOT", "."), "installation directory containing config.defaults")
 	home := flag.String("home", os.Getenv("WEBMUX_HOME"), "writable configuration/data directory")
 	listen := flag.String("listen", "", "override HTTP listen address (e.g. 127.0.0.1:18080)")
@@ -67,8 +67,13 @@ func run() error {
 	}
 	api, err := httpapi.New(store, httpapi.Options{Name: config.App.Name, SecureMode: config.App.SecureMode, JWTSecret: os.Getenv("JWT_SECRET")})
 	if err != nil {
-		return fmt.Errorf("initialize authentication: %w", err)
+		return fmt.Errorf("initialize API: %w", err)
 	}
+	defer func() {
+		if err := api.Close(); err != nil {
+			resultErr = errors.Join(resultErr, fmt.Errorf("close sessions: %w", err))
+		}
+	}()
 	var certificate *tls.Certificate
 	certFile, keyFile := store.ConfigPath("tls/cert.pem"), store.ConfigPath("tls/key.pem")
 	_, certErr := os.Stat(certFile)
@@ -102,6 +107,9 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if err := api.RestoreSessions(); err != nil {
+		return fmt.Errorf("restore sessions: %w", err)
+	}
 	handler := api.Handler()
 	servers := make([]*http.Server, 0, len(listeners))
 	failures := make(chan error, len(listeners))

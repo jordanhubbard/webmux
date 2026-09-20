@@ -31,6 +31,7 @@ func fixture(t *testing.T, mode string) (*Server, http.Handler) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = s.Close() })
 	return s, s.Handler()
 }
 

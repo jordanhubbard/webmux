@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/jordanhubbard/webmux/server/internal/auth"
+	"github.com/jordanhubbard/webmux/server/internal/session"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 )
 
@@ -20,6 +21,7 @@ type Server struct {
 	secure        bool
 	passwordSlots chan struct{}
 	logger        *slog.Logger
+	sessions      *session.Broker
 }
 
 type Options struct {
@@ -38,8 +40,15 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, passwordSlots: make(chan struct{}, 2), logger: logger}, nil
+	sessions, err := session.New(store, logger)
+	if err != nil {
+		return nil, err
+	}
+	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions}, nil
 }
+
+func (s *Server) RestoreSessions() error { return s.sessions.Restore() }
+func (s *Server) Close() error           { return s.sessions.Close() }
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
@@ -68,6 +77,12 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/config/layout", s.protected(false, s.getLayout))
 	mux.Handle("PUT /api/config/layout", s.protected(false, s.updateLayout))
 	mux.Handle("GET /api/config/fonts/{index}", s.protected(false, s.getFont))
+	mux.Handle("GET /api/sessions", s.protected(false, s.listSessions))
+	mux.Handle("POST /api/sessions", s.protected(false, s.createSession))
+	mux.Handle("GET /api/sessions/{id}", s.protected(false, s.getSession))
+	mux.Handle("PATCH /api/sessions/{id}", s.protected(false, s.patchSession))
+	mux.Handle("DELETE /api/sessions/{id}", s.protected(false, s.deleteSession))
+	mux.Handle("POST /api/sessions/{id}/reconnect", s.protected(false, s.reconnectSession))
 	return s.cors(newLimiter(300, globalWindow).wrap(apiPaths(mux)))
 }
 

@@ -56,6 +56,9 @@ func whitespace(r rune) bool {
 
 func trim(value string) string { return strings.TrimFunc(value, whitespace) }
 
+// TrimSpace follows JavaScript String.trim for browser-facing text fields.
+func TrimSpace(value string) string { return trim(value) }
+
 func boolean(value any, fallback bool) bool {
 	if value, ok := value.(bool); ok {
 		return value
