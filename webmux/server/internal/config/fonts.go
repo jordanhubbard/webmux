@@ -126,7 +126,7 @@ func FontFaces(value any) ([]FontFace, error) {
 		}
 		source := text(raw["source"], "")
 		segments := strings.FieldsFunc(source, func(r rune) bool { return r == '/' || r == '\\' })
-		if source == "" || length(source) > 512 || filepath.IsAbs(source) || slices.Contains(segments, "..") || strings.ContainsAny(source, "\x00\r\n") || fontScheme.MatchString(source) || FontContentType(source) == "" {
+		if source == "" || length(source) > 512 || strings.HasPrefix(source, "/") || strings.HasPrefix(source, `\`) || filepath.IsAbs(source) || slices.Contains(segments, "..") || strings.ContainsAny(source, "\x00\r\n") || fontScheme.MatchString(source) || FontContentType(source) == "" {
 			return nil, invalid(FontFacesError)
 		}
 		face := FontFace{Family: family, Source: source}

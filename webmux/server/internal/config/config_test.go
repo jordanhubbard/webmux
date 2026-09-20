@@ -65,7 +65,7 @@ func TestFontNormalizationAndInvalidInputs(t *testing.T) {
 	if len(faces) != 1 || faces[0].Family != "Fixture Font" || faces[0].Weight != "400" || faces[0].Style != "italic" || faces[0].Display != "swap" || faces[0].URL != "" {
 		t.Fatal(faces)
 	}
-	for _, source := range []string{"../outside.ttf", `fonts\..\outside.ttf`, "/etc/font.ttf", "https://example.invalid/font.ttf", "C:/font.ttf", "font.js"} {
+	for _, source := range []string{"../outside.ttf", `fonts\..\outside.ttf`, "/etc/font.ttf", `\fonts\rooted.ttf`, `\\server\share\font.ttf`, "https://example.invalid/font.ttf", "C:/font.ttf", "font.js"} {
 		if _, err := FontFaces([]any{Object{"family": "Font", "source": source}}); err == nil {
 			t.Fatalf("accepted source %q", source)
 		}

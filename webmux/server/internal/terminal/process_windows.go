@@ -85,6 +85,11 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 	}
 	startup := windows.StartupInfoEx{}
 	startup.Cb = uint32(unsafe.Sizeof(startup))
+	// Explicit null standard handles let ConPTY install its own. Otherwise a
+	// redirected parent (including a service or go test) can pass its streams
+	// through even when CreateProcess disables general handle inheritance.
+	// https://github.com/microsoft/terminal/discussions/15814
+	startup.Flags = windows.STARTF_USESTDHANDLES
 	startup.ProcThreadAttributeList = attributes.List()
 	var info windows.ProcessInformation
 	err = windows.CreateProcess(application, commandLine, nil, nil, false,
