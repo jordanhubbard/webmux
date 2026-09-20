@@ -13,6 +13,18 @@ compatibility gates. The Go implementation lives in `webmux/server`; partial
 implementation is not a production replacement. Do not run both implementations
 against the same writable `WEBMUX_HOME`.
 
+Windows native MSI CI now repeats the service lifecycle with a temporary local
+Users-group account after the fresh-install LocalSystem check. The fixture
+supplies generated credentials through a scoped replacement of the credential
+prompt, leaving the installer registration path intact. It grants the account
+read/execute access to the payload and wrapper, modify access to private runtime
+state, checks the SCM identity and absence of retained service-account XML, and
+reuses reconfiguration, PTY/transcript shutdown and restart checks. After service
+removal it removes the added payload ACLs and account; a surviving service keeps
+its account/state for diagnosis. This addition requires Windows CI execution;
+PowerShell is unavailable on the local macOS host. Domain accounts and forced
+rollback failures remain separate gaps.
+
 Native packaging now applies the release-tag/version check before building and
 verifies its complete upload set before retaining artifacts. Unix requires one
 version/platform/architecture-specific archive plus its SHA-256 file; Windows

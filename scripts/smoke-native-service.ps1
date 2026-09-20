@@ -1,6 +1,6 @@
 # Run only on an isolated Windows runner: exercise the actual WinSW lifecycle.
 [CmdletBinding()]
-param([Parameter(Mandatory = $true)][string]$BundleDirectory)
+param([Parameter(Mandatory = $true)][string]$BundleDirectory, [switch]$UserAccount)
 $ErrorActionPreference = 'Stop'
 $serviceDirectory = Join-Path $env:ProgramData 'WebMux'
 if ((Get-Service -Name WebMux -ErrorAction SilentlyContinue) -or (Test-Path -LiteralPath $serviceDirectory)) {
@@ -23,6 +23,13 @@ $app = $app -replace '(?m)^(\s*session_logging:\r?\n\s*enabled:)\s*false', '${1}
 [IO.File]::WriteAllText($appFile, $app)
 [IO.File]::WriteAllText((Join-Path $homeDirectory 'config/auth.yaml'), "auth:`n  mode: none`n  users: []`n")
 $url = "http://127.0.0.1:$port"
+$fixtureAccount = $null
+$fixtureSid = $null
+$fixtureCredential = $null
+function Grant-FixtureAccess([string]$Directory, [string]$Rights) {
+  & icacls.exe $Directory /grant:r "*${fixtureSid}:(OI)(CI)$Rights" /T /Q | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "Could not grant fixture account access to $Directory" }
+}
 function Wait-Healthy {
   $deadline = [DateTime]::UtcNow.AddSeconds(30)
   do {
@@ -35,7 +42,32 @@ function Wait-Healthy {
   throw 'Native Windows service did not become healthy.'
 }
 try {
-  & $installer install -Backend go -LocalSystem -WebMuxHome $homeDirectory
+  if ($UserAccount) {
+    $name = 'wmx' + [Guid]::NewGuid().ToString('N').Substring(0, 12)
+    $password = ConvertTo-SecureString ('aA1!' + [Guid]::NewGuid().ToString('N') + [Guid]::NewGuid().ToString('N')) -AsPlainText -Force
+    $createdAccount = New-LocalUser -Name $name -Password $password -Description 'Temporary WebMux CI service fixture'
+    $fixtureAccount = $name
+    $fixtureSid = $createdAccount.SID.Value
+    $users = Get-LocalGroup -SID 'S-1-5-32-545'
+    if (-not (Get-LocalGroupMember -Group $users | Where-Object { $_.SID.Value -eq $fixtureSid })) {
+      Add-LocalGroupMember -Group $users -Member $createdAccount
+    }
+    $fixtureCredential = [PSCredential]::new("$env:COMPUTERNAME\$name", $password)
+    $password = $null
+    [IO.Directory]::CreateDirectory($serviceDirectory) | Out-Null
+    Grant-FixtureAccess $root 'RX'
+    Grant-FixtureAccess $serviceDirectory 'RX'
+    Grant-FixtureAccess $homeDirectory 'M'
+    # Shadow only the prompt in this fixture's scope. The installed script still
+    # exercises its real credential registration and password-scrubbing path.
+    function Get-Credential {
+      param([string]$UserName, [string]$Message)
+      return $fixtureCredential
+    }
+    & $installer install -Backend go -WebMuxHome $homeDirectory
+  } else {
+    & $installer install -Backend go -LocalSystem -WebMuxHome $homeDirectory
+  }
   Wait-Healthy
   $definition = [xml][IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml'))
   if ($definition.service.executable -ne (Join-Path $root 'bin/webmux.exe')) { throw 'Service is not using the native executable.' }
@@ -43,6 +75,10 @@ try {
   $page = Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 5
   if ($page.Content -notmatch '<div id="root">') { throw 'Service did not serve the frontend.' }
   $account = (Get-CimInstance Win32_Service -Filter "Name='WebMux'").StartName
+  if ($UserAccount) {
+    if ($account -notin @(".\$fixtureAccount", "$env:COMPUTERNAME\$fixtureAccount")) { throw 'Service is not running under the fixture account.' }
+    if ($definition.SelectSingleNode('/service/serviceaccount')) { throw 'Service account credentials remained in the XML after registration.' }
+  }
   $environment = @($definition.service.env | ForEach-Object { $_.OuterXml }) -join "`n"
   $originalConfig = [IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml'))
   $rejected = $false
@@ -94,8 +130,15 @@ try {
   } finally {
     if (-not (Get-Service -Name WebMux -ErrorAction SilentlyContinue)) {
       if (Test-Path -LiteralPath $homeDirectory) { Remove-Item -LiteralPath $homeDirectory -Recurse -Force }
+      if ($fixtureAccount) {
+        & icacls.exe $root /remove:g "*$fixtureSid" /T /Q | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'Could not remove fixture account permissions from the installed payload.' }
+        Remove-LocalUser -Name $fixtureAccount
+        if (Get-LocalUser -Name $fixtureAccount -ErrorAction SilentlyContinue) { throw 'Fixture account survived cleanup.' }
+      }
     }
+    $fixtureCredential = $null
   }
 }
 if (Get-Service -Name WebMux -ErrorAction SilentlyContinue) { throw 'Service registration survived uninstall.' }
-Write-Host 'Native Windows service passed: install, HTTP/UI, stop, start, preserved config and uninstall.'
+Write-Host "Native Windows service passed: install, HTTP/UI, stop, start, preserved config and uninstall (custom account: $UserAccount)."

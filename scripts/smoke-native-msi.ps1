@@ -70,6 +70,9 @@ try {
   & node (Join-Path $PSScriptRoot 'smoke-native-package.mts') $installRoot
   if ($LASTEXITCODE -ne 0) { throw 'Installed native runtime failed smoke checks.' }
   & (Join-Path $PSScriptRoot 'smoke-native-service.ps1') -BundleDirectory $installRoot
+  if (-not $previousPath) {
+    & (Join-Path $PSScriptRoot 'smoke-native-service.ps1') -BundleDirectory $installRoot -UserAccount
+  }
 } catch {
   Write-Error $_ -ErrorAction Continue
   throw
