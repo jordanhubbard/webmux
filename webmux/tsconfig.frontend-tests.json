@@ -1,0 +1,15 @@
+{
+  "extends": "./frontend/tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "novnc__novnc", "node", "vitest/globals", "@testing-library/jest-dom"],
+    "paths": {
+      "@frontend/*": ["./frontend/src/*"],
+      "vitest": ["./node_modules/vitest"],
+      "@testing-library/*": ["./node_modules/@testing-library/*"],
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"]
+    }
+  },
+  "include": ["../tests/frontend/**/*.ts", "../tests/frontend/**/*.tsx", "frontend/src", "frontend/vite.config.ts"],
+  "exclude": ["node_modules"]
+}

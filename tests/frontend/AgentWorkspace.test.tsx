@@ -47,7 +47,6 @@ function makeSession(overrides: Partial<Session> = {}): Session {
     transport: 'exec',
     host_id: '',
     hostname: 'codex.local',
-    port: 0,
     username: 'codex',
     key_id: '',
     cols: 120,
@@ -126,12 +125,12 @@ function restoreViewport() {
   if (originalVisualViewport) {
     Object.defineProperty(window, 'visualViewport', originalVisualViewport);
   } else {
-    delete (window as Partial<Window>).visualViewport;
+    Reflect.deleteProperty(window, 'visualViewport');
   }
   if (originalMaxTouchPoints) {
     Object.defineProperty(Navigator.prototype, 'maxTouchPoints', originalMaxTouchPoints);
   } else {
-    delete (Navigator.prototype as Partial<Navigator>).maxTouchPoints;
+    Reflect.deleteProperty(Navigator.prototype, 'maxTouchPoints');
   }
 }
 

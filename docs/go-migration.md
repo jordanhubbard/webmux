@@ -318,12 +318,23 @@ RFB 3.8 server through each backend's WebSocket proxy. The fixture supplies a
 fixed raw-pixel framebuffer and records keyboard and pointer events. Thumbnail
 and fullscreen views at both viewport sizes compare exactly; typing and clicking
 also reach the RFB server. The complete 26-state Node baseline/control/Go sequence
-passes locally. Hosted validation of the VNC additions is pending. This fixture
+passes locally and on Linux and Windows CI at beb7d95. This fixture
 covers raw encoding and unauthenticated RFB only.
 
 This is scoped rendering evidence, not proof of every state or platform. Active
 RDP rendering, agent panes, remaining failure states, real guacd/RDP
 and VNC hosts, and performance gates still need coverage before replacement.
+
+`npm run typecheck` now checks source coverage before running all seven strict
+TypeScript projects. It rejects tracked or untracked nonignored JavaScript and
+TypeScript files outside those projects, resolving existing test-directory
+symlinks before comparing paths. Backend/frontend tests and Vite configuration
+are included, alongside runtime, browser, helper and tooling sources. Generated
+ignored output and installed dependencies remain outside the source inventory.
+The expanded check exposed and corrected incomplete session fixtures, readonly
+property deletion in viewport cleanup, global fetch mock assignment and missing
+Vite test-configuration typing. Both deliberately introduced JavaScript and
+unchecked TypeScript probes were rejected locally.
 
 Packaging scripts, browser test runners, the E2E fixture and agent status helper
 now have checked TypeScript sources. ESLint and Jest configurations are
@@ -445,7 +456,9 @@ repair of a stopped definition that references the removed Node backend, checkin
 account/environment preservation and successful native startup. Windows execution
 at b9ebe58 caught PowerShell coercing the replacement API's null backup path to
 an empty string. Both replacement calls now use .NET `NullString.Value`; the
-corrected Windows execution is pending. This does not yet verify custom accounts or delayed startup failure
+corrected Windows x64 execution passes at beb7d95, including running and stopped
+reconfiguration after both fresh installation and MSI replacement. This does not
+yet verify custom accounts or delayed startup failure
 rollback. The documented migration sequence stops the service before MSI replacement.
 Native MSI CI installs on an isolated runner, exercises the installed HTTP/UI,
 authentication and PTY runtime, runs the WinSW service lifecycle from that

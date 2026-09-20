@@ -18,7 +18,7 @@
     "dev:frontend": "npm run dev --workspace=frontend",
     "build": "npm run build:helpers && npm run build --workspace=backend && npm run build --workspace=frontend",
     "build:helpers": "tsc --project tsconfig.helpers.json",
-    "typecheck": "tsc --noEmit --project backend/tsconfig.json && tsc --noEmit --project frontend/tsconfig.json && tsc --project tsconfig.tools.json && tsc --noEmit --project tsconfig.helpers.json && tsc --project tsconfig.e2e.json",
+    "typecheck": "node scripts/check-typescript.mts",
     "test:contract": "npm run build --workspace=backend && node scripts/server-contract.mts",
     "test:contract:auth": "npm run test:contract",
     "test:e2e": "node scripts/run-playwright.mts",

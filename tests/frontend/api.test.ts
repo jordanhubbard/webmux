@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 function clearStorage() {
   try { localStorage.clear(); } catch { /* jsdom may not support */ }
@@ -6,6 +6,7 @@ function clearStorage() {
 }
 
 describe('api utilities', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
   beforeEach(() => {
     clearStorage();
     vi.resetModules();
@@ -39,7 +40,7 @@ describe('api utilities', () => {
 
     beforeEach(() => {
       fetchSpy = vi.fn();
-      global.fetch = fetchSpy;
+      vi.stubGlobal('fetch', fetchSpy);
       clearStorage();
     });
 
@@ -161,7 +162,7 @@ describe('api utilities', () => {
 
     beforeEach(() => {
       fetchSpy = vi.fn();
-      global.fetch = fetchSpy;
+      vi.stubGlobal('fetch', fetchSpy);
       clearStorage();
     });
 
