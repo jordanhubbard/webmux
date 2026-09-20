@@ -1,6 +1,7 @@
 import { test, expect, type Page, type TestInfo } from '@playwright/test';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { randomBytes } from 'node:crypto';
 
 test.skip(process.env.WEBMUX_VISUAL_PARITY !== '1', 'Run through test:visual-parity to create the Node baseline first');
 test.use({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, locale: 'en-US', timezoneId: 'UTC', colorScheme: 'dark', contextOptions: { reducedMotion: 'reduce' } });
@@ -74,6 +75,7 @@ async function comparePixels(page: Page, info: TestInfo, name: string): Promise<
 }
 
 test('workspace and dialogs match the Node rendering exactly', async ({ page }, info) => {
+  test.skip(process.env.WEBMUX_E2E_AUTH === 'local', 'Trusted workspace uses the no-auth fixture');
   await page.goto('/');
   const add = page.getByTestId('add-cell-0-0').first();
   await expect(add).toBeVisible();
@@ -98,4 +100,43 @@ test('workspace and dialogs match the Node rendering exactly', async ({ page }, 
     await page.keyboard.press('Escape');
     await page.setViewportSize({ width: 1280, height: 800 });
   }
+});
+
+test('setup and sign-in match the Node rendering exactly', async ({ page }, info) => {
+  test.skip(process.env.WEBMUX_E2E_AUTH !== 'local', 'Authentication uses an isolated local-auth fixture');
+  const password = randomBytes(12).toString('hex');
+  const incorrect = randomBytes(12).toString('hex');
+  async function captureBoth(name: string): Promise<void> {
+    await capture(page, info, `${name}.png`);
+    await page.setViewportSize({ width: 375, height: 667 });
+    await capture(page, info, `${name}-narrow.png`);
+    await page.setViewportSize({ width: 1280, height: 800 });
+  }
+  await page.goto('/');
+  await expect(page.getByText('First-time setup', { exact: true })).toBeVisible();
+  await captureBoth('auth-setup');
+  await page.getByLabel('Username', { exact: true }).fill('visual-owner');
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByLabel('Confirm Password', { exact: true }).fill(incorrect);
+  await page.getByRole('button', { name: 'Create Account', exact: true }).click();
+  await expect(page.getByText('Passwords do not match', { exact: true })).toBeVisible();
+  await captureBoth('auth-setup-error');
+  await page.getByLabel('Confirm Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Create Account', exact: true }).click();
+  await expect(page.getByTestId('add-cell-0-0').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(page.getByText('Sign in to your session', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Confirm Password', { exact: true })).toHaveCount(0);
+  await captureBoth('auth-sign-in');
+  await page.getByLabel('Username', { exact: true }).fill('visual-owner');
+  await page.getByLabel('Password', { exact: true }).fill(incorrect);
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+  await expect(page.getByText('Invalid credentials', { exact: true })).toBeVisible();
+  await captureBoth('auth-sign-in-error');
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+  await expect(page.getByTestId('add-cell-0-0').first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId('add-cell-0-0').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
 });

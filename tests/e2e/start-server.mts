@@ -7,6 +7,8 @@ const require = createRequire(import.meta.url);
 
 const testHome = path.resolve(import.meta.dirname, '.test-home');
 const defaultsDir = path.resolve(import.meta.dirname, '../../webmux/config.defaults');
+const authMode = process.env.WEBMUX_E2E_AUTH ?? 'none';
+if (authMode !== 'none' && authMode !== 'local') throw new Error(`Unsupported browser-test auth mode: ${authMode}`);
 
 // Initialize before requiring the server: Playwright's globalSetup runs AFTER its
 // webServer starts. Never remove watched storage from a running server, including
@@ -18,7 +20,7 @@ for (const directory of ['config', 'logs', 'data']) {
 for (const entry of fs.readdirSync(defaultsDir, { withFileTypes: true })) {
   if (entry.isDirectory()) continue;
   let content = fs.readFileSync(path.join(defaultsDir, entry.name), 'utf8');
-  if (entry.name === 'auth.yaml') content = content.replace('mode: local', 'mode: none');
+  if (entry.name === 'auth.yaml') content = content.replace('mode: local', `mode: ${authMode}`);
   fs.writeFileSync(path.join(testHome, 'config', entry.name), content);
 }
 process.env.WEBMUX_HOME = testHome;

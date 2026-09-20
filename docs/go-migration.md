@@ -271,8 +271,18 @@ This changes only the screenshot renderer, with no CSS changes, masking, pixel
 tolerance or baseline updates during comparisons. Hosted Linux/Windows
 verification of this control remains required; it is not yet a completed gate.
 
-This is scoped rendering evidence, not proof of every state or platform. Login,
-active terminal/desktop rendering, agent panes, failure states, real guacd/RDP
+The visual runner now repeats the Node baseline/control/Go sequence with an
+isolated local-authentication fixture as well as trusted mode. Eight additional
+captures cover first-time setup, mismatched setup passwords, sign-in and rejected
+credentials at desktop and narrow viewports. The same browser flow creates the
+owner account, signs out, signs back in and reloads the authenticated workspace.
+Credentials are generated per run; screenshot password lengths remain fixed.
+All 16 states and both authentication modes pass locally with Chromium 145,
+including exact decoded-RGBA comparisons. TypeScript checks pass. CI verification
+of these added states is pending.
+
+This is scoped rendering evidence, not proof of every state or platform. Active
+terminal/desktop rendering, agent panes, remaining failure states, real guacd/RDP
 and VNC hosts, and performance gates still need coverage before replacement.
 
 Packaging scripts, browser test runners, the E2E fixture and agent status helper
