@@ -1,8 +1,11 @@
-const fs = require('node:fs');
-const path = require('node:path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
 
-const testHome = path.resolve(__dirname, '.test-home');
-const defaultsDir = path.resolve(__dirname, '../../webmux/config.defaults');
+const require = createRequire(import.meta.url);
+
+const testHome = path.resolve(import.meta.dirname, '.test-home');
+const defaultsDir = path.resolve(import.meta.dirname, '../../webmux/config.defaults');
 
 // Initialize before requiring the server: Playwright's globalSetup runs AFTER its
 // webServer starts. Never remove watched storage from a running server, including

@@ -27,7 +27,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'node ../tests/e2e/start-server.cjs',
+    command: 'node ../tests/e2e/start-server.mts',
     port: TEST_PORT,
     cwd: WEBMUX_DIR,
     reuseExistingServer: false,

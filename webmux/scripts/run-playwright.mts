@@ -1,7 +1,10 @@
-const path = require('path');
-const { spawnSync } = require('child_process');
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 
-const webmuxDir = path.resolve(__dirname, '..');
+const require = createRequire(import.meta.url);
+
+const webmuxDir = path.resolve(import.meta.dirname, '..');
 const nodeModules = path.join(webmuxDir, 'node_modules');
 const playwrightCli = require.resolve('@playwright/test/cli', { paths: [webmuxDir] });
 const childEnv = {

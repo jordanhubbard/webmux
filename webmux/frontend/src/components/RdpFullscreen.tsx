@@ -1,6 +1,4 @@
 import { useState, useRef, useCallback } from 'react';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import Guacamole from 'guacamole-common-js';
 import { RdpViewer } from './RdpViewer';
 import type { RdpClientControl } from './RdpViewer';

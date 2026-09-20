@@ -7,6 +7,37 @@ on:
     branches: [main]
 
 jobs:
+  go-server:
+    name: Go Server (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: webmux/package-lock.json
+      - name: Test native server with race detector
+        working-directory: webmux/server
+        run: go test -race ./...
+      - name: Vet native server
+        working-directory: webmux/server
+        run: go vet ./...
+      - name: Install compatibility test dependencies
+        working-directory: webmux
+        run: npm ci
+      - name: Verify Node and Go authentication compatibility
+        working-directory: webmux
+        run: npm run test:contract:auth
+
   test:
     name: Backend Tests
     runs-on: ubuntu-22.04

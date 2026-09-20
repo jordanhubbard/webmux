@@ -1,9 +1,12 @@
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { spawnSync } = require('child_process');
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 
-const frontendDir = path.resolve(__dirname, '..', 'frontend');
+const require = createRequire(import.meta.url);
+
+const frontendDir = path.resolve(import.meta.dirname, '..', 'frontend');
 const vitestCli = require.resolve('vitest/vitest.mjs', { paths: [frontendDir] });
 const storageFile = path.join(os.tmpdir(), `webmux-vitest-localstorage-${process.pid}.json`);
 const nodeMajor = Number(process.versions.node.split('.')[0]);
