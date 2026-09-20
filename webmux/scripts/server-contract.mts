@@ -964,6 +964,25 @@ async function agentContract(backend: Backend): Promise<void> {
     const statusDir = path.join(server.home, 'data', 'agent-status', 'alpha');
     await mkdir(statusDir, { recursive: true });
     const statusFile = path.join(statusDir, `${Buffer.from('alpha-task-a').toString('base64url')}.json`);
+    // Hook timestamps may use JavaScript's human-readable date formats. Verify
+    // status inference and exact spelling preservation through the public API.
+    for (const stamp of [
+      '2100-09-20', '2100-09-20T12:34:56', '2100-09-20T12:34',
+      '2100-09-20 12:34:56', '2100-09-20T12:34:56+0530',
+      '2100-09-20T12:34+05:30', '09/20/2100 12:34:56', '9/20/2100',
+      new Date('2100-09-20T12:34:56Z').toUTCString(),
+      new Date('2100-09-20T12:34:56Z').toString(),
+      'Mon Sep 20 2100 12:34:56 GMT+0530 (India Standard Time)',
+      'September 20, 2100 12:34:56 GMT',
+    ]) {
+      assert(Number.isFinite(Date.parse(stamp)), `invalid timestamp fixture ${stamp}`);
+      await writeFile(statusFile, JSON.stringify({ last_output_at: stamp }));
+      const response = await call('GET', '/api/agents/alpha/sessions');
+      assert.equal(response.status, 200); assert(Array.isArray(response.body));
+      const first = record(response.body[0]);
+      assert.equal(first.last_output_at, stamp, `${backend}: timestamp ${stamp}`);
+      assert.equal(first.status, 'working'); assert.equal(first.status_source, 'tmux');
+    }
     await writeFile(statusFile, JSON.stringify({ agent_id: 'alpha', name: 'alpha-task-a', status: 'waiting', source: 'hook', updated_at: new Date().toISOString(), extension: 'preserved' }));
     const attached = await call('POST', '/api/agents/alpha/attach', { name: 'alpha-task-a', cols: 999, rows: 1 });
     assert.equal(attached.status, 201);

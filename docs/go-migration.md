@@ -116,9 +116,15 @@ configuration blocks new access without deleting recoverable saved records.
 Activity writes debounce for 200 ms, suppress output during the first 1.5 seconds
 of a launch and flush on shutdown. Status inference preserves waiting slop and
 recent/stale boundaries. Tests use isolated homes and fixture processes; they
-do not contact operator tmux sockets. Locale-dependent label ordering and
-non-ISO legacy timestamps still require differential coverage;
-the initial implementation uses English collation and RFC3339 timestamps.
+do not contact operator tmux sockets. Timestamp inference now also accepts
+JavaScript UTC/local date strings, ISO dates without a time, zone-less local
+datetimes, compact numeric offsets, and common US numeric/month-name dates.
+Public API contracts check that both servers retain the hook's original spelling
+and infer activity consistently; Go unit tests check the actual UTC instants,
+including positive/negative offsets and local-time interpretation. This is not
+complete JavaScript Date.parse compatibility: calendar overflow, 24:00, expanded
+years, other legacy spellings and DST ambiguity still need coverage. Display
+name ordering still uses English collation; host-locale parity remains open.
 
 VNC and RDP session HTTP APIs now support owner-scoped create/list/get/move/delete
 and reconnect state changes. Separate desktop brokers preserve saved-host port
@@ -425,6 +431,15 @@ intervals. It does not cover browser rendering, remote transports, concurrent
 sessions or sustained load. Go input latency is worse in this run; performance
 parity remains unproven. The measurement was made with these changes applied on
 top of a56722e and an explicitly recorded dirty working tree.
+
+At 2e847f6, the Linux CI benchmark also completed with exact payload delivery
+(AMD EPYC 7763, Node 24.20.0, Go 1.26.0). Go/Node results were 15.9/244.7 ms
+startup, 11.0/80.6 MiB idle RSS, 16.4/88.3 MiB active RSS, 0.73/1.01 ms p95
+input latency and 19.8/20.8 MiB/s transfer. The differing latency/throughput
+results reinforce the need for platform and workload coverage before asserting
+performance parity. The report is in CI run 35539594099's
+`backend-performance-Linux` artifact; that job subsequently failed its separate
+exact screenshot comparison.
 
 ### Deliberate security differences
 

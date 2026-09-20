@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -20,11 +21,44 @@ type metadata map[string]any
 
 func (m metadata) text(key string) string { v, _ := m[key].(string); return v }
 func isoTime(value string) int64 {
+	return timestampInLocation(value, time.Local)
+}
+func timestampInLocation(value string, local *time.Location) int64 {
 	parsed, err := time.Parse(time.RFC3339Nano, value)
-	if err != nil {
-		return 0
+	if err == nil {
+		return parsed.UnixMilli()
 	}
-	return parsed.UnixMilli()
+	// ISO date-only values use UTC; datetimes without a zone use host local
+	// time. Preserve the original spelling in metadata and API responses.
+	if parsed, err := time.Parse("2006-01-02", value); err == nil {
+		return parsed.UnixMilli()
+	}
+	for _, layout := range []string{"2006-01-02T15:04:05Z0700", "2006-01-02T15:04Z07:00", "2006-01-02T15:04Z0700"} {
+		if parsed, err := time.Parse(layout, value); err == nil {
+			return parsed.UnixMilli()
+		}
+	}
+	for _, layout := range []string{"2006-01-02T15:04:05", "2006-01-02T15:04", "2006-01-02 15:04:05", "2006-01-02 15:04", "1/2/2006 15:04:05", "1/2/2006"} {
+		if parsed, err := time.ParseInLocation(layout, value, local); err == nil {
+			return parsed.UnixMilli()
+		}
+	}
+	// Date.toString() includes a descriptive zone name in parentheses. Its
+	// numeric GMT offset determines the instant, not the host's zone database.
+	legacy := strings.TrimSpace(value)
+	if i := strings.LastIndex(legacy, " ("); i >= 0 && strings.HasSuffix(legacy, ")") {
+		legacy = legacy[:i]
+	}
+	for _, layout := range []string{
+		"Mon, 02 Jan 2006 15:04:05 GMT",
+		"Mon Jan 02 2006 15:04:05 GMT-0700",
+		"January 2, 2006 15:04:05 GMT",
+	} {
+		if parsed, err := time.Parse(layout, legacy); err == nil {
+			return parsed.UnixMilli()
+		}
+	}
+	return 0
 }
 func latestISO(values ...string) string {
 	latest := int64(0)
