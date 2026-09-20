@@ -69,7 +69,7 @@ func (b *Broker) Join(owner, id string) (*Viewer, error) {
 		e.focus = v.ID
 	}
 	b.broadcastLocked(e, b.presenceLocked(e, "viewer_join", v.ID))
-	v.send(Event{"type": "status", "session_id": id, "state": e.value.State, "viewer_id": v.ID, "transcript_enabled": false})
+	v.send(Event{"type": "status", "session_id": id, "state": e.value.State, "viewer_id": v.ID, "transcript_enabled": e.run != nil && e.run.log.active()})
 	if e.scrollback != "" {
 		v.send(Event{"type": "output", "session_id": id, "data": e.scrollback})
 	}

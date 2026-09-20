@@ -58,8 +58,10 @@ broker serializes grid allocation and persistence, rebuilds layout tiles while
 preserving layout metadata, and rejects stale output/exit events from replaced
 processes. Terminal WebSockets now support ticket/token authentication, atomic
 scrollback-to-live delivery, input, resize, viewer presence/focus and deletion.
-Other application routes, static UI serving, transcript toggle/logging and
-agent-service integration remain pending.
+Transcript logging now follows the configured launch default, supports manual
+pause/resume into the same file, and rotates files across launches. It preserves
+headers/footers, audit event fields and owner-only POSIX permissions. Other
+application routes, static UI serving and agent-service integration remain pending.
 
 The internal terminal process layer now supports Unix PTYs and Windows ConPTY,
 with independent process lifetime, serialized input, resize, exit status,
@@ -89,8 +91,12 @@ fixtures deliberately use failed local exec launches; a real Go PTY test covers
 initial-command injection, input, resize, reconnect, Unicode and process exit.
 The terminal WebSocket contract also runs a checked TypeScript fixture inside a
 real PTY through both servers and compares authentication, tickets, input,
-dimensions, Unicode, late-viewer replay, focus, leave and deletion. The broker
-tests cover the replay/live boundary and bounded input/output queues.
+dimensions, Unicode, late-viewer replay, focus, leave and deletion. It also
+compares transcript defaults, pause/resume status, excluded paused output,
+reconnect rotation, deletion footers and POSIX permissions. The broker tests
+cover the replay/live boundary, bounded queues, disk failures, drain races and
+shutdown flushing. Transcript filenames retain the legacy pattern; launch
+generation numbers are per-runtime identifiers, not persisted sequence numbers.
 Fixtures use temporary homes and never
 connect to real terminal or desktop hosts. `npm run typecheck` checks the
 TypeScript contract harness as well as the application.
@@ -151,5 +157,13 @@ still need conversion or removal as the Go deployment tooling replaces them.
   bounded by 256 messages and 2 MiB of queued data. Slow viewers or excess
   input receive close code 1013 instead of blocking unrelated sessions or growing
   queues without bound. Viewer disconnection does not terminate its PTY.
+- Transcript writes run outside the session lock with a queue bounded by 256
+  chunks and 4 MiB. A write failure or overflow disables recording, emits an audit
+  error and notifies viewers while leaving the terminal running. A socket may
+  have at most 16 pending transcript toggles. Pause/resume requests are serialized
+  per session, and draining an old log cannot disable a replacement launch's log.
+- Transcript opens are confined to the log directory. Resume rejects a substituted
+  symlink or non-regular file instead of appending to its target. Disconnected
+  processes cannot start a new transcript through a stale process handle.
 
 These are intentional changes, not claims of byte-for-byte error compatibility.

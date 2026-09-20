@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -462,6 +462,7 @@ async function terminalContract(backend: Backend): Promise<void> {
   const open = (route: string): SocketProbe => { const client = probe(server.socket(route)); clients.push(client); return client; };
   try {
     const owner = stringField((await server.request('POST', '/api/auth/bootstrap', { username: 'owner', password: 'password' })).body, 'token');
+    assert.equal((await server.request('PUT', '/api/config', { app: { session_logging: { enabled: true } } }, owner)).status, 200);
     const quote = (value: string): string => process.platform === 'win32' ? `"${value}"` : `'${value.replaceAll("'", `'"'"'`)}'`;
     const command = `${quote(process.execPath)} ${quote(path.join(root, 'scripts', 'terminal-fixture.mts'))}`;
     const created = await server.request('POST', '/api/sessions', { hostname: 'localhost', username: 'fixture', transport: 'exec', exec_command: command }, owner);
@@ -477,6 +478,7 @@ async function terminalContract(backend: Backend): Promise<void> {
     await waitSocket(first, () => first.output.includes('fixture-ready'), 'initial terminal output');
     const firstStatus = first.events.find(event => event.type === 'status' && typeof event.viewer_id === 'string');
     assert.ok(firstStatus);
+    assert.equal(firstStatus.transcript_enabled, true);
     const firstID = stringField(firstStatus, 'viewer_id');
     const reuse = open(`${pathName}?ticket=${ticket}`);
     await waitSocket(reuse, () => reuse.closed !== undefined, 'ticket reuse close');
@@ -486,6 +488,29 @@ async function terminalContract(backend: Backend): Promise<void> {
     first.socket.send(JSON.stringify({ type: 'resize', cols: 99, rows: 31 }));
     first.socket.send(JSON.stringify({ type: 'input', data: 'size\r' }));
     await waitSocket(first, () => first.output.includes('fixture-size:99x31'), 'terminal resize');
+    first.socket.send(JSON.stringify({ type: 'transcript_toggle' }));
+    await waitSocket(first, () => first.events.some(event => event.type === 'transcript_status' && event.transcript_enabled === false), 'transcript pause');
+    const paused = first.events.find(event => event.type === 'transcript_status' && event.transcript_enabled === false);
+    assert.ok(paused);
+    const transcript = stringField(paused, 'transcript_file');
+    const beforePause = await readFile(transcript, 'utf8');
+    assert.ok(beforePause.includes('[webmux transcript started ') && beforePause.includes('fixture-reply:hello:λ😀'));
+    assert.ok(beforePause.includes('reason=manual_pause'));
+    first.socket.send(JSON.stringify({ type: 'input', data: 'paused-output\r' }));
+    await waitSocket(first, () => first.output.includes('fixture-reply:paused-output:λ😀'), 'output while transcript paused');
+    assert.ok(!(await readFile(transcript, 'utf8')).includes('paused-output'));
+    const resumeIndex = first.events.length;
+    first.socket.send(JSON.stringify({ type: 'transcript_toggle' }));
+    await waitSocket(first, () => first.events.slice(resumeIndex).some(event => event.type === 'transcript_status' && event.transcript_enabled === true), 'transcript resume');
+    const resumed = first.events.slice(resumeIndex).find(event => event.type === 'transcript_status' && event.transcript_enabled === true);
+    assert.equal(resumed?.transcript_file, transcript);
+    first.socket.send(JSON.stringify({ type: 'input', data: 'recorded-output\r' }));
+    await waitSocket(first, () => first.output.includes('fixture-reply:recorded-output:λ😀'), 'resumed transcript output');
+    await waitFile(transcript, 'fixture-reply:recorded-output:λ😀');
+    if (process.platform !== 'win32') {
+      assert.equal((await stat(transcript)).mode & 0o777, 0o600);
+      assert.equal((await stat(path.dirname(transcript))).mode & 0o777, 0o700);
+    }
     const second = open(`${pathName}?token=${owner}`);
     await waitSocket(second, () => second.output.includes('fixture-reply:hello:λ😀'), 'scrollback replay');
     const secondJoin = second.events.find(event => event.type === 'viewer_join');
@@ -502,12 +527,34 @@ async function terminalContract(backend: Backend): Promise<void> {
     const leave = first.events.find(event => event.type === 'viewer_leave' && event.viewer_id === secondID);
     assert.equal(leave?.focus_owner, undefined);
     assert.equal(leave?.viewer_count, 1);
+    const reconnectIndex = first.events.length;
+    const outputIndex = first.output.length;
+    assert.equal((await server.request('POST', `/api/sessions/${id}/reconnect`, {}, owner)).status, 200);
+    await waitSocket(first, () => first.events.slice(reconnectIndex).some(event => event.type === 'transcript_status' && event.transcript_enabled === true), 'new launch transcript');
+    const restarted = first.events.slice(reconnectIndex).find(event => event.type === 'transcript_status' && event.transcript_enabled === true);
+    assert.ok(restarted);
+    const nextTranscript = stringField(restarted, 'transcript_file');
+    assert.notEqual(nextTranscript, transcript);
+    await waitSocket(first, () => first.output.slice(outputIndex).includes('fixture-ready'), 'reconnected terminal output');
+    await waitFile(transcript, 'reason=reconnect');
+    assert.ok((await readFile(transcript, 'utf8')).includes('[webmux transcript resumed '));
+    assert.ok(!(await readFile(transcript, 'utf8')).includes('paused-output'));
     assert.equal((await server.request('DELETE', `/api/sessions/${id}`, undefined, owner)).status, 204);
     await waitSocket(first, () => first.closed !== undefined, 'session deletion close');
     assert.equal(first.closed, 1000);
+    await waitFile(nextTranscript, 'reason=deleted');
   } finally {
     for (const client of clients) client.socket.terminate();
     await server.close();
+  }
+}
+
+async function waitFile(file: string, content: string): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  for (;;) {
+    if ((await readFile(file, 'utf8')).includes(content)) return;
+    assert.ok(Date.now() < deadline, `transcript missing ${content}`);
+    await delay(10);
   }
 }
 

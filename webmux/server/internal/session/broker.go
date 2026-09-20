@@ -35,6 +35,8 @@ type run struct {
 	stopped    chan struct{}
 	stopOnce   sync.Once
 	inputBytes atomic.Int64
+	generation uint64
+	log        *transcriptLog
 }
 
 func (r *run) stop() {
@@ -45,11 +47,13 @@ func (r *run) stop() {
 }
 
 type entry struct {
-	value      Session
-	run        *run
-	scrollback string
-	viewers    map[string]*Viewer
-	focus      string
+	value        Session
+	run          *run
+	scrollback   string
+	viewers      map[string]*Viewer
+	focus        string
+	generation   uint64
+	logOperation sync.Mutex
 }
 
 // Broker owns sessions and PTYs. Viewers do not own process lifetime. All map,
@@ -65,6 +69,7 @@ type Broker struct {
 	order   []string
 	closed  bool
 	workers sync.WaitGroup
+	openLog func(string, string, bool) (transcriptSink, error)
 }
 
 func New(store *storage.Store, logger *slog.Logger) (*Broker, error) {
@@ -77,7 +82,7 @@ func newBroker(store *storage.Store, logger *slog.Logger, launch launchFunc) (*B
 	if logger == nil {
 		logger = slog.Default()
 	}
-	b := &Broker{store: store, logger: logger, launch: launch, entries: map[string]*entry{}}
+	b := &Broker{store: store, logger: logger, launch: launch, entries: map[string]*entry{}, openLog: openTranscript}
 	var saved document
 	if err := store.ReadSessions(&saved); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("load terminal sessions: %w", err)
@@ -250,6 +255,7 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 			r := e.run
 			e.run = nil
 			r.stop()
+			r.log.stop("create_failed")
 			go r.process.Close()
 		}
 		return Session{}, err
@@ -261,6 +267,7 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 var templateCommands = map[string]string{"claude-cli": "claude", "htop": "htop", "python-repl": "python3", "nano-repl": "nano --repl", "ssh-agent": `eval $(ssh-agent -s) && ssh-add ~/.ssh/id_rsa && echo "SSH agent ready"`}
 
 func (b *Broker) startLocked(e *entry, password, initial string) error {
+	e.generation++
 	e.value.State = "connecting"
 	e.value.UpdatedAt = now()
 	e.scrollback = ""
@@ -271,9 +278,12 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 		b.logger.Warn("terminal launch failed", "session_id", e.value.ID, "error", err)
 		return err
 	}
-	r := &run{process: p, initial: initial, first: true, input: make(chan string, 256), stopped: make(chan struct{})}
+	r := &run{process: p, initial: initial, first: true, input: make(chan string, 256), stopped: make(chan struct{}), generation: e.generation}
 	e.run = r
-	b.broadcastLocked(e, Event{"type": "transcript_status", "session_id": e.value.ID, "transcript_enabled": false})
+	if b.loggingEnabledLocked() {
+		b.openTranscriptLocked(e, r)
+	}
+	b.broadcastLocked(e, b.transcriptEventLocked(e))
 	b.workers.Add(2)
 	go b.read(e.value.ID, r)
 	go b.writeInput(r)
@@ -299,6 +309,7 @@ func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
 	e.run = nil
 	if old != nil {
 		old.stop()
+		old.log.stop("reconnect")
 	}
 	// Invalidate under the lock, but terminate outside it: ConPTY close may
 	// drain output which needs this same lock to finish.
@@ -405,6 +416,7 @@ func (b *Broker) Delete(owner, id string) error {
 	b.closeViewersLocked(e, 1000, "Session deleted")
 	if r != nil {
 		r.stop()
+		r.log.stop("deleted")
 	}
 	b.audit(map[string]any{"type": "session_deleted", "session_id": id})
 	b.mu.Unlock()
@@ -533,6 +545,7 @@ func (b *Broker) read(id string, r *run) {
 	}
 	e.run = nil
 	r.stop()
+	r.log.stop("process_exit")
 	e.value.State = "disconnected"
 	e.value.UpdatedAt = now()
 	b.broadcastLocked(e, Event{"type": "status", "session_id": id, "state": "disconnected", "message": fmt.Sprintf("Process exited with code %d", exit.Code), "transcript_enabled": false})
@@ -547,6 +560,11 @@ func (b *Broker) output(id string, r *run, data string) {
 	e := b.entries[id]
 	if b.closed || e == nil || e.run != r {
 		return
+	}
+	if r.log != nil {
+		if err := r.log.append(data); err != nil {
+			b.transcriptErrorLocked(id, r, r.log, err)
+		}
 	}
 	if r.first {
 		r.first = false
@@ -644,6 +662,7 @@ func (b *Broker) Close() error {
 		b.closeViewersLocked(e, 1001, "Server shutting down")
 		if e.run != nil {
 			e.run.stop()
+			e.run.log.stop("shutdown")
 			processes = append(processes, e.run.process)
 			e.run = nil
 		}

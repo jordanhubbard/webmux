@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -108,7 +109,8 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 		rejectSocket(connection, message)
 		return
 	}
-	defer s.sessions.Leave(owner, id, viewer.ID)
+	var toggles sync.WaitGroup
+	toggleSlots := make(chan struct{}, 16)
 	connection.SetReadLimit(1 << 20)
 	writerDone := make(chan struct{})
 	stopWriter := make(chan struct{})
@@ -147,7 +149,13 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-	defer func() { close(stopWriter); _ = connection.Close(); <-writerDone }()
+	defer func() {
+		close(stopWriter)
+		_ = connection.Close()
+		s.sessions.Leave(owner, id, viewer.ID)
+		<-writerDone
+		toggles.Wait()
+	}()
 	for {
 		kind, payload, err := connection.ReadMessage()
 		if err != nil {
@@ -184,6 +192,19 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 			}
 		case "focus":
 			_ = s.sessions.Focus(owner, id, viewer.ID)
+		case "transcript_toggle":
+			select {
+			case toggleSlots <- struct{}{}:
+			default:
+				closeSocket(connection, 1013, "Transcript control is busy")
+				return
+			}
+			toggles.Add(1)
+			go func() {
+				defer toggles.Done()
+				defer func() { <-toggleSlots }()
+				_ = s.sessions.ToggleTranscript(owner, id, viewer.ID)
+			}()
 		}
 	}
 }
