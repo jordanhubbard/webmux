@@ -1,11 +1,39 @@
 import { test, expect, type Page, type TestInfo } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 test.skip(process.env.WEBMUX_VISUAL_PARITY !== '1', 'Run through test:visual-parity to create the Node baseline first');
 test.use({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, locale: 'en-US', timezoneId: 'UTC', colorScheme: 'dark', contextOptions: { reducedMotion: 'reduce' } });
 
 async function capture(page: Page, info: TestInfo, name: string): Promise<void> {
   await page.evaluate(() => document.fonts.ready);
+  const diagnostic = JSON.stringify(await page.evaluate(() => ({
+    userAgent: navigator.userAgent,
+    viewport: { width: innerWidth, height: innerHeight, scale: devicePixelRatio },
+    fonts: [...document.fonts].map(font => ({ family: font.family, status: font.status })),
+    buttons: [...document.querySelectorAll('button')].map(button => {
+      const style = getComputedStyle(button);
+      return { text: button.textContent, title: button.title, bounds: button.getBoundingClientRect().toJSON(),
+        styles: Object.fromEntries([...style].map(key => [key, style.getPropertyValue(key)])) };
+    }),
+  })), null, 2);
+  const baselineDiagnostic = info.snapshotPath(`${name}.json`);
+  if (info.config.updateSnapshots === 'all') {
+    await mkdir(path.dirname(baselineDiagnostic), { recursive: true });
+    await writeFile(baselineDiagnostic, diagnostic);
+  }
+  try { await comparePixels(page, info, name); }
+  catch (error) {
+    for (const [label, data] of [['actual', diagnostic], ['baseline', await readFile(baselineDiagnostic)]] as const) {
+      const file = info.outputPath(`${name}-${label}-layout.json`);
+      await writeFile(file, data);
+      await info.attach(`${name}-${label}-layout`, { path: file, contentType: 'application/json' });
+    }
+    throw error;
+  }
+}
+
+async function comparePixels(page: Page, info: TestInfo, name: string): Promise<void> {
   await expect(page).toHaveScreenshot(name, { animations: 'disabled', caret: 'hide', threshold: 0, maxDiffPixels: 0 });
   // Playwright's comparator may ignore anti-aliasing differences even at zero
   // threshold. Compare every decoded RGBA pixel as well, without that exemption.
@@ -31,7 +59,11 @@ async function capture(page: Page, info: TestInfo, name: string): Promise<void> 
     }
     return changed;
   }, { actual: actual.toString('base64'), expected: expected.toString('base64') });
-  if (differences !== 0) await info.attach(`raw-${name}`, { body: actual, contentType: 'image/png' });
+  if (differences !== 0) {
+    const file = info.outputPath(`raw-${name}`);
+    await writeFile(file, actual);
+    await info.attach(`raw-${name}`, { path: file, contentType: 'image/png' });
+  }
   expect(differences, `${name}: raw RGBA pixel differences`).toBe(0);
 }
 

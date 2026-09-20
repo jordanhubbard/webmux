@@ -39,6 +39,7 @@ jobs:
       - name: Package native server
         run: node scripts/package-native.mts
       - name: Exercise extracted native runtime
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/webmux-native"
@@ -46,6 +47,17 @@ jobs:
             if [ -f "$archive" ]; then tar -xf "$archive" -C "$RUNNER_TEMP/webmux-native"; fi
           done
           node scripts/smoke-native-package.mts "$RUNNER_TEMP"/webmux-native/webmux-*
+      - name: Exercise extracted Windows native runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $archives = @(Get-ChildItem dist -Filter '*-native.zip')
+          if ($archives.Count -ne 1) { throw 'Expected exactly one native archive.' }
+          $extract = Join-Path $env:RUNNER_TEMP 'webmux-native'
+          Expand-Archive -LiteralPath $archives[0].FullName -DestinationPath $extract
+          $roots = @(Get-ChildItem $extract -Directory)
+          if ($roots.Count -ne 1) { throw 'Expected exactly one extracted installation.' }
+          node scripts/smoke-native-package.mts $roots[0].FullName
       - uses: actions/upload-artifact@v7
         with:
           name: native-preview-${{ matrix.os }}
@@ -70,7 +82,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          node -e 'if (process.env.RELEASE_TAG !== "v" + require("./webmux/backend/package.json").version) process.exit(1)'
+          node scripts/packaging-checks.mts release-version
       - name: Build runtime bundle
         run: make package
       - name: Test extracted bundle
@@ -92,12 +104,7 @@ jobs:
           brew trust --formula jordanhubbard/webmux/webmux
           brew tap jordanhubbard/webmux "$GITHUB_WORKSPACE"
           brew info jordanhubbard/webmux/webmux --json=v2 > "$RUNNER_TEMP/webmux-tap-info.json"
-          node - <<'JS'
-          const assert = require('node:assert/strict');
-          const fs = require('node:fs');
-          const formula = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/webmux-tap-info.json`)).formulae[0];
-          assert.equal(formula.full_name, 'jordanhubbard/webmux/webmux');
-          JS
+          node scripts/packaging-checks.mts tap
           brew untap jordanhubbard/webmux
       - name: Install formula from this revision
         env:
@@ -108,29 +115,13 @@ jobs:
           git archive --format=tar.gz --output="$RUNNER_TEMP/webmux-source.tar.gz" HEAD
           cp -f Formula/webmux.rb "$(brew --repository webmux/packaging-test)/Formula/webmux.rb"
           export WEBMUX_TEST_FORMULA="$(brew --repository webmux/packaging-test)/Formula/webmux.rb"
-          node - <<'JS'
-          const fs = require('node:fs');
-          const { createHash } = require('node:crypto');
-          const source = `${process.env.RUNNER_TEMP}/webmux-source.tar.gz`;
-          const file = process.env.WEBMUX_TEST_FORMULA;
-          const sha = createHash('sha256').update(fs.readFileSync(source)).digest('hex');
-          fs.writeFileSync(file, fs.readFileSync(file, 'utf8')
-            .replace(/^  url .*$/m, `  url "file://${source}"\n  version "0.0.0"`)
-            .replace(/^  sha256 .*$/m, `  sha256 "${sha}"`));
-          JS
+          node scripts/packaging-checks.mts formula
           brew install --build-from-source webmux/packaging-test/webmux
           brew test webmux/packaging-test/webmux
       - name: Verify service definition
         run: |
           brew services info webmux/packaging-test/webmux --json > "$RUNNER_TEMP/webmux-service.json"
-          node - <<'JS'
-          const assert = require('node:assert/strict');
-          const fs = require('node:fs');
-          const [service] = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/webmux-service.json`));
-          assert(service.command.endsWith('/opt/webmux/bin/webmux'));
-          assert(service.working_dir);
-          assert(service.log_path.endsWith('/var/log/webmux.log'));
-          JS
+          node scripts/packaging-checks.mts service
 
   windows-package:
     name: Package (${{ matrix.runner }})
@@ -155,7 +146,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          node -e 'if (process.env.RELEASE_TAG !== "v" + require("./webmux/backend/package.json").version) process.exit(1)'
+          node scripts/packaging-checks.mts release-version
       - name: Install WiX
         shell: pwsh
         run: |
