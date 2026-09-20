@@ -12,13 +12,17 @@ on:
 permissions:
   contents: read
 
+# Keep native macOS addons compatible with the prior runner deployment target.
+env:
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+
 jobs:
   native-preview:
     name: Native bundle (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, ubuntu-22.04, windows-2022, windows-11-arm]
+        os: [macos-15, ubuntu-22.04, windows-2022, windows-11-arm]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -121,7 +125,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, ubuntu-22.04]
+        os: [macos-15, ubuntu-22.04]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7

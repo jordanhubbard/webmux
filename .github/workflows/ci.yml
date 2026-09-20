@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# Keep native macOS addons compatible with the prior runner deployment target.
+env:
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+
 jobs:
   go-server:
     name: Go Server (${{ matrix.os }})
@@ -13,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-14, windows-2022]
+        os: [ubuntu-22.04, macos-15, windows-2022]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7

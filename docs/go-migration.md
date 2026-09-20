@@ -38,6 +38,14 @@ Tests establish parity for the covered cases, not universal equivalence. Any
 intentional security improvement must be recorded separately from compatibility
 claims. Work remaining stays on #77 until these requirements are verified.
 
+Hosted macOS verification now uses the ARM64 `macos-15` image. GitHub's
+[macOS 14 deprecation notice](https://github.com/actions/runner-images/issues/13518)
+warns of longer queues beginning July 6, 2026 and retirement on November 2.
+The old jobs remained queued without assigned runners; deprecation may contribute,
+but the queue cause is not proven. Both workflows retain
+`MACOSX_DEPLOYMENT_TARGET=14.0` for native macOS build tools. New-runner execution
+and compatibility on an actual macOS 14 machine still need verification.
+
 ## Implemented foundation
 
 The Go server currently implements health, authentication/account, saved-host,
