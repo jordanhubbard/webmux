@@ -80,11 +80,16 @@ func number(raw string) float64 {
 	return v
 }
 func epochISO(raw string) string {
-	v := number(raw)
-	if v <= 0 || v > 253402300799 {
+	v, err := config.Number(raw)
+	millis := v * 1000
+	if err != nil || math.IsNaN(v) || v <= 0 || millis > float64(dateLimitMillis) {
 		return ""
 	}
-	return time.UnixMilli(int64(v * 1000)).UTC().Format(timeFormat)
+	instant := time.UnixMilli(int64(millis)).UTC()
+	if instant.Year() > 9999 {
+		return fmt.Sprintf("+%06d", instant.Year()) + instant.Format("-01-02T15:04:05.000Z")
+	}
+	return instant.Format(timeFormat)
 }
 func socketArgs(d Definition) []string {
 	flag := "-L"

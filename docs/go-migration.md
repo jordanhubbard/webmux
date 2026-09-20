@@ -134,6 +134,11 @@ Berlin, Lord Howe's half-hour shifts, Apia's skipped day, and supported local
 legacy spellings. Six of those cases failed before this correction. Host timezone
 database differences and other legacy spellings remain outside verified parity. Display
 name ordering still uses English collation; host-locale parity remains open.
+Epoch-seconds conversion now also uses JavaScript-compatible numeric coercion
+and the full Date range, including fractional milliseconds near year 9999 and
+signed six-digit ISO years. Node 24 oracle tests exposed six rejected valid inputs
+before the fix. Out-of-range epochs remain ignored instead of propagating Node's
+RangeError; this defensive difference is intentional.
 
 VNC and RDP session HTTP APIs now support owner-scoped create/list/get/move/delete
 and reconnect state changes. Separate desktop brokers preserve saved-host port
@@ -382,7 +387,8 @@ calls `scripts/smoke-windows-service-shutdown.mts` before restart. This checked
 TypeScript helper launches a real PTY child, waits for 128 output markers, stops
 WinSW, and verifies socket closure, child termination, every acknowledged marker
 in the transcript and its shutdown footer. TypeScript and the real child fixture
-pass locally; the new WinSW drain assertion awaits Windows CI. Custom-account
+pass locally; Windows x64 passed the new WinSW drain assertion and complete native
+MSI/packaging job at c89d6c1. Windows arm64 verification remains pending. Custom-account
 behavior and switching default release/service commands remain unfinished.
 
 `scripts/package-windows.ps1 -Backend go` now builds the frontend, native archive

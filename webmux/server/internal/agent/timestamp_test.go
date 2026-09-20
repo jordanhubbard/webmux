@@ -5,6 +5,28 @@ import (
 	"time"
 )
 
+func TestEpochTimestampNodeCompatibility(t *testing.T) {
+	// Captured from Node 24 Number(raw) and Date.toISOString().
+	for _, test := range []struct{ raw, want string }{
+		{"0.0001", "1970-01-01T00:00:00.000Z"},
+		{"0.0019", "1970-01-01T00:00:00.001Z"},
+		{"1", "1970-01-01T00:00:01.000Z"},
+		{"  0x10  ", "1970-01-01T00:00:16.000Z"},
+		{"0b11", "1970-01-01T00:00:03.000Z"},
+		{"0o10", "1970-01-01T00:00:08.000Z"},
+		{"253402300799.999", "9999-12-31T23:59:59.999Z"},
+		{"253402300800", "+010000-01-01T00:00:00.000Z"},
+		{"8640000000000", "+275760-09-13T00:00:00.000Z"},
+		{"NaN", ""}, {"Infinity", ""}, {"-1", ""}, {"0", ""},
+		// Out-of-range epochs remain ignored instead of throwing as Node does.
+		{"8640000000000.001", ""}, {"1e300", ""},
+	} {
+		if got := epochISO(test.raw); got != test.want {
+			t.Errorf("epochISO(%q) = %q, want %q", test.raw, got, test.want)
+		}
+	}
+}
+
 func TestLegacyTimestampInstants(t *testing.T) {
 	// Expected instants were also checked with Node 24 Date.parse. Use a fixed
 	// local zone to catch accidentally interpreting zone-less datetimes as UTC.
