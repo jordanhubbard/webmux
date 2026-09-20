@@ -25,7 +25,8 @@ publication and the default switch remain gated on the full migration checks.
 Windows x64 at 1569987 reached this gate after passing installed MSI and service
 checks, then correctly rejected an extra `.wixpdb` debug database. Packaging now
 passes `-pdbtype none` to WiX, and a regression case rejects debug output from the
-native upload set. Hosted verification of that correction is pending.
+native upload set. Linux and Windows x64 native packaging passed the upload gate at
+1747b59, including Windows installed-MSI/service checks before upload.
 
 ## Completion requirements
 
@@ -76,6 +77,12 @@ complete shutdown footer on the transcript containing the acknowledged output.
 It distinguishes that transcript from the new file opened during restoration.
 Uninstall waits for launchd's asynchronous registration removal before deleting
 the fixture directory.
+
+Make start/restart now propagate service-manager errors, and restart aborts if
+its rebuild fails instead of replacing the service and printing success. A
+fixture that substitutes all manager commands reproduced the former false-success
+exit and verifies manager failures, rebuild-before-restart ordering and successful
+controls without touching any installed service.
 
 ## Implemented foundation
 

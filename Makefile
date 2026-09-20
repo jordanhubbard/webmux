@@ -253,7 +253,7 @@ start: build check-guacd
 	@mkdir -p "$(WEBMUX_HOME)/logs"
 	@if $(SVC_INSTALLED); then \
 		printf "$(C_BLU)▸$(C_RST) Starting webmux via $(SVC_MGR)…\n"; \
-		$(SVC_START); \
+		$(SVC_START) || exit $$?; \
 		sleep 1; \
 		$(SVC_STATUS) 2>/dev/null | sed 's/^/  /' || true; \
 		printf "$(C_GRN)●$(C_RST) webmux started $(C_DIM)(managed by $(SVC_MGR))$(C_RST)\n"; \
@@ -272,14 +272,14 @@ stop:
 
 restart:
 	@if $(SVC_INSTALLED); then \
-		$(MAKE) --no-print-directory build; \
+		$(MAKE) --no-print-directory build || exit $$?; \
 		printf "$(C_BLU)▸$(C_RST) Restarting webmux via $(SVC_MGR) $(C_DIM)(deliberate restart)$(C_RST)…\n"; \
-		$(SVC_RESTART); \
+		$(SVC_RESTART) || exit $$?; \
 		sleep 1; \
 		$(SVC_STATUS) 2>/dev/null | sed 's/^/  /' || true; \
 		printf "$(C_GRN)●$(C_RST) webmux restarted $(C_DIM)(managed by $(SVC_MGR))$(C_RST)\n"; \
 	else \
-		$(MAKE) --no-print-directory stop; \
+		$(MAKE) --no-print-directory stop || exit $$?; \
 		$(MAKE) --no-print-directory start; \
 	fi
 
