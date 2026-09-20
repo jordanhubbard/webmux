@@ -18,7 +18,10 @@ $appFile = Join-Path $homeDirectory 'config/app.yaml'
 $app = [IO.File]::ReadAllText((Join-Path $root 'config.defaults/app.yaml'))
 $app = $app.Replace('name: webmux', 'name: native-service-smoke').Replace('listen_host: 0.0.0.0', 'listen_host: 127.0.0.1')
 $app = $app -replace '(?m)^(\s*http_port:)\s*\d+', "`$1 $port"
+$app = $app -replace '(?m)^(\s*https_port:)\s*\d+', '${1} 0'
+$app = $app -replace '(?m)^(\s*session_logging:\r?\n\s*enabled:)\s*false', '${1} true'
 [IO.File]::WriteAllText($appFile, $app)
+[IO.File]::WriteAllText((Join-Path $homeDirectory 'config/auth.yaml'), "auth:`n  mode: none`n  users: []`n")
 $url = "http://127.0.0.1:$port"
 function Wait-Healthy {
   $deadline = [DateTime]::UtcNow.AddSeconds(30)
@@ -39,7 +42,8 @@ try {
   if ($definition.service.arguments) { throw 'Native service has unexpected launch arguments.' }
   $page = Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 5
   if ($page.Content -notmatch '<div id="root">') { throw 'Service did not serve the frontend.' }
-  & $installer stop
+  & node (Join-Path $PSScriptRoot 'smoke-windows-service-shutdown.mts') $homeDirectory "$port" $installer
+  if ($LASTEXITCODE -ne 0) { throw 'Native service terminal/transcript shutdown checks failed.' }
   $reachable = $false
   try { $null = Invoke-WebRequest -UseBasicParsing -Uri "$url/api/health" -TimeoutSec 2; $reachable = $true } catch { }
   if ($reachable) { throw 'Service listener survived stop.' }

@@ -376,10 +376,14 @@ paths, explicit choices and an empty PATH for native selection. It also installs
 the native WinSW service as LocalSystem on an isolated runner, verifies HTTP/UI,
 stop/start, preserved configuration and uninstall. The fixture refuses an
 existing WebMux service/wrapper and retains state if service removal fails.
-These PowerShell checks await CI; they cannot run on the local macOS host.
-They establish service lifecycle behavior when passing, but do not alone prove
-graceful PTY/transcript draining or custom-account behavior. Native MSI/Homebrew
-integration and switching default release/service commands remain unfinished.
+Basic lifecycle checks have passed in Windows CI; they cannot run on the local
+macOS host. The fixture now enables transcripts in its private configuration and
+calls `scripts/smoke-windows-service-shutdown.mts` before restart. This checked
+TypeScript helper launches a real PTY child, waits for 128 output markers, stops
+WinSW, and verifies socket closure, child termination, every acknowledged marker
+in the transcript and its shutdown footer. TypeScript and the real child fixture
+pass locally; the new WinSW drain assertion awaits Windows CI. Custom-account
+behavior and switching default release/service commands remain unfinished.
 
 `scripts/package-windows.ps1 -Backend go` now builds the frontend, native archive
 and a `-native.msi` installer with a checksum. The default remains `-Backend node`
@@ -454,8 +458,8 @@ The same fixture now runs in Linux packaging CI against systemd. It links a
 temporary runtime-only unit under a random name, supplies the invoking user's
 UID/GID, and uses noninteractive sudo only for manager commands. It checks the
 same HTTP/UI, configuration, PID, PTY and transcript assertions, plus clean
-systemd exit status and removal of the runtime unit. Linux execution of this
-new lifecycle branch remains pending. The native unit uses
+systemd exit status and removal of the runtime unit. This lifecycle and the full
+Linux native packaging job passed CI at 77ebf68. The native unit uses
 [`KillMode=mixed`](https://github.com/systemd/systemd/blob/main/man/systemd.kill.xml)
 so the server receives SIGTERM first and manages PTY/transcript shutdown, while
 systemd still kills remaining processes after server exit or the stop timeout.
