@@ -408,12 +408,15 @@ launcher and node_modules files, native runtime/service behavior, and removal
 of product registration on uninstall. The first Windows x64 run at a64e6e0 failed
 at the fixture's registry-based registration lookup before upgrade. The fixture
 now uses MSI's RelatedProducts API keyed by UpgradeCode instead of assuming an
-Add/Remove Programs registry location; hosted verification remains pending.
+Add/Remove Programs registry location. Windows x64 passed the corrected fresh
+installation and same-version replacement at ce2f34c, including one product
+registration and legacy-payload removal; arm64 verification remains pending.
 `scripts/smoke-upgrade-state.mts` seeds a private home using the installed Node
 runtime before replacement, then uses that same home with the installed Go runtime.
 It verifies existing account login, the pre-upgrade JWT, saved-host responses and
 byte-preserved app/authentication configuration. TypeScript and the Node-to-Go
-shared-home sequence pass locally; the installed-MSI sequence awaits Windows CI.
+shared-home sequence pass locally; Windows x64 also passed the installed-MSI
+sequence at ce2f34c, including WinSW transcript draining after both installations.
 This covers stopped application replacement; active
 service migration and forced-failure rollback tests remain outstanding.
 Native MSI CI installs on an isolated runner, exercises the installed HTTP/UI,
@@ -517,9 +520,10 @@ test expectations on Windows. Rendering now normalizes checkout line endings;
 parser diagnostics are scoped to the fixture while retaining the exit-status
 check. Local tests also execute special-character paths through env. All seven
 helper tests and TypeScript checks pass locally; the corrected Linux parser and
-helper job passed CI at 652d7ee. Windows checks are still running. At 3708235 Linux Go/browser/visual checks and Linux and
+helper job passed CI at 652d7ee; Windows's complete test/build/browser/visual job
+also passed at that revision. At 3708235 Linux Go/browser/visual checks and Linux and
 Windows native packaging passed; macOS hosted jobs remain queued. These
-serialization checks do not replace the pending systemd lifecycle result.
+serialization checks complement the successful Linux systemd lifecycle at 77ebf68.
 
 ### Backend performance measurements
 
@@ -527,6 +531,14 @@ Run `npm run benchmark:server` from `webmux` using Node 24 and Go. The checked
 TypeScript harness builds the native binary, alternates five isolated launches
 of each backend, and records startup, backend-only resident memory, 30 terminal
 round trips after five warmups, and a 1 MiB terminal transfer. It checks the exact
+payload for one PTY and then repeats the workload with four concurrent PTYs,
+recording each client's timings and the backend's concurrent RSS. The local
+five-round run transferred all 50 MiB without loss or duplication. Concurrent
+Node/Go p95 input latency was 0.73/2.34 ms, backend RSS 98.4/23.9 MiB, and median
+per-client throughput 10.54/12.21 MiB/s. Go input latency remains higher on this
+Mac despite lower memory usage and higher throughput; these measurements do
+not establish browser-rendering, remote-network or sustained-load parity.
+The harness checks the exact
 payload count and fails on lost output or a disconnected viewer. Configuration,
 PTY children and listeners belong to the fixture; it does not use operator state.
 Unix CI uploads the JSON report, including raw samples and host/toolchain details.

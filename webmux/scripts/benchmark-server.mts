@@ -14,7 +14,8 @@ const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'webmux-benchmark-'));
 const binary = path.join(temporary, process.platform === 'win32' ? 'webmux.exe' : 'webmux');
 const rounds = 5;
 type Backend = 'node' | 'go';
-interface Sample { startupMs: number; idleRssBytes: number; activeRssBytes: number; pingMs: number[]; bulkMiBPerSecond: number }
+interface TerminalSample { pingMs: number[]; bulkMiBPerSecond: number }
+interface Sample extends TerminalSample { startupMs: number; idleRssBytes: number; activeRssBytes: number; concurrent: TerminalSample[]; concurrentRssBytes: number }
 const samples: Record<Backend, Sample[]> = { node: [], go: [] };
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 function record(value: unknown): Record<string, unknown> {
@@ -60,7 +61,9 @@ async function sample(backend: Backend): Promise<Sample> {
       WEBMUX_EXEC_COMMAND: `${quote(process.execPath)} ${quote(path.join(root, 'scripts/performance-fixture.mts'))}`,
     },
   });
-  let logs = '', spawnError: Error | undefined, socket: WebSocket | undefined, sessionID: string | undefined;
+  let logs = '', spawnError: Error | undefined;
+  const sockets: WebSocket[] = [];
+  const sessionIDs: string[] = [];
   child.on('error', error => { spawnError = error; });
   child.stdout?.on('data', (data: Buffer) => { logs = (logs + data.toString()).slice(-8192); });
   child.stderr?.on('data', (data: Buffer) => { logs = (logs + data.toString()).slice(-8192); });
@@ -85,51 +88,67 @@ async function sample(backend: Backend): Promise<Sample> {
     await sleep(100);
     const idleRssBytes = rss(child.pid);
     const token = stringField(await request('POST', '/api/auth/refresh'), 'token');
-    sessionID = stringField(await request('POST', '/api/sessions', { hostname: 'localhost', username: 'fixture', transport: 'exec' }), 'id');
-    let tail = '', payloadBytes = 0, socketError: Error | undefined;
-    const changes = new Set<() => void>();
-    socket = new WebSocket(`ws://127.0.0.1:${address.port}/api/term/${sessionID}?token=${encodeURIComponent(token)}`);
-    socket.addEventListener('error', () => { socketError = new Error('Terminal WebSocket failed'); for (const fn of changes) fn(); });
-    socket.addEventListener('close', event => { socketError = new Error(`Terminal WebSocket closed (${event.code}: ${event.reason})`); for (const fn of changes) fn(); });
-    socket.addEventListener('message', event => {
-      const message = record(JSON.parse(String(event.data)));
-      if (message.type === 'output' && typeof message.data === 'string') {
-        tail = (tail + message.data).slice(-16384);
-        for (const character of message.data) if (character === 'x') payloadBytes++;
-        for (const fn of changes) fn();
-      }
-    });
-    function waitFor(marker: string): Promise<void> {
-      return new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => { changes.delete(check); reject(new Error(`Missing ${marker}: ${tail.slice(-512)}`)); }, 10000);
-        function check(): void {
-          if (socketError || tail.includes(marker)) {
-            clearTimeout(timeout); changes.delete(check);
-            if (socketError) reject(socketError); else resolve();
-          }
+    async function openTerminal() {
+      const sessionID = stringField(await request('POST', '/api/sessions', { hostname: 'localhost', username: 'fixture', transport: 'exec' }), 'id');
+      sessionIDs.push(sessionID);
+      let tail = '', payloadBytes = 0, socketError: Error | undefined;
+      const changes = new Set<() => void>();
+      const socket = new WebSocket(`${base.replace(/^http/, 'ws')}/api/term/${sessionID}?token=${encodeURIComponent(token)}`);
+      sockets.push(socket);
+      socket.addEventListener('error', () => { socketError = new Error('Terminal WebSocket failed'); for (const fn of changes) fn(); });
+      socket.addEventListener('close', event => { socketError = new Error(`Terminal WebSocket closed (${event.code}: ${event.reason})`); for (const fn of changes) fn(); });
+      socket.addEventListener('message', event => {
+        const message = record(JSON.parse(String(event.data)));
+        if (message.type === 'output' && typeof message.data === 'string') {
+          tail = (tail + message.data).slice(-16384);
+          for (const character of message.data) if (character === 'x') payloadBytes++;
+          for (const fn of changes) fn();
         }
-        changes.add(check); check();
       });
+      function waitFor(marker: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => { changes.delete(check); reject(new Error(`Missing ${marker}: ${tail.slice(-512)}`)); }, 10000);
+          function check(): void {
+            if (socketError || tail.includes(marker)) {
+              clearTimeout(timeout); changes.delete(check);
+              if (socketError) reject(socketError); else resolve();
+            }
+          }
+          changes.add(check); check();
+        });
+      }
+      await waitFor('benchmark-ready');
+      return { sessionID, socket, measure: async (): Promise<TerminalSample> => {
+        const pingMs: number[] = [];
+        for (let i = 0; i < 35; i++) {
+          const start = performance.now();
+          socket.send(JSON.stringify({ type: 'input', data: `ping-${i}\r` }));
+          await waitFor(`pong-${i}:done`);
+          if (i >= 5) pingMs.push(performance.now() - start);
+        }
+        const beforeBytes = payloadBytes, transferStart = performance.now();
+        socket.send(JSON.stringify({ type: 'input', data: 'bulk\r' }));
+        await waitFor('benchmark-bulk-done');
+        const transferMs = performance.now() - transferStart;
+        assert.equal(payloadBytes - beforeBytes, 1024 * 1024, 'PTY payload lost or duplicated');
+        return { pingMs, bulkMiBPerSecond: 1000 / transferMs };
+      } };
     }
-    await waitFor('benchmark-ready');
-    const pingMs: number[] = [];
-    for (let i = 0; i < 35; i++) {
-      const start = performance.now();
-      socket.send(JSON.stringify({ type: 'input', data: `ping-${i}\r` }));
-      await waitFor(`pong-${i}:done`);
-      if (i >= 5) pingMs.push(performance.now() - start);
-    }
-    const beforeBytes = payloadBytes, transferStart = performance.now();
-    socket.send(JSON.stringify({ type: 'input', data: 'bulk\r' }));
-    await waitFor('benchmark-bulk-done');
-    const transferMs = performance.now() - transferStart;
-    assert.equal(payloadBytes - beforeBytes, 1024 * 1024, 'PTY payload lost or duplicated');
+    const single = await openTerminal();
+    const singleSample = await single.measure();
     const activeRssBytes = rss(child.pid);
-    return { startupMs, idleRssBytes, activeRssBytes, pingMs, bulkMiBPerSecond: 1000 / transferMs };
+    single.socket.close();
+    await request('DELETE', `/api/sessions/${single.sessionID}`);
+    sessionIDs.splice(sessionIDs.indexOf(single.sessionID), 1);
+    const clients = [];
+    for (let index = 0; index < 4; index++) clients.push(await openTerminal());
+    const concurrent = await Promise.all(clients.map(client => client.measure()));
+    const concurrentRssBytes = rss(child.pid);
+    return { startupMs, idleRssBytes, activeRssBytes, ...singleSample, concurrent, concurrentRssBytes };
   } catch (error) { console.error(`${backend}: ${logs}`); throw error; }
   finally {
-    socket?.close();
-    try { if (sessionID) await request('DELETE', `/api/sessions/${sessionID}`); }
+    for (const socket of sockets) socket.close();
+    try { for (const id of sessionIDs) await request('DELETE', `/api/sessions/${id}`); }
     finally { await stop(child); }
   }
 }
@@ -149,6 +168,9 @@ try {
     medianIdleRssBytes: percentile(samples[backend].map(sample => sample.idleRssBytes), 0.5),
     medianActiveRssBytes: percentile(samples[backend].map(sample => sample.activeRssBytes), 0.5),
     p95PingMs: percentile(samples[backend].flatMap(sample => sample.pingMs), 0.95),
+    p95ConcurrentPingMs: percentile(samples[backend].flatMap(sample => sample.concurrent.flatMap(client => client.pingMs)), 0.95),
+    medianConcurrentRssBytes: percentile(samples[backend].map(sample => sample.concurrentRssBytes), 0.5),
+    medianConcurrentClientMiBPerSecond: percentile(samples[backend].flatMap(sample => sample.concurrent.map(client => client.bulkMiBPerSecond)), 0.5),
     medianBulkMiBPerSecond: percentile(samples[backend].map(sample => sample.bulkMiBPerSecond), 0.5),
   }]));
   const report = { timestamp: new Date().toISOString(), platform: process.platform, arch: process.arch, os: os.release(),
@@ -156,7 +178,7 @@ try {
     node: process.version, go: execFileSync('go', ['version'], { encoding: 'utf8' }).trim(),
     revision: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
     workingTreeDirty: execFileSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).trim().length > 0,
-    rounds, workload: 'auth=none; one local PTY; 5 warmup + 30 measured pings; 1 MiB output; RSS excludes child/client; 10ms startup polling', summary, samples };
+    rounds, workload: 'auth=none; one local PTY, then four concurrent PTYs; each: 5 warmup + 30 measured pings; 1 MiB output; RSS excludes child/client; 10ms startup polling', summary, samples };
   await fs.mkdir(path.dirname(outputFile), { recursive: true });
   await fs.writeFile(outputFile, JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify(summary, null, 2));
