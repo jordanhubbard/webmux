@@ -16,7 +16,7 @@ function Get-WebMuxServiceRuntime {
   if (-not (Test-Path -LiteralPath $legacy -PathType Leaf)) {
     throw "The Node production build is missing at $legacy. Run npm run build or select a native bundle."
   }
-  $node = (Get-Command node.exe -CommandType Application -ErrorAction Stop).Source
+  $node = (Get-Command node.exe -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
   return [PSCustomObject]@{ Backend = 'node'; Executable = $node; Arguments = '"' + $legacy + '"' }
 }
 Export-ModuleMember -Function Get-WebMuxServiceRuntime

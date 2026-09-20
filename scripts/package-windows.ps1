@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
   [string]$OutputDirectory,
-  [string]$WixCommand = 'wix'
+  [string]$WixCommand = 'wix',
+  [ValidateSet('node', 'go')]
+  [string]$Backend = 'node'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -32,9 +34,11 @@ if (-not $OutputDirectory) {
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 $Version = (Get-Content -LiteralPath (Join-Path $Repository 'webmux/backend/package.json') -Raw |
   ConvertFrom-Json).version
-$BundleName = "webmux-$Version-windows-$NodeArch-node24"
+$Flavor = if ($Backend -eq 'go') { 'native' } else { 'node24' }
+$BundleName = "webmux-$Version-windows-$NodeArch-$Flavor"
 $Archive = Join-Path $OutputDirectory "$BundleName.zip"
-$Installer = Join-Path $OutputDirectory "webmux-$Version-windows-$NodeArch.msi"
+$InstallerSuffix = if ($Backend -eq 'go') { '-native' } else { '' }
+$Installer = Join-Path $OutputDirectory "webmux-$Version-windows-$NodeArch$InstallerSuffix.msi"
 $Temporary = Join-Path ([IO.Path]::GetTempPath()) "webmux-msi-$([Guid]::NewGuid())"
 
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
@@ -45,13 +49,15 @@ try {
   try {
     & npm ci --no-audit --no-fund
     if ($LASTEXITCODE -ne 0) { throw "npm ci failed with exit code $LASTEXITCODE." }
-    & npm run build
+    if ($Backend -eq 'go') { & npm run build --workspace=frontend }
+    else { & npm run build }
     if ($LASTEXITCODE -ne 0) { throw "npm run build failed with exit code $LASTEXITCODE." }
   } finally {
     Pop-Location
   }
 
-  & node (Join-Path $Repository 'scripts/package.mts') $OutputDirectory
+  $Packager = if ($Backend -eq 'go') { 'scripts/package-native.mts' } else { 'scripts/package.mts' }
+  & node (Join-Path $Repository $Packager) $OutputDirectory
   if ($LASTEXITCODE -ne 0) { throw "Runtime packaging failed with exit code $LASTEXITCODE." }
   if (-not (Test-Path -LiteralPath $Archive)) { throw "Runtime bundle was not created at $Archive." }
 

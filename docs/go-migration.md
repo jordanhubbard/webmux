@@ -322,6 +322,23 @@ They establish service lifecycle behavior when passing, but do not alone prove
 graceful PTY/transcript draining or custom-account behavior. Native MSI/Homebrew
 integration and switching default release/service commands remain unfinished.
 
+`scripts/package-windows.ps1 -Backend go` now builds the frontend, native archive
+and a `-native.msi` installer with a checksum. The default remains `-Backend node`
+during migration. Both variants use the existing per-user WiX product and
+installation directory, so they are replacement variants rather than side-by-side
+products; same-version migration/upgrade coverage remains outstanding.
+Native MSI CI installs on an isolated runner, exercises the installed HTTP/UI,
+authentication and PTY runtime, runs the WinSW service lifecycle from that
+installation, and uninstalls. It refuses an existing installation/service and
+retains the installation if service cleanup fails. These MSI checks await Windows
+CI; no MSI has been executed locally on macOS.
+
+At b8dca7a, Windows service-selection fixtures failed before service installation:
+two Node installations on PATH produced an array of executable paths. The
+resolver now selects the first application, and the fixture requires one string
+path. This also corrects the legacy Node service selection behavior; verification
+of the actual service lifecycle is still pending.
+
 ### Deliberate security differences
 
 - Go rejects tokens for accounts that have been deleted, including refresh and

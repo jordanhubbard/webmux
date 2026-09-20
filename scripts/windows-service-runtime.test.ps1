@@ -22,7 +22,8 @@ try {
   $runtime = Get-WebMuxServiceRuntime -ApplicationDirectory $fixture
   Assert-Equal $runtime.Backend 'node'
   Assert-Equal $runtime.Arguments ('"' + $legacy + '"')
-  Assert-Equal $runtime.Executable (Get-Command node.exe -CommandType Application).Source
+  if ($runtime.Executable -isnot [string]) { throw 'Service executable must be a single path.' }
+  Assert-Equal $runtime.Executable (Get-Command node.exe -CommandType Application | Select-Object -First 1).Source
   [IO.File]::WriteAllText($native, '')
   $previousPath = $env:PATH
   try {

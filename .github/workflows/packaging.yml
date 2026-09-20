@@ -32,12 +32,24 @@ jobs:
           cache: npm
           cache-dependency-path: webmux/package-lock.json
       - name: Build existing frontend
+        if: runner.os != 'Windows'
         working-directory: webmux
         run: |
           npm ci
           npm run build --workspace=frontend
       - name: Package native server
+        if: runner.os != 'Windows'
         run: node scripts/package-native.mts
+      - name: Install WiX for native MSI
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Build native Windows archive and MSI
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/package-windows.ps1 -Backend go
       - name: Exercise extracted native runtime
         if: runner.os != 'Windows'
         shell: bash
@@ -60,7 +72,13 @@ jobs:
           ./scripts/windows-service-runtime.test.ps1 -RuntimeModule (Join-Path $roots[0].FullName 'service/runtime.psm1')
           node scripts/smoke-native-package.mts $roots[0].FullName
           if ($LASTEXITCODE -ne 0) { throw 'Native runtime smoke failed.' }
-          ./scripts/smoke-native-service.ps1 -BundleDirectory $roots[0].FullName
+      - name: Exercise installed native MSI and service
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem dist -Filter '*-native.msi')
+          if ($installers.Count -ne 1) { throw 'Expected exactly one native MSI.' }
+          ./scripts/smoke-native-msi.ps1 -Installer $installers[0].FullName
       - uses: actions/upload-artifact@v7
         with:
           name: native-preview-${{ matrix.os }}
