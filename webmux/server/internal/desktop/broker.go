@@ -70,9 +70,10 @@ type CreateRequest struct {
 	Col         *float64 `json:"col"`
 }
 type entry struct {
-	value    Session
-	password string
-	done     chan struct{}
+	value       Session
+	password    string
+	done        chan struct{}
+	connections map[*Connection]string
 }
 type Broker struct {
 	mu      sync.Mutex

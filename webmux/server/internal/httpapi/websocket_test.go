@@ -191,7 +191,15 @@ func TestTerminalSocketOriginSizeAndShutdown(t *testing.T) {
 		t.Fatal("shutdown left socket handlers running")
 	}
 	_ = live.SetReadDeadline(time.Now().Add(time.Second))
-	if _, _, err := live.ReadMessage(); err == nil {
-		t.Fatal("socket survived shutdown")
+	// Already-buffered join/status frames may arrive before the close is read.
+	// Drain them, but require an actual close rather than accepting a timeout.
+	for {
+		if _, _, err := live.ReadMessage(); err != nil {
+			var closed *websocket.CloseError
+			if !errors.As(err, &closed) {
+				t.Fatalf("socket did not close after shutdown: %v", err)
+			}
+			break
+		}
 	}
 }

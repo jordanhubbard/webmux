@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { cp, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
-import { createServer } from 'node:net';
+import { createServer, type Socket } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -559,6 +559,48 @@ async function terminalContract(backend: Backend): Promise<void> {
   }
 }
 
+async function vncContract(backend: Backend): Promise<void> {
+  const upstreams = new Set<Socket>();
+  const echo = createServer(socket => {
+    upstreams.add(socket);
+    socket.on('close', () => upstreams.delete(socket));
+    socket.on('error', () => {});
+    socket.write(Buffer.from('RFB 003.008\n'));
+    socket.on('data', data => socket.write(data));
+  });
+  echo.listen(0, '127.0.0.1'); await once(echo, 'listening');
+  const address = echo.address(); assert.ok(address && typeof address !== 'string');
+  const server = await start(backend, 'local', undefined, { WEBMUX_ALLOW_LOCAL_TARGETS: '1' }).catch((error: unknown) => { echo.close(); throw error; });
+  const clients: WebSocket[] = [];
+  const open = (route: string): WebSocket => { const socket = server.socket(route); clients.push(socket); socket.on('error', () => {}); return socket; };
+  try {
+    const owner = stringField((await server.request('POST', '/api/auth/bootstrap', { username: 'owner', password: 'password' })).body, 'token');
+    const created = await server.request('POST', '/api/vnc/sessions', { hostname: '127.0.0.1', vnc_port: address.port }, owner);
+    assert.equal(created.status, 201); const id = stringField(created.body, 'id'); const route = `/api/vnc/ws/${id}`;
+    const denied = open(route); assert.equal((await once(denied, 'close'))[0], 1008);
+    const ticket = stringField((await server.request('POST', '/api/auth/ticket', {}, owner)).body, 'ticket');
+    const client = open(`${route}?ticket=${ticket}`);
+    let received = Buffer.alloc(0);
+    client.on('message', (data: WebSocket.RawData, binary: boolean) => {
+      assert.equal(binary, true);
+      received = Buffer.concat([received, Array.isArray(data) ? Buffer.concat(data) : Buffer.isBuffer(data) ? data : Buffer.from(data)]);
+    });
+    const waitBytes = async (length: number): Promise<void> => { const deadline = Date.now() + 10_000; while (received.length < length) { assert.ok(Date.now() < deadline, 'VNC fixture data timeout'); await delay(10); } };
+    await waitBytes(12); assert.equal(received.toString(), 'RFB 003.008\n');
+    const reused = open(`${route}?ticket=${ticket}`); assert.equal((await once(reused, 'close'))[0], 1008);
+    const payload = Buffer.from([0, 255, 128, 1, 13, 10]); client.send(payload);
+    await waitBytes(12 + payload.length); assert.deepEqual(received.subarray(12), payload);
+    assert.equal(record((await server.request('GET', `/api/vnc/sessions/${id}`, undefined, owner)).body).state, 'connected');
+    const close = once(client, 'close'); for (const upstream of upstreams) upstream.end();
+    assert.equal((await close)[0], 1001);
+  } finally {
+    for (const client of clients) client.terminate();
+    await server.close();
+    for (const upstream of upstreams) upstream.destroy();
+    await new Promise<void>((resolve, reject) => echo.close(error => error ? reject(error) : resolve()));
+  }
+}
+
 async function desktopContract(backend: Backend): Promise<void> {
   const server = await start(backend, 'local');
   let owner = '';
@@ -716,7 +758,8 @@ try {
     await terminalContract(backend);
     await agentContract(backend);
     await desktopContract(backend);
-    console.log(`${backend}: HTTP, terminal WebSocket, agent, desktop session and cross-backend restart contracts passed`);
+    await vncContract(backend);
+    console.log(`${backend}: HTTP, terminal WebSocket, agent, desktop session/VNC and cross-backend restart contracts passed`);
   }
 } finally {
   await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

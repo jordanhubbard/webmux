@@ -87,9 +87,14 @@ defaults, per-owner/per-protocol grids, compaction and the legacy desktop YAML
 files. Passwords remain in memory, are inaccessible to other owners and disappear
 on deletion, shutdown or restart. Recovery marks desktops disconnected without
 opening network connections. Transport lifetime notifications are available for
-the forthcoming proxies. VNC/RDP WebSocket proxies, network restrictions and the
-Guacamole handshake remain unimplemented; desktop CRUD alone does not provide
-remote desktop connectivity.
+the proxies. VNC now supports authenticated binary WebSocket/TCP forwarding,
+session ownership, one-use tickets, destination validation and DNS address
+pinning. Private network destinations remain supported; the existing explicit
+local-target environment override is preserved. Connections stop on deletion,
+shutdown or account revocation. Multiple viewers retain independent connection
+state so a closing viewer cannot disconnect another live viewer's session state.
+The RDP proxy and Guacamole handshake remain unimplemented. Full browser-based
+VNC rendering parity is still unverified.
 
 The internal terminal process layer now supports Unix PTYs and Windows ConPTY,
 with independent process lifetime, serialized input, resize, exit status,
@@ -130,7 +135,9 @@ agent discovery, errors, sizing, attach/replacement, interactive output, scratch
 cwd/reuse, status metadata and multi-user revocation. It never opens a real tmux
 socket. Desktop contracts compare both protocols' defaults, host resolution,
 ownership, grid moves/compaction, credential exclusion and cross-backend restart
-recovery. The terminal size contract retains an exact dimension assertion and a
+recovery. A local TCP fixture also verifies VNC authentication, ticket reuse,
+binary data in both directions and upstream-close semantics against both servers.
+The terminal size contract retains an exact dimension assertion and a
 ten-second deadline; its TypeScript fixture opens a fresh terminal handle for
 each size query because Node's cached stdout dimensions can remain stale on
 Windows with cooked input.
@@ -214,6 +221,13 @@ still need conversion or removal as the Go deployment tooling replaces them.
   create/move/delete writes roll back in-memory state. Corrupt, duplicate or
   wrong-protocol saved desktop records fail startup rather than being silently
   discarded. Passwords have no fields in the persisted session types.
+- VNC upgrades enforce browser Origin/Host agreement and recheck accounts during
+  input and every five seconds. Inbound messages are limited to 1 MiB with four
+  queued messages; writes have ten-second deadlines. Destination lookup is
+  bounded to five seconds and TCP connection establishment to ten seconds.
+  Canonical address checks cover the full IPv6 link-local range and mapped IPv4
+  forms, extending the old textual address checks. Dialing uses only the checked
+  IP address. Tests use local fixtures or stub DNS answers, not remote hosts.
 
 These are intentional changes, not claims of byte-for-byte error compatibility.
 
@@ -230,3 +244,6 @@ tests. Linux's complete Go and differential job passed at 69d2319. Windows still
 failed the Node fixture's cached-size assertion despite ConPTY reporting the new
 dimensions. The fresh-handle query above addresses that fixture limitation;
 a successful Windows differential run remains required.
+The subsequent Windows job at 8b98c85 stopped earlier on a shutdown assertion
+that treated a buffered status frame as a live socket. That test now drains
+buffered frames and requires an actual WebSocket close within its deadline.

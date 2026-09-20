@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/jordanhubbard/webmux/server/internal/auth"
 	"github.com/jordanhubbard/webmux/server/internal/desktop"
+	"github.com/jordanhubbard/webmux/server/internal/netguard"
 	"github.com/jordanhubbard/webmux/server/internal/session"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 )
@@ -28,6 +30,7 @@ type Server struct {
 	sessions      *session.Broker
 	vnc           *desktop.Broker
 	rdp           *desktop.Broker
+	targets       *netguard.Guard
 	socketMu      sync.Mutex
 	sockets       map[*websocket.Conn]struct{}
 	socketWorkers sync.WaitGroup
@@ -64,7 +67,7 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp}, nil
+	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1")}, nil
 }
 
 func (s *Server) RestoreSessions() error {
@@ -112,6 +115,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/agents/{agentId}/attach", s.protected(false, s.attachAgent))
 	mux.Handle("POST /api/agents/{agentId}/scratch", s.protected(false, s.scratchAgent))
 	s.registerDesktops(mux)
+	mux.HandleFunc("GET /api/vnc/ws/{id}", s.vncSocket)
 	return s.cors(newLimiter(300, globalWindow).wrap(apiPaths(mux)))
 }
 
