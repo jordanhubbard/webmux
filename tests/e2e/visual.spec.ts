@@ -7,7 +7,13 @@ test.use({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, locale:
 
 async function capture(page: Page, info: TestInfo, name: string): Promise<void> {
   await page.evaluate(() => document.fonts.ready);
-  const diagnostic = JSON.stringify(await page.evaluate(() => ({
+  const session = await page.context().newCDPSession(page);
+  let renderingArguments: string[];
+  try {
+    const command = await session.send('Browser.getBrowserCommandLine');
+    renderingArguments = command.arguments.filter(argument => /^--(?:disable-gpu$|force-color-profile=|disable-partial-raster$)/.test(argument));
+  } finally { await session.detach(); }
+  const diagnostic = JSON.stringify({ renderingArguments, ...await page.evaluate(() => ({
     userAgent: navigator.userAgent,
     viewport: { width: innerWidth, height: innerHeight, scale: devicePixelRatio },
     fonts: [...document.fonts].map(font => ({ family: font.family, status: font.status })),
@@ -16,7 +22,7 @@ async function capture(page: Page, info: TestInfo, name: string): Promise<void> 
       return { text: button.textContent, title: button.title, bounds: button.getBoundingClientRect().toJSON(),
         styles: Object.fromEntries([...style].map(key => [key, style.getPropertyValue(key)])) };
     }),
-  })), null, 2);
+  })) }, null, 2);
   const baselineDiagnostic = info.snapshotPath(`${name}.json`);
   if (info.config.updateSnapshots === 'all') {
     await mkdir(path.dirname(baselineDiagnostic), { recursive: true });

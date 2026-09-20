@@ -26,7 +26,10 @@ export default defineConfig({
         browserName: 'chromium',
         launchOptions: {
           ...(CHROMIUM_EXECUTABLE ? { executablePath: CHROMIUM_EXECUTABLE } : {}),
-          ...(VISUAL_PARITY ? { args: ['--disable-gpu', '--force-color-profile=srgb'] } : {}),
+          // Partial raster reuse in Chromium 145 can change rounded-border
+          // channels between identical runs. Render whole tiles for this exact
+          // comparison; ordinary browser workflow tests keep default rendering.
+          ...(VISUAL_PARITY ? { args: ['--disable-gpu', '--force-color-profile=srgb', '--disable-partial-raster'] } : {}),
         },
       },
     },

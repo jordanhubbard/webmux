@@ -256,6 +256,21 @@ baseline/actual diagnostics have identical browser version, viewport, font set,
 all 15 button bounds and computed styles. This narrows the investigation but
 does not establish the cause or satisfy the exact rendering gate.
 
+Using CI's Chromium 145 headless shell locally reproduced the rounded-border
+differences between two Node runs, with identical layout/style diagnostics.
+The original capture differed in eight pixels by one channel value. Disabling
+Skia runtime CPU optimizations did not make repeated captures reliable.
+Disabling partial rasterization did: the Node baseline/control/Go comparison
+and six further alternating Node/Go runs passed all eight states against the
+same baseline. Removing that flag reproduced a four-pixel mismatch in the
+terminal dialog; restoring it is the proposed renderer control. The visual
+configuration now uses `--disable-partial-raster`, and diagnostics record the
+actual rendering flags from Chromium's DevTools protocol. See Google's
+[tooling flag documentation](https://github.com/GoogleChrome/chrome-launcher/blob/main/docs/chrome-flags-for-tools.md).
+This changes only the screenshot renderer, with no CSS changes, masking, pixel
+tolerance or baseline updates during comparisons. Hosted Linux/Windows
+verification of this control remains required; it is not yet a completed gate.
+
 This is scoped rendering evidence, not proof of every state or platform. Login,
 active terminal/desktop rendering, agent panes, failure states, real guacd/RDP
 and VNC hosts, and performance gates still need coverage before replacement.
