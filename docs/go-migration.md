@@ -40,15 +40,19 @@ claims. Work remaining stays on #77 until these requirements are verified.
 
 ## Implemented foundation
 
-The Go server currently implements health, authentication/account, saved-host
-and SSH-key catalog routes,
+The Go server currently implements health, authentication/account, saved-host,
+SSH-key catalog, runtime settings, layout and authenticated font routes,
 Argon2id PHC password storage, HS256 JWTs, one-use WebSocket ticket storage,
 per-client rate limiting, HTTP/TLS listeners and graceful HTTP shutdown. It uses
 the existing `WEBMUX_HOME/config` and `data/events` layout. Authentication config
 updates are serialized and atomically replaced, preserve unknown fields and
 follow configuration symlinks. Catalog updates preserve legacy missing/null
 fields and custom metadata, serialize concurrent changes, and redact key paths
-and private metadata from API responses. Other application routes, static UI serving and
+and private metadata from API responses. Settings enforce administrator/trusted
+access, preserve nested defaults and disabled agent definitions, and keep
+environment overrides out of YAML. Font serving follows the real app.yaml
+directory and confines file opens to that root, with range/conditional requests
+and the existing cache headers. Other application routes, static UI serving and
 WebSocket/session transports are not implemented yet.
 
 Run from `webmux/server` with Go 1.26 or later:
@@ -60,9 +64,11 @@ go run ./cmd/webmux --root .. --home /tmp/webmux-go-dev --listen 127.0.0.1:18080
 ```
 
 From `webmux`, `npm run test:contract` builds both servers, runs the same
-authentication and catalog expectations against each, then restarts the opposite
-server against the fixture's persisted credentials and catalogs. This verifies
-password hashes, tokens, hosts and keys across both migration directions.
+authentication, catalog and settings expectations against each, then restarts the
+opposite server against persisted credentials, catalogs, settings and font files.
+This verifies these formats across both migration directions. The settings-only
+layout restart fixture has no sessions and therefore no tiles; session-driven
+layout reconciliation and recovery remain part of the pending transport work.
 Fixtures use temporary homes and never
 connect to real terminal or desktop hosts. `npm run typecheck` checks the
 TypeScript contract harness as well as the application.
@@ -95,5 +101,9 @@ still need conversion or removal as the Go deployment tooling replaces them.
 - Secure mode requires a usable TLS certificate/key; partial or unreadable TLS
   configuration fails startup instead of silently omitting HTTPS.
 - Invalid JSON/types produce bounded JSON errors; oversized bodies receive 413.
+- Settings updates validate the effective response before committing, so invalid
+  environment limits cannot produce a failed response after saving a change.
+- Font file opens use an OS-confined root in addition to canonical-path checks,
+  preventing a replaced symlink from escaping the configured directory.
 
 These are intentional changes, not claims of byte-for-byte error compatibility.

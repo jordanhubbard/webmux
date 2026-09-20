@@ -68,6 +68,12 @@ func (s *Store) ReadConfig(name string, out any) error {
 	return readYAML(s.ConfigPath(name), out)
 }
 
+func (s *Store) WriteConfig(name string, value any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return writeYAML(s.ConfigPath(name), value)
+}
+
 // UpdateConfig keeps the read, validation, mutation and atomic replacement in
 // one critical section, preventing concurrent bootstrap or account updates
 // from overwriting each other. Returning an error aborts the write.
@@ -107,6 +113,17 @@ func readYAML(name string, out any) error {
 func writeYAML(name string, value any) error {
 	// Updating a linked config updates its target instead of removing the link.
 	resolved, err := filepath.EvalSymlinks(name)
+	if errors.Is(err, os.ErrNotExist) {
+		// A missing file may be created, but a dangling operator-owned symlink
+		// must never be silently replaced by a regular file.
+		if _, linkErr := os.Lstat(name); errors.Is(linkErr, os.ErrNotExist) {
+			parent, parentErr := filepath.EvalSymlinks(filepath.Dir(name))
+			if parentErr != nil {
+				return parentErr
+			}
+			resolved, err = filepath.Join(parent, filepath.Base(name)), nil
+		}
+	}
 	if err != nil {
 		return err
 	}

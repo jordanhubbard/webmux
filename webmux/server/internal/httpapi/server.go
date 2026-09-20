@@ -63,6 +63,11 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/keys", s.protected(false, s.listKeys))
 	mux.Handle("POST /api/keys", s.protected(false, s.createKey))
 	mux.Handle("DELETE /api/keys/{id}", s.protected(false, s.deleteKey))
+	mux.Handle("GET /api/config", s.protected(false, s.getSettings))
+	mux.Handle("PUT /api/config", s.protected(false, s.updateSettings))
+	mux.Handle("GET /api/config/layout", s.protected(false, s.getLayout))
+	mux.Handle("PUT /api/config/layout", s.protected(false, s.updateLayout))
+	mux.Handle("GET /api/config/fonts/{index}", s.protected(false, s.getFont))
 	return s.cors(newLimiter(300, globalWindow).wrap(apiPaths(mux)))
 }
 

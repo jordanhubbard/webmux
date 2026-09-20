@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
-import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -49,11 +49,12 @@ async function stop(child: ChildProcess): Promise<void> {
 
 interface RunningServer {
   home: string;
+  raw: (route: string, headers?: Record<string, string>) => Promise<Response>;
   request: (method: string, route: string, body?: JSONRecord, token?: string) => Promise<{ status: number; body: unknown }>;
   close: () => Promise<void>;
 }
 
-async function start(backend: Backend, mode: Mode, existingHome?: string): Promise<RunningServer> {
+async function start(backend: Backend, mode: Mode, existingHome?: string, environment: NodeJS.ProcessEnv = {}): Promise<RunningServer> {
   const home = existingHome ?? await mkdtemp(path.join(temporary, `${backend}-${mode}-`));
   if (!existingHome) {
     await cp(path.join(root, 'config.defaults'), path.join(home, 'config'), { recursive: true });
@@ -75,7 +76,11 @@ async function start(backend: Backend, mode: Mode, existingHome?: string): Promi
         HTTPS_PORT: '0',
         JWT_SECRET: '',
         WEBMUX_SLAVE_HOST: '',
+        WEBMUX_EXEC_COMMAND: undefined,
+        WEBMUX_TERMINAL_GRID_MAX_COLS: undefined,
+        WEBMUX_TERMINAL_GRID_MAX_ROWS: undefined,
         NODE_ENV: 'contract',
+        ...environment,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -105,6 +110,7 @@ async function start(backend: Backend, mode: Mode, existingHome?: string): Promi
   }
   return {
     home,
+    raw: (route, headers) => fetch(base + route, { headers, signal: AbortSignal.timeout(10_000) }),
     async request(method, route, body, token) {
       const response = await fetch(base + route, {
         method,
@@ -139,6 +145,7 @@ async function localContract(backend: Backend): Promise<void> {
     assert.deepEqual(await call('GET', '/api/auth/me'), { status: 401, body: { error: 'Unauthorized' } });
     assert.deepEqual(await call('GET', '/api/hosts'), { status: 401, body: { error: 'Unauthorized' } });
     assert.deepEqual(await call('GET', '/api/keys'), { status: 401, body: { error: 'Unauthorized' } });
+    assert.deepEqual(await call('GET', '/api/config'), { status: 401, body: { error: 'Unauthorized' } });
     assert.deepEqual(await call('POST', '/api/auth/login', {}), { status: 400, body: { error: 'Username and password required' } });
     const bootstrap = await call('POST', '/api/auth/bootstrap', { username: 'owner', password: 'owner-🔐-password' });
     assert.equal(bootstrap.status, 200);
@@ -156,6 +163,10 @@ async function localContract(backend: Backend): Promise<void> {
     assert.equal(memberLogin.status, 200);
     const memberToken = checkToken(memberLogin.body, 'member', 'local');
     assert.deepEqual(await call('GET', '/api/auth/users', undefined, memberToken), { status: 403, body: { error: 'Admin privileges required' } });
+    assert.equal((await call('GET', '/api/config', undefined, memberToken)).status, 200);
+    assert.deepEqual(await call('PUT', '/api/config', { app: { name: 'not-allowed' } }, memberToken), { status: 403, body: { error: 'Admin privileges required' } });
+    assert.equal((await call('PUT', '/api/config', { app: { name: 'owner-settings' } }, ownerToken)).status, 200);
+    assert.equal((await call('PUT', '/api/config/layout', { layout: { font_size: 17, tiles: [] } }, memberToken)).status, 200);
     assert.deepEqual(await call('GET', '/api/auth/users', undefined, ownerToken), { status: 200, body: [{ username: 'owner', admin: true }, { username: 'member', admin: false }] });
     const refresh = await call('POST', '/api/auth/refresh', undefined, ownerToken);
     assert.equal(refresh.status, 200);
@@ -263,6 +274,99 @@ async function catalogContract(backend: Backend): Promise<void> {
   } finally { await other.close(); }
 }
 
+async function settingsContract(backend: Backend): Promise<void> {
+  const environment = {
+    WEBMUX_TERMINAL_GRID_MAX_COLS: '3',
+    WEBMUX_TERMINAL_GRID_MAX_ROWS: 'unlimited',
+    WEBMUX_EXEC_COMMAND: 'fixture-exec {host}',
+  };
+  const server = await start(backend, 'none', undefined, environment);
+  const appPath = path.join(server.home, 'config', 'app.yaml');
+  let savedResponse: unknown;
+  const layout = { layout: { font_size: 18, tiles: [{ session_id: 'fixture', row: 0, col: 1 }] }, metadata: 'preserved' };
+  try {
+    const initial = await server.request('GET', '/api/config/');
+    assert.equal(initial.status, 200);
+    const initialApp = record(record(initial.body).app);
+    assert.deepEqual(initialApp.terminal_grid, { max_cols: 3, max_rows: null });
+    assert.equal(initialApp.exec_command, 'fixture-exec {host}');
+    assert.deepEqual(initialApp.agents, { enabled: false, combined_pane: true, disable_in_multi_user_mode: true, definitions: [] });
+    assert.deepEqual(await server.request('PUT', '/api/config', {}), { status: 400, body: { error: 'Request body must contain an app object' } });
+    const before = await readFile(appPath, 'utf8');
+    const invalidUpdates: [JSONRecord, string][] = [
+      [{ listen_host: '127.0.0.2' }, "Field 'listen_host' cannot be changed at runtime"],
+      [{ secure_mode: true }, "Field 'secure_mode' cannot be changed at runtime"],
+      [{ agents: { enabled: true } }, "Field 'agents' cannot be changed at runtime"],
+      [{ default_term: { font_family: 'bad; color: red' } }, 'Invalid app.default_term.font_family'],
+      [{ terminal_grid: { max_cols: -1 } }, 'app.terminal_grid.max_cols must be a positive integer, null, 0, or unlimited'],
+      [{ font_faces: [{ family: 'Outside', source: '../outside.ttf' }] }, 'Invalid app.font_faces'],
+      [{ transport: { mosh_server_path: 'relative' } }, 'Invalid mosh_server_path: must be an absolute path'],
+    ];
+    for (const [app, message] of invalidUpdates) {
+      assert.deepEqual(await server.request('PUT', '/api/config', { app }), { status: 400, body: { error: message } });
+      assert.equal(await readFile(appPath, 'utf8'), before, 'invalid update changed configuration');
+    }
+    await mkdir(path.join(server.home, 'config', 'fonts'));
+    await writeFile(path.join(server.home, 'config', 'fonts', 'fixture.woff2'), 'fixture-font-bytes');
+    const update = await server.request('PUT', '/api/config', { app: {
+      name: 'contract-settings', default_term: { font_family: 'Fixture Font,monospace', font_size: 17 },
+      terminal_grid: { max_cols: 4, max_rows: 'unlimited' }, session_logging: { enabled: true },
+      font_faces: [{ family: 'Fixture Font', source: 'fonts/fixture.woff2', weight: 400, style: 'ITALIC', display: 'SWAP' }],
+      transport: { mosh_server_path: '/usr/local/bin/mosh-server' },
+      ui: { default_pane: ' desktops ', host_switcher: { enabled: true, suffixes: ['.example', 2, ' '], hosts: [{ id: 'local', hostname: 'localhost', label: 'Local' }, { id: 7 }] } },
+    } });
+    assert.equal(update.status, 200);
+    const updatedApp = record(record(update.body).app);
+    assert.deepEqual(updatedApp.default_term, { ...record(initialApp.default_term), font_family: '"Fixture Font", monospace', font_size: 17 });
+    assert.deepEqual(updatedApp.terminal_grid, { max_cols: 3, max_rows: null });
+    assert.deepEqual(updatedApp.session_logging, { enabled: true });
+    assert.deepEqual(updatedApp.font_faces, [{ family: 'Fixture Font', source: 'fonts/fixture.woff2', weight: '400', style: 'italic', display: 'swap', url: '/api/config/fonts/0' }]);
+    assert.deepEqual(updatedApp.ui, { default_pane: 'desktops', host_switcher: { enabled: true, suffixes: ['.example'], hosts: [{ id: 'local', hostname: 'localhost', label: 'Local' }] } });
+    assert.deepEqual(updatedApp.transport, { ...record(initialApp.transport), mosh_server_path: '/usr/local/bin/mosh-server' });
+    const persisted = record(record(yaml.load(await readFile(appPath, 'utf8'))).app);
+    assert.deepEqual(persisted.terminal_grid, { max_cols: 4, max_rows: 'unlimited' });
+    assert.equal(persisted.exec_command, undefined);
+    assert.ok(Array.isArray(persisted.font_faces));
+    assert.equal(record(persisted.font_faces[0]).url, undefined);
+    const font = await server.raw('/api/config/fonts/0');
+    assert.equal(font.status, 200);
+    assert.equal(font.headers.get('content-type'), 'font/woff2');
+    assert.equal(font.headers.get('cache-control'), 'private, max-age=3600');
+    assert.equal(await font.text(), 'fixture-font-bytes');
+    const etag = font.headers.get('etag');
+    assert.ok(etag);
+    // Node fetch otherwise injects Cache-Control: no-cache for conditional
+    // requests, which deliberately forces Express to return a fresh 200 body.
+    const cached = await server.raw('/api/config/fonts/0', { 'If-None-Match': etag, 'Cache-Control': 'max-age=0' });
+    assert.equal(cached.status, 304);
+    await cached.body?.cancel();
+    const uncached = await server.raw('/api/config/fonts/0', { 'If-None-Match': etag, 'Cache-Control': 'no-cache' });
+    assert.equal(uncached.status, 200);
+    assert.equal(await uncached.text(), 'fixture-font-bytes');
+    const range = await server.raw('/api/config/fonts/0', { Range: 'bytes=0-6' });
+    assert.equal(range.status, 206);
+    assert.equal(await range.text(), 'fixture');
+    assert.deepEqual(await server.request('GET', '/api/config/fonts/-1'), { status: 404, body: { error: 'Font not found' } });
+    assert.deepEqual(await server.request('PUT', '/api/config/layout', layout), { status: 200, body: layout });
+    assert.deepEqual(await server.request('GET', '/api/config/layout'), { status: 200, body: layout });
+    // This fixture creates no real sessions. The Node broker reconciles tiles
+    // with sessions at shutdown/startup, so leave an empty tile list for the
+    // settings-only restart check. Real session/layout recovery is a separate
+    // transport contract; the nonempty layout API round-trip is checked above.
+    layout.layout.tiles = [];
+    assert.deepEqual(await server.request('PUT', '/api/config/layout', layout), { status: 200, body: layout });
+    savedResponse = (await server.request('GET', '/api/config')).body;
+  } finally { await server.close(); }
+  const other = await start(backend === 'go' ? 'node' : 'go', 'none', server.home, environment);
+  try {
+    assert.deepEqual(await other.request('GET', '/api/config'), { status: 200, body: savedResponse });
+    assert.deepEqual(await other.request('GET', '/api/config/layout'), { status: 200, body: layout });
+    const font = await other.raw('/api/config/fonts/0');
+    assert.equal(font.status, 200);
+    assert.equal(await font.text(), 'fixture-font-bytes');
+  } finally { await other.close(); }
+}
+
 try {
   const build = spawnSync('go', ['build', '-o', binary, './cmd/webmux'], { cwd: path.join(root, 'server'), stdio: 'inherit' });
   if (build.error) throw build.error;
@@ -271,7 +375,8 @@ try {
     await localContract(backend);
     await trustedContract(backend);
     await catalogContract(backend);
-    console.log(`${backend}: authentication/catalog contracts and cross-backend restarts passed`);
+    await settingsContract(backend);
+    console.log(`${backend}: authentication/catalog/settings contracts and cross-backend restarts passed`);
   }
 } finally {
   await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
