@@ -270,6 +270,10 @@ actual rendering flags from Chromium's DevTools protocol. See Google's
 This changes only the screenshot renderer, with no CSS changes, masking, pixel
 tolerance or baseline updates during comparisons. Hosted Linux/Windows
 verification of this control remains required; it is not yet a completed gate.
+At 055bde9, Linux subsequently passed the full Go job, including the exact
+screenshot comparison. Windows Go race/vet/contracts passed; its separate
+browser/visual job was still running when checked. macOS hosted work remains
+queued.
 
 The visual runner now repeats the Node baseline/control/Go sequence with an
 isolated local-authentication fixture as well as trusted mode. Eight additional
@@ -281,8 +285,19 @@ All 16 states and both authentication modes pass locally with Chromium 145,
 including exact decoded-RGBA comparisons. TypeScript checks pass. CI verification
 of these added states is pending.
 
+Six further captures now cover an active terminal, search highlights and the
+disconnected overlay at both viewport sizes. A checked TypeScript child runs in
+a real PTY and emits fixed ANSI colors, bold text and Unicode. The browser sends
+input, verifies its rendered reply, searches two matches, exits the child, then
+reconnects and verifies that the fresh screen replaces the prior output. The
+fixture hides its cursor through ordinary terminal escape sequences so blinking
+does not make the reference image time-dependent. No terminal output or socket
+is mocked, and the session is deleted during cleanup. TypeScript and the full
+22-state visual sequence pass locally; hosted coverage of these additions is
+still pending.
+
 This is scoped rendering evidence, not proof of every state or platform. Active
-terminal/desktop rendering, agent panes, remaining failure states, real guacd/RDP
+desktop rendering, agent panes, remaining failure states, real guacd/RDP
 and VNC hosts, and performance gates still need coverage before replacement.
 
 Packaging scripts, browser test runners, the E2E fixture and agent status helper
