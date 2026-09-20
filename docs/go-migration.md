@@ -126,8 +126,13 @@ complete JavaScript Date.parse compatibility. A dedicated ISO parser now handles
 reduced dates, calendar overflow, 24:00, signed six-digit years, millisecond
 truncation, lowercase separators and JavaScript's timestamp range limits. Node
 oracle cases and API contracts also reject invalid numeric offsets, comma
-fractions, negative zero years and instants outside that range. Other legacy
-spellings and DST ambiguity still need coverage. Display
+fractions, negative zero years and instants outside that range. Local datetime
+resolution now follows [ECMAScript's transition rule](https://tc39.es/ecma262/multipage/numbers-and-dates.html#sec-utc-t):
+repeated times choose the earlier instant, and skipped times use the offset
+before the transition. Node 24 oracle cases cover New York transition boundaries,
+Berlin, Lord Howe's half-hour shifts, Apia's skipped day, and supported local
+legacy spellings. Six of those cases failed before this correction. Host timezone
+database differences and other legacy spellings remain outside verified parity. Display
 name ordering still uses English collation; host-locale parity remains open.
 
 VNC and RDP session HTTP APIs now support owner-scoped create/list/get/move/delete

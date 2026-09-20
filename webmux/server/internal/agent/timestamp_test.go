@@ -80,3 +80,36 @@ func TestISOTimestampNodeCompatibility(t *testing.T) {
 		}
 	}
 }
+
+func TestLocalTimestampTransitions(t *testing.T) {
+	// UTC expectations independently captured from Node 24 Date.parse.
+	for _, test := range []struct{ zone, value, want string }{
+		{"America/New_York", "2026-03-08T01:59:59.999", "2026-03-08T06:59:59.999Z"},
+		{"America/New_York", "2026-03-08T02:00:00", "2026-03-08T07:00:00.000Z"},
+		{"America/New_York", "2026-03-08T02:30:00", "2026-03-08T07:30:00.000Z"},
+		{"America/New_York", "2026-03-08T03:00:00", "2026-03-08T07:00:00.000Z"},
+		{"America/New_York", "2026-11-01T01:30:00", "2026-11-01T05:30:00.000Z"},
+		{"America/New_York", "2026-11-01T02:00:00", "2026-11-01T07:00:00.000Z"},
+		{"America/New_York", "2026-03-08 02:30:00", "2026-03-08T07:30:00.000Z"},
+		{"America/New_York", "3/8/2026 02:30:00", "2026-03-08T07:30:00.000Z"},
+		{"Europe/Berlin", "2026-03-29T02:30:00", "2026-03-29T01:30:00.000Z"},
+		{"Europe/Berlin", "2026-10-25T02:30:00", "2026-10-25T00:30:00.000Z"},
+		{"Australia/Lord_Howe", "2026-04-05T01:45:00", "2026-04-04T14:45:00.000Z"},
+		{"Australia/Lord_Howe", "2026-10-04T02:15:00", "2026-10-03T15:45:00.000Z"},
+		{"Pacific/Apia", "2011-12-30T12:00:00", "2011-12-30T22:00:00.000Z"},
+	} {
+		t.Run(test.zone+"/"+test.value, func(t *testing.T) {
+			local, err := time.LoadLocation(test.zone)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want, err := time.Parse(time.RFC3339Nano, test.want)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := timestampInLocation(test.value, local); got != want.UnixMilli() {
+				t.Fatalf("got %s, want %s", time.UnixMilli(got).UTC(), want)
+			}
+		})
+	}
+}

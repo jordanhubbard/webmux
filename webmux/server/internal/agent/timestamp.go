@@ -13,6 +13,34 @@ var isoTimestampPattern = regexp.MustCompile(`^([+-]\d{6}|\d{4})(?:-(\d{2})(?:-(
 
 const dateLimitMillis int64 = 8640000000000000
 
+// Resolve local wall time like ECMAScript UTC(t): select the earlier instant
+// in a repeated interval, and the pre-transition offset in a skipped interval.
+// Go's time.Date deliberately does not guarantee either choice.
+func resolveLocalTimestamp(wall time.Time, local *time.Location) time.Time {
+	guess := time.Date(wall.Year(), wall.Month(), wall.Day(), wall.Hour(), wall.Minute(), wall.Second(), wall.Nanosecond(), local)
+	// IANA transitions (including date-line changes) fit within this window.
+	limit := guess.Add(48 * time.Hour)
+	for cursor := guess.Add(-48 * time.Hour); !cursor.After(limit); {
+		zone := cursor.In(local)
+		_, offset := zone.Zone()
+		start, end := zone.ZoneBounds()
+		candidate := wall.Add(-time.Duration(offset) * time.Second)
+		if (start.IsZero() || !candidate.Before(start)) && (end.IsZero() || candidate.Before(end)) {
+			return candidate
+		}
+		if end.IsZero() || !end.After(cursor) {
+			break
+		}
+		_, nextOffset := end.In(local).Zone()
+		if nextOffset > offset && !wall.Before(end.Add(time.Duration(offset)*time.Second)) &&
+			wall.Before(end.Add(time.Duration(nextOffset)*time.Second)) {
+			return candidate
+		}
+		cursor = end
+	}
+	return guess
+}
+
 func parseISOTimestamp(fields []string, local *time.Location) int64 {
 	integer := func(index, fallback int) int {
 		if fields[index] == "" {
@@ -51,7 +79,8 @@ func parseISOTimestamp(fields []string, local *time.Location) int64 {
 		location = time.FixedZone("", offset)
 	}
 	// Date normalizes February 30 and 24:00 after checking component ranges.
-	instant := time.Date(year, time.Month(month), day, hour, minute, second, millis*int(time.Millisecond), location).UnixMilli()
+	wall := time.Date(year, time.Month(month), day, hour, minute, second, millis*int(time.Millisecond), time.UTC)
+	instant := resolveLocalTimestamp(wall, location).UnixMilli()
 	if instant < -dateLimitMillis || instant > dateLimitMillis {
 		return 0
 	}
@@ -66,8 +95,8 @@ func timestampInLocation(value string, local *time.Location) int64 {
 		return parseISOTimestamp(fields, local)
 	}
 	for _, layout := range []string{"2006-01-02 15:04:05", "2006-01-02 15:04", "1/2/2006 15:04:05", "1/2/2006"} {
-		if parsed, err := time.ParseInLocation(layout, value, local); err == nil {
-			return parsed.UnixMilli()
+		if parsed, err := time.Parse(layout, value); err == nil {
+			return resolveLocalTimestamp(parsed, local).UnixMilli()
 		}
 	}
 	// Date.toString() includes a descriptive zone name in parentheses. Its
