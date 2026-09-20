@@ -395,7 +395,19 @@ behavior and switching default release/service commands remain unfinished.
 and a `-native.msi` installer with a checksum. The default remains `-Backend node`
 during migration. Both variants use the existing per-user WiX product and
 installation directory, so they are replacement variants rather than side-by-side
-products; same-version migration/upgrade coverage remains outstanding.
+products. WiX now enables same-version major upgrades so swapping backend variants
+does not register overlapping products. Removal is scheduled after transaction
+initialization so MSI can roll it back if the replacement fails; see the
+[WiX upgrade semantics](https://docs.firegiant.com/wix/schema/wxs/majorupgrade/).
+Versions must continue to use three meaningful numeric components because MSI
+ignores a fourth component when comparing versions.
+Windows native CI now builds both variants and exercises both fresh installation
+and a same-version Node-to-Go upgrade. It first runs the installed Node bundle,
+then checks a single new per-user product registration, absence of legacy backend,
+launcher and node_modules files, native runtime/service behavior, and removal
+of product registration on uninstall. Execution awaits Windows CI; XML/YAML
+validation passes locally. This covers stopped application replacement; active
+service migration and forced-failure rollback tests remain outstanding.
 Native MSI CI installs on an isolated runner, exercises the installed HTTP/UI,
 authentication and PTY runtime, runs the WinSW service lifecycle from that
 installation, and uninstalls. It refuses an existing installation/service and

@@ -9,7 +9,9 @@
       Compressed="yes"
       UpgradeCode="1E20A25F-F940-4B0B-8AC0-7E785279F7C5">
 
-    <MajorUpgrade DowngradeErrorMessage="A newer version of WebMux is already installed." />
+    <!-- Node and native packages of one release replace each other. -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes" Schedule="afterInstallInitialize"
+                  DowngradeErrorMessage="A newer version of WebMux is already installed." />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
     <SummaryInformation Description="Browser-based workspace for persistent terminals and remote desktops" />
 

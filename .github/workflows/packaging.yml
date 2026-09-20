@@ -57,7 +57,9 @@ jobs:
       - name: Build native Windows archive and MSI
         if: runner.os == 'Windows'
         shell: pwsh
-        run: ./scripts/package-windows.ps1 -Backend go
+        run: |
+          ./scripts/package-windows.ps1 -Backend node
+          ./scripts/package-windows.ps1 -Backend go
       - name: Exercise extracted native runtime
         if: runner.os != 'Windows'
         shell: bash
@@ -86,7 +88,10 @@ jobs:
         run: |
           $installers = @(Get-ChildItem dist -Filter '*-native.msi')
           if ($installers.Count -ne 1) { throw 'Expected exactly one native MSI.' }
+          $previous = @(Get-ChildItem dist -Filter '*.msi' | Where-Object { $_.Name -notlike '*-native.msi' })
+          if ($previous.Count -ne 1) { throw 'Expected exactly one legacy MSI.' }
           ./scripts/smoke-native-msi.ps1 -Installer $installers[0].FullName
+          ./scripts/smoke-native-msi.ps1 -Installer $installers[0].FullName -PreviousInstaller $previous[0].FullName
       - name: Set up Homebrew for native installation
         if: runner.os != 'Windows'
         uses: Homebrew/actions/setup-homebrew@3b81d438eda92ee13b5849940d993be027717ecf
