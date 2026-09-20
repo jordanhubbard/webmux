@@ -93,8 +93,13 @@ pinning. Private network destinations remain supported; the existing explicit
 local-target environment override is preserved. Connections stop on deletion,
 shutdown or account revocation. Multiple viewers retain independent connection
 state so a closing viewer cannot disconnect another live viewer's session state.
-The RDP proxy and Guacamole handshake remain unimplemented. Full browser-based
-VNC rendering parity is still unverified.
+The RDP proxy now shares the authenticated desktop transport lifecycle and
+connects through the operator-configured guacd endpoint. Its handshake preserves
+the existing parameter defaults and sends only the validated destination IP.
+Local fake-guacd tests cover credentials, Unicode framing, bidirectional text,
+protocol errors and deletion during the handshake. A real guacd/RDP server,
+Node/Go RDP differential coverage and full browser-based VNC/RDP rendering parity
+remain required before switching the default backend.
 
 The internal terminal process layer now supports Unix PTYs and Windows ConPTY,
 with independent process lifetime, serialized input, resize, exit status,
@@ -228,6 +233,13 @@ still need conversion or removal as the Go deployment tooling replaces them.
   Canonical address checks cover the full IPv6 link-local range and mapped IPv4
   forms, extending the old textual address checks. Dialing uses only the checked
   IP address. Tests use local fixtures or stub DNS answers, not remote hosts.
+- RDP uses the same ownership, origin, account and destination checks. Its
+  handshake has a ten-second deadline. Guacamole instructions are bounded to
+  1 MiB and 1,024 elements; lengths count Unicode code points and separators
+  inside values remain data. Complete instructions are forwarded as text frames,
+  preserving UTF-8 characters split across TCP reads. This corrects the legacy
+  handshake parser's semicolon splitting and UTF-16 length handling. Malformed
+  guacd configuration fails closed instead of silently using the default daemon.
 
 These are intentional changes, not claims of byte-for-byte error compatibility.
 
@@ -247,3 +259,7 @@ a successful Windows differential run remains required.
 The subsequent Windows job at 8b98c85 stopped earlier on a shutdown assertion
 that treated a buffered status frame as a live socket. That test now drains
 buffered frames and requires an actual WebSocket close within its deadline.
+Linux's full Go and differential job passed at 9b80338. Windows then exposed an
+agent test that assumed record deletion and process shutdown were simultaneous;
+the process deliberately closes outside the broker lock to allow output to drain.
+That assertion now waits up to five seconds for process shutdown as well.

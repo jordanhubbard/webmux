@@ -238,9 +238,11 @@ func TestAgentPolicyRevokesLiveSessionAndWatcherStops(t *testing.T) {
 	if code != 1008 || reason != "Agent sessions are not enabled" {
 		t.Fatal(code, reason)
 	}
+	// Revocation removes the record under the broker lock, then closes the
+	// process outside it so terminal output can drain. Wait for both effects.
 	select {
 	case <-p.done:
-	default:
+	case <-time.After(5 * time.Second):
 		t.Fatal("revoked process running")
 	}
 	if err := b.Close(); err != nil {

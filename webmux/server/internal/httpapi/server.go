@@ -116,6 +116,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/agents/{agentId}/scratch", s.protected(false, s.scratchAgent))
 	s.registerDesktops(mux)
 	mux.HandleFunc("GET /api/vnc/ws/{id}", s.vncSocket)
+	mux.HandleFunc("GET /api/rdp/ws/{id}", s.rdpSocket)
 	return s.cors(newLimiter(300, globalWindow).wrap(apiPaths(mux)))
 }
 
