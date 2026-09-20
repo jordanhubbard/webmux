@@ -271,9 +271,9 @@ This changes only the screenshot renderer, with no CSS changes, masking, pixel
 tolerance or baseline updates during comparisons. Hosted Linux/Windows
 verification of this control remains required; it is not yet a completed gate.
 At 055bde9, Linux subsequently passed the full Go job, including the exact
-screenshot comparison. Windows Go race/vet/contracts passed; its separate
-browser/visual job was still running when checked. macOS hosted work remains
-queued.
+screenshot comparison. Windows also passed both its Go race/vet/contracts and
+browser/visual jobs. This verifies the renderer control for the eight states
+present at that checkpoint; macOS hosted work remains queued.
 
 The visual runner now repeats the Node baseline/control/Go sequence with an
 isolated local-authentication fixture as well as trusted mode. Eight additional
@@ -435,8 +435,17 @@ touching installed services. Both Node and Go pass local start/stop/restart,
 HTTP, pidfile cleanup and byte-preserved configuration checks. The fixture uses
 fresh candidate ports because the existing port selector avoids TIME_WAIT ports.
 Native source build and process checks now run in Linux/macOS packaging CI.
-The native launchd template parses locally with the expected executable and
-state path; actual source-installed OS-service lifecycle coverage remains pending.
+`scripts/smoke-launchd.mts` now loads the shipped native template under a random
+temporary service label, private configuration and loopback port. It checks real
+launchd startup, UI serving, unchanged app configuration, signing-secret
+preservation and two graceful stop cycles with zero exit status, followed by a
+new process on restart. It removes the registered fixture afterward. The local
+macOS GUI-domain run passes; macOS packaging CI now runs this check too (using
+the user domain if no GUI domain exists). Operator service labels are untouched.
+This verifies the template's lifecycle, not the full Make installer. End-to-end
+installer/systemd coverage, upgrade/drain checks and robust path escaping in the
+Make installer remain pending: its sed substitutions do not handle arbitrary
+replacement characters, and systemd environment paths need quoting.
 
 ### Backend performance measurements
 
