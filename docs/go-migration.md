@@ -122,8 +122,12 @@ datetimes, compact numeric offsets, and common US numeric/month-name dates.
 Public API contracts check that both servers retain the hook's original spelling
 and infer activity consistently; Go unit tests check the actual UTC instants,
 including positive/negative offsets and local-time interpretation. This is not
-complete JavaScript Date.parse compatibility: calendar overflow, 24:00, expanded
-years, other legacy spellings and DST ambiguity still need coverage. Display
+complete JavaScript Date.parse compatibility. A dedicated ISO parser now handles
+reduced dates, calendar overflow, 24:00, signed six-digit years, millisecond
+truncation, lowercase separators and JavaScript's timestamp range limits. Node
+oracle cases and API contracts also reject invalid numeric offsets, comma
+fractions, negative zero years and instants outside that range. Other legacy
+spellings and DST ambiguity still need coverage. Display
 name ordering still uses English collation; host-locale parity remains open.
 
 VNC and RDP session HTTP APIs now support owner-scoped create/list/get/move/delete

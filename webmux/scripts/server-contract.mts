@@ -974,6 +974,9 @@ async function agentContract(backend: Backend): Promise<void> {
       new Date('2100-09-20T12:34:56Z').toString(),
       'Mon Sep 20 2100 12:34:56 GMT+0530 (India Standard Time)',
       'September 20, 2100 12:34:56 GMT',
+      '2100', '2100-09', '2100T12:00Z', '2100-02-30T12:00Z',
+      '2100-09-20T24:00:00Z', '2100-09-20t12:00:00z',
+      '+010000-01-01T00:00:00Z', '+275760-09-13T00:00:00Z',
     ]) {
       assert(Number.isFinite(Date.parse(stamp)), `invalid timestamp fixture ${stamp}`);
       await writeFile(statusFile, JSON.stringify({ last_output_at: stamp }));
@@ -982,6 +985,17 @@ async function agentContract(backend: Backend): Promise<void> {
       const first = record(response.body[0]);
       assert.equal(first.last_output_at, stamp, `${backend}: timestamp ${stamp}`);
       assert.equal(first.status, 'working'); assert.equal(first.status_source, 'tmux');
+    }
+    for (const stamp of [
+      '2100-09-20T24:00:00.0001Z', '2100-09-20T12:00:00,1Z',
+      '2100-09-20T12:00:00+24:00', '2100-09-20T12:00:00+2360',
+      '-000000-01-01T00:00:00Z', '+275760-09-13T00:00:00.001Z',
+    ]) {
+      assert(Number.isNaN(Date.parse(stamp)), `valid timestamp in rejection fixture ${stamp}`);
+      await writeFile(statusFile, JSON.stringify({ last_output_at: stamp }));
+      const response = await call('GET', '/api/agents/alpha/sessions');
+      assert.equal(response.status, 200); assert(Array.isArray(response.body));
+      assert.equal(record(response.body[0]).last_output_at, record(listed.body[0]).last_output_at, `${backend}: invalid timestamp ${stamp}`);
     }
     await writeFile(statusFile, JSON.stringify({ agent_id: 'alpha', name: 'alpha-task-a', status: 'waiting', source: 'hook', updated_at: new Date().toISOString(), extension: 'preserved' }));
     const attached = await call('POST', '/api/agents/alpha/attach', { name: 'alpha-task-a', cols: 999, rows: 1 });
