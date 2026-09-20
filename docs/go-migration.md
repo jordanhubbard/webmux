@@ -78,6 +78,15 @@ It distinguishes that transcript from the new file opened during restoration.
 Uninstall waits for launchd's asynchronous registration removal before deleting
 the fixture directory.
 
+The Make fixture now supports Linux's user manager as well. Packaging CI starts
+the runner's user manager and supplies its runtime/bus environment before running
+the fixture. The unit uses a unique filename in the invoking user's normal unit
+directory; Make derives its control name from that path instead of hard-coding
+`webmux.service`. The production default is unchanged. This checks the actual
+install/enable/start/stop/restart/disable/uninstall path, with the same PTY,
+transcript and persistence assertions. Linux execution of this addition is
+pending; local TypeScript and helper checks pass.
+
 Make start/restart now propagate service-manager errors, and restart aborts if
 its rebuild fails instead of replacing the service and printing success. A
 fixture that substitutes all manager commands reproduced the former false-success

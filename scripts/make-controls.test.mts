@@ -31,3 +31,24 @@ test('Make does not report successful service control after a failed manager com
     const restarted = run('restart'); assert.ifError(restarted.error); assert.equal(restarted.status, 0, restarted.stderr);
   } finally { fs.rmSync(home, { recursive: true, force: true }); }
 });
+
+test('Make user-service controls target the configured unit instead of the default service', { skip: process.platform === 'win32' }, () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-make-unit-'));
+  const unit = path.join(directory, 'private-fixture.service');
+  const log = path.join(directory, 'commands');
+  try {
+    fs.writeFileSync(unit, 'fixture');
+    fs.writeFileSync(path.join(directory, 'systemctl'), '#!/bin/sh\nprintf "%s " "$@" >> "$WEBMUX_COMMAND_LOG"\nprintf "\\n" >> "$WEBMUX_COMMAND_LOG"\n', { mode: 0o700 });
+    for (const action of ['start', 'stop', 'restart']) {
+      const result = spawnSync('make', ['--no-print-directory', '-o', 'build', '-o', 'check-guacd', action,
+        'OS=Linux', `UNIT=${unit}`, `WEBMUX_HOME=${directory}`, 'MAKE=true', 'SVC_STATUS=true'], {
+        cwd: path.resolve(import.meta.dirname, '..'), encoding: 'utf8', timeout: 10000,
+        env: { ...process.env, PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`, WEBMUX_COMMAND_LOG: log },
+      });
+      assert.ifError(result.error); assert.equal(result.status, 0, result.stdout + result.stderr);
+    }
+    assert.deepEqual(fs.readFileSync(log, 'utf8').trim().split('\n').map(line => line.trim()), [
+      '--user start private-fixture.service', '--user stop private-fixture.service', '--user restart private-fixture.service',
+    ]);
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});

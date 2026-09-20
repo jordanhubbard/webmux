@@ -60,6 +60,15 @@ jobs:
       - name: Verify native Make service installation
         if: runner.os == 'macOS'
         run: node scripts/smoke-unix-service.mts --make
+      - name: Verify native Make user-service installation
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+          sudo -n systemctl start "user@$(id -u).service"
+          systemctl --user show-environment > /dev/null
+          node scripts/smoke-unix-service.mts --make
       - name: Install WiX for native MSI
         if: runner.os == 'Windows'
         shell: pwsh

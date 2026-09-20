@@ -13,7 +13,6 @@ import { renderService } from './render-service.mts';
 assert(process.platform === 'darwin' || process.platform === 'linux', 'Unix service smoke requires macOS or Linux');
 const darwin = process.platform === 'darwin';
 const makeMode = process.argv.includes('--make');
-assert(!makeMode || darwin, 'Make installer fixture currently requires macOS');
 const sourceRoot = path.resolve(import.meta.dirname, '../webmux');
 await fs.access(path.join(sourceRoot, 'bin/webmux'));
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'webmux-unix-service-'));
@@ -28,10 +27,11 @@ function launch(args: string[], required = true): string {
   if (required) assert.equal(result.status, 0, `launchctl ${args.join(' ')}: ${result.stderr}`);
   return result.status === 0 ? result.stdout : '';
 }
-// Linux uses the system manager because hosted runners may have no user bus.
-// Only manager commands need sudo; the service runs as the invoking user.
+// Template mode uses the system manager with an unprivileged service identity;
+// Make mode exercises the actual user manager and requires its bus to be available.
 function systemctl(args: string[], required = true): string {
-  const result = spawnSync('sudo', ['-n', 'systemctl', '--no-pager', ...args], { encoding: 'utf8', timeout: 45000 });
+  const result = spawnSync(makeMode ? 'systemctl' : 'sudo',
+    [...(makeMode ? ['--user'] : ['-n', 'systemctl']), '--no-pager', ...args], { encoding: 'utf8', timeout: 45000 });
   if (result.error) throw result.error;
   if (required) assert.equal(result.status, 0, `systemctl ${args.join(' ')}: ${result.stderr}`);
   return result.stdout;
@@ -43,12 +43,13 @@ function property(name: string): string {
 }
 const domain = darwin ? (launch(['print', `gui/${uid}`], false) ? `gui/${uid}` : `user/${uid}`) : 'system';
 const target = `${domain}/${label}`;
-const definition = path.join(temporary, darwin ? 'fixture.plist' : label);
+const definition = !darwin && makeMode ? path.join(os.homedir(), '.config/systemd/user', label)
+  : path.join(temporary, darwin ? 'fixture.plist' : label);
 function makeControl(action: 'install' | 'start' | 'stop' | 'restart' | 'uninstall'): void {
-  assert(makeMode && darwin && domain === `gui/${uid}`, 'Make fixture requires an isolated GUI-domain service');
+  assert(makeMode && (!darwin || domain === `gui/${uid}`), 'Make fixture requires an isolated service');
   const result = spawnSync('make', ['--no-print-directory', '-o', 'build', action,
     'WEBMUX_BACKEND=go', 'MAKE=make -o build', `NODE=${process.execPath}`, `WEBMUX_DIR=${root}`, `WEBMUX_HOME=${home}`,
-    `PLIST=${definition}`, `LAUNCHD_SVC=${target}`], {
+    ...(darwin ? [`PLIST=${definition}`, `LAUNCHD_SVC=${target}`] : [`UNIT=${definition}`])], {
     cwd: path.dirname(sourceRoot), encoding: 'utf8', timeout: 30000,
     env: { ...process.env, JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' },
   });
@@ -56,6 +57,7 @@ function makeControl(action: 'install' | 'start' | 'stop' | 'restart' | 'uninsta
   assert.equal(result.status, 0, result.stdout + result.stderr);
 }
 let registered = false;
+let definitionCreated = false;
 let socket: WebSocket | undefined;
 async function waitFor(check: () => Promise<boolean>, description: string): Promise<void> {
   const until = Date.now() + 15000;
@@ -66,7 +68,8 @@ async function waitFor(check: () => Promise<boolean>, description: string): Prom
 }
 try {
   if (makeMode) {
-    assert.equal(domain, `gui/${uid}`, 'Make installer needs a GUI launchd domain');
+    if (darwin) assert.equal(domain, `gui/${uid}`, 'Make installer needs a GUI launchd domain');
+    else systemctl(['show-environment']);
     await fs.mkdir(path.join(root, 'service'), { recursive: true });
     for (const entry of ['bin', 'web', 'config.defaults']) await fs.symlink(path.join(sourceRoot, entry), path.join(root, entry));
   }
@@ -74,6 +77,8 @@ try {
   else {
     assert(uid > 0, 'Run the Linux fixture as an unprivileged user with noninteractive sudo');
     assert.equal(property('LoadState'), 'not-found', 'Fixture unit already exists');
+    await assert.rejects(fs.lstat(definition), { code: 'ENOENT' });
+    await fs.mkdir(path.dirname(definition), { recursive: true });
   }
   await fs.cp(path.join(sourceRoot, 'config.defaults'), path.join(home, 'config'), { recursive: true });
   assert((await fs.lstat(path.join(home, 'config'))).isDirectory(), 'Fixture configuration must be a private directory, not a symlink');
@@ -109,9 +114,10 @@ try {
   } else {
     // Appending a Service section overrides inherited manager environment.
     // Identity overrides adapt the user-service template to the system manager.
-    template += `\n[Service]\nUser=${uid}\nGroup=${process.getgid!()}\n` +
+    template += '\n[Service]\n' + (makeMode ? '' : `User=${uid}\nGroup=${process.getgid!()}\n`) +
       Object.entries(environment).map(([key, value]) => `Environment="${key}=${value}"`).join('\n') + '\n';
-    await fs.writeFile(definition, template, { mode: 0o600 });
+    await fs.writeFile(definition, template, { mode: 0o600, flag: 'wx' });
+    definitionCreated = true;
   }
   const base = `http://127.0.0.1:${address.port}`;
   async function healthy(): Promise<boolean> {
@@ -147,7 +153,7 @@ try {
       pid = service.match(/\bpid = ([1-9][0-9]*)/)?.[1];
     } else {
       assert.equal(property('ActiveState'), 'active');
-      assert.equal(property('User'), String(uid));
+      if (!makeMode) assert.equal(property('User'), String(uid));
       assert.equal(property('KillMode'), 'mixed');
       pid = property('MainPID');
       assert.match(pid, /^[1-9][0-9]*$/);
@@ -191,9 +197,15 @@ try {
     else systemctl(['stop', label]);
     if (restarting) {
       await waitFor(healthy, 'Make restart startup');
-      const restarted = launch(['print', target]);
-      assert.match(restarted, /state = running/);
-      const nextPID = restarted.match(/\bpid = ([1-9][0-9]*)/)?.[1];
+      let nextPID: string | undefined;
+      if (darwin) {
+        const restarted = launch(['print', target]);
+        assert.match(restarted, /state = running/);
+        nextPID = restarted.match(/\bpid = ([1-9][0-9]*)/)?.[1];
+      } else {
+        assert.equal(property('ActiveState'), 'active');
+        nextPID = property('MainPID'); assert.match(nextPID, /^[1-9][0-9]*$/);
+      }
       assert(nextPID && nextPID !== pid, 'Make restart did not replace the backend');
       assert.equal(await fs.readFile(appFile, 'utf8'), app);
       assert.equal(await fs.readFile(path.join(home, 'config/auth.yaml'), 'utf8'), auth);
@@ -230,15 +242,16 @@ try {
     assert(transcript.replaceAll('\r', '').includes(expected), 'Shutdown lost acknowledged terminal output');
     assert.match(transcript, /\[webmux transcript stopped .* reason=shutdown\]\r?\n$/);
   }
-  console.log(`Native Unix ${makeMode ? 'Make installer' : 'service template'} passed startup, UI, active PTY shutdown, transcript drain and restart in ${darwin ? domain : 'systemd (unprivileged service)'}`);
+  console.log(`Native Unix ${makeMode ? 'Make installer' : 'service template'} passed startup, UI, active PTY shutdown, transcript drain and restart in ${darwin ? domain : makeMode ? 'systemd user manager' : 'systemd (unprivileged service)'}`);
 } finally {
   socket?.close();
+  if (!registered && definitionCreated) await fs.rm(definition, { force: true });
   if (registered && makeMode) {
     makeControl('uninstall');
-    await waitFor(async () => launch(['print', target], false) === '', 'Make uninstall registration cleanup');
+    await waitFor(async () => darwin ? launch(['print', target], false) === '' : property('LoadState') === 'not-found', 'Make uninstall registration cleanup');
     await assert.rejects(fs.access(definition), { code: 'ENOENT' });
   }
-  if (registered && !darwin) {
+  if (registered && !darwin && !makeMode) {
     systemctl(['stop', label]);
     systemctl(['disable', '--runtime', label]);
     systemctl(['daemon-reload']);

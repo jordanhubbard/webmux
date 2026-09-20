@@ -341,6 +341,7 @@ clean: stop
 
 PLIST       := $(HOME)/Library/LaunchAgents/com.webmux.server.plist
 UNIT        := $(HOME)/.config/systemd/user/webmux.service
+SYSTEMD_UNIT := $(notdir $(UNIT))
 LAUNCHD_SVC := gui/$(shell id -u)/com.webmux.server
 
 # ── Service-manager awareness ───────────────────────────────────────
@@ -365,10 +366,10 @@ else
   export WEBMUX_SERVICE_OUTPUT := $(UNIT)
   SVC_MGR       := systemd
   SVC_INSTALLED := [ -f "$$WEBMUX_SERVICE_OUTPUT" ]
-  SVC_START     := systemctl --user start webmux.service
-  SVC_STOP      := systemctl --user stop webmux.service
-  SVC_RESTART   := systemctl --user restart webmux.service
-  SVC_STATUS    := systemctl --user --no-pager --lines=0 status webmux.service
+  SVC_START     := systemctl --user start "$(SYSTEMD_UNIT)"
+  SVC_STOP      := systemctl --user stop "$(SYSTEMD_UNIT)"
+  SVC_RESTART   := systemctl --user restart "$(SYSTEMD_UNIT)"
+  SVC_STATUS    := systemctl --user --no-pager --lines=0 status "$(SYSTEMD_UNIT)"
 endif
 
 install: stop build
@@ -386,7 +387,7 @@ else
 	@printf "$(C_BLU)▸$(C_RST) Installing systemd user service…\n"
 	@$(NODE) scripts/render-service.mts $(WEBMUX_BACKEND)
 	@systemctl --user daemon-reload
-	@systemctl --user enable --now webmux.service
+	@systemctl --user enable --now "$(SYSTEMD_UNIT)"
 	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)%s$(C_RST)\n" "$$WEBMUX_SERVICE_OUTPUT"
 	@printf "  $(C_DIM)config:$(C_RST) %s\n" "$$WEBMUX_HOME"
 	@printf "  $(C_DIM)logs:$(C_RST)   %s/logs/webmux.log\n" "$$WEBMUX_HOME"
@@ -402,7 +403,7 @@ ifeq ($(shell uname),Darwin)
 	@printf "$(C_GRN)✓$(C_RST) Uninstalled.\n"
 else
 	@printf "$(C_BLU)▸$(C_RST) Removing systemd user service…\n"
-	@systemctl --user disable --now webmux.service 2>/dev/null || true
+	@systemctl --user disable --now "$(SYSTEMD_UNIT)" 2>/dev/null || true
 	@rm -f "$$WEBMUX_SERVICE_OUTPUT"
 	@systemctl --user daemon-reload
 	@printf "$(C_GRN)✓$(C_RST) Uninstalled.\n"
