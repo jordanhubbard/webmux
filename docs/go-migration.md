@@ -63,6 +63,18 @@ pause/resume into the same file, and rotates files across launches. It preserves
 headers/footers, audit event fields and owner-only POSIX permissions. Other
 application routes, static UI serving and agent-service integration remain pending.
 
+The internal agent service now normalizes agent configuration independently,
+checks the multi-user access policy, discovers tmux sessions, assigns duplicate
+display names, resolves pane directories and builds attach argument vectors.
+It reads existing base64url-named JSON status files and atomically updates them
+while preserving unknown hook metadata. Status inference preserves waiting
+slop, recent/stale boundaries and suppression of replay-only output. Tests use
+isolated homes and a fake command runner; they do not contact operator tmux
+sockets. Agent HTTP routes, broker attach/scratch lifecycle, policy reloads and
+debounced live-activity recording still need integration. Locale-dependent label
+ordering and non-ISO legacy timestamps also require differential coverage;
+the initial implementation uses English collation and RFC3339 timestamps.
+
 The internal terminal process layer now supports Unix PTYs and Windows ConPTY,
 with independent process lifetime, serialized input, resize, exit status,
 output draining and idempotent cancellation. SSH/mosh/exec command planning
@@ -165,5 +177,19 @@ still need conversion or removal as the Go deployment tooling replaces them.
 - Transcript opens are confined to the log directory. Resume rejects a substituted
   symlink or non-regular file instead of appending to its target. Disconnected
   processes cannot start a new transcript through a stale process handle.
+- Agent discovery commands have a five-second timeout and 1 MiB limit per output
+  stream. Status reads are limited to 1 MiB and confined to the agent directory;
+  writes use atomic replacement and owner-only POSIX file permissions. The
+  configured home and agent directories remain operator-controlled.
+
+### Platform verification
+
+The Linux Go CI job passed at commit 2176490. The Windows run exposed rooted
+font-path validation and redirected-standard-handle inheritance failures.
+Font validation now rejects leading separators on every platform. ConPTY
+startup explicitly supplies null standard handles, following the
+[Microsoft terminal maintainers' guidance](https://github.com/microsoft/terminal/discussions/15814),
+so child terminal I/O does not inherit redirected server streams. These changes
+still need a successful Windows runtime CI run; cross-compilation is insufficient.
 
 These are intentional changes, not claims of byte-for-byte error compatibility.

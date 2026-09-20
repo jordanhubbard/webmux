@@ -202,6 +202,10 @@ func normalizeAgents(raw Object) (Object, error) {
 		"disable_in_multi_user_mode": boolean(raw["disable_in_multi_user_mode"], true), "definitions": definitions}, nil
 }
 
+// NormalizeAgents validates the independent agent section without requiring
+// unrelated display or font settings to be valid.
+func NormalizeAgents(raw Object) (Object, error) { return normalizeAgents(raw) }
+
 // Update returns persisted settings; API-only fields and environment overrides
 // are applied separately to the public response.
 func Update(current Document, updates Object) (Document, error) {
