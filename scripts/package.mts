@@ -57,10 +57,10 @@ exit /b %ERRORLEVEL%\r
 set -eu
 WEBMUX_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 export WEBMUX_ROOT
-if [ "$(node -p 'process.versions.node.split(".")[0]')" != 24 ]; then
-  echo "This WebMux bundle requires Node.js 24 on PATH." >&2
-  exit 1
-fi
+case "$(node --version)" in
+  v24.*) ;;
+  *) echo "This WebMux bundle requires Node.js 24 on PATH." >&2; exit 1 ;;
+esac
 exec node "$WEBMUX_ROOT/backend/dist/index.js" "$@"
 `, { mode: 0o755 });
   }

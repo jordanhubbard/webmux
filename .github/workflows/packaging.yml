@@ -79,6 +79,25 @@ jobs:
           $installers = @(Get-ChildItem dist -Filter '*-native.msi')
           if ($installers.Count -ne 1) { throw 'Expected exactly one native MSI.' }
           ./scripts/smoke-native-msi.ps1 -Installer $installers[0].FullName
+      - name: Set up Homebrew for native installation
+        if: runner.os != 'Windows'
+        uses: Homebrew/actions/setup-homebrew@3b81d438eda92ee13b5849940d993be027717ecf
+      - name: Install and test native Homebrew formula
+        if: runner.os != 'Windows'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'
+        run: |
+          brew tap-new --no-git webmux/native-test
+          git archive --format=tar.gz --output="$RUNNER_TEMP/webmux-source.tar.gz" HEAD
+          cp -f Formula/webmux.rb "$(brew --repository webmux/native-test)/Formula/webmux.rb"
+          export WEBMUX_TEST_FORMULA="$(brew --repository webmux/native-test)/Formula/webmux.rb"
+          node scripts/packaging-checks.mts formula
+          brew install --build-from-source --with-native-server webmux/native-test/webmux
+          brew test webmux/native-test/webmux
+          node scripts/smoke-native-package.mts "$(brew --prefix webmux/native-test/webmux)/libexec"
+          brew services info webmux/native-test/webmux --json > "$RUNNER_TEMP/webmux-service.json"
+          node scripts/packaging-checks.mts service
       - uses: actions/upload-artifact@v7
         with:
           name: native-preview-${{ matrix.os }}

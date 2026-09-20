@@ -263,8 +263,12 @@ probe, and Windows packaging's Node runtime inspection also use checked
 TypeScript. Release metadata tests execute the CLI against temporary fixtures,
 preserve root/dependency versions and reject incomplete records before writes;
 they run with `npm run test:helpers`. The legacy Node bundle launcher still
-contains a generated JavaScript version expression and remains to be removed
-or converted when native deployment replaces it.
+requires Node 24, but now checks `node --version` using shell pattern matching
+instead of an embedded JavaScript expression. Homebrew's legacy Argon2/PTY
+checks use the same checked TypeScript verifier as archive smoke tests.
+Targeted tracked-file searches find no `.js`, `.mjs`, `.cjs` or `.jsx` source
+files and no inline Node expressions in scripts, formulae or packaging workflows;
+generated browser/runtime JavaScript and upstream dependencies remain expected.
 
 ### Native bundle preview
 
@@ -338,6 +342,27 @@ two Node installations on PATH produced an array of executable paths. The
 resolver now selects the first application, and the fixture requires one string
 path. This also corrects the legacy Node service selection behavior; verification
 of the actual service lifecycle is still pending.
+At cd5181f, Windows x64 passed native archive creation/extraction, runtime smoke,
+MSI installation, the installed runtime checks, the actual WinSW service
+install/HTTP/UI/stop/start/uninstall lifecycle and MSI uninstall. This resolves
+the runtime-selection fixture failure. Windows arm64 and macOS CI remain pending;
+upgrade, graceful transcript draining and custom-account tests remain required.
+
+Homebrew now offers `--with-native-server` for a source revision containing the
+migration. It installs only frontend build dependencies, uses the shared native
+archive packager and installs its payload under `libexec`. Go and Node are
+build-only dependencies for this variant. The stable release still defaults to
+Node; requesting a native build from a release lacking Go source fails with an
+explicit message. The normal `webmux` launcher, Homebrew service command, logs
+and external configuration directory remain unchanged. Formula tests exercise
+HTTP/UI and password bootstrap/login for both variants, and retain the legacy
+native-module/PTY verifier when that helper exists in the source release.
+
+An isolated macOS checkout passed the frontend-only install/build, native archive
+creation and full artifact smoke pipeline. Ruby syntax, TypeScript and workflow
+checks pass. Linux/macOS native packaging CI now installs the formula from this
+revision, runs `brew test`, exercises the installed native payload and verifies
+the service definition. Actual Homebrew installation results remain pending.
 
 ### Deliberate security differences
 

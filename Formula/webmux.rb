@@ -6,27 +6,54 @@ class Webmux < Formula
   license "BSD-2-Clause"
   head "https://github.com/jordanhubbard/webmux.git", branch: "main"
 
-  depends_on "python@3.14" => :build
-  depends_on "node@24"
+  option "with-native-server", "Build the Go server migration preview"
+  if build.with? "native-server"
+    depends_on "go" => :build
+    depends_on "node@24" => :build
+  else
+    depends_on "python@3.14" => :build
+    depends_on "node@24"
+  end
   depends_on "openssh"
 
   def install
     ENV.prepend_path "PATH", Formula["node@24"].opt_bin
-    ENV["PYTHON"] = Formula["python@3.14"].opt_bin/"python3.14"
-    cd "webmux" do
-      system "npm", "ci", "--no-audit", "--no-fund"
-      system "npm", "run", "build"
-      # Reinstall only server dependencies; native modules match the runtime above.
-      rm_r "node_modules"
-      system "npm", "ci", "--omit=dev", "--workspace=backend", "--no-audit", "--no-fund"
-      libexec.install "node_modules", "web", "config.defaults", "package.json", "package-lock.json"
-      (libexec/"backend").install "backend/dist", "backend/package.json"
+    if build.with? "native-server"
+      odie "Native builds require a source revision containing the Go migration." unless (buildpath/"scripts/package-native.mts").exist?
+      cd "webmux" do
+        system "npm", "ci", "--workspace=frontend", "--include-workspace-root", "--no-audit", "--no-fund"
+        system "npm", "run", "build", "--workspace=frontend"
+      end
+      system "node", "scripts/package-native.mts", buildpath/"native-dist"
+      archives = Dir[buildpath/"native-dist/*-native.tar.gz"]
+      odie "Expected exactly one native runtime archive" unless archives.length == 1
+      (buildpath/"native-stage").mkpath
+      system "tar", "-xzf", archives.first, "-C", buildpath/"native-stage"
+      roots = Dir[buildpath/"native-stage/webmux-*"]
+      odie "Expected exactly one extracted runtime" unless roots.length == 1
+      libexec.install Dir["#{roots.first}/*"]
+      launch = "exec \"#{opt_libexec}/bin/webmux\" \"$@\""
+      runtime_path = "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin"
+    else
+      ENV["PYTHON"] = Formula["python@3.14"].opt_bin/"python3.14"
+      cd "webmux" do
+        system "npm", "ci", "--no-audit", "--no-fund"
+        system "npm", "run", "build"
+        rm_r "node_modules"
+        system "npm", "ci", "--omit=dev", "--workspace=backend", "--no-audit", "--no-fund"
+        libexec.install "node_modules", "web", "config.defaults", "package.json", "package-lock.json"
+        (libexec/"backend").install "backend/dist", "backend/package.json"
+      end
+      helper = buildpath/"scripts/verify-node-runtime.mts"
+      (libexec/"scripts").install helper if helper.exist?
+      launch = "exec \"#{Formula["node@24"].opt_bin}/node\" \"#{opt_libexec}/backend/dist/index.js\" \"$@\""
+      runtime_path = "#{Formula["node@24"].opt_bin}:#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin"
     end
     (bin/"webmux").write <<~SH
       #!/bin/sh
       export WEBMUX_ROOT="#{opt_libexec}"
-      export PATH="#{Formula["node@24"].opt_bin}:#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:$PATH"
-      exec "#{Formula["node@24"].opt_bin}/node" "#{opt_libexec}/backend/dist/index.js" "$@"
+      export PATH="#{runtime_path}:$PATH"
+      #{launch}
     SH
   end
 
@@ -59,23 +86,20 @@ class Webmux < Formula
       assert_equal "ok", JSON.parse(health)["status"]
       assert_match '<div id="root">', shell_output("curl --fail http://127.0.0.1:#{port}/")
       assert_path_exists testpath/"state/config/auth.yaml"
-      system Formula["node@24"].opt_bin/"node", "-e", <<~JS
-        const assert = require('node:assert/strict');
-        const argon2 = require('#{libexec}/node_modules/argon2');
-        const pty = require('#{libexec}/node_modules/node-pty');
-        (async () => {
-          assert(await argon2.verify(await argon2.hash('packaging-test'), 'packaging-test'));
-          const terminal = pty.spawn('/bin/sh', ['-c', 'printf webmux-pty-ok'], {env: process.env});
-          let output = '';
-          const timeout = setTimeout(() => process.exit(1), 10000);
-          terminal.onData(data => output += data);
-          terminal.onExit(({exitCode}) => {
-            clearTimeout(timeout);
-            assert.equal(exitCode, 0);
-            assert.match(output, /webmux-pty-ok/);
-          });
-        })().catch(error => { console.error(error); process.exit(1); });
-      JS
+      require "net/http"
+      require "securerandom"
+      credentials = JSON.generate(username: "formula-test", password: SecureRandom.hex(24))
+      %w[bootstrap login].each do |action|
+        response = Net::HTTP.post(URI("http://127.0.0.1:#{port}/api/auth/#{action}"),
+                                 credentials, "Content-Type" => "application/json")
+        assert_kind_of Net::HTTPSuccess, response
+        assert_kind_of String, JSON.parse(response.body)["token"]
+      end
+      if (libexec/"bin/webmux").exist?
+        refute_path_exists libexec/"node_modules"
+      elsif (libexec/"scripts/verify-node-runtime.mts").exist?
+        system Formula["node@24"].opt_bin/"node", libexec/"scripts/verify-node-runtime.mts", libexec
+      end
     ensure
       Process.kill "TERM", pid
       Process.wait pid
