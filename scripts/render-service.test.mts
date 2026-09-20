@@ -30,18 +30,28 @@ for (const backend of ['node', 'go']) {
       }
       const unit = renderService(await fs.readFile(path.join(templates, `webmux.service.${suffix}`), 'utf8'), 'linux', values);
       assert(unit.includes('%%n')); assert(unit.includes('%%u'));
-      assert(unit.includes('ExecStart=:"')); // Disable $ expansion, including in Node's script argument.
+      // env execs the absolute target without a shell. systemd forbids some
+      // characters in the executable token even when correctly quoted.
+      assert(unit.includes('ExecStart=:/usr/bin/env -- "'));
       assert(unit.includes('\\"double\\"'));
       assert(unit.includes(`WorkingDirectory=${root.replaceAll('%', '%%')}\n`));
-      if (process.platform === 'linux') {
+      if (process.platform === 'linux' || process.platform === 'darwin') {
         await fs.mkdir(path.join(root, 'bin'), { recursive: true });
         await fs.mkdir(path.join(home, 'logs'), { recursive: true });
         await fs.symlink(process.execPath, node);
         await fs.symlink(process.execPath, path.join(root, 'bin/webmux'));
+        const executable = backend === 'go' ? path.join(root, 'bin/webmux') : node;
+        const launched = spawnSync('/usr/bin/env', ['--', executable, '--version'], { encoding: 'utf8', timeout: 15000 });
+        assert.ifError(launched.error); assert.equal(launched.status, 0, launched.stderr);
+        assert.equal(launched.stdout.trim(), process.version);
+      }
+      if (process.platform === 'linux') {
         const file = path.join(temporary, 'fixture.service'); await fs.writeFile(file, unit);
         const verified = spawnSync('systemd-analyze', ['verify', file], { encoding: 'utf8', timeout: 15000 });
         assert.ifError(verified.error); assert.equal(verified.status, 0, verified.stderr);
-        assert.doesNotMatch(verified.stderr, /invalid|ignoring|failed|not executable/i);
+        // verify also diagnoses unrelated units installed on the runner.
+        const diagnostics = verified.stderr.split('\n').filter(line => line.includes('fixture.service')).join('\n');
+        assert.equal(diagnostics, '', diagnostics);
       }
     } finally { await fs.rm(temporary, { recursive: true, force: true }); }
   });
@@ -51,6 +61,14 @@ test('service renderer rejects line and XML control characters', () => {
     for (const home of ['/tmp/a\nb', '/tmp/a\rb', '/tmp/a\0b']) {
       assert.throws(() => renderService('__WEBMUX_HOME__', platform, { root: '/tmp/root', home, node: '/usr/bin/node', searchPath: '/usr/bin' }), /control characters/);
     }
+  }
+});
+
+test('service rendering normalizes Windows checkout line endings', () => {
+  const values = { root: '/tmp/root', home: '/tmp/home', node: '/usr/bin/node', searchPath: '/usr/bin' };
+  const template = '[Service]\nWorkingDirectory=__WEBMUX_DIR__\nEnvironment="WEBMUX_HOME=__WEBMUX_HOME__"\n';
+  for (const platform of ['darwin', 'linux'] as const) {
+    assert.equal(renderService(template.replaceAll('\n', '\r\n'), platform, values), renderService(template, platform, values));
   }
 });
 

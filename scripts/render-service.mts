@@ -11,7 +11,7 @@ export function renderService(template: string, platform: 'darwin' | 'linux', pa
   const values: Record<string, string> = { WEBMUX_DIR: paths.root, WEBMUX_HOME: paths.home, NODE_PATH: paths.node, PATH: paths.searchPath };
   for (const value of Object.values(values)) assert(!/[\u0000-\u001f\u007f]/.test(value), 'Service paths must not contain control characters');
   const xml = (value: string) => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;');
-  return template.split('\n').map(line => line.replace(/__(NODE_PATH|WEBMUX_DIR|WEBMUX_HOME|PATH)__/g, (_, key: string) => {
+  return template.split(/\r?\n/).map(line => line.replace(/__(NODE_PATH|WEBMUX_DIR|WEBMUX_HOME|PATH)__/g, (_, key: string) => {
     const value = values[key];
     if (platform === 'darwin') return xml(value);
     // All these directives expand systemd % specifiers. Only Environment and

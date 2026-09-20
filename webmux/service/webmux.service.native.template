@@ -9,7 +9,7 @@ Environment="WEBMUX_ROOT=__WEBMUX_DIR__"
 Environment="WEBMUX_HOME=__WEBMUX_HOME__"
 Environment="PATH=__PATH__"
 WorkingDirectory=__WEBMUX_DIR__
-ExecStart=:"__WEBMUX_DIR__/bin/webmux"
+ExecStart=:/usr/bin/env -- "__WEBMUX_DIR__/bin/webmux"
 Restart=on-failure
 RestartSec=10
 KillSignal=SIGTERM

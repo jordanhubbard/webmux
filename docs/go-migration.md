@@ -459,7 +459,9 @@ The Make installer now delegates service serialization to checked TypeScript in
 `scripts/render-service.mts`. It escapes launchd XML values, quotes systemd
 environment/command words, preserves literal percent specifiers and disables
 command-line environment expansion so dollar signs remain path data. Path-valued
-systemd directives retain their distinct whole-value syntax. Rendering validates
+systemd directives retain their distinct whole-value syntax. Linux commands use
+`/usr/bin/env --` to exec the absolute target without a shell: systemd rejects
+some characters in its executable token even when quoting is correct. Rendering validates
 control characters before writes and atomically replaces the definition with a
 private file. Make passes the destination through the environment instead of
 embedding it into the renderer command, and service removal quotes that path.
@@ -468,8 +470,15 @@ This does not certify arbitrary path characters throughout every Make target.
 Tests round-trip special paths through macOS's plist parser for both backends,
 verify CLI replacement/failure behavior and run `systemd-analyze verify` on Linux.
 Local TypeScript/helper checks and the real launchd lifecycle pass with a state
-directory containing spaces and an ampersand. Linux parser verification awaits CI;
-these serialization checks do not replace an actual systemd lifecycle test.
+directory containing spaces and an ampersand. CI at 3708235 exposed the Linux
+executable-token restriction, unrelated runner-unit warnings, and CRLF-sensitive
+test expectations on Windows. Rendering now normalizes checkout line endings;
+parser diagnostics are scoped to the fixture while retaining the exit-status
+check. Local tests also execute special-character paths through env. All seven
+helper tests and TypeScript checks pass locally; the corrected Linux parser and
+Windows checks await CI. At 3708235 Linux Go/browser/visual checks and Linux and
+Windows native packaging passed; macOS hosted jobs remain queued. These
+serialization checks do not replace an actual systemd lifecycle test.
 
 ### Backend performance measurements
 
