@@ -88,6 +88,35 @@ func (s *Store) WriteSessions(value any) error {
 	return writeYAML(filepath.Join(s.Home, "data", "sessions", "sessions.yaml"), value)
 }
 
+func desktopFilename(kind string) (string, error) {
+	switch kind {
+	case "vnc":
+		return "vnc-sessions.yaml", nil
+	case "rdp":
+		return "rdp-sessions.yaml", nil
+	default:
+		return "", errors.New("invalid desktop kind")
+	}
+}
+func (s *Store) ReadDesktopSessions(kind string, out any) error {
+	name, err := desktopFilename(kind)
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return readYAML(filepath.Join(s.Home, "data", "sessions", name), out)
+}
+func (s *Store) WriteDesktopSessions(kind string, value any) error {
+	name, err := desktopFilename(kind)
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return writeYAML(filepath.Join(s.Home, "data", "sessions", name), value)
+}
+
 // UpdateConfig keeps the read, validation, mutation and atomic replacement in
 // one critical section, preventing concurrent bootstrap or account updates
 // from overwriting each other. Returning an error aborts the write.

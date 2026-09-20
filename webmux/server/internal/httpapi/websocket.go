@@ -22,7 +22,7 @@ func (s *Server) closeSocketsAndSessions() error {
 			_ = connection.Close()
 		}
 		s.socketMu.Unlock()
-		s.closeErr = s.sessions.Close()
+		s.closeErr = errors.Join(s.sessions.Close(), s.vnc.Close(), s.rdp.Close())
 		s.socketWorkers.Wait()
 	})
 	return s.closeErr

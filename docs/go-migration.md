@@ -81,6 +81,16 @@ do not contact operator tmux sockets. Locale-dependent label ordering and
 non-ISO legacy timestamps still require differential coverage;
 the initial implementation uses English collation and RFC3339 timestamps.
 
+VNC and RDP session HTTP APIs now support owner-scoped create/list/get/move/delete
+and reconnect state changes. Separate desktop brokers preserve saved-host port
+defaults, per-owner/per-protocol grids, compaction and the legacy desktop YAML
+files. Passwords remain in memory, are inaccessible to other owners and disappear
+on deletion, shutdown or restart. Recovery marks desktops disconnected without
+opening network connections. Transport lifetime notifications are available for
+the forthcoming proxies. VNC/RDP WebSocket proxies, network restrictions and the
+Guacamole handshake remain unimplemented; desktop CRUD alone does not provide
+remote desktop connectivity.
+
 The internal terminal process layer now supports Unix PTYs and Windows ConPTY,
 with independent process lifetime, serialized input, resize, exit status,
 output draining and idempotent cancellation. SSH/mosh/exec command planning
@@ -118,8 +128,12 @@ generation numbers are per-runtime identifiers, not persisted sequence numbers.
 An isolated Go tmux protocol fixture also runs through both servers to compare
 agent discovery, errors, sizing, attach/replacement, interactive output, scratch
 cwd/reuse, status metadata and multi-user revocation. It never opens a real tmux
-socket. The terminal size contract waits for Node's asynchronous size-cache
-update while retaining an exact dimension assertion and a ten-second deadline.
+socket. Desktop contracts compare both protocols' defaults, host resolution,
+ownership, grid moves/compaction, credential exclusion and cross-backend restart
+recovery. The terminal size contract retains an exact dimension assertion and a
+ten-second deadline; its TypeScript fixture opens a fresh terminal handle for
+each size query because Node's cached stdout dimensions can remain stale on
+Windows with cooked input.
 Fixtures use temporary homes and never
 connect to real terminal or desktop hosts. `npm run typecheck` checks the
 TypeScript contract harness as well as the application.
@@ -196,6 +210,10 @@ still need conversion or removal as the Go deployment tooling replaces them.
   policy-driven deletion fails, Go still closes viewers and the revoked process,
   retaining the record for a later cleanup retry. Agent status writes occur
   outside the session lock and shutdown waits for their completion.
+- Desktop records reject invalid ports and non-finite/negative positions. Failed
+  create/move/delete writes roll back in-memory state. Corrupt, duplicate or
+  wrong-protocol saved desktop records fail startup rather than being silently
+  discarded. Passwords have no fields in the persisted session types.
 
 These are intentional changes, not claims of byte-for-byte error compatibility.
 
@@ -208,6 +226,7 @@ startup explicitly supplies null standard handles, following the
 [Microsoft terminal maintainers' guidance](https://github.com/microsoft/terminal/discussions/15814),
 so child terminal I/O does not inherit redirected server streams. Linux and
 Windows Go race tests and vet then passed at 150073e, including native ConPTY
-tests. Both jobs subsequently failed in the Node differential resize assertion;
-the bounded asynchronous assertion above addresses that test race. A fully green
-cross-platform differential run is still required.
+tests. Linux's complete Go and differential job passed at 69d2319. Windows still
+failed the Node fixture's cached-size assertion despite ConPTY reporting the new
+dimensions. The fresh-handle query above addresses that fixture limitation;
+a successful Windows differential run remains required.

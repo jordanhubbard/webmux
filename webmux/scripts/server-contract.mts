@@ -559,6 +559,65 @@ async function terminalContract(backend: Backend): Promise<void> {
   }
 }
 
+async function desktopContract(backend: Backend): Promise<void> {
+  const server = await start(backend, 'local');
+  let owner = '';
+  const saved: { kind: 'vnc' | 'rdp'; value: JSONRecord }[] = [];
+  try {
+    owner = stringField((await server.request('POST', '/api/auth/bootstrap', { username: 'owner', password: 'password' })).body, 'token');
+    assert.equal((await server.request('POST', '/api/auth/register', { username: 'member', password: 'password' }, owner)).status, 201);
+    const member = stringField((await server.request('POST', '/api/auth/login', { username: 'member', password: 'password' })).body, 'token');
+    assert.equal((await server.request('POST', '/api/hosts', { id: 'desktop-host', hostname: 'desktop.invalid', vnc_port: 5907, rdp_port: 3397 }, owner)).status, 201);
+    for (const kind of ['vnc', 'rdp'] as const) {
+      const base = `/api/${kind}/sessions`;
+      const call = (method: string, route: string, body?: JSONRecord) => server.request(method, route, body, owner);
+      assert.equal((await server.request('GET', base)).status, 401);
+      assert.deepEqual(await call('POST', base, {}), { status: 400, body: { error: 'hostname or host_id is required' } });
+      const first = await call('POST', base, { hostname: 'first.invalid', [`${kind}_password`]: 'transient-only' });
+      assert.equal(first.status, 201);
+      const firstID = stringField(first.body, 'id');
+      assert.equal(record(first.body)[`${kind}_port`], kind === 'vnc' ? 5900 : 3389);
+      assert.equal(record(first.body).state, 'connecting'); assert.equal(record(first.body).persistent, true);
+      assert.equal(record(first.body).row, 0); assert.equal(record(first.body).col, 0);
+      assert.equal(record(first.body)[`${kind}_password`], undefined);
+      const foreign = await server.request('POST', base, { hostname: 'foreign.invalid' }, member);
+      assert.equal(foreign.status, 201); assert.equal(record(foreign.body).col, 0);
+      for (const method of ['GET', 'PATCH', 'DELETE']) assert.equal((await server.request(method, `${base}/${firstID}`, method === 'PATCH' ? {} : undefined, member)).status, 404);
+      const second = await call('POST', base, { host_id: 'desktop-host', hostname: 'ignored.invalid', [`${kind}_port`]: 6000, row: 2, col: 3, rdp_username: 'desktop-user', rdp_domain: 'fixture-domain' });
+      assert.equal(second.status, 201);
+      const secondID = stringField(second.body, 'id');
+      assert.equal(record(second.body).hostname, 'desktop.invalid');
+      assert.equal(record(second.body)[`${kind}_port`], kind === 'vnc' ? 5907 : 3397);
+      if (kind === 'rdp') { assert.equal(record(second.body).rdp_username, 'desktop-user'); assert.equal(record(second.body).rdp_domain, 'fixture-domain'); }
+      else assert.equal(record(second.body).rdp_username, undefined);
+      const third = await call('POST', base, { hostname: 'third.invalid' });
+      assert.equal(record(third.body).row, 2); assert.equal(record(third.body).col, 4);
+      assert.equal((await call('DELETE', `${base}/${firstID}`)).status, 204);
+      const compacted = record((await call('GET', `${base}/${secondID}`)).body);
+      assert.equal(compacted.row, 0); assert.equal(compacted.col, 0);
+      assert.deepEqual(await call('PATCH', `${base}/${secondID}`, { row: 1 }), { status: 400, body: { error: 'row and col are required' } });
+      assert.deepEqual(await call('PATCH', `${base}/${secondID}`, { row: null, col: 0 }), { status: 400, body: { error: 'row and col must be non-negative numbers' } });
+      assert.deepEqual(await call('PATCH', `${base}/${secondID}`, { row: -1, col: 0 }), { status: 400, body: { error: 'row and col must be non-negative numbers' } });
+      const moved = await call('PATCH', `${base}/${secondID}`, { row: 3.5, col: 5.5 });
+      assert.equal(moved.status, 200); assert.equal(record(moved.body).row, 3.5); assert.equal(record(moved.body).col, 5.5);
+      const reconnect = await call('POST', `${base}/${secondID}/reconnect`, {});
+      assert.equal(reconnect.status, 200); assert.equal(record(reconnect.body).state, 'connecting');
+      saved.push({ kind, value: record(reconnect.body) });
+      const data = await readFile(path.join(server.home, 'data', 'sessions', `${kind}-sessions.yaml`), 'utf8');
+      assert.ok(!data.includes('password') && !data.includes('transient-only'));
+    }
+    assert.deepEqual(await server.request('GET', '/api/sessions', undefined, owner), { status: 200, body: [] });
+  } finally { await server.close(); }
+  const other = await start(backend === 'go' ? 'node' : 'go', 'local', server.home);
+  try {
+    for (const { kind, value } of saved) {
+      const restored = await other.request('GET', `/api/${kind}/sessions/${stringField(value, 'id')}`, undefined, owner);
+      assert.equal(restored.status, 200);
+      assert.deepEqual({ ...record(restored.body), updated_at: undefined }, { ...value, state: 'disconnected', updated_at: undefined });
+    }
+  } finally { await other.close(); }
+}
+
 async function agentContract(backend: Backend): Promise<void> {
   const cwd = await mkdtemp(path.join(temporary, 'agent-cwd-'));
   const server = await start(backend, 'local', undefined, {
@@ -656,7 +715,8 @@ try {
     await sessionContract(backend);
     await terminalContract(backend);
     await agentContract(backend);
-    console.log(`${backend}: HTTP, terminal WebSocket, agent and cross-backend restart contracts passed`);
+    await desktopContract(backend);
+    console.log(`${backend}: HTTP, terminal WebSocket, agent, desktop session and cross-backend restart contracts passed`);
   }
 } finally {
   await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

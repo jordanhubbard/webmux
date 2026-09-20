@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/jordanhubbard/webmux/server/internal/auth"
+	"github.com/jordanhubbard/webmux/server/internal/desktop"
 	"github.com/jordanhubbard/webmux/server/internal/session"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 )
@@ -25,6 +26,8 @@ type Server struct {
 	passwordSlots chan struct{}
 	logger        *slog.Logger
 	sessions      *session.Broker
+	vnc           *desktop.Broker
+	rdp           *desktop.Broker
 	socketMu      sync.Mutex
 	sockets       map[*websocket.Conn]struct{}
 	socketWorkers sync.WaitGroup
@@ -53,11 +56,21 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions}, nil
+	vnc, err := desktop.New(store, desktop.VNC)
+	if err != nil {
+		return nil, err
+	}
+	rdp, err := desktop.New(store, desktop.RDP)
+	if err != nil {
+		return nil, err
+	}
+	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp}, nil
 }
 
-func (s *Server) RestoreSessions() error { return s.sessions.Restore() }
-func (s *Server) Close() error           { return s.closeSocketsAndSessions() }
+func (s *Server) RestoreSessions() error {
+	return errors.Join(s.sessions.Restore(), s.vnc.Restore(), s.rdp.Restore())
+}
+func (s *Server) Close() error { return s.closeSocketsAndSessions() }
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
@@ -98,6 +111,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/agents/{agentId}/sessions", s.protected(false, s.listAgents))
 	mux.Handle("POST /api/agents/{agentId}/attach", s.protected(false, s.attachAgent))
 	mux.Handle("POST /api/agents/{agentId}/scratch", s.protected(false, s.scratchAgent))
+	s.registerDesktops(mux)
 	return s.cors(newLimiter(300, globalWindow).wrap(apiPaths(mux)))
 }
 
