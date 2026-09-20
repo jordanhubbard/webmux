@@ -295,12 +295,32 @@ separately and are not selected by the existing release publication job.
 At 87844f5, Linux native archive creation and the complete extracted-artifact
 smoke test passed. Windows x64 created its archive but Git Bash's GNU tar could
 not extract the ZIP, so no Windows runtime assertion ran. Windows extraction now
-uses PowerShell's `Expand-Archive`; a successful rerun is still required.
+uses PowerShell's `Expand-Archive`.
 At 8282422, Windows extraction succeeded and the server started, but a fixture
 cleanup EPERM masked the original assertion failure. The smoke test now retains
 all assertion/cleanup errors, terminates its Windows process tree and checks
 shell-generated output independently of ConPTY newline encoding. These changes
-pass locally on macOS; Windows runtime verification remains pending.
+pass locally on macOS. At 4836ab3, native archive creation and the full extracted
+runtime smoke passed on Linux and Windows x64/arm64. macOS CI is still queued.
+
+Windows service registration now resolves the installed runtime: native bundles
+launch `bin/webmux.exe` directly, while legacy Node bundles retain their existing
+entry point. `-Backend go|node` can select explicitly; auto selects the native
+binary when present. Native selection does not look for Node on PATH. Both
+packagers include the shared runtime resolver; native Windows archives include
+`bin/webmux-service.cmd` and the existing WinSW installer. Account selection,
+wrapper checksum verification, external writable state and service controls
+remain in that installer.
+
+Windows packaging CI now checks runtime selection with missing files, spaced
+paths, explicit choices and an empty PATH for native selection. It also installs
+the native WinSW service as LocalSystem on an isolated runner, verifies HTTP/UI,
+stop/start, preserved configuration and uninstall. The fixture refuses an
+existing WebMux service/wrapper and retains state if service removal fails.
+These PowerShell checks await CI; they cannot run on the local macOS host.
+They establish service lifecycle behavior when passing, but do not alone prove
+graceful PTY/transcript draining or custom-account behavior. Native MSI/Homebrew
+integration and switching default release/service commands remain unfinished.
 
 ### Deliberate security differences
 

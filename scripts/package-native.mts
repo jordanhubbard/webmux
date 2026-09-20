@@ -34,6 +34,13 @@ try {
   for (const entry of ['web', 'config.defaults']) copyTree(path.join(source, entry), path.join(stage, entry));
   fs.accessSync(path.join(stage, 'web/index.html'));
   fs.copyFileSync(path.join(repo, 'LICENSE'), path.join(stage, 'LICENSE'));
+  if (goos === 'windows') {
+    fs.mkdirSync(path.join(stage, 'service'));
+    for (const entry of ['windows-service.ps1', 'runtime.psm1']) {
+      copyTree(path.join(source, 'service', entry), path.join(stage, 'service', entry));
+    }
+    fs.writeFileSync(path.join(stage, 'bin/webmux-service.cmd'), `@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0..\\service\\windows-service.ps1" %*\r\nexit /b %ERRORLEVEL%\r\n`);
+  }
   const executable = path.join(stage, 'bin', goos === 'windows' ? 'webmux.exe' : 'webmux');
   const buildEnv = { ...process.env, GOOS: goos, GOARCH: goarch, CGO_ENABLED: '0' };
   execFileSync('go', ['build', '-trimpath', '-o', executable, './cmd/webmux'], {
@@ -52,6 +59,7 @@ WEBMUX_ROOT or --root explicitly overrides the installation directory.
 For this migration preview, use an isolated WEBMUX_HOME and never run Node and
 Go servers against the same writable home. Existing release services/installers
 still use Node until the migration gates pass.
+${goos === 'windows' ? 'Native service preview: from an elevated terminal, run bin\\webmux-service.cmd install\nwith -WebMuxHome pointing to isolated state. The existing account prompt and\noptional -LocalSystem switch apply; no Node.js runtime is needed.\n' : ''}
 OpenSSH is required for SSH; mosh, sshpass and tmux depend on selected features.
 RDP requires an operator-managed guacd. These external tools are not bundled.
 To upgrade, stop the server, extract a new bundle separately, then restart it

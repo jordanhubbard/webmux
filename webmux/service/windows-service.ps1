@@ -6,6 +6,9 @@ param(
 
   [string]$WebMuxHome,
 
+  [ValidateSet('auto', 'go', 'node')]
+  [string]$Backend = 'auto',
+
   [switch]$LocalSystem
 )
 
@@ -21,8 +24,8 @@ $WinSWUrl = "https://github.com/winsw/winsw/releases/download/v$WinSWVersion/Win
 $ServiceDirectory = Join-Path $env:ProgramData 'WebMux'
 $WrapperPath = Join-Path $ServiceDirectory 'WebMux.exe'
 $ConfigPath = Join-Path $ServiceDirectory 'WebMux.xml'
-$ApplicationDirectory = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$EntryPoint = Join-Path $ApplicationDirectory 'backend\dist\index.js'
+$ApplicationDirectory = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+Import-Module (Join-Path $PSScriptRoot 'runtime.psm1') -Force
 
 function Assert-WindowsAdministrator {
   if ($env:OS -ne 'Windows_NT') {
@@ -44,7 +47,7 @@ function Get-WebMuxService {
 }
 
 function Write-ServiceConfig([string]$ServiceAccountXml = '') {
-  $nodePath = (Get-Command node.exe -CommandType Application -ErrorAction Stop).Source
+  $runtime = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory -Backend $Backend
   $pathValue = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
   $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
   if ($userPath) { $pathValue = "$pathValue;$userPath" }
@@ -55,8 +58,8 @@ function Write-ServiceConfig([string]$ServiceAccountXml = '') {
   <id>$ServiceName</id>
   <name>WebMux</name>
   <description>Web-native persistent SSH terminal multiplexer</description>
-  <executable>$(Escape-Xml $nodePath)</executable>
-  <arguments>&quot;$(Escape-Xml $EntryPoint)&quot;</arguments>
+  <executable>$(Escape-Xml $runtime.Executable)</executable>
+  <arguments>$(Escape-Xml $runtime.Arguments)</arguments>
   <workingdirectory>$(Escape-Xml $ApplicationDirectory)</workingdirectory>
   <env name="WEBMUX_ROOT" value="$(Escape-Xml $ApplicationDirectory)" />
   <env name="WEBMUX_HOME" value="$(Escape-Xml $WebMuxHome)" />
@@ -103,9 +106,7 @@ function Install-WebMuxService {
   if (Get-WebMuxService) {
     throw "The $ServiceName service is already installed. Run the uninstall command first."
   }
-  if (-not (Test-Path -LiteralPath $EntryPoint)) {
-    throw "The production build is missing at $EntryPoint. Run npm run build first."
-  }
+  $null = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory -Backend $Backend
   if (-not (Get-Command ssh.exe -CommandType Application -ErrorAction SilentlyContinue)) {
     throw 'OpenSSH Client is required: ssh.exe was not found on PATH.'
   }

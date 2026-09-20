@@ -57,7 +57,10 @@ jobs:
           Expand-Archive -LiteralPath $archives[0].FullName -DestinationPath $extract
           $roots = @(Get-ChildItem $extract -Directory)
           if ($roots.Count -ne 1) { throw 'Expected exactly one extracted installation.' }
+          ./scripts/windows-service-runtime.test.ps1 -RuntimeModule (Join-Path $roots[0].FullName 'service/runtime.psm1')
           node scripts/smoke-native-package.mts $roots[0].FullName
+          if ($LASTEXITCODE -ne 0) { throw 'Native runtime smoke failed.' }
+          ./scripts/smoke-native-service.ps1 -BundleDirectory $roots[0].FullName
       - uses: actions/upload-artifact@v7
         with:
           name: native-preview-${{ matrix.os }}

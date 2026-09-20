@@ -26,7 +26,7 @@ try {
   // The caller builds first. Explicit allowlist excludes credentials and development tools.
   const entries = ['package.json', 'package-lock.json', 'backend/package.json',
     'backend/dist', 'frontend/package.json', 'web', 'config.defaults'];
-  if (process.platform === 'win32') entries.push('service/windows-service.ps1');
+  if (process.platform === 'win32') entries.push('service/windows-service.ps1', 'service/runtime.psm1');
   for (const entry of entries) {
     const destination = path.join(stage, entry);
     fs.mkdirSync(path.dirname(destination), { recursive: true });
