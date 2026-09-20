@@ -67,7 +67,16 @@ the API. The Go server serves the existing production frontend from
 `WEBMUX_ROOT/web`, with client-side navigation fallback, directory redirects,
 GET/HEAD, range requests, stat ETags, Last-Modified and revalidation. Differential
 fixtures compare asset/index bytes and cache/content headers against Node.
-AI integration remains pending.
+AI status/chat routes now preserve RCC-first routing, legacy LOOM environment
+aliases and NVIDIA-before-OpenAI fallback. They retain the system prompt, last
+ten history entries with system messages removed, the final 3,000 UTF-16 units of
+terminal context, provider defaults, request parameters and response metadata.
+RCC preserves reply whitespace; direct replies use JavaScript-compatible trimming.
+Local differential fixtures compare authentication, status, missing messages,
+RCC requests/replies, environment precedence, UTF-16 boundaries and unavailable
+fallbacks. Go transport fixtures verify both direct provider URLs, credentials,
+model selection, empty choices, errors, deadlines and cancellation. These tests
+do not call real providers or use operator credentials.
 
 Authenticated octet-stream uploads now preserve the existing path/name/size
 response, random filename prefixes, 10 MiB per-file limit and 500 MiB shared
@@ -204,6 +213,9 @@ Windows passed the browser workflows but failed its workspace screenshot:
 Playwright reported two changed pixels; decoding the images found 13 changed
 pixels at toolbar button borders. This remains unresolved; the stricter raw-pixel
 gate has not relaxed that requirement. Its eight local macOS comparisons pass.
+At 678dffc, Linux and Windows both passed the stricter decoded-pixel comparison
+and browser workflows. No UI change explained the earlier Windows difference;
+retain it as evidence of intermittent rendering and continue enforcing the gate.
 
 This is scoped rendering evidence, not proof of every state or platform. Login,
 active terminal/desktop rendering, agent panes, failure states, real guacd/RDP
@@ -251,6 +263,13 @@ still need conversion or removal as the Go deployment tooling replaces them.
   recognizes canonical key references and holds the key-catalog lock through
   deletion. An unreadable/malformed catalog disables cleanup rather than treating
   all files as unreferenced. No upload files are exposed through static UI serving.
+- AI requests inherit HTTP cancellation and retain the 15-second RCC/20-second
+  direct-provider deadlines. Provider responses are bounded to 1 MiB; malformed
+  data produces sanitized errors without upstream bodies or credentials. Redirects
+  within the configured origin remain supported (up to ten hops); cross-origin
+  redirects are rejected rather than forwarding terminal context elsewhere.
+  Invalid context/history types and roles produce 400 responses. Provider URLs
+  remain operator-configured; the chat body cannot select a destination.
 - Terminal launches reject invalid ports, unsupported transports and dimensions
   outside the WebSocket resize limits. Unreadable key/mosh configuration fails
   the launch instead of silently falling back to a different configuration.

@@ -3,6 +3,7 @@ import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { cp, mkdir, mkdtemp, readFile, rename, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { createServer, type Socket } from 'node:net';
+import { createServer as createHTTPServer } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -81,6 +82,8 @@ async function start(backend: Backend, mode: Mode, existingHome?: string, enviro
         HTTPS_PORT: '0',
         JWT_SECRET: '',
         WEBMUX_SLAVE_HOST: '',
+        WEBMUX_RCC_URL: '', WEBMUX_RCC_TOKEN: '', LOOM_RCC_BRAIN_URL: '', LOOM_RCC_AGENT_TOKEN: '',
+        NVIDIA_API_KEY: '', OPENAI_API_KEY: '', WEBMUX_MODEL: '',
         WEBMUX_EXEC_COMMAND: undefined,
         WEBMUX_TERMINAL_GRID_MAX_COLS: undefined,
         WEBMUX_TERMINAL_GRID_MAX_ROWS: undefined,
@@ -145,6 +148,65 @@ function checkToken(body: unknown, username: string, mode: Mode): string {
   assert.equal(typeof claims.exp, 'number');
   assert.equal(claims.exp! - claims.iat!, 8 * 60 * 60);
   return token;
+}
+
+let aiBaseline: unknown;
+async function aiContract(backend: Backend): Promise<void> {
+  const unavailable = { error: 'AI assistant unavailable', detail: 'No LLM API key configured', hint: 'Set WEBMUX_RCC_URL+WEBMUX_RCC_TOKEN or NVIDIA_API_KEY/OPENAI_API_KEY' };
+  const plain = await start(backend, 'none');
+  try {
+    assert.deepEqual(await plain.request('GET', '/api/ai/status'), { status: 200, body: { available: false, providers: { rcc: false, nvidia: false, openai: false }, model: 'gpt-4o-mini' } });
+    for (const message of [undefined, '', '  ', 42]) assert.deepEqual(await plain.request('POST', '/api/ai/chat', { message }), { status: 400, body: { error: 'message required' } });
+    assert.deepEqual(await plain.request('POST', '/api/ai/chat', { message: 'help' }), { status: 503, body: unavailable });
+  } finally { await plain.close(); }
+  const requests: { url: string | undefined; authorization: string | undefined; body: JSONRecord }[] = [];
+  let fail = false;
+  let fixtureError: unknown;
+  const provider = createHTTPServer((request, response) => {
+    void (async () => {
+      const chunks: Buffer[] = [];
+      for await (const chunk of request) { assert.ok(Buffer.isBuffer(chunk)); chunks.push(chunk); }
+      requests.push({ url: request.url, authorization: request.headers.authorization, body: record(JSON.parse(Buffer.concat(chunks).toString()) as unknown) });
+      response.writeHead(fail ? 503 : 200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify(fail ? { error: 'fixture failure' } : { status: 'completed', result: '  fixture reply  ' }));
+    })().catch((error: unknown) => { fixtureError = error; response.writeHead(500); response.end(); });
+  });
+  provider.listen(0, '127.0.0.1'); await once(provider, 'listening');
+  const address = provider.address(); assert.ok(address && typeof address !== 'string');
+  try {
+    for (const primary of [false, true]) {
+      fail = false;
+      const environment: NodeJS.ProcessEnv = { LOOM_RCC_BRAIN_URL: `http://127.0.0.1:${address.port}/`, LOOM_RCC_AGENT_TOKEN: 'alias-fixture', WEBMUX_MODEL: 'fixture-model' };
+      if (primary) { environment.WEBMUX_RCC_URL = `http://127.0.0.1:${address.port}/primary/`; environment.WEBMUX_RCC_TOKEN = 'primary-fixture'; }
+      const server = await start(backend, 'local', undefined, environment);
+      try {
+        assert.equal((await server.request('GET', '/api/ai/status')).status, 401);
+        assert.equal((await server.request('POST', '/api/ai/chat', { message: 'help' })).status, 401);
+        const owner = stringField((await server.request('POST', '/api/auth/bootstrap', { username: 'owner', password: 'password' })).body, 'token');
+        assert.deepEqual(await server.request('GET', '/api/ai/status', undefined, owner), { status: 200, body: { available: true, providers: { rcc: true, nvidia: false, openai: false }, model: 'fixture-model' } });
+        const history = Array.from({ length: 11 }, (_, index) => ({ role: index === 5 ? 'system' : index % 2 ? 'user' : 'assistant', content: `history-${index}` }));
+        const context = '😀' + 'x'.repeat(2999);
+        const before = Date.now();
+        const result = await server.request('POST', '/api/ai/chat', { message: ' \uFEFFhelp ', context, history, sessionId: 'client-context-only' }, owner);
+        assert.equal(result.status, 200);
+        const value = record(result.body);
+        assert.equal(value.reply, '  fixture reply  '); assert.equal(value.source, 'rcc'); assert.equal(value.model, 'rcc-brain');
+        assert.ok(typeof value.ts === 'number' && value.ts >= before && value.ts <= Date.now());
+        const captured = requests.at(-1); assert.ok(captured);
+        assert.equal(captured.url, primary ? '/primary/api/brain/request' : '/api/brain/request');
+        assert.equal(captured.authorization, `Bearer ${primary ? 'primary' : 'alias'}-fixture`);
+        const messages = captured.body.messages; assert.ok(Array.isArray(messages));
+        assert.equal(messages.length, 11); assert.equal(record(messages[0]).role, 'system');
+        assert.deepEqual(messages.slice(1, -1), history.slice(-10).filter(message => message.role !== 'system'));
+        assert.deepEqual(messages.at(-1), { role: 'user', content: `<terminal_context>\n${context.slice(-3000)}\n</terminal_context>\n\nhelp` });
+        if (backend === 'node') aiBaseline = captured.body;
+        else assert.deepEqual(captured.body, aiBaseline, 'provider request parity');
+        fail = true;
+        assert.deepEqual(await server.request('POST', '/api/ai/chat', { message: 'help' }, owner), { status: 503, body: unavailable });
+        assert.equal(fixtureError, undefined);
+      } finally { await server.close(); }
+    }
+  } finally { await new Promise<void>((resolve, reject) => provider.close(error => error ? reject(error) : resolve())); }
 }
 
 async function uploadContract(backend: Backend): Promise<void> {
@@ -913,6 +975,7 @@ try {
   for (const backend of ['node', 'go'] as const) {
     await staticContract(backend);
     await uploadContract(backend);
+    await aiContract(backend);
     await localContract(backend);
     await trustedContract(backend);
     await catalogContract(backend);

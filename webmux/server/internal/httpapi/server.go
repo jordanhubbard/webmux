@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"github.com/jordanhubbard/webmux/server/internal/ai"
 	"github.com/jordanhubbard/webmux/server/internal/auth"
 	"github.com/jordanhubbard/webmux/server/internal/desktop"
 	"github.com/jordanhubbard/webmux/server/internal/netguard"
@@ -34,6 +35,7 @@ type Server struct {
 	rdp           *desktop.Broker
 	targets       *netguard.Guard
 	uploads       *upload.Service
+	ai            *ai.Service
 	socketMu      sync.Mutex
 	sockets       map[*websocket.Conn]struct{}
 	socketWorkers sync.WaitGroup
@@ -71,7 +73,7 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store)}, nil
+	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil)}, nil
 }
 
 func (s *Server) RestoreSessions() error {
@@ -101,6 +103,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/keys", s.protected(false, s.listKeys))
 	mux.Handle("POST /api/keys", s.protected(false, s.createKey))
 	mux.Handle("POST /api/upload", s.protected(false, s.uploadFile))
+	mux.Handle("GET /api/ai/status", s.protected(false, s.aiStatus))
+	mux.Handle("POST /api/ai/chat", s.protected(false, s.aiChat))
 	mux.Handle("DELETE /api/keys/{id}", s.protected(false, s.deleteKey))
 	mux.Handle("GET /api/config", s.protected(false, s.getSettings))
 	mux.Handle("PUT /api/config", s.protected(false, s.updateSettings))
