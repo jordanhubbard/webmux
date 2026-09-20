@@ -109,6 +109,23 @@ webmux-service uninstall
 
 Use the corresponding `npm run service:<action>` command for a source checkout.
 
+For a native migration preview, stop the existing service before replacing the
+MSI, then point its existing registration at the new runtime:
+
+```powershell
+webmux-service stop
+# Install the native MSI here.
+webmux-service reconfigure -Backend go
+webmux-service start
+```
+
+`reconfigure` preserves the registered Windows account, `WEBMUX_HOME`, other
+environment variables, and log/recovery settings. It updates the executable,
+arguments, working directory and `WEBMUX_ROOT` without asking for the account
+password again. A stopped service stays stopped; a running service is stopped
+and restarted. The selected runtime must already be installed. This command
+does not install an MSI or change the service account or writable home.
+
 The installer downloads and checksum-verifies the stable [WinSW 2.12.0 service wrapper](https://github.com/winsw/winsw/releases/tag/v2.12.0) under `%ProgramData%\WebMux`. The first service installation therefore requires access to GitHub. Service output is written under `%WEBMUX_HOME%\logs`; uninstalling preserves runtime data and logs.
 
 For an isolated test installation that does not need user SSH credentials, use

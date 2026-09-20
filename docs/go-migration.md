@@ -427,6 +427,17 @@ shared-home sequence pass locally; Windows x64 also passed the installed-MSI
 sequence at ce2f34c, including WinSW transcript draining after both installations.
 This covers stopped application replacement; active
 service migration and forced-failure rollback tests remain outstanding.
+The Windows service installer now provides `reconfigure -Backend go|node|auto`
+to retarget an existing registration after replacement. It updates only the
+runtime command, working directory and installation-root environment entry;
+the SCM account, writable home, other environment and recovery/log settings
+remain intact. It preserves stopped/running state, atomically replaces XML and
+attempts to restore the prior definition if replacement or synchronous restart
+fails. The isolated WinSW fixture now exercises running reconfiguration and
+repair of a stopped definition that references the removed Node backend, checking
+account/environment preservation and successful native startup. Windows execution
+is pending; this does not yet verify custom accounts or delayed startup failure
+rollback. The documented migration sequence stops the service before MSI replacement.
 Native MSI CI installs on an isolated runner, exercises the installed HTTP/UI,
 authentication and PTY runtime, runs the WinSW service lifecycle from that
 installation, and uninstalls. It refuses an existing installation/service and

@@ -42,11 +42,40 @@ try {
   if ($definition.service.arguments) { throw 'Native service has unexpected launch arguments.' }
   $page = Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 5
   if ($page.Content -notmatch '<div id="root">') { throw 'Service did not serve the frontend.' }
+  $account = (Get-CimInstance Win32_Service -Filter "Name='WebMux'").StartName
+  $environment = @($definition.service.env | ForEach-Object { $_.OuterXml }) -join "`n"
+  $originalConfig = [IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml'))
+  $rejected = $false
+  try { & $installer reconfigure -Backend node } catch {
+    if ($_.Exception.Message -notmatch 'Node production build is missing') { throw }
+    $rejected = $true
+  }
+  if (-not $rejected) { throw 'Reconfigure accepted a missing backend.' }
+  if ([IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml')) -cne $originalConfig) { throw 'Failed preflight changed the definition.' }
+  if ((Get-Service -Name WebMux).Status -ne 'Running') { throw 'Failed preflight stopped the service.' }
+  & $installer reconfigure -Backend go
+  Wait-Healthy
+  $reconfigured = [xml][IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml'))
+  if ((@($reconfigured.service.env | ForEach-Object { $_.OuterXml }) -join "`n") -cne $environment) {
+    throw 'Reconfigure changed the installed environment.'
+  }
+  if ((Get-CimInstance Win32_Service -Filter "Name='WebMux'").StartName -ne $account) { throw 'Reconfigure changed the service account.' }
   & node (Join-Path $PSScriptRoot 'smoke-windows-service-shutdown.mts') $homeDirectory "$port" $installer
   if ($LASTEXITCODE -ne 0) { throw 'Native service terminal/transcript shutdown checks failed.' }
   $reachable = $false
   try { $null = Invoke-WebRequest -UseBasicParsing -Uri "$url/api/health" -TimeoutSec 2; $reachable = $true } catch { }
   if ($reachable) { throw 'Service listener survived stop.' }
+  # Model a stopped service whose XML still references the removed Node backend.
+  $configPath = Join-Path $serviceDirectory 'WebMux.xml'
+  $stale = [xml][IO.File]::ReadAllText($configPath)
+  $stale.SelectSingleNode('/service/executable').InnerText = 'node.exe'
+  $stale.SelectSingleNode('/service/arguments').InnerText = '"' + (Join-Path $root 'backend/dist/index.js') + '"'
+  $stale.Save($configPath)
+  & $installer reconfigure -Backend go
+  if ((Get-Service -Name WebMux).Status -ne 'Stopped') { throw 'Reconfigure started a previously stopped service.' }
+  $native = [xml][IO.File]::ReadAllText($configPath)
+  if ($native.service.executable -ne (Join-Path $root 'bin/webmux.exe') -or $native.service.arguments) { throw 'Reconfigure did not replace the legacy launch command.' }
+  if ((Get-CimInstance Win32_Service -Filter "Name='WebMux'").StartName -ne $account) { throw 'Migration changed the service account.' }
   & $installer start
   Wait-Healthy
   if ([IO.File]::ReadAllText($appFile) -cne $app) { throw 'Service changed operator configuration.' }

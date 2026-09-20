@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [Parameter(Position = 0)]
-  [ValidateSet('install', 'uninstall', 'start', 'stop', 'restart', 'status')]
+  [ValidateSet('install', 'uninstall', 'reconfigure', 'start', 'stop', 'restart', 'status')]
   [string]$Action = 'status',
 
   [string]$WebMuxHome,
@@ -174,11 +174,74 @@ function Uninstall-WebMuxService {
   Write-Host 'WebMux service uninstalled. Runtime data and logs were preserved.'
 }
 
+function Reconfigure-WebMuxService {
+  $service = Get-WebMuxService
+  if (-not $service) { throw 'Install the WebMux service before reconfiguring it.' }
+  $runtime = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory -Backend $Backend
+  $original = [IO.File]::ReadAllBytes($ConfigPath)
+  $definition = New-Object System.Xml.XmlDocument
+  $definition.XmlResolver = $null
+  $definition.Load($ConfigPath)
+  if ($definition.SelectSingleNode('/service/id').InnerText -ne $ServiceName) { throw 'Unexpected WinSW service identity.' }
+  foreach ($name in @('executable', 'arguments', 'workingdirectory')) {
+    if ($definition.SelectNodes("/service/$name").Count -ne 1) { throw "Expected one WinSW $name element." }
+  }
+  $roots = $definition.SelectNodes('/service/env[@name="WEBMUX_ROOT"]')
+  if ($roots.Count -ne 1) { throw 'Expected one WEBMUX_ROOT environment entry.' }
+  $definition.SelectSingleNode('/service/executable').InnerText = $runtime.Executable
+  $definition.SelectSingleNode('/service/arguments').InnerText = $runtime.Arguments
+  $definition.SelectSingleNode('/service/workingdirectory').InnerText = $ApplicationDirectory
+  $roots[0].SetAttribute('value', $ApplicationDirectory)
+  $wasRunning = $service.Status -eq 'Running'
+  if ($service.Status -ne 'Stopped' -and -not $wasRunning) { throw "Wait for the service's pending transition before reconfiguring: $($service.Status)" }
+  $temporary = Join-Path $ServiceDirectory "WebMux-$([Guid]::NewGuid()).xml.tmp"
+  $replaced = $false
+  try {
+    # Serialize and validate the new runtime before stopping the current service.
+    $definition.Save($temporary)
+    if ($wasRunning) {
+      Stop-Service -Name $ServiceName
+      $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+    }
+    [IO.File]::Replace($temporary, $ConfigPath, $null)
+    $replaced = $true
+    if ($wasRunning) {
+      Start-Service -Name $ServiceName
+      (Get-Service -Name $ServiceName).WaitForStatus('Running', [TimeSpan]::FromSeconds(30))
+    }
+  } catch {
+    $failure = $_
+    if ($replaced) {
+      $current = Get-WebMuxService
+      if ($current.Status -ne 'Stopped') {
+        Stop-Service -Name $ServiceName
+        $current.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+      }
+      [IO.File]::WriteAllBytes($temporary, $original)
+      [IO.File]::Replace($temporary, $ConfigPath, $null)
+    }
+    if ($wasRunning -and (Get-WebMuxService).Status -eq 'Stopped') {
+      Start-Service -Name $ServiceName
+      (Get-Service -Name $ServiceName).WaitForStatus('Running', [TimeSpan]::FromSeconds(30))
+    }
+    throw $failure
+  } finally {
+    if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
+  }
+  Write-Host "WebMux service runtime reconfigured to $($runtime.Backend). Existing account and environment were preserved."
+}
+
 Assert-WindowsAdministrator
 
 switch ($Action) {
   'install' { Install-WebMuxService }
   'uninstall' { Uninstall-WebMuxService }
+  'reconfigure' {
+    if ($PSBoundParameters.ContainsKey('WebMuxHome') -or $LocalSystem) {
+      throw 'Reconfigure preserves the installed home and service account; omit WebMuxHome and LocalSystem.'
+    }
+    Reconfigure-WebMuxService
+  }
   'start' {
     Start-Service -Name $ServiceName
     (Get-Service -Name $ServiceName).WaitForStatus('Running', [TimeSpan]::FromSeconds(30))
