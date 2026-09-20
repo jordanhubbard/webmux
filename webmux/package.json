@@ -34,7 +34,7 @@
     "service:reconfigure": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 reconfigure",
     "service:status": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 status",
     "lint": "npm run lint --workspace=backend && npm run lint --workspace=frontend",
-    "test:helpers": "npm run build:helpers && node --test scripts/helpers.test.mts ../scripts/release-metadata.test.mts ../scripts/render-service.test.mts",
+    "test:helpers": "npm run build:helpers && node --test scripts/helpers.test.mts ../scripts/release-metadata.test.mts ../scripts/render-service.test.mts ../scripts/verify-native-artifacts.test.mts",
     "test": "npm run test --workspace=backend && npm run test --workspace=frontend && npm run test:helpers"
   },
   "devDependencies": {

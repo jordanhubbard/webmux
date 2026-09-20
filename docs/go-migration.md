@@ -13,6 +13,16 @@ compatibility gates. The Go implementation lives in `webmux/server`; partial
 implementation is not a production replacement. Do not run both implementations
 against the same writable `WEBMUX_HOME`.
 
+Native packaging now applies the release-tag/version check before building and
+verifies its complete upload set before retaining artifacts. Unix requires one
+version/platform/architecture-specific archive plus its SHA-256 file; Windows
+also requires the matching MSI and checksum. Missing, stale, nonregular, empty or
+corrupted native artifacts fail the gate. Legacy files may coexist in the build
+directory. The verifier passes the existing local native archive and regression
+fixtures for incomplete/corrupted sets; TypeScript, all eight helper tests and
+workflow parsing pass locally. Hosted execution is pending. Native release
+publication and the default switch remain gated on the full migration checks.
+
 ## Completion requirements
 
 - Preserve HTTP methods, paths, response shapes, status codes, WebSocket framing,

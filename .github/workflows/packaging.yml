@@ -35,6 +35,11 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: webmux/package-lock.json
+      - name: Verify native release version
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: node scripts/packaging-checks.mts release-version
       - name: Build existing frontend
         if: runner.os != 'Windows'
         working-directory: webmux
@@ -115,6 +120,8 @@ jobs:
           node scripts/smoke-native-package.mts "$(brew --prefix webmux/native-test/webmux)/libexec"
           brew services info webmux/native-test/webmux --json > "$RUNNER_TEMP/webmux-service.json"
           node scripts/packaging-checks.mts service
+      - name: Verify native upload set and checksums
+        run: node scripts/verify-native-artifacts.mts
       - uses: actions/upload-artifact@v7
         with:
           name: native-preview-${{ matrix.os }}
