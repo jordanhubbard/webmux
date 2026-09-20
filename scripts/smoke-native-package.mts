@@ -4,10 +4,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { randomBytes } from 'node:crypto';
-import { stripVTControlCharacters } from 'node:util';
+import { promisify, stripVTControlCharacters } from 'node:util';
 
 function record(value: unknown): Record<string, unknown> {
   assert(value && typeof value === 'object' && !Array.isArray(value));
@@ -16,20 +16,25 @@ function record(value: unknown): Record<string, unknown> {
 function stringField(value: unknown, key: string): string {
   const field = record(value)[key]; assert.equal(typeof field, 'string'); return field as string;
 }
-async function until(check: () => boolean | Promise<boolean>, label: string): Promise<void> {
+async function until(check: () => boolean | Promise<boolean>, label: string | (() => string)): Promise<void> {
   const deadline = Date.now() + 15000;
   do {
     if (await check()) return;
     await new Promise(resolve => setTimeout(resolve, 50));
   } while (Date.now() < deadline);
-  throw new Error(`Timed out: ${label}`);
+  throw new Error(`Timed out: ${typeof label === 'function' ? label() : label}`);
 }
 async function stop(child: ChildProcess): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null) return;
   const closed = once(child, 'close');
-  child.kill('SIGTERM');
+  // Node cannot deliver a graceful SIGTERM on Windows. Kill the isolated
+  // fixture tree so a failed PTY assertion cannot leave a shell holding cwd.
+  const termination = process.platform === 'win32' && child.pid !== undefined
+    ? promisify(execFile)('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { timeout: 10000 })
+    : Promise.resolve(child.kill('SIGTERM'));
   const timer = setTimeout(() => child.kill('SIGKILL'), 10000);
   try {
+    await termination;
     const [code, signal] = await closed;
     if (process.platform !== 'win32') assert.equal(code, 0, `Shutdown: ${String(signal)}`);
     else assert(code !== null || signal);
@@ -60,13 +65,14 @@ const password = randomBytes(24).toString('hex');
 let child: ChildProcess | undefined;
 let socket: WebSocket | undefined;
 let logs = '';
+const failures: unknown[] = [];
 try {
   for (let attempt = 0; attempt < 2; attempt++) {
     let launchError: Error | undefined;
     child = spawn(path.join(root, 'bin', process.platform === 'win32' ? 'webmux.exe' : 'webmux'), [], {
       cwd: home, stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, WEBMUX_HOME: home, WEBMUX_ROOT: '', HTTP_PORT: String(port), HTTPS_PORT: '0',
-        JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '', SHELL: '/bin/sh',
+        JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '', SHELL: '/bin/sh', WEBMUX_SMOKE_WORD: 'ok',
         WEBMUX_EXEC_COMMAND: process.platform === 'win32' ? 'cmd.exe /d /q' : '/bin/sh' },
     });
     child.on('error', error => { launchError = error; });
@@ -105,8 +111,13 @@ try {
       if (value.type === 'output' && typeof value.data === 'string') output += value.data;
     });
     await until(() => { assert(!wsError, 'WebSocket failed'); return socket?.readyState === WebSocket.OPEN; }, 'WebSocket open');
-    socket.send(JSON.stringify({ type: 'input', data: 'echo native-pty-ok\r' }));
-    await until(() => /(?:^|\n)native-pty-ok\r?\n/.test(stripVTControlCharacters(output)), 'PTY command output');
+    // The expected marker is absent from the input, so terminal input echo
+    // cannot pass this assertion. ConPTY may encode newlines as cursor moves.
+    const command = process.platform === 'win32' ? 'echo native-pty-%WEBMUX_SMOKE_WORD%\r'
+      : 'printf "%s%s\\n" native-pty- "$WEBMUX_SMOKE_WORD"\r';
+    socket.send(JSON.stringify({ type: 'input', data: command }));
+    await until(() => stripVTControlCharacters(output).includes('native-pty-ok'),
+      () => `PTY command output: ${JSON.stringify(output)}`);
     await request('DELETE', `/api/sessions/${id}`, undefined, token);
     await until(() => socket?.readyState === WebSocket.CLOSED, 'Deleted terminal socket close');
     socket = undefined;
@@ -116,9 +127,11 @@ try {
   }
   for (const entry of ['config', 'data']) assert(!fs.existsSync(path.join(root, entry)), `Runtime wrote bundle/${entry}`);
   console.log('Native bundle passed: HTTP, UI, persisted login, PTY/WebSocket, deletion, restart, config preservation.');
-} catch (error) { console.error(logs); throw error; }
+} catch (error) { console.error(logs); failures.push(error); }
 finally {
   socket?.close();
-  try { if (child && !child.killed) await stop(child); }
-  finally { fs.rmSync(home, { recursive: true, force: true }); }
+  try { if (child && !child.killed) await stop(child); } catch (error) { failures.push(error); }
+  try { fs.rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); }
+  catch (error) { failures.push(error); }
 }
+if (failures.length > 0) throw new AggregateError(failures, 'Native bundle smoke test failed');

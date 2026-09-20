@@ -240,6 +240,11 @@ Visual failures now attach baseline and actual browser/font information, button
 bounds and computed styles alongside the images. These diagnostics do not mask
 pixels or relax the gate. A deliberately changed local baseline is rejected and
 produces both diagnostic attachments; the unmodified local comparisons pass.
+At 8282422, Linux passed its full Go/browser/visual job. Windows passed the Go
+race/vet/contracts job but failed the visual comparison again. The uploaded
+baseline/actual diagnostics have identical browser version, viewport, font set,
+all 15 button bounds and computed styles. This narrows the investigation but
+does not establish the cause or satisfy the exact rendering gate.
 
 This is scoped rendering evidence, not proof of every state or platform. Login,
 active terminal/desktop rendering, agent panes, failure states, real guacd/RDP
@@ -253,8 +258,13 @@ by Git. `npm run build` includes this step, and `npm run test:helpers` exercises
 the actual compiled status hook. Packaging CI's release-version, tap metadata,
 formula preparation and service checks now live in checked
 `scripts/packaging-checks.mts`, replacing all inline JavaScript in that workflow.
-Remaining inline Node snippets in shell/service files still need conversion or
-removal as the Go deployment tooling replaces them.
+Release metadata reads/updates/consistency checks, the managed-browser launch
+probe, and Windows packaging's Node runtime inspection also use checked
+TypeScript. Release metadata tests execute the CLI against temporary fixtures,
+preserve root/dependency versions and reject incomplete records before writes;
+they run with `npm run test:helpers`. The legacy Node bundle launcher still
+contains a generated JavaScript version expression and remains to be removed
+or converted when native deployment replaces it.
 
 ### Native bundle preview
 
@@ -286,6 +296,11 @@ At 87844f5, Linux native archive creation and the complete extracted-artifact
 smoke test passed. Windows x64 created its archive but Git Bash's GNU tar could
 not extract the ZIP, so no Windows runtime assertion ran. Windows extraction now
 uses PowerShell's `Expand-Archive`; a successful rerun is still required.
+At 8282422, Windows extraction succeeded and the server started, but a fixture
+cleanup EPERM masked the original assertion failure. The smoke test now retains
+all assertion/cleanup errors, terminates its Windows process tree and checks
+shell-generated output independently of ConPTY newline encoding. These changes
+pass locally on macOS; Windows runtime verification remains pending.
 
 ### Deliberate security differences
 

@@ -9,10 +9,13 @@ $ErrorActionPreference = 'Stop'
 if ($env:OS -ne 'Windows_NT') {
   throw 'The Windows installer must be built on Windows.'
 }
-if ((node -p "process.versions.node.split('.')[0]") -ne '24') {
+$RuntimeJSON = & node (Join-Path $PSScriptRoot 'packaging-checks.mts') node-runtime
+if ($LASTEXITCODE -ne 0) { throw 'Could not inspect the Node.js build runtime.' }
+$Runtime = $RuntimeJSON | ConvertFrom-Json
+if ($Runtime.major -ne 24) {
   throw 'The Windows installer must be built with Node.js 24.'
 }
-$NodeArch = node -p 'process.arch'
+$NodeArch = $Runtime.arch
 $WixArch = switch ($NodeArch) {
   'x64'   { 'x64' }
   'arm64' { 'arm64' }
