@@ -54,6 +54,7 @@ interface RunningServer {
   home: string;
   socket: (route: string) => WebSocket;
   raw: (route: string, headers?: Record<string, string>, method?: string) => Promise<Response>;
+  upload: (data: Uint8Array, name?: string, token?: string, contentType?: string) => Promise<Response>;
   request: (method: string, route: string, body?: JSONRecord, token?: string) => Promise<{ status: number; body: unknown }>;
   close: () => Promise<void>;
 }
@@ -116,6 +117,11 @@ async function start(backend: Backend, mode: Mode, existingHome?: string, enviro
     home,
     socket: route => new WebSocket(base.replace('http:', 'ws:') + route),
     raw: (route, headers, method = 'GET') => fetch(base + route, { headers, method, redirect: 'manual', signal: AbortSignal.timeout(10_000) }),
+    upload: (data, name, token, contentType = 'application/octet-stream') => fetch(base + '/api/upload', {
+      method: 'POST', body: new Uint8Array(data).buffer,
+      headers: { 'Content-Type': contentType, ...(name === undefined ? {} : { 'X-Filename': name }), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      signal: AbortSignal.timeout(15_000),
+    }),
     async request(method, route, body, token) {
       const response = await fetch(base + route, {
         method,
@@ -139,6 +145,43 @@ function checkToken(body: unknown, username: string, mode: Mode): string {
   assert.equal(typeof claims.exp, 'number');
   assert.equal(claims.exp! - claims.iat!, 8 * 60 * 60);
   return token;
+}
+
+async function uploadContract(backend: Backend): Promise<void> {
+  const server = await start(backend, 'local');
+  let referenced = '';
+  let stale = '';
+  try {
+    const unauthorized = await server.upload(Buffer.from('no'));
+    assert.equal(unauthorized.status, 401); await unauthorized.body?.cancel();
+    const owner = stringField((await server.request('POST', '/api/auth/bootstrap', { username: 'owner', password: 'password' })).body, 'token');
+    const invalid = await server.upload(Buffer.from('invalid'), 'file', owner, 'text/plain');
+    assert.equal(invalid.status, 400); assert.deepEqual(await invalid.json(), { error: 'Content-Type must be application/octet-stream' });
+    for (const [name, suffix, size] of [['file.pem', '-file.pem', 256], ['../../file.pem', '-file.pem', 0], ['unsafe file.pem', '.pem', 37], [undefined, '.bin', 10*1024*1024]] as const) {
+      const data = Buffer.alloc(size, 255);
+      const response = await server.upload(data, name, owner);
+      assert.equal(response.status, 201);
+      const value = record(await response.json());
+      const file = stringField(value, 'path'); const storedName = stringField(value, 'name');
+      assert.match(storedName.slice(0, 12), /^[0-9a-f]{12}$/); assert.ok(storedName.endsWith(suffix));
+      assert.equal(file, path.join(server.home, 'uploads', storedName)); assert.equal(value.size, size);
+      assert.deepEqual(await readFile(file), data);
+      if (!referenced) referenced = file; else stale = file;
+    }
+    const oversized = await server.upload(Buffer.alloc(10*1024*1024+1), 'large.bin', owner);
+    assert.equal(oversized.status, 413); assert.deepEqual(await oversized.json(), { error: 'File too large (max 10 MB)' });
+    assert.equal((await server.request('POST', '/api/keys', { id: 'uploaded-key', private_key_path: referenced }, owner)).status, 201);
+    const old = new Date(Date.now() - 31*24*60*60*1000);
+    await utimes(referenced, old, old); await utimes(stale, old, old);
+  } finally { await server.close(); }
+  const restored = await start(backend === 'node' ? 'go' : 'node', 'local', server.home);
+  try {
+    const deadline = Date.now() + 5_000;
+    while (await stat(stale).then(() => true, (error: NodeJS.ErrnoException) => { if (error.code !== 'ENOENT') throw error; return false; })) {
+      assert.ok(Date.now() < deadline, 'startup did not purge stale upload'); await delay(20);
+    }
+    assert.deepEqual(await readFile(referenced), Buffer.alloc(256, 255));
+  } finally { await restored.close(); }
 }
 
 let staticBaseline: unknown;
@@ -869,6 +912,7 @@ try {
   assert.equal(fixtureBuild.status, 0, 'Agent fixture build failed');
   for (const backend of ['node', 'go'] as const) {
     await staticContract(backend);
+    await uploadContract(backend);
     await localContract(backend);
     await trustedContract(backend);
     await catalogContract(backend);

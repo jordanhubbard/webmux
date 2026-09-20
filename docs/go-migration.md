@@ -67,7 +67,17 @@ the API. The Go server serves the existing production frontend from
 `WEBMUX_ROOT/web`, with client-side navigation fallback, directory redirects,
 GET/HEAD, range requests, stat ETags, Last-Modified and revalidation. Differential
 fixtures compare asset/index bytes and cache/content headers against Node.
-Uploads and AI integration remain pending.
+AI integration remains pending.
+
+Authenticated octet-stream uploads now preserve the existing path/name/size
+response, random filename prefixes, 10 MiB per-file limit and 500 MiB shared
+quota. Files stream to private disk files and rejected/interrupted writes are
+removed. Cleanup runs at startup, daily and near the quota, deleting only files
+older than 30 days that the key catalog does not reference. Differential fixtures
+cover binary content, safe/unsafe/missing names, empty and maximum-size files,
+authentication, rejection and cleanup across Node/Go restarts. The original API
+uses shared authenticated storage, not per-user file ownership; that contract
+remains unchanged.
 
 The existing Node route order accidentally intercepted the template list as a
 session ID. Both implementations now expose the intended authenticated list;
@@ -177,7 +187,9 @@ TypeScript instead of an embedded JavaScript string. Browser specs and Playwrigh
 configuration are also included in `npm run typecheck`.
 
 `npm run test:visual-parity` creates Node screenshots and then compares Go against
-those images with zero pixel difference and zero color threshold. Both runs use
+those images with zero pixel difference and zero color threshold. An additional
+decoded RGBA comparison checks every pixel because Playwright's default image
+comparison can ignore anti-aliasing differences even with a zero threshold. Both runs use
 the same build and Chromium executable, locale, timezone, fonts and scale. The
 eight covered states are empty terminal workspace, terminal connection dialog,
 settings, empty desktop workspace, and VNC/RDP dialogs at 1280×800 and 375×667.
@@ -186,6 +198,12 @@ All eight comparisons pass locally on macOS. Baselines are generated under
 browser workflows and the sequential visual comparison, uploading image evidence.
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` can select an installed browser; otherwise
 Playwright uses its installed Chromium version.
+
+At 98eb3ae, Linux passed browser workflows and the original screenshot gate.
+Windows passed the browser workflows but failed its workspace screenshot:
+Playwright reported two changed pixels; decoding the images found 13 changed
+pixels at toolbar button borders. This remains unresolved; the stricter raw-pixel
+gate has not relaxed that requirement. Its eight local macOS comparisons pass.
 
 This is scoped rendering evidence, not proof of every state or platform. Login,
 active terminal/desktop rendering, agent panes, failure states, real guacd/RDP
@@ -226,6 +244,13 @@ still need conversion or removal as the Go deployment tooling replaces them.
 - Production assets also use OS-confined file opens. Dot paths, backslashes,
   Windows stream syntax, non-regular files and symlinks escaping the build root
   return 404 instead of serving arbitrary files or directory listings.
+- Upload writers and cleanup serialize quota accounting, preventing concurrent
+  requests from oversubscribing the quota. Files use exclusive creation and
+  owner-only permissions; aborted and oversized writes are removed. Unsafe or
+  overlong filename extensions fall back to `.bin`. Cleanup ignores symlinks,
+  recognizes canonical key references and holds the key-catalog lock through
+  deletion. An unreadable/malformed catalog disables cleanup rather than treating
+  all files as unreferenced. No upload files are exposed through static UI serving.
 - Terminal launches reject invalid ports, unsupported transports and dimensions
   outside the WebSocket resize limits. Unreadable key/mosh configuration fails
   the launch instead of silently falling back to a different configuration.

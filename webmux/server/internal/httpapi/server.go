@@ -18,6 +18,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/netguard"
 	"github.com/jordanhubbard/webmux/server/internal/session"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
+	"github.com/jordanhubbard/webmux/server/internal/upload"
 )
 
 type Server struct {
@@ -32,6 +33,7 @@ type Server struct {
 	vnc           *desktop.Broker
 	rdp           *desktop.Broker
 	targets       *netguard.Guard
+	uploads       *upload.Service
 	socketMu      sync.Mutex
 	sockets       map[*websocket.Conn]struct{}
 	socketWorkers sync.WaitGroup
@@ -69,7 +71,7 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1")}, nil
+	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store)}, nil
 }
 
 func (s *Server) RestoreSessions() error {
@@ -98,6 +100,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /api/hosts/{id}", s.protected(false, s.deleteHost))
 	mux.Handle("GET /api/keys", s.protected(false, s.listKeys))
 	mux.Handle("POST /api/keys", s.protected(false, s.createKey))
+	mux.Handle("POST /api/upload", s.protected(false, s.uploadFile))
 	mux.Handle("DELETE /api/keys/{id}", s.protected(false, s.deleteKey))
 	mux.Handle("GET /api/config", s.protected(false, s.getSettings))
 	mux.Handle("PUT /api/config", s.protected(false, s.updateSettings))

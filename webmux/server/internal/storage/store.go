@@ -68,6 +68,19 @@ func (s *Store) ReadConfig(name string, out any) error {
 	return readYAML(s.ConfigPath(name), out)
 }
 
+// InspectConfig holds the configuration lock through an operation derived from
+// its contents. The callback must not call other Store methods. Upload cleanup
+// uses this to prevent a key reference being added between inspection and deletion.
+func InspectConfig[T any](s *Store, name string, inspect func(*T) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var value T
+	if err := readYAML(s.ConfigPath(name), &value); err != nil {
+		return err
+	}
+	return inspect(&value)
+}
+
 func (s *Store) WriteConfig(name string, value any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -107,6 +107,10 @@ func run() (resultErr error) {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	maintenanceCtx, cancelMaintenance := context.WithCancel(ctx)
+	maintenanceDone := make(chan struct{})
+	go func() { defer close(maintenanceDone); api.MaintainUploads(maintenanceCtx) }()
+	defer func() { cancelMaintenance(); <-maintenanceDone }()
 	if err := api.RestoreSessions(); err != nil {
 		return fmt.Errorf("restore sessions: %w", err)
 	}
