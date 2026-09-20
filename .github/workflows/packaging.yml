@@ -13,6 +13,44 @@ permissions:
   contents: read
 
 jobs:
+  native-preview:
+    name: Native bundle (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, ubuntu-22.04, windows-2022, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: webmux/package-lock.json
+      - name: Build existing frontend
+        working-directory: webmux
+        run: |
+          npm ci
+          npm run build --workspace=frontend
+      - name: Package native server
+        run: node scripts/package-native.mts
+      - name: Exercise extracted native runtime
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/webmux-native"
+          for archive in dist/*-native.tar.gz dist/*-native.zip; do
+            if [ -f "$archive" ]; then tar -xf "$archive" -C "$RUNNER_TEMP/webmux-native"; fi
+          done
+          node scripts/smoke-native-package.mts "$RUNNER_TEMP"/webmux-native/webmux-*
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-preview-${{ matrix.os }}
+          path: dist/*-native.*
+
   package:
     name: Package (${{ matrix.os }})
     strategy:

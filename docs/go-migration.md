@@ -230,6 +230,12 @@ At 30d5808, Linux again differed at toolbar borders (16 raw pixels, RGB changes
 of one). The software-rendering configuration and Node-to-Node control now pass
 locally across all eight states; their CI results remain unverified. No pixel
 tolerance has been introduced.
+At fc9faab, the Windows Go race/vet/differential job passed, including the revised
+timestamp assertion and slave startup contracts. Browser workflows passed on
+Linux and Windows, but both visual jobs failed. Linux failed during the second
+Node run, establishing that the baseline is not yet repeatable even with
+software rendering; Windows passed the Node control and failed on Go. Renderer
+pinning alone has therefore not resolved the visual gate.
 
 This is scoped rendering evidence, not proof of every state or platform. Login,
 active terminal/desktop rendering, agent panes, failure states, real guacd/RDP
@@ -242,6 +248,33 @@ and Windows launcher in `webmux/scripts/dist`; generated JavaScript is ignored
 by Git. `npm run build` includes this step, and `npm run test:helpers` exercises
 the actual compiled status hook. Inline Node snippets in shell/CI/service files
 still need conversion or removal as the Go deployment tooling replaces them.
+
+### Native bundle preview
+
+`node scripts/package-native.mts [output-directory]` builds a native Go executable
+and packages it with the existing production `web` build, `config.defaults`,
+license, manifest and SHA-256 checksum. Build the frontend first with
+`npm --prefix webmux run build --workspace=frontend`. The packager supports
+macOS/Linux/Windows x64 and arm64 hosts, builds for the host with CGO disabled,
+and rejects symlinks/non-regular entries. Its explicit allowlist excludes local
+configuration, data, Node dependencies and development tools. Node is needed
+to run the checked TypeScript build tooling, not to run the extracted server.
+
+The binary discovers the installation root relative to its resolved executable
+when adjacent defaults exist; `WEBMUX_ROOT` and `--root` retain explicit override
+precedence. Source-tree runs without adjacent defaults retain `.` as their
+default. An extracted installation can therefore start from a different working
+directory without a JavaScript launcher.
+
+Run `node scripts/smoke-native-package.mts <extracted-directory>` to verify the
+actual artifact. The isolated fixture checks HTTP/UI serving, unauthenticated
+rejection, bootstrap/login, a real PTY over WebSocket, deletion/closure, login
+after restart, and byte-preserved operator configuration. Local macOS arm64
+passes; packaging CI now runs this on Linux, macOS and Windows x64/arm64 runners.
+Windows termination through Node's child-process API does not establish graceful
+Windows service-stop behavior. Native service wrappers, Homebrew/MSI integration
+and release publication remain unfinished. Preview artifacts are uploaded
+separately and are not selected by the existing release publication job.
 
 ### Deliberate security differences
 

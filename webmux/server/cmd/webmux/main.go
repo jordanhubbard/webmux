@@ -32,7 +32,7 @@ func main() {
 }
 
 func run() (resultErr error) {
-	root := flag.String("root", envDefault("WEBMUX_ROOT", "."), "installation directory containing config.defaults")
+	root := flag.String("root", envDefault("WEBMUX_ROOT", installationRoot()), "installation directory containing config.defaults")
 	home := flag.String("home", os.Getenv("WEBMUX_HOME"), "writable configuration/data directory")
 	listen := flag.String("listen", "", "override HTTP listen address (e.g. 127.0.0.1:18080)")
 	flag.Parse()
@@ -168,6 +168,23 @@ func envDefault(name, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// Extracted bundles can start from any working directory. Source-tree runs
+// retain the current-directory default when no adjacent installation exists.
+func installationRoot() string {
+	executable, err := os.Executable()
+	if err != nil {
+		return "."
+	}
+	if resolved, err := filepath.EvalSymlinks(executable); err == nil {
+		executable = resolved
+	}
+	root := filepath.Dir(filepath.Dir(executable))
+	if info, err := os.Stat(filepath.Join(root, "config.defaults")); err == nil && info.IsDir() {
+		return root
+	}
+	return "."
 }
 
 func parseSlavePort(raw string) (int, error) {
