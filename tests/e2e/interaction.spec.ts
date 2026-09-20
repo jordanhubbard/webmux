@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import path from 'node:path';
 
 test('connection dialog contains focus, dismisses with Escape, and restores its keyboard opener', async ({ page }) => {
   await page.goto('/');
@@ -60,10 +61,10 @@ test('desktop picker and connection forms share keyboard dismissal and fit narro
 
 test('terminal control keys reach a real PTY and search and logging use explicit controls', async ({ page, request }) => {
   // An isolated raw-mode process reports the bytes it actually receives from xterm.
-  const script = "process.stdin.setRawMode(true);process.stdin.resume();process.stdin.on('data',b=>process.stdout.write('KEY:'+b.toString('hex')+';'));process.stdout.write('READY');";
+  const fixture = path.resolve(__dirname, 'terminal-fixture.mts');
   const response = await request.post('/api/sessions', { data: {
     hostname: 'localhost', username: 'keyboard-test', transport: 'exec',
-    exec_command: `"${process.execPath}" -e "${script}"`,
+    exec_command: `"${process.execPath}" "${fixture}"`,
   } });
   expect(response.ok()).toBe(true);
   const session = await response.json();

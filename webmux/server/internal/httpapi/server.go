@@ -25,6 +25,7 @@ type Server struct {
 	auth          *auth.Service
 	name          string
 	secure        bool
+	webDir        string
 	passwordSlots chan struct{}
 	logger        *slog.Logger
 	sessions      *session.Broker
@@ -44,6 +45,7 @@ type Options struct {
 	SecureMode bool
 	JWTSecret  string
 	Logger     *slog.Logger
+	WebDir     string
 }
 
 func New(store *storage.Store, options Options) (*Server, error) {
@@ -67,7 +69,7 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1")}, nil
+	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1")}, nil
 }
 
 func (s *Server) RestoreSessions() error {
@@ -119,6 +121,9 @@ func (s *Server) Handler() http.Handler {
 	s.registerDesktops(mux)
 	mux.HandleFunc("GET /api/vnc/ws/{id}", s.vncSocket)
 	mux.HandleFunc("GET /api/rdp/ws/{id}", s.rdpSocket)
+	if s.webDir != "" {
+		mux.HandleFunc("GET /", s.serveUI)
+	}
 	return s.cors(newLimiter(300, globalWindow).wrap(apiPaths(mux)))
 }
 

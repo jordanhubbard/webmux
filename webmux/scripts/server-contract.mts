@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
-import { cp, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rename, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { createServer, type Socket } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -53,12 +53,12 @@ async function stop(child: ChildProcess): Promise<void> {
 interface RunningServer {
   home: string;
   socket: (route: string) => WebSocket;
-  raw: (route: string, headers?: Record<string, string>) => Promise<Response>;
+  raw: (route: string, headers?: Record<string, string>, method?: string) => Promise<Response>;
   request: (method: string, route: string, body?: JSONRecord, token?: string) => Promise<{ status: number; body: unknown }>;
   close: () => Promise<void>;
 }
 
-async function start(backend: Backend, mode: Mode, existingHome?: string, environment: NodeJS.ProcessEnv = {}): Promise<RunningServer> {
+async function start(backend: Backend, mode: Mode, existingHome?: string, environment: NodeJS.ProcessEnv = {}, installationRoot = root): Promise<RunningServer> {
   const home = existingHome ?? await mkdtemp(path.join(temporary, `${backend}-${mode}-`));
   if (!existingHome) {
     await cp(path.join(root, 'config.defaults'), path.join(home, 'config'), { recursive: true });
@@ -69,12 +69,12 @@ async function start(backend: Backend, mode: Mode, existingHome?: string, enviro
   }
   const port = await reservePort();
   const child = spawn(backend === 'go' ? binary : process.execPath,
-    backend === 'go' ? ['--root', root, '--home', home, '--listen', `127.0.0.1:${port}`] : [path.join(root, 'backend', 'dist', 'index.js')],
+    backend === 'go' ? ['--root', installationRoot, '--home', home, '--listen', `127.0.0.1:${port}`] : [path.join(root, 'backend', 'dist', 'index.js')],
     {
       cwd: root,
       env: {
         ...process.env,
-        WEBMUX_ROOT: root,
+        WEBMUX_ROOT: installationRoot,
         WEBMUX_HOME: home,
         HTTP_PORT: String(port),
         HTTPS_PORT: '0',
@@ -115,7 +115,7 @@ async function start(backend: Backend, mode: Mode, existingHome?: string, enviro
   return {
     home,
     socket: route => new WebSocket(base.replace('http:', 'ws:') + route),
-    raw: (route, headers) => fetch(base + route, { headers, signal: AbortSignal.timeout(10_000) }),
+    raw: (route, headers, method = 'GET') => fetch(base + route, { headers, method, redirect: 'manual', signal: AbortSignal.timeout(10_000) }),
     async request(method, route, body, token) {
       const response = await fetch(base + route, {
         method,
@@ -139,6 +139,42 @@ function checkToken(body: unknown, username: string, mode: Mode): string {
   assert.equal(typeof claims.exp, 'number');
   assert.equal(claims.exp! - claims.iat!, 8 * 60 * 60);
   return token;
+}
+
+let staticBaseline: unknown;
+async function staticContract(backend: Backend): Promise<void> {
+  const installation = await mkdtemp(path.join(temporary, `${backend}-static-`));
+  await cp(path.join(root, 'config.defaults'), path.join(installation, 'config.defaults'), { recursive: true });
+  await mkdir(path.join(installation, 'web', 'assets'), { recursive: true });
+  const files = { 'index.html': '<!doctype html><title>WebMux</title>', 'assets/app.js': 'console.log("fixture");', 'assets/app.css': 'body{color:red}' };
+  for (const [name, text] of Object.entries(files)) {
+    const file = path.join(installation, 'web', name);
+    await writeFile(file, text);
+    await utimes(file, new Date('2025-01-01T00:00:00Z'), new Date('2025-01-01T00:00:00Z'));
+  }
+  const server = await start(backend, 'local', undefined, {}, installation);
+  try {
+    const responses: unknown[] = [];
+    for (const route of ['/', '/index.html', '/workspace/terminals', '/assets/app.js', '/assets/app.css']) {
+      const response = await server.raw(route);
+      assert.equal(response.status, 200);
+      responses.push({ route, body: await response.text(), headers: Object.fromEntries(['content-type', 'cache-control', 'etag', 'last-modified', 'accept-ranges'].map(name => [name, response.headers.get(name)])) });
+    }
+    const asset = await server.raw('/assets/app.js');
+    const etag = asset.headers.get('etag'); assert.ok(etag); await asset.body?.cancel();
+    const cached = await server.raw('/assets/app.js', { 'If-None-Match': etag, 'Cache-Control': 'max-age=0' });
+    assert.equal(cached.status, 304);
+    const range = await server.raw('/assets/app.js', { Range: 'bytes=0-6' });
+    assert.equal(range.status, 206); assert.equal(await range.text(), 'console');
+    const head = await server.raw('/assets/app.js', {}, 'HEAD');
+    assert.equal(head.status, 200); assert.equal(await head.text(), '');
+    assert.equal(Number(head.headers.get('content-length')), files['assets/app.js'].length);
+    const redirect = await server.raw('/assets?version=1');
+    assert.equal(redirect.status, 301); assert.equal(redirect.headers.get('location'), '/assets/?version=1'); await redirect.body?.cancel();
+    assert.equal((await server.request('GET', '/api/sessions')).status, 401);
+    if (backend === 'node') staticBaseline = responses;
+    else assert.deepEqual(responses, staticBaseline, 'static frontend response parity');
+  } finally { await server.close(); }
 }
 
 async function localContract(backend: Backend): Promise<void> {
@@ -832,6 +868,7 @@ try {
   if (fixtureBuild.error) throw fixtureBuild.error;
   assert.equal(fixtureBuild.status, 0, 'Agent fixture build failed');
   for (const backend of ['node', 'go'] as const) {
+    await staticContract(backend);
     await localContract(backend);
     await trustedContract(backend);
     await catalogContract(backend);

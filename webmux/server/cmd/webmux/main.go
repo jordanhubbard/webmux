@@ -65,7 +65,7 @@ func run() (resultErr error) {
 	if err != nil {
 		return err
 	}
-	api, err := httpapi.New(store, httpapi.Options{Name: config.App.Name, SecureMode: config.App.SecureMode, JWTSecret: os.Getenv("JWT_SECRET")})
+	api, err := httpapi.New(store, httpapi.Options{Name: config.App.Name, SecureMode: config.App.SecureMode, JWTSecret: os.Getenv("JWT_SECRET"), WebDir: filepath.Join(*root, "web")})
 	if err != nil {
 		return fmt.Errorf("initialize API: %w", err)
 	}

@@ -15,5 +15,5 @@
       "node-pty": ["./node_modules/node-pty/typings/node-pty.d.ts"]
     }
   },
-  "include": ["scripts/**/*.mts", "../scripts/**/*.mts", "../tests/e2e/start-server.mts"]
+  "include": ["scripts/**/*.mts", "../scripts/**/*.mts", "../tests/e2e/*.mts"]
 }

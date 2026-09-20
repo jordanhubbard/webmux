@@ -37,6 +37,31 @@ jobs:
       - name: Verify Node and Go API compatibility
         working-directory: webmux
         run: npm run test:contract
+      - name: Build browser application
+        if: runner.os == 'Linux'
+        working-directory: webmux
+        run: npm run build --workspace=frontend
+      - name: Install browser for Go parity tests
+        if: runner.os == 'Linux'
+        working-directory: webmux
+        run: npx playwright install --with-deps chromium
+      - name: Verify browser workflows against Go
+        if: runner.os == 'Linux'
+        working-directory: webmux
+        run: npm run test:e2e:go
+      - name: Compare Node and Go screenshots
+        if: runner.os == 'Linux'
+        working-directory: webmux
+        run: npm run test:visual-parity
+      - name: Preserve browser parity evidence
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-parity-linux
+          include-hidden-files: true
+          path: |
+            tests/e2e/.visual-baseline
+            webmux/test-results
 
   test:
     name: Backend Tests
@@ -104,6 +129,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
+
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
@@ -138,3 +168,21 @@ jobs:
       - name: Run browser tests
         run: npm run test:e2e
         working-directory: webmux
+
+      - name: Run browser tests against Go
+        run: npm run test:e2e:go
+        working-directory: webmux
+
+      - name: Compare Node and Go screenshots
+        run: npm run test:visual-parity
+        working-directory: webmux
+
+      - name: Preserve browser parity evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-parity-windows
+          include-hidden-files: true
+          path: |
+            tests/e2e/.visual-baseline
+            webmux/test-results

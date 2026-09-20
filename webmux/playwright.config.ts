@@ -13,6 +13,7 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   reporter: [['list']],
+  snapshotPathTemplate: '{testDir}/.visual-baseline/{platform}/{arg}{ext}',
   use: {
     baseURL: `http://localhost:${TEST_PORT}`,
     headless: true,
@@ -31,7 +32,7 @@ export default defineConfig({
     port: TEST_PORT,
     cwd: WEBMUX_DIR,
     reuseExistingServer: false,
-    timeout: 15_000,
+    timeout: 120_000,
     env: {
       WEBMUX_ROOT: WEBMUX_DIR,
       WEBMUX_HOME: TEST_HOME,

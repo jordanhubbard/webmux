@@ -18,6 +18,7 @@ webmux/logs/
 
 # E2E test artifacts
 tests/e2e/.test-home/
+tests/e2e/.visual-baseline/
 test-results/
 playwright-report/
 *~

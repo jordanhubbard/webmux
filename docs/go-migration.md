@@ -63,7 +63,11 @@ pause/resume into the same file, and rotates files across launches. It preserves
 headers/footers, audit event fields and owner-only POSIX permissions. Template
 list/detail routes expose all five built-in templates with their existing text,
 icons, setup steps and launch commands. The Go broker uses the same catalog as
-the API. Other application routes and static UI serving remain pending.
+the API. The Go server serves the existing production frontend from
+`WEBMUX_ROOT/web`, with client-side navigation fallback, directory redirects,
+GET/HEAD, range requests, stat ETags, Last-Modified and revalidation. Differential
+fixtures compare asset/index bytes and cache/content headers against Node.
+Uploads and AI integration remain pending.
 
 The existing Node route order accidentally intercepted the template list as a
 session ID. Both implementations now expose the intended authenticated list;
@@ -161,6 +165,32 @@ Fixtures use temporary homes and never
 connect to real terminal or desktop hosts. `npm run typecheck` checks the
 TypeScript contract harness as well as the application.
 
+### Browser and visual verification
+
+Build the existing frontend before browser tests (`npm run build`). Run
+`npm run test:e2e` against Node or `npm run test:e2e:go` against Go. The runner
+initializes an isolated test home; the Go variant builds and launches the native
+server. All 12 existing browser workflows pass locally against both backends,
+including a real PTY, control-key delivery, search, transcript toggles, settings,
+dialog focus and narrow desktop forms. The PTY fixture now uses checked
+TypeScript instead of an embedded JavaScript string. Browser specs and Playwright
+configuration are also included in `npm run typecheck`.
+
+`npm run test:visual-parity` creates Node screenshots and then compares Go against
+those images with zero pixel difference and zero color threshold. Both runs use
+the same build and Chromium executable, locale, timezone, fonts and scale. The
+eight covered states are empty terminal workspace, terminal connection dialog,
+settings, empty desktop workspace, and VNC/RDP dialogs at 1280×800 and 375×667.
+All eight comparisons pass locally on macOS. Baselines are generated under
+`tests/e2e/.visual-baseline` and ignored by Git. Linux and Windows CI now run Go
+browser workflows and the sequential visual comparison, uploading image evidence.
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` can select an installed browser; otherwise
+Playwright uses its installed Chromium version.
+
+This is scoped rendering evidence, not proof of every state or platform. Login,
+active terminal/desktop rendering, agent panes, failure states, real guacd/RDP
+and VNC hosts, and performance gates still need coverage before replacement.
+
 Packaging scripts, browser test runners, the E2E fixture and agent status helper
 now have checked TypeScript sources. ESLint and Jest configurations are
 declarative JSON. `npm run build:helpers` produces the installable agent helper
@@ -193,6 +223,9 @@ still need conversion or removal as the Go deployment tooling replaces them.
   environment limits cannot produce a failed response after saving a change.
 - Font file opens use an OS-confined root in addition to canonical-path checks,
   preventing a replaced symlink from escaping the configured directory.
+- Production assets also use OS-confined file opens. Dot paths, backslashes,
+  Windows stream syntax, non-regular files and symlinks escaping the build root
+  return 404 instead of serving arbitrary files or directory listings.
 - Terminal launches reject invalid ports, unsupported transports and dimensions
   outside the WebSocket resize limits. Unreadable key/mosh configuration fails
   the launch instead of silently falling back to a different configuration.
