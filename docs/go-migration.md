@@ -55,6 +55,15 @@ directory and confines file opens to that root, with range/conditional requests
 and the existing cache headers. Other application routes, static UI serving and
 WebSocket/session transports are not implemented yet.
 
+The internal terminal process layer now supports Unix PTYs and Windows ConPTY,
+with independent process lifetime, serialized input, resize, exit status,
+output draining and idempotent cancellation. SSH/mosh/exec command planning
+preserves the existing keepalive, host-key, key-path, shell-template and password
+environment behavior. This layer is not connected to session routes yet. Its
+tests launch a local fixture in a real terminal and check dimensions, Unicode,
+large final output, exit codes and blocked-I/O cleanup. Windows runtime results
+must be verified in CI; cross-compilation alone does not establish ConPTY parity.
+
 Run from `webmux/server` with Go 1.26 or later:
 
 ```sh
@@ -105,5 +114,11 @@ still need conversion or removal as the Go deployment tooling replaces them.
   environment limits cannot produce a failed response after saving a change.
 - Font file opens use an OS-confined root in addition to canonical-path checks,
   preventing a replaced symlink from escaping the configured directory.
+- Terminal launches reject invalid ports, unsupported transports and dimensions
+  outside the WebSocket resize limits. Unreadable key/mosh configuration fails
+  the launch instead of silently falling back to a different configuration.
+- Mosh key paths use complete shell quoting, including spaces and apostrophes.
+  Unix terminal descriptors remain pollable so cancellation can release blocked
+  I/O; Windows launch failures release pipes, attribute lists and native handles.
 
 These are intentional changes, not claims of byte-for-byte error compatibility.

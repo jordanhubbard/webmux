@@ -69,6 +69,19 @@ var agentID = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,63}$`)
 var socketName = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
 var moshPath = regexp.MustCompile(`^[a-zA-Z0-9/_.-]+$`)
 
+func ValidateMoshServerPath(path string) error {
+	if !strings.HasPrefix(path, "/") {
+		return invalid("Invalid mosh_server_path: must be an absolute path")
+	}
+	if length(path) > 4096 {
+		return invalid("Invalid mosh_server_path: too long")
+	}
+	if !moshPath.MatchString(path) || slices.Contains(strings.Split(path, "/"), "..") {
+		return invalid("Invalid mosh_server_path: " + path)
+	}
+	return nil
+}
+
 // Normalize returns public settings without modifying the input document.
 func Normalize(document Document, environment bool) (Document, error) {
 	if document.App == nil {
@@ -197,14 +210,11 @@ func Update(current Document, updates Object) (Document, error) {
 	}
 	if value := AsObject(updates["transport"])["mosh_server_path"]; value != nil && value != "" {
 		path, ok := value.(string)
-		if !ok || !strings.HasPrefix(path, "/") {
+		if !ok {
 			return Document{}, invalid("Invalid mosh_server_path: must be an absolute path")
 		}
-		if length(path) > 4096 {
-			return Document{}, invalid("Invalid mosh_server_path: too long")
-		}
-		if !moshPath.MatchString(path) || slices.Contains(strings.Split(path, "/"), "..") {
-			return Document{}, invalid("Invalid mosh_server_path: " + path)
+		if err := ValidateMoshServerPath(path); err != nil {
+			return Document{}, err
 		}
 	}
 	merged := clone(current.App)
