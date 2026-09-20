@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -26,15 +27,29 @@ type process interface {
 }
 type launchFunc func(terminal.LaunchRequest, string) (process, error)
 type run struct {
-	process process
-	initial string
-	timer   *time.Timer
-	first   bool
+	process    process
+	initial    string
+	timer      *time.Timer
+	first      bool
+	input      chan string
+	stopped    chan struct{}
+	stopOnce   sync.Once
+	inputBytes atomic.Int64
 }
+
+func (r *run) stop() {
+	r.stopOnce.Do(func() { close(r.stopped) })
+	if r.timer != nil {
+		r.timer.Stop()
+	}
+}
+
 type entry struct {
 	value      Session
 	run        *run
 	scrollback string
+	viewers    map[string]*Viewer
+	focus      string
 }
 
 // Broker owns sessions and PTYs. Viewers do not own process lifetime. All map,
@@ -234,6 +249,7 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 		if e.run != nil {
 			r := e.run
 			e.run = nil
+			r.stop()
 			go r.process.Close()
 		}
 		return Session{}, err
@@ -255,10 +271,12 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 		b.logger.Warn("terminal launch failed", "session_id", e.value.ID, "error", err)
 		return err
 	}
-	r := &run{process: p, initial: initial, first: true}
+	r := &run{process: p, initial: initial, first: true, input: make(chan string, 256), stopped: make(chan struct{})}
 	e.run = r
-	b.workers.Add(1)
+	b.broadcastLocked(e, Event{"type": "transcript_status", "session_id": e.value.ID, "transcript_enabled": false})
+	b.workers.Add(2)
 	go b.read(e.value.ID, r)
+	go b.writeInput(r)
 	return nil
 }
 
@@ -279,8 +297,8 @@ func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
 	}
 	old := e.run
 	e.run = nil
-	if old != nil && old.timer != nil {
-		old.timer.Stop()
+	if old != nil {
+		old.stop()
 	}
 	// Invalidate under the lock, but terminate outside it: ConPTY close may
 	// drain output which needs this same lock to finish.
@@ -384,8 +402,9 @@ func (b *Broker) Delete(owner, id string) error {
 	}
 	r := e.run
 	e.run = nil
-	if r != nil && r.timer != nil {
-		r.timer.Stop()
+	b.closeViewersLocked(e, 1000, "Session deleted")
+	if r != nil {
+		r.stop()
 	}
 	b.audit(map[string]any{"type": "session_deleted", "session_id": id})
 	b.mu.Unlock()
@@ -402,18 +421,59 @@ func (b *Broker) Input(owner, id, data string) error {
 		return ErrClosed
 	}
 	e, err := b.ownedLocked(owner, id)
-	var p process
+	var current *run
 	if err == nil && e.run != nil {
-		p = e.run.process
+		current = e.run
 	}
 	b.mu.Unlock()
 	if err != nil {
 		return err
 	}
-	if p != nil {
-		_, err = p.Write([]byte(data))
+	if current == nil {
+		return nil
 	}
-	return err
+	select {
+	case <-current.stopped:
+		return ErrClosed
+	default:
+	}
+	size := int64(len(data))
+	if current.inputBytes.Add(size) > 2<<20 {
+		current.inputBytes.Add(-size)
+		return ErrInputBusy
+	}
+	select {
+	case current.input <- data:
+		return nil
+	case <-current.stopped:
+		current.inputBytes.Add(-size)
+		return ErrClosed
+	default:
+		current.inputBytes.Add(-size)
+		return ErrInputBusy
+	}
+}
+
+var ErrInputBusy = errors.New("terminal input queue is full")
+
+func (b *Broker) writeInput(r *run) {
+	defer b.workers.Done()
+	for {
+		select {
+		case <-r.stopped:
+			return
+		default:
+		}
+		select {
+		case <-r.stopped:
+			return
+		case data := <-r.input:
+			r.inputBytes.Add(-int64(len(data)))
+			if _, err := r.process.Write([]byte(data)); err != nil {
+				return
+			}
+		}
+	}
 }
 func (b *Broker) Resize(owner, id string, cols, rows int) error {
 	if cols < 1 || cols > 500 || rows < 1 || rows > 200 {
@@ -472,11 +532,10 @@ func (b *Broker) read(id string, r *run) {
 		return
 	}
 	e.run = nil
-	if r.timer != nil {
-		r.timer.Stop()
-	}
+	r.stop()
 	e.value.State = "disconnected"
 	e.value.UpdatedAt = now()
+	b.broadcastLocked(e, Event{"type": "status", "session_id": id, "state": "disconnected", "message": fmt.Sprintf("Process exited with code %d", exit.Code), "transcript_enabled": false})
 	if err := b.persistLocked(); err != nil {
 		b.logger.Error("save terminal exit", "error", err)
 	}
@@ -493,6 +552,7 @@ func (b *Broker) output(id string, r *run, data string) {
 		r.first = false
 		e.value.State = "connected"
 		e.value.UpdatedAt = now()
+		b.broadcastLocked(e, Event{"type": "status", "session_id": id, "state": "connected"})
 		if r.initial != "" {
 			r.timer = time.AfterFunc(800*time.Millisecond, func() {
 				b.mu.Lock()
@@ -509,6 +569,7 @@ func (b *Broker) output(id string, r *run, data string) {
 		}
 	}
 	e.scrollback = trimScrollback(e.scrollback + data)
+	b.broadcastLocked(e, Event{"type": "output", "session_id": id, "data": data})
 }
 func trimScrollback(value string) string {
 	// JS bounds this buffer in UTF-16 code units. Keep the same bound without
@@ -580,10 +641,9 @@ func (b *Broker) Close() error {
 	b.closed = true
 	var processes []process
 	for _, e := range b.entries {
+		b.closeViewersLocked(e, 1001, "Server shutting down")
 		if e.run != nil {
-			if e.run.timer != nil {
-				e.run.timer.Stop()
-			}
+			e.run.stop()
 			processes = append(processes, e.run.process)
 			e.run = nil
 		}

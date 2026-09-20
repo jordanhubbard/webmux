@@ -56,8 +56,10 @@ and the existing cache headers. Terminal session HTTP routes now support
 owner-scoped CRUD, patch precedence, reconnect and saved-session recovery. The
 broker serializes grid allocation and persistence, rebuilds layout tiles while
 preserving layout metadata, and rejects stale output/exit events from replaced
-processes. Other application routes, static UI serving and WebSocket delivery
-are not implemented yet; transcript and agent-service integration remain pending.
+processes. Terminal WebSockets now support ticket/token authentication, atomic
+scrollback-to-live delivery, input, resize, viewer presence/focus and deletion.
+Other application routes, static UI serving, transcript toggle/logging and
+agent-service integration remain pending.
 
 The internal terminal process layer now supports Unix PTYs and Windows ConPTY,
 with independent process lifetime, serialized input, resize, exit status,
@@ -85,6 +87,10 @@ contract checks ownership, defaults, patch precedence, grid limits, reconnect
 failure, layout reconciliation and cross-backend session recovery. These HTTP
 fixtures deliberately use failed local exec launches; a real Go PTY test covers
 initial-command injection, input, resize, reconnect, Unicode and process exit.
+The terminal WebSocket contract also runs a checked TypeScript fixture inside a
+real PTY through both servers and compares authentication, tickets, input,
+dimensions, Unicode, late-viewer replay, focus, leave and deletion. The broker
+tests cover the replay/live boundary and bounded input/output queues.
 Fixtures use temporary homes and never
 connect to real terminal or desktop hosts. `npm run typecheck` checks the
 TypeScript contract harness as well as the application.
@@ -133,5 +139,17 @@ still need conversion or removal as the Go deployment tooling replaces them.
 - Grid allocation searches occupied cells instead of iterating through the
   configured grid dimensions. Reconnect launch failures are saved as errors so
   disk state agrees with the failed request.
+- Terminal WebSockets enforce session ownership and recheck the ticket/token
+  subject against current accounts. The old terminal handler only checked that
+  credentials were valid. Existing sockets recheck authorization on messages
+  and every five seconds, closing when the account or authentication mode changes.
+- Browser WebSocket origins must match the request Host; clients without Origin
+  remain supported. Reverse proxies must preserve the browser-facing Host. The
+  Vite development proxy now does so, without changing UI rendering.
+- WebSocket upgrades share the HTTP request rate limit. Messages are limited to
+  1 MiB. Each viewer has a 128-event output queue, and each PTY has an input queue
+  bounded by 256 messages and 2 MiB of queued data. Slow viewers or excess
+  input receive close code 1013 instead of blocking unrelated sessions or growing
+  queues without bound. Viewer disconnection does not terminate its PTY.
 
 These are intentional changes, not claims of byte-for-byte error compatibility.

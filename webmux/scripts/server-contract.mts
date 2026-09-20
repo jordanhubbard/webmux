@@ -9,6 +9,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import * as argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import yaml from 'js-yaml';
+import WebSocket from 'ws';
 
 const root = path.resolve(import.meta.dirname, '..');
 const temporary = await mkdtemp(path.join(os.tmpdir(), 'webmux-auth-contract-'));
@@ -49,6 +50,7 @@ async function stop(child: ChildProcess): Promise<void> {
 
 interface RunningServer {
   home: string;
+  socket: (route: string) => WebSocket;
   raw: (route: string, headers?: Record<string, string>) => Promise<Response>;
   request: (method: string, route: string, body?: JSONRecord, token?: string) => Promise<{ status: number; body: unknown }>;
   close: () => Promise<void>;
@@ -110,6 +112,7 @@ async function start(backend: Backend, mode: Mode, existingHome?: string, enviro
   }
   return {
     home,
+    socket: route => new WebSocket(base.replace('http:', 'ws:') + route),
     raw: (route, headers) => fetch(base + route, { headers, signal: AbortSignal.timeout(10_000) }),
     async request(method, route, body, token) {
       const response = await fetch(base + route, {
@@ -421,6 +424,93 @@ async function sessionContract(backend: Backend): Promise<void> {
   } finally { await other.close(); }
 }
 
+interface SocketProbe {
+  socket: WebSocket;
+  events: JSONRecord[];
+  output: string;
+  closed?: number;
+  error?: Error;
+}
+
+function probe(socket: WebSocket): SocketProbe {
+  const result: SocketProbe = { socket, events: [], output: '' };
+  socket.on('message', raw => {
+    try {
+      const data = Array.isArray(raw) ? Buffer.concat(raw) : Buffer.isBuffer(raw) ? raw : Buffer.from(raw);
+      const event = record(JSON.parse(data.toString()) as unknown);
+      result.events.push(event);
+      if (event.type === 'output' && typeof event.data === 'string') result.output += event.data;
+    } catch (error) { result.error = error instanceof Error ? error : new Error(String(error)); }
+  });
+  socket.on('close', code => { result.closed = code; });
+  socket.on('error', error => { result.error = error; });
+  return result;
+}
+
+async function waitSocket(client: SocketProbe, predicate: () => boolean, label: string): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  while (!predicate()) {
+    if (client.error) throw client.error;
+    assert.ok(Date.now() < deadline, `${label}: ${JSON.stringify(client.events)} (close ${client.closed})`);
+    await delay(10);
+  }
+}
+
+async function terminalContract(backend: Backend): Promise<void> {
+  const server = await start(backend, 'local');
+  const clients: SocketProbe[] = [];
+  const open = (route: string): SocketProbe => { const client = probe(server.socket(route)); clients.push(client); return client; };
+  try {
+    const owner = stringField((await server.request('POST', '/api/auth/bootstrap', { username: 'owner', password: 'password' })).body, 'token');
+    const quote = (value: string): string => process.platform === 'win32' ? `"${value}"` : `'${value.replaceAll("'", `'"'"'`)}'`;
+    const command = `${quote(process.execPath)} ${quote(path.join(root, 'scripts', 'terminal-fixture.mts'))}`;
+    const created = await server.request('POST', '/api/sessions', { hostname: 'localhost', username: 'fixture', transport: 'exec', exec_command: command }, owner);
+    assert.equal(created.status, 201);
+    const id = stringField(created.body, 'id');
+    const pathName = `/api/term/${id}`;
+    const unauthorized = open(pathName);
+    await waitSocket(unauthorized, () => unauthorized.closed !== undefined, 'unauthenticated socket close');
+    assert.equal(unauthorized.closed, 1008);
+    assert.ok(unauthorized.events.some(event => event.type === 'error' && event.message === 'Unauthorized'));
+    const ticket = stringField((await server.request('POST', '/api/auth/ticket', {}, owner)).body, 'ticket');
+    const first = open(`${pathName}?ticket=${ticket}`);
+    await waitSocket(first, () => first.output.includes('fixture-ready'), 'initial terminal output');
+    const firstStatus = first.events.find(event => event.type === 'status' && typeof event.viewer_id === 'string');
+    assert.ok(firstStatus);
+    const firstID = stringField(firstStatus, 'viewer_id');
+    const reuse = open(`${pathName}?ticket=${ticket}`);
+    await waitSocket(reuse, () => reuse.closed !== undefined, 'ticket reuse close');
+    assert.equal(reuse.closed, 1008);
+    first.socket.send(JSON.stringify({ type: 'input', data: 'hello\r' }));
+    await waitSocket(first, () => first.output.includes('fixture-reply:hello:λ😀'), 'interactive output');
+    first.socket.send(JSON.stringify({ type: 'resize', cols: 99, rows: 31 }));
+    first.socket.send(JSON.stringify({ type: 'input', data: 'size\r' }));
+    await waitSocket(first, () => first.output.includes('fixture-size:99x31'), 'terminal resize');
+    const second = open(`${pathName}?token=${owner}`);
+    await waitSocket(second, () => second.output.includes('fixture-reply:hello:λ😀'), 'scrollback replay');
+    const secondJoin = second.events.find(event => event.type === 'viewer_join');
+    assert.ok(secondJoin);
+    const secondID = stringField(secondJoin, 'viewer_id');
+    assert.equal(secondJoin.focus_owner, firstID);
+    assert.equal(secondJoin.viewer_count, 2);
+    second.socket.send('malformed JSON');
+    second.socket.send(JSON.stringify({ type: 'resize', cols: -1, rows: 24 }));
+    second.socket.send(JSON.stringify({ type: 'focus' }));
+    await waitSocket(first, () => first.events.some(event => event.type === 'focus' && event.focus_owner === secondID), 'viewer focus');
+    second.socket.close();
+    await waitSocket(first, () => first.events.some(event => event.type === 'viewer_leave' && event.viewer_id === secondID), 'viewer leave');
+    const leave = first.events.find(event => event.type === 'viewer_leave' && event.viewer_id === secondID);
+    assert.equal(leave?.focus_owner, undefined);
+    assert.equal(leave?.viewer_count, 1);
+    assert.equal((await server.request('DELETE', `/api/sessions/${id}`, undefined, owner)).status, 204);
+    await waitSocket(first, () => first.closed !== undefined, 'session deletion close');
+    assert.equal(first.closed, 1000);
+  } finally {
+    for (const client of clients) client.socket.terminate();
+    await server.close();
+  }
+}
+
 try {
   const build = spawnSync('go', ['build', '-o', binary, './cmd/webmux'], { cwd: path.join(root, 'server'), stdio: 'inherit' });
   if (build.error) throw build.error;
@@ -431,7 +521,8 @@ try {
     await catalogContract(backend);
     await settingsContract(backend);
     await sessionContract(backend);
-    console.log(`${backend}: authentication/catalog/settings/session contracts and cross-backend restarts passed`);
+    await terminalContract(backend);
+    console.log(`${backend}: HTTP, terminal WebSocket and cross-backend restart contracts passed`);
   }
 } finally {
   await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

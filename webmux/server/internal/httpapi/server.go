@@ -8,6 +8,9 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
+
+	"github.com/gorilla/websocket"
 
 	"github.com/jordanhubbard/webmux/server/internal/auth"
 	"github.com/jordanhubbard/webmux/server/internal/session"
@@ -22,6 +25,12 @@ type Server struct {
 	passwordSlots chan struct{}
 	logger        *slog.Logger
 	sessions      *session.Broker
+	socketMu      sync.Mutex
+	sockets       map[*websocket.Conn]struct{}
+	socketWorkers sync.WaitGroup
+	closing       bool
+	closeOnce     sync.Once
+	closeErr      error
 }
 
 type Options struct {
@@ -48,7 +57,7 @@ func New(store *storage.Store, options Options) (*Server, error) {
 }
 
 func (s *Server) RestoreSessions() error { return s.sessions.Restore() }
-func (s *Server) Close() error           { return s.sessions.Close() }
+func (s *Server) Close() error           { return s.closeSocketsAndSessions() }
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
@@ -83,6 +92,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PATCH /api/sessions/{id}", s.protected(false, s.patchSession))
 	mux.Handle("DELETE /api/sessions/{id}", s.protected(false, s.deleteSession))
 	mux.Handle("POST /api/sessions/{id}/reconnect", s.protected(false, s.reconnectSession))
+	mux.HandleFunc("GET /api/term/{id}", s.terminalSocket)
 	return s.cors(newLimiter(300, globalWindow).wrap(apiPaths(mux)))
 }
 

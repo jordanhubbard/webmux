@@ -1,0 +1,189 @@
+package httpapi
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"time"
+	"unicode/utf8"
+
+	"github.com/gorilla/websocket"
+	"github.com/jordanhubbard/webmux/server/internal/auth"
+	"github.com/jordanhubbard/webmux/server/internal/session"
+)
+
+func (s *Server) closeSocketsAndSessions() error {
+	s.closeOnce.Do(func() {
+		s.socketMu.Lock()
+		s.closing = true
+		for connection := range s.sockets {
+			_ = connection.Close()
+		}
+		s.socketMu.Unlock()
+		s.closeErr = s.sessions.Close()
+		s.socketWorkers.Wait()
+	})
+	return s.closeErr
+}
+
+func (s *Server) socketIdentity(r *http.Request) (owner, mode string, ok bool) {
+	config, err := auth.LoadConfig(s.store)
+	if err != nil {
+		return "", "", false
+	}
+	mode = config.Auth.Mode
+	if ticket := r.URL.Query().Get("ticket"); ticket != "" {
+		owner, ok = s.auth.ConsumeTicket(ticket)
+		if !ok {
+			return "", mode, false
+		}
+	} else if mode == "local" {
+		owner, err = s.auth.Verify(r.URL.Query().Get("token"))
+		if err != nil {
+			return "", mode, false
+		}
+	}
+	if mode == "none" {
+		return "anonymous", mode, true
+	}
+	return owner, mode, config.HasUser(owner)
+}
+func (s *Server) socketAuthorized(owner, mode string) bool {
+	config, err := auth.LoadConfig(s.store)
+	return err == nil && config.Auth.Mode == mode && (mode == "none" || config.HasUser(owner))
+}
+
+func closeSocket(connection *websocket.Conn, code int, reason string) {
+	_ = connection.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, reason), time.Now().Add(time.Second))
+	_ = connection.Close()
+}
+func rejectSocket(connection *websocket.Conn, message string) {
+	_ = connection.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	_ = connection.WriteJSON(session.Event{"type": "error", "message": message})
+	closeSocket(connection, 1008, message)
+}
+
+func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
+	// Register before upgrading so shutdown also waits for in-flight handshakes.
+	s.socketMu.Lock()
+	if s.closing {
+		s.socketMu.Unlock()
+		writeError(w, 503, "Server is shutting down")
+		return
+	}
+	s.socketWorkers.Add(1)
+	s.socketMu.Unlock()
+	defer s.socketWorkers.Done()
+	// The default origin check accepts same-host browser origins and non-browser
+	// clients without Origin. Compression remains disabled, as in the Node server.
+	upgrader := websocket.Upgrader{HandshakeTimeout: 5 * time.Second, ReadBufferSize: 4096, WriteBufferSize: 4096}
+	connection, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	defer connection.Close()
+	s.socketMu.Lock()
+	if s.closing {
+		s.socketMu.Unlock()
+		return
+	}
+	if s.sockets == nil {
+		s.sockets = map[*websocket.Conn]struct{}{}
+	}
+	s.sockets[connection] = struct{}{}
+	s.socketMu.Unlock()
+	defer func() { s.socketMu.Lock(); delete(s.sockets, connection); s.socketMu.Unlock() }()
+	owner, mode, ok := s.socketIdentity(r)
+	if !ok {
+		rejectSocket(connection, "Unauthorized")
+		return
+	}
+	id := r.PathValue("id")
+	viewer, err := s.sessions.Join(owner, id)
+	if err != nil {
+		message := "Session not found"
+		if !errors.Is(err, session.ErrNotFound) {
+			message = "Session unavailable"
+		}
+		rejectSocket(connection, message)
+		return
+	}
+	defer s.sessions.Leave(owner, id, viewer.ID)
+	connection.SetReadLimit(1 << 20)
+	writerDone := make(chan struct{})
+	stopWriter := make(chan struct{})
+	go func() {
+		defer close(writerDone)
+		defer connection.Close()
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-viewer.Done():
+				code, reason := viewer.CloseReason()
+				closeSocket(connection, code, reason)
+				return
+			default:
+			}
+			select {
+			case <-stopWriter:
+				return
+			case <-viewer.Done():
+				code, reason := viewer.CloseReason()
+				closeSocket(connection, code, reason)
+				return
+			case <-ticker.C:
+				if !s.socketAuthorized(owner, mode) {
+					closeSocket(connection, 1008, "Unauthorized")
+					return
+				}
+			case event := <-viewer.Events():
+				if err := connection.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
+					return
+				}
+				if err := connection.WriteJSON(event); err != nil {
+					return
+				}
+			}
+		}
+	}()
+	defer func() { close(stopWriter); _ = connection.Close(); <-writerDone }()
+	for {
+		kind, payload, err := connection.ReadMessage()
+		if err != nil {
+			return
+		}
+		if kind == websocket.TextMessage && !utf8.Valid(payload) {
+			closeSocket(connection, 1007, "Invalid UTF-8")
+			return
+		}
+		if !s.socketAuthorized(owner, mode) {
+			closeSocket(connection, 1008, "Unauthorized")
+			return
+		}
+		var message struct {
+			Type string `json:"type"`
+			Data string `json:"data"`
+			Cols int    `json:"cols"`
+			Rows int    `json:"rows"`
+		}
+		if json.Unmarshal(payload, &message) != nil {
+			continue
+		}
+		switch message.Type {
+		case "input":
+			if message.Data != "" {
+				if err := s.sessions.Input(owner, id, message.Data); errors.Is(err, session.ErrInputBusy) {
+					closeSocket(connection, 1013, "Terminal input is busy")
+					return
+				}
+			}
+		case "resize":
+			if message.Cols > 0 && message.Cols <= 500 && message.Rows > 0 && message.Rows <= 200 {
+				_ = s.sessions.Resize(owner, id, message.Cols, message.Rows)
+			}
+		case "focus":
+			_ = s.sessions.Focus(owner, id, viewer.ID)
+		}
+	}
+}
