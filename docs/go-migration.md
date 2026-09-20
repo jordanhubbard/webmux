@@ -64,12 +64,18 @@ The Unix lifecycle fixture also supports `--make` on macOS. It invokes the real
 Make install/start/stop/uninstall targets with a private launchd identity,
 temporary application root and copied configuration. The already-built native
 binary and web assets are reused (`-o build`); the service serializer and manager
-commands execute normally. Local GUI-domain verification passes two start/stop
-cycles, HTTP/UI checks, configuration/signing-secret preservation, active PTY
+commands execute normally. Local GUI-domain verification passes install, stop,
+start and restart, HTTP/UI checks, configuration/signing-secret preservation, active PTY
 child exit, acknowledged-output transcript draining and uninstall cleanup.
 Repository defaults remain unchanged. This is now a macOS packaging CI step;
-hosted execution, Linux user-manager Make installation and the separate Make
-`restart` command remain unverified.
+hosted execution and Linux user-manager Make installation remain unverified.
+The fixture also exercises the separate Make `restart` command while a terminal
+is active, requiring a different backend PID, restored persistent session,
+preserved application configuration/signing secret, old PTY termination and a
+complete shutdown footer on the transcript containing the acknowledged output.
+It distinguishes that transcript from the new file opened during restoration.
+Uninstall waits for launchd's asynchronous registration removal before deleting
+the fixture directory.
 
 ## Implemented foundation
 

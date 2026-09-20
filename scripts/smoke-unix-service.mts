@@ -44,10 +44,10 @@ function property(name: string): string {
 const domain = darwin ? (launch(['print', `gui/${uid}`], false) ? `gui/${uid}` : `user/${uid}`) : 'system';
 const target = `${domain}/${label}`;
 const definition = path.join(temporary, darwin ? 'fixture.plist' : label);
-function makeControl(action: 'install' | 'start' | 'stop' | 'uninstall'): void {
+function makeControl(action: 'install' | 'start' | 'stop' | 'restart' | 'uninstall'): void {
   assert(makeMode && darwin && domain === `gui/${uid}`, 'Make fixture requires an isolated GUI-domain service');
   const result = spawnSync('make', ['--no-print-directory', '-o', 'build', action,
-    'WEBMUX_BACKEND=go', `NODE=${process.execPath}`, `WEBMUX_DIR=${root}`, `WEBMUX_HOME=${home}`,
+    'WEBMUX_BACKEND=go', 'MAKE=make -o build', `NODE=${process.execPath}`, `WEBMUX_DIR=${root}`, `WEBMUX_HOME=${home}`,
     `PLIST=${definition}`, `LAUNCHD_SVC=${target}`], {
     cwd: path.dirname(sourceRoot), encoding: 'utf8', timeout: 30000,
     env: { ...process.env, JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' },
@@ -185,16 +185,33 @@ try {
     const childPID = Number(output.match(/child:([1-9][0-9]*)/)?.[1]);
     assert(Number.isSafeInteger(childPID) && childPID > 1);
     process.kill(childPID, 0);
-    if (makeMode) makeControl('stop');
+    const restarting = makeMode && round === 1;
+    if (makeMode) makeControl(restarting ? 'restart' : 'stop');
     else if (darwin) launch(['kill', 'SIGTERM', target]);
     else systemctl(['stop', label]);
-    await waitFor(async () => !await healthy(), 'service listener shutdown');
-    await waitFor(async () => {
-      if (!darwin) return property('ActiveState') === 'inactive' && property('MainPID') === '0' &&
-        property('Result') === 'success' && property('ExecMainStatus') === '0';
-      const stopped = launch(['print', target]);
-      return /last exit code = 0/.test(stopped) && !/\bpid = [1-9]/.test(stopped) && !/state = running/.test(stopped);
-    }, 'graceful native exit');
+    if (restarting) {
+      await waitFor(healthy, 'Make restart startup');
+      const restarted = launch(['print', target]);
+      assert.match(restarted, /state = running/);
+      const nextPID = restarted.match(/\bpid = ([1-9][0-9]*)/)?.[1];
+      assert(nextPID && nextPID !== pid, 'Make restart did not replace the backend');
+      assert.equal(await fs.readFile(appFile, 'utf8'), app);
+      assert.equal(await fs.readFile(path.join(home, 'config/auth.yaml'), 'utf8'), auth);
+      await waitFor(async () => {
+        const restored = await fetch(`${base}/api/sessions/${session.id}`, { signal: AbortSignal.timeout(1000) });
+        const value: unknown = await restored.json();
+        return restored.ok && value !== null && typeof value === 'object' && 'id' in value && value.id === session.id
+          && 'state' in value && value.state === 'connected';
+      }, 'persistent terminal restoration after Make restart');
+    } else {
+      await waitFor(async () => !await healthy(), 'service listener shutdown');
+      await waitFor(async () => {
+        if (!darwin) return property('ActiveState') === 'inactive' && property('MainPID') === '0' &&
+          property('Result') === 'success' && property('ExecMainStatus') === '0';
+        const stopped = launch(['print', target]);
+        return /last exit code = 0/.test(stopped) && !/\bpid = [1-9]/.test(stopped) && !/state = running/.test(stopped);
+      }, 'graceful native exit');
+    }
     await waitFor(async () => socket?.readyState === WebSocket.CLOSED, 'terminal socket shutdown');
     socket = undefined;
     await waitFor(async () => {
@@ -203,8 +220,13 @@ try {
     }, 'PTY child exit');
     const directory = path.join(home, 'logs/sessions');
     const files = (await fs.readdir(directory)).filter(name => name.startsWith(`session-${session.id}-`));
-    assert.equal(files.length, 1);
-    const transcript = await fs.readFile(path.join(directory, files[0]!), 'utf8');
+    if (!restarting) assert.equal(files.length, 1);
+    // Restart restores persistent terminals and opens a new transcript. Check
+    // the generation which actually produced this round's acknowledged output.
+    const transcripts = await Promise.all(files.map(file => fs.readFile(path.join(directory, file), 'utf8')));
+    const matching = transcripts.filter(text => text.replaceAll('\r', '').includes(expected));
+    assert.equal(matching.length, 1, 'Expected one transcript containing this generation’s output');
+    const transcript = matching[0]!;
     assert(transcript.replaceAll('\r', '').includes(expected), 'Shutdown lost acknowledged terminal output');
     assert.match(transcript, /\[webmux transcript stopped .* reason=shutdown\]\r?\n$/);
   }
@@ -213,7 +235,7 @@ try {
   socket?.close();
   if (registered && makeMode) {
     makeControl('uninstall');
-    assert.equal(launch(['print', target], false), '', 'Make uninstall retained the fixture service');
+    await waitFor(async () => launch(['print', target], false) === '', 'Make uninstall registration cleanup');
     await assert.rejects(fs.access(definition), { code: 'ENOENT' });
   }
   if (registered && !darwin) {
