@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gorilla/websocket"
+	"github.com/jordanhubbard/webmux/server/internal/agent"
 	"github.com/jordanhubbard/webmux/server/internal/auth"
 	"github.com/jordanhubbard/webmux/server/internal/session"
 )
@@ -55,6 +56,13 @@ func (s *Server) socketAuthorized(owner, mode string) bool {
 }
 
 func closeSocket(connection *websocket.Conn, code int, reason string) {
+	// RFC 6455 leaves 123 bytes for the reason after the status code.
+	if len(reason) > 123 {
+		reason = reason[:123]
+		for !utf8.ValidString(reason) {
+			reason = reason[:len(reason)-1]
+		}
+	}
 	_ = connection.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, reason), time.Now().Add(time.Second))
 	_ = connection.Close()
 }
@@ -102,6 +110,16 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	viewer, err := s.sessions.Join(owner, id)
 	if err != nil {
+		var access *agent.AccessError
+		if errors.As(err, &access) {
+			rejectSocket(connection, access.Message)
+			if access.Status != 500 {
+				if cleanupErr := s.sessions.EnforceAgentAccess(); cleanupErr != nil {
+					s.logger.Warn("clean up denied agent session", "error", cleanupErr)
+				}
+			}
+			return
+		}
 		message := "Session not found"
 		if !errors.Is(err, session.ErrNotFound) {
 			message = "Session unavailable"

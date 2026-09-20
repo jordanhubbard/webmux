@@ -93,6 +93,11 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /api/sessions/{id}", s.protected(false, s.deleteSession))
 	mux.Handle("POST /api/sessions/{id}/reconnect", s.protected(false, s.reconnectSession))
 	mux.HandleFunc("GET /api/term/{id}", s.terminalSocket)
+	mux.Handle("GET /api/agents/config", s.protected(false, s.getAgentConfig))
+	mux.Handle("GET /api/agents/sessions", s.protected(false, s.listAgents))
+	mux.Handle("GET /api/agents/{agentId}/sessions", s.protected(false, s.listAgents))
+	mux.Handle("POST /api/agents/{agentId}/attach", s.protected(false, s.attachAgent))
+	mux.Handle("POST /api/agents/{agentId}/scratch", s.protected(false, s.scratchAgent))
 	return s.cors(newLimiter(300, globalWindow).wrap(apiPaths(mux)))
 }
 

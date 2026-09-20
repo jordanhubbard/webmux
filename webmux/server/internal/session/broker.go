@@ -15,6 +15,7 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
+	"github.com/jordanhubbard/webmux/server/internal/agent"
 	"github.com/jordanhubbard/webmux/server/internal/config"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 	"github.com/jordanhubbard/webmux/server/internal/terminal"
@@ -27,16 +28,17 @@ type process interface {
 }
 type launchFunc func(terminal.LaunchRequest, string) (process, error)
 type run struct {
-	process    process
-	initial    string
-	timer      *time.Timer
-	first      bool
-	input      chan string
-	stopped    chan struct{}
-	stopOnce   sync.Once
-	inputBytes atomic.Int64
-	generation uint64
-	log        *transcriptLog
+	process     process
+	initial     string
+	timer       *time.Timer
+	first       bool
+	input       chan string
+	stopped     chan struct{}
+	stopOnce    sync.Once
+	inputBytes  atomic.Int64
+	generation  uint64
+	log         *transcriptLog
+	replayUntil time.Time
 }
 
 func (r *run) stop() {
@@ -61,15 +63,21 @@ type entry struct {
 // not hold it. A run pointer is a generation token: old output and exit events
 // can never mutate a reconnected or deleted session.
 type Broker struct {
-	mu      sync.Mutex
-	store   *storage.Store
-	logger  *slog.Logger
-	launch  launchFunc
-	entries map[string]*entry
-	order   []string
-	closed  bool
-	workers sync.WaitGroup
-	openLog func(string, string, bool) (transcriptSink, error)
+	mu            sync.Mutex
+	store         *storage.Store
+	logger        *slog.Logger
+	launch        launchFunc
+	entries       map[string]*entry
+	order         []string
+	closed        bool
+	workers       sync.WaitGroup
+	openLog       func(string, string, bool) (transcriptSink, error)
+	agents        *agent.Service
+	agentMu       sync.Mutex
+	policyStop    chan struct{}
+	policyStarted bool
+	activity      map[agentActivityKey]pendingAgentActivity
+	activityWake  chan struct{}
 }
 
 func New(store *storage.Store, logger *slog.Logger) (*Broker, error) {
@@ -82,7 +90,7 @@ func newBroker(store *storage.Store, logger *slog.Logger, launch launchFunc) (*B
 	if logger == nil {
 		logger = slog.Default()
 	}
-	b := &Broker{store: store, logger: logger, launch: launch, entries: map[string]*entry{}, openLog: openTranscript}
+	b := &Broker{store: store, logger: logger, launch: launch, entries: map[string]*entry{}, openLog: openTranscript, agents: agent.New(store, logger), policyStop: make(chan struct{})}
 	var saved document
 	if err := store.ReadSessions(&saved); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("load terminal sessions: %w", err)
@@ -101,11 +109,15 @@ func newBroker(store *storage.Store, logger *slog.Logger, launch launchFunc) (*B
 // TLS before reconnecting persisted sessions. Agent recovery is owned by the
 // agent service and must never be inferred from a saved exec argv alone.
 func (b *Broker) Restore() error {
+	if err := b.EnforceAgentAccess(); err != nil {
+		return err
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.closed {
 		return ErrClosed
 	}
+	b.startPolicyLocked()
 	for _, id := range b.order {
 		e := b.entries[id]
 		if e.run != nil {
@@ -278,7 +290,7 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 		b.logger.Warn("terminal launch failed", "session_id", e.value.ID, "error", err)
 		return err
 	}
-	r := &run{process: p, initial: initial, first: true, input: make(chan string, 256), stopped: make(chan struct{}), generation: e.generation}
+	r := &run{process: p, initial: initial, first: true, input: make(chan string, 256), stopped: make(chan struct{}), generation: e.generation, replayUntil: time.Now().Add(1500 * time.Millisecond)}
 	e.run = r
 	if b.loggingEnabledLocked() {
 		b.openTranscriptLocked(e, r)
@@ -291,6 +303,8 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 }
 
 func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
+	b.agentMu.Lock()
+	defer b.agentMu.Unlock()
 	b.mu.Lock()
 	if b.closed {
 		b.mu.Unlock()
@@ -302,8 +316,10 @@ func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
 		return Session{}, err
 	}
 	if e.value.Agent() {
-		b.mu.Unlock()
-		return Session{}, invalid("Agent sessions require the agent service")
+		if _, err := b.agents.Access(e.value.AgentID); err != nil {
+			b.mu.Unlock()
+			return Session{}, err
+		}
 	}
 	old := e.run
 	e.run = nil
@@ -329,7 +345,15 @@ func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
 	if current != e || e.run != nil {
 		return e.value.clone(), nil
 	}
+	if e.value.Agent() {
+		if _, err := b.agents.Access(e.value.AgentID); err != nil {
+			return Session{}, err
+		}
+	}
 	err = b.startLocked(e, password, "")
+	if err == nil {
+		b.markAttachReadyLocked(e)
+	}
 	if persistErr := b.persistLocked(); persistErr != nil {
 		return Session{}, persistErr
 	}
@@ -381,6 +405,9 @@ func (b *Broker) Patch(owner, id string, patch Patch) (Session, error) {
 }
 
 func (b *Broker) Delete(owner, id string) error {
+	return b.deleteSession(owner, id, 1000, "Session deleted")
+}
+func (b *Broker) deleteSession(owner, id string, code int, reason string) error {
 	b.mu.Lock()
 	if b.closed {
 		b.mu.Unlock()
@@ -408,12 +435,31 @@ func (b *Broker) Delete(owner, id string) error {
 		for item, pos := range oldPositions {
 			item.value.Row, item.value.Col = pos[0], pos[1]
 		}
+		// A failed disk write must not keep a revoked agent process accessible.
+		// Retain its saved record for a later cleanup retry, but revoke viewers
+		// and the process immediately.
+		if code == 1008 {
+			r := e.run
+			e.run = nil
+			b.closeViewersLocked(e, code, reason)
+			e.value.State = "disconnected"
+			e.value.UpdatedAt = now()
+			if r != nil {
+				r.stop()
+				r.log.stop("deleted")
+			}
+			b.mu.Unlock()
+			if r != nil {
+				_ = r.process.Close()
+			}
+			return err
+		}
 		b.mu.Unlock()
 		return err
 	}
 	r := e.run
 	e.run = nil
-	b.closeViewersLocked(e, 1000, "Session deleted")
+	b.closeViewersLocked(e, code, reason)
 	if r != nil {
 		r.stop()
 		r.log.stop("deleted")
@@ -456,6 +502,11 @@ func (b *Broker) Input(owner, id, data string) error {
 	}
 	select {
 	case current.input <- data:
+		b.mu.Lock()
+		if e := b.entries[id]; !b.closed && e != nil && e.run == current {
+			b.recordAgentActivityLocked(e, current, true)
+		}
+		b.mu.Unlock()
 		return nil
 	case <-current.stopped:
 		current.inputBytes.Add(-size)
@@ -588,6 +639,7 @@ func (b *Broker) output(id string, r *run, data string) {
 	}
 	e.scrollback = trimScrollback(e.scrollback + data)
 	b.broadcastLocked(e, Event{"type": "output", "session_id": id, "data": data})
+	b.recordAgentActivityLocked(e, r, false)
 }
 func trimScrollback(value string) string {
 	// JS bounds this buffer in UTF-16 code units. Keep the same bound without
@@ -657,6 +709,7 @@ func (b *Broker) Close() error {
 		return nil
 	}
 	b.closed = true
+	close(b.policyStop)
 	var processes []process
 	for _, e := range b.entries {
 		b.closeViewersLocked(e, 1001, "Server shutting down")

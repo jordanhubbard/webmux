@@ -4,13 +4,17 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/jordanhubbard/webmux/server/internal/agent"
 	"github.com/jordanhubbard/webmux/server/internal/config"
 	"github.com/jordanhubbard/webmux/server/internal/session"
 )
 
 func (s *Server) sessionError(w http.ResponseWriter, err error, message string) {
 	var validation *config.ValidationError
+	var access *agent.AccessError
 	switch {
+	case errors.As(err, &access):
+		writeError(w, access.Status, access.Message)
 	case errors.Is(err, session.ErrNotFound):
 		writeError(w, 404, "Session not found")
 	case errors.As(err, &validation):

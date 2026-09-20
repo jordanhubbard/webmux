@@ -61,18 +61,24 @@ scrollback-to-live delivery, input, resize, viewer presence/focus and deletion.
 Transcript logging now follows the configured launch default, supports manual
 pause/resume into the same file, and rotates files across launches. It preserves
 headers/footers, audit event fields and owner-only POSIX permissions. Other
-application routes, static UI serving and agent-service integration remain pending.
+application routes and static UI serving remain pending.
 
 The internal agent service now normalizes agent configuration independently,
 checks the multi-user access policy, discovers tmux sessions, assigns duplicate
 display names, resolves pane directories and builds attach argument vectors.
 It reads existing base64url-named JSON status files and atomically updates them
-while preserving unknown hook metadata. Status inference preserves waiting
-slop, recent/stale boundaries and suppression of replay-only output. Tests use
-isolated homes and a fake command runner; they do not contact operator tmux
-sockets. Agent HTTP routes, broker attach/scratch lifecycle, policy reloads and
-debounced live-activity recording still need integration. Locale-dependent label
-ordering and non-ISO legacy timestamps also require differential coverage;
+while preserving unknown hook metadata. Agent HTTP routes now support config,
+discovery, attach and scratch. The broker reuses owner-scoped panes, relaunches
+changed attach commands and keeps live scratch shells when their selected cwd
+changes. Agent sessions remain outside the terminal grid and startup reconnect.
+Access checks cover HTTP, WebSocket joins and reconnect; a one-second policy
+poll removes revoked agents and closes viewers with code 1008. Malformed app
+configuration blocks new access without deleting recoverable saved records.
+Activity writes debounce for 200 ms, suppress output during the first 1.5 seconds
+of a launch and flush on shutdown. Status inference preserves waiting slop and
+recent/stale boundaries. Tests use isolated homes and fixture processes; they
+do not contact operator tmux sockets. Locale-dependent label ordering and
+non-ISO legacy timestamps still require differential coverage;
 the initial implementation uses English collation and RFC3339 timestamps.
 
 The internal terminal process layer now supports Unix PTYs and Windows ConPTY,
@@ -109,6 +115,11 @@ reconnect rotation, deletion footers and POSIX permissions. The broker tests
 cover the replay/live boundary, bounded queues, disk failures, drain races and
 shutdown flushing. Transcript filenames retain the legacy pattern; launch
 generation numbers are per-runtime identifiers, not persisted sequence numbers.
+An isolated Go tmux protocol fixture also runs through both servers to compare
+agent discovery, errors, sizing, attach/replacement, interactive output, scratch
+cwd/reuse, status metadata and multi-user revocation. It never opens a real tmux
+socket. The terminal size contract waits for Node's asynchronous size-cache
+update while retaining an exact dimension assertion and a ten-second deadline.
 Fixtures use temporary homes and never
 connect to real terminal or desktop hosts. `npm run typecheck` checks the
 TypeScript contract harness as well as the application.
@@ -181,6 +192,12 @@ still need conversion or removal as the Go deployment tooling replaces them.
   stream. Status reads are limited to 1 MiB and confined to the agent directory;
   writes use atomic replacement and owner-only POSIX file permissions. The
   configured home and agent directories remain operator-controlled.
+- Concurrent attach/scratch requests serialize pane selection. If persisting a
+  policy-driven deletion fails, Go still closes viewers and the revoked process,
+  retaining the record for a later cleanup retry. Agent status writes occur
+  outside the session lock and shutdown waits for their completion.
+
+These are intentional changes, not claims of byte-for-byte error compatibility.
 
 ### Platform verification
 
@@ -189,7 +206,8 @@ font-path validation and redirected-standard-handle inheritance failures.
 Font validation now rejects leading separators on every platform. ConPTY
 startup explicitly supplies null standard handles, following the
 [Microsoft terminal maintainers' guidance](https://github.com/microsoft/terminal/discussions/15814),
-so child terminal I/O does not inherit redirected server streams. These changes
-still need a successful Windows runtime CI run; cross-compilation is insufficient.
-
-These are intentional changes, not claims of byte-for-byte error compatibility.
+so child terminal I/O does not inherit redirected server streams. Linux and
+Windows Go race tests and vet then passed at 150073e, including native ConPTY
+tests. Both jobs subsequently failed in the Node differential resize assertion;
+the bounded asynchronous assertion above addresses that test race. A fully green
+cross-platform differential run is still required.

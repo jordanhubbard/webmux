@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
-import { cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,6 +14,8 @@ import WebSocket from 'ws';
 const root = path.resolve(import.meta.dirname, '..');
 const temporary = await mkdtemp(path.join(os.tmpdir(), 'webmux-auth-contract-'));
 const binary = path.join(temporary, process.platform === 'win32' ? 'webmux.exe' : 'webmux');
+const agentFixtureDir = path.join(temporary, 'agent-bin');
+const agentFixture = path.join(agentFixtureDir, process.platform === 'win32' ? 'tmux.exe' : 'tmux');
 const secret = 'isolated-contract-fixture-not-a-production-secret';
 type Backend = 'node' | 'go';
 type Mode = 'local' | 'none';
@@ -486,8 +488,16 @@ async function terminalContract(backend: Backend): Promise<void> {
     first.socket.send(JSON.stringify({ type: 'input', data: 'hello\r' }));
     await waitSocket(first, () => first.output.includes('fixture-reply:hello:λ😀'), 'interactive output');
     first.socket.send(JSON.stringify({ type: 'resize', cols: 99, rows: 31 }));
-    first.socket.send(JSON.stringify({ type: 'input', data: 'size\r' }));
-    await waitSocket(first, () => first.output.includes('fixture-size:99x31'), 'terminal resize');
+    // ConPTY delivery and Node's SIGWINCH-driven stdout size cache update
+    // asynchronously. Query until the child observes the requested dimensions;
+    // the protocol has no resize acknowledgement to await before sending input.
+    const resizeDeadline = Date.now() + 10_000;
+    while (!first.output.includes('fixture-size:99x31')) {
+      if (first.error) throw first.error;
+      assert.ok(Date.now() < resizeDeadline, `terminal resize: ${JSON.stringify(first.events)}`);
+      first.socket.send(JSON.stringify({ type: 'input', data: 'size\r' }));
+      await delay(50);
+    }
     first.socket.send(JSON.stringify({ type: 'transcript_toggle' }));
     await waitSocket(first, () => first.events.some(event => event.type === 'transcript_status' && event.transcript_enabled === false), 'transcript pause');
     const paused = first.events.find(event => event.type === 'transcript_status' && event.transcript_enabled === false);
@@ -549,6 +559,78 @@ async function terminalContract(backend: Backend): Promise<void> {
   }
 }
 
+async function agentContract(backend: Backend): Promise<void> {
+  const cwd = await mkdtemp(path.join(temporary, 'agent-cwd-'));
+  const server = await start(backend, 'local', undefined, {
+    PATH: `${agentFixtureDir}${path.delimiter}${process.env.PATH ?? ''}`,
+    SHELL: agentFixture, COMSPEC: agentFixture, WEBMUX_AGENT_FIXTURE_CWD: cwd,
+  });
+  const clients: SocketProbe[] = [];
+  try {
+    const owner = stringField((await server.request('POST', '/api/auth/bootstrap', { username: 'owner', password: 'password' })).body, 'token');
+    const call = (method: string, route: string, body?: JSONRecord) => server.request(method, route, body, owner);
+    assert.equal((await server.request('GET', '/api/agents/config')).status, 401);
+    assert.deepEqual(await call('GET', '/api/agents/sessions'), { status: 404, body: { error: 'Agent sessions are not enabled' } });
+    const appPath = path.join(server.home, 'config', 'app.yaml');
+    const app = record(yaml.load(await readFile(appPath, 'utf8')));
+    record(app.app).agents = { enabled: true, combined_pane: true, disable_in_multi_user_mode: true, definitions: [{ id: 'alpha', label: 'Alpha', plural_label: 'Alphas', badge: 'A', tmux_socket: 'fixture-only', workspace: 'agents', enabled: true }] };
+    await writeFile(`${appPath}.contract`, yaml.dump(app));
+    await rename(`${appPath}.contract`, appPath);
+    assert.deepEqual(await call('GET', '/api/agents/config'), { status: 200, body: record(app.app).agents });
+    assert.deepEqual(await call('GET', '/api/agents/missing/sessions'), { status: 404, body: { error: 'Agent definition not found' } });
+    const listed = await call('GET', '/api/agents/alpha/sessions');
+    assert.equal(listed.status, 200);
+    assert.ok(Array.isArray(listed.body));
+    assert.deepEqual(listed.body.map(item => record(item).name), ['alpha-task-a', 'alpha-task-b']);
+    assert.deepEqual((await call('GET', '/api/agents/sessions')).body, listed.body);
+    assert.deepEqual(await call('POST', '/api/agents/alpha/attach', {}), { status: 400, body: { error: 'name is required' } });
+    assert.deepEqual(await call('POST', '/api/agents/alpha/attach', { name: 'missing' }), { status: 404, body: { error: 'Alpha session not found' } });
+    assert.deepEqual(await call('POST', '/api/agents/alpha/scratch', { selectedName: null }), { status: 400, body: { error: 'selectedName must be a string' } });
+    const statusDir = path.join(server.home, 'data', 'agent-status', 'alpha');
+    await mkdir(statusDir, { recursive: true });
+    const statusFile = path.join(statusDir, `${Buffer.from('alpha-task-a').toString('base64url')}.json`);
+    await writeFile(statusFile, JSON.stringify({ agent_id: 'alpha', name: 'alpha-task-a', status: 'waiting', source: 'hook', updated_at: new Date().toISOString(), extension: 'preserved' }));
+    const attached = await call('POST', '/api/agents/alpha/attach', { name: 'alpha-task-a', cols: 999, rows: 1 });
+    assert.equal(attached.status, 201);
+    const id = stringField(attached.body, 'id');
+    const value = record(attached.body);
+    assert.equal(value.cols, 240); assert.equal(value.rows, 10); assert.equal(value.state, 'connected');
+    assert.equal(value.agent_role, 'attach'); assert.equal(value.persistent, false);
+    assert.equal(value.workspace, 'agents'); assert.deepEqual(value.exec_argv, ['tmux', '-L', 'fixture-only', 'attach-session', '-t', 'alpha-task-a']);
+    const client = probe(server.socket(`/api/term/${id}?token=${encodeURIComponent(owner)}`)); clients.push(client);
+    await waitSocket(client, () => client.output.includes('agent-fixture-ready'), 'agent attachment output');
+    client.socket.send(JSON.stringify({ type: 'input', data: 'hello\r' }));
+    await waitSocket(client, () => client.output.includes('agent-fixture-reply:hello'), 'agent interactive output');
+    await waitFile(statusFile, 'last_input_at');
+    const activity = record(JSON.parse(await readFile(statusFile, 'utf8')) as unknown);
+    assert.equal(activity.status, 'working'); assert.equal(activity.source, 'webmux'); assert.equal(activity.extension, 'preserved');
+    await delay(1600); // Pass the intentional replay suppression window.
+    client.socket.send(JSON.stringify({ type: 'input', data: 'live-output\r' }));
+    await waitSocket(client, () => client.output.includes('agent-fixture-reply:live-output'), 'live agent output');
+    await waitFile(statusFile, 'last_output_source');
+    assert.equal(record(JSON.parse(await readFile(statusFile, 'utf8')) as unknown).last_output_source, 'live');
+    const reused = await call('POST', '/api/agents/alpha/attach', { name: 'alpha-task-a' });
+    assert.equal(reused.status, 200); assert.equal(stringField(reused.body, 'id'), id);
+    const outputIndex = client.output.length;
+    const replaced = await call('POST', '/api/agents/alpha/attach', { name: 'alpha-task-b', cols: 100.9, rows: 30.9 });
+    assert.equal(replaced.status, 200); assert.equal(stringField(replaced.body, 'id'), id);
+    assert.equal(record(replaced.body).cols, 100); assert.equal(record(replaced.body).rows, 30);
+    await waitSocket(client, () => client.output.slice(outputIndex).includes('agent-fixture-ready'), 'agent replacement output');
+    const scratch = await call('POST', '/api/agents/alpha/scratch', { selectedName: 'alpha-task-a' });
+    assert.equal(scratch.status, 201); assert.equal(record(scratch.body).exec_cwd, cwd);
+    assert.equal(record(scratch.body).agent_role, 'scratch'); assert.equal(record(scratch.body).col, 1);
+    const scratchAgain = await call('POST', '/api/agents/alpha/scratch', {});
+    assert.equal(scratchAgain.status, 200); assert.equal(stringField(scratchAgain.body, 'id'), stringField(scratch.body, 'id'));
+    assert.deepEqual(await call('GET', '/api/sessions'), { status: 200, body: [] });
+    assert.equal((await call('POST', '/api/auth/register', { username: 'member', password: 'password' })).status, 201);
+    assert.deepEqual(await call('GET', '/api/agents/sessions'), { status: 403, body: { error: 'Agent sessions are disabled in multi-user mode' } });
+    await waitSocket(client, () => client.closed !== undefined, 'agent policy revocation');
+    assert.equal(client.closed, 1008);
+    assert.equal((await call('GET', `/api/sessions/${id}`)).status, 404);
+    assert.equal((await call('GET', '/api/agents/config')).status, 200);
+  } finally { for (const client of clients) client.socket.terminate(); await server.close(); }
+}
+
 async function waitFile(file: string, content: string): Promise<void> {
   const deadline = Date.now() + 10_000;
   for (;;) {
@@ -562,6 +644,10 @@ try {
   const build = spawnSync('go', ['build', '-o', binary, './cmd/webmux'], { cwd: path.join(root, 'server'), stdio: 'inherit' });
   if (build.error) throw build.error;
   assert.equal(build.status, 0, 'Go build failed');
+  await mkdir(agentFixtureDir);
+  const fixtureBuild = spawnSync('go', ['build', '-o', agentFixture, './internal/agent/testdata/tmux'], { cwd: path.join(root, 'server'), stdio: 'inherit' });
+  if (fixtureBuild.error) throw fixtureBuild.error;
+  assert.equal(fixtureBuild.status, 0, 'Agent fixture build failed');
   for (const backend of ['node', 'go'] as const) {
     await localContract(backend);
     await trustedContract(backend);
@@ -569,7 +655,8 @@ try {
     await settingsContract(backend);
     await sessionContract(backend);
     await terminalContract(backend);
-    console.log(`${backend}: HTTP, terminal WebSocket and cross-backend restart contracts passed`);
+    await agentContract(backend);
+    console.log(`${backend}: HTTP, terminal WebSocket, agent and cross-backend restart contracts passed`);
   }
 } finally {
   await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

@@ -51,10 +51,10 @@ func (b *Broker) Join(owner, id string) (*Viewer, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Agent access policy is handled by the forthcoming agent integration.
-	// Until then, never expose a restored agent PTY through the generic route.
 	if e.value.Agent() {
-		return nil, invalid("Agent session unavailable")
+		if _, err := b.agents.Access(e.value.AgentID); err != nil {
+			return nil, err
+		}
 	}
 	viewerID, err := uuid()
 	if err != nil {
