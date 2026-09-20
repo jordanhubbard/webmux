@@ -22,6 +22,10 @@ directory. The verifier passes the existing local native archive and regression
 fixtures for incomplete/corrupted sets; TypeScript, all eight helper tests and
 workflow parsing pass locally. Hosted execution is pending. Native release
 publication and the default switch remain gated on the full migration checks.
+Windows x64 at 1569987 reached this gate after passing installed MSI and service
+checks, then correctly rejected an extra `.wixpdb` debug database. Packaging now
+passes `-pdbtype none` to WiX, and a regression case rejects debug output from the
+native upload set. Hosted verification of that correction is pending.
 
 ## Completion requirements
 
@@ -55,6 +59,17 @@ The old jobs remained queued without assigned runners; deprecation may contribut
 but the queue cause is not proven. Both workflows retain
 `MACOSX_DEPLOYMENT_TARGET=14.0` for native macOS build tools. New-runner execution
 and compatibility on an actual macOS 14 machine still need verification.
+
+The Unix lifecycle fixture also supports `--make` on macOS. It invokes the real
+Make install/start/stop/uninstall targets with a private launchd identity,
+temporary application root and copied configuration. The already-built native
+binary and web assets are reused (`-o build`); the service serializer and manager
+commands execute normally. Local GUI-domain verification passes two start/stop
+cycles, HTTP/UI checks, configuration/signing-secret preservation, active PTY
+child exit, acknowledged-output transcript draining and uninstall cleanup.
+Repository defaults remain unchanged. This is now a macOS packaging CI step;
+hosted execution, Linux user-manager Make installation and the separate Make
+`restart` command remain unverified.
 
 ## Implemented foundation
 

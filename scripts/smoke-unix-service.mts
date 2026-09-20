@@ -12,9 +12,12 @@ import { renderService } from './render-service.mts';
 
 assert(process.platform === 'darwin' || process.platform === 'linux', 'Unix service smoke requires macOS or Linux');
 const darwin = process.platform === 'darwin';
-const root = path.resolve(import.meta.dirname, '../webmux');
-await fs.access(path.join(root, 'bin/webmux'));
+const makeMode = process.argv.includes('--make');
+assert(!makeMode || darwin, 'Make installer fixture currently requires macOS');
+const sourceRoot = path.resolve(import.meta.dirname, '../webmux');
+await fs.access(path.join(sourceRoot, 'bin/webmux'));
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'webmux-unix-service-'));
+const root = makeMode ? path.join(temporary, 'application') : sourceRoot;
 const home = path.join(temporary, 'state & config');
 const nonce = `${process.pid}-${randomBytes(6).toString('hex')}`;
 const label = darwin ? `com.webmux.smoke.${nonce}` : `webmux-smoke-${nonce}.service`;
@@ -41,6 +44,17 @@ function property(name: string): string {
 const domain = darwin ? (launch(['print', `gui/${uid}`], false) ? `gui/${uid}` : `user/${uid}`) : 'system';
 const target = `${domain}/${label}`;
 const definition = path.join(temporary, darwin ? 'fixture.plist' : label);
+function makeControl(action: 'install' | 'start' | 'stop' | 'uninstall'): void {
+  assert(makeMode && darwin && domain === `gui/${uid}`, 'Make fixture requires an isolated GUI-domain service');
+  const result = spawnSync('make', ['--no-print-directory', '-o', 'build', action,
+    'WEBMUX_BACKEND=go', `NODE=${process.execPath}`, `WEBMUX_DIR=${root}`, `WEBMUX_HOME=${home}`,
+    `PLIST=${definition}`, `LAUNCHD_SVC=${target}`], {
+    cwd: path.dirname(sourceRoot), encoding: 'utf8', timeout: 30000,
+    env: { ...process.env, JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' },
+  });
+  if (result.error) throw result.error;
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+}
 let registered = false;
 let socket: WebSocket | undefined;
 async function waitFor(check: () => Promise<boolean>, description: string): Promise<void> {
@@ -51,12 +65,18 @@ async function waitFor(check: () => Promise<boolean>, description: string): Prom
   }
 }
 try {
+  if (makeMode) {
+    assert.equal(domain, `gui/${uid}`, 'Make installer needs a GUI launchd domain');
+    await fs.mkdir(path.join(root, 'service'), { recursive: true });
+    for (const entry of ['bin', 'web', 'config.defaults']) await fs.symlink(path.join(sourceRoot, entry), path.join(root, entry));
+  }
   if (darwin) assert.equal(launch(['print', target], false), '', 'Fixture service label already exists');
   else {
     assert(uid > 0, 'Run the Linux fixture as an unprivileged user with noninteractive sudo');
     assert.equal(property('LoadState'), 'not-found', 'Fixture unit already exists');
   }
-  await fs.cp(path.join(root, 'config.defaults'), path.join(home, 'config'), { recursive: true });
+  await fs.cp(path.join(sourceRoot, 'config.defaults'), path.join(home, 'config'), { recursive: true });
+  assert((await fs.lstat(path.join(home, 'config'))).isDirectory(), 'Fixture configuration must be a private directory, not a symlink');
   await fs.mkdir(path.join(home, 'logs'), { recursive: true });
   const listener = net.createServer(); listener.listen(0, '127.0.0.1'); await once(listener, 'listening');
   const address = listener.address(); assert(address && typeof address === 'object');
@@ -70,7 +90,7 @@ try {
   await fs.writeFile(path.join(home, 'config/auth.yaml'), 'auth:\n  mode: none\n  users: []\n');
   const environment = { HTTP_PORT: String(address.port), HTTPS_PORT: '0', JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' };
   const templateName = darwin ? 'com.webmux.server.plist.native.template' : 'webmux.service.native.template';
-  let template = renderService(await fs.readFile(path.join(root, 'service', templateName), 'utf8'), darwin ? 'darwin' : 'linux', {
+  let template = renderService(await fs.readFile(path.join(sourceRoot, 'service', templateName), 'utf8'), darwin ? 'darwin' : 'linux', {
     root, home, node: process.execPath, searchPath: process.env.PATH ?? '/usr/bin:/bin',
   });
   if (darwin) {
@@ -102,7 +122,13 @@ try {
     } catch { return false; }
   }
   registered = true;
-  if (darwin) launch(['bootstrap', domain, definition]);
+  if (makeMode) {
+    // Supply the same validated template with only fixture identity/environment
+    // substitutions. Make still invokes the real serializer and service commands.
+    await fs.writeFile(path.join(root, 'service', templateName), template);
+    await fs.unlink(definition);
+    makeControl('install');
+  } else if (darwin) launch(['bootstrap', domain, definition]);
   else {
     systemctl(['link', '--runtime', definition]);
     systemctl(['daemon-reload']);
@@ -110,7 +136,8 @@ try {
   let auth = '';
   let previousPID = '';
   for (let round = 0; round < 2; round++) {
-    if (darwin) { if (round) launch(['kickstart', target]); }
+    if (makeMode) { if (round) makeControl('start'); }
+    else if (darwin) { if (round) launch(['kickstart', target]); }
     else systemctl(['start', label]);
     await waitFor(healthy, 'native service startup');
     let pid: string | undefined;
@@ -158,7 +185,8 @@ try {
     const childPID = Number(output.match(/child:([1-9][0-9]*)/)?.[1]);
     assert(Number.isSafeInteger(childPID) && childPID > 1);
     process.kill(childPID, 0);
-    if (darwin) launch(['kill', 'SIGTERM', target]);
+    if (makeMode) makeControl('stop');
+    else if (darwin) launch(['kill', 'SIGTERM', target]);
     else systemctl(['stop', label]);
     await waitFor(async () => !await healthy(), 'service listener shutdown');
     await waitFor(async () => {
@@ -180,9 +208,14 @@ try {
     assert(transcript.replaceAll('\r', '').includes(expected), 'Shutdown lost acknowledged terminal output');
     assert.match(transcript, /\[webmux transcript stopped .* reason=shutdown\]\r?\n$/);
   }
-  console.log(`Native Unix service template passed startup, UI, active PTY shutdown, transcript drain and restart in ${darwin ? domain : 'systemd (unprivileged service)'}`);
+  console.log(`Native Unix ${makeMode ? 'Make installer' : 'service template'} passed startup, UI, active PTY shutdown, transcript drain and restart in ${darwin ? domain : 'systemd (unprivileged service)'}`);
 } finally {
   socket?.close();
+  if (registered && makeMode) {
+    makeControl('uninstall');
+    assert.equal(launch(['print', target], false), '', 'Make uninstall retained the fixture service');
+    await assert.rejects(fs.access(definition), { code: 'ENOENT' });
+  }
   if (registered && !darwin) {
     systemctl(['stop', label]);
     systemctl(['disable', '--runtime', label]);

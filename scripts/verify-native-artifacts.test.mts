@@ -32,6 +32,10 @@ test('native upload gate rejects incomplete, stale, empty and corrupted release 
     fs.writeFileSync(path.join(directory, 'webmux-old-native.zip'), 'stale');
     assert.throws(verify, /upload set/);
     fs.unlinkSync(path.join(directory, 'webmux-old-native.zip'));
+    const debug = archive.replace(/\.zip$/, '.wixpdb');
+    fs.writeFileSync(path.join(directory, debug), 'installer debug database');
+    assert.throws(verify, /upload set/);
+    fs.unlinkSync(path.join(directory, debug));
     fs.writeFileSync(path.join(directory, 'legacy.zip'), 'unrelated legacy artifact');
     verify();
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }

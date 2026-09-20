@@ -57,6 +57,9 @@ jobs:
       - name: Verify native Unix service lifecycle
         if: runner.os != 'Windows'
         run: node scripts/smoke-unix-service.mts
+      - name: Verify native Make service installation
+        if: runner.os == 'macOS'
+        run: node scripts/smoke-unix-service.mts --make
       - name: Install WiX for native MSI
         if: runner.os == 'Windows'
         shell: pwsh

@@ -67,6 +67,7 @@ try {
 
   & $WixCommand build (Join-Path $Repository 'packaging/windows/webmux.wxs') `
     -arch $WixArch `
+    -pdbtype none `
     -d "Version=$Version" `
     -bindpath "Stage=$Stage" `
     -out $Installer
