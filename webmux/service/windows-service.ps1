@@ -203,7 +203,8 @@ function Reconfigure-WebMuxService {
       Stop-Service -Name $ServiceName
       $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
     }
-    [IO.File]::Replace($temporary, $ConfigPath, $null)
+    # PowerShell coerces $null to an empty string for this .NET string parameter.
+    [IO.File]::Replace($temporary, $ConfigPath, [System.Management.Automation.Language.NullString]::Value)
     $replaced = $true
     if ($wasRunning) {
       Start-Service -Name $ServiceName
@@ -218,7 +219,7 @@ function Reconfigure-WebMuxService {
         $current.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
       }
       [IO.File]::WriteAllBytes($temporary, $original)
-      [IO.File]::Replace($temporary, $ConfigPath, $null)
+      [IO.File]::Replace($temporary, $ConfigPath, [System.Management.Automation.Language.NullString]::Value)
     }
     if ($wasRunning -and (Get-WebMuxService).Status -eq 'Stopped') {
       Start-Service -Name $ServiceName

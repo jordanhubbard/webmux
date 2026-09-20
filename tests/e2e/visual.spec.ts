@@ -2,6 +2,7 @@ import { test, expect, type Page, type TestInfo } from '@playwright/test';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
+import { startVisualVnc } from './visual-vnc-fixture.mts';
 
 test.skip(process.env.WEBMUX_VISUAL_PARITY !== '1', 'Run through test:visual-parity to create the Node baseline first');
 test.use({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, locale: 'en-US', timezoneId: 'UTC', colorScheme: 'dark', contextOptions: { reducedMotion: 'reduce' } });
@@ -183,5 +184,42 @@ test('active terminal, search and reconnect match Node exactly', async ({ page, 
     expect(errors).toEqual([]);
   } finally {
     expect((await request.delete(`/api/sessions/${session.id}`)).ok()).toBe(true);
+  }
+});
+
+test('active VNC pixels and input match Node exactly', async ({ page, request }, info) => {
+  test.skip(process.env.WEBMUX_E2E_AUTH === 'local', 'Desktop uses the trusted fixture');
+  const desktop = await startVisualVnc();
+  let id: string | undefined;
+  try {
+    const response = await request.post('/api/vnc/sessions', { data: { hostname: '127.0.0.1', vnc_port: desktop.port } });
+    expect(response.ok()).toBe(true);
+    id = (await response.json() as { id: string }).id;
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Desktops', exact: true }).click();
+    const canvas = page.locator('canvas').filter({ visible: true }).first();
+    await expect.poll(() => canvas.evaluate(node => {
+      const pixel = (node as HTMLCanvasElement).getContext('2d')?.getImageData(0, 0, 1, 1).data;
+      return pixel ? Array.from(pixel) : [];
+    })).toEqual([48, 80, 112, 255]);
+    await captureBoth(page, info, 'vnc-active');
+    // The thumbnail itself disables pointer events; double-click its body.
+    await canvas.locator('..').locator('..').locator('..').dblclick({ position: { x: 100, y: 100 } });
+    await expect(page.getByTitle('Back to grid', { exact: true })).toBeVisible();
+    const fullscreen = page.locator('canvas').filter({ visible: true }).first();
+    await expect.poll(() => fullscreen.evaluate(node => (node as HTMLCanvasElement).width)).toBe(320);
+    await fullscreen.click({ position: { x: 20, y: 20 } });
+    await page.keyboard.press('a');
+    await expect.poll(() => desktop.keys.includes(97)).toBe(true);
+    await expect.poll(() => desktop.pointers.some(mask => (mask & 1) !== 0)).toBe(true);
+    await page.mouse.move(0, 0);
+    await captureBoth(page, info, 'vnc-fullscreen');
+    expect(desktop.errors).toEqual([]);
+  } finally {
+    try {
+      if (id) expect((await request.delete(`/api/vnc/sessions/${id}`)).ok()).toBe(true);
+    } finally {
+      await desktop.close();
+    }
   }
 });

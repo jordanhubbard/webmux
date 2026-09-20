@@ -311,11 +311,18 @@ reconnects and verifies that the fresh screen replaces the prior output. The
 fixture hides its cursor through ordinary terminal escape sequences so blinking
 does not make the reference image time-dependent. No terminal output or socket
 is mocked, and the session is deleted during cleanup. TypeScript and the full
-22-state visual sequence pass locally; hosted coverage of these additions is
-still pending.
+22-state visual sequence pass locally and on Linux and Windows CI at 24cda10.
+
+Four additional captures exercise the real noVNC client against an isolated
+RFB 3.8 server through each backend's WebSocket proxy. The fixture supplies a
+fixed raw-pixel framebuffer and records keyboard and pointer events. Thumbnail
+and fullscreen views at both viewport sizes compare exactly; typing and clicking
+also reach the RFB server. The complete 26-state Node baseline/control/Go sequence
+passes locally. Hosted validation of the VNC additions is pending. This fixture
+covers raw encoding and unauthenticated RFB only.
 
 This is scoped rendering evidence, not proof of every state or platform. Active
-desktop rendering, agent panes, remaining failure states, real guacd/RDP
+RDP rendering, agent panes, remaining failure states, real guacd/RDP
 and VNC hosts, and performance gates still need coverage before replacement.
 
 Packaging scripts, browser test runners, the E2E fixture and agent status helper
@@ -436,7 +443,9 @@ attempts to restore the prior definition if replacement or synchronous restart
 fails. The isolated WinSW fixture now exercises running reconfiguration and
 repair of a stopped definition that references the removed Node backend, checking
 account/environment preservation and successful native startup. Windows execution
-is pending; this does not yet verify custom accounts or delayed startup failure
+at b9ebe58 caught PowerShell coercing the replacement API's null backup path to
+an empty string. Both replacement calls now use .NET `NullString.Value`; the
+corrected Windows execution is pending. This does not yet verify custom accounts or delayed startup failure
 rollback. The documented migration sequence stops the service before MSI replacement.
 Native MSI CI installs on an isolated runner, exercises the installed HTTP/UI,
 authentication and PTY runtime, runs the WinSW service lifecycle from that
@@ -557,6 +566,10 @@ Node/Go p95 input latency was 0.73/2.34 ms, backend RSS 98.4/23.9 MiB, and media
 per-client throughput 10.54/12.21 MiB/s. Go input latency remains higher on this
 Mac despite lower memory usage and higher throughput; these measurements do
 not establish browser-rendering, remote-network or sustained-load parity.
+The Linux CI report at 24cda10 also passes all payload checks. Its concurrent
+Node/Go p95 latency is 2.03/2.25 ms, RSS 90.7/17.7 MiB, and median per-client
+throughput 8.85/6.44 MiB/s. Go throughput is lower on that runner, so the local
+throughput improvement cannot be generalized across platforms.
 The harness checks the exact
 payload count and fails on lost output or a disconnected viewer. Configuration,
 PTY children and listeners belong to the fixture; it does not use operator state.
