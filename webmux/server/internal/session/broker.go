@@ -50,13 +50,14 @@ func (r *run) stop() {
 }
 
 type entry struct {
-	value        Session
-	run          *run
-	scrollback   string
-	viewers      map[string]*Viewer
-	focus        string
-	generation   uint64
-	logOperation sync.Mutex
+	value           Session
+	run             *run
+	scrollback      string
+	scrollbackUnits int
+	viewers         map[string]*Viewer
+	focus           string
+	generation      uint64
+	logOperation    sync.Mutex
 }
 
 // Broker owns sessions and PTYs. Viewers do not own process lifetime. All map,
@@ -282,6 +283,7 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 	e.value.State = "connecting"
 	e.value.UpdatedAt = now()
 	e.scrollback = ""
+	e.scrollbackUnits = 0
 	p, err := b.launch(e.value.launchRequest(), password)
 	if err != nil {
 		e.value.State = "error"
@@ -636,35 +638,48 @@ func (b *Broker) output(id string, r *run, data string) {
 			b.logger.Error("save terminal connection", "error", err)
 		}
 	}
-	e.scrollback = trimScrollback(e.scrollback + data)
+	e.scrollback, e.scrollbackUnits = appendScrollback(e.scrollback, e.scrollbackUnits, data)
 	b.broadcastLocked(e, Event{"type": "output", "session_id": id, "data": data})
 	b.recordAgentActivityLocked(e, r, false)
 }
-func trimScrollback(value string) string {
-	// JS bounds this buffer in UTF-16 code units. Keep the same bound without
-	// cutting a surrogate pair or producing invalid UTF-8 in JSON output.
-	units := 0
-	start := len(value)
-	for start > 0 {
-		r, size := utf8.DecodeLastRuneInString(value[:start])
+
+// appendScrollback tracks UTF-16 length so each output chunk scans only the
+// new text and discarded prefix, rather than the entire retained 64 KiB.
+func appendScrollback(previous string, units int, data string) (string, int) {
+	value := previous + data
+	units += utf16Units(data)
+	if units <= 64*1024 {
+		return value, units
+	}
+	start := 0
+	for units > 64*1024 {
+		r, size := utf8.DecodeRuneInString(value[start:])
 		width := 1
 		if r > 0xffff {
 			width = 2
 		}
-		if units+width > 64*1024 {
-			break
-		}
-		units += width
-		start -= size
-	}
-	if start == 0 {
-		return value
+		units -= width
+		start += size
 	}
 	value = value[start:]
-	if newline := strings.IndexByte(value, '\n'); newline >= 0 && len(utf16.Encode([]rune(value[:newline]))) < 4096 {
-		value = value[newline+1:]
+	if newline := strings.IndexByte(value, '\n'); newline >= 0 {
+		prefixUnits := utf16Units(value[:newline])
+		if prefixUnits < 4096 {
+			value = value[newline+1:]
+			units -= prefixUnits + 1
+		}
 	}
-	return value
+	return value, units
+}
+func utf16Units(value string) int {
+	units := 0
+	for _, r := range value {
+		units++
+		if r > 0xffff {
+			units++
+		}
+	}
+	return units
 }
 
 func (b *Broker) persistLocked() error {

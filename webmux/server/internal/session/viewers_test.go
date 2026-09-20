@@ -11,7 +11,8 @@ import (
 func event(t *testing.T, v *Viewer, kind string) Event {
 	t.Helper()
 	select {
-	case value := <-v.Events():
+	case <-v.Ready():
+		value := v.Take()
 		if value["type"] != kind {
 			t.Fatalf("event %v, wanted %s", value, kind)
 		}
@@ -79,6 +80,69 @@ func TestViewerPresenceFocusAndReplay(t *testing.T) {
 	}
 }
 
+func TestViewerCoalescesOnlyAdjacentOutput(t *testing.T) {
+	v := &Viewer{ready: make(chan struct{}, 1), done: make(chan struct{})}
+	first := Event{"type": "output", "session_id": "one", "data": "abc"}
+	v.send(first)
+	v.send(Event{"type": "output", "session_id": "one", "data": "😀"})
+	v.send(Event{"type": "status", "state": "connected"})
+	v.send(Event{"type": "output", "session_id": "one", "data": "def"})
+	v.send(Event{"type": "output", "session_id": "two", "data": "ghi"})
+	if first["data"] != "abc" {
+		t.Fatal("changed an event shared with another viewer")
+	}
+	if got := event(t, v, "output")["data"]; got != "abc😀" {
+		t.Fatalf("merged output: %v", got)
+	}
+	event(t, v, "status")
+	if got := event(t, v, "output")["data"]; got != "def" {
+		t.Fatalf("output crossed status boundary: %v", got)
+	}
+	if got := event(t, v, "output")["data"]; got != "ghi" {
+		t.Fatalf("output crossed session boundary: %v", got)
+	}
+	select {
+	case <-v.Ready():
+		t.Fatal("empty queue signaled ready")
+	default:
+	}
+	// Exercise wrapping and re-notification after draining the ring.
+	for range 300 {
+		v.send(first)
+		event(t, v, "output")
+	}
+}
+
+func TestViewerCoalescingLimitAndControlOverflow(t *testing.T) {
+	v := &Viewer{ready: make(chan struct{}, 1), done: make(chan struct{})}
+	chunk := strings.Repeat("x", 40*1024)
+	for range 2 {
+		v.send(Event{"type": "output", "session_id": "one", "data": chunk})
+	}
+	for range 2 {
+		if got := event(t, v, "output")["data"]; got != chunk {
+			t.Fatal("coalesced entry exceeded 64 KiB")
+		}
+	}
+	for range 128 {
+		v.send(Event{"type": "status"})
+	}
+	select {
+	case <-v.Done():
+		t.Fatal("closed before reaching queue capacity")
+	default:
+	}
+	v.send(Event{"type": "status"})
+	select {
+	case <-v.Done():
+	default:
+		t.Fatal("control overflow did not close viewer")
+	}
+	if code, _ := v.CloseReason(); code != 1013 {
+		t.Fatalf("control overflow close code: %d", code)
+	}
+}
+
 func TestSlowViewerCannotBlockTerminal(t *testing.T) {
 	b, _, launched := fixture(t)
 	s := create(t, b, "owner")
@@ -87,8 +151,8 @@ func TestSlowViewerCannotBlockTerminal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for range 140 {
-		p.output(t, "chunk\n")
+	for range 280 {
+		p.output(t, strings.Repeat("x", 32*1024))
 	}
 	select {
 	case <-v.Done():
@@ -136,7 +200,8 @@ func TestJoinReplayAndLiveOutputHaveNoGapOrDuplication(t *testing.T) {
 	defer timeout.Stop()
 	for received.Len() < expected.Len() {
 		select {
-		case value := <-v.Events():
+		case <-v.Ready():
+			value := v.Take()
 			if value["type"] == "output" {
 				received.WriteString(value["data"].(string))
 			}

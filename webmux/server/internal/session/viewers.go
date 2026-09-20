@@ -1,5 +1,7 @@
 package session
 
+import "sync"
+
 // Event uses the existing browser WebSocket message field names. Events become
 // immutable before entering a viewer queue.
 type Event map[string]any
@@ -8,14 +10,35 @@ type Event map[string]any
 // On overflow the client reconnects and receives fresh state and scrollback.
 type Viewer struct {
 	ID     string
-	events chan Event
+	mu     sync.Mutex
+	queue  [128]Event
+	head   int
+	count  int
+	ready  chan struct{}
 	done   chan struct{}
 	code   int
 	reason string
 }
 
-func (v *Viewer) Events() <-chan Event  { return v.events }
-func (v *Viewer) Done() <-chan struct{} { return v.done }
+func (v *Viewer) Ready() <-chan struct{} { return v.ready }
+func (v *Viewer) Done() <-chan struct{}  { return v.done }
+
+// Take removes one event after Ready signals. A single consumer owns this queue.
+func (v *Viewer) Take() Event {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.count == 0 {
+		return nil
+	}
+	event := v.queue[v.head]
+	v.queue[v.head] = nil
+	v.head = (v.head + 1) % len(v.queue)
+	v.count--
+	if v.count > 0 {
+		v.ready <- struct{}{}
+	}
+	return event
+}
 
 // CloseReason is safe to read after Done closes.
 func (v *Viewer) CloseReason() (int, string) { <-v.done; return v.code, v.reason }
@@ -29,15 +52,36 @@ func (v *Viewer) finish(code int, reason string) {
 	}
 }
 func (v *Viewer) send(event Event) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 	select {
 	case <-v.done:
 		return
 	default:
 	}
-	select {
-	case v.events <- event:
-	default:
+	// PTY reads have arbitrary chunk boundaries. Combine only adjacent output
+	// for the same session, preserving all bytes and control-event ordering.
+	// Never wait to form a batch; an idle consumer is notified immediately.
+	if event["type"] == "output" && v.count > 0 {
+		last := (v.head + v.count - 1) % len(v.queue)
+		previous := v.queue[last]
+		if previous["type"] == "output" && previous["session_id"] == event["session_id"] {
+			before, okBefore := previous["data"].(string)
+			after, okAfter := event["data"].(string)
+			if okBefore && okAfter && len(before)+len(after) <= 64*1024 {
+				v.queue[last] = Event{"type": "output", "session_id": event["session_id"], "data": before + after}
+				return
+			}
+		}
+	}
+	if v.count == len(v.queue) {
 		v.finish(1013, "Viewer is too slow")
+		return
+	}
+	v.queue[(v.head+v.count)%len(v.queue)] = event
+	v.count++
+	if v.count == 1 {
+		v.ready <- struct{}{}
 	}
 }
 
@@ -60,7 +104,7 @@ func (b *Broker) Join(owner, id string) (*Viewer, error) {
 	if err != nil {
 		return nil, err
 	}
-	v := &Viewer{ID: viewerID, events: make(chan Event, 128), done: make(chan struct{})}
+	v := &Viewer{ID: viewerID, ready: make(chan struct{}, 1), done: make(chan struct{})}
 	if e.viewers == nil {
 		e.viewers = map[string]*Viewer{}
 	}

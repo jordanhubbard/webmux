@@ -22,6 +22,7 @@ tests/e2e/.test-home/
 tests/e2e/.visual-baseline/
 test-results/
 playwright-report/
+webmux/benchmark-results.json
 *~
 
 # Release bundles

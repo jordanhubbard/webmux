@@ -388,6 +388,44 @@ Native source build and process checks now run in Linux/macOS packaging CI.
 The native launchd template parses locally with the expected executable and
 state path; actual source-installed OS-service lifecycle coverage remains pending.
 
+### Backend performance measurements
+
+Run `npm run benchmark:server` from `webmux` using Node 24 and Go. The checked
+TypeScript harness builds the native binary, alternates five isolated launches
+of each backend, and records startup, backend-only resident memory, 30 terminal
+round trips after five warmups, and a 1 MiB terminal transfer. It checks the exact
+payload count and fails on lost output or a disconnected viewer. Configuration,
+PTY children and listeners belong to the fixture; it does not use operator state.
+Unix CI uploads the JSON report, including raw samples and host/toolchain details.
+These are measurements with correctness assertions, not relative speed gates.
+
+The initial macOS run found that Go's scrollback processing rescanned the retained
+64 KiB on every output chunk. Tracking UTF-16 length incrementally removes that
+scan; randomized comparisons retain the previous implementation as an oracle.
+Removing the scan exposed a second problem: a local reader could overflow the
+128-event viewer queue during a 1 MiB burst. The queue now coalesces adjacent
+output for the same session, with each coalesced entry capped at 64 KiB. Control
+events retain their order, events shared by viewers remain immutable, and a full
+128-entry queue still disconnects the slow viewer without blocking its PTY.
+JSON output uses complete WebSocket frames, avoiding write-buffer fragmentation.
+
+A local Apple M4 Pro/macOS arm64 run using Node 24.20.0 and Go 1.27.1 measured:
+
+| Metric | Node | Go |
+| --- | ---: | ---: |
+| Median HTTP startup | 208 ms | 25 ms |
+| Median idle backend RSS | 73.4 MiB | 14.3 MiB |
+| Median active backend RSS | 83.2 MiB | 22.0 MiB |
+| p95 terminal round trip | 0.32 ms | 3.38 ms |
+| Median terminal transfer | 27.4 MiB/s | 50.9 MiB/s |
+
+This single-host workload uses trusted authentication, one local PTY and loopback
+networking. RSS excludes the client and child process; startup is polled at 10 ms
+intervals. It does not cover browser rendering, remote transports, concurrent
+sessions or sustained load. Go input latency is worse in this run; performance
+parity remains unproven. The measurement was made with these changes applied on
+top of a56722e and an explicitly recorded dirty working tree.
+
 ### Deliberate security differences
 
 - Go rejects tokens for accounts that have been deleted, including refresh and

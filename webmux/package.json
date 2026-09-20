@@ -24,6 +24,7 @@
     "test:e2e": "node scripts/run-playwright.mts",
     "test:e2e:go": "node scripts/run-playwright.mts --backend=go",
     "test:visual-parity": "node scripts/visual-parity.mts",
+    "benchmark:server": "npm run build --workspace=backend && node scripts/benchmark-server.mts",
     "start": "npm run start --workspace=backend",
     "service:install": "npm run build && powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 install",
     "service:uninstall": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 uninstall",

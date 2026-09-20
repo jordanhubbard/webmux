@@ -157,11 +157,18 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 					closeSocket(connection, 1008, "Unauthorized")
 					return
 				}
-			case event := <-viewer.Events():
+			case <-viewer.Ready():
+				event := viewer.Take()
+				payload, err := json.Marshal(event)
+				if err != nil {
+					return
+				}
 				if err := connection.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
 					return
 				}
-				if err := connection.WriteJSON(event); err != nil {
+				// WriteMessage sends the complete JSON value in one frame even
+				// when PTY output exceeds the connection's small write buffer.
+				if err := connection.WriteMessage(websocket.TextMessage, payload); err != nil {
 					return
 				}
 			}

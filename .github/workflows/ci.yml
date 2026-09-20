@@ -37,6 +37,16 @@ jobs:
       - name: Verify Node and Go API compatibility
         working-directory: webmux
         run: npm run test:contract
+      - name: Measure backend performance
+        if: runner.os != 'Windows'
+        working-directory: webmux
+        run: node scripts/benchmark-server.mts
+      - name: Preserve backend performance measurements
+        if: always() && runner.os != 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-performance-${{ runner.os }}
+          path: webmux/benchmark-results.json
       - name: Build browser application
         if: runner.os == 'Linux'
         working-directory: webmux
