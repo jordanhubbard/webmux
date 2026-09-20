@@ -443,9 +443,23 @@ new process on restart. It removes the registered fixture afterward. The local
 macOS GUI-domain run passes; macOS packaging CI now runs this check too (using
 the user domain if no GUI domain exists). Operator service labels are untouched.
 This verifies the template's lifecycle, not the full Make installer. End-to-end
-installer/systemd coverage, upgrade/drain checks and robust path escaping in the
-Make installer remain pending: its sed substitutions do not handle arbitrary
-replacement characters, and systemd environment paths need quoting.
+installer/systemd coverage and upgrade/drain checks remain pending.
+
+The Make installer now delegates service serialization to checked TypeScript in
+`scripts/render-service.mts`. It escapes launchd XML values, quotes systemd
+environment/command words, preserves literal percent specifiers and disables
+command-line environment expansion so dollar signs remain path data. Path-valued
+systemd directives retain their distinct whole-value syntax. Rendering validates
+control characters before writes and atomically replaces the definition with a
+private file. Make passes the destination through the environment instead of
+embedding it into the renderer command, and service removal quotes that path.
+This does not certify arbitrary path characters throughout every Make target.
+
+Tests round-trip special paths through macOS's plist parser for both backends,
+verify CLI replacement/failure behavior and run `systemd-analyze verify` on Linux.
+Local TypeScript/helper checks and the real launchd lifecycle pass with a state
+directory containing spaces and an ampersand. Linux parser verification awaits CI;
+these serialization checks do not replace an actual systemd lifecycle test.
 
 ### Backend performance measurements
 

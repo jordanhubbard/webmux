@@ -8,12 +8,13 @@ import net from 'node:net';
 import { once } from 'node:events';
 import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { renderService } from './render-service.mts';
 
 assert.equal(process.platform, 'darwin', 'launchd smoke requires macOS');
 const root = path.resolve(import.meta.dirname, '../webmux');
 await fs.access(path.join(root, 'bin/webmux'));
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'webmux-launchd-'));
-const home = path.join(temporary, 'state');
+const home = path.join(temporary, 'state & config');
 const label = `com.webmux.smoke.${process.pid}.${randomBytes(6).toString('hex')}`;
 const uid = process.getuid!();
 function launch(args: string[], required = true): string {
@@ -47,9 +48,9 @@ try {
   await fs.writeFile(appFile, app);
   await fs.writeFile(path.join(home, 'config/auth.yaml'), 'auth:\n  mode: none\n  users: []\n');
   const xml = (value: string) => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&apos;');
-  let template = (await fs.readFile(path.join(root, 'service/com.webmux.server.plist.native.template'), 'utf8'))
-    .replace('<string>com.webmux.server</string>', `<string>${label}</string>`)
-    .replaceAll('__WEBMUX_DIR__', xml(root)).replaceAll('__WEBMUX_HOME__', xml(home)).replaceAll('__PATH__', xml(process.env.PATH ?? '/usr/bin:/bin'));
+  let template = renderService(await fs.readFile(path.join(root, 'service/com.webmux.server.plist.native.template'), 'utf8'), 'darwin', {
+    root, home, node: process.execPath, searchPath: process.env.PATH ?? '/usr/bin:/bin',
+  }).replace('<string>com.webmux.server</string>', `<string>${label}</string>`);
   // Prevent launchd's environment from selecting operator ports or slave mode.
   const environment = { HTTP_PORT: String(address.port), HTTPS_PORT: '0', JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' };
   template = template.replace('<key>EnvironmentVariables</key>\n    <dict>', '<key>EnvironmentVariables</key>\n    <dict>\n' +

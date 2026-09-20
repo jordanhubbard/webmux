@@ -56,11 +56,9 @@ OS           := $(shell uname)
 
 ifeq ($(WEBMUX_BACKEND),go)
   SERVER_COMMAND := "$(WEBMUX_DIR)/bin/webmux"
-  SERVICE_TEMPLATE := native.template
   E2E_SCRIPT := test:e2e:go
 else ifeq ($(WEBMUX_BACKEND),node)
   SERVER_COMMAND := $(NODE) backend/dist/index.js
-  SERVICE_TEMPLATE := template
   E2E_SCRIPT := test:e2e
 else
   $(error WEBMUX_BACKEND must be node or go)
@@ -340,9 +338,6 @@ clean: stop
 	@printf "$(C_GRN)✓$(C_RST) Clean.\n"
 
 # ── Service management ──────────────────────────────────────────
-SERVICE_DIR     := $(WEBMUX_DIR)/service
-NODE_PATH       := $(shell which node)
-CURRENT_PATH    := $(shell echo $$PATH)
 
 PLIST       := $(HOME)/Library/LaunchAgents/com.webmux.server.plist
 UNIT        := $(HOME)/.config/systemd/user/webmux.service
@@ -359,15 +354,17 @@ LAUNCHD_SVC := gui/$(shell id -u)/com.webmux.server
 #
 # SVC_INSTALLED is a shell test: true (exit 0) when the service unit exists.
 ifeq ($(OS),Darwin)
+  export WEBMUX_SERVICE_OUTPUT := $(PLIST)
   SVC_MGR       := launchd
-  SVC_INSTALLED := [ -f "$(PLIST)" ]
-  SVC_START     := launchctl kickstart "$(LAUNCHD_SVC)" 2>/dev/null || launchctl bootstrap gui/$$(id -u) "$(PLIST)"
+  SVC_INSTALLED := [ -f "$$WEBMUX_SERVICE_OUTPUT" ]
+  SVC_START     := launchctl kickstart "$(LAUNCHD_SVC)" 2>/dev/null || launchctl bootstrap gui/$$(id -u) "$$WEBMUX_SERVICE_OUTPUT"
   SVC_STOP      := launchctl kill TERM "$(LAUNCHD_SVC)"
   SVC_RESTART   := launchctl kickstart -k "$(LAUNCHD_SVC)"
   SVC_STATUS    := launchctl print "$(LAUNCHD_SVC)" 2>/dev/null | grep -E 'state = |pid = '
 else
+  export WEBMUX_SERVICE_OUTPUT := $(UNIT)
   SVC_MGR       := systemd
-  SVC_INSTALLED := [ -f "$(UNIT)" ]
+  SVC_INSTALLED := [ -f "$$WEBMUX_SERVICE_OUTPUT" ]
   SVC_START     := systemctl --user start webmux.service
   SVC_STOP      := systemctl --user stop webmux.service
   SVC_RESTART   := systemctl --user restart webmux.service
@@ -375,39 +372,24 @@ else
 endif
 
 install: stop build
-	@mkdir -p "$(WEBMUX_HOME)/logs"
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Installing launchd service…\n"
-	@mkdir -p "$(HOME)/Library/LaunchAgents"
+	@$(NODE) scripts/render-service.mts $(WEBMUX_BACKEND)
 	@launchctl bootout $(LAUNCHD_SVC) 2>/dev/null || true
-	@sed \
-		-e 's|__NODE_PATH__|$(NODE_PATH)|g' \
-		-e 's|__WEBMUX_DIR__|$(WEBMUX_DIR)|g' \
-		-e 's|__WEBMUX_HOME__|$(WEBMUX_HOME)|g' \
-		-e 's|__PATH__|$(CURRENT_PATH)|g' \
-		"$(SERVICE_DIR)/com.webmux.server.plist.$(SERVICE_TEMPLATE)" \
-		> "$(PLIST)"
-	@launchctl bootstrap gui/$$(id -u) "$(PLIST)"
+	@launchctl bootstrap gui/$$(id -u) "$$WEBMUX_SERVICE_OUTPUT"
 	@launchctl kickstart -k $(LAUNCHD_SVC) 2>/dev/null || true
-	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)$(PLIST)$(C_RST)\n"
-	@printf "  $(C_DIM)config:$(C_RST) $(WEBMUX_HOME)\n"
-	@printf "  $(C_DIM)logs:$(C_RST)   $(WEBMUX_HOME)/logs/webmux.log\n"
+	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)%s$(C_RST)\n" "$$WEBMUX_SERVICE_OUTPUT"
+	@printf "  $(C_DIM)config:$(C_RST) %s\n" "$$WEBMUX_HOME"
+	@printf "  $(C_DIM)logs:$(C_RST)   %s/logs/webmux.log\n" "$$WEBMUX_HOME"
 	@printf "$(C_GRN)●$(C_RST) WebMux will start automatically on login.\n"
 else
 	@printf "$(C_BLU)▸$(C_RST) Installing systemd user service…\n"
-	@mkdir -p $(dir $(UNIT))
-	@sed \
-		-e 's|__NODE_PATH__|$(NODE_PATH)|g' \
-		-e 's|__WEBMUX_DIR__|$(WEBMUX_DIR)|g' \
-		-e 's|__WEBMUX_HOME__|$(WEBMUX_HOME)|g' \
-		-e 's|__PATH__|$(CURRENT_PATH)|g' \
-		"$(SERVICE_DIR)/webmux.service.$(SERVICE_TEMPLATE)" \
-		> "$(UNIT)"
+	@$(NODE) scripts/render-service.mts $(WEBMUX_BACKEND)
 	@systemctl --user daemon-reload
 	@systemctl --user enable --now webmux.service
-	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)$(UNIT)$(C_RST)\n"
-	@printf "  $(C_DIM)config:$(C_RST) $(WEBMUX_HOME)\n"
-	@printf "  $(C_DIM)logs:$(C_RST)   $(WEBMUX_HOME)/logs/webmux.log\n"
+	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)%s$(C_RST)\n" "$$WEBMUX_SERVICE_OUTPUT"
+	@printf "  $(C_DIM)config:$(C_RST) %s\n" "$$WEBMUX_HOME"
+	@printf "  $(C_DIM)logs:$(C_RST)   %s/logs/webmux.log\n" "$$WEBMUX_HOME"
 	@printf "$(C_GRN)●$(C_RST) WebMux will start automatically on login.\n"
 	@printf "  $(C_DIM)Hint: run$(C_RST) loginctl enable-linger $(USER) $(C_DIM)to start without logging in.$(C_RST)\n"
 endif
@@ -416,12 +398,12 @@ uninstall:
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Removing launchd service…\n"
 	@launchctl bootout $(LAUNCHD_SVC) 2>/dev/null || true
-	@rm -f $(PLIST)
+	@rm -f "$$WEBMUX_SERVICE_OUTPUT"
 	@printf "$(C_GRN)✓$(C_RST) Uninstalled.\n"
 else
 	@printf "$(C_BLU)▸$(C_RST) Removing systemd user service…\n"
 	@systemctl --user disable --now webmux.service 2>/dev/null || true
-	@rm -f $(UNIT)
+	@rm -f "$$WEBMUX_SERVICE_OUTPUT"
 	@systemctl --user daemon-reload
 	@printf "$(C_GRN)✓$(C_RST) Uninstalled.\n"
 endif
