@@ -3,6 +3,7 @@ node_modules/
 
 # Build output
 webmux/backend/dist/
+webmux/scripts/dist/
 webmux/web/
 
 # Runtime config, data, and logs (live in ~/.config/webmux at runtime)

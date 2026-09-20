@@ -118,7 +118,7 @@ installed in an isolated staging directory to avoid including developer state.
 To test an extracted bundle:
 
 ```bash
-node scripts/smoke-package.cjs /absolute/path/to/extracted/webmux-version-platform-arch-node24
+node scripts/smoke-package.mts /absolute/path/to/extracted/webmux-version-platform-arch-node24
 ```
 
 On Windows, install WiX 5 and build both the ZIP and MSI from PowerShell:
@@ -141,7 +141,7 @@ workflows).
 After publishing a reviewed release, update the formula on a branch:
 
 ```bash
-node scripts/update-homebrew.cjs vX.Y.Z
+node scripts/update-homebrew.mts vX.Y.Z
 ```
 
 This downloads the tagged source archive and updates its URL and SHA-256. Commit

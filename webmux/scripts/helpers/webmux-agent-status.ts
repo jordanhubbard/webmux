@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { execFileSync } = require('child_process');
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const AGENT_ID_RE = /^[a-z][a-z0-9_-]{0,63}$/;
 const VALID_STATUSES = new Set(['waiting', 'working', 'unknown', 'stale']);
 
-function parseArgs(argv) {
-  const args = {};
+function parseArgs(argv: string[]): Record<string, string | undefined> {
+  const args: Record<string, string | undefined> = {};
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (!arg.startsWith('--')) continue;
@@ -20,17 +20,17 @@ function parseArgs(argv) {
   return args;
 }
 
-function tmuxSocketArgs(socket) {
+function tmuxSocketArgs(socket: string | undefined): string[] {
   if (!socket) return [];
   return path.isAbsolute(socket) ? ['-S', socket] : ['-L', socket];
 }
 
-function tmuxSocketPathFromEnv(value) {
+export function tmuxSocketPathFromEnv(value: string | undefined): string | undefined {
   if (!value) return undefined;
   return value.split(',')[0] || undefined;
 }
 
-function tmuxSessionFromPane(pane, socket) {
+export function tmuxSessionFromPane(pane: string | undefined, socket: string | undefined): string | undefined {
   if (!pane) return undefined;
   const displayArgs = ['display-message', '-p', '-t', pane, '#S'];
   const attempts = [];
@@ -51,13 +51,13 @@ function tmuxSessionFromPane(pane, socket) {
   return undefined;
 }
 
-function resolveSessionName(args) {
+function resolveSessionName(args: Record<string, string | undefined>): string | undefined {
   return args.name ||
     process.env.WEBMUX_AGENT_SESSION ||
     tmuxSessionFromPane(process.env.TMUX_PANE, args.tmux_socket || process.env.WEBMUX_AGENT_TMUX_SOCKET);
 }
 
-function encodeSessionName(name) {
+function encodeSessionName(name: string): string {
   return Buffer.from(name, 'utf8')
     .toString('base64')
     .replace(/\+/g, '-')
@@ -65,45 +65,53 @@ function encodeSessionName(name) {
     .replace(/=+$/g, '');
 }
 
-function statusFile(agentId, name) {
+function statusFile(agentId: string, name: string): string {
   const webmuxHome = process.env.WEBMUX_HOME || path.join(os.homedir(), '.config', 'webmux');
   return path.join(webmuxHome, 'data', 'agent-status', agentId, `${encodeSessionName(name)}.json`);
 }
 
-function readJson(file) {
+function parseObject(input: string): Record<string, unknown> {
+  const value: unknown = JSON.parse(input);
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown> : {};
+}
+
+function readJson(file: string): Record<string, unknown> {
   try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
+    return parseObject(fs.readFileSync(file, 'utf8'));
   } catch {
     return {};
   }
 }
 
-function writeJsonAtomic(file, value) {
+function writeJsonAtomic(file: string, value: Record<string, unknown>): void {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   fs.writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
   fs.renameSync(tmp, file);
 }
 
-async function readStdin() {
+async function readStdin(): Promise<Record<string, unknown>> {
   let input = '';
   for await (const chunk of process.stdin) {
-    input += chunk.toString('utf8');
+    const value: unknown = chunk;
+    if (Buffer.isBuffer(value)) input += value.toString('utf8');
+    else if (typeof value === 'string') input += value;
   }
   if (!input.trim()) return {};
   try {
-    return JSON.parse(input);
+    return parseObject(input);
   } catch {
     return {};
   }
 }
 
-async function main() {
+async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const agentId = args.agent || args.kind || 'codex';
   const status = args.status;
 
-  if (!AGENT_ID_RE.test(agentId) || !VALID_STATUSES.has(status)) return;
+  if (!AGENT_ID_RE.test(agentId) || !status || !VALID_STATUSES.has(status)) return;
 
   const hookInput = await readStdin();
   const name = resolveSessionName(args);
@@ -115,7 +123,7 @@ async function main() {
   const now = new Date().toISOString();
   const file = statusFile(agentId, name);
   const previous = readJson(file);
-  const next = {
+  const next: Record<string, unknown> = {
     ...previous,
     agent_id: agentId,
     name,
@@ -138,12 +146,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch(err => {
-    console.error(`webmux-agent-status: ${err.message}`);
+  main().catch((err: unknown) => {
+    console.error(`webmux-agent-status: ${err instanceof Error ? err.message : String(err)}`);
   });
 }
-
-module.exports = {
-  tmuxSessionFromPane,
-  tmuxSocketPathFromEnv,
-};

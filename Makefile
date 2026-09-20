@@ -83,7 +83,7 @@ package:
 	@$(NODE) -e 'if (process.versions.node.split(".")[0] !== "24" || !["darwin", "linux"].includes(process.platform)) { console.error("Packaging requires Node.js 24 on macOS or Linux"); process.exit(1); }'
 	@cd "$(WEBMUX_DIR)" && $(NPM) ci --no-audit --no-fund
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build
-	@$(NODE) scripts/package.cjs
+	@$(NODE) scripts/package.mts
 
 help:
 	@printf "$(C_BLD)$(C_MAG)▦ WebMux$(C_RST)$(C_DIM) — web-native terminal multiplexer$(C_RST)\n\n"
@@ -300,7 +300,7 @@ lint:
 
 clean: stop
 	@printf "$(C_BLU)▸$(C_RST) Cleaning build artifacts…\n"
-	@rm -rf "$(WEBMUX_DIR)/backend/dist" "$(WEBMUX_DIR)/web"
+	@rm -rf "$(WEBMUX_DIR)/backend/dist" "$(WEBMUX_DIR)/scripts/dist" "$(WEBMUX_DIR)/web"
 	@rm -rf "$(WEBMUX_DIR)/node_modules" "$(WEBMUX_DIR)/backend/node_modules" "$(WEBMUX_DIR)/frontend/node_modules"
 	@rm -f "$(PIDFILE)"
 	@printf "$(C_GRN)✓$(C_RST) Clean.\n"

@@ -16,9 +16,11 @@
   "scripts": {
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
-    "build": "npm run build --workspace=backend && npm run build --workspace=frontend",
-    "typecheck": "tsc --noEmit --project backend/tsconfig.json && tsc --noEmit --project frontend/tsconfig.json && tsc --project tsconfig.tools.json",
-    "test:contract:auth": "npm run build --workspace=backend && node scripts/auth-contract.mts",
+    "build": "npm run build:helpers && npm run build --workspace=backend && npm run build --workspace=frontend",
+    "build:helpers": "tsc --project tsconfig.helpers.json",
+    "typecheck": "tsc --noEmit --project backend/tsconfig.json && tsc --noEmit --project frontend/tsconfig.json && tsc --project tsconfig.tools.json && tsc --noEmit --project tsconfig.helpers.json",
+    "test:contract": "npm run build --workspace=backend && node scripts/server-contract.mts",
+    "test:contract:auth": "npm run test:contract",
     "test:e2e": "node scripts/run-playwright.mts",
     "start": "npm run start --workspace=backend",
     "service:install": "npm run build && powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 install",
@@ -28,7 +30,8 @@
     "service:restart": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 restart",
     "service:status": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 status",
     "lint": "npm run lint --workspace=backend && npm run lint --workspace=frontend",
-    "test": "npm run test --workspace=backend && npm run test --workspace=frontend"
+    "test:helpers": "npm run build:helpers && node --test scripts/helpers.test.mts",
+    "test": "npm run test --workspace=backend && npm run test --workspace=frontend && npm run test:helpers"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2"

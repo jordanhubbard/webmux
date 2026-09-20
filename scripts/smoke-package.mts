@@ -1,19 +1,24 @@
 #!/usr/bin/env node
 // Exercise an extracted bundle with isolated state, including native runtime modules.
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const net = require('node:net');
-const { spawn } = require('node:child_process');
-const { once } = require('node:events');
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import net from 'node:net';
+import { spawn, type ChildProcess } from 'node:child_process';
+import { createRequire } from 'node:module';
 
-async function main() {
-  const root = path.resolve(process.argv[2]);
-  const argon2 = require(path.join(root, 'node_modules/argon2'));
-  const pty = require(path.join(root, 'node_modules/node-pty'));
+const require = createRequire(import.meta.url);
+import { once } from 'node:events';
+
+async function main(): Promise<void> {
+  const argument = process.argv[2];
+  if (!argument) throw new Error('Usage: node scripts/smoke-package.mts <bundle-directory>');
+  const root = path.resolve(argument);
+  const argon2: typeof import('argon2') = require(path.join(root, 'node_modules/argon2'));
+  const pty: typeof import('node-pty') = require(path.join(root, 'node_modules/node-pty'));
   assert(await argon2.verify(await argon2.hash('package-test'), 'package-test'));
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     const windows = process.platform === 'win32';
     const terminal = pty.spawn(windows ? (process.env.ComSpec || 'cmd.exe') : '/bin/sh',
       windows ? ['/d', '/s', '/c', 'echo webmux-pty-ok'] : ['-c', 'printf webmux-pty-ok'],
@@ -30,8 +35,10 @@ async function main() {
   const socket = net.createServer();
   socket.listen(0, '127.0.0.1');
   await once(socket, 'listening');
-  const port = socket.address().port;
-  await new Promise(resolve => socket.close(resolve));
+  const address = socket.address();
+  assert(address && typeof address === 'object');
+  const port = address.port;
+  await new Promise<void>((resolve, reject) => socket.close(error => error ? reject(error) : resolve()));
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-smoke-'));
   const config = path.join(home, 'config');
   fs.mkdirSync(config);
@@ -39,7 +46,7 @@ async function main() {
     .replace('name: webmux', 'name: package-preservation-test')
     .replace('listen_host: 0.0.0.0', 'listen_host: 127.0.0.1');
   fs.writeFileSync(path.join(config, 'app.yaml'), app);
-  let child;
+  let child: ChildProcess | undefined;
   let logs = '';
   try {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -52,14 +59,15 @@ async function main() {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
       const exited = once(child, 'exit');
-      child.stdout.on('data', data => { logs += data; });
-      child.stderr.on('data', data => { logs += data; });
+      child.stdout?.on('data', (data: Buffer) => { logs += data; });
+      child.stderr?.on('data', (data: Buffer) => { logs += data; });
       let healthy = false;
       for (let retry = 0; retry < 100; retry++) {
         if (child.exitCode !== null) throw new Error(`Server exited: ${logs}`);
         try {
           const response = await fetch(`http://127.0.0.1:${port}/api/health`);
-          const health = await response.json();
+          const health: unknown = await response.json();
+          assert(health && typeof health === 'object' && 'status' in health && 'name' in health);
           assert.equal(health.status, 'ok');
           assert.equal(health.name, 'package-preservation-test');
           healthy = true;
@@ -73,7 +81,7 @@ async function main() {
       assert.equal(fs.readFileSync(path.join(config, 'app.yaml'), 'utf8'), app);
       assert(fs.existsSync(path.join(config, 'auth.yaml')));
       child.kill('SIGTERM');
-      const timer = setTimeout(() => child.kill('SIGKILL'), 10000);
+      const timer = setTimeout(() => child?.kill('SIGKILL'), 10000);
       const [code, signal] = await exited;
       clearTimeout(timer);
       if (windows) assert(code !== null || signal, logs);

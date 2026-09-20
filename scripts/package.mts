@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 // Stage an installable runtime without copying local configuration or node_modules.
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const { execFileSync } = require('node:child_process');
-const { createHash } = require('node:crypto');
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
-const repo = path.resolve(__dirname, '..');
+const repo = path.resolve(import.meta.dirname, '..');
 const source = path.join(repo, 'webmux');
 const output = path.resolve(process.argv[2] || path.join(repo, 'dist'));
-const version = JSON.parse(fs.readFileSync(path.join(source, 'backend/package.json'))).version;
+const metadata: unknown = JSON.parse(fs.readFileSync(path.join(source, 'backend/package.json'), 'utf8'));
+if (!metadata || typeof metadata !== 'object' || !('version' in metadata) || typeof metadata.version !== 'string') {
+  throw new Error('Backend package has no version string.');
+}
+const version = metadata.version;
 if (!['darwin', 'linux', 'win32'].includes(process.platform) || process.versions.node.split('.')[0] !== '24') {
   throw new Error('Build release bundles on macOS, Linux, or Windows using Node.js 24.');
 }
@@ -39,15 +43,7 @@ try {
   }
   fs.mkdirSync(path.join(stage, 'bin'));
   if (process.platform === 'win32') {
-    fs.writeFileSync(path.join(stage, 'bin/webmux.js'), `const path = require('node:path');
-if (process.versions.node.split('.')[0] !== '24') {
-  console.error('This WebMux bundle requires Node.js 24 on PATH.');
-  process.exit(1);
-}
-const root = path.resolve(__dirname, '..');
-process.env.WEBMUX_ROOT = root;
-require(path.join(root, 'backend/dist/index.js'));
-`);
+    fs.copyFileSync(path.join(source, 'scripts/dist/windows-launcher.js'), path.join(stage, 'bin/webmux.js'));
     fs.writeFileSync(path.join(stage, 'bin/webmux.cmd'), `@echo off\r
 node "%~dp0webmux.js" %*\r
 exit /b %ERRORLEVEL%\r
@@ -68,10 +64,11 @@ fi
 exec node "$WEBMUX_ROOT/backend/dist/index.js" "$@"
 `, { mode: 0o755 });
   }
+  const report = process.report.getReport() as { header: { glibcVersionRuntime?: string } };
   fs.writeFileSync(path.join(stage, 'bundle.json'), JSON.stringify({
     version, platform: process.platform, arch: process.arch, node: process.versions.node,
     nodeABI: process.versions.modules,
-    glibc: process.report.getReport().header.glibcVersionRuntime,
+    glibc: report.header.glibcVersionRuntime,
   }, null, 2) + '\n');
   fs.writeFileSync(path.join(stage, 'README.txt'), process.platform === 'win32' ? `WebMux ${version}
 

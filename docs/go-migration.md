@@ -40,12 +40,15 @@ claims. Work remaining stays on #77 until these requirements are verified.
 
 ## Implemented foundation
 
-The Go server currently implements health and authentication/account routes,
+The Go server currently implements health, authentication/account, saved-host
+and SSH-key catalog routes,
 Argon2id PHC password storage, HS256 JWTs, one-use WebSocket ticket storage,
 per-client rate limiting, HTTP/TLS listeners and graceful HTTP shutdown. It uses
 the existing `WEBMUX_HOME/config` and `data/events` layout. Authentication config
 updates are serialized and atomically replaced, preserve unknown fields and
-follow configuration symlinks. Other application routes, static UI serving and
+follow configuration symlinks. Catalog updates preserve legacy missing/null
+fields and custom metadata, serialize concurrent changes, and redact key paths
+and private metadata from API responses. Other application routes, static UI serving and
 WebSocket/session transports are not implemented yet.
 
 Run from `webmux/server` with Go 1.26 or later:
@@ -56,12 +59,21 @@ go vet ./...
 go run ./cmd/webmux --root .. --home /tmp/webmux-go-dev --listen 127.0.0.1:18080
 ```
 
-From `webmux`, `npm run test:contract:auth` builds both servers, runs the same
-authentication expectations against each, then restarts the opposite server
-against the fixture's persisted credentials. This verifies password hashes and
-tokens across both migration directions. Fixtures use temporary homes and never
+From `webmux`, `npm run test:contract` builds both servers, runs the same
+authentication and catalog expectations against each, then restarts the opposite
+server against the fixture's persisted credentials and catalogs. This verifies
+password hashes, tokens, hosts and keys across both migration directions.
+Fixtures use temporary homes and never
 connect to real terminal or desktop hosts. `npm run typecheck` checks the
 TypeScript contract harness as well as the application.
+
+Packaging scripts, browser test runners, the E2E fixture and agent status helper
+now have checked TypeScript sources. ESLint and Jest configurations are
+declarative JSON. `npm run build:helpers` produces the installable agent helper
+and Windows launcher in `webmux/scripts/dist`; generated JavaScript is ignored
+by Git. `npm run build` includes this step, and `npm run test:helpers` exercises
+the actual compiled status hook. Inline Node snippets in shell/CI/service files
+still need conversion or removal as the Go deployment tooling replaces them.
 
 ### Deliberate security differences
 

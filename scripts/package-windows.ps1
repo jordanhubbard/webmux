@@ -48,7 +48,7 @@ try {
     Pop-Location
   }
 
-  & node (Join-Path $Repository 'scripts/package.cjs') $OutputDirectory
+  & node (Join-Path $Repository 'scripts/package.mts') $OutputDirectory
   if ($LASTEXITCODE -ne 0) { throw "Runtime packaging failed with exit code $LASTEXITCODE." }
   if (-not (Test-Path -LiteralPath $Archive)) { throw "Runtime bundle was not created at $Archive." }
 

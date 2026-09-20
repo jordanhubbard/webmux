@@ -39,7 +39,7 @@ jobs:
         run: |
           mkdir "$RUNNER_TEMP/webmux-bundle"
           tar -xzf dist/webmux-*.tar.gz -C "$RUNNER_TEMP/webmux-bundle"
-          node scripts/smoke-package.cjs "$RUNNER_TEMP"/webmux-bundle/webmux-*
+          node scripts/smoke-package.mts "$RUNNER_TEMP"/webmux-bundle/webmux-*
       - uses: actions/upload-artifact@v7
         with:
           name: webmux-${{ matrix.os }}
@@ -134,7 +134,7 @@ jobs:
           $extract = Join-Path $env:RUNNER_TEMP 'webmux-windows-bundle'
           Expand-Archive -LiteralPath $archive.FullName -DestinationPath $extract
           $root = Get-ChildItem $extract -Directory | Select-Object -First 1
-          node scripts/smoke-package.cjs $root.FullName
+          node scripts/smoke-package.mts $root.FullName
       - name: Install, test, and uninstall MSI
         shell: pwsh
         run: |
@@ -152,7 +152,7 @@ jobs:
             if (-not (Test-Path -LiteralPath (Join-Path $installRoot 'bin\webmux.cmd'))) {
               throw 'MSI did not install the WebMux launcher.'
             }
-            node scripts/smoke-package.cjs $installRoot
+            node scripts/smoke-package.mts $installRoot
           } finally {
             if (Test-Path -LiteralPath $installRoot) {
               $process = Start-Process msiexec.exe -ArgumentList @('/x', $msi.FullName, '/qn', '/norestart', '/l*v', $uninstallLog) -Wait -PassThru

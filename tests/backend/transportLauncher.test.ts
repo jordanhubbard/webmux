@@ -3,7 +3,7 @@ import { Session } from '@backend/types';
 import * as pty from 'node-pty';
 import * as os from 'os';
 
-// node-pty is mocked via jest.config.js moduleNameMapper
+// node-pty is mocked via jest.config.json moduleNameMapper
 
 function makeSession(overrides: Partial<Session> = {}): Session {
   return {

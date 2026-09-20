@@ -56,7 +56,28 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/auth/users", s.protected(true, s.users))
 	mux.Handle("DELETE /api/auth/users/{username}", s.protected(true, s.deleteUser))
 	mux.Handle("POST /api/auth/ticket", s.protected(false, s.issueTicket))
-	return s.cors(newLimiter(300, globalWindow).wrap(mux))
+	mux.Handle("GET /api/hosts", s.protected(false, s.listHosts))
+	mux.Handle("POST /api/hosts", s.protected(false, s.createHost))
+	mux.Handle("PUT /api/hosts/{id}", s.protected(false, s.updateHost))
+	mux.Handle("DELETE /api/hosts/{id}", s.protected(false, s.deleteHost))
+	mux.Handle("GET /api/keys", s.protected(false, s.listKeys))
+	mux.Handle("POST /api/keys", s.protected(false, s.createKey))
+	mux.Handle("DELETE /api/keys/{id}", s.protected(false, s.deleteKey))
+	return s.cors(newLimiter(300, globalWindow).wrap(apiPaths(mux)))
+}
+
+// Express accepts trailing slashes on API routes without redirecting. Preserve
+// that behavior, but don't strip a slash encoded inside an identifier (%2F).
+func apiPaths(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") && strings.HasSuffix(r.URL.EscapedPath(), "/") {
+			clone := r.Clone(r.Context())
+			clone.URL.Path = strings.TrimRight(clone.URL.Path, "/")
+			clone.URL.RawPath = strings.TrimRight(clone.URL.RawPath, "/")
+			r = clone
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 type authenticatedHandler func(http.ResponseWriter, *http.Request, string)
@@ -144,9 +165,14 @@ func jsonError(w http.ResponseWriter, err error) {
 }
 
 func writeJSON(w http.ResponseWriter, code int, value any) {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		code = http.StatusInternalServerError
+		encoded = []byte(`{"error":"Internal server error"}`)
+	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(value)
+	_, _ = w.Write(append(encoded, '\n'))
 }
 
 func writeError(w http.ResponseWriter, code int, message string) {

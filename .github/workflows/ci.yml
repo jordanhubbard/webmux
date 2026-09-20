@@ -34,9 +34,9 @@ jobs:
       - name: Install compatibility test dependencies
         working-directory: webmux
         run: npm ci
-      - name: Verify Node and Go authentication compatibility
+      - name: Verify Node and Go API compatibility
         working-directory: webmux
-        run: npm run test:contract:auth
+        run: npm run test:contract
 
   test:
     name: Backend Tests
@@ -67,6 +67,10 @@ jobs:
 
       - name: Run backend tests
         run: npm run test --workspace=backend
+        working-directory: webmux
+
+      - name: Test compiled TypeScript helpers
+        run: npm run test:helpers
         working-directory: webmux
 
   build:
