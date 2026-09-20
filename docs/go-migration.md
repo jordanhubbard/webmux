@@ -88,6 +88,13 @@ authentication, rejection and cleanup across Node/Go restarts. The original API
 uses shared authenticated storage, not per-user file ownership; that contract
 remains unchanged.
 
+Slave startup now honors `WEBMUX_SLAVE_HOST` and `WEBMUX_SLAVE_PORT`. After
+ordinary recovery, it removes all terminal sessions (including other owners and
+agent panes) and creates the system-owned exec console at row/column zero.
+Desktop records remain intact. Differential fixtures verify both migration
+directions, explicit/default ports, ownership, persistence and interactive input
+through the console; broker tests verify old process and viewer cleanup.
+
 The existing Node route order accidentally intercepted the template list as a
 session ID. Both implementations now expose the intended authenticated list;
 Node registers templates before the generic session route and explicitly applies
@@ -195,11 +202,14 @@ dialog focus and narrow desktop forms. The PTY fixture now uses checked
 TypeScript instead of an embedded JavaScript string. Browser specs and Playwright
 configuration are also included in `npm run typecheck`.
 
-`npm run test:visual-parity` creates Node screenshots and then compares Go against
-those images with zero pixel difference and zero color threshold. An additional
+`npm run test:visual-parity` creates Node screenshots, checks a second Node run
+against them, and then compares Go with zero pixel difference and zero color
+threshold. An additional
 decoded RGBA comparison checks every pixel because Playwright's default image
-comparison can ignore anti-aliasing differences even with a zero threshold. Both runs use
-the same build and Chromium executable, locale, timezone, fonts and scale. The
+comparison can ignore anti-aliasing differences even with a zero threshold. All runs use
+the same build and Chromium executable, locale, timezone, fonts and scale. Visual
+runs disable GPU rendering and force sRGB; ordinary browser workflows retain
+their default renderer. The
 eight covered states are empty terminal workspace, terminal connection dialog,
 settings, empty desktop workspace, and VNC/RDP dialogs at 1280×800 and 375×667.
 All eight comparisons pass locally on macOS. Baselines are generated under
@@ -216,6 +226,10 @@ gate has not relaxed that requirement. Its eight local macOS comparisons pass.
 At 678dffc, Linux and Windows both passed the stricter decoded-pixel comparison
 and browser workflows. No UI change explained the earlier Windows difference;
 retain it as evidence of intermittent rendering and continue enforcing the gate.
+At 30d5808, Linux again differed at toolbar borders (16 raw pixels, RGB changes
+of one). The software-rendering configuration and Node-to-Node control now pass
+locally across all eight states; their CI results remain unverified. No pixel
+tolerance has been introduced.
 
 This is scoped rendering evidence, not proof of every state or platform. Login,
 active terminal/desktop rendering, agent panes, failure states, real guacd/RDP
@@ -273,6 +287,10 @@ still need conversion or removal as the Go deployment tooling replaces them.
 - Terminal launches reject invalid ports, unsupported transports and dimensions
   outside the WebSocket resize limits. Unreadable key/mosh configuration fails
   the launch instead of silently falling back to a different configuration.
+- Slave mode rejects malformed, fractional or out-of-range ports before opening
+  writable state; empty/zero ports retain the legacy fallback to 22. Reset or
+  persistence errors stop startup rather than logging an error and continuing
+  with a partially initialized console.
 - Mosh key paths use complete shell quoting, including spaces and apostrophes.
   Unix terminal descriptors remain pollable so cancellation can release blocked
   I/O; Windows launch failures release pipes, attribute lists and native handles.
@@ -354,3 +372,8 @@ That assertion now waits up to five seconds for process shutdown as well.
 The complete Linux and Windows Go jobs passed at 5a6df28, including the race
 suite, vet and differential contracts. macOS CI remains queued; local macOS
 checks pass. Real remote desktop rendering remains outside these fixture checks.
+At 30d5808, Windows failed the AI timestamp contract's strict cross-process clock
+ordering assertion. The contract now requires an integer Unix-millisecond value
+within one second of the request window and prints both clocks on failure;
+production timestamps are unchanged. A Windows rerun is required to verify this
+change.

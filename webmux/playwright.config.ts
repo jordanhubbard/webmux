@@ -5,6 +5,7 @@ const TEST_PORT = 18080;
 const TEST_HOME = path.resolve(__dirname, '../tests/e2e/.test-home');
 const WEBMUX_DIR = path.resolve(__dirname);
 const CHROMIUM_EXECUTABLE = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const VISUAL_PARITY = process.env.WEBMUX_VISUAL_PARITY === '1';
 
 export default defineConfig({
   testDir: '../tests/e2e',
@@ -23,7 +24,10 @@ export default defineConfig({
       name: 'chromium',
       use: {
         browserName: 'chromium',
-        launchOptions: CHROMIUM_EXECUTABLE ? { executablePath: CHROMIUM_EXECUTABLE } : undefined,
+        launchOptions: {
+          ...(CHROMIUM_EXECUTABLE ? { executablePath: CHROMIUM_EXECUTABLE } : {}),
+          ...(VISUAL_PARITY ? { args: ['--disable-gpu', '--force-color-profile=srgb'] } : {}),
+        },
       },
     },
   ],

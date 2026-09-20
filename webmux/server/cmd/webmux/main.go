@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"math"
 	"net"
 	"net/http"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	appconfig "github.com/jordanhubbard/webmux/server/internal/config"
 	"github.com/jordanhubbard/webmux/server/internal/httpapi"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 )
@@ -34,6 +36,15 @@ func run() (resultErr error) {
 	home := flag.String("home", os.Getenv("WEBMUX_HOME"), "writable configuration/data directory")
 	listen := flag.String("listen", "", "override HTTP listen address (e.g. 127.0.0.1:18080)")
 	flag.Parse()
+	slaveHost := os.Getenv("WEBMUX_SLAVE_HOST")
+	slavePort := 0
+	if slaveHost != "" {
+		var err error
+		slavePort, err = parseSlavePort(os.Getenv("WEBMUX_SLAVE_PORT"))
+		if err != nil {
+			return err
+		}
+	}
 	if *home == "" {
 		userHome, err := os.UserHomeDir()
 		if err != nil {
@@ -114,6 +125,12 @@ func run() (resultErr error) {
 	if err := api.RestoreSessions(); err != nil {
 		return fmt.Errorf("restore sessions: %w", err)
 	}
+	if slaveHost != "" {
+		if err := api.StartSlave(slaveHost, slavePort); err != nil {
+			return fmt.Errorf("initialize slave session: %w", err)
+		}
+		slog.Info("slave console initialized", "host", slaveHost, "port", slavePort)
+	}
 	handler := api.Handler()
 	servers := make([]*http.Server, 0, len(listeners))
 	failures := make(chan error, len(listeners))
@@ -151,6 +168,14 @@ func envDefault(name, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func parseSlavePort(raw string) (int, error) {
+	value, err := appconfig.Number(raw)
+	if err != nil || math.IsNaN(value) || math.IsInf(value, 0) || math.Trunc(value) != value || value < 0 || value > 65535 {
+		return 0, errors.New("invalid WEBMUX_SLAVE_PORT")
+	}
+	return int(value), nil
 }
 
 func port(name string, fallback int) (int, error) {

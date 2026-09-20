@@ -79,6 +79,10 @@ func New(store *storage.Store, options Options) (*Server, error) {
 func (s *Server) RestoreSessions() error {
 	return errors.Join(s.sessions.Restore(), s.vnc.Restore(), s.rdp.Restore())
 }
+func (s *Server) StartSlave(host string, port int) error {
+	_, err := s.sessions.ResetForSlave(host, port)
+	return err
+}
 func (s *Server) Close() error { return s.closeSocketsAndSessions() }
 
 func (s *Server) Handler() http.Handler {

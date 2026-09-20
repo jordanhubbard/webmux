@@ -82,6 +82,7 @@ async function start(backend: Backend, mode: Mode, existingHome?: string, enviro
         HTTPS_PORT: '0',
         JWT_SECRET: '',
         WEBMUX_SLAVE_HOST: '',
+        WEBMUX_SLAVE_PORT: '',
         WEBMUX_RCC_URL: '', WEBMUX_RCC_TOKEN: '', LOOM_RCC_BRAIN_URL: '', LOOM_RCC_AGENT_TOKEN: '',
         NVIDIA_API_KEY: '', OPENAI_API_KEY: '', WEBMUX_MODEL: '',
         WEBMUX_EXEC_COMMAND: undefined,
@@ -191,7 +192,11 @@ async function aiContract(backend: Backend): Promise<void> {
         assert.equal(result.status, 200);
         const value = record(result.body);
         assert.equal(value.reply, '  fixture reply  '); assert.equal(value.source, 'rcc'); assert.equal(value.model, 'rcc-brain');
-        assert.ok(typeof value.ts === 'number' && value.ts >= before && value.ts <= Date.now());
+        // Node and Go use different wall-clock implementations on Windows;
+        // millisecond samples need not be strictly ordered across processes.
+        const after = Date.now();
+        assert.ok(typeof value.ts === 'number' && Number.isSafeInteger(value.ts) && value.ts >= before - 1000 && value.ts <= after + 1000,
+          `AI timestamp outside request window: ${JSON.stringify({ before, timestamp: value.ts, after })}`);
         const captured = requests.at(-1); assert.ok(captured);
         assert.equal(captured.url, primary ? '/primary/api/brain/request' : '/api/brain/request');
         assert.equal(captured.authorization, `Bearer ${primary ? 'primary' : 'alias'}-fixture`);
@@ -610,6 +615,52 @@ async function waitSocket(client: SocketProbe, predicate: () => boolean, label: 
   }
 }
 
+async function slaveContract(backend: Backend): Promise<void> {
+  const initial = await start(backend, 'local');
+  let system = '', other = '';
+  const oldIDs: string[] = [];
+  const desktops: { kind: string; id: string }[] = [];
+  try {
+    system = stringField((await initial.request('POST', '/api/auth/bootstrap', { username: 'system', password: 'password' })).body, 'token');
+    assert.equal((await initial.request('POST', '/api/auth/register', { username: 'other', password: 'password' }, system)).status, 201);
+    other = stringField((await initial.request('POST', '/api/auth/login', { username: 'other', password: 'password' })).body, 'token');
+    for (const owner of [system, other]) {
+      const created = await initial.request('POST', '/api/sessions', { hostname: 'localhost', username: 'old', transport: 'exec' }, owner);
+      assert.equal(created.status, 201); oldIDs.push(stringField(created.body, 'id'));
+    }
+    for (const kind of ['vnc', 'rdp']) {
+      const created = await initial.request('POST', `/api/${kind}/sessions`, { hostname: '192.0.2.1' }, system);
+      assert.equal(created.status, 201); desktops.push({ kind, id: stringField(created.body, 'id') });
+    }
+  } finally { await initial.close(); }
+  const quote = (value: string): string => process.platform === 'win32' ? `"${value}"` : `'${value.replaceAll("'", `'"'"'`)}'`;
+  const command = `${quote(process.execPath)} ${quote(path.join(root, 'scripts', 'terminal-fixture.mts'))}`;
+  for (const [index, runtime] of [backend, backend === 'node' ? 'go' : 'node'].entries()) {
+    const server = await start(runtime as Backend, 'local', initial.home, { WEBMUX_SLAVE_HOST: 'console.local', WEBMUX_SLAVE_PORT: index === 0 ? '1234' : '', WEBMUX_EXEC_COMMAND: command });
+    let client: SocketProbe | undefined;
+    try {
+      const listed = await server.request('GET', '/api/sessions', undefined, system);
+      assert.equal(listed.status, 200); assert.ok(Array.isArray(listed.body)); assert.equal(listed.body.length, 1);
+      const value = record(listed.body[0]); const id = stringField(value, 'id');
+      assert.ok(!oldIDs.includes(id)); oldIDs.push(id);
+      assert.deepEqual(Object.fromEntries(['owner', 'username', 'hostname', 'transport', 'port', 'row', 'col', 'title'].map(key => [key, value[key]])), {
+        owner: 'system', username: 'console', hostname: 'console.local', transport: 'exec', port: index === 0 ? 1234 : 22, row: 0, col: 0, title: `console.local:${index === 0 ? 1234 : 22}`,
+      });
+      assert.deepEqual((await server.request('GET', '/api/sessions', undefined, other)).body, []);
+      assert.equal((await server.request('GET', `/api/sessions/${id}`, undefined, other)).status, 404);
+      for (const desktop of desktops) assert.equal(stringField((await server.request('GET', `/api/${desktop.kind}/sessions/${desktop.id}`, undefined, system)).body, 'id'), desktop.id);
+      client = probe(server.socket(`/api/term/${id}?token=${system}`));
+      const active = client;
+      await waitSocket(active, () => active.output.includes('fixture-ready'), 'slave console launch');
+      active.socket.send(JSON.stringify({ type: 'input', data: 'slave-input\r' }));
+      await waitSocket(active, () => active.output.includes('fixture-reply:slave-input:λ😀'), 'slave console input');
+    } finally { client?.socket.terminate(); await server.close(); }
+    const saved = record(yaml.load(await readFile(path.join(initial.home, 'data', 'sessions', 'sessions.yaml'), 'utf8')));
+    assert.ok(Array.isArray(saved.sessions)); assert.equal(saved.sessions.length, 1);
+    assert.equal(record(saved.sessions[0]).owner, 'system');
+  }
+}
+
 async function terminalContract(backend: Backend): Promise<void> {
   const server = await start(backend, 'local');
   const clients: SocketProbe[] = [];
@@ -982,6 +1033,7 @@ try {
     await settingsContract(backend);
     await sessionContract(backend);
     await terminalContract(backend);
+    await slaveContract(backend);
     await agentContract(backend);
     await desktopContract(backend);
     await vncContract(backend);
