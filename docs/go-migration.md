@@ -403,10 +403,18 @@ Versions must continue to use three meaningful numeric components because MSI
 ignores a fourth component when comparing versions.
 Windows native CI now builds both variants and exercises both fresh installation
 and a same-version Node-to-Go upgrade. It first runs the installed Node bundle,
-then checks a single new per-user product registration, absence of legacy backend,
+then checks a single new product registration, absence of legacy backend,
 launcher and node_modules files, native runtime/service behavior, and removal
-of product registration on uninstall. Execution awaits Windows CI; XML/YAML
-validation passes locally. This covers stopped application replacement; active
+of product registration on uninstall. The first Windows x64 run at a64e6e0 failed
+at the fixture's registry-based registration lookup before upgrade. The fixture
+now uses MSI's RelatedProducts API keyed by UpgradeCode instead of assuming an
+Add/Remove Programs registry location; hosted verification remains pending.
+`scripts/smoke-upgrade-state.mts` seeds a private home using the installed Node
+runtime before replacement, then uses that same home with the installed Go runtime.
+It verifies existing account login, the pre-upgrade JWT, saved-host responses and
+byte-preserved app/authentication configuration. TypeScript and the Node-to-Go
+shared-home sequence pass locally; the installed-MSI sequence awaits Windows CI.
+This covers stopped application replacement; active
 service migration and forced-failure rollback tests remain outstanding.
 Native MSI CI installs on an isolated runner, exercises the installed HTTP/UI,
 authentication and PTY runtime, runs the WinSW service lifecycle from that

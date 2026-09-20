@@ -15,14 +15,22 @@ if ((Test-Path -LiteralPath $installRoot) -or
 $temporary = Join-Path ([IO.Path]::GetTempPath()) "webmux-native-msi-smoke-$([Guid]::NewGuid())"
 [IO.Directory]::CreateDirectory($temporary) | Out-Null
 function Get-WebMuxProducts {
-  foreach ($key in @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall', 'HKCU:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall')) {
-    Get-ChildItem -LiteralPath $key -ErrorAction SilentlyContinue | ForEach-Object {
-      $entry = Get-ItemProperty -LiteralPath $_.PSPath
-      if ($entry.DisplayName -eq 'WebMux') { $entry.PSChildName }
+  # Ask MSI by UpgradeCode rather than assuming an Add/Remove Programs registry
+  # location. Includes products registered for the current user and machine.
+  $engine = New-Object -ComObject WindowsInstaller.Installer
+  $related = $null
+  try {
+    $related = $engine.GetType().InvokeMember('RelatedProducts', [Reflection.BindingFlags]::GetProperty,
+      $null, $engine, @('{1E20A25F-F940-4B0B-8AC0-7E785279F7C5}'))
+    foreach ($product in $related) { [string]$product }
+  } finally {
+    if ($null -ne $related -and [Runtime.InteropServices.Marshal]::IsComObject($related)) {
+      [void][Runtime.InteropServices.Marshal]::ReleaseComObject($related)
     }
+    [void][Runtime.InteropServices.Marshal]::ReleaseComObject($engine)
   }
 }
-if (@(Get-WebMuxProducts).Count -ne 0) { throw 'MSI smoke requires no existing per-user WebMux product registration.' }
+if (@(Get-WebMuxProducts).Count -ne 0) { throw 'MSI smoke requires no existing WebMux product registration.' }
 $activeInstaller = $installerPath
 function Invoke-Installer([string]$Operation, [string]$Log, [string]$Package = $installerPath) {
   $arguments = @($Operation, ('"' + $Package + '"'), '/qn', '/norestart', '/l*v', ('"' + $Log + '"'))
@@ -43,16 +51,22 @@ try {
     $previousProduct = $products[0]
     & node (Join-Path $PSScriptRoot 'smoke-package.mts') $installRoot
     if ($LASTEXITCODE -ne 0) { throw 'Installed legacy runtime failed smoke checks.' }
+    & node (Join-Path $PSScriptRoot 'smoke-upgrade-state.mts') node seed $installRoot (Join-Path $temporary 'state')
+    if ($LASTEXITCODE -ne 0) { throw 'Could not seed installed legacy state.' }
   }
   Invoke-Installer '/i' (Join-Path $temporary 'install.log')
   $activeInstaller = $installerPath
   $products = @(Get-WebMuxProducts)
-  if ($products.Count -ne 1) { throw 'Native installation left duplicate or missing product registrations.' }
+  if ($products.Count -ne 1) { throw "Expected one native product registration, found $($products.Count): $($products -join ', ')" }
   if ($previousProduct -and $products[0] -eq $previousProduct) { throw 'Native upgrade retained the old product registration.' }
   if (-not (Test-Path -LiteralPath (Join-Path $installRoot 'bin\webmux.exe'))) { throw 'MSI omitted the native executable.' }
   if (Test-Path -LiteralPath (Join-Path $installRoot 'node_modules')) { throw 'Native MSI includes Node runtime dependencies.' }
   if (Test-Path -LiteralPath (Join-Path $installRoot 'backend')) { throw 'Native upgrade left legacy backend files.' }
   if (Test-Path -LiteralPath (Join-Path $installRoot 'bin/webmux.js')) { throw 'Native upgrade left the legacy launcher.' }
+  if ($previousPath) {
+    & node (Join-Path $PSScriptRoot 'smoke-upgrade-state.mts') go verify $installRoot (Join-Path $temporary 'state')
+    if ($LASTEXITCODE -ne 0) { throw 'Native upgrade did not preserve legacy state.' }
+  }
   & node (Join-Path $PSScriptRoot 'smoke-native-package.mts') $installRoot
   if ($LASTEXITCODE -ne 0) { throw 'Installed native runtime failed smoke checks.' }
   & (Join-Path $PSScriptRoot 'smoke-native-service.ps1') -BundleDirectory $installRoot
