@@ -42,7 +42,10 @@ interoperability.
 
 The source Makefile now defaults to Go after differential contracts, exact visual
 parity, and real VNC/RDP checks passed. `WEBMUX_BACKEND=node` retains the legacy
-comparison path. npm, Windows packaging and Homebrew defaults, published releases,
+comparison path. Root npm build/start/browser tests also default to Go, with
+`build:node`, `start:node` and `test:e2e:node` retaining explicit legacy commands.
+The checked TypeScript native launcher builds the platform executable and forwards
+termination signals to the foreground child. Windows packaging and Homebrew defaults, published releases,
 remaining platform coverage and PR review are still migration work; this source
 default change is not a production release. The Go implementation lives in
 `webmux/server`. Do not run both implementations against the same writable

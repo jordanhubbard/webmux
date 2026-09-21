@@ -51,7 +51,7 @@ try {
     else { & npm ci --no-audit --no-fund }
     if ($LASTEXITCODE -ne 0) { throw "npm ci failed with exit code $LASTEXITCODE." }
     if ($Backend -eq 'go') { & npm run build --workspace=frontend }
-    else { & npm run build }
+    else { & npm run build:node }
     if ($LASTEXITCODE -ne 0) { throw "npm run build failed with exit code $LASTEXITCODE." }
   } finally {
     Pop-Location

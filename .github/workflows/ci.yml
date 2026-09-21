@@ -75,7 +75,7 @@ jobs:
         run: |
           sudo -n apt-get update
           sudo -n apt-get install -y xvfb x11vnc x11-xserver-utils xdotool
-          npm run test:e2e -- vnc-integration.spec.ts --output=test-results/vnc-node
+          npm run test:e2e:node -- vnc-integration.spec.ts --output=test-results/vnc-node
           npm run test:e2e:go -- vnc-integration.spec.ts --output=test-results/vnc-go
       - name: Verify real RDP interoperability through Node and Go
         if: runner.os == 'Linux'
@@ -84,7 +84,7 @@ jobs:
           WEBMUX_REAL_RDP: '1'
         run: |
           sudo -n apt-get install -y guacd libguac-client-rdp0 freerdp2-shadow-x11
-          npm run test:e2e -- rdp-integration.spec.ts --output=test-results/rdp-node
+          npm run test:e2e:node -- rdp-integration.spec.ts --output=test-results/rdp-node
           npm run test:e2e:go -- rdp-integration.spec.ts --output=test-results/rdp-go
       - name: Preserve browser parity evidence
         if: always() && runner.os == 'Linux'
@@ -138,6 +138,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -199,7 +204,8 @@ jobs:
         working-directory: webmux
 
       - name: Run browser tests
-        run: npm run test:e2e
+        # Root npm build produces Go; Node remains the differential baseline.
+        run: npm run build --workspace=backend && npm run test:e2e:node
         working-directory: webmux
 
       - name: Run browser tests against Go

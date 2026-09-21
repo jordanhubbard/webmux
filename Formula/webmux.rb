@@ -38,7 +38,8 @@ class Webmux < Formula
       ENV["PYTHON"] = Formula["python@3.14"].opt_bin/"python3.14"
       cd "webmux" do
         system "npm", "ci", "--no-audit", "--no-fund"
-        system "npm", "run", "build"
+        legacy_build = (buildpath/"webmux/scripts/native.mts").exist? ? "build:node" : "build"
+        system "npm", "run", legacy_build
         rm_r "node_modules"
         system "npm", "ci", "--omit=dev", "--workspace=backend", "--no-audit", "--no-fund"
         libexec.install "node_modules", "web", "config.defaults", "package.json", "package-lock.json"

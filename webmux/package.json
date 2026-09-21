@@ -16,16 +16,16 @@
   "scripts": {
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
-    "build": "npm run build:helpers && npm run build --workspace=backend && npm run build --workspace=frontend",
+    "build": "npm run build:helpers && node scripts/native.mts build && npm run build --workspace=frontend",
     "build:helpers": "tsc --project tsconfig.helpers.json",
     "typecheck": "node scripts/check-typescript.mts",
     "test:contract": "npm run build --workspace=backend && node scripts/server-contract.mts",
     "test:contract:auth": "npm run test:contract",
-    "test:e2e": "node scripts/run-playwright.mts",
+    "test:e2e": "node scripts/run-playwright.mts --backend=go",
     "test:e2e:go": "node scripts/run-playwright.mts --backend=go",
     "test:visual-parity": "node scripts/visual-parity.mts",
     "benchmark:server": "npm run build --workspace=backend && node scripts/benchmark-server.mts",
-    "start": "npm run start --workspace=backend",
+    "start": "node scripts/native.mts start",
     "service:install": "npm run build && powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 install",
     "service:uninstall": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 uninstall",
     "service:start": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 start",
@@ -35,7 +35,10 @@
     "service:status": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 status",
     "lint": "npm run lint --workspace=backend && npm run lint --workspace=frontend",
     "test:helpers": "npm run build:helpers && node --test scripts/helpers.test.mts ../scripts/release-metadata.test.mts ../scripts/render-service.test.mts ../scripts/verify-native-artifacts.test.mts ../scripts/make-controls.test.mts",
-    "test": "npm run test --workspace=backend && npm run test --workspace=frontend && npm run test:helpers"
+    "test": "npm run test --workspace=backend && npm run test --workspace=frontend && npm run test:helpers",
+    "build:node": "npm run build:helpers && npm run build --workspace=backend && npm run build --workspace=frontend",
+    "start:node": "npm run start --workspace=backend",
+    "test:e2e:node": "node scripts/run-playwright.mts --backend=node"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2"

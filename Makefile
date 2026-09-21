@@ -60,7 +60,7 @@ ifeq ($(WEBMUX_BACKEND),go)
   NPM_WORKSPACES := --workspace=frontend --include-workspace-root
 else ifeq ($(WEBMUX_BACKEND),node)
   SERVER_COMMAND := $(NODE) backend/dist/index.js
-  E2E_SCRIPT := test:e2e
+  E2E_SCRIPT := test:e2e:node
 else
   $(error WEBMUX_BACKEND must be node or go)
 endif
@@ -101,7 +101,7 @@ ifeq ($(WEBMUX_BACKEND),go)
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build --workspace=frontend
 	@$(NODE) scripts/package-native.mts
 else
-	@cd "$(WEBMUX_DIR)" && $(NPM) run build
+	@cd "$(WEBMUX_DIR)" && $(NPM) run build:node
 	@$(NODE) scripts/package.mts
 endif
 
@@ -156,7 +156,7 @@ ifeq ($(WEBMUX_BACKEND),go)
 	@mkdir -p "$(WEBMUX_DIR)/bin"
 	@cd "$(WEBMUX_DIR)/server" && $(GO) build -trimpath -o ../bin/webmux ./cmd/webmux
 else
-	@cd "$(WEBMUX_DIR)" && $(NPM) run build --silent
+	@cd "$(WEBMUX_DIR)" && $(NPM) run build:node --silent
 endif
 	@printf "$(C_GRN)✓$(C_RST) Build complete.\n"
 

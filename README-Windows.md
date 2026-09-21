@@ -54,18 +54,21 @@ Verify the SHA-256 file before accepting that warning.
 
 ## Build and Run from Source
 
-Install Git, then clone and build:
+Install Git and Go 1.26 or newer, then clone and build. Node.js builds the UI;
+the resulting server is the native Go executable:
 
 ```powershell
 winget install Git.Git
+winget install GoLang.Go
 git clone https://github.com/jordanhubbard/webmux.git
 cd webmux\webmux
-npm ci
+npm ci --workspace=frontend --include-workspace-root
 npm run build
 npm start
 ```
 
-Published dependencies normally provide prebuilt Windows binaries. If npm must
+For legacy compatibility work, use a full `npm ci`, `npm run build:node` and
+`npm run start:node`. Published dependencies normally provide prebuilt Windows binaries. If npm must
 compile `node-pty` or `argon2`, install Visual Studio Build Tools with the
 **Desktop development with C++** workload and rerun `npm ci`.
 

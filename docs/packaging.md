@@ -107,10 +107,10 @@ double-clicking it or running `msiexec.exe /i <installer>.msi`. It installs unde
 user `PATH`. The MSI is currently unsigned, so verify its checksum before
 accepting the unknown-publisher warning.
 
-To build a bundle locally using Node.js 24:
+To build the legacy bundle locally using Node.js 24:
 
 ```bash
-make package
+make package WEBMUX_BACKEND=node
 ```
 
 Output goes to `dist/`. The build uses `npm ci`; production dependencies are

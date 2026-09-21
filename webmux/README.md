@@ -2,7 +2,8 @@
 
 This directory contains the WebMux application workspaces:
 
-- `backend/`: Express, WebSocket, and `node-pty` services
+- `server/`: native Go HTTP/WebSocket server and terminal services
+- `backend/`: legacy TypeScript backend for compatibility comparisons
 - `frontend/`: React, Vite, xterm.js, VNC, and RDP clients
 - `config.defaults/`: templates copied to `WEBMUX_HOME` on first run
 - `examples/`: optional configuration examples
@@ -15,6 +16,11 @@ The repository-level [README](../README.md) is the canonical guide for features,
 
 From this directory:
 
+Go 1.26+ and Node.js 24+ are required for source builds. `npm run build` builds
+the Go server and browser UI; `npm start` launches the native binary. Use
+`build:node` and `start:node` for the legacy server. `npm run test:e2e` tests Go;
+`test:e2e:node` tests a separately built legacy backend.
+
 ```bash
 npm install
 npm run build
@@ -23,7 +29,8 @@ npm test
 npm run lint
 ```
 
-Run the development servers separately when working on the UI and API:
+The existing TypeScript backend watch loop remains available for compatibility
+development. Run it and the frontend development server separately:
 
 ```bash
 npm run dev:backend
