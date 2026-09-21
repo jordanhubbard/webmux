@@ -56,6 +56,12 @@ to Go; `scripts/package-windows.ps1 -Backend node` retains the legacy installer.
 Native Windows CI exercises the unqualified command and legacy packaging selects
 Node explicitly. At efb3d89, Linux and Windows Go checks and Windows x64 native
 packaging passed; the packaging-default change requires its own Windows CI run.
+The release workflow now selects only native artifacts after native and legacy
+compatibility jobs pass. A checked TypeScript publication gate revalidates all
+four platform directories and every archive/MSI checksum after download. Tests
+reject missing targets, unexpected legacy files, stale versions and altered bytes.
+This prepares future release uploads; no release has been published, and the
+complete hosted publication path remains unverified.
 Homebrew defaults, published releases,
 remaining platform coverage and PR review are still migration work; this source
 default change is not a production release. The Go implementation lives in

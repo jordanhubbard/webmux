@@ -87,14 +87,17 @@ sessions can find these tools.
 
 ## Runtime release bundles and Windows installer
 
-Releases also build `.tar.gz` runtime bundles for macOS ARM64 and Linux x86-64,
+The next release built from this migration uses native Go `.tar.gz` runtime bundles for macOS ARM64 and Linux x86-64,
 plus Windows x64 and ARM64 runtime `.zip` bundles and per-user `.msi` installers,
 with a `.sha256` file for each artifact. They contain the compiled application, default configuration,
-license, and native production dependencies. Node.js 24 and OpenSSH must be
-installed separately; these are not standalone executables.
-`bundle.json` records the build platform, CPU, Node ABI, and Linux glibc version.
-Linux bundles target glibc systems at least as new as the build environment;
-use Homebrew/source builds for other architectures or libc implementations.
+license, and the Go executable. Native filenames end in `-native.tar.gz`,
+`-native.zip` or `-native.msi`. They do not require Node.js at runtime. Keep the
+executable with its UI and configuration files; install OpenSSH separately for
+SSH sessions and optional tools for the features that use them.
+`bundle.json` records the build platform and CPU. Use source builds for other
+architectures. Existing published Node bundles still require Node.js 24 and
+their original platform-compatible native dependencies; this branch does not
+replace or publish those releases.
 
 Verify the checksum with `shasum -a 256 -c <archive>.sha256` on macOS or
 `sha256sum -c <archive>.sha256` on Linux, extract the archive, and run its
@@ -132,16 +135,18 @@ dotnet tool install --global wix --version 5.0.2
 The command defaults to Go and produces `-native.zip` and `-native.msi` files
 with SHA-256 checksums in `dist/`. Node.js is a build dependency; the installed
 native server does not require it. Use `-Backend node` to build the legacy Node
-bundle and MSI for compatibility checks. Release publication still uses the
-legacy artifacts while the migration gates remain open.
+bundle and MSI for compatibility checks.
 
 ## Maintaining releases
 
 The packaging workflow tests macOS, Linux, and Windows on pull requests. It
 builds and tests extracted runtime bundles, installs and tests the Homebrew
 formula against the PR revision, and installs, tests, and removes the Windows
-MSI. Published releases receive bundles, the MSI, and checksums only after all
-platforms pass. Release publication must trigger GitHub Actions (a release
+MSI. The release upload job waits for both native and legacy compatibility jobs,
+downloads only native artifacts, and verifies all four platform directories,
+exact filenames, nonempty regular files and SHA-256 checksums before uploading.
+The platform mapping follows the [GitHub-hosted runner architectures](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
+No release has been published as part of this migration. Release publication must trigger GitHub Actions (a release
 created using another workflow's default `GITHUB_TOKEN` does not trigger new
 workflows).
 

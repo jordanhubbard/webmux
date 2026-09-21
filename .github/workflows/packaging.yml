@@ -273,22 +273,43 @@ jobs:
             dist/*.msi
             dist/*.msi.sha256
 
+  verify-native-release:
+    name: Verify native release artifacts
+    needs: [native-preview]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: native-preview-*
+          path: dist
+      - name: Verify complete native release set
+        run: node scripts/verify-native-artifacts.mts --release dist
+
   publish:
     name: Attach release bundles
     if: github.event_name == 'release'
-    needs: [package, windows-package]
+    needs: [verify-native-release, package, windows-package]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
       - uses: actions/download-artifact@v8
         with:
-          pattern: webmux-*
+          pattern: native-preview-*
           path: dist
-          merge-multiple: true
+      - name: Verify complete native release set
+        run: node scripts/verify-native-artifacts.mts --release dist
       - name: Upload verified bundles and checksums
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$RELEASE_TAG" dist/* --clobber
+        run: gh release upload "$RELEASE_TAG" dist/*/* --clobber
