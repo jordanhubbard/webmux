@@ -29,13 +29,16 @@ npm test
 npm run lint
 ```
 
-The existing TypeScript backend watch loop remains available for compatibility
-development. Run it and the frontend development server separately:
+Start the native backend with `npm start` after building, then run the frontend
+development server in a separate terminal:
 
 ```bash
-npm run dev:backend
 npm run dev:frontend
 ```
+
+Stop, rebuild and restart the native server after Go changes. The existing
+TypeScript backend watch loop remains available as `npm run dev:backend` for
+compatibility development.
 
 The frontend development server proxies API requests to the backend. For browser tests, install Playwright Chromium with `npx playwright install chromium`, then run `npm run test:e2e`. Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` when using an existing compatible Chrome or Chromium installation.
 

@@ -7,7 +7,7 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 - **2D tiled terminal workspace** — scrollable CSS Grid of fixed-size terminals; click "+" placeholders to add sessions to the right or below any existing tile
 - **Configurable terminal size** — default 80×24; adjust columns, rows, and font size from the top bar (persisted to config)
 - **Full terminal emulation** — xterm.js with 256-color, clickable links, 5000-line scrollback
-- **SSH and mosh transports** — proper PTY via node-pty, with keepalive and auto-reconnect
+- **SSH and mosh transports** — native PTYs, with keepalive and auto-reconnect
 - **Persistent sessions** — sessions survive browser closes and server reboots; auto-reconnected on startup
 - **Remote desktop workspace** — arrange VNC and RDP sessions in a second tiled workspace, with fullscreen viewing and reconnect controls
 - **Saved hosts** — save connection profiles for one-click connect; stored with hostname, port, username, transport, and key
@@ -325,24 +325,33 @@ The browser obtains a short-lived WebSocket ticket and connects to `/api/term/:s
 
 ## Development
 
+Run npm commands from `webmux/`. For the native backend:
+
 ```bash
-# Backend in watch mode
-npm run dev:backend
+cd webmux
+npm run build
+npm start
+```
 
-# Frontend dev server (proxies /api to backend)
+In a second terminal, run the frontend development server from `webmux/`:
+
+```bash
 npm run dev:frontend
+```
 
-# Run tests
+It proxies API requests to the running backend. Stop, rebuild and restart the
+native server after Go changes. `npm run dev:backend` remains the legacy
+TypeScript server's watch loop for compatibility work.
+
+Run quality checks from the repository root:
+
+```bash
 make test
-
+make lint
 # Run browser tests from the application workspace
 cd webmux
 npx playwright install chromium
 npm run test:e2e
-
-# Lint
-cd ..
-make lint
 ```
 
 If Playwright does not publish a bundled Chromium build for the host OS, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a compatible installed Chrome or Chromium executable before running `npm run test:e2e`.
