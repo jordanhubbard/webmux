@@ -3,7 +3,7 @@ param(
   [string]$OutputDirectory,
   [string]$WixCommand = 'wix',
   [ValidateSet('node', 'go')]
-  [string]$Backend = 'node'
+  [string]$Backend = 'go'
 )
 
 $ErrorActionPreference = 'Stop'

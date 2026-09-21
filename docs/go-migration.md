@@ -45,7 +45,12 @@ parity, and real VNC/RDP checks passed. `WEBMUX_BACKEND=node` retains the legacy
 comparison path. Root npm build/start/browser tests also default to Go, with
 `build:node`, `start:node` and `test:e2e:node` retaining explicit legacy commands.
 The checked TypeScript native launcher builds the platform executable and forwards
-termination signals to the foreground child. Windows packaging and Homebrew defaults, published releases,
+termination signals to the foreground child. Windows packaging now also defaults
+to Go; `scripts/package-windows.ps1 -Backend node` retains the legacy installer.
+Native Windows CI exercises the unqualified command and legacy packaging selects
+Node explicitly. At efb3d89, Linux and Windows Go checks and Windows x64 native
+packaging passed; the packaging-default change requires its own Windows CI run.
+Homebrew defaults, published releases,
 remaining platform coverage and PR review are still migration work; this source
 default change is not a production release. The Go implementation lives in
 `webmux/server`. Do not run both implementations against the same writable
@@ -545,8 +550,8 @@ MSI/packaging job at c89d6c1. Windows arm64 verification remains pending. Custom
 behavior and switching default release/service commands remain unfinished.
 
 `scripts/package-windows.ps1 -Backend go` now builds the frontend, native archive
-and a `-native.msi` installer with a checksum. The default remains `-Backend node`
-during migration. Both variants use the existing per-user WiX product and
+and a `-native.msi` installer with a checksum. Initially the default remained
+`-Backend node`; it now defaults to Go as described above. Both variants use the existing per-user WiX product and
 installation directory, so they are replacement variants rather than side-by-side
 products. WiX now enables same-version major upgrades so swapping backend variants
 does not register overlapping products. Removal is scheduled after transaction

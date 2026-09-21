@@ -74,7 +74,7 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/package-windows.ps1 -Backend node
-          ./scripts/package-windows.ps1 -Backend go
+          ./scripts/package-windows.ps1
       - name: Exercise extracted native runtime
         if: runner.os != 'Windows'
         shell: bash
@@ -224,7 +224,7 @@ jobs:
           "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Build Windows bundle and MSI
         shell: pwsh
-        run: ./scripts/package-windows.ps1
+        run: ./scripts/package-windows.ps1 -Backend node
       - name: Test extracted Windows bundle
         shell: pwsh
         run: |

@@ -121,12 +121,19 @@ To test an extracted bundle:
 node scripts/smoke-package.mts /absolute/path/to/extracted/webmux-version-platform-arch-node24
 ```
 
-On Windows, install WiX 5 and build both the ZIP and MSI from PowerShell:
+On Windows, install Go 1.26 or newer, Node.js 24 and WiX 5, then build the
+native Go ZIP and MSI from PowerShell:
 
 ```powershell
 dotnet tool install --global wix --version 5.0.2
 .\scripts\package-windows.ps1
 ```
+
+The command defaults to Go and produces `-native.zip` and `-native.msi` files
+with SHA-256 checksums in `dist/`. Node.js is a build dependency; the installed
+native server does not require it. Use `-Backend node` to build the legacy Node
+bundle and MSI for compatibility checks. Release publication still uses the
+legacy artifacts while the migration gates remain open.
 
 ## Maintaining releases
 
