@@ -18,8 +18,14 @@ job 106174628464), alongside the preceding contract and visual parity checks.
 The expanded test creates sessions through the VNC dialog with and without a
 generated password, reconnects in fullscreen, and checks pointer coordinates on
 the actual X display using xdotool. Both cases passed through Node and Go in
-Linux CI at c75be78 (run 35547532582, job 106176051606). Clipboard, keyboard and all encoding
-interoperability are not established by this test.
+Linux CI at c75be78 (run 35547532582, job 106176051606). The fixture now also
+focuses an xev observer on its private display and requires actual press/release
+events for browser-generated `a` and Enter input, in both password modes. Observer
+output is retained with the VNC log. Strict TypeScript checks pass; keyboard
+execution awaits Linux CI. Local XQuartz Xvfb did not produce its allocated
+display within the fixture deadline, so it provides no keyboard evidence.
+Clipboard, modifier/layout combinations and all encoding interoperability remain
+outside this test.
 
 Linux CI additionally schedules `rdp-integration.spec.ts` through Node and Go
 with `WEBMUX_REAL_RDP=1`: a private Xvfb display is shared by a loopback-bound

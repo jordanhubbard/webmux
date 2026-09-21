@@ -7,13 +7,14 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-for (const authenticated of [false, true]) test(`real x11vnc updates and pointer input (${authenticated ? 'password' : 'no password'})`, async ({ page, request }, info) => {
-  test.skip(process.env.WEBMUX_REAL_VNC !== '1', 'Requires Linux Xvfb, x11vnc and xsetroot');
+for (const authenticated of [false, true]) test(`real x11vnc updates and input (${authenticated ? 'password' : 'no password'})`, async ({ page, request }, info) => {
+  test.skip(process.env.WEBMUX_REAL_VNC !== '1', 'Requires Linux Xvfb, x11vnc, xsetroot, xdotool and xev');
   test.setTimeout(60_000);
   const children: ChildProcess[] = [];
   const temporary = mkdtempSync(join(tmpdir(), 'webmux-real-vnc-'));
   const password = authenticated ? randomBytes(4).toString('hex') : '';
   let diagnostics = '';
+  let keyboardEvents = '';
   let failure: Error | undefined;
   let id: string | undefined;
   function start(command: string, args: string[]) {
@@ -107,6 +108,35 @@ for (const authenticated of [false, true]) test(`real x11vnc updates and pointer
       const y = Number(/^Y=(\d+)$/m.exec(location.stdout)?.[1]);
       return Math.abs(x - 80 * 640 / bounds.width) <= 2 && Math.abs(y - 60 * 480 / bounds.height) <= 2;
     }).toBe(true);
+    // Observe actual X key events after browser input crosses noVNC, the backend
+    // proxy and x11vnc. Only the private display contains this observer window.
+    const observer = start('xev', ['-display', displayName, '-name', 'webmux-keyboard-fixture', '-geometry', '100x100+400+300']);
+    observer.stdout!.on('data', chunk => { keyboardEvents = (keyboardEvents + String(chunk)).slice(-65536); });
+    const xdo = (args: string[]) => {
+      const result = spawnSync('xdotool', args, {
+        encoding: 'utf8', timeout: 5000, env: { ...process.env, DISPLAY: displayName },
+      });
+      if (result.error) throw result.error;
+      return result;
+    };
+    let observerWindow = '';
+    await expect.poll(() => {
+      if (failure) throw failure;
+      const found = xdo(['search', '--name', '^webmux-keyboard-fixture$']);
+      observerWindow = found.stdout.trim();
+      return found.status === 0 && /^\d+$/.test(observerWindow);
+    }).toBe(true);
+    const focused = xdo(['windowfocus', observerWindow]);
+    expect(focused.status, focused.stderr).toBe(0);
+    await page.keyboard.press('a');
+    await page.keyboard.press('Enter');
+    await expect.poll(() => Array.from(
+      keyboardEvents.matchAll(/(KeyPress|KeyRelease) event,[\s\S]*?keysym ([^)\n]+)/g),
+      match => `${match[1]} ${match[2]}`,
+    )).toEqual(expect.arrayContaining([
+      'KeyPress 0x61, a', 'KeyRelease 0x61, a',
+      'KeyPress 0xff0d, Return', 'KeyRelease 0xff0d, Return',
+    ]));
     expect(errors).toEqual([]);
   } finally {
     try {
@@ -120,7 +150,7 @@ for (const authenticated of [false, true]) test(`real x11vnc updates and pointer
         try { await exited; } finally { clearTimeout(timer); }
       }
       const log = info.outputPath('x11vnc.log');
-      writeFileSync(log, diagnostics);
+      writeFileSync(log, diagnostics + '\nX keyboard observer:\n' + keyboardEvents);
       await info.attach('x11vnc-log', { path: log, contentType: 'text/plain' });
       rmSync(temporary, { recursive: true, force: true });
     }
