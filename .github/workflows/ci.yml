@@ -75,8 +75,8 @@ jobs:
         run: |
           sudo -n apt-get update
           sudo -n apt-get install -y xvfb x11vnc x11-xserver-utils
-          npm run test:e2e -- vnc-integration.spec.ts
-          npm run test:e2e:go -- vnc-integration.spec.ts
+          npm run test:e2e -- vnc-integration.spec.ts --output=test-results/vnc-node
+          npm run test:e2e:go -- vnc-integration.spec.ts --output=test-results/vnc-go
       - name: Preserve browser parity evidence
         if: always() && runner.os == 'Linux'
         uses: actions/upload-artifact@v7

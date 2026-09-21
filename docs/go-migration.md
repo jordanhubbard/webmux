@@ -13,7 +13,8 @@ Linux Go CI also schedules `vnc-integration.spec.ts` against both backends with
 loopback-only x11vnc server, checks actual noVNC canvas pixels before and after
 a screen update, and reloads the browser to verify reconnection. Processes and
 sessions are cleaned up, and server logs are attached to test results. This
-addition passes strict TypeScript checking; its first Linux execution is pending.
+addition passed for Node and Go in Linux CI at fd00f18 (run 35547016523,
+job 106174628464), alongside the preceding contract and visual parity checks.
 It does not establish VNC password, clipboard or all encoding interoperability.
 
 The Node server remains the default until the complete replacement passes the
@@ -36,8 +37,10 @@ administrator's private AppData prevented the service account from resolving
 configuration paths even with access granted on the leaf directory. The fixture
 also injects a synchronous startup failure after XML replacement, then checks
 byte-for-byte restoration before the real recovery start, unchanged SCM identity,
-healthy HTTP and temporary-file cleanup. This rollback addition awaits Windows
-execution. Domain accounts and delayed startup failures remain separate gaps.
+healthy HTTP and temporary-file cleanup. Windows x64 passed this rollback check
+for both accounts at c87c67b (run 35547121334, job 106174906830), including the
+legacy-to-native MSI upgrade path. Domain accounts and delayed startup failures
+remain separate gaps.
 
 Native packaging now applies the release-tag/version check before building and
 verifies its complete upload set before retaining artifacts. Unix requires one
