@@ -51,7 +51,7 @@ LOGFILE      := $(WEBMUX_HOME)/logs/webmux.log
 NODE         := node
 NPM          := npm
 GO           := go
-WEBMUX_BACKEND ?= node
+WEBMUX_BACKEND ?= go
 OS           := $(shell uname)
 
 ifeq ($(WEBMUX_BACKEND),go)
@@ -108,7 +108,7 @@ endif
 help:
 	@printf "$(C_BLD)$(C_MAG)▦ WebMux$(C_RST)$(C_DIM) — web-native terminal multiplexer$(C_RST)\n\n"
 	@printf "$(C_BLD)Targets:$(C_RST)\n"
-	@printf "  $(C_CYN)make package$(C_RST)        Build a macOS/Linux runtime bundle (Node.js 24)\n"
+	@printf "  $(C_CYN)make package$(C_RST)        Build a native macOS/Linux runtime bundle\n"
 	@printf "  $(C_CYN)make$(C_RST)               Build the application\n"
 	@printf "  $(C_CYN)make start$(C_RST)          Build and start the server\n"
 	@printf "  $(C_CYN)make stop$(C_RST)           Stop the running server\n"
@@ -129,7 +129,7 @@ help:
 	@printf "  $(C_CYN)make check-guacd$(C_RST)    Check guacd (RDP proxy) installation\n"
 	@printf "  $(C_CYN)make help$(C_RST)           Show this help\n"
 	@printf "\n$(C_BLD)Configuration:$(C_RST)\n"
-	@printf "  $(C_YLW)WEBMUX_BACKEND$(C_RST)=$(C_DIM)node|go$(C_RST)          Backend (Go migration preview)\n"
+	@printf "  $(C_YLW)WEBMUX_BACKEND$(C_RST)=$(C_DIM)go|node$(C_RST)          Backend (default: go)\n"
 	@printf "  $(C_YLW)WEBMUX_HOME$(C_RST)=$(C_DIM)~/.config/webmux$(C_RST)   Runtime config/data directory\n"
 	@printf "  $(C_YLW)HTTP_PORT$(C_RST)=$(C_DIM)8080$(C_RST)              HTTP listen port\n"
 	@printf "  $(C_YLW)HTTPS_PORT$(C_RST)=$(C_DIM)8443$(C_RST)             HTTPS listen port\n"

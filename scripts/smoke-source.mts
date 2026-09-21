@@ -6,9 +6,10 @@ import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
 import { once } from 'node:events';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 
-const backend = process.argv[2] ?? 'go';
+const explicitBackend = process.argv[2];
+const backend = explicitBackend ?? 'go';
 assert(backend === 'go' || backend === 'node', 'Expected go or node');
 assert(process.platform !== 'win32', 'Source Make controls are Unix-only');
 const repo = path.resolve(import.meta.dirname, '..');
@@ -25,10 +26,12 @@ const app = fs.readFileSync(path.join(repo, 'webmux/config.defaults/app.yaml'), 
   .replace('name: webmux', 'name: source-control-smoke').replace('listen_host: 0.0.0.0', 'listen_host: 127.0.0.1');
 fs.mkdirSync(path.join(home, 'config')); fs.writeFileSync(path.join(home, 'config/app.yaml'), app);
 function control(target: '_start_manual' | '_stop_manual'): void {
-  const result = spawnSync('make', ['--no-print-directory', target, `WEBMUX_BACKEND=${backend}`,
+  const env: NodeJS.ProcessEnv = { ...process.env, JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' };
+  if (!explicitBackend) delete env.WEBMUX_BACKEND;
+  const result = spawnSync('make', ['--no-print-directory', target, ...(explicitBackend ? [`WEBMUX_BACKEND=${backend}`] : []),
     `WEBMUX_HOME=${home}`, `HTTP_PORT=${port}`, 'HTTPS_PORT=8443'], {
     cwd: repo, timeout: 20000, encoding: 'utf8',
-    env: { ...process.env, JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' },
+    env,
   });
   if (result.error) throw result.error;
   assert.equal(result.status, 0, result.stdout + result.stderr);
@@ -43,6 +46,10 @@ try {
     started = true; control('_start_manual');
     const pid = fs.readFileSync(path.join(home, '.webmux.pid'), 'utf8').trim();
     assert.match(pid, /^[1-9]\d*$/); process.kill(Number(pid), 0);
+    if (backend === 'go') {
+      const executable = execFileSync('ps', ['-p', pid, '-o', 'comm='], { encoding: 'utf8', timeout: 5000 }).trim();
+      assert.equal(path.basename(executable), 'webmux', `Expected the native server, got ${executable}`);
+    }
     let healthy = false;
     for (let retry = 0; retry < 50; retry++) {
       try {

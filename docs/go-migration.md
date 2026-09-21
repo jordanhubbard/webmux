@@ -32,16 +32,21 @@ video and image capability instructions before `connect`. Both now send those
 instructions in legacy handshake order, advertising PNG/JPEG image support.
 A Go regression assertion failed before the fix; protocol/HTTP race tests and
 strict TypeScript checks pass afterward. Differential contract fixtures now
-require the capabilities too. Real-server verification of the fix is pending.
+require the capabilities too. Real guacd/FreeRDP rendering, screen updates and
+browser reconnection passed through Node and Go in Linux CI at 5845dae (run
+35548153331, job 106177760100).
 Full desktop-server logs are written to artifact files, since inline Playwright
 attachments were truncated in console output and absent from the uploaded files.
 The test does not validate Windows/NLA authentication, clipboard or input
 interoperability.
 
-The Node server remains the default until the complete replacement passes the
-compatibility gates. The Go implementation lives in `webmux/server`; partial
-implementation is not a production replacement. Do not run both implementations
-against the same writable `WEBMUX_HOME`.
+The source Makefile now defaults to Go after differential contracts, exact visual
+parity, and real VNC/RDP checks passed. `WEBMUX_BACKEND=node` retains the legacy
+comparison path. npm, Windows packaging and Homebrew defaults, published releases,
+remaining platform coverage and PR review are still migration work; this source
+default change is not a production release. The Go implementation lives in
+`webmux/server`. Do not run both implementations against the same writable
+`WEBMUX_HOME`.
 
 Windows native MSI CI now repeats the service lifecycle with a temporary local
 Users-group account after the fresh-install LocalSystem check. The fixture
@@ -616,10 +621,9 @@ hosted verification remains queued.
 
 ### Source builds and process control
 
-The Makefile accepts `WEBMUX_BACKEND=go` for native builds, packaging, manual
-start/stop, tests and source service installation. For example,
-`make build WEBMUX_BACKEND=go` writes `webmux/bin/webmux` and builds the existing
-frontend and checked helpers. `make install WEBMUX_BACKEND=go` uses native
+The Makefile defaults to Go for builds, packaging, manual start/stop, tests and
+source service installation. `make build` writes `webmux/bin/webmux` and builds the
+existing frontend and checked helpers. `make install` uses native
 launchd/systemd templates; their executable is the source tree's Go binary.
 Native Make and Windows package dependency installation selects the frontend and root
 tooling workspaces, excluding the legacy backend's native npm dependencies.
@@ -629,7 +633,8 @@ manual start/stop/restart, checksum verification and extracted-runtime smoke
 checks with no installed `node-pty`, `argon2`, `express` or backend workspace.
 Changing the backend of an already installed service requires reinstalling its
 definition. Normal service-aware start/stop continues to operate the installed
-definition. Node remains the default until the full migration gates pass.
+definition. Explicit `WEBMUX_BACKEND=node` targets remain for legacy comparisons;
+the legacy packaging CI job supplies that option.
 
 Go unit/race tests and vet join the native Make test/lint targets, and browser
 tests select the Go runner. The root Makefile's remaining inline Node expression

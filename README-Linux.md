@@ -1,6 +1,6 @@
 # Running WebMux on Linux
 
-WebMux runs natively on Linux using Unix pseudoterminals through `node-pty`. The repository Makefile can build the application, run it directly, or install it as a systemd user service.
+The source Makefile runs WebMux's Go backend on Linux using Unix pseudoterminals. It can build the application, run it directly, or install it as a systemd user service. `WEBMUX_BACKEND=node` selects the legacy backend for compatibility testing.
 
 ## Homebrew installation
 
@@ -23,7 +23,8 @@ source checkout.
 ## Prerequisites
 
 - A supported 64-bit or ARM64 Linux distribution
-- Node.js 24 LTS or newer
+- Go 1.26 or newer
+- Node.js 24 LTS or newer for frontend/tooling builds
 - Git and OpenSSH Client
 - A C/C++ toolchain and Python if npm must compile a native dependency
 
@@ -34,10 +35,11 @@ sudo apt update
 sudo apt install git openssh-client build-essential python3
 ```
 
-Install Node.js 24 LTS or newer using your distribution packages, NodeSource, or another trusted Node.js distribution. Verify it before building:
+Install Go 1.26 or newer and Node.js 24 LTS or newer using your distribution packages or the language distributors. Verify them before building:
 
 ```bash
 node --version
+go version
 ssh -V
 ```
 

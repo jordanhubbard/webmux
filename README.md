@@ -54,7 +54,8 @@ prerequisites, upgrades, and current signing information.
 
 ### Prerequisites (source builds)
 
-- Node.js >= 24
+- Go >= 1.26 for native source builds
+- Node.js >= 24 for frontend and tooling builds
 - OpenSSH client (`ssh` on macOS/Linux, `ssh.exe` on `PATH` on Windows)
 - (Optional) `sshpass` for password-based SSH auth
 - (Optional) `mosh` on both ends for mosh transport
@@ -79,6 +80,12 @@ make start      # start in background
 Open `http://localhost:8080`. On first run with local auth, you'll be prompted to create the first administrator account.
 
 Runtime configuration and state are created under `~/.config/webmux/` by default; the source checkout remains disposable.
+
+The Makefile builds and runs the Go backend by default. Use
+`WEBMUX_BACKEND=node` with Make targets to exercise the legacy backend during
+compatibility testing. Existing installed service definitions retain their
+backend until reinstalled. Published installers and npm/Homebrew defaults are
+tracked separately in the [migration status](docs/go-migration.md).
 
 ### Install as a Service
 
@@ -254,7 +261,8 @@ Each user gets their own session collection. The first user is created via the b
 
 webmux/                          Source / install directory (WEBMUX_ROOT)
   config.defaults/               Default config templates (copied on first run)
-  backend/                       Node.js / TypeScript backend (Express + ws)
+  server/                        Native Go backend (source Make default)
+  backend/                       Legacy Node.js / TypeScript compatibility backend
   frontend/                      React / TypeScript frontend (Vite + xterm.js)
   service/                       launchd / systemd service templates
 ```

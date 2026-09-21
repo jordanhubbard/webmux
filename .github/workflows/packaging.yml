@@ -40,20 +40,14 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: node scripts/packaging-checks.mts release-version
-      - name: Build existing frontend
-        if: runner.os != 'Windows'
-        working-directory: webmux
-        run: |
-          npm ci --workspace=frontend --include-workspace-root --no-audit --no-fund
-          npm run build --workspace=frontend
       - name: Package native server
         if: runner.os != 'Windows'
-        run: node scripts/package-native.mts
+        run: make package
       - name: Verify native source build and manual controls
         if: runner.os != 'Windows'
         run: |
-          make -o deps build WEBMUX_BACKEND=go
-          node scripts/smoke-source.mts go
+          make -o deps build
+          node scripts/smoke-source.mts
       - name: Verify native Unix service lifecycle
         if: runner.os != 'Windows'
         run: node scripts/smoke-unix-service.mts
@@ -160,7 +154,7 @@ jobs:
         run: |
           node scripts/packaging-checks.mts release-version
       - name: Build runtime bundle
-        run: make package
+        run: make package WEBMUX_BACKEND=node
       - name: Test extracted bundle
         run: |
           mkdir "$RUNNER_TEMP/webmux-bundle"
