@@ -10,7 +10,7 @@ test('Make does not report successful service control after a failed manager com
   const marker = path.join(home, 'restarted');
   const run = (action: string, ...overrides: string[]) => spawnSync('make', [
     '--no-print-directory', '-o', 'build', '-o', 'check-guacd', action,
-    `WEBMUX_HOME=${home}`, 'WEBMUX_BACKEND=go',
+    `WEBMUX_HOME=${home}`,
     // Every service-manager command is replaced. No installed service is used.
     'SVC_INSTALLED=true', 'SVC_MGR=fixture', 'SVC_STATUS=true',
     'SVC_START=true', 'SVC_RESTART=true', 'MAKE=true', ...overrides,

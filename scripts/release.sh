@@ -88,7 +88,7 @@ bump_package_versions() {
     success "package.json files updated to $version"
 }
 
-# Ensures backend/frontend package.json versions and the root lockfile's
+# Ensures root/frontend package.json versions and the root lockfile's
 # per-workspace version entries all agree before a release is tagged.
 validate_version_consistency() {
     node scripts/release-metadata.mts validate
@@ -237,7 +237,7 @@ cmd_prepare() {
     success "Tests passed"
 
     info "Committing release changes..."
-    git add CHANGELOG.md webmux/frontend/package.json webmux/backend/package.json webmux/package-lock.json
+    git add CHANGELOG.md webmux/frontend/package.json webmux/package.json webmux/package-lock.json
     git commit -m "Release v$next_version"
 
     info "Pushing $release_branch..."

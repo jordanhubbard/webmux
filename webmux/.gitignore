@@ -4,7 +4,6 @@ node_modules/
 .pnp.js
 
 # Build outputs
-backend/dist/
 frontend/dist/
 web/
 

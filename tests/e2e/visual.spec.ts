@@ -5,10 +5,10 @@ import { randomBytes } from 'node:crypto';
 import { startVisualVnc } from './visual-vnc-fixture.mts';
 import { startVisualRdp } from './visual-rdp-fixture.mts';
 
-test.skip(process.env.WEBMUX_VISUAL_PARITY !== '1', 'Run through test:visual-parity to create the Node baseline first');
+test.skip(process.env.WEBMUX_VISUAL_PARITY !== '1', 'Run through test:visual to create the Go repeatability baseline first');
 test.use({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, locale: 'en-US', timezoneId: 'UTC', colorScheme: 'dark', contextOptions: { reducedMotion: 'reduce' } });
 
-test('workspace and dialogs match the Node rendering exactly', async ({ page }, info) => {
+test('workspace and dialogs render identically across Go runs', async ({ page }, info) => {
   test.skip(process.env.WEBMUX_E2E_AUTH === 'local', 'Trusted workspace uses the no-auth fixture');
   await page.goto('/');
   const add = page.getByTestId('add-cell-0-0').first();
@@ -36,7 +36,7 @@ test('workspace and dialogs match the Node rendering exactly', async ({ page }, 
   }
 });
 
-test('setup and sign-in match the Node rendering exactly', async ({ page }, info) => {
+test('setup and sign-in render identically across Go runs', async ({ page }, info) => {
   test.skip(process.env.WEBMUX_E2E_AUTH !== 'local', 'Authentication uses an isolated local-auth fixture');
   const password = randomBytes(12).toString('hex');
   const incorrect = randomBytes(12).toString('hex');
@@ -69,7 +69,7 @@ test('setup and sign-in match the Node rendering exactly', async ({ page }, info
   await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
 });
 
-test('active terminal, search and reconnect match Node exactly', async ({ page, request }, info) => {
+test('active terminal, search and reconnect render identically across Go runs', async ({ page, request }, info) => {
   test.skip(process.env.WEBMUX_E2E_AUTH === 'local', 'Terminal rendering uses the trusted fixture');
   const fixture = path.resolve(__dirname, 'visual-terminal-fixture.mts');
   const response = await request.post('/api/sessions', { data: {
@@ -117,7 +117,7 @@ test('active terminal, search and reconnect match Node exactly', async ({ page, 
   }
 });
 
-test('active VNC pixels and input match Node exactly', async ({ page, request }, info) => {
+test('active VNC pixels and input render identically across Go runs', async ({ page, request }, info) => {
   test.skip(process.env.WEBMUX_E2E_AUTH === 'local', 'Desktop uses the trusted fixture');
   const desktop = await startVisualVnc();
   let id: string | undefined;
@@ -164,7 +164,7 @@ test('active VNC pixels and input match Node exactly', async ({ page, request },
   }
 });
 
-test('active RDP pixels and input match Node exactly', async ({ page, request }, info) => {
+test('active RDP pixels and input render identically across Go runs', async ({ page, request }, info) => {
   test.skip(process.env.WEBMUX_E2E_AUTH === 'local', 'Desktop uses the trusted fixture');
   page.setDefaultTimeout(5000);
   const desktop = await startVisualRdp();

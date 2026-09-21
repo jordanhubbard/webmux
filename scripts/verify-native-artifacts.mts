@@ -44,7 +44,7 @@ export function verifyNativeReleaseArtifacts(directory: string, version: string)
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = path.resolve(import.meta.dirname, '..');
-  const metadata: unknown = JSON.parse(fs.readFileSync(path.join(root, 'webmux/backend/package.json'), 'utf8'));
+  const metadata: unknown = JSON.parse(fs.readFileSync(path.join(root, 'webmux/package.json'), 'utf8'));
   assert(metadata && typeof metadata === 'object' && 'version' in metadata && typeof metadata.version === 'string');
   if (process.argv[2] === '--release') {
     verifyNativeReleaseArtifacts(path.resolve(process.argv[3] ?? path.join(root, 'dist')), metadata.version);

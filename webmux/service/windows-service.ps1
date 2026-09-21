@@ -6,9 +6,6 @@ param(
 
   [string]$WebMuxHome,
 
-  [ValidateSet('auto', 'go', 'node')]
-  [string]$Backend = 'auto',
-
   [switch]$LocalSystem
 )
 
@@ -47,7 +44,7 @@ function Get-WebMuxService {
 }
 
 function Write-ServiceConfig([string]$ServiceAccountXml = '') {
-  $runtime = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory -Backend $Backend
+  $runtime = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory
   $pathValue = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
   $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
   if ($userPath) { $pathValue = "$pathValue;$userPath" }
@@ -106,7 +103,7 @@ function Install-WebMuxService {
   if (Get-WebMuxService) {
     throw "The $ServiceName service is already installed. Run the uninstall command first."
   }
-  $null = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory -Backend $Backend
+  $null = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory
   if (-not (Get-Command ssh.exe -CommandType Application -ErrorAction SilentlyContinue)) {
     throw 'OpenSSH Client is required: ssh.exe was not found on PATH.'
   }
@@ -177,7 +174,7 @@ function Uninstall-WebMuxService {
 function Reconfigure-WebMuxService {
   $service = Get-WebMuxService
   if (-not $service) { throw 'Install the WebMux service before reconfiguring it.' }
-  $runtime = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory -Backend $Backend
+  $runtime = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory
   $original = [IO.File]::ReadAllBytes($ConfigPath)
   $definition = New-Object System.Xml.XmlDocument
   $definition.XmlResolver = $null

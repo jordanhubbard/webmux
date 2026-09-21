@@ -48,7 +48,7 @@ const definition = !darwin && makeMode ? path.join(os.homedir(), '.config/system
 function makeControl(action: 'install' | 'start' | 'stop' | 'restart' | 'uninstall'): void {
   assert(makeMode && (!darwin || domain === `gui/${uid}`), 'Make fixture requires an isolated service');
   const result = spawnSync('make', ['--no-print-directory', '-o', 'build', action,
-    'WEBMUX_BACKEND=go', 'MAKE=make -o build', `NODE=${process.execPath}`, `WEBMUX_DIR=${root}`, `WEBMUX_HOME=${home}`,
+    'MAKE=make -o build', `NODE=${process.execPath}`, `WEBMUX_DIR=${root}`, `WEBMUX_HOME=${home}`,
     ...(darwin ? [`PLIST=${definition}`, `LAUNCHD_SVC=${target}`] : [`UNIT=${definition}`])], {
     cwd: path.dirname(sourceRoot), encoding: 'utf8', timeout: 30000,
     env: { ...process.env, JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' },
@@ -96,7 +96,7 @@ try {
   const environment = { HTTP_PORT: String(address.port), HTTPS_PORT: '0', JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' };
   const templateName = darwin ? 'com.webmux.server.plist.native.template' : 'webmux.service.native.template';
   let template = renderService(await fs.readFile(path.join(sourceRoot, 'service', templateName), 'utf8'), darwin ? 'darwin' : 'linux', {
-    root, home, node: process.execPath, searchPath: process.env.PATH ?? '/usr/bin:/bin',
+    root, home, searchPath: process.env.PATH ?? '/usr/bin:/bin',
   });
   if (darwin) {
     template = template.replace('<string>com.webmux.server</string>', `<string>${label}</string>`)

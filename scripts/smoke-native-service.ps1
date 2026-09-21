@@ -64,7 +64,7 @@ function Test-ReconfigureRollback {
     Microsoft.PowerShell.Management\Start-Service -Name $Name
   }
   $rejected = $false
-  try { & $installer reconfigure -Backend go } catch {
+  try { & $installer reconfigure } catch {
     if ($_.Exception.Message -ne 'Injected fixture startup failure after XML replacement') { throw }
     $rejected = $true
   }
@@ -99,9 +99,9 @@ try {
       param([string]$UserName, [string]$Message)
       return $fixtureCredential
     }
-    & $installer install -Backend go -WebMuxHome $homeDirectory
+    & $installer install -WebMuxHome $homeDirectory
   } else {
-    & $installer install -Backend go -LocalSystem -WebMuxHome $homeDirectory
+    & $installer install -LocalSystem -WebMuxHome $homeDirectory
   }
   Wait-Healthy
   $definition = [xml][IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml'))
@@ -117,15 +117,19 @@ try {
   $environment = @($definition.service.env | ForEach-Object { $_.OuterXml }) -join "`n"
   $originalConfig = [IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml'))
   $rejected = $false
-  try { & $installer reconfigure -Backend node } catch {
-    if ($_.Exception.Message -notmatch 'Node production build is missing') { throw }
+  # Copy only service scripts so preflight sees a missing Go binary without
+  # touching the executable used by the running service.
+  $missingRoot = Join-Path $homeDirectory 'missing-runtime'
+  Copy-Item -LiteralPath (Join-Path $root 'service') -Destination $missingRoot -Recurse -Force
+  try { & (Join-Path $missingRoot 'windows-service.ps1') reconfigure } catch {
+    if ($_.Exception.Message -notmatch 'native server is missing') { throw }
     $rejected = $true
-  }
+  } finally { Remove-Item -LiteralPath $missingRoot -Recurse -Force }
   if (-not $rejected) { throw 'Reconfigure accepted a missing backend.' }
   if ([IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml')) -cne $originalConfig) { throw 'Failed preflight changed the definition.' }
   if ((Get-Service -Name WebMux).Status -ne 'Running') { throw 'Failed preflight stopped the service.' }
   Test-ReconfigureRollback
-  & $installer reconfigure -Backend go
+  & $installer reconfigure
   Wait-Healthy
   $reconfigured = [xml][IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml'))
   if ((@($reconfigured.service.env | ForEach-Object { $_.OuterXml }) -join "`n") -cne $environment) {
@@ -143,7 +147,7 @@ try {
   $stale.SelectSingleNode('/service/executable').InnerText = 'node.exe'
   $stale.SelectSingleNode('/service/arguments').InnerText = '"' + (Join-Path $root 'backend/dist/index.js') + '"'
   $stale.Save($configPath)
-  & $installer reconfigure -Backend go
+  & $installer reconfigure
   if ((Get-Service -Name WebMux).Status -ne 'Stopped') { throw 'Reconfigure started a previously stopped service.' }
   $native = [xml][IO.File]::ReadAllText($configPath)
   if ($native.service.executable -ne (Join-Path $root 'bin/webmux.exe') -or $native.service.arguments) { throw 'Reconfigure did not replace the legacy launch command.' }

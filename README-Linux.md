@@ -1,6 +1,6 @@
 # Running WebMux on Linux
 
-The source Makefile runs WebMux's Go backend on Linux using Unix pseudoterminals. It can build the application, run it directly, or install it as a systemd user service. `WEBMUX_BACKEND=node` selects the legacy backend for compatibility testing.
+The source Makefile runs WebMux's Go backend on Linux using Unix pseudoterminals. It can build the application, run it directly, or install it as a systemd user service.
 
 ## Homebrew installation
 

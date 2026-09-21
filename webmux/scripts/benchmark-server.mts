@@ -1,4 +1,4 @@
-// Compare both backends under the same isolated local workload.
+// Measure the Go server under an isolated local workload.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -13,10 +13,9 @@ const outputFile = path.resolve(process.argv[2] ?? path.join(root, 'benchmark-re
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'webmux-benchmark-'));
 const binary = path.join(temporary, process.platform === 'win32' ? 'webmux.exe' : 'webmux');
 const rounds = 5;
-type Backend = 'node' | 'go';
 interface TerminalSample { pingMs: number[]; bulkMiBPerSecond: number }
 interface Sample extends TerminalSample { startupMs: number; idleRssBytes: number; activeRssBytes: number; concurrent: TerminalSample[]; concurrentRssBytes: number }
-const samples: Record<Backend, Sample[]> = { node: [], go: [] };
+const samples: Sample[] = [];
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 function record(value: unknown): Record<string, unknown> {
   assert(value && typeof value === 'object' && !Array.isArray(value)); return value as Record<string, unknown>;
@@ -41,8 +40,8 @@ async function stop(child: ChildProcess): Promise<void> {
     if (process.platform !== 'win32') assert.equal(code, 0);
   } finally { clearTimeout(timer); }
 }
-async function sample(backend: Backend): Promise<Sample> {
-  const home = await fs.mkdtemp(path.join(temporary, `${backend}-`));
+async function sample(): Promise<Sample> {
+  const home = await fs.mkdtemp(path.join(temporary, `go-`));
   await fs.cp(path.join(root, 'config.defaults'), path.join(home, 'config'), { recursive: true });
   const appFile = path.join(home, 'config/app.yaml');
   await fs.writeFile(appFile, (await fs.readFile(appFile, 'utf8')).replace('listen_host: 0.0.0.0', 'listen_host: 127.0.0.1'));
@@ -53,7 +52,7 @@ async function sample(backend: Backend): Promise<Sample> {
   const base = `http://127.0.0.1:${address.port}`;
   const quote = (value: string) => process.platform === 'win32' ? `"${value}"` : `'${value.replaceAll("'", `'"'"'`)}'`;
   const started = performance.now();
-  const child = spawn(backend === 'go' ? binary : process.execPath, backend === 'go' ? [] : [path.join(root, 'backend/dist/index.js')], {
+  const child = spawn(binary, [], {
     cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: {
       ...process.env, WEBMUX_ROOT: root, WEBMUX_HOME: home, HTTP_PORT: String(address.port), HTTPS_PORT: '0',
       JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '',
@@ -145,7 +144,7 @@ async function sample(backend: Backend): Promise<Sample> {
     const concurrent = await Promise.all(clients.map(client => client.measure()));
     const concurrentRssBytes = rss(child.pid);
     return { startupMs, idleRssBytes, activeRssBytes, ...singleSample, concurrent, concurrentRssBytes };
-  } catch (error) { console.error(`${backend}: ${logs}`); throw error; }
+  } catch (error) { console.error(`go: ${logs}`); throw error; }
   finally {
     for (const socket of sockets) socket.close();
     try { for (const id of sessionIDs) await request('DELETE', `/api/sessions/${id}`); }
@@ -159,20 +158,18 @@ function percentile(values: number[], fraction: number): number {
 try {
   execFileSync('go', ['build', '-trimpath', '-o', binary, './cmd/webmux'], { cwd: path.join(root, 'server'), stdio: 'inherit' });
   for (let round = 0; round < rounds; round++) {
-    for (const backend of (round % 2 === 0 ? ['node', 'go'] : ['go', 'node']) as Backend[]) {
-      samples[backend].push(await sample(backend));
-    }
+    samples.push(await sample());
   }
-  const summary = Object.fromEntries((['node', 'go'] as const).map(backend => [backend, {
-    medianStartupMs: percentile(samples[backend].map(sample => sample.startupMs), 0.5),
-    medianIdleRssBytes: percentile(samples[backend].map(sample => sample.idleRssBytes), 0.5),
-    medianActiveRssBytes: percentile(samples[backend].map(sample => sample.activeRssBytes), 0.5),
-    p95PingMs: percentile(samples[backend].flatMap(sample => sample.pingMs), 0.95),
-    p95ConcurrentPingMs: percentile(samples[backend].flatMap(sample => sample.concurrent.flatMap(client => client.pingMs)), 0.95),
-    medianConcurrentRssBytes: percentile(samples[backend].map(sample => sample.concurrentRssBytes), 0.5),
-    medianConcurrentClientMiBPerSecond: percentile(samples[backend].flatMap(sample => sample.concurrent.map(client => client.bulkMiBPerSecond)), 0.5),
-    medianBulkMiBPerSecond: percentile(samples[backend].map(sample => sample.bulkMiBPerSecond), 0.5),
-  }]));
+  const summary = { go: {
+    medianStartupMs: percentile(samples.map(sample => sample.startupMs), 0.5),
+    medianIdleRssBytes: percentile(samples.map(sample => sample.idleRssBytes), 0.5),
+    medianActiveRssBytes: percentile(samples.map(sample => sample.activeRssBytes), 0.5),
+    p95PingMs: percentile(samples.flatMap(sample => sample.pingMs), 0.95),
+    p95ConcurrentPingMs: percentile(samples.flatMap(sample => sample.concurrent.flatMap(client => client.pingMs)), 0.95),
+    medianConcurrentRssBytes: percentile(samples.map(sample => sample.concurrentRssBytes), 0.5),
+    medianConcurrentClientMiBPerSecond: percentile(samples.flatMap(sample => sample.concurrent.map(client => client.bulkMiBPerSecond)), 0.5),
+    medianBulkMiBPerSecond: percentile(samples.map(sample => sample.bulkMiBPerSecond), 0.5),
+  } };
   const report = { timestamp: new Date().toISOString(), platform: process.platform, arch: process.arch, os: os.release(),
     cpu: os.cpus()[0]?.model, totalMemoryBytes: os.totalmem(),
     node: process.version, go: execFileSync('go', ['version'], { encoding: 'utf8' }).trim(),
