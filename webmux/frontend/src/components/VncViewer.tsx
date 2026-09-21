@@ -1,6 +1,4 @@
 import { useEffect, useRef } from 'react';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import RFB from '@novnc/novnc/lib/rfb.js';
 import { buildVncWsUrl } from '../utils/api';
 

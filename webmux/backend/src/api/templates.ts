@@ -18,8 +18,10 @@
 
 import { Router, Request, Response } from 'express';
 import type { SessionTemplate } from '../types';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
+router.use(requireAuth);
 
 // ── Built-in templates ───────────────────────────────────────────────────────
 const TEMPLATES: SessionTemplate[] = [

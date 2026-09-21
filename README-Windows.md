@@ -1,15 +1,15 @@
 # Running WebMux on Windows
 
-WebMux runs natively on modern Windows using ConPTY through `node-pty`. The backend resolves `ssh.exe` from `PATH`, uses `cmd.exe` for local command templates and scratch shells, and stores runtime state under the hosting user's profile by default.
+WebMux's Go backend runs natively on modern Windows using ConPTY. The legacy Node backend uses `node-pty` for ConPTY access. Both resolve `ssh.exe` from `PATH`, use `cmd.exe` for local command templates and scratch shells, and store runtime state under the hosting user's profile by default.
 
 ## Prerequisites
 
 1. A current Windows release with ConPTY support, on x64 or ARM64. Published MSIs are available for both architectures. Installing the Windows service also requires .NET Framework 4.6.1 or newer, included with supported Windows releases.
-2. Node.js 24 LTS or newer.
+2. Node.js 24 for source UI/tooling builds and legacy Node installers. Native Go installers do not require Node.js at runtime.
 3. Microsoft OpenSSH Client, with `ssh.exe` available through `PATH`.
 4. Git only when installing from a source checkout.
 
-Install the common prerequisites from an elevated PowerShell prompt:
+Install the prerequisites for source builds or legacy installers from an elevated PowerShell prompt. For a native installer, only the OpenSSH command is needed:
 
 ```powershell
 winget install OpenJS.NodeJS.LTS
@@ -52,20 +52,29 @@ and state under `%USERPROFILE%\.config\webmux`.
 The MSI is not yet code-signed, so Windows identifies the publisher as unknown.
 Verify the SHA-256 file before accepting that warning.
 
+Native installers built from the Go migration use `-native.msi` filenames
+(and matching `.sha256` files). Use those full filenames in the verification and
+installation commands above. Existing published releases retain their original
+Node-based filenames and runtime requirement; no native release has been
+published as part of this migration.
+
 ## Build and Run from Source
 
-Install Git, then clone and build:
+Install Git and Go 1.26 or newer, then clone and build. Node.js builds the UI;
+the resulting server is the native Go executable:
 
 ```powershell
 winget install Git.Git
+winget install GoLang.Go
 git clone https://github.com/jordanhubbard/webmux.git
 cd webmux\webmux
-npm ci
+npm ci --workspace=frontend --include-workspace-root
 npm run build
 npm start
 ```
 
-Published dependencies normally provide prebuilt Windows binaries. If npm must
+For legacy compatibility work, use a full `npm ci`, `npm run build:node` and
+`npm run start:node`. Published dependencies normally provide prebuilt Windows binaries. If npm must
 compile `node-pty` or `argon2`, install Visual Studio Build Tools with the
 **Desktop development with C++** workload and rerun `npm ci`.
 
@@ -108,6 +117,23 @@ webmux-service uninstall
 ```
 
 Use the corresponding `npm run service:<action>` command for a source checkout.
+
+For a native migration preview, stop the existing service before replacing the
+MSI, then point its existing registration at the new runtime:
+
+```powershell
+webmux-service stop
+# Install the native MSI here.
+webmux-service reconfigure -Backend go
+webmux-service start
+```
+
+`reconfigure` preserves the registered Windows account, `WEBMUX_HOME`, other
+environment variables, and log/recovery settings. It updates the executable,
+arguments, working directory and `WEBMUX_ROOT` without asking for the account
+password again. A stopped service stays stopped; a running service is stopped
+and restarted. The selected runtime must already be installed. This command
+does not install an MSI or change the service account or writable home.
 
 The installer downloads and checksum-verifies the stable [WinSW 2.12.0 service wrapper](https://github.com/winsw/winsw/releases/tag/v2.12.0) under `%ProgramData%\WebMux`. The first service installation therefore requires access to GitHub. Service output is written under `%WEBMUX_HOME%\logs`; uninstalling preserves runtime data and logs.
 

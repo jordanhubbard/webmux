@@ -1,7 +1,7 @@
 {
   "extends": "../../webmux/backend/tsconfig.json",
   "compilerOptions": {
-    "rootDir": ".",
+    "rootDir": "../..",
     "outDir": null,
     "declaration": false,
     "declarationMap": false,
@@ -13,5 +13,6 @@
       "@backend/*": ["../../webmux/backend/src/*"]
     }
   },
-  "include": ["./**/*.test.ts", "../../webmux/backend/src/**/*.ts"]
+  "include": ["./**/*.test.ts", "../../webmux/backend/src/**/*.ts"],
+  "exclude": ["node_modules"]
 }

@@ -3,6 +3,8 @@ node_modules/
 
 # Build output
 webmux/backend/dist/
+webmux/bin/
+webmux/scripts/dist/
 webmux/web/
 
 # Runtime config, data, and logs (live in ~/.config/webmux at runtime)
@@ -17,8 +19,10 @@ webmux/logs/
 
 # E2E test artifacts
 tests/e2e/.test-home/
+tests/e2e/.visual-baseline/
 test-results/
 playwright-report/
+webmux/benchmark-results.json
 *~
 
 # Release bundles

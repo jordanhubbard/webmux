@@ -7,7 +7,7 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 - **2D tiled terminal workspace** — scrollable CSS Grid of fixed-size terminals; click "+" placeholders to add sessions to the right or below any existing tile
 - **Configurable terminal size** — default 80×24; adjust columns, rows, and font size from the top bar (persisted to config)
 - **Full terminal emulation** — xterm.js with 256-color, clickable links, 5000-line scrollback
-- **SSH and mosh transports** — proper PTY via node-pty, with keepalive and auto-reconnect
+- **SSH and mosh transports** — native PTYs, with keepalive and auto-reconnect
 - **Persistent sessions** — sessions survive browser closes and server reboots; auto-reconnected on startup
 - **Remote desktop workspace** — arrange VNC and RDP sessions in a second tiled workspace, with fullscreen viewing and reconnect controls
 - **Saved hosts** — save connection profiles for one-click connect; stored with hostname, port, username, transport, and key
@@ -54,7 +54,8 @@ prerequisites, upgrades, and current signing information.
 
 ### Prerequisites (source builds)
 
-- Node.js >= 24
+- Go >= 1.26 for native source builds
+- Node.js >= 24 for frontend and tooling builds
 - OpenSSH client (`ssh` on macOS/Linux, `ssh.exe` on `PATH` on Windows)
 - (Optional) `sshpass` for password-based SSH auth
 - (Optional) `mosh` on both ends for mosh transport
@@ -79,6 +80,13 @@ make start      # start in background
 Open `http://localhost:8080`. On first run with local auth, you'll be prompted to create the first administrator account.
 
 Runtime configuration and state are created under `~/.config/webmux/` by default; the source checkout remains disposable.
+
+The Makefile builds and runs the Go backend by default. Use
+`WEBMUX_BACKEND=node` with Make targets to exercise the legacy backend during
+compatibility testing. Existing installed service definitions retain their
+backend until reinstalled. Root npm build/start and Homebrew HEAD also select Go.
+Existing published installers and the stable Homebrew formula are
+tracked separately in the [migration status](docs/go-migration.md).
 
 ### Install as a Service
 
@@ -254,7 +262,8 @@ Each user gets their own session collection. The first user is created via the b
 
 webmux/                          Source / install directory (WEBMUX_ROOT)
   config.defaults/               Default config templates (copied on first run)
-  backend/                       Node.js / TypeScript backend (Express + ws)
+  server/                        Native Go backend (source Make default)
+  backend/                       Legacy Node.js / TypeScript compatibility backend
   frontend/                      React / TypeScript frontend (Vite + xterm.js)
   service/                       launchd / systemd service templates
 ```
@@ -317,24 +326,32 @@ The browser obtains a short-lived WebSocket ticket and connects to `/api/term/:s
 
 ## Development
 
+Run npm commands from `webmux/`. For the native backend:
+
 ```bash
-# Backend in watch mode
+cd webmux
 npm run dev:backend
+```
 
-# Frontend dev server (proxies /api to backend)
+In a second terminal, run the frontend development server from `webmux/`:
+
+```bash
 npm run dev:frontend
+```
 
-# Run tests
+It proxies API requests to the running backend. `dev:backend` builds Go before
+starting it; stop and rerun the command after Go changes. The legacy TypeScript
+watch loop is available as `npm run dev:backend:node` for compatibility work.
+
+Run quality checks from the repository root:
+
+```bash
 make test
-
+make lint
 # Run browser tests from the application workspace
 cd webmux
 npx playwright install chromium
 npm run test:e2e
-
-# Lint
-cd ..
-make lint
 ```
 
 If Playwright does not publish a bundled Chromium build for the host OS, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a compatible installed Chrome or Chromium executable before running `npm run test:e2e`.

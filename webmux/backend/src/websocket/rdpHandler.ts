@@ -178,7 +178,11 @@ export function setupRdpWebSocket(wss: WebSocketServer): void {
             rdpParamValue(p, targetIp, session.rdp_port,
               session.rdp_username, password, session.rdp_domain)
           );
-          socket.write(encodeGuac('connect', ...paramValues));
+          // Required legacy handshake capabilities precede connect in order.
+          socket.write(encodeGuac('size', '1024', '768', '96')
+            + encodeGuac('audio') + encodeGuac('video')
+            + encodeGuac('image', 'image/png', 'image/jpeg')
+            + encodeGuac('connect', ...paramValues));
 
         } else if (parsed.opcode === 'ready') {
           handshakeDone = true;

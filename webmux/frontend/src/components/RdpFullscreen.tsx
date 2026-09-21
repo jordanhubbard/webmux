@@ -1,6 +1,4 @@
 import { useState, useRef, useCallback } from 'react';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import Guacamole from 'guacamole-common-js';
 import { RdpViewer } from './RdpViewer';
 import type { RdpClientControl } from './RdpViewer';
@@ -42,8 +40,10 @@ export function RdpFullscreen({ session, onBack, onDisconnect }: RdpFullscreenPr
       if (!c) return;
       try {
         const stream = c.createClipboardStream('text/plain');
-        const writer = new Guacamole.StringWriter(stream);
-        writer.sendText(text);
+        // StringWriter in Guacamole 1.5 encodes UTF-16 surrogate halves
+        // separately. TextEncoder preserves supplementary characters as UTF-8.
+        const writer = new Guacamole.ArrayBufferWriter(stream);
+        writer.sendData(new TextEncoder().encode(text));
         writer.sendEnd();
       } catch {
         // Clipboard stream not available — ignore silently

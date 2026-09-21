@@ -6,7 +6,123 @@ on:
   pull_request:
     branches: [main]
 
+# Keep native macOS addons compatible with the prior runner deployment target.
+env:
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+
 jobs:
+  go-server:
+    name: Go Server (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15, windows-2022]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: webmux/package-lock.json
+      - name: Test native server with race detector
+        working-directory: webmux/server
+        run: go test -race ./...
+      - name: Vet native server
+        working-directory: webmux/server
+        run: go vet ./...
+      - name: Install compatibility test dependencies
+        working-directory: webmux
+        run: npm ci
+      - name: Verify Node and Go API compatibility
+        working-directory: webmux
+        run: npm run test:contract
+      - name: Measure backend performance
+        if: runner.os != 'Windows'
+        working-directory: webmux
+        run: node scripts/benchmark-server.mts
+      - name: Preserve backend performance measurements
+        if: always() && runner.os != 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-performance-${{ runner.os }}
+          path: webmux/benchmark-results.json
+      - name: Build browser application
+        if: runner.os == 'Linux'
+        working-directory: webmux
+        run: npm run build --workspace=frontend
+      - name: Install browser for Go parity tests
+        if: runner.os == 'Linux'
+        working-directory: webmux
+        run: npx playwright install --with-deps chromium
+      - name: Verify browser workflows against Go
+        if: runner.os == 'Linux'
+        working-directory: webmux
+        run: npm run test:e2e:go
+      - name: Compare Node and Go screenshots
+        if: runner.os == 'Linux'
+        working-directory: webmux
+        run: npm run test:visual-parity
+      - name: Install real desktop test dependencies
+        id: desktop-tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo -n apt-get update
+          sudo -n apt-get install -y openssh-server tmux xvfb x11vnc x11-xserver-utils x11-utils xdotool xclip guacd libguac-client-rdp0 freerdp2-shadow-x11
+      - name: Compare real agent workflows and screenshots through Node and Go
+        if: runner.os == 'Linux'
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_AGENTS: '1'
+          WEBMUX_VISUAL_PARITY: '1'
+        run: |
+          npm run test:e2e:node -- agent-integration.spec.ts --update-snapshots=all --output=test-results/agents-baseline
+          npm run test:e2e:node -- agent-integration.spec.ts --update-snapshots=none --output=test-results/agents-control
+          npm run test:e2e:go -- agent-integration.spec.ts --update-snapshots=none --output=test-results/agents-go
+      - name: Verify real SSH interoperability through Node and Go
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_SSH: '1'
+        run: |
+          ssh_result=0
+          npm run test:e2e:node -- ssh-integration.spec.ts --output=test-results/ssh-node || ssh_result=1
+          npm run test:e2e:go -- ssh-integration.spec.ts --output=test-results/ssh-go || ssh_result=1
+          exit "$ssh_result"
+      - name: Verify real VNC interoperability through Node and Go
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_VNC: '1'
+        run: |
+          desktop_result=0
+          npm run test:e2e:node -- vnc-integration.spec.ts --output=test-results/vnc-node || desktop_result=1
+          npm run test:e2e:go -- vnc-integration.spec.ts --output=test-results/vnc-go || desktop_result=1
+          exit "$desktop_result"
+      - name: Verify real RDP interoperability through Node and Go
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_RDP: '1'
+        run: |
+          desktop_result=0
+          npm run test:e2e:node -- rdp-integration.spec.ts --output=test-results/rdp-node || desktop_result=1
+          npm run test:e2e:go -- rdp-integration.spec.ts --output=test-results/rdp-go || desktop_result=1
+          exit "$desktop_result"
+      - name: Preserve browser parity evidence
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-parity-linux
+          include-hidden-files: true
+          path: |
+            tests/e2e/.visual-baseline
+            webmux/test-results
+
   test:
     name: Backend Tests
     runs-on: ubuntu-22.04
@@ -38,6 +154,10 @@ jobs:
         run: npm run test --workspace=backend
         working-directory: webmux
 
+      - name: Test compiled TypeScript helpers
+        run: npm run test:helpers
+        working-directory: webmux
+
   build:
     name: Build
     runs-on: ubuntu-22.04
@@ -45,6 +165,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -68,6 +193,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -101,5 +231,24 @@ jobs:
         working-directory: webmux
 
       - name: Run browser tests
-        run: npm run test:e2e
+        # Root npm build produces Go; Node remains the differential baseline.
+        run: npm run build --workspace=backend && npm run test:e2e:node
         working-directory: webmux
+
+      - name: Run browser tests against Go
+        run: npm run test:e2e:go
+        working-directory: webmux
+
+      - name: Compare Node and Go screenshots
+        run: npm run test:visual-parity
+        working-directory: webmux
+
+      - name: Preserve browser parity evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-parity-windows
+          include-hidden-files: true
+          path: |
+            tests/e2e/.visual-baseline
+            webmux/test-results

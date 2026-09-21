@@ -51,8 +51,7 @@ cd "$WEBMUX_DIR"
 launches_ok() {
   # True only if the managed Chromium can actually start a headless browser.
   # Bounded so a hung launch can't stall provisioning.
-  run_bounded 30 node -e \
-    "require('playwright-core').chromium.launch({headless:true}).then(b=>b.close()).catch(()=>process.exit(1))" \
+  run_bounded 30 node "$WEBMUX_DIR/scripts/check-browser.mts" \
     >/dev/null 2>&1
 }
 

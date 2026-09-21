@@ -66,7 +66,7 @@ get_current_version() {
 }
 
 get_package_version() {
-    node -e "console.log(require('./$1').version)"
+    node scripts/release-metadata.mts read "$1"
 }
 
 calculate_next_version() {
@@ -84,47 +84,14 @@ calculate_next_version() {
 bump_package_versions() {
     local version=$1
     info "Bumping package.json versions to $version..."
-    sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$version\"/" webmux/frontend/package.json && rm -f webmux/frontend/package.json.bak
-    sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$version\"/" webmux/backend/package.json  && rm -f webmux/backend/package.json.bak
-    node -e "
-      const fs = require('fs');
-      const lock = JSON.parse(fs.readFileSync('webmux/package-lock.json', 'utf8'));
-      if (lock.packages) {
-        ['backend', 'frontend'].forEach(function(pkg) {
-          if (lock.packages[pkg]) lock.packages[pkg].version = '$version';
-        });
-      }
-      fs.writeFileSync('webmux/package-lock.json', JSON.stringify(lock, null, 2) + '\n');
-    "
+    node scripts/release-metadata.mts bump "$version"
     success "package.json files updated to $version"
 }
 
 # Ensures backend/frontend package.json versions and the root lockfile's
 # per-workspace version entries all agree before a release is tagged.
 validate_version_consistency() {
-    local backend_version frontend_version lock_backend_version lock_frontend_version
-    backend_version=$(get_package_version webmux/backend/package.json)
-    frontend_version=$(get_package_version webmux/frontend/package.json)
-    lock_backend_version=$(node -e "
-      const lock = require('./webmux/package-lock.json');
-      process.stdout.write((lock.packages && lock.packages.backend && lock.packages.backend.version) || '');
-    ")
-    lock_frontend_version=$(node -e "
-      const lock = require('./webmux/package-lock.json');
-      process.stdout.write((lock.packages && lock.packages.frontend && lock.packages.frontend.version) || '');
-    ")
-
-    if [[ "$backend_version" != "$frontend_version" ]]; then
-        error "Version mismatch: backend package.json ($backend_version) != frontend package.json ($frontend_version)"
-    fi
-    if [[ "$backend_version" != "$lock_backend_version" ]]; then
-        error "Version mismatch: backend package.json ($backend_version) != package-lock.json backend entry ($lock_backend_version)"
-    fi
-    if [[ "$frontend_version" != "$lock_frontend_version" ]]; then
-        error "Version mismatch: frontend package.json ($frontend_version) != package-lock.json frontend entry ($lock_frontend_version)"
-    fi
-
-    echo "$backend_version"
+    node scripts/release-metadata.mts validate
 }
 
 # ── Changelog ─────────────────────────────────────────────────────────

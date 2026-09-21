@@ -1,6 +1,4 @@
 import { useEffect, useRef } from 'react';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import Guacamole from 'guacamole-common-js';
 import { buildRdpWsUrl } from '../utils/api';
 
@@ -11,20 +9,7 @@ interface RdpViewerProps {
   clientRef?: React.MutableRefObject<RdpClientControl | null>;
 }
 
-export interface RdpClientControl {
-  createClipboardStream(mimetype: string): unknown;
-  sendKeyEvent(pressed: 0 | 1, keysym: number): void;
-}
-
-interface GuacamoleMouseState {
-  x: number;
-  y: number;
-  left: boolean;
-  middle: boolean;
-  right: boolean;
-  up: boolean;
-  down: boolean;
-}
+export type RdpClientControl = Pick<Guacamole.Client, 'createClipboardStream' | 'sendKeyEvent'>;
 
 export function RdpViewer({ sessionId, mode, onStateChange, clientRef }: RdpViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -56,9 +41,9 @@ export function RdpViewer({ sessionId, mode, onStateChange, clientRef }: RdpView
 
     if (mode === 'fullscreen') {
       const mouse = new Guacamole.Mouse(containerRef.current);
-      mouse.onmousedown = (state: GuacamoleMouseState) => { if (active) client.sendMouseState(state); };
-      mouse.onmouseup = (state: GuacamoleMouseState) => { if (active) client.sendMouseState(state); };
-      mouse.onmousemove = (state: GuacamoleMouseState) => { if (active) client.sendMouseState(state); };
+      mouse.onmousedown = state => { if (active) client.sendMouseState(state); };
+      mouse.onmouseup = state => { if (active) client.sendMouseState(state); };
+      mouse.onmousemove = state => { if (active) client.sendMouseState(state); };
 
       const keyboard = new Guacamole.Keyboard(document);
       keyboard.onkeydown = (keysym: number) => { if (active) client.sendKeyEvent(1, keysym); };
@@ -102,7 +87,9 @@ export function RdpViewer({ sessionId, mode, onStateChange, clientRef }: RdpView
     <div
       ref={containerRef}
       data-1p-ignore
-      style={{ width: '100%', height: '100%', overflow: 'auto', background: '#000' }}
+      // Guacamole places canvas layers at z-index -1. Keep them above this
+      // viewer's background while preserving their ordering below child layers.
+      style={{ width: '100%', height: '100%', overflow: 'auto', background: '#000', isolation: 'isolate' }}
       tabIndex={0}
     />
   );

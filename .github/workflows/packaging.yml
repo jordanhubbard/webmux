@@ -12,13 +12,135 @@ on:
 permissions:
   contents: read
 
+# Keep native macOS addons compatible with the prior runner deployment target.
+env:
+  MACOSX_DEPLOYMENT_TARGET: "14.0"
+
 jobs:
+  native-preview:
+    name: Native bundle (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, ubuntu-22.04, windows-2022, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: webmux/package-lock.json
+      - name: Verify native release version
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: node scripts/packaging-checks.mts release-version
+      - name: Package native server
+        if: runner.os != 'Windows'
+        run: make package
+      - name: Verify native source build and manual controls
+        if: runner.os != 'Windows'
+        run: |
+          make -o deps build
+          node scripts/smoke-source.mts
+      - name: Verify native Unix service lifecycle
+        if: runner.os != 'Windows'
+        run: node scripts/smoke-unix-service.mts
+      - name: Verify native Make service installation
+        if: runner.os == 'macOS'
+        run: node scripts/smoke-unix-service.mts --make
+      - name: Verify native Make user-service installation
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+          sudo -n systemctl start "user@$(id -u).service"
+          systemctl --user show-environment > /dev/null
+          node scripts/smoke-unix-service.mts --make
+      - name: Install WiX for native MSI
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Build native Windows archive and MSI
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./scripts/package-windows.ps1 -Backend node
+          ./scripts/package-windows.ps1
+      - name: Exercise extracted native runtime
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/webmux-native"
+          for archive in dist/*-native.tar.gz dist/*-native.zip; do
+            if [ -f "$archive" ]; then tar -xf "$archive" -C "$RUNNER_TEMP/webmux-native"; fi
+          done
+          node scripts/smoke-native-package.mts "$RUNNER_TEMP"/webmux-native/webmux-*
+      - name: Exercise extracted Windows native runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $archives = @(Get-ChildItem dist -Filter '*-native.zip')
+          if ($archives.Count -ne 1) { throw 'Expected exactly one native archive.' }
+          $extract = Join-Path $env:RUNNER_TEMP 'webmux-native'
+          Expand-Archive -LiteralPath $archives[0].FullName -DestinationPath $extract
+          $roots = @(Get-ChildItem $extract -Directory)
+          if ($roots.Count -ne 1) { throw 'Expected exactly one extracted installation.' }
+          ./scripts/windows-service-runtime.test.ps1 -RuntimeModule (Join-Path $roots[0].FullName 'service/runtime.psm1')
+          node scripts/smoke-native-package.mts $roots[0].FullName
+          if ($LASTEXITCODE -ne 0) { throw 'Native runtime smoke failed.' }
+      - name: Exercise installed native MSI and service
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem dist -Filter '*-native.msi')
+          if ($installers.Count -ne 1) { throw 'Expected exactly one native MSI.' }
+          $previous = @(Get-ChildItem dist -Filter '*.msi' | Where-Object { $_.Name -notlike '*-native.msi' })
+          if ($previous.Count -ne 1) { throw 'Expected exactly one legacy MSI.' }
+          ./scripts/smoke-native-msi.ps1 -Installer $installers[0].FullName
+          ./scripts/smoke-native-msi.ps1 -Installer $installers[0].FullName -PreviousInstaller $previous[0].FullName
+      - name: Set up Homebrew for native installation
+        if: runner.os != 'Windows'
+        uses: Homebrew/actions/setup-homebrew@3b81d438eda92ee13b5849940d993be027717ecf
+      - name: Install and test native Homebrew HEAD default
+        if: runner.os != 'Windows'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'
+        run: |
+          brew tap-new --no-git webmux/native-test
+          git clone --bare . "$RUNNER_TEMP/webmux-head.git"
+          git --git-dir="$RUNNER_TEMP/webmux-head.git" update-ref refs/heads/main HEAD
+          git --git-dir="$RUNNER_TEMP/webmux-head.git" symbolic-ref HEAD refs/heads/main
+          cp -f Formula/webmux.rb "$(brew --repository webmux/native-test)/Formula/webmux.rb"
+          export WEBMUX_TEST_FORMULA="$(brew --repository webmux/native-test)/Formula/webmux.rb"
+          node scripts/packaging-checks.mts formula-head
+          brew install --HEAD --build-from-source webmux/native-test/webmux
+          brew test webmux/native-test/webmux
+          node scripts/smoke-native-package.mts "$(brew --prefix webmux/native-test/webmux)/libexec"
+          brew services info webmux/native-test/webmux --json > "$RUNNER_TEMP/webmux-service.json"
+          node scripts/packaging-checks.mts service
+      - name: Verify native upload set and checksums
+        run: node scripts/verify-native-artifacts.mts
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-preview-${{ matrix.os }}
+          path: dist/*-native.*
+
   package:
     name: Package (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, ubuntu-22.04]
+        os: [macos-15, ubuntu-22.04]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -32,14 +154,14 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          node -e 'if (process.env.RELEASE_TAG !== "v" + require("./webmux/backend/package.json").version) process.exit(1)'
+          node scripts/packaging-checks.mts release-version
       - name: Build runtime bundle
-        run: make package
+        run: make package WEBMUX_BACKEND=node
       - name: Test extracted bundle
         run: |
           mkdir "$RUNNER_TEMP/webmux-bundle"
           tar -xzf dist/webmux-*.tar.gz -C "$RUNNER_TEMP/webmux-bundle"
-          node scripts/smoke-package.cjs "$RUNNER_TEMP"/webmux-bundle/webmux-*
+          node scripts/smoke-package.mts "$RUNNER_TEMP"/webmux-bundle/webmux-*
       - uses: actions/upload-artifact@v7
         with:
           name: webmux-${{ matrix.os }}
@@ -54,12 +176,7 @@ jobs:
           brew trust --formula jordanhubbard/webmux/webmux
           brew tap jordanhubbard/webmux "$GITHUB_WORKSPACE"
           brew info jordanhubbard/webmux/webmux --json=v2 > "$RUNNER_TEMP/webmux-tap-info.json"
-          node - <<'JS'
-          const assert = require('node:assert/strict');
-          const fs = require('node:fs');
-          const formula = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/webmux-tap-info.json`)).formulae[0];
-          assert.equal(formula.full_name, 'jordanhubbard/webmux/webmux');
-          JS
+          node scripts/packaging-checks.mts tap
           brew untap jordanhubbard/webmux
       - name: Install formula from this revision
         env:
@@ -70,29 +187,13 @@ jobs:
           git archive --format=tar.gz --output="$RUNNER_TEMP/webmux-source.tar.gz" HEAD
           cp -f Formula/webmux.rb "$(brew --repository webmux/packaging-test)/Formula/webmux.rb"
           export WEBMUX_TEST_FORMULA="$(brew --repository webmux/packaging-test)/Formula/webmux.rb"
-          node - <<'JS'
-          const fs = require('node:fs');
-          const { createHash } = require('node:crypto');
-          const source = `${process.env.RUNNER_TEMP}/webmux-source.tar.gz`;
-          const file = process.env.WEBMUX_TEST_FORMULA;
-          const sha = createHash('sha256').update(fs.readFileSync(source)).digest('hex');
-          fs.writeFileSync(file, fs.readFileSync(file, 'utf8')
-            .replace(/^  url .*$/m, `  url "file://${source}"\n  version "0.0.0"`)
-            .replace(/^  sha256 .*$/m, `  sha256 "${sha}"`));
-          JS
+          node scripts/packaging-checks.mts formula
           brew install --build-from-source webmux/packaging-test/webmux
           brew test webmux/packaging-test/webmux
       - name: Verify service definition
         run: |
           brew services info webmux/packaging-test/webmux --json > "$RUNNER_TEMP/webmux-service.json"
-          node - <<'JS'
-          const assert = require('node:assert/strict');
-          const fs = require('node:fs');
-          const [service] = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/webmux-service.json`));
-          assert(service.command.endsWith('/opt/webmux/bin/webmux'));
-          assert(service.working_dir);
-          assert(service.log_path.endsWith('/var/log/webmux.log'));
-          JS
+          node scripts/packaging-checks.mts service
 
   windows-package:
     name: Package (${{ matrix.runner }})
@@ -117,7 +218,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          node -e 'if (process.env.RELEASE_TAG !== "v" + require("./webmux/backend/package.json").version) process.exit(1)'
+          node scripts/packaging-checks.mts release-version
       - name: Install WiX
         shell: pwsh
         run: |
@@ -125,7 +226,7 @@ jobs:
           "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - name: Build Windows bundle and MSI
         shell: pwsh
-        run: ./scripts/package-windows.ps1
+        run: ./scripts/package-windows.ps1 -Backend node
       - name: Test extracted Windows bundle
         shell: pwsh
         run: |
@@ -134,7 +235,7 @@ jobs:
           $extract = Join-Path $env:RUNNER_TEMP 'webmux-windows-bundle'
           Expand-Archive -LiteralPath $archive.FullName -DestinationPath $extract
           $root = Get-ChildItem $extract -Directory | Select-Object -First 1
-          node scripts/smoke-package.cjs $root.FullName
+          node scripts/smoke-package.mts $root.FullName
       - name: Install, test, and uninstall MSI
         shell: pwsh
         run: |
@@ -152,7 +253,7 @@ jobs:
             if (-not (Test-Path -LiteralPath (Join-Path $installRoot 'bin\webmux.cmd'))) {
               throw 'MSI did not install the WebMux launcher.'
             }
-            node scripts/smoke-package.cjs $installRoot
+            node scripts/smoke-package.mts $installRoot
           } finally {
             if (Test-Path -LiteralPath $installRoot) {
               $process = Start-Process msiexec.exe -ArgumentList @('/x', $msi.FullName, '/qn', '/norestart', '/l*v', $uninstallLog) -Wait -PassThru
@@ -174,22 +275,43 @@ jobs:
             dist/*.msi
             dist/*.msi.sha256
 
+  verify-native-release:
+    name: Verify native release artifacts
+    needs: [native-preview]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: native-preview-*
+          path: dist
+      - name: Verify complete native release set
+        run: node scripts/verify-native-artifacts.mts --release dist
+
   publish:
     name: Attach release bundles
     if: github.event_name == 'release'
-    needs: [package, windows-package]
+    needs: [verify-native-release, package, windows-package]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
       - uses: actions/download-artifact@v8
         with:
-          pattern: webmux-*
+          pattern: native-preview-*
           path: dist
-          merge-multiple: true
+      - name: Verify complete native release set
+        run: node scripts/verify-native-artifacts.mts --release dist
       - name: Upload verified bundles and checksums
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$RELEASE_TAG" dist/* --clobber
+        run: gh release upload "$RELEASE_TAG" dist/*/* --clobber

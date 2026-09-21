@@ -1,10 +1,13 @@
 [CmdletBinding()]
 param(
   [Parameter(Position = 0)]
-  [ValidateSet('install', 'uninstall', 'start', 'stop', 'restart', 'status')]
+  [ValidateSet('install', 'uninstall', 'reconfigure', 'start', 'stop', 'restart', 'status')]
   [string]$Action = 'status',
 
   [string]$WebMuxHome,
+
+  [ValidateSet('auto', 'go', 'node')]
+  [string]$Backend = 'auto',
 
   [switch]$LocalSystem
 )
@@ -21,8 +24,8 @@ $WinSWUrl = "https://github.com/winsw/winsw/releases/download/v$WinSWVersion/Win
 $ServiceDirectory = Join-Path $env:ProgramData 'WebMux'
 $WrapperPath = Join-Path $ServiceDirectory 'WebMux.exe'
 $ConfigPath = Join-Path $ServiceDirectory 'WebMux.xml'
-$ApplicationDirectory = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$EntryPoint = Join-Path $ApplicationDirectory 'backend\dist\index.js'
+$ApplicationDirectory = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+Import-Module (Join-Path $PSScriptRoot 'runtime.psm1') -Force
 
 function Assert-WindowsAdministrator {
   if ($env:OS -ne 'Windows_NT') {
@@ -44,7 +47,7 @@ function Get-WebMuxService {
 }
 
 function Write-ServiceConfig([string]$ServiceAccountXml = '') {
-  $nodePath = (Get-Command node.exe -CommandType Application -ErrorAction Stop).Source
+  $runtime = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory -Backend $Backend
   $pathValue = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
   $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
   if ($userPath) { $pathValue = "$pathValue;$userPath" }
@@ -55,8 +58,8 @@ function Write-ServiceConfig([string]$ServiceAccountXml = '') {
   <id>$ServiceName</id>
   <name>WebMux</name>
   <description>Web-native persistent SSH terminal multiplexer</description>
-  <executable>$(Escape-Xml $nodePath)</executable>
-  <arguments>&quot;$(Escape-Xml $EntryPoint)&quot;</arguments>
+  <executable>$(Escape-Xml $runtime.Executable)</executable>
+  <arguments>$(Escape-Xml $runtime.Arguments)</arguments>
   <workingdirectory>$(Escape-Xml $ApplicationDirectory)</workingdirectory>
   <env name="WEBMUX_ROOT" value="$(Escape-Xml $ApplicationDirectory)" />
   <env name="WEBMUX_HOME" value="$(Escape-Xml $WebMuxHome)" />
@@ -103,9 +106,7 @@ function Install-WebMuxService {
   if (Get-WebMuxService) {
     throw "The $ServiceName service is already installed. Run the uninstall command first."
   }
-  if (-not (Test-Path -LiteralPath $EntryPoint)) {
-    throw "The production build is missing at $EntryPoint. Run npm run build first."
-  }
+  $null = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory -Backend $Backend
   if (-not (Get-Command ssh.exe -CommandType Application -ErrorAction SilentlyContinue)) {
     throw 'OpenSSH Client is required: ssh.exe was not found on PATH.'
   }
@@ -173,11 +174,75 @@ function Uninstall-WebMuxService {
   Write-Host 'WebMux service uninstalled. Runtime data and logs were preserved.'
 }
 
+function Reconfigure-WebMuxService {
+  $service = Get-WebMuxService
+  if (-not $service) { throw 'Install the WebMux service before reconfiguring it.' }
+  $runtime = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory -Backend $Backend
+  $original = [IO.File]::ReadAllBytes($ConfigPath)
+  $definition = New-Object System.Xml.XmlDocument
+  $definition.XmlResolver = $null
+  $definition.Load($ConfigPath)
+  if ($definition.SelectSingleNode('/service/id').InnerText -ne $ServiceName) { throw 'Unexpected WinSW service identity.' }
+  foreach ($name in @('executable', 'arguments', 'workingdirectory')) {
+    if ($definition.SelectNodes("/service/$name").Count -ne 1) { throw "Expected one WinSW $name element." }
+  }
+  $roots = $definition.SelectNodes('/service/env[@name="WEBMUX_ROOT"]')
+  if ($roots.Count -ne 1) { throw 'Expected one WEBMUX_ROOT environment entry.' }
+  $definition.SelectSingleNode('/service/executable').InnerText = $runtime.Executable
+  $definition.SelectSingleNode('/service/arguments').InnerText = $runtime.Arguments
+  $definition.SelectSingleNode('/service/workingdirectory').InnerText = $ApplicationDirectory
+  $roots[0].SetAttribute('value', $ApplicationDirectory)
+  $wasRunning = $service.Status -eq 'Running'
+  if ($service.Status -ne 'Stopped' -and -not $wasRunning) { throw "Wait for the service's pending transition before reconfiguring: $($service.Status)" }
+  $temporary = Join-Path $ServiceDirectory "WebMux-$([Guid]::NewGuid()).xml.tmp"
+  $replaced = $false
+  try {
+    # Serialize and validate the new runtime before stopping the current service.
+    $definition.Save($temporary)
+    if ($wasRunning) {
+      Stop-Service -Name $ServiceName
+      $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+    }
+    # PowerShell coerces $null to an empty string for this .NET string parameter.
+    [IO.File]::Replace($temporary, $ConfigPath, [System.Management.Automation.Language.NullString]::Value)
+    $replaced = $true
+    if ($wasRunning) {
+      Start-Service -Name $ServiceName
+      (Get-Service -Name $ServiceName).WaitForStatus('Running', [TimeSpan]::FromSeconds(30))
+    }
+  } catch {
+    $failure = $_
+    if ($replaced) {
+      $current = Get-WebMuxService
+      if ($current.Status -ne 'Stopped') {
+        Stop-Service -Name $ServiceName
+        $current.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(30))
+      }
+      [IO.File]::WriteAllBytes($temporary, $original)
+      [IO.File]::Replace($temporary, $ConfigPath, [System.Management.Automation.Language.NullString]::Value)
+    }
+    if ($wasRunning -and (Get-WebMuxService).Status -eq 'Stopped') {
+      Start-Service -Name $ServiceName
+      (Get-Service -Name $ServiceName).WaitForStatus('Running', [TimeSpan]::FromSeconds(30))
+    }
+    throw $failure
+  } finally {
+    if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
+  }
+  Write-Host "WebMux service runtime reconfigured to $($runtime.Backend). Existing account and environment were preserved."
+}
+
 Assert-WindowsAdministrator
 
 switch ($Action) {
   'install' { Install-WebMuxService }
   'uninstall' { Uninstall-WebMuxService }
+  'reconfigure' {
+    if ($PSBoundParameters.ContainsKey('WebMuxHome') -or $LocalSystem) {
+      throw 'Reconfigure preserves the installed home and service account; omit WebMuxHome and LocalSystem.'
+    }
+    Reconfigure-WebMuxService
+  }
   'start' {
     Start-Service -Name $ServiceName
     (Get-Service -Name $ServiceName).WaitForStatus('Running', [TimeSpan]::FromSeconds(30))

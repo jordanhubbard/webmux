@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type UserConfig } from 'vite';
+import type { InlineConfig } from 'vitest';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
@@ -18,7 +19,7 @@ const novncPatch = {
   },
 };
 
-export default defineConfig({
+const config: UserConfig & { test: InlineConfig } = {
   plugins: [react(), novncPatch],
   resolve: {
     alias: {
@@ -36,7 +37,8 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
-        changeOrigin: true,
+        // Preserve the browser-facing Host for the server's WebSocket origin check.
+        changeOrigin: false,
         ws: true,
       },
     },
@@ -70,4 +72,6 @@ export default defineConfig({
       },
     },
   },
-});
+};
+
+export default defineConfig(config);

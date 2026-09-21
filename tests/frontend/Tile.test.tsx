@@ -18,6 +18,8 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 function makeSession(overrides: Partial<Session> = {}): Session {
   return {
     id: 's1',
+    kind: 'terminal',
+    minimized: false,
     owner: 'testuser',
     transport: 'ssh',
     host_id: '',

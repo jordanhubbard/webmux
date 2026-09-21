@@ -1,6 +1,6 @@
 # Running WebMux on macOS
 
-WebMux runs natively on macOS using Unix pseudoterminals through `node-pty`. The repository Makefile can build the application, run it directly, or install it as a per-user launchd service.
+The source Makefile runs WebMux's Go backend on macOS using Unix pseudoterminals. It can build the application, run it directly, or install it as a per-user launchd service. `WEBMUX_BACKEND=node` selects the legacy backend for compatibility testing.
 
 ## Homebrew installation
 
@@ -23,7 +23,8 @@ source checkout.
 ## Prerequisites
 
 - A currently supported macOS release
-- Node.js 24 LTS or newer
+- Go 1.26 or newer
+- Node.js 24 LTS or newer for frontend/tooling builds
 - Git
 - The built-in OpenSSH client
 - Xcode Command Line Tools if npm must compile a native dependency
@@ -32,7 +33,7 @@ Homebrew is a convenient way to install the required tools:
 
 ```bash
 xcode-select --install
-brew install node git
+brew install go node git
 ```
 
 Optional features require additional software:

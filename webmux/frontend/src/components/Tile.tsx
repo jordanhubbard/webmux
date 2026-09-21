@@ -20,6 +20,7 @@ interface TileProps {
   onFocus?: () => void;
   onClose: (id: string) => void;
   onReconnect: (id: string) => void;
+  onStateChange?: (id: string, state: ConnectionState) => void;
   onRename: (id: string, title: string) => void;
   onTitleMouseDown?: (sessionId: string, e: React.MouseEvent) => void;
   isDragging?: boolean;
@@ -44,6 +45,7 @@ export function Tile({
   onFocus: onTileFocus,
   onClose,
   onReconnect,
+  onStateChange,
   onRename,
   onTitleMouseDown,
   isDragging,
@@ -71,7 +73,8 @@ export function Tile({
 
   const handleStateChange = useCallback((newState: ConnectionState) => {
     setState(newState);
-  }, []);
+    onStateChange?.(session.id, newState);
+  }, [onStateChange, session.id]);
 
   const handleViewerUpdate = useCallback((count: number, _owner?: string) => {
     setViewerCount(count);

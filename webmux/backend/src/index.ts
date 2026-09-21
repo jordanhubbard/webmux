@@ -117,11 +117,11 @@ async function main(): Promise<void> {
   app.use('/api/auth', authRouter);
   app.use('/api/hosts', hostsRouter);
   app.use('/api/keys', keysRouter);
+  app.use('/api/sessions/templates', templatesRouter);
   app.use('/api/sessions', sessionsRouter);
   app.use('/api/config', configRouter);
   app.use('/api/upload', uploadRouter);
   app.use('/api/ai', aiRouter);
-  app.use('/api/sessions/templates', templatesRouter);
   app.use('/api/vnc', vncRouter);
   app.use('/api/rdp', rdpRouter);
   app.use('/api/agents', agentsRouter);

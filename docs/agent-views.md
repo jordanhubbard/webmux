@@ -94,7 +94,8 @@ session activity timestamps for recency and status.
 For runtimes with Codex-style hooks, install the optional status writer:
 
 ```bash
-install -m 0755 webmux/scripts/webmux-agent-status.js ~/.local/bin/webmux-agent-status
+npm --prefix webmux run build:helpers
+install -m 0755 webmux/scripts/dist/webmux-agent-status.js ~/.local/bin/webmux-agent-status
 ```
 
 Example hook commands:
@@ -198,7 +199,8 @@ app:
 4. Optionally install the hook script:
 
 ```bash
-install -m 0755 webmux/scripts/webmux-agent-status.js ~/.local/bin/webmux-agent-status
+npm --prefix webmux run build:helpers
+install -m 0755 webmux/scripts/dist/webmux-agent-status.js ~/.local/bin/webmux-agent-status
 ```
 
 5. Restart WebMux:

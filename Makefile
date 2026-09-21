@@ -50,7 +50,20 @@ PIDFILE      := $(WEBMUX_HOME)/.webmux.pid
 LOGFILE      := $(WEBMUX_HOME)/logs/webmux.log
 NODE         := node
 NPM          := npm
+GO           := go
+WEBMUX_BACKEND ?= go
 OS           := $(shell uname)
+
+ifeq ($(WEBMUX_BACKEND),go)
+  SERVER_COMMAND := "$(WEBMUX_DIR)/bin/webmux"
+  E2E_SCRIPT := test:e2e:go
+  NPM_WORKSPACES := --workspace=frontend --include-workspace-root
+else ifeq ($(WEBMUX_BACKEND),node)
+  SERVER_COMMAND := $(NODE) backend/dist/index.js
+  E2E_SCRIPT := test:e2e:node
+else
+  $(error WEBMUX_BACKEND must be node or go)
+endif
 
 export WEBMUX_ROOT
 export WEBMUX_HOME
@@ -80,15 +93,22 @@ all: build
 
 # Platform-specific runtime bundle; use Node.js 24 and build from the lockfile.
 package:
-	@$(NODE) -e 'if (process.versions.node.split(".")[0] !== "24" || !["darwin", "linux"].includes(process.platform)) { console.error("Packaging requires Node.js 24 on macOS or Linux"); process.exit(1); }'
-	@cd "$(WEBMUX_DIR)" && $(NPM) ci --no-audit --no-fund
-	@cd "$(WEBMUX_DIR)" && $(NPM) run build
-	@$(NODE) scripts/package.cjs
+ifeq ($(WEBMUX_BACKEND),node)
+	@$(NODE) scripts/packaging-checks.mts legacy-platform
+endif
+	@cd "$(WEBMUX_DIR)" && $(NPM) ci $(NPM_WORKSPACES) --no-audit --no-fund
+ifeq ($(WEBMUX_BACKEND),go)
+	@cd "$(WEBMUX_DIR)" && $(NPM) run build --workspace=frontend
+	@$(NODE) scripts/package-native.mts
+else
+	@cd "$(WEBMUX_DIR)" && $(NPM) run build:node
+	@$(NODE) scripts/package.mts
+endif
 
 help:
 	@printf "$(C_BLD)$(C_MAG)▦ WebMux$(C_RST)$(C_DIM) — web-native terminal multiplexer$(C_RST)\n\n"
 	@printf "$(C_BLD)Targets:$(C_RST)\n"
-	@printf "  $(C_CYN)make package$(C_RST)        Build a macOS/Linux runtime bundle (Node.js 24)\n"
+	@printf "  $(C_CYN)make package$(C_RST)        Build a native macOS/Linux runtime bundle\n"
 	@printf "  $(C_CYN)make$(C_RST)               Build the application\n"
 	@printf "  $(C_CYN)make start$(C_RST)          Build and start the server\n"
 	@printf "  $(C_CYN)make stop$(C_RST)           Stop the running server\n"
@@ -109,6 +129,7 @@ help:
 	@printf "  $(C_CYN)make check-guacd$(C_RST)    Check guacd (RDP proxy) installation\n"
 	@printf "  $(C_CYN)make help$(C_RST)           Show this help\n"
 	@printf "\n$(C_BLD)Configuration:$(C_RST)\n"
+	@printf "  $(C_YLW)WEBMUX_BACKEND$(C_RST)=$(C_DIM)go|node$(C_RST)          Backend (default: go)\n"
 	@printf "  $(C_YLW)WEBMUX_HOME$(C_RST)=$(C_DIM)~/.config/webmux$(C_RST)   Runtime config/data directory\n"
 	@printf "  $(C_YLW)HTTP_PORT$(C_RST)=$(C_DIM)8080$(C_RST)              HTTP listen port\n"
 	@printf "  $(C_YLW)HTTPS_PORT$(C_RST)=$(C_DIM)8443$(C_RST)             HTTPS listen port\n"
@@ -126,11 +147,17 @@ check-guacd:
 	fi
 
 deps:
-	@cd "$(WEBMUX_DIR)" && $(NPM) install --silent
+	@cd "$(WEBMUX_DIR)" && $(NPM) install $(NPM_WORKSPACES) --silent
 
 build: deps
 	@printf "$(C_BLU)▸$(C_RST) Building webmux…\n"
-	@cd "$(WEBMUX_DIR)" && $(NPM) run build --silent
+ifeq ($(WEBMUX_BACKEND),go)
+	@cd "$(WEBMUX_DIR)" && $(NPM) run build:helpers --silent && $(NPM) run build --workspace=frontend --silent
+	@mkdir -p "$(WEBMUX_DIR)/bin"
+	@cd "$(WEBMUX_DIR)/server" && $(GO) build -trimpath -o ../bin/webmux ./cmd/webmux
+else
+	@cd "$(WEBMUX_DIR)" && $(NPM) run build:node --silent
+endif
 	@printf "$(C_GRN)✓$(C_RST) Build complete.\n"
 
 configure:
@@ -181,7 +208,7 @@ _start_manual:
 	LOG_START=$$(wc -l < "$(LOGFILE)" 2>/dev/null || echo 0); \
 	cd "$(WEBMUX_DIR)" && $(RUNTIME_ENV) HTTP_PORT=$$ACTUAL_HTTP HTTPS_PORT=$$ACTUAL_HTTPS \
 		WEBMUX_ROOT="$(WEBMUX_ROOT)" WEBMUX_HOME="$(WEBMUX_HOME)" \
-		exec $(NODE) backend/dist/index.js >> "$(LOGFILE)" 2>&1 & echo $$! > "$(PIDFILE)"; \
+		exec $(SERVER_COMMAND) >> "$(LOGFILE)" 2>&1 & echo $$! > "$(PIDFILE)"; \
 	sleep 0.5; \
 	if kill -0 $$(cat "$(PIDFILE)") 2>/dev/null; then \
 		printf "$(C_GRN)●$(C_RST) webmux started $(C_DIM)(pid $$(cat "$(PIDFILE)"))$(C_RST)\n"; \
@@ -227,7 +254,7 @@ start: build check-guacd
 	@mkdir -p "$(WEBMUX_HOME)/logs"
 	@if $(SVC_INSTALLED); then \
 		printf "$(C_BLU)▸$(C_RST) Starting webmux via $(SVC_MGR)…\n"; \
-		$(SVC_START); \
+		$(SVC_START) || exit $$?; \
 		sleep 1; \
 		$(SVC_STATUS) 2>/dev/null | sed 's/^/  /' || true; \
 		printf "$(C_GRN)●$(C_RST) webmux started $(C_DIM)(managed by $(SVC_MGR))$(C_RST)\n"; \
@@ -246,14 +273,14 @@ stop:
 
 restart:
 	@if $(SVC_INSTALLED); then \
-		$(MAKE) --no-print-directory build; \
+		$(MAKE) --no-print-directory build || exit $$?; \
 		printf "$(C_BLU)▸$(C_RST) Restarting webmux via $(SVC_MGR) $(C_DIM)(deliberate restart)$(C_RST)…\n"; \
-		$(SVC_RESTART); \
+		$(SVC_RESTART) || exit $$?; \
 		sleep 1; \
 		$(SVC_STATUS) 2>/dev/null | sed 's/^/  /' || true; \
 		printf "$(C_GRN)●$(C_RST) webmux restarted $(C_DIM)(managed by $(SVC_MGR))$(C_RST)\n"; \
 	else \
-		$(MAKE) --no-print-directory stop; \
+		$(MAKE) --no-print-directory stop || exit $$?; \
 		$(MAKE) --no-print-directory start; \
 	fi
 
@@ -276,7 +303,14 @@ status:
 test: test-unit test-e2e
 	@printf "$(C_GRN)✓$(C_RST) All tests passed.\n"
 
+# Compatibility tests and the complete TypeScript gate still cover both servers.
+# Target-specific variables propagate to build/deps, including parallel make.
+test-unit test-e2e: NPM_WORKSPACES :=
+
 test-unit: build
+ifeq ($(WEBMUX_BACKEND),go)
+	@cd "$(WEBMUX_DIR)/server" && $(GO) test -race ./...
+endif
 	@printf "$(C_BLU)▸$(C_RST) Type-checking…\n"
 	@cd "$(WEBMUX_DIR)" && $(NPM) run typecheck --silent
 	@printf "$(C_GRN)✓$(C_RST) Types OK.\n"
@@ -292,26 +326,27 @@ test-e2e: build
 	@EXE="$$("$(CURDIR)/scripts/ensure-e2e-browser.sh")" || { \
 		printf "$(C_RED)✗$(C_RST) E2E skipped — no usable browser (see message above).\n"; exit 1; }; \
 	printf "$(C_BLU)▸$(C_RST) Running E2E tests…\n"; \
-	cd "$(WEBMUX_DIR)" && PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$$EXE" $(NPM) run test:e2e
+	cd "$(WEBMUX_DIR)" && PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$$EXE" $(NPM) run $(E2E_SCRIPT)
 	@printf "$(C_GRN)✓$(C_RST) E2E tests passed.\n"
 
 lint:
 	@cd "$(WEBMUX_DIR)" && $(NPM) run lint
+ifeq ($(WEBMUX_BACKEND),go)
+	@cd "$(WEBMUX_DIR)/server" && $(GO) vet ./...
+endif
 
 clean: stop
 	@printf "$(C_BLU)▸$(C_RST) Cleaning build artifacts…\n"
-	@rm -rf "$(WEBMUX_DIR)/backend/dist" "$(WEBMUX_DIR)/web"
+	@rm -rf "$(WEBMUX_DIR)/backend/dist" "$(WEBMUX_DIR)/scripts/dist" "$(WEBMUX_DIR)/web" "$(WEBMUX_DIR)/bin"
 	@rm -rf "$(WEBMUX_DIR)/node_modules" "$(WEBMUX_DIR)/backend/node_modules" "$(WEBMUX_DIR)/frontend/node_modules"
 	@rm -f "$(PIDFILE)"
 	@printf "$(C_GRN)✓$(C_RST) Clean.\n"
 
 # ── Service management ──────────────────────────────────────────
-SERVICE_DIR     := $(WEBMUX_DIR)/service
-NODE_PATH       := $(shell which node)
-CURRENT_PATH    := $(shell echo $$PATH)
 
 PLIST       := $(HOME)/Library/LaunchAgents/com.webmux.server.plist
 UNIT        := $(HOME)/.config/systemd/user/webmux.service
+SYSTEMD_UNIT := $(notdir $(UNIT))
 LAUNCHD_SVC := gui/$(shell id -u)/com.webmux.server
 
 # ── Service-manager awareness ───────────────────────────────────────
@@ -325,55 +360,42 @@ LAUNCHD_SVC := gui/$(shell id -u)/com.webmux.server
 #
 # SVC_INSTALLED is a shell test: true (exit 0) when the service unit exists.
 ifeq ($(OS),Darwin)
+  export WEBMUX_SERVICE_OUTPUT := $(PLIST)
   SVC_MGR       := launchd
-  SVC_INSTALLED := [ -f "$(PLIST)" ]
-  SVC_START     := launchctl kickstart "$(LAUNCHD_SVC)" 2>/dev/null || launchctl bootstrap gui/$$(id -u) "$(PLIST)"
+  SVC_INSTALLED := [ -f "$$WEBMUX_SERVICE_OUTPUT" ]
+  SVC_START     := launchctl kickstart "$(LAUNCHD_SVC)" 2>/dev/null || launchctl bootstrap gui/$$(id -u) "$$WEBMUX_SERVICE_OUTPUT"
   SVC_STOP      := launchctl kill TERM "$(LAUNCHD_SVC)"
   SVC_RESTART   := launchctl kickstart -k "$(LAUNCHD_SVC)"
   SVC_STATUS    := launchctl print "$(LAUNCHD_SVC)" 2>/dev/null | grep -E 'state = |pid = '
 else
+  export WEBMUX_SERVICE_OUTPUT := $(UNIT)
   SVC_MGR       := systemd
-  SVC_INSTALLED := [ -f "$(UNIT)" ]
-  SVC_START     := systemctl --user start webmux.service
-  SVC_STOP      := systemctl --user stop webmux.service
-  SVC_RESTART   := systemctl --user restart webmux.service
-  SVC_STATUS    := systemctl --user --no-pager --lines=0 status webmux.service
+  SVC_INSTALLED := [ -f "$$WEBMUX_SERVICE_OUTPUT" ]
+  SVC_START     := systemctl --user start "$(SYSTEMD_UNIT)"
+  SVC_STOP      := systemctl --user stop "$(SYSTEMD_UNIT)"
+  SVC_RESTART   := systemctl --user restart "$(SYSTEMD_UNIT)"
+  SVC_STATUS    := systemctl --user --no-pager --lines=0 status "$(SYSTEMD_UNIT)"
 endif
 
 install: stop build
-	@mkdir -p "$(WEBMUX_HOME)/logs"
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Installing launchd service…\n"
-	@mkdir -p "$(HOME)/Library/LaunchAgents"
+	@$(NODE) scripts/render-service.mts $(WEBMUX_BACKEND)
 	@launchctl bootout $(LAUNCHD_SVC) 2>/dev/null || true
-	@sed \
-		-e 's|__NODE_PATH__|$(NODE_PATH)|g' \
-		-e 's|__WEBMUX_DIR__|$(WEBMUX_DIR)|g' \
-		-e 's|__WEBMUX_HOME__|$(WEBMUX_HOME)|g' \
-		-e 's|__PATH__|$(CURRENT_PATH)|g' \
-		"$(SERVICE_DIR)/com.webmux.server.plist.template" \
-		> "$(PLIST)"
-	@launchctl bootstrap gui/$$(id -u) "$(PLIST)"
+	@launchctl bootstrap gui/$$(id -u) "$$WEBMUX_SERVICE_OUTPUT"
 	@launchctl kickstart -k $(LAUNCHD_SVC) 2>/dev/null || true
-	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)$(PLIST)$(C_RST)\n"
-	@printf "  $(C_DIM)config:$(C_RST) $(WEBMUX_HOME)\n"
-	@printf "  $(C_DIM)logs:$(C_RST)   $(WEBMUX_HOME)/logs/webmux.log\n"
+	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)%s$(C_RST)\n" "$$WEBMUX_SERVICE_OUTPUT"
+	@printf "  $(C_DIM)config:$(C_RST) %s\n" "$$WEBMUX_HOME"
+	@printf "  $(C_DIM)logs:$(C_RST)   %s/logs/webmux.log\n" "$$WEBMUX_HOME"
 	@printf "$(C_GRN)●$(C_RST) WebMux will start automatically on login.\n"
 else
 	@printf "$(C_BLU)▸$(C_RST) Installing systemd user service…\n"
-	@mkdir -p $(dir $(UNIT))
-	@sed \
-		-e 's|__NODE_PATH__|$(NODE_PATH)|g' \
-		-e 's|__WEBMUX_DIR__|$(WEBMUX_DIR)|g' \
-		-e 's|__WEBMUX_HOME__|$(WEBMUX_HOME)|g' \
-		-e 's|__PATH__|$(CURRENT_PATH)|g' \
-		"$(SERVICE_DIR)/webmux.service.template" \
-		> "$(UNIT)"
+	@$(NODE) scripts/render-service.mts $(WEBMUX_BACKEND)
 	@systemctl --user daemon-reload
-	@systemctl --user enable --now webmux.service
-	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)$(UNIT)$(C_RST)\n"
-	@printf "  $(C_DIM)config:$(C_RST) $(WEBMUX_HOME)\n"
-	@printf "  $(C_DIM)logs:$(C_RST)   $(WEBMUX_HOME)/logs/webmux.log\n"
+	@systemctl --user enable --now "$(SYSTEMD_UNIT)"
+	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)%s$(C_RST)\n" "$$WEBMUX_SERVICE_OUTPUT"
+	@printf "  $(C_DIM)config:$(C_RST) %s\n" "$$WEBMUX_HOME"
+	@printf "  $(C_DIM)logs:$(C_RST)   %s/logs/webmux.log\n" "$$WEBMUX_HOME"
 	@printf "$(C_GRN)●$(C_RST) WebMux will start automatically on login.\n"
 	@printf "  $(C_DIM)Hint: run$(C_RST) loginctl enable-linger $(USER) $(C_DIM)to start without logging in.$(C_RST)\n"
 endif
@@ -382,12 +404,12 @@ uninstall:
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Removing launchd service…\n"
 	@launchctl bootout $(LAUNCHD_SVC) 2>/dev/null || true
-	@rm -f $(PLIST)
+	@rm -f "$$WEBMUX_SERVICE_OUTPUT"
 	@printf "$(C_GRN)✓$(C_RST) Uninstalled.\n"
 else
 	@printf "$(C_BLU)▸$(C_RST) Removing systemd user service…\n"
-	@systemctl --user disable --now webmux.service 2>/dev/null || true
-	@rm -f $(UNIT)
+	@systemctl --user disable --now "$(SYSTEMD_UNIT)" 2>/dev/null || true
+	@rm -f "$$WEBMUX_SERVICE_OUTPUT"
 	@systemctl --user daemon-reload
 	@printf "$(C_GRN)✓$(C_RST) Uninstalled.\n"
 endif
