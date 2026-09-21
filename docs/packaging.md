@@ -112,18 +112,18 @@ double-clicking it or running `msiexec.exe /i <installer>.msi`. It installs unde
 user `PATH`. The MSI is currently unsigned, so verify its checksum before
 accepting the unknown-publisher warning.
 
-To build the legacy bundle locally using Node.js 24:
+To build the native bundle locally using Go and Node.js 24:
 
 ```bash
-make package WEBMUX_BACKEND=node
+make package
 ```
 
-Output goes to `dist/`. The build uses `npm ci`; production dependencies are
-installed in an isolated staging directory to avoid including developer state.
+Output goes to `dist/`. The build uses `npm ci` for frontend/tooling dependencies;
+the bundle contains the Go executable, browser assets and configuration templates.
 To test an extracted bundle:
 
 ```bash
-node scripts/smoke-package.mts /absolute/path/to/extracted/webmux-version-platform-arch-node24
+node scripts/smoke-native-package.mts /absolute/path/to/extracted/webmux-version-platform-arch-native
 ```
 
 On Windows, install Go 1.26 or newer, Node.js 24 and WiX 5, then build the
@@ -134,10 +134,11 @@ dotnet tool install --global wix --version 5.0.2
 .\scripts\package-windows.ps1
 ```
 
-The command defaults to Go and produces `-native.zip` and `-native.msi` files
+The command produces `-native.zip` and `-native.msi` files
 with SHA-256 checksums in `dist/`. Node.js is a build dependency; the installed
-native server does not require it. Use `-Backend node` to build the legacy Node
-bundle and MSI for compatibility checks.
+native server does not require it. Legacy bundle generation has been removed.
+Windows CI downloads the published v1.3.11 MSI solely as an upgrade fixture,
+verifies its checksum, and checks migration of its saved state to Go.
 
 ## Maintaining releases
 

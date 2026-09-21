@@ -44,7 +44,7 @@ migration from a checkout, optional tools, and runtime release bundles.
 
 ### Windows (x64 and ARM64)
 
-Install Node.js 24 and Microsoft OpenSSH Client, then download the
+Install Microsoft OpenSSH Client, then download the
 `webmux-<version>-windows-x64.msi` (or `-arm64.msi` on ARM64 Windows) asset from the latest
 [GitHub release](https://github.com/jordanhubbard/webmux/releases/latest). Open
 a new PowerShell window after installation and run `webmux`, or run
@@ -81,12 +81,11 @@ Open `http://localhost:8080`. On first run with local auth, you'll be prompted t
 
 Runtime configuration and state are created under `~/.config/webmux/` by default; the source checkout remains disposable.
 
-The Makefile builds and runs the Go backend by default. Use
-`WEBMUX_BACKEND=node` with Make targets to exercise the legacy backend during
-compatibility testing. Existing installed service definitions retain their
-backend until reinstalled. Root npm build/start and Homebrew HEAD also select Go.
-Existing published installers and the stable Homebrew formula are
-tracked separately in the [migration status](docs/go-migration.md).
+The Makefile, npm commands and packaged releases run the Go backend.
+The legacy Node backend has been removed. Reinstall existing source services
+with `make install` (Unix), or use `webmux-service reconfigure` (Windows), if
+those services still point to a Node installation. See the
+[migration history](docs/go-migration.md) for prior verification evidence.
 
 ### Install as a Service
 
@@ -263,7 +262,6 @@ Each user gets their own session collection. The first user is created via the b
 webmux/                          Source / install directory (WEBMUX_ROOT)
   config.defaults/               Default config templates (copied on first run)
   server/                        Native Go backend (source Make default)
-  backend/                       Legacy Node.js / TypeScript compatibility backend
   frontend/                      React / TypeScript frontend (Vite + xterm.js)
   service/                       launchd / systemd service templates
 ```
@@ -340,8 +338,7 @@ npm run dev:frontend
 ```
 
 It proxies API requests to the running backend. `dev:backend` builds Go before
-starting it; stop and rerun the command after Go changes. The legacy TypeScript
-watch loop is available as `npm run dev:backend:node` for compatibility work.
+starting it; stop and rerun the command after Go changes.
 
 Run quality checks from the repository root:
 

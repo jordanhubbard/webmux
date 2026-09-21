@@ -2,19 +2,19 @@
 
 ## Overview
 
-WebMux is a browser-based remote workspace built as a React frontend and Node.js backend. REST manages configuration and session lifecycle; WebSockets carry interactive terminal, VNC, and RDP traffic.
+WebMux is a browser-based remote workspace built as a React frontend and Go backend. REST manages configuration and session lifecycle; WebSockets carry interactive terminal, VNC, and RDP traffic.
 
 ## Component Diagram
 
 ```
 Browser                                WebMux Host
 ┌──────────────────────────┐           ┌──────────────────────────────────┐
-│ React application        │   HTTP    │ Express REST API                 │
+│ React application        │   HTTP    │ Go HTTP REST API                 │
 │ ├ Terminal workspace     │◄─────────►│ ├ auth, users, config, hosts    │
 │ │ └ xterm.js tiles       │           │ └ terminal/VNC/RDP/agent state │
 │ ├ Desktop workspace      │ WebSocket │                                  │
 │ │ ├ VNC client           │◄─────────►│ Session brokers and proxies      │
-│ │ └ Guacamole RDP client │           │ ├ node-pty: SSH, mosh, exec     │
+│ │ └ Guacamole RDP client │           │ ├ PTY/ConPTY: SSH, mosh, exec     │
 │ ├ Agent workspace        │           │ ├ VNC WebSocket proxy           │
 │ └ Navigation and dialogs │           │ └ guacd RDP proxy               │
 └──────────────────────────┘           │                                  │
@@ -26,15 +26,18 @@ Browser                                WebMux Host
 
 ## Backend Services
 
-| Service | Responsibility |
-|---------|---------------|
-| **SessionBroker** | Session lifecycle (create, reconnect, delete, resize), layout positioning |
-| **VncBroker / RdpBroker** | Desktop session lifecycle, ownership, layout, and reconnect state |
-| **TransportLauncher** | Spawns SSH/mosh processes via node-pty, manages PTY handles |
-| **PresenceService** | Multi-viewer tracking, focus management, WebSocket broadcast |
-| **CredentialHandler** | In-memory password storage with 5-minute TTL, auto-zeroing |
-| **AgentService** | Discovers configured tmux sessions and creates validated attach or scratch sessions |
-| **PersistenceManager** | Runtime config/state I/O, atomic writes, JSONL audit logging, file watchers |
+The server lives in `webmux/server/`, with its entry point in `cmd/webmux`.
+
+| Go package | Responsibility |
+|------------|----------------|
+| `internal/httpapi` | REST routing, authentication middleware, terminal and desktop WebSockets |
+| `internal/session` | Session lifecycle, layout, viewer focus, scrollback and transcripts |
+| `internal/desktop` | VNC/RDP session lifecycle, ownership and persisted state |
+| `internal/terminal` | SSH/mosh/exec launch planning and Unix PTY/Windows ConPTY processes |
+| `internal/auth` | Accounts, password verification, tokens and WebSocket tickets |
+| `internal/agent` | tmux discovery, access policy and agent status |
+| `internal/config`, `internal/storage` | Runtime configuration, atomic state writes and audit logging |
+| `internal/guacamole`, `internal/netguard` | RDP protocol handling and validated desktop destinations |
 
 ## Frontend Components
 
@@ -55,9 +58,9 @@ Browser                                WebMux Host
 ## Data Flow
 
 1. User creates session via ConnectionDialog -> POST `/api/sessions`
-2. SessionBroker resolves host, selects transport, spawns PTY via TransportLauncher
+2. The session broker resolves the host and starts a PTY through the terminal launcher
 3. Frontend opens WebSocket to `/api/term/:id`
-4. PresenceService tracks viewer, assigns focus
+4. The session package tracks the viewer and assigns focus
 5. Terminal data flows: PTY stdout -> WebSocket -> xterm.js (and reverse for input)
 6. When `app.session_logging.enabled` is true, the same PTY output is streamed to a protected, per-launch transcript under `WEBMUX_HOME/logs/sessions/`
 7. Session metadata and layout are persisted under `WEBMUX_HOME`; audit events are appended as JSONL

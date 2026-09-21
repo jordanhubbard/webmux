@@ -49,8 +49,6 @@ try {
     $products = @(Get-WebMuxProducts)
     if ($products.Count -ne 1) { throw 'Expected one legacy product registration.' }
     $previousProduct = $products[0]
-    & node (Join-Path $PSScriptRoot 'smoke-package.mts') $installRoot
-    if ($LASTEXITCODE -ne 0) { throw 'Installed legacy runtime failed smoke checks.' }
     & node (Join-Path $PSScriptRoot 'smoke-upgrade-state.mts') node seed $installRoot (Join-Path $temporary 'state')
     if ($LASTEXITCODE -ne 0) { throw 'Could not seed installed legacy state.' }
   }

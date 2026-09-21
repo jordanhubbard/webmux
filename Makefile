@@ -51,19 +51,10 @@ LOGFILE      := $(WEBMUX_HOME)/logs/webmux.log
 NODE         := node
 NPM          := npm
 GO           := go
-WEBMUX_BACKEND ?= go
 OS           := $(shell uname)
-
-ifeq ($(WEBMUX_BACKEND),go)
-  SERVER_COMMAND := "$(WEBMUX_DIR)/bin/webmux"
-  E2E_SCRIPT := test:e2e:go
-  NPM_WORKSPACES := --workspace=frontend --include-workspace-root
-else ifeq ($(WEBMUX_BACKEND),node)
-  SERVER_COMMAND := $(NODE) backend/dist/index.js
-  E2E_SCRIPT := test:e2e:node
-else
-  $(error WEBMUX_BACKEND must be node or go)
-endif
+SERVER_COMMAND := "$(WEBMUX_DIR)/bin/webmux"
+E2E_SCRIPT := test:e2e
+NPM_WORKSPACES := --workspace=frontend --include-workspace-root
 
 export WEBMUX_ROOT
 export WEBMUX_HOME
@@ -93,17 +84,9 @@ all: build
 
 # Platform-specific runtime bundle; use Node.js 24 and build from the lockfile.
 package:
-ifeq ($(WEBMUX_BACKEND),node)
-	@$(NODE) scripts/packaging-checks.mts legacy-platform
-endif
 	@cd "$(WEBMUX_DIR)" && $(NPM) ci $(NPM_WORKSPACES) --no-audit --no-fund
-ifeq ($(WEBMUX_BACKEND),go)
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build --workspace=frontend
 	@$(NODE) scripts/package-native.mts
-else
-	@cd "$(WEBMUX_DIR)" && $(NPM) run build:node
-	@$(NODE) scripts/package.mts
-endif
 
 help:
 	@printf "$(C_BLD)$(C_MAG)▦ WebMux$(C_RST)$(C_DIM) — web-native terminal multiplexer$(C_RST)\n\n"
@@ -129,7 +112,6 @@ help:
 	@printf "  $(C_CYN)make check-guacd$(C_RST)    Check guacd (RDP proxy) installation\n"
 	@printf "  $(C_CYN)make help$(C_RST)           Show this help\n"
 	@printf "\n$(C_BLD)Configuration:$(C_RST)\n"
-	@printf "  $(C_YLW)WEBMUX_BACKEND$(C_RST)=$(C_DIM)go|node$(C_RST)          Backend (default: go)\n"
 	@printf "  $(C_YLW)WEBMUX_HOME$(C_RST)=$(C_DIM)~/.config/webmux$(C_RST)   Runtime config/data directory\n"
 	@printf "  $(C_YLW)HTTP_PORT$(C_RST)=$(C_DIM)8080$(C_RST)              HTTP listen port\n"
 	@printf "  $(C_YLW)HTTPS_PORT$(C_RST)=$(C_DIM)8443$(C_RST)             HTTPS listen port\n"
@@ -151,13 +133,9 @@ deps:
 
 build: deps
 	@printf "$(C_BLU)▸$(C_RST) Building webmux…\n"
-ifeq ($(WEBMUX_BACKEND),go)
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build:helpers --silent && $(NPM) run build --workspace=frontend --silent
 	@mkdir -p "$(WEBMUX_DIR)/bin"
 	@cd "$(WEBMUX_DIR)/server" && $(GO) build -trimpath -o ../bin/webmux ./cmd/webmux
-else
-	@cd "$(WEBMUX_DIR)" && $(NPM) run build:node --silent
-endif
 	@printf "$(C_GRN)✓$(C_RST) Build complete.\n"
 
 configure:
@@ -303,14 +281,8 @@ status:
 test: test-unit test-e2e
 	@printf "$(C_GRN)✓$(C_RST) All tests passed.\n"
 
-# Compatibility tests and the complete TypeScript gate still cover both servers.
-# Target-specific variables propagate to build/deps, including parallel make.
-test-unit test-e2e: NPM_WORKSPACES :=
-
 test-unit: build
-ifeq ($(WEBMUX_BACKEND),go)
 	@cd "$(WEBMUX_DIR)/server" && $(GO) test -race ./...
-endif
 	@printf "$(C_BLU)▸$(C_RST) Type-checking…\n"
 	@cd "$(WEBMUX_DIR)" && $(NPM) run typecheck --silent
 	@printf "$(C_GRN)✓$(C_RST) Types OK.\n"
@@ -331,14 +303,11 @@ test-e2e: build
 
 lint:
 	@cd "$(WEBMUX_DIR)" && $(NPM) run lint
-ifeq ($(WEBMUX_BACKEND),go)
-	@cd "$(WEBMUX_DIR)/server" && $(GO) vet ./...
-endif
 
 clean: stop
 	@printf "$(C_BLU)▸$(C_RST) Cleaning build artifacts…\n"
-	@rm -rf "$(WEBMUX_DIR)/backend/dist" "$(WEBMUX_DIR)/scripts/dist" "$(WEBMUX_DIR)/web" "$(WEBMUX_DIR)/bin"
-	@rm -rf "$(WEBMUX_DIR)/node_modules" "$(WEBMUX_DIR)/backend/node_modules" "$(WEBMUX_DIR)/frontend/node_modules"
+	@rm -rf "$(WEBMUX_DIR)/scripts/dist" "$(WEBMUX_DIR)/web" "$(WEBMUX_DIR)/bin"
+	@rm -rf "$(WEBMUX_DIR)/node_modules" "$(WEBMUX_DIR)/frontend/node_modules"
 	@rm -f "$(PIDFILE)"
 	@printf "$(C_GRN)✓$(C_RST) Clean.\n"
 
@@ -380,7 +349,7 @@ endif
 install: stop build
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Installing launchd service…\n"
-	@$(NODE) scripts/render-service.mts $(WEBMUX_BACKEND)
+	@$(NODE) scripts/render-service.mts
 	@launchctl bootout $(LAUNCHD_SVC) 2>/dev/null || true
 	@launchctl bootstrap gui/$$(id -u) "$$WEBMUX_SERVICE_OUTPUT"
 	@launchctl kickstart -k $(LAUNCHD_SVC) 2>/dev/null || true
@@ -390,7 +359,7 @@ ifeq ($(shell uname),Darwin)
 	@printf "$(C_GRN)●$(C_RST) WebMux will start automatically on login.\n"
 else
 	@printf "$(C_BLU)▸$(C_RST) Installing systemd user service…\n"
-	@$(NODE) scripts/render-service.mts $(WEBMUX_BACKEND)
+	@$(NODE) scripts/render-service.mts
 	@systemctl --user daemon-reload
 	@systemctl --user enable --now "$(SYSTEMD_UNIT)"
 	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)%s$(C_RST)\n" "$$WEBMUX_SERVICE_OUTPUT"

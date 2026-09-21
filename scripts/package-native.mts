@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 const repo = path.resolve(import.meta.dirname, '..');
 const source = path.join(repo, 'webmux');
 const output = path.resolve(process.argv[2] || path.join(repo, 'dist'));
-const metadata: unknown = JSON.parse(fs.readFileSync(path.join(source, 'backend/package.json'), 'utf8'));
+const metadata: unknown = JSON.parse(fs.readFileSync(path.join(source, 'package.json'), 'utf8'));
 if (!metadata || typeof metadata !== 'object' || !('version' in metadata) || typeof metadata.version !== 'string'
   || !/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(metadata.version)) throw new Error('Invalid package version');
 const goos = process.platform === 'win32' ? 'windows' : process.platform;
@@ -50,16 +50,15 @@ try {
     version: metadata.version, backend: 'go', platform: process.platform, arch: process.arch,
     go: execFileSync('go', ['version'], { encoding: 'utf8', env: buildEnv }).trim(),
   }, null, 2) + '\n');
-  fs.writeFileSync(path.join(stage, 'README.txt'), `WebMux ${metadata.version} — native migration preview
+  fs.writeFileSync(path.join(stage, 'README.txt'), `WebMux ${metadata.version} — native server
 
 Run bin/${goos === 'windows' ? 'webmux.exe' : 'webmux'} and open http://localhost:8080.
 No Node.js runtime is required. Keep bin, web and config.defaults together.
 Configuration/state default to ~/.config/webmux; WEBMUX_HOME overrides this.
 WEBMUX_ROOT or --root explicitly overrides the installation directory.
-For this migration preview, use an isolated WEBMUX_HOME and never run Node and
-Go servers against the same writable home. Existing release services/installers
-still use Node until the migration gates pass.
-${goos === 'windows' ? 'Native service preview: from an elevated terminal, run bin\\webmux-service.cmd install\nwith -WebMuxHome pointing to isolated state. The existing account prompt and\noptional -LocalSystem switch apply; no Node.js runtime is needed.\n' : ''}
+Never run multiple servers against the same writable home.
+Reinstall or reconfigure services that still point to an older Node installation.
+${goos === 'windows' ? 'Service installation: from an elevated terminal, run bin\\webmux-service.cmd install\nwith -WebMuxHome pointing to isolated state. The existing account prompt and\noptional -LocalSystem switch apply; no Node.js runtime is needed.\n' : ''}
 OpenSSH is required for SSH; mosh, sshpass and tmux depend on selected features.
 RDP requires an operator-managed guacd. These external tools are not bundled.
 To upgrade, stop the server, extract a new bundle separately, then restart it

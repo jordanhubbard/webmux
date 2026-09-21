@@ -18,7 +18,6 @@ const binary = path.join(temporary, process.platform === 'win32' ? 'webmux.exe' 
 const agentFixtureDir = path.join(temporary, 'agent-bin');
 const agentFixture = path.join(agentFixtureDir, process.platform === 'win32' ? 'tmux.exe' : 'tmux');
 const secret = 'isolated-contract-fixture-not-a-production-secret';
-type Backend = 'node' | 'go';
 type Mode = 'local' | 'none';
 type JSONRecord = Record<string, unknown>;
 
@@ -60,8 +59,8 @@ interface RunningServer {
   close: () => Promise<void>;
 }
 
-async function start(backend: Backend, mode: Mode, existingHome?: string, environment: NodeJS.ProcessEnv = {}, installationRoot = root): Promise<RunningServer> {
-  const home = existingHome ?? await mkdtemp(path.join(temporary, `${backend}-${mode}-`));
+async function start(mode: Mode, existingHome?: string, environment: NodeJS.ProcessEnv = {}, installationRoot = root): Promise<RunningServer> {
+  const home = existingHome ?? await mkdtemp(path.join(temporary, `go-${mode}-`));
   if (!existingHome) {
     await cp(path.join(root, 'config.defaults'), path.join(home, 'config'), { recursive: true });
     await writeFile(path.join(home, 'config', 'auth.yaml'), yaml.dump({ auth: { mode, users: [], jwt_secret: secret } }));
@@ -70,8 +69,8 @@ async function start(backend: Backend, mode: Mode, existingHome?: string, enviro
     await writeFile(appPath, app.replace('listen_host: 0.0.0.0', 'listen_host: 127.0.0.1'));
   }
   const port = await reservePort();
-  const child = spawn(backend === 'go' ? binary : process.execPath,
-    backend === 'go' ? ['--root', installationRoot, '--home', home, '--listen', `127.0.0.1:${port}`] : [path.join(root, 'backend', 'dist', 'index.js')],
+  const child = spawn(binary,
+    ['--root', installationRoot, '--home', home, '--listen', `127.0.0.1:${port}`],
     {
       cwd: root,
       env: {
@@ -103,7 +102,7 @@ async function start(backend: Backend, mode: Mode, existingHome?: string, enviro
     let ready = false;
     for (let attempt = 0; attempt < 100; attempt++) {
       if (startupError) throw startupError;
-      if (child.exitCode !== null || child.signalCode !== null) throw new Error(`${backend} exited during startup:\n${logs}`);
+      if (child.exitCode !== null || child.signalCode !== null) throw new Error(`go exited during startup:\n${logs}`);
       try {
         const response = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(500) });
         ready = response.ok;
@@ -112,7 +111,7 @@ async function start(backend: Backend, mode: Mode, existingHome?: string, enviro
       } catch { /* Server has not bound its socket yet. */ }
       await delay(100);
     }
-    assert.ok(ready, `${backend} did not become healthy:\n${logs}`);
+    assert.ok(ready, `go did not become healthy:\n${logs}`);
   } catch (error) {
     await stop(child);
     throw error;
@@ -151,10 +150,9 @@ function checkToken(body: unknown, username: string, mode: Mode): string {
   return token;
 }
 
-let aiBaseline: unknown;
-async function aiContract(backend: Backend): Promise<void> {
+async function aiContract(): Promise<void> {
   const unavailable = { error: 'AI assistant unavailable', detail: 'No LLM API key configured', hint: 'Set WEBMUX_RCC_URL+WEBMUX_RCC_TOKEN or NVIDIA_API_KEY/OPENAI_API_KEY' };
-  const plain = await start(backend, 'none');
+  const plain = await start('none');
   try {
     assert.deepEqual(await plain.request('GET', '/api/ai/status'), { status: 200, body: { available: false, providers: { rcc: false, nvidia: false, openai: false }, model: 'gpt-4o-mini' } });
     for (const message of [undefined, '', '  ', 42]) assert.deepEqual(await plain.request('POST', '/api/ai/chat', { message }), { status: 400, body: { error: 'message required' } });
@@ -179,7 +177,7 @@ async function aiContract(backend: Backend): Promise<void> {
       fail = false;
       const environment: NodeJS.ProcessEnv = { LOOM_RCC_BRAIN_URL: `http://127.0.0.1:${address.port}/`, LOOM_RCC_AGENT_TOKEN: 'alias-fixture', WEBMUX_MODEL: 'fixture-model' };
       if (primary) { environment.WEBMUX_RCC_URL = `http://127.0.0.1:${address.port}/primary/`; environment.WEBMUX_RCC_TOKEN = 'primary-fixture'; }
-      const server = await start(backend, 'local', undefined, environment);
+      const server = await start('local', undefined, environment);
       try {
         assert.equal((await server.request('GET', '/api/ai/status')).status, 401);
         assert.equal((await server.request('POST', '/api/ai/chat', { message: 'help' })).status, 401);
@@ -204,8 +202,6 @@ async function aiContract(backend: Backend): Promise<void> {
         assert.equal(messages.length, 11); assert.equal(record(messages[0]).role, 'system');
         assert.deepEqual(messages.slice(1, -1), history.slice(-10).filter(message => message.role !== 'system'));
         assert.deepEqual(messages.at(-1), { role: 'user', content: `<terminal_context>\n${context.slice(-3000)}\n</terminal_context>\n\nhelp` });
-        if (backend === 'node') aiBaseline = captured.body;
-        else assert.deepEqual(captured.body, aiBaseline, 'provider request parity');
         fail = true;
         assert.deepEqual(await server.request('POST', '/api/ai/chat', { message: 'help' }, owner), { status: 503, body: unavailable });
         assert.equal(fixtureError, undefined);
@@ -214,8 +210,8 @@ async function aiContract(backend: Backend): Promise<void> {
   } finally { await new Promise<void>((resolve, reject) => provider.close(error => error ? reject(error) : resolve())); }
 }
 
-async function uploadContract(backend: Backend): Promise<void> {
-  const server = await start(backend, 'local');
+async function uploadContract(): Promise<void> {
+  const server = await start('local');
   let referenced = '';
   let stale = '';
   try {
@@ -241,7 +237,7 @@ async function uploadContract(backend: Backend): Promise<void> {
     const old = new Date(Date.now() - 31*24*60*60*1000);
     await utimes(referenced, old, old); await utimes(stale, old, old);
   } finally { await server.close(); }
-  const restored = await start(backend === 'node' ? 'go' : 'node', 'local', server.home);
+  const restored = await start('local', server.home);
   try {
     const deadline = Date.now() + 5_000;
     while (await stat(stale).then(() => true, (error: NodeJS.ErrnoException) => { if (error.code !== 'ENOENT') throw error; return false; })) {
@@ -251,9 +247,8 @@ async function uploadContract(backend: Backend): Promise<void> {
   } finally { await restored.close(); }
 }
 
-let staticBaseline: unknown;
-async function staticContract(backend: Backend): Promise<void> {
-  const installation = await mkdtemp(path.join(temporary, `${backend}-static-`));
+async function staticContract(): Promise<void> {
+  const installation = await mkdtemp(path.join(temporary, `go-static-`));
   await cp(path.join(root, 'config.defaults'), path.join(installation, 'config.defaults'), { recursive: true });
   await mkdir(path.join(installation, 'web', 'assets'), { recursive: true });
   const files = { 'index.html': '<!doctype html><title>WebMux</title>', 'assets/app.js': 'console.log("fixture");', 'assets/app.css': 'body{color:red}' };
@@ -262,13 +257,17 @@ async function staticContract(backend: Backend): Promise<void> {
     await writeFile(file, text);
     await utimes(file, new Date('2025-01-01T00:00:00Z'), new Date('2025-01-01T00:00:00Z'));
   }
-  const server = await start(backend, 'local', undefined, {}, installation);
+  const server = await start('local', undefined, {}, installation);
   try {
-    const responses: unknown[] = [];
     for (const route of ['/', '/index.html', '/workspace/terminals', '/assets/app.js', '/assets/app.css']) {
       const response = await server.raw(route);
       assert.equal(response.status, 200);
-      responses.push({ route, body: await response.text(), headers: Object.fromEntries(['content-type', 'cache-control', 'etag', 'last-modified', 'accept-ranges'].map(name => [name, response.headers.get(name)])) });
+      const file = route.startsWith('/assets/') ? route.slice(1) as keyof typeof files : 'index.html';
+      assert.equal(await response.text(), files[file]);
+      assert.match(response.headers.get('content-type') ?? '', file.endsWith('.js') ? /javascript/ : file.endsWith('.css') ? /text\/css/ : /text\/html/);
+      assert.equal(response.headers.get('accept-ranges'), 'bytes');
+      assert.ok(response.headers.get('etag'));
+      assert.equal(response.headers.get('last-modified'), 'Wed, 01 Jan 2025 00:00:00 GMT');
     }
     const asset = await server.raw('/assets/app.js');
     const etag = asset.headers.get('etag'); assert.ok(etag); await asset.body?.cancel();
@@ -282,13 +281,11 @@ async function staticContract(backend: Backend): Promise<void> {
     const redirect = await server.raw('/assets?version=1');
     assert.equal(redirect.status, 301); assert.equal(redirect.headers.get('location'), '/assets/?version=1'); await redirect.body?.cancel();
     assert.equal((await server.request('GET', '/api/sessions')).status, 401);
-    if (backend === 'node') staticBaseline = responses;
-    else assert.deepEqual(responses, staticBaseline, 'static frontend response parity');
   } finally { await server.close(); }
 }
 
-async function localContract(backend: Backend): Promise<void> {
-  const server = await start(backend, 'local');
+async function localContract(): Promise<void> {
+  const server = await start('local');
   let ownerToken: string;
   try {
     const call = server.request;
@@ -339,7 +336,7 @@ async function localContract(backend: Backend): Promise<void> {
 
   // Restart the opposite implementation on the same files. The old token and
   // password must still work, in both directions, without a data conversion.
-  const other = await start(backend === 'go' ? 'node' : 'go', 'local', server.home);
+  const other = await start('local', server.home);
   try {
     assert.deepEqual(await other.request('GET', '/api/auth/me', undefined, ownerToken), { status: 200, body: { username: 'owner', admin: true } });
     const login = await other.request('POST', '/api/auth/login', { username: 'owner', password: 'owner-🔐-password' });
@@ -348,8 +345,8 @@ async function localContract(backend: Backend): Promise<void> {
   } finally { await other.close(); }
 }
 
-async function trustedContract(backend: Backend): Promise<void> {
-  const server = await start(backend, 'none');
+async function trustedContract(): Promise<void> {
+  const server = await start('none');
   try {
     assert.deepEqual(await server.request('GET', '/api/auth/status'), { status: 200, body: { mode: 'none', bootstrap_required: true } });
     assert.deepEqual(await server.request('GET', '/api/auth/me'), { status: 200, body: { username: 'anonymous', admin: false } });
@@ -363,8 +360,8 @@ async function trustedContract(backend: Backend): Promise<void> {
   } finally { await server.close(); }
 }
 
-async function catalogContract(backend: Backend): Promise<void> {
-  const server = await start(backend, 'none');
+async function catalogContract(): Promise<void> {
+  const server = await start('none');
   const hostID = 'fixture/with slash/';
   const hostRoute = `/api/hosts/${encodeURIComponent(hostID)}`;
   let savedHost: unknown;
@@ -402,7 +399,7 @@ async function catalogContract(backend: Backend): Promise<void> {
     assert.deepEqual(await call('DELETE', `/api/keys/${generatedID}`), { status: 204, body: null });
   } finally { await server.close(); }
 
-  const other = await start(backend === 'go' ? 'node' : 'go', 'none', server.home);
+  const other = await start('none', server.home);
   try {
     assert.deepEqual(await other.request('GET', '/api/hosts'), { status: 200, body: [savedHost] });
     assert.deepEqual(await other.request('GET', '/api/keys'), { status: 200, body: [{ id: 'key-fixture', type: 'rsa', encrypted: false, description: 'fixture' }] });
@@ -425,13 +422,13 @@ async function catalogContract(backend: Backend): Promise<void> {
   } finally { await other.close(); }
 }
 
-async function settingsContract(backend: Backend): Promise<void> {
+async function settingsContract(): Promise<void> {
   const environment = {
     WEBMUX_TERMINAL_GRID_MAX_COLS: '3',
     WEBMUX_TERMINAL_GRID_MAX_ROWS: 'unlimited',
     WEBMUX_EXEC_COMMAND: 'fixture-exec {host}',
   };
-  const server = await start(backend, 'none', undefined, environment);
+  const server = await start('none', undefined, environment);
   const appPath = path.join(server.home, 'config', 'app.yaml');
   let savedResponse: unknown;
   const layout = { layout: { font_size: 18, tiles: [{ session_id: 'fixture', row: 0, col: 1 }] }, metadata: 'preserved' };
@@ -500,7 +497,7 @@ async function settingsContract(backend: Backend): Promise<void> {
     assert.deepEqual(await server.request('GET', '/api/config/fonts/-1'), { status: 404, body: { error: 'Font not found' } });
     assert.deepEqual(await server.request('PUT', '/api/config/layout', layout), { status: 200, body: layout });
     assert.deepEqual(await server.request('GET', '/api/config/layout'), { status: 200, body: layout });
-    // This fixture creates no real sessions. The Node broker reconciles tiles
+    // This fixture creates no real sessions. Startup reconciles tiles
     // with sessions at shutdown/startup, so leave an empty tile list for the
     // settings-only restart check. Real session/layout recovery is a separate
     // transport contract; the nonempty layout API round-trip is checked above.
@@ -508,7 +505,7 @@ async function settingsContract(backend: Backend): Promise<void> {
     assert.deepEqual(await server.request('PUT', '/api/config/layout', layout), { status: 200, body: layout });
     savedResponse = (await server.request('GET', '/api/config')).body;
   } finally { await server.close(); }
-  const other = await start(backend === 'go' ? 'node' : 'go', 'none', server.home, environment);
+  const other = await start('none', server.home, environment);
   try {
     assert.deepEqual(await other.request('GET', '/api/config'), { status: 200, body: savedResponse });
     assert.deepEqual(await other.request('GET', '/api/config/layout'), { status: 200, body: layout });
@@ -518,8 +515,8 @@ async function settingsContract(backend: Backend): Promise<void> {
   } finally { await other.close(); }
 }
 
-async function sessionContract(backend: Backend): Promise<void> {
-  const server = await start(backend, 'local', undefined, { WEBMUX_TERMINAL_GRID_MAX_COLS: '2', WEBMUX_TERMINAL_GRID_MAX_ROWS: '2' });
+async function sessionContract(): Promise<void> {
+  const server = await start('local', undefined, { WEBMUX_TERMINAL_GRID_MAX_COLS: '2', WEBMUX_TERMINAL_GRID_MAX_ROWS: '2' });
   let id = '';
   let owner = '';
   try {
@@ -567,7 +564,7 @@ async function sessionContract(backend: Backend): Promise<void> {
   } finally { await server.close(); }
   const saved = await readFile(path.join(server.home, 'data', 'sessions', 'sessions.yaml'), 'utf8');
   assert.ok(!saved.includes('transient-only') && !saved.includes('password'));
-  const other = await start(backend === 'go' ? 'node' : 'go', 'local', server.home);
+  const other = await start('local', server.home);
   try {
     const restored = await other.request('GET', `/api/sessions/${id}`, undefined, owner);
     assert.equal(restored.status, 200);
@@ -615,8 +612,8 @@ async function waitSocket(client: SocketProbe, predicate: () => boolean, label: 
   }
 }
 
-async function slaveContract(backend: Backend): Promise<void> {
-  const initial = await start(backend, 'local');
+async function slaveContract(): Promise<void> {
+  const initial = await start('local');
   let system = '', other = '';
   const oldIDs: string[] = [];
   const desktops: { kind: string; id: string }[] = [];
@@ -635,8 +632,8 @@ async function slaveContract(backend: Backend): Promise<void> {
   } finally { await initial.close(); }
   const quote = (value: string): string => process.platform === 'win32' ? `"${value}"` : `'${value.replaceAll("'", `'"'"'`)}'`;
   const command = `${quote(process.execPath)} ${quote(path.join(root, 'scripts', 'terminal-fixture.mts'))}`;
-  for (const [index, runtime] of [backend, backend === 'node' ? 'go' : 'node'].entries()) {
-    const server = await start(runtime as Backend, 'local', initial.home, { WEBMUX_SLAVE_HOST: 'console.local', WEBMUX_SLAVE_PORT: index === 0 ? '1234' : '', WEBMUX_EXEC_COMMAND: command });
+  for (const index of [0, 1]) {
+    const server = await start('local', initial.home, { WEBMUX_SLAVE_HOST: 'console.local', WEBMUX_SLAVE_PORT: index === 0 ? '1234' : '', WEBMUX_EXEC_COMMAND: command });
     let client: SocketProbe | undefined;
     try {
       const listed = await server.request('GET', '/api/sessions', undefined, system);
@@ -661,8 +658,8 @@ async function slaveContract(backend: Backend): Promise<void> {
   }
 }
 
-async function terminalContract(backend: Backend): Promise<void> {
-  const server = await start(backend, 'local');
+async function terminalContract(): Promise<void> {
+  const server = await start('local');
   const clients: SocketProbe[] = [];
   const open = (route: string): SocketProbe => { const client = probe(server.socket(route)); clients.push(client); return client; };
   try {
@@ -762,7 +759,7 @@ async function terminalContract(backend: Backend): Promise<void> {
   }
 }
 
-async function vncContract(backend: Backend): Promise<void> {
+async function vncContract(): Promise<void> {
   const upstreams = new Set<Socket>();
   const echo = createServer(socket => {
     upstreams.add(socket);
@@ -773,7 +770,7 @@ async function vncContract(backend: Backend): Promise<void> {
   });
   echo.listen(0, '127.0.0.1'); await once(echo, 'listening');
   const address = echo.address(); assert.ok(address && typeof address !== 'string');
-  const server = await start(backend, 'local', undefined, { WEBMUX_ALLOW_LOCAL_TARGETS: '1' }).catch((error: unknown) => { echo.close(); throw error; });
+  const server = await start('local', undefined, { WEBMUX_ALLOW_LOCAL_TARGETS: '1' }).catch((error: unknown) => { echo.close(); throw error; });
   const clients: WebSocket[] = [];
   const open = (route: string): WebSocket => { const socket = server.socket(route); clients.push(socket); socket.on('error', () => {}); return socket; };
   try {
@@ -804,7 +801,7 @@ async function vncContract(backend: Backend): Promise<void> {
   }
 }
 
-async function rdpContract(backend: Backend): Promise<void> {
+async function rdpContract(): Promise<void> {
   // ASCII fixture instructions isolate shared legacy behavior. Fragmented
   // Unicode and embedded separators have dedicated Go protocol tests.
   const instruction = (...values: string[]): string => values.map(value => `${value.length}.${value}`).join(',') + ';';
@@ -833,7 +830,7 @@ async function rdpContract(backend: Backend): Promise<void> {
   });
   daemon.listen(0, '127.0.0.1'); await once(daemon, 'listening');
   const address = daemon.address(); assert.ok(address && typeof address !== 'string');
-  const server = await start(backend, 'local').catch((error: unknown) => { daemon.close(); throw error; });
+  const server = await start('local').catch((error: unknown) => { daemon.close(); throw error; });
   const clients: WebSocket[] = [];
   const open = (route: string): WebSocket => { const socket = server.socket(route); clients.push(socket); socket.on('error', () => {}); return socket; };
   try {
@@ -877,8 +874,8 @@ async function rdpContract(backend: Backend): Promise<void> {
   }
 }
 
-async function desktopContract(backend: Backend): Promise<void> {
-  const server = await start(backend, 'local');
+async function desktopContract(): Promise<void> {
+  const server = await start('local');
   let owner = '';
   const saved: { kind: 'vnc' | 'rdp'; value: JSONRecord }[] = [];
   try {
@@ -926,7 +923,7 @@ async function desktopContract(backend: Backend): Promise<void> {
     }
     assert.deepEqual(await server.request('GET', '/api/sessions', undefined, owner), { status: 200, body: [] });
   } finally { await server.close(); }
-  const other = await start(backend === 'go' ? 'node' : 'go', 'local', server.home);
+  const other = await start('local', server.home);
   try {
     for (const { kind, value } of saved) {
       const restored = await other.request('GET', `/api/${kind}/sessions/${stringField(value, 'id')}`, undefined, owner);
@@ -936,9 +933,9 @@ async function desktopContract(backend: Backend): Promise<void> {
   } finally { await other.close(); }
 }
 
-async function agentContract(backend: Backend): Promise<void> {
+async function agentContract(): Promise<void> {
   const cwd = await mkdtemp(path.join(temporary, 'agent-cwd-'));
-  const server = await start(backend, 'local', undefined, {
+  const server = await start('local', undefined, {
     PATH: `${agentFixtureDir}${path.delimiter}${process.env.PATH ?? ''}`,
     SHELL: agentFixture, COMSPEC: agentFixture, WEBMUX_AGENT_FIXTURE_CWD: cwd,
   });
@@ -985,7 +982,7 @@ async function agentContract(backend: Backend): Promise<void> {
       const response = await call('GET', '/api/agents/alpha/sessions');
       assert.equal(response.status, 200); assert(Array.isArray(response.body));
       const first = record(response.body[0]);
-      assert.equal(first.last_output_at, stamp, `${backend}: timestamp ${stamp}`);
+      assert.equal(first.last_output_at, stamp, `go: timestamp ${stamp}`);
       assert.equal(first.status, 'working'); assert.equal(first.status_source, 'tmux');
     }
     for (const stamp of [
@@ -997,7 +994,7 @@ async function agentContract(backend: Backend): Promise<void> {
       await writeFile(statusFile, JSON.stringify({ last_output_at: stamp }));
       const response = await call('GET', '/api/agents/alpha/sessions');
       assert.equal(response.status, 200); assert(Array.isArray(response.body));
-      assert.equal(record(response.body[0]).last_output_at, record(listed.body[0]).last_output_at, `${backend}: invalid timestamp ${stamp}`);
+      assert.equal(record(response.body[0]).last_output_at, record(listed.body[0]).last_output_at, `go: invalid timestamp ${stamp}`);
     }
     await writeFile(statusFile, JSON.stringify({ agent_id: 'alpha', name: 'alpha-task-a', status: 'waiting', source: 'hook', updated_at: new Date().toISOString(), extension: 'preserved' }));
     const attached = await call('POST', '/api/agents/alpha/attach', { name: 'alpha-task-a', cols: 999, rows: 1 });
@@ -1058,23 +1055,21 @@ try {
   const fixtureBuild = spawnSync('go', ['build', '-o', agentFixture, './internal/agent/testdata/tmux'], { cwd: path.join(root, 'server'), stdio: 'inherit' });
   if (fixtureBuild.error) throw fixtureBuild.error;
   assert.equal(fixtureBuild.status, 0, 'Agent fixture build failed');
-  for (const backend of ['node', 'go'] as const) {
-    await staticContract(backend);
-    await uploadContract(backend);
-    await aiContract(backend);
-    await localContract(backend);
-    await trustedContract(backend);
-    await catalogContract(backend);
-    await settingsContract(backend);
-    await sessionContract(backend);
-    await terminalContract(backend);
-    await slaveContract(backend);
-    await agentContract(backend);
-    await desktopContract(backend);
-    await vncContract(backend);
-    await rdpContract(backend);
-    console.log(`${backend}: HTTP, templates, terminal WebSocket, agent, VNC/RDP and cross-backend restart contracts passed`);
-  }
+  await staticContract();
+  await uploadContract();
+  await aiContract();
+  await localContract();
+  await trustedContract();
+  await catalogContract();
+  await settingsContract();
+  await sessionContract();
+  await terminalContract();
+  await slaveContract();
+  await agentContract();
+  await desktopContract();
+  await vncContract();
+  await rdpContract();
+  console.log('Go: HTTP, templates, terminal WebSocket, agent, VNC/RDP and restart contracts passed');
 } finally {
   await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }

@@ -1,9 +1,8 @@
 {
   "name": "webmux",
-  "version": "1.0.0",
+  "version": "1.3.12",
   "private": true,
   "workspaces": [
-    "backend",
     "frontend"
   ],
   "engines": {
@@ -15,17 +14,14 @@
   },
   "scripts": {
     "dev:backend": "node scripts/native.mts build && node scripts/native.mts start",
-    "dev:backend:node": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "build": "npm run build:helpers && node scripts/native.mts build && npm run build --workspace=frontend",
     "build:helpers": "tsc --project tsconfig.helpers.json",
     "typecheck": "node scripts/check-typescript.mts",
-    "test:contract": "npm run build --workspace=backend && node scripts/server-contract.mts",
-    "test:contract:auth": "npm run test:contract",
-    "test:e2e": "node scripts/run-playwright.mts --backend=go",
-    "test:e2e:go": "node scripts/run-playwright.mts --backend=go",
-    "test:visual-parity": "node scripts/visual-parity.mts",
-    "benchmark:server": "npm run build --workspace=backend && node scripts/benchmark-server.mts",
+    "test:contract": "node scripts/server-contract.mts",
+    "test:e2e": "node scripts/run-playwright.mts",
+    "test:e2e:go": "node scripts/run-playwright.mts",
+    "benchmark:server": "node scripts/benchmark-server.mts",
     "start": "node scripts/native.mts start",
     "service:install": "npm run build && powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 install",
     "service:uninstall": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 uninstall",
@@ -34,18 +30,23 @@
     "service:restart": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 restart",
     "service:reconfigure": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 reconfigure",
     "service:status": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 status",
-    "lint": "npm run lint:go && npm run lint:node",
+    "lint": "npm run lint:go && npm run lint --workspace=frontend",
     "lint:go": "cd server && go vet ./...",
-    "lint:node": "npm run lint --workspace=backend && npm run lint --workspace=frontend",
     "test:helpers": "npm run build:helpers && node --test scripts/helpers.test.mts ../scripts/release-metadata.test.mts ../scripts/render-service.test.mts ../scripts/verify-native-artifacts.test.mts ../scripts/make-controls.test.mts",
-    "test": "npm run test:go && npm run test:node",
+    "test": "npm run test:go && npm run test --workspace=frontend && npm run test:helpers",
     "test:go": "cd server && go test ./...",
-    "test:node": "npm run test --workspace=backend && npm run test --workspace=frontend && npm run test:helpers",
-    "build:node": "npm run build:helpers && npm run build --workspace=backend && npm run build --workspace=frontend",
-    "start:node": "npm run start --workspace=backend",
-    "test:e2e:node": "node scripts/run-playwright.mts --backend=node"
+    "test:visual": "node scripts/visual-repeatability.mts"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2"
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^20.12.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/ws": "^8.5.12",
+    "argon2": "^0.31.2",
+    "jsonwebtoken": "^9.0.2",
+    "js-yaml": "^4.1.0",
+    "ws": "^8.18.0",
+    "typescript": "^5.4.0"
   }
 }

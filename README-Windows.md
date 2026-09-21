@@ -1,11 +1,11 @@
 # Running WebMux on Windows
 
-WebMux's Go backend runs natively on modern Windows using ConPTY. The legacy Node backend uses `node-pty` for ConPTY access. Both resolve `ssh.exe` from `PATH`, use `cmd.exe` for local command templates and scratch shells, and store runtime state under the hosting user's profile by default.
+WebMux's Go backend runs natively on modern Windows using ConPTY. It resolves `ssh.exe` from `PATH`, uses `cmd.exe` for local command templates and scratch shells, and stores runtime state under the hosting user's profile by default.
 
 ## Prerequisites
 
 1. A current Windows release with ConPTY support, on x64 or ARM64. Published MSIs are available for both architectures. Installing the Windows service also requires .NET Framework 4.6.1 or newer, included with supported Windows releases.
-2. Node.js 24 for source UI/tooling builds and legacy Node installers. Native Go installers do not require Node.js at runtime.
+2. Node.js 24 for source UI/tooling builds. Go installers do not require Node.js at runtime.
 3. Microsoft OpenSSH Client, with `ssh.exe` available through `PATH`.
 4. Git only when installing from a source checkout.
 
@@ -73,11 +73,6 @@ npm run build
 npm start
 ```
 
-For legacy compatibility work, use a full `npm ci`, `npm run build:node` and
-`npm run start:node`. Published dependencies normally provide prebuilt Windows binaries. If npm must
-compile `node-pty` or `argon2`, install Visual Studio Build Tools with the
-**Desktop development with C++** workload and rerun `npm ci`.
-
 Open `http://localhost:8080`. Runtime configuration and state default to `%USERPROFILE%\.config\webmux`.
 
 Override runtime settings for the current PowerShell session when needed:
@@ -124,7 +119,7 @@ MSI, then point its existing registration at the new runtime:
 ```powershell
 webmux-service stop
 # Install the native MSI here.
-webmux-service reconfigure -Backend go
+webmux-service reconfigure
 webmux-service start
 ```
 

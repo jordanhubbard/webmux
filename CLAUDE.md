@@ -43,7 +43,7 @@ Additional targets (`lint`, `status`, `configure`, `help`, etc.) are encouraged 
 - **All tests MUST go in the `tests/` directory** at the top level of the repository.
 - **Code coverage must be at least 70%.** When writing new code, write tests to cover it. When modifying existing code, check coverage and add tests if it falls below 70%.
 - **All tests must pass before push.** Do not push code with failing tests. Run `make test` and verify before any push.
-- Test files should mirror the source structure (e.g., `tests/backend/sessionBroker.test.ts` for `backend/src/services/sessionBroker.ts`).
+- Test files should mirror the source structure (e.g., `webmux/server/internal/session/broker_test.go` for the Go session package).
 - Use the project's existing test framework (Jest, Vitest, pytest, etc.) — do not introduce a second test runner.
 
 ### Code Quality
@@ -64,8 +64,8 @@ When a skill applies to the current task, use it. Key skills:
 
 ## WebMux-Specific Notes
 
-- The application source lives under `webmux/` (backend + frontend workspaces).
-- Backend: Express + ws + node-pty (TypeScript). Frontend: React + xterm.js (TypeScript, Vite).
+- The application source lives under `webmux/` (Go server + frontend workspace).
+- Backend: Go HTTP/WebSocket server with Unix PTYs and Windows ConPTY. Frontend: React + xterm.js (TypeScript, Vite).
 - Runtime configuration is YAML-based under `WEBMUX_HOME/config/` (default `~/.config/webmux/config/`); `webmux/config.defaults/` contains first-run templates.
 - The top-level `Makefile` delegates to `npm` scripts inside `webmux/`.
 

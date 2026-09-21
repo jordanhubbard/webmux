@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
 
-# Keep native macOS addons compatible with the prior runner deployment target.
+# Keep the independent Argon2 compatibility fixture compatible with macOS runners.
 env:
   MACOSX_DEPLOYMENT_TARGET: "14.0"
 
@@ -35,10 +35,10 @@ jobs:
       - name: Vet native server
         working-directory: webmux/server
         run: go vet ./...
-      - name: Install compatibility test dependencies
+      - name: Install test dependencies
         working-directory: webmux
         run: npm ci
-      - name: Verify Node and Go API compatibility
+      - name: Verify Go API contracts
         working-directory: webmux
         run: npm run test:contract
       - name: Measure backend performance
@@ -55,7 +55,7 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: webmux
         run: npm run build --workspace=frontend
-      - name: Install browser for Go parity tests
+      - name: Install browser for Go tests
         if: runner.os == 'Linux'
         working-directory: webmux
         run: npx playwright install --with-deps chromium
@@ -63,54 +63,50 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: webmux
         run: npm run test:e2e:go
-      - name: Compare Node and Go screenshots
+      - name: Check Go screenshot repeatability
         if: runner.os == 'Linux'
         working-directory: webmux
-        run: npm run test:visual-parity
+        run: npm run test:visual
       - name: Install real desktop test dependencies
         id: desktop-tools
         if: runner.os == 'Linux'
         run: |
           sudo -n apt-get update
           sudo -n apt-get install -y openssh-server tmux xvfb x11vnc x11-xserver-utils x11-utils xdotool xclip guacd libguac-client-rdp0 freerdp2-shadow-x11
-      - name: Compare real agent workflows and screenshots through Node and Go
+      - name: Verify real agent workflows and screenshot repeatability
         if: runner.os == 'Linux'
         working-directory: webmux
         env:
           WEBMUX_REAL_AGENTS: '1'
           WEBMUX_VISUAL_PARITY: '1'
         run: |
-          npm run test:e2e:node -- agent-integration.spec.ts --update-snapshots=all --output=test-results/agents-baseline
-          npm run test:e2e:node -- agent-integration.spec.ts --update-snapshots=none --output=test-results/agents-control
+          npm run test:e2e -- agent-integration.spec.ts --update-snapshots=all --output=test-results/agents-baseline
           npm run test:e2e:go -- agent-integration.spec.ts --update-snapshots=none --output=test-results/agents-go
-      - name: Verify real SSH interoperability through Node and Go
+      - name: Verify real SSH interoperability through Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux
         env:
           WEBMUX_REAL_SSH: '1'
         run: |
           ssh_result=0
-          npm run test:e2e:node -- ssh-integration.spec.ts --output=test-results/ssh-node || ssh_result=1
           npm run test:e2e:go -- ssh-integration.spec.ts --output=test-results/ssh-go || ssh_result=1
           exit "$ssh_result"
-      - name: Verify real VNC interoperability through Node and Go
+      - name: Verify real VNC interoperability through Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux
         env:
           WEBMUX_REAL_VNC: '1'
         run: |
           desktop_result=0
-          npm run test:e2e:node -- vnc-integration.spec.ts --output=test-results/vnc-node || desktop_result=1
           npm run test:e2e:go -- vnc-integration.spec.ts --output=test-results/vnc-go || desktop_result=1
           exit "$desktop_result"
-      - name: Verify real RDP interoperability through Node and Go
+      - name: Verify real RDP interoperability through Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux
         env:
           WEBMUX_REAL_RDP: '1'
         run: |
           desktop_result=0
-          npm run test:e2e:node -- rdp-integration.spec.ts --output=test-results/rdp-node || desktop_result=1
           npm run test:e2e:go -- rdp-integration.spec.ts --output=test-results/rdp-go || desktop_result=1
           exit "$desktop_result"
       - name: Preserve browser parity evidence
@@ -124,7 +120,7 @@ jobs:
             webmux/test-results
 
   test:
-    name: Backend Tests
+    name: Frontend and Tooling Tests
     runs-on: ubuntu-22.04
 
     steps:
@@ -147,11 +143,11 @@ jobs:
         working-directory: webmux
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint --workspace=frontend
         working-directory: webmux
 
-      - name: Run backend tests
-        run: npm run test --workspace=backend
+      - name: Run frontend tests
+        run: npm run test --workspace=frontend
         working-directory: webmux
 
       - name: Test compiled TypeScript helpers
@@ -230,17 +226,12 @@ jobs:
         run: npx playwright install chromium
         working-directory: webmux
 
-      - name: Run browser tests
-        # Root npm build produces Go; Node remains the differential baseline.
-        run: npm run build --workspace=backend && npm run test:e2e:node
-        working-directory: webmux
-
       - name: Run browser tests against Go
         run: npm run test:e2e:go
         working-directory: webmux
 
-      - name: Compare Node and Go screenshots
-        run: npm run test:visual-parity
+      - name: Check Go screenshot repeatability
+        run: npm run test:visual
         working-directory: webmux
 
       - name: Preserve browser parity evidence

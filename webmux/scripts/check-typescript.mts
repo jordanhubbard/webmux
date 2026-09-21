@@ -7,12 +7,10 @@ import ts from 'typescript';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const projects = [
-  'webmux/backend/tsconfig.json',
   'webmux/frontend/tsconfig.json',
   'webmux/tsconfig.tools.json',
   'webmux/tsconfig.helpers.json',
   'webmux/tsconfig.e2e.json',
-  'tests/backend/tsconfig.json',
   'webmux/tsconfig.frontend-tests.json',
 ];
 const covered = new Set<string>();

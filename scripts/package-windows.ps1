@@ -1,9 +1,7 @@
 [CmdletBinding()]
 param(
   [string]$OutputDirectory,
-  [string]$WixCommand = 'wix',
-  [ValidateSet('node', 'go')]
-  [string]$Backend = 'go'
+  [string]$WixCommand = 'wix'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -32,12 +30,12 @@ if (-not $OutputDirectory) {
   $OutputDirectory = Join-Path $Repository 'dist'
 }
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
-$Version = (Get-Content -LiteralPath (Join-Path $Repository 'webmux/backend/package.json') -Raw |
+$Version = (Get-Content -LiteralPath (Join-Path $Repository 'webmux/package.json') -Raw |
   ConvertFrom-Json).version
-$Flavor = if ($Backend -eq 'go') { 'native' } else { 'node24' }
+$Flavor = 'native'
 $BundleName = "webmux-$Version-windows-$NodeArch-$Flavor"
 $Archive = Join-Path $OutputDirectory "$BundleName.zip"
-$InstallerSuffix = if ($Backend -eq 'go') { '-native' } else { '' }
+$InstallerSuffix = '-native'
 $Installer = Join-Path $OutputDirectory "webmux-$Version-windows-$NodeArch$InstallerSuffix.msi"
 $Temporary = Join-Path ([IO.Path]::GetTempPath()) "webmux-msi-$([Guid]::NewGuid())"
 
@@ -47,17 +45,15 @@ New-Item -ItemType Directory -Path $Temporary | Out-Null
 try {
   Push-Location (Join-Path $Repository 'webmux')
   try {
-    if ($Backend -eq 'go') { & npm ci --workspace=frontend --include-workspace-root --no-audit --no-fund }
-    else { & npm ci --no-audit --no-fund }
+    & npm ci --no-audit --no-fund
     if ($LASTEXITCODE -ne 0) { throw "npm ci failed with exit code $LASTEXITCODE." }
-    if ($Backend -eq 'go') { & npm run build --workspace=frontend }
-    else { & npm run build:node }
+    & npm run build --workspace=frontend
     if ($LASTEXITCODE -ne 0) { throw "npm run build failed with exit code $LASTEXITCODE." }
   } finally {
     Pop-Location
   }
 
-  $Packager = if ($Backend -eq 'go') { 'scripts/package-native.mts' } else { 'scripts/package.mts' }
+  $Packager = 'scripts/package-native.mts'
   & node (Join-Path $Repository $Packager) $OutputDirectory
   if ($LASTEXITCODE -ne 0) { throw "Runtime packaging failed with exit code $LASTEXITCODE." }
   if (-not (Test-Path -LiteralPath $Archive)) { throw "Runtime bundle was not created at $Archive." }

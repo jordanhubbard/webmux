@@ -1,5 +1,11 @@
 # Go server migration
 
+The legacy Node backend was removed in #83. Go is now the only source runtime.
+The sections below preserve the chronological migration evidence and may refer
+to commands or comparison gates that existed before retirement. Current build,
+test, and packaging commands are in [the workspace guide](../webmux/README.md)
+and [packaging guide](packaging.md).
+
 Tracked in [#77](https://github.com/jordanhubbard/webmux/issues/77).
 
 The target architecture is a native Go server and the existing React/TypeScript

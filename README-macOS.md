@@ -1,6 +1,6 @@
 # Running WebMux on macOS
 
-The source Makefile runs WebMux's Go backend on macOS using Unix pseudoterminals. It can build the application, run it directly, or install it as a per-user launchd service. `WEBMUX_BACKEND=node` selects the legacy backend for compatibility testing.
+The source Makefile runs WebMux's Go backend on macOS using Unix pseudoterminals. It can build the application, run it directly, or install it as a per-user launchd service.
 
 ## Homebrew installation
 

@@ -8,9 +8,6 @@ import net from 'node:net';
 import { once } from 'node:events';
 import { execFileSync, spawnSync } from 'node:child_process';
 
-const explicitBackend = process.argv[2];
-const backend = explicitBackend ?? 'go';
-assert(backend === 'go' || backend === 'node', 'Expected go or node');
 assert(process.platform !== 'win32', 'Source Make controls are Unix-only');
 const repo = path.resolve(import.meta.dirname, '..');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-source-smoke-'));
@@ -27,8 +24,7 @@ const app = fs.readFileSync(path.join(repo, 'webmux/config.defaults/app.yaml'), 
 fs.mkdirSync(path.join(home, 'config')); fs.writeFileSync(path.join(home, 'config/app.yaml'), app);
 function control(target: '_start_manual' | '_stop_manual'): void {
   const env: NodeJS.ProcessEnv = { ...process.env, JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' };
-  if (!explicitBackend) delete env.WEBMUX_BACKEND;
-  const result = spawnSync('make', ['--no-print-directory', target, ...(explicitBackend ? [`WEBMUX_BACKEND=${backend}`] : []),
+  const result = spawnSync('make', ['--no-print-directory', target,
     `WEBMUX_HOME=${home}`, `HTTP_PORT=${port}`, 'HTTPS_PORT=8443'], {
     cwd: repo, timeout: 20000, encoding: 'utf8',
     env,
@@ -46,10 +42,8 @@ try {
     started = true; control('_start_manual');
     const pid = fs.readFileSync(path.join(home, '.webmux.pid'), 'utf8').trim();
     assert.match(pid, /^[1-9]\d*$/); process.kill(Number(pid), 0);
-    if (backend === 'go') {
-      const executable = execFileSync('ps', ['-p', pid, '-o', 'comm='], { encoding: 'utf8', timeout: 5000 }).trim();
-      assert.equal(path.basename(executable), 'webmux', `Expected the native server, got ${executable}`);
-    }
+    const executable = execFileSync('ps', ['-p', pid, '-o', 'comm='], { encoding: 'utf8', timeout: 5000 }).trim();
+    assert.equal(path.basename(executable), 'webmux', `Expected the native server, got ${executable}`);
     let healthy = false;
     for (let retry = 0; retry < 50; retry++) {
       try {
@@ -67,7 +61,7 @@ try {
     assert(!fs.existsSync(path.join(home, '.webmux.pid')), 'Stop retained pidfile');
     await assert.rejects(fetch(`${base}/api/health`, { signal: AbortSignal.timeout(1000) }));
   }
-  console.log(`${backend}: Make manual start/stop, restart and preserved state passed.`);
+  console.log(`Go: Make manual start/stop, restart and preserved state passed.`);
 } catch (error) {
   const log = path.join(home, 'logs/webmux.log');
   if (fs.existsSync(log)) console.error(fs.readFileSync(log, 'utf8'));

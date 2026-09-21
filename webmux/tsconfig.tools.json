@@ -8,12 +8,14 @@
     "skipLibCheck": true,
     "erasableSyntaxOnly": true,
     "verbatimModuleSyntax": true,
-    "types": ["node"],
-    "allowImportingTsExtensions": true,
-    "paths": {
-      "argon2": ["./node_modules/argon2/argon2.d.ts"],
-      "node-pty": ["./node_modules/node-pty/typings/node-pty.d.ts"]
-    }
+    "types": [
+      "node"
+    ],
+    "allowImportingTsExtensions": true
   },
-  "include": ["scripts/**/*.mts", "../scripts/**/*.mts", "../tests/e2e/*.mts"]
+  "include": [
+    "scripts/**/*.mts",
+    "../scripts/**/*.mts",
+    "../tests/e2e/*.mts"
+  ]
 }
