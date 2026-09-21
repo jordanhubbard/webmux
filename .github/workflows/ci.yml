@@ -67,25 +67,32 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: webmux
         run: npm run test:visual-parity
+      - name: Install real desktop test dependencies
+        id: desktop-tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo -n apt-get update
+          sudo -n apt-get install -y xvfb x11vnc x11-xserver-utils x11-utils xdotool xclip guacd libguac-client-rdp0 freerdp2-shadow-x11
       - name: Verify real VNC interoperability through Node and Go
         if: runner.os == 'Linux'
         working-directory: webmux
         env:
           WEBMUX_REAL_VNC: '1'
         run: |
-          sudo -n apt-get update
-          sudo -n apt-get install -y xvfb x11vnc x11-xserver-utils x11-utils xdotool xclip
-          npm run test:e2e:node -- vnc-integration.spec.ts --output=test-results/vnc-node
-          npm run test:e2e:go -- vnc-integration.spec.ts --output=test-results/vnc-go
+          desktop_result=0
+          npm run test:e2e:node -- vnc-integration.spec.ts --output=test-results/vnc-node || desktop_result=1
+          npm run test:e2e:go -- vnc-integration.spec.ts --output=test-results/vnc-go || desktop_result=1
+          exit "$desktop_result"
       - name: Verify real RDP interoperability through Node and Go
-        if: runner.os == 'Linux'
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux
         env:
           WEBMUX_REAL_RDP: '1'
         run: |
-          sudo -n apt-get install -y guacd libguac-client-rdp0 freerdp2-shadow-x11
-          npm run test:e2e:node -- rdp-integration.spec.ts --output=test-results/rdp-node
-          npm run test:e2e:go -- rdp-integration.spec.ts --output=test-results/rdp-go
+          desktop_result=0
+          npm run test:e2e:node -- rdp-integration.spec.ts --output=test-results/rdp-node || desktop_result=1
+          npm run test:e2e:go -- rdp-integration.spec.ts --output=test-results/rdp-go || desktop_result=1
+          exit "$desktop_result"
       - name: Preserve browser parity evidence
         if: always() && runner.os == 'Linux'
         uses: actions/upload-artifact@v7
