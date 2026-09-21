@@ -6,19 +6,25 @@ class Webmux < Formula
   license "BSD-2-Clause"
   head "https://github.com/jordanhubbard/webmux.git", branch: "main"
 
-  option "with-native-server", "Build the Go server migration preview"
-  if build.with? "native-server"
+  option "with-native-server", "Build Go from a stable source containing the migration"
+  head do
     depends_on "go" => :build
     depends_on "node@24" => :build
-  else
-    depends_on "python@3.14" => :build
-    depends_on "node@24"
+  end
+  stable do
+    if build.with? "native-server"
+      depends_on "go" => :build
+      depends_on "node@24" => :build
+    else
+      depends_on "python@3.14" => :build
+      depends_on "node@24"
+    end
   end
   depends_on "openssh"
 
   def install
     ENV.prepend_path "PATH", Formula["node@24"].opt_bin
-    if build.with? "native-server"
+    if build.head? || build.with?("native-server")
       odie "Native builds require a source revision containing the Go migration." unless (buildpath/"scripts/package-native.mts").exist?
       cd "webmux" do
         system "npm", "ci", "--workspace=frontend", "--include-workspace-root", "--no-audit", "--no-fund"

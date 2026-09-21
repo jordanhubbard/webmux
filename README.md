@@ -84,7 +84,8 @@ Runtime configuration and state are created under `~/.config/webmux/` by default
 The Makefile builds and runs the Go backend by default. Use
 `WEBMUX_BACKEND=node` with Make targets to exercise the legacy backend during
 compatibility testing. Existing installed service definitions retain their
-backend until reinstalled. Root npm build/start also selects Go. Published installers and Homebrew defaults are
+backend until reinstalled. Root npm build/start and Homebrew HEAD also select Go.
+Existing published installers and the stable Homebrew formula are
 tracked separately in the [migration status](docs/go-migration.md).
 
 ### Install as a Service

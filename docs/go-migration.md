@@ -69,7 +69,9 @@ X observer started: the fixture clicked a Guacamole canvas covered by the input
 container. It now clicks the focusable viewer, matching the passing browser
 interaction test, with a five-second action deadline. Cleanup retains an earlier
 failure instead of replacing it with a closed-request-context error. Execution
-of this corrected RDP keyboard extension remains pending in Linux CI.
+of this corrected RDP keyboard extension passed through Node and Go at 875ec72
+(run 35550389889, Linux job 106183911050). VNC failure no longer suppresses RDP
+execution; each desktop step runs both backends and fails if either fails.
 The test does not validate Windows/NLA authentication, clipboard or all input
 layouts/modifiers.
 
@@ -89,7 +91,12 @@ four platform directories and every archive/MSI checksum after download. Tests
 reject missing targets, unexpected legacy files, stale versions and altered bytes.
 This prepares future release uploads; no release has been published, and the
 complete hosted publication path remains unverified.
-Homebrew defaults, published releases,
+Homebrew HEAD now defaults to Go, with Go and Node as build-only dependencies;
+the stable pre-migration tag retains its Node runtime. Native Homebrew CI uses a
+private bare Git snapshot of the exact tested revision and installs `--HEAD`
+without the native option. Homebrew's loader confirms both dependency sets, and
+the local snapshot/formula-rewrite check passes; full HEAD installation awaits
+CI. Stable Homebrew defaults, published releases,
 remaining platform coverage and PR review are still migration work; this source
 default change is not a production release. The Go implementation lives in
 `webmux/server`. Do not run both implementations against the same writable

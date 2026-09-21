@@ -110,18 +110,20 @@ jobs:
       - name: Set up Homebrew for native installation
         if: runner.os != 'Windows'
         uses: Homebrew/actions/setup-homebrew@3b81d438eda92ee13b5849940d993be027717ecf
-      - name: Install and test native Homebrew formula
+      - name: Install and test native Homebrew HEAD default
         if: runner.os != 'Windows'
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
           HOMEBREW_NO_INSTALL_CLEANUP: '1'
         run: |
           brew tap-new --no-git webmux/native-test
-          git archive --format=tar.gz --output="$RUNNER_TEMP/webmux-source.tar.gz" HEAD
+          git clone --bare . "$RUNNER_TEMP/webmux-head.git"
+          git --git-dir="$RUNNER_TEMP/webmux-head.git" update-ref refs/heads/main HEAD
+          git --git-dir="$RUNNER_TEMP/webmux-head.git" symbolic-ref HEAD refs/heads/main
           cp -f Formula/webmux.rb "$(brew --repository webmux/native-test)/Formula/webmux.rb"
           export WEBMUX_TEST_FORMULA="$(brew --repository webmux/native-test)/Formula/webmux.rb"
-          node scripts/packaging-checks.mts formula
-          brew install --build-from-source --with-native-server webmux/native-test/webmux
+          node scripts/packaging-checks.mts formula-head
+          brew install --HEAD --build-from-source webmux/native-test/webmux
           brew test webmux/native-test/webmux
           node scripts/smoke-native-package.mts "$(brew --prefix webmux/native-test/webmux)/libexec"
           brew services info webmux/native-test/webmux --json > "$RUNNER_TEMP/webmux-service.json"

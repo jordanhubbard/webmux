@@ -19,6 +19,13 @@ dependencies. The first installation requires build tools (Xcode Command Line
 Tools on macOS, or a C/C++ toolchain on Linux); Python is supplied by Homebrew.
 There are no prebuilt Homebrew bottles yet.
 
+The development formula's HEAD path defaults to the native Go server and uses
+Go and Node.js only during the build. Once the migration is merged to `main`,
+`brew install --HEAD jordanhubbard/webmux/webmux` selects that path. The stable
+formula still points to the existing pre-migration tag and retains its Node
+runtime requirements. Changing the stable default requires a reviewed native
+release and formula update; HEAD installation does not publish one.
+
 The repository itself is the tap; no separate `homebrew-webmux` repository is
 required. The explicit URL in `brew tap` is necessary. Homebrew 6 validates tap
 contents immediately after cloning, so record formula-specific trust before the

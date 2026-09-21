@@ -50,6 +50,16 @@ switch (process.argv[2]) {
       .replace(/^  sha256 .*$/m, () => `  sha256 "${sha}"`));
     break;
   }
+  case 'formula-head': {
+    const source = path.join(environment('RUNNER_TEMP'), 'webmux-head.git');
+    assert(fs.statSync(path.join(source, 'HEAD')).isFile(), 'Missing private HEAD source repository');
+    const file = environment('WEBMUX_TEST_FORMULA');
+    const formula = fs.readFileSync(file, 'utf8');
+    assert.match(formula, /^  head ".*", branch: "main"$/m);
+    const url = JSON.stringify(`file://${source}`).replaceAll('#', '\\#');
+    fs.writeFileSync(file, formula.replace(/^  head ".*", branch: "main"$/m, () => `  head ${url}, branch: "main"`));
+    break;
+  }
   case 'service': {
     const value = record(first(readJSON(path.join(environment('RUNNER_TEMP'), 'webmux-service.json'))));
     assert(typeof value.command === 'string' && value.command.endsWith('/opt/webmux/bin/webmux'));
@@ -57,5 +67,5 @@ switch (process.argv[2]) {
     assert(typeof value.log_path === 'string' && value.log_path.endsWith('/var/log/webmux.log'));
     break;
   }
-  default: throw new Error('Usage: node scripts/packaging-checks.mts <legacy-platform|node-runtime|release-version|tap|formula|service>');
+  default: throw new Error('Usage: node scripts/packaging-checks.mts <legacy-platform|node-runtime|release-version|tap|formula|formula-head|service>');
 }
