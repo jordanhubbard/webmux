@@ -99,7 +99,8 @@ termination signals to the foreground child. Windows packaging now also defaults
 to Go; `scripts/package-windows.ps1 -Backend node` retains the legacy installer.
 Native Windows CI exercises the unqualified command and legacy packaging selects
 Node explicitly. At efb3d89, Linux and Windows Go checks and Windows x64 native
-packaging passed; the packaging-default change requires its own Windows CI run.
+packaging passed. Both Windows x64 and ARM64 packaging subsequently passed
+the default-Go path at 661a798 (run 35551284753).
 The release workflow now selects only native artifacts after native and legacy
 compatibility jobs pass. A checked TypeScript publication gate revalidates all
 four platform directories and every archive/MSI checksum after download. Tests
@@ -110,10 +111,11 @@ Homebrew HEAD now defaults to Go, with Go and Node as build-only dependencies;
 the stable pre-migration tag retains its Node runtime. Native Homebrew CI uses a
 private bare Git snapshot of the exact tested revision and installs `--HEAD`
 without the native option. Homebrew's loader confirms both dependency sets, and
-the local snapshot/formula-rewrite check passes; full HEAD installation awaits
-CI. Its first Linux run staged the private bare Git directory as a local file;
-the fixture URL now explicitly selects Homebrew's Git downloader so installation
-receives a checked-out source tree. Full installation must be rerun.
+the local snapshot/formula-rewrite check passes. The first Linux run staged the
+private bare Git directory as a local file; explicitly selecting Homebrew's Git
+downloader fixed it. Full Linux HEAD installation, formula tests, installed-runtime
+checks and the artifact gate passed at 661a798 (job 106186389844). Hosted macOS
+installation remains queued.
 Stable Homebrew defaults, published releases,
 remaining platform coverage and PR review are still migration work; this source
 default change is not a production release. The Go implementation lives in
@@ -147,8 +149,9 @@ also requires the matching MSI and checksum. Missing, stale, nonregular, empty o
 corrupted native artifacts fail the gate. Legacy files may coexist in the build
 directory. The verifier passes the existing local native archive and regression
 fixtures for incomplete/corrupted sets; TypeScript, all eight helper tests and
-workflow parsing pass locally. Hosted execution is pending. Native release
-publication and the default switch remain gated on the full migration checks.
+workflow parsing pass locally. Linux and both Windows architectures passed
+the upload gate at 661a798 (run 35551284753). The assembled four-platform gate
+still awaits hosted macOS; no release has been published.
 Windows x64 at 1569987 reached this gate after passing installed MSI and service
 checks, then correctly rejected an extra `.wixpdb` debug database. Packaging now
 passes `-pdbtype none` to WiX, and a regression case rejects debug output from the
@@ -203,7 +206,8 @@ commands execute normally. Local GUI-domain verification passes install, stop,
 start and restart, HTTP/UI checks, configuration/signing-secret preservation, active PTY
 child exit, acknowledged-output transcript draining and uninstall cleanup.
 Repository defaults remain unchanged. This is now a macOS packaging CI step;
-hosted execution and Linux user-manager Make installation remain unverified.
+hosted macOS execution remains queued. Linux user-manager Make installation
+and lifecycle checks passed at 661a798 (job 106186389844).
 The fixture also exercises the separate Make `restart` command while a terminal
 is active, requiring a different backend PID, restored persistent session,
 preserved application configuration/signing secret, old PTY termination and a
@@ -218,8 +222,8 @@ the fixture. The unit uses a unique filename in the invoking user's normal unit
 directory; Make derives its control name from that path instead of hard-coding
 `webmux.service`. The production default is unchanged. This checks the actual
 install/enable/start/stop/restart/disable/uninstall path, with the same PTY,
-transcript and persistence assertions. Linux execution of this addition is
-pending; local TypeScript and helper checks pass.
+transcript and persistence assertions. Linux execution passed at 661a798
+(job 106186389844); local TypeScript and helper checks also pass.
 
 Make start/restart now propagate service-manager errors, and restart aborts if
 its rebuild fails instead of replacing the service and printing success. A
@@ -522,11 +526,19 @@ overview colors before capturing. This corrects stale UI state without masking
 the minimap, delaying for an arbitrary duration, or relaxing pixel comparisons.
 The complete 30-state Node baseline/control/Go sequence, strict TypeScript checks,
 183 frontend tests and frontend production build pass locally with these fixes.
-Hosted validation of the RDP additions and UI corrections is pending.
+The complete Linux Go job passed these additions at 661a798 (job 106186389911).
+Windows Go race/vet/contracts also passed (job 106186389806), but its browser job
+failed the newer VNC/RDP clipboard readback checks before the full visual sequence
+finished. Windows clipboard writes convert LF to CRLF, as described by the
+[Clipboard API specification](https://www.w3.org/TR/clipboard-apis/#dom-clipboard-writetext).
+The fixture now expects that platform payload at browser readback and requires
+exactly those bytes at the protocol boundary; it does not normalize received
+transport data or relax pixel comparisons. Windows verification remains required.
 
 This is scoped rendering evidence, not proof of every state or platform. Active
-agent panes, remaining failure states, real guacd/RDP
-and VNC hosts, and performance gates still need coverage before replacement.
+agent panes and remaining failure states still need coverage before replacement.
+Real Linux desktop and performance checks are described separately above and below;
+they do not establish Windows/NLA or every desktop encoding/input combination.
 
 `npm run typecheck` now checks source coverage before running all seven strict
 TypeScript projects. It rejects tracked or untracked nonignored JavaScript and
@@ -966,5 +978,6 @@ checks pass. Real remote desktop rendering remains outside these fixture checks.
 At 30d5808, Windows failed the AI timestamp contract's strict cross-process clock
 ordering assertion. The contract now requires an integer Unix-millisecond value
 within one second of the request window and prints both clocks on failure;
-production timestamps are unchanged. A Windows rerun is required to verify this
-change.
+production timestamps are unchanged. Windows Go race/vet/differential checks
+subsequently passed, including at 661a798 (job 106186389806). This does not resolve
+the separately tracked Windows browser clipboard fixture failure.

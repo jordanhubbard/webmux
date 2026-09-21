@@ -221,11 +221,14 @@ test('active VNC pixels and input match Node exactly', async ({ page, request },
     await captureBoth(page, info, 'vnc-fullscreen');
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(page.url()).origin });
     const clipboard = 'WebMux clipboard\nsecond line';
+    // Clipboard API writeText uses platform line endings on Windows. Keep the
+    // wire assertion exact: the app must forward the browser's complete payload.
+    const expectedClipboard = process.platform === 'win32' ? clipboard.replaceAll('\n', '\r\n') : clipboard;
     await page.evaluate(text => navigator.clipboard.writeText(text), clipboard);
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(clipboard);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expectedClipboard);
     await page.getByTitle('VNC Options', { exact: true }).click();
     await page.getByText('Paste Clipboard', { exact: true }).click();
-    await expect.poll(() => desktop.clipboard).toContain(clipboard);
+    await expect.poll(() => desktop.clipboard).toContain(expectedClipboard);
     expect(desktop.errors).toEqual([]);
   } finally {
     try {
@@ -282,11 +285,14 @@ test('active RDP pixels and input match Node exactly', async ({ page, request },
     // Exceed a Guacamole blob's size and retain multi-byte characters across
     // clipboard chunks, including newlines used by the application's paste UI.
     const clipboard = `WebMux clipboard\n${'é😀'.repeat(3000)}\nlast line`;
+    // Clipboard API writeText uses platform line endings on Windows. Keep the
+    // wire assertion exact: the app must forward the browser's complete payload.
+    const expectedClipboard = process.platform === 'win32' ? clipboard.replaceAll('\n', '\r\n') : clipboard;
     await page.evaluate(text => navigator.clipboard.writeText(text), clipboard);
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(clipboard);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expectedClipboard);
     await page.getByTitle('RDP Options', { exact: true }).click();
     await page.getByText('Paste Clipboard', { exact: true }).click();
-    await expect.poll(() => desktop.clipboard.includes(clipboard)).toBe(true);
+    await expect.poll(() => desktop.clipboard.includes(expectedClipboard)).toBe(true);
     expect(desktop.clipboardChunks[0]).toBeGreaterThan(1);
     expect(desktop.errors).toEqual([]);
   } finally {
