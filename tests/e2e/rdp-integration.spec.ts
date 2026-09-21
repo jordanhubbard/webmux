@@ -14,6 +14,7 @@ test('real guacd and FreeRDP screen updates, reconnection and keyboard input', a
   const children: ChildProcess[] = [];
   let diagnostics = '';
   let failure: Error | undefined;
+  let testFailed = false;
   let id: string | undefined;
   const environment: NodeJS.ProcessEnv = { ...process.env, XDG_CONFIG_HOME: temporary };
   function start(command: string, args: string[], env = environment) {
@@ -86,14 +87,22 @@ test('real guacd and FreeRDP screen updates, reconnection and keyboard input', a
     await canvas.locator('xpath=ancestor::div[@data-1p-ignore]/..').dblclick({ position: { x: 100, y: 100 } });
     await expect(page.getByTitle('Back to grid', { exact: true })).toBeVisible();
     await expect.poll(pixel, { timeout: 20000 }).toEqual([0, 255, 0, 255]);
-    await canvas.click({ position: { x: 80, y: 60 } });
+    // Guacamole's layered canvases are covered by its input container. Click
+    // the same focusable viewer used by the browser interaction parity test.
+    await page.locator('div[data-1p-ignore][tabindex="0"]').click({ position: { x: 80, y: 60 }, timeout: 5000 });
     await verifyXKeyboard(page, displayName, start, () => {
       // start() already retains every child stdout/stderr chunk in diagnostics.
     });
     expect(errors).toEqual([]);
+  } catch (error) {
+    testFailed = true;
+    throw error;
   } finally {
     try {
       if (id) expect((await request.delete(`/api/rdp/sessions/${id}`)).ok()).toBe(true);
+    } catch (error) {
+      if (!testFailed) throw error;
+      diagnostics += `\nSession cleanup after test failure: ${String(error)}\n`;
     } finally {
       // Each child owns a new process group, including guacd connection workers.
       for (const child of children.reverse()) {

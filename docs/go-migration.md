@@ -50,7 +50,12 @@ Full desktop-server logs are written to artifact files, since inline Playwright
 attachments were truncated in console output and absent from the uploaded files.
 The RDP test now also reconnects in fullscreen and uses the same checked
 TypeScript X observer to require browser-generated `a` and Enter press/release
-events. Execution of this RDP keyboard extension remains pending in Linux CI.
+events. Its first execution at f32c2ab timed out on the Node baseline before the
+X observer started: the fixture clicked a Guacamole canvas covered by the input
+container. It now clicks the focusable viewer, matching the passing browser
+interaction test, with a five-second action deadline. Cleanup retains an earlier
+failure instead of replacing it with a closed-request-context error. Execution
+of this corrected RDP keyboard extension remains pending in Linux CI.
 The test does not validate Windows/NLA authentication, clipboard or all input
 layouts/modifiers.
 
