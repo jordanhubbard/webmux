@@ -57,7 +57,9 @@ switch (process.argv[2]) {
     const formula = fs.readFileSync(file, 'utf8');
     assert.match(formula, /^  head ".*", branch: "main"$/m);
     const url = JSON.stringify(`file://${source}`).replaceAll('#', '\\#');
-    fs.writeFileSync(file, formula.replace(/^  head ".*", branch: "main"$/m, () => `  head ${url}, branch: "main"`));
+    // A file:// URL otherwise selects Homebrew's local-file strategy, which
+    // stages the bare repository itself instead of checking out its source.
+    fs.writeFileSync(file, formula.replace(/^  head ".*", branch: "main"$/m, () => `  head ${url}, using: :git, branch: "main"`));
     break;
   }
   case 'service': {

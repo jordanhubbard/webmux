@@ -44,7 +44,9 @@ sending clipboard input. At 0e27509 (run 35550644071, Linux job 106184628777),
 both Go cases and the password Node case passed exact clipboard delivery; the
 remaining Node case failed earlier at the five-second Xvfb startup deadline.
 Both desktop fixtures now allow 15 seconds for display allocation and fail
-immediately if Xvfb exits. A complete passing run remains required.
+immediately if Xvfb exits. The complete Linux job passed at f9ff975 (run
+35550994091, job 106185591811), including all four VNC clipboard/password cases
+and both RDP keyboard cases, alongside race/vet, contracts and visual parity.
 Remote-to-browser
 clipboard, modifier/layout combinations and all encoding interoperability remain
 outside this test.
@@ -109,7 +111,10 @@ the stable pre-migration tag retains its Node runtime. Native Homebrew CI uses a
 private bare Git snapshot of the exact tested revision and installs `--HEAD`
 without the native option. Homebrew's loader confirms both dependency sets, and
 the local snapshot/formula-rewrite check passes; full HEAD installation awaits
-CI. Stable Homebrew defaults, published releases,
+CI. Its first Linux run staged the private bare Git directory as a local file;
+the fixture URL now explicitly selects Homebrew's Git downloader so installation
+receives a checked-out source tree. Full installation must be rerun.
+Stable Homebrew defaults, published releases,
 remaining platform coverage and PR review are still migration work; this source
 default change is not a production release. The Go implementation lives in
 `webmux/server`. Do not run both implementations against the same writable
