@@ -31,8 +31,6 @@ try {
     } else if (stat.isFile()) fs.copyFileSync(from, to);
     else throw new Error(`Cannot package non-regular entry: ${from}`);
   }
-  for (const entry of ['web', 'config.defaults']) copyTree(path.join(source, entry), path.join(stage, entry));
-  fs.accessSync(path.join(stage, 'web/index.html'));
   fs.copyFileSync(path.join(repo, 'LICENSE'), path.join(stage, 'LICENSE'));
   if (goos === 'windows') {
     fs.mkdirSync(path.join(stage, 'service'));
@@ -42,20 +40,22 @@ try {
     fs.writeFileSync(path.join(stage, 'bin/webmux-service.cmd'), `@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0..\\service\\windows-service.ps1" %*\r\nexit /b %ERRORLEVEL%\r\n`);
   }
   const executable = path.join(stage, 'bin', goos === 'windows' ? 'webmux.exe' : 'webmux');
-  const buildEnv = { ...process.env, GOOS: goos, GOARCH: goarch, CGO_ENABLED: '0' };
-  execFileSync('go', ['build', '-trimpath', '-o', executable, './cmd/webmux'], {
-    cwd: path.join(source, 'server'), env: buildEnv, stdio: 'inherit',
+  execFileSync('go', ['run', './cmd/build', '-goos', goos, '-goarch', goarch, '-o', executable], {
+    cwd: path.join(source, 'server'), stdio: 'inherit',
   });
   fs.writeFileSync(path.join(stage, 'bundle.json'), JSON.stringify({
     version: metadata.version, backend: 'go', platform: process.platform, arch: process.arch,
-    go: execFileSync('go', ['version'], { encoding: 'utf8', env: buildEnv }).trim(),
+    go: execFileSync('go', ['version'], { encoding: 'utf8' }).trim(),
   }, null, 2) + '\n');
   fs.writeFileSync(path.join(stage, 'README.txt'), `WebMux ${metadata.version} — native server
 
 Run bin/${goos === 'windows' ? 'webmux.exe' : 'webmux'} and open http://localhost:8080.
-No Node.js runtime is required. Keep bin, web and config.defaults together.
+The executable embeds the browser UI and configuration defaults.
+No Node.js runtime or adjacent asset directories are required; you may copy the
+executable anywhere. Optional Windows service support stays in this archive.
 Configuration/state default to ~/.config/webmux; WEBMUX_HOME overrides this.
-WEBMUX_ROOT or --root explicitly overrides the installation directory.
+WEBMUX_ROOT or --root optionally supplies external web/ and config.defaults/
+directories. Missing directories use embedded assets.
 Never run multiple servers against the same writable home.
 Reinstall or reconfigure services that still point to an older Node installation.
 ${goos === 'windows' ? 'Service installation: from an elevated terminal, run bin\\webmux-service.cmd install\nwith -WebMuxHome pointing to isolated state. The existing account prompt and\noptional -LocalSystem switch apply; no Node.js runtime is needed.\n' : ''}

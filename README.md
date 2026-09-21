@@ -81,7 +81,9 @@ Open `http://localhost:8080`. On first run with local auth, you'll be prompted t
 
 Runtime configuration and state are created under `~/.config/webmux/` by default; the source checkout remains disposable.
 
-The Makefile, npm commands and packaged releases run the Go backend.
+The Makefile and npm build commands produce a standalone Go executable with the
+browser UI and configuration defaults embedded. Copy `webmux/bin/webmux`
+(`webmux.exe` on Windows) anywhere and run it; state remains in `WEBMUX_HOME`.
 The legacy Node backend has been removed. Reinstall existing source services
 with `make install` (Unix), or use `webmux-service reconfigure` (Windows), if
 those services still point to a Node installation. See the
@@ -130,7 +132,7 @@ make start SECURE_MODE=true JWT_SECRET=$(openssl rand -hex 32)
 
 ## Configuration
 
-Runtime configuration lives in `~/.config/webmux/` (override with `WEBMUX_HOME`). On first run, default config files are copied from `config.defaults/` in the source tree.
+Runtime configuration lives in `~/.config/webmux/` (override with `WEBMUX_HOME`). On first run, missing configuration files are initialized from defaults embedded in the executable. Existing configuration is preserved.
 
 Administrators can edit runtime-safe application settings from the **gear button** in the top bar. In trusted mode, the gear is available to the local operator; in secure mode, it is visible only to administrator accounts. The dialog manages application identity, terminal defaults and grid limits, session logging, transport preferences, hosted fonts, the default workspace, and the host switcher. Startup and security settings—ports, bind addresses, authentication mode, and secrets—remain file-managed.
 

@@ -42,12 +42,12 @@ if (process.env.WEBMUX_REAL_SSH === '1') {
 }
 if (process.env.WEBMUX_VISUAL_PARITY === '1' || process.env.WEBMUX_REAL_VNC === '1' || process.env.WEBMUX_REAL_RDP === '1') process.env.WEBMUX_ALLOW_LOCAL_TARGETS = '1';
 const binary = path.join(testHome, process.platform === 'win32' ? 'webmux.exe' : 'webmux');
-const build = spawnSync('go', ['build', '-o', binary, './cmd/webmux'], {
+const build = spawnSync('go', ['run', './cmd/build', '-o', binary], {
   cwd: path.resolve(import.meta.dirname, '../../webmux/server'), stdio: 'inherit',
 });
 if (build.error) throw build.error;
 if (build.status !== 0) process.exit(build.status ?? 1);
-const child = spawn(binary, [], { stdio: 'inherit', env: process.env });
+const child = spawn(binary, [], { stdio: 'inherit', env: { ...process.env, WEBMUX_ROOT: '' } });
 for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => child.kill(signal));
 child.on('error', error => { console.error(error); process.exitCode = 1; });
 child.on('exit', code => { process.exitCode = code ?? 0; });

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -23,12 +24,18 @@ type Store struct {
 }
 
 func Open(home, defaults string) (*Store, error) {
+	return OpenFS(home, os.DirFS(defaults))
+}
+
+// OpenFS seeds missing configuration from disk or embedded defaults. Existing
+// files and operator-owned symlinks are preserved in either case.
+func OpenFS(home string, defaults fs.FS) (*Store, error) {
 	for _, dir := range []string{"config", "config/tls", "data/sessions", "data/events", "logs"} {
 		if err := os.MkdirAll(filepath.Join(home, dir), 0700); err != nil {
 			return nil, err
 		}
 	}
-	entries, err := os.ReadDir(defaults)
+	entries, err := fs.ReadDir(defaults, ".")
 	if err != nil {
 		return nil, fmt.Errorf("read configuration defaults: %w", err)
 	}
@@ -46,7 +53,7 @@ func Open(home, defaults string) (*Store, error) {
 		if err != nil {
 			return nil, err
 		}
-		data, readErr := os.ReadFile(filepath.Join(defaults, entry.Name()))
+		data, readErr := fs.ReadFile(defaults, entry.Name())
 		if readErr == nil {
 			_, readErr = f.Write(data)
 		}

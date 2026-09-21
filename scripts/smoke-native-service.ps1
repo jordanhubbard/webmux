@@ -18,7 +18,7 @@ $port = $listener.LocalEndpoint.Port
 $listener.Stop()
 [IO.Directory]::CreateDirectory((Join-Path $homeDirectory 'config')) | Out-Null
 $appFile = Join-Path $homeDirectory 'config/app.yaml'
-$app = [IO.File]::ReadAllText((Join-Path $root 'config.defaults/app.yaml'))
+$app = [IO.File]::ReadAllText((Join-Path $PSScriptRoot '../webmux/config.defaults/app.yaml'))
 $app = $app.Replace('name: webmux', 'name: native-service-smoke').Replace('listen_host: 0.0.0.0', 'listen_host: 127.0.0.1')
 $app = $app -replace '(?m)^(\s*http_port:)\s*\d+', "`$1 $port"
 $app = $app -replace '(?m)^(\s*https_port:)\s*\d+', '${1} 0'

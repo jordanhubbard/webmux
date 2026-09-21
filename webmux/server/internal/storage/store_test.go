@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+	"testing/fstest"
 )
 
 func TestUpdatesAreSerializedAndAbortWithoutWriting(t *testing.T) {
@@ -112,5 +113,29 @@ func TestMultipleYAMLDocumentsRejected(t *testing.T) {
 	var cfg map[string]string
 	if err := readYAML(file, &cfg); err == nil {
 		t.Fatal("ambiguous configuration accepted")
+	}
+}
+
+func TestEmbeddedDefaultsPreserveOperatorState(t *testing.T) {
+	defaults := fstest.MapFS{"app.yaml": &fstest.MapFile{Data: []byte("name: original\n")}}
+	home := t.TempDir()
+	store, err := OpenFS(home, defaults)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(store.ConfigPath("app.yaml"), []byte("name: customized\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	defaults["app.yaml"].Data = []byte("name: upgraded-default\n")
+	defaults["new.yaml"] = &fstest.MapFile{Data: []byte("enabled: true\n")}
+	if _, err := OpenFS(home, defaults); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(store.ConfigPath("app.yaml"))
+	if err != nil || string(data) != "name: customized\n" {
+		t.Fatal(string(data), err)
+	}
+	if _, err := os.Stat(store.ConfigPath("new.yaml")); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -47,7 +47,7 @@ const root = path.resolve(argument);
 const manifest = record(JSON.parse(fs.readFileSync(path.join(root, 'bundle.json'), 'utf8')));
 assert.equal(manifest.backend, 'go');
 assert.equal(manifest.platform, process.platform); assert.equal(manifest.arch, process.arch);
-for (const excluded of ['node_modules', 'backend', 'config', 'data', 'package.json']) {
+for (const excluded of ['node_modules', 'backend', 'config', 'data', 'package.json', 'web', 'config.defaults']) {
   assert(!fs.existsSync(path.join(root, excluded)), `Unexpected bundle entry: ${excluded}`);
 }
 const listener = net.createServer();
@@ -57,10 +57,12 @@ const address = listener.address(); assert(address && typeof address === 'object
 const port = address.port;
 await new Promise<void>((resolve, reject) => listener.close(error => error ? reject(error) : resolve()));
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-native-smoke-'));
-fs.mkdirSync(path.join(home, 'config'));
-const app = fs.readFileSync(path.join(root, 'config.defaults/app.yaml'), 'utf8')
-  .replace('name: webmux', 'name: native-package-test').replace('listen_host: 0.0.0.0', 'listen_host: 127.0.0.1');
-fs.writeFileSync(path.join(home, 'config/app.yaml'), app);
+const program = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-standalone-'));
+const executable = path.join(program, process.platform === 'win32' ? 'webmux.exe' : 'webmux');
+fs.copyFileSync(path.join(root, 'bin', path.basename(executable)), executable);
+fs.chmodSync(executable, 0o700);
+let app = '';
+let previousToken: string | undefined;
 const password = randomBytes(24).toString('hex');
 let child: ChildProcess | undefined;
 let socket: WebSocket | undefined;
@@ -69,7 +71,7 @@ const failures: unknown[] = [];
 try {
   for (let attempt = 0; attempt < 2; attempt++) {
     let launchError: Error | undefined;
-    child = spawn(path.join(root, 'bin', process.platform === 'win32' ? 'webmux.exe' : 'webmux'), [], {
+    child = spawn(executable, ['--listen', `127.0.0.1:${port}`], {
       cwd: home, stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, WEBMUX_HOME: home, WEBMUX_ROOT: '', HTTP_PORT: String(port), HTTPS_PORT: '0',
         JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '', SHELL: '/bin/sh', WEBMUX_SMOKE_WORD: 'ok',
@@ -85,11 +87,24 @@ try {
       try {
         const response = await fetch(`${base}/api/health`, { signal: AbortSignal.timeout(1000) });
         const value = record(await response.json());
-        return response.ok && value.status === 'ok' && value.name === 'native-package-test';
+        return response.ok && value.status === 'ok' && value.name === (attempt === 0 ? 'webmux' : 'native-package-test');
       } catch { return false; }
     }, `HTTP startup: ${logs}`);
     const frontend = await fetch(base);
-    assert.equal(frontend.status, 200); assert.match(await frontend.text(), /<div id="root">/);
+    assert.equal(frontend.status, 200);
+    const html = await frontend.text(); assert.match(html, /<div id="root">/);
+    const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"?#]+)"/g)].map(match => match[1]);
+    assert(assets.some(asset => asset.endsWith('.js')) && assets.some(asset => asset.endsWith('.css')), 'Missing bundled JS/CSS');
+    for (const asset of assets) {
+      const response = await fetch(base + asset);
+      assert.equal(response.status, 200); assert((await response.arrayBuffer()).byteLength > 0);
+      const etag = response.headers.get('etag'); assert(etag);
+      const cached = await fetch(base + asset, { headers: { 'If-None-Match': etag, 'Cache-Control': 'max-age=0' } });
+      assert.equal(cached.status, 304);
+    }
+    assert.match(await (await fetch(base + '/workspace/terminals')).text(), /<div id="root">/);
+    for (const file of ['app.yaml', 'auth.yaml', 'hosts.yaml', 'keys.yaml', 'layout.yaml']) assert(fs.existsSync(path.join(home, 'config', file)));
+    if (attempt === 0) app = fs.readFileSync(path.join(home, 'config/app.yaml'), 'utf8');
     assert.equal((await fetch(`${base}/api/sessions`)).status, 401);
     async function request(method: string, route: string, body?: unknown, token?: string): Promise<unknown> {
       const response = await fetch(`${base}${route}`, { method, signal: AbortSignal.timeout(5000),
@@ -100,7 +115,9 @@ try {
       return response.status === 204 ? undefined : response.json();
     }
     if (attempt === 0) await request('POST', '/api/auth/bootstrap', { username: 'package-user', password });
+    if (previousToken) await request('GET', '/api/auth/me', undefined, previousToken);
     const token = stringField(await request('POST', '/api/auth/login', { username: 'package-user', password }), 'token');
+    previousToken = token;
     const id = stringField(await request('POST', '/api/sessions', { hostname: 'localhost', username: 'fixture', transport: 'exec' }, token), 'id');
     let output = '';
     let wsError = false;
@@ -124,14 +141,19 @@ try {
     assert.equal(fs.readFileSync(path.join(home, 'config/app.yaml'), 'utf8'), app);
     assert(fs.existsSync(path.join(home, 'config/auth.yaml')));
     await stop(child); child = undefined;
+    if (attempt === 0) {
+      app = app.replace('name: webmux', 'name: native-package-test');
+      fs.writeFileSync(path.join(home, 'config/app.yaml'), app);
+    }
   }
   for (const entry of ['config', 'data']) assert(!fs.existsSync(path.join(root, entry)), `Runtime wrote bundle/${entry}`);
-  console.log('Native bundle passed: HTTP, UI, persisted login, PTY/WebSocket, deletion, restart, config preservation.');
+  assert.deepEqual(fs.readdirSync(program), [path.basename(executable)], 'Runtime wrote beside the executable');
+  console.log('Relocated standalone executable passed: HTTP, UI, persisted login, PTY/WebSocket, deletion, restart, config preservation.');
 } catch (error) { console.error(logs); failures.push(error); }
 finally {
   socket?.close();
   try { if (child && !child.killed) await stop(child); } catch (error) { failures.push(error); }
-  try { fs.rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); }
+  try { fs.rmSync(program, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); fs.rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); }
   catch (error) { failures.push(error); }
 }
 if (failures.length > 0) throw new AggregateError(failures, 'Native bundle smoke test failed');

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"testing/fstest"
 )
 
 func TestStaticAssetsNavigationAndCache(t *testing.T) {
@@ -80,4 +81,53 @@ func TestStaticFilesConfinedToBuild(t *testing.T) {
 	requireStatus(t, request(s.Handler(), "GET", "/", "", ""), 404)
 	s.webDir = filepath.Join(s.webDir, "missing")
 	requireStatus(t, request(s.Handler(), "GET", "/", "", ""), 404)
+}
+
+// Embedded files have zero modification times. Their cache identity must change
+// across upgrades even when two versions contain the same number of bytes.
+func TestEmbeddedAssetsCacheIdentityAndRanges(t *testing.T) {
+	s, _ := fixture(t, "local")
+	files := fstest.MapFS{
+		"index.html":    &fstest.MapFile{Data: []byte("<html>standalone</html>")},
+		"assets/app.js": &fstest.MapFile{Data: []byte("version-one")},
+	}
+	s.webFS = files
+	handler := s.Handler()
+	first := request(handler, "GET", "/assets/app.js", "", "")
+	requireStatus(t, first, 200)
+	etag := first.Header().Get("ETag")
+	if etag == "" || first.Header().Get("Last-Modified") != "" {
+		t.Fatal(first.Header())
+	}
+	for _, tc := range []struct {
+		method, header, value string
+		status                int
+		body                  string
+	}{
+		{"HEAD", "", "", 200, ""},
+		{"GET", "Range", "bytes=0-6", 206, "version"},
+		{"GET", "If-None-Match", etag, 304, ""},
+	} {
+		r := httptest.NewRequest(tc.method, "/assets/app.js", nil)
+		if tc.header != "" {
+			r.Header.Set(tc.header, tc.value)
+		}
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, r)
+		requireStatus(t, w, tc.status)
+		if w.Body.String() != tc.body {
+			t.Fatal(w.Body.String())
+		}
+	}
+	files["assets/app.js"].Data = []byte("version-two")
+	r := httptest.NewRequest("GET", "/assets/app.js", nil)
+	r.Header.Set("If-None-Match", etag)
+	changed := httptest.NewRecorder()
+	handler.ServeHTTP(changed, r)
+	requireStatus(t, changed, 200)
+	if changed.Header().Get("ETag") == etag || changed.Body.String() != "version-two" {
+		t.Fatal(changed.Header(), changed.Body.String())
+	}
+	requireStatus(t, request(handler, "GET", "/workspace/terminals", "", ""), 200)
+	requireStatus(t, request(handler, "GET", "/api/sessions", "", ""), 401)
 }
