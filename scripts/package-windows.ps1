@@ -47,7 +47,8 @@ New-Item -ItemType Directory -Path $Temporary | Out-Null
 try {
   Push-Location (Join-Path $Repository 'webmux')
   try {
-    & npm ci --no-audit --no-fund
+    if ($Backend -eq 'go') { & npm ci --workspace=frontend --include-workspace-root --no-audit --no-fund }
+    else { & npm ci --no-audit --no-fund }
     if ($LASTEXITCODE -ne 0) { throw "npm ci failed with exit code $LASTEXITCODE." }
     if ($Backend -eq 'go') { & npm run build --workspace=frontend }
     else { & npm run build }

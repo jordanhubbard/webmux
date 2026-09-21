@@ -21,9 +21,12 @@ read/execute access to the payload and wrapper, modify access to private runtime
 state, checks the SCM identity and absence of retained service-account XML, and
 reuses reconfiguration, PTY/transcript shutdown and restart checks. After service
 removal it removes the added payload ACLs and account; a surviving service keeps
-its account/state for diagnosis. This addition requires Windows CI execution;
-PowerShell is unavailable on the local macOS host. Domain accounts and forced
-rollback failures remain separate gaps.
+its account/state for diagnosis. Windows x64 packaging passed this path at
+62bd946, including active PTY termination, transcript draining and reconfiguration.
+The disposable runtime directory lives under ProgramData: placing it inside the
+administrator's private AppData prevented the service account from resolving
+configuration paths even with access granted on the leaf directory. Domain
+accounts and forced rollback failures remain separate gaps.
 
 Native packaging now applies the release-tag/version check before building and
 verifies its complete upload set before retaining artifacts. Unix requires one
@@ -583,7 +586,7 @@ start/stop, tests and source service installation. For example,
 `make build WEBMUX_BACKEND=go` writes `webmux/bin/webmux` and builds the existing
 frontend and checked helpers. `make install WEBMUX_BACKEND=go` uses native
 launchd/systemd templates; their executable is the source tree's Go binary.
-Native Make build/package dependency installation selects the frontend and root
+Native Make and Windows package dependency installation selects the frontend and root
 tooling workspaces, excluding the legacy backend's native npm dependencies.
 The test targets retain all workspaces for compatibility tests and complete
 TypeScript checking. A clean macOS arm64 checkout passed native build, package,

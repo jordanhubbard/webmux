@@ -44,7 +44,7 @@ jobs:
         if: runner.os != 'Windows'
         working-directory: webmux
         run: |
-          npm ci
+          npm ci --workspace=frontend --include-workspace-root --no-audit --no-fund
           npm run build --workspace=frontend
       - name: Package native server
         if: runner.os != 'Windows'
