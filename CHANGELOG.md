@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.12] - 2026-09-21
+
+### Other
+- Migrate server APIs and terminal sessions to Go with checked TypeScript tooling (#78)
+- docs: connect the project narrative to the chronological AI chronicle (#76)
+
 ## [1.3.11] - 2026-09-12
 
 ### Other
