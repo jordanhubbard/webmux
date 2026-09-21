@@ -3,8 +3,11 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { captureBoth } from './visual-capture';
 
-test('real tmux discovery, browser attachment, reload and scratch shell', async ({ page, request }) => {
+test.use({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, locale: 'en-US', timezoneId: 'UTC', colorScheme: 'dark', contextOptions: { reducedMotion: 'reduce' } });
+
+test('real tmux discovery, browser attachment, reload and scratch shell', async ({ page, request }, info) => {
   test.skip(process.env.WEBMUX_REAL_AGENTS !== '1', 'Requires an isolated Unix tmux fixture');
   test.setTimeout(60000);
   if (process.platform === 'win32') throw new Error('The real tmux fixture requires Unix');
@@ -36,17 +39,29 @@ test('real tmux discovery, browser attachment, reload and scratch shell', async 
   };
   let failed = false;
   try {
-    tmux('new-session', '-d', '-s', 'fixture-task', '-c', directory,
-      process.execPath, path.resolve(__dirname, 'visual-terminal-fixture.mts'));
     const agents = { enabled: true, combined_pane: true, disable_in_multi_user_mode: true,
       definitions: [{ id: 'fixture', label: 'Fixture', plural_label: 'Fixtures', badge: 'TEST',
         tmux_socket: socket, workspace: 'agents', enabled: true }] };
     const section = /^  agents:\n(?: {4}.*\n)+/m;
     expect(original).toMatch(section);
     replaceConfig(original.replace(section, `  agents: ${JSON.stringify(agents)}\n`));
-    const attaching = responseFor('attach');
     await page.goto('/');
     await page.getByRole('button', { name: 'Agents', exact: true }).click();
+    await expect(page.getByText('No agent sessions', { exact: true })).toBeVisible();
+    await expect(page.getByText('No session selected', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '+ Shell', exact: true })).toBeDisabled();
+    if (process.env.WEBMUX_VISUAL_PARITY === '1') {
+      await page.mouse.move(0, 0);
+      await captureBoth(page, info, 'agents-empty');
+    }
+
+    tmux('new-session', '-d', '-s', 'fixture-task', '-c', directory,
+      process.execPath, path.resolve(__dirname, 'visual-terminal-fixture.mts'));
+    // Keep fixture output deterministic; tmux's default status bar includes time
+    // and hostname, unrelated to the application's rendering.
+    tmux('set-option', '-g', 'status', 'off');
+    const attaching = responseFor('attach');
+    await page.getByTitle('Refresh Agents', { exact: true }).click();
     const attached = await sessionFrom(attaching);
     expect(attached.agent_role).toBe('attach');
     const layout = page.getByTestId('agents-layout');
@@ -58,6 +73,10 @@ test('real tmux discovery, browser attachment, reload and scratch shell', async 
     await page.keyboard.type('agent-browser-input');
     await page.keyboard.press('Enter');
     await expect(rows).toContainText('input: agent-browser-input');
+    if (process.env.WEBMUX_VISUAL_PARITY === '1') {
+      await page.mouse.move(0, 0);
+      await captureBoth(page, info, 'agents-active');
+    }
 
     const reattaching = responseFor('attach');
     await page.reload();

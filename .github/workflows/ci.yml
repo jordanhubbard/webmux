@@ -73,16 +73,16 @@ jobs:
         run: |
           sudo -n apt-get update
           sudo -n apt-get install -y openssh-server tmux xvfb x11vnc x11-xserver-utils x11-utils xdotool xclip guacd libguac-client-rdp0 freerdp2-shadow-x11
-      - name: Verify real agent browser workflows through Node and Go
+      - name: Compare real agent workflows and screenshots through Node and Go
         if: runner.os == 'Linux'
         working-directory: webmux
         env:
           WEBMUX_REAL_AGENTS: '1'
+          WEBMUX_VISUAL_PARITY: '1'
         run: |
-          agent_result=0
-          npm run test:e2e:node -- agent-integration.spec.ts --output=test-results/agents-node || agent_result=1
-          npm run test:e2e:go -- agent-integration.spec.ts --output=test-results/agents-go || agent_result=1
-          exit "$agent_result"
+          npm run test:e2e:node -- agent-integration.spec.ts --update-snapshots=all --output=test-results/agents-baseline
+          npm run test:e2e:node -- agent-integration.spec.ts --update-snapshots=none --output=test-results/agents-control
+          npm run test:e2e:go -- agent-integration.spec.ts --update-snapshots=none --output=test-results/agents-go
       - name: Verify real SSH interoperability through Node and Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux

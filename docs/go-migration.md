@@ -184,8 +184,17 @@ Node and Go pass locally on macOS, alongside all seven strict TypeScript project
 The same scenario passed through both backends in Linux CI at 0a86bd0 (job
 106190603173). That complete job also passed race/vet, differential contracts,
 performance checks, browser workflows, exact visual comparisons and real VNC/RDP
-interoperability. This adds functional coverage, not agent-workspace screenshot
-coverage.
+interoperability.
+
+Agent verification now also captures the empty and active workspace at desktop
+and narrow widths. The fixture uses real tmux with its clock/hostname status bar
+disabled; the child supplies deterministic terminal output. The shared capture
+helper retains zero tolerance, decoded-RGBA comparison and rendering diagnostics.
+Only the first Node run creates the four reference images; a second Node control
+and the Go run must match them without updates. All four comparisons, the full
+agent flow and strict TypeScript checks pass locally on macOS. Linux execution
+of this visual extension remains pending. Scratch-shell screenshots and all
+agent status/error combinations remain outside these four captures.
 
 ## Completion requirements
 
