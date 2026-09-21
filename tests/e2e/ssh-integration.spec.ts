@@ -3,13 +3,15 @@ import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer, createConnection } from 'node:net';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir, userInfo } from 'node:os';
+import { homedir, userInfo } from 'node:os';
 import { join } from 'node:path';
 
 test('real OpenSSH key authentication, shell input and PTY resize', async ({ request, baseURL }, info) => {
   test.skip(process.env.WEBMUX_REAL_SSH !== '1', 'Requires Linux OpenSSH server and the isolated client wrapper');
   test.setTimeout(60000);
-  const temporary = mkdtempSync(join(tmpdir(), 'webmux-real-ssh-'));
+  // sshd StrictModes checks every ancestor of AuthorizedKeysFile. /tmp is
+  // world-writable, so keep this owned 0700 fixture under the user's home.
+  const temporary = mkdtempSync(join(homedir(), '.webmux-real-ssh-'));
   let daemon: ChildProcess | undefined;
   let client: WebSocket | undefined;
   let id: string | undefined;

@@ -164,6 +164,11 @@ key authentication, shell output and PTY resize through each backend's terminal
 WebSocket. The client wrapper isolates configuration, agent and known-hosts state.
 Strict TypeScript checks and default opt-out test discovery pass locally; the
 real SSH scenario requires its Linux CI run before claiming interoperability.
+The first run at f6de8d5 reached OpenSSH through both backends but rejected the
+fixture key: StrictModes disallows the world-writable `/tmp` ancestor of its
+authorized-key file. The private 0700 fixture directory now lives under the
+runner's home, preserving normal OpenSSH permission checks. The corrected
+fixture still requires Linux verification.
 
 ## Completion requirements
 
