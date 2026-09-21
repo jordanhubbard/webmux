@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+const [mode, marker] = process.argv.slice(2);
+if (!process.stdin.isTTY) throw new Error('Mouse fixture requires a PTY');
+process.stdin.setRawMode(true);
+process.stdin.resume();
+const mouse = mode === 'mouse' || (mode === 'restart' && !fs.existsSync(marker));
+if (mode === 'restart') fs.writeFileSync(marker, 'started');
+if (mouse) process.stdout.write('\x1b[?1003h\x1b[?1006h');
+process.stdout.write(mouse ? 'MOUSE READY' : 'PLAIN READY');
+process.stdin.on('data', (data: Buffer) => process.stdout.write(`\r\nINPUT:${data.toString('hex')};`));
