@@ -116,6 +116,32 @@ try {
   Wait-Healthy
   if ([IO.File]::ReadAllText($appFile) -cne $app) { throw 'Service changed operator configuration.' }
   if (-not (Test-Path -LiteralPath (Join-Path $homeDirectory 'config/auth.yaml'))) { throw 'Service did not initialize authentication.' }
+} catch {
+  # Capture startup evidence before cleanup removes the private fixture. Never
+  # print the service XML: registration temporarily writes credentials there.
+  $failure = $_
+  try {
+    Get-CimInstance Win32_Service -Filter "Name='WebMux'" |
+      Select-Object Name, State, StartName, ExitCode, ServiceSpecificExitCode |
+      Format-List | Out-Host
+    foreach ($directory in @($serviceDirectory, (Join-Path $homeDirectory 'logs'))) {
+      if (Test-Path -LiteralPath $directory) {
+        Get-ChildItem -LiteralPath $directory -Filter '*.log' -File | ForEach-Object {
+          Write-Host "Service fixture log: $($_.Name)"
+          Get-Content -LiteralPath $_.FullName -Tail 60 | Out-Host
+        }
+      }
+    }
+    Get-WinEvent -FilterHashtable @{
+      LogName = 'System'; ProviderName = 'Service Control Manager'
+      StartTime = [DateTime]::Now.AddMinutes(-5)
+    } -ErrorAction SilentlyContinue |
+      Where-Object { $_.Message -match 'WebMux' } |
+      Select-Object -First 10 TimeCreated, Id, Message | Format-List | Out-Host
+  } catch {
+    Write-Warning "Could not collect service fixture diagnostics: $($_.Exception.Message)"
+  }
+  throw $failure
 } finally {
   try {
     if (Get-Service -Name WebMux -ErrorAction SilentlyContinue) {
