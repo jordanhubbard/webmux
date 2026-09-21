@@ -38,12 +38,22 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
       const screen = tile.locator('.xterm-screen');
       const box = (await screen.boundingBox())!;
       await page.mouse.move(box.x + 20, box.y + 12);
+      await tile.locator('.xterm-helper-textarea').focus();
+      await page.keyboard.type('h');
+      await expect.poll(() => outputs.get(source)).toContain('INPUT:68;');
+      expect(inputs.get(source)).toEqual(['h']);
+      // Explicit button input remains available to applications.
+      await page.mouse.down();
+      await page.mouse.up();
       await expect.poll(() => outputs.get(source)).toContain('INPUT:1b5b3c');
       if (scenario === 'broadcast') {
         await expect(page.getByTestId(`tile-cell-${peer}`).locator('.xterm-rows')).toContainText('PLAIN READY');
         await page.getByRole('button', { name: 'Type to All', exact: true }).click();
         inputs.get(source)!.length = 0; inputs.get(peer!)!.length = 0;
         await page.mouse.move(box.x + 45, box.y + 12);
+        await page.mouse.down();
+        await page.mouse.move(box.x + 60, box.y + 12);
+        await page.mouse.up();
         await expect.poll(() => inputs.get(source)!.length).toBeGreaterThan(0);
         expect(inputs.get(peer!)).toEqual([]);
         await tile.locator('.xterm-helper-textarea').focus();

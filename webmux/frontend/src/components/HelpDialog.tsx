@@ -42,7 +42,7 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
         <Section title="Copy and Paste">
           <Row label="Select text" desc="Drag over terminal text. In mouse-enabled applications, hold Option on macOS or Shift on Windows/Linux to select text instead of sending mouse input." />
           <Row label="Copy / Paste" desc="Use the browser clipboard shortcuts while the terminal has focus (Cmd+C / Cmd+V on macOS), or its context menu. Ctrl+C remains the terminal interrupt key. Click in the terminal again after using other controls." />
-          <Row label="Type to All" desc="Pasted text is broadcast when Type to All is enabled. Mouse events stay in their own terminal." />
+          <Row label="Type to All" desc="Pasted text is broadcast when Type to All is enabled. Clicks, dragging, and scrolling stay in their own terminal. Pointer hover is never sent to applications." />
         </Section>
 
         <Section title="Keyboard Input">

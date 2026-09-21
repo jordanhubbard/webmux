@@ -38,6 +38,17 @@ describe('terminal input filtering', () => {
     expect(shouldSuppressTerminalInput('\x1b[0n')).toBe(true);
   });
 
+  it('blocks hover with every modifier while preserving deliberate mouse input', () => {
+    for (const button of [35, 39, 43, 47, 51, 55, 59, 63]) {
+      expect(shouldSuppressTerminalInput(`\x1b[<${button};6;1M`)).toBe(true);
+    }
+    for (const button of [0, 1, 2, 32, 33, 34, 64, 65, 128]) {
+      expect(shouldSuppressTerminalInput(`\x1b[<${button};6;1M`)).toBe(false);
+    }
+    expect(shouldSuppressTerminalInput('\x1b[<0;6;1m')).toBe(false);
+    expect(shouldSuppressTerminalInput('\x1b[200~\x1b[<35;6;1M\x1b[201~')).toBe(false);
+  });
+
   it('does not suppress normal keyboard input', () => {
     expect(shouldSuppressTerminalInput('\x1b[A')).toBe(false);
     expect(shouldSuppressTerminalInput('hello')).toBe(false);
