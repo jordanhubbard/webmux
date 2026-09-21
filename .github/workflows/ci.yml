@@ -77,6 +77,15 @@ jobs:
           sudo -n apt-get install -y xvfb x11vnc x11-xserver-utils xdotool
           npm run test:e2e -- vnc-integration.spec.ts --output=test-results/vnc-node
           npm run test:e2e:go -- vnc-integration.spec.ts --output=test-results/vnc-go
+      - name: Verify real RDP interoperability through Node and Go
+        if: runner.os == 'Linux'
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_RDP: '1'
+        run: |
+          sudo -n apt-get install -y guacd freerdp2-shadow-x11
+          npm run test:e2e -- rdp-integration.spec.ts --output=test-results/rdp-node
+          npm run test:e2e:go -- rdp-integration.spec.ts --output=test-results/rdp-go
       - name: Preserve browser parity evidence
         if: always() && runner.os == 'Linux'
         uses: actions/upload-artifact@v7

@@ -21,6 +21,14 @@ the actual X display using xdotool. That expansion passes strict TypeScript
 checking but awaits Linux execution. Clipboard, keyboard and all encoding
 interoperability are not established by this test.
 
+Linux CI additionally schedules `rdp-integration.spec.ts` through Node and Go
+with `WEBMUX_REAL_RDP=1`: a private Xvfb display is shared by a loopback-bound
+FreeRDP shadow server through an owned guacd process. The browser checks initial
+pixels, live screen updates and reload/reconnection. Process groups include
+guacd's connection workers for cleanup, and each backend retains separate logs.
+This new real-server RDP test awaits Linux execution; it does not validate
+Windows/NLA authentication, clipboard or input interoperability.
+
 The Node server remains the default until the complete replacement passes the
 compatibility gates. The Go implementation lives in `webmux/server`; partial
 implementation is not a production replacement. Do not run both implementations

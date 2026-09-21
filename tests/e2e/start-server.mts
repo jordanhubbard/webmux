@@ -25,10 +25,14 @@ for (const entry of fs.readdirSync(defaultsDir, { withFileTypes: true })) {
     if (!content.includes('    port: 4822')) throw new Error('Expected the default guacd port in the visual fixture');
     content = content.replace('    port: 4822', '    port: 14822');
   }
+  if (entry.name === 'app.yaml' && process.env.WEBMUX_REAL_RDP === '1') {
+    if (!content.includes('    port: 4822')) throw new Error('Expected default guacd port for real RDP fixture');
+    content = content.replace('    port: 4822', '    port: 14823');
+  }
   fs.writeFileSync(path.join(testHome, 'config', entry.name), content);
 }
 process.env.WEBMUX_HOME = testHome;
-if (process.env.WEBMUX_VISUAL_PARITY === '1' || process.env.WEBMUX_REAL_VNC === '1') process.env.WEBMUX_ALLOW_LOCAL_TARGETS = '1';
+if (process.env.WEBMUX_VISUAL_PARITY === '1' || process.env.WEBMUX_REAL_VNC === '1' || process.env.WEBMUX_REAL_RDP === '1') process.env.WEBMUX_ALLOW_LOCAL_TARGETS = '1';
 const backend = process.env.WEBMUX_E2E_BACKEND ?? 'node';
 if (backend === 'go') {
   const binary = path.join(testHome, process.platform === 'win32' ? 'webmux.exe' : 'webmux');
