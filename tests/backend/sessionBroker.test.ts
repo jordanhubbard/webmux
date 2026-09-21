@@ -50,9 +50,19 @@ describe('SessionBroker', () => {
       .replace(/=+$/g, '');
   }
 
-  function readAgentStatus(agentId: string, name: string) {
+  async function readAgentStatus(agentId: string, name: string) {
     const file = path.join(tmpDir, 'data', 'agent-status', agentId, `${encodedStatusName(name)}.json`);
-    return JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, unknown>;
+    const deadline = Date.now() + 3000;
+    for (;;) {
+      try {
+        return JSON.parse(await fs.promises.readFile(file, 'utf8')) as Record<string, unknown>;
+      } catch (error) {
+        // Status publication is asynchronous and atomic. Wait for publication,
+        // not an assumed filesystem latency on the hosted Windows runner.
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || Date.now() >= deadline) throw error;
+        await sleep(10);
+      }
+    }
   }
 
   function sleep(ms: number) {
@@ -363,16 +373,16 @@ describe('SessionBroker', () => {
 
     await sleep(5);
     handle.emit('data', 'live agent output');
-    await sleep(25);
 
-    expect(readAgentStatus('codex', 'codex-a')).toMatchObject({
+    const status = await readAgentStatus('codex', 'codex-a');
+    expect(status).toMatchObject({
       agent_id: 'codex',
       name: 'codex-a',
       status: 'working',
       source: 'webmux',
       last_output_source: 'live',
     });
-    expect(typeof readAgentStatus('codex', 'codex-a').last_output_at).toBe('string');
+    expect(typeof status.last_output_at).toBe('string');
   });
 
   it('persists sessions to disk', async () => {

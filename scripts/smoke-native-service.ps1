@@ -8,7 +8,10 @@ if ((Get-Service -Name WebMux -ErrorAction SilentlyContinue) -or (Test-Path -Lit
 }
 $root = (Resolve-Path -LiteralPath $BundleDirectory).Path
 $installer = Join-Path $root 'service/windows-service.ps1'
-$homeDirectory = Join-Path ([IO.Path]::GetTempPath()) "webmux-service-smoke-$([Guid]::NewGuid())"
+# A different service account cannot inspect the runner administrator's private
+# AppData ancestors when Go resolves configuration paths. Keep fixture data out
+# of that profile; grant access only to this disposable directory below.
+$homeDirectory = Join-Path $env:ProgramData "webmux-service-smoke-$([Guid]::NewGuid())"
 $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
 $listener.Start()
 $port = $listener.LocalEndpoint.Port
