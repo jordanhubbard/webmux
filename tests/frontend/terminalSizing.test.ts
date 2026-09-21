@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isTerminalIdentityResponse,
+  isTerminalLocalInput,
   shouldSuppressTerminalInput,
 } from '@frontend/utils/terminalInput';
 import { fitTerminalSizeToPixels } from '@frontend/utils/terminalSizing';
@@ -41,5 +42,16 @@ describe('terminal input filtering', () => {
     expect(shouldSuppressTerminalInput('\x1b[A')).toBe(false);
     expect(shouldSuppressTerminalInput('hello')).toBe(false);
     expect(shouldSuppressTerminalInput('\r')).toBe(false);
+  });
+});
+
+describe('terminal-local reports', () => {
+  it('isolates mouse and focus reports without capturing keys or bracketed paste', () => {
+    for (const value of ['\x1b[<35;6;1M', '\x1b[<0;6;1m', '\x1b[I', '\x1b[O']) {
+      expect(isTerminalLocalInput(value)).toBe(true);
+    }
+    for (const value of ['k', '\x1b[A', '\x1b[200~\x1b[<35;6;1M\x1b[201~']) {
+      expect(isTerminalLocalInput(value)).toBe(false);
+    }
   });
 });

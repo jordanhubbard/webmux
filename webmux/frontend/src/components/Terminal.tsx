@@ -7,7 +7,7 @@ import '@xterm/xterm/css/xterm.css';
 import type { WebSocketMessage, ConnectionState, TerminalTheme } from '../types';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
-import { installTerminalQuerySuppressors, shouldSuppressTerminalInput } from '../utils/terminalInput';
+import { installTerminalQuerySuppressors, isTerminalLocalInput, shouldSuppressTerminalInput } from '../utils/terminalInput';
 import { TERMINAL_FONTS_LOADED_EVENT, loadTerminalFontFamily, normalizeTerminalFontFamily } from '../utils/terminalFont';
 
 export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
@@ -105,7 +105,10 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       setShowSearch(true);
       searchInputRef.current?.focus();
     },
-    toggleTranscript: () => wsHandleRef.current?.send({ type: 'transcript_toggle' }),
+    toggleTranscript: () => {
+      wsHandleRef.current?.send({ type: 'transcript_toggle' });
+      termRef.current?.focus();
+    },
   }));
 
   useEffect(() => {
@@ -150,6 +153,9 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
         }
         break;
       case 'status':
+        // Queue the reset with output so old asynchronous writes cannot re-enable modes.
+        // viewer_id marks an initial snapshot; connected marks a new PTY run.
+        if (msg.viewer_id || msg.state === 'connected') termRef.current?.write('\x18\x1bc');
         if (msg.state) onStateChangeRef.current(msg.state);
         if (typeof msg.transcript_enabled === 'boolean') setTranscriptEnabled(msg.transcript_enabled);
         break;
@@ -199,6 +205,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       fontFamily: normalizedFontFamily,
       fontSize,
       cursorBlink: true,
+      macOptionClickForcesSelection: true,
       macOptionIsMeta: /Mac|iPhone|iPad/.test(navigator.platform),
       allowTransparency: false,
       // Search highlighting uses xterm's proposed decoration API.
@@ -237,7 +244,8 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     // Route input through the broadcast context instead of sending directly
     const dataListener = term.onData((data: string) => {
       if (shouldSuppressTerminalInput(data)) return;
-      routeInputRef.current(sessionId, data);
+      if (isTerminalLocalInput(data)) wsHandleRef.current?.send({ type: 'input', data });
+      else routeInputRef.current(sessionId, data);
     });
 
     const resizeListener = term.onResize(({ cols, rows }: { cols: number; rows: number }) => {
