@@ -78,6 +78,16 @@ execution; each desktop step runs both backends and fails if either fails.
 The test does not validate Windows/NLA authentication, clipboard or all input
 layouts/modifiers.
 
+The browser's RDP Paste Clipboard path now has an exact multi-packet Unicode
+check at the Guacamole boundary. The initial Node-baseline run exposed invalid
+UTF-8 for supplementary characters: Guacamole 1.5 StringWriter encodes UTF-16
+surrogate halves separately. The shared TypeScript UI now uses TextEncoder and
+ArrayBufferWriter, preserving UTF-8 while retaining Guacamole's packet sizing.
+The regression failed before the fix and passes through both backends locally,
+including unchanged RDP screenshots/input checks, production UI build, frontend
+lint and all seven strict TypeScript projects. Real desktop clipboard
+interoperability remains a separate gate.
+
 The source Makefile now defaults to Go after differential contracts, exact visual
 parity, and real VNC/RDP checks passed. `WEBMUX_BACKEND=node` retains the legacy
 comparison path. Root npm build/start/browser tests also default to Go, with

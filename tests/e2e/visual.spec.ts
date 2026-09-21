@@ -278,6 +278,16 @@ test('active RDP pixels and input match Node exactly', async ({ page, request },
     await expect.poll(() => desktop.pointers.some(args => (Number(args[2]) & 1) !== 0)).toBe(true);
     await page.mouse.move(0, 0);
     await captureBoth(page, info, 'rdp-fullscreen');
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(page.url()).origin });
+    // Exceed a Guacamole blob's size and retain multi-byte characters across
+    // clipboard chunks, including newlines used by the application's paste UI.
+    const clipboard = `WebMux clipboard\n${'é😀'.repeat(3000)}\nlast line`;
+    await page.evaluate(text => navigator.clipboard.writeText(text), clipboard);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(clipboard);
+    await page.getByTitle('RDP Options', { exact: true }).click();
+    await page.getByText('Paste Clipboard', { exact: true }).click();
+    await expect.poll(() => desktop.clipboard.includes(clipboard)).toBe(true);
+    expect(desktop.clipboardChunks[0]).toBeGreaterThan(1);
     expect(desktop.errors).toEqual([]);
   } finally {
     try { if (id) expect((await request.delete(`/api/rdp/sessions/${id}`)).ok()).toBe(true); }

@@ -10,12 +10,15 @@ function instruction(...values: string[]): string {
 export async function startVisualRdp() {
   const sockets = new Set<Socket>();
   const keys: string[][] = [], pointers: string[][] = [], errors: string[] = [];
+  const clipboard: string[] = [];
+  const clipboardChunks: number[] = [];
   const server = createServer(socket => {
     sockets.add(socket);
     socket.on('close', () => sockets.delete(socket));
     socket.on('error', error => errors.push(error.message));
     socket.setEncoding('utf8');
     let buffer = '', selected = false, connected = false;
+    const clipboardStreams = new Map<string, Buffer[]>();
     socket.on('data', chunk => {
       try {
         buffer += chunk;
@@ -52,13 +55,32 @@ export async function startVisualRdp() {
               + instruction('sync', '1'));
           } else if (opcode === 'key') keys.push(args);
           else if (opcode === 'mouse') pointers.push(args);
+          else if (opcode === 'clipboard') {
+            assert.equal(args.length, 2);
+            assert.equal(args[1], 'text/plain');
+            assert(!clipboardStreams.has(args[0]));
+            clipboardStreams.set(args[0], []);
+            socket.write(instruction('ack', args[0], 'Ready', '0'));
+          } else if (opcode === 'blob') {
+            const chunks = clipboardStreams.get(args[0]);
+            assert(chunks, 'Unknown clipboard stream');
+            chunks.push(Buffer.from(args[1], 'base64'));
+            assert(chunks.reduce((total, value) => total + value.length, 0) <= 1024 * 1024);
+            socket.write(instruction('ack', args[0], 'Received', '0'));
+          } else if (opcode === 'end') {
+            const chunks = clipboardStreams.get(args[0]);
+            assert(chunks, 'Unknown clipboard stream');
+            clipboard.push(Buffer.concat(chunks).toString('utf8'));
+            clipboardChunks.push(chunks.length);
+            clipboardStreams.delete(args[0]);
+          }
           else if (opcode === 'disconnect') socket.end();
         }
       } catch (error) { errors.push(String(error)); socket.destroy(); }
     });
   });
   server.listen(14822, '127.0.0.1'); await once(server, 'listening');
-  return { keys, pointers, errors, close: async () => {
+  return { keys, pointers, clipboard, clipboardChunks, errors, close: async () => {
     for (const socket of sockets) socket.destroy();
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   } };
