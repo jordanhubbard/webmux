@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { verifyXKeyboard } from './x-keyboard-fixture';
 
 for (const authenticated of [false, true]) test(`real x11vnc updates and input (${authenticated ? 'password' : 'no password'})`, async ({ page, request }, info) => {
-  test.skip(process.env.WEBMUX_REAL_VNC !== '1', 'Requires Linux Xvfb, x11vnc, xsetroot, xdotool and xev');
+  test.skip(process.env.WEBMUX_REAL_VNC !== '1', 'Requires Linux Xvfb, x11vnc, xsetroot, xdotool, xev and xclip');
   test.setTimeout(60_000);
   const children: ChildProcess[] = [];
   const temporary = mkdtempSync(join(tmpdir(), 'webmux-real-vnc-'));
@@ -112,6 +112,21 @@ for (const authenticated of [false, true]) test(`real x11vnc updates and input (
     await verifyXKeyboard(page, displayName, start, chunk => {
       keyboardEvents = (keyboardEvents + chunk).slice(-65536);
     });
+    // Exercise the actual browser menu and clipboard API. Read only the private
+    // X display's clipboard, never the developer/runner's desktop clipboard.
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(page.url()).origin });
+    const clipboard = `WebMux clipboard ${randomBytes(8).toString('hex')}\nsecond line`;
+    await page.evaluate(text => navigator.clipboard.writeText(text), clipboard);
+    await page.getByTitle('VNC Options', { exact: true }).click();
+    await page.getByText('Paste Clipboard', { exact: true }).click();
+    await expect.poll(() => {
+      const result = spawnSync('xclip', ['-selection', 'clipboard', '-out'], {
+        encoding: 'utf8', timeout: 1000, maxBuffer: 65536,
+        env: { ...process.env, DISPLAY: displayName },
+      });
+      if (result.error && (result.error as NodeJS.ErrnoException).code !== 'ETIMEDOUT') throw result.error;
+      return result.status === 0 ? result.stdout : null;
+    }).toBe(clipboard);
     expect(errors).toEqual([]);
   } finally {
     try {

@@ -74,7 +74,7 @@ jobs:
           WEBMUX_REAL_VNC: '1'
         run: |
           sudo -n apt-get update
-          sudo -n apt-get install -y xvfb x11vnc x11-xserver-utils x11-utils xdotool
+          sudo -n apt-get install -y xvfb x11vnc x11-xserver-utils x11-utils xdotool xclip
           npm run test:e2e:node -- vnc-integration.spec.ts --output=test-results/vnc-node
           npm run test:e2e:go -- vnc-integration.spec.ts --output=test-results/vnc-go
       - name: Verify real RDP interoperability through Node and Go

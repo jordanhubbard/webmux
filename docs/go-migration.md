@@ -25,7 +25,11 @@ output is retained with the VNC log. Both keyboard cases passed through Node and
 Go at df10984 (run 35549336760, Linux job 106181052721), along with API contracts,
 visual parity and real RDP rendering. Local XQuartz Xvfb did not produce its allocated
 display within the fixture deadline, so it provides no keyboard evidence.
-Clipboard, modifier/layout combinations and all encoding interoperability remain
+The VNC fixture additionally uses the browser's actual clipboard API and Paste
+Clipboard menu, then requires a unique multiline payload from `xclip` on the
+private X display in both password modes. This outbound clipboard extension
+passes strict TypeScript checks but awaits Linux execution. Remote-to-browser
+clipboard, modifier/layout combinations and all encoding interoperability remain
 outside this test.
 
 Linux CI additionally schedules `rdp-integration.spec.ts` through Node and Go
