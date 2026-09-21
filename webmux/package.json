@@ -14,7 +14,8 @@
     "https-proxy-agent": "^5.0.1"
   },
   "scripts": {
-    "dev:backend": "npm run dev --workspace=backend",
+    "dev:backend": "node scripts/native.mts build && node scripts/native.mts start",
+    "dev:backend:node": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "build": "npm run build:helpers && node scripts/native.mts build && npm run build --workspace=frontend",
     "build:helpers": "tsc --project tsconfig.helpers.json",

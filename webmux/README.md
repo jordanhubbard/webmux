@@ -29,16 +29,16 @@ npm test
 npm run lint
 ```
 
-Start the native backend with `npm start` after building, then run the frontend
-development server in a separate terminal:
+Run `npm run dev:backend` to build and start the native backend, then run the
+frontend development server in a separate terminal:
 
 ```bash
 npm run dev:frontend
 ```
 
-Stop, rebuild and restart the native server after Go changes. The existing
-TypeScript backend watch loop remains available as `npm run dev:backend` for
-compatibility development.
+Stop and rerun `npm run dev:backend` after Go changes. The TypeScript backend
+watch loop remains available as `npm run dev:backend:node` for compatibility
+development. `npm start` runs the existing native binary without rebuilding.
 
 The frontend development server proxies API requests to the backend. For browser tests, install Playwright Chromium with `npx playwright install chromium`, then run `npm run test:e2e`. Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` when using an existing compatible Chrome or Chromium installation.
 

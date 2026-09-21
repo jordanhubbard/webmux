@@ -330,8 +330,7 @@ Run npm commands from `webmux/`. For the native backend:
 
 ```bash
 cd webmux
-npm run build
-npm start
+npm run dev:backend
 ```
 
 In a second terminal, run the frontend development server from `webmux/`:
@@ -340,9 +339,9 @@ In a second terminal, run the frontend development server from `webmux/`:
 npm run dev:frontend
 ```
 
-It proxies API requests to the running backend. Stop, rebuild and restart the
-native server after Go changes. `npm run dev:backend` remains the legacy
-TypeScript server's watch loop for compatibility work.
+It proxies API requests to the running backend. `dev:backend` builds Go before
+starting it; stop and rerun the command after Go changes. The legacy TypeScript
+watch loop is available as `npm run dev:backend:node` for compatibility work.
 
 Run quality checks from the repository root:
 

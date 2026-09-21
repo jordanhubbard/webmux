@@ -95,8 +95,13 @@ parity, and real VNC/RDP checks passed. `WEBMUX_BACKEND=node` retains the legacy
 comparison path. Root npm build/start/browser tests also default to Go, with
 `build:node`, `start:node` and `test:e2e:node` retaining explicit legacy commands.
 The checked TypeScript native launcher builds the platform executable and forwards
-termination signals to the foreground child. Windows packaging now also defaults
-to Go; `scripts/package-windows.ps1 -Backend node` retains the legacy installer.
+termination signals to the foreground child. The default `dev:backend` command
+also builds and starts Go; the previous
+TypeScript watch loop remains explicit as `dev:backend:node`. Go source changes
+require stopping and rerunning the development command. An isolated local smoke
+check verifies the actual Go child, HTTP startup and child termination.
+Windows packaging defaults to Go;
+`scripts/package-windows.ps1 -Backend node` retains the legacy installer.
 Native Windows CI exercises the unqualified command and legacy packaging selects
 Node explicitly. At efb3d89, Linux and Windows Go checks and Windows x64 native
 packaging passed. Both Windows x64 and ARM64 packaging subsequently passed
