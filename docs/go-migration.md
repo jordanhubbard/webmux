@@ -33,7 +33,15 @@ clipboard text. The local protocol fixture now also records ClientCutText and
 passes the actual browser clipboard/menu path through Node and Go with exact
 multiline text. The real-desktop fixture separately checks browser readback and
 outbound RFB payloads and retains x11vnc selection/xclip diagnostics to locate
-the remaining failure. This does not establish real-desktop clipboard parity.
+the remaining failure. At 0f35e37, browser readback and outbound RFB checks passed,
+and x11vnc logged receipt of the text, but xclip reported `target STRING not
+available`. No selection-owner window had been created. Inspection of
+[x11vnc initialization](https://github.com/LibVNC/x11vnc/blob/master/src/xevents.c)
+found its display-manager wait before creating that window. The owned Xvfb
+fixture has no display manager; it now sets `X11VNC_AVOID_WINDOWS=never` only for
+its x11vnc child and explicitly waits for selection-window creation before
+sending clipboard input. Verification of that correction remains pending.
+This does not yet establish real-desktop clipboard parity.
 Remote-to-browser
 clipboard, modifier/layout combinations and all encoding interoperability remain
 outside this test.

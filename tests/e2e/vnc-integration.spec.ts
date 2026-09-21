@@ -18,8 +18,8 @@ for (const authenticated of [false, true]) test(`real x11vnc updates and input (
   let keyboardEvents = '';
   let failure: Error | undefined;
   let id: string | undefined;
-  function start(command: string, args: string[]) {
-    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  function start(command: string, args: string[], env = process.env) {
+    const child = spawn(command, args, { env, stdio: ['ignore', 'pipe', 'pipe'] });
     children.push(child);
     child.on('error', error => { failure = error; });
     child.stderr!.on('data', chunk => { diagnostics = (diagnostics + String(chunk)).slice(-65536); });
@@ -55,7 +55,15 @@ for (const authenticated of [false, true]) test(`real x11vnc updates and input (
       expect(saved.status).toBe(0);
       authArgs.splice(0, 1, '-rfbauth', passwordFile);
     }
-    start('x11vnc', ['-display', displayName, '-rfbport', String(port), '-localhost', '-forever', '-shared', ...authArgs, '-noxdamage', '-seldir', 'debug']);
+    // This owned Xvfb display has no login manager. Avoid x11vnc's delayed
+    // selection-window creation while it waits for a display manager to exit.
+    start('x11vnc', ['-display', displayName, '-rfbport', String(port), '-localhost', '-forever', '-shared', ...authArgs, '-noxdamage', '-seldir', 'debug'], {
+      ...process.env, X11VNC_AVOID_WINDOWS: 'never',
+    });
+    await expect.poll(() => {
+      if (failure) throw failure;
+      return diagnostics.includes('created selwin:');
+    }, { timeout: 10000, message: 'x11vnc must create its X selection owner before clipboard input' }).toBe(true);
     await expect.poll(async () => {
       if (failure) throw failure;
       return new Promise<boolean>(resolve => {
