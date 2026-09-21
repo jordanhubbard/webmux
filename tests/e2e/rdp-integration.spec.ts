@@ -52,8 +52,9 @@ test('real guacd and FreeRDP screen updates, reconnection and keyboard input', a
     display.stdout!.on('data', chunk => { number += String(chunk); });
     await expect.poll(() => {
       if (failure) throw failure;
+      if (display.exitCode !== null || display.signalCode !== null) throw new Error(`Xvfb exited before display allocation: ${diagnostics}`);
       return /^\d+\n$/.test(number);
-    }).toBe(true);
+    }, { timeout: 15000, message: 'Private Xvfb must allocate its display' }).toBe(true);
     const displayName = `:${number.trim()}`;
     const paint = (color: string) => {
       const result = spawnSync('xsetroot', ['-display', displayName, '-solid', color], { encoding: 'utf8', timeout: 5000 });

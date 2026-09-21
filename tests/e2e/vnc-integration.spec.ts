@@ -32,8 +32,9 @@ for (const authenticated of [false, true]) test(`real x11vnc updates and input (
     display.stdout!.on('data', chunk => { displayNumber += String(chunk); });
     await expect.poll(() => {
       if (failure) throw failure;
+      if (display.exitCode !== null || display.signalCode !== null) throw new Error(`Xvfb exited before display allocation: ${diagnostics}`);
       return /^\d+\n$/.test(displayNumber);
-    }).toBe(true);
+    }, { timeout: 15000, message: 'Private Xvfb must allocate its display' }).toBe(true);
     const displayName = `:${displayNumber.trim()}`;
     const paint = (color: string) => {
       const result = spawnSync('xsetroot', ['-display', displayName, '-solid', color], { encoding: 'utf8', timeout: 5000 });

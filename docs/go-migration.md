@@ -40,8 +40,11 @@ available`. No selection-owner window had been created. Inspection of
 found its display-manager wait before creating that window. The owned Xvfb
 fixture has no display manager; it now sets `X11VNC_AVOID_WINDOWS=never` only for
 its x11vnc child and explicitly waits for selection-window creation before
-sending clipboard input. Verification of that correction remains pending.
-This does not yet establish real-desktop clipboard parity.
+sending clipboard input. At 0e27509 (run 35550644071, Linux job 106184628777),
+both Go cases and the password Node case passed exact clipboard delivery; the
+remaining Node case failed earlier at the five-second Xvfb startup deadline.
+Both desktop fixtures now allow 15 seconds for display allocation and fail
+immediately if Xvfb exits. A complete passing run remains required.
 Remote-to-browser
 clipboard, modifier/layout combinations and all encoding interoperability remain
 outside this test.
