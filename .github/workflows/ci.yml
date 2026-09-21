@@ -67,6 +67,16 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: webmux
         run: npm run test:visual-parity
+      - name: Verify real VNC interoperability through Node and Go
+        if: runner.os == 'Linux'
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_VNC: '1'
+        run: |
+          sudo -n apt-get update
+          sudo -n apt-get install -y xvfb x11vnc x11-xserver-utils
+          npm run test:e2e -- vnc-integration.spec.ts
+          npm run test:e2e:go -- vnc-integration.spec.ts
       - name: Preserve browser parity evidence
         if: always() && runner.os == 'Linux'
         uses: actions/upload-artifact@v7

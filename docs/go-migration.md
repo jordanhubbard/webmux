@@ -8,6 +8,14 @@ fonts. WASM is not required. First-party browser and Node tooling sources must b
 checked TypeScript; generated JavaScript and upstream dependencies are not
 first-party source.
 
+Linux Go CI also schedules `vnc-integration.spec.ts` against both backends with
+`WEBMUX_REAL_VNC=1`. It owns an automatically allocated Xvfb display and a
+loopback-only x11vnc server, checks actual noVNC canvas pixels before and after
+a screen update, and reloads the browser to verify reconnection. Processes and
+sessions are cleaned up, and server logs are attached to test results. This
+addition passes strict TypeScript checking; its first Linux execution is pending.
+It does not establish VNC password, clipboard or all encoding interoperability.
+
 The Node server remains the default until the complete replacement passes the
 compatibility gates. The Go implementation lives in `webmux/server`; partial
 implementation is not a production replacement. Do not run both implementations
