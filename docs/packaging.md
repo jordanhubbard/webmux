@@ -13,18 +13,14 @@ Open http://localhost:8080 and create the first administrator account. To run in
 foreground instead, use `webmux`. Linux background services require systemd and an
 available user service manager; foreground operation does not.
 
-The formula builds the tagged release using the npm lockfile. It installs Node.js
-24 and OpenSSH, compiles the UI and backend, and retains only backend production
-dependencies. The first installation requires build tools (Xcode Command Line
-Tools on macOS, or a C/C++ toolchain on Linux); Python is supplied by Homebrew.
-There are no prebuilt Homebrew bottles yet.
+The stable formula builds the v1.3.12 native Go server and browser UI from the
+tagged source using the npm lockfile. Go and Node.js 24 are build dependencies;
+the installed runtime requires OpenSSH but does not require Node.js or Python.
+The first installation requires build tools (Xcode Command Line Tools on macOS,
+or a C/C++ toolchain on Linux). There are no prebuilt Homebrew bottles yet.
 
-The development formula's HEAD path defaults to the native Go server and uses
-Go and Node.js only during the build. Once the migration is merged to `main`,
-`brew install --HEAD jordanhubbard/webmux/webmux` selects that path. The stable
-formula still points to the existing pre-migration tag and retains its Node
-runtime requirements. Changing the stable default requires a reviewed native
-release and formula update; HEAD installation does not publish one.
+`brew install --HEAD jordanhubbard/webmux/webmux` builds the native server from
+`main` instead of the stable tag.
 
 The repository itself is the tap; no separate `homebrew-webmux` repository is
 required. The explicit URL in `brew tap` is necessary. Homebrew 6 validates tap
@@ -94,7 +90,7 @@ sessions can find these tools.
 
 ## Runtime release bundles and Windows installer
 
-The next release built from this migration uses native Go `.tar.gz` runtime bundles for macOS ARM64 and Linux x86-64,
+Release v1.3.12 provides native Go `.tar.gz` runtime bundles for macOS ARM64 and Linux x86-64,
 plus Windows x64 and ARM64 runtime `.zip` bundles and per-user `.msi` installers,
 with a `.sha256` file for each artifact. They contain the compiled application, default configuration,
 license, and the Go executable. Native filenames end in `-native.tar.gz`,
@@ -102,9 +98,8 @@ license, and the Go executable. Native filenames end in `-native.tar.gz`,
 executable with its UI and configuration files; install OpenSSH separately for
 SSH sessions and optional tools for the features that use them.
 `bundle.json` records the build platform and CPU. Use source builds for other
-architectures. Existing published Node bundles still require Node.js 24 and
-their original platform-compatible native dependencies; this branch does not
-replace or publish those releases.
+architectures. Previously published Node bundles still require Node.js 24 and
+their original platform-compatible native dependencies.
 
 Verify the checksum with `shasum -a 256 -c <archive>.sha256` on macOS or
 `sha256sum -c <archive>.sha256` on Linux, extract the archive, and run its
@@ -153,7 +148,8 @@ MSI. The release upload job waits for both native and legacy compatibility jobs,
 downloads only native artifacts, and verifies all four platform directories,
 exact filenames, nonempty regular files and SHA-256 checksums before uploading.
 The platform mapping follows the [GitHub-hosted runner architectures](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
-No release has been published as part of this migration. Release publication must trigger GitHub Actions (a release
+Native runtime bundles are published starting with v1.3.12. Release publication
+must trigger GitHub Actions (a release
 created using another workflow's default `GITHUB_TOKEN` does not trigger new
 workflows).
 
