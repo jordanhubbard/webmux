@@ -171,8 +171,9 @@ runner's home, preserving normal OpenSSH permission checks. The corrected
 fixture passed authentication and shell input through both backends at 088064a,
 but its initial-size assertion failed because shell control sequences interrupted
 the assumed line format. It now prints a computed marker containing `stty size`,
-which cannot be confused with command echo. The complete resize scenario still
-requires Linux verification.
+which cannot be confused with command echo. The complete authentication, shell
+input and initial-size/resize scenario passed through Node and Go at 0a86bd0 in
+[Linux CI](https://github.com/jordanhubbard/webmux/actions/runs/35552815663/job/106190603173).
 
 The opt-in Unix `agent-integration.spec.ts` starts a real tmux server on a private
 socket with user tmux configuration disabled. Through the actual browser it
@@ -180,8 +181,11 @@ checks discovery, attachment, typed terminal input, attachment reuse after reloa
 and scratch-shell creation, working directory and deletion. It restores the
 owned backend fixture configuration and removes its sessions and tmux server.
 Node and Go pass locally on macOS, alongside all seven strict TypeScript projects.
-Linux CI now runs the same scenario through both backends; hosted execution is
-pending. This adds functional coverage, not agent-workspace screenshot coverage.
+The same scenario passed through both backends in Linux CI at 0a86bd0 (job
+106190603173). That complete job also passed race/vet, differential contracts,
+performance checks, browser workflows, exact visual comparisons and real VNC/RDP
+interoperability. This adds functional coverage, not agent-workspace screenshot
+coverage.
 
 ## Completion requirements
 
