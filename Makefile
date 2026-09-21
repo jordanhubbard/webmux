@@ -57,6 +57,7 @@ OS           := $(shell uname)
 ifeq ($(WEBMUX_BACKEND),go)
   SERVER_COMMAND := "$(WEBMUX_DIR)/bin/webmux"
   E2E_SCRIPT := test:e2e:go
+  NPM_WORKSPACES := --workspace=frontend --include-workspace-root
 else ifeq ($(WEBMUX_BACKEND),node)
   SERVER_COMMAND := $(NODE) backend/dist/index.js
   E2E_SCRIPT := test:e2e
@@ -95,7 +96,7 @@ package:
 ifeq ($(WEBMUX_BACKEND),node)
 	@$(NODE) scripts/packaging-checks.mts legacy-platform
 endif
-	@cd "$(WEBMUX_DIR)" && $(NPM) ci --no-audit --no-fund
+	@cd "$(WEBMUX_DIR)" && $(NPM) ci $(NPM_WORKSPACES) --no-audit --no-fund
 ifeq ($(WEBMUX_BACKEND),go)
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build --workspace=frontend
 	@$(NODE) scripts/package-native.mts
@@ -146,7 +147,7 @@ check-guacd:
 	fi
 
 deps:
-	@cd "$(WEBMUX_DIR)" && $(NPM) install --silent
+	@cd "$(WEBMUX_DIR)" && $(NPM) install $(NPM_WORKSPACES) --silent
 
 build: deps
 	@printf "$(C_BLU)▸$(C_RST) Building webmux…\n"
@@ -301,6 +302,10 @@ status:
 #   make test-e2e    e2e only (provisions a Chromium first)
 test: test-unit test-e2e
 	@printf "$(C_GRN)✓$(C_RST) All tests passed.\n"
+
+# Compatibility tests and the complete TypeScript gate still cover both servers.
+# Target-specific variables propagate to build/deps, including parallel make.
+test-unit test-e2e: NPM_WORKSPACES :=
 
 test-unit: build
 ifeq ($(WEBMUX_BACKEND),go)

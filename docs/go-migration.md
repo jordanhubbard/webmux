@@ -583,6 +583,12 @@ start/stop, tests and source service installation. For example,
 `make build WEBMUX_BACKEND=go` writes `webmux/bin/webmux` and builds the existing
 frontend and checked helpers. `make install WEBMUX_BACKEND=go` uses native
 launchd/systemd templates; their executable is the source tree's Go binary.
+Native Make build/package dependency installation selects the frontend and root
+tooling workspaces, excluding the legacy backend's native npm dependencies.
+The test targets retain all workspaces for compatibility tests and complete
+TypeScript checking. A clean macOS arm64 checkout passed native build, package,
+manual start/stop/restart, checksum verification and extracted-runtime smoke
+checks with no installed `node-pty`, `argon2`, `express` or backend workspace.
 Changing the backend of an already installed service requires reinstalling its
 definition. Normal service-aware start/stop continues to operate the installed
 definition. Node remains the default until the full migration gates pass.
