@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+func childBlockInput() error { return nil }
+
 func childSize() (int, int, error) {
 	var info windows.ConsoleScreenBufferInfo
 	err := windows.GetConsoleScreenBufferInfo(windows.Handle(os.Stdout.Fd()), &info)

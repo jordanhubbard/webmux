@@ -36,6 +36,9 @@ func TestTerminalChild(t *testing.T) {
 		case "exit":
 			os.Exit(7)
 		case "block":
+			if err := childBlockInput(); err != nil {
+				t.Fatal(err)
+			}
 			fmt.Println("blocked-ready")
 			for {
 				time.Sleep(time.Hour)
@@ -149,10 +152,12 @@ func TestTerminalCloseCancelsBlockedIO(t *testing.T) {
 	send(t, p, "block")
 	c.expect(t, "blocked-ready")
 	written := make(chan struct{})
-	go func() { _, _ = p.Write(bytes.Repeat([]byte("x"), 8<<20)); close(written) }()
+	var writtenN int
+	var writtenErr error
+	go func() { writtenN, writtenErr = p.Write(bytes.Repeat([]byte("x"), 8<<20)); close(written) }()
 	select {
 	case <-written:
-		t.Fatal("expected input to block while child is not reading")
+		t.Fatalf("expected input to block while child is not reading: wrote %d bytes, error %v", writtenN, writtenErr)
 	case <-time.After(50 * time.Millisecond):
 	}
 	closed := make(chan struct{})

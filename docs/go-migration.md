@@ -100,6 +100,15 @@ also builds and starts Go; the previous
 TypeScript watch loop remains explicit as `dev:backend:node`. Go source changes
 require stopping and rerunning the development command. An isolated local smoke
 check verifies the actual Go child, HTTP startup and child termination.
+Root `npm test` now includes Go tests before the legacy backend, frontend and
+helper suites; root `npm run lint` includes Go vet before TypeScript lint.
+Explicit `test:go`/`lint:go` and `test:node`/`lint:node` commands retain separate
+checks. Running the complete test command exposed a macOS fixture assumption:
+an overlong canonical-mode PTY input write need not block. The Unix test child
+now runs `stty -icanon -echo` before asserting blocked-I/O cancellation. The
+corrected cancellation case passes 20 ordinary and ten race-enabled local runs;
+the complete root test and lint commands pass locally. No production PTY code
+changed; hosted platform verification of the fixture change remains pending.
 Windows packaging defaults to Go;
 `scripts/package-windows.ps1 -Backend node` retains the legacy installer.
 Native Windows CI exercises the unqualified command and legacy packaging selects
