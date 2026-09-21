@@ -73,10 +73,14 @@ test('real OpenSSH key authentication, shell input and PTY resize', async ({ req
     const input = (data: string) => client!.send(JSON.stringify({ type: 'input', data }));
     input("printf '\\nWEBMUX_%s\\n' SSH_READY\r");
     await expect.poll(() => output, { timeout: 15000 }).toContain('WEBMUX_SSH_READY');
-    input('stty size\r');
-    await expect.poll(() => output).toMatch(/\r?\n31 90\r?\n/);
+    // Shell prompt controls may sit between the line break and stty's output.
+    // A computed marker verifies dimensions without depending on prompt bytes
+    // or mistaking the echoed command for the actual command result.
+    const sizeCommand = "printf '\\nWEBMUX_SIZE_%s\\n' \"$(stty size)\"\r";
+    input(sizeCommand);
+    await expect.poll(() => output).toContain('WEBMUX_SIZE_31 90');
     client.send(JSON.stringify({ type: 'resize', cols: 88, rows: 33 }));
-    await expect.poll(() => { input('stty size\r'); return output; }).toMatch(/\r?\n33 88\r?\n/);
+    await expect.poll(() => { input(sizeCommand); return output; }).toContain('WEBMUX_SIZE_33 88');
     expect(diagnostics).toContain('Accepted publickey');
   } catch (error) { failed = true; throw error; }
   finally {

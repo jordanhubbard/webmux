@@ -168,7 +168,20 @@ The first run at f6de8d5 reached OpenSSH through both backends but rejected the
 fixture key: StrictModes disallows the world-writable `/tmp` ancestor of its
 authorized-key file. The private 0700 fixture directory now lives under the
 runner's home, preserving normal OpenSSH permission checks. The corrected
-fixture still requires Linux verification.
+fixture passed authentication and shell input through both backends at 088064a,
+but its initial-size assertion failed because shell control sequences interrupted
+the assumed line format. It now prints a computed marker containing `stty size`,
+which cannot be confused with command echo. The complete resize scenario still
+requires Linux verification.
+
+The opt-in Unix `agent-integration.spec.ts` starts a real tmux server on a private
+socket with user tmux configuration disabled. Through the actual browser it
+checks discovery, attachment, typed terminal input, attachment reuse after reload,
+and scratch-shell creation, working directory and deletion. It restores the
+owned backend fixture configuration and removes its sessions and tmux server.
+Node and Go pass locally on macOS, alongside all seven strict TypeScript projects.
+Linux CI now runs the same scenario through both backends; hosted execution is
+pending. This adds functional coverage, not agent-workspace screenshot coverage.
 
 ## Completion requirements
 
@@ -538,7 +551,9 @@ finished. Windows clipboard writes convert LF to CRLF, as described by the
 [Clipboard API specification](https://www.w3.org/TR/clipboard-apis/#dom-clipboard-writetext).
 The fixture now expects that platform payload at browser readback and requires
 exactly those bytes at the protocol boundary; it does not normalize received
-transport data or relax pixel comparisons. Windows verification remains required.
+transport data or relax pixel comparisons. The complete Windows browser/build job
+passed at 7fc8c07 (run 35552258434, job 106189060166), including all three trusted
+Node baseline/control/Go sequences and the local-authentication comparisons.
 
 This is scoped rendering evidence, not proof of every state or platform. Active
 agent panes and remaining failure states still need coverage before replacement.
