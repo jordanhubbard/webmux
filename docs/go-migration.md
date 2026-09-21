@@ -15,7 +15,11 @@ a screen update, and reloads the browser to verify reconnection. Processes and
 sessions are cleaned up, and server logs are attached to test results. This
 addition passed for Node and Go in Linux CI at fd00f18 (run 35547016523,
 job 106174628464), alongside the preceding contract and visual parity checks.
-It does not establish VNC password, clipboard or all encoding interoperability.
+The expanded test creates sessions through the VNC dialog with and without a
+generated password, reconnects in fullscreen, and checks pointer coordinates on
+the actual X display using xdotool. That expansion passes strict TypeScript
+checking but awaits Linux execution. Clipboard, keyboard and all encoding
+interoperability are not established by this test.
 
 The Node server remains the default until the complete replacement passes the
 compatibility gates. The Go implementation lives in `webmux/server`; partial
