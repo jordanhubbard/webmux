@@ -826,8 +826,8 @@ async function rdpContract(backend: Backend): Promise<void> {
         buffered = buffered.slice(boundary + 1);
         requests.push(message);
         if (requests.length === 1) socket.write(instruction('args', 'hostname', 'port', 'username', 'password', 'domain', 'resize-method', 'unknown'));
-        else if (requests.length === 2) socket.write(ready + output);
-        else socket.write(message);
+        else if (requests.length === 6) socket.write(ready + output);
+        else if (requests.length > 6) socket.write(message);
       }
     });
   });
@@ -859,11 +859,13 @@ async function rdpContract(backend: Backend): Promise<void> {
       assert.equal(received, text);
     };
     await waitText(ready + output);
-    assert.deepEqual(requests, [instruction('select', 'rdp'), instruction('connect', '192.0.2.1', '3390', 'desktop-user', 'password', 'domain', 'display-update', '')]);
+    assert.deepEqual(requests, [instruction('select', 'rdp'), instruction('size', '1024', '768', '96'),
+      instruction('audio'), instruction('video'), instruction('image', 'image/png', 'image/jpeg'),
+      instruction('connect', '192.0.2.1', '3390', 'desktop-user', 'password', 'domain', 'display-update', '')]);
     const reused = open(`${route}?ticket=${ticket}`); assert.equal((await once(reused, 'close'))[0], 1008);
     client.send(input);
     await waitText(ready + output + input);
-    assert.equal(requests[2], input);
+    assert.equal(requests[6], input);
     assert.equal(record((await server.request('GET', `/api/rdp/sessions/${id}`, undefined, owner)).body).state, 'connected');
     const close = once(client, 'close'); for (const upstream of upstreams) upstream.end();
     assert.equal((await close)[0], 1001);

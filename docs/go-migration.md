@@ -26,8 +26,17 @@ with `WEBMUX_REAL_RDP=1`: a private Xvfb display is shared by a loopback-bound
 FreeRDP shadow server through an owned guacd process. The browser checks initial
 pixels, live screen updates and reload/reconnection. Process groups include
 guacd's connection workers for cleanup, and each backend retains separate logs.
-This new real-server RDP test awaits Linux execution; it does not validate
-Windows/NLA authentication, clipboard or input interoperability.
+Its first Linux run at bc16606 failed on the Node baseline before displaying the
+desktop. Inspection found that both backends omitted the required size, audio,
+video and image capability instructions before `connect`. Both now send those
+instructions in legacy handshake order, advertising PNG/JPEG image support.
+A Go regression assertion failed before the fix; protocol/HTTP race tests and
+strict TypeScript checks pass afterward. Differential contract fixtures now
+require the capabilities too. Real-server verification of the fix is pending.
+Full desktop-server logs are written to artifact files, since inline Playwright
+attachments were truncated in console output and absent from the uploaded files.
+The test does not validate Windows/NLA authentication, clipboard or input
+interoperability.
 
 The Node server remains the default until the complete replacement passes the
 compatibility gates. The Go implementation lives in `webmux/server`; partial

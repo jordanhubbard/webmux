@@ -52,7 +52,8 @@ func TestHandshakeParametersAndBufferedOutput(t *testing.T) {
 	if err != nil || got.Raw != ready {
 		t.Fatal(got, err)
 	}
-	if output.String() != Encode("select", "rdp")+Encode("connect", want...) {
+	capabilities := Encode("size", "1024", "768", "96") + Encode("audio") + Encode("video") + Encode("image", "image/png", "image/jpeg")
+	if output.String() != Encode("select", "rdp")+capabilities+Encode("connect", want...) {
 		t.Fatal("handshake parameter mismatch")
 	}
 	if next, err := d.Read(); err != nil || next.Opcode != "sync" {

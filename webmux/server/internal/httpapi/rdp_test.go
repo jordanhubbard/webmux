@@ -63,6 +63,15 @@ func TestRdpHandshakeUnicodeBridgeAndDeletion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	for _, want := range []string{
+		guacamole.Encode("size", "1024", "768", "96"), guacamole.Encode("audio"),
+		guacamole.Encode("video"), guacamole.Encode("image", "image/png", "image/jpeg"),
+	} {
+		got, err := d.Read()
+		if err != nil || got.Raw != want {
+			t.Fatal("missing or out-of-order handshake capability", got, err)
+		}
+	}
 	connect, err := d.Read()
 	if err != nil || connect.Opcode != "connect" || !reflect.DeepEqual(connect.Args, []string{"192.0.2.1", "3389", "user😀", "password", "domain"}) {
 		t.Fatal("incorrect handshake credentials or destination", err)

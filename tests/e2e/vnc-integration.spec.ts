@@ -3,7 +3,7 @@ import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { createServer, createConnection } from 'node:net';
 import { once } from 'node:events';
 import { randomBytes } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -119,7 +119,9 @@ for (const authenticated of [false, true]) test(`real x11vnc updates and pointer
         const timer = setTimeout(() => child.kill('SIGKILL'), 3000);
         try { await exited; } finally { clearTimeout(timer); }
       }
-      await info.attach('x11vnc-log', { body: diagnostics, contentType: 'text/plain' });
+      const log = info.outputPath('x11vnc.log');
+      writeFileSync(log, diagnostics);
+      await info.attach('x11vnc-log', { path: log, contentType: 'text/plain' });
       rmSync(temporary, { recursive: true, force: true });
     }
   }

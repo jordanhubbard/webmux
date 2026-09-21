@@ -162,7 +162,10 @@ func Handshake(d *Decoder, w io.Writer, p Parameters) (Instruction, error) {
 			for i, name := range instruction.Args {
 				values[i] = p.Value(name)
 			}
-			if _, err := io.WriteString(w, Encode("connect", values...)); err != nil {
+			// Legacy protocol negotiation requires these capabilities, in order,
+			// before connect. guacd uses image types to encode desktop updates.
+			capabilities := Encode("size", "1024", "768", "96") + Encode("audio") + Encode("video") + Encode("image", "image/png", "image/jpeg")
+			if _, err := io.WriteString(w, capabilities+Encode("connect", values...)); err != nil {
 				return Instruction{}, err
 			}
 			connected = true

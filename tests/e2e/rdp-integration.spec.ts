@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { createServer, createConnection } from 'node:net';
 import { once } from 'node:events';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -100,7 +100,11 @@ test('real guacd and FreeRDP screen updates and reconnection', async ({ page, re
         const timer = setTimeout(() => signal('SIGKILL'), 3000);
         try { await exited; } finally { clearTimeout(timer); signal('SIGKILL'); }
       }
-      try { await info.attach('rdp-server-log', { body: diagnostics, contentType: 'text/plain' }); }
+      try {
+        const log = info.outputPath('rdp-server.log');
+        writeFileSync(log, diagnostics);
+        await info.attach('rdp-server-log', { path: log, contentType: 'text/plain' });
+      }
       finally { rmSync(temporary, { recursive: true, force: true }); }
     }
   }
