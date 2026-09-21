@@ -198,3 +198,21 @@ The local binary uses Go 1.27.1. CI uses `go-version-file` with `go 1.26.0`; lat
 6. #92: lifecycle, backpressure, partial persistence and error feedback, with focused tests per finding.
 
 Keep the restored local service on the native LaunchAgent. Preserve unrelated working-tree changes and existing stashes; this audit's documentation is isolated on its own branch.
+
+## Follow-up: local server crash-log review
+
+Reviewed the full retained service log, the launchd job, persisted session/event records, and matching macOS diagnostic reports on September 21 after native migration. Older Node log entries generally lack timestamps, so their precise dates cannot be reconstructed from this file alone.
+
+| Evidence | Count | Current assessment |
+| --- | --- | --- |
+| Unhandled Node `EADDRINUSE` startup failures on port 8080 | 3 | Historical competing-listener failures. One native LaunchAgent owns the listener now. Native bind failures return an error instead of an unhandled Node event; port conflicts remain possible if another service is launched. |
+| `node-pty` resize `ioctl` / `ENOTTY` exceptions | 3 | Historical Node resize path removed. Native resize returns an error through the broker/request handler instead of throwing a JS exception. No recurrence observed in the native run. |
+| Missing frontend `index.html` | 2 | Historical missing-build errors. Current UI and every referenced JS/CSS asset were fetched and byte-verified after deployment. |
+| Express URI decoding errors | 109 | Malformed request failures, not demonstrated process crashes. Express/serve-static is no longer used. No replay of scanner requests was needed for this review. |
+| VNC TCP errors | 58 (57 host-unreachable) | Remote connection failures, not evidence of whole-server crashes. Migration does not repair unreachable hosts; their current connectivity was not revalidated. |
+| Graceful shutdown messages | 38 | These are not crash evidence. |
+| Matching Node macOS diagnostic | 1 | September 14 disk-write resource report: action taken was none. It does not establish a crash or identify WebMux as that Node process. |
+
+At the review, launchd reported one run and never exited for the native process started at 15:08:44 PDT; the native log contained only its startup line. Health remained HTTP 200. The eight persisted terminal sessions were marked connected. Two terminal child exits after migration had code 0 and subsequent reconnect events, while the server PID stayed unchanged. This is approximately 17 minutes of observed native uptime, not a long-duration reliability guarantee.
+
+The mouse fixes in #96 were deployed as frontend assets with no service restart. The old Node crash paths are removed and no native crash is currently evidenced; it would be inaccurate to claim that every connection failure or future crash has been resolved.
