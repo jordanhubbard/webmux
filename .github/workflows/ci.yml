@@ -72,9 +72,19 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo -n apt-get update
-          sudo -n apt-get install -y xvfb x11vnc x11-xserver-utils x11-utils xdotool xclip guacd libguac-client-rdp0 freerdp2-shadow-x11
-      - name: Verify real VNC interoperability through Node and Go
+          sudo -n apt-get install -y openssh-server xvfb x11vnc x11-xserver-utils x11-utils xdotool xclip guacd libguac-client-rdp0 freerdp2-shadow-x11
+      - name: Verify real SSH interoperability through Node and Go
         if: runner.os == 'Linux'
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_SSH: '1'
+        run: |
+          ssh_result=0
+          npm run test:e2e:node -- ssh-integration.spec.ts --output=test-results/ssh-node || ssh_result=1
+          npm run test:e2e:go -- ssh-integration.spec.ts --output=test-results/ssh-go || ssh_result=1
+          exit "$ssh_result"
+      - name: Verify real VNC interoperability through Node and Go
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux
         env:
           WEBMUX_REAL_VNC: '1'

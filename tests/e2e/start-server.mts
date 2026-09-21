@@ -32,6 +32,17 @@ for (const entry of fs.readdirSync(defaultsDir, { withFileTypes: true })) {
   fs.writeFileSync(path.join(testHome, 'config', entry.name), content);
 }
 process.env.WEBMUX_HOME = testHome;
+if (process.env.WEBMUX_REAL_SSH === '1') {
+  if (process.platform !== 'linux') throw new Error('The real SSH fixture requires Linux');
+  const directory = path.join(testHome, 'ssh-bin');
+  fs.mkdirSync(directory, { mode: 0o700 });
+  const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+  // Invoke the actual system client with isolated trust/configuration files.
+  const args = ['-F', '/dev/null', '-o', `UserKnownHostsFile=${path.join(testHome, 'known_hosts')}`,
+    '-o', 'GlobalKnownHostsFile=/dev/null', '-o', 'IdentityAgent=none', '-o', 'IdentitiesOnly=yes', '-o', 'BatchMode=yes'];
+  fs.writeFileSync(path.join(directory, 'ssh'), `#!/bin/sh\nexec /usr/bin/ssh ${args.map(quote).join(' ')} "$@"\n`, { mode: 0o700 });
+  process.env.PATH = `${directory}${path.delimiter}${process.env.PATH ?? ''}`;
+}
 if (process.env.WEBMUX_VISUAL_PARITY === '1' || process.env.WEBMUX_REAL_VNC === '1' || process.env.WEBMUX_REAL_RDP === '1') process.env.WEBMUX_ALLOW_LOCAL_TARGETS = '1';
 const backend = process.env.WEBMUX_E2E_BACKEND ?? 'node';
 if (backend === 'go') {

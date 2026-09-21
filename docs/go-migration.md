@@ -155,6 +155,13 @@ passes `-pdbtype none` to WiX, and a regression case rejects debug output from t
 native upload set. Linux and Windows x64 native packaging passed the upload gate at
 1747b59, including Windows installed-MSI/service checks before upload.
 
+The opt-in Linux `ssh-integration.spec.ts` fixture launches a private loopback
+OpenSSH server with temporary host and authentication keys. It exercises actual
+key authentication, shell output and PTY resize through each backend's terminal
+WebSocket. The client wrapper isolates configuration, agent and known-hosts state.
+Strict TypeScript checks and default opt-out test discovery pass locally; the
+real SSH scenario requires its Linux CI run before claiming interoperability.
+
 ## Completion requirements
 
 - Preserve HTTP methods, paths, response shapes, status codes, WebSocket framing,
