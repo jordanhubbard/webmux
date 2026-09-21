@@ -55,7 +55,7 @@ for (const authenticated of [false, true]) test(`real x11vnc updates and input (
       expect(saved.status).toBe(0);
       authArgs.splice(0, 1, '-rfbauth', passwordFile);
     }
-    start('x11vnc', ['-display', displayName, '-rfbport', String(port), '-localhost', '-forever', '-shared', ...authArgs, '-noxdamage']);
+    start('x11vnc', ['-display', displayName, '-rfbport', String(port), '-localhost', '-forever', '-shared', ...authArgs, '-noxdamage', '-seldir', 'debug']);
     await expect.poll(async () => {
       if (failure) throw failure;
       return new Promise<boolean>(resolve => {
@@ -67,6 +67,14 @@ for (const authenticated of [false, true]) test(`real x11vnc updates and input (
       });
     }).toBe(true);
     const errors: string[] = [];
+    const clipboardFrames: string[] = [];
+    page.on('websocket', socket => socket.on('framesent', ({ payload }) => {
+      // This x11vnc fixture negotiates the original RFB ClientCutText message.
+      if (typeof payload !== 'string' && payload.length >= 8 && payload[0] === 6
+        && payload.readUInt32BE(4) === payload.length - 8) {
+        clipboardFrames.push(payload.subarray(8).toString('latin1'));
+      }
+    }));
     page.on('pageerror', error => errors.push(error.message));
     const canvas = page.locator('canvas[width="640"]').filter({ visible: true }).first();
     const pixel = () => canvas.evaluate(node => Array.from((node as HTMLCanvasElement).getContext('2d')!.getImageData(100, 100, 1, 1).data));
@@ -117,14 +125,17 @@ for (const authenticated of [false, true]) test(`real x11vnc updates and input (
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(page.url()).origin });
     const clipboard = `WebMux clipboard ${randomBytes(8).toString('hex')}\nsecond line`;
     await page.evaluate(text => navigator.clipboard.writeText(text), clipboard);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(clipboard);
     await page.getByTitle('VNC Options', { exact: true }).click();
     await page.getByText('Paste Clipboard', { exact: true }).click();
+    await expect.poll(() => clipboardFrames, { message: 'Browser must send the clipboard payload over RFB' }).toContain(clipboard);
     await expect.poll(() => {
       const result = spawnSync('xclip', ['-selection', 'clipboard', '-out'], {
         encoding: 'utf8', timeout: 1000, maxBuffer: 65536,
         env: { ...process.env, DISPLAY: displayName },
       });
       if (result.error && (result.error as NodeJS.ErrnoException).code !== 'ETIMEDOUT') throw result.error;
+      diagnostics = (diagnostics + `\nxclip status=${result.status} signal=${result.signal}: ${result.stderr}\n`).slice(-65536);
       return result.status === 0 ? result.stdout : null;
     }).toBe(clipboard);
     expect(errors).toEqual([]);

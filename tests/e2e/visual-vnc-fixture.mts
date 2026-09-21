@@ -8,6 +8,7 @@ export async function startVisualVnc() {
   const sockets = new Set<Socket>();
   const keys: number[] = [];
   const pointers: number[] = [];
+  const clipboard: string[] = [];
   const errors: string[] = [];
   const width = 320, height = 200;
   const server = createServer(socket => {
@@ -70,13 +71,14 @@ export async function startVisualVnc() {
           } else if (message[0] === 3 && (!sent || message[1] === 0)) frame();
           else if (message[0] === 4 && message[1] === 1) keys.push(message.readUInt32BE(4));
           else if (message[0] === 5) pointers.push(message[1]);
+          else if (message[0] === 6) clipboard.push(message.subarray(8).toString('latin1'));
         }
       } catch (error) { errors.push(String(error)); socket.destroy(); }
     });
   });
   // Fixed fixture port keeps the unmodified UI's host:port title deterministic.
   server.listen(15909, '127.0.0.1'); await once(server, 'listening');
-  return { port: 15909, keys, pointers, errors, close: async () => {
+  return { port: 15909, keys, pointers, clipboard, errors, close: async () => {
     for (const socket of sockets) socket.destroy();
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   } };

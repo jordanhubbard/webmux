@@ -28,7 +28,13 @@ display within the fixture deadline, so it provides no keyboard evidence.
 The VNC fixture additionally uses the browser's actual clipboard API and Paste
 Clipboard menu, then requires a unique multiline payload from `xclip` on the
 private X display in both password modes. This outbound clipboard extension
-passes strict TypeScript checks but awaits Linux execution. Remote-to-browser
+failed on the Node baseline at 2cb53d9: both password cases returned no X
+clipboard text. The local protocol fixture now also records ClientCutText and
+passes the actual browser clipboard/menu path through Node and Go with exact
+multiline text. The real-desktop fixture separately checks browser readback and
+outbound RFB payloads and retains x11vnc selection/xclip diagnostics to locate
+the remaining failure. This does not establish real-desktop clipboard parity.
+Remote-to-browser
 clipboard, modifier/layout combinations and all encoding interoperability remain
 outside this test.
 

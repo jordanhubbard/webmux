@@ -219,6 +219,13 @@ test('active VNC pixels and input match Node exactly', async ({ page, request },
     await expect.poll(() => desktop.pointers.some(mask => (mask & 1) !== 0)).toBe(true);
     await page.mouse.move(0, 0);
     await captureBoth(page, info, 'vnc-fullscreen');
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(page.url()).origin });
+    const clipboard = 'WebMux clipboard\nsecond line';
+    await page.evaluate(text => navigator.clipboard.writeText(text), clipboard);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(clipboard);
+    await page.getByTitle('VNC Options', { exact: true }).click();
+    await page.getByText('Paste Clipboard', { exact: true }).click();
+    await expect.poll(() => desktop.clipboard).toContain(clipboard);
     expect(desktop.errors).toEqual([]);
   } finally {
     try {
