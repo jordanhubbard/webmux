@@ -13,9 +13,9 @@
     "https-proxy-agent": "^5.0.1"
   },
   "scripts": {
-    "dev:backend": "node scripts/native.mts build && node scripts/native.mts start",
+    "dev:backend": "npm run build && node scripts/native.mts start",
     "dev:frontend": "npm run dev --workspace=frontend",
-    "build": "npm run build:helpers && node scripts/native.mts build && npm run build --workspace=frontend",
+    "build": "npm run build:helpers && npm run build --workspace=frontend && node scripts/native.mts build",
     "build:helpers": "tsc --project tsconfig.helpers.json",
     "typecheck": "node scripts/check-typescript.mts",
     "test:contract": "node scripts/server-contract.mts",

@@ -1,5 +1,4 @@
-// Command webmux is the native Go server. During migration use a separate home
-// and port; the Node server remains the supported default until parity passes.
+// Command webmux serves the browser UI and native terminal/desktop APIs.
 package main
 
 import (
@@ -8,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"math"
 	"net"
@@ -19,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jordanhubbard/webmux/server/internal/assets"
 	appconfig "github.com/jordanhubbard/webmux/server/internal/config"
 	"github.com/jordanhubbard/webmux/server/internal/httpapi"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
@@ -32,7 +33,7 @@ func main() {
 }
 
 func run() (resultErr error) {
-	root := flag.String("root", envDefault("WEBMUX_ROOT", installationRoot()), "installation directory containing config.defaults")
+	root := flag.String("root", os.Getenv("WEBMUX_ROOT"), "optional directory overriding embedded web/ and config.defaults/")
 	home := flag.String("home", os.Getenv("WEBMUX_HOME"), "writable configuration/data directory")
 	listen := flag.String("listen", "", "override HTTP listen address (e.g. 127.0.0.1:18080)")
 	flag.Parse()
@@ -52,7 +53,12 @@ func run() (resultErr error) {
 		}
 		*home = filepath.Join(userHome, ".config", "webmux")
 	}
-	store, err := storage.Open(*home, filepath.Join(*root, "config.defaults"))
+	defaults, web, err := runtimeAssets(*root)
+	if err != nil {
+		return err
+	}
+	defer defaults.Close()
+	store, err := storage.OpenFS(*home, defaults.FS())
 	if err != nil {
 		return err
 	}
@@ -76,7 +82,7 @@ func run() (resultErr error) {
 	if err != nil {
 		return err
 	}
-	api, err := httpapi.New(store, httpapi.Options{Name: config.App.Name, SecureMode: config.App.SecureMode, JWTSecret: os.Getenv("JWT_SECRET"), WebDir: filepath.Join(*root, "web")})
+	api, err := httpapi.New(store, httpapi.Options{Name: config.App.Name, SecureMode: config.App.SecureMode, JWTSecret: os.Getenv("JWT_SECRET"), WebDir: web.directory, WebFS: web.files})
 	if err != nil {
 		return fmt.Errorf("initialize API: %w", err)
 	}
@@ -163,11 +169,60 @@ func run() (resultErr error) {
 	return serveErr
 }
 
-func envDefault(name, fallback string) string {
-	if value := os.Getenv(name); value != "" {
-		return value
+type webAssets struct {
+	directory string
+	files     fs.FS
+}
+type defaultAssets struct {
+	files fs.FS
+	root  *os.Root
+}
+
+func (a defaultAssets) FS() fs.FS { return a.files }
+func (a defaultAssets) Close() {
+	if a.root != nil {
+		_ = a.root.Close()
 	}
-	return fallback
+}
+
+func runtimeAssets(root string) (defaultAssets, webAssets, error) {
+	defaults := defaultAssets{files: assets.Defaults()}
+	web := webAssets{files: assets.Web()}
+	// A standalone binary never discovers files from its current directory.
+	// Unembedded go build retains the source-tree development fallback.
+	if root == "" && defaults.files == nil {
+		root = installationRoot()
+	}
+	if root != "" {
+		for _, name := range []string{"config.defaults", "web"} {
+			directory := filepath.Join(root, name)
+			info, err := os.Stat(directory)
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			if err != nil {
+				defaults.Close()
+				return defaultAssets{}, webAssets{}, err
+			}
+			if !info.IsDir() {
+				defaults.Close()
+				return defaultAssets{}, webAssets{}, fmt.Errorf("%s must be a directory", directory)
+			}
+			if name == "web" {
+				web.directory = directory
+				continue
+			}
+			opened, err := os.OpenRoot(directory)
+			if err != nil {
+				return defaultAssets{}, webAssets{}, err
+			}
+			defaults = defaultAssets{files: opened.FS(), root: opened}
+		}
+	}
+	if defaults.files == nil {
+		return defaults, web, errors.New("configuration defaults unavailable: build with go run ./cmd/build or set --root for development")
+	}
+	return defaults, web, nil
 }
 
 // Extracted bundles can start from any working directory. Source-tree runs

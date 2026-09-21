@@ -135,7 +135,7 @@ build: deps
 	@printf "$(C_BLU)▸$(C_RST) Building webmux…\n"
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build:helpers --silent && $(NPM) run build --workspace=frontend --silent
 	@mkdir -p "$(WEBMUX_DIR)/bin"
-	@cd "$(WEBMUX_DIR)/server" && $(GO) build -trimpath -o ../bin/webmux ./cmd/webmux
+	@cd "$(WEBMUX_DIR)/server" && $(GO) run ./cmd/build -o ../bin/webmux
 	@printf "$(C_GRN)✓$(C_RST) Build complete.\n"
 
 configure:

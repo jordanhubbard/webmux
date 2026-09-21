@@ -90,21 +90,30 @@ sessions can find these tools.
 
 ## Runtime release bundles and Windows installer
 
-Release v1.3.12 provides native Go `.tar.gz` runtime bundles for macOS ARM64 and Linux x86-64,
-plus Windows x64 and ARM64 runtime `.zip` bundles and per-user `.msi` installers,
-with a `.sha256` file for each artifact. They contain the compiled application, default configuration,
-license, and the Go executable. Native filenames end in `-native.tar.gz`,
-`-native.zip` or `-native.msi`. They do not require Node.js at runtime. Keep the
-executable with its UI and configuration files; install OpenSSH separately for
-SSH sessions and optional tools for the features that use them.
-`bundle.json` records the build platform and CPU. Use source builds for other
-architectures. Previously published Node bundles still require Node.js 24 and
-their original platform-compatible native dependencies.
+Current source builds produce a standalone Go executable containing the browser
+UI and configuration defaults. Archives include the executable, license, build
+metadata and, on Windows, optional service installation scripts. No adjacent
+`web/` or `config.defaults/` directory is needed to run the executable, and no
+Node.js runtime is required. OpenSSH and optional mosh/tmux/guacd tools remain
+external dependencies for their respective features.
 
-Verify the checksum with `shasum -a 256 -c <archive>.sha256` on macOS or
-`sha256sum -c <archive>.sha256` on Linux, extract the archive, and run its
-`bin/webmux`. Keep the extracted directory intact. Bundles use the same runtime
-state directory as the Homebrew package; stop the previous instance before switching.
+Native filenames end in `-native.tar.gz`, `-native.zip` or `-native.msi`, with a
+`.sha256` file for each artifact. `bundle.json` records the build platform and
+CPU. Verify the checksum with `shasum -a 256 -c <archive>.sha256` on macOS or
+`sha256sum -c <archive>.sha256` on Linux, extract the archive, and run
+`bin/webmux`. The executable can also be copied to another directory by itself.
+Keep the Windows service scripts if using `webmux-service`.
+
+Stop the previous instance before upgrading. Start the replacement with the
+same `WEBMUX_HOME` to retain accounts, configuration and sessions. Missing
+configuration files are initialized from embedded defaults; existing files are
+never overwritten. `--root`/`WEBMUX_ROOT` provides an optional external asset
+and defaults override for custom installations and source development.
+
+Already-published v1.3.12 bundles predate asset embedding and still require their
+adjacent UI and defaults directories. Earlier Node bundles additionally require
+Node.js 24. The stable Homebrew tag keeps its release's layout until the next
+release; HEAD builds use the standalone executable.
 
 On Windows, verify a checksum with `Get-FileHash`, then install the MSI by
 double-clicking it or running `msiexec.exe /i <installer>.msi`. It installs under
@@ -119,7 +128,8 @@ make package
 ```
 
 Output goes to `dist/`. The build uses `npm ci` for frontend/tooling dependencies;
-the bundle contains the Go executable, browser assets and configuration templates.
+the Go build command embeds those browser assets and configuration templates
+into the executable.
 To test an extracted bundle:
 
 ```bash

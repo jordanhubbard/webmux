@@ -1,5 +1,4 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
 import { constants } from 'node:os';
 import path from 'node:path';
 
@@ -8,8 +7,7 @@ const binary = path.join(root, 'bin', process.platform === 'win32' ? 'webmux.exe
 const [action, ...args] = process.argv.slice(2);
 if (action === 'build') {
   if (args.length) throw new Error('Native build takes no arguments');
-  mkdirSync(path.dirname(binary), { recursive: true });
-  const result = spawnSync('go', ['build', '-trimpath', '-o', binary, './cmd/webmux'], {
+  const result = spawnSync('go', ['run', './cmd/build', '-o', binary], {
     cwd: path.join(root, 'server'), stdio: 'inherit',
   });
   if (result.error) throw result.error;

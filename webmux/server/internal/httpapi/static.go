@@ -1,8 +1,12 @@
 package httpapi
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"mime"
 	"net/http"
 	"os"
@@ -25,16 +29,25 @@ func (s *Server) serveUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	root, err := os.OpenRoot(s.webDir)
-	if err != nil {
+	files := s.webFS
+	if s.webDir != "" {
+		root, err := os.OpenRoot(s.webDir)
+		if err != nil {
+			notFound()
+			return
+		}
+		defer root.Close()
+		files = root.FS()
+	}
+	if files == nil {
 		notFound()
 		return
 	}
-	defer root.Close()
+	name = strings.TrimSuffix(name, "/")
 	if name == "" {
 		name = "."
 	}
-	info, err := root.Stat(name)
+	info, err := fs.Stat(files, name)
 	if err == nil && info.IsDir() {
 		if !strings.HasSuffix(r.URL.Path, "/") {
 			location := *r.URL
@@ -44,18 +57,18 @@ func (s *Server) serveUI(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		name = path.Join(name, "index.html")
-		info, err = root.Stat(name)
+		info, err = fs.Stat(files, name)
 	}
 	if errors.Is(err, os.ErrNotExist) {
 		name = "index.html"
-		info, err = root.Stat(name)
+		info, err = fs.Stat(files, name)
 	}
 	if err != nil || !info.Mode().IsRegular() {
 		notFound()
 		return
 	}
 	// Root.Open confines symlinks at the point of opening, not just during stat.
-	file, err := root.Open(name)
+	file, err := files.Open(name)
 	if err != nil {
 		notFound()
 		return
@@ -83,7 +96,26 @@ func (s *Server) serveUI(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", contentType)
 	}
 	w.Header().Set("Cache-Control", "public, max-age=0")
-	w.Header().Set("ETag", fmt.Sprintf(`W/"%x-%x"`, info.Size(), info.ModTime().UnixMilli()))
+	var content io.ReadSeeker
+	if info.ModTime().IsZero() {
+		// Embedded files have no modification time. Hash their bytes so an upgrade
+		// invalidates cached files even when their lengths happen to match.
+		data, err := io.ReadAll(file)
+		if err != nil {
+			http.Error(w, "Unable to read asset", 500)
+			return
+		}
+		content = bytes.NewReader(data)
+		w.Header().Set("ETag", fmt.Sprintf(`"%x"`, sha256.Sum256(data)))
+	} else {
+		var ok bool
+		content, ok = file.(io.ReadSeeker)
+		if !ok {
+			http.Error(w, "Unable to seek asset", 500)
+			return
+		}
+		w.Header().Set("ETag", fmt.Sprintf(`W/"%x-%x"`, info.Size(), info.ModTime().UnixMilli()))
+	}
 	for _, directive := range strings.Split(r.Header.Get("Cache-Control"), ",") {
 		if strings.EqualFold(strings.TrimSpace(directive), "no-cache") {
 			r = r.Clone(r.Context())
@@ -92,5 +124,5 @@ func (s *Server) serveUI(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	http.ServeContent(w, r, name, info.ModTime(), file)
+	http.ServeContent(w, r, name, info.ModTime(), content)
 }
