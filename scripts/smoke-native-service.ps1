@@ -44,6 +44,38 @@ function Wait-Healthy {
   } while ([DateTime]::UtcNow -lt $deadline)
   throw 'Native Windows service did not become healthy.'
 }
+function Test-ReconfigureRollback {
+  $rollbackPath = Join-Path $serviceDirectory 'WebMux.xml'
+  $before = [Convert]::ToBase64String([IO.File]::ReadAllBytes($rollbackPath))
+  $attempt = [PSCustomObject]@{ Count = 0 }
+  # Scope the injected failure to this invocation. Stop, XML replacement and
+  # rollback remain real; the second start delegates to the Windows cmdlet.
+  function Start-Service {
+    param([string]$Name)
+    if ($Name -ne 'WebMux') { throw 'Rollback fixture targeted an unexpected service.' }
+    $attempt.Count++
+    $current = [Convert]::ToBase64String([IO.File]::ReadAllBytes($rollbackPath))
+    if ($attempt.Count -eq 1) {
+      if ((Get-Service -Name $Name).Status -ne 'Stopped') { throw 'Reconfigure did not stop before replacing its definition.' }
+      if ($current -ceq $before) { throw 'Failure injection did not reach the replaced definition.' }
+      throw 'Injected fixture startup failure after XML replacement'
+    }
+    if ($attempt.Count -ne 2 -or $current -cne $before) { throw 'Rollback did not restore the original definition before restart.' }
+    Microsoft.PowerShell.Management\Start-Service -Name $Name
+  }
+  $rejected = $false
+  try { & $installer reconfigure -Backend go } catch {
+    if ($_.Exception.Message -ne 'Injected fixture startup failure after XML replacement') { throw }
+    $rejected = $true
+  }
+  if (-not $rejected -or $attempt.Count -ne 2) { throw 'Reconfigure did not report the failure and attempt recovery.' }
+  if ([Convert]::ToBase64String([IO.File]::ReadAllBytes($rollbackPath)) -cne $before) { throw 'Rollback changed original XML bytes.' }
+  if ((Get-Service -Name WebMux).Status -ne 'Running') { throw 'Rollback did not restore the running service.' }
+  if ((Get-CimInstance Win32_Service -Filter "Name='WebMux'").StartName -ne $account) { throw 'Rollback changed the service account.' }
+  Wait-Healthy
+  if (@(Get-ChildItem -LiteralPath $serviceDirectory -Filter 'WebMux-*.xml.tmp').Count -ne 0) { throw 'Rollback retained temporary definitions.' }
+  Write-Host 'Reconfigure restored original XML bytes, account and running service after injected startup failure.'
+}
 try {
   if ($UserAccount) {
     $name = 'wmx' + [Guid]::NewGuid().ToString('N').Substring(0, 12)
@@ -92,6 +124,7 @@ try {
   if (-not $rejected) { throw 'Reconfigure accepted a missing backend.' }
   if ([IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml')) -cne $originalConfig) { throw 'Failed preflight changed the definition.' }
   if ((Get-Service -Name WebMux).Status -ne 'Running') { throw 'Failed preflight stopped the service.' }
+  Test-ReconfigureRollback
   & $installer reconfigure -Backend go
   Wait-Healthy
   $reconfigured = [xml][IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml'))

@@ -33,8 +33,11 @@ its account/state for diagnosis. Windows x64 packaging passed this path at
 62bd946, including active PTY termination, transcript draining and reconfiguration.
 The disposable runtime directory lives under ProgramData: placing it inside the
 administrator's private AppData prevented the service account from resolving
-configuration paths even with access granted on the leaf directory. Domain
-accounts and forced rollback failures remain separate gaps.
+configuration paths even with access granted on the leaf directory. The fixture
+also injects a synchronous startup failure after XML replacement, then checks
+byte-for-byte restoration before the real recovery start, unchanged SCM identity,
+healthy HTTP and temporary-file cleanup. This rollback addition awaits Windows
+execution. Domain accounts and delayed startup failures remain separate gaps.
 
 Native packaging now applies the release-tag/version check before building and
 verifies its complete upload set before retaining artifacts. Unix requires one
