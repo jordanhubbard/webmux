@@ -83,7 +83,7 @@ jobs:
         env:
           WEBMUX_REAL_RDP: '1'
         run: |
-          sudo -n apt-get install -y guacd freerdp2-shadow-x11
+          sudo -n apt-get install -y guacd libguac-client-rdp0 freerdp2-shadow-x11
           npm run test:e2e -- rdp-integration.spec.ts --output=test-results/rdp-node
           npm run test:e2e:go -- rdp-integration.spec.ts --output=test-results/rdp-go
       - name: Preserve browser parity evidence

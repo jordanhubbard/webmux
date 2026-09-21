@@ -17,8 +17,8 @@ addition passed for Node and Go in Linux CI at fd00f18 (run 35547016523,
 job 106174628464), alongside the preceding contract and visual parity checks.
 The expanded test creates sessions through the VNC dialog with and without a
 generated password, reconnects in fullscreen, and checks pointer coordinates on
-the actual X display using xdotool. That expansion passes strict TypeScript
-checking but awaits Linux execution. Clipboard, keyboard and all encoding
+the actual X display using xdotool. Both cases passed through Node and Go in
+Linux CI at c75be78 (run 35547532582, job 106176051606). Clipboard, keyboard and all encoding
 interoperability are not established by this test.
 
 Linux CI additionally schedules `rdp-integration.spec.ts` through Node and Go
