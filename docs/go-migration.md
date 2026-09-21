@@ -21,8 +21,9 @@ the actual X display using xdotool. Both cases passed through Node and Go in
 Linux CI at c75be78 (run 35547532582, job 106176051606). The fixture now also
 focuses an xev observer on its private display and requires actual press/release
 events for browser-generated `a` and Enter input, in both password modes. Observer
-output is retained with the VNC log. Strict TypeScript checks pass; keyboard
-execution awaits Linux CI. Local XQuartz Xvfb did not produce its allocated
+output is retained with the VNC log. Both keyboard cases passed through Node and
+Go at df10984 (run 35549336760, Linux job 106181052721), along with API contracts,
+visual parity and real RDP rendering. Local XQuartz Xvfb did not produce its allocated
 display within the fixture deadline, so it provides no keyboard evidence.
 Clipboard, modifier/layout combinations and all encoding interoperability remain
 outside this test.
@@ -43,8 +44,11 @@ browser reconnection passed through Node and Go in Linux CI at 5845dae (run
 35548153331, job 106177760100).
 Full desktop-server logs are written to artifact files, since inline Playwright
 attachments were truncated in console output and absent from the uploaded files.
-The test does not validate Windows/NLA authentication, clipboard or input
-interoperability.
+The RDP test now also reconnects in fullscreen and uses the same checked
+TypeScript X observer to require browser-generated `a` and Enter press/release
+events. Execution of this RDP keyboard extension remains pending in Linux CI.
+The test does not validate Windows/NLA authentication, clipboard or all input
+layouts/modifiers.
 
 The source Makefile now defaults to Go after differential contracts, exact visual
 parity, and real VNC/RDP checks passed. `WEBMUX_BACKEND=node` retains the legacy

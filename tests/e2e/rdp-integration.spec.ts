@@ -5,8 +5,9 @@ import { once } from 'node:events';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { verifyXKeyboard } from './x-keyboard-fixture';
 
-test('real guacd and FreeRDP screen updates and reconnection', async ({ page, request }, info) => {
+test('real guacd and FreeRDP screen updates, reconnection and keyboard input', async ({ page, request }, info) => {
   test.skip(process.env.WEBMUX_REAL_RDP !== '1', 'Requires Linux Xvfb, guacd and FreeRDP shadow server');
   test.setTimeout(90_000);
   const temporary = mkdtempSync(join(tmpdir(), 'webmux-real-rdp-'));
@@ -82,6 +83,13 @@ test('real guacd and FreeRDP screen updates and reconnection', async ({ page, re
     await page.reload();
     await page.getByRole('button', { name: 'Desktops', exact: true }).click();
     await expect.poll(pixel, { timeout: 20000 }).toEqual([0, 255, 0, 255]);
+    await canvas.locator('xpath=ancestor::div[@data-1p-ignore]/..').dblclick({ position: { x: 100, y: 100 } });
+    await expect(page.getByTitle('Back to grid', { exact: true })).toBeVisible();
+    await expect.poll(pixel, { timeout: 20000 }).toEqual([0, 255, 0, 255]);
+    await canvas.click({ position: { x: 80, y: 60 } });
+    await verifyXKeyboard(page, displayName, start, () => {
+      // start() already retains every child stdout/stderr chunk in diagnostics.
+    });
     expect(errors).toEqual([]);
   } finally {
     try {
