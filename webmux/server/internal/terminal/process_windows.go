@@ -18,6 +18,7 @@ type windowsProcess struct {
 	process       *os.Process
 	console       windows.Handle
 	consoleMu     sync.Mutex
+	closing       bool
 	job           windows.Handle
 	jobMu         sync.Mutex
 	pipeOnce      sync.Once
@@ -170,7 +171,7 @@ func (p *windowsProcess) Write(data []byte) (int, error) { return p.input.Write(
 func (p *windowsProcess) resize(cols, rows int) error {
 	p.consoleMu.Lock()
 	defer p.consoleMu.Unlock()
-	if p.console == 0 {
+	if p.console == 0 || p.closing {
 		return os.ErrClosed
 	}
 	return windows.ResizePseudoConsole(p.console, windows.Coord{X: int16(cols), Y: int16(rows)})
@@ -186,11 +187,16 @@ func (p *windowsProcess) closeConsole() {
 func (p *windowsProcess) Close() error {
 	// Break both pipes before waiting for ClosePseudoConsole. This also releases
 	// a concurrent graceful close that is blocked emitting its final frame.
-	err := errors.Join(p.closePipes(), p.closeJob())
+	err := errors.Join(p.prepareClose(), p.closeJob())
 	p.closeConsole()
 	return err
 }
-func (p *windowsProcess) closePipes() error {
+func (p *windowsProcess) prepareClose() error {
+	// Finish an in-flight resize while output can still drain, then prevent
+	// any later resize from entering ConPTY after its channels are closed.
+	p.consoleMu.Lock()
+	defer p.consoleMu.Unlock()
+	p.closing = true
 	p.pipeOnce.Do(func() {
 		// Close output first: closing input may itself make the child exit.
 		p.pipeErr = errors.Join(p.output.Close(), p.input.Close())
@@ -212,7 +218,7 @@ func (p *windowsProcess) kill() error {
 	// ClosePseudoConsole while Close() is still tearing down its channels.
 	// Older ConPTY implementations can hang in that race even with no live
 	// descendants. Graceful exit still drains output through wait().
-	_ = p.closePipes()
+	_ = p.prepareClose()
 	p.jobMu.Lock()
 	defer p.jobMu.Unlock()
 	if p.job == 0 {
