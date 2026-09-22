@@ -20,6 +20,8 @@ type windowsProcess struct {
 	consoleMu     sync.Mutex
 	job           windows.Handle
 	jobMu         sync.Mutex
+	pipeOnce      sync.Once
+	pipeErr       error
 }
 
 func startNative(spec Command) (_ nativeProcess, resultErr error) {
@@ -184,9 +186,16 @@ func (p *windowsProcess) closeConsole() {
 func (p *windowsProcess) Close() error {
 	// Break both pipes before waiting for ClosePseudoConsole. This also releases
 	// a concurrent graceful close that is blocked emitting its final frame.
-	err := errors.Join(p.closeJob(), p.input.Close(), p.output.Close())
+	err := errors.Join(p.closePipes(), p.closeJob())
 	p.closeConsole()
 	return err
+}
+func (p *windowsProcess) closePipes() error {
+	p.pipeOnce.Do(func() {
+		// Close output first: closing input may itself make the child exit.
+		p.pipeErr = errors.Join(p.output.Close(), p.input.Close())
+	})
+	return p.pipeErr
 }
 func (p *windowsProcess) closeJob() error {
 	p.jobMu.Lock()
@@ -199,6 +208,11 @@ func (p *windowsProcess) closeJob() error {
 	return err
 }
 func (p *windowsProcess) kill() error {
+	// Cancel pipes before terminating the tree. Otherwise wait() can enter
+	// ClosePseudoConsole while Close() is still tearing down its channels.
+	// Older ConPTY implementations can hang in that race even with no live
+	// descendants. Graceful exit still drains output through wait().
+	_ = p.closePipes()
 	p.jobMu.Lock()
 	defer p.jobMu.Unlock()
 	if p.job == 0 {

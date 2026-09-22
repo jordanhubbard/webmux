@@ -37,7 +37,7 @@ process.stdin.on('data', d => process.stdout.write('input:'+d.toString('hex')));
 `), 0600); err != nil {
 		t.Fatal(err)
 	}
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 50; i++ {
 		p, err := Start(Command{Path: "cmd.exe", ShellCommand: fmt.Sprintf(`"%s" "%s"`, node, fixture), Cols: 80, Rows: 24})
 		if err != nil {
 			t.Fatal(err)
