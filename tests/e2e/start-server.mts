@@ -47,7 +47,7 @@ const build = spawnSync('go', ['run', './cmd/build', '-o', binary], {
 });
 if (build.error) throw build.error;
 if (build.status !== 0) process.exit(build.status ?? 1);
-const child = spawn(binary, [], { stdio: 'inherit', env: { ...process.env, WEBMUX_ROOT: '' } });
+const child = spawn(binary, [], { stdio: 'inherit', env: { ...process.env, WEBMUX_ROOT: '', WEBMUX_DEBUG_TERMINAL: '1' } });
 for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => child.kill(signal));
 child.on('error', error => { console.error(error); process.exitCode = 1; });
 child.on('exit', code => { process.exitCode = code ?? 0; });

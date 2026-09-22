@@ -3,10 +3,13 @@ package terminal
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Command contains only launch-time state. Callers must not persist Env: it may
@@ -98,6 +101,16 @@ func (p *Process) Resize(cols, rows int) error {
 func (p *Process) Wait() Exit            { <-p.done; return p.exit }
 func (p *Process) Done() <-chan struct{} { return p.done }
 func (p *Process) Close() error {
+	// Opt-in diagnostics for platform teardown stalls. Browser tests enable
+	// this so a request timeout includes server-side goroutine evidence.
+	if os.Getenv("WEBMUX_DEBUG_TERMINAL") == "1" {
+		timer := time.AfterFunc(5*time.Second, func() {
+			stacks := make([]byte, 1<<20)
+			n := runtime.Stack(stacks, true)
+			fmt.Fprintf(os.Stderr, "WebMux terminal close stalled:\n%s\n", stacks[:n])
+		})
+		defer timer.Stop()
+	}
 	p.closeOnce.Do(func() {
 		p.controlMu.Lock()
 		p.closed = true
