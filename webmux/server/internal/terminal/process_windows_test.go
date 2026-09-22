@@ -7,7 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -30,7 +32,7 @@ func TestWindowsCloseRawShellChild(t *testing.T) {
 	fixture := filepath.Join(t.TempDir(), "raw-child.cjs")
 	if err := os.WriteFile(fixture, []byte(`process.stdin.setRawMode(true);
 process.stdin.resume();
-process.stdout.write('\x1b[?1003h\x1b[?1006hraw-ready');
+process.stdout.write('\x1b[?1003h\x1b[?1006hraw-ready:'+process.pid+';');
 process.stdin.on('data', d => process.stdout.write('input:'+d.toString('hex')));
 `), 0600); err != nil {
 		t.Fatal(err)
@@ -42,7 +44,20 @@ process.stdin.on('data', d => process.stdout.write('input:'+d.toString('hex')));
 		}
 		c := &capture{changed: make(chan struct{}, 1), done: make(chan struct{})}
 		go func() { _, c.err = io.Copy(c, p); close(c.done) }()
-		c.expect(t, "raw-ready")
+		c.expect(t, ";")
+		match := regexp.MustCompile(`raw-ready:(\d+);`).FindStringSubmatch(c.text())
+		if len(match) != 2 {
+			t.Fatalf("missing child PID: %q", c.text())
+		}
+		pid, err := strconv.ParseUint(match[1], 10, 32)
+		if err != nil {
+			t.Fatal(err)
+		}
+		childHandle, err := windows.OpenProcess(windows.SYNCHRONIZE, false, uint32(pid))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer windows.CloseHandle(childHandle)
 		if _, err := p.Write([]byte("h")); err != nil {
 			t.Fatal(err)
 		}
@@ -61,5 +76,9 @@ process.stdin.on('data', d => process.stdout.write('input:'+d.toString('hex')));
 		}
 		await(t, p.Done())
 		await(t, c.done)
+		status, err := windows.WaitForSingleObject(childHandle, 5000)
+		if err != nil || status != windows.WAIT_OBJECT_0 {
+			t.Fatalf("raw child survived terminal close: status=%d err=%v", status, err)
+		}
 	}
 }
