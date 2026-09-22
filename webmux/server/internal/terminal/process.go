@@ -60,6 +60,7 @@ func dimensions(cols, rows int) error {
 }
 
 func Start(command Command) (*Process, error) {
+	defer traceSlowOperation("start")()
 	if err := dimensions(command.Cols, command.Rows); err != nil {
 		return nil, err
 	}
@@ -101,16 +102,7 @@ func (p *Process) Resize(cols, rows int) error {
 func (p *Process) Wait() Exit            { <-p.done; return p.exit }
 func (p *Process) Done() <-chan struct{} { return p.done }
 func (p *Process) Close() error {
-	// Opt-in diagnostics for platform teardown stalls. Browser tests enable
-	// this so a request timeout includes server-side goroutine evidence.
-	if os.Getenv("WEBMUX_DEBUG_TERMINAL") == "1" {
-		timer := time.AfterFunc(5*time.Second, func() {
-			stacks := make([]byte, 1<<20)
-			n := runtime.Stack(stacks, true)
-			fmt.Fprintf(os.Stderr, "WebMux terminal close stalled:\n%s\n", stacks[:n])
-		})
-		defer timer.Stop()
-	}
+	defer traceSlowOperation("close")()
 	p.closeOnce.Do(func() {
 		p.controlMu.Lock()
 		p.closed = true
@@ -122,4 +114,18 @@ func (p *Process) Close() error {
 		p.closeErr = errors.Join(err, p.native.Close())
 	})
 	return p.closeErr
+}
+
+// Opt-in diagnostics let browser-test timeouts retain server-side evidence
+// without exposing launch arguments or environment values.
+func traceSlowOperation(operation string) func() {
+	if os.Getenv("WEBMUX_DEBUG_TERMINAL") != "1" {
+		return func() {}
+	}
+	timer := time.AfterFunc(5*time.Second, func() {
+		stacks := make([]byte, 1<<20)
+		n := runtime.Stack(stacks, true)
+		fmt.Fprintf(os.Stderr, "WebMux terminal %s stalled:\n%s\n", operation, stacks[:n])
+	})
+	return func() { timer.Stop() }
 }
