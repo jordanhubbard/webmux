@@ -65,6 +65,22 @@ process.stdin.on('data', d => process.stdout.write('input:'+d.toString('hex')));
 		if _, err := p.Write([]byte("\x1b[<0;3;1M\x1b[<0;3;1m")); err != nil {
 			t.Fatal(err)
 		}
+		// Browsers send fit/resize messages concurrently with reconnect/delete.
+		stopResize, resizeDone := make(chan struct{}), make(chan struct{})
+		go func() {
+			defer close(resizeDone)
+			ticker := time.NewTicker(time.Millisecond)
+			defer ticker.Stop()
+			for width := 80; ; width = 80 + (width+1)%20 {
+				select {
+				case <-stopResize:
+					return
+				case <-ticker.C:
+					_ = p.Resize(width, 24)
+				}
+			}
+		}()
+		time.Sleep(2 * time.Millisecond)
 		closed := make(chan struct{})
 		go func() { _ = p.Close(); close(closed) }()
 		select {
@@ -74,6 +90,8 @@ process.stdin.on('data', d => process.stdout.write('input:'+d.toString('hex')));
 			n := runtime.Stack(stacks, true)
 			t.Fatalf("raw shell close hung on iteration %d\n%s", i, stacks[:n])
 		}
+		close(stopResize)
+		await(t, resizeDone)
 		await(t, p.Done())
 		await(t, c.done)
 		status, err := windows.WaitForSingleObject(childHandle, 5000)
