@@ -2,6 +2,7 @@ package terminal
 
 import (
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"sort"
@@ -23,6 +24,7 @@ type windowsProcess struct {
 	jobMu         sync.Mutex
 	pipeOnce      sync.Once
 	pipeErr       error
+	drainDone     chan struct{}
 }
 
 func startNative(spec Command) (_ nativeProcess, resultErr error) {
@@ -185,21 +187,25 @@ func (p *windowsProcess) closeConsole() {
 	}
 }
 func (p *windowsProcess) Close() error {
-	// Break both pipes before waiting for ClosePseudoConsole. This also releases
-	// a concurrent graceful close that is blocked emitting its final frame.
 	err := errors.Join(p.prepareClose(), p.closeJob())
+	// Keep output draining until ConPTY has finished its final frame. Closing
+	// the output handle first can leave older ConPTY versions stuck in close.
 	p.closeConsole()
+	err = errors.Join(err, p.output.Close())
+	<-p.drainDone
 	return err
 }
 func (p *windowsProcess) prepareClose() error {
-	// Finish an in-flight resize while output can still drain, then prevent
-	// any later resize from entering ConPTY after its channels are closed.
-	p.consoleMu.Lock()
-	defer p.consoleMu.Unlock()
-	p.closing = true
 	p.pipeOnce.Do(func() {
-		// Close output first: closing input may itself make the child exit.
-		p.pipeErr = errors.Join(p.output.Close(), p.input.Close())
+		// Explicit close discards remaining output. Start a drain even if the
+		// caller has no reader, and before taking consoleMu: a concurrent
+		// graceful close or resize may already be waiting for output to drain.
+		p.drainDone = make(chan struct{})
+		go func() { _, _ = io.Copy(io.Discard, p.output); close(p.drainDone) }()
+		p.consoleMu.Lock()
+		defer p.consoleMu.Unlock()
+		p.closing = true
+		p.pipeErr = p.input.Close()
 	})
 	return p.pipeErr
 }
@@ -214,10 +220,8 @@ func (p *windowsProcess) closeJob() error {
 	return err
 }
 func (p *windowsProcess) kill() error {
-	// Cancel pipes before terminating the tree. Otherwise wait() can enter
-	// ClosePseudoConsole while Close() is still tearing down its channels.
-	// Older ConPTY implementations can hang in that race even with no live
-	// descendants. Graceful exit still drains output through wait().
+	// Cancel input and begin draining output before the exit waiter can
+	// start ConPTY teardown. Graceful exit still uses the caller's reader.
 	_ = p.prepareClose()
 	p.jobMu.Lock()
 	defer p.jobMu.Unlock()
