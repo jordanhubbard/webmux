@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 
+test.use({ trace: 'retain-on-failure' });
+
 for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
   test(`mouse reports stay with their process across ${scenario}`, async ({ page, request }) => {
     const ids: string[] = [];
@@ -75,7 +77,7 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
         await tile.getByRole('button', { name: 'Log session', exact: true }).click();
         await expect(input).toBeFocused();
       } else {
-        const response = await request.post(`/api/sessions/${source}/reconnect`, { data: {} });
+        const response = await request.post(`/api/sessions/${source}/reconnect`, { data: {}, timeout: 10_000 });
         expect(response.ok()).toBe(true);
         await expect(tile.locator('.xterm-rows')).toContainText('PLAIN READY');
         await expect(tile.locator('.xterm-rows')).not.toContainText('MOUSE READY');
@@ -88,7 +90,7 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
         expect(inputs.get(source)).toEqual(['k']);
       }
     } finally {
-      for (const id of ids) expect((await request.delete(`/api/sessions/${id}`)).ok()).toBe(true);
+      for (const id of ids) expect((await request.delete(`/api/sessions/${id}`, { timeout: 5_000 })).ok()).toBe(true);
     }
   });
 }
