@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -62,7 +63,11 @@ func (l Launcher) Launch(request LaunchRequest, password string) (*Process, erro
 	if err != nil {
 		return nil, err
 	}
-	command, err := (planner{platform: runtime.GOOS, home: home, environment: os.Environ(), lookup: exec.LookPath}).build(request, password, keyPath, moshServer)
+	currentUser := ""
+	if u, err := user.Current(); err == nil {
+		currentUser = u.Username
+	}
+	command, err := (planner{platform: runtime.GOOS, home: home, environment: os.Environ(), lookup: exec.LookPath, currentUser: currentUser}).build(request, password, keyPath, moshServer)
 	if err != nil {
 		return nil, err
 	}
@@ -70,9 +75,17 @@ func (l Launcher) Launch(request LaunchRequest, password string) (*Process, erro
 }
 
 type planner struct {
-	platform, home string
-	environment    []string
-	lookup         func(string) (string, error)
+	platform, home, currentUser string
+	environment                 []string
+	lookup                      func(string) (string, error)
+}
+
+func isLoopbackHost(hostname string) bool {
+	switch strings.ToLower(hostname) {
+	case "localhost", "127.0.0.1", "::1", "[::1]":
+		return true
+	}
+	return false
 }
 
 var hostname = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9.])?$|^\[[0-9a-fA-F:]+\]$`)
@@ -186,6 +199,23 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 		}
 		command.Args = append(command.Args, destination)
 	case "ssh", "":
+		// On macOS, an ssh hop to the local machine lands in a fresh sshd
+		// session with no Aqua/keychain attachment, breaking keyring-backed
+		// CLIs (e.g. jira-cli) even though the webmux server itself runs in
+		// the user's unlocked GUI session. Skip the unnecessary ssh hop for
+		// same-user loopback connections so the spawned shell inherits that
+		// session directly, same as any other locally spawned PTY.
+		if p.platform == "darwin" && p.currentUser != "" && isLoopbackHost(request.Hostname) &&
+			request.Port == 22 && password == "" && keyPath == "" &&
+			(request.Username == "" || request.Username == p.currentUser) {
+			shell := strings.TrimSpace(p.env("SHELL"))
+			if shell == "" {
+				shell = "/bin/sh"
+			}
+			command.Path, err = resolve(shell)
+			command.Args = []string{"-l"}
+			break
+		}
 		command.Path, err = resolve("ssh")
 		command.Args = []string{"-tt", "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=3", "-o", "ConnectTimeout=10", "-o", "TCPKeepAlive=yes", "-o", "StrictHostKeyChecking=accept-new", "-p", strconv.Itoa(request.Port)}
 		if keyPath != "" {

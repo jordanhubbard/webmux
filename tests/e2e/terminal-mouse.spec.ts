@@ -90,7 +90,9 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
         expect(inputs.get(source)).toEqual(['k']);
       }
     } finally {
-      for (const id of ids) expect((await request.delete(`/api/sessions/${id}`, { timeout: 5_000 })).ok()).toBe(true);
+      // Windows permits five seconds for console close handlers. Allow the
+      // same bounded teardown window as the native process tests.
+      for (const id of ids) expect((await request.delete(`/api/sessions/${id}`, { timeout: 10_000 })).ok()).toBe(true);
     }
   });
 }

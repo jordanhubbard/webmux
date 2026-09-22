@@ -5,6 +5,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.14] - 2026-09-22
+
+### Fixed
+- Drain Windows terminal output through ConPTY shutdown and cancel input before terminating the process tree, preventing reconnect and close hangs.
+- On macOS, launch a local login shell for same-user loopback sessions using the default SSH port and no explicit credentials, retaining the WebMux process's GUI/keychain context.
+- Continue using SSH for custom ports, explicit credentials, other users, remote hosts, and non-macOS platforms.
+
 ## [1.3.13] - 2026-09-21
 
 ### Changed
