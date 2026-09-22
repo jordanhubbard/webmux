@@ -5,6 +5,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.13] - 2026-09-21
+
+### Changed
+- Ship standalone Go executables with the web interface and default configuration embedded.
+- Remove the legacy Node.js server; use the Go server for runtime sessions and APIs.
+- Use native release bundles for Homebrew installations.
+
+### Fixed
+- Terminate Windows terminal process trees on reconnect and close to prevent raw-input children from hanging ConPTY teardown.
+- Keep mouse and focus reports in their originating terminal when Type to All is enabled.
+- Reset terminal modes on reconnect so stale mouse tracking does not leak into a new process.
+- Suppress unbuttoned mouse movement reports that appear as stray characters; clicks, dragging, and scrolling remain available. Application hover behavior is intentionally disabled.
+- Allow Option-drag text selection on macOS in mouse-enabled terminal applications and restore terminal focus after toggling transcript logging.
+
+### Documentation
+- Clarify terminal copy/paste, selection modifiers, and broadcast behavior in the in-app help.
+
 ## [1.3.12] - 2026-09-21
 
 ### Other

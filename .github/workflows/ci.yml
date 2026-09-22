@@ -230,6 +230,10 @@ jobs:
         run: npm run test:e2e:go
         working-directory: webmux
 
+      - name: Stress Windows terminal reconnect
+        run: npm run test:e2e:go -- terminal-mouse.spec.ts --grep restart --repeat-each=10 --output=test-results/reconnect-stress
+        working-directory: webmux
+
       - name: Check Go screenshot repeatability
         run: npm run test:visual
         working-directory: webmux

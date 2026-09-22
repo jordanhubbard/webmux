@@ -18,6 +18,8 @@ type windowsProcess struct {
 	process       *os.Process
 	console       windows.Handle
 	consoleMu     sync.Mutex
+	job           windows.Handle
+	jobMu         sync.Mutex
 }
 
 func startNative(spec Command) (_ nativeProcess, resultErr error) {
@@ -68,6 +70,17 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 			_ = p.Close()
 		}
 	}()
+	// Own the entire session tree, not only cmd.exe. A live raw-input child
+	// can otherwise keep older ConPTY implementations in ClosePseudoConsole.
+	p.job, err = windows.CreateJobObject(nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	limits := windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION{}
+	limits.BasicLimitInformation.LimitFlags = windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+	if _, err := windows.SetInformationJobObject(p.job, windows.JobObjectExtendedLimitInformation, uintptr(unsafe.Pointer(&limits)), uint32(unsafe.Sizeof(limits))); err != nil {
+		return nil, err
+	}
 	if err := windows.CreatePseudoConsole(windows.Coord{X: int16(spec.Cols), Y: int16(spec.Rows)}, windows.Handle(inputRead.Fd()), windows.Handle(outputWrite.Fd()), 0, &p.console); err != nil {
 		return nil, err
 	}
@@ -93,7 +106,7 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 	startup.ProcThreadAttributeList = attributes.List()
 	var info windows.ProcessInformation
 	err = windows.CreateProcess(application, commandLine, nil, nil, false,
-		windows.EXTENDED_STARTUPINFO_PRESENT|windows.CREATE_UNICODE_ENVIRONMENT,
+		windows.EXTENDED_STARTUPINFO_PRESENT|windows.CREATE_UNICODE_ENVIRONMENT|windows.CREATE_SUSPENDED,
 		&environment[0], directory, &startup.StartupInfo, &info)
 	if err != nil {
 		return nil, err
@@ -103,6 +116,14 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 	p.process, err = os.FindProcess(int(info.ProcessId))
 	if err != nil {
 		_ = windows.TerminateProcess(info.Process, 1)
+		return nil, err
+	}
+	// Assign before executing any child code so descendants cannot race job
+	// ownership. The deferred error cleanup kills even a suspended process.
+	if err := windows.AssignProcessToJobObject(p.job, info.Process); err != nil {
+		return nil, err
+	}
+	if _, err := windows.ResumeThread(info.Thread); err != nil {
 		return nil, err
 	}
 	return p, nil
@@ -163,13 +184,32 @@ func (p *windowsProcess) closeConsole() {
 func (p *windowsProcess) Close() error {
 	// Break both pipes before waiting for ClosePseudoConsole. This also releases
 	// a concurrent graceful close that is blocked emitting its final frame.
-	err := errors.Join(p.input.Close(), p.output.Close())
+	err := errors.Join(p.closeJob(), p.input.Close(), p.output.Close())
 	p.closeConsole()
 	return err
 }
-func (p *windowsProcess) kill() error { return p.process.Kill() }
+func (p *windowsProcess) closeJob() error {
+	p.jobMu.Lock()
+	defer p.jobMu.Unlock()
+	if p.job == 0 {
+		return nil
+	}
+	err := windows.CloseHandle(p.job)
+	p.job = 0
+	return err
+}
+func (p *windowsProcess) kill() error {
+	p.jobMu.Lock()
+	defer p.jobMu.Unlock()
+	if p.job == 0 {
+		return os.ErrProcessDone
+	}
+	return windows.TerminateJobObject(p.job, 1)
+}
 func (p *windowsProcess) wait() Exit {
 	state, err := p.process.Wait()
+	// The session ends with its root; reap descendants before closing ConPTY.
+	_ = p.closeJob()
 	// Closing ConPTY after exit emits the final frame and breaks the output pipe.
 	// The caller drains Read concurrently; explicit Close can cancel that drain.
 	p.closeConsole()
