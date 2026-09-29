@@ -18,6 +18,7 @@ import (
 // LaunchRequest is internal session state, never an unvalidated HTTP request.
 // Passwords are separate so they cannot accidentally enter persisted sessions.
 type LaunchRequest struct {
+	SessionID                            string
 	Hostname, Username, Transport, KeyID string
 	Port, Cols, Rows                     int
 	ExecCommand                          string
@@ -29,7 +30,7 @@ type Launcher struct{ Store *storage.Store }
 
 func (l Launcher) Launch(request LaunchRequest, password string) (*Process, error) {
 	keyPath, moshServer := "", ""
-	if request.Transport != "exec" && request.KeyID != "" {
+	if request.Transport != "exec" && request.Transport != "local" && request.KeyID != "" {
 		var document struct {
 			Keys []struct {
 				ID   string `yaml:"id"`
@@ -145,6 +146,24 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 	}
 	var err error
 	switch request.Transport {
+	case "local":
+		if request.Hostname != "localhost" || request.Username != "" || password != "" || keyPath != "" || request.KeyID != "" || request.ExecCommand != "" || len(request.ExecArgv) != 0 {
+			return Command{}, errors.New("local connections must use localhost without credentials or commands")
+		}
+		if !regexp.MustCompile(`^[a-f0-9-]{36}$`).MatchString(request.SessionID) {
+			return Command{}, errors.New("invalid local session ID")
+		}
+		command.Path, err = resolve("tmux")
+		if err != nil {
+			return Command{}, errors.New("Local terminals require tmux installed on the WebMux server and available on PATH")
+		}
+		// Detaching the client leaves the shell alive for reconnect and recovery.
+		command.Args = []string{"new-session", "-A", "-s", "webmux-" + request.SessionID}
+		for i := len(command.Env) - 1; i >= 0; i-- {
+			if strings.HasPrefix(command.Env[i], "TMUX=") || strings.HasPrefix(command.Env[i], "TMUX_PANE=") {
+				command.Env = append(command.Env[:i], command.Env[i+1:]...)
+			}
+		}
 	case "exec":
 		if request.ExecCwd != "" {
 			command.Dir = request.ExecCwd

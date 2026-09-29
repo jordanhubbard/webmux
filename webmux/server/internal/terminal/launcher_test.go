@@ -224,3 +224,37 @@ func TestDarwinLoopbackSSHBoundaries(t *testing.T) {
 		})
 	}
 }
+
+func TestLocalTmuxCommand(t *testing.T) {
+	p := testPlanner()
+	p.environment = append(p.environment, "TMUX=/tmp/parent", "TMUX_PANE=%1")
+	r := LaunchRequest{SessionID: "12345678-1234-1234-1234-123456789abc", Hostname: "localhost", Transport: "local", Cols: 80, Rows: 24}
+	c, err := p.build(r, "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Path != "/resolved/tmux" || !reflect.DeepEqual(c.Args, []string{"new-session", "-A", "-s", "webmux-" + r.SessionID}) {
+		t.Fatalf("command: %+v", c)
+	}
+	for _, env := range c.Env {
+		if strings.HasPrefix(env, "TMUX=") || strings.HasPrefix(env, "TMUX_PANE=") {
+			t.Fatalf("inherited parent tmux: %s", env)
+		}
+	}
+	for _, mutate := range []func(*LaunchRequest){
+		func(r *LaunchRequest) { r.Hostname = "remote" },
+		func(r *LaunchRequest) { r.Username = "root" },
+		func(r *LaunchRequest) { r.SessionID = "other:session" },
+		func(r *LaunchRequest) { r.ExecCommand = "echo unsafe" },
+	} {
+		bad := r
+		mutate(&bad)
+		if _, err := p.build(bad, "", "", ""); err == nil {
+			t.Fatalf("accepted %+v", bad)
+		}
+	}
+	p.lookup = func(string) (string, error) { return "", errors.New("missing") }
+	if _, err := p.build(r, "", "", ""); err == nil || !strings.Contains(err.Error(), "require tmux") {
+		t.Fatalf("missing tmux: %v", err)
+	}
+}

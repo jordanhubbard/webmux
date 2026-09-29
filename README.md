@@ -26,6 +26,14 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 - **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
 - **Session expiry handling** — visible JWT countdown and refresh controls prevent expired browser sessions from entering reconnect loops
 
+## Local terminals
+
+In **Connect to Host**, choose **Localhost · tmux** under **Quick Connect** to open a persistent shell directly on the WebMux server. No SSH server, saved host, username, or key is needed. Install `tmux` on the server and make it available on the WebMux process's `PATH`.
+
+Local terminals use the same terminal emulator and workspace as remote SSH sessions. They run as the OS user running WebMux (not the browser's login name). Each terminal has its own `webmux-<session-id>` tmux session; reconnecting or restarting WebMux reattaches to that shell. A machine reboot ends the running shell, and recovery creates a new one.
+
+Closing a tile removes its WebMux record and detaches its tmux client; the shell remains available through `tmux attach -t webmux-<session-id>`. Use `exit` inside the shell, or `tmux kill-session -t webmux-<session-id>`, to terminate it permanently.
+
 ## Quick Start
 
 ### Homebrew (macOS and Linux)
