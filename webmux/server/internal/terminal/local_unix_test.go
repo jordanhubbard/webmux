@@ -51,7 +51,7 @@ func TestLocalTmuxShellSurvivesClientClose(t *testing.T) {
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		pid, err = run("display-message", "-p", "-t", target, "#{pane_pid}")
-		if err == nil {
+		if err == nil && pid != "" {
 			break
 		}
 		time.Sleep(20 * time.Millisecond)
