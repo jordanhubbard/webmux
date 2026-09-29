@@ -123,8 +123,12 @@ jobs:
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
         run: |
-          if brew list --versions openssl@1.1 > /dev/null 2>&1; then
-            brew unlink openssl@1.1
+          # The runner links via opt/, which brew unlink does not remove.
+          openssl_link="$(brew --prefix)/bin/openssl"
+          if [ -L "$openssl_link" ]; then
+            case "$(readlink "$openssl_link")" in
+              */openssl@1.1/*) rm -f "$openssl_link" ;;
+            esac
           fi
       - name: Install and test native Homebrew HEAD default
         if: runner.os != 'Windows'
@@ -203,8 +207,12 @@ jobs:
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
         run: |
-          if brew list --versions openssl@1.1 > /dev/null 2>&1; then
-            brew unlink openssl@1.1
+          # The runner links via opt/, which brew unlink does not remove.
+          openssl_link="$(brew --prefix)/bin/openssl"
+          if [ -L "$openssl_link" ]; then
+            case "$(readlink "$openssl_link")" in
+              */openssl@1.1/*) rm -f "$openssl_link" ;;
+            esac
           fi
       - name: Install formula from this revision
         env:
