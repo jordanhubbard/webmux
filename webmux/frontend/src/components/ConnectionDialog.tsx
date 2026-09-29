@@ -113,6 +113,18 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
     }
   };
 
+  const handleLocalConnect = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await onConnect({ transport: 'local', hostname: 'localhost', username: '', row: suggestedRow ?? 0, col: suggestedCol ?? 0 });
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleDeleteHost = async (hostId: string) => {
     try {
       await api.deleteHost(hostId);
@@ -128,6 +140,13 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
     <Dialog title="Connect to Host" onClose={onClose} dismissible={!submitting}>
 
       <form onSubmit={handleConnect} style={styles.form}>
+        <div style={styles.field}>
+          <label style={styles.label}>Quick Connect</label>
+          <button type="button" style={styles.hostCardBtn} onClick={handleLocalConnect} disabled={submitting}>
+            Localhost · tmux
+          </button>
+          <small>Persistent terminal on this WebMux server, running as its OS user. Requires tmux.</small>
+        </div>
         {/* Saved hosts as quick-connect cards */}
         {hosts.length > 0 && (
           <div style={styles.field}>

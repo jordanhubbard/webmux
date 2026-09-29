@@ -197,7 +197,13 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 	if b.closed {
 		return Session{}, ErrClosed
 	}
-	if request.Username == "" {
+	if request.Transport == "local" {
+		if request.HostID != "" || (request.Hostname != "" && request.Hostname != "localhost") || request.Username != "" || request.Password != "" || request.KeyID != "" || request.ExecCommand != "" || request.Port != 0 {
+			return Session{}, invalid("local connections do not accept remote hosts, credentials, ports, or commands")
+		}
+		request.Hostname = "localhost"
+	}
+	if request.Username == "" && request.Transport != "local" {
 		return Session{}, invalid("username is required")
 	}
 	id, err := uuid()
@@ -248,6 +254,9 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 		return Session{}, err
 	}
 	title := request.Username + "@" + request.Hostname
+	if request.Transport == "local" {
+		title = "localhost · tmux"
+	}
 	if request.Transport == "exec" {
 		title = fmt.Sprintf("%s:%d", request.Hostname, request.Port)
 	}

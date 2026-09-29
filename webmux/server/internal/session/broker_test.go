@@ -331,3 +331,65 @@ func TestFailedPersistenceRollsBackAndClosesProcess(t *testing.T) {
 		t.Fatal("failed deletion removed session")
 	}
 }
+
+func TestLocalSessionRecovery(t *testing.T) {
+	b, store, _ := fixture(t)
+	first, err := b.Create("owner", CreateRequest{Transport: "local"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := b.Create("owner", CreateRequest{Transport: "local"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.ID == second.ID || first.Hostname != "localhost" || !first.Persistent || first.Username != "" {
+		t.Fatalf("local session: %+v", first)
+	}
+	if _, err := b.Reconnect("other", first.ID, ""); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("ownership: %v", err)
+	}
+	if err := b.Close(); err != nil {
+		t.Fatal(err)
+	}
+	var recovered []terminal.LaunchRequest
+	next, err := newBroker(store, slog.Default(), func(r terminal.LaunchRequest, password string) (process, error) {
+		recovered = append(recovered, r)
+		return fake(), nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer next.Close()
+	if err := next.Restore(); err != nil {
+		t.Fatal(err)
+	}
+	if len(recovered) != 2 || recovered[0].SessionID != first.ID || recovered[1].SessionID != second.ID || recovered[0].Transport != "local" {
+		t.Fatalf("recovery: %+v", recovered)
+	}
+	if _, err := next.Reconnect("owner", first.ID, ""); err != nil {
+		t.Fatal(err)
+	}
+	if recovered[2].SessionID != first.ID {
+		t.Fatal("reconnect changed tmux identity")
+	}
+}
+
+func TestLocalSessionRejectsRemoteOptions(t *testing.T) {
+	b, _, _ := fixture(t)
+	for _, r := range []CreateRequest{
+		{Transport: "local", Hostname: "remote"},
+		{Transport: "local", HostID: "saved"},
+		{Transport: "local", Username: "root"},
+		{Transport: "local", Password: "secret"},
+		{Transport: "local", KeyID: "key"},
+		{Transport: "local", Port: 2222},
+		{Transport: "local", ExecCommand: "shell"},
+	} {
+		if _, err := b.Create("owner", r); err == nil {
+			t.Fatalf("accepted %+v", r)
+		}
+	}
+	if len(b.List("owner")) != 0 {
+		t.Fatal("invalid requests created sessions")
+	}
+}

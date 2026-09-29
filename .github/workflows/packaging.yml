@@ -118,6 +118,18 @@ jobs:
       - name: Set up Homebrew for native installation
         if: runner.os != 'Windows'
         uses: Homebrew/actions/setup-homebrew@3b81d438eda92ee13b5849940d993be027717ecf
+      - name: Unlink runner OpenSSL 1.1 before dependency upgrades
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          # The runner links via opt/, which brew unlink does not remove.
+          openssl_link="$(brew --prefix)/bin/openssl"
+          if [ -L "$openssl_link" ]; then
+            case "$(readlink "$openssl_link")" in
+              */openssl@1.1/*) rm -f "$openssl_link" ;;
+            esac
+          fi
       - name: Install and test native Homebrew HEAD default
         if: runner.os != 'Windows'
         env:
@@ -190,6 +202,18 @@ jobs:
           brew info jordanhubbard/webmux/webmux --json=v2 > "$RUNNER_TEMP/webmux-tap-info.json"
           node scripts/packaging-checks.mts tap
           brew untap jordanhubbard/webmux
+      - name: Unlink runner OpenSSL 1.1 before dependency upgrades
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          # The runner links via opt/, which brew unlink does not remove.
+          openssl_link="$(brew --prefix)/bin/openssl"
+          if [ -L "$openssl_link" ]; then
+            case "$(readlink "$openssl_link")" in
+              */openssl@1.1/*) rm -f "$openssl_link" ;;
+            esac
+          fi
       - name: Install formula from this revision
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'

@@ -1,4 +1,4 @@
-export type TransportType = 'ssh' | 'mosh' | 'exec';
+export type TransportType = 'ssh' | 'mosh' | 'exec' | 'local';
 export type SessionKind = 'terminal' | 'vnc' | 'rdp';
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
 export type WorkspaceName = 'terminals' | 'desktops' | 'agents' | string;
