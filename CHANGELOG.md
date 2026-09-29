@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.15] - 2026-09-29
+
+### Added
+- Add a Localhost · tmux quick-connect option for persistent local shells alongside remote SSH sessions in the same terminal workspace.
+- Reattach local terminals to their existing tmux shells across reconnects and WebMux process restarts.
+
+### Fixed
+- Unlink the hosted macOS runner's legacy OpenSSL before Homebrew dependency upgrades so packaging checks can complete.
+
 ## [1.3.14] - 2026-09-22
 
 ### Fixed
