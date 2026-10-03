@@ -199,7 +199,7 @@ export function Tile({
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
         </div>
         <div style={styles.chromeRight}>
-          <button style={styles.chromeBtn} title="Open companion browser on terminal host" onClick={() => setShowBrowser(true)}>Browser</button>
+          <button style={styles.browserBtn} title="Open an interactive browser on this terminal’s host" aria-expanded={showBrowser} onClick={() => setShowBrowser(true)}>Open browser</button>
           <TerminalActions terminalRef={termHandleRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
           {broadcastMode && (
             <button
@@ -353,6 +353,16 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 10,
     color: '#888',
     marginRight: 4,
+  },
+  browserBtn: {
+    background: '#39306b',
+    border: '1px solid #9b8cff',
+    color: '#fff',
+    fontSize: 12,
+    cursor: 'pointer',
+    padding: '3px 7px',
+    borderRadius: 4,
+    lineHeight: 1,
   },
   chromeBtn: {
     background: 'none',

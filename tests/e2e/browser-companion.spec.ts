@@ -27,7 +27,7 @@ test('browser companion completes a loopback callback and retains state until en
   const session = await created.json();
   try {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Browser', exact: true }).click();
+    await page.getByRole('button', { name: 'Open browser', exact: true }).click();
     const viewport = page.getByAltText('Interactive remote browser viewport');
     await expect(viewport).toBeVisible({ timeout: 30_000 });
     await page.getByRole('textbox', { name: 'Remote browser URL' }).fill(identityURL);
@@ -49,7 +49,7 @@ test('browser companion completes a loopback callback and retains state until en
     await page.screenshot({ path: 'test-results/browser-companion.png' });
     await page.getByRole('button', { name: 'Return to terminal' }).click();
     await expect(viewport).not.toBeVisible();
-    await page.getByRole('button', { name: 'Browser', exact: true }).click();
+    await page.getByRole('button', { name: 'Open browser', exact: true }).click();
     await expect(viewport).toBeVisible();
     const reopened = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
     expect((await reopened.json()).target).toBe(target);

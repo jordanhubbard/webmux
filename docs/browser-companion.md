@@ -2,7 +2,7 @@
 
 ## Experience
 
-Each terminal has a **Browser** action. It opens a resizable companion drawer,
+Each terminal has a **Open browser** action. It opens a resizable companion drawer,
 leaving the terminal running and available beside it. The drawer identifies the
 terminal and the host where the browser actually runs. Paste an authentication
 URL, interact with the remote page, and return to the terminal when the CLI
@@ -66,7 +66,7 @@ Tracked in [#110](https://github.com/jordanhubbard/webmux/issues/110).
 ## Trying it
 
 Build with `make build`, start an isolated instance, and add a Local terminal.
-Click **Browser**, paste the URL printed by the CLI, and complete authentication.
+Click **Open browser**, paste the URL printed by the CLI, and complete authentication.
 On an SSH target, install the matching native binary as `webmux` on PATH and
 Chrome/Chromium; confirm `ssh HOST webmux --help` works non-interactively first.
 `WEBMUX_BROWSER_EXECUTABLE` can select a Chromium executable on the worker host.
