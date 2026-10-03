@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 import http from 'node:http';
 import { execFileSync } from 'node:child_process';
 
-test('browser companion completes a loopback callback and retains state until ended', async ({ page, request }) => {
+for (const linkKind of ['plain', 'osc8'] as const) {
+test(`browser companion follows ${linkKind} terminal links and completes a loopback callback`, async ({ page, request }) => {
   test.setTimeout(90_000);
   // This is a real browser acceptance test, not a mocked frame or protocol.
   let received = '';
@@ -26,12 +27,46 @@ test('browser companion completes a loopback callback and retains state until en
   expect(created.ok()).toBe(true);
   const session = await created.json();
   try {
+    if (linkKind === 'osc8') {
+      // Some tmux/terminfo combinations strip OSC 8. Inject that exact PTY
+      // output at the transport boundary to exercise xterm's native link path.
+      await page.routeWebSocket(/\/api\/term\//, socket => {
+        const server = socket.connectToServer();
+        server.onMessage(raw => {
+          const message = JSON.parse(raw.toString());
+          if (message.type === 'output') message.data = message.data.replaceAll('WEBMUX_OSC8_FIXTURE',
+            `\x1b]8;;${identityURL}\x1b\\Remote sign-in\x1b]8;;\x1b\\`);
+          socket.send(JSON.stringify(message));
+        });
+      });
+    }
     await page.goto('/');
-    await page.getByRole('button', { name: 'Open browser', exact: true }).click();
+    let popups = 0;
+    page.on('popup', () => { popups++; });
+    if (process.platform !== 'win32') {
+      // Drive an actual CLI-produced terminal link, not the companion URL field.
+      const input = page.getByTestId(`tile-cell-${session.id}`).locator('.xterm-helper-textarea');
+      await input.focus();
+      const command = linkKind === 'plain'
+        ? String.raw`printf '\n${identityURL}\n'`
+        : String.raw`printf '\nWEBMUX_OSC8_FIXTURE\n'`;
+      await page.keyboard.type(command);
+      await page.keyboard.press('Enter');
+      const linkText = linkKind === 'plain' ? identityURL : 'Remote sign-in';
+      const line = page.locator('.xterm-rows').getByText(linkText, { exact: true }).last();
+      await expect(line).toBeVisible();
+      const box = (await line.boundingBox())!;
+      await page.mouse.move(box.x + 25, box.y + box.height / 2);
+      await page.mouse.click(box.x + 25, box.y + box.height / 2);
+    } else {
+      await page.getByRole('button', { name: 'Open browser', exact: true }).click();
+    }
     const viewport = page.getByAltText('Interactive remote browser viewport');
     await expect(viewport).toBeVisible({ timeout: 30_000 });
-    await page.getByRole('textbox', { name: 'Remote browser URL' }).fill(identityURL);
-    await page.getByRole('button', { name: 'Go', exact: true }).click();
+    if (process.platform === 'win32') {
+      await page.getByRole('textbox', { name: 'Remote browser URL' }).fill(identityURL);
+      await page.getByRole('button', { name: 'Go', exact: true }).click();
+    }
     // Wait for navigation to reach the worker before interacting with its frame.
     await expect.poll(async () => {
       const res = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
@@ -43,6 +78,8 @@ test('browser companion completes a loopback callback and retains state until en
     await page.keyboard.press('Tab');
     await page.keyboard.press('Enter');
     await expect.poll(() => received, { timeout: 15_000 }).toBe('callback-proof');
+    expect(popups).toBe(0);
+    expect(page.context().pages()).toHaveLength(1);
     await expect(page.getByRole('textbox', { name: 'Remote browser URL' })).toHaveValue(/\/callback\?code=callback-proof/);
     const before = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
     const target = (await before.json()).target;
@@ -64,3 +101,5 @@ test('browser companion completes a loopback callback and retains state until en
     await Promise.all([new Promise<void>(resolve => identity.close(() => resolve())), new Promise<void>(resolve => callback.close(() => resolve()))]);
   }
 });
+
+}

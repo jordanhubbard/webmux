@@ -5,7 +5,7 @@ import type { Session } from '../types';
 import './BrowserCompanion.css';
 
 /** A nonmodal drawer: the linked terminal remains interactive. */
-export function BrowserCompanion({ session, onHide }: { session: Session; onHide: () => void }) {
+export function BrowserCompanion({ session, navigation, onHide }: { session: Session; navigation?: { url: string } | null; onHide: () => void }) {
   const [frame, setFrame] = useState<BrowserFrame>();
   const [address, setAddress] = useState('');
   const [error, setError] = useState('');
@@ -46,6 +46,14 @@ export function BrowserCompanion({ session, onHide }: { session: Session; onHide
     void act({ action: 'start' });
     return () => { mounted.current = false; };
   }, [act]);
+
+  useEffect(() => {
+    if (!navigation) return;
+    addressEditing.current = false;
+    setAddress(navigation.url);
+    // The startup effect queues first, including when a link opens the drawer.
+    void act({ action: 'navigate', url: navigation.url });
+  }, [act, navigation]);
 
   useEffect(() => {
     if (!ready) return;

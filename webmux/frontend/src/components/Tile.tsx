@@ -57,6 +57,7 @@ export function Tile({
   onThemeChange,
 }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
+  const [browserNavigation, setBrowserNavigation] = useState<{ url: string } | null>(null);
   const [showBrowser, setShowBrowser] = useState(false);
   const [viewerCount, setViewerCount] = useState(1);
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
@@ -257,13 +258,14 @@ export function Tile({
         </div>
       </div>
 
-      {showBrowser && <BrowserCompanion session={session} onHide={() => { setShowBrowser(false); termHandleRef.current?.focus(); }} />}
+      {showBrowser && <BrowserCompanion session={session} navigation={browserNavigation} onHide={() => { setBrowserNavigation(null); setShowBrowser(false); termHandleRef.current?.focus(); }} />}
       <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
         {(state === 'disconnected' || state === 'error') && (
           <ReconnectOverlay onReconnect={() => onReconnect(session.id)} />
         )}
         <Terminal
           ref={termHandleRef}
+          onOpenLink={url => { setBrowserNavigation({ url }); setShowBrowser(true); }}
           sessionId={session.id}
           fontSize={fontSize}
           fontFamily={fontFamily}

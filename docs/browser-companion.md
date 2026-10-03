@@ -4,7 +4,7 @@
 
 Each terminal has a **Open browser** action. It opens a resizable companion drawer,
 leaving the terminal running and available beside it. The drawer identifies the
-terminal and the host where the browser actually runs. Paste an authentication
+terminal and the host where the browser actually runs. Click an authentication link in the terminal, or paste its
 URL, interact with the remote page, and return to the terminal when the CLI
 reports success. A redirect alone is not evidence that authentication succeeded.
 
@@ -36,8 +36,10 @@ credential storage.
 - Authenticated, owner-checked session APIs carry frames and input. Browser
   cookies stay in a private temporary directory on the execution host. URLs,
   credentials, and frames are not written into terminal transcripts or audit logs.
-- Manual URL entry is the initial handoff. Existing tools that launch a host's
-  default browser still need their printed URL copied into the companion.
+- Terminal link clicks (plain URLs and OSC 8 hyperlinks) open the linked
+  companion and navigate there, including when its drawer is already open.
+  Manual URL entry is also available. A CLI invoking the OS browser opener
+  directly still needs its printed link clicked; shell-launch capture is pending.
 
 ## Acceptance
 
@@ -53,7 +55,6 @@ Tracked in [#110](https://github.com/jordanhubbard/webmux/issues/110).
 
 1. A shell-scoped `BROWSER` opener routes launch requests to the linked companion;
    an unobtrusive “Browser requested” badge opens it without stealing focus.
-   Add an explicit “Open in remote browser” link action to terminal URLs.
 2. Dock/undock and remembered pane sizes; adapt to narrow screens with Terminal /
    Browser tabs and a visible pending-auth indicator.
 3. Opt-in reusable profiles per host and user, plus clear expiry and sign-out

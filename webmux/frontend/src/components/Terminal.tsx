@@ -56,6 +56,7 @@ interface TerminalProps {
   theme?: TerminalTheme | null;
   onBell?: () => void;
   onTranscriptChange?: (enabled: boolean) => void;
+  onOpenLink?: (url: string) => void;
 }
 
 export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal({
@@ -70,7 +71,10 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   theme,
   onBell,
   onTranscriptChange,
+  onOpenLink,
 }: TerminalProps, ref) {
+  const onOpenLinkRef = useRef(onOpenLink);
+  onOpenLinkRef.current = onOpenLink;
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -200,6 +204,11 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     if (!containerRef.current) return;
 
     const normalizedFontFamily = normalizeTerminalFontFamily(fontFamily);
+    const openLink = (event: MouseEvent, uri: string) => {
+      event.preventDefault();
+      if (onOpenLinkRef.current) onOpenLinkRef.current(uri);
+      else window.open(uri, '_blank', 'noopener,noreferrer');
+    };
     const term = new XTerm({
       theme: { ...DEFAULT_TERMINAL_THEME, ...(theme || {}) },
       fontFamily: normalizedFontFamily,
@@ -211,15 +220,11 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       // Search highlighting uses xterm's proposed decoration API.
       allowProposedApi: true,
       scrollback: 5000,
-      linkHandler: {
-        activate: (_event: MouseEvent, uri: string) => {
-          window.open(uri, '_blank', 'noopener,noreferrer');
-        },
-      },
+      linkHandler: { activate: openLink },
     });
 
     const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon();
+    const webLinksAddon = new WebLinksAddon(openLink);
     const searchAddon = new SearchAddon();
     const terminalQuerySuppressor = installTerminalQuerySuppressors(term);
     term.loadAddon(fitAddon);
