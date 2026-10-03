@@ -34,6 +34,12 @@ Local terminals use the same terminal emulator and workspace as remote SSH sessi
 
 Closing a tile removes its WebMux record and detaches its tmux client; the shell remains available through `tmux attach -t webmux-<session-id>`. Use `exit` inside the shell, or `tmux kill-session -t webmux-<session-id>`, to terminate it permanently.
 
+## Browser companion (preview)
+
+Click **Browser** on a terminal to interact with a browser running on the same host. Paste the CLI authentication URL, finish signing in, and return to the terminal. The companion shares only the browser viewport and preserves remote localhost callbacks. **Return to terminal** keeps the browser alive; **End browser** clears its temporary profile.
+
+Local terminals need Chrome/Chromium on the WebMux server. SSH/Mosh terminals additionally need the matching native `webmux` binary on the target PATH and non-interactive SSH key/agent access. See the [UX plan, prerequisites, and limitations](docs/browser-companion.md).
+
 ## Quick Start
 
 ### Homebrew (macOS and Linux)

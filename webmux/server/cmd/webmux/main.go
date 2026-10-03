@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/assets"
+	"github.com/jordanhubbard/webmux/server/internal/browser"
 	appconfig "github.com/jordanhubbard/webmux/server/internal/config"
 	"github.com/jordanhubbard/webmux/server/internal/httpapi"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
@@ -33,6 +34,9 @@ func main() {
 }
 
 func run() (resultErr error) {
+	if len(os.Args) == 2 && os.Args[1] == "--browser-worker" {
+		return browser.Worker(os.Stdin, os.Stdout)
+	}
 	root := flag.String("root", os.Getenv("WEBMUX_ROOT"), "optional directory overriding embedded web/ and config.defaults/")
 	home := flag.String("home", os.Getenv("WEBMUX_HOME"), "writable configuration/data directory")
 	listen := flag.String("listen", "", "override HTTP listen address (e.g. 127.0.0.1:18080)")

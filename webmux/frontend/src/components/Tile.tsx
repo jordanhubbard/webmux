@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Terminal, type TerminalHandle } from './Terminal';
+import { BrowserCompanion } from './BrowserCompanion';
 import { TerminalActions } from './TerminalActions';
 import { ReconnectOverlay } from './ReconnectOverlay';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
@@ -56,6 +57,7 @@ export function Tile({
   onThemeChange,
 }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
+  const [showBrowser, setShowBrowser] = useState(false);
   const [viewerCount, setViewerCount] = useState(1);
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -197,6 +199,7 @@ export function Tile({
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
         </div>
         <div style={styles.chromeRight}>
+          <button style={styles.chromeBtn} title="Open companion browser on terminal host" onClick={() => setShowBrowser(true)}>Browser</button>
           <TerminalActions terminalRef={termHandleRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
           {broadcastMode && (
             <button
@@ -254,6 +257,7 @@ export function Tile({
         </div>
       </div>
 
+      {showBrowser && <BrowserCompanion session={session} onHide={() => { setShowBrowser(false); termHandleRef.current?.focus(); }} />}
       <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
         {(state === 'disconnected' || state === 'error') && (
           <ReconnectOverlay onReconnect={() => onReconnect(session.id)} />
