@@ -31,6 +31,13 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
   expect(created.ok()).toBe(true);
   const session = await created.json();
   const launchConfig = path.resolve(__dirname, '.test-home', `browser-launch-${session.id}.json`);
+  // Keep an earlier viewer connected: the active terminal must claim browser
+  // requests instead of allowing the first tab to receive them forever.
+  const idleViewer = linkKind === 'gh-browser' ? await page.context().newPage() : null;
+  if (idleViewer) {
+    await idleViewer.goto('/');
+    await expect(idleViewer.getByTestId(`tile-cell-${session.id}`).locator('.xterm-screen')).toBeVisible();
+  }
   try {
     if (linkKind === 'osc8') {
       // Some tmux/terminfo combinations strip OSC 8. Inject that exact PTY
@@ -51,7 +58,7 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     if (shellLaunch) {
       writeFileSync(launchConfig, JSON.stringify({ url: identityURL, mode: linkKind }), { mode: 0o600 });
       const quote = (value: string) => "'" + value.replaceAll("'", "'\\''") + "'";
-      await page.getByTestId(`tile-cell-${session.id}`).locator('.xterm-helper-textarea').focus();
+      await page.getByTestId(`tile-cell-${session.id}`).locator('.xterm-screen').click({ position: { x: 30, y: 100 } });
       await page.keyboard.type([process.execPath, path.resolve(__dirname, 'browser-launch-fixture.mts'), launchConfig].map(quote).join(' '));
       await page.keyboard.press('Enter');
       await expect(page.locator('.xterm-rows')).toContainText('Press Enter to launch the authentication browser.');
@@ -93,7 +100,8 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     await page.keyboard.press('Enter');
     await expect.poll(() => received, { timeout: 15_000 }).toBe('callback-proof');
     expect(popups).toBe(0);
-    expect(page.context().pages()).toHaveLength(1);
+    expect(page.context().pages()).toHaveLength(idleViewer ? 2 : 1);
+    if (idleViewer) await expect(idleViewer.locator('aside.browser-companion')).toHaveCount(0);
     await expect(page.getByRole('textbox', { name: 'Remote browser URL' })).toHaveValue(/\/callback\?code=callback-proof/);
     const before = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
     const target = (await before.json()).target;
@@ -109,6 +117,7 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     const ended = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
     expect(ended.status()).toBe(503);
   } finally {
+    await idleViewer?.close();
     rmSync(launchConfig, { force: true });
     await request.delete(`/api/sessions/${session.id}`);
     // Local terminals intentionally persist in tmux after disconnection.

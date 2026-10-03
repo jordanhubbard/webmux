@@ -284,6 +284,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     const el = containerRef.current;
     // Click to focus this terminal
     const clickHandler = () => {
+      wsHandleRef.current?.send({ type: 'focus' });
       setFocusedSessionId(sessionId);
       onFocusGainedRef.current();
       term.focus();
