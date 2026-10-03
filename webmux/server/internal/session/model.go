@@ -9,6 +9,7 @@ var ErrNotFound = errors.New("Session not found")
 var ErrClosed = errors.New("session broker is shutting down")
 
 type Session struct {
+	BrowserLocal     bool     `json:"browser_local,omitempty" yaml:"browser_local,omitempty"`
 	ID               string   `json:"id" yaml:"id"`
 	Kind             string   `json:"kind" yaml:"kind"`
 	Owner            string   `json:"owner" yaml:"owner"`

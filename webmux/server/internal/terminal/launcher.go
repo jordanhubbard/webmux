@@ -1,6 +1,8 @@
 package terminal
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,7 +12,9 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/jordanhubbard/webmux/server/internal/browseropen"
 	"github.com/jordanhubbard/webmux/server/internal/config"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 )
@@ -68,15 +72,33 @@ func (l Launcher) Launch(request LaunchRequest, password string) (*Process, erro
 	if u, err := user.Current(); err == nil {
 		currentUser = u.Username
 	}
-	command, err := (planner{platform: runtime.GOOS, home: home, environment: os.Environ(), lookup: exec.LookPath, currentUser: currentUser}).build(request, password, keyPath, moshServer)
+	browserShell, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
-	return Start(command)
+	command, err := (planner{browserShell: browserShell, platform: runtime.GOOS, home: home, environment: os.Environ(), lookup: exec.LookPath, currentUser: currentUser}).build(request, password, keyPath, moshServer)
+	if err != nil {
+		return nil, err
+	}
+	local := request.Transport == "local" || command.Path == browserShell
+	if !local && password == "" && (request.Transport == "ssh" || request.Transport == "") {
+		// Probe in the PTY child, not under the broker's lock during restore.
+		payload, err := json.Marshal(browserConnect{Request: request, KeyPath: keyPath, Path: command.Path, Args: command.Args})
+		if err != nil {
+			return nil, err
+		}
+		command.Path, command.Args = browserShell, []string{"--browser-connect", string(payload)}
+	}
+	process, err := Start(command)
+	if process != nil {
+		process.browserLocal = local
+	}
+	return process, err
 }
 
 type planner struct {
 	platform, home, currentUser string
+	browserShell                string
 	environment                 []string
 	lookup                      func(string) (string, error)
 }
@@ -159,6 +181,9 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 		}
 		// Detaching the client leaves the shell alive for reconnect and recovery.
 		command.Args = []string{"new-session", "-A", "-s", "webmux-" + request.SessionID}
+		if p.browserShell != "" {
+			command.Args = append(command.Args, "--", p.browserShell, "--browser-shell")
+		}
 		for i := len(command.Env) - 1; i >= 0; i-- {
 			if strings.HasPrefix(command.Env[i], "TMUX=") || strings.HasPrefix(command.Env[i], "TMUX_PANE=") {
 				command.Env = append(command.Env[:i], command.Env[i+1:]...)
@@ -217,6 +242,7 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 			destination = request.Username + "@" + destination
 		}
 		command.Args = append(command.Args, destination)
+
 	case "ssh", "":
 		// On macOS, an ssh hop to the local machine lands in a fresh sshd
 		// session with no Aqua/keychain attachment, breaking keyring-backed
@@ -233,6 +259,10 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 			}
 			command.Path, err = resolve(shell)
 			command.Args = []string{"-l"}
+			if p.browserShell != "" {
+				command.Path = p.browserShell
+				command.Args = []string{"--browser-shell"}
+			}
 			break
 		}
 		command.Path, err = resolve("ssh")
@@ -244,6 +274,7 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 			command.Args = append(command.Args, "-l", request.Username)
 		}
 		command.Args = append(command.Args, request.Hostname)
+
 		if err == nil && password != "" {
 			ssh := command.Path
 			command.Path, err = resolve("sshpass")
@@ -263,3 +294,52 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 }
 
 func shellQuote(value string) string { return "'" + strings.ReplaceAll(value, "'", `'"'"'`) + "'" }
+
+// Probe with a portable command before changing SSH's login behavior. Missing
+// helpers (including on Windows SSH hosts) leave the normal shell available.
+func remoteBrowserAvailable(r LaunchRequest, keyPath string) bool {
+	if r.Transport != "ssh" && r.Transport != "mosh" && r.Transport != "" {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	port := r.Port
+	if port == 0 {
+		port = 22
+	}
+	args := []string{"-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=2", "-p", strconv.Itoa(port)}
+	if keyPath != "" {
+		args = append(args, "-i", keyPath)
+	}
+	if r.Username != "" {
+		args = append(args, "-l", r.Username)
+	}
+	args = append(args, "--", r.Hostname, "webmux --browser-capabilities")
+	output, err := exec.CommandContext(ctx, "ssh", args...).Output()
+	return err == nil && strings.TrimSpace(string(output)) == "1"
+}
+
+// browserConnect contains no environment or password; it is an internal argv
+// payload to a child of the same WebMux binary, never an HTTP request.
+type browserConnect struct {
+	Request       LaunchRequest
+	KeyPath, Path string
+	Args          []string
+}
+
+func ConnectBrowser(payload string) error {
+	var value browserConnect
+	if err := json.Unmarshal([]byte(payload), &value); err != nil {
+		return err
+	}
+	if remoteBrowserAvailable(value.Request, value.KeyPath) {
+		if value.Request.Transport == "mosh" {
+			value.Args = append(value.Args, "webmux", "--browser-shell")
+		} else {
+			value.Args = append(value.Args, "webmux --browser-shell")
+		}
+	} else {
+		fmt.Fprintln(os.Stderr, "[WebMux: automatic browser launch needs matching webmux on the remote PATH and verified key/agent SSH access. Terminal links still open the companion.]")
+	}
+	return browseropen.Execute(value.Path, append([]string{value.Path}, value.Args...), os.Environ())
+}

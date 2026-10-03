@@ -42,14 +42,15 @@ type nativeProcess interface {
 // emits a final display frame during shutdown. Close cancels blocked I/O and
 // discards remaining output; Wait alone preserves output for the reader.
 type Process struct {
-	native    nativeProcess
-	done      chan struct{}
-	exit      Exit
-	writeMu   sync.Mutex
-	controlMu sync.Mutex
-	closed    bool
-	closeOnce sync.Once
-	closeErr  error
+	browserLocal bool
+	native       nativeProcess
+	done         chan struct{}
+	exit         Exit
+	writeMu      sync.Mutex
+	controlMu    sync.Mutex
+	closed       bool
+	closeOnce    sync.Once
+	closeErr     error
 }
 
 func dimensions(cols, rows int) error {
@@ -129,3 +130,5 @@ func traceSlowOperation(operation string) func() {
 	})
 	return func() { timer.Stop() }
 }
+
+func (p *Process) BrowserOnServer() bool { return p.browserLocal }

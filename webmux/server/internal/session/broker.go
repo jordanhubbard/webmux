@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jordanhubbard/webmux/server/internal/agent"
+	"github.com/jordanhubbard/webmux/server/internal/browseropen"
 	"github.com/jordanhubbard/webmux/server/internal/config"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 	"github.com/jordanhubbard/webmux/server/internal/templates"
@@ -29,17 +30,18 @@ type process interface {
 }
 type launchFunc func(terminal.LaunchRequest, string) (process, error)
 type run struct {
-	process     process
-	initial     string
-	timer       *time.Timer
-	first       bool
-	input       chan string
-	stopped     chan struct{}
-	stopOnce    sync.Once
-	inputBytes  atomic.Int64
-	generation  uint64
-	log         *transcriptLog
-	replayUntil time.Time
+	browserDecoder browseropen.Decoder
+	process        process
+	initial        string
+	timer          *time.Timer
+	first          bool
+	input          chan string
+	stopped        chan struct{}
+	stopOnce       sync.Once
+	inputBytes     atomic.Int64
+	generation     uint64
+	log            *transcriptLog
+	replayUntil    time.Time
 }
 
 func (r *run) stop() {
@@ -50,6 +52,8 @@ func (r *run) stop() {
 }
 
 type entry struct {
+	browserRequest  Event
+	browserExpires  time.Time
 	value           Session
 	run             *run
 	scrollback      string
@@ -288,6 +292,7 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 }
 
 func (b *Broker) startLocked(e *entry, password, initial string) error {
+	e.browserRequest = nil
 	e.generation++
 	e.value.State = "connecting"
 	e.value.UpdatedAt = now()
@@ -299,6 +304,9 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 		e.value.UpdatedAt = now()
 		b.logger.Warn("terminal launch failed", "session_id", e.value.ID, "error", err)
 		return err
+	}
+	if source, ok := p.(interface{ BrowserOnServer() bool }); ok {
+		e.value.BrowserLocal = source.BrowserOnServer()
 	}
 	r := &run{process: p, initial: initial, first: true, input: make(chan string, 256), stopped: make(chan struct{}), generation: e.generation, replayUntil: time.Now().Add(1500 * time.Millisecond)}
 	e.run = r
@@ -621,6 +629,24 @@ func (b *Broker) output(id string, r *run, data string) {
 	e := b.entries[id]
 	if b.closed || e == nil || e.run != r {
 		return
+	}
+	var urls []string
+	data, urls = r.browserDecoder.Feed(data)
+	for _, url := range urls {
+		requestID, err := uuid()
+		if err != nil {
+			continue
+		}
+		e.browserRequest = Event{"type": "browser_open", "session_id": id, "url": url, "request_id": requestID}
+		e.browserExpires = time.Now().Add(5 * time.Minute)
+		if viewer := e.viewers[e.focus]; viewer != nil {
+			viewer.send(e.browserRequest)
+		} else {
+			for _, viewer := range e.viewers {
+				viewer.send(e.browserRequest)
+				break
+			}
+		}
 	}
 	if r.log != nil {
 		if err := r.log.append(data); err != nil {

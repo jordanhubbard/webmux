@@ -204,6 +204,8 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		switch message.Type {
+		case "browser_ack":
+			s.sessions.AcknowledgeBrowser(owner, id, message.Data)
 		case "input":
 			if message.Data != "" {
 				if err := s.sessions.Input(owner, id, message.Data); errors.Is(err, session.ErrInputBusy) {

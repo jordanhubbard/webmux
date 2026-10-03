@@ -141,6 +141,12 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
 
   const handleMessage = useCallback((msg: WebSocketMessage) => {
     switch (msg.type) {
+      case 'browser_open':
+        if (msg.url && onOpenLinkRef.current) {
+          onOpenLinkRef.current(msg.url);
+          wsHandleRef.current?.send({ type: 'browser_ack', data: msg.request_id });
+        }
+        break;
       case 'output':
         if (msg.data && termRef.current) {
           const shouldScroll = autoScrollRef.current && !userScrolledRef.current;

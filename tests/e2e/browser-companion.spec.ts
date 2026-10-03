@@ -1,10 +1,14 @@
 import { test, expect } from '@playwright/test';
 import http from 'node:http';
+import { writeFileSync, rmSync } from 'node:fs';
+import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-for (const linkKind of ['plain', 'osc8'] as const) {
-test(`browser companion follows ${linkKind} terminal links and completes a loopback callback`, async ({ page, request }) => {
+for (const linkKind of ['plain', 'osc8', 'gh-browser', 'browser', 'open', 'xdg-open'] as const) {
+test(`browser companion routes ${linkKind} authentication and completes a loopback callback`, async ({ page, request }) => {
   test.setTimeout(90_000);
+  const shellLaunch = linkKind !== 'plain' && linkKind !== 'osc8';
+  test.skip(shellLaunch && process.platform === 'win32', 'Local tmux shell handoff requires Unix');
   // This is a real browser acceptance test, not a mocked frame or protocol.
   let received = '';
   const callback = http.createServer((req, res) => {
@@ -26,6 +30,7 @@ test(`browser companion follows ${linkKind} terminal links and completes a loopb
   const created = await request.post('/api/sessions', { data: { transport: 'local', cols: 80, rows: 24 } });
   expect(created.ok()).toBe(true);
   const session = await created.json();
+  const launchConfig = path.resolve(__dirname, '.test-home', `browser-launch-${session.id}.json`);
   try {
     if (linkKind === 'osc8') {
       // Some tmux/terminfo combinations strip OSC 8. Inject that exact PTY
@@ -43,7 +48,16 @@ test(`browser companion follows ${linkKind} terminal links and completes a loopb
     await page.goto('/');
     let popups = 0;
     page.on('popup', () => { popups++; });
-    if (process.platform !== 'win32') {
+    if (shellLaunch) {
+      writeFileSync(launchConfig, JSON.stringify({ url: identityURL, mode: linkKind }), { mode: 0o600 });
+      const quote = (value: string) => "'" + value.replaceAll("'", "'\\''") + "'";
+      await page.getByTestId(`tile-cell-${session.id}`).locator('.xterm-helper-textarea').focus();
+      await page.keyboard.type([process.execPath, path.resolve(__dirname, 'browser-launch-fixture.mts'), launchConfig].map(quote).join(' '));
+      await page.keyboard.press('Enter');
+      await expect(page.locator('.xterm-rows')).toContainText('Press Enter to launch the authentication browser.');
+      // This is the user's exact action: Enter inside the CLI, no link click or URL paste.
+      await page.keyboard.press('Enter');
+    } else if (process.platform !== 'win32') {
       // Drive an actual CLI-produced terminal link, not the companion URL field.
       const input = page.getByTestId(`tile-cell-${session.id}`).locator('.xterm-helper-textarea');
       await input.focus();
@@ -95,6 +109,7 @@ test(`browser companion follows ${linkKind} terminal links and completes a loopb
     const ended = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
     expect(ended.status()).toBe(503);
   } finally {
+    rmSync(launchConfig, { force: true });
     await request.delete(`/api/sessions/${session.id}`);
     // Local terminals intentionally persist in tmux after disconnection.
     try { execFileSync('tmux', ['kill-session', '-t', `webmux-${session.id}`]); } catch { /* already exited */ }

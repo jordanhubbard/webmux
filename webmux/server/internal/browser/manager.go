@@ -34,7 +34,7 @@ type Manager struct {
 }
 
 func command(s session.Session, store *storage.Store) (*exec.Cmd, error) {
-	if s.Transport == "local" {
+	if s.Transport == "local" || s.BrowserLocal {
 		binary, err := os.Executable()
 		if err != nil {
 			return nil, err

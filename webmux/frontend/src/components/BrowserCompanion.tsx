@@ -80,7 +80,7 @@ export function BrowserCompanion({ session, navigation, onHide }: { session: Ses
   return createPortal(
     <aside className="browser-companion" aria-label={`Browser for ${session.title}`} onKeyDown={e => e.stopPropagation()}>
       <header>
-        <div><strong>Browser · {session.title}</strong><small>Runs on {session.transport === 'local' ? 'the WebMux server' : `${session.username ? `${session.username}@` : ''}${session.hostname}`} · private temporary profile</small></div>
+        <div><strong>Browser · {session.title}</strong><small>Runs on {session.transport === 'local' || session.browser_local ? 'the WebMux server' : `${session.username ? `${session.username}@` : ''}${session.hostname}`} · private temporary profile</small></div>
         <button onClick={onHide}>Return to terminal</button>
         <button onClick={() => void end()} disabled={busy}>End browser</button>
       </header>

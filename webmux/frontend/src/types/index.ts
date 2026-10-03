@@ -15,6 +15,7 @@ export interface Session {
   hostname: string;
   username: string;
   key_id: string;
+  browser_local?: boolean;
   exec_command?: string;
   exec_argv?: string[];
   exec_cwd?: string;
@@ -94,7 +95,7 @@ export interface AuthUserInfo {
 }
 
 export interface WebSocketMessage {
-  type: 'input' | 'resize' | 'output' | 'status' | 'focus' | 'viewer_join' | 'viewer_leave' | 'error' | 'transcript_toggle' | 'transcript_status';
+  type: 'input' | 'resize' | 'output' | 'status' | 'focus' | 'viewer_join' | 'viewer_leave' | 'error' | 'transcript_toggle' | 'transcript_status' | 'browser_open' | 'browser_ack';
   session_id?: string;
   data?: string;
   cols?: number;
@@ -106,6 +107,8 @@ export interface WebSocketMessage {
   message?: string;
   transcript_enabled?: boolean;
   transcript_file?: string;
+  url?: string;
+  request_id?: string;
 }
 
 export interface CreateSessionRequest {
