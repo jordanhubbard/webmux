@@ -95,6 +95,12 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     }).toBe(identityURL);
     const bounds = (await viewport.boundingBox())!;
     await viewport.click({ position: { x: 100 * bounds.width / 1100, y: 60 * bounds.height / 760 } });
+    if (linkKind === 'gh-browser') {
+      // Real combined modifiers previously failed JSON decoding at both hops.
+      await page.keyboard.press('Control+Shift+ArrowRight');
+      await page.keyboard.press('Meta+Shift+ArrowRight');
+      await expect(page.getByRole('alert')).toHaveCount(0);
+    }
     await page.keyboard.type('callback-proof');
     await page.keyboard.press('Tab');
     await page.keyboard.press('Enter');

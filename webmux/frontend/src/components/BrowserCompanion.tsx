@@ -90,6 +90,9 @@ export function BrowserCompanion({ session, navigation, onHide }: { session: Ses
         <input aria-label="Remote browser URL" placeholder="Paste the authentication URL from this terminal" value={address} onFocus={() => { addressEditing.current = true; }} onBlur={() => { addressEditing.current = false; }} onChange={e => setAddress(e.target.value)} />
         <button type="submit" disabled={busy}>Go</button>
       </form>
+      {frame?.url.includes('/sessions/two-factor/webauthn') && <div role="note" className="browser-message">
+        Passkey and security-key prompts are not forwarded to your device. Choose “More options” on GitHub and use another sign-in method you have configured.
+      </div>}
       {frame && frame.tabs.length > 1 && <label className="browser-tabs">Page <select aria-label="Remote browser page" value={frame.target} onChange={e => void act({ action: 'tab', target: e.target.value })}>
         {frame.tabs.map(tab => <option key={tab.id} value={tab.id}>{tab.title || 'Untitled page'}</option>)}
       </select></label>}

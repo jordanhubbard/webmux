@@ -21,17 +21,17 @@ import (
 const Width, Height = 1100, 760
 
 type Request struct {
-	Action    string         `json:"action"`
-	URL       string         `json:"url,omitempty"`
-	Text      string         `json:"text,omitempty"`
-	Key       string         `json:"key,omitempty"`
-	Code      string         `json:"code,omitempty"`
-	KeyCode   int64          `json:"keyCode,omitempty"`
-	Modifiers input.Modifier `json:"modifiers,omitempty"`
-	X         float64        `json:"x,omitempty"`
-	Y         float64        `json:"y,omitempty"`
-	DeltaY    float64        `json:"deltaY,omitempty"`
-	Target    string         `json:"target,omitempty"`
+	Action    string  `json:"action"`
+	URL       string  `json:"url,omitempty"`
+	Text      string  `json:"text,omitempty"`
+	Key       string  `json:"key,omitempty"`
+	Code      string  `json:"code,omitempty"`
+	KeyCode   int64   `json:"keyCode,omitempty"`
+	Modifiers int64   `json:"modifiers,omitempty"`
+	X         float64 `json:"x,omitempty"`
+	Y         float64 `json:"y,omitempty"`
+	DeltaY    float64 `json:"deltaY,omitempty"`
+	Target    string  `json:"target,omitempty"`
 }
 
 type Tab struct {
@@ -206,8 +206,8 @@ func perform(ctx context.Context, req Request) error {
 			req.Modifiers = req.Modifiers&^4 | 2
 		}
 		actions = append(actions,
-			input.DispatchKeyEvent(input.KeyDown).WithText(req.Text).WithKey(req.Key).WithCode(req.Code).WithWindowsVirtualKeyCode(req.KeyCode).WithModifiers(req.Modifiers),
-			input.DispatchKeyEvent(input.KeyUp).WithKey(req.Key).WithCode(req.Code).WithWindowsVirtualKeyCode(req.KeyCode).WithModifiers(req.Modifiers))
+			input.DispatchKeyEvent(input.KeyDown).WithText(req.Text).WithKey(req.Key).WithCode(req.Code).WithWindowsVirtualKeyCode(req.KeyCode).WithModifiers(input.Modifier(req.Modifiers)),
+			input.DispatchKeyEvent(input.KeyUp).WithKey(req.Key).WithCode(req.Code).WithWindowsVirtualKeyCode(req.KeyCode).WithModifiers(input.Modifier(req.Modifiers)))
 	case "click", "scroll":
 		if req.X < 0 || req.X > Width || req.Y < 0 || req.Y > Height || req.DeltaY < -3000 || req.DeltaY > 3000 {
 			return errors.New("invalid pointer")

@@ -47,3 +47,19 @@ func TestWorkerProfileCleanup(t *testing.T) {
 		t.Fatalf("credential profile leaked: %v", profiles)
 	}
 }
+
+func TestModifierCombinationsSurviveWorkerProtocol(t *testing.T) {
+	for modifiers := int64(0); modifiers < 16; modifiers++ {
+		encoded, err := json.Marshal(Request{Action: "key", Modifiers: modifiers})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var decoded Request
+		if err := json.Unmarshal(encoded, &decoded); err != nil {
+			t.Fatal(err)
+		}
+		if decoded.Modifiers != modifiers {
+			t.Fatalf("modifiers changed: %d -> %d", modifiers, decoded.Modifiers)
+		}
+	}
+}

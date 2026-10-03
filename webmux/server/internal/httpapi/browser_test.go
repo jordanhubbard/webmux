@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/jordanhubbard/webmux/server/internal/session"
@@ -26,6 +27,11 @@ func TestBrowserOwnershipAndValidation(t *testing.T) {
 	}
 	requireStatus(t, request(handler, "POST", path, `{"action":"start"}`, owner), 409)
 	requireStatus(t, request(handler, "POST", path, `{"action":"navigate","url":"file:///etc/passwd"}`, owner), 400)
+	// Modifier flags are a bitmask, including combinations. They must survive
+	// HTTP decoding before reaching the worker (which is intentionally absent).
+	for modifiers := 0; modifiers < 16; modifiers++ {
+		requireStatus(t, request(handler, "POST", path, fmt.Sprintf(`{"action":"key","key":"Shift","modifiers":%d}`, modifiers), owner), 503)
+	}
 	requireStatus(t, request(handler, "DELETE", path, "", owner), 204)
 	response := request(handler, "POST", path, `{"action":"frame"}`, owner)
 	requireStatus(t, response, 503)

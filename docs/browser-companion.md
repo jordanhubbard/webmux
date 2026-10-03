@@ -96,6 +96,11 @@ Chrome/Chromium; confirm `ssh HOST webmux --help` works non-interactively first.
 `WEBMUX_BROWSER_EXECUTABLE` can select a Chromium executable on the worker host.
 The browser uses Chromium's normal sandbox; running it as root is not supported.
 
+Passkey and security-key prompts are not forwarded to the viewer's device. On
+GitHub's passkey two-factor page, choose **More options** and another method you
+already configured, such as an authenticator app. If no supported alternative
+exists, this companion cannot complete that sign-in. Do not disable account 2FA.
+
 The first version transmits compressed snapshots, aimed at forms and navigation,
 not video. Clipboard paste is explicit; clipboard contents are never fetched
 automatically. All viewers authenticated as the terminal owner share its browser;
