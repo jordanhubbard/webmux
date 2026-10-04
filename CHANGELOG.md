@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.16] - 2026-10-03
+
+### Other
+- Separate browser input rate budget from workspace APIs (#110)
+- Accept combined browser keyboard modifiers and explain passkey limits (#110)
+- Send companion launches to the active terminal viewer (#110)
+- Route CLI browser launches through linked terminal companions (#110)
+- Route terminal link clicks into the companion browser (#109)
+- Make the terminal browser launcher visible and explicit (#109)
+- Add terminal browser companion for remote authentication (#109)
+
 ## [1.3.15] - 2026-09-29
 
 ### Added
