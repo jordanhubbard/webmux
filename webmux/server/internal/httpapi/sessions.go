@@ -88,5 +88,6 @@ func (s *Server) deleteSession(w http.ResponseWriter, r *http.Request, owner str
 		s.sessionError(w, err, "Failed to delete session")
 		return
 	}
+	s.browsers.End(r.PathValue("id"))
 	w.WriteHeader(204)
 }

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Terminal, type TerminalHandle } from './Terminal';
+import { BrowserCompanion } from './BrowserCompanion';
 import { TerminalActions } from './TerminalActions';
 import { ReconnectOverlay } from './ReconnectOverlay';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
@@ -56,6 +57,8 @@ export function Tile({
   onThemeChange,
 }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
+  const [browserNavigation, setBrowserNavigation] = useState<{ url: string } | null>(null);
+  const [showBrowser, setShowBrowser] = useState(false);
   const [viewerCount, setViewerCount] = useState(1);
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -197,6 +200,7 @@ export function Tile({
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
         </div>
         <div style={styles.chromeRight}>
+          <button style={styles.browserBtn} title="Open an interactive browser on this terminal’s host" aria-expanded={showBrowser} onClick={() => setShowBrowser(true)}>Open browser</button>
           <TerminalActions terminalRef={termHandleRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
           {broadcastMode && (
             <button
@@ -254,12 +258,14 @@ export function Tile({
         </div>
       </div>
 
+      {showBrowser && <BrowserCompanion session={session} navigation={browserNavigation} onHide={() => { setBrowserNavigation(null); setShowBrowser(false); termHandleRef.current?.focus(); }} />}
       <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
         {(state === 'disconnected' || state === 'error') && (
           <ReconnectOverlay onReconnect={() => onReconnect(session.id)} />
         )}
         <Terminal
           ref={termHandleRef}
+          onOpenLink={url => { setBrowserNavigation({ url }); setShowBrowser(true); }}
           sessionId={session.id}
           fontSize={fontSize}
           fontFamily={fontFamily}
@@ -349,6 +355,16 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 10,
     color: '#888',
     marginRight: 4,
+  },
+  browserBtn: {
+    background: '#39306b',
+    border: '1px solid #9b8cff',
+    color: '#fff',
+    fontSize: 12,
+    cursor: 'pointer',
+    padding: '3px 7px',
+    borderRadius: 4,
+    lineHeight: 1,
   },
   chromeBtn: {
     background: 'none',

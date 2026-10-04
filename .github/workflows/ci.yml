@@ -58,7 +58,9 @@ jobs:
       - name: Install browser for Go tests
         if: runner.os == 'Linux'
         working-directory: webmux
-        run: npx playwright install --with-deps chromium
+        run: |
+          npx playwright install --with-deps chromium
+          sudo -n apt-get install -y tmux
       - name: Verify browser workflows against Go
         if: runner.os == 'Linux'
         working-directory: webmux

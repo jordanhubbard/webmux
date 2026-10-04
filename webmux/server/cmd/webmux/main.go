@@ -20,9 +20,12 @@ import (
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/assets"
+	"github.com/jordanhubbard/webmux/server/internal/browser"
+	"github.com/jordanhubbard/webmux/server/internal/browseropen"
 	appconfig "github.com/jordanhubbard/webmux/server/internal/config"
 	"github.com/jordanhubbard/webmux/server/internal/httpapi"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
+	"github.com/jordanhubbard/webmux/server/internal/terminal"
 )
 
 func main() {
@@ -33,6 +36,31 @@ func main() {
 }
 
 func run() (resultErr error) {
+	if len(os.Args) == 3 && os.Args[1] == "--browser-connect" {
+		return terminal.ConnectBrowser(os.Args[2])
+	}
+	name := filepath.Base(os.Args[0])
+	switch name {
+	case "webmux-open", "webmux-open.exe", "open", "xdg-open", "sensible-browser":
+		if name == "webmux-open.exe" {
+			name = "webmux-open"
+		}
+		return browseropen.Handle(name, os.Args[1:])
+	}
+	if len(os.Args) >= 2 && os.Args[1] == "--browser-open" {
+		return browseropen.Open(os.Args[2:])
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--browser-shell" {
+		return browseropen.Shell()
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--browser-capabilities" {
+		fmt.Println("1")
+		return nil
+	}
+
+	if len(os.Args) == 2 && os.Args[1] == "--browser-worker" {
+		return browser.Worker(os.Stdin, os.Stdout)
+	}
 	root := flag.String("root", os.Getenv("WEBMUX_ROOT"), "optional directory overriding embedded web/ and config.defaults/")
 	home := flag.String("home", os.Getenv("WEBMUX_HOME"), "writable configuration/data directory")
 	listen := flag.String("listen", "", "override HTTP listen address (e.g. 127.0.0.1:18080)")

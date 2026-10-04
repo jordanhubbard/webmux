@@ -16,6 +16,7 @@ import (
 
 	"github.com/jordanhubbard/webmux/server/internal/ai"
 	"github.com/jordanhubbard/webmux/server/internal/auth"
+	"github.com/jordanhubbard/webmux/server/internal/browser"
 	"github.com/jordanhubbard/webmux/server/internal/desktop"
 	"github.com/jordanhubbard/webmux/server/internal/netguard"
 	"github.com/jordanhubbard/webmux/server/internal/session"
@@ -24,6 +25,7 @@ import (
 )
 
 type Server struct {
+	browsers      browser.Manager
 	store         *storage.Store
 	auth          *auth.Service
 	name          string
@@ -132,13 +134,26 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/agents/{agentId}/sessions", s.protected(false, s.listAgents))
 	mux.Handle("POST /api/agents/{agentId}/attach", s.protected(false, s.attachAgent))
 	mux.Handle("POST /api/agents/{agentId}/scratch", s.protected(false, s.scratchAgent))
+	mux.Handle("POST /api/sessions/{id}/browser", s.protected(false, s.browserAction))
+	mux.Handle("DELETE /api/sessions/{id}/browser", s.protected(false, s.browserAction))
 	s.registerDesktops(mux)
 	mux.HandleFunc("GET /api/vnc/ws/{id}", s.vncSocket)
 	mux.HandleFunc("GET /api/rdp/ws/{id}", s.rdpSocket)
 	if s.webDir != "" || s.webFS != nil {
 		mux.HandleFunc("GET /", s.serveUI)
 	}
-	return s.cors(newLimiter(300, globalWindow).wrap(apiPaths(mux)))
+	// Viewport polling and individual key events must not consume the budget
+	// for login, configuration, or terminal connections. Both paths remain limited.
+	general := newLimiter(300, globalWindow).wrap(mux)
+	interactive := newLimiter(1800, globalWindow).wrap(mux)
+	return s.cors(apiPaths(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, pattern := mux.Handler(r)
+		if pattern == "POST /api/sessions/{id}/browser" || pattern == "DELETE /api/sessions/{id}/browser" {
+			interactive.ServeHTTP(w, r)
+			return
+		}
+		general.ServeHTTP(w, r)
+	})))
 }
 
 // Express accepts trailing slashes on API routes without redirecting. Preserve
