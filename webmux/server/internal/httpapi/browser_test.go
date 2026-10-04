@@ -39,3 +39,13 @@ func TestBrowserOwnershipAndValidation(t *testing.T) {
 		t.Fatal("browser response may be cached")
 	}
 }
+
+func TestBrowserTrafficHasSeparateBoundedBudget(t *testing.T) {
+	_, handler := fixture(t, "none")
+	for i := 0; i < 1800; i++ {
+		requireStatus(t, request(handler, "POST", "/api/sessions/missing/browser", `{"action":"frame"}`, ""), 404)
+	}
+	requireStatus(t, request(handler, "POST", "/api/sessions/missing/browser", `{"action":"frame"}`, ""), 429)
+	requireStatus(t, request(handler, "GET", "/api/auth/status", "", ""), 200)
+	requireStatus(t, request(handler, "GET", "/api/sessions", "", ""), 200)
+}

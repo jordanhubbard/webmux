@@ -142,7 +142,18 @@ func (s *Server) Handler() http.Handler {
 	if s.webDir != "" || s.webFS != nil {
 		mux.HandleFunc("GET /", s.serveUI)
 	}
-	return s.cors(newLimiter(300, globalWindow).wrap(apiPaths(mux)))
+	// Viewport polling and individual key events must not consume the budget
+	// for login, configuration, or terminal connections. Both paths remain limited.
+	general := newLimiter(300, globalWindow).wrap(mux)
+	interactive := newLimiter(1800, globalWindow).wrap(mux)
+	return s.cors(apiPaths(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, pattern := mux.Handler(r)
+		if pattern == "POST /api/sessions/{id}/browser" || pattern == "DELETE /api/sessions/{id}/browser" {
+			interactive.ServeHTTP(w, r)
+			return
+		}
+		general.ServeHTTP(w, r)
+	})))
 }
 
 // Express accepts trailing slashes on API routes without redirecting. Preserve

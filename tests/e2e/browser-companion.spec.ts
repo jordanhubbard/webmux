@@ -133,3 +133,15 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
 });
 
 }
+
+// Each case loads a complete workspace; the full suite shares one client IP.
+// Let the production API budget reset before unrelated workspace tests start.
+// Browser input itself has its own independently tested rate limit.
+test.afterAll(async ({ request }) => {
+  test.setTimeout(75_000);
+  const response = await request.get('/api/auth/status');
+  const seconds = Number(response.headers()['ratelimit-reset']);
+  if (Number.isFinite(seconds) && seconds > 0) {
+    await new Promise(resolve => setTimeout(resolve, Math.min(seconds, 60) * 1000 + 100));
+  }
+});
