@@ -141,6 +141,16 @@ func (m *Manager) End(owner, session string) {
 	delete(m.requests, owner+"\x00"+session)
 }
 
+// Cancel only the caller's ticket. An older viewer must not cancel a newer login.
+func (m *Manager) Cancel(owner, session, id string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	key := owner + "\x00" + session
+	if p, ok := m.requests[key]; ok && p.id == id {
+		delete(m.requests, key)
+	}
+}
+
 func Deliver(ctx context.Context, p Payload) error {
 	u, err := Validate(p)
 	if err != nil {

@@ -72,5 +72,5 @@ func TestAuthHandoffOwnershipAndInvalidTargets(t *testing.T) {
 	if response.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal("cacheable callback")
 	}
-	requireStatus(t, request(handler, "DELETE", path, "", owner), 204)
+	requireStatus(t, request(handler, "DELETE", path, `{}`, owner), 204)
 }

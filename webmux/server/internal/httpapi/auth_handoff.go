@@ -19,17 +19,17 @@ func (s *Server) authHandoff(w http.ResponseWriter, r *http.Request, owner strin
 		s.sessionError(w, err, "Failed to get terminal")
 		return
 	}
-	if r.Method == http.MethodDelete {
-		s.handoffs.End(owner, id)
-		w.WriteHeader(204)
-		return
-	}
 	var req struct {
 		Authorization string `json:"authorization"`
 		ID            string `json:"id"`
 		Callback      string `json:"callback"`
 	}
 	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if r.Method == http.MethodDelete {
+		s.handoffs.Cancel(owner, id, req.ID)
+		w.WriteHeader(204)
 		return
 	}
 	if terminal.State != "connected" {

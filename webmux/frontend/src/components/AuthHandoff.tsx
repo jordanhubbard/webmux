@@ -36,7 +36,7 @@ export function AuthHandoff({ session, url, onDismiss, onCompanion }: {
     finally { setBusy(false); }
   };
   const dismiss = () => {
-    if (ticket) void api.endAuthHandoff(session.id).catch(() => { /* Server expiry remains authoritative. */ });
+    if (ticket) void api.endAuthHandoff(session.id, ticket).catch(() => { /* Server expiry remains authoritative. */ });
     onDismiss();
   };
 

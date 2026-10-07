@@ -81,6 +81,10 @@ func TestOwnershipReplayReplacementExpiryAndCancellation(t *testing.T) {
 		t.Fatal("superseded")
 	}
 	m.End("other", "session")
+	m.Cancel("owner", "session", old)
+	if m.requests["owner\x00session"].id != id {
+		t.Fatal("old viewer cancelled new ticket")
+	}
 	p := m.requests["owner\x00session"]
 	p.expires = time.Now().Add(-time.Second)
 	m.requests["owner\x00session"] = p
