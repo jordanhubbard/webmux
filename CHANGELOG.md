@@ -5,6 +5,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Session-linked CLI sign-in panels use the viewing browser for device codes and passkeys, with a one-shot, state-bound localhost callback relay and explicit terminal-host browser fallback (#114).
+
 ## [1.3.16] - 2026-10-03
 
 ### Other

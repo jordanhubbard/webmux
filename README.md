@@ -34,14 +34,13 @@ Local terminals use the same terminal emulator and workspace as remote SSH sessi
 
 Closing a tile removes its WebMux record and detaches its tmux client; the shell remains available through `tmux attach -t webmux-<session-id>`. Use `exit` inside the shell, or `tmux kill-session -t webmux-<session-id>`, to terminate it permanently.
 
-## Browser companion (preview)
+## CLI authentication and browser companion
 
-In a new Local terminal, run `gh auth login` and press Enter at its browser prompt: the companion opens automatically on the same host. You can also click **Open browser** on a terminal. Click a link printed in the terminal to open it directly in the companion, or paste the CLI authentication URL. Finish signing in and return to the terminal. The companion shares only the browser viewport and preserves remote localhost callbacks. **Return to terminal** keeps the browser alive; **End browser** clears its temporary profile.
+In a new Local or qualified SSH terminal, CLI browser requests and clicked links open a **session-linked sign-in panel**. Choose **Continue in this browser** for device codes and manual-code flows, keeping your existing browser login and passkeys. The provider returns device approval to the waiting CLI. For state-bound localhost OAuth, choose **Prepare callback relay**, sign in, then paste the final localhost URL back into the panel. WebMux delivers it once to the originating terminal host. Check the CLI for success.
 
-Local terminals need Chrome/Chromium on the WebMux server. SSH/Mosh terminals additionally need the matching native `webmux` binary on the target PATH and verified non-interactive SSH key/agent access. Matching SSH hosts support automatic launch; Mosh uses terminal link clicks. Existing tmux shells need a new terminal to pick up the helper environment. See the [UX plan, prerequisites, and limitations](docs/browser-companion.md).
+Each tile's **Sign in** action also accepts a pasted link. See [CLI authentication from any browser](docs/authentication-handoff.md) for return paths, sandbox boundaries, SSH prerequisites and security details. Device-code handoffs need no Chromium; SSH callback relay needs a matching native `webmux` binary and verified non-interactive SSH key/agent access.
 
-For CLI sign-in from any viewing device, see [session-linked authentication](docs/authentication-handoff.md): use your browser for device codes and passkeys, with an explicit callback relay for localhost OAuth.
-
+**Open browser** and **Use browser on terminal host** retain the companion as an explicit fallback. It needs Chrome/Chromium on the terminal host and shares only the browser viewport. **Return to terminal** keeps it alive; **End browser** clears its temporary profile. See [companion prerequisites and limitations](docs/browser-companion.md).
 
 ## Quick Start
 

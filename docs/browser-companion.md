@@ -49,7 +49,7 @@ credential storage.
 - New Local shells set shell-scoped `BROWSER` and `GH_BROWSER` helpers. Bash/Zsh
   startup hooks preserve user profiles, then restore the helper environment.
   PATH-based `open`, `xdg-open`, and `sensible-browser` calls with one HTTP(S) URL
-  also route into the companion. No user startup files or OS associations change.
+  also route into the sign-in panel. No user startup files or OS associations change.
 - SSH probes for the matching helper with verified host keys and key/agent access
   before starting a browser-linked shell. Missing support leaves a normal shell
   and prints a setup hint. Mosh uses manual link clicks because its terminal
