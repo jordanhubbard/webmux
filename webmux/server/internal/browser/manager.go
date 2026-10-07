@@ -34,12 +34,20 @@ type Manager struct {
 }
 
 func command(s session.Session, store *storage.Store) (*exec.Cmd, error) {
+	return WorkerCommand(context.Background(), s, store, "--browser-worker")
+}
+
+// WorkerCommand uses only fixed worker modes, never user URLs or shell text.
+func WorkerCommand(ctx context.Context, s session.Session, store *storage.Store, mode string) (*exec.Cmd, error) {
+	if mode != "--browser-worker" && mode != "--auth-callback" {
+		return nil, errors.New("Unsupported worker mode")
+	}
 	if s.Transport == "local" || s.BrowserLocal {
 		binary, err := os.Executable()
 		if err != nil {
 			return nil, err
 		}
-		return exec.Command(binary, "--browser-worker"), nil
+		return exec.CommandContext(ctx, binary, mode), nil
 	}
 	if s.Transport != "ssh" && s.Transport != "mosh" && s.Transport != "" {
 		return nil, errors.New("Browser companion requires a Local, SSH, or Mosh terminal; exec commands do not identify the shell host")
@@ -75,8 +83,8 @@ func command(s session.Session, store *storage.Store) (*exec.Cmd, error) {
 		args = append(args, "-l", s.Username)
 	}
 	// Session hostnames and usernames have already passed terminal validation.
-	args = append(args, "--", s.Hostname, "webmux --browser-worker")
-	return exec.Command("ssh", args...), nil
+	args = append(args, "--", s.Hostname, "webmux "+mode)
+	return exec.CommandContext(ctx, "ssh", args...), nil
 }
 
 func (m *Manager) Start(s session.Session, store *storage.Store) error {

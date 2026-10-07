@@ -2,13 +2,16 @@
 
 ## Experience
 
-Each terminal has an **Open browser** action. It opens a resizable companion drawer,
-leaving the terminal running and available beside it. The drawer identifies the
-terminal and the host where the browser actually runs. In a newly created Local or
-qualified SSH terminal, pressing Enter at a CLI browser prompt (such as
-`gh auth login`) opens the companion automatically. Clicking a printed link or
-pasting its URL also works. Interact with the remote page and return when the CLI
-reports success. A redirect alone is not evidence that authentication succeeded.
+Terminal links and shell browser requests now open a **session-linked sign-in
+panel**. Prefer your current browser for device codes, SSO, passkeys and manual
+code flows; state-bound localhost OAuth can use the callback relay. See
+[CLI authentication](authentication-handoff.md) for the flow and prerequisites.
+
+Each terminal also retains an **Open browser** action. It opens a resizable
+companion drawer, leaving the terminal running beside it. Choose **Use browser on
+terminal host** in the sign-in panel when you need this fallback. The drawer
+identifies the terminal and host where the browser runs. A redirect alone is not
+evidence that authentication succeeded.
 
 The page executes on the shell host: `localhost` callbacks reach the CLI there.
 Only the browser viewport is transmitted; no desktop, taskbar, or unrelated
@@ -40,8 +43,8 @@ credential storage.
   control packets are removed before terminal logging and scrollback. Browser
   frames and inputs are not logged; URLs printed normally by a CLI remain ordinary
   terminal output and can appear in enabled session logs.
-- Terminal link clicks (plain URLs and OSC 8 hyperlinks) open the linked
-  companion and navigate there, including when its drawer is already open.
+- Terminal link clicks (plain URLs and OSC 8 hyperlinks) open the sign-in
+  panel; choosing its terminal-host fallback navigates the linked companion.
   Manual URL entry is also available.
 - New Local shells set shell-scoped `BROWSER` and `GH_BROWSER` helpers. Bash/Zsh
   startup hooks preserve user profiles, then restore the helper environment.
@@ -82,8 +85,9 @@ Tracked in [#110](https://github.com/jordanhubbard/webmux/issues/110).
 
 Build with `make build`, start an isolated instance, and add a Local terminal.
 Run `gh auth login`, choose browser authentication, and press Enter when prompted.
-The companion should open inside WebMux. Finish signing in and check the CLI for
-success. You can also click any HTTP(S) link printed in the terminal.
+The sign-in panel should open inside WebMux. Choose **Continue in this browser**
+for device login, or explicitly choose the terminal-host browser fallback. Check
+the CLI for success. You can also click any HTTP(S) link printed in the terminal.
 
 Existing tmux shells keep their old environment across server updates. Create a
 **new Local terminal** to enable automatic launch; simply refreshing or reconnecting

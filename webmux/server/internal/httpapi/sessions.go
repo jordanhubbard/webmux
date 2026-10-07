@@ -76,6 +76,7 @@ func (s *Server) reconnectSession(w http.ResponseWriter, r *http.Request, owner 
 	if !decodeJSON(w, r, &input) {
 		return
 	}
+	s.handoffs.End(owner, r.PathValue("id"))
 	value, err := s.sessions.Reconnect(owner, r.PathValue("id"), input.Password)
 	if err != nil {
 		s.sessionError(w, err, "Failed to reconnect session")
@@ -88,6 +89,7 @@ func (s *Server) deleteSession(w http.ResponseWriter, r *http.Request, owner str
 		s.sessionError(w, err, "Failed to delete session")
 		return
 	}
+	s.handoffs.End(owner, r.PathValue("id"))
 	s.browsers.End(r.PathValue("id"))
 	w.WriteHeader(204)
 }

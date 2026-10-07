@@ -1,0 +1,9 @@
+.auth-handoff { flex: 0 1 auto; overflow: auto; max-height: 55%; padding: 12px; color: #ddd; background: #17172b; border-bottom: 1px solid #7770b9; font: 13px system-ui; }
+.auth-handoff header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.auth-handoff p { margin: 8px 0; }
+.auth-handoff .auth-destination { overflow-wrap: anywhere; }
+.auth-handoff button, .auth-handoff a { display: inline-block; padding: 7px 9px; margin: 4px 8px 4px 0; background: #303052; border: 1px solid #777; border-radius: 4px; color: #fff; cursor: pointer; }
+.auth-handoff button:disabled { opacity: .5; cursor: default; }
+.auth-handoff input { display: block; box-sizing: border-box; width: 100%; padding: 8px; background: #080815; color: #fff; border: 1px solid #777; border-radius: 4px; }
+.auth-handoff [role="alert"] { color: #ffbfaa; }
+.auth-handoff :focus-visible { outline: 2px solid #ac9bff; outline-offset: 2px; }

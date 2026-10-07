@@ -40,6 +40,9 @@ In a new Local terminal, run `gh auth login` and press Enter at its browser prom
 
 Local terminals need Chrome/Chromium on the WebMux server. SSH/Mosh terminals additionally need the matching native `webmux` binary on the target PATH and verified non-interactive SSH key/agent access. Matching SSH hosts support automatic launch; Mosh uses terminal link clicks. Existing tmux shells need a new terminal to pick up the helper environment. See the [UX plan, prerequisites, and limitations](docs/browser-companion.md).
 
+For CLI sign-in from any viewing device, see [session-linked authentication](docs/authentication-handoff.md): use your browser for device codes and passkeys, with an explicit callback relay for localhost OAuth.
+
+
 ## Quick Start
 
 ### Homebrew (macOS and Linux)

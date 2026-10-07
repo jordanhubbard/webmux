@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/assets"
+	"github.com/jordanhubbard/webmux/server/internal/authhandoff"
 	"github.com/jordanhubbard/webmux/server/internal/browser"
 	"github.com/jordanhubbard/webmux/server/internal/browseropen"
 	appconfig "github.com/jordanhubbard/webmux/server/internal/config"
@@ -58,6 +59,9 @@ func run() (resultErr error) {
 		return nil
 	}
 
+	if len(os.Args) == 2 && os.Args[1] == "--auth-callback" {
+		return authhandoff.Worker(os.Stdin, os.Stdout)
+	}
 	if len(os.Args) == 2 && os.Args[1] == "--browser-worker" {
 		return browser.Worker(os.Stdin, os.Stdout)
 	}

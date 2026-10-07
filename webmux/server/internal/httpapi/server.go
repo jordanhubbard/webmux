@@ -16,6 +16,7 @@ import (
 
 	"github.com/jordanhubbard/webmux/server/internal/ai"
 	"github.com/jordanhubbard/webmux/server/internal/auth"
+	"github.com/jordanhubbard/webmux/server/internal/authhandoff"
 	"github.com/jordanhubbard/webmux/server/internal/browser"
 	"github.com/jordanhubbard/webmux/server/internal/desktop"
 	"github.com/jordanhubbard/webmux/server/internal/netguard"
@@ -25,6 +26,7 @@ import (
 )
 
 type Server struct {
+	handoffs      authhandoff.Manager
 	browsers      browser.Manager
 	store         *storage.Store
 	auth          *auth.Service
@@ -136,6 +138,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/agents/{agentId}/scratch", s.protected(false, s.scratchAgent))
 	mux.Handle("POST /api/sessions/{id}/browser", s.protected(false, s.browserAction))
 	mux.Handle("DELETE /api/sessions/{id}/browser", s.protected(false, s.browserAction))
+	mux.Handle("POST /api/sessions/{id}/auth-handoff", s.protected(false, s.authHandoff))
+	mux.Handle("DELETE /api/sessions/{id}/auth-handoff", s.protected(false, s.authHandoff))
 	s.registerDesktops(mux)
 	mux.HandleFunc("GET /api/vnc/ws/{id}", s.vncSocket)
 	mux.HandleFunc("GET /api/rdp/ws/{id}", s.rdpSocket)
