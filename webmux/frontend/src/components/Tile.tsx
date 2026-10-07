@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Terminal, type TerminalHandle } from './Terminal';
+import { AuthHandoff } from './AuthHandoff';
 import { BrowserCompanion } from './BrowserCompanion';
 import { TerminalActions } from './TerminalActions';
 import { ReconnectOverlay } from './ReconnectOverlay';
@@ -59,6 +60,7 @@ export function Tile({
   const [state, setState] = useState<ConnectionState>(session.state);
   const [browserNavigation, setBrowserNavigation] = useState<{ url: string } | null>(null);
   const [showBrowser, setShowBrowser] = useState(false);
+  const [handoff, setHandoff] = useState<{ url: string; requestId?: string; key: number } | null>(null);
   const [viewerCount, setViewerCount] = useState(1);
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -201,6 +203,7 @@ export function Tile({
         </div>
         <div style={styles.chromeRight}>
           <button style={styles.browserBtn} title="Open an interactive browser on this terminal’s host" aria-expanded={showBrowser} onClick={() => setShowBrowser(true)}>Open browser</button>
+          <button style={styles.browserBtn} onClick={() => setHandoff({ url: '', key: Date.now() })}>Sign in</button>
           <TerminalActions terminalRef={termHandleRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
           {broadcastMode && (
             <button
@@ -258,6 +261,9 @@ export function Tile({
         </div>
       </div>
 
+      {handoff && <AuthHandoff key={handoff.key} session={session} url={handoff.url}
+        onDismiss={() => { if (handoff.requestId) termHandleRef.current?.acknowledgeBrowser(handoff.requestId); setHandoff(null); termHandleRef.current?.focus(); }}
+        onCompanion={url => { setBrowserNavigation({ url }); setShowBrowser(true); }} />}
       {showBrowser && <BrowserCompanion session={session} navigation={browserNavigation} onHide={() => { setBrowserNavigation(null); setShowBrowser(false); termHandleRef.current?.focus(); }} />}
       <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
         {(state === 'disconnected' || state === 'error') && (
@@ -265,7 +271,7 @@ export function Tile({
         )}
         <Terminal
           ref={termHandleRef}
-          onOpenLink={url => { setBrowserNavigation({ url }); setShowBrowser(true); }}
+          onOpenLink={(url, requestId) => { setHandoff(previous => requestId && previous?.requestId === requestId ? previous : { url, requestId, key: Date.now() }); }}
           sessionId={session.id}
           fontSize={fontSize}
           fontFamily={fontFamily}

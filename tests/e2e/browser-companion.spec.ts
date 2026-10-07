@@ -82,6 +82,9 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     } else {
       await page.getByRole('button', { name: 'Open browser', exact: true }).click();
     }
+    if (process.platform !== 'win32') {
+      await page.getByRole('button', { name: 'Use browser on terminal host' }).click();
+    }
     const viewport = page.getByAltText('Interactive remote browser viewport');
     await expect(viewport).toBeVisible({ timeout: 30_000 });
     if (process.platform === 'win32') {

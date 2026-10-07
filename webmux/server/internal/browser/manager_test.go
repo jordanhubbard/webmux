@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -33,5 +34,23 @@ func TestNavigationSchemes(t *testing.T) {
 		if ValidURL(raw) {
 			t.Errorf("accepted %q", raw)
 		}
+	}
+}
+
+func TestCallbackWorkerUsesTrustedTransportWithoutSecrets(t *testing.T) {
+	for _, transport := range []string{"ssh", "mosh"} {
+		cmd, err := WorkerCommand(context.Background(), session.Session{Transport: transport, Hostname: "target.example", Username: "alice", Port: 2222}, nil, "--auth-callback")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cmd.Args[len(cmd.Args)-1] != "webmux --auth-callback" {
+			t.Fatal("wrong worker")
+		}
+		if cmd.Args[len(cmd.Args)-2] != "target.example" {
+			t.Fatal("wrong host")
+		}
+	}
+	if _, err := WorkerCommand(context.Background(), session.Session{Transport: "local"}, nil, "--auth-callback; evil"); err == nil {
+		t.Fatal("accepted shell text")
 	}
 }

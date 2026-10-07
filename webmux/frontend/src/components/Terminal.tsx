@@ -36,6 +36,7 @@ export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
 const SEARCH_OPTIONS = { caseSensitive: false, decorations: { matchOverviewRuler: '#7c6af7', activeMatchColorOverviewRuler: '#50fa7b', matchBackground: '#7c6af733', activeMatchBackground: '#50fa7b55' } };
 
 export interface TerminalHandle {
+  acknowledgeBrowser: (id: string) => void;
   scrollToBottom: () => void;
   isAtBottom: () => boolean;
   sendInput: (data: string) => void;
@@ -56,7 +57,7 @@ interface TerminalProps {
   theme?: TerminalTheme | null;
   onBell?: () => void;
   onTranscriptChange?: (enabled: boolean) => void;
-  onOpenLink?: (url: string) => void;
+  onOpenLink?: (url: string, requestId?: string) => void;
 }
 
 export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal({
@@ -92,6 +93,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const { registerSend, unregisterSend, routeInput, setFocusedSessionId, broadcastMode, focusedSessionId } = useInputBroadcast();
 
   useImperativeHandle(ref, () => ({
+    acknowledgeBrowser: (id: string) => { wsHandleRef.current?.send({ type: 'browser_ack', data: id }); },
     scrollToBottom: () => {
       userScrolledRef.current = false;
       termRef.current?.scrollToBottom();
@@ -143,8 +145,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     switch (msg.type) {
       case 'browser_open':
         if (msg.url && onOpenLinkRef.current) {
-          onOpenLinkRef.current(msg.url);
-          wsHandleRef.current?.send({ type: 'browser_ack', data: msg.request_id });
+          onOpenLinkRef.current(msg.url, msg.request_id);
         }
         break;
       case 'output':
