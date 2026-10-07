@@ -118,6 +118,13 @@ jobs:
       - name: Set up Homebrew for native installation
         if: runner.os != 'Windows'
         uses: Homebrew/actions/setup-homebrew@3b81d438eda92ee13b5849940d993be027717ecf
+      # Homebrew prepends its bin directory; restore the pinned, self-contained
+      # Node runtime before brew upgrades can break the runner's brewed Node.
+      - name: Restore Node 24 after Homebrew PATH setup
+        if: runner.os != 'Windows'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
       - name: Unlink runner OpenSSL 1.1 before dependency upgrades
         if: runner.os == 'macOS'
         env:
@@ -192,6 +199,13 @@ jobs:
           path: dist/*
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@3b81d438eda92ee13b5849940d993be027717ecf
+      # Homebrew prepends its bin directory; restore the pinned, self-contained
+      # Node runtime before brew upgrades can break the runner's brewed Node.
+      - name: Restore Node 24 after Homebrew PATH setup
+        if: runner.os != 'Windows'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
       - name: Verify documented tap bootstrap
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
