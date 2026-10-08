@@ -5,8 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.17] - 2026-10-07
+
 ### Added
 - Session-linked CLI sign-in panels use the viewing browser for device codes and passkeys, with a one-shot, state-bound localhost callback relay and explicit terminal-host browser fallback (#114).
+
+### Fixed
+- Keep an older viewer from cancelling a newer sign-in attempt for the same terminal.
+- Preserve the pinned Node 24 runtime after Homebrew setup changes the CI PATH, keeping packaging verification reliable (#116).
 
 ## [1.3.16] - 2026-10-03
 
