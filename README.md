@@ -26,6 +26,14 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 - **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
 - **Session expiry handling** — visible JWT countdown and refresh controls prevent expired browser sessions from entering reconnect loops
 
+## Experimental USB transport
+
+`webmux usb-forward --host developer@build-mac` runs beside a physical USB device
+and forwards a separately configured native USB exporter over SSH to a loopback
+listener on the development host. Native exporter/importer software is required;
+iPhone/Xcode hardware compatibility is not yet qualified. See
+[setup, transport limits and acceptance status](docs/usb-forwarding.md).
+
 ## Local terminals
 
 In **Connect to Host**, choose **Localhost · tmux** under **Quick Connect** to open a persistent shell directly on the WebMux server. No SSH server, saved host, username, or key is needed. Install `tmux` on the server and make it available on the WebMux process's `PATH`.
