@@ -48,6 +48,17 @@ describe('TopBar', () => {
     onGlobalLockChange: vi.fn(),
   });
 
+  it('opens USB setup and restores focus when closed', () => {
+    render(<TopBar {...defaultTopBarProps()} />, { wrapper });
+    const button = screen.getByRole('button', { name: 'USB redirection' });
+    button.focus();
+    fireEvent.click(button);
+    expect(screen.getByRole('dialog', { name: 'USB redirection' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Close usb redirection' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(button).toHaveFocus();
+  });
+
   it('renders logo and controls', () => {
     render(<TopBar {...defaultTopBarProps()} />, { wrapper });
     expect(screen.getAllByText(/WebMux/i).length).toBeGreaterThan(0);
