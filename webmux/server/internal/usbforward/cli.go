@@ -70,14 +70,14 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("webmux usb-forward", flag.ContinueOnError)
 	fs.SetOutput(out)
 	var o options
-	fs.StringVar(&o.host, "host", "", "development Mac SSH host or user@host (known host key required)")
+	fs.StringVar(&o.host, "host", "", "receiving computer SSH host or user@host (known host key required)")
 	fs.StringVar(&o.identity, "identity", "", "optional existing SSH private-key path")
 	fs.IntVar(&o.sshPort, "ssh-port", 22, "SSH port")
 	fs.IntVar(&o.exportPort, "export-port", 7575, "local USB exporter TCP port on 127.0.0.1")
 	fs.IntVar(&o.listenPort, "listen-port", 0, "development host loopback port (0 chooses a free port)")
 	fs.DurationVar(&o.duration, "duration", 30*time.Minute, "foreground forwarding lease, maximum 1h")
 	fs.Usage = func() {
-		fmt.Fprintln(out, "Experimental USB transport. Run beside the physical device with a separately configured native USB exporter; matching WebMux and a USB importer are required on the development Mac. This does not establish iPhone/Xcode compatibility.\nUsage: webmux usb-forward --host user@build-mac [options]")
+		fmt.Fprintln(out, "Experimental USB transport. Run beside the physical device with a separately configured native USB exporter; matching WebMux and a USB importer are required on the receiving computer. This does not establish iPhone/Xcode compatibility.\nUsage: webmux usb-forward --host user@build-host [options]")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {

@@ -28,6 +28,10 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 
 ## Experimental USB transport
 
+Use **🔌 USB** in the top bar for setup guidance and a local forwarding command.
+Linux, Windows and macOS peers need compatible native USB exporter/importer
+software; the peers do not need to run the same OS.
+
 `webmux usb-forward --host developer@build-mac` runs beside a physical USB device
 and forwards a separately configured native USB exporter over SSH to a loopback
 listener on the development host. Native exporter/importer software is required;
