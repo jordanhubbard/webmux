@@ -5,6 +5,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.18] - 2026-10-10
+
+### Added
+- Add a USB setup button in every workspace with native software guidance, validated local forwarding commands, and cross-platform peer instructions (#120).
+- Add an experimental, bounded SSH transport for separately configured native USB exporters, with verified host keys, loopback-only receiving listeners and automatic cleanup on expiry or disconnect (#120).
+
+### Documentation
+- Record the frontend clipboard, keyboard lifecycle and dependency audit with tracked follow-ups (#87).
+
+### Limitations
+- USB redirection requires compatible native exporter/importer software and destination device drivers. Physical USB compatibility, iPhone/Xcode discovery/install/debug and live browser device status remain unverified; the USB button currently guides setup.
+
 ## [1.3.17] - 2026-10-07
 
 ### Added
