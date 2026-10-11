@@ -316,7 +316,10 @@ func (r *relay) run(listener net.Listener) error {
 	r.mu.Unlock()
 	r.readers.Wait()
 	close(done)
-	if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) || canceled {
+	// A canceled peer can close the pipe before cancellation reaches this
+	// relay context. Treat that transport closure like EOF, but retain malformed
+	// frame and truncated-payload errors.
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrClosedPipe) || errors.Is(err, net.ErrClosed) || canceled {
 		return nil
 	}
 	return err
