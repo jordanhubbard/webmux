@@ -1,0 +1,13 @@
+.usb-forward { padding: 0 18px 18px; font-size: 13px; line-height: 1.5; }
+.usb-forward-route { color: #c8bfff; font-weight: 600; }
+.usb-forward a { color: #b8aaff; }
+.usb-forward li { margin-bottom: 8px; }
+.usb-forward ol { padding-left: 20px; }
+.usb-forward-fields label { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.usb-forward-fields small, .usb-forward-note { color: #b2b2c8; }
+.usb-forward-ports { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.usb-forward :is(input, select, textarea) { box-sizing: border-box; width: 100%; background: #101022; border: 1px solid #555575; border-radius: 4px; color: #eee; padding: 8px; }
+.usb-forward textarea { resize: vertical; font-family: var(--webmux-mono-font); }
+.usb-forward button { background: #6653cf; border: 1px solid #9785ff; border-radius: 4px; color: white; padding: 8px 12px; cursor: pointer; margin-top: 8px; }
+.usb-forward button:disabled { opacity: 0.5; cursor: default; }
+.usb-forward [aria-invalid=true] { border-color: #ff9393; }

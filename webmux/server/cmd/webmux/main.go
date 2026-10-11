@@ -27,6 +27,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/httpapi"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 	"github.com/jordanhubbard/webmux/server/internal/terminal"
+	"github.com/jordanhubbard/webmux/server/internal/usbforward"
 )
 
 func main() {
@@ -37,6 +38,18 @@ func main() {
 }
 
 func run() (resultErr error) {
+	if len(os.Args) >= 2 && (os.Args[1] == "usb-forward" || os.Args[1] == "--usb-forward-worker") {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		if os.Args[1] == "usb-forward" {
+			return usbforward.Run(ctx, os.Args[2:], os.Stderr)
+		}
+		if len(os.Args) != 2 {
+			return errors.New("USB worker does not accept command-line arguments")
+		}
+		return usbforward.WorkerStdio(ctx)
+	}
+
 	if len(os.Args) == 3 && os.Args[1] == "--browser-connect" {
 		return terminal.ConnectBrowser(os.Args[2])
 	}
