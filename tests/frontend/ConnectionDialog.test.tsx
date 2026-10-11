@@ -301,3 +301,18 @@ describe('ConnectionDialog', () => {
     });
   });
 });
+
+it('quick-connects localhost without credentials or a saved host', async () => {
+  const onConnect = vi.fn().mockResolvedValue(undefined);
+  render(<ConnectionDialog onConnect={onConnect} onClose={vi.fn()} suggestedRow={1} suggestedCol={2} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Localhost · tmux' }));
+  await waitFor(() => expect(onConnect).toHaveBeenCalledWith({ transport: 'local', hostname: 'localhost', username: '', row: 1, col: 2 }));
+});
+
+it('shows local quick-connect failures and allows retry', async () => {
+  const onConnect = vi.fn().mockRejectedValue(new Error('tmux is missing'));
+  render(<ConnectionDialog onConnect={onConnect} onClose={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Localhost · tmux' }));
+  await waitFor(() => expect(screen.getByText('tmux is missing')).toBeDefined());
+  expect(screen.getByRole('button', { name: 'Localhost · tmux' })).not.toBeDisabled();
+});

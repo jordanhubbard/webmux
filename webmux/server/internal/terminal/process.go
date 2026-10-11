@@ -3,10 +3,13 @@ package terminal
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Command contains only launch-time state. Callers must not persist Env: it may
@@ -39,14 +42,15 @@ type nativeProcess interface {
 // emits a final display frame during shutdown. Close cancels blocked I/O and
 // discards remaining output; Wait alone preserves output for the reader.
 type Process struct {
-	native    nativeProcess
-	done      chan struct{}
-	exit      Exit
-	writeMu   sync.Mutex
-	controlMu sync.Mutex
-	closed    bool
-	closeOnce sync.Once
-	closeErr  error
+	browserLocal bool
+	native       nativeProcess
+	done         chan struct{}
+	exit         Exit
+	writeMu      sync.Mutex
+	controlMu    sync.Mutex
+	closed       bool
+	closeOnce    sync.Once
+	closeErr     error
 }
 
 func dimensions(cols, rows int) error {
@@ -57,6 +61,7 @@ func dimensions(cols, rows int) error {
 }
 
 func Start(command Command) (*Process, error) {
+	defer traceSlowOperation("start")()
 	if err := dimensions(command.Cols, command.Rows); err != nil {
 		return nil, err
 	}
@@ -98,6 +103,7 @@ func (p *Process) Resize(cols, rows int) error {
 func (p *Process) Wait() Exit            { <-p.done; return p.exit }
 func (p *Process) Done() <-chan struct{} { return p.done }
 func (p *Process) Close() error {
+	defer traceSlowOperation("close")()
 	p.closeOnce.Do(func() {
 		p.controlMu.Lock()
 		p.closed = true
@@ -110,3 +116,19 @@ func (p *Process) Close() error {
 	})
 	return p.closeErr
 }
+
+// Opt-in diagnostics let browser-test timeouts retain server-side evidence
+// without exposing launch arguments or environment values.
+func traceSlowOperation(operation string) func() {
+	if os.Getenv("WEBMUX_DEBUG_TERMINAL") != "1" {
+		return func() {}
+	}
+	timer := time.AfterFunc(5*time.Second, func() {
+		stacks := make([]byte, 1<<20)
+		n := runtime.Stack(stacks, true)
+		fmt.Fprintf(os.Stderr, "WebMux terminal %s stalled:\n%s\n", operation, stacks[:n])
+	})
+	return func() { timer.Stop() }
+}
+
+func (p *Process) BrowserOnServer() bool { return p.browserLocal }

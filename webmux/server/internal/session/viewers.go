@@ -1,6 +1,9 @@
 package session
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 // Event uses the existing browser WebSocket message field names. Events become
 // immutable before entering a viewer queue.
@@ -117,6 +120,9 @@ func (b *Broker) Join(owner, id string) (*Viewer, error) {
 	if e.scrollback != "" {
 		v.send(Event{"type": "output", "session_id": id, "data": e.scrollback})
 	}
+	if e.browserRequest != nil && time.Now().Before(e.browserExpires) {
+		v.send(e.browserRequest)
+	}
 	return v, nil
 }
 func (b *Broker) Leave(owner, id, viewerID string) {
@@ -180,4 +186,14 @@ func (b *Broker) closeViewersLocked(e *entry, code int, reason string) {
 	}
 	e.viewers = nil
 	e.focus = ""
+}
+
+// Acknowledged launch requests are never replayed from scrollback or snapshots.
+func (b *Broker) AcknowledgeBrowser(owner, id, requestID string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	e, err := b.ownedLocked(owner, id)
+	if err == nil && e.browserRequest != nil && e.browserRequest["request_id"] == requestID {
+		e.browserRequest = nil
+	}
 }

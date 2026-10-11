@@ -7,7 +7,7 @@ import '@xterm/xterm/css/xterm.css';
 import type { WebSocketMessage, ConnectionState, TerminalTheme } from '../types';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
-import { installTerminalQuerySuppressors, shouldSuppressTerminalInput } from '../utils/terminalInput';
+import { installTerminalQuerySuppressors, isTerminalLocalInput, shouldSuppressTerminalInput } from '../utils/terminalInput';
 import { TERMINAL_FONTS_LOADED_EVENT, loadTerminalFontFamily, normalizeTerminalFontFamily } from '../utils/terminalFont';
 
 export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
@@ -36,6 +36,7 @@ export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
 const SEARCH_OPTIONS = { caseSensitive: false, decorations: { matchOverviewRuler: '#7c6af7', activeMatchColorOverviewRuler: '#50fa7b', matchBackground: '#7c6af733', activeMatchBackground: '#50fa7b55' } };
 
 export interface TerminalHandle {
+  acknowledgeBrowser: (id: string) => void;
   scrollToBottom: () => void;
   isAtBottom: () => boolean;
   sendInput: (data: string) => void;
@@ -56,6 +57,7 @@ interface TerminalProps {
   theme?: TerminalTheme | null;
   onBell?: () => void;
   onTranscriptChange?: (enabled: boolean) => void;
+  onOpenLink?: (url: string, requestId?: string) => void;
 }
 
 export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Terminal({
@@ -70,7 +72,10 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   theme,
   onBell,
   onTranscriptChange,
+  onOpenLink,
 }: TerminalProps, ref) {
+  const onOpenLinkRef = useRef(onOpenLink);
+  onOpenLinkRef.current = onOpenLink;
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -88,6 +93,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const { registerSend, unregisterSend, routeInput, setFocusedSessionId, broadcastMode, focusedSessionId } = useInputBroadcast();
 
   useImperativeHandle(ref, () => ({
+    acknowledgeBrowser: (id: string) => { wsHandleRef.current?.send({ type: 'browser_ack', data: id }); },
     scrollToBottom: () => {
       userScrolledRef.current = false;
       termRef.current?.scrollToBottom();
@@ -105,7 +111,10 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       setShowSearch(true);
       searchInputRef.current?.focus();
     },
-    toggleTranscript: () => wsHandleRef.current?.send({ type: 'transcript_toggle' }),
+    toggleTranscript: () => {
+      wsHandleRef.current?.send({ type: 'transcript_toggle' });
+      termRef.current?.focus();
+    },
   }));
 
   useEffect(() => {
@@ -134,6 +143,11 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
 
   const handleMessage = useCallback((msg: WebSocketMessage) => {
     switch (msg.type) {
+      case 'browser_open':
+        if (msg.url && onOpenLinkRef.current) {
+          onOpenLinkRef.current(msg.url, msg.request_id);
+        }
+        break;
       case 'output':
         if (msg.data && termRef.current) {
           const shouldScroll = autoScrollRef.current && !userScrolledRef.current;
@@ -150,6 +164,9 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
         }
         break;
       case 'status':
+        // Queue the reset with output so old asynchronous writes cannot re-enable modes.
+        // viewer_id marks an initial snapshot; connected marks a new PTY run.
+        if (msg.viewer_id || msg.state === 'connected') termRef.current?.write('\x18\x1bc');
         if (msg.state) onStateChangeRef.current(msg.state);
         if (typeof msg.transcript_enabled === 'boolean') setTranscriptEnabled(msg.transcript_enabled);
         break;
@@ -194,25 +211,27 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     if (!containerRef.current) return;
 
     const normalizedFontFamily = normalizeTerminalFontFamily(fontFamily);
+    const openLink = (event: MouseEvent, uri: string) => {
+      event.preventDefault();
+      if (onOpenLinkRef.current) onOpenLinkRef.current(uri);
+      else window.open(uri, '_blank', 'noopener,noreferrer');
+    };
     const term = new XTerm({
       theme: { ...DEFAULT_TERMINAL_THEME, ...(theme || {}) },
       fontFamily: normalizedFontFamily,
       fontSize,
       cursorBlink: true,
+      macOptionClickForcesSelection: true,
       macOptionIsMeta: /Mac|iPhone|iPad/.test(navigator.platform),
       allowTransparency: false,
       // Search highlighting uses xterm's proposed decoration API.
       allowProposedApi: true,
       scrollback: 5000,
-      linkHandler: {
-        activate: (_event: MouseEvent, uri: string) => {
-          window.open(uri, '_blank', 'noopener,noreferrer');
-        },
-      },
+      linkHandler: { activate: openLink },
     });
 
     const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon();
+    const webLinksAddon = new WebLinksAddon(openLink);
     const searchAddon = new SearchAddon();
     const terminalQuerySuppressor = installTerminalQuerySuppressors(term);
     term.loadAddon(fitAddon);
@@ -237,7 +256,8 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     // Route input through the broadcast context instead of sending directly
     const dataListener = term.onData((data: string) => {
       if (shouldSuppressTerminalInput(data)) return;
-      routeInputRef.current(sessionId, data);
+      if (isTerminalLocalInput(data)) wsHandleRef.current?.send({ type: 'input', data });
+      else routeInputRef.current(sessionId, data);
     });
 
     const resizeListener = term.onResize(({ cols, rows }: { cols: number; rows: number }) => {
@@ -265,6 +285,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     const el = containerRef.current;
     // Click to focus this terminal
     const clickHandler = () => {
+      wsHandleRef.current?.send({ type: 'focus' });
       setFocusedSessionId(sessionId);
       onFocusGainedRef.current();
       term.focus();

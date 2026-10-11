@@ -26,6 +26,34 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 - **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
 - **Session expiry handling** — visible JWT countdown and refresh controls prevent expired browser sessions from entering reconnect loops
 
+## Experimental USB transport
+
+Use **🔌 USB** in the top bar for setup guidance and a local forwarding command.
+Linux, Windows and macOS peers need compatible native USB exporter/importer
+software; the peers do not need to run the same OS.
+
+`webmux usb-forward --host developer@build-mac` runs beside a physical USB device
+and forwards a separately configured native USB exporter over SSH to a loopback
+listener on the development host. Native exporter/importer software is required;
+iPhone/Xcode hardware compatibility is not yet qualified. See
+[setup, transport limits and acceptance status](docs/usb-forwarding.md).
+
+## Local terminals
+
+In **Connect to Host**, choose **Localhost · tmux** under **Quick Connect** to open a persistent shell directly on the WebMux server. No SSH server, saved host, username, or key is needed. Install `tmux` on the server and make it available on the WebMux process's `PATH`.
+
+Local terminals use the same terminal emulator and workspace as remote SSH sessions. They run as the OS user running WebMux (not the browser's login name). Each terminal has its own `webmux-<session-id>` tmux session; reconnecting or restarting WebMux reattaches to that shell. A machine reboot ends the running shell, and recovery creates a new one.
+
+Closing a tile removes its WebMux record and detaches its tmux client; the shell remains available through `tmux attach -t webmux-<session-id>`. Use `exit` inside the shell, or `tmux kill-session -t webmux-<session-id>`, to terminate it permanently.
+
+## CLI authentication and browser companion
+
+In a new Local or qualified SSH terminal, CLI browser requests and clicked links open a **session-linked sign-in panel**. Choose **Continue in this browser** for device codes and manual-code flows, keeping your existing browser login and passkeys. The provider returns device approval to the waiting CLI. For state-bound localhost OAuth, choose **Prepare callback relay**, sign in, then paste the final localhost URL back into the panel. WebMux delivers it once to the originating terminal host. Check the CLI for success.
+
+Each tile's **Sign in** action also accepts a pasted link. See [CLI authentication from any browser](docs/authentication-handoff.md) for return paths, sandbox boundaries, SSH prerequisites and security details. Device-code handoffs need no Chromium; SSH callback relay needs a matching native `webmux` binary and verified non-interactive SSH key/agent access.
+
+**Open browser** and **Use browser on terminal host** retain the companion as an explicit fallback. It needs Chrome/Chromium on the terminal host and shares only the browser viewport. **Return to terminal** keeps it alive; **End browser** clears its temporary profile. See [companion prerequisites and limitations](docs/browser-companion.md).
+
 ## Quick Start
 
 ### Homebrew (macOS and Linux)

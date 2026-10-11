@@ -9,6 +9,7 @@ var ErrNotFound = errors.New("Session not found")
 var ErrClosed = errors.New("session broker is shutting down")
 
 type Session struct {
+	BrowserLocal     bool     `json:"browser_local,omitempty" yaml:"browser_local,omitempty"`
 	ID               string   `json:"id" yaml:"id"`
 	Kind             string   `json:"kind" yaml:"kind"`
 	Owner            string   `json:"owner" yaml:"owner"`
@@ -40,7 +41,7 @@ type Session struct {
 func (s Session) Agent() bool    { return s.AgentID != "" && s.AgentRole != "" }
 func (s Session) clone() Session { s.ExecArgv = append([]string(nil), s.ExecArgv...); return s }
 func (s Session) launchRequest() terminal.LaunchRequest {
-	return terminal.LaunchRequest{Hostname: s.Hostname, Username: s.Username, Transport: s.Transport, KeyID: s.KeyID, Port: s.Port, Cols: s.Cols, Rows: s.Rows, ExecCommand: s.ExecCommand, ExecArgv: append([]string(nil), s.ExecArgv...), ExecCwd: s.ExecCwd}
+	return terminal.LaunchRequest{SessionID: s.ID, Hostname: s.Hostname, Username: s.Username, Transport: s.Transport, KeyID: s.KeyID, Port: s.Port, Cols: s.Cols, Rows: s.Rows, ExecCommand: s.ExecCommand, ExecArgv: append([]string(nil), s.ExecArgv...), ExecCwd: s.ExecCwd}
 }
 
 type CreateRequest struct {

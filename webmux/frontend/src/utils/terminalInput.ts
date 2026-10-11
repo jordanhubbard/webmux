@@ -13,6 +13,12 @@ const OSC_RESPONSE_PATTERN = new RegExp(
 /** OSC identifiers used by termenv/gh for color and palette queries. */
 const OSC_COLOR_QUERY_IDS = [4, 10, 11, 12, 104, 110, 111] as const;
 
+/** Mouse/focus reports describe one terminal, never broadcast keyboard input. */
+export function isTerminalLocalInput(data: string): boolean {
+  return (data.startsWith(`${ESC}[<`) && /^\d+;\d+;\d+[Mm]$/.test(data.slice(3)))
+    || data === `${ESC}[I` || data === `${ESC}[O`;
+}
+
 export function isTerminalIdentityResponse(data: string): boolean {
   if (!data.startsWith(`${ESC}[`) || !data.endsWith('c')) return false;
   return TERMINAL_IDENTITY_RESPONSE_BODY_PATTERN.test(data.slice(2, -1));
@@ -25,6 +31,12 @@ export function isTerminalIdentityResponse(data: string): boolean {
  */
 export function shouldSuppressTerminalInput(data: string): boolean {
   if (!data.includes(ESC)) return false;
+  // ANY-motion mode can outlive the application consuming it. Never send
+  // pointer hover to stdin; retain clicks, button-held motion, and wheel input.
+  if (data.startsWith(`${ESC}[<`) && /^\d+;\d+;\d+M$/.test(data.slice(3))) {
+    const button = Number(data.slice(3, data.indexOf(';')));
+    if ((button & ~28) === 35) return true; // Strip Shift/Alt/Ctrl modifiers.
+  }
   if (isTerminalIdentityResponse(data)) return true;
   if (CURSOR_POSITION_REPORT_PATTERN.test(data)) return true;
   if (DEVICE_STATUS_REPORT_PATTERN.test(data)) return true;

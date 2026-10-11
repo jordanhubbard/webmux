@@ -1,0 +1,22 @@
+.browser-companion {
+  position: fixed; z-index: 900; right: 8px; top: 64px; bottom: 8px;
+  width: min(880px, 65vw); min-width: 340px; max-width: calc(100vw - 16px);
+  display: flex; flex-direction: column; overflow: auto; resize: horizontal;
+  color: #ddd; background: #111124; border: 1px solid #7c6af7;
+  border-radius: 8px; box-shadow: 0 8px 32px #0008; font: 13px system-ui;
+}
+.browser-companion header { display: flex; gap: 8px; align-items: center; padding: 12px; flex-wrap: wrap; }
+.browser-companion header div { flex: 1; min-width: 160px; overflow-wrap: anywhere; }
+.browser-companion small { display: block; color: #b4b4ce; margin-top: 4px; }
+.browser-companion button, .browser-companion select { color: #eee; background: #303052; border: 1px solid #666687; padding: 7px 9px; border-radius: 4px; cursor: pointer; }
+.browser-companion button:disabled { opacity: .5; cursor: default; }
+.browser-companion :focus-visible { outline: 2px solid #ac9bff; outline-offset: 2px; }
+.browser-navigation { display: flex; gap: 6px; padding: 8px; }
+.browser-navigation input { min-width: 0; flex: 1; background: #080815; color: #fff; border: 1px solid #777; border-radius: 4px; padding: 8px; }
+.browser-viewport { flex: 1; min-height: 0; overflow: auto; background: #20202b; }
+.browser-viewport img { width: 100%; height: auto; display: block; touch-action: none; }
+.browser-message, .browser-tabs { padding: 12px; }
+.browser-message[role="alert"] { color: #ffbfaa; }
+.browser-companion footer { display: flex; align-items: center; gap: 8px; padding: 10px; font-size: 11px; color: #b4b4ce; }
+.browser-companion footer span { flex: 1; }
+@media (max-width: 650px) { .browser-companion { width: calc(100vw - 16px); min-width: 0; top: 48px; } }

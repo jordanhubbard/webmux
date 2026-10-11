@@ -22,7 +22,7 @@ func (s *Server) closeSocketsAndSessions() error {
 			_ = connection.Close()
 		}
 		s.socketMu.Unlock()
-		s.closeErr = errors.Join(s.sessions.Close(), s.vnc.Close(), s.rdp.Close(), s.uploads.Close())
+		s.closeErr = errors.Join(s.browsers.Close(), s.sessions.Close(), s.vnc.Close(), s.rdp.Close(), s.uploads.Close())
 		s.socketWorkers.Wait()
 	})
 	return s.closeErr
@@ -204,6 +204,8 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		switch message.Type {
+		case "browser_ack":
+			s.sessions.AcknowledgeBrowser(owner, id, message.Data)
 		case "input":
 			if message.Data != "" {
 				if err := s.sessions.Input(owner, id, message.Data); errors.Is(err, session.ErrInputBusy) {

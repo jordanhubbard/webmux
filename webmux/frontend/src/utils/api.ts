@@ -52,7 +52,20 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export interface BrowserAction {
+  action: string; url?: string; text?: string; key?: string; code?: string;
+  keyCode?: number; modifiers?: number; x?: number; y?: number; deltaY?: number; target?: string;
+}
+export interface BrowserFrame {
+  image?: string; url: string; target: string; tabs: { id: string; title: string }[]; error?: string;
+}
+
 export const api = {
+  beginAuthHandoff: (id: string, authorization: string) => request<{ id: string; expires_in: number }>(`/sessions/${id}/auth-handoff`, { method: 'POST', body: JSON.stringify({ authorization }) }),
+  deliverAuthHandoff: (id: string, ticket: string, callback: string) => request<{ delivered: boolean }>(`/sessions/${id}/auth-handoff`, { method: 'POST', body: JSON.stringify({ id: ticket, callback }) }),
+  endAuthHandoff: (id: string, ticket: string) => request<void>(`/sessions/${id}/auth-handoff`, { method: 'DELETE', body: JSON.stringify({ id: ticket }) }),
+  browserAction: (id: string, action: BrowserAction) => request<BrowserFrame>(`/sessions/${id}/browser`, { method: 'POST', body: JSON.stringify(action) }),
+  endBrowser: (id: string) => request<void>(`/sessions/${id}/browser`, { method: 'DELETE' }),
   // Auth
   getAuthStatus: () => request<AuthStatus>('/auth/status'),
   login: (username: string, password: string) =>

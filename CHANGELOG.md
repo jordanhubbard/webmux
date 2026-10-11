@@ -5,6 +5,59 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.17] - 2026-10-07
+
+### Added
+- Session-linked CLI sign-in panels use the viewing browser for device codes and passkeys, with a one-shot, state-bound localhost callback relay and explicit terminal-host browser fallback (#114).
+
+### Fixed
+- Keep an older viewer from cancelling a newer sign-in attempt for the same terminal.
+- Preserve the pinned Node 24 runtime after Homebrew setup changes the CI PATH, keeping packaging verification reliable (#116).
+
+## [1.3.16] - 2026-10-03
+
+### Other
+- Separate browser input rate budget from workspace APIs (#110)
+- Accept combined browser keyboard modifiers and explain passkey limits (#110)
+- Send companion launches to the active terminal viewer (#110)
+- Route CLI browser launches through linked terminal companions (#110)
+- Route terminal link clicks into the companion browser (#109)
+- Make the terminal browser launcher visible and explicit (#109)
+- Add terminal browser companion for remote authentication (#109)
+
+## [1.3.15] - 2026-09-29
+
+### Added
+- Add a Localhost · tmux quick-connect option for persistent local shells alongside remote SSH sessions in the same terminal workspace.
+- Reattach local terminals to their existing tmux shells across reconnects and WebMux process restarts.
+
+### Fixed
+- Unlink the hosted macOS runner's legacy OpenSSL before Homebrew dependency upgrades so packaging checks can complete.
+
+## [1.3.14] - 2026-09-22
+
+### Fixed
+- Drain Windows terminal output through ConPTY shutdown and cancel input before terminating the process tree, preventing reconnect and close hangs.
+- On macOS, launch a local login shell for same-user loopback sessions using the default SSH port and no explicit credentials, retaining the WebMux process's GUI/keychain context.
+- Continue using SSH for custom ports, explicit credentials, other users, remote hosts, and non-macOS platforms.
+
+## [1.3.13] - 2026-09-21
+
+### Changed
+- Ship standalone Go executables with the web interface and default configuration embedded.
+- Remove the legacy Node.js server; use the Go server for runtime sessions and APIs.
+- Use native release bundles for Homebrew installations.
+
+### Fixed
+- Terminate Windows terminal process trees on reconnect and close to prevent raw-input children from hanging ConPTY teardown.
+- Keep mouse and focus reports in their originating terminal when Type to All is enabled.
+- Reset terminal modes on reconnect so stale mouse tracking does not leak into a new process.
+- Suppress unbuttoned mouse movement reports that appear as stray characters; clicks, dragging, and scrolling remain available. Application hover behavior is intentionally disabled.
+- Allow Option-drag text selection on macOS in mouse-enabled terminal applications and restore terminal focus after toggling transcript logging.
+
+### Documentation
+- Clarify terminal copy/paste, selection modifiers, and broadcast behavior in the in-app help.
+
 ## [1.3.12] - 2026-09-21
 
 ### Other

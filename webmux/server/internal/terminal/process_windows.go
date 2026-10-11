@@ -2,6 +2,7 @@ package terminal
 
 import (
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"sort"
@@ -18,6 +19,12 @@ type windowsProcess struct {
 	process       *os.Process
 	console       windows.Handle
 	consoleMu     sync.Mutex
+	closing       bool
+	job           windows.Handle
+	jobMu         sync.Mutex
+	pipeOnce      sync.Once
+	pipeErr       error
+	drainDone     chan struct{}
 }
 
 func startNative(spec Command) (_ nativeProcess, resultErr error) {
@@ -68,6 +75,17 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 			_ = p.Close()
 		}
 	}()
+	// Own the entire session tree, not only cmd.exe. A live raw-input child
+	// can otherwise keep older ConPTY implementations in ClosePseudoConsole.
+	p.job, err = windows.CreateJobObject(nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	limits := windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION{}
+	limits.BasicLimitInformation.LimitFlags = windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+	if _, err := windows.SetInformationJobObject(p.job, windows.JobObjectExtendedLimitInformation, uintptr(unsafe.Pointer(&limits)), uint32(unsafe.Sizeof(limits))); err != nil {
+		return nil, err
+	}
 	if err := windows.CreatePseudoConsole(windows.Coord{X: int16(spec.Cols), Y: int16(spec.Rows)}, windows.Handle(inputRead.Fd()), windows.Handle(outputWrite.Fd()), 0, &p.console); err != nil {
 		return nil, err
 	}
@@ -93,7 +111,7 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 	startup.ProcThreadAttributeList = attributes.List()
 	var info windows.ProcessInformation
 	err = windows.CreateProcess(application, commandLine, nil, nil, false,
-		windows.EXTENDED_STARTUPINFO_PRESENT|windows.CREATE_UNICODE_ENVIRONMENT,
+		windows.EXTENDED_STARTUPINFO_PRESENT|windows.CREATE_UNICODE_ENVIRONMENT|windows.CREATE_SUSPENDED,
 		&environment[0], directory, &startup.StartupInfo, &info)
 	if err != nil {
 		return nil, err
@@ -103,6 +121,14 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 	p.process, err = os.FindProcess(int(info.ProcessId))
 	if err != nil {
 		_ = windows.TerminateProcess(info.Process, 1)
+		return nil, err
+	}
+	// Assign before executing any child code so descendants cannot race job
+	// ownership. The deferred error cleanup kills even a suspended process.
+	if err := windows.AssignProcessToJobObject(p.job, info.Process); err != nil {
+		return nil, err
+	}
+	if _, err := windows.ResumeThread(info.Thread); err != nil {
 		return nil, err
 	}
 	return p, nil
@@ -147,7 +173,7 @@ func (p *windowsProcess) Write(data []byte) (int, error) { return p.input.Write(
 func (p *windowsProcess) resize(cols, rows int) error {
 	p.consoleMu.Lock()
 	defer p.consoleMu.Unlock()
-	if p.console == 0 {
+	if p.console == 0 || p.closing {
 		return os.ErrClosed
 	}
 	return windows.ResizePseudoConsole(p.console, windows.Coord{X: int16(cols), Y: int16(rows)})
@@ -161,15 +187,53 @@ func (p *windowsProcess) closeConsole() {
 	}
 }
 func (p *windowsProcess) Close() error {
-	// Break both pipes before waiting for ClosePseudoConsole. This also releases
-	// a concurrent graceful close that is blocked emitting its final frame.
-	err := errors.Join(p.input.Close(), p.output.Close())
+	err := errors.Join(p.prepareClose(), p.closeJob())
+	// Keep output draining until ConPTY has finished its final frame. Closing
+	// the output handle first can leave older ConPTY versions stuck in close.
 	p.closeConsole()
+	err = errors.Join(err, p.output.Close())
+	<-p.drainDone
 	return err
 }
-func (p *windowsProcess) kill() error { return p.process.Kill() }
+func (p *windowsProcess) prepareClose() error {
+	p.pipeOnce.Do(func() {
+		// Explicit close discards remaining output. Start a drain even if the
+		// caller has no reader, and before taking consoleMu: a concurrent
+		// graceful close or resize may already be waiting for output to drain.
+		p.drainDone = make(chan struct{})
+		go func() { _, _ = io.Copy(io.Discard, p.output); close(p.drainDone) }()
+		p.consoleMu.Lock()
+		defer p.consoleMu.Unlock()
+		p.closing = true
+		p.pipeErr = p.input.Close()
+	})
+	return p.pipeErr
+}
+func (p *windowsProcess) closeJob() error {
+	p.jobMu.Lock()
+	defer p.jobMu.Unlock()
+	if p.job == 0 {
+		return nil
+	}
+	err := windows.CloseHandle(p.job)
+	p.job = 0
+	return err
+}
+func (p *windowsProcess) kill() error {
+	// Cancel input and begin draining output before the exit waiter can
+	// start ConPTY teardown. Graceful exit still uses the caller's reader.
+	_ = p.prepareClose()
+	p.jobMu.Lock()
+	defer p.jobMu.Unlock()
+	if p.job == 0 {
+		return os.ErrProcessDone
+	}
+	return windows.TerminateJobObject(p.job, 1)
+}
 func (p *windowsProcess) wait() Exit {
 	state, err := p.process.Wait()
+	// The session ends with its root; reap descendants before closing ConPTY.
+	_ = p.closeJob()
 	// Closing ConPTY after exit emits the final frame and breaks the output pipe.
 	// The caller drains Read concurrently; explicit Close can cancel that drain.
 	p.closeConsole()
