@@ -287,3 +287,28 @@ func TestOccupiedPortAndCanceledHandshake(t *testing.T) {
 	}
 	a.Close()
 }
+
+func TestClosedTransportIsGraceful(t *testing.T) {
+	for _, local := range []bool{false, true} {
+		name := "peer-close"
+		if local {
+			name = "local-close-before-context-cancellation"
+		}
+		t.Run(name, func(t *testing.T) {
+			a, b := net.Pipe()
+			defer a.Close()
+			defer b.Close()
+			if local {
+				a.Close()
+			} else {
+				b.Close()
+			}
+			// Keep the context live to reproduce pipe closure winning the race
+			// against context cancellation in exporter/worker cleanup.
+			r := newRelay(context.Background(), &wire{ReadWriteCloser: a}, "")
+			if err := r.run(nil); err != nil {
+				t.Fatalf("closed transport: %v", err)
+			}
+		})
+	}
+}
