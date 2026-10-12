@@ -1,29 +1,13 @@
-import { defineConfig, type UserConfig } from 'vite';
-import type { InlineConfig } from 'vitest';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-// noVNC's lib/util/browser.js uses a top-level `await` export that Rollup's
-// CJS transformer cannot parse. Patch it out at build time — the affected
-// symbol (supportsWebCodecsH264Decode) is an optional performance hint for
-// H.264 hardware decode; setting it to false is safe for all VNC sessions.
-const novncPatch = {
-  name: 'novnc-tla-patch',
-  transform(code: string, id: string) {
-    if (id.includes('@novnc') && id.endsWith('browser.js')) {
-      return code.replace(
-        /exports\.supportsWebCodecsH264Decode\s*=\s*\S+\s*=\s*await[^;]+;/,
-        'exports.supportsWebCodecsH264Decode = supportsWebCodecsH264Decode = false;',
-      );
-    }
-  },
-};
-
-const config: UserConfig & { test: InlineConfig } = {
-  plugins: [react(), novncPatch],
+const config = {
+  plugins: [react()],
   resolve: {
     alias: {
       '@frontend': path.resolve(__dirname, 'src'),
+      'guacamole-common-js': path.resolve(__dirname, '../node_modules/guacamole-common-js/dist/esm/guacamole-common.js'),
       '@testing-library/react': path.resolve(__dirname, '../node_modules/@testing-library/react'),
       react: path.resolve(__dirname, '../node_modules/react'),
       'react-dom': path.resolve(__dirname, '../node_modules/react-dom'),
@@ -64,13 +48,6 @@ const config: UserConfig & { test: InlineConfig } = {
     environment: 'jsdom',
     include: ['../../tests/frontend/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
     setupFiles: './src/test/setup.ts',
-    server: {
-      deps: {
-        // Run @novnc/novnc through Vite's transform pipeline so the
-        // novncPatch plugin can remove the top-level await before Node loads it.
-        inline: ['@novnc/novnc'],
-      },
-    },
   },
 };
 

@@ -74,6 +74,12 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
           return clipboardData.getData('text/plain');
         });
         expect(copied).toBe('MOUSE');
+        await tile.getByRole('button', { name: 'Terminal clipboard' }).click();
+        await expect(page.getByLabel('Clipboard text')).toHaveValue('MOUSE');
+        await page.getByLabel('Clipboard text').fill('paste-fixture');
+        await page.getByRole('button', { name: 'Send text', exact: true }).click();
+        await expect.poll(() => inputs.get(source)!.join('')).toContain('paste-fixture');
+        await expect(input).toBeFocused();
         await tile.getByRole('button', { name: 'Log session', exact: true }).click();
         await expect(input).toBeFocused();
       } else {

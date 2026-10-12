@@ -5,6 +5,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.19] - 2026-10-12
+
+### Fixed
+- Silently fall back to a normal SSH terminal when optional browser integration is unavailable (#125).
+- Recover browser-companion polling after transient navigation or request failures (#110).
+- Scope RDP keyboard handling to the viewer and release held keys on blur; provide explicit desktop clipboard access with a manual fallback (#90).
+- Add terminal Copy/Paste controls, preserve selection and bracketed paste, and report disconnected or oversized input (#88, #92).
+- Release stale agent attachments, serialize polling, report failed mutations, and compensate/reload partially saved layouts (#92).
+- Repair dependency lock identities, remove the stale frontend lock, and update vulnerable build dependencies (#89, #93).
+- Give SSH USB tests bounded startup time, guaranteed child cleanup and captured diagnostics; exercise the built CLI and worker with a dummy exporter (#127, #128).
+
+### Changed
+- Require Go 1.27.2, pin GitHub Actions by commit, add dependency audit/update automation and include component provenance in native bundles (#91).
+- Use noVNC 1.7's ESM entry point without the obsolete CommonJS build patch.
+- Test native USB/IP enumeration, storage traffic and interruption cleanup through WebMux in a pinned Linux VM (#128).
+
+### Limitations
+- Physical USB/iPhone/Xcode acceptance remains unqualified; the Linux virtual fixture does not qualify macOS/Windows USB drivers. Windows signing requires publisher enrollment; WinGet publication awaits upstream review. Remote identity-provider and advanced browser-companion work remain tracked separately.
+
 ## [1.3.18] - 2026-10-10
 
 ### Added

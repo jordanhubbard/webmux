@@ -9,6 +9,7 @@ interface UseWebSocketOptions {
   onOpen?: () => void;
   onClose?: () => void;
   onUnauthorized?: () => void;
+  onSendError?: (message: string) => void;
 }
 
 export interface WebSocketHandle {
@@ -16,6 +17,7 @@ export interface WebSocketHandle {
   close: () => void;
 }
 
+const MAX_PENDING_BYTES = 512 * 1024;
 const INITIAL_DELAY_MS = 1000;
 const MAX_DELAY_MS = 30_000;
 
@@ -28,7 +30,11 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
   // fit/resize, which fires synchronously on mount while the handshake is
   // still in flight) are queued here and flushed in order once onopen fires,
   // instead of being silently dropped.
-  const pendingRef = useRef<WebSocketMessage[]>([]);
+  const pendingRef = useRef<string[]>([]);
+  const pendingBytesRef = useRef(0);
+  const connectedOnceRef = useRef(false);
+  const onSendErrorRef = useRef(options.onSendError);
+  onSendErrorRef.current = options.onSendError;
 
   const { sessionId, onMessage, onOpen, onClose, onUnauthorized } = options;
 
@@ -55,6 +61,7 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
   useEffect(() => {
     closedRef.current = false;
     attemptRef.current = 0;
+    connectedOnceRef.current = false;
 
     function connect() {
       if (closedRef.current) return;
@@ -64,17 +71,24 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (closedRef.current || wsRef.current !== ws) return;
+        connectedOnceRef.current = true;
         attemptRef.current = 0;
         const queued = pendingRef.current;
         pendingRef.current = [];
+        pendingBytesRef.current = 0;
         for (const msg of queued) {
-          ws.send(JSON.stringify(msg));
+          ws.send(msg);
         }
         onOpenRef.current?.();
       };
 
       ws.onclose = (event) => {
-        if (closedRef.current) return;
+        if (closedRef.current || wsRef.current !== ws) return;
+        wsRef.current = null;
+        if (pendingRef.current.length) onSendErrorRef.current?.('Connection closed before queued input was sent. Please retry.');
+        pendingRef.current = [];
+        pendingBytesRef.current = 0;
         onCloseRef.current?.();
         if (event.code === 1008 && event.reason === 'Unauthorized') {
           closedRef.current = true;
@@ -114,14 +128,29 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
       // Drop anything still queued so a torn-down component can't leak
       // sends into a future socket (new session, or a remount).
       pendingRef.current = [];
+      pendingBytesRef.current = 0;
     };
   }, [sessionId]);
 
   const send = useCallback((msg: WebSocketMessage) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(msg));
-    } else if (wsRef.current?.readyState === WebSocket.CONNECTING) {
-      pendingRef.current.push(msg);
+    const serialized = JSON.stringify(msg);
+    const size = new TextEncoder().encode(serialized).length;
+    const ws = wsRef.current;
+    if (closedRef.current || !ws || (ws.readyState !== WebSocket.OPEN &&
+        (ws.readyState !== WebSocket.CONNECTING || connectedOnceRef.current))) {
+      onSendErrorRef.current?.('Input was not sent: terminal disconnected. Reconnect and retry.');
+      return;
+    }
+    if (size + pendingBytesRef.current + (ws.bufferedAmount || 0) > MAX_PENDING_BYTES) {
+      onSendErrorRef.current?.('Input was not sent: terminal is busy or paste is too large. Wait and send smaller chunks.');
+      return;
+    }
+    if (ws.readyState === WebSocket.OPEN) {
+      try { ws.send(serialized); }
+      catch { onSendErrorRef.current?.('Input was not sent. Reconnect and retry.'); }
+    } else {
+      pendingRef.current.push(serialized);
+      pendingBytesRef.current += size;
     }
   }, []);
 

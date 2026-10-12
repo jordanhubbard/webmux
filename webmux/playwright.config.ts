@@ -29,7 +29,7 @@ export default defineConfig({
           // Partial raster reuse in Chromium 145 can change rounded-border
           // channels between identical runs. Render whole tiles for this exact
           // comparison; ordinary browser workflow tests keep default rendering.
-          ...(VISUAL_PARITY ? { args: ['--disable-gpu', '--force-color-profile=srgb', '--disable-partial-raster'] } : {}),
+          ...(VISUAL_PARITY ? { args: ['--enable-automation', '--disable-gpu', '--force-color-profile=srgb', '--disable-partial-raster'] } : {}),
         },
       },
     },

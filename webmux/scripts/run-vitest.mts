@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 
 const frontendDir = path.resolve(import.meta.dirname, '..', 'frontend');
-const vitestCli = require.resolve('vitest/vitest.mjs', { paths: [frontendDir] });
+const vitestCli = path.join(path.dirname(require.resolve('vitest/package.json', { paths: [frontendDir] })), 'vitest.mjs');
 const storageFile = path.join(os.tmpdir(), `webmux-vitest-localstorage-${process.pid}.json`);
 const nodeMajor = Number(process.versions.node.split('.')[0]);
 const childEnv = { ...process.env };

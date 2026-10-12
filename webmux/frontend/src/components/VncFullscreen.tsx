@@ -1,3 +1,4 @@
+import { ClipboardDialog } from './ClipboardDialog';
 import { useState, useRef, useCallback } from 'react';
 import { VncViewer } from './VncViewer';
 import type { VncClientControl } from './VncViewer';
@@ -14,6 +15,9 @@ const TOP_BAR_H = 36;
 
 export function VncFullscreen({ session, vncPassword, onBack, onDisconnect }: VncFullscreenProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [clipboardOpen, setClipboardOpen] = useState(false);
+  const [remoteClipboard, setRemoteClipboard] = useState('');
+  const [connectionState, setConnectionState] = useState('connecting');
   const rfbRef = useRef<VncClientControl | null>(null);
 
   const handleSendCtrlAltDel = useCallback(() => {
@@ -21,14 +25,11 @@ export function VncFullscreen({ session, vncPassword, onBack, onDisconnect }: Vn
     setMenuOpen(false);
   }, []);
 
-  const handlePasteClipboard = useCallback(() => {
-    navigator.clipboard.readText().then(text => {
-      rfbRef.current?.clipboardPasteFrom(text);
-    }).catch(() => {
-      // Clipboard permission denied or not available — ignore silently.
-    });
-    setMenuOpen(false);
-  }, []);
+  const sendClipboard = (text: string) => {
+    if (!rfbRef.current || connectionState !== 'connected') throw new Error('Desktop is disconnected. Reconnect before sending.');
+    rfbRef.current.clipboardPasteFrom(text);
+  };
+  const handlePasteClipboard = () => { setClipboardOpen(true); setMenuOpen(false); };
 
   const handleDisconnect = useCallback(() => {
     setMenuOpen(false);
@@ -41,6 +42,7 @@ export function VncFullscreen({ session, vncPassword, onBack, onDisconnect }: Vn
 
   return (
     <div style={styles.overlay}>
+      {clipboardOpen && <ClipboardDialog initialText={remoteClipboard} onSend={sendClipboard} onClose={() => setClipboardOpen(false)} />}
       {/* Top bar */}
       <div style={styles.topBar}>
         <button style={styles.backBtn} onClick={onBack} title="Back to grid">
@@ -61,16 +63,16 @@ export function VncFullscreen({ session, vncPassword, onBack, onDisconnect }: Vn
               {/* Backdrop to close menu on outside click */}
               <div style={styles.menuBackdrop} onClick={() => setMenuOpen(false)} />
               <div style={styles.menu}>
-                <div style={styles.menuItem} onClick={handleSendCtrlAltDel}>
+                <button style={styles.menuItem} onClick={handleSendCtrlAltDel}>
                   Send Ctrl+Alt+Del
-                </div>
-                <div style={styles.menuItem} onClick={handlePasteClipboard}>
-                  Paste Clipboard
-                </div>
+                </button>
+                <button style={styles.menuItem} onClick={handlePasteClipboard}>
+                  Clipboard
+                </button>
                 <div style={styles.menuSeparator}>─────────────</div>
-                <div style={{ ...styles.menuItem, color: '#ff8888' }} onClick={handleDisconnect}>
+                <button style={{ ...styles.menuItem, color: '#ff8888' }} onClick={handleDisconnect}>
                   Disconnect
-                </div>
+                </button>
               </div>
             </>
           )}
@@ -83,6 +85,8 @@ export function VncFullscreen({ session, vncPassword, onBack, onDisconnect }: Vn
           sessionId={session.id}
           vncPassword={vncPassword}
           mode="fullscreen"
+          onClipboard={setRemoteClipboard}
+          onStateChange={setConnectionState}
           rfbRef={rfbRef}
         />
       </div>
@@ -163,6 +167,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 4,
   },
   menuItem: {
+    display: 'block', width: '100%', background: 'none', border: 0, textAlign: 'left',
     padding: '8px 14px',
     fontSize: 13,
     color: '#ccc',

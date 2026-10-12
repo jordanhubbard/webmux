@@ -30,15 +30,10 @@ for (const entry of fs.readdirSync(defaultsDir, { withFileTypes: true })) {
   fs.writeFileSync(path.join(testHome, 'config', entry.name), content);
 }
 process.env.WEBMUX_HOME = testHome;
-// Match the headless-shell executable used by Playwright's headless UI tests.
-// This test-only registry import is pinned by the workspace lockfile.
+// Use Playwright's supported executable lookup rather than its private registry.
 const testRequire = createRequire(path.resolve(import.meta.dirname, '../../webmux/package.json'));
-const playwrightRoot = path.dirname(testRequire.resolve('playwright-core/package.json'));
-const { registry } = testRequire(path.join(playwrightRoot, 'lib/server/registry/index.js')) as {
-  registry: { findExecutable(name: string): { executablePath(): string } };
-};
-process.env.WEBMUX_BROWSER_EXECUTABLE ||= process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
-  || registry.findExecutable('chromium-headless-shell').executablePath();
+const { chromium } = testRequire('playwright-core') as { chromium: { executablePath(): string } };
+process.env.WEBMUX_BROWSER_EXECUTABLE ||= process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || chromium.executablePath();
 if (process.env.WEBMUX_REAL_SSH === '1') {
   if (process.platform !== 'linux') throw new Error('The real SSH fixture requires Linux');
   const directory = path.join(testHome, 'ssh-bin');

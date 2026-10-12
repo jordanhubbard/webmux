@@ -26,7 +26,7 @@ func (s Stdio) Write(p []byte) (int, error) { return s.Out.Write(p) }
 func (s Stdio) Close() error                { return errors.Join(s.In.Close(), s.Out.Close()) }
 
 type options struct {
-	host, identity                  string
+	host, identity, knownHosts      string
 	sshPort, exportPort, listenPort int
 	duration                        time.Duration
 }
@@ -43,8 +43,8 @@ func (o options) validate() error {
 	if o.duration < time.Second || o.duration > maxLifetime || o.duration%time.Second != 0 {
 		return errors.New("--duration must be whole seconds, from 1s to 1h")
 	}
-	if strings.ContainsAny(o.identity, "\r\n\x00") {
-		return errors.New("invalid identity path")
+	if strings.ContainsAny(o.identity+o.knownHosts, "\r\n\x00") {
+		return errors.New("invalid identity or known-hosts path")
 	}
 	return (Config{Version: 1, Port: o.listenPort, Seconds: int(o.duration.Seconds())}).validate()
 }
@@ -60,6 +60,12 @@ func (o options) sshArgs() []string {
 	if o.identity != "" {
 		a = append(a, "-i", o.identity)
 	}
+	if o.knownHosts != "" {
+		// OpenSSH parses this value as ssh_config syntax even though exec
+		// receives one argv element. Quote paths containing whitespace.
+		quoted := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(o.knownHosts)
+		a = append(a, "-o", `UserKnownHostsFile="`+quoted+`"`)
+	}
 	return append(a, "--", o.host, "webmux --usb-forward-worker")
 }
 
@@ -72,6 +78,7 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	var o options
 	fs.StringVar(&o.host, "host", "", "receiving computer SSH host or user@host (known host key required)")
 	fs.StringVar(&o.identity, "identity", "", "optional existing SSH private-key path")
+	fs.StringVar(&o.knownHosts, "known-hosts", "", "optional verified SSH known-hosts file")
 	fs.IntVar(&o.sshPort, "ssh-port", 22, "SSH port")
 	fs.IntVar(&o.exportPort, "export-port", 7575, "local USB exporter TCP port on 127.0.0.1")
 	fs.IntVar(&o.listenPort, "listen-port", 0, "development host loopback port (0 chooses a free port)")

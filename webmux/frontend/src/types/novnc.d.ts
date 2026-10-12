@@ -1,7 +1,5 @@
-// Upstream types describe the extensionless import and require all credential
-// fields. noVNC 1.6 also exports this .js path and accepts partial credentials
-// (including password-only VNC). Keep the real runtime behavior unchanged.
-declare module '@novnc/novnc/lib/rfb.js' {
+// noVNC 1.7 exposes its ESM RFB implementation at the package root.
+declare module '@novnc/novnc' {
   import RFB from '@novnc/novnc/lib/rfb';
 
   type Credentials = Partial<Parameters<RFB['sendCredentials']>[0]>;

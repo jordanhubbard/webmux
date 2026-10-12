@@ -5,8 +5,17 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 for (const linkKind of ['plain', 'osc8', 'gh-browser', 'browser', 'open', 'xdg-open'] as const) {
-test(`browser companion routes ${linkKind} authentication and completes a loopback callback`, async ({ page, request }) => {
+test(`browser companion routes ${linkKind} authentication and completes a loopback callback`, async ({ page, request }, info) => {
   test.setTimeout(90_000);
+  const replies: unknown[] = [];
+  page.on('response', async response => {
+    if (!response.url().endsWith('/browser')) return;
+    try {
+      const { url, error } = await response.json();
+      replies.push({ status: response.status(), url, error });
+      if (replies.length > 20) replies.shift();
+    } catch { /* request may have been canceled during teardown */ }
+  });
   const shellLaunch = linkKind !== 'plain' && linkKind !== 'osc8';
   test.skip(shellLaunch && process.platform === 'win32', 'Local tmux shell handoff requires Unix');
   // This is a real browser acceptance test, not a mocked frame or protocol.
@@ -111,7 +120,12 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     expect(popups).toBe(0);
     expect(page.context().pages()).toHaveLength(idleViewer ? 2 : 1);
     if (idleViewer) await expect(idleViewer.locator('aside.browser-companion')).toHaveCount(0);
-    await expect(page.getByRole('textbox', { name: 'Remote browser URL' })).toHaveValue(/\/callback\?code=callback-proof/);
+    await expect(page.getByRole('textbox', { name: 'Remote browser URL' })).toHaveValue(/\/callback\?code=callback-proof/, { timeout: 20_000 }).catch(async error => {
+      const state = await page.evaluate(() => ({ visibility: document.visibilityState, active: document.activeElement?.tagName }));
+      await info.attach('browser-navigation-diagnostics', { body: JSON.stringify({ state, replies }), contentType: 'application/json' });
+      console.error(JSON.stringify({ state, replies }));
+      throw error;
+    });
     const before = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
     const target = (await before.json()).target;
     await page.screenshot({ path: 'test-results/browser-companion.png' });

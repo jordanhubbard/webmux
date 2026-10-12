@@ -11,6 +11,52 @@ env:
   MACOSX_DEPLOYMENT_TARGET: "14.0"
 
 jobs:
+  virtual-usb:
+    name: Virtual USB kernel integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      USB_TEST_KERNEL: 6.8.0-146-generic
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: webmux/server/go.mod
+      - name: Install native kernel USB fixture prerequisites
+        run: |
+          sudo -n apt-get update
+          # Hosted Azure kernels omit gadget drivers. Boot an isolated generic
+          # kernel with matching modules instead of mutating the host kernel.
+          sudo -n apt-get install -y openssh-server qemu-system-x86 busybox-static python3-venv "linux-image-$USB_TEST_KERNEL" "linux-modules-extra-$USB_TEST_KERNEL" "linux-tools-$USB_TEST_KERNEL"
+          for module in usbip-vudc g_mass_storage vhci-hcd; do
+            modinfo -k "$USB_TEST_KERNEL" -F filename "$module"
+          done
+          python3 -m venv "$RUNNER_TEMP/virtme"
+          "$RUNNER_TEMP/virtme/bin/pip" install virtme-ng==1.41
+      - name: Build CLI and separate worker
+        working-directory: webmux/server
+        run: go build -o "$RUNNER_TEMP/webmux" ./cmd/webmux
+      - name: Exercise virtual USB over SSH
+        run: |
+          printf -v fixture_command '%q ' env GITHUB_ACTIONS=true python3 "$GITHUB_WORKSPACE/tests/usb-kernel.py" "$RUNNER_TEMP/webmux"
+          # virtme otherwise locks every synthetic guest account. This guest
+          # has no network adapter, and its fixture sshd allows public keys only.
+          sudo -n env PATH="$RUNNER_TEMP/virtme/bin:/usr/sbin:/usr/bin:/sbin:/bin" PYTHONUNBUFFERED=1 timeout --kill-after=15s 180s "$RUNNER_TEMP/virtme/bin/vng" --run "$USB_TEST_KERNEL" --user root --empty-passwords --memory 1G --cpus 2 --verbose --exec "$fixture_command"
+  security:
+    name: Dependency audit
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: webmux/server/go.mod
+      - run: npm ci && npm run check:lock && npm audit --audit-level=low
+        working-directory: webmux
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+        working-directory: webmux/server
   go-server:
     name: Go Server (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -19,12 +65,12 @@ jobs:
       matrix:
         os: [ubuntu-22.04, macos-15, windows-2022]
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: webmux/server/go.mod
           cache-dependency-path: webmux/server/go.sum
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
           cache: npm
@@ -32,6 +78,10 @@ jobs:
       - name: Test native server with race detector
         working-directory: webmux/server
         run: go test -race ./...
+      - name: Repeat Windows SSH CLI lifecycle
+        if: runner.os == 'Windows'
+        working-directory: webmux/server
+        run: go test -race ./internal/usbforward -run TestRealSSHTransportAndHostKeyRejection -count=3
       - name: Vet native server
         working-directory: webmux/server
         run: go vet ./...
@@ -47,7 +97,7 @@ jobs:
         run: node scripts/benchmark-server.mts
       - name: Preserve backend performance measurements
         if: always() && runner.os != 'Windows'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: backend-performance-${{ runner.os }}
           path: webmux/benchmark-results.json
@@ -113,7 +163,7 @@ jobs:
           exit "$desktop_result"
       - name: Preserve browser parity evidence
         if: always() && runner.os == 'Linux'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: browser-parity-linux
           include-hidden-files: true
@@ -127,10 +177,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
           cache: 'npm'
@@ -162,15 +212,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: webmux/server/go.mod
           cache-dependency-path: webmux/server/go.sum
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
           cache: 'npm'
@@ -190,15 +240,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: webmux/server/go.mod
           cache-dependency-path: webmux/server/go.sum
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
           cache: 'npm'
@@ -242,7 +292,7 @@ jobs:
 
       - name: Preserve browser parity evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: browser-parity-windows
           include-hidden-files: true

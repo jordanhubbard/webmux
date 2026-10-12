@@ -152,7 +152,10 @@ test('active VNC pixels and input render identically across Go runs', async ({ p
     await page.evaluate(text => navigator.clipboard.writeText(text), clipboard);
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expectedClipboard);
     await page.getByTitle('VNC Options', { exact: true }).click();
-    await page.getByText('Paste Clipboard', { exact: true }).click();
+    await page.getByRole('button', { name: 'Clipboard', exact: true }).click();
+    await page.getByRole('button', { name: 'Read clipboard', exact: true }).click();
+    await expect(page.getByRole('status')).toContainText('Clipboard loaded');
+    await page.getByRole('button', { name: 'Send text', exact: true }).click();
     await expect.poll(() => desktop.clipboard).toContain(expectedClipboard);
     expect(desktop.errors).toEqual([]);
   } finally {
@@ -216,7 +219,10 @@ test('active RDP pixels and input render identically across Go runs', async ({ p
     await page.evaluate(text => navigator.clipboard.writeText(text), clipboard);
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(expectedClipboard);
     await page.getByTitle('RDP Options', { exact: true }).click();
-    await page.getByText('Paste Clipboard', { exact: true }).click();
+    await page.getByRole('button', { name: 'Clipboard', exact: true }).click();
+    await page.getByRole('button', { name: 'Read clipboard', exact: true }).click();
+    await expect(page.getByRole('status')).toContainText('Clipboard loaded');
+    await page.getByRole('button', { name: 'Send text', exact: true }).click();
     await expect.poll(() => desktop.clipboard.includes(expectedClipboard)).toBe(true);
     expect(desktop.clipboardChunks[0]).toBeGreaterThan(1);
     expect(desktop.errors).toEqual([]);

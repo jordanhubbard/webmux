@@ -1,3 +1,4 @@
+import { movePair } from '../utils/movePair';
 import { Dialog } from './Dialog';
 import { AddSessionCell } from './AddSessionCell';
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -107,6 +108,8 @@ function pickerBtnStyle(border: string): React.CSSProperties {
 export function GraphicsWorkspace() {
   const [vncSessions, setVncSessions] = useState<VncSession[]>([]);
   const [rdpSessions, setRdpSessions] = useState<RdpSession[]>([]);
+  const [operationError, setOperationError] = useState('');
+  const movePendingRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [fullscreen, setFullscreen] = useState<FullscreenState>({ type: 'none' });
   const [dialog, setDialog] = useState<DialogState>({ type: 'none' });
@@ -130,7 +133,7 @@ export function GraphicsWorkspace() {
   useEffect(() => {
     Promise.all([api.getVncSessions(), api.getRdpSessions()])
       .then(([vnc, rdp]) => { setVncSessions(vnc); setRdpSessions(rdp); })
-      .catch(err => console.error('Failed to load graphics sessions:', err))
+      .catch(err => setOperationError(`Could not load desktops: ${String(err)}`))
       .finally(() => setLoading(false));
   }, []);
 
@@ -148,14 +151,14 @@ export function GraphicsWorkspace() {
   }, []);
 
   const handleCloseVnc = useCallback(async (id: string) => {
-    await api.deleteVncSession(id);
+    try { await api.deleteVncSession(id); } catch (err) { setOperationError(String(err)); return; }
     vncPasswordsRef.current.delete(id);
     setVncSessions(prev => prev.filter(s => s.id !== id));
     setFullscreen(prev => (prev.type === 'vnc' && prev.session.id === id) ? { type: 'none' } : prev);
   }, []);
 
   const handleCloseRdp = useCallback(async (id: string) => {
-    await api.deleteRdpSession(id);
+    try { await api.deleteRdpSession(id); } catch (err) { setOperationError(String(err)); return; }
     setRdpSessions(prev => prev.filter(s => s.id !== id));
     setFullscreen(prev => (prev.type === 'rdp' && prev.session.id === id) ? { type: 'none' } : prev);
   }, []);
@@ -164,14 +167,14 @@ export function GraphicsWorkspace() {
     try {
       const updated = await api.reconnectVncSession(id);
       setVncSessions(prev => prev.map(s => s.id === id ? updated : s));
-    } catch (err) { console.error('Reconnect error:', err); }
+    } catch (err) { setOperationError(`Could not reconnect: ${String(err)}`); }
   }, []);
 
   const handleReconnectRdp = useCallback(async (id: string) => {
     try {
       const updated = await api.reconnectRdpSession(id);
       setRdpSessions(prev => prev.map(s => s.id === id ? updated : s));
-    } catch (err) { console.error('Reconnect error:', err); }
+    } catch (err) { setOperationError(`Could not reconnect: ${String(err)}`); }
   }, []);
 
   const getGridCell = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
@@ -219,7 +222,8 @@ export function GraphicsWorkspace() {
         const dragged = sessions.find(s => s.id === dragId);
         const targetSession = sessions.find(s => s.row === target.row && s.col === target.col);
 
-        if (dragged && targetSession) {
+        if (dragged && targetSession && !movePendingRef.current) {
+          movePendingRef.current = true;
           const srcRow = dragged.row;
           const srcCol = dragged.col;
 
@@ -239,22 +243,17 @@ export function GraphicsWorkspace() {
 
           // Persist
           try {
-            if (dragged.kind === 'vnc') await api.moveVncSession(dragId, target.row, target.col);
-            else await api.moveRdpSession(dragId, target.row, target.col);
-            if (targetSession.kind === 'vnc') await api.moveVncSession(targetSession.id, srcRow, srcCol);
-            else await api.moveRdpSession(targetSession.id, srcRow, srcCol);
+            const move = dragged.kind === 'vnc' ? api.moveVncSession : api.moveRdpSession;
+            const moveTarget = targetSession.kind === 'vnc' ? api.moveVncSession : api.moveRdpSession;
+            await movePair(() => move(dragId, target.row, target.col),
+              () => moveTarget(targetSession.id, srcRow, srcCol), () => move(dragId, srcRow, srcCol));
           } catch (err) {
-            console.error('Move failed:', err);
-            // Revert on failure
-            const revert = (prev: AnySession[]): AnySession[] =>
-              prev.map(s => {
-                if (s.id === dragId) return { ...s, row: srcRow, col: srcCol } as AnySession;
-                if (s.id === targetSession.id) return { ...s, row: target.row, col: target.col } as AnySession;
-                return s;
-              });
-            if (dragged.kind === 'vnc') setVncSessions(prev => revert(prev) as VncSession[]);
-            else setRdpSessions(prev => revert(prev) as RdpSession[]);
-          }
+            setOperationError(`Could not save layout: ${String(err)}`);
+            try {
+              const [vnc, rdp] = await Promise.all([api.getVncSessions(), api.getRdpSessions()]);
+              setVncSessions(vnc); setRdpSessions(rdp);
+            } catch { setOperationError('Could not reload saved layout. Reload the page before moving more sessions.'); }
+          } finally { movePendingRef.current = false; }
         }
       }
 
@@ -311,6 +310,7 @@ export function GraphicsWorkspace() {
 
   return (
     <div style={styles.outer}>
+      {operationError && <div role="alert">{operationError} <button onClick={() => setOperationError('')}>Dismiss</button></div>}
       <div
         ref={gridRef}
         style={{

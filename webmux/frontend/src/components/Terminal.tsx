@@ -1,3 +1,4 @@
+import { ClipboardDialog } from './ClipboardDialog';
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
@@ -42,6 +43,7 @@ export interface TerminalHandle {
   sendInput: (data: string) => void;
   focus: () => void;
   openSearch: () => void;
+  openClipboard: () => void;
   toggleTranscript: () => void;
 }
 
@@ -83,6 +85,8 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const wsHandleRef = useRef<ReturnType<typeof useWebSocket> | null>(null);
   const userScrolledRef = useRef(false);
   const autoScrollRef = useRef(autoScroll);
+  const [clipboardText, setClipboardText] = useState<string | null>(null);
+  const [inputError, setInputError] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchIndex, setSearchIndex] = useState(-1);
@@ -105,6 +109,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     focus: () => {
       termRef.current?.focus();
     },
+    openClipboard: () => { setClipboardText(termRef.current?.getSelection() ?? ''); },
     openSearch: () => {
       setFocusedSessionId(sessionId);
       onFocusGainedRef.current();
@@ -189,6 +194,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const wsHandle = useWebSocket({
     sessionId,
     onMessage: handleMessage,
+    onSendError: setInputError,
     onOpen: () => onStateChangeRef.current('connected'),
     onClose: () => onStateChangeRef.current('disconnected'),
   });
@@ -403,6 +409,11 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      {inputError && <div role="alert" style={{ position: 'absolute', top: 0, zIndex: 20, background: '#511', color: '#fff' }}>{inputError} <button onClick={() => setInputError('')}>Dismiss</button></div>}
+      {clipboardText !== null && <ClipboardDialog initialText={clipboardText} onClose={() => { setClipboardText(null); setTimeout(() => termRef.current?.focus(), 0); }} onSend={text => {
+        if (state !== 'connected') throw new Error('Terminal is disconnected. Reconnect before sending.');
+        termRef.current?.paste(text);
+      }} />}
       <div
         ref={containerRef}
         data-1p-ignore

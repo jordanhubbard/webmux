@@ -45,7 +45,17 @@ try {
   });
   fs.writeFileSync(path.join(stage, 'bundle.json'), JSON.stringify({
     version: metadata.version, backend: 'go', platform: process.platform, arch: process.arch,
-    go: execFileSync('go', ['version'], { encoding: 'utf8' }).trim(),
+    go: execFileSync('go', ['version'], { cwd: path.join(source, 'server'), encoding: 'utf8' }).trim(),
+  }, null, 2) + '\n');
+  const lock = JSON.parse(fs.readFileSync(path.join(source, 'package-lock.json'), 'utf8')) as {
+    packages: Record<string, { version?: string; resolved?: string; integrity?: string; dev?: boolean; link?: boolean }>;
+  };
+  fs.writeFileSync(path.join(stage, 'components.json'), JSON.stringify({
+    description: 'Embedded browser dependencies and native Go build identity. External SSH, mosh, tmux, guacd and native USB drivers are operator-managed and are not bundled or qualified by this inventory.',
+    binarySHA256: createHash('sha256').update(fs.readFileSync(executable)).digest('hex'),
+    goBuild: execFileSync('go', ['version', '-m', executable], { cwd: path.join(source, 'server'), encoding: 'utf8' }).trim(),
+    browserDependencies: Object.entries(lock.packages).filter(([location, entry]) => location.includes('node_modules/') && !entry.dev && !entry.link)
+      .map(([location, entry]) => ({ name: location.slice(location.lastIndexOf('node_modules/') + 13), version: entry.version, resolved: entry.resolved, integrity: entry.integrity })),
   }, null, 2) + '\n');
   fs.writeFileSync(path.join(stage, 'README.txt'), `WebMux ${metadata.version} — native server
 
