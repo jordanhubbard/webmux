@@ -25,12 +25,12 @@ jobs:
         os: [macos-15, ubuntu-22.04, windows-2022, windows-11-arm]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: webmux/server/go.mod
           cache-dependency-path: webmux/server/go.sum
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
           cache: npm
@@ -122,7 +122,7 @@ jobs:
       # Node runtime before brew upgrades can break the runner's brewed Node.
       - name: Restore Node 24 after Homebrew PATH setup
         if: runner.os != 'Windows'
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
       - name: Unlink runner OpenSSL 1.1 before dependency upgrades
@@ -157,7 +157,7 @@ jobs:
           node scripts/packaging-checks.mts service
       - name: Verify native upload set and checksums
         run: node scripts/verify-native-artifacts.mts
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: native-preview-${{ matrix.os }}
           path: dist/*-native.*
@@ -170,12 +170,12 @@ jobs:
         os: [macos-15, ubuntu-22.04]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: webmux/server/go.mod
           cache-dependency-path: webmux/server/go.sum
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
           cache: npm
@@ -193,7 +193,7 @@ jobs:
           mkdir "$RUNNER_TEMP/webmux-bundle"
           tar -xzf dist/webmux-*.tar.gz -C "$RUNNER_TEMP/webmux-bundle"
           node scripts/smoke-native-package.mts "$RUNNER_TEMP"/webmux-bundle/webmux-*
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: webmux-${{ matrix.os }}
           path: dist/*
@@ -203,7 +203,7 @@ jobs:
       # Node runtime before brew upgrades can break the runner's brewed Node.
       - name: Restore Node 24 after Homebrew PATH setup
         if: runner.os != 'Windows'
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
       - name: Verify documented tap bootstrap
@@ -250,11 +250,11 @@ jobs:
     needs: [native-preview]
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: native-preview-*
           path: dist
@@ -269,11 +269,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: native-preview-*
           path: dist

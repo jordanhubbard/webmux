@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /webmux
+    schedule:
+      interval: weekly
+    groups:
+      vitest:
+        patterns: ['vitest', '@vitest/*']
+  - package-ecosystem: gomod
+    directory: /webmux/server
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

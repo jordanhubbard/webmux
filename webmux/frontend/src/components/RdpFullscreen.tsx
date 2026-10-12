@@ -1,3 +1,4 @@
+import { ClipboardDialog } from './ClipboardDialog';
 import { useState, useRef, useCallback } from 'react';
 import Guacamole from 'guacamole-common-js';
 import { RdpViewer } from './RdpViewer';
@@ -19,6 +20,10 @@ const KEY_DELETE = 0xFFFF;
 
 export function RdpFullscreen({ session, onBack, onDisconnect }: RdpFullscreenProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [clipboardOpen, setClipboardOpen] = useState(false);
+  const [remoteClipboard, setRemoteClipboard] = useState('');
+  const [connectionState, setConnectionState] = useState('connecting');
+  const [clipboardError, setClipboardError] = useState('');
   const clientRef = useRef<RdpClientControl | null>(null);
 
   const handleSendCtrlAltDel = useCallback(() => {
@@ -34,23 +39,18 @@ export function RdpFullscreen({ session, onBack, onDisconnect }: RdpFullscreenPr
     setMenuOpen(false);
   }, []);
 
-  const handlePasteClipboard = useCallback(() => {
-    navigator.clipboard.readText().then(text => {
-      const c = clientRef.current;
-      if (!c) return;
-      try {
-        const stream = c.createClipboardStream('text/plain');
-        // StringWriter in Guacamole 1.5 encodes UTF-16 surrogate halves
-        // separately. TextEncoder preserves supplementary characters as UTF-8.
-        const writer = new Guacamole.ArrayBufferWriter(stream);
-        writer.sendData(new TextEncoder().encode(text));
-        writer.sendEnd();
-      } catch {
-        // Clipboard stream not available — ignore silently
-      }
-    }).catch(() => {});
-    setMenuOpen(false);
-  }, []);
+  const sendClipboard = (text: string) => {
+    const c = clientRef.current;
+    if (!c || connectionState !== 'connected') throw new Error('Desktop is disconnected. Reconnect before sending.');
+    setClipboardError('');
+    const writer = new Guacamole.ArrayBufferWriter(c.createClipboardStream('text/plain'));
+    writer.onack = status => {
+      if (status.isError()) setClipboardError(`Desktop rejected clipboard text: ${status.message}`);
+    };
+    writer.sendData(new TextEncoder().encode(text));
+    writer.sendEnd();
+  };
+  const handlePasteClipboard = () => { setClipboardOpen(true); setMenuOpen(false); };
 
   const handleDisconnect = useCallback(() => {
     setMenuOpen(false);
@@ -59,6 +59,8 @@ export function RdpFullscreen({ session, onBack, onDisconnect }: RdpFullscreenPr
 
   return (
     <div style={styles.overlay}>
+      {clipboardError && <div role="alert">{clipboardError} <button onClick={() => setClipboardError('')}>Dismiss</button></div>}
+      {clipboardOpen && <ClipboardDialog initialText={remoteClipboard} onSend={sendClipboard} onClose={() => setClipboardOpen(false)} />}
       <div style={styles.topBar}>
         <button style={styles.backBtn} onClick={onBack} title="Back to grid">
           &#9664; Back
@@ -77,16 +79,16 @@ export function RdpFullscreen({ session, onBack, onDisconnect }: RdpFullscreenPr
             <>
               <div style={styles.menuBackdrop} onClick={() => setMenuOpen(false)} />
               <div style={styles.menu}>
-                <div style={styles.menuItem} onClick={handleSendCtrlAltDel}>
+                <button style={styles.menuItem} onClick={handleSendCtrlAltDel}>
                   Send Ctrl+Alt+Del
-                </div>
-                <div style={styles.menuItem} onClick={handlePasteClipboard}>
-                  Paste Clipboard
-                </div>
+                </button>
+                <button style={styles.menuItem} onClick={handlePasteClipboard}>
+                  Clipboard
+                </button>
                 <div style={styles.menuSeparator}>─────────────</div>
-                <div style={{ ...styles.menuItem, color: '#ff8888' }} onClick={handleDisconnect}>
+                <button style={{ ...styles.menuItem, color: '#ff8888' }} onClick={handleDisconnect}>
                   Disconnect
-                </div>
+                </button>
               </div>
             </>
           )}
@@ -97,6 +99,8 @@ export function RdpFullscreen({ session, onBack, onDisconnect }: RdpFullscreenPr
         <RdpViewer
           sessionId={session.id}
           mode="fullscreen"
+          onClipboard={setRemoteClipboard}
+          onStateChange={setConnectionState}
           clientRef={clientRef}
         />
       </div>
@@ -177,6 +181,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 4,
   },
   menuItem: {
+    display: 'block', width: '100%', background: 'none', border: 0, textAlign: 'left',
     padding: '8px 14px',
     fontSize: 13,
     color: '#ccc',

@@ -239,6 +239,8 @@ export function AgentWorkspace({
   const [sortMode, setSortMode] = useState<SortMode>('recently-ready');
   const reserveScratch = scratchVisible || scratchLoading;
   const attachRequestRef = useRef(0);
+  const pollingRef = useRef(false);
+  const loadRequestRef = useRef(0);
   const listRef = useRef<HTMLDivElement | null>(null);
   const sortModeRef = useRef<SortMode>(sortMode);
   const viewportSize = useVisualViewportSize();
@@ -266,7 +268,7 @@ export function AgentWorkspace({
 
   const deleteAgentSession = useCallback((sessionId: string) => {
     api.deleteSession(sessionId).catch(err => {
-      console.error(`Failed to delete agent session ${sessionId}:`, err);
+      setError(`Could not release session: ${(err as Error).message}`);
     });
   }, []);
 
@@ -280,11 +282,15 @@ export function AgentWorkspace({
   }, [deleteAgentSession]);
 
   const loadSessions = useCallback(async (options: { showLoading?: boolean } = {}) => {
+    if (pollingRef.current) return;
+    pollingRef.current = true;
+    const requestId = ++loadRequestRef.current;
     const showLoading = options.showLoading !== false;
     if (showLoading) setLoading(true);
     setError(null);
     try {
       const loaded = agent ? await api.getAgentSessions(agent.id) : await api.getAllAgentSessions();
+      if (requestId !== loadRequestRef.current) return;
       setAgentSessions(loaded);
       setSelectedKey(current => {
         if (current && loaded.some(session => sessionKey(session) === current)) return current;
@@ -292,6 +298,7 @@ export function AgentWorkspace({
         return firstVisibleSession ? sessionKey(firstVisibleSession) : null;
       });
     } catch (err) {
+      if (requestId !== loadRequestRef.current) return;
       const message = (err as Error).message;
       if (message === 'Agent sessions are disabled in multi-user mode' || message === 'Agent sessions are not enabled') {
         onAgentAccessDenied?.();
@@ -305,7 +312,10 @@ export function AgentWorkspace({
         console.warn(`Failed to refresh ${workspaceLabel}:`, err);
       }
     } finally {
-      if (showLoading) setLoading(false);
+      if (requestId === loadRequestRef.current) {
+        pollingRef.current = false;
+        if (showLoading) setLoading(false);
+      }
     }
   }, [agent, clearAttachedSession, onAgentAccessDenied, workspaceLabel]);
 
@@ -315,6 +325,7 @@ export function AgentWorkspace({
       return;
     }
     loadSessions();
+    return () => { ++loadRequestRef.current; pollingRef.current = false; };
   }, [availableDefinitions.length, loadSessions]);
 
   useEffect(() => {
@@ -343,6 +354,8 @@ export function AgentWorkspace({
           }
           return session;
         });
+      } else {
+        deleteAgentSession(session.id);
       }
     } catch (err) {
       if (attachRequestRef.current === requestId) {
@@ -363,6 +376,7 @@ export function AgentWorkspace({
     } else {
       clearAttachedSession();
     }
+    return () => { ++attachRequestRef.current; };
   }, [attachSelected, clearAttachedSession, selectedAgentId, selectedAgentName]);
 
   const openScratch = useCallback(async () => {

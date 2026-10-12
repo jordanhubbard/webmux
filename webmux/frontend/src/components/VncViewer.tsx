@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import RFB from '@novnc/novnc/lib/rfb.js';
+import RFB from '@novnc/novnc';
 import { buildVncWsUrl } from '../utils/api';
 
 interface VncViewerProps {
@@ -7,6 +7,7 @@ interface VncViewerProps {
   vncPassword?: string;
   mode: 'thumbnail' | 'fullscreen';
   onStateChange?: (state: 'connecting' | 'connected' | 'disconnected' | 'error') => void;
+  onClipboard?: (text: string) => void;
   rfbRef?: React.MutableRefObject<VncClientControl | null>;
 }
 
@@ -15,7 +16,9 @@ export interface VncClientControl {
   sendCtrlAltDel(): void;
 }
 
-export function VncViewer({ sessionId, vncPassword, mode, onStateChange, rfbRef }: VncViewerProps) {
+export function VncViewer({ sessionId, vncPassword, mode, onStateChange, rfbRef, onClipboard }: VncViewerProps) {
+  const clipboardRef = useRef(onClipboard);
+  clipboardRef.current = onClipboard;
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Keep latest callbacks/values in refs so RFB event listeners never capture stale closures.
@@ -34,6 +37,10 @@ export function VncViewer({ sessionId, vncPassword, mode, onStateChange, rfbRef 
 
     rfb.scaleViewport = mode === 'fullscreen';
     rfb.resizeSession = false;
+
+    rfb.addEventListener('clipboard', event => {
+      clipboardRef.current?.(event.detail.text.slice(0, 128 * 1024));
+    });
 
     rfb.addEventListener('connect', () => {
       onStateChangeRef.current?.('connected');

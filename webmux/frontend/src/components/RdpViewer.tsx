@@ -6,12 +6,15 @@ interface RdpViewerProps {
   sessionId: string;
   mode: 'thumbnail' | 'fullscreen';
   onStateChange?: (state: 'connecting' | 'connected' | 'disconnected' | 'error') => void;
+  onClipboard?: (text: string) => void;
   clientRef?: React.MutableRefObject<RdpClientControl | null>;
 }
 
 export type RdpClientControl = Pick<Guacamole.Client, 'createClipboardStream' | 'sendKeyEvent'>;
 
-export function RdpViewer({ sessionId, mode, onStateChange, clientRef }: RdpViewerProps) {
+export function RdpViewer({ sessionId, mode, onStateChange, clientRef, onClipboard }: RdpViewerProps) {
+  const clipboardRef = useRef(onClipboard);
+  clipboardRef.current = onClipboard;
   const containerRef = useRef<HTMLDivElement>(null);
   const onStateChangeRef = useRef(onStateChange);
   useEffect(() => { onStateChangeRef.current = onStateChange; }, [onStateChange]);
@@ -37,7 +40,18 @@ export function RdpViewer({ sessionId, mode, onStateChange, clientRef }: RdpView
       onStateChangeRef.current?.('error');
     };
 
+    client.onclipboard = (stream, mime) => {
+      if (mime !== 'text/plain') { stream.sendAck('Text only', 0x030f); return; }
+      const reader = new Guacamole.StringReader(stream);
+      let text = '';
+      reader.ontext = part => { text = (text + part).slice(0, 128 * 1024); };
+      reader.onend = () => clipboardRef.current?.(text);
+    };
     let active = true;
+    let keyboard: Guacamole.Keyboard | undefined;
+    const container = containerRef.current;
+    const focus = () => container.focus();
+    const release = () => keyboard?.reset();
 
     if (mode === 'fullscreen') {
       const mouse = new Guacamole.Mouse(containerRef.current);
@@ -45,7 +59,9 @@ export function RdpViewer({ sessionId, mode, onStateChange, clientRef }: RdpView
       mouse.onmouseup = state => { if (active) client.sendMouseState(state); };
       mouse.onmousemove = state => { if (active) client.sendMouseState(state); };
 
-      const keyboard = new Guacamole.Keyboard(document);
+      keyboard = new Guacamole.Keyboard(container);
+      container.addEventListener('mousedown', focus);
+      container.addEventListener('blur', release);
       keyboard.onkeydown = (keysym: number) => { if (active) client.sendKeyEvent(1, keysym); };
       keyboard.onkeyup = (keysym: number) => { if (active) client.sendKeyEvent(0, keysym); };
     }
@@ -55,6 +71,10 @@ export function RdpViewer({ sessionId, mode, onStateChange, clientRef }: RdpView
     client.connect();
 
     return () => {
+      keyboard?.reset();
+      if (keyboard) { keyboard.onkeydown = null; keyboard.onkeyup = null; }
+      container.removeEventListener('mousedown', focus);
+      container.removeEventListener('blur', release);
       active = false;
       client.disconnect();
       if (containerRef.current && displayElem.parentNode === containerRef.current) {

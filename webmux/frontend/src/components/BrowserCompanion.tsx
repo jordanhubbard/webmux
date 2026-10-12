@@ -30,11 +30,15 @@ export function BrowserCompanion({ session, navigation, onHide }: { session: Ses
         if (result.image) setFrame(result);
         if (!addressEditing.current && result.url && result.url !== 'about:blank') setAddress(result.url);
         setError(result.error ?? '');
-        setReady(!result.error);
+        // Navigation may destroy the screenshot execution context transiently.
+        // Once started, keep polling so the next frame can recover.
+        setReady(previous => previous || !result.error);
       } catch (err) {
         if (mounted.current) {
           setError(err instanceof Error ? err.message : 'Browser request failed');
-          setReady(false);
+          // A transport or redirect failure must not permanently stop a
+          // previously running viewer. Startup failures still need reconnect.
+          if (action.action === 'start') setReady(false);
         }
       } finally { pending.current = false; }
     });

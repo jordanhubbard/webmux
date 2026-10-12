@@ -1,3 +1,4 @@
+import { movePair } from '../utils/movePair';
 import { AddSessionCell } from './AddSessionCell';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Tile } from './Tile';
@@ -139,6 +140,8 @@ export function Workspace({
   const { focusedSessionId } = useInputBroadcast();
 
   // Drag state
+  const [operationError, setOperationError] = useState('');
+  const movePendingRef = useRef(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ row: number; col: number } | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
@@ -166,7 +169,7 @@ export function Workspace({
         setSessions(loaded);
         setCollapsedSessions(new Set(loaded.filter(s => s.minimized).map(s => s.id)));
       })
-      .catch(err => console.error('Failed to load sessions:', err))
+      .catch(err => setOperationError(`Could not load sessions: ${String(err)}`))
       .finally(() => setLoading(false));
   }, []);
 
@@ -188,20 +191,20 @@ export function Workspace({
     api.deleteSession(id)
       .then(() => api.getSessions())
       .then(setSessions)
-      .catch(err => console.error('Failed to delete session:', err));
+      .catch(err => setOperationError(`Could not delete session: ${String(err)}`));
   }, []);
 
   const handleReconnect = useCallback((id: string) => {
     api.reconnectSession(id).then(updated => {
       setSessions(prev => prev.map(s => s.id === id ? updated : s));
-    }).catch(err => console.error('Reconnect error:', err));
+    }).catch(err => setOperationError(`Could not reconnect: ${String(err)}`));
   }, []);
 
   const handleRename = useCallback((id: string, title: string) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, title } : s));
     api.renameSession(id, title).catch(err => {
-      console.error('Rename error:', err);
-      api.getSessions().then(setSessions);
+      setOperationError(`Could not rename: ${String(err)}`);
+      api.getSessions().then(setSessions).catch(err => setOperationError(String(err)));
     });
   }, []);
 
@@ -327,13 +330,13 @@ export function Workspace({
           const session = current.find(s => s.id === sessionId);
           if (session && (session.row !== target.row || session.col !== target.col)) {
             setSessions(p => p.map(s => s.id === sessionId ? { ...s, row: target.row, col: target.col } : s));
-            api.moveSession(sessionId, target.row, target.col).catch(() => {});
+            api.moveSession(sessionId, target.row, target.col).catch(err => setOperationError(`Could not save layout: ${String(err)}`));
           }
         }
-        api.setMinimized(sessionId, false).catch(() => {});
+        api.setMinimized(sessionId, false).catch(err => setOperationError(`Could not restore session: ${String(err)}`));
       } else {
         next.add(sessionId);
-        api.setMinimized(sessionId, true).catch(() => {});
+        api.setMinimized(sessionId, true).catch(err => setOperationError(`Could not minimize session: ${String(err)}`));
       }
       return next;
     });
@@ -394,7 +397,8 @@ export function Workspace({
           !collapsedSessionsRef.current.has(s.id)
         );
 
-        if (dragged) {
+        if (dragged && !movePendingRef.current) {
+          movePendingRef.current = true;
           const srcRow = dragged.row;
           const srcCol = dragged.col;
 
@@ -407,18 +411,15 @@ export function Workspace({
 
           // Persist to backend
           try {
-            await api.moveSession(dragId, target.row, target.col);
-            if (targetSession) {
-              await api.moveSession(targetSession.id, srcRow, srcCol);
-            }
+            await movePair(
+              () => api.moveSession(dragId, target.row, target.col),
+              targetSession ? () => api.moveSession(targetSession.id, srcRow, srcCol) : undefined,
+              () => api.moveSession(dragId, srcRow, srcCol));
           } catch (err) {
-            console.error('Move failed:', err);
-            setSessions(prev => prev.map(s => {
-              if (s.id === dragId) return { ...s, row: srcRow, col: srcCol };
-              if (targetSession && s.id === targetSession.id) return { ...s, row: target.row, col: target.col };
-              return s;
-            }));
-          }
+            setOperationError(`Could not save layout: ${String(err)}`);
+            try { setSessions(await api.getSessions()); }
+            catch { setOperationError('Could not reload saved layout. Reload the page before moving more sessions.'); }
+          } finally { movePendingRef.current = false; }
         }
       }
 
@@ -457,6 +458,7 @@ export function Workspace({
 
   return (
     <div style={styles.shell}>
+      {operationError && <div role="alert">{operationError} <button onClick={() => setOperationError('')}>Dismiss</button></div>}
       <div ref={outerRef} style={styles.outer} data-testid="workspace-scroll">
         <div style={styles.hint}>Hold Shift to scroll</div>
         {sessions.length > 0 && (

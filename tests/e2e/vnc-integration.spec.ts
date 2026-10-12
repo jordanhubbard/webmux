@@ -136,7 +136,10 @@ for (const authenticated of [false, true]) test(`real x11vnc updates and input (
     await page.evaluate(text => navigator.clipboard.writeText(text), clipboard);
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(clipboard);
     await page.getByTitle('VNC Options', { exact: true }).click();
-    await page.getByText('Paste Clipboard', { exact: true }).click();
+    await page.getByRole('button', { name: 'Clipboard', exact: true }).click();
+    await page.getByRole('button', { name: 'Read clipboard', exact: true }).click();
+    await expect(page.getByRole('status')).toContainText('Clipboard loaded');
+    await page.getByRole('button', { name: 'Send text', exact: true }).click();
     await expect.poll(() => clipboardFrames, { message: 'Browser must send the clipboard payload over RFB' }).toContain(clipboard);
     await expect.poll(() => {
       const result = spawnSync('xclip', ['-selection', 'clipboard', '-out'], {

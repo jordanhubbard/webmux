@@ -290,4 +290,25 @@ describe('useWebSocket', () => {
     act(() => { vi.advanceTimersByTime(1); });
     expect(MockWebSocket.instances.length).toBe(3);
   });
+  it('bounds queued UTF-8 input and reports backpressure', async () => {
+    const useWebSocket = await importHook();
+    const onSendError = vi.fn();
+    const { result } = renderHook(() => useWebSocket({ sessionId: 's1', onMessage: vi.fn(), onSendError }));
+    act(() => result.current.send({ type: 'input', data: '🔐'.repeat(140000) }));
+    expect(onSendError).toHaveBeenCalledWith(expect.stringContaining('too large'));
+    act(() => MockWebSocket.instances[0].simulateOpen());
+    expect(MockWebSocket.instances[0].sentMessages).toEqual([]);
+  });
+  it('reports input in reconnect gaps instead of replaying it later', async () => {
+    const useWebSocket = await importHook();
+    const onSendError = vi.fn();
+    const { result } = renderHook(() => useWebSocket({ sessionId: 's1', onMessage: vi.fn(), onSendError }));
+    act(() => { MockWebSocket.instances[0].simulateOpen(); MockWebSocket.instances[0].simulateClose(); });
+    act(() => result.current.send({ type: 'input', data: 'dangerous stale command' }));
+    expect(onSendError).toHaveBeenCalledWith(expect.stringContaining('disconnected'));
+    act(() => vi.advanceTimersByTime(1000));
+    act(() => MockWebSocket.instances[1].simulateOpen());
+    expect(MockWebSocket.instances[1].sentMessages).toEqual([]);
+  });
+
 });

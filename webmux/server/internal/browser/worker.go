@@ -145,11 +145,16 @@ func Worker(in io.Reader, out io.Writer) error {
 			frame := Frame{Target: string(chromedp.FromContext(current).Target.TargetID), Tabs: []Tab{}}
 			err := perform(ctx, req)
 			if err == nil {
-				err = chromedp.Run(ctx, chromedp.Location(&frame.URL), chromedp.ActionFunc(func(ctx context.Context) error {
+				// A redirect can invalidate the execution context or stall a
+				// screenshot. Bound frame capture separately so polling and queued
+				// input recover without waiting for the full action timeout.
+				frameCtx, stopFrame := context.WithTimeout(ctx, 3*time.Second)
+				err = chromedp.Run(frameCtx, chromedp.Location(&frame.URL), chromedp.ActionFunc(func(ctx context.Context) error {
 					var err error
 					frame.Image, err = page.CaptureScreenshot().WithFormat(page.CaptureScreenshotFormatJpeg).WithQuality(65).Do(ctx)
 					return err
 				}))
+				stopFrame()
 			}
 			finish()
 			if err != nil {

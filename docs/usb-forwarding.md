@@ -150,7 +150,11 @@ exporter loss, cancellation, expiry, listener cleanup, invalid options,
 oversized/malformed frames, occupied ports, and protocol violations. It also
 uses a real OpenSSH client with ephemeral host/client keys against an in-process
 SSH server, proves byte transfer through the fixed worker command, and checks
-that an unknown host key is rejected. Keys and test traffic are disposable
+that an unknown host key is rejected. The fixture builds the WebMux executable,
+executes a separate worker through SSH, and runs the real CLI against a dummy TCP
+exporter, checking binary payloads and listener cleanup after lease expiry.
+`--known-hosts` selects an explicit verified trust file for isolated environments;
+strict host-key verification remains enabled. Keys and test traffic are disposable
 fixtures, not host or phone credentials.
 
 Still required: native exporter/importer qualification on both Macs, reconnect
@@ -158,3 +162,26 @@ and device release after interruption, actual iPhone/Xcode install/debug, and li
 browser status. The USB button provides setup guidance and command generation.
 No driver or system service has been installed or modified as part of this feature. Keep issue #120 open until these
 acceptance conditions have evidence.
+
+
+### Virtual USB and physical acceptance
+
+The fake exporter is intentional: WebMux carries opaque TCP, so ordinary CI must
+not require a phone or USB driver. The built CLI/worker test validates that boundary.
+A second Linux-only CI tier runs `tests/usb-kernel.py` in a disposable Ubuntu VM.
+It boots a generic kernel with matching modules in a nested, network-isolated VM
+(hosted Azure kernels omit gadget drivers), records that kernel version,
+creates a mass-storage gadget on the `usbip-vudc` virtual controller, and connects the native USB/IP exporter
+to the `vhci_hcd` importer through the built WebMux CLI and a separate SSH worker.
+It verifies enumeration, exact reads and writes, explicit detach, device
+disappearance after interruption, and process/listener cleanup. Missing kernel
+modules fail the dedicated job rather than silently skipping assertions. The
+fixture refuses machines with existing USB forwarding modules and selects only
+its own gadget; do not run it on a workstation with real USB devices.
+
+Only a passing dedicated CI run establishes native-tier evidence. The guest
+kernel is pinned in CI and recorded in its log, not a promise of compatibility
+with every kernel. Linux gadget emulation does not establish compatibility
+with VirtualHere, Windows/macOS drivers, or iPhone/Xcode. Physical acceptance stays
+in #120. See the [kernel gadget API](https://www.kernel.org/doc/html/latest/driver-api/usb/gadget.html)
+and [USB/IP setup](https://github.com/torvalds/linux/blob/master/tools/usb/usbip/README).

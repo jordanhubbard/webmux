@@ -301,4 +301,14 @@ describe('AgentWorkspace', () => {
       vi.useRealTimers();
     }
   });
+  it('releases an attachment that arrives after unmount', async () => {
+    let resolve!: (session: Session) => void;
+    apiMock.attachAgentSession.mockReturnValue(new Promise<Session>(r => { resolve = r; }));
+    const view = render(<AgentWorkspace agent={codexDefinition} agentDefinitions={[codexDefinition]} {...defaultProps} />);
+    await waitFor(() => expect(apiMock.attachAgentSession).toHaveBeenCalled());
+    view.unmount();
+    await act(async () => { resolve(makeSession({ id: 'late-session' })); });
+    expect(apiMock.deleteSession).toHaveBeenCalledWith('late-session');
+  });
+
 });
