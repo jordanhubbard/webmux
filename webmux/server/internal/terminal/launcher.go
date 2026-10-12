@@ -338,8 +338,8 @@ func ConnectBrowser(payload string) error {
 		} else {
 			value.Args = append(value.Args, "webmux --browser-shell")
 		}
-	} else {
-		fmt.Fprintln(os.Stderr, "[WebMux: automatic browser launch needs matching webmux on the remote PATH and verified key/agent SSH access. Terminal links still open the companion.]")
 	}
+	// Browser integration is optional. A failed capability probe does not mean
+	// the terminal connection will fail; keep the normal shell fallback silent.
 	return browseropen.Execute(value.Path, append([]string{value.Path}, value.Args...), os.Environ())
 }

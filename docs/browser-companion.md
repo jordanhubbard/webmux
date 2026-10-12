@@ -52,8 +52,9 @@ credential storage.
   also route into the sign-in panel. No user startup files or OS associations change.
 - SSH probes for the matching helper with verified host keys and key/agent access
   before starting a browser-linked shell. Missing support leaves a normal shell
-  and prints a setup hint. Mosh uses manual link clicks because its terminal
-  protocol does not reliably carry the launch control sequence.
+  silently; clicked links still open the sign-in panel. Mosh uses manual link
+  clicks because its terminal protocol does not reliably carry the launch control
+  sequence.
 - Launch requests travel through the existing PTY, including through local tmux,
   without a public listener or bearer token in the shell. The focused viewer
   receives the request; an unacknowledged request is retained for up to five
