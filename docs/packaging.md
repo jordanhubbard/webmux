@@ -13,7 +13,7 @@ Open http://localhost:8080 and create the first administrator account. To run in
 foreground instead, use `webmux`. Linux background services require systemd and an
 available user service manager; foreground operation does not.
 
-The stable formula builds the v1.3.12 native Go server and browser UI from the
+The stable formula builds the released native Go server and browser UI from the
 tagged source using the npm lockfile. Go and Node.js 24 are build dependencies;
 the installed runtime requires OpenSSH but does not require Node.js or Python.
 The first installation requires build tools (Xcode Command Line Tools on macOS,
