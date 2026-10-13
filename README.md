@@ -15,7 +15,7 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 - **Multi-viewer presence** — multiple tabs can watch the same session; click-to-focus controls who has keyboard input
 - **Type to All** — broadcast mode sends keystrokes to every open session simultaneously
 - **Application-owned terminal keys** — control and function keys reach the terminal application; search and logging have visible toolbar controls
-- **Workspace navigation** — switch among terminals, desktops, and configured agent views; use the minimap and minimized-session dock to navigate larger layouts
+- **Workspace navigation** — switch among terminals, desktops, and configured agent views; use the minimap and minimized-session dock to navigate larger layouts. Click **Pack** in the terminal dock to close gaps from the top left, preserving reading order and the current column count; minimized sessions stay minimized.
 - **Per-window controls** — rename, move, minimize, lock, theme, and control auto-scroll for individual terminal sessions or globally
 - **SSH key and password auth** — managed keys via `keys.yaml`, password-based via `sshpass`
 - **Two security modes** — local auth (Argon2id + JWT + HTTPS) or trusted mode for isolated networks

@@ -1,6 +1,37 @@
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
 
+test('Pack closes terminal grid holes and retains the layout after reload', async ({ page, request }) => {
+  const ids: string[] = [];
+  try {
+    for (const [row, col] of [[0, 1], [2, 0], [3, 1]]) {
+      const response = await request.post('/api/sessions', { data: {
+        hostname: 'localhost', username: 'pack-test', transport: 'exec', row, col,
+        exec_command: `"${process.execPath}" "${path.resolve(__dirname, 'terminal-fixture.mts')}"`,
+      } });
+      expect(response.ok()).toBe(true);
+      ids.push((await response.json()).id);
+    }
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Pack', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Pack', exact: true })).toBeDisabled();
+    const saved = await (await request.get('/api/sessions')).json();
+    for (const [index, id] of ids.entries()) {
+      expect(saved.find((s: { id: string }) => s.id === id)).toMatchObject({ row: Math.floor(index / 2), col: index % 2 });
+    }
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Pack', exact: true })).toBeDisabled();
+    for (const [index, id] of ids.entries()) {
+      const tile = page.getByTestId(`tile-cell-${id}`);
+      await expect(tile).toHaveCSS('grid-row-start', String(Math.floor(index / 2) + 1));
+      await expect(tile).toHaveCSS('grid-column-start', String(index % 2 + 1));
+      await expect(tile.locator('.xterm-helper-textarea')).toBeAttached();
+    }
+  } finally {
+    for (const id of ids) await request.delete(`/api/sessions/${id}`);
+  }
+});
+
 test('connection dialog contains focus, dismisses with Escape, and restores its keyboard opener', async ({ page }) => {
   await page.goto('/');
   const add = page.getByTestId('add-cell-0-0').first();
