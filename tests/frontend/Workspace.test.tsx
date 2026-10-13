@@ -8,6 +8,7 @@ const mockSessions = [
   {
     id: 's1', owner: 'u1', transport: 'ssh' as const, host_id: '', hostname: 'h1', username: 'u1',
     key_id: '', cols: 80, rows: 24, row: 0, col: 0, port: 22,
+    kind: 'terminal' as const, minimized: false,
     state: 'connected' as const, created_at: '', updated_at: '', title: 'u1@h1', persistent: true,
   },
 ];
@@ -78,6 +79,7 @@ describe('Workspace', () => {
     terminalFocusFns.clear();
     const { api } = await import('@frontend/utils/api');
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    vi.mocked(api.moveSession).mockReset().mockResolvedValue(mockSessions[0]);
   });
 
   const defaultProps = { fontSize: 14, termCols: 80, termRows: 24, globalAutoScroll: true, globalAutoScrollVersion: 0, onGlobalAutoScrollChange: vi.fn(), globalLock: false, globalLockVersion: 0, onGlobalLockChange: vi.fn() };
@@ -105,6 +107,91 @@ describe('Workspace', () => {
     await waitFor(() => {
       expect(screen.getAllByText('u1@h1').length).toBeGreaterThan(0);
     });
+  });
+
+  it('packs gaps in reading order, saves positions, and leaves minimized sessions alone', async () => {
+    const { api } = await import('@frontend/utils/api');
+    const sessions = [
+      { ...mockSessions[0], id: 'last', row: 3, col: 0 },
+      { ...mockSessions[0], id: 'hidden', row: 0, col: 0, minimized: true },
+      { ...mockSessions[0], id: 'first', row: 0, col: 1 },
+      { ...mockSessions[0], id: 'middle', row: 2, col: 1 },
+    ];
+    vi.mocked(api.getSessions).mockResolvedValue(sessions);
+    const view = render(<Workspace {...defaultProps} terminalGridLimit={{ maxCols: 2, maxRows: 4 }} />, { wrapper });
+    fireEvent.click(await screen.findByRole('button', { name: 'Pack' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Pack' })).toBeDisabled());
+    expect(vi.mocked(api.moveSession).mock.calls).toEqual([
+      ['first', 0, 0], ['middle', 0, 1], ['last', 1, 0],
+    ]);
+    expect(screen.getByTestId('tile-cell-first')).toHaveStyle({ gridRow: '1', gridColumn: '1' });
+    expect(screen.getByTestId('tile-cell-middle')).toHaveStyle({ gridRow: '1', gridColumn: '2' });
+    expect(screen.getByTestId('tile-cell-last')).toHaveStyle({ gridRow: '2', gridColumn: '1' });
+    expect(screen.getByTestId('tile-cell-hidden')).toHaveStyle({ visibility: 'hidden' });
+
+    const saved = sessions.map(s => {
+      const move = vi.mocked(api.moveSession).mock.calls.find(([id]) => id === s.id);
+      return move ? { ...s, row: move[1], col: move[2] } : s;
+    });
+    view.unmount();
+    vi.mocked(api.getSessions).mockResolvedValue(saved);
+    render(<Workspace {...defaultProps} />, { wrapper });
+    expect(await screen.findByRole('button', { name: 'Pack' })).toBeDisabled();
+    expect(screen.getByTestId('tile-cell-last')).toHaveStyle({ gridRow: '2', gridColumn: '1' });
+  });
+
+  it('disables Pack for an already compact or entirely minimized layout', async () => {
+    const { api } = await import('@frontend/utils/api');
+    vi.mocked(api.getSessions).mockResolvedValue(mockSessions);
+    const view = render(<Workspace {...defaultProps} />, { wrapper });
+    expect(await screen.findByRole('button', { name: 'Pack' })).toBeDisabled();
+    view.unmount();
+    vi.mocked(api.getSessions).mockResolvedValue([{ ...mockSessions[0], row: 4, minimized: true }]);
+    render(<Workspace {...defaultProps} />, { wrapper });
+    expect(await screen.findByRole('button', { name: 'Pack' })).toBeDisabled();
+    expect(api.moveSession).not.toHaveBeenCalled();
+  });
+
+  it('blocks duplicate packing and layout interactions while saving', async () => {
+    const { api } = await import('@frontend/utils/api');
+    vi.mocked(api.getSessions).mockResolvedValue([{ ...mockSessions[0], row: 2 }]);
+    let finish!: () => void;
+    vi.mocked(api.moveSession).mockImplementation(() => new Promise(resolve => {
+      finish = () => resolve(mockSessions[0]);
+    }));
+    render(<Workspace {...defaultProps} />, { wrapper });
+    fireEvent.click(await screen.findByRole('button', { name: 'Pack' }));
+    expect(screen.getByRole('button', { name: 'Packing…' })).toBeDisabled();
+    expect(screen.getByTestId('dock-s1')).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Packing…' }));
+    fireEvent.click(screen.getByTestId('add-cell-2-1'));
+    expect(screen.queryByText('Connect to Host')).toBeNull();
+    expect(api.moveSession).toHaveBeenCalledTimes(1);
+    finish();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Pack' })).toBeDisabled());
+    expect(screen.getByTestId('tile-cell-s1')).toHaveStyle({ gridRow: '1', gridColumn: '1' });
+  });
+
+  it('reloads saved positions after a partial packing failure and allows retry', async () => {
+    const { api } = await import('@frontend/utils/api');
+    const sessions = [
+      { ...mockSessions[0], id: 's1', row: 1 },
+      { ...mockSessions[0], id: 's2', row: 3 },
+    ];
+    vi.mocked(api.getSessions).mockResolvedValueOnce(sessions)
+      .mockResolvedValue([{ ...sessions[0], row: 0 }, sessions[1]]);
+    vi.mocked(api.moveSession).mockResolvedValueOnce(mockSessions[0]).mockRejectedValueOnce(new Error('offline'));
+    render(<Workspace {...defaultProps} />, { wrapper });
+    fireEvent.click(await screen.findByRole('button', { name: 'Pack' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not pack layout: Error: offline');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Pack' })).toBeEnabled());
+    expect(api.getSessions).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('tile-cell-s1')).toHaveStyle({ gridRow: '1' });
+    expect(screen.getByTestId('tile-cell-s2')).toHaveStyle({ gridRow: '4' });
+    fireEvent.click(screen.getByRole('button', { name: 'Pack' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Pack' })).toBeDisabled());
+    expect(screen.getByTestId('tile-cell-s2')).toHaveStyle({ gridRow: '2' });
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('shows add cells adjacent to existing tiles', async () => {

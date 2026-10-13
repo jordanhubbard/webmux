@@ -142,6 +142,7 @@ export function Workspace({
   // Drag state
   const [operationError, setOperationError] = useState('');
   const movePendingRef = useRef(false);
+  const [packing, setPacking] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{ row: number; col: number } | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
@@ -188,6 +189,7 @@ export function Workspace({
   }, []);
 
   const handleClose = useCallback((id: string) => {
+    if (movePendingRef.current) return;
     api.deleteSession(id)
       .then(() => api.getSessions())
       .then(setSessions)
@@ -298,6 +300,7 @@ export function Workspace({
   }, []);
 
   const handleToggleCollapse = useCallback((sessionId: string) => {
+    if (movePendingRef.current) return;
     setCollapsedSessions(prev => {
       const next = new Set(prev);
       if (next.has(sessionId)) {
@@ -355,6 +358,7 @@ export function Workspace({
   }, [tile.w, tile.h]);
 
   const handleTitleMouseDown = useCallback((sessionId: string, e: React.MouseEvent) => {
+    if (movePendingRef.current) return;
     e.preventDefault();
     setDraggingId(sessionId);
     draggingIdRef.current = sessionId;
@@ -439,6 +443,38 @@ export function Workspace({
 
   const visibleSessions = sessions.filter(s => !collapsedSessions.has(s.id));
 
+  // Use occupied columns, excluding the extra column of add-session cells.
+  const packCols = Math.max(1, ...visibleSessions.map(s => s.col + 1));
+  const packMoves = [...visibleSessions]
+    .sort((a, b) => a.row - b.row || a.col - b.col)
+    .map((session, index) => ({ session, row: Math.floor(index / packCols), col: index % packCols }))
+    .filter(({ session, row, col }) => session.row !== row || session.col !== col);
+
+  const handlePack = async () => {
+    if (movePendingRef.current || draggingIdRef.current || dialogPos || packMoves.length === 0) return;
+    movePendingRef.current = true;
+    setPacking(true);
+    setOperationError('');
+    try {
+      // Save in reading order so each destination is vacated before reuse.
+      for (const { session, row, col } of packMoves) {
+        await api.moveSession(session.id, row, col);
+        setSessions(previous => previous.map(s => s.id === session.id ? { ...s, row, col } : s));
+      }
+      if (outerRef.current) {
+        outerRef.current.scrollLeft = 0;
+        outerRef.current.scrollTop = 0;
+      }
+    } catch (err) {
+      setOperationError(`Could not pack layout: ${String(err)}`);
+      try { setSessions(await api.getSessions()); }
+      catch { setOperationError('Could not reload saved layout. Reload the page before moving more sessions.'); }
+    } finally {
+      movePendingRef.current = false;
+      setPacking(false);
+    }
+  };
+
   const addPositions = getAddPositions(visibleSessions, terminalGridLimit);
 
   const allPositions = [
@@ -463,6 +499,14 @@ export function Workspace({
         <div style={styles.hint}>Hold Shift to scroll</div>
         {sessions.length > 0 && (
           <div style={styles.dock}>
+            <button
+              style={{ ...styles.dockItem, opacity: packing || packMoves.length === 0 ? 0.5 : 1 }}
+              onClick={handlePack}
+              disabled={packing || !!draggingId || !!dialogPos || packMoves.length === 0}
+              title="Pack visible sessions from the top left, keeping the current column count"
+            >
+              {packing ? 'Packing…' : 'Pack'}
+            </button>
             {[...sessions].sort((a, b) => a.title.localeCompare(b.title)).map(session => {
               const isMinimized = collapsedSessions.has(session.id);
               const hasBell = bellSessions.has(session.id);
@@ -470,6 +514,7 @@ export function Workspace({
               return (
                 <button
                   key={session.id}
+                  disabled={packing}
                   data-testid={`dock-${session.id}`}
                   data-focused={isFocused ? 'true' : 'false'}
                   aria-current={isFocused ? 'true' : undefined}
@@ -571,7 +616,7 @@ export function Workspace({
               row={pos.row}
               col={pos.col}
               isEmpty={visibleSessions.length === 0}
-              onClick={() => setDialogPos(pos)}
+              onClick={() => { if (!movePendingRef.current) setDialogPos(pos); }}
             />
           ))}
 
