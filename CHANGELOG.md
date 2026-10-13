@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.20] - 2026-10-12
+
+### Fixed
+- Supply a UTF-8 locale for Mosh when a service manager launches WebMux without locale settings; preserve explicitly configured locales (#142).
+- Honor SSH fallback for Mosh startup errors and initial UDP connection timeouts. Preserve diagnostics, retain SSH for reconnects, and avoid fallback loops, duplicate initial commands, or replacing established Mosh sessions (#144).
+
 ## [1.3.19] - 2026-10-12
 
 ### Fixed
