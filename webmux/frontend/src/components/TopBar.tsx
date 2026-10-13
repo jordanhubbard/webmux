@@ -157,6 +157,7 @@ export function TopBar({
         >
           Desktops
         </button>
+        <button onClick={() => setActivePane('sessions')} aria-pressed={activePane === 'sessions'}>Host sessions</button>
         {agentDefinitions.length > 0 && combinedAgentPane && (
           <button
             onClick={() => setActivePane('agents')}

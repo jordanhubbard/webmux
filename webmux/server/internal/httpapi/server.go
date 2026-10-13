@@ -94,6 +94,7 @@ func (s *Server) Close() error { return s.closeSocketsAndSessions() }
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.Handle("POST /api/session-manager", s.protected(true, s.sessionManager))
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]string{"status": "ok", "name": s.name})
 	})
