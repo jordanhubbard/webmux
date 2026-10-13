@@ -157,6 +157,43 @@ func TestMoshCommandCompatibility(t *testing.T) {
 	}
 }
 
+func TestMoshServiceLocale(t *testing.T) {
+	for _, tc := range []struct {
+		name, platform, transport string
+		env, want                 []string
+	}{
+		{"launchd", "darwin", "mosh", nil, []string{"LANG=en_US.UTF-8"}},
+		{"linux service", "linux", "mosh", nil, []string{"LANG=C.UTF-8"}},
+		{"empty locale", "darwin", "mosh", []string{"LANG=", "LC_ALL=", "LC_CTYPE="}, []string{"LC_ALL=", "LC_CTYPE=", "LANG=en_US.UTF-8"}},
+		{"explicit language", "darwin", "mosh", []string{"LANG=de_DE.UTF-8"}, []string{"LANG=de_DE.UTF-8"}},
+		{"explicit ctype", "darwin", "mosh", []string{"LC_CTYPE=UTF-8"}, []string{"LC_CTYPE=UTF-8"}},
+		{"explicit override", "darwin", "mosh", []string{"LC_ALL=C"}, []string{"LC_ALL=C"}},
+		{"messages only", "darwin", "mosh", []string{"LC_MESSAGES=C"}, []string{"LC_MESSAGES=C", "LANG=en_US.UTF-8"}},
+		{"ssh unchanged", "darwin", "ssh", nil, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := testPlanner()
+			p.platform = tc.platform
+			p.environment = append(p.environment, tc.env...)
+			r := testRequest()
+			r.Transport = tc.transport
+			command, err := p.build(r, "", "", "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var locales []string
+			for _, value := range command.Env {
+				if strings.HasPrefix(value, "LANG=") || strings.HasPrefix(value, "LC_") {
+					locales = append(locales, value)
+				}
+			}
+			if !reflect.DeepEqual(locales, tc.want) {
+				t.Fatalf("locale environment = %v, want %v", locales, tc.want)
+			}
+		})
+	}
+}
+
 func TestLauncherRejectsInvalidInputsAndMissingTools(t *testing.T) {
 	for _, change := range []func(*LaunchRequest){
 		func(r *LaunchRequest) { r.Hostname = "" },
