@@ -222,6 +222,21 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 			command.Args = []string{"-c", line}
 		}
 	case "mosh":
+		// Service managers such as launchd may supply no locale. Mosh refuses
+		// the resulting ASCII default; supply UTF-8 only when the operator has
+		// not configured any character-set locale (LC_ALL > LC_CTYPE > LANG).
+		if p.env("LC_ALL") == "" && p.env("LC_CTYPE") == "" && p.env("LANG") == "" {
+			locale := "C.UTF-8"
+			if p.platform == "darwin" {
+				locale = "en_US.UTF-8"
+			}
+			for i := len(command.Env) - 1; i >= 0; i-- {
+				if strings.HasPrefix(command.Env[i], "LANG=") || p.platform == "windows" && strings.HasPrefix(strings.ToUpper(command.Env[i]), "LANG=") {
+					command.Env = append(command.Env[:i], command.Env[i+1:]...)
+				}
+			}
+			command.Env = append(command.Env, "LANG="+locale)
+		}
 		command.Path, err = resolve("mosh")
 		if err != nil {
 			return Command{}, errors.New("mosh is not installed on this system")

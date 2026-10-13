@@ -42,6 +42,9 @@ type run struct {
 	generation     uint64
 	log            *transcriptLog
 	replayUntil    time.Time
+	moshOutput     string
+	moshScreen     bool
+	moshFailed     bool
 }
 
 func (r *run) stop() {
@@ -300,9 +303,12 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 	e.scrollbackUnits = 0
 	p, err := b.launch(e.value.launchRequest(), password)
 	if err != nil {
+		b.logger.Warn("terminal launch failed", "session_id", e.value.ID, "error", err)
+		if attempted, fallbackErr := b.fallbackLocked(e, password, initial); attempted {
+			return fallbackErr
+		}
 		e.value.State = "error"
 		e.value.UpdatedAt = now()
-		b.logger.Warn("terminal launch failed", "session_id", e.value.ID, "error", err)
 		return err
 	}
 	if source, ok := p.(interface{ BrowserOnServer() bool }); ok {
@@ -318,6 +324,36 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 	go b.read(e.value.ID, r)
 	go b.writeInput(r)
 	return nil
+}
+
+// Fall back once per session: the persisted transport becomes SSH, so restore
+// and reconnect cannot loop back into a broken Mosh launch. Passwords remain
+// confined to the synchronous launch; asynchronous fallback can prompt in SSH.
+func (b *Broker) fallbackLocked(e *entry, password, initial string) (bool, error) {
+	if e.value.Transport != "mosh" {
+		return false, nil
+	}
+	var app config.Document
+	if err := b.store.ReadConfig("app.yaml", &app); err != nil || config.AsObject(app.App["transport"])["ssh_fallback"] == false {
+		return false, nil
+	}
+	previous := e.scrollback
+	e.value.Transport = "ssh"
+	b.logger.Info("Mosh connection failed; falling back to SSH", "session_id", e.value.ID)
+	err := b.startLocked(e, password, initial)
+	message := "\r\n[WebMux: Mosh could not connect; falling back to SSH.]\r\n"
+	e.scrollback, e.scrollbackUnits = appendScrollback(previous, utf16Units(previous), message)
+	if e.run != nil && e.run.log != nil {
+		if logErr := e.run.log.append(message); logErr != nil {
+			b.transcriptErrorLocked(e.value.ID, e.run, e.run.log, logErr)
+		}
+	}
+	b.broadcastLocked(e, Event{"type": "output", "session_id": e.value.ID, "data": message})
+	b.broadcastLocked(e, Event{"type": "status", "session_id": e.value.ID, "state": e.value.State, "transport": "ssh", "message": "Mosh failed; using SSH"})
+	if err != nil {
+		b.logger.Warn("SSH fallback launch failed", "session_id", e.value.ID, "error", err)
+	}
+	return true, err
 }
 
 func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
@@ -615,6 +651,18 @@ func (b *Broker) read(id string, r *run) {
 	e.run = nil
 	r.stop()
 	r.log.stop("process_exit")
+	// Mosh's client enters the alternate screen before its UDP handshake.
+	// On timeout it prints this explicit failure after leaving that screen.
+	// Do not replace a successfully established session on logout or loss of
+	// connectivity: Mosh owns roaming/recovery after its initial handshake.
+	if (exit.Code != 0 || exit.Err != nil) && (!r.moshScreen || r.moshFailed) {
+		if attempted, _ := b.fallbackLocked(e, "", ""); attempted {
+			if err := b.persistLocked(); err != nil {
+				b.logger.Error("save SSH fallback", "error", err)
+			}
+			return
+		}
+	}
 	e.value.State = "disconnected"
 	e.value.UpdatedAt = now()
 	b.broadcastLocked(e, Event{"type": "status", "session_id": id, "state": "disconnected", "message": fmt.Sprintf("Process exited with code %d", exit.Code), "transcript_enabled": false})
@@ -629,6 +677,16 @@ func (b *Broker) output(id string, r *run, data string) {
 	e := b.entries[id]
 	if b.closed || e == nil || e.run != r {
 		return
+	}
+	if e.value.Transport == "mosh" {
+		// Keep enough overlap to recognize diagnostics split across PTY reads,
+		// without retaining an unbounded second copy of terminal output.
+		r.moshOutput += data
+		r.moshScreen = r.moshScreen || strings.Contains(r.moshOutput, "\x1b[?1049h")
+		r.moshFailed = r.moshFailed || strings.Contains(r.moshOutput, "mosh did not make a successful connection")
+		if len(r.moshOutput) > 256 {
+			r.moshOutput = r.moshOutput[len(r.moshOutput)-256:]
+		}
 	}
 	var urls []string
 	data, urls = r.browserDecoder.Feed(data)
