@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -21,6 +22,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 	"github.com/jordanhubbard/webmux/server/internal/templates"
 	"github.com/jordanhubbard/webmux/server/internal/terminal"
+	"github.com/jordanhubbard/webmux/server/internal/terminalclipboard"
 )
 
 type process interface {
@@ -30,21 +32,22 @@ type process interface {
 }
 type launchFunc func(terminal.LaunchRequest, string) (process, error)
 type run struct {
-	browserDecoder browseropen.Decoder
-	process        process
-	initial        string
-	timer          *time.Timer
-	first          bool
-	input          chan string
-	stopped        chan struct{}
-	stopOnce       sync.Once
-	inputBytes     atomic.Int64
-	generation     uint64
-	log            *transcriptLog
-	replayUntil    time.Time
-	moshOutput     string
-	moshScreen     bool
-	moshFailed     bool
+	clipboardDecoder terminalclipboard.Decoder
+	browserDecoder   browseropen.Decoder
+	process          process
+	initial          string
+	timer            *time.Timer
+	first            bool
+	input            chan string
+	stopped          chan struct{}
+	stopOnce         sync.Once
+	inputBytes       atomic.Int64
+	generation       uint64
+	log              *transcriptLog
+	replayUntil      time.Time
+	moshOutput       string
+	moshScreen       bool
+	moshFailed       bool
 }
 
 func (r *run) stop() {
@@ -72,6 +75,7 @@ type entry struct {
 // not hold it. A run pointer is a generation token: old output and exit events
 // can never mutate a reconnected or deleted session.
 type Broker struct {
+	controlDir    string
 	mu            sync.Mutex
 	store         *storage.Store
 	logger        *slog.Logger
@@ -90,10 +94,26 @@ type Broker struct {
 }
 
 func New(store *storage.Store, logger *slog.Logger) (*Broker, error) {
-	launcher := terminal.Launcher{Store: store}
-	return newBroker(store, logger, func(request terminal.LaunchRequest, password string) (process, error) {
+	var controlDir string
+	if runtime.GOOS != "windows" {
+		var err error
+		controlDir, err = os.MkdirTemp("", "wm-ssh-")
+		if err != nil {
+			return nil, err
+		}
+	}
+	launcher := terminal.Launcher{Store: store, ControlDir: controlDir}
+	broker, err := newBroker(store, logger, func(request terminal.LaunchRequest, password string) (process, error) {
 		return launcher.Launch(request, password)
 	})
+	if err != nil {
+		if controlDir != "" {
+			_ = os.RemoveAll(controlDir)
+		}
+		return nil, err
+	}
+	broker.controlDir = controlDir
+	return broker, nil
 }
 func newBroker(store *storage.Store, logger *slog.Logger, launch launchFunc) (*Broker, error) {
 	if logger == nil {
@@ -688,6 +708,20 @@ func (b *Broker) output(id string, r *run, data string) {
 			r.moshOutput = r.moshOutput[len(r.moshOutput)-256:]
 		}
 	}
+	var copied *string
+	data, copied = r.clipboardDecoder.Feed(data)
+	if copied != nil {
+		// Deliver only to the active viewer. Never retain requests for reconnect.
+		value := Event{"type": "clipboard", "session_id": id, "data": *copied}
+		if viewer := e.viewers[e.focus]; viewer != nil {
+			viewer.send(value)
+		} else {
+			for _, viewer := range e.viewers {
+				viewer.send(value)
+				break
+			}
+		}
+	}
 	var urls []string
 	data, urls = r.browserDecoder.Feed(data)
 	for _, url := range urls {
@@ -808,6 +842,10 @@ func (b *Broker) audit(event map[string]any) {
 		b.logger.Warn("write session audit event", "error", err)
 	}
 }
+
+// SSHControlPath identifies this backend's private multiplexed connection.
+func (b *Broker) SSHControlPath(id string) string { return terminal.SSHControlPath(b.controlDir, id) }
+
 func (b *Broker) Close() error {
 	b.mu.Lock()
 	if b.closed {
@@ -837,5 +875,8 @@ func (b *Broker) Close() error {
 		_ = p.Close()
 	}
 	b.workers.Wait()
+	if b.controlDir != "" {
+		err = errors.Join(err, os.RemoveAll(b.controlDir))
+	}
 	return err
 }

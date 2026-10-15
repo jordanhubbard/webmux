@@ -118,6 +118,18 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ minimized }),
     }),
+  uploadTerminalFile: async (id: string, file: File, signal?: AbortSignal): Promise<{ path: string; name: string; size: number }> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) };
+    const token = getToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(`${API_BASE}/sessions/${encodeURIComponent(id)}/files`, { method: 'POST', headers, body: file, signal });
+    if (!response.ok) {
+      if (response.status === 401 && token) signalAuthExpired();
+      const error = await response.json().catch(() => ({ error: `Upload failed (${response.status})` })) as { error?: string };
+      throw new Error(error.error || 'Upload failed');
+    }
+    return response.json();
+  },
   // Upload
   uploadFile: async (file: File): Promise<{ path: string; name: string; size: number }> => {
     const token = getToken();

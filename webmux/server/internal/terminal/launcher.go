@@ -30,7 +30,10 @@ type LaunchRequest struct {
 	ExecCwd                              string
 }
 
-type Launcher struct{ Store *storage.Store }
+type Launcher struct {
+	Store      *storage.Store
+	ControlDir string
+}
 
 func (l Launcher) Launch(request LaunchRequest, password string) (*Process, error) {
 	keyPath, moshServer := "", ""
@@ -76,7 +79,7 @@ func (l Launcher) Launch(request LaunchRequest, password string) (*Process, erro
 	if err != nil {
 		return nil, err
 	}
-	command, err := (planner{browserShell: browserShell, platform: runtime.GOOS, home: home, environment: os.Environ(), lookup: exec.LookPath, currentUser: currentUser}).build(request, password, keyPath, moshServer)
+	command, err := (planner{controlPath: SSHControlPath(l.ControlDir, request.SessionID), browserShell: browserShell, platform: runtime.GOOS, home: home, environment: os.Environ(), lookup: exec.LookPath, currentUser: currentUser}).build(request, password, keyPath, moshServer)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +100,7 @@ func (l Launcher) Launch(request LaunchRequest, password string) (*Process, erro
 }
 
 type planner struct {
+	controlPath                 string
 	platform, home, currentUser string
 	browserShell                string
 	environment                 []string
@@ -282,6 +286,9 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 		}
 		command.Path, err = resolve("ssh")
 		command.Args = []string{"-tt", "-o", "ServerAliveInterval=15", "-o", "ServerAliveCountMax=3", "-o", "ConnectTimeout=10", "-o", "TCPKeepAlive=yes", "-o", "StrictHostKeyChecking=accept-new", "-p", strconv.Itoa(request.Port)}
+		if p.controlPath != "" {
+			command.Args = append(command.Args, "-o", "ControlMaster=auto", "-o", "ControlPersist=no", "-o", "ControlPath="+p.controlPath)
+		}
 		if keyPath != "" {
 			command.Args = append(command.Args, "-i", keyPath)
 		}

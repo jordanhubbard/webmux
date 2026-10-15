@@ -114,6 +114,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /api/hosts/{id}", s.protected(false, s.deleteHost))
 	mux.Handle("GET /api/keys", s.protected(false, s.listKeys))
 	mux.Handle("POST /api/keys", s.protected(false, s.createKey))
+	mux.Handle("POST /api/sessions/{id}/files", s.protected(false, s.terminalFile))
 	mux.Handle("POST /api/upload", s.protected(false, s.uploadFile))
 	mux.Handle("GET /api/ai/status", s.protected(false, s.aiStatus))
 	mux.Handle("POST /api/ai/chat", s.protected(false, s.aiChat))

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { copyDesktopText } from '../utils/terminalClipboard';
 import { Dialog } from './Dialog';
 
 export const MAX_CLIPBOARD_BYTES = 128 * 1024;
@@ -11,9 +12,8 @@ export function ClipboardDialog({ initialText = '', onSend, onClose }: {
   const [message, setMessage] = useState('');
   const access = async (copy: boolean) => {
     try {
-      if (!navigator.clipboard) throw new Error('unavailable');
-      if (copy) await navigator.clipboard.writeText(text);
-      else setText(await navigator.clipboard.readText());
+      if (copy) { if (!await copyDesktopText(text)) throw new Error('unavailable'); }
+      else { if (!navigator.clipboard) throw new Error('unavailable'); setText(await navigator.clipboard.readText()); }
       setMessage(copy ? 'Copied.' : 'Clipboard loaded. Review the text before sending.');
     } catch {
       setMessage('Clipboard access is unavailable or denied. Select and copy the text, or paste into the text box using your browser shortcut.');

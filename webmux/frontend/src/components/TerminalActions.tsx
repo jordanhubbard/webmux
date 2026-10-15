@@ -12,7 +12,9 @@ interface TerminalActionsProps {
 export function TerminalActions({ terminalRef, transcriptEnabled, connected }: TerminalActionsProps) {
   return (
     <div className="terminal-actions">
-      <button type="button" aria-label="Terminal clipboard" title="Copy selection or paste text" onClick={() => terminalRef.current?.openClipboard()}>Copy/Paste</button>
+      <button type="button" aria-label="Copy terminal selection" title="Copy selected text to your desktop" onClick={() => terminalRef.current?.copySelection()}>Copy</button>
+      <button type="button" aria-label="Paste into terminal" title="Paste desktop text or images into this terminal" disabled={!connected} onClick={() => terminalRef.current?.pasteFromDesktop()}>Paste</button>
+      <button type="button" aria-label="Terminal clipboard" title="Copy selection or paste text" onClick={() => terminalRef.current?.openClipboard()}>Clipboard…</button>
       <button type="button" aria-label="Search terminal" title="Search terminal scrollback"
         onClick={() => terminalRef.current?.openSearch()}>
         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">

@@ -1,3 +1,5 @@
+import { copyDesktopText, clipboardFiles, installTerminalPaste, MAX_TERMINAL_FILE_BYTES, quoteTerminalPath, terminalKeyHandler } from '../utils/terminalClipboard';
+import { api } from '../utils/api';
 import { ClipboardDialog } from './ClipboardDialog';
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
@@ -41,9 +43,13 @@ export interface TerminalHandle {
   scrollToBottom: () => void;
   isAtBottom: () => boolean;
   sendInput: (data: string) => void;
+  pasteInput: (data: string) => void;
+  uploadFiles: (files: File[]) => void;
   focus: () => void;
   openSearch: () => void;
   openClipboard: () => void;
+  copySelection: () => void;
+  pasteFromDesktop: () => void;
   toggleTranscript: () => void;
 }
 
@@ -76,6 +82,9 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   onTranscriptChange,
   onOpenLink,
 }: TerminalProps, ref) {
+  const stateRef = useRef(state); stateRef.current = state;
+  const localPasteRef = useRef(false);
+  const [remoteClipboard, setRemoteClipboard] = useState<string | null>(null);
   const onOpenLinkRef = useRef(onOpenLink);
   onOpenLinkRef.current = onOpenLink;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -96,6 +105,77 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
 
   const { registerSend, unregisterSend, routeInput, setFocusedSessionId, broadcastMode, focusedSessionId } = useInputBroadcast();
 
+  const [uploadNotice, setUploadNotice] = useState('');
+  const [uploadedPaths, setUploadedPaths] = useState<string[]>([]);
+  const uploadingRef = useRef(false);
+  const uploadAbortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; uploadAbortRef.current?.abort(); };
+  }, [sessionId]);
+  const pasteLocalInput = (data: string) => {
+    if (stateRef.current !== 'connected' || !termRef.current) throw new Error('File delivered, but the terminal disconnected. Reconnect and paste the displayed path.');
+    localPasteRef.current = true;
+    try { termRef.current.paste(data); } finally { localPasteRef.current = false; }
+  };
+  const transferFiles = async (files: File[]) => {
+    if (!files.length) return;
+    if (uploadingRef.current) { setInputError('A file transfer is already running. Wait for it to finish, then retry.'); return; }
+    if (stateRef.current !== 'connected') { setInputError('Reconnect the terminal before transferring files.'); return; }
+    if (files.length > 16) { setInputError('Drop or paste at most 16 files at a time.'); return; }
+    if (files.some(file => file.size > MAX_TERMINAL_FILE_BYTES)) { setInputError('Each file must be at most 10 MiB.'); return; }
+    uploadingRef.current = true;
+    const controller = new AbortController(); uploadAbortRef.current = controller;
+    setInputError(''); setUploadedPaths([]);
+    try {
+      for (const [index, file] of files.entries()) {
+        if (!mountedRef.current) break;
+        setUploadNotice(`Transferring ${index + 1}/${files.length}: ${file.name || 'clipboard image'}…`);
+        const result = await api.uploadTerminalFile(sessionId, file, controller.signal);
+        if (!mountedRef.current) break;
+        setUploadedPaths(previous => [...previous, result.path]);
+        pasteLocalInput(quoteTerminalPath(result.path) + ' ');
+        termRef.current?.focus();
+        setUploadNotice(`Delivered ${index + 1}/${files.length} to this terminal’s host.`);
+      }
+    } catch (err) {
+      if (mountedRef.current) { setUploadNotice(''); setInputError(err instanceof Error ? err.message : String(err)); }
+    } finally { uploadingRef.current = false; }
+  };
+  const transferRef = useRef(transferFiles); transferRef.current = transferFiles;
+
+  const pasteFromDesktop = async () => {
+    if (stateRef.current !== 'connected') { setInputError('Reconnect the terminal before pasting.'); return; }
+    try {
+      if (navigator.clipboard?.read) {
+        const items = await navigator.clipboard.read();
+        const files: File[] = [];
+        let text = '';
+        for (const item of items) {
+          const imageType = item.types.find(type => type.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            files.push(new File([blob], `clipboard-${Date.now()}.${imageType === 'image/jpeg' ? 'jpg' : imageType.split('/')[1]}`, { type: imageType }));
+          } else if (item.types.includes('text/plain')) text += await (await item.getType('text/plain')).text();
+        }
+        if (files.length) await transferRef.current(files);
+        else {
+          if (new TextEncoder().encode(text).length > 128 * 1024) throw new Error('Paste at most 128 KiB of text at a time.');
+          termRef.current?.paste(text);
+        }
+      } else if (navigator.clipboard?.readText) {
+        const text = await navigator.clipboard.readText();
+        if (new TextEncoder().encode(text).length > 128 * 1024) throw new Error('Paste at most 128 KiB of text at a time.');
+        termRef.current?.paste(text);
+      } else throw new Error('Clipboard API unavailable');
+    } catch {
+      setInputError('Browser clipboard access is unavailable or denied. Focus this terminal and use Cmd+V (Mac) or Ctrl+V / Ctrl+Shift+V to paste text or images directly.');
+    }
+    termRef.current?.focus();
+  };
+  const pasteDesktopRef = useRef(pasteFromDesktop); pasteDesktopRef.current = pasteFromDesktop;
+
   useImperativeHandle(ref, () => ({
     acknowledgeBrowser: (id: string) => { wsHandleRef.current?.send({ type: 'browser_ack', data: id }); },
     scrollToBottom: () => {
@@ -106,10 +186,18 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     sendInput: (data: string) => {
       wsHandleRef.current?.send({ type: 'input', data });
     },
+    pasteInput: pasteLocalInput,
+    uploadFiles: files => { void transferRef.current(files); },
     focus: () => {
       termRef.current?.focus();
     },
     openClipboard: () => { setClipboardText(termRef.current?.getSelection() ?? ''); },
+    copySelection: () => {
+      const text = termRef.current?.getSelection() ?? '';
+      if (!text) { setInputError('Select terminal text first. In mouse-enabled apps, hold Option on Mac or Shift elsewhere while selecting.'); return; }
+      void copyDesktopText(text).then(copied => { if (!copied) setClipboardText(text); termRef.current?.focus(); });
+    },
+    pasteFromDesktop: () => { void pasteDesktopRef.current(); },
     openSearch: () => {
       setFocusedSessionId(sessionId);
       onFocusGainedRef.current();
@@ -148,6 +236,14 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
 
   const handleMessage = useCallback((msg: WebSocketMessage) => {
     switch (msg.type) {
+      case 'clipboard': {
+        const text = msg.data ?? '';
+        setRemoteClipboard(text);
+        if (document.hasFocus() && document.activeElement === termRef.current?.textarea && navigator.clipboard?.writeText) {
+          void navigator.clipboard.writeText(text).then(() => setRemoteClipboard(current => current === text ? null : current)).catch(() => { /* A user click can grant clipboard access. */ });
+        }
+        break;
+      }
       case 'browser_open':
         if (msg.url && onOpenLinkRef.current) {
           onOpenLinkRef.current(msg.url, msg.request_id);
@@ -246,6 +342,16 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     term.open(containerRef.current);
     fitAddon.fit();
 
+    term.attachCustomKeyEventHandler(event => {
+      if (/Mac|iPhone|iPad/.test(navigator.platform) && event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'v') {
+        if (event.type === 'keydown') { event.preventDefault(); void pasteDesktopRef.current(); }
+        return false;
+      }
+      return terminalKeyHandler(event, term.hasSelection());
+    });
+    const removePaste = installTerminalPaste(containerRef.current, term, files => {
+      void transferRef.current(files);
+    }, () => stateRef.current === 'connected', setInputError);
     termRef.current = term;
     fitAddonRef.current = fitAddon;
     searchAddonRef.current = searchAddon;
@@ -262,7 +368,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     // Route input through the broadcast context instead of sending directly
     const dataListener = term.onData((data: string) => {
       if (shouldSuppressTerminalInput(data)) return;
-      if (isTerminalLocalInput(data)) wsHandleRef.current?.send({ type: 'input', data });
+      if (localPasteRef.current || isTerminalLocalInput(data)) wsHandleRef.current?.send({ type: 'input', data });
       else routeInputRef.current(sessionId, data);
     });
 
@@ -299,6 +405,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     el.addEventListener('mousedown', clickHandler);
 
     return () => {
+      removePaste();
       dataListener.dispose();
       resizeListener.dispose();
       bellListener.dispose();
@@ -408,8 +515,25 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const showOverlay = state !== 'connected';
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      {inputError && <div role="alert" style={{ position: 'absolute', top: 0, zIndex: 20, background: '#511', color: '#fff' }}>{inputError} <button onClick={() => setInputError('')}>Dismiss</button></div>}
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}
+      onDragOver={event => { if (Array.from(event.dataTransfer.types).includes('Files')) { event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'copy'; } }}
+      onDrop={event => { if (Array.from(event.dataTransfer.types).includes('Files')) { event.preventDefault(); event.stopPropagation(); void transferRef.current(clipboardFiles(event.dataTransfer)); } }}>
+      {(uploadNotice || inputError || uploadedPaths.length > 0) && <div style={{ position: 'absolute', top: 0, left: 0, zIndex: 20, padding: '6px 10px', background: '#242442', color: '#eee', fontSize: 12, maxWidth: '100%', overflowWrap: 'anywhere' }}>
+        <span role={inputError ? 'alert' : 'status'}>{inputError || uploadNotice}</span>{' '}
+        <button onClick={() => { setUploadNotice(''); setInputError(''); setUploadedPaths([]); }}>Dismiss</button>
+        {uploadedPaths.length > 0 && <details><summary>Delivered file paths</summary><div style={{ whiteSpace: 'pre-wrap', userSelect: 'all' }}>{uploadedPaths.join('\n')}</div></details>}
+      </div>}
+      {remoteClipboard !== null && <div role="status" style={{ position: 'absolute', bottom: 4, left: 4, zIndex: 20, padding: 8, background: '#242442', color: '#eee', maxWidth: 'calc(100% - 8px)' }}>
+        Terminal requested a desktop clipboard copy.{' '}
+        <button onClick={() => {
+          const text = remoteClipboard;
+          void copyDesktopText(text).then(copied => {
+            if (copied) setRemoteClipboard(current => current === text ? null : current);
+            else setClipboardText(text);
+          });
+        }}>Copy to desktop</button>{' '}
+        <button onClick={() => setRemoteClipboard(null)}>Dismiss</button>
+      </div>}
       {clipboardText !== null && <ClipboardDialog initialText={clipboardText} onClose={() => { setClipboardText(null); setTimeout(() => termRef.current?.focus(), 0); }} onSend={text => {
         if (state !== 'connected') throw new Error('Terminal is disconnected. Reconnect before sending.');
         termRef.current?.paste(text);
