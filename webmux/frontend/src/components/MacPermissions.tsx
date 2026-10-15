@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type MacSetup, type PermissionResult } from '../utils/api';
 import { Dialog } from './Dialog';
+import './MacPermissions.css';
 
 const labels: Record<string, string> = {
   unchecked: 'Not checked', allowed: 'Access verified', denied: 'Permission denied',
-  waiting: 'Still waiting for macOS', unavailable: 'SSH could not be verified',
+  waiting: 'Still waiting for macOS', unavailable: 'Access could not be verified',
   missing: 'Folder does not exist', error: 'Check could not complete',
 };
 function Result({ result }: { result: PermissionResult }) {
@@ -81,13 +82,13 @@ export function MacPermissions() {
     onClick={() => { void action(name); }}>{text}</button>;
   const ready = status.local.state === 'allowed';
   return <>
-    <div style={{ padding: '6px 14px', background: 'var(--bg-secondary, #242424)', display: 'flex', gap: 12, alignItems: 'center' }}>
+    <div className="mac-permissions-banner">
       <span>{ready ? 'Mac local folder access verified' : 'Mac folder access needs setup'}</span>
       <button type="button" onClick={() => setVisible(true)}>Mac permissions</button>
     </div>
     {visible && <Dialog title="Mac permissions" subtitle={`Complete these steps on ${status.hostname}, the Mac running WebMux.`}
       onClose={() => { if (!busy) void action('skip'); }} dismissible={!busy} width={720}>
-      <div style={{ padding: 24, overflowY: 'auto', lineHeight: 1.5 }}>
+      <div className="mac-permissions-body">
         <p>macOS protects Desktop, Documents, and Downloads. You approve access in System Settings; WebMux cannot grant itself permission. You can skip this step if you do not need these folders.</p>
         {!status.can_open_settings && <p>These settings are on <strong>{status.hostname}</strong>. Use its desktop or Screen Sharing. Buttons that open its desktop are available when you visit WebMux directly on that Mac.</p>}
         <h3>1. Allow local terminals to access your files</h3>
@@ -108,6 +109,7 @@ export function MacPermissions() {
         <button disabled={!!busy} onClick={() => { void action('restart'); }}>{restart ? 'Restarting WebMux…' : 'Restart WebMux and reconnect'}</button>
         {notice && <p role="status">{notice}</p>}
         {error && <p role="alert" style={{ color: 'var(--danger, #ff8080)' }}>{error}</p>}
+        <details><summary>Diagnostic details</summary><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', userSelect: 'all' }}>{JSON.stringify(setup, null, 2)}</pre></details>
         <p><button disabled={!!busy} onClick={() => { void action('skip'); }}>{ready ? 'Done' : 'Skip for now'}</button> You can reopen Mac permissions from the banner above your workspace.</p>
       </div>
     </Dialog>}

@@ -31,6 +31,7 @@ func TestMacSetupUnauthenticatedRequiresLocalSameOrigin(t *testing.T) {
 		{"127.0.0.1:1234", "http://evil.example", "", 403},
 		{"127.0.0.1:1234", "", "cross-site", 403},
 		{"127.0.0.1:1234", "http://example.com", "same-origin", 200},
+		{"127.0.0.1:1234", "https://example.com", "same-origin", 200},
 		{"[::1]:1234", "", "", 200},
 	} {
 		req := httptest.NewRequest(http.MethodGet, "http://example.com/api/setup/macos", nil)

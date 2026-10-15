@@ -40,11 +40,9 @@ func (s *Server) macSetupAccess(w http.ResponseWriter, r *http.Request, actor st
 	// browser requests, including deployments with authentication disabled.
 	if origin := r.Header.Get("Origin"); origin != "" {
 		parsed, err := url.Parse(origin)
-		scheme := "http"
-		if r.TLS != nil {
-			scheme = "https"
-		}
-		if err != nil || parsed.Host != r.Host || parsed.Scheme != scheme {
+		// Match the browser-facing Host, as our WebSocket origin check does.
+		// TLS may terminate at a reverse proxy before this request reaches Go.
+		if err != nil || parsed.Host != r.Host || (parsed.Scheme != "http" && parsed.Scheme != "https") {
 			writeError(w, 403, "Mac setup requires the same origin")
 			return false
 		}

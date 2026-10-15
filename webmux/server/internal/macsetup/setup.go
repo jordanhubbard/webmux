@@ -181,13 +181,16 @@ func runProbe(ctx context.Context, cmd *exec.Cmd, transport string) Result {
 		result.State, result.Detail = "error", "The permission helper returned an invalid result."
 		return result
 	}
+	verified := false
 	for i, folder := range result.Folders {
 		if folder.Name != []string{"Desktop", "Documents", "Downloads"}[i] {
 			result.State = "error"
 			break
 		}
 		switch folder.State {
-		case "allowed", "missing":
+		case "allowed":
+			verified = true
+		case "missing":
 		case "denied":
 			if result.State != "error" {
 				result.State = "denied"
@@ -195,6 +198,9 @@ func runProbe(ctx context.Context, cmd *exec.Cmd, transport string) Result {
 		default:
 			result.State = "error"
 		}
+	}
+	if result.State == "allowed" && !verified {
+		result.State, result.Detail = "unavailable", "None of these folders exists for this account; protected-folder access could not be verified."
 	}
 	return result
 }

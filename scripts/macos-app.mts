@@ -40,6 +40,7 @@ export function assembleApp(binary: string, destination: string, version: string
   const temporary = fs.mkdtempSync(path.join(parent, '.webmux-app-'));
   const staged = path.join(temporary, 'WebMux.app');
   const old = path.join(temporary, 'previous.app');
+  let retainBackup = false;
   try {
     fs.mkdirSync(path.join(staged, 'Contents/MacOS'), { recursive: true });
     fs.copyFileSync(binary, path.join(staged, 'Contents/MacOS/webmux'));
@@ -59,10 +60,16 @@ export function assembleApp(binary: string, destination: string, version: string
     }
     if (fs.existsSync(destination)) fs.renameSync(destination, old);
     try { fs.renameSync(staged, destination); }
-    catch (err) { if (fs.existsSync(old)) fs.renameSync(old, destination); throw err; }
+    catch (err) {
+      if (fs.existsSync(old)) {
+        try { fs.renameSync(old, destination); }
+        catch { retainBackup = true; throw new Error(`App replacement failed; previous app retained at ${old}`); }
+      }
+      throw err;
+    }
     if (identity === '-') console.log('WebMux.app uses a development signature. Release distribution requires Developer ID signing and notarization. Recheck permissions after rebuilding.');
     console.log(`Installed ${destination}`);
-  } finally { fs.rmSync(temporary, { recursive: true, force: true }); }
+  } finally { if (!retainBackup) fs.rmSync(temporary, { recursive: true, force: true }); }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const repo = path.resolve(import.meta.dirname, '..');

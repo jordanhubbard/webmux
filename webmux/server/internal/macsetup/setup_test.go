@@ -16,6 +16,10 @@ func TestProbeProcess(t *testing.T) {
 	switch os.Getenv("WEBMUX_TEST_PROBE") {
 	case "valid":
 		os.Stdout.WriteString(`[{"name":"Desktop","state":"allowed"},{"name":"Documents","state":"missing"},{"name":"Downloads","state":"denied"}]`)
+	case "missing":
+		os.Stdout.WriteString(`[{"name":"Desktop","state":"missing"},{"name":"Documents","state":"missing"},{"name":"Downloads","state":"missing"}]`)
+	case "oversized":
+		os.Stdout.WriteString(string(bytes.Repeat([]byte("x"), 8192)))
 	case "ssh":
 		os.Stdout.WriteString("Desktop allowed\nDocuments missing\nDownloads denied\n")
 	case "hang":
@@ -32,7 +36,7 @@ func TestProbeProcess(t *testing.T) {
 func TestProbeResultsAndTimeout(t *testing.T) {
 	for _, tc := range []struct{ mode, transport, state string }{
 		{"valid", "local", "denied"}, {"ssh", "ssh", "denied"},
-		{"invalid", "local", "error"}, {"failure", "ssh", "unavailable"}, {"hang", "local", "waiting"},
+		{"missing", "local", "unavailable"}, {"oversized", "local", "error"}, {"invalid", "local", "error"}, {"failure", "ssh", "unavailable"}, {"hang", "local", "waiting"},
 	} {
 		t.Run(tc.mode, func(t *testing.T) {
 			duration := 3 * time.Second
