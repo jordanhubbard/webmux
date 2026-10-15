@@ -5,6 +5,37 @@ import { readFileSync, rmSync } from 'node:fs';
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64');
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 
+test('selected text copies between separate WebMux browser windows', async ({ page, context, request }) => {
+ const ids: string[] = [];
+ const destination = await context.newPage();
+ try {
+  for (let index = 0; index < 2; index++) {
+   const created = await request.post('/api/sessions', { data: { transport: 'exec', hostname: 'localhost', username: `clipboard-window-${index}`, exec_command: `"${process.execPath}" "${path.resolve(__dirname, 'clipboard-terminal-fixture.mts')}"` } });
+   expect(created.ok()).toBe(true); ids.push((await created.json()).id);
+  }
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/'); await destination.goto('/');
+  await page.bringToFront();
+  const source = page.getByTestId(`tile-cell-${ids[0]}`);
+  await expect(source.locator('.xterm-rows')).toContainText('CLIPBOARD_READY');
+  await source.locator('.xterm-rows > div').first().dblclick({ position: { x: 15, y: 7 } });
+  const mac = await page.evaluate(() => /Mac|iPhone|iPad/.test(navigator.platform));
+  await page.keyboard.press(mac ? 'Meta+c' : 'Control+c');
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('CLIPBOARD_READY');
+  await destination.bringToFront();
+  const target = destination.getByTestId(`tile-cell-${ids[1]}`);
+  await expect(target.locator('.xterm-rows')).toContainText('CLIPBOARD_READY');
+  await target.locator('.xterm-helper-textarea').focus();
+  await destination.keyboard.press(mac ? 'Meta+v' : 'Control+v');
+  // Verify the destination process received bracketed paste, beyond clipboard success.
+  const expected = Buffer.from('\x1b[200~CLIPBOARD_READY\x1b[201~').toString('hex');
+  await expect(target.locator('.xterm-rows')).toContainText(`INPUT_HEX:${expected};`);
+ } finally {
+  await destination.close();
+  for (const id of ids) expect((await request.delete(`/api/sessions/${id}`)).ok()).toBe(true);
+ }
+});
+
 test('desktop shortcuts paste bracketed text, copy selection and handle OSC 52 writes without reads', async ({ page, request }) => {
  const fixture = path.resolve(__dirname, 'clipboard-terminal-fixture.mts');
  const created = await request.post('/api/sessions', { data: { transport: 'exec', hostname: 'localhost', username: 'clipboard-test', exec_command: `"${process.execPath}" "${fixture}"` } });
