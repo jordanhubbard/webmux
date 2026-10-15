@@ -86,6 +86,8 @@ test('image drop and clipboard paste deliver exact bytes into the local tmux hos
   await input.focus();
   await page.keyboard.type([process.execPath, path.resolve(__dirname, 'clipboard-terminal-fixture.mts')].map(quote).join(' ')); await page.keyboard.press('Enter');
   await expect(tile.locator('.xterm-rows')).toContainText('CLIPBOARD_READY');
+  await page.keyboard.press('Control+f');
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('copied through tmux');
   await page.getByRole('button', { name: /^Type to All/ }).click(); inputs.get(peer.id)!.length = 0;
   const uploaded = page.waitForResponse(response => response.url().endsWith(`/api/sessions/${id}/files`) && response.request().method() === 'POST');
   await tile.locator('.xterm').evaluate((element, base64) => {
