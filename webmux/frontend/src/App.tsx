@@ -8,6 +8,7 @@ import { GraphicsWorkspace } from './components/GraphicsWorkspace';
 import { AgentWorkspace } from './components/AgentWorkspace';
 import { SessionManagerWorkspace } from './components/SessionManagerWorkspace';
 import { UsersDialog } from './components/UsersDialog';
+import { MacPermissions } from './components/MacPermissions';
 import { SettingsDialog } from './components/SettingsDialog';
 import { Dialog } from './components/Dialog';
 import { InputBroadcastProvider } from './contexts/InputBroadcastContext';
@@ -162,6 +163,7 @@ function AuthenticatedApp({
         hostSwitcher={hostSwitcher}
       />
 
+      {canManageSettings && <MacPermissions />}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
           <Workspace

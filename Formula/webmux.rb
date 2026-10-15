@@ -25,7 +25,8 @@ class Webmux < Formula
     roots = Dir[buildpath/"native-stage/webmux-*"]
     odie "Expected exactly one extracted runtime" unless roots.length == 1
     libexec.install Dir["#{roots.first}/*"]
-    launch = "exec \"#{opt_libexec}/bin/webmux\" \"$@\""
+    executable = OS.mac? ? opt_libexec/"WebMux.app/Contents/MacOS/webmux" : opt_libexec/"bin/webmux"
+    launch = "exec \"#{executable}\" \"$@\""
     runtime_path = "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin"
     (bin/"webmux").write <<~SH
       #!/bin/sh
@@ -49,6 +50,8 @@ class Webmux < Formula
       Configuration and state stay in ~/.config/webmux (or WEBMUX_HOME).
       Run brew services as your normal user to retain access to your SSH keys.
       Before migrating from a source installation, run make uninstall there.
+      On macOS, complete Mac permissions in the WebMux browser interface.
+      Grant access to WebMux.app for local terminals; Remote Login is separate.
       Optional tools: brew install mosh tmux guacamole-server
     EOS
   end

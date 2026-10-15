@@ -75,6 +75,82 @@ make stop
 make uninstall
 ```
 
+The source installer now installs `~/Applications/WebMux.app` and runs its
+embedded server through the LaunchAgent. Configuration remains in
+`~/.config/webmux`; rebuilding or replacing the app does not replace your data.
+
+## Mac permissions setup
+
+After installing or upgrading, open WebMux in your browser and sign in as an
+administrator. **Mac permissions** opens automatically on first use. If you
+skip it, the workspace banner lets you reopen it later. This setup also appears
+for existing source, Homebrew, and native installations.
+
+macOS requires you to approve protected-folder access yourself. The wizard
+provides the exact installed app or executable path and these two separate steps:
+
+- **Local terminals:** add WebMux under **System Settings → Privacy & Security →
+  Full Disk Access**. Full Disk Access covers more than Downloads; grant it when
+  your terminal workflows need protected files. A downloaded app should be kept
+  at a stable location, such as `~/Applications/WebMux.app`.
+- **SSH to this Mac:** under **General → Sharing → Remote Login ⓘ**, enable
+  **Allow full disk access for remote users** if your SSH workflows require it.
+  This changes access for the users allowed by Remote Login, independently of
+  the WebMux app's permission.
+
+The wizard's desktop buttons work when connected locally to WebMux. When using
+another computer, follow the same instructions on the server Mac's desktop or
+through Screen Sharing. They do not open settings on your browser's computer.
+
+**Check local access** launches a disposable helper from the running service,
+not your installation terminal. It attempts to enumerate Desktop, Documents, and
+Downloads without returning their filenames. The check times out after six
+seconds if macOS is waiting for a privacy response. No probes run until you
+request one. Missing folders are reported separately.
+
+**Check localhost SSH access** uses the current macOS account, localhost port 22,
+default SSH identities, and an already trusted host key. It never prompts for a
+password, changes host keys, or enables Remote Login. If that connection is not
+configured, the wizard gives a manual check to run in your existing SSH terminal.
+Other SSH accounts, configured identities, and ports need their own checks.
+
+After changing permissions, use **Restart WebMux and reconnect**, rerun the
+checks, and retry in a fresh terminal. The restart detaches clients and preserves
+existing tmux shells. Older tmux servers may retain the responsibility context of
+the process that originally started them; verify a fresh terminal instead of
+killing a shared tmux server. A successful folder probe verifies those folders,
+not every location covered by Full Disk Access.
+
+Setup requires an administrator. With authentication disabled, it is available
+only through a loopback connection. Skipping is stored in
+`~/.config/webmux/config/macos-setup.yaml`. Permission grants remain managed by
+macOS; WebMux does not modify TCC databases.
+
+### App signing and release packaging
+
+`make install` and macOS native archives assemble `WebMux.app` with bundle ID
+`com.webmux.server`, protected-folder usage descriptions, and a verified code
+signature. Homebrew runs the packaged app executable on macOS. Source and
+Homebrew builds default to a development (ad-hoc) signature: recheck permissions
+after rebuilding or upgrading; these builds are not notarized releases.
+
+For a Developer ID signed and notarized app, run packaging on a Mac with an
+unlocked signing keychain and a configured `notarytool` keychain profile:
+
+```bash
+export WEBMUX_MACOS_SIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)'
+export WEBMUX_MACOS_NOTARY_PROFILE='webmux'
+make package
+```
+
+The packaging helper signs with the hardened runtime, verifies the signature,
+submits for notarization, staples the ticket, and checks Gatekeeper acceptance.
+Signing or notarization failures fail packaging rather than silently producing
+an unsigned substitute. Keep the same Developer ID and bundle identifier across
+releases, and qualify permission persistence on upgrades. Do not put signing
+credentials in the repository. Managed enterprise Macs can receive the required
+privacy policy through MDM.
+
 Logs are written to `~/.config/webmux/logs/webmux.log` unless `WEBMUX_HOME` is overridden.
 
 ## Platform Notes

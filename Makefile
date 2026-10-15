@@ -313,6 +313,7 @@ clean: stop
 
 # ── Service management ──────────────────────────────────────────
 
+MACOS_APP   := $(HOME)/Applications/WebMux.app
 PLIST       := $(HOME)/Library/LaunchAgents/com.webmux.server.plist
 UNIT        := $(HOME)/.config/systemd/user/webmux.service
 SYSTEMD_UNIT := $(notdir $(UNIT))
@@ -330,6 +331,7 @@ LAUNCHD_SVC := gui/$(shell id -u)/com.webmux.server
 # SVC_INSTALLED is a shell test: true (exit 0) when the service unit exists.
 ifeq ($(OS),Darwin)
   export WEBMUX_SERVICE_OUTPUT := $(PLIST)
+  export WEBMUX_EXECUTABLE := $(MACOS_APP)/Contents/MacOS/webmux
   SVC_MGR       := launchd
   SVC_INSTALLED := [ -f "$$WEBMUX_SERVICE_OUTPUT" ]
   SVC_START     := launchctl kickstart "$(LAUNCHD_SVC)" 2>/dev/null || launchctl bootstrap gui/$$(id -u) "$$WEBMUX_SERVICE_OUTPUT"
@@ -349,6 +351,7 @@ endif
 install: stop build
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Installing launchd service…\n"
+	@$(NODE) scripts/macos-app.mts "$(WEBMUX_DIR)/bin/webmux" "$(MACOS_APP)"
 	@$(NODE) scripts/render-service.mts
 	@launchctl bootout $(LAUNCHD_SVC) 2>/dev/null || true
 	@launchctl bootstrap gui/$$(id -u) "$$WEBMUX_SERVICE_OUTPUT"
@@ -357,6 +360,7 @@ ifeq ($(shell uname),Darwin)
 	@printf "  $(C_DIM)config:$(C_RST) %s\n" "$$WEBMUX_HOME"
 	@printf "  $(C_DIM)logs:$(C_RST)   %s/logs/webmux.log\n" "$$WEBMUX_HOME"
 	@printf "$(C_GRN)●$(C_RST) WebMux will start automatically on login.\n"
+	@printf "  Open WebMux in your browser to complete Mac permissions setup: http://localhost:8080\n"
 else
 	@printf "$(C_BLU)▸$(C_RST) Installing systemd user service…\n"
 	@$(NODE) scripts/render-service.mts
