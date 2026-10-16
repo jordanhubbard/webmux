@@ -32,6 +32,9 @@ for (const entry of fs.readdirSync(defaultsDir, { withFileTypes: true })) {
   }
   fs.writeFileSync(path.join(testHome, 'config', entry.name), content);
 }
+// Terminal workflows use an already-configured installation. First-run Mac
+// setup has its own component and API tests; its dialog would steal input here.
+fs.writeFileSync(path.join(testHome, 'config', 'macos-setup.yaml'), 'skipped: true\n');
 process.env.WEBMUX_HOME = testHome;
 // Use Playwright's supported executable lookup rather than its private registry.
 const testRequire = createRequire(path.resolve(import.meta.dirname, '../../webmux/package.json'));
