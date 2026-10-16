@@ -1,10 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { createRequire } from 'node:module';
 import { spawn, spawnSync } from 'node:child_process';
 
 const testHome = path.resolve(import.meta.dirname, '.test-home');
 const defaultsDir = path.resolve(import.meta.dirname, '../../webmux/config.defaults');
+const tmuxTemporary = process.platform === 'win32' ? null : fs.mkdtempSync(path.join(os.tmpdir(), 'wm-tmux-'));
+if (tmuxTemporary) process.env.TMUX_TMPDIR = tmuxTemporary;
 const authMode = process.env.WEBMUX_E2E_AUTH ?? 'none';
 if (authMode !== 'none' && authMode !== 'local') throw new Error(`Unsupported browser-test auth mode: ${authMode}`);
 
@@ -29,6 +32,9 @@ for (const entry of fs.readdirSync(defaultsDir, { withFileTypes: true })) {
   }
   fs.writeFileSync(path.join(testHome, 'config', entry.name), content);
 }
+// Terminal workflows use an already-configured installation. First-run Mac
+// setup has its own component and API tests; its dialog would steal input here.
+fs.writeFileSync(path.join(testHome, 'config', 'macos-setup.yaml'), 'skipped: true\n');
 process.env.WEBMUX_HOME = testHome;
 // Use Playwright's supported executable lookup rather than its private registry.
 const testRequire = createRequire(path.resolve(import.meta.dirname, '../../webmux/package.json'));
@@ -55,4 +61,7 @@ if (build.status !== 0) process.exit(build.status ?? 1);
 const child = spawn(binary, [], { stdio: 'inherit', env: { ...process.env, WEBMUX_ROOT: '', WEBMUX_DEBUG_TERMINAL: '1' } });
 for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => child.kill(signal));
 child.on('error', error => { console.error(error); process.exitCode = 1; });
-child.on('exit', code => { process.exitCode = code ?? 0; });
+child.on('exit', code => {
+  if (tmuxTemporary) { spawnSync('tmux', ['kill-server'], { env: process.env, stdio: 'ignore', timeout: 5000 }); fs.rmSync(tmuxTemporary, { recursive: true, force: true }); }
+  process.exitCode = code ?? 0;
+});

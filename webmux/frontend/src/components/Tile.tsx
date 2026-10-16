@@ -5,7 +5,7 @@ import { BrowserCompanion } from './BrowserCompanion';
 import { TerminalActions } from './TerminalActions';
 import { ReconnectOverlay } from './ReconnectOverlay';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
-import { api } from '../utils/api';
+import { clipboardFiles } from '../utils/terminalClipboard';
 import type { Session, ConnectionState, NamedTheme } from '../types';
 
 interface TileProps {
@@ -115,18 +115,10 @@ export function Tile({
 
   const [fileDragOver, setFileDragOver] = useState(false);
 
-  const handleFileDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setFileDragOver(false);
-    const files = e.dataTransfer.files;
-    if (files.length === 0) return;
-    try {
-      const result = await api.uploadFile(files[0]);
-      termHandleRef.current?.sendInput(result.path + ' ');
-    } catch (err) {
-      console.error('File upload failed:', err);
-    }
+  const handleFileDrop = useCallback((e: React.DragEvent) => {
+    if (!Array.from(e.dataTransfer.types).includes('Files')) return;
+    e.preventDefault(); e.stopPropagation(); setFileDragOver(false);
+    termHandleRef.current?.uploadFiles(clipboardFiles(e.dataTransfer));
   }, []);
 
   const stateColor = state === 'connected' ? '#4aaa6a' :
@@ -148,7 +140,7 @@ export function Tile({
   return (
     <div
       onWheel={e => { if (!e.shiftKey) e.stopPropagation(); }}
-      onDragOver={e => { e.preventDefault(); e.stopPropagation(); setFileDragOver(true); }}
+      onDragOver={e => { if (!Array.from(e.dataTransfer.types).includes('Files')) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'copy'; setFileDragOver(true); }}
       onDragLeave={e => { e.preventDefault(); e.stopPropagation(); setFileDragOver(false); }}
       onDrop={handleFileDrop}
       style={{

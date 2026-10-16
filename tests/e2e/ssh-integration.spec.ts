@@ -2,11 +2,11 @@ import { test, expect } from '@playwright/test';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer, createConnection } from 'node:net';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, renameSync } from 'node:fs';
 import { homedir, userInfo } from 'node:os';
 import { join } from 'node:path';
 
-test('real OpenSSH key authentication, shell input and PTY resize', async ({ request, baseURL }, info) => {
+test('real OpenSSH key authentication, shell input and PTY resize', async ({ page, request, baseURL }, info) => {
   test.skip(process.env.WEBMUX_REAL_SSH !== '1', 'Requires Linux OpenSSH server and the isolated client wrapper');
   test.setTimeout(60000);
   // sshd StrictModes checks every ancestor of AuthorizedKeysFile. /tmp is
@@ -82,6 +82,27 @@ test('real OpenSSH key authentication, shell input and PTY resize', async ({ req
     client.send(JSON.stringify({ type: 'resize', cols: 88, rows: 33 }));
     await expect.poll(() => { input(sizeCommand); return output; }).toContain('WEBMUX_SIZE_33 88');
     expect(diagnostics).toContain('Accepted publickey');
+    // The browser drop must reach the SSH filesystem, even after the identity
+    // file is moved away: this proves reuse of the authenticated master.
+    renameSync(join(temporary, 'identity'), join(temporary, 'identity.saved'));
+    try {
+      await page.goto('/');
+      const tile = page.getByTestId(`tile-cell-${id}`);
+      const payload = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64');
+      const uploaded = page.waitForResponse(response => response.url().endsWith(`/api/sessions/${id}/files`) && response.request().method() === 'POST');
+      await tile.locator('.xterm').evaluate((element, base64) => {
+        const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0)); const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(new File([bytes], 'remote screen.png', { type: 'image/png' }));
+        element.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
+      }, payload.toString('base64'));
+      const response = await uploaded; expect(response.ok(), await response.text()).toBe(true);
+      const file = await response.json();
+      expect(file.path).toMatch(/^\/tmp\/webmux-upload\./);
+      expect(readFileSync(file.path)).toEqual(payload);
+      await expect(tile.getByRole('status')).toContainText('Delivered');
+      rmSync(join(file.path, '..'), { recursive: true, force: true });
+    } finally { renameSync(join(temporary, 'identity.saved'), join(temporary, 'identity')); }
+
   } catch (error) { failed = true; throw error; }
   finally {
     client?.close();

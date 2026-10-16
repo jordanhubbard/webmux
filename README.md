@@ -46,6 +46,41 @@ Local terminals use the same terminal emulator and workspace as remote SSH sessi
 
 Closing a tile removes its WebMux record and detaches its tmux client; the shell remains available through `tmux attach -t webmux-<session-id>`. Use `exit` inside the shell, or `tmux kill-session -t webmux-<session-id>`, to terminate it permanently.
 
+### Terminal images, files, and clipboard
+
+Drop images or files onto a terminal, or paste a screenshot using the desktop
+paste shortcut. WebMux transfers the bytes to that terminal's host and inserts
+its quoted file path for the shell or CLI to use. Local tmux and agent sessions
+receive a server-local path; SSH/Mosh sessions receive a path on the remote
+host. Transfers never press Enter or broadcast file paths to other sessions.
+Up to 16 files may be transferred at once, with a 10 MiB limit per file.
+Progress, errors, and delivered paths remain visible in the terminal.
+
+SSH transfers use a separate channel through the terminal's authenticated
+connection on macOS/Linux WebMux servers. Reconnect terminals created before
+this feature was installed. Key authentication is a fallback, including Mosh
+and Windows-hosted WebMux. Password-only connections need an active multiplexed
+SSH connection. Remote hosts must provide a POSIX shell, `mktemp`, and `cat`;
+they do not need WebMux installed. Remote files are placed in private
+`/tmp/webmux-upload.*` directories; local staging follows the existing upload
+quota/retention policy. Files may be removed by the host's temporary-file policy.
+
+Use **Copy** and **Paste** in the terminal toolbar, **Cmd+C / Cmd+V** on Mac,
+or **Ctrl+Shift+C / Ctrl+Shift+V** elsewhere. On Windows/Linux, Ctrl+V pastes and
+Ctrl+C copies a selection or sends an interrupt when no text is selected.
+Mac Ctrl+V also supports CLI-style image paste through the browser clipboard API.
+The **Clipboard…** dialog remains available for manual text transfer.
+Native browser paste events work without granting background clipboard access;
+toolbar clipboard access requires HTTPS or localhost and browser permission.
+
+Terminal applications can copy UTF-8 text to your desktop with OSC 52. A focused
+terminal copies automatically when the browser permits it; otherwise a visible
+**Copy to desktop** button completes the request. Clipboard-read queries are
+never answered, and clipboard requests are excluded from logs and scrollback
+replay. A tmux server's own `set-clipboard` policy still determines whether it
+forwards application OSC 52 requests; WebMux does not change a shared server's
+clipboard policy.
+
 ## CLI authentication and browser companion
 
 In a new Local or qualified SSH terminal, CLI browser requests and clicked links open a **session-linked sign-in panel**. Choose **Continue in this browser** for device codes and manual-code flows, keeping your existing browser login and passkeys. The provider returns device approval to the waiting CLI. For state-bound localhost OAuth, choose **Prepare callback relay**, sign in, then paste the final localhost URL back into the panel. WebMux delivers it once to the originating terminal host. Check the CLI for success.
