@@ -60,7 +60,21 @@ export interface BrowserFrame {
   image?: string; url: string; target: string; tabs: { id: string; title: string }[]; error?: string;
 }
 
+export interface PermissionResult {
+  state: string; detail?: string; checked_at?: string;
+  folders?: { name: string; state: string }[];
+}
+export interface MacSetup {
+  skipped: boolean;
+  status: {
+    instance: string; supported: boolean; hostname: string; executable: string; permission_target: string;
+    can_open_settings: boolean; local: PermissionResult; ssh: PermissionResult;
+  };
+}
+
 export const api = {
+  getMacSetup: () => request<MacSetup>('/setup/macos'),
+  macSetupAction: (action: string, transport?: 'local' | 'ssh') => request<PermissionResult | { ok?: boolean; restarting?: boolean }>('/setup/macos', { method: 'POST', body: JSON.stringify({ action, transport }) }),
   sessionManager: <T>(operation: string, params: Record<string, unknown> = {}, clientId?: string) => request<{ version: number; hostId: string; providerId: string; generation: string; result: T }>('/session-manager', {
     method: 'POST', body: JSON.stringify({ version: 1, operation, params, requestId: crypto.randomUUID(), clientId }),
   }),

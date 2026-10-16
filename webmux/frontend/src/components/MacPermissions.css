@@ -1,0 +1,35 @@
+.mac-permissions-banner {
+  padding: 6px 14px;
+  background: #20203a;
+  border-bottom: 1px solid #3a3a68;
+  color: #d0d0e0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.mac-permissions-body {
+  padding: 8px 24px 20px;
+  overflow-y: auto;
+  line-height: 1.5;
+  font-size: 14px;
+}
+.mac-permissions-body h3 { margin: 24px 0 10px; font-size: 16px; }
+.mac-permissions-body p { margin: 12px 0; }
+.mac-permissions-body [role='status'] { margin: 12px 0; padding: 10px 12px; background: #20203a; border-radius: 6px; }
+.mac-permissions-body button, .mac-permissions-banner button {
+  padding: 7px 12px;
+  border: 1px solid #515181;
+  border-radius: 5px;
+  background: #303052;
+  color: #e8e8ef;
+  cursor: pointer;
+  font: inherit;
+}
+.mac-permissions-body button:hover:enabled, .mac-permissions-banner button:hover { background: #404070; }
+.mac-permissions-body button:focus-visible, .mac-permissions-banner button:focus-visible { outline: 2px solid #aaaaff; outline-offset: 2px; }
+.mac-permissions-body button:disabled { opacity: 0.55; cursor: default; }
+.mac-permissions-body details { margin-top: 16px; }
+.mac-permissions-body summary { cursor: pointer; }
+.mac-permissions-body pre { font-size: 12px; }

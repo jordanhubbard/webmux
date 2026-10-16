@@ -49,7 +49,7 @@ function makeControl(action: 'install' | 'start' | 'stop' | 'restart' | 'uninsta
   assert(makeMode && (!darwin || domain === `gui/${uid}`), 'Make fixture requires an isolated service');
   const result = spawnSync('make', ['--no-print-directory', '-o', 'build', action,
     'MAKE=make -o build', `NODE=${process.execPath}`, `WEBMUX_DIR=${root}`, `WEBMUX_HOME=${home}`,
-    ...(darwin ? [`PLIST=${definition}`, `LAUNCHD_SVC=${target}`] : [`UNIT=${definition}`])], {
+    ...(darwin ? [`PLIST=${definition}`, `LAUNCHD_SVC=${target}`, `MACOS_APP=${path.join(temporary, 'WebMux.app')}`] : [`UNIT=${definition}`])], {
     cwd: path.dirname(sourceRoot), encoding: 'utf8', timeout: 30000,
     env: { ...process.env, JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' },
   });
@@ -97,6 +97,7 @@ try {
   const templateName = darwin ? 'com.webmux.server.plist.native.template' : 'webmux.service.native.template';
   let template = renderService(await fs.readFile(path.join(sourceRoot, 'service', templateName), 'utf8'), darwin ? 'darwin' : 'linux', {
     root, home, searchPath: process.env.PATH ?? '/usr/bin:/bin',
+    executable: darwin && makeMode ? path.join(temporary, 'WebMux.app/Contents/MacOS/webmux') : undefined,
   });
   if (darwin) {
     template = template.replace('<string>com.webmux.server</string>', `<string>${label}</string>`)
@@ -166,6 +167,33 @@ try {
     assert.match(current, /jwt_secret:/);
     if (round) assert.equal(current, auth, 'Signing secret changed across service restart');
     auth = current;
+    if (darwin && round === 1) {
+      const before = await (await fetch(`${base}/api/setup/macos`)).json() as { skipped: boolean; status: { supported: boolean; instance: string; permission_target: string } };
+      assert(before.status.supported);
+      if (makeMode) assert(before.status.permission_target.endsWith('/WebMux.app'));
+      const setupAction = async (action: string, transport?: string) => {
+        const response = await fetch(`${base}/api/setup/macos`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, transport }), signal: AbortSignal.timeout(10000) });
+        assert(response.ok, await response.clone().text());
+        return response;
+      };
+      await setupAction('skip');
+      if (process.env.WEBMUX_TEST_MACOS_PERMISSIONS === '1') {
+        for (const transport of ['local', 'ssh']) {
+          const checked = await (await setupAction('check', transport)).json() as { state: string };
+          assert(['allowed', 'denied', 'waiting', 'unavailable'].includes(checked.state));
+          console.log(`macOS ${transport} permission check: ${checked.state}`);
+        }
+      }
+      assert.equal((await setupAction('restart')).status, 202);
+      await waitFor(async () => {
+        try {
+          const response = await fetch(`${base}/api/setup/macos`, { signal: AbortSignal.timeout(1000) });
+          const next = await response.json() as typeof before;
+          return response.ok && next.skipped && next.status.instance !== before.status.instance;
+        } catch { return false; }
+      }, 'guided restart and persisted setup preference');
+      console.log('macOS app identity, guided restart, and persisted skip verified');
+    }
     const created = await fetch(`${base}/api/sessions`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000),
       body: JSON.stringify({ hostname: 'localhost', username: 'fixture', transport: 'exec', exec_command: '/bin/sh' }),

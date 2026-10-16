@@ -18,7 +18,8 @@ func TestStartupSurvivesProfilePATHAndBrowserOverrides(t *testing.T) {
 				t.Skip("shell unavailable")
 			}
 			home := t.TempDir()
-			// Keep distribution login banners out of this shell-protocol fixture.
+			// Ubuntu's global bash startup prints sudo advice for a fresh HOME.
+			// Keep that system banner out of this shell-protocol fixture.
 			if err := os.WriteFile(filepath.Join(home, ".hushlogin"), nil, 0600); err != nil {
 				t.Fatal(err)
 			}
