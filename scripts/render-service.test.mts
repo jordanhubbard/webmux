@@ -89,3 +89,11 @@ test('installer CLI replaces definitions atomically and preserves them on invali
     assert.deepEqual((await fs.readdir(temporary)).sort(), ['definition', 'state & config']);
   } finally { await fs.rm(temporary, { recursive: true, force: true }); }
 });
+
+test('macOS service executes the installed app with its associated bundle identity', async () => {
+  const template = await fs.readFile(path.join(templates, 'com.webmux.server.plist.native.template'), 'utf8');
+  const xml = renderService(template, 'darwin', { root: '/source', home: '/state', searchPath: '/usr/bin', executable: '/Users/test/Applications/WebMux.app/Contents/MacOS/webmux' });
+  assert(xml.includes('<string>/Users/test/Applications/WebMux.app/Contents/MacOS/webmux</string>'));
+  assert(xml.includes('<key>AssociatedBundleIdentifiers</key>'));
+  assert(!xml.includes('/source/bin/webmux'));
+});

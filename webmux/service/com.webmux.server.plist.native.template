@@ -7,8 +7,11 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>__WEBMUX_DIR__/bin/webmux</string>
+        <string>__WEBMUX_EXECUTABLE__</string>
     </array>
+
+    <key>AssociatedBundleIdentifiers</key>
+    <array><string>com.webmux.server</string></array>
 
     <key>WorkingDirectory</key>
     <string>__WEBMUX_DIR__</string>

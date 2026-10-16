@@ -24,6 +24,7 @@ vi.mock('@frontend/hooks/useAuth', () => ({
 
 vi.mock('@frontend/utils/api', () => ({
   api: {
+    getMacSetup: vi.fn().mockResolvedValue({ status: { supported: false } }),
     sessionManager: vi.fn(),
     getConfig: vi.fn().mockResolvedValue({
       app: {

@@ -175,3 +175,16 @@ the formula update through a pull request; after merging, users receive it throu
 `brew update` and `brew upgrade`. Do not point the stable formula at an unpublished
 tag. Runtime bundles are published starting with v1.3.9; the Windows MSI starts
 with v1.3.10.
+
+## macOS protected-folder access
+
+After starting the service, complete **Mac permissions** in the browser. Local
+tmux terminals and SSH use separate macOS privacy grants. The wizard provides
+the installed app path, local System Settings actions, bounded service-context
+checks, and restart/retest guidance. See [macOS setup and signing](../README-macOS.md#mac-permissions-setup).
+
+macOS archives include `WebMux.app`; Homebrew runs that app's executable.
+Development builds use ad-hoc signing unless Developer ID signing and
+notarization are explicitly configured. Store the app at a stable location and
+verify permissions after upgrades. A service starting successfully does not
+prove access to protected folders.

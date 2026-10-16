@@ -25,6 +25,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/browseropen"
 	appconfig "github.com/jordanhubbard/webmux/server/internal/config"
 	"github.com/jordanhubbard/webmux/server/internal/httpapi"
+	"github.com/jordanhubbard/webmux/server/internal/macsetup"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 	"github.com/jordanhubbard/webmux/server/internal/terminal"
 	"github.com/jordanhubbard/webmux/server/internal/usbforward"
@@ -38,6 +39,9 @@ func main() {
 }
 
 func run() (resultErr error) {
+	if len(os.Args) == 2 && os.Args[1] == "--macos-permission-probe" {
+		return macsetup.ProbeWorker(os.Stdout)
+	}
 	if len(os.Args) >= 2 && (os.Args[1] == "usb-forward" || os.Args[1] == "--usb-forward-worker") {
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
@@ -127,7 +131,15 @@ func run() (resultErr error) {
 	if err != nil {
 		return err
 	}
-	api, err := httpapi.New(store, httpapi.Options{Name: config.App.Name, SecureMode: config.App.SecureMode, JWTSecret: os.Getenv("JWT_SECRET"), WebDir: web.directory, WebFS: web.files})
+	restartRequests := make(chan struct{}, 1)
+	api, err := httpapi.New(store, httpapi.Options{Restart: func() error {
+		select {
+		case restartRequests <- struct{}{}:
+			return nil
+		default:
+			return errors.New("restart already requested")
+		}
+	}, Name: config.App.Name, SecureMode: config.App.SecureMode, JWTSecret: os.Getenv("JWT_SECRET"), WebDir: web.directory, WebFS: web.files})
 	if err != nil {
 		return fmt.Errorf("initialize API: %w", err)
 	}
@@ -196,7 +208,10 @@ func run() (resultErr error) {
 		slog.Info("listening", "url", scheme+"://"+listener.Addr().String())
 	}
 	var serveErr error
+	restarting := false
 	select {
+	case <-restartRequests:
+		restarting = true
 	case <-ctx.Done():
 	case serveErr = <-failures:
 	}
@@ -207,6 +222,18 @@ func run() (resultErr error) {
 			_ = server.Close()
 			serveErr = errors.Join(serveErr, err)
 		}
+	}
+	if restarting {
+		cancelMaintenance()
+		<-maintenanceDone
+		if err := api.Close(); err != nil {
+			return err
+		}
+		// Deferred listener closes do not run across exec. Close descriptors first.
+		for _, listener := range listeners {
+			_ = listener.Close()
+		}
+		return macsetup.Replace()
 	}
 	if errors.Is(serveErr, http.ErrServerClosed) {
 		return nil

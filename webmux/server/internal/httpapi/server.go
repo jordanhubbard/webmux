@@ -19,6 +19,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/authhandoff"
 	"github.com/jordanhubbard/webmux/server/internal/browser"
 	"github.com/jordanhubbard/webmux/server/internal/desktop"
+	"github.com/jordanhubbard/webmux/server/internal/macsetup"
 	"github.com/jordanhubbard/webmux/server/internal/netguard"
 	"github.com/jordanhubbard/webmux/server/internal/session"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
@@ -26,6 +27,8 @@ import (
 )
 
 type Server struct {
+	macSetup      macsetup.Manager
+	restart       func() error
 	handoffs      authhandoff.Manager
 	browsers      browser.Manager
 	store         *storage.Store
@@ -51,6 +54,7 @@ type Server struct {
 }
 
 type Options struct {
+	Restart    func() error
 	Name       string
 	SecureMode bool
 	JWTSecret  string
@@ -80,7 +84,7 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil)}, nil
+	return &Server{restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil)}, nil
 }
 
 func (s *Server) RestoreSessions() error {
@@ -94,6 +98,8 @@ func (s *Server) Close() error { return s.closeSocketsAndSessions() }
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.Handle("GET /api/setup/macos", s.protected(false, s.getMacSetup))
+	mux.Handle("POST /api/setup/macos", s.protected(false, s.macSetupAction))
 	mux.Handle("POST /api/session-manager", s.protected(true, s.sessionManager))
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]string{"status": "ok", "name": s.name})
