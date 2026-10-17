@@ -5,6 +5,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.21] - 2026-10-16
+
+### Added
+- Add a Pack control to compact the terminal grid (#147).
+- Add a host session-manager workspace with provider-backed session controls (#149).
+- Guide macOS local and SSH folder permissions and install a signed app bundle with a stable application identity (#151).
+- Integrate desktop clipboard support, deliver pasted terminal images to their hosts, and support clipboard forwarding between separate WebMux windows (#154).
+
+### Fixed
+- Keep one macOS local-access check alive while desktop prompts are answered, remove each granted or denied folder from the pending list, and automatically close and remember completion without remounting the dialog (#157).
+- Isolate browser-suite request budgets and keep first-run setup from interrupting terminal workflow fixtures (#154).
+
+### Limitations
+- Source and native macOS builds use a development signature unless Developer ID signing and notarization are configured; permission persistence across upgrades remains subject to macOS (#152).
+
 ## [1.3.20] - 2026-10-12
 
 ### Fixed

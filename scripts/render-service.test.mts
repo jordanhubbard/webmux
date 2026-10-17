@@ -76,14 +76,14 @@ test('installer CLI replaces definitions atomically and preserves them on invali
     await fs.writeFile(output, 'previous definition');
     const script = path.join(import.meta.dirname, 'render-service.mts');
     const result = spawnSync(process.execPath, [script], { encoding: 'utf8',
-      env: { ...process.env, WEBMUX_ROOT: path.resolve(templates, '..'), WEBMUX_HOME: home, WEBMUX_SERVICE_OUTPUT: output } });
+      env: { ...process.env, WEBMUX_ROOT: path.resolve(templates, '..'), WEBMUX_EXECUTABLE: path.resolve(templates, '../bin/webmux'), WEBMUX_HOME: home, WEBMUX_SERVICE_OUTPUT: output } });
     assert.equal(result.status, 0, result.stderr);
     const saved = await fs.readFile(output, 'utf8');
     assert(saved.includes('/bin/webmux')); assert(!saved.includes('backend/dist/index.js'));
     await fs.access(path.join(home, 'logs'));
     assert.equal((await fs.stat(output)).mode & 0o777, 0o600);
     const rejected = spawnSync(process.execPath, [script], { encoding: 'utf8',
-      env: { ...process.env, WEBMUX_ROOT: path.resolve(templates, '..'), WEBMUX_HOME: `${home}\ninvalid`, WEBMUX_SERVICE_OUTPUT: output } });
+      env: { ...process.env, WEBMUX_ROOT: path.resolve(templates, '..'), WEBMUX_EXECUTABLE: path.resolve(templates, '../bin/webmux'), WEBMUX_HOME: `${home}\ninvalid`, WEBMUX_SERVICE_OUTPUT: output } });
     assert.notEqual(rejected.status, 0);
     assert.equal(await fs.readFile(output, 'utf8'), saved);
     assert.deepEqual((await fs.readdir(temporary)).sort(), ['definition', 'state & config']);
