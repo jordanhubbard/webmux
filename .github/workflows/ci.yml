@@ -22,6 +22,8 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: webmux/server/go.mod
+      - name: Test USB sysfs detach polling
+        run: python3 -m unittest discover -s tests -p test_usb_sysfs.py
       - name: Install native kernel USB fixture prerequisites
         run: |
           sudo -n apt-get update

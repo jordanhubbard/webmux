@@ -16,6 +16,8 @@ import sys
 import tempfile
 import time
 
+from usb_sysfs import imported_disk
+
 
 def run(*args, check=True):
     result = subprocess.run(args, text=True, stdout=subprocess.PIPE,
@@ -74,16 +76,6 @@ def start(name, *args, user=None, group=None):
     children.append(child)
     return child
 
-
-def imported_disk():
-    for entry in Path("/sys/class/block").iterdir():
-        resolved = entry.resolve()
-        if "vhci_hcd" not in str(resolved) or (entry / "partition").exists():
-            continue
-        if any((p / "serial").is_file() and (p / "serial").read_text().strip() == "webmux-ci-storage"
-               for p in resolved.parents):
-            return Path("/dev", entry.name)
-    return None
 
 
 try:
