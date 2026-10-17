@@ -7,6 +7,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [1.3.22] - 2026-10-17
 
+### Fixed
+- Handle disappearing sysfs serial files while the USB integration fixture polls device detach, preserving unexpected I/O failures (#161).
+
 ### Removed
 - Remove the unused Host sessions workspace and external session-manager integration (#162).
 
