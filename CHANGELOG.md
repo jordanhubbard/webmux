@@ -5,8 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.22] - 2026-10-17
+
 ### Removed
 - Remove the unused Host sessions workspace and external session-manager integration (#162).
+
+### Changed
+- Update xterm fit and web-links addons to 0.11.0 and 0.12.0 (#138, #137).
+- Update golang.org/x/crypto to 0.58.0, x/sys to 0.49.0, and x/text to 0.43.0 (#134).
 
 ## [1.3.21] - 2026-10-16
 
