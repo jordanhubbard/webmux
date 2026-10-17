@@ -66,3 +66,54 @@ it('confirms a new process instance before reporting restart success', async () 
   setup.status.instance = 'second';
   expect(await screen.findByText(/WebMux restarted\./, {}, { timeout: 2500 })).toBeDefined();
 });
+
+it('removes individual decisions without remounting the dialog and closes after the last decision', async () => {
+  render(<MacPermissions />);
+  const dialog = await screen.findByRole('dialog');
+  setup.status.local = { state: 'waiting', folders: [
+    { name: 'Desktop', state: 'waiting' }, { name: 'Documents', state: 'waiting' }, { name: 'Downloads', state: 'waiting' },
+  ] };
+  fireEvent.click(screen.getByRole('button', { name: 'Check local access' }));
+  await screen.findByText('Desktop: Still waiting for macOS');
+  setup.status.local.folders![0].state = 'allowed';
+  await waitFor(() => expect(screen.queryByText('Desktop: Still waiting for macOS')).toBeNull(), { timeout: 2500 });
+  expect(screen.getByRole('dialog')).toBe(dialog);
+  expect(screen.getByText('Documents: Still waiting for macOS')).toBeDefined();
+  setup.status.local.folders![1].state = 'denied';
+  await waitFor(() => expect(screen.queryByText('Documents: Still waiting for macOS')).toBeNull(), { timeout: 2500 });
+  expect(screen.getByRole('dialog')).toBe(dialog);
+  setup.status.local.folders![2].state = 'allowed';
+  setup.status.local.state = 'denied';
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull(), { timeout: 2500 });
+  expect(vi.mocked(api.macSetupAction).mock.calls.filter(call => call[0] === 'check')).toHaveLength(1);
+  expect(api.macSetupAction).toHaveBeenCalledWith('skip');
+  fireEvent.click(screen.getByRole('button', { name: 'Mac permissions' }));
+  expect(screen.getByText('Permission denied')).toBeDefined();
+});
+it('stops polling when dismissed and does not reopen after a late response', async () => {
+  setup.status.local.state = 'waiting';
+  setup.skipped = true;
+  render(<MacPermissions />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Mac permissions' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  const count = vi.mocked(api.getMacSetup).mock.calls.length;
+  await new Promise(resolve => setTimeout(resolve, 850));
+  expect(api.getMacSetup).toHaveBeenCalledTimes(count);
+});
+
+it('resumes observing an existing check after a reload without requesting access again', async () => {
+  setup.status.local = { state: 'waiting', folders: [
+    { name: 'Desktop', state: 'allowed' }, { name: 'Documents', state: 'waiting' }, { name: 'Downloads', state: 'waiting' },
+  ] };
+  render(<MacPermissions />);
+  await screen.findByRole('dialog');
+  expect(screen.queryByText(/Desktop:/)).toBeNull();
+  expect(screen.getByRole('button', { name: 'Checking…' })).toBeDisabled();
+  setup.status.local = { state: 'allowed', folders: [
+    { name: 'Desktop', state: 'allowed' }, { name: 'Documents', state: 'allowed' }, { name: 'Downloads', state: 'allowed' },
+  ] };
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull(), { timeout: 2500 });
+  expect(api.macSetupAction).toHaveBeenCalledWith('skip');
+  expect(vi.mocked(api.macSetupAction).mock.calls.some(call => call[0] === 'check')).toBe(false);
+});

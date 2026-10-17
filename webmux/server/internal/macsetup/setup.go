@@ -92,8 +92,12 @@ func ProbeWorker(out io.Writer) error {
 			state = "error"
 		}
 		folders = append(folders, Folder{Name: name, State: state})
+		// Publish each decision before the next folder can block on a prompt.
+		if err := json.NewEncoder(out).Encode(folders); err != nil {
+			return err
+		}
 	}
-	return json.NewEncoder(out).Encode(folders)
+	return nil
 }
 
 const sshProbe = `for folder in Desktop Documents Downloads; do
@@ -117,35 +121,73 @@ func (m *Manager) Check(ctx context.Context, transport string) (Result, error) {
 	}
 	m.running = true
 	m.mu.Unlock()
+	if transport == "local" {
+		// The HTTP request only starts the check. Desktop approval can take minutes;
+		// disconnecting the browser must not kill the prompt or start another one.
+		m.mu.Lock()
+		m.local = Result{State: "waiting", Folders: []Folder{{Name: "Desktop", State: "waiting"}, {Name: "Documents", State: "waiting"}, {Name: "Downloads", State: "waiting"}}}
+		initial := m.local
+		m.mu.Unlock()
+		go m.checkLocal()
+		return initial, nil
+	}
 	defer func() { m.mu.Lock(); m.running = false; m.mu.Unlock() }()
 	ctx, cancel := context.WithTimeout(ctx, 6*time.Second)
 	defer cancel()
-	exe, err := os.Executable()
-	if err != nil {
-		return Result{}, err
-	}
-	var cmd *exec.Cmd
-	if transport == "local" {
-		cmd = exec.CommandContext(ctx, exe, "--macos-permission-probe")
-	} else {
-		// Fixed host and command, no password prompts, config-supplied proxy commands,
-		// host-key changes, or arbitrary user-provided commands.
-		cmd = exec.CommandContext(ctx, "/usr/bin/ssh", "-F", "/dev/null", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=3", "-o", "ConnectionAttempts=1", "-o", "ClearAllForwardings=yes", "localhost", sshProbe)
-	}
+	// Fixed host and command, no password prompts, config-supplied proxy commands,
+	// host-key changes, or arbitrary user-provided commands.
+	cmd := exec.CommandContext(ctx, "/usr/bin/ssh", "-F", "/dev/null", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=3", "-o", "ConnectionAttempts=1", "-o", "ClearAllForwardings=yes", "localhost", sshProbe)
 	cmd.WaitDelay = time.Second
 	result := runProbe(ctx, cmd, transport)
 	m.mu.Lock()
-	if transport == "local" {
-		m.local = result
-	} else {
-		m.ssh = result
-	}
+	m.ssh = result
 	m.mu.Unlock()
 	return result, nil
 }
 
+// Keep exactly one bounded helper alive while publishing decisions for polling clients.
+func (m *Manager) checkLocal() {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	exe, err := os.Executable()
+	result := Result{State: "error", Detail: "The permission helper could not start."}
+	if err == nil {
+		cmd := exec.CommandContext(ctx, exe, "--macos-permission-probe")
+		cmd.WaitDelay = time.Second
+		result = runProbeProgress(ctx, cmd, "local", func(folders []Folder) {
+			if len(folders) > 3 {
+				return
+			}
+			for i, folder := range folders {
+				if folder.Name != []string{"Desktop", "Documents", "Downloads"}[i] || (folder.State != "allowed" && folder.State != "denied" && folder.State != "missing") {
+					return
+				}
+			}
+			pending := append([]Folder(nil), folders...)
+			for _, name := range []string{"Desktop", "Documents", "Downloads"}[len(folders):] {
+				pending = append(pending, Folder{Name: name, State: "waiting"})
+			}
+			m.mu.Lock()
+			m.local = Result{State: "waiting", Folders: pending}
+			m.mu.Unlock()
+		})
+	}
+	m.mu.Lock()
+	// A timed-out helper has exited; show a retry instead of polling forever.
+	if result.State == "waiting" {
+		result.State = "error"
+		result.Folders = m.local.Folders
+	}
+	m.local, m.running = result, false
+	m.mu.Unlock()
+}
+
 func runProbe(ctx context.Context, cmd *exec.Cmd, transport string) Result {
-	var output probeOutput
+	return runProbeProgress(ctx, cmd, transport, nil)
+}
+
+func runProbeProgress(ctx context.Context, cmd *exec.Cmd, transport string, progress func([]Folder)) Result {
+	output := probeOutput{progress: progress}
 	cmd.Stdout = &output
 	cmd.Stderr = io.Discard
 	err := cmd.Run()
@@ -166,7 +208,8 @@ func runProbe(ctx context.Context, cmd *exec.Cmd, transport string) Result {
 		return result
 	}
 	if transport == "local" {
-		err = json.Unmarshal(data, &result.Folders)
+		lines := bytes.Split(bytes.TrimSpace(data), []byte("\n"))
+		err = json.Unmarshal(lines[len(lines)-1], &result.Folders)
 	} else {
 		for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
 			parts := strings.Fields(line)
@@ -227,17 +270,29 @@ func Open(ctx context.Context, action string) error {
 
 // A shell startup hook on the SSH path may print arbitrary output. Keep it bounded.
 type probeOutput struct {
-	bytes.Buffer
+	buffer   bytes.Buffer
 	overflow bool
+	progress func([]Folder)
 }
+
+func (b *probeOutput) Bytes() []byte { return b.buffer.Bytes() }
 
 func (b *probeOutput) Write(p []byte) (int, error) {
 	n := len(p)
-	remaining := 4096 - b.Len()
+	remaining := 4096 - b.buffer.Len()
 	if len(p) > remaining {
 		p = p[:remaining]
 		b.overflow = true
 	}
-	_, _ = b.Buffer.Write(p)
+	_, _ = b.buffer.Write(p)
+	if b.progress != nil && !b.overflow {
+		lines := bytes.Split(b.buffer.Bytes(), []byte("\n"))
+		if len(lines) > 1 {
+			var folders []Folder
+			if json.Unmarshal(lines[len(lines)-2], &folders) == nil {
+				b.progress(folders)
+			}
+		}
+	}
 	return n, nil
 }

@@ -22,6 +22,13 @@ func TestProbeProcess(t *testing.T) {
 		os.Stdout.WriteString(string(bytes.Repeat([]byte("x"), 8192)))
 	case "ssh":
 		os.Stdout.WriteString("Desktop allowed\nDocuments missing\nDownloads denied\n")
+	case "progress":
+		os.Stdout.WriteString(`[{"name":"Desktop","state":"allowed"}]` + "\n")
+		var ack [1]byte
+		if _, err := os.Stdin.Read(ack[:]); err != nil {
+			os.Exit(1)
+		}
+		os.Stdout.WriteString(`[{"name":"Desktop","state":"allowed"},{"name":"Documents","state":"denied"},{"name":"Downloads","state":"allowed"}]` + "\n")
 	case "hang":
 		time.Sleep(time.Minute)
 	case "invalid":
@@ -79,10 +86,39 @@ func TestWorkerDiscardsFilenames(t *testing.T) {
 		t.Fatal("directory contents leaked")
 	}
 	var folders []Folder
-	if err := json.Unmarshal(out.Bytes(), &folders); err != nil {
+	lines := bytes.Split(bytes.TrimSpace(out.Bytes()), []byte("\n"))
+	if len(lines) != 3 {
+		t.Fatalf("expected one update per folder: %s", out.Bytes())
+	}
+	if err := json.Unmarshal(lines[len(lines)-1], &folders); err != nil {
 		t.Fatal(err)
 	}
 	if len(folders) != 3 || folders[1].State != "missing" || folders[2].State != "allowed" {
 		t.Fatalf("%+v", folders)
+	}
+}
+
+func TestProgressBeforeHelperExit(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestProbeProcess$")
+	cmd.Env = append(os.Environ(), "WEBMUX_TEST_PROBE=progress", "GORACE=atexit_sleep_ms=0")
+	ack, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ack.Close()
+	var updates [][]Folder
+	result := runProbeProgress(ctx, cmd, "local", func(folders []Folder) {
+		if len(updates) == 0 {
+			// The child cannot finish until its first update reaches this callback.
+			if _, err := ack.Write([]byte("x")); err != nil {
+				t.Error(err)
+			}
+		}
+		updates = append(updates, folders)
+	})
+	if result.State != "denied" || len(updates) < 1 || updates[0][0].State != "allowed" || len(result.Folders) != 3 {
+		t.Fatalf("result=%+v updates=%+v", result, updates)
 	}
 }
