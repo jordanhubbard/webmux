@@ -11,8 +11,6 @@ This directory contains the WebMux application workspaces:
 
 The repository-level [README](../README.md) is the canonical guide for features, configuration, security, installation, and deployment. Agent workspace setup is documented in [Agent Views](../docs/agent-views.md).
 
-The optional [Host session manager](../docs/session-manager.md) workspace uses a generic local service contract for session discovery, attach/detach, recent work and explicit permission changes.
-
 ## Development
 
 From this directory:

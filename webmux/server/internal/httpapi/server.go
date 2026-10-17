@@ -100,7 +100,6 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("GET /api/setup/macos", s.protected(false, s.getMacSetup))
 	mux.Handle("POST /api/setup/macos", s.protected(false, s.macSetupAction))
-	mux.Handle("POST /api/session-manager", s.protected(true, s.sessionManager))
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]string{"status": "ok", "name": s.name})
 	})

@@ -75,9 +75,6 @@ export interface MacSetup {
 export const api = {
   getMacSetup: () => request<MacSetup>('/setup/macos'),
   macSetupAction: (action: string, transport?: 'local' | 'ssh') => request<PermissionResult | { ok?: boolean; restarting?: boolean }>('/setup/macos', { method: 'POST', body: JSON.stringify({ action, transport }) }),
-  sessionManager: <T>(operation: string, params: Record<string, unknown> = {}, clientId?: string) => request<{ version: number; hostId: string; providerId: string; generation: string; result: T }>('/session-manager', {
-    method: 'POST', body: JSON.stringify({ version: 1, operation, params, requestId: crypto.randomUUID(), clientId }),
-  }),
   beginAuthHandoff: (id: string, authorization: string) => request<{ id: string; expires_in: number }>(`/sessions/${id}/auth-handoff`, { method: 'POST', body: JSON.stringify({ authorization }) }),
   deliverAuthHandoff: (id: string, ticket: string, callback: string) => request<{ delivered: boolean }>(`/sessions/${id}/auth-handoff`, { method: 'POST', body: JSON.stringify({ id: ticket, callback }) }),
   endAuthHandoff: (id: string, ticket: string) => request<void>(`/sessions/${id}/auth-handoff`, { method: 'DELETE', body: JSON.stringify({ id: ticket }) }),
