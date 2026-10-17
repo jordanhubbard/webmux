@@ -5,6 +5,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Removed
+- Remove the unused Host sessions workspace and external session-manager integration (#162).
+
 ## [1.3.21] - 2026-10-16
 
 ### Added

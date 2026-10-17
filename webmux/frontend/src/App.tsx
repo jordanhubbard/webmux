@@ -6,7 +6,6 @@ import { TopBar } from './components/TopBar';
 import { Workspace } from './components/Workspace';
 import { GraphicsWorkspace } from './components/GraphicsWorkspace';
 import { AgentWorkspace } from './components/AgentWorkspace';
-import { SessionManagerWorkspace } from './components/SessionManagerWorkspace';
 import { UsersDialog } from './components/UsersDialog';
 import { MacPermissions } from './components/MacPermissions';
 import { SettingsDialog } from './components/SettingsDialog';
@@ -114,8 +113,6 @@ function AuthenticatedApp({
     [agentDefinitions, combinedAgentPane],
   );
   const [mountedAgentPanes, setMountedAgentPanes] = useState<Set<WorkspacePane>>(() => new Set());
-  const [mountedSessionManager, setMountedSessionManager] = useState(false);
-  useEffect(() => { if (activePane === 'sessions') setMountedSessionManager(true); }, [activePane]);
 
   useEffect(() => {
     if (!agentWorkspacePanes.has(activePane)) return;
@@ -185,7 +182,6 @@ function AuthenticatedApp({
         <div style={{ display: activePane === 'desktops' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
           <GraphicsWorkspace />
         </div>
-        {(activePane === 'sessions' || mountedSessionManager) && <div style={{ display: activePane === 'sessions' ? 'block' : 'none', height: '100%' }}><SessionManagerWorkspace /></div>}
         {agentDefinitions.length > 0 && combinedAgentPane && shouldMountAgentPane('agents') && (
           <div style={{ display: activePane === 'agents' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
             <AgentWorkspace
@@ -333,7 +329,7 @@ export default function App() {
 
   const availablePanes = useMemo<WorkspacePane[]>(() => {
     const agentDefinitions = enabledAgentDefinitions(agentConfig);
-    const panes: WorkspacePane[] = ['terminals', 'desktops', 'sessions'];
+    const panes: WorkspacePane[] = ['terminals', 'desktops'];
     if (agentDefinitions.length > 0) {
       if (agentConfig.combined_pane !== false) {
         panes.push('agents');
@@ -345,7 +341,7 @@ export default function App() {
   }, [agentConfig]);
   const workspaceOptions = useMemo(() => availablePanes.map(pane => ({
     value: pane,
-    label: pane === 'sessions' ? 'Host sessions' : pane === 'terminals' ? 'Terminals' : pane === 'desktops' ? 'Desktops' : pane === 'agents'
+    label: pane === 'terminals' ? 'Terminals' : pane === 'desktops' ? 'Desktops' : pane === 'agents'
       ? 'Agents'
       : agentConfig.definitions.find(definition => definition.workspace === pane)?.plural_label ?? pane,
   })), [agentConfig.definitions, availablePanes]);

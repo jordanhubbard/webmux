@@ -25,7 +25,6 @@ vi.mock('@frontend/hooks/useAuth', () => ({
 vi.mock('@frontend/utils/api', () => ({
   api: {
     getMacSetup: vi.fn().mockResolvedValue({ status: { supported: false } }),
-    sessionManager: vi.fn(),
     getConfig: vi.fn().mockResolvedValue({
       app: {
         name: 'webmux',
@@ -182,20 +181,6 @@ describe('App', () => {
     });
     expect(screen.queryByText('Agents')).toBeNull();
     expect(api.getAllAgentSessions).not.toHaveBeenCalled();
-  });
-
-  it('keeps host-session drafts when switching to terminals and back', async () => {
-    mockAuth.isLoading = false; mockAuth.isAuthenticated = true;
-    mockAuth.authStatus = { mode: 'local', bootstrap_required: false };
-    const session = { id: 'fixture', title: 'Manager fixture', cwd: '/fixture', state: 'idle', summary: '', observedAt: 1000, attachments: [], capabilities: { permissions: true } };
-    vi.mocked(api.sessionManager).mockImplementation(async (operation) => ({ version: 1, hostId: 'host', providerId: 'codex-local', generation: 'epoch', result: (operation === 'list' ? { sessions: [session], nextCursor: null, coverage: { complete: true, message: 'Fixture' } } : operation === 'read' ? { session, items: [], requests: [], turnId: null, observedAt: 1000 } : {}) as never }));
-    render(<App />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Host sessions' }));
-    fireEvent.click(await screen.findByRole('button', { name: /Manager fixture/ }));
-    fireEvent.change(await screen.findByLabelText('Message to session'), { target: { value: 'Preserve across panes' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Terminals' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Host sessions' }));
-    expect(screen.getByLabelText('Message to session')).toHaveValue('Preserve across panes');
   });
 
   it('shows configured Agents pane when app.agents is enabled', async () => {
