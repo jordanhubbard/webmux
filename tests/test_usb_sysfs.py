@@ -11,7 +11,7 @@ class ImportedDiskTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        root = Path(self.temporary.name)
+        root = Path(self.temporary.name).resolve()
         self.blocks = root / 'block'
         self.blocks.mkdir()
         self.device = root / 'vhci_hcd' / 'usb1' / '1-1'
