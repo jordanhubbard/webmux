@@ -104,9 +104,13 @@ through Screen Sharing. They do not open settings on your browser's computer.
 
 **Check local access** launches a disposable helper from the running service,
 not your installation terminal. It attempts to enumerate Desktop, Documents, and
-Downloads without returning their filenames. The check times out after six
-seconds if macOS is waiting for a privacy response. No probes run until you
-request one. Missing folders are reported separately.
+Downloads without returning their filenames. Each folder disappears from the
+pending list once access is granted, denied, or the folder is found to be missing.
+The dialog closes after all three decisions and remembers that setup is complete,
+including denials. SSH setup remains optional through the Mac permissions banner.
+The same helper waits up to five minutes for desktop responses; status updates do
+not restart it or repeat permission requests. If it times out, retry the check.
+No probes run until you request one.
 
 **Check localhost SSH access** uses the current macOS account, localhost port 22,
 default SSH identities, and an already trusted host key. It never prompts for a

@@ -8,11 +8,14 @@ const labels: Record<string, string> = {
   waiting: 'Still waiting for macOS', unavailable: 'Access could not be verified',
   missing: 'Folder does not exist', error: 'Check could not complete',
 };
+function resolved(result: PermissionResult) {
+  return result.state !== 'waiting' && result.folders?.length === 3 && result.folders.every(folder => ['allowed', 'denied', 'missing'].includes(folder.state));
+}
 function Result({ result }: { result: PermissionResult }) {
   return <div role="status">
     <strong>{labels[result.state] ?? result.state}</strong>
     {result.detail && <p>{result.detail}</p>}
-    {result.folders && <ul>{result.folders.map(folder => <li key={folder.name}>{folder.name}: {labels[folder.state] ?? folder.state}</li>)}</ul>}
+    {result.folders && <ul>{result.folders.filter(folder => !['allowed', 'denied', 'missing'].includes(folder.state)).map(folder => <li key={folder.name}>{folder.name}: {labels[folder.state] ?? folder.state}</li>)}</ul>}
     {result.checked_at && <small>Checked {new Date(result.checked_at).toLocaleString()}</small>}
   </div>;
 }
@@ -35,10 +38,36 @@ export function MacPermissions() {
     api.getMacSetup().then(value => {
       if (!active || !value.status.supported) return;
       setSetup(value);
-      setVisible(!value.skipped && value.status.local.state === 'unchecked');
+      setVisible(!value.skipped && ['unchecked', 'waiting'].includes(value.status.local.state));
     }).catch(() => { /* Mac setup is restricted to administrators and local unauthenticated users. */ });
     return () => { active = false; };
   }, []);
+
+  const localState = setup?.status.local.state;
+  // Poll status only: starting a new probe would repeat prompts and flicker the UI.
+  useEffect(() => {
+    if (!visible || localState !== 'waiting') return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const value = await api.getMacSetup();
+        if (cancelled) return;
+        setSetup(value);
+        if (value.status.local.state !== 'waiting') {
+          if (resolved(value.status.local)) {
+            setVisible(false);
+            // Remember completion, including explicit denials, across restarts.
+            await api.macSetupAction('skip');
+          }
+          return;
+        }
+      } catch { /* Retain the current view during transient connection failures. */ }
+      if (!cancelled) timer = setTimeout(() => { void poll(); }, 750);
+    };
+    timer = setTimeout(() => { void poll(); }, 750);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [visible, localState]);
 
   // Poll for the observable end of restart. Never assume elapsed time means success.
   useEffect(() => {
@@ -72,7 +101,11 @@ export function MacPermissions() {
     try {
       await api.macSetupAction(name, transport);
       if (name === 'restart') { setRestartInstance(status.instance); setRestart(true); return; }
-      await load();
+      const value = await load();
+      if (name === 'check' && transport === 'local' && resolved(value.status.local)) {
+        setVisible(false);
+        await api.macSetupAction('skip');
+      }
       if (name === 'skip') setVisible(false);
     } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
     setBusy(null);
@@ -96,7 +129,7 @@ export function MacPermissions() {
         <p style={{ overflowWrap: 'anywhere', userSelect: 'all' }}><code>{status.permission_target}</code></p>
         <p>In the file picker, press <strong>⌘⇧G</strong> and paste that path. “Show WebMux in Finder” reveals the item to select.</p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{openButton('privacy', 'Open Privacy settings')}{openButton('reveal', 'Show WebMux in Finder')}
-          <button disabled={!!busy} onClick={() => { void action('check', 'local'); }}>{busy === 'local' ? 'Checking…' : 'Check local access'}</button></div>
+          <button disabled={!!busy || status.local.state === 'waiting'} onClick={() => { void action('check', 'local'); }}>{busy === 'local' || status.local.state === 'waiting' ? 'Checking…' : 'Check local access'}</button></div>
         <Result result={status.local} />
         <h3>2. Allow SSH access, if you use SSH to this Mac</h3>
         <p>Open <strong>System Settings → General → Sharing → Remote Login ⓘ</strong>. Enable <strong>Allow full disk access for remote users</strong>. This applies to SSH users allowed by Remote Login, separately from local terminals.</p>
