@@ -65,7 +65,8 @@ supported; Windows WebMux's existing terminals remain available.
 Closing a tile detaches the WebMux viewer; **Open terminal** restores it without
 launching another agent. After an SSH failure, **Reconnect agent** reconnects the
 central attachment to the existing remote tmux session and reuses its tunnel
-port. Restarting WebMux reattaches persisted grid tiles without restarting the
+port. Reconnection retains Rig's exact enrolled session ID so historical records
+with the same name do not make later reconnects ambiguous. Restarting WebMux reattaches persisted grid tiles without restarting the
 provider processes. Explicitly exiting a provider stops that agent; reconnecting
 a stopped agent launches a new provider session in the same registered seat.
 
@@ -88,7 +89,8 @@ isolation between users of the same OS account.
 The browser tests use the actual published Rig daemon and text UI without
 provider credentials. They also enroll two interactive provider stand-ins,
 exchange a fresh challenge/ACK through Rig, inspect attributed messages, and
-check grid refresh and tile close/reopen. CI runs this against OpenRig 0.6.14;
+check grid refresh, tile close/reopen and two consecutive stopped-agent
+reconnections. CI runs this against OpenRig 0.6.14;
 these stand-ins qualify transport, not provider reasoning. Live cross-host
 qualification additionally uses real
 Codex processes on Puck and sparky, independent nonce/hash receipts, and the

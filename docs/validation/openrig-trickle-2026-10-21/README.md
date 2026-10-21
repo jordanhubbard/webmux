@@ -22,6 +22,11 @@ reviewer independently checked the final delta and fingerprints, timeout driver,
 19 CI contracts and 15 roadmap tests, and sent a verdict of no blocking source
 findings within the diagnostic scope. That verdict explicitly excludes merge
 and release readiness.
+The workload ended at documentation revision
+`3160ae3adb7cc5d4444308676b975dc4411fae9c`. Fresh Windows execution passed all three
+report-driver tests, including the lock and timeout controls, but the Qt suite
+still had 34 passes and one startup-state failure. The diagnostic advance does
+not resolve that original startup defect.
 
 The [message record](messages.json) retains both directions of actual Rig
 communication, bound to the central daemon's `transport:v1` provenance. Messages
@@ -45,6 +50,14 @@ provider pane PID and reverse-forward port stayed unchanged. The remote agent
 sent a fresh `RECONNECTED` nonce through Rig and received the local coder's
 matching ACK. Both agents remained available in the production grid afterward.
 
+Repeating this exercise exposed a second defect: unclaiming by session name
+became ambiguous once Rig retained multiple records from earlier reconnects.
+WebMux now persists the exact enrolled session ID and uses it for unclaim. Older
+managed records migrate from the retained attachment response. Browser coverage
+now kills and reconnects the stand-in twice, requiring a new exact session ID on
+each enrollment while reusing the grid tile and preserving the unrelated tmux
+session. The existing remote provider remains intact during real relay recovery.
+
 ## Repeatable browser gate
 
 `openrig.spec.ts` uses the published OpenRig 0.6.14 CLI, actual daemon and tmux
@@ -63,6 +76,9 @@ tmux server retains an older environment. The test starts such a server before
 installing its wrappers and checks that project shutdown preserves an unrelated
 session. The fixture preserves enrolled sender/transport variables and clears
 inherited routing once before starting its private daemon.
+It stops the detached daemon in the suite's final hook before Playwright
+terminates the server process group, and starts Rig only after a successful
+native build, preventing failed fixture builds from leaking a daemon.
 
 ## Boundaries
 

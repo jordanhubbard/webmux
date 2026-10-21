@@ -57,13 +57,15 @@
       "timeout_driver": "2 pass, 1 Windows-only skip; four hang controls",
       "ci_contracts": 19,
       "roadmap_tests": 15,
-      "qt_cases": 35
+      "qt_cases": 35,
+      "windows_report_driver": "3 pass, including exclusive-lock and four timeout controls",
+      "windows_qt": "34 pass, 1 startup-state failure"
     },
     "merge_ready": false,
     "remaining": [
       "stale authority and acceptance receipt",
-      "fresh exact-head Windows qualification",
-      "unresolved chooser startup timeout"
+      "passing exact-head Windows Qt qualification",
+      "unresolved desktop startup-state failure"
     ]
   },
   "relay_reconnect": {
@@ -73,6 +75,14 @@
     "remote_provider_pane_pid": "250746",
     "central_pane_pid": "36226",
     "challenge_nonce": "601311feb8360d64e537cdd3",
-    "matching_peer_ack_received": true
-  }
+    "matching_peer_ack_received": true,
+    "exact_id_recovery": {
+      "first_session_id": "01M5FWSH7M6JRMMTD41M7E46CD",
+      "second_session_id": "01M5FWTP9RATJ8FFME3YQQTPBA",
+      "remote_provider_pid_unchanged": true,
+      "repeated_exact_id_reconnects_passed": true,
+      "legacy_attachment_record_migrated": true
+    }
+  },
+  "workload_documentation_commit": "3160ae3adb7cc5d4444308676b975dc4411fae9c"
 }

@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
-type Agent = { target: string; project: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number };
+type Agent = { target: string; project: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string };
 type Input = { project?: string; name?: string; host?: string; cwd?: string; runtime?: string };
 const [action, directory] = process.argv.slice(2);
 if (!directory) throw new Error('Missing coordination state directory');
@@ -120,15 +120,22 @@ try {
       // service PATH explicitly rather than inheriting that server's stale PATH.
       write(launcher, `#!/bin/sh\nset -eu\nexport PATH=${q(process.env.PATH ?? '')}:"$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"\n${attach} > ${q(attached + '.tmp')} || { mv -f ${q(attached + '.tmp')} ${q(attached)}; exit 1; }\nmv -f ${q(attached + '.tmp')} ${q(attached)}\n${q(process.execPath)} ${q(process.argv[1])} environment ${q(directory)} ${q(tmux)}\n. ${q(envFile)}\n${command}\n`);
       fs.chmodSync(launcher, 0o700);
-      if (existing) run('rig', ['unclaim', target]);
+      if (existing) {
+        // Reattachments retain historical records with the same session name.
+        // Use the exact enrolled session ID; names become ambiguous on retry.
+        const previous = existing.sessionId ?? (fs.existsSync(attached) ? (JSON.parse(fs.readFileSync(attached, 'utf8')) as { sessionId?: string }).sessionId : undefined);
+        if (!previous) throw new Error('Cannot resolve the previous Rig session ID. Restore the agent registration record before reconnecting.');
+        run('rig', ['unclaim', previous]);
+      }
       fs.rmSync(attached, { force: true });
       run('tmux', ['new-session', '-d', '-s', tmux, '-x', '120', '-y', '36', `/bin/sh ${q(launcher)}`]);
       const agent: Agent = { target, project, name, host, cwd, runtime, tmux, remotePort };
       const deadline = Date.now() + 10000;
       while (!fs.existsSync(attached) && Date.now() < deadline) await delay(100);
       if (!fs.existsSync(attached)) throw new Error('Agent did not register with the coordinator.');
-      const registration = JSON.parse(fs.readFileSync(attached, 'utf8')) as { ok?: boolean; error?: string; attachmentType?: string };
-      if (registration.ok === false || registration.attachmentType !== 'tmux') throw new Error(registration.error || 'Agent transport registration failed.');
+      const registration = JSON.parse(fs.readFileSync(attached, 'utf8')) as { ok?: boolean; error?: string; attachmentType?: string; sessionId?: string };
+      if (registration.ok === false || registration.attachmentType !== 'tmux' || !registration.sessionId) throw new Error(registration.error || 'Agent transport registration failed.');
+      agent.sessionId = registration.sessionId;
       // Keep a registered seat discoverable even if provider startup fails.
       // The owner can fix authentication and explicitly reconnect that seat.
       write(recordFile, agent);

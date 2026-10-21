@@ -1,8 +1,18 @@
 import { test, expect } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+
+test.afterAll(() => {
+  if (process.env.WEBMUX_REAL_OPENRIG !== '1') return;
+  const executable = path.resolve(__dirname, '.test-home', 'openrig-bin', 'rig');
+  if (!existsSync(executable)) return;
+  // Stop before Playwright terminates the web-server process group. Waiting for
+  // the server's exit handler alone can leave the detached Rig daemon behind.
+  const stopped = spawnSync(executable, ['daemon', 'stop'], { timeout: 15000, encoding: 'utf8' });
+  expect(stopped.status, stopped.stdout + stopped.stderr).toBe(0);
+});
 
 test('coordination is a dismissible modal and leaves the terminal grid intact', async ({ page, request }) => {
   const original = await (await request.get('/api/sessions')).json();
@@ -29,7 +39,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   const home = path.resolve(__dirname, '.test-home');
   const project = 'browser-workload';
   const sessions: string[] = [];
-  type Agent = { name: string; target: string; connected: boolean };
+  type Agent = { name: string; target: string; connected: boolean; sessionId?: string };
   type Session = { id: string; openrig_view?: string };
   const status = async () => (await (await request.get('/api/coordination')).json()) as {
     agents: Agent[]; messages: { from: string; to: string; body: string }[];
@@ -38,10 +48,10 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     await page.getByRole('button', { name: 'Coordination', exact: true }).click();
     return page.getByRole('dialog', { name: 'Coordination', exact: true });
   };
-  const openAgent = async (name: string) => {
+  const openAgent = async (name: string, reconnect = false) => {
     const dialog = await openDialog();
     const response = page.waitForResponse(value => value.url().endsWith('/api/coordination/attach') && value.request().method() === 'POST');
-    await dialog.locator('article').filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: 'Open terminal', exact: true }).click();
+    await dialog.locator('article').filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: reconnect ? 'Reconnect agent' : 'Open terminal', exact: true }).click();
     const attached = await response;
     expect(attached.status()).toBe(200);
     const session = await attached.json() as Session;
@@ -98,6 +108,22 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     sessions.push(coderSession.id);
     await expect(page.getByTestId(`tile-cell-${coderSession.id}`).locator('.xterm-rows')).toContainText(`WM_ACK:${nonce}`);
     expect((await status()).agents).toHaveLength(2);
+    const tmuxEnv = { ...process.env, TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') };
+    let previousId = (await status()).agents.find(value => value.target === coder.target)!.sessionId;
+    expect(previousId).toBeTruthy();
+    for (let reconnect = 0; reconnect < 2; reconnect++) {
+      const stopped = spawnSync('tmux', ['kill-session', '-t', `=${coder.target}`], { env: tmuxEnv, timeout: 5000 });
+      expect(stopped.status).toBe(0);
+      await expect.poll(async () => (await status()).agents.find(value => value.target === coder.target)!.connected).toBe(false);
+      expect((await openAgent('coder', true)).id).toBe(coderSession.id);
+      await expect(page.getByTestId(`tile-cell-${coderSession.id}`).locator('.xterm-rows')).toContainText('FIXTURE_READY');
+      const current = (await status()).agents.find(value => value.target === coder.target)!;
+      expect(current.connected).toBe(true);
+      expect(current.sessionId).toBeTruthy();
+      expect(current.sessionId).not.toBe(previousId);
+      previousId = current.sessionId;
+      expect((await status()).agents).toHaveLength(2);
+    }
     await page.screenshot({ path: info.outputPath('managed-rig-workload.png') });
   } finally {
     for (const id of sessions) await request.delete(`/api/sessions/${id}`);
