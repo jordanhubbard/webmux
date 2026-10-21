@@ -23,6 +23,23 @@ operation. Remote hosts use the service user's OpenSSH configuration and normal
 host-key verification. WebMux's existing SSH connections and tmux sessions keep
 their existing behavior.
 
+## Remote identity verification follow-up
+
+Cross-host message delivery and reconnect are qualified separately from native
+process identity. OpenRig 0.6.14 sees the central SSH relay as the foreground
+process of a remote Codex seat. Its attention reconciler can therefore report
+`process_identity_ambiguous` even after a successful message exchange, and
+`clear-attention` refuses to clear that pane-identity condition. Message ACKs
+are not proof of process identity or conversation continuity.
+
+[WebMux #176](https://github.com/jordanhubbard/webmux/issues/176) tracks the
+integration with [OpenRig #1723](https://github.com/mvschwarz/openrig/issues/1723).
+The [development fork](https://github.com/jordanhubbard/openrig) will be tested
+in an isolated daemon instance before any production rollout. The proposed
+interface separates the local delivery pane from the remote execution binding;
+OpenRig must verify the latter while preserving SSH host trust and refusing
+stale, unreachable or mismatched identities. This work is not yet qualified.
+
 ## Prerequisites
 
 On the Linux/macOS WebMux server, put `rig`, `node` and `tmux` on the service PATH.
