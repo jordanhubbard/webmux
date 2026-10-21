@@ -73,3 +73,11 @@ WEBMUX_REAL_OPENRIG=1 \
 WEBMUX_OPENRIG_CLI=/tmp/webmux-openrig-test/node_modules/@openrig/cli/dist/bin-wrapper.js \
   npm run test:e2e -- openrig.spec.ts
 ```
+
+Separately, the [live coordination acceptance record](validation/openrig-live-2026-10-21/README.md)
+proves a Claude Code → Codex → Claude Code → Codex challenge/response/ACK exchange
+through the published OpenRig daemon. Both real agents independently verified
+the digest. The record includes native transcripts, daemon outbox rows and an
+independent verifier with negative tests. This passed before WebMux was installed
+or relaunched. The first attempt also established that Codex's sandbox must
+permit the local daemon connection; WebMux does not alter provider permissions.

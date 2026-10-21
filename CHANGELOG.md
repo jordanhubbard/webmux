@@ -9,6 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 - Prototype an optional host-local OpenRig dashboard workspace with an authenticated pop-out view, shared attachment reuse, missing-tool guidance, and input isolated from terminal broadcasting (#172).
+- Record and independently verify a live Claude Code/Codex challenge-response-ACK exchange through OpenRig, including the sandbox networking prerequisite, before relaunching WebMux (#172).
 
 ### Limitations
 - OpenRig must already be installed and its shared dashboard running as the WebMux service user on Linux or macOS. The prototype attaches a dashboard; existing CLI agents require OpenRig integration to participate in coordination. Remote-host selection and native Windows OpenRig are not included (#172).

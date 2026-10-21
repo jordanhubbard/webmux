@@ -1,0 +1,16 @@
+name: webmux-proof-agent
+version: "1.0"
+description: Bounded live messaging acceptance agent
+profiles:
+  default:
+    uses:
+      skills: []
+      guidance: []
+      subagents: []
+      plugins: []
+      runtime_resources: []
+startup:
+  files:
+    - path: role.md
+      delivery_hint: send_text
+      required: true
