@@ -8,11 +8,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [1.3.23] - 2026-10-20
 
 ### Added
-- Add an optional host-local OpenRig text dashboard, interactive terminals for daemon-listed agents, independent pop-outs, and an owner-visible Claude/Codex coordination test (#172).
+- Add a Coordination modal and managed agent terminals in the ordinary grid, with one supervised OpenRig coordinator and SSH execution hosts sharing project identity and messaging. Retain the raw text dashboard as optional diagnostics (#172).
 - Record and independently verify a live Claude Code/Codex challenge-response-ACK exchange through OpenRig, including the sandbox networking prerequisite, before relaunching WebMux (#172).
 
 ### Limitations
-- OpenRig must already be installed with a configured daemon as the WebMux service user on Linux or macOS. Existing CLI agents require OpenRig integration to participate in coordination. The explicit live test starts only its named pair; opening other views starts no teams. Remote-host selection and native Windows OpenRig are not included (#172).
+- Coordination requires OpenRig, tmux and supported Node runtimes on the Linux/macOS WebMux server, plus authenticated provider CLIs and a Rig client on execution hosts. Remote hosts use OpenSSH and loopback reverse forwarding; no remote daemon is required. Existing independent CLI sessions need explicit adoption. Native Windows coordination hosting is unsupported (#172).
 
 ### Changed
 - Integrate the pending xterm 6, Vite 8 / React plugin 6, and chromedp 0.21 / CDP 0.158.1 upgrades together (#170).

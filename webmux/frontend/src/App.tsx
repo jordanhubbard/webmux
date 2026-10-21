@@ -169,7 +169,6 @@ function AuthenticatedApp({
 
       {canManageSettings && <MacPermissions />}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-        {activePane === 'openrig' && canManageSettings && <OpenRigWorkspace fontSize={fontSize} fontFamily={fontFamily} />}
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
           <Workspace
             fontSize={fontSize}
@@ -337,7 +336,7 @@ export default function App() {
 
   const availablePanes = useMemo<WorkspacePane[]>(() => {
     const agentDefinitions = enabledAgentDefinitions(agentConfig);
-    const panes: WorkspacePane[] = ['terminals', 'desktops', ...(canManageSettings ? ['openrig'] : [])];
+    const panes: WorkspacePane[] = ['terminals', 'desktops'];
     if (agentDefinitions.length > 0) {
       if (agentConfig.combined_pane !== false) {
         panes.push('agents');
@@ -346,7 +345,7 @@ export default function App() {
       }
     }
     return panes;
-  }, [agentConfig, canManageSettings]);
+  }, [agentConfig]);
   const workspaceOptions = useMemo(() => availablePanes.map(pane => ({
     value: pane,
     label: pane === 'terminals' ? 'Terminals' : pane === 'desktops' ? 'Desktops' : pane === 'openrig' ? 'OpenRig' : pane === 'agents'

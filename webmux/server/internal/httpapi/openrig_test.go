@@ -20,7 +20,7 @@ func TestOpenRigRequiresAdministratorAndReportsMissingInstallation(t *testing.T)
 	admin := responseToken(t, request(handler, "POST", "/api/auth/bootstrap", `{"username":"owner","password":"owner-password"}`, ""))
 	requireStatus(t, request(handler, "POST", "/api/auth/register", `{"username":"member","password":"member-password"}`, admin), 201)
 	member := responseToken(t, request(handler, "POST", "/api/auth/login", `{"username":"member","password":"member-password"}`, ""))
-	for _, endpoint := range []struct{ method, path string }{{"GET", "/api/openrig"}, {"GET", "/api/openrig/agents"}, {"POST", "/api/openrig/attach"}, {"POST", "/api/openrig/proof/stop"}} {
+	for _, endpoint := range []struct{ method, path string }{{"GET", "/api/coordination"}, {"POST", "/api/coordination/agents"}, {"POST", "/api/coordination/attach"}, {"GET", "/api/openrig"}, {"GET", "/api/openrig/agents"}, {"POST", "/api/openrig/attach"}, {"POST", "/api/openrig/proof/stop"}} {
 		requireStatus(t, request(handler, endpoint.method, endpoint.path, "", member), 403)
 	}
 	requireStatus(t, request(handler, "GET", "/api/openrig", "", admin), 200)

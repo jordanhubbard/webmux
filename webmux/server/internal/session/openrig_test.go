@@ -160,3 +160,47 @@ func TestOpenRigViewsReuseOnlyTheirOwnerAndView(t *testing.T) {
 		t.Fatal("detaching agent stopped dashboard")
 	}
 }
+
+func TestManagedRigAgentsUseOrdinaryPersistentGridTiles(t *testing.T) {
+	b, store, launched := fixture(t)
+	argv := []string{"/test/tmux", "attach-session", "-t", "=central-seat"}
+	first, err := b.EnsureRigTerminal("owner", "central-seat", "reviewer · remote", argv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := b.EnsureRigTerminal("owner", "central-seat", "reviewer · remote", argv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.ID != second.ID || len(b.List("owner")) != 1 {
+		t.Fatal("duplicate or missing ordinary tile")
+	}
+	if first.Companion != "" || first.Workspace != "" || !first.Persistent {
+		t.Fatalf("not an ordinary persistent tile: %+v", first)
+	}
+	if len(b.List("other")) != 0 {
+		t.Fatal("agent exposed to another owner")
+	}
+	if err := b.Close(); err != nil {
+		t.Fatal(err)
+	}
+	<-launched
+	launches := 0
+	restored, err := newBroker(store, nil, func(request terminal.LaunchRequest, _ string) (process, error) {
+		launches++
+		if !slices.Equal(request.ExecArgv, argv) {
+			t.Fatalf("changed verified attach argv: %v", request.ExecArgv)
+		}
+		return fake(), nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	if err := restored.Restore(); err != nil {
+		t.Fatal(err)
+	}
+	if launches != 1 || len(restored.List("owner")) != 1 {
+		t.Fatal("managed terminal did not reattach after restart")
+	}
+}

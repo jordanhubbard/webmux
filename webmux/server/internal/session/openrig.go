@@ -41,6 +41,16 @@ func (b *Broker) EnsureOpenRig(owner, executable string) (Session, error) {
 // EnsureOpenRigView reuses one PTY per owner and view. argv comes from trusted
 // server handlers, never directly from the request.
 func (b *Broker) EnsureOpenRigView(owner, view, title string, argv []string) (Session, error) {
+	return b.ensureRigView(owner, view, title, argv, false)
+}
+
+// EnsureRigTerminal attaches a verified managed tmux seat in the ordinary grid.
+// Closing this PTY detaches its viewer and leaves the agent running.
+func (b *Broker) EnsureRigTerminal(owner, target, title string, argv []string) (Session, error) {
+	return b.ensureRigView(owner, "managed:"+target, title, argv, true)
+}
+
+func (b *Broker) ensureRigView(owner, view, title string, argv []string, grid bool) (Session, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.closed {
@@ -49,7 +59,7 @@ func (b *Broker) EnsureOpenRigView(owner, view, title string, argv []string) (Se
 	var selected *entry
 	for _, id := range b.order {
 		e := b.entries[id]
-		if e.value.Owner == owner && e.value.Companion == "openrig" && (e.value.OpenRigView == view || (view == "dashboard" && e.value.OpenRigView == "")) {
+		if e.value.Owner == owner && (e.value.Companion == "openrig" || grid) && (e.value.OpenRigView == view || (view == "dashboard" && e.value.OpenRigView == "")) {
 			selected = e
 			break
 		}
@@ -61,6 +71,19 @@ func (b *Broker) EnsureOpenRigView(owner, view, title string, argv []string) (Se
 			return Session{}, err
 		}
 		selected = &entry{value: Session{ID: id, Kind: "terminal", Owner: owner, Transport: "exec", Hostname: "localhost", Cols: 120, Rows: 36, Title: title, OpenRigView: view, Workspace: "openrig", Companion: "openrig", CreatedAt: now(), UpdatedAt: now()}}
+		if grid {
+			limits, err := loadLimits(b.store)
+			if err != nil {
+				return Session{}, err
+			}
+			row, col, err := limits.next(b.ownerEntriesLocked(owner), nil, nil)
+			if err != nil {
+				return Session{}, err
+			}
+			selected.value.Row, selected.value.Col = row, col
+			selected.value.Workspace, selected.value.Companion = "", ""
+			selected.value.Persistent = true
+		}
 		b.entries[id] = selected
 		b.order = append(b.order, id)
 	}

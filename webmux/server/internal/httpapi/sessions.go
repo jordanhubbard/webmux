@@ -71,7 +71,7 @@ func (s *Server) reconnectSession(w http.ResponseWriter, r *http.Request, owner 
 		s.sessionError(w, err, "Failed to reconnect session")
 		return
 	}
-	if value.Companion == "openrig" && !s.openRigAccess(w, owner) {
+	if (value.Companion == "openrig" || value.OpenRigView != "") && !s.openRigAccess(w, owner) {
 		return
 	}
 	var input struct {

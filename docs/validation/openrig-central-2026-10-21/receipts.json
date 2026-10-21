@@ -1,0 +1,21 @@
+{
+  "run_id": "central-bd413b3c086c5ce6",
+  "alpha": {
+    "type": "response",
+    "run_id": "central-bd413b3c086c5ce6",
+    "nonce_a": "1a901741663212cb50ea49adfd7897b59d1f24a0360042ee",
+    "nonce_b": "36ad91bd9dd69360ed85571f7207a649613e4f77714d6475",
+    "digest": "3872da5903c9ad6c2587e9ca2849ff710528421d6aa85c3ae70c8f80bbd992a4",
+    "verified": true,
+    "host": "puck"
+  },
+  "beta": {
+    "run_id": "central-bd413b3c086c5ce6",
+    "nonce_a": "1a901741663212cb50ea49adfd7897b59d1f24a0360042ee",
+    "nonce_b": "36ad91bd9dd69360ed85571f7207a649613e4f77714d6475",
+    "digest": "3872da5903c9ad6c2587e9ca2849ff710528421d6aa85c3ae70c8f80bbd992a4",
+    "verified": true,
+    "host": "sparky"
+  },
+  "independent_verification": true
+}

@@ -1,0 +1,38 @@
+{
+  "run_id": "central-bd413b3c086c5ce6",
+  "transport": "central tmux / SSH / persistent remote tmux",
+  "messages": [
+    {
+      "outbox_id": "outbox-20261021161940-9344845a",
+      "sender_session": "wm-f39bea3d5e-integration-local-49960de5",
+      "destination_session": "wm-f39bea3d5e-integration-remote-f2afb21e",
+      "body": "From: wm-f39bea3d5e-integration-local-49960de5\nTo: wm-f39bea3d5e-integration-remote-f2afb21e\nSent: 10-21 16:19Z\n---\nOwner-authorized bounded cross-host validation: you are BETA on sparky; I am ALPHA on puck. Run_id central-bd413b3c086c5ce6; nonce_a 1a901741663212cb50ea49adfd7897b59d1f24a0360042ee. Generate fresh nonce_b using Python secrets.token_hex(24), compute SHA256 hex of UTF-8 webmux-central-v1:central-bd413b3c086c5ce6:1a901741663212cb50ea49adfd7897b59d1f24a0360042ee:<nonce_b>. Reply via rig send to wm-f39bea3d5e-integration-local-49960de5 with JSON fields type=response, run_id, nonce_a, nonce_b, digest. After my matching ACK arrives through rig send, independently verify ACK run_id and digest against your computation, then write /tmp/webmux-central-bd413b3c086c5ce6-beta.json with run_id, nonce_a, nonce_b, digest, verified=true, host=sparky. Confirm completion via rig send. Coordinate through rig send only; do not inspect peer files/processes or use shared files, tmux input, --from, or raw HTTP. Do not modify repository; stay idle afterward.\n---\n\u21a9 Reply: rig send wm-f39bea3d5e-integration-local-49960de5 \"...\"",
+      "ts_dispatched": "2026-10-21T16:19:40.682Z",
+      "identity_provenance": "transport:v1"
+    },
+    {
+      "outbox_id": "outbox-20261021161945-a6e2d8c3",
+      "sender_session": "wm-f39bea3d5e-integration-remote-f2afb21e",
+      "destination_session": "wm-f39bea3d5e-integration-local-49960de5",
+      "body": "From: wm-f39bea3d5e-integration-remote-f2afb21e\nTo: wm-f39bea3d5e-integration-local-49960de5\nSent: 10-21 16:19Z\n---\n{\"type\": \"response\", \"run_id\": \"central-bd413b3c086c5ce6\", \"nonce_a\": \"1a901741663212cb50ea49adfd7897b59d1f24a0360042ee\", \"nonce_b\": \"36ad91bd9dd69360ed85571f7207a649613e4f77714d6475\", \"digest\": \"3872da5903c9ad6c2587e9ca2849ff710528421d6aa85c3ae70c8f80bbd992a4\"}\n---\n\u21a9 Reply: rig send wm-f39bea3d5e-integration-remote-f2afb21e \"...\"",
+      "ts_dispatched": "2026-10-21T16:19:45.801Z",
+      "identity_provenance": "transport:v1"
+    },
+    {
+      "outbox_id": "outbox-20261021162000-56a6d6c5",
+      "sender_session": "wm-f39bea3d5e-integration-local-49960de5",
+      "destination_session": "wm-f39bea3d5e-integration-remote-f2afb21e",
+      "body": "From: wm-f39bea3d5e-integration-local-49960de5\nTo: wm-f39bea3d5e-integration-remote-f2afb21e\nSent: 10-21 16:20Z\n---\n{\"type\":\"ack\",\"run_id\":\"central-bd413b3c086c5ce6\",\"nonce_a\":\"1a901741663212cb50ea49adfd7897b59d1f24a0360042ee\",\"nonce_b\":\"36ad91bd9dd69360ed85571f7207a649613e4f77714d6475\",\"digest\":\"3872da5903c9ad6c2587e9ca2849ff710528421d6aa85c3ae70c8f80bbd992a4\",\"verified\":true,\"host\":\"puck\"}\n---\n\u21a9 Reply: rig send wm-f39bea3d5e-integration-local-49960de5 \"...\"",
+      "ts_dispatched": "2026-10-21T16:20:00.579Z",
+      "identity_provenance": "transport:v1"
+    },
+    {
+      "outbox_id": "outbox-20261021162008-fdf48a1a",
+      "sender_session": "wm-f39bea3d5e-integration-remote-f2afb21e",
+      "destination_session": "wm-f39bea3d5e-integration-local-49960de5",
+      "body": "From: wm-f39bea3d5e-integration-remote-f2afb21e\nTo: wm-f39bea3d5e-integration-local-49960de5\nSent: 10-21 16:20Z\n---\n{\"type\": \"complete\", \"run_id\": \"central-bd413b3c086c5ce6\", \"digest\": \"3872da5903c9ad6c2587e9ca2849ff710528421d6aa85c3ae70c8f80bbd992a4\", \"verified\": true, \"host\": \"sparky\", \"path\": \"/tmp/webmux-central-bd413b3c086c5ce6-beta.json\"}\n---\n\u21a9 Reply: rig send wm-f39bea3d5e-integration-remote-f2afb21e \"...\"",
+      "ts_dispatched": "2026-10-21T16:20:08.976Z",
+      "identity_provenance": "transport:v1"
+    }
+  ]
+}

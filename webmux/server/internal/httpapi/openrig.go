@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jordanhubbard/webmux/server/internal/openrigcoord"
 	"github.com/jordanhubbard/webmux/server/internal/openrigproof"
 	"io"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/auth"
+	"github.com/jordanhubbard/webmux/server/internal/session"
 )
 
 func openRigExecutable() (string, string) {
@@ -233,4 +235,109 @@ func (s *Server) getOpenRigAgents(w http.ResponseWriter, r *http.Request, owner 
 		return
 	}
 	writeJSON(w, 200, value)
+}
+
+// Managed agents attach through a server-verified transport, never arbitrary argv.
+type managedRigAgent struct {
+	Target  string `json:"target"`
+	Project string `json:"project"`
+	Name    string `json:"name"`
+	Host    string `json:"host"`
+	Cwd     string `json:"cwd"`
+	Runtime string `json:"runtime"`
+	Tmux    string `json:"tmux"`
+}
+
+func (s *Server) rigAction(w http.ResponseWriter, r *http.Request, owner, action string) {
+	if !s.openRigAccess(w, owner) {
+		return
+	}
+	if executable, message := openRigExecutable(); executable == "" {
+		writeError(w, 409, message)
+		return
+	}
+	input := ""
+	if action == "create" {
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 8192))
+		if err != nil || !json.Valid(body) {
+			writeError(w, 400, "Invalid agent details.")
+			return
+		}
+		input = string(body)
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 75*time.Second)
+	defer cancel()
+	output, err := openrigcoord.Run(ctx, s.store.Home, owner, action, input)
+	if err != nil {
+		writeError(w, 502, "Coordination: "+err.Error())
+		return
+	}
+	if action == "create" {
+		var agent managedRigAgent
+		if json.Unmarshal(output, &agent) != nil || agent.Tmux == "" {
+			writeError(w, 502, "Invalid managed agent response.")
+			return
+		}
+		if _, err := s.attachManagedRigTerminal(owner, agent); err != nil {
+			s.sessionError(w, err, "Agent was created. Open its terminal from Coordination after making room in the grid.")
+			return
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(output)
+}
+
+func (s *Server) attachManagedRigTerminal(owner string, agent managedRigAgent) (session.Session, error) {
+	tmux, err := exec.LookPath("tmux")
+	if err != nil {
+		return session.Session{}, err
+	}
+	return s.sessions.EnsureRigTerminal(owner, agent.Target, agent.Name+" · "+agent.Host+" · "+agent.Project, []string{tmux, "attach-session", "-t", "=" + agent.Tmux})
+}
+
+func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner string) {
+	if !s.openRigAccess(w, owner) {
+		return
+	}
+	var body struct {
+		Target string `json:"target"`
+	}
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024)).Decode(&body) != nil {
+		writeError(w, 400, "Invalid agent target.")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	output, err := openrigcoord.Run(ctx, s.store.Home, owner, "status", "")
+	if err != nil {
+		writeError(w, 502, "Cannot read coordinator state.")
+		return
+	}
+	var status struct {
+		Agents []managedRigAgent `json:"agents"`
+	}
+	if json.Unmarshal(output, &status) != nil {
+		writeError(w, 502, "Invalid coordinator response.")
+		return
+	}
+	for _, agent := range status.Agents {
+		if agent.Target == body.Target {
+			value, err := s.attachManagedRigTerminal(owner, agent)
+			if err != nil {
+				s.sessionError(w, err, "Cannot open agent terminal.")
+				return
+			}
+			writeJSON(w, 200, value)
+			return
+		}
+	}
+	writeError(w, 404, "Unknown managed agent.")
+}
+
+func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner string) {
+	s.rigAction(w, r, owner, "status")
+}
+func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, owner string) {
+	s.rigAction(w, r, owner, "create")
 }

@@ -1,119 +1,87 @@
-# OpenRig workspace
+# Agent coordination
 
-WebMux 1.3.23 provides the actual OpenRig text UI and interactive terminals for
-OpenRig agents in a selectable workspace. Every view can be popped out into its
-own browser window. Normal SSH connections, tmux discovery, scratch shells and
-existing agent workspaces retain their behavior.
+WebMux 1.3.23 integrates OpenRig behind the ordinary **Terminals** grid. The
+**Coordination** button opens a modal showing managed agents, execution hosts,
+project directories, and recent attributed messages recorded by Rig. Creating
+an agent opens its interactive CLI in a normal terminal tile. The raw Rig text
+dashboard remains available under **Advanced diagnostics**.
 
-## Host setup
+## One coordinator, multiple execution hosts
 
-Configure OpenRig on the Linux or macOS host running WebMux, as the same OS user.
-Follow the [upstream guide](https://github.com/mvschwarz/openrig). The service's
-PATH must include `rig`, a Node runtime supported by OpenRig, and `tmux`. Its
-OpenRig instance and tmux environment must match those used to launch the agents.
-On macOS, a service does not necessarily inherit an interactive shell's PATH.
+The WebMux service supervises an optional, loopback-only OpenRig daemon. The
+coordinator owns the common project/team state and messaging. Each managed agent
+has a real tmux attachment on the coordinator host. For a remote agent that
+attachment runs SSH to a persistent tmux session on the execution host. A
+loopback-only SSH reverse forward gives its Rig client access to the central
+API. Messages travel through Rig's ordinary tmux delivery path and the same SSH
+terminal the owner can interact with. No remote Rig daemon is required.
 
-Start the OpenRig daemon separately and verify `rig tui` works in that environment.
-A kernel team is optional: the WebMux dashboard runs standalone `rig tui`, without
-requiring the separate `rig tui --shared` kernel terminal. WebMux shares its own
-PTY between browser views.
+Provider processes, credentials and project files remain on their execution
+hosts. A shared project ID groups agents centrally; a project's directory is
+mapped separately on each host. Git checkout synchronization is an independent
+operation. Remote hosts use the service user's OpenSSH configuration and normal
+host-key verification. WebMux's existing SSH connections and tmux sessions keep
+their existing behavior.
 
-WebMux does not install OpenRig or apply its setup plan. Selecting the workspace,
-checking status, connecting the dashboard and listing/attaching existing agents
-do not start teams. Existing independent CLI sessions need OpenRig registration
-and provider integration before they can participate in its messaging.
+## Prerequisites
 
-## Use the real dashboard and agent terminals
+On the Linux/macOS WebMux server, put `rig`, `node` and `tmux` on the service PATH.
+Use a Node version supported by the installed OpenRig release (the qualified
+version is OpenRig 0.6.14 with its own Node 22/24 runtime). WebMux's helper needs
+Node 24 or later. A `rig` launcher must preserve `TMUX`, `TMUX_PANE`,
+`OPENRIG_URL` and `OPENRIG_SESSION_NAME`: these bind the real transport and sender
+identity. Do not install a wrapper that clears them.
 
-1. Select **OpenRig**, then **Connect dashboard**. Authenticated deployments
-   require a WebMux administrator; trusted mode follows host Settings access.
-2. Use the dashboard's keyboard navigation to inspect topology, agents and feed.
-   This is OpenRig's own UI, rendered through WebMux's terminal/WebSocket path.
-3. Select a daemon-listed agent tab, then **Connect** to attach its interactive
-   tmux CLI. **Check again** refreshes the list. Arbitrary commands and targets
-   are not accepted: the server verifies agent targets against OpenRig's list.
-4. **Pop out** the dashboard and each desired CLI. The selected view is preserved
-   in the URL and uses the normal WebMux login. Allow pop-ups for the site.
+On each execution host, install the chosen provider CLI, authenticate it there,
+and install a Rig **client** (`@openrig/cli@0.6.14`). For remote hosts, also install
+tmux and Python 3 and enable noninteractive SSH from the WebMux service account.
+The host must permit loopback reverse forwarding. Its login PATH or
+`~/.local/bin`, `/opt/homebrew/bin`, `/home/linuxbrew/.linuxbrew/bin` must expose
+these tools. Credentials are never copied by the integration.
 
-One viewer PTY is reused per WebMux owner and selected view, across windows.
-Closing a window or switching panels leaves the viewer and agent running.
-**Detach** closes only that viewer client. Detaching a CLI does not kill its
-underlying agent tmux session. After restarting WebMux, explicitly reconnect each
-view. These terminals do not occupy normal grid tiles and are isolated from
-**Type to All**. Shared viewers use normal WebMux sizing and focus behavior.
+An existing daemon is reused. WebMux remembers its port and checks it every 30
+seconds so a restart uses the same endpoint. Closing WebMux viewers leaves the
+daemon and tmux agents running. Native Windows coordination hosting is not
+supported; Windows WebMux's existing terminals remain available.
 
-The dashboard's own commands can perform OpenRig operations. Provider desktop
-window integrations remain upstream functionality; the WebMux agent tabs give
-you browser terminals directly, without requiring herdr or another desktop UI.
+## Owner workflow
 
-## Owner-visible acceptance on Puck
+1. Click **Coordination**. Inspect current agents and recent messages.
+2. Under **Create agent**, enter a project ID, agent name, execution host and
+   absolute project directory on that host. Select Codex or Claude Code.
+3. Click **Create and open terminal**. The registered provider starts in a normal
+   terminal tile with its Rig URL and sender identity already supplied. It
+   discovers teammates using `rig whoami` and `rig ps --nodes -A`.
+4. Repeat for another host using the same project ID and that host's directory.
+5. In either CLI, ask it to send a fresh phrase to its teammate with `rig send`
+   and have the teammate reply. Watch both normal terminal tiles and the modal's
+   recent coordination. Recorded messages are labeled with Rig's delivery state;
+   a pending record alone is not proof of receipt.
 
-The session owner can test this from WebMux after relaunch:
+Closing a tile detaches the WebMux viewer; **Open terminal** restores it without
+launching another agent. After an SSH failure, **Reconnect agent** reconnects the
+central attachment to the existing remote tmux session and reuses its tunnel
+port. Restarting WebMux reattaches persisted grid tiles without restarting the
+provider processes. Explicitly exiting a provider stops that agent; reconnecting
+a stopped agent launches a new provider session in the same registered seat.
 
-1. Connect **Dashboard** and pop it out. Keep the actual OpenRig UI visible.
-2. Choose **Run live test**. This explicitly starts a named Claude Code / Codex
-   pair using the host's configured provider accounts. It uses provider quota.
-   The team is namespaced by WebMux owner. A preconfigured daemon and working
-   provider authentication are required; no login or sandbox policy is changed.
-3. Connect the **Claude** and **Codex** views and pop them out beside the dashboard.
-   Confirm both are real interactive CLIs and that the pair appears in OpenRig.
-4. Watch the fresh challenge arrive in Claude, Claude send it through `rig send`
-   to Codex, Codex generate a new nonce and send its response, and Claude send
-   the matching ACK. Codex verifies that ACK before writing its result.
-5. **PASS** appears only when both result files match the current run, the fresh
-   challenge and independently computed SHA-256 digest. Expand the result to
-   inspect the run ID, both nonces and digest. The console and native CLI
-   transcripts remain available; this is not a canned transcript replay.
-6. **Run fresh challenge** repeats the protocol with a new run and nonce. The
-   previous PASS is cleared before launching the new test.
-7. After PASS, the pair remains running. In either CLI, ask it to send a new,
-   owner-chosen message to its peer through OpenRig and have that peer reply.
-   Confirm receipt in both terminals; inspect the team and activity in the TUI.
-   This checks interactive coordination beyond the bounded test.
-8. Close one pop-out and reopen it; the agent should remain available. Switch to
-   **Terminals** and confirm an existing SSH/tmux session is still usable.
-9. Choose **Stop test agents** when finished. This targets only the named test
-   team. Other OpenRig teams, the daemon, dashboard and ordinary sessions remain.
+Existing independently launched agents do not inherit environment changes.
+They need an explicit Rig adoption/bootstrap step or a new managed launch to
+participate. This release automatically enrolls agents created through the
+modal; it does not inject instructions into arbitrary running CLI processes.
 
-Authentication, provider permission and daemon networking failures are visible in
-those same CLI windows and the test console. They never produce PASS. For Codex,
-workspace-write mode must permit the local daemon connection; WebMux does not
-silently relax the provider's permissions.
+Coordination is an administrator feature in authenticated mode, matching host
+Settings. Trusted mode exposes it to the trusted owner. It is not multi-tenant
+isolation between users of the same OS account.
 
-Test status, current results, captured CLI transcripts and per-run results live
-under `WEBMUX_HOME/data/openrig-proof/<owner-hash>/`. This hash scopes storage and
-team names; OpenRig is still a host-level administrator feature, not isolation
-between OS accounts. The live console is an explicit acceptance aid, while the
-dashboard and existing-agent terminals are useful independently of it.
+## Qualification
 
-This prototype supports OpenRig on the WebMux host. For another machine, run
-WebMux alongside OpenRig there. Remote host selection and native Windows OpenRig
-are outside this prototype.
+The browser tests use the actual published Rig daemon and text UI without
+provider credentials. Live cross-host qualification additionally uses real
+Codex processes on Puck and sparky, independent nonce/hash receipts, and the
+central daemon's attributed outbox. See the [cross-host record](validation/openrig-central-2026-10-21/README.md).
 
-## Validation
-
-Broker/API tests cover view reuse, owner and grid separation, administrator
-revocation, exact daemon-listed tmux targets, detach and explicit reconnect.
-Frontend tests cover independent CLI views, pop-outs, explicit test start/stop,
-and invalidation of a previous PASS. Runner unit fixtures check fresh challenges,
-rejection of tampered/stale results and shutdown scope; they are not live-agent
-qualification.
-
-The optional browser test starts the published OpenRig daemon without a kernel
-or provider credentials. It renders the actual text UI, navigates it by keyboard,
-shares its PTY with a pop-out and verifies that detaching preserves the daemon:
-
-```sh
-npm install --prefix /tmp/webmux-openrig-test @openrig/cli@0.6.14
-cd webmux
-# Run with a supported Node 24 runtime.
-WEBMUX_REAL_OPENRIG=1 \
-WEBMUX_OPENRIG_CLI=/tmp/webmux-openrig-test/node_modules/@openrig/cli/dist/bin-wrapper.js \
-  npm run test:e2e -- openrig.spec.ts
-```
-
-The separate [live coordination record](validation/openrig-live-2026-10-21/README.md)
-proves actual Claude Code ↔ Codex messaging through the published daemon on Linux,
-with native transcripts, transport-attributed daemon outbox rows and an independent
-verifier with negative tests. Puck's provider authentication and live exchange
-must be verified separately; Linux evidence does not qualify a macOS deployment.
+Earlier host-local tests remain as historical evidence:
+[Claude/Codex on Linux](validation/openrig-live-2026-10-21/README.md) and
+[initial Puck dashboard](validation/openrig-puck-2026-10-21/README.md). They are not
+substitutes for cross-host qualification.
