@@ -31,12 +31,12 @@ test('published OpenRig CLI attaches once, shares views and leaves its tmux sess
   const home = path.resolve(__dirname, '.test-home');
   const socket = readFileSync(path.join(home, 'openrig-tmux-socket'), 'utf8');
   const tmuxAlive = () => spawnSync('tmux', ['-S', socket, 'has-session', '-t', '=webmux-openrig-dashboard'], { timeout: 2000 }).status;
-  await page.goto('/');
-  await page.getByRole('button', { name: 'OpenRig', exact: true }).click();
-  await page.getByRole('button', { name: 'Connect dashboard', exact: true }).click();
   const terminal = page.getByTestId('openrig-terminal');
   let id: string | null = null;
   try {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'OpenRig', exact: true }).click();
+    await page.getByRole('button', { name: 'Connect dashboard', exact: true }).click();
     await expect(terminal.locator('.xterm-rows')).toContainText('fixture ready');
     id = await terminal.getAttribute('data-session-id');
     await terminal.locator('.xterm-helper-textarea').focus();
@@ -60,5 +60,12 @@ test('published OpenRig CLI attaches once, shares views and leaves its tmux sess
     await expect(terminal).toHaveCount(0);
     expect(tmuxAlive()).toBe(0);
     expect((await (await request.get('/api/openrig')).json()).session).toBeNull();
-  } finally { if (id) await request.delete(`/api/sessions/${id}`); }
+  } finally {
+    try { if (id) await request.delete(`/api/sessions/${id}`); }
+    finally {
+      // Playwright may terminate its webServer process group before the Node
+      // exit handler runs. Own this fixture's detached tmux session here too.
+      spawnSync('tmux', ['-S', socket, 'kill-session', '-t', '=webmux-openrig-dashboard'], { timeout: 5000 });
+    }
+  }
 });

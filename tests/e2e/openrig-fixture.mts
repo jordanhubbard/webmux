@@ -35,5 +35,9 @@ export async function startOpenRigFixture(home: string): Promise<() => void> {
   const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
   fs.writeFileSync(path.join(directory, 'rig'), `#!/bin/sh\nexport OPENRIG_URL=${quote(`http://127.0.0.1:${address.port}`)}\nexport OPENRIG_HOME=${quote(rigHome)}\nexport HOME=${quote(rigHome)}\nunset OPENRIG_SESSION_NAME RIGGED_SESSION_NAME\nexec ${quote(process.execPath)} ${quote(cli)} "$@"\n`, { mode: 0o700 });
   process.env.PATH = `${directory}${path.delimiter}${process.env.PATH ?? ''}`;
-  return () => { daemon.closeAllConnections(); daemon.close(); };
+  return () => {
+    daemon.closeAllConnections();
+    daemon.close();
+    spawnSync('tmux', ['-S', socket.stdout.trim(), 'kill-session', '-t', `=${target}`], { timeout: 5000 });
+  };
 }
