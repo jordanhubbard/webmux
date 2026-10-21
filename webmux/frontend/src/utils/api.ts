@@ -73,6 +73,8 @@ export interface MacSetup {
 }
 
 export const api = {
+  getOpenRig: () => request<{ available: boolean; message: string; session: Session | null }>('/openrig'),
+  attachOpenRig: () => request<Session>('/openrig/attach', { method: 'POST' }),
   getMacSetup: () => request<MacSetup>('/setup/macos'),
   macSetupAction: (action: string, transport?: 'local' | 'ssh') => request<PermissionResult | { ok?: boolean; restarting?: boolean }>('/setup/macos', { method: 'POST', body: JSON.stringify({ action, transport }) }),
   beginAuthHandoff: (id: string, authorization: string) => request<{ id: string; expires_in: number }>(`/sessions/${id}/auth-handoff`, { method: 'POST', body: JSON.stringify({ authorization }) }),

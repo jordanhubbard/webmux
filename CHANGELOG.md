@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.23] - 2026-10-20
+
+### Added
+- Prototype an optional host-local OpenRig dashboard workspace with an authenticated pop-out view, shared attachment reuse, missing-tool guidance, and input isolated from terminal broadcasting (#172).
+
+### Limitations
+- OpenRig must already be installed and its shared dashboard running as the WebMux service user on Linux or macOS. The prototype attaches a dashboard; existing CLI agents require OpenRig integration to participate in coordination. Remote-host selection and native Windows OpenRig are not included (#172).
+
 ### Changed
 - Integrate the pending xterm 6, Vite 8 / React plugin 6, and chromedp 0.21 / CDP 0.158.1 upgrades together (#170).
 

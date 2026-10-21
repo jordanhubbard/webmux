@@ -66,8 +66,12 @@ func (s *Server) patchSession(w http.ResponseWriter, r *http.Request, owner stri
 	writeJSON(w, 200, value)
 }
 func (s *Server) reconnectSession(w http.ResponseWriter, r *http.Request, owner string) {
-	if _, err := s.sessions.Get(owner, r.PathValue("id")); err != nil {
+	value, err := s.sessions.Get(owner, r.PathValue("id"))
+	if err != nil {
 		s.sessionError(w, err, "Failed to reconnect session")
+		return
+	}
+	if value.Companion == "openrig" && !s.openRigAccess(w, owner) {
 		return
 	}
 	var input struct {
@@ -77,7 +81,7 @@ func (s *Server) reconnectSession(w http.ResponseWriter, r *http.Request, owner 
 		return
 	}
 	s.handoffs.End(owner, r.PathValue("id"))
-	value, err := s.sessions.Reconnect(owner, r.PathValue("id"), input.Password)
+	value, err = s.sessions.Reconnect(owner, r.PathValue("id"), input.Password)
 	if err != nil {
 		s.sessionError(w, err, "Failed to reconnect session")
 		return

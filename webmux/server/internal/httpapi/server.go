@@ -139,6 +139,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/sessions/{id}/reconnect", s.protected(false, s.reconnectSession))
 	mux.HandleFunc("GET /api/term/{id}", s.terminalSocket)
 	mux.Handle("GET /api/agents/config", s.protected(false, s.getAgentConfig))
+	mux.Handle("GET /api/openrig", s.protected(false, s.getOpenRig))
+	mux.Handle("POST /api/openrig/attach", s.protected(false, s.attachOpenRig))
 	mux.Handle("GET /api/agents/sessions", s.protected(false, s.listAgents))
 	mux.Handle("GET /api/agents/{agentId}/sessions", s.protected(false, s.listAgents))
 	mux.Handle("POST /api/agents/{agentId}/attach", s.protected(false, s.attachAgent))

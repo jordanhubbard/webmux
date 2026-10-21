@@ -116,6 +116,7 @@ export function TopBar({
         <button style={styles.iconBtn} onClick={() => setShowUSB(true)} title="Set up USB redirection" aria-label="USB redirection">
           <span aria-hidden="true">🔌</span> USB
         </button>
+        {canManageSettings && <button style={{ ...styles.iconBtn, background: activePane === 'openrig' ? '#7c6af7' : undefined }} onClick={() => setActivePane('openrig')} aria-pressed={activePane === 'openrig'}>OpenRig</button>}
         <button
           style={{
             ...styles.broadcastBtn,

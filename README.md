@@ -24,6 +24,7 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 - **Operator settings UI** — edit runtime-safe application settings from an admin-only top-bar gear
 - **Audit log** — append-only JSONL event log (logins, session lifecycle)
 - **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
+- **OpenRig dashboard prototype** — on-demand host-local agent coordination dashboard with a shared pop-out view; see [setup and scope](docs/openrig.md)
 - **Session expiry handling** — visible JWT countdown and refresh controls prevent expired browser sessions from entering reconnect loops
 
 ## Experimental USB transport
@@ -366,6 +367,8 @@ webmux/                          Source / install directory (WEBMUX_ROOT)
 | `PUT` | `/api/config/layout` | Update layout |
 | `GET` | `/api/agents/config` | Get normalized agent-view config |
 | `GET` | `/api/agents/sessions` | List configured agent tmux sessions |
+| `GET` | `/api/openrig` | Check host OpenRig prerequisites and the current dashboard attachment (admin) |
+| `POST` | `/api/openrig/attach` | Attach the host's existing OpenRig shared dashboard (admin) |
 | `GET` | `/api/agents/:agentId/sessions` | List sessions for one configured agent |
 | `POST` | `/api/agents/:agentId/attach` | Attach to a validated tmux session |
 | `POST` | `/api/agents/:agentId/scratch` | Open or reuse an agent scratch shell |
