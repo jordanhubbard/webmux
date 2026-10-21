@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Integrate the pending xterm 6, Vite 8 / React plugin 6, and chromedp 0.21 / CDP 0.158.1 upgrades together (#170).
+
+### Fixed
+- Require Go 1.27.3 to address the standard-library certificate-trust advisory reported by the dependency audit (#170).
+- Update terminal selection fixtures to xterm 6's interactive surface while retaining clipboard-byte and mouse-routing assertions (#170).
+- Migrate remote browser actions and screenshot capture to the typed CDP API, and preserve terminal/browser vendor chunks with Rolldown's supported grouping (#170).
+
 ## [1.3.22] - 2026-10-17
 
 ### Fixed
