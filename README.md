@@ -24,6 +24,7 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 - **Operator settings UI** — edit runtime-safe application settings from an admin-only top-bar gear
 - **Audit log** — append-only JSONL event log (logins, session lifecycle)
 - **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
+- **Agent coordination** — a Coordination modal, ordinary agent terminal tiles, and one supervised OpenRig coordinator for local and SSH execution hosts; see [setup and scope](docs/openrig.md)
 - **Session expiry handling** — visible JWT countdown and refresh controls prevent expired browser sessions from entering reconnect loops
 
 ## Experimental USB transport
@@ -366,6 +367,13 @@ webmux/                          Source / install directory (WEBMUX_ROOT)
 | `PUT` | `/api/config/layout` | Update layout |
 | `GET` | `/api/agents/config` | Get normalized agent-view config |
 | `GET` | `/api/agents/sessions` | List configured agent tmux sessions |
+| `GET` | `/api/coordination` | Managed agents and recent coordination (admin) |
+| `POST` | `/api/coordination/agents` | Create or reconnect a managed agent in the terminal grid (admin) |
+| `POST` | `/api/coordination/attach` | Open an existing managed agent terminal (admin) |
+| `GET` | `/api/openrig` | Check host OpenRig prerequisites, view attachments and live-test status (admin) |
+| `POST` | `/api/openrig/attach` | Attach the text dashboard, a listed agent CLI or the explicit live-test console (admin) |
+| `GET` | `/api/openrig/agents` | List host-local OpenRig agent terminal targets (admin) |
+| `POST` | `/api/openrig/proof/stop` | Stop only the current owner's acceptance pair (admin) |
 | `GET` | `/api/agents/:agentId/sessions` | List sessions for one configured agent |
 | `POST` | `/api/agents/:agentId/attach` | Attach to a validated tmux session |
 | `POST` | `/api/agents/:agentId/scratch` | Open or reuse an agent scratch shell |

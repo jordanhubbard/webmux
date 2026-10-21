@@ -18,7 +18,8 @@ test('selected text copies between separate WebMux browser windows', async ({ pa
   await page.bringToFront();
   const source = page.getByTestId(`tile-cell-${ids[0]}`);
   await expect(source.locator('.xterm-rows')).toContainText('CLIPBOARD_READY');
-  await source.locator('.xterm-rows > div').first().dblclick({ position: { x: 15, y: 7 } });
+  // xterm 6's rendered rows ignore pointer events; select through its interactive surface.
+  await source.locator('.xterm-screen').dblclick({ position: { x: 15, y: 7 } });
   const mac = await page.evaluate(() => /Mac|iPhone|iPad/.test(navigator.platform));
   await page.keyboard.press(mac ? 'Meta+c' : 'Control+c');
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('CLIPBOARD_READY');
@@ -53,7 +54,7 @@ test('desktop shortcuts paste bracketed text, copy selection and handle OSC 52 w
   await page.evaluate(() => navigator.clipboard.writeText('first line\nsecond line'));
   await page.keyboard.press(mac ? 'Meta+v' : 'Control+v');
   await expect.poll(() => inputs.join('')).toContain('\x1b[200~first line\rsecond line\x1b[201~');
-  await tile.locator('.xterm-rows > div').first().dblclick({ position: { x: 15, y: 7 } });
+  await tile.locator('.xterm-screen').dblclick({ position: { x: 15, y: 7 } });
   await page.keyboard.press(mac ? 'Meta+c' : 'Control+c');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('CLIPBOARD_READY');
   await input.focus();

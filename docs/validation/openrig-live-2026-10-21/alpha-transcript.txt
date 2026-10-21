@@ -1,0 +1,45 @@
+● Bash(python3 -I -c '
+      import hashlib, json…)
+  ⎿  Error: Exit code 1
+       File "<string>", line 6
+         d=hashlib.sha256(f"webmux-openrig-v1:{run_id}:{nonce_a}:{r[\"nonce_b\"]
+     }".encode("utf-8")).hexdigest()
+                                                                     ^
+     SyntaxError: unexpected character after line continuation character
+
+● Bash(python3 -I -c '
+      import hashlib, json…)
+  ⎿  computed 34700fde1d0f1bf9af56d1d8ab83ae3a374d66fe0e1fee9f34f83e62fb73c
+     b55 ok True
+     {
+     … +9 lines (ctrl+o to expand)
+
+● Bash(rig send proof-beta@webmux-proof '{"type": "ack", "run_id":
+      "webmux-live-0b2862dfbeecec74", "digest":
+      "34700fde1d0f1bf9af56d1d8ab83ae3a374d66fe0e1fee9f34f83e62f…)
+  ⎿  Sent to proof-beta@webmux-proof
+
+● My side of the proof is done.
+
+  - Verified: BETA's response came through rig send. Its run_id and nonce_a
+    matched what I sent, and nonce_b is a 48-character hex string. I recomputed
+    SHA-256 of webmux-openrig-v1:<run_id>:<nonce_a>:<nonce_b> with Python
+    hashlib and got 34700fde…fb73cb55, the same digest BETA sent.
+  - Written:
+    $POC_ROOT/workspace/alpha/alpha-proof.json holds
+    run_id, nonce_a, nonce_b, digest, verified: true, runtime: "claude-code"
+    and peer: "proof-beta@webmux-proof".
+  - ACK sent: BETA got {"type":"ack", run_id, digest} through rig send.
+
+  I haven't seen whether BETA wrote beta-proof.json; that's in its own folder.
+  I'm idle now.
+
+✻ Sautéed for 17s · done 12:40 AM
+
+───────────────────────────────────────────────────── proof-alpha@webmux-proof ─
+❯ 
+────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ accept edits on (shift+tab to cycle)
+                                        ✔ Update installed · Restart to update
+
+

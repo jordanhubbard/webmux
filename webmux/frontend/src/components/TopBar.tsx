@@ -4,6 +4,7 @@ import type { AgentDefinition, HostSwitcherConfig, NamedTheme } from '../types';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
 import { HelpDialog } from './HelpDialog';
+import { CoordinationDialog } from './CoordinationDialog';
 import { USBForwardDialog } from './USBForwardDialog';
 
 function getHostSwitchContext(hostSwitcher?: HostSwitcherConfig) {
@@ -77,6 +78,7 @@ export function TopBar({
   const { activePane, setActivePane } = useWorkspacePane();
   const [showHelp, setShowHelp] = useState(false);
   const [showUSB, setShowUSB] = useState(false);
+  const [showCoordination, setShowCoordination] = useState(false);
   const [editingSize, setEditingSize] = useState(false);
   const [sizeInput, setSizeInput] = useState('');
   const sizeInputRef = useRef<HTMLInputElement>(null);
@@ -110,12 +112,14 @@ export function TopBar({
     <>
     {showHelp && <HelpDialog onClose={() => setShowHelp(false)} />}
     {showUSB && <USBForwardDialog onClose={() => setShowUSB(false)} />}
+    {showCoordination && <CoordinationDialog onClose={() => setShowCoordination(false)} />}
     <div style={styles.bar}>
       <div style={styles.left}>
         <span style={styles.logo}>{'\u25a6'} {appName.toLowerCase() === 'webmux' ? 'WebMux' : appName}</span>
         <button style={styles.iconBtn} onClick={() => setShowUSB(true)} title="Set up USB redirection" aria-label="USB redirection">
           <span aria-hidden="true">🔌</span> USB
         </button>
+        {canManageSettings && <button style={styles.iconBtn} onClick={() => setShowCoordination(true)}>Coordination</button>}
         <button
           style={{
             ...styles.broadcastBtn,

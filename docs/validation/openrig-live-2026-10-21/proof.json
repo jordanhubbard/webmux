@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-21T07:42:04.423084+00:00",
+  "run_id": "webmux-live-0b2862dfbeecec74",
+  "controller": {
+    "seed_target": "proof-alpha@webmux-proof",
+    "nonce_a": "8733d0521914406609ecdb2cfb1f28217d0c70e27f623521"
+  },
+  "daemon": {
+    "mock": false,
+    "implementation": "@openrig/cli",
+    "version": "0.6.14",
+    "health": {
+      "status": "ok",
+      "pid": 2429370,
+      "euid": 1000,
+      "semver": "0.6.14",
+      "commit": "df1c1517f03a403fb468523be1c563d489209a1d",
+      "selfHostId": "host-bf05d2e3",
+      "bind": {
+        "mode": "explicit",
+        "hosts": [
+          "127.0.0.1"
+        ],
+        "tailscaleDetected": true
+      }
+    }
+  },
+  "agents": [
+    {
+      "session": "proof-alpha@webmux-proof",
+      "runtime": "claude-code",
+      "process": {
+        "pid": 2442288,
+        "command": "claude",
+        "version": "2.1.302 (Claude Code)",
+        "cwd": "$POC_ROOT/workspace/alpha"
+      }
+    },
+    {
+      "session": "proof-beta@webmux-proof",
+      "runtime": "codex",
+      "process": {
+        "pid": 2442572,
+        "command": "codex",
+        "version": "codex-cli 0.162.0",
+        "cwd": "$POC_ROOT/workspace/beta"
+      }
+    }
+  ],
+  "codex_sandbox": {
+    "mode": "workspace-write",
+    "network_access": true
+  },
+  "alpha": {
+    "run_id": "webmux-live-0b2862dfbeecec74",
+    "nonce_a": "8733d0521914406609ecdb2cfb1f28217d0c70e27f623521",
+    "nonce_b": "701aa6d0d98520f7edff393b88e124acf45f0f156b5b4fec",
+    "digest": "34700fde1d0f1bf9af56d1d8ab83ae3a374d66fe0e1fee9f34f83e62fb73cb55",
+    "verified": true,
+    "runtime": "claude-code",
+    "peer": "proof-beta@webmux-proof"
+  },
+  "beta": {
+    "run_id": "webmux-live-0b2862dfbeecec74",
+    "nonce_a": "8733d0521914406609ecdb2cfb1f28217d0c70e27f623521",
+    "nonce_b": "701aa6d0d98520f7edff393b88e124acf45f0f156b5b4fec",
+    "digest": "34700fde1d0f1bf9af56d1d8ab83ae3a374d66fe0e1fee9f34f83e62fb73cb55",
+    "verified": true,
+    "runtime": "codex",
+    "peer": "proof-alpha@webmux-proof"
+  },
+  "messages": [
+    {
+      "outbox_id": "outbox-20261021074031-08228cd7",
+      "sender_session": "proof-alpha@webmux-proof",
+      "destination_session": "proof-beta@webmux-proof",
+      "body": "From: proof-alpha@webmux-proof\nTo: proof-beta@webmux-proof\nSent: 10-21 07:40Z\n---\nPROOF CHALLENGE from ALPHA. run_id=webmux-live-0b2862dfbeecec74 nonce_a=8733d0521914406609ecdb2cfb1f28217d0c70e27f623521. Instructions for BETA: Generate your own fresh nonce_b with Python secrets.token_hex(24); calculate digest = SHA256 hex of the UTF-8 string \"webmux-openrig-v1:<run_id>:<nonce_a>:<nonce_b>\"; reply to proof-alpha@webmux-proof through rig send with JSON fields type=response, run_id, nonce_a, nonce_b, digest. Do not write a final proof until ALPHA acknowledges. When an ACK with matching run_id and digest arrives from ALPHA, independently verify the digest, write beta-proof.json in your own cwd with run_id, nonce_a, nonce_b, digest, verified=true, runtime=\"codex\", peer=\"proof-alpha@webmux-proof\", and then stay idle. Learn nonce_a only from this rig message; do not inspect ALPHA files or processes.\n---\n\u21a9 Reply: rig send proof-alpha@webmux-proof \"...\"",
+      "ts_dispatched": "2026-10-21T07:40:31.087Z",
+      "delivery_state": "pending",
+      "identity_provenance": "transport:v1"
+    },
+    {
+      "outbox_id": "outbox-20261021074037-64eabc6b",
+      "sender_session": "proof-beta@webmux-proof",
+      "destination_session": "proof-alpha@webmux-proof",
+      "body": "From: proof-beta@webmux-proof\nTo: proof-alpha@webmux-proof\nSent: 10-21 07:40Z\n---\n{\"type\": \"response\", \"run_id\": \"webmux-live-0b2862dfbeecec74\", \"nonce_a\": \"8733d0521914406609ecdb2cfb1f28217d0c70e27f623521\", \"nonce_b\": \"701aa6d0d98520f7edff393b88e124acf45f0f156b5b4fec\", \"digest\": \"34700fde1d0f1bf9af56d1d8ab83ae3a374d66fe0e1fee9f34f83e62fb73cb55\"}\n---\n\u21a9 Reply: rig send proof-beta@webmux-proof \"...\"",
+      "ts_dispatched": "2026-10-21T07:40:37.648Z",
+      "delivery_state": "pending",
+      "identity_provenance": "transport:v1"
+    },
+    {
+      "outbox_id": "outbox-20261021074051-ca14714c",
+      "sender_session": "proof-alpha@webmux-proof",
+      "destination_session": "proof-beta@webmux-proof",
+      "body": "From: proof-alpha@webmux-proof\nTo: proof-beta@webmux-proof\nSent: 10-21 07:40Z\n---\n{\"type\": \"ack\", \"run_id\": \"webmux-live-0b2862dfbeecec74\", \"digest\": \"34700fde1d0f1bf9af56d1d8ab83ae3a374d66fe0e1fee9f34f83e62fb73cb55\"}\n---\n\u21a9 Reply: rig send proof-alpha@webmux-proof \"...\"",
+      "ts_dispatched": "2026-10-21T07:40:51.025Z",
+      "delivery_state": "pending",
+      "identity_provenance": "transport:v1"
+    }
+  ],
+  "initial_failure": {
+    "reason": "Codex workspace-write sandbox blocked local daemon access with EPERM",
+    "outcome": "No proof files produced; not counted as success",
+    "correction": "Explicit sandbox_workspace_write.network_access=true in the isolated Codex account; relaunched only the test rig before a fresh challenge"
+  },
+  "receipt_note": "OpenRig outbox delivery_state remains pending; consumption is demonstrated by the peer-generated nonce, independently verified result files, ACK, and captured CLI transcripts."
+}

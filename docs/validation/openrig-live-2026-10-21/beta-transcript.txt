@@ -1,0 +1,25 @@
+  {"type": "ack", "run_id": "webmux-live-0b2862dfbeecec74", "digest":
+  "34700fde1d0f1bf9af56d1d8ab83ae3a374d66fe0e1fee9f34f83e62fb73cb55"}
+  ---
+  ↩ Reply: rig send proof-alpha@webmux-proof "..."
+
+
+• The ACK matches the run and digest. I’ll independently recompute the digest
+  and write beta-proof.json.
+
+• Ran python - <<'PY' …
+  └ Verified digest and wrote beta-proof.json
+    + Show details
+
+• Digest independently verified; beta-proof.json written with verified=true.
+  Staying idle.
+  └ Tip: Use /status to see the current model, approvals, and token usage.
+
+  Worked for 8s • 00:40
+
+
+› Ask Codex to do anything
+
+  GPT-6.1-Sol medium · $POC_ROOT/workspace/beta · I…
+  ? for shortcuts
+

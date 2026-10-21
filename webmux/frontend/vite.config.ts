@@ -6,17 +6,17 @@ const config = {
   plugins: [react()],
   resolve: {
     alias: {
-      '@frontend': path.resolve(__dirname, 'src'),
-      'guacamole-common-js': path.resolve(__dirname, '../node_modules/guacamole-common-js/dist/esm/guacamole-common.js'),
-      '@testing-library/react': path.resolve(__dirname, '../node_modules/@testing-library/react'),
-      react: path.resolve(__dirname, '../node_modules/react'),
-      'react-dom': path.resolve(__dirname, '../node_modules/react-dom'),
+      '@frontend': path.resolve(import.meta.dirname, 'src'),
+      'guacamole-common-js': path.resolve(import.meta.dirname, '../node_modules/guacamole-common-js/dist/esm/guacamole-common.js'),
+      '@testing-library/react': path.resolve(import.meta.dirname, '../node_modules/@testing-library/react'),
+      react: path.resolve(import.meta.dirname, '../node_modules/react'),
+      'react-dom': path.resolve(import.meta.dirname, '../node_modules/react-dom'),
     },
     preserveSymlinks: true,
   },
   server: {
     fs: {
-      allow: [path.resolve(__dirname, '../..')],
+      allow: [path.resolve(import.meta.dirname, '../..')],
     },
     proxy: {
       '/api': {
@@ -34,11 +34,13 @@ const config = {
     target: 'esnext',
     outDir: '../web',
     emptyOutDir: true,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          xterm: ['@xterm/xterm', '@xterm/addon-fit', '@xterm/addon-web-links'],
-          novnc: ['@novnc/novnc'],
+        codeSplitting: {
+          groups: [
+            { name: 'xterm', test: /[\\/]node_modules[\\/]@xterm[\\/]/ },
+            { name: 'novnc', test: /[\\/]node_modules[\\/]@novnc[\\/]/ },
+          ],
         },
       },
     },

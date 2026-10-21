@@ -1,0 +1,10 @@
+{
+  "server": "Puck macOS ARM64",
+  "build": "46bc14f",
+  "same_grid_session_ids": true,
+  "session_ids": [
+    "41e70772-8594-4699-801b-736fffd0f2fd",
+    "2604963e-0fb3-4d11-a346-3d22bb15da6e"
+  ],
+  "new_process_instance": true
+}

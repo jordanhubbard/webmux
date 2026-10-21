@@ -108,6 +108,14 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := r.PathValue("id")
+	value, _ := s.sessions.Get(owner, id)
+	authorized := func() bool {
+		return s.socketAuthorized(owner, mode) && ((value.Companion != "openrig" && value.OpenRigView == "") || s.openRigPermission(owner) == nil)
+	}
+	if !authorized() {
+		rejectSocket(connection, "Unauthorized")
+		return
+	}
 	viewer, err := s.sessions.Join(owner, id)
 	if err != nil {
 		var access *agent.AccessError
@@ -153,7 +161,7 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 				closeSocket(connection, code, reason)
 				return
 			case <-ticker.C:
-				if !s.socketAuthorized(owner, mode) {
+				if !authorized() {
 					closeSocket(connection, 1008, "Unauthorized")
 					return
 				}
@@ -190,7 +198,7 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 			closeSocket(connection, 1007, "Invalid UTF-8")
 			return
 		}
-		if !s.socketAuthorized(owner, mode) {
+		if !authorized() {
 			closeSocket(connection, 1008, "Unauthorized")
 			return
 		}

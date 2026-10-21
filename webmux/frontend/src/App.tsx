@@ -6,6 +6,7 @@ import { TopBar } from './components/TopBar';
 import { Workspace } from './components/Workspace';
 import { GraphicsWorkspace } from './components/GraphicsWorkspace';
 import { AgentWorkspace } from './components/AgentWorkspace';
+import { OpenRigWorkspace } from './components/OpenRigWorkspace';
 import { UsersDialog } from './components/UsersDialog';
 import { MacPermissions } from './components/MacPermissions';
 import { SettingsDialog } from './components/SettingsDialog';
@@ -132,6 +133,12 @@ function AuthenticatedApp({
   const handleAgentAccessDenied = useCallback(() => {
     setActivePane('terminals');
   }, [setActivePane]);
+
+  if (new URLSearchParams(window.location.search).get('panel') === 'openrig') {
+    return canManageSettings
+      ? <OpenRigWorkspace fontSize={fontSize} fontFamily={fontFamily} poppedOut />
+      : <p role="alert">Administrator access is required for the host OpenRig dashboard.</p>;
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -341,7 +348,7 @@ export default function App() {
   }, [agentConfig]);
   const workspaceOptions = useMemo(() => availablePanes.map(pane => ({
     value: pane,
-    label: pane === 'terminals' ? 'Terminals' : pane === 'desktops' ? 'Desktops' : pane === 'agents'
+    label: pane === 'terminals' ? 'Terminals' : pane === 'desktops' ? 'Desktops' : pane === 'openrig' ? 'OpenRig' : pane === 'agents'
       ? 'Agents'
       : agentConfig.definitions.find(definition => definition.workspace === pane)?.plural_label ?? pane,
   })), [agentConfig.definitions, availablePanes]);

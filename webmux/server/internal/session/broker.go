@@ -173,7 +173,7 @@ func (b *Broker) ownerEntriesLocked(owner string) []*entry {
 	result := []*entry{}
 	for _, id := range b.order {
 		e := b.entries[id]
-		if e.value.Owner == owner && !e.value.Agent() {
+		if e.value.Owner == owner && !e.value.Agent() && e.value.Companion == "" {
 			result = append(result, e)
 		}
 	}
@@ -496,7 +496,7 @@ func (b *Broker) deleteSession(owner, id string, code int, reason string) error 
 	oldPositions := map[*entry][2]int{}
 	delete(b.entries, id)
 	b.order = slices.DeleteFunc(b.order, func(value string) bool { return value == id })
-	if !e.value.Agent() {
+	if !e.value.Agent() && e.value.Companion == "" {
 		items := b.ownerEntriesLocked(owner)
 		for _, item := range items {
 			oldPositions[item] = [2]int{item.value.Row, item.value.Col}
@@ -815,7 +815,7 @@ func (b *Broker) persistLocked() error {
 	for _, id := range b.order {
 		s := b.entries[id].value
 		sessions = append(sessions, s)
-		if !s.Agent() {
+		if !s.Agent() && s.Companion == "" {
 			tiles = append(tiles, map[string]any{"session_id": s.ID, "row": s.Row, "col": s.Col})
 		}
 	}

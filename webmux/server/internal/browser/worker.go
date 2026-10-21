@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/target"
@@ -80,7 +81,7 @@ func Worker(in io.Reader, out io.Writer) error {
 	// Start outside an operation timeout: cancelling the first Run context would
 	// otherwise tear down the browser after a successful first response.
 	startup := time.AfterFunc(20*time.Second, cancel)
-	err = chromedp.Run(root, chromedp.EmulateViewport(Width, Height), chromedp.Navigate("about:blank"))
+	err = chromedp.Do(root, chromedp.EmulateViewport(Width, Height), chromedp.Navigate("about:blank"))
 	startup.Stop()
 	if err != nil {
 		_ = json.NewEncoder(out).Encode(Frame{Error: "Cannot start Chromium. Install Chrome/Chromium on the terminal host and run as a non-root user."})
@@ -133,7 +134,7 @@ func Worker(in io.Reader, out io.Writer) error {
 						var release context.CancelFunc
 						ctx, release = chromedp.NewContext(root, chromedp.WithTargetID(info.TargetID))
 						defer release()
-						if err := chromedp.Run(ctx, chromedp.EmulateViewport(Width, Height)); err != nil {
+						if err := chromedp.Do(ctx, chromedp.EmulateViewport(Width, Height)); err != nil {
 							return err
 						}
 						tabs[info.TargetID] = ctx
@@ -149,9 +150,17 @@ func Worker(in io.Reader, out io.Writer) error {
 				// screenshot. Bound frame capture separately so polling and queued
 				// input recover without waiting for the full action timeout.
 				frameCtx, stopFrame := context.WithTimeout(ctx, 3*time.Second)
-				err = chromedp.Run(frameCtx, chromedp.Location(&frame.URL), chromedp.ActionFunc(func(ctx context.Context) error {
+				err = chromedp.Do(frameCtx, chromedp.Func(func(ctx context.Context, target *chromedp.Target) error {
 					var err error
-					frame.Image, err = page.CaptureScreenshot().WithFormat(page.CaptureScreenshotFormatJpeg).WithQuality(65).Do(ctx)
+					frame.URL, err = chromedp.Location()(ctx, target)
+					if err != nil {
+						return err
+					}
+					quality := int64(65)
+					result, err := cdp.Call(ctx, target, page.CaptureScreenshot, page.CaptureScreenshotParams{
+						Format: page.CaptureScreenshotFormatJpeg, Quality: &quality,
+					})
+					frame.Image = result.Data
 					return err
 				}))
 				stopFrame()
@@ -173,8 +182,15 @@ func Worker(in io.Reader, out io.Writer) error {
 	}
 }
 
+func protocolAction[P, R any](command cdp.Command[P, R], params P) chromedp.Action[chromedp.Void] {
+	return chromedp.Func(func(ctx context.Context, target *chromedp.Target) error {
+		_, err := cdp.Call(ctx, target, command, params)
+		return err
+	})
+}
+
 func perform(ctx context.Context, req Request) error {
-	var actions []chromedp.Action
+	var actions []chromedp.Action[chromedp.Void]
 	switch req.Action {
 	case "frame", "tab":
 		return nil
@@ -184,9 +200,9 @@ func perform(ctx context.Context, req Request) error {
 		}
 		// Do not wait for navigation: OAuth callbacks may intentionally leave a
 		// page loading while waiting for terminal-side work.
-		actions = append(actions, chromedp.ActionFunc(func(ctx context.Context) error {
-			_, _, errorText, _, err := page.Navigate(req.URL).Do(ctx)
-			if err == nil && errorText != "" {
+		actions = append(actions, chromedp.Func(func(ctx context.Context, target *chromedp.Target) error {
+			result, err := cdp.Call(ctx, target, page.Navigate, page.NavigateParams{URL: req.URL})
+			if err == nil && result.ErrorText != "" {
 				err = errors.New("navigation failed")
 			}
 			return err
@@ -194,12 +210,12 @@ func perform(ctx context.Context, req Request) error {
 	case "back":
 		actions = append(actions, chromedp.NavigateBack())
 	case "reload":
-		actions = append(actions, page.Reload())
+		actions = append(actions, protocolAction(page.Reload, page.ReloadParams{}))
 	case "text":
 		if len(req.Text) > 65536 {
 			return errors.New("text too long")
 		}
-		actions = append(actions, input.InsertText(req.Text))
+		actions = append(actions, protocolAction(input.InsertText, input.InsertTextParams{Text: req.Text}))
 	case "key":
 		if len(req.Text) > 8 || len(req.Key) > 64 || len(req.Code) > 64 || req.Modifiers < 0 || req.Modifiers > 15 {
 			return errors.New("invalid key")
@@ -211,21 +227,21 @@ func perform(ctx context.Context, req Request) error {
 			req.Modifiers = req.Modifiers&^4 | 2
 		}
 		actions = append(actions,
-			input.DispatchKeyEvent(input.KeyDown).WithText(req.Text).WithKey(req.Key).WithCode(req.Code).WithWindowsVirtualKeyCode(req.KeyCode).WithModifiers(input.Modifier(req.Modifiers)),
-			input.DispatchKeyEvent(input.KeyUp).WithKey(req.Key).WithCode(req.Code).WithWindowsVirtualKeyCode(req.KeyCode).WithModifiers(input.Modifier(req.Modifiers)))
+			protocolAction(input.DispatchKeyEvent, input.DispatchKeyEventParams{Type: input.DispatchKeyEventTypeKeyDown, Text: req.Text, Key: req.Key, Code: req.Code, WindowsVirtualKeyCode: req.KeyCode, Modifiers: req.Modifiers}),
+			protocolAction(input.DispatchKeyEvent, input.DispatchKeyEventParams{Type: input.DispatchKeyEventTypeKeyUp, Key: req.Key, Code: req.Code, WindowsVirtualKeyCode: req.KeyCode, Modifiers: req.Modifiers}))
 	case "click", "scroll":
 		if req.X < 0 || req.X > Width || req.Y < 0 || req.Y > Height || req.DeltaY < -3000 || req.DeltaY > 3000 {
 			return errors.New("invalid pointer")
 		}
 		if req.Action == "scroll" {
-			actions = append(actions, input.DispatchMouseEvent(input.MouseWheel, req.X, req.Y).WithDeltaY(req.DeltaY))
+			actions = append(actions, protocolAction(input.DispatchMouseEvent, input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseWheel, X: req.X, Y: req.Y, DeltaY: req.DeltaY}))
 		} else {
 			actions = append(actions,
-				input.DispatchMouseEvent(input.MousePressed, req.X, req.Y).WithButton(input.Left).WithClickCount(1),
-				input.DispatchMouseEvent(input.MouseReleased, req.X, req.Y).WithButton(input.Left).WithClickCount(1))
+				protocolAction(input.DispatchMouseEvent, input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMousePressed, X: req.X, Y: req.Y, Button: input.MouseButtonLeft, ClickCount: 1}),
+				protocolAction(input.DispatchMouseEvent, input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseReleased, X: req.X, Y: req.Y, Button: input.MouseButtonLeft, ClickCount: 1}))
 		}
 	default:
 		return errors.New("unknown browser action")
 	}
-	return chromedp.Run(ctx, actions...)
+	return chromedp.Do(ctx, actions...)
 }

@@ -16,6 +16,8 @@
   "include": [
     "scripts/**/*.mts",
     "../scripts/**/*.mts",
-    "../tests/e2e/*.mts"
+    "../tests/e2e/*.mts",
+    "server/internal/openrigproof/*.mts",
+    "server/internal/openrigcoord/*.mts"
   ]
 }

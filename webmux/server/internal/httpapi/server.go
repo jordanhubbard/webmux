@@ -2,6 +2,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -27,30 +28,32 @@ import (
 )
 
 type Server struct {
-	macSetup      macsetup.Manager
-	restart       func() error
-	handoffs      authhandoff.Manager
-	browsers      browser.Manager
-	store         *storage.Store
-	auth          *auth.Service
-	name          string
-	secure        bool
-	webDir        string
-	webFS         fs.FS
-	passwordSlots chan struct{}
-	logger        *slog.Logger
-	sessions      *session.Broker
-	vnc           *desktop.Broker
-	rdp           *desktop.Broker
-	targets       *netguard.Guard
-	uploads       *upload.Service
-	ai            *ai.Service
-	socketMu      sync.Mutex
-	sockets       map[*websocket.Conn]struct{}
-	socketWorkers sync.WaitGroup
-	closing       bool
-	closeOnce     sync.Once
-	closeErr      error
+	coordinationOnce   sync.Once
+	coordinationCancel context.CancelFunc
+	macSetup           macsetup.Manager
+	restart            func() error
+	handoffs           authhandoff.Manager
+	browsers           browser.Manager
+	store              *storage.Store
+	auth               *auth.Service
+	name               string
+	secure             bool
+	webDir             string
+	webFS              fs.FS
+	passwordSlots      chan struct{}
+	logger             *slog.Logger
+	sessions           *session.Broker
+	vnc                *desktop.Broker
+	rdp                *desktop.Broker
+	targets            *netguard.Guard
+	uploads            *upload.Service
+	ai                 *ai.Service
+	socketMu           sync.Mutex
+	sockets            map[*websocket.Conn]struct{}
+	socketWorkers      sync.WaitGroup
+	closing            bool
+	closeOnce          sync.Once
+	closeErr           error
 }
 
 type Options struct {
@@ -88,13 +91,19 @@ func New(store *storage.Store, options Options) (*Server, error) {
 }
 
 func (s *Server) RestoreSessions() error {
+	s.startCoordination()
 	return errors.Join(s.sessions.Restore(), s.vnc.Restore(), s.rdp.Restore())
 }
 func (s *Server) StartSlave(host string, port int) error {
 	_, err := s.sessions.ResetForSlave(host, port)
 	return err
 }
-func (s *Server) Close() error { return s.closeSocketsAndSessions() }
+func (s *Server) Close() error {
+	if s.coordinationCancel != nil {
+		s.coordinationCancel()
+	}
+	return s.closeSocketsAndSessions()
+}
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
@@ -139,6 +148,13 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/sessions/{id}/reconnect", s.protected(false, s.reconnectSession))
 	mux.HandleFunc("GET /api/term/{id}", s.terminalSocket)
 	mux.Handle("GET /api/agents/config", s.protected(false, s.getAgentConfig))
+	mux.Handle("GET /api/coordination", s.protected(false, s.getCoordination))
+	mux.Handle("POST /api/coordination/agents", s.protected(false, s.createCoordinatedAgent))
+	mux.Handle("POST /api/coordination/attach", s.protected(false, s.attachManagedRig))
+	mux.Handle("GET /api/openrig", s.protected(false, s.getOpenRig))
+	mux.Handle("GET /api/openrig/agents", s.protected(false, s.getOpenRigAgents))
+	mux.Handle("POST /api/openrig/attach", s.protected(false, s.attachOpenRig))
+	mux.Handle("POST /api/openrig/proof/stop", s.protected(false, s.stopOpenRigProof))
 	mux.Handle("GET /api/agents/sessions", s.protected(false, s.listAgents))
 	mux.Handle("GET /api/agents/{agentId}/sessions", s.protected(false, s.listAgents))
 	mux.Handle("POST /api/agents/{agentId}/attach", s.protected(false, s.attachAgent))

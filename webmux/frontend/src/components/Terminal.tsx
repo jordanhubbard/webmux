@@ -291,7 +291,13 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     sessionId,
     onMessage: handleMessage,
     onSendError: setInputError,
-    onOpen: () => onStateChangeRef.current('connected'),
+    onOpen: () => {
+      // The first fit can precede the resize listener. Always send the current
+      // viewport when the socket opens, including after reconnecting a viewer.
+      const term = termRef.current;
+      if (term) wsHandleRef.current?.send({ type: 'resize', cols: term.cols, rows: term.rows });
+      onStateChangeRef.current('connected');
+    },
     onClose: () => onStateChangeRef.current('disconnected'),
   });
 

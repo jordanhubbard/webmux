@@ -1,0 +1,22 @@
+version: "0.2"
+name: webmux-proof
+summary: Two real CLI agents proving bidirectional local OpenRig messaging
+pods:
+  - id: proof
+    label: Acceptance
+    members:
+      - id: alpha
+        agent_ref: local:agent
+        runtime: claude-code
+        profile: default
+        cwd: alpha
+      - id: beta
+        agent_ref: local:agent
+        runtime: codex
+        profile: default
+        cwd: beta
+    edges:
+      - kind: collaborates_with
+        from: alpha
+        to: beta
+edges: []

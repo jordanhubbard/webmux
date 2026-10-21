@@ -5,6 +5,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.23] - 2026-10-20
+
+### Added
+- Add a Coordination modal and managed agent terminals in the ordinary grid, with one supervised OpenRig coordinator and SSH execution hosts sharing project identity and messaging. Retain the raw text dashboard as optional diagnostics (#172).
+- Record and independently verify a live Claude Code/Codex challenge-response-ACK exchange through OpenRig, including the sandbox networking prerequisite, before relaunching WebMux (#172).
+
+### Limitations
+- Coordination requires OpenRig, tmux and supported Node runtimes on the Linux/macOS WebMux server, plus authenticated provider CLIs and a Rig client on execution hosts. Remote hosts use OpenSSH and loopback reverse forwarding; no remote daemon is required. Existing independent CLI sessions need explicit adoption. Native Windows coordination hosting is unsupported (#172).
+
+### Changed
+- Integrate the pending xterm 6, Vite 8 / React plugin 6, and chromedp 0.21 / CDP 0.158.1 upgrades together (#170).
+
+### Fixed
+- Send the current terminal size when a viewer connects so text dashboards render correctly on their first frame (#172).
+- Require Go 1.27.3 to address the standard-library certificate-trust advisory reported by the dependency audit (#170).
+- Update terminal selection fixtures to xterm 6's interactive surface while retaining clipboard-byte and mouse-routing assertions (#170).
+- Migrate remote browser actions and screenshot capture to the typed CDP API, and preserve terminal/browser vendor chunks with Rolldown's supported grouping (#170).
+
 ## [1.3.22] - 2026-10-17
 
 ### Fixed

@@ -3,6 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { createRequire } from 'node:module';
 import { spawn, spawnSync } from 'node:child_process';
+import { startOpenRigFixture } from './openrig-fixture.mts';
 
 const testHome = path.resolve(import.meta.dirname, '.test-home');
 const defaultsDir = path.resolve(import.meta.dirname, '../../webmux/config.defaults');
@@ -53,15 +54,17 @@ if (process.env.WEBMUX_REAL_SSH === '1') {
 }
 if (process.env.WEBMUX_VISUAL_PARITY === '1' || process.env.WEBMUX_REAL_VNC === '1' || process.env.WEBMUX_REAL_RDP === '1') process.env.WEBMUX_ALLOW_LOCAL_TARGETS = '1';
 const binary = path.join(testHome, process.platform === 'win32' ? 'webmux.exe' : 'webmux');
+const stopOpenRig = process.env.WEBMUX_REAL_OPENRIG === '1' ? await startOpenRigFixture(testHome) : () => {};
 const build = spawnSync('go', ['run', './cmd/build', '-o', binary], {
   cwd: path.resolve(import.meta.dirname, '../../webmux/server'), stdio: 'inherit',
 });
 if (build.error) throw build.error;
 if (build.status !== 0) process.exit(build.status ?? 1);
-const child = spawn(binary, [], { stdio: 'inherit', env: { ...process.env, WEBMUX_ROOT: '', WEBMUX_DEBUG_TERMINAL: '1' } });
+const child = spawn(binary, [], { stdio: 'inherit', env: { ...process.env, WEBMUX_COORDINATION_DISABLED: process.env.WEBMUX_REAL_OPENRIG === '1' ? '0' : '1', WEBMUX_ROOT: '', WEBMUX_DEBUG_TERMINAL: '1' } });
 for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => child.kill(signal));
 child.on('error', error => { console.error(error); process.exitCode = 1; });
 child.on('exit', code => {
+  stopOpenRig();
   if (tmuxTemporary) { spawnSync('tmux', ['kill-server'], { env: process.env, stdio: 'ignore', timeout: 5000 }); fs.rmSync(tmuxTemporary, { recursive: true, force: true }); }
   process.exitCode = code ?? 0;
 });

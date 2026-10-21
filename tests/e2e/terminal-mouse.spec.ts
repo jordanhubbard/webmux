@@ -45,8 +45,7 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
       await expect.poll(() => outputs.get(source)).toContain('INPUT:68;');
       expect(inputs.get(source)).toEqual(['h']);
       // Explicit button input remains available to applications.
-      await page.mouse.down();
-      await page.mouse.up();
+      await screen.click({ position: { x: 20, y: 12 } });
       await expect.poll(() => outputs.get(source)).toContain('INPUT:1b5b3c');
       if (scenario === 'broadcast') {
         await expect(page.getByTestId(`tile-cell-${peer}`).locator('.xterm-rows')).toContainText('PLAIN READY');
@@ -65,7 +64,7 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
       } else if (scenario === 'selection') {
         const modifier = await page.evaluate(() => /Mac|iPhone|iPad/.test(navigator.platform)) ? 'Alt' : 'Shift';
         await page.keyboard.down(modifier);
-        await tile.locator('.xterm-rows > div').first().dblclick({ position: { x: 16, y: 7 } });
+        await screen.dblclick({ position: { x: 16, y: 7 } });
         await page.keyboard.up(modifier);
         const input = tile.locator('.xterm-helper-textarea');
         const copied = await input.evaluate(element => {

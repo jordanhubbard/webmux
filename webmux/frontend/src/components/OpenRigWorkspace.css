@@ -1,0 +1,21 @@
+.openrig-workspace { display: flex; flex-direction: column; height: 100%; min-height: 0; color: #e0e0e0; background: #0d0d1a; }
+.openrig-workspace header { display: flex; align-items: center; gap: 8px; padding: 10px; flex-wrap: wrap; background: #16162a; }
+.openrig-workspace strong { flex: 1; }
+.openrig-workspace small { display: block; color: #aaa; font-weight: normal; }
+.openrig-workspace button { background: #2a2a4a; color: #eee; border: 1px solid #666687; border-radius: 4px; padding: 6px 10px; cursor: pointer; }
+.openrig-workspace button:disabled { opacity: .5; cursor: default; }
+.openrig-workspace button:focus-visible { outline: 2px solid #ac9bff; outline-offset: 2px; }
+.openrig-workspace p { margin: 12px; }
+.openrig-workspace a { color: #b6aaff; }
+.openrig-workspace [role=alert] { color: #ffb0b0; }
+.openrig-guidance { max-width: 700px; padding: 20px; }
+.openrig-guidance h2 { font-size: 18px; margin: 12px; }
+.openrig-terminal { flex: 1; min-height: 0; overflow: hidden; padding: 8px; }
+.openrig-workspace footer { padding: 8px 12px; font-size: 12px; color: #aaa; }
+.openrig-workspace nav, .openrig-proof-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; }
+.openrig-workspace [aria-pressed=true] { border-color: #c3b6ff; background: #463765; }
+.openrig-proof-controls span { font-size: 12px; color: #aaa; }
+.openrig-proof-result { margin: 0 12px; max-height: 160px; overflow: auto; }
+.openrig-proof-result summary { cursor: pointer; }
+.openrig-proof-result dl { font-size: 12px; }
+.openrig-proof-result dd { overflow-wrap: anywhere; font-family: monospace; }

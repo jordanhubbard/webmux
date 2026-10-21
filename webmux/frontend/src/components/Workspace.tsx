@@ -175,6 +175,12 @@ export function Workspace({
   }, []);
 
   useEffect(() => {
+    const reload = () => { void api.getSessions().then(setSessions).catch(err => setOperationError(String(err))); };
+    window.addEventListener('webmux-sessions-changed', reload);
+    return () => window.removeEventListener('webmux-sessions-changed', reload);
+  }, []);
+
+  useEffect(() => {
     if (!focusedSessionId) return;
     const outer = outerRef.current;
     const tileElement = tileElementRefs.current.get(focusedSessionId);
