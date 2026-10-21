@@ -34,11 +34,17 @@ are not proof of process identity or conversation continuity.
 
 [WebMux #176](https://github.com/jordanhubbard/webmux/issues/176) tracks the
 integration with [OpenRig #1723](https://github.com/mvschwarz/openrig/issues/1723).
-The [development fork](https://github.com/jordanhubbard/openrig) will be tested
-in an isolated daemon instance before any production rollout. The proposed
-interface separates the local delivery pane from the remote execution binding;
-OpenRig must verify the latter while preserving SSH host trust and refusing
-stale, unreachable or mismatched identities. This work is not yet qualified.
+The [development fork](https://github.com/jordanhubbard/openrig) now implements
+explicit SSH/tmux identity observation. WebMux detects the new attach options,
+registers both ends, and uses the returned sender address independently of the
+physical tmux session. A coordinator without those options retains the existing
+transport, without gaining a remote identity claim.
+
+The isolated [relay qualification](validation/openrig-relay-identity-2026-10-21/README.md)
+used real macOS and Linux Codex processes, message replies, coordinator restart,
+and a remote-shell refusal with no input written. The installed production
+coordinator was not replaced. Remote Claude identity, provider telemetry hooks,
+and automatic remote resume/fork remain outside this patch.
 
 ## Prerequisites
 
