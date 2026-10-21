@@ -7,7 +7,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 const runner = path.resolve(import.meta.dirname, '../webmux/server/internal/openrigcoord/runner.mts');
 for (const [host, runtime] of [['worker', 'codex'], ['localhost', 'codex'], ['worker', 'claude-code'], ['legacy', 'codex']]) {
-  test(`relay registration and launch grammar for ${host}/${runtime}`, () => {
+  test(`relay registration and launch grammar for ${host}/${runtime}`, { skip: process.platform === 'win32' ? 'Executes the POSIX shell/tmux launcher; qualified on macOS and Linux.' : false }, () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wm-relay-contract-'));
     const bin = path.join(dir, 'bin'); fs.mkdirSync(bin);
     const stub = `#!${process.execPath}
