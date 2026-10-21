@@ -19,6 +19,10 @@ The SSH relay was then terminated and recreated using the same registered seat
 and reverse-forward port. The remote tmux pane PID stayed unchanged. This tests
 reconnection to the existing agent instead of launching another remote provider.
 
+The native macOS candidate also passed a real WebMux restart: its process
+instance changed while both normal-grid session IDs were preserved. The browser
+then reattached to the real Codex terminals. See [restart evidence](native-restart.json).
+
 Frontend tests cover modal creation, attributed messages, ordinary-grid refresh,
 and failure reporting. Go tests cover owner isolation, grid attachment reuse,
 administrator authorization, and reattachment of persisted agent tiles after a

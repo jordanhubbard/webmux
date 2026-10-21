@@ -127,9 +127,11 @@ try {
       if (!fs.existsSync(attached)) throw new Error('Agent did not register with the coordinator.');
       const registration = JSON.parse(fs.readFileSync(attached, 'utf8')) as { ok?: boolean; error?: string; attachmentType?: string };
       if (registration.ok === false || registration.attachmentType !== 'tmux') throw new Error(registration.error || 'Agent transport registration failed.');
+      // Keep a registered seat discoverable even if provider startup fails.
+      // The owner can fix authentication and explicitly reconnect that seat.
+      write(recordFile, agent);
       await delay(300);
       run('tmux', ['has-session', '-t', `=${tmux}`], 3000);
-      write(recordFile, agent);
       console.log(JSON.stringify(agent));
     }
   } else throw new Error('Unknown coordinator action');
