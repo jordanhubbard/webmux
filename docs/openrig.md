@@ -32,6 +32,10 @@ Node 24 or later. A `rig` launcher must preserve `TMUX`, `TMUX_PANE`,
 `OPENRIG_URL` and `OPENRIG_SESSION_NAME`: these bind the real transport and sender
 identity. Do not install a wrapper that clears them.
 
+Managed launches preserve the service's PATH order and append common tool
+locations as fallbacks. This keeps project creation and agent enrollment on the
+same Rig installation, including when the service uses a dedicated wrapper.
+
 On each execution host, install the chosen provider CLI, authenticate it there,
 and install a Rig **client** (`@openrig/cli@0.6.14`). For remote hosts, also install
 tmux and Python 3 and enable noninteractive SSH from the WebMux service account.
@@ -65,6 +69,11 @@ port. Restarting WebMux reattaches persisted grid tiles without restarting the
 provider processes. Explicitly exiting a provider stops that agent; reconnecting
 a stopped agent launches a new provider session in the same registered seat.
 
+On first use, complete the provider's folder-trust or sign-in prompt inside its
+terminal. If the provider exits during startup, resolve the prompt and use
+**Reconnect agent**. A live tmux attachment alone does not prove the provider is
+ready or that a message was received.
+
 Existing independently launched agents do not inherit environment changes.
 They need an explicit Rig adoption/bootstrap step or a new managed launch to
 participate. This release automatically enrolls agents created through the
@@ -77,9 +86,16 @@ isolation between users of the same OS account.
 ## Qualification
 
 The browser tests use the actual published Rig daemon and text UI without
-provider credentials. Live cross-host qualification additionally uses real
+provider credentials. They also enroll two interactive provider stand-ins,
+exchange a fresh challenge/ACK through Rig, inspect attributed messages, and
+check grid refresh and tile close/reopen. CI runs this against OpenRig 0.6.14;
+these stand-ins qualify transport, not provider reasoning. Live cross-host
+qualification additionally uses real
 Codex processes on Puck and sparky, independent nonce/hash receipts, and the
 central daemon's attributed outbox. See the [cross-host record](validation/openrig-central-2026-10-21/README.md).
+
+The [production Trickle workload](validation/openrig-trickle-2026-10-21/README.md)
+records a real coding/review session created through the installed WebMux UI.
 
 Earlier host-local tests remain as historical evidence:
 [Claude/Codex on Linux](validation/openrig-live-2026-10-21/README.md) and

@@ -5,6 +5,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Preserve service PATH precedence for managed Rig agent launches so enrollment uses the same installation as project creation; give the provider selector an exact accessible label (#174).
+
+### Added
+- Run published-Rig browser coverage for managed enrollment, attributed challenge/ACK messaging, grid refresh and tile close/reopen. Retain a production Codex coding/review workload against Trickle, including WebMux restart persistence (#174).
+
 ## [1.3.23] - 2026-10-20
 
 ### Added

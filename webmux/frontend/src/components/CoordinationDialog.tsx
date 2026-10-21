@@ -73,7 +73,7 @@ export function CoordinationDialog({ onClose }: { onClose: () => void }) {
         <label>Agent name<input required pattern="[a-z]([a-z0-9]|-){0,47}" value={name} onChange={e => setName(e.target.value)} placeholder="reviewer" /></label>
         <label>Execution host<input required value={host} onChange={e => setHost(e.target.value)} placeholder="localhost or SSH host" /></label>
         <label>Project directory on this host<input required value={cwd} onChange={e => setCwd(e.target.value)} placeholder="/absolute/project/path" /></label>
-        <label>Agent<select value={runtime} onChange={e => setRuntime(e.target.value)}><option value="codex">Codex</option><option value="claude-code">Claude Code</option></select></label>
+        <div><label htmlFor="coordination-runtime">Agent</label><select id="coordination-runtime" value={runtime} onChange={e => setRuntime(e.target.value)}><option value="codex">Codex</option><option value="claude-code">Claude Code</option></select></div>
       </div>
       <p><button type="submit" disabled={busy}>{busy ? 'Connecting…' : 'Create and open terminal'}</button></p>
     </form>

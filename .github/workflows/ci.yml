@@ -145,6 +145,15 @@ jobs:
           ssh_result=0
           npm run test:e2e:go -- ssh-integration.spec.ts --output=test-results/ssh-go || ssh_result=1
           exit "$ssh_result"
+      - name: Verify managed agents through the published Rig CLI
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_OPENRIG: '1'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/webmux-openrig" --no-audit --no-fund @openrig/cli@0.6.14
+          export WEBMUX_OPENRIG_CLI="$RUNNER_TEMP/webmux-openrig/node_modules/@openrig/cli/dist/bin-wrapper.js"
+          npm run test:e2e:go -- openrig.spec.ts --output=test-results/openrig-go
       - name: Verify real VNC interoperability through Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux

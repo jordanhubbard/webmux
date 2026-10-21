@@ -1,0 +1,53 @@
+{
+  "schema": "webmux/live-workload@1",
+  "checked_at": "2026-10-21T18:38:42.077Z",
+  "workload": "NVIDIA-Omniverse/trickle CI-009 / issue #81",
+  "workload_review": "https://github.com/NVIDIA-Omniverse/trickle/pull/88",
+  "workload_commit": "43aed2f6c2b25cc722d19bde1d33465329050575",
+  "provider": "Codex",
+  "agents": [
+    {
+      "role": "coder",
+      "execution": "local macOS",
+      "target": "wm-215ca0cfed-trickle-release-coder-49960de5",
+      "connected": true
+    },
+    {
+      "role": "reviewer",
+      "execution": "remote Linux",
+      "target": "wm-215ca0cfed-trickle-release-reviewer-1855f8fe",
+      "connected": true
+    }
+  ],
+  "grid_sessions": [
+    {
+      "id": "fd10014e-2e98-4e0e-b389-70d82d876951",
+      "state": "connected",
+      "view": "managed:wm-215ca0cfed-trickle-release-coder-49960de5"
+    },
+    {
+      "id": "153dfa2a-9fa5-415a-90d0-1690ad8fa193",
+      "state": "connected",
+      "view": "managed:wm-215ca0cfed-trickle-release-reviewer-1855f8fe"
+    }
+  ],
+  "browser": {
+    "authenticated_production": true,
+    "coordination_http_status": 200,
+    "refresh_reuses_sessions": true,
+    "open_terminal_reuses_sessions": true
+  },
+  "restart": {
+    "at": "2026-10-21T18:37:59.875622+00:00",
+    "before_pid": "41727",
+    "after_pid": "22847",
+    "local_pane_pids_unchanged": true,
+    "remote_provider_pane_pid_unchanged": true,
+    "grid_session_ids_preserved": true
+  },
+  "qualification_boundaries": [
+    "Real Codex-to-Codex coding and review; Claude Code was not exercised.",
+    "Trickle Windows acceptance and stale lifecycle receipt remain open.",
+    "Published browser fixture uses interactive stand-ins; live provider evidence is separate."
+  ]
+}

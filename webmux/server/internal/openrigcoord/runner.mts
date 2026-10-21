@@ -85,7 +85,7 @@ try {
       console.log(JSON.stringify(existing));
     } else {
       // Validate the actual execution host before allocating a central seat.
-      const probe = `export PATH="$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"; cd ${q(cwd)} && command -v ${runtime === 'codex' ? 'codex' : 'claude'} && command -v rig${local ? '' : ' && command -v tmux'}`;
+      const probe = `export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; cd ${q(cwd)} && command -v ${runtime === 'codex' ? 'codex' : 'claude'} && command -v rig${local ? '' : ' && command -v tmux'}`;
       if (local) run('/bin/sh', ['-c', probe]); else run('ssh', [...sshArgs, host, probe]);
       const projectDir = path.join(directory, project);
       fs.mkdirSync(projectDir, { recursive: true, mode: 0o700 });
@@ -110,13 +110,13 @@ try {
       const envFile = path.join(directory, `${tmux}.env`);
       const remotePort = local ? 0 : existing?.remotePort ?? Number(run('ssh', [...sshArgs, host, "python3 -c 'import socket; s=socket.socket(); s.bind((\"127.0.0.1\",0)); print(s.getsockname()[1])'"]));
       if (!local && (!Number.isInteger(remotePort) || remotePort < 1024 || remotePort > 65535)) throw new Error('Cannot allocate a private SSH reverse forward.');
-      const remoteAgent = `export PATH="$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"; export OPENRIG_URL=http://127.0.0.1:${remotePort}; export OPENRIG_SESSION_NAME=${q(target)}; cd ${q(cwd)} && exec ${cli}`;
-      const remoteRun = `export PATH="$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"; exec tmux new-session -A -s ${q(tmux)} ${q('/bin/sh -c ' + q(remoteAgent))}`;
+      const remoteAgent = `export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; export OPENRIG_URL=http://127.0.0.1:${remotePort}; export OPENRIG_SESSION_NAME=${q(target)}; cd ${q(cwd)} && exec ${cli}`;
+      const remoteRun = `export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; exec tmux new-session -A -s ${q(tmux)} ${q('/bin/sh -c ' + q(remoteAgent))}`;
       // Pass only routing identity through the SSH channel; credentials and
       // provider homes stay on the execution host. Never forward auth tokens.
       const endpoint = `node -e 'const u=new URL(process.env.OPENRIG_URL); if(u.hostname!=="127.0.0.1"&&u.hostname!=="localhost") throw Error("Coordinator must be loopback-only"); console.log(u.port||80)'`;
       const command = local ? `cd ${q(cwd)}\nexec ${cli}` : `PORT=$(${endpoint})\nexec ssh ${sshArgs.map(q).join(' ')} -o ExitOnForwardFailure=yes -tt -R ${q(`127.0.0.1:${remotePort}:127.0.0.1:`)}"$PORT" ${q(host)} ${q(remoteRun)}`;
-      write(launcher, `#!/bin/sh\nset -eu\nexport PATH="$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"\n${attach} > ${q(attached + '.tmp')} || { mv -f ${q(attached + '.tmp')} ${q(attached)}; exit 1; }\nmv -f ${q(attached + '.tmp')} ${q(attached)}\n${q(process.execPath)} ${q(process.argv[1])} environment ${q(directory)} ${q(tmux)}\n. ${q(envFile)}\n${command}\n`);
+      write(launcher, `#!/bin/sh\nset -eu\nexport PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"\n${attach} > ${q(attached + '.tmp')} || { mv -f ${q(attached + '.tmp')} ${q(attached)}; exit 1; }\nmv -f ${q(attached + '.tmp')} ${q(attached)}\n${q(process.execPath)} ${q(process.argv[1])} environment ${q(directory)} ${q(tmux)}\n. ${q(envFile)}\n${command}\n`);
       fs.chmodSync(launcher, 0o700);
       if (existing) run('rig', ['unclaim', target]);
       fs.rmSync(attached, { force: true });

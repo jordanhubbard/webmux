@@ -25,6 +25,7 @@ it('creates an agent in the selected host directory and refreshes the ordinary g
     fireEvent.change(screen.getByLabelText('Agent name'), { target: { value: 'reviewer' } });
     fireEvent.change(screen.getByLabelText('Execution host'), { target: { value: 'sparky.local' } });
     fireEvent.change(screen.getByLabelText('Project directory on this host'), { target: { value: '/work/project' } });
+    expect(screen.getByRole('combobox', { name: 'Agent' })).toHaveValue('codex');
     fireEvent.click(screen.getByRole('button', { name: 'Create and open terminal' }));
     await waitFor(() => expect(close).toHaveBeenCalledOnce());
     expect(mocks.create).toHaveBeenCalledWith({ project: 'shared-project', name: 'reviewer', host: 'sparky.local', cwd: '/work/project', runtime: 'codex' });

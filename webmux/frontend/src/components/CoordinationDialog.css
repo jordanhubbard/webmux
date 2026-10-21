@@ -5,6 +5,6 @@
 .coordination-dialog button { background: #6653cf; border: 1px solid #9785ff; border-radius: 4px; color: white; padding: 6px 12px; cursor: pointer; margin-top: 6px; }
 .coordination-dialog button:disabled { opacity: 0.5; cursor: default; }
 .coordination-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.coordination-fields label { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.coordination-fields label, .coordination-fields > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .coordination-fields :is(input, select) { box-sizing: border-box; width: 100%; background: #101022; border: 1px solid #555575; border-radius: 4px; color: #eee; padding: 8px; }
 @media (max-width: 600px) { .coordination-fields { grid-template-columns: 1fr; } }
