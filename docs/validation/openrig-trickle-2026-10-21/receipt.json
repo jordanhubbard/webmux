@@ -1,9 +1,9 @@
 {
   "schema": "webmux/live-workload@1",
-  "checked_at": "2026-10-21T18:38:42.077Z",
+  "checked_at": "2026-10-21T18:43:49.561Z",
   "workload": "NVIDIA-Omniverse/trickle CI-009 / issue #81",
   "workload_review": "https://github.com/NVIDIA-Omniverse/trickle/pull/88",
-  "workload_commit": "43aed2f6c2b25cc722d19bde1d33465329050575",
+  "workload_commit": "3de6a353aa338358b7ff09a9fa0aeeade452f51e",
   "provider": "Codex",
   "agents": [
     {
@@ -49,5 +49,30 @@
     "Real Codex-to-Codex coding and review; Claude Code was not exercised.",
     "Trickle Windows acceptance and stale lifecycle receipt remain open.",
     "Published browser fixture uses interactive stand-ins; live provider evidence is separate."
-  ]
+  ],
+  "implementation_commit": "43aed2f6c2b25cc722d19bde1d33465329050575",
+  "review": {
+    "verdict": "No blocking source findings in the scoped diagnostic patch",
+    "independent_checks": {
+      "timeout_driver": "2 pass, 1 Windows-only skip; four hang controls",
+      "ci_contracts": 19,
+      "roadmap_tests": 15,
+      "qt_cases": 35
+    },
+    "merge_ready": false,
+    "remaining": [
+      "stale authority and acceptance receipt",
+      "fresh exact-head Windows qualification",
+      "unresolved chooser startup timeout"
+    ]
+  },
+  "relay_reconnect": {
+    "remote_provider_pid_unchanged": true,
+    "central_relay_recreated": true,
+    "remote_forward_port_reused": 35099,
+    "remote_provider_pane_pid": "250746",
+    "central_pane_pid": "36226",
+    "challenge_nonce": "601311feb8360d64e537cdd3",
+    "matching_peer_ack_received": true
+  }
 }

@@ -114,6 +114,10 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
         expect(stopped.status, stopped.stdout + stopped.stderr).toBe(0);
       }
     }
+    const sentinel = spawnSync('tmux', ['has-session', '-t', '=webmux-fixture-path'], {
+      env: { ...process.env, TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') }, timeout: 5000,
+    });
+    if (info.status === info.expectedStatus) expect(sentinel.status).toBe(0);
   }
 });
 

@@ -116,7 +116,9 @@ try {
       // provider homes stay on the execution host. Never forward auth tokens.
       const endpoint = `node -e 'const u=new URL(process.env.OPENRIG_URL); if(u.hostname!=="127.0.0.1"&&u.hostname!=="localhost") throw Error("Coordinator must be loopback-only"); console.log(u.port||80)'`;
       const command = local ? `cd ${q(cwd)}\nexec ${cli}` : `PORT=$(${endpoint})\nexec ssh ${sshArgs.map(q).join(' ')} -o ExitOnForwardFailure=yes -tt -R ${q(`127.0.0.1:${remotePort}:127.0.0.1:`)}"$PORT" ${q(host)} ${q(remoteRun)}`;
-      write(launcher, `#!/bin/sh\nset -eu\nexport PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"\n${attach} > ${q(attached + '.tmp')} || { mv -f ${q(attached + '.tmp')} ${q(attached)}; exit 1; }\nmv -f ${q(attached + '.tmp')} ${q(attached)}\n${q(process.execPath)} ${q(process.argv[1])} environment ${q(directory)} ${q(tmux)}\n. ${q(envFile)}\n${command}\n`);
+      // An existing tmux server retains its original environment. Bind the
+      // service PATH explicitly rather than inheriting that server's stale PATH.
+      write(launcher, `#!/bin/sh\nset -eu\nexport PATH=${q(process.env.PATH ?? '')}:"$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"\n${attach} > ${q(attached + '.tmp')} || { mv -f ${q(attached + '.tmp')} ${q(attached)}; exit 1; }\nmv -f ${q(attached + '.tmp')} ${q(attached)}\n${q(process.execPath)} ${q(process.argv[1])} environment ${q(directory)} ${q(tmux)}\n. ${q(envFile)}\n${command}\n`);
       fs.chmodSync(launcher, 0o700);
       if (existing) run('rig', ['unclaim', target]);
       fs.rmSync(attached, { force: true });

@@ -16,6 +16,12 @@ The coder worked in an isolated worktree based on PR #82 and pushed
 partial QTest assertions when a suite times out, with missing, empty, partial
 and passing-only timeout controls. The reviewer independently ran 35 non-GPU
 Qt cases on Linux and exchanged code-level findings and review instructions.
+The final pushed revision is `3de6a353aa338358b7ff09a9fa0aeeade452f51e`,
+including the supported refresh of its changed CMake input fingerprints. The
+reviewer independently checked the final delta and fingerprints, timeout driver,
+19 CI contracts and 15 roadmap tests, and sent a verdict of no blocking source
+findings within the diagnostic scope. That verdict explicitly excludes merge
+and release readiness.
 
 The [message record](messages.json) retains both directions of actual Rig
 communication, bound to the central daemon's `transport:v1` provenance. Messages
@@ -33,6 +39,12 @@ central pane PIDs, the remote provider pane PID and grid session IDs remained
 unchanged. The authenticated browser reattached and displayed the coordination
 messages after restart.
 
+The remote SSH relay was then deliberately stopped and recreated through
+**Reconnect agent**. Its central pane PID changed while the existing remote
+provider pane PID and reverse-forward port stayed unchanged. The remote agent
+sent a fresh `RECONNECTED` nonce through Rig and received the local coder's
+matching ACK. Both agents remained available in the production grid afterward.
+
 ## Repeatable browser gate
 
 `openrig.spec.ts` uses the published OpenRig 0.6.14 CLI, actual daemon and tmux
@@ -46,8 +58,11 @@ same gate with the published CLI pinned to 0.6.14.
 This test exposed a launcher PATH bug: prepending common tool locations could
 select another Rig executable after project creation. Preserving configured
 PATH precedence fixes enrollment and keeps the isolated fixture on its own
-coordinator. The fixture preserves enrolled sender/transport variables and
-clears inherited routing once before starting its private daemon.
+coordinator. Launchers explicitly bind the service PATH even when the existing
+tmux server retains an older environment. The test starts such a server before
+installing its wrappers and checks that project shutdown preserves an unrelated
+session. The fixture preserves enrolled sender/transport variables and clears
+inherited routing once before starting its private daemon.
 
 ## Boundaries
 

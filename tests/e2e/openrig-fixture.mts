@@ -9,7 +9,7 @@ import { spawnSync } from 'node:child_process';
 export async function startOpenRigFixture(home: string): Promise<() => void> {
   // Drop the caller's routing once, before starting the isolated server. The
   // wrapper must preserve identities subsequently supplied by Rig enrollment.
-  for (const key of ['OPENRIG_SESSION_NAME', 'RIGGED_SESSION_NAME', 'OPENRIG_URL', 'RIGGED_URL', 'OPENRIG_HOST', 'RIGGED_HOST', 'OPENRIG_NODE_ID', 'OPENRIG_ACTIVITY_HOOK_TOKEN']) delete process.env[key];
+  for (const key of ['TMUX', 'TMUX_PANE', 'OPENRIG_SESSION_NAME', 'RIGGED_SESSION_NAME', 'OPENRIG_URL', 'RIGGED_URL', 'OPENRIG_HOST', 'RIGGED_HOST', 'OPENRIG_NODE_ID', 'OPENRIG_ACTIVITY_HOOK_TOKEN']) delete process.env[key];
   const cli = process.env.WEBMUX_OPENRIG_CLI;
   if (!cli || !fs.existsSync(cli)) throw new Error('Set WEBMUX_OPENRIG_CLI to the installed OpenRig dist/bin-wrapper.js');
   const reserved = createServer();
@@ -43,6 +43,12 @@ readline.createInterface({ input: process.stdin, terminal: false }).on('line', r
   } catch (error) { console.log('FIXTURE_ERROR ' + error.message); }
 });
 `, { mode: 0o700 });
+  // Simulate an already-running tmux server whose PATH predates the service's
+  // dedicated Rig/provider wrappers. Managed launchers must bind the service
+  // PATH explicitly, and project shutdown must preserve this unrelated session.
+  const sentinel = spawnSync('tmux', ['-f', '/dev/null', 'new-session', '-d', '-s', 'webmux-fixture-path', '/bin/sleep 600'], { encoding: 'utf8', timeout: 5000 });
+  if (sentinel.status !== 0) throw new Error(`Cannot start isolated tmux fixture: ${sentinel.stderr}`);
+  fs.writeFileSync(path.join(home, 'openrig-tmux-directory'), process.env.TMUX_TMPDIR ?? '');
   process.env.PATH = `${directory}${path.delimiter}${process.env.PATH ?? ''}`;
   const result = spawnSync(executable, ['daemon', 'start', '--host', '127.0.0.1', '--port', String(address.port), '--no-kernel'], { encoding: 'utf8', timeout: 30000 });
   if (result.status !== 0) throw new Error(`Cannot start real OpenRig daemon: ${result.stdout} ${result.stderr}`);
