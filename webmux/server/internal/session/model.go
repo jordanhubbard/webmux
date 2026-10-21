@@ -9,6 +9,7 @@ var ErrNotFound = errors.New("Session not found")
 var ErrClosed = errors.New("session broker is shutting down")
 
 type Session struct {
+	OpenRigView      string   `json:"openrig_view,omitempty" yaml:"openrig_view,omitempty"`
 	Companion        string   `json:"companion,omitempty" yaml:"companion,omitempty"`
 	BrowserLocal     bool     `json:"browser_local,omitempty" yaml:"browser_local,omitempty"`
 	ID               string   `json:"id" yaml:"id"`

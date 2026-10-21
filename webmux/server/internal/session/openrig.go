@@ -3,24 +3,44 @@ package session
 // OpenRigSession returns the owner's dashboard attachment, separate from the
 // terminal grid. Closing a viewer never closes the attachment or agent teams.
 func (b *Broker) OpenRigSession(owner string) *Session {
+	value, ok := b.OpenRigViews(owner)["dashboard"]
+	if !ok {
+		return nil
+	}
+	return &value
+}
+
+func (b *Broker) OpenRigViews(owner string) map[string]Session {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	result := make(map[string]Session)
 	for _, id := range b.order {
 		e := b.entries[id]
-		if e.value.Owner == owner && e.value.Companion == "openrig" {
-			value := e.value.clone()
-			if e.run == nil {
-				value.State = "disconnected"
-			}
-			return &value
+		if e.value.Owner != owner || e.value.Companion != "openrig" {
+			continue
 		}
+		value := e.value.clone()
+		if e.run == nil {
+			value.State = "disconnected"
+		}
+		view := value.OpenRigView
+		if view == "" {
+			view = "dashboard"
+		}
+		result[view] = value
 	}
-	return nil
+	return result
 }
 
 // EnsureOpenRig only attaches a dashboard client. The fixed argv deliberately
 // does not run setup, start a daemon, launch a team, or open a desktop terminal.
 func (b *Broker) EnsureOpenRig(owner, executable string) (Session, error) {
+	return b.EnsureOpenRigView(owner, "dashboard", "OpenRig dashboard", []string{executable, "tui"})
+}
+
+// EnsureOpenRigView reuses one PTY per owner and view. argv comes from trusted
+// server handlers, never directly from the request.
+func (b *Broker) EnsureOpenRigView(owner, view, title string, argv []string) (Session, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.closed {
@@ -29,7 +49,7 @@ func (b *Broker) EnsureOpenRig(owner, executable string) (Session, error) {
 	var selected *entry
 	for _, id := range b.order {
 		e := b.entries[id]
-		if e.value.Owner == owner && e.value.Companion == "openrig" {
+		if e.value.Owner == owner && e.value.Companion == "openrig" && (e.value.OpenRigView == view || (view == "dashboard" && e.value.OpenRigView == "")) {
 			selected = e
 			break
 		}
@@ -40,14 +60,14 @@ func (b *Broker) EnsureOpenRig(owner, executable string) (Session, error) {
 		if err != nil {
 			return Session{}, err
 		}
-		selected = &entry{value: Session{ID: id, Kind: "terminal", Owner: owner, Transport: "exec", Hostname: "localhost", Cols: 120, Rows: 36, Title: "OpenRig dashboard", Workspace: "openrig", Companion: "openrig", CreatedAt: now(), UpdatedAt: now()}}
+		selected = &entry{value: Session{ID: id, Kind: "terminal", Owner: owner, Transport: "exec", Hostname: "localhost", Cols: 120, Rows: 36, Title: title, OpenRigView: view, Workspace: "openrig", Companion: "openrig", CreatedAt: now(), UpdatedAt: now()}}
 		b.entries[id] = selected
 		b.order = append(b.order, id)
 	}
 	oldValue := selected.value.clone()
 	launched := false
 	if selected.run == nil {
-		selected.value.ExecArgv = []string{executable, "tui", "--shared"}
+		selected.value.ExecArgv = append([]string(nil), argv...)
 		if err := b.startLocked(selected, "", ""); err != nil {
 			return Session{}, err
 		}

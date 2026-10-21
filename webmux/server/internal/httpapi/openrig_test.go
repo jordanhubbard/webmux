@@ -1,7 +1,11 @@
 package httpapi
 
 import (
+	"encoding/json"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -16,7 +20,7 @@ func TestOpenRigRequiresAdministratorAndReportsMissingInstallation(t *testing.T)
 	admin := responseToken(t, request(handler, "POST", "/api/auth/bootstrap", `{"username":"owner","password":"owner-password"}`, ""))
 	requireStatus(t, request(handler, "POST", "/api/auth/register", `{"username":"member","password":"member-password"}`, admin), 201)
 	member := responseToken(t, request(handler, "POST", "/api/auth/login", `{"username":"member","password":"member-password"}`, ""))
-	for _, endpoint := range []struct{ method, path string }{{"GET", "/api/openrig"}, {"POST", "/api/openrig/attach"}} {
+	for _, endpoint := range []struct{ method, path string }{{"GET", "/api/openrig"}, {"GET", "/api/openrig/agents"}, {"POST", "/api/openrig/attach"}, {"POST", "/api/openrig/proof/stop"}} {
 		requireStatus(t, request(handler, endpoint.method, endpoint.path, "", member), 403)
 	}
 	requireStatus(t, request(handler, "GET", "/api/openrig", "", admin), 200)
@@ -65,4 +69,40 @@ func TestOpenRigRevokedAdminCannotReconnectOrKeepSocket(t *testing.T) {
 	denied := dialSocket(t, url)
 	socketEvent(t, denied, "error")
 	socketClose(t, denied, 1008)
+}
+
+func TestOpenRigAttachesOnlyDaemonListedTargets(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("OpenRig supports Unix hosts only")
+	}
+	_, handler := fixture(t, "none")
+	directory := t.TempDir()
+	t.Setenv("PATH", directory)
+	for name, content := range map[string]string{
+		"rig":  "#!/bin/sh\nprintf '%s\\n' '{\"entries\":[{\"canonicalSessionName\":\"builder@my-team\",\"runtime\":\"codex\",\"rigName\":\"my-team\",\"sessionStatus\":\"running\"}]}'\n",
+		"tmux": "#!/bin/sh\nexit 0\n",
+	} {
+		if err := os.WriteFile(filepath.Join(directory, name), []byte(content), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	listing := request(handler, "GET", "/api/openrig/agents", "", "")
+	requireStatus(t, listing, 200)
+	if !strings.Contains(listing.Body.String(), `"target":"builder@my-team"`) {
+		t.Fatal(listing.Body.String())
+	}
+	requireStatus(t, request(handler, "POST", "/api/openrig/attach", `{"view":"agent","target":"unlisted; touch /tmp/unsafe"}`, ""), 404)
+	requireStatus(t, request(handler, "POST", "/api/openrig/attach", `{"view":"arbitrary-command"}`, ""), 400)
+	attached := request(handler, "POST", "/api/openrig/attach", `{"view":"agent","target":"builder@my-team"}`, "")
+	requireStatus(t, attached, 200)
+	var value struct {
+		Argv []string `json:"exec_argv"`
+		View string   `json:"openrig_view"`
+	}
+	if err := json.Unmarshal(attached.Body.Bytes(), &value); err != nil {
+		t.Fatal(err)
+	}
+	if value.View != "agent:builder@my-team" || len(value.Argv) != 4 || value.Argv[1] != "attach-session" || value.Argv[3] != "=builder@my-team" {
+		t.Fatalf("unsafe or unexpected launch: %+v", value)
+	}
 }

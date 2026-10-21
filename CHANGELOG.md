@@ -8,16 +8,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [1.3.23] - 2026-10-20
 
 ### Added
-- Prototype an optional host-local OpenRig dashboard workspace with an authenticated pop-out view, shared attachment reuse, missing-tool guidance, and input isolated from terminal broadcasting (#172).
+- Add an optional host-local OpenRig text dashboard, interactive terminals for daemon-listed agents, independent pop-outs, and an owner-visible Claude/Codex coordination test (#172).
 - Record and independently verify a live Claude Code/Codex challenge-response-ACK exchange through OpenRig, including the sandbox networking prerequisite, before relaunching WebMux (#172).
 
 ### Limitations
-- OpenRig must already be installed and its shared dashboard running as the WebMux service user on Linux or macOS. The prototype attaches a dashboard; existing CLI agents require OpenRig integration to participate in coordination. Remote-host selection and native Windows OpenRig are not included (#172).
+- OpenRig must already be installed with a configured daemon as the WebMux service user on Linux or macOS. Existing CLI agents require OpenRig integration to participate in coordination. The explicit live test starts only its named pair; opening other views starts no teams. Remote-host selection and native Windows OpenRig are not included (#172).
 
 ### Changed
 - Integrate the pending xterm 6, Vite 8 / React plugin 6, and chromedp 0.21 / CDP 0.158.1 upgrades together (#170).
 
 ### Fixed
+- Send the current terminal size when a viewer connects so text dashboards render correctly on their first frame (#172).
 - Require Go 1.27.3 to address the standard-library certificate-trust advisory reported by the dependency audit (#170).
 - Update terminal selection fixtures to xterm 6's interactive surface while retaining clipboard-byte and mouse-routing assertions (#170).
 - Migrate remote browser actions and screenshot capture to the typed CDP API, and preserve terminal/browser vendor chunks with Rolldown's supported grouping (#170).

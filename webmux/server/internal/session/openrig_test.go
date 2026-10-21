@@ -47,7 +47,7 @@ func TestOpenRigAttachmentIsSharedPerOwnerAndSeparateFromGrid(t *testing.T) {
 			t.Fatalf("unexpected dashboard state: %+v", result)
 		}
 	}
-	if len(requests) != 1 || !slices.Equal(requests[0].ExecArgv, []string{"/test/rig", "tui", "--shared"}) {
+	if len(requests) != 1 || !slices.Equal(requests[0].ExecArgv, []string{"/test/rig", "tui"}) {
 		t.Fatalf("unexpected launches: %+v", requests)
 	}
 	if len(b.List("owner")) != 0 || b.OpenRigSession("other") != nil {
@@ -129,5 +129,34 @@ func TestOpenRigPersistenceFailureDoesNotLeaveOrphanAttachment(t *testing.T) {
 	case <-(<-launched).done:
 	case <-time.After(time.Second):
 		t.Fatal("failed attachment leaked its client")
+	}
+}
+
+func TestOpenRigViewsReuseOnlyTheirOwnerAndView(t *testing.T) {
+	b, _, _ := fixture(t)
+	dashboard, err := b.EnsureOpenRig("owner", "/test/rig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	alpha, err := b.EnsureOpenRigView("owner", "alpha", "Claude", []string{"tmux", "attach-session", "-t", "=proof-alpha@team"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	again, err := b.EnsureOpenRigView("owner", "alpha", "Claude", []string{"tmux", "attach-session", "-t", "=proof-alpha@team"})
+	if err != nil || again.ID != alpha.ID || alpha.ID == dashboard.ID {
+		t.Fatalf("view collision: %+v %+v %v", alpha, again, err)
+	}
+	other, err := b.EnsureOpenRigView("other", "alpha", "Claude", []string{"tmux", "attach-session", "-t", "=other"})
+	if err != nil || other.ID == alpha.ID {
+		t.Fatalf("owner collision: %+v %v", other, err)
+	}
+	if len(b.OpenRigViews("owner")) != 2 || len(b.OpenRigViews("other")) != 1 || len(b.List("owner")) != 0 {
+		t.Fatal("incorrect owner/grid isolation")
+	}
+	if err := b.Delete("owner", alpha.ID); err != nil {
+		t.Fatal(err)
+	}
+	if b.OpenRigSession("owner").ID != dashboard.ID {
+		t.Fatal("detaching agent stopped dashboard")
 	}
 }

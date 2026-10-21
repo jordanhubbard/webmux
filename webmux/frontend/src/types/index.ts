@@ -8,6 +8,7 @@ export type AgentStatusSource = 'hook' | 'tmux' | 'webmux' | 'none';
 
 export interface Session {
   companion?: 'openrig';
+  openrig_view?: string;
   id: string;
   kind: 'terminal';
   owner: string;
