@@ -34,6 +34,17 @@ const CHAR_W_RATIO = 0.602;
 const CHAR_H_RATIO = 1.2;
 const CHROME_H = 30;
 const TILE_PADDING = 24;
+const DRAG_EDGE = 48;
+const DRAG_OUTSIDE = 96;
+const DRAG_SPEED = 700; // pixels/second, independent of display refresh rate
+
+function edgeVelocity(position: number, start: number, end: number): number {
+  const band = Math.min(DRAG_EDGE, (end - start) / 2);
+  if (band <= 0) return 0;
+  if (position < start + band) return -DRAG_SPEED * Math.min(1, (start + band - position) / band);
+  if (position > end - band) return DRAG_SPEED * Math.min(1, (position - end + band) / band);
+  return 0;
+}
 
 function tilePixelSize(cols: number, rows: number, fontSize: number) {
   const w = Math.ceil(cols * fontSize * CHAR_W_RATIO) + TILE_PADDING;
@@ -154,6 +165,7 @@ export function Workspace({
   // Refs for use in event handlers (avoid stale closures)
   const sessionsRef = useRef<Session[]>([]);
   const draggingIdRef = useRef<string | null>(null);
+  const dragPointerRef = useRef({ x: 0, y: 0 });
   const dropTargetRef = useRef<{ row: number; col: number } | null>(null);
   const tileElementRefs = useRef(new Map<string, HTMLDivElement>());
   const collapsedSessionsRef = useRef<Set<string>>(new Set());
@@ -364,8 +376,9 @@ export function Workspace({
   }, [tile.w, tile.h]);
 
   const handleTitleMouseDown = useCallback((sessionId: string, e: React.MouseEvent) => {
-    if (movePendingRef.current) return;
+    if (movePendingRef.current || e.button !== 0) return;
     e.preventDefault();
+    dragPointerRef.current = { x: e.clientX, y: e.clientY };
     setDraggingId(sessionId);
     draggingIdRef.current = sessionId;
     setGhostPos({ x: e.clientX, y: e.clientY });
@@ -375,9 +388,30 @@ export function Workspace({
   useEffect(() => {
     if (!draggingId) return;
 
-    const onMouseMove = (e: MouseEvent) => {
-      setGhostPos({ x: e.clientX, y: e.clientY });
-      const cell = getGridCell(e.clientX, e.clientY);
+    let frame = 0;
+    let previousTime = performance.now();
+    const viewport = () => {
+      const outer = outerRef.current;
+      if (!outer) return null;
+      const rect = outer.getBoundingClientRect();
+      const left = Math.max(0, rect.left + outer.clientLeft);
+      const top = Math.max(0, rect.top + outer.clientTop);
+      const right = Math.min(window.innerWidth, rect.left + outer.clientLeft + outer.clientWidth);
+      const bottom = Math.min(window.innerHeight, rect.top + outer.clientTop + outer.clientHeight);
+      return right > left && bottom > top ? { left, top, right, bottom } : null;
+    };
+    const nearViewport = (rect: NonNullable<ReturnType<typeof viewport>>, x: number, y: number) =>
+      x >= rect.left - DRAG_OUTSIDE && x <= rect.right + DRAG_OUTSIDE &&
+      y >= rect.top - DRAG_OUTSIDE && y <= rect.bottom + DRAG_OUTSIDE;
+    const updateTarget = () => {
+      const { x, y } = dragPointerRef.current;
+      const rect = viewport();
+      // A pointer just outside the viewport still targets its visible edge.
+      // Read the grid's current rectangle after scrolling, never a drag-start offset.
+      const cell = rect && nearViewport(rect, x, y) ? getGridCell(
+        Math.max(rect.left + 1, Math.min(rect.right - 1, x)),
+        Math.max(rect.top + 1, Math.min(rect.bottom - 1, y)),
+      ) : null;
       if (cell && isWithinTerminalGridLimit(cell.row, cell.col, terminalGridLimit)) {
         const sessionAtCell = sessionsRef.current.find(s =>
           s.row === cell.row &&
@@ -386,7 +420,7 @@ export function Workspace({
         );
         const isSelf = sessionAtCell && sessionAtCell.id === draggingIdRef.current;
         const newTarget = isSelf ? null : cell;
-        setDropTarget(newTarget);
+        setDropTarget(previous => previous?.row === newTarget?.row && previous?.col === newTarget?.col ? previous : newTarget);
         dropTargetRef.current = newTarget;
       } else {
         setDropTarget(null);
@@ -394,9 +428,48 @@ export function Workspace({
       }
     };
 
-    const onMouseUp = async () => {
+    const cancelDrag = () => {
+      cancelAnimationFrame(frame);
+      setDraggingId(null);
+      setDropTarget(null);
+      draggingIdRef.current = null;
+      dropTargetRef.current = null;
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      if (!draggingIdRef.current) return;
+      if ((e.buttons & 1) === 0) { cancelDrag(); return; }
+      dragPointerRef.current = { x: e.clientX, y: e.clientY };
+      setGhostPos(dragPointerRef.current);
+      updateTarget();
+    };
+    const tick = (time: number) => {
+      if (!draggingIdRef.current) return;
+      const elapsed = Math.min(50, Math.max(0, time - previousTime)) / 1000;
+      previousTime = time;
+      const outer = outerRef.current;
+      const rect = viewport();
+      const { x, y } = dragPointerRef.current;
+      if (outer && rect && nearViewport(rect, x, y)) {
+        outer.scrollLeft += edgeVelocity(x, rect.left, rect.right) * elapsed;
+        outer.scrollTop += edgeVelocity(y, rect.top, rect.bottom) * elapsed;
+      }
+      updateTarget();
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelDrag(); }
+    };
+    const onVisibility = () => { if (document.hidden) cancelDrag(); };
+
+    const onMouseUp = async (e: MouseEvent) => {
+      if (!draggingIdRef.current) return;
+      dragPointerRef.current = { x: e.clientX, y: e.clientY };
+      updateTarget();
       const dragId = draggingIdRef.current;
       const target = dropTargetRef.current;
+      // End the interaction before awaiting persistence, including failed saves.
+      cancelDrag();
 
       if (dragId && target) {
         const currentSessions = sessionsRef.current;
@@ -433,15 +506,18 @@ export function Workspace({
         }
       }
 
-      setDraggingId(null);
-      setDropTarget(null);
-      draggingIdRef.current = null;
-      dropTargetRef.current = null;
     };
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('keydown', onKeyDown, true);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('blur', cancelDrag);
     return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener('keydown', onKeyDown, true);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('blur', cancelDrag);
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
     };
