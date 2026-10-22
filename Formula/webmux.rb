@@ -1,8 +1,8 @@
 class Webmux < Formula
   desc "Browser-based workspace for persistent terminals and remote desktops"
   homepage "https://github.com/jordanhubbard/webmux"
-  url "https://github.com/jordanhubbard/webmux/archive/refs/tags/v1.3.20.tar.gz"
-  sha256 "5bc1872797f88504ea7184d7e21593782d9bf1705b19f548544d4245000b2d06"
+  url "https://github.com/jordanhubbard/webmux/archive/refs/tags/v1.3.23.tar.gz"
+  sha256 "960ff8357b5d39f4ec9a5ead8e72bceb989d72746290bea5aa906d410128dbb2"
   license "BSD-2-Clause"
   head "https://github.com/jordanhubbard/webmux.git", branch: "main"
 
