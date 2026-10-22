@@ -41,16 +41,21 @@ func (b *Broker) EnsureOpenRig(owner, executable string) (Session, error) {
 // EnsureOpenRigView reuses one PTY per owner and view. argv comes from trusted
 // server handlers, never directly from the request.
 func (b *Broker) EnsureOpenRigView(owner, view, title string, argv []string) (Session, error) {
-	return b.ensureRigView(owner, view, title, argv, false)
+	return b.ensureRigView(owner, view, title, argv, false, nil)
 }
 
 // EnsureRigTerminal attaches a verified managed tmux seat in the ordinary grid.
 // Closing this PTY detaches its viewer and leaves the agent running.
-func (b *Broker) EnsureRigTerminal(owner, target, title string, argv []string) (Session, error) {
-	return b.ensureRigView(owner, "managed:"+target, title, argv, true)
+func (b *Broker) EnsureRigTerminal(owner, target, title string, argv []string, identity ...RigIdentity) (Session, error) {
+	var rig *RigIdentity
+	if len(identity) == 1 && identity[0].Target == target {
+		value := identity[0]
+		rig = &value
+	}
+	return b.ensureRigView(owner, "managed:"+target, title, argv, true, rig)
 }
 
-func (b *Broker) ensureRigView(owner, view, title string, argv []string, grid bool) (Session, error) {
+func (b *Broker) ensureRigView(owner, view, title string, argv []string, grid bool, rig *RigIdentity) (Session, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.closed {
@@ -95,6 +100,10 @@ func (b *Broker) ensureRigView(owner, view, title string, argv []string, grid bo
 			return Session{}, err
 		}
 		launched = true
+	}
+	if rig != nil {
+		value := *rig
+		selected.value.Rig = &value
 	}
 	if err := b.persistLocked(); err != nil {
 		if launched {

@@ -51,12 +51,24 @@ export function CoordinationDialog({ onClose }: { onClose: () => void }) {
     <button type="button" disabled={busy} onClick={() => void refresh()}>Refresh status</button>
     <div style={{ maxHeight: 280, overflow: 'auto', margin: '12px 0' }}>
       {agents.length === 0 && <p>No managed agents yet. Create an agent below to connect it automatically.</p>}
-      {agents.map(agent => <article key={agent.target} style={{ borderBottom: '1px solid #44446a', padding: '10px 0' }}>
-        <strong>{agent.name}</strong> · {agent.project} · {agent.host} · {agent.runtime}
-        <div>{agent.connected ? (agent.activityState || agent.sessionStatus || 'Terminal connected') : 'Terminal stopped'} · <code>{agent.cwd}</code></div>
-        <details><summary>Messaging address</summary><code>{agent.target}</code></details>
-        <button type="button" disabled={busy} onClick={() => void openTerminal(agent.target)}>{agent.connected ? 'Open terminal' : 'Reconnect agent'}</button>
-      </article>)}
+      {[...new Set(agents.map(agent => agent.project))].sort().map(projectId => <details className="coordination-project" key={projectId} open>
+        <summary><strong>{projectId}</strong> · {agents.filter(agent => agent.project === projectId).length} workers</summary>
+        <ul aria-label={`${projectId} workers`} className="coordination-workers">
+          {agents.filter(agent => agent.project === projectId).map(agent => <li key={agent.target}>
+            <article aria-label={`${agent.name} on ${agent.host}`}>
+              <strong>{agent.name}</strong> <span className="coordination-rig">Rig-managed</span>
+              <dl className="coordination-worker-facts">
+                <div><dt>Execution host</dt><dd>{agent.host}</dd></div>
+                <div><dt>Runtime</dt><dd>{agent.runtime}</dd></div>
+                <div><dt>State</dt><dd>{agent.connected ? (agent.activityState || agent.sessionStatus || 'Connected; activity unknown') : 'Terminal stopped'}</dd></div>
+              </dl>
+              <div><code>{agent.cwd}</code></div>
+              <details><summary>Messaging address</summary><code>{agent.target}</code></details>
+              <button type="button" disabled={busy} onClick={() => void openTerminal(agent.target)}>{agent.connected ? 'Open terminal' : 'Reconnect agent'}</button>
+            </article>
+          </li>)}
+        </ul>
+      </details>)}
     </div>
     {messages.length > 0 && <details open><summary>Recent coordination</summary><div style={{ maxHeight: 180, overflow: 'auto' }}>{messages.map((message, index) => <div key={`${message.time}-${index}`} style={{ padding: '6px 0' }}><small>{new Date(message.time).toLocaleTimeString()} · {agents.find(a => a.target === message.from)?.name || message.from} → {agents.find(a => a.target === message.to)?.name || message.to} · recorded ({message.state})</small><pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>{message.body.split('\n---\n')[1] ?? message.body}</pre></div>)}</div></details>}
     <form onSubmit={event => {

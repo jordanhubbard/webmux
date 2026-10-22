@@ -40,7 +40,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   const project = 'browser-workload';
   const sessions: string[] = [];
   type Agent = { name: string; target: string; connected: boolean; sessionId?: string };
-  type Session = { id: string; openrig_view?: string };
+  type Session = { id: string; openrig_view?: string; rig?: { target: string; project: string; name: string; host: string; runtime: string } };
   const status = async () => (await (await request.get('/api/coordination')).json()) as {
     agents: Agent[]; messages: { from: string; to: string; body: string }[];
   };
@@ -75,7 +75,9 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       const listing: Session[] = await (await request.get('/api/sessions')).json();
       const session = listing.find(value => value.openrig_view === `managed:${agent.target}`)!;
       sessions.push(session.id);
+      expect(session.rig).toEqual({ target: agent.target, project, name, host: 'localhost', runtime: 'codex' });
       const terminal = page.getByTestId(`tile-cell-${session.id}`);
+      await expect(terminal.getByLabel('Rig-managed worker')).toContainText(`Rig · ${project} · ${name} · localhost`);
       await expect(terminal.locator('.xterm-rows')).toContainText('FIXTURE_READY');
       await expect(terminal.locator('.xterm-rows')).toContainText(agent.target);
     }
@@ -174,4 +176,30 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
   } finally {
     if (id) await request.delete(`/api/sessions/${id}`);
   }
+});
+
+
+test('coordination groups explicit worker identities in keyboard-expandable projects', async ({ page }) => {
+  await page.route('**/api/coordination', route => route.fulfill({ json: { messages: [], agents: [
+    { target: 'opaque-one', project: 'demo-release', name: 'reviewer', host: 'build-host', runtime: 'codex', cwd: '/work/demo', connected: true, activityState: 'needs_input' },
+    { target: 'opaque-two', project: 'demo-release', name: 'coder', host: 'localhost', runtime: 'claude-code', cwd: '/work/demo', connected: false },
+    { target: 'opaque-three', project: 'other-project', name: 'reviewer', host: 'other-host', runtime: 'codex', cwd: '/work/other', connected: true },
+  ] } }));
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Coordination', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Coordination', exact: true });
+  const workers = dialog.getByRole('list', { name: 'demo-release workers' });
+  await expect(workers.getByRole('article')).toHaveCount(2);
+  await expect(workers.getByText('build-host', { exact: true })).toBeVisible();
+  await expect(workers.getByText('needs_input')).toBeVisible();
+  const summary = dialog.locator('summary').filter({ hasText: 'demo-release' });
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await expect(workers).not.toBeVisible();
+  await page.keyboard.press('Space');
+  await expect(workers).toBeVisible();
+  await expect(workers.getByRole('button', { name: 'Open terminal' })).toHaveCount(1);
+  await expect(workers.getByRole('button', { name: 'Reconnect agent' })).toHaveCount(1);
+  await page.setViewportSize({ width: 390, height: 800 });
+  expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
 });

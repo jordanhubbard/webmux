@@ -293,7 +293,7 @@ func (s *Server) attachManagedRigTerminal(owner string, agent managedRigAgent) (
 	if err != nil {
 		return session.Session{}, err
 	}
-	return s.sessions.EnsureRigTerminal(owner, agent.Target, agent.Name+" · "+agent.Host+" · "+agent.Project, []string{tmux, "attach-session", "-t", "=" + agent.Tmux})
+	return s.sessions.EnsureRigTerminal(owner, agent.Target, agent.Name+" · "+agent.Host+" · "+agent.Project, []string{tmux, "attach-session", "-t", "=" + agent.Tmux}, session.RigIdentity{Target: agent.Target, Project: agent.Project, Name: agent.Name, Host: agent.Host, Runtime: agent.Runtime})
 }
 
 func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner string) {

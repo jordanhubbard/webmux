@@ -281,3 +281,13 @@ describe('Tile', () => {
     expect(onTitleMouseDown).toHaveBeenCalledWith('s1', expect.any(Object));
   });
 });
+
+it('shows explicit Rig provenance separately from title and transport', () => {
+  const session = makeSession({ title: 'My shell title', rig: { target: 'opaque-id', project: 'demo-release', name: 'reviewer', host: 'build-host', runtime: 'codex' } });
+  const view = render(<Tile session={session} fontSize={14} onClose={vi.fn()} onReconnect={vi.fn()} onRename={vi.fn()} />, { wrapper });
+  expect(screen.getByText('My shell title')).toBeVisible();
+  expect(screen.getByText('SSH')).toBeVisible();
+  expect(screen.getByLabelText('Rig-managed worker')).toHaveTextContent('Rig · demo-release · reviewer · build-host');
+  view.rerender(<Tile session={makeSession({ title: 'Rig demo-release reviewer build-host' })} fontSize={14} onClose={vi.fn()} onReconnect={vi.fn()} onRename={vi.fn()} />);
+  expect(screen.queryByLabelText('Rig-managed worker')).toBeNull();
+});

@@ -6,6 +6,23 @@ project directories, and recent attributed messages recorded by Rig. Creating
 an agent opens its interactive CLI in a normal terminal tile. The raw Rig text
 dashboard remains available under **Advanced diagnostics**.
 
+## Projects and worker identity
+
+The Coordination modal groups workers under expandable project headings. Each
+worker shows its registered name (such as coder or reviewer), execution host,
+runtime and observed state. Expand or collapse a project with its summary button
+or Enter/Space; Open terminal and Reconnect agent retain their existing behavior.
+A worker name is the registered name, not an inferred permission or capability.
+
+Opening a managed terminal records its coordinator target, project, name, host
+and runtime with that tile. The **Rig** badge shows project, worker and execution
+host separately from the terminal's editable title and transport badge. For
+remote workers the viewer still attaches locally to an SSH relay: its EXEC
+transport is not a claim that the provider executes locally. Existing tiles gain
+this metadata when opened again from Coordination. Renaming an ordinary terminal
+does not make it Rig-managed. Tile identity is retained registration metadata,
+not a live activity or verified-process indicator; consult Coordination for state.
+
 ## One coordinator, multiple execution hosts
 
 The WebMux service supervises an optional, loopback-only OpenRig daemon. The
