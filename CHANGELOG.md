@@ -5,31 +5,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### Fixed
-- Require tmux 3.4 or newer before using Rig coordination, avoiding tmux 3.2a's server crash when probing a stopped seat; pin and verify the qualified CI binary (#184).
-- Preserve service PATH precedence for managed Rig agent launches so enrollment uses the same installation as project creation; give the provider selector an exact accessible label (#174).
-- Reconnect managed Rig agents by exact enrolled session ID so retained same-name sessions do not make repeated reconnects ambiguous (#174).
+## [1.3.23] - 2026-10-22
 
 ### Added
-- Run published-Rig browser coverage for managed enrollment, attributed challenge/ACK messaging, grid refresh and tile close/reopen. Retain a production Codex coding/review workload against Trickle, including WebMux restart persistence (#174).
-
-## [1.3.23] - 2026-10-20
-
-### Added
-- Add a Coordination modal and managed agent terminals in the ordinary grid, with one supervised OpenRig coordinator and SSH execution hosts sharing project identity and messaging. Retain the raw text dashboard as optional diagnostics (#172).
-- Record and independently verify a live Claude Code/Codex challenge-response-ACK exchange through OpenRig, including the sandbox networking prerequisite, before relaunching WebMux (#172).
-
-### Limitations
-- Coordination requires OpenRig, tmux and supported Node runtimes on the Linux/macOS WebMux server, plus authenticated provider CLIs and a Rig client on execution hosts. Remote hosts use OpenSSH and loopback reverse forwarding; no remote daemon is required. Existing independent CLI sessions need explicit adoption. Native Windows coordination hosting is unsupported (#172).
+- Add a Rig coordination modal and managed agent terminals in the ordinary grid, with one supervised OpenRig coordinator and SSH execution hosts sharing project identity and messaging. Retain the raw text dashboard as optional diagnostics (#172, #181).
+- Show project-worker hierarchy and explicit Rig identity on managed terminal tiles (#178).
+- Record and independently verify a live Claude Code/Codex challenge-response-ACK exchange, plus a production Codex coding/review workload against Trickle with WebMux restart persistence (#172, #174).
+- Run published-Rig browser coverage for enrollment, attributed messaging, reconnect, grid refresh and tile close/reopen (#174).
 
 ### Changed
 - Integrate the pending xterm 6, Vite 8 / React plugin 6, and chromedp 0.21 / CDP 0.158.1 upgrades together (#170).
+- Require new linked worktrees to use the repository-owned Literate AI worktree root (#182).
 
 ### Fixed
+- Keep browser-test tmux cleanup outside Playwright's web-server process group. Treat absent or refused private sockets as already stopped while retaining failures for listening endpoints and unexpected cleanup errors (#156, #186).
+- Scroll near workspace edges during tile drags, and cancel safely on Escape or focus loss (#180).
+- Verify remote Codex relay identity with the qualified OpenRig fork (#176).
+- Require tmux 3.4 or newer before using Rig coordination, avoiding tmux 3.2a's server crash when probing a stopped seat; pin and verify the qualified CI binary (#184).
+- Preserve service PATH precedence for managed Rig launches and reconnect by exact enrolled session ID (#174).
 - Send the current terminal size when a viewer connects so text dashboards render correctly on their first frame (#172).
 - Require Go 1.27.3 to address the standard-library certificate-trust advisory reported by the dependency audit (#170).
 - Update terminal selection fixtures to xterm 6's interactive surface while retaining clipboard-byte and mouse-routing assertions (#170).
 - Migrate remote browser actions and screenshot capture to the typed CDP API, and preserve terminal/browser vendor chunks with Rolldown's supported grouping (#170).
+
+### Limitations
+- Coordination requires OpenRig, tmux and supported Node runtimes on the Linux/macOS WebMux server, authenticated provider CLIs, and a Rig client on execution hosts. Remote hosts use OpenSSH and loopback reverse forwarding; no remote daemon is required. Existing independent CLI sessions need explicit adoption. Native Windows coordination hosting is unsupported (#172).
+- Positive remote relay identity requires the qualified OpenRig fork; published OpenRig alone does not establish that acceptance (#176).
+- macOS production notarization and Windows Authenticode signing remain pending; physical USB/iPhone/Xcode qualification remains open (#152, #63, #120).
 
 ## [1.3.22] - 2026-10-17
 

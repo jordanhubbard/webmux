@@ -1,7 +1,24 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import net from 'node:net';
 import { spawn, spawnSync } from 'node:child_process';
+
+async function socketIsStopped(socket: string): Promise<boolean> {
+  const connection = net.createConnection(socket);
+  try {
+    return await new Promise<boolean>((resolve, reject) => {
+      connection.once('connect', () => resolve(false));
+      connection.once('error', (error: NodeJS.ErrnoException) => {
+        if (error.code === 'ENOENT' || error.code === 'ECONNREFUSED') resolve(true);
+        else reject(error);
+      });
+      connection.setTimeout(1000, () => reject(new Error(`Timed out checking private test socket ${socket}`)));
+    });
+  } finally {
+    connection.destroy();
+  }
+}
 
 // Own the socket outside Playwright's webServer process group: teardown can kill
 // that whole group before start-server's child-exit callback gets a turn.
@@ -44,7 +61,7 @@ export async function runWithPrivateTmux(command: string, args: string[], option
       // environment. Never hide a cleanup failure by unlinking a live socket.
       const socket = path.join(directory, `tmux-${process.getuid!()}`, 'default');
       const result = spawnSync('tmux', ['-S', socket, 'kill-server'], { env, encoding: 'utf8', timeout: 5000 });
-      if ((result.error || result.status !== 0) && fs.existsSync(socket)) {
+      if (result.error || (result.status !== 0 && !await socketIsStopped(socket))) {
         throw new Error(`Cannot stop private test tmux at ${socket}: ${result.error?.message ?? result.stderr}`);
       }
       fs.rmSync(directory, { recursive: true, force: true });
