@@ -1,14 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { createRequire } from 'node:module';
 import { spawn, spawnSync } from 'node:child_process';
 import { startOpenRigFixture } from './openrig-fixture.mts';
 
 const testHome = path.resolve(import.meta.dirname, '.test-home');
 const defaultsDir = path.resolve(import.meta.dirname, '../../webmux/config.defaults');
-const tmuxTemporary = process.platform === 'win32' ? null : fs.mkdtempSync(path.join(os.tmpdir(), 'wm-tmux-'));
-if (tmuxTemporary) process.env.TMUX_TMPDIR = tmuxTemporary;
+if (process.platform !== 'win32' && !process.env.TMUX_TMPDIR) {
+  throw new Error('Run browser tests through npm run test:e2e so the outer runner owns private tmux cleanup');
+}
 const authMode = process.env.WEBMUX_E2E_AUTH ?? 'none';
 if (authMode !== 'none' && authMode !== 'local') throw new Error(`Unsupported browser-test auth mode: ${authMode}`);
 
@@ -65,6 +65,5 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => ch
 child.on('error', error => { console.error(error); process.exitCode = 1; });
 child.on('exit', code => {
   stopOpenRig();
-  if (tmuxTemporary) { spawnSync('tmux', ['kill-server'], { env: process.env, stdio: 'ignore', timeout: 5000 }); fs.rmSync(tmuxTemporary, { recursive: true, force: true }); }
   process.exitCode = code ?? 0;
 });
