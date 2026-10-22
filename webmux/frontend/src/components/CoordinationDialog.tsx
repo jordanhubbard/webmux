@@ -43,7 +43,7 @@ export function CoordinationDialog({ onClose }: { onClose: () => void }) {
     } catch (err) { setError(String(err)); }
     finally { setBusy(false); }
   };
-  return <Dialog title="Coordination" subtitle="One coordinator for your agents across hosts" onClose={onClose} width={800} dismissible={!busy}>
+  return <Dialog title="Rig" subtitle="One coordinator for your agents across hosts" onClose={onClose} width={800} dismissible={!busy}>
     <div className="coordination-dialog">
     <p>Agents run in your terminal grid. OpenRig shares their project identity and messages; project files stay on each host.</p>
     {statusError && <p role="alert" style={{ color: '#ff9b9b' }}>{statusError}</p>}

@@ -1,7 +1,7 @@
 # Agent coordination
 
 WebMux 1.3.23 integrates OpenRig behind the ordinary **Terminals** grid. The
-**Coordination** button opens a modal showing managed agents, execution hosts,
+**Rig** button opens a modal showing managed agents, execution hosts,
 project directories, and recent attributed messages recorded by Rig. Creating
 an agent opens its interactive CLI in a normal terminal tile. The raw Rig text
 dashboard remains available under **Advanced diagnostics**.
@@ -90,7 +90,7 @@ supported; Windows WebMux's existing terminals remain available.
 
 ## Owner workflow
 
-1. Click **Coordination**. Inspect current agents and recent messages.
+1. Click **Rig**. Inspect current agents and recent messages.
 2. Under **Create agent**, enter a project ID, agent name, execution host and
    absolute project directory on that host. Select Codex or Claude Code.
 3. Click **Create and open terminal**. The registered provider starts in a normal
@@ -143,3 +143,11 @@ Earlier host-local tests remain as historical evidence:
 [Claude/Codex on Linux](validation/openrig-live-2026-10-21/README.md) and
 [initial Puck dashboard](validation/openrig-puck-2026-10-21/README.md). They are not
 substitutes for cross-host qualification.
+
+The optional diagnostics panel presents a **Connect dashboard** action and
+**Refresh connection** when the coordinator is unavailable or has restarted.
+Opening it does not launch agents. Once connected, closing the view preserves
+the dashboard attachment; **Detach dashboard** disconnects only that viewer.
+The main Rig menu retains project and worker management. The terminal dock's
+**Pack** action fills visible grid holes from the top left while preserving
+the current occupied column count.

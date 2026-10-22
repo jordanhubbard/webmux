@@ -19,8 +19,8 @@ test('coordination is a dismissible modal and leaves the terminal grid intact', 
   let attachments = 0;
   page.on('request', value => { if (value.method() === 'POST' && /coordination|openrig/.test(value.url())) attachments++; });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Coordination', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Coordination', exact: true });
+  await page.getByRole('button', { name: 'Rig', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Rig', exact: true });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('heading', { name: 'Create agent', exact: true })).toBeVisible();
   await expect(dialog.getByLabel('Project directory on this host')).toBeVisible();
@@ -45,8 +45,8 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     agents: Agent[]; messages: { from: string; to: string; body: string }[];
   };
   const openDialog = async () => {
-    await page.getByRole('button', { name: 'Coordination', exact: true }).click();
-    return page.getByRole('dialog', { name: 'Coordination', exact: true });
+    await page.getByRole('button', { name: 'Rig', exact: true }).click();
+    return page.getByRole('dialog', { name: 'Rig', exact: true });
   };
   const openAgent = async (name: string, reconnect = false) => {
     const dialog = await openDialog();
@@ -186,8 +186,8 @@ test('coordination groups explicit worker identities in keyboard-expandable proj
     { target: 'opaque-three', project: 'other-project', name: 'reviewer', host: 'other-host', runtime: 'codex', cwd: '/work/other', connected: true },
   ] } }));
   await page.goto('/');
-  await page.getByRole('button', { name: 'Coordination', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Coordination', exact: true });
+  await page.getByRole('button', { name: 'Rig', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Rig', exact: true });
   const workers = dialog.getByRole('list', { name: 'demo-release workers' });
   await expect(workers.getByRole('article')).toHaveCount(2);
   await expect(workers.getByText('build-host', { exact: true })).toBeVisible();

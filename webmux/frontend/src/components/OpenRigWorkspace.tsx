@@ -13,17 +13,20 @@ export function OpenRigWorkspace({ fontSize, fontFamily, poppedOut = false }: {
   const [available, setAvailable] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [refresh, setRefresh] = useState(0);
   useEffect(() => {
     let active = true;
-    void api.getOpenRig().then(status => { if (active) { setAvailable(status.available); setSession(status.session); setError(status.message); } }).catch(err => { if (active) setError(String(err)); });
+    setChecking(true);
+    void api.getOpenRig().then(status => {
+      if (active) { setAvailable(status.available); setSession(status.session); setError(status.message); }
+    }).catch(err => { if (active) { setAvailable(false); setError(String(err)); } })
+      .finally(() => { if (active) setChecking(false); });
     return () => { active = false; };
-  }, []);
+  }, [refresh]);
   return <section className="openrig-workspace" aria-label="OpenRig dashboard">
     <header><strong>OpenRig diagnostics</strong>
-      <button disabled={!available || busy || !!session} onClick={() => {
-        setBusy(true);
-        void api.attachOpenRig().then(setSession).catch(err => setError(String(err))).finally(() => setBusy(false));
-      }}>{session ? 'Dashboard connected' : 'Connect dashboard'}</button>
+      {session && <span>Dashboard connected</span>}
       {session && <button disabled={busy} onClick={() => {
         setBusy(true);
         void api.deleteSession(session.id).then(() => setSession(null)).catch(err => setError(String(err))).finally(() => setBusy(false));
@@ -31,7 +34,18 @@ export function OpenRigWorkspace({ fontSize, fontFamily, poppedOut = false }: {
       {poppedOut && <button onClick={() => window.close()}>Close view</button>}
     </header>
     {error && <p role="alert">{error}</p>}
-    {!session && <p>Connect the raw Rig text dashboard for diagnostics. Use Coordination in the main WebMux window to create agents and open their terminal tiles.</p>}
+    {!session && <div className="openrig-guidance">
+      <h2>Open Rig diagnostics</h2>
+      <p>This view connects the live Rig text dashboard. It does not create coding agents.</p>
+      <button disabled={!available || busy || checking} onClick={() => {
+        setBusy(true); setError('');
+        void api.attachOpenRig().then(setSession).catch(err => setError(String(err))).finally(() => setBusy(false));
+      }}>{busy ? 'Connecting dashboard…' : 'Connect dashboard'}</button>
+      <button disabled={busy || checking} onClick={() => setRefresh(value => value + 1)}>Refresh connection</button>
+      {checking && <p role="status">Checking the Rig coordinator…</p>}
+      {!checking && !available && !error && <p>Rig is unavailable. Check the coordinator, then refresh the connection.</p>}
+      <p>For projects, workers and their terminal tiles, open the <strong>Rig</strong> menu in the main WebMux window.</p>
+    </div>}
     {session && <div className="openrig-terminal" data-testid="openrig-terminal" data-session-id={session.id}>
       <InputBroadcastProvider><Terminal sessionId={session.id} fontSize={fontSize} fontFamily={fontFamily} state={session.state}
         autoScroll onStateChange={state => setSession(value => value ? { ...value, state } : value)} onViewerUpdate={() => {}} onFocusGained={() => {}} /></InputBroadcastProvider>
