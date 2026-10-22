@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { runWithPrivateTmux } from './private-test-tmux.mts';
 
 const require = createRequire(import.meta.url);
 
@@ -21,12 +21,12 @@ const runs = args.length ? [args] : [1, 2].map(shard => [
 ]);
 let exitCode = 0;
 for (const runArgs of runs) {
-  const result = spawnSync(
+  const status = await runWithPrivateTmux(
     process.execPath,
     [playwrightCli, 'test', ...runArgs],
-    { cwd: webmuxDir, env: childEnv, stdio: 'inherit' },
+    { cwd: webmuxDir, env: childEnv },
   );
-  if (result.error) throw result.error;
-  if (result.status !== 0) exitCode = result.status ?? 1;
+  if (status !== 0) exitCode = status;
+  if (status === 130 || status === 143) break;
 }
 process.exitCode = exitCode;

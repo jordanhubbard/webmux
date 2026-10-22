@@ -226,6 +226,9 @@ jobs:
         run: npm run test --workspace=frontend
         working-directory: webmux
 
+      - name: Install tmux for helper lifecycle tests
+        run: sudo -n apt-get install -y tmux
+
       - name: Test compiled TypeScript helpers
         run: npm run test:helpers
         working-directory: webmux
