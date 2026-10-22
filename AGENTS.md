@@ -2,6 +2,29 @@
 
 Public work enters through GitHub Issues and pull requests. Maintainers use [mac](https://github.com/jordanhubbard/mac) for internal task tracking and work dispatch. This repository does not use beads.
 
+## Literate AI guidance and worktree placement
+
+If Literate AI has installed a root `SKILL.md`, read and follow it before changing
+the project. It is the provider-neutral onboarding authority; keep these
+project-specific instructions when refreshing inherited guidance.
+
+Before creating any linked Git worktree, resolve the owning repository's location:
+
+```bash
+litai project worktree location . --json
+```
+
+Create the worktree below the returned `worktree_root`, using a short, portable
+name. For this repository, that root is `<canonical-checkout>/.worktrees/` and is
+ignored by Git. Do not create sibling directories under `~/Src` or use external
+temporary directories as worktree-placement fallbacks. If location resolution
+fails, resolve the failure before allocating a worktree.
+
+Before removing a worktree, inspect tracked, untracked, and ignored content,
+preserve useful work and evidence, and verify that its commits are retained in
+the owning repository. Use non-force `git worktree remove` after the required
+review and merge checks pass.
+
 ## Quick Reference
 
 ```bash

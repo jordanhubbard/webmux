@@ -164,7 +164,8 @@ func TestOpenRigViewsReuseOnlyTheirOwnerAndView(t *testing.T) {
 func TestManagedRigAgentsUseOrdinaryPersistentGridTiles(t *testing.T) {
 	b, store, launched := fixture(t)
 	argv := []string{"/test/tmux", "attach-session", "-t", "=central-seat"}
-	first, err := b.EnsureRigTerminal("owner", "central-seat", "reviewer · remote", argv)
+	identity := RigIdentity{Target: "central-seat", Project: "demo-release", Name: "reviewer", Host: "remote", Runtime: "codex"}
+	first, err := b.EnsureRigTerminal("owner", "central-seat", "reviewer · remote", argv, identity)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,6 +200,17 @@ func TestManagedRigAgentsUseOrdinaryPersistentGridTiles(t *testing.T) {
 	defer restored.Close()
 	if err := restored.Restore(); err != nil {
 		t.Fatal(err)
+	}
+	if first.Rig == nil || *first.Rig != identity || second.Rig == nil || *second.Rig != identity {
+		t.Fatal("explicit identity missing")
+	}
+	first.Rig.Name = "client mutation"
+	if b.entries[first.ID].value.Rig.Name != identity.Name {
+		t.Fatal("returned identity aliases broker state")
+	}
+	values := restored.List("owner")
+	if len(values) != 1 || values[0].Rig == nil || *values[0].Rig != identity {
+		t.Fatal("identity did not survive persistence")
 	}
 	if launches != 1 || len(restored.List("owner")) != 1 {
 		t.Fatal("managed terminal did not reattach after restart")

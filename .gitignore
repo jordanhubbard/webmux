@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Repository-owned linked worktrees
+/.worktrees/
+
 # Build output
 webmux/bin/
 webmux/scripts/dist/

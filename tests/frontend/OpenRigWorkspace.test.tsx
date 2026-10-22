@@ -54,3 +54,17 @@ it('keeps the dashboard outside global broadcast and retains it when the view cl
   await waitFor(() => expect(screen.queryByTestId('openrig-terminal')).toBeNull());
   expect(mocks.remove).toHaveBeenCalledWith(session.id);
 });
+
+it('shows an actionable diagnostics connection and rechecks availability without launching agents', async () => {
+  mocks.status.mockResolvedValueOnce({ available: false, message: 'Coordinator starting', session: null });
+  render(<OpenRigWorkspace fontSize={14} />);
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Coordinator starting'));
+  expect(screen.getByRole('heading', { name: 'Open Rig diagnostics' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Connect dashboard' })).toBeDisabled();
+  mocks.status.mockResolvedValueOnce({ available: true, message: '', session: null });
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh connection' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Connect dashboard' })).toBeEnabled());
+  expect(mocks.attach).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Connect dashboard' }));
+  expect(await screen.findByTestId('openrig-terminal')).toHaveAttribute('data-session-id', session.id);
+});

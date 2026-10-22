@@ -113,6 +113,19 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           sudo -n apt-get install -y tmux
+      - name: Install qualified tmux for Rig coordination
+        if: runner.os == 'Linux'
+        run: |
+          sudo -n apt-get install -y libevent-dev libncurses-dev
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/tmux-3.4.tar.gz" https://github.com/tmux/tmux/releases/download/3.4/tmux-3.4.tar.gz
+          echo "551ab8dea0bf505c0ad6b7bb35ef567cdde0ccb84357df142c254f35a23e19aa  $RUNNER_TEMP/tmux-3.4.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/tmux-3.4.tar.gz" -C "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP/tmux-3.4"
+          ./configure --prefix="$RUNNER_TEMP/webmux-tmux"
+          make -j2
+          make install
+          echo "$RUNNER_TEMP/webmux-tmux/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/webmux-tmux/bin/tmux" -V
       - name: Verify browser workflows against Go
         if: runner.os == 'Linux'
         working-directory: webmux
@@ -145,6 +158,15 @@ jobs:
           ssh_result=0
           npm run test:e2e:go -- ssh-integration.spec.ts --output=test-results/ssh-go || ssh_result=1
           exit "$ssh_result"
+      - name: Verify managed agents through the published Rig CLI
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_OPENRIG: '1'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/webmux-openrig" --no-audit --no-fund @openrig/cli@0.6.14
+          export WEBMUX_OPENRIG_CLI="$RUNNER_TEMP/webmux-openrig/node_modules/@openrig/cli/dist/bin-wrapper.js"
+          npm run test:e2e:go -- openrig.spec.ts --output=test-results/openrig-go
       - name: Verify real VNC interoperability through Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux

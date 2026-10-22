@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
-type Agent = { target: string; project: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number };
+type Agent = { target: string; project: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string };
 type Input = { project?: string; name?: string; host?: string; cwd?: string; runtime?: string };
 const [action, directory] = process.argv.slice(2);
 if (!directory) throw new Error('Missing coordination state directory');
@@ -23,8 +23,17 @@ const identifier = (value: string, field: string) => {
   if (!/^[a-z][a-z0-9-]{0,47}$/.test(value)) throw new Error(`${field}: use a letter followed by letters, digits or hyphens (48 characters maximum).`);
   return value;
 };
-const sshArgs = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=8', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3'];
+const sshArgs = ['-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=8', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3'];
 try {
+  if (action !== 'environment') {
+    // Rig's activity probe can crash tmux 3.2a after a seat disappears,
+    // taking every session on that server with it. Fail before calling Rig.
+    const version = run('tmux', ['-V']);
+    const match = /^tmux (?:next-)?(\d+)\.(\d+)/.exec(version);
+    if (!match || Number(match[1]) < 3 || (Number(match[1]) === 3 && Number(match[2]) < 4)) {
+      throw new Error('Rig coordination requires tmux 3.4 or newer on the WebMux server. Upgrade tmux on the service PATH before enabling coordination.');
+    }
+  }
   if (action === 'ensure') {
     // start is idempotent and leaves an existing daemon and its teams intact.
     const state = path.join(directory, 'coordinator.json');
@@ -38,9 +47,17 @@ try {
   } else if (action === 'environment') {
     const tmux = process.argv[4] ?? '';
     if (!/^wm-[a-z0-9-]+$/.test(tmux)) throw new Error('Invalid managed transport');
-    const attached = JSON.parse(fs.readFileSync(path.join(directory, `${tmux}.attached.json`), 'utf8')) as { attachmentType?: string; env?: Record<string, unknown> };
-    if (attached.attachmentType !== 'tmux' || typeof attached.env?.OPENRIG_URL !== 'string' || attached.env?.OPENRIG_SESSION_NAME !== tmux) throw new Error('Rig did not bind the expected terminal');
+    const attached = JSON.parse(fs.readFileSync(path.join(directory, `${tmux}.attached.json`), 'utf8')) as { attachmentType?: string; sessionName?: string; senderAddress?: string; env?: Record<string, unknown> };
+    if (attached.attachmentType !== 'tmux' || typeof attached.env?.OPENRIG_URL !== 'string' || attached.sessionName !== tmux || typeof attached.env?.OPENRIG_SESSION_NAME !== 'string' || attached.env.OPENRIG_SESSION_NAME !== (attached.senderAddress ?? attached.sessionName)) throw new Error('Rig did not bind the expected terminal');
     const keys = ['OPENRIG_NODE_ID', 'OPENRIG_SESSION_NAME', 'OPENRIG_RUNTIME', 'OPENRIG_URL', 'OPENRIG_ACTIVITY_HOOK_TOKEN'];
+    const remoteFile = path.join(directory, `${tmux}.remote.json`);
+    if (fs.existsSync(remoteFile)) {
+      const remote = JSON.parse(fs.readFileSync(remoteFile, 'utf8')) as { setup: string; run: string };
+      const sender = q(String(attached.env.OPENRIG_SESSION_NAME));
+      attached.env.OPENRIG_RELAY_SETUP = remote.setup.replaceAll(q('__OPENRIG_SENDER_ADDRESS__'), sender);
+      attached.env.OPENRIG_RELAY_RUN = remote.run.replaceAll(q('__OPENRIG_SENDER_ADDRESS__'), sender);
+      keys.push('OPENRIG_RELAY_SETUP', 'OPENRIG_RELAY_RUN');
+    }
     write(path.join(directory, `${tmux}.env`), keys.filter(key => typeof attached.env?.[key] === 'string').map(key => `export ${key}=${q(String(attached.env?.[key]))}`).join('\n') + '\n');
   } else if (action === 'status') {
     const raw = JSON.parse(run('rig', ['ps', '--nodes', '-A', '--fields', 'canonicalSessionName,runtime,rigName,sessionStatus', '--json'])) as Record<string, unknown>[] | { entries?: Record<string, unknown>[] };
@@ -66,6 +83,10 @@ try {
     const runtime = input.runtime ?? 'codex';
     if (!['codex', 'claude-code'].includes(runtime)) throw new Error('Unsupported agent runtime.');
     const local = host === 'localhost';
+    // Older published coordinators retain their existing transport, with no
+    // remote identity claim. Explicit relay enrollment needs both new options.
+    const attachHelp = !local && runtime === 'codex' ? run('rig', ['attach', '--help']) : '';
+    const relayIdentity = attachHelp.includes('--relay-ssh-host') && attachHelp.includes('--relay-tmux-session');
     const identityFile = path.join(directory, 'identity.json');
     const scope = fs.existsSync(identityFile) ? (JSON.parse(fs.readFileSync(identityFile, 'utf8')) as { scope: string }).scope : crypto.createHash('sha256').update(directory).digest('hex').slice(0, 10);
     if (!/^[a-f0-9]{10}$/.test(scope)) throw new Error('Invalid saved coordinator identity');
@@ -75,7 +96,7 @@ try {
     const tmux = `wm-${scope}-${project}-${member}`;
     const target = tmux;
     const recordFile = path.join(directory, `${tmux}.agent.json`);
-    const existing = records().find(a => a.target === target);
+    const existing = records().find(a => a.tmux === tmux);
     let alive = false;
     try { run('tmux', ['has-session', '-t', `=${tmux}`], 3000); alive = true; } catch { /* A stopped relay can be explicitly reconnected. */ }
     if (existing && (existing.cwd !== cwd || existing.runtime !== runtime)) throw new Error('This agent has a different directory or runtime. Choose another name.');
@@ -85,7 +106,7 @@ try {
       console.log(JSON.stringify(existing));
     } else {
       // Validate the actual execution host before allocating a central seat.
-      const probe = `export PATH="$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"; cd ${q(cwd)} && command -v ${runtime === 'codex' ? 'codex' : 'claude'} && command -v rig${local ? '' : ' && command -v tmux'}`;
+      const probe = `export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; cd ${q(cwd)} && command -v ${runtime === 'codex' ? 'codex' : 'claude'} && command -v rig${local ? '' : ' && command -v tmux'}`;
       if (local) run('/bin/sh', ['-c', probe]); else run('ssh', [...sshArgs, host, probe]);
       const projectDir = path.join(directory, project);
       fs.mkdirSync(projectDir, { recursive: true, mode: 0o700 });
@@ -104,29 +125,47 @@ try {
       const role = `You are ${name}, a WebMux coordinated agent for project ${project}, executing on ${host} in ${cwd}. OpenRig is already connected through OPENRIG_URL and OPENRIG_SESSION_NAME. Run rig whoami --json and rig ps --nodes -A --json to discover teammates. Use rig send <canonicalSessionName> <message> for coordination; do not override sender identity. Project identity is shared, files are host-local. Keep the owner's project instructions and permission policy. Report READY and wait for the owner or a teammate. Do not launch other agents automatically.`;
       const cli = runtime === 'codex' ? `codex -c sandbox_workspace_write.network_access=true ${q(role)}` : `claude --append-system-prompt ${q(role)} ${q('Verify your coordination identity, discover teammates, report READY and wait.')}`;
       const rigId = (JSON.parse(fs.readFileSync(projectState, 'utf8')) as { rigId: string }).rigId;
-      const attach = `rig attach --self --rig ${q(rigId)} ${existing ? `--node ${q('agents.' + member)}` : `--pod agents --member ${q(member)}`} --runtime ${q(runtime)} --cwd ${q(cwd)} --json`;
+      const attach = `rig attach --self --rig ${q(rigId)} ${existing ? `--node ${q('agents.' + member)}` : `--pod agents --member ${q(member)}`} --runtime ${q(runtime)} --cwd ${q(cwd)}${relayIdentity ? ` --relay-ssh-host ${q(host)} --relay-tmux-session ${q(tmux)}` : ''} --json`;
       // Get the actual daemon URL from the supported attach response, not a
       // guessed service port. Node writes a shell-quoted env file from JSON.
       const envFile = path.join(directory, `${tmux}.env`);
       const remotePort = local ? 0 : existing?.remotePort ?? Number(run('ssh', [...sshArgs, host, "python3 -c 'import socket; s=socket.socket(); s.bind((\"127.0.0.1\",0)); print(s.getsockname()[1])'"]));
       if (!local && (!Number.isInteger(remotePort) || remotePort < 1024 || remotePort > 65535)) throw new Error('Cannot allocate a private SSH reverse forward.');
-      const remoteAgent = `export PATH="$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"; export OPENRIG_URL=http://127.0.0.1:${remotePort}; export OPENRIG_SESSION_NAME=${q(target)}; cd ${q(cwd)} && exec ${cli}`;
-      const remoteRun = `export PATH="$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"; exec tmux new-session -A -s ${q(tmux)} ${q('/bin/sh -c ' + q(remoteAgent))}`;
+      const remoteAgent = `export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; export OPENRIG_URL=http://127.0.0.1:${remotePort}; export OPENRIG_SESSION_NAME=${q('__OPENRIG_SENDER_ADDRESS__')}; cd ${q(cwd)} && exec ${cli}`;
+      const remoteRun = `export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; exec tmux new-session -A -s ${q(tmux)} ${q('/bin/sh -c ' + q(remoteAgent))}`;
+      // The patched coordinator proves this exact attach command against the local
+      // SSH process, then independently observes the remote pane. Agent prompts
+      // and session creation are kept out of the identity-bearing attach argv.
+      const relayPath = 'export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; ';
+      const remoteCreate = `${relayPath}tmux has-session -t ${q('=' + tmux)} 2>/dev/null || tmux new-session -d -s ${q(tmux)} ${q('/bin/sh -c ' + q(remoteAgent))}`;
+      const remoteAttach = `${relayPath}exec tmux attach-session -t =${tmux}`;
+      if (!local) write(path.join(directory, `${tmux}.remote.json`), { setup: remoteCreate, run: remoteRun });
       // Pass only routing identity through the SSH channel; credentials and
       // provider homes stay on the execution host. Never forward auth tokens.
       const endpoint = `node -e 'const u=new URL(process.env.OPENRIG_URL); if(u.hostname!=="127.0.0.1"&&u.hostname!=="localhost") throw Error("Coordinator must be loopback-only"); console.log(u.port||80)'`;
-      const command = local ? `cd ${q(cwd)}\nexec ${cli}` : `PORT=$(${endpoint})\nexec ssh ${sshArgs.map(q).join(' ')} -o ExitOnForwardFailure=yes -tt -R ${q(`127.0.0.1:${remotePort}:127.0.0.1:`)}"$PORT" ${q(host)} ${q(remoteRun)}`;
-      write(launcher, `#!/bin/sh\nset -eu\nexport PATH="$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin:$PATH"\n${attach} > ${q(attached + '.tmp')} || { mv -f ${q(attached + '.tmp')} ${q(attached)}; exit 1; }\nmv -f ${q(attached + '.tmp')} ${q(attached)}\n${q(process.execPath)} ${q(process.argv[1])} environment ${q(directory)} ${q(tmux)}\n. ${q(envFile)}\n${command}\n`);
+      const command = local ? `cd ${q(cwd)}\nexec ${cli}` : `${relayIdentity ? `ssh ${sshArgs.map(q).join(' ')} ${q(host)} "$OPENRIG_RELAY_SETUP"\n` : ''}PORT=$(${endpoint})\nexec ssh ${sshArgs.map(q).join(' ')} -o ExitOnForwardFailure=yes -tt -R ${q(`127.0.0.1:${remotePort}:127.0.0.1:`)}"$PORT" ${q(host)} ${relayIdentity ? q(remoteAttach) : '"$OPENRIG_RELAY_RUN"'}`;
+      // An existing tmux server retains its original environment. Bind the
+      // service PATH explicitly rather than inheriting that server's stale PATH.
+      write(launcher, `#!/bin/sh\nset -eu\nexport PATH=${q(process.env.PATH ?? '')}:"$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"\n${attach} > ${q(attached + '.tmp')} || { mv -f ${q(attached + '.tmp')} ${q(attached)}; exit 1; }\nmv -f ${q(attached + '.tmp')} ${q(attached)}\n${q(process.execPath)} ${q(process.argv[1])} environment ${q(directory)} ${q(tmux)}\n. ${q(envFile)}\n${command}\n`);
       fs.chmodSync(launcher, 0o700);
-      if (existing) run('rig', ['unclaim', target]);
+      if (existing) {
+        // Reattachments retain historical records with the same session name.
+        // Use the exact enrolled session ID; names become ambiguous on retry.
+        const previous = existing.sessionId ?? (fs.existsSync(attached) ? (JSON.parse(fs.readFileSync(attached, 'utf8')) as { sessionId?: string }).sessionId : undefined);
+        if (!previous) throw new Error('Cannot resolve the previous Rig session ID. Restore the agent registration record before reconnecting.');
+        run('rig', ['unclaim', previous]);
+      }
       fs.rmSync(attached, { force: true });
       run('tmux', ['new-session', '-d', '-s', tmux, '-x', '120', '-y', '36', `/bin/sh ${q(launcher)}`]);
       const agent: Agent = { target, project, name, host, cwd, runtime, tmux, remotePort };
       const deadline = Date.now() + 10000;
       while (!fs.existsSync(attached) && Date.now() < deadline) await delay(100);
       if (!fs.existsSync(attached)) throw new Error('Agent did not register with the coordinator.');
-      const registration = JSON.parse(fs.readFileSync(attached, 'utf8')) as { ok?: boolean; error?: string; attachmentType?: string };
-      if (registration.ok === false || registration.attachmentType !== 'tmux') throw new Error(registration.error || 'Agent transport registration failed.');
+      const registration = JSON.parse(fs.readFileSync(attached, 'utf8')) as { ok?: boolean; error?: string; attachmentType?: string; sessionId?: string; env?: { OPENRIG_SESSION_NAME?: string } };
+      if (registration.ok === false || registration.attachmentType !== 'tmux' || !registration.sessionId) throw new Error(registration.error || 'Agent transport registration failed.');
+      agent.sessionId = registration.sessionId;
+      if (typeof registration.env?.OPENRIG_SESSION_NAME !== 'string') throw new Error('Coordinator did not return a sender address.');
+      agent.target = registration.env.OPENRIG_SESSION_NAME;
       // Keep a registered seat discoverable even if provider startup fails.
       // The owner can fix authentication and explicitly reconnect that seat.
       write(recordFile, agent);

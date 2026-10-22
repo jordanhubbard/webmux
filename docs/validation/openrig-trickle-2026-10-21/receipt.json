@@ -1,0 +1,88 @@
+{
+  "schema": "webmux/live-workload@1",
+  "checked_at": "2026-10-21T18:43:49.561Z",
+  "workload": "NVIDIA-Omniverse/trickle CI-009 / issue #81",
+  "workload_review": "https://github.com/NVIDIA-Omniverse/trickle/pull/88",
+  "workload_commit": "3de6a353aa338358b7ff09a9fa0aeeade452f51e",
+  "provider": "Codex",
+  "agents": [
+    {
+      "role": "coder",
+      "execution": "local macOS",
+      "target": "wm-215ca0cfed-trickle-release-coder-49960de5",
+      "connected": true
+    },
+    {
+      "role": "reviewer",
+      "execution": "remote Linux",
+      "target": "wm-215ca0cfed-trickle-release-reviewer-1855f8fe",
+      "connected": true
+    }
+  ],
+  "grid_sessions": [
+    {
+      "id": "fd10014e-2e98-4e0e-b389-70d82d876951",
+      "state": "connected",
+      "view": "managed:wm-215ca0cfed-trickle-release-coder-49960de5"
+    },
+    {
+      "id": "153dfa2a-9fa5-415a-90d0-1690ad8fa193",
+      "state": "connected",
+      "view": "managed:wm-215ca0cfed-trickle-release-reviewer-1855f8fe"
+    }
+  ],
+  "browser": {
+    "authenticated_production": true,
+    "coordination_http_status": 200,
+    "refresh_reuses_sessions": true,
+    "open_terminal_reuses_sessions": true
+  },
+  "restart": {
+    "at": "2026-10-21T18:37:59.875622+00:00",
+    "before_pid": "41727",
+    "after_pid": "22847",
+    "local_pane_pids_unchanged": true,
+    "remote_provider_pane_pid_unchanged": true,
+    "grid_session_ids_preserved": true
+  },
+  "qualification_boundaries": [
+    "Real Codex-to-Codex coding and review; Claude Code was not exercised.",
+    "Trickle Windows acceptance and stale lifecycle receipt remain open.",
+    "Published browser fixture uses interactive stand-ins; live provider evidence is separate."
+  ],
+  "implementation_commit": "43aed2f6c2b25cc722d19bde1d33465329050575",
+  "review": {
+    "verdict": "No blocking source findings in the scoped diagnostic patch",
+    "independent_checks": {
+      "timeout_driver": "2 pass, 1 Windows-only skip; four hang controls",
+      "ci_contracts": 19,
+      "roadmap_tests": 15,
+      "qt_cases": 35,
+      "windows_report_driver": "3 pass, including exclusive-lock and four timeout controls",
+      "windows_qt": "34 pass, 1 startup-state failure"
+    },
+    "merge_ready": false,
+    "remaining": [
+      "stale authority and acceptance receipt",
+      "passing exact-head Windows Qt qualification",
+      "unresolved desktop startup-state failure"
+    ]
+  },
+  "relay_reconnect": {
+    "remote_provider_pid_unchanged": true,
+    "central_relay_recreated": true,
+    "remote_forward_port_reused": 35099,
+    "remote_provider_pane_pid": "250746",
+    "central_pane_pid": "36226",
+    "challenge_nonce": "601311feb8360d64e537cdd3",
+    "matching_peer_ack_received": true,
+    "exact_id_recovery": {
+      "first_session_id": "01M5FWSH7M6JRMMTD41M7E46CD",
+      "second_session_id": "01M5FWTP9RATJ8FFME3YQQTPBA",
+      "remote_provider_pid_unchanged": true,
+      "repeated_exact_id_reconnects_passed": true,
+      "legacy_attachment_record_migrated": true
+    }
+  },
+  "workload_documentation_commit": "3160ae3adb7cc5d4444308676b975dc4411fae9c"
+}
