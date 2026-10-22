@@ -25,6 +25,15 @@ const identifier = (value: string, field: string) => {
 };
 const sshArgs = ['-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=8', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3'];
 try {
+  if (action !== 'environment') {
+    // Rig's activity probe can crash tmux 3.2a after a seat disappears,
+    // taking every session on that server with it. Fail before calling Rig.
+    const version = run('tmux', ['-V']);
+    const match = /^tmux (?:next-)?(\d+)\.(\d+)/.exec(version);
+    if (!match || Number(match[1]) < 3 || (Number(match[1]) === 3 && Number(match[2]) < 4)) {
+      throw new Error('Rig coordination requires tmux 3.4 or newer on the WebMux server. Upgrade tmux on the service PATH before enabling coordination.');
+    }
+  }
   if (action === 'ensure') {
     // start is idempotent and leaves an existing daemon and its teams intact.
     const state = path.join(directory, 'coordinator.json');

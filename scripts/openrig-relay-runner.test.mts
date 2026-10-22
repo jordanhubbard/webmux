@@ -22,6 +22,7 @@ if(name==='rig'){
  if(a.at(-1).includes('socket.socket')) console.log('3456');
  else if(a.at(-1).includes('command -v')) console.log('/tools/codex\\n/tools/rig\\n/tools/tmux');
 }else if(name==='tmux'){
+ if(a[0]==='-V'){console.log('tmux 3.4');process.exit(0);}
  if(a[0]==='has-session') process.exit(fs.existsSync(path.join(root,'alive'))?0:1);
  if(a[0]==='new-session'){const t=a[a.indexOf('-s')+1];fs.writeFileSync(path.join(root,'alive'),t);const r=cp.spawnSync('/bin/sh',['-c',a.at(-1)],{env:{...process.env,TEST_TMUX:t},encoding:'utf8'});if(r.status)process.stderr.write(r.stderr);process.exit(r.status||0);}
 }

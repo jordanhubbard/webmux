@@ -48,7 +48,9 @@ and automatic remote resume/fork remain outside this patch.
 
 ## Prerequisites
 
-On the Linux/macOS WebMux server, put `rig`, `node` and `tmux` on the service PATH.
+On the Linux/macOS WebMux server, put `rig`, `node` and tmux **3.4 or newer** on the service PATH.
+Coordination rejects older or unrecognized tmux versions before calling Rig:
+tmux 3.2a can crash its entire server when Rig probes a recently stopped seat.
 Use a Node version supported by the installed OpenRig release (the qualified
 version is OpenRig 0.6.14 with its own Node 22/24 runtime). WebMux's helper needs
 Node 24 or later. A `rig` launcher must preserve `TMUX`, `TMUX_PANE`,
