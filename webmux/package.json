@@ -32,7 +32,7 @@
     "service:status": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 status",
     "lint": "npm run lint:go && npm run lint --workspace=frontend",
     "lint:go": "cd server && go vet ./...",
-    "test:helpers": "npm run build:helpers && node --test scripts/helpers.test.mts scripts/check-lock-identity.test.mts ../scripts/release-metadata.test.mts ../scripts/render-service.test.mts ../scripts/macos-app.test.mts ../scripts/verify-native-artifacts.test.mts ../scripts/verify-openrig-proof.test.mts ../scripts/openrig-runner.test.mts ../scripts/openrig-relay-runner.test.mts ../scripts/make-controls.test.mts",
+    "test:helpers": "npm run build:helpers && node --test scripts/helpers.test.mts scripts/check-lock-identity.test.mts ../scripts/release-metadata.test.mts ../scripts/render-service.test.mts ../scripts/macos-app.test.mts ../scripts/verify-native-artifacts.test.mts ../scripts/verify-openrig-proof.test.mts ../scripts/openrig-runner.test.mts ../scripts/openrig-relay-runner.test.mts ../scripts/openrig-tmux.test.mts ../scripts/make-controls.test.mts",
     "test": "npm run test:go && npm run test --workspace=frontend && npm run test:helpers",
     "test:go": "cd server && go test ./...",
     "test:visual": "node scripts/visual-repeatability.mts",

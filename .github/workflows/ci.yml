@@ -113,6 +113,19 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           sudo -n apt-get install -y tmux
+      - name: Install qualified tmux for Rig coordination
+        if: runner.os == 'Linux'
+        run: |
+          sudo -n apt-get install -y libevent-dev libncurses-dev
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/tmux-3.4.tar.gz" https://github.com/tmux/tmux/releases/download/3.4/tmux-3.4.tar.gz
+          echo "551ab8dea0bf505c0ad6b7bb35ef567cdde0ccb84357df142c254f35a23e19aa  $RUNNER_TEMP/tmux-3.4.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/tmux-3.4.tar.gz" -C "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP/tmux-3.4"
+          ./configure --prefix="$RUNNER_TEMP/webmux-tmux"
+          make -j2
+          make install
+          echo "$RUNNER_TEMP/webmux-tmux/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/webmux-tmux/bin/tmux" -V
       - name: Verify browser workflows against Go
         if: runner.os == 'Linux'
         working-directory: webmux

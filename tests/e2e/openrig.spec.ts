@@ -39,6 +39,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   const home = path.resolve(__dirname, '.test-home');
   const project = 'browser-workload';
   const sessions: string[] = [];
+  let workloadCompleted = false;
   type Agent = { name: string; target: string; connected: boolean; sessionId?: string };
   type Session = { id: string; openrig_view?: string; rig?: { target: string; project: string; name: string; host: string; runtime: string } };
   const status = async () => (await (await request.get('/api/coordination')).json()) as {
@@ -127,6 +128,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       expect((await status()).agents).toHaveLength(2);
     }
     await page.screenshot({ path: info.outputPath('managed-rig-workload.png') });
+    workloadCompleted = true;
   } finally {
     for (const id of sessions) await request.delete(`/api/sessions/${id}`);
     // Only this test's isolated project is stopped; server teardown owns daemon
@@ -138,14 +140,14 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       if (!existsSync(file)) continue;
       const team = JSON.parse(readFileSync(file, 'utf8')) as { rigId: string };
       const stopped = spawnSync(path.join(home, 'openrig-bin', 'rig'), ['down', team.rigId], { timeout: 15000, encoding: 'utf8' });
-      if (info.status === info.expectedStatus && !/already stopped/.test(stopped.stdout + stopped.stderr)) {
+      if (workloadCompleted && !/already stopped/.test(stopped.stdout + stopped.stderr)) {
         expect(stopped.status, stopped.stdout + stopped.stderr).toBe(0);
       }
     }
     const sentinel = spawnSync('tmux', ['has-session', '-t', '=webmux-fixture-path'], {
       env: { ...process.env, TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') }, timeout: 5000,
     });
-    if (info.status === info.expectedStatus) expect(sentinel.status).toBe(0);
+    if (workloadCompleted) expect(sentinel.status).toBe(0);
   }
 });
 
