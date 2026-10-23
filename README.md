@@ -45,6 +45,8 @@ In **Connect to Host**, choose **Localhost · tmux** under **Quick Connect** to 
 
 Local terminals use the same terminal emulator and workspace as remote SSH sessions. They run as the OS user running WebMux (not the browser's login name). Each terminal has its own `webmux-<session-id>` tmux session; reconnecting or restarting WebMux reattaches to that shell. A machine reboot ends the running shell, and recovery creates a new one.
 
+The wheel scrolls a local terminal's tmux pane history. WebMux enables tmux mouse mode for its own session when it attaches, without changing other tmux sessions. For tmux reached through SSH or another independently managed connection, enable tmux mouse mode there (`tmux set -g mouse on`) to use wheel scrolling; `Ctrl+B` then `[` enters copy mode from the keyboard.
+
 Closing a tile removes its WebMux record and detaches its tmux client; the shell remains available through `tmux attach -t webmux-<session-id>`. Use `exit` inside the shell, or `tmux kill-session -t webmux-<session-id>`, to terminate it permanently.
 
 ### Terminal images, files, and clipboard

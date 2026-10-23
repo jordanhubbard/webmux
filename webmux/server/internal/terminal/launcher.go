@@ -184,10 +184,15 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 			return Command{}, errors.New("Local terminals require tmux installed on the WebMux server and available on PATH")
 		}
 		// Detaching the client leaves the shell alive for reconnect and recovery.
-		command.Args = []string{"new-session", "-A", "-s", "webmux-" + request.SessionID}
+		// Mouse mode lets tmux handle wheel events in its alternate screen and
+		// enter copy mode for pane history. Set it on this session only, including
+		// when -A reattaches an existing shell.
+		session := "webmux-" + request.SessionID
+		command.Args = []string{"new-session", "-A", "-s", session}
 		if p.browserShell != "" {
 			command.Args = append(command.Args, "--", p.browserShell, "--browser-shell")
 		}
+		command.Args = append(command.Args, ";", "set-option", "-t", session, "mouse", "on")
 		for i := len(command.Env) - 1; i >= 0; i-- {
 			if strings.HasPrefix(command.Env[i], "TMUX=") || strings.HasPrefix(command.Env[i], "TMUX_PANE=") {
 				command.Env = append(command.Env[:i], command.Env[i+1:]...)
