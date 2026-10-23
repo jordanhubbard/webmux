@@ -31,15 +31,19 @@ export function CoordinationDialog({ onClose }: { onClose: () => void }) {
     const timer = window.setInterval(() => { void refresh(); }, 5000);
     return () => window.clearInterval(timer);
   }, [refresh]);
+  const revealTerminal = async (target: string) => {
+    const session = await api.attachCoordinatedAgent(target);
+    window.dispatchEvent(new CustomEvent('webmux-sessions-changed', { detail: { sessionId: session.id } }));
+    setActivePane('terminals');
+    onClose();
+  };
   const openTerminal = async (target: string) => {
     setBusy(true);
+    setError('');
     try {
       const agent = agents.find(a => a.target === target);
       if (agent && !agent.connected) await api.createCoordinatedAgent(agent);
-      await api.attachCoordinatedAgent(target);
-      window.dispatchEvent(new Event('webmux-sessions-changed'));
-      setActivePane('terminals');
-      onClose();
+      await revealTerminal(target);
     } catch (err) { setError(String(err)); }
     finally { setBusy(false); }
   };
@@ -73,10 +77,8 @@ export function CoordinationDialog({ onClose }: { onClose: () => void }) {
     {messages.length > 0 && <details open><summary>Recent coordination</summary><div style={{ maxHeight: 180, overflow: 'auto' }}>{messages.map((message, index) => <div key={`${message.time}-${index}`} style={{ padding: '6px 0' }}><small>{new Date(message.time).toLocaleTimeString()} · {agents.find(a => a.target === message.from)?.name || message.from} → {agents.find(a => a.target === message.to)?.name || message.to} · recorded ({message.state})</small><pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>{message.body.split('\n---\n')[1] ?? message.body}</pre></div>)}</div></details>}
     <form onSubmit={event => {
       event.preventDefault(); setBusy(true); setError('');
-      void api.createCoordinatedAgent({ project, name, host, cwd, runtime }).then(() => {
-        window.dispatchEvent(new Event('webmux-sessions-changed'));
-        setActivePane('terminals'); onClose();
-      }).catch(err => setError(String(err))).finally(() => setBusy(false));
+      void api.createCoordinatedAgent({ project, name, host, cwd, runtime }).then(agent => revealTerminal(agent.target))
+        .catch(err => setError(String(err))).finally(() => setBusy(false));
     }}>
       <h3>Create agent</h3>
       <p>Use the same project ID on every host. Remote hosts use your server’s OpenSSH configuration and need the agent CLI and Rig client installed; no remote Rig daemon is needed.</p>

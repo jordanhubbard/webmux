@@ -75,7 +75,7 @@ export interface MacSetup {
 
 export const api = {
   getCoordination: () => request<{ agents: CoordinatedAgent[]; messages: { from: string; to: string; body: string; time: string; state: string }[] }>('/coordination'),
-  createCoordinatedAgent: (input: { project: string; name: string; host: string; cwd: string; runtime: string }) => request('/coordination/agents', { method: 'POST', body: JSON.stringify(input) }),
+  createCoordinatedAgent: (input: { project: string; name: string; host: string; cwd: string; runtime: string }) => request<{ target: string }>('/coordination/agents', { method: 'POST', body: JSON.stringify(input) }),
   attachCoordinatedAgent: (target: string) => request<Session>('/coordination/attach', { method: 'POST', body: JSON.stringify({ target }) }),
   getOpenRig: () => request<{ available: boolean; message: string; session: Session | null; views?: Record<string, Session>; proof?: { phase: string; run_id: string; message: string; nonce_a?: string; nonce_b?: string; digest?: string } | null }>('/openrig'),
   getOpenRigAgents: () => request<{ target: string; runtime: string; rig: string; status: string }[]>('/openrig/agents'),

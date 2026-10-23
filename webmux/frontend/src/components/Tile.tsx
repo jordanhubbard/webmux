@@ -10,6 +10,7 @@ import type { Session, ConnectionState, NamedTheme } from '../types';
 
 interface TileProps {
   session: Session;
+  focusRequest?: number;
   fontSize: number;
   fontFamily?: string;
   autoScroll?: boolean;
@@ -35,6 +36,7 @@ interface TileProps {
 
 export function Tile({
   session,
+  focusRequest = 0,
   fontSize,
   fontFamily,
   autoScroll = true,
@@ -71,6 +73,10 @@ export function Tile({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isFocused = focusedSessionId === session.id;
+
+  useEffect(() => {
+    if (focusRequest) termHandleRef.current?.focus();
+  }, [focusRequest]);
 
   useEffect(() => {
     setState(session.state);

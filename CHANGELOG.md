@@ -5,6 +5,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Make Rig's Open terminal, reconnect and create actions reveal and focus the requested terminal, including offscreen and minimized views. Restore minimized views into a free grid cell without duplicating the agent or its viewer (#191).
+
 ## [1.3.23] - 2026-10-22
 
 ### Added
