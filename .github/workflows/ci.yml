@@ -14,7 +14,7 @@ jobs:
   virtual-usb:
     name: Virtual USB kernel integration
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       USB_TEST_KERNEL: 6.8.0-146-generic
     steps:
@@ -26,10 +26,13 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_usb_sysfs.py
       - name: Install native kernel USB fixture prerequisites
         run: |
+          # The hosted Azure mirror can take longer than this job's deadline
+          # to fetch the generic kernel image and modules.
+          sudo -n sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
           sudo -n apt-get update
           # Hosted Azure kernels omit gadget drivers. Boot an isolated generic
           # kernel with matching modules instead of mutating the host kernel.
-          sudo -n apt-get install -y openssh-server qemu-system-x86 busybox-static python3-venv "linux-image-$USB_TEST_KERNEL" "linux-modules-extra-$USB_TEST_KERNEL" "linux-tools-$USB_TEST_KERNEL"
+          sudo -n apt-get install -y --no-install-recommends openssh-server qemu-system-x86 busybox-static python3-venv "linux-image-$USB_TEST_KERNEL" "linux-modules-extra-$USB_TEST_KERNEL" "linux-tools-$USB_TEST_KERNEL"
           for module in usbip-vudc g_mass_storage vhci-hcd; do
             modinfo -k "$USB_TEST_KERNEL" -F filename "$module"
           done
