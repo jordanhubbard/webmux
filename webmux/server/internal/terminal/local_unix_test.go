@@ -59,11 +59,20 @@ func TestLocalTmuxShellSurvivesClientClose(t *testing.T) {
 	if err != nil || pid == "" {
 		t.Fatalf("tmux session did not start: %s, %v", pid, err)
 	}
+	if mouse, err := run("show-option", "-v", "-t", target, "mouse"); err != nil || mouse != "on" {
+		t.Fatalf("managed session mouse mode: %q, %v", mouse, err)
+	}
+	if globalMouse, err := run("show-option", "-gv", "mouse"); err != nil || globalMouse != "off" {
+		t.Fatalf("global mouse mode changed: %q, %v", globalMouse, err)
+	}
 	if err := first.Close(); err != nil {
 		t.Fatal(err)
 	}
 	if got, err := run("display-message", "-p", "-t", target, "#{pane_pid}"); err != nil || got != pid {
 		t.Fatalf("shell lost after detach: %s, %v", got, err)
+	}
+	if _, err := run("set-option", "-t", target, "mouse", "off"); err != nil {
+		t.Fatal(err)
 	}
 	second := start()
 	defer second.Close()
@@ -77,5 +86,8 @@ func TestLocalTmuxShellSurvivesClientClose(t *testing.T) {
 	}
 	if got, err := run("display-message", "-p", "-t", target, "#{pane_pid}:#{session_attached}"); err != nil || got != pid+":1" {
 		t.Fatalf("reattach lost shell: %s, %v", got, err)
+	}
+	if mouse, err := run("show-option", "-v", "-t", target, "mouse"); err != nil || mouse != "on" {
+		t.Fatalf("reattached session mouse mode: %q, %v", mouse, err)
 	}
 }

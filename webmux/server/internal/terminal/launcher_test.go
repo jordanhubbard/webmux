@@ -270,7 +270,7 @@ func TestLocalTmuxCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.Path != "/resolved/tmux" || !reflect.DeepEqual(c.Args, []string{"new-session", "-A", "-s", "webmux-" + r.SessionID}) {
+	if c.Path != "/resolved/tmux" || !reflect.DeepEqual(c.Args, []string{"new-session", "-A", "-s", "webmux-" + r.SessionID, ";", "set-option", "-t", "webmux-" + r.SessionID, "mouse", "on"}) {
 		t.Fatalf("command: %+v", c)
 	}
 	for _, env := range c.Env {
