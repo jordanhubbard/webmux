@@ -216,3 +216,56 @@ func TestManagedRigAgentsUseOrdinaryPersistentGridTiles(t *testing.T) {
 		t.Fatal("managed terminal did not reattach after restart")
 	}
 }
+
+func TestManagedRigOpenRestoresMinimizedTileWithoutOverlapOrDuplicateViewer(t *testing.T) {
+	for _, full := range []bool{false, true} {
+		t.Run(map[bool]string{false: "restore", true: "full grid"}[full], func(t *testing.T) {
+			b, store, launched := fixture(t)
+			argv := []string{"/test/tmux", "attach-session", "-t", "=seat"}
+			first, err := b.EnsureRigTerminal("owner", "seat", "coder", argv)
+			if err != nil {
+				t.Fatal(err)
+			}
+			other, err := b.EnsureRigTerminal("owner", "other", "reviewer", argv)
+			if err != nil {
+				t.Fatal(err)
+			}
+			minimized := true
+			if _, err := b.Patch("owner", first.ID, Patch{Minimized: &minimized}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := b.Patch("owner", other.ID, Patch{Row: &first.Row, Col: &first.Col}); err != nil {
+				t.Fatal(err)
+			}
+			if full {
+				if err := store.WriteConfig("app.yaml", map[string]any{"app": map[string]any{"terminal_grid": map[string]any{"max_cols": 1, "max_rows": 1}}}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			reopened, err := b.EnsureRigTerminal("owner", "seat", "coder", argv)
+			if full {
+				if err == nil {
+					t.Fatal("restored terminal bypassed a full grid")
+				}
+				unchanged, getErr := b.Get("owner", first.ID)
+				if getErr != nil || !unchanged.Minimized || unchanged.Row != first.Row || unchanged.Col != first.Col {
+					t.Fatalf("failed restore changed saved state: %+v, %v", unchanged, getErr)
+				}
+			} else {
+				if err != nil || reopened.ID != first.ID || reopened.Minimized {
+					t.Fatalf("terminal was not restored: %+v, %v", reopened, err)
+				}
+				if reopened.Row == first.Row && reopened.Col == first.Col {
+					t.Fatal("restored tile overlaps the reviewer")
+				}
+				repeated, err := b.EnsureRigTerminal("owner", "seat", "coder", argv)
+				if err != nil || repeated.ID != reopened.ID {
+					t.Fatalf("repeated open changed the viewer: %+v, %v", repeated, err)
+				}
+			}
+			if len(b.List("owner")) != 2 || len(launched) != 2 {
+				t.Fatal("opening the minimized terminal duplicated a viewer")
+			}
+		})
+	}
+}

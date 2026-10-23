@@ -93,10 +93,32 @@ func (b *Broker) ensureRigView(owner, view, title string, argv []string, grid bo
 		b.order = append(b.order, id)
 	}
 	oldValue := selected.value.clone()
+	restoring := grid && selected.value.Minimized
+	if restoring {
+		limits, err := loadLimits(b.store)
+		if err != nil {
+			return Session{}, err
+		}
+		visible := []*entry{}
+		for _, item := range b.ownerEntriesLocked(owner) {
+			if !item.value.Minimized {
+				visible = append(visible, item)
+			}
+		}
+		row, col, err := limits.next(visible, nil, nil)
+		if err != nil {
+			return Session{}, err
+		}
+		selected.value.Row, selected.value.Col = row, col
+		selected.value.Minimized = false
+	}
 	launched := false
 	if selected.run == nil {
 		selected.value.ExecArgv = append([]string(nil), argv...)
 		if err := b.startLocked(selected, "", ""); err != nil {
+			if restoring {
+				selected.value = oldValue
+			}
 			return Session{}, err
 		}
 		launched = true

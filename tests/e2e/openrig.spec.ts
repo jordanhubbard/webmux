@@ -41,7 +41,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   const sessions: string[] = [];
   let workloadCompleted = false;
   type Agent = { name: string; target: string; connected: boolean; sessionId?: string };
-  type Session = { id: string; openrig_view?: string; rig?: { target: string; project: string; name: string; host: string; runtime: string } };
+  type Session = { id: string; row: number; col: number; openrig_view?: string; rig?: { target: string; project: string; name: string; host: string; runtime: string } };
   const status = async () => (await (await request.get('/api/coordination')).json()) as {
     agents: Agent[]; messages: { from: string; to: string; body: string }[];
   };
@@ -62,6 +62,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   try {
     await page.goto('/');
     for (const name of ['coder', 'reviewer']) {
+      await page.getByRole('button', { name: 'Desktops', exact: true }).click();
       const dialog = await openDialog();
       await dialog.getByLabel('Project ID', { exact: true }).fill(project);
       await dialog.getByLabel('Agent name', { exact: true }).fill(name);
@@ -78,6 +79,9 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       sessions.push(session.id);
       expect(session.rig).toEqual({ target: agent.target, project, name, host: 'localhost', runtime: 'codex' });
       const terminal = page.getByTestId(`tile-cell-${session.id}`);
+      await expect(page.getByTestId('workspace-scroll')).toBeVisible();
+      await expect(terminal).toBeInViewport({ ratio: 0.1 });
+      await expect(terminal.locator('.xterm-helper-textarea')).toBeFocused();
       await expect(terminal.getByLabel('Rig-managed worker')).toContainText(`Rig · ${project} · ${name} · localhost`);
       await expect(terminal.locator('.xterm-rows')).toContainText('FIXTURE_READY');
       await expect(terminal.locator('.xterm-rows')).toContainText(agent.target);
@@ -103,6 +107,31 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     expect((await status()).agents.map(value => value.target)).toEqual(agents.map(value => value.target));
     expect((await openAgent('coder')).id).toBe(sessions[0]);
     expect((await (await request.get('/api/sessions')).json()).map((value: Session) => value.id)).toEqual(sessions);
+
+    // An existing viewer outside the visible grid must actually be revealed.
+    const moved = await request.patch(`/api/sessions/${sessions[0]}`, { data: { row: 2, col: 2 } });
+    expect(moved.ok()).toBe(true);
+    await page.reload();
+    await page.getByTestId('workspace-scroll').evaluate(el => el.scrollTo(0, 0));
+    await expect(terminal).not.toBeInViewport();
+    expect((await openAgent('coder')).id).toBe(sessions[0]);
+    await expect(terminal).toBeInViewport({ ratio: 0.1 });
+    await expect(terminal.locator('.xterm-helper-textarea')).toBeFocused();
+
+    // Restoring a minimized viewer must keep its identity and avoid another tile.
+    await terminal.getByTitle('Minimize', { exact: true }).click();
+    await expect(terminal).toBeHidden();
+    const occupied = await request.patch(`/api/sessions/${sessions[1]}`, { data: { row: 2, col: 2 } });
+    expect(occupied.ok()).toBe(true);
+    await page.reload();
+    await expect(terminal).toBeHidden();
+    const restored = await openAgent('coder');
+    expect(restored.id).toBe(sessions[0]);
+    expect([restored.row, restored.col]).not.toEqual([2, 2]);
+    await expect(terminal).toBeInViewport({ ratio: 0.1 });
+    await expect(terminal.locator('.xterm-helper-textarea')).toBeFocused();
+    expect((await status()).agents).toHaveLength(2);
+
     // Close the actual tile, then reopen the same agent without launching a third.
     await terminal.getByTitle('Close', { exact: true }).click();
     await expect(terminal).toHaveCount(0);

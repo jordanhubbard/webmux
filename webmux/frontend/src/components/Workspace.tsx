@@ -148,7 +148,9 @@ export function Workspace({
   const [lockOverrides, setLockOverrides] = useState<Map<string, boolean>>(new Map());
   const [bellSessions, setBellSessions] = useState<Set<string>>(new Set());
   const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(new Set());
-  const { focusedSessionId } = useInputBroadcast();
+  const [sessionToReveal, setSessionToReveal] = useState<{ id: string; request: number } | null>(null);
+  const sessionRequestRef = useRef(0);
+  const { focusedSessionId, setFocusedSessionId } = useInputBroadcast();
 
   // Drag state
   const [operationError, setOperationError] = useState('');
@@ -176,21 +178,32 @@ export function Workspace({
     dropTargetRef.current = dropTarget;
   }, [dropTarget]);
 
-  useEffect(() => {
+  const loadSessions = useCallback((requestedSessionId?: string) => {
+    const request = ++sessionRequestRef.current;
     api.getSessions()
       .then(loaded => {
+        if (request !== sessionRequestRef.current) return;
         setSessions(loaded);
         setCollapsedSessions(new Set(loaded.filter(s => s.minimized).map(s => s.id)));
+        if (requestedSessionId && loaded.some(s => s.id === requestedSessionId)) {
+          setFocusedSessionId(requestedSessionId);
+          setSessionToReveal({ id: requestedSessionId, request });
+        }
       })
-      .catch(err => setOperationError(`Could not load sessions: ${String(err)}`))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch(err => { if (request === sessionRequestRef.current) setOperationError(`Could not load sessions: ${String(err)}`); })
+      .finally(() => { if (request === sessionRequestRef.current) setLoading(false); });
+  }, [setFocusedSessionId]);
+
+  useEffect(() => { loadSessions(); }, [loadSessions]);
 
   useEffect(() => {
-    const reload = () => { void api.getSessions().then(setSessions).catch(err => setOperationError(String(err))); };
+    const reload = (event: Event) => {
+      const requested = (event as CustomEvent<{ sessionId?: string }>).detail?.sessionId;
+      loadSessions(typeof requested === 'string' ? requested : undefined);
+    };
     window.addEventListener('webmux-sessions-changed', reload);
     return () => window.removeEventListener('webmux-sessions-changed', reload);
-  }, []);
+  }, [loadSessions]);
 
   useEffect(() => {
     if (!focusedSessionId) return;
@@ -199,6 +212,19 @@ export function Workspace({
     if (!outer || !tileElement) return;
     scrollElementFullyIntoView(outer, tileElement);
   }, [focusedSessionId]);
+
+  useEffect(() => {
+    if (!sessionToReveal) return;
+    const outer = outerRef.current;
+    const tileElement = tileElementRefs.current.get(sessionToReveal.id);
+    if (!outer || !tileElement) return;
+    const frame = requestAnimationFrame(() => {
+      if (outer.clientWidth === 0 || outer.clientHeight === 0) return;
+      scrollElementFullyIntoView(outer, tileElement);
+      setSessionToReveal(null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [sessionToReveal, sessions, outerSize.width, outerSize.height]);
 
   const handleAddSession = useCallback(async (req: CreateSessionRequest) => {
     const session = await api.createSession(req);
@@ -661,6 +687,7 @@ export function Workspace({
               >
                 <Tile
                   session={session}
+                  focusRequest={sessionToReveal?.id === session.id ? sessionToReveal.request : 0}
                   onStateChange={handleSessionStateChange}
                   fontSize={fontSize}
                   fontFamily={fontFamily}
