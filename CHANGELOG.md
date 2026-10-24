@@ -5,8 +5,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.24] - 2026-10-24
+
+### Added
+- Make Rig seats part of the 2D terminal workflow: choose a seat or host from an empty cell, place a seat in that cell, and use a persistent project and seat navigator to reopen viewers (#194).
+- Show Type to All recipients and allow selection of all terminals, one Rig project, individual terminals, or none (#194).
+
+### Changed
+- Distinguish opening a Rig viewer from restarting its provider, identify viewer-only reconnect and detach controls, and report unverified provider activity as unknown (#194).
+- Keep Rig controls out of non-admin workspaces and explain how the optional tmux-only Agents pane relates to Rig seats (#194).
+
 ### Fixed
 - Make Rig's Open terminal, reconnect and create actions reveal and focus the requested terminal, including offscreen and minimized views. Restore minimized views into a free grid cell without duplicating the agent or its viewer (#191).
+- Let wheel scrolling move each managed Rig terminal's tmux history without moving the whole grid, for local and remote seats (#193).
+
+### Limitations
+- Rig seats created outside WebMux still need canonical discovery and adoption; safe stop controls across local and remote providers remain open (#194).
 
 ## [1.3.23] - 2026-10-22
 
