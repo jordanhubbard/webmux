@@ -51,9 +51,10 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
         await expect(page.getByTestId(`tile-cell-${peer}`).locator('.xterm-rows')).toContainText('PLAIN READY');
         await page.getByRole('button', { name: 'Type to All', exact: true }).click();
         inputs.get(source)!.length = 0; inputs.get(peer!)!.length = 0;
-        await page.mouse.move(box.x + 45, box.y + 12);
+        const broadcastBox = (await screen.boundingBox())!;
+        await page.mouse.move(broadcastBox.x + 45, broadcastBox.y + 12);
         await page.mouse.down();
-        await page.mouse.move(box.x + 60, box.y + 12);
+        await page.mouse.move(broadcastBox.x + 60, broadcastBox.y + 12);
         await page.mouse.up();
         await expect.poll(() => inputs.get(source)!.length).toBeGreaterThan(0);
         expect(inputs.get(peer!)).toEqual([]);
