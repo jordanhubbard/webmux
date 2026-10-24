@@ -103,6 +103,7 @@ try {
     if (existing && alive) {
       if (existing.cwd !== cwd || existing.runtime !== runtime) throw new Error('This agent already exists with a different directory or runtime. Choose another name.');
       run('tmux', ['has-session', '-t', `=${tmux}`], 3000);
+      run('tmux', ['set-option', '-t', tmux, 'mouse', 'on'], 3000);
       console.log(JSON.stringify(existing));
     } else {
       // Validate the actual execution host before allocating a central seat.
@@ -132,13 +133,16 @@ try {
       const remotePort = local ? 0 : existing?.remotePort ?? Number(run('ssh', [...sshArgs, host, "python3 -c 'import socket; s=socket.socket(); s.bind((\"127.0.0.1\",0)); print(s.getsockname()[1])'"]));
       if (!local && (!Number.isInteger(remotePort) || remotePort < 1024 || remotePort > 65535)) throw new Error('Cannot allocate a private SSH reverse forward.');
       const remoteAgent = `export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; export OPENRIG_URL=http://127.0.0.1:${remotePort}; export OPENRIG_SESSION_NAME=${q('__OPENRIG_SENDER_ADDRESS__')}; cd ${q(cwd)} && exec ${cli}`;
-      const remoteRun = `export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; exec tmux new-session -A -s ${q(tmux)} ${q('/bin/sh -c ' + q(remoteAgent))}`;
       // The patched coordinator proves this exact attach command against the local
       // SSH process, then independently observes the remote pane. Agent prompts
       // and session creation are kept out of the identity-bearing attach argv.
       const relayPath = 'export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; ';
-      const remoteCreate = `${relayPath}tmux has-session -t ${q('=' + tmux)} 2>/dev/null || tmux new-session -d -s ${q(tmux)} ${q('/bin/sh -c ' + q(remoteAgent))}`;
-      const remoteAttach = `${relayPath}exec tmux attach-session -t =${tmux}`;
+      const remoteSeat = q('=' + tmux);
+      const remoteMouse = `tmux set-option -t ${q(tmux)} mouse on`;
+      const remotePrepare = `(tmux has-session -t ${remoteSeat} 2>/dev/null || tmux new-session -d -s ${q(tmux)} ${q('/bin/sh -c ' + q(remoteAgent))}) && ${remoteMouse}`;
+      const remoteCreate = `${relayPath}${remotePrepare}`;
+      const remoteRun = `${remoteCreate} && exec tmux attach-session -t ${remoteSeat}`;
+      const remoteAttach = `${relayPath}${remoteMouse} && exec tmux attach-session -t ${remoteSeat}`;
       if (!local) write(path.join(directory, `${tmux}.remote.json`), { setup: remoteCreate, run: remoteRun });
       // Pass only routing identity through the SSH channel; credentials and
       // provider homes stay on the execution host. Never forward auth tokens.
@@ -156,7 +160,10 @@ try {
         run('rig', ['unclaim', previous]);
       }
       fs.rmSync(attached, { force: true });
+      // Enable wheel scrollback only for this seat. Leave the user's global
+      // tmux setting and unrelated sessions alone.
       run('tmux', ['new-session', '-d', '-s', tmux, '-x', '120', '-y', '36', `/bin/sh ${q(launcher)}`]);
+      run('tmux', ['set-option', '-t', tmux, 'mouse', 'on'], 3000);
       const agent: Agent = { target, project, name, host, cwd, runtime, tmux, remotePort };
       const deadline = Date.now() + 10000;
       while (!fs.existsSync(attached) && Date.now() < deadline) await delay(100);

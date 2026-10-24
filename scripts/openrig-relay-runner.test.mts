@@ -41,8 +41,15 @@ if(name==='rig'){
         const session=attach[attach.indexOf('--relay-tmux-session')+1];
         const remote=calls.filter(a=>a[0]==='ssh');
         assert(remote.some(a=>a.at(-1)!.includes('tmux new-session -d')));
-        assert.equal(remote.at(-1)!.at(-1),`export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; exec tmux attach-session -t =${session}`);
+        assert.equal(remote.at(-1)!.at(-1),`export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; tmux set-option -t '${session}' mouse on && exec tmux attach-session -t '=${session}'`);
         assert(remote.every(a=>a.includes('StrictHostKeyChecking=yes')));
+      }
+      if (host !== 'localhost') {
+        const saved=fs.readdirSync(dir).find(name=>name.endsWith('.remote.json'))!;
+        const commands=JSON.parse(fs.readFileSync(path.join(dir,saved),'utf8')) as {setup:string;run:string};
+        assert.match(commands.setup,/tmux set-option -t 'wm-[a-z0-9-]+' mouse on/);
+        assert.match(commands.run,/tmux set-option -t 'wm-[a-z0-9-]+' mouse on && exec tmux attach-session/);
+        if (!expected) assert.match(calls.filter(a=>a[0]==='ssh').at(-1)!.at(-1)!,/tmux set-option -t 'wm-[a-z0-9-]+' mouse on/);
       }
     } finally { fs.rmSync(dir,{recursive:true,force:true}); }
   });

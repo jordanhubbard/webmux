@@ -91,6 +91,35 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     const reviewer = agents.find(value => value.name === 'reviewer')!;
     expect(agents).toHaveLength(2);
     expect(agents.every(value => value.connected)).toBe(true);
+    const tmuxEnv = { ...process.env, TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') };
+    const tmux = (...args: string[]) => {
+      const result = spawnSync('tmux', args, { env: tmuxEnv, encoding: 'utf8', timeout: 5000 });
+      expect(result.status, result.stderr).toBe(0);
+      return result.stdout.trim();
+    };
+    expect(tmux('display-message', '-p', '-t', coder.target, '#{mouse}')).toBe('1');
+    expect(tmux('show-option', '-gv', 'mouse')).toBe('off');
+    expect(tmux('display-message', '-p', '-t', 'webmux-fixture-path', '#{mouse}')).toBe('0');
+    tmux('set-option', '-t', coder.target, 'mouse', 'off');
+    expect((await openAgent('coder')).id).toBe(sessions[0]);
+    expect(tmux('display-message', '-p', '-t', coder.target, '#{mouse}')).toBe('1');
+    tmux('send-keys', '-t', coder.target, 'WM_SCROLL_OLD', 'Enter');
+    for (let index = 0; index < 40; index++) tmux('send-keys', '-t', coder.target, `WM_SCROLL_${index}`, 'Enter');
+    tmux('send-keys', '-t', coder.target, 'WM_SCROLL_NEW', 'Enter');
+    const scrollTile = page.getByTestId(`tile-cell-${sessions[0]}`);
+    const rows = scrollTile.locator('.xterm-rows');
+    await expect(rows).toContainText('WM_SCROLL_NEW');
+    await expect(rows).not.toContainText('WM_SCROLL_OLD');
+    const workspace = page.getByTestId('workspace-scroll');
+    const beforeWheel = await workspace.evaluate(el => ({ x: el.scrollLeft, y: el.scrollTop }));
+    const screen = scrollTile.locator('.xterm-screen');
+    const box = (await screen.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    for (let index = 0; index < 20; index++) await page.mouse.wheel(0, -120);
+    await expect.poll(() => tmux('display-message', '-p', '-t', coder.target, '#{pane_in_mode}')).toBe('1');
+    await expect(rows).toContainText('WM_SCROLL_OLD');
+    expect(await workspace.evaluate(el => ({ x: el.scrollLeft, y: el.scrollTop }))).toEqual(beforeWheel);
+    tmux('send-keys', '-t', coder.target, 'q');
     const nonce = randomBytes(16).toString('hex');
     const terminal = page.getByTestId(`tile-cell-${sessions[0]}`);
     await terminal.locator('.xterm-helper-textarea').focus();
@@ -140,7 +169,6 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     sessions.push(coderSession.id);
     await expect(page.getByTestId(`tile-cell-${coderSession.id}`).locator('.xterm-rows')).toContainText(`WM_ACK:${nonce}`);
     expect((await status()).agents).toHaveLength(2);
-    const tmuxEnv = { ...process.env, TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') };
     let previousId = (await status()).agents.find(value => value.target === coder.target)!.sessionId;
     expect(previousId).toBeTruthy();
     for (let reconnect = 0; reconnect < 2; reconnect++) {
