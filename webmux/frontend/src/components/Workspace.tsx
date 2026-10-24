@@ -3,6 +3,9 @@ import { AddSessionCell } from './AddSessionCell';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Tile } from './Tile';
 import { ConnectionDialog } from './ConnectionDialog';
+import { CoordinationDialog } from './CoordinationDialog';
+import { RigNavigator } from './RigNavigator';
+import { Dialog } from './Dialog';
 import { WorkspaceMinimap } from './WorkspaceMinimap';
 import { api } from '../utils/api';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
@@ -143,6 +146,8 @@ export function Workspace({
   }, []);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
+  const [dialogMode, setDialogMode] = useState<'choose' | 'host' | 'rig'>('choose');
+  const [showRigManager, setShowRigManager] = useState(false);
   const [themeOverrides, setThemeOverrides] = useState<Map<string, string>>(() => loadSessionThemeOverrides());
   const [autoScrollOverrides, setAutoScrollOverrides] = useState<Map<string, boolean>>(new Map());
   const [lockOverrides, setLockOverrides] = useState<Map<string, boolean>>(new Map());
@@ -150,7 +155,7 @@ export function Workspace({
   const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(new Set());
   const [sessionToReveal, setSessionToReveal] = useState<{ id: string; request: number } | null>(null);
   const sessionRequestRef = useRef(0);
-  const { focusedSessionId, setFocusedSessionId } = useInputBroadcast();
+  const { focusedSessionId, setFocusedSessionId, broadcastMode, broadcastExcluded, setBroadcastRecipients, toggleBroadcastExclude } = useInputBroadcast();
 
   // Drag state
   const [operationError, setOperationError] = useState('');
@@ -230,6 +235,11 @@ export function Workspace({
     const session = await api.createSession(req);
     setSessions(prev => [...prev, session]);
     setDialogPos(null);
+  }, []);
+
+  const openRigSeat = useCallback(async (target: string) => {
+    const session = await api.attachCoordinatedAgent(target);
+    window.dispatchEvent(new CustomEvent('webmux-sessions-changed', { detail: { sessionId: session.id } }));
   }, []);
 
   const handleClose = useCallback((id: string) => {
@@ -603,6 +613,14 @@ export function Workspace({
   return (
     <div style={styles.shell}>
       {operationError && <div role="alert">{operationError} <button onClick={() => setOperationError('')}>Dismiss</button></div>}
+      <RigNavigator onOpen={openRigSeat} onManage={() => setShowRigManager(true)} />
+      {broadcastMode && <div role="group" aria-label="Type to All recipients" style={{ padding: '5px 10px', background: '#3a2a1a', color: '#f1d494', display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
+        <strong>Type to All recipients</strong>
+        <button type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), sessions.map(s => s.id))}>All</button>
+        {[...new Set(sessions.flatMap(s => s.rig ? [s.rig.project] : []))].sort().map(project => <button key={project} type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), sessions.filter(s => s.rig?.project === project).map(s => s.id))}>Project: {project}</button>)}
+        <button type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), [])}>None</button>
+        {sessions.map(session => <label key={session.id} style={{ whiteSpace: 'nowrap' }}><input type="checkbox" checked={!broadcastExcluded.has(session.id)} onChange={() => toggleBroadcastExclude(session.id)} />{session.rig ? `${session.rig.project}/${session.rig.name}` : session.title}</label>)}
+      </div>}
       <div ref={outerRef} style={styles.outer} data-testid="workspace-scroll">
         <div style={styles.hint}>Hold Shift to scroll</div>
         {sessions.length > 0 && (
@@ -725,7 +743,7 @@ export function Workspace({
               row={pos.row}
               col={pos.col}
               isEmpty={visibleSessions.length === 0}
-              onClick={() => { if (!movePendingRef.current) setDialogPos(pos); }}
+              onClick={() => { if (!movePendingRef.current) { setDialogMode('choose'); setDialogPos(pos); } }}
             />
           ))}
 
@@ -745,7 +763,15 @@ export function Workspace({
           }} />
         )}
 
-        {dialogPos && (
+        {dialogPos && dialogMode === 'choose' && <Dialog title="Add to grid" subtitle={`Row ${dialogPos.row + 1}, column ${dialogPos.col + 1}`} onClose={() => setDialogPos(null)}>
+          <p>Choose what this cell will show.</p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" data-dialog-autofocus onClick={() => setDialogMode('rig')}>Open or create Rig seat</button>
+            <button type="button" onClick={() => setDialogMode('host')}>Connect to host</button>
+          </div>
+        </Dialog>}
+        {dialogPos && dialogMode === 'rig' && <CoordinationDialog position={dialogPos} onClose={() => setDialogPos(null)} />}
+        {dialogPos && dialogMode === 'host' && (
           <ConnectionDialog
             onConnect={handleAddSession}
             onClose={() => setDialogPos(null)}
@@ -764,6 +790,7 @@ export function Workspace({
         tileHeight={tile.h}
         gap={GAP}
       />
+      {showRigManager && <CoordinationDialog onClose={() => setShowRigManager(false)} />}
     </div>
   );
 }

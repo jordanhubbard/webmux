@@ -18,6 +18,7 @@ const terminalFocusFns = vi.hoisted(() => new Map<string, ReturnType<typeof vi.f
 vi.mock('@frontend/utils/api', () => ({
   api: {
     getSessions: vi.fn().mockResolvedValue([]),
+    getCoordination: vi.fn().mockResolvedValue({ agents: [], messages: [] }),
     createSession: vi.fn(),
     deleteSession: vi.fn(),
     reconnectSession: vi.fn(),
@@ -226,6 +227,7 @@ describe('Workspace', () => {
       expect(screen.getByTestId('add-cell-0-0')).toBeDefined();
     });
     fireEvent.click(screen.getByTestId('add-cell-0-0'));
+    fireEvent.click(screen.getByRole('button', { name: 'Connect to host' }));
     await waitFor(() => {
       expect(screen.getByText('Connect to Host')).toBeDefined();
     });

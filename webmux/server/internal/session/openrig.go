@@ -47,15 +47,25 @@ func (b *Broker) EnsureOpenRigView(owner, view, title string, argv []string) (Se
 // EnsureRigTerminal attaches a verified managed tmux seat in the ordinary grid.
 // Closing this PTY detaches its viewer and leaves the agent running.
 func (b *Broker) EnsureRigTerminal(owner, target, title string, argv []string, identity ...RigIdentity) (Session, error) {
+	return b.EnsureRigTerminalAt(owner, target, title, argv, nil, nil, identity...)
+}
+
+// EnsureRigTerminalAt places a viewer in a requested free cell. Seat identity
+// and provider lifecycle are independent of the viewer's grid position.
+func (b *Broker) EnsureRigTerminalAt(owner, target, title string, argv []string, row, col *int, identity ...RigIdentity) (Session, error) {
 	var rig *RigIdentity
 	if len(identity) == 1 && identity[0].Target == target {
 		value := identity[0]
 		rig = &value
 	}
-	return b.ensureRigView(owner, "managed:"+target, title, argv, true, rig)
+	return b.ensureRigViewAt(owner, "managed:"+target, title, argv, true, rig, row, col)
 }
 
 func (b *Broker) ensureRigView(owner, view, title string, argv []string, grid bool, rig *RigIdentity) (Session, error) {
+	return b.ensureRigViewAt(owner, view, title, argv, grid, rig, nil, nil)
+}
+
+func (b *Broker) ensureRigViewAt(owner, view, title string, argv []string, grid bool, rig *RigIdentity, requestedRow, requestedCol *int) (Session, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.closed {
@@ -70,6 +80,23 @@ func (b *Broker) ensureRigView(owner, view, title string, argv []string, grid bo
 		}
 	}
 	created := selected == nil
+	if (requestedRow == nil) != (requestedCol == nil) {
+		return Session{}, invalid("Terminal grid row and col must be provided together")
+	}
+	if grid && requestedRow != nil {
+		limits, err := loadLimits(b.store)
+		if err != nil {
+			return Session{}, err
+		}
+		if err := limits.validate(*requestedRow, *requestedCol); err != nil {
+			return Session{}, err
+		}
+		for _, item := range b.ownerEntriesLocked(owner) {
+			if item != selected && !item.value.Minimized && item.value.Workspace == "" && item.value.Row == *requestedRow && item.value.Col == *requestedCol {
+				return Session{}, invalid("Terminal grid cell is occupied")
+			}
+		}
+	}
 	if created {
 		id, err := uuid()
 		if err != nil {
@@ -81,7 +108,7 @@ func (b *Broker) ensureRigView(owner, view, title string, argv []string, grid bo
 			if err != nil {
 				return Session{}, err
 			}
-			row, col, err := limits.next(b.ownerEntriesLocked(owner), nil, nil)
+			row, col, err := limits.next(b.ownerEntriesLocked(owner), requestedRow, requestedCol)
 			if err != nil {
 				return Session{}, err
 			}
@@ -105,18 +132,21 @@ func (b *Broker) ensureRigView(owner, view, title string, argv []string, grid bo
 				visible = append(visible, item)
 			}
 		}
-		row, col, err := limits.next(visible, nil, nil)
+		row, col, err := limits.next(visible, requestedRow, requestedCol)
 		if err != nil {
 			return Session{}, err
 		}
 		selected.value.Row, selected.value.Col = row, col
 		selected.value.Minimized = false
 	}
+	if grid && !created && !restoring && requestedRow != nil {
+		selected.value.Row, selected.value.Col = *requestedRow, *requestedCol
+	}
 	launched := false
 	if selected.run == nil {
 		selected.value.ExecArgv = append([]string(nil), argv...)
 		if err := b.startLocked(selected, "", ""); err != nil {
-			if restoring {
+			if !created {
 				selected.value = oldValue
 			}
 			return Session{}, err

@@ -36,8 +36,8 @@ it('shows attributed coordination and opens an existing agent without relaunchin
   mocks.status.mockResolvedValue({ agents: [{ target: 'seat', name: 'reviewer', project: 'shared', host: 'remote', cwd: '/work', runtime: 'codex', connected: true }], messages: [{ from: 'seat', to: 'peer', time: '2026-10-21T16:00:00Z', state: 'pending', body: 'Fresh peer reply' }] });
   render(<CoordinationDialog onClose={() => {}} />);
   expect(await screen.findByText('Fresh peer reply')).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'Open terminal' }));
-  await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('seat'));
+  fireEvent.click(screen.getByRole('button', { name: 'Open viewer' }));
+  await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('seat', undefined));
   expect(mocks.create).not.toHaveBeenCalled();
 });
 
@@ -58,7 +58,7 @@ it('groups workers by explicit project and preserves reconnect actions', async (
   fireEvent.click(group.querySelector('summary')!);
   expect(group.open).toBe(false);
   fireEvent.click(group.querySelector('summary')!);
-  fireEvent.click(within(project).getByRole('button', { name: 'Reconnect agent' }));
-  await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('opaque-one'));
+  fireEvent.click(within(project).getByRole('button', { name: 'Restart provider and open' }));
+  await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('opaque-one', undefined));
   expect(mocks.create).toHaveBeenCalledWith(agents[0]);
 });

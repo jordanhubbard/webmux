@@ -10,7 +10,7 @@ export interface CoordinatedAgent {
   activityState?: string;
 }
 
-export function CoordinationDialog({ onClose }: { onClose: () => void }) {
+export function CoordinationDialog({ onClose, position }: { onClose: () => void; position?: { row: number; col: number } }) {
   const [agents, setAgents] = useState<CoordinatedAgent[]>([]);
   const [messages, setMessages] = useState<Awaited<ReturnType<typeof api.getCoordination>>['messages']>([]);
   const [statusError, setStatusError] = useState('');
@@ -32,7 +32,7 @@ export function CoordinationDialog({ onClose }: { onClose: () => void }) {
     return () => window.clearInterval(timer);
   }, [refresh]);
   const revealTerminal = async (target: string) => {
-    const session = await api.attachCoordinatedAgent(target);
+    const session = await api.attachCoordinatedAgent(target, position);
     window.dispatchEvent(new CustomEvent('webmux-sessions-changed', { detail: { sessionId: session.id } }));
     setActivePane('terminals');
     onClose();
@@ -41,13 +41,19 @@ export function CoordinationDialog({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError('');
     try {
-      const agent = agents.find(a => a.target === target);
-      if (agent && !agent.connected) await api.createCoordinatedAgent(agent);
       await revealTerminal(target);
     } catch (err) { setError(String(err)); }
     finally { setBusy(false); }
   };
-  return <Dialog title="Rig" subtitle="One coordinator for your agents across hosts" onClose={onClose} width={800} dismissible={!busy}>
+  const restartProvider = async (agent: CoordinatedAgent) => {
+    setBusy(true); setError('');
+    try {
+      await api.createCoordinatedAgent({ ...agent, ...position });
+      await revealTerminal(agent.target);
+    } catch (err) { setError(String(err)); }
+    finally { setBusy(false); }
+  };
+  return <Dialog title="Rig" subtitle={position ? `Open a seat at row ${position.row + 1}, column ${position.col + 1}` : 'One coordinator for your agents across hosts'} onClose={onClose} width={800} dismissible={!busy}>
     <div className="coordination-dialog">
     <p>Agents run in your terminal grid. OpenRig shares their project identity and messages; project files stay on each host.</p>
     {statusError && <p role="alert" style={{ color: '#ff9b9b' }}>{statusError}</p>}
@@ -64,11 +70,14 @@ export function CoordinationDialog({ onClose }: { onClose: () => void }) {
               <dl className="coordination-worker-facts">
                 <div><dt>Execution host</dt><dd>{agent.host}</dd></div>
                 <div><dt>Runtime</dt><dd>{agent.runtime}</dd></div>
-                <div><dt>State</dt><dd>{agent.connected ? (agent.activityState || agent.sessionStatus || 'Connected; activity unknown') : 'Terminal stopped'}</dd></div>
+                <div><dt>Provider</dt><dd>{agent.sessionStatus || 'Unknown'}</dd></div>
+                <div><dt>Attention</dt><dd>{agent.activityState || 'Unknown'}</dd></div>
+                <div><dt>Attachment</dt><dd>{agent.connected ? 'tmux available' : 'tmux unavailable'}</dd></div>
               </dl>
               <div><code>{agent.cwd}</code></div>
               <details><summary>Messaging address</summary><code>{agent.target}</code></details>
-              <button type="button" disabled={busy} onClick={() => void openTerminal(agent.target)}>{agent.connected ? 'Open terminal' : 'Reconnect agent'}</button>
+              <button type="button" disabled={busy || !agent.connected} onClick={() => void openTerminal(agent.target)}>Open viewer</button>{' '}
+              {!agent.connected && <button type="button" disabled={busy} onClick={() => void restartProvider(agent)}>Restart provider and open</button>}
             </article>
           </li>)}
         </ul>
@@ -77,7 +86,7 @@ export function CoordinationDialog({ onClose }: { onClose: () => void }) {
     {messages.length > 0 && <details open><summary>Recent coordination</summary><div style={{ maxHeight: 180, overflow: 'auto' }}>{messages.map((message, index) => <div key={`${message.time}-${index}`} style={{ padding: '6px 0' }}><small>{new Date(message.time).toLocaleTimeString()} · {agents.find(a => a.target === message.from)?.name || message.from} → {agents.find(a => a.target === message.to)?.name || message.to} · recorded ({message.state})</small><pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>{message.body.split('\n---\n')[1] ?? message.body}</pre></div>)}</div></details>}
     <form onSubmit={event => {
       event.preventDefault(); setBusy(true); setError('');
-      void api.createCoordinatedAgent({ project, name, host, cwd, runtime }).then(agent => revealTerminal(agent.target))
+      void api.createCoordinatedAgent({ project, name, host, cwd, runtime, ...position }).then(agent => revealTerminal(agent.target))
         .catch(err => setError(String(err))).finally(() => setBusy(false));
     }}>
       <h3>Create agent</h3>
