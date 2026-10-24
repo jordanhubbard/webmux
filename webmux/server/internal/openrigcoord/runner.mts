@@ -103,6 +103,7 @@ try {
     if (existing && alive) {
       if (existing.cwd !== cwd || existing.runtime !== runtime) throw new Error('This agent already exists with a different directory or runtime. Choose another name.');
       run('tmux', ['has-session', '-t', `=${tmux}`], 3000);
+      run('tmux', ['set-option', '-t', tmux, 'mouse', 'on'], 3000);
       console.log(JSON.stringify(existing));
     } else {
       // Validate the actual execution host before allocating a central seat.
@@ -156,7 +157,10 @@ try {
         run('rig', ['unclaim', previous]);
       }
       fs.rmSync(attached, { force: true });
+      // Enable wheel scrollback only for this seat. Leave the user's global
+      // tmux setting and unrelated sessions alone.
       run('tmux', ['new-session', '-d', '-s', tmux, '-x', '120', '-y', '36', `/bin/sh ${q(launcher)}`]);
+      run('tmux', ['set-option', '-t', tmux, 'mouse', 'on'], 3000);
       const agent: Agent = { target, project, name, host, cwd, runtime, tmux, remotePort };
       const deadline = Date.now() + 10000;
       while (!fs.existsSync(attached) && Date.now() < deadline) await delay(100);

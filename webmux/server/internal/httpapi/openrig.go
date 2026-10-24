@@ -278,7 +278,7 @@ func (s *Server) rigAction(w http.ResponseWriter, r *http.Request, owner, action
 			writeError(w, 502, "Invalid managed agent response.")
 			return
 		}
-		if _, err := s.attachManagedRigTerminal(owner, agent); err != nil {
+		if _, err := s.attachManagedRigTerminal(r.Context(), owner, agent); err != nil {
 			s.sessionError(w, err, "Agent was created. Open its terminal from Coordination after making room in the grid.")
 			return
 		}
@@ -288,10 +288,17 @@ func (s *Server) rigAction(w http.ResponseWriter, r *http.Request, owner, action
 	_, _ = w.Write(output)
 }
 
-func (s *Server) attachManagedRigTerminal(owner string, agent managedRigAgent) (session.Session, error) {
+func (s *Server) attachManagedRigTerminal(parent context.Context, owner string, agent managedRigAgent) (session.Session, error) {
 	tmux, err := exec.LookPath("tmux")
 	if err != nil {
 		return session.Session{}, err
+	}
+	// Existing seats may predate the per-session mouse setting. Apply it when
+	// opening a viewer without changing tmux's global or unrelated sessions.
+	ctx, cancel := context.WithTimeout(parent, 3*time.Second)
+	defer cancel()
+	if err := exec.CommandContext(ctx, tmux, "set-option", "-t", agent.Tmux, "mouse", "on").Run(); err != nil {
+		return session.Session{}, fmt.Errorf("enable managed terminal scrollback: %w", err)
 	}
 	return s.sessions.EnsureRigTerminal(owner, agent.Target, agent.Name+" · "+agent.Host+" · "+agent.Project, []string{tmux, "attach-session", "-t", "=" + agent.Tmux}, session.RigIdentity{Target: agent.Target, Project: agent.Project, Name: agent.Name, Host: agent.Host, Runtime: agent.Runtime})
 }
@@ -323,7 +330,7 @@ func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner 
 	}
 	for _, agent := range status.Agents {
 		if agent.Target == body.Target {
-			value, err := s.attachManagedRigTerminal(owner, agent)
+			value, err := s.attachManagedRigTerminal(r.Context(), owner, agent)
 			if err != nil {
 				s.sessionError(w, err, "Cannot open agent terminal.")
 				return

@@ -112,6 +112,11 @@ with the same name do not make later reconnects ambiguous. Restarting WebMux rea
 provider processes. Explicitly exiting a provider stops that agent; reconnecting
 a stopped agent launches a new provider session in the same registered seat.
 
+Wheel over a managed terminal to scroll that seat's tmux history independently
+of the 2D workspace. WebMux enables mouse mode on the managed tmux session when
+it creates or opens the tile; it leaves the global tmux setting alone. Use the
+workspace scrollbar or minimap to navigate between tiles.
+
 On first use, complete the provider's folder-trust or sign-in prompt inside its
 terminal. If the provider exits during startup, resolve the prompt and use
 **Reconnect agent**. A live tmux attachment alone does not prove the provider is
