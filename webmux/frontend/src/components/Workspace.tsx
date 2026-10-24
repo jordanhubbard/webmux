@@ -14,6 +14,7 @@ import { loadSessionThemeOverrides, saveSessionThemeOverrides } from '../utils/t
 import { useElementSize, useTouchLikeViewport } from '../utils/viewport';
 
 interface WorkspaceProps {
+  canManageRig?: boolean;
   fontSize: number;
   fontFamily?: string;
   termCols: number;
@@ -124,6 +125,7 @@ function getAddPositions(
 }
 
 export function Workspace({
+  canManageRig = true,
   fontSize,
   fontFamily,
   termCols,
@@ -613,7 +615,7 @@ export function Workspace({
   return (
     <div style={styles.shell}>
       {operationError && <div role="alert">{operationError} <button onClick={() => setOperationError('')}>Dismiss</button></div>}
-      <RigNavigator onOpen={openRigSeat} onManage={() => setShowRigManager(true)} />
+      {canManageRig && <RigNavigator onOpen={openRigSeat} onManage={() => setShowRigManager(true)} />}
       {broadcastMode && <div role="group" aria-label="Type to All recipients" style={{ padding: '5px 10px', background: '#3a2a1a', color: '#f1d494', display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
         <strong>Type to All recipients</strong>
         <button type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), sessions.map(s => s.id))}>All</button>
@@ -743,7 +745,7 @@ export function Workspace({
               row={pos.row}
               col={pos.col}
               isEmpty={visibleSessions.length === 0}
-              onClick={() => { if (!movePendingRef.current) { setDialogMode('choose'); setDialogPos(pos); } }}
+              onClick={() => { if (!movePendingRef.current) { setDialogMode(canManageRig ? 'choose' : 'host'); setDialogPos(pos); } }}
             />
           ))}
 

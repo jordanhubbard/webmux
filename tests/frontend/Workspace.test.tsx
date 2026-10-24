@@ -233,6 +233,14 @@ describe('Workspace', () => {
     });
   });
 
+  it('keeps Rig controls out of non-admin workspaces', async () => {
+    render(<Workspace {...defaultProps} canManageRig={false} />, { wrapper });
+    const add = await screen.findByTestId('add-cell-0-0');
+    expect(screen.queryByText(/Rig seats \(/)).toBeNull();
+    fireEvent.click(add);
+    expect(screen.getByRole('dialog', { name: 'Connect to Host' })).toBeDefined();
+  });
+
   it('scrolls the focused terminal tile fully into view', async () => {
     const { api } = await import('@frontend/utils/api');
     const sessions = [

@@ -171,6 +171,7 @@ function AuthenticatedApp({
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
           <Workspace
+            canManageRig={canManageSettings}
             fontSize={fontSize}
             fontFamily={fontFamily}
             termCols={termCols}
