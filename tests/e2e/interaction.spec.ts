@@ -38,6 +38,7 @@ test('connection dialog contains focus, dismisses with Escape, and restores its 
   await expect(add).toBeVisible();
   await add.focus();
   await page.keyboard.press('Enter');
+  await page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Connect to host' }).click();
   const dialog = page.getByRole('dialog', { name: 'Connect to Host' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByPlaceholder('hostname or IP')).toBeFocused();

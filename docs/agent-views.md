@@ -1,5 +1,27 @@
 # Agent Views
 
+## Rig seats in the terminal grid
+
+The terminal grid is the primary viewer for WebMux-managed Rig seats. Click an
+empty cell and choose **Open or create Rig seat** to place a seat there, or use
+the persistent **Rig seats** navigator above the grid to reveal an existing
+viewer. The navigator groups seats by project and shows their execution host.
+Opening a viewer does not create or restart a provider. **Restart provider and
+open** is a separate action for a stopped tmux attachment. Closing a Rig tile
+detaches its viewer and leaves the seat running; the tile's reconnect control
+only reconnects the viewer transport. Rig's own session status and attention
+are shown separately from the WebMux viewer connection state. When Rig has no
+verified activity state, WebMux reports it as unknown.
+
+With **Type to All** enabled, the recipient strip above the grid lets you
+select all terminals, one Rig project, individual tiles, or none. The selected
+names remain visible while typing.
+
+The top-bar **Rig** dialog provides creation, status, and recent messages. The
+Rig text dashboard is an optional diagnostic view. The **Agents** workspace
+described below is a separate, optional tmux-only integration: it lists
+configured tmux sockets and does not enroll sessions in Rig.
+
 Agent views let WebMux list and attach to agent runtime sessions that already
 exist in named tmux servers. The feature is disabled by default. When enabled,
 WebMux adds an Agents workspace that can attach to a selected tmux session and

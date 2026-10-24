@@ -118,7 +118,9 @@ export function WorkspaceMinimap({ scrollRef, sessions, numCols, numRows, tileWi
             : s.state === 'error' ? '#ff5555'
             : '#555';
           return (
-            <rect key={s.id} x={x} y={y} width={w} height={h} fill={fill} opacity={0.65} rx={1} />
+            <rect key={s.id} x={x} y={y} width={w} height={h} fill={fill} opacity={0.65} rx={1}>
+              <title>{s.rig ? `${s.rig.project}/${s.rig.name} on ${s.rig.host}` : s.title} · viewer {s.state}</title>
+            </rect>
           );
         })}
         <rect

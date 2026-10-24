@@ -15,6 +15,7 @@ interface InputBroadcastState {
   /** Sessions excluded from broadcast */
   broadcastExcluded: Set<string>;
   toggleBroadcastExclude: (sessionId: string) => void;
+  setBroadcastRecipients: (allIds: string[], selectedIds: string[]) => void;
 }
 
 const InputBroadcastContext = createContext<InputBroadcastState | null>(null);
@@ -54,6 +55,11 @@ export function InputBroadcastProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setBroadcastRecipients = useCallback((allIds: string[], selectedIds: string[]) => {
+    const selected = new Set(selectedIds);
+    setBroadcastExcluded(new Set(allIds.filter(id => !selected.has(id))));
+  }, []);
+
   const routeInput = useCallback((fromSessionId: string, data: string) => {
     if (broadcastModeRef.current) {
       const excluded = broadcastExcludedRef.current;
@@ -76,7 +82,8 @@ export function InputBroadcastProvider({ children }: { children: ReactNode }) {
     routeInput,
     broadcastExcluded,
     toggleBroadcastExclude,
-  }), [broadcastMode, focusedSessionId, setFocusedSessionId, registerSend, unregisterSend, routeInput, broadcastExcluded, toggleBroadcastExclude]);
+    setBroadcastRecipients,
+  }), [broadcastMode, focusedSessionId, setFocusedSessionId, registerSend, unregisterSend, routeInput, broadcastExcluded, toggleBroadcastExclude, setBroadcastRecipients]);
 
   return (
     <InputBroadcastContext.Provider value={value}>

@@ -257,6 +257,7 @@ func (s *Server) rigAction(w http.ResponseWriter, r *http.Request, owner, action
 		return
 	}
 	input := ""
+	var row, col *int
 	if action == "create" {
 		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 8192))
 		if err != nil || !json.Valid(body) {
@@ -264,6 +265,15 @@ func (s *Server) rigAction(w http.ResponseWriter, r *http.Request, owner, action
 			return
 		}
 		input = string(body)
+		var placement struct {
+			Row *int `json:"row"`
+			Col *int `json:"col"`
+		}
+		if json.Unmarshal(body, &placement) != nil || (placement.Row == nil) != (placement.Col == nil) {
+			writeError(w, 400, "Grid row and col must be provided together.")
+			return
+		}
+		row, col = placement.Row, placement.Col
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 75*time.Second)
 	defer cancel()
@@ -278,7 +288,7 @@ func (s *Server) rigAction(w http.ResponseWriter, r *http.Request, owner, action
 			writeError(w, 502, "Invalid managed agent response.")
 			return
 		}
-		if _, err := s.attachManagedRigTerminal(r.Context(), owner, agent); err != nil {
+		if _, err := s.attachManagedRigTerminal(r.Context(), owner, agent, row, col); err != nil {
 			s.sessionError(w, err, "Agent was created. Open its terminal from Coordination after making room in the grid.")
 			return
 		}
@@ -288,7 +298,7 @@ func (s *Server) rigAction(w http.ResponseWriter, r *http.Request, owner, action
 	_, _ = w.Write(output)
 }
 
-func (s *Server) attachManagedRigTerminal(parent context.Context, owner string, agent managedRigAgent) (session.Session, error) {
+func (s *Server) attachManagedRigTerminal(parent context.Context, owner string, agent managedRigAgent, row, col *int) (session.Session, error) {
 	tmux, err := exec.LookPath("tmux")
 	if err != nil {
 		return session.Session{}, err
@@ -300,7 +310,7 @@ func (s *Server) attachManagedRigTerminal(parent context.Context, owner string, 
 	if err := exec.CommandContext(ctx, tmux, "set-option", "-t", agent.Tmux, "mouse", "on").Run(); err != nil {
 		return session.Session{}, fmt.Errorf("enable managed terminal scrollback: %w", err)
 	}
-	return s.sessions.EnsureRigTerminal(owner, agent.Target, agent.Name+" · "+agent.Host+" · "+agent.Project, []string{tmux, "attach-session", "-t", "=" + agent.Tmux}, session.RigIdentity{Target: agent.Target, Project: agent.Project, Name: agent.Name, Host: agent.Host, Runtime: agent.Runtime})
+	return s.sessions.EnsureRigTerminalAt(owner, agent.Target, agent.Name+" · "+agent.Host+" · "+agent.Project, []string{tmux, "attach-session", "-t", "=" + agent.Tmux}, row, col, session.RigIdentity{Target: agent.Target, Project: agent.Project, Name: agent.Name, Host: agent.Host, Runtime: agent.Runtime})
 }
 
 func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner string) {
@@ -309,8 +319,10 @@ func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner 
 	}
 	var body struct {
 		Target string `json:"target"`
+		Row    *int   `json:"row"`
+		Col    *int   `json:"col"`
 	}
-	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024)).Decode(&body) != nil {
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024)).Decode(&body) != nil || (body.Row == nil) != (body.Col == nil) {
 		writeError(w, 400, "Invalid agent target.")
 		return
 	}
@@ -330,7 +342,7 @@ func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner 
 	}
 	for _, agent := range status.Agents {
 		if agent.Target == body.Target {
-			value, err := s.attachManagedRigTerminal(r.Context(), owner, agent)
+			value, err := s.attachManagedRigTerminal(r.Context(), owner, agent, body.Row, body.Col)
 			if err != nil {
 				s.sessionError(w, err, "Cannot open agent terminal.")
 				return

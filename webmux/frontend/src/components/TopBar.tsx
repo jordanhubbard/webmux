@@ -129,7 +129,7 @@ export function TopBar({
           }}
           onMouseDown={e => e.preventDefault()}
           onClick={() => setBroadcastMode(!broadcastMode)}
-          title={broadcastMode ? 'Type to All: ON — input goes to every pane' : 'Type to All: OFF — input goes to focused pane only'}
+          title={broadcastMode ? 'Type to All: ON — choose recipients above the grid' : 'Type to All: OFF — input goes to focused pane only'}
         >
           {broadcastMode ? 'Type to All: ON' : 'Type to All'}
         </button>

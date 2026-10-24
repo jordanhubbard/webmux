@@ -38,14 +38,16 @@ test.describe('UI loads', () => {
     await expect(page.locator('text=Type to All')).toBeVisible();
   });
 
-  test('add cell opens connection dialog on click', async ({ page }) => {
+  test('add cell offers Rig seats and host connections', async ({ page }) => {
     await page.goto('/');
     // Both panes render add-cell-0-0; .first() targets the terminals pane.
     const addCell = page.getByTestId('add-cell-0-0').first();
     await expect(addCell).toBeVisible({ timeout: 10_000 });
 
     await addCell.click();
-    await expect(page.locator('text=Connect to Host')).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Open or create Rig seat' })).toBeVisible();
+    await page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Connect to host' }).click();
+    await expect(page.getByRole('dialog', { name: 'Connect to Host' })).toBeVisible();
   });
 
   test('config endpoint returns valid app config', async ({ request }) => {

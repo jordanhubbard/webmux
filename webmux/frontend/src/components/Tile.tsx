@@ -198,7 +198,7 @@ export function Tile({
             >{session.title}</span>
           )}
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
-          {session.rig && <span aria-label="Rig-managed worker" title={`Rig-managed · ${session.rig.runtime} · ${session.rig.target}`} style={{ ...styles.transport, color: '#c5b8ff', flexShrink: 1, minWidth: 0, maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Rig · {session.rig.project} · {session.rig.name} · {session.rig.host}</span>}
+          {session.rig && <span aria-label="Rig-managed worker" title={`Rig seat ${session.rig.target} · ${session.rig.runtime} · viewer ${state} · provider status in Rig seats`} style={{ ...styles.transport, color: '#c5b8ff', flexShrink: 1, minWidth: 0, maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Rig · {session.rig.project} · {session.rig.name} · {session.rig.host}</span>}
         </div>
         <div style={styles.chromeRight}>
           <button style={styles.browserBtn} title="Open an interactive browser on this terminal’s host" aria-expanded={showBrowser} onClick={() => setShowBrowser(true)}>Open browser</button>
@@ -250,12 +250,12 @@ export function Tile({
             title={locked ? 'Locked (click to unlock)' : 'Unlocked (click to lock)'}
           >{locked ? '\ud83d\udd12' : '\ud83d\udd13'}</button>
           {(state === 'disconnected' || state === 'error') && (
-            <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onReconnect(session.id)} title="Reconnect">{'\u21ba'}</button>
+            <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onReconnect(session.id)} title={session.rig ? 'Reconnect viewer transport' : 'Reconnect'}>{'\u21ba'}</button>
           )}
           <button
             style={{ ...styles.chromeBtn, color: locked ? '#444' : '#ff8888', cursor: locked ? 'not-allowed' : 'pointer' }}
             onClick={() => { if (!locked) onClose(session.id); }}
-            title={locked ? 'Window is locked' : 'Close'}
+            title={locked ? 'Window is locked' : session.rig ? 'Detach viewer; seat keeps running' : 'Close'}
           >{'\u2715'}</button>
         </div>
       </div>

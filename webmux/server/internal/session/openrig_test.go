@@ -269,3 +269,32 @@ func TestManagedRigOpenRestoresMinimizedTileWithoutOverlapOrDuplicateViewer(t *t
 		})
 	}
 }
+
+func TestManagedRigPlacementPreservesSeatAndRejectsOccupiedCell(t *testing.T) {
+	b, _, launched := fixture(t)
+	argv := []string{"/test/tmux", "attach-session", "-t", "=seat"}
+	row, col := 2, 1
+	first, err := b.EnsureRigTerminalAt("owner", "seat", "coder", argv, &row, &col)
+	if err != nil || first.Row != row || first.Col != col {
+		t.Fatalf("requested placement: %+v, %v", first, err)
+	}
+	other, err := b.EnsureRigTerminal("owner", "other", "reviewer", argv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := b.EnsureRigTerminalAt("owner", "seat", "coder", argv, &other.Row, &other.Col); err == nil {
+		t.Fatal("occupied cell accepted")
+	}
+	unchanged, err := b.Get("owner", first.ID)
+	if err != nil || unchanged.Row != row || unchanged.Col != col {
+		t.Fatalf("collision moved viewer: %+v, %v", unchanged, err)
+	}
+	newRow, newCol := 3, 1
+	moved, err := b.EnsureRigTerminalAt("owner", "seat", "coder", argv, &newRow, &newCol)
+	if err != nil || moved.ID != first.ID || moved.Row != newRow || moved.Col != newCol {
+		t.Fatalf("viewer move: %+v, %v", moved, err)
+	}
+	if len(b.List("owner")) != 2 || len(launched) != 2 {
+		t.Fatal("viewer move relaunched a seat")
+	}
+}

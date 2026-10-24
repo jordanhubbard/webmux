@@ -52,7 +52,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   const openAgent = async (name: string, reconnect = false) => {
     const dialog = await openDialog();
     const response = page.waitForResponse(value => value.url().endsWith('/api/coordination/attach') && value.request().method() === 'POST');
-    await dialog.locator('article').filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: reconnect ? 'Reconnect agent' : 'Open terminal', exact: true }).click();
+    await dialog.locator('article').filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: reconnect ? 'Restart provider and open' : 'Open viewer', exact: true }).click();
     const attached = await response;
     expect(attached.status()).toBe(200);
     const session = await attached.json() as Session;
@@ -61,9 +61,16 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   };
   try {
     await page.goto('/');
-    for (const name of ['coder', 'reviewer']) {
-      await page.getByRole('button', { name: 'Desktops', exact: true }).click();
-      const dialog = await openDialog();
+    for (const [index, name] of ['coder', 'reviewer'].entries()) {
+      let dialog;
+      if (index === 0) {
+        await page.getByTestId('add-cell-0-0').first().click();
+        await page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Open or create Rig seat' }).click();
+        dialog = page.getByRole('dialog', { name: 'Rig', exact: true });
+      } else {
+        await page.getByRole('button', { name: 'Desktops', exact: true }).click();
+        dialog = await openDialog();
+      }
       await dialog.getByLabel('Project ID', { exact: true }).fill(project);
       await dialog.getByLabel('Agent name', { exact: true }).fill(name);
       await dialog.getByLabel('Execution host', { exact: true }).fill('localhost');
@@ -76,6 +83,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       const agent = (await status()).agents.find(value => value.name === name)!;
       const listing: Session[] = await (await request.get('/api/sessions')).json();
       const session = listing.find(value => value.openrig_view === `managed:${agent.target}`)!;
+      if (index === 0) expect([session.row, session.col]).toEqual([0, 0]);
       sessions.push(session.id);
       expect(session.rig).toEqual({ target: agent.target, project, name, host: 'localhost', runtime: 'codex' });
       const terminal = page.getByTestId(`tile-cell-${session.id}`);
@@ -162,7 +170,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     expect((await status()).agents).toHaveLength(2);
 
     // Close the actual tile, then reopen the same agent without launching a third.
-    await terminal.getByTitle('Close', { exact: true }).click();
+    await terminal.getByTitle('Detach viewer; seat keeps running', { exact: true }).click();
     await expect(terminal).toHaveCount(0);
     expect((await status()).agents.every(value => value.connected)).toBe(true);
     const coderSession = await openAgent('coder');
@@ -257,8 +265,9 @@ test('coordination groups explicit worker identities in keyboard-expandable proj
   await expect(workers).not.toBeVisible();
   await page.keyboard.press('Space');
   await expect(workers).toBeVisible();
-  await expect(workers.getByRole('button', { name: 'Open terminal' })).toHaveCount(1);
-  await expect(workers.getByRole('button', { name: 'Reconnect agent' })).toHaveCount(1);
+  await expect(workers.getByRole('button', { name: 'Open viewer' })).toHaveCount(2);
+  await expect(workers.getByRole('button', { name: 'Open viewer', exact: true }).last()).toBeDisabled();
+  await expect(workers.getByRole('button', { name: 'Restart provider and open' })).toHaveCount(1);
   await page.setViewportSize({ width: 390, height: 800 });
   expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
 });
