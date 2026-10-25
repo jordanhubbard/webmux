@@ -152,35 +152,51 @@ The Makefile and npm build commands produce a standalone Go executable with the
 browser UI and configuration defaults embedded. Copy `webmux/bin/webmux`
 (`webmux.exe` on Windows) anywhere and run it; state remains in `WEBMUX_HOME`.
 The legacy Node backend has been removed. Reinstall existing source services
-with `make install` (Unix), or use `webmux-service reconfigure` (Windows), if
+with `make install-server` (Unix), or use `webmux-service reconfigure` (Windows), if
 those services still point to a Node installation. See the
 [migration history](docs/go-migration.md) for prior verification evidence.
 
-### Install as a Service
+### Install the client or server
 
 ```bash
-make install    # installs launchd (macOS) or systemd (Linux) service
+make install         # client only, to ~/.local/bin; does not start or enroll it
+make install-server  # server only, as a launchd or systemd service
+make install-all     # both on the same machine
 ```
 
-WebMux will start automatically on login and auto-reconnect any persistent sessions after a reboot.
+The server service starts automatically on login and reconnects persistent sessions.
+Start the client explicitly with `webmux-client --server https://WEBMUX_HOST:8443 --background`
+after installing it. Add `~/.local/bin` to PATH if needed; `CLIENT_BINDIR` changes
+the install directory.
 
 ```bash
-make uninstall  # remove the OS service
+make uninstall         # remove the client executable
+make uninstall-server  # remove the server service
+make uninstall-all     # remove both
 ```
 
-`make install` supports macOS and Linux. Windows uses the npm service commands documented in [README-Windows.md](README-Windows.md).
+These Make install targets support macOS and Linux. Windows uses the npm service commands documented in [README-Windows.md](README-Windows.md).
 
 ### Makefile Targets
 
 | Target | Description |
 |--------|-------------|
-| `make` | Install dependencies and build |
+| `make` | Build server and client |
+| `make build-server` | Build the server and browser UI |
+| `make build-client` | Build the standalone client |
+| `make package` | Package server and client together |
+| `make package-server` | Package the server only |
+| `make package-client` | Package the client only |
 | `make start` | Build and start the server (background) |
 | `make stop` | Stop the running server |
 | `make restart` | Restart the server |
 | `make status` | Check if the server is running |
-| `make install` | Install as OS service (launchd/systemd) |
-| `make uninstall` | Remove the OS service |
+| `make install` | Install the client executable only |
+| `make install-server` | Install the server service |
+| `make install-all` | Install client and server |
+| `make uninstall` | Remove the client executable |
+| `make uninstall-server` | Remove the server service |
+| `make uninstall-all` | Remove both installations |
 | `make test` | Run all tests (unit + e2e) |
 | `make test-unit` | Typecheck + unit tests (no browser needed) |
 | `make test-e2e` | E2E tests (auto-provisions a Chromium, falls back to system Chrome) |
@@ -462,8 +478,8 @@ Thanks to the people who have contributed code and reviews as WebMux grew beyond
 ### Service Management
 
 ```bash
-make install      # build + install launchd (macOS) or systemd (Linux) user service
-make uninstall    # stop + remove the service
+make install-server    # build + install launchd (macOS) or systemd (Linux) user service
+make uninstall-server  # stop + remove the service
 make status       # check if running
 make restart      # rebuild + deliberate restart via the service manager
 ```

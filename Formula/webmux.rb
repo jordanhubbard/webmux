@@ -49,7 +49,8 @@ class Webmux < Formula
       Open http://localhost:8080 after starting WebMux.
       Configuration and state stay in ~/.config/webmux (or WEBMUX_HOME).
       Run brew services as your normal user to retain access to your SSH keys.
-      Before migrating from a source installation, run make uninstall there.
+      Before migrating from a source installation, run make uninstall-server
+      there (or make uninstall with older source versions).
       On macOS, complete Mac permissions in the WebMux browser interface.
       Grant access to WebMux.app for local terminals; Remote Login is separate.
       Optional tools: brew install mosh tmux guacamole-server

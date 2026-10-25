@@ -61,7 +61,7 @@ Open `http://localhost:8080`. Runtime configuration and state default to `~/.con
 ## Install as a Service
 
 ```bash
-make install
+make install-server
 make status
 ```
 
@@ -72,7 +72,7 @@ Use the repository Makefile for service management:
 ```bash
 make restart
 make stop
-make uninstall
+make uninstall-server
 ```
 
 The source installer now installs `~/Applications/WebMux.app` and runs its
@@ -132,7 +132,7 @@ macOS; WebMux does not modify TCC databases.
 
 ### App signing and release packaging
 
-`make install` and macOS native archives assemble `WebMux.app` with bundle ID
+`make install-server` and macOS native archives assemble `WebMux.app` with bundle ID
 `com.webmux.server`, protected-folder usage descriptions, and a verified code
 signature. Homebrew runs the packaged app executable on macOS. Source and
 Homebrew builds default to a development (ad-hoc) signature: recheck permissions

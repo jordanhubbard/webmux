@@ -45,10 +45,10 @@ const domain = darwin ? (launch(['print', `gui/${uid}`], false) ? `gui/${uid}` :
 const target = `${domain}/${label}`;
 const definition = !darwin && makeMode ? path.join(os.homedir(), '.config/systemd/user', label)
   : path.join(temporary, darwin ? 'fixture.plist' : label);
-function makeControl(action: 'install' | 'start' | 'stop' | 'restart' | 'uninstall'): void {
+function makeControl(action: 'install-server' | 'start' | 'stop' | 'restart' | 'uninstall-server'): void {
   assert(makeMode && (!darwin || domain === `gui/${uid}`), 'Make fixture requires an isolated service');
-  const result = spawnSync('make', ['--no-print-directory', '-o', 'build', action,
-    'MAKE=make -o build', `NODE=${process.execPath}`, `WEBMUX_DIR=${root}`, `WEBMUX_HOME=${home}`,
+  const result = spawnSync('make', ['--no-print-directory', '-o', 'build-server', action,
+    'MAKE=make -o build-server', `NODE=${process.execPath}`, `WEBMUX_DIR=${root}`, `WEBMUX_HOME=${home}`,
     ...(darwin ? [`PLIST=${definition}`, `LAUNCHD_SVC=${target}`, `MACOS_APP=${path.join(temporary, 'WebMux.app')}`] : [`UNIT=${definition}`])], {
     cwd: path.dirname(sourceRoot), encoding: 'utf8', timeout: 30000,
     env: { ...process.env, JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' },
@@ -134,7 +134,7 @@ try {
     // substitutions. Make still invokes the real serializer and service commands.
     await fs.writeFile(path.join(root, 'service', templateName), template);
     await fs.unlink(definition);
-    makeControl('install');
+    makeControl('install-server');
   } else if (darwin) launch(['bootstrap', domain, definition]);
   else {
     systemctl(['link', '--runtime', definition]);
@@ -275,7 +275,7 @@ try {
   socket?.close();
   if (!registered && definitionCreated) await fs.rm(definition, { force: true });
   if (registered && makeMode) {
-    makeControl('uninstall');
+    makeControl('uninstall-server');
     await waitFor(async () => darwin ? launch(['print', target], false) === '' : property('LoadState') === 'not-found', 'Make uninstall registration cleanup');
     await assert.rejects(fs.access(definition), { code: 'ENOENT' });
   }

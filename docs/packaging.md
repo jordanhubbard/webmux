@@ -70,8 +70,9 @@ override when migrating.
 
 ## Migrating from a source checkout
 
-From the old checkout, run `make uninstall` if you installed its service, or
-`make stop` if you started it manually. Then install and start the Homebrew package.
+From a current source checkout, run `make uninstall-server` if you installed its
+service (`make uninstall` on older source versions), or `make stop` if you
+started it manually. Then install and start the Homebrew package.
 The default state directory is shared, so existing users, hosts, keys, and layouts
 remain available. Do not run both installations against the same state directory.
 Use `brew services` to control the packaged installation.
@@ -125,11 +126,15 @@ To build the native bundle locally using Go and Node.js 24:
 
 ```bash
 make package
+make package-server  # server-only archive
+make package-client  # client-only archive; no frontend build or npm install
 ```
 
 Output goes to `dist/`. The build uses `npm ci` for frontend/tooling dependencies;
 the Go build command embeds those browser assets and configuration templates
-into the executable.
+into the server executable. `make package` preserves the combined archive used
+by the current release workflow. The split archives are independent outputs;
+installing a client archive never starts or enrolls the client.
 To test an extracted bundle:
 
 ```bash

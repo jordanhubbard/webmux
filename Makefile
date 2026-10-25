@@ -1,7 +1,7 @@
 # WebMux — web-native terminal multiplexer
 #
 # Usage:
-#   make                  Build the application
+#   make                  Build server and client
 #   make start            Build and start the server (background)
 #   make stop             Stop the running server
 #   make restart          Restart the server
@@ -9,8 +9,11 @@
 #   make test             Run all tests
 #   make lint             Lint all code
 #   make clean            Remove build artifacts and dependencies
-#   make install          Install as OS service (launchd/systemd)
-#   make uninstall        Remove OS service
+#   make install          Install the client executable only
+#   make install-server   Install the server as an OS service
+#   make install-all      Install both client and server
+#   make uninstall        Remove the client executable
+#   make uninstall-server Remove the server service
 #   make release          Test, bump patch version, tag, push, create GitHub release
 #   make release-minor    Same as release but bumps the minor version
 #   make release-major    Same as release but bumps the major version
@@ -24,6 +27,7 @@
 #   AUTH_MODE          none | local            (default: local)
 #   JWT_SECRET         Token signing secret    (default: dev secret)
 #   SECURE_MODE        true | false            (default: false)
+#   CLIENT_BINDIR      Client install directory (default: ~/.local/bin)
 #
 # Examples:
 #   make start HTTP_PORT=9090
@@ -46,6 +50,7 @@ C_WHT  := \033[37m
 WEBMUX_DIR   := $(CURDIR)/webmux
 WEBMUX_ROOT  := $(WEBMUX_DIR)
 WEBMUX_HOME  ?= $(HOME)/.config/webmux
+CLIENT_BINDIR ?= $(HOME)/.local/bin
 PIDFILE      := $(WEBMUX_HOME)/.webmux.pid
 LOGFILE      := $(WEBMUX_HOME)/logs/webmux.log
 NODE         := node
@@ -76,23 +81,36 @@ ifneq ($(JWT_SECRET),)
 endif
 
 # ── Targets ────────────────────────────────────────────────────────
-.PHONY: all build deps check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
-       install uninstall release release-minor release-major release-publish changelog-init \
-       package _start_manual _stop_manual
+.PHONY: all build build-server build-client deps check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
+       install install-client install-server install-all uninstall uninstall-client uninstall-server uninstall-all \
+       release release-minor release-major release-publish changelog-init \
+       package package-server package-client package-assets _start_manual _stop_manual
 
 all: build
 
-# Platform-specific runtime bundle; use Node.js 24 and build from the lockfile.
-package:
+# Platform-specific runtime bundles; the combined package remains the release artifact.
+package-assets:
 	@cd "$(WEBMUX_DIR)" && $(NPM) ci $(NPM_WORKSPACES) --no-audit --no-fund
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build --workspace=frontend
-	@$(NODE) scripts/package-native.mts
+
+package: package-assets
+	@WEBMUX_NATIVE_COMPONENT=all $(NODE) scripts/package-native.mts
+
+package-server: package-assets
+	@WEBMUX_NATIVE_COMPONENT=server $(NODE) scripts/package-native.mts
+
+package-client:
+	@WEBMUX_NATIVE_COMPONENT=client $(NODE) scripts/package-native.mts
 
 help:
 	@printf "$(C_BLD)$(C_MAG)▦ WebMux$(C_RST)$(C_DIM) — web-native terminal multiplexer$(C_RST)\n\n"
 	@printf "$(C_BLD)Targets:$(C_RST)\n"
-	@printf "  $(C_CYN)make package$(C_RST)        Build a native macOS/Linux runtime bundle\n"
-	@printf "  $(C_CYN)make$(C_RST)               Build the application\n"
+	@printf "  $(C_CYN)make package$(C_RST)        Package server and client together\n"
+	@printf "  $(C_CYN)make package-server$(C_RST) Package the server only\n"
+	@printf "  $(C_CYN)make package-client$(C_RST) Package the client only\n"
+	@printf "  $(C_CYN)make$(C_RST)               Build server and client\n"
+	@printf "  $(C_CYN)make build-server$(C_RST)  Build the server and browser UI\n"
+	@printf "  $(C_CYN)make build-client$(C_RST)  Build the standalone client\n"
 	@printf "  $(C_CYN)make start$(C_RST)          Build and start the server\n"
 	@printf "  $(C_CYN)make stop$(C_RST)           Stop the running server\n"
 	@printf "  $(C_CYN)make restart$(C_RST)        Restart the server\n"
@@ -102,8 +120,12 @@ help:
 	@printf "  $(C_CYN)make test-e2e$(C_RST)       E2E tests (auto-provisions a browser)\n"
 	@printf "  $(C_CYN)make lint$(C_RST)           Lint all code\n"
 	@printf "  $(C_CYN)make clean$(C_RST)          Remove build artifacts\n"
-	@printf "  $(C_CYN)make install$(C_RST)        Install as OS service (launchd/systemd)\n"
-	@printf "  $(C_CYN)make uninstall$(C_RST)      Remove OS service\n"
+	@printf "  $(C_CYN)make install$(C_RST)        Install the client executable only\n"
+	@printf "  $(C_CYN)make install-server$(C_RST) Install the server service\n"
+	@printf "  $(C_CYN)make install-all$(C_RST)    Install both client and server\n"
+	@printf "  $(C_CYN)make uninstall$(C_RST)      Remove the client executable\n"
+	@printf "  $(C_CYN)make uninstall-server$(C_RST) Remove the server service\n"
+	@printf "  $(C_CYN)make uninstall-all$(C_RST)  Remove both installations\n"
 	@printf "  $(C_CYN)make configure$(C_RST)      Update runtime configuration\n"
 	@printf "  $(C_CYN)make release$(C_RST)        Bump patch version, test, open release PR\n"
 	@printf "  $(C_CYN)make release-minor$(C_RST)  Bump minor version, test, open release PR\n"
@@ -116,6 +138,7 @@ help:
 	@printf "  $(C_YLW)HTTP_PORT$(C_RST)=$(C_DIM)8080$(C_RST)              HTTP listen port\n"
 	@printf "  $(C_YLW)HTTPS_PORT$(C_RST)=$(C_DIM)8443$(C_RST)             HTTPS listen port\n"
 	@printf "  $(C_YLW)LISTEN_HOST$(C_RST)=$(C_DIM)0.0.0.0$(C_RST)          Bind address\n"
+	@printf "  $(C_YLW)CLIENT_BINDIR$(C_RST)=$(C_DIM)~/.local/bin$(C_RST)     Client install directory\n"
 
 check-guacd:
 	@if command -v guacd >/dev/null 2>&1; then \
@@ -131,13 +154,21 @@ check-guacd:
 deps:
 	@cd "$(WEBMUX_DIR)" && $(NPM) install $(NPM_WORKSPACES) --silent
 
-build: deps
+build: build-server build-client
+	@printf "$(C_GRN)✓$(C_RST) Server and client build complete.\n"
+
+build-server: deps
 	@printf "$(C_BLU)▸$(C_RST) Building webmux…\n"
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build:helpers --silent && $(NPM) run build --workspace=frontend --silent
 	@mkdir -p "$(WEBMUX_DIR)/bin"
 	@cd "$(WEBMUX_DIR)/server" && $(GO) run ./cmd/build -o ../bin/webmux
+	@printf "$(C_GRN)✓$(C_RST) Server build complete.\n"
+
+build-client:
+	@printf "$(C_BLU)▸$(C_RST) Building webmux-client…\n"
+	@mkdir -p "$(WEBMUX_DIR)/bin"
 	@cd "$(WEBMUX_DIR)/server" && $(GO) build -o ../bin/webmux-client ./cmd/webmux-client
-	@printf "$(C_GRN)✓$(C_RST) Build complete.\n"
+	@printf "$(C_GRN)✓$(C_RST) Client build complete.\n"
 
 configure:
 	@printf "$(C_BLU)▸$(C_RST) Configuring webmux…\n"
@@ -229,7 +260,7 @@ _stop_manual:
 # manager so a restart is a *deliberate* restart (not a crash the manager
 # would auto-recover or count as a failure). Otherwise fall back to the
 # manual pidfile helpers above.
-start: build check-guacd
+start: build-server check-guacd
 	@mkdir -p "$(WEBMUX_HOME)/logs"
 	@if $(SVC_INSTALLED); then \
 		printf "$(C_BLU)▸$(C_RST) Starting webmux via $(SVC_MGR)…\n"; \
@@ -252,7 +283,7 @@ stop:
 
 restart:
 	@if $(SVC_INSTALLED); then \
-		$(MAKE) --no-print-directory build || exit $$?; \
+		$(MAKE) --no-print-directory build-server || exit $$?; \
 		printf "$(C_BLU)▸$(C_RST) Restarting webmux via $(SVC_MGR) $(C_DIM)(deliberate restart)$(C_RST)…\n"; \
 		$(SVC_RESTART) || exit $$?; \
 		sleep 1; \
@@ -349,7 +380,17 @@ else
   SVC_STATUS    := systemctl --user --no-pager --lines=0 status "$(SYSTEMD_UNIT)"
 endif
 
-install: stop build
+install: install-client
+
+install-client: build-client
+	@mkdir -p "$(CLIENT_BINDIR)"
+	@install -m 0755 "$(WEBMUX_DIR)/bin/webmux-client" "$(CLIENT_BINDIR)/webmux-client"
+	@printf "$(C_GRN)✓$(C_RST) Installed client: %s/webmux-client\n" "$(CLIENT_BINDIR)"
+	@printf "  Start it explicitly with: %s/webmux-client --server https://WEBMUX_HOST:8443 --background\n" "$(CLIENT_BINDIR)"
+
+install-all: install-server install-client
+
+install-server: stop build-server
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Installing launchd service…\n"
 	@$(NODE) scripts/macos-app.mts "$(WEBMUX_DIR)/bin/webmux" "$(MACOS_APP)"
@@ -374,7 +415,15 @@ else
 	@printf "  $(C_DIM)Hint: run$(C_RST) loginctl enable-linger $(USER) $(C_DIM)to start without logging in.$(C_RST)\n"
 endif
 
-uninstall:
+uninstall: uninstall-client
+
+uninstall-client:
+	@rm -f "$(CLIENT_BINDIR)/webmux-client"
+	@printf "$(C_GRN)✓$(C_RST) Client executable removed from %s\n" "$(CLIENT_BINDIR)"
+
+uninstall-all: uninstall-server uninstall-client
+
+uninstall-server:
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Removing launchd service…\n"
 	@launchctl bootout $(LAUNCHD_SVC) 2>/dev/null || true

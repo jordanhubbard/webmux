@@ -767,7 +767,7 @@ hosted verification remains queued.
 
 The Makefile defaults to Go for builds, packaging, manual start/stop, tests and
 source service installation. `make build` writes `webmux/bin/webmux` and builds the
-existing frontend and checked helpers. `make install` uses native
+existing frontend and checked helpers. `make install-server` uses native
 launchd/systemd templates; their executable is the source tree's Go binary.
 Native Make and Windows package dependency installation selects the frontend and root
 tooling workspaces, excluding the legacy backend's native npm dependencies.

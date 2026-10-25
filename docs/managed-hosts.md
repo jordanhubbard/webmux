@@ -9,10 +9,12 @@ mode is enabled.
 
 ## Connect a host
 
-1. Download the native WebMux bundle for the remote machine and copy only
-   `bin/webmux-client` (or `bin/webmux-client.exe`) to a directory on its PATH.
-   The client is included in the macOS, Linux and Windows bundles; it does not
-   install or run the WebMux server.
+1. On a macOS or Linux source checkout, run `make install`. It builds only
+   `webmux-client` and installs it to `~/.local/bin` (override with
+   `CLIENT_BINDIR=/your/bin`). Add that directory to PATH if needed. Or copy
+   `bin/webmux-client` (or `bin/webmux-client.exe`) from a client-only native
+   bundle to a directory on PATH. The combined bundle also includes the client.
+   None of these installation methods starts or enrolls it.
 2. On that machine, run `webmux-client --server https://WEBMUX_HOST:8443
    --background`. On first use, it prompts for a WebMux username and password
    in the terminal. It stores a private, revocable client credential and prints
