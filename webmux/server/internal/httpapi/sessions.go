@@ -58,6 +58,29 @@ func (s *Server) patchSession(w http.ResponseWriter, r *http.Request, owner stri
 	if !decodeJSON(w, r, &input) {
 		return
 	}
+	if input.HostID != nil {
+		current, err := s.sessions.Get(owner, r.PathValue("id"))
+		if err != nil {
+			s.sessionError(w, err, "Failed to associate host")
+			return
+		}
+		var hosts hostsConfig
+		if err := s.store.ReadConfig("hosts.yaml", &hosts); err != nil {
+			s.internalError(w, err)
+			return
+		}
+		match := false
+		for _, host := range hosts.Hosts {
+			if host["id"] == *input.HostID && host["hostname"] == current.Hostname && host["username"] == current.Username && host["port"] == current.Port {
+				match = true
+				break
+			}
+		}
+		if !match {
+			writeError(w, 400, "Saved host must match this SSH session's hostname, account and port")
+			return
+		}
+	}
 	value, err := s.sessions.Patch(owner, r.PathValue("id"), input)
 	if err != nil {
 		s.sessionError(w, err, "Failed to update session")

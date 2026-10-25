@@ -22,6 +22,11 @@ func (s *Server) closeSocketsAndSessions() error {
 			_ = connection.Close()
 		}
 		s.socketMu.Unlock()
+		s.clientMu.Lock()
+		for _, client := range s.clientSockets {
+			_ = client.conn.Close()
+		}
+		s.clientMu.Unlock()
 		s.closeErr = errors.Join(s.browsers.Close(), s.sessions.Close(), s.vnc.Close(), s.rdp.Close(), s.uploads.Close())
 		s.socketWorkers.Wait()
 	})

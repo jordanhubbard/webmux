@@ -136,6 +136,7 @@ build: deps
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build:helpers --silent && $(NPM) run build --workspace=frontend --silent
 	@mkdir -p "$(WEBMUX_DIR)/bin"
 	@cd "$(WEBMUX_DIR)/server" && $(GO) run ./cmd/build -o ../bin/webmux
+	@cd "$(WEBMUX_DIR)/server" && $(GO) build -o ../bin/webmux-client ./cmd/webmux-client
 	@printf "$(C_GRN)✓$(C_RST) Build complete.\n"
 
 configure:

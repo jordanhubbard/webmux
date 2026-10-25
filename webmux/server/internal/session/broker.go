@@ -446,6 +446,11 @@ func (b *Broker) Patch(owner, id string, patch Patch) (Session, error) {
 	}
 	old := e.value
 	switch {
+	case patch.HostID != nil:
+		if e.value.Transport != "ssh" || *patch.HostID == "" {
+			return Session{}, invalid("only SSH sessions can be associated with a saved host")
+		}
+		e.value.HostID = *patch.HostID
 	case patch.Minimized != nil:
 		e.value.Minimized = *patch.Minimized
 	case patch.Title != nil:

@@ -25,6 +25,7 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 - **Audit log** — append-only JSONL event log (logins, session lifecycle)
 - **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
 - **Agent coordination** — a Coordination modal, ordinary agent terminal tiles, and one supervised OpenRig coordinator for local and SSH execution hosts; see [setup and scope](docs/openrig.md)
+- **Optional managed hosts** — a separately installed `webmux-client` checks in over an outbound connection, links to saved SSH hosts by a one-time code, and reports host facts; see [managed-host setup](docs/managed-hosts.md)
 - **Session expiry handling** — visible JWT countdown and refresh controls prevent expired browser sessions from entering reconnect loops
 
 ## Experimental USB transport

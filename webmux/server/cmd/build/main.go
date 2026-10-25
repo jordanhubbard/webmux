@@ -41,7 +41,7 @@ func build(output, web, defaults, goos, goarch string) error {
 		return err
 	}
 	// Fail before compiling rather than ship a binary missing its UI or defaults.
-	for _, name := range []string{filepath.Join(web, "index.html"), filepath.Join(defaults, "app.yaml"), filepath.Join(defaults, "auth.yaml"), filepath.Join(defaults, "hosts.yaml"), filepath.Join(defaults, "keys.yaml"), filepath.Join(defaults, "layout.yaml")} {
+	for _, name := range []string{filepath.Join(web, "index.html"), filepath.Join(defaults, "app.yaml"), filepath.Join(defaults, "auth.yaml"), filepath.Join(defaults, "hosts.yaml"), filepath.Join(defaults, "clients.yaml"), filepath.Join(defaults, "keys.yaml"), filepath.Join(defaults, "layout.yaml")} {
 		if info, err := os.Lstat(name); err != nil || !info.Mode().IsRegular() || info.Size() == 0 {
 			return fmt.Errorf("missing or invalid build input %s (run the frontend build first)", name)
 		}
