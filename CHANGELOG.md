@@ -5,6 +5,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.25] - 2026-10-25
+
+### Added
+- Add an optional `webmux-client` that connects outward to an authenticated WebMux server. Pair it explicitly with a saved SSH host to show OS, architecture, CPU count, optional load average, and last check-in; refresh facts, unlink the host, or revoke the client from the Host dialog (#199).
+- Publish separate client-only and server-only native archives for macOS, Linux, Windows x64, and Windows ARM64 alongside the combined archives and Windows MSI (#204).
+
+### Changed
+- Make `make install` build and install only the client. Use `make install-server` for the server service or `make install-all` for both; corresponding build, package, and uninstall targets are separate (#202).
+- Require all three archive variants and their checksums in the native release gate (#204).
+
+### Limitations
+- The managed-host channel currently reports host facts. Remote Rig project and seat observation remains follow-up work (#200). The user starts and pairs each client; installation alone does not enroll a host (#199).
+
 ## [1.3.24] - 2026-10-24
 
 ### Added
