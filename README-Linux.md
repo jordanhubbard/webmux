@@ -65,7 +65,7 @@ Open `http://localhost:8080`. Runtime configuration and state default to `~/.con
 ## Install as a Service
 
 ```bash
-make install
+make install-server
 make status
 ```
 
@@ -76,7 +76,7 @@ Use the repository Makefile for service management:
 ```bash
 make restart
 make stop
-make uninstall
+make uninstall-server
 ```
 
 To start the user service during boot without an interactive login:
