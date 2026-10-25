@@ -10,6 +10,8 @@ test('native upload gate rejects incomplete, stale, empty and corrupted release 
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-native-artifacts-'));
   const archive = 'webmux-1.2.3-windows-arm64-native.zip';
   const installer = 'webmux-1.2.3-windows-arm64-native.msi';
+  const client = 'webmux-client-1.2.3-windows-arm64-native.zip';
+  const server = 'webmux-server-1.2.3-windows-arm64-native.zip';
   const verify = () => verifyNativeArtifacts(directory, '1.2.3', 'win32', 'arm64');
   const write = (name: string, bytes: string) => {
     fs.writeFileSync(path.join(directory, name), bytes);
@@ -19,10 +21,17 @@ test('native upload gate rejects incomplete, stale, empty and corrupted release 
     write(archive, 'archive fixture');
     assert.throws(verify, /upload set/); // A Windows archive alone is not a release.
     write(installer, 'installer fixture');
+    assert.throws(verify, /upload set/); // Split deliverables are required too.
+    write(client, 'client fixture');
+    assert.throws(verify, /upload set/);
+    write(server, 'server fixture');
     verify();
     fs.writeFileSync(path.join(directory, archive), 'corrupted bytes');
     assert.throws(verify, /Checksum mismatch/);
     write(archive, 'archive fixture');
+    fs.writeFileSync(path.join(directory, client), 'corrupted client bytes');
+    assert.throws(verify, /Checksum mismatch/);
+    write(client, 'client fixture');
     write(installer, '');
     assert.throws(verify, /Empty artifact/);
     write(installer, 'installer fixture');
@@ -57,6 +66,11 @@ test('publication requires all native targets and rejects mixed or tampered down
       fs.mkdirSync(root);
       for (const extension of extensions) {
         const name = `webmux-1.2.3-${target}-native.${extension}`;
+        fs.writeFileSync(path.join(root, name), name);
+        fs.writeFileSync(path.join(root, `${name}.sha256`), `${createHash('sha256').update(name).digest('hex')}  ${name}\n`);
+      }
+      for (const component of ['client', 'server']) {
+        const name = `webmux-${component}-1.2.3-${target}-native.${target.startsWith('windows') ? 'zip' : 'tar.gz'}`;
         fs.writeFileSync(path.join(root, name), name);
         fs.writeFileSync(path.join(root, `${name}.sha256`), `${createHash('sha256').update(name).digest('hex')}  ${name}\n`);
       }

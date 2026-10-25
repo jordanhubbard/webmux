@@ -38,6 +38,7 @@ $Archive = Join-Path $OutputDirectory "$BundleName.zip"
 $InstallerSuffix = '-native'
 $Installer = Join-Path $OutputDirectory "webmux-$Version-windows-$NodeArch$InstallerSuffix.msi"
 $Temporary = Join-Path ([IO.Path]::GetTempPath()) "webmux-msi-$([Guid]::NewGuid())"
+$PreviousNativeComponent = $env:WEBMUX_NATIVE_COMPONENT
 
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $Temporary | Out-Null
@@ -54,6 +55,7 @@ try {
   }
 
   $Packager = 'scripts/package-native.mts'
+  $env:WEBMUX_NATIVE_COMPONENT = 'all'
   & node (Join-Path $Repository $Packager) $OutputDirectory
   if ($LASTEXITCODE -ne 0) { throw "Runtime packaging failed with exit code $LASTEXITCODE." }
   if (-not (Test-Path -LiteralPath $Archive)) { throw "Runtime bundle was not created at $Archive." }
@@ -75,8 +77,18 @@ try {
   "$InstallerHash  $([IO.Path]::GetFileName($Installer))" |
     Set-Content -LiteralPath "$Installer.sha256" -Encoding ascii
 
+  foreach ($Component in @('client', 'server')) {
+    $env:WEBMUX_NATIVE_COMPONENT = $Component
+    & node (Join-Path $Repository $Packager) $OutputDirectory
+    if ($LASTEXITCODE -ne 0) { throw "$Component packaging failed with exit code $LASTEXITCODE." }
+    $SplitArchive = Join-Path $OutputDirectory "webmux-$Component-$Version-windows-$NodeArch-$Flavor.zip"
+    if (-not (Test-Path -LiteralPath $SplitArchive)) { throw "$Component archive was not created at $SplitArchive." }
+    Write-Host $SplitArchive
+  }
+
   Write-Host $Archive
   Write-Host $Installer
 } finally {
+  $env:WEBMUX_NATIVE_COMPONENT = $PreviousNativeComponent
   Remove-Item -LiteralPath $Temporary -Recurse -Force -ErrorAction SilentlyContinue
 }

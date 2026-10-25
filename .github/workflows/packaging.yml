@@ -40,9 +40,14 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: node scripts/packaging-checks.mts release-version
-      - name: Package native server
+      - name: Package combined native bundle
         if: runner.os != 'Windows'
         run: make package
+      - name: Package separate native client and server archives
+        if: runner.os != 'Windows'
+        run: |
+          make package-client
+          make package-server
       - name: Verify native source build and manual controls
         if: runner.os != 'Windows'
         run: |
@@ -82,12 +87,12 @@ jobs:
           for archive in dist/*-native.tar.gz dist/*-native.zip; do
             if [ -f "$archive" ]; then tar -xf "$archive" -C "$RUNNER_TEMP/webmux-native"; fi
           done
-          node scripts/smoke-native-package.mts "$RUNNER_TEMP"/webmux-native/webmux-*
+          node scripts/smoke-native-package.mts "$RUNNER_TEMP"/webmux-native/webmux-[0-9]*
       - name: Exercise extracted Windows native runtime
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $archives = @(Get-ChildItem dist -Filter '*-native.zip')
+          $archives = @(Get-ChildItem dist -Filter '*-native.zip' | Where-Object { $_.Name -notmatch '^webmux-(client|server)-' })
           if ($archives.Count -ne 1) { throw 'Expected exactly one native archive.' }
           $extract = Join-Path $env:RUNNER_TEMP 'webmux-native'
           Expand-Archive -LiteralPath $archives[0].FullName -DestinationPath $extract
