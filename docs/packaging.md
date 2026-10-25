@@ -91,18 +91,23 @@ sessions can find these tools.
 
 ## Runtime release bundles and Windows installer
 
-Current source builds produce a standalone Go executable containing the browser
-UI and configuration defaults. Archives include the executable, license, build
-metadata and, on Windows, optional service installation scripts. No adjacent
-`web/` or `config.defaults/` directory is needed to run the executable, and no
-Node.js runtime is required. OpenSSH and optional mosh/tmux/guacd tools remain
+Current source builds produce a standalone Go server executable containing the
+browser UI and configuration defaults. Combined and server-only archives include
+that executable, license, build metadata and, on Windows, optional service
+installation scripts. Client-only archives contain `webmux-client` without the
+server or browser assets. The server executable needs no adjacent `web/` or
+`config.defaults/` directory, and neither executable requires a Node.js
+runtime. OpenSSH and optional mosh/tmux/guacd tools remain
 external dependencies for their respective features.
 
 Native filenames end in `-native.tar.gz`, `-native.zip` or `-native.msi`, with a
 `.sha256` file for each artifact. `bundle.json` records the build platform and
 CPU. Verify the checksum with `shasum -a 256 -c <archive>.sha256` on macOS or
 `sha256sum -c <archive>.sha256` on Linux, extract the archive, and run
-`bin/webmux`. The executable can also be copied to another directory by itself.
+`bin/webmux` from a combined or server archive. For a client-only archive,
+copy `bin/webmux-client` to a directory on PATH and start it explicitly with
+`--server`; installation does not start or enroll it. The executables can also
+be copied to another directory by themselves.
 Keep the Windows service scripts if using `webmux-service`.
 
 Stop the previous instance before upgrading. Start the replacement with the
@@ -132,9 +137,10 @@ make package-client  # client-only archive; no frontend build or npm install
 
 Output goes to `dist/`. The build uses `npm ci` for frontend/tooling dependencies;
 the Go build command embeds those browser assets and configuration templates
-into the server executable. `make package` preserves the combined archive used
-by the current release workflow. The split archives are independent outputs;
-installing a client archive never starts or enrolls the client.
+into the server executable. The release workflow publishes combined,
+server-only, and client-only archives for each native platform. The split
+archives are independent outputs; installing a client archive never starts or
+enrolls the client.
 To test an extracted bundle:
 
 ```bash
@@ -149,7 +155,8 @@ dotnet tool install --global wix --version 5.0.2
 .\scripts\package-windows.ps1
 ```
 
-The command produces `-native.zip` and `-native.msi` files
+The command produces combined, server-only, and client-only `-native.zip`
+archives plus a combined `-native.msi` installer
 with SHA-256 checksums in `dist/`. Node.js is a build dependency; the installed
 native server does not require it. Legacy bundle generation has been removed.
 Windows CI downloads the published v1.3.11 MSI solely as an upgrade fixture,

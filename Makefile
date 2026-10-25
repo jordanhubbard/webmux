@@ -88,7 +88,7 @@ endif
 
 all: build
 
-# Platform-specific runtime bundles; the combined package remains the release artifact.
+# Platform-specific runtime bundles; the combined archive retains its existing name.
 package-assets:
 	@cd "$(WEBMUX_DIR)" && $(NPM) ci $(NPM_WORKSPACES) --no-audit --no-fund
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build --workspace=frontend

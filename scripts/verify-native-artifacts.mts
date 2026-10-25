@@ -9,8 +9,14 @@ export function verifyNativeArtifacts(directory: string, version: string, platfo
   assert(/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(version), 'Invalid native version');
   assert(['darwin', 'linux', 'win32'].includes(platform), 'Unsupported native platform');
   assert(['x64', 'arm64'].includes(arch), 'Unsupported native architecture');
-  const stem = `webmux-${version}-${platform === 'win32' ? 'windows' : platform}-${arch}-native`;
-  const artifacts = (platform === 'win32' ? ['zip', 'msi'] : ['tar.gz']).map(extension => `${stem}.${extension}`);
+  const target = `${version}-${platform === 'win32' ? 'windows' : platform}-${arch}-native`;
+  const extension = platform === 'win32' ? 'zip' : 'tar.gz';
+  const artifacts = [
+    `webmux-${target}.${extension}`,
+    `webmux-server-${target}.${extension}`,
+    `webmux-client-${target}.${extension}`,
+    ...(platform === 'win32' ? [`webmux-${target}.msi`] : []),
+  ];
   const expected = artifacts.flatMap(name => [name, `${name}.sha256`]).sort();
   const actual = fs.readdirSync(directory).filter(name => name.includes('-native.')).sort();
   assert.deepEqual(actual, expected, 'Native upload set must contain exactly this version/platform and its checksums');
