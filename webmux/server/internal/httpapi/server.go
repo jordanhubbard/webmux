@@ -28,6 +28,9 @@ import (
 )
 
 type Server struct {
+	clientMu           sync.Mutex
+	clientSockets      map[string]*clientConnection
+	clientFacts        map[string]clientSnapshot
 	coordinationOnce   sync.Once
 	coordinationCancel context.CancelFunc
 	macSetup           macsetup.Manager
@@ -87,7 +90,7 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil)}, nil
+	return &Server{restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil), clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
 }
 
 func (s *Server) RestoreSessions() error {
@@ -123,6 +126,14 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /api/auth/users/{username}", s.protected(true, s.deleteUser))
 	mux.Handle("POST /api/auth/ticket", s.protected(false, s.issueTicket))
 	mux.Handle("GET /api/hosts", s.protected(false, s.listHosts))
+	mux.Handle("GET /api/clients", s.protected(false, s.listClients))
+	mux.Handle("POST /api/clients/enroll", s.protected(false, s.enrollClient))
+	mux.Handle("POST /api/clients/pair-code", http.HandlerFunc(s.clientPairCode))
+	mux.Handle("GET /api/clients/connect", http.HandlerFunc(s.clientSocket))
+	mux.Handle("POST /api/clients/{id}/refresh", s.protected(false, s.refreshClient))
+	mux.Handle("DELETE /api/clients/{id}", s.protected(false, s.revokeClient))
+	mux.Handle("POST /api/hosts/{id}/client", s.protected(false, s.bindClient))
+	mux.Handle("DELETE /api/hosts/{id}/client", s.protected(false, s.unbindClient))
 	mux.Handle("POST /api/hosts", s.protected(false, s.createHost))
 	mux.Handle("PUT /api/hosts/{id}", s.protected(false, s.updateHost))
 	mux.Handle("DELETE /api/hosts/{id}", s.protected(false, s.deleteHost))

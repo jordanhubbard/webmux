@@ -3,13 +3,18 @@ import { Terminal, type TerminalHandle } from './Terminal';
 import { AuthHandoff } from './AuthHandoff';
 import { BrowserCompanion } from './BrowserCompanion';
 import { TerminalActions } from './TerminalActions';
+import { ManagedHostDialog } from './ManagedHostDialog';
 import { ReconnectOverlay } from './ReconnectOverlay';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { clipboardFiles } from '../utils/terminalClipboard';
-import type { Session, ConnectionState, NamedTheme } from '../types';
+import type { Session, ConnectionState, NamedTheme, ManagedClient } from '../types';
 
 interface TileProps {
   session: Session;
+  canManageHosts?: boolean;
+  managedClient?: ManagedClient;
+  onManagedClientChanged?: () => void;
+  onSessionUpdated?: (session: Session) => void;
   focusRequest?: number;
   fontSize: number;
   fontFamily?: string;
@@ -36,6 +41,10 @@ interface TileProps {
 
 export function Tile({
   session,
+  canManageHosts = true,
+  managedClient,
+  onManagedClientChanged,
+  onSessionUpdated,
   focusRequest = 0,
   fontSize,
   fontFamily,
@@ -62,6 +71,7 @@ export function Tile({
   const [state, setState] = useState<ConnectionState>(session.state);
   const [browserNavigation, setBrowserNavigation] = useState<{ url: string } | null>(null);
   const [showBrowser, setShowBrowser] = useState(false);
+  const [showManagedHost, setShowManagedHost] = useState(false);
   const [handoff, setHandoff] = useState<{ url: string; requestId?: string; key: number } | null>(null);
   const [viewerCount, setViewerCount] = useState(1);
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
@@ -198,9 +208,11 @@ export function Tile({
             >{session.title}</span>
           )}
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
+          {session.transport === 'ssh' && managedClient && <span style={{ ...styles.transport, color: managedClient.online ? '#50fa7b' : '#aaa' }} title={`Managed host ${managedClient.online ? 'connected' : 'offline'}`}>Host {managedClient.online ? '●' : '○'}</span>}
           {session.rig && <span aria-label="Rig-managed worker" title={`Rig seat ${session.rig.target} · ${session.rig.runtime} · viewer ${state} · provider status in Rig seats`} style={{ ...styles.transport, color: '#c5b8ff', flexShrink: 1, minWidth: 0, maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Rig · {session.rig.project} · {session.rig.name} · {session.rig.host}</span>}
         </div>
         <div style={styles.chromeRight}>
+          {canManageHosts && session.transport === 'ssh' && <button style={styles.browserBtn} onClick={() => setShowManagedHost(true)} title="View or link a WebMux host client">Host</button>}
           <button style={styles.browserBtn} title="Open an interactive browser on this terminal’s host" aria-expanded={showBrowser} onClick={() => setShowBrowser(true)}>Open browser</button>
           <button style={styles.browserBtn} onClick={() => setHandoff({ url: '', key: Date.now() })}>Sign in</button>
           <TerminalActions terminalRef={termHandleRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
@@ -264,6 +276,7 @@ export function Tile({
         onDismiss={() => { if (handoff.requestId) termHandleRef.current?.acknowledgeBrowser(handoff.requestId); setHandoff(null); termHandleRef.current?.focus(); }}
         onCompanion={url => { setBrowserNavigation({ url }); setShowBrowser(true); }} />}
       {showBrowser && <BrowserCompanion session={session} navigation={browserNavigation} onHide={() => { setBrowserNavigation(null); setShowBrowser(false); termHandleRef.current?.focus(); }} />}
+      {showManagedHost && <ManagedHostDialog session={session} client={managedClient} onClose={() => setShowManagedHost(false)} onChanged={() => onManagedClientChanged?.()} onSessionUpdated={updated => onSessionUpdated?.(updated)} />}
       <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
         {(state === 'disconnected' || state === 'error') && (
           <ReconnectOverlay onReconnect={() => onReconnect(session.id)} />

@@ -85,6 +85,7 @@ type Patch struct {
 	Col       *int    `json:"col"`
 	Title     *string `json:"title"`
 	Minimized *bool   `json:"minimized"`
+	HostID    *string `json:"host_id"`
 }
 
 type document struct {

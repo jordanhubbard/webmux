@@ -37,6 +37,7 @@ vi.mock('@frontend/utils/api', () => ({
     }),
     getSessions: vi.fn().mockResolvedValue([]),
     getCoordination: vi.fn().mockResolvedValue({ agents: [], messages: [] }),
+	getClients: vi.fn().mockResolvedValue([]),
     getHosts: vi.fn().mockResolvedValue([]),
     getKeys: vi.fn().mockResolvedValue([]),
     getAuthStatus: vi.fn().mockResolvedValue({ mode: 'none', bootstrap_required: false }),

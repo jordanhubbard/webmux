@@ -156,11 +156,30 @@ func (s *Server) updateHost(w http.ResponseWriter, r *http.Request, _ string) {
 		return
 	}
 	id := r.PathValue("id")
+	clients, err := s.readClients()
+	if err != nil {
+		s.internalError(w, err)
+		return
+	}
+	linked := false
+	for _, client := range clients.Clients {
+		if client.HostID == id {
+			linked = true
+			break
+		}
+	}
 	var updated catalogRecord
 	err = storage.UpdateConfig(s.store, "hosts.yaml", func(config *hostsConfig) error {
 		for _, host := range config.Hosts {
 			if host["id"] != id {
 				continue
+			}
+			if linked {
+				for _, field := range []string{"hostname", "username", "port", "transport"} {
+					if value, present := updates[field]; present && fmt.Sprint(value) != fmt.Sprint(host[field]) {
+						return &responseError{409, "Unlink the managed client before changing this host's connection identity"}
+					}
+				}
 			}
 			for key, value := range updates {
 				host[key] = value
@@ -197,6 +216,17 @@ func (s *Server) deleteHost(w http.ResponseWriter, r *http.Request, _ string) {
 	})
 	if err != nil {
 		s.catalogError(w, err, "Failed to delete host")
+		return
+	}
+	if err := storage.UpdateConfig(s.store, "clients.yaml", func(config *clientConfig) error {
+		for i := range config.Clients {
+			if config.Clients[i].HostID == id {
+				config.Clients[i].HostID = ""
+			}
+		}
+		return nil
+	}); err != nil {
+		s.internalError(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

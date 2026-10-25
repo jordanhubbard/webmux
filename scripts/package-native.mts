@@ -44,6 +44,11 @@ try {
   execFileSync('go', ['run', './cmd/build', '-goos', goos, '-goarch', goarch, '-o', executable], {
     cwd: path.join(source, 'server'), stdio: 'inherit',
   });
+  const clientExecutable = path.join(stage, 'bin', goos === 'windows' ? 'webmux-client.exe' : 'webmux-client');
+  execFileSync('go', ['build', '-trimpath', '-o', clientExecutable, './cmd/webmux-client'], {
+    cwd: path.join(source, 'server'), stdio: 'inherit',
+    env: { ...process.env, GOOS: goos, GOARCH: goarch, CGO_ENABLED: '0' },
+  });
   if (goos === 'darwin') assembleApp(executable, path.join(stage, 'WebMux.app'), metadata.version);
   fs.writeFileSync(path.join(stage, 'bundle.json'), JSON.stringify({
     version: metadata.version, backend: 'go', platform: process.platform, arch: process.arch,
@@ -55,6 +60,7 @@ try {
   fs.writeFileSync(path.join(stage, 'components.json'), JSON.stringify({
     description: 'Embedded browser dependencies and native Go build identity. External SSH, mosh, tmux, guacd and native USB drivers are operator-managed and are not bundled or qualified by this inventory.',
     binarySHA256: createHash('sha256').update(fs.readFileSync(executable)).digest('hex'),
+    clientBinarySHA256: createHash('sha256').update(fs.readFileSync(clientExecutable)).digest('hex'),
     goBuild: execFileSync('go', ['version', '-m', executable], { cwd: path.join(source, 'server'), encoding: 'utf8' }).trim(),
     browserDependencies: Object.entries(lock.packages).filter(([location, entry]) => location.includes('node_modules/') && !entry.dev && !entry.link)
       .map(([location, entry]) => ({ name: location.slice(location.lastIndexOf('node_modules/') + 13), version: entry.version, resolved: entry.resolved, integrity: entry.integrity })),
@@ -74,6 +80,7 @@ ${goos === 'darwin' ? 'macOS: keep WebMux.app at a stable location such as ~/App
 ${goos === 'windows' ? 'Service installation: from an elevated terminal, run bin\\webmux-service.cmd install\nwith -WebMuxHome pointing to isolated state. The existing account prompt and\noptional -LocalSystem switch apply; no Node.js runtime is needed.\n' : ''}
 OpenSSH is required for SSH; mosh, sshpass and tmux depend on selected features.
 RDP requires an operator-managed guacd. These external tools are not bundled.
+The standalone bin/${goos === 'windows' ? 'webmux-client.exe' : 'webmux-client'} connects a user-managed host outward to a WebMux server.
 To upgrade, stop the server, extract a new bundle separately, then restart it
 with the same WEBMUX_HOME. Do not overwrite runtime configuration with defaults.
 Documentation: https://github.com/jordanhubbard/webmux

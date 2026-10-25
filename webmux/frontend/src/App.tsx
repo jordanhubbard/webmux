@@ -172,6 +172,7 @@ function AuthenticatedApp({
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
           <Workspace
             canManageRig={canManageSettings}
+            canManageHosts={auth.authStatus?.mode === 'local'}
             fontSize={fontSize}
             fontFamily={fontFamily}
             termCols={termCols}

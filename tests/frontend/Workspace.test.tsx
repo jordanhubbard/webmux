@@ -19,6 +19,7 @@ vi.mock('@frontend/utils/api', () => ({
   api: {
     getSessions: vi.fn().mockResolvedValue([]),
     getCoordination: vi.fn().mockResolvedValue({ agents: [], messages: [] }),
+    getClients: vi.fn().mockResolvedValue([]),
     createSession: vi.fn(),
     deleteSession: vi.fn(),
     reconnectSession: vi.fn(),
@@ -108,6 +109,19 @@ describe('Workspace', () => {
     await waitFor(() => {
       expect(screen.getAllByText('u1@h1').length).toBeGreaterThan(0);
     });
+  });
+
+  it('shows one managed host on matching SSH tiles and never on a different destination', async () => {
+    const { api } = await import('@frontend/utils/api');
+    vi.mocked(api.getSessions).mockResolvedValue([
+      { ...mockSessions[0], host_id: 'host-1' },
+      { ...mockSessions[0], id: 's2', host_id: 'host-1', row: 0, col: 1 },
+      { ...mockSessions[0], id: 's3', host_id: 'host-1', hostname: 'other-host', row: 1, col: 0 },
+    ]);
+    vi.mocked(api.getHosts).mockResolvedValue([{ id: 'host-1', hostname: 'h1', username: 'u1', port: 22, transport: 'ssh' }] as Awaited<ReturnType<typeof api.getHosts>>);
+    vi.mocked(api.getClients).mockResolvedValue([{ id: 'client-1', owner: 'u1', label: 'h1', host_id: 'host-1', online: true }]);
+    render(<Workspace {...defaultProps} />, { wrapper });
+    await waitFor(() => expect(screen.getAllByTitle('Managed host connected')).toHaveLength(2));
   });
 
   it('packs gaps in reading order, saves positions, and leaves minimized sessions alone', async () => {

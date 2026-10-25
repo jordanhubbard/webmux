@@ -20,6 +20,7 @@ export interface Session {
   transport: TransportType;
   host_id: string;
   hostname: string;
+  port?: number;
   username: string;
   key_id: string;
   browser_local?: boolean;
@@ -84,6 +85,16 @@ export interface HostEntry {
   vnc_port: number;
   rdp_enabled: boolean;
   rdp_port: number;
+}
+
+export interface ManagedClient {
+  id: string;
+  owner: string;
+  label: string;
+  host_id?: string;
+  online: boolean;
+  last_seen?: string;
+  snapshot?: { hostname: string; os: string; arch: string; cpus: number; load1?: number; at: string };
 }
 
 export interface AuthStatus {

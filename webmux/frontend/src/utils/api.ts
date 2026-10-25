@@ -10,6 +10,7 @@ import type {
   CreateVncSessionRequest,
   DeepPartial,
   HostEntry,
+  ManagedClient,
   KeyEntry,
   AgentsConfig,
   RdpSession,
@@ -198,6 +199,12 @@ export const api = {
 
   // Hosts
   getHosts: () => request<HostEntry[]>('/hosts'),
+  getClients: () => request<ManagedClient[]>('/clients'),
+  bindClient: (hostId: string, pairCode: string) => request<{ client_id: string; host_id: string }>(`/hosts/${encodeURIComponent(hostId)}/client`, { method: 'POST', body: JSON.stringify({ pair_code: pairCode }) }),
+  unbindClient: (hostId: string) => request<void>(`/hosts/${encodeURIComponent(hostId)}/client`, { method: 'DELETE' }),
+  revokeClient: (clientId: string) => request<void>(`/clients/${encodeURIComponent(clientId)}`, { method: 'DELETE' }),
+  refreshClient: (clientId: string) => request<ManagedClient['snapshot']>(`/clients/${encodeURIComponent(clientId)}/refresh`, { method: 'POST', body: '{}' }),
+  associateSessionHost: (sessionId: string, hostId: string) => request<Session>(`/sessions/${encodeURIComponent(sessionId)}`, { method: 'PATCH', body: JSON.stringify({ host_id: hostId }) }),
   createHost: (host: Partial<HostEntry>) =>
     request<HostEntry>('/hosts', { method: 'POST', body: JSON.stringify(host) }),
   deleteHost: (id: string) =>

@@ -9,12 +9,13 @@ import { Dialog } from './Dialog';
 import { WorkspaceMinimap } from './WorkspaceMinimap';
 import { api } from '../utils/api';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
-import type { Session, CreateSessionRequest, NamedTheme } from '../types';
+import type { Session, CreateSessionRequest, NamedTheme, ManagedClient, HostEntry } from '../types';
 import { loadSessionThemeOverrides, saveSessionThemeOverrides } from '../utils/themes';
 import { useElementSize, useTouchLikeViewport } from '../utils/viewport';
 
 interface WorkspaceProps {
   canManageRig?: boolean;
+  canManageHosts?: boolean;
   fontSize: number;
   fontFamily?: string;
   termCols: number;
@@ -126,6 +127,7 @@ function getAddPositions(
 
 export function Workspace({
   canManageRig = true,
+  canManageHosts = true,
   fontSize,
   fontFamily,
   termCols,
@@ -141,6 +143,20 @@ export function Workspace({
   onGlobalLockChange,
 }: WorkspaceProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [managedClients, setManagedClients] = useState<ManagedClient[]>([]);
+  const [savedHosts, setSavedHosts] = useState<HostEntry[]>([]);
+  const refreshManagedClients = useCallback(() => {
+    void Promise.all([api.getClients(), api.getHosts()]).then(([clients, hosts]) => {
+      setManagedClients(clients);
+      setSavedHosts(hosts);
+    }).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!canManageHosts) return;
+    refreshManagedClients();
+    const timer = window.setInterval(refreshManagedClients, 10000);
+    return () => window.clearInterval(timer);
+  }, [canManageHosts, refreshManagedClients]);
   const handleSessionStateChange = useCallback((id: string, state: Session['state']) => {
     setSessions(previous => previous.some(session => session.id === id && session.state !== state)
       ? previous.map(session => session.id === id ? { ...session, state } : session)
@@ -707,6 +723,11 @@ export function Workspace({
               >
                 <Tile
                   session={session}
+                  canManageHosts={canManageHosts}
+                  managedClient={savedHosts.some(host => host.id === session.host_id && host.hostname === session.hostname && host.username === session.username && (host.port || 22) === (session.port || 22))
+                    ? managedClients.find(client => client.host_id && client.host_id === session.host_id) : undefined}
+                  onManagedClientChanged={refreshManagedClients}
+                  onSessionUpdated={updated => setSessions(previous => previous.map(value => value.id === updated.id ? updated : value))}
                   focusRequest={sessionToReveal?.id === session.id ? sessionToReveal.request : 0}
                   onStateChange={handleSessionStateChange}
                   fontSize={fontSize}
