@@ -119,7 +119,7 @@ export function TopBar({
         <button style={styles.iconBtn} onClick={() => setShowUSB(true)} title="Set up USB redirection" aria-label="USB redirection">
           <span aria-hidden="true">🔌</span> USB
         </button>
-        {canManageSettings && <button style={styles.iconBtn} onClick={() => setShowCoordination(true)}>Rig</button>}
+        {canManageSettings && <button style={styles.iconBtn} onClick={() => setShowCoordination(true)}>Coordination</button>}
         <button
           style={{
             ...styles.broadcastBtn,

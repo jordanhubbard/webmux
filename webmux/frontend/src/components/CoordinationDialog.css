@@ -4,6 +4,13 @@
 .coordination-dialog summary { cursor: pointer; color: #bdb5ed; }
 .coordination-dialog button { background: #6653cf; border: 1px solid #9785ff; border-radius: 4px; color: white; padding: 6px 12px; cursor: pointer; margin-top: 6px; }
 .coordination-dialog button:disabled { opacity: 0.5; cursor: default; }
+.coordination-error { color: #ff9b9b; white-space: pre-wrap; }
+.coordination-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 16px; }
+.coordination-toolbar label { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+.coordination-toolbar select { background: #101022; border: 1px solid #555575; border-radius: 4px; color: #eee; padding: 7px; }
+.coordination-current, .coordination-provider-choice { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.coordination-current { align-items: center; padding: 4px 0; }
+.coordination-current button, .coordination-provider-choice button { margin-top: 0; }
 .coordination-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .coordination-fields label, .coordination-fields > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .coordination-fields :is(input, select) { box-sizing: border-box; width: 100%; background: #101022; border: 1px solid #555575; border-radius: 4px; color: #eee; padding: 8px; }
@@ -17,3 +24,25 @@
 .coordination-worker-facts dt { color: #aaaabd; font-size: 11px; }
 .coordination-worker-facts dd { margin: 0; overflow-wrap: anywhere; }
 .coordination-rig { font-size: 11px; color: #c5b8ff; margin-left: 8px; }
+.coordination-rig-list { max-height: 320px; overflow: auto; margin: 12px 0; }
+.coordination-identity { color: #aaaabd; font-size: 11px; }
+.coordination-identity span { text-transform: uppercase; letter-spacing: .06em; }
+.coordination-state { display: inline-block; margin-left: 6px; padding: 1px 6px; border: 1px solid #555575; border-radius: 10px; font-size: 10px; text-transform: uppercase; }
+.coordination-state-running, .coordination-state-active { border-color: #3e8f5b; color: #7ee39d; }
+.coordination-state-stopped, .coordination-state-archived { color: #aaaabd; }
+.coordination-state-degraded, .coordination-state-attention_required { border-color: #a2783e; color: #ffc879; }
+.coordination-unavailable { display: inline-block; margin: 8px 0 0 8px; color: #aaaabd; font-size: 11px; }
+.coordination-choice { display: flex; flex-wrap: wrap; gap: 8px 24px; border: 1px solid #44446a; border-radius: 6px; margin: 8px 0 12px; }
+.coordination-choice label { display: flex; gap: 7px; align-items: center; }
+.coordination-input-action { display: flex; gap: 6px; align-items: stretch; }
+.coordination-input-action button { margin-top: 0; }
+.coordination-browser { border: 1px solid #555575; border-radius: 6px; margin-top: 12px; padding: 10px; }
+.coordination-browser-actions { display: flex; gap: 8px; }
+.coordination-browser ul { list-style: none; max-height: 180px; overflow: auto; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+.coordination-browser li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.coordination-browser li button { width: 100%; margin: 0; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; background: #252542; }
+.coordination-browser li span, .coordination-repository { color: #7ee39d; font-size: 10px; white-space: nowrap; }
+.coordination-messages { max-height: 180px; overflow: auto; }
+.coordination-messages > div { padding: 6px 0; }
+.coordination-messages pre { white-space: pre-wrap; font-size: 12px; }
+@media (max-width: 600px) { .coordination-browser ul { grid-template-columns: 1fr; } }

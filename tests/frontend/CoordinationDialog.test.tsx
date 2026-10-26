@@ -1,64 +1,134 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { CoordinationDialog } from '@frontend/components/CoordinationDialog';
-const mocks = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn(), attach: vi.fn() }));
-vi.mock('@frontend/utils/api', () => ({ api: { getCoordination: mocks.status, createCoordinatedAgent: mocks.create, attachCoordinatedAgent: mocks.attach } }));
+import { CoordinationDialog, type CoordinationStatus } from '@frontend/components/CoordinationDialog';
+
+const mocks = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn(), attach: vi.fn(), browse: vi.fn(), updateConfig: vi.fn() }));
+vi.mock('@frontend/utils/api', () => ({ api: {
+  getCoordination: mocks.status,
+  createCoordinatedAgent: mocks.create,
+  attachCoordinatedAgent: mocks.attach,
+  browseCoordinationWorkspaces: mocks.browse,
+  updateConfig: mocks.updateConfig,
+} }));
+
+const emptyStatus = (): CoordinationStatus => ({
+  contract: 'webmux-coordination/v1',
+  defaultProvider: 'rig',
+  providers: [
+    { id: 'rig', label: 'Rig', available: true, capabilities: ['projects', 'topology', 'launch', 'attach'], contract: 'openrig-cli/0.6.14' },
+    { id: 'agent-deck', label: 'Agent Deck', available: false, message: 'Install Agent Deck', capabilities: ['sessions'], contract: 'agent-deck-cli/v1' },
+  ],
+  projects: [], seats: [], messages: [], errors: {},
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.status.mockResolvedValue({ agents: [], messages: [] });
-  mocks.create.mockResolvedValue({});
-  mocks.attach.mockResolvedValue({});
+  mocks.status.mockResolvedValue(emptyStatus());
+  mocks.create.mockResolvedValue({ target: 'new-seat', session: { id: 'viewer' } });
+  mocks.attach.mockResolvedValue({ id: 'viewer' });
+  mocks.browse.mockResolvedValue({ host: 'localhost', path: '/work/project', parent: '/work', repository: true, entries: [] });
+  mocks.updateConfig.mockResolvedValue({ app: { coordination: { default_provider: 'agent-deck' } } });
 });
-it('opens without launching agents and reports coordinator failures', async () => {
-  mocks.status.mockRejectedValue(new Error('Install OpenRig'));
+
+it('opens without launching sessions and reports provider failures', async () => {
+  mocks.status.mockRejectedValue(new Error('Cannot read coordinators'));
   render(<CoordinationDialog onClose={() => {}} />);
-  expect(await screen.findByRole('alert')).toHaveTextContent('Install OpenRig');
+  expect(await screen.findByRole('alert')).toHaveTextContent('Cannot read coordinators');
   expect(mocks.create).not.toHaveBeenCalled();
   expect(mocks.attach).not.toHaveBeenCalled();
 });
-it('creates an agent in the selected host directory and refreshes the ordinary grid', async () => {
+
+it('creates a new Rig project in a browsed host workspace and opens its terminal', async () => {
   const changed = vi.fn(); const close = vi.fn();
   window.addEventListener('webmux-sessions-changed', changed);
   try {
     render(<CoordinationDialog onClose={close} />);
-    fireEvent.change(screen.getByLabelText('Project ID'), { target: { value: 'shared-project' } });
-    fireEvent.change(screen.getByLabelText('Agent name'), { target: { value: 'reviewer' } });
-    fireEvent.change(screen.getByLabelText('Execution host'), { target: { value: 'sparky.local' } });
-    fireEvent.change(screen.getByLabelText('Project directory on this host'), { target: { value: '/work/project' } });
-    expect(screen.getByRole('combobox', { name: 'Agent' })).toHaveValue('codex');
-    fireEvent.click(screen.getByRole('button', { name: 'Create and open terminal' }));
+    fireEvent.click(await screen.findByLabelText('New coordinated project'));
+    fireEvent.change(screen.getByLabelText('New Rig name'), { target: { value: 'shared-project' } });
+    fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'reviewer' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
+    await waitFor(() => expect(mocks.browse).toHaveBeenCalledWith('rig', 'localhost', undefined));
+    fireEvent.click(await screen.findByRole('button', { name: 'Choose this folder' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create session and open terminal' }));
     await waitFor(() => expect(close).toHaveBeenCalledOnce());
-    expect(mocks.create).toHaveBeenCalledWith({ project: 'shared-project', name: 'reviewer', host: 'sparky.local', cwd: '/work/project', runtime: 'codex' });
+    expect(mocks.create).toHaveBeenCalledWith({ provider: 'rig', mode: 'new', projectId: undefined, projectName: 'shared-project', context: undefined, name: 'reviewer', host: 'localhost', workspace: '/work/project', runtime: 'codex' });
+    expect(mocks.attach).not.toHaveBeenCalled();
     expect(changed).toHaveBeenCalledOnce();
   } finally { window.removeEventListener('webmux-sessions-changed', changed); }
 });
-it('shows attributed coordination and opens an existing agent without relaunching', async () => {
-  mocks.status.mockResolvedValue({ agents: [{ target: 'seat', name: 'reviewer', project: 'shared', host: 'remote', cwd: '/work', runtime: 'codex', connected: true }], messages: [{ from: 'seat', to: 'peer', time: '2026-10-21T16:00:00Z', state: 'pending', body: 'Fresh peer reply' }] });
+
+it('uses canonical Rig topology and state instead of stale private project records', async () => {
+  const value = emptyStatus();
+  value.projects = [
+    { provider: 'rig', id: 'active-id', name: 'canonical-active', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: ['agents'] },
+    { provider: 'rig', id: 'stopped-id', name: 'canonical-stopped', host: 'localhost', state: 'stopped', historical: true, seatCount: 0, runningCount: 0 },
+  ];
+  value.seats = [{ provider: 'rig', id: 'canonical-seat', projectId: 'active-id', projectName: 'canonical-active', name: 'coder', host: 'sparky', workspace: '/src/project', runtime: 'codex', state: 'running', openable: true, managed: true, context: 'agents' }];
+  mocks.status.mockResolvedValue(value);
   render(<CoordinationDialog onClose={() => {}} />);
-  expect(await screen.findByText('Fresh peer reply')).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'Open viewer' }));
-  await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('seat', undefined));
-  expect(mocks.create).not.toHaveBeenCalled();
+  const project = await screen.findByRole('list', { name: 'canonical-active sessions' });
+  expect(within(project).getByText('/src/project')).toBeVisible();
+  expect(screen.getByText('canonical-stopped')).toBeVisible();
+  expect(screen.queryByText('trickle-release')).not.toBeInTheDocument();
+  fireEvent.click(within(project).getByRole('button', { name: 'Open session' }));
+  await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('rig', 'canonical-seat', undefined));
 });
 
-it('groups workers by explicit project and preserves reconnect actions', async () => {
-  const agents = [
-    { target: 'opaque-one', project: 'demo-release', name: 'reviewer', host: 'build-host', runtime: 'codex', cwd: '/work', connected: false },
-    { target: 'opaque-two', project: 'demo-release', name: 'coder', host: 'localhost', runtime: 'claude-code', cwd: '/work', connected: true, activityState: 'working' },
-    { target: 'opaque-three', project: 'other-project', name: 'reviewer', host: 'other-host', runtime: 'codex', cwd: '/work', connected: true },
-  ];
-  mocks.status.mockResolvedValue({ agents, messages: [] });
+it('creates a seat in an existing canonical Rig pod', async () => {
+  const value = emptyStatus();
+  value.projects = [{ provider: 'rig', id: 'rig-id', name: 'shared-rig', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: ['reviewers', 'workers'] }];
+  value.seats = [{ provider: 'rig', id: 'seat', projectId: 'rig-id', projectName: 'shared-rig', name: 'owner', host: 'localhost', workspace: '/work', runtime: 'codex', state: 'running', openable: true, managed: false, context: 'workers' }];
+  mocks.status.mockResolvedValue(value);
   render(<CoordinationDialog onClose={() => {}} />);
-  const project = await screen.findByRole('list', { name: 'demo-release workers' });
-  expect(within(project).getAllByRole('article')).toHaveLength(2);
-  expect(screen.getByRole('list', { name: 'other-project workers' })).toBeVisible();
-  expect(within(project).getByText('working')).toBeVisible();
-  const group = project.closest('details')!;
-  expect(group.open).toBe(true);
-  fireEvent.click(group.querySelector('summary')!);
-  expect(group.open).toBe(false);
-  fireEvent.click(group.querySelector('summary')!);
-  fireEvent.click(within(project).getByRole('button', { name: 'Restart provider and open' }));
-  await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('opaque-one', undefined));
-  expect(mocks.create).toHaveBeenCalledWith(agents[0]);
+  await screen.findByText('shared-rig');
+  fireEvent.change(screen.getByLabelText('Rig pod'), { target: { value: 'reviewers' } });
+  fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'reviewer' } });
+  fireEvent.change(screen.getByLabelText('Workspace on execution host'), { target: { value: '/work' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Create session and open terminal' }));
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ provider: 'rig', mode: 'existing', projectId: 'rig-id', projectName: 'shared-rig', context: 'reviewers', workspace: '/work' })));
+});
+
+it('surfaces Agent Deck local and remote sessions with host-qualified identity', async () => {
+  const value = emptyStatus();
+  value.providers[1] = { id: 'agent-deck', label: 'Agent Deck', available: true, capabilities: ['sessions', 'remote', 'native-session-id'], contract: 'agent-deck-cli/v1' };
+  value.defaultProvider = 'agent-deck';
+  value.projects = [{ provider: 'agent-deck', id: 'sparky:webmux', name: 'webmux', host: 'sparky', state: 'active', historical: false, seatCount: 1, runningCount: 1 }];
+  value.seats = [{ provider: 'agent-deck', id: 'sparky:session-1', projectId: 'sparky:webmux', projectName: 'webmux', name: 'remote-review', host: 'sparky', workspace: '/home/jkh/Src/webmux', runtime: 'codex', state: 'running', openable: true, managed: true, nativeSessionId: 'codex-thread-1' }];
+  mocks.status.mockResolvedValue(value);
+  render(<CoordinationDialog onClose={() => {}} />);
+  const sessions = await screen.findByRole('list', { name: 'webmux sessions' });
+  expect(within(sessions).getByText('codex-thread-1')).toBeVisible();
+  expect(within(sessions).getByText('/home/jkh/Src/webmux')).toBeVisible();
+  fireEvent.click(within(sessions).getByRole('button', { name: 'Open session' }));
+  await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('agent-deck', 'sparky:session-1', undefined));
+});
+
+it('requires an upgrade choice and can persist Agent Deck as the default', async () => {
+  const value = emptyStatus();
+  value.defaultProvider = 'choose';
+  value.providers[1] = { ...value.providers[1], available: true };
+  mocks.status.mockResolvedValue(value);
+  render(<CoordinationDialog onClose={() => {}} />);
+
+  expect(await screen.findByText(/one-time upgrade choice/)).toBeVisible();
+  expect(screen.queryByText('Create coordinated session')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Coordination experience'), { target: { value: 'agent-deck' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Make default' }));
+
+  await waitFor(() => expect(mocks.updateConfig).toHaveBeenCalledWith({ app: { coordination: { default_provider: 'agent-deck' } } }));
+  expect(await screen.findByText('Using')).toHaveTextContent('Using Agent Deck');
+});
+
+it('temporarily switches providers without rewriting the default', async () => {
+  const value = emptyStatus();
+  value.providers[1] = { ...value.providers[1], available: true };
+  mocks.status.mockResolvedValue(value);
+  render(<CoordinationDialog onClose={() => {}} />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+  fireEvent.change(screen.getByLabelText('Coordination experience'), { target: { value: 'agent-deck' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Use this time' }));
+
+  expect(await screen.findByText(/default: Rig/)).toBeVisible();
+  expect(mocks.updateConfig).not.toHaveBeenCalled();
 });

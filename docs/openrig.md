@@ -1,17 +1,37 @@
 # Agent coordination
 
-WebMux 1.3.23 integrates OpenRig behind the ordinary **Terminals** grid. The
-**Rig** button opens a modal showing managed agents, execution hosts,
-project directories, and recent attributed messages recorded by Rig. Creating
-an agent opens its interactive CLI in a normal terminal tile. The raw Rig text
-dashboard remains available under **Advanced diagnostics**.
+WebMux exposes coordinator-managed coding sessions behind the ordinary
+**Terminals** grid. The **Coordination** button opens a project and session
+browser backed by a versioned provider contract. Rig is the bundled topology
+and peer-messaging provider; Agent Deck is an optional session-lifecycle
+provider. Creating a session opens its interactive CLI in a normal terminal
+tile. The raw Rig text dashboard remains available under **Advanced
+diagnostics**.
+
+New installations open Coordination in Agent Deck by default. Select
+**Settings → Coordination** to make Agent Deck, Rig, or Disabled the persistent
+experience. Upgraded installations that predate this setting ask once instead
+of silently changing an existing Rig workflow. The Coordination header shows
+the active provider; **Change** browses another provider for the current visit,
+and **Make default** persists that choice. A configured provider that is not
+installed remains selected with its installation guidance—WebMux never falls
+back silently. Sessions remain owned by the provider that created them and are
+available whenever that provider is selected.
+
+The browser deliberately keeps three concepts separate: a coordinator project
+(a Rig topology or Agent Deck group), a coordinator session/seat, and a
+filesystem workspace on an execution host. Canonical provider discovery is the
+source of truth. WebMux's private launch records enrich that inventory but do
+not create a second, stale project list. Running, stopped, and historical Rig
+topologies remain visible with their provider IDs.
 
 ## Projects and worker identity
 
 The Coordination modal groups workers under expandable project headings. Each
 worker shows its registered name (such as coder or reviewer), execution host,
 runtime and observed state. Expand or collapse a project with its summary button
-or Enter/Space; Open terminal and Reconnect agent retain their existing behavior.
+or Enter/Space; **Open session** attaches an existing viewer and **Restart
+provider and open** is reserved for a stopped managed Rig seat.
 A worker name is the registered name, not an inferred permission or capability.
 
 Opening a managed terminal records its coordinator target, project, name, host
@@ -39,6 +59,30 @@ mapped separately on each host. Git checkout synchronization is an independent
 operation. Remote hosts use the service user's OpenSSH configuration and normal
 host-key verification. WebMux's existing SSH connections and tmux sessions keep
 their existing behavior.
+
+## Agent Deck provider
+
+When `agent-deck` is on the WebMux service PATH, Coordination also inventories
+the current local Agent Deck profile and every remote registered with that
+Agent Deck instance. Session IDs are qualified by location (`local:<id>` or
+`<remote>:<id>`), so identical names on different hosts do not collide. The
+browser shows the native Codex or Claude session ID when Agent Deck reports it,
+and uses Agent Deck's own local or remote attach transport when opening a tile.
+
+Creating a session in an Agent Deck group routes `launch` to the selected local
+instance or registered remote and starts Codex or Claude in the selected
+workspace. Remote workspace browsing resolves the registered remote to its SSH
+host while retaining the Agent Deck remote name as the coordinator identity.
+Install and authenticate Agent Deck and the chosen coding CLI on every host
+that owns sessions. WebMux does not scan arbitrary shells: sessions must be
+known to Rig or Agent Deck before they appear.
+
+Agent Deck provides host/session inventory and lifecycle, including remote
+sessions and native harness IDs. Rig provides canonical topology and peer
+messaging. They are complementary providers rather than one being silently
+treated as the other's project database. Additional coordinators can implement
+the same internal status, launch, and attach adapter without changing the
+browser wire contract (`webmux-coordination/v1`).
 
 ## Remote identity verification follow-up
 
@@ -92,20 +136,26 @@ supported; Windows WebMux's existing terminals remain available.
 
 ## Owner workflow
 
-1. Click **Rig**. Inspect current agents and recent messages.
-2. Under **Create agent**, enter a project ID, agent name, execution host and
-   absolute project directory on that host. Select Codex or Claude Code.
-3. Click **Create and open terminal**. The registered provider starts in a normal
+1. Click **Coordination** and inspect the default provider's projects and
+   sessions. Use **Change** for a temporary switch or **Make default** to keep
+   the selected experience. The same default is available under
+   **Settings → Coordination**.
+2. Choose an existing project or **New coordinated project**. Select an
+   execution host, browse to an absolute workspace on that host, name the
+   session, and select Codex or Claude Code. Existing Rig projects also require
+   choosing a canonical pod.
+3. Click **Create session and open terminal**. The registered provider starts in a normal
    terminal tile with its Rig URL and sender identity already supplied. It
    discovers teammates using `rig whoami` and `rig ps --nodes -A`.
-4. Repeat for another host using the same project ID and that host's directory.
+4. Repeat for another host using the same coordinator project and that host's
+   workspace.
 5. In either CLI, ask it to send a fresh phrase to its teammate with `rig send`
    and have the teammate reply. Watch both normal terminal tiles and the modal's
    recent coordination. Recorded messages are labeled with Rig's delivery state;
    a pending record alone is not proof of receipt.
 
-Closing a tile detaches the WebMux viewer; **Open terminal** restores it without
-launching another agent. After an SSH failure, **Reconnect agent** reconnects the
+Closing a tile detaches the WebMux viewer; **Open session** restores it without
+launching another agent. After an SSH failure, **Restart provider and open** reconnects the
 central attachment to the existing remote tmux session and reuses its tunnel
 port. Reconnection retains Rig's exact enrolled session ID so historical records
 with the same name do not make later reconnects ambiguous. Restarting WebMux reattaches persisted grid tiles without restarting the
@@ -120,7 +170,7 @@ navigate between tiles.
 
 On first use, complete the provider's folder-trust or sign-in prompt inside its
 terminal. If the provider exits during startup, resolve the prompt and use
-**Reconnect agent**. A live tmux attachment alone does not prove the provider is
+**Restart provider and open**. A live tmux attachment alone does not prove the provider is
 ready or that a message was received.
 
 Existing independently launched agents do not inherit environment changes.
@@ -156,6 +206,6 @@ The optional diagnostics panel presents a **Connect dashboard** action and
 **Refresh connection** when the coordinator is unavailable or has restarted.
 Opening it does not launch agents. Once connected, closing the view preserves
 the dashboard attachment; **Detach dashboard** disconnects only that viewer.
-The main Rig menu retains project and worker management. The terminal dock's
+The main Coordination menu retains project and session management. The terminal dock's
 **Pack** action fills visible grid holes from the top left while preserving
 the current occupied column count.

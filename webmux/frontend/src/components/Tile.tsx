@@ -209,7 +209,7 @@ export function Tile({
           )}
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
           {session.transport === 'ssh' && managedClient && <span style={{ ...styles.transport, color: managedClient.online ? '#50fa7b' : '#aaa' }} title={`Managed host ${managedClient.online ? 'connected' : 'offline'}`}>Host {managedClient.online ? '●' : '○'}</span>}
-          {session.rig && <span aria-label="Rig-managed worker" title={`Rig seat ${session.rig.target} · ${session.rig.runtime} · viewer ${state} · provider status in Rig seats`} style={{ ...styles.transport, color: '#c5b8ff', flexShrink: 1, minWidth: 0, maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Rig · {session.rig.project} · {session.rig.name} · {session.rig.host}</span>}
+          {session.rig && <span aria-label={session.rig.provider === 'agent-deck' ? 'Agent Deck-managed worker' : 'Rig-managed worker'} title={`${session.rig.provider || 'Rig'} session ${session.rig.target} · ${session.rig.runtime} · viewer ${state}`} style={{ ...styles.transport, color: '#c5b8ff', flexShrink: 1, minWidth: 0, maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.rig.provider === 'agent-deck' ? 'Agent Deck' : 'Rig'} · {session.rig.project} · {session.rig.name} · {session.rig.host}</span>}
         </div>
         <div style={styles.chromeRight}>
           {canManageHosts && session.transport === 'ssh' && <button style={styles.browserBtn} onClick={() => setShowManagedHost(true)} title="View or link a WebMux host client">Host</button>}

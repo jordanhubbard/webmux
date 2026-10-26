@@ -5,6 +5,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Replace the fixed Rig project form with a canonical project/session browser,
+  explicit workspace picker for local and SSH hosts, active/stopped/history
+  state, and direct creation in an existing Rig pod or a new topology (#209).
+- Add a versioned coordinator-provider contract and optional Agent Deck adapter
+  that inventories local and registered-remote sessions with host-qualified and
+  native Codex/Claude identities, then launches or attaches on the owning host
+  (#209).
+- Make Agent Deck the default coordination experience for new installations,
+  add a persistent provider selector in Settings, and let users temporarily
+  switch providers in Coordination without silently falling back. Upgrades
+  without a saved preference receive a one-time choice (#209).
+
 ### Fixed
 - Resolve `.local` WebMux server names through mDNS in static Linux
   `webmux-client` builds instead of sending them to unicast DNS (#208).

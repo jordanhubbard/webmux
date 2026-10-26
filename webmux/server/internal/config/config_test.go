@@ -102,3 +102,25 @@ func TestMutableFieldsAndTransportValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestCoordinationDefaultMigrationAndValidation(t *testing.T) {
+	normalized, err := Normalize(Document{App: Object{}}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := AsObject(normalized.App["coordination"])["default_provider"]; got != "choose" {
+		t.Fatalf("missing provider normalized to %v, want choose", got)
+	}
+	for _, provider := range []string{"agent-deck", "rig", "disabled", "choose"} {
+		updated, err := Update(Document{App: Object{}}, Object{"coordination": Object{"default_provider": provider}})
+		if err != nil {
+			t.Fatalf("provider %q rejected: %v", provider, err)
+		}
+		if got := AsObject(updated.App["coordination"])["default_provider"]; got != provider {
+			t.Fatalf("provider %q persisted as %v", provider, got)
+		}
+	}
+	if _, err := Update(Document{App: Object{}}, Object{"coordination": Object{"default_provider": "other"}}); err == nil {
+		t.Fatal("invalid coordination provider accepted")
+	}
+}
