@@ -51,11 +51,13 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   };
   const openAgent = async (name: string, reconnect = false) => {
     const dialog = await openDialog();
-    const response = page.waitForResponse(value => value.url().endsWith('/api/coordination/attach') && value.request().method() === 'POST');
+    const endpoint = reconnect ? '/api/coordination/agents' : '/api/coordination/attach';
+    const response = page.waitForResponse(value => value.url().endsWith(endpoint) && value.request().method() === 'POST');
     await dialog.locator('article').filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: reconnect ? 'Restart provider and open' : 'Open session', exact: true }).click();
     const attached = await response;
     expect(attached.status()).toBe(200);
-    const session = await attached.json() as Session;
+    const body = await attached.json() as Session | { session: Session };
+    const session = reconnect ? (body as { session: Session }).session : body as Session;
     await expect(dialog).toHaveCount(0);
     return session;
   };
