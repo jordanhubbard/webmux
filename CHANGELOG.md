@@ -5,6 +5,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.26] - 2026-10-26
+
 ### Added
 - Replace the fixed Rig project form with a canonical project/session browser,
   explicit workspace picker for local and SSH hosts, active/stopped/history
