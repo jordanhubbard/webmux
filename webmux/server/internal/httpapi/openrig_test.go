@@ -40,15 +40,16 @@ func TestDisabledCoordinationDoesNotDiscoverMachineWideProviders(t *testing.T) {
 	response := request(handler, "GET", "/api/coordination", "", "")
 	requireStatus(t, response, 200)
 	var status struct {
-		Contract  string            `json:"contract"`
-		Providers []json.RawMessage `json:"providers"`
-		Projects  []json.RawMessage `json:"projects"`
-		Seats     []json.RawMessage `json:"seats"`
+		Contract        string            `json:"contract"`
+		DefaultProvider string            `json:"defaultProvider"`
+		Providers       []json.RawMessage `json:"providers"`
+		Projects        []json.RawMessage `json:"projects"`
+		Seats           []json.RawMessage `json:"seats"`
 	}
 	if err := json.Unmarshal(response.Body.Bytes(), &status); err != nil {
 		t.Fatal(err)
 	}
-	if status.Contract != "webmux-coordination/v1" || len(status.Providers) != 0 || len(status.Projects) != 0 || len(status.Seats) != 0 {
+	if status.Contract != "webmux-coordination/v1" || status.DefaultProvider != "choose" || len(status.Providers) != 0 || len(status.Projects) != 0 || len(status.Seats) != 0 {
 		t.Fatalf("disabled coordination leaked provider state: %+v", status)
 	}
 	requireStatus(t, request(handler, "POST", "/api/coordination/attach", `{"provider":"rig","target":"seat"}`, ""), 409)

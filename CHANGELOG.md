@@ -13,6 +13,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   that inventories local and registered-remote sessions with host-qualified and
   native Codex/Claude identities, then launches or attaches on the owning host
   (#209).
+- Make Agent Deck the default coordination experience for new installations,
+  add a persistent provider selector in Settings, and let users temporarily
+  switch providers in Coordination without silently falling back. Upgrades
+  without a saved preference receive a one-time choice (#209).
 
 ### Fixed
 - Resolve `.local` WebMux server names through mDNS in static Linux

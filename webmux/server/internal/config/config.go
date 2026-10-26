@@ -109,6 +109,12 @@ func Normalize(document Document, environment bool) (Document, error) {
 	}
 	app["font_faces"] = faces
 	app["session_logging"] = Object{"enabled": boolean(AsObject(app["session_logging"])["enabled"], false)}
+	coordination := clone(AsObject(app["coordination"]))
+	provider := text(coordination["default_provider"], "choose")
+	if !slices.Contains([]string{"agent-deck", "rig", "disabled", "choose"}, provider) {
+		return Document{}, invalid("Invalid coordination default_provider: " + provider)
+	}
+	app["coordination"] = Object{"default_provider": provider}
 	grid := clone(AsObject(app["terminal_grid"]))
 	for _, field := range []string{"max_cols", "max_rows"} {
 		limit, err := GridLimit(grid[field], "app.terminal_grid."+field)
@@ -209,7 +215,7 @@ func NormalizeAgents(raw Object) (Object, error) { return normalizeAgents(raw) }
 // Update returns persisted settings; API-only fields and environment overrides
 // are applied separately to the public response.
 func Update(current Document, updates Object) (Document, error) {
-	mutable := []string{"name", "default_term", "font_faces", "terminal_grid", "session_logging", "transport", "ui"}
+	mutable := []string{"name", "default_term", "font_faces", "terminal_grid", "session_logging", "transport", "ui", "coordination"}
 	for _, key := range slices.Sorted(maps.Keys(updates)) {
 		if !slices.Contains(mutable, key) {
 			return Document{}, invalid(fmt.Sprintf("Field '%s' cannot be changed at runtime", key))
@@ -226,7 +232,7 @@ func Update(current Document, updates Object) (Document, error) {
 	}
 	merged := clone(current.App)
 	maps.Copy(merged, updates)
-	for _, field := range []string{"default_term", "terminal_grid", "session_logging", "transport", "ui"} {
+	for _, field := range []string{"default_term", "terminal_grid", "session_logging", "transport", "ui", "coordination"} {
 		if value := updates[field]; value != nil {
 			patch, ok := value.(map[string]any)
 			if !ok {
@@ -245,7 +251,7 @@ func Update(current Document, updates Object) (Document, error) {
 	if err != nil {
 		return Document{}, err
 	}
-	for _, field := range []string{"default_term", "font_faces", "session_logging"} {
+	for _, field := range []string{"default_term", "font_faces", "session_logging", "coordination"} {
 		merged[field] = normalized.App[field]
 	}
 	return Document{App: merged, Extra: current.Extra}, nil

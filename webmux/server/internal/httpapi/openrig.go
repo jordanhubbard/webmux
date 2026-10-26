@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/auth"
+	"github.com/jordanhubbard/webmux/server/internal/config"
 	"github.com/jordanhubbard/webmux/server/internal/session"
 )
 
@@ -295,10 +296,17 @@ func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner s
 	if !s.openRigAccess(w, owner) {
 		return
 	}
+	defaultProvider := any("choose")
 	if os.Getenv("WEBMUX_COORDINATION_DISABLED") == "1" {
-		writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "providers": []coordinationProviderDescriptor{}, "projects": []coordinationProject{}, "seats": []coordinationSeat{}, "messages": []coordinationMessage{}, "errors": map[string]string{}})
+		writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "defaultProvider": defaultProvider, "providers": []coordinationProviderDescriptor{}, "projects": []coordinationProject{}, "seats": []coordinationSeat{}, "messages": []coordinationMessage{}, "errors": map[string]string{}})
 		return
 	}
+	settings, err := s.loadSettings()
+	if err != nil {
+		s.catalogError(w, err, "Failed to load coordination settings")
+		return
+	}
+	defaultProvider = config.AsObject(settings.App["coordination"])["default_provider"]
 	providers := s.coordinationProviders(owner)
 	descriptors := make([]coordinationProviderDescriptor, 0, len(providers))
 	projects := []coordinationProject{}
@@ -325,7 +333,7 @@ func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner s
 			errors[descriptor.ID] = strings.Join(status.Errors, "; ")
 		}
 	}
-	writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "providers": descriptors, "projects": projects, "seats": seats, "messages": messages, "errors": errors})
+	writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "defaultProvider": defaultProvider, "providers": descriptors, "projects": projects, "seats": seats, "messages": messages, "errors": errors})
 }
 func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, owner string) {
 	if !s.openRigAccess(w, owner) {

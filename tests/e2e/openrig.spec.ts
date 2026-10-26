@@ -22,8 +22,15 @@ test('coordination is a dismissible modal and leaves the terminal grid intact', 
   await page.getByRole('button', { name: 'Coordination', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Coordination', exact: true });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('heading', { name: 'Create coordinated session', exact: true })).toBeVisible();
-  await expect(dialog.getByLabel('Workspace on execution host')).toBeVisible();
+  const experience = dialog.getByLabel('Coordination experience');
+  if (await experience.locator('option[value="rig"]').count()) {
+    await experience.selectOption('rig');
+    await dialog.getByRole('button', { name: 'Use this time' }).click();
+    await expect(dialog.getByRole('heading', { name: 'Create coordinated session', exact: true })).toBeVisible();
+    await expect(dialog.getByLabel('Workspace on execution host')).toBeVisible();
+  } else {
+    await expect(experience).toBeVisible();
+  }
   await expect(page.getByRole('button', { name: 'Run fresh challenge' })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
@@ -252,6 +259,7 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
 test('coordination groups provider-owned sessions in keyboard-expandable projects', async ({ page }) => {
   await page.route('**/api/coordination', route => route.fulfill({ json: {
     contract: 'webmux-coordination/v1',
+    defaultProvider: 'rig',
     providers: [{ id: 'rig', label: 'Rig', available: true, capabilities: ['projects', 'attach'], contract: 'openrig-cli/0.6.14' }],
     projects: [
       { provider: 'rig', id: 'rig-one', name: 'demo-release', host: 'localhost', state: 'running', historical: false, seatCount: 2, runningCount: 1, contexts: ['agents'] },

@@ -8,6 +8,16 @@ provider. Creating a session opens its interactive CLI in a normal terminal
 tile. The raw Rig text dashboard remains available under **Advanced
 diagnostics**.
 
+New installations open Coordination in Agent Deck by default. Select
+**Settings → Coordination** to make Agent Deck, Rig, or Disabled the persistent
+experience. Upgraded installations that predate this setting ask once instead
+of silently changing an existing Rig workflow. The Coordination header shows
+the active provider; **Change** browses another provider for the current visit,
+and **Make default** persists that choice. A configured provider that is not
+installed remains selected with its installation guidance—WebMux never falls
+back silently. Sessions remain owned by the provider that created them and are
+available whenever that provider is selected.
+
 The browser deliberately keeps three concepts separate: a coordinator project
 (a Rig topology or Agent Deck group), a coordinator session/seat, and a
 filesystem workspace on an execution host. Canonical provider discovery is the
@@ -126,8 +136,10 @@ supported; Windows WebMux's existing terminals remain available.
 
 ## Owner workflow
 
-1. Click **Coordination**, choose a coordinator, and inspect its canonical
-   projects and sessions.
+1. Click **Coordination** and inspect the default provider's projects and
+   sessions. Use **Change** for a temporary switch or **Make default** to keep
+   the selected experience. The same default is available under
+   **Settings → Coordination**.
 2. Choose an existing project or **New coordinated project**. Select an
    execution host, browse to an absolute workspace on that host, name the
    session, and select Codex or Claude Code. Existing Rig projects also require

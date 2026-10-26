@@ -8,6 +8,9 @@
 .coordination-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 16px; }
 .coordination-toolbar label { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
 .coordination-toolbar select { background: #101022; border: 1px solid #555575; border-radius: 4px; color: #eee; padding: 7px; }
+.coordination-current, .coordination-provider-choice { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.coordination-current { align-items: center; padding: 4px 0; }
+.coordination-current button, .coordination-provider-choice button { margin-top: 0; }
 .coordination-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .coordination-fields label, .coordination-fields > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .coordination-fields :is(input, select) { box-sizing: border-box; width: 100%; background: #101022; border: 1px solid #555575; border-radius: 4px; color: #eee; padding: 8px; }

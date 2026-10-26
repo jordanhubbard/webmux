@@ -225,6 +225,9 @@ export interface AppConfig {
     session_logging?: {
       enabled?: boolean;
     };
+    coordination?: {
+      default_provider?: 'agent-deck' | 'rig' | 'disabled' | 'choose';
+    };
     transport?: {
       prefer_mosh?: boolean;
       ssh_fallback?: boolean;

@@ -17,6 +17,7 @@ interface SettingsDialogProps {
 
 interface SettingsForm {
   name: string;
+  coordinationProvider: 'agent-deck' | 'rig' | 'disabled' | 'choose';
   cols: string;
   rows: string;
   fontSize: string;
@@ -47,6 +48,7 @@ interface SettingsForm {
 function formFromConfig(config: AppConfig): SettingsForm {
   return {
     name: config.app.name,
+    coordinationProvider: config.app.coordination?.default_provider ?? 'choose',
     cols: String(config.app.default_term.cols),
     rows: String(config.app.default_term.rows),
     fontSize: String(config.app.default_term.font_size),
@@ -183,6 +185,8 @@ export function SettingsDialog({ workspaceOptions, onClose, onSaved }: SettingsD
         || JSON.stringify(form.hostSwitcherHosts) !== JSON.stringify(originalForm.hostSwitcherHosts);
       const fontFacesChanged = JSON.stringify(form.fontFaces) !== JSON.stringify(originalForm.fontFaces);
 
+      const coordinationChanged = form.coordinationProvider !== originalForm.coordinationProvider;
+
       const appUpdate = {
         ...(form.name !== originalForm.name ? { name } : {}),
         ...(terminalChanged ? {
@@ -197,6 +201,7 @@ export function SettingsDialog({ workspaceOptions, onClose, onSaved }: SettingsD
         ...(form.sessionLogging !== originalForm.sessionLogging
           ? { session_logging: { enabled: form.sessionLogging } }
           : {}),
+        ...(coordinationChanged ? { coordination: { default_provider: form.coordinationProvider } } : {}),
         ...(transportChanged ? {
           transport: {
             prefer_mosh: form.preferMosh,
@@ -275,6 +280,23 @@ export function SettingsDialog({ workspaceOptions, onClose, onSaved }: SettingsD
                   {paneOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
               </Field>
+            </Section>
+
+            <Section title="Coordination">
+              <Field label="Default coordination experience" hint="Coordination opens in this provider. You can temporarily browse another provider without changing the default.">
+                <select
+                  aria-label="Default coordination experience"
+                  style={styles.input}
+                  value={form.coordinationProvider}
+                  onChange={event => update('coordinationProvider', event.target.value as SettingsForm['coordinationProvider'])}
+                >
+                  {form.coordinationProvider === 'choose' && <option value="choose">Choose an experience…</option>}
+                  <option value="agent-deck">Agent Deck (recommended)</option>
+                  <option value="rig">Rig (advanced team coordination)</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </Field>
+              <span style={styles.hint}>Agent Deck manages local and remote coding sessions. Rig adds canonical team topology and peer messaging.</span>
             </Section>
 
             <Section title="Terminal defaults">

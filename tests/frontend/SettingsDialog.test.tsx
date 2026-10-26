@@ -25,6 +25,7 @@ const config = {
     },
     terminal_grid: { max_cols: null, max_rows: 4 },
     session_logging: { enabled: false },
+    coordination: { default_provider: 'agent-deck' as const },
     transport: { prefer_mosh: false, ssh_fallback: true, mosh_server_path: '' },
     ui: { default_pane: 'terminals' },
   },
@@ -46,6 +47,7 @@ describe('SettingsDialog', () => {
         default_term: { ...config.app.default_term, ...update.app.default_term },
         terminal_grid: { ...config.app.terminal_grid, ...update.app.terminal_grid },
         session_logging: { ...config.app.session_logging, ...update.app.session_logging },
+        coordination: { ...config.app.coordination, ...update.app.coordination },
         transport: { ...config.app.transport, ...update.app.transport },
         ui: { ...config.app.ui, ...update.app.ui },
       },
@@ -112,6 +114,16 @@ describe('SettingsDialog', () => {
 
     expect(await screen.findByText('Columns must be between 40 and 240')).toBeDefined();
     expect(api.updateConfig).not.toHaveBeenCalled();
+  });
+
+  it('changes the default coordination experience', async () => {
+    render(<SettingsDialog workspaceOptions={workspaceOptions} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.change(await screen.findByLabelText('Default coordination experience'), { target: { value: 'rig' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+
+    await waitFor(() => expect(api.updateConfig).toHaveBeenCalledWith({
+      app: { coordination: { default_provider: 'rig' } },
+    }));
   });
 
   it('reports save errors without closing the dialog', async () => {

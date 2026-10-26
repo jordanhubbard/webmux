@@ -16,6 +16,8 @@ app:
     max_rows: null
   session_logging:
     enabled: false
+  coordination:
+    default_provider: agent-deck
   ui:
     default_pane: terminals
     host_switcher:

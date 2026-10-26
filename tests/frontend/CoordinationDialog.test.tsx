@@ -2,16 +2,18 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { CoordinationDialog, type CoordinationStatus } from '@frontend/components/CoordinationDialog';
 
-const mocks = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn(), attach: vi.fn(), browse: vi.fn() }));
+const mocks = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn(), attach: vi.fn(), browse: vi.fn(), updateConfig: vi.fn() }));
 vi.mock('@frontend/utils/api', () => ({ api: {
   getCoordination: mocks.status,
   createCoordinatedAgent: mocks.create,
   attachCoordinatedAgent: mocks.attach,
   browseCoordinationWorkspaces: mocks.browse,
+  updateConfig: mocks.updateConfig,
 } }));
 
 const emptyStatus = (): CoordinationStatus => ({
   contract: 'webmux-coordination/v1',
+  defaultProvider: 'rig',
   providers: [
     { id: 'rig', label: 'Rig', available: true, capabilities: ['projects', 'topology', 'launch', 'attach'], contract: 'openrig-cli/0.6.14' },
     { id: 'agent-deck', label: 'Agent Deck', available: false, message: 'Install Agent Deck', capabilities: ['sessions'], contract: 'agent-deck-cli/v1' },
@@ -25,6 +27,7 @@ beforeEach(() => {
   mocks.create.mockResolvedValue({ target: 'new-seat', session: { id: 'viewer' } });
   mocks.attach.mockResolvedValue({ id: 'viewer' });
   mocks.browse.mockResolvedValue({ host: 'localhost', path: '/work/project', parent: '/work', repository: true, entries: [] });
+  mocks.updateConfig.mockResolvedValue({ app: { coordination: { default_provider: 'agent-deck' } } });
 });
 
 it('opens without launching sessions and reports provider failures', async () => {
@@ -88,14 +91,44 @@ it('creates a seat in an existing canonical Rig pod', async () => {
 it('surfaces Agent Deck local and remote sessions with host-qualified identity', async () => {
   const value = emptyStatus();
   value.providers[1] = { id: 'agent-deck', label: 'Agent Deck', available: true, capabilities: ['sessions', 'remote', 'native-session-id'], contract: 'agent-deck-cli/v1' };
+  value.defaultProvider = 'agent-deck';
   value.projects = [{ provider: 'agent-deck', id: 'sparky:webmux', name: 'webmux', host: 'sparky', state: 'active', historical: false, seatCount: 1, runningCount: 1 }];
   value.seats = [{ provider: 'agent-deck', id: 'sparky:session-1', projectId: 'sparky:webmux', projectName: 'webmux', name: 'remote-review', host: 'sparky', workspace: '/home/jkh/Src/webmux', runtime: 'codex', state: 'running', openable: true, managed: true, nativeSessionId: 'codex-thread-1' }];
   mocks.status.mockResolvedValue(value);
   render(<CoordinationDialog onClose={() => {}} />);
-  fireEvent.change(await screen.findByLabelText('Coordinator'), { target: { value: 'agent-deck' } });
   const sessions = await screen.findByRole('list', { name: 'webmux sessions' });
   expect(within(sessions).getByText('codex-thread-1')).toBeVisible();
   expect(within(sessions).getByText('/home/jkh/Src/webmux')).toBeVisible();
   fireEvent.click(within(sessions).getByRole('button', { name: 'Open session' }));
   await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('agent-deck', 'sparky:session-1', undefined));
+});
+
+it('requires an upgrade choice and can persist Agent Deck as the default', async () => {
+  const value = emptyStatus();
+  value.defaultProvider = 'choose';
+  value.providers[1] = { ...value.providers[1], available: true };
+  mocks.status.mockResolvedValue(value);
+  render(<CoordinationDialog onClose={() => {}} />);
+
+  expect(await screen.findByText(/one-time upgrade choice/)).toBeVisible();
+  expect(screen.queryByText('Create coordinated session')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Coordination experience'), { target: { value: 'agent-deck' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Make default' }));
+
+  await waitFor(() => expect(mocks.updateConfig).toHaveBeenCalledWith({ app: { coordination: { default_provider: 'agent-deck' } } }));
+  expect(await screen.findByText('Using')).toHaveTextContent('Using Agent Deck');
+});
+
+it('temporarily switches providers without rewriting the default', async () => {
+  const value = emptyStatus();
+  value.providers[1] = { ...value.providers[1], available: true };
+  mocks.status.mockResolvedValue(value);
+  render(<CoordinationDialog onClose={() => {}} />);
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+  fireEvent.change(screen.getByLabelText('Coordination experience'), { target: { value: 'agent-deck' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Use this time' }));
+
+  expect(await screen.findByText(/default: Rig/)).toBeVisible();
+  expect(mocks.updateConfig).not.toHaveBeenCalled();
 });
