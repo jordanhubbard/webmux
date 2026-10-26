@@ -161,6 +161,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/agents/config", s.protected(false, s.getAgentConfig))
 	mux.Handle("GET /api/coordination", s.protected(false, s.getCoordination))
 	mux.Handle("POST /api/coordination/agents", s.protected(false, s.createCoordinatedAgent))
+	mux.Handle("POST /api/coordination/workspaces", s.protected(false, s.browseCoordinationWorkspaces))
 	mux.Handle("POST /api/coordination/attach", s.protected(false, s.attachManagedRig))
 	mux.Handle("GET /api/openrig", s.protected(false, s.getOpenRig))
 	mux.Handle("GET /api/openrig/agents", s.protected(false, s.getOpenRigAgents))

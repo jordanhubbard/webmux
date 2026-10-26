@@ -19,11 +19,11 @@ test('coordination is a dismissible modal and leaves the terminal grid intact', 
   let attachments = 0;
   page.on('request', value => { if (value.method() === 'POST' && /coordination|openrig/.test(value.url())) attachments++; });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Rig', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Rig', exact: true });
+  await page.getByRole('button', { name: 'Coordination', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Coordination', exact: true });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('heading', { name: 'Create agent', exact: true })).toBeVisible();
-  await expect(dialog.getByLabel('Project directory on this host')).toBeVisible();
+  await expect(dialog.getByRole('heading', { name: 'Create coordinated session', exact: true })).toBeVisible();
+  await expect(dialog.getByLabel('Workspace on execution host')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Run fresh challenge' })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
@@ -40,19 +40,19 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   const project = 'browser-workload';
   const sessions: string[] = [];
   let workloadCompleted = false;
-  type Agent = { name: string; target: string; connected: boolean; sessionId?: string };
+  type Agent = { name: string; id: string; state: string; openable: boolean; nativeSessionId?: string };
   type Session = { id: string; row: number; col: number; openrig_view?: string; rig?: { target: string; project: string; name: string; host: string; runtime: string } };
   const status = async () => (await (await request.get('/api/coordination')).json()) as {
-    agents: Agent[]; messages: { from: string; to: string; body: string }[];
+    seats: Agent[]; messages: { from: string; to: string; body: string }[];
   };
   const openDialog = async () => {
-    await page.getByRole('button', { name: 'Rig', exact: true }).click();
-    return page.getByRole('dialog', { name: 'Rig', exact: true });
+    await page.getByRole('button', { name: 'Coordination', exact: true }).click();
+    return page.getByRole('dialog', { name: 'Coordination', exact: true });
   };
   const openAgent = async (name: string, reconnect = false) => {
     const dialog = await openDialog();
     const response = page.waitForResponse(value => value.url().endsWith('/api/coordination/attach') && value.request().method() === 'POST');
-    await dialog.locator('article').filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: reconnect ? 'Restart provider and open' : 'Open viewer', exact: true }).click();
+    await dialog.locator('article').filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: reconnect ? 'Restart provider and open' : 'Open session', exact: true }).click();
     const attached = await response;
     expect(attached.status()).toBe(200);
     const session = await attached.json() as Session;
@@ -65,55 +65,56 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       let dialog;
       if (index === 0) {
         await page.getByTestId('add-cell-0-0').first().click();
-        await page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Open or create Rig seat' }).click();
-        dialog = page.getByRole('dialog', { name: 'Rig', exact: true });
+        await page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Open coordinated session' }).click();
+        dialog = page.getByRole('dialog', { name: 'Coordination', exact: true });
+        await dialog.getByLabel('New coordinated project').check();
       } else {
         await page.getByRole('button', { name: 'Desktops', exact: true }).click();
         dialog = await openDialog();
       }
-      await dialog.getByLabel('Project ID', { exact: true }).fill(project);
-      await dialog.getByLabel('Agent name', { exact: true }).fill(name);
+      if (index === 0) await dialog.getByLabel('New Rig name', { exact: true }).fill(project);
+      await dialog.getByLabel('Session name', { exact: true }).fill(name);
       await dialog.getByLabel('Execution host', { exact: true }).fill('localhost');
-      await dialog.getByLabel('Project directory on this host', { exact: true }).fill(home);
-      await dialog.getByRole('combobox', { name: 'Agent', exact: true }).selectOption('codex');
+      await dialog.getByLabel('Workspace on execution host', { exact: true }).fill(home);
+      await dialog.getByRole('combobox', { name: 'Coding agent', exact: true }).selectOption('codex');
       const response = page.waitForResponse(value => value.url().endsWith('/api/coordination/agents') && value.request().method() === 'POST');
-      await dialog.getByRole('button', { name: 'Create and open terminal', exact: true }).click();
+      await dialog.getByRole('button', { name: 'Create session and open terminal', exact: true }).click();
       expect((await response).status()).toBe(200);
       await expect(dialog).toHaveCount(0);
-      const agent = (await status()).agents.find(value => value.name === name)!;
+      const agent = (await status()).seats.find(value => value.name === name)!;
       const listing: Session[] = await (await request.get('/api/sessions')).json();
-      const session = listing.find(value => value.openrig_view === `managed:${agent.target}`)!;
+      const session = listing.find(value => value.openrig_view === `managed:${agent.id}`)!;
       if (index === 0) expect([session.row, session.col]).toEqual([0, 0]);
       sessions.push(session.id);
-      expect(session.rig).toEqual({ target: agent.target, project, name, host: 'localhost', runtime: 'codex' });
+      expect(session.rig).toEqual({ target: agent.id, project, name, host: 'localhost', runtime: 'codex' });
       const terminal = page.getByTestId(`tile-cell-${session.id}`);
       await expect(page.getByTestId('workspace-scroll')).toBeVisible();
       await expect(terminal).toBeInViewport({ ratio: 0.1 });
       await expect(terminal.locator('.xterm-helper-textarea')).toBeFocused();
       await expect(terminal.getByLabel('Rig-managed worker')).toContainText(`Rig · ${project} · ${name} · localhost`);
       await expect(terminal.locator('.xterm-rows')).toContainText('FIXTURE_READY');
-      await expect(terminal.locator('.xterm-rows')).toContainText(agent.target);
+      await expect(terminal.locator('.xterm-rows')).toContainText(agent.id);
     }
-    const agents = (await status()).agents;
+    const agents = (await status()).seats;
     const coder = agents.find(value => value.name === 'coder')!;
     const reviewer = agents.find(value => value.name === 'reviewer')!;
     expect(agents).toHaveLength(2);
-    expect(agents.every(value => value.connected)).toBe(true);
+    expect(agents.every(value => value.openable)).toBe(true);
     const tmuxEnv = { ...process.env, TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') };
     const tmux = (...args: string[]) => {
       const result = spawnSync('tmux', args, { env: tmuxEnv, encoding: 'utf8', timeout: 5000 });
       expect(result.status, result.stderr).toBe(0);
       return result.stdout.trim();
     };
-    expect(tmux('display-message', '-p', '-t', coder.target, '#{mouse}')).toBe('1');
+    expect(tmux('display-message', '-p', '-t', coder.id, '#{mouse}')).toBe('1');
     expect(tmux('show-option', '-gv', 'mouse')).toBe('off');
     expect(tmux('display-message', '-p', '-t', 'webmux-fixture-path', '#{mouse}')).toBe('0');
-    tmux('set-option', '-t', coder.target, 'mouse', 'off');
+    tmux('set-option', '-t', coder.id, 'mouse', 'off');
     expect((await openAgent('coder')).id).toBe(sessions[0]);
-    expect(tmux('display-message', '-p', '-t', coder.target, '#{mouse}')).toBe('1');
-    tmux('send-keys', '-t', coder.target, 'WM_SCROLL_OLD', 'Enter');
-    for (let index = 0; index < 40; index++) tmux('send-keys', '-t', coder.target, `WM_SCROLL_${index}`, 'Enter');
-    tmux('send-keys', '-t', coder.target, 'WM_SCROLL_NEW', 'Enter');
+    expect(tmux('display-message', '-p', '-t', coder.id, '#{mouse}')).toBe('1');
+    tmux('send-keys', '-t', coder.id, 'WM_SCROLL_OLD', 'Enter');
+    for (let index = 0; index < 40; index++) tmux('send-keys', '-t', coder.id, `WM_SCROLL_${index}`, 'Enter');
+    tmux('send-keys', '-t', coder.id, 'WM_SCROLL_NEW', 'Enter');
     const scrollTile = page.getByTestId(`tile-cell-${sessions[0]}`);
     const rows = scrollTile.locator('.xterm-rows');
     await expect(rows).toContainText('WM_SCROLL_NEW');
@@ -124,24 +125,24 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     const box = (await screen.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     for (let index = 0; index < 20; index++) await page.mouse.wheel(0, -120);
-    await expect.poll(() => tmux('display-message', '-p', '-t', coder.target, '#{pane_in_mode}')).toBe('1');
+    await expect.poll(() => tmux('display-message', '-p', '-t', coder.id, '#{pane_in_mode}')).toBe('1');
     await expect(rows).toContainText('WM_SCROLL_OLD');
     expect(await workspace.evaluate(el => ({ x: el.scrollLeft, y: el.scrollTop }))).toEqual(beforeWheel);
-    tmux('send-keys', '-t', coder.target, 'q');
+    tmux('send-keys', '-t', coder.id, 'q');
     const nonce = randomBytes(16).toString('hex');
     const terminal = page.getByTestId(`tile-cell-${sessions[0]}`);
     await terminal.locator('.xterm-helper-textarea').focus();
-    await page.keyboard.insertText(`fixture-send ${reviewer.target} WM_CHALLENGE:${coder.target}:${nonce}`);
+    await page.keyboard.insertText(`fixture-send ${reviewer.id} WM_CHALLENGE:${coder.id}:${nonce}`);
     await page.keyboard.press('Enter');
     // The ACK is generated by the peer only after receiving Rig's tmux delivery.
     await expect(terminal.locator('.xterm-rows')).toContainText(`WM_ACK:${nonce}`, { timeout: 30_000 });
-    await expect.poll(async () => (await status()).messages.some(value => value.from === reviewer.target && value.to === coder.target && value.body.includes(`WM_ACK:${nonce}`))).toBe(true);
+    await expect.poll(async () => (await status()).messages.some(value => value.from === reviewer.id && value.to === coder.id && value.body.includes(`WM_ACK:${nonce}`))).toBe(true);
     const dialog = await openDialog();
     await expect(dialog).toContainText(`WM_ACK:${nonce}`);
     await page.keyboard.press('Escape');
     await page.reload();
     for (const id of sessions) await expect(page.getByTestId(`tile-cell-${id}`)).toBeVisible();
-    expect((await status()).agents.map(value => value.target)).toEqual(agents.map(value => value.target));
+    expect((await status()).seats.map(value => value.id)).toEqual(agents.map(value => value.id));
     expect((await openAgent('coder')).id).toBe(sessions[0]);
     expect((await (await request.get('/api/sessions')).json()).map((value: Session) => value.id)).toEqual(sessions);
 
@@ -167,30 +168,30 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     expect([restored.row, restored.col]).not.toEqual([2, 2]);
     await expect(terminal).toBeInViewport({ ratio: 0.1 });
     await expect(terminal.locator('.xterm-helper-textarea')).toBeFocused();
-    expect((await status()).agents).toHaveLength(2);
+    expect((await status()).seats).toHaveLength(2);
 
     // Close the actual tile, then reopen the same agent without launching a third.
     await terminal.getByTitle('Detach viewer; seat keeps running', { exact: true }).click();
     await expect(terminal).toHaveCount(0);
-    expect((await status()).agents.every(value => value.connected)).toBe(true);
+    expect((await status()).seats.every(value => value.state !== 'stopped')).toBe(true);
     const coderSession = await openAgent('coder');
     sessions.push(coderSession.id);
     await expect(page.getByTestId(`tile-cell-${coderSession.id}`).locator('.xterm-rows')).toContainText(`WM_ACK:${nonce}`);
-    expect((await status()).agents).toHaveLength(2);
-    let previousId = (await status()).agents.find(value => value.target === coder.target)!.sessionId;
+    expect((await status()).seats).toHaveLength(2);
+    let previousId = (await status()).seats.find(value => value.id === coder.id)!.nativeSessionId;
     expect(previousId).toBeTruthy();
     for (let reconnect = 0; reconnect < 2; reconnect++) {
-      const stopped = spawnSync('tmux', ['kill-session', '-t', `=${coder.target}`], { env: tmuxEnv, timeout: 5000 });
+      const stopped = spawnSync('tmux', ['kill-session', '-t', `=${coder.id}`], { env: tmuxEnv, timeout: 5000 });
       expect(stopped.status).toBe(0);
-      await expect.poll(async () => (await status()).agents.find(value => value.target === coder.target)!.connected).toBe(false);
+      await expect.poll(async () => (await status()).seats.find(value => value.id === coder.id)!.state).toBe('stopped');
       expect((await openAgent('coder', true)).id).toBe(coderSession.id);
       await expect(page.getByTestId(`tile-cell-${coderSession.id}`).locator('.xterm-rows')).toContainText('FIXTURE_READY');
-      const current = (await status()).agents.find(value => value.target === coder.target)!;
-      expect(current.connected).toBe(true);
-      expect(current.sessionId).toBeTruthy();
-      expect(current.sessionId).not.toBe(previousId);
-      previousId = current.sessionId;
-      expect((await status()).agents).toHaveLength(2);
+      const current = (await status()).seats.find(value => value.id === coder.id)!;
+      expect(current.state !== 'stopped').toBe(true);
+      expect(current.nativeSessionId).toBeTruthy();
+      expect(current.nativeSessionId).not.toBe(previousId);
+      previousId = current.nativeSessionId;
+      expect((await status()).seats).toHaveLength(2);
     }
     await page.screenshot({ path: info.outputPath('managed-rig-workload.png') });
     workloadCompleted = true;
@@ -246,27 +247,35 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
 });
 
 
-test('coordination groups explicit worker identities in keyboard-expandable projects', async ({ page }) => {
-  await page.route('**/api/coordination', route => route.fulfill({ json: { messages: [], agents: [
-    { target: 'opaque-one', project: 'demo-release', name: 'reviewer', host: 'build-host', runtime: 'codex', cwd: '/work/demo', connected: true, activityState: 'needs_input' },
-    { target: 'opaque-two', project: 'demo-release', name: 'coder', host: 'localhost', runtime: 'claude-code', cwd: '/work/demo', connected: false },
-    { target: 'opaque-three', project: 'other-project', name: 'reviewer', host: 'other-host', runtime: 'codex', cwd: '/work/other', connected: true },
-  ] } }));
+test('coordination groups provider-owned sessions in keyboard-expandable projects', async ({ page }) => {
+  await page.route('**/api/coordination', route => route.fulfill({ json: {
+    contract: 'webmux-coordination/v1',
+    providers: [{ id: 'rig', label: 'Rig', available: true, capabilities: ['projects', 'attach'], contract: 'openrig-cli/0.6.14' }],
+    projects: [
+      { provider: 'rig', id: 'rig-one', name: 'demo-release', host: 'localhost', state: 'running', historical: false, seatCount: 2, runningCount: 1, contexts: ['agents'] },
+      { provider: 'rig', id: 'rig-two', name: 'other-project', host: 'other-host', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: ['agents'] },
+    ],
+    seats: [
+      { provider: 'rig', id: 'opaque-one', projectId: 'rig-one', projectName: 'demo-release', name: 'reviewer', host: 'build-host', runtime: 'codex', workspace: '/work/demo', state: 'waiting', openable: true, managed: true, context: 'agents' },
+      { provider: 'rig', id: 'opaque-two', projectId: 'rig-one', projectName: 'demo-release', name: 'coder', host: 'localhost', runtime: 'claude-code', workspace: '/work/demo', state: 'stopped', openable: false, managed: true, context: 'agents' },
+      { provider: 'rig', id: 'opaque-three', projectId: 'rig-two', projectName: 'other-project', name: 'reviewer', host: 'other-host', runtime: 'codex', workspace: '/work/other', state: 'running', openable: true, managed: false, context: 'agents' },
+    ],
+    messages: [], errors: {},
+  } }));
   await page.goto('/');
-  await page.getByRole('button', { name: 'Rig', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Rig', exact: true });
-  const workers = dialog.getByRole('list', { name: 'demo-release workers' });
+  await page.getByRole('button', { name: 'Coordination', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Coordination', exact: true });
+  const workers = dialog.getByRole('list', { name: 'demo-release sessions' });
   await expect(workers.getByRole('article')).toHaveCount(2);
   await expect(workers.getByText('build-host', { exact: true })).toBeVisible();
-  await expect(workers.getByText('needs_input')).toBeVisible();
+  await expect(workers.getByText('waiting')).toBeVisible();
   const summary = dialog.locator('summary').filter({ hasText: 'demo-release' });
   await summary.focus();
   await page.keyboard.press('Enter');
   await expect(workers).not.toBeVisible();
   await page.keyboard.press('Space');
   await expect(workers).toBeVisible();
-  await expect(workers.getByRole('button', { name: 'Open viewer' })).toHaveCount(2);
-  await expect(workers.getByRole('button', { name: 'Open viewer', exact: true }).last()).toBeDisabled();
+  await expect(workers.getByRole('button', { name: 'Open session' })).toHaveCount(1);
   await expect(workers.getByRole('button', { name: 'Restart provider and open' })).toHaveCount(1);
   await page.setViewportSize({ width: 390, height: 800 });
   expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);

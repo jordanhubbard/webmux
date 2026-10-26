@@ -8,6 +8,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/openrigproof"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -239,78 +240,18 @@ func (s *Server) getOpenRigAgents(w http.ResponseWriter, r *http.Request, owner 
 
 // Managed agents attach through a server-verified transport, never arbitrary argv.
 type managedRigAgent struct {
-	Target  string `json:"target"`
-	Project string `json:"project"`
-	Name    string `json:"name"`
-	Host    string `json:"host"`
-	Cwd     string `json:"cwd"`
-	Runtime string `json:"runtime"`
-	Tmux    string `json:"tmux"`
-}
-
-func (s *Server) rigAction(w http.ResponseWriter, r *http.Request, owner, action string) {
-	if !s.openRigAccess(w, owner) {
-		return
-	}
-	if executable, message := openRigExecutable(); executable == "" {
-		writeError(w, 409, message)
-		return
-	}
-	input := ""
-	var row, col *int
-	if action == "create" {
-		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 8192))
-		if err != nil || !json.Valid(body) {
-			writeError(w, 400, "Invalid agent details.")
-			return
-		}
-		input = string(body)
-		var placement struct {
-			Row *int `json:"row"`
-			Col *int `json:"col"`
-		}
-		if json.Unmarshal(body, &placement) != nil || (placement.Row == nil) != (placement.Col == nil) {
-			writeError(w, 400, "Grid row and col must be provided together.")
-			return
-		}
-		row, col = placement.Row, placement.Col
-	}
-	ctx, cancel := context.WithTimeout(r.Context(), 75*time.Second)
-	defer cancel()
-	output, err := openrigcoord.Run(ctx, s.store.Home, owner, action, input)
-	if err != nil {
-		writeError(w, 502, "Coordination: "+err.Error())
-		return
-	}
-	if action == "create" {
-		var agent managedRigAgent
-		if json.Unmarshal(output, &agent) != nil || agent.Tmux == "" {
-			writeError(w, 502, "Invalid managed agent response.")
-			return
-		}
-		if _, err := s.attachManagedRigTerminal(r.Context(), owner, agent, row, col); err != nil {
-			s.sessionError(w, err, "Agent was created. Open its terminal from Coordination after making room in the grid.")
-			return
-		}
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(output)
-}
-
-func (s *Server) attachManagedRigTerminal(parent context.Context, owner string, agent managedRigAgent, row, col *int) (session.Session, error) {
-	tmux, err := exec.LookPath("tmux")
-	if err != nil {
-		return session.Session{}, err
-	}
-	// Existing seats may predate the per-session mouse setting. Apply it when
-	// opening a viewer without changing tmux's global or unrelated sessions.
-	ctx, cancel := context.WithTimeout(parent, 3*time.Second)
-	defer cancel()
-	if err := exec.CommandContext(ctx, tmux, "set-option", "-t", agent.Tmux, "mouse", "on").Run(); err != nil {
-		return session.Session{}, fmt.Errorf("enable managed terminal scrollback: %w", err)
-	}
-	return s.sessions.EnsureRigTerminalAt(owner, agent.Target, agent.Name+" · "+agent.Host+" · "+agent.Project, []string{tmux, "attach-session", "-t", "=" + agent.Tmux}, row, col, session.RigIdentity{Target: agent.Target, Project: agent.Project, Name: agent.Name, Host: agent.Host, Runtime: agent.Runtime})
+	Target    string `json:"target"`
+	Project   string `json:"project"`
+	RigID     string `json:"rigId"`
+	RigName   string `json:"rigName"`
+	Pod       string `json:"pod"`
+	Name      string `json:"name"`
+	Host      string `json:"host"`
+	Cwd       string `json:"cwd"`
+	Runtime   string `json:"runtime"`
+	Tmux      string `json:"tmux"`
+	SessionID string `json:"sessionId,omitempty"`
+	Connected bool   `json:"connected,omitempty"`
 }
 
 func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner string) {
@@ -318,45 +259,190 @@ func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner 
 		return
 	}
 	var body struct {
-		Target string `json:"target"`
-		Row    *int   `json:"row"`
-		Col    *int   `json:"col"`
+		Provider string `json:"provider"`
+		Target   string `json:"target"`
+		Row      *int   `json:"row"`
+		Col      *int   `json:"col"`
 	}
-	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 1024)).Decode(&body) != nil || (body.Row == nil) != (body.Col == nil) {
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 2048)).Decode(&body) != nil || body.Target == "" || (body.Row == nil) != (body.Col == nil) {
 		writeError(w, 400, "Invalid agent target.")
+		return
+	}
+	if body.Provider == "" {
+		body.Provider = "rig"
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	defer cancel()
+	provider := s.coordinationProvider(owner, body.Provider)
+	if provider == nil || !provider.Descriptor().Available {
+		writeError(w, 409, "The selected coordination provider is unavailable.")
+		return
+	}
+	launch, err := provider.Attach(ctx, body.Target)
+	if err != nil {
+		writeError(w, 502, "Coordination: "+err.Error())
+		return
+	}
+	value, err := s.attachCoordinationTerminal(r.Context(), owner, launch, body.Row, body.Col)
+	if err != nil {
+		s.sessionError(w, err, "Cannot open coordinated session terminal.")
+		return
+	}
+	writeJSON(w, 200, value)
+}
+
+func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner string) {
+	if !s.openRigAccess(w, owner) {
+		return
+	}
+	if os.Getenv("WEBMUX_COORDINATION_DISABLED") == "1" {
+		writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "providers": []coordinationProviderDescriptor{}, "projects": []coordinationProject{}, "seats": []coordinationSeat{}, "messages": []coordinationMessage{}, "errors": map[string]string{}})
+		return
+	}
+	providers := s.coordinationProviders(owner)
+	descriptors := make([]coordinationProviderDescriptor, 0, len(providers))
+	projects := []coordinationProject{}
+	seats := []coordinationSeat{}
+	messages := []coordinationMessage{}
+	errors := map[string]string{}
+	for _, provider := range providers {
+		descriptor := provider.Descriptor()
+		descriptors = append(descriptors, descriptor)
+		if !descriptor.Available {
+			continue
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+		status, err := provider.Status(ctx)
+		cancel()
+		if err != nil {
+			errors[descriptor.ID] = err.Error()
+			continue
+		}
+		projects = append(projects, status.Projects...)
+		seats = append(seats, status.Seats...)
+		messages = append(messages, status.Messages...)
+		if len(status.Errors) > 0 {
+			errors[descriptor.ID] = strings.Join(status.Errors, "; ")
+		}
+	}
+	writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "providers": descriptors, "projects": projects, "seats": seats, "messages": messages, "errors": errors})
+}
+func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, owner string) {
+	if !s.openRigAccess(w, owner) {
+		return
+	}
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 8192))
+	if err != nil {
+		writeError(w, 400, "Invalid coordination request.")
+		return
+	}
+	var request struct {
+		coordinationLaunchRequest
+		Row *int `json:"row"`
+		Col *int `json:"col"`
+	}
+	if json.Unmarshal(body, &request) != nil || request.Provider == "" || (request.Row == nil) != (request.Col == nil) {
+		writeError(w, 400, "Invalid coordination request.")
+		return
+	}
+	provider := s.coordinationProvider(owner, request.Provider)
+	if provider == nil || !provider.Descriptor().Available {
+		writeError(w, 409, "The selected coordination provider is unavailable.")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 75*time.Second)
+	defer cancel()
+	launch, err := provider.Launch(ctx, request.coordinationLaunchRequest)
+	if err != nil {
+		writeError(w, 502, "Coordination: "+err.Error())
+		return
+	}
+	value, err := s.attachCoordinationTerminal(r.Context(), owner, launch, request.Row, request.Col)
+	if err != nil {
+		s.sessionError(w, err, "Session was created. Open it from Coordination after making room in the grid.")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"target": launch.Target, "session": value})
+}
+func (s *Server) browseCoordinationWorkspaces(w http.ResponseWriter, r *http.Request, owner string) {
+	if !s.openRigAccess(w, owner) {
+		return
+	}
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 8192))
+	if err != nil || !json.Valid(body) {
+		writeError(w, 400, "Invalid workspace request.")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
-	output, err := openrigcoord.Run(ctx, s.store.Home, owner, "status", "")
-	if err != nil {
-		writeError(w, 502, "Cannot read coordinator state.")
+	var browse struct {
+		Provider string `json:"provider"`
+		Host     string `json:"host"`
+		Path     string `json:"path"`
+	}
+	if json.Unmarshal(body, &browse) != nil {
+		writeError(w, 400, "Invalid workspace request.")
 		return
 	}
-	var status struct {
-		Agents []managedRigAgent `json:"agents"`
+	if browse.Provider == "" {
+		browse.Provider = "rig"
 	}
-	if json.Unmarshal(output, &status) != nil {
-		writeError(w, 502, "Invalid coordinator response.")
+	provider := s.coordinationProvider(owner, browse.Provider)
+	if provider == nil || !provider.Descriptor().Available {
+		writeError(w, 409, "The selected coordination provider is unavailable.")
 		return
 	}
-	for _, agent := range status.Agents {
-		if agent.Target == body.Target {
-			value, err := s.attachManagedRigTerminal(r.Context(), owner, agent, body.Row, body.Col)
-			if err != nil {
-				s.sessionError(w, err, "Cannot open agent terminal.")
-				return
-			}
-			writeJSON(w, 200, value)
+	if browse.Provider == "agent-deck" && browse.Host != "" && browse.Host != "localhost" {
+		resolved, err := provider.(*agentDeckProvider).remoteHost(ctx, browse.Host)
+		if err != nil {
+			writeError(w, 502, "Workspace browser: "+err.Error())
 			return
 		}
+		browse.Host = resolved
+		body, _ = json.Marshal(browse)
 	}
-	writeError(w, 404, "Unknown managed agent.")
+	output, err := openrigcoord.Run(ctx, s.store.Home, owner, "browse", string(body))
+	if err != nil {
+		writeError(w, 502, "Workspace browser: "+err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(output)
 }
 
-func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner string) {
-	s.rigAction(w, r, owner, "status")
+func (s *Server) coordinationProviders(owner string) []coordinationProvider {
+	return []coordinationProvider{&rigProvider{home: s.store.Home, owner: owner}, newAgentDeckProvider()}
 }
-func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, owner string) {
-	s.rigAction(w, r, owner, "create")
+
+func (s *Server) coordinationProvider(owner, id string) coordinationProvider {
+	if os.Getenv("WEBMUX_COORDINATION_DISABLED") == "1" {
+		return nil
+	}
+	for _, provider := range s.coordinationProviders(owner) {
+		if provider.Descriptor().ID == id {
+			return provider
+		}
+	}
+	return nil
+}
+
+func (s *Server) attachCoordinationTerminal(parent context.Context, owner string, launch coordinationLaunch, row, col *int) (session.Session, error) {
+	if launch.Provider == "rig" && len(launch.Argv) >= 4 {
+		ctx, cancel := context.WithTimeout(parent, 3*time.Second)
+		defer cancel()
+		if err := exec.CommandContext(ctx, launch.Argv[0], "set-option", "-t", strings.TrimPrefix(launch.Argv[3], "="), "mouse", "on").Run(); err != nil {
+			return session.Session{}, fmt.Errorf("enable coordinated terminal scrollback: %w", err)
+		}
+	}
+	viewerTarget := launch.Target
+	if launch.Provider != "rig" {
+		viewerTarget = launch.Provider + ":" + launch.Target
+	}
+	identityProvider := launch.Provider
+	if identityProvider == "rig" {
+		identityProvider = ""
+	}
+	identity := session.RigIdentity{Provider: identityProvider, Target: viewerTarget, Project: launch.Project, Name: launch.Name, Host: launch.Host, Runtime: launch.Runtime}
+	return s.sessions.EnsureRigTerminalAt(owner, viewerTarget, launch.Title, launch.Argv, row, col, identity)
 }

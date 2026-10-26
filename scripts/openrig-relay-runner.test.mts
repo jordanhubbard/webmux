@@ -15,7 +15,7 @@ const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_pro
 const name=path.basename(process.argv[1]),a=process.argv.slice(2),root=process.env.WM_RELAY_TEST;
 fs.appendFileSync(path.join(root,'calls'),JSON.stringify([name,...a])+'\\n');
 if(name==='rig'){
- if(a[0]==='up') console.log(JSON.stringify({rigId:'private-rig'}));
+ if(a[0]==='up') console.log(JSON.stringify({rigId:'01M5H000000000000000000000'}));
  if(a[0]==='attach'&&a.includes('--help')){console.log(process.env.WM_LEGACY==='1'?'--self --rig':'--self --rig --relay-ssh-host --relay-tmux-session');process.exit(0);}
  if(a[0]==='attach') {const tmux=process.env.TEST_TMUX;console.log(JSON.stringify({ok:true,attachmentType:'tmux',sessionName:tmux,senderAddress:'canonical@test',sessionId:'private-session',env:{OPENRIG_URL:'http://127.0.0.1:4567',OPENRIG_SESSION_NAME:'canonical@test'}}));}
 }else if(name==='ssh'){

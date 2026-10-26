@@ -387,9 +387,10 @@ webmux/                          Source / install directory (WEBMUX_ROOT)
 | `PUT` | `/api/config/layout` | Update layout |
 | `GET` | `/api/agents/config` | Get normalized agent-view config |
 | `GET` | `/api/agents/sessions` | List configured agent tmux sessions |
-| `GET` | `/api/coordination` | Managed agents and recent coordination (admin) |
-| `POST` | `/api/coordination/agents` | Create or reconnect a managed agent in the terminal grid (admin) |
-| `POST` | `/api/coordination/attach` | Open an existing managed agent terminal (admin) |
+| `GET` | `/api/coordination` | Provider descriptors plus canonical projects, sessions, native IDs, and messages (`webmux-coordination/v1`, admin) |
+| `POST` | `/api/coordination/agents` | Launch a Rig or Agent Deck session and open it in the terminal grid (admin) |
+| `POST` | `/api/coordination/workspaces` | Browse local or registered-remote workspaces before launch (admin) |
+| `POST` | `/api/coordination/attach` | Open an existing provider-owned session (admin) |
 | `GET` | `/api/openrig` | Check host OpenRig prerequisites, view attachments and live-test status (admin) |
 | `POST` | `/api/openrig/attach` | Attach the text dashboard, a listed agent CLI or the explicit live-test console (admin) |
 | `GET` | `/api/openrig/agents` | List host-local OpenRig agent terminal targets (admin) |

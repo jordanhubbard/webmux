@@ -45,7 +45,7 @@ test.describe('UI loads', () => {
     await expect(addCell).toBeVisible({ timeout: 10_000 });
 
     await addCell.click();
-    await expect(page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Open or create Rig seat' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Open coordinated session' })).toBeVisible();
     await page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Connect to host' }).click();
     await expect(page.getByRole('dialog', { name: 'Connect to Host' })).toBeVisible();
   });

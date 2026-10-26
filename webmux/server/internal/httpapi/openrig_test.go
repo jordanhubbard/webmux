@@ -20,7 +20,7 @@ func TestOpenRigRequiresAdministratorAndReportsMissingInstallation(t *testing.T)
 	admin := responseToken(t, request(handler, "POST", "/api/auth/bootstrap", `{"username":"owner","password":"owner-password"}`, ""))
 	requireStatus(t, request(handler, "POST", "/api/auth/register", `{"username":"member","password":"member-password"}`, admin), 201)
 	member := responseToken(t, request(handler, "POST", "/api/auth/login", `{"username":"member","password":"member-password"}`, ""))
-	for _, endpoint := range []struct{ method, path string }{{"GET", "/api/coordination"}, {"POST", "/api/coordination/agents"}, {"POST", "/api/coordination/attach"}, {"GET", "/api/openrig"}, {"GET", "/api/openrig/agents"}, {"POST", "/api/openrig/attach"}, {"POST", "/api/openrig/proof/stop"}} {
+	for _, endpoint := range []struct{ method, path string }{{"GET", "/api/coordination"}, {"POST", "/api/coordination/agents"}, {"POST", "/api/coordination/workspaces"}, {"POST", "/api/coordination/attach"}, {"GET", "/api/openrig"}, {"GET", "/api/openrig/agents"}, {"POST", "/api/openrig/attach"}, {"POST", "/api/openrig/proof/stop"}} {
 		requireStatus(t, request(handler, endpoint.method, endpoint.path, "", member), 403)
 	}
 	requireStatus(t, request(handler, "GET", "/api/openrig", "", admin), 200)
@@ -32,6 +32,26 @@ func TestOpenRigFollowsTrustedModeHostAccess(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 	requireStatus(t, request(handler, "GET", "/api/openrig", "", ""), 200)
 	requireStatus(t, request(handler, "POST", "/api/openrig/attach", "", ""), 409)
+}
+
+func TestDisabledCoordinationDoesNotDiscoverMachineWideProviders(t *testing.T) {
+	_, handler := fixture(t, "none")
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "1")
+	response := request(handler, "GET", "/api/coordination", "", "")
+	requireStatus(t, response, 200)
+	var status struct {
+		Contract  string            `json:"contract"`
+		Providers []json.RawMessage `json:"providers"`
+		Projects  []json.RawMessage `json:"projects"`
+		Seats     []json.RawMessage `json:"seats"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &status); err != nil {
+		t.Fatal(err)
+	}
+	if status.Contract != "webmux-coordination/v1" || len(status.Providers) != 0 || len(status.Projects) != 0 || len(status.Seats) != 0 {
+		t.Fatalf("disabled coordination leaked provider state: %+v", status)
+	}
+	requireStatus(t, request(handler, "POST", "/api/coordination/attach", `{"provider":"rig","target":"seat"}`, ""), 409)
 }
 
 func TestOpenRigRevokedAdminCannotReconnectOrKeepSocket(t *testing.T) {

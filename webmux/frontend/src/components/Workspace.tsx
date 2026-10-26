@@ -255,8 +255,8 @@ export function Workspace({
     setDialogPos(null);
   }, []);
 
-  const openRigSeat = useCallback(async (target: string) => {
-    const session = await api.attachCoordinatedAgent(target);
+  const openRigSeat = useCallback(async (provider: string, target: string) => {
+    const session = await api.attachCoordinatedAgent(provider, target);
     window.dispatchEvent(new CustomEvent('webmux-sessions-changed', { detail: { sessionId: session.id } }));
   }, []);
 
@@ -789,7 +789,7 @@ export function Workspace({
         {dialogPos && dialogMode === 'choose' && <Dialog title="Add to grid" subtitle={`Row ${dialogPos.row + 1}, column ${dialogPos.col + 1}`} onClose={() => setDialogPos(null)}>
           <p>Choose what this cell will show.</p>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" data-dialog-autofocus onClick={() => setDialogMode('rig')}>Open or create Rig seat</button>
+            <button type="button" data-dialog-autofocus onClick={() => setDialogMode('rig')}>Open coordinated session</button>
             <button type="button" onClick={() => setDialogMode('host')}>Connect to host</button>
           </div>
         </Dialog>}
