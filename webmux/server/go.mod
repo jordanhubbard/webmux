@@ -3,7 +3,7 @@ module github.com/jordanhubbard/webmux/server
 go 1.27.3
 
 require (
-	github.com/chromedp/cdproto v0.158.1
+	github.com/chromedp/cdproto v0.158.4
 	github.com/chromedp/chromedp v0.21.0
 	github.com/creack/pty v1.1.24
 	github.com/golang-jwt/jwt/v5 v5.3.1
