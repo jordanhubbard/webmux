@@ -52,9 +52,15 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   const status = async () => (await (await request.get('/api/coordination')).json()) as {
     seats: Agent[]; messages: { from: string; to: string; body: string }[];
   };
+  const useRig = async (dialog: ReturnType<typeof page.getByRole>) => {
+    await dialog.getByRole('button', { name: 'Change' }).click();
+    await dialog.getByLabel('Coordination experience').selectOption('rig');
+    await dialog.getByRole('button', { name: 'Use this time' }).click();
+    return dialog;
+  };
   const openDialog = async () => {
     await page.getByRole('button', { name: 'Coordination', exact: true }).click();
-    return page.getByRole('dialog', { name: 'Coordination', exact: true });
+    return useRig(page.getByRole('dialog', { name: 'Coordination', exact: true }));
   };
   const openAgent = async (name: string, reconnect = false) => {
     const dialog = await openDialog();
@@ -75,7 +81,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       if (index === 0) {
         await page.getByTestId('add-cell-0-0').first().click();
         await page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Open coordinated session' }).click();
-        dialog = page.getByRole('dialog', { name: 'Coordination', exact: true });
+        dialog = await useRig(page.getByRole('dialog', { name: 'Coordination', exact: true }));
         await dialog.getByLabel('New coordinated project').check();
       } else {
         await page.getByRole('button', { name: 'Desktops', exact: true }).click();
