@@ -250,7 +250,9 @@ func requestJSON(endpoint, bearer string, body []byte, out any) error {
 	if bearer != "" {
 		req.Header.Set("Authorization", "Bearer "+bearer)
 	}
-	client := &http.Client{Timeout: 15 * time.Second}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = clientDialContext()
+	client := &http.Client{Transport: transport, Timeout: 15 * time.Second}
 	response, err := client.Do(req)
 	if err != nil {
 		return err
@@ -314,7 +316,10 @@ func connect(ctx context.Context, server, credential string) error {
 		endpoint.Scheme = "ws"
 	}
 	headers := http.Header{"Authorization": {"Bearer " + credential}}
-	connection, response, err := (&websocket.Dialer{HandshakeTimeout: 10 * time.Second}).DialContext(ctx, endpoint.String(), headers)
+	dialer := *websocket.DefaultDialer
+	dialer.HandshakeTimeout = 10 * time.Second
+	dialer.NetDialContext = clientDialContext()
+	connection, response, err := dialer.DialContext(ctx, endpoint.String(), headers)
 	if err != nil {
 		if response != nil && response.StatusCode == 401 {
 			return errRevoked
@@ -389,7 +394,10 @@ func probeConnection(server, credential string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	headers := http.Header{"Authorization": {"Bearer " + credential}}
-	connection, response, err := (&websocket.Dialer{HandshakeTimeout: 10 * time.Second}).DialContext(ctx, endpoint.String(), headers)
+	dialer := *websocket.DefaultDialer
+	dialer.HandshakeTimeout = 10 * time.Second
+	dialer.NetDialContext = clientDialContext()
+	connection, response, err := dialer.DialContext(ctx, endpoint.String(), headers)
 	if err != nil {
 		if response != nil && response.StatusCode == 401 {
 			return errRevoked
