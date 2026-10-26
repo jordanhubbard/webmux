@@ -84,9 +84,9 @@ try {
     ? `WebMux ${metadata.version} — native client
 
 Copy bin/${goos === 'windows' ? 'webmux-client.exe' : 'webmux-client'} to a directory on PATH.
-Run it explicitly with --server https://WEBMUX_HOST:8443 --background, then link
-the printed pairing code in the WebMux SSH tile. Installation does not start or
-enroll the client. No WebMux server or browser assets are included.
+Copy the exact server URL and command from WebMux's Managed host dialog, then
+link the printed pairing code in the WebMux SSH tile. Installation does not
+start or enroll the client. No WebMux server or browser assets are included.
 Documentation: https://github.com/jordanhubbard/webmux/blob/main/docs/managed-hosts.md
 `
     : `WebMux ${metadata.version} — native server${component === 'all' ? ' and client' : ''}

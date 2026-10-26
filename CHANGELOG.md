@@ -5,6 +5,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Resolve `.local` WebMux server names through mDNS in static Linux
+  `webmux-client` builds instead of sending them to unicast DNS (#208).
+- Direct client installs to the exact URL shown by the Managed host dialog
+  instead of assuming HTTPS on port 8443 with an unspecified certificate name
+  (#208).
+
 ## [1.3.25] - 2026-10-25
 
 ### Added

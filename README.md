@@ -165,8 +165,9 @@ make install-all     # both on the same machine
 ```
 
 The server service starts automatically on login and reconnects persistent sessions.
-Start the client explicitly with `webmux-client --server https://WEBMUX_HOST:8443 --background`
-after installing it. Add `~/.local/bin` to PATH if needed; `CLIENT_BINDIR` changes
+Open WebMux's Managed host dialog and copy its command, or start the client
+explicitly with `webmux-client --server WEBMUX_URL --background` after installing
+it. Add `~/.local/bin` to PATH if needed; `CLIENT_BINDIR` changes
 the install directory.
 
 ```bash

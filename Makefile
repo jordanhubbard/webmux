@@ -386,7 +386,8 @@ install-client: build-client
 	@mkdir -p "$(CLIENT_BINDIR)"
 	@install -m 0755 "$(WEBMUX_DIR)/bin/webmux-client" "$(CLIENT_BINDIR)/webmux-client"
 	@printf "$(C_GRN)✓$(C_RST) Installed client: %s/webmux-client\n" "$(CLIENT_BINDIR)"
-	@printf "  Start it explicitly with: %s/webmux-client --server https://WEBMUX_HOST:8443 --background\n" "$(CLIENT_BINDIR)"
+	@printf "  Copy the exact server URL from WebMux's Managed host dialog, then run:\n"
+	@printf "  %s/webmux-client --server WEBMUX_URL --background\n" "$(CLIENT_BINDIR)"
 
 install-all: install-server install-client
 

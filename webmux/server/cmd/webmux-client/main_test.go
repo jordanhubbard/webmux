@@ -3,17 +3,69 @@ package main
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
+
+func TestLocalHostnameDialUsesInjectedResolver(t *testing.T) {
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	accepted := make(chan error, 1)
+	go func() {
+		connection, acceptErr := listener.Accept()
+		if acceptErr == nil {
+			acceptErr = connection.Close()
+		}
+		accepted <- acceptErr
+	}()
+
+	var resolved string
+	lookup := func(_ context.Context, host string) ([]net.IPAddr, error) {
+		resolved = host
+		return []net.IPAddr{{IP: net.ParseIP("127.0.0.1")}}, nil
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	dial := dialResolvedHost(&net.Dialer{}, lookup)
+	connection, err := dial(context.Background(), "tcp", net.JoinHostPort("fixture.local", strconv.Itoa(port)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = connection.Close()
+	if resolved != "fixture.local" {
+		t.Fatalf("resolved %q instead of the original mDNS hostname", resolved)
+	}
+	if err := <-accepted; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestOrdinaryHostnameDialBypassesMulticastResolver(t *testing.T) {
+	called := false
+	lookup := func(context.Context, string) ([]net.IPAddr, error) {
+		called = true
+		return nil, errors.New("unexpected lookup")
+	}
+	dial := dialResolvedHost(&net.Dialer{}, lookup)
+	if _, err := dial(context.Background(), "tcp", "127.0.0.1:1"); err == nil {
+		t.Fatal("closed TCP port unexpectedly accepted a connection")
+	}
+	if called {
+		t.Fatal("ordinary address was sent to the multicast resolver")
+	}
+}
 
 func TestClientIdentityAndServerURL(t *testing.T) {
 	if server, err := normalizeServer("webmux.example:8443", false); err != nil || server != "https://webmux.example:8443" {

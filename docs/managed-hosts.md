@@ -15,14 +15,21 @@ mode is enabled.
    `bin/webmux-client` (or `bin/webmux-client.exe`) from a client-only native
    bundle to a directory on PATH. The combined bundle also includes the client.
    None of these installation methods starts or enrolls it.
-2. On that machine, run `webmux-client --server https://WEBMUX_HOST:8443
-   --background`. On first use, it prompts for a WebMux username and password
-   in the terminal. It stores a private, revocable client credential and prints
-   a one-time pairing code. Do not put a password, browser token or client
-   credential on the command line. If the server is on an explicitly trusted
-   cleartext network, `--allow-insecure-http` permits `http://`; HTTP exposes
-   login and client credentials to that network.
+2. In WebMux's Managed host dialog, copy the displayed client command. It uses
+   the browser's current origin by default; edit **WebMux URL reachable from
+   this host** when the client reaches the server through another address. On
+   that machine, run the copied command. On first use, it prompts for a WebMux
+   username and password in the terminal. It stores a private, revocable client
+   credential and prints a one-time pairing code. Do not put a password,
+   browser token or client credential on the command line. For HTTPS, the URL's
+   hostname must be covered by the server certificate. If the server is on an
+   explicitly trusted cleartext network, `--allow-insecure-http` permits
+   `http://`; HTTP exposes login and client credentials to that network.
    A bare `WEBMUX_HOST:8443` also works and uses HTTPS.
+   Linux clients resolve `.local` server names with multicast DNS even in the
+   static native build. The client and server must be on a network where mDNS
+   multicast is reachable; use a routable DNS name when crossing network
+   boundaries. TLS verification continues to use the original server name.
 3. In WebMux, open an SSH tile for that machine and click **Host**. If the
    connection is not yet saved, click **Save this host**. Enter the pairing code
    under **Link client**. The binding belongs to the authenticated WebMux user.
