@@ -1,9 +1,17 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TopBar } from '@frontend/components/TopBar';
 import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
 import type { AuthState } from '@frontend/hooks/useAuth';
 import type { ReactNode } from 'react';
+
+const apiMocks = vi.hoisted(() => ({ getCoordination: vi.fn() }));
+vi.mock('@frontend/utils/api', () => ({ api: { getCoordination: apiMocks.getCoordination } }));
+
+beforeEach(() => {
+  apiMocks.getCoordination.mockReset();
+  apiMocks.getCoordination.mockResolvedValue({ attentionCount: 0 });
+});
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <InputBroadcastProvider>{children}</InputBroadcastProvider>
@@ -63,6 +71,12 @@ describe('TopBar', () => {
     render(<TopBar {...defaultTopBarProps()} />, { wrapper });
     expect(screen.getAllByText(/WebMux/i).length).toBeGreaterThan(0);
     expect(screen.getByText('14px')).toBeDefined();
+  });
+
+  it('shows coordinated session attention without opening the dialog', async () => {
+    apiMocks.getCoordination.mockResolvedValue({ attentionCount: 3 });
+    render(<TopBar {...defaultTopBarProps()} />, { wrapper });
+    expect(await screen.findByTitle('3 coordinated session updates need attention')).toHaveTextContent('Coordination3');
   });
 
   it('shows secure badge in secure mode', () => {

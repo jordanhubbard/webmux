@@ -24,6 +24,10 @@
 .coordination-worker-facts dt { color: #aaaabd; font-size: 11px; }
 .coordination-worker-facts dd { margin: 0; overflow-wrap: anywhere; }
 .coordination-rig { font-size: 11px; color: #c5b8ff; margin-left: 8px; }
+.coordination-role, .coordination-attention { display: inline-block; margin-left: 8px; padding: 1px 6px; border-radius: 10px; font-size: 10px; text-transform: uppercase; }
+.coordination-role { border: 1px solid #686892; color: #c5b8ff; }
+.coordination-attention { border: 1px solid #a2783e; color: #ffc879; }
+.coordination-worker-attention { border-left: 2px solid #a2783e; padding-left: 8px; }
 .coordination-rig-list { max-height: 320px; overflow: auto; margin: 12px 0; }
 .coordination-identity { color: #aaaabd; font-size: 11px; }
 .coordination-identity span { text-transform: uppercase; letter-spacing: .06em; }
@@ -45,4 +49,10 @@
 .coordination-messages { max-height: 180px; overflow: auto; }
 .coordination-messages > div { padding: 6px 0; }
 .coordination-messages pre { white-space: pre-wrap; font-size: 12px; }
+.coordination-message-urgent { border-left: 2px solid #a2783e; padding-left: 8px !important; }
+.coordination-composer, .coordination-drain { border: 1px solid #555575; border-radius: 6px; margin-top: 10px; padding: 10px; }
+.coordination-composer label { display: flex; flex-direction: column; gap: 4px; }
+.coordination-composer textarea { box-sizing: border-box; width: 100%; min-height: 82px; resize: vertical; background: #101022; border: 1px solid #555575; border-radius: 4px; color: #eee; padding: 8px; }
+.coordination-composer .coordination-inline { display: flex; flex-direction: row; align-items: center; margin-top: 7px; }
+.coordination-delivery { color: #b8e6c5; margin: 7px 0 0; }
 @media (max-width: 600px) { .coordination-browser ul { grid-template-columns: 1fr; } }

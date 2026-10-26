@@ -391,6 +391,9 @@ webmux/                          Source / install directory (WEBMUX_ROOT)
 | `POST` | `/api/coordination/agents` | Launch a Rig or Agent Deck session and open it in the terminal grid (admin) |
 | `POST` | `/api/coordination/workspaces` | Browse local or registered-remote workspaces before launch (admin) |
 | `POST` | `/api/coordination/attach` | Open an existing provider-owned session (admin) |
+| `POST` | `/api/coordination/messages` | Send or safely queue an instruction through the selected coordinator (admin) |
+| `POST` | `/api/coordination/send-status` | Read a coordinator-native delivery outcome without returning message content (admin) |
+| `POST` | `/api/coordination/drain` | Collect durable remote completion records into a local conductor (admin) |
 | `GET` | `/api/openrig` | Check host OpenRig prerequisites, view attachments and live-test status (admin) |
 | `POST` | `/api/openrig/attach` | Attach the text dashboard, a listed agent CLI or the explicit live-test console (admin) |
 | `GET` | `/api/openrig/agents` | List host-local OpenRig agent terminal targets (admin) |

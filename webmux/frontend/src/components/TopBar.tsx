@@ -6,6 +6,7 @@ import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
 import { HelpDialog } from './HelpDialog';
 import { CoordinationDialog } from './CoordinationDialog';
 import { USBForwardDialog } from './USBForwardDialog';
+import { api } from '../utils/api';
 
 function getHostSwitchContext(hostSwitcher?: HostSwitcherConfig) {
   if (!hostSwitcher?.enabled || hostSwitcher.hosts.length === 0) return null;
@@ -79,6 +80,7 @@ export function TopBar({
   const [showHelp, setShowHelp] = useState(false);
   const [showUSB, setShowUSB] = useState(false);
   const [showCoordination, setShowCoordination] = useState(false);
+  const [coordinationAttention, setCoordinationAttention] = useState(0);
   const [editingSize, setEditingSize] = useState(false);
   const [sizeInput, setSizeInput] = useState('');
   const sizeInputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +92,15 @@ export function TopBar({
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [auth.sessionExpiresAt]);
+
+  useEffect(() => {
+    if (!canManageSettings) { setCoordinationAttention(0); return; }
+    const refresh = () => { void api.getCoordination().then(value => setCoordinationAttention(value.attentionCount || 0)).catch(() => {}); };
+    refresh();
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener('webmux-sessions-changed', refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener('webmux-sessions-changed', refresh); };
+  }, [canManageSettings]);
 
   const remainingSeconds = auth.sessionExpiresAt
     ? Math.max(0, Math.ceil((auth.sessionExpiresAt - now) / 1000))
@@ -119,7 +130,7 @@ export function TopBar({
         <button style={styles.iconBtn} onClick={() => setShowUSB(true)} title="Set up USB redirection" aria-label="USB redirection">
           <span aria-hidden="true">🔌</span> USB
         </button>
-        {canManageSettings && <button style={styles.iconBtn} onClick={() => setShowCoordination(true)}>Coordination</button>}
+        {canManageSettings && <button style={styles.iconBtn} aria-label="Coordination" title={coordinationAttention ? `${coordinationAttention} coordinated session updates need attention` : 'Manage coordinated sessions'} onClick={() => setShowCoordination(true)}>Coordination{coordinationAttention > 0 && <span aria-hidden="true" style={styles.attentionBadge}>{coordinationAttention}</span>}</button>}
         <button
           style={{
             ...styles.broadcastBtn,
@@ -455,6 +466,18 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#aaa',
     fontSize: 12,
     cursor: 'pointer',
+  },
+  attentionBadge: {
+    display: 'inline-block',
+    minWidth: 16,
+    marginLeft: 5,
+    padding: '0 4px',
+    borderRadius: 8,
+    background: '#a2783e',
+    color: '#fff4d0',
+    fontSize: 10,
+    fontWeight: 700,
+    textAlign: 'center',
   },
   fontSize: {
     color: '#aaa',

@@ -10,12 +10,25 @@ export interface CoordinationProvider {
 }
 export interface CoordinationProject {
   provider: string; id: string; name: string; host: string; state: string; historical: boolean;
-  seatCount: number; runningCount: number; detail?: string; contexts?: string[];
+  seatCount: number; runningCount: number; detail?: string; contexts?: string[]; attentionCount?: number;
 }
 export interface CoordinationSeat {
   provider: string; id: string; projectId: string; projectName: string; name: string; host: string;
   workspace?: string; runtime: string; state: string; openable: boolean; managed: boolean;
-  nativeSessionId?: string; context?: string;
+  nativeSessionId?: string; context?: string; parentId?: string; parentName?: string;
+  role?: string; substate?: string; lastActivityAt?: string; attention?: boolean; canReceive?: boolean; exitCode?: number;
+}
+export interface CoordinationMessage {
+  provider?: string; from: string; to: string; body: string; time: string; state: string;
+  kind?: string; level?: string; sourceRemote?: string;
+}
+export interface CoordinationSendResult {
+  target: string; sendId?: string; state?: string; verdict?: string; delivery?: string;
+  confirmation?: string; reason?: string; queued: boolean; submitted: boolean;
+}
+export interface CoordinationDrainResult {
+  remote: string; target: string; fetched: number; written: number; duplicates: number; unknown: number;
+  woke: boolean; writerRunning?: boolean; writerDetail?: string; messages: CoordinationMessage[];
 }
 export interface WorkspaceListing {
   host: string; path: string; parent: string | null; repository: boolean;
@@ -23,7 +36,7 @@ export interface WorkspaceListing {
 }
 export interface CoordinationStatus {
   contract: string; defaultProvider: 'agent-deck' | 'rig' | 'disabled' | 'choose'; providers: CoordinationProvider[]; projects: CoordinationProject[]; seats: CoordinationSeat[];
-  messages: { from: string; to: string; body: string; time: string; state: string }[]; errors: Record<string, string>;
+  messages: CoordinationMessage[]; errors: Record<string, string>; attentionCount?: number;
 }
 
 export function CoordinationDialog({ onClose, position }: { onClose: () => void; position?: { row: number; col: number } }) {
@@ -43,6 +56,13 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
   const [workspace, setWorkspace] = useState('');
   const [runtime, setRuntime] = useState('codex');
   const [browser, setBrowser] = useState<WorkspaceListing | null>(null);
+  const [composerTarget, setComposerTarget] = useState('');
+  const [instruction, setInstruction] = useState('');
+  const [queueInstruction, setQueueInstruction] = useState(true);
+  const [deliveries, setDeliveries] = useState<Record<string, CoordinationSendResult>>({});
+  const [drainRemote, setDrainRemote] = useState('');
+  const [drainTarget, setDrainTarget] = useState('');
+  const [drainResult, setDrainResult] = useState<CoordinationDrainResult | null>(null);
   const { setActivePane } = useWorkspacePane();
 
   const refresh = useCallback(async () => {
@@ -66,9 +86,12 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
   const defaultProvider = status.providers.find(value => value.id === status.defaultProvider);
   const projects = status.projects.filter(value => value.provider === provider);
   const seats = status.seats.filter(value => value.provider === provider);
+  const providerMessages = status.messages.filter(value => !value.provider || value.provider === provider);
   const selectedProject = projects.find(value => value.id === projectID);
   const contexts = selectedProject?.contexts || [];
   const hostOptions = useMemo(() => [...new Set(['localhost', ...projects.map(value => value.host), ...seats.map(value => value.host)])].filter(Boolean), [projects, seats]);
+  const drainRemotes = useMemo(() => [...new Set(projects.map(value => value.host).filter(value => value && value !== 'localhost'))], [projects]);
+  const drainTargets = seats.filter(value => value.canReceive && value.id.startsWith('local:'));
 
   useEffect(() => {
     setProjectID(current => projects.some(value => value.id === current) ? current : projects.find(value => !value.historical)?.id || projects[0]?.id || '');
@@ -77,6 +100,23 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
     setContext(current => contexts.includes(current) ? current : contexts[0] || '');
     if (selectedProject && provider === 'agent-deck') setHost(selectedProject.host);
   }, [projectID, provider, selectedProject?.host, contexts.join('\0')]);
+  useEffect(() => {
+    setDrainRemote(current => drainRemotes.includes(current) ? current : drainRemotes[0] || '');
+    setDrainTarget(current => drainTargets.some(value => value.id === current) ? current : drainTargets[0]?.id || '');
+  }, [provider, drainRemotes.join('\0'), drainTargets.map(value => value.id).join('\0')]);
+  useEffect(() => {
+    const pending = Object.entries(deliveries).filter(([, value]) => value.sendId && !['landed', 'delivered', 'failed', 'settled'].includes(value.state || value.verdict || value.delivery || ''));
+    if (pending.length === 0) return;
+    const timer = window.setInterval(() => {
+      for (const [target, delivery] of pending) {
+        void api.getCoordinationSendStatus('agent-deck', target, delivery.sendId!).then(value => {
+          const text = (key: string) => typeof value[key] === 'string' ? value[key] as string : undefined;
+          setDeliveries(current => ({ ...current, [target]: { ...(current[target] ?? delivery), target, sendId: delivery.sendId, state: text('state'), verdict: text('verdict'), delivery: text('delivery'), confirmation: text('confirmation'), reason: text('reason'), queued: text('state') === 'queued', submitted: value.submitted === true } }));
+        }).catch(() => {});
+      }
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [deliveries]);
 
   const revealSession = (session: Session) => {
     window.dispatchEvent(new CustomEvent('webmux-sessions-changed', { detail: { sessionId: session.id } }));
@@ -129,6 +169,26 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
     } catch (err) { setError(String(err)); }
     finally { setBusy(false); }
   };
+  const sendInstruction = async (seat: CoordinationSeat) => {
+    const message = instruction.trim();
+    if (!message) return;
+    setBusy(true); setError('');
+    try {
+      const result = await api.sendCoordinationMessage(seat.provider, seat.id, message, queueInstruction);
+      setDeliveries(current => ({ ...current, [seat.id]: result }));
+      setInstruction('');
+    } catch (err) { setError(String(err)); }
+    finally { setBusy(false); }
+  };
+  const drainRemoteCompletions = async () => {
+    if (!drainRemote || !drainTarget) return;
+    setBusy(true); setError(''); setDrainResult(null);
+    try {
+      setDrainResult(await api.drainCoordinationRemote('agent-deck', drainRemote, drainTarget));
+      await refresh();
+    } catch (err) { setError(String(err)); }
+    finally { setBusy(false); }
+  };
 
   return <Dialog title="Coordination" subtitle={position ? `Open a session at row ${position.row + 1}, column ${position.col + 1}` : 'Projects and coding sessions across hosts'} onClose={onClose} width={880} dismissible={!busy}>
     <div className="coordination-dialog">
@@ -161,20 +221,29 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
           {projects.map(project => {
             const projectSeats = seats.filter(seat => seat.projectId === project.id);
             return <details className="coordination-project" key={`${project.provider}:${project.id}`} open={!project.historical}>
-              <summary><strong>{project.name}</strong> <span className={`coordination-state coordination-state-${project.state}`}>{project.state}</span> · {project.runningCount}/{project.seatCount} active · {project.host}</summary>
+              <summary><strong>{project.name}</strong> <span className={`coordination-state coordination-state-${project.state}`}>{project.state}</span> · {project.runningCount}/{project.seatCount} active{project.attentionCount ? ` · ${project.attentionCount} need attention` : ''} · {project.host}</summary>
               <p className="coordination-identity"><span>Provider ID</span> <code>{project.id}</code>{project.detail && <> · {project.detail}</>}</p>
               {projectSeats.length === 0 ? <p>No sessions in this project.</p> : <ul aria-label={`${project.name} sessions`} className="coordination-workers">
-                {projectSeats.map(seat => <li key={`${seat.provider}:${seat.id}`}><article aria-label={`${seat.name} in ${seat.projectName}`}>
-                  <strong>{seat.name}</strong> {seat.managed && <span className="coordination-rig">{provider === 'rig' ? 'Rig-managed' : 'Agent Deck-managed'}</span>}
+                {projectSeats.map(seat => <li key={`${seat.provider}:${seat.id}`}><article aria-label={`${seat.name} in ${seat.projectName}`} className={seat.attention ? 'coordination-worker-attention' : undefined}>
+                  <strong>{seat.name}</strong> {seat.managed && <span className="coordination-rig">{provider === 'rig' ? 'Rig-managed' : 'Agent Deck-managed'}</span>}{seat.role && seat.role !== 'session' && <span className="coordination-role">{seat.role}</span>}{seat.attention && <span className="coordination-attention">Needs attention</span>}
                   <dl className="coordination-worker-facts">
                     <div><dt>Host</dt><dd>{seat.host}</dd></div><div><dt>Runtime</dt><dd>{seat.runtime}</dd></div>
-                    <div><dt>State</dt><dd>{seat.state}</dd></div>{seat.context && <div><dt>Context</dt><dd>{seat.context}</dd></div>}
+                    <div><dt>State</dt><dd>{seat.state}{seat.substate ? ` · ${seat.substate}` : ''}{seat.exitCode !== undefined ? ` · exit ${seat.exitCode}` : ''}</dd></div>{seat.context && <div><dt>Context</dt><dd>{seat.context}</dd></div>}
+                    {seat.parentId && <div><dt>Parent</dt><dd>{seat.parentName || seat.parentId}</dd></div>}
                     {seat.workspace && <div><dt>Workspace</dt><dd><code>{seat.workspace}</code></dd></div>}
                     {seat.nativeSessionId && <div><dt>Native session</dt><dd><code>{seat.nativeSessionId}</code></dd></div>}
+                    {seat.lastActivityAt && <div><dt>Last activity</dt><dd>{new Date(seat.lastActivityAt).toLocaleString()}</dd></div>}
                   </dl>
                   {seat.openable ? <button type="button" disabled={busy} onClick={() => void openTerminal(seat)}>Open session</button>
                     : seat.managed && provider === 'rig' && seat.workspace ? <button type="button" disabled={busy} onClick={() => void restartSeat(seat)}>Restart provider and open</button>
                       : <span className="coordination-unavailable">No attach transport reported by this provider</span>}
+                  {provider === 'agent-deck' && seat.openable && <button type="button" disabled={busy} onClick={() => { setComposerTarget(current => current === seat.id ? '' : seat.id); setInstruction(''); }}>{composerTarget === seat.id ? 'Cancel instruction' : 'Send instruction'}</button>}
+                  {composerTarget === seat.id && <form className="coordination-composer" onSubmit={event => { event.preventDefault(); void sendInstruction(seat); }}>
+                    <label>Instruction for {seat.name}<textarea required value={instruction} onChange={event => setInstruction(event.target.value)} placeholder="Describe the bounded task or question" /></label>
+                    <label className="coordination-inline"><input type="checkbox" checked={queueInstruction} onChange={event => setQueueInstruction(event.target.checked)} /> Queue safely until the target can accept input</label>
+                    <button type="submit" disabled={busy || !instruction.trim()}>{queueInstruction ? 'Queue instruction' : 'Send now'}</button>
+                  </form>}
+                  {deliveries[seat.id] && <p role="status" className="coordination-delivery">Delivery: {deliveries[seat.id].state || deliveries[seat.id].verdict || deliveries[seat.id].delivery || 'accepted'}{deliveries[seat.id].confirmation ? ` · ${deliveries[seat.id].confirmation}` : ''}{deliveries[seat.id].reason ? ` · ${deliveries[seat.id].reason}` : ''}</p>}
                 </article></li>)}
               </ul>}
               {!project.historical && <button type="button" disabled={busy || (provider === 'rig' && (project.contexts?.length ?? 0) === 0)} onClick={() => { setMode('existing'); setProjectID(project.id); setHost(project.host); document.getElementById('coordination-create-seat')?.scrollIntoView({ block: 'nearest' }); }}>Create session in this project</button>}
@@ -183,7 +252,17 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
         </div>
       </section>
 
-      {provider === 'rig' && status.messages.length > 0 && <details><summary>Recent Rig coordination</summary><div className="coordination-messages">{status.messages.map((message, index) => <div key={`${message.time}-${index}`}><small>{new Date(message.time).toLocaleTimeString()} · {message.from} → {message.to} · recorded ({message.state})</small><pre>{message.body.split('\n---\n')[1] ?? message.body}</pre></div>)}</div></details>}
+      {providerMessages.length > 0 && <details open={provider === 'agent-deck'}><summary>{provider === 'rig' ? 'Recent Rig coordination' : `Agent Deck activity (${providerMessages.length})`}</summary><div className="coordination-messages">{providerMessages.map((message, index) => <div key={`${message.time}-${message.from}-${index}`} className={message.level === 'urgent' ? 'coordination-message-urgent' : undefined}><small>{new Date(message.time).toLocaleTimeString()} · {message.from} → {message.to} · {message.kind || 'message'} ({message.state || 'recorded'})</small><pre>{(message.body.split('\n---\n')[1] ?? message.body) || 'Status changed without a text result.'}</pre></div>)}</div></details>}
+
+      {provider === 'agent-deck' && drainRemotes.length > 0 && <section className="coordination-drain" aria-labelledby="coordination-drain-heading">
+        <h3 id="coordination-drain-heading">Collect remote completions</h3>
+        {drainTargets.length === 0 ? <p>Start or identify a local Agent Deck conductor before collecting remote completion records.</p> : <>
+          <p>Pull durable completion and transition records from a registered remote into a local conductor. The remote records are not consumed.</p>
+          <div className="coordination-fields"><label>Remote Agent Deck<select value={drainRemote} onChange={event => setDrainRemote(event.target.value)}>{drainRemotes.map(value => <option key={value} value={value}>{value}</option>)}</select></label><label>Receiving conductor<select value={drainTarget} onChange={event => setDrainTarget(event.target.value)}>{drainTargets.map(value => <option key={value.id} value={value.id}>{value.name} · {value.projectName}</option>)}</select></label></div>
+          <button type="button" disabled={busy || !drainRemote || !drainTarget} onClick={() => void drainRemoteCompletions()}>Collect completions</button>
+        </>}
+        {drainResult && <p role="status">Collected {drainResult.written} new of {drainResult.fetched} records from {drainResult.remote}; {drainResult.duplicates} already present.{drainResult.writerRunning === false ? ` Warning: ${drainResult.writerDetail || 'the remote transition writer is not running.'}` : ''}</p>}
+      </section>}
 
       <form id="coordination-create-seat" onSubmit={event => {
         event.preventDefault(); setBusy(true); setError('');

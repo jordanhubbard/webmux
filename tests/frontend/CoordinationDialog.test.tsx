@@ -2,13 +2,16 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { CoordinationDialog, type CoordinationStatus } from '@frontend/components/CoordinationDialog';
 
-const mocks = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn(), attach: vi.fn(), browse: vi.fn(), updateConfig: vi.fn() }));
+const mocks = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn(), attach: vi.fn(), browse: vi.fn(), updateConfig: vi.fn(), send: vi.fn(), sendStatus: vi.fn(), drain: vi.fn() }));
 vi.mock('@frontend/utils/api', () => ({ api: {
   getCoordination: mocks.status,
   createCoordinatedAgent: mocks.create,
   attachCoordinatedAgent: mocks.attach,
   browseCoordinationWorkspaces: mocks.browse,
   updateConfig: mocks.updateConfig,
+  sendCoordinationMessage: mocks.send,
+  getCoordinationSendStatus: mocks.sendStatus,
+  drainCoordinationRemote: mocks.drain,
 } }));
 
 const emptyStatus = (): CoordinationStatus => ({
@@ -28,6 +31,9 @@ beforeEach(() => {
   mocks.attach.mockResolvedValue({ id: 'viewer' });
   mocks.browse.mockResolvedValue({ host: 'localhost', path: '/work/project', parent: '/work', repository: true, entries: [] });
   mocks.updateConfig.mockResolvedValue({ app: { coordination: { default_provider: 'agent-deck' } } });
+  mocks.send.mockResolvedValue({ target: 'sparky:session-1', sendId: 'send-1', state: 'queued', queued: true, submitted: true });
+  mocks.sendStatus.mockResolvedValue({ state: 'landed', confirmation: 'accepted', submitted: true });
+  mocks.drain.mockResolvedValue({ remote: 'sparky', target: 'local:conductor-1', fetched: 2, written: 1, duplicates: 1, unknown: 0, woke: true, messages: [] });
 });
 
 it('opens without launching sessions and reports provider failures', async () => {
@@ -101,6 +107,37 @@ it('surfaces Agent Deck local and remote sessions with host-qualified identity',
   expect(within(sessions).getByText('/home/jkh/Src/webmux')).toBeVisible();
   fireEvent.click(within(sessions).getByRole('button', { name: 'Open session' }));
   await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('agent-deck', 'sparky:session-1', undefined));
+});
+
+it('queues Agent Deck instructions and collects remote completions into a conductor', async () => {
+  const value = emptyStatus();
+  value.providers[1] = { id: 'agent-deck', label: 'Agent Deck', available: true, capabilities: ['sessions', 'remote', 'parent-child', 'send', 'queue', 'send-status', 'completion-inbox', 'remote-drain'], contract: 'agent-deck-cli/v1' };
+  value.defaultProvider = 'agent-deck';
+  value.attentionCount = 1;
+  value.projects = [
+    { provider: 'agent-deck', id: 'local:webmux', name: 'webmux', host: 'localhost', state: 'active', historical: false, seatCount: 1, runningCount: 1, attentionCount: 1 },
+    { provider: 'agent-deck', id: 'sparky:webmux', name: 'webmux', host: 'sparky', state: 'active', historical: false, seatCount: 1, runningCount: 1 },
+  ];
+  value.seats = [
+    { provider: 'agent-deck', id: 'local:conductor-1', projectId: 'local:webmux', projectName: 'webmux', name: 'conductor', host: 'localhost', runtime: 'codex', state: 'running', openable: true, managed: true, role: 'conductor', attention: true, canReceive: true },
+    { provider: 'agent-deck', id: 'sparky:worker-1', projectId: 'sparky:webmux', projectName: 'webmux', name: 'worker', host: 'sparky', runtime: 'claude-code', state: 'running', openable: true, managed: true, role: 'worker', parentId: 'parent-1', parentName: 'conductor', canReceive: true },
+  ];
+  value.messages = [{ provider: 'agent-deck', from: 'worker', to: 'conductor', body: 'Review complete', time: '2026-10-26T10:00:00Z', state: 'completed', kind: 'completion', sourceRemote: 'sparky' }];
+  mocks.status.mockResolvedValue(value);
+
+  render(<CoordinationDialog onClose={() => {}} />);
+  const remote = await screen.findByRole('article', { name: 'worker in webmux' });
+  expect(within(remote).getByText('conductor')).toBeVisible();
+  fireEvent.click(within(remote).getByRole('button', { name: 'Send instruction' }));
+  fireEvent.change(within(remote).getByLabelText('Instruction for worker'), { target: { value: 'Run the focused review' } });
+  fireEvent.click(within(remote).getByRole('button', { name: 'Queue instruction' }));
+  await waitFor(() => expect(mocks.send).toHaveBeenCalledWith('agent-deck', 'sparky:worker-1', 'Run the focused review', true));
+  expect(await within(remote).findByRole('status')).toHaveTextContent('queued');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Collect completions' }));
+  await waitFor(() => expect(mocks.drain).toHaveBeenCalledWith('agent-deck', 'sparky', 'local:conductor-1'));
+  expect(await screen.findByText(/Collected 1 new of 2 records/)).toBeVisible();
+  expect(screen.getByText('Review complete')).toBeVisible();
 });
 
 it('requires an upgrade choice and can persist Agent Deck as the default', async () => {

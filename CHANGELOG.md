@@ -5,6 +5,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Make Agent Deck a complete multi-host coordination path: show conductor and
+  worker relationships, waiting/completed/failed attention, safely queue or send
+  instructions, follow delivery outcomes, and collect durable remote completion
+  records into a selected local conductor (#221).
+
+### Changed
+- Treat Agent Deck as the recommended session conductor and Rig as the optional
+  topology-centric provider without mixing identities or silently falling back
+  between them (#221).
+
 ## [1.3.26] - 2026-10-26
 
 ### Added

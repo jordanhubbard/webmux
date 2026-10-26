@@ -39,6 +39,50 @@ test('coordination is a dismissible modal and leaves the terminal grid intact', 
   expect(await (await request.get('/api/sessions')).json()).toEqual(original);
 });
 
+test('Agent Deck UI queues work and drains remote completion records', async ({ page }) => {
+  const status = {
+    contract: 'webmux-coordination/v1', defaultProvider: 'agent-deck', errors: {}, attentionCount: 1,
+    providers: [{ id: 'agent-deck', label: 'Agent Deck', available: true, contract: 'agent-deck-cli/v1', capabilities: ['sessions', 'remote', 'parent-child', 'send', 'queue', 'send-status', 'completion-inbox', 'remote-drain'] }],
+    projects: [
+      { provider: 'agent-deck', id: 'local:webmux', name: 'webmux', host: 'localhost', state: 'active', historical: false, seatCount: 1, runningCount: 1, attentionCount: 1 },
+      { provider: 'agent-deck', id: 'sparky:webmux', name: 'webmux', host: 'sparky', state: 'active', historical: false, seatCount: 1, runningCount: 1 },
+    ],
+    seats: [
+      { provider: 'agent-deck', id: 'local:conductor', projectId: 'local:webmux', projectName: 'webmux', name: 'conductor', host: 'localhost', runtime: 'codex', state: 'waiting', openable: true, managed: true, role: 'conductor', attention: true, canReceive: true },
+      { provider: 'agent-deck', id: 'sparky:worker', projectId: 'sparky:webmux', projectName: 'webmux', name: 'reviewer', host: 'sparky', runtime: 'claude-code', state: 'running', openable: true, managed: true, role: 'worker', parentId: 'conductor', parentName: 'conductor', canReceive: true },
+    ],
+    messages: [{ provider: 'agent-deck', from: 'reviewer', to: 'conductor', body: 'Remote review completed', time: '2026-10-26T10:00:00Z', state: 'completed', kind: 'completion', sourceRemote: 'sparky' }],
+  };
+  let sent: unknown;
+  let drained: unknown;
+  await page.route('**/api/coordination', route => route.fulfill({ json: status }));
+  await page.route('**/api/coordination/messages', async route => {
+    sent = route.request().postDataJSON();
+    await route.fulfill({ json: { target: 'sparky:worker', sendId: 'send-1', state: 'queued', queued: true, submitted: true } });
+  });
+  await page.route('**/api/coordination/send-status', route => route.fulfill({ json: { state: 'landed', confirmation: 'accepted', submitted: true } }));
+  await page.route('**/api/coordination/drain', async route => {
+    drained = route.request().postDataJSON();
+    await route.fulfill({ json: { remote: 'sparky', target: 'local:conductor', fetched: 2, written: 1, duplicates: 1, unknown: 0, woke: true, messages: [] } });
+  });
+
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Coordination', exact: true })).toContainText('1');
+  await page.getByRole('button', { name: 'Coordination', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Coordination', exact: true });
+  const worker = dialog.getByRole('article', { name: 'reviewer in webmux' });
+  await expect(worker).toContainText('Parentconductor');
+  await worker.getByRole('button', { name: 'Send instruction' }).click();
+  await worker.getByLabel('Instruction for reviewer').fill('Review the authentication changes');
+  await worker.getByRole('button', { name: 'Queue instruction' }).click();
+  await expect(worker.getByRole('status')).toContainText('queued');
+  expect(sent).toEqual({ provider: 'agent-deck', target: 'sparky:worker', message: 'Review the authentication changes', queue: true });
+  await dialog.getByRole('button', { name: 'Collect completions' }).click();
+  await expect(dialog.getByText(/Collected 1 new of 2 records/)).toBeVisible();
+  expect(drained).toEqual({ provider: 'agent-deck', remote: 'sparky', target: 'local:conductor' });
+  await expect(dialog.getByText('Remote review completed')).toBeVisible();
+});
+
 test('managed agents enroll, exchange attributed Rig messages and reuse ordinary grid terminals', async ({ page, request }, info) => {
   test.skip(process.env.WEBMUX_REAL_OPENRIG !== '1', 'Requires the isolated published-CLI fixture');
   test.setTimeout(120_000);
