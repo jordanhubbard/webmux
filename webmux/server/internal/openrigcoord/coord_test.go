@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +24,9 @@ type workspaceListing struct {
 
 func browseForTest(t *testing.T, home, input string) (workspaceListing, error) {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("Rig coordination and its SSH workspace browser are unsupported on native Windows")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	output, err := Run(ctx, home, "test-owner", "browse", input)

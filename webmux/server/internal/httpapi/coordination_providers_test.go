@@ -5,12 +5,16 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 func fakeAgentDeck(t *testing.T) (string, string) {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("Agent Deck integration uses Unix interactive terminal transports")
+	}
 	directory := t.TempDir()
 	logPath := filepath.Join(directory, "calls")
 	executable := filepath.Join(directory, "agent-deck")
