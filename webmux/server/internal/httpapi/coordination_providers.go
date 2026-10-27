@@ -351,7 +351,7 @@ func (p *agentDeckProvider) Descriptor() coordinationProviderDescriptor {
 		Contract:     "agent-deck-cli/v1",
 	}
 	if p.executable == "" {
-		value.Message = "Install Agent Deck on the WebMux server to inventory and launch its local and registered-remote sessions."
+		value.Message = "Install Agent Deck on the WebMux server with `make install-agent-deck` or `brew install asheshgoplani/tap/agent-deck`, then restart WebMux."
 	}
 	return value
 }
@@ -442,6 +442,14 @@ func (p *agentDeckProvider) runJSONInput(ctx context.Context, destination any, i
 	}
 	if len(output) > 8*1024*1024 {
 		return fmt.Errorf("Agent Deck response is too large")
+	}
+	// Agent Deck 1.16.34 prints these human-readable empty-state messages
+	// with status 0 even when --json is requested. Treat them as the empty
+	// arrays the CLI contract otherwise returns so a fresh installation is
+	// immediately usable.
+	trimmed := strings.TrimSpace(string(output))
+	if trimmed == "No profiles found." || strings.HasPrefix(trimmed, "No remotes configured.") {
+		output = []byte("[]")
 	}
 	if err := json.Unmarshal(output, destination); err != nil {
 		return fmt.Errorf("invalid Agent Deck JSON: %w", err)

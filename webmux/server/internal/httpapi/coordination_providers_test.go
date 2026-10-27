@@ -110,6 +110,35 @@ func TestAgentDeckProviderDiscoversHostQualifiedNativeSessions(t *testing.T) {
 	}
 }
 
+func TestAgentDeckProviderAcceptsFreshInstallEmptyState(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Agent Deck integration uses Unix interactive terminal transports")
+	}
+	executable := filepath.Join(t.TempDir(), "agent-deck")
+	script := `#!/bin/sh
+case "$*" in
+  "list --all --json") printf 'No profiles found.\n' ;;
+  "group list --json") printf '{"groups":[],"total_groups":0,"total_sessions":0}\n' ;;
+  "remote list --json") printf 'No remotes configured.\n\nAdd one with: agent-deck remote add <name> <user@host>\n' ;;
+  *) exit 2 ;;
+esac
+`
+	if err := os.WriteFile(executable, []byte(script), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	provider := &agentDeckProvider{executable: executable}
+	status, err := provider.Status(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(status.Projects) != 0 || len(status.Seats) != 0 || len(status.Errors) != 0 {
+		t.Fatalf("fresh Agent Deck install was not empty: %+v", status)
+	}
+	if _, err := provider.remoteHost(context.Background(), "missing"); err == nil || !strings.Contains(err.Error(), "no longer configured") {
+		t.Fatalf("unexpected missing remote result: %v", err)
+	}
+}
+
 func TestAgentDeckProviderSendsQueuesAndReportsStatus(t *testing.T) {
 	executable, logPath := fakeAgentDeck(t)
 	provider := &agentDeckProvider{executable: executable}

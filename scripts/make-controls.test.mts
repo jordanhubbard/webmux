@@ -77,3 +77,69 @@ test('default Make install delivers only the client executable and does not requ
     assert(!fs.existsSync(executable), 'client executable was not removed');
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });
+
+test('Make installs the qualified Agent Deck release idempotently and supports an explicit opt-out', { skip: process.platform === 'win32' }, () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-agent-deck-install-'));
+  const bin = path.join(directory, 'bin');
+  const executable = path.join(bin, 'agent-deck');
+  const installer = path.join(directory, 'installer.sh');
+  const marker = path.join(directory, 'installer-ran');
+  const root = path.resolve(import.meta.dirname, '..');
+  fs.mkdirSync(bin);
+  const writeVersion = (version: string) => fs.writeFileSync(executable, `#!/bin/sh
+printf 'Agent Deck v${version}\\n'
+`, { mode: 0o700 });
+  fs.writeFileSync(installer, `#!/bin/bash
+set -eu
+version=
+bindir=
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --version) version="\${2#v}"; shift 2 ;;
+    --dir) bindir="$2"; shift 2 ;;
+    --non-interactive) shift ;;
+    *) exit 64 ;;
+  esac
+done
+printf ran > "$WEBMUX_AGENT_DECK_MARKER"
+mkdir -p "$bindir"
+printf '#!/bin/sh\\nprintf "Agent Deck v%s\\\\n"\\n' "$version" > "$bindir/agent-deck"
+chmod +x "$bindir/agent-deck"
+`, { mode: 0o700 });
+  const run = (...extra: string[]) => spawnSync('make', ['--no-print-directory', 'install-agent-deck',
+    `AGENT_DECK_BINDIR=${bin}`, 'AGENT_DECK_VERSION=v1.16.34', ...extra], {
+    cwd: root, encoding: 'utf8', timeout: 30000,
+    env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? '/usr/bin:/bin'}`,
+      AGENT_DECK_INSTALLER_URL: `file://${installer}`, WEBMUX_AGENT_DECK_MARKER: marker },
+  });
+  try {
+    writeVersion('1.17.0');
+    const current = run();
+    assert.ifError(current.error); assert.equal(current.status, 0, current.stdout + current.stderr);
+    assert.match(current.stdout, /Agent Deck 1\.17\.0 found/);
+    assert(!fs.existsSync(marker), 'current Agent Deck unexpectedly ran the installer');
+
+    writeVersion('1.15.0');
+    const upgraded = run();
+    assert.ifError(upgraded.error); assert.equal(upgraded.status, 0, upgraded.stdout + upgraded.stderr);
+    assert.match(upgraded.stdout, /older than WebMux requires/);
+    assert.match(spawnSync(executable, ['version'], { encoding: 'utf8' }).stdout, /v1\.16\.34/);
+    assert(fs.existsSync(marker), 'old Agent Deck did not run the installer');
+
+    fs.rmSync(marker);
+    const skipped = run('INSTALL_AGENT_DECK=no');
+    assert.ifError(skipped.error); assert.equal(skipped.status, 0, skipped.stdout + skipped.stderr);
+    assert.match(skipped.stdout, /installation skipped/);
+    assert(!fs.existsSync(marker), 'opt-out ran the Agent Deck installer');
+
+    const invalid = run('INSTALL_AGENT_DECK=maybe');
+    assert.ifError(invalid.error); assert.notEqual(invalid.status, 0);
+    assert.match(invalid.stderr, /must be yes or no/);
+
+    const service = spawnSync('make', ['--no-print-directory', '-n', 'install-server',
+      '-o', 'install-agent-deck', '-o', 'stop', '-o', 'build-server',
+      'AGENT_DECK_BINDIR=/qualified/agent-deck'], { cwd: root, encoding: 'utf8', timeout: 10000 });
+    assert.ifError(service.error); assert.equal(service.status, 0, service.stdout + service.stderr);
+    assert.match(service.stdout, /PATH="\/qualified\/agent-deck:\$PATH" node scripts\/render-service\.mts/);
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});

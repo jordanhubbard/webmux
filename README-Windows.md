@@ -1,5 +1,11 @@
 # Running WebMux on Windows
 
+Agent Deck supports Windows through WSL, but native WebMux services cannot use
+a WSL-only coordinator as their local provider. The Windows installer therefore
+does not install Agent Deck. Run the WebMux server inside WSL/Linux for Agent
+Deck coordination; native Windows terminals and remote desktops remain
+available without it.
+
 WebMux's Go backend runs natively on modern Windows using ConPTY. It resolves `ssh.exe` from `PATH`, uses `cmd.exe` for local command templates and scratch shells, and stores runtime state under the hosting user's profile by default.
 
 ## Prerequisites

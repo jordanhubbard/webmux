@@ -8,6 +8,7 @@ class Webmux < Formula
 
   depends_on "go" => :build
   depends_on "node@24" => :build
+  depends_on "asheshgoplani/tap/agent-deck"
   depends_on "openssh"
 
   def install
@@ -53,11 +54,13 @@ class Webmux < Formula
       there (or make uninstall with older source versions).
       On macOS, complete Mac permissions in the WebMux browser interface.
       Grant access to WebMux.app for local terminals; Remote Login is separate.
-      Optional tools: brew install mosh tmux guacamole-server
+      Agent Deck and tmux are installed for the default coordination experience.
+      Optional tools: brew install mosh guacamole-server
     EOS
   end
 
   test do
+    assert_predicate formula_opt_bin("asheshgoplani/tap/agent-deck")/"agent-deck", :executable?
     ENV["WEBMUX_HOME"] = testpath/"state"
     port = free_port
     ENV["HTTP_PORT"] = port.to_s

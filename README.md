@@ -160,8 +160,8 @@ those services still point to a Node installation. See the
 
 ```bash
 make install         # client only, to ~/.local/bin; does not start or enroll it
-make install-server  # server only, as a launchd or systemd service
-make install-all     # both on the same machine
+make install-server  # server + Agent Deck, as a launchd or systemd service
+make install-all     # client, server, and Agent Deck on the same machine
 ```
 
 The server service starts automatically on login and reconnects persistent sessions.
@@ -177,6 +177,11 @@ make uninstall-all     # remove both
 ```
 
 These Make install targets support macOS and Linux. Windows uses the npm service commands documented in [README-Windows.md](README-Windows.md).
+`make install-server` installs the qualified Agent Deck release into
+`~/.local/bin` and places that directory on the service PATH. Use
+`INSTALL_AGENT_DECK=no make install-server` only for an intentional Rig-only or
+coordination-disabled installation. On an execution host that does not run the
+WebMux server, use `make install-agent-deck` separately.
 
 ### Makefile Targets
 
@@ -193,6 +198,7 @@ These Make install targets support macOS and Linux. Windows uses the npm service
 | `make restart` | Restart the server |
 | `make status` | Check if the server is running |
 | `make install` | Install the client executable only |
+| `make install-agent-deck` | Install or update the qualified Agent Deck coordinator |
 | `make install-server` | Install the server service |
 | `make install-all` | Install client and server |
 | `make uninstall` | Remove the client executable |

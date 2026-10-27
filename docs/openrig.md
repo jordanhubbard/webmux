@@ -62,6 +62,14 @@ their existing behavior.
 
 ## Agent Deck provider
 
+Source `make install-server` and `make install-all` install WebMux's
+qualified Agent Deck release by default. Homebrew installs Agent Deck as a
+dependency. Use `make install-agent-deck` on a macOS/Linux execution host
+that does not run the server. The installer is idempotent, pins the qualified
+version, and uses Agent Deck's checksum-verifying upstream installer. Set
+`INSTALL_AGENT_DECK=no` only for an intentional Rig-only or
+coordination-disabled server.
+
 When `agent-deck` is on the WebMux service PATH, Coordination also inventories
 the current local Agent Deck profile and every remote registered with that
 Agent Deck instance. Session IDs are qualified by location (`local:<id>` or
@@ -73,9 +81,10 @@ Creating a session in an Agent Deck group routes `launch` to the selected local
 instance or registered remote and starts Codex or Claude in the selected
 workspace. Remote workspace browsing resolves the registered remote to its SSH
 host while retaining the Agent Deck remote name as the coordinator identity.
-Install and authenticate Agent Deck and the chosen coding CLI on every host
-that owns sessions. WebMux does not scan arbitrary shells: sessions must be
-known to Rig or Agent Deck before they appear.
+Authenticate Agent Deck and the chosen coding CLI on every host that owns
+sessions. Installation cannot copy credentials or register remotes. WebMux does
+not scan arbitrary shells: sessions must be known to Rig or Agent Deck before
+they appear.
 
 Agent Deck provides host/session inventory and lifecycle, including remote
 sessions and native harness IDs. WebMux also uses Agent Deck's native conductor

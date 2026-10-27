@@ -62,9 +62,11 @@ instances; use a user service if automatic startup is wanted.
 The managed-host channel is general WebMux infrastructure. Its first capability
 is reporting host facts. Rig enrollment and project/seat observation are separate
 capabilities to add over the same channel. Installing this client does not
-install Rig, start a Rig daemon, enroll an arbitrary running agent, or make
-independent projects appear in the central Rig. Native Windows supports the
-WebMux client, while OpenRig currently runs on Windows through WSL2.
+install a coordinator, start a daemon, enroll an arbitrary running agent, or
+make independent projects appear centrally. Run `make install-agent-deck`
+separately on macOS/Linux execution hosts that Agent Deck will manage. Native
+Windows supports the WebMux client, while Agent Deck and OpenRig currently run
+on Windows through WSL2.
 
 The protocol is versioned. The server accepts one current connection for each
 client ID, stores only a hash of its long-lived credential, and uses the
