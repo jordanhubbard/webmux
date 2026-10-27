@@ -5,6 +5,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.27] - 2026-10-27
+
+### Other
+- Trust Agent Deck tap in package installs (#221)
+- Install Agent Deck with WebMux (#221)
+- Complete Agent Deck coordination messaging (#221)
+
 ### Added
 - Make Agent Deck a complete multi-host coordination path: show conductor and
   worker relationships, waiting/completed/failed attention, safely queue or send
