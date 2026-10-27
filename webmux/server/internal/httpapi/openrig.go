@@ -298,7 +298,7 @@ func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner s
 	}
 	defaultProvider := any("choose")
 	if os.Getenv("WEBMUX_COORDINATION_DISABLED") == "1" {
-		writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "defaultProvider": defaultProvider, "providers": []coordinationProviderDescriptor{}, "projects": []coordinationProject{}, "seats": []coordinationSeat{}, "messages": []coordinationMessage{}, "errors": map[string]string{}})
+		writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "defaultProvider": defaultProvider, "providers": []coordinationProviderDescriptor{}, "projects": []coordinationProject{}, "seats": []coordinationSeat{}, "messages": []coordinationMessage{}, "errors": map[string]string{}, "attentionCount": 0})
 		return
 	}
 	settings, err := s.loadSettings()
@@ -313,6 +313,7 @@ func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner s
 	seats := []coordinationSeat{}
 	messages := []coordinationMessage{}
 	errors := map[string]string{}
+	attention := 0
 	for _, provider := range providers {
 		descriptor := provider.Descriptor()
 		descriptors = append(descriptors, descriptor)
@@ -329,12 +330,104 @@ func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner s
 		projects = append(projects, status.Projects...)
 		seats = append(seats, status.Seats...)
 		messages = append(messages, status.Messages...)
+		attention += status.Attention
 		if len(status.Errors) > 0 {
 			errors[descriptor.ID] = strings.Join(status.Errors, "; ")
 		}
 	}
-	writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "defaultProvider": defaultProvider, "providers": descriptors, "projects": projects, "seats": seats, "messages": messages, "errors": errors})
+	writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "defaultProvider": defaultProvider, "providers": descriptors, "projects": projects, "seats": seats, "messages": messages, "errors": errors, "attentionCount": attention})
 }
+
+func (s *Server) sendCoordinationMessage(w http.ResponseWriter, r *http.Request, owner string) {
+	if !s.openRigAccess(w, owner) {
+		return
+	}
+	var body struct {
+		Provider string `json:"provider"`
+		coordinationSendRequest
+	}
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 264*1024)).Decode(&body) != nil || body.Provider == "" || body.Target == "" || strings.TrimSpace(body.Message) == "" {
+		writeError(w, 400, "Invalid coordination message.")
+		return
+	}
+	provider := s.coordinationProvider(owner, body.Provider)
+	if provider == nil || !provider.Descriptor().Available {
+		writeError(w, 409, "The selected coordination provider is unavailable.")
+		return
+	}
+	messenger, ok := provider.(coordinationMessenger)
+	if !ok {
+		writeError(w, 409, "The selected coordination provider does not support structured messaging.")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
+	defer cancel()
+	result, err := messenger.Send(ctx, body.coordinationSendRequest)
+	if err != nil {
+		writeError(w, 502, "Coordination message: "+err.Error())
+		return
+	}
+	writeJSON(w, 200, result)
+}
+
+func (s *Server) coordinationSendStatus(w http.ResponseWriter, r *http.Request, owner string) {
+	if !s.openRigAccess(w, owner) {
+		return
+	}
+	var body struct {
+		Provider string `json:"provider"`
+		Target   string `json:"target"`
+		SendID   string `json:"sendId"`
+	}
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body) != nil || body.Provider == "" || body.Target == "" || body.SendID == "" {
+		writeError(w, 400, "Invalid coordination send status request.")
+		return
+	}
+	provider := s.coordinationProvider(owner, body.Provider)
+	messenger, ok := provider.(coordinationMessenger)
+	if provider == nil || !provider.Descriptor().Available || !ok {
+		writeError(w, 409, "The selected coordination provider does not support send status.")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
+	result, err := messenger.SendStatus(ctx, body.Target, body.SendID)
+	if err != nil {
+		writeError(w, 502, "Coordination send status: "+err.Error())
+		return
+	}
+	writeJSON(w, 200, result)
+}
+
+func (s *Server) drainCoordinationRemote(w http.ResponseWriter, r *http.Request, owner string) {
+	if !s.openRigAccess(w, owner) {
+		return
+	}
+	var body struct {
+		Provider string `json:"provider"`
+		Remote   string `json:"remote"`
+		Target   string `json:"target"`
+	}
+	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body) != nil || body.Provider == "" || body.Remote == "" || body.Target == "" {
+		writeError(w, 400, "Invalid remote completion request.")
+		return
+	}
+	provider := s.coordinationProvider(owner, body.Provider)
+	drainer, ok := provider.(coordinationDrainer)
+	if provider == nil || !provider.Descriptor().Available || !ok {
+		writeError(w, 409, "The selected coordination provider does not support remote completion collection.")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+	result, err := drainer.Drain(ctx, body.Remote, body.Target)
+	if err != nil {
+		writeError(w, 502, "Remote completions: "+err.Error())
+		return
+	}
+	writeJSON(w, 200, result)
+}
+
 func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, owner string) {
 	if !s.openRigAccess(w, owner) {
 		return

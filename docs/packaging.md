@@ -3,11 +3,17 @@
 The same formula supports macOS and Linux. Install [Homebrew](https://brew.sh/), then:
 
 ```bash
+brew trust --formula asheshgoplani/tap/agent-deck
+brew tap asheshgoplani/tap
 brew trust --formula jordanhubbard/webmux/webmux
 brew tap jordanhubbard/webmux https://github.com/jordanhubbard/webmux
 brew install jordanhubbard/webmux/webmux
 brew services start jordanhubbard/webmux/webmux
 ```
+
+The formula depends on `asheshgoplani/tap/agent-deck`, which also installs
+tmux, so the default Agent Deck coordination experience is available to the
+service.
 
 Open http://localhost:8080 and create the first administrator account. To run in the
 foreground instead, use `webmux`. Linux background services require systemd and an
@@ -23,10 +29,11 @@ or a C/C++ toolchain on Linux). There are no prebuilt Homebrew bottles yet.
 `main` instead of the stable tag.
 
 The repository itself is the tap; no separate `homebrew-webmux` repository is
-required. The explicit URL in `brew tap` is necessary. Homebrew 6 validates tap
-contents immediately after cloning, so record formula-specific trust before the
-tap command. Trusting only `jordanhubbard/webmux/webmux` is narrower than
-trusting every current and future formula in the tap.
+required. The explicit URL in the WebMux `brew tap` is necessary. Homebrew
+6 validates tap contents immediately after cloning, so record formula-specific
+trust before each tap command. Trusting only
+`asheshgoplani/tap/agent-deck` and `jordanhubbard/webmux/webmux`
+is narrower than trusting every current and future formula in either tap.
 
 ## Services, configuration, and upgrades
 
@@ -99,6 +106,17 @@ server or browser assets. The server executable needs no adjacent `web/` or
 `config.defaults/` directory, and neither executable requires a Node.js
 runtime. OpenSSH and optional mosh/tmux/guacd tools remain
 external dependencies for their respective features.
+
+Agent Deck is not embedded in native archives. On macOS or Linux, install the
+qualified release before starting an extracted server:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/asheshgoplani/agent-deck/v1.16.34/install.sh | bash -s -- --version v1.16.34 --non-interactive
+```
+
+Ensure `~/.local/bin` is on the server service PATH. Native Windows
+coordination hosting is unavailable because Agent Deck supports Windows only
+through WSL.
 
 Native filenames end in `-native.tar.gz`, `-native.zip` or `-native.msi`, with a
 `.sha256` file for each artifact. `bundle.json` records the build platform and

@@ -1,4 +1,4 @@
-import type { CoordinationStatus, WorkspaceListing } from '../components/CoordinationDialog';
+import type { CoordinationDrainResult, CoordinationSendResult, CoordinationStatus, WorkspaceListing } from '../components/CoordinationDialog';
 import type {
   AgentTmuxSession,
   AppConfig,
@@ -79,6 +79,9 @@ export const api = {
   createCoordinatedAgent: (input: { provider: string; mode: 'new' | 'existing'; projectId?: string; projectName: string; context?: string; name: string; host: string; workspace: string; runtime: string; row?: number; col?: number }) => request<{ target: string; session: Session }>('/coordination/agents', { method: 'POST', body: JSON.stringify(input) }),
   browseCoordinationWorkspaces: (provider: string, host: string, path?: string) => request<WorkspaceListing>('/coordination/workspaces', { method: 'POST', body: JSON.stringify({ provider, host, path }) }),
   attachCoordinatedAgent: (provider: string, target: string, position?: { row: number; col: number }) => request<Session>('/coordination/attach', { method: 'POST', body: JSON.stringify({ provider, target, ...position }) }),
+  sendCoordinationMessage: (provider: string, target: string, message: string, queue: boolean) => request<CoordinationSendResult>('/coordination/messages', { method: 'POST', body: JSON.stringify({ provider, target, message, queue }) }),
+  getCoordinationSendStatus: (provider: string, target: string, sendId: string) => request<Record<string, unknown>>('/coordination/send-status', { method: 'POST', body: JSON.stringify({ provider, target, sendId }) }),
+  drainCoordinationRemote: (provider: string, remote: string, target: string) => request<CoordinationDrainResult>('/coordination/drain', { method: 'POST', body: JSON.stringify({ provider, remote, target }) }),
   getOpenRig: () => request<{ available: boolean; message: string; session: Session | null; views?: Record<string, Session>; proof?: { phase: string; run_id: string; message: string; nonce_a?: string; nonce_b?: string; digest?: string } | null }>('/openrig'),
   getOpenRigAgents: () => request<{ target: string; runtime: string; rig: string; status: string }[]>('/openrig/agents'),
   attachOpenRig: (view = 'dashboard', target?: string) => request<Session>('/openrig/attach', { method: 'POST', body: JSON.stringify({ view, target }) }),

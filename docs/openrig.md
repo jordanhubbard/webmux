@@ -2,9 +2,9 @@
 
 WebMux exposes coordinator-managed coding sessions behind the ordinary
 **Terminals** grid. The **Coordination** button opens a project and session
-browser backed by a versioned provider contract. Rig is the bundled topology
-and peer-messaging provider; Agent Deck is an optional session-lifecycle
-provider. Creating a session opens its interactive CLI in a normal terminal
+browser backed by a versioned provider contract. Agent Deck is the recommended
+session conductor; Rig remains an optional topology-centric provider. Creating
+a session opens its interactive CLI in a normal terminal
 tile. The raw Rig text dashboard remains available under **Advanced
 diagnostics**.
 
@@ -62,6 +62,14 @@ their existing behavior.
 
 ## Agent Deck provider
 
+Source `make install-server` and `make install-all` install WebMux's
+qualified Agent Deck release by default. Homebrew installs Agent Deck as a
+dependency. Use `make install-agent-deck` on a macOS/Linux execution host
+that does not run the server. The installer is idempotent, pins the qualified
+version, and uses Agent Deck's checksum-verifying upstream installer. Set
+`INSTALL_AGENT_DECK=no` only for an intentional Rig-only or
+coordination-disabled server.
+
 When `agent-deck` is on the WebMux service PATH, Coordination also inventories
 the current local Agent Deck profile and every remote registered with that
 Agent Deck instance. Session IDs are qualified by location (`local:<id>` or
@@ -73,16 +81,26 @@ Creating a session in an Agent Deck group routes `launch` to the selected local
 instance or registered remote and starts Codex or Claude in the selected
 workspace. Remote workspace browsing resolves the registered remote to its SSH
 host while retaining the Agent Deck remote name as the coordinator identity.
-Install and authenticate Agent Deck and the chosen coding CLI on every host
-that owns sessions. WebMux does not scan arbitrary shells: sessions must be
-known to Rig or Agent Deck before they appear.
+Authenticate Agent Deck and the chosen coding CLI on every host that owns
+sessions. Installation cannot copy credentials or register remotes. WebMux does
+not scan arbitrary shells: sessions must be known to Rig or Agent Deck before
+they appear.
 
 Agent Deck provides host/session inventory and lifecycle, including remote
-sessions and native harness IDs. Rig provides canonical topology and peer
-messaging. They are complementary providers rather than one being silently
+sessions and native harness IDs. WebMux also uses Agent Deck's native conductor
+relationships, guarded send queue, delivery status, completion inbox, and remote
+drain commands. Instructions are supplied on standard input, never interpolated
+into a command line. A local conductor can collect durable transition and
+completion records from registered remotes without consuming the remote copy;
+source-host attribution stays attached to every imported record. The toolbar
+badge and project/session rows surface waiting, completed, and failed work that
+needs attention.
+
+Rig provides canonical topology and peer messaging. The providers are
+alternative experiences rather than one being silently
 treated as the other's project database. Additional coordinators can implement
-the same internal status, launch, and attach adapter without changing the
-browser wire contract (`webmux-coordination/v1`).
+the same internal status, launch, attach, messaging, delivery-status, and drain
+adapters without changing the browser wire contract (`webmux-coordination/v1`).
 
 ## Remote identity verification follow-up
 
@@ -193,6 +211,14 @@ these stand-ins qualify transport, not provider reasoning. Live cross-host
 qualification additionally uses real
 Codex processes on Puck and sparky, independent nonce/hash receipts, and the
 central daemon's attributed outbox. See the [cross-host record](validation/openrig-central-2026-10-21/README.md).
+
+Agent Deck's deterministic tests exercise local and remote discovery, guarded
+queue/immediate sends, sanitized delivery status, conductor inbox records, and
+remote drain provenance through a contract fixture. To run the read-only check
+against the installed CLI, authenticated profile, and registered remotes, use
+`WEBMUX_REAL_AGENT_DECK=1 go test ./internal/httpapi -run RealAgentDeck` from
+`webmux/server`. It never launches a session or sends an instruction. Interactive
+send/drain qualification remains explicit because it can affect live agents.
 
 The [production Trickle workload](validation/openrig-trickle-2026-10-21/README.md)
 records a real coding/review session created through the installed WebMux UI.

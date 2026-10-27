@@ -10,6 +10,7 @@
 #   make lint             Lint all code
 #   make clean            Remove build artifacts and dependencies
 #   make install          Install the client executable only
+#   make install-agent-deck Install the qualified Agent Deck coordinator
 #   make install-server   Install the server as an OS service
 #   make install-all      Install both client and server
 #   make uninstall        Remove the client executable
@@ -28,6 +29,8 @@
 #   JWT_SECRET         Token signing secret    (default: dev secret)
 #   SECURE_MODE        true | false            (default: false)
 #   CLIENT_BINDIR      Client install directory (default: ~/.local/bin)
+#   AGENT_DECK_BINDIR  Agent Deck install directory (default: ~/.local/bin)
+#   INSTALL_AGENT_DECK Install Agent Deck with the server (default: yes)
 #
 # Examples:
 #   make start HTTP_PORT=9090
@@ -51,6 +54,9 @@ WEBMUX_DIR   := $(CURDIR)/webmux
 WEBMUX_ROOT  := $(WEBMUX_DIR)
 WEBMUX_HOME  ?= $(HOME)/.config/webmux
 CLIENT_BINDIR ?= $(HOME)/.local/bin
+AGENT_DECK_BINDIR ?= $(HOME)/.local/bin
+AGENT_DECK_VERSION ?= v1.16.34
+INSTALL_AGENT_DECK ?= yes
 PIDFILE      := $(WEBMUX_HOME)/.webmux.pid
 LOGFILE      := $(WEBMUX_HOME)/logs/webmux.log
 NODE         := node
@@ -82,7 +88,7 @@ endif
 
 # ── Targets ────────────────────────────────────────────────────────
 .PHONY: all build build-server build-client deps check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
-       install install-client install-server install-all uninstall uninstall-client uninstall-server uninstall-all \
+       install install-client install-agent-deck install-server install-all uninstall uninstall-client uninstall-server uninstall-all \
        release release-minor release-major release-publish changelog-init \
        package package-server package-client package-assets _start_manual _stop_manual
 
@@ -121,6 +127,7 @@ help:
 	@printf "  $(C_CYN)make lint$(C_RST)           Lint all code\n"
 	@printf "  $(C_CYN)make clean$(C_RST)          Remove build artifacts\n"
 	@printf "  $(C_CYN)make install$(C_RST)        Install the client executable only\n"
+	@printf "  $(C_CYN)make install-agent-deck$(C_RST) Install the qualified Agent Deck coordinator\n"
 	@printf "  $(C_CYN)make install-server$(C_RST) Install the server service\n"
 	@printf "  $(C_CYN)make install-all$(C_RST)    Install both client and server\n"
 	@printf "  $(C_CYN)make uninstall$(C_RST)      Remove the client executable\n"
@@ -139,6 +146,8 @@ help:
 	@printf "  $(C_YLW)HTTPS_PORT$(C_RST)=$(C_DIM)8443$(C_RST)             HTTPS listen port\n"
 	@printf "  $(C_YLW)LISTEN_HOST$(C_RST)=$(C_DIM)0.0.0.0$(C_RST)          Bind address\n"
 	@printf "  $(C_YLW)CLIENT_BINDIR$(C_RST)=$(C_DIM)~/.local/bin$(C_RST)     Client install directory\n"
+	@printf "  $(C_YLW)AGENT_DECK_BINDIR$(C_RST)=$(C_DIM)~/.local/bin$(C_RST) Agent Deck install directory\n"
+	@printf "  $(C_YLW)INSTALL_AGENT_DECK$(C_RST)=$(C_DIM)yes$(C_RST)         Install Agent Deck with server\n"
 
 check-guacd:
 	@if command -v guacd >/dev/null 2>&1; then \
@@ -389,13 +398,23 @@ install-client: build-client
 	@printf "  Copy the exact server URL from WebMux's Managed host dialog, then run:\n"
 	@printf "  %s/webmux-client --server WEBMUX_URL --background\n" "$(CLIENT_BINDIR)"
 
+install-agent-deck:
+	@if [ "$(INSTALL_AGENT_DECK)" = "yes" ]; then \
+		AGENT_DECK_BINDIR="$(AGENT_DECK_BINDIR)" AGENT_DECK_VERSION="$(AGENT_DECK_VERSION)" \
+			sh scripts/install-agent-deck.sh; \
+	elif [ "$(INSTALL_AGENT_DECK)" = "no" ]; then \
+		printf "$(C_YLW)! $(C_RST) Agent Deck installation skipped (INSTALL_AGENT_DECK=no).\n"; \
+	else \
+		printf "$(C_RED)✗$(C_RST) INSTALL_AGENT_DECK must be yes or no.\n" >&2; exit 2; \
+	fi
+
 install-all: install-server install-client
 
-install-server: stop build-server
+install-server: install-agent-deck stop build-server
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Installing launchd service…\n"
 	@$(NODE) scripts/macos-app.mts "$(WEBMUX_DIR)/bin/webmux" "$(MACOS_APP)"
-	@$(NODE) scripts/render-service.mts
+	@PATH="$(AGENT_DECK_BINDIR):$$PATH" $(NODE) scripts/render-service.mts
 	@launchctl bootout $(LAUNCHD_SVC) 2>/dev/null || true
 	@launchctl bootstrap gui/$$(id -u) "$$WEBMUX_SERVICE_OUTPUT"
 	@launchctl kickstart -k $(LAUNCHD_SVC) 2>/dev/null || true
@@ -406,7 +425,7 @@ ifeq ($(shell uname),Darwin)
 	@printf "  Open WebMux in your browser to complete Mac permissions setup: http://localhost:8080\n"
 else
 	@printf "$(C_BLU)▸$(C_RST) Installing systemd user service…\n"
-	@$(NODE) scripts/render-service.mts
+	@PATH="$(AGENT_DECK_BINDIR):$$PATH" $(NODE) scripts/render-service.mts
 	@systemctl --user daemon-reload
 	@systemctl --user enable --now "$(SYSTEMD_UNIT)"
 	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)%s$(C_RST)\n" "$$WEBMUX_SERVICE_OUTPUT"

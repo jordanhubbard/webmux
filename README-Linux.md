@@ -7,15 +7,20 @@ The source Makefile runs WebMux's Go backend on Linux using Unix pseudoterminals
 Homebrew supports both macOS and Linux:
 
 ```bash
+brew trust --formula asheshgoplani/tap/agent-deck
+brew tap asheshgoplani/tap
 brew trust --formula jordanhubbard/webmux/webmux
 brew tap jordanhubbard/webmux https://github.com/jordanhubbard/webmux
 brew install jordanhubbard/webmux/webmux
 brew services start jordanhubbard/webmux/webmux
 ```
 
+The formula installs Agent Deck and tmux for WebMux's default coordination
+experience.
+
 Run these commands as your normal user. Open http://localhost:8080, or run
-`webmux` for foreground operation. The formula-specific trust must be recorded
-before Homebrew 6 validates the custom-URL tap. See
+`webmux` for foreground operation. Record formula-specific trust for Agent Deck
+and WebMux before Homebrew 6 validates their taps. See
 [packaging](docs/packaging.md) for service requirements, upgrades, migration,
 and release bundles. The instructions below cover building and running from a
 source checkout.
@@ -69,7 +74,19 @@ make install-server
 make status
 ```
 
-This installs `~/.config/systemd/user/webmux.service`, enables it, and starts WebMux as the installing user so it can access that user's SSH configuration and keys.
+This installs the qualified Agent Deck release in `~/.local/bin`, places that
+directory on the service PATH, installs `~/.config/systemd/user/webmux.service`,
+and starts WebMux as the installing user so it can access that user's SSH
+configuration and keys. Use `INSTALL_AGENT_DECK=no make install-server` only
+when configuring Rig instead or disabling coordination.
+
+Install Agent Deck on every registered remote that will own coordinated
+sessions. From a WebMux checkout, run `make install-agent-deck`; without a
+checkout, use Agent Deck's checksum-verifying installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/asheshgoplani/agent-deck/v1.16.34/install.sh | bash -s -- --version v1.16.34 --non-interactive
+```
 
 Use the repository Makefile for service management:
 
