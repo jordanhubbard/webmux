@@ -3,6 +3,8 @@
 The same formula supports macOS and Linux. Install [Homebrew](https://brew.sh/), then:
 
 ```bash
+brew trust --formula asheshgoplani/tap/agent-deck
+brew tap asheshgoplani/tap
 brew trust --formula jordanhubbard/webmux/webmux
 brew tap jordanhubbard/webmux https://github.com/jordanhubbard/webmux
 brew install jordanhubbard/webmux/webmux
@@ -27,10 +29,11 @@ or a C/C++ toolchain on Linux). There are no prebuilt Homebrew bottles yet.
 `main` instead of the stable tag.
 
 The repository itself is the tap; no separate `homebrew-webmux` repository is
-required. The explicit URL in `brew tap` is necessary. Homebrew 6 validates tap
-contents immediately after cloning, so record formula-specific trust before the
-tap command. Trusting only `jordanhubbard/webmux/webmux` is narrower than
-trusting every current and future formula in the tap.
+required. The explicit URL in the WebMux `brew tap` is necessary. Homebrew
+6 validates tap contents immediately after cloning, so record formula-specific
+trust before each tap command. Trusting only
+`asheshgoplani/tap/agent-deck` and `jordanhubbard/webmux/webmux`
+is narrower than trusting every current and future formula in either tap.
 
 ## Services, configuration, and upgrades
 

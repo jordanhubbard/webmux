@@ -7,6 +7,8 @@ The source Makefile runs WebMux's Go backend on macOS using Unix pseudoterminals
 Homebrew supports both macOS and Linux:
 
 ```bash
+brew trust --formula asheshgoplani/tap/agent-deck
+brew tap asheshgoplani/tap
 brew trust --formula jordanhubbard/webmux/webmux
 brew tap jordanhubbard/webmux https://github.com/jordanhubbard/webmux
 brew install jordanhubbard/webmux/webmux
@@ -17,8 +19,8 @@ The formula installs Agent Deck and tmux for WebMux's default coordination
 experience.
 
 Run these commands as your normal user. Open http://localhost:8080, or run
-`webmux` for foreground operation. The formula-specific trust must be recorded
-before Homebrew 6 validates the custom-URL tap. See
+`webmux` for foreground operation. Record formula-specific trust for Agent Deck
+and WebMux before Homebrew 6 validates their taps. See
 [packaging](docs/packaging.md) for service requirements, upgrades, migration,
 and release bundles. The instructions below cover building and running from a
 source checkout.

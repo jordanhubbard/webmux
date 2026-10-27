@@ -98,16 +98,19 @@ Each tile's **Sign in** action also accepts a pasted link. See [CLI authenticati
 ### Homebrew (macOS and Linux)
 
 ```bash
+brew trust --formula asheshgoplani/tap/agent-deck
+brew tap asheshgoplani/tap
 brew trust --formula jordanhubbard/webmux/webmux
 brew tap jordanhubbard/webmux https://github.com/jordanhubbard/webmux
 brew install jordanhubbard/webmux/webmux
 brew services start jordanhubbard/webmux/webmux
 ```
 
-Open http://localhost:8080. Run services as your normal user so WebMux can access
-your SSH keys. The formula-specific trust must be recorded before Homebrew 6
-validates the custom-URL tap. See [packaging](docs/packaging.md) for upgrades,
-migration from a checkout, optional tools, and runtime release bundles.
+Open http://localhost:8080. Run services as your normal user so WebMux can
+access your SSH keys. Record formula-specific trust for Agent Deck and WebMux
+before Homebrew 6 validates their taps. See
+[packaging](docs/packaging.md) for upgrades, migration from a checkout,
+optional tools, and runtime release bundles.
 
 ### Windows (x64 and ARM64)
 
