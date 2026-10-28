@@ -13,11 +13,11 @@ const childEnv = {
   NODE_PATH: [nodeModules, process.env.NODE_PATH].filter(Boolean).join(path.delimiter),
 };
 
-// The full suite shares one client address. Keep each half on a fresh server
+// The full suite shares one client address. Keep each shard on a fresh server
 // so accumulated browser requests do not exhaust the production rate limit.
 // Focused invocations retain their exact CLI arguments and output directory.
-const runs = args.length ? [args] : [1, 2].map(shard => [
-  `--shard=${shard}/2`, `--output=test-results/shard-${shard}`,
+const runs = args.length ? [args] : [1, 2, 3].map(shard => [
+  `--shard=${shard}/3`, `--output=test-results/shard-${shard}`,
 ]);
 let exitCode = 0;
 for (const runArgs of runs) {

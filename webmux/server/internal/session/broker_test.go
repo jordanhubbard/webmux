@@ -393,3 +393,46 @@ func TestLocalSessionRejectsRemoteOptions(t *testing.T) {
 		t.Fatal("invalid requests created sessions")
 	}
 }
+
+func TestProjectLabelPersistenceOwnershipAndProviderAuthority(t *testing.T) {
+	b, store, _ := fixture(t)
+	s := create(t, b, "owner")
+	label := "WebMux"
+	if _, err := b.Patch("other", s.ID, Patch{ProjectLabel: &label}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("cross-owner project patch: %v", err)
+	}
+	value, err := b.Patch("owner", s.ID, Patch{ProjectLabel: &label})
+	if err != nil || value.ProjectLabel != label {
+		t.Fatalf("project patch: %+v %v", value, err)
+	}
+	for _, bad := range []string{"bad\nlabel", strings.Repeat("x", 129)} {
+		if _, err := b.Patch("owner", s.ID, Patch{ProjectLabel: &bad}); err == nil {
+			t.Fatalf("accepted project label %q", bad)
+		}
+	}
+	if err := b.Close(); err != nil {
+		t.Fatal(err)
+	}
+	next, err := newBroker(store, nil, func(terminal.LaunchRequest, string) (process, error) { return fake(), nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer next.Close()
+	if err := next.Restore(); err != nil {
+		t.Fatal(err)
+	}
+	restored, err := next.Get("owner", s.ID)
+	if err != nil || restored.ProjectLabel != label {
+		t.Fatalf("restored project: %+v %v", restored, err)
+	}
+	managed, err := next.EnsureRigTerminal("owner", "seat", "reviewer", []string{"fixture"}, RigIdentity{Target: "seat", Project: "Canonical", Name: "reviewer", Workspace: "/work/canonical"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := next.Patch("owner", managed.ID, Patch{ProjectLabel: &label}); err == nil {
+		t.Fatal("manual label overrode provider project")
+	}
+	if current, _ := next.Get("owner", managed.ID); current.Rig.Project != "Canonical" || current.Rig.Workspace != "/work/canonical" {
+		t.Fatalf("provider identity lost: %+v", current)
+	}
+}

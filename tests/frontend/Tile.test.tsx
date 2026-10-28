@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { api } from '@frontend/utils/api';
 import { Tile } from '@frontend/components/Tile';
 import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
 import type { Session } from '@frontend/types';
@@ -290,7 +291,7 @@ describe('Tile', () => {
       { wrapper },
     );
     // Fire mousedown on the chrome (not a button) — title includes rename hint
-    const chrome = screen.getByTitle('user@example.com (double-click to rename)').closest('[style]')!.parentElement!;
+    const chrome = screen.getByTitle(/Project: not set/).closest('[style]')!.parentElement!;
     fireEvent.mouseDown(chrome);
     expect(onTitleMouseDown).toHaveBeenCalledWith('s1', expect.any(Object));
   });
@@ -299,9 +300,25 @@ describe('Tile', () => {
 it('shows explicit Rig provenance separately from title and transport', () => {
   const session = makeSession({ title: 'My shell title', rig: { target: 'opaque-id', project: 'demo-release', name: 'reviewer', host: 'build-host', runtime: 'codex' } });
   const view = render(<Tile session={session} fontSize={14} onClose={vi.fn()} onReconnect={vi.fn()} onRename={vi.fn()} />, { wrapper });
-  expect(screen.getByText('My shell title')).toBeVisible();
+  expect(screen.getByText('demo-release / My shell title')).toBeVisible();
   expect(screen.getByText('SSH')).toBeVisible();
-  expect(screen.getByLabelText('Rig-managed worker')).toHaveTextContent('Rig · demo-release · reviewer · build-host');
+  expect(screen.getByLabelText('Rig-managed worker')).toHaveTextContent('Rig');
+  expect(screen.getByLabelText('Rig-managed worker')).toHaveAttribute('title', expect.stringContaining('demo-release'));
   view.rerender(<Tile session={makeSession({ title: 'Rig demo-release reviewer build-host' })} fontSize={14} onClose={vi.fn()} onReconnect={vi.fn()} onRename={vi.fn()} />);
   expect(screen.queryByLabelText('Rig-managed worker')).toBeNull();
+});
+
+it('saves an explicit project label for an unmanaged session and shows it as identity', async () => {
+  const saved = vi.spyOn(api, 'setSessionProject').mockResolvedValue(makeSession({ project_label: 'WebMux' }));
+  const updated = vi.fn();
+  try {
+    render(<Tile session={makeSession()} fontSize={14} onClose={vi.fn()} onReconnect={vi.fn()} onRename={vi.fn()} onSessionUpdated={updated} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'Set project' }));
+    fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'WebMux' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save project label' }));
+    await waitFor(() => expect(saved).toHaveBeenCalledWith('s1', 'WebMux'));
+    expect(await screen.findByText('WebMux / user@example.com')).toBeVisible();
+    expect(updated).toHaveBeenCalledWith(expect.objectContaining({ project_label: 'WebMux' }));
+    expect(screen.queryByRole('button', { name: 'Set project' })).toBeNull();
+  } finally { saved.mockRestore(); }
 });

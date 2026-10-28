@@ -47,6 +47,30 @@ tab never creates a project or starts an agent.
 
 ## Projects and worker identity
 
+Project identity comes from the coordinator's structured session record, keyed
+by execution host, provider and session ID. Agent Deck supplies its group and
+registered path; Rig supplies the topology/seat binding and registered workspace.
+WebMux retains that association in its persisted session document and refreshes
+it when the provider session is attached again. A registered workspace is not a
+live CWD readout: agents may change directory without changing project membership.
+
+Terminal titles and the session dock show **project / session**. The browser
+window title follows the focused terminal and remembers its focus separately
+per browser tab across reloads. Hover a title or open **Tools** for host, identity
+source and the registered workspace, when available.
+
+An unmanaged SSH/tmux terminal has no coordinator record. **Set project** saves
+an explicit label on the server; it survives reconnects and restarts. WebMux
+does not guess its project from terminal output, prompt text or a transient CWD,
+and does not present an unobserved current directory as live information.
+
+Source interfaces: [Agent Deck JSON session identity](https://github.com/asheshgoplani/agent-deck/blob/main/skills/agent-deck/references/cli-reference.md#session-current),
+[Codex thread metadata](https://learn.chatgpt.com/docs/app-server), and
+[Claude session/CWD hook events](https://code.claude.com/docs/en/hooks).
+Coding-CLI metadata can supply additional location information when explicitly
+integrated; WebMux's project label does not depend on parsing private transcript
+formats or installing hooks into the user's coding tools.
+
 The Coordination tab groups workers under expandable project headings. Each
 worker shows its registered name (such as coder or reviewer), execution host,
 runtime and observed state. Expand or collapse a project with its summary button

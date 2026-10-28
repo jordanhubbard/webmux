@@ -159,12 +159,14 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       const session = listing.find(value => value.openrig_view === `managed:${agent.id}`)!;
       if (index === 0) expect([session.row, session.col]).toEqual([0, 0]);
       sessions.push(session.id);
-      expect(session.rig).toEqual({ target: agent.id, project, name, host: 'localhost', runtime: 'codex' });
+      expect(session.rig).toEqual({ target: agent.id, project, name, host: 'localhost', runtime: 'codex', workspace: home });
       const terminal = page.getByTestId(`tile-cell-${session.id}`);
       await expect(page.getByTestId('workspace-scroll')).toBeVisible();
       await expect(terminal).toBeInViewport({ ratio: 0.1 });
       await expect(terminal.locator('.xterm-helper-textarea')).toBeFocused();
-      await expect(terminal.getByLabel('Rig-managed worker')).toContainText(`Rig · ${project} · ${name} · localhost`);
+      await expect(terminal.getByLabel('Rig-managed worker')).toHaveAttribute('title', new RegExp(project));
+      await expect(terminal.getByText(`${project} / ${name}`, { exact: true })).toBeVisible();
+      await expect(page).toHaveTitle(new RegExp(project));
       await expect(terminal.locator('.xterm-rows')).toContainText('FIXTURE_READY');
       await expect(terminal.locator('.xterm-rows')).toContainText(agent.id);
     }

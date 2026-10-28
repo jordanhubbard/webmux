@@ -8,11 +8,14 @@ import { Dialog } from './Dialog';
 import { WorkspaceMinimap } from './WorkspaceMinimap';
 import { api } from '../utils/api';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
+import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
+import { sessionIdentity } from '../utils/sessionIdentity';
 import type { Session, CreateSessionRequest, NamedTheme, ManagedClient, HostEntry } from '../types';
 import { loadSessionThemeOverrides, saveSessionThemeOverrides } from '../utils/themes';
 import { useElementSize, useTouchLikeViewport } from '../utils/viewport';
 
 interface WorkspaceProps {
+  appName?: string;
   canManageRig?: boolean;
   canManageHosts?: boolean;
   fontSize: number;
@@ -127,6 +130,7 @@ function getAddPositions(
 }
 
 export function Workspace({
+  appName = 'WebMux',
   canManageRig = true,
   canManageHosts = true,
   fontSize,
@@ -174,6 +178,17 @@ export function Workspace({
   const [sessionToReveal, setSessionToReveal] = useState<{ id: string; request: number } | null>(null);
   const sessionRequestRef = useRef(0);
   const { focusedSessionId, setFocusedSessionId, broadcastMode, broadcastExcluded, setBroadcastRecipients, toggleBroadcastExclude } = useInputBroadcast();
+  const { activePane } = useWorkspacePane();
+  useEffect(() => () => { document.title = appName; }, [appName]);
+
+  useEffect(() => {
+    if (activePane !== 'terminals') return;
+    const session = sessions.find(value => value.id === focusedSessionId) || sessions[0];
+    if (!session) { document.title = appName; return; }
+    const identity = sessionIdentity(session);
+    document.title = `${identity.project ? identity.label : `Project not set / ${identity.name}`} · ${identity.host} — ${appName}`;
+    if (focusedSessionId === session.id) sessionStorage.setItem('webmux-focused-session', session.id);
+  }, [activePane, appName, focusedSessionId, sessions]);
 
   // Drag state
   const [operationError, setOperationError] = useState('');
@@ -208,6 +223,8 @@ export function Workspace({
         if (request !== sessionRequestRef.current) return;
         setSessions(loaded);
         setCollapsedSessions(new Set(loaded.filter(s => s.minimized).map(s => s.id)));
+        const remembered = sessionStorage.getItem('webmux-focused-session');
+        if (!requestedSessionId && remembered && loaded.some(s => s.id === remembered)) setFocusedSessionId(remembered);
         if (requestedSessionId && loaded.some(s => s.id === requestedSessionId)) {
           setFocusedSessionId(requestedSessionId);
           setSessionToReveal({ id: requestedSessionId, request });
@@ -671,10 +688,10 @@ export function Workspace({
                       return next;
                     });
                   }}
-                  title={isMinimized ? `Show: ${session.title}` : `Minimize: ${session.title}`}
+                  title={isMinimized ? `Show: ${sessionIdentity(session).label}` : `Minimize: ${sessionIdentity(session).label}`}
                 >
                   <span style={{ color: hasBell ? '#f1fa8c' : isFocused ? '#fff' : isMinimized ? '#666' : '#4aaa6a', fontSize: 8 }}>{'\u25cf'}</span>
-                  <span style={styles.dockTitle}>{session.title}</span>
+                  <span style={styles.dockTitle}>{sessionIdentity(session).label}</span>
                 </button>
               );
             })}

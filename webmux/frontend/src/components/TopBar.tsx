@@ -89,6 +89,10 @@ export function TopBar({
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
+    if (activePane !== 'terminals') document.title = `${activePane === 'coordination' ? 'Coordination' : activePane === 'desktops' ? 'Desktops' : 'Agents'} — ${appName}`;
+  }, [activePane, appName]);
+
+  useEffect(() => {
     if (!auth.sessionExpiresAt) return;
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);

@@ -10,12 +10,13 @@ var ErrClosed = errors.New("session broker is shutting down")
 
 // RigIdentity is recorded only from the server coordinator, never a terminal title.
 type RigIdentity struct {
-	Provider string `json:"provider,omitempty" yaml:"provider,omitempty"`
-	Target   string `json:"target" yaml:"target"`
-	Project  string `json:"project" yaml:"project"`
-	Name     string `json:"name" yaml:"name"`
-	Host     string `json:"host" yaml:"host"`
-	Runtime  string `json:"runtime" yaml:"runtime"`
+	Provider  string `json:"provider,omitempty" yaml:"provider,omitempty"`
+	Target    string `json:"target" yaml:"target"`
+	Project   string `json:"project" yaml:"project"`
+	Name      string `json:"name" yaml:"name"`
+	Host      string `json:"host" yaml:"host"`
+	Runtime   string `json:"runtime" yaml:"runtime"`
+	Workspace string `json:"workspace,omitempty" yaml:"workspace,omitempty"`
 }
 
 type Session struct {
@@ -43,6 +44,7 @@ type Session struct {
 	CreatedAt        string       `json:"created_at" yaml:"created_at"`
 	UpdatedAt        string       `json:"updated_at" yaml:"updated_at"`
 	Title            string       `json:"title" yaml:"title"`
+	ProjectLabel     string       `json:"project_label,omitempty" yaml:"project_label,omitempty"`
 	Persistent       bool         `json:"persistent" yaml:"persistent"`
 	Minimized        bool         `json:"minimized" yaml:"minimized"`
 	Workspace        string       `json:"workspace,omitempty" yaml:"workspace,omitempty"`
@@ -82,11 +84,12 @@ type CreateRequest struct {
 }
 
 type Patch struct {
-	Row       *int    `json:"row"`
-	Col       *int    `json:"col"`
-	Title     *string `json:"title"`
-	Minimized *bool   `json:"minimized"`
-	HostID    *string `json:"host_id"`
+	Row          *int    `json:"row"`
+	Col          *int    `json:"col"`
+	Title        *string `json:"title"`
+	ProjectLabel *string `json:"project_label"`
+	Minimized    *bool   `json:"minimized"`
+	HostID       *string `json:"host_id"`
 }
 
 type document struct {
