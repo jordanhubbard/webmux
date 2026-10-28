@@ -57,6 +57,7 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
   const [workspace, setWorkspace] = useState('');
   const [runtime, setRuntime] = useState('codex');
   const [browser, setBrowser] = useState<WorkspaceListing | null>(null);
+  const [showAllFolders, setShowAllFolders] = useState(false);
   const [composerTarget, setComposerTarget] = useState('');
   const [instruction, setInstruction] = useState('');
   const [queueInstruction, setQueueInstruction] = useState(true);
@@ -159,7 +160,11 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
   };
   const browse = async (path?: string) => {
     setBusy(true); setError('');
-    try { setBrowser(await api.browseCoordinationWorkspaces(provider, host, path)); }
+    try {
+      const listing = await api.browseCoordinationWorkspaces(provider, host, path);
+      setBrowser(listing);
+      setWorkspace(listing.path);
+    }
     catch (err) { setError(String(err)); }
     finally { setBusy(false); }
   };
@@ -255,7 +260,7 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
           <label>Session name<input required pattern="[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}" value={resolvedName} onChange={event => setName(event.target.value)} /></label>
         </div>
         <p className="coordination-hint">Names are editable labels, not commands. We suggest a project from your folder and a session from the agent and purpose. The purpose names the session; give the agent its instructions after it opens.</p>
-        {browser && <section className="coordination-browser" aria-label={`Workspaces on ${host}`}><div><strong>{host}</strong> · <code>{browser.path}</code> {browser.repository && <span className="coordination-repository">Git repository</span>}</div><div className="coordination-browser-actions"><button type="button" onClick={chooseFolder}>Choose this folder</button>{browser.parent && <button type="button" onClick={() => void browse(browser.parent!)}>Parent folder</button>}</div><ul>{browser.entries.map(entry => <li key={entry.path}><button type="button" onClick={() => void browse(entry.path)}>{entry.name}/</button>{entry.repository && <span>Git repository</span>}</li>)}</ul></section>}
+        {browser && <section className="coordination-browser" aria-label={`Workspaces on ${host}`}><div><strong>{host}</strong> · <code>{browser.path}</code> {browser.repository && <span className="coordination-repository">Git repository</span>}</div><div className="coordination-browser-actions"><button type="button" onClick={chooseFolder}>Choose this folder</button>{browser.parent && <button type="button" onClick={() => void browse(browser.parent!)}>Parent folder</button>}<button type="button" aria-pressed={showAllFolders} onClick={() => setShowAllFolders(value => !value)}>{showAllFolders ? 'Hide hidden folders' : 'Show all'}</button></div><ul>{browser.entries.filter(entry => showAllFolders || !entry.name.startsWith('.')).map(entry => <li key={entry.path}><button type="button" onClick={() => void browse(entry.path)}>{entry.name}/</button>{entry.repository && <span>Git repository</span>}</li>)}</ul></section>}
         <p><button type="submit" disabled={busy || !selectedProvider?.available || (mode === 'existing' && (!selectedProject || (provider === 'rig' && !context)))}>{busy ? 'Connecting…' : 'Start agent and open terminal'}</button></p>
       </form>
       <section aria-labelledby="coordination-projects-heading">
