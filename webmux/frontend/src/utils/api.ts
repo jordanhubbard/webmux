@@ -137,6 +137,8 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ title }),
     }),
+  setSessionProject: (id: string, project_label: string) =>
+    request<Session>(`/sessions/${id}`, { method: 'PATCH', body: JSON.stringify({ project_label }) }),
   setMinimized: (id: string, minimized: boolean) =>
     request<Session>(`/sessions/${id}`, {
       method: 'PATCH',

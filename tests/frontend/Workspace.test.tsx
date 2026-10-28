@@ -79,6 +79,7 @@ describe('Workspace', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     terminalFocusFns.clear();
+    sessionStorage.clear();
     const { api } = await import('@frontend/utils/api');
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     vi.mocked(api.moveSession).mockReset().mockResolvedValue(mockSessions[0]);
@@ -86,11 +87,14 @@ describe('Workspace', () => {
 
   const defaultProps = { fontSize: 14, termCols: 80, termRows: 24, globalAutoScroll: true, globalAutoScrollVersion: 0, onGlobalAutoScrollChange: vi.fn(), globalLock: false, globalLockVersion: 0, onGlobalLockChange: vi.fn() };
 
-  it('shows add cell when no sessions', async () => {
+  it('starts with a 2 by 2 grid and does not fetch coordinator inventories', async () => {
     render(<Workspace {...defaultProps} />, { wrapper });
     await waitFor(() => {
-      expect(screen.getByText('Click to add a session')).toBeDefined();
+      expect(screen.getAllByText('Click to add a session')).toHaveLength(4);
     });
+    for (const [row, col] of [[0, 0], [0, 1], [1, 0], [1, 1]]) expect(screen.getByTestId(`add-cell-${row}-${col}`)).toBeInTheDocument();
+    const { api } = await import('@frontend/utils/api');
+    expect(api.getCoordination).not.toHaveBeenCalled();
   });
 
   it('shows loading state initially', async () => {
@@ -376,4 +380,21 @@ describe('Workspace', () => {
     fireEvent.mouseDown(terminal);
     expect(screen.getByTestId('dock-s1')).toHaveAttribute('data-focused', 'true');
   });
+});
+
+it('labels browser windows by the focused project and remembers focus per window', async () => {
+  const { api } = await import('@frontend/utils/api');
+  vi.mocked(api.getSessions).mockResolvedValue([
+    { ...mockSessions[0], project_label: 'WebMux', title: 'reviewer' },
+    { ...mockSessions[0], id: 's2', project_label: 'Trickle', title: 'builder', col: 1 },
+  ]);
+  const props = { fontSize: 14, termCols: 80, termRows: 24, globalAutoScroll: true, globalAutoScrollVersion: 0, onGlobalAutoScrollChange: vi.fn(), globalLock: false, globalLockVersion: 0, onGlobalLockChange: vi.fn() };
+  const view = render(<Workspace {...props} />, { wrapper });
+  await waitFor(() => expect(document.title).toContain('WebMux / reviewer'));
+  fireEvent.mouseDown(screen.getByTestId('terminal-s2'));
+  await waitFor(() => expect(document.title).toContain('Trickle / builder'));
+  expect(sessionStorage.getItem('webmux-focused-session')).toBe('s2');
+  view.unmount();
+  render(<Workspace {...props} />, { wrapper });
+  await waitFor(() => expect(document.title).toContain('Trickle / builder'));
 });

@@ -7,7 +7,7 @@ export type AgentRuntimeStatus = 'waiting' | 'working' | 'unknown' | 'stale';
 export type AgentStatusSource = 'hook' | 'tmux' | 'webmux' | 'none';
 
 export interface RigIdentity {
-  provider?: string; target: string; project: string; name: string; host: string; runtime: string;
+  provider?: string; target: string; project: string; name: string; host: string; runtime: string; workspace?: string;
 }
 
 export interface Session {
@@ -35,6 +35,7 @@ export interface Session {
   created_at: string;
   updated_at: string;
   title: string;
+  project_label?: string;
   persistent: boolean;
   minimized: boolean;
   workspace?: WorkspaceName;

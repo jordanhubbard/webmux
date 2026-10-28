@@ -4,16 +4,18 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Tile } from './Tile';
 import { ConnectionDialog } from './ConnectionDialog';
 import { CoordinationDialog } from './CoordinationDialog';
-import { RigNavigator } from './RigNavigator';
 import { Dialog } from './Dialog';
 import { WorkspaceMinimap } from './WorkspaceMinimap';
 import { api } from '../utils/api';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
+import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
+import { sessionIdentity } from '../utils/sessionIdentity';
 import type { Session, CreateSessionRequest, NamedTheme, ManagedClient, HostEntry } from '../types';
 import { loadSessionThemeOverrides, saveSessionThemeOverrides } from '../utils/themes';
 import { useElementSize, useTouchLikeViewport } from '../utils/viewport';
 
 interface WorkspaceProps {
+  appName?: string;
   canManageRig?: boolean;
   canManageHosts?: boolean;
   fontSize: number;
@@ -101,11 +103,13 @@ function getAddPositions(
   sessions: Session[],
   terminalGridLimit?: WorkspaceProps['terminalGridLimit'],
 ): { row: number; col: number }[] {
-  if (sessions.length === 0) {
-    return isWithinTerminalGridLimit(0, 0, terminalGridLimit) ? [{ row: 0, col: 0 }] : [];
-  }
-
   const occupied = new Set(sessions.map(s => `${s.row},${s.col}`));
+  const starter = [{ row: 0, col: 0 }, { row: 0, col: 1 }, { row: 1, col: 0 }, { row: 1, col: 1 }]
+    .filter(p => isWithinTerminalGridLimit(p.row, p.col, terminalGridLimit));
+  if (sessions.every(s => s.row < 2 && s.col < 2)) {
+    const empty = starter.filter(p => !occupied.has(`${p.row},${p.col}`));
+    if (empty.length || !sessions.length) return empty;
+  }
   const positions: { row: number; col: number }[] = [];
   const seen = new Set<string>();
 
@@ -126,6 +130,7 @@ function getAddPositions(
 }
 
 export function Workspace({
+  appName = 'WebMux',
   canManageRig = true,
   canManageHosts = true,
   fontSize,
@@ -165,7 +170,6 @@ export function Workspace({
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
   const [dialogMode, setDialogMode] = useState<'choose' | 'host' | 'rig'>('choose');
-  const [showRigManager, setShowRigManager] = useState(false);
   const [themeOverrides, setThemeOverrides] = useState<Map<string, string>>(() => loadSessionThemeOverrides());
   const [autoScrollOverrides, setAutoScrollOverrides] = useState<Map<string, boolean>>(new Map());
   const [lockOverrides, setLockOverrides] = useState<Map<string, boolean>>(new Map());
@@ -174,6 +178,17 @@ export function Workspace({
   const [sessionToReveal, setSessionToReveal] = useState<{ id: string; request: number } | null>(null);
   const sessionRequestRef = useRef(0);
   const { focusedSessionId, setFocusedSessionId, broadcastMode, broadcastExcluded, setBroadcastRecipients, toggleBroadcastExclude } = useInputBroadcast();
+  const { activePane } = useWorkspacePane();
+  useEffect(() => () => { document.title = appName; }, [appName]);
+
+  useEffect(() => {
+    if (activePane !== 'terminals') return;
+    const session = sessions.find(value => value.id === focusedSessionId) || sessions[0];
+    if (!session) { document.title = appName; return; }
+    const identity = sessionIdentity(session);
+    document.title = `${identity.project ? identity.label : `Project not set / ${identity.name}`} · ${identity.host} — ${appName}`;
+    if (focusedSessionId === session.id) sessionStorage.setItem('webmux-focused-session', session.id);
+  }, [activePane, appName, focusedSessionId, sessions]);
 
   // Drag state
   const [operationError, setOperationError] = useState('');
@@ -208,6 +223,8 @@ export function Workspace({
         if (request !== sessionRequestRef.current) return;
         setSessions(loaded);
         setCollapsedSessions(new Set(loaded.filter(s => s.minimized).map(s => s.id)));
+        const remembered = sessionStorage.getItem('webmux-focused-session');
+        if (!requestedSessionId && remembered && loaded.some(s => s.id === remembered)) setFocusedSessionId(remembered);
         if (requestedSessionId && loaded.some(s => s.id === requestedSessionId)) {
           setFocusedSessionId(requestedSessionId);
           setSessionToReveal({ id: requestedSessionId, request });
@@ -253,11 +270,6 @@ export function Workspace({
     const session = await api.createSession(req);
     setSessions(prev => [...prev, session]);
     setDialogPos(null);
-  }, []);
-
-  const openRigSeat = useCallback(async (provider: string, target: string) => {
-    const session = await api.attachCoordinatedAgent(provider, target);
-    window.dispatchEvent(new CustomEvent('webmux-sessions-changed', { detail: { sessionId: session.id } }));
   }, []);
 
   const handleClose = useCallback((id: string) => {
@@ -631,7 +643,6 @@ export function Workspace({
   return (
     <div style={styles.shell}>
       {operationError && <div role="alert">{operationError} <button onClick={() => setOperationError('')}>Dismiss</button></div>}
-      {canManageRig && <RigNavigator onOpen={openRigSeat} onManage={() => setShowRigManager(true)} />}
       {broadcastMode && <div role="group" aria-label="Type to All recipients" style={{ padding: '5px 10px', background: '#3a2a1a', color: '#f1d494', display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
         <strong>Type to All recipients</strong>
         <button type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), sessions.map(s => s.id))}>All</button>
@@ -677,10 +688,10 @@ export function Workspace({
                       return next;
                     });
                   }}
-                  title={isMinimized ? `Show: ${session.title}` : `Minimize: ${session.title}`}
+                  title={isMinimized ? `Show: ${sessionIdentity(session).label}` : `Minimize: ${sessionIdentity(session).label}`}
                 >
                   <span style={{ color: hasBell ? '#f1fa8c' : isFocused ? '#fff' : isMinimized ? '#666' : '#4aaa6a', fontSize: 8 }}>{'\u25cf'}</span>
-                  <span style={styles.dockTitle}>{session.title}</span>
+                  <span style={styles.dockTitle}>{sessionIdentity(session).label}</span>
                 </button>
               );
             })}
@@ -813,7 +824,6 @@ export function Workspace({
         tileHeight={tile.h}
         gap={GAP}
       />
-      {showRigManager && <CoordinationDialog onClose={() => setShowRigManager(false)} />}
     </div>
   );
 }

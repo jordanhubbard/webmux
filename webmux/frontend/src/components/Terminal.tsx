@@ -401,14 +401,18 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     termEl.addEventListener('wheel', wheelHandler, { passive: true });
 
     const el = containerRef.current;
-    // Click to focus this terminal
-    const clickHandler = () => {
+    const focusHandler = () => {
       wsHandleRef.current?.send({ type: 'focus' });
       setFocusedSessionId(sessionId);
       onFocusGainedRef.current();
+    };
+    // Click to focus this terminal
+    const clickHandler = () => {
+      focusHandler();
       term.focus();
     };
     el.addEventListener('mousedown', clickHandler);
+    el.addEventListener('focusin', focusHandler);
 
     return () => {
       removePaste();
@@ -418,6 +422,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       terminalQuerySuppressor.dispose();
       termEl.removeEventListener('wheel', wheelHandler);
       el.removeEventListener('mousedown', clickHandler);
+      el.removeEventListener('focusin', focusHandler);
       term.dispose();
       termRef.current = null;
       fitAddonRef.current = null;

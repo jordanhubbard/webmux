@@ -58,9 +58,9 @@ it('shows Rig diagnostics only while using the Rig provider', async () => {
 it('offers None alongside both providers and persists it without creating sessions', async () => {
   render(<CoordinationDialog onClose={() => {}} />);
   await screen.findByText('Using');
-  fireEvent.change(screen.getByLabelText('Coordination experience'), { target: { value: 'disabled' } });
+  fireEvent.change(screen.getByLabelText('Coordinator'), { target: { value: 'disabled' } });
   expect(screen.getByRole('status')).toHaveTextContent('No coordinator selected');
-  expect(screen.queryByText('Create coordinated session')).toBeNull();
+  expect(screen.queryByText('Start a coding agent')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Make default' }));
   await waitFor(() => expect(mocks.updateConfig).toHaveBeenCalledWith({ app: { coordination: { default_provider: 'disabled' } } }));
   expect(mocks.create).not.toHaveBeenCalled();
@@ -71,13 +71,13 @@ it('creates a new Rig project in a browsed host workspace and opens its terminal
   window.addEventListener('webmux-sessions-changed', changed);
   try {
     render(<CoordinationDialog onClose={close} />);
-    fireEvent.click(await screen.findByLabelText('New coordinated project'));
-    fireEvent.change(screen.getByLabelText('New Rig name'), { target: { value: 'shared-project' } });
+    fireEvent.click(await screen.findByLabelText('Start a new project'));
+    fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'shared-project' } });
     fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'reviewer' } });
     fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
     await waitFor(() => expect(mocks.browse).toHaveBeenCalledWith('rig', 'localhost', undefined));
     fireEvent.click(await screen.findByRole('button', { name: 'Choose this folder' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Create session and open terminal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
     await waitFor(() => expect(close).toHaveBeenCalledOnce());
     expect(mocks.create).toHaveBeenCalledWith({ provider: 'rig', mode: 'new', projectId: undefined, projectName: 'shared-project', context: undefined, name: 'reviewer', host: 'localhost', workspace: '/work/project', runtime: 'codex' });
     expect(mocks.attach).not.toHaveBeenCalled();
@@ -109,10 +109,11 @@ it('creates a seat in an existing canonical Rig pod', async () => {
   mocks.status.mockResolvedValue(value);
   render(<CoordinationDialog onClose={() => {}} />);
   await screen.findByText('shared-rig');
+  fireEvent.click(screen.getByLabelText('Add an agent to an existing project'));
   fireEvent.change(screen.getByLabelText('Rig pod'), { target: { value: 'reviewers' } });
   fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'reviewer' } });
-  fireEvent.change(screen.getByLabelText('Workspace on execution host'), { target: { value: '/work' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Create session and open terminal' }));
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
   await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ provider: 'rig', mode: 'existing', projectId: 'rig-id', projectName: 'shared-rig', context: 'reviewers', workspace: '/work' })));
 });
 
@@ -159,6 +160,7 @@ it('queues Agent Deck instructions and collects remote completions into a conduc
   fireEvent.click(screen.getByRole('button', { name: 'Collect completions' }));
   await waitFor(() => expect(mocks.drain).toHaveBeenCalledWith('agent-deck', 'sparky', 'local:conductor-1'));
   expect(await screen.findByText(/Collected 1 new of 2 records/)).toBeVisible();
+  fireEvent.click(screen.getByText(/Agent Deck activity/));
   expect(screen.getByText('Review complete')).toBeVisible();
 });
 
@@ -170,8 +172,8 @@ it('requires an upgrade choice and can persist Agent Deck as the default', async
   render(<CoordinationDialog onClose={() => {}} />);
 
   expect(await screen.findByText(/one-time upgrade choice/)).toBeVisible();
-  expect(screen.queryByText('Create coordinated session')).not.toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText('Coordination experience'), { target: { value: 'agent-deck' } });
+  expect(screen.queryByText('Start a coding agent')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Coordinator'), { target: { value: 'agent-deck' } });
   fireEvent.click(screen.getByRole('button', { name: 'Make default' }));
 
   await waitFor(() => expect(mocks.updateConfig).toHaveBeenCalledWith({ app: { coordination: { default_provider: 'agent-deck' } } }));
@@ -185,9 +187,44 @@ it('temporarily switches providers without rewriting the default', async () => {
   render(<CoordinationDialog onClose={() => {}} />);
 
   await screen.findByText('Using');
-  fireEvent.change(screen.getByLabelText('Coordination experience'), { target: { value: 'agent-deck' } });
+  fireEvent.change(screen.getByLabelText('Coordinator'), { target: { value: 'agent-deck' } });
   fireEvent.click(screen.getByRole('button', { name: 'Use this time' }));
 
   expect(await screen.findByText(/default: Rig/)).toBeVisible();
   expect(mocks.updateConfig).not.toHaveBeenCalled();
+});
+
+it('suggests meaningful editable names from a folder and purpose without launching on navigation', async () => {
+  render(<CoordinationDialog inline onClose={() => {}} />);
+  await screen.findByText('Using');
+  expect(screen.queryByRole('dialog')).toBeNull();
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/payment-service' } });
+  expect(screen.getByLabelText('Project name')).toHaveValue('payment-service');
+  expect(screen.getByLabelText('Session name')).toHaveValue('codex-builder');
+  fireEvent.change(screen.getByLabelText('Session purpose'), { target: { value: 'reviewer' } });
+  expect(screen.getByLabelText('Session name')).toHaveValue('codex-reviewer');
+  fireEvent.change(screen.getByLabelText('Coding agent'), { target: { value: 'claude-code' } });
+  expect(screen.getByLabelText('Session name')).toHaveValue('claude-reviewer');
+  fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'security-review' } });
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/other-service' } });
+  expect(screen.getByLabelText('Project name')).toHaveValue('other-service');
+  expect(screen.getByLabelText('Session name')).toHaveValue('security-review');
+  expect(mocks.create).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ mode: 'new', projectName: 'other-service', name: 'security-review', workspace: '/work/other-service', runtime: 'claude-code' })));
+});
+
+it('avoids name collisions and adds an agent to an existing project', async () => {
+  const value = emptyStatus();
+  value.projects = [{ provider: 'rig', id: 'project-one', name: 'webmux', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: ['agents'] }];
+  value.seats = [{ provider: 'rig', id: 'worker-one', projectId: 'project-one', projectName: 'webmux', name: 'codex-builder', host: 'localhost', runtime: 'codex', state: 'running', openable: true, managed: true }];
+  mocks.status.mockResolvedValue(value);
+  render(<CoordinationDialog onClose={() => {}} />);
+  await screen.findByText('Using');
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/webmux' } });
+  expect(screen.getByLabelText('Project name')).toHaveValue('webmux-2');
+  fireEvent.click(screen.getByLabelText('Add an agent to an existing project'));
+  expect(screen.getByLabelText('Session name')).toHaveValue('codex-builder-2');
+  fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ mode: 'existing', projectId: 'project-one', projectName: 'webmux', context: 'agents', name: 'codex-builder-2' })));
 });

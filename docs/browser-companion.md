@@ -7,7 +7,7 @@ panel**. Prefer your current browser for device codes, SSO, passkeys and manual
 code flows; state-bound localhost OAuth can use the callback relay. See
 [CLI authentication](authentication-handoff.md) for the flow and prerequisites.
 
-Each terminal also retains an **Open browser** action. It opens a resizable
+Each terminal also retains a **Tools → Open browser** action. It opens a resizable
 companion drawer, leaving the terminal running beside it. Choose **Use browser on
 terminal host** in the sign-in panel when you need this fallback. The drawer
 identifies the terminal and host where the browser runs. A redirect alone is not

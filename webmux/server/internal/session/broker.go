@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode"
 	"unicode/utf16"
 	"unicode/utf8"
 
@@ -453,6 +454,15 @@ func (b *Broker) Patch(owner, id string, patch Patch) (Session, error) {
 		e.value.HostID = *patch.HostID
 	case patch.Minimized != nil:
 		e.value.Minimized = *patch.Minimized
+	case patch.ProjectLabel != nil:
+		if e.value.Rig != nil {
+			return Session{}, invalid("Provider-managed projects are named by their coordinator")
+		}
+		label := strings.TrimSpace(*patch.ProjectLabel)
+		if !utf8.ValidString(label) || len(utf16.Encode([]rune(label))) > 128 || strings.ContainsFunc(label, unicode.IsControl) {
+			return Session{}, invalid("project label must be at most 128 characters without control characters")
+		}
+		e.value.ProjectLabel = label
 	case patch.Title != nil:
 		title := config.TrimSpace(*patch.Title)
 		if len(utf16.Encode([]rune(title))) < 1 || len(utf16.Encode([]rune(title))) > 128 {

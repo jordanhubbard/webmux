@@ -3,10 +3,13 @@ import { Terminal, type TerminalHandle } from './Terminal';
 import { AuthHandoff } from './AuthHandoff';
 import { BrowserCompanion } from './BrowserCompanion';
 import { TerminalActions } from './TerminalActions';
+import { Dialog } from './Dialog';
 import { ManagedHostDialog } from './ManagedHostDialog';
 import { ReconnectOverlay } from './ReconnectOverlay';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { clipboardFiles } from '../utils/terminalClipboard';
+import { sessionIdentity } from '../utils/sessionIdentity';
+import { api } from '../utils/api';
 import type { Session, ConnectionState, NamedTheme, ManagedClient } from '../types';
 
 interface TileProps {
@@ -70,6 +73,7 @@ export function Tile({
 }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [browserNavigation, setBrowserNavigation] = useState<{ url: string } | null>(null);
+  const [showTools, setShowTools] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
   const [showManagedHost, setShowManagedHost] = useState(false);
   const [handoff, setHandoff] = useState<{ url: string; requestId?: string; key: number } | null>(null);
@@ -77,6 +81,14 @@ export function Tile({
   const [transcriptEnabled, setTranscriptEnabled] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(session.title);
+  const [projectLabel, setProjectLabel] = useState(session.project_label);
+  const [showProject, setShowProject] = useState(false);
+  const [projectDraft, setProjectDraft] = useState('');
+  const [projectError, setProjectError] = useState('');
+  const [savingProject, setSavingProject] = useState(false);
+  const identity = sessionIdentity({ ...session, project_label: projectLabel });
+  useEffect(() => { setProjectLabel(session.project_label); }, [session.project_label]);
+  const editProject = () => { setProjectDraft(projectLabel || ''); setProjectError(''); setShowProject(true); };
   const { focusedSessionId, broadcastMode, broadcastExcluded, toggleBroadcastExclude } = useInputBroadcast();
   const isExcluded = broadcastExcluded.has(session.id);
   const termHandleRef = useRef<TerminalHandle>(null);
@@ -202,19 +214,19 @@ export function Tile({
             />
           ) : (
             <span
+              data-testid="session-title"
               style={styles.title}
-              title={`${session.title} (double-click to rename)`}
+              title={`Project: ${identity.project || 'not set'}\nSession: ${identity.name}\nHost: ${identity.host}\nSource: ${identity.source}${identity.workspace ? `\nRegistered workspace: ${identity.workspace}` : ''}\nDouble-click to rename session`}
               onDoubleClick={handleTitleDoubleClick}
-            >{session.title}</span>
+            >{identity.label}</span>
           )}
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
           {session.transport === 'ssh' && managedClient && <span style={{ ...styles.transport, color: managedClient.online ? '#50fa7b' : '#aaa' }} title={`Managed host ${managedClient.online ? 'connected' : 'offline'}`}>Host {managedClient.online ? '●' : '○'}</span>}
-          {session.rig && <span aria-label={session.rig.provider === 'agent-deck' ? 'Agent Deck-managed worker' : 'Rig-managed worker'} title={`${session.rig.provider || 'Rig'} session ${session.rig.target} · ${session.rig.runtime} · viewer ${state}`} style={{ ...styles.transport, color: '#c5b8ff', flexShrink: 1, minWidth: 0, maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.rig.provider === 'agent-deck' ? 'Agent Deck' : 'Rig'} · {session.rig.project} · {session.rig.name} · {session.rig.host}</span>}
+          {session.rig && <span aria-label={session.rig.provider === 'agent-deck' ? 'Agent Deck-managed worker' : 'Rig-managed worker'} title={`${identity.source} · ${identity.project} · ${identity.name} · ${identity.host} · ${session.rig.target}`} style={{ ...styles.transport, color: '#c5b8ff' }}>{identity.source}</span>}
+          {!identity.project && <button style={styles.browserBtn} onClick={editProject}>Set project</button>}
         </div>
         <div style={styles.chromeRight}>
-          {canManageHosts && session.transport === 'ssh' && <button style={styles.browserBtn} onClick={() => setShowManagedHost(true)} title="View or link a WebMux host client">Host</button>}
-          <button style={styles.browserBtn} title="Open an interactive browser on this terminal’s host" aria-expanded={showBrowser} onClick={() => setShowBrowser(true)}>Open browser</button>
-          <button style={styles.browserBtn} onClick={() => setHandoff({ url: '', key: Date.now() })}>Sign in</button>
+          <button style={styles.browserBtn} aria-label="Session tools" title="Session tools" onClick={() => setShowTools(true)}>Tools</button>
           <TerminalActions terminalRef={termHandleRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
           {broadcastMode && (
             <button
@@ -242,20 +254,7 @@ export function Tile({
             onClick={() => termHandleRef.current?.scrollToBottom()}
             title="Scroll to bottom"
           >&#8595;</button>
-          {themes.length > 0 && onThemeChange && (
-            <select
-              style={styles.themeSelect}
-              value={themeOverride ?? ''}
-              onChange={e => onThemeChange(session.id, e.target.value || null)}
-              title={themeOverride ? `Theme override: ${themeOverride}` : `Using global theme${globalTheme ? ` (${globalTheme})` : ''}`}
-              onMouseDown={e => e.stopPropagation()}
-            >
-              <option value="">{globalTheme ? `\u25bd ${globalTheme}` : '\u25bd (default)'}</option>
-              {themes.map(t => (
-                <option key={t.name} value={t.name}>{t.name}</option>
-              ))}
-            </select>
-          )}
+
           <button
             style={{ ...styles.chromeBtn, color: locked ? '#e8a030' : '#666', fontSize: 10 }}
             onClick={() => onLockToggle?.(session.id)}
@@ -275,6 +274,42 @@ export function Tile({
       {handoff && <AuthHandoff key={handoff.key} session={session} url={handoff.url}
         onDismiss={() => { if (handoff.requestId) termHandleRef.current?.acknowledgeBrowser(handoff.requestId); setHandoff(null); termHandleRef.current?.focus(); }}
         onCompanion={url => { setBrowserNavigation({ url }); setShowBrowser(true); }} />}
+      {showTools && <Dialog title="Session tools" subtitle={session.title} onClose={() => setShowTools(false)} width={440}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: 20, alignItems: 'center' }}>
+          <p style={{ width: '100%', margin: 0 }}>Project: <strong>{identity.project || 'Not set'}</strong><br />Session: {identity.name}<br />Host: {identity.host}<br />Source: {identity.source}{identity.workspace && <><br />Registered workspace: <code>{identity.workspace}</code></>}</p>
+          {!session.rig && <button style={styles.browserBtn} onClick={editProject}>Edit project label</button>}
+          {canManageHosts && session.transport === 'ssh' && <button style={styles.browserBtn} onClick={() => { setShowTools(false); setShowManagedHost(true); }} title="View or link a WebMux host client">Host</button>}
+          <button style={styles.browserBtn} title="Open an interactive browser on this terminal’s host" aria-expanded={showBrowser} onClick={() => { setShowTools(false); setShowBrowser(true); }}>Open browser</button>
+          <button style={styles.browserBtn} onClick={() => { setShowTools(false); setHandoff({ url: '', key: Date.now() }); }}>Sign in</button>
+          {themes.length > 0 && onThemeChange && (
+            <select
+              style={styles.themeSelect}
+              value={themeOverride ?? ''}
+              onChange={e => onThemeChange(session.id, e.target.value || null)}
+              title={themeOverride ? `Theme override: ${themeOverride}` : `Using global theme${globalTheme ? ` (${globalTheme})` : ''}`}
+              onMouseDown={e => e.stopPropagation()}
+            >
+              <option value="">{globalTheme ? `\u25bd ${globalTheme}` : '\u25bd (default)'}</option>
+              {themes.map(t => (
+                <option key={t.name} value={t.name}>{t.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      </Dialog>}
+      {showProject && <Dialog title="Project label" subtitle={session.title} onClose={() => setShowProject(false)} dismissible={!savingProject} width={440}>
+        <form style={{ padding: 20 }} onSubmit={event => {
+          event.preventDefault(); setSavingProject(true); setProjectError('');
+          void api.setSessionProject(session.id, projectDraft.trim()).then(updated => {
+            setProjectLabel(updated.project_label); onSessionUpdated?.(updated); setShowProject(false);
+          }).catch(err => setProjectError(String(err))).finally(() => setSavingProject(false));
+        }}>
+          <p>This terminal has no coordinator project record. Save a label so you can recognize it across reconnects and restarts. Changing directory does not change this label.</p>
+          <label>Project name<input data-dialog-autofocus value={projectDraft} onChange={event => setProjectDraft(event.target.value)} maxLength={128} style={{ width: '100%', boxSizing: 'border-box', margin: '8px 0 16px' }} /></label>
+          {projectError && <p role="alert">{projectError}</p>}
+          <button type="submit" disabled={savingProject}>{savingProject ? 'Saving…' : 'Save project label'}</button>
+        </form>
+      </Dialog>}
       {showBrowser && <BrowserCompanion session={session} navigation={browserNavigation} onHide={() => { setBrowserNavigation(null); setShowBrowser(false); termHandleRef.current?.focus(); }} />}
       {showManagedHost && <ManagedHostDialog session={session} client={managedClient} onClose={() => setShowManagedHost(false)} onChanged={() => onManagedClientChanged?.()} onSessionUpdated={updated => onSessionUpdated?.(updated)} />}
       <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>

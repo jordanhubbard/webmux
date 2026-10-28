@@ -100,7 +100,7 @@ WEBMUX_ROOT or --root optionally supplies external web/ and config.defaults/
 directories. Missing directories use embedded assets.
 Never run multiple servers against the same writable home.
 Reinstall or reconfigure services that still point to an older Node installation.
-${goos === 'darwin' ? 'macOS: keep WebMux.app at a stable location such as ~/Applications. Run its\nContents/MacOS/webmux executable for the app identity used by privacy settings.\nComplete Mac permissions in the browser after starting the server.\nThe flat bin/webmux executable is retained for CLI compatibility.\n' : ''}
+${goos === 'darwin' ? 'macOS: keep WebMux.app at a stable location such as ~/Applications. Run its\nContents/MacOS/webmux executable for the app identity used by privacy settings.\nOpen More > Mac permissions in the browser after starting the server.\nThe flat bin/webmux executable is retained for CLI compatibility.\n' : ''}
 ${goos === 'windows' ? 'Service installation: from an elevated terminal, run bin\\webmux-service.cmd install\nwith -WebMuxHome pointing to isolated state. The existing account prompt and\noptional -LocalSystem switch apply; no Node.js runtime is needed.\n' : ''}
 OpenSSH is required for SSH; mosh, sshpass and tmux depend on selected features.
 RDP requires an operator-managed guacd. These external tools are not bundled.

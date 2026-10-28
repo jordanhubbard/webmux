@@ -20,7 +20,7 @@ function Result({ result }: { result: PermissionResult }) {
   </div>;
 }
 
-export function MacPermissions() {
+export function MacPermissions({ compact = false }: { compact?: boolean }) {
   const [setup, setSetup] = useState<MacSetup | null>(null);
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -38,10 +38,10 @@ export function MacPermissions() {
     api.getMacSetup().then(value => {
       if (!active || !value.status.supported) return;
       setSetup(value);
-      setVisible(!value.skipped && ['unchecked', 'waiting'].includes(value.status.local.state));
+      setVisible(!compact && !value.skipped && ['unchecked', 'waiting'].includes(value.status.local.state));
     }).catch(() => { /* Mac setup is restricted to administrators and local unauthenticated users. */ });
     return () => { active = false; };
-  }, []);
+  }, [compact]);
 
   const localState = setup?.status.local.state;
   // Poll status only: starting a new probe would repeat prompts and flicker the UI.
@@ -115,7 +115,7 @@ export function MacPermissions() {
     onClick={() => { void action(name); }}>{text}</button>;
   const ready = status.local.state === 'allowed';
   return <>
-    <div className="mac-permissions-banner">
+    <div className={compact ? 'mac-permissions-shortcut' : 'mac-permissions-banner'}>
       <span>{ready ? 'Mac local folder access verified' : 'Mac folder access needs setup'}</span>
       <button type="button" onClick={() => setVisible(true)}>Mac permissions</button>
     </div>

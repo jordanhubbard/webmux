@@ -4,6 +4,18 @@ import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
+test('home gives a fresh 2 by 2 terminal grid the page without coordinator inventory', async ({ page }) => {
+  let coordinationRequests = 0;
+  await page.route('**/api/sessions', route => route.fulfill({ json: [] }));
+  page.on('request', request => { if (request.url().endsWith('/api/coordination')) coordinationRequests++; });
+  await page.goto('/');
+  for (const [row, col] of [[0, 0], [0, 1], [1, 0], [1, 1]]) await expect(page.getByTestId(`add-cell-${row}-${col}`).first()).toBeVisible();
+  await expect(page.getByText(/Coordinated sessions \(/)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'USB redirection' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Settings', exact: true })).toHaveCount(0);
+  expect(coordinationRequests).toBe(0);
+});
+
 test.afterAll(() => {
   if (process.env.WEBMUX_REAL_OPENRIG !== '1') return;
   const executable = path.resolve(__dirname, '.test-home', 'openrig-bin', 'rig');
@@ -14,25 +26,25 @@ test.afterAll(() => {
   expect(stopped.status, stopped.stdout + stopped.stderr).toBe(0);
 });
 
-test('coordination is a dismissible modal and leaves the terminal grid intact', async ({ page, request }) => {
+test('coordination lives in its own tab and leaves the terminal grid intact', async ({ page, request }) => {
   const original = await (await request.get('/api/sessions')).json();
   let attachments = 0;
   page.on('request', value => { if (value.method() === 'POST' && /coordination|openrig/.test(value.url())) attachments++; });
   await page.goto('/');
   await page.getByRole('button', { name: 'Coordination', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Coordination', exact: true });
+  const dialog = page.getByRole('region', { name: 'Coordination', exact: true });
   await expect(dialog).toBeVisible();
-  const experience = dialog.getByLabel('Coordination experience');
+  const experience = dialog.getByLabel('Coordinator');
   if (await experience.locator('option[value="rig"]').count()) {
     await experience.selectOption('rig');
     await dialog.getByRole('button', { name: 'Use this time' }).click();
-    await expect(dialog.getByRole('heading', { name: 'Create coordinated session', exact: true })).toBeVisible();
-    await expect(dialog.getByLabel('Workspace on execution host')).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: 'Start a coding agent', exact: true })).toBeVisible();
+    await expect(dialog.getByLabel('Code folder')).toBeVisible();
   } else {
     await expect(experience).toBeVisible();
   }
   await expect(page.getByRole('button', { name: 'Run fresh challenge' })).toHaveCount(0);
-  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Terminals', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByTestId('workspace-scroll')).toBeVisible();
   expect(attachments).toBe(0);
@@ -67,9 +79,9 @@ test('Agent Deck UI queues work and drains remote completion records', async ({ 
   });
 
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Coordination', exact: true })).toContainText('1');
+  await expect(page.getByRole('button', { name: 'Coordination', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Coordination', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Coordination', exact: true });
+  const dialog = page.getByRole('region', { name: 'Coordination', exact: true });
   const worker = dialog.getByRole('article', { name: 'reviewer in webmux' });
   await expect(worker).toContainText('Parentconductor');
   await worker.getByRole('button', { name: 'Send instruction' }).click();
@@ -80,6 +92,7 @@ test('Agent Deck UI queues work and drains remote completion records', async ({ 
   await dialog.getByRole('button', { name: 'Collect completions' }).click();
   await expect(dialog.getByText(/Collected 1 new of 2 records/)).toBeVisible();
   expect(drained).toEqual({ provider: 'agent-deck', remote: 'sparky', target: 'local:conductor' });
+  await dialog.getByText(/Agent Deck activity/).click();
   await expect(dialog.getByText('Remote review completed')).toBeVisible();
 });
 
@@ -98,13 +111,13 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   };
   const useRig = async (dialog: ReturnType<typeof page.getByRole>) => {
     await expect(dialog.locator('.coordination-current')).toBeVisible();
-    await dialog.getByLabel('Coordination experience').selectOption('rig');
+    await dialog.getByLabel('Coordinator').selectOption('rig');
     await dialog.getByRole('button', { name: 'Use this time' }).click();
     return dialog;
   };
   const openDialog = async () => {
     await page.getByRole('button', { name: 'Coordination', exact: true }).click();
-    return useRig(page.getByRole('dialog', { name: 'Coordination', exact: true }));
+    return useRig(page.getByRole('region', { name: 'Coordination', exact: true }));
   };
   const openAgent = async (name: string, reconnect = false) => {
     const dialog = await openDialog();
@@ -126,18 +139,19 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
         await page.getByTestId('add-cell-0-0').first().click();
         await page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Open coordinated session' }).click();
         dialog = await useRig(page.getByRole('dialog', { name: 'Coordination', exact: true }));
-        await dialog.getByLabel('New coordinated project').check();
+        await dialog.getByLabel('Start a new project').check();
       } else {
         await page.getByRole('button', { name: 'Desktops', exact: true }).click();
         dialog = await openDialog();
+        await dialog.getByLabel('Add an agent to an existing project').check();
       }
-      if (index === 0) await dialog.getByLabel('New Rig name', { exact: true }).fill(project);
+      if (index === 0) await dialog.getByLabel('Project name', { exact: true }).fill(project);
       await dialog.getByLabel('Session name', { exact: true }).fill(name);
-      await dialog.getByLabel('Execution host', { exact: true }).fill('localhost');
-      await dialog.getByLabel('Workspace on execution host', { exact: true }).fill(home);
+      await dialog.getByLabel('Run on host', { exact: true }).fill('localhost');
+      await dialog.getByLabel('Code folder', { exact: true }).fill(home);
       await dialog.getByRole('combobox', { name: 'Coding agent', exact: true }).selectOption('codex');
       const response = page.waitForResponse(value => value.url().endsWith('/api/coordination/agents') && value.request().method() === 'POST');
-      await dialog.getByRole('button', { name: 'Create session and open terminal', exact: true }).click();
+      await dialog.getByRole('button', { name: 'Start agent and open terminal', exact: true }).click();
       expect((await response).status()).toBe(200);
       await expect(dialog).toHaveCount(0);
       const agent = (await status()).seats.find(value => value.name === name)!;
@@ -145,12 +159,14 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       const session = listing.find(value => value.openrig_view === `managed:${agent.id}`)!;
       if (index === 0) expect([session.row, session.col]).toEqual([0, 0]);
       sessions.push(session.id);
-      expect(session.rig).toEqual({ target: agent.id, project, name, host: 'localhost', runtime: 'codex' });
+      expect(session.rig).toEqual({ target: agent.id, project, name, host: 'localhost', runtime: 'codex', workspace: home });
       const terminal = page.getByTestId(`tile-cell-${session.id}`);
       await expect(page.getByTestId('workspace-scroll')).toBeVisible();
       await expect(terminal).toBeInViewport({ ratio: 0.1 });
       await expect(terminal.locator('.xterm-helper-textarea')).toBeFocused();
-      await expect(terminal.getByLabel('Rig-managed worker')).toContainText(`Rig · ${project} · ${name} · localhost`);
+      await expect(terminal.getByLabel('Rig-managed worker')).toHaveAttribute('title', new RegExp(project));
+      await expect(terminal.getByText(`${project} / ${name}`, { exact: true })).toBeVisible();
+      await expect(page).toHaveTitle(new RegExp(project));
       await expect(terminal.locator('.xterm-rows')).toContainText('FIXTURE_READY');
       await expect(terminal.locator('.xterm-rows')).toContainText(agent.id);
     }
@@ -324,7 +340,7 @@ test('coordination groups provider-owned sessions in keyboard-expandable project
   } }));
   await page.goto('/');
   await page.getByRole('button', { name: 'Coordination', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Coordination', exact: true });
+  const dialog = page.getByRole('region', { name: 'Coordination', exact: true });
   const workers = dialog.getByRole('list', { name: 'demo-release sessions' });
   await expect(workers.getByRole('article')).toHaveCount(2);
   await expect(workers.getByText('build-host', { exact: true })).toBeVisible();

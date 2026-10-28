@@ -19,10 +19,12 @@ test('workspace and dialogs render identically across Go runs', async ({ page },
   await expect(page.getByRole('dialog', { name: 'Connect to Host' })).toBeVisible();
   await capture(page, info, 'terminal-dialog.png');
   await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Settings' }).getByLabel('Application name')).toBeVisible();
   await capture(page, info, 'settings.png');
   await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Close more', exact: true }).click();
   await page.getByRole('button', { name: 'Desktops', exact: true }).click();
   await capture(page, info, 'desktops.png');
   for (const protocol of ['VNC', 'RDP']) {
@@ -53,6 +55,7 @@ test('setup and sign-in render identically across Go runs', async ({ page }, inf
   await page.getByLabel('Confirm Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Create Account', exact: true }).click();
   await expect(page.getByTestId('add-cell-0-0').first()).toBeVisible();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByText('Sign in to your session', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Confirm Password', { exact: true })).toHaveCount(0);
@@ -67,6 +70,7 @@ test('setup and sign-in render identically across Go runs', async ({ page }, inf
   await expect(page.getByTestId('add-cell-0-0').first()).toBeVisible();
   await page.reload();
   await expect(page.getByTestId('add-cell-0-0').first()).toBeVisible();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
 });
 

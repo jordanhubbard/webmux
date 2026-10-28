@@ -17,7 +17,7 @@ test('tile drag scrolls all edges, tracks the current grid and stops on drop or 
     await page.goto('/');
     const scroll = page.getByTestId('workspace-scroll');
     const tile = page.getByTestId(`tile-cell-${ids[0]}`);
-    const title = tile.locator('[title$="(double-click to rename)"]');
+    const title = tile.getByTestId('session-title');
     await expect(title).toBeVisible();
     await tile.locator('.xterm-helper-textarea').focus();
     const bounds = (await scroll.boundingBox())!;

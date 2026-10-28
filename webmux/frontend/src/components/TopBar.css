@@ -1,0 +1,8 @@
+.toolbar-options { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 20px; line-height: 1.5; }
+.toolbar-options > div { max-width: 100%; }
+.mac-permissions-shortcut { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; font-size: 13px; }
+.mac-permissions-shortcut button { color: #eee; background: #303052; border: 1px solid #515181; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+@media (max-width: 650px) {
+  .webmux-topbar { height: auto !important; min-height: 44px; flex-wrap: wrap; padding: 8px !important; }
+  .webmux-topbar > div { max-width: 100%; flex-wrap: wrap; }
+}
