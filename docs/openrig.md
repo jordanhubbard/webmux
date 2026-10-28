@@ -121,6 +121,23 @@ Agent Deck instance. Session IDs are qualified by location (`local:<id>` or
 browser shows the native Codex or Claude session ID when Agent Deck reports it,
 and uses Agent Deck's own local or remote attach transport when opening a tile.
 
+To let Agent Deck panes follow WebMux's terminal colors, merge this setting into
+Agent Deck's `config.toml` on each execution host (use `agent-deck config get
+theme --json` to locate the effective file):
+
+```toml
+[tmux]
+window_style_override = "default"
+```
+
+Add the key to an existing `[tmux]` table rather than creating a duplicate table.
+This is Agent Deck's [supported pane-style override](https://github.com/asheshgoplani/agent-deck/blob/v1.16.34/internal/session/userconfig.go).
+It lets the terminal emulator supply the background instead of Agent Deck
+painting a fixed color based on the desktop appearance. The setting persists
+across attaches and applies to Agent Deck sessions opened in other terminals too.
+Existing attached panes may need a reconnect before Agent Deck reapplies it;
+the coding agent itself does not need to restart.
+
 Creating a session in an Agent Deck group routes `launch` to the selected local
 instance or registered remote and starts Codex or Claude in the selected
 workspace. Remote workspace browsing resolves the registered remote to its SSH
