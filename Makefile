@@ -161,7 +161,7 @@ check-guacd:
 	fi
 
 deps:
-	@cd "$(WEBMUX_DIR)" && $(NPM) install $(NPM_WORKSPACES) --silent
+	@cd "$(WEBMUX_DIR)" && $(NPM) install $(NPM_WORKSPACES) --no-audit --no-fund
 
 build: build-server build-client
 	@printf "$(C_GRN)✓$(C_RST) Server and client build complete.\n"
@@ -410,14 +410,14 @@ install-agent-deck:
 
 install-all: install-server install-client
 
-install-server: install-agent-deck stop build-server
+# Finish fallible preparation before interrupting the installed service.
+# Do not list stop as a prerequisite: make -j can run it beside the build.
+install-server: install-agent-deck build-server
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Installing launchd service…\n"
 	@$(NODE) scripts/macos-app.mts "$(WEBMUX_DIR)/bin/webmux" "$(MACOS_APP)"
 	@PATH="$(AGENT_DECK_BINDIR):$$PATH" $(NODE) scripts/render-service.mts
-	@launchctl bootout $(LAUNCHD_SVC) 2>/dev/null || true
-	@launchctl bootstrap gui/$$(id -u) "$$WEBMUX_SERVICE_OUTPUT"
-	@launchctl kickstart -k $(LAUNCHD_SVC) 2>/dev/null || true
+	@$(NODE) scripts/check-launchd.mts "$(LAUNCHD_SVC)" "$(LOGFILE)" "$$WEBMUX_SERVICE_OUTPUT"
 	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)%s$(C_RST)\n" "$$WEBMUX_SERVICE_OUTPUT"
 	@printf "  $(C_DIM)config:$(C_RST) %s\n" "$$WEBMUX_HOME"
 	@printf "  $(C_DIM)logs:$(C_RST)   %s/logs/webmux.log\n" "$$WEBMUX_HOME"
@@ -427,6 +427,7 @@ else
 	@printf "$(C_BLU)▸$(C_RST) Installing systemd user service…\n"
 	@PATH="$(AGENT_DECK_BINDIR):$$PATH" $(NODE) scripts/render-service.mts
 	@systemctl --user daemon-reload
+	@systemctl --user stop "$(SYSTEMD_UNIT)"
 	@systemctl --user enable --now "$(SYSTEMD_UNIT)"
 	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)%s$(C_RST)\n" "$$WEBMUX_SERVICE_OUTPUT"
 	@printf "  $(C_DIM)config:$(C_RST) %s\n" "$$WEBMUX_HOME"
