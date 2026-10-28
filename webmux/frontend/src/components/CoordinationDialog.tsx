@@ -160,7 +160,11 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
   };
   const browse = async (path?: string) => {
     setBusy(true); setError('');
-    try { setBrowser(await api.browseCoordinationWorkspaces(provider, host, path)); }
+    try {
+      const listing = await api.browseCoordinationWorkspaces(provider, host, path);
+      setBrowser(listing);
+      setWorkspace(listing.path);
+    }
     catch (err) { setError(String(err)); }
     finally { setBusy(false); }
   };

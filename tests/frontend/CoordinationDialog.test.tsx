@@ -66,7 +66,7 @@ it('offers None alongside both providers and persists it without creating sessio
   expect(mocks.create).not.toHaveBeenCalled();
 });
 
-it('creates a new Rig project in a browsed host workspace and opens its terminal', async () => {
+it('launches from the browsed folder without requiring a second folder selection', async () => {
   const changed = vi.fn(); const close = vi.fn();
   window.addEventListener('webmux-sessions-changed', changed);
   try {
@@ -76,10 +76,13 @@ it('creates a new Rig project in a browsed host workspace and opens its terminal
     fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'reviewer' } });
     fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
     await waitFor(() => expect(mocks.browse).toHaveBeenCalledWith('rig', 'localhost', undefined));
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose this folder' }));
+    await waitFor(() => expect(screen.getByLabelText('Code folder')).toHaveValue('/work/project'));
+    mocks.browse.mockResolvedValue({ host: 'localhost', path: '/work', parent: '/', repository: false, entries: [] });
+    fireEvent.click(screen.getByRole('button', { name: 'Parent folder' }));
+    await waitFor(() => expect(screen.getByLabelText('Code folder')).toHaveValue('/work'));
     fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
     await waitFor(() => expect(close).toHaveBeenCalledOnce());
-    expect(mocks.create).toHaveBeenCalledWith({ provider: 'rig', mode: 'new', projectId: undefined, projectName: 'shared-project', context: undefined, name: 'reviewer', host: 'localhost', workspace: '/work/project', runtime: 'codex' });
+    expect(mocks.create).toHaveBeenCalledWith({ provider: 'rig', mode: 'new', projectId: undefined, projectName: 'shared-project', context: undefined, name: 'reviewer', host: 'localhost', workspace: '/work', runtime: 'codex' });
     expect(mocks.attach).not.toHaveBeenCalled();
     expect(changed).toHaveBeenCalledOnce();
   } finally { window.removeEventListener('webmux-sessions-changed', changed); }
