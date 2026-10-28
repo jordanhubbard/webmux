@@ -5,6 +5,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.29] - 2026-10-28
+
 ### Changed
 - Restore the terminal-first home: start with a 2×2 grid, keep coordination in
   its own tab, and put display preferences, account/host tools, and per-session
@@ -14,6 +16,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Show durable project/session identity in terminal titles, the dock and browser
   window titles. Use coordinator-owned identity for managed sessions and saved
   project labels for ordinary terminals, independently of changing CWD (#228).
+
+### Fixed
+- Hide dot-prefixed folders in the coordination workspace browser by default;
+  use **Show all** to reveal them (#230).
+- Keep **Code folder** synchronized with the folder shown in the browser,
+  including parent-folder navigation, so launching an agent does not require
+  selecting the same folder again (#232).
+
+### Documentation
+- Explain Agent Deck's supported pane-style setting for inheriting WebMux's
+  terminal colors instead of using a desktop-dependent fixed background. This
+  setting must be applied to an existing Agent Deck configuration explicitly
+  (#233).
 
 ## [1.3.28] - 2026-10-28
 
