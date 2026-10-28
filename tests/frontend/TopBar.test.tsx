@@ -1,16 +1,18 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TopBar } from '@frontend/components/TopBar';
 import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
 import type { AuthState } from '@frontend/hooks/useAuth';
 import type { ReactNode } from 'react';
 
-const apiMocks = vi.hoisted(() => ({ getCoordination: vi.fn() }));
-vi.mock('@frontend/utils/api', () => ({ api: { getCoordination: apiMocks.getCoordination } }));
+const apiMocks = vi.hoisted(() => ({ getCoordination: vi.fn(), updateConfig: vi.fn() }));
+vi.mock('@frontend/utils/api', () => ({ api: { getCoordination: apiMocks.getCoordination, updateConfig: apiMocks.updateConfig } }));
 
 beforeEach(() => {
   apiMocks.getCoordination.mockReset();
   apiMocks.getCoordination.mockResolvedValue({ attentionCount: 0 });
+  apiMocks.updateConfig.mockReset();
+  apiMocks.updateConfig.mockResolvedValue(undefined);
 });
 
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -77,6 +79,25 @@ describe('TopBar', () => {
     apiMocks.getCoordination.mockResolvedValue({ attentionCount: 3 });
     render(<TopBar {...defaultTopBarProps()} />, { wrapper });
     expect(await screen.findByTitle('3 coordinated session updates need attention')).toHaveTextContent('Coordination3');
+  });
+
+  it('surfaces and persists Agent Deck, Rig and None in the main toolbar', async () => {
+    apiMocks.getCoordination.mockResolvedValue({ attentionCount: 0, defaultProvider: 'agent-deck' });
+    render(<TopBar {...defaultTopBarProps()} />, { wrapper });
+    const selector = screen.getByRole('combobox', { name: 'Coordinator' });
+    await waitFor(() => expect(selector).toHaveValue('agent-deck'));
+    for (const label of ['Agent Deck', 'Rig', 'None']) expect(screen.getByRole('option', { name: label })).toBeInTheDocument();
+    for (const provider of ['rig', 'disabled', 'agent-deck']) {
+      apiMocks.getCoordination.mockResolvedValue({ attentionCount: 0, defaultProvider: provider });
+      fireEvent.change(selector, { target: { value: provider } });
+      await waitFor(() => expect(apiMocks.updateConfig).toHaveBeenLastCalledWith({ app: { coordination: { default_provider: provider } } }));
+      await waitFor(() => expect(selector).toHaveValue(provider));
+      await waitFor(() => expect(selector).toBeEnabled());
+    }
+    apiMocks.updateConfig.mockRejectedValue(new Error('Cannot save coordinator'));
+    fireEvent.change(selector, { target: { value: 'rig' } });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Cannot save coordinator');
+    expect(selector).toHaveValue('agent-deck');
   });
 
   it('shows secure badge in secure mode', () => {

@@ -108,8 +108,8 @@ func TestCoordinationDefaultMigrationAndValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := AsObject(normalized.App["coordination"])["default_provider"]; got != "choose" {
-		t.Fatalf("missing provider normalized to %v, want choose", got)
+	if got := AsObject(normalized.App["coordination"])["default_provider"]; got != "agent-deck" {
+		t.Fatalf("missing provider normalized to %v, want agent-deck", got)
 	}
 	for _, provider := range []string{"agent-deck", "rig", "disabled", "choose"} {
 		updated, err := Update(Document{App: Object{}}, Object{"coordination": Object{"default_provider": provider}})

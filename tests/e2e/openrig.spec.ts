@@ -97,7 +97,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     seats: Agent[]; messages: { from: string; to: string; body: string }[];
   };
   const useRig = async (dialog: ReturnType<typeof page.getByRole>) => {
-    await dialog.getByRole('button', { name: 'Change' }).click();
+    await expect(dialog.locator('.coordination-current')).toBeVisible();
     await dialog.getByLabel('Coordination experience').selectOption('rig');
     await dialog.getByRole('button', { name: 'Use this time' }).click();
     return dialog;

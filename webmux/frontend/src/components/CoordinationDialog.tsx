@@ -71,7 +71,7 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
       setStatus(value); setStatusError('');
       if (!providerInitialized.current) {
         providerInitialized.current = true;
-        if (value.defaultProvider === 'agent-deck' || value.defaultProvider === 'rig') setProvider(value.defaultProvider);
+        if (value.defaultProvider === 'agent-deck' || value.defaultProvider === 'rig' || value.defaultProvider === 'disabled') setProvider(value.defaultProvider);
         else setChangingProvider(true);
       }
     } catch (err) { setStatusError(String(err)); }
@@ -160,12 +160,13 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
     setProvider(value); setProjectID(''); setBrowser(null); setWorkspace('');
   };
   const makeDefault = async () => {
-    if (provider !== 'agent-deck' && provider !== 'rig') return;
+    if (provider !== 'agent-deck' && provider !== 'rig' && provider !== 'disabled') return;
     setBusy(true); setError('');
     try {
       await api.updateConfig({ app: { coordination: { default_provider: provider } } });
       setStatus(current => ({ ...current, defaultProvider: provider }));
       setChangingProvider(false);
+      window.dispatchEvent(new CustomEvent('webmux-sessions-changed'));
     } catch (err) { setError(String(err)); }
     finally { setBusy(false); }
   };
@@ -196,21 +197,25 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
       {statusError && <p role="alert" className="coordination-error">{statusError}</p>}
       {error && <p role="alert" className="coordination-error">{error}</p>}
       <div className="coordination-toolbar">
-        {provider && !changingProvider
-          ? <div className="coordination-current"><span>Using <strong>{selectedProvider?.label ?? provider}</strong>{status.defaultProvider !== provider && <> · default: {defaultProvider?.label ?? status.defaultProvider}</>}</span><button type="button" disabled={busy} onClick={() => setChangingProvider(true)}>Change</button></div>
-          : <div className="coordination-provider-choice">
-              <label>Coordination experience<select aria-label="Coordination experience" value={provider} onChange={event => chooseProvider(event.target.value)}>
+        {provider && <div className="coordination-current"><span>Using <strong>{provider === 'disabled' ? 'None' : selectedProvider?.label ?? provider}</strong>{status.defaultProvider !== provider && <> · default: {status.defaultProvider === 'disabled' ? 'None' : defaultProvider?.label ?? status.defaultProvider}</>}</span></div>}
+          <div className="coordination-provider-choice">
+              <label>Coordination experience<select aria-label="Coordination experience" disabled={busy} value={provider} onChange={event => { chooseProvider(event.target.value); setChangingProvider(true); }}>
                 <option value="">Choose an experience…</option>
-                {status.providers.map(value => <option key={value.id} value={value.id}>{value.label}{value.id === 'agent-deck' ? ' (recommended)' : ''}{value.available ? '' : ' · unavailable'}</option>)}
+                {['agent-deck', 'rig'].map(id => {
+                  const value = status.providers.find(value => value.id === id);
+                  return <option key={id} value={id}>{id === 'agent-deck' ? 'Agent Deck' : 'Rig'}{value?.available ? '' : ' · unavailable'}</option>;
+                })}
+                <option value="disabled">None</option>
               </select></label>
-              {provider && <button type="button" disabled={busy} onClick={() => setChangingProvider(false)}>Use this time</button>}
+              {provider && changingProvider && <button type="button" disabled={busy} onClick={() => setChangingProvider(false)}>Use this time</button>}
               {provider && status.defaultProvider !== provider && <button type="button" disabled={busy} onClick={() => void makeDefault()}>Make default</button>}
-            </div>}
+            </div>
         <button type="button" disabled={busy} onClick={() => void refresh()}>Refresh projects and sessions</button>
       </div>
       {status.defaultProvider === 'choose' && !provider && <p role="note">Choose Agent Deck or Rig to begin. Making it the default completes the one-time upgrade choice.</p>}
       {status.defaultProvider === 'disabled' && !provider && <p role="note">Coordination is disabled. Choose an experience above to enable it now or make it the default.</p>}
-      {provider && <>
+      {provider === 'disabled' && <p role="status">No coordinator selected. Existing sessions keep running. Choose Agent Deck or Rig to manage coordinated sessions.</p>}
+      {provider && provider !== 'disabled' && <>
       {selectedProvider?.message && !selectedProvider.available && <p role="note">{selectedProvider.message}</p>}
       {status.errors[provider] && <p role="alert" className="coordination-error">{status.errors[provider]}</p>}
 
@@ -289,7 +294,7 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
       </form>
       </>}
       <details><summary>Provider contracts</summary><ul>{status.providers.map(value => <li key={value.id}><strong>{value.label}</strong> · <code>{value.contract}</code> · {value.capabilities.join(', ')}</li>)}</ul></details>
-      <details><summary>Advanced diagnostics</summary><p><a href="?panel=openrig" target="_blank" rel="noreferrer">Open Rig text dashboard</a></p></details>
+      {provider === 'rig' && <details><summary>Rig diagnostics</summary><p><a href="?panel=openrig" target="_blank" rel="noreferrer">Open Rig text dashboard (Rig provider only)</a></p></details>}
     </div>
   </Dialog>;
 }

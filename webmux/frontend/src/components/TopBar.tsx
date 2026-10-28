@@ -81,6 +81,9 @@ export function TopBar({
   const [showUSB, setShowUSB] = useState(false);
   const [showCoordination, setShowCoordination] = useState(false);
   const [coordinationAttention, setCoordinationAttention] = useState(0);
+  const [coordinator, setCoordinator] = useState('');
+  const [savingCoordinator, setSavingCoordinator] = useState(false);
+  const [coordinatorError, setCoordinatorError] = useState('');
   const [editingSize, setEditingSize] = useState(false);
   const [sizeInput, setSizeInput] = useState('');
   const sizeInputRef = useRef<HTMLInputElement>(null);
@@ -95,12 +98,26 @@ export function TopBar({
 
   useEffect(() => {
     if (!canManageSettings) { setCoordinationAttention(0); return; }
-    const refresh = () => { void api.getCoordination().then(value => setCoordinationAttention(value.attentionCount || 0)).catch(() => {}); };
+    const refresh = () => { void api.getCoordination().then(value => {
+      setCoordinationAttention(value.attentionCount || 0);
+      setCoordinator(value.defaultProvider || 'agent-deck');
+    }).catch(() => {}); };
     refresh();
     const timer = window.setInterval(refresh, 30000);
     window.addEventListener('webmux-sessions-changed', refresh);
     return () => { window.clearInterval(timer); window.removeEventListener('webmux-sessions-changed', refresh); };
   }, [canManageSettings]);
+
+  const chooseCoordinator = async (provider: string) => {
+    if (provider !== 'agent-deck' && provider !== 'rig' && provider !== 'disabled') return;
+    setSavingCoordinator(true); setCoordinatorError('');
+    try {
+      await api.updateConfig({ app: { coordination: { default_provider: provider } } });
+      setCoordinator(provider);
+      window.dispatchEvent(new CustomEvent('webmux-sessions-changed'));
+    } catch (err) { setCoordinatorError(String(err)); }
+    finally { setSavingCoordinator(false); }
+  };
 
   const remainingSeconds = auth.sessionExpiresAt
     ? Math.max(0, Math.ceil((auth.sessionExpiresAt - now) / 1000))
@@ -131,6 +148,14 @@ export function TopBar({
           <span aria-hidden="true">🔌</span> USB
         </button>
         {canManageSettings && <button style={styles.iconBtn} aria-label="Coordination" title={coordinationAttention ? `${coordinationAttention} coordinated session updates need attention` : 'Manage coordinated sessions'} onClick={() => setShowCoordination(true)}>Coordination{coordinationAttention > 0 && <span aria-hidden="true" style={styles.attentionBadge}>{coordinationAttention}</span>}</button>}
+        {canManageSettings && <label style={{ color: '#bbb', fontSize: 12 }}>Coordinator{' '}
+          <select aria-label="Coordinator" title="Default session coordinator" style={styles.iconBtn} value={coordinator}
+            disabled={savingCoordinator || !coordinator} onChange={event => void chooseCoordinator(event.target.value)}>
+            {(!coordinator || coordinator === 'choose') && <option value={coordinator}>{coordinator ? 'Choose…' : 'Loading…'}</option>}
+            <option value="agent-deck">Agent Deck</option><option value="rig">Rig</option><option value="disabled">None</option>
+          </select>
+        </label>}
+        {coordinatorError && <span role="alert">{coordinatorError}</span>}
         <button
           style={{
             ...styles.broadcastBtn,

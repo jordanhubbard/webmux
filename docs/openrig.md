@@ -5,13 +5,17 @@ WebMux exposes coordinator-managed coding sessions behind the ordinary
 browser backed by a versioned provider contract. Agent Deck is the recommended
 session conductor; Rig remains an optional topology-centric provider. Creating
 a session opens its interactive CLI in a normal terminal
-tile. The raw Rig text dashboard remains available under **Advanced
-diagnostics**.
+tile. When Rig is selected, its raw text dashboard is available under **Rig
+diagnostics**. That dashboard reports Rig status; Agent Deck sessions appear in
+the Agent Deck Coordination view.
 
-New installations open Coordination in Agent Deck by default. Select
-**Settings → Coordination** to make Agent Deck, Rig, or Disabled the persistent
-experience. Upgraded installations that predate this setting ask once instead
-of silently changing an existing Rig workflow. The Coordination header shows
+New installations and upgrades without a saved provider open Coordination in
+Agent Deck by default. The main toolbar's **Coordinator** menu shows the current
+selection and offers **Agent Deck**, **Rig**, and **None**. Selecting an entry
+saves the default immediately. **None** leaves existing sessions running.
+The Coordination dialog also exposes all three choices; **Make default** saves
+its selection. **Settings → Coordination** provides the same setting.
+Explicit provider selections are preserved. The Coordination header shows
 the active provider; **Change** browses another provider for the current visit,
 and **Make default** persists that choice. A configured provider that is not
 installed remains selected with its installation guidance—WebMux never falls

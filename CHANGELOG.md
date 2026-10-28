@@ -5,6 +5,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.28] - 2026-10-28
+
+### Fixed
+- Surface the active coordinator in a toolbar menu with Agent Deck, Rig, and
+  None; expose the same choices directly in the Coordination dialog (#227).
+- Use Agent Deck by default when upgrading a configuration without a saved
+  coordination provider; preserve explicit provider selections (#227).
+- Label disconnected Rig diagnostic sessions accurately, offer explicit
+  reconnection after server restarts, and show Rig diagnostics only for the Rig
+  coordination provider (#227).
+- Retry macOS service registration while launchd finishes unloading the previous
+  job, avoiding intermittent bootstrap error 5 during source upgrades (#225).
+- Build the replacement server before interrupting the installed service, so a
+  failed source build or parallel `make install-all` leaves the running server
+  available (#225).
+- Check that the macOS LaunchAgent remains running before reporting a successful
+  server installation; propagate startup errors and point to the server log
+  instead of silently accepting an exited job (#225).
+
 ## [1.3.27] - 2026-10-27
 
 ### Other

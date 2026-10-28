@@ -6,9 +6,9 @@ import type { Session } from '@frontend/types';
 
 const mocks = vi.hoisted(() => ({ status: vi.fn(), attach: vi.fn(), remove: vi.fn(), stop: vi.fn(), agents: vi.fn() }));
 vi.mock('@frontend/utils/api', () => ({ api: { getOpenRig: mocks.status, attachOpenRig: mocks.attach, deleteSession: mocks.remove, stopOpenRigProof: mocks.stop, getOpenRigAgents: mocks.agents } }));
-vi.mock('@frontend/components/Terminal', () => ({ Terminal: () => {
+vi.mock('@frontend/components/Terminal', () => ({ Terminal: ({ onStateChange }: { onStateChange: (state: string) => void }) => {
   const { broadcastMode } = useInputBroadcast();
-  return <div>Dashboard broadcast: {String(broadcastMode)}</div>;
+  return <div>Dashboard broadcast: {String(broadcastMode)}<button onClick={() => onStateChange('disconnected')}>Simulate dashboard exit</button></div>;
 } }));
 const session = { id: 'dashboard-one', state: 'connected', companion: 'openrig' } as Session;
 beforeEach(() => {
@@ -17,6 +17,21 @@ beforeEach(() => {
   mocks.attach.mockImplementation(async () => { mocks.status.mockResolvedValue({ available: true, message: '', session }); return session; });
   mocks.remove.mockResolvedValue(undefined);
   mocks.agents.mockResolvedValue([]);
+});
+
+it('reports a restored disconnected dashboard and reattaches it explicitly', async () => {
+  mocks.status.mockResolvedValue({ available: true, message: '', session: { ...session, state: 'disconnected' } });
+  render(<OpenRigWorkspace fontSize={14} poppedOut />);
+  expect(await screen.findByText('Dashboard disconnected')).toBeVisible();
+  expect(screen.queryByText('Dashboard connected')).toBeNull();
+  expect(screen.getByText(/For Agent Deck sessions/)).toBeVisible();
+  expect(mocks.attach).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Reconnect dashboard' }));
+  expect(await screen.findByText('Dashboard connected')).toBeVisible();
+  expect(mocks.attach).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Simulate dashboard exit' }));
+  expect(await screen.findByText('Dashboard disconnected')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Reconnect dashboard' })).toBeEnabled();
 });
 
 it('does not launch on selection, explains missing prerequisites and reports attachment failures', async () => {

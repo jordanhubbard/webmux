@@ -4,6 +4,53 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
+import { registerService } from './check-launchd.mts';
+
+test('launchd registration retries asynchronous teardown and propagates persistent failures', async () => {
+  let attempts = 0;
+  await registerService('gui/501', '/fixture.plist', () => {
+    if (++attempts < 3) throw new Error('Bootstrap failed: 5: Input/output error');
+  }, async () => {}, 1000);
+  assert.equal(attempts, 3);
+  await assert.rejects(registerService('gui/501', '/fixture.plist', () => {
+    throw new Error('permission denied');
+  }, async () => {}, 0), /permission denied/);
+});
+
+test('failed server builds preserve the installed service, including parallel install-all', { skip: process.platform === 'win32' }, () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-install-build-failure-'));
+  const marker = path.join(directory, 'stopped');
+  try {
+    for (const action of ['install-server', 'install-all']) {
+      const result = spawnSync('make', ['--no-print-directory', '-j4', '-o', 'install-agent-deck', '-o', 'build-client',
+        action, 'NPM=false', `CLIENT_BINDIR=${path.join(directory, 'bin')}`,
+        'SVC_INSTALLED=true', 'SVC_STOP=touch "$$WEBMUX_STOP_MARKER"'], {
+        cwd: path.resolve(import.meta.dirname, '..'), encoding: 'utf8', timeout: 10000,
+        env: { ...process.env, WEBMUX_STOP_MARKER: marker },
+      });
+      assert.ifError(result.error);
+      assert.notEqual(result.status, 0, 'Build failure was swallowed');
+      assert(!fs.existsSync(marker), `${action} stopped the installed server before the build succeeded`);
+    }
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('launchd startup verification rejects exited jobs and accepts a stable running PID', { skip: process.platform === 'win32' }, () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-launchd-startup-'));
+  try {
+    fs.writeFileSync(path.join(directory, 'launchctl'), '#!/bin/sh\nprintf "%s\\n" "$WEBMUX_LAUNCHD_STATE"\n', { mode: 0o700 });
+    for (const running of [false, true]) {
+      const result = spawnSync(process.execPath, [path.join(import.meta.dirname, 'check-launchd.mts'), 'gui/501/fixture', '/fixture/server.log'], {
+        encoding: 'utf8', timeout: 15000,
+        env: { ...process.env, PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`,
+          WEBMUX_LAUNCHD_STATE: running ? 'state = running\npid = 123' : 'state = not running\nlast exit code = 0' },
+      });
+      assert.ifError(result.error);
+      assert.equal(result.status, running ? 0 : 1, result.stdout + result.stderr);
+      if (!running) assert.match(result.stderr, /did not remain running.*\/fixture\/server.log/);
+    }
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
 
 test('Make does not report successful service control after a failed manager command or rebuild', { skip: process.platform === 'win32' }, () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-make-failure-'));

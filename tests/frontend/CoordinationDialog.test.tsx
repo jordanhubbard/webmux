@@ -44,6 +44,28 @@ it('opens without launching sessions and reports provider failures', async () =>
   expect(mocks.attach).not.toHaveBeenCalled();
 });
 
+it('shows Rig diagnostics only while using the Rig provider', async () => {
+  const view = render(<CoordinationDialog onClose={() => {}} />);
+  fireEvent.click(await screen.findByText('Rig diagnostics'));
+  expect(screen.getByRole('link', { name: /Open Rig text dashboard/ })).toHaveAttribute('href', '?panel=openrig');
+  view.unmount();
+  mocks.status.mockResolvedValue({ ...emptyStatus(), defaultProvider: 'agent-deck' });
+  render(<CoordinationDialog onClose={() => {}} />);
+  await screen.findByText('Using');
+  expect(screen.queryByRole('link', { name: /Open Rig text dashboard/ })).toBeNull();
+});
+
+it('offers None alongside both providers and persists it without creating sessions', async () => {
+  render(<CoordinationDialog onClose={() => {}} />);
+  await screen.findByText('Using');
+  fireEvent.change(screen.getByLabelText('Coordination experience'), { target: { value: 'disabled' } });
+  expect(screen.getByRole('status')).toHaveTextContent('No coordinator selected');
+  expect(screen.queryByText('Create coordinated session')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Make default' }));
+  await waitFor(() => expect(mocks.updateConfig).toHaveBeenCalledWith({ app: { coordination: { default_provider: 'disabled' } } }));
+  expect(mocks.create).not.toHaveBeenCalled();
+});
+
 it('creates a new Rig project in a browsed host workspace and opens its terminal', async () => {
   const changed = vi.fn(); const close = vi.fn();
   window.addEventListener('webmux-sessions-changed', changed);
@@ -162,7 +184,7 @@ it('temporarily switches providers without rewriting the default', async () => {
   mocks.status.mockResolvedValue(value);
   render(<CoordinationDialog onClose={() => {}} />);
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Change' }));
+  await screen.findByText('Using');
   fireEvent.change(screen.getByLabelText('Coordination experience'), { target: { value: 'agent-deck' } });
   fireEvent.click(screen.getByRole('button', { name: 'Use this time' }));
 
