@@ -110,7 +110,7 @@ func Normalize(document Document, environment bool) (Document, error) {
 	app["font_faces"] = faces
 	app["session_logging"] = Object{"enabled": boolean(AsObject(app["session_logging"])["enabled"], false)}
 	coordination := clone(AsObject(app["coordination"]))
-	provider := text(coordination["default_provider"], "choose")
+	provider := text(coordination["default_provider"], "agent-deck")
 	if !slices.Contains([]string{"agent-deck", "rig", "disabled", "choose"}, provider) {
 		return Document{}, invalid("Invalid coordination default_provider: " + provider)
 	}

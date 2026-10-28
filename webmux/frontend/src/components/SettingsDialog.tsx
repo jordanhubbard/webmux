@@ -48,7 +48,7 @@ interface SettingsForm {
 function formFromConfig(config: AppConfig): SettingsForm {
   return {
     name: config.app.name,
-    coordinationProvider: config.app.coordination?.default_provider ?? 'choose',
+    coordinationProvider: config.app.coordination?.default_provider ?? 'agent-deck',
     cols: String(config.app.default_term.cols),
     rows: String(config.app.default_term.rows),
     fontSize: String(config.app.default_term.font_size),
@@ -293,7 +293,7 @@ export function SettingsDialog({ workspaceOptions, onClose, onSaved }: SettingsD
                   {form.coordinationProvider === 'choose' && <option value="choose">Choose an experience…</option>}
                   <option value="agent-deck">Agent Deck (recommended)</option>
                   <option value="rig">Rig (advanced team coordination)</option>
-                  <option value="disabled">Disabled</option>
+                  <option value="disabled">None</option>
                 </select>
               </Field>
               <span style={styles.hint}>Agent Deck manages local and remote coding sessions. Rig adds canonical team topology and peer messaging.</span>
