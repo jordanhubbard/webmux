@@ -65,6 +65,7 @@ test.describe('UI loads', () => {
     await page.goto('/');
     await expect(page.locator('text=Click to add a session').first()).toBeVisible({ timeout: 10_000 });
 
+    await page.getByRole('button', { name: 'More', exact: true }).click();
     await page.getByRole('button', { name: 'Settings' }).click();
     const dialog = page.getByRole('dialog', { name: 'Settings' });
     await expect(dialog).toBeVisible();

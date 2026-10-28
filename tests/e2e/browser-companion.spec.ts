@@ -89,6 +89,7 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
       await page.mouse.move(box.x + 25, box.y + box.height / 2);
       await page.mouse.click(box.x + 25, box.y + box.height / 2);
     } else {
+      await page.getByRole('button', { name: 'Session tools', exact: true }).click();
       await page.getByRole('button', { name: 'Open browser', exact: true }).click();
     }
     if (process.platform !== 'win32') {
@@ -131,6 +132,7 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     await page.screenshot({ path: 'test-results/browser-companion.png' });
     await page.getByRole('button', { name: 'Return to terminal' }).click();
     await expect(viewport).not.toBeVisible();
+    await page.getByRole('button', { name: 'Session tools', exact: true }).click();
     await page.getByRole('button', { name: 'Open browser', exact: true }).click();
     await expect(viewport).toBeVisible();
     const reopened = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });

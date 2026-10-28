@@ -5,6 +5,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Restore the terminal-first home: start with a 2×2 grid, keep coordination in
+  its own tab, and put display preferences, account/host tools, and per-session
+  browser helpers behind deliberate controls (#228).
+- Guide agent creation from a code folder, suggest editable project and
+  purpose-based session names, and keep coordinator activity collapsed (#228).
+
 ## [1.3.28] - 2026-10-28
 
 ### Fixed

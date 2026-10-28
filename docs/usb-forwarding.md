@@ -61,7 +61,7 @@ client. [Linux USB/IP](https://docs.kernel.org/usb/usbip_protocol.html) describe
 the native protocol. Both peers must use compatible implementations; do not
 assume that a VirtualHere server and a generic USB/IP client are interchangeable.
 
-Click **🔌 USB** in the WebMux top bar to generate a local helper command. Enter
+Click **More → USB redirection** to generate a local helper command. Enter
 the receiving SSH host, SSH port, local exporter port and lease duration. The
 button is available in every workspace and does not intercept terminal keys.
 The browser neither launches native processes nor installs drivers, claims

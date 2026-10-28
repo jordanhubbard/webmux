@@ -56,14 +56,16 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
           <Row label="Type to All" desc="When enabled (orange bar), every keystroke is sent to all open sessions simultaneously. Click the button again to disable." />
         </Section>
 
-        <Section title="Top Bar Controls">
+        <Section title="Controls">
+          <Row label="Coordination tab" desc="Start a coding agent in a folder, or open an existing coordinated session. WebMux suggests editable project and purpose-based session names." />
+          <Row label="Session tools" desc="Open a browser, sign in, manage a host client, or change one terminal’s theme." />
           <Row label="Type to All" desc="Toggle broadcast mode — sends input to every session at once." />
-          <Row label="A− / A+" desc="Decrease or increase the terminal font size (8–32 px, persisted)." />
-          <Row label="C− / C+" desc="Decrease or increase terminal columns in steps of 10 (40–240)." />
-          <Row label="R− / R+" desc="Decrease or increase terminal rows in steps of 5 (10–80)." />
-          <Row label="Secure / Trusted" desc="Shows the current security mode. Secure = HTTPS + JWT auth. Trusted = open access for isolated networks." />
-          <Row label="+ Account" desc="Create an additional user account." />
-          <Row label="Sign out" desc="Log out of the current session." />
+          <Row label="Display → A− / A+" desc="Decrease or increase the terminal font size (8–32 px, persisted)." />
+          <Row label="Display → C− / C+" desc="Decrease or increase terminal columns in steps of 10 (40–240)." />
+          <Row label="Display → R− / R+" desc="Decrease or increase terminal rows in steps of 5 (10–80)." />
+          <Row label="More → Secure / Trusted" desc="Shows the current security mode. Secure = HTTPS + JWT auth. Trusted = open access for isolated networks." />
+          <Row label="More → Users" desc="Create an additional user account." />
+          <Row label="More → Sign out" desc="Log out of the current session." />
         </Section>
 
         <Section title="Sessions">

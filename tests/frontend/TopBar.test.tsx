@@ -1,12 +1,13 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { TopBar } from '@frontend/components/TopBar';
+import { WorkspacePaneProvider } from '@frontend/contexts/WorkspacePaneContext';
 import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
 import type { AuthState } from '@frontend/hooks/useAuth';
 import type { ReactNode } from 'react';
 
 const apiMocks = vi.hoisted(() => ({ getCoordination: vi.fn(), updateConfig: vi.fn() }));
-vi.mock('@frontend/utils/api', () => ({ api: { getCoordination: apiMocks.getCoordination, updateConfig: apiMocks.updateConfig } }));
+vi.mock('@frontend/utils/api', () => ({ api: { getCoordination: apiMocks.getCoordination, updateConfig: apiMocks.updateConfig, getMacSetup: () => Promise.resolve({ status: { supported: false } }) } }));
 
 beforeEach(() => {
   apiMocks.getCoordination.mockReset();
@@ -16,7 +17,7 @@ beforeEach(() => {
 });
 
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <InputBroadcastProvider>{children}</InputBroadcastProvider>
+  <WorkspacePaneProvider availablePanes={['terminals', 'desktops', 'coordination']}><InputBroadcastProvider>{children}</InputBroadcastProvider></WorkspacePaneProvider>
 );
 
 function makeAuth(overrides: Partial<AuthState> = {}): AuthState {
@@ -60,48 +61,38 @@ describe('TopBar', () => {
 
   it('opens USB setup and restores focus when closed', () => {
     render(<TopBar {...defaultTopBarProps()} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
     const button = screen.getByRole('button', { name: 'USB redirection' });
     button.focus();
     fireEvent.click(button);
     expect(screen.getByRole('dialog', { name: 'USB redirection' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Close usb redirection' }));
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'USB redirection' })).not.toBeInTheDocument();
     expect(button).toHaveFocus();
   });
 
   it('renders logo and controls', () => {
     render(<TopBar {...defaultTopBarProps()} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'Display' }));
     expect(screen.getAllByText(/WebMux/i).length).toBeGreaterThan(0);
     expect(screen.getByText('14px')).toBeDefined();
   });
 
-  it('shows coordinated session attention without opening the dialog', async () => {
-    apiMocks.getCoordination.mockResolvedValue({ attentionCount: 3 });
+  it('keeps coordinator inventories and secondary controls off the terminal home', () => {
     render(<TopBar {...defaultTopBarProps()} />, { wrapper });
-    expect(await screen.findByTitle('3 coordinated session updates need attention')).toHaveTextContent('Coordination3');
-  });
-
-  it('surfaces and persists Agent Deck, Rig and None in the main toolbar', async () => {
-    apiMocks.getCoordination.mockResolvedValue({ attentionCount: 0, defaultProvider: 'agent-deck' });
-    render(<TopBar {...defaultTopBarProps()} />, { wrapper });
-    const selector = screen.getByRole('combobox', { name: 'Coordinator' });
-    await waitFor(() => expect(selector).toHaveValue('agent-deck'));
-    for (const label of ['Agent Deck', 'Rig', 'None']) expect(screen.getByRole('option', { name: label })).toBeInTheDocument();
-    for (const provider of ['rig', 'disabled', 'agent-deck']) {
-      apiMocks.getCoordination.mockResolvedValue({ attentionCount: 0, defaultProvider: provider });
-      fireEvent.change(selector, { target: { value: provider } });
-      await waitFor(() => expect(apiMocks.updateConfig).toHaveBeenLastCalledWith({ app: { coordination: { default_provider: provider } } }));
-      await waitFor(() => expect(selector).toHaveValue(provider));
-      await waitFor(() => expect(selector).toBeEnabled());
-    }
-    apiMocks.updateConfig.mockRejectedValue(new Error('Cannot save coordinator'));
-    fireEvent.change(selector, { target: { value: 'rig' } });
-    expect(await screen.findByRole('alert')).toHaveTextContent('Cannot save coordinator');
-    expect(selector).toHaveValue('agent-deck');
+    expect(screen.queryByRole('combobox', { name: 'Coordinator' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'USB redirection' })).toBeNull();
+    expect(screen.queryByText('14px')).toBeNull();
+    expect(screen.queryByText('Sign out')).toBeNull();
+    expect(apiMocks.getCoordination).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Coordination' }));
+    expect(screen.getByRole('button', { name: 'Coordination' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('shows secure badge in secure mode', () => {
     render(<TopBar {...defaultTopBarProps()} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
     expect(screen.getByText(/Secure/)).toBeDefined();
   });
 
@@ -110,12 +101,14 @@ describe('TopBar', () => {
       <TopBar {...defaultTopBarProps()} auth={makeAuth({ authStatus: { mode: 'none', bootstrap_required: false } })} secureMode={false} />,
       { wrapper },
     );
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
     expect(screen.getByText(/Trusted/)).toBeDefined();
   });
 
   it('calls onFontSizeChange when clicking A- or A+', () => {
     const onFontSizeChange = vi.fn();
     render(<TopBar {...defaultTopBarProps()} onFontSizeChange={onFontSizeChange} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'Display' }));
     fireEvent.click(screen.getByText('A+'));
     expect(onFontSizeChange).toHaveBeenCalledWith(15);
     fireEvent.click(screen.getByText('A-'));
@@ -135,6 +128,7 @@ describe('TopBar', () => {
 
   it('shows current user badge', () => {
     render(<TopBar {...defaultTopBarProps()} currentUser="admin" />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
     expect(screen.getByText('admin')).toBeDefined();
   });
 
@@ -144,6 +138,7 @@ describe('TopBar', () => {
       <TopBar {...defaultTopBarProps()} auth={makeAuth({ sessionExpiresAt: Date.now() + 60_000, refreshSession })} />,
       { wrapper },
     );
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
     expect(screen.getByText(/Session 00:01:00/)).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh session' }));
     expect(refreshSession).toHaveBeenCalledTimes(1);
@@ -151,17 +146,20 @@ describe('TopBar', () => {
 
   it('shows Users button for admins', () => {
     render(<TopBar {...defaultTopBarProps()} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
     expect(screen.getByText('Users')).toBeDefined();
   });
 
   it('hides Users button for non-admins', () => {
     render(<TopBar {...defaultTopBarProps()} auth={makeAuth({ isAdmin: false })} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
     expect(screen.queryByText('Users')).toBeNull();
   });
 
   it('calls onManageUsers when Users clicked', () => {
     const onManageUsers = vi.fn();
     render(<TopBar {...defaultTopBarProps()} onManageUsers={onManageUsers} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
     fireEvent.click(screen.getByText('Users'));
     expect(onManageUsers).toHaveBeenCalled();
   });
@@ -169,6 +167,7 @@ describe('TopBar', () => {
   it('shows the settings gear to operators and opens settings', () => {
     const onManageSettings = vi.fn();
     render(<TopBar {...defaultTopBarProps()} onManageSettings={onManageSettings} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
 
@@ -177,12 +176,14 @@ describe('TopBar', () => {
 
   it('hides the settings gear from non-admin users', () => {
     render(<TopBar {...defaultTopBarProps()} canManageSettings={false} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
     expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull();
   });
 
   it('shows term size and responds to C+/C-/R+/R-', () => {
     const onTermSizeChange = vi.fn();
     render(<TopBar {...defaultTopBarProps()} onTermSizeChange={onTermSizeChange} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'Display' }));
     expect(screen.getByText('80×24')).toBeDefined();
     fireEvent.click(screen.getByText('C+'));
     expect(onTermSizeChange).toHaveBeenCalledWith(90, 24);
@@ -256,6 +257,7 @@ describe('TopBar', () => {
       />,
       { wrapper },
     );
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
     expect(screen.getByTestId('host-switcher')).toBeDefined();
     expect(screen.getByText('Lab A')).toBeDefined();
     expect(screen.getByText('Lab B')).toBeDefined();

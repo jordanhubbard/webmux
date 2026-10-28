@@ -4,9 +4,10 @@ import type { AgentDefinition, HostSwitcherConfig, NamedTheme } from '../types';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
 import { HelpDialog } from './HelpDialog';
-import { CoordinationDialog } from './CoordinationDialog';
+import { Dialog } from './Dialog';
+import { MacPermissions } from './MacPermissions';
+import './TopBar.css';
 import { USBForwardDialog } from './USBForwardDialog';
-import { api } from '../utils/api';
 
 function getHostSwitchContext(hostSwitcher?: HostSwitcherConfig) {
   if (!hostSwitcher?.enabled || hostSwitcher.hosts.length === 0) return null;
@@ -79,11 +80,8 @@ export function TopBar({
   const { activePane, setActivePane } = useWorkspacePane();
   const [showHelp, setShowHelp] = useState(false);
   const [showUSB, setShowUSB] = useState(false);
-  const [showCoordination, setShowCoordination] = useState(false);
-  const [coordinationAttention, setCoordinationAttention] = useState(0);
-  const [coordinator, setCoordinator] = useState('');
-  const [savingCoordinator, setSavingCoordinator] = useState(false);
-  const [coordinatorError, setCoordinatorError] = useState('');
+  const [showOptions, setShowOptions] = useState(false);
+  const [showDisplay, setShowDisplay] = useState(false);
   const [editingSize, setEditingSize] = useState(false);
   const [sizeInput, setSizeInput] = useState('');
   const sizeInputRef = useRef<HTMLInputElement>(null);
@@ -95,29 +93,6 @@ export function TopBar({
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [auth.sessionExpiresAt]);
-
-  useEffect(() => {
-    if (!canManageSettings) { setCoordinationAttention(0); return; }
-    const refresh = () => { void api.getCoordination().then(value => {
-      setCoordinationAttention(value.attentionCount || 0);
-      setCoordinator(value.defaultProvider || 'agent-deck');
-    }).catch(() => {}); };
-    refresh();
-    const timer = window.setInterval(refresh, 30000);
-    window.addEventListener('webmux-sessions-changed', refresh);
-    return () => { window.clearInterval(timer); window.removeEventListener('webmux-sessions-changed', refresh); };
-  }, [canManageSettings]);
-
-  const chooseCoordinator = async (provider: string) => {
-    if (provider !== 'agent-deck' && provider !== 'rig' && provider !== 'disabled') return;
-    setSavingCoordinator(true); setCoordinatorError('');
-    try {
-      await api.updateConfig({ app: { coordination: { default_provider: provider } } });
-      setCoordinator(provider);
-      window.dispatchEvent(new CustomEvent('webmux-sessions-changed'));
-    } catch (err) { setCoordinatorError(String(err)); }
-    finally { setSavingCoordinator(false); }
-  };
 
   const remainingSeconds = auth.sessionExpiresAt
     ? Math.max(0, Math.ceil((auth.sessionExpiresAt - now) / 1000))
@@ -138,127 +113,10 @@ export function TopBar({
 
   return (
     <>
-    {showHelp && <HelpDialog onClose={() => setShowHelp(false)} />}
-    {showUSB && <USBForwardDialog onClose={() => setShowUSB(false)} />}
-    {showCoordination && <CoordinationDialog onClose={() => setShowCoordination(false)} />}
-    <div style={styles.bar}>
-      <div style={styles.left}>
-        <span style={styles.logo}>{'\u25a6'} {appName.toLowerCase() === 'webmux' ? 'WebMux' : appName}</span>
-        <button style={styles.iconBtn} onClick={() => setShowUSB(true)} title="Set up USB redirection" aria-label="USB redirection">
-          <span aria-hidden="true">🔌</span> USB
-        </button>
-        {canManageSettings && <button style={styles.iconBtn} aria-label="Coordination" title={coordinationAttention ? `${coordinationAttention} coordinated session updates need attention` : 'Manage coordinated sessions'} onClick={() => setShowCoordination(true)}>Coordination{coordinationAttention > 0 && <span aria-hidden="true" style={styles.attentionBadge}>{coordinationAttention}</span>}</button>}
-        {canManageSettings && <label style={{ color: '#bbb', fontSize: 12 }}>Coordinator{' '}
-          <select aria-label="Coordinator" title="Default session coordinator" style={styles.iconBtn} value={coordinator}
-            disabled={savingCoordinator || !coordinator} onChange={event => void chooseCoordinator(event.target.value)}>
-            {(!coordinator || coordinator === 'choose') && <option value={coordinator}>{coordinator ? 'Choose…' : 'Loading…'}</option>}
-            <option value="agent-deck">Agent Deck</option><option value="rig">Rig</option><option value="disabled">None</option>
-          </select>
-        </label>}
-        {coordinatorError && <span role="alert">{coordinatorError}</span>}
-        <button
-          style={{
-            ...styles.broadcastBtn,
-            background: broadcastMode ? '#e8a030' : '#1a1a3a',
-            color: broadcastMode ? '#000' : '#aaa',
-            borderColor: broadcastMode ? '#e8a030' : '#333366',
-          }}
-          onMouseDown={e => e.preventDefault()}
-          onClick={() => setBroadcastMode(!broadcastMode)}
-          title={broadcastMode ? 'Type to All: ON — choose recipients above the grid' : 'Type to All: OFF — input goes to focused pane only'}
-        >
-          {broadcastMode ? 'Type to All: ON' : 'Type to All'}
-        </button>
-        <button
-          onClick={() => setActivePane('terminals')}
-          style={{
-            background: activePane === 'terminals' ? '#7c6af7' : '#1a1a3a',
-            color: '#fff',
-            border: '1px solid #333366',
-            borderRadius: 4,
-            padding: '4px 12px',
-            cursor: 'pointer',
-            fontSize: 13,
-          }}
-        >
-          Terminals
-        </button>
-        <button
-          onClick={() => setActivePane('desktops')}
-          style={{
-            background: activePane === 'desktops' ? '#5a9af7' : '#1a1a3a',
-            color: '#fff',
-            border: '1px solid #333366',
-            borderRadius: 4,
-            padding: '4px 12px',
-            cursor: 'pointer',
-            fontSize: 13,
-          }}
-        >
-          Desktops
-        </button>
-        {agentDefinitions.length > 0 && combinedAgentPane && (
-          <button
-            onClick={() => setActivePane('agents')}
-            style={{
-              background: activePane === 'agents' ? '#4aaa6a' : '#1a1a3a',
-              color: '#fff',
-              border: '1px solid #333366',
-              borderRadius: 4,
-              padding: '4px 12px',
-              cursor: 'pointer',
-              fontSize: 13,
-            }}
-          >
-            Agents
-          </button>
-        )}
-        {agentDefinitions.length > 0 && !combinedAgentPane && agentDefinitions.map(definition => (
-          <button
-            key={definition.id}
-            onClick={() => setActivePane(definition.workspace)}
-            style={{
-              background: activePane === definition.workspace ? '#4aaa6a' : '#1a1a3a',
-              color: '#fff',
-              border: '1px solid #333366',
-              borderRadius: 4,
-              padding: '4px 12px',
-              cursor: 'pointer',
-              fontSize: 13,
-            }}
-          >
-            {definition.plural_label}
-          </button>
-        ))}
-        <button
-          style={{
-            ...styles.broadcastBtn,
-            background: globalAutoScroll ? '#1a3a2a' : '#1a1a3a',
-            color: globalAutoScroll ? '#50fa7b' : '#aaa',
-            borderColor: globalAutoScroll ? '#50fa7b' : '#333366',
-          }}
-          onMouseDown={e => e.preventDefault()}
-          onClick={() => onGlobalAutoScrollChange(!globalAutoScroll)}
-          title={globalAutoScroll ? 'Auto-scroll: ON — terminals follow output' : 'Auto-scroll: OFF — terminals stay in place'}
-        >
-          {globalAutoScroll ? 'Auto-scroll: ON' : 'Auto-scroll: OFF'}
-        </button>
-        <button
-          style={{
-            ...styles.broadcastBtn,
-            background: globalLock ? '#3a2a1a' : '#1a1a3a',
-            color: globalLock ? '#e8a030' : '#aaa',
-            borderColor: globalLock ? '#e8a030' : '#333366',
-          }}
-          onMouseDown={e => e.preventDefault()}
-          onClick={() => onGlobalLockChange(!globalLock)}
-          title={globalLock ? 'Lock: ON — close buttons disabled' : 'Lock: OFF — windows can be closed'}
-        >
-          {globalLock ? '\ud83d\udd12 Locked' : '\ud83d\udd13 Unlocked'}
-        </button>
-      </div>
-
-      <div style={styles.right}>
+      {showHelp && <HelpDialog onClose={() => setShowHelp(false)} />}
+      {showUSB && <USBForwardDialog onClose={() => setShowUSB(false)} />}
+      {showDisplay && <Dialog title="Terminal display" subtitle="Appearance, starting size and behavior for your terminals" onClose={() => setShowDisplay(false)} width={520}>
+        <div className="toolbar-options">
         {activePane === 'terminals' && (
           <div style={styles.fontControls}>
             <button
@@ -345,6 +203,38 @@ export function TopBar({
           </div>
         )}
 
+        <button
+          style={{
+            ...styles.broadcastBtn,
+            background: globalAutoScroll ? '#1a3a2a' : '#1a1a3a',
+            color: globalAutoScroll ? '#50fa7b' : '#aaa',
+            borderColor: globalAutoScroll ? '#50fa7b' : '#333366',
+          }}
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => onGlobalAutoScrollChange(!globalAutoScroll)}
+          title={globalAutoScroll ? 'Auto-scroll: ON — terminals follow output' : 'Auto-scroll: OFF — terminals stay in place'}
+        >
+          {globalAutoScroll ? 'Auto-scroll: ON' : 'Auto-scroll: OFF'}
+        </button>
+        <button
+          style={{
+            ...styles.broadcastBtn,
+            background: globalLock ? '#3a2a1a' : '#1a1a3a',
+            color: globalLock ? '#e8a030' : '#aaa',
+            borderColor: globalLock ? '#e8a030' : '#333366',
+          }}
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => onGlobalLockChange(!globalLock)}
+          title={globalLock ? 'Lock: ON — close buttons disabled' : 'Lock: OFF — windows can be closed'}
+        >
+          {globalLock ? '\ud83d\udd12 Locked' : '\ud83d\udd13 Unlocked'}
+        </button>
+        </div>
+      </Dialog>}
+      {showOptions && <Dialog title="More" subtitle="Host tools, settings and your account" onClose={() => setShowOptions(false)} width={520}>
+        <div className="toolbar-options">
+          <button style={styles.iconBtn} onClick={() => setShowUSB(true)} title="Set up USB redirection" aria-label="USB redirection">USB redirection</button>
+          {canManageSettings && <MacPermissions compact />}
         {canManageSettings && (
           <button
             style={styles.settingsBtn}
@@ -418,8 +308,96 @@ export function TopBar({
             ))}
           </div>
         )}
+        </div>
+      </Dialog>}
+      <div className="webmux-topbar" style={styles.bar}>
+        <div style={styles.left}>
+          <span style={styles.logo}>{'\u25a6'} {appName.toLowerCase() === 'webmux' ? 'WebMux' : appName}</span>
+        <button
+          onClick={() => setActivePane('terminals')}
+          style={{
+            background: activePane === 'terminals' ? '#7c6af7' : '#1a1a3a',
+            color: '#fff',
+            border: '1px solid #333366',
+            borderRadius: 4,
+            padding: '4px 12px',
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
+        >
+          Terminals
+        </button>
+        <button
+          onClick={() => setActivePane('desktops')}
+          style={{
+            background: activePane === 'desktops' ? '#5a9af7' : '#1a1a3a',
+            color: '#fff',
+            border: '1px solid #333366',
+            borderRadius: 4,
+            padding: '4px 12px',
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
+        >
+          Desktops
+        </button>
+        {agentDefinitions.length > 0 && combinedAgentPane && (
+          <button
+            onClick={() => setActivePane('agents')}
+            style={{
+              background: activePane === 'agents' ? '#4aaa6a' : '#1a1a3a',
+              color: '#fff',
+              border: '1px solid #333366',
+              borderRadius: 4,
+              padding: '4px 12px',
+              cursor: 'pointer',
+              fontSize: 13,
+            }}
+          >
+            Agents
+          </button>
+        )}
+        {agentDefinitions.length > 0 && !combinedAgentPane && agentDefinitions.map(definition => (
+          <button
+            key={definition.id}
+            onClick={() => setActivePane(definition.workspace)}
+            style={{
+              background: activePane === definition.workspace ? '#4aaa6a' : '#1a1a3a',
+              color: '#fff',
+              border: '1px solid #333366',
+              borderRadius: 4,
+              padding: '4px 12px',
+              cursor: 'pointer',
+              fontSize: 13,
+            }}
+          >
+            {definition.plural_label}
+          </button>
+        ))}
+
+          {canManageSettings && <button style={{ ...styles.iconBtn, background: activePane === 'coordination' ? '#7c6af7' : '#1a1a3a' }} aria-pressed={activePane === 'coordination'} onClick={() => setActivePane('coordination')}>Coordination</button>}
+        </div>
+        <div style={styles.right}>
+          {activePane === 'terminals' && <>
+        <button
+          style={{
+            ...styles.broadcastBtn,
+            background: broadcastMode ? '#e8a030' : '#1a1a3a',
+            color: broadcastMode ? '#000' : '#aaa',
+            borderColor: broadcastMode ? '#e8a030' : '#333366',
+          }}
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => setBroadcastMode(!broadcastMode)}
+          title={broadcastMode ? 'Type to All: ON — choose recipients above the grid' : 'Type to All: OFF — input goes to focused pane only'}
+        >
+          {broadcastMode ? 'Type to All: ON' : 'Type to All'}
+        </button>
+
+            <button style={styles.iconBtn} onClick={() => setShowDisplay(true)}>Display</button>
+          </>}
+          <button style={styles.iconBtn} onClick={() => setShowOptions(true)}>More</button>
+        </div>
       </div>
-    </div>
     </>
   );
 }
@@ -435,7 +413,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0 16px',
     flexShrink: 0,
     zIndex: 100,
-    gap: 16,
+    gap: 8,
     minWidth: 0,
     overflowX: 'auto',
     overflowY: 'hidden',
@@ -444,7 +422,7 @@ const styles: Record<string, React.CSSProperties> = {
   left: {
     display: 'flex',
     alignItems: 'center',
-    gap: 16,
+    gap: 8,
     flex: '0 0 auto',
   },
   logo: {

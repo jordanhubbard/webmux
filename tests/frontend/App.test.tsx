@@ -143,8 +143,28 @@ describe('App', () => {
     mockAuth.authStatus = { mode: 'none', bootstrap_required: false };
     render(<App />);
     await waitFor(() => {
-      expect(screen.getByText('Click to add a session')).toBeDefined();
+      expect(screen.getAllByText('Click to add a session')[0]).toBeDefined();
     });
+  });
+
+  it('opens coordination on demand and preserves the terminal grid between tabs', async () => {
+    mockAuth.isLoading = false;
+    mockAuth.isAuthenticated = true;
+    mockAuth.authStatus = { mode: 'none', bootstrap_required: false };
+    vi.mocked(api.getCoordination).mockResolvedValue({ contract: 'webmux-coordination/v1', defaultProvider: 'agent-deck', providers: [{ id: 'agent-deck', label: 'Agent Deck', available: true, contract: 'agent-deck-cli/v1', capabilities: [] }], projects: [], seats: [], messages: [], errors: {} });
+    render(<App />);
+    await screen.findAllByText('Click to add a session');
+    expect(api.getCoordination).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Mac permissions' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Coordination' }));
+    expect(await screen.findByRole('heading', { name: 'Start a coding agent' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Coordination' })).toBeVisible();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const mounts = vi.mocked(api.getSessions).mock.calls.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Terminals' }));
+    expect(screen.queryByRole('region', { name: 'Coordination' })).toBeNull();
+    expect(screen.getAllByText('Click to add a session')).toHaveLength(4);
+    expect(api.getSessions).toHaveBeenCalledTimes(mounts);
   });
 
   it('opens application settings from the gear in trusted mode', async () => {
@@ -153,6 +173,7 @@ describe('App', () => {
     mockAuth.authStatus = { mode: 'none', bootstrap_required: false };
     render(<App />);
 
+    fireEvent.click(await screen.findByRole('button', { name: 'More' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Settings' }));
 
     expect(await screen.findByRole('dialog', { name: 'Settings' })).toBeDefined();
@@ -179,7 +200,7 @@ describe('App', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText('Click to add a session')).toBeDefined();
+      expect(screen.getAllByText('Click to add a session')[0]).toBeDefined();
     });
     expect(screen.queryByText('Agents')).toBeNull();
     expect(api.getAllAgentSessions).not.toHaveBeenCalled();
@@ -276,6 +297,7 @@ describe('App', () => {
       expect(document.documentElement.style.getPropertyValue('--webmux-mono-font')).toBe(fontStack);
     });
 
+    fireEvent.click(screen.getByRole('button', { name: 'Display' }));
     fireEvent.click(screen.getByText('A+'));
     await waitFor(() => {
       expect(api.updateConfig).toHaveBeenCalledWith({

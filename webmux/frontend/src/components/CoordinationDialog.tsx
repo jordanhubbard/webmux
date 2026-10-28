@@ -39,7 +39,7 @@ export interface CoordinationStatus {
   messages: CoordinationMessage[]; errors: Record<string, string>; attentionCount?: number;
 }
 
-export function CoordinationDialog({ onClose, position }: { onClose: () => void; position?: { row: number; col: number } }) {
+export function CoordinationDialog({ onClose, position, inline = false }: { onClose: () => void; position?: { row: number; col: number }; inline?: boolean }) {
   const [status, setStatus] = useState<CoordinationStatus>({ contract: '', defaultProvider: 'choose', providers: [], projects: [], seats: [], messages: [], errors: {} });
   const [provider, setProvider] = useState('');
   const [changingProvider, setChangingProvider] = useState(false);
@@ -47,11 +47,12 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
   const [statusError, setStatusError] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState<'existing' | 'new'>('existing');
+  const [mode, setMode] = useState<'existing' | 'new'>('new');
   const [projectID, setProjectID] = useState('');
-  const [projectName, setProjectName] = useState('');
+  const [projectName, setProjectName] = useState<string | null>(null);
   const [context, setContext] = useState('');
-  const [name, setName] = useState('');
+  const [name, setName] = useState<string | null>(null);
+  const [purpose, setPurpose] = useState('builder');
   const [host, setHost] = useState('localhost');
   const [workspace, setWorkspace] = useState('');
   const [runtime, setRuntime] = useState('codex');
@@ -93,13 +94,27 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
   const drainRemotes = useMemo(() => [...new Set(projects.map(value => value.host).filter(value => value && value !== 'localhost'))], [projects]);
   const drainTargets = seats.filter(value => value.canReceive && value.id.startsWith('local:'));
 
+  // Names identify sessions, not special commands or agent instructions.
+  const folderName = workspace.replace(/\\/g, '/').split('/').filter(Boolean).pop() || 'project';
+  let suggestedProject = folderName.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 42) || 'project';
+  if (!/^[a-z]/.test(suggestedProject)) suggestedProject = `project-${suggestedProject}`.slice(0, 42);
+  const projectBase = suggestedProject;
+  for (let suffix = 2; projects.some(value => value.host === host && value.name === suggestedProject); suffix++) suggestedProject = `${projectBase}-${suffix}`;
+  const resolvedProjectName = projectName ?? suggestedProject;
+  const nameBase = `${runtime === 'codex' ? 'codex' : 'claude'}-${purpose}`;
+  let suggestedName = nameBase;
+  for (let suffix = 2; seats.some(value => value.host === host && value.name === suggestedName && (mode === 'new' ? value.projectName === resolvedProjectName : value.projectId === projectID)); suffix++) suggestedName = `${nameBase}-${suffix}`;
+  const resolvedName = name ?? suggestedName;
+
   useEffect(() => {
     setProjectID(current => projects.some(value => value.id === current) ? current : projects.find(value => !value.historical)?.id || projects[0]?.id || '');
   }, [provider, status.projects]);
   useEffect(() => {
     setContext(current => contexts.includes(current) ? current : contexts[0] || '');
-    if (selectedProject && provider === 'agent-deck') setHost(selectedProject.host);
-  }, [projectID, provider, selectedProject?.host, contexts.join('\0')]);
+    if (mode === 'existing' && selectedProject && provider === 'agent-deck' && host !== selectedProject.host) {
+      setHost(selectedProject.host); setWorkspace(''); setBrowser(null);
+    }
+  }, [mode, projectID, provider, selectedProject?.host, contexts.join('\0'), host]);
   useEffect(() => {
     setDrainRemote(current => drainRemotes.includes(current) ? current : drainRemotes[0] || '');
     setDrainTarget(current => drainTargets.some(value => value.id === current) ? current : drainTargets[0]?.id || '');
@@ -149,12 +164,7 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
     finally { setBusy(false); }
   };
   const chooseFolder = () => {
-    if (!browser) return;
-    setWorkspace(browser.path);
-    if (mode === 'new' && !projectName) {
-      const parts = browser.path.split('/').filter(Boolean);
-      setProjectName(parts[parts.length - 1]?.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^[^a-z]+/, '') || 'project');
-    }
+    if (browser) setWorkspace(browser.path);
   };
   const chooseProvider = (value: string) => {
     setProvider(value); setProjectID(''); setBrowser(null); setWorkspace('');
@@ -191,15 +201,15 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
     finally { setBusy(false); }
   };
 
-  return <Dialog title="Coordination" subtitle={position ? `Open a session at row ${position.row + 1}, column ${position.col + 1}` : 'Projects and coding sessions across hosts'} onClose={onClose} width={880} dismissible={!busy}>
+  const content = <>
     <div className="coordination-dialog">
-      <p>Browse coordinator-owned projects and sessions, then launch Codex or Claude in a validated workspace on the selected host.</p>
+      <p>Start a coding agent in a folder, or open a session you already have. A project keeps agents working on the same code together. Opening a session puts its terminal in the Terminals grid.</p>
       {statusError && <p role="alert" className="coordination-error">{statusError}</p>}
       {error && <p role="alert" className="coordination-error">{error}</p>}
       <div className="coordination-toolbar">
         {provider && <div className="coordination-current"><span>Using <strong>{provider === 'disabled' ? 'None' : selectedProvider?.label ?? provider}</strong>{status.defaultProvider !== provider && <> · default: {status.defaultProvider === 'disabled' ? 'None' : defaultProvider?.label ?? status.defaultProvider}</>}</span></div>}
           <div className="coordination-provider-choice">
-              <label>Coordination experience<select aria-label="Coordination experience" disabled={busy} value={provider} onChange={event => { chooseProvider(event.target.value); setChangingProvider(true); }}>
+              <label>Coordinator<select aria-label="Coordinator" disabled={busy} value={provider} onChange={event => { chooseProvider(event.target.value); setChangingProvider(true); }}>
                 <option value="">Choose an experience…</option>
                 {['agent-deck', 'rig'].map(id => {
                   const value = status.providers.find(value => value.id === id);
@@ -219,15 +229,44 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
       {selectedProvider?.message && !selectedProvider.available && <p role="note">{selectedProvider.message}</p>}
       {status.errors[provider] && <p role="alert" className="coordination-error">{status.errors[provider]}</p>}
 
+      <form id="coordination-create-seat" onSubmit={event => {
+        event.preventDefault(); setBusy(true); setError('');
+        const input = { provider, mode, projectId: mode === 'existing' ? projectID : undefined, projectName: mode === 'existing' ? selectedProject?.name || '' : resolvedProjectName, context: mode === 'existing' ? context : undefined, name: resolvedName, host, workspace, runtime, ...position };
+        void api.createCoordinatedAgent(input).then(value => revealSession(value.session)).catch(err => setError(String(err))).finally(() => setBusy(false));
+      }}>
+        <h3>Start a coding agent</h3>
+        <p>Choose your code folder and an agent. WebMux opens its terminal there so you can describe the task. Localhost is the computer running WebMux.</p>
+        <div className="coordination-fields">
+          <label>Run on host<input required list="coordination-hosts" value={host} onChange={event => { setHost(event.target.value); setBrowser(null); setWorkspace(''); }} placeholder={provider === 'agent-deck' ? 'Agent Deck remote name' : 'localhost or SSH host'} /><datalist id="coordination-hosts">{hostOptions.map(value => <option value={value} key={value} />)}</datalist></label>
+          <div><label htmlFor="coordination-workspace">Code folder</label><span className="coordination-input-action"><input id="coordination-workspace" required value={workspace} onChange={event => setWorkspace(event.target.value)} placeholder="Choose the folder containing your code" /><button type="button" disabled={busy || !host.trim()} onClick={() => void browse(workspace || undefined)}>Browse</button></span></div>
+          <div><label htmlFor="coordination-runtime">Coding agent</label><select id="coordination-runtime" value={runtime} onChange={event => setRuntime(event.target.value)}><option value="codex">Codex</option><option value="claude-code">Claude Code</option></select></div>
+          <label>Session purpose<select value={purpose} onChange={event => setPurpose(event.target.value)}><option value="builder">Build a feature</option><option value="reviewer">Review changes</option><option value="investigator">Investigate a problem</option></select></label>
+        </div>
+        <fieldset className="coordination-choice"><legend>Where should this agent belong?</legend>
+          <label><input type="radio" name="coordination-mode" checked={mode === 'new'} onChange={() => setMode('new')} /> Start a new project</label>
+          <label><input type="radio" name="coordination-mode" checked={mode === 'existing'} onChange={() => setMode('existing')} disabled={projects.filter(value => !value.historical).length === 0} /> Add an agent to an existing project</label>
+        </fieldset>
+        {mode === 'existing' && <div className="coordination-fields">
+          <label>Project<select required value={projectID} onChange={event => setProjectID(event.target.value)}><option value="">Choose a project</option>{projects.filter(value => !value.historical).map(value => <option key={value.id} value={value.id}>{value.name} · {value.host} · {value.state}</option>)}</select></label>
+          {provider === 'rig' && <label>Rig pod<select required value={context} onChange={event => setContext(event.target.value)}><option value="">Choose a pod</option>{contexts.map(value => <option key={value} value={value}>{value}</option>)}</select></label>}
+        </div>}
+        <div className="coordination-fields coordination-names">
+          {mode === 'new' && <label>Project name<input required pattern="[a-z]([a-z0-9]|-){0,47}" value={resolvedProjectName} onChange={event => setProjectName(event.target.value)} /></label>}
+          <label>Session name<input required pattern="[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}" value={resolvedName} onChange={event => setName(event.target.value)} /></label>
+        </div>
+        <p className="coordination-hint">Names are editable labels, not commands. We suggest a project from your folder and a session from the agent and purpose. The purpose names the session; give the agent its instructions after it opens.</p>
+        {browser && <section className="coordination-browser" aria-label={`Workspaces on ${host}`}><div><strong>{host}</strong> · <code>{browser.path}</code> {browser.repository && <span className="coordination-repository">Git repository</span>}</div><div className="coordination-browser-actions"><button type="button" onClick={chooseFolder}>Choose this folder</button>{browser.parent && <button type="button" onClick={() => void browse(browser.parent!)}>Parent folder</button>}</div><ul>{browser.entries.map(entry => <li key={entry.path}><button type="button" onClick={() => void browse(entry.path)}>{entry.name}/</button>{entry.repository && <span>Git repository</span>}</li>)}</ul></section>}
+        <p><button type="submit" disabled={busy || !selectedProvider?.available || (mode === 'existing' && (!selectedProject || (provider === 'rig' && !context)))}>{busy ? 'Connecting…' : 'Start agent and open terminal'}</button></p>
+      </form>
       <section aria-labelledby="coordination-projects-heading">
-        <h3 id="coordination-projects-heading">{provider === 'rig' ? 'Canonical Rig projects' : 'Agent Deck groups'}</h3>
-        {projects.length === 0 && selectedProvider?.available && !status.errors[provider] && <p>No projects are registered with this coordinator. Create one below.</p>}
+        <h3 id="coordination-projects-heading">Your projects and sessions</h3>
+        {projects.length === 0 && selectedProvider?.available && !status.errors[provider] && <p>No projects yet. Choose a workspace above to start your first agent.</p>}
         <div className="coordination-rig-list">
           {projects.map(project => {
             const projectSeats = seats.filter(seat => seat.projectId === project.id);
             return <details className="coordination-project" key={`${project.provider}:${project.id}`} open={!project.historical}>
               <summary><strong>{project.name}</strong> <span className={`coordination-state coordination-state-${project.state}`}>{project.state}</span> · {project.runningCount}/{project.seatCount} active{project.attentionCount ? ` · ${project.attentionCount} need attention` : ''} · {project.host}</summary>
-              <p className="coordination-identity"><span>Provider ID</span> <code>{project.id}</code>{project.detail && <> · {project.detail}</>}</p>
+              <details className="coordination-identity"><summary>Project details</summary><code>{project.id}</code>{project.detail && <p>{project.detail}</p>}</details>
               {projectSeats.length === 0 ? <p>No sessions in this project.</p> : <ul aria-label={`${project.name} sessions`} className="coordination-workers">
                 {projectSeats.map(seat => <li key={`${seat.provider}:${seat.id}`}><article aria-label={`${seat.name} in ${seat.projectName}`} className={seat.attention ? 'coordination-worker-attention' : undefined}>
                   <strong>{seat.name}</strong> {seat.managed && <span className="coordination-rig">{provider === 'rig' ? 'Rig-managed' : 'Agent Deck-managed'}</span>}{seat.role && seat.role !== 'session' && <span className="coordination-role">{seat.role}</span>}{seat.attention && <span className="coordination-attention">Needs attention</span>}
@@ -257,7 +296,7 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
         </div>
       </section>
 
-      {providerMessages.length > 0 && <details open={provider === 'agent-deck'}><summary>{provider === 'rig' ? 'Recent Rig coordination' : `Agent Deck activity (${providerMessages.length})`}</summary><div className="coordination-messages">{providerMessages.map((message, index) => <div key={`${message.time}-${message.from}-${index}`} className={message.level === 'urgent' ? 'coordination-message-urgent' : undefined}><small>{new Date(message.time).toLocaleTimeString()} · {message.from} → {message.to} · {message.kind || 'message'} ({message.state || 'recorded'})</small><pre>{(message.body.split('\n---\n')[1] ?? message.body) || 'Status changed without a text result.'}</pre></div>)}</div></details>}
+      {providerMessages.length > 0 && <details><summary>{provider === 'rig' ? 'Recent Rig coordination' : `Agent Deck activity (${providerMessages.length})`}</summary><div className="coordination-messages">{providerMessages.map((message, index) => <div key={`${message.time}-${message.from}-${index}`} className={message.level === 'urgent' ? 'coordination-message-urgent' : undefined}><small>{new Date(message.time).toLocaleTimeString()} · {message.from} → {message.to} · {message.kind || 'message'} ({message.state || 'recorded'})</small><pre>{(message.body.split('\n---\n')[1] ?? message.body) || 'Status changed without a text result.'}</pre></div>)}</div></details>}
 
       {provider === 'agent-deck' && drainRemotes.length > 0 && <section className="coordination-drain" aria-labelledby="coordination-drain-heading">
         <h3 id="coordination-drain-heading">Collect remote completions</h3>
@@ -269,32 +308,13 @@ export function CoordinationDialog({ onClose, position }: { onClose: () => void;
         {drainResult && <p role="status">Collected {drainResult.written} new of {drainResult.fetched} records from {drainResult.remote}; {drainResult.duplicates} already present.{drainResult.writerRunning === false ? ` Warning: ${drainResult.writerDetail || 'the remote transition writer is not running.'}` : ''}</p>}
       </section>}
 
-      <form id="coordination-create-seat" onSubmit={event => {
-        event.preventDefault(); setBusy(true); setError('');
-        const input = { provider, mode, projectId: mode === 'existing' ? projectID : undefined, projectName: mode === 'existing' ? selectedProject?.name || '' : projectName, context: mode === 'existing' ? context : undefined, name, host, workspace, runtime, ...position };
-        void api.createCoordinatedAgent(input).then(value => revealSession(value.session)).catch(err => setError(String(err))).finally(() => setBusy(false));
-      }}>
-        <h3>Create coordinated session</h3>
-        <fieldset className="coordination-choice"><legend>Action</legend>
-          <label><input type="radio" name="coordination-mode" checked={mode === 'existing'} onChange={() => setMode('existing')} /> New session in an existing project</label>
-          <label><input type="radio" name="coordination-mode" checked={mode === 'new'} onChange={() => setMode('new')} /> New coordinated project</label>
-        </fieldset>
-        <div className="coordination-fields">
-          {mode === 'existing' ? <>
-            <label>{provider === 'rig' ? 'Rig topology' : 'Agent Deck group'}<select required value={projectID} onChange={event => setProjectID(event.target.value)}><option value="">Choose a project</option>{projects.filter(value => !value.historical).map(value => <option key={value.id} value={value.id}>{value.name} · {value.host} · {value.state}</option>)}</select></label>
-            {provider === 'rig' && <label>Rig pod<select required value={context} onChange={event => setContext(event.target.value)}><option value="">Choose a pod</option>{contexts.map(value => <option key={value} value={value}>{value}</option>)}</select></label>}
-          </> : <label>{provider === 'rig' ? 'New Rig name' : 'New group name'}<input required pattern="[a-z]([a-z0-9]|-){0,47}" value={projectName} onChange={event => setProjectName(event.target.value)} placeholder="project-coordination" /></label>}
-          <label>Session name<input required pattern="[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}" value={name} onChange={event => setName(event.target.value)} placeholder="reviewer" /></label>
-          <label>Execution host<input required list="coordination-hosts" value={host} onChange={event => { setHost(event.target.value); setBrowser(null); setWorkspace(''); }} placeholder={provider === 'agent-deck' ? 'Agent Deck remote name' : 'localhost or SSH host'} /><datalist id="coordination-hosts">{hostOptions.map(value => <option value={value} key={value} />)}</datalist></label>
-          <div><label htmlFor="coordination-workspace">Workspace on execution host</label><span className="coordination-input-action"><input id="coordination-workspace" required value={workspace} onChange={event => setWorkspace(event.target.value)} placeholder="Browse or enter an absolute path" /><button type="button" disabled={busy || !host.trim()} onClick={() => void browse(workspace || undefined)}>Browse</button></span></div>
-          <div><label htmlFor="coordination-runtime">Coding agent</label><select id="coordination-runtime" value={runtime} onChange={event => setRuntime(event.target.value)}><option value="codex">Codex</option><option value="claude-code">Claude Code</option></select></div>
-        </div>
-        {browser && <section className="coordination-browser" aria-label={`Workspaces on ${host}`}><div><strong>{host}</strong> · <code>{browser.path}</code> {browser.repository && <span className="coordination-repository">Git repository</span>}</div><div className="coordination-browser-actions"><button type="button" onClick={chooseFolder}>Choose this folder</button>{browser.parent && <button type="button" onClick={() => void browse(browser.parent!)}>Parent folder</button>}</div><ul>{browser.entries.map(entry => <li key={entry.path}><button type="button" onClick={() => void browse(entry.path)}>{entry.name}/</button>{entry.repository && <span>Git repository</span>}</li>)}</ul></section>}
-        <p><button type="submit" disabled={busy || !selectedProvider?.available || (mode === 'existing' && (!selectedProject || (provider === 'rig' && !context)))}>{busy ? 'Connecting…' : 'Create session and open terminal'}</button></p>
-      </form>
+
       </>}
       <details><summary>Provider contracts</summary><ul>{status.providers.map(value => <li key={value.id}><strong>{value.label}</strong> · <code>{value.contract}</code> · {value.capabilities.join(', ')}</li>)}</ul></details>
       {provider === 'rig' && <details><summary>Rig diagnostics</summary><p><a href="?panel=openrig" target="_blank" rel="noreferrer">Open Rig text dashboard (Rig provider only)</a></p></details>}
     </div>
-  </Dialog>;
+  </>;
+  return inline
+    ? <section className="coordination-page" aria-label="Coordination"><header><h1>Coordination</h1><p>Projects and coding agents, when you need them</p></header>{content}</section>
+    : <Dialog title="Coordination" subtitle={position ? `Start an agent at row ${position.row + 1}, column ${position.col + 1}` : 'Projects and coding agents'} onClose={onClose} width={880} dismissible={!busy}>{content}</Dialog>;
 }

@@ -56,3 +56,13 @@
 .coordination-composer .coordination-inline { display: flex; flex-direction: row; align-items: center; margin-top: 7px; }
 .coordination-delivery { color: #b8e6c5; margin: 7px 0 0; }
 @media (max-width: 600px) { .coordination-browser ul { grid-template-columns: 1fr; } }
+
+.coordination-page { height: 100%; overflow-y: auto; box-sizing: border-box; padding: 20px max(12px, calc((100% - 1000px) / 2)); color: #e0e0ef; }
+.coordination-page > header { padding: 0 18px; }
+.coordination-page h1 { margin: 0; font-size: 23px; }
+.coordination-page > header p, .coordination-hint { color: #aaaabd; }
+#coordination-create-seat { margin: 20px 0 28px; padding: 18px; background: #18182c; border: 1px solid #41415c; border-radius: 7px; }
+#coordination-create-seat h3 { margin-top: 0; }
+.coordination-choice { margin: 16px 0; border: 1px solid #44445e; border-radius: 5px; }
+.coordination-names { margin-top: 14px; }
+.coordination-hint { font-size: 12px; }

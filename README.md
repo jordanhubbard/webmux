@@ -5,7 +5,7 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 ## Features
 
 - **2D tiled terminal workspace** — scrollable CSS Grid of fixed-size terminals; click "+" placeholders to add sessions to the right or below any existing tile
-- **Configurable terminal size** — default 80×24; adjust columns, rows, and font size from the top bar (persisted to config)
+- **Configurable terminal size** — default 80×24; adjust columns, rows, and font size under **Display** (persisted to config)
 - **Full terminal emulation** — xterm.js with 256-color, clickable links, 5000-line scrollback
 - **SSH and mosh transports** — native PTYs, with keepalive and auto-reconnect
 - **Persistent sessions** — sessions survive browser closes and server reboots; auto-reconnected on startup
@@ -24,13 +24,13 @@ A browser-based remote workspace for persistent terminal and desktop sessions. W
 - **Operator settings UI** — edit runtime-safe application settings from an admin-only top-bar gear
 - **Audit log** — append-only JSONL event log (logins, session lifecycle)
 - **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
-- **Agent coordination** — a Coordination modal, ordinary agent terminal tiles, and one supervised OpenRig coordinator for local and SSH execution hosts; see [setup and scope](docs/openrig.md)
+- **Agent coordination** — a separate Coordination tab for Agent Deck or Rig, with suggested editable project/session names and ordinary agent terminal tiles; see [setup and scope](docs/openrig.md)
 - **Optional managed hosts** — a separately installed `webmux-client` checks in over an outbound connection, links to saved SSH hosts by a one-time code, and reports host facts; see [managed-host setup](docs/managed-hosts.md)
 - **Session expiry handling** — visible JWT countdown and refresh controls prevent expired browser sessions from entering reconnect loops
 
 ## Experimental USB transport
 
-Use **🔌 USB** in the top bar for setup guidance and a local forwarding command.
+Use **More → USB redirection** for setup guidance and a local forwarding command.
 Linux, Windows and macOS peers need compatible native USB exporter/importer
 software; the peers do not need to run the same OS.
 
@@ -89,9 +89,9 @@ clipboard policy.
 
 In a new Local or qualified SSH terminal, CLI browser requests and clicked links open a **session-linked sign-in panel**. Choose **Continue in this browser** for device codes and manual-code flows, keeping your existing browser login and passkeys. The provider returns device approval to the waiting CLI. For state-bound localhost OAuth, choose **Prepare callback relay**, sign in, then paste the final localhost URL back into the panel. WebMux delivers it once to the originating terminal host. Check the CLI for success.
 
-Each tile's **Sign in** action also accepts a pasted link. See [CLI authentication from any browser](docs/authentication-handoff.md) for return paths, sandbox boundaries, SSH prerequisites and security details. Device-code handoffs need no Chromium; SSH callback relay needs a matching native `webmux` binary and verified non-interactive SSH key/agent access.
+Each tile's **Tools → Sign in** action also accepts a pasted link. See [CLI authentication from any browser](docs/authentication-handoff.md) for return paths, sandbox boundaries, SSH prerequisites and security details. Device-code handoffs need no Chromium; SSH callback relay needs a matching native `webmux` binary and verified non-interactive SSH key/agent access.
 
-**Open browser** and **Use browser on terminal host** retain the companion as an explicit fallback. It needs Chrome/Chromium on the terminal host and shares only the browser viewport. **Return to terminal** keeps it alive; **End browser** clears its temporary profile. See [companion prerequisites and limitations](docs/browser-companion.md).
+**Tools → Open browser** and **Use browser on terminal host** retain the companion as an explicit fallback. It needs Chrome/Chromium on the terminal host and shares only the browser viewport. **Return to terminal** keeps it alive; **End browser** clears its temporary profile. See [companion prerequisites and limitations](docs/browser-companion.md).
 
 ## Quick Start
 
@@ -227,7 +227,7 @@ make start SECURE_MODE=true JWT_SECRET=$(openssl rand -hex 32)
 
 Runtime configuration lives in `~/.config/webmux/` (override with `WEBMUX_HOME`). On first run, missing configuration files are initialized from defaults embedded in the executable. Existing configuration is preserved.
 
-Administrators can edit runtime-safe application settings from the **gear button** in the top bar. In trusted mode, the gear is available to the local operator; in secure mode, it is visible only to administrator accounts. The dialog manages application identity, terminal defaults and grid limits, session logging, transport preferences, hosted fonts, the default workspace, and the host switcher. Startup and security settings—ports, bind addresses, authentication mode, and secrets—remain file-managed.
+Administrators can edit runtime-safe application settings from **More → Settings**. In trusted mode, Settings is available to the local operator; in secure mode, Settings is visible only to administrator accounts. The dialog manages application identity, terminal defaults and grid limits, session logging, transport preferences, hosted fonts, the default workspace, and the host switcher. Startup and security settings—ports, bind addresses, authentication mode, and secrets—remain file-managed.
 
 ### `app.yaml` — Application Settings
 
@@ -263,7 +263,7 @@ app:
     port: 4822
 ```
 
-The `default_term` settings control every terminal tile's dimensions and fixed-width font. Each tile is rendered at a fixed pixel size derived from `cols`, `rows`, and `font_size`. `font_family` accepts a normal comma-separated CSS font-family list and is applied across terminal and monospace UI text. Multi-word family names such as `Custom Mono` are normalized to quoted CSS family names, so `Custom Mono, Monaco, monospace` is returned and saved as `"Custom Mono", Monaco, monospace`. The size values can also be adjusted live from the top bar; changes are saved back to `app.yaml` automatically.
+The `default_term` settings control every terminal tile's dimensions and fixed-width font. Each tile is rendered at a fixed pixel size derived from `cols`, `rows`, and `font_size`. `font_family` accepts a normal comma-separated CSS font-family list and is applied across terminal and monospace UI text. Multi-word family names such as `Custom Mono` are normalized to quoted CSS family names, so `Custom Mono, Monaco, monospace` is returned and saved as `"Custom Mono", Monaco, monospace`. The size values can also be adjusted live under **Display**; changes are saved back to `app.yaml` automatically.
 
 Optional `font_faces` entries let WebMux host local font files for browser clients. `source` paths must be relative paths to `.otf`, `.ttf`, `.woff`, or `.woff2` files; they are resolved relative to the real `app.yaml` path, so symlinked config files can keep fonts beside the shared config. The frontend fetches configured font files through authenticated same-origin routes and registers them before refitting terminals. Once a face is declared, reference its `family` name from `default_term.font_family`.
 
@@ -336,7 +336,7 @@ Set `auth.mode: local` and `secure_mode: true`. Place your TLS cert at `~/.confi
 
 ### Multi-User
 
-Each user gets their own session collection. The first user is created via the bootstrap prompt on first login and becomes an administrator. Administrators can manage additional accounts from the top bar; sign out and sign in as another user to switch session collections.
+Each user gets their own session collection. The first user is created via the bootstrap prompt on first login and becomes an administrator. Administrators can manage additional accounts under **More → Users**; sign out and sign in as another user to switch session collections.
 
 ## Directory Layout
 

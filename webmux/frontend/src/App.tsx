@@ -7,8 +7,8 @@ import { Workspace } from './components/Workspace';
 import { GraphicsWorkspace } from './components/GraphicsWorkspace';
 import { AgentWorkspace } from './components/AgentWorkspace';
 import { OpenRigWorkspace } from './components/OpenRigWorkspace';
+import { CoordinationDialog } from './components/CoordinationDialog';
 import { UsersDialog } from './components/UsersDialog';
-import { MacPermissions } from './components/MacPermissions';
 import { SettingsDialog } from './components/SettingsDialog';
 import { Dialog } from './components/Dialog';
 import { InputBroadcastProvider } from './contexts/InputBroadcastContext';
@@ -167,8 +167,8 @@ function AuthenticatedApp({
         hostSwitcher={hostSwitcher}
       />
 
-      {canManageSettings && <MacPermissions />}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        {canManageSettings && activePane === 'coordination' && <CoordinationDialog inline onClose={() => setActivePane('terminals')} />}
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
           <Workspace
             canManageRig={canManageSettings}
@@ -338,7 +338,7 @@ export default function App() {
 
   const availablePanes = useMemo<WorkspacePane[]>(() => {
     const agentDefinitions = enabledAgentDefinitions(agentConfig);
-    const panes: WorkspacePane[] = ['terminals', 'desktops'];
+    const panes: WorkspacePane[] = ['terminals', 'desktops', ...(canManageSettings ? ['coordination'] : [])];
     if (agentDefinitions.length > 0) {
       if (agentConfig.combined_pane !== false) {
         panes.push('agents');
@@ -347,10 +347,10 @@ export default function App() {
       }
     }
     return panes;
-  }, [agentConfig]);
+  }, [agentConfig, canManageSettings]);
   const workspaceOptions = useMemo(() => availablePanes.map(pane => ({
     value: pane,
-    label: pane === 'terminals' ? 'Terminals' : pane === 'desktops' ? 'Desktops' : pane === 'openrig' ? 'OpenRig' : pane === 'agents'
+    label: pane === 'terminals' ? 'Terminals' : pane === 'desktops' ? 'Desktops' : pane === 'coordination' ? 'Coordination' : pane === 'openrig' ? 'OpenRig' : pane === 'agents'
       ? 'Agents'
       : agentConfig.definitions.find(definition => definition.workspace === pane)?.plural_label ?? pane,
   })), [agentConfig.definitions, availablePanes]);

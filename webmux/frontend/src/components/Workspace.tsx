@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Tile } from './Tile';
 import { ConnectionDialog } from './ConnectionDialog';
 import { CoordinationDialog } from './CoordinationDialog';
-import { RigNavigator } from './RigNavigator';
 import { Dialog } from './Dialog';
 import { WorkspaceMinimap } from './WorkspaceMinimap';
 import { api } from '../utils/api';
@@ -101,11 +100,13 @@ function getAddPositions(
   sessions: Session[],
   terminalGridLimit?: WorkspaceProps['terminalGridLimit'],
 ): { row: number; col: number }[] {
-  if (sessions.length === 0) {
-    return isWithinTerminalGridLimit(0, 0, terminalGridLimit) ? [{ row: 0, col: 0 }] : [];
-  }
-
   const occupied = new Set(sessions.map(s => `${s.row},${s.col}`));
+  const starter = [{ row: 0, col: 0 }, { row: 0, col: 1 }, { row: 1, col: 0 }, { row: 1, col: 1 }]
+    .filter(p => isWithinTerminalGridLimit(p.row, p.col, terminalGridLimit));
+  if (sessions.every(s => s.row < 2 && s.col < 2)) {
+    const empty = starter.filter(p => !occupied.has(`${p.row},${p.col}`));
+    if (empty.length || !sessions.length) return empty;
+  }
   const positions: { row: number; col: number }[] = [];
   const seen = new Set<string>();
 
@@ -165,7 +166,6 @@ export function Workspace({
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
   const [dialogMode, setDialogMode] = useState<'choose' | 'host' | 'rig'>('choose');
-  const [showRigManager, setShowRigManager] = useState(false);
   const [themeOverrides, setThemeOverrides] = useState<Map<string, string>>(() => loadSessionThemeOverrides());
   const [autoScrollOverrides, setAutoScrollOverrides] = useState<Map<string, boolean>>(new Map());
   const [lockOverrides, setLockOverrides] = useState<Map<string, boolean>>(new Map());
@@ -253,11 +253,6 @@ export function Workspace({
     const session = await api.createSession(req);
     setSessions(prev => [...prev, session]);
     setDialogPos(null);
-  }, []);
-
-  const openRigSeat = useCallback(async (provider: string, target: string) => {
-    const session = await api.attachCoordinatedAgent(provider, target);
-    window.dispatchEvent(new CustomEvent('webmux-sessions-changed', { detail: { sessionId: session.id } }));
   }, []);
 
   const handleClose = useCallback((id: string) => {
@@ -631,7 +626,6 @@ export function Workspace({
   return (
     <div style={styles.shell}>
       {operationError && <div role="alert">{operationError} <button onClick={() => setOperationError('')}>Dismiss</button></div>}
-      {canManageRig && <RigNavigator onOpen={openRigSeat} onManage={() => setShowRigManager(true)} />}
       {broadcastMode && <div role="group" aria-label="Type to All recipients" style={{ padding: '5px 10px', background: '#3a2a1a', color: '#f1d494', display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
         <strong>Type to All recipients</strong>
         <button type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), sessions.map(s => s.id))}>All</button>
@@ -813,7 +807,6 @@ export function Workspace({
         tileHeight={tile.h}
         gap={GAP}
       />
-      {showRigManager && <CoordinationDialog onClose={() => setShowRigManager(false)} />}
     </div>
   );
 }

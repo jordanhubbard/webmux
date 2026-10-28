@@ -19,6 +19,7 @@ test('workspace and dialogs render identically across Go runs', async ({ page },
   await expect(page.getByRole('dialog', { name: 'Connect to Host' })).toBeVisible();
   await capture(page, info, 'terminal-dialog.png');
   await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Settings' }).getByLabel('Application name')).toBeVisible();
   await capture(page, info, 'settings.png');

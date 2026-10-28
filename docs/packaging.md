@@ -208,7 +208,7 @@ with v1.3.10.
 
 ## macOS protected-folder access
 
-After starting the service, complete **Mac permissions** in the browser. Local
+After starting the service, open **More → Mac permissions** in the browser. Local
 tmux terminals and SSH use separate macOS privacy grants. The wizard provides
 the installed app path, local System Settings actions, bounded service-context
 checks, and restart/retest guidance. See [macOS setup and signing](../README-macOS.md#mac-permissions-setup).

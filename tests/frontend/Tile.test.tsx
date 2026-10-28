@@ -40,6 +40,20 @@ function makeSession(overrides: Partial<Session> = {}): Session {
 }
 
 describe('Tile', () => {
+  it('keeps host and browser helpers behind session tools without hiding terminal actions', () => {
+    render(<Tile session={makeSession()} fontSize={14} onClose={vi.fn()} onReconnect={vi.fn()} onRename={vi.fn()} />, { wrapper });
+    expect(screen.queryByRole('button', { name: 'Open browser' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sign in' })).toBeNull();
+    const tools = screen.getByRole('button', { name: 'Session tools' });
+    tools.focus();
+    fireEvent.click(tools);
+    expect(screen.getByRole('dialog', { name: 'Session tools' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Open browser' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Close session tools' }));
+    expect(tools).toHaveFocus();
+  });
+
   it('renders session title and transport badge', () => {
     render(
       <Tile

@@ -1,8 +1,8 @@
 # Agent coordination
 
 WebMux exposes coordinator-managed coding sessions behind the ordinary
-**Terminals** grid. The **Coordination** button opens a project and session
-browser backed by a versioned provider contract. Agent Deck is the recommended
+**Terminals** grid. The **Coordination** tab opens a project and session
+browser, keeping agent inventories and activity off the terminal home. Agent Deck is the recommended
 session conductor; Rig remains an optional topology-centric provider. Creating
 a session opens its interactive CLI in a normal terminal
 tile. When Rig is selected, its raw text dashboard is available under **Rig
@@ -10,14 +10,12 @@ diagnostics**. That dashboard reports Rig status; Agent Deck sessions appear in
 the Agent Deck Coordination view.
 
 New installations and upgrades without a saved provider open Coordination in
-Agent Deck by default. The main toolbar's **Coordinator** menu shows the current
-selection and offers **Agent Deck**, **Rig**, and **None**. Selecting an entry
-saves the default immediately. **None** leaves existing sessions running.
-The Coordination dialog also exposes all three choices; **Make default** saves
-its selection. **Settings → Coordination** provides the same setting.
-Explicit provider selections are preserved. The Coordination header shows
-the active provider; **Change** browses another provider for the current visit,
-and **Make default** persists that choice. A configured provider that is not
+Agent Deck by default. Open the **Coordination** tab to choose **Agent Deck**,
+**Rig**, or **None**. **Make default** saves that choice. **None** leaves existing
+sessions running. **More → Settings → Coordination** provides the same setting.
+Explicit provider selections are preserved. The Coordination header shows the
+active provider; selecting another provider browses its projects for this visit.
+A configured provider that is not
 installed remains selected with its installation guidance—WebMux never falls
 back silently. Sessions remain owned by the provider that created them and are
 available whenever that provider is selected.
@@ -29,9 +27,27 @@ source of truth. WebMux's private launch records enrich that inventory but do
 not create a second, stale project list. Running, stopped, and historical Rig
 topologies remain visible with their provider IDs.
 
+## Start an agent
+
+1. Open **Coordination** and choose the folder containing your code. Use **Browse**
+   to find it on the selected execution host.
+2. Choose Codex or Claude Code and a purpose such as building, reviewing, or
+   investigating. Purpose suggests an illustrative session name; it does not
+   instruct or configure the coding agent.
+3. Start a new project to group agents working on that code, or add an agent to
+   an existing project. WebMux suggests a project name from the folder and a
+   session name such as `codex-reviewer`, adding a numeric suffix to avoid known
+   collisions. Both names are editable labels with no special command meaning.
+4. Select **Start agent and open terminal**. Its terminal opens in the ordinary
+   grid; give the agent its actual task there.
+
+Existing sessions can be opened from **Your projects and sessions**. Activity
+and provider diagnostics remain collapsed until requested. Merely visiting the
+tab never creates a project or starts an agent.
+
 ## Projects and worker identity
 
-The Coordination modal groups workers under expandable project headings. Each
+The Coordination tab groups workers under expandable project headings. Each
 worker shows its registered name (such as coder or reviewer), execution host,
 runtime and observed state. Expand or collapse a project with its summary button
 or Enter/Space; **Open session** attaches an existing viewer and **Restart

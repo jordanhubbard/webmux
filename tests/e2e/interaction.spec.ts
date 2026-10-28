@@ -45,7 +45,7 @@ test('connection dialog contains focus, dismisses with Escape, and restores its 
 
   // The workspace is inert. Native Tab navigation may visit browser chrome
   // (reported as document.body), but must never focus a background control.
-  await page.getByRole('button', { name: 'Settings', exact: true }).evaluate(element => element.focus());
+  await page.getByRole('button', { name: 'More', exact: true }).evaluate(element => element.focus());
   expect(await dialog.evaluate(element => element.contains(document.activeElement))).toBe(true);
   for (let i = 0; i < 16; i++) {
     await page.keyboard.press(i < 8 ? 'Tab' : 'Shift+Tab');
@@ -59,6 +59,7 @@ test('connection dialog contains focus, dismisses with Escape, and restores its 
 
 test('clicking the backdrop dismisses a dialog without activating the workspace', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', { name: 'More', exact: true }).click();
   const settings = page.getByRole('button', { name: 'Settings', exact: true });
   await settings.click();
   const dialog = page.getByRole('dialog', { name: 'Settings' });

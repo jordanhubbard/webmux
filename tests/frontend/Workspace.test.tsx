@@ -86,11 +86,14 @@ describe('Workspace', () => {
 
   const defaultProps = { fontSize: 14, termCols: 80, termRows: 24, globalAutoScroll: true, globalAutoScrollVersion: 0, onGlobalAutoScrollChange: vi.fn(), globalLock: false, globalLockVersion: 0, onGlobalLockChange: vi.fn() };
 
-  it('shows add cell when no sessions', async () => {
+  it('starts with a 2 by 2 grid and does not fetch coordinator inventories', async () => {
     render(<Workspace {...defaultProps} />, { wrapper });
     await waitFor(() => {
-      expect(screen.getByText('Click to add a session')).toBeDefined();
+      expect(screen.getAllByText('Click to add a session')).toHaveLength(4);
     });
+    for (const [row, col] of [[0, 0], [0, 1], [1, 0], [1, 1]]) expect(screen.getByTestId(`add-cell-${row}-${col}`)).toBeInTheDocument();
+    const { api } = await import('@frontend/utils/api');
+    expect(api.getCoordination).not.toHaveBeenCalled();
   });
 
   it('shows loading state initially', async () => {

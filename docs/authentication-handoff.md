@@ -35,7 +35,7 @@ WebMux does not rewrite CLI commands or assume every provider uses the same flow
 
 New Local and qualified SSH shells inherit the existing `BROWSER`/`GH_BROWSER`
 and PATH opener helpers. They now request a sign-in panel, not an automatic remote
-browser. Printed plain and OSC 8 links use the same panel when clicked. **Sign in**
+browser. Printed plain and OSC 8 links use the same panel when clicked. **Tools → Sign in**
 on each tile accepts a pasted link, including for older tmux shells, Mosh, a
 sandbox that strips the browser environment, or an absolute OS opener that bypasses
 WebMux. No terminal keybindings or operating-system browser associations change.

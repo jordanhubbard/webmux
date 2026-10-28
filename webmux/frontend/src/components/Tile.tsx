@@ -3,6 +3,7 @@ import { Terminal, type TerminalHandle } from './Terminal';
 import { AuthHandoff } from './AuthHandoff';
 import { BrowserCompanion } from './BrowserCompanion';
 import { TerminalActions } from './TerminalActions';
+import { Dialog } from './Dialog';
 import { ManagedHostDialog } from './ManagedHostDialog';
 import { ReconnectOverlay } from './ReconnectOverlay';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
@@ -70,6 +71,7 @@ export function Tile({
 }: TileProps) {
   const [state, setState] = useState<ConnectionState>(session.state);
   const [browserNavigation, setBrowserNavigation] = useState<{ url: string } | null>(null);
+  const [showTools, setShowTools] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
   const [showManagedHost, setShowManagedHost] = useState(false);
   const [handoff, setHandoff] = useState<{ url: string; requestId?: string; key: number } | null>(null);
@@ -212,9 +214,7 @@ export function Tile({
           {session.rig && <span aria-label={session.rig.provider === 'agent-deck' ? 'Agent Deck-managed worker' : 'Rig-managed worker'} title={`${session.rig.provider || 'Rig'} session ${session.rig.target} · ${session.rig.runtime} · viewer ${state}`} style={{ ...styles.transport, color: '#c5b8ff', flexShrink: 1, minWidth: 0, maxWidth: 280, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.rig.provider === 'agent-deck' ? 'Agent Deck' : 'Rig'} · {session.rig.project} · {session.rig.name} · {session.rig.host}</span>}
         </div>
         <div style={styles.chromeRight}>
-          {canManageHosts && session.transport === 'ssh' && <button style={styles.browserBtn} onClick={() => setShowManagedHost(true)} title="View or link a WebMux host client">Host</button>}
-          <button style={styles.browserBtn} title="Open an interactive browser on this terminal’s host" aria-expanded={showBrowser} onClick={() => setShowBrowser(true)}>Open browser</button>
-          <button style={styles.browserBtn} onClick={() => setHandoff({ url: '', key: Date.now() })}>Sign in</button>
+          <button style={styles.browserBtn} aria-label="Session tools" title="Session tools" onClick={() => setShowTools(true)}>Tools</button>
           <TerminalActions terminalRef={termHandleRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
           {broadcastMode && (
             <button
@@ -242,20 +242,7 @@ export function Tile({
             onClick={() => termHandleRef.current?.scrollToBottom()}
             title="Scroll to bottom"
           >&#8595;</button>
-          {themes.length > 0 && onThemeChange && (
-            <select
-              style={styles.themeSelect}
-              value={themeOverride ?? ''}
-              onChange={e => onThemeChange(session.id, e.target.value || null)}
-              title={themeOverride ? `Theme override: ${themeOverride}` : `Using global theme${globalTheme ? ` (${globalTheme})` : ''}`}
-              onMouseDown={e => e.stopPropagation()}
-            >
-              <option value="">{globalTheme ? `\u25bd ${globalTheme}` : '\u25bd (default)'}</option>
-              {themes.map(t => (
-                <option key={t.name} value={t.name}>{t.name}</option>
-              ))}
-            </select>
-          )}
+
           <button
             style={{ ...styles.chromeBtn, color: locked ? '#e8a030' : '#666', fontSize: 10 }}
             onClick={() => onLockToggle?.(session.id)}
@@ -275,6 +262,27 @@ export function Tile({
       {handoff && <AuthHandoff key={handoff.key} session={session} url={handoff.url}
         onDismiss={() => { if (handoff.requestId) termHandleRef.current?.acknowledgeBrowser(handoff.requestId); setHandoff(null); termHandleRef.current?.focus(); }}
         onCompanion={url => { setBrowserNavigation({ url }); setShowBrowser(true); }} />}
+      {showTools && <Dialog title="Session tools" subtitle={session.title} onClose={() => setShowTools(false)} width={440}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', padding: 20, alignItems: 'center' }}>
+          {canManageHosts && session.transport === 'ssh' && <button style={styles.browserBtn} onClick={() => { setShowTools(false); setShowManagedHost(true); }} title="View or link a WebMux host client">Host</button>}
+          <button style={styles.browserBtn} title="Open an interactive browser on this terminal’s host" aria-expanded={showBrowser} onClick={() => { setShowTools(false); setShowBrowser(true); }}>Open browser</button>
+          <button style={styles.browserBtn} onClick={() => { setShowTools(false); setHandoff({ url: '', key: Date.now() }); }}>Sign in</button>
+          {themes.length > 0 && onThemeChange && (
+            <select
+              style={styles.themeSelect}
+              value={themeOverride ?? ''}
+              onChange={e => onThemeChange(session.id, e.target.value || null)}
+              title={themeOverride ? `Theme override: ${themeOverride}` : `Using global theme${globalTheme ? ` (${globalTheme})` : ''}`}
+              onMouseDown={e => e.stopPropagation()}
+            >
+              <option value="">{globalTheme ? `\u25bd ${globalTheme}` : '\u25bd (default)'}</option>
+              {themes.map(t => (
+                <option key={t.name} value={t.name}>{t.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      </Dialog>}
       {showBrowser && <BrowserCompanion session={session} navigation={browserNavigation} onHide={() => { setBrowserNavigation(null); setShowBrowser(false); termHandleRef.current?.focus(); }} />}
       {showManagedHost && <ManagedHostDialog session={session} client={managedClient} onClose={() => setShowManagedHost(false)} onChanged={() => onManagedClientChanged?.()} onSessionUpdated={updated => onSessionUpdated?.(updated)} />}
       <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
