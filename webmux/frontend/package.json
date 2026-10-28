@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.4.0",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.0.0",
     "@types/guacamole-common-js": "^1.5.5",
     "@types/novnc__novnc": "^1.6.0",
