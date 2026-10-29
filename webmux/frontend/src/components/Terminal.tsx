@@ -12,6 +12,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { installTerminalQuerySuppressors, isTerminalLocalInput, shouldSuppressTerminalInput } from '../utils/terminalInput';
 import { TERMINAL_FONTS_LOADED_EVENT, loadTerminalFontFamily, normalizeTerminalFontFamily } from '../utils/terminalFont';
+import { scrollTerminalPages } from '../utils/terminalScroll';
 
 export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
   background: '#0d0d1a',
@@ -41,6 +42,7 @@ const SEARCH_OPTIONS = { caseSensitive: false, decorations: { matchOverviewRuler
 export interface TerminalHandle {
   acknowledgeBrowser: (id: string) => void;
   scrollToBottom: () => void;
+  scrollPages: (delta: number) => void;
   isAtBottom: () => boolean;
   sendInput: (data: string) => void;
   pasteInput: (data: string) => void;
@@ -181,6 +183,12 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     scrollToBottom: () => {
       userScrolledRef.current = false;
       termRef.current?.scrollToBottom();
+    },
+    scrollPages: (delta: number) => {
+      if (termRef.current) {
+        scrollTerminalPages(termRef.current, delta, userScrolledRef,
+          (data) => wsHandleRef.current?.send({ type: 'input', data }));
+      }
     },
     isAtBottom: () => !userScrolledRef.current,
     sendInput: (data: string) => {
