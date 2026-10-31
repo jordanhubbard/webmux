@@ -231,3 +231,33 @@ it('avoids name collisions and adds an agent to an existing project', async () =
   fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
   await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ mode: 'existing', projectId: 'project-one', projectName: 'webmux', context: 'agents', name: 'codex-builder-2' })));
 });
+
+
+it('uses built-in WebMux without offering external launches or a guarded queue', async () => {
+  mocks.status.mockResolvedValue({ ...emptyStatus(), defaultProvider: 'webmux', providers: [
+    { id: 'webmux', label: 'WebMux', available: true, capabilities: ['terminals', 'connected-servers', 'direct-messaging'], contract: 'webmux-server-directory/v1' },
+    ...emptyStatus().providers,
+  ] });
+  const close = vi.fn();
+  render(<CoordinationDialog onClose={close} />);
+  expect(await screen.findByRole('region', { name: 'Built-in WebMux coordination' })).toHaveTextContent('No external coordinator is required');
+  expect(screen.getByLabelText('Coordinator')).toHaveValue('webmux');
+  expect(screen.queryByRole('button', { name: 'Start agent and open terminal' })).toBeNull();
+  expect(screen.queryByLabelText('Queue safely until the target can accept input')).toBeNull();
+  await waitFor(() => expect(mocks.status).toHaveBeenCalledWith('webmux'));
+  fireEvent.click(screen.getByRole('button', { name: 'Open terminals and servers' }));
+  expect(close).toHaveBeenCalledOnce();
+  expect(mocks.create).not.toHaveBeenCalled();
+  expect(mocks.send).not.toHaveBeenCalled();
+});
+
+it('saves WebMux as the default and explicitly browses an external provider', async () => {
+  render(<CoordinationDialog onClose={() => {}} />);
+  await screen.findByText('Using');
+  fireEvent.change(screen.getByLabelText('Coordinator'), { target: { value: 'webmux' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Make default' }));
+  await waitFor(() => expect(mocks.updateConfig).toHaveBeenCalledWith({ app: { coordination: { default_provider: 'webmux' } } }));
+  fireEvent.change(screen.getByLabelText('Coordinator'), { target: { value: 'agent-deck' } });
+  await waitFor(() => expect(mocks.status).toHaveBeenCalledWith('agent-deck'));
+  expect(mocks.create).not.toHaveBeenCalled();
+});

@@ -26,7 +26,7 @@ Connected WebMux servers can share authenticated terminal views and session-targ
 - **Operator settings UI** — edit runtime-safe application settings from an admin-only top-bar gear
 - **Audit log** — append-only JSONL event log (logins, session lifecycle)
 - **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
-- **Agent coordination** — a separate Coordination tab for Agent Deck or Rig, with suggested editable project/session names and ordinary agent terminal tiles; see [setup and scope](docs/openrig.md)
+- **Agent coordination** — built-in WebMux terminals and messaging by default, with optional Agent Deck or Rig for managed projects and agents in the Coordination tab; see [setup and scope](docs/openrig.md)
 - **Optional managed hosts** — a separately installed `webmux-client` checks in over an outbound connection, links to saved SSH hosts by a one-time code, and reports host facts; see [managed-host setup](docs/managed-hosts.md)
 - **Session expiry handling** — visible JWT countdown and refresh controls prevent expired browser sessions from entering reconnect loops
 
@@ -108,6 +108,10 @@ brew install jordanhubbard/webmux/webmux
 brew services start jordanhubbard/webmux/webmux
 ```
 
+The stable formula currently builds v1.4.0 with Agent Deck as its default. The
+source checkout uses built-in WebMux coordination; this change will ship in the
+next release.
+
 Open http://localhost:8080. Run services as your normal user so WebMux can
 access your SSH keys. Record formula-specific trust for Agent Deck and WebMux
 before Homebrew 6 validates their taps. See
@@ -165,8 +169,8 @@ those services still point to a Node installation. See the
 
 ```bash
 make install         # client only, to ~/.local/bin; does not start or enroll it
-make install-server  # server + Agent Deck, as a launchd or systemd service
-make install-all     # client, server, and Agent Deck on the same machine
+make install-server  # server as a launchd or systemd service
+make install-all     # client and server on the same machine
 ```
 
 The server service starts automatically on login and reconnects persistent sessions.
@@ -182,11 +186,10 @@ make uninstall-all     # remove both
 ```
 
 These Make install targets support macOS and Linux. Windows uses the npm service commands documented in [README-Windows.md](README-Windows.md).
-`make install-server` installs the qualified Agent Deck release into
-`~/.local/bin` and places that directory on the service PATH. Use
-`INSTALL_AGENT_DECK=no make install-server` only for an intentional Rig-only or
-coordination-disabled installation. On an execution host that does not run the
-WebMux server, use `make install-agent-deck` separately.
+`make install-server` uses built-in WebMux coordination. To install the optional
+qualified Agent Deck release into `~/.local/bin`, use `make install-agent-deck`
+or `make install-server INSTALL_AGENT_DECK=yes`. The service includes that
+directory on its PATH. Rig remains a separate optional installation.
 
 ### Makefile Targets
 

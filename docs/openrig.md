@@ -1,24 +1,37 @@
 # Agent coordination
 
-WebMux exposes coordinator-managed coding sessions behind the ordinary
-**Terminals** grid. The **Coordination** tab opens a project and session
-browser, keeping agent inventories and activity off the terminal home. Agent Deck is the recommended
-session conductor; Rig remains an optional topology-centric provider. Creating
-a session opens its interactive CLI in a normal terminal
-tile. When Rig is selected, its raw text dashboard is available under **Rig
-diagnostics**. That dashboard reports Rig status; Agent Deck sessions appear in
-the Agent Deck Coordination view.
+The source checkout includes the built-in default described here. Published
+v1.4.0 still defaults to Agent Deck; the new selection will ship in the next
+release.
 
-New installations and upgrades without a saved provider open Coordination in
-Agent Deck by default. Open the **Coordination** tab to choose **Agent Deck**,
-**Rig**, or **None**. **Make default** saves that choice. **None** leaves existing
-sessions running. **More → Settings → Coordination** provides the same setting.
-Explicit provider selections are preserved. The Coordination header shows the
-active provider; selecting another provider browses its projects for this visit.
-A configured provider that is not
-installed remains selected with its installation guidance—WebMux never falls
-back silently. Sessions remain owned by the provider that created them and are
-available whenever that provider is selected.
+WebMux is the default built-in coordination experience. Each host runs WebMux;
+its Terminals workspace provides local terminals, selected-server and all-server
+views, and direct messages to running terminals. No external coordinator is
+required. See [connected servers and messaging](server-federation.md) for setup.
+
+Agent Deck and Rig remain optional external coordinators. Neither has been
+replaced: Agent Deck adds managed projects, guarded instruction queues and
+completion records; Rig adds canonical team topology and peer messaging. WebMux's
+direct messages report queue admission, not agent processing or task completion.
+The built-in mode does not provide those external tools' project launch wizard,
+guarded queue, or durable completion inbox.
+
+Open **Coordination → Coordinator** and choose **WebMux (built-in)**, **Agent
+Deck**, **Rig**, or **None**. Selection browses that experience for the current
+visit; **Make default** saves it. **More → Settings → Coordination** provides the
+same setting. New installations and missing settings default to WebMux. Explicit
+saved choices are preserved, so existing Agent Deck or Rig users can choose
+WebMux and click **Make default**. **None** leaves existing sessions running.
+
+The built-in panel opens **Terminals**, where users create terminals, run their
+chosen coding CLI, select connected servers, and send messages. Merely opening
+Coordination never launches an agent. External inventories are queried only for
+the selected provider; Rig's background supervisor runs only when Rig is the
+saved default. Switching does not stop existing agents or change their ownership.
+A selected external tool that is unavailable shows its installation guidance;
+there is no silent fallback.
+
+The following sections describe the optional external integrations.
 
 The browser deliberately keeps three concepts separate: a coordinator project
 (a Rig topology or Agent Deck group), a coordinator session/seat, and a
@@ -29,7 +42,7 @@ topologies remain visible with their provider IDs.
 
 ## Start an agent
 
-1. Open **Coordination** and choose the folder containing your code. Use **Browse**
+1. Open **Coordination**, select **Agent Deck** or **Rig**, and choose the folder containing your code. Use **Browse**
    to find it on the selected execution host.
 2. Choose Codex or Claude Code and a purpose such as building, reviewing, or
    investigating. Purpose suggests an illustrative session name; it does not
@@ -106,13 +119,10 @@ their existing behavior.
 
 ## Agent Deck provider
 
-Source `make install-server` and `make install-all` install WebMux's
-qualified Agent Deck release by default. Homebrew installs Agent Deck as a
-dependency. Use `make install-agent-deck` on a macOS/Linux execution host
-that does not run the server. The installer is idempotent, pins the qualified
-version, and uses Agent Deck's checksum-verifying upstream installer. Set
-`INSTALL_AGENT_DECK=no` only for an intentional Rig-only or
-coordination-disabled server.
+Agent Deck is optional and is not installed by default. Use
+`make install-agent-deck` or `make install-server INSTALL_AGENT_DECK=yes`
+on macOS/Linux, or `brew install asheshgoplani/tap/agent-deck` with Homebrew. The installer is idempotent, pins the qualified
+version, and uses Agent Deck's checksum-verifying upstream installer.
 
 When `agent-deck` is on the WebMux service PATH, Coordination also inventories
 the current local Agent Deck profile and every remote registered with that
@@ -186,7 +196,7 @@ and a remote-shell refusal with no input written. The installed production
 coordinator was not replaced. Remote Claude identity, provider telemetry hooks,
 and automatic remote resume/fork remain outside this patch.
 
-## Prerequisites
+## Rig prerequisites
 
 On the Linux/macOS WebMux server, put `rig`, `node` and tmux **3.4 or newer** on the service PATH.
 Coordination rejects older or unrecognized tmux versions before calling Rig:
@@ -213,11 +223,10 @@ seconds so a restart uses the same endpoint. Closing WebMux viewers leaves the
 daemon and tmux agents running. Native Windows coordination hosting is not
 supported; Windows WebMux's existing terminals remain available.
 
-## Owner workflow
+## Rig owner workflow
 
-1. Click **Coordination** and inspect the default provider's projects and
-   sessions. Use **Change** for a temporary switch or **Make default** to keep
-   the selected experience. The same default is available under
+1. Click **Coordination**, choose **Rig** in the Coordinator selector, and inspect
+   its projects and sessions. Use **Make default** to keep that experience. The same default is available under
    **Settings → Coordination**.
 2. Choose an existing project or **New coordinated project**. Select an
    execution host, browse to an absolute workspace on that host, name the

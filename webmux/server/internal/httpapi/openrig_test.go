@@ -153,3 +153,60 @@ func TestOpenRigAttachesOnlyDaemonListedTargets(t *testing.T) {
 		t.Fatalf("unsafe or unexpected launch: %+v", value)
 	}
 }
+
+func TestWebMuxDefaultDoesNotQueryExternalInventories(t *testing.T) {
+	s, handler := fixture(t, "none")
+	if err := s.store.WriteConfig("app.yaml", map[string]any{"app": map[string]any{}}); err != nil {
+		t.Fatal(err)
+	}
+	executable, logPath := fakeAgentDeck(t)
+	t.Setenv("PATH", filepath.Dir(executable)+string(os.PathListSeparator)+os.Getenv("PATH"))
+	response := request(handler, "GET", "/api/coordination", "", "")
+	requireStatus(t, response, 200)
+	var status struct {
+		DefaultProvider string                           `json:"defaultProvider"`
+		Providers       []coordinationProviderDescriptor `json:"providers"`
+		Seats           []coordinationSeat               `json:"seats"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &status); err != nil {
+		t.Fatal(err)
+	}
+	if status.DefaultProvider != "webmux" || len(status.Seats) != 0 || len(status.Providers) != 3 || status.Providers[0].ID != "webmux" || !status.Providers[0].Available {
+		t.Fatalf("unexpected built-in default: %s", response.Body.String())
+	}
+	if _, err := os.Stat(logPath); !os.IsNotExist(err) {
+		t.Fatalf("external coordinator queried by default: %v", err)
+	}
+	if s.rigCoordinationSelected() {
+		t.Fatal("missing settings enabled Rig supervisor")
+	}
+	selected := request(handler, "GET", "/api/coordination?provider=agent-deck", "", "")
+	requireStatus(t, selected, 200)
+	if !strings.Contains(selected.Body.String(), `"id":"sparky:remote-1"`) {
+		t.Fatalf("explicit provider not queried: %s", selected.Body.String())
+	}
+	if !strings.Contains(selected.Body.String(), `"defaultProvider":"webmux"`) {
+		t.Fatal("temporary selection changed saved default")
+	}
+	requireStatus(t, request(handler, "GET", "/api/coordination?provider=other", "", ""), 400)
+}
+
+func TestRigSupervisionRequiresExplicitSavedSelection(t *testing.T) {
+	// Exercise selection without starting an installed coordinator in this test.
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "1")
+	s, _ := fixture(t, "none")
+	for _, provider := range []string{"webmux", "agent-deck", "disabled", "choose", "rig", "webmux"} {
+		if err := s.store.WriteConfig("app.yaml", map[string]any{"app": map[string]any{"coordination": map[string]any{"default_provider": provider}}}); err != nil {
+			t.Fatal(err)
+		}
+		if got := s.rigCoordinationSelected(); got != (provider == "rig") {
+			t.Fatalf("provider %s: Rig supervision %v", provider, got)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(s.store.Home, "config", "app.yaml"), []byte("[broken"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if s.rigCoordinationSelected() {
+		t.Fatal("invalid settings enabled Rig")
+	}
+}

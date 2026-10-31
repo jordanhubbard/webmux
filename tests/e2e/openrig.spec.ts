@@ -67,7 +67,7 @@ test('Agent Deck UI queues work and drains remote completion records', async ({ 
   };
   let sent: unknown;
   let drained: unknown;
-  await page.route('**/api/coordination', route => route.fulfill({ json: status }));
+  await page.route(/\/api\/coordination(?:\?.*)?$/, route => route.fulfill({ json: status }));
   await page.route('**/api/coordination/messages', async route => {
     sent = route.request().postDataJSON();
     await route.fulfill({ json: { target: 'sparky:worker', sendId: 'send-1', state: 'queued', queued: true, submitted: true } });
@@ -106,7 +106,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   let workloadCompleted = false;
   type Agent = { name: string; id: string; state: string; openable: boolean; nativeSessionId?: string };
   type Session = { id: string; row: number; col: number; openrig_view?: string; rig?: { target: string; project: string; name: string; host: string; runtime: string } };
-  const status = async () => (await (await request.get('/api/coordination')).json()) as {
+  const status = async () => (await (await request.get('/api/coordination?provider=rig')).json()) as {
     seats: Agent[]; messages: { from: string; to: string; body: string }[];
   };
   const useRig = async (dialog: ReturnType<typeof page.getByRole>) => {
@@ -323,7 +323,7 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
 
 
 test('coordination groups provider-owned sessions in keyboard-expandable projects', async ({ page }) => {
-  await page.route('**/api/coordination', route => route.fulfill({ json: {
+  await page.route(/\/api\/coordination(?:\?.*)?$/, route => route.fulfill({ json: {
     contract: 'webmux-coordination/v1',
     defaultProvider: 'rig',
     providers: [{ id: 'rig', label: 'Rig', available: true, capabilities: ['projects', 'attach'], contract: 'openrig-cli/0.6.14' }],

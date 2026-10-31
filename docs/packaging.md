@@ -11,9 +11,11 @@ brew install jordanhubbard/webmux/webmux
 brew services start jordanhubbard/webmux/webmux
 ```
 
-The formula depends on `asheshgoplani/tap/agent-deck`, which also installs
-tmux, so the default Agent Deck coordination experience is available to the
-service.
+The stable formula currently builds v1.4.0 and installs Agent Deck and tmux.
+The source checkout now defaults to built-in WebMux coordination; removing the
+formula dependency belongs with the next release that includes that change.
+With `--HEAD`, WebMux is the default; the formula still installs Agent Deck until
+that release updates its dependencies.
 
 Open http://localhost:8080 and create the first administrator account. To run in the
 foreground instead, use `webmux`. Linux background services require systemd and an
@@ -31,9 +33,8 @@ or a C/C++ toolchain on Linux). There are no prebuilt Homebrew bottles yet.
 The repository itself is the tap; no separate `homebrew-webmux` repository is
 required. The explicit URL in the WebMux `brew tap` is necessary. Homebrew
 6 validates tap contents immediately after cloning, so record formula-specific
-trust before each tap command. Trusting only
-`asheshgoplani/tap/agent-deck` and `jordanhubbard/webmux/webmux`
-is narrower than trusting every current and future formula in either tap.
+trust before the tap command. Trusting only `jordanhubbard/webmux/webmux`
+is narrower than trusting every current and future formula in the tap.
 
 ## Services, configuration, and upgrades
 
@@ -108,15 +109,15 @@ runtime. OpenSSH and optional mosh/tmux/guacd tools remain
 external dependencies for their respective features.
 
 Agent Deck is not embedded in native archives. On macOS or Linux, install the
-qualified release before starting an extracted server:
+qualified release only if you select the optional Agent Deck coordinator:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/asheshgoplani/agent-deck/v1.16.34/install.sh | bash -s -- --version v1.16.34 --non-interactive
 ```
 
-Ensure `~/.local/bin` is on the server service PATH. Native Windows
-coordination hosting is unavailable because Agent Deck supports Windows only
-through WSL.
+For Agent Deck, ensure `~/.local/bin` is on the server service PATH. Native
+Windows supports built-in WebMux coordination; the optional external coordinator
+hosts are unavailable there (Agent Deck requires WSL).
 
 Native filenames end in `-native.tar.gz`, `-native.zip` or `-native.msi`, with a
 `.sha256` file for each artifact. `bundle.json` records the build platform and

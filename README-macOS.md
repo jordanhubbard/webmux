@@ -15,8 +15,9 @@ brew install jordanhubbard/webmux/webmux
 brew services start jordanhubbard/webmux/webmux
 ```
 
-The formula installs Agent Deck and tmux for WebMux's default coordination
-experience.
+The stable formula currently builds v1.4.0 and installs Agent Deck and tmux.
+The source checkout defaults to built-in WebMux coordination; the next release
+will carry that default into stable packages.
 
 Run these commands as your normal user. Open http://localhost:8080, or run
 `webmux` for foreground operation. Record formula-specific trust for Agent Deck
@@ -70,16 +71,16 @@ make install-server
 make status
 ```
 
-This installs the qualified Agent Deck release in `~/.local/bin`, places that
-directory on the service PATH, installs
+This places `~/.local/bin` on the service PATH, installs
 `~/Library/LaunchAgents/com.webmux.server.plist`, and configures launchd to
 start WebMux when the user logs in. It runs as the installing user so it can
-access that user's SSH configuration and keys. Use
-`INSTALL_AGENT_DECK=no make install-server` only when configuring Rig instead
-or disabling coordination.
+access that user's SSH configuration and keys. Built-in WebMux coordination
+is the default. Use `make install-agent-deck` or
+`make install-server INSTALL_AGENT_DECK=yes` to install the optional Agent Deck
+integration; Rig is installed separately.
 
-Install Agent Deck on every registered remote that will own coordinated
-sessions. From a WebMux checkout, run `make install-agent-deck`; without a
+If you select Agent Deck, install it on every registered remote that will own
+its coordinated sessions. From a WebMux checkout, run `make install-agent-deck`; without a
 checkout, use Agent Deck's checksum-verifying installer:
 
 ```bash

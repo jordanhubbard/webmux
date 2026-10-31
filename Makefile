@@ -30,7 +30,7 @@
 #   SECURE_MODE        true | false            (default: false)
 #   CLIENT_BINDIR      Client install directory (default: ~/.local/bin)
 #   AGENT_DECK_BINDIR  Agent Deck install directory (default: ~/.local/bin)
-#   INSTALL_AGENT_DECK Install Agent Deck with the server (default: yes)
+#   INSTALL_AGENT_DECK Install Agent Deck with the server (default: no)
 #
 # Examples:
 #   make start HTTP_PORT=9090
@@ -56,7 +56,7 @@ WEBMUX_HOME  ?= $(HOME)/.config/webmux
 CLIENT_BINDIR ?= $(HOME)/.local/bin
 AGENT_DECK_BINDIR ?= $(HOME)/.local/bin
 AGENT_DECK_VERSION ?= v1.16.34
-INSTALL_AGENT_DECK ?= yes
+INSTALL_AGENT_DECK ?= no
 PIDFILE      := $(WEBMUX_HOME)/.webmux.pid
 LOGFILE      := $(WEBMUX_HOME)/logs/webmux.log
 NODE         := node
@@ -88,7 +88,7 @@ endif
 
 # ── Targets ────────────────────────────────────────────────────────
 .PHONY: all build build-server build-client deps check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
-       install install-client install-agent-deck install-server install-all uninstall uninstall-client uninstall-server uninstall-all \
+       install install-client install-agent-deck install-optional-agent-deck install-server install-all uninstall uninstall-client uninstall-server uninstall-all \
        release release-minor release-major release-publish changelog-init \
        package package-server package-client package-assets _start_manual _stop_manual
 
@@ -147,7 +147,7 @@ help:
 	@printf "  $(C_YLW)LISTEN_HOST$(C_RST)=$(C_DIM)0.0.0.0$(C_RST)          Bind address\n"
 	@printf "  $(C_YLW)CLIENT_BINDIR$(C_RST)=$(C_DIM)~/.local/bin$(C_RST)     Client install directory\n"
 	@printf "  $(C_YLW)AGENT_DECK_BINDIR$(C_RST)=$(C_DIM)~/.local/bin$(C_RST) Agent Deck install directory\n"
-	@printf "  $(C_YLW)INSTALL_AGENT_DECK$(C_RST)=$(C_DIM)yes$(C_RST)         Install Agent Deck with server\n"
+	@printf "  $(C_YLW)INSTALL_AGENT_DECK$(C_RST)=$(C_DIM)no$(C_RST)          Install Agent Deck with server\n"
 
 check-guacd:
 	@if command -v guacd >/dev/null 2>&1; then \
@@ -399,6 +399,10 @@ install-client: build-client
 	@printf "  %s/webmux-client --server WEBMUX_URL --background\n" "$(CLIENT_BINDIR)"
 
 install-agent-deck:
+	@AGENT_DECK_BINDIR="$(AGENT_DECK_BINDIR)" AGENT_DECK_VERSION="$(AGENT_DECK_VERSION)" \
+		sh scripts/install-agent-deck.sh
+
+install-optional-agent-deck:
 	@if [ "$(INSTALL_AGENT_DECK)" = "yes" ]; then \
 		AGENT_DECK_BINDIR="$(AGENT_DECK_BINDIR)" AGENT_DECK_VERSION="$(AGENT_DECK_VERSION)" \
 			sh scripts/install-agent-deck.sh; \
@@ -412,7 +416,7 @@ install-all: install-server install-client
 
 # Finish fallible preparation before interrupting the installed service.
 # Do not list stop as a prerequisite: make -j can run it beside the build.
-install-server: install-agent-deck build-server
+install-server: install-optional-agent-deck build-server
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Installing launchd service…\n"
 	@$(NODE) scripts/macos-app.mts "$(WEBMUX_DIR)/bin/webmux" "$(MACOS_APP)"

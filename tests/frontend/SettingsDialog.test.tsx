@@ -116,6 +116,12 @@ describe('SettingsDialog', () => {
     expect(api.updateConfig).not.toHaveBeenCalled();
   });
 
+  it('defaults missing coordination settings to WebMux', async () => {
+    (api.getConfig as ReturnType<typeof vi.fn>).mockResolvedValue({ ...config, app: { ...config.app, coordination: undefined } });
+    render(<SettingsDialog workspaceOptions={workspaceOptions} onClose={vi.fn()} onSaved={vi.fn()} />);
+    expect(await screen.findByLabelText('Default coordination experience')).toHaveValue('webmux');
+  });
+
   it('changes the default coordination experience', async () => {
     render(<SettingsDialog workspaceOptions={workspaceOptions} onClose={vi.fn()} onSaved={vi.fn()} />);
     fireEvent.change(await screen.findByLabelText('Default coordination experience'), { target: { value: 'rig' } });
