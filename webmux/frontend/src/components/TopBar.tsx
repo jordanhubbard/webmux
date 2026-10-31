@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
 import type { AuthState } from '../hooks/useAuth';
 import type { AgentDefinition, HostSwitcherConfig, NamedTheme } from '../types';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
@@ -28,6 +28,8 @@ function getHostSwitchContext(hostSwitcher?: HostSwitcherConfig) {
 }
 
 interface TopBarProps {
+  serverSelector?: ReactNode;
+  remoteServersActive?: boolean;
   auth: AuthState;
   appName: string;
   fontSize: number;
@@ -75,6 +77,8 @@ export function TopBar({
   agentDefinitions = [],
   combinedAgentPane = true,
   hostSwitcher,
+  serverSelector,
+  remoteServersActive = false,
 }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
   const { activePane, setActivePane } = useWorkspacePane();
@@ -155,7 +159,7 @@ export function TopBar({
           </select>
         )}
 
-        {activePane === 'terminals' && (
+        {activePane === 'terminals' && !remoteServersActive && (
           <div style={styles.termSizeControls}>
             <button
               style={styles.iconBtn}
@@ -207,6 +211,7 @@ export function TopBar({
           </div>
         )}
 
+        {!remoteServersActive && <>
         <button
           style={{
             ...styles.broadcastBtn,
@@ -233,6 +238,7 @@ export function TopBar({
         >
           {globalLock ? '\ud83d\udd12 Locked' : '\ud83d\udd13 Unlocked'}
         </button>
+        </>}
         </div>
       </Dialog>}
       {showOptions && <Dialog title="More" subtitle="Host tools, settings and your account" onClose={() => setShowOptions(false)} width={520}>
@@ -317,6 +323,7 @@ export function TopBar({
       <div className="webmux-topbar" style={styles.bar}>
         <div style={styles.left}>
           <span style={styles.logo}>{'\u25a6'} {appName.toLowerCase() === 'webmux' ? 'WebMux' : appName}</span>
+          {serverSelector}
         <button
           onClick={() => setActivePane('terminals')}
           style={{
@@ -382,7 +389,7 @@ export function TopBar({
           {canManageSettings && <button style={{ ...styles.iconBtn, background: activePane === 'coordination' ? '#7c6af7' : '#1a1a3a' }} aria-pressed={activePane === 'coordination'} onClick={() => setActivePane('coordination')}>Coordination</button>}
         </div>
         <div style={styles.right}>
-          {activePane === 'terminals' && <>
+          {activePane === 'terminals' && !remoteServersActive && <>
         <button
           style={{
             ...styles.broadcastBtn,

@@ -35,6 +35,14 @@ describe('api utilities', () => {
     });
   });
 
+  it('routes a namespaced session through this server without exposing a peer credential', async () => {
+    localStorage.setItem('webmux_token', 'browser-token');
+    const { buildWsUrl } = await import('@frontend/utils/api');
+    expect(buildWsUrl('@remote/same-id')).toContain('/api/servers/remote/term/same-id?token=browser-token');
+    expect(buildWsUrl('same-id')).toContain('/api/term/same-id?token=browser-token');
+    expect(buildWsUrl('@remote/../api/config')).not.toContain('/api/servers/remote/');
+  });
+
   describe('api client', () => {
     let fetchSpy: ReturnType<typeof vi.fn>;
 

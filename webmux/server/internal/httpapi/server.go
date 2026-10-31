@@ -110,6 +110,7 @@ func (s *Server) Close() error {
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	s.registerFederation(mux)
 	mux.Handle("GET /api/setup/macos", s.protected(false, s.getMacSetup))
 	mux.Handle("POST /api/setup/macos", s.protected(false, s.macSetupAction))
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
@@ -187,9 +188,14 @@ func (s *Server) Handler() http.Handler {
 	// Viewport polling and individual key events must not consume the budget
 	// for login, configuration, or terminal connections. Both paths remain limited.
 	general := newLimiter(300, globalWindow).wrap(mux)
+	discovery := newLimiter(1200, globalWindow).wrap(mux)
 	interactive := newLimiter(1800, globalWindow).wrap(mux)
 	return s.cors(apiPaths(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, pattern := mux.Handler(r)
+		if pattern == "GET /api/servers" || pattern == "GET /api/servers/{server}/sessions" || pattern == "GET /api/federation/sessions" {
+			discovery.ServeHTTP(w, r)
+			return
+		}
 		if pattern == "POST /api/sessions/{id}/browser" || pattern == "DELETE /api/sessions/{id}/browser" {
 			interactive.ServeHTTP(w, r)
 			return

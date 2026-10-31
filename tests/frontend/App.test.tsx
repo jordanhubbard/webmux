@@ -24,6 +24,7 @@ vi.mock('@frontend/hooks/useAuth', () => ({
 
 vi.mock('@frontend/utils/api', () => ({
   api: {
+    getServers: vi.fn().mockResolvedValue({ version: 1, servers: [{ id: 'local', name: 'WebMux' }] }),
     getMacSetup: vi.fn().mockResolvedValue({ status: { supported: false } }),
     getConfig: vi.fn().mockResolvedValue({
       app: {

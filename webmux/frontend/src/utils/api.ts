@@ -74,7 +74,14 @@ export interface MacSetup {
   };
 }
 
+export interface ConnectedServer { id: string; name: string }
+
 export const api = {
+  getServers: () => request<{ version: number; servers: ConnectedServer[] }>('/servers'),
+  getServerSessions: (server: string) => request<Session[]>(`/servers/${encodeURIComponent(server)}/sessions`),
+  createServerSession: (server: string) => request<Session>(`/servers/${encodeURIComponent(server)}/sessions`, { method: 'POST', body: JSON.stringify({ transport: 'local' }) }),
+  reconnectServerSession: (server: string, id: string) => request<Session>(`/servers/${encodeURIComponent(server)}/sessions/${encodeURIComponent(id)}/reconnect`, { method: 'POST', body: '{}' }),
+  sendServerMessage: (server: string, id: string, message: string) => request<{ queued: boolean; processed: boolean }>(`/servers/${encodeURIComponent(server)}/sessions/${encodeURIComponent(id)}/messages`, { method: 'POST', body: JSON.stringify({ message }) }),
   getCoordination: () => request<CoordinationStatus>('/coordination'),
   createCoordinatedAgent: (input: { provider: string; mode: 'new' | 'existing'; projectId?: string; projectName: string; context?: string; name: string; host: string; workspace: string; runtime: string; row?: number; col?: number }) => request<{ target: string; session: Session }>('/coordination/agents', { method: 'POST', body: JSON.stringify(input) }),
   browseCoordinationWorkspaces: (provider: string, host: string, path?: string) => request<WorkspaceListing>('/coordination/workspaces', { method: 'POST', body: JSON.stringify({ provider, host, path }) }),
@@ -239,7 +246,9 @@ export function buildWsUrl(sessionId: string): string {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const host = window.location.host;
   const query = token ? `?token=${encodeURIComponent(token)}` : '';
-  return `${proto}//${host}/api/term/${sessionId}${query}`;
+  const remote = /^@([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)$/.exec(sessionId);
+  const endpoint = remote ? `/api/servers/${remote[1]}/term/${remote[2]}` : `/api/term/${encodeURIComponent(sessionId)}`;
+  return `${proto}//${host}${endpoint}${query}`;
 }
 
 export function buildVncWsUrl(sessionId: string): string {

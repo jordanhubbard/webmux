@@ -121,6 +121,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   };
   const transferFiles = async (files: File[]) => {
     if (!files.length) return;
+    if (sessionId.startsWith('@')) { setInputError('File transfer is available in the owning server’s focused workspace.'); return; }
     if (uploadingRef.current) { setInputError('A file transfer is already running. Wait for it to finish, then retry.'); return; }
     if (stateRef.current !== 'connected') { setInputError('Reconnect the terminal before transferring files.'); return; }
     if (files.length > 16) { setInputError('Drop or paste at most 16 files at a time.'); return; }
