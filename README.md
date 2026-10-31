@@ -26,7 +26,7 @@ Connected WebMux servers can share authenticated terminal views and session-targ
 - **Operator settings UI** — edit runtime-safe application settings from an admin-only top-bar gear
 - **Audit log** — append-only JSONL event log (logins, session lifecycle)
 - **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
-- **Agent coordination** — built-in WebMux terminals and messaging by default, with optional Agent Deck or Rig for managed projects and agents in the Coordination tab; see [setup and scope](docs/openrig.md)
+- **Agent coordination** — built-in WebMux terminals and messaging by default, with independently enabled Agent Deck and Rig integrations, a combined inventory, and a separate launch owner in the Coordination tab; see [setup and scope](docs/openrig.md)
 - **Optional managed hosts** — a separately installed `webmux-client` checks in over an outbound connection, links to saved SSH hosts by a one-time code, and reports host facts; see [managed-host setup](docs/managed-hosts.md)
 - **Session expiry handling** — visible JWT countdown and refresh controls prevent expired browser sessions from entering reconnect loops
 
@@ -108,9 +108,9 @@ brew install jordanhubbard/webmux/webmux
 brew services start jordanhubbard/webmux/webmux
 ```
 
-The stable formula currently builds v1.4.0 with Agent Deck as its default. The
-source checkout uses built-in WebMux coordination; this change will ship in the
-next release.
+WebMux provides built-in terminals and messaging by default. Enable Agent Deck
+and Rig independently in Coordination; both can be used together. Inventory
+filters and the default launch owner are separate preferences.
 
 Open http://localhost:8080. Run services as your normal user so WebMux can
 access your SSH keys. Record formula-specific trust for Agent Deck and WebMux

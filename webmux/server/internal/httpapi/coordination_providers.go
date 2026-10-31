@@ -27,6 +27,7 @@ type coordinationProviderDescriptor struct {
 	ID           string   `json:"id"`
 	Label        string   `json:"label"`
 	Available    bool     `json:"available"`
+	Enabled      bool     `json:"enabled"`
 	Message      string   `json:"message,omitempty"`
 	Capabilities []string `json:"capabilities"`
 	Contract     string   `json:"contract"`

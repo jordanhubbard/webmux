@@ -152,7 +152,7 @@ describe('App', () => {
     mockAuth.isLoading = false;
     mockAuth.isAuthenticated = true;
     mockAuth.authStatus = { mode: 'none', bootstrap_required: false };
-    vi.mocked(api.getCoordination).mockResolvedValue({ contract: 'webmux-coordination/v1', defaultProvider: 'agent-deck', providers: [{ id: 'agent-deck', label: 'Agent Deck', available: true, contract: 'agent-deck-cli/v1', capabilities: [] }], projects: [], seats: [], messages: [], errors: {} });
+    vi.mocked(api.getCoordination).mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'agent-deck', defaultView: 'agent-deck', enabledProviders: ['agent-deck'], providers: [{ id: 'agent-deck', label: 'Agent Deck', available: true, enabled: true, contract: 'agent-deck-cli/v1', capabilities: [] }], projects: [], seats: [], messages: [], errors: {} });
     render(<App />);
     await screen.findAllByText('Click to add a session');
     expect(api.getCoordination).not.toHaveBeenCalled();

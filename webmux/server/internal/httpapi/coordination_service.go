@@ -22,7 +22,7 @@ func (s *Server) startCoordination() {
 			ticker := time.NewTicker(30 * time.Second)
 			defer ticker.Stop()
 			for {
-				if executable, _ := openRigExecutable(); s.rigCoordinationSelected() && executable != "" {
+				if executable, _ := openRigExecutable(); s.coordinationEnabled("rig") && executable != "" {
 					check, finish := context.WithTimeout(ctx, 25*time.Second)
 					_, err := openrigcoord.Run(check, s.store.Home, "service", "ensure", "")
 					finish()
@@ -40,9 +40,9 @@ func (s *Server) startCoordination() {
 	})
 }
 
-// A default WebMux installation must not start an installed external coordinator.
+// Supervision follows integration enablement, independently of view or launch defaults.
 // Re-read settings so an explicit change takes effect without a server restart.
-func (s *Server) rigCoordinationSelected() bool {
+func (s *Server) coordinationEnabled(provider string) bool {
 	settings, err := s.loadSettings()
-	return err == nil && config.AsObject(settings.App["coordination"])["default_provider"] == "rig"
+	return err == nil && config.CoordinationEnabled(settings.App, provider)
 }

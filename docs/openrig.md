@@ -1,35 +1,49 @@
 # Agent coordination
 
-The source checkout includes the built-in default described here. Published
-v1.4.0 still defaults to Agent Deck; the new selection will ship in the next
-release.
+WebMux is the always-available foundation: terminals, connected-server views,
+and direct terminal messages. Agent Deck and Rig are independent optional
+integrations. You can enable either or both; each agent retains one lifecycle
+owner. Enabling both does not automatically merge their agent identities,
+queues, or completion events.
 
-WebMux is the default built-in coordination experience. Each host runs WebMux;
-its Terminals workspace provides local terminals, selected-server and all-server
-views, and direct messages to running terminals. No external coordinator is
-required. See [connected servers and messaging](server-federation.md) for setup.
+Open **Coordination** to configure three independent choices:
 
-Agent Deck and Rig remain optional external coordinators. Neither has been
-replaced: Agent Deck adds managed projects, guarded instruction queues and
-completion records; Rig adds canonical team topology and peer messaging. WebMux's
-direct messages report queue admission, not agent processing or task completion.
-The built-in mode does not provide those external tools' project launch wizard,
-guarded queue, or durable completion inbox.
+- **Enable Agent Deck** and **Enable Rig** control discovery and integration
+  services. Rig supervision follows its enable setting. Disabling an integration
+  leaves existing agents and terminal viewers running.
+- **Show sessions** filters **All sessions**, **WebMux**, **Agent Deck**, or **Rig**.
+  **Make default view** saves that filter. All sessions includes this server's
+  native terminals and enabled integration inventories, with owner labels and
+  owner-specific actions. Connected WebMux server terminals remain available
+  through the Terminals server selector.
+- **Launch owner** selects who manages a newly created agent. **WebMux** opens
+  the native terminal workflow; Agent Deck and Rig provide their own launch
+  forms. **Make default launch owner** saves this preference. Existing agents
+  keep their original owner when you change it.
 
-Open **Coordination → Coordinator** and choose **WebMux (built-in)**, **Agent
-Deck**, **Rig**, or **None**. Selection browses that experience for the current
-visit; **Make default** saves it. **More → Settings → Coordination** provides the
-same setting. New installations and missing settings default to WebMux. Explicit
-saved choices are preserved, so existing Agent Deck or Rig users can choose
-WebMux and click **Make default**. **None** leaves existing sessions running.
+**More → Settings → Coordination** exposes the same independent preferences.
+New installs use WebMux as the launch default, All sessions as the view, and no
+external integrations. A single unavailable integration reports its own error;
+it does not replace or disable the other inventory.
 
-The built-in panel opens **Terminals**, where users create terminals, run their
-chosen coding CLI, select connected servers, and send messages. Merely opening
-Coordination never launches an agent. External inventories are queried only for
-the selected provider; Rig's background supervisor runs only when Rig is the
-saved default. Switching does not stop existing agents or change their ownership.
-A selected external tool that is unavailable shows its installation guidance;
-there is no silent fallback.
+```yaml
+app:
+  coordination:
+    enabled_providers: [agent-deck, rig]
+    default_launch_provider: webmux
+    default_view: all
+```
+
+Legacy `default_provider: agent-deck` or `rig` migrates to enabling that
+integration and preserving its launch/view preference. Legacy `webmux`, `None`
+(`disabled`), or `choose`, and missing settings, migrate to WebMux with external
+integrations off. Saving configuration writes the new independent fields.
+
+WebMux direct messages report terminal-input queue admission, not agent
+processing or task completion. Agent Deck adds guarded instruction queues and
+completion records; Rig adds canonical team topology and peer messaging. Native
+terminal state is observed transport state, not proof that a coding agent is
+ready. Merely viewing inventories never launches an agent.
 
 The following sections describe the optional external integrations.
 
@@ -42,7 +56,7 @@ topologies remain visible with their provider IDs.
 
 ## Start an agent
 
-1. Open **Coordination**, select **Agent Deck** or **Rig**, and choose the folder containing your code. Use **Browse**
+1. Open **Coordination**, enable **Agent Deck** or **Rig** and select it as **Launch owner**, and choose the folder containing your code. Use **Browse**
    to find it on the selected execution host.
 2. Choose Codex or Claude Code and a purpose such as building, reviewing, or
    investigating. Purpose suggests an illustrative session name; it does not
@@ -167,9 +181,8 @@ source-host attribution stays attached to every imported record. The toolbar
 badge and project/session rows surface waiting, completed, and failed work that
 needs attention.
 
-Rig provides canonical topology and peer messaging. The providers are
-alternative experiences rather than one being silently
-treated as the other's project database. Additional coordinators can implement
+Rig provides canonical topology and peer messaging. Both integrations can be enabled together. They retain separate ownership and
+project databases; a shared-agent identity and event bridge is future work. Additional coordinators can implement
 the same internal status, launch, attach, messaging, delivery-status, and drain
 adapters without changing the browser wire contract (`webmux-coordination/v1`).
 
@@ -225,8 +238,8 @@ supported; Windows WebMux's existing terminals remain available.
 
 ## Rig owner workflow
 
-1. Click **Coordination**, choose **Rig** in the Coordinator selector, and inspect
-   its projects and sessions. Use **Make default** to keep that experience. The same default is available under
+1. Click **Coordination**, choose **Rig** as the Launch owner, and inspect
+   its projects and sessions. Use **Make default launch owner** to keep that launch preference. The same default is available under
    **Settings → Coordination**.
 2. Choose an existing project or **New coordinated project**. Select an
    execution host, browse to an absolute workspace on that host, name the

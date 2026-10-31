@@ -17,7 +17,9 @@ app:
   session_logging:
     enabled: false
   coordination:
-    default_provider: webmux
+    enabled_providers: []
+    default_launch_provider: webmux
+    default_view: all
   ui:
     default_pane: terminals
     host_switcher:

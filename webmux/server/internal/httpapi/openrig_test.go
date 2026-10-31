@@ -31,7 +31,8 @@ func TestAgentDeckCommunicationEndpointsPreserveProviderIdentity(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Agent Deck integration uses Unix interactive terminal transports")
 	}
-	_, handler := fixture(t, "none")
+	s, handler := fixture(t, "none")
+	setCoordinationIntegrations(t, s, "agent-deck")
 	executable, _ := fakeAgentDeck(t)
 	t.Setenv("PATH", filepath.Dir(executable)+string(os.PathListSeparator)+os.Getenv("PATH"))
 
@@ -61,7 +62,8 @@ func TestOpenRigFollowsTrustedModeHostAccess(t *testing.T) {
 }
 
 func TestDisabledCoordinationDoesNotDiscoverMachineWideProviders(t *testing.T) {
-	_, handler := fixture(t, "none")
+	s, handler := fixture(t, "none")
+	setCoordinationIntegrations(t, s)
 	t.Setenv("WEBMUX_COORDINATION_DISABLED", "1")
 	response := request(handler, "GET", "/api/coordination", "", "")
 	requireStatus(t, response, 200)
@@ -75,7 +77,7 @@ func TestDisabledCoordinationDoesNotDiscoverMachineWideProviders(t *testing.T) {
 	if err := json.Unmarshal(response.Body.Bytes(), &status); err != nil {
 		t.Fatal(err)
 	}
-	if status.Contract != "webmux-coordination/v1" || status.DefaultProvider != "choose" || len(status.Providers) != 0 || len(status.Projects) != 0 || len(status.Seats) != 0 {
+	if status.Contract != "webmux-coordination/v1" || status.DefaultProvider != "webmux" || len(status.Providers) != 1 || len(status.Projects) != 0 || len(status.Seats) != 0 {
 		t.Fatalf("disabled coordination leaked provider state: %+v", status)
 	}
 	requireStatus(t, request(handler, "POST", "/api/coordination/attach", `{"provider":"rig","target":"seat"}`, ""), 409)
@@ -177,10 +179,17 @@ func TestWebMuxDefaultDoesNotQueryExternalInventories(t *testing.T) {
 	if _, err := os.Stat(logPath); !os.IsNotExist(err) {
 		t.Fatalf("external coordinator queried by default: %v", err)
 	}
-	if s.rigCoordinationSelected() {
+	if s.coordinationEnabled("rig") {
 		t.Fatal("missing settings enabled Rig supervisor")
 	}
-	selected := request(handler, "GET", "/api/coordination?provider=agent-deck", "", "")
+	// Browsing a view must not implicitly enable an integration.
+	hidden := request(handler, "GET", "/api/coordination?provider=agent-deck", "", "")
+	requireStatus(t, hidden, 200)
+	if strings.Contains(hidden.Body.String(), `"id":"sparky:remote-1"`) {
+		t.Fatal("view selection enabled Agent Deck")
+	}
+	setCoordinationIntegrations(t, s, "agent-deck")
+	selected := request(handler, "GET", "/api/coordination?provider=webmux", "", "")
 	requireStatus(t, selected, 200)
 	if !strings.Contains(selected.Body.String(), `"id":"sparky:remote-1"`) {
 		t.Fatalf("explicit provider not queried: %s", selected.Body.String())
@@ -191,22 +200,41 @@ func TestWebMuxDefaultDoesNotQueryExternalInventories(t *testing.T) {
 	requireStatus(t, request(handler, "GET", "/api/coordination?provider=other", "", ""), 400)
 }
 
-func TestRigSupervisionRequiresExplicitSavedSelection(t *testing.T) {
+func TestRigSupervisionFollowsEnablementIndependentlyOfViewAndLaunch(t *testing.T) {
 	// Exercise selection without starting an installed coordinator in this test.
 	t.Setenv("WEBMUX_COORDINATION_DISABLED", "1")
 	s, _ := fixture(t, "none")
-	for _, provider := range []string{"webmux", "agent-deck", "disabled", "choose", "rig", "webmux"} {
-		if err := s.store.WriteConfig("app.yaml", map[string]any{"app": map[string]any{"coordination": map[string]any{"default_provider": provider}}}); err != nil {
-			t.Fatal(err)
+	for _, launch := range []string{"webmux", "agent-deck", "rig"} {
+		for _, view := range []string{"all", "webmux", "agent-deck", "rig"} {
+			if err := s.store.WriteConfig("app.yaml", map[string]any{"app": map[string]any{"coordination": map[string]any{"enabled_providers": []string{"agent-deck", "rig"}, "default_launch_provider": launch, "default_view": view}}}); err != nil {
+				t.Fatal(err)
+			}
+			if !s.coordinationEnabled("rig") || !s.coordinationEnabled("agent-deck") {
+				t.Fatalf("launch %s view %s disabled an integration", launch, view)
+			}
 		}
-		if got := s.rigCoordinationSelected(); got != (provider == "rig") {
-			t.Fatalf("provider %s: Rig supervision %v", provider, got)
-		}
+	}
+	setCoordinationIntegrations(t, s, "agent-deck")
+	if s.coordinationEnabled("rig") {
+		t.Fatal("disabled Rig kept supervision enabled")
 	}
 	if err := os.WriteFile(filepath.Join(s.store.Home, "config", "app.yaml"), []byte("[broken"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if s.rigCoordinationSelected() {
+	if s.coordinationEnabled("rig") {
 		t.Fatal("invalid settings enabled Rig")
+	}
+}
+
+func setCoordinationIntegrations(t *testing.T, s *Server, providers ...string) {
+	t.Helper()
+	if s.coordinationCancel != nil {
+		s.coordinationCancel()
+	}
+	if providers == nil {
+		providers = []string{}
+	}
+	if err := s.store.WriteConfig("app.yaml", map[string]any{"app": map[string]any{"coordination": map[string]any{"enabled_providers": providers, "default_launch_provider": "webmux", "default_view": "all"}}}); err != nil {
+		t.Fatal(err)
 	}
 }
