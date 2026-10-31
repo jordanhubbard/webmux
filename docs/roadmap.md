@@ -28,6 +28,12 @@ Implementation and acceptance:
 - Release preparation, exact-commit CI and native packaging, publication and
   artifact verification. The feature is not released until these gates pass.
 
+The first implementation PR is [#239](https://github.com/jordanhubbard/webmux/pull/239).
+Its initial hosted dependency gate exposed a newly published advisory in the
+existing lint dependency tree. [#240](https://github.com/jordanhubbard/webmux/issues/240)
+tracks the compatible minimatch/brace-expansion update required before release;
+keep the audit gate enabled.
+
 ## Next reliability work
 
 [#236](https://github.com/jordanhubbard/webmux/issues/236): bound Windows MSI smoke

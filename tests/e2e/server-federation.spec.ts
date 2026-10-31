@@ -74,9 +74,22 @@ test('two servers share interactive terminal views, messages and failure state w
     await expect(page.getByRole('combobox', { name: 'Server view' })).toHaveValue('remote');
     await expect(remote.locator('.xterm-rows')).toContainText('native-input-proof');
     expect((await (await request.get(`${peerURL}/api/sessions`)).json()).length).toBe(1);
+    await remote.locator('.xterm-helper-textarea').focus();
+    await page.keyboard.type('finish-provider');
+    await page.keyboard.press('Enter');
+    await expect(remote.getByText('disconnected', { exact: true })).toBeVisible();
+    await expect(remote.getByText('Viewer: connected', { exact: true })).toBeVisible();
+    await expect(remote.getByRole('button', { name: 'Restart provider' })).toBeVisible();
+    page.once('dialog', dialog => { void dialog.accept(); });
+    await remote.getByRole('button', { name: 'Restart provider' }).click();
+    await expect(remote.getByText('connected', { exact: true })).toBeVisible();
+    await expect(remote.locator('.xterm-rows')).toContainText('FEDERATION_READY:');
     await page.getByRole('combobox', { name: 'Server view' }).selectOption('all');
     await stopPeer();
-    await expect(page.getByRole('alert')).toContainText('Unavailable', { timeout: 15000 });
+    await expect(page.getByRole('region', { name: 'Other host sessions', exact: true }).locator('.server-heading').getByRole('alert')).toContainText('Unavailable', { timeout: 15000 });
+    await expect(remote.getByText('Viewer: disconnected', { exact: true })).toBeVisible();
+    // The server outage makes provider state stale; it does not prove a stop.
+    await expect(remote.getByText('connected', { exact: true })).toBeVisible();
     await expect(page.locator('[data-testid^="server-terminal-local-"] .xterm-rows')).toContainText('FEDERATION_READY:');
     await page.screenshot({ path: path.resolve(__dirname, '../../webmux/test-results/server-federation.png'), fullPage: true });
   } catch (error) {

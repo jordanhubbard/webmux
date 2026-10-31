@@ -13,6 +13,8 @@ function ServerTerminal({ server, session, fontSize, fontFamily, theme, onHide, 
   server: ConnectedServer; session: Session; fontSize: number; fontFamily?: string; theme?: NamedTheme['theme']; onHide: () => void; onError: (error: string) => void;
 }) {
   const [connection, setConnection] = useState<ConnectionState>('connecting');
+  const [providerState, setProviderState] = useState(session.state);
+  useEffect(() => { setProviderState(session.state); }, [session.state]);
   const [generation, setGeneration] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -22,16 +24,16 @@ function ServerTerminal({ server, session, fontSize, fontFamily, theme, onHide, 
   return <section className="server-terminal" aria-label={title} data-testid={`server-terminal-${server.id}-${session.id}`}>
     <header>
       <strong title={`${title} · ${identity.source}`}>{title}</strong>
-      <span title="Provider state reported by the owning server">{session.state}</span>
+      <span title="Provider state reported by the owning server">{providerState}</span>
       <span title="Browser viewer connection">Viewer: {connection}</span>
-      <button onClick={() => setGeneration(value => value + 1)} title="Reconnect this viewer without restarting its provider">Reconnect viewer</button>
-      {session.state !== 'connected' && session.state !== 'connecting' && <button onClick={() => {
+      <button onClick={() => { setConnection('connecting'); setGeneration(value => value + 1); }} title="Reconnect this viewer without restarting its provider">Reconnect viewer</button>
+      {providerState !== 'connected' && providerState !== 'connecting' && <button onClick={() => {
         if (window.confirm(`Restart the provider for ${title}? This starts a new terminal process on ${server.name}.`)) void api.reconnectServerSession(server.id, session.id).catch(error => onError(String(error)));
       }}>Restart provider</button>}
       <button onClick={() => { setMessage(''); setNotice(''); }}>Message</button>
       <button onClick={onHide} title="Hide this viewer; keep the session running on its server">Hide</button>
     </header>
-    <div className="server-terminal-body"><Terminal key={generation} sessionId={`@${server.id}/${session.id}`} fontSize={fontSize} fontFamily={fontFamily} state={session.state} autoScroll onStateChange={setConnection} onViewerUpdate={() => {}} onFocusGained={() => { document.title = `${title} — WebMux`; }} theme={theme} /></div>
+    <div className="server-terminal-body"><Terminal key={generation} sessionId={`@${server.id}/${session.id}`} fontSize={fontSize} fontFamily={fontFamily} state={providerState} autoScroll onStateChange={setProviderState} onTransportChange={connected => setConnection(connected ? 'connected' : 'disconnected')} onViewerUpdate={() => {}} onFocusGained={() => { document.title = `${title} — WebMux`; }} theme={theme} /></div>
     {message !== null && <Dialog title={`Message ${identity.name}`} subtitle={`Send one line as terminal input to ${server.name}. Enter is submitted; use only with an agent ready to receive a prompt.`} onClose={() => { if (!sending) setMessage(null); }}>
       <form onSubmit={event => {
         event.preventDefault(); setSending(true); setNotice('');
