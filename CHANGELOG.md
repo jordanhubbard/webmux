@@ -5,6 +5,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-31
+
+### Added
+- Connect independently running WebMux servers through an optional authenticated
+  directory. Keep peer credentials on the servers, map inbound grants to one
+  session owner, verify TLS and revoke active viewers when access changes (#238).
+- Choose This server, a selected server or All servers. Show server and durable
+  project/session labels, interact with remote terminals, and hide or reconnect
+  viewers without duplicating or stopping providers (#238).
+- Send a message to an explicit server/session without requiring Rig or Agent
+  Deck. Report terminal-input queue admission separately from agent processing
+  and retain authenticated source/target audit metadata (#238).
+
+### Fixed
+- Distinguish provider state from viewer transport, retain stale-state warnings
+  during server outages, and bound unresponsive peer connections with heartbeats.
+- Keep directory polling separate from the mutation request budget and require
+  confirmation before restarting a stopped provider.
+- Avoid reporting dropped background resize controls as unsent user input;
+  continue reporting actual input failures during reconnect gaps.
+- Update the lint toolchain's minimatch dependency to 11.0.3 and retire the old
+  brace-expansion override so its compatible fixed dependency is used (#240).
+
+### Documentation
+- Record the recovered multi-server priority and remaining work in the active
+  roadmap; document configuration, ownership, message semantics and limitations.
+
 ## [1.3.29] - 2026-10-28
 
 ### Changed

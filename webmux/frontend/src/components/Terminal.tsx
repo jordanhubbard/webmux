@@ -60,6 +60,8 @@ interface TerminalProps {
   state: ConnectionState;
   autoScroll: boolean;
   onStateChange: (state: ConnectionState) => void;
+  // With a separate transport callback, onStateChange reports provider status only.
+  onTransportChange?: (connected: boolean) => void;
   onViewerUpdate: (count: number, focusOwner?: string) => void;
   onFocusGained: () => void;
   theme?: TerminalTheme | null;
@@ -75,6 +77,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   state,
   autoScroll,
   onStateChange,
+  onTransportChange,
   onViewerUpdate,
   onFocusGained,
   theme,
@@ -83,6 +86,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   onOpenLink,
 }: TerminalProps, ref) {
   const stateRef = useRef(state); stateRef.current = state;
+  const onTransportChangeRef = useRef(onTransportChange); onTransportChangeRef.current = onTransportChange;
   const localPasteRef = useRef(false);
   const [remoteClipboard, setRemoteClipboard] = useState<string | null>(null);
   const onOpenLinkRef = useRef(onOpenLink);
@@ -121,6 +125,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   };
   const transferFiles = async (files: File[]) => {
     if (!files.length) return;
+    if (sessionId.startsWith('@')) { setInputError('File transfer is available in the owning server’s focused workspace.'); return; }
     if (uploadingRef.current) { setInputError('A file transfer is already running. Wait for it to finish, then retry.'); return; }
     if (stateRef.current !== 'connected') { setInputError('Reconnect the terminal before transferring files.'); return; }
     if (files.length > 16) { setInputError('Drop or paste at most 16 files at a time.'); return; }
@@ -292,13 +297,14 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     onMessage: handleMessage,
     onSendError: setInputError,
     onOpen: () => {
+      onTransportChangeRef.current?.(true);
       // The first fit can precede the resize listener. Always send the current
       // viewport when the socket opens, including after reconnecting a viewer.
       const term = termRef.current;
       if (term) wsHandleRef.current?.send({ type: 'resize', cols: term.cols, rows: term.rows });
-      onStateChangeRef.current('connected');
+      if (!onTransportChangeRef.current) onStateChangeRef.current('connected');
     },
-    onClose: () => onStateChangeRef.current('disconnected'),
+    onClose: () => { onTransportChangeRef.current?.(false); if (!onTransportChangeRef.current) onStateChangeRef.current('disconnected'); },
   });
 
   useEffect(() => {

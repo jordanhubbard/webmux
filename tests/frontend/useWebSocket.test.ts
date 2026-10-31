@@ -304,6 +304,8 @@ describe('useWebSocket', () => {
     const onSendError = vi.fn();
     const { result } = renderHook(() => useWebSocket({ sessionId: 's1', onMessage: vi.fn(), onSendError }));
     act(() => { MockWebSocket.instances[0].simulateOpen(); MockWebSocket.instances[0].simulateClose(); });
+    act(() => result.current.send({ type: 'resize', cols: 100, rows: 40 }));
+    expect(onSendError).not.toHaveBeenCalled();
     act(() => result.current.send({ type: 'input', data: 'dangerous stale command' }));
     expect(onSendError).toHaveBeenCalledWith(expect.stringContaining('disconnected'));
     act(() => vi.advanceTimersByTime(1000));

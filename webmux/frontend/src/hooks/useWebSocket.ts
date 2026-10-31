@@ -32,6 +32,7 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
   // instead of being silently dropped.
   const pendingRef = useRef<string[]>([]);
   const pendingBytesRef = useRef(0);
+  const pendingInputRef = useRef(false);
   const connectedOnceRef = useRef(false);
   const onSendErrorRef = useRef(options.onSendError);
   onSendErrorRef.current = options.onSendError;
@@ -77,6 +78,7 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
         const queued = pendingRef.current;
         pendingRef.current = [];
         pendingBytesRef.current = 0;
+        pendingInputRef.current = false;
         for (const msg of queued) {
           ws.send(msg);
         }
@@ -86,7 +88,8 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
       ws.onclose = (event) => {
         if (closedRef.current || wsRef.current !== ws) return;
         wsRef.current = null;
-        if (pendingRef.current.length) onSendErrorRef.current?.('Connection closed before queued input was sent. Please retry.');
+        if (pendingInputRef.current) onSendErrorRef.current?.('Connection closed before queued input was sent. Please retry.');
+        pendingInputRef.current = false;
         pendingRef.current = [];
         pendingBytesRef.current = 0;
         onCloseRef.current?.();
@@ -129,6 +132,7 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
       // sends into a future socket (new session, or a remount).
       pendingRef.current = [];
       pendingBytesRef.current = 0;
+      pendingInputRef.current = false;
     };
   }, [sessionId]);
 
@@ -138,18 +142,19 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
     const ws = wsRef.current;
     if (closedRef.current || !ws || (ws.readyState !== WebSocket.OPEN &&
         (ws.readyState !== WebSocket.CONNECTING || connectedOnceRef.current))) {
-      onSendErrorRef.current?.('Input was not sent: terminal disconnected. Reconnect and retry.');
+      if (msg.type === 'input') onSendErrorRef.current?.('Input was not sent: terminal disconnected. Reconnect and retry.');
       return;
     }
     if (size + pendingBytesRef.current + (ws.bufferedAmount || 0) > MAX_PENDING_BYTES) {
-      onSendErrorRef.current?.('Input was not sent: terminal is busy or paste is too large. Wait and send smaller chunks.');
+      if (msg.type === 'input') onSendErrorRef.current?.('Input was not sent: terminal is busy or paste is too large. Wait and send smaller chunks.');
       return;
     }
     if (ws.readyState === WebSocket.OPEN) {
       try { ws.send(serialized); }
-      catch { onSendErrorRef.current?.('Input was not sent. Reconnect and retry.'); }
+      catch { if (msg.type === 'input') onSendErrorRef.current?.('Input was not sent. Reconnect and retry.'); }
     } else {
       pendingRef.current.push(serialized);
+      pendingInputRef.current ||= msg.type === 'input';
       pendingBytesRef.current += size;
     }
   }, []);

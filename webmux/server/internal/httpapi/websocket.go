@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -34,6 +36,9 @@ func (s *Server) closeSocketsAndSessions() error {
 }
 
 func (s *Server) socketIdentity(r *http.Request) (owner, mode string, ok bool) {
+	if grant, exists := r.Context().Value(federationContextKey{}).(serverGrant); exists {
+		return grant.Owner, "federation:" + grant.ID, true
+	}
 	config, err := auth.LoadConfig(s.store)
 	if err != nil {
 		return "", "", false
@@ -56,6 +61,18 @@ func (s *Server) socketIdentity(r *http.Request) (owner, mode string, ok bool) {
 	return owner, mode, config.HasUser(owner)
 }
 func (s *Server) socketAuthorized(owner, mode string) bool {
+	if strings.HasPrefix(mode, "federation:") {
+		d, err := s.serverDirectory()
+		if err != nil || !s.federationOwnerAllowed(owner) {
+			return false
+		}
+		for _, g := range d.Grants {
+			if g.ID == strings.TrimPrefix(mode, "federation:") && g.Owner == owner && len(os.Getenv(g.TokenEnv)) >= 32 {
+				return true
+			}
+		}
+		return false
+	}
 	config, err := auth.LoadConfig(s.store)
 	return err == nil && config.Auth.Mode == mode && (mode == "none" || config.HasUser(owner))
 }
@@ -115,6 +132,12 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	value, _ := s.sessions.Get(owner, id)
 	authorized := func() bool {
+		if expected, exists := r.Context().Value(federationContextKey{}).(serverGrant); exists {
+			current, valid := s.federationGrant(r)
+			if !valid || current != expected {
+				return false
+			}
+		}
 		return s.socketAuthorized(owner, mode) && ((value.Companion != "openrig" && value.OpenRigView == "") || s.openRigPermission(owner) == nil)
 	}
 	if !authorized() {

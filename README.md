@@ -2,6 +2,8 @@
 
 A browser-based remote workspace for persistent terminal and desktop sessions. WebMux started as tmux-on-a-jump-box: a shared, scrollable wall of SSH and mosh terminals. It now also brings VNC, RDP, and optional tmux-backed coding-agent sessions into the same web interface.
 
+Connected WebMux servers can share authenticated terminal views and session-targeted agent messages. See [multi-server setup and behavior](docs/server-federation.md) and the [active roadmap](docs/roadmap.md).
+
 ## Features
 
 - **2D tiled terminal workspace** — scrollable CSS Grid of fixed-size terminals; click "+" placeholders to add sessions to the right or below any existing tile

@@ -562,6 +562,15 @@ func (b *Broker) deleteSession(owner, id string, code int, reason string) error 
 }
 
 func (b *Broker) Input(owner, id, data string) error {
+	return b.input(owner, id, data, false)
+}
+
+// InputIfConnected reports stopped sessions rather than silently dropping a
+// message when the provider exits between discovery and queue admission.
+func (b *Broker) InputIfConnected(owner, id, data string) error {
+	return b.input(owner, id, data, true)
+}
+func (b *Broker) input(owner, id, data string, requireConnected bool) error {
 	b.mu.Lock()
 	if b.closed {
 		b.mu.Unlock()
@@ -577,6 +586,9 @@ func (b *Broker) Input(owner, id, data string) error {
 		return err
 	}
 	if current == nil {
+		if requireConnected {
+			return ErrClosed
+		}
 		return nil
 	}
 	select {

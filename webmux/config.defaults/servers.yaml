@@ -1,0 +1,5 @@
+# Optional server-to-server directory. Credentials remain in the server process
+# environment, never browser configuration. See docs/server-federation.md.
+version: 1
+servers: []
+grants: []

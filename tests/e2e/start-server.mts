@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawn, spawnSync } from 'node:child_process';
@@ -36,6 +37,9 @@ for (const entry of fs.readdirSync(defaultsDir, { withFileTypes: true })) {
 // Terminal workflows use an already-configured installation. First-run Mac
 // setup has its own component and API tests; its dialog would steal input here.
 fs.writeFileSync(path.join(testHome, 'config', 'macos-setup.yaml'), 'skipped: true\n');
+// A private, per-run credential for the two-server federation browser fixture.
+process.env.WEBMUX_E2E_FEDERATION_TOKEN = randomBytes(32).toString('hex');
+fs.writeFileSync(path.join(testHome, 'federation-token'), process.env.WEBMUX_E2E_FEDERATION_TOKEN, { mode: 0o600 });
 process.env.WEBMUX_HOME = testHome;
 // Use Playwright's supported executable lookup rather than its private registry.
 const testRequire = createRequire(path.resolve(import.meta.dirname, '../../webmux/package.json'));
