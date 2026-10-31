@@ -35,7 +35,7 @@ export interface WorkspaceListing {
   entries: { name: string; path: string; repository: boolean }[];
 }
 export interface CoordinationStatus {
-  contract: string; defaultProvider: 'agent-deck' | 'rig' | 'disabled' | 'choose'; providers: CoordinationProvider[]; projects: CoordinationProject[]; seats: CoordinationSeat[];
+  contract: string; defaultProvider: 'webmux' | 'agent-deck' | 'rig' | 'disabled' | 'choose'; providers: CoordinationProvider[]; projects: CoordinationProject[]; seats: CoordinationSeat[];
   messages: CoordinationMessage[]; errors: Record<string, string>; attentionCount?: number;
 }
 
@@ -69,15 +69,15 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
 
   const refresh = useCallback(async () => {
     try {
-      const value = await api.getCoordination();
+      const value = await api.getCoordination(provider || undefined);
       setStatus(value); setStatusError('');
       if (!providerInitialized.current) {
         providerInitialized.current = true;
-        if (value.defaultProvider === 'agent-deck' || value.defaultProvider === 'rig' || value.defaultProvider === 'disabled') setProvider(value.defaultProvider);
+        if (value.defaultProvider === 'webmux' || value.defaultProvider === 'agent-deck' || value.defaultProvider === 'rig' || value.defaultProvider === 'disabled') setProvider(value.defaultProvider);
         else setChangingProvider(true);
       }
     } catch (err) { setStatusError(String(err)); }
-  }, []);
+  }, [provider]);
   useEffect(() => {
     void refresh();
     const timer = window.setInterval(() => { void refresh(); }, 5000);
@@ -175,7 +175,7 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
     setProvider(value); setProjectID(''); setBrowser(null); setWorkspace('');
   };
   const makeDefault = async () => {
-    if (provider !== 'agent-deck' && provider !== 'rig' && provider !== 'disabled') return;
+    if (provider !== 'webmux' && provider !== 'agent-deck' && provider !== 'rig' && provider !== 'disabled') return;
     setBusy(true); setError('');
     try {
       await api.updateConfig({ app: { coordination: { default_provider: provider } } });
@@ -208,7 +208,7 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
 
   const content = <>
     <div className="coordination-dialog">
-      <p>Start a coding agent in a folder, or open a session you already have. A project keeps agents working on the same code together. Opening a session puts its terminal in the Terminals grid.</p>
+      <p>WebMux provides built-in terminals and messaging across connected servers. You can also select an external coordinator to manage agent projects and sessions.</p>
       {statusError && <p role="alert" className="coordination-error">{statusError}</p>}
       {error && <p role="alert" className="coordination-error">{error}</p>}
       <div className="coordination-toolbar">
@@ -216,9 +216,9 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
           <div className="coordination-provider-choice">
               <label>Coordinator<select aria-label="Coordinator" disabled={busy} value={provider} onChange={event => { chooseProvider(event.target.value); setChangingProvider(true); }}>
                 <option value="">Choose an experience…</option>
-                {['agent-deck', 'rig'].map(id => {
+                {['webmux', 'agent-deck', 'rig'].map(id => {
                   const value = status.providers.find(value => value.id === id);
-                  return <option key={id} value={id}>{id === 'agent-deck' ? 'Agent Deck' : 'Rig'}{value?.available ? '' : ' · unavailable'}</option>;
+                  return <option key={id} value={id}>{id === 'webmux' ? 'WebMux (built-in)' : id === 'agent-deck' ? 'Agent Deck' : 'Rig'}{value?.available ? '' : ' · unavailable'}</option>;
                 })}
                 <option value="disabled">None</option>
               </select></label>
@@ -227,10 +227,16 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
             </div>
         <button type="button" disabled={busy} onClick={() => void refresh()}>Refresh projects and sessions</button>
       </div>
-      {status.defaultProvider === 'choose' && !provider && <p role="note">Choose Agent Deck or Rig to begin. Making it the default completes the one-time upgrade choice.</p>}
+      {status.defaultProvider === 'choose' && !provider && <p role="note">Choose WebMux, Agent Deck, or Rig to begin. Making it the default completes the one-time upgrade choice.</p>}
       {status.defaultProvider === 'disabled' && !provider && <p role="note">Coordination is disabled. Choose an experience above to enable it now or make it the default.</p>}
-      {provider === 'disabled' && <p role="status">No coordinator selected. Existing sessions keep running. Choose Agent Deck or Rig to manage coordinated sessions.</p>}
-      {provider && provider !== 'disabled' && <>
+      {provider === 'disabled' && <p role="status">No coordinator selected. Existing sessions keep running. Choose WebMux, Agent Deck, or Rig to manage coordinated sessions.</p>}
+      {provider === 'webmux' && <section aria-label="Built-in WebMux coordination">
+        <h3>WebMux coordination</h3>
+        <p>Use the Terminals workspace to start coding agents in ordinary terminals. When connected servers are configured, the server selector shows this server, a selected connected server, or all configured servers. In selected-server and all-server views, Send message delivers a line of input to a running terminal; it does not confirm that an agent processed it.</p>
+        <p>No external coordinator is required. Choose Agent Deck for managed projects and guarded instruction queues, or Rig for team topology and peer messaging. Sessions created by those tools remain with their provider.</p>
+        <button type="button" onClick={() => { setActivePane('terminals'); onClose(); }}>Open terminals and servers</button>
+      </section>}
+      {provider && provider !== 'disabled' && provider !== 'webmux' && <>
       {selectedProvider?.message && !selectedProvider.available && <p role="note">{selectedProvider.message}</p>}
       {status.errors[provider] && <p role="alert" className="coordination-error">{status.errors[provider]}</p>}
 

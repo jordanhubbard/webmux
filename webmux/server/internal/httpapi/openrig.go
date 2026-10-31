@@ -308,7 +308,17 @@ func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner s
 	}
 	defaultProvider = config.AsObject(settings.App["coordination"])["default_provider"]
 	providers := s.coordinationProviders(owner)
-	descriptors := make([]coordinationProviderDescriptor, 0, len(providers))
+	selected := r.URL.Query().Get("provider")
+	if selected == "" {
+		selected, _ = defaultProvider.(string)
+	}
+	if selected != "webmux" && selected != "agent-deck" && selected != "rig" && selected != "disabled" && selected != "choose" {
+		writeError(w, 400, "Unknown coordination provider.")
+		return
+	}
+	// Built-in coordination uses the existing session and server APIs. It has
+	// no external process, project database, or provider launch/attach transport.
+	descriptors := []coordinationProviderDescriptor{{ID: "webmux", Label: "WebMux", Available: true, Capabilities: []string{"terminals", "connected-servers", "direct-messaging"}, Contract: "webmux-server-directory/v1"}}
 	projects := []coordinationProject{}
 	seats := []coordinationSeat{}
 	messages := []coordinationMessage{}
@@ -317,7 +327,7 @@ func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner s
 	for _, provider := range providers {
 		descriptor := provider.Descriptor()
 		descriptors = append(descriptors, descriptor)
-		if !descriptor.Available {
+		if descriptor.ID != selected || !descriptor.Available {
 			continue
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)

@@ -76,3 +76,12 @@ reliability item after #238 release/distribution qualification.
 External credentials, hardware and native-target evidence remain distinct from
 local implementation tests. Existing dependency/contributor PRs need their own
 review and checks; they are not folded into #238 automatically.
+
+## Built-in coordination default
+
+[Issue #242](https://github.com/jordanhubbard/webmux/issues/242) makes WebMux the
+default built-in experience, with Agent Deck and Rig as explicit optional
+integrations. Existing saved choices are retained. Selection and setup are
+explained in [agent coordination](openrig.md).
+[Issue #243](https://github.com/jordanhubbard/webmux/issues/243) tracks removing
+the stable Homebrew dependency when the next release contains this change.

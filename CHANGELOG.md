@@ -5,6 +5,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Default to built-in WebMux terminals, connected servers, and direct messaging.
+  Keep Agent Deck and Rig as explicit optional coordinators, preserve saved
+  choices, and expose WebMux in both Coordination and Settings (#242).
+- Query only the selected coordinator and supervise Rig only when it is the
+  saved default. Source server installs no longer install Agent Deck unless
+  requested with `INSTALL_AGENT_DECK=yes` or `make install-agent-deck` (#242).
+
 ## [1.4.0] - 2026-10-31
 
 ### Added

@@ -17,7 +17,7 @@ app:
   session_logging:
     enabled: false
   coordination:
-    default_provider: agent-deck
+    default_provider: webmux
   ui:
     default_pane: terminals
     host_switcher:

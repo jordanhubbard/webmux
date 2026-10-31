@@ -227,7 +227,7 @@ export interface AppConfig {
       enabled?: boolean;
     };
     coordination?: {
-      default_provider?: 'agent-deck' | 'rig' | 'disabled' | 'choose';
+      default_provider?: 'webmux' | 'agent-deck' | 'rig' | 'disabled' | 'choose';
     };
     transport?: {
       prefer_mosh?: boolean;
