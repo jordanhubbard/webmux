@@ -3,12 +3,17 @@
 Reviewed 2026-10-31 against the owner's recovered session and the open GitHub
 issues. GitHub issues track implementation and remaining acceptance work.
 
-## Current priority: connected WebMux servers
+## Connected WebMux servers: v1.4.0
 
-[#238](https://github.com/jordanhubbard/webmux/issues/238) resumes the owner-approved
-multi-host architecture. Earlier execution stopped before any repository changes
-because the command runner could not negotiate with its host. That execution
-blocker is now resolved.
+[#238](https://github.com/jordanhubbard/webmux/issues/238) tracks the owner-approved
+multi-host architecture through release and distribution. The implementation
+merged in [#239](https://github.com/jordanhubbard/webmux/pull/239), and
+[v1.4.0](https://github.com/jordanhubbard/webmux/releases/tag/v1.4.0) is published
+from `98b92e84c29d8ba85674026ef5b50f7c5c5927a4`. Exact-source
+[CI](https://github.com/jordanhubbard/webmux/actions/runs/41245370881) and
+[packaging](https://github.com/jordanhubbard/webmux/actions/runs/41245370869)
+passed before publication. The issue retains the final publication, artifact
+and Homebrew verification record.
 
 Each host runs WebMux and owns its local terminals. A configured, authenticated
 server directory supplies a local view, a selected-server view and an all-server
@@ -25,21 +30,20 @@ Implementation and acceptance:
   records; no claim of agent processing or task completion.
 - Native two-server and real browser coverage, ownership/security checks,
   regression gates and a reviewed implementation PR.
-- Release preparation, exact-commit CI and native packaging, publication and
-  artifact verification. The feature is not released until these gates pass.
+- Consistent v1.4.0 release metadata, exact-commit CI and all four native
+  packaging targets, followed by publication of 28 artifact/checksum files.
+  GitHub-stored digests matched the qualified artifacts at publication.
 
-The v1.4.0 implementation/release PR is [#239](https://github.com/jordanhubbard/webmux/pull/239).
-Its initial hosted dependency gate exposed a newly published advisory in the
-existing lint dependency tree. [#240](https://github.com/jordanhubbard/webmux/issues/240)
-tracks the compatible minimatch/brace-expansion update required before release;
-keep the audit gate enabled.
+[#240](https://github.com/jordanhubbard/webmux/issues/240) resolved the newly
+published lint-dependency advisory through compatible minimatch/brace-expansion
+updates. The dependency-audit gate remains enabled and passed for this release.
 
 ## Next reliability work
 
 [#236](https://github.com/jordanhubbard/webmux/issues/236): bound Windows MSI smoke
 operations and preserve progress/installer diagnostics after a stalled packaging
-run. The stall is not established as a product regression. Deferred while #238
-is the owner's highest priority.
+run. The stall is not established as a product regression. This is the next
+reliability item after #238 release/distribution qualification.
 
 ## Integration and feature follow-ups
 
