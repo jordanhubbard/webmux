@@ -28,7 +28,7 @@ Implementation and acceptance:
 - Release preparation, exact-commit CI and native packaging, publication and
   artifact verification. The feature is not released until these gates pass.
 
-The first implementation PR is [#239](https://github.com/jordanhubbard/webmux/pull/239).
+The v1.4.0 implementation/release PR is [#239](https://github.com/jordanhubbard/webmux/pull/239).
 Its initial hosted dependency gate exposed a newly published advisory in the
 existing lint dependency tree. [#240](https://github.com/jordanhubbard/webmux/issues/240)
 tracks the compatible minimatch/brace-expansion update required before release;
