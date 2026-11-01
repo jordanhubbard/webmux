@@ -54,7 +54,7 @@ test('publication requires all native targets and rejects mixed or tampered down
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-native-release-'));
   const verify = () => verifyNativeReleaseArtifacts(directory, '1.2.3');
   const targets = [
-    ['macos-26', 'darwin-arm64', ['tar.gz']],
+    ['macos-arm64', 'darwin-arm64', ['tar.gz']],
     ['ubuntu-22.04', 'linux-x64', ['tar.gz']],
     ['windows-2022', 'windows-x64', ['zip', 'msi']],
     ['windows-11-arm', 'windows-arm64', ['zip', 'msi']],

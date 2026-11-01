@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -28,14 +29,20 @@ func TestLocalTmuxShellSurvivesClientClose(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.Args = append([]string{"-f", "/dev/null"}, c.Args...)
+	socket := filepath.Join(dir, "socket")
+	c.Args = append([]string{"-S", socket, "-f", "/dev/null"}, c.Args...)
 	run := func(args ...string) (string, error) {
-		cmd := exec.Command(tmux, args...)
+		cmd := exec.Command(tmux, append([]string{"-S", socket, "-f", "/dev/null"}, args...)...)
 		cmd.Env = c.Env
 		out, err := cmd.CombinedOutput()
 		return strings.TrimSpace(string(out)), err
 	}
 	defer run("kill-server")
+	// Newer tmux versions default mouse mode to on. Establish the fixture's
+	// global value explicitly so session-only changes are tested on every version.
+	if output, err := run("new-session", "-d", "-s", "fixture", ";", "set-option", "-g", "mouse", "off"); err != nil {
+		t.Fatalf("initialize private tmux fixture: %s, %v", output, err)
+	}
 	start := func() *Process {
 		proc, err := Start(c)
 		if err != nil {
