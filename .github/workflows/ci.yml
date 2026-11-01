@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 # Keep the independent Argon2 compatibility fixture compatible with macOS runners.
 env:
@@ -64,13 +65,35 @@ jobs:
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
         working-directory: webmux/server
   go-server:
+    timeout-minutes: 30
     name: Go Server (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os == 'macos-arm64' && github.event_name != 'pull_request' && vars.WEBMUX_MACOS_RUNNER || matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-26, windows-2022]
+        include:
+          - os: ubuntu-22.04
+            runner: ubuntu-22.04
+          - os: macos-arm64
+            runner: macos-26
+          - os: windows-2022
+            runner: windows-2022
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_NO_INSTALL_CLEANUP: '1'
+      HOMEBREW_NO_AUTOREMOVE: '1'
+      HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: '1'
     steps:
+      - name: Verify temporary macOS runner and record provenance
+        id: macos_runner
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          test "$(uname -m)" = arm64
+          sw_vers
+          printf 'NPM_CONFIG_CACHE=%s/npm-cache\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'macOS ARM64 runner: %s\n' "$RUNNER_NAME" >> "$GITHUB_STEP_SUMMARY"
+          sw_vers >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:

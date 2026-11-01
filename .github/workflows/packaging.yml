@@ -18,13 +18,47 @@ env:
 
 jobs:
   native-preview:
+    timeout-minutes: 30
     name: Native bundle (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-26, ubuntu-22.04, windows-2022, windows-11-arm]
-    runs-on: ${{ matrix.os }}
+        include:
+          - os: macos-arm64
+            runner: macos-26
+          - os: ubuntu-22.04
+            runner: ubuntu-22.04
+          - os: windows-2022
+            runner: windows-2022
+          - os: windows-11-arm
+            runner: windows-11-arm
+    runs-on: ${{ matrix.os == 'macos-arm64' && github.event_name != 'pull_request' && vars.WEBMUX_MACOS_RUNNER || matrix.runner }}
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_NO_INSTALL_CLEANUP: '1'
+      HOMEBREW_NO_AUTOREMOVE: '1'
+      HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: '1'
     steps:
+      - name: Verify temporary macOS runner and record provenance
+        id: macos_runner
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          test "$(uname -m)" = arm64
+          sw_vers
+          printf 'NPM_CONFIG_CACHE=%s/npm-cache\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'macOS ARM64 runner: %s\n' "$RUNNER_NAME" >> "$GITHUB_STEP_SUMMARY"
+          sw_vers >> "$GITHUB_STEP_SUMMARY"
+          if [ "$RUNNER_ENVIRONMENT" = self-hosted ]; then
+            if brew list --formula --full-name | grep -Eq '(^|/)webmux$'; then
+              echo 'Refusing to change an existing WebMux Homebrew installation.' >&2
+              exit 1
+            fi
+            if brew tap | grep -Eq '^(webmux/(native-test|packaging-test)|jordanhubbard/webmux)$'; then
+              echo 'Refusing to change existing qualification taps.' >&2
+              exit 1
+            fi
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
@@ -63,7 +97,8 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          export XDG_RUNTIME_DIR
           export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
           sudo -n systemctl start "user@$(id -u).service"
           systemctl --user show-environment > /dev/null
@@ -121,7 +156,7 @@ jobs:
           ./scripts/smoke-native-msi.ps1 -Installer $installers[0].FullName
           ./scripts/smoke-native-msi.ps1 -Installer $installers[0].FullName -PreviousInstaller $previousMSI
       - name: Set up Homebrew for native installation
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && runner.environment != 'self-hosted'
         uses: Homebrew/actions/setup-homebrew@3b81d438eda92ee13b5849940d993be027717ecf
       # Homebrew prepends its bin directory; restore the pinned, self-contained
       # Node runtime before brew upgrades can break the runner's brewed Node.
@@ -131,7 +166,7 @@ jobs:
         with:
           node-version: '24'
       - name: Unlink runner OpenSSL 1.1 before dependency upgrades
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && runner.environment != 'self-hosted'
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
         run: |
@@ -155,9 +190,10 @@ jobs:
           git --git-dir="$RUNNER_TEMP/webmux-head.git" update-ref refs/heads/main HEAD
           git --git-dir="$RUNNER_TEMP/webmux-head.git" symbolic-ref HEAD refs/heads/main
           cp -f Formula/webmux.rb "$(brew --repository webmux/native-test)/Formula/webmux.rb"
-          export WEBMUX_TEST_FORMULA="$(brew --repository webmux/native-test)/Formula/webmux.rb"
+          WEBMUX_TEST_FORMULA="$(brew --repository webmux/native-test)/Formula/webmux.rb"
+          export WEBMUX_TEST_FORMULA
           node scripts/packaging-checks.mts formula-head
-          brew install --HEAD --build-from-source webmux/native-test/webmux
+          brew install --HEAD --build-from-source --skip-link webmux/native-test/webmux
           brew test webmux/native-test/webmux
           node scripts/smoke-native-package.mts "$(brew --prefix webmux/native-test/webmux)/libexec"
           brew services info webmux/native-test/webmux --json > "$RUNNER_TEMP/webmux-service.json"
@@ -169,14 +205,58 @@ jobs:
           name: native-preview-${{ matrix.os }}
           path: dist/*-native.*
 
+      - name: Remove temporary Homebrew qualification installations
+        if: always() && steps.macos_runner.outcome == 'success' && runner.environment == 'self-hosted' && runner.os == 'macOS'
+        shell: bash
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'
+        run: |
+          for tap in webmux/native-test webmux/packaging-test; do
+            if brew list --formula --full-name | grep -Fxq "$tap/webmux"; then
+              brew uninstall --formula "$tap/webmux"
+            fi
+            if brew tap | grep -Fxq "$tap"; then brew untap "$tap"; fi
+          done
+
   package:
+    timeout-minutes: 30
     name: Package (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-26, ubuntu-22.04]
-    runs-on: ${{ matrix.os }}
+        include:
+          - os: macos-arm64
+            runner: macos-26
+          - os: ubuntu-22.04
+            runner: ubuntu-22.04
+    runs-on: ${{ matrix.os == 'macos-arm64' && github.event_name != 'pull_request' && vars.WEBMUX_MACOS_RUNNER || matrix.runner }}
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_NO_INSTALL_CLEANUP: '1'
+      HOMEBREW_NO_AUTOREMOVE: '1'
+      HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: '1'
     steps:
+      - name: Verify temporary macOS runner and record provenance
+        id: macos_runner
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          test "$(uname -m)" = arm64
+          sw_vers
+          printf 'NPM_CONFIG_CACHE=%s/npm-cache\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'macOS ARM64 runner: %s\n' "$RUNNER_NAME" >> "$GITHUB_STEP_SUMMARY"
+          sw_vers >> "$GITHUB_STEP_SUMMARY"
+          if [ "$RUNNER_ENVIRONMENT" = self-hosted ]; then
+            if brew list --formula --full-name | grep -Eq '(^|/)webmux$'; then
+              echo 'Refusing to change an existing WebMux Homebrew installation.' >&2
+              exit 1
+            fi
+            if brew tap | grep -Eq '^(webmux/(native-test|packaging-test)|jordanhubbard/webmux)$'; then
+              echo 'Refusing to change existing qualification taps.' >&2
+              exit 1
+            fi
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
@@ -205,6 +285,7 @@ jobs:
           name: webmux-${{ matrix.os }}
           path: dist/*
       - name: Set up Homebrew
+        if: runner.environment != 'self-hosted'
         uses: Homebrew/actions/setup-homebrew@3b81d438eda92ee13b5849940d993be027717ecf
       # Homebrew prepends its bin directory; restore the pinned, self-contained
       # Node runtime before brew upgrades can break the runner's brewed Node.
@@ -226,7 +307,7 @@ jobs:
           node scripts/packaging-checks.mts tap
           brew untap jordanhubbard/webmux
       - name: Unlink runner OpenSSL 1.1 before dependency upgrades
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && runner.environment != 'self-hosted'
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
         run: |
@@ -247,14 +328,30 @@ jobs:
           brew tap-new --no-git webmux/packaging-test
           git archive --format=tar.gz --output="$RUNNER_TEMP/webmux-source.tar.gz" HEAD
           cp -f Formula/webmux.rb "$(brew --repository webmux/packaging-test)/Formula/webmux.rb"
-          export WEBMUX_TEST_FORMULA="$(brew --repository webmux/packaging-test)/Formula/webmux.rb"
+          WEBMUX_TEST_FORMULA="$(brew --repository webmux/packaging-test)/Formula/webmux.rb"
+          export WEBMUX_TEST_FORMULA
           node scripts/packaging-checks.mts formula
-          brew install --build-from-source webmux/packaging-test/webmux
+          brew install --build-from-source --skip-link webmux/packaging-test/webmux
           brew test webmux/packaging-test/webmux
       - name: Verify service definition
         run: |
           brew services info webmux/packaging-test/webmux --json > "$RUNNER_TEMP/webmux-service.json"
           node scripts/packaging-checks.mts service
+
+      - name: Remove temporary Homebrew qualification installations
+        if: always() && steps.macos_runner.outcome == 'success' && runner.environment == 'self-hosted' && runner.os == 'macOS'
+        shell: bash
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'
+        run: |
+          for tap in webmux/native-test webmux/packaging-test; do
+            if brew list --formula --full-name | grep -Fxq "$tap/webmux"; then
+              brew uninstall --formula "$tap/webmux"
+            fi
+            if brew tap | grep -Fxq "$tap"; then brew untap "$tap"; fi
+          done
+          if brew tap | grep -Fxq jordanhubbard/webmux; then brew untap jordanhubbard/webmux; fi
 
   verify-native-release:
     name: Verify native release artifacts
