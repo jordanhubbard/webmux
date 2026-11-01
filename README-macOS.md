@@ -7,21 +7,18 @@ The source Makefile runs WebMux's Go backend on macOS using Unix pseudoterminals
 Homebrew supports both macOS and Linux:
 
 ```bash
-brew trust --formula asheshgoplani/tap/agent-deck
-brew tap asheshgoplani/tap
 brew trust --formula jordanhubbard/webmux/webmux
 brew tap jordanhubbard/webmux https://github.com/jordanhubbard/webmux
 brew install jordanhubbard/webmux/webmux
 brew services start jordanhubbard/webmux/webmux
 ```
 
-The stable formula currently builds v1.4.0 and installs Agent Deck and tmux.
-The source checkout defaults to built-in WebMux coordination; the next release
-will carry that default into stable packages.
+The stable formula builds v1.4.1 with built-in WebMux coordination by default.
+Agent Deck and Rig are optional integrations and can be enabled together.
 
 Run these commands as your normal user. Open http://localhost:8080, or run
-`webmux` for foreground operation. Record formula-specific trust for Agent Deck
-and WebMux before Homebrew 6 validates their taps. See
+`webmux` for foreground operation. Record formula-specific trust for WebMux
+before Homebrew 6 validates its tap. See
 [packaging](docs/packaging.md) for service requirements, upgrades, migration,
 and release bundles. The instructions below cover building and running from a
 source checkout.
@@ -33,13 +30,14 @@ source checkout.
 - Node.js 24 LTS or newer for frontend/tooling builds
 - Git
 - The built-in OpenSSH client
+- tmux for built-in local terminals (`brew install tmux`)
 - Xcode Command Line Tools if npm must compile a native dependency
 
 Homebrew is a convenient way to install the required tools:
 
 ```bash
 xcode-select --install
-brew install go node git
+brew install go node git tmux
 ```
 
 Optional features require additional software:
@@ -48,7 +46,6 @@ Optional features require additional software:
 brew install mosh          # mosh transport
 brew install hudochenkov/sshpass/sshpass  # password-based SSH
 brew install guacamole-server             # RDP proxy
-brew install tmux                          # agent views
 ```
 
 SSH keys are preferred over `sshpass`. VNC support does not require a separate local proxy.

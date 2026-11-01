@@ -1,15 +1,15 @@
 class Webmux < Formula
   desc "Browser-based workspace for persistent terminals and remote desktops"
   homepage "https://github.com/jordanhubbard/webmux"
-  url "https://github.com/jordanhubbard/webmux/archive/refs/tags/v1.4.0.tar.gz"
-  sha256 "545c138f9476a7ffc9af728eafa615c1eccdd9df694b31caff1ae03aaed31838"
+  url "https://github.com/jordanhubbard/webmux/archive/refs/tags/v1.4.1.tar.gz"
+  sha256 "0925779a798618b98d90bffc19f25cb9d5583525f02fdb3cd3eac760f471bcc9"
   license "BSD-2-Clause"
   head "https://github.com/jordanhubbard/webmux.git", branch: "main"
 
   depends_on "go" => :build
   depends_on "node@24" => :build
-  depends_on "asheshgoplani/tap/agent-deck"
   depends_on "openssh"
+  depends_on "tmux"
 
   def install
     ENV.prepend_path "PATH", Formula["node@24"].opt_bin
@@ -54,13 +54,14 @@ class Webmux < Formula
       there (or make uninstall with older source versions).
       On macOS, complete Mac permissions in the WebMux browser interface.
       Grant access to WebMux.app for local terminals; Remote Login is separate.
-      Agent Deck and tmux are installed for the default coordination experience.
+      Built-in WebMux coordination is the default; tmux supports local terminals.
+      Agent Deck and Rig are optional integrations.
+      For integration setup, see https://github.com/jordanhubbard/webmux/blob/main/docs/openrig.md
       Optional tools: brew install mosh guacamole-server
     EOS
   end
 
   test do
-    assert_predicate formula_opt_bin("asheshgoplani/tap/agent-deck")/"agent-deck", :executable?
     ENV["WEBMUX_HOME"] = testpath/"state"
     port = free_port
     ENV["HTTP_PORT"] = port.to_s

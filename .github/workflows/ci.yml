@@ -96,9 +96,11 @@ jobs:
           if [ "$RUNNER_ENVIRONMENT" = self-hosted ]; then
             cache_root="$RUNNER_TOOL_CACHE/webmux-build-cache"
             mkdir -p "$cache_root"
-            printf 'NPM_CONFIG_CACHE=%s/npm\n' "$cache_root" >> "$GITHUB_ENV"
-            printf 'GOCACHE=%s/go-build\n' "$cache_root" >> "$GITHUB_ENV"
-            printf 'GOPATH=%s/go\n' "$cache_root" >> "$GITHUB_ENV"
+            {
+              printf 'NPM_CONFIG_CACHE=%s/npm\n' "$cache_root"
+              printf 'GOCACHE=%s/go-build\n' "$cache_root"
+              printf 'GOPATH=%s/go\n' "$cache_root"
+            } >> "$GITHUB_ENV"
           fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7

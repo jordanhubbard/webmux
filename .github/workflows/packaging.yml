@@ -51,9 +51,11 @@ jobs:
           if [ "$RUNNER_ENVIRONMENT" = self-hosted ]; then
             cache_root="$RUNNER_TOOL_CACHE/webmux-build-cache"
             mkdir -p "$cache_root"
-            printf 'NPM_CONFIG_CACHE=%s/npm\n' "$cache_root" >> "$GITHUB_ENV"
-            printf 'GOCACHE=%s/go-build\n' "$cache_root" >> "$GITHUB_ENV"
-            printf 'GOPATH=%s/go\n' "$cache_root" >> "$GITHUB_ENV"
+            {
+              printf 'NPM_CONFIG_CACHE=%s/npm\n' "$cache_root"
+              printf 'GOCACHE=%s/go-build\n' "$cache_root"
+              printf 'GOPATH=%s/go\n' "$cache_root"
+            } >> "$GITHUB_ENV"
             if brew list --formula --full-name | grep -Eq '(^|/)webmux$'; then
               echo 'Refusing to change an existing WebMux Homebrew installation.' >&2
               exit 1
@@ -190,8 +192,6 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: '1'
           HOMEBREW_NO_INSTALL_CLEANUP: '1'
         run: |
-          brew trust --formula asheshgoplani/tap/agent-deck
-          brew tap asheshgoplani/tap
           brew tap-new --no-git webmux/native-test
           git clone --bare . "$RUNNER_TEMP/webmux-head.git"
           git --git-dir="$RUNNER_TEMP/webmux-head.git" update-ref refs/heads/main HEAD
@@ -256,9 +256,11 @@ jobs:
           if [ "$RUNNER_ENVIRONMENT" = self-hosted ]; then
             cache_root="$RUNNER_TOOL_CACHE/webmux-build-cache"
             mkdir -p "$cache_root"
-            printf 'NPM_CONFIG_CACHE=%s/npm\n' "$cache_root" >> "$GITHUB_ENV"
-            printf 'GOCACHE=%s/go-build\n' "$cache_root" >> "$GITHUB_ENV"
-            printf 'GOPATH=%s/go\n' "$cache_root" >> "$GITHUB_ENV"
+            {
+              printf 'NPM_CONFIG_CACHE=%s/npm\n' "$cache_root"
+              printf 'GOCACHE=%s/go-build\n' "$cache_root"
+              printf 'GOPATH=%s/go\n' "$cache_root"
+            } >> "$GITHUB_ENV"
             if brew list --formula --full-name | grep -Eq '(^|/)webmux$'; then
               echo 'Refusing to change an existing WebMux Homebrew installation.' >&2
               exit 1
@@ -313,8 +315,6 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: '1'
           XDG_CONFIG_HOME: ${{ runner.temp }}/homebrew-bootstrap-config
         run: |
-          brew trust --formula asheshgoplani/tap/agent-deck
-          brew tap asheshgoplani/tap
           brew trust --formula jordanhubbard/webmux/webmux
           brew tap jordanhubbard/webmux "$GITHUB_WORKSPACE"
           brew info jordanhubbard/webmux/webmux --json=v2 > "$RUNNER_TEMP/webmux-tap-info.json"
@@ -337,8 +337,6 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: '1'
           HOMEBREW_NO_INSTALL_CLEANUP: '1'
         run: |
-          brew trust --formula asheshgoplani/tap/agent-deck
-          brew tap asheshgoplani/tap
           brew tap-new --no-git webmux/packaging-test
           git archive --format=tar.gz --output="$RUNNER_TEMP/webmux-source.tar.gz" HEAD
           cp -f Formula/webmux.rb "$(brew --repository webmux/packaging-test)/Formula/webmux.rb"
