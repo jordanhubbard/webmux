@@ -9,6 +9,7 @@ class Webmux < Formula
   depends_on "go" => :build
   depends_on "node@24" => :build
   depends_on "openssh"
+  depends_on "tmux"
 
   def install
     ENV.prepend_path "PATH", Formula["node@24"].opt_bin
@@ -53,7 +54,8 @@ class Webmux < Formula
       there (or make uninstall with older source versions).
       On macOS, complete Mac permissions in the WebMux browser interface.
       Grant access to WebMux.app for local terminals; Remote Login is separate.
-      Built-in WebMux coordination is the default. Agent Deck and Rig are optional.
+      Built-in WebMux coordination is the default; tmux supports local terminals.
+      Agent Deck and Rig are optional integrations.
       For integration setup, see https://github.com/jordanhubbard/webmux/blob/main/docs/openrig.md
       Optional tools: brew install mosh guacamole-server
     EOS

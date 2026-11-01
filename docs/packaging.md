@@ -20,7 +20,9 @@ available user service manager; foreground operation does not.
 
 The stable formula builds the released native Go server and browser UI from the
 tagged source using the npm lockfile. Go and Node.js 24 are build dependencies;
-the installed runtime requires OpenSSH but does not require Node.js or Python.
+the installed runtime requires OpenSSH and tmux for built-in local terminals,
+but does not require Node.js or Python. Homebrew installs these runtime tools
+directly, independently of the optional coordinators.
 The first installation requires build tools (Xcode Command Line Tools on macOS,
 or a C/C++ toolchain on Linux). There are no prebuilt Homebrew bottles yet.
 
@@ -85,10 +87,10 @@ Use `brew services` to control the packaged installation.
 ## Optional features
 
 ```bash
-brew install mosh tmux guacamole-server
+brew install mosh guacamole-server
 ```
 
-These enable mosh transport, tmux-backed agent views, and the `guacd` dependency
+These enable mosh transport and the `guacd` dependency
 for RDP respectively; configure and start `guacd` separately. Password-based SSH
 needs `sshpass`; see the platform guide for installation instructions. The WebMux
 launcher includes Homebrew's bin and sbin directories in PATH so service-launched
@@ -102,7 +104,7 @@ that executable, license, build metadata and, on Windows, optional service
 installation scripts. Client-only archives contain `webmux-client` without the
 server or browser assets. The server executable needs no adjacent `web/` or
 `config.defaults/` directory, and neither executable requires a Node.js
-runtime. OpenSSH and optional mosh/tmux/guacd tools remain
+runtime. OpenSSH, tmux for local terminals, and optional mosh/guacd tools remain
 external dependencies for their respective features.
 
 Agent Deck is not embedded in native archives. On macOS or Linux, install the

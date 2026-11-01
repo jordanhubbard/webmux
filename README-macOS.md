@@ -30,13 +30,14 @@ source checkout.
 - Node.js 24 LTS or newer for frontend/tooling builds
 - Git
 - The built-in OpenSSH client
+- tmux for built-in local terminals (`brew install tmux`)
 - Xcode Command Line Tools if npm must compile a native dependency
 
 Homebrew is a convenient way to install the required tools:
 
 ```bash
 xcode-select --install
-brew install go node git
+brew install go node git tmux
 ```
 
 Optional features require additional software:
