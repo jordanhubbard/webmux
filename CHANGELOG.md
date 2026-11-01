@@ -5,13 +5,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-10-31
+
 ### Changed
-- Default to built-in WebMux terminals, connected servers, and direct messaging.
-  Keep Agent Deck and Rig as explicit optional coordinators, preserve saved
-  choices, and expose WebMux in both Coordination and Settings (#242).
-- Query only the selected coordinator and supervise Rig only when it is the
-  saved default. Source server installs no longer install Agent Deck unless
-  requested with `INSTALL_AGENT_DECK=yes` or `make install-agent-deck` (#242).
+- Keep WebMux as the built-in foundation and default launch owner. Enable Agent
+  Deck and Rig independently, including both together (#245).
+- Separate the All/WebMux/Agent Deck/Rig inventory filter from launch ownership
+  and integration enablement. Preserve provider-qualified identity and route
+  each action to its original owner, including overlapping IDs (#245).
+- Supervise Rig whenever its integration is enabled, independently of the
+  launch default or selected view. Discover enabled integrations concurrently
+  and isolate their failures (#245).
+- Migrate legacy coordinator selections to independent preferences. Existing
+  agents and terminal viewers keep their owners and continue running (#245).
+- Make Agent Deck optional in source installs; explicit `make install-agent-deck`
+  and `make install-server INSTALL_AGENT_DECK=yes` remain available (#242).
+
+### Fixed
+- Attribute integration activity at the adapter boundary so omitted CLI provider
+  fields cannot hide messages or misroute actions in combined views (#245).
 
 ## [1.4.0] - 2026-10-31
 

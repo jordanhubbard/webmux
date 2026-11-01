@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/auth"
@@ -272,6 +273,21 @@ func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner 
 	if body.Provider == "" {
 		body.Provider = "rig"
 	}
+	if body.Provider == "webmux" {
+		value, err := s.sessions.Get(owner, body.Target)
+		if err != nil || value.Rig != nil || value.Kind != "terminal" || value.Agent() || value.Companion != "" {
+			writeError(w, 404, "Native terminal not found.")
+			return
+		}
+		visible := false
+		value, err = s.sessions.Patch(owner, body.Target, session.Patch{Minimized: &visible})
+		if err != nil {
+			s.sessionError(w, err, "Cannot reopen native terminal.")
+			return
+		}
+		writeJSON(w, 200, value)
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
 	provider := s.coordinationProvider(owner, body.Provider)
@@ -296,56 +312,74 @@ func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner s
 	if !s.openRigAccess(w, owner) {
 		return
 	}
-	defaultProvider := any("choose")
-	if os.Getenv("WEBMUX_COORDINATION_DISABLED") == "1" {
-		writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "defaultProvider": defaultProvider, "providers": []coordinationProviderDescriptor{}, "projects": []coordinationProject{}, "seats": []coordinationSeat{}, "messages": []coordinationMessage{}, "errors": map[string]string{}, "attentionCount": 0})
-		return
-	}
 	settings, err := s.loadSettings()
 	if err != nil {
 		s.catalogError(w, err, "Failed to load coordination settings")
 		return
 	}
-	defaultProvider = config.AsObject(settings.App["coordination"])["default_provider"]
-	providers := s.coordinationProviders(owner)
+	preferences := config.AsObject(settings.App["coordination"])
+	defaultProvider := preferences["default_launch_provider"]
+	providers := []coordinationProvider{}
+	if os.Getenv("WEBMUX_COORDINATION_DISABLED") != "1" {
+		providers = s.coordinationProviders(owner)
+	}
 	selected := r.URL.Query().Get("provider")
 	if selected == "" {
-		selected, _ = defaultProvider.(string)
+		selected, _ = preferences["default_view"].(string)
 	}
-	if selected != "webmux" && selected != "agent-deck" && selected != "rig" && selected != "disabled" && selected != "choose" {
+	if selected != "webmux" && selected != "agent-deck" && selected != "rig" && selected != "all" && selected != "disabled" && selected != "choose" {
 		writeError(w, 400, "Unknown coordination provider.")
 		return
 	}
 	// Built-in coordination uses the existing session and server APIs. It has
 	// no external process, project database, or provider launch/attach transport.
-	descriptors := []coordinationProviderDescriptor{{ID: "webmux", Label: "WebMux", Available: true, Capabilities: []string{"terminals", "connected-servers", "direct-messaging"}, Contract: "webmux-server-directory/v1"}}
+	descriptors := []coordinationProviderDescriptor{{ID: "webmux", Label: "WebMux", Available: true, Enabled: true, Capabilities: []string{"terminals", "connected-servers", "direct-messaging"}, Contract: "webmux-server-directory/v1"}}
 	projects := []coordinationProject{}
 	seats := []coordinationSeat{}
+	groups := map[string]int{}
+	for _, value := range s.sessions.List(owner) {
+		if value.Rig != nil || value.Kind != "terminal" {
+			continue
+		}
+		name := value.ProjectLabel
+		if name == "" {
+			name = "WebMux terminals"
+		}
+		host := value.Hostname
+		if host == "" {
+			host = "localhost"
+		}
+		id := fmt.Sprintf("%d:%s%s", len(host), host, name)
+		index, exists := groups[id]
+		if !exists {
+			index = len(projects)
+			groups[id] = index
+			projects = append(projects, coordinationProject{Provider: "webmux", ID: id, Name: name, Host: host, State: "observed"})
+		}
+		projects[index].SeatCount++
+		if value.State == "connected" {
+			projects[index].RunningCount++
+		}
+		seats = append(seats, coordinationSeat{Provider: "webmux", ID: value.ID, ProjectID: id, ProjectName: name, Name: value.Title, Host: host, Runtime: "terminal", State: value.State, Openable: true, NativeSession: value.ID})
+	}
 	messages := []coordinationMessage{}
 	errors := map[string]string{}
 	attention := 0
-	for _, provider := range providers {
-		descriptor := provider.Descriptor()
-		descriptors = append(descriptors, descriptor)
-		if descriptor.ID != selected || !descriptor.Available {
+	for _, result := range discoverCoordination(r.Context(), providers, settings.App) {
+		descriptors = append(descriptors, result.descriptor)
+		if result.err != nil {
+			errors[result.descriptor.ID] = result.err.Error()
 			continue
 		}
-		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
-		status, err := provider.Status(ctx)
-		cancel()
-		if err != nil {
-			errors[descriptor.ID] = err.Error()
-			continue
-		}
-		projects = append(projects, status.Projects...)
-		seats = append(seats, status.Seats...)
-		messages = append(messages, status.Messages...)
-		attention += status.Attention
-		if len(status.Errors) > 0 {
-			errors[descriptor.ID] = strings.Join(status.Errors, "; ")
+		projects = append(projects, result.status.Projects...)
+		seats = append(seats, result.status.Seats...)
+		messages = append(messages, result.status.Messages...)
+		attention += result.status.Attention
+		if len(result.status.Errors) > 0 {
+			errors[result.descriptor.ID] = strings.Join(result.status.Errors, "; ")
 		}
 	}
-	writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "defaultProvider": defaultProvider, "providers": descriptors, "projects": projects, "seats": seats, "messages": messages, "errors": errors, "attentionCount": attention})
+	writeJSON(w, 200, map[string]any{"contract": "webmux-coordination/v1", "defaultProvider": defaultProvider, "defaultLaunchProvider": defaultProvider, "defaultView": preferences["default_view"], "enabledProviders": preferences["enabled_providers"], "providers": descriptors, "projects": projects, "seats": seats, "messages": messages, "errors": errors, "attentionCount": attention})
 }
 
 func (s *Server) sendCoordinationMessage(w http.ResponseWriter, r *http.Request, owner string) {
@@ -527,7 +561,7 @@ func (s *Server) coordinationProviders(owner string) []coordinationProvider {
 }
 
 func (s *Server) coordinationProvider(owner, id string) coordinationProvider {
-	if os.Getenv("WEBMUX_COORDINATION_DISABLED") == "1" {
+	if os.Getenv("WEBMUX_COORDINATION_DISABLED") == "1" || !s.coordinationEnabled(id) {
 		return nil
 	}
 	for _, provider := range s.coordinationProviders(owner) {
@@ -556,4 +590,42 @@ func (s *Server) attachCoordinationTerminal(parent context.Context, owner string
 	}
 	identity := session.RigIdentity{Provider: identityProvider, Target: viewerTarget, Project: launch.Project, Name: launch.Name, Host: launch.Host, Runtime: launch.Runtime, Workspace: launch.Workspace}
 	return s.sessions.EnsureRigTerminalAt(owner, viewerTarget, launch.Title, launch.Argv, row, col, identity)
+}
+
+type coordinationDiscovery struct {
+	descriptor coordinationProviderDescriptor
+	status     coordinationProviderStatus
+	err        error
+}
+
+func discoverCoordination(ctx context.Context, providers []coordinationProvider, app config.Object) []coordinationDiscovery {
+	results := make([]coordinationDiscovery, len(providers))
+	var pending sync.WaitGroup
+	for index, provider := range providers {
+		descriptor := provider.Descriptor()
+		descriptor.Enabled = config.CoordinationEnabled(app, descriptor.ID)
+		results[index].descriptor = descriptor
+		if !descriptor.Enabled || !descriptor.Available {
+			continue
+		}
+		pending.Add(1)
+		go func() {
+			defer pending.Done()
+			check, cancel := context.WithTimeout(ctx, 20*time.Second)
+			defer cancel()
+			results[index].status, results[index].err = provider.Status(check)
+			// Adapter identity is authoritative even when a CLI omits attribution.
+			for i := range results[index].status.Projects {
+				results[index].status.Projects[i].Provider = descriptor.ID
+			}
+			for i := range results[index].status.Seats {
+				results[index].status.Seats[i].Provider = descriptor.ID
+			}
+			for i := range results[index].status.Messages {
+				results[index].status.Messages[i].Provider = descriptor.ID
+			}
+		}()
+	}
+	pending.Wait()
+	return results
 }

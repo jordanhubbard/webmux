@@ -85,3 +85,11 @@ integrations. Existing saved choices are retained. Selection and setup are
 explained in [agent coordination](openrig.md).
 [Issue #243](https://github.com/jordanhubbard/webmux/issues/243) tracks removing
 the stable Homebrew dependency when the next release contains this change.
+
+## Independent coordination integrations
+
+[Issue #245](https://github.com/jordanhubbard/webmux/issues/245) separates enabled
+integrations, inventory filters, and default launch ownership for v1.4.1. Agent
+Deck and Rig can be enabled together; native terminals remain available. Each
+session retains its lifecycle owner. Shared-agent identity/event bridging is
+outside this release and tracked by [#246](https://github.com/jordanhubbard/webmux/issues/246).

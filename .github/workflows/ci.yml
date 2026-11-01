@@ -24,6 +24,10 @@ jobs:
           go-version-file: webmux/server/go.mod
       - name: Test USB sysfs detach polling
         run: python3 -m unittest discover -s tests -p test_usb_sysfs.py
+      - name: Test Ubuntu package mirror configuration
+        run: python3 -m unittest discover -s tests -p test_ci_apt.py
+      - name: Configure Ubuntu package mirrors and network bounds
+        run: sudo -n python3 scripts/configure-ci-apt.py
       - name: Install native kernel USB fixture prerequisites
         run: |
           sudo -n apt-get update
@@ -65,7 +69,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-15, windows-2022]
+        os: [ubuntu-22.04, macos-26, windows-2022]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
@@ -107,6 +111,9 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: webmux
         run: npm run build --workspace=frontend
+      - name: Configure Ubuntu package mirrors and network bounds
+        if: runner.os == 'Linux'
+        run: sudo -n python3 scripts/configure-ci-apt.py
       - name: Install browser for Go tests
         if: runner.os == 'Linux'
         working-directory: webmux

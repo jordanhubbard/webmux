@@ -109,12 +109,11 @@ func Normalize(document Document, environment bool) (Document, error) {
 	}
 	app["font_faces"] = faces
 	app["session_logging"] = Object{"enabled": boolean(AsObject(app["session_logging"])["enabled"], false)}
-	coordination := clone(AsObject(app["coordination"]))
-	provider := text(coordination["default_provider"], "webmux")
-	if !slices.Contains([]string{"webmux", "agent-deck", "rig", "disabled", "choose"}, provider) {
-		return Document{}, invalid("Invalid coordination default_provider: " + provider)
+	coordination, err := normalizeCoordination(AsObject(app["coordination"]))
+	if err != nil {
+		return Document{}, err
 	}
-	app["coordination"] = Object{"default_provider": provider}
+	app["coordination"] = coordination
 	grid := clone(AsObject(app["terminal_grid"]))
 	for _, field := range []string{"max_cols", "max_rows"} {
 		limit, err := GridLimit(grid[field], "app.terminal_grid."+field)

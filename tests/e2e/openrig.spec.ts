@@ -34,10 +34,9 @@ test('coordination lives in its own tab and leaves the terminal grid intact', as
   await page.getByRole('button', { name: 'Coordination', exact: true }).click();
   const dialog = page.getByRole('region', { name: 'Coordination', exact: true });
   await expect(dialog).toBeVisible();
-  const experience = dialog.getByLabel('Coordinator');
-  if (await experience.locator('option[value="rig"]').count()) {
+  const experience = dialog.getByLabel('Launch owner');
+  if (process.env.WEBMUX_REAL_OPENRIG === '1') {
     await experience.selectOption('rig');
-    await dialog.getByRole('button', { name: 'Use this time' }).click();
     await expect(dialog.getByRole('heading', { name: 'Start a coding agent', exact: true })).toBeVisible();
     await expect(dialog.getByLabel('Code folder')).toBeVisible();
   } else {
@@ -53,8 +52,8 @@ test('coordination lives in its own tab and leaves the terminal grid intact', as
 
 test('Agent Deck UI queues work and drains remote completion records', async ({ page }) => {
   const status = {
-    contract: 'webmux-coordination/v1', defaultProvider: 'agent-deck', errors: {}, attentionCount: 1,
-    providers: [{ id: 'agent-deck', label: 'Agent Deck', available: true, contract: 'agent-deck-cli/v1', capabilities: ['sessions', 'remote', 'parent-child', 'send', 'queue', 'send-status', 'completion-inbox', 'remote-drain'] }],
+    contract: 'webmux-coordination/v1', defaultLaunchProvider: 'agent-deck', defaultView: 'agent-deck', enabledProviders: ['agent-deck'], errors: {}, attentionCount: 1,
+    providers: [{ id: 'agent-deck', label: 'Agent Deck', available: true, enabled: true, contract: 'agent-deck-cli/v1', capabilities: ['sessions', 'remote', 'parent-child', 'send', 'queue', 'send-status', 'completion-inbox', 'remote-drain'] }],
     projects: [
       { provider: 'agent-deck', id: 'local:webmux', name: 'webmux', host: 'localhost', state: 'active', historical: false, seatCount: 1, runningCount: 1, attentionCount: 1 },
       { provider: 'agent-deck', id: 'sparky:webmux', name: 'webmux', host: 'sparky', state: 'active', historical: false, seatCount: 1, runningCount: 1 },
@@ -106,13 +105,13 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   let workloadCompleted = false;
   type Agent = { name: string; id: string; state: string; openable: boolean; nativeSessionId?: string };
   type Session = { id: string; row: number; col: number; openrig_view?: string; rig?: { target: string; project: string; name: string; host: string; runtime: string } };
-  const status = async () => (await (await request.get('/api/coordination?provider=rig')).json()) as {
-    seats: Agent[]; messages: { from: string; to: string; body: string }[];
+  const status = async () => {
+    const value = await (await request.get('/api/coordination')).json() as { seats: (Agent & { provider: string })[]; messages: { provider: string; from: string; to: string; body: string }[] };
+    return { seats: value.seats.filter(seat => seat.provider === 'rig'), messages: value.messages.filter(message => message.provider === 'rig') };
   };
   const useRig = async (dialog: ReturnType<typeof page.getByRole>) => {
-    await expect(dialog.locator('.coordination-current')).toBeVisible();
-    await dialog.getByLabel('Coordinator').selectOption('rig');
-    await dialog.getByRole('button', { name: 'Use this time' }).click();
+    await expect(dialog.getByLabel('Launch owner')).toBeVisible();
+    await dialog.getByLabel('Launch owner').selectOption('rig');
     return dialog;
   };
   const openDialog = async () => {
@@ -325,8 +324,8 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
 test('coordination groups provider-owned sessions in keyboard-expandable projects', async ({ page }) => {
   await page.route(/\/api\/coordination(?:\?.*)?$/, route => route.fulfill({ json: {
     contract: 'webmux-coordination/v1',
-    defaultProvider: 'rig',
-    providers: [{ id: 'rig', label: 'Rig', available: true, capabilities: ['projects', 'attach'], contract: 'openrig-cli/0.6.14' }],
+    defaultLaunchProvider: 'rig', defaultView: 'rig', enabledProviders: ['rig'],
+    providers: [{ id: 'rig', label: 'Rig', available: true, enabled: true, capabilities: ['projects', 'attach'], contract: 'openrig-cli/0.6.14' }],
     projects: [
       { provider: 'rig', id: 'rig-one', name: 'demo-release', host: 'localhost', state: 'running', historical: false, seatCount: 2, runningCount: 1, contexts: ['agents'] },
       { provider: 'rig', id: 'rig-two', name: 'other-project', host: 'other-host', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: ['agents'] },
@@ -355,4 +354,62 @@ test('coordination groups provider-owned sessions in keyboard-expandable project
   await expect(workers.getByRole('button', { name: 'Restart provider and open' })).toHaveCount(1);
   await page.setViewportSize({ width: 390, height: 800 });
   expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+});
+
+
+test('integration enablement, launch owner and inventory view persist independently', async ({ page, request }) => {
+  const original = await (await request.get('/api/config')).json();
+  let launches = 0;
+  page.on('request', value => { if (value.method() === 'POST' && /\/api\/coordination\/(agents|attach)$/.test(value.url())) launches++; });
+  try {
+    expect((await request.put('/api/config', { data: { app: { coordination: { enabled_providers: ['agent-deck', 'rig'], default_launch_provider: 'webmux', default_view: 'all' } } } })).ok()).toBe(true);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Coordination', exact: true }).click();
+    const panel = page.getByRole('region', { name: 'Coordination', exact: true });
+    await expect(panel.getByLabel('Enable Agent Deck')).toBeChecked();
+    await expect(panel.getByLabel('Enable Rig')).toBeChecked();
+    await expect(panel.getByLabel('Launch owner')).toHaveValue('webmux');
+    await panel.getByLabel('Show sessions').selectOption('rig');
+    await panel.getByRole('button', { name: 'Make default view' }).click();
+    await expect(panel.getByRole('button', { name: 'Make default view' })).toHaveCount(0);
+    await panel.getByLabel('Launch owner').selectOption('agent-deck');
+    await panel.getByRole('button', { name: 'Make default launch owner' }).click();
+    await expect(panel.getByRole('button', { name: 'Make default launch owner' })).toHaveCount(0);
+    await page.reload();
+    await page.getByRole('button', { name: 'Coordination', exact: true }).click();
+    await expect(panel.getByLabel('Show sessions')).toHaveValue('rig');
+    await expect(panel.getByLabel('Launch owner')).toHaveValue('agent-deck');
+    await expect(panel.getByLabel('Enable Rig')).toBeChecked();
+    await expect(panel.getByLabel('Enable Agent Deck')).toBeChecked();
+    expect(launches).toBe(0);
+  } finally {
+    expect((await request.put('/api/config', { data: { app: { coordination: original.app.coordination } } })).ok()).toBe(true);
+  }
+});
+
+
+test('All sessions keeps overlapping provider IDs separate and fits a narrow screen', async ({ page }, info) => {
+  const providers = ['webmux', 'agent-deck', 'rig'];
+  const labels = { webmux: 'WebMux', 'agent-deck': 'Agent Deck', rig: 'Rig' };
+  await page.route(/\/api\/coordination(?:\?.*)?$/, route => route.fulfill({ json: {
+    contract: 'webmux-coordination/v1', defaultLaunchProvider: 'webmux', defaultView: 'all', enabledProviders: ['agent-deck', 'rig'],
+    providers: providers.map(id => ({ id, label: labels[id as keyof typeof labels], enabled: true, available: true, capabilities: [], contract: 'fixture' })),
+    projects: providers.map(provider => ({ provider, id: 'shared', name: `${provider} project`, host: 'localhost', state: 'observed', historical: false, seatCount: 1, runningCount: 1 })),
+    seats: providers.map(provider => ({ provider, id: 'same-id', projectId: 'shared', projectName: `${provider} project`, name: `${provider} worker`, host: 'localhost', runtime: 'terminal', state: 'running', openable: true, managed: provider !== 'webmux' })),
+    messages: [], errors: {},
+  } }));
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Coordination', exact: true }).click();
+  const panel = page.getByRole('region', { name: 'Coordination', exact: true });
+  for (const provider of providers) await expect(panel.getByRole('article', { name: `${provider} worker in ${provider} project` })).toBeVisible();
+  await page.screenshot({ path: info.outputPath('coordination-all-desktop.png'), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(panel.getByLabel('Enable Agent Deck')).toBeVisible();
+  await expect(panel.getByLabel('Enable Rig')).toBeVisible();
+  expect(await panel.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  await page.screenshot({ path: info.outputPath('coordination-all-mobile.png'), fullPage: true });
+  await panel.getByLabel('Show sessions').selectOption('rig');
+  await expect(panel.getByRole('article')).toHaveCount(1);
+  await expect(panel.getByLabel('Launch owner')).toHaveValue('webmux');
+  await expect(panel.getByLabel('Enable Agent Deck')).toBeChecked();
 });

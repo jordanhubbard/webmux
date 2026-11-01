@@ -33,7 +33,7 @@ export function verifyNativeArtifacts(directory: string, version: string, platfo
 /** Recheck downloaded artifacts before publication, including every supported target. */
 export function verifyNativeReleaseArtifacts(directory: string, version: string): void {
   const targets = [
-    ['macos-15', 'darwin', 'arm64'],
+    ['macos-26', 'darwin', 'arm64'],
     ['ubuntu-22.04', 'linux', 'x64'],
     ['windows-2022', 'win32', 'x64'],
     ['windows-11-arm', 'win32', 'arm64'],
