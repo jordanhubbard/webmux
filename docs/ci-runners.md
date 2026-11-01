@@ -18,7 +18,8 @@ assertion or reuse artifacts from another source commit.
 
 Homebrew checks refuse to proceed when a WebMux installation or qualification
 tap already exists. Temporary test kegs are installed without linking into the
-host's PATH and removed with their private taps afterward. Existing dependency
+host's PATH; `brew test --force` runs their complete formula tests while unlinked.
+The test kegs and private taps are removed afterward. Existing dependency
 packages remain installed. Hosted-runner OpenSSL and Homebrew setup adjustments
 are skipped on self-hosted machines. Service smoke tests use private service
 labels and configuration directories.

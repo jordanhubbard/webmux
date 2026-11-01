@@ -194,7 +194,7 @@ jobs:
           export WEBMUX_TEST_FORMULA
           node scripts/packaging-checks.mts formula-head
           brew install --HEAD --build-from-source --skip-link webmux/native-test/webmux
-          brew test webmux/native-test/webmux
+          brew test --force webmux/native-test/webmux
           node scripts/smoke-native-package.mts "$(brew --prefix webmux/native-test/webmux)/libexec"
           brew services info webmux/native-test/webmux --json > "$RUNNER_TEMP/webmux-service.json"
           node scripts/packaging-checks.mts service
@@ -332,7 +332,7 @@ jobs:
           export WEBMUX_TEST_FORMULA
           node scripts/packaging-checks.mts formula
           brew install --build-from-source --skip-link webmux/packaging-test/webmux
-          brew test webmux/packaging-test/webmux
+          brew test --force webmux/packaging-test/webmux
       - name: Verify service definition
         run: |
           brew services info webmux/packaging-test/webmux --json > "$RUNNER_TEMP/webmux-service.json"
