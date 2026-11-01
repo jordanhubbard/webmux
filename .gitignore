@@ -29,3 +29,6 @@ webmux/benchmark-results.json
 
 # Release bundles
 /dist/
+
+# Python CI helper bytecode
+__pycache__/
