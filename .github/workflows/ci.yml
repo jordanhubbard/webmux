@@ -91,18 +91,26 @@ jobs:
         run: |
           test "$(uname -m)" = arm64
           sw_vers
-          printf 'NPM_CONFIG_CACHE=%s/npm-cache\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
           printf 'macOS ARM64 runner: %s\n' "$RUNNER_NAME" >> "$GITHUB_STEP_SUMMARY"
           sw_vers >> "$GITHUB_STEP_SUMMARY"
+          if [ "$RUNNER_ENVIRONMENT" = self-hosted ]; then
+            cache_root="$RUNNER_TOOL_CACHE/webmux-build-cache"
+            mkdir -p "$cache_root"
+            printf 'NPM_CONFIG_CACHE=%s/npm\n' "$cache_root" >> "$GITHUB_ENV"
+            printf 'GOCACHE=%s/go-build\n' "$cache_root" >> "$GITHUB_ENV"
+            printf 'GOPATH=%s/go\n' "$cache_root" >> "$GITHUB_ENV"
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: webmux/server/go.mod
+          cache: ${{ runner.environment != 'self-hosted' }}
           cache-dependency-path: webmux/server/go.sum
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
-          cache: npm
+          package-manager-cache: ${{ runner.environment != 'self-hosted' }}
+          cache: ${{ runner.environment != 'self-hosted' && 'npm' || '' }}
           cache-dependency-path: webmux/package-lock.json
       - name: Test native server with race detector
         working-directory: webmux/server

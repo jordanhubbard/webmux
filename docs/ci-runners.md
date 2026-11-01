@@ -16,6 +16,10 @@ trigger so a workflow branch can be qualified on its exact commit before merge.
 Use the full CI and Packaging workflows; do not replace their tests with a status
 assertion or reuse artifacts from another source commit.
 
+Use dedicated Go build/module caches for the temporary runner. Hosted Go/npm
+cache restore and upload are disabled on self-hosted jobs; do not archive the
+operator's existing caches into public repository caches.
+
 Homebrew checks refuse to proceed when a WebMux installation or qualification
 tap already exists. Temporary test kegs are installed without linking into the
 host's PATH; `brew test --force` runs their complete formula tests while unlinked.
