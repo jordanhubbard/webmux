@@ -51,9 +51,11 @@ jobs:
           if [ "$RUNNER_ENVIRONMENT" = self-hosted ]; then
             cache_root="$RUNNER_TOOL_CACHE/webmux-build-cache"
             mkdir -p "$cache_root"
-            printf 'NPM_CONFIG_CACHE=%s/npm\n' "$cache_root" >> "$GITHUB_ENV"
-            printf 'GOCACHE=%s/go-build\n' "$cache_root" >> "$GITHUB_ENV"
-            printf 'GOPATH=%s/go\n' "$cache_root" >> "$GITHUB_ENV"
+            {
+              printf 'NPM_CONFIG_CACHE=%s/npm\n' "$cache_root"
+              printf 'GOCACHE=%s/go-build\n' "$cache_root"
+              printf 'GOPATH=%s/go\n' "$cache_root"
+            } >> "$GITHUB_ENV"
             if brew list --formula --full-name | grep -Eq '(^|/)webmux$'; then
               echo 'Refusing to change an existing WebMux Homebrew installation.' >&2
               exit 1
@@ -254,9 +256,11 @@ jobs:
           if [ "$RUNNER_ENVIRONMENT" = self-hosted ]; then
             cache_root="$RUNNER_TOOL_CACHE/webmux-build-cache"
             mkdir -p "$cache_root"
-            printf 'NPM_CONFIG_CACHE=%s/npm\n' "$cache_root" >> "$GITHUB_ENV"
-            printf 'GOCACHE=%s/go-build\n' "$cache_root" >> "$GITHUB_ENV"
-            printf 'GOPATH=%s/go\n' "$cache_root" >> "$GITHUB_ENV"
+            {
+              printf 'NPM_CONFIG_CACHE=%s/npm\n' "$cache_root"
+              printf 'GOCACHE=%s/go-build\n' "$cache_root"
+              printf 'GOPATH=%s/go\n' "$cache_root"
+            } >> "$GITHUB_ENV"
             if brew list --formula --full-name | grep -Eq '(^|/)webmux$'; then
               echo 'Refusing to change an existing WebMux Homebrew installation.' >&2
               exit 1

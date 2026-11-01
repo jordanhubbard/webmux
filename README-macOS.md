@@ -46,7 +46,6 @@ Optional features require additional software:
 brew install mosh          # mosh transport
 brew install hudochenkov/sshpass/sshpass  # password-based SSH
 brew install guacamole-server             # RDP proxy
-brew install tmux                          # agent views
 ```
 
 SSH keys are preferred over `sshpass`. VNC support does not require a separate local proxy.

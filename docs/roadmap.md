@@ -83,13 +83,33 @@ review and checks; they are not folded into #238 automatically.
 default built-in experience, with Agent Deck and Rig as explicit optional
 integrations. Existing saved choices are retained. Selection and setup are
 explained in [agent coordination](openrig.md).
-[Issue #243](https://github.com/jordanhubbard/webmux/issues/243) tracks removing
-the stable Homebrew dependency when the next release contains this change.
+[Issue #243](https://github.com/jordanhubbard/webmux/issues/243) updates stable
+Homebrew distribution for v1.4.1: Agent Deck becomes optional, while tmux remains
+a direct dependency for built-in local terminals.
 
-## Independent coordination integrations
+## Independent coordination integrations: v1.4.1
 
 [Issue #245](https://github.com/jordanhubbard/webmux/issues/245) separates enabled
 integrations, inventory filters, and default launch ownership for v1.4.1. Agent
 Deck and Rig can be enabled together; native terminals remain available. Each
 session retains its lifecycle owner. Shared-agent identity/event bridging is
 outside this release and tracked by [#246](https://github.com/jordanhubbard/webmux/issues/246).
+
+[v1.4.1](https://github.com/jordanhubbard/webmux/releases/tag/v1.4.1) is published
+from `0ebdfa0379825873c0be0bf6932879e1d96fc77b`. Exact-source
+[CI](https://github.com/jordanhubbard/webmux/actions/runs/41326686398) and
+[packaging](https://github.com/jordanhubbard/webmux/actions/runs/41326686382)
+passed before publication; all 28 native asset/checksum files were verified.
+The stable formula update uses the published source archive and does not move
+the release tag to incorporate its necessarily post-publication checksum.
+
+[#251](https://github.com/jordanhubbard/webmux/issues/251), implemented in
+[#252](https://github.com/jordanhubbard/webmux/pull/252), permits explicitly
+selected temporary fleet runners for trusted release checks. The actual
+macOS version is recorded; public pull-request jobs keep hosted runners.
+See [temporary runner operation](ci-runners.md).
+
+[#253](https://github.com/jordanhubbard/webmux/issues/253) tracks a reproduced
+tmux 3.8 multiple-viewer capability-reply/input issue. It was found by expanded
+Mac browser testing and remains a known limitation; neither the coordination
+changes nor the runner/fixture corrections claim to resolve it.
