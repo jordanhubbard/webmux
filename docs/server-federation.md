@@ -74,8 +74,13 @@ providers keep running when viewers close.
 
 ## Use the views
 
-Choose a server in the toolbar. **All servers** groups terminal tiles under
-server labels. Each tile shows its server, durable project/session label,
+The selector offers **Show my windows only**, **Show SERVER windows only**, and
+**Show all connected servers’ windows**. The combined view places all terminal
+tiles in one responsive 2D matrix. Every tile carries its owning server's name
+and directory ID, plus a stable color badge and top border. Session IDs remain
+scoped to their owning server, including when two servers use the same ID.
+
+Each tile shows its durable project/session label,
 provider state and browser viewer connection separately. Missing project labels
 can be set in the owning server's local workspace. Project names are saved
 session metadata or coordinator identities, never inferred from mutable cwd.
@@ -151,3 +156,21 @@ npm run test:e2e -- server-federation.spec.ts
 
 These tests qualify the local two-server path. TLS deployment and network access
 still depend on the configured hosts and their certificates.
+
+For opt-in native qualification against a separate Linux host accessible by
+noninteractive SSH, run from `webmux`:
+
+```bash
+npm run qualify:cluster -- SSH_HOST
+```
+
+The runner builds this checkout for both hosts, starts private installations on
+loopback, and connects them through SSH forwards in both directions. It tests
+all three views, the shared matrix, owner isolation, terminal input, targeted
+messages, remote terminal creation, resize, viewer reattachment, live grant
+revocation, and recovery of the same tmux provider
+after a peer server restart. It retains a JSON report, screenshots and logs under
+`_build/server-cluster-*`, stops its test processes and private tmux servers,
+and leaves the installed services running. The peer needs Python 3 and tmux;
+the controller needs the normal build/browser dependencies. This verifies the
+secured-tunnel path; it does not qualify a deployment's HTTPS certificates.

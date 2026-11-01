@@ -22,6 +22,7 @@
     "test:e2e": "node scripts/run-playwright.mts",
     "test:e2e:go": "node scripts/run-playwright.mts",
     "benchmark:server": "node scripts/benchmark-server.mts",
+    "qualify:cluster": "node scripts/qualify-server-cluster.mts",
     "start": "node scripts/native.mts start",
     "service:install": "npm run build && powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 install",
     "service:uninstall": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File service/windows-service.ps1 uninstall",

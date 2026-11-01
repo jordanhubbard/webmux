@@ -59,6 +59,7 @@ func (r *run) stop() {
 }
 
 type entry struct {
+	replayScreen    replayScreen
 	browserRequest  Event
 	browserExpires  time.Time
 	value           Session
@@ -322,6 +323,7 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 	e.value.UpdatedAt = now()
 	e.scrollback = ""
 	e.scrollbackUnits = 0
+	e.replayScreen = replayScreen{}
 	p, err := b.launch(e.value.launchRequest(), password)
 	if err != nil {
 		b.logger.Warn("terminal launch failed", "session_id", e.value.ID, "error", err)
@@ -359,11 +361,14 @@ func (b *Broker) fallbackLocked(e *entry, password, initial string) (bool, error
 		return false, nil
 	}
 	previous := e.scrollback
+	previousScreen := e.replayScreen
 	e.value.Transport = "ssh"
 	b.logger.Info("Mosh connection failed; falling back to SSH", "session_id", e.value.ID)
 	err := b.startLocked(e, password, initial)
 	message := "\r\n[WebMux: Mosh could not connect; falling back to SSH.]\r\n"
-	e.scrollback, e.scrollbackUnits = appendScrollback(previous, utf16Units(previous), message)
+	e.scrollback, e.scrollbackUnits = previous, utf16Units(previous)
+	e.replayScreen = previousScreen
+	e.appendReplay(message)
 	if e.run != nil && e.run.log != nil {
 		if logErr := e.run.log.append(message); logErr != nil {
 			b.transcriptErrorLocked(e.value.ID, e.run, e.run.log, logErr)
@@ -792,7 +797,7 @@ func (b *Broker) output(id string, r *run, data string) {
 			b.logger.Error("save terminal connection", "error", err)
 		}
 	}
-	e.scrollback, e.scrollbackUnits = appendScrollback(e.scrollback, e.scrollbackUnits, data)
+	e.appendReplay(data)
 	b.broadcastLocked(e, Event{"type": "output", "session_id": id, "data": data})
 	b.recordAgentActivityLocked(e, r, false)
 }

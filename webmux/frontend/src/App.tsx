@@ -181,10 +181,10 @@ function AuthenticatedApp({
         combinedAgentPane={combinedAgentPane}
         hostSwitcher={hostSwitcher}
         remoteServersActive={serverView !== 'local'}
-        serverSelector={servers.length > 1 && <select aria-label="Server view" value={serverView} onChange={event => { setServerView(event.target.value); sessionStorage.setItem('webmux-server-view', event.target.value); setActivePane('terminals'); }} style={{ maxWidth: 180, background: '#1a1a3a', color: '#eee', border: '1px solid #333366', borderRadius: 4, padding: 4 }}>
-          <option value="local">This server · {appName}</option>
-          <option value="all">All servers</option>
-          {servers.filter(server => server.id !== 'local').map(server => <option key={server.id} value={server.id}>{server.name}</option>)}
+        serverSelector={servers.length > 1 && <select aria-label="Server view" value={serverView} onChange={event => { setServerView(event.target.value); sessionStorage.setItem('webmux-server-view', event.target.value); setActivePane('terminals'); }} style={{ maxWidth: 300, background: '#1a1a3a', color: '#eee', border: '1px solid #333366', borderRadius: 4, padding: 4 }}>
+          <option value="local">Show my windows only · {window.location.hostname}</option>
+          <option value="all">Show all connected servers’ windows</option>
+          {servers.filter(server => server.id !== 'local').map(server => <option key={server.id} value={server.id}>Show {server.name} windows only</option>)}
         </select>}
       />
 
