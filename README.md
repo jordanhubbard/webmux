@@ -100,8 +100,6 @@ Each tile's **Tools → Sign in** action also accepts a pasted link. See [CLI au
 ### Homebrew (macOS and Linux)
 
 ```bash
-brew trust --formula asheshgoplani/tap/agent-deck
-brew tap asheshgoplani/tap
 brew trust --formula jordanhubbard/webmux/webmux
 brew tap jordanhubbard/webmux https://github.com/jordanhubbard/webmux
 brew install jordanhubbard/webmux/webmux
@@ -113,8 +111,8 @@ and Rig independently in Coordination; both can be used together. Inventory
 filters and the default launch owner are separate preferences.
 
 Open http://localhost:8080. Run services as your normal user so WebMux can
-access your SSH keys. Record formula-specific trust for Agent Deck and WebMux
-before Homebrew 6 validates their taps. See
+access your SSH keys. Record formula-specific trust for WebMux before
+Homebrew 6 validates its tap. See
 [packaging](docs/packaging.md) for upgrades, migration from a checkout,
 optional tools, and runtime release bundles.
 

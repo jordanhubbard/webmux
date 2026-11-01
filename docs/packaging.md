@@ -3,19 +3,16 @@
 The same formula supports macOS and Linux. Install [Homebrew](https://brew.sh/), then:
 
 ```bash
-brew trust --formula asheshgoplani/tap/agent-deck
-brew tap asheshgoplani/tap
 brew trust --formula jordanhubbard/webmux/webmux
 brew tap jordanhubbard/webmux https://github.com/jordanhubbard/webmux
 brew install jordanhubbard/webmux/webmux
 brew services start jordanhubbard/webmux/webmux
 ```
 
-The stable formula currently builds v1.4.0 and installs Agent Deck and tmux.
-The source checkout now defaults to built-in WebMux coordination; removing the
-formula dependency belongs with the next release that includes that change.
-With `--HEAD`, WebMux is the default; the formula still installs Agent Deck until
-that release updates its dependencies.
+The stable formula builds v1.4.1 with built-in WebMux coordination by default.
+Agent Deck and Rig are optional integrations and can be enabled together.
+Neither is a formula dependency. See the [coordination setup](openrig.md) to
+install and enable an integration.
 
 Open http://localhost:8080 and create the first administrator account. To run in the
 foreground instead, use `webmux`. Linux background services require systemd and an
@@ -137,8 +134,8 @@ and defaults override for custom installations and source development.
 
 Already-published v1.3.12 bundles predate asset embedding and still require their
 adjacent UI and defaults directories. Earlier Node bundles additionally require
-Node.js 24. The stable Homebrew tag keeps its release's layout until the next
-release; HEAD builds use the standalone executable.
+Node.js 24. Current stable Homebrew and HEAD builds both use the standalone
+executable.
 
 On Windows, verify a checksum with `Get-FileHash`, then install the MSI by
 double-clicking it or running `msiexec.exe /i <installer>.msi`. It installs under

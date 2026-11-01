@@ -135,10 +135,20 @@ their existing behavior.
 
 Agent Deck is optional and is not installed by default. Use
 `make install-agent-deck` or `make install-server INSTALL_AGENT_DECK=yes`
-on macOS/Linux, or `brew install asheshgoplani/tap/agent-deck` with Homebrew. The installer is idempotent, pins the qualified
-version, and uses Agent Deck's checksum-verifying upstream installer.
+on macOS/Linux. The installer is idempotent, pins the qualified version, and
+uses Agent Deck's checksum-verifying upstream installer. Alternatively, install
+the optional Homebrew formula:
 
-When `agent-deck` is on the WebMux service PATH, Coordination also inventories
+```bash
+brew trust --formula asheshgoplani/tap/agent-deck
+brew tap asheshgoplani/tap
+brew install asheshgoplani/tap/agent-deck
+```
+
+Enable Agent Deck in Coordination after installation.
+
+When the integration is enabled and `agent-deck` is on the WebMux service PATH,
+Coordination also inventories
 the current local Agent Deck profile and every remote registered with that
 Agent Deck instance. Session IDs are qualified by location (`local:<id>` or
 `<remote>:<id>`), so identical names on different hosts do not collide. The

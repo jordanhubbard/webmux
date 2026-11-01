@@ -190,8 +190,6 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: '1'
           HOMEBREW_NO_INSTALL_CLEANUP: '1'
         run: |
-          brew trust --formula asheshgoplani/tap/agent-deck
-          brew tap asheshgoplani/tap
           brew tap-new --no-git webmux/native-test
           git clone --bare . "$RUNNER_TEMP/webmux-head.git"
           git --git-dir="$RUNNER_TEMP/webmux-head.git" update-ref refs/heads/main HEAD
@@ -313,8 +311,6 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: '1'
           XDG_CONFIG_HOME: ${{ runner.temp }}/homebrew-bootstrap-config
         run: |
-          brew trust --formula asheshgoplani/tap/agent-deck
-          brew tap asheshgoplani/tap
           brew trust --formula jordanhubbard/webmux/webmux
           brew tap jordanhubbard/webmux "$GITHUB_WORKSPACE"
           brew info jordanhubbard/webmux/webmux --json=v2 > "$RUNNER_TEMP/webmux-tap-info.json"
@@ -337,8 +333,6 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: '1'
           HOMEBREW_NO_INSTALL_CLEANUP: '1'
         run: |
-          brew trust --formula asheshgoplani/tap/agent-deck
-          brew tap asheshgoplani/tap
           brew tap-new --no-git webmux/packaging-test
           git archive --format=tar.gz --output="$RUNNER_TEMP/webmux-source.tar.gz" HEAD
           cp -f Formula/webmux.rb "$(brew --repository webmux/packaging-test)/Formula/webmux.rb"
