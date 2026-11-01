@@ -23,11 +23,16 @@ test('tile drag scrolls all edges, tracks the current grid and stops on drop or 
     const bounds = (await scroll.boundingBox())!;
     const middle = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
     const position = () => scroll.evaluate(el => ({ x: el.scrollLeft, y: el.scrollTop }));
+    const grabTitle = async () => {
+      await title.evaluate(element => element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' }));
+      // A raw screen coordinate can hit another element after scrolling.
+      await title.hover({ position: { x: 15, y: 8 } });
+      await page.mouse.down();
+      await expect(page.getByTestId('workspace-drag-ghost')).toBeVisible();
+    };
     const begin = async () => {
       await scroll.evaluate(el => { el.scrollLeft = 0; el.scrollTop = 0; });
-      const box = (await title.boundingBox())!;
-      await page.mouse.move(box.x + Math.min(box.width / 2, 40), box.y + box.height / 2);
-      await page.mouse.down();
+      await grabTitle();
     };
     await begin();
     // A stationary pointer must keep moving the grid; no synthetic scroll events.
@@ -59,31 +64,30 @@ test('tile drag scrolls all edges, tracks the current grid and stops on drop or 
       const value = sessions.find((s: { id: string }) => s.id === ids[0]);
       return { row: value.row, col: value.col };
     }).toEqual(target);
+    await expect(tile).toHaveCSS('grid-column-start', String(target.col + 1));
+    await expect(tile).toHaveCSS('grid-row-start', String(target.row + 1));
+    await expect(page.getByTestId('workspace-drag-ghost')).toHaveCount(0);
     const afterDrop = await position();
     await page.mouse.move(bounds.x + bounds.width - 3, bounds.y + bounds.height - 3);
     await page.waitForTimeout(150); // negative control: no active drag means no RAF scrolling
     expect(await position()).toEqual(afterDrop);
 
     // Bring the moved title into view, then cancel an active edge drag.
-    await title.scrollIntoViewIfNeeded();
-    const titleBox = (await title.boundingBox())!;
-    await page.mouse.move(titleBox.x + 15, titleBox.y + titleBox.height / 2);
-    await page.mouse.down();
+    await grabTitle();
     await page.mouse.move(bounds.x + 2, bounds.y + 2);
     await page.keyboard.press('Escape');
+    await expect(page.getByTestId('workspace-drag-ghost')).toHaveCount(0);
     const afterCancel = await position();
     await page.waitForTimeout(150);
     expect(await position()).toEqual(afterCancel);
     await expect(tile.locator('.xterm-rows')).not.toContainText('KEY:1b;');
     await page.mouse.up();
-    await title.scrollIntoViewIfNeeded();
-    const resumedBox = (await title.boundingBox())!;
-    await page.mouse.move(resumedBox.x + 15, resumedBox.y + resumedBox.height / 2);
-    await page.mouse.down();
+    await grabTitle();
     await page.mouse.move(bounds.x + bounds.width - 3, bounds.y + bounds.height - 3);
     const beforeBlur = await position();
     await expect.poll(async () => (await position()).y).toBeGreaterThan(beforeBlur.y + 20);
     await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await expect(page.getByTestId('workspace-drag-ghost')).toHaveCount(0);
     const afterBlur = await position();
     await page.waitForTimeout(150);
     expect(await position()).toEqual(afterBlur);

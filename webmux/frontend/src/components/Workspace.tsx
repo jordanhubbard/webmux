@@ -783,7 +783,7 @@ export function Workspace({
 
         {/* Drag ghost */}
         {draggingId && (
-          <div style={{
+          <div data-testid="workspace-drag-ghost" style={{
             position: 'fixed',
             left: ghostPos.x - tile.w / 2,
             top: ghostPos.y - CHROME_H / 2,
