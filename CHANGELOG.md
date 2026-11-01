@@ -5,6 +5,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Offer explicit local-only, selected-server-only and all-connected-server
+  terminal views. Display connected terminals in one shared matrix with an
+  owning-server badge and stable color on each tile (#256).
+
+### Fixed
+- Preserve alternate-screen selection when truncating terminal replay, preventing
+  stale full-screen status bars from entering scrolling text after reconnect
+  and resize (#255).
+
+### Added
+- Add opt-in native two-host qualification for remote views, targeted messages,
+  owner isolation, viewer lifecycle, grant revocation and peer restart recovery.
+
 ## [1.4.1] - 2026-10-31
 
 ### Changed

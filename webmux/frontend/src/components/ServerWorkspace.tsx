@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Terminal } from './Terminal';
 import { Dialog } from './Dialog';
 import { api, type ConnectedServer } from '../utils/api';
@@ -8,6 +8,14 @@ import './ServerWorkspace.css';
 
 type Snapshot = { sessions: Session[]; error?: string };
 interface Props { servers: ConnectedServer[]; selected: string; fontSize: number; fontFamily?: string; themes: NamedTheme[]; globalTheme: string | null }
+
+function serverStyle(id: string): CSSProperties {
+  // IDs stay stable across directory polling and view changes. The text badge
+  // remains the primary identity; color is an additional scanning aid.
+  let hash = 0;
+  for (const character of id) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return { '--server-color': `hsl(${hash % 360} 65% 72%)` } as CSSProperties;
+}
 
 function ServerTerminal({ server, session, fontSize, fontFamily, theme, onHide, onError }: {
   server: ConnectedServer; session: Session; fontSize: number; fontFamily?: string; theme?: NamedTheme['theme']; onHide: () => void; onError: (error: string) => void;
@@ -21,9 +29,10 @@ function ServerTerminal({ server, session, fontSize, fontFamily, theme, onHide, 
   const [notice, setNotice] = useState('');
   const identity = sessionIdentity(session);
   const title = `${server.name} · ${identity.label}`;
-  return <section className="server-terminal" aria-label={title} data-testid={`server-terminal-${server.id}-${session.id}`}>
+  return <section className="server-terminal" style={serverStyle(server.id)} aria-label={title} data-server-id={server.id} data-testid={`server-terminal-${server.id}-${session.id}`}>
     <header>
-      <strong title={`${title} · ${identity.source}`}>{title}</strong>
+      <span className="server-badge" title={`Owning server: ${server.name} (${server.id})`}>{server.name} · {server.id === 'local' ? 'this server' : server.id}</span>
+      <strong title={`${title} · ${identity.source}`}>{identity.label}</strong>
       <span title="Provider state reported by the owning server">{providerState}</span>
       <span title="Browser viewer connection">Viewer: {connection}</span>
       <button onClick={() => { setConnection('connecting'); setGeneration(value => value + 1); }} title="Reconnect this viewer without restarting its provider">Reconnect viewer</button>
@@ -80,12 +89,12 @@ export function ServerWorkspace({ servers, selected, fontSize, fontFamily, theme
     return () => { canceled = true; clearTimeout(timer); };
   }, [targetKey, refresh]);
   const theme = themes.find(theme => theme.name === globalTheme)?.theme;
-  return <div className="server-workspace">
+  return <div className="server-workspace" aria-label={selected === 'all' ? 'All connected server windows' : 'Selected server windows'}>
     {error && <p role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></p>}
     {targets.map(server => {
       const snapshot = snapshots[server.id];
-      return <section key={server.id} aria-label={`${server.name} sessions`}>
-        <div className="server-heading"><strong>{server.name}</strong>
+      return <section key={server.id} style={serverStyle(server.id)} aria-label={`${server.name} sessions`} className="server-summary">
+        <div className="server-heading"><strong className="server-badge">{server.name} · {server.id === 'local' ? 'this server' : server.id}</strong>
           {snapshot?.error ? <span role="alert">Unavailable · {snapshot.error}. Session status may be stale.</span> : <span>{snapshot ? `${snapshot.sessions.length} sessions` : 'Connecting…'}</span>}
           <button disabled={creating !== null || !!snapshot?.error} onClick={() => {
             setCreating(server.id); setError('');
@@ -94,8 +103,11 @@ export function ServerWorkspace({ servers, selected, fontSize, fontFamily, theme
           {[...hidden].some(key => key.startsWith(`${server.id}/`)) && <button onClick={() => setHidden(previous => new Set([...previous].filter(key => !key.startsWith(`${server.id}/`))))}>Show hidden viewers</button>}
         </div>
         {snapshot && !snapshot.error && snapshot.sessions.length === 0 && <p>No terminal sessions on this server.</p>}
-        <div className="server-terminal-grid">{snapshot?.sessions.filter(session => !hidden.has(`${server.id}/${session.id}`)).map(session => <ServerTerminal key={session.id} server={server} session={session} fontSize={fontSize} fontFamily={fontFamily} theme={theme} onError={setError} onHide={() => setHidden(previous => new Set(previous).add(`${server.id}/${session.id}`))} />)}</div>
       </section>;
     })}
+    <div className="server-terminal-grid" aria-label="Server terminal matrix">{targets.flatMap(server =>
+      snapshots[server.id]?.sessions.filter(session => !hidden.has(`${server.id}/${session.id}`)).map(session =>
+        <ServerTerminal key={`${server.id}/${session.id}`} server={server} session={session} fontSize={fontSize} fontFamily={fontFamily} theme={theme} onError={setError} onHide={() => setHidden(previous => new Set(previous).add(`${server.id}/${session.id}`))} />) || []
+    )}</div>
   </div>;
 }
