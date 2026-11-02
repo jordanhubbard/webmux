@@ -10,29 +10,39 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/page"
-	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 )
 
 const Width, Height = 1100, 760
 
 type Request struct {
-	Action    string  `json:"action"`
-	URL       string  `json:"url,omitempty"`
-	Text      string  `json:"text,omitempty"`
-	Key       string  `json:"key,omitempty"`
-	Code      string  `json:"code,omitempty"`
-	KeyCode   int64   `json:"keyCode,omitempty"`
-	Modifiers int64   `json:"modifiers,omitempty"`
-	X         float64 `json:"x,omitempty"`
-	Y         float64 `json:"y,omitempty"`
-	DeltaY    float64 `json:"deltaY,omitempty"`
-	Target    string  `json:"target,omitempty"`
+	Backward    bool     `json:"backward,omitempty"`
+	IgnoreCache bool     `json:"ignoreCache,omitempty"`
+	Action      string   `json:"action"`
+	URL         string   `json:"url,omitempty"`
+	Text        string   `json:"text,omitempty"`
+	Key         string   `json:"key,omitempty"`
+	Code        string   `json:"code,omitempty"`
+	KeyCode     int64    `json:"keyCode,omitempty"`
+	Modifiers   int64    `json:"modifiers,omitempty"`
+	X           float64  `json:"x,omitempty"`
+	Y           float64  `json:"y,omitempty"`
+	DeltaY      float64  `json:"deltaY,omitempty"`
+	Target      string   `json:"target,omitempty"`
+	Width       int64    `json:"width,omitempty"`
+	Height      int64    `json:"height,omitempty"`
+	DeltaX      float64  `json:"deltaX,omitempty"`
+	Button      string   `json:"button,omitempty"`
+	Buttons     int64    `json:"buttons,omitempty"`
+	ClickCount  int64    `json:"clickCount,omitempty"`
+	Accept      bool     `json:"accept,omitempty"`
+	Files       []Upload `json:"files,omitempty"`
 }
 
 type Tab struct {
@@ -41,11 +51,23 @@ type Tab struct {
 }
 
 type Frame struct {
-	Image  []byte `json:"image,omitempty"`
-	URL    string `json:"url"`
-	Target string `json:"target"`
-	Tabs   []Tab  `json:"tabs"`
-	Error  string `json:"error,omitempty"`
+	Found       *bool          `json:"found,omitempty"`
+	Protocol    int            `json:"protocol"`
+	Image       []byte         `json:"image,omitempty"`
+	URL         string         `json:"url"`
+	Target      string         `json:"target"`
+	Tabs        []Tab          `json:"tabs"`
+	Error       string         `json:"error,omitempty"`
+	Select      *SelectControl `json:"select,omitempty"`
+	Width       int64          `json:"width"`
+	Height      int64          `json:"height"`
+	CanBack     bool           `json:"canBack"`
+	CanForward  bool           `json:"canForward"`
+	Dialog      *Dialog        `json:"dialog,omitempty"`
+	FileChooser *FileChooser   `json:"fileChooser,omitempty"`
+	Downloads   []Download     `json:"downloads"`
+	File        *Upload        `json:"file,omitempty"`
+	Clipboard   *string        `json:"clipboard,omitempty"`
 }
 
 func ValidURL(raw string) bool {
@@ -87,15 +109,20 @@ func Worker(in io.Reader, out io.Writer) error {
 		_ = json.NewEncoder(out).Encode(Frame{Error: "Cannot start Chromium. Install Chrome/Chromium on the terminal host and run as a non-root user."})
 		return err
 	}
-	tabs := map[target.ID]context.Context{chromedp.FromContext(root).Target.TargetID: root}
-	current := root
+	browser, err := newCompanion(root, profile)
+	if err != nil {
+		return err
+	}
+	if err := chromedp.Do(root, protocolAction(page.SetInterceptFileChooserDialog, page.SetInterceptFileChooserDialogParams{Enabled: true})); err != nil {
+		return err
+	}
 	requests := make(chan Request)
 	done := make(chan struct{})
 	defer close(done)
 	go func() {
 		defer close(requests)
 		scanner := bufio.NewScanner(in)
-		scanner.Buffer(make([]byte, 4096), 1<<20)
+		scanner.Buffer(make([]byte, 4096), MaxMessageBytes)
 		for scanner.Scan() {
 			var req Request
 			if json.Unmarshal(scanner.Bytes(), &req) != nil {
@@ -120,61 +147,23 @@ func Worker(in io.Reader, out io.Writer) error {
 				return nil
 			}
 			idle.Reset(30 * time.Minute)
-			if req.Action == "tab" {
-				infos, err := chromedp.Targets(root)
-				if err != nil {
-					return err
-				}
-				for _, info := range infos {
-					if info.Type != "page" || string(info.TargetID) != req.Target {
-						continue
-					}
-					ctx, exists := tabs[info.TargetID]
-					if !exists {
-						var release context.CancelFunc
-						ctx, release = chromedp.NewContext(root, chromedp.WithTargetID(info.TargetID))
-						defer release()
-						if err := chromedp.Do(ctx, chromedp.EmulateViewport(Width, Height)); err != nil {
-							return err
-						}
-						tabs[info.TargetID] = ctx
-					}
-					current = ctx
-				}
+			err := browser.tabAction(req)
+			var extra Frame
+			if err == nil && req.Action != "tab" && req.Action != "new_tab" && req.Action != "close_tab" {
+				ctx, finish := context.WithTimeout(browser.current, 15*time.Second)
+				browser.mu.Lock()
+				browser.operation = finish
+				browser.operationTarget = chromedp.FromContext(browser.current).Target.TargetID
+				browser.mu.Unlock()
+				err = browser.step(ctx, req, &extra)
+				browser.mu.Lock()
+				browser.operation = nil
+				browser.mu.Unlock()
+				finish()
 			}
-			ctx, finish := context.WithTimeout(current, 15*time.Second)
-			frame := Frame{Target: string(chromedp.FromContext(current).Target.TargetID), Tabs: []Tab{}}
-			err := perform(ctx, req)
-			if err == nil {
-				// A redirect can invalidate the execution context or stall a
-				// screenshot. Bound frame capture separately so polling and queued
-				// input recover without waiting for the full action timeout.
-				frameCtx, stopFrame := context.WithTimeout(ctx, 3*time.Second)
-				err = chromedp.Do(frameCtx, chromedp.Func(func(ctx context.Context, target *chromedp.Target) error {
-					var err error
-					frame.URL, err = chromedp.Location()(ctx, target)
-					if err != nil {
-						return err
-					}
-					quality := int64(65)
-					result, err := cdp.Call(ctx, target, page.CaptureScreenshot, page.CaptureScreenshotParams{
-						Format: page.CaptureScreenshotFormatJpeg, Quality: &quality,
-					})
-					frame.Image = result.Data
-					return err
-				}))
-				stopFrame()
-			}
-			finish()
-			if err != nil {
-				frame.Error = "Browser action failed. Check the URL or retry; end and reopen the browser if it has stopped."
-			}
-			infos, _ := chromedp.Targets(root)
-			for _, info := range infos {
-				if info.Type == "page" {
-					frame.Tabs = append(frame.Tabs, Tab{ID: string(info.TargetID), Title: info.Title})
-				}
-			}
+			frame := browser.snapshot(req, err)
+			frame.Clipboard, frame.File, frame.Found = extra.Clipboard, extra.File, extra.Found
+
 			if err := encoder.Encode(frame); err != nil {
 				return err
 			}
@@ -189,7 +178,7 @@ func protocolAction[P, R any](command cdp.Command[P, R], params P) chromedp.Acti
 	})
 }
 
-func perform(ctx context.Context, req Request) error {
+func perform(ctx context.Context, req Request, width, height int64) error {
 	var actions []chromedp.Action[chromedp.Void]
 	switch req.Action {
 	case "frame", "tab":
@@ -202,15 +191,31 @@ func perform(ctx context.Context, req Request) error {
 		// page loading while waiting for terminal-side work.
 		actions = append(actions, chromedp.Func(func(ctx context.Context, target *chromedp.Target) error {
 			result, err := cdp.Call(ctx, target, page.Navigate, page.NavigateParams{URL: req.URL})
-			if err == nil && result.ErrorText != "" {
+			if err == nil && result.ErrorText != "" && result.ErrorText != "net::ERR_ABORTED" {
 				err = errors.New("navigation failed")
 			}
 			return err
 		}))
-	case "back":
-		actions = append(actions, chromedp.NavigateBack())
+	case "back", "forward":
+		actions = append(actions, chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
+			history, err := cdp.Call(ctx, t, page.GetNavigationHistory, cdp.Empty{})
+			if err != nil {
+				return err
+			}
+			index := history.CurrentIndex - 1
+			if req.Action == "forward" {
+				index = history.CurrentIndex + 1
+			}
+			if index < 0 || index >= int64(len(history.Entries)) {
+				return errors.New("No navigation history in that direction")
+			}
+			_, err = cdp.Call(ctx, t, page.NavigateToHistoryEntry, page.NavigateToHistoryEntryParams{EntryID: history.Entries[index].ID})
+			return err
+		}))
+	case "stop":
+		actions = append(actions, protocolAction(page.StopLoading, cdp.Empty{}))
 	case "reload":
-		actions = append(actions, protocolAction(page.Reload, page.ReloadParams{}))
+		actions = append(actions, protocolAction(page.Reload, page.ReloadParams{IgnoreCache: &req.IgnoreCache}))
 	case "text":
 		if len(req.Text) > 65536 {
 			return errors.New("text too long")
@@ -226,15 +231,50 @@ func perform(ctx context.Context, req Request) error {
 		if runtime.GOOS != "darwin" && req.Modifiers&4 != 0 {
 			req.Modifiers = req.Modifiers&^4 | 2
 		}
+		var commands []string
+		primary := int64(2)
+		if runtime.GOOS == "darwin" {
+			primary = 4
+		}
+		if req.Modifiers&primary != 0 && req.Modifiers&1 == 0 {
+			switch strings.ToLower(req.Key) {
+			case "a":
+				commands = []string{"selectAll"}
+			case "z":
+				if req.Modifiers&8 != 0 {
+					commands = []string{"redo"}
+				} else {
+					commands = []string{"undo"}
+				}
+			case "y":
+				commands = []string{"redo"}
+			}
+		}
 		actions = append(actions,
-			protocolAction(input.DispatchKeyEvent, input.DispatchKeyEventParams{Type: input.DispatchKeyEventTypeKeyDown, Text: req.Text, Key: req.Key, Code: req.Code, WindowsVirtualKeyCode: req.KeyCode, Modifiers: req.Modifiers}),
+			protocolAction(input.DispatchKeyEvent, input.DispatchKeyEventParams{Type: input.DispatchKeyEventTypeKeyDown, Text: req.Text, Key: req.Key, Code: req.Code, WindowsVirtualKeyCode: req.KeyCode, Modifiers: req.Modifiers, Commands: commands}),
 			protocolAction(input.DispatchKeyEvent, input.DispatchKeyEventParams{Type: input.DispatchKeyEventTypeKeyUp, Key: req.Key, Code: req.Code, WindowsVirtualKeyCode: req.KeyCode, Modifiers: req.Modifiers}))
-	case "click", "scroll":
-		if req.X < 0 || req.X > Width || req.Y < 0 || req.Y > Height || req.DeltaY < -3000 || req.DeltaY > 3000 {
+	case "click", "scroll", "mouse_down", "mouse_up", "mouse_move":
+		if req.X < 0 || req.X > float64(width) || req.Y < 0 || req.Y > float64(height) || req.DeltaY < -3000 || req.DeltaY > 3000 || req.DeltaX < -3000 || req.DeltaX > 3000 || req.Modifiers < 0 || req.Modifiers > 15 || req.Buttons < 0 || req.Buttons > 7 {
 			return errors.New("invalid pointer")
 		}
 		if req.Action == "scroll" {
-			actions = append(actions, protocolAction(input.DispatchMouseEvent, input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseWheel, X: req.X, Y: req.Y, DeltaY: req.DeltaY}))
+			actions = append(actions, protocolAction(input.DispatchMouseEvent, input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseWheel, X: req.X, Y: req.Y, DeltaY: req.DeltaY, DeltaX: req.DeltaX, Modifiers: req.Modifiers}))
+		} else if req.Action != "click" {
+			button := input.MouseButton(req.Button)
+			if button != "left" && button != "right" && button != "middle" && button != "none" {
+				return errors.New("invalid mouse button")
+			}
+			if req.ClickCount < 0 || req.ClickCount > 3 {
+				return errors.New("invalid click count")
+			}
+			kind := input.DispatchMouseEventTypeMouseMoved
+			if req.Action == "mouse_down" {
+				kind = input.DispatchMouseEventTypeMousePressed
+			}
+			if req.Action == "mouse_up" {
+				kind = input.DispatchMouseEventTypeMouseReleased
+			}
+			actions = append(actions, protocolAction(input.DispatchMouseEvent, input.DispatchMouseEventParams{Type: kind, X: req.X, Y: req.Y, Button: button, Buttons: req.Buttons, ClickCount: req.ClickCount, Modifiers: req.Modifiers}))
 		} else {
 			actions = append(actions,
 				protocolAction(input.DispatchMouseEvent, input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMousePressed, X: req.X, Y: req.Y, Button: input.MouseButtonLeft, ClickCount: 1}),

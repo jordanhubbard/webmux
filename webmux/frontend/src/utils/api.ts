@@ -56,10 +56,20 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export interface BrowserAction {
   action: string; url?: string; text?: string; key?: string; code?: string;
-  keyCode?: number; modifiers?: number; x?: number; y?: number; deltaY?: number; target?: string;
+  keyCode?: number; modifiers?: number; x?: number; y?: number; deltaY?: number; deltaX?: number; target?: string;
+  width?: number; height?: number; button?: string; buttons?: number; clickCount?: number;
+  backward?: boolean; ignoreCache?: boolean; accept?: boolean; files?: { name: string; data: string }[];
 }
 export interface BrowserFrame {
+  protocol?: number;
   image?: string; url: string; target: string; tabs: { id: string; title: string }[]; error?: string;
+  width?: number; height?: number; canBack?: boolean; canForward?: boolean;
+  dialog?: { type: string; message: string; prompt: string };
+  select?: { options: { value: string; label: string; selected: boolean; disabled: boolean }[] };
+  fileChooser?: { multiple: boolean };
+  downloads?: { id: string; name: string; state: string; bytes: number }[];
+  file?: { name: string; data: string };
+  clipboard?: string; found?: boolean;
 }
 
 export interface PermissionResult {

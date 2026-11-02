@@ -276,7 +276,10 @@ func (s *Server) cors(next http.Handler) http.Handler {
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, out any) bool {
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	return decodeJSONLimit(w, r, out, 1<<20)
+}
+func decodeJSONLimit(w http.ResponseWriter, r *http.Request, out any, limit int64) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(out); err != nil {
 		jsonError(w, err)
