@@ -95,6 +95,10 @@ and passthrough policies still determine which application requests reach WebMux
 Native host commands such as `pbcopy` and `pbpaste` continue to use that host's OS
 pasteboard; OSC 52 connects compatible terminal applications to the browser's
 pasteboard, including over SSH.
+Windows ConPTY currently consumes application clipboard-read queries before they
+reach WebMux; app-driven reads are unavailable there. Keyboard/toolbar paste and
+automatic application copies still work. The ConPTY read limitation is tracked
+in #268 and has a native Windows regression.
 
 ## CLI authentication and browser companion
 
