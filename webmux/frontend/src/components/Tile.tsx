@@ -6,6 +6,8 @@ import { TerminalActions } from './TerminalActions';
 import { Dialog } from './Dialog';
 import { ManagedHostDialog } from './ManagedHostDialog';
 import { ReconnectOverlay } from './ReconnectOverlay';
+import { TerminalScrollStrip, SCROLL_STRIP_WIDTH } from './TerminalScrollStrip';
+import { useTouchLikeViewport } from '../utils/viewport';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { clipboardFiles } from '../utils/terminalClipboard';
 import { sessionIdentity } from '../utils/sessionIdentity';
@@ -93,6 +95,7 @@ export function Tile({
   const isExcluded = broadcastExcluded.has(session.id);
   const termHandleRef = useRef<TerminalHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const showScrollStrip = useTouchLikeViewport();
 
   const isFocused = focusedSessionId === session.id;
 
@@ -313,24 +316,29 @@ export function Tile({
       {showBrowser && <BrowserCompanion session={session} navigation={browserNavigation} onHide={() => { setBrowserNavigation(null); setShowBrowser(false); termHandleRef.current?.focus(); }} />}
       {showManagedHost && <ManagedHostDialog session={session} client={managedClient} onClose={() => setShowManagedHost(false)} onChanged={() => onManagedClientChanged?.()} onSessionUpdated={updated => onSessionUpdated?.(updated)} />}
       <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
-        {(state === 'disconnected' || state === 'error') && (
-          <ReconnectOverlay onReconnect={() => onReconnect(session.id)} />
-        )}
-        <Terminal
-          ref={termHandleRef}
-          onOpenLink={(url, requestId) => { setHandoff(previous => requestId && previous?.requestId === requestId ? previous : { url, requestId, key: Date.now() }); }}
-          sessionId={session.id}
-          fontSize={fontSize}
-          fontFamily={fontFamily}
-          state={state}
-          autoScroll={autoScroll}
-          onStateChange={handleStateChange}
-          onViewerUpdate={handleViewerUpdate}
-          onFocusGained={handleFocusGained}
-          theme={themes.find(t => t.name === (themeOverride ?? globalTheme))?.theme}
-          onBell={() => onBell?.(session.id)}
-          onTranscriptChange={setTranscriptEnabled}
-        />
+        {/* Inset the terminal region so the scroll strip never overlaps text */}
+        <div style={{ ...styles.termRegion, right: showScrollStrip ? SCROLL_STRIP_WIDTH : 0 }}>
+          {(state === 'disconnected' || state === 'error') && (
+            <ReconnectOverlay onReconnect={() => onReconnect(session.id)} />
+          )}
+          <Terminal
+            ref={termHandleRef}
+            onOpenLink={(url, requestId) => { setHandoff(previous => requestId && previous?.requestId === requestId ? previous : { url, requestId, key: Date.now() }); }}
+            sessionId={session.id}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            state={state}
+            autoScroll={autoScroll}
+            onStateChange={handleStateChange}
+            onViewerUpdate={handleViewerUpdate}
+            onFocusGained={handleFocusGained}
+            theme={themes.find(t => t.name === (themeOverride ?? globalTheme))?.theme}
+            onBell={() => onBell?.(session.id)}
+            onTranscriptChange={setTranscriptEnabled}
+          />
+        </div>
+        {/* Touch-only scroll strip */}
+        {showScrollStrip && <TerminalScrollStrip onScroll={d => termHandleRef.current?.scrollPages(d)} />}
       </div>
     </div>
   );
@@ -443,5 +451,12 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'relative',
     flex: 1,
     overflow: 'hidden',
+  },
+  // Positioned region holding the terminal, inset when the scroll strip shows
+  termRegion: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
   },
 };
