@@ -53,6 +53,11 @@ test('two servers share interactive terminal views, messages and failure state w
     await expect(remote.locator('.xterm-rows')).toContainText('FEDERATION_READY:');
     await expect(page.locator('[data-testid^="server-terminal-local-"]')).toHaveCount(1);
     await expect(remote).toHaveAccessibleName(/Other host · WebMux/);
+    const providerPid = (await remote.locator('.xterm-rows').innerText()).match(/FEDERATION_READY:(\d+)/)![1];
+    await page.getByRole('toolbar', { name: 'Terminal layout' }).getByRole('button', { name: 'Pack', exact: true }).click();
+    const matrix = page.getByLabel('Server terminal matrix');
+    await expect(matrix.locator('.server-terminal')).toHaveCount(2);
+    await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
     await remote.locator('.xterm-helper-textarea').focus();
     await page.keyboard.type('native-input-proof');
     await page.keyboard.press('Enter');
@@ -72,6 +77,7 @@ test('two servers share interactive terminal views, messages and failure state w
     await expect(page.locator('[data-testid^="server-terminal-local-"]')).toHaveCount(0);
     await page.reload();
     await expect(page.getByRole('combobox', { name: 'Server view' })).toHaveValue('remote');
+    await expect(page.getByLabel('Server terminal matrix').locator('.server-terminal')).toHaveCount(1);
     await expect(remote.locator('.xterm-rows')).toContainText('native-input-proof');
     expect((await (await request.get(`${peerURL}/api/sessions`)).json()).length).toBe(1);
     await remote.locator('.xterm-helper-textarea').focus();

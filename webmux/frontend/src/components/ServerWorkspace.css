@@ -12,3 +12,7 @@
 .server-terminal input { display: block; box-sizing: border-box; width: 100%; padding: 8px; margin: 8px 0; background: #0d0d1a; color: #eee; border: 1px solid #333366; }
 
 .server-workspace > p[role=alert] { grid-column: 1 / -1; }
+
+.server-layout-controls { grid-column: 1 / -1; position: sticky; top: 0; z-index: 10; background: #12122a; padding: 6px 8px; }
+.server-workspace-packed { display: block; }
+.server-workspace-packed .server-layout-controls { margin-bottom: 8px; }

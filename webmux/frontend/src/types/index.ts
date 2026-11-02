@@ -114,7 +114,7 @@ export interface AuthUserInfo {
 }
 
 export interface WebSocketMessage {
-  type: 'input' | 'resize' | 'output' | 'status' | 'focus' | 'viewer_join' | 'viewer_leave' | 'error' | 'transcript_toggle' | 'transcript_status' | 'browser_open' | 'browser_ack' | 'clipboard';
+  type: 'input' | 'resize' | 'output' | 'status' | 'focus' | 'viewer_join' | 'viewer_leave' | 'error' | 'transcript_toggle' | 'transcript_status' | 'browser_open' | 'browser_ack' | 'clipboard' | 'clipboard_read' | 'clipboard_reply';
   session_id?: string;
   data?: string;
   cols?: number;

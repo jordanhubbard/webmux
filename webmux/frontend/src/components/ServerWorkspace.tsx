@@ -51,6 +51,7 @@ export function ServerWorkspace({ servers, selected, fontSize, fontFamily, theme
   const [snapshots, setSnapshots] = useState<Record<string, Snapshot>>({});
   const [hidden, setHidden] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState('');
+  const [packed, setPacked] = useState(() => sessionStorage.getItem('webmux-server-packed') === 'true');
   const [creating, setCreating] = useState<string | null>(null);
   const mounted = useRef(true);
   const targets = servers.filter(server => selected === 'all' || server.id === selected);
@@ -80,7 +81,14 @@ export function ServerWorkspace({ servers, selected, fontSize, fontFamily, theme
     return () => { canceled = true; clearTimeout(timer); };
   }, [targetKey, refresh]);
   const theme = themes.find(theme => theme.name === globalTheme)?.theme;
-  return <div className="server-workspace">
+  const terminals = (server: ConnectedServer) => snapshots[server.id]?.sessions
+    .filter(session => !hidden.has(`${server.id}/${session.id}`))
+    .sort((a, b) => a.row - b.row || a.col - b.col || a.id.localeCompare(b.id))
+    .map(session => <ServerTerminal key={`${server.id}/${session.id}`} server={server} session={session} fontSize={fontSize} fontFamily={fontFamily} theme={theme} onError={setError} onHide={() => setHidden(previous => new Set(previous).add(`${server.id}/${session.id}`))} />);
+  return <div className={`server-workspace${packed ? ' server-workspace-packed' : ''}`}>
+    <div className="server-layout-controls" role="toolbar" aria-label="Terminal layout">
+      <button disabled={packed || !targets.some(server => snapshots[server.id]?.sessions.length)} title="Pack visible terminals from all selected servers into one matrix" onClick={() => { setPacked(true); sessionStorage.setItem('webmux-server-packed', 'true'); }}>Pack</button>
+    </div>
     {error && <p role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></p>}
     {targets.map(server => {
       const snapshot = snapshots[server.id];
@@ -94,8 +102,9 @@ export function ServerWorkspace({ servers, selected, fontSize, fontFamily, theme
           {[...hidden].some(key => key.startsWith(`${server.id}/`)) && <button onClick={() => setHidden(previous => new Set([...previous].filter(key => !key.startsWith(`${server.id}/`))))}>Show hidden viewers</button>}
         </div>
         {snapshot && !snapshot.error && snapshot.sessions.length === 0 && <p>No terminal sessions on this server.</p>}
-        <div className="server-terminal-grid">{snapshot?.sessions.filter(session => !hidden.has(`${server.id}/${session.id}`)).map(session => <ServerTerminal key={session.id} server={server} session={session} fontSize={fontSize} fontFamily={fontFamily} theme={theme} onError={setError} onHide={() => setHidden(previous => new Set(previous).add(`${server.id}/${session.id}`))} />)}</div>
+        {!packed && <div className="server-terminal-grid">{terminals(server)}</div>}
       </section>;
     })}
+    {packed && <div className="server-terminal-grid" aria-label="Server terminal matrix">{targets.flatMap(server => terminals(server) || [])}</div>}
   </div>;
 }
