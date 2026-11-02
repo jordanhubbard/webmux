@@ -231,15 +231,18 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var message struct {
-			Type string `json:"type"`
-			Data string `json:"data"`
-			Cols int    `json:"cols"`
-			Rows int    `json:"rows"`
+			Type      string `json:"type"`
+			RequestID string `json:"request_id"`
+			Data      string `json:"data"`
+			Cols      int    `json:"cols"`
+			Rows      int    `json:"rows"`
 		}
 		if json.Unmarshal(payload, &message) != nil {
 			continue
 		}
 		switch message.Type {
+		case "clipboard_reply":
+			_ = s.sessions.ClipboardReply(owner, id, viewer.ID, message.RequestID, message.Data)
 		case "browser_ack":
 			s.sessions.AcknowledgeBrowser(owner, id, message.Data)
 		case "input":

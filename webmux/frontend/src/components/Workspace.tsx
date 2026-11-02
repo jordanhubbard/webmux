@@ -650,53 +650,53 @@ export function Workspace({
         <button type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), [])}>None</button>
         {sessions.map(session => <label key={session.id} style={{ whiteSpace: 'nowrap' }}><input type="checkbox" checked={!broadcastExcluded.has(session.id)} onChange={() => toggleBroadcastExclude(session.id)} />{session.rig ? `${session.rig.project}/${session.rig.name}` : session.title}</label>)}
       </div>}
+      {sessions.length > 0 && (
+        <div style={styles.dock} role="toolbar" aria-label="Terminal layout">
+          <button
+            style={{ ...styles.dockItem, opacity: packing || packMoves.length === 0 ? 0.5 : 1 }}
+            onClick={handlePack}
+            disabled={packing || !!draggingId || !!dialogPos || packMoves.length === 0}
+            title="Pack visible sessions from the top left, keeping the current column count"
+          >
+            {packing ? 'Packing…' : 'Pack'}
+          </button>
+          {[...sessions].sort((a, b) => a.title.localeCompare(b.title)).map(session => {
+            const isMinimized = collapsedSessions.has(session.id);
+            const hasBell = bellSessions.has(session.id);
+            const isFocused = focusedSessionId === session.id;
+            return (
+              <button
+                key={session.id}
+                disabled={packing}
+                data-testid={`dock-${session.id}`}
+                data-focused={isFocused ? 'true' : 'false'}
+                aria-current={isFocused ? 'true' : undefined}
+                style={{
+                  ...styles.dockItem,
+                  opacity: isMinimized && !hasBell ? 0.5 : 1,
+                  background: isFocused ? '#7c6af7' : '#1a1a3a',
+                  borderColor: hasBell ? '#f1fa8c' : isFocused ? '#9b8cff' : isMinimized ? '#222244' : '#333366',
+                  color: isFocused ? '#fff' : '#ccc',
+                }}
+                onClick={() => {
+                  handleToggleCollapse(session.id);
+                  setBellSessions(prev => {
+                    const next = new Set(prev);
+                    next.delete(session.id);
+                    return next;
+                  });
+                }}
+                title={isMinimized ? `Show: ${sessionIdentity(session).label}` : `Minimize: ${sessionIdentity(session).label}`}
+              >
+                <span style={{ color: hasBell ? '#f1fa8c' : isFocused ? '#fff' : isMinimized ? '#666' : '#4aaa6a', fontSize: 8 }}>{'\u25cf'}</span>
+                <span style={styles.dockTitle}>{sessionIdentity(session).label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div ref={outerRef} style={styles.outer} data-testid="workspace-scroll">
         <div style={styles.hint}>Hold Shift to scroll</div>
-        {sessions.length > 0 && (
-          <div style={styles.dock}>
-            <button
-              style={{ ...styles.dockItem, opacity: packing || packMoves.length === 0 ? 0.5 : 1 }}
-              onClick={handlePack}
-              disabled={packing || !!draggingId || !!dialogPos || packMoves.length === 0}
-              title="Pack visible sessions from the top left, keeping the current column count"
-            >
-              {packing ? 'Packing…' : 'Pack'}
-            </button>
-            {[...sessions].sort((a, b) => a.title.localeCompare(b.title)).map(session => {
-              const isMinimized = collapsedSessions.has(session.id);
-              const hasBell = bellSessions.has(session.id);
-              const isFocused = focusedSessionId === session.id;
-              return (
-                <button
-                  key={session.id}
-                  disabled={packing}
-                  data-testid={`dock-${session.id}`}
-                  data-focused={isFocused ? 'true' : 'false'}
-                  aria-current={isFocused ? 'true' : undefined}
-                  style={{
-                    ...styles.dockItem,
-                    opacity: isMinimized && !hasBell ? 0.5 : 1,
-                    background: isFocused ? '#7c6af7' : '#1a1a3a',
-                    borderColor: hasBell ? '#f1fa8c' : isFocused ? '#9b8cff' : isMinimized ? '#222244' : '#333366',
-                    color: isFocused ? '#fff' : '#ccc',
-                  }}
-                  onClick={() => {
-                    handleToggleCollapse(session.id);
-                    setBellSessions(prev => {
-                      const next = new Set(prev);
-                      next.delete(session.id);
-                      return next;
-                    });
-                  }}
-                  title={isMinimized ? `Show: ${sessionIdentity(session).label}` : `Minimize: ${sessionIdentity(session).label}`}
-                >
-                  <span style={{ color: hasBell ? '#f1fa8c' : isFocused ? '#fff' : isMinimized ? '#666' : '#4aaa6a', fontSize: 8 }}>{'\u25cf'}</span>
-                  <span style={styles.dockTitle}>{sessionIdentity(session).label}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
         <div
           ref={gridRef}
           style={{

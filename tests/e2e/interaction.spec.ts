@@ -13,7 +13,10 @@ test('Pack closes terminal grid holes and retains the layout after reload', asyn
       ids.push((await response.json()).id);
     }
     await page.goto('/');
-    await page.getByRole('button', { name: 'Pack', exact: true }).click();
+    const pack = page.getByRole('toolbar', { name: 'Terminal layout' }).getByRole('button', { name: 'Pack', exact: true });
+    await page.getByTestId('workspace-scroll').evaluate(el => { el.scrollTop = el.scrollHeight; });
+    await expect(pack).toBeInViewport();
+    await pack.click();
     await expect(page.getByRole('button', { name: 'Pack', exact: true })).toBeDisabled();
     const saved = await (await request.get('/api/sessions')).json();
     for (const [index, id] of ids.entries()) {

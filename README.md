@@ -50,6 +50,11 @@ Local terminals use the same terminal emulator and workspace as remote SSH sessi
 
 The wheel scrolls a local or Rig-managed terminal's tmux pane history. WebMux enables tmux mouse mode for those sessions when it attaches, without changing other tmux sessions. For tmux reached through SSH or another independently managed connection, enable tmux mouse mode there (`tmux set -g mouse on`) to use wheel scrolling; `Ctrl+B` then `[` enters copy mode from the keyboard.
 
+The **Pack** button stays above the local terminal grid and compacts visible
+sessions from the top left while preserving the column count. Connected-server
+views also provide **Pack**, combining visible terminals into one compact matrix;
+that view survives page reloads without restarting terminal providers.
+
 Closing a tile removes its WebMux record and detaches its tmux client; the shell remains available through `tmux attach -t webmux-<session-id>`. Use `exit` inside the shell, or `tmux kill-session -t webmux-<session-id>`, to terminate it permanently.
 
 ### Terminal images, files, and clipboard
@@ -79,13 +84,21 @@ The **Clipboard…** dialog remains available for manual text transfer.
 Native browser paste events work without granting background clipboard access;
 toolbar clipboard access requires HTTPS or localhost and browser permission.
 
-Terminal applications can copy UTF-8 text to your desktop with OSC 52. A focused
-terminal copies automatically when the browser permits it; otherwise a visible
-**Copy to desktop** button completes the request. Clipboard-read queries are
-never answered, and clipboard requests are excluded from logs and scrollback
-replay. A tmux server's own `set-clipboard` policy still determines whether it
-forwards application OSC 52 requests; WebMux does not change a shared server's
-clipboard policy.
+Terminal applications can copy and read UTF-8 text through OSC 52, using the
+pasteboard of the browser displaying that session. Copies happen immediately,
+without a confirmation badge. Clipboard queries are answered only by the focused
+terminal, and replies go directly to that provider, even with Type to All enabled.
+Browser clipboard access requires HTTPS or localhost and site permission.
+Clipboard requests are excluded from logs and replay; stale replies are discarded
+after a provider restart or viewer focus change. A tmux server's own clipboard
+and passthrough policies still determine which application requests reach WebMux.
+Native host commands such as `pbcopy` and `pbpaste` continue to use that host's OS
+pasteboard; OSC 52 connects compatible terminal applications to the browser's
+pasteboard, including over SSH.
+Windows ConPTY currently consumes application clipboard-read queries before they
+reach WebMux; app-driven reads are unavailable there. Keyboard/toolbar paste and
+automatic application copies still work. The ConPTY read limitation is tracked
+in #268 and has a native Windows regression.
 
 ## CLI authentication and browser companion
 

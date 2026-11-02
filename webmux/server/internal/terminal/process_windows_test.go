@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -99,4 +100,40 @@ process.stdin.on('data', d => process.stdout.write('input:'+d.toString('hex')));
 			t.Fatalf("raw child survived terminal close: status=%d err=%v", status, err)
 		}
 	}
+}
+
+// ConPTY interprets application output before WebMux receives it. Its OSC 52
+// handler forwards clipboard writes but consumes read queries. Retain native
+// evidence for this backend limit rather than mocking a query into browser tests.
+func TestWindowsConPTYClipboardQueryBoundary(t *testing.T) {
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Fatal("Node is required for the ConPTY clipboard regression")
+	}
+	fixture := filepath.Join(t.TempDir(), "clipboard-boundary.cjs")
+	if err := os.WriteFile(fixture, []byte(`process.stdin.setRawMode(true);
+process.stdin.resume();
+process.stdout.write('CLIPBOARD_BEFORE\x1b]52;c;Y29weQ==\x1b\\CLIPBOARD_BETWEEN\x1b]52;c;?\x07CLIPBOARD_MIDDLE\x1b]52;c;?\x1b\\CLIPBOARD_AFTER');
+`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	p, err := Start(Command{Path: "cmd.exe", ShellCommand: fmt.Sprintf(`"%s" "%s"`, node, fixture), Cols: 160, Rows: 24})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := &capture{changed: make(chan struct{}, 1), done: make(chan struct{})}
+	go func() { _, c.err = io.Copy(c, p); close(c.done) }()
+	t.Cleanup(func() { _ = p.Close(); await(t, p.Done()); await(t, c.done) })
+	c.expect(t, "CLIPBOARD_AFTER")
+	output := c.text()
+	if !strings.Contains(output, "\x1b]52;c;Y29weQ==") {
+		t.Fatalf("ConPTY lost clipboard write; output: %q", output)
+	}
+	if strings.Contains(output, "52;c;?") {
+		t.Fatalf("ConPTY now preserves clipboard queries: enable and qualify the Windows application-read workflows; output: %q", output)
+	}
+	if !strings.Contains(output, "CLIPBOARD_BETWEEN") || !strings.Contains(output, "CLIPBOARD_MIDDLE") {
+		t.Fatalf("ConPTY lost surrounding output: %q", output)
+	}
+	t.Logf("ConPTY clipboard boundary: write forwarded; BEL/ST queries consumed; output: %q", output)
 }

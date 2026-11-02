@@ -37,7 +37,7 @@ test('selected text copies between separate WebMux browser windows', async ({ pa
  }
 });
 
-test('desktop shortcuts paste bracketed text, copy selection and handle OSC 52 writes without reads', async ({ page, request }) => {
+test('desktop shortcuts paste bracketed text, copy selection and handle immediate OSC 52 copies and application pasteboard reads', async ({ page, request }) => {
  const fixture = path.resolve(__dirname, 'clipboard-terminal-fixture.mts');
  const created = await request.post('/api/sessions', { data: { transport: 'exec', hostname: 'localhost', username: 'clipboard-test', exec_command: `"${process.execPath}" "${fixture}"` } });
  expect(created.ok()).toBe(true);
@@ -60,15 +60,22 @@ test('desktop shortcuts paste bracketed text, copy selection and handle OSC 52 w
   await input.focus();
   await page.keyboard.press('Control+d');
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('copied from terminal 😀');
-  await page.evaluate(() => navigator.clipboard.writeText('desktop-private-read-must-not-leak'));
-  inputs.length = 0;
-  await page.keyboard.press('Control+e'); await page.keyboard.type('z');
-  await expect.poll(() => inputs.join('')).toContain('z');
-  expect(inputs.join('')).not.toContain('desktop-private');
-  // Force a permission failure to exercise the visible one-click fallback.
+  await page.evaluate(() => navigator.clipboard.writeText('desktop pasteboard 😀'));
+  // Native ConPTY consumes OSC 52 read queries before the broker can see them.
+  // The Windows native test retains this boundary; keyboard paste remains covered.
+  if (process.platform !== 'win32') {
+   inputs.length = 0;
+   await page.keyboard.press('Control+e');
+   const reply = '\x1b]52;c;' + Buffer.from('desktop pasteboard 😀').toString('base64') + '\x1b\\';
+   await expect(tile.locator('.xterm-rows')).toContainText(`INPUT_HEX:${Buffer.from(reply).toString('hex')};`);
+   expect(inputs.join('')).not.toContain('desktop pasteboard');
+  }
+  // An asynchronous Clipboard API rejection falls back to the native copy command.
   await page.evaluate(() => { Object.defineProperty(navigator.clipboard, 'writeText', { configurable: true, value: () => Promise.reject(new Error('blocked')) }); });
   await page.keyboard.press('Control+d');
-  await expect(tile.getByRole('button', { name: 'Copy to desktop', exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('copied from terminal 😀');
+  await expect(tile.getByRole('button', { name: 'Copy to desktop', exact: true })).toHaveCount(0);
+
  } finally { expect((await request.delete(`/api/sessions/${id}`)).ok()).toBe(true); }
 });
 
@@ -116,5 +123,58 @@ test('image drop and clipboard paste deliver exact bytes into the local tmux hos
  } finally {
   await request.delete(`/api/sessions/${id}`); await request.delete(`/api/sessions/${peer.id}`);
   for (const file of paths) rmSync(file, { force: true });
+ }
+});
+
+test('application pasteboard replies stay with the focused session under Type to All', async ({ page, request }) => {
+ test.skip(process.platform === 'win32', 'ConPTY consumes app clipboard-read queries; tracked in #268 and covered by native boundary regression');
+ const ids: string[] = [];
+ const replies = new Map<string, string[]>();
+ page.on('websocket', socket => {
+  const id = ids.find(id => socket.url().includes(id));
+  if (id) socket.on('framesent', frame => {
+   const message = JSON.parse(frame.payload.toString());
+   if (message.type === 'clipboard_reply') replies.get(id)!.push(message.data);
+  });
+ });
+ try {
+  for (let index = 0; index < 2; index++) {
+   const response = await request.post('/api/sessions', { data: { transport: 'exec', hostname: 'localhost', username: `clipboard-scope-${index}`, exec_command: `"${process.execPath}" "${path.resolve(__dirname, 'clipboard-terminal-fixture.mts')}"` } });
+   expect(response.ok()).toBe(true); const { id } = await response.json(); ids.push(id); replies.set(id, []);
+  }
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  const source = page.getByTestId(`tile-cell-${ids[0]}`);
+  const peer = page.getByTestId(`tile-cell-${ids[1]}`);
+  for (const tile of [source, peer]) await expect(tile.locator('.xterm-rows')).toContainText('CLIPBOARD_READY');
+  await page.getByRole('button', { name: /^Type to All/ }).click();
+  await source.locator('.xterm-helper-textarea').focus();
+  await page.evaluate(() => navigator.clipboard.writeText('session-private clipboard'));
+  await page.keyboard.press('Control+e');
+  await expect.poll(() => replies.get(ids[0])).toEqual(['session-private clipboard']);
+  expect(replies.get(ids[1])).toEqual([]);
+  const encoded = Buffer.from('session-private clipboard').toString('base64');
+  await expect(source.locator('.xterm-rows')).toContainText(Buffer.from(`\x1b]52;c;${encoded}\x1b\\`).toString('hex'));
+  await expect(peer.locator('.xterm-rows')).not.toContainText(encoded);
+  // Resolve a clipboard read after switching terminals: no late response is sent.
+  await page.getByRole('button', { name: /^Type to All/ }).click();
+  await source.locator('.xterm-helper-textarea').focus();
+  await page.evaluate(() => {
+   Object.defineProperty(navigator.clipboard, 'readText', { configurable: true, value: () => new Promise<string>(resolve => {
+    Object.assign(window, { finishClipboardRead: resolve });
+   }) });
+  });
+  await page.keyboard.press('Control+e');
+  await expect.poll(() => page.evaluate(() => typeof Reflect.get(window, 'finishClipboardRead'))).toBe('function');
+  await peer.locator('.xterm-helper-textarea').focus();
+  await source.locator('.xterm-helper-textarea').focus();
+  await page.evaluate(() => { Reflect.get(window, 'finishClipboardRead')('late clipboard'); });
+  await peer.locator('.xterm-helper-textarea').focus();
+  await page.keyboard.insertText('focus-barrier');
+  await expect(peer.locator('.xterm-rows')).toContainText(Buffer.from('focus-barrier').toString('hex').slice(-8));
+  expect(replies.get(ids[0])).toEqual(['session-private clipboard']);
+  expect(replies.get(ids[1])).toEqual([]);
+ } finally {
+  for (const id of ids) await request.delete(`/api/sessions/${id}`);
  }
 });
