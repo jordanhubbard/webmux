@@ -106,8 +106,18 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
       const res = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
       return (await res.json()).url;
     }).toBe(identityURL);
+    // The viewport now follows the drawer. Match the displayed frame to the
+    // worker geometry before converting page coordinates into viewer pixels.
+    let geometry = { width: 1100, height: 760 };
+    await expect.poll(async () => {
+      const response = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
+      const remote = await response.json();
+      const displayed = await viewport.evaluate(el => ({ width: (el as HTMLImageElement).naturalWidth, height: (el as HTMLImageElement).naturalHeight }));
+      geometry = { width: remote.width, height: remote.height };
+      return displayed.width === remote.width && displayed.height === remote.height;
+    }).toBe(true);
     const bounds = (await viewport.boundingBox())!;
-    await viewport.click({ position: { x: 100 * bounds.width / 1100, y: 60 * bounds.height / 760 } });
+    await viewport.click({ position: { x: 100 * bounds.width / geometry.width, y: 60 * bounds.height / geometry.height } });
     if (linkKind === 'gh-browser') {
       // Real combined modifiers previously failed JSON decoding at both hops.
       await page.keyboard.press('Control+Shift+ArrowRight');

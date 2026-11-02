@@ -136,7 +136,7 @@ func (m *Manager) Start(s session.Session, store *storage.Store) error {
 		return errors.New("Cannot launch browser worker; check the WebMux binary and SSH installation")
 	}
 	c := &client{cmd: cmd, in: in, lines: bufio.NewScanner(out), done: make(chan struct{}), owner: s.Owner, stopped: make(chan struct{})}
-	c.lines.Buffer(make([]byte, 4096), 8<<20)
+	c.lines.Buffer(make([]byte, 4096), MaxMessageBytes)
 	m.clients[s.ID] = c
 	go func() { _ = cmd.Wait(); _ = in.Close(); close(c.done) }()
 	return nil
