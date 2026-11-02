@@ -17,8 +17,8 @@
     "@xterm/addon-web-links": "^0.12.0",
     "@xterm/xterm": "^6.0.0",
     "guacamole-common-js": "^1.5.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
@@ -28,8 +28,8 @@
     "@types/novnc__novnc": "^1.6.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.71.2",
-    "@typescript-eslint/parser": "^8.71.2",
+    "@typescript-eslint/eslint-plugin": "^8.72.0",
+    "@typescript-eslint/parser": "^8.72.0",
     "@vitejs/plugin-react": "^6.1.2",
     "eslint": "^8.57.0",
     "jsdom": "^24.0.0",
