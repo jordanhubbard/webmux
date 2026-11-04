@@ -5,6 +5,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-11-04
+
+### Fixed
+- Restore the lower-right thumbnail explorer when viewing another server's
+  terminals or all connected servers. Keep click/drag navigation aligned with
+  grouped and packed layouts, hidden viewers, and viewport changes (#279, #280).
+
+### Added
+- Expose bounded server compatibility and build observations through the
+  server-info endpoint, with qualification and integration gaps documented (#277).
+
+### Changed
+- Document native bridge integration capabilities and remaining qualification
+  gaps (#275).
+
 ## [1.4.2] - 2026-11-02
 
 ### Added
