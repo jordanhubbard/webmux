@@ -117,6 +117,7 @@ func (s *Server) Handler() http.Handler {
 		writeJSON(w, 200, map[string]string{"status": "ok", "name": s.name})
 	})
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)
+	mux.Handle("GET /api/server-info", s.protected(false, s.serverInfo))
 	limited := newLimiter(10, authWindow)
 	mux.Handle("POST /api/auth/login", limited.wrap(http.HandlerFunc(s.login)))
 	mux.Handle("POST /api/auth/bootstrap", limited.wrap(http.HandlerFunc(s.bootstrap)))

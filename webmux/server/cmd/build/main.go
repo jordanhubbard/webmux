@@ -3,6 +3,8 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -12,6 +14,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
+
+	"github.com/jordanhubbard/webmux/server/internal/buildinfo"
 )
 
 func main() {
@@ -37,6 +42,10 @@ func build(output, web, defaults, goos, goarch string) error {
 		return err
 	}
 	output, err = filepath.Abs(output)
+	if err != nil {
+		return err
+	}
+	observed, err := observeSource(module)
 	if err != nil {
 		return err
 	}
@@ -66,7 +75,16 @@ func build(output, web, defaults, goos, goarch string) error {
 	if err := os.MkdirAll(filepath.Dir(output), 0755); err != nil {
 		return err
 	}
-	command := exec.Command("go", "build", "-trimpath", "-tags=embedded", "-o", output, "./cmd/webmux")
+	// A moved HEAD, changed package version or changed dirty observation must
+	// not silently become the staged binary's reported source identity.
+	after, err := observeSource(module)
+	if err != nil {
+		return err
+	}
+	if after != observed {
+		return errors.New("build metadata changed while staging source")
+	}
+	command := exec.Command("go", "build", "-trimpath", "-tags=embedded", "-ldflags", observed.linkerFlags(), "-o", output, "./cmd/webmux")
 	command.Dir = stage
 	for _, variable := range os.Environ() {
 		key, _, _ := strings.Cut(variable, "=")
@@ -79,6 +97,68 @@ func build(output, web, defaults, goos, goarch string) error {
 	command.Env = append(command.Env, "GOOS="+goos, "GOARCH="+goarch, "CGO_ENABLED=0", "GOWORK=off")
 	command.Stdout, command.Stderr = os.Stdout, os.Stderr
 	return command.Run()
+}
+
+type sourceObservation struct{ version, revision, modified string }
+
+func observeSource(module string) (sourceObservation, error) {
+	var result sourceObservation
+	data, err := os.ReadFile(filepath.Join(module, "..", "package.json"))
+	if err == nil {
+		var metadata struct {
+			Version string `json:"version"`
+		}
+		if len(data) > 1<<20 || json.Unmarshal(data, &metadata) != nil || !buildinfo.ValidVersion(metadata.Version) {
+			return result, errors.New("invalid build package version")
+		}
+		result.version = metadata.Version
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return result, errors.New("cannot read build package version")
+	}
+	// Source archives and module-only copies do not invent a revision. Require
+	// the module itself to be tracked, rather than accepting an unrelated outer
+	// repository or caller-supplied GIT_DIR/GIT_WORK_TREE.
+	if _, ok := observeGit(module, "ls-files", "--error-unmatch", "--", "go.mod"); !ok {
+		return result, nil
+	}
+	if revision, ok := observeGit(module, "rev-parse", "HEAD"); ok && buildinfo.ValidRevision(revision) {
+		result.revision = revision
+		if status, ok := observeGit(module, "status", "--porcelain", "--untracked-files=normal"); ok {
+			result.modified = "false"
+			if status != "" {
+				result.modified = "true"
+			}
+		}
+	}
+	return result, nil
+}
+
+func observeGit(module string, arguments ...string) (string, bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, "git", append([]string{"--no-optional-locks", "-c", "core.fsmonitor=false", "-C", module}, arguments...)...)
+	for _, variable := range os.Environ() {
+		key, _, _ := strings.Cut(variable, "=")
+		if !strings.HasPrefix(strings.ToUpper(key), "GIT_") {
+			command.Env = append(command.Env, variable)
+		}
+	}
+	output, err := command.Output()
+	if err != nil || len(output) > 1<<20 {
+		return "", false
+	}
+	return strings.TrimSpace(string(output)), true
+}
+
+func (s sourceObservation) linkerFlags() string {
+	const prefix = "github.com/jordanhubbard/webmux/server/internal/buildinfo."
+	var flags []string
+	for _, field := range []struct{ name, value string }{{"version", s.version}, {"revision", s.revision}, {"modified", s.modified}} {
+		if field.value != "" {
+			flags = append(flags, "-X", prefix+field.name+"="+field.value)
+		}
+	}
+	return strings.Join(flags, " ")
 }
 
 func copyTree(source, destination string) error {

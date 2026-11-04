@@ -3,6 +3,12 @@
 Reviewed 2026-10-31 against the owner's recovered session and the open GitHub
 issues. GitHub issues track implementation and remaining acceptance work.
 
+## Runtime compatibility follow-up
+
+[#277](https://github.com/jordanhubbard/webmux/issues/277): expose bounded
+[server compatibility and self-reported build metadata](server-info.md),
+preserving existing authentication, federation and provider boundaries.
+
 ## Connected WebMux servers: v1.4.0
 
 [#238](https://github.com/jordanhubbard/webmux/issues/238) tracks the owner-approved
