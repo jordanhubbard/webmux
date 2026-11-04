@@ -47,6 +47,11 @@ reliability item after #238 release/distribution qualification.
 
 ## Integration and feature follow-ups
 
+- [#275](https://github.com/jordanhubbard/webmux/issues/275): source-backed
+  [native bridge integration research](native-bridge-integration.md) for Codex iOS.
+  Current coordination/federation APIs are reusable, but connector implementation,
+  scoped authorization choices and physical cross-project acceptance remain pending.
+
 - [#194](https://github.com/jordanhubbard/webmux/issues/194): remaining canonical
   Rig discovery, lifecycle/provenance contract and optional Agents-pane
   reconciliation. Its grid-centered UI work landed in #196; the issue remains
