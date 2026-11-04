@@ -47,6 +47,9 @@ reliability item after #238 release/distribution qualification.
 
 ## Integration and feature follow-ups
 
+- [#277](https://github.com/jordanhubbard/webmux/issues/277): expose bounded
+  [server compatibility and self-reported build metadata](server-info.md),
+  preserving existing authentication, federation and provider boundaries.
 - [#194](https://github.com/jordanhubbard/webmux/issues/194): remaining canonical
   Rig discovery, lifecycle/provenance contract and optional Agents-pane
   reconciliation. Its grid-centered UI work landed in #196; the issue remains
