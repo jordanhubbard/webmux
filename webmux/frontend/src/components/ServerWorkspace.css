@@ -1,3 +1,4 @@
+.server-workspace-container { position: relative; height: 100%; min-height: 0; }
 .server-workspace { height: 100%; overflow: auto; padding: 8px; box-sizing: border-box; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 620px), 1fr)); gap: 8px; align-content: start; }
 .server-heading { display: flex; align-items: center; gap: 10px; padding: 6px 0; flex-wrap: wrap; }
 .server-heading span { color: #aaa; font-size: 12px; }
