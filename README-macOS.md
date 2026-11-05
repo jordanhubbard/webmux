@@ -76,6 +76,13 @@ is the default. Use `make install-agent-deck` or
 `make install-server INSTALL_AGENT_DECK=yes` to install the optional Agent Deck
 integration; Rig is installed separately.
 
+Service replacement runs in a detached worker so it can finish if restarting
+WebMux closes the terminal running the installer. It waits for launchd to remove
+the old job before registering the replacement, then verifies that the new
+process stays running. Progress and failures are recorded in
+`~/.config/webmux/logs/webmux.log`. `make install-all` installs the client before
+replacing the server.
+
 If you select Agent Deck, install it on every registered remote that will own
 its coordinated sessions. From a WebMux checkout, run `make install-agent-deck`; without a
 checkout, use Agent Deck's checksum-verifying installer:

@@ -412,7 +412,10 @@ install-optional-agent-deck:
 		printf "$(C_RED)✗$(C_RST) INSTALL_AGENT_DECK must be yes or no.\n" >&2; exit 2; \
 	fi
 
-install-all: install-server install-client
+# Finish client installation before restarting the server that may own this
+# terminal. A recursive target also preserves that order under make -j.
+install-all: install-client
+	@$(MAKE) install-server
 
 # Finish fallible preparation before interrupting the installed service.
 # Do not list stop as a prerequisite: make -j can run it beside the build.
