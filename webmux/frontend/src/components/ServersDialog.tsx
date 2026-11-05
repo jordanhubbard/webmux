@@ -6,9 +6,9 @@ import './ServersDialog.css';
 type Editor = { kind: 'server' | 'grant'; existing: boolean; id: string; name: string; url: string; owner: string; allow_http: boolean; token_env: string; credential: string };
 const emptyEditor = (kind: Editor['kind']): Editor => ({ kind, existing: false, id: '', name: '', url: '', owner: '', allow_http: false, token_env: '', credential: '' });
 
-export function ServersDialog({ onClose, onChanged, currentUser }: { onClose: () => void; onChanged: () => Promise<void>; currentUser: string | null }) {
+export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddServer = false }: { initiallyAddServer?: boolean; onClose: () => void; onChanged: () => Promise<void>; currentUser: string | null }) {
   const [directory, setDirectory] = useState<ServerDirectory | null>(null);
-  const [editor, setEditor] = useState<Editor | null>(null);
+  const [editor, setEditor] = useState<Editor | null>(() => initiallyAddServer ? emptyEditor('server') : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -31,7 +31,7 @@ export function ServersDialog({ onClose, onChanged, currentUser }: { onClose: ()
     if (!window.confirm(kind === 'server' ? `Remove ${id}? Its terminal processes will keep running on that server.` : `Remove incoming grant ${id}? This revokes the other server’s access.`)) return;
     void run(async () => { if (kind === 'server') await api.deleteServer(id); else await api.deleteServerGrant(id); await reload(); });
   };
-  return <Dialog title="Manage servers" subtitle="Connect to other WebMux servers and control their access to this server." width={700} onClose={onClose} dismissible={!busy}>
+  return <Dialog title="Manage servers" subtitle="Manage your WebMux cluster: add, edit or remove server connections and incoming access." width={700} onClose={onClose} dismissible={!busy}>
     <div className="servers-manager">
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}

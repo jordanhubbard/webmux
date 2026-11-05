@@ -50,9 +50,11 @@ test('two servers share interactive terminal views, messages and failure state w
     }
     await page.setViewportSize({ width: 900, height: 650 });
     await page.goto('/');
-    await page.getByRole('button', { name: 'Manage servers', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'More', exact: true })).toBeInViewport();
+    const cluster = page.getByRole('group', { name: 'WebMux cluster' });
+    await cluster.getByRole('button', { name: 'Refresh servers', exact: true }).click();
+    await cluster.getByRole('button', { name: 'Add server', exact: true }).click();
     const manager = page.getByRole('dialog', { name: 'Manage servers' });
-    await manager.getByRole('button', { name: 'Add server', exact: true }).click();
     await manager.getByLabel('ID', { exact: true }).fill('remote');
     await manager.getByLabel('Name', { exact: true }).fill('Other host');
     await manager.getByLabel('Server URL', { exact: true }).fill(peerURL);
@@ -92,7 +94,7 @@ test('two servers share interactive terminal views, messages and failure state w
     await manager.getByRole('button', { name: 'Save server', exact: true }).click();
     await expect(manager.getByRole('status')).toContainText('Saved');
     await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Refresh servers', exact: true }).click();
+    await page.getByRole('group', { name: 'WebMux cluster' }).getByRole('button', { name: 'Refresh servers', exact: true }).click();
     await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
     expect((await (await request.get(`${peerURL}/api/sessions`)).json()).length).toBe(1);
     await page.getByRole('toolbar', { name: 'Terminal layout' }).getByRole('button', { name: 'Pack', exact: true }).click();
@@ -112,6 +114,8 @@ test('two servers share interactive terminal views, messages and failure state w
     await expect(dialog.getByRole('status')).toContainText('processing is not confirmed');
     await page.keyboard.press('Escape');
     await expect(remote.locator('.xterm-rows')).toContainText('FEDERATION_REPLY:[WebMux controller] agent-message-proof');
+    // Leave room for one terminal below the wrapped cluster toolbar.
+    await page.setViewportSize({ width: 900, height: 750 });
     await remote.getByRole('button', { name: 'Hide', exact: true }).click();
     await expect(remote).toHaveCount(0);
     await expect(overview).toBeHidden();
@@ -150,6 +154,12 @@ test('two servers share interactive terminal views, messages and failure state w
     await expect(remote.getByText('connected', { exact: true })).toBeVisible();
     await expect(page.locator('[data-testid^="server-terminal-local-"] .xterm-rows')).toContainText('FEDERATION_READY:');
     await page.screenshot({ path: path.resolve(__dirname, '../../webmux/test-results/server-federation.png'), fullPage: true });
+    await cluster.getByRole('button', { name: 'Manage servers', exact: true }).click();
+    page.once('dialog', dialog => { void dialog.accept(); });
+    await manager.getByRole('button', { name: 'Remove Other host', exact: true }).click();
+    await expect(manager.getByText('No server peers configured. Add a server to browse its terminals.')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('combobox', { name: 'Server view' })).toHaveCount(0);
   } catch (error) {
     throw new Error(`${String(error)}\nPeer diagnostics: ${diagnostics}`);
   } finally {
