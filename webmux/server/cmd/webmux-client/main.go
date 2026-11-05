@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -25,6 +26,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/jordanhubbard/webmux/server/internal/discovery"
 	"golang.org/x/term"
 )
 
@@ -63,7 +65,7 @@ func main() {
 
 func run() error {
 	flags := flag.NewFlagSet("webmux-client", flag.ContinueOnError)
-	server := flags.String("server", "", "WebMux server address or URL, for example webmux.example:8443")
+	server := flags.String("server", "", "WebMux hostname to discover, or an explicit http(s) URL")
 	statePath := flags.String("state", "", "private client identity file (optional)")
 	background := flags.Bool("background", false, "continue in the background after enrollment")
 	pairCode := flags.Bool("pair-code", false, "print a new one-time host pairing code")
@@ -75,16 +77,33 @@ func run() error {
 	if *server == "" && flags.NArg() == 1 {
 		*server = flags.Arg(0)
 	}
-	endpoint, err := normalizeServer(*server, *allowHTTP)
+	logicalServer := *server
+	resolvedServer := *server
+	discover := isDiscoverableHost(*server)
+	if discover {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		var err error
+		resolvedServer, err = discovery.Resolve(ctx, *server, *allowHTTP)
+		cancel()
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stderr, "Discovered WebMux server: %s\n", resolvedServer)
+		logicalServer = "webmux://" + strings.ToLower(strings.TrimSuffix(*server, "."))
+	}
+	endpoint, err := normalizeServer(resolvedServer, *allowHTTP)
 	if err != nil {
 		return err
+	}
+	if !discover {
+		logicalServer = endpoint
 	}
 	if *statePath == "" {
 		configDir, err := os.UserConfigDir()
 		if err != nil {
 			return err
 		}
-		key := sha256.Sum256([]byte(endpoint))
+		key := sha256.Sum256([]byte(logicalServer))
 		*statePath = filepath.Join(configDir, "webmux-client", hex.EncodeToString(key[:12])+".json")
 	}
 	id, err := loadIdentity(*statePath)
@@ -93,13 +112,14 @@ func run() error {
 		if err != nil {
 			return err
 		}
+		id.Server = logicalServer
 		if err := saveIdentity(*statePath, id); err != nil {
 			return err
 		}
 	} else if err != nil {
 		return err
 	}
-	if id.Server != endpoint {
+	if id.Server != logicalServer {
 		return errors.New("identity belongs to a different WebMux server")
 	}
 	if *pairCode {
@@ -109,14 +129,15 @@ func run() error {
 		if err := probeConnection(endpoint, id.Credential); err != nil {
 			return fmt.Errorf("server check-in failed: %w", err)
 		}
-		return startBackground(endpoint, *statePath, *allowHTTP)
+		return startBackground(*server, *statePath, *allowHTTP)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	fmt.Fprintf(os.Stderr, "Connected host identity: %s\n", id.ID)
 	backoff := time.Second
+	activeEndpoint := endpoint
 	for ctx.Err() == nil {
-		err := connect(ctx, endpoint, id.Credential)
+		err := connect(ctx, activeEndpoint, id.Credential)
 		if errors.Is(err, errRevoked) {
 			return err
 		}
@@ -133,8 +154,25 @@ func run() error {
 		if backoff > 30*time.Second {
 			backoff = 30 * time.Second
 		}
+		if discover {
+			if discovered, discoverErr := discovery.Resolve(ctx, *server, *allowHTTP); discoverErr == nil {
+				if discovered != activeEndpoint {
+					fmt.Fprintf(os.Stderr, "Discovered WebMux server: %s\n", discovered)
+				}
+				activeEndpoint = discovered
+			} else {
+				fmt.Fprintf(os.Stderr, "server rediscovery failed: %v\n", discoverErr)
+			}
+		}
 	}
 	return nil
+}
+
+func isDiscoverableHost(raw string) bool {
+	if net.ParseIP(strings.Trim(raw, "[]")) != nil {
+		return true
+	}
+	return raw != "" && !strings.ContainsAny(raw, ":/\\@ ") && !strings.HasPrefix(raw, ".")
 }
 
 func normalizeServer(raw string, allowHTTP bool) (string, error) {
