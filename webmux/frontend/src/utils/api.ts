@@ -86,7 +86,17 @@ export interface MacSetup {
 
 export interface ConnectedServer { id: string; name: string }
 
+export interface ManagedServer extends ConnectedServer { url: string; allow_http: boolean; token_env: string; credential_ready: boolean }
+export interface ServerGrant { id: string; owner: string; token_env: string; credential_ready: boolean }
+export interface ServerDirectory { servers: ManagedServer[]; grants: ServerGrant[] }
+export interface ServerCredentialInput { token_env: string; credential: string }
+
 export const api = {
+  getServerDirectory: () => request<ServerDirectory>('/server-directory'),
+  saveServer: (id: string, input: ServerCredentialInput & { name: string; url: string; allow_http: boolean }) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
+  deleteServer: (id: string) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  saveServerGrant: (id: string, input: ServerCredentialInput & { owner: string }) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
+  deleteServerGrant: (id: string) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   getServers: () => request<{ version: number; servers: ConnectedServer[] }>('/servers'),
   getServerSessions: (server: string) => request<Session[]>(`/servers/${encodeURIComponent(server)}/sessions`),
   createServerSession: (server: string) => request<Session>(`/servers/${encodeURIComponent(server)}/sessions`, { method: 'POST', body: JSON.stringify({ transport: 'local' }) }),
