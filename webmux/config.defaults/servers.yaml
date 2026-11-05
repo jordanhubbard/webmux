@@ -1,5 +1,6 @@
-# Optional server-to-server directory. Credentials remain in the server process
-# environment, never browser configuration. See docs/server-federation.md.
+# Optional server-to-server directory. Manage servers can store credentials
+# privately here, or use token_env for service environment credentials.
+# Read APIs never return credentials. See docs/server-federation.md.
 version: 1
 servers: []
 grants: []

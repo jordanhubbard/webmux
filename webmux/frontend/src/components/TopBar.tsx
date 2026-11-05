@@ -29,6 +29,7 @@ function getHostSwitchContext(hostSwitcher?: HostSwitcherConfig) {
 
 interface TopBarProps {
   serverSelector?: ReactNode;
+  onManageServers?: () => void;
   remoteServersActive?: boolean;
   auth: AuthState;
   appName: string;
@@ -78,6 +79,7 @@ export function TopBar({
   combinedAgentPane = true,
   hostSwitcher,
   serverSelector,
+  onManageServers,
   remoteServersActive = false,
 }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
@@ -324,6 +326,7 @@ export function TopBar({
         <div style={styles.left}>
           <span style={styles.logo}>{'\u25a6'} {appName.toLowerCase() === 'webmux' ? 'WebMux' : appName}</span>
           {serverSelector}
+          {canManageSettings && onManageServers && <button style={styles.iconBtn} onClick={onManageServers}>Manage servers</button>}
         <button
           onClick={() => setActivePane('terminals')}
           style={{

@@ -3,14 +3,52 @@
 Run WebMux on each host. Each server owns its terminals, processes, session IDs,
 project bindings and persistence. A browser connected to one server can select
 **This server**, one configured server, or **All servers**. The default local
-workspace keeps its existing terminal grid. The server selector appears only
-when an administrator has configured at least one peer.
+workspace keeps its existing terminal grid. Administrators can open **Manage
+servers** from the toolbar even before any peers exist. The server selector appears after the first peer is configured.
 
 Connections are opened on demand. There is no distributed mesh, shared home
 directory, automatic discovery, or requirement for Rig or Agent Deck. Those
 coordinators remain optional for task assignment and provider lifecycle work.
 
-## Configure a pair
+## Manage connections in the UI
+
+Open **Manage servers** on the controller and choose **Add server**. Enter a
+stable ID, display name, and the other WebMux server's origin URL. Use HTTPS;
+allow HTTP only on an already trusted private network or tunnel. Enter a shared
+credential of at least 32 printable ASCII characters without spaces, or use
+**Generate credential** and transfer it privately.
+
+On the receiving server, open **Manage servers → Add incoming grant**. Enter an
+ID, an existing local account as the session owner (`anonymous` in trusted mode),
+and the same credential. A grant gives that trusted server access to this owner's
+terminals, which run as the WebMux service user. Choose **Test connection** on the
+controller to check the saved configuration. To connect in both directions,
+configure another outgoing entry and incoming grant with a separate credential.
+
+**Edit** changes an entry or repairs an unavailable credential. A blank replacement
+keeps the existing credential. The environment-variable option preserves existing
+service-based deployments; entering a replacement credential switches that entry
+to server-managed storage. UI-supplied credentials are stored in the server's private
+`$WEBMUX_HOME/config/servers.yaml` (mode 0600 on Unix), never returned through read
+APIs, logged, or saved in browser storage. Secure the server's data and backups.
+Existing `token_env` configurations remain supported. Saving UI credentials does
+not require a service restart. Copy a generated credential before saving: it cannot
+be retrieved through the UI afterward.
+
+Use **Refresh servers** to reread the directory, fetch current session lists, and
+reattach the selected servers' viewers. **Refresh <server name>** retries one
+server. These actions keep the remote terminal processes running. Failed servers
+keep their last observed session list with a stale warning. If a credential is
+unavailable, open **Manage servers → Edit** and supply its replacement; refreshing
+alone cannot repair missing credentials. If the receiving server rejects it,
+check the matching incoming grant and its account owner.
+
+**Remove** disconnects a peer's viewers while keeping its providers running.
+Removing an incoming grant revokes that peer's access. Both actions require
+confirmation. These controls are administrator-only in authenticated mode and
+available to operators in trusted `auth.mode: none`, like other settings.
+
+## Configure a pair through files
 
 Use the same WebMux release on both servers. Give each server a distinct
 `WEBMUX_HOME`; never run two servers against the same data directory.
@@ -18,7 +56,8 @@ Use the same WebMux release on both servers. Give each server a distinct
 Generate a random credential, for example with `openssl rand -hex 32`. Transfer it
 privately to both servers and set it in their service environments. Do not put
 credentials in a URL, browser storage, shell history, Git, or the frontend app
-configuration. Environment values must contain at least 32 characters.
+configuration. The management dialog accepts credentials transiently and saves
+them only in private server configuration. Environment values must contain at least 32 characters.
 
 On the controller, edit `$WEBMUX_HOME/config/servers.yaml`:
 

@@ -1,0 +1,12 @@
+.servers-manager { color: #ddd; font-size: 13px; padding: 0 16px 16px; }
+.servers-manager section { border: 1px solid #333366; border-radius: 5px; margin: 12px 0; padding: 12px; overflow-wrap: anywhere; }
+.servers-manager p { line-height: 1.5; }
+.servers-manager [role=alert] { color: #ffb86c; }
+.servers-manager [role=status] { color: #8be9fd; }
+.servers-manager fieldset { border: 0; padding: 0; min-width: 0; }
+.servers-manager label { display: block; margin: 10px 0; }
+.servers-manager input:not([type=checkbox]) { display: block; box-sizing: border-box; width: 100%; margin-top: 5px; padding: 8px; color: #eee; background: #0d0d1a; border: 1px solid #44446a; border-radius: 4px; }
+.servers-manager .servers-check { display: flex; align-items: center; gap: 8px; }
+.servers-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
+.servers-manager button { background: #1a1a3a; color: #eee; border: 1px solid #44446a; border-radius: 4px; padding: 6px 10px; cursor: pointer; }
+.servers-manager button:disabled { opacity: .5; cursor: default; }

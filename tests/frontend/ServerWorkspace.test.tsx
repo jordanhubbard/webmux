@@ -59,4 +59,14 @@ describe('connected server workspace', () => {
     expect(screen.getByRole('button', { name: 'New terminal on Other host' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'New terminal on This Mac' })).toBeEnabled();
   });
+  it('manually refreshes an unavailable peer without creating or restarting providers', async () => {
+    mocks.list.mockRejectedValueOnce(new Error('offline')).mockResolvedValue([session]);
+    renderView('remote');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unavailable');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Other host' }));
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+    expect(screen.getByText('@remote/same-id')).toBeInTheDocument();
+    expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.restart).not.toHaveBeenCalled();
+  });
 });

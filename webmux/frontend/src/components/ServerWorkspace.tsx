@@ -8,10 +8,10 @@ import type { ConnectionState, NamedTheme, Session } from '../types';
 import './ServerWorkspace.css';
 
 type Snapshot = { sessions: Session[]; error?: string };
-interface Props { servers: ConnectedServer[]; selected: string; fontSize: number; fontFamily?: string; themes: NamedTheme[]; globalTheme: string | null }
+interface Props { servers: ConnectedServer[]; selected: string; fontSize: number; fontFamily?: string; themes: NamedTheme[]; globalTheme: string | null; onManageServers?: () => void; onRefreshDirectory?: () => Promise<void>; directoryRevision?: number }
 
-function ServerTerminal({ server, session, fontSize, fontFamily, theme, onHide, onError }: {
-  server: ConnectedServer; session: Session; fontSize: number; fontFamily?: string; theme?: NamedTheme['theme']; onHide: () => void; onError: (error: string) => void;
+function ServerTerminal({ server, session, fontSize, fontFamily, theme, onHide, onError, reconnectVersion }: {
+  reconnectVersion: string; server: ConnectedServer; session: Session; fontSize: number; fontFamily?: string; theme?: NamedTheme['theme']; onHide: () => void; onError: (error: string) => void;
 }) {
   const [connection, setConnection] = useState<ConnectionState>('connecting');
   const [providerState, setProviderState] = useState(session.state);
@@ -34,7 +34,7 @@ function ServerTerminal({ server, session, fontSize, fontFamily, theme, onHide, 
       <button onClick={() => { setMessage(''); setNotice(''); }}>Message</button>
       <button onClick={onHide} title="Hide this viewer; keep the session running on its server">Hide</button>
     </header>
-    <div className="server-terminal-body"><Terminal key={generation} sessionId={`@${server.id}/${session.id}`} fontSize={fontSize} fontFamily={fontFamily} state={providerState} autoScroll onStateChange={setProviderState} onTransportChange={connected => setConnection(connected ? 'connected' : 'disconnected')} onViewerUpdate={() => {}} onFocusGained={() => { document.title = `${title} — WebMux`; }} theme={theme} /></div>
+    <div className="server-terminal-body"><Terminal key={`${reconnectVersion}/${generation}`} sessionId={`@${server.id}/${session.id}`} fontSize={fontSize} fontFamily={fontFamily} state={providerState} autoScroll onStateChange={setProviderState} onTransportChange={connected => setConnection(connected ? 'connected' : 'disconnected')} onViewerUpdate={() => {}} onFocusGained={() => { document.title = `${title} — WebMux`; }} theme={theme} /></div>
     {message !== null && <Dialog title={`Message ${identity.name}`} subtitle={`Send one line as terminal input to ${server.name}. Enter is submitted; use only with an agent ready to receive a prompt.`} onClose={() => { if (!sending) setMessage(null); }}>
       <form onSubmit={event => {
         event.preventDefault(); setSending(true); setNotice('');
@@ -48,7 +48,10 @@ function ServerTerminal({ server, session, fontSize, fontFamily, theme, onHide, 
   </section>;
 }
 
-export function ServerWorkspace({ servers, selected, fontSize, fontFamily, themes, globalTheme }: Props) {
+export function ServerWorkspace({ servers, selected, fontSize, fontFamily, themes, globalTheme, onManageServers, onRefreshDirectory, directoryRevision = 0 }: Props) {
+  const [reconnectVersions, setReconnectVersions] = useState<Record<string, number>>({});
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshRequests = useRef<Record<string, number>>({});
   const [snapshots, setSnapshots] = useState<Record<string, Snapshot>>({});
   const [hidden, setHidden] = useState<Set<string>>(() => new Set());
   const [error, setError] = useState('');
@@ -65,11 +68,14 @@ export function ServerWorkspace({ servers, selected, fontSize, fontFamily, theme
   }, []);
   const refresh = useCallback(async (ids: string[], valid: () => boolean) => {
     await Promise.all(ids.map(async id => {
+      const request = (refreshRequests.current[id] || 0) + 1;
+      refreshRequests.current[id] = request;
+      const current = () => valid() && refreshRequests.current[id] === request;
       try {
         const sessions = await api.getServerSessions(id);
-        if (valid()) setSnapshots(previous => ({ ...previous, [id]: { sessions } }));
+        if (current()) setSnapshots(previous => ({ ...previous, [id]: { sessions } }));
       } catch (error) {
-        if (valid()) setSnapshots(previous => ({ ...previous, [id]: { sessions: previous[id]?.sessions || [], error: String(error) } }));
+        if (current()) setSnapshots(previous => ({ ...previous, [id]: { sessions: previous[id]?.sessions || [], error: String(error) } }));
       }
     }));
   }, []);
@@ -82,7 +88,7 @@ export function ServerWorkspace({ servers, selected, fontSize, fontFamily, theme
     };
     void poll();
     return () => { canceled = true; clearTimeout(timer); };
-  }, [targetKey, refresh]);
+  }, [targetKey, refresh, directoryRevision]);
   // Read actual CSS grid geometry for both responsive grouped and packed views.
   useLayoutEffect(() => {
     const container = scrollRef.current;
@@ -111,14 +117,28 @@ export function ServerWorkspace({ servers, selected, fontSize, fontFamily, theme
     window.addEventListener('resize', measure);
     return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
   }, [snapshots, hidden, targetKey, packed]);
+  const refreshAndReconnect = async (ids: string[], reloadDirectory = false) => {
+    setRefreshing(true); setError('');
+    try {
+      if (reloadDirectory) await onRefreshDirectory?.();
+      await refresh(ids, () => mounted.current);
+      if (mounted.current) setReconnectVersions(previous => {
+        const next = { ...previous };
+        for (const id of ids) next[id] = (next[id] || 0) + 1;
+        return next;
+      });
+    } catch (error) { if (mounted.current) setError(String(error)); }
+    finally { if (mounted.current) setRefreshing(false); }
+  };
   const theme = themes.find(theme => theme.name === globalTheme)?.theme;
   const terminals = (server: ConnectedServer) => snapshots[server.id]?.sessions
     .filter(session => !hidden.has(`${server.id}/${session.id}`))
     .sort((a, b) => a.row - b.row || a.col - b.col || a.id.localeCompare(b.id))
-    .map(session => <ServerTerminal key={`${server.id}/${session.id}`} server={server} session={session} fontSize={fontSize} fontFamily={fontFamily} theme={theme} onError={setError} onHide={() => setHidden(previous => new Set(previous).add(`${server.id}/${session.id}`))} />);
+    .map(session => <ServerTerminal reconnectVersion={`${directoryRevision}/${reconnectVersions[server.id] || 0}`} key={`${server.id}/${session.id}`} server={server} session={session} fontSize={fontSize} fontFamily={fontFamily} theme={theme} onError={setError} onHide={() => setHidden(previous => new Set(previous).add(`${server.id}/${session.id}`))} />);
   return <div className="server-workspace-container">
     <div ref={scrollRef} className={`server-workspace${packed ? ' server-workspace-packed' : ''}`}>
       <div className="server-layout-controls" role="toolbar" aria-label="Terminal layout">
+        <button disabled={refreshing} onClick={() => { void refreshAndReconnect(targets.map(server => server.id), true); }}>Refresh servers</button>
         <button disabled={packed || !targets.some(server => snapshots[server.id]?.sessions.length)} title="Pack visible terminals from all selected servers into one matrix" onClick={() => { setPacked(true); sessionStorage.setItem('webmux-server-packed', 'true'); }}>Pack</button>
       </div>
       {error && <p role="alert">{error} <button onClick={() => setError('')}>Dismiss</button></p>}
@@ -126,7 +146,8 @@ export function ServerWorkspace({ servers, selected, fontSize, fontFamily, theme
         const snapshot = snapshots[server.id];
         return <section key={server.id} aria-label={`${server.name} sessions`}>
           <div className="server-heading"><strong>{server.name}</strong>
-            {snapshot?.error ? <span role="alert">Unavailable · {snapshot.error}. Session status may be stale.</span> : <span>{snapshot ? `${snapshot.sessions.length} sessions` : 'Connecting…'}</span>}
+            {snapshot?.error ? <span role="alert">Unavailable · {snapshot.error}. Session status may be stale. {onManageServers && <button onClick={onManageServers}>Manage connection to {server.name}</button>}</span> : <span>{snapshot ? `${snapshot.sessions.length} sessions` : 'Connecting…'}</span>}
+            <button disabled={refreshing} title="Reload sessions and reconnect viewers; keep terminal processes running" onClick={() => { void refreshAndReconnect([server.id]); }}>Refresh {server.name}</button>
             <button disabled={creating !== null || !!snapshot?.error} onClick={() => {
               setCreating(server.id); setError('');
               void api.createServerSession(server.id).then(() => refresh([server.id], () => mounted.current)).catch(error => { if (mounted.current) setError(String(error)); }).finally(() => { if (mounted.current) setCreating(null); });

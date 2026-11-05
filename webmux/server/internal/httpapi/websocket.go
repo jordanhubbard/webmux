@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -67,7 +66,7 @@ func (s *Server) socketAuthorized(owner, mode string) bool {
 			return false
 		}
 		for _, g := range d.Grants {
-			if g.ID == strings.TrimPrefix(mode, "federation:") && g.Owner == owner && len(os.Getenv(g.TokenEnv)) >= 32 {
+			if g.ID == strings.TrimPrefix(mode, "federation:") && g.Owner == owner && len(serverCredential(g.TokenEnv, g.Credential)) >= 32 {
 				return true
 			}
 		}

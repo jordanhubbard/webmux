@@ -39,7 +39,8 @@ test('two servers share interactive terminal views, messages and failure state w
     await expect.poll(async () => {
       try { return (await request.get(`${peerURL}/api/health`, { timeout: 1000 })).status(); } catch { return 0; }
     }, { timeout: 15000, message: 'Peer WebMux should become healthy' }).toBe(200);
-    fs.writeFileSync(directoryFile, `version: 1\nservers:\n  - id: remote\n    name: Other host\n    url: ${peerURL}\n    allow_http: true\n    token_env: WEBMUX_E2E_FEDERATION_TOKEN\ngrants: []\n`);
+    // Start with no peers: management must be discoverable before the selector exists.
+    fs.writeFileSync(directoryFile, 'version: 1\nservers: []\ngrants: []\n');
     for (const base of ['', peerURL]) {
       const created = await request.post(`${base}/api/sessions`, { data: { hostname: 'localhost', username: 'fixture', transport: 'exec', exec_command: `"${process.execPath}" "${path.resolve(__dirname, 'federation-fixture.mts')}"` } });
       expect(created.ok()).toBe(true);
@@ -49,6 +50,19 @@ test('two servers share interactive terminal views, messages and failure state w
     }
     await page.setViewportSize({ width: 900, height: 650 });
     await page.goto('/');
+    await page.getByRole('button', { name: 'Manage servers', exact: true }).click();
+    const manager = page.getByRole('dialog', { name: 'Manage servers' });
+    await manager.getByRole('button', { name: 'Add server', exact: true }).click();
+    await manager.getByLabel('ID', { exact: true }).fill('remote');
+    await manager.getByLabel('Name', { exact: true }).fill('Other host');
+    await manager.getByLabel('Server URL', { exact: true }).fill(peerURL);
+    await manager.getByLabel('Allow HTTP for a trusted private network or tunnel').check();
+    await manager.getByLabel('Credential', { exact: true }).fill(fs.readFileSync(path.join(controllerHome, 'federation-token'), 'utf8'));
+    await manager.getByRole('button', { name: 'Save server', exact: true }).click();
+    await manager.getByRole('button', { name: 'Test connection to Other host' }).click();
+    await expect(manager.getByRole('status')).toContainText('connection successful');
+    await page.screenshot({ path: path.resolve(__dirname, '../../webmux/test-results/server-management.png'), fullPage: true });
+    await page.keyboard.press('Escape');
     await page.getByRole('combobox', { name: 'Server view' }).selectOption('all');
     const remote = page.locator('[data-testid^="server-terminal-remote-"]');
     await expect(remote.locator('.xterm-rows')).toContainText('FEDERATION_READY:');
@@ -65,6 +79,22 @@ test('two servers share interactive terminal views, messages and failure state w
     // The navigator stays in the viewport while the terminal grid scrolls.
     await expect(overview).toBeInViewport();
     const providerPid = (await remote.locator('.xterm-rows').innerText()).match(/FEDERATION_READY:(\d+)/)![1];
+    await page.getByRole('button', { name: 'Refresh Other host', exact: true }).click();
+    await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
+    // Reproduce an unavailable service credential, repair it through the UI,
+    // and prove the existing provider survives both failure and reattachment.
+    fs.writeFileSync(directoryFile, `version: 1\nservers:\n  - id: remote\n    name: Other host\n    url: ${peerURL}\n    allow_http: true\n    token_env: WEBMUX_E2E_MISSING_TOKEN\ngrants: []\n`);
+    await page.getByRole('button', { name: 'Refresh Other host', exact: true }).click();
+    await expect(page.getByRole('region', { name: 'Other host sessions', exact: true }).getByRole('alert')).toContainText('Manage servers');
+    await page.getByRole('button', { name: 'Manage connection to Other host' }).click();
+    await manager.getByRole('button', { name: 'Edit Other host' }).click();
+    await manager.getByLabel('Replacement credential').fill(fs.readFileSync(path.join(controllerHome, 'federation-token'), 'utf8'));
+    await manager.getByRole('button', { name: 'Save server', exact: true }).click();
+    await expect(manager.getByRole('status')).toContainText('Saved');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Refresh servers', exact: true }).click();
+    await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
+    expect((await (await request.get(`${peerURL}/api/sessions`)).json()).length).toBe(1);
     await page.getByRole('toolbar', { name: 'Terminal layout' }).getByRole('button', { name: 'Pack', exact: true }).click();
     const matrix = page.getByLabel('Server terminal matrix');
     await expect(matrix.locator('.server-terminal')).toHaveCount(2);
