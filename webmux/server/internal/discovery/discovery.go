@@ -35,16 +35,19 @@ func Advertise(host string, httpPort, httpsPort int, hasTLS bool) (io.Closer, er
 	if host == "" || strings.ContainsAny(host, ":/") {
 		return nil, errors.New("invalid mDNS host name")
 	}
+	instance := host
+	if len(instance) > 57 {
+		instance = instance[:57]
+	}
 	conn4, conn6, err := multicastSockets()
 	if err != nil {
 		return nil, err
 	}
 	opts := []mdns.ServerOption{mdns.WithLocalNames(host + ".local")}
 	if hasTLS {
-		opts = append(opts, mdns.WithService(mdns.ServiceInstance{Instance: host, Service: secureService, Host: host + ".local.", Port: uint16(httpsPort)}))
-	} else {
-		opts = append(opts, mdns.WithService(mdns.ServiceInstance{Instance: host, Service: clearService, Host: host + ".local.", Port: uint16(httpPort)}))
+		opts = append(opts, mdns.WithService(mdns.ServiceInstance{Instance: instance + " HTTPS", Service: secureService, Host: host + ".local.", Port: uint16(httpsPort)}))
 	}
+	opts = append(opts, mdns.WithService(mdns.ServiceInstance{Instance: instance + " HTTP", Service: clearService, Host: host + ".local.", Port: uint16(httpPort)}))
 	server, err := mdns.NewServer(packet4(conn4), packet6(conn6), opts...)
 	if err != nil {
 		closeSockets(conn4, conn6)

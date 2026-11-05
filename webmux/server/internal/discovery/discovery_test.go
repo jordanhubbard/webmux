@@ -93,7 +93,7 @@ func TestMulticastAdvertisementRoundTrip(t *testing.T) {
 		want      string
 	}{
 		{false, "https://webmux-discovery-fixture.local:19443"},
-		{true, "https://webmux-discovery-fixture.local:19443"},
+		{true, "http://webmux-discovery-fixture.local:19080"},
 	} {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		got, err := Resolve(ctx, "webmux-discovery-fixture.local", test.allowHTTP)

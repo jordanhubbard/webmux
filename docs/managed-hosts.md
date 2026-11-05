@@ -26,8 +26,9 @@ mode is enabled.
    explicitly trusted cleartext network, `--allow-insecure-http` permits
    `http://`; HTTP exposes login and client credentials to that network.
    A bare `WEBMUX_HOST` discovers the server's advertised port. On the local
-   network, WebMux advertises its HTTPS listener (or HTTP when HTTPS is not
-   configured) with multicast DNS. For routed hosts, publish a DNS SRV record
+   network, WebMux advertises its active HTTP and HTTPS listeners with multicast
+   DNS. The client prefers HTTPS unless `--allow-insecure-http` is passed. For
+   routed hosts, publish a DNS SRV record
    at `_webmuxs._tcp.WEBMUX_HOST` for HTTPS or `_webmux._tcp.WEBMUX_HOST` for
    HTTP. The SRV target must be `WEBMUX_HOST`; HTTPS still validates that
    hostname against a certificate trusted by the client. Without an
