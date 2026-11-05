@@ -5,10 +5,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.4] - 2026-11-04
+
 ### Added
+- Add, edit, remove and test connected server peers from **Manage servers**,
+  available in the toolbar before any peers are configured (#287).
+- Configure incoming grants and repair missing credentials through the UI.
+  Save credentials privately on the server while retaining service-environment
+  configuration support (#287).
+- Refresh one server or all selected servers, reload session lists and reconnect
+  viewers without restarting their terminal processes (#287).
 - Discover managed-host server ports from local multicast or DNS SRV records
   when `webmux-client` receives a bare hostname, and rediscover after a lost
   connection while preserving its enrolled identity (#285).
+
+### Fixed
+- Explain unavailable and rejected peer credentials with actionable recovery
+  guidance, and prevent older session polls from replacing newer results (#287).
 
 ## [1.4.3] - 2026-11-04
 
