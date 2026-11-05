@@ -113,7 +113,7 @@ test('default Make install delivers only the client executable and does not requ
     assert.equal(installed.status, 0, installed.stdout + installed.stderr);
     assert(fs.statSync(executable).isFile());
     assert(fs.statSync(executable).mode & 0o111, 'client executable is not runnable');
-    assert.match(installed.stdout, /--server WEBMUX_URL --background/);
+    assert.match(installed.stdout, /--server WEBMUX_HOST --background/);
     assert.doesNotMatch(installed.stdout, /https:\/\/WEBMUX_HOST:8443/);
     assert(!fs.existsSync(path.join(directory, 'home')), 'client installation initialized server state');
     const removed = spawnSync('make', ['uninstall', ...args], {

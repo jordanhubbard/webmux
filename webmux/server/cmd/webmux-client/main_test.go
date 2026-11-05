@@ -68,6 +68,16 @@ func TestOrdinaryHostnameDialBypassesMulticastResolver(t *testing.T) {
 }
 
 func TestClientIdentityAndServerURL(t *testing.T) {
+	for _, host := range []string{"puck.local", "webmux.example", "127.0.0.1", "[::1]"} {
+		if !isDiscoverableHost(host) {
+			t.Fatalf("bare host %q bypassed discovery", host)
+		}
+	}
+	for _, explicit := range []string{"https://puck.local:8443", "puck.local:8443", "http://puck.local:8080"} {
+		if isDiscoverableHost(explicit) {
+			t.Fatalf("explicit endpoint %q entered discovery", explicit)
+		}
+	}
 	if server, err := normalizeServer("webmux.example:8443", false); err != nil || server != "https://webmux.example:8443" {
 		t.Fatalf("host:port shortcut: %q %v", server, err)
 	}

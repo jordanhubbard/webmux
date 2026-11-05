@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Discover managed-host server ports from local multicast or DNS SRV records
+  when `webmux-client` receives a bare hostname, and rediscover after a lost
+  connection while preserving its enrolled identity (#285).
+
 ## [1.4.3] - 2026-11-04
 
 ### Fixed
