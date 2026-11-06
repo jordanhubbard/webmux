@@ -83,15 +83,11 @@ test('desktop shortcuts paste bracketed text, copy selection and handle immediat
   await page.keyboard.press('Control+d');
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('copied from terminal 😀');
   await page.evaluate(() => navigator.clipboard.writeText('desktop pasteboard 😀'));
-  // Native ConPTY consumes OSC 52 read queries before the broker can see them.
-  // The Windows native test retains this boundary; keyboard paste remains covered.
-  if (process.platform !== 'win32') {
-   inputs.length = 0;
-   await page.keyboard.press('Control+e');
-   const reply = '\x1b]52;c;' + Buffer.from('desktop pasteboard 😀').toString('base64') + '\x1b\\';
-   await expect(tile.locator('.xterm-rows')).toContainText(`INPUT_HEX:${Buffer.from(reply).toString('hex')};`);
-   expect(inputs.join('')).not.toContain('desktop pasteboard');
-  }
+  inputs.length = 0;
+  await page.keyboard.press('Control+e');
+  const reply = '\x1b]52;c;' + Buffer.from('desktop pasteboard 😀').toString('base64') + '\x1b\\';
+  await expect(tile.locator('.xterm-rows')).toContainText(`INPUT_HEX:${Buffer.from(reply).toString('hex')};`);
+  expect(inputs.join('')).not.toContain('desktop pasteboard');
   // An asynchronous Clipboard API rejection falls back to the native copy command.
   await page.evaluate(() => { Object.defineProperty(navigator.clipboard, 'writeText', { configurable: true, value: () => Promise.reject(new Error('blocked')) }); });
   await page.keyboard.press('Control+d');
@@ -149,7 +145,6 @@ test('image drop and clipboard paste deliver exact bytes into the local tmux hos
 });
 
 test('application pasteboard replies stay with the focused session under Type to All', async ({ page, request }) => {
- test.skip(process.platform === 'win32', 'ConPTY consumes app clipboard-read queries; tracked in #268 and covered by native boundary regression');
  const ids: string[] = [];
  const replies = new Map<string, string[]>();
  page.on('websocket', socket => {

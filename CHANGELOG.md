@@ -20,6 +20,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   owning-server badge and stable color on each tile (#256).
 
 ### Fixed
+- Support Windows application clipboard reads through the bundled ConPTY, with
+  native round-trip and focused-session isolation qualification (#268).
 - Embed the pinned Microsoft ConPTY runtime on Windows so alternate-screen
   switches survive into browser replay, including on Server 2022 (#259).
 - Preserve alternate-screen selection when truncating terminal replay, preventing

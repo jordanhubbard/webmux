@@ -136,6 +136,9 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 	if _, err := windows.ResumeThread(info.Thread); err != nil {
 		return nil, err
 	}
+	if err := p.consoleAPI.releaseConsole(p.console); err != nil {
+		return nil, err
+	}
 	return p, nil
 }
 
