@@ -63,6 +63,7 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
         await expect.poll(() => outputs.get(peer!)).toContain('INPUT:6b;');
         expect(inputs.get(peer!)).toEqual(['k']);
       } else if (scenario === 'selection') {
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
         const modifier = await page.evaluate(() => /Mac|iPhone|iPad/.test(navigator.platform)) ? 'Alt' : 'Shift';
         await page.keyboard.down(modifier);
         await screen.dblclick({ position: { x: 16, y: 7 } });
@@ -74,10 +75,10 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
           return clipboardData.getData('text/plain');
         });
         expect(copied).toBe('MOUSE');
-        await tile.getByRole('button', { name: 'Terminal clipboard' }).click();
-        await expect(page.getByLabel('Clipboard text')).toHaveValue('MOUSE');
-        await page.getByLabel('Clipboard text').fill('paste-fixture');
-        await page.getByRole('button', { name: 'Send text', exact: true }).click();
+        await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('MOUSE');
+        await expect(page.getByRole('dialog')).toHaveCount(0);
+        await page.evaluate(() => navigator.clipboard.writeText('paste-fixture'));
+        await page.keyboard.press(modifier === 'Alt' ? 'Meta+v' : 'Control+v');
         await expect.poll(() => inputs.get(source)!.join('')).toContain('paste-fixture');
         await expect(input).toBeFocused();
         await tile.getByRole('button', { name: 'Log session', exact: true }).click();
