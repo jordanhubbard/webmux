@@ -5,6 +5,33 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Open empty terminal slots directly with local tmux first, saved remote hosts
+  next, and coordination set to None. Show provider launch settings only after
+  selecting Agent Deck or Rig; retain saved and one-time remote connections (#297).
+
+### Fixed
+- Automatically copy completed terminal text selections to the browser host clipboard
+  for native paste into other windows, without a clipboard dialog (#296).
+
+### Changed
+- Offer explicit local-only, selected-server-only and all-connected-server
+  terminal views. Display connected terminals in one shared matrix with an
+  owning-server badge and stable color on each tile (#256).
+
+### Fixed
+- Support Windows application clipboard reads through the bundled ConPTY, with
+  native round-trip and focused-session isolation qualification (#268).
+- Embed the pinned Microsoft ConPTY runtime on Windows so alternate-screen
+  switches survive into browser replay, including on Server 2022 (#259).
+- Preserve alternate-screen selection when truncating terminal replay, preventing
+  stale full-screen status bars from entering scrolling text after reconnect
+  and resize (#255).
+
+### Added
+- Add opt-in native two-host qualification for remote views, targeted messages,
+  owner isolation, viewer lifecycle, grant revocation and peer restart recovery.
+
 ## [1.4.4] - 2026-11-04
 
 ### Added

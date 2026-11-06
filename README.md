@@ -57,6 +57,20 @@ that view survives page reloads without restarting terminal providers.
 
 Closing a tile removes its WebMux record and detaches its tmux client; the shell remains available through `tmux attach -t webmux-<session-id>`. Use `exit` inside the shell, or `tmux kill-session -t webmux-<session-id>`, to terminate it permanently.
 
+### Adding terminals
+
+Click **+** in an empty slot, then press Enter or choose **Localhost · tmux**
+for a persistent terminal on the WebMux server. Saved remote hosts appear directly
+below it; click a saved username/host/port entry to reconnect without retyping.
+Expand **New or one-time remote connection** for a new host: **Connect** leaves
+it unsaved, while **Save & Connect** remembers the tuple for next time.
+
+**Coordinator** starts at **None**. Select **Agent Deck** or **Rig** only when
+you want a managed coding agent. That opens the selected provider’s code-folder
+and project form, with suggested names under **Optional names and session role**.
+Rig uses projects and pods; Agent Deck uses project groups. Ordinary terminals
+need neither. The Coordination tab retains the full management interface.
+
 ### Terminal images, files, and clipboard
 
 Drop images or files onto a terminal, or paste a screenshot using the desktop
@@ -76,11 +90,15 @@ they do not need WebMux installed. Remote files are placed in private
 `/tmp/webmux-upload.*` directories; local staging follows the existing upload
 quota/retention policy. Files may be removed by the host's temporary-file policy.
 
-Use **Copy** and **Paste** in the terminal toolbar, **Cmd+C / Cmd+V** on Mac,
+Selecting terminal text automatically copies it to the browser host’s native
+clipboard when you release the mouse. Paste into any other window with the
+normal desktop shortcut; no WebMux dialog is needed. In mouse-enabled apps,
+hold Option on macOS or Shift on Windows/Linux while selecting.
+
+You can also use **Copy** and **Paste** in the terminal toolbar, **Cmd+C / Cmd+V** on Mac,
 or **Ctrl+Shift+C / Ctrl+Shift+V** elsewhere. On Windows/Linux, Ctrl+V pastes and
 Ctrl+C copies a selection or sends an interrupt when no text is selected.
 Mac Ctrl+V also supports CLI-style image paste through the browser clipboard API.
-The **Clipboard…** dialog remains available for manual text transfer.
 Native browser paste events work without granting background clipboard access;
 toolbar clipboard access requires HTTPS or localhost and browser permission.
 
@@ -95,10 +113,9 @@ and passthrough policies still determine which application requests reach WebMux
 Native host commands such as `pbcopy` and `pbpaste` continue to use that host's OS
 pasteboard; OSC 52 connects compatible terminal applications to the browser's
 pasteboard, including over SSH.
-Windows ConPTY currently consumes application clipboard-read queries before they
-reach WebMux; app-driven reads are unavailable there. Keyboard/toolbar paste and
-automatic application copies still work. The ConPTY read limitation is tracked
-in #268 and has a native Windows regression.
+Windows uses the bundled Microsoft ConPTY runtime to preserve OSC 52 copies,
+queries, and application replies. Clipboard reads use the same focused-session
+policy on all server platforms.
 
 ## CLI authentication and browser companion
 

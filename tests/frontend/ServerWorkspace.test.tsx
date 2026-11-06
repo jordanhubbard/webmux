@@ -20,6 +20,12 @@ describe('connected server workspace', () => {
     expect(screen.getByText('@remote/same-id')).toBeInTheDocument();
     const remote = screen.getByTestId('server-terminal-remote-same-id');
     expect(remote).toHaveAccessibleName('Other host · WebMux / Builder');
+    expect(within(remote).getByText('Other host · remote')).toBeVisible();
+    const local = screen.getByTestId('server-terminal-local-same-id');
+    expect(within(local).getByText('This Mac · this server')).toBeVisible();
+    expect(local.parentElement).toBe(remote.parentElement);
+    expect(remote.parentElement).toHaveAccessibleName('Server terminal matrix');
+    expect(remote.style.getPropertyValue('--server-color')).not.toBe(local.style.getPropertyValue('--server-color'));
     fireEvent.click(within(remote).getByRole('button', { name: 'Hide' }));
     expect(screen.queryByText('@remote/same-id')).not.toBeInTheDocument();
     expect(screen.getByText('@local/same-id')).toBeInTheDocument();

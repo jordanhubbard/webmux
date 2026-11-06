@@ -245,7 +245,6 @@ describe('Workspace', () => {
       expect(screen.getByTestId('add-cell-0-0')).toBeDefined();
     });
     fireEvent.click(screen.getByTestId('add-cell-0-0'));
-    fireEvent.click(screen.getByRole('button', { name: 'Connect to host' }));
     await waitFor(() => {
       expect(screen.getByText('Connect to Host')).toBeDefined();
     });

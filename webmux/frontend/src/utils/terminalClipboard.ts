@@ -44,15 +44,21 @@ export function installTerminalPaste(element: HTMLElement, term: Terminal, onFil
   return () => element.removeEventListener('paste', paste, true);
 }
 
-/** User-initiated copy still works on HTTP when the Async Clipboard API does not. */
+/** Copy in the current user gesture without requesting clipboard-read access.
+ * The native copy command also works on HTTP and avoids Clipboard API prompts.
+ */
 export async function copyDesktopText(text: string): Promise<boolean> {
-  if (navigator.clipboard?.writeText) {
-    try { await navigator.clipboard.writeText(text); return true; } catch { /* Try the browser copy command. */ }
-  }
   const active = document.activeElement as HTMLElement | null;
   const input = document.createElement('textarea');
   input.value = text; input.style.position = 'fixed'; input.style.opacity = '0';
   document.body.append(input); input.select();
-  try { return typeof document.execCommand === 'function' && document.execCommand('copy'); }
-  finally { input.remove(); active?.focus(); }
+  let copied = false;
+  try { copied = typeof document.execCommand === 'function' && document.execCommand('copy'); }
+  catch { /* Some hosts expose the command but reject it. */ }
+  finally { input.remove(); active?.focus({ preventScroll: true }); }
+  if (copied) return true;
+  if (navigator.clipboard?.writeText) {
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* Report denial without a dialog. */ }
+  }
+  return false;
 }

@@ -38,16 +38,18 @@ test.describe('UI loads', () => {
     await expect(page.locator('text=Type to All')).toBeVisible();
   });
 
-  test('add cell offers Rig seats and host connections', async ({ page }) => {
+  test('add cell defaults to local tmux with optional coordination', async ({ page }) => {
     await page.goto('/');
     // Both panes render add-cell-0-0; .first() targets the terminals pane.
     const addCell = page.getByTestId('add-cell-0-0').first();
     await expect(addCell).toBeVisible({ timeout: 10_000 });
 
     await addCell.click();
-    await expect(page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Open coordinated session' })).toBeVisible();
-    await page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Connect to host' }).click();
-    await expect(page.getByRole('dialog', { name: 'Connect to Host' })).toBeVisible();
+    const dialog = page.getByRole('dialog', { name: 'Connect to Host' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Localhost · tmux', exact: true })).toBeFocused();
+    await expect(dialog.getByRole('combobox', { name: 'Coordinator', exact: true })).toHaveValue('none');
+    await expect(dialog.getByText('New or one-time remote connection', { exact: true })).toBeVisible();
   });
 
   test('config endpoint returns valid app config', async ({ request }) => {

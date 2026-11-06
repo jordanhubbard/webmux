@@ -39,12 +39,12 @@ export interface CoordinationStatus {
   messages: CoordinationMessage[]; errors: Record<string, string>; attentionCount?: number;
 }
 
-export function CoordinationDialog({ onClose, position, inline = false }: { onClose: () => void; position?: { row: number; col: number }; inline?: boolean }) {
+export function CoordinationDialog({ onClose, position, inline = false, initialProvider, initialHost = 'localhost', launchOnly = false, onBack }: { onClose: () => void; position?: { row: number; col: number }; inline?: boolean; initialProvider?: 'agent-deck' | 'rig'; initialHost?: string; launchOnly?: boolean; onBack?: () => void }) {
   const [status, setStatus] = useState<CoordinationStatus>({ contract: '', defaultLaunchProvider: 'webmux', defaultView: 'all', enabledProviders: [], providers: [], projects: [], seats: [], messages: [], errors: {} });
-  const [provider, setProvider] = useState('');
-  const [view, setView] = useState('all');
-  const providerInitialized = useRef(false);
-  const viewInitialized = useRef(false);
+  const [provider, setProvider] = useState(initialProvider || '');
+  const [view, setView] = useState(initialProvider || 'all');
+  const providerInitialized = useRef(!!initialProvider);
+  const viewInitialized = useRef(!!initialProvider);
   const refreshing = useRef<Promise<void> | null>(null);
   const [statusError, setStatusError] = useState('');
   const [error, setError] = useState('');
@@ -55,7 +55,7 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
   const [context, setContext] = useState('');
   const [name, setName] = useState<string | null>(null);
   const [purpose, setPurpose] = useState('builder');
-  const [host, setHost] = useState('localhost');
+  const [host, setHost] = useState(initialHost);
   const [workspace, setWorkspace] = useState('');
   const [runtime, setRuntime] = useState('codex');
   const [browser, setBrowser] = useState<WorkspaceListing | null>(null);
@@ -227,9 +227,15 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
 
   const content = <>
     <div className="coordination-dialog">
-      <p>WebMux provides built-in terminals and messaging across connected servers. You can enable Agent Deck and Rig together to manage agent projects and sessions.</p>
+      {!launchOnly && <p>WebMux provides built-in terminals and messaging across connected servers. You can enable Agent Deck and Rig together to manage agent projects and sessions.</p>}
       {statusError && <p role="alert" className="coordination-error">{statusError}</p>}
       {error && <p role="alert" className="coordination-error">{error}</p>}
+      {launchOnly && <>
+        <button type="button" disabled={busy} onClick={onBack}>Back to terminal connection</button>
+        <p>{provider === 'rig' ? 'Rig organizes agents into projects and pods. Choose a code folder; WebMux suggests names and creates the project and pod for you.' : 'Agent Deck groups agent sessions by project. Choose a code folder; WebMux suggests project and session names for you.'}</p>
+        {!status.enabledProviders.includes(provider) && <label><input type="checkbox" disabled={busy} checked={false} onChange={() => toggleIntegration(provider as 'agent-deck' | 'rig', true)} /> Enable {provider === 'rig' ? 'Rig' : 'Agent Deck'}</label>}
+      </>}
+      {!launchOnly && <>
       <fieldset className="coordination-choice"><legend>Optional integrations</legend>
         {(['agent-deck', 'rig'] as const).map(id => <label key={id}><input type="checkbox" disabled={busy} checked={status.enabledProviders.includes(id)} onChange={event => toggleIntegration(id, event.target.checked)} /> Enable {id === 'rig' ? 'Rig' : 'Agent Deck'}</label>)}
       </fieldset>
@@ -249,12 +255,13 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
         {provider && provider !== status.defaultLaunchProvider && <button type="button" disabled={busy} onClick={() => void savePreferences({ default_launch_provider: provider as CoordinationStatus['defaultLaunchProvider'] })}>Make default launch owner</button>}
         <span>Default launch owner: {status.defaultLaunchProvider === 'webmux' ? 'WebMux' : status.defaultLaunchProvider === 'rig' ? 'Rig' : 'Agent Deck'}</span>
       </div>
+      </>}
       {status.providers.filter(value => value.id !== 'webmux' && value.enabled && (view === 'all' || view === value.id)).map(value => <div key={value.id}>
         {value.message && !value.available && <p role="note">{value.label}: {value.message}</p>}
         {status.errors[value.id] && <p role="alert" className="coordination-error">{value.label}: {status.errors[value.id]}</p>}
       </div>)}
       {(view === 'agent-deck' || view === 'rig') && !status.enabledProviders.includes(view) && <p role="note">This integration is disabled. Enable it above to discover its sessions.</p>}
-      {(provider === 'webmux' || view === 'all' || view === 'webmux') && <section aria-label="Built-in WebMux coordination">
+      {!launchOnly && (provider === 'webmux' || view === 'all' || view === 'webmux') && <section aria-label="Built-in WebMux coordination">
         <h3>WebMux coordination</h3>
         <p>Open Terminals to run coding agents and interact with connected WebMux servers. In selected-server and all-server views, Send message submits one line of terminal input. Agent processing is not confirmed.</p>
         <p>No external coordinator is required. Agent Deck adds managed projects and guarded instruction queues. Rig adds team topology and peer messaging. Enable either or both above; existing sessions keep their owner.</p>
@@ -273,7 +280,6 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
           <label>Run on host<input required list="coordination-hosts" value={host} onChange={event => { setHost(event.target.value); setBrowser(null); setWorkspace(''); }} placeholder={provider === 'agent-deck' ? 'Agent Deck remote name' : 'localhost or SSH host'} /><datalist id="coordination-hosts">{hostOptions.map(value => <option value={value} key={value} />)}</datalist></label>
           <div><label htmlFor="coordination-workspace">Code folder</label><span className="coordination-input-action"><input id="coordination-workspace" required value={workspace} onChange={event => setWorkspace(event.target.value)} placeholder="Choose the folder containing your code" /><button type="button" disabled={busy || !host.trim()} onClick={() => void browse(workspace || undefined)}>Browse</button></span></div>
           <div><label htmlFor="coordination-runtime">Coding agent</label><select id="coordination-runtime" value={runtime} onChange={event => setRuntime(event.target.value)}><option value="codex">Codex</option><option value="claude-code">Claude Code</option></select></div>
-          <label>Session purpose<select value={purpose} onChange={event => setPurpose(event.target.value)}><option value="builder">Build a feature</option><option value="reviewer">Review changes</option><option value="investigator">Investigate a problem</option></select></label>
         </div>
         <fieldset className="coordination-choice"><legend>Where should this agent belong?</legend>
           <label><input type="radio" name="coordination-mode" checked={mode === 'new'} onChange={() => setMode('new')} /> Start a new project</label>
@@ -283,15 +289,20 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
           <label>Project<select required value={projectID} onChange={event => setProjectID(event.target.value)}><option value="">Choose a project</option>{projects.filter(value => !value.historical).map(value => <option key={value.id} value={value.id}>{value.name} · {value.host} · {value.state}</option>)}</select></label>
           {provider === 'rig' && <label>Rig pod<select required value={context} onChange={event => setContext(event.target.value)}><option value="">Choose a pod</option>{contexts.map(value => <option key={value} value={value}>{value}</option>)}</select></label>}
         </div>}
+        <details open={!launchOnly || undefined}><summary>Optional names and session role</summary>
         <div className="coordination-fields coordination-names">
+          <label>Session purpose<select value={purpose} onChange={event => setPurpose(event.target.value)}><option value="builder">Build a feature</option><option value="reviewer">Review changes</option><option value="investigator">Investigate a problem</option></select></label>
+
           {mode === 'new' && <label>Project name<input required pattern="[a-z]([a-z0-9]|-){0,47}" value={resolvedProjectName} onChange={event => setProjectName(event.target.value)} /></label>}
           <label>Session name<input required pattern="[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}" value={resolvedName} onChange={event => setName(event.target.value)} /></label>
         </div>
         <p className="coordination-hint">Names are editable labels, not commands. We suggest a project from your folder and a session from the agent and purpose. The purpose names the session; give the agent its instructions after it opens.</p>
+        </details>
         {browser && <section className="coordination-browser" aria-label={`Workspaces on ${host}`}><div><strong>{host}</strong> · <code>{browser.path}</code> {browser.repository && <span className="coordination-repository">Git repository</span>}</div><div className="coordination-browser-actions"><button type="button" onClick={chooseFolder}>Choose this folder</button>{browser.parent && <button type="button" onClick={() => void browse(browser.parent!)}>Parent folder</button>}<button type="button" aria-pressed={showAllFolders} onClick={() => setShowAllFolders(value => !value)}>{showAllFolders ? 'Hide hidden folders' : 'Show all'}</button></div><ul>{browser.entries.filter(entry => showAllFolders || !entry.name.startsWith('.')).map(entry => <li key={entry.path}><button type="button" onClick={() => void browse(entry.path)}>{entry.name}/</button>{entry.repository && <span>Git repository</span>}</li>)}</ul></section>}
         <p><button type="submit" disabled={busy || !selectedProvider?.available || !selectedProvider.enabled || (mode === 'existing' && (!selectedProject || (provider === 'rig' && !context)))}>{busy ? 'Connecting…' : 'Start agent and open terminal'}</button></p>
       </form>
       </>}
+      {!launchOnly && <>
       <section aria-labelledby="coordination-projects-heading">
         <h3 id="coordination-projects-heading">Your projects and sessions</h3>
         {visibleProjects.length === 0 && <p>No sessions in this view. Use Terminals for native sessions or enable an integration above.</p>}
@@ -345,9 +356,10 @@ export function CoordinationDialog({ onClose, position, inline = false }: { onCl
 
       <details><summary>Provider contracts</summary><ul>{status.providers.map(value => <li key={value.id}><strong>{value.label}</strong> · <code>{value.contract}</code> · {value.capabilities.join(', ')}</li>)}</ul></details>
       {status.enabledProviders.includes('rig') && (view === 'all' || view === 'rig') && <details><summary>Rig diagnostics</summary><p><a href="?panel=openrig" target="_blank" rel="noreferrer">Open Rig text dashboard (Rig provider only)</a></p></details>}
+      </>}
     </div>
   </>;
   return inline
     ? <section className="coordination-page" aria-label="Coordination"><header><h1>Coordination</h1><p>Projects and coding agents, when you need them</p></header>{content}</section>
-    : <Dialog title="Coordination" subtitle={position ? `Start an agent at row ${position.row + 1}, column ${position.col + 1}` : 'Projects and coding agents'} onClose={onClose} width={880} dismissible={!busy}>{content}</Dialog>;
+    : <Dialog title={launchOnly ? `New ${provider === 'rig' ? 'Rig' : 'Agent Deck'} session` : 'Coordination'} subtitle={position ? `Start an agent at row ${position.row + 1}, column ${position.col + 1}` : 'Projects and coding agents'} onClose={onClose} width={880} dismissible={!busy}>{content}</Dialog>;
 }

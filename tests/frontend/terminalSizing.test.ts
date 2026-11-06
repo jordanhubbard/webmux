@@ -33,6 +33,7 @@ describe('terminal input filtering', () => {
   });
 
   it('suppresses OSC and CPR replies that break remote interactive prompts', () => {
+    expect(shouldSuppressTerminalInput('')).toBe(true);
     expect(shouldSuppressTerminalInput('\x1b]11;rgb:1e1e/1e1e/1e1e\x1b\\')).toBe(true);
     expect(shouldSuppressTerminalInput('\x1b[24;80R')).toBe(true);
     expect(shouldSuppressTerminalInput('\x1b[0n')).toBe(true);

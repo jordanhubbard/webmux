@@ -1,6 +1,7 @@
 package terminal
 
 import (
+	"bufio"
 	"errors"
 	"io"
 	"os"
@@ -16,8 +17,13 @@ import (
 
 type windowsProcess struct {
 	input, output *os.File
+	inputMu       sync.Mutex
+	outputOnce    sync.Once
+	outputReader  *bufio.Reader
+	outputInitErr error
 	process       *os.Process
 	console       windows.Handle
+	consoleAPI    *conptyAPI
 	consoleMu     sync.Mutex
 	closing       bool
 	job           windows.Handle
@@ -28,6 +34,10 @@ type windowsProcess struct {
 }
 
 func startNative(spec Command) (_ nativeProcess, resultErr error) {
+	consoleAPI, err := loadConPTY()
+	if err != nil {
+		return nil, err
+	}
 	// Resolve before changing directories, as node-pty does for ConPTY.
 	path, err := exec.LookPath(spec.Path)
 	if err != nil {
@@ -65,7 +75,7 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 		return nil, err
 	}
 	defer outputWrite.Close()
-	p := &windowsProcess{input: inputWrite, output: outputRead}
+	p := &windowsProcess{input: inputWrite, output: outputRead, consoleAPI: consoleAPI}
 	defer func() {
 		if resultErr != nil {
 			if p.process != nil {
@@ -86,7 +96,7 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 	if _, err := windows.SetInformationJobObject(p.job, windows.JobObjectExtendedLimitInformation, uintptr(unsafe.Pointer(&limits)), uint32(unsafe.Sizeof(limits))); err != nil {
 		return nil, err
 	}
-	if err := windows.CreatePseudoConsole(windows.Coord{X: int16(spec.Cols), Y: int16(spec.Rows)}, windows.Handle(inputRead.Fd()), windows.Handle(outputWrite.Fd()), 0, &p.console); err != nil {
+	if err := p.consoleAPI.createConsole(windows.Coord{X: int16(spec.Cols), Y: int16(spec.Rows)}, windows.Handle(inputRead.Fd()), windows.Handle(outputWrite.Fd()), &p.console); err != nil {
 		return nil, err
 	}
 	attributes, err := windows.NewProcThreadAttributeList(1)
@@ -131,6 +141,9 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 	if _, err := windows.ResumeThread(info.Thread); err != nil {
 		return nil, err
 	}
+	if err := p.consoleAPI.releaseConsole(p.console); err != nil {
+		return nil, err
+	}
 	return p, nil
 }
 
@@ -168,21 +181,44 @@ func environmentBlock(environment []string) []uint16 {
 	return append(block, 0)
 }
 
-func (p *windowsProcess) Read(data []byte) (int, error)  { return p.output.Read(data) }
-func (p *windowsProcess) Write(data []byte) (int, error) { return p.input.Write(data) }
+func (p *windowsProcess) Read(data []byte) (int, error) {
+	p.outputOnce.Do(func() {
+		p.outputReader = bufio.NewReader(p.output)
+		// The pinned ConPTY emits this host negotiation before application
+		// output. Answer it here, before a browser attaches; otherwise it waits
+		// three seconds for a DA response that the browser deliberately blocks.
+		// Match the complete runtime preamble so later application queries are
+		// never mistaken for this connection's startup handshake.
+		const preamble = "\x1b[1t\x1b[c"
+		if prefix, err := p.outputReader.Peek(len(preamble)); err == nil && string(prefix) == preamble {
+			_, _ = p.outputReader.Discard(len(preamble))
+			// The DA1 response of the xterm.js terminal used by WebMux.
+			_, p.outputInitErr = p.Write([]byte("\x1b[?1;2c"))
+		}
+	})
+	if p.outputInitErr != nil {
+		return 0, p.outputInitErr
+	}
+	return p.outputReader.Read(data)
+}
+func (p *windowsProcess) Write(data []byte) (int, error) {
+	p.inputMu.Lock()
+	defer p.inputMu.Unlock()
+	return p.input.Write(data)
+}
 func (p *windowsProcess) resize(cols, rows int) error {
 	p.consoleMu.Lock()
 	defer p.consoleMu.Unlock()
 	if p.console == 0 || p.closing {
 		return os.ErrClosed
 	}
-	return windows.ResizePseudoConsole(p.console, windows.Coord{X: int16(cols), Y: int16(rows)})
+	return p.consoleAPI.resizeConsole(p.console, windows.Coord{X: int16(cols), Y: int16(rows)})
 }
 func (p *windowsProcess) closeConsole() {
 	p.consoleMu.Lock()
 	defer p.consoleMu.Unlock()
 	if p.console != 0 {
-		windows.ClosePseudoConsole(p.console)
+		p.consoleAPI.closeConsole(p.console)
 		p.console = 0
 	}
 }

@@ -102,10 +102,9 @@ process.stdin.on('data', d => process.stdout.write('input:'+d.toString('hex')));
 	}
 }
 
-// ConPTY interprets application output before WebMux receives it. Its OSC 52
-// handler forwards clipboard writes but consumes read queries. Retain native
-// evidence for this backend limit rather than mocking a query into browser tests.
-func TestWindowsConPTYClipboardQueryBoundary(t *testing.T) {
+// Qualify both directions through the bundled ConPTY, including the reply
+// arriving at a real raw-input application rather than only observing output.
+func TestWindowsConPTYClipboardRoundTrip(t *testing.T) {
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Fatal("Node is required for the ConPTY clipboard regression")
@@ -113,6 +112,7 @@ func TestWindowsConPTYClipboardQueryBoundary(t *testing.T) {
 	fixture := filepath.Join(t.TempDir(), "clipboard-boundary.cjs")
 	if err := os.WriteFile(fixture, []byte(`process.stdin.setRawMode(true);
 process.stdin.resume();
+process.stdin.on('data', data => process.stdout.write('INPUTHEX:'+data.toString('hex')+';'));
 process.stdout.write('CLIPBOARD_BEFORE\x1b]52;c;Y29weQ==\x1b\\CLIPBOARD_BETWEEN\x1b]52;c;?\x07CLIPBOARD_MIDDLE\x1b]52;c;?\x1b\\CLIPBOARD_AFTER');
 `), 0600); err != nil {
 		t.Fatal(err)
@@ -129,11 +129,23 @@ process.stdout.write('CLIPBOARD_BEFORE\x1b]52;c;Y29weQ==\x1b\\CLIPBOARD_BETWEEN\
 	if !strings.Contains(output, "\x1b]52;c;Y29weQ==") {
 		t.Fatalf("ConPTY lost clipboard write; output: %q", output)
 	}
-	if strings.Contains(output, "52;c;?") {
-		t.Fatalf("ConPTY now preserves clipboard queries: enable and qualify the Windows application-read workflows; output: %q", output)
+	if !strings.Contains(output, "\x1b]52;c;?\a") || !strings.Contains(output, "\x1b]52;c;?\x1b\\") {
+		t.Fatalf("ConPTY lost clipboard read queries; output: %q", output)
 	}
 	if !strings.Contains(output, "CLIPBOARD_BETWEEN") || !strings.Contains(output, "CLIPBOARD_MIDDLE") {
 		t.Fatalf("ConPTY lost surrounding output: %q", output)
 	}
-	t.Logf("ConPTY clipboard boundary: write forwarded; BEL/ST queries consumed; output: %q", output)
+	reply := "\x1b]52;c;bmF0aXZlIGNsaXBib2FyZA==\x1b\\"
+	if _, err := p.Write([]byte(reply + "NATIVE_BARRIER")); err != nil {
+		t.Fatal(err)
+	}
+	c.expect(t, fmt.Sprintf("%x", "NATIVE_BARRIER"))
+	var input strings.Builder
+	for _, match := range regexp.MustCompile(`INPUTHEX:([0-9a-f]+);`).FindAllStringSubmatch(c.text(), -1) {
+		input.WriteString(match[1])
+	}
+	if input.String() != fmt.Sprintf("%x", reply+"NATIVE_BARRIER") {
+		t.Fatalf("ConPTY changed application input or leaked startup replies; output: %q", c.text())
+	}
+	t.Log("ConPTY native clipboard: write, BEL/ST queries and application reply all preserved")
 }

@@ -136,8 +136,10 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       let dialog;
       if (index === 0) {
         await page.getByTestId('add-cell-0-0').first().click();
-        await page.getByRole('dialog', { name: 'Add to grid' }).getByRole('button', { name: 'Open coordinated session' }).click();
-        dialog = await useRig(page.getByRole('dialog', { name: 'Coordination', exact: true }));
+        await page.getByRole('combobox', { name: 'Coordinator', exact: true }).selectOption('rig');
+        dialog = page.getByRole('dialog', { name: 'New Rig session', exact: true });
+        await expect(dialog.getByLabel('Code folder', { exact: true })).toBeVisible();
+        await dialog.getByText('Optional names and session role', { exact: true }).click();
         await dialog.getByLabel('Start a new project').check();
       } else {
         await page.getByRole('button', { name: 'Desktops', exact: true }).click();

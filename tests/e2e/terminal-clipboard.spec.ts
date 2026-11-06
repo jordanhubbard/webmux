@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { readFileSync, rmSync } from 'node:fs';
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64');
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 
-test('selected text copies between separate WebMux browser windows', async ({ page, context, request }) => {
+test('selection automatically copies to native paste in another app and WebMux window without permissions or dialogs', async ({ page, context, request }) => {
  const ids: string[] = [];
  const destination = await context.newPage();
  try {
@@ -13,16 +14,37 @@ test('selected text copies between separate WebMux browser windows', async ({ pa
    const created = await request.post('/api/sessions', { data: { transport: 'exec', hostname: 'localhost', username: `clipboard-window-${index}`, exec_command: `"${process.execPath}" "${path.resolve(__dirname, 'clipboard-terminal-fixture.mts')}"` } });
    expect(created.ok()).toBe(true); ids.push((await created.json()).id);
   }
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/'); await destination.goto('/');
   await page.bringToFront();
   const source = page.getByTestId(`tile-cell-${ids[0]}`);
   await expect(source.locator('.xterm-rows')).toContainText('CLIPBOARD_READY');
-  // xterm 6's rendered rows ignore pointer events; select through its interactive surface.
-  await source.locator('.xterm-screen').dblclick({ position: { x: 15, y: 7 } });
+  // Exercise the native copy command used on insecure HTTP hosts too.
+  await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined }));
+  const screen = source.locator('.xterm-screen');
+  const bounds = (await screen.boundingBox())!;
+  const cellWidth = await source.locator('.xterm-rows').evaluate(element => {
+   const style = getComputedStyle(element); const canvas = document.createElement('canvas');
+   const drawing = canvas.getContext('2d')!; drawing.font = `${style.fontSize} ${style.fontFamily}`;
+   return drawing.measureText('W').width;
+  });
+  await page.mouse.move(bounds.x + 1, bounds.y + 7);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + cellWidth * 15 + 1, bounds.y + 7, { steps: 12 });
+  await page.mouse.up();
+  if (process.env.WEBMUX_TEST_NATIVE_CLIPBOARD === '1') {
+   expect(execFileSync('xclip', ['-selection', 'clipboard', '-o'], { encoding: 'utf8', timeout: 5000 })).toBe('CLIPBOARD_READY');
+  }
   const mac = await page.evaluate(() => /Mac|iPhone|iPad/.test(navigator.platform));
-  await page.keyboard.press(mac ? 'Meta+c' : 'Control+c');
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('CLIPBOARD_READY');
+  // No copy shortcut, Clipboard API grants, or WebMux dialog. A separate page
+  // receives the host clipboard through the browser's real native paste event.
+  const otherApp = await context.newPage();
+  await otherApp.goto('data:text/html,<textarea aria-label="Other application"></textarea>');
+  await otherApp.getByRole('textbox').focus();
+  await otherApp.keyboard.press(mac ? 'Meta+v' : 'Control+v');
+  await expect(otherApp.getByRole('textbox')).toHaveValue('CLIPBOARD_READY');
+  await otherApp.close();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Terminal clipboard', exact: true })).toHaveCount(0);
   await destination.bringToFront();
   const target = destination.getByTestId(`tile-cell-${ids[1]}`);
   await expect(target.locator('.xterm-rows')).toContainText('CLIPBOARD_READY');
@@ -61,15 +83,11 @@ test('desktop shortcuts paste bracketed text, copy selection and handle immediat
   await page.keyboard.press('Control+d');
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('copied from terminal 😀');
   await page.evaluate(() => navigator.clipboard.writeText('desktop pasteboard 😀'));
-  // Native ConPTY consumes OSC 52 read queries before the broker can see them.
-  // The Windows native test retains this boundary; keyboard paste remains covered.
-  if (process.platform !== 'win32') {
-   inputs.length = 0;
-   await page.keyboard.press('Control+e');
-   const reply = '\x1b]52;c;' + Buffer.from('desktop pasteboard 😀').toString('base64') + '\x1b\\';
-   await expect(tile.locator('.xterm-rows')).toContainText(`INPUT_HEX:${Buffer.from(reply).toString('hex')};`);
-   expect(inputs.join('')).not.toContain('desktop pasteboard');
-  }
+  inputs.length = 0;
+  await page.keyboard.press('Control+e');
+  const reply = '\x1b]52;c;' + Buffer.from('desktop pasteboard 😀').toString('base64') + '\x1b\\';
+  await expect(tile.locator('.xterm-rows')).toContainText(`INPUT_HEX:${Buffer.from(reply).toString('hex')};`);
+  expect(inputs.join('')).not.toContain('desktop pasteboard');
   // An asynchronous Clipboard API rejection falls back to the native copy command.
   await page.evaluate(() => { Object.defineProperty(navigator.clipboard, 'writeText', { configurable: true, value: () => Promise.reject(new Error('blocked')) }); });
   await page.keyboard.press('Control+d');
@@ -127,7 +145,6 @@ test('image drop and clipboard paste deliver exact bytes into the local tmux hos
 });
 
 test('application pasteboard replies stay with the focused session under Type to All', async ({ page, request }) => {
- test.skip(process.platform === 'win32', 'ConPTY consumes app clipboard-read queries; tracked in #268 and covered by native boundary regression');
  const ids: string[] = [];
  const replies = new Map<string, string[]>();
  page.on('websocket', socket => {

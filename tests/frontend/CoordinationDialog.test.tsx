@@ -328,3 +328,19 @@ it('keeps the owning target unchanged across repeated delivery polls', async () 
     for (const call of mocks.sendStatus.mock.calls) expect(call).toEqual(['agent-deck', 'local:worker', 'pending']);
   } finally { vi.useRealTimers(); }
 });
+
+it.each(['rig', 'agent-deck'] as const)('opens only the selected %s launch form from a terminal slot', async provider => {
+  const back = vi.fn();
+  render(<CoordinationDialog launchOnly initialProvider={provider} initialHost="puck.local" onBack={back} onClose={vi.fn()} position={{ row: 1, col: 2 }} />);
+  expect(await screen.findByLabelText('Code folder', { exact: true })).toBeVisible();
+  await waitFor(() => expect(mocks.status).toHaveBeenCalled());
+  expect(screen.getByLabelText('Run on host', { exact: true })).toHaveValue('puck.local');
+  expect(screen.queryByLabelText('Launch owner')).toBeNull();
+  expect(screen.queryByLabelText('Show sessions')).toBeNull();
+  expect(screen.queryByText('Your projects and sessions')).toBeNull();
+  expect(screen.queryByText('Provider contracts')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Back to terminal connection' }));
+  expect(back).toHaveBeenCalledOnce();
+  expect(mocks.create).not.toHaveBeenCalled();
+  expect(mocks.updateConfig).not.toHaveBeenCalled();
+});
