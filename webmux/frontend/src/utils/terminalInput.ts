@@ -30,6 +30,7 @@ export function isTerminalIdentityResponse(data: string): boolean {
  * OSC/CPR queries and break if those replies arrive on stdin later.
  */
 export function shouldSuppressTerminalInput(data: string): boolean {
+  if (!data) return true;
   if (!data.includes(ESC)) return false;
   // ANY-motion mode can outlive the application consuming it. Never send
   // pointer hover to stdin; retain clicks, button-held motion, and wheel input.
