@@ -36,7 +36,13 @@ test('project labels survive cwd changes and reloads, and browser windows follow
     await expect(page).toHaveTitle(/Other project \/ builder/);
     await page.reload();
     await expect(page).toHaveTitle(/Other project \/ builder/);
-    await expect(tile.getByText('WebMux / reviewer', { exact: true })).toBeVisible();
+    await tile.getByRole('button', { name: 'Edit project', exact: true }).click();
+    await expect(editor.getByLabel('Project name')).toHaveValue('WebMux');
+    await editor.getByLabel('Project name').fill('Renamed project');
+    await editor.getByRole('button', { name: 'Save project label' }).click();
+    await expect(tile.getByText('Renamed project / reviewer', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(tile.getByText('Renamed project / reviewer', { exact: true })).toBeVisible();
   } finally {
     for (const id of ids) await request.delete(`/api/sessions/${id}`);
   }

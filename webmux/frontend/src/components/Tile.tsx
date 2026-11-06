@@ -90,7 +90,7 @@ export function Tile({
   const [savingProject, setSavingProject] = useState(false);
   const identity = sessionIdentity({ ...session, project_label: projectLabel });
   useEffect(() => { setProjectLabel(session.project_label); }, [session.project_label]);
-  const editProject = () => { setProjectDraft(projectLabel || ''); setProjectError(''); setShowProject(true); };
+  const editProject = () => { setProjectDraft(projectLabel || ''); setProjectError(''); setShowTools(false); setShowProject(true); };
   const { focusedSessionId, broadcastMode, broadcastExcluded, toggleBroadcastExclude } = useInputBroadcast();
   const isExcluded = broadcastExcluded.has(session.id);
   const termHandleRef = useRef<TerminalHandle>(null);
@@ -226,7 +226,7 @@ export function Tile({
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
           {session.transport === 'ssh' && managedClient && <span style={{ ...styles.transport, color: managedClient.online ? '#50fa7b' : '#aaa' }} title={`Managed host ${managedClient.online ? 'connected' : 'offline'}`}>Host {managedClient.online ? '●' : '○'}</span>}
           {session.rig && <span aria-label={session.rig.provider === 'agent-deck' ? 'Agent Deck-managed worker' : 'Rig-managed worker'} title={`${identity.source} · ${identity.project} · ${identity.name} · ${identity.host} · ${session.rig.target}`} style={{ ...styles.transport, color: '#c5b8ff' }}>{identity.source}</span>}
-          {!identity.project && <button style={styles.browserBtn} onClick={editProject}>Set project</button>}
+          {!session.rig && <button style={{ ...styles.browserBtn, flexShrink: 0 }} onClick={editProject}>{identity.project ? 'Edit project' : 'Set project'}</button>}
         </div>
         <div style={styles.chromeRight}>
           <button style={styles.browserBtn} aria-label="Session tools" title="Session tools" onClick={() => setShowTools(true)}>Tools</button>
@@ -307,7 +307,7 @@ export function Tile({
             setProjectLabel(updated.project_label); onSessionUpdated?.(updated); setShowProject(false);
           }).catch(err => setProjectError(String(err))).finally(() => setSavingProject(false));
         }}>
-          <p>This terminal has no coordinator project record. Save a label so you can recognize it across reconnects and restarts. Changing directory does not change this label.</p>
+          <p>Name this window’s project so you can recognize it across reconnects and restarts. Changing directory does not change this label. Leave the name blank to clear it.</p>
           <label>Project name<input data-dialog-autofocus value={projectDraft} onChange={event => setProjectDraft(event.target.value)} maxLength={128} style={{ width: '100%', boxSizing: 'border-box', margin: '8px 0 16px' }} /></label>
           {projectError && <p role="alert">{projectError}</p>}
           <button type="submit" disabled={savingProject}>{savingProject ? 'Saving…' : 'Save project label'}</button>

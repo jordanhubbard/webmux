@@ -111,7 +111,7 @@ function AuthenticatedApp({
 }: AuthenticatedAppProps) {
   const { activePane, setActivePane } = useWorkspacePane();
   const [servers, setServers] = useState<ConnectedServer[]>([]);
-  const [showServers, setShowServers] = useState(false);
+  const [showServers, setShowServers] = useState<'add' | 'manage' | null>(null);
   const [serverDirectoryRevision, setServerDirectoryRevision] = useState(0);
   const [serverDirectoryError, setServerDirectoryError] = useState('');
   const [serverView, setServerView] = useState(() => sessionStorage.getItem('webmux-server-view') || 'local');
@@ -191,7 +191,9 @@ function AuthenticatedApp({
         agentDefinitions={agentDefinitions}
         combinedAgentPane={combinedAgentPane}
         hostSwitcher={hostSwitcher}
-        onManageServers={() => setShowServers(true)}
+        onManageServers={() => setShowServers('manage')}
+        onAddServer={() => setShowServers('add')}
+        onRefreshServers={refreshServerDirectory}
         remoteServersActive={serverView !== 'local'}
         serverSelector={servers.length > 1 && <select aria-label="Server view" value={serverView} onChange={event => { setServerView(event.target.value); sessionStorage.setItem('webmux-server-view', event.target.value); setActivePane('terminals'); }} style={{ maxWidth: 180, background: '#1a1a3a', color: '#eee', border: '1px solid #333366', borderRadius: 4, padding: 4 }}>
           <option value="local">This server · {appName}</option>
@@ -200,12 +202,12 @@ function AuthenticatedApp({
         </select>}
       />
 
-      {showServers && <ServersDialog onClose={() => setShowServers(false)} onChanged={refreshServerDirectory} currentUser={currentUser} />}
+      {showServers && <ServersDialog initiallyAddServer={showServers === 'add'} onClose={() => setShowServers(null)} onChanged={refreshServerDirectory} currentUser={currentUser} />}
       {serverDirectoryError && <p role="alert" style={{ margin: 0, padding: '4px 8px', color: '#ffb86c' }}>{serverDirectoryError}</p>}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         {canManageSettings && activePane === 'coordination' && <CoordinationDialog inline onClose={() => setActivePane('terminals')} />}
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
-          {serverView !== 'local' ? <InputBroadcastProvider><ServerWorkspace onManageServers={() => setShowServers(true)} onRefreshDirectory={refreshServerDirectory} directoryRevision={serverDirectoryRevision} servers={servers} selected={serverView} fontSize={fontSize} fontFamily={fontFamily} themes={themes} globalTheme={globalTheme} /></InputBroadcastProvider> : <Workspace
+          {serverView !== 'local' ? <InputBroadcastProvider><ServerWorkspace onManageServers={() => setShowServers('manage')} onRefreshDirectory={refreshServerDirectory} directoryRevision={serverDirectoryRevision} servers={servers} selected={serverView} fontSize={fontSize} fontFamily={fontFamily} themes={themes} globalTheme={globalTheme} /></InputBroadcastProvider> : <Workspace
             appName={appName}
             canManageRig={canManageSettings}
             canManageHosts={auth.authStatus?.mode === 'local'}

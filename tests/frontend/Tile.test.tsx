@@ -367,3 +367,34 @@ it('saves an explicit project label for an unmanaged session and shows it as ide
     expect(screen.queryByRole('button', { name: 'Set project' })).toBeNull();
   } finally { saved.mockRestore(); }
 });
+
+it('edits, clears and retries an existing window project directly from its header', async () => {
+  const saved = vi.spyOn(api, 'setSessionProject');
+  const updated = vi.fn();
+  try {
+    saved.mockRejectedValueOnce(new Error('Save unavailable')).mockResolvedValueOnce(makeSession({ project_label: 'Renamed' })).mockResolvedValueOnce(makeSession({ project_label: '' }));
+    render(<Tile session={makeSession({ project_label: 'Original' })} fontSize={14} onClose={vi.fn()} onReconnect={vi.fn()} onRename={vi.fn()} onSessionUpdated={updated} />, { wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit project' }));
+    expect(screen.getByLabelText('Project name')).toHaveValue('Original');
+    fireEvent.change(screen.getByLabelText('Project name'), { target: { value: ' Renamed ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save project label' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Save unavailable');
+    expect(screen.getByLabelText('Project name')).toHaveValue(' Renamed ');
+    fireEvent.click(screen.getByRole('button', { name: 'Save project label' }));
+    expect(await screen.findByText('Renamed / user@example.com')).toBeVisible();
+    expect(saved).toHaveBeenLastCalledWith('s1', 'Renamed');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit project' }));
+    fireEvent.change(screen.getByLabelText('Project name'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save project label' }));
+    expect(await screen.findByRole('button', { name: 'Set project' })).toBeVisible();
+    expect(saved).toHaveBeenLastCalledWith('s1', '');
+    expect(updated).toHaveBeenLastCalledWith(expect.objectContaining({ project_label: '' }));
+  } finally { saved.mockRestore(); }
+});
+
+it('does not offer a local project override for coordinator-managed windows', () => {
+  render(<Tile session={makeSession({ rig: { provider: 'rig', project: 'Owned', name: 'worker', host: 'host', target: 'worker' } as Session['rig'] })} fontSize={14} onClose={vi.fn()} onReconnect={vi.fn()} onRename={vi.fn()} />, { wrapper });
+  expect(screen.queryByRole('button', { name: /Edit project|Set project/ })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Session tools' }));
+  expect(screen.queryByRole('button', { name: 'Edit project label' })).toBeNull();
+});
