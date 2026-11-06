@@ -9,6 +9,9 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
     const ids: string[] = [];
     const outputs = new Map<string, string>();
     const inputs = new Map<string, string[]>();
+    // ConPTY enables real focus reports. Keep them in the raw capture for
+    // source/peer isolation assertions, but separate them from keyboard input.
+    const keyboardInputs = (id: string) => inputs.get(id)!.filter(data => data !== '\x1b[I' && data !== '\x1b[O');
     page.on('websocket', socket => {
       const id = ids.find(id => socket.url().includes(id));
       if (!id) return;
@@ -43,7 +46,7 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
       await tile.locator('.xterm-helper-textarea').focus();
       await page.keyboard.type('h');
       await expect.poll(() => outputs.get(source)).toContain('INPUT:68;');
-      expect(inputs.get(source)).toEqual(['h']);
+      expect(keyboardInputs(source), `Raw input hex: ${inputs.get(source)!.map(data => Buffer.from(data).toString('hex')).join(',')}`).toEqual(['h']);
       // Explicit button input remains available to applications.
       await screen.click({ position: { x: 20, y: 12 } });
       await expect.poll(() => outputs.get(source)).toContain('INPUT:1b5b3c');
@@ -61,7 +64,7 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
         await tile.locator('.xterm-helper-textarea').focus();
         await page.keyboard.type('k');
         await expect.poll(() => outputs.get(peer!)).toContain('INPUT:6b;');
-        expect(inputs.get(peer!)).toEqual(['k']);
+        expect(keyboardInputs(peer!)).toEqual(['k']);
       } else if (scenario === 'selection') {
         await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
         const modifier = await page.evaluate(() => /Mac|iPhone|iPad/.test(navigator.platform)) ? 'Alt' : 'Shift';
@@ -94,7 +97,7 @@ for (const scenario of ['broadcast', 'restart', 'selection'] as const) {
         await tile.locator('.xterm-helper-textarea').focus();
         await page.keyboard.type('k');
         await expect.poll(() => outputs.get(source)).toContain('INPUT:6b;');
-        expect(inputs.get(source)).toEqual(['k']);
+        expect(keyboardInputs(source)).toEqual(['k']);
       }
     } finally {
       // Windows permits five seconds for console close handlers. Allow the

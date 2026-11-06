@@ -331,3 +331,15 @@ it('puts local tmux and saved remote tuples before new connections, with coordin
   fireEvent.change(screen.getByLabelText('Coordinator'), { target: { value: 'agent-deck' } });
   expect(coordinate).toHaveBeenCalledWith('agent-deck', 'localhost');
 });
+
+it('opens legacy saved hosts at the missing username and can save the completed tuple', async () => {
+  mockApi.getHosts.mockResolvedValue([{ id: 'legacy', hostname: 'host1.example.com', port: 22, tags: [], mosh_allowed: false }]);
+  render(<ConnectionDialog onConnect={vi.fn()} onClose={vi.fn()} localFirst />);
+  fireEvent.click(await screen.findByTitle('Connect to host1.example.com:22'));
+  const username = screen.getByPlaceholderText('user');
+  expect(username.closest('details')).toHaveAttribute('open');
+  expect(username).toHaveFocus();
+  expect(screen.getByPlaceholderText('hostname or IP')).toHaveValue('host1.example.com');
+  fireEvent.change(username, { target: { value: 'jkh' } });
+  expect(screen.getByRole('button', { name: 'Save & Connect' })).toBeVisible();
+});

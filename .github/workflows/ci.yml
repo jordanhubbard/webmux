@@ -6,11 +6,6 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      windows_replay_only:
-        description: Qualify Windows ConPTY replay with retained VT diagnostics
-        type: boolean
-        default: false
 
 # Keep the independent Argon2 compatibility fixture compatible with macOS runners.
 env:
@@ -18,7 +13,6 @@ env:
 
 jobs:
   virtual-usb:
-    if: ${{ !inputs.windows_replay_only }}
     name: Virtual USB kernel integration
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -56,7 +50,6 @@ jobs:
           # has no network adapter, and its fixture sshd allows public keys only.
           sudo -n env PATH="$RUNNER_TEMP/virtme/bin:/usr/sbin:/usr/bin:/sbin:/bin" PYTHONUNBUFFERED=1 timeout --kill-after=15s 180s "$RUNNER_TEMP/virtme/bin/vng" --run "$USB_TEST_KERNEL" --user root --empty-passwords --memory 1G --cpus 2 --verbose --exec "$fixture_command"
   security:
-    if: ${{ !inputs.windows_replay_only }}
     name: Dependency audit
     runs-on: ubuntu-22.04
     steps:
@@ -72,7 +65,6 @@ jobs:
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
         working-directory: webmux/server
   go-server:
-    if: ${{ !inputs.windows_replay_only }}
     timeout-minutes: 30
     name: Go Server (${{ matrix.os }})
     runs-on: ${{ matrix.os == 'macos-arm64' && github.event_name != 'pull_request' && vars.WEBMUX_MACOS_RUNNER || matrix.runner }}
@@ -244,7 +236,6 @@ jobs:
             webmux/test-results
 
   test:
-    if: ${{ !inputs.windows_replay_only }}
     name: Frontend and Tooling Tests
     runs-on: ubuntu-22.04
 
@@ -283,7 +274,6 @@ jobs:
         working-directory: webmux
 
   build:
-    if: ${{ !inputs.windows_replay_only }}
     name: Build
     runs-on: ubuntu-22.04
 
@@ -312,7 +302,6 @@ jobs:
         working-directory: webmux
 
   windows:
-    if: ${{ !inputs.windows_replay_only }}
     name: Windows Tests and Build
     runs-on: windows-2022
 
@@ -377,34 +366,3 @@ jobs:
           path: |
             tests/e2e/.visual-baseline
             webmux/test-results
-
-  windows-replay:
-    if: ${{ inputs.windows_replay_only }}
-    name: Windows ConPTY replay qualification
-    runs-on: windows-2022
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        with:
-          go-version-file: webmux/server/go.mod
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
-        with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: webmux/package-lock.json
-      - run: npm ci
-        working-directory: webmux
-      - run: npm run build
-        working-directory: webmux
-      - run: npx playwright install chromium
-        working-directory: webmux
-      - run: go test -timeout 3m -v ./internal/terminal -run 'TestWindowsConPTYClipboard|TestTerminalInputResizeAndExit|TestTerminalCloseCancelsBlockedIO|TestWindowsCloseRawShellChild'
-        working-directory: webmux/server
-      - run: npm run test:e2e -- terminal-replay.spec.ts terminal-clipboard.spec.ts terminal-mouse.spec.ts --trace retain-on-failure
-        working-directory: webmux
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        if: always()
-        with:
-          name: windows-replay-diagnostics
-          path: webmux/test-results

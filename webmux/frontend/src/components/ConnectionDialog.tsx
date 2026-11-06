@@ -1,5 +1,5 @@
 import { Dialog } from './Dialog';
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
 import { api } from '../utils/api';
 import type { HostEntry, KeyEntry, CreateSessionRequest } from '../types';
 
@@ -13,6 +13,8 @@ interface ConnectionDialogProps {
 }
 
 export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCol, localFirst = false, onChooseCoordinator }: ConnectionDialogProps) {
+  const remoteDetailsRef = useRef<HTMLDetailsElement>(null);
+  const usernameRef = useRef<HTMLInputElement>(null);
   const [hosts, setHosts] = useState<HostEntry[]>([]);
   const [hostsError, setHostsError] = useState('');
   const [keys, setKeys] = useState<Pick<KeyEntry, 'id' | 'type' | 'encrypted' | 'description'>[]>([]);
@@ -92,7 +94,11 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
   const handleQuickConnect = async (host: HostEntry) => {
     const user = host.username || username.trim();
     if (!user) {
-      setError('Enter a username first, then click a saved host to connect');
+      setHostname(host.hostname); setPort(host.port); setTransport(host.transport === 'mosh' ? 'mosh' : 'ssh');
+      setSelectedKeyId(host.key_id || ''); setAuthMode(host.key_id ? 'key' : 'agent'); setPassword('');
+      if (remoteDetailsRef.current) remoteDetailsRef.current.open = true;
+      usernameRef.current?.focus();
+      setError('Enter a username first, then Connect or Save & Connect.');
       return;
     }
     setSubmitting(true);
@@ -137,7 +143,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
     }
   };
 
-  const alreadySaved = hosts.some(h => h.hostname === hostname.trim() && h.port === port && (!h.username || h.username === username.trim()));
+  const alreadySaved = hosts.some(h => h.hostname === hostname.trim() && h.port === port && (h.username || '') === username.trim());
 
   return (
     <Dialog title="Connect to Host" onClose={onClose} dismissible={!submitting}>
@@ -192,7 +198,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
           </div>
         )}
 
-        <details open={!localFirst || undefined}>
+        <details ref={remoteDetailsRef} open={!localFirst || undefined}>
           <summary style={styles.remoteSummary}>New or one-time remote connection</summary>
           <div style={{ ...styles.form, padding: '12px 0 0' }}>
         {/* Hostname + Port */}
@@ -226,6 +232,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
           <input
             style={styles.input}
             type="text"
+            ref={usernameRef}
             placeholder="user"
             value={username}
             onChange={e => setUsername(e.target.value)}

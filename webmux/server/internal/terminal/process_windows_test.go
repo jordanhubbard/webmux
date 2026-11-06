@@ -140,8 +140,12 @@ process.stdout.write('CLIPBOARD_BEFORE\x1b]52;c;Y29weQ==\x1b\\CLIPBOARD_BETWEEN\
 		t.Fatal(err)
 	}
 	c.expect(t, fmt.Sprintf("%x", "NATIVE_BARRIER"))
-	if !strings.Contains(c.text(), fmt.Sprintf("%x", reply)) {
-		t.Fatalf("ConPTY consumed clipboard reply; output: %q", c.text())
+	var input strings.Builder
+	for _, match := range regexp.MustCompile(`INPUTHEX:([0-9a-f]+);`).FindAllStringSubmatch(c.text(), -1) {
+		input.WriteString(match[1])
+	}
+	if input.String() != fmt.Sprintf("%x", reply+"NATIVE_BARRIER") {
+		t.Fatalf("ConPTY changed application input or leaked startup replies; output: %q", c.text())
 	}
 	t.Log("ConPTY native clipboard: write, BEL/ST queries and application reply all preserved")
 }
