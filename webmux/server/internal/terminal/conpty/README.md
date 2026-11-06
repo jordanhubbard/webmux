@@ -6,7 +6,7 @@ SHA-256: 175640566a3b59c4b132070ee96c2c77e5ab7edd2e92732a5eb3610bbf63d90e
 License: MIT; see LICENSE.
 
 The Windows executable embeds the immutable package, verifies its digest, and
-extracts only its own architecture's conpty.dll and matching OpenConsole.exe to
+extracts its architecture's conpty.dll and compatible native OpenConsole hosts to
 the service user's cache. Existing files must match the embedded bytes before
 loading. Loading uses the absolute DLL path and restricts dependency search to
 its directory and Windows system libraries. Linux/macOS builds omit the package.

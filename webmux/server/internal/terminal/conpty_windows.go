@@ -53,10 +53,14 @@ func extractConPTY() (*conptyAPI, error) {
 	if err != nil {
 		return nil, err
 	}
-	for source, destination := range map[string]string{
-		"runtimes/win-" + arch + "/native/conpty.dll":        "conpty.dll",
-		"build/native/runtimes/" + arch + "/OpenConsole.exe": filepath.Join(arch, "OpenConsole.exe"),
-	} {
+	files := map[string]string{"runtimes/win-" + arch + "/native/conpty.dll": "conpty.dll"}
+	// Match the package's MSBuild deployment rules: x64 programs can run
+	// under ARM64 emulation, but ConPTY still starts a native console host.
+	hosts := map[string][]string{"x86": {"x86", "x64", "arm64"}, "x64": {"x64", "arm64"}, "arm64": {"arm64"}}[arch]
+	for _, host := range hosts {
+		files["build/native/runtimes/"+host+"/OpenConsole.exe"] = filepath.Join(host, "OpenConsole.exe")
+	}
+	for source, destination := range files {
 		entry, err := archive.Open(source)
 		if err != nil {
 			return nil, err

@@ -33,7 +33,10 @@ test('rejoining a truncated full-screen replay keeps status bars out of scrollba
     await expect(rows).toContainText('TMUX STATUS');
     await expect(rows).not.toContainText('OLD HISTORY');
   } finally {
-    if (process.platform === 'win32') console.log('WINDOWS_REPLAY_VT', JSON.stringify({ bytes: captures.join('').length, chunks: captures.map(data => data.slice(-12000)) }));
+    if (process.platform === 'win32') {
+      console.log('WINDOWS_REPLAY_VT', JSON.stringify(captures.map(data => ({ bytes: data.length, head: data.slice(0, 128), tail: data.slice(-512), alternate: data.includes('\x1b[?1049h') }))));
+      await test.info().attach('terminal-replay-vt', { body: Buffer.from(JSON.stringify(captures)), contentType: 'application/json' });
+    }
     expect((await request.delete(`/api/sessions/${id}`, { timeout: 10_000 })).ok()).toBe(true);
   }
 });

@@ -399,7 +399,9 @@ jobs:
         working-directory: webmux
       - run: npx playwright install chromium
         working-directory: webmux
-      - run: npm run test:e2e -- terminal-replay.spec.ts --trace retain-on-failure
+      - run: go test -v ./internal/terminal
+        working-directory: webmux/server
+      - run: npm run test:e2e -- terminal-replay.spec.ts terminal-clipboard.spec.ts terminal-mouse.spec.ts --trace retain-on-failure
         working-directory: webmux
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()

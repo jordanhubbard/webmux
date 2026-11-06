@@ -162,3 +162,12 @@ New-NetFirewallRule -DisplayName 'WebMux 8080' -Direction Inbound -Protocol TCP 
 - The repository-level `make` commands are macOS/Linux conveniences. Use npm and PowerShell service commands on Windows.
 
 Return to the [main README](README.md).
+
+### Terminal runtime
+
+WebMux embeds Microsoft's MIT-licensed ConPTY 1.24 redistributable so terminal
+screen behavior is consistent across supported Windows versions, including
+Server 2022. On first terminal launch it verifies and extracts the pinned package
+to the service user's cache, then loads its architecture-specific runtime.
+No separate terminal runtime installation is needed. Package provenance and the
+license are recorded in `webmux/server/internal/terminal/conpty/`.
