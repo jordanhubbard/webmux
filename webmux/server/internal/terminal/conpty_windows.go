@@ -25,7 +25,7 @@ var conptyPackage []byte
 
 const conptyPackageSHA256 = "175640566a3b59c4b132070ee96c2c77e5ab7edd2e92732a5eb3610bbf63d90e"
 
-type conptyAPI struct{ create, resize, close *windows.Proc }
+type conptyAPI struct{ create, resize, close, release *windows.Proc }
 
 var conptyOnce sync.Once
 var conptyRuntime *conptyAPI
@@ -107,7 +107,7 @@ func extractConPTY() (*conptyAPI, error) {
 	}
 	dll := &windows.DLL{Name: name, Handle: handle}
 	api := &conptyAPI{}
-	for name, destination := range map[string]**windows.Proc{"ConptyCreatePseudoConsole": &api.create, "ConptyResizePseudoConsole": &api.resize, "ConptyClosePseudoConsole": &api.close} {
+	for name, destination := range map[string]**windows.Proc{"ConptyCreatePseudoConsole": &api.create, "ConptyResizePseudoConsole": &api.resize, "ConptyClosePseudoConsole": &api.close, "ConptyReleasePseudoConsole": &api.release} {
 		*destination, err = dll.FindProc(name)
 		if err != nil {
 			dll.Release()
@@ -132,3 +132,13 @@ func (api *conptyAPI) resizeConsole(console windows.Handle, size windows.Coord) 
 	return nil
 }
 func (api *conptyAPI) closeConsole(console windows.Handle) { api.close.Call(uintptr(console)) }
+
+// After the child has attached, release the host's keep-alive reference. The
+// HPCON remains valid for resize/close, while child exit can finish output.
+func (api *conptyAPI) releaseConsole(console windows.Handle) error {
+	result, _, _ := api.release.Call(uintptr(console))
+	if uint32(result) != 0 {
+		return fmt.Errorf("ConptyReleasePseudoConsole HRESULT %#x", uint32(result))
+	}
+	return nil
+}
