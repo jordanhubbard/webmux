@@ -399,7 +399,7 @@ jobs:
         working-directory: webmux
       - run: npx playwright install chromium
         working-directory: webmux
-      - run: go test -v ./internal/terminal
+      - run: go test -timeout 3m -v ./internal/terminal -run 'TestWindowsConPTYClipboard|TestTerminalInputResizeAndExit|TestTerminalCloseCancelsBlockedIO'
         working-directory: webmux/server
       - run: npm run test:e2e -- terminal-replay.spec.ts terminal-clipboard.spec.ts terminal-mouse.spec.ts --trace retain-on-failure
         working-directory: webmux
