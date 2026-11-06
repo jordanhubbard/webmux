@@ -23,6 +23,9 @@ import (
 //go:embed conpty/runtime.nupkg
 var conptyPackage []byte
 
+//go:embed conpty/LICENSE
+var conptyLicense []byte
+
 const conptyPackageSHA256 = "175640566a3b59c4b132070ee96c2c77e5ab7edd2e92732a5eb3610bbf63d90e"
 
 type conptyAPI struct{ create, resize, close, release *windows.Proc }
@@ -70,35 +73,12 @@ func extractConPTY() (*conptyAPI, error) {
 		if err != nil {
 			return nil, err
 		}
-		target := filepath.Join(directory, destination)
-		existing, readErr := os.ReadFile(target)
-		if readErr == nil && bytes.Equal(existing, data) {
-			continue
-		}
-		if err := os.MkdirAll(filepath.Dir(target), 0700); err != nil {
+		if err := installConPTYFile(filepath.Join(directory, destination), data); err != nil {
 			return nil, err
 		}
-		file, err := os.CreateTemp(filepath.Dir(target), ".conpty-*")
-		if err != nil {
-			return nil, err
-		}
-		temporary := file.Name()
-		_, writeErr := file.Write(data)
-		closeErr := file.Close()
-		if writeErr == nil {
-			writeErr = closeErr
-		}
-		if writeErr == nil {
-			writeErr = os.Rename(temporary, target)
-		}
-		os.Remove(temporary)
-		if writeErr != nil {
-			// Another WebMux process may have installed and loaded this exact runtime.
-			installed, err := os.ReadFile(target)
-			if err != nil || !bytes.Equal(installed, data) {
-				return nil, writeErr
-			}
-		}
+	}
+	if err := installConPTYFile(filepath.Join(directory, "LICENSE"), conptyLicense); err != nil {
+		return nil, err
 	}
 	name := filepath.Join(directory, "conpty.dll")
 	handle, err := windows.LoadLibraryEx(name, 0, windows.LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|windows.LOAD_LIBRARY_SEARCH_SYSTEM32)
@@ -139,6 +119,38 @@ func (api *conptyAPI) releaseConsole(console windows.Handle) error {
 	result, _, _ := api.release.Call(uintptr(console))
 	if uint32(result) != 0 {
 		return fmt.Errorf("ConptyReleasePseudoConsole HRESULT %#x", uint32(result))
+	}
+	return nil
+}
+
+func installConPTYFile(target string, data []byte) error {
+	existing, readErr := os.ReadFile(target)
+	if readErr == nil && bytes.Equal(existing, data) {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(target), 0700); err != nil {
+		return err
+	}
+	file, err := os.CreateTemp(filepath.Dir(target), ".conpty-*")
+	if err != nil {
+		return err
+	}
+	temporary := file.Name()
+	_, writeErr := file.Write(data)
+	closeErr := file.Close()
+	if writeErr == nil {
+		writeErr = closeErr
+	}
+	if writeErr == nil {
+		writeErr = os.Rename(temporary, target)
+	}
+	os.Remove(temporary)
+	if writeErr != nil {
+		// Another WebMux process may have installed and loaded this exact runtime.
+		installed, err := os.ReadFile(target)
+		if err != nil || !bytes.Equal(installed, data) {
+			return writeErr
+		}
 	}
 	return nil
 }

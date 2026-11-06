@@ -7,7 +7,7 @@ License: MIT; see LICENSE.
 
 The Windows executable embeds the immutable package, verifies its digest, and
 extracts its architecture's conpty.dll and compatible native OpenConsole hosts to
-the service user's cache. Existing files must match the embedded bytes before
+the service user's cache, including the embedded MIT license. Existing files must match the embedded bytes before
 loading. Loading uses the absolute DLL path and restricts dependency search to
 its directory and Windows system libraries. Linux/macOS builds omit the package.
 
