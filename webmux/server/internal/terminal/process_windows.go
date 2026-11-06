@@ -18,6 +18,7 @@ type windowsProcess struct {
 	input, output *os.File
 	process       *os.Process
 	console       windows.Handle
+	consoleAPI    *conptyAPI
 	consoleMu     sync.Mutex
 	closing       bool
 	job           windows.Handle
@@ -28,6 +29,10 @@ type windowsProcess struct {
 }
 
 func startNative(spec Command) (_ nativeProcess, resultErr error) {
+	consoleAPI, err := loadConPTY()
+	if err != nil {
+		return nil, err
+	}
 	// Resolve before changing directories, as node-pty does for ConPTY.
 	path, err := exec.LookPath(spec.Path)
 	if err != nil {
@@ -65,7 +70,7 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 		return nil, err
 	}
 	defer outputWrite.Close()
-	p := &windowsProcess{input: inputWrite, output: outputRead}
+	p := &windowsProcess{input: inputWrite, output: outputRead, consoleAPI: consoleAPI}
 	defer func() {
 		if resultErr != nil {
 			if p.process != nil {
@@ -86,7 +91,7 @@ func startNative(spec Command) (_ nativeProcess, resultErr error) {
 	if _, err := windows.SetInformationJobObject(p.job, windows.JobObjectExtendedLimitInformation, uintptr(unsafe.Pointer(&limits)), uint32(unsafe.Sizeof(limits))); err != nil {
 		return nil, err
 	}
-	if err := windows.CreatePseudoConsole(windows.Coord{X: int16(spec.Cols), Y: int16(spec.Rows)}, windows.Handle(inputRead.Fd()), windows.Handle(outputWrite.Fd()), 0, &p.console); err != nil {
+	if err := p.consoleAPI.createConsole(windows.Coord{X: int16(spec.Cols), Y: int16(spec.Rows)}, windows.Handle(inputRead.Fd()), windows.Handle(outputWrite.Fd()), &p.console); err != nil {
 		return nil, err
 	}
 	attributes, err := windows.NewProcThreadAttributeList(1)
@@ -176,13 +181,13 @@ func (p *windowsProcess) resize(cols, rows int) error {
 	if p.console == 0 || p.closing {
 		return os.ErrClosed
 	}
-	return windows.ResizePseudoConsole(p.console, windows.Coord{X: int16(cols), Y: int16(rows)})
+	return p.consoleAPI.resizeConsole(p.console, windows.Coord{X: int16(cols), Y: int16(rows)})
 }
 func (p *windowsProcess) closeConsole() {
 	p.consoleMu.Lock()
 	defer p.consoleMu.Unlock()
 	if p.console != 0 {
-		windows.ClosePseudoConsole(p.console)
+		p.consoleAPI.closeConsole(p.console)
 		p.console = 0
 	}
 }
