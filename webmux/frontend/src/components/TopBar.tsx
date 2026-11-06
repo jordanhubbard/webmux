@@ -30,6 +30,8 @@ function getHostSwitchContext(hostSwitcher?: HostSwitcherConfig) {
 interface TopBarProps {
   serverSelector?: ReactNode;
   onManageServers?: () => void;
+  onAddServer?: () => void;
+  onRefreshServers?: () => Promise<void>;
   remoteServersActive?: boolean;
   auth: AuthState;
   appName: string;
@@ -80,10 +82,13 @@ export function TopBar({
   hostSwitcher,
   serverSelector,
   onManageServers,
+  onAddServer,
+  onRefreshServers,
   remoteServersActive = false,
 }: TopBarProps) {
   const { broadcastMode, setBroadcastMode } = useInputBroadcast();
   const { activePane, setActivePane } = useWorkspacePane();
+  const [refreshingServers, setRefreshingServers] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showUSB, setShowUSB] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
@@ -325,8 +330,17 @@ export function TopBar({
       <div className="webmux-topbar" style={styles.bar}>
         <div style={styles.left}>
           <span style={styles.logo}>{'\u25a6'} {appName.toLowerCase() === 'webmux' ? 'WebMux' : appName}</span>
-          {serverSelector}
-          {canManageSettings && onManageServers && <button style={styles.iconBtn} onClick={onManageServers}>Manage servers</button>}
+          {canManageSettings && onManageServers && <div className="cluster-controls" role="group" aria-label="WebMux cluster">
+            <span>Cluster</span>
+            {serverSelector}
+            {onAddServer && <button style={styles.iconBtn} onClick={onAddServer}>Add server</button>}
+            <button style={styles.iconBtn} onClick={onManageServers} title="Edit or remove server connections and incoming access grants">Manage servers</button>
+            {onRefreshServers && <button style={styles.iconBtn} disabled={refreshingServers} onClick={() => {
+              setRefreshingServers(true);
+              // The application displays directory errors beside the workspace.
+              void onRefreshServers().catch(() => {}).finally(() => setRefreshingServers(false));
+            }}>{refreshingServers ? 'Refreshing servers…' : 'Refresh servers'}</button>}
+          </div>}
         <button
           onClick={() => setActivePane('terminals')}
           style={{

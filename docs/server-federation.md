@@ -12,7 +12,9 @@ coordinators remain optional for task assignment and provider lifecycle work.
 
 ## Manage connections in the UI
 
-Open **Manage servers** on the controller and choose **Add server**. Enter a
+Use the **Cluster** controls in the main toolbar: **Add server** opens a new connection form, **Manage servers** lists connections for editing or removal, and **Refresh servers** reloads the directory and selected viewers. These controls are available before the first peer is configured.
+
+Open **Add server** on the controller. Enter a
 stable ID, display name, and the other WebMux server's origin URL. Use HTTPS;
 allow HTTP only on an already trusted private network or tunnel. Enter a shared
 credential of at least 32 printable ASCII characters without spaces, or use

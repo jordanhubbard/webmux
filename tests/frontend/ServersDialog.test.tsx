@@ -52,3 +52,29 @@ describe('server management', () => {
     await waitFor(() => expect(mocks.grant).toHaveBeenCalledWith('controller', { owner: 'owner', credential: 'c'.repeat(40), token_env: '' }));
   });
 });
+
+it('opens the add editor directly from the cluster shortcut', async () => {
+  render(<ServersDialog initiallyAddServer onClose={vi.fn()} onChanged={vi.fn()} currentUser="owner" />);
+  expect(screen.getByLabelText('ID')).toHaveValue('');
+  expect(screen.getByRole('button', { name: 'Save server' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(await screen.findByRole('button', { name: 'Edit Builder' })).toBeVisible();
+});
+
+it('removes a peer only after confirmation and refreshes the directory', async () => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+  const changed = vi.fn().mockResolvedValue(undefined);
+  try {
+    render(<ServersDialog onClose={vi.fn()} onChanged={changed} currentUser="owner" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Builder' }));
+    expect(mocks.remove).not.toHaveBeenCalled();
+    confirm.mockReturnValue(true);
+    mocks.directory.mockResolvedValue({ servers: [], grants: [] });
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Builder' }));
+    await waitFor(() => expect(changed).toHaveBeenCalledOnce());
+    expect(mocks.remove).toHaveBeenCalledWith('remote');
+    expect(await screen.findByText(/No server peers configured/)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh directory' }));
+    await waitFor(() => expect(changed).toHaveBeenCalledTimes(2));
+  } finally { confirm.mockRestore(); }
+});
