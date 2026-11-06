@@ -1,6 +1,7 @@
 package terminal
 
 import (
+	"bufio"
 	"errors"
 	"io"
 	"os"
@@ -16,6 +17,10 @@ import (
 
 type windowsProcess struct {
 	input, output *os.File
+	inputMu       sync.Mutex
+	outputOnce    sync.Once
+	outputReader  *bufio.Reader
+	outputInitErr error
 	process       *os.Process
 	console       windows.Handle
 	consoleAPI    *conptyAPI
@@ -176,8 +181,31 @@ func environmentBlock(environment []string) []uint16 {
 	return append(block, 0)
 }
 
-func (p *windowsProcess) Read(data []byte) (int, error)  { return p.output.Read(data) }
-func (p *windowsProcess) Write(data []byte) (int, error) { return p.input.Write(data) }
+func (p *windowsProcess) Read(data []byte) (int, error) {
+	p.outputOnce.Do(func() {
+		p.outputReader = bufio.NewReader(p.output)
+		// The pinned ConPTY emits this host negotiation before application
+		// output. Answer it here, before a browser attaches; otherwise it waits
+		// three seconds for a DA response that the browser deliberately blocks.
+		// Match the complete runtime preamble so later application queries are
+		// never mistaken for this connection's startup handshake.
+		const preamble = "\x1b[1t\x1b[c"
+		if prefix, err := p.outputReader.Peek(len(preamble)); err == nil && string(prefix) == preamble {
+			_, _ = p.outputReader.Discard(len(preamble))
+			// The DA1 response of the xterm.js terminal used by WebMux.
+			_, p.outputInitErr = p.Write([]byte("\x1b[?1;2c"))
+		}
+	})
+	if p.outputInitErr != nil {
+		return 0, p.outputInitErr
+	}
+	return p.outputReader.Read(data)
+}
+func (p *windowsProcess) Write(data []byte) (int, error) {
+	p.inputMu.Lock()
+	defer p.inputMu.Unlock()
+	return p.input.Write(data)
+}
 func (p *windowsProcess) resize(cols, rows int) error {
 	p.consoleMu.Lock()
 	defer p.consoleMu.Unlock()
