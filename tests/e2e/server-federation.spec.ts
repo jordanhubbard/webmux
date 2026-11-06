@@ -120,7 +120,8 @@ test('two servers share interactive terminal views, messages and failure state w
     await expect(remote.locator('.xterm-rows')).toContainText('FEDERATION_REPLY:native-input-proof');
     await expect(local.locator('.xterm-rows')).not.toContainText('native-input-proof');
     const initialSize = await request.get('/api/servers/remote/sessions').then(r => r.json()).then(s => `${s[0].cols}x${s[0].rows}`);
-    await page.setViewportSize({ width: 900, height: 720 });
+    // Change width as well as height: terminal tiles have a fixed height.
+    await page.setViewportSize({ width: 1100, height: 720 });
     await expect.poll(async () => {
       const sessions = await (await request.get('/api/servers/remote/sessions')).json();
       return `${sessions[0].cols}x${sessions[0].rows}`;
