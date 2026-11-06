@@ -141,11 +141,24 @@ func (s *Store) WriteDesktopSessions(kind string, value any) error {
 // one critical section, preventing concurrent bootstrap or account updates
 // from overwriting each other. Returning an error aborts the write.
 func UpdateConfig[T any](s *Store, name string, change func(*T) error) error {
+	return updateConfig(s, name, (*T)(nil), change)
+}
+
+// UpdateConfigOrCreate initializes an absent optional configuration while keeping
+// its read/modify/write operation atomic with other updates in this process.
+func UpdateConfigOrCreate[T any](s *Store, name string, initial T, change func(*T) error) error {
+	return updateConfig(s, name, &initial, change)
+}
+
+func updateConfig[T any](s *Store, name string, initial *T, change func(*T) error) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var value T
 	if err := readYAML(s.ConfigPath(name), &value); err != nil {
-		return err
+		if !errors.Is(err, os.ErrNotExist) || initial == nil {
+			return err
+		}
+		value = *initial
 	}
 	if err := change(&value); err != nil {
 		return err

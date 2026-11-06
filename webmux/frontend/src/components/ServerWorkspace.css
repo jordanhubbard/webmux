@@ -1,3 +1,4 @@
+.server-workspace-container { position: relative; height: 100%; min-height: 0; }
 .server-workspace { height: 100%; overflow: auto; padding: 8px; box-sizing: border-box; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 620px), 1fr)); gap: 8px; align-content: start; }
 .server-heading { display: flex; align-items: center; gap: 10px; padding: 6px 0; flex-wrap: wrap; }
 .server-heading span { color: #aaa; font-size: 12px; }
@@ -12,3 +13,7 @@
 .server-terminal input { display: block; box-sizing: border-box; width: 100%; padding: 8px; margin: 8px 0; background: #0d0d1a; color: #eee; border: 1px solid #333366; }
 
 .server-workspace > p[role=alert] { grid-column: 1 / -1; }
+
+.server-layout-controls { grid-column: 1 / -1; position: sticky; top: 0; z-index: 10; background: #12122a; padding: 6px 8px; }
+.server-workspace-packed { display: block; }
+.server-workspace-packed .server-layout-controls { margin-bottom: 8px; }

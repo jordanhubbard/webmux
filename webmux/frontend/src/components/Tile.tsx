@@ -6,6 +6,8 @@ import { TerminalActions } from './TerminalActions';
 import { Dialog } from './Dialog';
 import { ManagedHostDialog } from './ManagedHostDialog';
 import { ReconnectOverlay } from './ReconnectOverlay';
+import { TerminalScrollStrip, SCROLL_STRIP_WIDTH } from './TerminalScrollStrip';
+import { useTouchLikeViewport } from '../utils/viewport';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { clipboardFiles } from '../utils/terminalClipboard';
 import { sessionIdentity } from '../utils/sessionIdentity';
@@ -88,11 +90,12 @@ export function Tile({
   const [savingProject, setSavingProject] = useState(false);
   const identity = sessionIdentity({ ...session, project_label: projectLabel });
   useEffect(() => { setProjectLabel(session.project_label); }, [session.project_label]);
-  const editProject = () => { setProjectDraft(projectLabel || ''); setProjectError(''); setShowProject(true); };
+  const editProject = () => { setProjectDraft(projectLabel || ''); setProjectError(''); setShowTools(false); setShowProject(true); };
   const { focusedSessionId, broadcastMode, broadcastExcluded, toggleBroadcastExclude } = useInputBroadcast();
   const isExcluded = broadcastExcluded.has(session.id);
   const termHandleRef = useRef<TerminalHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const showScrollStrip = useTouchLikeViewport();
 
   const isFocused = focusedSessionId === session.id;
 
@@ -223,7 +226,7 @@ export function Tile({
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
           {session.transport === 'ssh' && managedClient && <span style={{ ...styles.transport, color: managedClient.online ? '#50fa7b' : '#aaa' }} title={`Managed host ${managedClient.online ? 'connected' : 'offline'}`}>Host {managedClient.online ? '●' : '○'}</span>}
           {session.rig && <span aria-label={session.rig.provider === 'agent-deck' ? 'Agent Deck-managed worker' : 'Rig-managed worker'} title={`${identity.source} · ${identity.project} · ${identity.name} · ${identity.host} · ${session.rig.target}`} style={{ ...styles.transport, color: '#c5b8ff' }}>{identity.source}</span>}
-          {!identity.project && <button style={styles.browserBtn} onClick={editProject}>Set project</button>}
+          {!session.rig && <button style={{ ...styles.browserBtn, flexShrink: 0 }} onClick={editProject}>{identity.project ? 'Edit project' : 'Set project'}</button>}
         </div>
         <div style={styles.chromeRight}>
           <button style={styles.browserBtn} aria-label="Session tools" title="Session tools" onClick={() => setShowTools(true)}>Tools</button>
@@ -304,33 +307,38 @@ export function Tile({
             setProjectLabel(updated.project_label); onSessionUpdated?.(updated); setShowProject(false);
           }).catch(err => setProjectError(String(err))).finally(() => setSavingProject(false));
         }}>
-          <p>This terminal has no coordinator project record. Save a label so you can recognize it across reconnects and restarts. Changing directory does not change this label.</p>
+          <p>Name this window’s project so you can recognize it across reconnects and restarts. Changing directory does not change this label. Leave the name blank to clear it.</p>
           <label>Project name<input data-dialog-autofocus value={projectDraft} onChange={event => setProjectDraft(event.target.value)} maxLength={128} style={{ width: '100%', boxSizing: 'border-box', margin: '8px 0 16px' }} /></label>
           {projectError && <p role="alert">{projectError}</p>}
           <button type="submit" disabled={savingProject}>{savingProject ? 'Saving…' : 'Save project label'}</button>
         </form>
       </Dialog>}
-      {showBrowser && <BrowserCompanion session={session} navigation={browserNavigation} onHide={() => { setBrowserNavigation(null); setShowBrowser(false); termHandleRef.current?.focus(); }} />}
+      {showBrowser && <BrowserCompanion session={session} navigation={browserNavigation} onAuthentication={url => { setShowBrowser(false); setHandoff({ url, key: Date.now() }); }} onHide={() => { setBrowserNavigation(null); setShowBrowser(false); termHandleRef.current?.focus(); }} />}
       {showManagedHost && <ManagedHostDialog session={session} client={managedClient} onClose={() => setShowManagedHost(false)} onChanged={() => onManagedClientChanged?.()} onSessionUpdated={updated => onSessionUpdated?.(updated)} />}
       <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
-        {(state === 'disconnected' || state === 'error') && (
-          <ReconnectOverlay onReconnect={() => onReconnect(session.id)} />
-        )}
-        <Terminal
-          ref={termHandleRef}
-          onOpenLink={(url, requestId) => { setHandoff(previous => requestId && previous?.requestId === requestId ? previous : { url, requestId, key: Date.now() }); }}
-          sessionId={session.id}
-          fontSize={fontSize}
-          fontFamily={fontFamily}
-          state={state}
-          autoScroll={autoScroll}
-          onStateChange={handleStateChange}
-          onViewerUpdate={handleViewerUpdate}
-          onFocusGained={handleFocusGained}
-          theme={themes.find(t => t.name === (themeOverride ?? globalTheme))?.theme}
-          onBell={() => onBell?.(session.id)}
-          onTranscriptChange={setTranscriptEnabled}
-        />
+        {/* Inset the terminal region so the scroll strip never overlaps text */}
+        <div style={{ ...styles.termRegion, right: showScrollStrip ? SCROLL_STRIP_WIDTH : 0 }}>
+          {(state === 'disconnected' || state === 'error') && (
+            <ReconnectOverlay onReconnect={() => onReconnect(session.id)} />
+          )}
+          <Terminal
+            ref={termHandleRef}
+            onOpenLink={(url, requestId) => { setHandoff(previous => requestId && previous?.requestId === requestId ? previous : { url, requestId, key: Date.now() }); }}
+            sessionId={session.id}
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            state={state}
+            autoScroll={autoScroll}
+            onStateChange={handleStateChange}
+            onViewerUpdate={handleViewerUpdate}
+            onFocusGained={handleFocusGained}
+            theme={themes.find(t => t.name === (themeOverride ?? globalTheme))?.theme}
+            onBell={() => onBell?.(session.id)}
+            onTranscriptChange={setTranscriptEnabled}
+          />
+        </div>
+        {/* Touch-only scroll strip */}
+        {showScrollStrip && <TerminalScrollStrip onScroll={d => termHandleRef.current?.scrollPages(d)} />}
       </div>
     </div>
   );
@@ -443,5 +451,12 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'relative',
     flex: 1,
     overflow: 'hidden',
+  },
+  // Positioned region holding the terminal, inset when the scroll strip shows
+  termRegion: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
   },
 };

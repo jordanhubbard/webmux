@@ -56,10 +56,20 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export interface BrowserAction {
   action: string; url?: string; text?: string; key?: string; code?: string;
-  keyCode?: number; modifiers?: number; x?: number; y?: number; deltaY?: number; target?: string;
+  keyCode?: number; modifiers?: number; x?: number; y?: number; deltaY?: number; deltaX?: number; target?: string;
+  width?: number; height?: number; button?: string; buttons?: number; clickCount?: number;
+  backward?: boolean; ignoreCache?: boolean; accept?: boolean; files?: { name: string; data: string }[];
 }
 export interface BrowserFrame {
+  protocol?: number;
   image?: string; url: string; target: string; tabs: { id: string; title: string }[]; error?: string;
+  width?: number; height?: number; canBack?: boolean; canForward?: boolean;
+  dialog?: { type: string; message: string; prompt: string };
+  select?: { options: { value: string; label: string; selected: boolean; disabled: boolean }[] };
+  fileChooser?: { multiple: boolean };
+  downloads?: { id: string; name: string; state: string; bytes: number }[];
+  file?: { name: string; data: string };
+  clipboard?: string; found?: boolean;
 }
 
 export interface PermissionResult {
@@ -76,7 +86,17 @@ export interface MacSetup {
 
 export interface ConnectedServer { id: string; name: string }
 
+export interface ManagedServer extends ConnectedServer { url: string; allow_http: boolean; token_env: string; credential_ready: boolean }
+export interface ServerGrant { id: string; owner: string; token_env: string; credential_ready: boolean }
+export interface ServerDirectory { servers: ManagedServer[]; grants: ServerGrant[] }
+export interface ServerCredentialInput { token_env: string; credential: string }
+
 export const api = {
+  getServerDirectory: () => request<ServerDirectory>('/server-directory'),
+  saveServer: (id: string, input: ServerCredentialInput & { name: string; url: string; allow_http: boolean }) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
+  deleteServer: (id: string) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  saveServerGrant: (id: string, input: ServerCredentialInput & { owner: string }) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
+  deleteServerGrant: (id: string) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   getServers: () => request<{ version: number; servers: ConnectedServer[] }>('/servers'),
   getServerSessions: (server: string) => request<Session[]>(`/servers/${encodeURIComponent(server)}/sessions`),
   createServerSession: (server: string) => request<Session>(`/servers/${encodeURIComponent(server)}/sessions`, { method: 'POST', body: JSON.stringify({ transport: 'local' }) }),

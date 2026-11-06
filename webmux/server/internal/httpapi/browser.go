@@ -20,7 +20,7 @@ func (s *Server) browserAction(w http.ResponseWriter, r *http.Request, owner str
 		return
 	}
 	var req browser.Request
-	if !decodeJSON(w, r, &req) {
+	if !decodeJSONLimit(w, r, &req, 16<<20) {
 		return
 	}
 	if req.Action == "start" {

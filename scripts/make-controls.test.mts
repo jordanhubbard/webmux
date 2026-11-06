@@ -35,6 +35,29 @@ test('failed server builds preserve the installed service, including parallel in
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });
 
+test('parallel install-all finishes client installation before server replacement', { skip: process.platform === 'win32' }, () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-install-order-'));
+  const makefile = path.join(directory, 'fixture.mk');
+  const marker = path.join(directory, 'client-installed');
+  try {
+    fs.writeFileSync(makefile, `include ${path.resolve(import.meta.dirname, '../Makefile')}
+install-client:
+\t@sleep 0.2
+\t@touch "${marker}"
+install-server:
+\t@test -f "${marker}"
+`);
+    const result = spawnSync('make', ['--no-print-directory', '-j4', '-f', makefile,
+      '-o', 'build-client', '-o', 'build-server', '-o', 'install-optional-agent-deck',
+      'install-all', `MAKE=make -f ${makefile} -o build-server -o install-optional-agent-deck`], {
+      cwd: path.resolve(import.meta.dirname, '..'), encoding: 'utf8', timeout: 10000,
+    });
+    assert.ifError(result.error);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert(fs.existsSync(marker));
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('launchd startup verification rejects exited jobs and accepts a stable running PID', { skip: process.platform === 'win32' }, () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-launchd-startup-'));
   try {
@@ -113,7 +136,7 @@ test('default Make install delivers only the client executable and does not requ
     assert.equal(installed.status, 0, installed.stdout + installed.stderr);
     assert(fs.statSync(executable).isFile());
     assert(fs.statSync(executable).mode & 0o111, 'client executable is not runnable');
-    assert.match(installed.stdout, /--server WEBMUX_URL --background/);
+    assert.match(installed.stdout, /--server WEBMUX_HOST --background/);
     assert.doesNotMatch(installed.stdout, /https:\/\/WEBMUX_HOST:8443/);
     assert(!fs.existsSync(path.join(directory, 'home')), 'client installation initialized server state');
     const removed = spawnSync('make', ['uninstall', ...args], {

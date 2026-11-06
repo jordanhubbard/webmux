@@ -69,3 +69,103 @@ func TestClipboardWritesAreLiveOnlyAndNeverLogged(t *testing.T) {
 		t.Fatal("clipboard was replayed")
 	}
 }
+
+func TestClipboardReadsBelongToOneViewerAndProvider(t *testing.T) {
+	b, _, launched := fixture(t)
+	s := create(t, b, "owner")
+	p := <-launched
+	v, err := b.Join("owner", s.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := b.Join("owner", s.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	query := func() string {
+		t.Helper()
+		p.output(t, "\x1b]52;c;?\a")
+		for {
+			select {
+			case <-v.Ready():
+				message := v.Take()
+				if message["type"] == "clipboard_read" {
+					return message["request_id"].(string)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("clipboard query not delivered")
+				return ""
+			}
+		}
+	}
+	noInput := func() {
+		t.Helper()
+		select {
+		case data := <-p.input:
+			t.Fatalf("unexpected protocol input: %q", data)
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+	id := query()
+	if err := b.ClipboardReply("other-owner", s.ID, v.ID, id, "wrong owner"); err == nil {
+		t.Fatal("accepted another owner")
+	}
+	if err := b.ClipboardReply("owner", s.ID, other.ID, id, "wrong viewer"); err == nil {
+		t.Fatal("accepted another viewer")
+	}
+	if err := b.ClipboardReply("owner", s.ID, v.ID, "invented", "unsolicited"); err == nil {
+		t.Fatal("accepted unsolicited data")
+	}
+	if err := b.ClipboardReply("owner", s.ID, v.ID, id, strings.Repeat("x", 128*1024+1)); err == nil {
+		t.Fatal("accepted oversized data")
+	}
+	noInput()
+	text := "desktop 😀\ntext"
+	if err := b.ClipboardReply("owner", s.ID, v.ID, id, text); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case data := <-p.input:
+		if want := "\x1b]52;c;" + base64.StdEncoding.EncodeToString([]byte(text)) + "\x1b\\"; data != want {
+			t.Fatalf("got %q, want %q", data, want)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("clipboard response never reached process")
+	}
+	if err := b.ClipboardReply("owner", s.ID, v.ID, id, "replayed"); err == nil {
+		t.Fatal("accepted duplicate")
+	}
+	noInput()
+	id = query()
+	if err := b.Focus("owner", s.ID, other.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.Focus("owner", s.ID, v.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.ClipboardReply("owner", s.ID, v.ID, id, "old focus"); err == nil {
+		t.Fatal("accepted stale focus")
+	}
+	noInput()
+	id = query()
+	b.mu.Lock()
+	b.entries[s.ID].run.clipboardRead.expires = time.Now().Add(-time.Second)
+	b.mu.Unlock()
+	if err := b.ClipboardReply("owner", s.ID, v.ID, id, "expired"); err == nil {
+		t.Fatal("accepted expired response")
+	}
+	noInput()
+	id = query()
+	if _, err := b.Reconnect("owner", s.ID, ""); err != nil {
+		t.Fatal(err)
+	}
+	next := <-launched
+	if err := b.ClipboardReply("owner", s.ID, v.ID, id, "old process"); err == nil {
+		t.Fatal("accepted previous process response")
+	}
+	select {
+	case data := <-next.input:
+		t.Fatalf("clipboard reached replacement process: %q", data)
+	case <-time.After(20 * time.Millisecond):
+	}
+}

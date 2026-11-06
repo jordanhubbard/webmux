@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TopBar } from '@frontend/components/TopBar';
 import { WorkspacePaneProvider } from '@frontend/contexts/WorkspacePaneContext';
 import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
@@ -57,6 +57,28 @@ describe('TopBar', () => {
     onGlobalAutoScrollChange: vi.fn(),
     globalLock: false,
     onGlobalLockChange: vi.fn(),
+  });
+
+  it('exposes cluster management without opening More or configuring a peer', async () => {
+    const manage = vi.fn(), add = vi.fn();
+    let finish!: () => void;
+    const refresh = vi.fn(() => new Promise<void>(resolve => { finish = resolve; }));
+    render(<TopBar {...defaultTopBarProps()} onManageServers={manage} onAddServer={add} onRefreshServers={refresh} />, { wrapper });
+    expect(screen.getByRole('group', { name: 'WebMux cluster' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Add server' }));
+    expect(add).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Manage servers' }));
+    expect(manage).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh servers' }));
+    expect(screen.getByRole('button', { name: 'Refreshing servers…' })).toBeDisabled();
+    finish();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh servers' })).toBeEnabled());
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('hides cluster management from accounts without settings access', () => {
+    render(<TopBar {...defaultTopBarProps()} canManageSettings={false} onManageServers={vi.fn()} onAddServer={vi.fn()} onRefreshServers={vi.fn()} />, { wrapper });
+    expect(screen.queryByRole('group', { name: 'WebMux cluster' })).toBeNull();
   });
 
   it('opens USB setup and restores focus when closed', () => {

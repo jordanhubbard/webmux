@@ -5,6 +5,74 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.4] - 2026-11-04
+
+### Added
+- Add, edit, remove and test connected server peers from **Manage servers**,
+  available in the toolbar before any peers are configured (#287).
+- Configure incoming grants and repair missing credentials through the UI.
+  Save credentials privately on the server while retaining service-environment
+  configuration support (#287).
+- Refresh one server or all selected servers, reload session lists and reconnect
+  viewers without restarting their terminal processes (#287).
+- Discover managed-host server ports from local multicast or DNS SRV records
+  when `webmux-client` receives a bare hostname, and rediscover after a lost
+  connection while preserving its enrolled identity (#285).
+
+### Fixed
+- Explain unavailable and rejected peer credentials with actionable recovery
+  guidance, and prevent older session polls from replacing newer results (#287).
+
+## [1.4.3] - 2026-11-04
+
+### Fixed
+- Restore the lower-right thumbnail explorer when viewing another server's
+  terminals or all connected servers. Keep click/drag navigation aligned with
+  grouped and packed layouts, hidden viewers, and viewport changes (#279, #280).
+
+### Added
+- Expose bounded server compatibility and build observations through the
+  server-info endpoint, with qualification and integration gaps documented (#277).
+
+### Changed
+- Document native bridge integration capabilities and remaining qualification
+  gaps (#275).
+
+## [1.4.2] - 2026-11-02
+
+### Added
+- Expand the built-in browser with responsive/expanded views, tabs and popups,
+  page search, selection copy, file uploads/downloads, JavaScript dialogs and
+  native select controls. Improve pointer, keyboard and Unicode input (#271).
+- Reuse sign-in handoff for browser links that return to the terminal host;
+  open public sites directly in the desktop browser (#271).
+- Let compatible applications in focused macOS/Linux terminals read the browser
+  pasteboard through OSC 52. Keep replies scoped to the requesting session and
+  provider, including with Type to All enabled (#267).
+- Add touch-only page-scroll controls for terminal tiles (#237).
+
+### Fixed
+- Copy terminal application text immediately without the intrusive confirmation
+  badge; retain keyboard and toolbar copy/paste and the native copy fallback (#267).
+- Keep Pack above the local scrolling grid and provide Pack in connected-server
+  views. Retain the compact matrix across reloads without restarting providers (#267).
+- Reject expired, duplicate, wrong-viewer and previous-provider clipboard replies,
+  including reads completed after focus leaves and returns (#267).
+
+### Changed
+- Update Vite and test matchers, keep React/React DOM and TypeScript ESLint
+  parser/plugin versions aligned, and refresh Go networking/YAML dependencies
+  (#217, #219, #260, #261, #265).
+
+### Known limitations
+- Windows ConPTY consumes application clipboard-read queries before WebMux can
+  see them. Automatic application copies and keyboard/toolbar paste remain
+  supported; app-driven reads are tracked in #268 and covered by a native
+  Windows boundary regression.
+- Browser companion sessions require an updated WebMux on the terminal host.
+  Headless-browser restrictions, hardware authentication, native OS dialogs, and
+  external-provider qualification remain tracked in #110.
+
 ## [1.4.1] - 2026-10-31
 
 ### Changed

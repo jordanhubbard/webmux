@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState, useCallback, RefObject } from 'react';
-import type { Session } from '../types';
+import type { ConnectionState, Session } from '../types';
+
+export interface WorkspaceOverviewTile {
+  id: string;
+  title: string;
+  state: ConnectionState;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 interface WorkspaceMinimapProps {
   scrollRef: RefObject<HTMLDivElement | null>;
@@ -17,12 +27,29 @@ const MINIMAP_H_MAX = 140;
 const PAD = 12;
 
 export function WorkspaceMinimap({ scrollRef, sessions, numCols, numRows, tileWidth, tileHeight, gap }: WorkspaceMinimapProps) {
+  const tiles = sessions.map(s => ({
+    id: s.id,
+    title: s.rig ? `${s.rig.project}/${s.rig.name} on ${s.rig.host}` : s.title,
+    state: s.state,
+    x: s.col * tileWidth + (s.col + 1) * gap,
+    y: s.row * tileHeight + (s.row + 1) * gap,
+    width: tileWidth,
+    height: tileHeight,
+  }));
+  return <WorkspaceOverview scrollRef={scrollRef} tiles={tiles}
+    gridW={numCols * tileWidth + (numCols + 1) * gap}
+    gridH={numRows * tileHeight + (numRows + 1) * gap} />;
+}
+
+export function WorkspaceOverview({ scrollRef, tiles, gridW, gridH }: {
+  scrollRef: RefObject<HTMLDivElement | null>;
+  tiles: WorkspaceOverviewTile[];
+  gridW: number;
+  gridH: number;
+}) {
   const [viewport, setViewport] = useState({ x: 0, y: 0, w: 0, h: 0 });
   const [visible, setVisible] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
-
-  const gridW = numCols * tileWidth + (numCols + 1) * gap;
-  const gridH = numRows * tileHeight + (numRows + 1) * gap;
 
   // Derive minimap pixel size: preserve grid aspect ratio, cap dimensions.
   const aspect = gridH / Math.max(1, gridW);
@@ -50,7 +77,7 @@ export function WorkspaceMinimap({ scrollRef, sessions, numCols, numRows, tileWi
       window.removeEventListener('resize', sync);
       ro?.disconnect();
     };
-  }, [scrollRef, sessions.length, numCols, numRows]);
+  }, [scrollRef, tiles.length, gridW, gridH]);
 
   const jumpTo = useCallback((clientX: number, clientY: number) => {
     const el = scrollRef.current;
@@ -77,7 +104,7 @@ export function WorkspaceMinimap({ scrollRef, sessions, numCols, numRows, tileWi
     document.addEventListener('mouseup', onUp);
   };
 
-  if (!visible || sessions.length === 0) return null;
+  if (!visible || tiles.length === 0) return null;
 
   // Viewport rect clamped so it stays visible at the edges of the minimap.
   const vpX = viewport.x * scaleX;
@@ -108,18 +135,18 @@ export function WorkspaceMinimap({ scrollRef, sessions, numCols, numRows, tileWi
         onMouseDown={handleMouseDown}
         style={{ display: 'block', cursor: 'pointer', background: '#0a0a18', borderRadius: 3 }}
       >
-        {sessions.map(s => {
-          const x = (s.col * tileWidth + (s.col + 1) * gap) * scaleX;
-          const y = (s.row * tileHeight + (s.row + 1) * gap) * scaleY;
-          const w = Math.max(2, tileWidth * scaleX);
-          const h = Math.max(2, tileHeight * scaleY);
+        {tiles.map(s => {
+          const x = s.x * scaleX;
+          const y = s.y * scaleY;
+          const w = Math.max(2, s.width * scaleX);
+          const h = Math.max(2, s.height * scaleY);
           const fill = s.state === 'connected' ? '#4aaa6a'
             : s.state === 'connecting' ? '#caaa4a'
             : s.state === 'error' ? '#ff5555'
             : '#555';
           return (
             <rect key={s.id} x={x} y={y} width={w} height={h} fill={fill} opacity={0.65} rx={1}>
-              <title>{s.rig ? `${s.rig.project}/${s.rig.name} on ${s.rig.host}` : s.title} · viewer {s.state}</title>
+              <title>{s.title} · viewer {s.state}</title>
             </rect>
           );
         })}

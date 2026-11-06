@@ -1,4 +1,4 @@
-import { copyDesktopText, clipboardFiles, installTerminalPaste, MAX_TERMINAL_FILE_BYTES, quoteTerminalPath, terminalKeyHandler } from '../utils/terminalClipboard';
+import { copyDesktopText, clipboardFiles, installTerminalPaste, MAX_TERMINAL_FILE_BYTES, MAX_TERMINAL_PASTE_BYTES, quoteTerminalPath, terminalKeyHandler } from '../utils/terminalClipboard';
 import { api } from '../utils/api';
 import { ClipboardDialog } from './ClipboardDialog';
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
@@ -12,6 +12,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { installTerminalQuerySuppressors, isTerminalLocalInput, shouldSuppressTerminalInput } from '../utils/terminalInput';
 import { TERMINAL_FONTS_LOADED_EVENT, loadTerminalFontFamily, normalizeTerminalFontFamily } from '../utils/terminalFont';
+import { scrollTerminalPages } from '../utils/terminalScroll';
 
 export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
   background: '#0d0d1a',
@@ -41,6 +42,7 @@ const SEARCH_OPTIONS = { caseSensitive: false, decorations: { matchOverviewRuler
 export interface TerminalHandle {
   acknowledgeBrowser: (id: string) => void;
   scrollToBottom: () => void;
+  scrollPages: (delta: number) => void;
   isAtBottom: () => boolean;
   sendInput: (data: string) => void;
   pasteInput: (data: string) => void;
@@ -88,7 +90,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const stateRef = useRef(state); stateRef.current = state;
   const onTransportChangeRef = useRef(onTransportChange); onTransportChangeRef.current = onTransportChange;
   const localPasteRef = useRef(false);
-  const [remoteClipboard, setRemoteClipboard] = useState<string | null>(null);
+  const clipboardGenerationRef = useRef(0);
   const onOpenLinkRef = useRef(onOpenLink);
   onOpenLinkRef.current = onOpenLink;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -187,6 +189,12 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       userScrolledRef.current = false;
       termRef.current?.scrollToBottom();
     },
+    scrollPages: (delta: number) => {
+      if (termRef.current) {
+        scrollTerminalPages(termRef.current, delta, userScrolledRef,
+          (data) => wsHandleRef.current?.send({ type: 'input', data }));
+      }
+    },
     isAtBottom: () => !userScrolledRef.current,
     sendInput: (data: string) => {
       wsHandleRef.current?.send({ type: 'input', data });
@@ -200,7 +208,10 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     copySelection: () => {
       const text = termRef.current?.getSelection() ?? '';
       if (!text) { setInputError('Select terminal text first. In mouse-enabled apps, hold Option on Mac or Shift elsewhere while selecting.'); return; }
-      void copyDesktopText(text).then(copied => { if (!copied) setClipboardText(text); termRef.current?.focus(); });
+      void copyDesktopText(text).then(copied => {
+        if (!copied) setInputError('The browser blocked clipboard access. Use HTTPS or localhost and allow clipboard access for this site.');
+        termRef.current?.focus();
+      });
     },
     pasteFromDesktop: () => { void pasteDesktopRef.current(); },
     openSearch: () => {
@@ -243,10 +254,26 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     switch (msg.type) {
       case 'clipboard': {
         const text = msg.data ?? '';
-        setRemoteClipboard(text);
-        if (document.hasFocus() && document.activeElement === termRef.current?.textarea && navigator.clipboard?.writeText) {
-          void navigator.clipboard.writeText(text).then(() => setRemoteClipboard(current => current === text ? null : current)).catch(() => { /* A user click can grant clipboard access. */ });
+        void copyDesktopText(text).then(copied => {
+          if (!copied) setInputError('The browser blocked clipboard access. Use HTTPS or localhost and allow clipboard access for this site.');
+        });
+        break;
+      }
+      case 'clipboard_read': {
+        if (!msg.request_id || !document.hasFocus() || document.activeElement !== termRef.current?.textarea) break;
+        if (!navigator.clipboard?.readText) {
+          setInputError('Clipboard access requires HTTPS or localhost and browser support.'); break;
         }
+        const socket = wsHandleRef.current;
+        const textarea = termRef.current?.textarea;
+        const generation = clipboardGenerationRef.current;
+        void navigator.clipboard.readText().then(text => {
+          if (clipboardGenerationRef.current !== generation || wsHandleRef.current?.send !== socket?.send || !document.hasFocus() || document.activeElement !== textarea) return;
+          if (new TextEncoder().encode(text).length > MAX_TERMINAL_PASTE_BYTES) {
+            setInputError('Clipboard text exceeds the 128 KiB terminal limit.'); return;
+          }
+          socket?.send({ type: 'clipboard_reply', request_id: msg.request_id, data: text });
+        }).catch(() => setInputError('The browser blocked clipboard access. Use HTTPS or localhost and allow clipboard access for this site.'));
         break;
       }
       case 'browser_open':
@@ -419,8 +446,12 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     };
     el.addEventListener('mousedown', clickHandler);
     el.addEventListener('focusin', focusHandler);
+    const cancelClipboardRead = () => { clipboardGenerationRef.current++; };
+    el.addEventListener('focusout', cancelClipboardRead);
+    window.addEventListener('blur', cancelClipboardRead);
 
     return () => {
+      cancelClipboardRead();
       removePaste();
       dataListener.dispose();
       resizeListener.dispose();
@@ -429,6 +460,8 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       termEl.removeEventListener('wheel', wheelHandler);
       el.removeEventListener('mousedown', clickHandler);
       el.removeEventListener('focusin', focusHandler);
+      el.removeEventListener('focusout', cancelClipboardRead);
+      window.removeEventListener('blur', cancelClipboardRead);
       term.dispose();
       termRef.current = null;
       fitAddonRef.current = null;
@@ -539,17 +572,6 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
         <span role={inputError ? 'alert' : 'status'}>{inputError || uploadNotice}</span>{' '}
         <button onClick={() => { setUploadNotice(''); setInputError(''); setUploadedPaths([]); }}>Dismiss</button>
         {uploadedPaths.length > 0 && <details><summary>Delivered file paths</summary><div style={{ whiteSpace: 'pre-wrap', userSelect: 'all' }}>{uploadedPaths.join('\n')}</div></details>}
-      </div>}
-      {remoteClipboard !== null && <div role="status" style={{ position: 'absolute', bottom: 4, left: 4, zIndex: 20, padding: 8, background: '#242442', color: '#eee', maxWidth: 'calc(100% - 8px)' }}>
-        Terminal requested a desktop clipboard copy.{' '}
-        <button onClick={() => {
-          const text = remoteClipboard;
-          void copyDesktopText(text).then(copied => {
-            if (copied) setRemoteClipboard(current => current === text ? null : current);
-            else setClipboardText(text);
-          });
-        }}>Copy to desktop</button>{' '}
-        <button onClick={() => setRemoteClipboard(null)}>Dismiss</button>
       </div>}
       {clipboardText !== null && <ClipboardDialog initialText={clipboardText} onClose={() => { setClipboardText(null); setTimeout(() => termRef.current?.focus(), 0); }} onSend={text => {
         if (state !== 'connected') throw new Error('Terminal is disconnected. Reconnect before sending.');

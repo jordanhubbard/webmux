@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -67,7 +66,7 @@ func (s *Server) socketAuthorized(owner, mode string) bool {
 			return false
 		}
 		for _, g := range d.Grants {
-			if g.ID == strings.TrimPrefix(mode, "federation:") && g.Owner == owner && len(os.Getenv(g.TokenEnv)) >= 32 {
+			if g.ID == strings.TrimPrefix(mode, "federation:") && g.Owner == owner && len(serverCredential(g.TokenEnv, g.Credential)) >= 32 {
 				return true
 			}
 		}
@@ -231,15 +230,18 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var message struct {
-			Type string `json:"type"`
-			Data string `json:"data"`
-			Cols int    `json:"cols"`
-			Rows int    `json:"rows"`
+			Type      string `json:"type"`
+			RequestID string `json:"request_id"`
+			Data      string `json:"data"`
+			Cols      int    `json:"cols"`
+			Rows      int    `json:"rows"`
 		}
 		if json.Unmarshal(payload, &message) != nil {
 			continue
 		}
 		switch message.Type {
+		case "clipboard_reply":
+			_ = s.sessions.ClipboardReply(owner, id, viewer.ID, message.RequestID, message.Data)
 		case "browser_ack":
 			s.sessions.AcknowledgeBrowser(owner, id, message.Data)
 		case "input":

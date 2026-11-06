@@ -395,8 +395,8 @@ install-client: build-client
 	@mkdir -p "$(CLIENT_BINDIR)"
 	@install -m 0755 "$(WEBMUX_DIR)/bin/webmux-client" "$(CLIENT_BINDIR)/webmux-client"
 	@printf "$(C_GRN)✓$(C_RST) Installed client: %s/webmux-client\n" "$(CLIENT_BINDIR)"
-	@printf "  Copy the exact server URL from WebMux's Managed host dialog, then run:\n"
-	@printf "  %s/webmux-client --server WEBMUX_URL --background\n" "$(CLIENT_BINDIR)"
+	@printf "  Discover the server's advertised port, then enroll:\n"
+	@printf "  %s/webmux-client --server WEBMUX_HOST --background\n" "$(CLIENT_BINDIR)"
 
 install-agent-deck:
 	@AGENT_DECK_BINDIR="$(AGENT_DECK_BINDIR)" AGENT_DECK_VERSION="$(AGENT_DECK_VERSION)" \
@@ -412,7 +412,10 @@ install-optional-agent-deck:
 		printf "$(C_RED)✗$(C_RST) INSTALL_AGENT_DECK must be yes or no.\n" >&2; exit 2; \
 	fi
 
-install-all: install-server install-client
+# Finish client installation before restarting the server that may own this
+# terminal. A recursive target also preserves that order under make -j.
+install-all: install-client
+	@$(MAKE) install-server
 
 # Finish fallible preparation before interrupting the installed service.
 # Do not list stop as a prerequisite: make -j can run it beside the build.

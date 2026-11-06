@@ -23,7 +23,8 @@ func TestWorkerProfileCleanup(t *testing.T) {
 	t.Cleanup(func() { _ = send.Close(); _ = receive.Close() })
 	go func() { _ = json.NewEncoder(send).Encode(Request{Action: "frame"}) }()
 	var frame Frame
-	if err := json.NewDecoder(receive).Decode(&frame); err != nil {
+	decoder := json.NewDecoder(receive)
+	if err := decoder.Decode(&frame); err != nil {
 		t.Fatal(err)
 	}
 	if frame.Error != "" || len(frame.Image) == 0 {
@@ -32,6 +33,27 @@ func TestWorkerProfileCleanup(t *testing.T) {
 	profiles, _ := filepath.Glob(filepath.Join(root, "webmux-browser-*"))
 	if len(profiles) != 1 {
 		t.Fatalf("expected one private profile, got %v", profiles)
+	}
+	first := frame.Target
+	go func() { _ = json.NewEncoder(send).Encode(Request{Action: "new_tab"}) }()
+	if err := decoder.Decode(&frame); err != nil {
+		t.Fatal(err)
+	}
+	if frame.Error != "" || frame.Target == first || len(frame.Tabs) != 2 {
+		t.Fatalf("new tab failed: %+v", frame)
+	}
+	second := frame.Target
+	for _, req := range []Request{{Action: "tab", Target: first}, {Action: "close_tab", Target: first}, {Action: "frame"}} {
+		go func() { _ = json.NewEncoder(send).Encode(req) }()
+		if err := decoder.Decode(&frame); err != nil {
+			t.Fatal(err)
+		}
+		if frame.Error != "" {
+			t.Fatalf("tab lifecycle failed: %s", frame.Error)
+		}
+	}
+	if frame.Target != second || len(frame.Tabs) != 1 {
+		t.Fatalf("closing the root tab lost the retained tab: %+v", frame)
 	}
 	_ = send.Close()
 	select {

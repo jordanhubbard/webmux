@@ -117,6 +117,7 @@ func (s *Server) Handler() http.Handler {
 		writeJSON(w, 200, map[string]string{"status": "ok", "name": s.name})
 	})
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)
+	mux.Handle("GET /api/server-info", s.protected(false, s.serverInfo))
 	limited := newLimiter(10, authWindow)
 	mux.Handle("POST /api/auth/login", limited.wrap(http.HandlerFunc(s.login)))
 	mux.Handle("POST /api/auth/bootstrap", limited.wrap(http.HandlerFunc(s.bootstrap)))
@@ -276,7 +277,10 @@ func (s *Server) cors(next http.Handler) http.Handler {
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, out any) bool {
-	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	return decodeJSONLimit(w, r, out, 1<<20)
+}
+func decodeJSONLimit(w http.ResponseWriter, r *http.Request, out any, limit int64) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(out); err != nil {
 		jsonError(w, err)
