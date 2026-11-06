@@ -2,6 +2,11 @@ import { test, expect } from '@playwright/test';
 import path from 'node:path';
 
 test('rejoining a truncated full-screen replay keeps status bars out of scrollback', async ({ page, request }) => {
+  const captures: string[] = [];
+  page.on('websocket', socket => socket.on('framereceived', frame => {
+    const message = JSON.parse(frame.payload.toString());
+    if (message.type === 'output') captures.push(message.data);
+  }));
   const fixture = path.resolve(__dirname, 'replay-terminal-fixture.mts');
   const created = await request.post('/api/sessions', { data: {
     hostname: 'localhost', username: 'replay-test', transport: 'exec',
@@ -28,6 +33,7 @@ test('rejoining a truncated full-screen replay keeps status bars out of scrollba
     await expect(rows).toContainText('TMUX STATUS');
     await expect(rows).not.toContainText('OLD HISTORY');
   } finally {
+    if (process.platform === 'win32') console.log('WINDOWS_REPLAY_VT', JSON.stringify({ bytes: captures.join('').length, chunks: captures.map(data => data.slice(-12000)) }));
     expect((await request.delete(`/api/sessions/${id}`, { timeout: 10_000 })).ok()).toBe(true);
   }
 });
