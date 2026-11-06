@@ -8,10 +8,13 @@ interface ConnectionDialogProps {
   onClose: () => void;
   suggestedRow?: number;
   suggestedCol?: number;
+  localFirst?: boolean;
+  onChooseCoordinator?: (provider: 'agent-deck' | 'rig', host: string) => void;
 }
 
-export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCol }: ConnectionDialogProps) {
+export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCol, localFirst = false, onChooseCoordinator }: ConnectionDialogProps) {
   const [hosts, setHosts] = useState<HostEntry[]>([]);
+  const [hostsError, setHostsError] = useState('');
   const [keys, setKeys] = useState<Pick<KeyEntry, 'id' | 'type' | 'encrypted' | 'description'>[]>([]);
   const [hostname, setHostname] = useState('');
   const [port, setPort] = useState(22);
@@ -25,7 +28,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    api.getHosts().then(setHosts).catch(() => {});
+    api.getHosts().then(setHosts).catch(() => setHostsError('Could not load saved hosts. Close and reopen this dialog to retry.'));
     api.getKeys().then(setKeys).catch(() => {});
   }, []);
 
@@ -140,13 +143,23 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
     <Dialog title="Connect to Host" onClose={onClose} dismissible={!submitting}>
 
       <form onSubmit={handleConnect} style={styles.form}>
+        {onChooseCoordinator && <label style={styles.field}>Coordinator
+          <select aria-label="Coordinator" style={styles.input} value="none" onChange={event => {
+            if (event.target.value !== 'none') onChooseCoordinator(event.target.value as 'agent-deck' | 'rig', hostname.trim() || 'localhost');
+          }}>
+            <option value="none">None</option>
+            <option value="agent-deck">Agent Deck</option>
+            <option value="rig">Rig</option>
+          </select>
+        </label>}
         <div style={styles.field}>
-          <label style={styles.label}>Quick Connect</label>
-          <button type="button" style={styles.hostCardBtn} onClick={handleLocalConnect} disabled={submitting}>
+          <label style={styles.label}>Local terminal</label>
+          <button type="button" style={localFirst ? styles.connectBtn : styles.hostCardBtn} data-dialog-autofocus={localFirst || undefined} onClick={handleLocalConnect} disabled={submitting}>
             Localhost · tmux
           </button>
           <small>Persistent terminal on this WebMux server, running as its OS user. Requires tmux.</small>
         </div>
+        {hostsError && <p role="alert">{hostsError}</p>}
         {/* Saved hosts as quick-connect cards */}
         {hosts.length > 0 && (
           <div style={styles.field}>
@@ -158,7 +171,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
                     type="button"
                     style={styles.hostCardBtn}
                     onClick={() => handleQuickConnect(h)}
-                    title={`Connect to ${h.username ? h.username + '@' : ''}${h.hostname}`}
+                    title={`Connect to ${h.username ? h.username + '@' : ''}${h.hostname}:${h.port}`}
                     disabled={submitting}
                   >
                     {h.username && <span style={styles.hostCardUser}>{h.username}@</span>}
@@ -179,13 +192,9 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
           </div>
         )}
 
-        {/* Divider when hosts exist */}
-        {hosts.length > 0 && (
-          <div style={styles.divider}>
-            <span style={styles.dividerText}>or connect to a new host</span>
-          </div>
-        )}
-
+        <details open={!localFirst || undefined}>
+          <summary style={styles.remoteSummary}>New or one-time remote connection</summary>
+          <div style={{ ...styles.form, padding: '12px 0 0' }}>
         {/* Hostname + Port */}
         <div style={styles.field}>
           <label style={styles.label}>Host</label>
@@ -196,7 +205,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
               placeholder="hostname or IP"
               value={hostname}
               onChange={e => setHostname(e.target.value)}
-              data-dialog-autofocus
+              data-dialog-autofocus={!localFirst || undefined}
               data-1p-ignore
             />
             <input
@@ -267,7 +276,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
           </div>
         )}
 
-        {error && <div style={styles.error}>{error}</div>}
+        {error && hostname.trim() && <div role="alert" style={styles.error}>{error}</div>}
 
         <div style={styles.actions}>
           <button type="button" style={styles.cancelBtn} onClick={onClose} disabled={submitting}>Cancel</button>
@@ -280,12 +289,17 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
             {submitting ? 'Connecting\u2026' : 'Connect'}
           </button>
         </div>
+          <small>Connect opens this connection once. Save &amp; Connect remembers the username, host, and port for next time.</small>
+          </div>
+        </details>
+        {error && !hostname.trim() && <div role="alert" style={styles.error}>{error}</div>}
       </form>
     </Dialog>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
+  remoteSummary: { cursor: 'pointer', color: '#c0c0e0', padding: '6px 0' },
   form: {
     display: 'flex',
     flexDirection: 'column',

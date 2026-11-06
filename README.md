@@ -57,6 +57,20 @@ that view survives page reloads without restarting terminal providers.
 
 Closing a tile removes its WebMux record and detaches its tmux client; the shell remains available through `tmux attach -t webmux-<session-id>`. Use `exit` inside the shell, or `tmux kill-session -t webmux-<session-id>`, to terminate it permanently.
 
+### Adding terminals
+
+Click **+** in an empty slot, then press Enter or choose **Localhost · tmux**
+for a persistent terminal on the WebMux server. Saved remote hosts appear directly
+below it; click a saved username/host/port entry to reconnect without retyping.
+Expand **New or one-time remote connection** for a new host: **Connect** leaves
+it unsaved, while **Save & Connect** remembers the tuple for next time.
+
+**Coordinator** starts at **None**. Select **Agent Deck** or **Rig** only when
+you want a managed coding agent. That opens the selected provider’s code-folder
+and project form, with suggested names under **Optional names and session role**.
+Rig uses projects and pods; Agent Deck uses project groups. Ordinary terminals
+need neither. The Coordination tab retains the full management interface.
+
 ### Terminal images, files, and clipboard
 
 Drop images or files onto a terminal, or paste a screenshot using the desktop

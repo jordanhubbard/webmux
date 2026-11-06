@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { readFileSync, rmSync } from 'node:fs';
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64');
@@ -17,8 +18,22 @@ test('selection automatically copies to native paste in another app and WebMux w
   await page.bringToFront();
   const source = page.getByTestId(`tile-cell-${ids[0]}`);
   await expect(source.locator('.xterm-rows')).toContainText('CLIPBOARD_READY');
-  // xterm 6's rendered rows ignore pointer events; select through its interactive surface.
-  await source.locator('.xterm-screen').dblclick({ position: { x: 15, y: 7 } });
+  // Exercise the native copy command used on insecure HTTP hosts too.
+  await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined }));
+  const screen = source.locator('.xterm-screen');
+  const bounds = (await screen.boundingBox())!;
+  const cellWidth = await source.locator('.xterm-rows').evaluate(element => {
+   const style = getComputedStyle(element); const canvas = document.createElement('canvas');
+   const drawing = canvas.getContext('2d')!; drawing.font = `${style.fontSize} ${style.fontFamily}`;
+   return drawing.measureText('W').width;
+  });
+  await page.mouse.move(bounds.x + 1, bounds.y + 7);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + cellWidth * 15 + 1, bounds.y + 7, { steps: 12 });
+  await page.mouse.up();
+  if (process.env.WEBMUX_TEST_NATIVE_CLIPBOARD === '1') {
+   expect(execFileSync('xclip', ['-selection', 'clipboard', '-o'], { encoding: 'utf8', timeout: 5000 })).toBe('CLIPBOARD_READY');
+  }
   const mac = await page.evaluate(() => /Mac|iPhone|iPad/.test(navigator.platform));
   // No copy shortcut, Clipboard API grants, or WebMux dialog. A separate page
   // receives the host clipboard through the browser's real native paste event.

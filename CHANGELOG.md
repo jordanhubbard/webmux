@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Open empty terminal slots directly with local tmux first, saved remote hosts
+  next, and coordination set to None. Show provider launch settings only after
+  selecting Agent Deck or Rig; retain saved and one-time remote connections (#297).
+
 ### Fixed
 - Automatically copy completed terminal text selections to the browser host clipboard
   for native paste into other windows, without a clipboard dialog (#296).

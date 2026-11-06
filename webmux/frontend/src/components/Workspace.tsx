@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Tile } from './Tile';
 import { ConnectionDialog } from './ConnectionDialog';
 import { CoordinationDialog } from './CoordinationDialog';
-import { Dialog } from './Dialog';
 import { WorkspaceMinimap } from './WorkspaceMinimap';
 import { api } from '../utils/api';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
@@ -169,7 +168,8 @@ export function Workspace({
   }, []);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
-  const [dialogMode, setDialogMode] = useState<'choose' | 'host' | 'rig'>('choose');
+  const [coordinator, setCoordinator] = useState<'agent-deck' | 'rig' | null>(null);
+  const [coordinatorHost, setCoordinatorHost] = useState('localhost');
   const [themeOverrides, setThemeOverrides] = useState<Map<string, string>>(() => loadSessionThemeOverrides());
   const [autoScrollOverrides, setAutoScrollOverrides] = useState<Map<string, boolean>>(new Map());
   const [lockOverrides, setLockOverrides] = useState<Map<string, boolean>>(new Map());
@@ -777,7 +777,7 @@ export function Workspace({
               row={pos.row}
               col={pos.col}
               isEmpty={visibleSessions.length === 0}
-              onClick={() => { if (!movePendingRef.current) { setDialogMode(canManageRig ? 'choose' : 'host'); setDialogPos(pos); } }}
+              onClick={() => { if (!movePendingRef.current) { setCoordinator(null); setDialogPos(pos); } }}
             />
           ))}
 
@@ -797,16 +797,11 @@ export function Workspace({
           }} />
         )}
 
-        {dialogPos && dialogMode === 'choose' && <Dialog title="Add to grid" subtitle={`Row ${dialogPos.row + 1}, column ${dialogPos.col + 1}`} onClose={() => setDialogPos(null)}>
-          <p>Choose what this cell will show.</p>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" data-dialog-autofocus onClick={() => setDialogMode('rig')}>Open coordinated session</button>
-            <button type="button" onClick={() => setDialogMode('host')}>Connect to host</button>
-          </div>
-        </Dialog>}
-        {dialogPos && dialogMode === 'rig' && <CoordinationDialog position={dialogPos} onClose={() => setDialogPos(null)} />}
-        {dialogPos && dialogMode === 'host' && (
+        {dialogPos && coordinator && <CoordinationDialog position={dialogPos} initialProvider={coordinator} initialHost={coordinatorHost} launchOnly onBack={() => setCoordinator(null)} onClose={() => setDialogPos(null)} />}
+        {dialogPos && !coordinator && (
           <ConnectionDialog
+            localFirst
+            onChooseCoordinator={canManageRig ? (provider, host) => { setCoordinatorHost(host); setCoordinator(provider); } : undefined}
             onConnect={handleAddSession}
             onClose={() => setDialogPos(null)}
             suggestedRow={dialogPos.row}
