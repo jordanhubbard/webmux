@@ -1,6 +1,5 @@
 import { copyDesktopText, clipboardFiles, installTerminalPaste, MAX_TERMINAL_FILE_BYTES, MAX_TERMINAL_PASTE_BYTES, quoteTerminalPath, terminalKeyHandler } from '../utils/terminalClipboard';
 import { api } from '../utils/api';
-import { ClipboardDialog } from './ClipboardDialog';
 import { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
@@ -49,7 +48,6 @@ export interface TerminalHandle {
   uploadFiles: (files: File[]) => void;
   focus: () => void;
   openSearch: () => void;
-  openClipboard: () => void;
   copySelection: () => void;
   pasteFromDesktop: () => void;
   toggleTranscript: () => void;
@@ -100,7 +98,6 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const wsHandleRef = useRef<ReturnType<typeof useWebSocket> | null>(null);
   const userScrolledRef = useRef(false);
   const autoScrollRef = useRef(autoScroll);
-  const [clipboardText, setClipboardText] = useState<string | null>(null);
   const [inputError, setInputError] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -204,7 +201,6 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     focus: () => {
       termRef.current?.focus();
     },
-    openClipboard: () => { setClipboardText(termRef.current?.getSelection() ?? ''); },
     copySelection: () => {
       const text = termRef.current?.getSelection() ?? '';
       if (!text) { setInputError('Select terminal text first. In mouse-enabled apps, hold Option on Mac or Shift elsewhere while selecting.'); return; }
@@ -391,6 +387,15 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     const removePaste = installTerminalPaste(containerRef.current, term, files => {
       void transferRef.current(files);
     }, () => stateRef.current === 'connected', setInputError);
+    // xterm reports completed mouse selections on mouseup, retaining the
+    // browser user gesture. Empty selections must leave the clipboard intact.
+    const selectionListener = term.onSelectionChange(() => {
+      const text = term.getSelection();
+      if (!text || !document.hasFocus() || !containerRef.current?.contains(document.activeElement)) return;
+      void copyDesktopText(text).then(copied => {
+        if (!copied && termRef.current === term) setInputError('The browser blocked automatic copy. Use Cmd+C (Mac) or Ctrl+Shift+C to copy the selection.');
+      });
+    });
     termRef.current = term;
     fitAddonRef.current = fitAddon;
     searchAddonRef.current = searchAddon;
@@ -453,6 +458,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     return () => {
       cancelClipboardRead();
       removePaste();
+      selectionListener.dispose();
       dataListener.dispose();
       resizeListener.dispose();
       bellListener.dispose();
@@ -573,10 +579,6 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
         <button onClick={() => { setUploadNotice(''); setInputError(''); setUploadedPaths([]); }}>Dismiss</button>
         {uploadedPaths.length > 0 && <details><summary>Delivered file paths</summary><div style={{ whiteSpace: 'pre-wrap', userSelect: 'all' }}>{uploadedPaths.join('\n')}</div></details>}
       </div>}
-      {clipboardText !== null && <ClipboardDialog initialText={clipboardText} onClose={() => { setClipboardText(null); setTimeout(() => termRef.current?.focus(), 0); }} onSend={text => {
-        if (state !== 'connected') throw new Error('Terminal is disconnected. Reconnect before sending.');
-        termRef.current?.paste(text);
-      }} />}
       <div
         ref={containerRef}
         data-1p-ignore

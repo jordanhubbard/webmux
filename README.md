@@ -76,11 +76,15 @@ they do not need WebMux installed. Remote files are placed in private
 `/tmp/webmux-upload.*` directories; local staging follows the existing upload
 quota/retention policy. Files may be removed by the host's temporary-file policy.
 
-Use **Copy** and **Paste** in the terminal toolbar, **Cmd+C / Cmd+V** on Mac,
+Selecting terminal text automatically copies it to the browser host’s native
+clipboard when you release the mouse. Paste into any other window with the
+normal desktop shortcut; no WebMux dialog is needed. In mouse-enabled apps,
+hold Option on macOS or Shift on Windows/Linux while selecting.
+
+You can also use **Copy** and **Paste** in the terminal toolbar, **Cmd+C / Cmd+V** on Mac,
 or **Ctrl+Shift+C / Ctrl+Shift+V** elsewhere. On Windows/Linux, Ctrl+V pastes and
 Ctrl+C copies a selection or sends an interrupt when no text is selected.
 Mac Ctrl+V also supports CLI-style image paste through the browser clipboard API.
-The **Clipboard…** dialog remains available for manual text transfer.
 Native browser paste events work without granting background clipboard access;
 toolbar clipboard access requires HTTPS or localhost and browser permission.
 

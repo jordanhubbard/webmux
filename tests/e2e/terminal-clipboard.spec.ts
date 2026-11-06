@@ -5,7 +5,7 @@ import { readFileSync, rmSync } from 'node:fs';
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64');
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 
-test('selected text copies between separate WebMux browser windows', async ({ page, context, request }) => {
+test('selection automatically copies to native paste in another app and WebMux window without permissions or dialogs', async ({ page, context, request }) => {
  const ids: string[] = [];
  const destination = await context.newPage();
  try {
@@ -13,7 +13,6 @@ test('selected text copies between separate WebMux browser windows', async ({ pa
    const created = await request.post('/api/sessions', { data: { transport: 'exec', hostname: 'localhost', username: `clipboard-window-${index}`, exec_command: `"${process.execPath}" "${path.resolve(__dirname, 'clipboard-terminal-fixture.mts')}"` } });
    expect(created.ok()).toBe(true); ids.push((await created.json()).id);
   }
-  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/'); await destination.goto('/');
   await page.bringToFront();
   const source = page.getByTestId(`tile-cell-${ids[0]}`);
@@ -21,8 +20,16 @@ test('selected text copies between separate WebMux browser windows', async ({ pa
   // xterm 6's rendered rows ignore pointer events; select through its interactive surface.
   await source.locator('.xterm-screen').dblclick({ position: { x: 15, y: 7 } });
   const mac = await page.evaluate(() => /Mac|iPhone|iPad/.test(navigator.platform));
-  await page.keyboard.press(mac ? 'Meta+c' : 'Control+c');
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('CLIPBOARD_READY');
+  // No copy shortcut, Clipboard API grants, or WebMux dialog. A separate page
+  // receives the host clipboard through the browser's real native paste event.
+  const otherApp = await context.newPage();
+  await otherApp.goto('data:text/html,<textarea aria-label="Other application"></textarea>');
+  await otherApp.getByRole('textbox').focus();
+  await otherApp.keyboard.press(mac ? 'Meta+v' : 'Control+v');
+  await expect(otherApp.getByRole('textbox')).toHaveValue('CLIPBOARD_READY');
+  await otherApp.close();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Terminal clipboard', exact: true })).toHaveCount(0);
   await destination.bringToFront();
   const target = destination.getByTestId(`tile-cell-${ids[1]}`);
   await expect(target.locator('.xterm-rows')).toContainText('CLIPBOARD_READY');

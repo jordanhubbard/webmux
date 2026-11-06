@@ -5,6 +5,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Automatically copy completed terminal text selections to the browser host clipboard
+  for native paste into other windows, without a clipboard dialog (#296).
+
 ### Changed
 - Offer explicit local-only, selected-server-only and all-connected-server
   terminal views. Display connected terminals in one shared matrix with an
