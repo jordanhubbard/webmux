@@ -1,5 +1,4 @@
-// Package terminalclipboard recognizes write-only OSC 52 requests. Requests are
-// stripped before logging/replay; clipboard reads never receive a response.
+// Package terminalclipboard recognizes OSC 52 requests before logging/replay.
 package terminalclipboard
 
 import (
@@ -17,6 +16,12 @@ type Decoder struct {
 	dropping bool
 }
 
+type Request struct {
+	Selection string
+	Text      string
+	Read      bool
+}
+
 func terminator(s string) (int, int) {
 	bel, st := strings.IndexByte(s, '\a'), strings.Index(s, "\x1b\\")
 	if bel >= 0 && (st < 0 || bel < st) {
@@ -27,11 +32,11 @@ func terminator(s string) (int, int) {
 	}
 	return -1, 0
 }
-func (d *Decoder) Feed(chunk string) (string, *string) {
+func (d *Decoder) Feed(chunk string) (string, []Request) {
 	data := d.pending + chunk
 	d.pending = ""
 	var visible strings.Builder
-	var clipboard *string
+	var clipboard []Request
 	for data != "" {
 		if d.dropping {
 			end, n := terminator(data)
@@ -74,11 +79,16 @@ func (d *Decoder) Feed(chunk string) (string, *string) {
 		}
 		if end <= maxPacket {
 			selection, encoded, ok := strings.Cut(data[:end], ";")
-			if ok && (selection == "" || selection == "c" || selection == "s" || selection == "p") && encoded != "?" {
+			if ok && (selection == "" || selection == "c" || selection == "s" || selection == "p") {
+				if encoded == "?" {
+					clipboard = append(clipboard, Request{Selection: selection, Read: true})
+					data = data[end+n:]
+					continue
+				}
 				decoded, err := base64.StdEncoding.DecodeString(encoded)
 				if err == nil && len(decoded) <= MaxBytes && utf8.Valid(decoded) {
 					text := string(decoded)
-					clipboard = &text
+					clipboard = append(clipboard, Request{Selection: selection, Text: text})
 				}
 			}
 		}

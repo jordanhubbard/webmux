@@ -25,6 +25,11 @@ func TestBrowserOwnershipAndValidation(t *testing.T) {
 		requireStatus(t, request(handler, method, path, `{"action":"start"}`, ""), 401)
 		requireStatus(t, request(handler, method, path, `{"action":"start"}`, other), 404)
 	}
+	for _, action := range []string{"upload", "download", "dialog", "select_option", "new_tab", "close_tab", "resize", "copy"} {
+		body := fmt.Sprintf(`{"action":%q}`, action)
+		requireStatus(t, request(handler, "POST", path, body, ""), 401)
+		requireStatus(t, request(handler, "POST", path, body, other), 404)
+	}
 	requireStatus(t, request(handler, "POST", path, `{"action":"start"}`, owner), 409)
 	requireStatus(t, request(handler, "POST", path, `{"action":"navigate","url":"file:///etc/passwd"}`, owner), 400)
 	// Modifier flags are a bitmask, including combinations. They must survive

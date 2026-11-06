@@ -34,6 +34,7 @@ type process interface {
 type launchFunc func(terminal.LaunchRequest, string) (process, error)
 type run struct {
 	clipboardDecoder terminalclipboard.Decoder
+	clipboardRead    *clipboardRead
 	browserDecoder   browseropen.Decoder
 	process          process
 	initial          string
@@ -740,11 +741,24 @@ func (b *Broker) output(id string, r *run, data string) {
 			r.moshOutput = r.moshOutput[len(r.moshOutput)-256:]
 		}
 	}
-	var copied *string
-	data, copied = r.clipboardDecoder.Feed(data)
-	if copied != nil {
+	var clipboard []terminalclipboard.Request
+	data, clipboard = r.clipboardDecoder.Feed(data)
+	for _, request := range clipboard {
 		// Deliver only to the active viewer. Never retain requests for reconnect.
-		value := Event{"type": "clipboard", "session_id": id, "data": *copied}
+		value := Event{"type": "clipboard", "session_id": id, "data": request.Text}
+		if request.Read {
+			viewer := e.viewers[e.focus]
+			if viewer == nil || (r.clipboardRead != nil && time.Now().Before(r.clipboardRead.expires)) {
+				continue
+			}
+			requestID, err := uuid()
+			if err != nil {
+				continue
+			}
+			r.clipboardRead = &clipboardRead{id: requestID, viewer: viewer.ID, selection: request.Selection, expires: time.Now().Add(5 * time.Second)}
+			viewer.send(Event{"type": "clipboard_read", "session_id": id, "request_id": requestID})
+			continue
+		}
 		if viewer := e.viewers[e.focus]; viewer != nil {
 			viewer.send(value)
 		} else {

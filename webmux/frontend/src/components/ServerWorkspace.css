@@ -1,3 +1,4 @@
+.server-workspace-container { position: relative; height: 100%; min-height: 0; }
 .server-workspace { height: 100%; overflow: auto; padding: 8px; box-sizing: border-box; }
 .server-summary { margin-bottom: 8px; }
 .server-badge { color: var(--server-color); border: 1px solid var(--server-color); border-radius: 4px; padding: 2px 6px; font-size: 11px; white-space: nowrap; }
@@ -15,3 +16,7 @@
 .server-terminal input { display: block; box-sizing: border-box; width: 100%; padding: 8px; margin: 8px 0; background: #0d0d1a; color: #eee; border: 1px solid #333366; }
 
 .server-workspace > p[role=alert] { grid-column: 1 / -1; }
+
+.server-layout-controls { grid-column: 1 / -1; position: sticky; top: 0; z-index: 10; background: #12122a; padding: 6px 8px; }
+.server-workspace-packed { display: block; }
+.server-workspace-packed .server-layout-controls { margin-bottom: 8px; }

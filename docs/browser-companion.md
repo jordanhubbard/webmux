@@ -27,10 +27,46 @@ ephemeral across server restarts. An idle browser expires after 30 minutes witho
 viewer activity, so hiding it is suitable for short interruptions, not long-term
 credential storage.
 
-## First implementation
+## Everyday browser controls
 
-- Native Go browser worker using Chromium, with a fixed 1100 × 760 viewport and
-  compressed viewport frames. No public debugging port or new network service.
+Use **Expand browser** for a full workspace, or resize the drawer. The Chromium
+viewport follows the available area instead of scaling a fixed desktop layout.
+Back, forward, reload, stop, new tab, close tab, and tab selection are available.
+**Find text** searches the page, with previous/next matches. Cmd/Ctrl+F, R, T and
+W provide page search, reload, new tab and close/hide respectively.
+Site-created popups appear in the tab selector.
+
+Hover, drag, double-click, right-click, horizontal/vertical scrolling and combined
+keyboard shortcuts reach the page. Native page dropdowns get an option chooser;
+JavaScript alert, confirm and prompt dialogs get visible controls. Text input
+supports Unicode, composition events and mobile keyboard input. **Escape** reaches
+the remote page; **Shift+Escape** returns focus to WebMux controls. **Cmd/Ctrl+L**
+focuses the address, and **Copy selection** / **Cmd/Ctrl+C** copy selected page text
+to this device. Ordinary paste and the manual paste field insert text into the
+focused page field.
+
+Click a file input on the page to choose files from your device. Up to eight files
+and 10 MiB can be sent in one selection, with 50 MiB retained per browser. Downloads
+appear in **Downloads**; choose **Save** to transfer completed files to your device.
+Downloads are limited to 10 MiB each, 20 retained files and 50 MiB per browser.
+Files travel through the authenticated browser worker connection, including when
+the worker is on an SSH host; the remote host does not need access to your local
+file paths. Ending the browser removes its private files together with its profile.
+Directory pickers and OS-native browser UI are not forwarded.
+
+For a site that rejects automated Chromium or needs your device's passkey, native
+SSO, client certificate or security key, use **Open in your browser**. Public sites
+open directly on this device. **Sign-in handoff** uses the existing session-linked
+flow for CLI sign-in and callback relaying. Loopback URLs and OAuth URLs with local
+callbacks use that handoff rather than silently opening localhost on the wrong
+machine. Cookies are separate between the companion and your everyday browser.
+This does not claim that remote hardware authentication is supported.
+
+## Current implementation
+
+- Native Go browser worker using Chromium, with a viewport that follows the drawer size and
+  compressed viewport frames. Pointer/key input does not wait for a screenshot
+  after each event. No public debugging port or new network service.
 - Local terminals start the worker on the WebMux server. SSH/Mosh terminals start
   it through SSH on the terminal's host, using the saved key and existing SSH
   configuration/trust. Password-only SSH asks the user to configure key/agent
@@ -78,9 +114,8 @@ Tracked in [#110](https://github.com/jordanhubbard/webmux/issues/110).
 2. Opt-in reusable profiles per host and user, plus clear expiry and sign-out
    controls. Add a single-controller lease before cross-user collaboration.
 3. Qualify identity providers individually. Headless/automated browsers may be
-   rejected by some providers; hardware keys, client certificates, native SSO,
-   downloads/uploads, and screen-reader access to the remote DOM need dedicated
-   support. Do not claim these work merely because a callback fixture passes.
+   rejected by some providers; remote hardware keys, client certificates, native
+   SSO and screen-reader access to the remote DOM need dedicated support. Do not claim these work merely because a callback fixture passes.
 
 ## Trying it
 
@@ -98,6 +133,8 @@ and unsupported shell startup scripts may bypass the helper; click the printed
 link in those cases.
 On an SSH target, install the matching native binary as `webmux` on PATH and
 Chrome/Chromium; confirm `ssh HOST webmux --help` works non-interactively first.
+An older remote worker is reported as an upgrade requirement before the new
+controls are used.
 `WEBMUX_BROWSER_EXECUTABLE` can select a Chromium executable on the worker host.
 The browser uses Chromium's normal sandbox; running it as root is not supported.
 
@@ -106,11 +143,20 @@ GitHub's passkey two-factor page, choose **More options** and another method you
 already configured, such as an authenticator app. If no supported alternative
 exists, this companion cannot complete that sign-in. Do not disable account 2FA.
 
-The first version transmits compressed snapshots, aimed at forms and navigation,
+The companion transmits compressed snapshots, aimed at interactive pages and forms,
 not video. Clipboard paste is explicit; clipboard contents are never fetched
 automatically. All viewers authenticated as the terminal owner share its browser;
-the first version does not provide a multi-person control arbitration protocol.
+it does not provide a multi-person control arbitration protocol.
 
-Qualification so far: macOS Chrome 154 and Chromium 145 headless-shell pass the
-real-browser checks. The full Chrome-for-Testing 145 build on macOS timed out
-when capturing a viewport; use current Chrome or headless-shell for the preview.
+Earlier companion checks passed macOS Chrome 154 and Chromium 145 headless-shell.
+The expanded workspace is locally qualified with macOS Chrome 156; CI records its
+managed Chromium and native platform evidence separately. The full
+Chrome-for-Testing 145 build on macOS previously timed out capturing a viewport;
+that historical result does not qualify the expanded workspace.
+
+The v1.4.2 workspace fixture exercises actual Chromium over the owner-checked API:
+hover/drag/double/right click, confirm/prompt/dropdown interaction, selection copy,
+Unicode insertion, a >1 MiB upload, exact binary download, back/forward, new/closed
+tabs, site popups, hide/reopen and cleanup. These fixtures qualify the controls;
+provider-specific sign-in, native device authentication and SSH-host acceptance
+remain separate qualification work in #110.

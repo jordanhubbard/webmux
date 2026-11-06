@@ -24,6 +24,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/browser"
 	"github.com/jordanhubbard/webmux/server/internal/browseropen"
 	appconfig "github.com/jordanhubbard/webmux/server/internal/config"
+	"github.com/jordanhubbard/webmux/server/internal/discovery"
 	"github.com/jordanhubbard/webmux/server/internal/httpapi"
 	"github.com/jordanhubbard/webmux/server/internal/macsetup"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
@@ -178,6 +179,17 @@ func run() (resultErr error) {
 		}
 		defer listener.Close()
 		listeners = append(listeners, tls.NewListener(listener, &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{*certificate}}))
+	}
+	if *listen == "" && config.App.ListenHost != "127.0.0.1" && config.App.ListenHost != "::1" && config.App.ListenHost != "localhost" {
+		host, hostErr := os.Hostname()
+		if hostErr == nil {
+			advertisement, advertiseErr := discovery.Advertise(host, httpPort, httpsPort, certificate != nil)
+			if advertiseErr == nil {
+				defer advertisement.Close()
+			} else {
+				slog.Warn("WebMux port advertisement unavailable", "error", advertiseErr)
+			}
+		}
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

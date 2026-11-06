@@ -142,6 +142,9 @@ func (b *Broker) Leave(owner, id, viewerID string) {
 	// next focus request (or newly joining viewer) chooses the next owner.
 	if e.focus == viewerID {
 		e.focus = ""
+		if e.run != nil {
+			e.run.clipboardRead = nil
+		}
 	}
 	b.broadcastLocked(e, b.presenceLocked(e, "viewer_leave", viewerID))
 }
@@ -160,6 +163,9 @@ func (b *Broker) Focus(owner, id, viewerID string) error {
 	case <-v.done:
 		return ErrClosed
 	default:
+	}
+	if e.focus != viewerID && e.run != nil {
+		e.run.clipboardRead = nil
 	}
 	e.focus = viewerID
 	b.broadcastLocked(e, b.presenceLocked(e, "focus", ""))

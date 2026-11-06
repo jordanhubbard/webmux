@@ -4,6 +4,7 @@ import type { AuthState } from './hooks/useAuth';
 import { LoginPage } from './components/LoginPage';
 import { TopBar } from './components/TopBar';
 import { ServerWorkspace } from './components/ServerWorkspace';
+import { ServersDialog } from './components/ServersDialog';
 import type { ConnectedServer } from './utils/api';
 import { Workspace } from './components/Workspace';
 import { GraphicsWorkspace } from './components/GraphicsWorkspace';
@@ -110,8 +111,18 @@ function AuthenticatedApp({
 }: AuthenticatedAppProps) {
   const { activePane, setActivePane } = useWorkspacePane();
   const [servers, setServers] = useState<ConnectedServer[]>([]);
+  const [showServers, setShowServers] = useState(false);
+  const [serverDirectoryRevision, setServerDirectoryRevision] = useState(0);
   const [serverDirectoryError, setServerDirectoryError] = useState('');
   const [serverView, setServerView] = useState(() => sessionStorage.getItem('webmux-server-view') || 'local');
+  const refreshServerDirectory = useCallback(async () => {
+    try {
+      const result = await api.getServers();
+      setServers(result.servers); setServerDirectoryError('');
+      setServerView(view => view === 'all' || result.servers.some(server => server.id === view) ? view : 'local');
+      setServerDirectoryRevision(value => value + 1);
+    } catch (error) { setServerDirectoryError('Unable to refresh connected servers. Open Manage servers to check the configuration.'); throw error; }
+  }, []);
   useEffect(() => {
     if (!canManageSettings) { setServers([]); setServerView('local'); setServerDirectoryError(''); return; }
     let canceled = false;
@@ -180,6 +191,7 @@ function AuthenticatedApp({
         agentDefinitions={agentDefinitions}
         combinedAgentPane={combinedAgentPane}
         hostSwitcher={hostSwitcher}
+        onManageServers={() => setShowServers(true)}
         remoteServersActive={serverView !== 'local'}
         serverSelector={servers.length > 1 && <select aria-label="Server view" value={serverView} onChange={event => { setServerView(event.target.value); sessionStorage.setItem('webmux-server-view', event.target.value); setActivePane('terminals'); }} style={{ maxWidth: 300, background: '#1a1a3a', color: '#eee', border: '1px solid #333366', borderRadius: 4, padding: 4 }}>
           <option value="local">Show my windows only · {window.location.hostname}</option>
@@ -188,11 +200,12 @@ function AuthenticatedApp({
         </select>}
       />
 
+      {showServers && <ServersDialog onClose={() => setShowServers(false)} onChanged={refreshServerDirectory} currentUser={currentUser} />}
       {serverDirectoryError && <p role="alert" style={{ margin: 0, padding: '4px 8px', color: '#ffb86c' }}>{serverDirectoryError}</p>}
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         {canManageSettings && activePane === 'coordination' && <CoordinationDialog inline onClose={() => setActivePane('terminals')} />}
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
-          {serverView !== 'local' ? <InputBroadcastProvider><ServerWorkspace servers={servers} selected={serverView} fontSize={fontSize} fontFamily={fontFamily} themes={themes} globalTheme={globalTheme} /></InputBroadcastProvider> : <Workspace
+          {serverView !== 'local' ? <InputBroadcastProvider><ServerWorkspace onManageServers={() => setShowServers(true)} onRefreshDirectory={refreshServerDirectory} directoryRevision={serverDirectoryRevision} servers={servers} selected={serverView} fontSize={fontSize} fontFamily={fontFamily} themes={themes} globalTheme={globalTheme} /></InputBroadcastProvider> : <Workspace
             appName={appName}
             canManageRig={canManageSettings}
             canManageHosts={auth.authStatus?.mode === 'local'}

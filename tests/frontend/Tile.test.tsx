@@ -1,16 +1,31 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { forwardRef, useImperativeHandle } from 'react';
 import { api } from '@frontend/utils/api';
 import { Tile } from '@frontend/components/Tile';
 import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
 import type { Session } from '@frontend/types';
 import type { ReactNode } from 'react';
 
+// Control the touch-viewport gate and spy on scrollPages.
+const touchMocks = vi.hoisted(() => ({ touchLike: false, scrollPages: vi.fn() }));
+
+vi.mock('@frontend/utils/viewport', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@frontend/utils/viewport')>();
+  return { ...actual, useTouchLikeViewport: () => touchMocks.touchLike };
+});
+
 vi.mock('@frontend/components/Terminal', () => ({
-  Terminal: vi.fn().mockImplementation(({ sessionId }: { sessionId: string }) => (
-    <div data-testid={`terminal-${sessionId}`}>Terminal Mock</div>
-  )),
+  Terminal: forwardRef(({ sessionId }: { sessionId: string }, ref) => {
+    useImperativeHandle(ref, () => ({ scrollPages: touchMocks.scrollPages }));
+    return <div data-testid={`terminal-${sessionId}`}>Terminal Mock</div>;
+  }),
 }));
+
+beforeEach(() => {
+  touchMocks.touchLike = false;
+  touchMocks.scrollPages.mockClear();
+});
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <InputBroadcastProvider>{children}</InputBroadcastProvider>
@@ -294,6 +309,36 @@ describe('Tile', () => {
     const chrome = screen.getByTitle(/Project: not set/).closest('[style]')!.parentElement!;
     fireEvent.mouseDown(chrome);
     expect(onTitleMouseDown).toHaveBeenCalledWith('s1', expect.any(Object));
+  });
+
+  const baseProps = {
+    fontSize: 14,
+    autoScroll: true,
+    onAutoScrollToggle: vi.fn(),
+    locked: false,
+    onLockToggle: vi.fn(),
+    collapsed: false,
+    onToggleCollapse: vi.fn(),
+    onBell: vi.fn(),
+    onClose: vi.fn(),
+    onReconnect: vi.fn(),
+    onRename: vi.fn(),
+  };
+
+  it('hides the scroll arrows on a non-touch (desktop) viewport', () => {
+    touchMocks.touchLike = false;
+    render(<Tile session={makeSession()} {...baseProps} />, { wrapper });
+    expect(screen.queryByLabelText('Scroll up')).toBeNull();
+    expect(screen.queryByLabelText('Scroll down')).toBeNull();
+  });
+
+  it('shows the scroll arrows on a touch viewport and wires them to scrollPages', () => {
+    touchMocks.touchLike = true;
+    render(<Tile session={makeSession()} {...baseProps} />, { wrapper });
+    fireEvent.click(screen.getByLabelText('Scroll up'));
+    expect(touchMocks.scrollPages).toHaveBeenCalledWith(-1);
+    fireEvent.click(screen.getByLabelText('Scroll down'));
+    expect(touchMocks.scrollPages).toHaveBeenCalledWith(1);
   });
 });
 

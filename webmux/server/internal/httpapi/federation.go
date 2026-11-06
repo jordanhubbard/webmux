@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/subtle"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -17,19 +18,21 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/auth"
 )
 
-// Federation is file-managed: neither URLs nor secrets may be supplied by a
-// browser. Each inbound credential selects exactly one local session owner.
+// Federation configuration is administrator-managed. Read APIs never return
+// credentials. Each inbound credential selects exactly one local session owner.
 type serverPeer struct {
-	ID        string `yaml:"id" json:"id"`
-	Name      string `yaml:"name" json:"name"`
-	URL       string `yaml:"url" json:"-"`
-	TokenEnv  string `yaml:"token_env" json:"-"`
-	AllowHTTP bool   `yaml:"allow_http" json:"-"`
+	ID         string `yaml:"id" json:"id"`
+	Name       string `yaml:"name" json:"name"`
+	URL        string `yaml:"url" json:"-"`
+	TokenEnv   string `yaml:"token_env,omitempty" json:"-"`
+	Credential string `yaml:"credential,omitempty" json:"-"`
+	AllowHTTP  bool   `yaml:"allow_http" json:"-"`
 }
 type serverGrant struct {
-	ID       string `yaml:"id"`
-	Owner    string `yaml:"owner"`
-	TokenEnv string `yaml:"token_env"`
+	ID         string `yaml:"id"`
+	Owner      string `yaml:"owner"`
+	TokenEnv   string `yaml:"token_env,omitempty"`
+	Credential string `yaml:"credential,omitempty" json:"-"`
 }
 type serverDirectory struct {
 	Version int           `yaml:"version"`
@@ -48,33 +51,37 @@ func (s *Server) serverDirectory() (serverDirectory, error) {
 	if err != nil {
 		return d, err
 	}
+	return d, validateServerDirectory(d)
+}
+
+func validateServerDirectory(d serverDirectory) error {
 	if d.Version != 1 {
-		return d, errors.New("servers.yaml requires version: 1")
+		return errors.New("servers.yaml requires version: 1")
 	}
 	if len(d.Servers) > 32 || len(d.Grants) > 32 {
-		return d, errors.New("server directory permits at most 32 peers and 32 grants")
+		return errors.New("server directory permits at most 32 peers and 32 grants")
 	}
 	seen := map[string]bool{"local": true, "all": true}
 	for _, p := range d.Servers {
 		u, err := url.Parse(p.URL)
-		if !federationID.MatchString(p.ID) || seen[p.ID] || p.Name == "" || p.TokenEnv == "" || err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") || (u.Scheme != "https" && !(u.Scheme == "http" && p.AllowHTTP)) {
-			return d, errors.New("invalid server directory entry (unique ID, name, origin URL and token_env required; HTTP requires allow_http)")
+		if !federationID.MatchString(p.ID) || seen[p.ID] || p.Name == "" || !validServerCredential(p.TokenEnv, p.Credential) || err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") || (u.Scheme != "https" && !(u.Scheme == "http" && p.AllowHTTP)) {
+			return errors.New("invalid server directory entry (unique ID, name, origin URL and credential or token_env required; HTTP requires allow_http)")
 		}
 		seen[p.ID] = true
 	}
 	seen = map[string]bool{}
 	tokens := map[string]bool{}
 	for _, g := range d.Grants {
-		token := os.Getenv(g.TokenEnv)
-		if !federationID.MatchString(g.ID) || seen[g.ID] || g.Owner == "" || g.TokenEnv == "" || (token != "" && tokens[token]) {
-			return d, errors.New("invalid or duplicate server grant")
+		token := serverCredential(g.TokenEnv, g.Credential)
+		if !federationID.MatchString(g.ID) || seen[g.ID] || g.Owner == "" || !validServerCredential(g.TokenEnv, g.Credential) || (token != "" && tokens[token]) {
+			return errors.New("invalid or duplicate server grant")
 		}
 		seen[g.ID] = true
 		if token != "" {
 			tokens[token] = true
 		}
 	}
-	return d, nil
+	return nil
 }
 func (s *Server) federationAccess(w http.ResponseWriter, owner string) bool {
 	c, err := auth.LoadConfig(s.store)
@@ -102,7 +109,7 @@ func (s *Server) federationGrant(r *http.Request) (serverGrant, bool) {
 		return serverGrant{}, false
 	}
 	for _, g := range d.Grants {
-		expected := os.Getenv(g.TokenEnv)
+		expected := serverCredential(g.TokenEnv, g.Credential)
 		if len(expected) >= 32 && subtle.ConstantTimeCompare([]byte(token), []byte(expected)) == 1 && s.federationOwnerAllowed(g.Owner) {
 			return g, true
 		}
@@ -142,9 +149,9 @@ func (s *Server) peer(id string) (serverPeer, string, error) {
 	}
 	for _, p := range d.Servers {
 		if p.ID == id {
-			token := os.Getenv(p.TokenEnv)
+			token := serverCredential(p.TokenEnv, p.Credential)
 			if len(token) < 32 {
-				return p, "", errors.New("server credential is unavailable (at least 32 characters required)")
+				return p, "", errors.New("Server credential is unavailable. Open Manage servers and update the credential (at least 32 characters), or configure its environment variable and restart the service")
 			}
 			return p, token, nil
 		}
@@ -206,6 +213,10 @@ func (s *Server) proxyServer(w http.ResponseWriter, r *http.Request, owner strin
 			}
 			if r.StatusCode == 401 || r.StatusCode == 403 {
 				r.StatusCode = 502
+				_ = r.Body.Close()
+				body := `{"error":"Peer rejected the credential. Open Manage servers and verify it matches an incoming grant and an existing session owner on the receiving server."}`
+				r.Body = io.NopCloser(strings.NewReader(body))
+				r.ContentLength = int64(len(body))
 			}
 			r.Header = http.Header{"Content-Type": {"application/json"}}
 			return nil
@@ -263,6 +274,11 @@ func (s *Server) federationMessage(w http.ResponseWriter, r *http.Request, owner
 }
 func (s *Server) registerFederation(mux *http.ServeMux) {
 	mux.Handle("GET /api/servers", s.protected(false, s.listServers))
+	mux.Handle("GET /api/server-directory", s.protected(false, s.getServerDirectory))
+	mux.Handle("PUT /api/servers/{server}", s.protected(false, s.saveServerPeer))
+	mux.Handle("DELETE /api/servers/{server}", s.protected(false, s.deleteServerPeer))
+	mux.Handle("PUT /api/server-grants/{grant}", s.protected(false, s.saveServerGrant))
+	mux.Handle("DELETE /api/server-grants/{grant}", s.protected(false, s.deleteServerGrant))
 	for _, pattern := range []string{"GET /api/servers/{server}/sessions", "POST /api/servers/{server}/sessions", "POST /api/servers/{server}/sessions/{id}/{action}"} {
 		mux.Handle(pattern, s.protected(false, s.proxyServer))
 	}

@@ -10,7 +10,7 @@ vi.mock('@frontend/components/Terminal', () => ({ Terminal: ({ sessionId }: { se
 const servers = [{ id: 'local', name: 'This Mac' }, { id: 'remote', name: 'Other host' }];
 const session = { id: 'same-id', title: 'Builder', project_label: 'WebMux', state: 'connected', hostname: 'localhost' } as Session;
 const renderView = (selected = 'all') => render(<InputBroadcastProvider><ServerWorkspace servers={servers} selected={selected} fontSize={14} themes={[]} globalTheme={null} /></InputBroadcastProvider>);
-beforeEach(() => { vi.clearAllMocks(); mocks.list.mockResolvedValue([session]); mocks.message.mockResolvedValue({ queued: true, processed: false }); });
+beforeEach(() => { sessionStorage.clear(); vi.clearAllMocks(); mocks.list.mockResolvedValue([session]); mocks.message.mockResolvedValue({ queued: true, processed: false }); });
 
 describe('connected server workspace', () => {
   it('namespaces identical session IDs and hides only the chosen viewer', async () => {
@@ -34,6 +34,18 @@ describe('connected server workspace', () => {
     expect(screen.getByText('@remote/same-id')).toBeInTheDocument();
     expect(mocks.create).not.toHaveBeenCalled();
   });
+  it('packs selected servers into one persistent matrix without restarting providers', async () => {
+    const view = renderView();
+    await waitFor(() => expect(screen.getAllByTestId('remote-terminal')).toHaveLength(2));
+    fireEvent.click(screen.getByRole('button', { name: /^Pack$/ }));
+    const matrix = screen.getByLabelText('Server terminal matrix');
+    expect(within(matrix).getAllByTestId('remote-terminal')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: /^Pack$/ })).toBeDisabled();
+    view.unmount(); renderView();
+    await waitFor(() => expect(within(screen.getByLabelText('Server terminal matrix')).getAllByTestId('remote-terminal')).toHaveLength(2));
+    expect(mocks.restart).not.toHaveBeenCalled();
+    expect(mocks.create).not.toHaveBeenCalled();
+  });
   it('loads only the selected host and sends to an explicit session with honest acknowledgement', async () => {
     renderView('remote');
     await waitFor(() => expect(mocks.list).toHaveBeenCalledWith('remote'));
@@ -52,5 +64,15 @@ describe('connected server workspace', () => {
     expect(screen.getByText('@local/same-id')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New terminal on Other host' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'New terminal on This Mac' })).toBeEnabled();
+  });
+  it('manually refreshes an unavailable peer without creating or restarting providers', async () => {
+    mocks.list.mockRejectedValueOnce(new Error('offline')).mockResolvedValue([session]);
+    renderView('remote');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unavailable');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Other host' }));
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+    expect(screen.getByText('@remote/same-id')).toBeInTheDocument();
+    expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.restart).not.toHaveBeenCalled();
   });
 });
