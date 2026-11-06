@@ -5,32 +5,35 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.5] - 2026-11-06
+
 ### Changed
 - Open empty terminal slots directly with local tmux first, saved remote hosts
   next, and coordination set to None. Show provider launch settings only after
   selecting Agent Deck or Rig; retain saved and one-time remote connections (#297).
+- Offer local-only, selected-server-only and all-connected-server terminal views
+  in a shared matrix, with owning-server badges and stable colors (#256).
+- Update the Chrome DevTools protocol dependency.
+
+### Added
+- Expose window project editing and cluster lifecycle controls (#294).
+- Add opt-in native two-host qualification for remote views, targeted messages,
+  owner isolation, viewer lifecycle, grant revocation and peer restart recovery.
 
 ### Fixed
-- Automatically copy completed terminal text selections to the browser host clipboard
-  for native paste into other windows, without a clipboard dialog (#296).
-
-### Changed
-- Offer explicit local-only, selected-server-only and all-connected-server
-  terminal views. Display connected terminals in one shared matrix with an
-  owning-server badge and stable color on each tile (#256).
-
-### Fixed
+- Automatically copy completed terminal text selections to the browser host
+  clipboard for native paste into other windows, without a clipboard dialog (#296).
+- Complete saved remote host details when older entries lack a username (#297).
 - Support Windows application clipboard reads through the bundled ConPTY, with
   native round-trip and focused-session isolation qualification (#268).
-- Embed the pinned Microsoft ConPTY runtime on Windows so alternate-screen
-  switches survive into browser replay, including on Server 2022 (#259).
+- Embed the pinned, MIT-licensed Microsoft ConPTY runtime on Windows so
+  alternate-screen switches survive browser replay, including on Server 2022;
+  qualify lifecycle cleanup and startup handshakes (#259).
 - Preserve alternate-screen selection when truncating terminal replay, preventing
   stale full-screen status bars from entering scrolling text after reconnect
   and resize (#255).
-
-### Added
-- Add opt-in native two-host qualification for remote views, targeted messages,
-  owner isolation, viewer lifecycle, grant revocation and peer restart recovery.
+- Complete macOS service installation even when restarting WebMux disconnects
+  the invoking terminal (#292).
 
 ## [1.4.4] - 2026-11-04
 
