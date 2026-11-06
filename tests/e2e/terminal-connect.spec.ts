@@ -45,8 +45,13 @@ test('empty slots offer local tmux, saved tuples, one-time connections and optio
     await expect.poll(() => attempts.length).toBe(2);
     expect(attempts[1]).toMatchObject({ hostname: 'one-time.example.test', username: 'temporary-user', port: 22, transport: 'ssh' });
     expect((await (await request.get('/api/hosts')).json()).some((host: { hostname: string }) => host.hostname === 'one-time.example.test')).toBe(false);
+    // Wait for the response to finish: in-flight connections deliberately
+    // keep the modal open, so Escape before this boundary is ignored.
+    await expect(connection.getByRole('button', { name: 'Connect', exact: true })).toBeEnabled();
     // The saved-host list survives closing and reopening the dialog.
-    await page.keyboard.press('Escape'); await add.click();
+    await page.keyboard.press('Escape');
+    await expect(connection).toHaveCount(0);
+    await add.click();
     await expect(connection.getByTitle('Connect to saved-user@saved.example.test:2222')).toBeVisible();
     for (const [provider, label] of [['agent-deck', 'Agent Deck'], ['rig', 'Rig']]) {
       await connection.getByLabel('Coordinator', { exact: true }).selectOption(provider);
