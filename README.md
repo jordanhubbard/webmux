@@ -161,6 +161,7 @@ prerequisites, upgrades, and current signing information.
 - Go >= 1.26 for native source builds
 - Node.js >= 24 for frontend and tooling builds
 - OpenSSH client (`ssh` on macOS/Linux, `ssh.exe` on `PATH` on Windows)
+- tmux on macOS/Linux for built-in local terminals; source server install/start commands check for it on `PATH`
 - (Optional) `sshpass` for password-based SSH auth
 - (Optional) `mosh` on both ends for mosh transport
 - (Optional) a VNC target for VNC sessions

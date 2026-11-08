@@ -87,7 +87,7 @@ ifneq ($(JWT_SECRET),)
 endif
 
 # ── Targets ────────────────────────────────────────────────────────
-.PHONY: all build build-server build-client deps check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
+.PHONY: all build build-server build-client deps check-tmux check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
        install install-client install-agent-deck install-optional-agent-deck install-server install-all uninstall uninstall-client uninstall-server uninstall-all \
        release release-minor release-major release-publish changelog-init \
        package package-server package-client package-assets _start_manual _stop_manual
@@ -139,6 +139,7 @@ help:
 	@printf "  $(C_CYN)make release-major$(C_RST)  Bump major version, test, open release PR\n"
 	@printf "  $(C_CYN)make release-publish$(C_RST) Tag and publish after the release PR is merged\n"
 	@printf "  $(C_CYN)make check-guacd$(C_RST)    Check guacd (RDP proxy) installation\n"
+	@printf "  $(C_CYN)make check-tmux$(C_RST)     Check tmux (local terminals) installation\n"
 	@printf "  $(C_CYN)make help$(C_RST)           Show this help\n"
 	@printf "\n$(C_BLD)Configuration:$(C_RST)\n"
 	@printf "  $(C_YLW)WEBMUX_HOME$(C_RST)=$(C_DIM)~/.config/webmux$(C_RST)   Runtime config/data directory\n"
@@ -148,6 +149,9 @@ help:
 	@printf "  $(C_YLW)CLIENT_BINDIR$(C_RST)=$(C_DIM)~/.local/bin$(C_RST)     Client install directory\n"
 	@printf "  $(C_YLW)AGENT_DECK_BINDIR$(C_RST)=$(C_DIM)~/.local/bin$(C_RST) Agent Deck install directory\n"
 	@printf "  $(C_YLW)INSTALL_AGENT_DECK$(C_RST)=$(C_DIM)no$(C_RST)          Install Agent Deck with server\n"
+
+check-tmux:
+	@sh scripts/check-tmux.sh
 
 check-guacd:
 	@if command -v guacd >/dev/null 2>&1; then \
@@ -206,7 +210,7 @@ endif
 # ── Manual (non-service) process control ────────────────────────────
 # Direct pidfile-based start/stop used for dev runs and hosts where webmux is
 # NOT installed as an OS service. Dispatched from start/stop below.
-_start_manual:
+_start_manual: check-tmux
 	@mkdir -p "$(WEBMUX_HOME)/logs"
 	@if [ -f "$(PIDFILE)" ] && kill -0 $$(cat "$(PIDFILE)") 2>/dev/null; then \
 		printf "$(C_YLW)●$(C_RST) webmux is already running $(C_DIM)(pid $$(cat "$(PIDFILE)"))$(C_RST)\n"; \
@@ -269,7 +273,7 @@ _stop_manual:
 # manager so a restart is a *deliberate* restart (not a crash the manager
 # would auto-recover or count as a failure). Otherwise fall back to the
 # manual pidfile helpers above.
-start: build-server check-guacd
+start: check-tmux build-server check-guacd
 	@mkdir -p "$(WEBMUX_HOME)/logs"
 	@if $(SVC_INSTALLED); then \
 		printf "$(C_BLU)▸$(C_RST) Starting webmux via $(SVC_MGR)…\n"; \
@@ -290,7 +294,7 @@ stop:
 		$(MAKE) --no-print-directory _stop_manual; \
 	fi
 
-restart:
+restart: check-tmux
 	@if $(SVC_INSTALLED); then \
 		$(MAKE) --no-print-directory build-server || exit $$?; \
 		printf "$(C_BLU)▸$(C_RST) Restarting webmux via $(SVC_MGR) $(C_DIM)(deliberate restart)$(C_RST)…\n"; \
@@ -419,7 +423,7 @@ install-all: install-client
 
 # Finish fallible preparation before interrupting the installed service.
 # Do not list stop as a prerequisite: make -j can run it beside the build.
-install-server: install-optional-agent-deck build-server
+install-server: check-tmux install-optional-agent-deck build-server
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Installing launchd service…\n"
 	@$(NODE) scripts/macos-app.mts "$(WEBMUX_DIR)/bin/webmux" "$(MACOS_APP)"

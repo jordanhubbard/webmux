@@ -48,10 +48,18 @@ go version
 ssh -V
 ```
 
-Optional packages include `sshpass` for password-based SSH, `mosh` for mosh transport, `tmux` for agent views, and `guacd` for RDP:
+Install `tmux` for built-in local terminals and agent views. Source server
+installation, start, and restart commands check for it on the server PATH and
+stop with installation guidance if it is missing:
 
 ```bash
-sudo apt install sshpass mosh tmux guacd
+sudo apt-get install -y tmux
+```
+
+Optional packages include `sshpass` for password-based SSH, `mosh` for mosh transport, and `guacd` for RDP:
+
+```bash
+sudo apt install sshpass mosh guacd
 ```
 
 Package names vary by distribution. SSH keys are preferred over `sshpass`. VNC support does not require a separate local proxy.

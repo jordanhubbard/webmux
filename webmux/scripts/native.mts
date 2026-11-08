@@ -13,6 +13,11 @@ if (action === 'build') {
   if (result.error) throw result.error;
   process.exitCode = result.status ?? 1;
 } else if (action === 'start') {
+  if (process.platform !== 'win32') {
+    const prerequisite = spawnSync('sh', [path.resolve(root, '../scripts/check-tmux.sh')], { stdio: 'inherit' });
+    if (prerequisite.error) throw prerequisite.error;
+    if (prerequisite.status !== 0) process.exit(prerequisite.status ?? 1);
+  }
   const child = spawn(binary, args, {
     cwd: root, stdio: 'inherit', env: { ...process.env, WEBMUX_ROOT: process.env.WEBMUX_ROOT || root },
   });
