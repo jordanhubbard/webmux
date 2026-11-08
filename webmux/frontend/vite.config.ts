@@ -7,6 +7,7 @@ const config = {
   resolve: {
     alias: {
       '@frontend': path.resolve(import.meta.dirname, 'src'),
+      '@novnc/novnc': path.resolve(import.meta.dirname, '../node_modules/@novnc/novnc/core/rfb.js'),
       'guacamole-common-js': path.resolve(import.meta.dirname, '../node_modules/guacamole-common-js/dist/esm/guacamole-common.js'),
       '@testing-library/react': path.resolve(import.meta.dirname, '../node_modules/@testing-library/react'),
       react: path.resolve(import.meta.dirname, '../node_modules/react'),

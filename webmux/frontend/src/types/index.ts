@@ -251,6 +251,7 @@ export type DeepPartial<T> = {
 };
 
 export interface VncSession {
+  vnc_username?: string;
   id: string;
   kind: 'vnc';
   owner: string;
@@ -267,6 +268,7 @@ export interface VncSession {
 }
 
 export interface CreateVncSessionRequest {
+  vnc_username?: string;
   host_id?: string;
   hostname?: string;
   vnc_port?: number;

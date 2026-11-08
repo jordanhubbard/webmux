@@ -14,6 +14,7 @@ export function VncConnectionDialog({ onConnect, onClose, suggestedRow, suggeste
   const [vncHosts, setVncHosts] = useState<HostEntry[]>([]);
   const [hostname, setHostname] = useState('');
   const [vncPort, setVncPort] = useState(5900);
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -33,6 +34,7 @@ export function VncConnectionDialog({ onConnect, onClose, suggestedRow, suggeste
   const buildRequest = (): CreateVncSessionRequest => ({
     hostname: hostname.trim(),
     vnc_port: vncPort,
+    vnc_username: username.trim() || undefined,
     row: suggestedRow ?? 0,
     col: suggestedCol ?? 0,
   });
@@ -56,6 +58,7 @@ export function VncConnectionDialog({ onConnect, onClose, suggestedRow, suggeste
     try {
       const req: CreateVncSessionRequest = {
         host_id: host.id,
+        vnc_username: username.trim() || undefined,
         vnc_port: host.vnc_port || vncPort,
         row: suggestedRow ?? 0,
         col: suggestedCol ?? 0,
@@ -124,6 +127,21 @@ export function VncConnectionDialog({ onConnect, onClose, suggestedRow, suggeste
               max={65535}
             />
           </div>
+        </div>
+
+        <div style={styles.field}>
+          <label style={styles.label} htmlFor="vnc-username">VNC Username (optional)</label>
+          <input
+            id="vnc-username"
+            style={styles.input}
+            type="text"
+            placeholder="Mac account name for Apple Screen Sharing"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            autoComplete="off"
+            data-1p-ignore
+          />
+          <span style={{ fontSize: 12, color: '#aaa' }}>Leave blank for classic VNC password authentication. Apple Screen Sharing uses your Mac account name and password. Use HTTPS or localhost.</span>
         </div>
 
         {/* VNC Password */}
