@@ -9,7 +9,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import * as argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import WebSocket from 'ws';
 
 const root = path.resolve(import.meta.dirname, '..');
