@@ -138,6 +138,7 @@ export function VncTile({
         )}
         <VncViewer
           sessionId={session.id}
+          vncUsername={session.vnc_username}
           vncPassword={vncPassword}
           mode="thumbnail"
           onStateChange={handleStateChange}

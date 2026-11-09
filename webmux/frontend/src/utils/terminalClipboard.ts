@@ -44,21 +44,24 @@ export function installTerminalPaste(element: HTMLElement, term: Terminal, onFil
   return () => element.removeEventListener('paste', paste, true);
 }
 
-/** Copy in the current user gesture without requesting clipboard-read access.
- * The native copy command also works on HTTP and avoids Clipboard API prompts.
- */
+/** Copy in the current user gesture without requesting clipboard-read access. */
 export async function copyDesktopText(text: string): Promise<boolean> {
+  // Prefer the API's completed write over the legacy command's success flag.
+  if (navigator.clipboard?.writeText) {
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* Try native copy for browsers that deny API access. */ }
+  }
   const active = document.activeElement as HTMLElement | null;
   const input = document.createElement('textarea');
   input.value = text; input.style.position = 'fixed'; input.style.opacity = '0';
-  document.body.append(input); input.select();
+  // showModal() makes the rest of the document inert. A field appended to body
+  // cannot receive focus there, even when execCommand('copy') reports success.
+  const container = active?.closest('dialog[open]') ?? document.body;
+  container.append(input);
+  input.focus({ preventScroll: true });
+  input.select();
   let copied = false;
-  try { copied = typeof document.execCommand === 'function' && document.execCommand('copy'); }
+  try { copied = document.activeElement === input && typeof document.execCommand === 'function' && document.execCommand('copy'); }
   catch { /* Some hosts expose the command but reject it. */ }
   finally { input.remove(); active?.focus({ preventScroll: true }); }
-  if (copied) return true;
-  if (navigator.clipboard?.writeText) {
-    try { await navigator.clipboard.writeText(text); return true; } catch { /* Report denial without a dialog. */ }
-  }
-  return false;
+  return copied;
 }

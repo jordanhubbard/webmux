@@ -14,6 +14,7 @@
     "allowImportingTsExtensions": true
   },
   "include": [
+    "frontend/eslint.config.mts",
     "scripts/**/*.mts",
     "../scripts/**/*.mts",
     "../tests/e2e/*.mts",

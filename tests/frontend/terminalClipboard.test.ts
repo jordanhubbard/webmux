@@ -1,9 +1,32 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
-import { clipboardFiles, installTerminalPaste, quoteTerminalPath, terminalKeyHandler } from '@frontend/utils/terminalClipboard';
+import { clipboardFiles, copyDesktopText, installTerminalPaste, quoteTerminalPath, terminalKeyHandler } from '@frontend/utils/terminalClipboard';
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); Reflect.deleteProperty(navigator, 'clipboard'); Reflect.deleteProperty(document, 'execCommand'); });
 describe('desktop terminal input', () => {
+ it('waits for the Clipboard API write instead of trusting a legacy copy success flag', async () => {
+  let finish!: () => void;
+  const writeText = vi.fn(() => new Promise<void>(resolve => { finish = resolve; }));
+  const execCommand = vi.fn(() => true);
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+  Object.defineProperty(document, 'execCommand', { configurable: true, value: execCommand });
+  let finished = false;
+  const copying = copyDesktopText('host text 😀').then(result => { finished = true; return result; });
+  await Promise.resolve();
+  expect(finished).toBe(false);
+  expect(writeText).toHaveBeenCalledExactlyOnceWith('host text 😀');
+  expect(execCommand).not.toHaveBeenCalled();
+  finish();
+  expect(await copying).toBe(true);
+ });
+ it('reports failure when API access is denied and the fallback cannot receive focus', async () => {
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) } });
+  const execCommand = vi.fn(() => true);
+  Object.defineProperty(document, 'execCommand', { configurable: true, value: execCommand });
+  vi.spyOn(HTMLElement.prototype, 'focus').mockImplementation(() => {});
+  expect(await copyDesktopText('blocked text')).toBe(false);
+  expect(execCommand).not.toHaveBeenCalled();
+ });
  it('leaves desktop shortcuts to the browser and preserves terminal interrupts', () => {
   expect(terminalKeyHandler(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }), false, false)).toBe(false);
   expect(terminalKeyHandler(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true }), true, false)).toBe(false);

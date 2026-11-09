@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import RFB from '@novnc/novnc';
 import { buildVncWsUrl } from '../utils/api';
 
 interface VncViewerProps {
   sessionId: string;
+  vncUsername?: string;
   vncPassword?: string;
   mode: 'thumbnail' | 'fullscreen';
   onStateChange?: (state: 'connecting' | 'connected' | 'disconnected' | 'error') => void;
@@ -16,10 +17,11 @@ export interface VncClientControl {
   sendCtrlAltDel(): void;
 }
 
-export function VncViewer({ sessionId, vncPassword, mode, onStateChange, rfbRef, onClipboard }: VncViewerProps) {
+export function VncViewer({ sessionId, vncUsername, vncPassword, mode, onStateChange, rfbRef, onClipboard }: VncViewerProps) {
   const clipboardRef = useRef(onClipboard);
   clipboardRef.current = onClipboard;
   const containerRef = useRef<HTMLDivElement>(null);
+  const [credentialError, setCredentialError] = useState<string | null>(null);
 
   // Keep latest callbacks/values in refs so RFB event listeners never capture stale closures.
   const onStateChangeRef = useRef(onStateChange);
@@ -28,11 +30,17 @@ export function VncViewer({ sessionId, vncPassword, mode, onStateChange, rfbRef,
   useEffect(() => { vncPasswordRef.current = vncPassword; }, [vncPassword]);
 
   useEffect(() => {
+    setCredentialError(null);
+
+    if (!window.isSecureContext) {
+      onStateChangeRef.current?.('error');
+      return;
+    }
     if (!containerRef.current) return;
 
     onStateChangeRef.current?.('connecting');
 
-    const options = vncPassword ? { credentials: { password: vncPassword } } : undefined;
+    const options = { credentials: { username: vncUsername, ...(vncPassword ? { password: vncPassword } : {}) } };
     const rfb = new RFB(containerRef.current, buildVncWsUrl(sessionId), options);
 
     rfb.scaleViewport = mode === 'fullscreen';
@@ -50,8 +58,14 @@ export function VncViewer({ sessionId, vncPassword, mode, onStateChange, rfbRef,
       onStateChangeRef.current?.('disconnected');
     });
 
-    rfb.addEventListener('credentialsrequired', () => {
-      rfb.sendCredentials({ password: vncPasswordRef.current || '' });
+    rfb.addEventListener('credentialsrequired', event => {
+      if (event.detail.types.includes('username') && !vncUsername) {
+        setCredentialError('This server requires a VNC username. Create a new connection with the username filled in.');
+        rfb.disconnect();
+        onStateChangeRef.current?.('error');
+        return;
+      }
+      rfb.sendCredentials({ username: vncUsername, password: vncPasswordRef.current || '' });
     });
 
     rfb.addEventListener('securityfailure', () => {
@@ -69,7 +83,13 @@ export function VncViewer({ sessionId, vncPassword, mode, onStateChange, rfbRef,
       }
     };
     // Re-run when the session or display mode changes.
-  }, [sessionId, mode]);
+  }, [sessionId, mode, vncUsername]);
+
+  if (!window.isSecureContext) {
+    return <div role="alert" style={{ padding: 16 }}>VNC requires HTTPS or localhost. Open WebMux over HTTPS or through a localhost SSH tunnel.</div>;
+  }
+
+  const errorNotice = credentialError && <div role="alert" style={{ position: 'absolute', inset: 0, padding: 16 }}>{credentialError}</div>;
 
   if (mode === 'thumbnail') {
     return (
@@ -88,11 +108,15 @@ export function VncViewer({ sessionId, vncPassword, mode, onStateChange, rfbRef,
             pointerEvents: 'none',
           }}
         />
+        {errorNotice}
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} data-1p-ignore style={{ width: '100%', height: '100%' }} />
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div ref={containerRef} data-1p-ignore style={{ width: '100%', height: '100%' }} />
+      {errorNotice}
+    </div>
   );
 }

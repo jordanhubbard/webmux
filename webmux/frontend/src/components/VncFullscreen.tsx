@@ -83,6 +83,7 @@ export function VncFullscreen({ session, vncPassword, onBack, onDisconnect }: Vn
       <div style={styles.viewerContainer}>
         <VncViewer
           sessionId={session.id}
+          vncUsername={session.vnc_username}
           vncPassword={vncPassword}
           mode="fullscreen"
           onClipboard={setRemoteClipboard}
