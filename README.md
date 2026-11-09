@@ -30,6 +30,23 @@ Connected WebMux servers can share authenticated terminal views and session-targ
 - **Optional managed hosts** — a separately installed `webmux-client` checks in over an outbound connection, links to saved SSH hosts by a one-time code, and reports host facts; see [managed-host setup](docs/managed-hosts.md)
 - **Session expiry handling** — visible JWT countdown and refresh controls prevent expired browser sessions from entering reconnect loops
 
+### VNC and Apple Screen Sharing
+
+VNC connections accept an optional **VNC Username**. Leave it blank for classic
+VNC password authentication. For Apple Screen Sharing, enter the target Mac's
+account name (for example, `polar`) and its account password. The username is
+saved as `vnc_username` in the VNC session; passwords remain temporary. The
+`username` in `hosts.yaml` is for SSH/Mosh and is not used as a VNC username.
+Enter the VNC username before choosing a saved VNC host or connecting manually.
+
+Open WebMux over HTTPS or through a localhost SSH tunnel. noVNC requires browser
+cryptography APIs that are unavailable on ordinary LAN HTTP URLs. For example:
+
+```bash
+ssh -N -L 18081:127.0.0.1:8080 your-user@webmux-server
+# Open http://localhost:18081
+```
+
 ## Experimental USB transport
 
 Use **More → USB redirection** for setup guidance and a local forwarding command.

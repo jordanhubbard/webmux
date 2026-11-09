@@ -31,7 +31,7 @@ func fixture(t *testing.T, kind Kind) (*Broker, *storage.Store) {
 }
 func create(t *testing.T, b *Broker, owner string) Session {
 	t.Helper()
-	s, err := b.Create(owner, CreateRequest{Hostname: "fixture.invalid", VNCPassword: "transient-vnc", RDPPassword: "transient-rdp"})
+	s, err := b.Create(owner, CreateRequest{Hostname: "fixture.invalid", VNCUsername: " polar ", VNCPassword: "transient-vnc", RDPPassword: "transient-rdp"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,6 +85,12 @@ func TestDesktopLifecycleCredentialsAndRecovery(t *testing.T) {
 				t.Fatal(err)
 			}
 			restored, err := next.Get("owner", s.ID)
+			if kind == VNC && (s.VNCUsername != "polar" || restored.VNCUsername != "polar") {
+				t.Fatalf("VNC username was not normalized and restored: %q / %q", s.VNCUsername, restored.VNCUsername)
+			}
+			if kind == RDP && (s.VNCUsername != "" || restored.VNCUsername != "") {
+				t.Fatal("VNC username leaked into RDP session")
+			}
 			if err != nil || restored.State != "disconnected" {
 				t.Fatal(restored, err)
 			}

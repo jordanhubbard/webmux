@@ -9,6 +9,7 @@ import (
 	"os"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,6 +34,7 @@ type Session struct {
 	HostID      string  `json:"host_id" yaml:"host_id"`
 	Hostname    string  `json:"hostname" yaml:"hostname"`
 	VNCPort     int     `json:"vnc_port,omitempty" yaml:"vnc_port,omitempty"`
+	VNCUsername string  `json:"vnc_username,omitempty" yaml:"vnc_username,omitempty"`
 	RDPPort     int     `json:"rdp_port,omitempty" yaml:"rdp_port,omitempty"`
 	RDPUsername *string `json:"rdp_username,omitempty" yaml:"rdp_username,omitempty"`
 	RDPDomain   *string `json:"rdp_domain,omitempty" yaml:"rdp_domain,omitempty"`
@@ -61,6 +63,7 @@ type CreateRequest struct {
 	HostID      string   `json:"host_id"`
 	Hostname    string   `json:"hostname"`
 	VNCPort     int      `json:"vnc_port"`
+	VNCUsername string   `json:"vnc_username"`
 	VNCPassword string   `json:"vnc_password"`
 	RDPPort     int      `json:"rdp_port"`
 	RDPUsername string   `json:"rdp_username"`
@@ -252,6 +255,7 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 	s := Session{ID: id, Kind: b.kind, Owner: owner, HostID: request.HostID, Hostname: hostname, Row: row, Col: col, State: "connecting", CreatedAt: now(), UpdatedAt: now(), Title: fmt.Sprintf("%s://%s:%d", b.kind, hostname, port), Persistent: true}
 	if b.kind == VNC {
 		s.VNCPort = port
+		s.VNCUsername = strings.TrimSpace(request.VNCUsername)
 	} else {
 		s.RDPPort = port
 		s.RDPUsername = &request.RDPUsername
