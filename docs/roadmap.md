@@ -3,6 +3,44 @@
 Reviewed 2026-10-31 against the owner's recovered session and the open GitHub
 issues. GitHub issues track implementation and remaining acceptance work.
 
+## Current reliability work
+
+**First priority: [#318](https://github.com/jordanhubbard/webmux/issues/318).**
+Session-state recovery is the next implementation and qualification work, ahead
+of the remaining reliability and integration follow-ups. Its full acceptance
+criteria remain required; this priority change does not establish recovery
+support.
+
+### Recover active work after interruption
+
+[#318](https://github.com/jordanhubbard/webmux/issues/318) adds session-state
+recovery to the active reliability scope. After a host reboot, server update,
+restart or crash, WebMux should help the user continue the work they were doing,
+beyond reopening windows at their last SSH/mosh or managed-agent connection.
+
+With session logging enabled, retain the pre-interruption transcript and record
+reliable last-command, execution-host, working-directory and agent-session
+metadata. Reattach surviving processes first. For lost coding CLI processes
+(Codex, Claude Code, OpenCode, Cursor `agent` and other popular tools), use
+version-qualified native resume mechanisms and their original session IDs/state.
+Where supported, offer the previous WebMux log as additional recovery context;
+a terminal transcript is not a replacement for a CLI's native session format.
+
+Show the proposed recovery and its evidence, preserve ownership and lifecycle
+boundaries, avoid duplicate jobs, and require deliberate approval for arbitrary
+command replay or external transcript handoff. Handle disabled, missing, rotated
+or partial logs and unavailable hosts with clear fallback choices. Acceptance
+requires real restart/update/crash and host-reboot recovery, plus native coding
+CLI resume evidence; reopening a window or replaying its scrollback is not
+proof of restored agent state. Implementation and qualification remain open.
+
+### Windows packaging reliability
+
+[#236](https://github.com/jordanhubbard/webmux/issues/236): bound Windows MSI smoke
+operations and preserve progress/installer diagnostics after a stalled packaging
+run. The stall is not established as a product regression. This remains a
+follow-up after #318; it does not displace session-state recovery.
+
 ## Runtime compatibility follow-up
 
 [#277](https://github.com/jordanhubbard/webmux/issues/277): expose bounded
@@ -43,38 +81,6 @@ Implementation and acceptance:
 [#240](https://github.com/jordanhubbard/webmux/issues/240) resolved the newly
 published lint-dependency advisory through compatible minimatch/brace-expansion
 updates. The dependency-audit gate remains enabled and passed for this release.
-
-## Current reliability work
-
-### Recover active work after interruption
-
-[#318](https://github.com/jordanhubbard/webmux/issues/318) adds session-state
-recovery to the active reliability scope. After a host reboot, server update,
-restart or crash, WebMux should help the user continue the work they were doing,
-beyond reopening windows at their last SSH/mosh or managed-agent connection.
-
-With session logging enabled, retain the pre-interruption transcript and record
-reliable last-command, execution-host, working-directory and agent-session
-metadata. Reattach surviving processes first. For lost coding CLI processes
-(Codex, Claude Code, OpenCode, Cursor `agent` and other popular tools), use
-version-qualified native resume mechanisms and their original session IDs/state.
-Where supported, offer the previous WebMux log as additional recovery context;
-a terminal transcript is not a replacement for a CLI's native session format.
-
-Show the proposed recovery and its evidence, preserve ownership and lifecycle
-boundaries, avoid duplicate jobs, and require deliberate approval for arbitrary
-command replay or external transcript handoff. Handle disabled, missing, rotated
-or partial logs and unavailable hosts with clear fallback choices. Acceptance
-requires real restart/update/crash and host-reboot recovery, plus native coding
-CLI resume evidence; reopening a window or replaying its scrollback is not
-proof of restored agent state. Implementation and qualification remain open.
-
-### Windows packaging reliability
-
-[#236](https://github.com/jordanhubbard/webmux/issues/236): bound Windows MSI smoke
-operations and preserve progress/installer diagnostics after a stalled packaging
-run. The stall is not established as a product regression. This is the next
-reliability item after #238 release/distribution qualification.
 
 ## Integration and feature follow-ups
 
