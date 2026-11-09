@@ -4,7 +4,7 @@ go 1.27.3
 
 require (
 	github.com/chromedp/cdproto v0.159.2
-	github.com/chromedp/chromedp v0.21.0
+	github.com/chromedp/chromedp v0.23.0
 	github.com/creack/pty v1.1.24
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/gorilla/websocket v1.5.3
