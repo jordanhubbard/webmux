@@ -62,7 +62,7 @@ Its recovery metadata path needs separate native qualification and must not
 repurpose clipboard operations as a metadata channel. Pause behavior and
 execution-host ownership apply to that path as well.
 
-## Continuation control design
+## Continuation control
 
 Recovery actions must not be submitted as typed terminal input. A prompt-ready
 observation can become stale while a user edits a partial command or starts an
@@ -70,7 +70,12 @@ application. A revision check alone cannot make that input safe. The unpublished
 typed-input prototype was removed; there is no recovery-action HTTP endpoint in
 this checkpoint.
 
-The next implementation uses an authenticated execution-host control channel:
+The execution-host control worker now exists. Provider startup, broker actions
+and the browser still need to be connected to it before users can recover work.
+Its fixed `--recovery-rpc` helper reads one bounded JSON request from stdin;
+authentication keys and action payloads never travel as typed terminal input.
+
+The control path has these boundaries:
 
 1. A stable, session-owned tmux provider is probed before creation. A surviving
    provider is reattached. A lost provider with recorded activity starts a
@@ -97,8 +102,18 @@ The next implementation uses an authenticated execution-host control channel:
 
 The native identity tests must also cover changing conversations inside one CLI
 process. An initially selected conversation ID is not sufficient evidence after
-the user switches sessions. Prefer native hooks or the owning process's active
-state; ambiguity requires an explicit fallback, not a timestamp-based guess.
+the user switches sessions. Codex now rechecks its owning process's open native
+state instead of permanently caching the first selector. Other adapters still
+need their session-switch observations. Ambiguity requires an explicit fallback,
+not a timestamp-based guess.
+
+Control tests exercise the real Unix socket, persisted consumption across a
+worker's exit, stale and foreign requests, failed preflight, a revision change
+during preflight, independent transcript/replay consent and one-time retrieval
+of an approved replay script by its startup shell. A subprocess with its own
+controlling PTY verifies that complete and partial input typed while waiting
+cannot reach the reader started after recovery. These are worker/lifecycle
+checks, not evidence of conversational CLI recovery or host-reboot acceptance.
 
 Qualification will use a disposable native VM for host reboot. Do not reboot
 the user's workstation or existing shared workers. The actual resume acceptance

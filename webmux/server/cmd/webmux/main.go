@@ -36,6 +36,10 @@ import (
 
 func main() {
 	if err := run(); err != nil {
+		var helperExit recovery.ExitStatusError
+		if errors.As(err, &helperExit) {
+			os.Exit(helperExit.ExitCode())
+		}
 		var childExit *exec.ExitError
 		if errors.As(err, &childExit) {
 			os.Exit(childExit.ExitCode())
@@ -80,6 +84,21 @@ func run() (resultErr error) {
 	}
 	if len(os.Args) >= 2 && os.Args[1] == "--recovery-event" {
 		return recovery.ShellEvent(os.Args[2:], os.Stdout)
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--recovery-rpc" {
+		return recovery.ServeRPC(context.Background(), os.Stdin, os.Stdout)
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--recovery-wait" {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		return recovery.WaitForRecovery(ctx)
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--recovery-read-command" {
+		command, err := recovery.ReadReplay()
+		if err == nil {
+			fmt.Print(command)
+		}
+		return err
 	}
 	if len(os.Args) == 2 && os.Args[1] == "--browser-shell" {
 		return browseropen.Shell()

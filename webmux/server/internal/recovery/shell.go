@@ -34,7 +34,14 @@ func ShellEvent(args []string, out io.Writer) error {
 	if e.Instance == "" {
 		return nil
 	}
-	packet, err := Packet(e)
+	return Emit(e, out)
+}
+
+func Emit(event Event, out io.Writer) error {
+	// Capture failures must not prevent an interactive command from running.
+	// The controller separately reports unavailable host evidence via RPC.
+	_ = RecordHostEvent(event)
+	packet, err := Packet(event)
 	if err != nil {
 		return err
 	}

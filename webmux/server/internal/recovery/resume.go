@@ -47,25 +47,38 @@ func ResumeOnHost(encoded string) error {
 	if json.Unmarshal(data, &request) != nil || len(request.Context) > 16<<10 {
 		return errors.New("invalid native recovery payload")
 	}
+	args, err := prepareNativeResume(request)
+	if err != nil {
+		return err
+	}
+	if err := os.Chdir(request.Activity.Cwd); err != nil {
+		return err
+	}
+	return RunCLI(args[0], args[1:])
+}
+
+// Preflight never changes the process working directory or starts a model turn.
+// The waiting worker must persist consumption after this and before execution.
+func prepareNativeResume(request NativeResume) ([]string, error) {
+	if len(request.Context) > 16<<10 {
+		return nil, errors.New("native recovery context is too large")
+	}
 	a := request.Activity
 	args, err := ResumeArgv(a.CLI, a.NativeSessionID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	info, err := os.Stat(a.Cwd)
 	if err != nil || !info.IsDir() {
-		return errors.New("the original working directory is unavailable; recover this session manually")
-	}
-	if err := os.Chdir(a.Cwd); err != nil {
-		return err
+		return nil, errors.New("the original working directory is unavailable; recover this session manually")
 	}
 	binary, err := originalCLI(args[0])
 	if err != nil {
-		return err
+		return nil, err
 	}
-	version, err := cliOutput(binary, "--version")
+	version, err := cliOutputAt(a.Cwd, binary, "--version")
 	if err != nil || version == "" {
-		return errors.New("cannot verify the installed coding CLI version")
+		return nil, errors.New("cannot verify the installed coding CLI version")
 	}
 	helpArgs := []string{"--help"}
 	selector := "--resume"
@@ -76,29 +89,29 @@ func ResumeOnHost(encoded string) error {
 	if a.CLI == "opencode" {
 		selector = "--session"
 	}
-	help, err := cliOutput(binary, helpArgs...)
+	help, err := cliOutputAt(a.Cwd, binary, helpArgs...)
 	if err != nil || !strings.Contains(help, selector) {
-		return errors.New("the installed coding CLI does not support the required native resume selector")
+		return nil, errors.New("the installed coding CLI does not support the required native resume selector")
 	}
 	if a.CLI == "cursor" && !strings.Contains(help, "Cursor Agent") {
-		return errors.New("agent is not a supported Cursor CLI")
+		return nil, errors.New("agent is not a supported Cursor CLI")
 	}
 	switch a.CLI {
 	case "codex":
 		if !findCodexState(a.NativeSessionID, a.Cwd, a.NativeStateFile) {
-			return errors.New("the native Codex conversation is missing or belongs to a different project")
+			return nil, errors.New("the native Codex conversation is missing or belongs to a different project")
 		}
 	case "claude":
 		if !findClaudeState(a.NativeSessionID, a.Cwd) {
-			return errors.New("the native Claude conversation is missing or belongs to a different project")
+			return nil, errors.New("the native Claude conversation is missing or belongs to a different project")
 		}
 	case "cursor":
 		if cursorStateFile(a.NativeSessionID, a.Cwd) == "" {
-			return errors.New("the native Cursor conversation is missing from this project")
+			return nil, errors.New("the native Cursor conversation is missing from this project")
 		}
 	case "opencode":
 		if err := validateOpenCodeState(binary, a.NativeSessionID, a.Cwd); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if request.Context != "" {
@@ -109,7 +122,7 @@ func ResumeOnHost(encoded string) error {
 			args = append(args, prompt)
 		}
 	}
-	return RunCLI(args[0], args[1:])
+	return args, nil
 }
 
 func findCodexState(id, cwd, recorded string) bool {

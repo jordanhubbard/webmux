@@ -41,9 +41,14 @@ func originalCLI(name string) (string, error) {
 }
 
 func cliOutput(binary string, args ...string) (string, error) {
+	return cliOutputAt("", binary, args...)
+}
+
+func cliOutputAt(cwd, binary string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, binary, args...)
+	cmd.Dir = cwd
 	cmd.Env = os.Environ()
 	data, err := cmd.Output()
 	if len(data) > 64<<10 {
@@ -121,20 +126,14 @@ func RunCLI(name string, args []string) error {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 	emit := func() {
-		packet, err := Packet(event)
-		if err == nil {
-			_ = SendPacket(packet, os.Stdout)
-		}
+		_ = Emit(event, os.Stdout)
 	}
 	emit()
 	for {
 		select {
 		case err := <-completed:
 			emit()
-			packet, packetErr := Packet(Event{Kind: "complete", Instance: event.Instance, Cwd: cwd})
-			if packetErr == nil {
-				_ = SendPacket(packet, os.Stdout)
-			}
+			_ = Emit(Event{Kind: "complete", Instance: event.Instance, Cwd: cwd}, os.Stdout)
 			return err
 		case sig := <-signals:
 			// The terminal sends Ctrl-C to the complete foreground process group.
@@ -143,9 +142,11 @@ func RunCLI(name string, args []string) error {
 				_ = cmd.Process.Signal(sig)
 			}
 		case <-ticker.C:
-			if cli == "codex" && event.SessionID == "" {
-				if id, file := codexSessionForProcess(cmd.Process.Pid, cwd); id != "" {
-					event.SessionID, event.StateFile = id, file
+			if cli == "codex" {
+				// A user can switch conversations within the same process. Never
+				// keep an initial selector after the owning native state changes.
+				event.SessionID, event.StateFile = codexSessionForProcess(cmd.Process.Pid, cwd)
+				if event.SessionID != "" {
 					ticker.Reset(5 * time.Second)
 				}
 			}

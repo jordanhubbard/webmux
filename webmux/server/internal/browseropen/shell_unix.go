@@ -91,7 +91,7 @@ if [ -r "$HOME/.bash_profile" ]; then . "$HOME/.bash_profile"
 elif [ -r "$HOME/.bash_login" ]; then . "$HOME/.bash_login"
 elif [ -r "$HOME/.profile" ]; then . "$HOME/.profile"; fi
 `
-		if err := write(rc, body+setup+recovery.ShellHooks("bash")); err != nil {
+		if err := write(rc, body+setup+recovery.ShellWait()+recovery.ShellHooks("bash")); err != nil {
 			return nil, nil, err
 		}
 		return []string{shell, "--rcfile", rc, "-i"}, env, nil
@@ -112,6 +112,7 @@ elif [ -r "$HOME/.profile" ]; then . "$HOME/.profile"; fi
 				body += setup
 			}
 			if name == ".zshrc" {
+				body += recovery.ShellWait()
 				body += recovery.ShellHooks("zsh")
 			}
 			next := dir

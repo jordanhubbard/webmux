@@ -128,6 +128,7 @@ func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {
 		}
 		e.shellReady = false
 		command, replayable := recovery.SafeCommand(event.Command)
+		replayable = replayable && !event.Redacted
 		state.Activity = &recovery.Activity{Platform: event.Platform, Replayable: replayable, ShellInstance: event.Instance, Command: command, Cwd: event.Cwd, Source: "shell-integration", ObservedAt: now(), Running: true}
 		state.Pending, state.Disposition = false, "active"
 	case "cli":

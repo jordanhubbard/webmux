@@ -18,6 +18,8 @@ const MaxPacket = 32 << 10
 // Event is emitted by the shell/CLI helper on the execution host. It is
 // evidence for a recovery preview, never an instruction to execute a command.
 type Event struct {
+	Mode      string   `json:"mode,omitempty"`
+	Endpoint  string   `json:"endpoint,omitempty"`
 	Helper    string   `json:"helper,omitempty"`
 	Platform  string   `json:"platform,omitempty"`
 	Signature string   `json:"signature,omitempty"`
@@ -31,15 +33,16 @@ type Event struct {
 	StateFile string   `json:"state_file,omitempty"`
 	Argv      []string `json:"argv,omitempty"`
 	Survived  bool     `json:"survived,omitempty"`
+	Redacted  bool     `json:"redacted,omitempty"`
 }
 
 func (e Event) Validate() error {
 	switch e.Kind {
-	case "shell", "command", "complete", "cli", "provider":
+	case "shell", "command", "complete", "cli", "provider", "control":
 	default:
 		return errors.New("unknown recovery event")
 	}
-	for _, value := range []string{e.Helper, e.Platform, e.Instance, e.Cwd, e.CLI, e.Version, e.SessionID, e.StateFile} {
+	for _, value := range []string{e.Mode, e.Endpoint, e.Helper, e.Platform, e.Instance, e.Cwd, e.CLI, e.Version, e.SessionID, e.StateFile} {
 		if len(value) > 4096 || strings.ContainsFunc(value, unicode.IsControl) {
 			return errors.New("invalid recovery metadata")
 		}
