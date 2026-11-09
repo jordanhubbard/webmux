@@ -90,6 +90,19 @@ jobs:
         run: |
           make package-client
           make package-server
+      - name: Install tmux for Unix source and service qualification
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          if ! command -v tmux >/dev/null 2>&1; then
+            if [ "$RUNNER_OS" = macOS ]; then
+              brew install tmux
+            else
+              sudo -n apt-get update
+              sudo -n apt-get install -y tmux
+            fi
+          fi
+          sh scripts/check-tmux.sh
       - name: Verify native source build and manual controls
         if: runner.os != 'Windows'
         run: |

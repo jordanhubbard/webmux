@@ -6,6 +6,52 @@ import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { registerService } from './check-launchd.mts';
 
+test('missing tmux blocks Unix server installation and startup before service changes', { skip: process.platform === 'win32' }, () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-tmux-check-'));
+  const root = path.resolve(import.meta.dirname, '..');
+  const marker = path.join(directory, 'service-changed');
+  const make = spawnSync('/bin/sh', ['-c', 'command -v make'], { encoding: 'utf8' }).stdout.trim();
+  try {
+    // Isolate PATH so the test is independent of the host's tmux installation.
+    for (const command of ['uname', 'id', 'sh']) {
+      const executable = spawnSync('/bin/sh', ['-c', `command -v ${command}`], { encoding: 'utf8' }).stdout.trim();
+      fs.symlinkSync(executable, path.join(directory, command));
+    }
+    const env = { ...process.env, PATH: directory };
+    for (const action of ['install-server', 'start', 'restart', '_start_manual']) {
+      const result = spawnSync(make, ['--no-print-directory', '-j4',
+        '-o', 'build-server', '-o', 'install-optional-agent-deck', '-o', 'check-guacd', action,
+        `AGENT_DECK_BINDIR=${directory}`, `WEBMUX_HOME=${path.join(directory, 'home')}`,
+        'SVC_INSTALLED=true', `SVC_STOP=/usr/bin/touch ${marker}`,
+        `SVC_START=/usr/bin/touch ${marker}`, `SVC_RESTART=/usr/bin/touch ${marker}`,
+        `NODE=/usr/bin/touch ${marker}`, 'SHELL=/bin/sh'], {
+        cwd: root, encoding: 'utf8', timeout: 10000, env,
+      });
+      assert.ifError(result.error);
+      assert.notEqual(result.status, 0, `${action} accepted missing tmux`);
+      assert.match(result.stderr, /tmux is required.*not found on PATH/);
+      assert.match(result.stderr, /(?:brew install tmux|apt-get install -y tmux)/);
+      assert(!fs.existsSync(marker), `${action} changed the service without tmux`);
+      assert(!fs.existsSync(path.join(directory, 'home')), `${action} changed server state without tmux`);
+    }
+    const npmStart = spawnSync(process.execPath, [path.join(root, 'webmux/scripts/native.mts'), 'start'], {
+      cwd: root, encoding: 'utf8', timeout: 10000, env,
+    });
+    assert.ifError(npmStart.error);
+    assert.equal(npmStart.status, 1);
+    assert.match(npmStart.stderr, /tmux is required/);
+    assert.doesNotMatch(npmStart.stderr, /Unable to start native WebMux/);
+
+    fs.writeFileSync(path.join(directory, 'tmux'), '#!/bin/sh\nexit 0\n', { mode: 0o700 });
+    const installed = spawnSync(make, ['--no-print-directory', 'check-tmux', `AGENT_DECK_BINDIR=${directory}`], {
+      cwd: root, encoding: 'utf8', timeout: 10000, env,
+    });
+    assert.ifError(installed.error);
+    assert.equal(installed.status, 0, installed.stdout + installed.stderr);
+    assert.match(installed.stdout, /tmux found:/);
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('launchd registration retries asynchronous teardown and propagates persistent failures', async () => {
   let attempts = 0;
   await registerService('gui/501', '/fixture.plist', () => {
@@ -22,7 +68,7 @@ test('failed server builds preserve the installed service, including parallel in
   const marker = path.join(directory, 'stopped');
   try {
     for (const action of ['install-server', 'install-all']) {
-      const result = spawnSync('make', ['--no-print-directory', '-j4', '-o', 'install-optional-agent-deck', '-o', 'build-client',
+      const result = spawnSync('make', ['--no-print-directory', '-j4', '-o', 'check-tmux', '-o', 'install-optional-agent-deck', '-o', 'build-client',
         action, 'NPM=false', `CLIENT_BINDIR=${path.join(directory, 'bin')}`,
         'SVC_INSTALLED=true', 'SVC_STOP=touch "$$WEBMUX_STOP_MARKER"'], {
         cwd: path.resolve(import.meta.dirname, '..'), encoding: 'utf8', timeout: 10000,
@@ -49,7 +95,7 @@ install-server:
 `);
     const result = spawnSync('make', ['--no-print-directory', '-j4', '-f', makefile,
       '-o', 'build-client', '-o', 'build-server', '-o', 'install-optional-agent-deck',
-      'install-all', `MAKE=make -f ${makefile} -o build-server -o install-optional-agent-deck`], {
+      'install-all', `MAKE=make -f ${makefile} -o build-server -o install-optional-agent-deck -o check-tmux`], {
       cwd: path.resolve(import.meta.dirname, '..'), encoding: 'utf8', timeout: 10000,
     });
     assert.ifError(result.error);
@@ -79,7 +125,7 @@ test('Make does not report successful service control after a failed manager com
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-make-failure-'));
   const marker = path.join(home, 'restarted');
   const run = (action: string, ...overrides: string[]) => spawnSync('make', [
-    '--no-print-directory', '-o', 'build', '-o', 'build-server', '-o', 'check-guacd', action,
+    '--no-print-directory', '-o', 'build', '-o', 'build-server', '-o', 'check-guacd', '-o', 'check-tmux', action,
     `WEBMUX_HOME=${home}`,
     // Every service-manager command is replaced. No installed service is used.
     'SVC_INSTALLED=true', 'SVC_MGR=fixture', 'SVC_STATUS=true',
@@ -110,7 +156,7 @@ test('Make user-service controls target the configured unit instead of the defau
     fs.writeFileSync(unit, 'fixture');
     fs.writeFileSync(path.join(directory, 'systemctl'), '#!/bin/sh\nprintf "%s " "$@" >> "$WEBMUX_COMMAND_LOG"\nprintf "\\n" >> "$WEBMUX_COMMAND_LOG"\n', { mode: 0o700 });
     for (const action of ['start', 'stop', 'restart']) {
-      const result = spawnSync('make', ['--no-print-directory', '-o', 'build', '-o', 'build-server', '-o', 'check-guacd', action,
+      const result = spawnSync('make', ['--no-print-directory', '-o', 'build', '-o', 'build-server', '-o', 'check-guacd', '-o', 'check-tmux', action,
         'OS=Linux', `UNIT=${unit}`, `WEBMUX_HOME=${directory}`, 'MAKE=true', 'SVC_STATUS=true'], {
         cwd: path.resolve(import.meta.dirname, '..'), encoding: 'utf8', timeout: 10000,
         env: { ...process.env, PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`, WEBMUX_COMMAND_LOG: log },
