@@ -5,6 +5,8 @@ import { readFileSync, rmSync } from 'node:fs';
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64');
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+const nativeClipboard = () => execFileSync(process.platform === 'darwin' ? 'pbpaste' : 'xclip',
+ process.platform === 'darwin' ? [] : ['-selection', 'clipboard', '-o'], { encoding: 'utf8', timeout: 5000 });
 
 test('selection automatically copies to native paste in another app and WebMux window without permissions or dialogs', async ({ page, context, request }) => {
  const ids: string[] = [];
@@ -32,7 +34,7 @@ test('selection automatically copies to native paste in another app and WebMux w
   await page.mouse.move(bounds.x + cellWidth * 15 + 1, bounds.y + 7, { steps: 12 });
   await page.mouse.up();
   if (process.env.WEBMUX_TEST_NATIVE_CLIPBOARD === '1') {
-   expect(execFileSync('xclip', ['-selection', 'clipboard', '-o'], { encoding: 'utf8', timeout: 5000 })).toBe('CLIPBOARD_READY');
+   expect(nativeClipboard()).toBe('CLIPBOARD_READY');
   }
   const mac = await page.evaluate(() => /Mac|iPhone|iPad/.test(navigator.platform));
   // No copy shortcut, Clipboard API grants, or WebMux dialog. A separate page
@@ -77,6 +79,9 @@ test('desktop shortcuts paste bracketed text, copy selection and handle immediat
   await page.keyboard.press(mac ? 'Meta+v' : 'Control+v');
   await expect.poll(() => inputs.join('')).toContain('\x1b[200~first line\rsecond line\x1b[201~');
   await tile.locator('.xterm-screen').dblclick({ position: { x: 15, y: 7 } });
+  if (process.env.WEBMUX_TEST_NATIVE_CLIPBOARD === '1') {
+   await expect.poll(nativeClipboard).toBe('CLIPBOARD_READY');
+  }
   await page.keyboard.press(mac ? 'Meta+c' : 'Control+c');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('CLIPBOARD_READY');
   await input.focus();
