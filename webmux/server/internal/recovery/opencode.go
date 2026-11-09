@@ -39,7 +39,7 @@ func openCodeSession(binary, cwd, selectedID string) (string, error) {
 	}
 	cmd := exec.Command(binary, "serve", "--hostname", "127.0.0.1", "--port", strconv.Itoa(port))
 	cmd.Dir = cwd
-	for _, item := range os.Environ() {
+	for _, item := range cmd.Environ() {
 		if !strings.HasPrefix(item, "OPENCODE_SERVER_PASSWORD=") && !strings.HasPrefix(item, "OPENCODE_SERVER_USERNAME=") {
 			cmd.Env = append(cmd.Env, item)
 		}

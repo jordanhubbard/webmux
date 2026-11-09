@@ -51,10 +51,10 @@ project still require validation at the recovery action.
 | --- | --- | --- |
 | Durable owner-scoped activity and log references | Broker tests read persisted evidence before graceful shutdown; race detector passes | Native abrupt-server-termination coverage |
 | Real shell command and directory capture | Bash and Zsh PTY probes record commands and preserve exit status | Retain the native probe in the qualification harness and exercise through WebMux |
-| Native conversation identity | Adapter selector/ownership tests; installed OpenCode 1.19.5 allocation/export passes | Real conversational resume for Codex, Claude Code, OpenCode and Cursor |
-| Safe retained history | Bounded suffix, ANSI/OSC stripping, rotation, traversal and symlink controls | Automatic prior scrollback presentation in the recovery UI |
-| Surviving providers | Existing local tmux reattachment remains the baseline | Provider survival observations, remote SSH/mosh and managed-provider recovery |
-| Recovery preview and continuation | Owner-scoped read endpoint | UI, revision-bound action, native validation, command replay consent and selected transcript handoff |
+| Native conversation identity | All four installed CLIs recover a synthetic marker after process exit and exact-ID resume; real native metadata preflight accepts the original project and rejects another project | Interactive session switches and complete WebMux continuation flow |
+| Safe retained history | Bounded suffix, ANSI/OSC stripping, rotation, traversal and symlink controls; plain-text Recover dialog | Lifecycle qualification of prior scrollback restoration |
+| Surviving providers | Native tmux test preserves the provider PID and serializes concurrent provisioning | Connect startup and transport control; remote SSH/mosh and managed-provider recovery |
+| Recovery preview and continuation | Owner-scoped read endpoint and explicit Recover dialog with host, project, observation, CLI identity and retained output | Revision-bound broker action, browser action controls, consent and lifecycle integration |
 | Reboot/restart/update/crash | No new end-to-end qualification claimed | Disposable native host reboot, update and abrupt termination; duplicate-execution controls |
 
 Mosh synchronizes terminal screen state rather than an arbitrary byte stream.
@@ -71,7 +71,9 @@ typed-input prototype was removed; there is no recovery-action HTTP endpoint in
 this checkpoint.
 
 The execution-host control worker now exists. Provider startup, broker actions
-and the browser still need to be connected to it before users can recover work.
+and browser continuation controls still need to be connected to it before users
+can recover work. The browser can already preview recorded work through the
+explicit Recover control, including when a terminal is disconnected.
 Its fixed `--recovery-rpc` helper reads one bounded JSON request from stdin;
 authentication keys and action payloads never travel as typed terminal input.
 The RPC `ensure` operation provisions a stable tmux provider through a private
@@ -125,6 +127,40 @@ Qualification will use a disposable native VM for host reboot. Do not reboot
 the user's workstation or existing shared workers. The actual resume acceptance
 needs a synthetic conversation marker recovered by each named CLI, beyond
 empty-session allocation/export or mocked adapter assertions.
+
+## Native conversation qualification
+
+On 2026-11-09, real two-process synthetic-marker checks passed for Codex
+0.167.0, Claude Code 2.1.318, Cursor Agent 2026.11.05-86047df and OpenCode
+1.19.5. Each first process exited before a second process selected its exact
+native conversation ID and returned the remembered marker. The gated native
+preflight test also passed for all four: it accepts their real native metadata
+in the recorded directory and rejects the same ID from another project.
+These checks do not establish interactive session-switch tracking, the WebMux
+continuation path, transport recovery or reboot acceptance.
+
+The retained harness uses installed authentication, submits only synthetic
+content, and saves private evidence and projects outside existing Git checkouts:
+
+```bash
+python3 scripts/qualify-recovery-native.py
+# Or select adapters with repeated --cli codex / --cli claude / ... options.
+# The final JSON line gives the manifest's absolute filename.
+```
+
+Run metadata preflight on the same host and account using that explicit file:
+
+```bash
+cd webmux/server
+WEBMUX_QUALIFY_NATIVE_MANIFEST=/absolute/path/to/manifest.json \
+  go test -race -v ./internal/recovery -run TestQualifiedNativeConversationPreflight
+```
+
+The live checks uncovered two compatibility requirements now covered by
+regressions: successful help can be written to stderr, and changing a subprocess
+directory must also update its `PWD` environment. Identity commands continue to
+read stdout alone; successful help includes both streams. Metadata output is
+bounded during capture. No project-ownership validation was relaxed.
 
 ## Sources
 

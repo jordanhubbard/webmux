@@ -1,0 +1,8 @@
+.recovery-content { padding: 0 16px 16px; }
+.recovery-content h3 { font-size: 13px; margin: 16px 0 8px; }
+.recovery-details { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(0, 3fr); gap: 8px 12px; font-size: 12px; }
+.recovery-details dt { color: #aaaac0; }
+.recovery-details dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.recovery-command, .recovery-history { margin: 0; padding: 12px; background: #0d0d1a; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.recovery-history { max-height: 280px; overflow: auto; }
+.recovery-actions { display: flex; gap: 8px; margin-top: 16px; }

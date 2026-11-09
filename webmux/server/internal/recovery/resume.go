@@ -89,7 +89,7 @@ func prepareNativeResume(request NativeResume) ([]string, error) {
 	if a.CLI == "opencode" {
 		selector = "--session"
 	}
-	help, err := cliOutputAt(a.Cwd, binary, helpArgs...)
+	help, err := cliHelpAt(a.Cwd, binary, helpArgs...)
 	if err != nil || !strings.Contains(help, selector) {
 		return nil, errors.New("the installed coding CLI does not support the required native resume selector")
 	}

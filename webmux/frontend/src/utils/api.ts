@@ -15,6 +15,7 @@ import type {
   AgentsConfig,
   RdpSession,
   Session,
+  SessionRecovery,
   VncSession,
 } from '../types';
 import { signalAuthExpired } from './authSession';
@@ -92,6 +93,7 @@ export interface ServerDirectory { servers: ManagedServer[]; grants: ServerGrant
 export interface ServerCredentialInput { token_env: string; credential: string }
 
 export const api = {
+  getSessionRecovery: (id: string, signal?: AbortSignal) => request<SessionRecovery>(`/session-recovery/${encodeURIComponent(id)}`, { signal, cache: 'no-store' }),
   getServerDirectory: () => request<ServerDirectory>('/server-directory'),
   saveServer: (id: string, input: ServerCredentialInput & { name: string; url: string; allow_http: boolean }) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
   deleteServer: (id: string) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'DELETE' }),

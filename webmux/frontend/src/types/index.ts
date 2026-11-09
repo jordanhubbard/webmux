@@ -44,6 +44,19 @@ export interface Session {
   agent_session_name?: string;
 }
 
+export interface RecoveryActivity {
+  command?: string; cwd?: string; source: string; observed_at: string; running: boolean;
+  replayable: boolean; cli?: string; cli_version?: string; native_session_id?: string;
+}
+
+export interface SessionRecovery {
+  session_id: string; hostname: string; transport: string; lifecycle_owner: string;
+  history: string; history_available: boolean; shell_ready: boolean; message: string;
+  can_resume_cli: boolean; can_replay: boolean;
+  state?: { revision: number; pending: boolean; disposition?: string; auto_resume: boolean;
+    activity?: RecoveryActivity; transcripts?: string[] };
+}
+
 export interface TerminalTheme {
   background?: string;
   foreground?: string;

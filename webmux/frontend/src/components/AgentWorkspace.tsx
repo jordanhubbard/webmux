@@ -178,7 +178,7 @@ function TerminalPanel({ session, fontSize, fontFamily, theme, agent, onClose, c
           {session.agent_role === 'scratch' && <span style={styles.roleBadge}>SHELL</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <TerminalActions terminalRef={terminalRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
+          <TerminalActions sessionId={session.id} terminalRef={terminalRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
           {onClose && (
             <button style={styles.closeButton} onClick={onClose} title={closeTitle || 'Close'}>
               x

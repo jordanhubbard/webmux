@@ -1,6 +1,7 @@
 package recovery
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/term"
@@ -45,16 +47,48 @@ func cliOutput(binary string, args ...string) (string, error) {
 }
 
 func cliOutputAt(cwd, binary string, args ...string) (string, error) {
+	return cliTextAt(cwd, binary, false, args...)
+}
+
+func cliHelpAt(cwd, binary string, args ...string) (string, error) {
+	return cliTextAt(cwd, binary, true, args...)
+}
+
+type boundedCLIOutput struct {
+	mu       sync.Mutex
+	buffer   bytes.Buffer
+	exceeded bool
+}
+
+func (b *boundedCLIOutput) Write(data []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	remaining := (64 << 10) - b.buffer.Len()
+	if len(data) > remaining {
+		b.exceeded = true
+	}
+	_, _ = b.buffer.Write(data[:min(len(data), remaining)])
+	return len(data), nil
+}
+
+func cliTextAt(cwd, binary string, includeStderr bool, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, binary, args...)
 	cmd.Dir = cwd
-	cmd.Env = os.Environ()
-	data, err := cmd.Output()
-	if len(data) > 64<<10 {
+	cmd.Env = cmd.Environ()
+	var output boundedCLIOutput
+	cmd.Stdout = &output
+	if includeStderr {
+		// Several native CLIs, including OpenCode, print successful help to
+		// stderr. Identity-producing commands must still read stdout alone.
+		cmd.Stderr = &output
+	}
+	err := cmd.Run()
+	if output.exceeded {
 		return "", errors.New("coding CLI returned too much metadata")
 	}
-	return strings.TrimSpace(string(data)), err
+	return strings.TrimSpace(output.buffer.String()), err
 }
 
 func newNativeUUID() (string, error) {
@@ -90,7 +124,7 @@ func RunCLI(name string, args []string) error {
 	id := SelectedNativeID(cli, args)
 	launchArgs := append([]string(nil), args...)
 	if id == "" && cli == "claude" && !hasSessionSelection(cli, args) {
-		help, err := cliOutput(binary, "--help")
+		help, err := cliHelpAt(cwd, binary, "--help")
 		if err == nil && strings.Contains(help, "--session-id") {
 			id, err = newNativeUUID()
 			if err == nil {
@@ -113,7 +147,8 @@ func RunCLI(name string, args []string) error {
 	}
 	event := Event{Kind: "cli", Helper: os.Getenv("WEBMUX_RECOVERY_HELPER"), Platform: runtime.GOOS, Instance: os.Getenv("WEBMUX_RECOVERY_INSTANCE"), Cwd: cwd, CLI: cli, Version: version, SessionID: id, Argv: safeArgv(append([]string{name}, args...))}
 	cmd := exec.Command(binary, launchArgs...)
-	cmd.Env = os.Environ()
+	cmd.Dir = cwd
+	cmd.Env = cmd.Environ()
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Start(); err != nil {
 		return err

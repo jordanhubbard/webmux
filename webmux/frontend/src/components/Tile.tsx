@@ -230,7 +230,7 @@ export function Tile({
         </div>
         <div style={styles.chromeRight}>
           <button style={styles.browserBtn} aria-label="Session tools" title="Session tools" onClick={() => setShowTools(true)}>Tools</button>
-          <TerminalActions terminalRef={termHandleRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
+          <TerminalActions sessionId={session.id} terminalRef={termHandleRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
           {broadcastMode && (
             <button
               style={{
