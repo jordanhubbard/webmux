@@ -88,6 +88,16 @@ func run() (resultErr error) {
 	if len(os.Args) == 2 && os.Args[1] == "--recovery-rpc" {
 		return recovery.ServeRPC(context.Background(), os.Stdin, os.Stdout)
 	}
+	if len(os.Args) == 2 && os.Args[1] == "--recovery-capabilities" {
+		fmt.Println("1")
+		return nil
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--session-shell" {
+		return terminal.SessionShell()
+	}
+	if len(os.Args) == 3 && os.Args[1] == "--session-attach" {
+		return terminal.AttachSession(os.Args[2])
+	}
 	if len(os.Args) == 2 && os.Args[1] == "--recovery-wait" {
 		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 		defer stop()

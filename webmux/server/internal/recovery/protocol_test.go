@@ -43,6 +43,13 @@ func TestMalformedAndOversizedPacketsAreBoundedAndDiscarded(t *testing.T) {
 	}
 }
 
+func TestPlainHistoryDropsCharsetDesignatorsAndC1StringControls(t *testing.T) {
+	input := "before\x1b(Bafter\u009d52;c;private clipboard\u009cend\u009b31mred\u009b0m\u0090private DCS\u009c"
+	if got := PlainText(input); got != "beforeafterendred" {
+		t.Fatalf("control payload entered history: %q", got)
+	}
+}
+
 func TestHistoryIsBoundedPlainTextAndRejectsLinks(t *testing.T) {
 	dir := t.TempDir()
 	name := "session-owned.log"

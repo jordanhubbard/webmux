@@ -61,3 +61,59 @@ describe('recorded work preview', () => {
     expect(screen.getByLabelText('Previous terminal output').textContent).toBe(value.history);
   });
 });
+
+function waitingEvidence(): SessionRecovery {
+  const value = evidence();
+  return { ...value, waiting: true, host_revision: 17, instance: 'waiting-worker', can_resume_cli: true, can_replay: true,
+    state: { ...value.state!, activity: { ...value.state!.activity!, cli: 'codex', native_session_id: 'native-id' } } };
+}
+
+describe('continuation approval', () => {
+  it('resumes the selected native conversation without transmitting history by default', async () => {
+    vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(waitingEvidence());
+    const recover = vi.spyOn(api, 'recoverSession').mockResolvedValue({ outcome: 'consumed' });
+    const close = vi.fn();
+    render(<RecoveryDialog sessionId="one" onClose={close} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Resume codex conversation' }));
+    await waitFor(() => expect(close).toHaveBeenCalledOnce());
+    expect(recover).toHaveBeenCalledWith('one', expect.objectContaining({ kind: 'native', revision: 4, host_revision: 17, instance: 'waiting-worker', confirm: false }));
+    expect(recover.mock.calls[0][1]).not.toHaveProperty('context');
+  });
+
+  it('requires approval before replay and keeps transcript consent separate', async () => {
+    vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(waitingEvidence());
+    const recover = vi.spyOn(api, 'recoverSession').mockResolvedValue({ outcome: 'consumed' });
+    render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
+    const run = await screen.findByRole('button', { name: 'Run recorded command' });
+    expect(run).toBeDisabled();
+    expect(recover).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByLabelText(/I approve running the displayed command/));
+    expect(run).toBeEnabled();
+    expect(screen.getByLabelText(/I approve sharing the selected terminal output/)).not.toBeChecked();
+    fireEvent.click(run);
+    await waitFor(() => expect(recover).toHaveBeenCalledWith('one', expect.objectContaining({ kind: 'replay', confirm: true })));
+    expect(recover.mock.calls[0][1]).not.toHaveProperty('context');
+  });
+
+  it('transmits only selected text after handoff approval and a resume click', async () => {
+    vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(waitingEvidence());
+    const recover = vi.spyOn(api, 'recoverSession').mockResolvedValue({ outcome: 'consumed' });
+    render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
+    fireEvent.click(await screen.findByLabelText(/I approve sharing the selected terminal output/));
+    fireEvent.change(screen.getByLabelText('Selected terminal output to share'), { target: { value: 'selected context only' } });
+    expect(recover).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Resume codex conversation' }));
+    await waitFor(() => expect(recover).toHaveBeenCalledWith('one', expect.objectContaining({ kind: 'native', confirm: true, context: 'selected context only' })));
+  });
+
+  it('saves automatic resume only after opting in', async () => {
+    vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(waitingEvidence());
+    const save = vi.spyOn(api, 'setAutoRecovery').mockResolvedValue({ auto_resume: true });
+    render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
+    const automatic = await screen.findByLabelText(/Automatically resume interrupted native coding conversations/);
+    expect(automatic).not.toBeChecked();
+    expect(save).not.toHaveBeenCalled();
+    fireEvent.click(automatic);
+    await waitFor(() => expect(save).toHaveBeenCalledWith('one', true));
+  });
+});

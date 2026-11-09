@@ -72,7 +72,7 @@ func ensureProvider(ctx context.Context, id, key, helper string) (Event, error) 
 				provider.Mode = "unsupported-shell"
 			}
 		}
-		args = append(args, "-e", quote("WEBMUX_RECOVERY_WAIT="+wait))
+		args = append(args, "-e", quote("WEBMUX_RECOVERY_WAIT="+wait), "-e", quote("WEBMUX_RECOVERY_SEED="))
 		if shell := os.Getenv("SHELL"); shell != "" && !strings.ContainsFunc(shell, unicode.IsControl) {
 			args = append(args, "-e", quote("SHELL="+shell))
 		}

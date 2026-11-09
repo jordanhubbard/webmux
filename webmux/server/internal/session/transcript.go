@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -270,6 +271,26 @@ func (b *Broker) ToggleTranscript(owner, id, viewerID string) error {
 	}
 	l := r.log
 	pause := l.active()
+	if pause && r.recoveryPolling {
+		controller, ok := r.process.(recoveryController)
+		if ok {
+			b.mu.Unlock()
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			enabled := false
+			response := controller.RecoveryRPC(ctx, recovery.RPCRequest{Operation: "policy", Recording: &enabled})
+			cancel()
+			b.mu.Lock()
+			if b.closed || b.entries[id] != e || e.run != r {
+				b.mu.Unlock()
+				return ErrClosed
+			}
+			if response.Error != "" || response.Recording {
+				b.mu.Unlock()
+				return &config.ValidationError{Message: "Capture remains enabled because the host could not acknowledge pause: " + response.Error}
+			}
+			b.applyRecoverySnapshotLocked(e, r, response)
+		}
+	}
 	if l != nil {
 		if pause {
 			l.stop("manual_pause")
@@ -284,6 +305,12 @@ func (b *Broker) ToggleTranscript(owner, id, viewerID string) error {
 	}
 	if !pause {
 		b.openTranscriptLocked(e, r)
+	}
+	enabled := r.log.active()
+	e.value.TranscriptEnabled = &enabled
+	if err := b.persistLocked(); err != nil {
+		b.mu.Unlock()
+		return err
 	}
 	b.broadcastLocked(e, b.transcriptEventLocked(e))
 	b.mu.Unlock()

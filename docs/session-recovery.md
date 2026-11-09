@@ -26,6 +26,21 @@ logs preserve the native-session descriptor. History readers reject traversal,
 symlinks and substituted files, and remove terminal control sequences rather
 than replaying clipboard/browser requests from disk.
 
+`POST` on the same path submits a preview-bound native resume, approved command
+replay or new-shell choice. It binds the owner, broker revision, execution-host
+revision, waiting-worker instance and action UUID. The controller saves intent
+before dispatch; the host consumes the UUID before launch. Repeating a consumed
+request returns its receipt. A lost response is retained as an uncertain outcome.
+`PATCH` persists the terminal's explicit automatic-native-resume preference.
+Automatic resume requires active logging and a recorded running native
+conversation; it never shares a transcript or replays a shell command.
+
+The per-terminal logging choice survives restart. Pausing an integrated terminal
+requires host acknowledgement before capture is reported paused. Minimal control
+readiness stays available while paused, without recording new command/directory
+content. An empty host cache can be seeded from the controller's saved evidence;
+bootstrap never replaces newer host observations or an existing recording policy.
+
 ## Native adapters
 
 - Codex: identify the rollout file opened by the owning process or its children,
@@ -50,12 +65,12 @@ project still require validation at the recovery action.
 | Requirement | Current evidence | Remaining work |
 | --- | --- | --- |
 | Durable owner-scoped activity and log references | Broker tests read persisted evidence before graceful shutdown; race detector passes | Native abrupt-server-termination coverage |
-| Real shell command and directory capture | Bash and Zsh PTY probes record commands and preserve exit status | Retain the native probe in the qualification harness and exercise through WebMux |
+| Real shell command and directory capture | Bash/Zsh PTY probes preserve exit status; real WebMux local workflow records a long-running command, arguments and directory | Retain the separate Zsh probe in the qualification harness |
 | Native conversation identity | All four installed CLIs recover a synthetic marker after process exit and exact-ID resume; real native metadata preflight accepts the original project and rejects another project | Interactive session switches and complete WebMux continuation flow |
-| Safe retained history | Bounded suffix, ANSI/OSC stripping, rotation, traversal and symlink controls; plain-text Recover dialog | Lifecycle qualification of prior scrollback restoration |
-| Surviving providers | Native tmux test preserves the provider PID and serializes concurrent provisioning | Connect startup and transport control; remote SSH/mosh and managed-provider recovery |
-| Recovery preview and continuation | Owner-scoped read endpoint and explicit Recover dialog with host, project, observation, CLI identity and retained output | Revision-bound broker action, browser action controls, consent and lifecycle integration |
-| Reboot/restart/update/crash | No new end-to-end qualification claimed | Disposable native host reboot, update and abrupt termination; duplicate-execution controls |
+| Safe retained history | Bounded suffix, ANSI/OSC/C1 stripping, rotation and path controls; real local recovery retains the marker in API/UI history; redraw blank rows compacted only in the preview | Additional lifecycle/transport qualification |
+| Surviving providers | Real WebMux reconnect preserves provider PID and job count; native tmux test serializes concurrent provisioning | Remote SSH/mosh and managed-provider qualification |
+| Recovery preview and continuation | Owner-scoped API and browser actions; separate replay/handoff approval; broker tests for opt-in native auto resume and uncertain-outcome exclusion | Native CLI continuation through WebMux, managed lifecycle integration |
+| Reboot/restart/update/crash | Real local provider destruction enters recovery; approved replay increments job count once; duplicate request/reconnect do not rerun it | Disposable native host reboot, server update/restart and abrupt termination; remote failure |
 
 Mosh synchronizes terminal screen state rather than an arbitrary byte stream.
 Its recovery metadata path needs separate native qualification and must not
@@ -67,13 +82,13 @@ execution-host ownership apply to that path as well.
 Recovery actions must not be submitted as typed terminal input. A prompt-ready
 observation can become stale while a user edits a partial command or starts an
 application. A revision check alone cannot make that input safe. The unpublished
-typed-input prototype was removed; there is no recovery-action HTTP endpoint in
-this checkpoint.
+typed-input prototype was removed. The recovery-action HTTP endpoint now uses
+the execution-host worker instead.
 
-The execution-host control worker now exists. Provider startup, broker actions
-and browser continuation controls still need to be connected to it before users
-can recover work. The browser can already preview recorded work through the
-explicit Recover control, including when a terminal is disconnected.
+Provider startup, broker actions and browser continuation controls are connected
+to the execution-host worker. The real local browser workflow exercises the full
+path with a long-running job and an explicit approved replay. The browser also
+previews recorded work for disconnected terminals.
 Its fixed `--recovery-rpc` helper reads one bounded JSON request from stdin;
 authentication keys and action payloads never travel as typed terminal input.
 The RPC `ensure` operation provisions a stable tmux provider through a private
@@ -81,7 +96,7 @@ stdin script. Native tmux tests confirm that concurrent reconnects create one
 provider, a surviving process keeps its PID, and a lost provider with recorded
 activity receives the startup wait gate. The SSH control client uses a fixed
 remote helper command, configured account/key/port and a bounded JSON pipe;
-its implementation is present, but remote lifecycle qualification remains open.
+remote lifecycle qualification remains open.
 
 The control path has these boundaries:
 

@@ -128,6 +128,27 @@ func TestHostStateConcurrentWritersDoNotLoseCommittedIntents(t *testing.T) {
 	}
 }
 
+func TestEmptyHostCacheCanBeSeededWithoutOverwritingNewerEvidenceOrCapturePolicy(t *testing.T) {
+	hostFixture(t)
+	seed := &Activity{Command: "old command", Cwd: "/project", Running: true, Replayable: true, ShellInstance: "old"}
+	if err := InitializeHostEvidence(testHostSession, testHostKey, false, seed); err != nil {
+		t.Fatal(err)
+	}
+	state := hostSnapshot(t)
+	if !state.Recording || state.Command == nil || state.Command.Command != seed.Command {
+		t.Fatal("bootstrap changed an existing recording policy or lost saved evidence")
+	}
+	if err := RecordHostEvent(Event{Kind: "command", Command: "newer command", Instance: "current"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := InitializeHostEvidence(testHostSession, testHostKey, false, seed); err != nil {
+		t.Fatal(err)
+	}
+	if hostSnapshot(t).Command.Command != "newer command" {
+		t.Fatal("controller seed replaced newer host evidence")
+	}
+}
+
 func TestHostStateRejectsTraversalLinksAndOversizedRPC(t *testing.T) {
 	hostFixture(t)
 	if _, err := hostStateDirectory("../other"); err == nil {

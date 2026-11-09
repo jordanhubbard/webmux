@@ -13,6 +13,9 @@ import (
 // RecoveryView is owner-scoped like the terminal itself. History is plain text;
 // browser/clipboard/shell protocol packets are never replayed from disk.
 type RecoveryView struct {
+	Waiting          bool            `json:"waiting"`
+	HostRevision     uint64          `json:"host_revision"`
+	Instance         string          `json:"instance"`
 	CanResumeCLI     bool            `json:"can_resume_cli"`
 	CanReplay        bool            `json:"can_replay"`
 	SessionID        string          `json:"session_id"`
@@ -36,8 +39,21 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	s := e.value.clone()
 	ready := e.shellReady
 	helper, platform := e.shellHelper, e.shellPlatform
+	var control *recovery.Event
+	var hostRevision uint64
+	var controlError string
+	var hostReady bool
+	if e.run != nil {
+		control = e.run.recoveryControl
+		hostReady = e.run.recoveryReady
+		hostRevision, controlError = e.run.recoveryRevision, e.run.recoveryError
+	}
 	b.mu.Unlock()
 	view := RecoveryView{SessionID: id, Hostname: s.Hostname, Transport: s.Transport, LifecycleOwner: "webmux", State: s.Recovery, ShellReady: ready, Message: "No recorded activity is available. Reconnect or recover this session manually."}
+	view.HostRevision = hostRevision
+	if control != nil {
+		view.Waiting, view.Instance = control.Mode == "waiting" && hostReady, control.Instance
+	}
 	if s.Rig != nil {
 		view.LifecycleOwner = s.Rig.Provider
 		if view.LifecycleOwner == "" {
@@ -47,12 +63,15 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	if s.Agent() {
 		view.LifecycleOwner = "agent-deck"
 	}
-	if s.Recovery != nil && s.Recovery.Activity != nil && ready && view.LifecycleOwner == "webmux" {
+	if s.Recovery != nil && s.Recovery.Activity != nil && view.Waiting && view.LifecycleOwner == "webmux" {
 		a := s.Recovery.Activity
 		view.CanResumeCLI = helper != "" && recovery.ValidNativeID(a.CLI, a.NativeSessionID)
 		view.CanReplay = a.Replayable && (platform == "linux" || platform == "darwin")
 	}
 	if s.Recovery == nil {
+		if controlError != "" {
+			view.Message = controlError
+		}
 		return view, nil
 	}
 	var histories []string
@@ -81,6 +100,15 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	if s.Recovery.Disposition == "reattached" {
 		view.Message = "Reattached to the surviving session. Its running work was preserved."
 	}
+	if view.Waiting {
+		view.Message = "The previous provider was interrupted. Review the recorded work, then choose how to continue."
+	}
+	if s.Recovery.Disposition == "execution-uncertain" {
+		view.Message = "The previous recovery request may have started before the connection was lost. Refresh the host state before choosing another action."
+	}
+	if controlError != "" {
+		view.Message += " " + controlError
+	}
 	return view, nil
 }
 
@@ -89,6 +117,12 @@ func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {
 		return
 	}
 	if event.Kind == "shell" {
+		if r.recoveryControl != nil && r.recoveryControl.Instance == event.Instance {
+			copy := *r.recoveryControl
+			copy.Mode = "active"
+			copy.Ready = true
+			r.recoveryControl = &copy
+		}
 		e.shellInstance, e.shellReady = event.Instance, true
 		e.shellHelper, e.shellPlatform = event.Helper, event.Platform
 		b.restoreRecoveryHistoryLocked(e, r)
@@ -96,12 +130,26 @@ func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {
 	}
 	state := e.value.Recovery
 	if event.Kind == "provider" {
-		if state != nil && state.Pending && event.Survived {
+		e.shellHelper, e.shellPlatform = event.Helper, event.Platform
+		b.startRecoveryPollingLocked(e, r)
+		if state != nil && state.Pending && event.Survived && event.Mode != "waiting" {
 			state.Pending, state.Disposition = false, "reattached"
 			state.Revision++
 			if err := b.persistLocked(); err != nil {
 				b.logger.Warn("save recovery reattachment", "error", err)
 			}
+		}
+		return
+	}
+	if event.Kind == "control" {
+		if r.recoveryControl == nil || r.recoveryControl.Mode != event.Mode || r.recoveryControl.Instance != event.Instance {
+			r.recoveryReady = false
+		}
+		copy := event
+		r.recoveryControl = &copy
+		if event.Mode == "waiting" {
+			e.shellReady = false
+			b.restoreRecoveryHistoryLocked(e, r)
 		}
 		return
 	}

@@ -112,8 +112,10 @@ elif [ -r "$HOME/.profile" ]; then . "$HOME/.profile"; fi
 				body += setup
 			}
 			if name == ".zshrc" {
-				body += recovery.ShellWait()
 				body += recovery.ShellHooks("zsh")
+			}
+			if name == ".zlogin" {
+				body += recovery.ShellWait()
 			}
 			next := dir
 			if name == ".zlogin" {

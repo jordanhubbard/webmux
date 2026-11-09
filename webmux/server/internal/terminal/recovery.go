@@ -3,13 +3,19 @@ package terminal
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/jordanhubbard/webmux/server/internal/browseropen"
 	"github.com/jordanhubbard/webmux/server/internal/recovery"
 )
 
@@ -51,6 +57,11 @@ func (l Launcher) Recovery(ctx context.Context, launch LaunchRequest, local bool
 		}
 		args = append([]string{"-i", path}, args...)
 	}
+	return remoteRecoveryRPC(ctx, args, request)
+}
+
+func remoteRecoveryRPC(ctx context.Context, args []string, request recovery.RPCRequest) recovery.RPCResponse {
+	response := recovery.RPCResponse{Protocol: 1}
 	data, err := json.Marshal(request)
 	if err != nil {
 		response.Error = "Cannot encode the recovery control request"
@@ -77,6 +88,116 @@ func (l Launcher) Recovery(ctx context.Context, launch LaunchRequest, local bool
 		return recovery.RPCResponse{Protocol: 1, Error: "The execution host's recovery helper is unavailable or could not authenticate. Reconnect or recover manually; retained logs remain available."}
 	}
 	return response
+}
+
+func recoveryLaunchEvidence() (*recovery.Activity, error) {
+	encoded := os.Getenv("WEBMUX_RECOVERY_SEED")
+	if encoded == "" {
+		return nil, nil
+	}
+	if len(encoded) > 64<<10 {
+		return nil, errors.New("recovery launch evidence exceeds its limit")
+	}
+	data, err := base64.RawURLEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, errors.New("invalid recovery launch evidence")
+	}
+	var activity recovery.Activity
+	if json.Unmarshal(data, &activity) != nil {
+		return nil, errors.New("invalid recovery launch evidence")
+	}
+	return &activity, nil
+}
+
+func prepareRemoteRecovery(value *browserConnect) bool {
+	key := os.Getenv("WEBMUX_RECOVERY_KEY")
+	if key == "" {
+		return false
+	}
+	args, err := recoverySSHArgs(value.Request, value.ControlPath)
+	if err != nil {
+		return false
+	}
+	if value.KeyPath != "" {
+		args = append([]string{"-i", value.KeyPath}, args...)
+	}
+	probeArgs := append([]string(nil), args...)
+	probeArgs[len(probeArgs)-1] = "webmux --recovery-capabilities"
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	output, err := exec.CommandContext(ctx, "ssh", probeArgs...).Output()
+	cancel()
+	if err != nil || strings.TrimSpace(string(output)) != "1" {
+		return false
+	}
+	seed, err := recoveryLaunchEvidence()
+	if err != nil {
+		return false
+	}
+	recording := false
+	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	response := remoteRecoveryRPC(ctx, args, recovery.RPCRequest{Protocol: 1, SessionID: value.Request.SessionID, Key: key, Operation: "ensure", Recording: &recording, Seed: seed})
+	cancel()
+	if response.Error != "" {
+		fmt.Fprintln(os.Stderr, "[WebMux] Work recovery is unavailable on this host:", response.Error)
+		return false
+	}
+	for _, event := range response.Events {
+		if event.Kind == "provider" && recovery.Verify(event, key) {
+			if packet, err := recovery.SignedPacket(event, key); err == nil {
+				fmt.Fprint(os.Stdout, packet)
+			}
+		}
+	}
+	if value.Request.Transport == "mosh" {
+		value.Args = append(value.Args, "webmux", "--session-attach", value.Request.SessionID)
+	} else {
+		value.Args = append(value.Args, "webmux --session-attach "+shellQuote(value.Request.SessionID))
+	}
+	return true
+}
+
+// SessionShell creates or reattaches a stable provider, then replaces itself
+// with the client. The provider's scoped shell owns recovery.
+func SessionShell() error {
+	if os.Getenv("WEBMUX_RECOVERY_SEED_UNAVAILABLE") == "1" {
+		fmt.Fprintln(os.Stderr, "[WebMux] Saved recovery evidence is too large to send. Retained logs remain available in Recover work.")
+	}
+	id, key := os.Getenv("WEBMUX_RECOVERY_SESSION"), os.Getenv("WEBMUX_RECOVERY_KEY")
+	seed, err := recoveryLaunchEvidence()
+	if err != nil {
+		return err
+	}
+	if err := recovery.InitializeHostEvidence(id, key, false, seed); err != nil {
+		return err
+	}
+	provider, err := recovery.EnsureProvider(context.Background(), id, key)
+	if err != nil {
+		return err
+	}
+	if packet, err := recovery.SignedPacket(provider, key); err == nil {
+		fmt.Fprint(os.Stdout, packet)
+	}
+	return AttachSession(id)
+}
+
+func AttachSession(id string) error {
+	if !regexp.MustCompile(`^[a-f0-9-]{36}$`).MatchString(id) {
+		return errors.New("invalid provider session identity")
+	}
+	tmux, err := exec.LookPath("tmux")
+	if err != nil {
+		return errors.New("tmux is unavailable on the execution host")
+	}
+	var env []string
+	for _, item := range os.Environ() {
+		name, _, _ := strings.Cut(item, "=")
+		if name != "TMUX" && name != "TMUX_PANE" {
+			env = append(env, item)
+		}
+	}
+	target := "webmux-" + id
+	args := []string{tmux, "attach-session", "-t", target, ";", "set-option", "-t", target, "mouse", "on"}
+	return browseropen.Execute(tmux, args, env)
 }
 
 func recoverySSHArgs(request LaunchRequest, controlPath string) ([]string, error) {

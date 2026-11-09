@@ -85,7 +85,7 @@ func serveWaiting(ctx context.Context, listener *net.UnixListener, id, key, inst
 		}
 		response := RPCResponse{Protocol: 1, Outcome: "consumed"}
 		if err != nil {
-			response.Outcome, response.Error = "", err.Error()
+			response.Outcome, response.Error = "rejected", err.Error()
 		}
 		// Consumption is already durable. A lost response must never cause replay.
 		_ = json.NewEncoder(connection).Encode(response)
@@ -138,6 +138,9 @@ func acceptWaitingAction(request RPCRequest, id, key, instance string, prepare f
 		if prepared.Kind == "replay" {
 			state.Replay = &ReplayIntent{Instance: instance, Cwd: prepared.Cwd, Command: prepared.Command}
 		}
+		if prepared.Kind == "shell" {
+			state.Complete = &Event{Kind: "complete", Instance: cachedActivity(*state).ShellInstance}
+		}
 		return nil
 	})
 	return prepared, err
@@ -160,7 +163,7 @@ func ReadReplay() (string, error) {
 		return "", err
 	}
 	quote := func(value string) string { return "'" + strings.ReplaceAll(value, "'", `'"'"'`) + "'" }
-	return "cd -- " + quote(intent.Cwd) + " && eval " + quote(intent.Command), nil
+	return "cd -- " + quote(intent.Cwd) + " && { \"$WEBMUX_RECOVERY_HELPER\" --recovery-event command \"$PWD\" " + quote(intent.Command) + "; eval " + quote(intent.Command) + "; }", nil
 }
 
 type ExitStatusError int

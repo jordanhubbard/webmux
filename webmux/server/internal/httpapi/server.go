@@ -160,6 +160,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /api/sessions/{id}", s.protected(false, s.deleteSession))
 	mux.Handle("POST /api/sessions/{id}/reconnect", s.protected(false, s.reconnectSession))
 	mux.Handle("GET /api/session-recovery/{id}", s.protected(false, s.getSessionRecovery))
+	mux.Handle("POST /api/session-recovery/{id}", s.protected(false, s.recoverSession))
+	mux.Handle("PATCH /api/session-recovery/{id}", s.protected(false, s.patchRecovery))
 	mux.HandleFunc("GET /api/term/{id}", s.terminalSocket)
 	mux.Handle("GET /api/agents/config", s.protected(false, s.getAgentConfig))
 	mux.Handle("GET /api/coordination", s.protected(false, s.getCoordination))

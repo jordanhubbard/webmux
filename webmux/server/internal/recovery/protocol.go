@@ -34,6 +34,7 @@ type Event struct {
 	Argv      []string `json:"argv,omitempty"`
 	Survived  bool     `json:"survived,omitempty"`
 	Redacted  bool     `json:"redacted,omitempty"`
+	Ready     bool     `json:"ready,omitempty"`
 }
 
 func (e Event) Validate() error {

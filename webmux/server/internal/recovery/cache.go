@@ -164,6 +164,45 @@ func InitializeHostState(id, key string, recording bool) error {
 	return err
 }
 
+// A host cache can be lost independently of the controller's durable session
+// file. Seed only an empty cache; newer execution-host observations always win.
+func InitializeHostEvidence(id, key string, recording bool, seed *Activity) error {
+	if _, err := updateHostState(id, key, true, func(state *HostState) error {
+		if state.Revision == 0 {
+			state.Recording = recording
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	if seed == nil {
+		return nil
+	}
+	_, err := updateHostState(id, key, false, func(state *HostState) error {
+		if state.Command != nil || state.CLI != nil {
+			return nil
+		}
+		command, replayable := SafeCommand(seed.Command)
+		event := Event{Kind: "command", Instance: seed.ShellInstance, Platform: seed.Platform, Cwd: seed.Cwd, Command: command, Redacted: !seed.Replayable || !replayable}
+		if _, err := SignedPacket(event, key); err != nil {
+			return err
+		}
+		state.Command = &event
+		if seed.CLI != "" {
+			native := Event{Kind: "cli", Instance: seed.ShellInstance, Platform: seed.Platform, Cwd: seed.Cwd, CLI: seed.CLI, Version: seed.CLIVersion, SessionID: seed.NativeSessionID, StateFile: seed.NativeStateFile, Argv: safeArgv(seed.Argv)}
+			if _, err := SignedPacket(native, key); err != nil {
+				return err
+			}
+			state.CLI = &native
+		}
+		if !seed.Running {
+			state.Complete = &Event{Kind: "complete", Instance: seed.ShellInstance}
+		}
+		return nil
+	})
+	return err
+}
+
 func RecordHostEvent(event Event) error {
 	id, key := os.Getenv("WEBMUX_RECOVERY_SESSION"), os.Getenv("WEBMUX_RECOVERY_KEY")
 	if id == "" || key == "" {
@@ -177,6 +216,9 @@ func RecordHostEvent(event Event) error {
 	}
 	_, err := updateHostState(id, key, false, func(state *HostState) error {
 		event.Signature = ""
+		if event.Instance != "" && (event.Kind == "shell" || event.Kind == "command" || event.Kind == "cli") && (state.Control == nil || event.Instance == state.Control.Instance || event.Kind == "shell") {
+			state.Control = &Event{Kind: "control", Mode: "active", Instance: event.Instance, Helper: event.Helper, Platform: event.Platform, Ready: event.Kind == "shell"}
+		}
 		switch event.Kind {
 		case "provider":
 			state.Provider = &event
@@ -184,6 +226,9 @@ func RecordHostEvent(event Event) error {
 			state.Control = &event
 		case "shell":
 			// No new command/directory content is retained while capture is paused.
+			if event.Instance != "" && cachedActivity(*state).ShellInstance == event.Instance {
+				state.Complete = &Event{Kind: "complete", Instance: event.Instance}
+			}
 			if state.Recording {
 				state.Shell = &event
 			}

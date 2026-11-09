@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../utils/api';
-import type { SessionRecovery } from '../types';
+import type { RecoveryRequest, SessionRecovery } from '../types';
 import { Dialog } from './Dialog';
 import './RecoveryDialog.css';
 
@@ -9,6 +9,11 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
   const [value, setValue] = useState<SessionRecovery | null>(null);
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState('');
+  const [approveReplay, setApproveReplay] = useState(false);
+  const [shareContext, setShareContext] = useState(false);
+  const [context, setContext] = useState('');
   useEffect(() => {
     const controller = new AbortController();
     setValue(null); setError('');
@@ -20,9 +25,34 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
     return () => controller.abort();
   }, [sessionId, refresh]);
   const activity = value?.state?.activity;
-  return <Dialog title="Recover work" onClose={onClose} width={680}>
+  const refreshPreview = () => { setApproveReplay(false); setShareContext(false); setContext(''); setRefresh(count => count + 1); };
+  const perform = async (kind: RecoveryRequest['kind']) => {
+    if (!value?.waiting || !value.state || !value.instance || value.host_revision == null || busy) return;
+    setBusy(true); setActionError('');
+    try {
+      const selected = kind === 'native' && shareContext ? context : '';
+      if (new TextEncoder().encode(selected).length > 16 * 1024) throw new Error('Select at most 16 KiB of output to share.');
+      const token = crypto.getRandomValues(new Uint8Array(16));
+      token[6] = (token[6] & 15) | 64; token[8] = (token[8] & 63) | 128;
+      const hex = Array.from(token, byte => byte.toString(16).padStart(2, '0')).join('');
+      const id = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+      await api.recoverSession(sessionId, { id, kind, revision: value.state.revision,
+        host_revision: value.host_revision, instance: value.instance,
+        confirm: kind === 'replay' ? approveReplay : shareContext, ...(selected ? { context: selected } : {}) });
+      onClose();
+    } catch (cause) { setActionError(cause instanceof Error ? cause.message : 'Cannot continue this work'); refreshPreview(); }
+    finally { setBusy(false); }
+  };
+  const setAutomatic = async (enabled: boolean) => {
+    setBusy(true); setActionError('');
+    try { await api.setAutoRecovery(sessionId, enabled); refreshPreview(); }
+    catch (cause) { setActionError(cause instanceof Error ? cause.message : 'Cannot save recovery preference'); }
+    finally { setBusy(false); }
+  };
+  return <Dialog title="Recover work" onClose={onClose} dismissible={!busy} width={680}>
     <div className="recovery-content">
       {error && <p role="alert">{error}</p>}
+      {actionError && <p role="alert">{actionError}</p>}
       {!value && !error && <p role="status">Loading recorded work…</p>}
       {value && <>
         <p>{value.message}</p>
@@ -46,11 +76,39 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
           <pre className="recovery-history" tabIndex={0} aria-label="Previous terminal output">{value.history}</pre>
         </> : <p>No retained terminal output is available. Existing native conversation information is shown above when recorded.</p>}
         {!activity && <p>No reliable command was recorded. Use any retained output to recover this session manually.</p>}
+        {value.lifecycle_owner === 'webmux' && <label className="recovery-consent">
+          <input type="checkbox" checked={value.state?.auto_resume ?? false} disabled={busy}
+            onChange={event => void setAutomatic(event.target.checked)} />
+          Automatically resume interrupted native coding conversations while session logging is enabled
+        </label>}
+        {value.waiting && <>
+          {value.can_resume_cli && value.history_available && <>
+            <label className="recovery-consent"><input type="checkbox" checked={shareContext} disabled={busy}
+              onChange={event => {
+                setShareContext(event.target.checked);
+                if (event.target.checked && !context) setContext(new TextDecoder().decode(new TextEncoder().encode(value.history).slice(-(16 * 1024 - 4))));
+              }} />
+              I approve sharing the selected terminal output with {activity?.cli} when resuming
+            </label>
+            {shareContext && <textarea aria-label="Selected terminal output to share" value={context} disabled={busy}
+              onChange={event => setContext(event.target.value)} rows={6} />}
+          </>}
+          {value.can_replay && <label className="recovery-consent"><input type="checkbox" checked={approveReplay} disabled={busy}
+            onChange={event => setApproveReplay(event.target.checked)} />
+            I approve running the displayed command again on {value.hostname} in {activity?.cwd}
+          </label>}
+          <div className="recovery-actions">
+            {value.can_resume_cli && <button type="button" disabled={busy} onClick={() => void perform('native')}>Resume {activity?.cli} conversation</button>}
+            {value.can_replay && <button type="button" disabled={busy || !approveReplay} onClick={() => void perform('replay')}>Run recorded command</button>}
+            <button type="button" disabled={busy} onClick={() => void perform('shell')}>Start a shell</button>
+          </div>
+        </>}
       </>}
       <div className="recovery-actions">
-        <button type="button" data-dialog-autofocus onClick={() => setRefresh(count => count + 1)}>Refresh</button>
-        <button type="button" onClick={onClose}>Close</button>
+        <button type="button" disabled={busy} onClick={() => { setActionError(''); refreshPreview(); }}>Refresh</button>
+        <button type="button" disabled={busy} onClick={onClose}>Close</button>
       </div>
+      {busy && <p role="status">Contacting the execution host…</p>}
     </div>
   </Dialog>;
 }

@@ -17,6 +17,8 @@ func (s *Server) sessionError(w http.ResponseWriter, err error, message string) 
 		writeError(w, access.Status, access.Message)
 	case errors.Is(err, session.ErrNotFound):
 		writeError(w, 404, "Session not found")
+	case errors.Is(err, session.ErrRecoveryConflict):
+		writeError(w, 409, err.Error())
 	case errors.As(err, &validation):
 		writeError(w, 400, validation.Error())
 	case errors.Is(err, session.ErrClosed):
@@ -46,6 +48,47 @@ func (s *Server) getSessionRecovery(w http.ResponseWriter, r *http.Request, owne
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, value)
+}
+
+func (s *Server) recoverSession(w http.ResponseWriter, r *http.Request, owner string) {
+	if _, err := s.sessions.Get(owner, r.PathValue("id")); err != nil {
+		s.sessionError(w, err, "Failed to recover session")
+		return
+	}
+	var input session.RecoveryRequest
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	value, err := s.sessions.Recover(owner, r.PathValue("id"), input)
+	if err != nil {
+		s.sessionError(w, err, "Failed to recover session")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 200, value)
+}
+
+func (s *Server) patchRecovery(w http.ResponseWriter, r *http.Request, owner string) {
+	var input struct {
+		AutoResume *bool `json:"auto_resume"`
+	}
+	if _, err := s.sessions.Get(owner, r.PathValue("id")); err != nil {
+		s.sessionError(w, err, "Failed to update recovery")
+		return
+	}
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	if input.AutoResume == nil {
+		writeError(w, 400, "auto_resume is required")
+		return
+	}
+	if err := s.sessions.SetAutoRecovery(owner, r.PathValue("id"), *input.AutoResume); err != nil {
+		s.sessionError(w, err, "Failed to update recovery")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 200, map[string]bool{"auto_resume": *input.AutoResume})
 }
 func (s *Server) createSession(w http.ResponseWriter, r *http.Request, owner string) {
 	var input session.CreateRequest

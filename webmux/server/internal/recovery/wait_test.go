@@ -109,7 +109,7 @@ func TestApprovedReplayIsReadOnceAndOnlyByOwningStartupShell(t *testing.T) {
 	}
 	t.Setenv("WEBMUX_RECOVERY_INSTANCE", "current-worker")
 	script, err := ReadReplay()
-	if err != nil || !strings.HasPrefix(script, "cd -- '") || !strings.HasSuffix(script, "eval 'printf approved'") {
+	if err != nil || !strings.HasPrefix(script, "cd -- '") || !strings.Contains(script, "eval 'printf approved'") {
 		t.Fatal(script, err)
 	}
 	if _, err := ReadReplay(); err == nil {

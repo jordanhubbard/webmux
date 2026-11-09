@@ -50,11 +50,17 @@ export interface RecoveryActivity {
 }
 
 export interface SessionRecovery {
+  waiting?: boolean; host_revision?: number; instance?: string;
   session_id: string; hostname: string; transport: string; lifecycle_owner: string;
   history: string; history_available: boolean; shell_ready: boolean; message: string;
   can_resume_cli: boolean; can_replay: boolean;
   state?: { revision: number; pending: boolean; disposition?: string; auto_resume: boolean;
     activity?: RecoveryActivity; transcripts?: string[] };
+}
+
+export interface RecoveryRequest {
+  id: string; kind: 'native' | 'replay' | 'shell'; revision: number; host_revision: number;
+  instance: string; confirm: boolean; context?: string;
 }
 
 export interface TerminalTheme {

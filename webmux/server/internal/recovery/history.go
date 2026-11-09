@@ -58,7 +58,24 @@ func History(directory, name string) (string, error) {
 			return "", nil
 		}
 	}
-	return PlainText(string(data)), nil
+	// Terminal redraws contain long runs of cleared rows. Compact those in the
+	// plain preview, while retaining the original transcript file unchanged.
+	text := strings.ReplaceAll(PlainText(string(data)), "\r\n", "\n")
+	text = strings.ReplaceAll(text, "\r", "\n")
+	var lines []string
+	blank := 0
+	for _, line := range strings.Split(text, "\n") {
+		if strings.Trim(line, " \t") == "" {
+			blank++
+			if blank > 2 {
+				continue
+			}
+		} else {
+			blank = 0
+		}
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\n"), nil
 }
 
 // PlainText removes CSI and all string controls, including clipboard, browser
@@ -73,6 +90,10 @@ func PlainText(input string) string {
 		case 0:
 			if r == '\x1b' {
 				state = 'e'
+			} else if r == 0x9b {
+				state = 'c'
+			} else if r == 0x90 || r == 0x98 || r == 0x9d || r == 0x9e || r == 0x9f {
+				state = 's'
 			} else if r == '\n' || r == '\r' || r == '\t' || r >= 32 && r != 127 && !(r >= 0x80 && r <= 0x9f) {
 				out.WriteRune(r)
 			}
@@ -83,7 +104,17 @@ func PlainText(input string) string {
 			case ']', 'P', '^', '_', 'X':
 				state = 's'
 			default:
+				if r >= 0x20 && r <= 0x2f {
+					state = 'g'
+				} else {
+					state = 0
+				}
+			}
+		case 'g':
+			if r >= 0x30 && r <= 0x7e {
 				state = 0
+			} else if r == '\x1b' {
+				state = 'e'
 			}
 		case 'c':
 			if r >= 0x40 && r <= 0x7e {
@@ -92,7 +123,7 @@ func PlainText(input string) string {
 				state = 'e'
 			}
 		case 's':
-			if r == '\a' {
+			if r == '\a' || r == 0x9c {
 				state = 0
 			} else if r == '\x1b' {
 				state = 't'

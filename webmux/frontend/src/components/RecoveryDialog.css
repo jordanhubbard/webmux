@@ -1,4 +1,4 @@
-.recovery-content { padding: 0 16px 16px; }
+.recovery-content { padding: 0 16px 16px; min-height: 0; overflow: auto; }
 .recovery-content h3 { font-size: 13px; margin: 16px 0 8px; }
 .recovery-details { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(0, 3fr); gap: 8px 12px; font-size: 12px; }
 .recovery-details dt { color: #aaaac0; }
@@ -6,3 +6,9 @@
 .recovery-command, .recovery-history { margin: 0; padding: 12px; background: #0d0d1a; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 .recovery-history { max-height: 280px; overflow: auto; }
 .recovery-actions { display: flex; gap: 8px; margin-top: 16px; }
+.recovery-consent { display: flex; align-items: flex-start; gap: 8px; margin-top: 16px; font-size: 12px; }
+.recovery-content textarea { box-sizing: border-box; width: 100%; margin-top: 8px; }
+.recovery-actions { flex-wrap: wrap; }
+.recovery-actions button { border: 1px solid #4a4673; border-radius: 4px; padding: 6px 10px; background: #282844; color: inherit; font: inherit; font-size: 12px; cursor: pointer; }
+.recovery-actions button:disabled { opacity: 0.45; cursor: default; }
+.recovery-content textarea { background: #0d0d1a; color: inherit; border: 1px solid #4a4673; border-radius: 4px; padding: 8px; }

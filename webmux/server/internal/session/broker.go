@@ -34,6 +34,12 @@ type process interface {
 }
 type launchFunc func(terminal.LaunchRequest, string) (process, error)
 type run struct {
+	recoveryPolling  bool
+	recoveryReady    bool
+	recoveryRevision uint64
+	recoveryControl  *recovery.Event
+	recoveryError    string
+	autoAttempted    string
 	recoveryDecoder  recovery.Decoder
 	clipboardDecoder terminalclipboard.Decoder
 	clipboardRead    *clipboardRead
@@ -141,7 +147,7 @@ func newBroker(store *storage.Store, logger *slog.Logger, launch launchFunc) (*B
 		s = s.clone()
 		if s.Recovery != nil && (s.Recovery.Activity != nil || len(s.Recovery.Transcripts) > 0) {
 			s.Recovery.Pending = true
-			if s.Recovery.Disposition == "requested" {
+			if s.Recovery.Disposition == "requested" || s.Recovery.Disposition == "continuing" {
 				s.Recovery.Disposition = "execution-uncertain"
 			} else {
 				s.Recovery.Disposition = "interrupted"
@@ -367,7 +373,11 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 	}
 	r := &run{process: p, initial: initial, first: true, input: make(chan string, 256), stopped: make(chan struct{}), generation: e.generation, replayUntil: time.Now().Add(1500 * time.Millisecond)}
 	e.run = r
-	if b.loggingEnabledLocked() {
+	logging := b.loggingEnabledLocked()
+	if e.value.TranscriptEnabled != nil {
+		logging = *e.value.TranscriptEnabled
+	}
+	if logging {
 		b.openTranscriptLocked(e, r)
 	}
 	b.broadcastLocked(e, b.transcriptEventLocked(e))
@@ -613,6 +623,9 @@ func (b *Broker) input(owner, id, data string, requireConnected bool) error {
 	var current *run
 	if err == nil && e.run != nil {
 		current = e.run
+		if current.recoveryControl != nil && current.recoveryControl.Mode == "waiting" {
+			err = ErrRecoveryWaiting
+		}
 	}
 	b.mu.Unlock()
 	if err != nil {
@@ -652,6 +665,7 @@ func (b *Broker) input(owner, id, data string, requireConnected bool) error {
 }
 
 var ErrInputBusy = errors.New("terminal input queue is full")
+var ErrRecoveryWaiting = errors.New("This session is waiting for recovery. Open Recover work to continue or start a shell.")
 
 func (b *Broker) writeInput(r *run) {
 	defer b.workers.Done()

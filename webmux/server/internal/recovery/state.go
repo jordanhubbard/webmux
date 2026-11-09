@@ -19,6 +19,7 @@ type Activity struct {
 }
 
 type State struct {
+	Intent      *Intent   `json:"intent,omitempty" yaml:"intent,omitempty"`
 	AutoResume  bool      `json:"auto_resume" yaml:"auto_resume"`
 	Version     int       `json:"version" yaml:"version"`
 	Revision    uint64    `json:"revision" yaml:"revision"`
@@ -28,11 +29,21 @@ type State struct {
 	Disposition string    `json:"disposition,omitempty" yaml:"disposition,omitempty"`
 }
 
+type Intent struct {
+	ID      string `json:"id" yaml:"id"`
+	Hash    string `json:"-" yaml:"hash"`
+	Outcome string `json:"outcome" yaml:"outcome"`
+}
+
 func (s *State) Clone() *State {
 	if s == nil {
 		return nil
 	}
 	copy := *s
+	if s.Intent != nil {
+		intent := *s.Intent
+		copy.Intent = &intent
+	}
 	copy.Transcripts = append([]string(nil), s.Transcripts...)
 	if s.Activity != nil {
 		a := *s.Activity

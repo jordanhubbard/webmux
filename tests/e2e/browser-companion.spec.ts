@@ -85,9 +85,17 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
       const linkText = linkKind === 'plain' ? identityURL : 'Remote sign-in';
       const line = page.locator('.xterm-rows').getByText(linkText, { exact: true }).last();
       await expect(line).toBeVisible();
-      const box = (await line.boundingBox())!;
-      await page.mouse.move(box.x + 25, box.y + box.height / 2);
-      await page.mouse.click(box.x + 25, box.y + box.height / 2);
+      // Row spans are an accessibility mirror; xterm-screen receives pointer
+      // events. Reacquire geometry if a redraw replaces the span mid-click.
+      await expect(async () => {
+        const choice = page.getByRole('button', { name: 'Use browser on terminal host' });
+        if (await choice.isVisible()) return;
+        const box = await line.boundingBox();
+        if (!box) throw new Error('Terminal row was redrawn before link activation');
+        await page.mouse.move(box.x + 25, box.y + box.height / 2);
+        await page.mouse.click(box.x + 25, box.y + box.height / 2);
+        await expect(choice).toBeVisible({ timeout: 1000 });
+      }).toPass({ timeout: 10_000 });
     } else {
       await page.getByRole('button', { name: 'Session tools', exact: true }).click();
       await page.getByRole('button', { name: 'Open browser', exact: true }).click();
@@ -151,12 +159,16 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     await expect(viewport).not.toBeVisible();
     const ended = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
     expect(ended.status()).toBe(503);
+  } catch (error) {
+    console.error('Browser companion workflow failed:', String(error).split('\n').slice(0, 4).join('\n'));
+    throw error;
   } finally {
     await idleViewer?.close();
     rmSync(launchConfig, { force: true });
-    await request.delete(`/api/sessions/${session.id}`);
+    await request.delete(`/api/sessions/${session.id}`).catch(() => { /* the request fixture may already be closed after a timeout */ });
     // Local terminals intentionally persist in tmux after disconnection.
     try { execFileSync('tmux', ['kill-session', '-t', `webmux-${session.id}`]); } catch { /* already exited */ }
+    identity.closeAllConnections(); callback.closeAllConnections();
     await Promise.all([new Promise<void>(resolve => identity.close(() => resolve())), new Promise<void>(resolve => callback.close(() => resolve()))]);
   }
 });

@@ -20,6 +20,7 @@ type RPCRequest struct {
 	Operation string          `json:"operation"`
 	Recording *bool           `json:"recording,omitempty"`
 	Action    *RecoveryAction `json:"action,omitempty"`
+	Seed      *Activity       `json:"seed,omitempty"`
 }
 
 type RecoveryAction struct {
@@ -72,6 +73,9 @@ func HostRPC(ctx context.Context, request RPCRequest) RPCResponse {
 	response.Protocol = 1
 	if err != nil {
 		response.Error = err.Error()
+		if response.Outcome == "" {
+			response.Outcome = "rejected"
+		}
 	}
 	return response
 }
@@ -86,7 +90,7 @@ func hostRPC(ctx context.Context, request RPCRequest) (RPCResponse, error) {
 		if request.Recording == nil {
 			return RPCResponse{}, errors.New("missing recovery recording policy")
 		}
-		if err := InitializeHostState(request.SessionID, request.Key, *request.Recording); err != nil {
+		if err := InitializeHostEvidence(request.SessionID, request.Key, *request.Recording, request.Seed); err != nil {
 			return RPCResponse{}, err
 		}
 		if _, err := EnsureProvider(ctx, request.SessionID, request.Key); err != nil {
@@ -143,12 +147,15 @@ func callWaitingWorker(ctx context.Context, endpoint string, request RPCRequest)
 	deadline, _ := ctx.Deadline()
 	_ = connection.SetDeadline(deadline)
 	if err := json.NewEncoder(connection).Encode(request); err != nil {
-		return RPCResponse{}, err
+		return RPCResponse{Outcome: "uncertain"}, err
 	}
 	if err := connection.(*net.UnixConn).CloseWrite(); err != nil {
-		return RPCResponse{}, err
+		return RPCResponse{Outcome: "uncertain"}, err
 	}
 	var response RPCResponse
 	err = readRPC(connection, &response)
+	if err != nil {
+		response.Outcome = "uncertain"
+	}
 	return response, err
 }
