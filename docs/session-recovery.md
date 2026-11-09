@@ -62,6 +62,49 @@ Its recovery metadata path needs separate native qualification and must not
 repurpose clipboard operations as a metadata channel. Pause behavior and
 execution-host ownership apply to that path as well.
 
+## Continuation control design
+
+Recovery actions must not be submitted as typed terminal input. A prompt-ready
+observation can become stale while a user edits a partial command or starts an
+application. A revision check alone cannot make that input safe. The unpublished
+typed-input prototype was removed; there is no recovery-action HTTP endpoint in
+this checkpoint.
+
+The next implementation uses an authenticated execution-host control channel:
+
+1. A stable, session-owned tmux provider is probed before creation. A surviving
+   provider is reattached. A lost provider with recorded activity starts a
+   dedicated recovery-wait worker, rather than silently replaying the command
+   or injecting it into an existing shell/application.
+2. The waiting worker owns a private local socket. Local operations and fixed
+   SSH helper RPCs carry structured requests to that socket. The worker verifies
+   its session key, native conversation/project/version, request revision and
+   action ID before starting a child with clean terminal input. A live provider
+   cannot be replaced by this action path.
+3. Persist action intent and consumption before launch. Repeated requests and
+   reconnects cannot launch the same action twice. Preserve an uncertain outcome
+   after interruption instead of blindly retrying a command. Automatic recovery
+   is opt-in and limited to native conversation resume, without transcript
+   handoff or arbitrary command replay.
+4. Execution-host helpers maintain bounded, signed activity/control snapshots.
+   A private recording policy gates command persistence and honors logging
+   pause. Mosh reads these snapshots over the authenticated SSH helper path;
+   metadata must not depend on arbitrary OSC forwarding. No existing terminal
+   key binding, clipboard state or user startup file is repurposed.
+5. Rig and Agent Deck retain their lifecycle authority. Recovery must query and
+   resume their existing provider identities; saved attachment argv alone does
+   not authorize launching another agent.
+
+The native identity tests must also cover changing conversations inside one CLI
+process. An initially selected conversation ID is not sufficient evidence after
+the user switches sessions. Prefer native hooks or the owning process's active
+state; ambiguity requires an explicit fallback, not a timestamp-based guess.
+
+Qualification will use a disposable native VM for host reboot. Do not reboot
+the user's workstation or existing shared workers. The actual resume acceptance
+needs a synthetic conversation marker recovered by each named CLI, beyond
+empty-session allocation/export or mocked adapter assertions.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
