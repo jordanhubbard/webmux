@@ -9,7 +9,7 @@ const emptyEditor = (kind: Editor['kind']): Editor => ({ kind, existing: false, 
 function serverIdentity(url: string, directory: ServerDirectory) {
   const parsed = new URL(url);
   const base = parsed.host
-    .toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56) || 'server';
+    .toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^[^a-z0-9]+|-+$/g, '').slice(0, 56) || 'server';
   const used = new Set(['local', 'all', ...directory.servers.map(server => server.id), ...directory.grants.map(grant => grant.id)]);
   let id = base;
   for (let suffix = 2; used.has(id); suffix++) id = `${base}-${suffix}`;
@@ -51,8 +51,8 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
         void run(async () => {
           if (input.kind === 'server') {
             if (!directory) throw new Error('Wait for the server directory to load, then retry.');
-            const identity = input.existing ? input : serverIdentity(input.url, directory);
-            await api.saveServer(identity.id, { name: input.name.trim() || identity.name, url: input.url, allow_http: input.allow_http, token_env: input.token_env, credential: input.credential });
+            const identity = serverIdentity(input.url, directory);
+            await api.saveServer(input.existing ? input.id : identity.id, { name: input.name.trim() || identity.name, url: input.url, allow_http: input.allow_http, token_env: input.token_env, credential: input.credential });
           } else await api.saveServerGrant(input.id, { owner: input.owner, token_env: input.token_env, credential: input.credential });
           // Discard the transient credential immediately after a successful save.
           setEditor(null); setShowCredential(false);

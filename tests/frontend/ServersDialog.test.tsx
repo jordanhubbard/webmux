@@ -38,8 +38,9 @@ describe('server management', () => {
     expect(credential).toHaveAttribute('type', 'password');
     expect(credential).toHaveValue('');
     fireEvent.change(credential, { target: { value: 'b'.repeat(40) } });
+    fireEvent.change(screen.getByLabelText('Name (optional)'), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save server' }));
-    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith('remote', expect.objectContaining({ credential: 'b'.repeat(40), token_env: 'BUILDER_TOKEN' })));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith('remote', expect.objectContaining({ name: 'moved', url: 'https://moved', credential: 'b'.repeat(40), token_env: 'BUILDER_TOKEN' })));
   });
   it('creates an incoming grant with the intended local owner', async () => {
     render(<ServersDialog onClose={vi.fn()} onChanged={vi.fn().mockResolvedValue(undefined)} currentUser="owner" />);
@@ -86,6 +87,8 @@ it.each([
   ['https://local', 'local-2', 'local'],
   ['https://Builder:9443', 'builder-9443-2', 'builder:9443'],
   ['https://all', 'all-2', 'all'],
+  ['https://_builder', 'builder', '_builder'],
+  ['https://[::1]:8443', '1-8443', '[::1]:8443'],
   ['https://controller', 'controller-2', 'controller'],
   [`https://${'a'.repeat(63)}.example.net`, 'a'.repeat(56), `${'a'.repeat(63)}.example.net`],
 ])('derives a unique ID and default name from %s', async (url, id, name) => {
