@@ -74,6 +74,12 @@ The execution-host control worker now exists. Provider startup, broker actions
 and the browser still need to be connected to it before users can recover work.
 Its fixed `--recovery-rpc` helper reads one bounded JSON request from stdin;
 authentication keys and action payloads never travel as typed terminal input.
+The RPC `ensure` operation provisions a stable tmux provider through a private
+stdin script. Native tmux tests confirm that concurrent reconnects create one
+provider, a surviving process keeps its PID, and a lost provider with recorded
+activity receives the startup wait gate. The SSH control client uses a fixed
+remote helper command, configured account/key/port and a bounded JSON pipe;
+its implementation is present, but remote lifecycle qualification remains open.
 
 The control path has these boundaries:
 

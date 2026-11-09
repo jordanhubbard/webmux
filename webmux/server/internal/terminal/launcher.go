@@ -22,7 +22,7 @@ import (
 // LaunchRequest is internal session state, never an unvalidated HTTP request.
 // Passwords are separate so they cannot accidentally enter persisted sessions.
 type LaunchRequest struct {
-	RecoveryKey                          string
+	RecoveryKey                          string `json:"-"`
 	SessionID                            string
 	Hostname, Username, Transport, KeyID string
 	Port, Cols, Rows                     int

@@ -80,6 +80,20 @@ func hostRPC(ctx context.Context, request RPCRequest) (RPCResponse, error) {
 	if request.Protocol != 1 {
 		return RPCResponse{}, errors.New("unsupported recovery control protocol")
 	}
+	// Provisioning is invoked only by the authenticated execution-host account.
+	// It can create a new identity, but cannot replace a differently keyed one.
+	if request.Operation == "ensure" {
+		if request.Recording == nil {
+			return RPCResponse{}, errors.New("missing recovery recording policy")
+		}
+		if err := InitializeHostState(request.SessionID, request.Key, *request.Recording); err != nil {
+			return RPCResponse{}, err
+		}
+		if _, err := EnsureProvider(ctx, request.SessionID, request.Key); err != nil {
+			return RPCResponse{}, err
+		}
+		request.Operation = "snapshot"
+	}
 	// Authenticate before returning state or connecting to a waiting worker.
 	state, err := updateHostState(request.SessionID, request.Key, false, nil)
 	if err != nil {
