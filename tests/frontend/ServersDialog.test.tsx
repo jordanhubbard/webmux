@@ -18,8 +18,7 @@ describe('server management', () => {
     render(<ServersDialog onClose={vi.fn()} onChanged={changed} currentUser="owner" />);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Add server' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Add server' }));
-    fireEvent.change(screen.getByLabelText('ID'), { target: { value: 'new' } });
-    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New host' } });
+    fireEvent.change(screen.getByLabelText('Name (optional)'), { target: { value: 'New host' } });
     fireEvent.change(screen.getByLabelText('Server URL'), { target: { value: 'https://new' } });
     fireEvent.change(screen.getByLabelText('Credential', { exact: true }), { target: { value: 'a'.repeat(40) } });
     fireEvent.click(screen.getByRole('button', { name: 'Save server' }));
@@ -33,7 +32,8 @@ describe('server management', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Test connection to Builder' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Peer rejected credential');
     fireEvent.click(screen.getByRole('button', { name: 'Edit Builder' }));
-    expect(screen.getByLabelText('ID')).toBeDisabled();
+    expect(screen.queryByLabelText('ID')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Server URL'), { target: { value: 'https://moved' } });
     const credential = screen.getByLabelText('Replacement credential');
     expect(credential).toHaveAttribute('type', 'password');
     expect(credential).toHaveValue('');
@@ -46,7 +46,7 @@ describe('server management', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Add incoming grant' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Add incoming grant' }));
     expect(screen.getByLabelText('Session owner')).toHaveValue('owner');
-    fireEvent.change(screen.getByLabelText('ID'), { target: { value: 'controller' } });
+    fireEvent.change(screen.getByLabelText('Grant name'), { target: { value: 'controller' } });
     fireEvent.change(screen.getByLabelText('Credential', { exact: true }), { target: { value: 'c'.repeat(40) } });
     fireEvent.click(screen.getByRole('button', { name: 'Save grant' }));
     await waitFor(() => expect(mocks.grant).toHaveBeenCalledWith('controller', { owner: 'owner', credential: 'c'.repeat(40), token_env: '' }));
@@ -55,7 +55,8 @@ describe('server management', () => {
 
 it('opens the add editor directly from the cluster shortcut', async () => {
   render(<ServersDialog initiallyAddServer onClose={vi.fn()} onChanged={vi.fn()} currentUser="owner" />);
-  expect(screen.getByLabelText('ID')).toHaveValue('');
+  expect(screen.queryByLabelText('ID')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Server URL')).toHaveValue('');
   expect(screen.getByRole('button', { name: 'Save server' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(await screen.findByRole('button', { name: 'Edit Builder' })).toBeVisible();
@@ -77,4 +78,21 @@ it('removes a peer only after confirmation and refreshes the directory', async (
     fireEvent.click(screen.getByRole('button', { name: 'Refresh directory' }));
     await waitFor(() => expect(changed).toHaveBeenCalledTimes(2));
   } finally { confirm.mockRestore(); }
+});
+
+it.each([
+  ['https://builder:8443', 'builder-8443', 'builder:8443'],
+  ['https://builder', 'builder', 'builder'],
+  ['https://local', 'local-2', 'local'],
+  ['https://Builder:9443', 'builder-9443-2', 'builder:9443'],
+  ['https://all', 'all-2', 'all'],
+  ['https://controller', 'controller-2', 'controller'],
+  [`https://${'a'.repeat(63)}.example.net`, 'a'.repeat(56), `${'a'.repeat(63)}.example.net`],
+])('derives a unique ID and default name from %s', async (url, id, name) => {
+  mocks.directory.mockResolvedValue({ servers: [peer, { ...peer, id: 'builder-9443' }], grants: [{ id: 'controller', owner: 'owner' }] });
+  render(<ServersDialog initiallyAddServer onClose={vi.fn()} onChanged={vi.fn()} currentUser="owner" />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Save server' })).toBeEnabled());
+  fireEvent.change(screen.getByLabelText('Server URL'), { target: { value: url } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save server' }));
+  await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(id, expect.objectContaining({ name, url })));
 });

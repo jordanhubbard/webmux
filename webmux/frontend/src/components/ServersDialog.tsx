@@ -6,6 +6,16 @@ import './ServersDialog.css';
 type Editor = { kind: 'server' | 'grant'; existing: boolean; id: string; name: string; url: string; owner: string; allow_http: boolean; token_env: string; credential: string };
 const emptyEditor = (kind: Editor['kind']): Editor => ({ kind, existing: false, id: '', name: '', url: '', owner: '', allow_http: false, token_env: '', credential: '' });
 
+function serverIdentity(url: string, directory: ServerDirectory) {
+  const parsed = new URL(url);
+  const base = parsed.host
+    .toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 56) || 'server';
+  const used = new Set(['local', 'all', ...directory.servers.map(server => server.id), ...directory.grants.map(grant => grant.id)]);
+  let id = base;
+  for (let suffix = 2; used.has(id); suffix++) id = `${base}-${suffix}`;
+  return { id, name: parsed.host };
+}
+
 export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddServer = false }: { initiallyAddServer?: boolean; onClose: () => void; onChanged: () => Promise<void>; currentUser: string | null }) {
   const [directory, setDirectory] = useState<ServerDirectory | null>(null);
   const [editor, setEditor] = useState<Editor | null>(() => initiallyAddServer ? emptyEditor('server') : null);
@@ -39,8 +49,11 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
         event.preventDefault();
         const input = editor;
         void run(async () => {
-          if (input.kind === 'server') await api.saveServer(input.id, { name: input.name, url: input.url, allow_http: input.allow_http, token_env: input.token_env, credential: input.credential });
-          else await api.saveServerGrant(input.id, { owner: input.owner, token_env: input.token_env, credential: input.credential });
+          if (input.kind === 'server') {
+            if (!directory) throw new Error('Wait for the server directory to load, then retry.');
+            const identity = input.existing ? input : serverIdentity(input.url, directory);
+            await api.saveServer(identity.id, { name: input.name.trim() || identity.name, url: input.url, allow_http: input.allow_http, token_env: input.token_env, credential: input.credential });
+          } else await api.saveServerGrant(input.id, { owner: input.owner, token_env: input.token_env, credential: input.credential });
           // Discard the transient credential immediately after a successful save.
           setEditor(null); setShowCredential(false);
           await reload(); setNotice('Saved. Credentials stay on this server and are never returned to the browser.');
@@ -48,12 +61,14 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
       }}>
         <h3>{editor.existing ? 'Edit' : 'Add'} {editor.kind === 'server' ? 'server' : 'incoming grant'}</h3>
         <fieldset disabled={busy}>
-          <label>ID<input data-dialog-autofocus required pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" maxLength={64} disabled={editor.existing} value={editor.id} onChange={e => setEditor({ ...editor, id: e.target.value })} /></label>
           {editor.kind === 'server' ? <>
-            <label>Name<input required value={editor.name} onChange={e => setEditor({ ...editor, name: e.target.value })} /></label>
-            <label>Server URL<input required type="url" placeholder="https://builder.example.net:8443" value={editor.url} onChange={e => setEditor({ ...editor, url: e.target.value })} /></label>
+            <label>Server URL<input data-dialog-autofocus required type="url" placeholder="https://builder.example.net:8443" value={editor.url} onChange={e => setEditor({ ...editor, url: e.target.value })} /></label>
+            <label>Name (optional)<input placeholder="Defaults to the server address" value={editor.name} onChange={e => setEditor({ ...editor, name: e.target.value })} /></label>
             <label className="servers-check"><input type="checkbox" checked={editor.allow_http} onChange={e => setEditor({ ...editor, allow_http: e.target.checked })} />Allow HTTP for a trusted private network or tunnel</label>
-          </> : <label>Session owner<input required value={editor.owner} onChange={e => setEditor({ ...editor, owner: e.target.value })} /></label>}
+          </> : <>
+            <label>Grant name<input data-dialog-autofocus required pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" maxLength={64} disabled={editor.existing} value={editor.id} onChange={e => setEditor({ ...editor, id: e.target.value })} /></label>
+            <label>Session owner<input required value={editor.owner} onChange={e => setEditor({ ...editor, owner: e.target.value })} /></label>
+          </>}
           <p>Use the same credential in the outgoing server entry and the receiving server’s incoming grant. Each direction needs its own entry and grant. Copy a generated credential before saving; it cannot be viewed again afterward.</p>
           <label>{editor.existing ? 'Replacement credential' : 'Credential'}<input type={showCredential ? 'text' : 'password'} autoComplete="new-password" minLength={32} maxLength={4096} value={editor.credential} onChange={e => setEditor({ ...editor, credential: e.target.value })} placeholder={editor.existing ? 'Leave blank to keep the current credential' : 'At least 32 characters'} /></label>
           <div className="servers-actions">
@@ -64,7 +79,7 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
             <label>Credential environment variable<input pattern="[A-Za-z_][A-Za-z0-9_]*" value={editor.token_env} onChange={e => setEditor({ ...editor, token_env: e.target.value })} /></label>
             <p>A replacement credential overrides this setting. Changes to the service environment require a service restart.</p>
           </details>
-          <div className="servers-actions"><button type="submit">Save {editor.kind === 'server' ? 'server' : 'grant'}</button><button type="button" onClick={() => { setEditor(null); setShowCredential(false); }}>Cancel</button></div>
+          <div className="servers-actions"><button type="submit" disabled={!directory}>Save {editor.kind === 'server' ? 'server' : 'grant'}</button><button type="button" onClick={() => { setEditor(null); setShowCredential(false); }}>Cancel</button></div>
         </fieldset>
       </form> : <>
         <div className="servers-actions"><button disabled={busy || !directory} onClick={() => edit('server')}>Add server</button><button disabled={busy} onClick={() => { void run(reload); }}>Refresh directory</button></div>
