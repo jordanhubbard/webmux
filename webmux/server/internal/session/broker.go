@@ -20,6 +20,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/agent"
 	"github.com/jordanhubbard/webmux/server/internal/browseropen"
 	"github.com/jordanhubbard/webmux/server/internal/config"
+	"github.com/jordanhubbard/webmux/server/internal/recovery"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 	"github.com/jordanhubbard/webmux/server/internal/templates"
 	"github.com/jordanhubbard/webmux/server/internal/terminal"
@@ -33,6 +34,7 @@ type process interface {
 }
 type launchFunc func(terminal.LaunchRequest, string) (process, error)
 type run struct {
+	recoveryDecoder  recovery.Decoder
 	clipboardDecoder terminalclipboard.Decoder
 	clipboardRead    *clipboardRead
 	browserDecoder   browseropen.Decoder
@@ -60,6 +62,11 @@ func (r *run) stop() {
 }
 
 type entry struct {
+	shellHelper     string
+	shellPlatform   string
+	historyRestored bool
+	shellReady      bool
+	shellInstance   string
 	replayScreen    replayScreen
 	browserRequest  Event
 	browserExpires  time.Time
@@ -130,6 +137,15 @@ func newBroker(store *storage.Store, logger *slog.Logger, launch launchFunc) (*B
 	for _, s := range saved.Sessions {
 		if s.ID == "" || b.entries[s.ID] != nil {
 			return nil, errors.New("invalid or duplicate persisted session ID")
+		}
+		s = s.clone()
+		if s.Recovery != nil && (s.Recovery.Activity != nil || len(s.Recovery.Transcripts) > 0) {
+			s.Recovery.Pending = true
+			if s.Recovery.Disposition == "requested" {
+				s.Recovery.Disposition = "execution-uncertain"
+			} else {
+				s.Recovery.Disposition = "interrupted"
+			}
 		}
 		b.entries[s.ID] = &entry{value: s}
 		b.order = append(b.order, s.ID)
@@ -318,6 +334,17 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 }
 
 func (b *Broker) startLocked(e *entry, password, initial string) error {
+	if e.value.RecoveryKey == "" {
+		key, err := recovery.NewInstance()
+		if err != nil {
+			return err
+		}
+		e.value.RecoveryKey = key
+	}
+	e.shellReady = false
+	e.shellInstance = ""
+	e.shellHelper, e.shellPlatform = "", ""
+	e.historyRestored = false
 	e.browserRequest = nil
 	e.generation++
 	e.value.State = "connecting"
@@ -740,6 +767,11 @@ func (b *Broker) output(id string, r *run, data string) {
 		if len(r.moshOutput) > 256 {
 			r.moshOutput = r.moshOutput[len(r.moshOutput)-256:]
 		}
+	}
+	var recoveryEvents []recovery.Event
+	data, recoveryEvents = r.recoveryDecoder.Feed(data)
+	for _, event := range recoveryEvents {
+		b.recoveryEventLocked(e, r, event)
 	}
 	var clipboard []terminalclipboard.Request
 	data, clipboard = r.clipboardDecoder.Feed(data)

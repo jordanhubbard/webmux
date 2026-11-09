@@ -14,6 +14,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/jordanhubbard/webmux/server/internal/config"
+	"github.com/jordanhubbard/webmux/server/internal/recovery"
 )
 
 type transcriptSink interface {
@@ -202,6 +203,15 @@ func (b *Broker) openTranscriptLocked(e *entry, r *run) *transcriptLog {
 	}
 	_ = l.append(fmt.Sprintf("[webmux transcript %s %s session=%s launch=%d]\r\n", action, now(), id, r.generation))
 	r.log = l
+	if e.value.Recovery == nil {
+		e.value.Recovery = &recovery.State{Version: 1}
+	}
+	e.value.Recovery.AddTranscript(name)
+	// Save the reference before accepting output, including manually enabled
+	// logging. Shutdown cannot be relied on after a crash or a host reboot.
+	if err := b.persistLocked(); err != nil {
+		b.logger.Warn("save transcript recovery reference", "session_id", e.value.ID, "error", err)
+	}
 	b.audit(map[string]any{"type": "session_transcript_started", "session_id": e.value.ID, "launch_generation": r.generation, "path": path, "resumed": resumed})
 	b.workers.Add(1)
 	go b.writeTranscript(e.value.ID, r, l, sink)

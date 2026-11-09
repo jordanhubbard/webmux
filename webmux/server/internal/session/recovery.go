@@ -1,0 +1,191 @@
+package session
+
+import (
+	"errors"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strings"
+
+	"github.com/jordanhubbard/webmux/server/internal/recovery"
+)
+
+// RecoveryView is owner-scoped like the terminal itself. History is plain text;
+// browser/clipboard/shell protocol packets are never replayed from disk.
+type RecoveryView struct {
+	CanResumeCLI     bool            `json:"can_resume_cli"`
+	CanReplay        bool            `json:"can_replay"`
+	SessionID        string          `json:"session_id"`
+	Hostname         string          `json:"hostname"`
+	Transport        string          `json:"transport"`
+	LifecycleOwner   string          `json:"lifecycle_owner"`
+	State            *recovery.State `json:"state,omitempty"`
+	History          string          `json:"history"`
+	HistoryAvailable bool            `json:"history_available"`
+	ShellReady       bool            `json:"shell_ready"`
+	Message          string          `json:"message"`
+}
+
+func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
+	b.mu.Lock()
+	e, err := b.ownedLocked(owner, id)
+	if err != nil {
+		b.mu.Unlock()
+		return RecoveryView{}, err
+	}
+	s := e.value.clone()
+	ready := e.shellReady
+	helper, platform := e.shellHelper, e.shellPlatform
+	b.mu.Unlock()
+	view := RecoveryView{SessionID: id, Hostname: s.Hostname, Transport: s.Transport, LifecycleOwner: "webmux", State: s.Recovery, ShellReady: ready, Message: "No recorded activity is available. Reconnect or recover this session manually."}
+	if s.Rig != nil {
+		view.LifecycleOwner = s.Rig.Provider
+		if view.LifecycleOwner == "" {
+			view.LifecycleOwner = "rig"
+		}
+	}
+	if s.Agent() {
+		view.LifecycleOwner = "agent-deck"
+	}
+	if s.Recovery != nil && s.Recovery.Activity != nil && ready && view.LifecycleOwner == "webmux" {
+		a := s.Recovery.Activity
+		view.CanResumeCLI = helper != "" && recovery.ValidNativeID(a.CLI, a.NativeSessionID)
+		view.CanReplay = a.Replayable && (platform == "linux" || platform == "darwin")
+	}
+	if s.Recovery == nil {
+		return view, nil
+	}
+	var histories []string
+	for _, name := range s.Recovery.Transcripts {
+		text, err := recovery.History(filepath.Join(b.store.Home, "logs", "sessions"), name)
+		if err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				b.logger.Warn("read recovery history", "session_id", id, "error", err)
+			}
+			continue
+		}
+		if text != "" {
+			histories = append(histories, text)
+		}
+	}
+	view.History = strings.Join(histories, "\r\n")
+	if len(view.History) > recovery.MaxHistoryBytes {
+		view.History = strings.ToValidUTF8(view.History[len(view.History)-recovery.MaxHistoryBytes:], "")
+	}
+	view.HistoryAvailable = view.History != ""
+	if s.Recovery.Activity != nil {
+		view.Message = "Review the recorded activity and available history before continuing."
+	} else if view.HistoryAvailable {
+		view.Message = "Previous terminal output is available; no reliable command was recorded."
+	}
+	if s.Recovery.Disposition == "reattached" {
+		view.Message = "Reattached to the surviving session. Its running work was preserved."
+	}
+	return view, nil
+}
+
+func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {
+	if !recovery.Verify(event, e.value.RecoveryKey) {
+		return
+	}
+	if event.Kind == "shell" {
+		e.shellInstance, e.shellReady = event.Instance, true
+		e.shellHelper, e.shellPlatform = event.Helper, event.Platform
+		b.restoreRecoveryHistoryLocked(e, r)
+		return
+	}
+	state := e.value.Recovery
+	if event.Kind == "provider" {
+		if state != nil && state.Pending && event.Survived {
+			state.Pending, state.Disposition = false, "reattached"
+			state.Revision++
+			if err := b.persistLocked(); err != nil {
+				b.logger.Warn("save recovery reattachment", "error", err)
+			}
+		}
+		return
+	}
+	switch event.Kind {
+	case "command", "cli":
+		e.shellReady = false
+	case "complete":
+		e.shellReady = true
+	}
+	// Honor both global defaults and the per-session pause switch. Applications
+	// cannot enable recording simply by printing a metadata packet.
+	if !r.log.active() {
+		return
+	}
+	if state == nil {
+		state = &recovery.State{Version: 1}
+		e.value.Recovery = state
+	}
+	previous := state.Clone()
+	switch event.Kind {
+	case "command":
+		if event.Command == "" {
+			return
+		}
+		e.shellReady = false
+		command, replayable := recovery.SafeCommand(event.Command)
+		state.Activity = &recovery.Activity{Platform: event.Platform, Replayable: replayable, ShellInstance: event.Instance, Command: command, Cwd: event.Cwd, Source: "shell-integration", ObservedAt: now(), Running: true}
+		state.Pending, state.Disposition = false, "active"
+	case "cli":
+		e.shellReady = false
+		a := state.Activity
+		if a == nil {
+			a = &recovery.Activity{}
+			state.Activity = a
+		}
+		a.CLI, a.CLIVersion, a.NativeSessionID, a.NativeStateFile = event.CLI, event.Version, event.SessionID, event.StateFile
+		a.ShellInstance = event.Instance
+		a.Platform = event.Platform
+		a.Cwd, a.Argv, a.Source, a.Running = event.Cwd, append([]string(nil), event.Argv...), "cli-native-state", true
+		if a.Command == "" {
+			a.Command = strings.Join(event.Argv, " ")
+		}
+		state.Pending, state.Disposition = false, "active"
+	case "complete":
+		e.shellReady = true
+		if state.Activity != nil && state.Activity.ShellInstance != event.Instance {
+			return
+		}
+		if state.Activity != nil {
+			state.Activity.Running = false
+		}
+	default:
+		return
+	}
+	if reflect.DeepEqual(previous, state) {
+		return
+	}
+	state.Revision++
+	if state.Activity != nil {
+		state.Activity.ObservedAt = now()
+	}
+	if err := b.persistLocked(); err != nil {
+		b.logger.Warn("save recovery activity", "session_id", e.value.ID, "error", err)
+	}
+	b.broadcastLocked(e, Event{"type": "recovery_status", "session_id": e.value.ID, "recovery": state.Clone()})
+}
+
+func (b *Broker) restoreRecoveryHistoryLocked(e *entry, r *run) {
+	if e.historyRestored || e.value.Recovery == nil || !e.value.Recovery.Pending {
+		return
+	}
+	e.historyRestored = true
+	for i := len(e.value.Recovery.Transcripts) - 1; i >= 0; i-- {
+		name := e.value.Recovery.Transcripts[i]
+		if r.log != nil && r.log.name == name {
+			continue
+		}
+		text, err := recovery.History(filepath.Join(b.store.Home, "logs", "sessions"), name)
+		if err != nil || text == "" {
+			continue
+		}
+		text = "\r\n[Previous recorded output — review Recover work to continue]\r\n" + text + "\r\n[Current terminal]\r\n"
+		e.appendReplay(text)
+		b.broadcastLocked(e, Event{"type": "output", "session_id": e.value.ID, "data": text})
+		break
+	}
+}

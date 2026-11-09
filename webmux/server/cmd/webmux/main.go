@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
@@ -27,6 +28,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/discovery"
 	"github.com/jordanhubbard/webmux/server/internal/httpapi"
 	"github.com/jordanhubbard/webmux/server/internal/macsetup"
+	"github.com/jordanhubbard/webmux/server/internal/recovery"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 	"github.com/jordanhubbard/webmux/server/internal/terminal"
 	"github.com/jordanhubbard/webmux/server/internal/usbforward"
@@ -34,6 +36,10 @@ import (
 
 func main() {
 	if err := run(); err != nil {
+		var childExit *exec.ExitError
+		if errors.As(err, &childExit) {
+			os.Exit(childExit.ExitCode())
+		}
 		slog.Error("server stopped", "error", err)
 		os.Exit(1)
 	}
@@ -59,6 +65,9 @@ func run() (resultErr error) {
 		return terminal.ConnectBrowser(os.Args[2])
 	}
 	name := filepath.Base(os.Args[0])
+	if recovery.CLIName(name) != "" {
+		return recovery.RunCLI(name, os.Args[1:])
+	}
 	switch name {
 	case "webmux-open", "webmux-open.exe", "open", "xdg-open", "sensible-browser":
 		if name == "webmux-open.exe" {
@@ -68,6 +77,9 @@ func run() (resultErr error) {
 	}
 	if len(os.Args) >= 2 && os.Args[1] == "--browser-open" {
 		return browseropen.Open(os.Args[2:])
+	}
+	if len(os.Args) >= 2 && os.Args[1] == "--recovery-event" {
+		return recovery.ShellEvent(os.Args[2:], os.Stdout)
 	}
 	if len(os.Args) == 2 && os.Args[1] == "--browser-shell" {
 		return browseropen.Shell()

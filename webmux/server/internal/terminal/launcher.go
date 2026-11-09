@@ -22,6 +22,7 @@ import (
 // LaunchRequest is internal session state, never an unvalidated HTTP request.
 // Passwords are separate so they cannot accidentally enter persisted sessions.
 type LaunchRequest struct {
+	RecoveryKey                          string
 	SessionID                            string
 	Hostname, Username, Transport, KeyID string
 	Port, Cols, Rows                     int
@@ -158,11 +159,14 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 	// Remove inherited TERM rather than relying on duplicate-variable behavior.
 	for i := len(command.Env) - 1; i >= 0; i-- {
 		key, _, _ := strings.Cut(command.Env[i], "=")
-		if key == "TERM" || p.platform == "windows" && strings.EqualFold(key, "TERM") {
+		if key == "TERM" || key == "WEBMUX_RECOVERY_KEY" || key == "WEBMUX_RECOVERY_INSTANCE" || key == "WEBMUX_RECOVERY_HELPER" || p.platform == "windows" && (strings.EqualFold(key, "TERM") || strings.HasPrefix(strings.ToUpper(key), "WEBMUX_RECOVERY_")) {
 			command.Env = append(command.Env[:i], command.Env[i+1:]...)
 		}
 	}
 	command.Env = append(command.Env, "TERM=xterm-256color")
+	if request.RecoveryKey != "" {
+		command.Env = append(command.Env, "WEBMUX_RECOVERY_KEY="+request.RecoveryKey)
+	}
 	resolve := func(name string) (string, error) {
 		path, err := p.lookup(name)
 		if err != nil {

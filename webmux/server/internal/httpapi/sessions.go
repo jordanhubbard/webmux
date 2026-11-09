@@ -37,6 +37,16 @@ func (s *Server) getSession(w http.ResponseWriter, r *http.Request, owner string
 	}
 	writeJSON(w, 200, value)
 }
+
+func (s *Server) getSessionRecovery(w http.ResponseWriter, r *http.Request, owner string) {
+	value, err := s.sessions.Recovery(owner, r.PathValue("id"))
+	if err != nil {
+		s.sessionError(w, err, "Failed to read session recovery")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 200, value)
+}
 func (s *Server) createSession(w http.ResponseWriter, r *http.Request, owner string) {
 	var input session.CreateRequest
 	if !decodeJSON(w, r, &input) {
