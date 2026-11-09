@@ -7,7 +7,7 @@ import path from 'node:path';
 import { randomBytes, createHash } from 'node:crypto';
 import { chromium, expect } from '@playwright/test';
 import argon2 from 'argon2';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 
 const root = path.resolve(import.meta.dirname, '../..');
 const peer = process.argv[2];
