@@ -70,7 +70,7 @@ project still require validation at the recovery action.
 | Safe retained history | Bounded suffix, ANSI/OSC/C1 stripping, rotation and path controls; real local recovery retains the marker in API/UI history; redraw blank rows compacted only in the preview | Additional lifecycle/transport qualification |
 | Surviving providers | Real local reconnect plus VM service restart/SIGKILL preserve provider and pane PIDs and job count; independent Linux user scopes avoid service-cgroup cleanup | Remote SSH/mosh and managed-provider qualification |
 | Recovery preview and continuation | Owner-scoped API and browser actions; separate replay/handoff approval; broker tests for opt-in native auto resume and uncertain-outcome exclusion | Native CLI continuation through WebMux, managed lifecycle integration |
-| Reboot/restart/update/crash | Native VM orderly restart, SIGKILL and actual kernel reboot pass; reboot waits for approval, preserves history and original transcript references; duplicate request and three reconnects keep execution count unchanged | Different-binary update, remote failure and managed/CLI end-to-end coverage |
+| Reboot/restart/update/crash | Native VM orderly restart, different-binary update, SIGKILL and actual kernel reboot pass; reboot waits for approval, preserves history and original transcript references; duplicate request and three reconnects keep execution count unchanged | Remote failure and managed/CLI end-to-end coverage |
 
 Mosh synchronizes terminal screen state rather than an arbitrary byte stream.
 Its recovery metadata path needs separate native qualification and must not
@@ -173,6 +173,17 @@ the execution count at one until explicit approval. Approved replay increased
 the count to two. An identical action request and three reconnects kept it at
 two and retained the original transcript reference.
 
+A second complete run also performed atomic executable replacement. The update
+artifact was built from commit `72285783b05c8529124e9be0f53a3eee22ab945d`,
+SHA256 `b7877003c87d6d58cc136653ebb3f5bda05b7f55acf00ee50faa7372ba7db382`,
+and differed from the retained baseline binary. Service PID changed from 2156 to
+2574 while provider PID 1760, pane PID 1761 and one execution were preserved.
+The installed guest hash was checked against the update artifact. The run then
+passed SIGKILL and another actual reboot, from boot ID
+`8c1097a8-c4c0-4245-adc7-e364a38257c9` to
+`5a60bef7-c6ab-4307-b1a1-d953f1d70859`, followed by the same approval,
+duplicate-request, retained-history and three-reconnect checks.
+
 The fixture is based on the official
 [Ubuntu Noble ARM64 image](https://cloud-images.ubuntu.com/noble/20261017/),
 SHA256 `50e24e1fb79e89116e939d90aa7738f7af48c442fa1bc2510131e0b39c50348e`.
@@ -189,7 +200,7 @@ python3 scripts/qualify-recovery-vm.py --vm-root /absolute/path/to/disposable-fi
 # exercise atomic executable replacement while preserving the provider.
 ```
 
-The first native run did not include binary replacement. It does not establish
+These native VM runs do not establish
 remote SSH/mosh, managed-provider or conversational CLI recovery through WebMux;
 those remain separate acceptance work.
 
