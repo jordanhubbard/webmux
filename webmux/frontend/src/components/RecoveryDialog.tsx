@@ -56,6 +56,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
       {!value && !error && <p role="status">Loading recorded work…</p>}
       {value && <>
         <p>{value.message}</p>
+        {value.warning && <p role="status">{value.warning}</p>}
         <dl className="recovery-details">
           <dt>Execution host</dt><dd>{value.hostname} · {value.transport.toUpperCase()}</dd>
           <dt>Session manager</dt><dd>{value.lifecycle_owner === 'webmux' ? 'WebMux' : value.lifecycle_owner}</dd>

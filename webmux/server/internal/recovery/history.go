@@ -75,7 +75,15 @@ func History(directory, name string) (string, error) {
 		}
 		lines = append(lines, line)
 	}
-	return strings.Join(lines, "\n"), nil
+	preview := strings.Join(lines, "\n")
+	if len(preview) > MaxHistoryBytes {
+		start := len(preview) - MaxHistoryBytes
+		for start < len(preview) && !utf8.RuneStart(preview[start]) {
+			start++
+		}
+		preview = preview[start:]
+	}
+	return preview, nil
 }
 
 // PlainText removes CSI and all string controls, including clipboard, browser

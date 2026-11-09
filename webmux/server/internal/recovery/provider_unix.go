@@ -50,6 +50,7 @@ func ensureProvider(ctx context.Context, id, key, helper string) (Event, error) 
 		probe.Env = environment
 		if probe.Run() == nil {
 			provider.Survived = true
+			provider.Warning = providerServiceWarning(ctx, tmux, session, environment)
 			if state.Control != nil && state.Control.Mode == "waiting" {
 				provider.Mode = "waiting"
 			}
@@ -79,10 +80,28 @@ func ensureProvider(ctx context.Context, id, key, helper string) (Event, error) 
 		args = append(args, "--", quote(helper), "--browser-shell")
 		command := exec.CommandContext(ctx, tmux, "start-server", ";", "source-file", "-")
 		command.Env = environment
-		command.Stdin = strings.NewReader(strings.Join(args, " ") + "\n")
-		if err := command.Run(); err != nil {
-			return errors.New("unable to create the session-owned tmux provider")
+		script := strings.Join(args, " ") + "\n"
+		created := false
+		scopeContext, scopeCancel := context.WithTimeout(ctx, 3*time.Second)
+		if scoped := scopedProviderCommand(scopeContext, tmux, id, environment); scoped != nil {
+			scoped.Stdin = strings.NewReader(script)
+			created = scoped.Run() == nil
+			if !created {
+				// A response can be lost after creation. Never create a second
+				// provider merely because its scope command returned an error.
+				probe := exec.CommandContext(ctx, tmux, "has-session", "-t", "="+session)
+				probe.Env = environment
+				created = probe.Run() == nil
+			}
 		}
+		scopeCancel()
+		if !created {
+			command.Stdin = strings.NewReader(script)
+			if err := command.Run(); err != nil {
+				return errors.New("unable to create the session-owned tmux provider")
+			}
+		}
+		provider.Warning = providerServiceWarning(ctx, tmux, session, environment)
 		state.Control, state.Replay = nil, nil
 		state.Provider = &provider
 		return nil

@@ -39,6 +39,7 @@ type run struct {
 	recoveryRevision uint64
 	recoveryControl  *recovery.Event
 	recoveryError    string
+	recoveryWarning  string
 	autoAttempted    string
 	recoveryDecoder  recovery.Decoder
 	clipboardDecoder terminalclipboard.Decoder

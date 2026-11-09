@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestPacketsSurviveEveryReadBoundaryWithoutEnteringOutput(t *testing.T) {
@@ -47,6 +48,23 @@ func TestPlainHistoryDropsCharsetDesignatorsAndC1StringControls(t *testing.T) {
 	input := "before\x1b(Bafter\u009d52;c;private clipboard\u009cend\u009b31mred\u009b0m\u0090private DCS\u009c"
 	if got := PlainText(input); got != "beforeafterendred" {
 		t.Fatalf("control payload entered history: %q", got)
+	}
+}
+
+func TestMalformedUTF8HistoryStaysBoundedAfterReplacement(t *testing.T) {
+	dir := t.TempDir()
+	name := "session-malformed.log"
+	data := []byte(strings.Repeat("\xff\n", MaxHistoryBytes/2))
+	if err := os.WriteFile(filepath.Join(dir, name), data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	text, err := History(dir, name)
+	if err != nil || len(text) > MaxHistoryBytes || !utf8.ValidString(text) {
+		t.Fatalf("unbounded or malformed preview: bytes=%d, error=%v", len(text), err)
+	}
+	original, err := os.ReadFile(filepath.Join(dir, name))
+	if err != nil || string(original) != string(data) {
+		t.Fatal("preview changed the original transcript")
 	}
 }
 

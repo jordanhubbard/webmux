@@ -149,6 +149,27 @@ func TestEmptyHostCacheCanBeSeededWithoutOverwritingNewerEvidenceOrCapturePolicy
 	}
 }
 
+func TestPausedCaptureCanObservePromptReadinessWithoutSavingItsDirectory(t *testing.T) {
+	hostFixture(t)
+	if err := RecordHostEvent(Event{Kind: "command", Instance: "shell", Cwd: "/recorded-project", Command: "previous activity"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := InitializeHostState(testHostSession, testHostKey, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := RecordHostEvent(Event{Kind: "shell", Instance: "shell", Cwd: "/private-directory-after-pause", Platform: "linux"}); err != nil {
+		t.Fatal(err)
+	}
+	state := hostSnapshot(t)
+	data, _ := json.Marshal(state)
+	if state.Control == nil || !state.Control.Ready || state.Shell != nil || state.Complete == nil || strings.Contains(string(data), "/private-directory-after-pause") {
+		t.Fatal("pause lost readiness or retained private directory data")
+	}
+	if state.Command.Command != "previous activity" {
+		t.Fatal("pause replaced the recorded command")
+	}
+}
+
 func TestHostStateRejectsTraversalLinksAndOversizedRPC(t *testing.T) {
 	hostFixture(t)
 	if _, err := hostStateDirectory("../other"); err == nil {

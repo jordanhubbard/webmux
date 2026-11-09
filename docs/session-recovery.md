@@ -64,13 +64,13 @@ project still require validation at the recovery action.
 
 | Requirement | Current evidence | Remaining work |
 | --- | --- | --- |
-| Durable owner-scoped activity and log references | Broker tests read persisted evidence before graceful shutdown; race detector passes | Native abrupt-server-termination coverage |
+| Durable owner-scoped activity and log references | Broker tests persist before shutdown; native VM SIGKILL/reboot retain activity and original transcript references | Remote/managed lifecycle qualification |
 | Real shell command and directory capture | Bash/Zsh PTY probes preserve exit status; real WebMux local workflow records a long-running command, arguments and directory | Retain the separate Zsh probe in the qualification harness |
 | Native conversation identity | All four installed CLIs recover a synthetic marker after process exit and exact-ID resume; real native metadata preflight accepts the original project and rejects another project | Interactive session switches and complete WebMux continuation flow |
 | Safe retained history | Bounded suffix, ANSI/OSC/C1 stripping, rotation and path controls; real local recovery retains the marker in API/UI history; redraw blank rows compacted only in the preview | Additional lifecycle/transport qualification |
-| Surviving providers | Real WebMux reconnect preserves provider PID and job count; native tmux test serializes concurrent provisioning | Remote SSH/mosh and managed-provider qualification |
+| Surviving providers | Real local reconnect plus VM service restart/SIGKILL preserve provider and pane PIDs and job count; independent Linux user scopes avoid service-cgroup cleanup | Remote SSH/mosh and managed-provider qualification |
 | Recovery preview and continuation | Owner-scoped API and browser actions; separate replay/handoff approval; broker tests for opt-in native auto resume and uncertain-outcome exclusion | Native CLI continuation through WebMux, managed lifecycle integration |
-| Reboot/restart/update/crash | Real local provider destruction enters recovery; approved replay increments job count once; duplicate request/reconnect do not rerun it | Disposable native host reboot, server update/restart and abrupt termination; remote failure |
+| Reboot/restart/update/crash | Native VM orderly restart, SIGKILL and actual kernel reboot pass; reboot waits for approval, preserves history and original transcript references; duplicate request and three reconnects keep execution count unchanged | Different-binary update, remote failure and managed/CLI end-to-end coverage |
 
 Mosh synchronizes terminal screen state rather than an arbitrary byte stream.
 Its recovery metadata path needs separate native qualification and must not
@@ -97,6 +97,14 @@ provider, a surviving process keeps its PID, and a lost provider with recorded
 activity receives the startup wait gate. The SSH control client uses a fixed
 remote helper command, configured account/key/port and a bounded JSON pipe;
 remote lifecycle qualification remains open.
+
+On Linux, a tmux daemon created inside the WebMux service would inherit its
+cgroup and be killed by the service's normal `KillMode=mixed` cleanup. Provider
+creation therefore uses an independent transient scope under the same account's
+systemd user manager when available. It retains the private stdin provisioning
+path. The helper verifies actual provider cgroup ownership and reports a fallback
+warning if jobs remain bound to the service. It does not change the service's
+kill policy or enable lingering on the user's host.
 
 The control path has these boundaries:
 
@@ -130,6 +138,14 @@ state instead of permanently caching the first selector. Other adapters still
 need their session-switch observations. Ambiguity requires an explicit fallback,
 not a timestamp-based guess.
 
+Remaining native integration includes observing active-session changes in each
+interactive CLI, distinguishing a requested selector from verified active native
+state, and verifying how each supported version restores invocation-specific
+configuration roots, profiles and restrictive policy. Preserve those boundaries
+when needed; never carry approval-bypass flags into a recovery command. The
+complete WebMux continuation path still needs native conversation proof, beyond
+the separate provider/headless and preflight checks.
+
 Control tests exercise the real Unix socket, persisted consumption across a
 worker's exit, stale and foreign requests, failed preflight, a revision change
 during preflight, independent transcript/replay consent and one-time retrieval
@@ -138,10 +154,44 @@ controlling PTY verifies that complete and partial input typed while waiting
 cannot reach the reader started after recovery. These are worker/lifecycle
 checks, not evidence of conversational CLI recovery or host-reboot acceptance.
 
-Qualification will use a disposable native VM for host reboot. Do not reboot
-the user's workstation or existing shared workers. The actual resume acceptance
-needs a synthetic conversation marker recovered by each named CLI, beyond
+Host lifecycle qualification uses a disposable native VM. Do not reboot
+the user's workstation or existing shared workers. WebMux CLI-flow acceptance
+needs a synthetic conversation marker recovered by each named CLI through its
+continuation action, beyond
 empty-session allocation/export or mocked adapter assertions.
+
+## Native host lifecycle qualification
+
+The disposable ARM64 QEMU guest passed orderly WebMux restart, abrupt SIGKILL,
+actual guest host reboot, approved continuation and repeated reconnect tests on
+2026-11-09. The guest uses the recommended systemd user-service model with
+`KillMode=mixed`; its tmux provider runs in a separate user scope. Restart and
+SIGKILL preserved provider PID 3227, pane PID 3228 and one job execution. Reboot
+changed boot ID from `772b4a10-70fc-4867-af3e-84f8a3d1fdeb` to
+`8c1097a8-c4c0-4245-adc7-e364a38257c9`, started a new waiting provider and kept
+the execution count at one until explicit approval. Approved replay increased
+the count to two. An identical action request and three reconnects kept it at
+two and retained the original transcript reference.
+
+The fixture is based on the official
+[Ubuntu Noble ARM64 image](https://cloud-images.ubuntu.com/noble/20261017/),
+SHA256 `50e24e1fb79e89116e939d90aa7738f7af48c442fa1bc2510131e0b39c50348e`.
+Its disk, private SSH key, QMP socket, source/binary receipt, service definitions
+and JSON lifecycle receipt are retained under `_build/recovery-vm/`. This is a
+real kernel reboot, not a process restart or mocked lifecycle signal.
+
+The harness verifies the private QEMU process/socket and known fixture account
+before running. It submits only a synthetic fixture job:
+
+```bash
+python3 scripts/qualify-recovery-vm.py --vm-root /absolute/path/to/disposable-fixture
+# Add --update-binary /absolute/path/to/a/different-linux-arm64-webmux to
+# exercise atomic executable replacement while preserving the provider.
+```
+
+The first native run did not include binary replacement. It does not establish
+remote SSH/mosh, managed-provider or conversational CLI recovery through WebMux;
+those remain separate acceptance work.
 
 ## Native conversation qualification
 

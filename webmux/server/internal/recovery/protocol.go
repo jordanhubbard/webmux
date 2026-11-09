@@ -35,6 +35,7 @@ type Event struct {
 	Survived  bool     `json:"survived,omitempty"`
 	Redacted  bool     `json:"redacted,omitempty"`
 	Ready     bool     `json:"ready,omitempty"`
+	Warning   string   `json:"warning,omitempty"`
 }
 
 func (e Event) Validate() error {
@@ -43,7 +44,7 @@ func (e Event) Validate() error {
 	default:
 		return errors.New("unknown recovery event")
 	}
-	for _, value := range []string{e.Mode, e.Endpoint, e.Helper, e.Platform, e.Instance, e.Cwd, e.CLI, e.Version, e.SessionID, e.StateFile} {
+	for _, value := range []string{e.Mode, e.Endpoint, e.Helper, e.Platform, e.Instance, e.Cwd, e.CLI, e.Version, e.SessionID, e.StateFile, e.Warning} {
 		if len(value) > 4096 || strings.ContainsFunc(value, unicode.IsControl) {
 			return errors.New("invalid recovery metadata")
 		}

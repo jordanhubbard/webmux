@@ -119,6 +119,9 @@ func (b *Broker) applyRecoverySnapshotLocked(e *entry, r *run, response recovery
 		}
 	}
 	r.recoveryControl = control
+	if provider != nil {
+		r.recoveryWarning = provider.Warning
+	}
 	if control != nil {
 		e.shellHelper, e.shellPlatform = control.Helper, control.Platform
 		e.shellReady = control.Ready && control.Mode != "waiting"
@@ -244,7 +247,7 @@ func (b *Broker) Recover(owner, id string, input RecoveryRequest) (RecoveryResul
 			return RecoveryResult{Outcome: "consumed"}, nil
 		}
 	}
-	if !retry && (state == nil || state.Revision != input.Revision || r.recoveryRevision != input.HostRevision || r.recoveryControl == nil || r.recoveryControl.Mode != "waiting" || r.recoveryControl.Instance != input.Instance) {
+	if !retry && (!r.recoveryReady || state == nil || state.Revision != input.Revision || r.recoveryRevision != input.HostRevision || r.recoveryControl == nil || r.recoveryControl.Mode != "waiting" || r.recoveryControl.Instance != input.Instance) {
 		b.mu.Unlock()
 		return RecoveryResult{}, ErrRecoveryConflict
 	}

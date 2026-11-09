@@ -16,6 +16,7 @@ type RecoveryView struct {
 	Waiting          bool            `json:"waiting"`
 	HostRevision     uint64          `json:"host_revision"`
 	Instance         string          `json:"instance"`
+	Warning          string          `json:"warning,omitempty"`
 	CanResumeCLI     bool            `json:"can_resume_cli"`
 	CanReplay        bool            `json:"can_replay"`
 	SessionID        string          `json:"session_id"`
@@ -43,14 +44,17 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	var hostRevision uint64
 	var controlError string
 	var hostReady bool
+	var warning string
 	if e.run != nil {
 		control = e.run.recoveryControl
 		hostReady = e.run.recoveryReady
+		warning = e.run.recoveryWarning
 		hostRevision, controlError = e.run.recoveryRevision, e.run.recoveryError
 	}
 	b.mu.Unlock()
 	view := RecoveryView{SessionID: id, Hostname: s.Hostname, Transport: s.Transport, LifecycleOwner: "webmux", State: s.Recovery, ShellReady: ready, Message: "No recorded activity is available. Reconnect or recover this session manually."}
 	view.HostRevision = hostRevision
+	view.Warning = warning
 	if control != nil {
 		view.Waiting, view.Instance = control.Mode == "waiting" && hostReady, control.Instance
 	}
