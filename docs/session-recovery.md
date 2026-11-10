@@ -845,19 +845,65 @@ Executable SHA-256:
 Qualification script SHA-256:
 `4c861eed273a5917349fbdba6d4b59fc22e1e15ba95698489bd48a33c1cad140`.
 
-The harness also has an explicit `--native-resume` acceptance probe, requiring
-both snapshot and native-hook modes. That probe is not qualified yet. Actual
-Rig execution refused an adopted seat without startup context; materializing
-without a first managed start did not supply that context. A subsequent spec
-launch did not reach interactive native readiness. Negative manifests retain
-these outcomes. No WebMux Rig native-resume action or successful Rig-owned
-native continuation is claimed. Cleanup now closes the entire generated
-private tmux socket, including recovery shells Rig creates under derived
-canonical names; it does not touch other sockets or the shared daemon.
+The explicit `--native-resume` probe now qualifies native Rig-owned snapshot
+continuation as described below. Earlier negative fixtures established that
+adoption and materialization alone do not provide managed startup context.
+Cleanup closes the generated private tmux socket, including attention shells
+under derived canonical names; it does not touch other sockets or the shared
+daemon. The WebMux Rig native-launch action remains unimplemented.
+
+## Rig-owned native snapshot continuation
+
+Rig 0.6.14 (`9d0200f3`) and Claude Code 2.1.322 passed the private managed
+native-resume probe. A normal spec launch creates the manager's real startup
+context. The fixture enters native plan mode and selects plan for future
+managed continuation before seeding its synthetic marker. Its private
+manager-owned executable restores the original provider roots and merges
+SessionStart reporting plus a deny-all-tools rule into the manager's invocation
+settings. It preserves all original settings, including hooks and permission
+rules. The documented deny glob removes tools from the model's context; the
+native transcript also contains no model tool-use records.
+
+After the controller/manager lifecycle matrix and loss of the native process,
+Rig received one exact-seat launch with the saved snapshot ID. Its initial
+joined process proof reported attention required while preserving the resumed
+process. The fixture then used native `reconcile-session --no-launch` for the
+same rig and node. The pane PID remained unchanged during reconciliation.
+Reconciliation reports continuity and cwd as unverified; the fixture proves
+them independently rather than promoting that receipt's confidence.
+
+The resumed native CLI is a descendant of the new verified private pane. Its
+kernel-reported cwd matches the original project, its configuration roots
+(including absence) match the original roots, and its actual argv selects the
+original conversation in plan mode. The fixture verifies that every original
+manager hook and permission setting survives the additional observer/deny rule.
+Exactly one native resume execution is recorded. Through the restored WebMux
+viewer, a new assistant record returns the earlier marker and a fresh test
+phrase. Cleanup confirms no remaining private panes and a stopped daemon.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-45e07284-76c8-4205-b1bb-62c6c4443835/manifest.json`.
+Executable SHA-256:
+`6447fdcec05c9fdc03393605c853875025db4124d821b26899682d622498ea12`.
+Qualification script SHA-256:
+`2493f0e64f68b84cbeda00041621e09e7858c09170c91d2171873d4fa09a3a78`.
+
+Earlier attempts remain negative evidence. They exposed missing startup
+context on adopted seats, a native first-launch permission selection different
+from a pre-materialized seat's selection, and the manager's strict process
+parser rejecting extra CLI flags. The qualified no-tool rule is configured
+through native settings from the initial managed launch; recovery does not
+remove an original restriction to satisfy the parser. This evidence covers
+provider-owned local native continuation. A WebMux recovery action still needs
+durable snapshot/identity/policy binding, current owner/access checks,
+survivor-first validation, once-only execution and equivalent post-launch proof.
+Managed reboot and remote Rig destinations remain unqualified.
 
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
+- [Claude Code command reference](https://code.claude.com/docs/en/commands)
+- [Claude Code permissions and tool-name deny globs](https://code.claude.com/docs/en/permissions#tool-name-wildcards)
 - [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference)
 - [OpenCode CLI](https://opencode.ai/docs/cli/), checked against installed CLI help
 - [Cursor CLI sessions](https://cursor.com/docs/cli/overview#sessions)

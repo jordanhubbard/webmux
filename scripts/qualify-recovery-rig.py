@@ -179,11 +179,7 @@ def main():
             definition = json.loads(spec.read_text())
             definition['pods'][0]['members'] = [{'id': 'continuation', 'agent_ref': 'local:agent', 'runtime': 'claude-code', 'profile': 'default', 'cwd': entry['project']}]
             spec.write_text(json.dumps(definition))
-            rig('import', str(spec), '--materialize-only', '--rig-root', str(fixture), '--cwd', entry['project'])
-            catalog = json.loads(rig('ps', '--json', '--include-archived').stdout)
-            rows = catalog if isinstance(catalog, list) else catalog['entries']
-            assert len(rows) == 1
-            rig_id = rows[0]['rigId']
+            rig_id = None
         else:
             created = json.loads(rig('up', str(spec), '--yes', '--json').stdout)
             rig_id = created['rigId']
@@ -204,18 +200,26 @@ def main():
         if args.native_resume:
             # The manager owns this private executable and its fixed policy.
             # Preserve every argument it supplies; refuse a bypass/changed mode.
-            wrapper = '#!' + sys.executable + '\nimport os,sys,json\nroots=' + repr(roots) + '\nenv=dict(os.environ)\nfor key,value in roots.items():\n if value is None: env.pop(key,None)\n else: env[key]=value\na=sys.argv[1:]\n'
+            wrapper = '#!' + sys.executable + '\nimport os,sys,json\nroots=' + repr(roots) + '\nenv=dict(os.environ)\nfor key,value in roots.items():\n if value is None: env.pop(key,None)\n else: env[key]=value\na=sys.argv[1:]\nrequested=list(a)\n'
+            wrapper += 'with open(' + repr(str(fixture / 'native-requests.jsonl')) + ',"a") as f: f.write(json.dumps({"args":a})+chr(10))\n'
             wrapper += 'if any(x in a for x in ["--dangerously-skip-permissions","--allow-dangerously-skip-permissions"]): raise SystemExit("Fixture refuses permission bypass")\n'
-            wrapper += 'if "--permission-mode" in a and a[a.index("--permission-mode")+1]!="plan": raise SystemExit("Fixture refuses changed permission mode")\n'
-            wrapper += 'if not any(x in a for x in ["--version","--help","-h"]): a+=' + repr(['--strict-mcp-config', '--tools', '', '--permission-mode', 'plan', '--settings', json.dumps(hook_settings)]) + '\n'
-            wrapper += 'with open(' + repr(str(fixture / 'native-executions.jsonl')) + ',"a") as f: f.write(json.dumps({"args":a,"roots":{key:env.get(key) for key in roots}})+chr(10))\n'
+            wrapper += 'if "--permission-mode" in a and a[a.index("--permission-mode")+1] not in ["acceptEdits","plan"]: raise SystemExit("Fixture refuses changed permission mode")\n'
+            wrapper += 'if not any(x in a for x in ["--version","--help","-h"]):\n'
+            wrapper += ' hook=' + repr(hook_settings['hooks']['SessionStart']) + '\n'
+            wrapper += ' found=False\n for i,key in enumerate(a):\n  if key=="--settings":\n   config=json.loads(a[i+1])\n   assert isinstance(config,dict)\n   hooks=config.setdefault("hooks",{})\n   events=hooks.setdefault("SessionStart",[])\n   assert isinstance(events,list)\n   events.extend(hook)\n   a[i+1]=json.dumps(config)\n   found=True\n'
+            wrapper += '   deny=config.setdefault("permissions",{}).setdefault("deny",[])\n   assert isinstance(deny,list)\n   if "*" not in deny: deny.append("*")\n   a[i+1]=json.dumps(config)\n'
+            wrapper += ' if not found: a += ["--settings",' + repr(json.dumps(dict(hook_settings, permissions={'deny': ['*']}))) + ']\n'
+            wrapper += 'with open(' + repr(str(fixture / 'native-executions.jsonl')) + ',"a") as f: f.write(json.dumps({"pid":os.getpid(),"requested":requested,"args":a,"cwd":os.getcwd(),"roots":{key:env.get(key) for key in roots}})+chr(10))\n'
             wrapper += 'os.execve(' + repr(claude) + ',[' + repr(claude) + ',*a],env)\n'
             compile(wrapper, str(aliases / 'claude'), 'exec')
             executable(aliases / 'claude', wrapper)
         if args.native_resume:
-            rig('seat', 'set-permissions', pane, '--mode', 'plan', '--operator', 'webmux-recovery-fixture', '--reason', 'Private native managed launch with tools disabled', '--json')
             started = json.loads(rig('up', str(spec), '--yes', '--json').stdout)
-            assert started['rigId'] == rig_id, 'Spec launch replaced the materialized Rig identity'
+            rig_id = started['rigId']
+            rig('seat', 'set-permissions', pane, '--mode', 'plan', '--operator', 'webmux-recovery-fixture', '--reason', 'Match the live fixture plan mode for future continuation', '--json')
+            mux('send-keys', '-t', pane, '-l', '/plan')
+            mux('send-keys', '-t', pane, 'Enter')
+            wait(lambda: 'plan mode' in mux('capture-pane', '-pt', pane, check=False).stdout.lower(), 'native plan mode before the first model prompt')
             def managed_identity():
                 with urllib.request.urlopen('http://127.0.0.1:' + str(rig_port) + '/api/rigs/' + rig_id + '/sessions', timeout=10) as response:
                     rows = json.loads(response.read())
@@ -397,7 +401,16 @@ def main():
             result = rig('launch', rig_id, 'agents.continuation', '--snapshot-id', snapshot_id, '--json', check=False)
             (fixture / 'native-resume-result.json').write_text(json.dumps({'returncode': result.returncode, 'stdout': result.stdout, 'stderr': result.stderr}, indent=2) + '\n')
             if result.returncode:
-                raise RuntimeError('Native Rig did not confirm exact-snapshot resume; inspect native-resume-result.json')
+                outcome = json.loads(result.stdout)
+                if outcome.get('code') != 'attention_required' or 'joined restore proof is incomplete' not in outcome.get('error', ''):
+                    raise RuntimeError('Native Rig did not confirm exact-snapshot resume; inspect native-resume-result.json')
+                pending = native()
+                assert pending['count'] == 1
+                reconciled = rig('reconcile-session', pane, '--rig', rig_id, '--node', 'agents.continuation', '--no-launch', '--json', check=False)
+                (fixture / 'native-reconcile-result.json').write_text(json.dumps({'returncode': reconciled.returncode, 'stdout': reconciled.stdout, 'stderr': reconciled.stderr}, indent=2) + '\n')
+                assert native() == pending, 'Reconciliation replaced the native process'
+                if reconciled.returncode:
+                    raise RuntimeError('Native Rig could not reconcile the existing resumed process without launch; inspect native-reconcile-result.json')
             after = wait(lambda: native() if native()['count'] == 1 else None, 'Rig-owned resumed native process')
             assert after['pane_pid'] != before['pane_pid']
             api('/api/sessions/' + sid + '/reconnect', {})
@@ -407,13 +420,75 @@ def main():
             text = 'What exact marker did I ask you to remember earlier? Reply with the marker followed by ' + nonce + '. Do not use tools.'
             subprocess.run([str(rig_node), '--input-type=module', '-e', bridge], cwd=repo / 'webmux', input=json.dumps({'url': base.replace('http:', 'ws:') + '/api/term/' + sid, 'text': text}), text=True, timeout=12, check=True)
             answer = wait(lambda: next((value for key, value in records().items() if key not in prior and entry['marker'] in value and nonce in value), None), 'new native answer after Rig-owned snapshot resume')
-            receipt('Rig-owned native snapshot resume and conversation continuity', native=native(), nonce=nonce, new_assistant_answer=answer)
+            executions = [json.loads(line) for line in (fixture / 'native-executions.jsonl').read_text().splitlines()]
+            resumes = [row for row in executions if '--resume' in row['args'] and row['args'][row['args'].index('--resume') + 1] == entry['native_session_id']]
+            assert len(resumes) == 1, 'Manager launched more than one native resume'
+            resumed = resumes[0]
+            assert resumed['roots'] == roots and Path(resumed['cwd']).samefile(entry['project'])
+            argv, requested = resumed['args'], resumed['requested']
+            assert argv.count('--permission-mode') == 1 and argv[argv.index('--permission-mode') + 1] == 'plan'
+            assert '--fork-session' not in argv and '--session-id' not in argv
+            configurations = [json.loads(argv[i + 1]) for i, key in enumerate(argv) if key == '--settings']
+            assert len(configurations) == 1 and '*' in configurations[0]['permissions']['deny']
+            configuration = configurations[0]
+            for index, key in enumerate(requested):
+                if key != '--settings':
+                    continue
+                original = json.loads(requested[index + 1])
+                for name, value in original.items():
+                    if name == 'hooks':
+                        for event, groups in value.items():
+                            assert configuration['hooks'][event][:len(groups)] == groups
+                    elif name == 'permissions':
+                        for permission, rules in value.items():
+                            if permission == 'deny':
+                                assert configuration['permissions']['deny'][:len(rules)] == rules
+                            else:
+                                assert configuration['permissions'][permission] == rules
+                    else:
+                        assert configuration[name] == value
+            parents = {}
+            for line in subprocess.check_output(['ps', '-axo', 'pid=,ppid='], text=True, timeout=5).splitlines():
+                child, parent = line.split()
+                parents[int(child)] = int(parent)
+            cursor = resumed['pid']
+            for _ in range(64):
+                if cursor == after['pane_pid']:
+                    break
+                cursor = parents.get(cursor, 0)
+                if not cursor:
+                    raise AssertionError('Resumed CLI does not descend from the verified private pane')
+            else:
+                raise AssertionError('Native ancestry exceeds the qualification bound')
+            if sys.platform.startswith('linux'):
+                kernel_cwd = os.readlink('/proc/' + str(resumed['pid']) + '/cwd')
+            else:
+                output = subprocess.check_output(['lsof', '-a', '-p', str(resumed['pid']), '-d', 'cwd', '-Fn'], text=True, timeout=5)
+                paths = [line[1:] for line in output.splitlines() if line.startswith('n')]
+                assert len(paths) == 1
+                kernel_cwd = paths[0]
+            assert Path(kernel_cwd).samefile(entry['project'])
+            for line in native_file.read_bytes().splitlines():
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                if row.get('type') == 'assistant':
+                    assert not any(part.get('type') == 'tool_use' for part in row.get('message', {}).get('content', [])), 'No-tool fixture executed a model tool call'
+            receipt('Rig-owned native snapshot resume and conversation continuity', native=native(), native_pid=resumed['pid'], kernel_cwd=kernel_cwd, roots_and_original_settings_preserved=True, permission_mode='plan', deny_all_tools=True, nonce=nonce, new_assistant_answer=answer)
         assert (hashlib.sha256(settings.read_bytes()).hexdigest() if settings.is_file() else None) == settings_hash
         assert hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == script_hash
-        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_hooks': args.native_hooks, 'native_resume': args.native_resume, 'relay_sha256': relay_sha256, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': 'Private native Rig adoption, WebMux restart/SIGKILL, repeated reconnect, native conversation continuity, private Rig daemon SIGKILL/restart and lost-provider manual fallback. Not Rig native-resume action, host reboot or a remote destination.'}
+        scope = 'Private native Rig lifecycle, native identity and manual fallback.'
+        if args.native_resume:
+            scope += ' Includes Rig-owned exact-snapshot resume, no-launch reconciliation, original roots/settings, kernel cwd and new native assistant continuity.'
+        scope += ' No WebMux Rig native-launch action, host reboot or remote destination is qualified.'
+        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_hooks': args.native_hooks, 'native_resume': args.native_resume, 'relay_sha256': relay_sha256, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': scope}
         (fixture / 'manifest.json').write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(fixture / 'manifest.json')}), flush=True)
     except Exception as error:
+        panes = mux('list-panes', '-a', '-F', '#{pane_id}', check=False).stdout.splitlines()
+        for number, pane_id in enumerate(panes):
+            (fixture / ('failure-pane-' + str(number) + '.txt')).write_text(mux('capture-pane', '-pt', pane_id, '-S', '-200', check=False).stdout)
         (fixture / 'failure-native-pane.txt').write_text(mux('capture-pane', '-pt', pane, '-S', '-200', check=False).stdout)
         if sid and controller and controller.poll() is None:
             try:
