@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jordanhubbard/webmux/server/internal/session"
 )
 
 func fakeAgentDeck(t *testing.T) (string, string) {
@@ -25,6 +28,12 @@ printf '%s\n' "$*" >> "$WEBMUX_AGENT_DECK_TEST_LOG"
 case "$*" in
   "list --all --json")
     printf '%s\n' '[{"id":"local-1","title":"local coder","path":"/src/local","group":"webmux","tool":"codex","status":"waiting","substate":"input-required","codex_session_id":"codex-local","conductor_name":"webmux","last_activity_at":"2026-10-26T08:00:00Z"}]'
+    ;;
+  "session ownership inspect local-1 --json")
+    printf '%s\n' '{"instance_id":"local-1","state":"live","verdict":"owned","admissible":true,"pane_attached":true}'
+    ;;
+  "remote sparky session ownership inspect remote-1 --json")
+    printf '%s\n' '{"instance_id":"remote-1","state":"live","verdict":"owned","admissible":true,"pane_attached":true}'
     ;;
   "group list --json")
     printf '%s\n' '{"groups":[{"name":"webmux","path":"webmux","session_count":1}]}'
@@ -261,5 +270,173 @@ func TestRealAgentDeckReadOnlyQualification(t *testing.T) {
 		if seat.ID == "" || seat.Host == "" || seat.ProjectID == "" {
 			t.Fatalf("Agent Deck returned an unqualified session identity: %+v", seat)
 		}
+	}
+}
+
+func TestManagedReattachmentResolvesExactProviderDestination(t *testing.T) {
+	s, _ := fixture(t, "none")
+	setCoordinationIntegrations(t, s, "agent-deck")
+	executable, calls := fakeAgentDeck(t)
+	t.Setenv("PATH", filepath.Dir(executable)+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "")
+	identity := session.RigIdentity{Provider: "agent-deck", Target: "agent-deck:local:local-1", Host: "localhost", Workspace: "/src/local", Runtime: "codex"}
+	launch, err := s.resolveManagedReattachment(context.Background(), "anonymous", identity)
+	if err != nil || launch.Target != "local:local-1" || !reflect.DeepEqual(launch.Argv, []string{executable, "session", "attach", "local-1"}) {
+		t.Fatal("did not resolve the original provider-qualified attachment", launch, err)
+	}
+	for _, changed := range []session.RigIdentity{
+		{Provider: "agent-deck", Target: identity.Target, Host: "other-host", Workspace: identity.Workspace},
+		{Provider: "agent-deck", Target: identity.Target, Host: identity.Host, Workspace: "/other-project"},
+		{Provider: "agent-deck", Target: identity.Target, Host: identity.Host, Workspace: identity.Workspace, Runtime: "claude"},
+		{Provider: "agent-deck", Target: identity.Target, Host: identity.Host, Workspace: identity.Workspace, Runtime: identity.Runtime, ManagerProfile: "other-profile"},
+		{Provider: "agent-deck", Target: "agent-deck:local:deleted", Host: identity.Host},
+		{Provider: "agent-deck", Target: "rig:local:local-1", Host: identity.Host},
+	} {
+		if _, err := s.resolveManagedReattachment(context.Background(), "anonymous", changed); err == nil {
+			t.Fatal("changed or missing managed destination was accepted", changed)
+		}
+	}
+	// Openable alone is not liveness: Agent Deck exposes stopped sessions as
+	// openable too. Reconnection must not implicitly start one of those jobs.
+	script, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(executable, []byte(strings.ReplaceAll(strings.ReplaceAll(string(script), `"status":"waiting"`, `"status":"stopped"`), `"state":"live"`, `"state":"dead"`)), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.resolveManagedReattachment(context.Background(), "anonymous", identity); err == nil {
+		t.Fatal("stopped provider session was treated as a surviving process")
+	}
+	setCoordinationIntegrations(t, s)
+	if _, err := s.resolveManagedReattachment(context.Background(), "anonymous", identity); err == nil {
+		t.Fatal("disabled lifecycle manager was bypassed")
+	}
+	data, err := os.ReadFile(calls)
+	if err != nil || strings.Contains(string(data), "launch") || strings.Contains(string(data), "session start") || strings.Contains(string(data), "session attach") {
+		t.Fatal("resolving an attachment launched or restarted a managed job", string(data), err)
+	}
+}
+
+func TestManagedReconnectHTTPUsesFreshAttachment(t *testing.T) {
+	executable, _ := fakeAgentDeck(t)
+	t.Setenv("PATH", filepath.Dir(executable)+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "")
+	s, handler := fixture(t, "none")
+	setCoordinationIntegrations(t, s, "agent-deck")
+	identity := session.RigIdentity{Provider: "agent-deck", Target: "agent-deck:local:local-1", Host: "localhost", Workspace: "/src/local", Runtime: "codex"}
+	value, err := s.sessions.EnsureRigTerminal("anonymous", identity.Target, "coder", []string{"/bin/sh", "-c", "read line"}, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	endpoint := "/api/sessions/" + value.ID + "/reconnect"
+	setCoordinationIntegrations(t, s)
+	requireStatus(t, request(handler, "POST", endpoint, `{}`, ""), 409)
+	unchanged, err := s.sessions.Get("anonymous", value.ID)
+	if err != nil || unchanged.ExecArgv[0] != "/bin/sh" || unchanged.Rig == nil || *unchanged.Rig != identity {
+		t.Fatal("failed resolution changed the saved viewer", unchanged, err)
+	}
+	setCoordinationIntegrations(t, s, "agent-deck")
+	response := request(handler, "POST", endpoint, `{}`, "")
+	requireStatus(t, response, 200)
+	var result session.Session
+	if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.ID != value.ID || result.Rig == nil || *result.Rig != identity || !reflect.DeepEqual(result.ExecArgv, []string{executable, "session", "attach", "local-1"}) {
+		t.Fatal("HTTP reconnect lost its managed identity or used saved arguments", result)
+	}
+}
+
+func TestAgentDeckSurvivalUsesOwnedProcessIdentityAndRemoteNamespace(t *testing.T) {
+	executable, calls := fakeAgentDeck(t)
+	p := &agentDeckProvider{executable: executable}
+	for _, target := range []string{"local:local-1", "sparky:remote-1"} {
+		live, err := p.Survives(context.Background(), target)
+		if err != nil || !live {
+			t.Fatal("exact owned process was not verified", target, live, err)
+		}
+	}
+	script, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(executable, []byte(strings.ReplaceAll(string(script), `"instance_id":"local-1"`, `"instance_id":"other-session"`)), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if live, err := p.Survives(context.Background(), "local:local-1"); err != nil || live {
+		t.Fatal("another instance's ownership receipt was accepted", live, err)
+	}
+	data, err := os.ReadFile(calls)
+	if err != nil || !strings.Contains(string(data), "remote sparky session ownership inspect remote-1 --json") || strings.Contains(string(data), "reconcile") || strings.Contains(string(data), "session start") {
+		t.Fatal("survival probe changed lifecycle state or lost remote identity", string(data), err)
+	}
+}
+
+func TestManagedReattachmentAcceptsVerifiedNativeInventoryWithoutDisplayStatus(t *testing.T) {
+	executable, _ := fakeAgentDeck(t)
+	script, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(executable, []byte(strings.ReplaceAll(string(script), `"status":"waiting",`, "")), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", filepath.Dir(executable)+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "")
+	s, _ := fixture(t, "none")
+	setCoordinationIntegrations(t, s, "agent-deck")
+	identity := session.RigIdentity{Provider: "agent-deck", Target: "agent-deck:local:local-1", Host: "localhost", Workspace: "/src/local", Runtime: "codex"}
+	if _, err := s.resolveManagedReattachment(context.Background(), "anonymous", identity); err != nil {
+		t.Fatal("native inventory without display status blocked an owned process", err)
+	}
+}
+
+func TestAgentDeckLocalProfileScopesAttachmentAndOwnership(t *testing.T) {
+	executable, calls := fakeAgentDeck(t)
+	script, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := strings.ReplaceAll(string(script), `"id":"local-1","title"`, `"id":"local-1","profile":"work","transcript_path":"/native/conversation.jsonl","title"`)
+	text = strings.ReplaceAll(text, `"session ownership inspect local-1 --json")`, `"-p work session ownership inspect local-1 --json")`)
+	if err := os.WriteFile(executable, []byte(text), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	p := &agentDeckProvider{executable: executable}
+	launch, err := p.Attach(context.Background(), "local:local-1")
+	if err != nil || launch.Profile != "work" || launch.NativeStateFile != "/native/conversation.jsonl" || !reflect.DeepEqual(launch.Argv, []string{executable, "-p", "work", "session", "attach", "local-1"}) {
+		t.Fatal("attachment lost its native profile", launch, err)
+	}
+	if live, err := p.Survives(context.Background(), "local:local-1"); err != nil || !live {
+		t.Fatal("ownership used another profile", live, err)
+	}
+	data, _ := os.ReadFile(calls)
+	if !strings.Contains(string(data), "-p work session ownership inspect local-1 --json") {
+		t.Fatal("ownership did not name the original profile", string(data))
+	}
+}
+
+func TestAgentDeckDuplicateProfileIDsDoNotSelectAnArbitraryRegistry(t *testing.T) {
+	executable, _ := fakeAgentDeck(t)
+	script, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(string(script), "\n")
+	for index, line := range lines {
+		if strings.Contains(line, `"id":"local-1","title"`) {
+			lines[index] = strings.Replace(line, `}]'`, `},{"id":"local-1","profile":"work","title":"different profile","path":"/other","group":"other","tool":"codex"}]'`, 1)
+		}
+	}
+	if err := os.WriteFile(executable, []byte(strings.Join(lines, "\n")), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	p := &agentDeckProvider{executable: executable}
+	if _, err := p.Attach(context.Background(), "local:local-1"); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatal("ambiguous profile selected for attachment", err)
+	}
+	if live, err := p.Survives(context.Background(), "local:local-1"); err == nil || live {
+		t.Fatal("ambiguous profile used for process ownership", live, err)
 	}
 }

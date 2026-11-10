@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/jordanhubbard/webmux/server/internal/recovery"
 )
 
 // Open writes to the controlling terminal, not stdout (CLIs often capture their
@@ -72,11 +74,15 @@ func ShellEnvironment() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	cacheRoot, err := recovery.HostCacheRoot()
+	if err != nil {
+		return nil, err
+	}
 	env := []string{}
 	for _, item := range os.Environ() {
 		key, _, _ := strings.Cut(item, "=")
 		switch strings.ToUpper(key) {
-		case "BROWSER", "GH_BROWSER", "PATH", "WEBMUX_BROWSER_ORIGINAL_PATH":
+		case "BROWSER", "GH_BROWSER", "PATH", "WEBMUX_BROWSER_ORIGINAL_PATH", "WEBMUX_RECOVERY_INSTANCE", "WEBMUX_RECOVERY_HELPER", "WEBMUX_RECOVERY_CACHE_HOME":
 			continue
 		}
 		env = append(env, item)
@@ -85,7 +91,11 @@ func ShellEnvironment() ([]string, error) {
 	if runtime.GOOS == "windows" {
 		opener += ".exe"
 	}
-	return append(env, "BROWSER="+opener, "GH_BROWSER="+opener, "WEBMUX_BROWSER_BIN="+dir, "WEBMUX_BROWSER_ORIGINAL_PATH="+os.Getenv("PATH"), "PATH="+dir+string(os.PathListSeparator)+os.Getenv("PATH")), nil
+	instance, err := recovery.NewInstance()
+	if err != nil {
+		return nil, err
+	}
+	return append(env, "WEBMUX_RECOVERY_CACHE_HOME="+cacheRoot, "WEBMUX_RECOVERY_INSTANCE="+instance, "WEBMUX_RECOVERY_HELPER="+binary, "BROWSER="+opener, "GH_BROWSER="+opener, "WEBMUX_BROWSER_BIN="+dir, "WEBMUX_BROWSER_ORIGINAL_PATH="+os.Getenv("PATH"), "PATH="+dir+string(os.PathListSeparator)+os.Getenv("PATH")), nil
 }
 
 // Handle also catches PATH-based open/xdg-open invocations. Non-URL invocations

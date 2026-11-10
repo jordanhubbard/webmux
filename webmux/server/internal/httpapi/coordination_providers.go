@@ -23,6 +23,63 @@ type coordinationProvider interface {
 	Attach(context.Context, string) (coordinationLaunch, error)
 }
 
+// Display status is not process-liveness evidence: some native inventories
+// omit it entirely. Recovery asks the lifecycle owner for the exact target.
+type coordinationSurvival interface {
+	Survives(context.Context, string) (bool, error)
+}
+
+func (p *agentDeckProvider) Survives(ctx context.Context, target string) (bool, error) {
+	remote, id, err := splitAgentDeckTarget(target)
+	if err != nil {
+		return false, err
+	}
+	seat, err := p.agentDeckSeat(ctx, target)
+	if err != nil {
+		return false, err
+	}
+	var receipt struct {
+		InstanceID   string `json:"instance_id"`
+		State        string `json:"state"`
+		Verdict      string `json:"verdict"`
+		Admissible   bool   `json:"admissible"`
+		PaneAttached bool   `json:"pane_attached"`
+	}
+	args := []string{"session", "ownership", "inspect", id, "--json"}
+	if remote != "" {
+		args = append([]string{"remote", remote}, args...)
+	} else if seat.Profile != "" && seat.Profile != "default" {
+		args = append([]string{"-p", seat.Profile}, args...)
+	}
+	if err := p.runJSON(ctx, &receipt, args...); err != nil {
+		return false, err
+	}
+	return receipt.InstanceID == id && receipt.State == "live" && receipt.Verdict == "owned" && receipt.Admissible && receipt.PaneAttached, nil
+}
+
+func (p *rigProvider) Survives(ctx context.Context, target string) (bool, error) {
+	status, err := p.rawStatus(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, agent := range status.Agents {
+		if agent.Target == target {
+			// The coordinator runner checks this exact managed tmux seat.
+			return agent.Connected, nil
+		}
+	}
+	for _, seat := range status.Seats {
+		if seat.CanonicalSessionName == target && seat.Openable && seat.TmuxTarget != "" {
+			binary, err := exec.LookPath("tmux")
+			if err != nil {
+				return false, err
+			}
+			return exec.CommandContext(ctx, binary, "has-session", "-t", "="+seat.TmuxTarget).Run() == nil, nil
+		}
+	}
+	return false, nil
+}
+
 type coordinationProviderDescriptor struct {
 	ID           string   `json:"id"`
 	Label        string   `json:"label"`
@@ -48,28 +105,31 @@ type coordinationProject struct {
 }
 
 type coordinationSeat struct {
-	Provider       string `json:"provider"`
-	ID             string `json:"id"`
-	ProjectID      string `json:"projectId"`
-	ProjectName    string `json:"projectName"`
-	Name           string `json:"name"`
-	Host           string `json:"host"`
-	Workspace      string `json:"workspace,omitempty"`
-	Runtime        string `json:"runtime"`
-	State          string `json:"state"`
-	Openable       bool   `json:"openable"`
-	Managed        bool   `json:"managed"`
-	NativeSession  string `json:"nativeSessionId,omitempty"`
-	ProviderTarget string `json:"-"`
-	Context        string `json:"context,omitempty"`
-	ParentID       string `json:"parentId,omitempty"`
-	ParentName     string `json:"parentName,omitempty"`
-	Role           string `json:"role,omitempty"`
-	Substate       string `json:"substate,omitempty"`
-	LastActivity   string `json:"lastActivityAt,omitempty"`
-	Attention      bool   `json:"attention,omitempty"`
-	CanReceive     bool   `json:"canReceive,omitempty"`
-	ExitCode       *int   `json:"exitCode,omitempty"`
+	Profile         string `json:"profile,omitempty"`
+	NativeStateFile string `json:"nativeStateFile,omitempty"`
+	Provider        string `json:"provider"`
+	ID              string `json:"id"`
+	ProjectID       string `json:"projectId"`
+	ProjectName     string `json:"projectName"`
+	Name            string `json:"name"`
+	Host            string `json:"host"`
+	Workspace       string `json:"workspace,omitempty"`
+	Runtime         string `json:"runtime"`
+	State           string `json:"state"`
+	Openable        bool   `json:"openable"`
+	Managed         bool   `json:"managed"`
+	ManagerSession  string `json:"managerSessionId,omitempty"`
+	NativeSession   string `json:"nativeSessionId,omitempty"`
+	ProviderTarget  string `json:"-"`
+	Context         string `json:"context,omitempty"`
+	ParentID        string `json:"parentId,omitempty"`
+	ParentName      string `json:"parentName,omitempty"`
+	Role            string `json:"role,omitempty"`
+	Substate        string `json:"substate,omitempty"`
+	LastActivity    string `json:"lastActivityAt,omitempty"`
+	Attention       bool   `json:"attention,omitempty"`
+	CanReceive      bool   `json:"canReceive,omitempty"`
+	ExitCode        *int   `json:"exitCode,omitempty"`
 }
 
 type coordinationMessage struct {
@@ -145,15 +205,18 @@ type coordinationLaunchRequest struct {
 }
 
 type coordinationLaunch struct {
-	Provider  string
-	Target    string
-	Title     string
-	Project   string
-	Name      string
-	Host      string
-	Workspace string
-	Runtime   string
-	Argv      []string
+	Profile         string
+	NativeSession   string
+	NativeStateFile string
+	Provider        string
+	Target          string
+	Title           string
+	Project         string
+	Name            string
+	Host            string
+	Workspace       string
+	Runtime         string
+	Argv            []string
 }
 
 type agentDeckProvider struct {
@@ -245,9 +308,10 @@ func (p *rigProvider) Status(ctx context.Context) (coordinationProviderStatus, e
 		}
 		state := seat.LifecycleState
 		openable := seat.Openable
-		nativeSession := ""
+		managerSession := ""
 		if agent, ok := managed[seat.CanonicalSessionName]; ok {
-			nativeSession = agent.SessionID
+			// sessionId is Rig enrollment identity, not a coding CLI conversation.
+			managerSession = agent.SessionID
 			if !agent.Connected {
 				state = "stopped"
 				openable = false
@@ -256,7 +320,7 @@ func (p *rigProvider) Status(ctx context.Context) (coordinationProviderStatus, e
 		status.Seats = append(status.Seats, coordinationSeat{
 			Provider: "rig", ID: seat.CanonicalSessionName, ProjectID: seat.RigID, ProjectName: seat.RigName,
 			Name: name, Host: host, Workspace: seat.Cwd, Runtime: seat.Runtime, State: state,
-			Openable: openable, Managed: seat.Managed, NativeSession: nativeSession, ProviderTarget: seat.CanonicalSessionName, Context: seat.PodNamespace,
+			Openable: openable, Managed: seat.Managed, ManagerSession: managerSession, ProviderTarget: seat.CanonicalSessionName, Context: seat.PodNamespace,
 		})
 	}
 	for _, rig := range raw.Rigs {
@@ -358,6 +422,8 @@ func (p *agentDeckProvider) Descriptor() coordinationProviderDescriptor {
 }
 
 type agentDeckSession struct {
+	Profile         string `json:"profile"`
+	TranscriptPath  string `json:"transcript_path"`
 	ID              string `json:"id"`
 	Title           string `json:"title"`
 	Path            string `json:"path"`
@@ -626,6 +692,7 @@ func (p *agentDeckProvider) Status(ctx context.Context) (coordinationProviderSta
 		}
 		status.Seats = append(status.Seats, coordinationSeat{
 			Provider: "agent-deck", ID: qualified, ProjectID: projectID, ProjectName: group,
+			Profile: value.Profile, NativeStateFile: value.TranscriptPath,
 			Name: value.Title, Host: host, Workspace: workspace, Runtime: value.Tool, State: value.Status,
 			Openable: !value.Archived, Managed: true, NativeSession: native, ProviderTarget: value.ID,
 			ParentID: parentID, ParentName: parentName, Role: role, Substate: value.Substate,
@@ -698,10 +765,18 @@ func (p *agentDeckProvider) agentDeckSeat(ctx context.Context, target string) (c
 	if err != nil {
 		return coordinationSeat{}, err
 	}
+	var selected *coordinationSeat
 	for _, seat := range status.Seats {
 		if seat.ID == target {
-			return seat, nil
+			if selected != nil {
+				return coordinationSeat{}, fmt.Errorf("Agent Deck session ID is ambiguous across profiles; use its lifecycle manager to select the original profile")
+			}
+			copy := seat
+			selected = &copy
 		}
+	}
+	if selected != nil {
+		return *selected, nil
 	}
 	return coordinationSeat{}, fmt.Errorf("Agent Deck session is unavailable; refresh the session list")
 }
@@ -839,7 +914,10 @@ func (p *agentDeckProvider) Drain(ctx context.Context, remoteName, target string
 
 func (p *agentDeckProvider) Attach(ctx context.Context, target string) (coordinationLaunch, error) {
 	seat, err := p.agentDeckSeat(ctx, target)
-	if err != nil || !seat.Openable {
+	if err != nil {
+		return coordinationLaunch{}, err
+	}
+	if !seat.Openable {
 		return coordinationLaunch{}, fmt.Errorf("Agent Deck session is unavailable; refresh the session list")
 	}
 	remote, id, err := splitAgentDeckTarget(target)
@@ -849,8 +927,10 @@ func (p *agentDeckProvider) Attach(ctx context.Context, target string) (coordina
 	argv := []string{p.executable, "session", "attach", id}
 	if remote != "" {
 		argv = []string{p.executable, "remote", "attach", remote, id}
+	} else if seat.Profile != "" && seat.Profile != "default" {
+		argv = append([]string{p.executable, "-p", seat.Profile}, argv[1:]...)
 	}
-	return coordinationLaunch{Provider: "agent-deck", Target: target, Title: seat.Name + " · " + seat.Host + " · " + seat.ProjectName, Project: seat.ProjectName, Name: seat.Name, Host: seat.Host, Workspace: seat.Workspace, Runtime: seat.Runtime, Argv: argv}, nil
+	return coordinationLaunch{Provider: "agent-deck", Target: target, Profile: seat.Profile, NativeSession: seat.NativeSession, NativeStateFile: seat.NativeStateFile, Title: seat.Name + " · " + seat.Host + " · " + seat.ProjectName, Project: seat.ProjectName, Name: seat.Name, Host: seat.Host, Workspace: seat.Workspace, Runtime: seat.Runtime, Argv: argv}, nil
 }
 
 func (p *agentDeckProvider) Launch(ctx context.Context, request coordinationLaunchRequest) (coordinationLaunch, error) {

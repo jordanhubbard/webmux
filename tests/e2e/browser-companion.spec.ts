@@ -20,9 +20,11 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
   test.skip(shellLaunch && process.platform === 'win32', 'Local tmux shell handoff requires Unix');
   // This is a real browser acceptance test, not a mocked frame or protocol.
   let received = '';
+  let pageReady = false;
   const callback = http.createServer((req, res) => {
     const url = new URL(req.url!, 'http://localhost');
     if (url.pathname === '/callback') received = url.searchParams.get('code') ?? '';
+    if (url.pathname === '/ready') pageReady = true;
     res.end('<h1>Authorization complete. Return to your terminal.</h1>');
   });
   await new Promise<void>(resolve => callback.listen(0, '127.0.0.1', resolve));
@@ -32,7 +34,7 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     res.end(`<html><body style="margin:0"><form action="http://127.0.0.1:${callbackPort}/callback">
       <input name="code" aria-label="Authorization code" style="position:absolute;left:40px;top:40px;width:300px;height:40px">
       <button style="position:absolute;left:40px;top:120px;width:200px;height:40px">Authorize</button>
-      </form></body></html>`);
+      </form><script>addEventListener('DOMContentLoaded', () => fetch('http://127.0.0.1:${callbackPort}/ready', { mode: 'no-cors' }));</script></body></html>`);
   });
   await new Promise<void>(resolve => identity.listen(0, '127.0.0.1', resolve));
   const identityURL = `http://127.0.0.1:${(identity.address() as { port: number }).port}/authorize`;
@@ -85,9 +87,17 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
       const linkText = linkKind === 'plain' ? identityURL : 'Remote sign-in';
       const line = page.locator('.xterm-rows').getByText(linkText, { exact: true }).last();
       await expect(line).toBeVisible();
-      const box = (await line.boundingBox())!;
-      await page.mouse.move(box.x + 25, box.y + box.height / 2);
-      await page.mouse.click(box.x + 25, box.y + box.height / 2);
+      // Row spans are an accessibility mirror; xterm-screen receives pointer
+      // events. Reacquire geometry if a redraw replaces the span mid-click.
+      await expect(async () => {
+        const choice = page.getByRole('button', { name: 'Use browser on terminal host' });
+        if (await choice.isVisible()) return;
+        const box = await line.boundingBox();
+        if (!box) throw new Error('Terminal row was redrawn before link activation');
+        await page.mouse.move(box.x + 25, box.y + box.height / 2);
+        await page.mouse.click(box.x + 25, box.y + box.height / 2);
+        await expect(choice).toBeVisible({ timeout: 1000 });
+      }).toPass({ timeout: 10_000 });
     } else {
       await page.getByRole('button', { name: 'Session tools', exact: true }).click();
       await page.getByRole('button', { name: 'Open browser', exact: true }).click();
@@ -106,6 +116,8 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
       const res = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
       return (await res.json()).url;
     }).toBe(identityURL);
+    // Navigation can report its URL before the new document can receive input.
+    await expect.poll(() => pageReady).toBe(true);
     // The viewport now follows the drawer. Match the displayed frame to the
     // worker geometry before converting page coordinates into viewer pixels.
     let geometry = { width: 1100, height: 760 };
@@ -127,6 +139,7 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     await page.keyboard.type('callback-proof');
     await page.keyboard.press('Tab');
     await page.keyboard.press('Enter');
+    await expect(page.getByRole('alert')).toHaveCount(0);
     await expect.poll(() => received, { timeout: 15_000 }).toBe('callback-proof');
     expect(popups).toBe(0);
     expect(page.context().pages()).toHaveLength(idleViewer ? 2 : 1);
@@ -151,12 +164,16 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     await expect(viewport).not.toBeVisible();
     const ended = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
     expect(ended.status()).toBe(503);
+  } catch (error) {
+    console.error('Browser companion workflow failed:', String(error).split('\n').slice(0, 4).join('\n'));
+    throw error;
   } finally {
     await idleViewer?.close();
     rmSync(launchConfig, { force: true });
-    await request.delete(`/api/sessions/${session.id}`);
+    await request.delete(`/api/sessions/${session.id}`).catch(() => { /* the request fixture may already be closed after a timeout */ });
     // Local terminals intentionally persist in tmux after disconnection.
     try { execFileSync('tmux', ['kill-session', '-t', `webmux-${session.id}`]); } catch { /* already exited */ }
+    identity.closeAllConnections(); callback.closeAllConnections();
     await Promise.all([new Promise<void>(resolve => identity.close(() => resolve())), new Promise<void>(resolve => callback.close(() => resolve()))]);
   }
 });

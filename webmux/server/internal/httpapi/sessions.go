@@ -1,8 +1,12 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/agent"
 	"github.com/jordanhubbard/webmux/server/internal/config"
@@ -17,6 +21,8 @@ func (s *Server) sessionError(w http.ResponseWriter, err error, message string) 
 		writeError(w, access.Status, access.Message)
 	case errors.Is(err, session.ErrNotFound):
 		writeError(w, 404, "Session not found")
+	case errors.Is(err, session.ErrRecoveryConflict):
+		writeError(w, 409, err.Error())
 	case errors.As(err, &validation):
 		writeError(w, 400, validation.Error())
 	case errors.Is(err, session.ErrClosed):
@@ -36,6 +42,68 @@ func (s *Server) getSession(w http.ResponseWriter, r *http.Request, owner string
 		return
 	}
 	writeJSON(w, 200, value)
+}
+
+func (s *Server) getSessionRecovery(w http.ResponseWriter, r *http.Request, owner string) {
+	value, err := s.sessions.Recovery(owner, r.PathValue("id"))
+	if err != nil {
+		s.sessionError(w, err, "Failed to read session recovery")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 200, value)
+}
+
+func (s *Server) recoverSession(w http.ResponseWriter, r *http.Request, owner string) {
+	if _, err := s.sessions.Get(owner, r.PathValue("id")); err != nil {
+		s.sessionError(w, err, "Failed to recover session")
+		return
+	}
+	var input session.RecoveryRequest
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	var value session.RecoveryResult
+	var err error
+	if input.Kind == "managed" {
+		if !s.openRigAccess(w, owner) {
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 45*time.Second)
+		defer cancel()
+		value, err = s.sessions.RecoverManaged(ctx, owner, r.PathValue("id"), input, s.planManagedRecovery)
+	} else {
+		value, err = s.sessions.Recover(owner, r.PathValue("id"), input)
+	}
+	if err != nil {
+		s.sessionError(w, err, "Failed to recover session")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 200, value)
+}
+
+func (s *Server) patchRecovery(w http.ResponseWriter, r *http.Request, owner string) {
+	var input struct {
+		AutoResume *bool `json:"auto_resume"`
+	}
+	if _, err := s.sessions.Get(owner, r.PathValue("id")); err != nil {
+		s.sessionError(w, err, "Failed to update recovery")
+		return
+	}
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	if input.AutoResume == nil {
+		writeError(w, 400, "auto_resume is required")
+		return
+	}
+	if err := s.sessions.SetAutoRecovery(owner, r.PathValue("id"), *input.AutoResume); err != nil {
+		s.sessionError(w, err, "Failed to update recovery")
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 200, map[string]bool{"auto_resume": *input.AutoResume})
 }
 func (s *Server) createSession(w http.ResponseWriter, r *http.Request, owner string) {
 	var input session.CreateRequest
@@ -94,7 +162,7 @@ func (s *Server) reconnectSession(w http.ResponseWriter, r *http.Request, owner 
 		s.sessionError(w, err, "Failed to reconnect session")
 		return
 	}
-	if (value.Companion == "openrig" || value.OpenRigView != "") && !s.openRigAccess(w, owner) {
+	if (value.Companion == "openrig" || value.OpenRigView != "" || value.Rig != nil) && !s.openRigAccess(w, owner) {
 		return
 	}
 	var input struct {
@@ -103,13 +171,72 @@ func (s *Server) reconnectSession(w http.ResponseWriter, r *http.Request, owner 
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	s.handoffs.End(owner, r.PathValue("id"))
-	value, err = s.sessions.Reconnect(owner, r.PathValue("id"), input.Password)
+	if value.Rig != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+		defer cancel()
+		launch, resolveErr := s.resolveManagedReattachment(ctx, owner, *value.Rig)
+		if resolveErr != nil {
+			writeError(w, 409, resolveErr.Error())
+			return
+		}
+		s.handoffs.End(owner, value.ID)
+		value, err = s.sessions.ReconnectManaged(owner, value.ID, *value.Rig, launch.Argv)
+	} else {
+		s.handoffs.End(owner, value.ID)
+		value, err = s.sessions.Reconnect(owner, value.ID, input.Password)
+	}
 	if err != nil {
 		s.sessionError(w, err, "Failed to reconnect session")
 		return
 	}
 	writeJSON(w, 200, value)
+}
+
+func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, saved session.RigIdentity) (coordinationLaunch, error) {
+	id := saved.Provider
+	if id == "" {
+		id = "rig"
+	}
+	provider := s.coordinationProvider(owner, id)
+	if provider == nil {
+		return coordinationLaunch{}, fmt.Errorf("The %s lifecycle manager is unavailable or disabled. Retained logs are preserved; reconnect through that manager.", id)
+	}
+	target := saved.Target
+	if id != "rig" {
+		prefix := id + ":"
+		if !strings.HasPrefix(target, prefix) {
+			return coordinationLaunch{}, fmt.Errorf("The saved managed-session destination is invalid. Retained logs are preserved.")
+		}
+		target = strings.TrimPrefix(target, prefix)
+	}
+	survival, ok := provider.(coordinationSurvival)
+	if !ok {
+		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager cannot verify a surviving process. Retained logs are preserved.")
+	}
+	live, err := survival.Survives(ctx, target)
+	if err != nil {
+		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager could not verify the surviving session: %w. Retained logs are preserved.", err)
+	}
+	if !live {
+		return coordinationLaunch{}, fmt.Errorf("The original managed process is not confirmed running. Resume it through its lifecycle manager; retained logs are preserved.")
+	}
+	launch, err := provider.Attach(ctx, target)
+	if err != nil {
+		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager could not reattach the original session: %w. Retained logs are preserved; recover it through that manager.", err)
+	}
+	if launch.Provider != id || launch.Target != target || saved.Host != "" && saved.Host != launch.Host || saved.Workspace != "" && saved.Workspace != launch.Workspace || saved.Runtime != "" && saved.Runtime != launch.Runtime {
+		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager's session destination changed. Review its host, project and coding CLI before opening a new viewer; retained logs are preserved.")
+	}
+	profile := func(value string) string {
+		if value == "" {
+			return "default"
+		}
+		return value
+	}
+	if profile(saved.ManagerProfile) != profile(launch.Profile) {
+		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager's recorded profile changed. Review it through that manager; retained logs are preserved.")
+	}
+	return launch, nil
 }
 func (s *Server) deleteSession(w http.ResponseWriter, r *http.Request, owner string) {
 	if err := s.sessions.Delete(owner, r.PathValue("id")); err != nil {

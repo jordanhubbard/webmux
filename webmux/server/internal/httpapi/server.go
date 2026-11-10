@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 
@@ -95,7 +96,19 @@ func New(store *storage.Store, options Options) (*Server, error) {
 
 func (s *Server) RestoreSessions() error {
 	s.startCoordination()
-	return errors.Join(s.sessions.Restore(), s.vnc.Restore(), s.rdp.Restore())
+	terminalErr := s.sessions.Restore()
+	if terminalErr == nil {
+		terminalErr = s.sessions.RestoreManaged(context.Background(), func(parent context.Context, owner string, identity session.RigIdentity) ([]string, error) {
+			if err := s.openRigPermission(owner); err != nil {
+				return nil, err
+			}
+			ctx, cancel := context.WithTimeout(parent, 20*time.Second)
+			defer cancel()
+			launch, err := s.resolveManagedReattachment(ctx, owner, identity)
+			return launch.Argv, err
+		})
+	}
+	return errors.Join(terminalErr, s.vnc.Restore(), s.rdp.Restore())
 }
 func (s *Server) StartSlave(host string, port int) error {
 	_, err := s.sessions.ResetForSlave(host, port)
@@ -159,6 +172,9 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PATCH /api/sessions/{id}", s.protected(false, s.patchSession))
 	mux.Handle("DELETE /api/sessions/{id}", s.protected(false, s.deleteSession))
 	mux.Handle("POST /api/sessions/{id}/reconnect", s.protected(false, s.reconnectSession))
+	mux.Handle("GET /api/session-recovery/{id}", s.protected(false, s.getSessionRecovery))
+	mux.Handle("POST /api/session-recovery/{id}", s.protected(false, s.recoverSession))
+	mux.Handle("PATCH /api/session-recovery/{id}", s.protected(false, s.patchRecovery))
 	mux.HandleFunc("GET /api/term/{id}", s.terminalSocket)
 	mux.Handle("GET /api/agents/config", s.protected(false, s.getAgentConfig))
 	mux.Handle("GET /api/coordination", s.protected(false, s.getCoordination))

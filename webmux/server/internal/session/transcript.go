@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/jordanhubbard/webmux/server/internal/config"
+	"github.com/jordanhubbard/webmux/server/internal/recovery"
 )
 
 type transcriptSink interface {
@@ -202,6 +204,15 @@ func (b *Broker) openTranscriptLocked(e *entry, r *run) *transcriptLog {
 	}
 	_ = l.append(fmt.Sprintf("[webmux transcript %s %s session=%s launch=%d]\r\n", action, now(), id, r.generation))
 	r.log = l
+	if e.value.Recovery == nil {
+		e.value.Recovery = &recovery.State{Version: 1}
+	}
+	e.value.Recovery.AddTranscript(name)
+	// Save the reference before accepting output, including manually enabled
+	// logging. Shutdown cannot be relied on after a crash or a host reboot.
+	if err := b.persistLocked(); err != nil {
+		b.logger.Warn("save transcript recovery reference", "session_id", e.value.ID, "error", err)
+	}
 	b.audit(map[string]any{"type": "session_transcript_started", "session_id": e.value.ID, "launch_generation": r.generation, "path": path, "resumed": resumed})
 	b.workers.Add(1)
 	go b.writeTranscript(e.value.ID, r, l, sink)
@@ -260,6 +271,26 @@ func (b *Broker) ToggleTranscript(owner, id, viewerID string) error {
 	}
 	l := r.log
 	pause := l.active()
+	if pause && r.recoveryPolling {
+		controller, ok := r.process.(recoveryController)
+		if ok {
+			b.mu.Unlock()
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			enabled := false
+			response := controller.RecoveryRPC(ctx, recovery.RPCRequest{Operation: "policy", Recording: &enabled})
+			cancel()
+			b.mu.Lock()
+			if b.closed || b.entries[id] != e || e.run != r {
+				b.mu.Unlock()
+				return ErrClosed
+			}
+			if response.Error != "" || response.Recording {
+				b.mu.Unlock()
+				return &config.ValidationError{Message: "Capture remains enabled because the host could not acknowledge pause: " + response.Error}
+			}
+			b.applyRecoverySnapshotLocked(e, r, response)
+		}
+	}
 	if l != nil {
 		if pause {
 			l.stop("manual_pause")
@@ -274,6 +305,12 @@ func (b *Broker) ToggleTranscript(owner, id, viewerID string) error {
 	}
 	if !pause {
 		b.openTranscriptLocked(e, r)
+	}
+	enabled := r.log.active()
+	e.value.TranscriptEnabled = &enabled
+	if err := b.persistLocked(); err != nil {
+		b.mu.Unlock()
+		return err
 	}
 	b.broadcastLocked(e, b.transcriptEventLocked(e))
 	b.mu.Unlock()

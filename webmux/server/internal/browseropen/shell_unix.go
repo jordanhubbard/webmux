@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"github.com/jordanhubbard/webmux/server/internal/recovery"
 )
 
 func installOpeners(binary string) (string, error) {
@@ -22,7 +24,7 @@ func installOpeners(binary string) (string, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", err
 	}
-	for _, name := range []string{"webmux-open", "open", "xdg-open", "sensible-browser"} {
+	for _, name := range []string{"webmux-open", "open", "xdg-open", "sensible-browser", "codex", "claude", "opencode", "agent", "cursor-agent"} {
 		path := filepath.Join(dir, name)
 		if err := os.Symlink(binary, path); err != nil {
 			if target, readErr := os.Readlink(path); readErr != nil || target != binary {
@@ -89,7 +91,7 @@ if [ -r "$HOME/.bash_profile" ]; then . "$HOME/.bash_profile"
 elif [ -r "$HOME/.bash_login" ]; then . "$HOME/.bash_login"
 elif [ -r "$HOME/.profile" ]; then . "$HOME/.profile"; fi
 `
-		if err := write(rc, body+setup); err != nil {
+		if err := write(rc, body+setup+recovery.ShellWait()+recovery.ShellHooks("bash")); err != nil {
 			return nil, nil, err
 		}
 		return []string{shell, "--rcfile", rc, "-i"}, env, nil
@@ -108,6 +110,12 @@ elif [ -r "$HOME/.profile" ]; then . "$HOME/.profile"; fi
 			body := "ZDOTDIR=" + quote(original) + "\nif [ -r " + file + " ]; then . " + file + "; fi\n"
 			if name == ".zshrc" || name == ".zlogin" {
 				body += setup
+			}
+			if name == ".zshrc" {
+				body += recovery.ShellHooks("zsh")
+			}
+			if name == ".zlogin" {
+				body += recovery.ShellWait()
 			}
 			next := dir
 			if name == ".zlogin" {

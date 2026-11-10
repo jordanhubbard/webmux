@@ -2,6 +2,7 @@
 package terminal
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jordanhubbard/webmux/server/internal/recovery"
 )
 
 // Command contains only launch-time state. Callers must not persist Env: it may
@@ -42,6 +45,7 @@ type nativeProcess interface {
 // emits a final display frame during shutdown. Close cancels blocked I/O and
 // discards remaining output; Wait alone preserves output for the reader.
 type Process struct {
+	recovery     func(context.Context, recovery.RPCRequest) recovery.RPCResponse
 	browserLocal bool
 	native       nativeProcess
 	done         chan struct{}
@@ -51,6 +55,13 @@ type Process struct {
 	closed       bool
 	closeOnce    sync.Once
 	closeErr     error
+}
+
+func (p *Process) RecoveryRPC(ctx context.Context, request recovery.RPCRequest) recovery.RPCResponse {
+	if p.recovery == nil {
+		return recovery.RPCResponse{Protocol: 1, Error: "This session's lifecycle provider owns recovery"}
+	}
+	return p.recovery(ctx, request)
 }
 
 func dimensions(cols, rows int) error {

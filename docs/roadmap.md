@@ -1,15 +1,16 @@
 # WebMux active roadmap
 
-Reviewed 2026-10-31 against the owner's recovered session and the open GitHub
-issues. GitHub issues track implementation and remaining acceptance work.
+Reviewed 2026-11-10 against the implementation, qualification receipts and GitHub
+issue states. GitHub issues track implementation and remaining acceptance work.
 
 ## Current reliability work
 
 **First priority: [#318](https://github.com/jordanhubbard/webmux/issues/318).**
-Session-state recovery is the next implementation and qualification work, ahead
-of the remaining reliability and integration follow-ups. Its full acceptance
-criteria remain required; this priority change does not establish recovery
-support.
+Session-state recovery has an implementation checkpoint in
+[#322](https://github.com/jordanhubbard/webmux/pull/322). The owner requested that
+this checkpoint enter `main` for fix-forward work in a Claude session. This is
+an integration handoff, not completed acceptance: #318 remains open and first
+priority ahead of the other reliability and integration follow-ups.
 
 ### Recover active work after interruption
 
@@ -32,7 +33,45 @@ command replay or external transcript handoff. Handle disabled, missing, rotated
 or partial logs and unavailable hosts with clear fallback choices. Acceptance
 requires real restart/update/crash and host-reboot recovery, plus native coding
 CLI resume evidence; reopening a window or replaying its scrollback is not
-proof of restored agent state. Implementation and qualification remain open.
+proof of restored agent state. The implementation is available for fix-forward;
+full qualification remains open.
+
+Current evidence and limits:
+
+| Area | Progress |
+| --- | --- |
+| Recovery metadata and controls | Implemented: owner-scoped durable activity/native-session evidence, retained history, recovery previews, explicit replay/context consent, survivor checks and durable duplicate/uncertain-request handling. |
+| Named native CLIs | Real exact-conversation continuation passed for qualified Codex, Claude Code, Cursor agent and OpenCode versions, with fresh remembered-marker responses and original project/configuration checks. This does not qualify every invocation or platform. |
+| Ordinary local/SSH/mosh lifecycle | Real controller restart/update/SIGKILL and disposable guest reboot checks passed, including retained history and no duplicate execution. |
+| Local managed recovery | Real Agent Deck/Claude and Rig/Claude process-loss continuation passed. Rig additionally passed original executable/settings checks and an in-flight controller-loss test that refused unsafe retries. |
+| Managed shell job after reboot | Real Agent Deck shell-job guest reboot passed: manager/project/log identity retained, explicit fallback, no automatic restart and no duplicate execution after reconnects. This is not native coding-conversation recovery. |
+| Native managed conversation after reboot | Harness prepared as `qualify-recovery-managed-vm.py --native-claude`; no passing receipt. Guest Claude 2.1.322 is installed but its own login was not completed. The Mac's Claude login is confirmed. |
+
+The implementation/preparatory-harness checkpoint `3afb3bf` passed every hosted
+CI and Packaging check. Local qualification also includes affected Go race
+suites/vet, strict TypeScript, 50 helper tests and real native Rig recovery.
+Consult #322 for the checks on its final handoff commit. Full receipts, hashes,
+supported versions and historical limits are in [session recovery](session-recovery.md).
+The next session's working context is in [MEMORY.md](../MEMORY.md).
+
+Remaining #318 work, in order:
+
+1. Complete guest-native managed conversation recovery across an actual reboot,
+   including a fresh response recalling the original conversation marker and
+   duplicate-request checks after controller reconstruction.
+2. Finish remote managed-host/failure qualification and additional native
+   active-session, policy/profile and platform coverage. Unqualified cases must
+   continue to offer explicit fallback with retained logs.
+3. Resolve default shared-daemon Codex active-conversation tracking after
+   interactive switches. Verified explicit selectors remain manual evidence;
+   per-command hook injection did not qualify shared-daemon observation.
+4. Audit #318 against its complete acceptance criteria before closing it. The
+   owner-approved merge of #322 does not close this requirement or cut a release.
+
+[#320](https://github.com/jordanhubbard/webmux/issues/320) tracks intermittent
+hosted SSH/lease/reconnect failures; [#324](https://github.com/jordanhubbard/webmux/issues/324)
+tracks the intermittent existing fake-launchctl startup timeout. Their open
+status must not be confused with passing checks on this checkpoint.
 
 ### Windows packaging reliability
 
@@ -41,11 +80,12 @@ operations and preserve progress/installer diagnostics after a stalled packaging
 run. The stall is not established as a product regression. This remains a
 follow-up after #318; it does not displace session-state recovery.
 
-## Runtime compatibility follow-up
+## Runtime compatibility implementation
 
-[#277](https://github.com/jordanhubbard/webmux/issues/277): expose bounded
+[#277](https://github.com/jordanhubbard/webmux/issues/277) is closed: bounded
 [server compatibility and self-reported build metadata](server-info.md),
-preserving existing authentication, federation and provider boundaries.
+preserving existing authentication, federation and provider boundaries, has
+been implemented.
 
 ## Connected WebMux servers: v1.4.0
 
@@ -85,9 +125,10 @@ updates. The dependency-audit gate remains enabled and passed for this release.
 ## Integration and feature follow-ups
 
 - [#275](https://github.com/jordanhubbard/webmux/issues/275): source-backed
-  [native bridge integration research](native-bridge-integration.md) for Codex iOS.
-  Current coordination/federation APIs are reusable, but connector implementation,
-  scoped authorization choices and physical cross-project acceptance remain pending.
+  [native bridge integration research](native-bridge-integration.md) for Codex iOS
+  is complete and the research issue is closed. Connector implementation, scoped
+  authorization choices and physical cross-project acceptance remain separate,
+  unqualified work.
 
 - [#194](https://github.com/jordanhubbard/webmux/issues/194): remaining canonical
   Rig discovery, lifecycle/provenance contract and optional Agents-pane

@@ -588,8 +588,23 @@ func (s *Server) attachCoordinationTerminal(parent context.Context, owner string
 	if identityProvider == "rig" {
 		identityProvider = ""
 	}
-	identity := session.RigIdentity{Provider: identityProvider, Target: viewerTarget, Project: launch.Project, Name: launch.Name, Host: launch.Host, Runtime: launch.Runtime, Workspace: launch.Workspace}
-	return s.sessions.EnsureRigTerminalAt(owner, viewerTarget, launch.Title, launch.Argv, row, col, identity)
+	identity := session.RigIdentity{Provider: identityProvider, Target: viewerTarget, Project: launch.Project, Name: launch.Name, Host: launch.Host, Runtime: launch.Runtime, Workspace: launch.Workspace, ManagerProfile: launch.Profile}
+	if launch.Provider == "agent-deck" {
+		identity.NativeSessionID, identity.NativeStateFile = launch.NativeSession, launch.NativeStateFile
+	}
+	value, err := s.sessions.EnsureRigTerminalAt(owner, viewerTarget, launch.Title, launch.Argv, row, col, identity)
+	if err != nil {
+		return value, err
+	}
+	if launch.Provider == "rig" {
+		if err := s.captureRigRecovery(parent, owner, value.ID); err != nil {
+			s.logger.Debug("native Rig recovery metadata unavailable", "session_id", value.ID)
+		}
+		if fresh, err := s.sessions.Get(owner, value.ID); err == nil {
+			return fresh, nil
+		}
+	}
+	return value, nil
 }
 
 type coordinationDiscovery struct {

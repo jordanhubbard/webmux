@@ -20,6 +20,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/agent"
 	"github.com/jordanhubbard/webmux/server/internal/browseropen"
 	"github.com/jordanhubbard/webmux/server/internal/config"
+	"github.com/jordanhubbard/webmux/server/internal/recovery"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 	"github.com/jordanhubbard/webmux/server/internal/templates"
 	"github.com/jordanhubbard/webmux/server/internal/terminal"
@@ -33,6 +34,14 @@ type process interface {
 }
 type launchFunc func(terminal.LaunchRequest, string) (process, error)
 type run struct {
+	recoveryPolling  bool
+	recoveryReady    bool
+	recoveryRevision uint64
+	recoveryControl  *recovery.Event
+	recoveryError    string
+	recoveryWarning  string
+	autoAttempted    string
+	recoveryDecoder  recovery.Decoder
 	clipboardDecoder terminalclipboard.Decoder
 	clipboardRead    *clipboardRead
 	browserDecoder   browseropen.Decoder
@@ -60,6 +69,11 @@ func (r *run) stop() {
 }
 
 type entry struct {
+	shellHelper     string
+	shellPlatform   string
+	historyRestored bool
+	shellReady      bool
+	shellInstance   string
 	replayScreen    replayScreen
 	browserRequest  Event
 	browserExpires  time.Time
@@ -131,6 +145,15 @@ func newBroker(store *storage.Store, logger *slog.Logger, launch launchFunc) (*B
 		if s.ID == "" || b.entries[s.ID] != nil {
 			return nil, errors.New("invalid or duplicate persisted session ID")
 		}
+		s = s.clone()
+		if s.Recovery != nil && (s.Recovery.Activity != nil || len(s.Recovery.Transcripts) > 0) {
+			s.Recovery.Pending = true
+			if s.Recovery.Disposition == "requested" || s.Recovery.Disposition == "continuing" {
+				s.Recovery.Disposition = "execution-uncertain"
+			} else {
+				s.Recovery.Disposition = "interrupted"
+			}
+		}
 		b.entries[s.ID] = &entry{value: s}
 		b.order = append(b.order, s.ID)
 	}
@@ -155,7 +178,7 @@ func (b *Broker) Restore() error {
 		if e.run != nil {
 			continue
 		}
-		if e.value.Persistent && e.value.Hostname != "" && !e.value.Agent() {
+		if e.value.Persistent && e.value.Hostname != "" && !e.value.Agent() && e.value.Rig == nil {
 			_ = b.startLocked(e, "", "")
 		}
 	}
@@ -318,6 +341,17 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 }
 
 func (b *Broker) startLocked(e *entry, password, initial string) error {
+	if e.value.RecoveryKey == "" {
+		key, err := recovery.NewInstance()
+		if err != nil {
+			return err
+		}
+		e.value.RecoveryKey = key
+	}
+	e.shellReady = false
+	e.shellInstance = ""
+	e.shellHelper, e.shellPlatform = "", ""
+	e.historyRestored = false
 	e.browserRequest = nil
 	e.generation++
 	e.value.State = "connecting"
@@ -340,7 +374,11 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 	}
 	r := &run{process: p, initial: initial, first: true, input: make(chan string, 256), stopped: make(chan struct{}), generation: e.generation, replayUntil: time.Now().Add(1500 * time.Millisecond)}
 	e.run = r
-	if b.loggingEnabledLocked() {
+	logging := b.loggingEnabledLocked()
+	if e.value.TranscriptEnabled != nil {
+		logging = *e.value.TranscriptEnabled
+	}
+	if logging {
 		b.openTranscriptLocked(e, r)
 	}
 	b.broadcastLocked(e, b.transcriptEventLocked(e))
@@ -384,6 +422,19 @@ func (b *Broker) fallbackLocked(e *entry, password, initial string) (bool, error
 }
 
 func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
+	return b.reconnect(owner, id, password, nil, nil)
+}
+
+// ReconnectManaged accepts attach arguments freshly resolved by the lifecycle
+// owner. The saved identity binds that resolution to this existing viewer.
+func (b *Broker) ReconnectManaged(owner, id string, expected RigIdentity, argv []string) (Session, error) {
+	if len(argv) == 0 {
+		return Session{}, invalid("The coordinator did not return an attachment command")
+	}
+	return b.reconnect(owner, id, "", &expected, argv)
+}
+
+func (b *Broker) reconnect(owner, id, password string, expected *RigIdentity, argv []string) (Session, error) {
 	b.agentMu.Lock()
 	defer b.agentMu.Unlock()
 	b.mu.Lock()
@@ -395,6 +446,14 @@ func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
 	if err != nil {
 		b.mu.Unlock()
 		return Session{}, err
+	}
+	if expected != nil && (e.value.Rig == nil || *e.value.Rig != *expected) {
+		b.mu.Unlock()
+		return Session{}, ErrRecoveryConflict
+	}
+	if e.value.Rig != nil && expected == nil {
+		b.mu.Unlock()
+		return Session{}, invalid("The lifecycle manager must revalidate this session before reconnecting")
 	}
 	if e.value.Agent() {
 		if _, err := b.agents.Access(e.value.AgentID); err != nil {
@@ -426,6 +485,12 @@ func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
 	if current != e || e.run != nil {
 		return e.value.clone(), nil
 	}
+	if expected != nil {
+		if e.value.Rig == nil || *e.value.Rig != *expected {
+			return Session{}, ErrRecoveryConflict
+		}
+		e.value.ExecArgv = append([]string(nil), argv...)
+	}
 	if e.value.Agent() {
 		if _, err := b.agents.Access(e.value.AgentID); err != nil {
 			return Session{}, err
@@ -434,6 +499,15 @@ func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
 	err = b.startLocked(e, password, "")
 	if err == nil {
 		b.markAttachReadyLocked(e)
+		if expected != nil {
+			if e.value.Recovery == nil {
+				e.value.Recovery = &recovery.State{Version: 1}
+			}
+			e.value.Recovery.Pending = false
+			e.value.Recovery.Disposition = "reattached"
+			e.value.Recovery.ManagerMessage = ""
+			e.value.Recovery.Revision++
+		}
 	}
 	if persistErr := b.persistLocked(); persistErr != nil {
 		return Session{}, persistErr
@@ -586,6 +660,9 @@ func (b *Broker) input(owner, id, data string, requireConnected bool) error {
 	var current *run
 	if err == nil && e.run != nil {
 		current = e.run
+		if current.recoveryControl != nil && current.recoveryControl.Mode == "waiting" {
+			err = ErrRecoveryWaiting
+		}
 	}
 	b.mu.Unlock()
 	if err != nil {
@@ -625,6 +702,7 @@ func (b *Broker) input(owner, id, data string, requireConnected bool) error {
 }
 
 var ErrInputBusy = errors.New("terminal input queue is full")
+var ErrRecoveryWaiting = errors.New("This session is waiting for recovery. Open Recover work to continue or start a shell.")
 
 func (b *Broker) writeInput(r *run) {
 	defer b.workers.Done()
@@ -740,6 +818,11 @@ func (b *Broker) output(id string, r *run, data string) {
 		if len(r.moshOutput) > 256 {
 			r.moshOutput = r.moshOutput[len(r.moshOutput)-256:]
 		}
+	}
+	var recoveryEvents []recovery.Event
+	data, recoveryEvents = r.recoveryDecoder.Feed(data)
+	for _, event := range recoveryEvents {
+		b.recoveryEventLocked(e, r, event)
 	}
 	var clipboard []terminalclipboard.Request
 	data, clipboard = r.clipboardDecoder.Feed(data)

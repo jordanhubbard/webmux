@@ -42,6 +42,18 @@ func TestSessionHTTPOwnershipAndPatchPrecedence(t *testing.T) {
 		t.Fatal("password exposed")
 	}
 	path := "/api/sessions/" + value.ID
+	recoveryPath := "/api/session-recovery/" + value.ID
+	requireStatus(t, request(handler, "GET", recoveryPath, "", ""), 401)
+	requireStatus(t, request(handler, "GET", recoveryPath, "", other), 404)
+	for _, method := range []string{"POST", "PATCH"} {
+		requireStatus(t, request(handler, method, recoveryPath, `{}`, ""), 401)
+		requireStatus(t, request(handler, method, recoveryPath, `{}`, other), 404)
+	}
+	recovered := request(handler, "GET", recoveryPath, "", owner)
+	requireStatus(t, recovered, 200)
+	if recovered.Header().Get("Cache-Control") != "no-store" || strings.Contains(recovered.Body.String(), "recovery_key") || strings.Contains(created.Body.String(), "recovery_key") {
+		t.Fatal("recovery data was cached or an integration key was exposed")
+	}
 	for _, method := range []string{"GET", "PATCH", "DELETE"} {
 		requireStatus(t, request(handler, method, path, `{}`, other), 404)
 	}

@@ -103,7 +103,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   const project = 'browser-workload';
   const sessions: string[] = [];
   let workloadCompleted = false;
-  type Agent = { name: string; id: string; state: string; openable: boolean; nativeSessionId?: string };
+  type Agent = { name: string; id: string; state: string; openable: boolean; managerSessionId?: string; nativeSessionId?: string };
   type Session = { id: string; row: number; col: number; openrig_view?: string; rig?: { target: string; project: string; name: string; host: string; runtime: string } };
   const status = async () => {
     const value = await (await request.get('/api/coordination')).json() as { seats: (Agent & { provider: string })[]; messages: { provider: string; from: string; to: string; body: string }[] };
@@ -254,7 +254,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     sessions.push(coderSession.id);
     await expect(page.getByTestId(`tile-cell-${coderSession.id}`).locator('.xterm-rows')).toContainText(`WM_ACK:${nonce}`);
     expect((await status()).seats).toHaveLength(2);
-    let previousId = (await status()).seats.find(value => value.id === coder.id)!.nativeSessionId;
+    let previousId = (await status()).seats.find(value => value.id === coder.id)!.managerSessionId;
     expect(previousId).toBeTruthy();
     for (let reconnect = 0; reconnect < 2; reconnect++) {
       const stopped = spawnSync('tmux', ['kill-session', '-t', `=${coder.id}`], { env: tmuxEnv, timeout: 5000 });
@@ -264,9 +264,10 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       await expect(page.getByTestId(`tile-cell-${coderSession.id}`).locator('.xterm-rows')).toContainText('FIXTURE_READY');
       const current = (await status()).seats.find(value => value.id === coder.id)!;
       expect(current.state !== 'stopped').toBe(true);
-      expect(current.nativeSessionId).toBeTruthy();
-      expect(current.nativeSessionId).not.toBe(previousId);
-      previousId = current.nativeSessionId;
+      expect(current.managerSessionId).toBeTruthy();
+      expect(current.nativeSessionId).toBeUndefined();
+      expect(current.managerSessionId).not.toBe(previousId);
+      previousId = current.managerSessionId;
       expect((await status()).seats).toHaveLength(2);
     }
     await page.screenshot({ path: info.outputPath('managed-rig-workload.png') });
@@ -303,6 +304,9 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
     const terminal = page.getByTestId('openrig-terminal');
     await page.getByRole('button', { name: 'Connect dashboard', exact: true }).click();
     await expect(terminal.locator('.xterm-rows')).toContainText('EXPLORER');
+    await terminal.locator('.xterm-helper-textarea').focus();
+    await page.keyboard.type(':topology');
+    await page.keyboard.press('Enter');
     await expect(terminal.locator('.xterm-rows')).toContainText('TOPOLOGY');
     id = await terminal.getAttribute('data-session-id');
     await terminal.locator('.xterm-helper-textarea').focus();

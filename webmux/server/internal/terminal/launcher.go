@@ -2,6 +2,7 @@ package terminal
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,12 +17,15 @@ import (
 
 	"github.com/jordanhubbard/webmux/server/internal/browseropen"
 	"github.com/jordanhubbard/webmux/server/internal/config"
+	"github.com/jordanhubbard/webmux/server/internal/recovery"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 )
 
 // LaunchRequest is internal session state, never an unvalidated HTTP request.
 // Passwords are separate so they cannot accidentally enter persisted sessions.
 type LaunchRequest struct {
+	RecoveryKey                          string             `json:"-"`
+	RecoverySeed                         *recovery.Activity `json:"-"`
 	SessionID                            string
 	Hostname, Username, Transport, KeyID string
 	Port, Cols, Rows                     int
@@ -84,9 +88,9 @@ func (l Launcher) Launch(request LaunchRequest, password string) (*Process, erro
 		return nil, err
 	}
 	local := request.Transport == "local" || command.Path == browserShell
-	if !local && password == "" && (request.Transport == "ssh" || request.Transport == "") {
+	if !local && password == "" && (request.Transport == "ssh" || request.Transport == "" || request.Transport == "mosh") {
 		// Probe in the PTY child, not under the broker's lock during restore.
-		payload, err := json.Marshal(browserConnect{Request: request, KeyPath: keyPath, Path: command.Path, Args: command.Args})
+		payload, err := json.Marshal(browserConnect{Request: request, KeyPath: keyPath, Path: command.Path, Args: command.Args, ControlPath: SSHControlPath(l.ControlDir, request.SessionID)})
 		if err != nil {
 			return nil, err
 		}
@@ -95,6 +99,11 @@ func (l Launcher) Launch(request LaunchRequest, password string) (*Process, erro
 	process, err := Start(command)
 	if process != nil {
 		process.browserLocal = local
+		if request.Transport != "exec" && (local || password == "") {
+			process.recovery = func(ctx context.Context, rpc recovery.RPCRequest) recovery.RPCResponse {
+				return l.Recovery(ctx, request, local, rpc)
+			}
+		}
 	}
 	return process, err
 }
@@ -158,11 +167,22 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 	// Remove inherited TERM rather than relying on duplicate-variable behavior.
 	for i := len(command.Env) - 1; i >= 0; i-- {
 		key, _, _ := strings.Cut(command.Env[i], "=")
-		if key == "TERM" || p.platform == "windows" && strings.EqualFold(key, "TERM") {
+		if key == "TERM" || strings.HasPrefix(key, "WEBMUX_RECOVERY_") || p.platform == "windows" && (strings.EqualFold(key, "TERM") || strings.HasPrefix(strings.ToUpper(key), "WEBMUX_RECOVERY_")) {
 			command.Env = append(command.Env[:i], command.Env[i+1:]...)
 		}
 	}
 	command.Env = append(command.Env, "TERM=xterm-256color")
+	if request.RecoveryKey != "" {
+		command.Env = append(command.Env, "WEBMUX_RECOVERY_KEY="+request.RecoveryKey, "WEBMUX_RECOVERY_SESSION="+request.SessionID)
+		if request.RecoverySeed != nil {
+			data, err := json.Marshal(request.RecoverySeed)
+			if err == nil && len(data) <= 48<<10 {
+				command.Env = append(command.Env, "WEBMUX_RECOVERY_SEED="+base64.RawURLEncoding.EncodeToString(data))
+			} else {
+				command.Env = append(command.Env, "WEBMUX_RECOVERY_SEED_UNAVAILABLE=1")
+			}
+		}
+	}
 	resolve := func(name string) (string, error) {
 		path, err := p.lookup(name)
 		if err != nil {
@@ -197,6 +217,9 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 			if strings.HasPrefix(command.Env[i], "TMUX=") || strings.HasPrefix(command.Env[i], "TMUX_PANE=") {
 				command.Env = append(command.Env[:i], command.Env[i+1:]...)
 			}
+		}
+		if p.browserShell != "" && request.RecoveryKey != "" {
+			command.Path, command.Args = p.browserShell, []string{"--session-shell"}
 		}
 	case "exec":
 		if request.ExecCwd != "" {
@@ -251,6 +274,9 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 			return Command{}, errors.New("mosh is not installed on this system")
 		}
 		ssh := "ssh -o StrictHostKeyChecking=accept-new -p " + strconv.Itoa(request.Port)
+		if p.controlPath != "" {
+			ssh += " -o ControlMaster=auto -o ControlPersist=60 -o " + shellQuote("ControlPath="+p.controlPath)
+		}
 		if keyPath != "" {
 			ssh += " -i " + shellQuote(keyPath)
 		}
@@ -265,7 +291,10 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 		if request.Username != "" {
 			destination = request.Username + "@" + destination
 		}
-		command.Args = append(command.Args, destination)
+		// Mosh permutes options even after the destination. Terminate its
+		// option parser before appending remote helper flags such as
+		// --session-attach or --browser-shell.
+		command.Args = append(command.Args, "--", destination)
 
 	case "ssh", "":
 		// On macOS, an ssh hop to the local machine lands in a fresh sshd
@@ -286,6 +315,9 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 			if p.browserShell != "" {
 				command.Path = p.browserShell
 				command.Args = []string{"--browser-shell"}
+				if _, tmuxErr := p.lookup("tmux"); tmuxErr == nil && request.RecoveryKey != "" {
+					command.Args = []string{"--session-shell"}
+				}
 			}
 			break
 		}
@@ -352,6 +384,7 @@ type browserConnect struct {
 	Request       LaunchRequest
 	KeyPath, Path string
 	Args          []string
+	ControlPath   string
 }
 
 func ConnectBrowser(payload string) error {
@@ -359,7 +392,10 @@ func ConnectBrowser(payload string) error {
 	if err := json.Unmarshal([]byte(payload), &value); err != nil {
 		return err
 	}
-	if remoteBrowserAvailable(value.Request, value.KeyPath) {
+	if prepareRemoteRecovery(&value) {
+		// Provisioning happened over authenticated stdin before this terminal
+		// attaches. The attach argv contains only the stable provider identity.
+	} else if remoteBrowserAvailable(value.Request, value.KeyPath) {
 		if value.Request.Transport == "mosh" {
 			value.Args = append(value.Args, "webmux", "--browser-shell")
 		} else {

@@ -42,6 +42,12 @@ user service on Linux, preserving access to that user's SSH keys and known hosts
 On Linux, `loginctl enable-linger "$USER"` allows the user service to start without
 an interactive login, if permitted by your system administrator.
 
+Built-in tmux terminals use independent scopes under that same systemd user
+manager when available, so running work can survive WebMux service restarts.
+WebMux's own PTYs still close and its transcripts drain normally. If a host
+cannot provide that separation, Recover work reports the limitation and retains
+available evidence for explicit continuation; see [interrupted-work recovery](session-recovery.md).
+
 The package lives in Homebrew's Cellar. Runtime files stay under
 `~/.config/webmux/`: settings in `config/`, persistent state in `data/`, and
 application logs in `logs/`. Service stdout/stderr go to

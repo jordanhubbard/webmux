@@ -375,6 +375,10 @@ func (s *Server) serverTerminal(w http.ResponseWriter, r *http.Request) {
 	go bridge(downstream, upstream)
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
+	authorized := func() bool {
+		currentPeer, newToken, err := s.peer(peer.ID)
+		return err == nil && newToken == token && currentPeer == peer && s.socketAuthorized(owner, mode) && s.federationAdmin(owner)
+	}
 	for {
 		select {
 		case err := <-done:
@@ -383,21 +387,29 @@ func (s *Server) serverTerminal(w http.ResponseWriter, r *http.Request) {
 			if errors.As(err, &closed) && (closed.Code == 1000 || closed.Code == 1008) {
 				code, reason = closed.Code, closed.Text
 			}
+			// Revocation can close the upstream before this controller's next
+			// poll. Preserve the policy reason even if its close frame is lost.
+			if !authorized() {
+				code, reason = 1008, "Server access revoked"
+			}
 			closeSocket(downstream, code, reason)
 			_ = upstream.Close()
 			<-done
 			return
 		case <-ticker.C:
-			if err := upstream.WriteControl(websocket.PingMessage, nil, time.Now().Add(time.Second)); err != nil {
-				closeSocket(downstream, 1001, "Connected server is unavailable")
+			if !authorized() {
+				closeSocket(downstream, 1008, "Server access revoked")
 				_ = upstream.Close()
 				<-done
 				<-done
 				return
 			}
-			currentPeer, newToken, err := s.peer(peer.ID)
-			if err != nil || newToken != token || currentPeer != peer || !s.socketAuthorized(owner, mode) || !s.federationAdmin(owner) {
-				closeSocket(downstream, 1008, "Server access revoked")
+			if err := upstream.WriteControl(websocket.PingMessage, nil, time.Now().Add(time.Second)); err != nil {
+				code, reason := 1001, "Connected server is unavailable"
+				if !authorized() {
+					code, reason = 1008, "Server access revoked"
+				}
+				closeSocket(downstream, code, reason)
 				_ = upstream.Close()
 				<-done
 				<-done

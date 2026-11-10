@@ -15,7 +15,7 @@ export interface CoordinationProject {
 export interface CoordinationSeat {
   provider: string; id: string; projectId: string; projectName: string; name: string; host: string;
   workspace?: string; runtime: string; state: string; openable: boolean; managed: boolean;
-  nativeSessionId?: string; context?: string; parentId?: string; parentName?: string;
+  managerSessionId?: string; nativeSessionId?: string; context?: string; parentId?: string; parentName?: string;
   role?: string; substate?: string; lastActivityAt?: string; attention?: boolean; canReceive?: boolean; exitCode?: number;
 }
 export interface CoordinationMessage {
@@ -320,6 +320,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
                     <div><dt>State</dt><dd>{seat.state}{seat.substate ? ` · ${seat.substate}` : ''}{seat.exitCode !== undefined ? ` · exit ${seat.exitCode}` : ''}</dd></div>{seat.context && <div><dt>Context</dt><dd>{seat.context}</dd></div>}
                     {seat.parentId && <div><dt>Parent</dt><dd>{seat.parentName || seat.parentId}</dd></div>}
                     {seat.workspace && <div><dt>Workspace</dt><dd><code>{seat.workspace}</code></dd></div>}
+                    {seat.managerSessionId && <div><dt>Manager session</dt><dd><code>{seat.managerSessionId}</code></dd></div>}
                     {seat.nativeSessionId && <div><dt>Native session</dt><dd><code>{seat.nativeSessionId}</code></dd></div>}
                     {seat.lastActivityAt && <div><dt>Last activity</dt><dd>{new Date(seat.lastActivityAt).toLocaleString()}</dd></div>}
                   </dl>
