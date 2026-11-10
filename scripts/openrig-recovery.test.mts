@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { createServer } from 'node:http';
 import { observeRigRecovery, planRigRecovery, observeRigNativeProcess, rigBootIdentity, inspectRigRecoveryProcess, executeRigNativeRecovery, prepareRigNativeRecovery, type RigRecoveryIdentity } from '../webmux/server/internal/openrigcoord/rig-recovery.mts';
 
@@ -188,6 +189,7 @@ test('Rig native process proof joins only the owned descendant to executable, na
     assert.equal(proof.native_pid, 101); assert.equal(proof.pane_pid, 100);
     assert.equal(proof.native_session_id, identity.native_session_id); assert.equal(proof.permission_mode, 'plan');
     assert.match(proof.executable_hash, /^[a-f0-9]{64}$/); assert.match(proof.settings_hash, /^[a-f0-9]{64}$/);
+    assert.equal(proof.executable_path, fs.realpathSync(executable));
     assert.equal(JSON.stringify(proof).includes(settings.privateValue), false);
     assert.equal(calls.some(call => call.args.includes('args=') && call.args.includes('-axo')), false);
     reverseKeys = true;
@@ -333,11 +335,12 @@ test('Rig execution checks absence again, starts once and requires independent o
  const f=await fixture();
  try {
   f.inherit();
-  const process={pane_pid:100,native_pid:101,execution_uid:processUID(),started_at:'Mon Nov  9 22:21:02 2026 UTC',native_session_id:'08bbfe0e-d31c-4cb6-9d18-546eea56a08c',permission_mode:'acceptEdits',executable_hash:'d'.repeat(64),settings_hash:'e'.repeat(64)};
+  const executable=path.join(fs.realpathSync(f.root),'claude');fs.writeFileSync(executable,'original native image');
+  const process={pane_pid:100,native_pid:101,execution_uid:processUID(),started_at:'Mon Nov  9 22:21:02 2026 UTC',native_session_id:'08bbfe0e-d31c-4cb6-9d18-546eea56a08c',permission_mode:'acceptEdits',executable_hash:crypto.createHash('sha256').update(fs.readFileSync(executable)).digest('hex'),executable_path:executable,settings_hash:'e'.repeat(64)};
   const saved=await observeRigRecovery(f.run,f.identity,f.directory,()=>process,()=> 'f'.repeat(64));
   let launches=0, inspections=0, reconcile=0, attention=false, postFailure=false;
   const run=(command:string,args:string[])=>{
-   if(command==='claude'){assert.deepEqual(args,['--version']);return '2.1.322 (Claude Code)';}
+   if(command===executable){assert.deepEqual(args,['--version']);return '2.1.322 (Claude Code)';}
    if(command==='rig'&&args[0]==='reconcile-session'){reconcile++;assert(args.includes('--no-launch'));return '{}';}
    if(command==='rig'&&args[0]==='launch'&&!args.includes('--plan')){
     launches++;assert.deepEqual(args,['launch',saved.manager_rig_id,saved.manager_logical_id,'--snapshot-id',saved.manager_snapshot_id,'--json']);
@@ -358,6 +361,31 @@ test('Rig execution checks absence again, starts once and requires independent o
   assert.equal((await executeRigNativeRecovery(run,saved,inspect)).outcome,'resumed');assert.equal(launches,2);assert.equal(reconcile,1);
   inspections=0;attention=false;postFailure=true;
   await assert.rejects(executeRigNativeRecovery(run,saved,inspect),/original settings changed/);assert.equal(launches,3);
+ }finally{await f.close();}
+});
+
+test('Rig preparation rejects missing or changed original executable before invoking it or launching', { skip: process.platform === 'win32' }, async()=>{
+ const f=await fixture();
+ try{
+  f.inherit();
+  const executable=path.join(fs.realpathSync(f.root),'claude');fs.writeFileSync(executable,'original native image');
+  const proof={pane_pid:100,native_pid:101,execution_uid:processUID(),started_at:'Mon Nov  9 22:21:02 2026 UTC',native_session_id:'08bbfe0e-d31c-4cb6-9d18-546eea56a08c',permission_mode:'acceptEdits',executable_hash:crypto.createHash('sha256').update(fs.readFileSync(executable)).digest('hex'),executable_path:executable,settings_hash:'e'.repeat(64)};
+  const saved=await observeRigRecovery(f.run,f.identity,f.directory,()=>proof,()=> 'f'.repeat(64));
+  let versions=0;let mutate=false;
+  const run=(command:string,args:string[])=>{
+   if(command===executable){versions++;if(mutate)fs.writeFileSync(executable,'changed during version');return '2.1.322 (Claude Code)';}
+   return f.run(command,args);
+  };
+  const inspect=async()=>({state:'missing',reason:'process-loss'} as const);
+  assert.equal((await prepareRigNativeRecovery(run,saved,inspect)).state,'missing');assert.equal(versions,1);
+  fs.writeFileSync(executable,'different image with same claimed version');
+  await assert.rejects(prepareRigNativeRecovery(run,saved,inspect),/executable.*changed/);assert.equal(versions,1);
+  fs.writeFileSync(executable,'original native image');mutate=true;
+  await assert.rejects(prepareRigNativeRecovery(run,saved,inspect),/changed during preparation/);assert.equal(versions,2);
+  const legacy=JSON.parse(saved.manager_process!);delete legacy.executable_path;
+  await assert.rejects(prepareRigNativeRecovery(run,{...saved,manager_process:JSON.stringify(legacy)},inspect),/executable.*unavailable/);assert.equal(versions,2);
+  fs.unlinkSync(executable);
+  await assert.rejects(prepareRigNativeRecovery(run,saved,inspect),/ENOENT/);assert.equal(versions,2);
  }finally{await f.close();}
 });
 function processUID(){return process.getuid!();}

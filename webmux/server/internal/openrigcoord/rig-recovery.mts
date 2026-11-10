@@ -252,7 +252,7 @@ function rigProcessStart(run: RigRecoveryRun, pid: string): string {
 export interface RigNativeProcess {
   pane_pid: number; native_pid: number; started_at: string; execution_uid: number;
   native_session_id?: string; permission_mode: string;
-  executable_hash: string; settings_hash: string;
+  executable_hash: string; executable_path?: string; settings_hash: string;
 }
 
 // A tmux pane may be a shell wrapper. Only its native Claude descendant,
@@ -332,7 +332,7 @@ export function observeRigNativeProcess(run: RigRecoveryRun, saved: RigRecoveryI
   const current = /^\s*(\d+)\s+(\d+)\s+(.+)$/.exec(run('ps', ['-ww', '-p', pid, '-o', 'pid=,ppid=,args=']).trim());
   if (!current || Number(current[1]) !== native.pid || Number(current[2]) !== native.parent || current[3] !== native.command) throw new Error('The native process arguments changed during verification.');
   if (rigProcessStart(run, pid) !== started || Number(run('tmux', ['display-message', '-p', '-t', '=' + target + ':', '#{pane_pid}']).trim()) !== pane) throw new Error('The native process changed during verification.');
-  return { pane_pid: pane, native_pid: native.pid, started_at: started, execution_uid: ownerUID, native_session_id: native.id, permission_mode: native.mode, executable_hash: executableHash, settings_hash: digest(canonicalSettings(native.settings)) };
+  return { pane_pid: pane, native_pid: native.pid, started_at: started, execution_uid: ownerUID, native_session_id: native.id, permission_mode: native.mode, executable_hash: executableHash, executable_path: executable, settings_hash: digest(canonicalSettings(native.settings)) };
 }
 
 // Hash a stable kernel boot identity, not wall-clock uptime. Process IDs can be
@@ -356,11 +356,12 @@ interface RigStoredProcess extends RigNativeProcess {
 }
 function storedRigProcess(saved: RigRecoveryIdentity): RigStoredProcess {
   const record = object(JSON.parse(text(saved.manager_process, 4096)));
-  const keys = ['pane_pid', 'native_pid', 'started_at', 'execution_uid', 'native_session_id', 'native_identity_source', 'permission_mode', 'executable_hash', 'settings_hash', 'boot_id'];
+  const keys = ['pane_pid', 'native_pid', 'started_at', 'execution_uid', 'native_session_id', 'native_identity_source', 'permission_mode', 'executable_hash', 'executable_path', 'settings_hash', 'boot_id'];
   const hash = /^[a-f0-9]{64}$/;
   if (Object.keys(record).some(key => !keys.includes(key)) || ![record.pane_pid, record.native_pid].every(value => typeof value === 'number' && Number.isSafeInteger(value) && value > 0 && value < 2 ** 31) || typeof record.execution_uid !== 'number' || !Number.isSafeInteger(record.execution_uid) || record.execution_uid !== process.getuid?.() || record.native_session_id !== saved.native_session_id || !uuid.test(String(record.native_session_id)) || record.native_identity_source !== 'process-argv' || !['plan', 'acceptEdits'].includes(String(record.permission_mode)) || !text(record.started_at, 128).endsWith(' UTC') || ![record.executable_hash, record.settings_hash, record.boot_id].every(value => typeof value === 'string' && hash.test(value))) {
     throw new Error('The original Rig process record is unavailable or unqualified.');
   }
+  if (record.executable_path !== undefined && !path.isAbsolute(text(record.executable_path, 4096))) throw new Error('The original native executable path is invalid.');
   return record as unknown as RigStoredProcess;
 }
 
@@ -407,7 +408,7 @@ export async function inspectRigRecoveryProcess(run: RigRecoveryRun, saved: RigR
   const originalLive = boot === stored.boot_id && rigOriginalProcessLive(run, stored);
   if (rigPanePresent(run, context.target)) {
     const current = processObserver(run, saved, true);
-    if (current.native_session_id !== stored.native_session_id || current.execution_uid !== stored.execution_uid || current.executable_hash !== stored.executable_hash || current.settings_hash !== stored.settings_hash) throw new Error('The native Rig conversation, executable or original settings changed. Recover through the manager after reviewing its policy.');
+    if (current.native_session_id !== stored.native_session_id || current.execution_uid !== stored.execution_uid || current.executable_hash !== stored.executable_hash || stored.executable_path && current.executable_path !== stored.executable_path || current.settings_hash !== stored.settings_hash) throw new Error('The native Rig conversation, executable or original settings changed. Recover through the manager after reviewing its policy.');
     if (originalLive && (current.native_pid !== stored.native_pid || current.started_at !== stored.started_at || current.pane_pid !== stored.pane_pid)) throw new Error('The original native Rig process still exists outside the selected pane.');
     // Join current manager identity too: a launch selector alone cannot prove
     // which conversation an interactively changed CLI currently owns.
@@ -431,7 +432,11 @@ export async function prepareRigNativeRecovery(run: RigRecoveryRun, saved: RigRe
   const unchangedDefault = context.desired === null && context.effective.source === 'system_default' && original.permission_mode === 'acceptEdits';
   const originalPlan = context.desired?.mode === 'plan' && original.permission_mode === 'plan';
   if (!unchangedDefault && !originalPlan) throw new Error('The manager permission choice does not match a qualified original launch. Review it through Rig; recovery will not change the original policy.');
-  if (run('claude', ['--version']).trim() !== '2.1.322 (Claude Code)') throw new Error('The original native Claude version is unavailable.');
+  // Version output alone does not identify an executable. Verify the exact
+  // recorded OS image before invoking it or asking the manager to launch.
+  if (!original.executable_path || fs.realpathSync(original.executable_path) !== original.executable_path || executableDigest(original.executable_path) !== original.executable_hash) throw new Error('The original native Claude executable is unavailable or changed. Recover manually through Rig.');
+  if (run(original.executable_path, ['--version']).trim() !== '2.1.322 (Claude Code)') throw new Error('The original native Claude version is unavailable.');
+  if (executableDigest(original.executable_path) !== original.executable_hash) throw new Error('The original native Claude executable changed during preparation.');
   return { ...plan, state: inspection.state };
 }
 

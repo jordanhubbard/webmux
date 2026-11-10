@@ -27,7 +27,7 @@ func managedInstance(identity RigIdentity) string {
 func managedNativeSupported(identity RigIdentity) bool {
 	if validRigRecoveryReference(identity) && identity.ManagerProcess != "" && identity.ManagerProfile == "default" {
 		var process rigProcessReference
-		return json.Unmarshal([]byte(identity.ManagerProcess), &process) == nil && process.NativeIdentitySource == "process-argv"
+		return json.Unmarshal([]byte(identity.ManagerProcess), &process) == nil && process.NativeIdentitySource == "process-argv" && process.ExecutablePath != ""
 	}
 	return identity.Provider == "agent-deck" && identity.Host == "localhost" && strings.HasPrefix(identity.Target, "agent-deck:local:") &&
 		managedCLI(identity.Runtime) == "claude" && identity.NativeSource == "agent-deck-inventory" &&

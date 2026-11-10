@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"io"
+	"path/filepath"
 	"strings"
 	"unicode"
 )
@@ -19,6 +20,7 @@ type rigProcessReference struct {
 	NativeIdentitySource string `json:"native_identity_source"`
 	PermissionMode       string `json:"permission_mode"`
 	ExecutableHash       string `json:"executable_hash"`
+	ExecutablePath       string `json:"executable_path,omitempty"`
 	SettingsHash         string `json:"settings_hash"`
 	BootID               string `json:"boot_id"`
 }
@@ -37,6 +39,7 @@ func validRigProcessReference(value, nativeID string) bool {
 		return false
 	}
 	return record.PanePID > 0 && int64(record.PanePID) < 1<<31 && record.NativePID > 0 && int64(record.NativePID) < 1<<31 && record.ExecutionUID != nil && *record.ExecutionUID >= 0 && record.NativeSessionID == nativeID &&
+		(record.ExecutablePath == "" || filepath.IsAbs(record.ExecutablePath) && len(record.ExecutablePath) <= 4096 && !strings.ContainsFunc(record.ExecutablePath, unicode.IsControl)) &&
 		(record.NativeIdentitySource == "process-argv" || record.NativeIdentitySource == "manager-hook") &&
 		(record.PermissionMode == "plan" || record.PermissionMode == "acceptEdits") &&
 		strings.HasSuffix(record.StartedAt, " UTC") && len(record.StartedAt) <= 128 && !strings.ContainsFunc(record.StartedAt, unicode.IsControl) &&

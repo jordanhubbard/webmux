@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -207,5 +208,30 @@ func TestRigRecoveryUsesDurableIntentAndRetainsConsumedRequest(t *testing.T) {
 	identity = testRigCapturedIdentity(t)
 	if managedNativeSupported(identity) {
 		t.Fatal("Unqualified hook-only process evidence enabled Rig start")
+	}
+}
+
+func TestRigLegacyExecutableRecordRemainsReadableWithoutOfferingNativeStart(t *testing.T) {
+	identity := testRigCapturedIdentity(t)
+	var record rigProcessReference
+	if err := json.Unmarshal([]byte(identity.ManagerProcess), &record); err != nil {
+		t.Fatal(err)
+	}
+	record.NativeIdentitySource = "process-argv"
+	record.ExecutablePath = ""
+	data, err := json.Marshal(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity.ManagerProcess = string(data)
+	if !validRigProcessReference(identity.ManagerProcess, identity.NativeSessionID) || managedNativeSupported(identity) {
+		t.Fatal("Legacy record lost readability or enabled an unverified executable start")
+	}
+	for _, path := range []string{"relative/claude", "/claude\x00substituted"} {
+		record.ExecutablePath = path
+		data, _ = json.Marshal(record)
+		if validRigProcessReference(string(data), identity.NativeSessionID) {
+			t.Fatal("Invalid executable path accepted", path)
+		}
 	}
 }

@@ -1252,6 +1252,39 @@ errors. This does not establish coding CLI conversation continuity across a
 managed host reboot, Rig host reboot, remote managed recovery or Windows native
 execution. Those acceptance gaps remain open.
 
+## Original Rig executable checked before native launch
+
+Rig process capture now records the canonical OS executable path alongside its
+SHA-256. Missing-process preparation verifies that this exact path still resolves
+to itself and has the original bytes before running its version command or
+requesting a native manager launch. It verifies the bytes again after version
+inspection. Survivor and post-launch proof also retain the original path binding.
+The manager still owns command selection; independent proof after launch remains
+required, and an uncertain result is never retried.
+
+Older process records without the executable path remain readable and retain
+their transcripts, but no longer offer native start. Relative paths and control
+characters are rejected by the persisted descriptor validator. The helper tests
+cover unchanged success, missing/changed images, modification during version
+inspection, and legacy records. Images rejected by the initial hash check are
+not invoked. A fresh live
+capture can supply the newly required path evidence without changing native
+settings.
+
+The real Rig 0.6.14 / Claude 2.1.322 WebMux-action harness passed with this change:
+survivor reattachment, controller restart/SIGKILL, manager loss and recovery,
+exact-snapshot native continuation, consumed-request deduplication after restart,
+original settings/executable/project and a fresh remembered-marker answer.
+Receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-b0100c24-953b-4391-917b-752571801821/manifest.json`.
+Executable SHA-256:
+`2fd0d66a60e3546776f09c61f3abea473535ee5e63c6fe8ba18e1c5d03f21a13`.
+Recovery helper source SHA-256:
+`728f0e5ba6626af8620040a10e433693a43b218950ed1c8f82d58ffabab05440`.
+Affected Go race suites and vet, strict TypeScript, the standalone build and all
+50 helper tests passed. This run does not add managed native host-reboot or
+remote-conversation evidence.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

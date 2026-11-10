@@ -12,7 +12,7 @@ import (
 func testRigProcessRecord(t *testing.T) string {
 	t.Helper()
 	uid := 501
-	data, err := json.Marshal(rigProcessReference{PanePID: 100, NativePID: 101, StartedAt: "Mon Nov  9 22:21:02 2026 UTC", ExecutionUID: &uid, NativeSessionID: "08bbfe0e-d31c-4cb6-9d18-546eea56a08c", NativeIdentitySource: "manager-hook", PermissionMode: "acceptEdits", ExecutableHash: strings.Repeat("d", 64), SettingsHash: strings.Repeat("e", 64), BootID: strings.Repeat("f", 64)})
+	data, err := json.Marshal(rigProcessReference{PanePID: 100, NativePID: 101, StartedAt: "Mon Nov  9 22:21:02 2026 UTC", ExecutionUID: &uid, NativeSessionID: "08bbfe0e-d31c-4cb6-9d18-546eea56a08c", NativeIdentitySource: "manager-hook", PermissionMode: "acceptEdits", ExecutableHash: strings.Repeat("d", 64), ExecutablePath: filepath.Join(t.TempDir(), "claude"), SettingsHash: strings.Repeat("e", 64), BootID: strings.Repeat("f", 64)})
 	if err != nil {
 		t.Fatal(err)
 	}
