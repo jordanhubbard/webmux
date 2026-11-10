@@ -110,7 +110,12 @@ func RunCLI(name string, args []string) error {
 	if cli == "" {
 		return errors.New("unknown coding CLI")
 	}
-	if os.Getenv("WEBMUX_RECOVERY_INSTANCE") == "" || commandOnly(args) {
+	if os.Getenv("WEBMUX_RECOVERY_INSTANCE") == "" || commandOnly(cli, args) {
+		return executeCLI(binary, args)
+	}
+	// Other products also install an executable named agent. Never inject
+	// Cursor's selectors into an unrelated CLI, even when its flags overlap.
+	if cli == "cursor" && !isCursorCLI(binary) {
 		return executeCLI(binary, args)
 	}
 	cwd, err := os.Getwd()
@@ -212,9 +217,28 @@ func hasSessionSelection(cli string, args []string) bool {
 	}
 	for _, arg := range args {
 		key, _, _ := strings.Cut(arg, "=")
+		if cli == "cursor" && (key == "ls" || key == "resume") || cli == "claude" && (key == "--from-pr" || key == "--teleport" || key == "--cloud" || key == "--environment" || key == "--fork-session" || key == "--worktree" || key == "-w" || key == "--desktop" || key == "--bg" || key == "--background") || cli == "opencode" && (key == "--fork" || key == "pr") {
+			return true
+		}
 		if key == "--resume" || key == "--session" || key == "--session-id" || cli == "claude" && key == "-r" || cli == "opencode" && key == "-s" {
 			return true
 		}
 	}
 	return false
+}
+
+func isCursorCLI(binary string) bool {
+	help, err := cliHelpAt("", binary, "--help")
+	return err == nil && strings.Contains(help, "Start the Cursor Agent") && strings.Contains(help, "create-chat") && strings.Contains(help, "--resume")
+}
+
+// Prefer the unambiguous alias, but support installations that expose only
+// agent after verifying its native help. A shared basename is not identity.
+func cursorCLI() (string, string, error) {
+	for _, name := range []string{"cursor-agent", "agent"} {
+		if binary, err := originalCLI(name); err == nil && isCursorCLI(binary) {
+			return name, binary, nil
+		}
+	}
+	return "", "", errors.New("a supported Cursor Agent is unavailable on this execution host")
 }

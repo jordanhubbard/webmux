@@ -151,7 +151,7 @@ func TestMoshCommandCompatibility(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := []string{`--ssh=ssh -o StrictHostKeyChecking=accept-new -p 2222 -i '/keys/alice'"'"'s key'`, "--server=/usr/local/bin/mosh-server", "alice@host.example"}
+	expected := []string{`--ssh=ssh -o StrictHostKeyChecking=accept-new -p 2222 -i '/keys/alice'"'"'s key'`, "--server=/usr/local/bin/mosh-server", "--", "alice@host.example"}
 	if !reflect.DeepEqual(command.Args, expected) {
 		t.Fatalf("mosh args: %v", command.Args)
 	}

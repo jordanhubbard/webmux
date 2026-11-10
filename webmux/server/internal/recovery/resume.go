@@ -73,6 +73,9 @@ func prepareNativeResume(request NativeResume) ([]string, error) {
 		return nil, errors.New("the original working directory is unavailable; recover this session manually")
 	}
 	binary, err := originalCLI(args[0])
+	if a.CLI == "cursor" {
+		args[0], binary, err = cursorCLI()
+	}
 	if err != nil {
 		return nil, err
 	}

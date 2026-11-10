@@ -43,10 +43,55 @@ func TestNativeSelectorsNeverGuessLatestOrReplayBypassFlags(t *testing.T) {
 	}{
 		{"claude", []string{"--resume"}}, {"claude", []string{"-r", "named-conversation"}},
 		{"cursor", []string{"--resume"}}, {"opencode", []string{"--session", "invalid"}},
+		{"cursor", []string{"ls"}}, {"cursor", []string{"resume"}},
+		{"claude", []string{"--from-pr", "318"}}, {"claude", []string{"--teleport"}},
+		{"claude", []string{"--cloud=conversation"}}, {"claude", []string{"--fork-session"}},
+		{"opencode", []string{"--fork"}},
 	} {
 		if !hasSessionSelection(tc.cli, tc.args) {
 			t.Fatal("would replace the user's native session selector with a fresh session")
 		}
+	}
+}
+
+func TestNativeControlCommandsDoNotAllocateConversations(t *testing.T) {
+	for _, tc := range []struct {
+		cli  string
+		args []string
+	}{
+		{"cursor", []string{"--list-models"}}, {"opencode", []string{"agent", "list"}},
+		{"opencode", []string{"acp"}}, {"claude", []string{"agents", "list"}},
+		{"claude", []string{"doctor"}}, {"claude", []string{"setup-token"}},
+	} {
+		if !commandOnly(tc.cli, tc.args) {
+			t.Fatalf("would allocate a conversation for %s %v", tc.cli, tc.args)
+		}
+	}
+	if commandOnly("cursor", []string{"agent", "explain this project"}) {
+		t.Fatal("Cursor's interactive agent subcommand was excluded")
+	}
+}
+
+func TestCursorResolutionRejectsAnUnrelatedAgentAndUsesVerifiedAlias(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix executable fixtures")
+	}
+	dir := t.TempDir()
+	t.Setenv("WEBMUX_BROWSER_ORIGINAL_PATH", dir)
+	write := func(name, help string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("#!/bin/sh\nprintf '%s\\n' '"+help+"'\n"), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("agent", "Grok Build TUI --resume --session-id")
+	if _, _, err := cursorCLI(); err == nil {
+		t.Fatal("unrelated agent accepted as Cursor")
+	}
+	write("cursor-agent", "Start the Cursor Agent --resume create-chat")
+	name, binary, err := cursorCLI()
+	if err != nil || name != "cursor-agent" || binary != filepath.Join(dir, name) {
+		t.Fatalf("verified alias unavailable: %q %q %v", name, binary, err)
 	}
 }
 

@@ -50,6 +50,9 @@ bootstrap never replaces newer host observations or an existing recording policy
   session ID using the installed CLI's supported `--session-id` option.
 - Cursor Agent: preserve an explicit ID, or use `agent create-chat` and select
   that native ID when starting the interactive client.
+  Recovery prefers the `cursor-agent` alias and verifies native help before
+  using either alias: other products can also install an executable named
+  `agent`. Unrelated clients pass through without Cursor session injection.
 - OpenCode: allocate an exact native session through a temporary authenticated
   loopback server, stop that server, then select the ID in the normal TUI.
   No model turn is submitted during allocation.
@@ -68,12 +71,13 @@ project still require validation at the recovery action.
 | Real shell command and directory capture | Bash/Zsh PTY probes preserve exit status; real WebMux local workflow records a long-running command, arguments and directory | Retain the separate Zsh probe in the qualification harness |
 | Native conversation identity | All four installed CLIs recover a synthetic marker after process exit and exact-ID resume; real native metadata preflight accepts the original project and rejects another project | Interactive session switches and complete WebMux continuation flow |
 | Safe retained history | Bounded suffix, ANSI/OSC/C1 stripping, rotation and path controls; real local recovery retains the marker in API/UI history; redraw blank rows compacted only in the preview | Additional lifecycle/transport qualification |
-| Surviving providers | Real local reconnect plus VM service restart/SIGKILL preserve provider and pane PIDs and job count; independent Linux user scopes avoid service-cgroup cleanup | Remote SSH/mosh and managed-provider qualification |
+| Surviving providers | Local, SSH and native mosh reconnect/restart/SIGKILL preserve provider and pane PIDs and job count; independent Linux user scopes avoid service-cgroup cleanup | Managed-provider qualification |
 | Recovery preview and continuation | Owner-scoped API and browser actions; separate replay/handoff approval; broker tests for opt-in native auto resume and uncertain-outcome exclusion | Native CLI continuation through WebMux, managed lifecycle integration |
-| Reboot/restart/update/crash | Native VM orderly restart, different-binary update, SIGKILL and actual kernel reboot pass; reboot waits for approval, preserves history and original transcript references; duplicate request and three reconnects keep execution count unchanged | Remote failure and managed/CLI end-to-end coverage |
+| Reboot/restart/update/crash | Native VM orderly restart, different-binary update, SIGKILL and kernel reboot pass; SSH and native mosh separately pass controller restart/SIGKILL and remote kernel reboot; approved replay, duplicate request and three reconnects preserve counts and original transcript references | Managed/CLI end-to-end coverage and additional remote failure modes |
 
 Mosh synchronizes terminal screen state rather than an arbitrary byte stream.
-Its recovery metadata path needs separate native qualification and must not
+Its recovery metadata path uses the separate authenticated SSH control channel
+and must not
 repurpose clipboard operations as a metadata channel. Pause behavior and
 execution-host ownership apply to that path as well.
 
@@ -96,7 +100,7 @@ stdin script. Native tmux tests confirm that concurrent reconnects create one
 provider, a surviving process keeps its PID, and a lost provider with recorded
 activity receives the startup wait gate. The SSH control client uses a fixed
 remote helper command, configured account/key/port and a bounded JSON pipe;
-remote lifecycle qualification remains open.
+native SSH and mosh lifecycle qualification is recorded below.
 
 On Linux, a tmux daemon created inside the WebMux service would inherit its
 cgroup and be killed by the service's normal `KillMode=mixed` cleanup. Provider
@@ -245,3 +249,27 @@ bounded during capture. No project-ownership validation was relaxed.
 - [OpenCode CLI](https://opencode.ai/docs/cli/), checked against installed CLI help
 - [Cursor CLI sessions](https://cursor.com/docs/cli/overview#sessions)
 - [Mosh screen-state protocol](https://mosh.org/mosh-paper-draft.pdf)
+### Remote SSH and mosh
+
+`scripts/qualify-recovery-remote.py` starts its own private controller and targets
+only the verified disposable QEMU guest. Each transport passed controller
+restart, controller SIGKILL, actual remote kernel reboot, explicit approved
+replay and three reconnects. The native mosh run disables SSH fallback and
+records a running descendant `mosh-client` at every stage. Separate authenticated
+SSH snapshots capture its command metadata; screen rendering is not metadata.
+
+SSH preserved provider/pane PIDs 2229/2230 across controller failures. Guest reboot
+changed boot ID `2f11b5d2-254b-4573-8f1b-4ec6d9723fa2` to
+`df1794d5-253c-429c-9964-db03c3f68540`. Mosh preserved PIDs 3513/3514; its reboot
+changed boot ID `66fbf6c5-3bf1-411a-90e1-a52cf4a76804` to
+`2f11b5d2-254b-4573-8f1b-4ec6d9723fa2`. Both retained execution count one until
+approval, then count two after duplicate receipt lookup and repeated reconnects.
+Original transcript references and pre-interruption markers remained available.
+
+Receipts under the private VM evidence root are
+`ssh-controller-8105a648-90d0-4c83-8df3-d5820c0e5fd6/receipt.json` and
+`mosh-controller-da5d9c02-762d-4cc5-868a-46a54f207bfb/receipt.json`.
+An earlier mosh attempt fell back to SSH and does not qualify mosh. Native
+testing exposed mosh's option permutation: the launcher now terminates its own
+options before the destination so remote `--session-attach` is passed to WebMux.
+

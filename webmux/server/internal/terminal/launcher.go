@@ -291,7 +291,10 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 		if request.Username != "" {
 			destination = request.Username + "@" + destination
 		}
-		command.Args = append(command.Args, destination)
+		// Mosh permutes options even after the destination. Terminate its
+		// option parser before appending remote helper flags such as
+		// --session-attach or --browser-shell.
+		command.Args = append(command.Args, "--", destination)
 
 	case "ssh", "":
 		// On macOS, an ssh hop to the local machine lands in a fresh sshd

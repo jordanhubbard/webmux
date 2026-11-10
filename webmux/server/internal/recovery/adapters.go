@@ -85,7 +85,7 @@ func SelectedNativeID(cli string, args []string) string {
 	return ""
 }
 
-func commandOnly(args []string) bool {
+func commandOnly(cli string, args []string) bool {
 	for _, arg := range args {
 		if arg == "--version" || arg == "-v" || arg == "--help" || arg == "-h" {
 			return true
@@ -93,6 +93,16 @@ func commandOnly(args []string) bool {
 	}
 	if len(args) == 0 {
 		return false
+	}
+	if cli == "cursor" {
+		for _, arg := range args {
+			if arg == "--list-models" {
+				return true
+			}
+		}
+	}
+	if cli == "opencode" && (args[0] == "agent" || args[0] == "acp" || args[0] == "github" || args[0] == "plug") || cli == "claude" && (args[0] == "agents" || args[0] == "auto-mode" || args[0] == "doctor" || args[0] == "gateway" || args[0] == "logs" || args[0] == "purge" || args[0] == "respawn" || args[0] == "rm" || args[0] == "setup-token" || args[0] == "stop" || args[0] == "kill" || args[0] == "ultrareview") {
+		return true
 	}
 	switch args[0] {
 	case "persist", "attach", "install-shell-integration", "uninstall-shell-integration", "generate-rule", "rule", "bedrock", "login", "logout", "auth", "providers", "models", "mcp", "plugin", "plugins", "upgrade", "update", "install", "uninstall", "completion", "completions", "debug", "features", "app-server", "serve", "web", "export", "import", "db", "session", "stats", "create-chat", "status", "whoami", "about", "team", "worker", "help":

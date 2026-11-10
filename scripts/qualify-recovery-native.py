@@ -17,7 +17,7 @@ import subprocess
 import uuid
 
 
-NAMES = {"codex": "codex", "claude": "claude", "cursor": "agent", "opencode": "opencode"}
+NAMES = {"codex": "codex", "claude": "claude", "cursor": "cursor-agent", "opencode": "opencode"}
 
 
 def native_binary(name):
@@ -104,6 +104,10 @@ def qualify(cli, root, timeout):
     }
     try:
         binary = native_binary(NAMES[cli])
+        if cli == "cursor":
+            help_text = subprocess.run([binary, "--help"], capture_output=True, text=True, timeout=15, check=True)
+            if "Start the Cursor Agent" not in help_text.stdout + help_text.stderr:
+                raise RuntimeError("installed executable is not a supported Cursor Agent")
         version = subprocess.run([binary, "--version"], stdin=subprocess.DEVNULL,
                                  capture_output=True, text=True, timeout=15, check=True)
         result["version"] = version.stdout.strip()
