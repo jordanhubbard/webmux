@@ -860,7 +860,7 @@ context. The fixture enters native plan mode and selects plan for future
 managed continuation before seeding its synthetic marker. Its private
 manager-owned executable restores the original provider roots and merges
 SessionStart reporting plus a deny-all-tools rule into the manager's invocation
-settings. It preserves all original settings, including hooks and permission
+settings. It preserves the settings supplied by Rig for each invocation, including hooks and permission
 rules. The documented deny glob removes tools from the model's context; the
 native transcript also contains no model tool-use records.
 
@@ -875,8 +875,9 @@ them independently rather than promoting that receipt's confidence.
 The resumed native CLI is a descendant of the new verified private pane. Its
 kernel-reported cwd matches the original project, its configuration roots
 (including absence) match the original roots, and its actual argv selects the
-original conversation in plan mode. The fixture verifies that every original
-manager hook and permission setting survives the additional observer/deny rule.
+original conversation in plan mode. The fixture verifies that each invocation's manager-supplied
+hook and permission settings survive the additional observer/deny rule.
+The first-launch comparison below additionally checks preservation across resume.
 Exactly one native resume execution is recorded. Through the restored WebMux
 viewer, a new assistant record returns the earlier marker and a fresh test
 phrase. Cleanup confirms no remaining private panes and a stopped daemon.
@@ -1062,6 +1063,63 @@ owner/logging boundaries, reconstruction, process-only revision invalidation and
 malformed, foreign or unknown process records. The preceding published
 application checkpoint `9bf603f` passed all hosted CI and Packaging checks,
 including Windows tooling and Go; the new head requires its own hosted results.
+
+## Rig survivor-first inspection and original-policy comparison
+
+The embedded read-only inspector now joins the stored process/boot reference to
+current manager and OS evidence. It recognizes the surviving original or an
+already verified continuation without starting anything. A process still alive
+outside its pane, competing process identity, an unknown/partial process census,
+permission failure, changed native conversation or changed original settings
+requires manual inspection. Confirmed pane/process absence is sampled again;
+a new kernel boot is handled separately from PID reuse. Process arguments are
+read only for the selected pane's execution-account-owned descendants.
+
+Inline settings fingerprints now sort object keys while preserving array order.
+The inspector compares the original settings with the resumed process, rather
+than merely checking the settings supplied to an individual resume invocation.
+
+That comparison exposed a fixture policy transition: the older native probe
+started with Rig's inherited team default, then selected explicit plan mode.
+Rig's source chooses different generated settings for those policies. The
+initial team default includes its Bash `PreToolUse` command-convenience hook and
+permission allow entries; explicit plan selection omits those generated fields.
+Earlier evidence established per-invocation fixture retention and conversation
+continuity, and did not establish first-launch inline-settings equality.
+
+The updated probe separates these cases. Native resume keeps the team default
+unless the drift test is requested; `--keep-team-default` makes that explicit. Rig retains
+its original policy from the first launch and WebMux verifies the original
+survivor, confirmed process loss and the resumed continuation with equal original
+settings/executable fingerprints. Rig reports a successful restore and a fresh
+native assistant response returns the remembered marker. With
+`--expect-policy-drift`, the probe deliberately selects plan after first launch
+and requires WebMux to reject the changed settings. That mode qualifies the
+rejection boundary, not policy-preserving recovery. Tools remain denied in the
+private fixture from its initial native launch.
+
+The fixture serializes its added settings compactly, matching native Rig's
+format; changing JSON whitespace had made the manager's strict process proof
+ambiguous in earlier probes. No manager receipt is promoted to a stronger claim.
+The verifier supports the published first-launch and resume argument orders,
+including inherited `acceptEdits`, settings before resume and optional inline
+settings. The selected owned pane and exact native ID bind legacy forms.
+
+Positive unchanged-policy receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-6ff6841e-e88b-4d51-ac1f-0f550ffa18a6/manifest.json`.
+Executable SHA-256:
+`069c98f29908217e8395ff92691e81aaa9dd88c80af1794c1014b2b8332fa9cd`.
+Qualification script SHA-256:
+`cad7dd06e381970ba2aae45f8bdfd4e06a55f52120845a9727df6b42464c8f20`.
+The changed-policy rejection receipt is
+`~/.local/share/webmux/recovery-qualification/rig-native-82edc583-4fee-4ff5-b0f3-729f7f090f81/manifest.json`;
+it explicitly records `original_settings_preserved: false` and an expected
+rejection. Both keep private evidence and stop only their own fixtures.
+
+Strict TypeScript, standalone build, HTTP/coordinator Go tests and the focused
+metadata/process tests passed. The published `9de076a` application checkpoint
+passed every hosted CI and Packaging check. WebMux's Rig launch action remains
+disabled pending once-only execution integration and its lifecycle acceptance.
 
 ## Sources
 

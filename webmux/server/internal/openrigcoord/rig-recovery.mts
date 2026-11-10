@@ -124,13 +124,13 @@ async function destination(run: RigRecoveryRun, identity: RigRecoveryIdentity) {
   }
   const permissions = object(object(await get(`/api/seat/status/${encodeURIComponent(target)}`)).permissions);
   const effective = object(permissions.effective);
-  const desired = object(permissions.desired);
-  if (desired.runtime !== 'claude-code' || desired.mode !== 'plan' || effective.permissionMode !== 'plan') {
-    throw new Error('This native Rig recovery policy has not been qualified.');
-  }
+  const desired = permissions.desired === null ? null : object(permissions.desired);
+  const explicit = desired?.runtime === 'claude-code' && ['plan', 'acceptEdits'].includes(String(desired.mode)) && effective.permissionMode === desired.mode && effective.effectiveMode === desired.mode && effective.source === 'explicit';
+  const inherited = desired === null && permissions.selectionState === 'inherit' && effective.effectiveMode === 'acceptEdits' && effective.source === 'system_default' && effective.launchPosture === 'floor' && effective.permissionMode === undefined;
+  if (!explicit && !inherited) throw new Error('This native Rig recovery policy has not been qualified.');
   const profile = text(node.profile, 128);
   if (profile !== 'default') throw new Error('This Rig profile is not qualified for native recovery.');
-  const policy = (file: string) => digest({ rigId, nodeId, logicalId, cwd, runtime: node.runtime, profile, agentRef: node.agentRef, spec: node.resolvedSpecHash, model: node.model, permissions: { desired: { runtime: desired.runtime, mode: desired.mode }, effective }, files: policyFiles(cwd, file) });
+  const policy = (file: string) => digest({ rigId, nodeId, logicalId, cwd, runtime: node.runtime, profile, agentRef: node.agentRef, spec: node.resolvedSpecHash, model: node.model, permissions: { desired: desired ? { runtime: desired.runtime, mode: desired.mode } : null, effective }, files: policyFiles(cwd, file) });
   return { get, target, cwd, rigId, logicalId, route, nodeId, node, profile, policy };
 }
 
@@ -239,6 +239,12 @@ function executableDigest(file: string): string {
   } finally { fs.closeSync(fd); }
 }
 
+function canonicalSettings(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalSettings);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0).map(([key, child]) => [key, canonicalSettings(child)]));
+  return value;
+}
+
 function rigProcessStart(run: RigRecoveryRun, pid: string): string {
   return text(run('env', ['LC_ALL=C', 'TZ=UTC', 'ps', '-p', pid, '-o', 'lstart=']).trim(), 120) + ' UTC';
 }
@@ -293,15 +299,17 @@ export function observeRigNativeProcess(run: RigRecoveryRun, saved: RigRecoveryI
     // Published Rig uses settings last for resume, but appends the fresh
     // --session-id/name after settings on first launch. Parse only those exact
     // forms; JSON remains one opaque argument and cannot introduce options.
-    const resumed = /^(\/\S*\/claude) --permission-mode (plan|acceptEdits) --resume ([a-f0-9-]{36}) --name ([a-zA-Z0-9_.:@-]+) --settings (\{.*\})$/.exec(row[3]);
-    const initial = allowInitial ? /^(\/\S*\/claude) --permission-mode (plan|acceptEdits) --settings (\{.*\}) --session-id ([a-f0-9-]{36}) --name ([a-zA-Z0-9_.:@-]+)$/.exec(row[3]) : null;
-    const native = resumed ? { executable: resumed[1], mode: resumed[2], id: resumed[3], target: resumed[4], settings: resumed[5] }
-      : initial ? { executable: initial[1], mode: initial[2], id: initial[4], target: initial[5], settings: initial[3] } : undefined;
+    const resumed = /^(\/\S*\/claude) --permission-mode (plan|acceptEdits) --resume ([a-f0-9-]{36}) --name ([a-zA-Z0-9_.:@-]+)(?: --settings (\{.*\}))?$/.exec(row[3]);
+    const legacy = /^(\/\S*\/claude) --permission-mode (acceptEdits)(?: --settings (\{.*\}))? --resume ([a-f0-9-]{36})(?: --name ([a-zA-Z0-9_.:@-]+))?$/.exec(row[3]);
+    const initial = allowInitial ? /^(\/\S*\/claude) --permission-mode (plan|acceptEdits)(?: --settings (\{.*\}))? --session-id ([a-f0-9-]{36}) --name ([a-zA-Z0-9_.:@-]+)$/.exec(row[3]) : null;
+    const native = resumed ? { executable: resumed[1], mode: resumed[2], id: resumed[3], target: resumed[4], settings: resumed[5] ?? '{}' }
+      : legacy ? { executable: legacy[1], mode: legacy[2], id: legacy[4], target: legacy[5] ?? target, settings: legacy[3] ?? '{}' }
+      : initial ? { executable: initial[1], mode: initial[2], id: initial[4], target: initial[5], settings: initial[3] ?? '{}' } : undefined;
     if (!native) {
       if (/^\/\S*\/claude(?:\s|$)/.test(row[3])) throw new Error('The exact native Rig conversation process is missing or ambiguous.');
       continue;
     }
-    if (native.target !== target || !uuid.test(native.id) || native.id !== saved.native_session_id || !allowInitial && native.mode !== 'plan') throw new Error('The exact native Rig conversation process is missing or ambiguous.');
+    if (native.target !== target || !uuid.test(native.id) || native.id !== saved.native_session_id) throw new Error('The exact native Rig conversation process is missing or ambiguous.');
     const settings = object(JSON.parse(native.settings));
     candidates.push({ pid: Number(row[1]), parent: Number(row[2]), command: row[3], executable: native.executable, id: native.id, mode: native.mode, settings });
   }
@@ -324,7 +332,7 @@ export function observeRigNativeProcess(run: RigRecoveryRun, saved: RigRecoveryI
   const current = /^\s*(\d+)\s+(\d+)\s+(.+)$/.exec(run('ps', ['-ww', '-p', pid, '-o', 'pid=,ppid=,args=']).trim());
   if (!current || Number(current[1]) !== native.pid || Number(current[2]) !== native.parent || current[3] !== native.command) throw new Error('The native process arguments changed during verification.');
   if (rigProcessStart(run, pid) !== started || Number(run('tmux', ['display-message', '-p', '-t', '=' + target + ':', '#{pane_pid}']).trim()) !== pane) throw new Error('The native process changed during verification.');
-  return { pane_pid: pane, native_pid: native.pid, started_at: started, execution_uid: ownerUID, native_session_id: native.id, permission_mode: native.mode, executable_hash: executableHash, settings_hash: digest(native.settings) };
+  return { pane_pid: pane, native_pid: native.pid, started_at: started, execution_uid: ownerUID, native_session_id: native.id, permission_mode: native.mode, executable_hash: executableHash, settings_hash: digest(canonicalSettings(native.settings)) };
 }
 
 // Hash a stable kernel boot identity, not wall-clock uptime. Process IDs can be
@@ -341,4 +349,75 @@ export function rigBootIdentity(run: RigRecoveryRun, platform = process.platform
     return digest([platform, id]);
   }
   throw new Error('Native Rig boot identity is unsupported.');
+}
+
+interface RigStoredProcess extends RigNativeProcess {
+  native_session_id: string; native_identity_source: string; boot_id: string;
+}
+function storedRigProcess(saved: RigRecoveryIdentity): RigStoredProcess {
+  const record = object(JSON.parse(text(saved.manager_process, 4096)));
+  const keys = ['pane_pid', 'native_pid', 'started_at', 'execution_uid', 'native_session_id', 'native_identity_source', 'permission_mode', 'executable_hash', 'settings_hash', 'boot_id'];
+  const hash = /^[a-f0-9]{64}$/;
+  if (Object.keys(record).some(key => !keys.includes(key)) || ![record.pane_pid, record.native_pid].every(value => typeof value === 'number' && Number.isSafeInteger(value) && value > 0 && value < 2 ** 31) || typeof record.execution_uid !== 'number' || !Number.isSafeInteger(record.execution_uid) || record.execution_uid !== process.getuid?.() || record.native_session_id !== saved.native_session_id || !uuid.test(String(record.native_session_id)) || record.native_identity_source !== 'process-argv' || !['plan', 'acceptEdits'].includes(String(record.permission_mode)) || !text(record.started_at, 128).endsWith(' UTC') || ![record.executable_hash, record.settings_hash, record.boot_id].every(value => typeof value === 'string' && hash.test(value))) {
+    throw new Error('The original Rig process record is unavailable or unqualified.');
+  }
+  return record as unknown as RigStoredProcess;
+}
+
+function rigOriginalProcessLive(run: RigRecoveryRun, stored: RigStoredProcess): boolean {
+  // A successful empty/truncated process table is not proof of absence. Require
+  // this observing helper in the census, and never read unrelated process argv.
+  const table = run('ps', ['-axo', 'pid=,ppid=,uid=']);
+  if (table.length > maximum) throw new Error('Native process inventory exceeds its limit.');
+  const owners = new Map<number, number>();
+  for (const line of table.split('\n')) {
+    if (!line.trim()) continue;
+    const row = /^\s*(\d+)\s+(\d+)\s+(-?\d+)\s*$/.exec(line);
+    if (!row || owners.has(Number(row[1])) || !row.slice(1).every(value => Number.isSafeInteger(Number(value)))) throw new Error('Native process absence cannot be verified.');
+    owners.set(Number(row[1]), Number(row[3]));
+  }
+  if (owners.get(process.pid) !== process.getuid?.()) throw new Error('Native process absence cannot be verified.');
+  if (!owners.has(stored.native_pid)) return false;
+  if (owners.get(stored.native_pid) !== stored.execution_uid) throw new Error('The recorded process ID crosses an execution-account boundary.');
+  return rigProcessStart(run, String(stored.native_pid)) === stored.started_at;
+}
+
+function rigPanePresent(run: RigRecoveryRun, target: string): boolean {
+  try { run('tmux', ['has-session', '-t', '=' + target]); return true; }
+  catch (error) {
+    const result = error as { status?: unknown; stderr?: unknown };
+    const detail = String(result?.stderr ?? '').trim();
+    if (result?.status === 1 && (detail === "can't find session: " + target || /^no server running on .+$/.test(detail) || /^error connecting to .+ \(No such file or directory\)$/.test(detail))) return false;
+    throw new Error('Rig pane absence cannot be verified.');
+  }
+}
+
+export interface RigProcessInspection {
+  state: 'surviving' | 'missing'; reason: 'original-process' | 'verified-continuation' | 'process-loss' | 'host-reboot';
+  process?: RigNativeProcess;
+}
+
+// Read-only and survivor-first. An original process still alive outside its
+// pane, an unknown manager/OS result or changed native policy never permits start.
+export async function inspectRigRecoveryProcess(run: RigRecoveryRun, saved: RigRecoveryIdentity, processObserver = observeRigNativeProcess, bootObserver = rigBootIdentity): Promise<RigProcessInspection> {
+  const stored = storedRigProcess(saved);
+  const context = await destination(run, saved);
+  if (context.rigId !== saved.manager_rig_id || context.nodeId !== saved.manager_node_id || context.logicalId !== saved.manager_logical_id) throw new Error('The original Rig recovery destination changed.');
+  const boot = bootObserver(run);
+  const originalLive = boot === stored.boot_id && rigOriginalProcessLive(run, stored);
+  if (rigPanePresent(run, context.target)) {
+    const current = processObserver(run, saved, true);
+    if (current.native_session_id !== stored.native_session_id || current.execution_uid !== stored.execution_uid || current.executable_hash !== stored.executable_hash || current.settings_hash !== stored.settings_hash) throw new Error('The native Rig conversation, executable or original settings changed. Recover through the manager after reviewing its policy.');
+    if (originalLive && (current.native_pid !== stored.native_pid || current.started_at !== stored.started_at || current.pane_pid !== stored.pane_pid)) throw new Error('The original native Rig process still exists outside the selected pane.');
+    // Join current manager identity too: a launch selector alone cannot prove
+    // which conversation an interactively changed CLI currently owns.
+    const record = object(await context.get(`/api/sessions/${encodeURIComponent(context.target)}/generation-record`));
+    const generation = JSON.parse(text(record.generationId)) as unknown;
+    if (record.runtime !== 'claude-code' || record.sessionId !== saved.native_session_id || !Array.isArray(generation) || generation.length !== 6 || generation[1] !== saved.native_session_id || generation[2] !== saved.native_state_file || digest(generation.slice(1)) !== saved.manager_record_identity) throw new Error('The current native Rig conversation changed or is unavailable.');
+    if (bootObserver(run) !== boot) throw new Error('The execution host identity changed during verification.');
+    return { state: 'surviving', reason: originalLive ? 'original-process' : 'verified-continuation', process: current };
+  }
+  if (originalLive || boot === stored.boot_id && rigOriginalProcessLive(run, stored)) throw new Error('The original native Rig process is still running without its recorded pane. Inspect the manager; another start is not permitted.');
+  if (bootObserver(run) !== boot) throw new Error('The execution host identity changed during verification.');
+  return { state: 'missing', reason: boot === stored.boot_id ? 'process-loss' : 'host-reboot' };
 }

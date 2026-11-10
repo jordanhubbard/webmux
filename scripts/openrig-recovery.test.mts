@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:http';
-import { observeRigRecovery, planRigRecovery, observeRigNativeProcess, rigBootIdentity, type RigRecoveryIdentity } from '../webmux/server/internal/openrigcoord/rig-recovery.mts';
+import { observeRigRecovery, planRigRecovery, observeRigNativeProcess, rigBootIdentity, inspectRigRecoveryProcess, type RigRecoveryIdentity } from '../webmux/server/internal/openrigcoord/rig-recovery.mts';
 
 async function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-rig-recovery-'));
@@ -21,13 +21,14 @@ async function fixture() {
   const policy = { desired: { runtime: 'claude-code', mode: 'plan' }, effective: { permissionMode: 'plan', effectiveMode: 'plan', source: 'explicit' } };
   const snapshots = new Map<string, unknown>();
   const calls: string[] = [];
+  let inheritedPolicy = false;
   let created = 0, metadataStatus = 200, corruptSnapshot = false;
   const plan: Record<string, unknown> = { ok: true, planOnly: true, snapshotSelection: { snapshotId: snapshotIds[0] }, targetNodes: [{ nodeId, logicalId: 'agents.coder' }], unmatchedIds: [], nonTargetEffects: { mode: 'unchanged', reason: null, affected: [] } };
   const server = createServer((req, res) => {
     calls.push(`${req.method} ${req.url}`); res.setHeader('content-type', 'application/json');
     const send = (body: unknown) => res.end(JSON.stringify(body));
     if (req.url === `/api/rigs/${rig}/nodes/agents.coder`) return send(node);
-    if (req.url === `/api/seat/status/${encodeURIComponent(target)}`) return send({ permissions: policy });
+    if (req.url === `/api/seat/status/${encodeURIComponent(target)}`) return send({ permissions: inheritedPolicy ? { selectionState: 'inherit', desired: null, effective: { effectiveMode: 'acceptEdits', source: 'system_default', launchPosture: 'floor' } } : policy });
     if (req.url === `/api/sessions/${encodeURIComponent(target)}/generation-record`) {
       res.statusCode = metadataStatus;
       const stat = fs.statSync(file);
@@ -56,7 +57,7 @@ async function fixture() {
     return JSON.stringify([{ rigId: rig, logicalId: 'agents.coder', canonicalSessionName: target, runtime: 'claude-code' }]);
   };
   const identity: RigRecoveryIdentity = { target, project: 'project', name: 'coder', host: 'localhost', runtime: 'claude-code', workspace: cwd };
-  return { root, cwd, directory, file, run, identity, node, policy, calls, plan, snapshots, created: () => created, metadataStatus: (value: number) => { metadataStatus = value; }, corruptSnapshot: () => { corruptSnapshot = true; }, close: async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); fs.rmSync(root, { recursive: true, force: true }); } };
+  return { root, cwd, directory, file, run, identity, node, policy, calls, plan, snapshots, inherit: () => { inheritedPolicy = true; }, created: () => created, metadataStatus: (value: number) => { metadataStatus = value; }, corruptSnapshot: () => { corruptSnapshot = true; }, close: async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); fs.rmSync(root, { recursive: true, force: true }); } };
 }
 
 test('native Rig capture binds exact snapshot and record, reuses unchanged state, and exports no conversation or settings', async () => {
@@ -159,7 +160,7 @@ test('Rig native process proof joins only the owned descendant to executable, na
     fs.writeFileSync(executable, 'synthetic native binary'); fs.chmodSync(executable, 0o700);
     const settings = { permissions: { deny: ['*'] }, privateValue: 'DO_NOT_EXPORT_PROCESS_SETTINGS' };
     const identity = { ...f.identity, native_session_id: '08bbfe0e-d31c-4cb6-9d18-546eea56a08c' };
-    let nativeId = identity.native_session_id, kernelCwd = f.cwd, binary = executable, duplicate = false, changed = false, foreignUID = false, argvChanged = false, fresh = false, version = '2.1.322 (Claude Code)';
+    let nativeId = identity.native_session_id, kernelCwd = f.cwd, binary = executable, duplicate = false, changed = false, foreignUID = false, argvChanged = false, fresh = false, legacy = false, noSettings = false, reverseKeys = false, version = '2.1.322 (Claude Code)';
     let paneReads = 0, versionReads = 0;
     const calls: { command: string; args: string[] }[] = [];
     const run = (command: string, args: string[]) => {
@@ -177,7 +178,9 @@ test('Rig native process proof joins only the owned descendant to executable, na
       if (args.at(-1) === 'lstart=') return 'Mon Nov  9 22:21:02 2026';
       assert.equal(args[0], '-ww');
       assert.equal(args.includes('300'), false);
-      const native = fresh ? executable + ' --permission-mode acceptEdits --settings ' + JSON.stringify(settings) + ' --session-id ' + nativeId + ' --name ' + identity.target : executable + ' --permission-mode plan --resume ' + nativeId + ' --name ' + identity.target + ' --settings ' + JSON.stringify(settings);
+      const policy = JSON.stringify(reverseKeys ? { privateValue: settings.privateValue, permissions: settings.permissions } : settings);
+      const settingsArg = noSettings ? '' : ' --settings ' + policy;
+      const native = fresh ? executable + ' --permission-mode acceptEdits' + settingsArg + ' --session-id ' + nativeId + ' --name ' + identity.target : legacy ? executable + ' --permission-mode acceptEdits' + settingsArg + ' --resume ' + nativeId + ' --name ' + identity.target : executable + ' --permission-mode plan --resume ' + nativeId + ' --name ' + identity.target + settingsArg;
       if (args[2] === '101') return '101 100 ' + (argvChanged ? native.replace(nativeId, '18bbfe0e-d31c-4cb6-9d18-546eea56a08c') : native);
       return '100 1 /bin/bash\n101 100 ' + native + (duplicate ? '\n102 100 ' + native.replace(nativeId, '18bbfe0e-d31c-4cb6-9d18-546eea56a08c') : '');
     };
@@ -187,11 +190,19 @@ test('Rig native process proof joins only the owned descendant to executable, na
     assert.match(proof.executable_hash, /^[a-f0-9]{64}$/); assert.match(proof.settings_hash, /^[a-f0-9]{64}$/);
     assert.equal(JSON.stringify(proof).includes(settings.privateValue), false);
     assert.equal(calls.some(call => call.args.includes('args=') && call.args.includes('-axo')), false);
+    reverseKeys = true;
+    assert.equal(observeRigNativeProcess(run, identity, false, 'darwin').settings_hash, proof.settings_hash, 'Object key order changed semantic policy identity');
+    reverseKeys = false;
     fresh = true;
     const initial = observeRigNativeProcess(run, identity, true, 'darwin');
     assert.equal(initial.native_session_id, identity.native_session_id); assert.equal(initial.permission_mode, 'acceptEdits');
     assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /missing or ambiguous/);
     fresh = false;
+    legacy = true;
+    assert.equal(observeRigNativeProcess(run, identity, false, 'darwin').permission_mode, 'acceptEdits');
+    noSettings = true;
+    assert.match(observeRigNativeProcess(run, identity, false, 'darwin').settings_hash, /^[a-f0-9]{64}$/);
+    legacy = false; noSettings = false;
     foreignUID = true;
     const argumentsRead = calls.filter(call => call.args.includes('pid=,ppid=,args=')).length;
     assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /execution-account boundary/);
@@ -252,4 +263,68 @@ test('Rig boot fingerprint remains stable across UUID formatting and changes for
   assert.equal(first, rigBootIdentity(run('08BBFE0E-D31C-4CB6-9D18-546EEA56A08C\n'), 'darwin'));
   assert.notEqual(first, rigBootIdentity(run('18bbfe0e-d31c-4cb6-9d18-546eea56a08c'), 'darwin'));
   assert.throws(() => rigBootIdentity(run('unknown'), 'darwin'), /boot identity/);
+});
+
+test('Rig survivor inspection refuses duplicates, escaped originals, unknown absence and policy drift', { skip: process.platform === 'win32' }, async () => {
+  const f = await fixture();
+  try {
+    const uid = process.getuid!();
+    const nativeId = '08bbfe0e-d31c-4cb6-9d18-546eea56a08c';
+    const original = { pane_pid: 100, native_pid: 101, execution_uid: uid, started_at: 'Mon Nov  9 22:21:02 2026 UTC', native_session_id: nativeId, permission_mode: 'acceptEdits', executable_hash: 'd'.repeat(64), settings_hash: 'e'.repeat(64) };
+    const storedBoot = 'f'.repeat(64);
+    const saved = await observeRigRecovery(f.run, f.identity, f.directory, () => original, () => storedBoot);
+    let boot = storedBoot, alive = true, pane = true, census = true, denied = false, changedSettings = false, currentPid = 101;
+    let processReads = 0;
+    const run = (command: string, args: string[]) => {
+      if (command === 'ps') {
+        assert.deepEqual(args, ['-axo', 'pid=,ppid=,uid=']); processReads++;
+        return (census ? `${process.pid} ${process.ppid} ${uid}\n` : '') + '300 1 -2' + (alive ? `\n101 100 ${uid}` : '');
+      }
+      if (command === 'env') { assert.deepEqual(args, ['LC_ALL=C', 'TZ=UTC', 'ps', '-p', '101', '-o', 'lstart=']); return 'Mon Nov  9 22:21:02 2026'; }
+      if (command === 'tmux') {
+        assert.deepEqual(args, ['has-session', '-t', '=' + f.identity.target]);
+        if (denied) throw Object.assign(new Error('tmux failed'), { status: 1, stderr: 'permission denied' });
+        if (!pane) throw Object.assign(new Error('absent'), { status: 1, stderr: Buffer.from("can't find session: " + f.identity.target) });
+        return '';
+      }
+      return f.run(command, args);
+    };
+    const inspect = () => inspectRigRecoveryProcess(run, saved, () => ({ ...original, native_pid: currentPid, settings_hash: changedSettings ? 'a'.repeat(64) : original.settings_hash }), () => boot);
+    assert.equal((await inspect()).reason, 'original-process');
+    pane = false;
+    await assert.rejects(inspect(), /still running without its recorded pane/);
+    alive = false;
+    const before = processReads;
+    assert.deepEqual(await inspect(), { state: 'missing', reason: 'process-loss' });
+    assert.equal(processReads - before, 2);
+    denied = true;
+    await assert.rejects(inspect(), /pane absence cannot be verified/);
+    denied = false; census = false;
+    await assert.rejects(inspect(), /process absence cannot be verified/);
+    census = true; alive = true; boot = 'a'.repeat(64);
+    const previousReads = processReads;
+    assert.deepEqual(await inspect(), { state: 'missing', reason: 'host-reboot' });
+    assert.equal(processReads, previousReads, 'An old PID was reused to infer survival across a different boot');
+    boot = storedBoot; pane = true; changedSettings = true;
+    await assert.rejects(inspect(), /original settings changed/);
+    changedSettings = false; currentPid = 102;
+    await assert.rejects(inspect(), /still exists outside the selected pane/);
+    alive = false;
+    assert.equal((await inspect()).reason, 'verified-continuation');
+    f.metadataStatus(401);
+    await assert.rejects(inspect(), /cannot verify/);
+    f.metadataStatus(200);
+    let reads = 0;
+    await assert.rejects(inspectRigRecoveryProcess(run, saved, () => original, () => ++reads === 1 ? storedBoot : 'b'.repeat(64)), /host identity changed/);
+  } finally { await f.close(); }
+});
+
+test('Rig metadata captures an unchanged inherited team default independently of explicit plan mode', async () => {
+  const f = await fixture();
+  try {
+    f.inherit();
+    const saved = await observeRigRecovery(f.run, f.identity, f.directory);
+    assert.equal(saved.native_source, 'rig-snapshot');
+    assert.equal((await planRigRecovery(f.run, saved)).plan_only, true);
+  } finally { await f.close(); }
 });

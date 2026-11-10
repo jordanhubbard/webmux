@@ -34,7 +34,15 @@ def main():
     parser.add_argument('--snapshot-plan', action='store_true', help='capture one private Rig snapshot and inspect exact-seat native launch plans without executing them')
     parser.add_argument('--native-hooks', action='store_true', help='qualify the installed Rig SessionStart relay with per-invocation Claude settings and native snapshot identity')
     parser.add_argument('--native-resume', action='store_true', help='qualify actual private Rig-owned exact-snapshot native continuation after process loss')
+    parser.add_argument('--keep-team-default', action='store_true', help='retain Rig native team-default permissions from first launch through resume without switching to explicit plan mode')
+    parser.add_argument('--expect-policy-drift', action='store_true', help='test the known first-launch/resume settings difference and require WebMux to reject it; does not qualify policy-preserving native recovery')
     args = parser.parse_args()
+    if args.keep_team_default and (not args.native_resume or args.expect_policy_drift):
+        parser.error('--keep-team-default requires --native-resume and cannot expect a policy change')
+    if args.native_resume and not args.expect_policy_drift:
+        args.keep_team_default = True
+    if args.expect_policy_drift and not args.native_resume:
+        parser.error('--expect-policy-drift requires --native-resume')
     if args.native_resume and not args.native_hooks:
         parser.error('--native-resume requires --native-hooks and --snapshot-plan')
     if args.native_hooks and not args.snapshot_plan:
@@ -127,6 +135,7 @@ def main():
     log = (fixture / 'controller.log').open('ab')
     controller, sid, daemon_started = None, None, False
     phases = []
+    original_settings_preserved = None
     def start():
         nonlocal controller
         controller = subprocess.Popen([str(binary), '-listen', '127.0.0.1:' + str(web_port)], env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=log)
@@ -207,8 +216,8 @@ def main():
             wrapper += 'if "--permission-mode" in a and a[a.index("--permission-mode")+1] not in ["acceptEdits","plan"]: raise SystemExit("Fixture refuses changed permission mode")\n'
             wrapper += 'if not any(x in a for x in ["--version","--help","-h"]):\n'
             wrapper += ' hook=' + repr(hook_settings['hooks']['SessionStart']) + '\n'
-            wrapper += ' found=False\n for i,key in enumerate(a):\n  if key=="--settings":\n   config=json.loads(a[i+1])\n   assert isinstance(config,dict)\n   hooks=config.setdefault("hooks",{})\n   events=hooks.setdefault("SessionStart",[])\n   assert isinstance(events,list)\n   events.extend(hook)\n   a[i+1]=json.dumps(config)\n   found=True\n'
-            wrapper += '   deny=config.setdefault("permissions",{}).setdefault("deny",[])\n   assert isinstance(deny,list)\n   if "*" not in deny: deny.append("*")\n   a[i+1]=json.dumps(config)\n'
+            wrapper += ' found=False\n for i,key in enumerate(a):\n  if key=="--settings":\n   config=json.loads(a[i+1])\n   assert isinstance(config,dict)\n   hooks=config.setdefault("hooks",{})\n   events=hooks.setdefault("SessionStart",[])\n   assert isinstance(events,list)\n   events.extend(hook)\n   a[i+1]=json.dumps(config,separators=(",",":"))\n   found=True\n'
+            wrapper += '   deny=config.setdefault("permissions",{}).setdefault("deny",[])\n   assert isinstance(deny,list)\n   if "*" not in deny: deny.append("*")\n   a[i+1]=json.dumps(config,separators=(",",":"))\n'
             wrapper += ' if not found: a += ["--settings",' + repr(json.dumps(dict(hook_settings, permissions={'deny': ['*']}))) + ']\n'
             wrapper += 'with open(' + repr(str(fixture / 'native-executions.jsonl')) + ',"a") as f: f.write(json.dumps({"pid":os.getpid(),"requested":requested,"args":a,"cwd":os.getcwd(),"roots":{key:env.get(key) for key in roots}})+chr(10))\n'
             wrapper += 'os.execve(' + repr(claude) + ',[' + repr(claude) + ',*a],env)\n'
@@ -217,10 +226,14 @@ def main():
         if args.native_resume:
             started = json.loads(rig('up', str(spec), '--yes', '--json').stdout)
             rig_id = started['rigId']
-            rig('seat', 'set-permissions', pane, '--mode', 'plan', '--operator', 'webmux-recovery-fixture', '--reason', 'Match the live fixture plan mode for future continuation', '--json')
-            mux('send-keys', '-t', pane, '-l', '/plan')
-            mux('send-keys', '-t', pane, 'Enter')
-            wait(lambda: 'plan mode' in mux('capture-pane', '-pt', pane, check=False).stdout.lower(), 'native plan mode before the first model prompt')
+            if not args.keep_team_default:
+                rig('seat', 'set-permissions', pane, '--mode', 'plan', '--operator', 'webmux-recovery-fixture', '--reason', 'Match the live fixture plan mode for future continuation', '--json')
+                mux('send-keys', '-t', pane, '-l', '/plan')
+                mux('send-keys', '-t', pane, 'Enter')
+                wait(lambda: 'plan mode' in mux('capture-pane', '-pt', pane, check=False).stdout.lower(), 'native plan mode before the first model prompt')
+            with urllib.request.urlopen('http://127.0.0.1:' + str(rig_port) + '/api/seat/status/' + urllib.parse.quote(pane, safe=''), timeout=10) as response:
+                initial_permissions = json.loads(response.read())
+            (fixture / 'initial-seat-permissions.json').write_text(json.dumps(initial_permissions, indent=2) + '\n')
             def managed_identity():
                 with urllib.request.urlopen('http://127.0.0.1:' + str(rig_port) + '/api/rigs/' + rig_id + '/sessions', timeout=10) as response:
                     rows = json.loads(response.read())
@@ -306,10 +319,18 @@ def main():
             assert original_process['native_session_id'] == entry['native_session_id'] and original_process['native_identity_source'] == 'process-argv'
             assert len(original_process['boot_id']) == 64 and original_process['started_at']
             assert len(original_process['settings_hash']) == 64 and len(original_process['executable_hash']) == 64
+            (fixture / 'original-native-process.json').write_text(json.dumps(original_process, indent=2) + '\n')
 
             owner_scope = hashlib.sha256(captured_session['owner'].encode()).hexdigest()[:24]
             runners = [home / 'data/coordination' / owner_scope / 'runner.mts']
             assert runners[0].is_file()
+            def webmux_inspect(label):
+                inspection = subprocess.run([str(rig_node), str(runners[0]), 'recovery-inspect', str(runners[0].parent)], input=json.dumps(captured_identity), env=env, capture_output=True, text=True, timeout=35)
+                (fixture / ('webmux-process-inspection-' + label + '.json')).write_text(json.dumps({'returncode': inspection.returncode, 'stdout': inspection.stdout, 'stderr': inspection.stderr}, indent=2) + '\n')
+                return inspection
+            live_inspection = webmux_inspect('live')
+            assert live_inspection.returncode == 0 and json.loads(live_inspection.stdout)['reason'] == 'original-process'
+
             def webmux_checkpoint_plan(label):
                 checkpoint = subprocess.run([str(rig_node), str(runners[0]), 'recovery-plan', str(runners[0].parent)], input=json.dumps(captured_identity), env=env, capture_output=True, text=True, timeout=35)
                 (fixture / ('webmux-checkpoint-plan-' + label + '.json')).write_text(json.dumps({'returncode': checkpoint.returncode, 'stdout': checkpoint.stdout, 'stderr': checkpoint.stderr}, indent=2) + '\n')
@@ -393,7 +414,7 @@ def main():
         assert native() == before and not view().get('state', {}).get('manager_message')
         receipt('private Rig manager recovery after startup refusal', native=native(), daemon_pid=replacement['pid'], preview=view())
         snapshot_id = None
-        if args.native_resume:
+        if args.native_resume and not args.keep_team_default:
             rig('seat', 'set-permissions', target, '--mode', 'plan', '--operator', 'webmux-recovery-fixture', '--reason', 'Private native recovery qualification with tools disabled', '--json')
         if args.snapshot_plan:
             snapshot_output = rig('snapshot', rig_id, '--intended-seats', 'agents.continuation').stdout
@@ -457,6 +478,8 @@ def main():
         receipt('native process loss and repeated manual fallback', native=native(), preview=view())
         if args.native_resume:
             webmux_checkpoint_plan('lost')
+            lost_inspection = webmux_inspect('lost')
+            assert lost_inspection.returncode == 0 and json.loads(lost_inspection.stdout) == {'state': 'missing', 'reason': 'process-loss'}
             assert native()['count'] == 0, 'Read-only WebMux preflight launched a replacement'
             snapshot_id = captured['manager_snapshot_id']
             receipt('WebMux recorded checkpoint live and lost-process preflight', snapshot_id=snapshot_id, native=native())
@@ -488,7 +511,7 @@ def main():
             resumed = resumes[0]
             assert resumed['roots'] == roots and Path(resumed['cwd']).samefile(entry['project'])
             argv, requested = resumed['args'], resumed['requested']
-            assert argv.count('--permission-mode') == 1 and argv[argv.index('--permission-mode') + 1] == 'plan'
+            assert argv.count('--permission-mode') == 1 and argv[argv.index('--permission-mode') + 1] == ('acceptEdits' if args.keep_team_default else 'plan')
             assert '--fork-session' not in argv and '--session-id' not in argv
             configurations = [json.loads(argv[i + 1]) for i, key in enumerate(argv) if key == '--settings']
             assert len(configurations) == 1 and '*' in configurations[0]['permissions']['deny']
@@ -542,9 +565,23 @@ def main():
             assert process_proof.returncode == 0, 'WebMux could not independently prove the resumed native process'
             proof = json.loads(process_proof.stdout)
             assert proof['native_pid'] == resumed['pid'] and proof['pane_pid'] == after['pane_pid']
-            assert proof['native_session_id'] == entry['native_session_id'] and proof['permission_mode'] == 'plan'
+            assert proof['native_session_id'] == entry['native_session_id'] and proof['permission_mode'] == ('acceptEdits' if args.keep_team_default else 'plan')
             assert proof['started_at'] and len(proof['executable_hash']) == 64 and len(proof['settings_hash']) == 64
             receipt('WebMux native process, executable, ID and kernel cwd proof', proof=proof)
+            original_configuration = json.loads(initial_clis[0]['args'][initial_clis[0]['args'].index('--settings') + 1])
+            original_settings_preserved = original_configuration == configuration
+            assert proof['executable_hash'] == original_process['executable_hash']
+            inspected_resume = webmux_inspect('resumed')
+            policy_comparison = {'original_settings_preserved': original_settings_preserved, 'original_hook_events': sorted(original_configuration.get('hooks', {})), 'resumed_hook_events': sorted(configuration.get('hooks', {})), 'original_permission_fields': sorted(original_configuration.get('permissions', {})), 'resumed_permission_fields': sorted(configuration.get('permissions', {}))}
+            (fixture / 'original-settings-comparison.json').write_text(json.dumps(policy_comparison, indent=2) + '\n')
+            if args.expect_policy_drift:
+                assert not original_settings_preserved, 'Expected policy drift disappeared; qualify the strict original-policy path instead'
+                assert inspected_resume.returncode != 0 and 'original settings changed' in inspected_resume.stderr
+                receipt('Original native settings drift rejected by WebMux', **policy_comparison)
+            else:
+                assert original_settings_preserved, 'Rig continuation changed first-launch inline settings; inspect original-settings-comparison.json'
+                assert inspected_resume.returncode == 0 and json.loads(inspected_resume.stdout)['reason'] == 'verified-continuation'
+
 
 
             for line in native_file.read_bytes().splitlines():
@@ -554,14 +591,16 @@ def main():
                     continue
                 if row.get('type') == 'assistant':
                     assert not any(part.get('type') == 'tool_use' for part in row.get('message', {}).get('content', [])), 'No-tool fixture executed a model tool call'
-            receipt('Rig-owned native snapshot resume and conversation continuity', native=native(), native_pid=resumed['pid'], kernel_cwd=kernel_cwd, roots_and_original_settings_preserved=True, permission_mode='plan', deny_all_tools=True, nonce=nonce, new_assistant_answer=answer)
+            receipt('Rig-owned native snapshot resume and conversation continuity', native=native(), native_pid=resumed['pid'], kernel_cwd=kernel_cwd, roots_preserved=True, manager_supplied_settings_preserved_per_invocation=True, original_settings_preserved=original_settings_preserved, permission_mode='acceptEdits' if args.keep_team_default else 'plan', deny_all_tools=True, nonce=nonce, new_assistant_answer=answer)
         assert (hashlib.sha256(settings.read_bytes()).hexdigest() if settings.is_file() else None) == settings_hash
         assert hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == script_hash
         scope = 'Private native Rig lifecycle, native identity and manual fallback.'
         if args.native_resume:
-            scope += ' Includes Rig-owned exact-snapshot resume, no-launch reconciliation, original roots/settings, kernel cwd and new native assistant continuity.'
+            scope += ' Includes Rig-owned exact-snapshot conversation continuation, no-launch reconciliation, original roots, kernel cwd and independent original-settings comparison.'
+        if args.expect_policy_drift:
+            scope += ' The expected original-settings mismatch was rejected by WebMux; this does not qualify policy-preserving recovery.'
         scope += ' No WebMux Rig native-launch action, host reboot or remote destination is qualified.'
-        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_hooks': args.native_hooks, 'native_resume': args.native_resume, 'relay_sha256': relay_sha256, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': scope}
+        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_hooks': args.native_hooks, 'native_resume': args.native_resume, 'kept_team_default': args.keep_team_default, 'expected_policy_drift': args.expect_policy_drift, 'original_settings_preserved': original_settings_preserved, 'relay_sha256': relay_sha256, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': scope}
         (fixture / 'manifest.json').write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(fixture / 'manifest.json')}), flush=True)
     except Exception as error:
@@ -574,7 +613,7 @@ def main():
                 (fixture / 'failure-preview.json').write_text(json.dumps(view(), indent=2) + '\n')
             except (OSError, ValueError):
                 pass
-        (fixture / 'manifest.json').write_text(json.dumps({'passed': False, 'error': str(error), 'error_type': type(error).__name__, 'phases': phases, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest()}, indent=2) + '\n')
+        (fixture / 'manifest.json').write_text(json.dumps({'passed': False, 'error': str(error), 'error_type': type(error).__name__, 'phases': phases, 'qualifier_sha256': script_hash, 'expected_policy_drift': args.expect_policy_drift, 'original_settings_preserved': original_settings_preserved, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest()}, indent=2) + '\n')
         print(json.dumps({'passed': False, 'manifest': str(fixture / 'manifest.json')}), flush=True)
         raise
     finally:
