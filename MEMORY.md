@@ -50,11 +50,10 @@ than assuming an older checkpoint's green checks apply to new source.
 1. Finish remote managed-host/failure, native active-session/policy/profile and
    platform qualification (including Rig across reboot). Retain clear manual
    fallback for unqualified cases.
-2. Codex default shared-daemon active-conversation observation: reviewed on
-   2026-11-10 with no viable observation point in 0.167.0 or upstream through
-   0.169.0-alpha.7 that preserves launch mode and sandbox. Owner decision needed
-   between manual-only, a per-terminal `--no-daemon` opt-in, or an upstream
-   request. Do not silently change launch mode or drop sandbox/approval settings.
+2. Codex default shared-daemon mode is **manual-only** (owner decision
+   2026-11-10). Upstream request: openai/codex#60625. Revisit only when that or
+   an equivalent ships; do not change launch mode or drop sandbox/approval
+   settings to obtain evidence. A `--no-daemon` opt-in was deferred.
 3. [#325](https://github.com/jordanhubbard/webmux/issues/325): terminal input
    sent right after managed reattach/controller reconstruction can be dropped.
 4. Audit every acceptance criterion in #318 before closing it. The merge itself

@@ -59,10 +59,10 @@ Remaining #318 work, in order:
 1. Finish remote managed-host/failure qualification and additional native
    active-session, policy/profile and platform coverage. Unqualified cases must
    continue to offer explicit fallback with retained logs.
-2. Codex shared-daemon active-conversation tracking after interactive switches:
-   Codex 0.167.0 (and upstream through 0.169.0-alpha.7) exposes no observation
-   point that preserves the launch mode and sandbox policy. Explicit selectors
-   remain manual evidence; options are in [session recovery](session-recovery.md#codex-shared-daemon-observation-2026-11-10).
+2. Codex in default shared-daemon mode is manual-only by owner decision: no
+   observation point preserves launch mode and sandbox policy after interactive
+   switches. Revisit when [openai/codex#60625](https://github.com/openai/codex/issues/60625)
+   or an equivalent ships ([details](session-recovery.md#codex-shared-daemon-observation-2026-11-10)).
 3. Investigate input loss after managed reattach ([#325](https://github.com/jordanhubbard/webmux/issues/325)).
 4. Audit #318 against its complete acceptance criteria before closing it. The
    owner-approved merge of #322 does not close this requirement or cut a release.

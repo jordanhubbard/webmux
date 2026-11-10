@@ -482,12 +482,14 @@ explicit sandbox policy:
 - The daemon socket is derived from `CODEX_HOME`; no separate socket override
   exists, and changing `CODEX_HOME` moves all native state.
 
-The safe current behavior is unchanged: explicit selections are qualified for
-manual continuation and observations remain `launch-selector`. Possible routes
-are an owner-approved, per-terminal opt-in to embedded mode (`--no-daemon`),
-where the qualified hook observer applies, or an upstream Codex change that
-records the thread ID in the session log or delivers hooks in daemon mode with
-the client's environment. Neither is implemented.
+**Decision (owner, 2026-11-10): Codex in default daemon mode is manual-only.**
+Explicit selections remain qualified for manual continuation and observations
+stay `launch-selector`; automatic recovery is not offered for these launches,
+and WebMux does not change the user's launch mode to obtain evidence. A local,
+opt-in way for the TUI to report its current thread was requested upstream as
+[openai/codex#60625](https://github.com/openai/codex/issues/60625). Revisit when
+that or an equivalent ships. A per-terminal `--no-daemon` opt-in was considered
+and deferred.
 
 On 2026-11-09, real two-process synthetic-marker checks passed for Codex
 0.167.0, Claude Code 2.1.318, Cursor Agent 2026.11.05-86047df and OpenCode
