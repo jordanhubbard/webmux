@@ -693,6 +693,64 @@ runs exposed an unavailable profile and a pending trust prompt; neither proved
 recovery. This evidence covers the tested local invocation, not every Claude
 setting, remote host or native Windows execution.
 
+## Native Rig lifecycle evidence
+
+On 2026-11-09, a private Rig 0.6.14 (`9d0200f3`) daemon adopted one real
+Claude Code 2.1.322 conversation through its native tmux registration. Orderly
+WebMux restart, WebMux SIGKILL and three explicit reconnects retained pane PID
+`45137`, one native pane and the existing WebMux viewer. A new assistant record
+returned the earlier synthetic marker and a fresh test phrase through that
+viewer. The Rig enrollment session ID was kept separate from the Claude
+conversation ID; it was not offered as native conversation evidence.
+
+The fixture also killed its private Rig daemon after verifying the PID against
+its own loopback health endpoint, private database path and instance record.
+WebMux's existing coordinator supervisor started a replacement daemon
+(`44915` to `47419`) and reattached the same native pane. A second case killed
+the daemon while a fixture guard refused `rig daemon start`. WebMux started
+with retained history and a managed-unavailable explanation, and reconnect
+returned HTTP 409 without replacing the surviving native process. Removing
+the guard, starting the manager and restarting WebMux reattached that same pane
+and cleared the unavailable explanation. The refusal guard is test fault
+injection; the daemon, manager inventory and native conversation are real.
+
+After explicit loss of the native pane, WebMux retained its prior history,
+reported managed recovery unavailable and rejected three reconnect attempts
+with HTTP 409. No replacement was launched. Rig native-resume through a snapshot
+is not implemented by this evidence; process loss requires recovery through Rig.
+
+The harness uses an empty topology, no kernel or team launch, a private daemon
+home/database and tmux socket, and a separately supplied installed CLI/runtime.
+The native conversation uses its original configuration roots with restricted
+mode, strict MCP configuration, tools disabled and plan mode. Provider
+credentials are not copied. Native permission settings retain their checksum.
+Cleanup verified zero fixture panes and a successful private-daemon stop.
+The shared Rig daemon and primary WebMux service are untouched.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-380743c0-74ea-4b0f-97f8-96b5fb470a92/manifest.json`.
+Executable SHA-256:
+`5a020592f8d943230a51f87ca3f350046dfd6556f903ccb54e90ae83f967b9d5`.
+Qualification script SHA-256:
+`256ab147aee1a5c48625d60632c6034d7f18387b022478842ab2e76a5fd19dd7`.
+Earlier negative fixtures exposed an incorrect target-prefix assertion and a
+test assumption that the existing supervisor would leave the manager stopped.
+Their manifests and cleanup receipts remain retained; neither is a completed
+qualification. The earlier survival-only positive is also retained.
+
+```bash
+python3 scripts/qualify-recovery-rig.py \
+  --binary /absolute/path/to/standalone-webmux \
+  --manifest /absolute/path/to/synthetic-native-manifest.json \
+  --rig-cli /absolute/path/to/openrig/dist/bin-wrapper.js \
+  --rig-node /absolute/path/to/compatible/node
+```
+
+This qualifies local adopted Rig/Claude survival and manual fallback. It does
+not qualify Rig snapshot/native-resume execution, managed host reboot, remote
+Rig destinations or other Rig-managed runtime configurations. Those remain
+part of #318's acceptance work.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
