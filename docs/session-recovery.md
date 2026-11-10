@@ -327,6 +327,8 @@ python3 scripts/qualify-recovery-configuration.py \
 These checks establish the tested root/profile cases, not interactive session
 switches or every possible CLI flag/custom settings payload. Unsupported custom
 settings continue to require explicit manual restoration.
+The qualified Codex invocation used `--no-daemon`; default shared-daemon
+ownership needs separate qualification before complete lifecycle acceptance.
 
 On 2026-11-09, real two-process synthetic-marker checks passed for Codex
 0.167.0, Claude Code 2.1.318, Cursor Agent 2026.11.05-86047df and OpenCode
