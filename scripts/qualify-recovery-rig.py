@@ -30,6 +30,7 @@ def main():
     parser.add_argument('--manifest', type=Path, required=True)
     parser.add_argument('--rig-cli', type=Path, required=True)
     parser.add_argument('--rig-node', type=Path, required=True)
+    parser.add_argument('--snapshot-plan', action='store_true', help='capture one private Rig snapshot and inspect exact-seat native launch plans without executing them')
     args = parser.parse_args()
     script_hash = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     repo = Path(__file__).resolve().parents[1]
@@ -268,9 +269,37 @@ def main():
         wait(connected, 'same native conversation after Rig manager recovery')
         assert native() == before and not view().get('state', {}).get('manager_message')
         receipt('private Rig manager recovery after startup refusal', native=native(), daemon_pid=replacement['pid'], preview=view())
+        snapshot_id = None
+        if args.snapshot_plan:
+            snapshot_output = rig('snapshot', rig_id, '--intended-seats', 'agents.continuation').stdout
+            prefix = 'Snapshot created: '
+            snapshot_id = next(line[len(prefix):].strip() for line in snapshot_output.splitlines() if line.startswith(prefix))
+            assert len(snapshot_id) == 26 and snapshot_id.isalnum()
+            with urllib.request.urlopen('http://127.0.0.1:' + str(rig_port) + '/api/rigs/' + rig_id + '/snapshots/' + snapshot_id, timeout=10) as response:
+                snapshot = json.loads(response.read())
+            (fixture / 'native-snapshot.json').write_text(json.dumps(snapshot, indent=2) + '\n')
+            planned = rig('launch', rig_id, 'agents.continuation', '--snapshot-id', snapshot_id, '--plan', '--json', check=False)
+            (fixture / 'live-snapshot-plan.json').write_text(json.dumps({'returncode': planned.returncode, 'stdout': planned.stdout, 'stderr': planned.stderr}, indent=2) + '\n')
+            plan = json.loads(planned.stdout)
+            assert planned.returncode == 0 and plan.get('ok') is True and plan.get('planOnly') is True
+            assert plan['snapshotSelection']['snapshotId'] == snapshot_id
+            assert plan['targetNodes'] == [{'nodeId': registration['nodeId'], 'logicalId': 'agents.continuation'}]
+            assert not plan['unmatchedIds'] and plan['nonTargetEffects'] == {'mode': 'unchanged', 'reason': None, 'affected': []}
+            assert native() == before
+            receipt('private snapshot capture and live exact-seat plan only', native=native(), snapshot_id=snapshot_id, plan_returncode=planned.returncode)
         stop()
         mux('kill-session', '-t', '=' + pane)
         assert native()['count'] == 0
+        if snapshot_id:
+            planned = rig('launch', rig_id, 'agents.continuation', '--snapshot-id', snapshot_id, '--plan', '--json', check=False)
+            (fixture / 'lost-snapshot-plan.json').write_text(json.dumps({'returncode': planned.returncode, 'stdout': planned.stdout, 'stderr': planned.stderr}, indent=2) + '\n')
+            plan = json.loads(planned.stdout)
+            assert planned.returncode == 0 and plan.get('ok') is True and plan.get('planOnly') is True
+            assert plan['snapshotSelection']['snapshotId'] == snapshot_id
+            assert plan['targetNodes'] == [{'nodeId': registration['nodeId'], 'logicalId': 'agents.continuation'}]
+            assert not plan['unmatchedIds'] and plan['nonTargetEffects'] == {'mode': 'unchanged', 'reason': None, 'affected': []}
+            assert native()['count'] == 0
+            receipt('lost native process exact-seat snapshot plan only', native=native(), snapshot_id=snapshot_id, plan_returncode=planned.returncode)
         start()
         v = wait(lambda: view() if view().get('state', {}).get('disposition') == 'managed-unavailable' else None, 'lost Rig provider fallback')
         assert native()['count'] == 0 and entry['marker'] in v['history'] and not v['can_resume_managed']
@@ -285,7 +314,7 @@ def main():
         receipt('native process loss and repeated manual fallback', native=native(), preview=view())
         assert (hashlib.sha256(settings.read_bytes()).hexdigest() if settings.is_file() else None) == settings_hash
         assert hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == script_hash
-        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': 'Private native Rig adoption, WebMux restart/SIGKILL, repeated reconnect, native conversation continuity, private Rig daemon SIGKILL/restart and lost-provider manual fallback. Not Rig native-resume action, host reboot or a remote destination.'}
+        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': 'Private native Rig adoption, WebMux restart/SIGKILL, repeated reconnect, native conversation continuity, private Rig daemon SIGKILL/restart and lost-provider manual fallback. Not Rig native-resume action, host reboot or a remote destination.'}
         (fixture / 'manifest.json').write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(fixture / 'manifest.json')}), flush=True)
     except Exception as error:

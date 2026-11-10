@@ -756,6 +756,33 @@ not qualify Rig snapshot/native-resume execution, managed host reboot, remote
 Rig destinations or other Rig-managed runtime configurations. Those remain
 part of #318's acceptance work.
 
+## Rig snapshot-plan boundary
+
+The harness's optional `--snapshot-plan` mode captures a private native Rig
+snapshot and requests `rig launch <rig-id> agents.continuation --snapshot-id
+<id> --plan --json` before and after native process loss. Both responses must
+report `ok: true`, `planOnly: true`, the exact snapshot and registered node,
+no unmatched seats and unchanged non-target seats. The live native pane must
+retain its PID; the lost-process case must retain zero native panes. The
+harness executes no snapshot launch.
+
+This passed for Rig 0.6.14 (`9d0200f3`). The resulting snapshot's adopted
+session had null `resumeType`, `resumeToken` and resume provenance even though
+the exact-seat plan succeeded. A successful plan therefore cannot by itself
+prove native conversation continuity or justify exposing a resume action.
+The native conversation, host/project, original roots and invocation policy
+must be verified separately through the lifecycle owner. The existing manual
+fallback remains appropriate for this unverified adopted session.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-6ea648a9-515b-4ff0-bd00-711073ad0833/manifest.json`.
+The fixture retains both plan responses and the private snapshot. Executable
+SHA-256: `040244bd4a5dd6a68acb2a684d751870c17ebbfc585ffa99c4486ab0260244f4`.
+Qualification script SHA-256:
+`0fb03534c3656a4b3c5b2b16317d975b312a687df8bd1b08fcd22209ac2cb2a9`.
+The complete survival/fallback matrix also passed in this run, and cleanup
+confirmed no native pane and a stopped private daemon.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
