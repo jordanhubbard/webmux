@@ -83,6 +83,29 @@ second copy of user plugins. Canceled preflight closes its private native server
 Claude and Cursor state-file references locate the recorded selector; observing
 later interactive session switches remains separate work.
 
+Native identity provenance is saved in signed host observations and durable
+controller activity. A `launch-selector` identifies the conversation requested
+at startup; it does not establish the current conversation after an interactive
+switch. `process-state` identifies an ID observed in the running process's
+native state. The recovery preview explains this distinction. Automatic native
+resume requires process-state evidence; launch selectors and older records
+without provenance remain available only for an explicit exact-session choice.
+The other adapters still need active-conversation observers before their
+automatic recovery can be qualified.
+
+On 2026-11-09, the provenance qualification passed through real provider loss,
+explicit native continuation and a new remembered-marker assistant response for
+all four installed CLIs. Codex's embedded-profile case retained `process-state`;
+Claude, Cursor and OpenCode retained `launch-selector`, with no promotion to a
+verified active conversation. Broker regressions exclude launch selectors,
+unavailable identity and legacy records from automatic execution while retaining
+explicit continuation. Private manifests are under
+`~/.local/share/webmux/recovery-qualification/`:
+`configuration-06d50078-ee29-4d00-869c-d876e49323e0/manifest.json` (Codex/Claude)
+and `configuration-a7b9d883-cfb0-4707-9013-2c33f86e0deb/manifest.json`
+(Cursor/OpenCode). Both used executable SHA-256
+`c7cceea75c096b58f9f5e0ff3c2009c05cc8de5a40cf32221e027e2374140515`.
+
 ## Acceptance record
 
 | Requirement | Current evidence | Remaining work |

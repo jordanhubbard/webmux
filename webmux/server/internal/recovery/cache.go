@@ -201,6 +201,7 @@ func InitializeHostEvidence(id, key string, recording bool, seed *Activity) erro
 		state.Command = &event
 		if seed.CLI != "" {
 			native := Event{Kind: "cli", Instance: seed.ShellInstance, Platform: seed.Platform, Cwd: seed.Cwd, CLI: seed.CLI, Version: seed.CLIVersion, SessionID: seed.NativeSessionID, StateFile: seed.NativeStateFile, Argv: safeArgv(seed.Argv)}
+			native.NativeEvidence = seed.NativeEvidence
 			native.Configuration = seed.Configuration.Clone()
 			if _, err := SignedPacket(native, key); err != nil {
 				return err

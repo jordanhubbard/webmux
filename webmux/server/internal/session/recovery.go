@@ -194,6 +194,7 @@ func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {
 			state.Activity = a
 		}
 		a.CLI, a.CLIVersion, a.NativeSessionID, a.NativeStateFile = event.CLI, event.Version, event.SessionID, event.StateFile
+		a.NativeEvidence = event.NativeEvidence
 		a.Configuration = event.Configuration.Clone()
 		a.ShellInstance = event.Instance
 		a.Platform = event.Platform

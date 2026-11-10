@@ -73,7 +73,7 @@ func (b *Broker) syncRecovery(e *entry, r *run) {
 			r.recoveryError = ""
 			b.applyRecoverySnapshotLocked(e, r, response)
 			state, control := e.value.Recovery, r.recoveryControl
-			if recording && response.Recording && state != nil && state.AutoResume && state.Activity != nil && state.Activity.Running && control != nil && control.Mode == "waiting" && r.autoAttempted != control.Instance && state.Activity.NativeRecoverable() && (state.Intent == nil || state.Intent.Outcome != "uncertain" && state.Intent.Outcome != "requested") {
+			if recording && response.Recording && state != nil && state.AutoResume && state.Activity != nil && state.Activity.Running && control != nil && control.Mode == "waiting" && r.autoAttempted != control.Instance && state.Activity.CanAutoResumeNative() && (state.Intent == nil || state.Intent.Outcome != "uncertain" && state.Intent.Outcome != "requested") {
 				r.autoAttempted = control.Instance
 				if actionID, err := uuid(); err == nil {
 					automatic = &RecoveryRequest{ID: actionID, Revision: state.Revision, HostRevision: r.recoveryRevision, Instance: control.Instance, Kind: "native"}
@@ -147,6 +147,7 @@ func (b *Broker) applyRecoverySnapshotLocked(e *entry, r *run, response recovery
 		}
 		if native != nil {
 			a.CLI, a.CLIVersion, a.NativeSessionID, a.NativeStateFile = native.CLI, native.Version, native.SessionID, native.StateFile
+			a.NativeEvidence = native.NativeEvidence
 			a.Configuration = native.Configuration.Clone()
 			a.Cwd, a.ShellInstance, a.Platform = native.Cwd, native.Instance, native.Platform
 			a.Argv, a.Source = append([]string(nil), native.Argv...), "cli-native-state"

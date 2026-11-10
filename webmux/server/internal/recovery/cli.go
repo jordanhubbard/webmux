@@ -156,6 +156,10 @@ func RunCLI(name string, args []string) error {
 	}
 	event := Event{Kind: "cli", Helper: os.Getenv("WEBMUX_RECOVERY_HELPER"), Platform: runtime.GOOS, Instance: os.Getenv("WEBMUX_RECOVERY_INSTANCE"), Cwd: cwd, CLI: cli, Version: version, SessionID: id, Argv: safeArgv(append([]string{name}, args...))}
 	event.Configuration = captureNativeConfiguration(cli)
+	event.NativeEvidence = "unavailable"
+	if id != "" {
+		event.NativeEvidence = "launch-selector"
+	}
 	cmd := exec.Command(binary, launchArgs...)
 	cmd.Dir = cwd
 	cmd.Env = cmd.Environ()
@@ -197,6 +201,10 @@ func RunCLI(name string, args []string) error {
 				// A user can switch conversations within the same process. Never
 				// keep an initial selector after the owning native state changes.
 				event.SessionID, event.StateFile = codexSessionForProcess(cmd.Process.Pid, cwd)
+				event.NativeEvidence = "unavailable"
+				if event.SessionID != "" {
+					event.NativeEvidence = "process-state"
+				}
 			}
 			if event.StateFile != "" {
 				ticker.Reset(5 * time.Second)

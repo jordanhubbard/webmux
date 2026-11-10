@@ -110,3 +110,24 @@ func TestStateCopiesDoNotShareMutableRecoveryEvidence(t *testing.T) {
 		t.Fatal("shared state escaped")
 	}
 }
+
+func TestNativeIdentityProvenanceIsAuthenticatedAndBounded(t *testing.T) {
+	event := Event{Kind: "cli", CLI: "codex", NativeEvidence: "launch-selector"}
+	packet, err := SignedPacket(event, "fixture-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoder Decoder
+	visible, events := decoder.Feed(packet)
+	if visible != "" || len(events) != 1 || events[0].NativeEvidence != "launch-selector" || !Verify(events[0], "fixture-key") {
+		t.Fatal("native provenance was lost or leaked", events)
+	}
+	events[0].NativeEvidence = "process-state"
+	if Verify(events[0], "fixture-key") {
+		t.Fatal("changing provenance retained authentication")
+	}
+	event.NativeEvidence = strings.Repeat("untrusted", 1000)
+	if _, err := SignedPacket(event, "fixture-key"); err == nil {
+		t.Fatal("unknown provenance entered durable metadata")
+	}
+}

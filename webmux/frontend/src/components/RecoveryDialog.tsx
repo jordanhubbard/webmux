@@ -72,6 +72,11 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
         {activity?.cli && <dl className="recovery-details">
           <dt>Coding CLI</dt><dd>{activity.cli} {activity.cli_version}</dd>
           <dt>Recorded native session</dt><dd>{activity.native_session_id || 'No reliable native session ID was recorded.'}</dd>
+          <dt>Conversation evidence</dt><dd>{activity.native_evidence === 'process-state'
+            ? 'Observed in the running CLI process’s native state.'
+            : activity.native_evidence === 'launch-selector'
+              ? 'Selected at launch. Later conversation changes have not been verified; automatic resume is unavailable.'
+              : 'The current conversation could not be verified; automatic resume is unavailable.'}</dd>
           {activity.native_state_file && <><dt>Native state file</dt><dd>{activity.native_state_file}</dd></>}
           {recordedRoots.length > 0 && <><dt>Original CLI paths</dt><dd>{recordedRoots.map(([name, path]) => <div key={name}>{name}: {path || '(empty)'}</div>)}</dd></>}
         </dl>}

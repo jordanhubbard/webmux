@@ -223,3 +223,25 @@ func TestHostStateRejectsTraversalLinksAndOversizedRPC(t *testing.T) {
 		t.Fatal("accepted multiple control requests")
 	}
 }
+
+func TestNativeEvidenceSurvivesHostSeedAndAuthenticatedSnapshot(t *testing.T) {
+	hostFixture(t)
+	seed := &Activity{CLI: "codex", NativeSessionID: testHostSession, NativeEvidence: "launch-selector", Cwd: "/project", Running: true}
+	if err := InitializeHostEvidence(testHostSession, testHostKey, true, seed); err != nil {
+		t.Fatal(err)
+	}
+	response := HostRPC(context.Background(), RPCRequest{Protocol: 1, SessionID: testHostSession, Key: testHostKey, Operation: "snapshot"})
+	if response.Error != "" {
+		t.Fatal(response.Error)
+	}
+	found := false
+	for _, event := range response.Events {
+		if event.Kind == "cli" {
+			found = Verify(event, testHostKey) && event.NativeEvidence == "launch-selector"
+		}
+	}
+	activity := cachedActivity(hostSnapshot(t))
+	if !found || activity.NativeEvidence != "launch-selector" || activity.CanAutoResumeNative() {
+		t.Fatal("host seed promoted an initial selector to current native state", activity)
+	}
+}

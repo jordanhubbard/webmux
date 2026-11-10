@@ -27,6 +27,7 @@ func cachedActivity(state HostState) Activity {
 	}
 	if event := state.CLI; event != nil {
 		activity.CLI, activity.CLIVersion, activity.NativeSessionID, activity.NativeStateFile = event.CLI, event.Version, event.SessionID, event.StateFile
+		activity.NativeEvidence = event.NativeEvidence
 		activity.Argv = append([]string(nil), event.Argv...)
 		activity.Configuration = event.Configuration.Clone()
 		activity.Cwd = event.Cwd

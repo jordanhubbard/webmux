@@ -206,6 +206,8 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 return activity if activity.get('running') and activity.get('native_session_id') == ident and (cli == 'opencode' or activity.get('native_state_file')) else None
 
             before = wait_for(running, cli + ' native identity')
+            expected_evidence = 'process-state' if cli == 'codex' else 'launch-selector'
+            assert before.get('native_evidence') == expected_evidence, 'initial native identity provenance is missing or incorrectly promoted'
             assert all(key not in before['configuration']['roots'] if key in unset.get(cli, set()) else before['configuration']['roots'].get(key) == value for key, value in roots[cli].items())
             prior = records(cli, entry, before)
             subprocess.run(['tmux', 'kill-session', '-t', target], check=True)
@@ -220,6 +222,7 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
             assert api(path, action)['outcome'] == 'consumed'
             phase = 'recovered'
             after = wait_for(running, cli + ' resumed native identity')
+            assert after.get('native_evidence') == expected_evidence, 'native continuation lost its identity provenance'
             assert all(key not in after['configuration']['roots'] if key in unset.get(cli, set()) else after['configuration']['roots'].get(key) == value for key, value in roots[cli].items())
             assert after['argv'] == before['argv'], 'native continuation dropped original invocation restrictions or profile'
             nonce = 'AFTER_CONFIGURATION_RECOVERY_' + uuid.uuid4().hex

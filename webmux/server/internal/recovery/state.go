@@ -1,7 +1,7 @@
 package recovery
 
 // Activity describes one observed command, not a reconstructed process image.
-// NativeSessionID is only set by a provider adapter using its native state.
+// NativeEvidence distinguishes the original selector from observed native state.
 type Activity struct {
 	Configuration   *NativeConfiguration `json:"configuration,omitempty" yaml:"configuration,omitempty"`
 	Platform        string               `json:"platform,omitempty" yaml:"platform,omitempty"`
@@ -16,11 +16,19 @@ type Activity struct {
 	CLIVersion      string               `json:"cli_version,omitempty" yaml:"cli_version,omitempty"`
 	NativeSessionID string               `json:"native_session_id,omitempty" yaml:"native_session_id,omitempty"`
 	NativeStateFile string               `json:"native_state_file,omitempty" yaml:"native_state_file,omitempty"`
+	NativeEvidence  string               `json:"native_evidence,omitempty" yaml:"native_evidence,omitempty"`
 	Running         bool                 `json:"running" yaml:"running"`
 }
 
 func (a *Activity) NativeRecoverable() bool {
 	return a != nil && ValidNativeID(a.CLI, a.NativeSessionID) && (a.Configuration == nil || a.Configuration.ManualReason == "")
+}
+
+// A launch selector establishes the conversation originally requested, not the
+// conversation currently selected after an in-process switch. Older records
+// without provenance likewise require the user's explicit choice.
+func (a *Activity) CanAutoResumeNative() bool {
+	return a.NativeRecoverable() && a.NativeEvidence == "process-state"
 }
 
 type State struct {

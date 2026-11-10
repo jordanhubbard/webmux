@@ -13,15 +13,16 @@ import (
 
 type controlProcess struct {
 	*fakeProcess
-	mu            sync.Mutex
-	key           string
-	revision      uint64
-	mode          string
-	actions       int
-	actionError   string
-	actionOutcome string
-	failPause     bool
-	configuration *recovery.NativeConfiguration
+	mu             sync.Mutex
+	key            string
+	revision       uint64
+	mode           string
+	actions        int
+	actionError    string
+	actionOutcome  string
+	failPause      bool
+	configuration  *recovery.NativeConfiguration
+	nativeEvidence string
 }
 
 func (p *controlProcess) RecoveryRPC(_ context.Context, request recovery.RPCRequest) recovery.RPCResponse {
@@ -46,7 +47,7 @@ func (p *controlProcess) RecoveryRPC(_ context.Context, request recovery.RPCRequ
 	for _, event := range []recovery.Event{
 		{Kind: "provider", Mode: "waiting", Helper: "/bin/webmux", Platform: "linux"},
 		{Kind: "command", Instance: "prior-shell", Platform: "linux", Command: "codex", Cwd: "/workspace"},
-		{Kind: "cli", Instance: "prior-shell", Platform: "linux", Cwd: "/workspace", CLI: "codex", Version: "0.167.0", SessionID: "cadc08a9-0d73-4b44-af10-084a60b44f5b", Configuration: p.configuration.Clone()},
+		{Kind: "cli", Instance: "prior-shell", Platform: "linux", Cwd: "/workspace", CLI: "codex", Version: "0.167.0", SessionID: "cadc08a9-0d73-4b44-af10-084a60b44f5b", Configuration: p.configuration.Clone(), NativeEvidence: p.nativeEvidence},
 		{Kind: "control", Mode: p.mode, Helper: "/bin/webmux", Platform: "linux", Instance: "waiting-worker"},
 	} {
 		packet, _ := recovery.SignedPacket(event, p.key)
@@ -63,7 +64,7 @@ func controlFixture(t *testing.T, logging bool) (*Broker, *controlProcess, Sessi
 	if logging {
 		enableLogging(t, store)
 	}
-	p := &controlProcess{fakeProcess: fake(), revision: 7, mode: "waiting"}
+	p := &controlProcess{fakeProcess: fake(), revision: 7, mode: "waiting", nativeEvidence: "process-state"}
 	b.launch = func(request terminal.LaunchRequest, _ string) (process, error) {
 		p.key = request.RecoveryKey
 		return p, nil
@@ -200,6 +201,41 @@ func TestAutomaticRecoveryResumesOnceAfterOptIn(t *testing.T) {
 	p.mu.Unlock()
 	if actions != 1 {
 		t.Fatalf("automatic resume ran %d times", actions)
+	}
+}
+
+func TestAutomaticRecoveryRequiresCurrentNativeIdentityEvidence(t *testing.T) {
+	for _, evidence := range []string{"", "launch-selector", "unavailable"} {
+		t.Run("evidence="+evidence, func(t *testing.T) {
+			b, p, s := controlFixture(t, true)
+			p.mu.Lock()
+			p.nativeEvidence = evidence
+			p.revision++
+			p.mu.Unlock()
+			if err := b.SetAutoRecovery("owner", s.ID, true); err != nil {
+				t.Fatal(err)
+			}
+			b.mu.Lock()
+			e, r := b.entries[s.ID], b.entries[s.ID].run
+			b.mu.Unlock()
+			b.syncRecovery(e, r)
+			b.syncRecovery(e, r)
+			p.mu.Lock()
+			actions := p.actions
+			p.mu.Unlock()
+			if actions != 0 {
+				t.Fatal("automatic resume used an unverified active conversation", actions)
+			}
+			view, err := b.Recovery("owner", s.ID)
+			if err != nil || view.State.Activity.NativeEvidence != evidence || !view.CanResumeCLI {
+				t.Fatal("lost uncertainty or the explicit exact-session choice", view, err)
+			}
+			// The owner can still deliberately select the exact displayed
+			// conversation. Missing provenance only excludes automatic choice.
+			if _, err := b.Recover("owner", s.ID, previewAction(t, b, s.ID, "native")); err != nil {
+				t.Fatal("explicit native continuation was blocked", err)
+			}
+		})
 	}
 }
 

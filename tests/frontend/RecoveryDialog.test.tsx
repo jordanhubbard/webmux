@@ -68,6 +68,22 @@ function waitingEvidence(): SessionRecovery {
     state: { ...value.state!, activity: { ...value.state!.activity!, cli: 'codex', native_session_id: 'native-id' } } };
 }
 
+describe('native conversation evidence', () => {
+  it.each([
+    ['launch-selector', /Selected at launch.*automatic resume is unavailable/],
+    ['process-state', /Observed in the running CLI process/],
+    [undefined, /current conversation could not be verified/],
+  ] as const)('explains %s evidence without treating a recorded selector as current state', async (source, explanation) => {
+    const value = waitingEvidence();
+    value.state!.activity!.native_evidence = source;
+    vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(value);
+    render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
+    expect(await screen.findByText(explanation)).toBeDefined();
+    expect(screen.getByText('native-id')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Resume codex conversation' })).toBeEnabled();
+  });
+});
+
 describe('continuation approval', () => {
   it('resumes the selected native conversation without transmitting history by default', async () => {
     vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(waitingEvidence());
