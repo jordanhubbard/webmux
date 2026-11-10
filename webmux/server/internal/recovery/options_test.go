@@ -39,3 +39,47 @@ func TestUnrestorableConfigurationDoesNotSilentlyBroadenNativePolicy(t *testing.
 		}
 	}
 }
+
+func TestUnsupportedNativeOptionsRequireManualRecoveryBeforeAction(t *testing.T) {
+	for _, cli := range []string{"codex", "cursor", "opencode"} {
+		for _, flags := range [][]string{{"--future-policy", "restricted"}, {"--model", "custom"}, {"--strict-config=false"}, {"--profile", ""}} {
+			args := append([]string{cli}, flags...)
+			cfg := captureNativeInvocationConfiguration(cli, args)
+			if cfg.ManualReason == "" {
+				t.Fatalf("%s silently discarded unsupported configuration %v", cli, flags)
+			}
+			activity := &Activity{CLI: cli, NativeSessionID: "08bbfe0e-d31c-4cb6-9d18-546eea56a08c", NativeEvidence: "process-state", Configuration: cfg}
+			if activity.CanAutoResumeNative() {
+				t.Fatalf("%s offered automatic recovery with unsupported settings", cli)
+			}
+		}
+	}
+}
+
+func TestNativeResumeSelectorsAreReplacedWithoutDiscardingFollowingRestrictions(t *testing.T) {
+	for _, tc := range []struct {
+		cli        string
+		args, want []string
+	}{
+		{"cursor", []string{"agent", "--resume=08bbfe0e-d31c-4cb6-9d18-546eea56a08c", "--mode", "ask"}, []string{"--mode", "ask"}},
+		{"opencode", []string{"opencode", "--session", "ses_12345678", "--pure"}, []string{"--pure"}},
+	} {
+		got, err := nativeResumeOptions(tc.cli, tc.args)
+		if err != nil || !reflect.DeepEqual(got, tc.want) {
+			t.Fatal(tc.cli, got, err)
+		}
+	}
+	for _, tc := range []struct {
+		cli  string
+		args []string
+	}{
+		{"cursor", []string{"agent", "--resume", "--mode", "ask"}},
+		{"opencode", []string{"opencode", "--session", "unknown", "--pure"}},
+		{"codex", []string{"codex", "--sandbox", "unknown"}},
+		{"cursor", []string{"agent", "--sandbox", "unknown"}},
+	} {
+		if _, err := nativeResumeOptions(tc.cli, tc.args); err == nil {
+			t.Fatal("invalid selector or sandbox silently discarded", tc.cli, tc.args)
+		}
+	}
+}

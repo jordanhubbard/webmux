@@ -21,18 +21,23 @@ func nativeResumeOptions(cli string, original []string) ([]string, error) {
 		if key == "--" {
 			break
 		}
-		boolean, valued := false, false
+		boolean, valued, selector, omitted := false, false, false, false
 		switch cli {
 		case "codex":
+			omitted = key == "--dangerously-bypass-approvals-and-sandbox" || key == "--full-auto" || key == "--last" || key == "--all"
 			boolean = key == "--no-daemon" || key == "--no-alt-screen" || key == "--strict-config"
 			valued = key == "--sandbox" || key == "-s" || key == "--profile" || key == "-p" || key == "--ask-for-approval" || key == "-a" || key == "--disable" || key == "--enable"
 			if key == "--config" || key == "-c" || key == "--remote" || key == "--ignore-user-config" {
 				return nil, errors.New("this Codex invocation uses configuration overrides or a remote app server; restore it manually to preserve its execution policy")
 			}
 		case "cursor":
+			selector = key == "--resume"
+			omitted = key == "--yolo"
 			boolean = key == "--plan"
 			valued = key == "--mode" || key == "--sandbox"
 		case "opencode":
+			selector = key == "--session" || key == "-s"
+			omitted = key == "--auto" || key == "--continue" || key == "-c"
 			boolean = key == "--pure"
 			valued = key == "--agent"
 		}
@@ -40,7 +45,13 @@ func nativeResumeOptions(cli string, original []string) ([]string, error) {
 			options = append(options, key)
 			continue
 		}
-		if !valued {
+		if omitted && !assigned {
+			continue
+		}
+		if !valued && !selector {
+			if strings.HasPrefix(key, "-") {
+				return nil, errors.New("this CLI invocation has unsupported settings; restore it manually to preserve its configuration")
+			}
 			continue
 		}
 		if !assigned {
@@ -53,12 +64,24 @@ func nativeResumeOptions(cli string, original []string) ([]string, error) {
 		if strings.HasPrefix(value, "-") || value == "" {
 			return nil, errors.New("recorded CLI restriction is invalid; restore manually")
 		}
-		// Never reintroduce explicit bypass modes from an earlier invocation.
-		if cli == "codex" && (key == "--sandbox" || key == "-s") && value != "read-only" && value != "workspace-write" {
+		if selector {
+			if !ValidNativeID(cli, value) {
+				return nil, errors.New("recorded CLI selector is invalid; restore manually")
+			}
 			continue
 		}
+		// Never reintroduce explicit bypass modes from an earlier invocation.
+		if cli == "codex" && (key == "--sandbox" || key == "-s") && value != "read-only" && value != "workspace-write" {
+			if value == "danger-full-access" {
+				continue
+			}
+			return nil, errors.New("the recorded Codex sandbox is unsupported; restore manually")
+		}
 		if cli == "cursor" && key == "--sandbox" && value != "enabled" {
-			continue
+			if value == "disabled" {
+				continue
+			}
+			return nil, errors.New("the recorded Cursor sandbox is unsupported; restore manually")
 		}
 		if cli == "cursor" && key == "--mode" && value != "ask" && value != "plan" {
 			return nil, errors.New("the recorded Cursor mode is unsupported; restore manually")

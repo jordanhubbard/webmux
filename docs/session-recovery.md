@@ -629,6 +629,28 @@ not qualify managed host reboot, Rig, remote managed hosts, other managed
 CLIs/profiles or authentication-failure behavior. Those remain part of #318's
 acceptance work.
 
+## Unsupported invocation options
+
+Codex, Cursor and OpenCode also reject unknown or incomplete recovery options
+rather than silently dropping them. Exact native selectors are replaced;
+supported restrictions retain their original values. Unknown sandbox values
+require manual recovery. Explicit bypass modes are omitted. Settings without a
+qualified preservation path, including explicit model overrides in these three
+adapters, receive a manual explanation in the preview. This leaves the original
+CLI launch unchanged; it limits the proposed recovery action.
+
+After this change, all four named CLIs passed real provider loss, explicit
+native recovery and fresh remembered-marker responses with original supported
+configuration roots and restrictions. Private receipt:
+`~/.local/share/webmux/recovery-qualification/configuration-c84a70e7-c30e-413b-9eb0-edb26f434992/manifest.json`.
+Executable SHA-256:
+`5a020592f8d943230a51f87ca3f350046dfd6556f903ccb54e90ae83f967b9d5`.
+Qualification script SHA-256:
+`e2ed9340d13f735e576ede95f9edf725b4f3706f1ef812be3e1b4509dbbab63d`.
+The full Go race suite and vet passed. An earlier attempt used a development
+binary without embedded assets and stopped before controller startup; its
+negative manifest is retained and does not count as native evidence.
+
 ## Claude invocation settings
 
 Claude recovery parses supported invocation settings explicitly. Variadic
