@@ -32,11 +32,13 @@ func sameManagedDestination(a, b RigIdentity) bool {
 // The coordinator owns these references. They are evidence, never executable
 // commands, and do not establish which conversation is active after a switch.
 func clearRigRecoveryReference(value *RigIdentity) {
+	value.ManagerProcess = ""
 	value.ManagerRigID, value.ManagerNodeID, value.ManagerLogicalID = "", "", ""
 	value.ManagerSnapshotID, value.ManagerSnapshotHash, value.ManagerPolicyHash, value.ManagerRecordIdentity = "", "", "", ""
 }
 
 func copyRigRecoveryReference(value *RigIdentity, from RigIdentity) {
+	value.ManagerProcess = from.ManagerProcess
 	value.ManagerRigID, value.ManagerNodeID, value.ManagerLogicalID = from.ManagerRigID, from.ManagerNodeID, from.ManagerLogicalID
 	value.ManagerSnapshotID, value.ManagerSnapshotHash, value.ManagerPolicyHash, value.ManagerRecordIdentity = from.ManagerSnapshotID, from.ManagerSnapshotHash, from.ManagerPolicyHash, from.ManagerRecordIdentity
 }
@@ -48,7 +50,7 @@ func validRigRecoveryReference(value RigIdentity) bool {
 	return (value.Provider == "" || value.Provider == "rig") && value.Host == "localhost" && value.Runtime == "claude-code" &&
 		value.NativeSource == "rig-snapshot" && filepath.IsAbs(value.Workspace) && filepath.IsAbs(value.NativeStateFile) && recovery.ValidNativeID("claude", value.NativeSessionID) && rigRecoveryULID.MatchString(value.ManagerRigID) && rigRecoveryULID.MatchString(value.ManagerNodeID) &&
 		rigRecoveryULID.MatchString(value.ManagerSnapshotID) && value.ManagerLogicalID != "" && len(value.ManagerLogicalID) <= 256 && !strings.ContainsFunc(value.ManagerLogicalID, unicode.IsControl) &&
-		rigRecoveryHash.MatchString(value.ManagerSnapshotHash) && rigRecoveryHash.MatchString(value.ManagerPolicyHash) && rigRecoveryHash.MatchString(value.ManagerRecordIdentity)
+		rigRecoveryHash.MatchString(value.ManagerSnapshotHash) && rigRecoveryHash.MatchString(value.ManagerPolicyHash) && rigRecoveryHash.MatchString(value.ManagerRecordIdentity) && validRigProcessReference(value.ManagerProcess, value.NativeSessionID)
 }
 
 func (b *Broker) managedEvidenceLocked(e *entry, value RigIdentity) RigIdentity {
@@ -71,7 +73,7 @@ func (b *Broker) managedEvidenceLocked(e *entry, value RigIdentity) RigIdentity 
 	if !recovery.ValidNativeID(managedCLI(value.Runtime), id) || len(file) > 4096 || strings.ContainsFunc(file, unicode.IsControl) {
 		return value
 	}
-	unchanged := value.NativeSessionID == id && value.NativeStateFile == file && value.NativeSource != "" && value.ManagerSnapshotHash == candidate.ManagerSnapshotHash && value.ManagerPolicyHash == candidate.ManagerPolicyHash && value.ManagerRecordIdentity == candidate.ManagerRecordIdentity
+	unchanged := value.NativeSessionID == id && value.NativeStateFile == file && value.NativeSource != "" && value.ManagerSnapshotHash == candidate.ManagerSnapshotHash && value.ManagerPolicyHash == candidate.ManagerPolicyHash && value.ManagerRecordIdentity == candidate.ManagerRecordIdentity && value.ManagerProcess == candidate.ManagerProcess
 	if validRigRecoveryReference(candidate) {
 		copyRigRecoveryReference(&value, candidate)
 	}

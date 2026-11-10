@@ -288,6 +288,25 @@ def main():
             assert view()['manager_snapshot_id'] == captured['manager_snapshot_id'], 'Unchanged metadata created another snapshot'
             captured_session = api('/api/sessions/' + sid)
             captured_identity = captured_session['rig']
+            if not captured_identity.get('manager_process'):
+                source = home / 'data/coordination' / hashlib.sha256(captured_session['owner'].encode()).hexdigest()[:24] / 'rig-recovery.mts'
+                probe_js = "import fs from 'node:fs';import{execFileSync}from'node:child_process';import{pathToFileURL}from'node:url';const m=await import(pathToFileURL(process.argv[1]));const i=JSON.parse(fs.readFileSync(0,'utf8'));const run=(c,a)=>execFileSync(c,a,{encoding:'utf8',timeout:25000,maxBuffer:4194304}).trim();console.log(JSON.stringify({process:m.observeRigNativeProcess(run,i,true),boot:m.rigBootIdentity(run)}));"
+                probe = subprocess.run([str(rig_node), '--input-type=module', '-e', probe_js, str(source)], input=json.dumps(captured_identity), env=env, capture_output=True, text=True, timeout=35)
+                (fixture / 'initial-process-diagnostic.json').write_text(json.dumps({'returncode': probe.returncode, 'stdout': probe.stdout, 'stderr': probe.stderr}, indent=2) + '\n')
+                own = [json.loads(line) for line in (fixture / 'native-executions.jsonl').read_text().splitlines() if '--permission-mode' in json.loads(line)['args'] and '--resume' not in json.loads(line)['args']]
+                if len(own) == 1:
+                    observed = subprocess.run(['ps', '-ww', '-p', str(own[0]['pid']), '-o', 'pid=,ppid=,args='], capture_output=True, text=True, timeout=5)
+                    (fixture / 'initial-kernel-process.txt').write_text(observed.stdout)
+                    (fixture / 'initial-kernel-process.txt').chmod(0o600)
+            original_process = json.loads(captured_identity['manager_process'])
+            assert original_process['pane_pid'] == before['pane_pid']
+            initial_execs = [json.loads(line) for line in (fixture / 'native-executions.jsonl').read_text().splitlines()]
+            initial_clis = [row for row in initial_execs if '--name' in row['args'] and row['args'][row['args'].index('--name') + 1] == pane and '--resume' not in row['args']]
+            assert len(initial_clis) == 1 and original_process['native_pid'] == initial_clis[0]['pid']
+            assert original_process['native_session_id'] == entry['native_session_id'] and original_process['native_identity_source'] == 'process-argv'
+            assert len(original_process['boot_id']) == 64 and original_process['started_at']
+            assert len(original_process['settings_hash']) == 64 and len(original_process['executable_hash']) == 64
+
             owner_scope = hashlib.sha256(captured_session['owner'].encode()).hexdigest()[:24]
             runners = [home / 'data/coordination' / owner_scope / 'runner.mts']
             assert runners[0].is_file()
@@ -318,6 +337,7 @@ def main():
             assert native() == before and entry['marker'] in v['history']
             if args.native_resume:
                 assert v['manager_snapshot_id'] == captured['manager_snapshot_id'] and v['manager_native_session'] == captured['manager_native_session']
+                assert api('/api/sessions/' + sid)['rig']['manager_process'] == captured_identity['manager_process'], 'Original native process proof changed across controller restart'
             receipt('controller SIGKILL' if abrupt else 'orderly controller restart', native=native(), preview=v)
         for _ in range(3):
             api('/api/sessions/' + sid + '/reconnect', {})

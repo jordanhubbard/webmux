@@ -11,7 +11,7 @@ export interface RigRecoveryIdentity {
   native_session_id?: string; native_state_file?: string; native_source?: string;
   manager_rig_id?: string; manager_node_id?: string; manager_logical_id?: string;
   manager_snapshot_id?: string; manager_snapshot_hash?: string;
-  manager_policy_hash?: string; manager_record_identity?: string;
+  manager_policy_hash?: string; manager_record_identity?: string; manager_process?: string;
 }
 export type RigRecoveryRun = (command: string, args: string[]) => string;
 const ulid = /^[0-9A-HJKMNP-TV-Z]{26}$/;
@@ -144,11 +144,12 @@ function snapshotIdentity(snapshot: ObjectValue, context: Awaited<ReturnType<typ
   if (snapshot.id !== snapshotId || snapshot.rigId !== rigId || nodes.length !== 1 || nodes[0].rigId !== rigId || nodes[0].logicalId !== logicalId || nodes[0].runtime !== 'claude-code' || nodes[0].profile !== profile || !sameDirectory(text(nodes[0].cwd), cwd) || selected.length !== 1 || selected[0].sessionName !== context.target || selected[0].status !== 'running' || selected[0].resumeType !== 'claude_id' || selected[0].resumeToken !== id || !['hook', 'operator'].includes(String(selected[0].resumeProvenance)) || !startup) {
     throw new Error('The native Rig snapshot does not verify this managed conversation.');
   }
+  return String(selected[0].resumeProvenance);
 }
 
 // Called only while the broker holds its logging-operation lock. A first
 // observation may create one native snapshot; matching observations reuse it.
-export async function observeRigRecovery(run: RigRecoveryRun, identity: RigRecoveryIdentity, directory: string): Promise<RigRecoveryIdentity> {
+export async function observeRigRecovery(run: RigRecoveryRun, identity: RigRecoveryIdentity, directory: string, processObserver = observeRigNativeProcess, bootObserver = rigBootIdentity): Promise<RigRecoveryIdentity> {
   const context = await destination(run, identity);
   const { get, target, cwd, rigId, logicalId, route, nodeId, profile, policy } = context;
   const record = object(await get(`/api/sessions/${encodeURIComponent(target)}/generation-record`));
@@ -175,11 +176,17 @@ export async function observeRigRecovery(run: RigRecoveryRun, identity: RigRecov
   }
   if (!ulid.test(snapshotId)) throw new Error('The native Rig snapshot identity is unavailable.');
   const snapshot = object(await get(`${route}/snapshots/${encodeURIComponent(snapshotId)}`));
-  snapshotIdentity(snapshot, context, snapshotId, id);
+  const provenance = snapshotIdentity(snapshot, context, snapshotId, id);
+  let processRecord = '';
+  try {
+    const observed = processObserver(run, { ...identity, native_session_id: id }, true);
+    if (!observed.native_session_id && provenance !== 'hook') throw new Error('The initial native identity is not hook-verified.');
+    processRecord = JSON.stringify({ ...observed, native_session_id: id, native_identity_source: observed.native_session_id ? 'process-argv' : 'manager-hook', boot_id: bootObserver(run) });
+  } catch { /* Retain checkpoint evidence, but leave unverified process state manual. */ }
   const temporary = cache + '.' + crypto.randomUUID() + '.tmp';
   try { fs.writeFileSync(temporary, JSON.stringify({ key, snapshotId }), { flag: 'wx', mode: 0o600 }); fs.renameSync(temporary, cache); }
   finally { fs.rmSync(temporary, { force: true }); }
-  return { ...identity, manager_profile: profile, native_session_id: id, native_state_file: file, native_source: 'rig-snapshot', manager_rig_id: rigId, manager_node_id: nodeId, manager_logical_id: logicalId, manager_snapshot_id: snapshotId, manager_snapshot_hash: digest(snapshot), manager_policy_hash: policyHash, manager_record_identity: stateIdentity };
+  return { ...identity, manager_profile: profile, native_session_id: id, native_state_file: file, native_source: 'rig-snapshot', manager_rig_id: rigId, manager_node_id: nodeId, manager_logical_id: logicalId, manager_snapshot_id: snapshotId, manager_snapshot_hash: digest(snapshot), manager_policy_hash: policyHash, manager_record_identity: stateIdentity, manager_process: processRecord };
 }
 
 export interface RigRecoveryPlan {
@@ -232,8 +239,12 @@ function executableDigest(file: string): string {
   } finally { fs.closeSync(fd); }
 }
 
+function rigProcessStart(run: RigRecoveryRun, pid: string): string {
+  return text(run('env', ['LC_ALL=C', 'TZ=UTC', 'ps', '-p', pid, '-o', 'lstart=']).trim(), 120) + ' UTC';
+}
+
 export interface RigNativeProcess {
-  pane_pid: number; native_pid: number; started_at: string;
+  pane_pid: number; native_pid: number; started_at: string; execution_uid: number;
   native_session_id?: string; permission_mode: string;
   executable_hash: string; settings_hash: string;
 }
@@ -279,21 +290,24 @@ export function observeRigNativeProcess(run: RigRecoveryRun, saved: RigRecoveryI
     if (!line.trim()) continue;
     const row = /^\s*(\d+)\s+(\d+)\s+(.+)$/.exec(line);
     if (!row || !descendants.has(Number(row[1])) || parents.get(Number(row[1])) !== Number(row[2])) throw new Error('The owned process tree changed.');
-    // This exact published Rig grammar leaves settings last. Unknown argv,
-    // whitespace-bearing executable paths and additional CLIs remain manual.
-    const native = /^(\/\S*\/claude) --permission-mode (plan|acceptEdits)(?: --resume ([a-f0-9-]{36}))? --name ([a-zA-Z0-9_.:@-]+) --settings (\{.*\})$/.exec(row[3]);
+    // Published Rig uses settings last for resume, but appends the fresh
+    // --session-id/name after settings on first launch. Parse only those exact
+    // forms; JSON remains one opaque argument and cannot introduce options.
+    const resumed = /^(\/\S*\/claude) --permission-mode (plan|acceptEdits) --resume ([a-f0-9-]{36}) --name ([a-zA-Z0-9_.:@-]+) --settings (\{.*\})$/.exec(row[3]);
+    const initial = allowInitial ? /^(\/\S*\/claude) --permission-mode (plan|acceptEdits) --settings (\{.*\}) --session-id ([a-f0-9-]{36}) --name ([a-zA-Z0-9_.:@-]+)$/.exec(row[3]) : null;
+    const native = resumed ? { executable: resumed[1], mode: resumed[2], id: resumed[3], target: resumed[4], settings: resumed[5] }
+      : initial ? { executable: initial[1], mode: initial[2], id: initial[4], target: initial[5], settings: initial[3] } : undefined;
     if (!native) {
       if (/^\/\S*\/claude(?:\s|$)/.test(row[3])) throw new Error('The exact native Rig conversation process is missing or ambiguous.');
       continue;
     }
-    const id = native[3];
-    if (native[4] !== target || (id ? !uuid.test(id) || id !== saved.native_session_id : !allowInitial) || !allowInitial && native[2] !== 'plan') throw new Error('The exact native Rig conversation process is missing or ambiguous.');
-    const settings = object(JSON.parse(native[5]));
-    candidates.push({ pid: Number(row[1]), parent: Number(row[2]), command: row[3], executable: native[1], id, mode: native[2], settings });
+    if (native.target !== target || !uuid.test(native.id) || native.id !== saved.native_session_id || !allowInitial && native.mode !== 'plan') throw new Error('The exact native Rig conversation process is missing or ambiguous.');
+    const settings = object(JSON.parse(native.settings));
+    candidates.push({ pid: Number(row[1]), parent: Number(row[2]), command: row[3], executable: native.executable, id: native.id, mode: native.mode, settings });
   }
   if (candidates.length !== 1) throw new Error('The exact native Rig conversation process is missing or ambiguous.');
   const native = candidates[0], pid = String(native.pid);
-  const started = text(run('ps', ['-p', pid, '-o', 'lstart=']).trim(), 128);
+  const started = rigProcessStart(run, pid);
   const executable = fs.realpathSync(native.executable);
   const executableHash = executableDigest(executable);
   if (platform === 'linux') {
@@ -309,6 +323,22 @@ export function observeRigNativeProcess(run: RigRecoveryRun, saved: RigRecoveryI
   if (run(native.executable, ['--version']).trim() !== '2.1.322 (Claude Code)') throw new Error('This native Claude version is not qualified for Rig recovery.');
   const current = /^\s*(\d+)\s+(\d+)\s+(.+)$/.exec(run('ps', ['-ww', '-p', pid, '-o', 'pid=,ppid=,args=']).trim());
   if (!current || Number(current[1]) !== native.pid || Number(current[2]) !== native.parent || current[3] !== native.command) throw new Error('The native process arguments changed during verification.');
-  if (run('ps', ['-p', pid, '-o', 'lstart=']).trim() !== started || Number(run('tmux', ['display-message', '-p', '-t', '=' + target + ':', '#{pane_pid}']).trim()) !== pane) throw new Error('The native process changed during verification.');
-  return { pane_pid: pane, native_pid: native.pid, started_at: started, native_session_id: native.id, permission_mode: native.mode, executable_hash: executableHash, settings_hash: digest(native.settings) };
+  if (rigProcessStart(run, pid) !== started || Number(run('tmux', ['display-message', '-p', '-t', '=' + target + ':', '#{pane_pid}']).trim()) !== pane) throw new Error('The native process changed during verification.');
+  return { pane_pid: pane, native_pid: native.pid, started_at: started, execution_uid: ownerUID, native_session_id: native.id, permission_mode: native.mode, executable_hash: executableHash, settings_hash: digest(native.settings) };
+}
+
+// Hash a stable kernel boot identity, not wall-clock uptime. Process IDs can be
+// reused after reboot; a WebMux or manager restart keeps this identity stable.
+export function rigBootIdentity(run: RigRecoveryRun, platform = process.platform): string {
+  if (platform === 'darwin') {
+    const id = run('sysctl', ['-n', 'kern.bootsessionuuid']).trim();
+    if (!uuid.test(id)) throw new Error('The execution host boot identity is unavailable.');
+    return digest([platform, id.toLowerCase()]);
+  }
+  if (platform === 'linux') {
+    const id = boundedFile('/proc/sys/kernel/random/boot_id', 256).toString('utf8').trim();
+    if (!uuid.test(id)) throw new Error('The execution host boot identity is unavailable.');
+    return digest([platform, id]);
+  }
+  throw new Error('Native Rig boot identity is unsupported.');
 }

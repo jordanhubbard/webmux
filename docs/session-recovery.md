@@ -1016,6 +1016,53 @@ This is the independent post-launch verification seam. The WebMux managed
 action still needs durable original process/boot identity, survivor-first checks
 and once-only execution around the qualified manager launch/reconciliation flow.
 
+## Durable original Rig process evidence
+
+With logging active, checkpoint capture now also records the original qualified
+Claude process: pane/native PIDs, execution UID, UTC process start time, native
+conversation/provenance and executable/settings hashes. A fingerprint of the
+kernel boot-session UUID distinguishes host reboot from controller or manager
+restart. macOS uses `kern.bootsessionuuid`; Linux uses the kernel boot ID. No
+process argv, settings contents, executable contents or credentials enter the
+stored process record.
+
+The broker validates the bounded record, persists it with the existing
+owner-scoped checkpoint, retains it through reconstruction and logging pause,
+and advances the recovery revision when only process identity changes. Unknown
+or malformed records are rejected. A failed process observation clears its
+current proof while keeping valid checkpoint/native-file evidence available for
+manual recovery; an old process record is not silently reused as current proof.
+
+The qualified first-launch grammar differs from resume: Rig places the inline
+settings before `--session-id` and `--name` when starting a fresh Claude seat.
+Resume places the exact `--resume` ID and name before the final settings. Both
+forms join the kernel-observed native ID to the manager snapshot and native file;
+the initial process is not identified from a terminal title or enrollment ID.
+Unsupported argument forms remain manual.
+
+Real native qualification matched the captured original PID to the private
+fixture's actual native launch PID, retained the same record across orderly
+restart and SIGKILL, and passed the complete manager-loss/reconnect/fallback
+matrix again. Provider-owned continuation from WebMux's recorded snapshot
+returned a fresh remembered-marker answer, with one native resume and independent
+post-launch executable/cwd/ID verification. All eight published-Rig browser tests
+also passed. Host reboot and the WebMux Rig launch action remain open.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-37fb4186-832d-40d7-8586-0271673864c8/manifest.json`.
+Executable SHA-256:
+`e614bf3f0a951115bd828daabf6185bc0c4f8822f1e93ae0c45e5f703799ce54`.
+Qualification script SHA-256:
+`b9d0de0eb9daad39af86e71b1a44ea08ef79f748b4755c956b43d181d2176355`.
+
+Full Go race tests/vet, strict TypeScript and the standalone build passed.
+Metadata tests cover stable/change-sensitive boot fingerprints, explicit process
+provenance, stale-proof removal and checkpoint retention. Broker tests cover
+owner/logging boundaries, reconstruction, process-only revision invalidation and
+malformed, foreign or unknown process records. The preceding published
+application checkpoint `9bf603f` passed all hosted CI and Packaging checks,
+including Windows tooling and Go; the new head requires its own hosted results.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

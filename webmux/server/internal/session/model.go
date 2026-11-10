@@ -11,6 +11,7 @@ var ErrClosed = errors.New("session broker is shutting down")
 
 // RigIdentity is recorded only from the server coordinator, never a terminal title.
 type RigIdentity struct {
+	ManagerProcess        string `json:"manager_process,omitempty" yaml:"manager_process,omitempty"`
 	ManagerRigID          string `json:"manager_rig_id,omitempty" yaml:"manager_rig_id,omitempty"`
 	ManagerNodeID         string `json:"manager_node_id,omitempty" yaml:"manager_node_id,omitempty"`
 	ManagerLogicalID      string `json:"manager_logical_id,omitempty" yaml:"manager_logical_id,omitempty"`

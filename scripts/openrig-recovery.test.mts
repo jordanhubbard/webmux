@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:http';
-import { observeRigRecovery, planRigRecovery, observeRigNativeProcess, type RigRecoveryIdentity } from '../webmux/server/internal/openrigcoord/rig-recovery.mts';
+import { observeRigRecovery, planRigRecovery, observeRigNativeProcess, rigBootIdentity, type RigRecoveryIdentity } from '../webmux/server/internal/openrigcoord/rig-recovery.mts';
 
 async function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-rig-recovery-'));
@@ -159,7 +159,7 @@ test('Rig native process proof joins only the owned descendant to executable, na
     fs.writeFileSync(executable, 'synthetic native binary'); fs.chmodSync(executable, 0o700);
     const settings = { permissions: { deny: ['*'] }, privateValue: 'DO_NOT_EXPORT_PROCESS_SETTINGS' };
     const identity = { ...f.identity, native_session_id: '08bbfe0e-d31c-4cb6-9d18-546eea56a08c' };
-    let nativeId = identity.native_session_id, kernelCwd = f.cwd, binary = executable, duplicate = false, changed = false, foreignUID = false, argvChanged = false, version = '2.1.322 (Claude Code)';
+    let nativeId = identity.native_session_id, kernelCwd = f.cwd, binary = executable, duplicate = false, changed = false, foreignUID = false, argvChanged = false, fresh = false, version = '2.1.322 (Claude Code)';
     let paneReads = 0, versionReads = 0;
     const calls: { command: string; args: string[] }[] = [];
     const run = (command: string, args: string[]) => {
@@ -167,6 +167,7 @@ test('Rig native process proof joins only the owned descendant to executable, na
       if (command === 'tmux') { assert.equal(args[3], '=' + identity.target + ':'); paneReads++; return changed && paneReads > 1 ? '200' : '100'; }
       if (command === executable) { versionReads++; assert.deepEqual(args, ['--version']); return version; }
       if (command === 'lsof') return 'p101\nn' + (args.includes('txt') ? binary : kernelCwd);
+      if (command === 'env') { assert.deepEqual(args.slice(0, 3), ['LC_ALL=C', 'TZ=UTC', 'ps']); return 'Mon Nov  9 22:21:02 2026'; }
       assert.equal(command, 'ps');
       if (args[0] === '-axo') {
         assert.equal(args[1], 'pid=,ppid=,uid=');
@@ -176,7 +177,7 @@ test('Rig native process proof joins only the owned descendant to executable, na
       if (args.at(-1) === 'lstart=') return 'Mon Nov  9 22:21:02 2026';
       assert.equal(args[0], '-ww');
       assert.equal(args.includes('300'), false);
-      const native = executable + ' --permission-mode plan --resume ' + nativeId + ' --name ' + identity.target + ' --settings ' + JSON.stringify(settings);
+      const native = fresh ? executable + ' --permission-mode acceptEdits --settings ' + JSON.stringify(settings) + ' --session-id ' + nativeId + ' --name ' + identity.target : executable + ' --permission-mode plan --resume ' + nativeId + ' --name ' + identity.target + ' --settings ' + JSON.stringify(settings);
       if (args[2] === '101') return '101 100 ' + (argvChanged ? native.replace(nativeId, '18bbfe0e-d31c-4cb6-9d18-546eea56a08c') : native);
       return '100 1 /bin/bash\n101 100 ' + native + (duplicate ? '\n102 100 ' + native.replace(nativeId, '18bbfe0e-d31c-4cb6-9d18-546eea56a08c') : '');
     };
@@ -186,6 +187,11 @@ test('Rig native process proof joins only the owned descendant to executable, na
     assert.match(proof.executable_hash, /^[a-f0-9]{64}$/); assert.match(proof.settings_hash, /^[a-f0-9]{64}$/);
     assert.equal(JSON.stringify(proof).includes(settings.privateValue), false);
     assert.equal(calls.some(call => call.args.includes('args=') && call.args.includes('-axo')), false);
+    fresh = true;
+    const initial = observeRigNativeProcess(run, identity, true, 'darwin');
+    assert.equal(initial.native_session_id, identity.native_session_id); assert.equal(initial.permission_mode, 'acceptEdits');
+    assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /missing or ambiguous/);
+    fresh = false;
     foreignUID = true;
     const argumentsRead = calls.filter(call => call.args.includes('pid=,ppid=,args=')).length;
     assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /execution-account boundary/);
@@ -208,4 +214,42 @@ test('Rig native process proof joins only the owned descendant to executable, na
     argvChanged = false; changed = true; paneReads = 0;
     assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /changed during verification/);
   } finally { await f.close(); }
+});
+
+test('Rig capture stores bounded original process and boot evidence; failed observation clears stale process proof', async () => {
+  const f = await fixture();
+  try {
+    const process = { pane_pid: 100, native_pid: 101, execution_uid: 501, started_at: 'Mon Nov  9 22:21:02 2026 UTC', permission_mode: 'acceptEdits', executable_hash: 'd'.repeat(64), settings_hash: 'e'.repeat(64) };
+    let boot = 'f'.repeat(64);
+    const observer = () => process;
+    const first = await observeRigRecovery(f.run, f.identity, f.directory, observer, () => boot);
+    const saved = JSON.parse(first.manager_process!);
+    assert.equal(saved.native_pid, 101); assert.equal(saved.pane_pid, 100);
+    assert.equal(saved.native_session_id, first.native_session_id); assert.equal(saved.native_identity_source, 'manager-hook');
+    assert.equal(saved.boot_id, boot); assert.equal(saved.execution_uid, 501);
+    assert.equal(saved.permission_mode, 'acceptEdits');
+    assert.equal(saved.args, undefined); assert.equal(saved.settings, undefined);
+    boot = 'a'.repeat(64);
+    const changed = await observeRigRecovery(f.run, first, f.directory, observer, () => boot);
+    assert.notEqual(changed.manager_process, first.manager_process);
+    assert.equal(changed.manager_snapshot_id, first.manager_snapshot_id);
+    const failed = await observeRigRecovery(f.run, changed, f.directory, () => { throw new Error('Unverified native process'); }, () => boot);
+    assert.equal(failed.manager_process, ''); assert.equal(failed.native_session_id, first.native_session_id);
+    const snapshot = f.snapshots.get(first.manager_snapshot_id!) as { data: { sessions: { resumeProvenance: string }[] } };
+    snapshot.data.sessions[0].resumeProvenance = 'operator';
+    const operator = await observeRigRecovery(f.run, first, f.directory, observer, () => boot);
+    assert.equal(operator.manager_process, '', 'Operator token alone qualified a fresh process conversation');
+    const exact = await observeRigRecovery(f.run, first, f.directory, () => ({ ...process, permission_mode: 'plan', native_session_id: first.native_session_id }), () => boot);
+    assert.equal(JSON.parse(exact.manager_process!).native_identity_source, 'process-argv');
+  } finally { await f.close(); }
+});
+
+test('Rig boot fingerprint remains stable across UUID formatting and changes for another kernel boot', () => {
+  const run = (value: string) => (command: string, args: string[]) => {
+    assert.equal(command, 'sysctl'); assert.deepEqual(args, ['-n', 'kern.bootsessionuuid']); return value;
+  };
+  const first = rigBootIdentity(run('08bbfe0e-d31c-4cb6-9d18-546eea56a08c'), 'darwin');
+  assert.equal(first, rigBootIdentity(run('08BBFE0E-D31C-4CB6-9D18-546EEA56A08C\n'), 'darwin'));
+  assert.notEqual(first, rigBootIdentity(run('18bbfe0e-d31c-4cb6-9d18-546eea56a08c'), 'darwin'));
+  assert.throws(() => rigBootIdentity(run('unknown'), 'darwin'), /boot identity/);
 });
