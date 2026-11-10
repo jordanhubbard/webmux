@@ -330,6 +330,31 @@ settings continue to require explicit manual restoration.
 The qualified Codex invocation used `--no-daemon`; default shared-daemon
 ownership needs separate qualification before complete lifecycle acceptance.
 
+The configuration harness also accepts `--cli codex --codex-daemon` to exercise
+normal daemon ownership without the private profile or `--no-daemon`. A failed
+case writes a manifest with `passed: false`, the executable hash, last activity
+and any completed receipts before fixture cleanup. A successful embedded case
+must not stand in for this separate daemon case.
+
+On 2026-11-09, the default Codex 0.167.0 daemon case displayed the synthetic
+conversation but did not yield an owning-process rollout file, so WebMux cleared
+the native ID. Three observation experiments did not qualify a replacement:
+
+- Routing through `--remote` rejected the original read-only sandbox override.
+  That changes invocation semantics and is not used by the recovery adapter.
+- Native TUI recording reported event kinds, including a conversation switch,
+  without the selected conversation ID in the tested records.
+- Injecting SessionStart hooks through `-c` produced Codex's warning that command
+  configuration overrides require embedded mode. This does not establish
+  shared-daemon observation. Only the fixture's reviewed metadata hook was
+  trusted; existing hook trust and the shared daemon were not changed.
+
+[Official Codex hook documentation](https://learn.chatgpt.com/docs/hooks) defines
+session IDs and transcript paths in hook input. A viable integration still needs
+to prove native lifecycle delivery, terminal ownership and conversation switches
+while retaining the user's launch mode and hook policy. No unqualified observer
+or permission workaround is installed by these experiments.
+
 On 2026-11-09, real two-process synthetic-marker checks passed for Codex
 0.167.0, Claude Code 2.1.318, Cursor Agent 2026.11.05-86047df and OpenCode
 1.19.5. Each first process exited before a second process selected its exact

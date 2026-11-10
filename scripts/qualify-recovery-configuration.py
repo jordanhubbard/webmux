@@ -28,6 +28,7 @@ def main():
     parser.add_argument('--binary', type=Path, required=True)
     parser.add_argument('--manifest', type=Path, required=True)
     parser.add_argument('--cli', choices=['codex', 'claude', 'cursor', 'opencode'], action='append')
+    parser.add_argument('--codex-daemon', action='store_true', help='qualify the normal shared-daemon mode instead of the direct-process profile case')
     args = parser.parse_args()
     repo = Path(__file__).resolve().parents[1]
     spec = importlib.util.spec_from_file_location('native_qualification', repo / 'scripts/qualify-recovery-native.py')
@@ -45,6 +46,7 @@ def main():
         assert Path(entry['project']).is_dir()
     fixture = Path.home() / '.local/share/webmux/recovery-qualification' / ('configuration-' + str(uuid.uuid4()))
     fixture.mkdir(mode=0o700, parents=True)
+    print(json.dumps({'fixture': str(fixture), 'codex_mode': 'shared-daemon' if args.codex_daemon else 'embedded-profile'}), flush=True)
     home = fixture / 'controller-home'
     shutil.copytree(repo / 'webmux/config.defaults', home / 'config')
     (home / 'config/auth.yaml').write_text('auth:\n  mode: none\n  users: []\n')
@@ -61,6 +63,9 @@ def main():
         for key, target in roots[cli].items():
             link = aliases / (cli + '-' + key)
             source = Path(target).resolve()
+            if cli == 'codex' and args.codex_daemon:
+                roots[cli][key] = str(target)
+                continue
             if cli == 'claude':
                 # Claude's macOS keychain identity also depends on its config
                 # root. Preserve the already-authenticated original root (or
@@ -176,7 +181,9 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
             wait_for(lambda: api(path)['shell_ready'], cli + ' shell readiness')
             ident = entry['native_session_id']
             options = {'codex': ['codex', 'resume', ident, '--sandbox', 'read-only', '--no-daemon', '--no-alt-screen'], 'claude': ['claude', '--resume', ident, '--safe-mode', '--tools', ''], 'cursor': ['cursor-agent', '--resume', ident, '--mode', 'ask', '--sandbox', 'enabled'], 'opencode': ['opencode', '--session', ident, '--pure', '--agent', 'plan']}[cli]
-            if cli == 'codex':
+            if cli == 'codex' and args.codex_daemon:
+                options.remove('--no-daemon')
+            elif cli == 'codex':
                 options.extend(['--profile', 'webmux-qualification'])
             settings = ['-u ' + key for key in unset.get(cli, set())]
             settings.extend(shlex.quote(key + '=' + value) for key, value in roots[cli].items() if key not in unset.get(cli, set()))
@@ -234,6 +241,22 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
             session_id = None
         (fixture / 'manifest.json').write_text(json.dumps({'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'receipts': receipts}, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(fixture / 'manifest.json')}), flush=True)
+    except Exception as error:
+        # Keep a failing native case reviewable before cleaning up its provider.
+        # Never infer success from a partially populated manifest or old output.
+        activity = None
+        if session_id:
+            try:
+                activity = api('/api/session-recovery/' + session_id).get('state', {}).get('activity')
+            except (OSError, ValueError, AttributeError):
+                pass
+        failure = {'passed': False, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
+                   'codex_mode': 'shared-daemon' if args.codex_daemon else 'embedded-profile',
+                   'error': str(error), 'error_type': type(error).__name__,
+                   'session_id': session_id, 'last_activity': activity, 'receipts': receipts}
+        (fixture / 'manifest.json').write_text(json.dumps(failure, indent=2) + '\n')
+        print(json.dumps({'passed': False, 'manifest': str(fixture / 'manifest.json')}), flush=True)
+        raise
     finally:
         try:
             if session_id:
