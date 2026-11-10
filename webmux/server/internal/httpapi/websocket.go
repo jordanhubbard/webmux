@@ -93,6 +93,17 @@ func rejectSocket(connection *websocket.Conn, message string) {
 	closeSocket(connection, 1008, message)
 }
 
+func inputErrorMessage(err error) string {
+	switch {
+	case errors.Is(err, session.ErrRecoveryWaiting):
+		return err.Error()
+	case errors.Is(err, session.ErrNotFound):
+		return "This terminal no longer exists. Input was not delivered."
+	default:
+		return "This terminal is not connected. Input was not delivered; reconnect to continue."
+	}
+}
+
 func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 	// Register before upgrading so shutdown also waits for in-flight handshakes.
 	s.socketMu.Lock()
@@ -163,6 +174,7 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var toggles sync.WaitGroup
+	var lastInputNotice time.Time
 	toggleSlots := make(chan struct{}, 16)
 	connection.SetReadLimit(1 << 20)
 	writerDone := make(chan struct{})
@@ -246,9 +258,16 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 			s.sessions.AcknowledgeBrowser(owner, id, message.Data)
 		case "input":
 			if message.Data != "" {
-				if err := s.sessions.Input(owner, id, message.Data); errors.Is(err, session.ErrInputBusy) {
+				err := s.sessions.InputIfConnected(owner, id, message.Data)
+				if errors.Is(err, session.ErrInputBusy) {
 					closeSocket(connection, 1013, "Terminal input is busy")
 					return
+				}
+				// Undeliverable input is reported to this viewer rather than
+				// discarded silently. Bounded so held-down keys stay quiet.
+				if err != nil && time.Since(lastInputNotice) >= time.Second {
+					lastInputNotice = time.Now()
+					viewer.Notify(session.Event{"type": "input_error", "session_id": id, "message": inputErrorMessage(err)})
 				}
 			}
 		case "resize":

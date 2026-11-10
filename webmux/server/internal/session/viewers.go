@@ -23,6 +23,9 @@ type Viewer struct {
 	reason string
 }
 
+// Notify queues an event for this viewer only.
+func (v *Viewer) Notify(event Event) { v.send(event) }
+
 func (v *Viewer) Ready() <-chan struct{} { return v.ready }
 func (v *Viewer) Done() <-chan struct{}  { return v.done }
 

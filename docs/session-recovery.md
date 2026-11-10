@@ -1364,8 +1364,50 @@ not recovery failures:
   answer oracle is unchanged.
 
 In the passing run the first post-reconstruction send was still not recorded
-and a second send succeeded. Input loss immediately after managed reattach is
-tracked as [#325](https://github.com/jordanhubbard/webmux/issues/325).
+and a second send succeeded. That loss was [#325](https://github.com/jordanhubbard/webmux/issues/325),
+explained in the next section.
+
+## Agent Deck attach input loss (#325)
+
+Every `agent-deck session attach` (1.16.34, lipgloss v1.1.0 / termenv v0.16.0)
+starts with a terminal background probe: an OSC 11 query followed by a
+cursor-position request (`CSI 6 n`). termenv then waits up to five seconds for
+a reply, reading stdin raw and discarding everything else, before the tmux
+client starts. WebMux's browser terminal deliberately suppresses all terminal
+query replies, so every Agent Deck attach stalled about five seconds and
+silently dropped keystrokes typed in that window. This was not specific to
+reboot or controller restart. The broker also reported `connected` at the
+probe's first byte.
+
+Isolation, using a private controller, Agent Deck home, tmux socket and loopback
+port:
+
+- With a raw byte logger in place of the attach command, WebMux delivered every
+  input, including one sent 78 ms after a post-restart reattach.
+- Under a bare PTY with no WebMux, Agent Deck dropped input typed before about
+  +5 s. Plain `tmux attach` delivered immediately. Answering only the
+  cursor-position request let tmux start in about 0.1 s with input delivered.
+
+**Mitigation.** For a run whose argv is an Agent Deck attach
+(`agent-deck [-p profile] session attach …` or `agent-deck remote attach …`), the
+broker answers that startup probe once, within three seconds of launch, and only
+when OSC 11 precedes the cursor request. The reply is `ESC[1;1R` with no colour
+report, so termenv treats OSC 11 as unsupported and uses its default rather
+than a background the user's terminal never reported. No other query is
+answered and the frontend's suppression is unchanged.
+
+With the mitigation, the real Agent Deck reproduction delivered every input,
+including input sent immediately after a controller restart. Before, 7 of 9
+were lost. Setting `TERM=tmux-256color` also avoids the probe, but it changes
+tmux's outer-terminal features (OSC 52 clipboard, cursor style, focus, title)
+and is not used. The upstream report is
+[asheshgoplani/agent-deck#3105](https://github.com/asheshgoplani/agent-deck/issues/3105);
+remove the mitigation once a fixed release is the minimum supported version.
+
+Separately, the terminal WebSocket no longer discards input silently when a
+session has no running process, is waiting for recovery or no longer exists.
+The viewer receives an `input_error` notice, at most once per second, that is
+shown in the terminal's input banner.
 
 This receipt qualifies one Linux guest, Agent Deck 1.16.34 and Claude 2.1.322
 with this launch policy. It does not qualify Rig across reboot, remote managed
