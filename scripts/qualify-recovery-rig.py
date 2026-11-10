@@ -32,7 +32,10 @@ def main():
     parser.add_argument('--rig-node', type=Path, required=True)
     parser.add_argument('--snapshot-plan', action='store_true', help='capture one private Rig snapshot and inspect exact-seat native launch plans without executing them')
     parser.add_argument('--native-hooks', action='store_true', help='qualify the installed Rig SessionStart relay with per-invocation Claude settings and native snapshot identity')
+    parser.add_argument('--native-resume', action='store_true', help='qualify actual private Rig-owned exact-snapshot native continuation after process loss')
     args = parser.parse_args()
+    if args.native_resume and not args.native_hooks:
+        parser.error('--native-resume requires --native-hooks and --snapshot-plan')
     if args.native_hooks and not args.snapshot_plan:
         parser.error('--native-hooks requires --snapshot-plan')
     script_hash = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
@@ -66,7 +69,7 @@ def main():
     (home / 'config/auth.yaml').write_text('auth:\n  mode: none\n  users: []\n')
     (home / 'config/app.yaml').write_text('app:\n  session_logging:\n    enabled: true\n  coordination:\n    enabled_providers: [rig]\n    default_launch_provider: webmux\n    default_view: all\n')
     socket_name = 'wm-rig-' + uuid.uuid4().hex[:12]
-    pane = 'wm-recovery-' + uuid.uuid4().hex[:12]
+    pane = 'agents-continuation@webmux-recovery' if args.native_resume else 'wm-recovery-' + uuid.uuid4().hex[:12]
     env = dict(os.environ)
     for key in list(env):
         if key.startswith(('WEBMUX_RECOVERY_', 'OPENRIG_', 'RIGGED_', 'AGENTDECK_', 'AGENT_DECK_')) or key in ['TMUX', 'TMUX_PANE', 'WEBMUX_COORDINATION_DISABLED']:
@@ -169,8 +172,21 @@ def main():
         daemon_started = True
         spec = fixture / 'rig.json'
         spec.write_text(json.dumps({'version': '0.2', 'name': 'webmux-recovery', 'summary': 'Private recovery qualification; no kernel or agent launch', 'pods': [{'id': 'agents', 'label': 'Recovery', 'members': []}], 'edges': []}))
-        created = json.loads(rig('up', str(spec), '--yes', '--json').stdout)
-        rig_id = created['rigId']
+        if args.native_resume:
+            package = fixture / 'agent'
+            package.mkdir(mode=0o700)
+            (package / 'agent.yaml').write_text(json.dumps({'name': 'webmux-recovery-native', 'version': '1.0', 'description': 'Private no-tool native recovery fixture', 'profiles': {'default': {'uses': {'skills': [], 'guidance': [], 'subagents': [], 'plugins': [], 'runtime_resources': []}}}, 'startup': {'files': []}}))
+            definition = json.loads(spec.read_text())
+            definition['pods'][0]['members'] = [{'id': 'continuation', 'agent_ref': 'local:agent', 'runtime': 'claude-code', 'profile': 'default', 'cwd': entry['project']}]
+            spec.write_text(json.dumps(definition))
+            rig('import', str(spec), '--materialize-only', '--rig-root', str(fixture), '--cwd', entry['project'])
+            catalog = json.loads(rig('ps', '--json', '--include-archived').stdout)
+            rows = catalog if isinstance(catalog, list) else catalog['entries']
+            assert len(rows) == 1
+            rig_id = rows[0]['rigId']
+        else:
+            created = json.loads(rig('up', str(spec), '--yes', '--json').stdout)
+            rig_id = created['rigId']
         registration_file = fixture / 'attached.json'
         launcher = fixture / 'native-launch.py'
         native_args = [claude, '--resume', entry['native_session_id'], '--restricted', '--strict-mcp-config', '--tools', '', '--permission-mode', 'plan']
@@ -185,13 +201,52 @@ def main():
             native_args.remove('--restricted')
             native_args += ['--settings', json.dumps(hook_settings)]
             routing = 'env.update(json.loads(r.stdout)["env"])\nenv["OPENRIG_SEAT_PROJECT_DIR"]=' + repr(entry['project']) + '\n'
-        executable(launcher, '#!' + sys.executable + '\nimport os,sys,json,subprocess\n' +
-                   'env=dict(os.environ)\nr=subprocess.run(' + repr([str(aliases / 'rig'), 'attach', '--self', '--rig', rig_id, '--pod', 'agents', '--member', 'continuation', '--runtime', 'claude-code', '--cwd', entry['project'], '--json']) + ',env=env,capture_output=True,text=True,check=True)\n' +
-                   'open(' + repr(str(registration_file)) + ',"w").write(r.stdout)\n' + routing + 'roots=' + repr(roots) + '\nfor key,value in roots.items():\n if value is None: env.pop(key,None)\n else: env[key]=value\n' +
-                   'os.chdir(' + repr(entry['project']) + ')\nos.execve(' + repr(claude) + ',' + repr(native_args) + ',env)\n')
-        mux('new-session', '-d', '-s', pane, '-x', '120', '-y', '40', shlex.join([sys.executable, str(launcher)]))
-        registration = wait(lambda: json.loads(registration_file.read_text()) if registration_file.exists() else None, 'native Rig enrollment')
-        assert registration.get('attachmentType') == 'tmux' and registration.get('sessionId')
+        if args.native_resume:
+            # The manager owns this private executable and its fixed policy.
+            # Preserve every argument it supplies; refuse a bypass/changed mode.
+            wrapper = '#!' + sys.executable + '\nimport os,sys,json\nroots=' + repr(roots) + '\nenv=dict(os.environ)\nfor key,value in roots.items():\n if value is None: env.pop(key,None)\n else: env[key]=value\na=sys.argv[1:]\n'
+            wrapper += 'if any(x in a for x in ["--dangerously-skip-permissions","--allow-dangerously-skip-permissions"]): raise SystemExit("Fixture refuses permission bypass")\n'
+            wrapper += 'if "--permission-mode" in a and a[a.index("--permission-mode")+1]!="plan": raise SystemExit("Fixture refuses changed permission mode")\n'
+            wrapper += 'if not any(x in a for x in ["--version","--help","-h"]): a+=' + repr(['--strict-mcp-config', '--tools', '', '--permission-mode', 'plan', '--settings', json.dumps(hook_settings)]) + '\n'
+            wrapper += 'with open(' + repr(str(fixture / 'native-executions.jsonl')) + ',"a") as f: f.write(json.dumps({"args":a,"roots":{key:env.get(key) for key in roots}})+chr(10))\n'
+            wrapper += 'os.execve(' + repr(claude) + ',[' + repr(claude) + ',*a],env)\n'
+            compile(wrapper, str(aliases / 'claude'), 'exec')
+            executable(aliases / 'claude', wrapper)
+        if args.native_resume:
+            rig('seat', 'set-permissions', pane, '--mode', 'plan', '--operator', 'webmux-recovery-fixture', '--reason', 'Private native managed launch with tools disabled', '--json')
+            started = json.loads(rig('up', str(spec), '--yes', '--json').stdout)
+            assert started['rigId'] == rig_id, 'Spec launch replaced the materialized Rig identity'
+            def managed_identity():
+                with urllib.request.urlopen('http://127.0.0.1:' + str(rig_port) + '/api/rigs/' + rig_id + '/sessions', timeout=10) as response:
+                    rows = json.loads(response.read())
+                candidates = [row for row in rows if row.get('sessionName') == pane and row.get('resumeType') == 'claude_id' and row.get('resumeToken')]
+                return candidates[-1] if candidates else None
+            managed = wait(managed_identity, 'native Rig-managed initial conversation identity')
+            uuid.UUID(managed['resumeToken'])
+            entry = dict(entry, native_session_id=managed['resumeToken'], marker='WM_RECOVERY_RIG_' + uuid.uuid4().hex)
+            registration = {'attachmentType': 'tmux', 'sessionId': managed['id'], 'nodeId': managed['nodeId'], 'env': {'OPENRIG_SESSION_NAME': pane}}
+            registration_file.write_text(json.dumps(registration))
+            def locate_native_state():
+                files = list((native_root / 'projects').glob('*/' + entry['native_session_id'] + '.jsonl'))
+                return files[0] if len(files) == 1 else None
+            # The first prompt creates the native transcript; use the live TTY
+            # only after native Rig has confirmed the managed CLI start.
+            mux('send-keys', '-t', pane, '-l', 'Remember this exact marker for later: ' + entry['marker'] + '. Reply with the marker. Do not use tools.')
+            mux('send-keys', '-t', pane, 'Enter')
+            native_file = wait(locate_native_state, 'fresh managed native transcript')
+            wait(lambda: any(entry['marker'] in text for text in records().values()), 'fresh managed native marker response')
+        else:
+            attach_args = [str(aliases / 'rig'), 'attach', '--self', '--rig', rig_id]
+            attach_args += ['--node', 'agents.continuation'] if args.native_resume else ['--pod', 'agents', '--member', 'continuation']
+            attach_args += ['--runtime', 'claude-code', '--cwd', entry['project'], '--json']
+            executable(launcher, '#!' + sys.executable + '\nimport os,sys,json,subprocess\n' +
+                       'env=dict(os.environ)\nr=subprocess.run(' + repr(attach_args) + ',env=env,capture_output=True,text=True,check=True)\n' +
+                       'open(' + repr(str(registration_file)) + ',"w").write(r.stdout)\n' + routing + 'roots=' + repr(roots) + '\nfor key,value in roots.items():\n if value is None: env.pop(key,None)\n else: env[key]=value\n' +
+                       'os.chdir(' + repr(entry['project']) + ')\nos.execve(' + repr(claude) + ',' + repr(native_args) + ',env)\n')
+            mux('new-session', '-d', '-s', pane, '-x', '120', '-y', '40', shlex.join([sys.executable, str(launcher)]))
+            registration = wait(lambda: json.loads(registration_file.read_text()) if registration_file.exists() else None, 'native Rig enrollment')
+            assert registration.get('attachmentType') == 'tmux' and registration.get('sessionId')
+            target = registration['env']['OPENRIG_SESSION_NAME']
         target = registration['env']['OPENRIG_SESSION_NAME']
         scope = hashlib.sha256(b'anonymous').hexdigest()[:24]
         directory = home / 'data/coordination' / scope
@@ -222,6 +277,7 @@ def main():
         assert not view().get('manager_native_session'), 'Rig enrollment ID was mistaken for a provider-native conversation'
         seats = [seat for seat in api('/api/coordination')['seats'] if seat['provider'] == 'rig' and seat['id'] == target]
         assert len(seats) == 1 and not seats[0].get('nativeSessionId'), 'Coordination inventory mislabeled the Rig enrollment ID as a native CLI conversation'
+        assert seats[0].get('managerSessionId') == registration['sessionId'], 'Coordination inventory lost the manager enrollment identity'
         receipt('initial native Rig attachment', native=before, preview=view(), registration_session_id=registration['sessionId'], native_session_id=entry['native_session_id'])
         for abrupt in (False, True):
             stop(abrupt)
@@ -285,6 +341,8 @@ def main():
         assert native() == before and not view().get('state', {}).get('manager_message')
         receipt('private Rig manager recovery after startup refusal', native=native(), daemon_pid=replacement['pid'], preview=view())
         snapshot_id = None
+        if args.native_resume:
+            rig('seat', 'set-permissions', target, '--mode', 'plan', '--operator', 'webmux-recovery-fixture', '--reason', 'Private native recovery qualification with tools disabled', '--json')
         if args.snapshot_plan:
             snapshot_output = rig('snapshot', rig_id, '--intended-seats', 'agents.continuation').stdout
             prefix = 'Snapshot created: '
@@ -296,6 +354,8 @@ def main():
             if args.native_hooks:
                 selected = [row for row in snapshot['data']['sessions'] if row['id'] == registration['sessionId']]
                 assert len(selected) == 1
+                if args.native_resume:
+                    assert snapshot['data']['nodeStartupContext'][registration['nodeId']] is not None, 'Rig did not persist its managed startup context'
                 assert selected[0]['resumeType'] == 'claude_id' and selected[0]['resumeToken'] == entry['native_session_id']
                 assert selected[0]['resumeProvenance'] == 'hook', 'native Rig callback did not establish the snapshot identity'
                 receipt('native Rig SessionStart identity retained through manager lifecycles', native=native(), native_provenance=selected[0]['resumeProvenance'], relay_sha256=relay_sha256)
@@ -333,9 +393,24 @@ def main():
                 raise AssertionError('Lost Rig process silently restarted')
             assert native()['count'] == 0
         receipt('native process loss and repeated manual fallback', native=native(), preview=view())
+        if args.native_resume:
+            result = rig('launch', rig_id, 'agents.continuation', '--snapshot-id', snapshot_id, '--json', check=False)
+            (fixture / 'native-resume-result.json').write_text(json.dumps({'returncode': result.returncode, 'stdout': result.stdout, 'stderr': result.stderr}, indent=2) + '\n')
+            if result.returncode:
+                raise RuntimeError('Native Rig did not confirm exact-snapshot resume; inspect native-resume-result.json')
+            after = wait(lambda: native() if native()['count'] == 1 else None, 'Rig-owned resumed native process')
+            assert after['pane_pid'] != before['pane_pid']
+            api('/api/sessions/' + sid + '/reconnect', {})
+            wait(connected, 'Rig-owned resumed native viewer')
+            wait(native_ready, 'resumed native history')
+            prior, nonce = records(), 'AFTER_RIG_NATIVE_RESUME_' + uuid.uuid4().hex
+            text = 'What exact marker did I ask you to remember earlier? Reply with the marker followed by ' + nonce + '. Do not use tools.'
+            subprocess.run([str(rig_node), '--input-type=module', '-e', bridge], cwd=repo / 'webmux', input=json.dumps({'url': base.replace('http:', 'ws:') + '/api/term/' + sid, 'text': text}), text=True, timeout=12, check=True)
+            answer = wait(lambda: next((value for key, value in records().items() if key not in prior and entry['marker'] in value and nonce in value), None), 'new native answer after Rig-owned snapshot resume')
+            receipt('Rig-owned native snapshot resume and conversation continuity', native=native(), nonce=nonce, new_assistant_answer=answer)
         assert (hashlib.sha256(settings.read_bytes()).hexdigest() if settings.is_file() else None) == settings_hash
         assert hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == script_hash
-        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_hooks': args.native_hooks, 'relay_sha256': relay_sha256, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': 'Private native Rig adoption, WebMux restart/SIGKILL, repeated reconnect, native conversation continuity, private Rig daemon SIGKILL/restart and lost-provider manual fallback. Not Rig native-resume action, host reboot or a remote destination.'}
+        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_hooks': args.native_hooks, 'native_resume': args.native_resume, 'relay_sha256': relay_sha256, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': 'Private native Rig adoption, WebMux restart/SIGKILL, repeated reconnect, native conversation continuity, private Rig daemon SIGKILL/restart and lost-provider manual fallback. Not Rig native-resume action, host reboot or a remote destination.'}
         (fixture / 'manifest.json').write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(fixture / 'manifest.json')}), flush=True)
     except Exception as error:
@@ -356,10 +431,19 @@ def main():
                 pass
         stop()
         mux('kill-session', '-t', '=' + pane, check=False)
-        if daemon_started:
-            stopped = rig('daemon', 'stop', check=False)
-            (fixture / 'cleanup.json').write_text(json.dumps({'native': native(), 'daemon_stop_returncode': stopped.returncode, 'daemon_stop_stdout': stopped.stdout, 'daemon_stop_stderr': stopped.stderr}, indent=2) + '\n')
-        log.close()
+        stopped = None
+        try:
+            stopped = rig('daemon', 'stop', check=False) if daemon_started else None
+        finally:
+            # All panes on this generated socket belong to this fixture, including
+            # a manager-created attention shell under a derived canonical name.
+            mux('kill-server', check=False)
+            remaining = mux('list-panes', '-a', '-F', '#{session_name} #{pane_pid}', check=False)
+            cleanup = {'remaining_panes': remaining.stdout}
+            if stopped is not None:
+                cleanup.update(daemon_stop_returncode=stopped.returncode, daemon_stop_stdout=stopped.stdout, daemon_stop_stderr=stopped.stderr)
+            (fixture / 'cleanup.json').write_text(json.dumps(cleanup, indent=2) + '\n')
+            log.close()
 
 
 if __name__ == '__main__':

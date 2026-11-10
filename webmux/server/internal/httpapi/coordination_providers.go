@@ -118,6 +118,7 @@ type coordinationSeat struct {
 	State           string `json:"state"`
 	Openable        bool   `json:"openable"`
 	Managed         bool   `json:"managed"`
+	ManagerSession  string `json:"managerSessionId,omitempty"`
 	NativeSession   string `json:"nativeSessionId,omitempty"`
 	ProviderTarget  string `json:"-"`
 	Context         string `json:"context,omitempty"`
@@ -307,8 +308,10 @@ func (p *rigProvider) Status(ctx context.Context) (coordinationProviderStatus, e
 		}
 		state := seat.LifecycleState
 		openable := seat.Openable
+		managerSession := ""
 		if agent, ok := managed[seat.CanonicalSessionName]; ok {
 			// sessionId is Rig enrollment identity, not a coding CLI conversation.
+			managerSession = agent.SessionID
 			if !agent.Connected {
 				state = "stopped"
 				openable = false
@@ -317,7 +320,7 @@ func (p *rigProvider) Status(ctx context.Context) (coordinationProviderStatus, e
 		status.Seats = append(status.Seats, coordinationSeat{
 			Provider: "rig", ID: seat.CanonicalSessionName, ProjectID: seat.RigID, ProjectName: seat.RigName,
 			Name: name, Host: host, Workspace: seat.Cwd, Runtime: seat.Runtime, State: state,
-			Openable: openable, Managed: seat.Managed, ProviderTarget: seat.CanonicalSessionName, Context: seat.PodNamespace,
+			Openable: openable, Managed: seat.Managed, ManagerSession: managerSession, ProviderTarget: seat.CanonicalSessionName, Context: seat.PodNamespace,
 		})
 	}
 	for _, rig := range raw.Rigs {

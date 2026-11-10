@@ -702,8 +702,10 @@ WebMux restart, WebMux SIGKILL and three explicit reconnects retained pane PID
 returned the earlier synthetic marker and a fresh test phrase through that
 viewer. The Rig enrollment session ID was kept separate from the Claude
 conversation ID; it was not offered as native conversation evidence. The
-coordination inventory also omits the misleading native-session field for Rig
-enrollment IDs. A real native regression failed against the preceding binary
+coordination inventory omits the misleading native-session field for Rig
+enrollment IDs and exposes their value separately as `managerSessionId` with
+a Manager session label. This preserves enrollment/re-enrollment tracking
+without presenting it as a provider-native conversation. A real native regression failed against the preceding binary
 and passed with this correction; the negative receipt is retained under
 `rig-native-9936fb26-e4bc-46db-b55f-efcc8d4fa8f7/manifest.json`. The full Go
 race suite and vet passed after the correction.
@@ -819,6 +821,39 @@ invocation. It does not yet implement a WebMux Rig native-launch action or
 qualify native resume after host reboot. Those still require exact snapshot,
 destination, native-state and execution-policy validation through the lifecycle
 owner, plus once-only launch and post-launch continuity evidence.
+
+## Manager identity and browser validation
+
+The Rig inventory preserves the enrollment identifier as `managerSessionId`;
+`nativeSessionId` remains reserved for provider-native conversation evidence.
+The UI labels these separately. The real published-CLI browser test uses the
+manager identifier to verify re-enrollment and explicitly checks that no native
+conversation is invented. Its diagnostic test requests the topology section
+before asserting its content, because the native TUI may initially show its
+startup screen.
+
+The earlier hosted Linux failure at `9f8422b` exposed the old test's reliance on
+the mislabeled field and its initial-page assumption. With the correction, all
+eight published Rig browser tests passed locally. The full Go race suite/vet,
+strict TypeScript, frontend lint/build and 337 frontend tests also passed.
+Real Claude/Rig survival, manager-loss, native-hook identity, plan-only snapshot
+and manual fallback checks passed again against the corrected inventory.
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-29eb4580-d313-4eae-a43b-a6906c2e5e52/manifest.json`.
+Executable SHA-256:
+`6447fdcec05c9fdc03393605c853875025db4124d821b26899682d622498ea12`.
+Qualification script SHA-256:
+`4c861eed273a5917349fbdba6d4b59fc22e1e15ba95698489bd48a33c1cad140`.
+
+The harness also has an explicit `--native-resume` acceptance probe, requiring
+both snapshot and native-hook modes. That probe is not qualified yet. Actual
+Rig execution refused an adopted seat without startup context; materializing
+without a first managed start did not supply that context. A subsequent spec
+launch did not reach interactive native readiness. Negative manifests retain
+these outcomes. No WebMux Rig native-resume action or successful Rig-owned
+native continuation is claimed. Cleanup now closes the entire generated
+private tmux socket, including recovery shells Rig creates under derived
+canonical names; it does not touch other sockets or the shared daemon.
 
 ## Sources
 

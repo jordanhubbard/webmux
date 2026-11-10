@@ -344,3 +344,16 @@ it.each(['rig', 'agent-deck'] as const)('opens only the selected %s launch form 
   expect(mocks.create).not.toHaveBeenCalled();
   expect(mocks.updateConfig).not.toHaveBeenCalled();
 });
+
+
+it('labels manager enrollment separately from provider-native conversations', async () => {
+  const value = emptyStatus();
+  value.projects = [{ provider: 'rig', id: 'rig-1', name: 'recovery', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1 }];
+  value.seats = [{ provider: 'rig', id: 'canonical-seat', projectId: 'rig-1', projectName: 'recovery', name: 'coder', host: 'localhost', runtime: 'claude-code', state: 'running', openable: true, managed: true, managerSessionId: 'rig-enrollment-id' }];
+  mocks.status.mockResolvedValue(value);
+  render(<CoordinationDialog onClose={() => {}} />);
+  const seat = await screen.findByRole('article', { name: 'coder in recovery' });
+  expect(within(seat).getByText('Manager session')).toBeVisible();
+  expect(within(seat).getByText('rig-enrollment-id')).toBeVisible();
+  expect(within(seat).queryByText('Native session')).toBeNull();
+});
