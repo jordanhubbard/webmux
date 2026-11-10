@@ -37,6 +37,7 @@ func nativeResumeOptions(cli string, original []string) ([]string, error) {
 			valued = key == "--mode" || key == "--sandbox"
 		case "opencode":
 			boolean = key == "--pure"
+			valued = key == "--agent"
 		}
 		if boolean && !assigned {
 			options = append(options, key)
@@ -70,6 +71,9 @@ func nativeResumeOptions(cli string, original []string) ([]string, error) {
 		}
 		if cli == "cursor" && key == "--mode" && value != "ask" && value != "plan" {
 			return nil, errors.New("the recorded Cursor mode is unsupported; restore manually")
+		}
+		if cli == "opencode" && key == "--agent" && value != "plan" {
+			return nil, errors.New("this OpenCode invocation uses a custom agent policy; restore it manually")
 		}
 		options = append(options, key, value)
 	}

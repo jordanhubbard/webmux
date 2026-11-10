@@ -73,10 +73,10 @@ project still require validation at the recovery action.
 | --- | --- | --- |
 | Durable owner-scoped activity and log references | Broker tests persist before shutdown; native VM SIGKILL/reboot retain activity and original transcript references | Remote/managed lifecycle qualification |
 | Real shell command and directory capture | Bash/Zsh PTY probes preserve exit status; real WebMux local workflow records a long-running command, arguments and directory | Retain the separate Zsh probe in the qualification harness |
-| Native conversation identity | All four installed CLIs recover a synthetic marker after process exit and exact-ID resume; real native metadata preflight accepts the original project and rejects another project | Interactive session switches and complete WebMux continuation flow |
+| Native conversation identity | All four installed CLIs recover a marker through WebMux provider loss and native recovery action; new native assistant records prove continuity; native preflight rejects another project | Interactive session switches and configuration-root continuity |
 | Safe retained history | Bounded suffix, ANSI/OSC/C1 stripping, rotation and path controls; real local recovery retains the marker in API/UI history; redraw blank rows compacted only in the preview | Additional lifecycle/transport qualification |
 | Surviving providers | Local, SSH and native mosh reconnect/restart/SIGKILL preserve provider and pane PIDs and job count; independent Linux user scopes avoid service-cgroup cleanup | Managed-provider qualification |
-| Recovery preview and continuation | Owner-scoped API and browser actions; separate replay/handoff approval; broker tests for opt-in native auto resume and uncertain-outcome exclusion | Native CLI continuation through WebMux, managed lifecycle integration |
+| Recovery preview and continuation | Owner-scoped API and browser actions; separate replay/handoff approval; broker tests for opt-in native auto resume and uncertain-outcome exclusion | Managed lifecycle integration and additional CLI lifecycle cases |
 | Reboot/restart/update/crash | Native VM orderly restart, different-binary update, SIGKILL and kernel reboot pass; SSH and native mosh separately pass controller restart/SIGKILL and remote kernel reboot; approved replay, duplicate request and three reconnects preserve counts and original transcript references | Managed/CLI end-to-end coverage and additional remote failure modes |
 
 Mosh synchronizes terminal screen state rather than an arbitrary byte stream.
@@ -246,7 +246,7 @@ in the native rollout returned the earlier synthetic marker plus a fresh
 post-recovery phrase; existing screen history was not the success oracle.
 The private receipt is
 `_build/recovery-qualification/webmux-native-15c396bf-4d2f-4253-bc1f-ceda0719dd62/codex-conversation-receipt.json`.
-This does not qualify the other interactive CLIs or session switching.
+The following probes qualify the other named CLIs; session switching remains separate.
 
 Claude Code also passed the WebMux provider-loss/native-action path. The installed
 CLI updated from 2.1.318 to 2.1.321 during qualification; the supported resume
@@ -256,6 +256,22 @@ earlier marker plus a fresh post-recovery phrase. Its receipt is beside the
 Codex receipt as `claude-conversation-receipt.json`. The HTTP test client timed
 out while waiting for preflight; the durable intent showed consumed and the
 already-started native client was inspected without submitting another action.
+
+Cursor Agent 2026.11.05-86047df passed the same WebMux continuation path with
+`--mode ask --sandbox enabled` retained. The new assistant text was verified in
+new JSON assistant blobs in the original project-scoped SQLite store, excluding
+all blob IDs present before provider loss. Its private receipt is
+`cursor-conversation-receipt.json` beside the Codex/Claude receipts. The executable
+used was the verified `cursor-agent` alias, while `agent` resolved to Grok.
+
+OpenCode 1.19.5 passed with `--pure --agent plan` retained. Its new assistant
+message was verified by native export from the same session, excluding every
+message ID present before provider loss. The receipt is
+`opencode-conversation-receipt.json` in the same fixture directory. Thus all four
+installed CLIs have actual WebMux provider-loss/native-action continuation
+evidence, in addition to the separate headless checks. Interactive conversation
+switches, configuration-root continuity and managed lifecycle recovery remain
+open acceptance work.
 
 On 2026-11-09, real two-process synthetic-marker checks passed for Codex
 0.167.0, Claude Code 2.1.318, Cursor Agent 2026.11.05-86047df and OpenCode

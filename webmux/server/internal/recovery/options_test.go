@@ -13,7 +13,7 @@ func TestResumePreservesRestrictionsWithoutReintroducingBypass(t *testing.T) {
 		{"codex", []string{"codex", "resume", "id", "--sandbox=read-only", "--no-daemon", "--profile", "work", "--dangerously-bypass-approvals-and-sandbox"}, []string{"--sandbox", "read-only", "--no-daemon", "--profile", "work"}},
 		{"claude", []string{"claude", "--safe-mode", "--tools", "", "--permission-mode", "plan", "--dangerously-skip-permissions"}, []string{"--safe-mode", "--tools", "", "--permission-mode", "plan"}},
 		{"cursor", []string{"agent", "--mode=ask", "--sandbox", "enabled", "--yolo"}, []string{"--mode", "ask", "--sandbox", "enabled"}},
-		{"opencode", []string{"opencode", "--pure", "--auto"}, []string{"--pure"}},
+		{"opencode", []string{"opencode", "--pure", "--agent", "plan", "--auto"}, []string{"--pure", "--agent", "plan"}},
 	} {
 		got, err := nativeResumeOptions(tc.cli, tc.original)
 		if err != nil || !reflect.DeepEqual(got, tc.want) {
