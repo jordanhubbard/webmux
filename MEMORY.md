@@ -48,7 +48,9 @@ than assuming an older checkpoint's green checks apply to new source.
 ## Fix-forward acceptance still open
 
 1. Finish remote managed-host/failure, native active-session/policy/profile and
-   platform qualification (including Rig across reboot). Retain clear manual
+   platform qualification. Rig across an actual reboot passed on 2026-11-10
+   (`scripts/qualify-recovery-rig-vm.py`; the guest now has Rig 0.6.14
+   9d0200f3 and Node 22.23.3 under `~/qualification`). Retain clear manual
    fallback for unqualified cases.
 2. Codex default shared-daemon mode is **manual-only** (owner decision
    2026-11-10). Upstream request: openai/codex#60625. Revisit only when that or

@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -158,5 +160,63 @@ func TestManagedStartupChecksCurrentOwnerAccessBeforeProviderDiscovery(t *testin
 	}
 	if len(data) != 0 {
 		t.Fatal("provider was queried before current access was checked", string(data))
+	}
+}
+
+func TestStartupStartsRigManagerBeforeRestoringManagedViewers(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("OpenRig supports Unix hosts only")
+	}
+	directory := t.TempDir()
+	calls := filepath.Join(directory, "calls")
+	// The daemon is down (as after a host reboot) and takes a moment to start.
+	// Restoration must not query Rig's inventory before that start completes.
+	for name, content := range map[string]string{
+		"rig": "#!/bin/sh\ncase \"$1 $2\" in\n" +
+			"  'daemon status') exit 1 ;;\n" +
+			"  'daemon start') sleep 1; echo 'daemon start' >> " + calls + "; echo 'Daemon started' ;;\n" +
+			"  *) echo \"$1\" >> " + calls + "; echo '{\"entries\":[]}' ;;\n" +
+			"esac\n",
+		"tmux": "#!/bin/sh\n[ \"$1\" = -V ] && echo 'tmux 3.4'\nexit 0\n",
+	} {
+		if err := os.WriteFile(filepath.Join(directory, name), []byte(content), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", directory+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "")
+	first, _ := fixture(t, "none")
+	setCoordinationIntegrations(t, first, "rig")
+	identity := session.RigIdentity{Provider: "rig", Target: "builder@my-team", Host: "localhost", Workspace: "/src/team", Runtime: "claude-code"}
+	if _, err := first.sessions.EnsureRigTerminal("anonymous", identity.Target, "builder", []string{"/bin/sh", "-c", "read line"}, identity); err != nil {
+		t.Fatal(err)
+	}
+	if err := first.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(calls); err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	restored, err := New(first.store, Options{Name: "restored", Logger: first.logger})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	// The first ensure is synchronous: when supervision has started, the
+	// manager start has completed. A background-only ensure returns first.
+	restored.startCoordination()
+	if data, _ := os.ReadFile(calls); strings.TrimSpace(string(data)) != "daemon start" {
+		t.Fatalf("supervision returned before starting the manager: %q", data)
+	}
+	if err := restored.RestoreSessions(); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(calls)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) < 2 || lines[0] != "daemon start" || !slices.Contains(lines[1:], "ps") {
+		t.Fatalf("managed restoration queried Rig before its manager was started: %q", lines)
 	}
 }
