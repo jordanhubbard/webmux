@@ -217,7 +217,7 @@ func hasSessionSelection(cli string, args []string) bool {
 	}
 	for _, arg := range args {
 		key, _, _ := strings.Cut(arg, "=")
-		if cli == "cursor" && (key == "ls" || key == "resume") || cli == "claude" && (key == "--from-pr" || key == "--teleport" || key == "--cloud" || key == "--environment" || key == "--fork-session" || key == "--worktree" || key == "-w" || key == "--desktop" || key == "--bg" || key == "--background") || cli == "opencode" && (key == "--fork" || key == "pr") {
+		if cli == "cursor" && (key == "ls" || key == "resume" || key == "--worktree" || key == "-w" || key == "--workspace") || cli == "claude" && (key == "--from-pr" || key == "--teleport" || key == "--cloud" || key == "--environment" || key == "--fork-session" || key == "--worktree" || key == "-w" || key == "--desktop" || key == "--bg" || key == "--background") || cli == "opencode" && (key == "--fork" || key == "pr") {
 			return true
 		}
 		if key == "--resume" || key == "--session" || key == "--session-id" || cli == "claude" && key == "-r" || cli == "opencode" && key == "-s" {

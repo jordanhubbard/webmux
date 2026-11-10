@@ -69,6 +69,14 @@ func ResumeArgv(cli, id string) ([]string, error) {
 }
 
 func SelectedNativeID(cli string, args []string) string {
+	// Forks, worktrees and remote/cloud selectors can replace a requested ID
+	// or project. Do not claim the source conversation as the active one.
+	for _, arg := range args {
+		key, _, _ := strings.Cut(arg, "=")
+		if (cli == "claude" || cli == "cursor") && (key == "--fork-session" || key == "--worktree" || key == "-w") || cli == "claude" && (key == "--cloud" || key == "--teleport" || key == "--environment" || key == "--desktop" || key == "--bg" || key == "--background") || cli == "opencode" && key == "--fork" {
+			return ""
+		}
+	}
 	for i, arg := range args {
 		key, value, assigned := strings.Cut(arg, "=")
 		selected := cli == "codex" && key == "resume" || cli == "claude" && (key == "--resume" || key == "-r" || key == "--session-id") || cli == "opencode" && (key == "--session" || key == "-s") || cli == "cursor" && key == "--resume"

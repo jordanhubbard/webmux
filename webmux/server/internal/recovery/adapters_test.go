@@ -72,6 +72,22 @@ func TestNativeControlCommandsDoNotAllocateConversations(t *testing.T) {
 	}
 }
 
+func TestForkedConversationDoesNotRetainTheSourceNativeIdentity(t *testing.T) {
+	id := "12345678-1234-4123-a123-123456789abc"
+	for _, tc := range []struct {
+		cli  string
+		args []string
+	}{
+		{"claude", []string{"--resume", id, "--fork-session"}},
+		{"cursor", []string{"--resume", id, "--worktree"}},
+		{"opencode", []string{"--session", "ses_abcdef123456", "--fork"}},
+	} {
+		if SelectedNativeID(tc.cli, tc.args) != "" || !hasSessionSelection(tc.cli, tc.args) {
+			t.Fatalf("would recover or replace source conversation: %s %v", tc.cli, tc.args)
+		}
+	}
+}
+
 func TestCursorResolutionRejectsAnUnrelatedAgentAndUsesVerifiedAlias(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Unix executable fixtures")

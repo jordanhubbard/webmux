@@ -248,6 +248,15 @@ The private receipt is
 `_build/recovery-qualification/webmux-native-15c396bf-4d2f-4253-bc1f-ceda0719dd62/codex-conversation-receipt.json`.
 This does not qualify the other interactive CLIs or session switching.
 
+Claude Code also passed the WebMux provider-loss/native-action path. The installed
+CLI updated from 2.1.318 to 2.1.321 during qualification; the supported resume
+options were verified again. The resumed invocation retained `--safe-mode` and
+`--tools ""`. A new assistant record in the original native JSONL returned the
+earlier marker plus a fresh post-recovery phrase. Its receipt is beside the
+Codex receipt as `claude-conversation-receipt.json`. The HTTP test client timed
+out while waiting for preflight; the durable intent showed consumed and the
+already-started native client was inspected without submitting another action.
+
 On 2026-11-09, real two-process synthetic-marker checks passed for Codex
 0.167.0, Claude Code 2.1.318, Cursor Agent 2026.11.05-86047df and OpenCode
 1.19.5. Each first process exited before a second process selected its exact
