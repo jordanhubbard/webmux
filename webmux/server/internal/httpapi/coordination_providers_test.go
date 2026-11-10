@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jordanhubbard/webmux/server/internal/session"
 )
 
 func fakeAgentDeck(t *testing.T) (string, string) {
@@ -261,5 +264,79 @@ func TestRealAgentDeckReadOnlyQualification(t *testing.T) {
 		if seat.ID == "" || seat.Host == "" || seat.ProjectID == "" {
 			t.Fatalf("Agent Deck returned an unqualified session identity: %+v", seat)
 		}
+	}
+}
+
+func TestManagedReattachmentResolvesExactProviderDestination(t *testing.T) {
+	s, _ := fixture(t, "none")
+	setCoordinationIntegrations(t, s, "agent-deck")
+	executable, calls := fakeAgentDeck(t)
+	t.Setenv("PATH", filepath.Dir(executable)+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "")
+	identity := session.RigIdentity{Provider: "agent-deck", Target: "agent-deck:local:local-1", Host: "localhost", Workspace: "/src/local", Runtime: "codex"}
+	launch, err := s.resolveManagedReattachment(context.Background(), "anonymous", identity)
+	if err != nil || launch.Target != "local:local-1" || !reflect.DeepEqual(launch.Argv, []string{executable, "session", "attach", "local-1"}) {
+		t.Fatal("did not resolve the original provider-qualified attachment", launch, err)
+	}
+	for _, changed := range []session.RigIdentity{
+		{Provider: "agent-deck", Target: identity.Target, Host: "other-host", Workspace: identity.Workspace},
+		{Provider: "agent-deck", Target: identity.Target, Host: identity.Host, Workspace: "/other-project"},
+		{Provider: "agent-deck", Target: identity.Target, Host: identity.Host, Workspace: identity.Workspace, Runtime: "claude"},
+		{Provider: "agent-deck", Target: "agent-deck:local:deleted", Host: identity.Host},
+		{Provider: "agent-deck", Target: "rig:local:local-1", Host: identity.Host},
+	} {
+		if _, err := s.resolveManagedReattachment(context.Background(), "anonymous", changed); err == nil {
+			t.Fatal("changed or missing managed destination was accepted", changed)
+		}
+	}
+	// Openable alone is not liveness: Agent Deck exposes stopped sessions as
+	// openable too. Reconnection must not implicitly start one of those jobs.
+	script, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(executable, []byte(strings.ReplaceAll(string(script), `"status":"waiting"`, `"status":"stopped"`)), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.resolveManagedReattachment(context.Background(), "anonymous", identity); err == nil {
+		t.Fatal("stopped provider session was treated as a surviving process")
+	}
+	setCoordinationIntegrations(t, s)
+	if _, err := s.resolveManagedReattachment(context.Background(), "anonymous", identity); err == nil {
+		t.Fatal("disabled lifecycle manager was bypassed")
+	}
+	data, err := os.ReadFile(calls)
+	if err != nil || strings.Contains(string(data), "launch") || strings.Contains(string(data), "session start") || strings.Contains(string(data), "session attach") {
+		t.Fatal("resolving an attachment launched or restarted a managed job", string(data), err)
+	}
+}
+
+func TestManagedReconnectHTTPUsesFreshAttachment(t *testing.T) {
+	executable, _ := fakeAgentDeck(t)
+	t.Setenv("PATH", filepath.Dir(executable)+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "")
+	s, handler := fixture(t, "none")
+	setCoordinationIntegrations(t, s, "agent-deck")
+	identity := session.RigIdentity{Provider: "agent-deck", Target: "agent-deck:local:local-1", Host: "localhost", Workspace: "/src/local", Runtime: "codex"}
+	value, err := s.sessions.EnsureRigTerminal("anonymous", identity.Target, "coder", []string{"/bin/sh", "-c", "read line"}, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	endpoint := "/api/sessions/" + value.ID + "/reconnect"
+	setCoordinationIntegrations(t, s)
+	requireStatus(t, request(handler, "POST", endpoint, `{}`, ""), 409)
+	unchanged, err := s.sessions.Get("anonymous", value.ID)
+	if err != nil || unchanged.ExecArgv[0] != "/bin/sh" || unchanged.Rig == nil || *unchanged.Rig != identity {
+		t.Fatal("failed resolution changed the saved viewer", unchanged, err)
+	}
+	setCoordinationIntegrations(t, s, "agent-deck")
+	response := request(handler, "POST", endpoint, `{}`, "")
+	requireStatus(t, response, 200)
+	var result session.Session
+	if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.ID != value.ID || result.Rig == nil || *result.Rig != identity || !reflect.DeepEqual(result.ExecArgv, []string{executable, "session", "attach", "local-1"}) {
+		t.Fatal("HTTP reconnect lost its managed identity or used saved arguments", result)
 	}
 }

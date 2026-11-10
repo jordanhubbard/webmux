@@ -178,6 +178,21 @@ The control path has these boundaries:
    resume their existing provider identities; saved attachment argv alone does
    not authorize launching another agent.
 
+Explicit managed reconnect now queries the enabled lifecycle manager's attach
+operation for the exact saved provider-qualified target, after confirming that
+its current inventory reports a live session. Openable stopped entries are not
+treated as surviving processes. It checks the recorded
+host, project directory and coding runtime before replacing the viewer, then
+uses newly resolved attach arguments while retaining its WebMux session ID.
+Unavailable/disabled managers, missing targets and changed destinations leave
+the existing viewer and saved evidence intact. The broker rejects managed
+reconnects that bypass this resolution. These requests never invoke a launch or
+session-start operation. Tests cover native PTY viewer replacement through the
+HTTP route, changed destinations, owner isolation and stale saved arguments.
+This is explicit reattachment coverage. Startup restoration still needs the
+same provider validation, and provider-owned native continuation after process
+loss/reboot remains open; these checks do not qualify managed lifecycle recovery.
+
 The native identity tests must also cover changing conversations inside one CLI
 process. An initially selected conversation ID is not sufficient evidence after
 the user switches sessions. Codex now rechecks its owning process's open native

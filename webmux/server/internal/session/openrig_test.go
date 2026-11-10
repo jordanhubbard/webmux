@@ -298,3 +298,50 @@ func TestManagedRigPlacementPreservesSeatAndRejectsOccupiedCell(t *testing.T) {
 		t.Fatal("viewer move relaunched a seat")
 	}
 }
+
+func TestManagedReconnectRequiresFreshOwnerBoundAttachment(t *testing.T) {
+	b, _, _ := fixture(t)
+	var requests []terminal.LaunchRequest
+	var processes []*fakeProcess
+	b.launch = func(request terminal.LaunchRequest, _ string) (process, error) {
+		requests = append(requests, request)
+		p := fake()
+		processes = append(processes, p)
+		return p, nil
+	}
+	identity := RigIdentity{Provider: "agent-deck", Target: "agent-deck:remote:seat", Host: "remote", Workspace: "/project"}
+	original := []string{"/old/agent-deck", "remote", "attach", "remote", "seat"}
+	value, err := b.EnsureRigTerminal("owner", identity.Target, "coder", original, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fresh := []string{"/current/agent-deck", "remote", "attach", "remote", "seat"}
+	if _, err := b.Reconnect("owner", value.ID, ""); err == nil {
+		t.Fatal("managed reconnect reused stale saved arguments")
+	}
+	stale := identity
+	stale.Host = "different-host"
+	if _, err := b.ReconnectManaged("owner", value.ID, stale, fresh); !errors.Is(err, ErrRecoveryConflict) {
+		t.Fatal("stale destination was accepted", err)
+	}
+	if _, err := b.ReconnectManaged("other", value.ID, identity, fresh); !errors.Is(err, ErrNotFound) {
+		t.Fatal("foreign owner could reconnect the managed viewer", err)
+	}
+	if len(requests) != 1 {
+		t.Fatal("rejected requests created another attachment")
+	}
+	select {
+	case <-processes[0].done:
+		t.Fatal("rejected request disconnected the original viewer")
+	default:
+	}
+	result, err := b.ReconnectManaged("owner", value.ID, identity, fresh)
+	if err != nil || len(requests) != 2 || !slices.Equal(requests[1].ExecArgv, fresh) || result.Rig == nil || *result.Rig != identity || result.ID != value.ID {
+		t.Fatal("fresh attachment lost the original viewer identity", result, requests, err)
+	}
+	fresh[0] = "caller mutation"
+	result, _ = b.Get("owner", value.ID)
+	if result.ExecArgv[0] != "/current/agent-deck" {
+		t.Fatal("saved attach arguments alias the caller")
+	}
+}

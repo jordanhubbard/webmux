@@ -422,6 +422,19 @@ func (b *Broker) fallbackLocked(e *entry, password, initial string) (bool, error
 }
 
 func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
+	return b.reconnect(owner, id, password, nil, nil)
+}
+
+// ReconnectManaged accepts attach arguments freshly resolved by the lifecycle
+// owner. The saved identity binds that resolution to this existing viewer.
+func (b *Broker) ReconnectManaged(owner, id string, expected RigIdentity, argv []string) (Session, error) {
+	if len(argv) == 0 {
+		return Session{}, invalid("The coordinator did not return an attachment command")
+	}
+	return b.reconnect(owner, id, "", &expected, argv)
+}
+
+func (b *Broker) reconnect(owner, id, password string, expected *RigIdentity, argv []string) (Session, error) {
 	b.agentMu.Lock()
 	defer b.agentMu.Unlock()
 	b.mu.Lock()
@@ -433,6 +446,14 @@ func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
 	if err != nil {
 		b.mu.Unlock()
 		return Session{}, err
+	}
+	if expected != nil && (e.value.Rig == nil || *e.value.Rig != *expected) {
+		b.mu.Unlock()
+		return Session{}, ErrRecoveryConflict
+	}
+	if e.value.Rig != nil && expected == nil {
+		b.mu.Unlock()
+		return Session{}, invalid("The lifecycle manager must revalidate this session before reconnecting")
 	}
 	if e.value.Agent() {
 		if _, err := b.agents.Access(e.value.AgentID); err != nil {
@@ -463,6 +484,12 @@ func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
 	}
 	if current != e || e.run != nil {
 		return e.value.clone(), nil
+	}
+	if expected != nil {
+		if e.value.Rig == nil || *e.value.Rig != *expected {
+			return Session{}, ErrRecoveryConflict
+		}
+		e.value.ExecArgv = append([]string(nil), argv...)
 	}
 	if e.value.Agent() {
 		if _, err := b.agents.Access(e.value.AgentID); err != nil {

@@ -1,8 +1,12 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/agent"
 	"github.com/jordanhubbard/webmux/server/internal/config"
@@ -147,7 +151,7 @@ func (s *Server) reconnectSession(w http.ResponseWriter, r *http.Request, owner 
 		s.sessionError(w, err, "Failed to reconnect session")
 		return
 	}
-	if (value.Companion == "openrig" || value.OpenRigView != "") && !s.openRigAccess(w, owner) {
+	if (value.Companion == "openrig" || value.OpenRigView != "" || value.Rig != nil) && !s.openRigAccess(w, owner) {
 		return
 	}
 	var input struct {
@@ -156,13 +160,66 @@ func (s *Server) reconnectSession(w http.ResponseWriter, r *http.Request, owner 
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	s.handoffs.End(owner, r.PathValue("id"))
-	value, err = s.sessions.Reconnect(owner, r.PathValue("id"), input.Password)
+	if value.Rig != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+		defer cancel()
+		launch, resolveErr := s.resolveManagedReattachment(ctx, owner, *value.Rig)
+		if resolveErr != nil {
+			writeError(w, 409, resolveErr.Error())
+			return
+		}
+		s.handoffs.End(owner, value.ID)
+		value, err = s.sessions.ReconnectManaged(owner, value.ID, *value.Rig, launch.Argv)
+	} else {
+		s.handoffs.End(owner, value.ID)
+		value, err = s.sessions.Reconnect(owner, value.ID, input.Password)
+	}
 	if err != nil {
 		s.sessionError(w, err, "Failed to reconnect session")
 		return
 	}
 	writeJSON(w, 200, value)
+}
+
+func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, saved session.RigIdentity) (coordinationLaunch, error) {
+	id := saved.Provider
+	if id == "" {
+		id = "rig"
+	}
+	provider := s.coordinationProvider(owner, id)
+	if provider == nil {
+		return coordinationLaunch{}, fmt.Errorf("The %s lifecycle manager is unavailable or disabled. Retained logs are preserved; reconnect through that manager.", id)
+	}
+	target := saved.Target
+	if id != "rig" {
+		prefix := id + ":"
+		if !strings.HasPrefix(target, prefix) {
+			return coordinationLaunch{}, fmt.Errorf("The saved managed-session destination is invalid. Retained logs are preserved.")
+		}
+		target = strings.TrimPrefix(target, prefix)
+	}
+	status, err := provider.Status(ctx)
+	if err != nil {
+		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager could not verify the surviving session: %w. Retained logs are preserved.", err)
+	}
+	live := false
+	for _, seat := range status.Seats {
+		if seat.ID == target {
+			live = seat.Openable && (seat.State == "running" || seat.State == "waiting" || seat.State == "idle")
+			break
+		}
+	}
+	if !live {
+		return coordinationLaunch{}, fmt.Errorf("The original managed process is not confirmed running. Resume it through its lifecycle manager; retained logs are preserved.")
+	}
+	launch, err := provider.Attach(ctx, target)
+	if err != nil {
+		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager could not reattach the original session: %w. Retained logs are preserved; recover it through that manager.", err)
+	}
+	if launch.Provider != id || launch.Target != target || saved.Host != "" && saved.Host != launch.Host || saved.Workspace != "" && saved.Workspace != launch.Workspace || saved.Runtime != "" && saved.Runtime != launch.Runtime {
+		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager's session destination changed. Review its host, project and coding CLI before opening a new viewer; retained logs are preserved.")
+	}
+	return launch, nil
 }
 func (s *Server) deleteSession(w http.ResponseWriter, r *http.Request, owner string) {
 	if err := s.sessions.Delete(owner, r.PathValue("id")); err != nil {
