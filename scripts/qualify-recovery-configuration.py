@@ -18,6 +18,8 @@ import shutil
 import socket
 import sqlite3
 import subprocess
+import struct
+import sys
 import time
 import urllib.request
 import uuid
@@ -30,6 +32,7 @@ def main():
     parser.add_argument('--cli', choices=['codex', 'claude', 'cursor', 'opencode'], action='append')
     parser.add_argument('--codex-daemon', action='store_true', help='qualify the normal shared-daemon mode instead of the direct-process profile case')
     args = parser.parse_args()
+    qualifier_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     repo = Path(__file__).resolve().parents[1]
     spec = importlib.util.spec_from_file_location('native_qualification', repo / 'scripts/qualify-recovery-native.py')
     native = importlib.util.module_from_spec(spec)
@@ -170,6 +173,23 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                     result[message['info']['id']] = ''.join(part.get('text', '') for part in message.get('parts', []) if part.get('type') == 'text')
         return result
 
+    def daemon_identity():
+        control = Path(roots['codex']['CODEX_HOME']) / 'app-server-control/app-server-control.sock'
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as peer:
+            peer.settimeout(3)
+            peer.connect(str(control))
+            if sys.platform == 'darwin':
+                pid = struct.unpack('i', peer.getsockopt(0, 2, 4))[0]
+            elif sys.platform.startswith('linux'):
+                pid, uid, _ = struct.unpack('3i', peer.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
+                assert uid == os.getuid()
+            else:
+                raise RuntimeError('This shared-daemon qualification requires native Unix peer PID support')
+        assert pid > 1
+        started = subprocess.check_output(['ps', '-p', str(pid), '-o', 'lstart='], text=True).strip()
+        assert started
+        return {'pid': pid, 'started_at': started, 'socket': str(control)}
+
     try:
         wait_for(lambda: api('/api/health')['status'] == 'ok', 'private controller')
         api('/api/config', {'app': {'session_logging': {'enabled': True}}}, 'PUT')
@@ -180,6 +200,7 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
             path = '/api/session-recovery/' + session_id
             wait_for(lambda: api(path)['shell_ready'], cli + ' shell readiness')
             ident = entry['native_session_id']
+            daemon_before = daemon_identity() if cli == 'codex' and args.codex_daemon else None
             options = {'codex': ['codex', 'resume', ident, '--sandbox', 'read-only', '--no-daemon', '--no-alt-screen'], 'claude': ['claude', '--resume', ident, '--safe-mode', '--tools', ''], 'cursor': ['cursor-agent', '--resume', ident, '--mode', 'ask', '--sandbox', 'enabled'], 'opencode': ['opencode', '--session', ident, '--pure', '--agent', 'plan']}[cli]
             if cli == 'codex' and args.codex_daemon:
                 options.remove('--no-daemon')
@@ -206,7 +227,15 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 return activity if activity.get('running') and activity.get('native_session_id') == ident and (cli == 'opencode' or activity.get('native_state_file')) else None
 
             before = wait_for(running, cli + ' native identity')
-            expected_evidence = 'process-state' if cli == 'codex' else 'launch-selector'
+            expected_evidence = 'process-state' if cli == 'codex' and not args.codex_daemon else 'launch-selector'
+            if daemon_before:
+                # Let both the fast first observation and the later owned-FD
+                # observation run. Do not qualify from the initial selector alone.
+                time.sleep(6)
+                before = running()
+                assert before
+                assert daemon_identity() == daemon_before
+
             assert before.get('native_evidence') == expected_evidence, 'initial native identity provenance is missing or incorrectly promoted'
             assert all(key not in before['configuration']['roots'] if key in unset.get(cli, set()) else before['configuration']['roots'].get(key) == value for key, value in roots[cli].items())
             prior = records(cli, entry, before)
@@ -234,15 +263,23 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 return next((text for key, text in records(cli, entry, after).items() if key not in prior and entry['marker'] in text and nonce in text), None)
 
             answer = wait_for(new_answer, cli + ' new native assistant response')
+            daemon_after = daemon_identity() if daemon_before else None
+            if daemon_before:
+                assert daemon_after == daemon_before, 'shared daemon identity changed during continuation'
+                time.sleep(6)
+                after = running()
+                assert after and after.get('native_evidence') == 'launch-selector', 'shared-daemon case was incorrectly promoted to observed process state'
+
             assert api(path, action)['outcome'] == 'consumed'
-            receipt = {'cli': cli, 'passed': True, 'session_id': session_id, 'native_session_id': ident, 'before': before, 'after': after, 'nonce': nonce, 'new_assistant_answer': answer, 'controller_ambient_roots': {key: environment[key] for key in roots[cli]}, 'native_hooks_left_untrusted': sorted(hook_choices)}
+            receipt = {'cli': cli, 'passed': True, 'session_id': session_id, 'native_session_id': ident, 'before': before, 'after': after, 'nonce': nonce, 'new_assistant_answer': answer, 'controller_ambient_roots': {key: environment[key] for key in roots[cli]}, 'native_hooks_left_untrusted': sorted(hook_choices), 'shared_daemon_before': daemon_before, 'shared_daemon_after': daemon_after, 'scope': 'Explicit selected conversation continuation; interactive switches are not verified' if daemon_before else 'Original root and profile continuation'}
             receipts.append(receipt)
             (fixture / (cli + '-receipt.json')).write_text(json.dumps(receipt, indent=2) + '\n')
             print(json.dumps({'cli': cli, 'passed': True, 'fixture': str(fixture)}), flush=True)
             api('/api/sessions/' + session_id, method='DELETE')
             subprocess.run(['tmux', 'kill-session', '-t', target], capture_output=True)
             session_id = None
-        (fixture / 'manifest.json').write_text(json.dumps({'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'receipts': receipts}, indent=2) + '\n')
+        assert hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == qualifier_sha256, 'qualification source changed during the native run'
+        (fixture / 'manifest.json').write_text(json.dumps({'passed': True, 'qualifier_sha256': qualifier_sha256, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'receipts': receipts}, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(fixture / 'manifest.json')}), flush=True)
     except Exception as error:
         # Keep a failing native case reviewable before cleaning up its provider.

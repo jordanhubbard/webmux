@@ -387,23 +387,33 @@ python3 scripts/qualify-recovery-configuration.py \
 These checks establish the tested root/profile cases, not interactive session
 switches or every possible CLI flag/custom settings payload. Unsupported custom
 settings continue to require explicit manual restoration.
-The qualified Codex invocation used `--no-daemon`; default shared-daemon
-ownership needs separate qualification before complete lifecycle acceptance.
+The four-CLI root/profile comparison used `--no-daemon` for Codex. A separate
+shared-daemon explicit-selection check now passes below; observing the active
+conversation after in-process switches remains open acceptance work.
 
 The configuration harness also accepts `--cli codex --codex-daemon` to exercise
-normal daemon ownership without the private profile or `--no-daemon`. A failed
+explicit native continuation with the normal daemon, without the private
+profile or `--no-daemon`. A failed
 case writes a manifest with `passed: false`, the executable hash, last activity
 and any completed receipts before fixture cleanup. A successful embedded case
 must not stand in for this separate daemon case.
 
-On 2026-11-09, the default Codex 0.167.0 daemon case displayed the synthetic
-conversation but did not yield an owning-process rollout file, so WebMux cleared
-the native ID. Three observation experiments did not qualify a replacement:
+An earlier 2026-11-09 build displayed the synthetic conversation in the default
+Codex 0.167.0 daemon case but cleared its explicitly selected native ID when the
+TUI had no owned rollout file. That data-loss behavior is now corrected: a
+verified native file for the exact selector/project is retained as a manual
+choice. Later owned-process observations replace it; loss of observed ownership
+removes automatic confidence while retaining the last known reference. This
+does not establish which conversation is active after an unobserved switch.
+Four observation experiments did not qualify a replacement:
 
 - Routing through `--remote` rejected the original read-only sandbox override.
   That changes invocation semantics and is not used by the recovery adapter.
 - Native TUI recording reported event kinds, including a conversation switch,
   without the selected conversation ID in the tested records.
+- Native SQLite logs distinguish processes with a PID and process UUID, but the
+  tested TUI records did not report its current conversation after resume and
+  `/new`. Process-scoped log presence does not establish native identity.
 - Injecting SessionStart hooks through `-c` produced Codex's warning that command
   configuration overrides require embedded mode. This does not establish
   shared-daemon observation. Only the fixture's reviewed metadata hook was
@@ -414,6 +424,27 @@ session IDs and transcript paths in hook input. A viable integration still needs
 to prove native lifecycle delivery, terminal ownership and conversation switches
 while retaining the user's launch mode and hook policy. No unqualified observer
 or permission workaround is installed by these experiments.
+
+The corrected explicit-selection path passed real shared-daemon continuation
+with Codex 0.167.0. WebMux retained the selected conversation and its native
+state file after provider loss, accepted an explicit native action, and received
+a fresh assistant record containing the earlier marker plus a new test phrase.
+The native invocation retained `--sandbox read-only` and `--no-alt-screen`,
+without adding `--no-daemon` or changing to remote mode. Both observations stayed
+`launch-selector`; automatic recovery remained ineligible. The daemon's native
+Unix peer PID `23567` and start time `2026-11-09 10:03:13` stayed unchanged.
+Controller roots deliberately differed from the CLI's original roots.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/configuration-789c40d0-f922-480a-a61b-f5b87206a6ef/manifest.json`.
+Executable SHA-256:
+`215a449d59da42f09c4cbbb1390ec9a93438f69e7a6d311721019430fd25d1af`.
+Qualification script SHA-256:
+`42d36577e0cd9a57eefd5b07a842be72b18bc1b6ba73b4ccff7f8fc53672b846`.
+The harness verifies its source stays unchanged and compares the daemon's native
+peer PID/start identity before and after continuation. This qualifies explicit
+recovery of the selected conversation, not automatic recovery of whichever
+conversation is current after a switch.
 
 On 2026-11-09, real two-process synthetic-marker checks passed for Codex
 0.167.0, Claude Code 2.1.318, Cursor Agent 2026.11.05-86047df and OpenCode

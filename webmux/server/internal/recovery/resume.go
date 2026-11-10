@@ -144,9 +144,17 @@ func prepareNativeResumeContext(ctx context.Context, request NativeResume) ([]st
 }
 
 func findCodexState(id, cwd, recorded string) bool {
+	return codexStateFile(id, cwd, recorded) != ""
+}
+
+func codexStateFile(id, cwd, recorded string) string {
+	if !ValidNativeID("codex", id) {
+		return ""
+	}
 	if recorded != "" {
 		if found, ok := codexMeta(recorded, cwd); ok && found == id {
-			return true
+			absolute, _ := filepath.Abs(recorded)
+			return absolute
 		}
 	}
 	home := os.Getenv("CODEX_HOME")
@@ -154,7 +162,7 @@ func findCodexState(id, cwd, recorded string) bool {
 		userHome, _ := os.UserHomeDir()
 		home = filepath.Join(userHome, ".codex")
 	}
-	matched := false
+	matched := ""
 	visited := 0
 	_ = filepath.WalkDir(filepath.Join(home, "sessions"), func(path string, entry os.DirEntry, err error) error {
 		visited++
@@ -172,7 +180,7 @@ func findCodexState(id, cwd, recorded string) bool {
 		}
 		if !entry.IsDir() && strings.Contains(entry.Name(), id) {
 			if found, ok := codexMeta(path, cwd); ok && found == id {
-				matched = true
+				matched, _ = filepath.Abs(path)
 				return filepath.SkipAll
 			}
 		}

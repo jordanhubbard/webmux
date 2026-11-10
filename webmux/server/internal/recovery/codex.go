@@ -131,3 +131,15 @@ func codexSessionForProcess(pid int, cwd string) (string, string) {
 	}
 	return id, path
 }
+
+// Absence of an owned rollout FD is not evidence that a previously selected
+// conversation disappeared. A shared daemon owns those files instead of the
+// TUI. Keep the last reliable reference for an explicit choice, while removing
+// current-process confidence as soon as ownership can no longer be observed.
+func observeCodexProcess(event *Event, id, file string) {
+	if id != "" {
+		event.SessionID, event.StateFile, event.NativeEvidence = id, file, "process-state"
+	} else if event.NativeEvidence == "process-state" {
+		event.NativeEvidence = "unavailable"
+	}
+}
