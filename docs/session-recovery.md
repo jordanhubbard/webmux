@@ -5,6 +5,14 @@ This is the implementation and qualification record for
 reliability priority. The feature is in progress. Reopening a window, displaying
 history, or launching a new coding CLI does not prove recovered agent state.
 
+On 2026-11-10 the owner requested integration of the current checkpoint through
+[#322](https://github.com/jordanhubbard/webmux/pull/322) and fix-forward work in a
+Claude session. This supersedes the earlier decision to hold the PR as a draft
+until full qualification. #318 remains open. See the current
+[roadmap](roadmap.md) and [repository handoff](../MEMORY.md); historical receipts
+below retain their original scope and must not be read as completing the remaining
+native managed-reboot or remote acceptance work.
+
 ## Recovery evidence
 
 Each terminal owns a persisted recovery descriptor alongside its saved launch
@@ -1301,7 +1309,10 @@ Python compilation and whitespace checks. **This native reboot mode is not yet
 qualified:** the guest's separate browser login is pending, so there is no native
 reboot receipt. The already-passing shell-job reboot receipt above must not be
 used as proof of this mode. The Mac's existing Claude login was independently
-confirmed; its credentials are not copied into the guest.
+confirmed; its credentials are not copied into the guest. For the owner's
+fix-forward handoff, the private login process and callback forward were stopped
+and the guest shut down with its disk/evidence retained. The guest's own login
+must be rechecked or completed when qualification resumes.
 
 The guest has 4 GiB of RAM for the native CLI. Its standard
 [Claude authentication flow](https://code.claude.com/docs/en/authentication)
