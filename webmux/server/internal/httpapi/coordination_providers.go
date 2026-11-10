@@ -307,9 +307,8 @@ func (p *rigProvider) Status(ctx context.Context) (coordinationProviderStatus, e
 		}
 		state := seat.LifecycleState
 		openable := seat.Openable
-		nativeSession := ""
 		if agent, ok := managed[seat.CanonicalSessionName]; ok {
-			nativeSession = agent.SessionID
+			// sessionId is Rig enrollment identity, not a coding CLI conversation.
 			if !agent.Connected {
 				state = "stopped"
 				openable = false
@@ -318,7 +317,7 @@ func (p *rigProvider) Status(ctx context.Context) (coordinationProviderStatus, e
 		status.Seats = append(status.Seats, coordinationSeat{
 			Provider: "rig", ID: seat.CanonicalSessionName, ProjectID: seat.RigID, ProjectName: seat.RigName,
 			Name: name, Host: host, Workspace: seat.Cwd, Runtime: seat.Runtime, State: state,
-			Openable: openable, Managed: seat.Managed, NativeSession: nativeSession, ProviderTarget: seat.CanonicalSessionName, Context: seat.PodNamespace,
+			Openable: openable, Managed: seat.Managed, ProviderTarget: seat.CanonicalSessionName, Context: seat.PodNamespace,
 		})
 	}
 	for _, rig := range raw.Rigs {

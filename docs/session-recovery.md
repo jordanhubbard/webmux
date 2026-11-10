@@ -698,15 +698,20 @@ setting, remote host or native Windows execution.
 On 2026-11-09, a private Rig 0.6.14 (`9d0200f3`) daemon adopted one real
 Claude Code 2.1.322 conversation through its native tmux registration. Orderly
 WebMux restart, WebMux SIGKILL and three explicit reconnects retained pane PID
-`45137`, one native pane and the existing WebMux viewer. A new assistant record
+`72800`, one native pane and the existing WebMux viewer. A new assistant record
 returned the earlier synthetic marker and a fresh test phrase through that
 viewer. The Rig enrollment session ID was kept separate from the Claude
-conversation ID; it was not offered as native conversation evidence.
+conversation ID; it was not offered as native conversation evidence. The
+coordination inventory also omits the misleading native-session field for Rig
+enrollment IDs. A real native regression failed against the preceding binary
+and passed with this correction; the negative receipt is retained under
+`rig-native-9936fb26-e4bc-46db-b55f-efcc8d4fa8f7/manifest.json`. The full Go
+race suite and vet passed after the correction.
 
 The fixture also killed its private Rig daemon after verifying the PID against
 its own loopback health endpoint, private database path and instance record.
 WebMux's existing coordinator supervisor started a replacement daemon
-(`44915` to `47419`) and reattached the same native pane. A second case killed
+(`72563` to `74899`) and reattached the same native pane. A second case killed
 the daemon while a fixture guard refused `rig daemon start`. WebMux started
 with retained history and a managed-unavailable explanation, and reconnect
 returned HTTP 409 without replacing the surviving native process. Removing
@@ -728,11 +733,11 @@ Cleanup verified zero fixture panes and a successful private-daemon stop.
 The shared Rig daemon and primary WebMux service are untouched.
 
 Private receipt:
-`~/.local/share/webmux/recovery-qualification/rig-native-380743c0-74ea-4b0f-97f8-96b5fb470a92/manifest.json`.
+`~/.local/share/webmux/recovery-qualification/rig-native-c926121b-f6c5-45a4-86e0-f0396d6bf253/manifest.json`.
 Executable SHA-256:
-`5a020592f8d943230a51f87ca3f350046dfd6556f903ccb54e90ae83f967b9d5`.
+`040244bd4a5dd6a68acb2a684d751870c17ebbfc585ffa99c4486ab0260244f4`.
 Qualification script SHA-256:
-`256ab147aee1a5c48625d60632c6034d7f18387b022478842ab2e76a5fd19dd7`.
+`634ce0672cbf59960e2f0f92a85b6a887c1d5f6e22100c78bde242c6b4c32e3c`.
 Earlier negative fixtures exposed an incorrect target-prefix assertion and a
 test assumption that the existing supervisor would leave the manager stopped.
 Their manifests and cleanup receipts remain retained; neither is a completed

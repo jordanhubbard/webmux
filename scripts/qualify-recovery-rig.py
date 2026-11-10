@@ -204,6 +204,8 @@ def main():
         wait(lambda: entry['marker'] in view()['history'], 'retained native history')
         assert view()['manager_target'] == target and view()['lifecycle_owner'] == 'rig'
         assert not view().get('manager_native_session'), 'Rig enrollment ID was mistaken for a provider-native conversation'
+        seats = [seat for seat in api('/api/coordination')['seats'] if seat['provider'] == 'rig' and seat['id'] == target]
+        assert len(seats) == 1 and not seats[0].get('nativeSessionId'), 'Coordination inventory mislabeled the Rig enrollment ID as a native CLI conversation'
         receipt('initial native Rig attachment', native=before, preview=view(), registration_session_id=registration['sessionId'], native_session_id=entry['native_session_id'])
         for abrupt in (False, True):
             stop(abrupt)
