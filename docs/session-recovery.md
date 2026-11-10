@@ -1198,6 +1198,60 @@ reboot or remote native recovery. The private launch gate has a deadline and is
 released during fixture cleanup; installed services and other managers are not
 controlled by this test.
 
+## Managed shell ownership across an actual host reboot
+
+`scripts/qualify-recovery-managed-vm.py` qualifies the real Agent Deck 1.16.34
+manager with a synthetic Python shell job inside the disposable ARM64 QEMU
+guest. It does not use a mocked manager or a coding CLI. Native conversational
+continuation remains a separate requirement; this run proves manager ownership,
+survival, retained history and safe fallback when the native process is gone.
+
+The final 2026-11-10 run kept pane PID 2384 and execution count one through
+orderly controller restart and SIGKILL. An actual guest reboot changed boot ID
+from `2b583521-8778-47a2-874c-b1cd04f67910` to
+`1f0eff88-92eb-4e51-969e-e3de1e6ce2a9`. WebMux then retained the original
+manager target, project, lifecycle owner and all pre-reboot transcript references.
+It reported `managed-unavailable`, with pending recovery and shell replay,
+managed resume and ordinary CLI resume all disabled. Three reconnects left the
+native pane absent and execution count at one. The history still contained the
+original synthetic marker.
+
+The harness verifies the private QEMU process, QMP state, pinned SSH fixture
+account and guest marker before controlling services or rebooting. Each phase
+verifies the private controller's actual executable through `/proc`. It disables
+the guest's previous test service while using its port, then restores that
+service and verifies it is active. Cleanup checks native pane absence before
+accepting an already-stopped manager session. The final receipt has no cleanup
+errors. Neither the workstation nor an installed shared service is controlled.
+
+Receipt:
+`_build/recovery-vm/qualification-441375b00aa1/managed-lifecycle-a9edfed7e14848f5891d94404bd05d5c.json`.
+WebMux executable SHA-256:
+`a0671b14624134fefa52f944e95460423f68b07ebc0f44e06441f35f7a4c076e`.
+Qualification script SHA-256:
+`f06e8d3653fb869efb9c96a586dd939b2a30cfe39716ab57534f2a7b88370909`.
+The Linux ARM64 Agent Deck executable SHA-256 is
+`bd65d34251f6f4ddf2816a58292c7c2711da29ef083974c7176148368adc60be`;
+its release archive matched the published v1.16.34 checksum before installation
+in the fixture. Python compilation and the complete native harness passed.
+
+Reproduce with the running, retained disposable guest and its private
+`qualification/agent-deck` executable:
+
+```bash
+python3 scripts/qualify-recovery-managed-vm.py \
+  --vm-root /absolute/path/to/disposable-fixture \
+  --binary /absolute/path/to/linux-arm64-webmux
+```
+
+The first attempt retained a failed receipt because both guest controllers
+started after reboot and competed for the port. A later attempt completed every
+recovery phase but flagged cleanup's expected manager-not-running response.
+Those receipts remain negative evidence; the final harness corrects both fixture
+errors. This does not establish coding CLI conversation continuity across a
+managed host reboot, Rig host reboot, remote managed recovery or Windows native
+execution. Those acceptance gaps remain open.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
