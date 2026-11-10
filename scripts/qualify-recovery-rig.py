@@ -510,6 +510,23 @@ def main():
                 assert len(paths) == 1
                 kernel_cwd = paths[0]
             assert Path(kernel_cwd).samefile(entry['project'])
+            # Observe only this fixture-owned native PID. Retain argv privately
+            # to design a kernel-backed production check without reading other
+            # users' process arguments or treating the pane shell as the CLI.
+            native_process = subprocess.check_output(['ps', '-p', str(resumed['pid']), '-o', 'pid=,ppid=,lstart=,comm=,args='], text=True, timeout=5)
+            (fixture / 'native-kernel-process.txt').write_text(native_process)
+            (fixture / 'native-kernel-process.txt').chmod(0o600)
+            receipt('fixture-owned native kernel identity', native_pid=resumed['pid'], native_id_in_kernel_argv=entry['native_session_id'] in native_process)
+            process_proof = subprocess.run([str(rig_node), str(runners[0]), 'recovery-process', str(runners[0].parent)], input=json.dumps(captured_identity), env=env, capture_output=True, text=True, timeout=35)
+            (fixture / 'webmux-native-process-proof.json').write_text(json.dumps({'returncode': process_proof.returncode, 'stdout': process_proof.stdout, 'stderr': process_proof.stderr}, indent=2) + '\n')
+            assert process_proof.returncode == 0, 'WebMux could not independently prove the resumed native process'
+            proof = json.loads(process_proof.stdout)
+            assert proof['native_pid'] == resumed['pid'] and proof['pane_pid'] == after['pane_pid']
+            assert proof['native_session_id'] == entry['native_session_id'] and proof['permission_mode'] == 'plan'
+            assert proof['started_at'] and len(proof['executable_hash']) == 64 and len(proof['settings_hash']) == 64
+            receipt('WebMux native process, executable, ID and kernel cwd proof', proof=proof)
+
+
             for line in native_file.read_bytes().splitlines():
                 try:
                     row = json.loads(line)

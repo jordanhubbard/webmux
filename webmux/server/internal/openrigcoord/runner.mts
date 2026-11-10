@@ -110,6 +110,10 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const { planRigRecovery } = await import('./rig-recovery.mts');
     const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
     console.log(JSON.stringify(await planRigRecovery(run, identity)));
+  } else if (action === 'recovery-process') {
+    const { observeRigNativeProcess } = await import('./rig-recovery.mts');
+    const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
+    console.log(JSON.stringify(observeRigNativeProcess(run, identity)));
   } else if (action === 'create') {
     const input = JSON.parse(fs.readFileSync(0, 'utf8')) as Input;
     const mode = input.mode ?? 'new';

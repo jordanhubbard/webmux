@@ -210,3 +210,105 @@ export async function planRigRecovery(run: RigRecoveryRun, saved: RigRecoveryIde
   }
   return { snapshot_id: snapshotId, rig_id: rigId, node_id: nodeId, logical_id: logicalId, target: context.target, native_session_id: nativeId, plan_only: true };
 }
+
+function executableDigest(file: string): string {
+  const fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK);
+  try {
+    const before = fs.fstatSync(fd);
+    const limit = 512 * 1024 * 1024;
+    if (!before.isFile() || before.size > limit) throw new Error('The native executable cannot be verified.');
+    const hash = crypto.createHash('sha256'), block = Buffer.alloc(64 * 1024);
+    let offset = 0;
+    for (;;) {
+      const n = fs.readSync(fd, block, 0, Math.min(block.length, limit - offset + 1), offset);
+      if (!n) break;
+      offset += n;
+      if (offset > limit) throw new Error('The native executable exceeds its limit.');
+      hash.update(block.subarray(0, n));
+    }
+    const after = fs.fstatSync(fd);
+    if (after.size !== before.size || after.mtimeMs !== before.mtimeMs || offset !== before.size) throw new Error('The native executable changed during verification.');
+    return hash.digest('hex');
+  } finally { fs.closeSync(fd); }
+}
+
+export interface RigNativeProcess {
+  pane_pid: number; native_pid: number; started_at: string;
+  native_session_id?: string; permission_mode: string;
+  executable_hash: string; settings_hash: string;
+}
+
+// A tmux pane may be a shell wrapper. Only its native Claude descendant,
+// independently joined to the OS executable and kernel cwd, is process proof.
+// Read arguments only for this owned pane's bounded descendant set.
+export function observeRigNativeProcess(run: RigRecoveryRun, saved: RigRecoveryIdentity, allowInitial = false, platform = process.platform): RigNativeProcess {
+  if (!['darwin', 'linux'].includes(platform) || saved.host !== 'localhost' || saved.runtime !== 'claude-code' || saved.provider && saved.provider !== 'rig') throw new Error('Native Rig process proof is unsupported.');
+  const target = text(saved.target, 256), cwd = text(saved.workspace);
+  if (!/^[a-zA-Z0-9_@-]+$/.test(target) || !path.isAbsolute(cwd)) throw new Error('Native Rig process destination is invalid.');
+  const pane = Number(run('tmux', ['display-message', '-p', '-t', '=' + target + ':', '#{pane_pid}']).trim());
+  if (!Number.isSafeInteger(pane) || pane < 1) throw new Error('The original Rig pane is unavailable.');
+  const table = run('ps', ['-axo', 'pid=,ppid=,uid=']);
+  const ownerUID = process.getuid?.();
+  if (ownerUID === undefined) throw new Error('The native process owner cannot be verified.');
+  const owners = new Map<number, number>();
+  if (table.length > maximum) throw new Error('Native process inventory exceeds its limit.');
+  const parents = new Map<number, number>();
+  for (const line of table.split('\n')) {
+    if (!line.trim()) continue;
+    const row = /^\s*(\d+)\s+(\d+)\s+(-?\d+)\s*$/.exec(line);
+    if (!row) throw new Error('Native process inventory cannot be verified.');
+    const pid = Number(row[1]), parent = Number(row[2]);
+    if (!Number.isSafeInteger(pid) || !Number.isSafeInteger(parent) || parents.has(pid)) throw new Error('Native process inventory is ambiguous.');
+    parents.set(pid, parent); owners.set(pid, Number(row[3]));
+  }
+  if (!parents.has(pane)) throw new Error('The original Rig pane process disappeared.');
+  const descendants = new Set([pane]);
+  for (let pass = 0; pass < 64; pass++) {
+    const before = descendants.size;
+    for (const [pid, parent] of parents) if (descendants.has(parent)) descendants.add(pid);
+    if (descendants.size > 64) throw new Error('The native Rig process tree is too large to verify.');
+    if (before === descendants.size) break;
+    if (pass === 63) throw new Error('The native Rig process tree is too deep to verify.');
+  }
+  if ([...descendants].some(pid => owners.get(pid) !== ownerUID)) throw new Error('The native process tree crosses an execution-account boundary.');
+  const selected = [...descendants].join(',');
+  const commands = run('ps', ['-ww', '-p', selected, '-o', 'pid=,ppid=,args=']);
+  if (commands.length > maximum) throw new Error('Native process arguments exceed their limit.');
+  const candidates: { pid: number; parent: number; command: string; executable: string; id?: string; mode: string; settings: ObjectValue }[] = [];
+  for (const line of commands.split('\n')) {
+    if (!line.trim()) continue;
+    const row = /^\s*(\d+)\s+(\d+)\s+(.+)$/.exec(line);
+    if (!row || !descendants.has(Number(row[1])) || parents.get(Number(row[1])) !== Number(row[2])) throw new Error('The owned process tree changed.');
+    // This exact published Rig grammar leaves settings last. Unknown argv,
+    // whitespace-bearing executable paths and additional CLIs remain manual.
+    const native = /^(\/\S*\/claude) --permission-mode (plan|acceptEdits)(?: --resume ([a-f0-9-]{36}))? --name ([a-zA-Z0-9_.:@-]+) --settings (\{.*\})$/.exec(row[3]);
+    if (!native) {
+      if (/^\/\S*\/claude(?:\s|$)/.test(row[3])) throw new Error('The exact native Rig conversation process is missing or ambiguous.');
+      continue;
+    }
+    const id = native[3];
+    if (native[4] !== target || (id ? !uuid.test(id) || id !== saved.native_session_id : !allowInitial) || !allowInitial && native[2] !== 'plan') throw new Error('The exact native Rig conversation process is missing or ambiguous.');
+    const settings = object(JSON.parse(native[5]));
+    candidates.push({ pid: Number(row[1]), parent: Number(row[2]), command: row[3], executable: native[1], id, mode: native[2], settings });
+  }
+  if (candidates.length !== 1) throw new Error('The exact native Rig conversation process is missing or ambiguous.');
+  const native = candidates[0], pid = String(native.pid);
+  const started = text(run('ps', ['-p', pid, '-o', 'lstart=']).trim(), 128);
+  const executable = fs.realpathSync(native.executable);
+  const executableHash = executableDigest(executable);
+  if (platform === 'linux') {
+    if (fs.realpathSync(`/proc/${pid}/exe`) !== executable || !sameDirectory(`/proc/${pid}/cwd`, cwd)) throw new Error('The native executable or kernel project changed.');
+  } else {
+    const executableFiles = run('lsof', ['-a', '-p', pid, '-d', 'txt', '-Fn']).split('\n').filter(line => line.startsWith('n')).map(line => line.slice(1));
+    if (!executableFiles.some(file => { try { return fs.realpathSync(file) === executable; } catch { return false; } })) throw new Error('The native OS executable cannot be verified.');
+    const directories = run('lsof', ['-a', '-p', pid, '-d', 'cwd', '-Fn']).split('\n').filter(line => line.startsWith('n')).map(line => line.slice(1));
+    if (directories.length !== 1 || !sameDirectory(directories[0], cwd)) throw new Error('The native kernel project changed.');
+  }
+  // Verify the OS executable before invoking its version command; a forged
+  // argv[0] must never cause an unrelated path to be executed.
+  if (run(native.executable, ['--version']).trim() !== '2.1.322 (Claude Code)') throw new Error('This native Claude version is not qualified for Rig recovery.');
+  const current = /^\s*(\d+)\s+(\d+)\s+(.+)$/.exec(run('ps', ['-ww', '-p', pid, '-o', 'pid=,ppid=,args=']).trim());
+  if (!current || Number(current[1]) !== native.pid || Number(current[2]) !== native.parent || current[3] !== native.command) throw new Error('The native process arguments changed during verification.');
+  if (run('ps', ['-p', pid, '-o', 'lstart=']).trim() !== started || Number(run('tmux', ['display-message', '-p', '-t', '=' + target + ':', '#{pane_pid}']).trim()) !== pane) throw new Error('The native process changed during verification.');
+  return { pane_pid: pane, native_pid: native.pid, started_at: started, native_session_id: native.id, permission_mode: native.mode, executable_hash: executableHash, settings_hash: digest(native.settings) };
+}

@@ -970,6 +970,52 @@ at `0e60a5c` came from Unix-only absolute paths in the broker test fixture;
 `372a4fe` uses platform-native temporary paths without weakening production
 validation. Exact-head Windows CI remains the required proof of that fix.
 
+## Independent Rig native-process verification
+
+The embedded helper can now independently verify the resumed Claude process
+beneath an already-owned Rig pane. It reads a bounded PID/parent/UID census,
+then reads arguments only for that pane's descendants under the WebMux execution
+account. A second Claude conversation or an unrecognized Claude invocation
+makes the observation ambiguous. The qualified grammar is the published Rig
+launch form with plan mode, the exact native resume ID, canonical seat name and
+inline settings last; unsupported forms remain manual.
+
+The verifier joins the native executable path to the OS process, checks Claude
+`2.1.322`, hashes the executable and settings without retaining their contents,
+and compares the kernel cwd to the original physical project. It samples the
+native arguments and start time again and confirms the same pane PID before
+returning a bounded metadata receipt. The Linux implementation uses `/proc`;
+the real native evidence below qualifies the macOS `ps`/`lsof` path. No Linux
+native-process qualification or WebMux Rig launch is established here.
+
+The private Rig fixture independently matched the verifier's native PID to the
+fixture-owned launch PID after exact-snapshot continuation, verified its original
+conversation/plan mode and received another remembered-marker answer. The full
+controller and manager lifecycle, checkpoint preflight and one-resume checks
+passed again. Earlier failed receipts exposed tmux's need for an exact session
+prefix ending in a colon and macOS's signed `nobody` UID; both were reproduced
+and corrected without treating an unknown process as absent.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-3872e0c7-5f3b-4e14-9ef5-f5549d39be28/manifest.json`.
+Executable SHA-256:
+`fac5ec119a028a75727db452743bbc88b04b78540e8578cb6cfb8ea1735a2662`.
+Qualification script SHA-256:
+`666de45839b6f2afdc611097436ab3cc6fc8c213a1e41ccbcfdb4bbe38d0b1f9`.
+
+Strict TypeScript, the standalone build, HTTP/coordinator Go tests and the
+focused process/metadata tests passed. Rejection cases include foreign
+conversations, competing Claude processes, changed cwd/executable/version,
+cross-account descendants, changed arguments and a changed pane. The Windows
+Go fixture fix passed hosted CI at `ad38816`; its remaining tooling failure was
+a POSIX mode-bit assertion. That assertion now runs on macOS/Linux, with all
+other metadata tests retained on Windows. Native Rig remains unsupported on
+Windows.
+
+This is the independent post-launch verification seam. The WebMux managed
+action still needs durable original process/boot identity, survivor-first checks
+and once-only execution around the qualified manager launch/reconciliation flow.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

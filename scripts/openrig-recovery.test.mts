@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:http';
-import { observeRigRecovery, planRigRecovery, type RigRecoveryIdentity } from '../webmux/server/internal/openrigcoord/rig-recovery.mts';
+import { observeRigRecovery, planRigRecovery, observeRigNativeProcess, type RigRecoveryIdentity } from '../webmux/server/internal/openrigcoord/rig-recovery.mts';
 
 async function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-rig-recovery-'));
@@ -70,7 +70,9 @@ test('native Rig capture binds exact snapshot and record, reuses unchanged state
     assert.deepEqual(repeated, first); assert.equal(f.created(), 1);
     assert.equal(f.calls.some(call => call.includes('sinceBytes')), false);
     const cache = fs.readdirSync(f.directory).find(name => name.endsWith('.json'))!;
-    assert.equal(fs.statSync(path.join(f.directory, cache)).mode & 0o777, 0o600);
+    // Native Rig is supported on macOS/Linux; Windows does not implement
+    // POSIX owner-only mode bits. Keep its metadata/rejection checks active.
+    if (process.platform !== 'win32') assert.equal(fs.statSync(path.join(f.directory, cache)).mode & 0o777, 0o600);
     fs.mkdirSync(path.join(f.cwd, '.claude'));
     fs.writeFileSync(path.join(f.cwd, '.claude/settings.local.json'), '{"permissions":{"deny":["Bash"]}}');
     const changed = await observeRigRecovery(f.run, f.identity, f.directory);
@@ -147,5 +149,63 @@ test('Rig recovery preflight refuses changed snapshot, selected node, native fil
     fs.writeFileSync(f.file, fs.readFileSync(f.file + '.old'));
     await assert.rejects(planRigRecovery(f.run, saved), /state or Rig recovery policy changed/);
     assert.equal(f.created(), 1);
+  } finally { await f.close(); }
+});
+
+test('Rig native process proof joins only the owned descendant to executable, native ID, cwd and stable process', { skip: process.platform === 'win32' }, async () => {
+  const f = await fixture();
+  try {
+    const executable = path.join(f.root, 'claude');
+    fs.writeFileSync(executable, 'synthetic native binary'); fs.chmodSync(executable, 0o700);
+    const settings = { permissions: { deny: ['*'] }, privateValue: 'DO_NOT_EXPORT_PROCESS_SETTINGS' };
+    const identity = { ...f.identity, native_session_id: '08bbfe0e-d31c-4cb6-9d18-546eea56a08c' };
+    let nativeId = identity.native_session_id, kernelCwd = f.cwd, binary = executable, duplicate = false, changed = false, foreignUID = false, argvChanged = false, version = '2.1.322 (Claude Code)';
+    let paneReads = 0, versionReads = 0;
+    const calls: { command: string; args: string[] }[] = [];
+    const run = (command: string, args: string[]) => {
+      calls.push({ command, args });
+      if (command === 'tmux') { assert.equal(args[3], '=' + identity.target + ':'); paneReads++; return changed && paneReads > 1 ? '200' : '100'; }
+      if (command === executable) { versionReads++; assert.deepEqual(args, ['--version']); return version; }
+      if (command === 'lsof') return 'p101\nn' + (args.includes('txt') ? binary : kernelCwd);
+      assert.equal(command, 'ps');
+      if (args[0] === '-axo') {
+        assert.equal(args[1], 'pid=,ppid=,uid=');
+        const uid = String(process.getuid!());
+        return '100 1 ' + uid + '\n101 100 ' + (foreignUID ? String(Number(uid) + 1) : uid) + '\n300 1 -2' + (duplicate ? '\n102 100 ' + uid : '');
+      }
+      if (args.at(-1) === 'lstart=') return 'Mon Nov  9 22:21:02 2026';
+      assert.equal(args[0], '-ww');
+      assert.equal(args.includes('300'), false);
+      const native = executable + ' --permission-mode plan --resume ' + nativeId + ' --name ' + identity.target + ' --settings ' + JSON.stringify(settings);
+      if (args[2] === '101') return '101 100 ' + (argvChanged ? native.replace(nativeId, '18bbfe0e-d31c-4cb6-9d18-546eea56a08c') : native);
+      return '100 1 /bin/bash\n101 100 ' + native + (duplicate ? '\n102 100 ' + native.replace(nativeId, '18bbfe0e-d31c-4cb6-9d18-546eea56a08c') : '');
+    };
+    const proof = observeRigNativeProcess(run, identity, false, 'darwin');
+    assert.equal(proof.native_pid, 101); assert.equal(proof.pane_pid, 100);
+    assert.equal(proof.native_session_id, identity.native_session_id); assert.equal(proof.permission_mode, 'plan');
+    assert.match(proof.executable_hash, /^[a-f0-9]{64}$/); assert.match(proof.settings_hash, /^[a-f0-9]{64}$/);
+    assert.equal(JSON.stringify(proof).includes(settings.privateValue), false);
+    assert.equal(calls.some(call => call.args.includes('args=') && call.args.includes('-axo')), false);
+    foreignUID = true;
+    const argumentsRead = calls.filter(call => call.args.includes('pid=,ppid=,args=')).length;
+    assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /execution-account boundary/);
+    assert.equal(calls.filter(call => call.args.includes('pid=,ppid=,args=')).length, argumentsRead);
+    foreignUID = false;
+    nativeId = '18bbfe0e-d31c-4cb6-9d18-546eea56a08c';
+    assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /missing or ambiguous/);
+    nativeId = identity.native_session_id; kernelCwd = f.directory;
+    assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /kernel project changed/);
+    kernelCwd = f.cwd; binary = f.file;
+    const beforeSpoof = versionReads;
+    assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /OS executable/);
+    assert.equal(versionReads, beforeSpoof, 'A forged argv executable was invoked before OS identity verification');
+    binary = executable; duplicate = true;
+    assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /missing or ambiguous/);
+    duplicate = false; version = 'future';
+    assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /version/);
+    version = '2.1.322 (Claude Code)'; argvChanged = true;
+    assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /arguments changed during verification/);
+    argvChanged = false; changed = true; paneReads = 0;
+    assert.throws(() => observeRigNativeProcess(run, identity, false, 'darwin'), /changed during verification/);
   } finally { await f.close(); }
 });
