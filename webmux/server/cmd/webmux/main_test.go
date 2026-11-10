@@ -54,3 +54,17 @@ func TestExplicitAssetOverrideAndInvalidDirectory(t *testing.T) {
 		t.Fatal("invalid explicit asset directory accepted")
 	}
 }
+
+func TestPrivateClaudeHookModePrecedesCompanionAliasDispatch(t *testing.T) {
+	previous := os.Args
+	t.Cleanup(func() { os.Args = previous })
+	t.Setenv("WEBMUX_BROWSER_ORIGINAL_PATH", t.TempDir())
+	for _, name := range []string{"claude", "webmux-open", "webmux"} {
+		// No hook arguments means a silent metadata no-op; it must never reach the
+		// actual coding CLI, browser opener, or server command-line parser.
+		os.Args = []string{name, "--recovery-claude-hook"}
+		if err := run(); err != nil {
+			t.Fatal("private helper mode was routed by alias", name, err)
+		}
+	}
+}

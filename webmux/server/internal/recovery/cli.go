@@ -114,7 +114,8 @@ func RunCLI(name string, args []string) error {
 	if cli == "" {
 		return errors.New("unknown coding CLI")
 	}
-	if os.Getenv("WEBMUX_RECOVERY_INSTANCE") == "" || commandOnly(cli, args) {
+	instance := os.Getenv("WEBMUX_RECOVERY_INSTANCE")
+	if instance == "" || os.Getenv("WEBMUX_RECOVERY_NATIVE_PARENT") == instance || commandOnly(cli, args) {
 		return executeCLI(binary, args)
 	}
 	// Other products also install an executable named agent. Never inject
@@ -163,12 +164,28 @@ func RunCLI(name string, args []string) error {
 	if id != "" {
 		event.NativeEvidence = "launch-selector"
 	}
+	var observations <-chan claudeSessionObservation
+	var claudeHookTranscript string
+	var observer *claudeObserver
+	if cli == "claude" {
+		observer = newClaudeObserver(version, args)
+		if observer != nil {
+			defer observer.close()
+			launchArgs = append([]string{"--settings", observer.settings}, launchArgs...)
+			observations = observer.observations
+		}
+	}
 	cmd := exec.Command(binary, launchArgs...)
 	cmd.Dir = cwd
-	cmd.Env = cmd.Environ()
+	// Commands launched by a coding CLI do not own its terminal's foreground
+	// recovery identity. A new provider's distinct instance remains independent.
+	cmd.Env = append(cmd.Environ(), "WEBMUX_RECOVERY_NATIVE_PARENT="+instance)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Start(); err != nil {
 		return err
+	}
+	if observer != nil {
+		observer.start(cmd.Process.Pid)
 	}
 	completed := make(chan error, 1)
 	go func() { completed <- cmd.Wait() }()
@@ -184,18 +201,35 @@ func RunCLI(name string, args []string) error {
 	for {
 		select {
 		case err := <-completed:
-			emit()
-			_ = Emit(Event{Kind: "complete", Instance: event.Instance, Cwd: cwd}, os.Stdout)
-			return err
+			// Native hooks can finish just before the CLI exits. Preserve any
+			// already authenticated observations queued before completion.
+			for {
+				select {
+				case observation := <-observations:
+					observeClaudeSession(&event, observation, cwd)
+				default:
+					emit()
+					_ = Emit(Event{Kind: "complete", Instance: event.Instance, Cwd: cwd}, os.Stdout)
+					return err
+				}
+			}
 		case sig := <-signals:
 			// The terminal sends Ctrl-C to the complete foreground process group.
 			// Forwarding it again turns a single interrupt into a double interrupt.
 			if sig != os.Interrupt || !term.IsTerminal(int(os.Stdin.Fd())) {
 				_ = cmd.Process.Signal(sig)
 			}
+		case observation := <-observations:
+			observeClaudeSession(&event, observation, cwd)
+			claudeHookTranscript = observation.Transcript
+			emit()
 		case <-ticker.C:
 			if cli == "claude" && event.SessionID != "" {
-				event.StateFile = claudeStateFile(event.SessionID, cwd)
+				if event.NativeEvidence == "native-hook" {
+					event.StateFile = claudeObservedStateFile(event.SessionID, cwd, claudeHookTranscript)
+				} else {
+					event.StateFile = claudeStateFile(event.SessionID, cwd)
+				}
 			}
 			if cli == "cursor" && event.SessionID != "" {
 				event.StateFile = cursorStateFile(event.SessionID, cwd)

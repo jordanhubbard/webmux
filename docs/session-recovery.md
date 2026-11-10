@@ -47,7 +47,9 @@ bootstrap never replaces newer host observations or an existing recording policy
   validate its `session_meta` project and ID, and select `codex resume <id>`.
   Concurrent candidates remain ambiguous; timestamps do not select a winner.
 - Claude Code: preserve an explicitly selected ID, or allocate an exact native
-  session ID using the installed CLI's supported `--session-id` option.
+  session ID using the installed CLI's supported `--session-id` option. Qualified
+  native SessionStart hooks additionally observe in-process clear and resume
+  changes, as described below.
 - Cursor Agent: preserve an explicit ID, or use `agent create-chat` and select
   that native ID when starting the interactive client.
   Recovery prefers the `cursor-agent` alias and verifies native help before
@@ -80,16 +82,20 @@ require manual restoration and are excluded from automatic native recovery.
 A new server discards an inherited parent-terminal cache pin before creating its
 own providers. OpenCode metadata probes use `--pure` so they do not execute a
 second copy of user plugins. Canceled preflight closes its private native server.
-Claude and Cursor state-file references locate the recorded selector; observing
-later interactive session switches remains separate work.
+Cursor state-file references locate the recorded selector; its later interactive
+switches remain unverified. Claude has a separately qualified, scoped observer
+for same-project conversation changes. Cross-project changes require manual
+validation of invocation roots and policy.
 
 Native identity provenance is saved in signed host observations and durable
 controller activity. A `launch-selector` identifies the conversation requested
 at startup; it does not establish the current conversation after an interactive
 switch. `process-state` identifies an ID observed in the running process's
 native state. The recovery preview explains this distinction. Automatic native
-resume requires process-state evidence; launch selectors and older records
-without provenance remain available only for an explicit exact-session choice.
+resume requires process-state evidence; launch selectors, native hook
+observations and older records without provenance remain available only for an
+explicit exact-session choice. Native hooks can stop reporting when settings
+change, so their observations do not acquire automatic execution confidence.
 The other adapters still need active-conversation observers before their
 automatic recovery can be qualified.
 
@@ -477,6 +483,64 @@ regressions: successful help can be written to stderr, and changing a subprocess
 directory must also update its `PWD` environment. Identity commands continue to
 read stdout alone; successful help includes both streams. Metadata output is
 bounded during capture. No project-ownership validation was relaxed.
+
+## Scoped Claude conversation observations
+
+The macOS/Linux implementation for Claude Code 2.1.322 adds only a
+SessionStart hook through per-invocation settings. It observes native startup,
+clear and resume events without writing user/project settings or altering
+permission rules. Hook merging and policy restrictions remain Claude's own
+[settings and hook behavior](https://code.claude.com/docs/en/hooks). Existing
+`--settings` or `--setting-sources` invocations, bare/safe mode, safe-mode
+environment overrides, explicit `--agent` invocations and unqualified versions keep the original
+launch path and manual evidence. Native managed-only or disabled-hook policy is
+never overridden.
+
+The callback sends bounded native JSON to a private per-launch Unix channel.
+The receiver authenticates its token and OS peer process ancestry, rejects
+subagent callbacks and unknown event sources, and validates the declared native
+state file against the recorded project. Hook stdout stays empty; terminal
+history and instructions are not sent through this channel. Nested coding CLI
+commands cannot replace the foreground CLI's recovery identity. Logging pause
+suppresses persistence while retaining prior evidence. Normal completion drains
+already authenticated callbacks before saving the final activity.
+
+The preview labels this provenance `native-hook` and explains why it remains
+manual recovery evidence: hook settings can stop subsequent observations.
+Cross-project changes remove current-identity confidence and preserve the last
+known conversation for an explicit choice. This does not qualify automatic
+Claude recovery, native Linux/Windows execution, remote hooks or every hook
+configuration. Linux and Windows builds are checked separately from native
+conversation proof.
+
+The native macOS check passed `/clear` into a new conversation, `/resume` back to the
+original, and `/resume` into the new conversation again. After actual tmux
+provider loss, the structured native recovery action selected the new ID rather
+than the original launch selector. A fresh assistant record returned the new
+conversation's synthetic marker plus a fresh phrase. The recovered observation
+matched the new waiting worker's instance, restrictions and original roots.
+Duplicate recovery returned the consumed receipt. Native permission-settings
+checksums stayed unchanged; the fixture provider was removed afterward.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/configuration-cbeb3e1c-c037-492a-be3f-a9f93c85ab30/manifest.json`.
+Recovered native ID: `c91820c5-636f-4ccc-9731-b9a80087da40`.
+Executable SHA-256:
+`1a391c73434bc9f2c8f19b9326e03f97d406a03aa7c499a4044558d20bf31259`.
+Qualification script SHA-256:
+`9598ecc81084e1f7daef6f5fdf07c6b8de44bb98a318d37a6dd19119569f8aff`.
+
+```bash
+python3 scripts/qualify-recovery-configuration.py \
+  --binary /absolute/path/to/standalone-webmux \
+  --manifest /absolute/path/to/synthetic-native-manifest.json \
+  --cli claude --claude-hooks
+```
+
+Earlier negative fixtures remain evidence: one exposed alias dispatch into the
+coding CLI instead of the private helper; another raced the wrapper's initial
+selector before the authenticated callback. The alias regression and the
+new-worker/provenance wait conditions now cover these failures.
 
 ## Explicit managed native recovery
 

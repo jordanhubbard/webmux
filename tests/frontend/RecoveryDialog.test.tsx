@@ -93,6 +93,7 @@ describe('native conversation evidence', () => {
   it.each([
     ['launch-selector', /Selected at launch.*automatic resume is unavailable/],
     ['process-state', /Observed in the running CLI process/],
+    ['native-hook', /Reported by the coding CLI.*automatic resume is unavailable/],
     [undefined, /current conversation could not be verified/],
   ] as const)('explains %s evidence without treating a recorded selector as current state', async (source, explanation) => {
     const value = waitingEvidence();

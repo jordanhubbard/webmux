@@ -31,6 +31,7 @@ def main():
     parser.add_argument('--manifest', type=Path, required=True)
     parser.add_argument('--cli', choices=['codex', 'claude', 'cursor', 'opencode'], action='append')
     parser.add_argument('--codex-daemon', action='store_true', help='qualify the normal shared-daemon mode instead of the direct-process profile case')
+    parser.add_argument('--claude-hooks', action='store_true', help='qualify scoped native SessionStart observations through clear/resume and recovery')
     args = parser.parse_args()
     qualifier_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     repo = Path(__file__).resolve().parents[1]
@@ -61,6 +62,8 @@ def main():
         'cursor': {'CURSOR_CONFIG_DIR': os.environ.get('CURSOR_CONFIG_DIR') or str(Path(os.environ['XDG_CONFIG_HOME']) / 'cursor' if os.environ.get('XDG_CONFIG_HOME') else Path.home() / '.cursor')},
         'opencode': {key: os.environ.get(key) or str(Path.home() / suffix) for key, suffix in [('XDG_CONFIG_HOME', '.config'), ('XDG_DATA_HOME', '.local/share'), ('XDG_STATE_HOME', '.local/state'), ('XDG_CACHE_HOME', '.cache')]},
     }
+    claude_settings_path = Path(roots['claude']['CLAUDE_CONFIG_DIR']) / 'settings.json'
+    claude_settings_before = hashlib.sha256(claude_settings_path.read_bytes()).hexdigest() if claude_settings_path.is_file() else None
     unset = {'claude': {'CLAUDE_CONFIG_DIR'} if not os.environ.get('CLAUDE_CONFIG_DIR') else set()}
     for cli in selected:
         for key, target in roots[cli].items():
@@ -144,6 +147,8 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 path = Path(activity['native_state_file'])
             else:
                 paths = list((Path(roots[cli]['CLAUDE_CONFIG_DIR']) / 'projects').glob('*/' + ident + '.jsonl'))
+                if not paths:
+                    return result
                 assert len(paths) == 1
                 path = paths[0]
             for index, line in enumerate(path.read_bytes().splitlines()):
@@ -206,6 +211,8 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 options.remove('--no-daemon')
             elif cli == 'codex':
                 options.extend(['--profile', 'webmux-qualification'])
+            if cli == 'claude' and args.claude_hooks:
+                options = ['claude', '--resume', ident, '--restricted', '--strict-mcp-config', '--tools', '', '--permission-mode', 'plan']
             settings = ['-u ' + key for key in unset.get(cli, set())]
             settings.extend(shlex.quote(key + '=' + value) for key, value in roots[cli].items() if key not in unset.get(cli, set()))
             command = 'cd ' + shlex.quote(entry['project']) + ' && env ' + ' '.join(settings) + ' ' + shlex.join(options)
@@ -215,6 +222,17 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
             hook_choices = set()
 
             def running():
+                if cli == 'claude' and args.claude_hooks:
+                    pane = subprocess.run(['tmux', 'capture-pane', '-pt', target, '-S', '-200'], capture_output=True, text=True)
+                    if 'Make auto mode your default permission mode?' in pane.stdout:
+                        if 'No, keep bypass permissions' not in pane.stdout:
+                            raise RuntimeError('Unknown native permission migration dialog; no choice submitted')
+                        if '❯ Yes' in pane.stdout or '❯ 1.' in pane.stdout:
+                            subprocess.run(['tmux', 'send-keys', '-t', target, 'Down', 'Enter'], check=True)
+                        elif '❯ No' in pane.stdout or '❯ 2.' in pane.stdout:
+                            subprocess.run(['tmux', 'send-keys', '-t', target, 'Enter'], check=True)
+                        else:
+                            raise RuntimeError('Native migration selection is unknown; no choice submitted')
                 if cli == 'codex' and phase not in hook_choices:
                     pane = subprocess.run(['tmux', 'capture-pane', '-pt', target], capture_output=True, text=True)
                     if 'Hooks need review' in pane.stdout and 'Continue without trusting' in pane.stdout:
@@ -224,10 +242,53 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                         subprocess.run(['tmux', 'send-keys', '-t', target, 'Down', 'Down', 'Enter'], check=True)
                         hook_choices.add(phase)
                 activity = api(path).get('state', {}).get('activity', {})
+                if cli == 'claude' and args.claude_hooks and activity.get('native_evidence') != 'native-hook':
+                    return None
                 return activity if activity.get('running') and activity.get('native_session_id') == ident and (cli == 'opencode' or activity.get('native_state_file')) else None
 
+            switches = []
             before = wait_for(running, cli + ' native identity')
+            if cli == 'claude' and args.claude_hooks:
+                def native_observed():
+                    activity = running()
+                    return activity if activity and activity.get('native_evidence') == 'native-hook' else None
+                before = wait_for(native_observed, 'Claude authenticated native callback')
+                def native_history(marker):
+                    running()  # Handle only the fixture's known native migration dialog.
+                    pane = subprocess.run(['tmux', 'capture-pane', '-pt', target, '-S', '-200'], capture_output=True, text=True)
+                    return marker in pane.stdout
+                wait_for(lambda: native_history(entry['marker']), 'Claude original conversation ready')
+                send('/clear')
+                def changed_conversation():
+                    activity = api(path).get('state', {}).get('activity', {})
+                    current = activity.get('native_session_id')
+                    return activity if current and current != ident and activity.get('native_evidence') == 'native-hook' else None
+                cleared = wait_for(changed_conversation, 'Claude clear native callback')
+                switched_id = str(uuid.UUID(cleared['native_session_id']))
+                switched_marker = 'WM_RECOVERY_SWITCH_' + uuid.uuid4().hex
+                switched_entry = dict(entry, native_session_id=switched_id, marker=switched_marker)
+                send('Remember this exact marker for later in this conversation: ' + switched_marker + '. Reply only with this marker. Do not use tools.')
+                def switched_answer():
+                    return next((text for text in records(cli, switched_entry, cleared).values() if switched_marker in text), None)
+                wait_for(switched_answer, 'Claude fresh cleared-conversation response')
+                switches.append({'action': 'clear', 'native_session_id': switched_id, 'observation': cleared})
+                (fixture / 'claude-switches.json').write_text(json.dumps(switches, indent=2) + '\n')
+                send('/resume ' + ident)
+                wait_for(lambda: running() if running() and running().get('native_evidence') == 'native-hook' else None, 'Claude in-process original resume callback')
+                wait_for(lambda: native_history(entry['marker']), 'Claude original history after in-process resume')
+                switches.append({'action': 'resume-original', 'native_session_id': ident, 'observation': running()})
+                (fixture / 'claude-switches.json').write_text(json.dumps(switches, indent=2) + '\n')
+                send('/resume ' + switched_id)
+                entry = switched_entry
+                ident = switched_id
+                before = wait_for(running, 'Claude in-process switched conversation callback')
+                wait_for(lambda: native_history(switched_marker), 'Claude switched history after in-process resume')
+                switches.append({'action': 'resume-switched', 'native_session_id': switched_id, 'observation': before})
+                (fixture / 'claude-switches.json').write_text(json.dumps(switches, indent=2) + '\n')
+
             expected_evidence = 'process-state' if cli == 'codex' and not args.codex_daemon else 'launch-selector'
+            if cli == 'claude' and args.claude_hooks:
+                expected_evidence = 'native-hook'
             if daemon_before:
                 # Let both the fast first observation and the later owned-FD
                 # observation run. Do not qualify from the initial selector alone.
@@ -250,10 +311,16 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
             (fixture / (cli + '-action.json')).write_text(json.dumps({'preview': preview, 'action': action}, indent=2) + '\n')
             assert api(path, action)['outcome'] == 'consumed'
             phase = 'recovered'
-            after = wait_for(running, cli + ' resumed native identity')
+            def resumed_running():
+                activity = running()
+                return activity if activity and activity.get('shell_instance') == preview['instance'] else None
+            after = wait_for(resumed_running, cli + ' resumed native identity from the new worker')
             assert after.get('native_evidence') == expected_evidence, 'native continuation lost its identity provenance'
             assert all(key not in after['configuration']['roots'] if key in unset.get(cli, set()) else after['configuration']['roots'].get(key) == value for key, value in roots[cli].items())
-            assert after['argv'] == before['argv'], 'native continuation dropped original invocation restrictions or profile'
+            expected_argv = list(before['argv'])
+            if cli == 'claude' and args.claude_hooks:
+                expected_argv[expected_argv.index('--resume') + 1] = ident
+            assert after['argv'] == expected_argv, 'native continuation dropped original invocation restrictions or profile'
             nonce = 'AFTER_CONFIGURATION_RECOVERY_' + uuid.uuid4().hex
             # Native TUI startup is distinct from its wrapper's identity event.
             wait_for(lambda: entry['marker'] in subprocess.run(['tmux', 'capture-pane', '-pt', target, '-S', '-200'], capture_output=True, text=True, check=True).stdout, cli + ' native history rendering')
@@ -271,13 +338,16 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 assert after and after.get('native_evidence') == 'launch-selector', 'shared-daemon case was incorrectly promoted to observed process state'
 
             assert api(path, action)['outcome'] == 'consumed'
-            receipt = {'cli': cli, 'passed': True, 'session_id': session_id, 'native_session_id': ident, 'before': before, 'after': after, 'nonce': nonce, 'new_assistant_answer': answer, 'controller_ambient_roots': {key: environment[key] for key in roots[cli]}, 'native_hooks_left_untrusted': sorted(hook_choices), 'shared_daemon_before': daemon_before, 'shared_daemon_after': daemon_after, 'scope': 'Explicit selected conversation continuation; interactive switches are not verified' if daemon_before else 'Original root and profile continuation'}
+            receipt = {'cli': cli, 'passed': True, 'session_id': session_id, 'native_session_id': ident, 'before': before, 'after': after, 'nonce': nonce, 'new_assistant_answer': answer, 'controller_ambient_roots': {key: environment[key] for key in roots[cli]}, 'native_hooks_left_untrusted': sorted(hook_choices), 'in_process_switches': switches, 'shared_daemon_before': daemon_before, 'shared_daemon_after': daemon_after, 'scope': 'Explicit selected conversation continuation; interactive switches are not verified' if daemon_before else 'Original root and profile continuation'}
             receipts.append(receipt)
             (fixture / (cli + '-receipt.json')).write_text(json.dumps(receipt, indent=2) + '\n')
             print(json.dumps({'cli': cli, 'passed': True, 'fixture': str(fixture)}), flush=True)
             api('/api/sessions/' + session_id, method='DELETE')
             subprocess.run(['tmux', 'kill-session', '-t', target], capture_output=True)
             session_id = None
+        if args.claude_hooks:
+            claude_settings_after = hashlib.sha256(claude_settings_path.read_bytes()).hexdigest() if claude_settings_path.is_file() else None
+            assert claude_settings_after == claude_settings_before, 'native Claude permission settings changed during the fixture'
         assert hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == qualifier_sha256, 'qualification source changed during the native run'
         (fixture / 'manifest.json').write_text(json.dumps({'passed': True, 'qualifier_sha256': qualifier_sha256, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'receipts': receipts}, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(fixture / 'manifest.json')}), flush=True)

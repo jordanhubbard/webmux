@@ -50,6 +50,11 @@ func main() {
 }
 
 func run() (resultErr error) {
+	// Recovery helpers also run through the browser companion's CLI aliases.
+	// Handle the private hook mode before dispatching by executable basename.
+	if len(os.Args) >= 2 && os.Args[1] == "--recovery-claude-hook" {
+		return recovery.ClaudeSessionHook(os.Args[2:], os.Stdin)
+	}
 	if len(os.Args) == 2 && os.Args[1] == "--macos-permission-probe" {
 		return macsetup.ProbeWorker(os.Stdout)
 	}

@@ -42,7 +42,7 @@ type Event struct {
 
 func (e Event) Validate() error {
 	switch e.NativeEvidence {
-	case "", "launch-selector", "process-state", "unavailable":
+	case "", "launch-selector", "process-state", "native-hook", "unavailable":
 	default:
 		return errors.New("unknown native identity evidence")
 	}
