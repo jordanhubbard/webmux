@@ -268,20 +268,28 @@ def main():
         else:
             raise AssertionError('missing managed process was silently restarted')
         receipt('native process loss fallback', native=native(), preview=v)
-        stop()
-        deck('session', 'start', ident, '--json')
+        assert v['can_resume_managed'] and v['instance']
+        action = {'id': str(uuid.uuid4()), 'kind': 'managed', 'revision': v['state']['revision'],
+                  'host_revision': 0, 'instance': v['instance'], 'confirm': True}
+        assert api('/api/session-recovery/' + sid, action)['outcome'] == 'consumed'
         after = wait(lambda: native() if native()['count'] == 1 else None, 'provider-owned native start')
         assert after['pane_pid'] != before['pane_pid']
-        start()
         wait(connected, 'new native process attachment')
+        assert api('/api/session-recovery/' + sid, action)['outcome'] == 'consumed'
+        assert native() == after
+        stop()
+        start()
+        wait(connected, 'consumed managed recovery receipt after restart')
+        assert api('/api/session-recovery/' + sid, action)['outcome'] == 'consumed'
+        assert native() == after
         wait(lambda: entry['marker'] in view()['history'], 'native resumed history')
         native_show = deck('session', 'show', ident, '--json')
         assert native_show['claude_session_id'] == entry['native_session_id']
-        receipt('provider-owned native continuation', native=after, conversation=answer('provider resumed native conversation'))
+        receipt('WebMux managed native recovery and durable duplicate receipt', native=after, conversation=answer('provider resumed native conversation'))
         settings = pathlib.Path.home() / '.claude/settings.json'
         assert (hashlib.sha256(settings.read_bytes()).hexdigest() if settings.exists() else None) == d['settings_sha256_before']
         assert hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest() == qualifier_sha256, 'qualification source changed during the native run'
-        result = {'passed': True, 'qualifier_sha256': qualifier_sha256, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'provider': 'agent-deck', 'provider_version': '1.16.34', 'native_cli': 'claude', 'native_cli_version': d['native_version'], 'native_session_id': entry['native_session_id'], 'provider_session_id': ident, 'webmux_session_id': sid, 'phases': phases, 'scope': 'Real controller restart, SIGKILL, repeated reconnect, native process loss fallback and explicit provider-owned native continuation. Not host reboot or WebMux managed-resume action.'}
+        result = {'passed': True, 'qualifier_sha256': qualifier_sha256, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'provider': 'agent-deck', 'provider_version': '1.16.34', 'native_cli': 'claude', 'native_cli_version': d['native_version'], 'native_session_id': entry['native_session_id'], 'provider_session_id': ident, 'webmux_session_id': sid, 'phases': phases, 'scope': 'Real controller restart, SIGKILL, repeated reconnect, native process loss fallback and explicit provider-owned native continuation. Includes WebMux managed-resume action and duplicate request after restart. Not host reboot.'}
         (p / 'lifecycle-manifest.json').write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(p / 'lifecycle-manifest.json')}), flush=True)
     except Exception as e:

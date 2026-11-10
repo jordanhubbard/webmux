@@ -13,6 +13,7 @@ import (
 // RecoveryView is owner-scoped like the terminal itself. History is plain text;
 // browser/clipboard/shell protocol packets are never replayed from disk.
 type RecoveryView struct {
+	CanResumeManaged        bool            `json:"can_resume_managed"`
 	ManagerProfile          string          `json:"manager_profile,omitempty"`
 	ManagerNativeSession    string          `json:"manager_native_session,omitempty"`
 	ManagerNativeStateFile  string          `json:"manager_native_state_file,omitempty"`
@@ -66,6 +67,8 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 		view.Waiting, view.Instance = control.Mode == "waiting" && hostReady, control.Instance
 	}
 	if s.Rig != nil {
+		view.Instance = managedInstance(*s.Rig)
+		view.CanResumeManaged = s.Recovery != nil && managedNativeSupported(*s.Rig)
 		view.ManagerProfile = s.Rig.ManagerProfile
 		view.ManagerNativeSession, view.ManagerNativeStateFile = s.Rig.NativeSessionID, s.Rig.NativeStateFile
 		view.ManagerNativeSource, view.ManagerNativeObservedAt = s.Rig.NativeSource, s.Rig.NativeObservedAt

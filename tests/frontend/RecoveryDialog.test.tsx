@@ -106,6 +106,41 @@ describe('native conversation evidence', () => {
 });
 
 describe('continuation approval', () => {
+  it('clears managed approval when the selected terminal changes', async () => {
+    const value: SessionRecovery = { ...evidence(), waiting: false, host_revision: 0, instance: 'managed-identity',
+      lifecycle_owner: 'agent-deck', can_resume_managed: true, manager_native_session: 'recorded-conversation' };
+    vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(value);
+    const recover = vi.spyOn(api, 'recoverSession');
+    const dialog = render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
+    const approve = await screen.findByLabelText(/I approve asking Agent Deck to resume/);
+    fireEvent.click(approve);
+    expect(screen.getByRole('button', { name: 'Resume through Agent Deck' })).toBeEnabled();
+    dialog.rerender(<RecoveryDialog sessionId="two" onClose={vi.fn()} />);
+    expect(await screen.findByRole('button', { name: 'Resume through Agent Deck' })).toBeDisabled();
+    expect(screen.getByLabelText(/I approve asking Agent Deck to resume/)).not.toBeChecked();
+    expect(recover).not.toHaveBeenCalled();
+  });
+
+  it('requires explicit managed approval and sends no transcript or arbitrary command', async () => {
+    const value: SessionRecovery = { ...evidence(), waiting: false, host_revision: 0, instance: 'managed-identity',
+      lifecycle_owner: 'agent-deck', can_resume_managed: true, manager_native_session: 'recorded-conversation',
+      manager_directory: '/project', manager_target: 'agent-deck:local:seat' };
+    value.state!.activity = undefined;
+    vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(value);
+    const recover = vi.spyOn(api, 'recoverSession').mockResolvedValue({ outcome: 'consumed' });
+    render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
+    const resume = await screen.findByRole('button', { name: 'Resume through Agent Deck' });
+    expect(resume).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Start a shell' })).toBeNull();
+    fireEvent.click(screen.getByLabelText(/I approve asking Agent Deck to resume/));
+    fireEvent.click(resume);
+    await waitFor(() => expect(recover).toHaveBeenCalledOnce());
+    expect(recover).toHaveBeenCalledWith('one', expect.objectContaining({ kind: 'managed', confirm: true,
+      revision: 4, host_revision: 0, instance: 'managed-identity' }));
+    expect(recover.mock.calls[0][1]).not.toHaveProperty('context');
+    expect(recover.mock.calls[0][1]).not.toHaveProperty('command');
+  });
+
   it('resumes the selected native conversation without transmitting history by default', async () => {
     vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(waitingEvidence());
     const recover = vi.spyOn(api, 'recoverSession').mockResolvedValue({ outcome: 'consumed' });

@@ -212,7 +212,8 @@ cancellation and unsafe/oversized manager diagnostics. These are lifecycle and
 adapter-boundary regressions, not native Agent Deck or Rig conversation proof.
 The separate native Agent Deck/Claude check below now covers controller
 lifecycle and explicit provider-owned continuation. Rig, managed host reboot,
-other managed CLIs/profiles and a WebMux managed-resume action remain open.
+other managed CLIs/profiles remain open. The local Agent Deck/Claude managed-resume
+action now has native proof below.
 
 The native identity tests must also cover changing conversations inside one CLI
 process. An initially selected conversation ID is not sufficient evidence after
@@ -446,22 +447,52 @@ directory must also update its `PWD` environment. Identity commands continue to
 read stdout alone; successful help includes both streams. Metadata output is
 bounded during capture. No project-ownership validation was relaxed.
 
+## Explicit managed native recovery
+
+For a recorded local Agent Deck/Claude conversation, **Recover work** offers
+**Resume through Agent Deck** with a separate approval checkbox. The summary
+shows the saved host, project, profile, native ID and state-file reference. The
+manager owns its saved launch command and current settings; the browser supplies
+neither a command nor transcript contents to this action. Other managed runtime
+and destination combinations keep their manual fallback.
+
+The server rechecks current owner access, the enabled manager, the exact saved
+destination and profile, and the native ownership receipt. A verified surviving
+process is attached first. Before starting a replacement, the adapter requires
+qualified Agent Deck 1.16.34, proof that no process remains, unchanged native
+references and bounded native JSON records matching the ID and physical project
+directory. The operation revalidates these observations immediately before
+calling the manager's exact-session start command, then checks the resulting
+native ID and process ownership before attaching the existing viewer.
+
+A request is bound to the recovery revision and saved managed identity. Its
+intent is persisted before the external operation. Duplicate consumed requests
+return the saved result, including across controller restart. An unresolved or
+uncertain operation blocks another start, even under a new request ID; inspect
+the manager and reconnect manually. No force, reconciliation, abandonment,
+message injection or arbitrary shell replay is used. Missing state, changed
+projects/profiles and escaped or unverified processes preserve the logs and
+require manual recovery. Unit and HTTP regressions cover these boundaries;
+real native continuation evidence follows.
+
 ## Native Agent Deck lifecycle evidence
 
-On 2026-11-09, real Agent Deck 1.16.34 and Claude Code 2.1.321 and 2.1.322 passed the
+On 2026-11-09, real Agent Deck 1.16.34 and Claude Code 2.1.322 passed the
 private managed-session harness. Orderly controller restart, SIGKILL and three
-explicit reconnects kept native pane PID `26085` and exactly one managed pane on the private socket.
+explicit reconnects kept native pane PID `64117` and exactly one managed pane on the private socket.
 A new assistant record returned the earlier synthetic marker and a fresh test
 phrase through the restored WebMux viewer.
 
 After explicit loss of the native process, WebMux retained the prior transcript,
 reported managed recovery unavailable and rejected reconnect with HTTP 409;
-no native process was started implicitly. An explicit Agent Deck start then
-resumed the same native conversation, created pane PID `32960`, and WebMux
+no native process was started implicitly. The explicit WebMux managed-resume
+action then asked Agent Deck to resume the same native conversation, created pane PID `70930`, and WebMux
 reattached the original viewer. Another new native assistant record returned
 the earlier marker and a second fresh phrase. The native conversation ID stayed
 `08bbfe0e-d31c-4cb6-9d18-546eea56a08c`; the WebMux viewer ID stayed
-`81bacb27-bbbd-4e1c-8204-93dc4550fff1`. All fixture processes were stopped afterward.
+`e46b1a6f-72a0-4a7c-86ce-5302f033676e`. Repeating the same action, including after another
+controller restart, returned its durable consumed receipt and retained exactly
+one native pane with the same new PID. All fixture processes were stopped afterward.
 
 The harness creates a private manager home/profile and tmux socket. A scoped
 native launcher restores the original CLI configuration roots and their
@@ -472,10 +503,10 @@ and verifies the original Claude settings file is unchanged. It waits for the
 actual tmux client before sending input, and counts only new assistant records.
 
 Private receipt:
-`~/.local/share/webmux/recovery-qualification/agent-deck-native-4fac1072-cfc8-4536-8a20-a7a1d97403fd/lifecycle-manifest.json`.
+`~/.local/share/webmux/recovery-qualification/agent-deck-native-7fe586aa-360f-4666-b6f2-8dcffc881d5c/lifecycle-manifest.json`.
 Executable SHA-256:
-`3dab419943936b4f4c15c2140a08f7e367d1a330826ea5aa753fa2e0518e9186`.
-Qualification script SHA-256: `f474ddff3b973884d0abf7b395a01f13964facbab7848b1c0b503e954b10274f`.
+`47c647500fbc851ae46f118d7fab4a40594036ace0266dc1c1d012d5e00f3d60`.
+Qualification script SHA-256: `dfdbc6e75bee21108534d072c0139aa313c33190875d674c71fd968fd8bdd337`.
 The harness verifies that its source stays unchanged during the run. The latest run also verifies that the recorded native
 conversation ID, state-file reference, manager profile and observation provenance
 survive both controller restart and SIGKILL. Logging-gated capture has separate
@@ -483,6 +514,8 @@ regressions: pause preserves the last reference; resume permits a new observatio
 The preview labels these as manager inventory observations, because later
 conversation switches are not yet verified. Local profile selection is explicit;
 changed profiles and ambiguous IDs are rejected before attachment.
+An earlier Claude 2.1.321 run established explicit provider-owned continuation
+through the manager CLI; the WebMux action above was tested with 2.1.322.
 Earlier failed fixtures remain negative evidence: one exposed the missing native
 inventory status field; others stopped at the native permission dialog and did
 not establish a conversational response.
@@ -494,9 +527,10 @@ python3 scripts/qualify-recovery-managed.py \
 ```
 
 This qualifies the tested local default-profile Agent Deck/Claude path and
-explicit provider-owned continuation. It does not qualify managed host reboot,
-Rig, remote managed hosts, other managed CLIs/profiles, or a WebMux managed-resume action. Those remain
-part of #318's acceptance work.
+the explicit WebMux managed-resume action through its lifecycle owner. It does
+not qualify managed host reboot, Rig, remote managed hosts, other managed
+CLIs/profiles or authentication-failure behavior. Those remain part of #318's
+acceptance work.
 
 ## Sources
 

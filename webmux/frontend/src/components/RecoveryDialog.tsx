@@ -12,11 +12,13 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
   const [approveReplay, setApproveReplay] = useState(false);
+  const [approveManaged, setApproveManaged] = useState(false);
   const [shareContext, setShareContext] = useState(false);
   const [context, setContext] = useState('');
   useEffect(() => {
     const controller = new AbortController();
     setValue(null); setError('');
+    setApproveReplay(false); setApproveManaged(false); setShareContext(false); setContext('');
     api.getSessionRecovery(sessionId, controller.signal).then(result => {
       if (!controller.signal.aborted) setValue(result);
     }).catch((cause: unknown) => {
@@ -26,9 +28,10 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
   }, [sessionId, refresh]);
   const activity = value?.state?.activity;
   const recordedRoots = Object.entries(activity?.configuration?.roots ?? {}).filter(([name]) => name !== 'HOME');
-  const refreshPreview = () => { setApproveReplay(false); setShareContext(false); setContext(''); setRefresh(count => count + 1); };
+  const refreshPreview = () => { setApproveReplay(false); setApproveManaged(false); setShareContext(false); setContext(''); setRefresh(count => count + 1); };
   const perform = async (kind: RecoveryRequest['kind']) => {
-    if (!value?.waiting || !value.state || !value.instance || value.host_revision == null || busy) return;
+    if (!value?.state || !value.instance || value.host_revision == null || busy) return;
+    if (kind === 'managed' ? !value.can_resume_managed || !approveManaged : !value.waiting) return;
     setBusy(true); setActionError('');
     try {
       const selected = kind === 'native' && shareContext ? context : '';
@@ -39,7 +42,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
       const id = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
       await api.recoverSession(sessionId, { id, kind, revision: value.state.revision,
         host_revision: value.host_revision, instance: value.instance,
-        confirm: kind === 'replay' ? approveReplay : shareContext, ...(selected ? { context: selected } : {}) });
+        confirm: kind === 'managed' ? approveManaged : kind === 'replay' ? approveReplay : shareContext, ...(selected ? { context: selected } : {}) });
       onClose();
     } catch (cause) { setActionError(cause instanceof Error ? cause.message : 'Cannot continue this work'); refreshPreview(); }
     finally { setBusy(false); }
@@ -93,7 +96,16 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
           <h3>Previous terminal output</h3>
           <pre className="recovery-history" tabIndex={0} aria-label="Previous terminal output">{value.history}</pre>
         </> : <p>No retained terminal output is available. Existing native conversation information is shown above when recorded.</p>}
-        {!activity && <p>No reliable command was recorded. Use any retained output to recover this session manually.</p>}
+        {!activity && !value.can_resume_managed && <p>No reliable command was recorded. Use any retained output to recover this session manually.</p>}
+        {value.can_resume_managed && <>
+          <p>Agent Deck will reattach its surviving process or start the recorded conversation using its saved session command and current settings. No terminal output will be sent to the coding service.</p>
+          <label className="recovery-consent"><input type="checkbox" checked={approveManaged} disabled={busy}
+            onChange={event => setApproveManaged(event.target.checked)} />
+            I approve asking Agent Deck to resume {value.manager_native_session} on {value.hostname} in {value.manager_directory}
+          </label>
+          <div className="recovery-actions"><button type="button" disabled={busy || !approveManaged}
+            onClick={() => void perform('managed')}>Resume through Agent Deck</button></div>
+        </>}
         {value.lifecycle_owner === 'webmux' && <label className="recovery-consent">
           <input type="checkbox" checked={value.state?.auto_resume ?? false} disabled={busy}
             onChange={event => void setAutomatic(event.target.checked)} />

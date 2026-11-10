@@ -63,7 +63,18 @@ func (s *Server) recoverSession(w http.ResponseWriter, r *http.Request, owner st
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	value, err := s.sessions.Recover(owner, r.PathValue("id"), input)
+	var value session.RecoveryResult
+	var err error
+	if input.Kind == "managed" {
+		if !s.openRigAccess(w, owner) {
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 45*time.Second)
+		defer cancel()
+		value, err = s.sessions.RecoverManaged(ctx, owner, r.PathValue("id"), input, s.planManagedRecovery)
+	} else {
+		value, err = s.sessions.Recover(owner, r.PathValue("id"), input)
+	}
 	if err != nil {
 		s.sessionError(w, err, "Failed to recover session")
 		return
