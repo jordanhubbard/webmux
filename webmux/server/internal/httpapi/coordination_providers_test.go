@@ -29,6 +29,12 @@ case "$*" in
   "list --all --json")
     printf '%s\n' '[{"id":"local-1","title":"local coder","path":"/src/local","group":"webmux","tool":"codex","status":"waiting","substate":"input-required","codex_session_id":"codex-local","conductor_name":"webmux","last_activity_at":"2026-10-26T08:00:00Z"}]'
     ;;
+  "session ownership inspect local-1 --json")
+    printf '%s\n' '{"instance_id":"local-1","state":"live","verdict":"owned","admissible":true,"pane_attached":true}'
+    ;;
+  "remote sparky session ownership inspect remote-1 --json")
+    printf '%s\n' '{"instance_id":"remote-1","state":"live","verdict":"owned","admissible":true,"pane_attached":true}'
+    ;;
   "group list --json")
     printf '%s\n' '{"groups":[{"name":"webmux","path":"webmux","session_count":1}]}'
     ;;
@@ -295,7 +301,7 @@ func TestManagedReattachmentResolvesExactProviderDestination(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(executable, []byte(strings.ReplaceAll(string(script), `"status":"waiting"`, `"status":"stopped"`)), 0o700); err != nil {
+	if err := os.WriteFile(executable, []byte(strings.ReplaceAll(strings.ReplaceAll(string(script), `"status":"waiting"`, `"status":"stopped"`), `"state":"live"`, `"state":"dead"`)), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.resolveManagedReattachment(context.Background(), "anonymous", identity); err == nil {
@@ -338,5 +344,49 @@ func TestManagedReconnectHTTPUsesFreshAttachment(t *testing.T) {
 	}
 	if result.ID != value.ID || result.Rig == nil || *result.Rig != identity || !reflect.DeepEqual(result.ExecArgv, []string{executable, "session", "attach", "local-1"}) {
 		t.Fatal("HTTP reconnect lost its managed identity or used saved arguments", result)
+	}
+}
+
+func TestAgentDeckSurvivalUsesOwnedProcessIdentityAndRemoteNamespace(t *testing.T) {
+	executable, calls := fakeAgentDeck(t)
+	p := &agentDeckProvider{executable: executable}
+	for _, target := range []string{"local:local-1", "sparky:remote-1"} {
+		live, err := p.Survives(context.Background(), target)
+		if err != nil || !live {
+			t.Fatal("exact owned process was not verified", target, live, err)
+		}
+	}
+	script, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(executable, []byte(strings.ReplaceAll(string(script), `"instance_id":"local-1"`, `"instance_id":"other-session"`)), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if live, err := p.Survives(context.Background(), "local:local-1"); err != nil || live {
+		t.Fatal("another instance's ownership receipt was accepted", live, err)
+	}
+	data, err := os.ReadFile(calls)
+	if err != nil || !strings.Contains(string(data), "remote sparky session ownership inspect remote-1 --json") || strings.Contains(string(data), "reconcile") || strings.Contains(string(data), "session start") {
+		t.Fatal("survival probe changed lifecycle state or lost remote identity", string(data), err)
+	}
+}
+
+func TestManagedReattachmentAcceptsVerifiedNativeInventoryWithoutDisplayStatus(t *testing.T) {
+	executable, _ := fakeAgentDeck(t)
+	script, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(executable, []byte(strings.ReplaceAll(string(script), `"status":"waiting",`, "")), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", filepath.Dir(executable)+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "")
+	s, _ := fixture(t, "none")
+	setCoordinationIntegrations(t, s, "agent-deck")
+	identity := session.RigIdentity{Provider: "agent-deck", Target: "agent-deck:local:local-1", Host: "localhost", Workspace: "/src/local", Runtime: "codex"}
+	if _, err := s.resolveManagedReattachment(context.Background(), "anonymous", identity); err != nil {
+		t.Fatal("native inventory without display status blocked an owned process", err)
 	}
 }

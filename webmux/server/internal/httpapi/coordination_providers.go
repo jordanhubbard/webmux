@@ -23,6 +23,57 @@ type coordinationProvider interface {
 	Attach(context.Context, string) (coordinationLaunch, error)
 }
 
+// Display status is not process-liveness evidence: some native inventories
+// omit it entirely. Recovery asks the lifecycle owner for the exact target.
+type coordinationSurvival interface {
+	Survives(context.Context, string) (bool, error)
+}
+
+func (p *agentDeckProvider) Survives(ctx context.Context, target string) (bool, error) {
+	remote, id, err := splitAgentDeckTarget(target)
+	if err != nil {
+		return false, err
+	}
+	var receipt struct {
+		InstanceID   string `json:"instance_id"`
+		State        string `json:"state"`
+		Verdict      string `json:"verdict"`
+		Admissible   bool   `json:"admissible"`
+		PaneAttached bool   `json:"pane_attached"`
+	}
+	args := []string{"session", "ownership", "inspect", id, "--json"}
+	if remote != "" {
+		args = append([]string{"remote", remote}, args...)
+	}
+	if err := p.runJSON(ctx, &receipt, args...); err != nil {
+		return false, err
+	}
+	return receipt.InstanceID == id && receipt.State == "live" && receipt.Verdict == "owned" && receipt.Admissible && receipt.PaneAttached, nil
+}
+
+func (p *rigProvider) Survives(ctx context.Context, target string) (bool, error) {
+	status, err := p.rawStatus(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, agent := range status.Agents {
+		if agent.Target == target {
+			// The coordinator runner checks this exact managed tmux seat.
+			return agent.Connected, nil
+		}
+	}
+	for _, seat := range status.Seats {
+		if seat.CanonicalSessionName == target && seat.Openable && seat.TmuxTarget != "" {
+			binary, err := exec.LookPath("tmux")
+			if err != nil {
+				return false, err
+			}
+			return exec.CommandContext(ctx, binary, "has-session", "-t", "="+seat.TmuxTarget).Run() == nil, nil
+		}
+	}
+	return false, nil
+}
+
 type coordinationProviderDescriptor struct {
 	ID           string   `json:"id"`
 	Label        string   `json:"label"`

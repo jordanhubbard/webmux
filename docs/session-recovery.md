@@ -180,8 +180,14 @@ The control path has these boundaries:
 
 Explicit managed reconnect now queries the enabled lifecycle manager's attach
 operation for the exact saved provider-qualified target, after confirming that
-its current inventory reports a live session. Openable stopped entries are not
-treated as surviving processes. It checks the recorded
+the original process survives. Display status is not used as liveness evidence:
+Agent Deck 1.16.34 omits status from `list --json`. Its read-only
+`session ownership inspect` receipt must identify the exact instance and report
+an owned live process with a surviving pane. Remote checks retain their original
+remote namespace. Rig uses the coordinator's exact managed tmux probe or checks
+the canonical tmux target directly. Neither probe launches, reconciles or kills
+processes. Openable stopped entries are not treated as surviving work.
+Reattachment checks the recorded
 host, project directory and coding runtime before replacing the viewer, then
 uses newly resolved attach arguments while retaining its WebMux session ID.
 Unavailable/disabled managers, missing targets and changed destinations leave
@@ -204,8 +210,9 @@ validation uses fresh attach arguments, repeated restoration attaches once,
 and revoked owner access prevents provider discovery. Broker tests cover
 cancellation and unsafe/oversized manager diagnostics. These are lifecycle and
 adapter-boundary regressions, not native Agent Deck or Rig conversation proof.
-Provider-owned native continuation after process loss/reboot and native managed
-lifecycle qualification remain open.
+The separate native Agent Deck/Claude check below now covers controller
+lifecycle and explicit provider-owned continuation. Rig, managed host reboot,
+other managed CLIs/profiles and a WebMux managed-resume action remain open.
 
 The native identity tests must also cover changing conversations inside one CLI
 process. An initially selected conversation ID is not sufficient evidence after
@@ -439,6 +446,52 @@ directory must also update its `PWD` environment. Identity commands continue to
 read stdout alone; successful help includes both streams. Metadata output is
 bounded during capture. No project-ownership validation was relaxed.
 
+## Native Agent Deck lifecycle evidence
+
+On 2026-11-09, real Agent Deck 1.16.34 and Claude Code 2.1.321 and 2.1.322 passed the
+private managed-session harness. Orderly controller restart, SIGKILL and three
+explicit reconnects kept native pane PID `17215` and exactly one managed pane on the private socket.
+A new assistant record returned the earlier synthetic marker and a fresh test
+phrase through the restored WebMux viewer.
+
+After explicit loss of the native process, WebMux retained the prior transcript,
+reported managed recovery unavailable and rejected reconnect with HTTP 409;
+no native process was started implicitly. An explicit Agent Deck start then
+resumed the same native conversation, created pane PID `23495`, and WebMux
+reattached the original viewer. Another new native assistant record returned
+the earlier marker and a second fresh phrase. The native conversation ID stayed
+`08bbfe0e-d31c-4cb6-9d18-546eea56a08c`; the WebMux viewer ID stayed
+`9173464a-8777-4686-a619-76b2d5dd85bc`. All fixture processes were stopped afterward.
+
+The harness creates a private manager home/profile and tmux socket. A scoped
+native launcher restores the original CLI configuration roots and their
+absence, with plan mode and tools disabled; only the synthetic native transcript
+is referenced into the private manager home. Authentication files are not
+copied. The fixture declines the known native global-permission migration dialog
+and verifies the original Claude settings file is unchanged. It waits for the
+actual tmux client before sending input, and counts only new assistant records.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/agent-deck-native-e9ad2eba-efb6-4e39-bd49-a14896b3f020/lifecycle-manifest.json`.
+Executable SHA-256:
+`0e8985d24fe0e406f4e8463213cac2c326dafedea359a8d0da8391970302b2cd`.
+Qualification script SHA-256: `9783940e9ebcb35ed91594f1f8513e1a98254c5a7f421fff5aa0e30a951d4a54`.
+The harness verifies that its source stays unchanged during the run.
+Earlier failed fixtures remain negative evidence: one exposed the missing native
+inventory status field; others stopped at the native permission dialog and did
+not establish a conversational response.
+
+```bash
+python3 scripts/qualify-recovery-managed.py \
+  --binary /absolute/path/to/standalone-webmux \
+  --manifest /absolute/path/to/synthetic-native-manifest.json
+```
+
+This qualifies the tested local default-profile Agent Deck/Claude path and
+explicit provider-owned continuation. It does not qualify managed host reboot,
+Rig, remote managed hosts, other managed CLIs/profiles, or a WebMux managed-resume action. Those remain
+part of #318's acceptance work.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
@@ -446,3 +499,5 @@ bounded during capture. No project-ownership validation was relaxed.
 - [OpenCode CLI](https://opencode.ai/docs/cli/), checked against installed CLI help
 - [Cursor CLI sessions](https://cursor.com/docs/cli/overview#sessions)
 - [Mosh screen-state protocol](https://mosh.org/mosh-paper-draft.pdf)
+
+- [Agent Deck ownership CLI source at the installed revision](https://github.com/asheshgoplani/agent-deck/blob/f36e77d6170b8d8b54f50c960c3f16e8a2c5df19/cmd/agent-deck/session_ownership_cmd.go)

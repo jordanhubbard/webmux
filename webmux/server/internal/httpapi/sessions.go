@@ -198,16 +198,13 @@ func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, s
 		}
 		target = strings.TrimPrefix(target, prefix)
 	}
-	status, err := provider.Status(ctx)
+	survival, ok := provider.(coordinationSurvival)
+	if !ok {
+		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager cannot verify a surviving process. Retained logs are preserved.")
+	}
+	live, err := survival.Survives(ctx, target)
 	if err != nil {
 		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager could not verify the surviving session: %w. Retained logs are preserved.", err)
-	}
-	live := false
-	for _, seat := range status.Seats {
-		if seat.ID == target {
-			live = seat.Openable && (seat.State == "running" || seat.State == "waiting" || seat.State == "idle")
-			break
-		}
 	}
 	if !live {
 		return coordinationLaunch{}, fmt.Errorf("The original managed process is not confirmed running. Resume it through its lifecycle manager; retained logs are preserved.")
