@@ -45,7 +45,7 @@ Current evidence and limits:
 | Ordinary local/SSH/mosh lifecycle | Real controller restart/update/SIGKILL and disposable guest reboot checks passed, including retained history and no duplicate execution. |
 | Local managed recovery | Real Agent Deck/Claude and Rig/Claude process-loss continuation passed. Rig additionally passed original executable/settings checks and an in-flight controller-loss test that refused unsafe retries. |
 | Managed shell job after reboot | Real Agent Deck shell-job guest reboot passed: manager/project/log identity retained, explicit fallback, no automatic restart and no duplicate execution after reconnects. This is not native coding-conversation recovery. |
-| Native managed conversation after reboot | Harness prepared as `qualify-recovery-managed-vm.py --native-claude`; no passing receipt. Guest Claude 2.1.322 is installed but its own login was not completed. The Mac's Claude login is confirmed. |
+| Native managed conversation after reboot | Passed for guest-native Agent Deck 1.16.34/Claude 2.1.322 on a Linux guest: same native conversation, project, roots and launch policy after an actual reboot, a fresh remembered-marker answer, and once-only recovery across reconnects and controller reconstruction. Input sent immediately after reattach can be dropped ([#325](https://github.com/jordanhubbard/webmux/issues/325)). |
 
 The implementation/preparatory-harness checkpoint `3afb3bf` passed every hosted
 CI and Packaging check. Local qualification also includes affected Go race
@@ -56,15 +56,14 @@ The next session's working context is in [MEMORY.md](../MEMORY.md).
 
 Remaining #318 work, in order:
 
-1. Complete guest-native managed conversation recovery across an actual reboot,
-   including a fresh response recalling the original conversation marker and
-   duplicate-request checks after controller reconstruction.
-2. Finish remote managed-host/failure qualification and additional native
+1. Finish remote managed-host/failure qualification and additional native
    active-session, policy/profile and platform coverage. Unqualified cases must
    continue to offer explicit fallback with retained logs.
-3. Resolve default shared-daemon Codex active-conversation tracking after
-   interactive switches. Verified explicit selectors remain manual evidence;
-   per-command hook injection did not qualify shared-daemon observation.
+2. Codex in default shared-daemon mode is manual-only by owner decision: no
+   observation point preserves launch mode and sandbox policy after interactive
+   switches. Revisit when [openai/codex#60625](https://github.com/openai/codex/issues/60625)
+   or an equivalent ships ([details](session-recovery.md#codex-shared-daemon-observation-2026-11-10)).
+3. Investigate input loss after managed reattach ([#325](https://github.com/jordanhubbard/webmux/issues/325)).
 4. Audit #318 against its complete acceptance criteria before closing it. The
    owner-approved merge of #322 does not close this requirement or cut a release.
 

@@ -134,14 +134,29 @@ def main():
 
     def native_ready():
         capture = text(deck_env + 'tmux -L wm-managed-qa capture-pane -pt ' + shlex.quote(target) + ' -S -200')
+        # Retained only in the failure manifest so an unrecognized native
+        # screen is visible as negative evidence. The fixture is synthetic.
+        manifest['last_native_pane'] = capture[-4000:]
         # Choose only known native onboarding controls in this new guest-owned
         # project. Never turn terminal output into a recovery command.
         if 'Choose the text style' in capture or 'Choose the text style that looks best' in capture:
             ssh(deck_env + 'tmux -L wm-managed-qa send-keys -t ' + shlex.quote(target) + ' Enter')
             return False
+        if 'Security notes:' in capture and 'Press Enter to continue' in capture:
+            ssh(deck_env + 'tmux -L wm-managed-qa send-keys -t ' + shlex.quote(target) + ' Enter')
+            return False
         if 'Do you trust the files in this folder?' in capture or 'Is this a project you created or one you trust?' in capture:
             assert fixture + '/project' in capture
-            ssh(deck_env + 'tmux -L wm-managed-qa send-keys -t ' + shlex.quote(target) + ' Enter')
+            # The native default is "No, exit"; select the trust option by
+            # its rendered cursor position rather than pressing Enter blindly.
+            lines = [line.lstrip() for line in capture.splitlines()]
+            if any(line.startswith('❯ Yes, I trust this folder') for line in lines):
+                keys = 'Enter'
+            elif any(line.startswith('❯ No, exit') for line in lines):
+                keys = 'Down Enter'
+            else:
+                raise RuntimeError('Unknown native folder-trust selection')
+            ssh(deck_env + 'tmux -L wm-managed-qa send-keys -t ' + shlex.quote(target) + ' ' + keys)
             return False
         if 'Make auto mode your default permission mode?' in capture:
             assert 'No, keep bypass permissions' in capture
@@ -155,19 +170,59 @@ def main():
             return False
         return marker in capture
 
-    def native_records():
-        code = 'import json,pathlib\nr={}\nfor n,line in enumerate(pathlib.Path(' + repr(native_file) + ').read_bytes().splitlines()):\n try: d=json.loads(line)\n except ValueError: continue\n if d.get("type")=="assistant": r[str(n)]="".join(c.get("text","") for c in d.get("message",{}).get("content",[]) if c.get("type")=="text")\nprint(json.dumps(r))\n'
+    def native_records(kind='assistant'):
+        code = 'import json,pathlib\nr={}\nfor n,line in enumerate(pathlib.Path(' + repr(native_file) + ').read_bytes().splitlines()):\n try: d=json.loads(line)\n except ValueError: continue\n if d.get("type")==' + repr(kind) + ':\n  c=d.get("message",{}).get("content",[])\n  r[str(n)]=c if isinstance(c,str) else "".join(x.get("text","") for x in c if isinstance(x,dict) and x.get("type")=="text")\nprint(json.dumps(r))\n'
         return json.loads(ssh('python3 -c ' + shlex.quote(code)).stdout)
+
+    def capture_pane():
+        return text(deck_env + 'tmux -L wm-managed-qa capture-pane -pt ' + shlex.quote(target))
+
+    def composer_idle():
+        # A resumed client repaints restored history (including the marker)
+        # before it accepts input. Require an empty composer prompt and an
+        # unchanged screen across two polls before sending a question.
+        first = capture_pane()
+        prompts = [line.strip() for line in first.splitlines() if line.lstrip().startswith('❯')]
+        if not prompts or prompts[-1] != '❯' or 'plan mode on' not in first:
+            return False
+        time.sleep(1)
+        return capture_pane() == first
+
+    def send(data):
+        subprocess.run(['node', '--input-type=module', '-e', bridge], cwd=Path(__file__).resolve().parents[1] / 'webmux',
+                       input=json.dumps({'url': base.replace('http:', 'ws:') + '/api/term/' + sid, 'text': data}), text=True, check=True, timeout=12)
 
     def answer(label):
         wait(native_ready, 'native Claude composer')
         prior = native_records()
+        prior_user = native_records('user')
         nonce = 'AFTER_GUEST_RECOVERY_' + uuid.uuid4().hex
         prompt = 'What exact marker did I ask you to remember earlier in this conversation? Reply with that marker followed by ' + nonce + '. Do not use tools.'
-        subprocess.run(['node', '--input-type=module', '-e', bridge], cwd=Path(__file__).resolve().parents[1] / 'webmux',
-                       input=json.dumps({'url': base.replace('http:', 'ws:') + '/api/term/' + sid, 'text': prompt}), text=True, check=True, timeout=12)
+
+        def submitted():
+            return any(key not in prior_user and nonce in value for key, value in native_records('user').items())
+
+        # Delivery is verified against the native file, never assumed. Resend
+        # only when the nonce is neither recorded nor visible in the composer,
+        # so a question cannot be submitted twice. The oracle is unchanged.
+        attempts = []
+        for attempt in range(3):
+            wait(composer_idle, 'idle native composer')
+            if nonce in capture_pane():
+                send('\r')
+                attempts.append('enter')
+            else:
+                send(prompt)
+                attempts.append('prompt')
+            try:
+                wait(submitted, 'native prompt record', seconds=20)
+                break
+            except RuntimeError:
+                if attempt == 2:
+                    manifest['native_delivery_attempts'] = attempts
+                    raise
         fresh = wait(lambda: next((value for key, value in native_records().items() if key not in prior and marker in value and nonce in value), None), label, seconds=120)
-        manifest.setdefault('native_answers', []).append({'phase': label, 'nonce': nonce, 'answer': fresh})
+        manifest.setdefault('native_answers', []).append({'phase': label, 'nonce': nonce, 'answer': fresh, 'delivery_attempts': attempts})
         save()
 
     try:
@@ -295,6 +350,7 @@ def main():
             assert text('sha256sum /home/webmuxqa/.local/bin/claude').split()[0] == manifest['native_executable_sha256']
             receipt('native duplicate receipt retained across reconstruction')
         manifest['passed'] = True
+        manifest.pop('last_native_pane', None)
     finally:
         cleanup_errors = []
         if sid:

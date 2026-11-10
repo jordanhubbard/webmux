@@ -1,6 +1,6 @@
 # WebMux recovery handoff
 
-Updated 2026-11-10. This is repository context for the next Claude or Codex
+Updated 2026-11-10 (Claude fix-forward session). This is repository context for the next Claude or Codex
 session; follow [AGENTS.md](AGENTS.md) for the development workflow.
 
 ## Owner's current direction
@@ -38,24 +38,26 @@ than assuming an older checkpoint's green checks apply to new source.
   both before invoking its version command or asking Rig to launch, and hashes
   again afterward. Legacy pathless records remain readable with manual recovery.
 - Real Agent Deck shell-job guest reboot: fallback retains manager/project/log
-  identity and repeated reconnects do not rerun the job. This does **not** prove
-  native coding-conversation continuity across reboot.
+  identity and repeated reconnects do not rerun the job.
+- Guest-native Agent Deck 1.16.34/Claude 2.1.322 conversation continuity across
+  an actual guest reboot passed on 2026-11-10 (binary `296931b`): same native
+  conversation, project, roots and launch policy, a fresh remembered-marker
+  answer, and once-only recovery across reconnects and controller
+  reconstruction. Details in docs/session-recovery.md.
 
 ## Fix-forward acceptance still open
 
-1. Run the guest-native managed conversation reboot test described below. Require
-   a fresh post-reboot answer recalling the original marker, the same native
-   conversation/project/configuration, and once-only recovery across reconnects
-   and controller reconstruction.
-2. Finish remote managed-host/failure, native active-session/policy/profile and
-   platform qualification. Retain clear manual fallback for unqualified cases.
-3. Resolve Codex's default shared-daemon active-conversation observation after
-   interactive switches. Explicit selected IDs have passed manual continuation;
-   they do not prove the current session after an unobserved switch. `-c` hook
-   injection required embedded mode in the tested native CLI. Do not silently
-   change launch mode or drop sandbox/approval settings to obtain evidence.
+1. Finish remote managed-host/failure, native active-session/policy/profile and
+   platform qualification (including Rig across reboot). Retain clear manual
+   fallback for unqualified cases.
+2. Codex default shared-daemon mode is **manual-only** (owner decision
+   2026-11-10). Upstream request: openai/codex#60625. Revisit only when that or
+   an equivalent ships; do not change launch mode or drop sandbox/approval
+   settings to obtain evidence. A `--no-daemon` opt-in was deferred.
+3. [#325](https://github.com/jordanhubbard/webmux/issues/325): terminal input
+   sent right after managed reattach/controller reconstruction can be dropped.
 4. Audit every acceptance criterion in #318 before closing it. The merge itself
-   is not native reboot acceptance or a release.
+   is not a release.
 
 Claude's scoped SessionStart observer covers native clear/resume transitions on
 qualified Unix launches. Hook/launch-selector evidence remains manual because
@@ -63,14 +65,12 @@ observation can stop; automatic resume requires reliable process evidence.
 Preserve original native roots and their absence, invocation policy, lifecycle
 owner and execution host. A WebMux transcript is not a provider-native file.
 
-## Guest-native test prepared, not passed
+## Disposable reboot guest
 
-The user said Claude is authenticated. `claude auth status --json` confirmed the
-Mac's existing claude.ai login. The disposable Linux guest has its own Claude
-2.1.322 at `/home/webmuxqa/.local/bin/claude`; its last verified status was
-`loggedIn: false`. Its browser login did not complete. The private login process
-and OAuth callback forwarding were stopped for this handoff; no host credentials
-were copied. Recheck the guest's own authentication before running the test.
+The guest's own Claude 2.1.322 at `/home/webmuxqa/.local/bin/claude` is logged
+in to claude.ai (expires 2026-12-08), via `claude auth login --claudeai` and the
+paste-code flow driven over the fixture SSH connection. No host credentials
+were copied. Recheck `claude auth status --json` in the guest before reuse.
 
 The retained QEMU guest is stopped, with its disk and evidence preserved and
 4 GiB configured RAM. Its ignored fixture directory is:
@@ -85,13 +85,12 @@ disk, QMP socket, fixture marker and ports when starting it. Never substitute th
 workstation or a shared worker for the disposable reboot target. Authentication
 status is recorded without credentials in `handoff-auth-status.json`.
 
-The native mode is implemented and Python-compilation checked, but has no
-passing native reboot receipt. After starting/authenticating the guest:
+To rerun the native reboot qualification after starting the guest:
 
 ```bash
 python3 scripts/qualify-recovery-managed-vm.py \
   --vm-root _build/recovery-vm/qualification-441375b00aa1 \
-  --binary _build/recovery-qualification/webmux-native-managed-reboot-linux \
+  --binary _build/recovery-qualification/webmux-native-managed-reboot-linux-296931b \
   --native-claude
 ```
 

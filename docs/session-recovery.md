@@ -462,6 +462,35 @@ peer PID/start identity before and after continuation. This qualifies explicit
 recovery of the selected conversation, not automatic recovery of whichever
 conversation is current after a switch.
 
+### Codex shared-daemon observation (2026-11-10)
+
+A further review of Codex 0.167.0 and upstream `main` through
+`rust-v0.169.0-alpha.7` found no observation point that identifies a TUI's
+current conversation while preserving the default daemon launch mode and
+explicit sandbox policy:
+
+- `thread/loaded/list` returns only the daemon's loaded thread IDs, with no
+  per-connection mapping; `server/diagnostics` reports process gauges.
+- The TUI session log (`CODEX_TUI_RECORD_SESSION`) records `/new` as a variant
+  only. Outbound `UserTurn` ops include a `client_user_message_id`, but the
+  daemon does not persist it in rollout records or thread items
+  (`clientUserMessageId` appears only in turn/steer/queue inputs), so it cannot
+  join a terminal to a thread. Matching prompt content or timestamps is not used.
+- A transparent relay on the TUI's own connection reliably observes thread IDs in
+  `thread/start`/`thread/resume` responses and `thread/started`, but requires
+  `--remote`, which rejects the original `--sandbox read-only` override.
+- The daemon socket is derived from `CODEX_HOME`; no separate socket override
+  exists, and changing `CODEX_HOME` moves all native state.
+
+**Decision (owner, 2026-11-10): Codex in default daemon mode is manual-only.**
+Explicit selections remain qualified for manual continuation and observations
+stay `launch-selector`; automatic recovery is not offered for these launches,
+and WebMux does not change the user's launch mode to obtain evidence. A local,
+opt-in way for the TUI to report its current thread was requested upstream as
+[openai/codex#60625](https://github.com/openai/codex/issues/60625). Revisit when
+that or an equivalent ships. A per-terminal `--no-daemon` opt-in was considered
+and deferred.
+
 On 2026-11-09, real two-process synthetic-marker checks passed for Codex
 0.167.0, Claude Code 2.1.318, Cursor Agent 2026.11.05-86047df and OpenCode
 1.19.5. Each first process exited before a second process selected its exact
@@ -1293,31 +1322,54 @@ Affected Go race suites and vet, strict TypeScript, the standalone build and all
 50 helper tests passed. This run does not add managed native host-reboot or
 remote-conversation evidence.
 
-## Guest-native conversation reboot mode awaiting qualification
+## Guest-native managed conversation across actual reboot
 
 The managed VM harness accepts `--native-claude`. This mode uses Claude 2.1.322
 installed and authenticated directly in the disposable guest. It creates a new
 synthetic native conversation there, resumes it through the real Agent Deck
 manager, and requires fresh remembered-marker responses before and after an
-actual guest reboot. The proposed continuation uses WebMux's managed action;
-duplicate requests are checked before and after controller reconstruction.
-Native executable, project, state-file reference, roots and explicit launch
-policy are checked as well.
+actual guest reboot. The continuation uses WebMux's managed action; duplicate
+requests are checked before and after controller reconstruction. Native
+executable, project, state-file reference, roots and explicit launch policy are
+checked as well.
 
-The guest installation and Linux WebMux build are prepared. The harness passes
-Python compilation and whitespace checks. **This native reboot mode is not yet
-qualified:** the guest's separate browser login is pending, so there is no native
-reboot receipt. The already-passing shell-job reboot receipt above must not be
-used as proof of this mode. The Mac's existing Claude login was independently
-confirmed; its credentials are not copied into the guest. For the owner's
-fix-forward handoff, the private login process and callback forward were stopped
-and the guest shut down with its disk/evidence retained. The guest's own login
-must be rechecked or completed when qualification resumes.
+On 2026-11-10 this mode passed against the Linux arm64 build of `296931b`
+(SHA-256 `9b224f52de62cda918e9b954835462c630b90e56193bf7fe8335b884d5cf4b9c`).
+Agent Deck 1.16.34 (`bd65d342…`) owned the session; guest Claude 2.1.322
+(`f220ca50…`) used its own claude.ai login, completed through the CLI's
+paste-code flow. No host credentials were copied. Phases: running, orderly
+restart, SIGKILL, actual kernel reboot (new boot ID), three repeated reconnects
+with no launch, approved managed continuation, and the duplicate receipt across
+controller reconstruction. Exactly two native launches occurred, both
+`--resume <original id> --safe-mode --tools "" --permission-mode plan` in the
+original project with identical roots. The post-reboot answer was a fresh
+assistant record containing the original marker and a new nonce, written to the
+original native state file. Receipt:
+`_build/recovery-vm/qualification-441375b00aa1/managed-lifecycle-4b04f27c726542ed9955dc9ab946ee27.json`,
+qualifier SHA-256 `7767eacd56aa4d7127c21ef158e6fcc24e3c485ec30173a4d2dac36cc47e7e40`.
 
-The guest has 4 GiB of RAM for the native CLI. Its standard
-[Claude authentication flow](https://code.claude.com/docs/en/authentication)
-uses a temporary SSH-forwarded localhost callback to the user's browser.
-Login codes and tokens are not collected in WebMux logs or repository evidence.
+Two earlier runs on the same build are retained as negative harness evidence,
+not recovery failures:
+
+- The first stopped at Claude's first-run "Security notes" screen, which the
+  harness did not recognize. Its folder-trust handler also pressed Enter
+  blindly although the native default is `No, exit`. The harness now dismisses
+  the notes and selects trust by the rendered cursor position.
+- The second passed every phase through the approved post-reboot continuation,
+  but the final question was never recorded by the native client. Restored
+  history repainted the marker before the composer accepted input, satisfying
+  the old readiness check. The harness now requires an empty, stable composer
+  and verifies submission against the native state file, resending only when
+  the nonce is neither recorded nor visible (at most three attempts). The
+  answer oracle is unchanged.
+
+In the passing run the first post-reconstruction send was still not recorded
+and a second send succeeded. Input loss immediately after managed reattach is
+tracked as [#325](https://github.com/jordanhubbard/webmux/issues/325).
+
+This receipt qualifies one Linux guest, Agent Deck 1.16.34 and Claude 2.1.322
+with this launch policy. It does not qualify Rig across reboot, remote managed
+hosts or other native CLIs across a managed reboot.
 
 ## Sources
 
