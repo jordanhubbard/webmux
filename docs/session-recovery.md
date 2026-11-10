@@ -1285,6 +1285,29 @@ Affected Go race suites and vet, strict TypeScript, the standalone build and all
 50 helper tests passed. This run does not add managed native host-reboot or
 remote-conversation evidence.
 
+## Guest-native conversation reboot mode awaiting qualification
+
+The managed VM harness accepts `--native-claude`. This mode uses Claude 2.1.322
+installed and authenticated directly in the disposable guest. It creates a new
+synthetic native conversation there, resumes it through the real Agent Deck
+manager, and requires fresh remembered-marker responses before and after an
+actual guest reboot. The proposed continuation uses WebMux's managed action;
+duplicate requests are checked before and after controller reconstruction.
+Native executable, project, state-file reference, roots and explicit launch
+policy are checked as well.
+
+The guest installation and Linux WebMux build are prepared. The harness passes
+Python compilation and whitespace checks. **This native reboot mode is not yet
+qualified:** the guest's separate browser login is pending, so there is no native
+reboot receipt. The already-passing shell-job reboot receipt above must not be
+used as proof of this mode. The Mac's existing Claude login was independently
+confirmed; its credentials are not copied into the guest.
+
+The guest has 4 GiB of RAM for the native CLI. Its standard
+[Claude authentication flow](https://code.claude.com/docs/en/authentication)
+uses a temporary SSH-forwarded localhost callback to the user's browser.
+Login codes and tokens are not collected in WebMux logs or repository evidence.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
