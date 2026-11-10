@@ -1171,6 +1171,33 @@ survivor reattachment, one launch, no-launch reconciliation, policy rejection an
 post-launch uncertainty. Published checkpoint `d92c891` passed all hosted CI and
 Packaging; the new head needs its own hosted results.
 
+## Recovery interrupted before its native result
+
+The native Rig harness now supports `--interrupt-action` with `--webmux-action`.
+It gates only its private native launch, confirms that the exact request ID and
+`outcome: requested` are on disk, and verifies that no native process has started.
+It then SIGKILLs only the private WebMux controller before releasing the launch.
+The request loses its response while the native manager completes one launch.
+
+After controller reconstruction, the original request and a different UUID are
+both rejected as uncertain. A second controller reconstruction still rejects a
+retry. Explicit viewer reconnection reattaches the same native PID without
+starting again. The resumed native conversation returns the original marker
+with a fresh test phrase; original settings, executable, cwd and one-resume
+checks pass. This tests an in-flight request, beyond a consumed receipt whose
+response was already returned.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-c4b46e25-e799-4c26-bed0-0b27ea4751dc/manifest.json`.
+Executable SHA-256:
+`adaab277e3c614d77fa181b76d5eaf4a805626bdd1373a3e1d9a0738b133abd0`.
+Qualification script SHA-256:
+`6d8ff8f07c1d3925078ea9945d4bfe0f7d5c30fb34474b649674e234bc8c0d28`.
+This checkpoint changes qualification only. It does not establish managed host
+reboot or remote native recovery. The private launch gate has a deadline and is
+released during fixture cleanup; installed services and other managers are not
+controlled by this test.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

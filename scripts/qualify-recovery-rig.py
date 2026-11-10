@@ -19,6 +19,7 @@ import socket
 import subprocess
 import sys
 import time
+import threading
 import urllib.error
 import urllib.request
 import urllib.parse
@@ -35,11 +36,14 @@ def main():
     parser.add_argument('--native-hooks', action='store_true', help='qualify the installed Rig SessionStart relay with per-invocation Claude settings and native snapshot identity')
     parser.add_argument('--native-resume', action='store_true', help='qualify actual private Rig-owned exact-snapshot native continuation after process loss')
     parser.add_argument('--webmux-action', action='store_true', help='perform approved native recovery through the WebMux HTTP action and verify once-only receipts across restart')
+    parser.add_argument('--interrupt-action', action='store_true', help='kill only the private controller after durable intent and before a gated native launch; verify uncertain requests cannot restart it')
     parser.add_argument('--keep-team-default', action='store_true', help='retain Rig native team-default permissions from first launch through resume without switching to explicit plan mode')
     parser.add_argument('--expect-policy-drift', action='store_true', help='test the known first-launch/resume settings difference and require WebMux to reject it; does not qualify policy-preserving native recovery')
     args = parser.parse_args()
     if args.keep_team_default and (not args.native_resume or args.expect_policy_drift):
         parser.error('--keep-team-default requires --native-resume and cannot expect a policy change')
+    if args.interrupt_action and not args.webmux_action:
+        parser.error('--interrupt-action requires --webmux-action')
     if args.webmux_action and (not args.native_resume or args.expect_policy_drift):
         parser.error('--webmux-action requires unchanged-policy --native-resume')
     if args.native_resume and not args.expect_policy_drift:
@@ -95,7 +99,14 @@ def main():
         path.write_text(text)
         path.chmod(0o700)
     restart_block = fixture / 'block-manager-start'
-    executable(aliases / 'rig', '#!/bin/sh\nif [ "$1" = daemon ] && [ "${2-}" = start ] && [ -f ' + shlex.quote(str(restart_block)) + ' ]; then echo "Private qualification fixture denies manager startup" >&2; exit 1; fi\nexec ' + shlex.join([str(rig_node), str(rig_cli)]) + ' "$@"\n')
+    launch_block, launch_reached = fixture / 'hold-native-launch', fixture / 'native-launch-reached'
+    rig_shim = '#!' + sys.executable + '\nimport os,sys,time,pathlib\na=sys.argv[1:]\n'
+    rig_shim += 'if a[:2]==["daemon","start"] and pathlib.Path(' + repr(str(restart_block)) + ').exists(): raise SystemExit("Private qualification fixture denies manager startup")\n'
+    rig_shim += 'block=pathlib.Path(' + repr(str(launch_block)) + ')\n'
+    rig_shim += 'if a and a[0]=="launch" and "--plan" not in a and block.exists():\n pathlib.Path(' + repr(str(launch_reached)) + ').write_text(str(os.getpid()))\n deadline=time.monotonic()+20\n while block.exists():\n  if time.monotonic()>deadline: raise SystemExit("Private launch gate expired")\n  time.sleep(0.05)\n'
+    rig_shim += 'os.execv(' + repr(str(rig_node)) + ',[' + repr(str(rig_node)) + ',' + repr(str(rig_cli)) + ',*a])\n'
+    compile(rig_shim, str(aliases / 'rig'), 'exec')
+    executable(aliases / 'rig', rig_shim)
     executable(aliases / 'tmux', '#!/bin/sh\nexec ' + shlex.join([tmux, '-L', socket_name]) + ' "$@"\n')
     executable(aliases / 'node', '#!/bin/sh\nexec ' + shlex.quote(str(rig_node)) + ' "$@"\n')
     def rig(*words, check=True):
@@ -497,17 +508,60 @@ def main():
             if args.webmux_action:
                 action_preview = view()
                 recovery_action = {'id': str(uuid.uuid4()), 'kind': 'managed', 'confirm': True, 'revision': action_preview['state']['revision'], 'host_revision': 0, 'instance': action_preview['instance']}
-                assert api('/api/session-recovery/' + sid, recovery_action)['outcome'] == 'consumed'
-                resumed_identity = native()
-                assert resumed_identity['count'] == 1
-                assert api('/api/session-recovery/' + sid, recovery_action)['outcome'] == 'consumed'
-                assert native() == resumed_identity
-                stop(True)
-                start()
-                wait(connected, 'recovery receipt retained across controller SIGKILL')
-                assert api('/api/session-recovery/' + sid, recovery_action)['outcome'] == 'consumed'
-                assert native() == resumed_identity
-                receipt('WebMux approved native action and durable once-only receipt across restart', native=native())
+                if args.interrupt_action:
+                    launch_block.write_text('private fixture gate')
+                    action_result = {}
+                    def submit_interrupted_action():
+                        try:
+                            action_result['response'] = api('/api/session-recovery/' + sid, recovery_action)
+                        except Exception as error:
+                            action_result['error_type'] = type(error).__name__
+                    action_thread = threading.Thread(target=submit_interrupted_action, daemon=True)
+                    action_thread.start()
+                    wait(lambda: launch_reached.is_file(), 'native launch reached after durable intent', seconds=20)
+                    durable = (home / 'data/sessions/sessions.yaml').read_text()
+                    assert recovery_action['id'] in durable and 'outcome: requested' in durable
+                    assert native()['count'] == 0, 'Launch gate did not stop before the native operation'
+                    stop(True)
+                    action_thread.join(timeout=5)
+                    assert not action_thread.is_alive() and 'response' not in action_result
+                    launch_block.unlink()
+                    resumed_identity = wait(lambda: native() if native()['count'] == 1 else None, 'one native process after lost controller response')
+                    (fixture / 'interrupted-action-client.json').write_text(json.dumps(action_result, indent=2) + '\n')
+                    start()
+                    wait(connected, 'surviving native process after in-flight controller loss')
+                    def reject_uncertain(request):
+                        try:
+                            api('/api/session-recovery/' + sid, request)
+                        except urllib.error.HTTPError as error:
+                            assert error.code in [400, 409]
+                        else:
+                            raise AssertionError('Uncertain managed recovery was retried')
+                        assert native() == resumed_identity
+                    reject_uncertain(recovery_action)
+                    current = view()
+                    fresh_request = dict(recovery_action, id=str(uuid.uuid4()), revision=current['state']['revision'], instance=current['instance'])
+                    reject_uncertain(fresh_request)
+                    stop(True)
+                    start()
+                    wait(connected, 'uncertain receipt survives a second controller reconstruction')
+                    reject_uncertain(recovery_action)
+                    api('/api/sessions/' + sid + '/reconnect', {})
+                    wait(connected, 'manual viewer reconnect to the one native continuation')
+                    assert native() == resumed_identity
+                    receipt('In-flight controller SIGKILL retains uncertain intent and blocks all duplicate starts', native=native(), request_id=recovery_action['id'])
+                else:
+                    assert api('/api/session-recovery/' + sid, recovery_action)['outcome'] == 'consumed'
+                    resumed_identity = native()
+                    assert resumed_identity['count'] == 1
+                    assert api('/api/session-recovery/' + sid, recovery_action)['outcome'] == 'consumed'
+                    assert native() == resumed_identity
+                    stop(True)
+                    start()
+                    wait(connected, 'recovery receipt retained across controller SIGKILL')
+                    assert api('/api/session-recovery/' + sid, recovery_action)['outcome'] == 'consumed'
+                    assert native() == resumed_identity
+                    receipt('WebMux approved native action and durable once-only receipt across restart', native=native())
             else:
                 result = rig('launch', rig_id, 'agents.continuation', '--snapshot-id', snapshot_id, '--json', check=False)
                 (fixture / 'native-resume-result.json').write_text(json.dumps({'returncode': result.returncode, 'stdout': result.stdout, 'stderr': result.stderr}, indent=2) + '\n')
@@ -626,8 +680,10 @@ def main():
         if args.expect_policy_drift:
             scope += ' The expected original-settings mismatch was rejected by WebMux; this does not qualify policy-preserving recovery.'
         scope += ' WebMux managed action and durable duplicate receipt were exercised.' if args.webmux_action else ' No WebMux Rig native-launch action is qualified.'
+        if args.interrupt_action:
+            scope += ' In-flight controller loss leaves an uncertain durable intent and no duplicate native start.'
         scope += ' Host reboot and remote destinations are not qualified.'
-        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_hooks': args.native_hooks, 'native_resume': args.native_resume, 'kept_team_default': args.keep_team_default, 'webmux_action': args.webmux_action, 'expected_policy_drift': args.expect_policy_drift, 'original_settings_preserved': original_settings_preserved, 'relay_sha256': relay_sha256, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': scope}
+        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_hooks': args.native_hooks, 'native_resume': args.native_resume, 'kept_team_default': args.keep_team_default, 'webmux_action': args.webmux_action, 'interrupted_action': args.interrupt_action, 'expected_policy_drift': args.expect_policy_drift, 'original_settings_preserved': original_settings_preserved, 'relay_sha256': relay_sha256, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': scope}
         (fixture / 'manifest.json').write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(fixture / 'manifest.json')}), flush=True)
     except Exception as error:
@@ -644,6 +700,7 @@ def main():
         print(json.dumps({'passed': False, 'manifest': str(fixture / 'manifest.json')}), flush=True)
         raise
     finally:
+        launch_block.unlink(missing_ok=True)
         if sid and controller and controller.poll() is None:
             try:
                 api('/api/sessions/' + sid, method='DELETE')
