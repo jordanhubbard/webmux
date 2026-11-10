@@ -13,23 +13,28 @@ import (
 // RecoveryView is owner-scoped like the terminal itself. History is plain text;
 // browser/clipboard/shell protocol packets are never replayed from disk.
 type RecoveryView struct {
-	ManagerTarget    string          `json:"manager_target,omitempty"`
-	ManagerDirectory string          `json:"manager_directory,omitempty"`
-	Waiting          bool            `json:"waiting"`
-	HostRevision     uint64          `json:"host_revision"`
-	Instance         string          `json:"instance"`
-	Warning          string          `json:"warning,omitempty"`
-	CanResumeCLI     bool            `json:"can_resume_cli"`
-	CanReplay        bool            `json:"can_replay"`
-	SessionID        string          `json:"session_id"`
-	Hostname         string          `json:"hostname"`
-	Transport        string          `json:"transport"`
-	LifecycleOwner   string          `json:"lifecycle_owner"`
-	State            *recovery.State `json:"state,omitempty"`
-	History          string          `json:"history"`
-	HistoryAvailable bool            `json:"history_available"`
-	ShellReady       bool            `json:"shell_ready"`
-	Message          string          `json:"message"`
+	ManagerProfile          string          `json:"manager_profile,omitempty"`
+	ManagerNativeSession    string          `json:"manager_native_session,omitempty"`
+	ManagerNativeStateFile  string          `json:"manager_native_state_file,omitempty"`
+	ManagerNativeSource     string          `json:"manager_native_source,omitempty"`
+	ManagerNativeObservedAt string          `json:"manager_native_observed_at,omitempty"`
+	ManagerTarget           string          `json:"manager_target,omitempty"`
+	ManagerDirectory        string          `json:"manager_directory,omitempty"`
+	Waiting                 bool            `json:"waiting"`
+	HostRevision            uint64          `json:"host_revision"`
+	Instance                string          `json:"instance"`
+	Warning                 string          `json:"warning,omitempty"`
+	CanResumeCLI            bool            `json:"can_resume_cli"`
+	CanReplay               bool            `json:"can_replay"`
+	SessionID               string          `json:"session_id"`
+	Hostname                string          `json:"hostname"`
+	Transport               string          `json:"transport"`
+	LifecycleOwner          string          `json:"lifecycle_owner"`
+	State                   *recovery.State `json:"state,omitempty"`
+	History                 string          `json:"history"`
+	HistoryAvailable        bool            `json:"history_available"`
+	ShellReady              bool            `json:"shell_ready"`
+	Message                 string          `json:"message"`
 }
 
 func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
@@ -61,6 +66,9 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 		view.Waiting, view.Instance = control.Mode == "waiting" && hostReady, control.Instance
 	}
 	if s.Rig != nil {
+		view.ManagerProfile = s.Rig.ManagerProfile
+		view.ManagerNativeSession, view.ManagerNativeStateFile = s.Rig.NativeSessionID, s.Rig.NativeStateFile
+		view.ManagerNativeSource, view.ManagerNativeObservedAt = s.Rig.NativeSource, s.Rig.NativeObservedAt
 		view.ManagerTarget, view.ManagerDirectory = s.Rig.Target, s.Rig.Workspace
 		if s.Rig.Host != "" {
 			view.Hostname = s.Rig.Host

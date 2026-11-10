@@ -154,7 +154,7 @@ func (b *Broker) ensureRigViewAt(owner, view, title string, argv []string, grid 
 		launched = true
 	}
 	if rig != nil {
-		value := *rig
+		value := b.managedEvidenceLocked(selected, *rig)
 		selected.value.Rig = &value
 	}
 	if err := b.persistLocked(); err != nil {

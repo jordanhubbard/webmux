@@ -34,6 +34,10 @@ func (p *agentDeckProvider) Survives(ctx context.Context, target string) (bool, 
 	if err != nil {
 		return false, err
 	}
+	seat, err := p.agentDeckSeat(ctx, target)
+	if err != nil {
+		return false, err
+	}
 	var receipt struct {
 		InstanceID   string `json:"instance_id"`
 		State        string `json:"state"`
@@ -44,6 +48,8 @@ func (p *agentDeckProvider) Survives(ctx context.Context, target string) (bool, 
 	args := []string{"session", "ownership", "inspect", id, "--json"}
 	if remote != "" {
 		args = append([]string{"remote", remote}, args...)
+	} else if seat.Profile != "" && seat.Profile != "default" {
+		args = append([]string{"-p", seat.Profile}, args...)
 	}
 	if err := p.runJSON(ctx, &receipt, args...); err != nil {
 		return false, err
@@ -99,28 +105,30 @@ type coordinationProject struct {
 }
 
 type coordinationSeat struct {
-	Provider       string `json:"provider"`
-	ID             string `json:"id"`
-	ProjectID      string `json:"projectId"`
-	ProjectName    string `json:"projectName"`
-	Name           string `json:"name"`
-	Host           string `json:"host"`
-	Workspace      string `json:"workspace,omitempty"`
-	Runtime        string `json:"runtime"`
-	State          string `json:"state"`
-	Openable       bool   `json:"openable"`
-	Managed        bool   `json:"managed"`
-	NativeSession  string `json:"nativeSessionId,omitempty"`
-	ProviderTarget string `json:"-"`
-	Context        string `json:"context,omitempty"`
-	ParentID       string `json:"parentId,omitempty"`
-	ParentName     string `json:"parentName,omitempty"`
-	Role           string `json:"role,omitempty"`
-	Substate       string `json:"substate,omitempty"`
-	LastActivity   string `json:"lastActivityAt,omitempty"`
-	Attention      bool   `json:"attention,omitempty"`
-	CanReceive     bool   `json:"canReceive,omitempty"`
-	ExitCode       *int   `json:"exitCode,omitempty"`
+	Profile         string `json:"profile,omitempty"`
+	NativeStateFile string `json:"nativeStateFile,omitempty"`
+	Provider        string `json:"provider"`
+	ID              string `json:"id"`
+	ProjectID       string `json:"projectId"`
+	ProjectName     string `json:"projectName"`
+	Name            string `json:"name"`
+	Host            string `json:"host"`
+	Workspace       string `json:"workspace,omitempty"`
+	Runtime         string `json:"runtime"`
+	State           string `json:"state"`
+	Openable        bool   `json:"openable"`
+	Managed         bool   `json:"managed"`
+	NativeSession   string `json:"nativeSessionId,omitempty"`
+	ProviderTarget  string `json:"-"`
+	Context         string `json:"context,omitempty"`
+	ParentID        string `json:"parentId,omitempty"`
+	ParentName      string `json:"parentName,omitempty"`
+	Role            string `json:"role,omitempty"`
+	Substate        string `json:"substate,omitempty"`
+	LastActivity    string `json:"lastActivityAt,omitempty"`
+	Attention       bool   `json:"attention,omitempty"`
+	CanReceive      bool   `json:"canReceive,omitempty"`
+	ExitCode        *int   `json:"exitCode,omitempty"`
 }
 
 type coordinationMessage struct {
@@ -196,15 +204,18 @@ type coordinationLaunchRequest struct {
 }
 
 type coordinationLaunch struct {
-	Provider  string
-	Target    string
-	Title     string
-	Project   string
-	Name      string
-	Host      string
-	Workspace string
-	Runtime   string
-	Argv      []string
+	Profile         string
+	NativeSession   string
+	NativeStateFile string
+	Provider        string
+	Target          string
+	Title           string
+	Project         string
+	Name            string
+	Host            string
+	Workspace       string
+	Runtime         string
+	Argv            []string
 }
 
 type agentDeckProvider struct {
@@ -409,6 +420,8 @@ func (p *agentDeckProvider) Descriptor() coordinationProviderDescriptor {
 }
 
 type agentDeckSession struct {
+	Profile         string `json:"profile"`
+	TranscriptPath  string `json:"transcript_path"`
 	ID              string `json:"id"`
 	Title           string `json:"title"`
 	Path            string `json:"path"`
@@ -677,6 +690,7 @@ func (p *agentDeckProvider) Status(ctx context.Context) (coordinationProviderSta
 		}
 		status.Seats = append(status.Seats, coordinationSeat{
 			Provider: "agent-deck", ID: qualified, ProjectID: projectID, ProjectName: group,
+			Profile: value.Profile, NativeStateFile: value.TranscriptPath,
 			Name: value.Title, Host: host, Workspace: workspace, Runtime: value.Tool, State: value.Status,
 			Openable: !value.Archived, Managed: true, NativeSession: native, ProviderTarget: value.ID,
 			ParentID: parentID, ParentName: parentName, Role: role, Substate: value.Substate,
@@ -749,10 +763,18 @@ func (p *agentDeckProvider) agentDeckSeat(ctx context.Context, target string) (c
 	if err != nil {
 		return coordinationSeat{}, err
 	}
+	var selected *coordinationSeat
 	for _, seat := range status.Seats {
 		if seat.ID == target {
-			return seat, nil
+			if selected != nil {
+				return coordinationSeat{}, fmt.Errorf("Agent Deck session ID is ambiguous across profiles; use its lifecycle manager to select the original profile")
+			}
+			copy := seat
+			selected = &copy
 		}
+	}
+	if selected != nil {
+		return *selected, nil
 	}
 	return coordinationSeat{}, fmt.Errorf("Agent Deck session is unavailable; refresh the session list")
 }
@@ -890,7 +912,10 @@ func (p *agentDeckProvider) Drain(ctx context.Context, remoteName, target string
 
 func (p *agentDeckProvider) Attach(ctx context.Context, target string) (coordinationLaunch, error) {
 	seat, err := p.agentDeckSeat(ctx, target)
-	if err != nil || !seat.Openable {
+	if err != nil {
+		return coordinationLaunch{}, err
+	}
+	if !seat.Openable {
 		return coordinationLaunch{}, fmt.Errorf("Agent Deck session is unavailable; refresh the session list")
 	}
 	remote, id, err := splitAgentDeckTarget(target)
@@ -900,8 +925,10 @@ func (p *agentDeckProvider) Attach(ctx context.Context, target string) (coordina
 	argv := []string{p.executable, "session", "attach", id}
 	if remote != "" {
 		argv = []string{p.executable, "remote", "attach", remote, id}
+	} else if seat.Profile != "" && seat.Profile != "default" {
+		argv = append([]string{p.executable, "-p", seat.Profile}, argv[1:]...)
 	}
-	return coordinationLaunch{Provider: "agent-deck", Target: target, Title: seat.Name + " · " + seat.Host + " · " + seat.ProjectName, Project: seat.ProjectName, Name: seat.Name, Host: seat.Host, Workspace: seat.Workspace, Runtime: seat.Runtime, Argv: argv}, nil
+	return coordinationLaunch{Provider: "agent-deck", Target: target, Profile: seat.Profile, NativeSession: seat.NativeSession, NativeStateFile: seat.NativeStateFile, Title: seat.Name + " · " + seat.Host + " · " + seat.ProjectName, Project: seat.ProjectName, Name: seat.Name, Host: seat.Host, Workspace: seat.Workspace, Runtime: seat.Runtime, Argv: argv}, nil
 }
 
 func (p *agentDeckProvider) Launch(ctx context.Context, request coordinationLaunchRequest) (coordinationLaunch, error) {

@@ -11,13 +11,18 @@ var ErrClosed = errors.New("session broker is shutting down")
 
 // RigIdentity is recorded only from the server coordinator, never a terminal title.
 type RigIdentity struct {
-	Provider  string `json:"provider,omitempty" yaml:"provider,omitempty"`
-	Target    string `json:"target" yaml:"target"`
-	Project   string `json:"project" yaml:"project"`
-	Name      string `json:"name" yaml:"name"`
-	Host      string `json:"host" yaml:"host"`
-	Runtime   string `json:"runtime" yaml:"runtime"`
-	Workspace string `json:"workspace,omitempty" yaml:"workspace,omitempty"`
+	ManagerProfile   string `json:"manager_profile,omitempty" yaml:"manager_profile,omitempty"`
+	NativeSessionID  string `json:"native_session_id,omitempty" yaml:"native_session_id,omitempty"`
+	NativeStateFile  string `json:"native_state_file,omitempty" yaml:"native_state_file,omitempty"`
+	NativeSource     string `json:"native_source,omitempty" yaml:"native_source,omitempty"`
+	NativeObservedAt string `json:"native_observed_at,omitempty" yaml:"native_observed_at,omitempty"`
+	Provider         string `json:"provider,omitempty" yaml:"provider,omitempty"`
+	Target           string `json:"target" yaml:"target"`
+	Project          string `json:"project" yaml:"project"`
+	Name             string `json:"name" yaml:"name"`
+	Host             string `json:"host" yaml:"host"`
+	Runtime          string `json:"runtime" yaml:"runtime"`
+	Workspace        string `json:"workspace,omitempty" yaml:"workspace,omitempty"`
 }
 
 type Session struct {

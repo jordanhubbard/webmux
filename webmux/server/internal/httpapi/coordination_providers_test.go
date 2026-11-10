@@ -288,6 +288,7 @@ func TestManagedReattachmentResolvesExactProviderDestination(t *testing.T) {
 		{Provider: "agent-deck", Target: identity.Target, Host: "other-host", Workspace: identity.Workspace},
 		{Provider: "agent-deck", Target: identity.Target, Host: identity.Host, Workspace: "/other-project"},
 		{Provider: "agent-deck", Target: identity.Target, Host: identity.Host, Workspace: identity.Workspace, Runtime: "claude"},
+		{Provider: "agent-deck", Target: identity.Target, Host: identity.Host, Workspace: identity.Workspace, Runtime: identity.Runtime, ManagerProfile: "other-profile"},
 		{Provider: "agent-deck", Target: "agent-deck:local:deleted", Host: identity.Host},
 		{Provider: "agent-deck", Target: "rig:local:local-1", Host: identity.Host},
 	} {
@@ -388,5 +389,54 @@ func TestManagedReattachmentAcceptsVerifiedNativeInventoryWithoutDisplayStatus(t
 	identity := session.RigIdentity{Provider: "agent-deck", Target: "agent-deck:local:local-1", Host: "localhost", Workspace: "/src/local", Runtime: "codex"}
 	if _, err := s.resolveManagedReattachment(context.Background(), "anonymous", identity); err != nil {
 		t.Fatal("native inventory without display status blocked an owned process", err)
+	}
+}
+
+func TestAgentDeckLocalProfileScopesAttachmentAndOwnership(t *testing.T) {
+	executable, calls := fakeAgentDeck(t)
+	script, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := strings.ReplaceAll(string(script), `"id":"local-1","title"`, `"id":"local-1","profile":"work","transcript_path":"/native/conversation.jsonl","title"`)
+	text = strings.ReplaceAll(text, `"session ownership inspect local-1 --json")`, `"-p work session ownership inspect local-1 --json")`)
+	if err := os.WriteFile(executable, []byte(text), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	p := &agentDeckProvider{executable: executable}
+	launch, err := p.Attach(context.Background(), "local:local-1")
+	if err != nil || launch.Profile != "work" || launch.NativeStateFile != "/native/conversation.jsonl" || !reflect.DeepEqual(launch.Argv, []string{executable, "-p", "work", "session", "attach", "local-1"}) {
+		t.Fatal("attachment lost its native profile", launch, err)
+	}
+	if live, err := p.Survives(context.Background(), "local:local-1"); err != nil || !live {
+		t.Fatal("ownership used another profile", live, err)
+	}
+	data, _ := os.ReadFile(calls)
+	if !strings.Contains(string(data), "-p work session ownership inspect local-1 --json") {
+		t.Fatal("ownership did not name the original profile", string(data))
+	}
+}
+
+func TestAgentDeckDuplicateProfileIDsDoNotSelectAnArbitraryRegistry(t *testing.T) {
+	executable, _ := fakeAgentDeck(t)
+	script, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(string(script), "\n")
+	for index, line := range lines {
+		if strings.Contains(line, `"id":"local-1","title"`) {
+			lines[index] = strings.Replace(line, `}]'`, `},{"id":"local-1","profile":"work","title":"different profile","path":"/other","group":"other","tool":"codex"}]'`, 1)
+		}
+	}
+	if err := os.WriteFile(executable, []byte(strings.Join(lines, "\n")), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	p := &agentDeckProvider{executable: executable}
+	if _, err := p.Attach(context.Background(), "local:local-1"); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatal("ambiguous profile selected for attachment", err)
+	}
+	if live, err := p.Survives(context.Background(), "local:local-1"); err == nil || live {
+		t.Fatal("ambiguous profile used for process ownership", live, err)
 	}
 }

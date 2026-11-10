@@ -63,6 +63,13 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
           <dt>Session manager</dt><dd>{value.lifecycle_owner === 'webmux' ? 'WebMux' : value.lifecycle_owner}</dd>
           {value.manager_target && <><dt>Managed session</dt><dd>{value.manager_target}</dd></>}
           {value.manager_directory && <><dt>Managed project directory</dt><dd>{value.manager_directory}</dd></>}
+          {value.manager_profile && <><dt>Manager profile</dt><dd>{value.manager_profile}</dd></>}
+          {value.manager_native_session && <>
+            <dt>Recorded managed conversation</dt><dd>{value.manager_native_session}</dd>
+            <dt>Conversation evidence</dt><dd>Recorded from the lifecycle manager. Later conversation changes have not been verified.</dd>
+          </>}
+          {value.manager_native_state_file && <><dt>Managed native state file</dt><dd>{value.manager_native_state_file}</dd></>}
+          {value.manager_native_observed_at && <><dt>Managed conversation observation</dt><dd>{new Date(value.manager_native_observed_at).toLocaleString()}</dd></>}
           {activity?.cwd && <><dt>Working directory</dt><dd>{activity.cwd}</dd></>}
           {activity?.observed_at && <><dt>Last observation</dt><dd>{new Date(activity.observed_at).toLocaleString()}</dd></>}
           {activity && <><dt>Evidence</dt><dd>{activity.source === 'cli-native-state' ? 'Native coding CLI metadata' : 'Shell observation'}</dd></>}

@@ -216,6 +216,15 @@ func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, s
 	if launch.Provider != id || launch.Target != target || saved.Host != "" && saved.Host != launch.Host || saved.Workspace != "" && saved.Workspace != launch.Workspace || saved.Runtime != "" && saved.Runtime != launch.Runtime {
 		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager's session destination changed. Review its host, project and coding CLI before opening a new viewer; retained logs are preserved.")
 	}
+	profile := func(value string) string {
+		if value == "" {
+			return "default"
+		}
+		return value
+	}
+	if profile(saved.ManagerProfile) != profile(launch.Profile) {
+		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager's recorded profile changed. Review it through that manager; retained logs are preserved.")
+	}
 	return launch, nil
 }
 func (s *Server) deleteSession(w http.ResponseWriter, r *http.Request, owner string) {

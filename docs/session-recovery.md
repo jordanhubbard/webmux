@@ -450,18 +450,18 @@ bounded during capture. No project-ownership validation was relaxed.
 
 On 2026-11-09, real Agent Deck 1.16.34 and Claude Code 2.1.321 and 2.1.322 passed the
 private managed-session harness. Orderly controller restart, SIGKILL and three
-explicit reconnects kept native pane PID `17215` and exactly one managed pane on the private socket.
+explicit reconnects kept native pane PID `26085` and exactly one managed pane on the private socket.
 A new assistant record returned the earlier synthetic marker and a fresh test
 phrase through the restored WebMux viewer.
 
 After explicit loss of the native process, WebMux retained the prior transcript,
 reported managed recovery unavailable and rejected reconnect with HTTP 409;
 no native process was started implicitly. An explicit Agent Deck start then
-resumed the same native conversation, created pane PID `23495`, and WebMux
+resumed the same native conversation, created pane PID `32960`, and WebMux
 reattached the original viewer. Another new native assistant record returned
 the earlier marker and a second fresh phrase. The native conversation ID stayed
 `08bbfe0e-d31c-4cb6-9d18-546eea56a08c`; the WebMux viewer ID stayed
-`9173464a-8777-4686-a619-76b2d5dd85bc`. All fixture processes were stopped afterward.
+`81bacb27-bbbd-4e1c-8204-93dc4550fff1`. All fixture processes were stopped afterward.
 
 The harness creates a private manager home/profile and tmux socket. A scoped
 native launcher restores the original CLI configuration roots and their
@@ -472,11 +472,17 @@ and verifies the original Claude settings file is unchanged. It waits for the
 actual tmux client before sending input, and counts only new assistant records.
 
 Private receipt:
-`~/.local/share/webmux/recovery-qualification/agent-deck-native-e9ad2eba-efb6-4e39-bd49-a14896b3f020/lifecycle-manifest.json`.
+`~/.local/share/webmux/recovery-qualification/agent-deck-native-4fac1072-cfc8-4536-8a20-a7a1d97403fd/lifecycle-manifest.json`.
 Executable SHA-256:
-`0e8985d24fe0e406f4e8463213cac2c326dafedea359a8d0da8391970302b2cd`.
-Qualification script SHA-256: `9783940e9ebcb35ed91594f1f8513e1a98254c5a7f421fff5aa0e30a951d4a54`.
-The harness verifies that its source stays unchanged during the run.
+`3dab419943936b4f4c15c2140a08f7e367d1a330826ea5aa753fa2e0518e9186`.
+Qualification script SHA-256: `f474ddff3b973884d0abf7b395a01f13964facbab7848b1c0b503e954b10274f`.
+The harness verifies that its source stays unchanged during the run. The latest run also verifies that the recorded native
+conversation ID, state-file reference, manager profile and observation provenance
+survive both controller restart and SIGKILL. Logging-gated capture has separate
+regressions: pause preserves the last reference; resume permits a new observation.
+The preview labels these as manager inventory observations, because later
+conversation switches are not yet verified. Local profile selection is explicit;
+changed profiles and ambiguous IDs are rejected before attachment.
 Earlier failed fixtures remain negative evidence: one exposed the missing native
 inventory status field; others stopped at the native permission dialog and did
 not establish a conversational response.

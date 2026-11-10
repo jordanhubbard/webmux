@@ -237,6 +237,9 @@ def main():
         wait(connected, 'initial viewer')
         wait(lambda: entry['marker'] in view()['history'], 'original native history')
         assert view()['manager_target'] == 'agent-deck:local:' + ident
+        assert view()['manager_native_session'] == entry['native_session_id']
+        assert view()['manager_native_state_file'] and view()['manager_native_source'] == 'agent-deck-inventory'
+        assert view()['manager_native_observed_at'] and view()['manager_profile'] == 'default'
         receipt('initial managed attachment', native=before, webmux_session_id=sid, preview=view())
         for abrupt in (False, True):
             stop(kill=abrupt)
@@ -245,6 +248,7 @@ def main():
             wait(connected, 'restored viewer')
             v = wait(lambda: view() if view().get('state', {}).get('disposition') == 'reattached' else None, 'managed restoration receipt')
             assert native() == before and entry['marker'] in v['history']
+            assert v['manager_native_session'] == entry['native_session_id'] and v['manager_native_state_file']
             receipt('SIGKILL' if abrupt else 'orderly restart', native=native(), preview=v)
         for _ in range(3):
             api('/api/sessions/' + sid + '/reconnect', {})

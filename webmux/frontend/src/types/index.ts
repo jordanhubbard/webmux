@@ -53,7 +53,8 @@ export interface RecoveryActivity {
 }
 
 export interface SessionRecovery {
-  manager_target?: string; manager_directory?: string;
+  manager_target?: string; manager_directory?: string; manager_profile?: string;
+  manager_native_session?: string; manager_native_state_file?: string; manager_native_source?: string; manager_native_observed_at?: string;
   waiting?: boolean; host_revision?: number; instance?: string; warning?: string;
   session_id: string; hostname: string; transport: string; lifecycle_owner: string;
   history: string; history_available: boolean; shell_ready: boolean; message: string;

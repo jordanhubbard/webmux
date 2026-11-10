@@ -27,11 +27,19 @@ describe('recorded work preview', () => {
     value.lifecycle_owner = 'agent-deck';
     value.manager_target = 'agent-deck:remote:original-session';
     value.manager_directory = '/remote/project';
+    value.manager_profile = 'work';
+    value.manager_native_session = 'recorded-native-id';
+    value.manager_native_state_file = '/native/conversation.jsonl';
+    value.manager_native_source = 'agent-deck-inventory';
     value.state!.activity = undefined;
     vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(value);
     render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
     expect(await screen.findByText('agent-deck:remote:original-session')).toBeDefined();
     expect(screen.getByText('/remote/project')).toBeDefined();
+    expect(screen.getByText('work')).toBeDefined();
+    expect(screen.getByText('recorded-native-id')).toBeDefined();
+    expect(screen.getByText('/native/conversation.jsonl')).toBeDefined();
+    expect(screen.getByText(/Later conversation changes have not been verified/)).toBeDefined();
     expect(screen.queryByText('Last observed command')).toBeNull();
   });
 
