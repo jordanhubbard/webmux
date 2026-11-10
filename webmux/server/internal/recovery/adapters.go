@@ -10,10 +10,14 @@ import (
 var nativeUUID = regexp.MustCompile(`(?i)^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`)
 var openCodeID = regexp.MustCompile(`^ses_[A-Za-z0-9_-]{8,128}$`)
 var credentialArgument = regexp.MustCompile(`(?i)(--(?:api[-_]?key|token|password|secret|header)(?:[=\s]|$)|\b[A-Z_]*(?:API_KEY|TOKEN|PASSWORD|SECRET)=)`)
+var inlineConfigurationArgument = regexp.MustCompile(`(?i)(\bOPENCODE_(?:CONFIG_CONTENT|PERMISSION)=|--settings(?:=|\s+)\s*['"]?\s*[\[{])`)
 
 func SafeCommand(command string) (string, bool) {
 	if credentialArgument.MatchString(command) {
 		return "[command contains credential arguments; recover manually]", false
+	}
+	if inlineConfigurationArgument.MatchString(command) {
+		return "[command contains inline configuration; recover manually]", false
 	}
 	return command, true
 }
@@ -22,7 +26,7 @@ func safeArgv(args []string) []string {
 	if len(args) == 0 {
 		return nil
 	}
-	if credentialArgument.MatchString(strings.Join(args, " ")) {
+	if credentialArgument.MatchString(strings.Join(args, " ")) || inlineConfigurationArgument.MatchString(strings.Join(args, " ")) {
 		return []string{args[0], "[credential arguments omitted]"}
 	}
 	return append([]string(nil), args...)

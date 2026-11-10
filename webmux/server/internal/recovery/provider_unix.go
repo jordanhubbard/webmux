@@ -34,6 +34,10 @@ func ensureProvider(ctx context.Context, id, key, helper string) (Event, error) 
 	if err != nil {
 		return Event{}, errors.New("durable recovery requires tmux on this execution host")
 	}
+	cacheRoot, err := HostCacheRoot()
+	if err != nil {
+		return Event{}, err
+	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	environment := []string{}
@@ -61,7 +65,7 @@ func ensureProvider(ctx context.Context, id, key, helper string) (Event, error) 
 			return err
 		}
 		quote := func(value string) string { return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'" }
-		args := []string{"new-session", "-d", "-s", quote(session), "-e", quote("WEBMUX_RECOVERY_SESSION=" + id), "-e", quote("WEBMUX_RECOVERY_KEY=" + key)}
+		args := []string{"new-session", "-d", "-s", quote(session), "-e", quote("WEBMUX_RECOVERY_SESSION=" + id), "-e", quote("WEBMUX_RECOVERY_KEY=" + key), "-e", quote("WEBMUX_RECOVERY_CACHE_HOME=" + cacheRoot)}
 		// Explicit environment overrides prevent a shared tmux server from
 		// accidentally passing another terminal's key or wait policy to a pane.
 		wait := "0"

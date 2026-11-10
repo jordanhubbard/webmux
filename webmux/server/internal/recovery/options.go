@@ -22,8 +22,8 @@ func nativeResumeOptions(cli string, original []string) ([]string, error) {
 		switch cli {
 		case "codex":
 			boolean = key == "--no-daemon" || key == "--no-alt-screen" || key == "--strict-config"
-			valued = key == "--sandbox" || key == "-s" || key == "--profile" || key == "-p" || key == "--ask-for-approval" || key == "-a"
-			if key == "--config" || key == "-c" || key == "--remote" {
+			valued = key == "--sandbox" || key == "-s" || key == "--profile" || key == "-p" || key == "--ask-for-approval" || key == "-a" || key == "--disable" || key == "--enable"
+			if key == "--config" || key == "-c" || key == "--remote" || key == "--ignore-user-config" {
 				return nil, errors.New("this Codex invocation uses configuration overrides or a remote app server; restore it manually to preserve its execution policy")
 			}
 		case "claude":

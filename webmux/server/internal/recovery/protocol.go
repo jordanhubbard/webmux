@@ -18,27 +18,31 @@ const MaxPacket = 32 << 10
 // Event is emitted by the shell/CLI helper on the execution host. It is
 // evidence for a recovery preview, never an instruction to execute a command.
 type Event struct {
-	Mode      string   `json:"mode,omitempty"`
-	Endpoint  string   `json:"endpoint,omitempty"`
-	Helper    string   `json:"helper,omitempty"`
-	Platform  string   `json:"platform,omitempty"`
-	Signature string   `json:"signature,omitempty"`
-	Kind      string   `json:"kind"`
-	Instance  string   `json:"instance,omitempty"`
-	Cwd       string   `json:"cwd,omitempty"`
-	Command   string   `json:"command,omitempty"`
-	CLI       string   `json:"cli,omitempty"`
-	Version   string   `json:"version,omitempty"`
-	SessionID string   `json:"session_id,omitempty"`
-	StateFile string   `json:"state_file,omitempty"`
-	Argv      []string `json:"argv,omitempty"`
-	Survived  bool     `json:"survived,omitempty"`
-	Redacted  bool     `json:"redacted,omitempty"`
-	Ready     bool     `json:"ready,omitempty"`
-	Warning   string   `json:"warning,omitempty"`
+	Configuration *NativeConfiguration `json:"configuration,omitempty"`
+	Mode          string               `json:"mode,omitempty"`
+	Endpoint      string               `json:"endpoint,omitempty"`
+	Helper        string               `json:"helper,omitempty"`
+	Platform      string               `json:"platform,omitempty"`
+	Signature     string               `json:"signature,omitempty"`
+	Kind          string               `json:"kind"`
+	Instance      string               `json:"instance,omitempty"`
+	Cwd           string               `json:"cwd,omitempty"`
+	Command       string               `json:"command,omitempty"`
+	CLI           string               `json:"cli,omitempty"`
+	Version       string               `json:"version,omitempty"`
+	SessionID     string               `json:"session_id,omitempty"`
+	StateFile     string               `json:"state_file,omitempty"`
+	Argv          []string             `json:"argv,omitempty"`
+	Survived      bool                 `json:"survived,omitempty"`
+	Redacted      bool                 `json:"redacted,omitempty"`
+	Ready         bool                 `json:"ready,omitempty"`
+	Warning       string               `json:"warning,omitempty"`
 }
 
 func (e Event) Validate() error {
+	if err := e.Configuration.Validate(e.CLI); err != nil {
+		return err
+	}
 	switch e.Kind {
 	case "shell", "command", "complete", "cli", "provider", "control":
 	default:

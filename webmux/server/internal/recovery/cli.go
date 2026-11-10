@@ -72,7 +72,11 @@ func (b *boundedCLIOutput) Write(data []byte) (int, error) {
 }
 
 func cliTextAt(cwd, binary string, includeStderr bool, args ...string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	return cliTextContext(context.Background(), cwd, binary, includeStderr, args...)
+}
+
+func cliTextContext(parent context.Context, cwd, binary string, includeStderr bool, args ...string) (string, error) {
+	ctx, cancel := context.WithTimeout(parent, 10*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, binary, args...)
 	cmd.Dir = cwd
@@ -151,6 +155,7 @@ func RunCLI(name string, args []string) error {
 		}
 	}
 	event := Event{Kind: "cli", Helper: os.Getenv("WEBMUX_RECOVERY_HELPER"), Platform: runtime.GOOS, Instance: os.Getenv("WEBMUX_RECOVERY_INSTANCE"), Cwd: cwd, CLI: cli, Version: version, SessionID: id, Argv: safeArgv(append([]string{name}, args...))}
+	event.Configuration = captureNativeConfiguration(cli)
 	cmd := exec.Command(binary, launchArgs...)
 	cmd.Dir = cwd
 	cmd.Env = cmd.Environ()
@@ -182,13 +187,19 @@ func RunCLI(name string, args []string) error {
 				_ = cmd.Process.Signal(sig)
 			}
 		case <-ticker.C:
+			if cli == "claude" && event.SessionID != "" {
+				event.StateFile = claudeStateFile(event.SessionID, cwd)
+			}
+			if cli == "cursor" && event.SessionID != "" {
+				event.StateFile = cursorStateFile(event.SessionID, cwd)
+			}
 			if cli == "codex" {
 				// A user can switch conversations within the same process. Never
 				// keep an initial selector after the owning native state changes.
 				event.SessionID, event.StateFile = codexSessionForProcess(cmd.Process.Pid, cwd)
-				if event.SessionID != "" {
-					ticker.Reset(5 * time.Second)
-				}
+			}
+			if event.StateFile != "" {
+				ticker.Reset(5 * time.Second)
 			}
 			emit()
 		}
@@ -228,15 +239,23 @@ func hasSessionSelection(cli string, args []string) bool {
 }
 
 func isCursorCLI(binary string) bool {
-	help, err := cliHelpAt("", binary, "--help")
+	return isCursorCLIContext(context.Background(), binary)
+}
+
+func isCursorCLIContext(ctx context.Context, binary string) bool {
+	help, err := cliTextContext(ctx, "", binary, true, "--help")
 	return err == nil && strings.Contains(help, "Start the Cursor Agent") && strings.Contains(help, "create-chat") && strings.Contains(help, "--resume")
 }
 
 // Prefer the unambiguous alias, but support installations that expose only
 // agent after verifying its native help. A shared basename is not identity.
 func cursorCLI() (string, string, error) {
+	return cursorCLIContext(context.Background())
+}
+
+func cursorCLIContext(ctx context.Context) (string, string, error) {
 	for _, name := range []string{"cursor-agent", "agent"} {
-		if binary, err := originalCLI(name); err == nil && isCursorCLI(binary) {
+		if binary, err := originalCLI(name); err == nil && isCursorCLIContext(ctx, binary) {
 			return name, binary, nil
 		}
 	}

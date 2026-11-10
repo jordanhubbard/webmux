@@ -3,19 +3,24 @@ package recovery
 // Activity describes one observed command, not a reconstructed process image.
 // NativeSessionID is only set by a provider adapter using its native state.
 type Activity struct {
-	Platform        string   `json:"platform,omitempty" yaml:"platform,omitempty"`
-	Replayable      bool     `json:"replayable" yaml:"replayable"`
-	ShellInstance   string   `json:"shell_instance,omitempty" yaml:"shell_instance,omitempty"`
-	Command         string   `json:"command,omitempty" yaml:"command,omitempty"`
-	Argv            []string `json:"argv,omitempty" yaml:"argv,omitempty"`
-	Cwd             string   `json:"cwd,omitempty" yaml:"cwd,omitempty"`
-	Source          string   `json:"source" yaml:"source"`
-	ObservedAt      string   `json:"observed_at" yaml:"observed_at"`
-	CLI             string   `json:"cli,omitempty" yaml:"cli,omitempty"`
-	CLIVersion      string   `json:"cli_version,omitempty" yaml:"cli_version,omitempty"`
-	NativeSessionID string   `json:"native_session_id,omitempty" yaml:"native_session_id,omitempty"`
-	NativeStateFile string   `json:"native_state_file,omitempty" yaml:"native_state_file,omitempty"`
-	Running         bool     `json:"running" yaml:"running"`
+	Configuration   *NativeConfiguration `json:"configuration,omitempty" yaml:"configuration,omitempty"`
+	Platform        string               `json:"platform,omitempty" yaml:"platform,omitempty"`
+	Replayable      bool                 `json:"replayable" yaml:"replayable"`
+	ShellInstance   string               `json:"shell_instance,omitempty" yaml:"shell_instance,omitempty"`
+	Command         string               `json:"command,omitempty" yaml:"command,omitempty"`
+	Argv            []string             `json:"argv,omitempty" yaml:"argv,omitempty"`
+	Cwd             string               `json:"cwd,omitempty" yaml:"cwd,omitempty"`
+	Source          string               `json:"source" yaml:"source"`
+	ObservedAt      string               `json:"observed_at" yaml:"observed_at"`
+	CLI             string               `json:"cli,omitempty" yaml:"cli,omitempty"`
+	CLIVersion      string               `json:"cli_version,omitempty" yaml:"cli_version,omitempty"`
+	NativeSessionID string               `json:"native_session_id,omitempty" yaml:"native_session_id,omitempty"`
+	NativeStateFile string               `json:"native_state_file,omitempty" yaml:"native_state_file,omitempty"`
+	Running         bool                 `json:"running" yaml:"running"`
+}
+
+func (a *Activity) NativeRecoverable() bool {
+	return a != nil && ValidNativeID(a.CLI, a.NativeSessionID) && (a.Configuration == nil || a.Configuration.ManualReason == "")
 }
 
 type State struct {
@@ -48,6 +53,7 @@ func (s *State) Clone() *State {
 	if s.Activity != nil {
 		a := *s.Activity
 		a.Argv = append([]string(nil), a.Argv...)
+		a.Configuration = a.Configuration.Clone()
 		copy.Activity = &a
 	}
 	return &copy

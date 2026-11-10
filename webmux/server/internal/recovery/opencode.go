@@ -2,6 +2,7 @@ package recovery
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -23,6 +24,13 @@ func createOpenCodeSession(binary, cwd string) (string, error) {
 }
 
 func openCodeSession(binary, cwd, selectedID string) (string, error) {
+	return openCodeSessionContext(context.Background(), binary, cwd, selectedID)
+}
+
+func openCodeSessionContext(ctx context.Context, binary, cwd, selectedID string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if selectedID != "" && !ValidNativeID("opencode", selectedID) {
 		return "", errors.New("invalid OpenCode conversation ID")
 	}
@@ -37,7 +45,9 @@ func openCodeSession(binary, cwd, selectedID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	cmd := exec.Command(binary, "serve", "--hostname", "127.0.0.1", "--port", strconv.Itoa(port))
+	// Metadata preparation must not run a second copy of user plugins. The
+	// actual TUI retains the original invocation's customization policy.
+	cmd := exec.Command(binary, "serve", "--pure", "--hostname", "127.0.0.1", "--port", strconv.Itoa(port))
 	cmd.Dir = cwd
 	for _, item := range cmd.Environ() {
 		if !strings.HasPrefix(item, "OPENCODE_SERVER_PASSWORD=") && !strings.HasPrefix(item, "OPENCODE_SERVER_USERNAME=") {
@@ -72,11 +82,13 @@ func openCodeSession(binary, cwd, selectedID string) (string, error) {
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
 		case <-done:
 			return "", errors.New("OpenCode session preparation exited")
 		default:
 		}
-		req, _ := http.NewRequest("GET", base+"/session?directory="+url.QueryEscape(cwd), nil)
+		req, _ := http.NewRequestWithContext(ctx, "GET", base+"/session?directory="+url.QueryEscape(cwd), nil)
 		req.SetBasicAuth("webmux", password)
 		response, err := client.Do(req)
 		if err == nil {
@@ -87,7 +99,11 @@ func openCodeSession(binary, cwd, selectedID string) (string, error) {
 				break
 			}
 		}
-		time.Sleep(100 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(100 * time.Millisecond):
+		}
 	}
 	if !ready {
 		return "", errors.New("OpenCode native session API did not become ready")
@@ -96,7 +112,7 @@ func openCodeSession(binary, cwd, selectedID string) (string, error) {
 	if selectedID != "" {
 		method, endpoint = "GET", "/session/"+url.PathEscape(selectedID)
 	}
-	req, _ := http.NewRequest(method, base+endpoint+"?directory="+url.QueryEscape(cwd), bytes.NewBufferString("{}"))
+	req, _ := http.NewRequestWithContext(ctx, method, base+endpoint+"?directory="+url.QueryEscape(cwd), bytes.NewBufferString("{}"))
 	req.SetBasicAuth("webmux", password)
 	req.Header.Set("Content-Type", "application/json")
 	response, err := client.Do(req)

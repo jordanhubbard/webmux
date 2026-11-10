@@ -12,10 +12,12 @@ import (
 )
 
 type preparedAction struct {
-	Kind    string
-	Cwd     string
-	Command string
-	Argv    []string
+	CLI           string
+	Configuration *NativeConfiguration
+	Kind          string
+	Cwd           string
+	Command       string
+	Argv          []string
 }
 
 func cachedActivity(state HostState) Activity {
@@ -26,6 +28,7 @@ func cachedActivity(state HostState) Activity {
 	if event := state.CLI; event != nil {
 		activity.CLI, activity.CLIVersion, activity.NativeSessionID, activity.NativeStateFile = event.CLI, event.Version, event.SessionID, event.StateFile
 		activity.Argv = append([]string(nil), event.Argv...)
+		activity.Configuration = event.Configuration.Clone()
 		activity.Cwd = event.Cwd
 	}
 	return activity
@@ -44,7 +47,7 @@ func preflightAction(state HostState, action RecoveryAction) (preparedAction, er
 			return preparedAction{}, errors.New("transcript handoff requires explicit confirmation")
 		}
 		args, err := prepareNativeResume(NativeResume{Activity: activity, Context: action.Context})
-		return preparedAction{Kind: "native", Cwd: activity.Cwd, Argv: args}, err
+		return preparedAction{Kind: "native", Cwd: activity.Cwd, Argv: args, CLI: activity.CLI, Configuration: activity.Configuration.Clone()}, err
 	case "replay":
 		if !action.Confirm || !activity.Replayable || activity.Command == "" || action.Context != "" {
 			return preparedAction{}, errors.New("command replay requires an unredacted command and explicit confirmation")

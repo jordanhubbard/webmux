@@ -69,7 +69,7 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	}
 	if s.Recovery != nil && s.Recovery.Activity != nil && view.Waiting && view.LifecycleOwner == "webmux" {
 		a := s.Recovery.Activity
-		view.CanResumeCLI = helper != "" && recovery.ValidNativeID(a.CLI, a.NativeSessionID)
+		view.CanResumeCLI = helper != "" && a.NativeRecoverable()
 		view.CanReplay = a.Replayable && (platform == "linux" || platform == "darwin")
 	}
 	if s.Recovery == nil {
@@ -112,6 +112,9 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	}
 	if controlError != "" {
 		view.Message += " " + controlError
+	}
+	if a := s.Recovery.Activity; a != nil && a.Configuration != nil && a.Configuration.ManualReason != "" {
+		view.Message += " " + a.Configuration.ManualReason
 	}
 	return view, nil
 }
@@ -191,6 +194,7 @@ func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {
 			state.Activity = a
 		}
 		a.CLI, a.CLIVersion, a.NativeSessionID, a.NativeStateFile = event.CLI, event.Version, event.SessionID, event.StateFile
+		a.Configuration = event.Configuration.Clone()
 		a.ShellInstance = event.Instance
 		a.Platform = event.Platform
 		a.Cwd, a.Argv, a.Source, a.Running = event.Cwd, append([]string(nil), event.Argv...), "cli-native-state", true

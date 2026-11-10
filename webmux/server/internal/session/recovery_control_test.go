@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 
@@ -20,6 +21,7 @@ type controlProcess struct {
 	actionError   string
 	actionOutcome string
 	failPause     bool
+	configuration *recovery.NativeConfiguration
 }
 
 func (p *controlProcess) RecoveryRPC(_ context.Context, request recovery.RPCRequest) recovery.RPCResponse {
@@ -44,7 +46,7 @@ func (p *controlProcess) RecoveryRPC(_ context.Context, request recovery.RPCRequ
 	for _, event := range []recovery.Event{
 		{Kind: "provider", Mode: "waiting", Helper: "/bin/webmux", Platform: "linux"},
 		{Kind: "command", Instance: "prior-shell", Platform: "linux", Command: "codex", Cwd: "/workspace"},
-		{Kind: "cli", Instance: "prior-shell", Platform: "linux", Cwd: "/workspace", CLI: "codex", Version: "0.167.0", SessionID: "cadc08a9-0d73-4b44-af10-084a60b44f5b"},
+		{Kind: "cli", Instance: "prior-shell", Platform: "linux", Cwd: "/workspace", CLI: "codex", Version: "0.167.0", SessionID: "cadc08a9-0d73-4b44-af10-084a60b44f5b", Configuration: p.configuration.Clone()},
 		{Kind: "control", Mode: p.mode, Helper: "/bin/webmux", Platform: "linux", Instance: "waiting-worker"},
 	} {
 		packet, _ := recovery.SignedPacket(event, p.key)
@@ -198,6 +200,30 @@ func TestAutomaticRecoveryResumesOnceAfterOptIn(t *testing.T) {
 	p.mu.Unlock()
 	if actions != 1 {
 		t.Fatalf("automatic resume ran %d times", actions)
+	}
+}
+
+func TestUnrecordedInlinePolicyDoesNotOfferOrAutomaticallyRunNativeRecovery(t *testing.T) {
+	b, p, s := controlFixture(t, true)
+	p.mu.Lock()
+	p.configuration = &recovery.NativeConfiguration{Roots: map[string]string{}, ManualReason: "Original inline settings require manual restoration."}
+	p.revision++
+	p.mu.Unlock()
+	b.mu.Lock()
+	e := b.entries[s.ID]
+	r := e.run
+	b.mu.Unlock()
+	b.syncRecovery(e, r)
+	if err := b.SetAutoRecovery("owner", s.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	b.syncRecovery(e, r)
+	p.mu.Lock()
+	actions := p.actions
+	p.mu.Unlock()
+	view, err := b.Recovery("owner", s.ID)
+	if err != nil || actions != 0 || view.CanResumeCLI || !strings.Contains(view.Message, "Original inline settings") {
+		t.Fatalf("native recovery discarded the original policy: actions=%d view=%+v error=%v", actions, view, err)
 	}
 }
 

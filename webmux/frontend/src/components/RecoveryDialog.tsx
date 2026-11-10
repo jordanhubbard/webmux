@@ -25,6 +25,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
     return () => controller.abort();
   }, [sessionId, refresh]);
   const activity = value?.state?.activity;
+  const recordedRoots = Object.entries(activity?.configuration?.roots ?? {}).filter(([name]) => name !== 'HOME');
   const refreshPreview = () => { setApproveReplay(false); setShareContext(false); setContext(''); setRefresh(count => count + 1); };
   const perform = async (kind: RecoveryRequest['kind']) => {
     if (!value?.waiting || !value.state || !value.instance || value.host_revision == null || busy) return;
@@ -71,6 +72,8 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
         {activity?.cli && <dl className="recovery-details">
           <dt>Coding CLI</dt><dd>{activity.cli} {activity.cli_version}</dd>
           <dt>Recorded native session</dt><dd>{activity.native_session_id || 'No reliable native session ID was recorded.'}</dd>
+          {activity.native_state_file && <><dt>Native state file</dt><dd>{activity.native_state_file}</dd></>}
+          {recordedRoots.length > 0 && <><dt>Original CLI paths</dt><dd>{recordedRoots.map(([name, path]) => <div key={name}>{name}: {path || '(empty)'}</div>)}</dd></>}
         </dl>}
         {value.history_available ? <>
           <h3>Previous terminal output</h3>

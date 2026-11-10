@@ -115,7 +115,7 @@ func WaitForRecovery(ctx context.Context) error {
 		if err := os.Chdir(prepared.Cwd); err != nil {
 			return err
 		}
-		if err := RunCLI(prepared.Argv[0], prepared.Argv[1:]); err != nil {
+		if err := RunConfiguredCLI(prepared.Argv, prepared.CLI, prepared.Configuration); err != nil {
 			fmt.Fprintln(os.Stderr, "\r\n[WebMux] Native recovery exited:", err)
 		}
 	}

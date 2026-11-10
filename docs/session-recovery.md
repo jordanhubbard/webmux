@@ -67,13 +67,29 @@ attached to the original TTY, and the wrapper must preserve interrupt behavior.
 Native state availability, supported versions, original execution host and
 project still require validation at the recovery action.
 
+The descriptor also snapshots supported CLI state/configuration path variables
+and their absence. It does not serialize the complete environment or credential
+values. Literal relative paths are retained and interpreted in the original
+working directory; changing their spelling can also change native account or
+keychain identity. A separate preflight process uses the recorded roots, and a
+scoped CLI child receives them after consumption. Neither operation changes the
+broker or waiting shell's environment. WebMux pins its own evidence-cache root
+before launching the shell, so a CLI-specific `HOME` or XDG override cannot
+redirect or lose its recovery observations. Unsupported inline OpenCode settings
+require manual restoration and are excluded from automatic native recovery.
+A new server discards an inherited parent-terminal cache pin before creating its
+own providers. OpenCode metadata probes use `--pure` so they do not execute a
+second copy of user plugins. Canceled preflight closes its private native server.
+Claude and Cursor state-file references locate the recorded selector; observing
+later interactive session switches remains separate work.
+
 ## Acceptance record
 
 | Requirement | Current evidence | Remaining work |
 | --- | --- | --- |
 | Durable owner-scoped activity and log references | Broker tests persist before shutdown; native VM SIGKILL/reboot retain activity and original transcript references | Remote/managed lifecycle qualification |
 | Real shell command and directory capture | Bash/Zsh PTY probes preserve exit status; real WebMux local workflow records a long-running command, arguments and directory | Retain the separate Zsh probe in the qualification harness |
-| Native conversation identity | All four installed CLIs recover a marker through WebMux provider loss and native recovery action; new native assistant records prove continuity; native preflight rejects another project | Interactive session switches and configuration-root continuity |
+| Native conversation identity | All four installed CLIs recover a marker through WebMux provider loss and native recovery action; new native assistant records prove continuity; native preflight rejects another project; configuration-root and named-profile qualification below | Interactive session switches and remaining invocation-specific settings |
 | Safe retained history | Bounded suffix, ANSI/OSC/C1 stripping, rotation and path controls; real local recovery retains the marker in API/UI history; redraw blank rows compacted only in the preview | Additional lifecycle/transport qualification |
 | Surviving providers | Local, SSH and native mosh reconnect/restart/SIGKILL preserve provider and pane PIDs and job count; independent Linux user scopes avoid service-cgroup cleanup | Managed-provider qualification |
 | Recovery preview and continuation | Owner-scoped API and browser actions; separate replay/handoff approval; broker tests for opt-in native auto resume and uncertain-outcome exclusion | Managed lifecycle integration and additional CLI lifecycle cases |
@@ -148,9 +164,10 @@ not a timestamp-based guess.
 
 Remaining native integration includes observing active-session changes in each
 interactive CLI, distinguishing a requested selector from verified active native
-state, and verifying how each supported version restores invocation-specific
-configuration roots, profiles and restrictive policy. Preserve those boundaries
-when needed; never carry approval-bypass flags into a recovery command. The
+state, and extending supported invocation-specific settings without discarding
+their policy. Configuration roots, a named Codex profile and the recorded
+restrictions now have native continuation evidence below. Never carry
+approval-bypass flags into a recovery command. The
 four basic WebMux continuation paths now have native conversation proof below.
 Those checks do not cover interactive session switches or every configuration
 override.
@@ -271,8 +288,45 @@ message ID present before provider loss. The receipt is
 `opencode-conversation-receipt.json` in the same fixture directory. Thus all four
 installed CLIs have actual WebMux provider-loss/native-action continuation
 evidence, in addition to the separate headless checks. Interactive conversation
-switches, configuration-root continuity and managed lifecycle recovery remain
-open acceptance work.
+switches and managed lifecycle recovery remain open acceptance work. The tested
+configuration-root/profile cases are recorded below.
+
+### Original CLI configuration and profile qualification
+
+`scripts/qualify-recovery-configuration.py` passed all four installed CLIs with
+the private controller deliberately configured to use different state roots.
+After provider loss, preflight and the resumed CLI used the original descriptor's
+roots, including absence of an override. The before/after native argv matched,
+and every CLI produced a new native assistant answer containing its previous
+synthetic marker plus a fresh post-recovery phrase. Repeating the action returned
+its consumed receipt. No transcript context was submitted.
+
+Codex 0.167.0 retained a private `webmux-qualification` profile and read-only
+sandbox. New native hook-trust prompts were answered by continuing without
+trusting hooks. Claude Code 2.1.321 retained an unset `CLAUDE_CONFIG_DIR`, which
+restored its original authenticated default despite the controller's override.
+Cursor Agent 2026.11.05-86047df and OpenCode 1.19.5 retained their recorded roots
+and ask/sandbox or plan restrictions. The private manifest is
+`~/.local/share/webmux/recovery-qualification/configuration-99f75e1b-b49c-4173-84e1-15cfe5a3be67/manifest.json`,
+with binary SHA256
+`1ef5a0db50f3414da3b11003b90e5e26fcbdcff59370600fa78869bbba9f0fb1`.
+
+Earlier fixture attempts did not qualify Claude: an invented configuration root
+opened onboarding or lacked that root's native authentication. Those failures
+are retained separately; they were not counted as recovery success. The harness
+now preserves the already-authenticated native root or its original absence.
+It references existing state paths rather than copying credentials and keeps
+new fixture profile/state files in its private directory.
+
+```bash
+python3 scripts/qualify-recovery-configuration.py \
+  --binary /absolute/path/to/standalone-webmux \
+  --manifest /absolute/path/to/synthetic-native-manifest.json
+```
+
+These checks establish the tested root/profile cases, not interactive session
+switches or every possible CLI flag/custom settings payload. Unsupported custom
+settings continue to require explicit manual restoration.
 
 On 2026-11-09, real two-process synthetic-marker checks passed for Codex
 0.167.0, Claude Code 2.1.318, Cursor Agent 2026.11.05-86047df and OpenCode

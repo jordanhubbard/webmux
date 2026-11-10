@@ -88,6 +88,11 @@ func run() (resultErr error) {
 	if len(os.Args) == 2 && os.Args[1] == "--recovery-rpc" {
 		return recovery.ServeRPC(context.Background(), os.Stdin, os.Stdout)
 	}
+	if len(os.Args) == 2 && os.Args[1] == "--recovery-preflight" {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		return recovery.ServeNativePreflightContext(ctx, os.Stdin, os.Stdout)
+	}
 	if len(os.Args) == 2 && os.Args[1] == "--recovery-capabilities" {
 		fmt.Println("1")
 		return nil
@@ -124,6 +129,10 @@ func run() (resultErr error) {
 	if len(os.Args) == 2 && os.Args[1] == "--browser-worker" {
 		return browser.Worker(os.Stdin, os.Stdout)
 	}
+	// A server started from a WebMux terminal owns a new provider namespace.
+	// Its local RPCs and launched shells must agree on this server's cache,
+	// rather than importing the parent terminal's pinned cache location.
+	_ = os.Unsetenv("WEBMUX_RECOVERY_CACHE_HOME")
 	root := flag.String("root", os.Getenv("WEBMUX_ROOT"), "optional directory overriding embedded web/ and config.defaults/")
 	home := flag.String("home", os.Getenv("WEBMUX_HOME"), "writable configuration/data directory")
 	listen := flag.String("listen", "", "override HTTP listen address (e.g. 127.0.0.1:18080)")

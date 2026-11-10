@@ -30,7 +30,7 @@ func TestRecoveryEvidenceSurvivesWithoutBrokerShutdown(t *testing.T) {
 	p := <-launched
 	p.output(t, "previous work 😀\n")
 	sendRecovery(t, b, s.ID, p, recovery.Event{Kind: "command", Instance: "original-shell", Cwd: "/workspace/project", Command: "codex resume previous"})
-	sendRecovery(t, b, s.ID, p, recovery.Event{Kind: "cli", Instance: "original-shell", Cwd: "/workspace/project", CLI: "codex", Version: "0.167.0", SessionID: "native-session", Argv: []string{"codex", "resume", "previous"}})
+	sendRecovery(t, b, s.ID, p, recovery.Event{Kind: "cli", Instance: "original-shell", Cwd: "/workspace/project", CLI: "codex", Version: "0.167.0", SessionID: "native-session", Argv: []string{"codex", "resume", "previous"}, Configuration: &recovery.NativeConfiguration{Roots: map[string]string{"CODEX_HOME": "/original-native-state"}}})
 	eventually(t, func() bool {
 		v, _ := b.Recovery("owner", s.ID)
 		return v.State != nil && v.State.Activity != nil && v.State.Activity.NativeSessionID == "native-session" && strings.Contains(v.History, "previous work 😀")
@@ -45,6 +45,9 @@ func TestRecoveryEvidenceSurvivesWithoutBrokerShutdown(t *testing.T) {
 	v, err := next.Recovery("owner", s.ID)
 	if err != nil || v.State == nil || !v.State.Pending || v.State.Activity.NativeSessionID != "native-session" || !v.HistoryAvailable {
 		t.Fatalf("lost persisted recovery evidence: %+v %v", v, err)
+	}
+	if v.State.Activity.Configuration == nil || v.State.Activity.Configuration.Roots["CODEX_HOME"] != "/original-native-state" {
+		t.Fatal("lost original CLI configuration before broker shutdown")
 	}
 	if _, err := next.Recovery("other", s.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatal("recovery crossed owner boundary")

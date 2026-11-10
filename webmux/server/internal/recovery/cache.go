@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // HostState is scoped to an execution-host account and a stable WebMux session.
@@ -39,11 +40,21 @@ func keyDigest(key string) string {
 	return hex.EncodeToString(digest[:])
 }
 
+func HostCacheRoot() (string, error) {
+	if pinned := os.Getenv("WEBMUX_RECOVERY_CACHE_HOME"); pinned != "" {
+		if !filepath.IsAbs(pinned) || strings.ContainsAny(pinned, "\x00\r\n") {
+			return "", errors.New("invalid recovery cache root")
+		}
+		return pinned, nil
+	}
+	return os.UserCacheDir()
+}
+
 func hostStateDirectory(id string) (string, error) {
 	if !nativeUUID.MatchString(id) {
 		return "", errors.New("invalid recovery session identity")
 	}
-	cache, err := os.UserCacheDir()
+	cache, err := HostCacheRoot()
 	if err != nil {
 		return "", err
 	}
@@ -190,6 +201,7 @@ func InitializeHostEvidence(id, key string, recording bool, seed *Activity) erro
 		state.Command = &event
 		if seed.CLI != "" {
 			native := Event{Kind: "cli", Instance: seed.ShellInstance, Platform: seed.Platform, Cwd: seed.Cwd, CLI: seed.CLI, Version: seed.CLIVersion, SessionID: seed.NativeSessionID, StateFile: seed.NativeStateFile, Argv: safeArgv(seed.Argv)}
+			native.Configuration = seed.Configuration.Clone()
 			if _, err := SignedPacket(native, key); err != nil {
 				return err
 			}

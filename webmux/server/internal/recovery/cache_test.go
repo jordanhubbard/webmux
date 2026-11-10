@@ -20,6 +20,7 @@ func hostFixture(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(home, "cache"))
 	t.Setenv("LocalAppData", filepath.Join(home, "cache"))
+	t.Setenv("WEBMUX_RECOVERY_CACHE_HOME", "")
 	t.Setenv("WEBMUX_RECOVERY_SESSION", testHostSession)
 	t.Setenv("WEBMUX_RECOVERY_KEY", testHostKey)
 	if err := InitializeHostState(testHostSession, testHostKey, true); err != nil {
@@ -146,6 +147,31 @@ func TestEmptyHostCacheCanBeSeededWithoutOverwritingNewerEvidenceOrCapturePolicy
 	}
 	if hostSnapshot(t).Command.Command != "newer command" {
 		t.Fatal("controller seed replaced newer host evidence")
+	}
+}
+
+func TestCLIHomeOverridesKeepTheOriginalHostEvidenceCache(t *testing.T) {
+	hostFixture(t)
+	cacheRoot, err := HostCacheRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("WEBMUX_RECOVERY_CACHE_HOME", cacheRoot)
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	configuration := captureNativeConfiguration("opencode")
+	event := Event{Kind: "cli", Instance: "owning-shell", CLI: "opencode", Configuration: configuration, SessionID: "ses_abcdef123456"}
+	if err := RecordHostEvent(event); err != nil {
+		t.Fatal(err)
+	}
+	state := hostSnapshot(t)
+	if state.CLI == nil || state.CLI.Configuration.Roots["HOME"] != os.Getenv("HOME") {
+		t.Fatal("CLI root overrides redirected activity away from the provider cache")
+	}
+	activity := cachedActivity(state)
+	activity.Configuration.Roots["HOME"] = "/mutated-copy"
+	if state.CLI.Configuration.Roots["HOME"] == "/mutated-copy" {
+		t.Fatal("cached activity aliases host configuration")
 	}
 }
 

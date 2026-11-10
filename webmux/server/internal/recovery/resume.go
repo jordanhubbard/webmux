@@ -2,6 +2,7 @@ package recovery
 
 import (
 	"bufio"
+	"context"
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/json"
@@ -54,12 +55,16 @@ func ResumeOnHost(encoded string) error {
 	if err := os.Chdir(request.Activity.Cwd); err != nil {
 		return err
 	}
-	return RunCLI(args[0], args[1:])
+	return RunConfiguredCLI(args, request.Activity.CLI, request.Activity.Configuration)
 }
 
 // Preflight never changes the process working directory or starts a model turn.
 // The waiting worker must persist consumption after this and before execution.
-func prepareNativeResume(request NativeResume) ([]string, error) {
+func prepareNativeResumeCurrent(request NativeResume) ([]string, error) {
+	return prepareNativeResumeContext(context.Background(), request)
+}
+
+func prepareNativeResumeContext(ctx context.Context, request NativeResume) ([]string, error) {
 	if len(request.Context) > 16<<10 {
 		return nil, errors.New("native recovery context is too large")
 	}
@@ -79,12 +84,12 @@ func prepareNativeResume(request NativeResume) ([]string, error) {
 	}
 	binary, err := originalCLI(args[0])
 	if a.CLI == "cursor" {
-		args[0], binary, err = cursorCLI()
+		args[0], binary, err = cursorCLIContext(ctx)
 	}
 	if err != nil {
 		return nil, err
 	}
-	version, err := cliOutputAt(a.Cwd, binary, "--version")
+	version, err := cliTextContext(ctx, a.Cwd, binary, false, "--version")
 	if err != nil || version == "" {
 		return nil, errors.New("cannot verify the installed coding CLI version")
 	}
@@ -97,7 +102,7 @@ func prepareNativeResume(request NativeResume) ([]string, error) {
 	if a.CLI == "opencode" {
 		selector = "--session"
 	}
-	help, err := cliHelpAt(a.Cwd, binary, helpArgs...)
+	help, err := cliTextContext(ctx, a.Cwd, binary, true, helpArgs...)
 	if err != nil || !strings.Contains(help, selector) {
 		return nil, errors.New("the installed coding CLI does not support the required native resume selector")
 	}
@@ -123,7 +128,7 @@ func prepareNativeResume(request NativeResume) ([]string, error) {
 			return nil, errors.New("the native Cursor conversation is missing from this project")
 		}
 	case "opencode":
-		if err := validateOpenCodeState(binary, a.NativeSessionID, a.Cwd); err != nil {
+		if _, err := openCodeSessionContext(ctx, binary, a.Cwd, a.NativeSessionID); err != nil {
 			return nil, err
 		}
 	}
@@ -177,6 +182,13 @@ func findCodexState(id, cwd, recorded string) bool {
 }
 
 func findClaudeState(id, cwd string) bool {
+	return claudeStateFile(id, cwd) != ""
+}
+
+func claudeStateFile(id, cwd string) string {
+	if !ValidNativeID("claude", id) {
+		return ""
+	}
 	home := os.Getenv("CLAUDE_CONFIG_DIR")
 	if home == "" {
 		userHome, _ := os.UserHomeDir()
@@ -185,7 +197,7 @@ func findClaudeState(id, cwd string) bool {
 	root := filepath.Join(home, "projects")
 	projects, err := os.ReadDir(root)
 	if err != nil {
-		return false
+		return ""
 	}
 	for i, project := range projects {
 		if i >= 2048 {
@@ -218,10 +230,13 @@ func findClaudeState(id, cwd string) bool {
 		}
 		_ = f.Close()
 		if found {
-			return true
+			absolute, err := filepath.Abs(file)
+			if err == nil {
+				return absolute
+			}
 		}
 	}
-	return false
+	return ""
 }
 
 // Cursor's installed CLI scopes native chat stores by the physical project path.
