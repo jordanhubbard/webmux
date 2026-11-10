@@ -3,18 +3,21 @@ package session
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func testRigCapturedIdentity() RigIdentity {
-	return RigIdentity{Target: "coder@project", Host: "localhost", Runtime: "claude-code", Workspace: "/project", ManagerProfile: "default", NativeSource: "rig-snapshot", NativeSessionID: "08bbfe0e-d31c-4cb6-9d18-546eea56a08c", NativeStateFile: "/native/original.jsonl", ManagerRigID: "01M71ZM6DE3RTCXHPJRXJ6XKPE", ManagerNodeID: "01M71ZM6TZ91BH689AGCFP2WCN", ManagerLogicalID: "agents.coder", ManagerSnapshotID: "01M71ZM6QSB0G9GNTTXX0242KJ", ManagerSnapshotHash: strings.Repeat("a", 64), ManagerPolicyHash: strings.Repeat("b", 64), ManagerRecordIdentity: strings.Repeat("c", 64)}
+func testRigCapturedIdentity(t *testing.T) RigIdentity {
+	t.Helper()
+	root := t.TempDir()
+	return RigIdentity{Target: "coder@project", Host: "localhost", Runtime: "claude-code", Workspace: filepath.Join(root, "project"), ManagerProfile: "default", NativeSource: "rig-snapshot", NativeSessionID: "08bbfe0e-d31c-4cb6-9d18-546eea56a08c", NativeStateFile: filepath.Join(root, "native", "original.jsonl"), ManagerRigID: "01M71ZM6DE3RTCXHPJRXJ6XKPE", ManagerNodeID: "01M71ZM6TZ91BH689AGCFP2WCN", ManagerLogicalID: "agents.coder", ManagerSnapshotID: "01M71ZM6QSB0G9GNTTXX0242KJ", ManagerSnapshotHash: strings.Repeat("a", 64), ManagerPolicyHash: strings.Repeat("b", 64), ManagerRecordIdentity: strings.Repeat("c", 64)}
 }
 
 func TestRigCaptureRespectsOwnerLoggingAndNativeReferences(t *testing.T) {
 	b, store, _ := fixture(t)
 	enableLogging(t, store)
-	original := testRigCapturedIdentity()
+	original := testRigCapturedIdentity(t)
 	blank := original
 	blank.NativeSessionID, blank.NativeStateFile, blank.NativeSource = "", "", ""
 	clearRigRecoveryReference(&blank)
@@ -70,7 +73,7 @@ func TestRigCaptureRespectsOwnerLoggingAndNativeReferences(t *testing.T) {
 func TestRigCaptureRejectsChangedDestinationsAndInvalidReferences(t *testing.T) {
 	b, store, _ := fixture(t)
 	enableLogging(t, store)
-	original := testRigCapturedIdentity()
+	original := testRigCapturedIdentity(t)
 	value, err := b.EnsureRigTerminal("owner", original.Target, "coder", []string{"attach"}, original)
 	if err != nil {
 		t.Fatal(err)
