@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -207,6 +208,54 @@ func TestFederationTwoServerNativeTerminalMessageAndRevocation(t *testing.T) {
 	socketClose(t, c, 1008)
 	if len(b.sessions.List("owner")) != 1 {
 		t.Fatal("revocation deleted provider")
+	}
+}
+
+// A peer may disappear without delivering its WebSocket close frame. Local
+// credential revocation must still take precedence over that transport error.
+func TestFederationAbruptPeerLossPreservesRevocation(t *testing.T) {
+	for _, revoked := range []bool{false, true} {
+		t.Run(fmt.Sprintf("revoked=%t", revoked), func(t *testing.T) {
+			a, handler := fixture(t, "local")
+			federationAccounts(t, a)
+			secret := strings.Repeat("fixture-credential", 3)
+			t.Setenv("WEBMUX_TEST_PEER_TOKEN", secret)
+			ctx, disconnect := context.WithCancel(context.Background())
+			defer disconnect()
+			remote := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("Authorization") != "Bearer "+secret {
+					http.Error(w, "Unauthorized", 401)
+					return
+				}
+				connection, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
+				if err != nil {
+					return
+				}
+				defer connection.Close()
+				_ = connection.WriteJSON(session.Event{"type": "ready"})
+				<-ctx.Done() // Close TCP directly, without a policy close frame.
+			}))
+			defer remote.Close()
+			federationConfig(t, a, serverDirectory{Version: 1, Servers: []serverPeer{{ID: "remote", Name: "Remote host", URL: remote.URL, TokenEnv: "WEBMUX_TEST_PEER_TOKEN", AllowHTTP: true}}})
+			central := httptest.NewServer(handler)
+			defer central.Close()
+			connection := dialSocket(t, "ws"+strings.TrimPrefix(central.URL, "http")+"/api/servers/remote/term/fixture?token="+token(t, a, "owner"))
+			defer connection.Close()
+			_ = connection.SetReadDeadline(time.Now().Add(10 * time.Second))
+			var event session.Event
+			if err := connection.ReadJSON(&event); err != nil || event["type"] != "ready" {
+				t.Fatal("peer was not connected", event, err)
+			}
+			if revoked {
+				t.Setenv("WEBMUX_TEST_PEER_TOKEN", strings.Repeat("rotated", 6))
+			}
+			disconnect()
+			code := 1001
+			if revoked {
+				code = 1008
+			}
+			socketClose(t, connection, code)
+		})
 	}
 }
 
