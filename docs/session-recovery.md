@@ -151,8 +151,9 @@ interactive CLI, distinguishing a requested selector from verified active native
 state, and verifying how each supported version restores invocation-specific
 configuration roots, profiles and restrictive policy. Preserve those boundaries
 when needed; never carry approval-bypass flags into a recovery command. The
-complete WebMux continuation path still needs native conversation proof, beyond
-the separate provider/headless and preflight checks.
+four basic WebMux continuation paths now have native conversation proof below.
+Those checks do not cover interactive session switches or every configuration
+override.
 
 Control tests exercise the real Unix socket, persisted consumption across a
 worker's exit, stale and foreign requests, failed preflight, a revision change
@@ -208,9 +209,9 @@ python3 scripts/qualify-recovery-vm.py --vm-root /absolute/path/to/disposable-fi
 # exercise atomic executable replacement while preserving the provider.
 ```
 
-The local VM runs and separate remote transport runs do not establish managed
-provider or conversational CLI recovery through WebMux; those remain separate
-acceptance work.
+The local VM and remote transport runs qualify provider lifecycle behavior.
+Conversational CLI checks are recorded separately below; managed-provider
+recovery remains open.
 
 ### Remote SSH and mosh
 
