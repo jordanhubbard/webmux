@@ -22,9 +22,13 @@ func managedInstance(identity RigIdentity) string {
 	return fmt.Sprintf("%x", sha256.Sum256(data))
 }
 
-// Managed recovery initially supports exact local Claude conversations owned by
-// Agent Deck. Other provider/runtime combinations retain manual recovery.
+// Native managed recovery supports qualified local Claude references owned by
+// Agent Deck or Rig. Unsupported evidence retains manual recovery.
 func managedNativeSupported(identity RigIdentity) bool {
+	if validRigRecoveryReference(identity) && identity.ManagerProcess != "" && identity.ManagerProfile == "default" {
+		var process rigProcessReference
+		return json.Unmarshal([]byte(identity.ManagerProcess), &process) == nil && process.NativeIdentitySource == "process-argv"
+	}
 	return identity.Provider == "agent-deck" && identity.Host == "localhost" && strings.HasPrefix(identity.Target, "agent-deck:local:") &&
 		managedCLI(identity.Runtime) == "claude" && identity.NativeSource == "agent-deck-inventory" &&
 		recovery.ValidNativeID("claude", identity.NativeSessionID) && filepath.IsAbs(identity.NativeStateFile) && identity.Workspace != ""

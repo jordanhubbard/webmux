@@ -34,11 +34,14 @@ def main():
     parser.add_argument('--snapshot-plan', action='store_true', help='capture one private Rig snapshot and inspect exact-seat native launch plans without executing them')
     parser.add_argument('--native-hooks', action='store_true', help='qualify the installed Rig SessionStart relay with per-invocation Claude settings and native snapshot identity')
     parser.add_argument('--native-resume', action='store_true', help='qualify actual private Rig-owned exact-snapshot native continuation after process loss')
+    parser.add_argument('--webmux-action', action='store_true', help='perform approved native recovery through the WebMux HTTP action and verify once-only receipts across restart')
     parser.add_argument('--keep-team-default', action='store_true', help='retain Rig native team-default permissions from first launch through resume without switching to explicit plan mode')
     parser.add_argument('--expect-policy-drift', action='store_true', help='test the known first-launch/resume settings difference and require WebMux to reject it; does not qualify policy-preserving native recovery')
     args = parser.parse_args()
     if args.keep_team_default and (not args.native_resume or args.expect_policy_drift):
         parser.error('--keep-team-default requires --native-resume and cannot expect a policy change')
+    if args.webmux_action and (not args.native_resume or args.expect_policy_drift):
+        parser.error('--webmux-action requires unchanged-policy --native-resume')
     if args.native_resume and not args.expect_policy_drift:
         args.keep_team_default = True
     if args.expect_policy_drift and not args.native_resume:
@@ -342,6 +345,14 @@ def main():
             assert native() == before
             webmux_checkpoint_plan('live')
             assert native() == before, 'Read-only WebMux preflight replaced the surviving process'
+            if args.webmux_action:
+                live_preview = view()
+                live_action = {'id': str(uuid.uuid4()), 'kind': 'managed', 'confirm': True, 'revision': live_preview['state']['revision'], 'host_revision': 0, 'instance': live_preview['instance']}
+                assert api('/api/session-recovery/' + sid, live_action)['outcome'] == 'consumed'
+                assert api('/api/session-recovery/' + sid, live_action)['outcome'] == 'consumed'
+                assert native() == before, 'Recovery action replaced the surviving provider'
+                receipt('WebMux managed action reattaches survivor and deduplicates receipt', native=native())
+
 
         else:
             assert not view().get('manager_native_session'), 'Rig enrollment ID was mistaken for a provider-native conversation'
@@ -466,7 +477,7 @@ def main():
             receipt('lost native process exact-seat snapshot plan only', native=native(), snapshot_id=snapshot_id, plan_returncode=planned.returncode)
         start()
         v = wait(lambda: view() if view().get('state', {}).get('disposition') == 'managed-unavailable' else None, 'lost Rig provider fallback')
-        assert native()['count'] == 0 and entry['marker'] in v['history'] and not v['can_resume_managed']
+        assert native()['count'] == 0 and entry['marker'] in v['history'] and v['can_resume_managed'] == bool(args.native_resume)
         for _ in range(3):
             try:
                 api('/api/sessions/' + sid + '/reconnect', {})
@@ -483,19 +494,34 @@ def main():
             assert native()['count'] == 0, 'Read-only WebMux preflight launched a replacement'
             snapshot_id = captured['manager_snapshot_id']
             receipt('WebMux recorded checkpoint live and lost-process preflight', snapshot_id=snapshot_id, native=native())
-            result = rig('launch', rig_id, 'agents.continuation', '--snapshot-id', snapshot_id, '--json', check=False)
-            (fixture / 'native-resume-result.json').write_text(json.dumps({'returncode': result.returncode, 'stdout': result.stdout, 'stderr': result.stderr}, indent=2) + '\n')
-            if result.returncode:
-                outcome = json.loads(result.stdout)
-                if outcome.get('code') != 'attention_required' or 'joined restore proof is incomplete' not in outcome.get('error', ''):
-                    raise RuntimeError('Native Rig did not confirm exact-snapshot resume; inspect native-resume-result.json')
-                pending = native()
-                assert pending['count'] == 1
-                reconciled = rig('reconcile-session', pane, '--rig', rig_id, '--node', 'agents.continuation', '--no-launch', '--json', check=False)
-                (fixture / 'native-reconcile-result.json').write_text(json.dumps({'returncode': reconciled.returncode, 'stdout': reconciled.stdout, 'stderr': reconciled.stderr}, indent=2) + '\n')
-                assert native() == pending, 'Reconciliation replaced the native process'
-                if reconciled.returncode:
-                    raise RuntimeError('Native Rig could not reconcile the existing resumed process without launch; inspect native-reconcile-result.json')
+            if args.webmux_action:
+                action_preview = view()
+                recovery_action = {'id': str(uuid.uuid4()), 'kind': 'managed', 'confirm': True, 'revision': action_preview['state']['revision'], 'host_revision': 0, 'instance': action_preview['instance']}
+                assert api('/api/session-recovery/' + sid, recovery_action)['outcome'] == 'consumed'
+                resumed_identity = native()
+                assert resumed_identity['count'] == 1
+                assert api('/api/session-recovery/' + sid, recovery_action)['outcome'] == 'consumed'
+                assert native() == resumed_identity
+                stop(True)
+                start()
+                wait(connected, 'recovery receipt retained across controller SIGKILL')
+                assert api('/api/session-recovery/' + sid, recovery_action)['outcome'] == 'consumed'
+                assert native() == resumed_identity
+                receipt('WebMux approved native action and durable once-only receipt across restart', native=native())
+            else:
+                result = rig('launch', rig_id, 'agents.continuation', '--snapshot-id', snapshot_id, '--json', check=False)
+                (fixture / 'native-resume-result.json').write_text(json.dumps({'returncode': result.returncode, 'stdout': result.stdout, 'stderr': result.stderr}, indent=2) + '\n')
+                if result.returncode:
+                    outcome = json.loads(result.stdout)
+                    if outcome.get('code') != 'attention_required' or 'joined restore proof is incomplete' not in outcome.get('error', ''):
+                        raise RuntimeError('Native Rig did not confirm exact-snapshot resume; inspect native-resume-result.json')
+                    pending = native()
+                    assert pending['count'] == 1
+                    reconciled = rig('reconcile-session', pane, '--rig', rig_id, '--node', 'agents.continuation', '--no-launch', '--json', check=False)
+                    (fixture / 'native-reconcile-result.json').write_text(json.dumps({'returncode': reconciled.returncode, 'stdout': reconciled.stdout, 'stderr': reconciled.stderr}, indent=2) + '\n')
+                    assert native() == pending, 'Reconciliation replaced the native process'
+                    if reconciled.returncode:
+                        raise RuntimeError('Native Rig could not reconcile the existing resumed process without launch; inspect native-reconcile-result.json')
             after = wait(lambda: native() if native()['count'] == 1 else None, 'Rig-owned resumed native process')
             assert after['pane_pid'] != before['pane_pid']
             api('/api/sessions/' + sid + '/reconnect', {})
@@ -599,8 +625,9 @@ def main():
             scope += ' Includes Rig-owned exact-snapshot conversation continuation, no-launch reconciliation, original roots, kernel cwd and independent original-settings comparison.'
         if args.expect_policy_drift:
             scope += ' The expected original-settings mismatch was rejected by WebMux; this does not qualify policy-preserving recovery.'
-        scope += ' No WebMux Rig native-launch action, host reboot or remote destination is qualified.'
-        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_hooks': args.native_hooks, 'native_resume': args.native_resume, 'kept_team_default': args.keep_team_default, 'expected_policy_drift': args.expect_policy_drift, 'original_settings_preserved': original_settings_preserved, 'relay_sha256': relay_sha256, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': scope}
+        scope += ' WebMux managed action and durable duplicate receipt were exercised.' if args.webmux_action else ' No WebMux Rig native-launch action is qualified.'
+        scope += ' Host reboot and remote destinations are not qualified.'
+        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_hooks': args.native_hooks, 'native_resume': args.native_resume, 'kept_team_default': args.keep_team_default, 'webmux_action': args.webmux_action, 'expected_policy_drift': args.expect_policy_drift, 'original_settings_preserved': original_settings_preserved, 'relay_sha256': relay_sha256, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': scope}
         (fixture / 'manifest.json').write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(fixture / 'manifest.json')}), flush=True)
     except Exception as error:

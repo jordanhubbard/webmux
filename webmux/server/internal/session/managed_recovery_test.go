@@ -158,3 +158,54 @@ func TestManagedRecoveryDoesNotStartWhenIntentCannotBeSaved(t *testing.T) {
 		t.Fatal("failed intent changed recovery state", view, err)
 	}
 }
+
+func TestRigRecoveryUsesDurableIntentAndRetainsConsumedRequest(t *testing.T) {
+	b, store, _ := fixture(t)
+	enableLogging(t, store)
+	identity := testRigCapturedIdentity(t)
+	identity.ManagerProcess = strings.Replace(identity.ManagerProcess, `"native_identity_source":"manager-hook"`, `"native_identity_source":"process-argv"`, 1)
+	value, err := b.EnsureRigTerminal("owner", identity.Target, "Rig", []string{"attach"}, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := previewAction(t, b, value.ID, "managed")
+	input.Confirm = true
+	calls := 0
+	plan := func(context.Context, string, RigIdentity) (func(context.Context) ([]string, error), error) {
+		return func(context.Context) ([]string, error) {
+			body, err := os.ReadFile(filepath.Join(store.Home, "data/sessions/sessions.yaml"))
+			if err != nil || !strings.Contains(string(body), "outcome: requested") {
+				t.Fatal("Rig operation preceded durable intent", err)
+			}
+			calls++
+			return []string{"fresh", "attach"}, nil
+		}, nil
+	}
+	for i := 0; i < 2; i++ {
+		if _, err := b.RecoverManaged(context.Background(), "owner", value.ID, input, plan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if calls != 1 {
+		t.Fatal("Rig operation repeated", calls)
+	}
+	if err := b.Close(); err != nil {
+		t.Fatal(err)
+	}
+	restored, err := newBroker(store, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	if _, err := restored.RecoverManaged(context.Background(), "owner", value.ID, input, plan); err != nil || calls != 1 {
+		t.Fatal("Rig receipt not retained", calls, err)
+	}
+	identity.ManagerProcess = ""
+	if managedNativeSupported(identity) {
+		t.Fatal("Legacy checkpoint without process proof enabled Rig start")
+	}
+	identity = testRigCapturedIdentity(t)
+	if managedNativeSupported(identity) {
+		t.Fatal("Unqualified hook-only process evidence enabled Rig start")
+	}
+}

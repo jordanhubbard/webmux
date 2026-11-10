@@ -1121,6 +1121,56 @@ metadata/process tests passed. The published `9de076a` application checkpoint
 passed every hosted CI and Packaging check. WebMux's Rig launch action remains
 disabled pending once-only execution integration and its lifecycle acceptance.
 
+## WebMux Rig recovery action
+
+The recovery preview now offers **Resume through Rig** for recorded local
+Claude conversations with qualified process/checkpoint evidence. It requires
+explicit approval and sends no terminal output or arbitrary command to Rig.
+Current owner access and integration enablement are checked before preparation
+and execution. Older checkpoint-only or unqualified records remain manual.
+
+Preparation verifies the original destination, process state, native file,
+checkpoint and policy. A surviving verified process returns fresh attachment
+arguments. Process loss requires an unchanged qualified permission choice and
+the supported native CLI version. The broker persists its requested intent
+before calling Rig; the coordinator repeats preparation under its mutation lock
+before issuing one exact-seat/snapshot launch. Changed or uncertain results are
+not retried. Native attention-required results permit only no-launch
+reconciliation after independent process proof.
+
+Completion requires the original native ID, executable/settings fingerprints,
+kernel cwd and permission mode. The viewer is resolved anew through Rig. The
+broker consumes the request before attaching, so duplicate requests and restored
+receipts cannot repeat the launch. The frontend displays the manager-specific
+approval and keeps transcript consent separate.
+
+Real native HTTP qualification passed against Rig `0.6.14 (9d0200f3)` and Claude
+`2.1.322`, using the unchanged team-default policy. The action reattached the
+original survivor, recovered after process loss, retained the original settings
+and roots, and returned a fresh remembered-marker response. The same request
+was repeated before and after controller SIGKILL/reconstruction without another
+native process or resume execution. All earlier controller/manager lifecycle
+and fallback checks passed in that run.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-afa3d9aa-3456-42f3-a7da-c943fab44fc5/manifest.json`.
+Executable SHA-256:
+`806223f92b82bfd354e91782195b56e453c71894f3ee806c4caf547d6eb3762d`.
+Qualification script SHA-256:
+`7f6a21f1c67c8b204a8fd07a681975c2b28649010384dd80845893a3a4cdf95e`.
+Reproduce with `--native-resume --native-hooks --snapshot-plan --webmux-action`
+and the existing synthetic conversation manifest. This qualifies the local
+managed action; managed host reboot, remote destinations and additional native
+policy/profile variations remain open.
+
+Validation passed: full Go race suite and vet, strict TypeScript, lint,
+production/standalone builds, 339 frontend tests, 49 helper tests and eight real
+published-Rig browser tests. Broker coverage checks that Rig execution follows
+durable intent and consumed receipts survive reconstruction; helper cases check
+survivor reattachment, one launch, no-launch reconciliation, policy rejection and
+post-launch uncertainty. Published checkpoint `d92c891` passed all hosted CI and
+Packaging; the new head needs its own hosted results.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

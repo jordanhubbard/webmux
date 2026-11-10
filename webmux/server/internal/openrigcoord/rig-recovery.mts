@@ -131,7 +131,7 @@ async function destination(run: RigRecoveryRun, identity: RigRecoveryIdentity) {
   const profile = text(node.profile, 128);
   if (profile !== 'default') throw new Error('This Rig profile is not qualified for native recovery.');
   const policy = (file: string) => digest({ rigId, nodeId, logicalId, cwd, runtime: node.runtime, profile, agentRef: node.agentRef, spec: node.resolvedSpecHash, model: node.model, permissions: { desired: desired ? { runtime: desired.runtime, mode: desired.mode } : null, effective }, files: policyFiles(cwd, file) });
-  return { get, target, cwd, rigId, logicalId, route, nodeId, node, profile, policy };
+  return { get, target, cwd, rigId, logicalId, route, nodeId, node, profile, policy, desired, effective };
 }
 
 function snapshotIdentity(snapshot: ObjectValue, context: Awaited<ReturnType<typeof destination>>, snapshotId: string, id: string) {
@@ -420,4 +420,52 @@ export async function inspectRigRecoveryProcess(run: RigRecoveryRun, saved: RigR
   if (originalLive || boot === stored.boot_id && rigOriginalProcessLive(run, stored)) throw new Error('The original native Rig process is still running without its recorded pane. Inspect the manager; another start is not permitted.');
   if (bootObserver(run) !== boot) throw new Error('The execution host identity changed during verification.');
   return { state: 'missing', reason: boot === stored.boot_id ? 'process-loss' : 'host-reboot' };
+}
+
+export async function prepareRigNativeRecovery(run: RigRecoveryRun, saved: RigRecoveryIdentity, inspect = inspectRigRecoveryProcess) {
+  const inspection = await inspect(run, saved);
+  if (inspection.state === 'surviving') return { state: inspection.state, target: saved.target, native_session_id: saved.native_session_id };
+  const plan = await planRigRecovery(run, saved);
+  const context = await destination(run, saved);
+  const original = storedRigProcess(saved);
+  const unchangedDefault = context.desired === null && context.effective.source === 'system_default' && original.permission_mode === 'acceptEdits';
+  const originalPlan = context.desired?.mode === 'plan' && original.permission_mode === 'plan';
+  if (!unchangedDefault && !originalPlan) throw new Error('The manager permission choice does not match a qualified original launch. Review it through Rig; recovery will not change the original policy.');
+  if (run('claude', ['--version']).trim() !== '2.1.322 (Claude Code)') throw new Error('The original native Claude version is unavailable.');
+  return { ...plan, state: inspection.state };
+}
+
+// Called only after the broker's once-only intent is durable. Preparation is
+// repeated under the coordinator mutation lock, including the survivor check.
+export async function executeRigNativeRecovery(run: RigRecoveryRun, saved: RigRecoveryIdentity, inspect = inspectRigRecoveryProcess) {
+  const prepared = await prepareRigNativeRecovery(run, saved, inspect);
+  if (prepared.state === 'surviving') return { outcome: 'reattached', target: saved.target, native_session_id: saved.native_session_id };
+  let result: ObjectValue;
+  let needsReconcile = false;
+  try {
+    result = object(JSON.parse(run('rig', ['launch', text(saved.manager_rig_id), text(saved.manager_logical_id), '--snapshot-id', text(saved.manager_snapshot_id), '--json'])));
+    if (result.ok !== true || result.rigId !== saved.manager_rig_id || result.nodeId !== saved.manager_node_id || result.logicalId !== saved.manager_logical_id || object(result.snapshotSelection).snapshotId !== saved.manager_snapshot_id) throw new Error('The native manager did not confirm this exact launch.');
+    const effects = object(result.nonTargetEffects);
+    if (effects.mode !== 'unchanged' || !Array.isArray(effects.affected) || effects.affected.length !== 0) throw new Error('The native manager reported other effects.');
+  } catch (error) {
+    const failed = error as { status?: unknown; stdout?: unknown };
+    const output = String(failed?.stdout ?? '');
+    if (failed.status !== 1 || output.length > maximum) throw new Error('Rig recovery result is uncertain. Inspect its existing processes; no launch will be retried.');
+    result = object(JSON.parse(output));
+    if (result.code !== 'attention_required' || !String(result.error).includes('joined restore proof is incomplete')) throw new Error('Rig could not confirm native recovery. Inspect it before reconnecting; no launch will be retried.');
+    needsReconcile = true;
+  }
+  // Independent proof is required even if the native manager reports success.
+  const inspected = await inspect(run, saved);
+  if (inspected.state !== 'surviving' || !inspected.process) throw new Error('The original native conversation could not be confirmed after recovery.');
+  const context = await destination(run, saved);
+  const expectedMode = context.desired?.mode ?? context.effective.effectiveMode;
+  if (inspected.process.permission_mode !== expectedMode) throw new Error('The resumed native permission mode changed. Inspect the existing process; no launch will be retried.');
+  if (needsReconcile) {
+    const before = inspected.process;
+    run('rig', ['reconcile-session', saved.target, '--rig', text(saved.manager_rig_id), '--node', text(saved.manager_logical_id), '--no-launch', '--json']);
+    const after = await inspect(run, saved);
+    if (after.state !== 'surviving' || after.process?.native_pid !== before.native_pid || after.process.started_at !== before.started_at || after.process.pane_pid !== before.pane_pid) throw new Error('Native reconciliation changed the verified process. No launch will be retried.');
+  }
+  return { outcome: 'resumed', target: saved.target, native_session_id: saved.native_session_id };
 }

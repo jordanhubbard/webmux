@@ -206,3 +206,16 @@ it('shows a Rig checkpoint and manual destination without offering an unqualifie
   expect(screen.queryByRole('button', { name: /Resume through/ })).toBeNull();
   expect(recover).not.toHaveBeenCalled();
 });
+
+it('asks Rig for an approved checkpoint continuation without sharing terminal history', async () => {
+ const value: SessionRecovery = { ...evidence(), lifecycle_owner: 'rig', can_resume_managed: true, instance: 'rig-proof', host_revision: 0, manager_native_session: 'rig-native', manager_snapshot_id: 'rig-checkpoint', manager_directory: '/project' };
+ vi.spyOn(api,'getSessionRecovery').mockResolvedValue(value);
+ const recover=vi.spyOn(api,'recoverSession').mockResolvedValue({outcome:'consumed'});
+ render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
+ const button=await screen.findByRole('button',{name:'Resume through Rig'});
+ expect(button).toBeDisabled();
+ fireEvent.click(screen.getByLabelText(/I approve asking Rig to resume/));
+ fireEvent.click(button);
+ await waitFor(()=>expect(recover).toHaveBeenCalledWith('one',expect.objectContaining({kind:'managed',confirm:true,instance:'rig-proof'})));
+ expect(recover.mock.calls[0][1]).not.toHaveProperty('context');
+});

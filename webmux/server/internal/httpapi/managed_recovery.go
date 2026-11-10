@@ -32,7 +32,11 @@ func (s *Server) planManagedRecovery(ctx context.Context, owner string, saved se
 	if s.openRigPermission(owner) != nil {
 		return nil, managedRecoveryError("Access to this lifecycle manager is no longer available.")
 	}
-	provider := s.coordinationProvider(owner, saved.Provider)
+	providerID := saved.Provider
+	if providerID == "" {
+		providerID = "rig"
+	}
+	provider := s.coordinationProvider(owner, providerID)
 	native, ok := provider.(managedNativeProvider)
 	if !ok {
 		return nil, managedRecoveryError("This lifecycle manager cannot resume the recorded native conversation; recover through the manager.")
@@ -43,10 +47,10 @@ func (s *Server) planManagedRecovery(ctx context.Context, owner string, saved se
 		if errors.As(err, &validation) {
 			return nil, err
 		}
-		return nil, managedRecoveryError("Agent Deck could not prepare recovery: " + err.Error())
+		return nil, managedRecoveryError("The lifecycle manager could not prepare recovery: " + err.Error())
 	}
 	return func(ctx context.Context) ([]string, error) {
-		if s.openRigPermission(owner) != nil || s.coordinationProvider(owner, saved.Provider) == nil {
+		if s.openRigPermission(owner) != nil || s.coordinationProvider(owner, providerID) == nil {
 			return nil, managedRecoveryError("Access to this lifecycle manager changed.")
 		}
 		return execute(ctx)

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:http';
-import { observeRigRecovery, planRigRecovery, observeRigNativeProcess, rigBootIdentity, inspectRigRecoveryProcess, type RigRecoveryIdentity } from '../webmux/server/internal/openrigcoord/rig-recovery.mts';
+import { observeRigRecovery, planRigRecovery, observeRigNativeProcess, rigBootIdentity, inspectRigRecoveryProcess, executeRigNativeRecovery, prepareRigNativeRecovery, type RigRecoveryIdentity } from '../webmux/server/internal/openrigcoord/rig-recovery.mts';
 
 async function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-rig-recovery-'));
@@ -327,4 +327,46 @@ test('Rig metadata captures an unchanged inherited team default independently of
     assert.equal(saved.native_source, 'rig-snapshot');
     assert.equal((await planRigRecovery(f.run, saved)).plan_only, true);
   } finally { await f.close(); }
+});
+
+test('Rig execution checks absence again, starts once and requires independent original-policy proof', { skip: process.platform === 'win32' }, async () => {
+ const f=await fixture();
+ try {
+  f.inherit();
+  const process={pane_pid:100,native_pid:101,execution_uid:processUID(),started_at:'Mon Nov  9 22:21:02 2026 UTC',native_session_id:'08bbfe0e-d31c-4cb6-9d18-546eea56a08c',permission_mode:'acceptEdits',executable_hash:'d'.repeat(64),settings_hash:'e'.repeat(64)};
+  const saved=await observeRigRecovery(f.run,f.identity,f.directory,()=>process,()=> 'f'.repeat(64));
+  let launches=0, inspections=0, reconcile=0, attention=false, postFailure=false;
+  const run=(command:string,args:string[])=>{
+   if(command==='claude'){assert.deepEqual(args,['--version']);return '2.1.322 (Claude Code)';}
+   if(command==='rig'&&args[0]==='reconcile-session'){reconcile++;assert(args.includes('--no-launch'));return '{}';}
+   if(command==='rig'&&args[0]==='launch'&&!args.includes('--plan')){
+    launches++;assert.deepEqual(args,['launch',saved.manager_rig_id,saved.manager_logical_id,'--snapshot-id',saved.manager_snapshot_id,'--json']);
+    if(attention)throw Object.assign(new Error('native attention'),{status:1,stdout:JSON.stringify({code:'attention_required',error:'Exact native session resumed, but joined restore proof is incomplete'})});
+    return JSON.stringify({ok:true,rigId:saved.manager_rig_id,nodeId:saved.manager_node_id,logicalId:saved.manager_logical_id,snapshotSelection:{snapshotId:saved.manager_snapshot_id},nonTargetEffects:{mode:'unchanged',affected:[]}});
+   }
+   return f.run(command,args);
+  };
+  const inspect=async()=>{
+   inspections++;
+   if(inspections===1)return {state:'missing',reason:'process-loss'} as const;
+   if(postFailure)throw new Error('original settings changed');
+   return {state:'surviving',reason:'verified-continuation',process:{...process,native_pid:102}} as const;
+  };
+  assert.equal((await executeRigNativeRecovery(run,saved,inspect)).outcome,'resumed');assert.equal(launches,1);
+  assert.equal((await executeRigNativeRecovery(run,saved,inspect)).outcome,'reattached');assert.equal(launches,1);
+  inspections=0;attention=true;
+  assert.equal((await executeRigNativeRecovery(run,saved,inspect)).outcome,'resumed');assert.equal(launches,2);assert.equal(reconcile,1);
+  inspections=0;attention=false;postFailure=true;
+  await assert.rejects(executeRigNativeRecovery(run,saved,inspect),/original settings changed/);assert.equal(launches,3);
+ }finally{await f.close();}
+});
+function processUID(){return process.getuid!();}
+
+test('Rig preparation refuses a permission choice different from the original launch before execution', { skip: process.platform === 'win32' }, async()=>{
+ const f=await fixture();
+ try{
+  const saved=await observeRigRecovery(f.run,f.identity,f.directory,()=>({pane_pid:100,native_pid:101,execution_uid:processUID(),started_at:'Mon Nov  9 22:21:02 2026 UTC',native_session_id:'08bbfe0e-d31c-4cb6-9d18-546eea56a08c',permission_mode:'acceptEdits',executable_hash:'d'.repeat(64),settings_hash:'e'.repeat(64)}),()=> 'f'.repeat(64));
+  await assert.rejects(prepareRigNativeRecovery(f.run,saved,async()=>({state:'missing',reason:'process-loss'})),/permission choice.*qualified original launch/);
+  assert.equal(f.calls.some(call=>call.includes('CLI')&&!call.includes('plan')),false);
+ }finally{await f.close();}
 });
