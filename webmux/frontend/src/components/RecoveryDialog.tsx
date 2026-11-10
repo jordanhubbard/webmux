@@ -66,6 +66,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
           <dt>Session manager</dt><dd>{value.lifecycle_owner === 'webmux' ? 'WebMux' : value.lifecycle_owner}</dd>
           {value.manager_target && <><dt>Managed session</dt><dd>{value.manager_target}</dd></>}
           {value.manager_directory && <><dt>Managed project directory</dt><dd>{value.manager_directory}</dd></>}
+          {value.manager_snapshot_id && <><dt>Recorded manager checkpoint</dt><dd>{value.manager_snapshot_id}</dd></>}
           {value.manager_profile && <><dt>Manager profile</dt><dd>{value.manager_profile}</dd></>}
           {value.manager_native_session && <>
             <dt>Recorded managed conversation</dt><dd>{value.manager_native_session}</dd>
@@ -98,7 +99,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
           <h3>Previous terminal output</h3>
           <pre className="recovery-history" tabIndex={0} aria-label="Previous terminal output">{value.history}</pre>
         </> : <p>No retained terminal output is available. Existing native conversation information is shown above when recorded.</p>}
-        {!activity && !value.can_resume_managed && <p>No reliable command was recorded. Use any retained output to recover this session manually.</p>}
+        {!activity && !value.can_resume_managed && <p>{value.manager_native_session ? 'Resume this recorded conversation through its session manager. Retained terminal output is available below when recorded.' : 'No reliable command was recorded. Use any retained output to recover this session manually.'}</p>}
         {value.can_resume_managed && <>
           <p>Agent Deck will reattach its surviving process or start the recorded conversation using its saved session command and current settings. No terminal output will be sent to the coding service.</p>
           <label className="recovery-consent"><input type="checkbox" checked={approveManaged} disabled={busy}

@@ -190,3 +190,19 @@ describe('continuation approval', () => {
     await waitFor(() => expect(save).toHaveBeenCalledWith('one', true));
   });
 });
+
+
+it('shows a Rig checkpoint and manual destination without offering an unqualified launch', async () => {
+  const value = evidence();
+  value.lifecycle_owner = 'rig'; value.state!.activity = undefined;
+  value.manager_target = 'coder@project'; value.manager_profile = 'default';
+  value.manager_native_session = 'native-conversation'; value.manager_snapshot_id = 'rig-checkpoint';
+  vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(value);
+  const recover = vi.spyOn(api, 'recoverSession');
+  render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
+  expect(await screen.findByText('rig-checkpoint')).toBeVisible();
+  expect(screen.getByText('native-conversation')).toBeVisible();
+  expect(screen.getByText(/Resume this recorded conversation through its session manager/)).toBeVisible();
+  expect(screen.queryByRole('button', { name: /Resume through/ })).toBeNull();
+  expect(recover).not.toHaveBeenCalled();
+});

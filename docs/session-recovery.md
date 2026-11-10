@@ -899,6 +899,42 @@ durable snapshot/identity/policy binding, current owner/access checks,
 survivor-first validation, once-only execution and equivalent post-launch proof.
 Managed reboot and remote Rig destinations remain unqualified.
 
+## Rig checkpoint recording in WebMux
+
+For local default-profile Claude seats on Rig `0.6.14 (9d0200f3)`, attaching
+an owned viewer with WebMux logging active now records the verified native
+conversation, native state path and an exact manager snapshot. The reference
+binds the rig, node, logical seat, physical project, native file identity and
+current plan-mode policy. WebMux asks for generation metadata without a byte
+offset, so that request does not retrieve conversation text. Settings are
+hashed; their contents and unrelated snapshot data do not enter the recovery
+record. Unchanged observations reuse a private snapshot reference.
+
+Capture is serialized with logging changes and scoped to the current owner.
+Paused logging does not capture new metadata and retains the previous record.
+Missing native state, manager authorization failures, unsupported versions or
+profiles, changed policy and snapshots without verified native identity keep
+manual recovery. The preview shows the recorded manager checkpoint and native
+conversation without offering an unimplemented Rig launch action.
+
+The real private Rig/Claude qualification passed with WebMux capture enabled:
+checkpoint capture and reuse, orderly restart, SIGKILL, three reconnects,
+manager loss/recovery, lost-process fallback and provider-owned exact-snapshot
+continuation with a fresh remembered-marker response. This does not qualify a
+WebMux Rig launch action, managed host reboot or remote Rig destination.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-55b11beb-5713-458d-844e-de308b4d0db2/manifest.json`.
+Executable SHA-256:
+`a0ff01314c3fb2fdfff094d05576c53bab04eb4fd63412b6ae5070236fba46ce`.
+Qualification script SHA-256:
+`a67d8a3b5910cc3360511753e90fe2e12d79a50e7972c3a9f982f9f8e8fb38b9`.
+Local validation passed: full Go race suite and vet, strict TypeScript, lint,
+production build, 338 frontend tests and 40 helper tests. Broker tests cover
+owner isolation, logging pause/resume, durable reconstruction and destination
+changes; helper tests cover snapshot reuse, policy changes and rejected native
+identity or manager authorization.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

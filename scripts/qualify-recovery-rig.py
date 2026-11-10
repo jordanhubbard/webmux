@@ -21,6 +21,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 import uuid
 
 
@@ -278,7 +279,15 @@ def main():
         wait(connected, 'managed Rig viewer')
         wait(lambda: entry['marker'] in view()['history'], 'retained native history')
         assert view()['manager_target'] == target and view()['lifecycle_owner'] == 'rig'
-        assert not view().get('manager_native_session'), 'Rig enrollment ID was mistaken for a provider-native conversation'
+        if args.native_resume:
+            captured = view()
+            assert captured.get('manager_native_session') == entry['native_session_id'], 'WebMux did not capture the verified native conversation'
+            assert captured.get('manager_native_state_file') == str(native_file)
+            assert captured.get('manager_native_source') == 'rig-snapshot' and captured.get('manager_snapshot_id')
+            api('/api/coordination/attach', {'provider': 'rig', 'target': target})
+            assert view()['manager_snapshot_id'] == captured['manager_snapshot_id'], 'Unchanged metadata created another snapshot'
+        else:
+            assert not view().get('manager_native_session'), 'Rig enrollment ID was mistaken for a provider-native conversation'
         seats = [seat for seat in api('/api/coordination')['seats'] if seat['provider'] == 'rig' and seat['id'] == target]
         assert len(seats) == 1 and not seats[0].get('nativeSessionId'), 'Coordination inventory mislabeled the Rig enrollment ID as a native CLI conversation'
         assert seats[0].get('managerSessionId') == registration['sessionId'], 'Coordination inventory lost the manager enrollment identity'
@@ -355,6 +364,16 @@ def main():
             with urllib.request.urlopen('http://127.0.0.1:' + str(rig_port) + '/api/rigs/' + rig_id + '/snapshots/' + snapshot_id, timeout=10) as response:
                 snapshot = json.loads(response.read())
             (fixture / 'native-snapshot.json').write_text(json.dumps(snapshot, indent=2) + '\n')
+            if args.native_resume:
+                for label, route in [('generation-record', '/api/sessions/' + urllib.parse.quote(pane, safe='') + '/generation-record'), ('node-detail', '/api/rigs/' + rig_id + '/nodes/agents.continuation'), ('seat-status', '/api/seat/status/' + urllib.parse.quote(pane, safe=''))]:
+                    try:
+                        with urllib.request.urlopen('http://127.0.0.1:' + str(rig_port) + route, timeout=10) as response:
+                            value = response.read(2 * 1024 * 1024 + 1)
+                            assert len(value) <= 2 * 1024 * 1024
+                            observed = {'status': response.status, 'data': json.loads(value)}
+                    except urllib.error.HTTPError as error:
+                        observed = {'status': error.code}
+                    (fixture / (label + '-metadata.json')).write_text(json.dumps(observed, indent=2) + '\n')
             if args.native_hooks:
                 selected = [row for row in snapshot['data']['sessions'] if row['id'] == registration['sessionId']]
                 assert len(selected) == 1

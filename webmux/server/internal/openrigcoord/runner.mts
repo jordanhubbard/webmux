@@ -1,6 +1,7 @@
 // WebMux owns the control plane; SSH carries each remote CLI's terminal and a
 // loopback-only reverse forward. No remote daemon or provider credentials copied.
 import fs from 'node:fs';
+import type { RigRecoveryIdentity } from './rig-recovery.mts';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -101,6 +102,10 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     }
     messages.sort((a, b) => b.time.localeCompare(a.time));
     console.log(JSON.stringify({ rigs, seats, agents, messages: messages.slice(0, 24), contract: 'openrig-cli/0.6.14' }));
+  } else if (action === 'recovery-observe') {
+    const { observeRigRecovery } = await import('./rig-recovery.mts');
+    const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
+    console.log(JSON.stringify(await observeRigRecovery(run, identity, directory)));
   } else if (action === 'create') {
     const input = JSON.parse(fs.readFileSync(0, 'utf8')) as Input;
     const mode = input.mode ?? 'new';

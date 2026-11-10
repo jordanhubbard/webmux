@@ -17,6 +17,9 @@ import (
 //go:embed runner.mts
 var runner []byte
 
+//go:embed rig-recovery.mts
+var rigRecovery []byte
+
 // Serialize launches and spec creation across simultaneous browser requests.
 var mutation sync.Mutex
 
@@ -30,6 +33,9 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 	}
 	script := filepath.Join(directory, "runner.mts")
 	if err := os.WriteFile(script, runner, 0600); err != nil {
+		return nil, err
+	}
+	if err := os.WriteFile(filepath.Join(directory, "rig-recovery.mts"), rigRecovery, 0600); err != nil {
 		return nil, err
 	}
 	cmd := exec.CommandContext(ctx, "node", script, action, directory)
