@@ -59,6 +59,7 @@ type run struct {
 	moshOutput       string
 	moshScreen       bool
 	moshFailed       bool
+	attachProbe      *attachProbe
 }
 
 func (r *run) stop() {
@@ -373,6 +374,7 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 		e.value.BrowserLocal = source.BrowserOnServer()
 	}
 	r := &run{process: p, initial: initial, first: true, input: make(chan string, 256), stopped: make(chan struct{}), generation: e.generation, replayUntil: time.Now().Add(1500 * time.Millisecond)}
+	r.attachProbe = newAttachProbe(e.value.ExecArgv, time.Now())
 	e.run = r
 	logging := b.loggingEnabledLocked()
 	if e.value.TranscriptEnabled != nil {
@@ -808,6 +810,15 @@ func (b *Broker) output(id string, r *run, data string) {
 	e := b.entries[id]
 	if b.closed || e == nil || e.run != r {
 		return
+	}
+	if r.attachProbe != nil {
+		answer, done := r.attachProbe.feed(data, time.Now())
+		if done {
+			r.attachProbe = nil
+		}
+		if answer && !r.enqueueReply(attachProbeCursorReply) {
+			b.logger.Warn("answer Agent Deck attach probe", "session_id", id, "error", ErrInputBusy)
+		}
 	}
 	if e.value.Transport == "mosh" {
 		// Keep enough overlap to recognize diagnostics split across PTY reads,

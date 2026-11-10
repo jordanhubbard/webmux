@@ -45,7 +45,7 @@ Current evidence and limits:
 | Ordinary local/SSH/mosh lifecycle | Real controller restart/update/SIGKILL and disposable guest reboot checks passed, including retained history and no duplicate execution. |
 | Local managed recovery | Real Agent Deck/Claude and Rig/Claude process-loss continuation passed. Rig additionally passed original executable/settings checks and an in-flight controller-loss test that refused unsafe retries. |
 | Managed shell job after reboot | Real Agent Deck shell-job guest reboot passed: manager/project/log identity retained, explicit fallback, no automatic restart and no duplicate execution after reconnects. This is not native coding-conversation recovery. |
-| Native managed conversation after reboot | Passed for guest-native Agent Deck 1.16.34/Claude 2.1.322 on a Linux guest: same native conversation, project, roots and launch policy after an actual reboot, a fresh remembered-marker answer, and once-only recovery across reconnects and controller reconstruction. Input sent immediately after reattach can be dropped ([#325](https://github.com/jordanhubbard/webmux/issues/325)). |
+| Native managed conversation after reboot | Passed for guest-native Agent Deck 1.16.34/Claude 2.1.322 on a Linux guest: same native conversation, project, roots and launch policy after an actual reboot, a fresh remembered-marker answer, and once-only recovery across reconnects and controller reconstruction. Early input loss on Agent Deck attach was an upstream startup probe, now mitigated ([#325](https://github.com/jordanhubbard/webmux/issues/325)). |
 
 The implementation/preparatory-harness checkpoint `3afb3bf` passed every hosted
 CI and Packaging check. Local qualification also includes affected Go race
@@ -63,7 +63,9 @@ Remaining #318 work, in order:
    observation point preserves launch mode and sandbox policy after interactive
    switches. Revisit when [openai/codex#60625](https://github.com/openai/codex/issues/60625)
    or an equivalent ships ([details](session-recovery.md#codex-shared-daemon-observation-2026-11-10)).
-3. Investigate input loss after managed reattach ([#325](https://github.com/jordanhubbard/webmux/issues/325)).
+3. Remove the Agent Deck attach-probe mitigation ([#325](https://github.com/jordanhubbard/webmux/issues/325))
+   once a release fixing [asheshgoplani/agent-deck#3105](https://github.com/asheshgoplani/agent-deck/issues/3105)
+   is the minimum supported version.
 4. Audit #318 against its complete acceptance criteria before closing it. The
    owner-approved merge of #322 does not close this requirement or cut a release.
 

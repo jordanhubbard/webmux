@@ -153,6 +153,44 @@ func TestTerminalSocketFocusMalformedMessagesAndDelete(t *testing.T) {
 	socketClose(t, second, 1000)
 }
 
+func TestTerminalSocketReportsUndeliverableInput(t *testing.T) {
+	// The fixture has no exec command, so the session has no running process.
+	// Input used to be discarded silently in this state.
+	s, url, id := websocketFixture(t, "none")
+	if value, err := s.sessions.Get("anonymous", id); err != nil || value.State == "connected" {
+		t.Fatalf("fixture unexpectedly connected: %v %v", value.State, err)
+	}
+	c := dialSocket(t, url)
+	socketEvent(t, c, "viewer_join")
+	socketEvent(t, c, "status")
+	for range 2 {
+		if err := c.WriteJSON(map[string]string{"type": "input", "data": "lost"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	notice := socketEvent(t, c, "input_error")
+	if message, _ := notice["message"].(string); !strings.Contains(message, "not delivered") || notice["session_id"] != id {
+		t.Fatalf("notice: %v", notice)
+	}
+	// The second keystroke inside the same second is not reported again.
+	if err := c.WriteJSON(map[string]string{"type": "focus"}); err != nil {
+		t.Fatal(err)
+	}
+	socketEvent(t, c, "focus")
+}
+
+func TestInputErrorMessage(t *testing.T) {
+	if got := inputErrorMessage(session.ErrRecoveryWaiting); got != session.ErrRecoveryWaiting.Error() {
+		t.Fatalf("recovery waiting: %q", got)
+	}
+	if got := inputErrorMessage(session.ErrNotFound); !strings.Contains(got, "no longer exists") {
+		t.Fatalf("not found: %q", got)
+	}
+	if got := inputErrorMessage(session.ErrClosed); !strings.Contains(got, "not connected") {
+		t.Fatalf("closed: %q", got)
+	}
+}
+
 func TestTerminalSocketOriginSizeAndShutdown(t *testing.T) {
 	s, url, _ := websocketFixture(t, "none")
 	c, response, err := websocket.DefaultDialer.Dial(url, http.Header{"Origin": []string{"https://unrelated.invalid"}})

@@ -299,6 +299,9 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
         if (msg.state) onStateChangeRef.current(msg.state);
         if (typeof msg.transcript_enabled === 'boolean') setTranscriptEnabled(msg.transcript_enabled);
         break;
+      case 'input_error':
+        if (msg.message) setInputError(msg.message);
+        break;
       case 'transcript_status':
         if (typeof msg.transcript_enabled === 'boolean') setTranscriptEnabled(msg.transcript_enabled);
         if (msg.message) console.error(`Transcript logging: ${msg.message}`);

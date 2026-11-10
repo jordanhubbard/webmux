@@ -54,8 +54,10 @@ than assuming an older checkpoint's green checks apply to new source.
    2026-11-10). Upstream request: openai/codex#60625. Revisit only when that or
    an equivalent ships; do not change launch mode or drop sandbox/approval
    settings to obtain evidence. A `--no-daemon` opt-in was deferred.
-3. [#325](https://github.com/jordanhubbard/webmux/issues/325): terminal input
-   sent right after managed reattach/controller reconstruction can be dropped.
+3. [#325](https://github.com/jordanhubbard/webmux/issues/325) is mitigated: the
+   broker answers Agent Deck attach's startup termenv probe once
+   (`internal/session/attach_probe.go`). Remove it when a release fixing
+   asheshgoplani/agent-deck#3105 is the minimum supported version.
 4. Audit every acceptance criterion in #318 before closing it. The merge itself
    is not a release.
 
