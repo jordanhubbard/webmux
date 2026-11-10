@@ -783,6 +783,43 @@ Qualification script SHA-256:
 The complete survival/fallback matrix also passed in this run, and cleanup
 confirmed no native pane and a stopped private daemon.
 
+## Native Rig conversation observation
+
+The optional `--snapshot-plan --native-hooks` fixture mode uses the installed
+Rig relay's SessionStart handler with per-invocation Claude settings and the
+routing environment returned by native Rig enrollment. It copies only the
+published relay source into the private fixture; provider credentials and
+user/project settings are not copied or rewritten. This test invocation allows
+hooks instead of passing `--restricted`, while retaining strict MCP
+configuration, disabled tools and plan mode. The production recovery adapter
+does not change an original invocation's hook opt-outs on this evidence.
+
+Rig 0.6.14 (`9d0200f3`) with Claude Code 2.1.322 recorded the correct
+`claude_id` and `hook` provenance. A subsequent native snapshot, after WebMux
+restart/SIGKILL and private Rig daemon loss/recovery, retained that exact
+conversation ID and reported its native resume metadata as resumable. The
+fixture checked the ID against the previously qualified native conversation;
+it did not set a token through operator attestation or modify manager storage.
+A fresh assistant record proved conversation continuity through the WebMux
+viewer. Both exact-seat snapshot plans remained plan-only, with no native
+replacement after process loss. The complete lifecycle/fallback matrix passed,
+and cleanup confirmed zero fixture panes and a stopped private daemon.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-e9a4b78b-0893-43ff-b581-40ef3b181367/manifest.json`.
+Executable SHA-256:
+`040244bd4a5dd6a68acb2a684d751870c17ebbfc585ffa99c4486ab0260244f4`.
+Qualification script SHA-256:
+`24ab1a3f5760a660836c3366529570251b11e946f79c6ab4625a6bdc9af72d40`.
+Published Rig relay source SHA-256:
+`c7fbf01d1762203272ae5835549bfd5316f98bb11e0734270e35cb04fe0f9c4d`.
+
+This establishes native Rig conversation observation for the tested local
+invocation. It does not yet implement a WebMux Rig native-launch action or
+qualify native resume after host reboot. Those still require exact snapshot,
+destination, native-state and execution-policy validation through the lifecycle
+owner, plus once-only launch and post-launch continuity evidence.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

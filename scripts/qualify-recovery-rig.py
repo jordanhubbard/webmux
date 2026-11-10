@@ -31,7 +31,10 @@ def main():
     parser.add_argument('--rig-cli', type=Path, required=True)
     parser.add_argument('--rig-node', type=Path, required=True)
     parser.add_argument('--snapshot-plan', action='store_true', help='capture one private Rig snapshot and inspect exact-seat native launch plans without executing them')
+    parser.add_argument('--native-hooks', action='store_true', help='qualify the installed Rig SessionStart relay with per-invocation Claude settings and native snapshot identity')
     args = parser.parse_args()
+    if args.native_hooks and not args.snapshot_plan:
+        parser.error('--native-hooks requires --snapshot-plan')
     script_hash = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     repo = Path(__file__).resolve().parents[1]
     binary, rig_cli, rig_node = [p.resolve(strict=True) for p in (args.binary, args.rig_cli, args.rig_node)]
@@ -170,10 +173,22 @@ def main():
         rig_id = created['rigId']
         registration_file = fixture / 'attached.json'
         launcher = fixture / 'native-launch.py'
+        native_args = [claude, '--resume', entry['native_session_id'], '--restricted', '--strict-mcp-config', '--tools', '', '--permission-mode', 'plan']
+        routing = ''
+        relay_sha256 = None
+        if args.native_hooks:
+            relay_source = rig_cli.parent.parent / 'daemon/assets/plugins/openrig-core/hooks/scripts/activity-relay.cjs'
+            relay = fixture / 'activity-relay.cjs'
+            relay.write_bytes(relay_source.read_bytes())
+            relay_sha256 = hashlib.sha256(relay.read_bytes()).hexdigest()
+            hook_settings = {'hooks': {'SessionStart': [{'hooks': [{'type': 'command', 'command': shlex.join([str(rig_node), str(relay)]), 'timeout': 5}]}]}}
+            native_args.remove('--restricted')
+            native_args += ['--settings', json.dumps(hook_settings)]
+            routing = 'env.update(json.loads(r.stdout)["env"])\nenv["OPENRIG_SEAT_PROJECT_DIR"]=' + repr(entry['project']) + '\n'
         executable(launcher, '#!' + sys.executable + '\nimport os,sys,json,subprocess\n' +
                    'env=dict(os.environ)\nr=subprocess.run(' + repr([str(aliases / 'rig'), 'attach', '--self', '--rig', rig_id, '--pod', 'agents', '--member', 'continuation', '--runtime', 'claude-code', '--cwd', entry['project'], '--json']) + ',env=env,capture_output=True,text=True,check=True)\n' +
-                   'open(' + repr(str(registration_file)) + ',"w").write(r.stdout)\nroots=' + repr(roots) + '\nfor key,value in roots.items():\n if value is None: env.pop(key,None)\n else: env[key]=value\n' +
-                   'os.chdir(' + repr(entry['project']) + ')\nos.execve(' + repr(claude) + ',' + repr([claude, '--resume', entry['native_session_id'], '--restricted', '--strict-mcp-config', '--tools', '', '--permission-mode', 'plan']) + ',env)\n')
+                   'open(' + repr(str(registration_file)) + ',"w").write(r.stdout)\n' + routing + 'roots=' + repr(roots) + '\nfor key,value in roots.items():\n if value is None: env.pop(key,None)\n else: env[key]=value\n' +
+                   'os.chdir(' + repr(entry['project']) + ')\nos.execve(' + repr(claude) + ',' + repr(native_args) + ',env)\n')
         mux('new-session', '-d', '-s', pane, '-x', '120', '-y', '40', shlex.join([sys.executable, str(launcher)]))
         registration = wait(lambda: json.loads(registration_file.read_text()) if registration_file.exists() else None, 'native Rig enrollment')
         assert registration.get('attachmentType') == 'tmux' and registration.get('sessionId')
@@ -278,6 +293,12 @@ def main():
             with urllib.request.urlopen('http://127.0.0.1:' + str(rig_port) + '/api/rigs/' + rig_id + '/snapshots/' + snapshot_id, timeout=10) as response:
                 snapshot = json.loads(response.read())
             (fixture / 'native-snapshot.json').write_text(json.dumps(snapshot, indent=2) + '\n')
+            if args.native_hooks:
+                selected = [row for row in snapshot['data']['sessions'] if row['id'] == registration['sessionId']]
+                assert len(selected) == 1
+                assert selected[0]['resumeType'] == 'claude_id' and selected[0]['resumeToken'] == entry['native_session_id']
+                assert selected[0]['resumeProvenance'] == 'hook', 'native Rig callback did not establish the snapshot identity'
+                receipt('native Rig SessionStart identity retained through manager lifecycles', native=native(), native_provenance=selected[0]['resumeProvenance'], relay_sha256=relay_sha256)
             planned = rig('launch', rig_id, 'agents.continuation', '--snapshot-id', snapshot_id, '--plan', '--json', check=False)
             (fixture / 'live-snapshot-plan.json').write_text(json.dumps({'returncode': planned.returncode, 'stdout': planned.stdout, 'stderr': planned.stderr}, indent=2) + '\n')
             plan = json.loads(planned.stdout)
@@ -314,7 +335,7 @@ def main():
         receipt('native process loss and repeated manual fallback', native=native(), preview=view())
         assert (hashlib.sha256(settings.read_bytes()).hexdigest() if settings.is_file() else None) == settings_hash
         assert hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == script_hash
-        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': 'Private native Rig adoption, WebMux restart/SIGKILL, repeated reconnect, native conversation continuity, private Rig daemon SIGKILL/restart and lost-provider manual fallback. Not Rig native-resume action, host reboot or a remote destination.'}
+        result = {'passed': True, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'qualifier_sha256': script_hash, 'rig_version': version, 'snapshot_plan_only': args.snapshot_plan, 'native_hooks': args.native_hooks, 'relay_sha256': relay_sha256, 'native_cli': subprocess.check_output([claude, '--version'], text=True).strip(), 'native_session_id': entry['native_session_id'], 'webmux_session_id': sid, 'phases': phases, 'scope': 'Private native Rig adoption, WebMux restart/SIGKILL, repeated reconnect, native conversation continuity, private Rig daemon SIGKILL/restart and lost-provider manual fallback. Not Rig native-resume action, host reboot or a remote destination.'}
         (fixture / 'manifest.json').write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(fixture / 'manifest.json')}), flush=True)
     except Exception as error:
