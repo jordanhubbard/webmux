@@ -61,8 +61,10 @@ bootstrap never replaces newer host observations or an existing recording policy
 
 Resume selectors use exact IDs, not `--last` or `--continue`. Supported explicit
 restrictions (including read-only sandbox, Cursor ask/plan mode, Claude safe mode
-and disabled tools) are preserved, along with Codex profiles. Unsupported custom
-settings/tool rules require manual restoration rather than silently dropping
+and disabled tools) are preserved, along with Codex profiles. Claude additionally
+retains supported model, agent, effort, settings-source, system-prompt-snapshot,
+variadic tool rules and extra-directory options. Unsupported or incomplete
+settings require manual restoration rather than silently dropping
 their policy. Explicit sandbox/approval bypass flags are not carried into a
 recovery command. CLI stdout stays
 attached to the original TTY, and the wrapper must preserve interrupt behavior.
@@ -626,6 +628,48 @@ the explicit WebMux managed-resume action through its lifecycle owner. It does
 not qualify managed host reboot, Rig, remote managed hosts, other managed
 CLIs/profiles or authentication-failure behavior. Those remain part of #318's
 acceptance work.
+
+## Claude invocation settings
+
+Claude recovery parses supported invocation settings explicitly. Variadic
+`--tools`, `--allowedTools`, `--disallowedTools` and `--add-dir` values retain
+their order, including an explicitly empty tool list. Named model/agent, effort,
+permission mode, settings sources and system-prompt snapshot selection are kept.
+Original conversation selectors are replaced with the exact recorded ID, and
+initial prompts and permission bypass flags are not replayed. Unknown flags,
+opaque settings, custom prompt payloads and incomplete options produce a
+bounded manual-recovery explanation when first observed, so the preview does
+not offer an action that discards those settings. Inline agent JSON is redacted
+from saved command arguments.
+
+A real Claude Code 2.1.322 conversation on macOS passed provider loss followed
+by the explicit WebMux native-resume action. The resumed invocation retained
+its model, named main-session agent, plan mode, disabled tools, allow/deny rules,
+project-only settings sources, effort, extra directory and snapshot setting.
+A new assistant record returned the earlier marker, a fresh test phrase and the
+agent-profile tag, which was never supplied in the user prompt. The native ID
+was unchanged; the recovered activity belonged to the new worker instance.
+The duplicate request returned its consumed result. The generated profile and
+native permission-settings file checksums remained unchanged.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/configuration-126af277-39c9-49f2-9660-5f57ef997e1e/manifest.json`.
+Executable SHA-256:
+`2c878c3d81fe92fc15b7cc32f0686f493c3773331bf412a5fc63c18f9a3ab202`.
+Qualification script SHA-256:
+`e2ed9340d13f735e576ede95f9edf725b4f3706f1ef812be3e1b4509dbbab63d`.
+
+The harness's `--claude-options --trust-owned-project` mode creates a private
+project and approves the native trust prompt only after checking the exact
+project path, sole generated profile file, absence of symlinks and profile
+checksum. This uses Claude's native project-trust flow and records that choice;
+it can add a native project-trust record. It does not change WebMux recovery's
+trust behavior. Without the explicit harness flag, the prompt remains pending.
+Fixture providers and generated active profile files are cleaned up; receipts,
+profile definitions, logs and failed attempts remain available. Earlier failed
+runs exposed an unavailable profile and a pending trust prompt; neither proved
+recovery. This evidence covers the tested local invocation, not every Claude
+setting, remote host or native Windows execution.
 
 ## Sources
 

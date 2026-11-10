@@ -31,7 +31,7 @@ func TestUnrestorableConfigurationDoesNotSilentlyBroadenNativePolicy(t *testing.
 		{"codex", []string{"codex", "--profile", "--dangerously-bypass-approvals-and-sandbox"}},
 		{"codex", []string{"codex", "[credential arguments omitted]"}},
 		{"claude", []string{"claude", "--settings", "private-settings.json"}},
-		{"claude", []string{"claude", "--tools", "Read"}},
+		{"claude", []string{"claude", "--tools=--dangerously-skip-permissions"}},
 		{"cursor", []string{"agent", "--mode"}},
 	} {
 		if _, err := nativeResumeOptions(tc.cli, tc.args); err == nil {

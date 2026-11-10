@@ -10,7 +10,7 @@ import (
 var nativeUUID = regexp.MustCompile(`(?i)^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`)
 var openCodeID = regexp.MustCompile(`^ses_[A-Za-z0-9_-]{8,128}$`)
 var credentialArgument = regexp.MustCompile(`(?i)(--(?:api[-_]?key|token|password|secret|header)(?:[=\s]|$)|\b[A-Z_]*(?:API_KEY|TOKEN|PASSWORD|SECRET)=)`)
-var inlineConfigurationArgument = regexp.MustCompile(`(?i)(\bOPENCODE_(?:CONFIG_CONTENT|PERMISSION)=|--settings(?:=|\s+)\s*['"]?\s*[\[{])`)
+var inlineConfigurationArgument = regexp.MustCompile(`(?i)(\bOPENCODE_(?:CONFIG_CONTENT|PERMISSION)=|--(?:settings|agents)(?:=|\s+)\s*['"]?\s*[\[{])`)
 
 func SafeCommand(command string) (string, bool) {
 	if credentialArgument.MatchString(command) {

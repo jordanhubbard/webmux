@@ -58,6 +58,18 @@ func captureNativeConfiguration(cli string) *NativeConfiguration {
 	return c
 }
 
+// Persist a bounded explanation as soon as the original invocation is seen,
+// so the preview never offers native recovery that would discard settings.
+func captureNativeInvocationConfiguration(cli string, args []string) *NativeConfiguration {
+	c := captureNativeConfiguration(cli)
+	if c.ManualReason == "" {
+		if _, err := nativeResumeOptions(cli, args); err != nil {
+			c.ManualReason = err.Error()
+		}
+	}
+	return c
+}
+
 func (c *NativeConfiguration) Validate(cli string) error {
 	if c == nil {
 		return nil

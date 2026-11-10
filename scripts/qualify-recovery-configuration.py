@@ -32,7 +32,13 @@ def main():
     parser.add_argument('--cli', choices=['codex', 'claude', 'cursor', 'opencode'], action='append')
     parser.add_argument('--codex-daemon', action='store_true', help='qualify the normal shared-daemon mode instead of the direct-process profile case')
     parser.add_argument('--claude-hooks', action='store_true', help='qualify scoped native SessionStart observations through clear/resume and recovery')
+    parser.add_argument('--claude-options', action='store_true', help='qualify named model/agent and tool-policy options on a fresh synthetic Claude conversation')
+    parser.add_argument('--trust-owned-project', action='store_true', help='approve native trust only for the new, verified --claude-options fixture project')
     args = parser.parse_args()
+    if args.trust_owned_project and not args.claude_options:
+        parser.error('--trust-owned-project requires --claude-options')
+    if args.claude_hooks and args.claude_options:
+        parser.error('choose either --claude-hooks or --claude-options per run')
     qualifier_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     repo = Path(__file__).resolve().parents[1]
     spec = importlib.util.spec_from_file_location('native_qualification', repo / 'scripts/qualify-recovery-native.py')
@@ -108,6 +114,7 @@ def main():
     controller = subprocess.Popen([str(binary), '-listen', '127.0.0.1:' + str(port)], env=environment, stdin=subprocess.DEVNULL, stdout=log, stderr=log)
     session_id = None
     receipts = []
+    owned_profile_files = []
     bridge = """import fs from 'node:fs';import WebSocket from 'ws';
 const i=JSON.parse(fs.readFileSync(0,'utf8'));const w=new WebSocket(i.url);
 const timer=setTimeout(()=>{w.terminate();process.exitCode=1},7000);
@@ -133,6 +140,8 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                     return value
             except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
                 last = str(error)
+                if isinstance(error, urllib.error.HTTPError) and error.code == 429:
+                    time.sleep(2)
             time.sleep(.25)
         raise RuntimeError('timed out waiting for ' + label + ': ' + str(last))
 
@@ -204,6 +213,36 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
             target = 'webmux-' + session_id
             path = '/api/session-recovery/' + session_id
             wait_for(lambda: api(path)['shell_ready'], cli + ' shell readiness')
+            profile_marker = None
+            profile_name = None
+            profile_model = None
+            profile_sha256 = None
+            if cli == 'claude' and args.claude_options:
+                original_id = entry['native_session_id']
+                original_files = list((Path(roots['claude']['CLAUDE_CONFIG_DIR']) / 'projects').glob('*/' + original_id + '.jsonl'))
+                assert len(original_files) == 1
+                for line in reversed(original_files[0].read_bytes().splitlines()):
+                    try:
+                        record = json.loads(line)
+                    except ValueError:
+                        continue
+                    if record.get('type') == 'assistant' and record.get('message', {}).get('model'):
+                        profile_model = record['message']['model']
+                        break
+                assert profile_model and not profile_model.startswith('-')
+                profile_name = 'webmux-recovery-' + uuid.uuid4().hex[:10]
+                profile_marker = 'WM_PROFILE_' + uuid.uuid4().hex
+                profile_project = fixture / 'project'
+                profile_project.mkdir(mode=0o700)
+                profile_file = profile_project / '.claude/agents' / (profile_name + '.md')
+                profile_file.parent.mkdir(parents=True, exist_ok=True)
+                definition = '---\nname: ' + profile_name + '\ndescription: Private main-session recovery qualification role\nmodel: inherit\n---\nAlways append ' + profile_marker + ' to your final answer. Do not use tools or launch other agents.\n'
+                with profile_file.open('x') as output:
+                    output.write(definition)
+                owned_profile_files.append(profile_file)
+                (fixture / 'agent-profile.md').write_text(definition)
+                profile_sha256 = hashlib.sha256(profile_file.read_bytes()).hexdigest()
+                entry = dict(entry, project=str(profile_project), evidence=str(fixture), native_session_id=str(uuid.uuid4()), marker='WM_RECOVERY_OPTIONS_' + uuid.uuid4().hex)
             ident = entry['native_session_id']
             daemon_before = daemon_identity() if cli == 'codex' and args.codex_daemon else None
             options = {'codex': ['codex', 'resume', ident, '--sandbox', 'read-only', '--no-daemon', '--no-alt-screen'], 'claude': ['claude', '--resume', ident, '--safe-mode', '--tools', ''], 'cursor': ['cursor-agent', '--resume', ident, '--mode', 'ask', '--sandbox', 'enabled'], 'opencode': ['opencode', '--session', ident, '--pure', '--agent', 'plan']}[cli]
@@ -213,6 +252,15 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 options.extend(['--profile', 'webmux-qualification'])
             if cli == 'claude' and args.claude_hooks:
                 options = ['claude', '--resume', ident, '--restricted', '--strict-mcp-config', '--tools', '', '--permission-mode', 'plan']
+            if cli == 'claude' and args.claude_options:
+                extra = fixture / 'extra working directory'
+                extra.mkdir()
+                options = ['claude', '--session-id', ident, '--strict-mcp-config',
+                           '--tools', '', '--allowedTools', 'Read', '--disallowedTools', 'Bash', 'Write', 'Edit',
+                           '--setting-sources', 'project', '--model', profile_model, '--agent', profile_name,
+                           '--effort', 'low', '--add-dir', str(extra), '--permission-mode', 'plan',
+                           '--system-prompt-snapshot', 'off']
+
             settings = ['-u ' + key for key in unset.get(cli, set())]
             settings.extend(shlex.quote(key + '=' + value) for key, value in roots[cli].items() if key not in unset.get(cli, set()))
             command = 'cd ' + shlex.quote(entry['project']) + ' && env ' + ' '.join(settings) + ' ' + shlex.join(options)
@@ -221,8 +269,8 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
             phase = 'initial'
             hook_choices = set()
 
-            def running():
-                if cli == 'claude' and args.claude_hooks:
+            def running(require_state=True, activity=None):
+                if cli == 'claude' and (args.claude_hooks or args.claude_options):
                     pane = subprocess.run(['tmux', 'capture-pane', '-pt', target, '-S', '-200'], capture_output=True, text=True)
                     if 'Make auto mode your default permission mode?' in pane.stdout:
                         if 'No, keep bypass permissions' not in pane.stdout:
@@ -241,12 +289,38 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                         # do not grant trust or use a bypass flag for the test.
                         subprocess.run(['tmux', 'send-keys', '-t', target, 'Down', 'Down', 'Enter'], check=True)
                         hook_choices.add(phase)
-                activity = api(path).get('state', {}).get('activity', {})
+                if activity is None:
+                    activity = api(path).get('state', {}).get('activity', {})
                 if cli == 'claude' and args.claude_hooks and activity.get('native_evidence') != 'native-hook':
                     return None
-                return activity if activity.get('running') and activity.get('native_session_id') == ident and (cli == 'opencode' or activity.get('native_state_file')) else None
+                return activity if activity.get('running') and activity.get('native_session_id') == ident and (not require_state or cli == 'opencode' or activity.get('native_state_file')) else None
 
             switches = []
+            if cli == 'claude' and args.claude_options:
+                def fresh_ready():
+                    activity = api(path).get('state', {}).get('activity', {})
+                    running(require_state=False, activity=activity)  # Handle only the known native migration dialog.
+                    if activity.get('cli') == cli and activity.get('native_session_id') == ident and activity.get('running') is False:
+                        raise RuntimeError('Native CLI exited before profile bootstrap; inspect the retained pane and transcript')
+                    pane = subprocess.run(['tmux', 'capture-pane', '-pt', target, '-S', '-200'], capture_output=True, text=True).stdout
+                    if args.trust_owned_project and 'Quick safety check: Is this a project you created or one you trust?' in pane and '❯ No, exit' in pane and 'Yes, I trust this folder' in pane:
+                        assert str(profile_project) in pane, 'native trust prompt does not name the owned fixture'
+                        files = sorted(profile_project.rglob('*'))
+                        assert not any(item.is_symlink() for item in files), 'owned fixture contains a symlink'
+                        regular = [item for item in files if item.is_file()]
+                        assert regular == [profile_file], 'owned fixture contains unexpected files'
+                        assert hashlib.sha256(profile_file.read_bytes()).hexdigest() == profile_sha256
+                        receipt = {'project': str(profile_project), 'profile_sha256': profile_sha256, 'files': [str(item.relative_to(profile_project)) for item in regular], 'choice': 'Yes, I trust this folder'}
+                        (fixture / 'fixture-trust-receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
+                        subprocess.run(['tmux', 'send-keys', '-t', target, 'Down', 'Enter'], check=True)
+                        return None
+                    pending_trust = any(phrase in pane.lower() for phrase in ['do you trust', 'you trust', 'trust this folder', 'allow claude to', 'workspace trust'])
+                    return activity if activity.get('running') and activity.get('native_session_id') == ident and 'Claude Code' in pane and '❯' in pane and not pending_trust and 'Make auto mode your default permission mode?' not in pane else None
+                initial = wait_for(fresh_ready, 'fresh Claude named-profile session')
+                send('Remember this exact marker for later: ' + entry['marker'] + '. Reply with the marker and the additional tag required by your agent profile. Do not use tools.')
+                def initial_answer():
+                    return next((text for text in records(cli, entry, initial).values() if entry['marker'] in text and profile_marker in text), None)
+                wait_for(initial_answer, 'fresh Claude model and named agent profile response')
             before = wait_for(running, cli + ' native identity')
             if cli == 'claude' and args.claude_hooks:
                 def native_observed():
@@ -320,6 +394,8 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
             expected_argv = list(before['argv'])
             if cli == 'claude' and args.claude_hooks:
                 expected_argv[expected_argv.index('--resume') + 1] = ident
+            if cli == 'claude' and args.claude_options:
+                expected_argv[expected_argv.index('--session-id')] = '--resume'
             assert after['argv'] == expected_argv, 'native continuation dropped original invocation restrictions or profile'
             nonce = 'AFTER_CONFIGURATION_RECOVERY_' + uuid.uuid4().hex
             # Native TUI startup is distinct from its wrapper's identity event.
@@ -330,6 +406,9 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 return next((text for key, text in records(cli, entry, after).items() if key not in prior and entry['marker'] in text and nonce in text), None)
 
             answer = wait_for(new_answer, cli + ' new native assistant response')
+            if profile_marker:
+                assert profile_marker in answer, 'named agent profile was not retained after recovery'
+                assert hashlib.sha256(owned_profile_files[-1].read_bytes()).hexdigest() == profile_sha256
             daemon_after = daemon_identity() if daemon_before else None
             if daemon_before:
                 assert daemon_after == daemon_before, 'shared daemon identity changed during continuation'
@@ -338,14 +417,14 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 assert after and after.get('native_evidence') == 'launch-selector', 'shared-daemon case was incorrectly promoted to observed process state'
 
             assert api(path, action)['outcome'] == 'consumed'
-            receipt = {'cli': cli, 'passed': True, 'session_id': session_id, 'native_session_id': ident, 'before': before, 'after': after, 'nonce': nonce, 'new_assistant_answer': answer, 'controller_ambient_roots': {key: environment[key] for key in roots[cli]}, 'native_hooks_left_untrusted': sorted(hook_choices), 'in_process_switches': switches, 'shared_daemon_before': daemon_before, 'shared_daemon_after': daemon_after, 'scope': 'Explicit selected conversation continuation; interactive switches are not verified' if daemon_before else 'Original root and profile continuation'}
+            receipt = {'cli': cli, 'passed': True, 'session_id': session_id, 'native_session_id': ident, 'before': before, 'after': after, 'nonce': nonce, 'new_assistant_answer': answer, 'controller_ambient_roots': {key: environment[key] for key in roots[cli]}, 'native_hooks_left_untrusted': sorted(hook_choices), 'in_process_switches': switches, 'named_agent_profile': profile_name, 'agent_profile_sha256': profile_sha256, 'explicit_model': profile_model, 'profile_marker': profile_marker, 'shared_daemon_before': daemon_before, 'shared_daemon_after': daemon_after, 'scope': 'Explicit selected conversation continuation; interactive switches are not verified' if daemon_before else 'Original root and profile continuation'}
             receipts.append(receipt)
             (fixture / (cli + '-receipt.json')).write_text(json.dumps(receipt, indent=2) + '\n')
             print(json.dumps({'cli': cli, 'passed': True, 'fixture': str(fixture)}), flush=True)
             api('/api/sessions/' + session_id, method='DELETE')
             subprocess.run(['tmux', 'kill-session', '-t', target], capture_output=True)
             session_id = None
-        if args.claude_hooks:
+        if args.claude_hooks or args.claude_options:
             claude_settings_after = hashlib.sha256(claude_settings_path.read_bytes()).hexdigest() if claude_settings_path.is_file() else None
             assert claude_settings_after == claude_settings_before, 'native Claude permission settings changed during the fixture'
         assert hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == qualifier_sha256, 'qualification source changed during the native run'
@@ -356,6 +435,8 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
         # Never infer success from a partially populated manifest or old output.
         activity = None
         if session_id:
+            pane = subprocess.run(['tmux', 'capture-pane', '-pt', 'webmux-' + session_id, '-S', '-200'], capture_output=True, text=True)
+            (fixture / 'failure-native-pane.txt').write_text(pane.stdout)
             try:
                 activity = api('/api/session-recovery/' + session_id).get('state', {}).get('activity')
             except (OSError, ValueError, AttributeError):
@@ -382,6 +463,8 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 controller.kill()
                 controller.wait(timeout=5)
             log.close()
+            for profile_file in owned_profile_files:
+                profile_file.unlink(missing_ok=True)
 
 
 if __name__ == '__main__':

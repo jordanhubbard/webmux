@@ -159,7 +159,7 @@ func RunCLI(name string, args []string) error {
 	if cli == "codex" && id != "" {
 		event.StateFile = codexStateFile(id, cwd, "")
 	}
-	event.Configuration = captureNativeConfiguration(cli)
+	event.Configuration = captureNativeInvocationConfiguration(cli, event.Argv)
 	event.NativeEvidence = "unavailable"
 	if id != "" {
 		event.NativeEvidence = "launch-selector"
