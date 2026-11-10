@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:http';
-import { observeRigRecovery, type RigRecoveryIdentity } from '../webmux/server/internal/openrigcoord/rig-recovery.mts';
+import { observeRigRecovery, planRigRecovery, type RigRecoveryIdentity } from '../webmux/server/internal/openrigcoord/rig-recovery.mts';
 
 async function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-rig-recovery-'));
@@ -22,6 +22,7 @@ async function fixture() {
   const snapshots = new Map<string, unknown>();
   const calls: string[] = [];
   let created = 0, metadataStatus = 200, corruptSnapshot = false;
+  const plan: Record<string, unknown> = { ok: true, planOnly: true, snapshotSelection: { snapshotId: snapshotIds[0] }, targetNodes: [{ nodeId, logicalId: 'agents.coder' }], unmatchedIds: [], nonTargetEffects: { mode: 'unchanged', reason: null, affected: [] } };
   const server = createServer((req, res) => {
     calls.push(`${req.method} ${req.url}`); res.setHeader('content-type', 'application/json');
     const send = (body: unknown) => res.end(JSON.stringify(body));
@@ -34,7 +35,7 @@ async function fixture() {
     }
     if (req.method === 'POST' && req.url === `/api/rigs/${rig}/snapshots`) {
       const id = snapshotIds[created++];
-      const body = { id, rigId: rig, data: { nodes: [{ id: nodeId, logicalId: 'agents.coder' }], sessions: [{ id: 'enrollment', nodeId, status: 'running', resumeType: 'claude_id', resumeToken: corruptSnapshot ? 'foreign' : native, resumeProvenance: 'hook' }], activeSessionIdByNode: { [nodeId]: 'enrollment' }, nodeStartupContext: { [nodeId]: { runtime: 'claude-code', startupActions: [] } }, unrelatedSecret: 'DO_NOT_EXPORT' } };
+      const body = { id, rigId: rig, data: { nodes: [{ id: nodeId, rigId: rig, logicalId: 'agents.coder', runtime: 'claude-code', profile: 'default', cwd }], sessions: [{ id: 'enrollment', nodeId, sessionName: target, status: 'running', resumeType: 'claude_id', resumeToken: corruptSnapshot ? 'foreign' : native, resumeProvenance: 'hook' }], activeSessionIdByNode: { [nodeId]: 'enrollment' }, nodeStartupContext: { [nodeId]: { runtime: 'claude-code', startupActions: [] } }, unrelatedSecret: 'DO_NOT_EXPORT' } };
       snapshots.set(id, body); return send(body);
     }
     const id = req.url?.split('/').at(-1);
@@ -45,13 +46,17 @@ async function fixture() {
   const address = server.address(); assert.ok(address && typeof address !== 'string');
   const run = (command: string, args: string[]) => {
     assert.equal(command, 'rig');
+    if (args[0] === 'launch') {
+      assert.deepEqual(args, ['launch', rig, 'agents.coder', '--snapshot-id', snapshotIds[0], '--plan', '--json']);
+      calls.push('CLI exact-seat plan'); return JSON.stringify(plan);
+    }
     if (args.join(' ') === '--version') return '0.6.14 (9d0200f3)';
     if (args.join(' ') === 'daemon status') return `Daemon running on port ${address.port}`;
     assert.deepEqual(args.slice(0, 4), ['ps', '--nodes', '-A', '--json']);
     return JSON.stringify([{ rigId: rig, logicalId: 'agents.coder', canonicalSessionName: target, runtime: 'claude-code' }]);
   };
   const identity: RigRecoveryIdentity = { target, project: 'project', name: 'coder', host: 'localhost', runtime: 'claude-code', workspace: cwd };
-  return { root, cwd, directory, file, run, identity, node, policy, calls, created: () => created, metadataStatus: (value: number) => { metadataStatus = value; }, corruptSnapshot: () => { corruptSnapshot = true; }, close: async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); fs.rmSync(root, { recursive: true, force: true }); } };
+  return { root, cwd, directory, file, run, identity, node, policy, calls, plan, snapshots, created: () => created, metadataStatus: (value: number) => { metadataStatus = value; }, corruptSnapshot: () => { corruptSnapshot = true; }, close: async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); fs.rmSync(root, { recursive: true, force: true }); } };
 }
 
 test('native Rig capture binds exact snapshot and record, reuses unchanged state, and exports no conversation or settings', async () => {
@@ -98,5 +103,49 @@ test('native Rig capture rejects changed destination, profile, policy and snapsh
     f.policy.desired.mode = 'plan'; f.corruptSnapshot();
     await assert.rejects(observeRigRecovery(f.run, f.identity, f.directory), /snapshot/);
     assert.equal(fs.readdirSync(f.directory).length, 0);
+  } finally { await f.close(); }
+});
+
+test('Rig recovery preflight validates immutable checkpoint and current policy without native launches', async () => {
+  const f = await fixture();
+  try {
+    const saved = await observeRigRecovery(f.run, f.identity, f.directory);
+    const created = f.created();
+    const plan = await planRigRecovery(f.run, saved);
+    assert.equal(plan.plan_only, true); assert.equal(plan.snapshot_id, saved.manager_snapshot_id);
+    assert.equal(plan.native_session_id, saved.native_session_id);
+    assert.equal(f.created(), created);
+    assert.equal(f.calls.filter(call => call === 'CLI exact-seat plan').length, 1);
+    f.policy.effective.permissionMode = 'acceptEdits';
+    await assert.rejects(planRigRecovery(f.run, saved), /policy/);
+    f.policy.effective.permissionMode = 'plan';
+    fs.mkdirSync(path.join(f.cwd, '.claude'));
+    fs.writeFileSync(path.join(f.cwd, '.claude/settings.json'), '{}');
+    await assert.rejects(planRigRecovery(f.run, saved), /policy changed/);
+    assert.equal(f.calls.filter(call => call === 'CLI exact-seat plan').length, 1);
+  } finally { await f.close(); }
+});
+
+test('Rig recovery preflight refuses changed snapshot, selected node, native file and plan side effects', async () => {
+  const f = await fixture();
+  try {
+    const saved = await observeRigRecovery(f.run, f.identity, f.directory);
+    const original = structuredClone(f.snapshots.get(saved.manager_snapshot_id!));
+    const snapshot = f.snapshots.get(saved.manager_snapshot_id!) as { data: { nodes: { cwd: string }[]; unrelatedSecret: string } };
+    snapshot.data.nodes[0].cwd = f.directory;
+    await assert.rejects(planRigRecovery(f.run, saved), /snapshot does not verify/);
+    snapshot.data.nodes[0].cwd = f.cwd;
+    snapshot.data.unrelatedSecret = 'changed';
+    await assert.rejects(planRigRecovery(f.run, saved), /checkpoint changed/);
+    f.snapshots.set(saved.manager_snapshot_id!, original);
+    f.plan.nonTargetEffects = { mode: 'changed', reason: 'other seat', affected: ['foreign'] };
+    await assert.rejects(planRigRecovery(f.run, saved), /other effects/);
+    f.plan.nonTargetEffects = { mode: 'unchanged', reason: null, affected: [] };
+    f.plan.targetNodes = [{ nodeId: saved.manager_node_id, logicalId: 'foreign' }];
+    await assert.rejects(planRigRecovery(f.run, saved), /other effects/);
+    fs.renameSync(f.file, f.file + '.old');
+    fs.writeFileSync(f.file, fs.readFileSync(f.file + '.old'));
+    await assert.rejects(planRigRecovery(f.run, saved), /state or Rig recovery policy changed/);
+    assert.equal(f.created(), 1);
   } finally { await f.close(); }
 });

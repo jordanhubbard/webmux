@@ -286,6 +286,23 @@ def main():
             assert captured.get('manager_native_source') == 'rig-snapshot' and captured.get('manager_snapshot_id')
             api('/api/coordination/attach', {'provider': 'rig', 'target': target})
             assert view()['manager_snapshot_id'] == captured['manager_snapshot_id'], 'Unchanged metadata created another snapshot'
+            captured_session = api('/api/sessions/' + sid)
+            captured_identity = captured_session['rig']
+            owner_scope = hashlib.sha256(captured_session['owner'].encode()).hexdigest()[:24]
+            runners = [home / 'data/coordination' / owner_scope / 'runner.mts']
+            assert runners[0].is_file()
+            def webmux_checkpoint_plan(label):
+                checkpoint = subprocess.run([str(rig_node), str(runners[0]), 'recovery-plan', str(runners[0].parent)], input=json.dumps(captured_identity), env=env, capture_output=True, text=True, timeout=35)
+                (fixture / ('webmux-checkpoint-plan-' + label + '.json')).write_text(json.dumps({'returncode': checkpoint.returncode, 'stdout': checkpoint.stdout, 'stderr': checkpoint.stderr}, indent=2) + '\n')
+                assert checkpoint.returncode == 0, 'WebMux could not validate its recorded Rig checkpoint; inspect checkpoint plan receipt'
+                planned_checkpoint = json.loads(checkpoint.stdout)
+                assert planned_checkpoint['plan_only'] is True and planned_checkpoint['snapshot_id'] == captured['manager_snapshot_id']
+                assert planned_checkpoint['native_session_id'] == entry['native_session_id'] and planned_checkpoint['target'] == target
+                return planned_checkpoint
+            assert native() == before
+            webmux_checkpoint_plan('live')
+            assert native() == before, 'Read-only WebMux preflight replaced the surviving process'
+
         else:
             assert not view().get('manager_native_session'), 'Rig enrollment ID was mistaken for a provider-native conversation'
         seats = [seat for seat in api('/api/coordination')['seats'] if seat['provider'] == 'rig' and seat['id'] == target]
@@ -299,6 +316,8 @@ def main():
             wait(connected, 'restored Rig viewer')
             v = wait(lambda: view() if view().get('state', {}).get('disposition') == 'reattached' else None, 'Rig restoration receipt')
             assert native() == before and entry['marker'] in v['history']
+            if args.native_resume:
+                assert v['manager_snapshot_id'] == captured['manager_snapshot_id'] and v['manager_native_session'] == captured['manager_native_session']
             receipt('controller SIGKILL' if abrupt else 'orderly controller restart', native=native(), preview=v)
         for _ in range(3):
             api('/api/sessions/' + sid + '/reconnect', {})
@@ -417,6 +436,10 @@ def main():
             assert native()['count'] == 0
         receipt('native process loss and repeated manual fallback', native=native(), preview=view())
         if args.native_resume:
+            webmux_checkpoint_plan('lost')
+            assert native()['count'] == 0, 'Read-only WebMux preflight launched a replacement'
+            snapshot_id = captured['manager_snapshot_id']
+            receipt('WebMux recorded checkpoint live and lost-process preflight', snapshot_id=snapshot_id, native=native())
             result = rig('launch', rig_id, 'agents.continuation', '--snapshot-id', snapshot_id, '--json', check=False)
             (fixture / 'native-resume-result.json').write_text(json.dumps({'returncode': result.returncode, 'stdout': result.stdout, 'stderr': result.stderr}, indent=2) + '\n')
             if result.returncode:

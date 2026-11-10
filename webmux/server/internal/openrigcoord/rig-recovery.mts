@@ -63,13 +63,14 @@ async function manager(run: RigRecoveryRun) {
 function nativeState(file: string, id: string, cwd: string) {
   const descriptor = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NONBLOCK);
   try {
-    if (!fs.fstatSync(descriptor).isFile()) throw new Error('The native conversation is unavailable.');
+    const stat = fs.fstatSync(descriptor);
+    if (!stat.isFile()) throw new Error('The native conversation is unavailable.');
     const bytes = Buffer.alloc(1024 * 1024);
     const read = fs.readSync(descriptor, bytes, 0, bytes.length, 0);
     for (const line of bytes.subarray(0, read).toString('utf8').split('\n').slice(0, 64)) {
       try {
         const record = object(JSON.parse(line));
-        if (record.sessionId === id && typeof record.cwd === 'string' && sameDirectory(record.cwd, cwd)) return;
+        if (record.sessionId === id && typeof record.cwd === 'string' && sameDirectory(record.cwd, cwd)) return digest([id, file, stat.dev, stat.ino, stat.birthtimeMs]);
       } catch { /* Incomplete/unknown records establish no identity. */ }
     }
     throw new Error('The native conversation does not verify the recorded project and session.');
@@ -101,9 +102,7 @@ function policyFiles(cwd: string, file: string) {
   });
 }
 
-// Called only while the broker holds its logging-operation lock. A first
-// observation may create one native snapshot; matching observations reuse it.
-export async function observeRigRecovery(run: RigRecoveryRun, identity: RigRecoveryIdentity, directory: string): Promise<RigRecoveryIdentity> {
+async function destination(run: RigRecoveryRun, identity: RigRecoveryIdentity) {
   if ((identity.provider && identity.provider !== 'rig') || identity.host !== 'localhost' || identity.runtime !== 'claude-code') {
     throw new Error('Native Rig recovery metadata is unsupported for this destination.');
   }
@@ -129,6 +128,29 @@ export async function observeRigRecovery(run: RigRecoveryRun, identity: RigRecov
   if (desired.runtime !== 'claude-code' || desired.mode !== 'plan' || effective.permissionMode !== 'plan') {
     throw new Error('This native Rig recovery policy has not been qualified.');
   }
+  const profile = text(node.profile, 128);
+  if (profile !== 'default') throw new Error('This Rig profile is not qualified for native recovery.');
+  const policy = (file: string) => digest({ rigId, nodeId, logicalId, cwd, runtime: node.runtime, profile, agentRef: node.agentRef, spec: node.resolvedSpecHash, model: node.model, permissions: { desired: { runtime: desired.runtime, mode: desired.mode }, effective }, files: policyFiles(cwd, file) });
+  return { get, target, cwd, rigId, logicalId, route, nodeId, node, profile, policy };
+}
+
+function snapshotIdentity(snapshot: ObjectValue, context: Awaited<ReturnType<typeof destination>>, snapshotId: string, id: string) {
+  const { rigId, nodeId, logicalId, cwd, profile } = context;
+  const data = object(snapshot.data);
+  const nodes = rows(data.nodes).filter(row => row.id === nodeId);
+  const active = object(data.activeSessionIdByNode)[nodeId];
+  const selected = rows(data.sessions).filter(row => row.id === active && row.nodeId === nodeId);
+  const startup = object(data.nodeStartupContext)[nodeId];
+  if (snapshot.id !== snapshotId || snapshot.rigId !== rigId || nodes.length !== 1 || nodes[0].rigId !== rigId || nodes[0].logicalId !== logicalId || nodes[0].runtime !== 'claude-code' || nodes[0].profile !== profile || !sameDirectory(text(nodes[0].cwd), cwd) || selected.length !== 1 || selected[0].sessionName !== context.target || selected[0].status !== 'running' || selected[0].resumeType !== 'claude_id' || selected[0].resumeToken !== id || !['hook', 'operator'].includes(String(selected[0].resumeProvenance)) || !startup) {
+    throw new Error('The native Rig snapshot does not verify this managed conversation.');
+  }
+}
+
+// Called only while the broker holds its logging-operation lock. A first
+// observation may create one native snapshot; matching observations reuse it.
+export async function observeRigRecovery(run: RigRecoveryRun, identity: RigRecoveryIdentity, directory: string): Promise<RigRecoveryIdentity> {
+  const context = await destination(run, identity);
+  const { get, target, cwd, rigId, logicalId, route, nodeId, profile, policy } = context;
   const record = object(await get(`/api/sessions/${encodeURIComponent(target)}/generation-record`));
   const id = text(record.sessionId);
   const generation = JSON.parse(text(record.generationId)) as unknown;
@@ -137,12 +159,10 @@ export async function observeRigRecovery(run: RigRecoveryRun, identity: RigRecov
   }
   const file = text(generation[2]);
   if (!path.isAbsolute(file)) throw new Error('The native Rig conversation path is unavailable.');
-  nativeState(file, id, cwd);
-  const profile = text(node.profile, 128);
-  if (profile !== 'default') throw new Error('This Rig profile is not qualified for native recovery.');
-  const stateIdentity = digest(generation.slice(1));
-  const policy = digest({ rigId, nodeId, logicalId, cwd, runtime: node.runtime, profile, agentRef: node.agentRef, spec: node.resolvedSpecHash, model: node.model, permissions: { desired: { runtime: desired.runtime, mode: desired.mode }, effective }, files: policyFiles(cwd, file) });
-  const key = digest([rigId, nodeId, id, stateIdentity, policy]);
+  const stateIdentity = nativeState(file, id, cwd);
+  if (stateIdentity !== digest(generation.slice(1))) throw new Error('The native conversation file identity changed.');
+  const policyHash = policy(file);
+  const key = digest([rigId, nodeId, id, stateIdentity, policyHash]);
   const cache = path.join(directory, 'recovery-' + crypto.createHash('sha256').update(target).digest('hex') + '.json');
   let snapshotId = '';
   try {
@@ -155,17 +175,38 @@ export async function observeRigRecovery(run: RigRecoveryRun, identity: RigRecov
   }
   if (!ulid.test(snapshotId)) throw new Error('The native Rig snapshot identity is unavailable.');
   const snapshot = object(await get(`${route}/snapshots/${encodeURIComponent(snapshotId)}`));
-  const data = object(snapshot.data);
-  const savedNodes = rows(data.nodes).filter(row => row.id === nodeId);
-  const sessions = rows(data.sessions);
-  const active = object(data.activeSessionIdByNode)[nodeId];
-  const selected = sessions.filter(row => row.id === active && row.nodeId === nodeId);
-  const contexts = object(data.nodeStartupContext);
-  if (snapshot.rigId !== rigId || savedNodes.length !== 1 || savedNodes[0].logicalId !== logicalId || selected.length !== 1 || selected[0].status !== 'running' || selected[0].resumeType !== 'claude_id' || selected[0].resumeToken !== id || !['hook', 'operator'].includes(String(selected[0].resumeProvenance)) || !contexts[nodeId]) {
-    throw new Error('The native Rig snapshot does not verify this managed conversation.');
-  }
+  snapshotIdentity(snapshot, context, snapshotId, id);
   const temporary = cache + '.' + crypto.randomUUID() + '.tmp';
   try { fs.writeFileSync(temporary, JSON.stringify({ key, snapshotId }), { flag: 'wx', mode: 0o600 }); fs.renameSync(temporary, cache); }
   finally { fs.rmSync(temporary, { force: true }); }
-  return { ...identity, manager_profile: profile, native_session_id: id, native_state_file: file, native_source: 'rig-snapshot', manager_rig_id: rigId, manager_node_id: nodeId, manager_logical_id: logicalId, manager_snapshot_id: snapshotId, manager_snapshot_hash: digest(snapshot), manager_policy_hash: policy, manager_record_identity: stateIdentity };
+  return { ...identity, manager_profile: profile, native_session_id: id, native_state_file: file, native_source: 'rig-snapshot', manager_rig_id: rigId, manager_node_id: nodeId, manager_logical_id: logicalId, manager_snapshot_id: snapshotId, manager_snapshot_hash: digest(snapshot), manager_policy_hash: policyHash, manager_record_identity: stateIdentity };
+}
+
+export interface RigRecoveryPlan {
+  snapshot_id: string; rig_id: string; node_id: string; logical_id: string;
+  target: string; native_session_id: string; plan_only: true;
+}
+
+// Read-only preflight. A valid manager plan is necessary, but cannot by itself
+// authorize a launch or establish that the original process is gone.
+export async function planRigRecovery(run: RigRecoveryRun, saved: RigRecoveryIdentity): Promise<RigRecoveryPlan> {
+  const context = await destination(run, saved);
+  const { get, route, rigId, nodeId, logicalId, cwd, policy } = context;
+  const snapshotId = text(saved.manager_snapshot_id), nativeId = text(saved.native_session_id);
+  const file = text(saved.native_state_file);
+  if (saved.native_source !== 'rig-snapshot' || !ulid.test(snapshotId) || !uuid.test(nativeId) || !path.isAbsolute(file) || saved.manager_rig_id !== rigId || saved.manager_node_id !== nodeId || saved.manager_logical_id !== logicalId || saved.manager_profile !== context.profile) {
+    throw new Error('The original Rig recovery destination changed.');
+  }
+  if (nativeState(file, nativeId, cwd) !== saved.manager_record_identity || policy(file) !== saved.manager_policy_hash) {
+    throw new Error('The original native state or Rig recovery policy changed.');
+  }
+  const snapshot = object(await get(`${route}/snapshots/${encodeURIComponent(snapshotId)}`));
+  snapshotIdentity(snapshot, context, snapshotId, nativeId);
+  if (digest(snapshot) !== saved.manager_snapshot_hash) throw new Error('The recorded Rig checkpoint changed.');
+  const plan = object(JSON.parse(run('rig', ['launch', rigId, logicalId, '--snapshot-id', snapshotId, '--plan', '--json'])));
+  const targets = rows(plan.targetNodes), effects = object(plan.nonTargetEffects);
+  if (plan.ok !== true || plan.planOnly !== true || object(plan.snapshotSelection).snapshotId !== snapshotId || targets.length !== 1 || targets[0].nodeId !== nodeId || targets[0].logicalId !== logicalId || !Array.isArray(plan.unmatchedIds) || plan.unmatchedIds.length !== 0 || effects.mode !== 'unchanged' || !Array.isArray(effects.affected) || effects.affected.length !== 0 || effects.reason !== null) {
+    throw new Error('Rig cannot plan the exact recorded seat without other effects.');
+  }
+  return { snapshot_id: snapshotId, rig_id: rigId, node_id: nodeId, logical_id: logicalId, target: context.target, native_session_id: nativeId, plan_only: true };
 }

@@ -935,6 +935,41 @@ owner isolation, logging pause/resume, durable reconstruction and destination
 changes; helper tests cover snapshot reuse, policy changes and rejected native
 identity or manager authorization.
 
+## Rig saved-checkpoint preflight
+
+The embedded Rig helper now has a read-only preflight for the recorded checkpoint.
+It resolves the current canonical seat and checks the saved rig/node/profile,
+physical project, current plan policy and settings hashes. Capture and preflight
+verify the native file's device, inode and creation time as well as bounded
+native session/project records. Snapshot validation also checks the selected
+node's runtime, profile and cwd and its active native conversation.
+
+Preflight rejects a changed snapshot digest or a native plan that selects another
+snapshot/node or reports non-target effects. It neither creates a checkpoint nor
+launches a process. A successful plan does not establish process ownership or
+absence and does not enable WebMux's Rig launch action. Capture now has a bounded
+15-second request deadline.
+
+The private native fixture exercised this embedded helper against WebMux's own
+recorded checkpoint with both a surviving and a lost process. Neither plan
+changed the process count or identity. Rig subsequently resumed from that same
+recorded snapshot and returned a new remembered-marker response with the original
+roots, settings, plan restriction and kernel cwd. Controller/manager lifecycle
+and repeated manual-fallback checks also passed.
+
+Private receipt:
+`~/.local/share/webmux/recovery-qualification/rig-native-a2330a20-d8ad-4e8c-9118-f79369f4db70/manifest.json`.
+Executable SHA-256:
+`7792af655c05554a34873b81a28fe6ea70eb8c8fe73b37c8d84e9aad6fae46fd`.
+Qualification script SHA-256:
+`475fa4b7453a6ebf5d5c1f4460b2d23ef2c98af13230657957da20462ab2f4f4`.
+Full Go race tests/vet, strict TypeScript, the standalone build and all 42 helper
+tests passed. Additional helper cases reject changed settings, native files,
+snapshot contents, target nodes and non-target effects. The Windows CI failure
+at `0e60a5c` came from Unix-only absolute paths in the broker test fixture;
+`372a4fe` uses platform-native temporary paths without weakening production
+validation. Exact-head Windows CI remains the required proof of that fix.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
