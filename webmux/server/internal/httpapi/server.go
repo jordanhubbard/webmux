@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 
@@ -95,7 +96,19 @@ func New(store *storage.Store, options Options) (*Server, error) {
 
 func (s *Server) RestoreSessions() error {
 	s.startCoordination()
-	return errors.Join(s.sessions.Restore(), s.vnc.Restore(), s.rdp.Restore())
+	terminalErr := s.sessions.Restore()
+	if terminalErr == nil {
+		terminalErr = s.sessions.RestoreManaged(context.Background(), func(parent context.Context, owner string, identity session.RigIdentity) ([]string, error) {
+			if err := s.openRigPermission(owner); err != nil {
+				return nil, err
+			}
+			ctx, cancel := context.WithTimeout(parent, 20*time.Second)
+			defer cancel()
+			launch, err := s.resolveManagedReattachment(ctx, owner, identity)
+			return launch.Argv, err
+		})
+	}
+	return errors.Join(terminalErr, s.vnc.Restore(), s.rdp.Restore())
 }
 func (s *Server) StartSlave(host string, port int) error {
 	_, err := s.sessions.ResetForSlave(host, port)

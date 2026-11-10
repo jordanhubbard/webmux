@@ -1,10 +1,12 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -212,8 +214,20 @@ func TestManagedRigAgentsUseOrdinaryPersistentGridTiles(t *testing.T) {
 	if len(values) != 1 || values[0].Rig == nil || *values[0].Rig != identity {
 		t.Fatal("identity did not survive persistence")
 	}
-	if launches != 1 || len(restored.List("owner")) != 1 {
-		t.Fatal("managed terminal did not reattach after restart")
+	if launches != 0 || len(restored.List("owner")) != 1 {
+		t.Fatal("managed terminal reused saved arguments before provider validation")
+	}
+	resolve := func(_ context.Context, owner string, saved RigIdentity) ([]string, error) {
+		if owner != "owner" || saved != identity {
+			t.Fatal("restoration resolved another owner or provider", owner, saved)
+		}
+		return argv, nil
+	}
+	if err := restored.RestoreManaged(context.Background(), resolve); err != nil {
+		t.Fatal(err)
+	}
+	if err := restored.RestoreManaged(context.Background(), resolve); err != nil || launches != 1 {
+		t.Fatal("managed restoration did not reattach once", launches, err)
 	}
 }
 
@@ -343,5 +357,89 @@ func TestManagedReconnectRequiresFreshOwnerBoundAttachment(t *testing.T) {
 	result, _ = b.Get("owner", value.ID)
 	if result.ExecArgv[0] != "/current/agent-deck" {
 		t.Fatal("saved attach arguments alias the caller")
+	}
+}
+
+func TestManagedRestorePreservesHistoryWhenManagerIsUnavailable(t *testing.T) {
+	b, store, launched := fixture(t)
+	enableLogging(t, store)
+	identity := RigIdentity{Provider: "agent-deck", Target: "agent-deck:remote:seat", Host: "remote", Workspace: "/project"}
+	value, err := b.EnsureRigTerminal("owner", identity.Target, "coder", []string{"old-attach"}, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := <-launched
+	if _, err := p.writer.Write([]byte("MANAGED_RETAINED_HISTORY\n")); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, func() bool {
+		v, _ := b.Recovery("owner", value.ID)
+		return strings.Contains(v.History, "MANAGED_RETAINED_HISTORY")
+	})
+	if err := b.Close(); err != nil {
+		t.Fatal(err)
+	}
+	launches := 0
+	restored, err := newBroker(store, nil, func(request terminal.LaunchRequest, _ string) (process, error) {
+		launches++
+		if !slices.Equal(request.ExecArgv, []string{"fresh-attach"}) {
+			t.Fatal("used unvalidated saved arguments", request.ExecArgv)
+		}
+		return fake(), nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	if err := restored.Restore(); err != nil || launches != 0 {
+		t.Fatal("ordinary restore launched a managed viewer", launches, err)
+	}
+	if err := restored.RestoreManaged(context.Background(), func(context.Context, string, RigIdentity) ([]string, error) {
+		return nil, errors.New("\x1b]52;c;hidden\aCoordinator offline " + strings.Repeat("x", 2000))
+	}); err != nil {
+		t.Fatal("unavailable manager prevented startup", err)
+	}
+	view, err := restored.Recovery("owner", value.ID)
+	if err != nil || launches != 0 || view.State.Disposition != "managed-unavailable" || view.Hostname != "remote" || view.ManagerTarget != identity.Target || view.ManagerDirectory != identity.Workspace || !strings.Contains(view.History, "MANAGED_RETAINED_HISTORY") || !strings.Contains(view.Message, "Coordinator offline") || strings.Contains(view.Message, "hidden") || len(view.State.ManagerMessage) > 1024 {
+		t.Fatal("lost retained evidence or exposed unsafe manager output", view, launches, err)
+	}
+	if err := restored.RestoreManaged(context.Background(), func(context.Context, string, RigIdentity) ([]string, error) { return []string{"fresh-attach"}, nil }); err != nil {
+		t.Fatal(err)
+	}
+	view, _ = restored.Recovery("owner", value.ID)
+	if launches != 1 || view.State.Pending || view.State.Disposition != "reattached" || view.State.ManagerMessage != "" || !strings.Contains(view.History, "MANAGED_RETAINED_HISTORY") {
+		t.Fatal("successful reattachment lost history or kept a stale error", view, launches)
+	}
+}
+
+func TestCanceledManagedRestoreDoesNotLaunchAfterResolution(t *testing.T) {
+	b, store, _ := fixture(t)
+	identity := RigIdentity{Target: "seat", Host: "localhost"}
+	_, err := b.EnsureRigTerminal("owner", identity.Target, "coder", []string{"attach"}, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := b.Close(); err != nil {
+		t.Fatal(err)
+	}
+	restored, err := newBroker(store, nil, func(terminal.LaunchRequest, string) (process, error) {
+		t.Fatal("canceled provider resolution launched a viewer")
+		return nil, errors.New("unexpected launch")
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	if err := restored.Restore(); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	err = restored.RestoreManaged(ctx, func(context.Context, string, RigIdentity) ([]string, error) {
+		cancel()
+		return []string{"must-not-launch"}, nil
+	})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatal("cancellation was lost", err)
 	}
 }

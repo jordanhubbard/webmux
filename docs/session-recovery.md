@@ -189,9 +189,23 @@ the existing viewer and saved evidence intact. The broker rejects managed
 reconnects that bypass this resolution. These requests never invoke a launch or
 session-start operation. Tests cover native PTY viewer replacement through the
 HTTP route, changed destinations, owner isolation and stale saved arguments.
-This is explicit reattachment coverage. Startup restoration still needs the
-same provider validation, and provider-owned native continuation after process
-loss/reboot remains open; these checks do not qualify managed lifecycle recovery.
+Startup now performs the same resolution after ordinary terminal restoration.
+The broker leaves saved managed viewers disconnected until their original
+lifecycle owner validates them; it never starts their saved attach arguments
+by itself. Current owner access is checked before provider discovery. A failed
+manager leaves a bounded, plain-text recovery explanation beside the retained
+history without preventing WebMux startup. A later successful reattachment
+clears that explanation and retains the same viewer ID. The recovery preview
+shows the recorded managed target, host and project directory.
+
+Tests reconstruct the server around a real PTY viewer and a controlled Agent
+Deck CLI fixture: a disabled manager preserves pre-restart history, later
+validation uses fresh attach arguments, repeated restoration attaches once,
+and revoked owner access prevents provider discovery. Broker tests cover
+cancellation and unsafe/oversized manager diagnostics. These are lifecycle and
+adapter-boundary regressions, not native Agent Deck or Rig conversation proof.
+Provider-owned native continuation after process loss/reboot and native managed
+lifecycle qualification remain open.
 
 The native identity tests must also cover changing conversations inside one CLI
 process. An initially selected conversation ID is not sufficient evidence after

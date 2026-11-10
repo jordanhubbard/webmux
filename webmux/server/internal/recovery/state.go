@@ -32,14 +32,15 @@ func (a *Activity) CanAutoResumeNative() bool {
 }
 
 type State struct {
-	Intent      *Intent   `json:"intent,omitempty" yaml:"intent,omitempty"`
-	AutoResume  bool      `json:"auto_resume" yaml:"auto_resume"`
-	Version     int       `json:"version" yaml:"version"`
-	Revision    uint64    `json:"revision" yaml:"revision"`
-	Activity    *Activity `json:"activity,omitempty" yaml:"activity,omitempty"`
-	Transcripts []string  `json:"transcripts,omitempty" yaml:"transcripts,omitempty"`
-	Pending     bool      `json:"pending" yaml:"pending"`
-	Disposition string    `json:"disposition,omitempty" yaml:"disposition,omitempty"`
+	ManagerMessage string    `json:"manager_message,omitempty" yaml:"manager_message,omitempty"`
+	Intent         *Intent   `json:"intent,omitempty" yaml:"intent,omitempty"`
+	AutoResume     bool      `json:"auto_resume" yaml:"auto_resume"`
+	Version        int       `json:"version" yaml:"version"`
+	Revision       uint64    `json:"revision" yaml:"revision"`
+	Activity       *Activity `json:"activity,omitempty" yaml:"activity,omitempty"`
+	Transcripts    []string  `json:"transcripts,omitempty" yaml:"transcripts,omitempty"`
+	Pending        bool      `json:"pending" yaml:"pending"`
+	Disposition    string    `json:"disposition,omitempty" yaml:"disposition,omitempty"`
 }
 
 type Intent struct {

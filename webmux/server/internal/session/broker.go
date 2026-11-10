@@ -178,7 +178,7 @@ func (b *Broker) Restore() error {
 		if e.run != nil {
 			continue
 		}
-		if e.value.Persistent && e.value.Hostname != "" && !e.value.Agent() {
+		if e.value.Persistent && e.value.Hostname != "" && !e.value.Agent() && e.value.Rig == nil {
 			_ = b.startLocked(e, "", "")
 		}
 	}
@@ -499,6 +499,15 @@ func (b *Broker) reconnect(owner, id, password string, expected *RigIdentity, ar
 	err = b.startLocked(e, password, "")
 	if err == nil {
 		b.markAttachReadyLocked(e)
+		if expected != nil {
+			if e.value.Recovery == nil {
+				e.value.Recovery = &recovery.State{Version: 1}
+			}
+			e.value.Recovery.Pending = false
+			e.value.Recovery.Disposition = "reattached"
+			e.value.Recovery.ManagerMessage = ""
+			e.value.Recovery.Revision++
+		}
 	}
 	if persistErr := b.persistLocked(); persistErr != nil {
 		return Session{}, persistErr

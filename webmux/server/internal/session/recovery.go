@@ -13,6 +13,8 @@ import (
 // RecoveryView is owner-scoped like the terminal itself. History is plain text;
 // browser/clipboard/shell protocol packets are never replayed from disk.
 type RecoveryView struct {
+	ManagerTarget    string          `json:"manager_target,omitempty"`
+	ManagerDirectory string          `json:"manager_directory,omitempty"`
 	Waiting          bool            `json:"waiting"`
 	HostRevision     uint64          `json:"host_revision"`
 	Instance         string          `json:"instance"`
@@ -59,6 +61,10 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 		view.Waiting, view.Instance = control.Mode == "waiting" && hostReady, control.Instance
 	}
 	if s.Rig != nil {
+		view.ManagerTarget, view.ManagerDirectory = s.Rig.Target, s.Rig.Workspace
+		if s.Rig.Host != "" {
+			view.Hostname = s.Rig.Host
+		}
 		view.LifecycleOwner = s.Rig.Provider
 		if view.LifecycleOwner == "" {
 			view.LifecycleOwner = "rig"
@@ -103,6 +109,9 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	}
 	if s.Recovery.Disposition == "reattached" {
 		view.Message = "Reattached to the surviving session. Its running work was preserved."
+	}
+	if s.Recovery.Disposition == "managed-unavailable" {
+		view.Message = "The original managed session could not be reattached. Retained terminal history remains available. " + s.Recovery.ManagerMessage
 	}
 	if view.Waiting {
 		view.Message = "The previous provider was interrupted. Review the recorded work, then choose how to continue."

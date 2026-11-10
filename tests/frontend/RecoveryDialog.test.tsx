@@ -22,6 +22,19 @@ function evidence(sessionId = 'one'): SessionRecovery {
 afterEach(() => vi.restoreAllMocks());
 
 describe('recorded work preview', () => {
+  it('shows the saved managed destination and project when no shell command is known', async () => {
+    const value = evidence();
+    value.lifecycle_owner = 'agent-deck';
+    value.manager_target = 'agent-deck:remote:original-session';
+    value.manager_directory = '/remote/project';
+    value.state!.activity = undefined;
+    vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(value);
+    render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
+    expect(await screen.findByText('agent-deck:remote:original-session')).toBeDefined();
+    expect(screen.getByText('/remote/project')).toBeDefined();
+    expect(screen.queryByText('Last observed command')).toBeNull();
+  });
+
   it('loads only after an explicit click, including while disconnected, and renders history as text', async () => {
     const load = vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(evidence());
     const terminalRef = createRef<TerminalHandle>();

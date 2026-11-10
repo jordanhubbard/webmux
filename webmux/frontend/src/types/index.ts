@@ -53,11 +53,12 @@ export interface RecoveryActivity {
 }
 
 export interface SessionRecovery {
+  manager_target?: string; manager_directory?: string;
   waiting?: boolean; host_revision?: number; instance?: string; warning?: string;
   session_id: string; hostname: string; transport: string; lifecycle_owner: string;
   history: string; history_available: boolean; shell_ready: boolean; message: string;
   can_resume_cli: boolean; can_replay: boolean;
-  state?: { revision: number; pending: boolean; disposition?: string; auto_resume: boolean;
+  state?: { revision: number; pending: boolean; disposition?: string; auto_resume: boolean; manager_message?: string;
     activity?: RecoveryActivity; transcripts?: string[] };
 }
 
