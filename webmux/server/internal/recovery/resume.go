@@ -68,6 +68,11 @@ func prepareNativeResume(request NativeResume) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	options, err := nativeResumeOptions(a.CLI, a.Argv)
+	if err != nil {
+		return nil, err
+	}
+	args = append(args, options...)
 	info, err := os.Stat(a.Cwd)
 	if err != nil || !info.IsDir() {
 		return nil, errors.New("the original working directory is unavailable; recover this session manually")
@@ -95,6 +100,11 @@ func prepareNativeResume(request NativeResume) ([]string, error) {
 	help, err := cliHelpAt(a.Cwd, binary, helpArgs...)
 	if err != nil || !strings.Contains(help, selector) {
 		return nil, errors.New("the installed coding CLI does not support the required native resume selector")
+	}
+	for _, option := range options {
+		if strings.HasPrefix(option, "-") && !strings.Contains(help, option) {
+			return nil, errors.New("the installed coding CLI cannot restore an original invocation restriction; recover manually")
+		}
 	}
 	if a.CLI == "cursor" && !strings.Contains(help, "Cursor Agent") {
 		return nil, errors.New("agent is not a supported Cursor CLI")

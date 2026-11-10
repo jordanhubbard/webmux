@@ -57,8 +57,12 @@ bootstrap never replaces newer host observations or an existing recording policy
   loopback server, stop that server, then select the ID in the normal TUI.
   No model turn is submitted during allocation.
 
-Resume selectors use exact IDs, not `--last` or `--continue`. Prior approval or
-sandbox bypass flags are not carried into a recovery command. CLI stdout stays
+Resume selectors use exact IDs, not `--last` or `--continue`. Supported explicit
+restrictions (including read-only sandbox, Cursor ask/plan mode, Claude safe mode
+and disabled tools) are preserved, along with Codex profiles. Unsupported custom
+settings/tool rules require manual restoration rather than silently dropping
+their policy. Explicit sandbox/approval bypass flags are not carried into a
+recovery command. CLI stdout stays
 attached to the original TTY, and the wrapper must preserve interrupt behavior.
 Native state availability, supported versions, original execution host and
 project still require validation at the recovery action.
@@ -233,6 +237,16 @@ testing exposed mosh's option permutation: the launcher now terminates its own
 options before the destination so remote `--session-attach` is passed to WebMux.
 
 ## Native conversation qualification
+
+The Codex WebMux continuation path also passed a real interactive check. A
+recorded running Codex provider was destroyed, then the structured native
+recovery action resumed the same project and native ID. The new invocation kept
+`--sandbox read-only`, `--no-daemon` and `--no-alt-screen`. A new assistant message
+in the native rollout returned the earlier synthetic marker plus a fresh
+post-recovery phrase; existing screen history was not the success oracle.
+The private receipt is
+`_build/recovery-qualification/webmux-native-15c396bf-4d2f-4253-bc1f-ceda0719dd62/codex-conversation-receipt.json`.
+This does not qualify the other interactive CLIs or session switching.
 
 On 2026-11-09, real two-process synthetic-marker checks passed for Codex
 0.167.0, Claude Code 2.1.318, Cursor Agent 2026.11.05-86047df and OpenCode
