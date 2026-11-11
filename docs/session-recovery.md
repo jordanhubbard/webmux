@@ -1367,6 +1367,10 @@ In the passing run the first post-reconstruction send was still not recorded
 and a second send succeeded. That loss was [#325](https://github.com/jordanhubbard/webmux/issues/325),
 explained in the next section.
 
+This receipt qualifies one Linux guest, Agent Deck 1.16.34 and Claude 2.1.322
+with this launch policy. It does not qualify remote managed hosts or other
+native CLIs across a managed reboot. Rig across reboot is recorded below.
+
 ## Agent Deck attach input loss (#325)
 
 Every `agent-deck session attach` (1.16.34, lipgloss v1.1.0 / termenv v0.16.0)
@@ -1409,9 +1413,65 @@ session has no running process, is waiting for recovery or no longer exists.
 The viewer receives an `input_error` notice, at most once per second, that is
 shown in the terminal's input banner.
 
-This receipt qualifies one Linux guest, Agent Deck 1.16.34 and Claude 2.1.322
-with this launch policy. It does not qualify Rig across reboot, remote managed
-hosts or other native CLIs across a managed reboot.
+## Rig-owned native conversation across actual reboot
+
+`scripts/qualify-recovery-rig-vm.py` runs the native Rig harness inside the
+disposable ARM64 guest in two stages around an actual reboot:
+
+- `qualify-recovery-rig.py --reboot-prepare` runs the existing local
+  `--webmux-action` flow up to native process loss: Rig-managed first launch,
+  survivor reattach through the WebMux action, controller restart/SIGKILL,
+  reconnects with a fresh answer, private daemon loss and recovery, and the
+  snapshot. It then leaves the native process, private daemon and a detached
+  controller running and records `reboot-state.json`.
+- The orchestrator reboots only the validated guest (new kernel boot ID).
+- `--resume-after-reboot` requires that new boot ID and continues from the
+  process-loss phase. It expects `managed-unavailable`, reconnect refusals, the
+  read-only inspector's `{state: missing, reason: host-reboot}`, then the
+  approved **Resume through Rig** action. It also checks the once-only receipt
+  across controller SIGKILL, independent process/executable/ID/kernel-cwd proof,
+  unchanged original settings and roots, and a fresh remembered-marker answer.
+
+On 2026-11-10 this passed with Rig `0.6.14 (9d0200f3)` on Node 22.23.3 and the
+guest's own Claude 2.1.322 login. No credentials were copied. Boot ID changed
+from `db29c102-69d2-4798-8175-761ed9746204` to
+`9c5a1f60-3fe5-492d-92f4-4b3c319d0e90`. The resumed process kept native ID
+`9c65ec2c-8a7b-4772-bd24-1f20789e3f4a` with the team-default `acceptEdits`
+policy, deny-all tools and original settings. Cleanup left no panes and a
+cleanly stopped private daemon. Receipt:
+`_build/recovery-vm/qualification-441375b00aa1/rig-reboot-3608924c40254614affdb81536786caa.json`
+(guest manifest embedded). WebMux SHA-256
+`0dbe95052a3c8cca11e657c31ffffbdaee5874d15a61a34b57476f7f15939495`;
+in-guest harness SHA-256
+`f79f5486abcdf70f485e5e30c1d0710b4c2b118447fa88a0c627e01abba5e323`.
+
+**Qualified Rig build.** npm's `@openrig/cli@0.6.14` reports `df1c1517`, not
+the qualified `9d0200f3`. The qualified build was a locally packed tarball from
+the October relay rollout that no longer exists. The orchestrator installs the
+installed release directory, which is portable: its only native module,
+better-sqlite3, ships a `linux-arm64` prebuild. It verifies the exact version
+string before use. A copy is kept at
+`_build/recovery-qualification/openrig-cli-0.6.14-9d0200f3-release.tgz`.
+
+**Fixture onboarding.** A first Rig launch in a never-trusted project stops at
+Claude's workspace-trust prompt, and Rig reports `attention_required`. Only
+when trust is the sole attention reason for the fixture's own seat does the
+harness select "Yes, I trust this folder" by the rendered cursor, confirm the
+prompt cleared, and run Rig's documented `rig seat continue`.
+
+**Product fix found by this run.** `RestoreSessions` started coordinator
+supervision in a goroutine and immediately restored managed viewers. When the
+Rig daemon was down at startup (always, after a host reboot), restoration could
+query Rig first, mark the viewer `managed-unavailable` and never retry, even
+though supervision restarted the daemon moments later. The first `ensure` now
+completes before restoration, within its existing 25-second bound; periodic
+supervision continues afterwards. `rig daemon start` returns only once the
+daemon is healthy (about 2.4 s in the guest). The regression test fails against
+the previous ordering.
+
+The earlier failed attempts are retained as negative evidence: an unhandled
+trust prompt, then the restoration race. This qualifies Rig on one Linux guest
+with this launch policy, not remote Rig destinations or other runtimes.
 
 ## Sources
 

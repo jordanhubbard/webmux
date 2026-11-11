@@ -18,26 +18,35 @@ func (s *Server) startCoordination() {
 	s.coordinationOnce.Do(func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		s.coordinationCancel = cancel
+		// Ensure once before returning: startup managed-viewer restoration
+		// queries Rig next, and after a host reboot or manager loss its daemon
+		// is not running yet. Bounded, so an unavailable coordinator still
+		// cannot prevent WebMux from starting.
+		s.ensureCoordinator(ctx)
 		go func() {
 			ticker := time.NewTicker(30 * time.Second)
 			defer ticker.Stop()
 			for {
-				if executable, _ := openRigExecutable(); s.coordinationEnabled("rig") && executable != "" {
-					check, finish := context.WithTimeout(ctx, 25*time.Second)
-					_, err := openrigcoord.Run(check, s.store.Home, "service", "ensure", "")
-					finish()
-					if err != nil && ctx.Err() == nil {
-						s.logger.Warn("OpenRig coordinator unavailable", "error", err)
-					}
-				}
 				select {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
 				}
+				s.ensureCoordinator(ctx)
 			}
 		}()
 	})
+}
+
+func (s *Server) ensureCoordinator(ctx context.Context) {
+	if executable, _ := openRigExecutable(); !s.coordinationEnabled("rig") || executable == "" {
+		return
+	}
+	check, finish := context.WithTimeout(ctx, 25*time.Second)
+	defer finish()
+	if _, err := openrigcoord.Run(check, s.store.Home, "service", "ensure", ""); err != nil && ctx.Err() == nil {
+		s.logger.Warn("OpenRig coordinator unavailable", "error", err)
+	}
 }
 
 // Supervision follows integration enablement, independently of view or launch defaults.
