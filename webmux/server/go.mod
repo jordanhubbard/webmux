@@ -1,6 +1,6 @@
 module github.com/jordanhubbard/webmux/server
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/chromedp/cdproto v0.159.2
