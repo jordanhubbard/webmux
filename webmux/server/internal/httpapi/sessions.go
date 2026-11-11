@@ -231,6 +231,11 @@ func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, s
 		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager could not verify the surviving session: %w. Retained logs are preserved.", err)
 	}
 	if !live {
+		if id == "rig" && saved.Host != "" && saved.Host != "localhost" {
+			// The local seat only carries SSH to the execution host, so losing it
+			// says nothing about the coding CLI's remote tmux session.
+			return coordinationLaunch{}, fmt.Errorf("The local SSH connection for this Rig seat on %s has ended, so WebMux cannot confirm whether its coding CLI is still running there and does not restart it. To reattach, start the agent again from Coordination with the same name, host, code folder and coding agent: a CLI still running on that host is reattached; otherwise a new conversation starts. Retained logs are preserved.", saved.Host)
+		}
 		return coordinationLaunch{}, fmt.Errorf("The original managed process is not confirmed running. Resume it through its lifecycle manager; retained logs are preserved.")
 	}
 	launch, err := provider.Attach(ctx, target)

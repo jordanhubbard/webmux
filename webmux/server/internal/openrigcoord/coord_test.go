@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -101,6 +102,53 @@ func TestBrowseRemoteWorkspaceUsesStrictNonInteractiveSSH(t *testing.T) {
 	for _, required := range []string{"BatchMode=yes", "StrictHostKeyChecking=yes", "ConnectTimeout=8", "devbox", "/srv/work"} {
 		if !strings.Contains(command, required) {
 			t.Fatalf("remote browser omitted %q: %s", required, command)
+		}
+	}
+}
+
+// Starting an agent on an unreachable or unprepared SSH host reports the cause
+// instead of the probe's command line, and starts no seat.
+func TestCreateReportsHostProbeFailureClearly(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Rig coordination is unsupported on native Windows")
+	}
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("Node.js is required by the embedded coordination runner")
+	}
+	for _, c := range []struct {
+		status    int
+		stderr    string
+		want      string
+		forbidden string
+	}{
+		{255, "ssh: connect to host devbox port 22: Connection refused", "Cannot reach devbox over SSH: ssh: connect to host devbox port 22: Connection refused. Nothing was started.", "is not ready"},
+		{1, "", "devbox is not ready for this agent: /srv/work must exist and claude, rig and tmux must be on its PATH.", "Cannot reach"},
+	} {
+		bin := t.TempDir()
+		if err := os.Symlink(node, filepath.Join(bin, "node")); err != nil {
+			t.Fatal(err)
+		}
+		calls := filepath.Join(bin, "calls")
+		for name, content := range map[string]string{
+			"ssh":  "#!/bin/sh\necho ssh >> " + calls + "\necho '" + c.stderr + "' >&2\nexit " + strconv.Itoa(c.status) + "\n",
+			"rig":  "#!/bin/sh\necho \"rig $*\" >> " + calls + "\necho '{\"rigId\":\"01ARZ3NDEKTSV4RRFFQ69G5FAV\"}'\n",
+			"tmux": "#!/bin/sh\necho \"tmux $*\" >> " + calls + "\n[ \"$1\" = -V ] && echo 'tmux 3.4' && exit 0\nexit 1\n",
+		} {
+			if err := os.WriteFile(filepath.Join(bin, name), []byte(content), 0o700); err != nil {
+				t.Fatal(err)
+			}
+		}
+		t.Setenv("PATH", bin)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		_, err := Run(ctx, t.TempDir(), "test-owner", "create", `{"mode":"new","rigName":"team","name":"builder","host":"devbox","cwd":"/srv/work","runtime":"claude-code"}`)
+		cancel()
+		if err == nil || err.Error() != c.want || strings.Contains(err.Error(), "Command failed") || strings.Contains(err.Error(), c.forbidden) {
+			t.Fatalf("unclear probe failure: %v", err)
+		}
+		data, _ := os.ReadFile(calls)
+		if strings.Contains(string(data), "new-session") || strings.Contains(string(data), "rig attach") {
+			t.Fatalf("a failed host probe started a seat: %s", data)
 		}
 	}
 }

@@ -50,8 +50,12 @@ than assuming an older checkpoint's green checks apply to new source.
 1. Finish native active-session/policy/profile and platform qualification.
    Remote managed-host failure fallback passed on 2026-11-10
    (`scripts/qualify-recovery-remote-managed.py`, Mac controller + guest):
-   remote native resume is manual-only by owner decision, and WebMux Rig seats
-   on SSH hosts remain unqualified. Rig across an actual reboot passed on 2026-11-10
+   remote native resume is manual-only by owner decision. Claude Code Rig seats
+   on SSH hosts passed on 2026-11-10 (`scripts/qualify-recovery-rig-ssh.py`;
+   the guest has a `~/.local/bin/rig` wrapper for the qualified build); Codex
+   seats on SSH hosts (relay-identity attach) remain untested. Upstream Agent
+   Deck reports: #3107 (silent empty remote list), #3108 (forward ownership
+   inspect). Rig across an actual reboot passed on 2026-11-10
    (`scripts/qualify-recovery-rig-vm.py`; the guest now has Rig 0.6.14
    9d0200f3 and Node 22.23.3 under `~/qualification`). Retain clear manual
    fallback for unqualified cases.

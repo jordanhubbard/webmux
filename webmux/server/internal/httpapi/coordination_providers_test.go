@@ -319,6 +319,45 @@ func TestManagedReattachmentResolvesExactProviderDestination(t *testing.T) {
 	}
 }
 
+// A Rig seat on an SSH host is a local tmux seat running ssh. When it is gone,
+// the coding CLI may still run in its tmux session on the execution host, so
+// the refusal names the explicit way back instead of a generic manager resume.
+func TestRigSSHSeatRefusalExplainsTheWayBack(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("OpenRig supports Unix hosts only")
+	}
+	directory := t.TempDir()
+	calls := filepath.Join(directory, "calls")
+	for name, content := range map[string]string{
+		"rig":  "#!/bin/sh\necho \"$*\" >> " + calls + "\necho '{\"entries\":[]}'\n",
+		"tmux": "#!/bin/sh\n[ \"$1\" = -V ] && echo 'tmux 3.4' && exit 0\nexit 1\n",
+	} {
+		if err := os.WriteFile(filepath.Join(directory, name), []byte(content), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", directory+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "")
+	s, _ := fixture(t, "none")
+	setCoordinationIntegrations(t, s, "rig")
+	remote := session.RigIdentity{Provider: "rig", Target: "wm-0123456789-abcdefgh-builder-1a2b3c4d", Host: "sparky", Workspace: "/src/team", Runtime: "claude-code"}
+	_, err := s.resolveManagedReattachment(context.Background(), "anonymous", remote)
+	if err == nil || !strings.Contains(err.Error(), "local SSH connection for this Rig seat on sparky has ended") || !strings.Contains(err.Error(), "start the agent again from Coordination") || !strings.Contains(err.Error(), "a new conversation starts") {
+		t.Fatal("remote Rig seat refusal does not explain how to reattach", err)
+	}
+	local := remote
+	local.Host = "localhost"
+	if _, err := s.resolveManagedReattachment(context.Background(), "anonymous", local); err == nil || !strings.Contains(err.Error(), "not confirmed running") {
+		t.Fatal("local Rig seat refusal changed", err)
+	}
+	data, _ := os.ReadFile(calls)
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		if !strings.HasPrefix(line, "ps ") {
+			t.Fatal("refusing a reattachment ran a Rig mutation", line)
+		}
+	}
+}
+
 func TestManagedReconnectHTTPUsesFreshAttachment(t *testing.T) {
 	executable, _ := fakeAgentDeck(t)
 	t.Setenv("PATH", filepath.Dir(executable)+string(os.PathListSeparator)+os.Getenv("PATH"))

@@ -132,7 +132,7 @@ and `configuration-a7b9d883-cfb0-4707-9013-2c33f86e0deb/manifest.json`
 | Safe retained history | Bounded suffix, ANSI/OSC/C1 stripping, rotation and path controls; real local recovery retains the marker in API/UI history; redraw blank rows compacted only in the preview | Additional lifecycle/transport qualification |
 | Surviving providers | Local, SSH and native mosh reconnect/restart/SIGKILL preserve provider and pane PIDs and job count; independent Linux user scopes avoid service-cgroup cleanup | Managed-provider qualification |
 | Recovery preview and continuation | Owner-scoped API and browser actions; separate replay/handoff approval; broker tests for opt-in native auto resume and uncertain-outcome exclusion | Managed lifecycle integration and additional CLI lifecycle cases |
-| Reboot/restart/update/crash | Native VM orderly restart, different-binary update, SIGKILL and kernel reboot pass; SSH and native mosh separately pass controller restart/SIGKILL and remote kernel reboot; approved replay, duplicate request and three reconnects preserve counts and original transcript references; remote managed hosts pass hung, rebooted and powered-off fallback with no duplicate execution ([details](#remote-managed-host-failure-2026-11-10)) | Remote Rig SSH-host seats |
+| Reboot/restart/update/crash | Native VM orderly restart, different-binary update, SIGKILL and kernel reboot pass; SSH and native mosh separately pass controller restart/SIGKILL and remote kernel reboot; approved replay, duplicate request and three reconnects preserve counts and original transcript references; remote managed hosts pass hung, rebooted and powered-off fallback with no duplicate execution ([details](#remote-managed-host-failure-2026-11-10)); Rig seats on an SSH host pass the same failures plus loss of the local seat ([details](#rig-seats-on-an-ssh-host-2026-11-10)) | Native coverage listed below |
 
 Mosh synchronizes terminal screen state rather than an arbitrary byte stream.
 Its recovery metadata path uses the separate authenticated SSH control channel
@@ -1541,10 +1541,71 @@ WebMux SHA-256
 runs are retained: a marker that scrolled off before attachment, a process
 probe that matched its own shell, and the refused-connection finding (fix 3).
 
-Not covered: WebMux-coordinated Rig seats on an SSH host. They share the
-`--ssh` shape (local seat, `ssh` pane). They need a Rig manager and a coding
-CLI on the guest, and remain unqualified. Remote Agent Deck sessions running a
-coding CLI recover through Agent Deck on that host.
+WebMux-coordinated Rig seats on an SSH host are qualified separately below.
+Remote Agent Deck sessions running a coding CLI recover through Agent Deck on
+that host.
+
+## Rig seats on an SSH host (2026-11-10)
+
+A Rig seat whose coding agent runs on another host has two parts: a local tmux
+seat, enrolled in the local Rig daemon, whose pane runs `ssh -tt`, and a tmux
+session on the execution host running the coding CLI. Losing the local seat
+(SSH keepalive failure, reboot of the WebMux host) leaves the remote CLI
+running. Rebooting the execution host ends both. WebMux never restarts the CLI
+itself. To get back, you start the agent again from Coordination with the same
+name, host, code folder and coding agent. That recreates the local seat. If the
+CLI's remote tmux session still exists, the seat reattaches to it; if not, a new
+conversation starts. Native resume of a remote Rig seat is not offered: native
+Rig recovery covers localhost Claude seats only.
+
+**Product fixes found by this qualification.**
+
+1. *A lost seat still read as preserved.* The recovery message comes from the
+   last restore. A viewer reattached at startup whose seat later ended (here,
+   SSH gave up about 58 s into a guest hang) still said "Reattached to the
+   surviving session. Its running work was preserved." The message now says the
+   terminal has since ended whenever the viewer has no running process. This
+   applies to every managed viewer.
+2. *The refusal gave no way back.* Reconnecting a lost SSH-host seat answered
+   "not confirmed running. Resume it through its lifecycle manager", although
+   the CLI might still be running and Rig offers no resume for it. For Rig
+   seats on a non-local host, the refusal and the startup fallback now name the
+   host and give the explicit way back (start the agent again with the same
+   settings), including that a new conversation starts if the CLI is gone.
+3. *Unreachable hosts reported a command line.* Starting an agent on an
+   unreachable host failed with the probe's whole `ssh` command. It now reports
+   `Cannot reach <host> over SSH: <reason>. Nothing was started.`, or that the
+   host lacks the workspace or the required CLIs.
+
+**Qualification.** `scripts/qualify-recovery-rig-ssh.py` runs a private
+controller, Rig daemon, tmux server (`TMUX_TMPDIR`) and HOME on the Mac, and an
+`ssh` wrapper that reaches only the guest alias. It launches one Claude Code
+seat on the guest through the WebMux API, using the guest's own Claude login.
+It exposes the qualified Rig build as `~/.local/bin/rig` on the guest, which
+WebMux requires on the execution host. It counts Claude processes whose working
+directory is the fixture workspace.
+
+On 2026-11-10 it passed with Rig 0.6.14 (9d0200f3) on both hosts and Claude
+Code 2.1.322 on the guest:
+
+| Phase | Result |
+| --- | --- |
+| Healthy guest: controller restart and SIGKILL | Reattached (startup 1.0–1.1 s); same CLI process |
+| Guest hung (QMP pause) past the seat's SSH keepalive | Startup 1.0 s, reattached to the waiting seat. SSH gave up after 59 s; the message then said the terminal had ended. Reconnect refused in 0.4 s with the way back. After resume the CLI was still running; starting the agent again reattached the same viewer and the same CLI process |
+| Local seat lost, guest untouched (as at a reboot of the WebMux host) | `managed-unavailable` naming the host; three reconnects refused; CLI untouched; starting the agent again reattached the same CLI process |
+| Actual guest reboot (boot ID `038618ec-d48e-46f7-9949-86518399de5e` → `1e7a6ade-2e4b-4577-a7ee-055acb567712`) | Seat ended at once; no CLI or remote seat survived; `managed-unavailable` naming the host; three reconnects refused and started nothing; starting the agent again started exactly one new CLI in the same viewer |
+| Guest powered off (connection refused) | Startup 0.6 s; `managed-unavailable`; reconnect refused; starting the agent again failed in 0.2 s with `Cannot reach … over SSH: … Connection refused. Nothing was started.` and created no seat |
+
+Every phase kept the pre-interruption transcript. Receipt:
+`~/.local/share/webmux/recovery-qualification/rig-ssh-1088fb7bbdc8/receipt.json`.
+WebMux SHA-256
+`5dfe152a13aca70a840810f0eb47f86cedae347d3e1d16c7cae783809a1ddb91`; harness SHA-256
+`b97418a803fbbdd381cf415f456d018b3401605b8464837b28aac2ffdef8ed9c`. Earlier runs
+are retained: one before fix 3, and one whose own check rejected the correct
+"Retained logs are preserved" wording.
+
+Not covered: Codex seats on an SSH host, which use Rig's relay-identity attach
+when the installed Rig supports it. Seats run under that path are untested.
 
 ## Sources
 
