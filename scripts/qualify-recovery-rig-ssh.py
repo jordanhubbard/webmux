@@ -44,6 +44,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--vm-root', type=Path, required=True)
     parser.add_argument('--binary', type=Path, required=True, help='WebMux build for this machine')
+    parser.add_argument('--rig-cli', type=Path, required=True, help='bin-wrapper.js of the qualified Rig release on this machine')
+    parser.add_argument('--rig-node', type=Path, required=True, help='node executable for that Rig release')
     args = parser.parse_args()
     repo = Path(__file__).resolve().parents[1]
     root = args.vm_root.resolve()
@@ -53,8 +55,9 @@ def main():
     assert ssh_args[-1] == 'webmuxqa@127.0.0.1' and launch['ssh_port'] == 32222
     process = subprocess.run(['ps', '-p', str(launch['pid']), '-o', 'command='], capture_output=True, text=True)
     assert 'qemu-system-aarch64' in process.stdout and str(root / 'disk.qcow2') in process.stdout, 'start the disposable guest first'
-    rig_binary = shutil.which('rig')
-    assert rig_binary and subprocess.run([rig_binary, '--version'], capture_output=True, text=True).stdout.strip() == RIG_VERSION
+    # Never use an installed `rig` command: WebMux's wrapper pins HOME and
+    # OPENRIG_HOME to the installed instance, which would defeat isolation.
+    rig_cli, rig_node = args.rig_cli.resolve(strict=True), args.rig_node.resolve(strict=True)
 
     def qmp(command):
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
@@ -110,6 +113,10 @@ def main():
     (p / 'ssh_config').write_text('\n'.join(config) + '\n')
     (p / 'bin/ssh').write_text('#!/bin/sh\nexec /usr/bin/ssh -F ' + shlex.quote(str(p / 'ssh_config')) + ' "$@"\n')
     (p / 'bin/ssh').chmod(0o700)
+    rig_binary = str(p / 'bin/rig')
+    Path(rig_binary).write_text('#!/bin/sh\nexec ' + shlex.quote(str(rig_node)) + ' ' + shlex.quote(str(rig_cli)) + ' "$@"\n')
+    Path(rig_binary).chmod(0o700)
+    assert subprocess.run([rig_binary, '--version'], env=env, capture_output=True, text=True).stdout.strip() == RIG_VERSION
 
     record_path = p / 'receipt.json'
     record = {'passed': False, 'scope': __doc__.strip().splitlines()[0], 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
@@ -235,6 +242,7 @@ def main():
         guest('mkdir -p ' + shlex.quote(workspace))
         started = rig('daemon', 'start', '--host', '127.0.0.1', '--port', str(rig_port), '--db', str(p / 'rig/openrig.sqlite'), '--no-kernel')
         assert started.returncode == 0, started.stderr
+        assert (p / 'rig/daemon.log').is_file(), 'the Rig daemon did not use the private OPENRIG_HOME'
         record['boot_ids'] = [boot_id()]
         startup = start()
         launched = api('/api/coordination/agents', spec)
