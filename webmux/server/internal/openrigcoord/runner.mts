@@ -191,7 +191,16 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     } else {
       // Validate the actual execution host before allocating a central seat.
       const probe = `export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; cd ${q(cwd)} && command -v ${runtime === 'codex' ? 'codex' : 'claude'} && command -v rig${local ? '' : ' && command -v tmux'}`;
-      if (local) run('/bin/sh', ['-c', probe]); else run('ssh', [...sshArgs, host, probe]);
+      try {
+        if (local) run('/bin/sh', ['-c', probe]); else run('ssh', [...sshArgs, host, probe]);
+      } catch (error) {
+        // Report the cause, not the probe's command line. ssh exits 255 (or is
+        // killed at the timeout) when it cannot reach the host at all.
+        const failure = error as { status?: number | null; stderr?: string };
+        const detail = String(failure.stderr ?? '').trim().split('\n').filter(Boolean).pop() ?? '';
+        if (!local && (failure.status === 255 || failure.status == null)) throw new Error(`Cannot reach ${host} over SSH${detail ? `: ${detail.slice(0, 300)}` : ''}. Nothing was started.`);
+        throw new Error(`${host} is not ready for this agent: ${cwd} must exist and ${runtime === 'codex' ? 'codex' : 'claude'}, rig${local ? '' : ' and tmux'} must be on its PATH.`);
+      }
       // attach-self binds the real central tmux pane. It remains the delivery
       // transport even when its foreground process is SSH to another machine.
       const attached = path.join(directory, `${tmux}.attached.json`);

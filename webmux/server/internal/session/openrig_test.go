@@ -407,9 +407,47 @@ func TestManagedRestorePreservesHistoryWhenManagerIsUnavailable(t *testing.T) {
 		t.Fatal(err)
 	}
 	view, _ = restored.Recovery("owner", value.ID)
-	if launches != 1 || view.State.Pending || view.State.Disposition != "reattached" || view.State.ManagerMessage != "" || !strings.Contains(view.History, "MANAGED_RETAINED_HISTORY") {
+	if launches != 1 || view.State.Pending || view.State.Disposition != "reattached" || view.State.ManagerMessage != "" || !strings.Contains(view.History, "MANAGED_RETAINED_HISTORY") || !strings.Contains(view.Message, "running work was preserved") {
 		t.Fatal("successful reattachment lost history or kept a stale error", view, launches)
 	}
+}
+
+// A reattached viewer can lose its process later, e.g. when a Rig seat's SSH
+// transport to its execution host drops. The view must not still claim the
+// work was preserved.
+func TestReattachedViewDoesNotOutliveItsTerminal(t *testing.T) {
+	b, store, launched := fixture(t)
+	enableLogging(t, store)
+	identity := RigIdentity{Target: "seat", Host: "sparky", Workspace: "/project"}
+	value, err := b.EnsureRigTerminal("owner", identity.Target, "coder", []string{"attach"}, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-launched
+	if err := b.Close(); err != nil {
+		t.Fatal(err)
+	}
+	var current *fakeProcess
+	restored, err := newBroker(store, nil, func(terminal.LaunchRequest, string) (process, error) {
+		current = fake()
+		return current, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	if err := restored.RestoreManaged(context.Background(), func(context.Context, string, RigIdentity) ([]string, error) { return []string{"attach"}, nil }); err != nil {
+		t.Fatal(err)
+	}
+	view, _ := restored.Recovery("owner", value.ID)
+	if view.State == nil || view.State.Disposition != "reattached" || !strings.Contains(view.Message, "running work was preserved") {
+		t.Fatal("live reattachment", view)
+	}
+	current.exit()
+	eventually(t, func() bool {
+		v, _ := restored.Recovery("owner", value.ID)
+		return strings.Contains(v.Message, "has since ended") && !strings.Contains(v.Message, "preserved")
+	})
 }
 
 func TestCanceledManagedRestoreDoesNotLaunchAfterResolution(t *testing.T) {

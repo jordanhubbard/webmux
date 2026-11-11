@@ -54,6 +54,7 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	var controlError string
 	var hostReady bool
 	var warning string
+	live := e.run != nil
 	if e.run != nil {
 		control = e.run.recoveryControl
 		hostReady = e.run.recoveryReady
@@ -122,6 +123,10 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	}
 	if s.Recovery.Disposition == "reattached" {
 		view.Message = "Reattached to the surviving session. Its running work was preserved."
+		if !live {
+			// The disposition records the last restore; the viewer can end later.
+			view.Message = "This session was reattached, but its terminal has since ended. Retained terminal history remains available; reconnect to check whether the original process is still running."
+		}
 	}
 	if s.Recovery.Disposition == "managed-unavailable" {
 		view.Message = "The original managed session could not be reattached. Retained terminal history remains available. " + s.Recovery.ManagerMessage
