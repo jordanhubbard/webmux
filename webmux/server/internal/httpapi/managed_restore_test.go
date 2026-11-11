@@ -220,3 +220,55 @@ func TestStartupStartsRigManagerBeforeRestoringManagedViewers(t *testing.T) {
 		t.Fatalf("managed restoration queried Rig before its manager was started: %q", lines)
 	}
 }
+
+func TestStartupWaitsForAnUnreachableRemoteManagerOnce(t *testing.T) {
+	executable, calls := fakeAgentDeck(t)
+	script, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unreachable := strings.ReplaceAll(string(script), `  "remote sessions sparky --json --with-errors")
+`, `  "remote sessions sparky --json --with-errors")
+    printf '%s\n' '{"sessions":[],"errors":[{"name":"sparky","host":"jkh@sparky.local","error":"ssh command failed: exit status 255: ssh: connect to host sparky.local port 22: Operation timed out\r\n"}]}'; exit 1
+`)
+	if err := os.WriteFile(executable, []byte(unreachable), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", filepath.Dir(executable)+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "")
+	first, _ := fixture(t, "none")
+	setCoordinationIntegrations(t, first, "agent-deck")
+	var ids []string
+	for _, target := range []string{"agent-deck:sparky:remote-1", "agent-deck:sparky:remote-2"} {
+		identity := session.RigIdentity{Provider: "agent-deck", Target: target, Host: "sparky", Workspace: "/home/jkh/Src/webmux", Runtime: "claude"}
+		value, err := first.sessions.EnsureRigTerminal("anonymous", target, "reviewer", []string{"/bin/sh", "-c", "read line"}, identity)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, value.ID)
+	}
+	if err := first.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(calls); err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	restored, err := New(first.store, Options{Name: "restored", Logger: first.logger})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	if err := restored.RestoreSessions(); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range ids {
+		view, err := restored.sessions.Recovery("anonymous", id)
+		if err != nil || view.State == nil || view.State.Disposition != "managed-unavailable" || !strings.Contains(view.State.ManagerMessage, `remote "sparky" did not respond`) {
+			t.Fatal("unreachable remote host was not reported for its viewer", view.State, err)
+		}
+	}
+	data, _ := os.ReadFile(calls)
+	if count := strings.Count(string(data), "remote sessions sparky --json --with-errors"); count != 1 {
+		t.Fatalf("startup polled one unreachable remote %d times: %s", count, data)
+	}
+}

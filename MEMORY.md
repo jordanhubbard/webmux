@@ -47,8 +47,11 @@ than assuming an older checkpoint's green checks apply to new source.
 
 ## Fix-forward acceptance still open
 
-1. Finish remote managed-host/failure, native active-session/policy/profile and
-   platform qualification. Rig across an actual reboot passed on 2026-11-10
+1. Finish native active-session/policy/profile and platform qualification.
+   Remote managed-host failure fallback passed on 2026-11-10
+   (`scripts/qualify-recovery-remote-managed.py`, Mac controller + guest):
+   remote native resume is manual-only by owner decision, and WebMux Rig seats
+   on SSH hosts remain unqualified. Rig across an actual reboot passed on 2026-11-10
    (`scripts/qualify-recovery-rig-vm.py`; the guest now has Rig 0.6.14
    9d0200f3 and Node 22.23.3 under `~/qualification`). Retain clear manual
    fallback for unqualified cases.

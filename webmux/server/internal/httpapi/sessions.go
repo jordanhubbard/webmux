@@ -192,6 +192,19 @@ func (s *Server) reconnectSession(w http.ResponseWriter, r *http.Request, owner 
 	writeJSON(w, 200, value)
 }
 
+// managedRemoteKey identifies the remote lifecycle manager that owns a managed
+// viewer, or "" for a local manager.
+func managedRemoteKey(owner string, saved session.RigIdentity) string {
+	if saved.Provider != "agent-deck" {
+		return ""
+	}
+	remote, _, err := splitAgentDeckTarget(strings.TrimPrefix(saved.Target, "agent-deck:"))
+	if err != nil || remote == "" {
+		return ""
+	}
+	return owner + "\x00agent-deck\x00" + remote
+}
+
 func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, saved session.RigIdentity) (coordinationLaunch, error) {
 	id := saved.Provider
 	if id == "" {
