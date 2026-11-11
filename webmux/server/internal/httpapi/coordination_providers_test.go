@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -32,8 +33,8 @@ case "$*" in
   "session ownership inspect local-1 --json")
     printf '%s\n' '{"instance_id":"local-1","state":"live","verdict":"owned","admissible":true,"pane_attached":true}'
     ;;
-  "remote sparky session ownership inspect remote-1 --json")
-    printf '%s\n' '{"instance_id":"remote-1","state":"live","verdict":"owned","admissible":true,"pane_attached":true}'
+  "remote sparky show remote-1 --json")
+    printf '%s\n' '{"id":"remote-1","status":"running","tmux_session":"agentdeck_remote-reviewer_1"}'
     ;;
   "group list --json")
     printf '%s\n' '{"groups":[{"name":"webmux","path":"webmux","session_count":1}]}'
@@ -41,8 +42,8 @@ case "$*" in
   "remote list --json")
     printf '%s\n' '[{"name":"sparky","host":"jkh@sparky.local","last_poll_status":"ok","profile":"work"}]'
     ;;
-  "remote sessions sparky --json")
-    printf '%s\n' '[{"id":"remote-1","title":"remote reviewer","path":"/home/jkh/Src/webmux","group":"webmux","tool":"claude","status":"running","claude_session_id":"claude-remote"}]'
+  "remote sessions sparky --json --with-errors")
+    printf '%s\n' '{"sessions":[{"id":"remote-1","title":"remote reviewer","path":"/home/jkh/Src/webmux","group":"webmux","tool":"claude","status":"running","claude_session_id":"claude-remote"}],"errors":[]}'
     ;;
   "remote sparky group list --json")
     printf '%s\n' '{"groups":[{"name":"webmux","path":"webmux","session_count":1}]}'
@@ -368,8 +369,63 @@ func TestAgentDeckSurvivalUsesOwnedProcessIdentityAndRemoteNamespace(t *testing.
 		t.Fatal("another instance's ownership receipt was accepted", live, err)
 	}
 	data, err := os.ReadFile(calls)
-	if err != nil || !strings.Contains(string(data), "remote sparky session ownership inspect remote-1 --json") || strings.Contains(string(data), "reconcile") || strings.Contains(string(data), "session start") {
+	// Agent Deck 1.16.34 rejects forwarded ownership receipts; the remote
+	// manager's forwarded session state is used instead.
+	if err != nil || !strings.Contains(string(data), "remote sparky show remote-1 --json") || strings.Contains(string(data), "remote sparky session ownership") || strings.Contains(string(data), "reconcile") || strings.Contains(string(data), "start") {
 		t.Fatal("survival probe changed lifecycle state or lost remote identity", string(data), err)
+	}
+	running := `{"id":"remote-1","status":"running","tmux_session":"agentdeck_remote-reviewer_1"}`
+	for _, state := range []string{
+		`{"id":"remote-1","status":"stopped","tmux_session":"agentdeck_remote-reviewer_1"}`,
+		`{"id":"remote-1","status":"error","tmux_session":"agentdeck_remote-reviewer_1"}`,
+		`{"id":"remote-1","status":"running","tmux_session":""}`,
+		`{"id":"other","status":"running","tmux_session":"agentdeck_remote-reviewer_1"}`,
+	} {
+		if err := os.WriteFile(executable, []byte(strings.ReplaceAll(string(script), running, state)), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if live, err := p.Survives(context.Background(), "sparky:remote-1"); err != nil || live {
+			t.Fatal("a remote session that is not running was treated as surviving", state, live, err)
+		}
+	}
+}
+
+func TestAgentDeckLookupsPollOnlyTheOwningRemote(t *testing.T) {
+	executable, calls := fakeAgentDeck(t)
+	script, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unreachable := strings.ReplaceAll(string(script), `  "remote sessions sparky --json --with-errors")
+`, `  "remote sessions sparky --json --with-errors")
+    printf '%s\n' '{"sessions":[],"errors":[{"name":"sparky","host":"jkh@sparky.local","error":"ssh command failed: exit status 255: ssh: connect to host sparky.local port 22: Operation timed out\r\n"}]}'; exit 1
+`)
+	if err := os.WriteFile(executable, []byte(unreachable), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	p := &agentDeckProvider{executable: executable}
+	if live, err := p.Survives(context.Background(), "local:local-1"); err != nil || !live {
+		t.Fatal("an unreachable remote affected a local session", live, err)
+	}
+	if _, err := p.Attach(context.Background(), "local:local-1"); err != nil {
+		t.Fatal("an unreachable remote affected local attachment", err)
+	}
+	data, _ := os.ReadFile(calls)
+	if strings.Contains(string(data), "remote sessions") {
+		t.Fatal("a local lookup polled remote hosts", string(data))
+	}
+	_, err = p.Survives(context.Background(), "sparky:remote-1")
+	var down *agentDeckRemoteUnavailable
+	if !errors.As(err, &down) || !strings.Contains(err.Error(), `remote "sparky" did not respond`) || !strings.Contains(err.Error(), "timed out") {
+		t.Fatal("an unreachable remote host was not reported as such", err)
+	}
+	if _, err := p.Survives(context.Background(), "retired:remote-1"); err == nil || !strings.Contains(err.Error(), "no longer configured") || errors.As(err, &down) {
+		t.Fatal("a removed remote was not reported as unconfigured", err)
+	}
+	// The inventory view still lists local sessions and reports the remote.
+	status, err := p.Status(context.Background())
+	if err != nil || len(status.Errors) == 0 || len(status.Seats) != 1 {
+		t.Fatal("inventory did not degrade to local sessions", status, err)
 	}
 }
 

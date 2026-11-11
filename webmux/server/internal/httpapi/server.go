@@ -98,13 +98,23 @@ func (s *Server) RestoreSessions() error {
 	s.startCoordination()
 	terminalErr := s.sessions.Restore()
 	if terminalErr == nil {
+		// One unreachable remote manager is waited for once per startup, not
+		// once for every viewer it owns. Viewers are restored sequentially.
+		unreachable := map[string]error{}
 		terminalErr = s.sessions.RestoreManaged(context.Background(), func(parent context.Context, owner string, identity session.RigIdentity) ([]string, error) {
 			if err := s.openRigPermission(owner); err != nil {
+				return nil, err
+			}
+			remote := managedRemoteKey(owner, identity)
+			if err := unreachable[remote]; remote != "" && err != nil {
 				return nil, err
 			}
 			ctx, cancel := context.WithTimeout(parent, 20*time.Second)
 			defer cancel()
 			launch, err := s.resolveManagedReattachment(ctx, owner, identity)
+			if down := (*agentDeckRemoteUnavailable)(nil); remote != "" && errors.As(err, &down) {
+				unreachable[remote] = err
+			}
 			return launch.Argv, err
 		})
 	}

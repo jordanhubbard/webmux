@@ -34,6 +34,9 @@ func (p *agentDeckProvider) Survives(ctx context.Context, target string) (bool, 
 	if err != nil {
 		return false, err
 	}
+	if remote != "" {
+		return p.remoteSurvives(ctx, remote, id)
+	}
 	seat, err := p.agentDeckSeat(ctx, target)
 	if err != nil {
 		return false, err
@@ -45,16 +48,39 @@ func (p *agentDeckProvider) Survives(ctx context.Context, target string) (bool, 
 		Admissible   bool   `json:"admissible"`
 		PaneAttached bool   `json:"pane_attached"`
 	}
-	args := []string{"session", "ownership", "inspect", id, "--json"}
-	if remote != "" {
-		args = append([]string{"remote", remote}, args...)
-	} else if seat.Profile != "" && seat.Profile != "default" {
-		args = append([]string{"-p", seat.Profile}, args...)
-	}
+	args := agentDeckLocalArgs(seat.Profile, "session", "ownership", "inspect", id, "--json")
 	if err := p.runJSON(ctx, &receipt, args...); err != nil {
 		return false, err
 	}
 	return receipt.InstanceID == id && receipt.State == "live" && receipt.Verdict == "owned" && receipt.Admissible && receipt.PaneAttached, nil
+}
+
+// Agent Deck 1.16.34 does not forward ownership receipts to a remote, so a
+// remote session is checked with the remote manager's own forwarded session
+// state. This only permits reattachment: `remote attach` fails for a session
+// that is not running and never starts one, so a stale state cannot launch a
+// duplicate job. Native resume on a remote host is not offered.
+func (p *agentDeckProvider) remoteSurvives(ctx context.Context, remote, id string) (bool, error) {
+	var shown struct {
+		ID          string `json:"id"`
+		Status      string `json:"status"`
+		TmuxSession string `json:"tmux_session"`
+	}
+	// The remote's session list fails only when the remote cannot be reached,
+	// which distinguishes a down host from a deleted session.
+	if _, err := p.agentDeckSeat(ctx, agentDeckQualified(remote, id)); err != nil {
+		return false, err
+	}
+	check, cancel := context.WithTimeout(ctx, agentDeckRemoteTimeout)
+	defer cancel()
+	if err := p.runJSON(check, &shown, "remote", remote, "show", id, "--json"); err != nil {
+		return false, err
+	}
+	switch shown.Status {
+	case "running", "waiting", "idle":
+		return shown.ID == id && shown.TmuxSession != "", nil
+	}
+	return false, nil
 }
 
 func (p *rigProvider) Survives(ctx context.Context, target string) (bool, error) {
@@ -502,8 +528,13 @@ func (p *agentDeckProvider) runJSONInput(ctx context.Context, destination any, i
 	}
 	output, err := command.Output()
 	if err != nil {
+		if ctx.Err() != nil {
+			return fmt.Errorf("no response within the time limit")
+		}
 		if exit, ok := err.(*exec.ExitError); ok {
-			return fmt.Errorf("%s", strings.TrimSpace(string(exit.Stderr)))
+			if message := strings.TrimSpace(string(exit.Stderr)); message != "" {
+				return fmt.Errorf("%s", message)
+			}
 		}
 		return err
 	}
@@ -522,6 +553,43 @@ func (p *agentDeckProvider) runJSONInput(ctx context.Context, destination any, i
 		return fmt.Errorf("invalid Agent Deck JSON: %w", err)
 	}
 	return nil
+}
+
+// Agent Deck 1.16.34's plain `remote sessions --json` prints an empty list and
+// exits 0 when the remote host refuses the connection, which is
+// indistinguishable from a remote with no sessions. The error envelope
+// reports the failure.
+func (p *agentDeckProvider) remoteSessions(ctx context.Context, name string) ([]agentDeckSession, error) {
+	var envelope struct {
+		Sessions []agentDeckSession `json:"sessions"`
+		Errors   []struct {
+			Error string `json:"error"`
+		} `json:"errors"`
+	}
+	command := exec.CommandContext(ctx, p.executable, "remote", "sessions", name, "--json", "--with-errors")
+	output, runErr := command.Output()
+	if ctx.Err() != nil {
+		return nil, fmt.Errorf("no response within the time limit")
+	}
+	if len(output) > 8*1024*1024 {
+		return nil, fmt.Errorf("Agent Deck response is too large")
+	}
+	if err := json.Unmarshal(output, &envelope); err != nil {
+		if exit, ok := runErr.(*exec.ExitError); ok && len(bytes.TrimSpace(exit.Stderr)) > 0 {
+			return nil, fmt.Errorf("%s", strings.TrimSpace(string(exit.Stderr)))
+		}
+		if runErr != nil {
+			return nil, runErr
+		}
+		return nil, fmt.Errorf("invalid Agent Deck JSON: %w", err)
+	}
+	if len(envelope.Errors) > 0 {
+		return nil, fmt.Errorf("%s", strings.TrimSpace(envelope.Errors[0].Error))
+	}
+	if runErr != nil {
+		return nil, runErr
+	}
+	return envelope.Sessions, nil
 }
 
 func (p *agentDeckProvider) remoteHost(ctx context.Context, name string) (string, error) {
@@ -551,7 +619,30 @@ func agentDeckProjectID(remote, group string) string {
 	return agentDeckQualified(remote, group)
 }
 
+// agentDeckRemoteUnavailable reports that a registered remote's own manager
+// could not be reached. It names the remote so recovery can say which host is
+// down instead of reporting that the session itself disappeared.
+type agentDeckRemoteUnavailable struct {
+	remote string
+	err    error
+}
+
+func (e *agentDeckRemoteUnavailable) Error() string {
+	return fmt.Sprintf("Agent Deck remote %q did not respond (its host may be down or unreachable): %v", e.remote, e.err)
+}
+
+func (e *agentDeckRemoteUnavailable) Unwrap() error { return e.err }
+
+const agentDeckRemoteTimeout = 12 * time.Second
+
 func (p *agentDeckProvider) Status(ctx context.Context) (coordinationProviderStatus, error) {
+	return p.status(ctx, true, "")
+}
+
+// status polls every registered remote for the inventory view. A lookup for one
+// session polls only the remote that owns it (none for a local session), so an
+// unreachable remote host cannot delay or fail local sessions or other remotes.
+func (p *agentDeckProvider) status(ctx context.Context, allRemotes bool, only string) (coordinationProviderStatus, error) {
 	if p.executable == "" {
 		return coordinationProviderStatus{}, fmt.Errorf("Agent Deck is not installed")
 	}
@@ -585,12 +676,19 @@ func (p *agentDeckProvider) Status(ctx context.Context) (coordinationProviderSta
 		return coordinationProviderStatus{}, err
 	}
 	status := coordinationProviderStatus{Projects: []coordinationProject{}, Seats: []coordinationSeat{}, Messages: []coordinationMessage{}, Errors: []string{}}
+	configured := only == ""
 	for _, remote := range remotes {
-		var sessions []agentDeckSession
-		remoteCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
-		err := p.runJSON(remoteCtx, &sessions, "remote", "sessions", remote.Name, "--json")
+		if !allRemotes && remote.Name != only {
+			continue
+		}
+		configured = true
+		remoteCtx, cancel := context.WithTimeout(ctx, agentDeckRemoteTimeout)
+		sessions, err := p.remoteSessions(remoteCtx, remote.Name)
 		cancel()
 		if err != nil {
+			if !allRemotes {
+				return coordinationProviderStatus{}, &agentDeckRemoteUnavailable{remote: remote.Name, err: err}
+			}
 			status.Errors = append(status.Errors, fmt.Sprintf("%s (%s): %v", remote.Name, remote.Host, err))
 			continue
 		}
@@ -598,7 +696,7 @@ func (p *agentDeckProvider) Status(ctx context.Context) (coordinationProviderSta
 			locatedSessions = append(locatedSessions, located{remote: remote.Name, session: value})
 		}
 		var groups agentDeckGroups
-		groupCtx, groupCancel := context.WithTimeout(ctx, 12*time.Second)
+		groupCtx, groupCancel := context.WithTimeout(ctx, agentDeckRemoteTimeout)
 		err = p.runJSON(groupCtx, &groups, "remote", remote.Name, "group", "list", "--json")
 		groupCancel()
 		if err != nil {
@@ -608,6 +706,9 @@ func (p *agentDeckProvider) Status(ctx context.Context) (coordinationProviderSta
 		for _, value := range flattenAgentDeckGroups(groups.Groups) {
 			locatedGroups = append(locatedGroups, locatedGroup{remote: remote.Name, host: remote.Name, group: value})
 		}
+	}
+	if !configured {
+		return coordinationProviderStatus{}, fmt.Errorf("Agent Deck remote %q is no longer configured", only)
 	}
 	type aggregate struct {
 		project  coordinationProject
@@ -761,7 +862,11 @@ func splitAgentDeckTarget(value string) (remote, id string, err error) {
 }
 
 func (p *agentDeckProvider) agentDeckSeat(ctx context.Context, target string) (coordinationSeat, error) {
-	status, err := p.Status(ctx)
+	remote, _, err := splitAgentDeckTarget(target)
+	if err != nil {
+		return coordinationSeat{}, err
+	}
+	status, err := p.status(ctx, false, remote)
 	if err != nil {
 		return coordinationSeat{}, err
 	}

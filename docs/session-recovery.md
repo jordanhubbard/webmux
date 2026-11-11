@@ -132,7 +132,7 @@ and `configuration-a7b9d883-cfb0-4707-9013-2c33f86e0deb/manifest.json`
 | Safe retained history | Bounded suffix, ANSI/OSC/C1 stripping, rotation and path controls; real local recovery retains the marker in API/UI history; redraw blank rows compacted only in the preview | Additional lifecycle/transport qualification |
 | Surviving providers | Local, SSH and native mosh reconnect/restart/SIGKILL preserve provider and pane PIDs and job count; independent Linux user scopes avoid service-cgroup cleanup | Managed-provider qualification |
 | Recovery preview and continuation | Owner-scoped API and browser actions; separate replay/handoff approval; broker tests for opt-in native auto resume and uncertain-outcome exclusion | Managed lifecycle integration and additional CLI lifecycle cases |
-| Reboot/restart/update/crash | Native VM orderly restart, different-binary update, SIGKILL and kernel reboot pass; SSH and native mosh separately pass controller restart/SIGKILL and remote kernel reboot; approved replay, duplicate request and three reconnects preserve counts and original transcript references | Managed/CLI end-to-end coverage and additional remote failure modes |
+| Reboot/restart/update/crash | Native VM orderly restart, different-binary update, SIGKILL and kernel reboot pass; SSH and native mosh separately pass controller restart/SIGKILL and remote kernel reboot; approved replay, duplicate request and three reconnects preserve counts and original transcript references; remote managed hosts pass hung, rebooted and powered-off fallback with no duplicate execution ([details](#remote-managed-host-failure-2026-11-10)) | Remote Rig SSH-host seats |
 
 Mosh synchronizes terminal screen state rather than an arbitrary byte stream.
 Its recovery metadata path uses the separate authenticated SSH control channel
@@ -1472,6 +1472,79 @@ the previous ordering.
 The earlier failed attempts are retained as negative evidence: an unhandled
 trust prompt, then the restoration race. This qualifies Rig on one Linux guest
 with this launch policy, not remote Rig destinations or other runtimes.
+
+## Remote managed-host failure (2026-11-10)
+
+**Scope (owner decision).** Remote managed sessions get qualified *fallback*,
+not native resume. Native recovery stays local to the execution host's own
+lifecycle manager. WebMux reattaches a remote session that is still running.
+Otherwise it shows a clear manual-recovery state with the retained transcript,
+and never starts the job itself. The remote topologies are:
+
+| Topology | Lifecycle owner | Execution host |
+| --- | --- | --- |
+| Agent Deck remote (`agent-deck remote add`) | the remote host's Agent Deck | remote |
+| Agent Deck `--ssh` session | local Agent Deck (pane runs `ssh`) | remote |
+| WebMux-coordinated Rig seat on an SSH host | local Rig seat (pane runs `ssh -tt`) | remote |
+
+**Product fixes found by this qualification.**
+
+1. *Surviving remote sessions could not be reattached.* The survival check
+   ran `agent-deck remote <name> session ownership inspect`, which Agent Deck
+   1.16.34 rejects ("unsupported remote command"). After an ordinary WebMux
+   restart, a healthy remote session was stuck in `managed-unavailable`, and
+   reconnect returned 409 with that raw error. Remote targets now use the
+   forwarded `remote <name> show` state (`running`, `waiting` or `idle` with a
+   tmux session). This permits only reattachment: `remote attach` fails for a
+   session that is not running and does not start it (verified against a
+   stopped job). Native resume on a remote host is not offered.
+2. *A down remote delayed or failed unrelated sessions.* Every Agent Deck
+   survival check and attachment called the full inventory, which polls every
+   registered remote for up to 12 s. Agent Deck forces `ConnectTimeout=10` and
+   multiplexes connections, so a hung remote cost about 10–12 s per call. A
+   local viewer's check plus attachment needed two such calls against a 20 s
+   budget, so healthy local sessions could fail, and startup waited once per
+   viewer. Lookups for one session now poll only its own remote (none for a
+   local session). Startup waits for an unreachable remote manager once,
+   however many viewers it owns.
+3. *A refused remote looked empty.* Agent Deck 1.16.34's
+   `remote sessions <name> --json` prints `[]` and exits 0 when the connection
+   is refused, so the remote seemed to have no sessions. WebMux now uses
+   `--json --with-errors`, whose envelope carries the SSH failure.
+4. *Unclear messages.* An unreachable remote is reported as `Agent Deck
+   remote "<name>" did not respond (its host may be down or unreachable)` with
+   the reason, instead of "session is unavailable". A killed command reports
+   the time limit instead of an empty message.
+
+**Qualification.** `scripts/qualify-recovery-remote-managed.py` runs a private
+controller and an isolated Agent Deck on the Mac (private HOME, XDG roots,
+tmux socket and an `ssh` wrapper that reaches only the guest alias). It drives
+three shell jobs that append to execution files: one owned by the guest's own
+Agent Deck as a registered remote, one local `--ssh` job executing on the
+guest, and one local control job.
+
+On 2026-11-10 it passed with Agent Deck 1.16.34 on both hosts:
+
+| Phase | Result |
+| --- | --- |
+| Healthy guest: controller restart and SIGKILL | All three reattached (startup 1.1–1.2 s) |
+| Guest hung (QMP pause) | Startup 12.8 s total. Remote `managed-unavailable` naming remote `qa`; reconnect refused in 12.1 s; `--ssh` and local reattached. After resume the remote viewer reattached. |
+| Actual guest reboot (boot ID `ae3341a4-be92-484f-98d4-65c24fb7c22f` → `0bc470ff-74a6-44c3-9f92-e4fedabdf590`) | Remote and `--ssh` `managed-unavailable` ("not confirmed running"); three reconnects each refused; remote manager reports `error`; no job process on the guest; local reattached |
+| Guest powered off (connection refused) | Startup 0.7 s. Remote reports `Connection refused` by remote name; `--ssh` unavailable; local reattached |
+
+Every phase kept one execution per job and the pre-interruption marker in each
+transcript. Receipt:
+`~/.local/share/webmux/recovery-qualification/remote-managed-52b9d683048d/receipt.json`.
+WebMux SHA-256
+`c7104726cbf4229b663a100845f3878457c669f527e57aeb4328f060b4887b3b`; harness SHA-256
+`785de32b88df1ea0a1aa26eba3c3263b53b6fee1d881d9effcbd1f859892388d`. Earlier failed
+runs are retained: a marker that scrolled off before attachment, a process
+probe that matched its own shell, and the refused-connection finding (fix 3).
+
+Not covered: WebMux-coordinated Rig seats on an SSH host. They share the
+`--ssh` shape (local seat, `ssh` pane). They need a Rig manager and a coding
+CLI on the guest, and remain unqualified. Remote Agent Deck sessions running a
+coding CLI recover through Agent Deck on that host.
 
 ## Sources
 
