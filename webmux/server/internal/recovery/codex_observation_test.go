@@ -10,7 +10,7 @@ import (
 func TestCodexUnknownProcessRetainsSelectedConversationWithoutAutomaticConfidence(t *testing.T) {
 	id := "01a1c268-92c8-7393-bfc3-e387e33d52b9"
 	event := Event{SessionID: id, StateFile: "/selected/rollout.jsonl", NativeEvidence: "launch-selector"}
-	observeCodexProcess(&event, "", "")
+	observeProcessState(&event, "", "")
 	if event.SessionID != id || event.StateFile != "/selected/rollout.jsonl" || event.NativeEvidence != "launch-selector" {
 		t.Fatal("missing TUI-owned file erased the explicit native selection", event)
 	}
@@ -20,11 +20,11 @@ func TestCodexUnknownProcessRetainsSelectedConversationWithoutAutomaticConfidenc
 	}
 	// A subsequent observed switch replaces the selector with the owned state.
 	switched := "01a1c383-71b0-7631-99d9-e0e5eb52a7a8"
-	observeCodexProcess(&event, switched, "/switched/rollout.jsonl")
+	observeProcessState(&event, switched, "/switched/rollout.jsonl")
 	if event.SessionID != switched || event.NativeEvidence != "process-state" {
 		t.Fatal("verified native switch did not replace the selector", event)
 	}
-	observeCodexProcess(&event, "", "")
+	observeProcessState(&event, "", "")
 	if event.SessionID != switched || event.NativeEvidence != "unavailable" {
 		t.Fatal("lost ownership discarded history or retained current-state confidence", event)
 	}

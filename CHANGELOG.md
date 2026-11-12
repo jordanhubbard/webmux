@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Follow in-process Cursor Agent chat switches for session recovery by
+  observing the chat store the running agent holds open, limited to the
+  recorded project (#318).
+
 ### Security
 - Require Go 1.27.4 to address the net/http MaxBytesReader header race
   (GO-2026-6859) reported by the dependency audit.

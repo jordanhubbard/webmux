@@ -92,8 +92,9 @@ require manual restoration and are excluded from automatic native recovery.
 A new server discards an inherited parent-terminal cache pin before creating its
 own providers. OpenCode metadata probes use `--pure` so they do not execute a
 second copy of user plugins. Canceled preflight closes its private native server.
-Cursor state-file references locate the recorded selector; its later interactive
-switches remain unverified. Claude has a separately qualified, scoped observer
+A running Cursor Agent holds only its selected chat's store open, so WebMux
+observes in-process Cursor chat switches from that open store
+([details](#cursor-chat-switches-2026-11-12)). Claude has a separately qualified, scoped observer
 for same-project conversation changes. Cross-project changes require manual
 validation of invocation roots and policy.
 
@@ -106,7 +107,9 @@ resume requires process-state evidence; launch selectors, native hook
 observations and older records without provenance remain available only for an
 explicit exact-session choice. Native hooks can stop reporting when settings
 change, so their observations do not acquire automatic execution confidence.
-The other adapters still need active-conversation observers before their
+Codex (direct process) and Cursor now have process-state observers. OpenCode
+keeps every conversation in one database, so its open files cannot identify
+the current one; it still needs an active-conversation observer before its
 automatic recovery can be qualified.
 
 On 2026-11-09, the provenance qualification passed through real provider loss,
@@ -128,7 +131,7 @@ and `configuration-a7b9d883-cfb0-4707-9013-2c33f86e0deb/manifest.json`
 | --- | --- | --- |
 | Durable owner-scoped activity and log references | Broker tests persist before shutdown; native VM SIGKILL/reboot retain activity and original transcript references | Remote/managed lifecycle qualification |
 | Real shell command and directory capture | Bash/Zsh PTY probes preserve exit status; real WebMux local workflow records a long-running command, arguments and directory | Retain the separate Zsh probe in the qualification harness |
-| Native conversation identity | All four installed CLIs recover a marker through WebMux provider loss and native recovery action; new native assistant records prove continuity; native preflight rejects another project; configuration-root and named-profile qualification below | Interactive session switches and remaining invocation-specific settings |
+| Native conversation identity | All four installed CLIs recover a marker through WebMux provider loss and native recovery action; new native assistant records prove continuity; native preflight rejects another project; configuration-root and named-profile qualification below | OpenCode interactive session switches (Codex, Claude and Cursor switches are observed) and remaining invocation-specific settings |
 | Safe retained history | Bounded suffix, ANSI/OSC/C1 stripping, rotation and path controls; real local recovery retains the marker in API/UI history; redraw blank rows compacted only in the preview | Additional lifecycle/transport qualification |
 | Surviving providers | Local, SSH and native mosh reconnect/restart/SIGKILL preserve provider and pane PIDs and job count; independent Linux user scopes avoid service-cgroup cleanup | Managed-provider qualification |
 | Recovery preview and continuation | Owner-scoped API and browser actions; separate replay/handoff approval; broker tests for opt-in native auto resume and uncertain-outcome exclusion | Managed lifecycle integration and additional CLI lifecycle cases |
@@ -233,9 +236,10 @@ action now has native proof below.
 
 The native identity tests must also cover changing conversations inside one CLI
 process. An initially selected conversation ID is not sufficient evidence after
-the user switches sessions. Codex now rechecks its owning process's open native
-state instead of permanently caching the first selector. Other adapters still
-need their session-switch observations. Ambiguity requires an explicit fallback,
+the user switches sessions. Codex and Cursor now recheck their owning
+process's open native state instead of permanently caching the first selector,
+and Claude has a scoped hook observer. OpenCode still needs a session-switch
+observation. Ambiguity requires an explicit fallback,
 not a timestamp-based guess.
 
 Remaining native integration includes observing active-session changes in each
@@ -522,6 +526,46 @@ regressions: successful help can be written to stderr, and changing a subprocess
 directory must also update its `PWD` environment. Identity commands continue to
 read stdout alone; successful help includes both streams. Metadata output is
 bounded during capture. No project-ownership validation was relaxed.
+
+### Cursor chat switches (2026-11-12)
+
+The Cursor Agent TUI opens `chats/<md5 of the project path>/<chat ID>/store.db`
+under its configuration root when a chat is loaded, and closes it when the user
+switches chats with `/resume`. A new chat has no store until its first turn.
+WebMux's CLI wrapper now polls the open files of the agent's process tree (the
+same bounded scan as Codex) and accepts a store only under the recorded
+project's chat directory. Two open chats give no answer. An observed store sets
+`process-state` evidence for that chat; losing it after an observation drops
+current-state confidence (`unavailable`) while keeping the last chat for an
+explicit choice. Before the first observation the launch selector stays.
+Native file descriptors are not observed on Windows.
+
+`scripts/qualify-recovery-configuration.py --cli cursor --cursor-switch`
+passed on 2026-11-12 with Cursor Agent 2026.11.11-b912975 (which updated
+itself from the earlier qualified 2026.11.05). Through WebMux it resumed the
+synthetic chat `6e902534-c8a6-45b0-8d92-bdb85f085158` (observed as
+`process-state`), created a second synthetic chat in the same fixture project
+with one turn, and switched to it in the running TUI with its own `/resume`
+picker. WebMux followed the switch to
+`70af6638-c988-4c1d-952f-b84bff3871f5` with `process-state`. After the provider
+was killed, the native recovery action ran
+`cursor-agent --resume 70af6638-… --mode ask --sandbox enabled`, kept that
+evidence, and the resumed chat answered with its own marker plus a fresh nonce.
+Receipt: `~/.local/share/webmux/recovery-qualification/configuration-0ad5570a-c49a-4c0a-bab8-a32c8a70d234/manifest.json`;
+WebMux SHA-256
+`e3d00f22a8ca1dd6e116263726cfebf8dd787ef070f77848f57b0edd8c16e9e3`; harness
+SHA-256 `04654946a8f5631f18e3d30f863d6a5e2e91f8afa307856b9f5aa64c151765d3`.
+
+The ordinary Cursor configuration run now expects `process-state` and passed
+(`configuration-c07ed5fb-5db7-43ea-bc5c-b1b4aac0915a`, harness before the final
+receipt-label change). Because Codex shares the open-file scan, its
+embedded-profile run was repeated and passed with Codex 0.167.2
+(`configuration-120903e7-e371-4716-bee6-1277d168dc97`, final harness).
+
+With process-state evidence a Cursor conversation becomes eligible for the
+owner's opt-in automatic native resume, like direct-process Codex. Earlier
+failed attempts in this run are retained: two harness picker-handling errors
+and one that checked evidence before the resumed agent had opened its store.
 
 ## Scoped Claude conversation observations
 

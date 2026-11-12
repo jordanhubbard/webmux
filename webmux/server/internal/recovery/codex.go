@@ -62,8 +62,23 @@ func codexMeta(file, cwd string) (string, bool) {
 // The owning process's open rollout file is authoritative. Searching for the
 // latest file by directory or timestamp can select another concurrent agent.
 func codexSessionForProcess(pid int, cwd string) (string, string) {
+	id, path := "", ""
+	for _, file := range processTreeOpenFiles(pid, func(file string) bool { return strings.HasSuffix(file, ".jsonl") }) {
+		if candidate, ok := codexMeta(file, cwd); ok {
+			if id != "" && candidate != id {
+				return "", ""
+			}
+			id, path = candidate, file
+		}
+	}
+	return id, path
+}
+
+// processTreeOpenFiles lists bounded open-file paths accepted by keep for pid
+// and its descendants. It returns nothing where open files cannot be observed.
+func processTreeOpenFiles(pid int, keep func(string) bool) []string {
 	if runtime.GOOS == "windows" {
-		return "", ""
+		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -100,43 +115,35 @@ func codexSessionForProcess(pid int, cwd string) (string, string) {
 				if i >= 256 {
 					break
 				}
-				if file, err := os.Readlink(filepath.Join(dir, entry.Name())); err == nil && strings.HasSuffix(file, ".jsonl") {
+				if file, err := os.Readlink(filepath.Join(dir, entry.Name())); err == nil && keep(file) {
 					files = append(files, file)
 				}
 			}
 		}
-	} else {
-		selected := make([]string, len(pids))
-		for i, child := range pids {
-			selected[i] = strconv.Itoa(child)
-		}
-		output, _ := exec.CommandContext(ctx, "lsof", "-a", "-p", strings.Join(selected, ","), "-Fn").Output()
-		if len(output) > 1<<20 {
-			return "", ""
-		}
-		for _, line := range strings.Split(string(output), "\n") {
-			if strings.HasPrefix(line, "n") && strings.HasSuffix(line, ".jsonl") {
-				files = append(files, line[1:])
-			}
+		return files
+	}
+	selected := make([]string, len(pids))
+	for i, child := range pids {
+		selected[i] = strconv.Itoa(child)
+	}
+	output, _ := exec.CommandContext(ctx, "lsof", "-a", "-p", strings.Join(selected, ","), "-Fn").Output()
+	if len(output) > 1<<20 {
+		return nil
+	}
+	for _, line := range strings.Split(string(output), "\n") {
+		if strings.HasPrefix(line, "n") && keep(line[1:]) {
+			files = append(files, line[1:])
 		}
 	}
-	id, path := "", ""
-	for _, file := range files {
-		if candidate, ok := codexMeta(file, cwd); ok {
-			if id != "" && candidate != id {
-				return "", ""
-			}
-			id, path = candidate, file
-		}
-	}
-	return id, path
+	return files
 }
 
-// Absence of an owned rollout FD is not evidence that a previously selected
-// conversation disappeared. A shared daemon owns those files instead of the
-// TUI. Keep the last reliable reference for an explicit choice, while removing
+// Absence of an owned native state file is not evidence that a previously
+// selected conversation disappeared. A shared Codex daemon owns those files
+// instead of the TUI, and a new Cursor chat has no store until its first turn.
+// Keep the last reliable reference for an explicit choice, while removing
 // current-process confidence as soon as ownership can no longer be observed.
-func observeCodexProcess(event *Event, id, file string) {
+func observeProcessState(event *Event, id, file string) {
 	if id != "" {
 		event.SessionID, event.StateFile, event.NativeEvidence = id, file, "process-state"
 	} else if event.NativeEvidence == "process-state" {

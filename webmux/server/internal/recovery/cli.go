@@ -231,12 +231,16 @@ func RunCLI(name string, args []string) error {
 					event.StateFile = claudeStateFile(event.SessionID, cwd)
 				}
 			}
-			if cli == "cursor" && event.SessionID != "" {
-				event.StateFile = cursorStateFile(event.SessionID, cwd)
+			if cli == "cursor" {
+				currentID, currentFile := cursorSessionForProcess(cmd.Process.Pid, cwd)
+				observeProcessState(&event, currentID, currentFile)
+				if event.NativeEvidence != "process-state" && event.SessionID != "" {
+					event.StateFile = cursorStateFile(event.SessionID, cwd)
+				}
 			}
 			if cli == "codex" {
 				currentID, currentFile := codexSessionForProcess(cmd.Process.Pid, cwd)
-				observeCodexProcess(&event, currentID, currentFile)
+				observeProcessState(&event, currentID, currentFile)
 			}
 			if event.StateFile != "" {
 				ticker.Reset(5 * time.Second)
