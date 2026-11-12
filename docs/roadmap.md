@@ -69,8 +69,10 @@ Remaining #318 work, in order:
    Cursor in-process chat switches are now observed
    ([details](session-recovery.md#cursor-chat-switches-2026-11-12)). OpenCode
    switches await upstream ([anomalyco/opencode#54329](https://github.com/anomalyco/opencode/issues/54329);
-   owner decision: explicit choice until then). Remaining invocation settings
-   and native Windows execution are still open. Remote native resume is
+   owner decision: explicit choice until then). Explicit models and other
+   ordinary settings are now resumed for Codex, Cursor and OpenCode
+   ([details](session-recovery.md#unsupported-invocation-options)); native
+   Windows execution is still open. Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
 2. Codex in default shared-daemon mode is manual-only by owner decision: no

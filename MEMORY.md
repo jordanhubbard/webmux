@@ -54,6 +54,10 @@ than assuming an older checkpoint's green checks apply to new source.
    conversation (no event, log line or file); owner decision 2026-11-12: keep
    it an explicit choice, no last-prompt tracking; revisit when
    anomalyco/opencode#54329 ships.
+   Explicit models and other ordinary options are resumed for Codex, Cursor
+   and OpenCode (2026-11-12, `--model CLI=MODEL` harness mode); Codex `-c`,
+   working-root and worktree options stay manual. OpenCode 1.19.5 ignores `-m`
+   when resuming with `--session`.
    Remote managed-host failure fallback passed on 2026-11-10
    (`scripts/qualify-recovery-remote-managed.py`, Mac controller + guest):
    remote native resume is manual-only by owner decision. Claude Code Rig seats
