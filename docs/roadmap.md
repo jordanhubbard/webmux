@@ -41,7 +41,7 @@ Current evidence and limits:
 | Area | Progress |
 | --- | --- |
 | Recovery metadata and controls | Implemented: owner-scoped durable activity/native-session evidence, retained history, recovery previews, explicit replay/context consent, survivor checks and durable duplicate/uncertain-request handling. |
-| Named native CLIs | Real exact-conversation continuation passed for qualified Codex, Claude Code, Cursor agent and OpenCode versions, with fresh remembered-marker responses and original project/configuration checks. This does not qualify every invocation or platform. |
+| Named native CLIs | Real exact-conversation continuation passed for qualified Codex, Claude Code, Cursor agent and OpenCode versions, with fresh remembered-marker responses and original project/configuration checks. In-process conversation switches are followed for Codex (direct process), Claude (scoped hooks) and Cursor (open chat store); OpenCode switches are not yet observed. This does not qualify every invocation or platform. |
 | Ordinary local/SSH/mosh lifecycle | Real controller restart/update/SIGKILL and disposable guest reboot checks passed, including retained history and no duplicate execution. |
 | Local managed recovery | Real Agent Deck/Claude and Rig/Claude process-loss continuation passed. Rig additionally passed original executable/settings checks and an in-flight controller-loss test that refused unsafe retries. |
 | Rig conversation after reboot | Passed on a Linux guest with Rig 0.6.14 (9d0200f3)/Claude 2.1.322: host-reboot detection, approved Resume through Rig, once-only receipt, original settings/roots and a fresh remembered-marker answer. Startup now starts the Rig manager before restoring managed viewers. |
@@ -66,7 +66,10 @@ Remaining #318 work, in order:
    ([details](session-recovery.md#rig-seats-on-an-ssh-host-2026-11-10)) and
    Codex Rig seats on SSH hosts (relay-identity attach,
    [details](session-recovery.md#codex-seats-on-an-ssh-host-2026-11-11)).
-   Remote native resume is
+   Cursor in-process chat switches are now observed
+   ([details](session-recovery.md#cursor-chat-switches-2026-11-12)); OpenCode
+   switches, remaining invocation settings and native Windows execution are
+   still open. Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
 2. Codex in default shared-daemon mode is manual-only by owner decision: no

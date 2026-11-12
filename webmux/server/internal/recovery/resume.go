@@ -253,6 +253,21 @@ func cursorStateFile(id, cwd string) string {
 	if !ValidNativeID("cursor", id) {
 		return ""
 	}
+	chats := cursorProjectChats(cwd)
+	if chats == "" {
+		return ""
+	}
+	path := filepath.Join(chats, id, "store.db")
+	info, err := os.Lstat(path)
+	if err != nil || !info.Mode().IsRegular() || info.Size() == 0 {
+		return ""
+	}
+	return path
+}
+
+// cursorProjectChats is the directory holding the project's Cursor chats:
+// <config root>/chats/<md5 of the physical project path>.
+func cursorProjectChats(cwd string) string {
 	root := os.Getenv("CURSOR_CONFIG_DIR")
 	if root == "" {
 		if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
@@ -266,13 +281,34 @@ func cursorStateFile(id, cwd string) string {
 	if err != nil {
 		return ""
 	}
-	hash := fmt.Sprintf("%x", md5.Sum([]byte(physical)))
-	path := filepath.Join(root, "chats", hash, id, "store.db")
-	info, err := os.Lstat(path)
-	if err != nil || !info.Mode().IsRegular() || info.Size() == 0 {
-		return ""
+	return filepath.Join(root, "chats", fmt.Sprintf("%x", md5.Sum([]byte(physical))))
+}
+
+// cursorSessionForProcess returns the chat whose store the running Cursor
+// Agent holds open. The agent opens only the selected chat's store and closes
+// it when the user switches chats. Stores outside this project's chats, or two
+// different open chats, give no answer rather than a guess.
+func cursorSessionForProcess(pid int, cwd string) (string, string) {
+	chats := cursorProjectChats(cwd)
+	if chats == "" {
+		return "", ""
 	}
-	return path
+	if physical, err := filepath.EvalSymlinks(chats); err == nil {
+		chats = physical
+	}
+	id, path := "", ""
+	for _, file := range processTreeOpenFiles(pid, func(file string) bool { return filepath.Base(file) == "store.db" }) {
+		chat := filepath.Dir(file)
+		candidate := filepath.Base(chat)
+		if filepath.Dir(chat) != chats || !ValidNativeID("cursor", candidate) {
+			continue
+		}
+		if id != "" && candidate != id {
+			return "", ""
+		}
+		id, path = candidate, file
+	}
+	return id, path
 }
 
 func validateOpenCodeState(binary, id, cwd string) error {

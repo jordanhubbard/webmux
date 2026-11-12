@@ -33,12 +33,15 @@ def main():
     parser.add_argument('--codex-daemon', action='store_true', help='qualify the normal shared-daemon mode instead of the direct-process profile case')
     parser.add_argument('--claude-hooks', action='store_true', help='qualify scoped native SessionStart observations through clear/resume and recovery')
     parser.add_argument('--claude-options', action='store_true', help='qualify named model/agent and tool-policy options on a fresh synthetic Claude conversation')
+    parser.add_argument('--cursor-switch', action='store_true', help='qualify observing an in-process Cursor chat switch through its open chat store, then recovery of the switched chat')
     parser.add_argument('--trust-owned-project', action='store_true', help='approve native trust only for the new, verified --claude-options fixture project')
     args = parser.parse_args()
     if args.trust_owned_project and not args.claude_options:
         parser.error('--trust-owned-project requires --claude-options')
     if args.claude_hooks and args.claude_options:
         parser.error('choose either --claude-hooks or --claude-options per run')
+    if args.cursor_switch and (args.cli or ['cursor']) != ['cursor']:
+        parser.error('--cursor-switch qualifies only --cli cursor')
     qualifier_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     repo = Path(__file__).resolve().parents[1]
     spec = importlib.util.spec_from_file_location('native_qualification', repo / 'scripts/qualify-recovery-native.py')
@@ -360,7 +363,60 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 switches.append({'action': 'resume-switched', 'native_session_id': switched_id, 'observation': before})
                 (fixture / 'claude-switches.json').write_text(json.dumps(switches, indent=2) + '\n')
 
-            expected_evidence = 'process-state' if cli == 'codex' and not args.codex_daemon else 'launch-selector'
+            if cli == 'cursor':
+                # The resumed chat's store is open once the TUI has loaded it.
+                def observed(expected):
+                    def check():
+                        activity = running()
+                        return activity if activity and activity.get('native_evidence') == 'process-state' and activity.get('native_session_id') == expected else None
+                    return check
+                before = wait_for(observed(ident), 'Cursor open-store observation of the resumed chat')
+            if cli == 'cursor' and args.cursor_switch:
+                switches.append({'action': 'resumed', 'native_session_id': ident, 'observation': before})
+                # A second synthetic chat in the same fixture project, created
+                # and given one turn outside the TUI so the picker lists it.
+                cursor_binary = native.native_binary('cursor-agent')
+                cursor_env = dict(os.environ, **roots[cli], PWD=entry['project'])
+                created = subprocess.run([cursor_binary, 'create-chat'], cwd=entry['project'], env=cursor_env, capture_output=True, text=True, check=True, timeout=60)
+                switched_id = str(uuid.UUID(created.stdout.strip().splitlines()[-1]))
+                switched_marker = 'WM_RECOVERY_SWITCH_' + uuid.uuid4().hex
+                turn = subprocess.run([cursor_binary, '--print', '--mode', 'ask', '--sandbox', 'enabled', '--output-format', 'json', '--resume', switched_id,
+                                       'Remember this exact marker for later in this conversation: ' + switched_marker + '. Reply only with this marker. Do not use tools.'],
+                                      cwd=entry['project'], env=cursor_env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=180)
+                assert turn.returncode == 0 and switched_marker in turn.stdout, 'second synthetic Cursor chat did not answer'
+                switched_entry = dict(entry, native_session_id=switched_id, marker=switched_marker)
+                # Switch inside the running TUI with its own chat picker, scoped
+                # to this workspace (the fixture project).
+                def pick(row):
+                    def picker():
+                        return 'All chats' in subprocess.run(['tmux', 'capture-pane', '-pt', target], capture_output=True, text=True).stdout
+                    send('/resume')
+                    time.sleep(2)
+                    if not picker():
+                        # The first Enter can only accept the command completion.
+                        subprocess.run(['tmux', 'send-keys', '-t', target, 'Enter'], check=True)
+                    wait_for(picker, 'Cursor chat picker')
+                    subprocess.run(['tmux', 'send-keys', '-t', target, 'Right'], check=True)
+                    time.sleep(1)
+                    pane = subprocess.run(['tmux', 'capture-pane', '-pt', target], capture_output=True, text=True).stdout
+                    assert 'This workspace' in pane, 'Cursor chat picker has no workspace scope'
+                    for _ in range(row):
+                        subprocess.run(['tmux', 'send-keys', '-t', target, 'Down'], check=True)
+                        time.sleep(.5)
+                    subprocess.run(['tmux', 'send-keys', '-t', target, 'Enter'], check=True)
+                    time.sleep(3)
+                    activity = api(path).get('state', {}).get('activity', {})
+                    return activity.get('native_session_id')
+                # Every chat in this workspace scope belongs to the fixture
+                # project. Try rows until the TUI holds the new chat.
+                for row in range(8):
+                    if pick(row) == switched_id:
+                        break
+                entry, ident = switched_entry, switched_id
+                before = wait_for(observed(switched_id), 'Cursor open-store observation of the switched chat')
+                switches.append({'action': 'switched', 'native_session_id': switched_id, 'observation': before})
+                (fixture / 'cursor-switches.json').write_text(json.dumps(switches, indent=2) + '\n')
+            expected_evidence = 'process-state' if cli == 'codex' and not args.codex_daemon or cli == 'cursor' else 'launch-selector'
             if cli == 'claude' and args.claude_hooks:
                 expected_evidence = 'native-hook'
             if daemon_before:
@@ -389,10 +445,13 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 activity = running()
                 return activity if activity and activity.get('shell_instance') == preview['instance'] else None
             after = wait_for(resumed_running, cli + ' resumed native identity from the new worker')
+            if cli == 'cursor':
+                # The selector comes first; the open store follows once loaded.
+                after = wait_for(lambda: (lambda activity: activity if activity and activity.get('native_evidence') == 'process-state' else None)(resumed_running()), 'Cursor open-store observation after recovery')
             assert after.get('native_evidence') == expected_evidence, 'native continuation lost its identity provenance'
             assert all(key not in after['configuration']['roots'] if key in unset.get(cli, set()) else after['configuration']['roots'].get(key) == value for key, value in roots[cli].items())
             expected_argv = list(before['argv'])
-            if cli == 'claude' and args.claude_hooks:
+            if cli == 'claude' and args.claude_hooks or cli == 'cursor' and args.cursor_switch:
                 expected_argv[expected_argv.index('--resume') + 1] = ident
             if cli == 'claude' and args.claude_options:
                 expected_argv[expected_argv.index('--session-id')] = '--resume'
@@ -417,7 +476,7 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 assert after and after.get('native_evidence') == 'launch-selector', 'shared-daemon case was incorrectly promoted to observed process state'
 
             assert api(path, action)['outcome'] == 'consumed'
-            receipt = {'cli': cli, 'passed': True, 'session_id': session_id, 'native_session_id': ident, 'before': before, 'after': after, 'nonce': nonce, 'new_assistant_answer': answer, 'controller_ambient_roots': {key: environment[key] for key in roots[cli]}, 'native_hooks_left_untrusted': sorted(hook_choices), 'in_process_switches': switches, 'named_agent_profile': profile_name, 'agent_profile_sha256': profile_sha256, 'explicit_model': profile_model, 'profile_marker': profile_marker, 'shared_daemon_before': daemon_before, 'shared_daemon_after': daemon_after, 'scope': 'Explicit selected conversation continuation; interactive switches are not verified' if daemon_before else 'Original root and profile continuation'}
+            receipt = {'cli': cli, 'passed': True, 'session_id': session_id, 'native_session_id': ident, 'before': before, 'after': after, 'nonce': nonce, 'new_assistant_answer': answer, 'controller_ambient_roots': {key: environment[key] for key in roots[cli]}, 'native_hooks_left_untrusted': sorted(hook_choices), 'in_process_switches': switches, 'named_agent_profile': profile_name, 'agent_profile_sha256': profile_sha256, 'explicit_model': profile_model, 'profile_marker': profile_marker, 'shared_daemon_before': daemon_before, 'shared_daemon_after': daemon_after, 'scope': 'Explicit selected conversation continuation; interactive switches are not verified' if daemon_before else 'In-process Cursor chat switch observed through the open chat store, then continuation of the switched chat' if cli == 'cursor' and args.cursor_switch else 'Original root and profile continuation'}
             receipts.append(receipt)
             (fixture / (cli + '-receipt.json')).write_text(json.dumps(receipt, indent=2) + '\n')
             print(json.dumps({'cli': cli, 'passed': True, 'fixture': str(fixture)}), flush=True)
