@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- Keep explicit models and other ordinary settings (Codex `--search` and
+  `--add-dir`, Cursor `--add-dir`, named OpenCode agents and display options)
+  when recovering Codex, Cursor and OpenCode conversations, instead of
+  requiring manual recovery; approval and trust automation is left out (#318).
 - Follow in-process Cursor Agent chat switches for session recovery by
   observing the chat store the running agent holds open, limited to the
   recorded project (#318).

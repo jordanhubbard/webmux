@@ -42,7 +42,7 @@ func TestUnrestorableConfigurationDoesNotSilentlyBroadenNativePolicy(t *testing.
 
 func TestUnsupportedNativeOptionsRequireManualRecoveryBeforeAction(t *testing.T) {
 	for _, cli := range []string{"codex", "cursor", "opencode"} {
-		for _, flags := range [][]string{{"--future-policy", "restricted"}, {"--model", "custom"}, {"--strict-config=false"}, {"--profile", ""}} {
+		for _, flags := range [][]string{{"--future-policy", "restricted"}, {"--model"}, {"--strict-config=false"}, {"--profile", ""}} {
 			args := append([]string{cli}, flags...)
 			cfg := captureNativeInvocationConfiguration(cli, args)
 			if cfg.ManualReason == "" {
@@ -80,6 +80,52 @@ func TestNativeResumeSelectorsAreReplacedWithoutDiscardingFollowingRestrictions(
 	} {
 		if _, err := nativeResumeOptions(tc.cli, tc.args); err == nil {
 			t.Fatal("invalid selector or sandbox silently discarded", tc.cli, tc.args)
+		}
+	}
+}
+
+// Explicit models and other non-policy settings are resumed as given; approval
+// and trust automation is left out, so the resumed CLI asks instead; initial
+// prompts are not replayed.
+func TestResumeKeepsModelAndOrdinarySettings(t *testing.T) {
+	for _, tc := range []struct {
+		cli            string
+		original, want []string
+	}{
+		{"codex", []string{"codex", "-m", "gpt-6.1-sol", "--search", "--add-dir", "../shared", "--add-dir=/tmp/out", "--oss", "--local-provider", "ollama", "--approve-for-me", "--dangerously-bypass-hook-trust", "fix the build"},
+			[]string{"-m", "gpt-6.1-sol", "--search", "--add-dir", "../shared", "--add-dir", "/tmp/out", "--oss", "--local-provider", "ollama"}},
+		{"cursor", []string{"cursor-agent", "--model", "claude-opus-4-8[context=1m,effort=high]", "--add-dir", "../docs", "--plugin-dir", "plugins", "-f", "--force", "--auto-review", "--approve-mcps", "--trust", "--mode", "plan"},
+			[]string{"--model", "claude-opus-4-8[context=1m,effort=high]", "--add-dir", "../docs", "--plugin-dir", "plugins", "--mode", "plan"}},
+		{"opencode", []string{"opencode", "-m", "nvidia-inference/switchyard/openai/gpt-5.6-sol", "--agent", "build", "--mini", "--no-replay", "--replay-limit", "20", "--print-logs", "--log-level", "WARN", "--prompt", "start over"},
+			[]string{"-m", "nvidia-inference/switchyard/openai/gpt-5.6-sol", "--agent", "build", "--mini", "--no-replay", "--replay-limit", "20", "--print-logs", "--log-level", "WARN"}},
+	} {
+		got, err := nativeResumeOptions(tc.cli, tc.original)
+		if err != nil || !reflect.DeepEqual(got, tc.want) {
+			t.Fatalf("%s: %q %v", tc.cli, got, err)
+		}
+		cfg := captureNativeInvocationConfiguration(tc.cli, tc.original)
+		activity := &Activity{CLI: tc.cli, NativeSessionID: "08bbfe0e-d31c-4cb6-9d18-546eea56a08c", NativeEvidence: "process-state", Configuration: cfg}
+		if tc.cli == "opencode" {
+			activity.NativeSessionID = "ses_12345678"
+		}
+		if cfg.ManualReason != "" || !activity.NativeRecoverable() {
+			t.Fatalf("%s: supported settings still require manual recovery: %s", tc.cli, cfg.ManualReason)
+		}
+	}
+	for _, tc := range []struct {
+		cli  string
+		args []string
+	}{
+		{"opencode", []string{"opencode", "--agent", "../escape"}},
+		{"opencode", []string{"opencode", "--port", "4096"}},
+		{"codex", []string{"codex", "-C", "/elsewhere"}},
+		{"codex", []string{"codex", "--worktree"}},
+		{"codex", []string{"codex", "-i", "screenshot.png"}},
+		{"cursor", []string{"cursor-agent", "--workspace", "/elsewhere"}},
+		{"cursor", []string{"cursor-agent", "--force=true"}},
+	} {
+		if _, err := nativeResumeOptions(tc.cli, tc.args); err == nil {
+			t.Fatalf("%s: silently accepted %v", tc.cli, tc.args)
 		}
 	}
 }

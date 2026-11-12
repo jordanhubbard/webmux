@@ -131,7 +131,7 @@ and `configuration-a7b9d883-cfb0-4707-9013-2c33f86e0deb/manifest.json`
 | --- | --- | --- |
 | Durable owner-scoped activity and log references | Broker tests persist before shutdown; native VM SIGKILL/reboot retain activity and original transcript references | Remote/managed lifecycle qualification |
 | Real shell command and directory capture | Bash/Zsh PTY probes preserve exit status; real WebMux local workflow records a long-running command, arguments and directory | Retain the separate Zsh probe in the qualification harness |
-| Native conversation identity | All four installed CLIs recover a marker through WebMux provider loss and native recovery action; new native assistant records prove continuity; native preflight rejects another project; configuration-root and named-profile qualification below | Remaining invocation-specific settings; OpenCode switches await upstream ([details](#opencode-conversation-switches-2026-11-12)) |
+| Native conversation identity | All four installed CLIs recover a marker through WebMux provider loss and native recovery action; new native assistant records prove continuity; native preflight rejects another project; configuration-root and named-profile qualification below | Codex `-c` overrides and options that change the working root or worktree stay manual; OpenCode switches await upstream ([details](#opencode-conversation-switches-2026-11-12)) |
 | Safe retained history | Bounded suffix, ANSI/OSC/C1 stripping, rotation and path controls; real local recovery retains the marker in API/UI history; redraw blank rows compacted only in the preview | Additional lifecycle/transport qualification |
 | Surviving providers | Local, SSH and native mosh reconnect/restart/SIGKILL preserve provider and pane PIDs and job count; independent Linux user scopes avoid service-cgroup cleanup | Managed-provider qualification |
 | Recovery preview and continuation | Owner-scoped API and browser actions; separate replay/handoff approval; broker tests for opt-in native auto resume and uncertain-outcome exclusion | Managed lifecycle integration and additional CLI lifecycle cases |
@@ -738,9 +738,41 @@ Codex, Cursor and OpenCode also reject unknown or incomplete recovery options
 rather than silently dropping them. Exact native selectors are replaced;
 supported restrictions retain their original values. Unknown sandbox values
 require manual recovery. Explicit bypass modes are omitted. Settings without a
-qualified preservation path, including explicit model overrides in these three
-adapters, receive a manual explanation in the preview. This leaves the original
-CLI launch unchanged; it limits the proposed recovery action.
+qualified preservation path receive a manual explanation in the preview. This
+leaves the original CLI launch unchanged; it limits the proposed recovery
+action.
+
+Since 2026-11-12 these settings are also resumed as given:
+
+| CLI | Kept | Left out (the resumed CLI asks instead) | Still manual |
+| --- | --- | --- | --- |
+| Codex | `-m`/`--model`, `--search`, `--add-dir` (repeatable), `--oss`, `--local-provider` | `--approve-for-me`, `--dangerously-bypass-hook-trust` | `-c`/`--config`, `-C`/`--cd`, `--worktree`, `-i`/`--image`, `--remote` |
+| Cursor | `--model` (including bracket parameters), `--add-dir`, `--plugin-dir` | `-f`/`--force`, `--auto-review`, `--approve-mcps`, `--trust` | `--workspace`, `--worktree`, `--api-key`, `--header`, `--endpoint` |
+| OpenCode | `-m`/`--model`, any named `--agent`, `--mini`, `--no-replay`, `--replay-limit`, `--print-logs`, `--log-level` | `--prompt` (never replayed) | `--port`, `--hostname`, `--mdns`, `--cors`, `--fork` |
+
+A named OpenCode agent is resumed by name, as Claude's named agents are; its
+definition stays in the user's configuration. Options that change the working
+root or start a new worktree stay manual because recovery validates the
+recorded project. The preflight still requires each kept option to appear in
+the installed CLI's own help.
+
+Qualified on 2026-11-12 through real WebMux provider loss and the native
+recovery action (`scripts/qualify-recovery-configuration.py --model CLI=MODEL`):
+
+| CLI | Model given | Native record after recovery |
+| --- | --- | --- |
+| Codex 0.167.2 | `-m gpt-6-luna` (not the configured default) | Resumed command kept `-m gpt-6-luna`; the rollout's new turn records `gpt-6-luna` |
+| Cursor 2026.11.11-b912975 | `--model gpt-5.2` (not the default) | Resumed command kept it; the chat records `lastUsedModel: gpt-5.2` |
+| OpenCode 1.19.5 | `-m nvidia-inference/aws/anthropic/bedrock-claude-sonnet-4-6` | Resumed command kept it, but OpenCode used the conversation's existing model for both the original and the recovered launch: with `--session`, this version does not switch a conversation's model |
+
+Each resumed conversation answered with its earlier marker plus a fresh nonce.
+Receipts: `configuration-b8385b09-1bb6-42fc-9de2-c2d1d84994d0` (all three, with
+Codex and OpenCode on their default models) and
+`configuration-5a2f913a-093d-400e-9864-22ea7025813a` (Codex and OpenCode on
+non-default models), under `~/.local/share/webmux/recovery-qualification/`.
+WebMux SHA-256
+`2e140579232cc5b2f18a0462916d09ecbf500934ad125c6d501c623f015b1252`; harness
+SHA-256 `2e384fd8414dce22e63edcc68bf626d244ea6460411e043e765b62fbb4154f53`.
 
 After this change, all four named CLIs passed real provider loss, explicit
 native recovery and fresh remembered-marker responses with original supported

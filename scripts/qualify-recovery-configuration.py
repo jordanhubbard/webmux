@@ -34,12 +34,16 @@ def main():
     parser.add_argument('--claude-hooks', action='store_true', help='qualify scoped native SessionStart observations through clear/resume and recovery')
     parser.add_argument('--claude-options', action='store_true', help='qualify named model/agent and tool-policy options on a fresh synthetic Claude conversation')
     parser.add_argument('--cursor-switch', action='store_true', help='qualify observing an in-process Cursor chat switch through its open chat store, then recovery of the switched chat')
+    parser.add_argument('--model', action='append', default=[], metavar='CLI=MODEL', help='launch codex, cursor or opencode with this explicit model and require recovery to keep it')
     parser.add_argument('--trust-owned-project', action='store_true', help='approve native trust only for the new, verified --claude-options fixture project')
     args = parser.parse_args()
     if args.trust_owned_project and not args.claude_options:
         parser.error('--trust-owned-project requires --claude-options')
     if args.claude_hooks and args.claude_options:
         parser.error('choose either --claude-hooks or --claude-options per run')
+    models = dict(item.split('=', 1) for item in args.model)
+    if not set(models) <= {'codex', 'cursor', 'opencode'}:
+        parser.error('--model accepts codex, cursor or opencode')
     if args.cursor_switch and (args.cli or ['cursor']) != ['cursor']:
         parser.error('--cursor-switch qualifies only --cli cursor')
     qualifier_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
@@ -249,6 +253,9 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
             ident = entry['native_session_id']
             daemon_before = daemon_identity() if cli == 'codex' and args.codex_daemon else None
             options = {'codex': ['codex', 'resume', ident, '--sandbox', 'read-only', '--no-daemon', '--no-alt-screen'], 'claude': ['claude', '--resume', ident, '--safe-mode', '--tools', ''], 'cursor': ['cursor-agent', '--resume', ident, '--mode', 'ask', '--sandbox', 'enabled'], 'opencode': ['opencode', '--session', ident, '--pure', '--agent', 'plan']}[cli]
+            if cli in models:
+                # Short form for Codex and OpenCode, long form for Cursor.
+                options.extend(['--model' if cli == 'cursor' else '-m', models[cli]])
             if cli == 'codex' and args.codex_daemon:
                 options.remove('--no-daemon')
             elif cli == 'codex':
@@ -476,7 +483,7 @@ setTimeout(()=>{clearTimeout(timer);w.close()},1500)});
                 assert after and after.get('native_evidence') == 'launch-selector', 'shared-daemon case was incorrectly promoted to observed process state'
 
             assert api(path, action)['outcome'] == 'consumed'
-            receipt = {'cli': cli, 'passed': True, 'session_id': session_id, 'native_session_id': ident, 'before': before, 'after': after, 'nonce': nonce, 'new_assistant_answer': answer, 'controller_ambient_roots': {key: environment[key] for key in roots[cli]}, 'native_hooks_left_untrusted': sorted(hook_choices), 'in_process_switches': switches, 'named_agent_profile': profile_name, 'agent_profile_sha256': profile_sha256, 'explicit_model': profile_model, 'profile_marker': profile_marker, 'shared_daemon_before': daemon_before, 'shared_daemon_after': daemon_after, 'scope': 'Explicit selected conversation continuation; interactive switches are not verified' if daemon_before else 'In-process Cursor chat switch observed through the open chat store, then continuation of the switched chat' if cli == 'cursor' and args.cursor_switch else 'Original root and profile continuation'}
+            receipt = {'cli': cli, 'passed': True, 'session_id': session_id, 'native_session_id': ident, 'before': before, 'after': after, 'nonce': nonce, 'new_assistant_answer': answer, 'controller_ambient_roots': {key: environment[key] for key in roots[cli]}, 'native_hooks_left_untrusted': sorted(hook_choices), 'in_process_switches': switches, 'named_agent_profile': profile_name, 'agent_profile_sha256': profile_sha256, 'profile_marker': profile_marker, 'shared_daemon_before': daemon_before, 'shared_daemon_after': daemon_after, 'explicit_model': models.get(cli) or profile_model, 'scope': 'Explicit selected conversation continuation; interactive switches are not verified' if daemon_before else 'In-process Cursor chat switch observed through the open chat store, then continuation of the switched chat' if cli == 'cursor' and args.cursor_switch else 'Original root and profile continuation'}
             receipts.append(receipt)
             (fixture / (cli + '-receipt.json')).write_text(json.dumps(receipt, indent=2) + '\n')
             print(json.dumps({'cli': cli, 'passed': True, 'fixture': str(fixture)}), flush=True)
