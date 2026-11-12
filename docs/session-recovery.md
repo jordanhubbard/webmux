@@ -1617,8 +1617,46 @@ through its own wrapper, and checks that the daemon log lands in the private
 `OPENRIG_HOME`. The behavior results stand; the receipts above predate the
 fix.
 
-Not covered: Codex seats on an SSH host, which use Rig's relay-identity attach
-when the installed Rig supports it. Seats run under that path are untested.
+### Codex seats on an SSH host (2026-11-11)
+
+Codex seats differ in how they enrol. When the installed Rig supports it,
+WebMux attaches them with Rig's relay identity (`--relay-ssh-host`,
+`--relay-tmux-session`). The launcher first creates the remote tmux session
+over a separate SSH call, then runs `ssh -tt` that only attaches to it. A
+relaunch runs the same create-if-missing step, so it reattaches a surviving
+Codex or starts one new conversation. Native resume of Codex is manual-only
+(shared-daemon mode), so the fallback is the same as for Claude.
+
+`scripts/qualify-recovery-rig-ssh.py --runtime codex` passed on 2026-11-11
+with Rig 0.6.14 (9d0200f3) on both hosts and the Codex 0.167.0 release binary
+(`codex-aarch64-unknown-linux-musl`, archive SHA-256
+`843489acb4d4b1079745c36b03c5963b887b83155af208fd53584e33ee8eb281`) on the
+guest, logged in to the guest's own ChatGPT account. The seat's launcher
+used the relay-identity attach. It counts `codex` processes whose working
+directory is the fixture workspace.
+
+| Phase | Result |
+| --- | --- |
+| Healthy guest: controller restart and SIGKILL | Reattached (startup 1.6–1.7 s); same Codex process |
+| Guest hung past the seat's SSH keepalive | Startup 1.5 s, reattached. SSH gave up after 59 s; the message then said the terminal had ended; reconnect refused with the way back. After resume, starting the agent again reattached the same viewer and the same Codex process |
+| Local seat lost, guest untouched | `managed-unavailable` naming the host; three reconnects refused (0.8 s each); starting the agent again reattached the same Codex process |
+| Actual guest reboot (boot ID `733efd68-de1d-47c8-b60d-707f26f29847` → `b78163b7-85e6-4047-af35-f6ae34b41049`) | No Codex or remote seat survived; three reconnects refused and started nothing; starting the agent again started exactly one new Codex in the same viewer |
+| Guest powered off | Startup 0.9 s; `managed-unavailable`; reconnect refused; starting the agent again failed in 0.4 s with `Cannot reach … over SSH: … Connection refused. Nothing was started.` and created no seat |
+
+Every phase kept the pre-interruption transcript, and the run used the
+private Rig home (the installed OpenRig instance was unchanged). Receipt:
+`~/.local/share/webmux/recovery-qualification/rig-ssh-bc479669baeb/receipt.json`.
+WebMux SHA-256
+`3787709fb680e33578e4dfe438e53737016ca68c0e4185e423173672c9747297` (main
+`4a53ac7`); harness SHA-256
+`90be82b41276197d23fc1ec1ecc5116f807078bfe4f64970b4799f87b398f2de`.
+
+The same harness and binary then reran the Claude Code 2.1.322 seat with the
+isolation fix: every phase passed again (startup 0.5–1.1 s, SSH gave up 57 s
+into the hang, boot ID `54881e47-2f01-47ba-9331-7332acefacfe` →
+`d8bf273e-fc96-4201-82f3-82c72559a24c`), with the installed OpenRig instance
+unchanged. Receipt:
+`~/.local/share/webmux/recovery-qualification/rig-ssh-50cc7ffc940b/receipt.json`.
 
 ## Sources
 

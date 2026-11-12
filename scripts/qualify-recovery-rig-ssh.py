@@ -46,6 +46,7 @@ def main():
     parser.add_argument('--binary', type=Path, required=True, help='WebMux build for this machine')
     parser.add_argument('--rig-cli', type=Path, required=True, help='bin-wrapper.js of the qualified Rig release on this machine')
     parser.add_argument('--rig-node', type=Path, required=True, help='node executable for that Rig release')
+    parser.add_argument('--runtime', choices=['claude-code', 'codex'], default='claude-code', help='coding CLI to run on the guest')
     args = parser.parse_args()
     repo = Path(__file__).resolve().parents[1]
     root = args.vm_root.resolve()
@@ -82,7 +83,12 @@ def main():
     assert guest('hostname') == 'webmux-recovery-qa', 'Refusing a host that is not the disposable guest'
     assert guest('test -f /var/tmp/webmux-qualification-ready && echo ok') == 'ok'
     assert guest('tmux -V') == 'tmux 3.4'
-    assert json.loads(guest(GUEST_HOME + '/.local/bin/claude auth status --json'))['loggedIn'], 'Authenticate the guest Claude first'
+    cli_name = 'codex' if args.runtime == 'codex' else 'claude'
+    cli_path = GUEST_HOME + '/.local/bin/' + cli_name
+    if args.runtime == 'codex':
+        assert guest(cli_path + ' login status 2>&1').startswith('Logged in'), 'Authenticate the guest Codex first'
+    else:
+        assert json.loads(guest(cli_path + ' auth status --json'))['loggedIn'], 'Authenticate the guest Claude first'
     # WebMux requires `rig` on the execution host; expose the qualified build.
     assert guest(shlex.join([GUEST_NODE, GUEST_RIG, '--version'])) == RIG_VERSION
     guest('test -x ~/.local/bin/rig || { printf "#!/bin/sh\\nexec %s %s \\"\\$@\\"\\n" > ~/.local/bin/rig && chmod 755 ~/.local/bin/rig; }' % (GUEST_NODE, GUEST_RIG))
@@ -120,8 +126,8 @@ def main():
 
     record_path = p / 'receipt.json'
     record = {'passed': False, 'scope': __doc__.strip().splitlines()[0], 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
-              'qualifier_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'rig': RIG_VERSION,
-              'guest_claude': guest(GUEST_HOME + '/.local/bin/claude --version'), 'fixture': str(p), 'guest_fixture': g, 'phases': []}
+              'qualifier_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'rig': RIG_VERSION, 'runtime': args.runtime,
+              'guest_cli': guest(cli_path + ' --version'), 'fixture': str(p), 'guest_fixture': g, 'phases': []}
 
     def save():
         record_path.write_text(json.dumps(record, indent=2) + '\n')
@@ -139,8 +145,8 @@ def main():
         return subprocess.run([rig_binary, *a], env=env, capture_output=True, text=True, timeout=60)
 
     def clis():
-        """Claude processes running in this fixture's workspace on the guest."""
-        out = guest('for pid in $(pgrep -x claude); do [ "$(readlink /proc/$pid/cwd)" = ' + shlex.quote(workspace) + ' ] && echo $pid; done; true')
+        """Coding-CLI processes running in this fixture's workspace on the guest."""
+        out = guest('for pid in $(pgrep -x ' + cli_name + '); do [ "$(readlink /proc/$pid/cwd)" = ' + shlex.quote(workspace) + ' ] && echo $pid; done; true')
         return sorted(int(x) for x in out.split())
 
     def remote_seats():
@@ -194,7 +200,7 @@ def main():
             controller.wait(timeout=20)
         controller = None
 
-    spec = {'provider': 'rig', 'mode': 'new', 'projectName': 'wmqa-' + tag[:8], 'name': 'guest', 'host': alias, 'workspace': workspace, 'runtime': 'claude-code'}
+    spec = {'provider': 'rig', 'mode': 'new', 'projectName': 'wmqa-' + tag[:8], 'name': 'guest', 'host': alias, 'workspace': workspace, 'runtime': args.runtime}
     sid = target = None
 
     def view():
