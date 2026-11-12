@@ -47,7 +47,7 @@ Current evidence and limits:
 | Rig conversation after reboot | Passed on a Linux guest with Rig 0.6.14 (9d0200f3)/Claude 2.1.322: host-reboot detection, approved Resume through Rig, once-only receipt, original settings/roots and a fresh remembered-marker answer. Startup now starts the Rig manager before restoring managed viewers. |
 | Managed shell job after reboot | Real Agent Deck shell-job guest reboot passed: manager/project/log identity retained, explicit fallback, no automatic restart and no duplicate execution after reconnects. This is not native coding-conversation recovery. |
 | Remote managed-host failure | Passed for Agent Deck 1.16.34 remotes and `--ssh` sessions against a hung, rebooted and powered-off guest: clear fallback naming the unreachable remote, bounded startup, unaffected local sessions, retained transcripts, no duplicate execution. Surviving remote sessions now reattach after a WebMux restart. Remote native resume stays with the execution host's own manager (owner decision). |
-| Rig seats on an SSH host | Passed for Rig 0.6.14 with Claude Code 2.1.322 on a hung, rebooted and powered-off guest, and with the local seat lost: truthful fallback naming the host, refused automatic reconnection, retained transcripts, no duplicate CLI. Starting the agent again reattaches a surviving CLI, starts one new conversation after a reboot, and starts nothing when the host is unreachable. |
+| Rig seats on an SSH host | Passed for Rig 0.6.14 with Claude Code 2.1.322 and (relay-identity attach) Codex 0.167.0 on a hung, rebooted and powered-off guest, and with the local seat lost: truthful fallback naming the host, refused automatic reconnection, retained transcripts, no duplicate CLI. Starting the agent again reattaches a surviving CLI, starts one new conversation after a reboot, and starts nothing when the host is unreachable. |
 | Native managed conversation after reboot | Passed for guest-native Agent Deck 1.16.34/Claude 2.1.322 on a Linux guest: same native conversation, project, roots and launch policy after an actual reboot, a fresh remembered-marker answer, and once-only recovery across reconnects and controller reconstruction. Early input loss on Agent Deck attach was an upstream startup probe, now mitigated ([#325](https://github.com/jordanhubbard/webmux/issues/325)). |
 
 The implementation/preparatory-harness checkpoint `3afb3bf` passed every hosted
@@ -63,8 +63,10 @@ Remaining #318 work, in order:
    coverage. Remote managed-host failure fallback is qualified
    ([details](session-recovery.md#remote-managed-host-failure-2026-11-10)), as
    are Claude Code Rig seats on SSH hosts
-   ([details](session-recovery.md#rig-seats-on-an-ssh-host-2026-11-10)); Codex
-   seats on SSH hosts (relay-identity attach) are not. Remote native resume is
+   ([details](session-recovery.md#rig-seats-on-an-ssh-host-2026-11-10)) and
+   Codex Rig seats on SSH hosts (relay-identity attach,
+   [details](session-recovery.md#codex-seats-on-an-ssh-host-2026-11-11)).
+   Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
 2. Codex in default shared-daemon mode is manual-only by owner decision: no
