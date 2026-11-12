@@ -1604,6 +1604,19 @@ WebMux SHA-256
 are retained: one before fix 3, and one whose own check rejected the correct
 "Retained logs are preserved" wording.
 
+**Isolation correction (2026-11-11).** The runs above found `rig` on the
+workstation's PATH, which was WebMux's installed Rig wrapper. That wrapper
+pins `HOME` and `OPENRIG_HOME` to the installed OpenRig instance. The Rig
+database stayed private (`--db`), but the daemon wrote its log, shutdown and
+activity-endpoint files and the `wmqa*` project and transcript folders into
+the installed instance. No other Rig daemon was running, and the installed
+database was unchanged. The stray folders were moved to
+`~/.local/share/webmux/recovery-qualification/rig-ssh-installed-instance-leak/`.
+The harness now requires `--rig-cli` and `--rig-node`, runs that release
+through its own wrapper, and checks that the daemon log lands in the private
+`OPENRIG_HOME`. The behavior results stand; the receipts above predate the
+fix.
+
 Not covered: Codex seats on an SSH host, which use Rig's relay-identity attach
 when the installed Rig supports it. Seats run under that path are untested.
 

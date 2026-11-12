@@ -52,8 +52,12 @@ than assuming an older checkpoint's green checks apply to new source.
    (`scripts/qualify-recovery-remote-managed.py`, Mac controller + guest):
    remote native resume is manual-only by owner decision. Claude Code Rig seats
    on SSH hosts passed on 2026-11-10 (`scripts/qualify-recovery-rig-ssh.py`;
-   the guest has a `~/.local/bin/rig` wrapper for the qualified build); Codex
-   seats on SSH hosts (relay-identity attach) remain untested. Upstream Agent
+   the guest has a `~/.local/bin/rig` wrapper for the qualified build; pass
+   `--rig-cli`/`--rig-node` for the Mac's Rig release, never the installed
+   `rig` wrapper, which pins the installed OpenRig instance); Codex
+   seats on SSH hosts (relay-identity attach) remain untested. The guest now
+   has the Codex 0.167.0 release binary in `~/.local/bin/codex`; check
+   `codex login status` there before use. Upstream Agent
    Deck reports: #3107 (silent empty remote list), #3108 (forward ownership
    inspect). Rig across an actual reboot passed on 2026-11-10
    (`scripts/qualify-recovery-rig-vm.py`; the guest now has Rig 0.6.14

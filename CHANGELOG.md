@@ -5,6 +5,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Security
+- Require Go 1.27.4 to address the net/http MaxBytesReader header race
+  (GO-2026-6859) reported by the dependency audit.
+
 ## [1.4.5] - 2026-11-06
 
 ### Changed
