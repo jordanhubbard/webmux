@@ -108,9 +108,9 @@ observations and older records without provenance remain available only for an
 explicit exact-session choice. Native hooks can stop reporting when settings
 change, so their observations do not acquire automatic execution confidence.
 Codex (direct process) and Cursor now have process-state observers. OpenCode
-keeps every conversation in one database, so its open files cannot identify
-the current one; it still needs an active-conversation observer before its
-automatic recovery can be qualified.
+1.19.5 exposes no selected conversation outside its interface
+([details](#opencode-conversation-switches-2026-11-12)), so OpenCode recovery
+stays an explicit choice of the launched conversation.
 
 On 2026-11-09, the provenance qualification passed through real provider loss,
 explicit native continuation and a new remembered-marker assistant response for
@@ -131,7 +131,7 @@ and `configuration-a7b9d883-cfb0-4707-9013-2c33f86e0deb/manifest.json`
 | --- | --- | --- |
 | Durable owner-scoped activity and log references | Broker tests persist before shutdown; native VM SIGKILL/reboot retain activity and original transcript references | Remote/managed lifecycle qualification |
 | Real shell command and directory capture | Bash/Zsh PTY probes preserve exit status; real WebMux local workflow records a long-running command, arguments and directory | Retain the separate Zsh probe in the qualification harness |
-| Native conversation identity | All four installed CLIs recover a marker through WebMux provider loss and native recovery action; new native assistant records prove continuity; native preflight rejects another project; configuration-root and named-profile qualification below | OpenCode interactive session switches (Codex, Claude and Cursor switches are observed) and remaining invocation-specific settings |
+| Native conversation identity | All four installed CLIs recover a marker through WebMux provider loss and native recovery action; new native assistant records prove continuity; native preflight rejects another project; configuration-root and named-profile qualification below | Remaining invocation-specific settings; OpenCode switches await upstream ([details](#opencode-conversation-switches-2026-11-12)) |
 | Safe retained history | Bounded suffix, ANSI/OSC/C1 stripping, rotation and path controls; real local recovery retains the marker in API/UI history; redraw blank rows compacted only in the preview | Additional lifecycle/transport qualification |
 | Surviving providers | Local, SSH and native mosh reconnect/restart/SIGKILL preserve provider and pane PIDs and job count; independent Linux user scopes avoid service-cgroup cleanup | Managed-provider qualification |
 | Recovery preview and continuation | Owner-scoped API and browser actions; separate replay/handoff approval; broker tests for opt-in native auto resume and uncertain-outcome exclusion | Managed lifecycle integration and additional CLI lifecycle cases |
@@ -238,8 +238,8 @@ The native identity tests must also cover changing conversations inside one CLI
 process. An initially selected conversation ID is not sufficient evidence after
 the user switches sessions. Codex and Cursor now recheck their owning
 process's open native state instead of permanently caching the first selector,
-and Claude has a scoped hook observer. OpenCode still needs a session-switch
-observation. Ambiguity requires an explicit fallback,
+and Claude has a scoped hook observer. OpenCode exposes no switch to observe
+([details](#opencode-conversation-switches-2026-11-12)). Ambiguity requires an explicit fallback,
 not a timestamp-based guess.
 
 Remaining native integration includes observing active-session changes in each
@@ -566,6 +566,28 @@ With process-state evidence a Cursor conversation becomes eligible for the
 owner's opt-in automatic native resume, like direct-process Codex. Earlier
 failed attempts in this run are retained: two harness picker-handling errors
 and one that checked evidence before the resumed agent had opened its store.
+
+### OpenCode conversation switches (2026-11-12)
+
+Probed with OpenCode 1.19.5 (Homebrew, macOS) on a synthetic conversation in
+its fixture project, launched with `--port` and a private server password so
+its own API and `/event` stream could be watched. Switching to a second
+synthetic conversation with the TUI's `/sessions` picker produced no `/event`
+bus event, no log line and no change to its state files. All conversations
+share one `opencode.db`, so open files cannot identify the current one. Its
+`/api/session/active` endpoint lists only conversations currently running a
+turn. The first observable sign of the switch is the next prompt
+(`message=loop session.id=…` in the shared log, message events on `/event`).
+
+Decision (owner, 2026-11-12): do not add last-prompt tracking, which would
+change how WebMux launches OpenCode and still not show the selected
+conversation. OpenCode recovery continues to offer the launched conversation
+as an explicit choice (`launch-selector`, never automatic). Upstream request:
+[anomalyco/opencode#54329](https://github.com/anomalyco/opencode/issues/54329),
+which asks for a TUI session-selected event and a query for attached TUIs'
+open sessions; WebMux's external-client use case was added there. Newer
+OpenCode TUI plugins can read the current route client-side; revisit when a
+supported OpenCode release exposes the selection to an external client.
 
 ## Scoped Claude conversation observations
 

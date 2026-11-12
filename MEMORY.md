@@ -50,8 +50,10 @@ than assuming an older checkpoint's green checks apply to new source.
 1. Finish native active-session/policy/profile and platform qualification.
    Cursor chat switches are observed from the agent's open chat store and
    passed on 2026-11-12 (`qualify-recovery-configuration.py --cli cursor
-   --cursor-switch`, Cursor 2026.11.11); OpenCode switches remain unobserved
-   (one shared database, so no per-session open file).
+   --cursor-switch`, Cursor 2026.11.11). OpenCode 1.19.5 exposes no selected
+   conversation (no event, log line or file); owner decision 2026-11-12: keep
+   it an explicit choice, no last-prompt tracking; revisit when
+   anomalyco/opencode#54329 ships.
    Remote managed-host failure fallback passed on 2026-11-10
    (`scripts/qualify-recovery-remote-managed.py`, Mac controller + guest):
    remote native resume is manual-only by owner decision. Claude Code Rig seats
