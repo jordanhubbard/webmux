@@ -1861,6 +1861,41 @@ Local recovery race tests and vet also passed. These controls prove the EOF
 dependency and compatible framing improvement; they do not establish what
 caused the original hosted failure.
 
+## Independent Windows ConPTY owner (2026-11-12)
+
+The private `nativeprovider` primitive owns a real ConPTY/job in a detached
+process, with a short-lived bootstrap between it and the controller. An
+account/session-scoped protected Windows mutex authorizes creation independently
+of the identity file. Missing state, an unreachable endpoint, a lost startup
+reply and concurrent callers cannot authorize another job while its owner lives.
+Authenticated framed sockets carry attach, input, resize and explicit stop.
+Closing a viewer detaches it. Launch environment and keys stay in private pipes;
+the account-owned record contains identity and a key digest. An immutable helper
+image is cached separately from the controller executable.
+
+Native Windows 11 AMD64 controls passed with no skips or forced fixture cleanup:
+five concurrent creators and lost bootstrap replies produced one Node/ConPTY
+job; viewer detach and controller/job termination preserved the original owner
+and process root; the controller image became replaceable; missing/unreachable
+records refused replacement; abrupt owner death reaped the process root before
+one explicit replacement; and a restrictive outer job refused creation. Resize
+reached the real child's console. A canceled probe wakes an established read,
+while an attached stream survives the end of its handshake context.
+
+The expanded run passed seven cases in 4.969 seconds. Native test executable
+SHA-256: `d0f8ce39d60b9c59bbce7a29cfec825a5e4c997ddb5fd1192412f8477ce8b89a`.
+Private evidence is `provider-v3-native.log` and `provider-v3-native-receipt.json`
+in the existing Windows qualification directory; lifecycle rows retain the
+tested owner/process transitions. Earlier native runs and source backup are
+also retained. Local affected race suites and Windows vet passed.
+
+This is a provider primitive, not enabled Windows local-terminal recovery.
+`recovery.EnsureProvider` still fails explicitly. Provider/shell integration,
+replay safety, full-screen restoration and UI/native coding-session qualification
+across restart/update/crash/reboot remain open under #318. The bounded one-MiB
+raw history tail is not a complete terminal-screen snapshot. Replacing a fixture
+controller image does not qualify an actual application update.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
@@ -1872,5 +1907,7 @@ caused the original hosted failure.
 - [Mosh screen-state protocol](https://mosh.org/mosh-paper-draft.pdf)
 - [Windows console modes](https://learn.microsoft.com/en-us/windows/console/setconsolemode)
 - [Windows console input-buffer discard](https://learn.microsoft.com/en-us/windows/console/flushconsoleinputbuffer)
+- [Windows process creation and breakaway flags](https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags)
+- [Windows job ownership and kill-on-close](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)
 
 - [Agent Deck ownership CLI source at the installed revision](https://github.com/asheshgoplani/agent-deck/blob/f36e77d6170b8d8b54f50c960c3f16e8a2c5df19/cmd/agent-deck/session_ownership_cmd.go)

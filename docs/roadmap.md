@@ -78,7 +78,11 @@ Remaining #318 work, in order:
    ([scope and remaining work](session-recovery.md#windows-native-baseline-2026-11-12)).
    The Windows recovery worker now passes native ConPTY input-handoff,
    cancellation and once-only controls; durable provider/shell integration
-   remains open ([worker scope](session-recovery.md#windows-recovery-worker-2026-11-12)). Remote native resume is
+   remains open ([worker scope](session-recovery.md#windows-recovery-worker-2026-11-12)).
+   An independent Windows ConPTY owner now passes native controller/job-loss,
+   duplicate-creation, resize and explicit-replacement controls; it is not yet
+   connected to local-terminal recovery
+   ([provider scope](session-recovery.md#independent-windows-conpty-owner-2026-11-12)). Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
 2. Codex in default shared-daemon mode is manual-only by owner decision: no
