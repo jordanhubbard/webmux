@@ -86,7 +86,10 @@ Remaining #318 work, in order:
    owner-approved merge of #322 does not close this requirement or cut a release.
 
 [#320](https://github.com/jordanhubbard/webmux/issues/320) tracks intermittent
-hosted SSH/lease/reconnect failures; [#324](https://github.com/jordanhubbard/webmux/issues/324)
+hosted SSH/lease/reconnect failures. The USB-forwarding CLI now waits for remote
+command completion before reporting released connections; real SSH controls
+cover delayed, hung and failed remote cleanup ([details](usb-forwarding.md#verification-and-remaining-work)).
+The separate federation/RDP reconnect failures remain open; [#324](https://github.com/jordanhubbard/webmux/issues/324)
 tracks the intermittent existing fake-launchctl startup timeout. Their open
 status must not be confused with passing checks on this checkpoint.
 

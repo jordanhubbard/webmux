@@ -312,3 +312,46 @@ func TestClosedTransportIsGraceful(t *testing.T) {
 		})
 	}
 }
+
+func TestSSHRelayCloseKeepsProcessOutputDraining(t *testing.T) {
+	inputReader, inputWriter := io.Pipe()
+	outputReader, outputWriter := io.Pipe()
+	defer inputReader.Close()
+	defer outputReader.Close()
+	defer outputWriter.Close()
+	transport := newSSHStdio(inputWriter, outputReader)
+	defer transport.Close()
+	payload := []byte("native-frame")
+	written := make(chan error, 1)
+	go func() { _, err := outputWriter.Write(payload); written <- err }()
+	got := make([]byte, len(payload))
+	if _, err := io.ReadFull(transport, got); err != nil || !bytes.Equal(got, payload) {
+		t.Fatalf("live relay output: %q %v", got, err)
+	}
+	if err := <-written; err != nil {
+		t.Fatal(err)
+	}
+	if err := transport.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := inputReader.Read(make([]byte, 1)); err != io.EOF {
+		t.Fatalf("SSH stdin stayed open: %v", err)
+	}
+	// Pending remote frames must not break the native SSH process's stdout pipe
+	// while it waits for the server's exit-status acknowledgement.
+	go func() { _, err := outputWriter.Write(bytes.Repeat([]byte{42}, maxFrame*3)); written <- err }()
+	select {
+	case err := <-written:
+		if err != nil {
+			t.Fatalf("SSH output pipe closed before process completion: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("SSH output did not drain after relay close")
+	}
+	outputWriter.Close()
+	select {
+	case <-transport.done:
+	case <-time.After(time.Second):
+		t.Fatal("SSH output reader survived process EOF")
+	}
+}

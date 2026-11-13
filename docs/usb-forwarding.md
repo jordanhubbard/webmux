@@ -136,8 +136,14 @@ installation may expose additional listeners; secure those independently.
   local exporter port; it cannot submit arbitrary hosts, ports or shell commands.
 - At most eight TCP streams, 32 KiB frames, socket backpressure and a 15-second
   blocked-write deadline bound resources. Each side enforces the lease and
-  closes the listener, sockets and transport on exit. No payloads, device
-  identifiers or pairing records are logged or saved by the helper.
+  closes the listener, sockets and transport on exit. After cancellation or
+  expiry, the CLI closes relay input while continuing to drain SSH output, and
+  waits up to three seconds for SSH to acknowledge remote-command completion before reporting released connections.
+  If that fails, it stops its dedicated SSH child (with up to three more seconds
+  to join stdio copiers), exits with an error and says remote release was not
+  confirmed. An unreachable worker still has its own lease deadline; check the
+  execution host before assuming its listener has disappeared. No payloads,
+  device identifiers or pairing records are logged or saved by the helper.
 - A reachable exporter and a ready transport are distinct from a driver attaching
   the device. SSH stderr reports prerequisite failures; the helper never labels
   an opaque TCP connection as a healthy iPhone or successful Xcode session.
@@ -153,6 +159,13 @@ SSH server, proves byte transfer through the fixed worker command, and checks
 that an unknown host key is rejected. The fixture builds the WebMux executable,
 executes a separate worker through SSH, and runs the real CLI against a dummy TCP
 exporter, checking binary payloads and listener cleanup after lease expiry.
+Gated remote-EOF controls keep the listener live after local cancellation and
+verify that successful completion waits for remote cleanup, that a hung worker
+fails within the cleanup bound, and that a failed remote exit never reports
+released connections. The SSH fixture supplies the same remote exit-status
+acknowledgement as sshd. These controls reproduce the premature-success ordering
+reported in [#320](https://github.com/jordanhubbard/webmux/issues/320); its separate
+federation and RDP reconnect observations remain open.
 `--known-hosts` selects an explicit verified trust file for isolated environments;
 strict host-key verification remains enabled. Keys and test traffic are disposable
 fixtures, not host or phone credentials.
