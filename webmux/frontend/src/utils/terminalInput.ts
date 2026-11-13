@@ -53,6 +53,12 @@ export function installTerminalQuerySuppressors(term: Terminal): IDisposable {
   const disposables: IDisposable[] = [
     term.parser.registerCsiHandler({ final: 'c' }, () => true),
     term.parser.registerCsiHandler({ prefix: '>', final: 'c' }, () => true),
+    // DECRQM replies are generated independently by every viewer. A late
+    // duplicate can reach the shell after tmux has finished probing, and can
+    // also be broadcast to unrelated sessions. Consume the queries here so
+    // keyboard/paste bytes and ordinary mode changes remain untouched.
+    term.parser.registerCsiHandler({ intermediates: '$', final: 'p' }, () => true),
+    term.parser.registerCsiHandler({ prefix: '?', intermediates: '$', final: 'p' }, () => true),
     term.parser.registerCsiHandler({ final: 'n' }, (params) => {
       const ps = params[0];
       return ps === 5 || ps === 6;

@@ -96,6 +96,11 @@ This does not claim that remote hardware authentication is supported.
   receives the request; an unacknowledged request is retained for up to five
   minutes so reconnecting can open it. Owner-checked acknowledgements prevent
   replay after it has been delivered.
+- Terminal viewers consume ANSI/DEC mode queries (DECRQM) in the parser, alongside
+  the existing identity/status/color query policy. Multiple viewers must not send
+  duplicate replies into a shell or broadcast them into another terminal. Programs
+  use their fallback when these capability queries receive no reply; ordinary
+  mode changes, keyboard input and bracketed paste remain available.
 
 ## Acceptance
 
@@ -104,6 +109,18 @@ loopback callback. Open it through the actual companion, type into its form,
 submit, and prove the callback receiver observed the result. Verify hide/reopen,
 explicit destruction, ownership denial, keyboard/paste, and launch failures.
 Repeat on an SSH host before claiming remote-host qualification.
+
+For [#253](https://github.com/jordanhubbard/webmux/issues/253), a real macOS 27.2
+ARM64 run with Homebrew tmux 3.8 and Chrome 157 reproduced the same DECRQM reply
+from both an earlier viewer and a later viewer, followed by shell-input corruption.
+With parser suppression, both viewers still receive the query but send no reply;
+the full `gh-browser` loopback callback workflow passes. The deterministic
+`terminal-mode-query.spec.ts` control injects split query output at the WebSocket
+boundary, checks both viewers and a broadcast peer, and verifies keyboard/paste
+bytes through real PTY child receipts. It fails against the parent frontend.
+Existing real mouse broadcast/restart/selection controls also pass. These are
+terminal and synthetic callback controls, separate from real identity-provider
+authentication acceptance under #110.
 
 ## Next iterations
 
