@@ -1,6 +1,7 @@
 package recovery
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -49,6 +50,24 @@ func readRPC(input io.Reader, value any) error {
 	}
 	if len(data) > maxRPCBytes {
 		return errors.New("recovery control message exceeds its limit")
+	}
+	if err := json.Unmarshal(data, value); err != nil {
+		return errors.New("invalid recovery control message")
+	}
+	return nil
+}
+
+// Waiting sockets carry one newline-terminated JSON value in each direction.
+// Both old and new writers use json.Encoder, so the delimiter is compatible
+// with existing workers without depending on delivery of an AF_UNIX half-close.
+// The stdio RPC above retains its whole-input, exactly-one-object contract.
+func readWorkerRPC(input io.Reader, value any) error {
+	data, err := bufio.NewReader(io.LimitReader(input, maxRPCBytes+1)).ReadBytes('\n')
+	if len(data) > maxRPCBytes {
+		return errors.New("recovery control message exceeds its limit")
+	}
+	if err != nil {
+		return err
 	}
 	if err := json.Unmarshal(data, value); err != nil {
 		return errors.New("invalid recovery control message")
@@ -158,7 +177,7 @@ func callWaitingWorker(ctx context.Context, endpoint string, request RPCRequest)
 		return RPCResponse{Outcome: "uncertain"}, err
 	}
 	var response RPCResponse
-	err = readRPC(connection, &response)
+	err = readWorkerRPC(connection, &response)
 	if err != nil {
 		response.Outcome = "uncertain"
 		if ctx.Err() != nil {

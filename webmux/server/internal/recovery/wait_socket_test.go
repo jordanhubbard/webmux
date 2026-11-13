@@ -2,11 +2,107 @@ package recovery
 
 import (
 	"context"
+	"encoding/json"
+	"net"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func TestWaitingSocketFramesRejectIncompleteOversizedAndMultipleValues(t *testing.T) {
+	for _, message := range []string{
+		`{"protocol":1}`,
+		"{invalid}\n",
+		"{\"protocol\":1}{\"protocol\":1}\n",
+		strings.Repeat(" ", maxRPCBytes) + "{}\n",
+	} {
+		var request RPCRequest
+		if err := readWorkerRPC(strings.NewReader(message), &request); err == nil {
+			t.Fatal("accepted an incomplete, oversized or ambiguous worker frame")
+		}
+	}
+}
+
+func TestWaitingWorkerReadsCompleteRequestWithoutWriteEOF(t *testing.T) {
+	request := waitingFixture(t)
+	listener, endpoint, cleanup, err := newWaitingSocket()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	finished := make(chan error, 1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_, err := serveWaiting(ctx, listener, testHostSession, testHostKey, "current-worker", preflightAction)
+		finished <- err
+	}()
+	c, err := net.Dial("unix", endpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = c.Close()
+		cancel()
+		_ = listener.Close()
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Error("worker fixture did not stop")
+		}
+	}()
+	_ = c.SetDeadline(time.Now().Add(2 * time.Second))
+	if err := json.NewEncoder(c).Encode(request); err != nil {
+		t.Fatal(err)
+	}
+	// Keep the write side open: a complete newline-delimited request must not
+	// depend on delivery of an AF_UNIX half-close before the worker acts.
+	var response RPCResponse
+	if err := json.NewDecoder(c).Decode(&response); err != nil {
+		t.Fatalf("complete request waited for EOF: %v", err)
+	}
+	if response.Error != "" || response.Outcome != "consumed" {
+		t.Fatal(response)
+	}
+	if err := <-finished; err != nil {
+		t.Fatal(err)
+	}
+	if len(hostSnapshot(t).Consumed) != 1 {
+		t.Fatal("request not consumed exactly once")
+	}
+}
+
+func TestWaitingClientReadsCompleteReplyWithoutReadEOF(t *testing.T) {
+	listener, endpoint, cleanup, err := newWaitingSocket()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	release := make(chan struct{})
+	defer close(release)
+	go func() {
+		c, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer c.Close()
+		var request RPCRequest
+		if readRPC(c, &request) != nil {
+			return
+		}
+		_ = json.NewEncoder(c).Encode(RPCResponse{Protocol: 1, Outcome: "consumed"})
+		<-release // Simulate a delayed read EOF after a complete legacy reply.
+	}()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	response, err := callWaitingWorker(ctx, endpoint, RPCRequest{Protocol: 1})
+	if err != nil || response.Outcome != "consumed" {
+		t.Fatalf("complete reply waited for EOF: %+v %v", response, err)
+	}
+}
 
 func TestWaitingSocketRPCConsumesExactlyOneIntent(t *testing.T) {
 	testWaitingSocketRPC(t, 0)

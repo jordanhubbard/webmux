@@ -83,7 +83,7 @@ func serveWaiting(ctx context.Context, listener *net.UnixListener, id, key, inst
 		_ = connection.SetDeadline(time.Now().Add(20 * time.Second))
 		var request RPCRequest
 		var prepared preparedAction
-		err = readRPC(connection, &request)
+		err = readWorkerRPC(connection, &request)
 		if err == nil {
 			prepared, err = acceptWaitingAction(request, id, key, instance, prepare)
 		}
