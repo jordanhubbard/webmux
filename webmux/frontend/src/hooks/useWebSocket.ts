@@ -109,6 +109,7 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
       ws.onerror = (e) => console.error('WebSocket error', e);
 
       ws.onmessage = (event: MessageEvent<string>) => {
+        if (closedRef.current || wsRef.current !== ws) return;
         try {
           const msg = JSON.parse(event.data) as WebSocketMessage;
           onMessageRef.current(msg);
