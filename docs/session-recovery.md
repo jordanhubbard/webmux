@@ -1903,9 +1903,47 @@ This addresses repeated request side effects, not complete screen restoration.
 This is a provider primitive, not enabled Windows local-terminal recovery.
 `recovery.EnsureProvider` still fails explicitly. Provider/shell integration,
 replay safety, full-screen restoration and UI/native coding-session qualification
-across restart/update/crash/reboot remain open under #318. The bounded one-MiB
-filtered history tail is not a complete terminal-screen snapshot. Replacing a fixture
+across restart/update/crash/reboot remain open under #318. Replacing a fixture
 controller image does not qualify an actual application update.
+
+### Screen mirror qualification (2026-11-13)
+
+Attachments now start from a bounded screen mirror rather than the filtered
+one-MiB output tail. The owner captures the screen and registers the live queue
+at the same output boundary, then sends the snapshot before subsequent output.
+Snapshot encoding runs outside the owner lock. The snapshot has a two-MiB
+encoded limit, history is bounded by viewport width, and incomplete UTF-8,
+controls or synchronized updates refuse attachment without replacing the job.
+The existing viewer count, queue and socket write limits still apply. A private
+`screen-v1` capability prevents a new client from silently accepting an older
+owner's tail-only replay. Mirror-generated terminal responses are discarded.
+
+The mirror uses pinned MIT-licensed `tuios.dev/vt v0.3.2`, with its default
+pure-Go backend. Its ANSI snapshot encoder has known limitations: saved DECSC
+cursor state, left/right margins, protected cells and REP state are not fully
+restored. The retained display filter also omits OSC palette changes and
+hyperlinks. These limitations remain qualification work under #355; this
+primitive is still disabled for normal Windows terminals.
+
+Portable race controls retain a header drawn once after more than a MiB of
+subsequent output, exercise partial/private controls, preserve immutable
+captures and refuse oversized snapshots. Native Windows AMD64 passed nine
+provider cases with zero skips or forced cleanup in 6.234 seconds, including
+real ConPTY screen reattachment and continued input in one surviving process.
+Executable SHA-256:
+`bac213462d9434a6cf21a68165d8c08579ae020addbce31770eda708c2cca70a`.
+Windows ARM64 cross-compilation passed; this is not an ARM64 runtime result.
+
+The captured native output and snapshot were independently rendered in real
+Chrome with the frontend's xterm library. Visible cells, widths, colors,
+attributes, cursor, active buffer and input modes matched before and after
+continued output, and after returning to the underlying normal screen. The
+comparison treats an unoccupied width-one cell and a literal space as the same
+visible blank, while retaining its style. Private evidence includes
+`provider-screen-v2-native.log`, `provider-screen-v2-native-receipt.json`,
+`provider-screen-v2-capture.json` and `provider-screen-v2-xterm-result.json`.
+This is component evidence; authenticated coding-session recovery and actual
+application restart/update/crash/reboot acceptance remain open.
 
 ## Sources
 

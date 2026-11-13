@@ -530,3 +530,59 @@ func TestNativeProviderRefusesRestrictiveControllerJob(t *testing.T) {
 		t.Fatal("restrictive job started a child terminal")
 	}
 }
+
+func TestNativeProviderScreenReattachmentAndContinuedInput(t *testing.T) {
+	permitBreakaway(t)
+	c, counter := config(t)
+	if err := os.WriteFile(c.Launch.Args[0], []byte(`const fs=require('fs');
+fs.appendFileSync(process.argv[2],process.pid+'\n');
+process.stdin.setRawMode(true);process.stdin.resume();
+process.stdin.on('data',data=>{
+ const text=data.toString();
+ if(text.includes('PAINT')) process.stdout.write('\x1b[?1049h\x1b[2J\x1b[H\x1b[31mHEADER_DRAWN_ONCE\x1b[0m\x1b[5;4H\x1b[32m日本語 α\x1b[18;1HBODY_READY\x1b[12;20H\x1b[36m\x1b[?25l\x1b[?2004h\x1b]52;c;c3ludGhldGlj\x07\x1b]777;webmux-browser;private-browser\x07\x1b]777;SCREEN_LIVE_BARRIER\x07');
+ if(text.includes('NEXT')) process.stdout.write('AFTER_SCREEN_REATTACH');
+});
+process.stdout.write('PAINTER_READY:'+process.pid+';');
+`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	i := ensure(t, c)
+	cleanupOwner(t, c, i)
+	first, original := attach(t, c, i)
+	expect(t, original, "PAINTER_READY:")
+	if _, err := first.Write([]byte("PAINT")); err != nil {
+		t.Fatal(err)
+	}
+	expect(t, original, "SCREEN_LIVE_BARRIER\a")
+	expect(t, original, "BODY_READY")
+	if err := first.Close(); err != nil {
+		t.Fatal(err)
+	}
+	second, restored := attach(t, c, i)
+	expect(t, restored, "BODY_READY")
+	view := restored.text()
+	if !strings.Contains(view, "HEADER_DRAWN_ONCE") || !strings.Contains(view, "日本語") {
+		t.Fatalf("reattachment lost native cells: %q", view)
+	}
+	if strings.Contains(view, "private-browser") || strings.Contains(view, "\x1b]52;") || strings.Contains(view, "SCREEN_LIVE_BARRIER") {
+		t.Fatal("reattachment replayed a private request", view)
+	}
+	beforeInput := len(view)
+	if _, err := second.Write([]byte("NEXT")); err != nil {
+		t.Fatal(err)
+	}
+	expect(t, restored, "AFTER_SCREEN_REATTACH")
+	if starts(t, counter) != 1 {
+		t.Fatal("screen reattachment created another job")
+	}
+	if target := os.Getenv("WEBMUX_NATIVE_SCREEN_CAPTURE"); target != "" {
+		data, err := json.Marshal(map[string]any{"cols": 100, "rows": 30, "original": original.text(), "snapshot": view, "future": restored.text()[beforeInput:], "owner_pid": i.OwnerPID, "root_pid": i.RootPID, "starts": 1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(target, data, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Logf("native_screen_replay owner=%d root=%d same_job=true snapshot_bytes=%d", i.OwnerPID, i.RootPID, len(view))
+}

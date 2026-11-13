@@ -21,6 +21,10 @@ type Filter struct {
 	osc      bool
 }
 
+// AtBoundary reports whether a new viewer can begin the following live stream
+// without inheriting a partial character, escape sequence or private payload.
+func (f *Filter) AtBoundary() bool { return f.state == 0 && len(f.partial) == 0 }
+
 func (f *Filter) Feed(data []byte) []byte {
 	if len(f.partial) > 0 {
 		data = append(append([]byte{}, f.partial...), data...)

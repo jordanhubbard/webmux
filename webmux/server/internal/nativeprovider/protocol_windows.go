@@ -51,6 +51,7 @@ type Identity struct {
 	OwnerPID     int    `json:"owner_pid"`
 	RootPID      int    `json:"root_pid"`
 	BinarySHA256 string `json:"binary_sha256"`
+	Replay       string `json:"replay,omitempty"`
 }
 
 type record struct {

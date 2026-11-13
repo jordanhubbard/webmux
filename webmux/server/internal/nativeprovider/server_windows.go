@@ -5,12 +5,15 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
 	"net"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/jordanhubbard/webmux/server/internal/screenstate"
 )
 
 type Terminal interface {
@@ -30,13 +33,17 @@ type subscriber struct {
 func (s *subscriber) close() { s.once.Do(func() { close(s.done); _ = s.connection.Close() }) }
 
 type owner struct {
-	identity Identity
-	key      string
-	terminal Terminal
-	mu       sync.Mutex
-	history  history
-	viewers  map[*subscriber]bool
-	exit     *frame
+	identity    Identity
+	key         string
+	terminal    Terminal
+	mu          sync.Mutex
+	resizeMu    sync.Mutex
+	history     history
+	screen      *screenstate.Screen
+	screenError error
+	changed     chan struct{}
+	viewers     map[*subscriber]bool
+	exit        *frame
 }
 
 func (o *owner) publish(f frame) {
@@ -44,17 +51,73 @@ func (o *owner) publish(f frame) {
 	defer o.mu.Unlock()
 	if len(f.Data) > 0 {
 		o.history.add(f.Data)
+		if o.screenError == nil {
+			o.screenError = o.screen.Feed(f.Data)
+		}
 	}
 	if f.Kind == "exit" {
 		saved := f
 		o.exit = &saved
 	}
+	close(o.changed)
+	o.changed = make(chan struct{})
 	for viewer := range o.viewers {
 		select {
 		case viewer.queue <- f:
 		default:
 			viewer.close()
 			delete(o.viewers, viewer)
+		}
+	}
+}
+
+func (o *owner) resize(cols, rows int) error {
+	o.resizeMu.Lock()
+	defer o.resizeMu.Unlock()
+	// Match the viewer before asking ConPTY to repaint. Never hold the owner
+	// lock during native I/O, which may need its output drained to complete.
+	o.mu.Lock()
+	err := o.screen.Resize(cols, rows)
+	if err != nil {
+		o.screenError = err
+	}
+	o.mu.Unlock()
+	if err != nil {
+		return err
+	}
+	return o.terminal.Resize(cols, rows)
+}
+
+func (o *owner) capture(ctx context.Context, viewer *subscriber) (screenstate.Image, error) {
+	o.resizeMu.Lock()
+	defer o.resizeMu.Unlock()
+	for {
+		o.mu.Lock()
+		if len(o.viewers) >= 8 || o.exit != nil {
+			o.mu.Unlock()
+			return screenstate.Image{}, errors.New("native provider is unavailable for attachment")
+		}
+		if o.screenError != nil {
+			o.mu.Unlock()
+			return screenstate.Image{}, errors.New("native terminal snapshot is unavailable; retained logs remain available")
+		}
+		image, err := o.screen.Capture()
+		if err == nil {
+			// Register at the same cut as the image. Subsequent output queues
+			// while encoding/sending it; none is lost or sent ahead of it.
+			o.viewers[viewer] = true
+			o.mu.Unlock()
+			return image, nil
+		}
+		changed := o.changed
+		o.mu.Unlock()
+		if !errors.Is(err, screenstate.ErrIncomplete) {
+			return screenstate.Image{}, err
+		}
+		select {
+		case <-changed:
+		case <-ctx.Done():
+			return screenstate.Image{}, screenstate.ErrIncomplete
 		}
 	}
 }
@@ -96,21 +159,36 @@ func (o *owner) handle(connection net.Conn) {
 	_ = connection.SetDeadline(time.Time{})
 	viewer := &subscriber{connection: connection, queue: make(chan frame, 64), done: make(chan struct{})}
 	defer viewer.close()
-	o.mu.Lock()
-	if len(o.viewers) >= 8 || o.exit != nil {
-		o.mu.Unlock()
+	if err := o.resize(request.Cols, request.Rows); err != nil {
+		_ = writeFrame(connection, frame{Kind: "rejected", Error: "native terminal resize failed"})
 		return
 	}
-	viewer.queue <- frame{Kind: "attached", Identity: &o.identity}
-	snapshot := o.history.snapshot()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	image, err := o.capture(ctx, viewer)
+	cancel()
+	if err != nil {
+		_ = writeFrame(connection, frame{Kind: "rejected", Error: err.Error()})
+		return
+	}
+	defer func() { o.mu.Lock(); delete(o.viewers, viewer); o.mu.Unlock() }()
+	snapshot, err := image.Bytes()
+	if err != nil {
+		_ = writeFrame(connection, frame{Kind: "rejected", Error: err.Error()})
+		return
+	}
+	// A snapshot may exceed the live queue's capacity. Send it first with a
+	// total deadline, while the bounded queue captures only subsequent output.
+	_ = connection.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	if writeFrame(connection, frame{Kind: "attached", Identity: &o.identity}) != nil {
+		return
+	}
 	for len(snapshot) > 0 {
 		n := min(len(snapshot), maxData)
-		viewer.queue <- frame{Kind: "data", Data: snapshot[:n]}
+		if writeFrame(connection, frame{Kind: "data", Data: snapshot[:n]}) != nil {
+			return
+		}
 		snapshot = snapshot[n:]
 	}
-	o.viewers[viewer] = true
-	o.mu.Unlock()
-	defer func() { o.mu.Lock(); delete(o.viewers, viewer); o.mu.Unlock() }()
 	go func() {
 		defer viewer.close()
 		for {
@@ -125,9 +203,6 @@ func (o *owner) handle(connection net.Conn) {
 			}
 		}
 	}()
-	if err := o.terminal.Resize(request.Cols, request.Rows); err != nil {
-		return
-	}
 	for {
 		// An idle attached viewer has no read deadline. A connection which
 		// begins a frame must finish it promptly and within the length bound.
@@ -156,7 +231,7 @@ func (o *owner) handle(connection net.Conn) {
 			if !validSize(message.Cols, message.Rows) {
 				return
 			}
-			if err := o.terminal.Resize(message.Cols, message.Rows); err != nil {
+			if err := o.resize(message.Cols, message.Rows); err != nil {
 				return
 			}
 		default:
@@ -211,7 +286,12 @@ func Serve(ctx context.Context, input io.Reader, output io.Writer, start func(La
 		return err
 	}
 	digest := sha256.Sum256(image)
-	o := &owner{identity: Identity{Session: c.Session, Instance: id, Endpoint: endpoint, OwnerPID: os.Getpid(), BinarySHA256: hex.EncodeToString(digest[:])}, key: c.Key, viewers: map[*subscriber]bool{}}
+	screen, err := screenstate.New(c.Launch.Cols, c.Launch.Rows)
+	if err != nil {
+		return err
+	}
+	defer screen.Close()
+	o := &owner{identity: Identity{Session: c.Session, Instance: id, Endpoint: endpoint, OwnerPID: os.Getpid(), BinarySHA256: hex.EncodeToString(digest[:]), Replay: "screen-v1"}, key: c.Key, viewers: map[*subscriber]bool{}, screen: screen, changed: make(chan struct{})}
 	if err := writeRecord(c.Root, c.Key, o.identity); err != nil {
 		return err
 	}
