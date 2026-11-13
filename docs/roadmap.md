@@ -72,8 +72,8 @@ Remaining #318 work, in order:
    owner decision: explicit choice until then). Explicit models and other
    ordinary settings are now resumed for Codex, Cursor and OpenCode
    ([details](session-recovery.md#unsupported-invocation-options)); native
-   Windows lifecycle recovery is still open. An authenticated Windows AMD64
-   Codex 0.153.0 headless exact-ID continuation passed; native lookup tests
+   Windows qualification is scoped to the cases below. An authenticated Windows
+   AMD64 Codex 0.153.0 headless exact-ID continuation passed; native lookup tests
    also reproduced and fixed the Windows executable-resolution gap
    ([scope and remaining work](session-recovery.md#windows-native-baseline-2026-11-12)).
    The Windows recovery worker now passes native ConPTY input-handoff,
@@ -94,8 +94,13 @@ Remaining #318 work, in order:
    Versioned snapshots now preserve the original Windows profile; authenticated
    native recovery also passed with a changed replacement-controller profile
    ([root qualification](session-recovery.md#windows-profile-root-recovery-2026-11-13)).
-   Broader configuration overrides and Windows host reboot qualification remain
-   open. Remote native resume is
+   An approved actual Windows host reboot also passed standalone Codex recovery:
+   exact conversation/project/policy, a fresh remembered-marker response,
+   byte-identical pre-reboot transcript/native-file prefixes and durable
+   duplicate receipts across another controller crash
+   ([reboot qualification](session-recovery.md#windows-native-conversation-after-host-reboot-2026-11-13)).
+   Authenticated installed-service recovery, broader CLI/configuration coverage
+   and ARM64 hardware qualification remain open. Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
 2. Codex in default shared-daemon mode is manual-only by owner decision: no
