@@ -26,7 +26,17 @@ type Screen struct {
 
 // Image owns a copy of the screen at one output boundary. Encoding it may run
 // after the caller registers a live-output queue and releases its owner lock.
-type Image struct{ state *snapshot.State }
+type Image struct {
+	state *snapshot.State
+	main  *underlay
+}
+
+// The upstream capture includes the main cells, but only active-buffer margins
+// and wrap flags. Retain those small pieces of the underlying screen as well.
+type underlay struct {
+	margins []int
+	wraps   []bool
+}
 
 func validSize(cols, rows int) bool { return cols >= 1 && cols <= 500 && rows >= 1 && rows <= 200 }
 
@@ -36,7 +46,7 @@ func New(cols, rows int) (*Screen, error) {
 	}
 	e := vt.NewEmulator(cols, rows)
 	e.SetScrollbackMaxLines(min(512, max(1, historyCells/cols)))
-	return &Screen{emulator: e}, nil
+	return &Screen{emulator: e, filter: replayfilter.Filter{Xterm: true}}, nil
 }
 
 func (s *Screen) Feed(data []byte) error {
@@ -85,14 +95,27 @@ func (s *Screen) Capture() (Image, error) {
 	}
 	state.Title, state.IconName, state.TitleStack = "", "", nil
 	state.TitlesKnown = false
-	return Image{state: state}, nil
+	var main *underlay
+	if state.IsAltScreen {
+		// This switches the mirror's active buffer without executing a terminal
+		// mode sequence or clearing cells. Feed/resize cannot interleave here.
+		s.emulator.RestoreAltScreenMode(false)
+		main = &underlay{wraps: make([]bool, state.Height)}
+		r := s.emulator.ScrollRegion()
+		main.margins = []int{r.Min.X, r.Min.Y, r.Dx(), r.Dy()}
+		for y := range main.wraps {
+			main.wraps[y], _ = s.emulator.RowSoftWrapped(y)
+		}
+		s.emulator.RestoreAltScreenMode(true)
+	}
+	return Image{state: state, main: main}, nil
 }
 
 func (i Image) Bytes() ([]byte, error) {
 	if i.state == nil {
 		return nil, errors.New("terminal snapshot is missing")
 	}
-	data := snapshot.Replay(i.state)
+	data := replayScreen(i.state, i.main)
 	if len(data) > MaxSnapshotBytes-3 {
 		return nil, ErrTooLarge
 	}

@@ -24,6 +24,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/nativeprovider"
 	"github.com/jordanhubbard/webmux/server/internal/terminal"
 	"golang.org/x/sys/windows"
+	"tuios.dev/vt"
 )
 
 func fixtureFrame(value any) []byte {
@@ -585,4 +586,67 @@ process.stdout.write('PAINTER_READY:'+process.pid+';');
 		}
 	}
 	t.Logf("native_screen_replay owner=%d root=%d same_job=true snapshot_bytes=%d", i.OwnerPID, i.RootPID, len(view))
+}
+
+// A continuously attached viewer and a fresh snapshot viewer must interpret
+// the same later ConPTY output identically, including state hidden by the grid.
+func TestNativeProviderContinuationState(t *testing.T) {
+	permitBreakaway(t)
+	var records []map[string]any
+	for _, tc := range []struct{ name, before, after string }{
+		{"saved-cursor", "\x1b[4;8H\x1b[31m\x1b7\x1b[10;20H\x1b[32m", "\x1b8X"},
+		{"saved-main-pen", "\x1b[31mSHELL\x1b[?1049h\x1b[32mAPP", "\x1b[?1049lX"},
+		{"left-right-margins", "\x1b[?69h\x1b[5;15s\x1b[1;14H", "ABCDE"},
+		{"protected-cells", "\x1b[1\"qKEEP\x1b[0\"q\x1b[H", "\x1b[?2K"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, counter := config(t)
+			before, _ := json.Marshal(tc.before)
+			after, _ := json.Marshal(tc.after)
+			script := `const fs=require('fs');fs.appendFileSync(process.argv[2],process.pid+'\n');process.stdin.setRawMode(true);process.stdin.resume();process.stdout.write('STATE_READY;');process.stdin.on('data',d=>{if(d.toString().includes('BEFORE'))process.stdout.write(` + string(before) + `+'\x1b]777;BEFORE_STATE_MARK\x07');if(d.toString().includes('AFTER'))process.stdout.write(` + string(after) + `+'\x1b]777;AFTER_STATE_MARK\x07');});`
+			if err := os.WriteFile(c.Launch.Args[0], []byte(script), 0600); err != nil {
+				t.Fatal(err)
+			}
+			identity := ensure(t, c)
+			cleanupOwner(t, c, identity)
+			first, reference := attach(t, c, identity)
+			expect(t, reference, "STATE_READY;")
+			if _, err := first.Write([]byte("BEFORE")); err != nil {
+				t.Fatal(err)
+			}
+			expect(t, reference, "BEFORE_STATE_MARK\a")
+			second, restored := attach(t, c, identity)
+			if _, err := second.Write([]byte("AFTER")); err != nil {
+				t.Fatal(err)
+			}
+			expect(t, reference, "AFTER_STATE_MARK\a")
+			expect(t, restored, "AFTER_STATE_MARK\a")
+			a, b := vt.NewEmulator(100, 30), vt.NewEmulator(100, 30)
+			defer a.Close()
+			defer b.Close()
+			referenceOutput := reference.text()
+			if tc.name == "left-right-margins" {
+				// The frontend xterm ignores mode 69; its CSI s saves the cursor.
+				referenceOutput = strings.ReplaceAll(referenceOutput, "\x1b[?69h", "")
+			}
+			a.WriteString(referenceOutput)
+			b.WriteString(restored.text())
+			if a.String() != b.String() || a.CursorPosition() != b.CursorPosition() {
+				t.Fatalf("native continuation diverged: reference=%q restored=%q", a.String(), b.String())
+			}
+			if starts(t, counter) != 1 {
+				t.Fatal("continuation created another job")
+			}
+			records = append(records, map[string]any{"name": tc.name, "cols": 100, "rows": 30, "original": reference.text(), "snapshot": restored.text(), "owner_pid": identity.OwnerPID, "root_pid": identity.RootPID, "starts": 1})
+		})
+	}
+	if target := os.Getenv("WEBMUX_NATIVE_STATE_CAPTURES"); target != "" {
+		data, err := json.Marshal(records)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(target, data, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
