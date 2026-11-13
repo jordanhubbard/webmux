@@ -86,6 +86,25 @@ test('two servers share interactive terminal views, messages and failure state w
     expect(await remote.evaluate(el => el.parentElement === document.querySelector('[aria-label="Server terminal matrix"]'))).toBe(true);
     expect(await local.evaluate(el => el.parentElement === document.querySelector('[aria-label="Server terminal matrix"]'))).toBe(true);
     const providerPid = (await remote.locator('.xterm-rows').innerText()).match(/FEDERATION_READY:(\d+)/)![1];
+    // A peer may revoke its incoming grant while the controller login remains
+    // valid. That must close only the remote viewer, never all local sockets.
+    const peerDirectory = path.join(peerHome, 'config/servers.yaml');
+    const peerGrants = fs.readFileSync(peerDirectory);
+    const replacePeerGrants = (contents: string | Buffer) => {
+      const temporary = `${peerDirectory}.replacement`;
+      fs.writeFileSync(temporary, contents);
+      fs.renameSync(temporary, peerDirectory);
+    };
+    await expect(local.getByTitle('Browser viewer connection')).toHaveText('Viewer: connected');
+    replacePeerGrants('version: 1\nservers: []\ngrants: []\n');
+    await expect(remote.getByTitle('Browser viewer connection')).toHaveText('Viewer: disconnected', { timeout: 10000 });
+    await expect(local.getByTitle('Browser viewer connection')).toHaveText('Viewer: connected');
+    expect((await request.post(`/api/servers/local/sessions/${ids[0]}/messages`, { data: { message: 'local-after-peer-revocation' } })).ok()).toBe(true);
+    await expect(local.locator('.xterm-rows')).toContainText('FEDERATION_REPLY:[WebMux local:anonymous] local-after-peer-revocation');
+    replacePeerGrants(peerGrants);
+    await remote.getByRole('button', { name: 'Reconnect viewer', exact: true }).click();
+    await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
+    expect((await request.get(`${peerURL}/api/sessions`).then(response => response.json())).length).toBe(1);
     const overview = page.getByTitle('Workspace overview — click or drag to jump', { exact: true });
     await expect(overview).toBeVisible();
     await expect(overview.locator('rect title')).toHaveCount(2);

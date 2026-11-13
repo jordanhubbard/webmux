@@ -384,8 +384,16 @@ func (s *Server) serverTerminal(w http.ResponseWriter, r *http.Request) {
 		case err := <-done:
 			code, reason := 1001, "Server connection closed"
 			var closed *websocket.CloseError
-			if errors.As(err, &closed) && (closed.Code == 1000 || closed.Code == 1008) {
-				code, reason = closed.Code, closed.Text
+			if errors.As(err, &closed) {
+				switch closed.Code {
+				case 1000:
+					code, reason = closed.Code, closed.Text
+				case 1008:
+					// A peer's policy rejection is not a controller login
+					// failure. The browser reserves "Unauthorized" for local
+					// authentication and otherwise signs out every viewer.
+					code, reason = 1008, "Connected server access revoked"
+				}
 			}
 			// Revocation can close the upstream before this controller's next
 			// poll. Preserve the policy reason even if its close frame is lost.
