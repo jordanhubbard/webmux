@@ -46,8 +46,11 @@ alone cannot repair missing credentials. If the receiving server rejects it,
 check the matching incoming grant and its account owner.
 
 **Remove** disconnects a peer's viewers while keeping its providers running.
-Removing an incoming grant revokes that peer's access. Both actions require
-confirmation. These controls are administrator-only in authenticated mode and
+Removing an incoming grant revokes that peer's access. A receiving server's
+policy rejection closes only that server's viewer; it does not expire the
+controller login or disconnect local terminals. Restore the grant or repair the
+peer credential, then reconnect the viewer to its surviving provider. Both
+removal actions require confirmation. These controls are administrator-only in authenticated mode and
 available to operators in trusted `auth.mode: none`, like other settings.
 
 ## Configure a pair through files

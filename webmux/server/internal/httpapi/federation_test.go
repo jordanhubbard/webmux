@@ -211,6 +211,41 @@ func TestFederationTwoServerNativeTerminalMessageAndRevocation(t *testing.T) {
 	}
 }
 
+// A peer's access policy is independent of the controller's login. Its close
+// frame must never become the local Unauthorized signal used by the browser.
+func TestFederationPeerUnauthorizedDoesNotExpireControllerIdentity(t *testing.T) {
+	a, handler := fixture(t, "local")
+	federationAccounts(t, a)
+	secret := strings.Repeat("fixture-credential", 3)
+	t.Setenv("WEBMUX_TEST_PEER_TOKEN", secret)
+	peer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer "+secret {
+			http.Error(w, "Unauthorized", 401)
+			return
+		}
+		connection, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer connection.Close()
+		closeSocket(connection, 1008, "Unauthorized")
+	}))
+	defer peer.Close()
+	federationConfig(t, a, serverDirectory{Version: 1, Servers: []serverPeer{{ID: "remote", Name: "Remote", URL: peer.URL, TokenEnv: "WEBMUX_TEST_PEER_TOKEN", AllowHTTP: true}}})
+	controller := httptest.NewServer(handler)
+	defer controller.Close()
+	credential := token(t, a, "owner")
+	connection := dialSocket(t, "ws"+strings.TrimPrefix(controller.URL, "http")+"/api/servers/remote/term/fixture?token="+credential)
+	defer connection.Close()
+	_ = connection.SetReadDeadline(time.Now().Add(5 * time.Second))
+	_, _, err := connection.ReadMessage()
+	var closed *websocket.CloseError
+	if !errors.As(err, &closed) || closed.Code != 1008 || closed.Text != "Connected server access revoked" {
+		t.Fatalf("Peer policy crossed controller authentication boundary: %v", err)
+	}
+	requireStatus(t, request(handler, "GET", "/api/servers", "", credential), 200)
+}
+
 // A peer may disappear without delivering its WebSocket close frame. Local
 // credential revocation must still take precedence over that transport error.
 func TestFederationAbruptPeerLossPreservesRevocation(t *testing.T) {
