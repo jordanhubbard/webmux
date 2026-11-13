@@ -61,6 +61,9 @@ func connect(ctx context.Context, i Identity, key, operation string, cols, rows 
 	if reply.Kind != want {
 		return nil, Identity{}, errors.New("invalid native provider response")
 	}
+	if operation == "attach" && reply.Identity.Replay != "screen-v1" {
+		return nil, Identity{}, errors.New("native provider cannot restore a complete terminal view; keep the existing job and recover manually")
+	}
 	// Attach keeps the connection after this handshake context ends. Join or
 	// stop its callback before clearing the deadline for subsequent streaming.
 	stopContext()
