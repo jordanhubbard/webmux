@@ -45,11 +45,10 @@ function Get-WebMuxService {
 
 function Write-ServiceConfig([string]$ServiceAccountXml = '') {
   $runtime = Get-WebMuxServiceRuntime -ApplicationDirectory $ApplicationDirectory
-  $pathValue = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
-  $userPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
-  if ($userPath) { $pathValue = "$pathValue;$userPath" }
   $logDirectory = Join-Path $WebMuxHome 'logs'
 
+  # WinSW expands this when it starts under the SCM-selected account. Keep
+  # USERPROFILE and PATH from that account rather than the installing shell.
   $xml = @"
 <service>
   <id>$ServiceName</id>
@@ -60,9 +59,7 @@ function Write-ServiceConfig([string]$ServiceAccountXml = '') {
   <workingdirectory>$(Escape-Xml $ApplicationDirectory)</workingdirectory>
   <env name="WEBMUX_ROOT" value="$(Escape-Xml $ApplicationDirectory)" />
   <env name="WEBMUX_HOME" value="$(Escape-Xml $WebMuxHome)" />
-  <env name="HOME" value="$(Escape-Xml $env:USERPROFILE)" />
-  <env name="USERPROFILE" value="$(Escape-Xml $env:USERPROFILE)" />
-  <env name="PATH" value="$(Escape-Xml $pathValue)" />
+  <env name="HOME" value="%USERPROFILE%" />
   <startmode>Automatic</startmode>
   <delayedAutoStart />
   <stoptimeout>30 sec</stoptimeout>
