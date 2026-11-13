@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/jordanhubbard/webmux/server/internal/screenstate"
 	"os"
+	"strings"
 )
 
 type fixture struct {
@@ -20,6 +21,21 @@ type fixture struct {
 
 func main() {
 	cases := []struct{ name, before, after string }{
+		{"alternate-wrapped-row", "SHELL\x1b[?1049h\x1b[H" + strings.Repeat("A", 80) + "B", "C"},
+		{"alternate-wrapped-blank", "SHELL\x1b[?1049h\x1b[H" + strings.Repeat("A", 80) + " ", "Y"},
+		{"origin-clamp-top", "\x1b[H\x1b7\x1b[3;20r\x1b[?6h", "\x1b8X"},
+		{"origin-clamp-bottom", "\x1b[24;1H\x1b7\x1b[3;20r\x1b[?6h", "\x1b8X"},
+		{"origin-clamp-then-widen", "\x1b[24;1H\x1b7\x1b[3;20r\x1b[?6h", "\x1b8X\x1b[?6l\x1b8Y"},
+		{"origin-batched-reset", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b[?1048h", "\x1b[?6;1048lX"},
+		{"origin-batched-reset-reverse", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b[?1048h", "\x1b[?1048;6lX"},
+		{"origin-active-at-restore", "\x1b[H\x1b[?1048h\x1b[3;20r\x1b[?6h", "\x1b[?1048lX"},
+		{"origin-after-ris", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b7\x1bc", "\x1b8X"},
+		{"origin-after-soft-reset", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b7\x1b[!p", "\x1b8X"},
+		{"saved-origin", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b[31m\x1b7\x1b[?6l\x1b[10;20H\x1b[32m", "\x1b8X"},
+		{"saved-pending-wrap", "\x1b[4;80HX\x1b7\x1b[10;20H", "\x1b8Y"},
+		{"saved-origin-csi", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b[s\x1b[?6l\x1b[10;20H", "\x1b[uTEXT"},
+		{"saved-origin-1048", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b[?1048h\x1b[?6l\x1b[10;20H", "\x1b[?1048lTEXT"},
+		{"saved-pending-1049", "\x1b[4;80HX\x1b[?1049hAPP", "\x1b[?1049lY"},
 		{"immediate", "Q", "\x1b[3b"},
 		{"colored-underline", "\x1b[1;3;4:3;38;2;220;40;20;48;2;12;24;36;58;2;30;210;60mQ", "\x1b[3b"},
 		{"unicode", "日", "\x1b[3b"},

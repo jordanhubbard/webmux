@@ -116,7 +116,10 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 		charsets(&b, []int{'B', 'B', 'B', 'B', 0, 0})
 		w.cur, w.set = snapshot.StyleState{}, false
 		w.protect(false)
-		w.rows(st.Screen, wrapFlags(st.ScreenWraps, len(st.Screen)), true, protectionRows(st.Width, st.Height, st.Protected))
+		// The alternate grid starts at home with full margins. Paint it in
+		// row order so the viewer recreates soft-wrap links; absolute CUPs
+		// between rows would silently turn wrapped lines into separate ones.
+		w.rows(st.Screen, wrapFlags(st.ScreenWraps, len(st.Screen)), false, protectionRows(st.Width, st.Height, st.Protected))
 	}
 
 	if len(st.TabStops) > 0 {
