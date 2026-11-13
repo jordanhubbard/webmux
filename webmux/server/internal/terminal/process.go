@@ -88,9 +88,13 @@ func Start(command Command) (*Process, error) {
 	if err != nil {
 		return nil, err
 	}
+	return newProcess(native), nil
+}
+
+func newProcess(native nativeProcess) *Process {
 	p := &Process{native: native, done: make(chan struct{})}
 	go func() { p.exit = native.wait(); close(p.done) }()
-	return p, nil
+	return p
 }
 
 func (p *Process) Read(data []byte) (int, error) { return p.native.Read(data) }

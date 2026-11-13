@@ -47,7 +47,7 @@ test.describe('UI loads', () => {
     await addCell.click();
     const dialog = page.getByRole('dialog', { name: 'Connect to Host' });
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole('button', { name: 'Localhost · tmux', exact: true })).toBeFocused();
+    await expect(dialog.getByRole('button', { name: 'Localhost', exact: true })).toBeFocused();
     await expect(dialog.getByRole('combobox', { name: 'Coordinator', exact: true })).toHaveValue('none');
     await expect(dialog.getByText('New or one-time remote connection', { exact: true })).toBeVisible();
   });

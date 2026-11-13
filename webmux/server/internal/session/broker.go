@@ -310,6 +310,9 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 	title := request.Username + "@" + request.Hostname
 	if request.Transport == "local" {
 		title = "localhost · tmux"
+		if runtime.GOOS == "windows" {
+			title = "localhost"
+		}
 	}
 	if request.Transport == "exec" {
 		title = fmt.Sprintf("%s:%d", request.Hostname, request.Port)

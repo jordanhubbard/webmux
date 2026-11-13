@@ -2120,6 +2120,61 @@ creation/attachment, launcher integration and actual application lifecycle
 qualification remain open under #318. This startup path prepares that integration
 without changing the tmux requirement in the current local launcher.
 
+### Windows local-provider integration (2026-11-13)
+
+Windows local terminals now create or reattach the independent native provider
+directly, without tmux or a second ConPTY layer. A viewer owns its authenticated
+stream connection; controller close detaches it while retaining the owner and
+job. The launcher initializes durable host evidence and emits a fresh signed
+provider event to start authenticated state polling. It does not replay cached
+shell/CLI observations as live events: the snapshot reconciler uses the current
+control state to determine readiness. A lost provider starts a waiting worker
+when prior activity exists. Failed or unsupported snapshots retain the job and
+return a clear attachment error rather than creating a replacement.
+
+The local connection button is labeled Localhost across platforms. Windows
+session titles no longer claim tmux. The legacy remote ensure/attach route still
+refuses Windows before allocating an unattachable provider; remote native
+attachment is not enabled by this local path.
+
+Native ConPTY integration controls exercise actual launcher processes. Abrupt
+controller loss preserves the owner instance, owner/root PIDs and one synthetic
+coding job; the replacement can read, send input, resize and detach without
+stopping that job. Explicit provider loss starts a new waiting worker with the
+recorded selector intact and no duplicate CLI. It rejects arbitrary Windows
+command replay before durable consumption, accepts a deliberate shell fallback,
+and recognizes a repeated recovery request as already consumed. The final
+Windows AMD64 run passed all four targeted cases in 4.562 seconds, with zero
+skips, including the remote-path refusal control. Test executable SHA-256:
+`e45f360829b8e1bea894b7642b7c57a05d2cca4c87be6524e2d4b9be5452d8e1`.
+Private fixture receipts use `local-provider-v7-*`.
+
+A separate private production application used local account authentication,
+the real browser connection dialog and terminal, and authenticated Codex 0.153.0
+with `gpt-6-astra`. After abrupt application termination and restart, the measured
+owner, root and actual Codex PIDs were unchanged, with one actual coding CLI.
+A fresh question through the restored browser returned the remembered marker
+without including its value. Both answers were verified in the exact selected
+native conversation file; the original project and explicit selector were
+retained. All three retained transcript files were nonempty and contained the
+marker after the restarts. This application image's SHA-256 is
+`ee727fb939ecfaae1d1b4ce429fb6a6b24e95cf540403a46b5473a458b63d5ee`.
+Private evidence uses `app-local-v1-*` and `app-local-v1-browser/`.
+
+This proves authenticated application survivor reattachment in the stated
+configuration. The invocation's configuration overrides remain manual-only,
+as the preview reports; no native process-loss resume, automatic active-thread
+observation, actual host reboot, or ARM64 hardware execution is claimed here.
+Windows native process-loss resume and broader policy/profile/lifecycle
+acceptance remain open under #318; screen-profile limits remain under #355.
+
+Full local Go race tests, relevant vet/Windows cross-vet, strict TypeScript,
+350 frontend tests, production frontend build and fourteen real Chrome workflow
+checks passed. Windows AMD64/ARM64 test compilation passed. The first local
+browser attempt could not launch a missing bundled Chromium; the completed run
+used the installed Chrome executable. Native fixture controls use a synthetic
+CLI and are separate from the authenticated application result above.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

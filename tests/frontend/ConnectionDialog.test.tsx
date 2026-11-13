@@ -305,16 +305,16 @@ describe('ConnectionDialog', () => {
 it('quick-connects localhost without credentials or a saved host', async () => {
   const onConnect = vi.fn().mockResolvedValue(undefined);
   render(<ConnectionDialog onConnect={onConnect} onClose={vi.fn()} suggestedRow={1} suggestedCol={2} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Localhost · tmux' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Localhost' }));
   await waitFor(() => expect(onConnect).toHaveBeenCalledWith({ transport: 'local', hostname: 'localhost', username: '', row: 1, col: 2 }));
 });
 
 it('shows local quick-connect failures and allows retry', async () => {
   const onConnect = vi.fn().mockRejectedValue(new Error('tmux is missing'));
   render(<ConnectionDialog onConnect={onConnect} onClose={vi.fn()} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Localhost · tmux' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Localhost' }));
   await waitFor(() => expect(screen.getByText('tmux is missing')).toBeDefined());
-  expect(screen.getByRole('button', { name: 'Localhost · tmux' })).not.toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Localhost' })).not.toBeDisabled();
 });
 
 it('puts local tmux and saved remote tuples before new connections, with coordination opt-in', async () => {
@@ -323,7 +323,7 @@ it('puts local tmux and saved remote tuples before new connections, with coordin
   const coordinate = vi.fn();
   render(<ConnectionDialog onConnect={connect} onClose={vi.fn()} localFirst onChooseCoordinator={coordinate} suggestedRow={2} suggestedCol={1} />);
   expect(screen.getByLabelText('Coordinator')).toHaveValue('none');
-  expect(screen.getByRole('button', { name: 'Localhost · tmux' })).toHaveAttribute('data-dialog-autofocus');
+  expect(screen.getByRole('button', { name: 'Localhost' })).toHaveAttribute('data-dialog-autofocus');
   expect(screen.getByPlaceholderText('hostname or IP').closest('details')).not.toHaveAttribute('open');
   fireEvent.click(await screen.findByTitle('Connect to jkh@puck.local:2222'));
   await waitFor(() => expect(connect).toHaveBeenCalledWith(expect.objectContaining({ host_id: 'saved', hostname: 'puck.local', username: 'jkh', port: 2222, transport: 'ssh', row: 2, col: 1 })));
