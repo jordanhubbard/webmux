@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import http from 'node:http';
 import { writeFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
@@ -7,6 +7,21 @@ import { execFileSync } from 'node:child_process';
 for (const linkKind of ['plain', 'osc8', 'gh-browser', 'browser', 'open', 'xdg-open'] as const) {
 test(`browser companion routes ${linkKind} authentication and completes a loopback callback`, async ({ page, request }, info) => {
   test.setTimeout(90_000);
+  const modeTraffic: { viewer: string; direction: string; at: number; controls: string[] }[] = [];
+  const traceModes = (viewer: Page, name: string) => viewer.on('websocket', socket => {
+    if (!new URL(socket.url()).pathname.startsWith('/api/term/')) return;
+    const record = (direction: string, payload: string | Buffer) => {
+      if (modeTraffic.length >= 64) return;
+      const message = JSON.parse(payload.toString()) as { type?: string; data?: string };
+      if (typeof message.data !== 'string') return;
+      // Keep only mode query/reply controls, never terminal commands or content.
+      const controls = message.data.match(/\x1b\[\??\d+(?:;\d+)?\$[py]/g);
+      if (controls) modeTraffic.push({ viewer: name, direction, at: Date.now(), controls });
+    };
+    socket.on('framesent', frame => record('framesent', frame.payload));
+    socket.on('framereceived', frame => record('framereceived', frame.payload));
+  });
+  if (linkKind === 'gh-browser') traceModes(page, 'active');
   const replies: unknown[] = [];
   page.on('response', async response => {
     if (!response.url().endsWith('/browser')) return;
@@ -78,6 +93,7 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
   // requests instead of allowing the first tab to receive them forever.
   const idleViewer = linkKind === 'gh-browser' ? await page.context().newPage() : null;
   if (idleViewer) {
+    traceModes(idleViewer, 'earlier');
     await idleViewer.goto('/');
     await expect(idleViewer.getByTestId(`tile-cell-${session.id}`).locator('.xterm-screen')).toBeVisible();
   }
@@ -222,6 +238,11 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     console.error('Browser companion workflow failed:', String(error).split('\n').slice(0, 4).join('\n'));
     throw error;
   } finally {
+    if (linkKind === 'gh-browser') {
+      const trafficPath = info.outputPath('terminal-mode-traffic.json');
+      writeFileSync(trafficPath, JSON.stringify(modeTraffic));
+      await info.attach('terminal-mode-traffic', { path: trafficPath, contentType: 'application/json' });
+    }
     await idleViewer?.close();
     rmSync(launchConfig, { force: true });
     await request.delete(`/api/sessions/${session.id}`).catch(() => { /* the request fixture may already be closed after a timeout */ });

@@ -255,7 +255,11 @@ selected temporary fleet runners for trusted release checks. The actual
 macOS version is recorded; public pull-request jobs keep hosted runners.
 See [temporary runner operation](ci-runners.md).
 
-[#253](https://github.com/jordanhubbard/webmux/issues/253) tracks a reproduced
-tmux 3.8 multiple-viewer capability-reply/input issue. It was found by expanded
-Mac browser testing and remains a known limitation; neither the coordination
-changes nor the runner/fixture corrections claim to resolve it.
+[#253](https://github.com/jordanhubbard/webmux/issues/253) reproduced duplicate
+DECRQM replies from two viewers corrupting tmux 3.8 shell input. Viewers now
+consume these queries in the parser, extending the existing query policy without
+filtering ordinary input bytes. The actual tmux 3.8 two-viewer browser workflow
+passes, as do deterministic split-query/broadcast controls with real PTY
+keyboard/paste receipts and existing mouse lifecycle checks. See the
+[evidence and scope](browser-companion.md#acceptance); real identity-provider
+qualification remains under #110.
