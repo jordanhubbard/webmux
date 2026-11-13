@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/jordanhubbard/webmux/server/internal/replayfilter"
 )
 
 const maxFrame = 256 << 10
@@ -154,13 +156,19 @@ func readFrame(r io.Reader, value any) error {
 }
 
 // A byte ring bounds unattended output without blocking the running job.
-// Its snapshot is a raw tail, not a claim of a complete terminal screen.
+// Its snapshot is a filtered tail, not a complete terminal screen. Live output
+// is untouched; retained output omits requests which must not run on reattach.
 type history struct {
 	data       []byte
 	next, used int
+	filter     replayfilter.Filter
 }
 
 func (h *history) add(data []byte) {
+	data = h.filter.Feed(data)
+	if len(data) == 0 {
+		return
+	}
 	if h.data == nil {
 		h.data = make([]byte, historyLimit)
 	}
