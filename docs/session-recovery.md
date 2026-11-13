@@ -1844,6 +1844,23 @@ Private evidence includes `socket-fix-native-receipt.json`, stage logs and the
 preserved `main-88d8086-ci-failure.log`. These controls do not prove the cause of
 the original hosted delay or complete Windows lifecycle acceptance.
 
+A later hosted Windows ConPTY handoff failed after 20.37 seconds with an
+uncertain, invalid control response ([#348](https://github.com/jordanhubbard/webmux/issues/348)).
+Waiting sockets now read one bounded newline-terminated JSON value rather than
+waiting for EOF. Existing writers already send this delimiter; clients retain
+their half-close for older surviving workers. Stdio RPC still validates its
+whole input. No request is retried, and missing replies remain uncertain.
+
+On native Windows, both deliberate delayed-EOF controls failed on the prior
+implementation. The fix passed 40 request/reply controls, ten real ConPTY
+approval/cancellation repetitions (30 test cases), and the full recovery suite
+(63 passing cases, five platform skips). Fixed executable SHA-256:
+`1eda29a78e78ac0275d6e5981216cc75e1bbc1984b742ba0f3b64908680b2224`.
+Private evidence is `worker-framing-receipts.json` and its four stage logs.
+Local recovery race tests and vet also passed. These controls prove the EOF
+dependency and compatible framing improvement; they do not establish what
+caused the original hosted failure.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
