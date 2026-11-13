@@ -91,6 +91,9 @@ Remaining #318 work, in order:
    remembered-marker response and duplicate-action controls; another controller
    crash preserved the resumed coding process
    ([action qualification](session-recovery.md#windows-structured-native-resume-2026-11-13)).
+   Versioned snapshots now preserve the original Windows profile; authenticated
+   native recovery also passed with a changed replacement-controller profile
+   ([root qualification](session-recovery.md#windows-profile-root-recovery-2026-11-13)).
    Broader configuration overrides and Windows host reboot qualification remain
    open. Remote native resume is
    manual by owner decision. Unqualified cases must
