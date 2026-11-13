@@ -79,7 +79,7 @@ func newNativeUUID() (string, error) {
 // RunCLI keeps the native CLI attached directly to the same TTY. Capturing its
 // stdout in a pipe would change interactive behavior and terminal capabilities.
 func RunCLI(name string, args []string) error {
-	binary, err := originalCLI(name)
+	binary, err := OriginalCLI(name)
 	if err != nil {
 		return err
 	}
@@ -272,7 +272,7 @@ func cursorCLI() (string, string, error) {
 
 func cursorCLIContext(ctx context.Context) (string, string, error) {
 	for _, name := range []string{"cursor-agent", "agent"} {
-		if binary, err := originalCLI(name); err == nil && isCursorCLIContext(ctx, binary) {
+		if binary, err := OriginalCLI(name); err == nil && isCursorCLIContext(ctx, binary) {
 			return name, binary, nil
 		}
 	}

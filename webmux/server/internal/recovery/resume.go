@@ -82,7 +82,7 @@ func prepareNativeResumeContext(ctx context.Context, request NativeResume) ([]st
 	if err != nil || !info.IsDir() {
 		return nil, errors.New("the original working directory is unavailable; recover this session manually")
 	}
-	binary, err := originalCLI(args[0])
+	binary, err := OriginalCLI(args[0])
 	if a.CLI == "cursor" {
 		args[0], binary, err = cursorCLIContext(ctx)
 	}

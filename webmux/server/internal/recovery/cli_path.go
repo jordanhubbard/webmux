@@ -8,7 +8,9 @@ import (
 	"strings"
 )
 
-func originalCLI(name string) (string, error) {
+// OriginalCLI resolves a native executable on the pre-integration PATH.
+// Shell-only shims are intentionally excluded on Windows.
+func OriginalCLI(name string) (string, error) {
 	search := os.Getenv("WEBMUX_BROWSER_ORIGINAL_PATH")
 	if search == "" {
 		search = os.Getenv("PATH")

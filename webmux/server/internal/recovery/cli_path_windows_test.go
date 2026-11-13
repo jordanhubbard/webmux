@@ -16,7 +16,7 @@ func TestOriginalCLIWindowsNativeExecutable(t *testing.T) {
 	}
 	t.Setenv("WEBMUX_BROWSER_ORIGINAL_PATH", dir)
 	for _, name := range []string{"codex", "codex.exe"} {
-		got, err := originalCLI(name)
+		got, err := OriginalCLI(name)
 		if err != nil || got != want {
 			t.Fatalf("%s: got %q, %v; want %q", name, got, err, want)
 		}
@@ -32,11 +32,11 @@ func TestOriginalCLIWindowsSkipsShellWrappersAndHelperCopies(t *testing.T) {
 	}
 	t.Setenv("PATHEXT", ".CMD;.BAT;.EXE")
 	t.Setenv("WEBMUX_BROWSER_ORIGINAL_PATH", wrappers+string(os.PathListSeparator)+helpers+string(os.PathListSeparator)+native)
-	if got, err := originalCLI("codex"); err != nil || got != filepath.Join(native, "codex.exe") {
+	if got, err := OriginalCLI("codex"); err != nil || got != filepath.Join(native, "codex.exe") {
 		t.Fatalf("selected wrapper/helper: %q, %v", got, err)
 	}
 	for _, name := range []string{"codex.cmd", "codex.bat"} {
-		if got, err := originalCLI(name); err == nil {
+		if got, err := OriginalCLI(name); err == nil {
 			t.Fatalf("accepted shell wrapper %q", got)
 		}
 	}
@@ -48,7 +48,7 @@ func TestOriginalCLIWindowsSkipsSelfAndRelativePATH(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("WEBMUX_BROWSER_ORIGINAL_PATH", "."+string(os.PathListSeparator)+filepath.Dir(self))
-	if got, err := originalCLI(filepath.Base(self)); err == nil {
+	if got, err := OriginalCLI(filepath.Base(self)); err == nil {
 		t.Fatalf("resolved helper back to itself: %q", got)
 	}
 	dir := t.TempDir()
@@ -57,7 +57,7 @@ func TestOriginalCLIWindowsSkipsSelfAndRelativePATH(t *testing.T) {
 	}
 	t.Chdir(dir)
 	t.Setenv("WEBMUX_BROWSER_ORIGINAL_PATH", ".")
-	if got, err := originalCLI("codex"); err == nil {
+	if got, err := OriginalCLI("codex"); err == nil {
 		t.Fatalf("selected executable from current project: %q", got)
 	}
 }
