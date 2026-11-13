@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { stripVTControlCharacters } from 'node:util';
 
 assert.equal(process.platform, 'win32');
-const [home, rawPort, installer] = process.argv.slice(2);
+const [home, rawPort, installer, expectedProfile, expectedUser, installerProfile] = process.argv.slice(2);
 assert(home && path.isAbsolute(home) && installer && path.isAbsolute(installer));
 assert(rawPort && /^\d+$/.test(rawPort));
 const port = Number(rawPort); assert(port > 0 && port <= 65535);
@@ -15,6 +15,10 @@ const base = `http://127.0.0.1:${port}`;
 const fixture = path.join(import.meta.dirname, 'service-terminal-fixture.mts');
 assert(!process.execPath.includes('"') && !fixture.includes('"'));
 const marker = randomBytes(8).toString('hex');
+const profileArguments = expectedProfile === undefined ? '' : [expectedProfile, expectedUser, installerProfile].map(value => {
+  assert(value && !/["\r\n\0]/.test(value), 'Invalid service profile fixture argument');
+  return ` "${value}"`;
+}).join('');
 async function waitFor(check: () => Promise<boolean>, description: string): Promise<void> {
   const deadline = Date.now() + 15000;
   while (!await check()) {
@@ -25,7 +29,7 @@ async function waitFor(check: () => Promise<boolean>, description: string): Prom
 const response = await fetch(`${base}/api/sessions`, {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000),
   body: JSON.stringify({ hostname: 'localhost', username: 'fixture', transport: 'exec',
-    exec_command: `"${process.execPath}" "${fixture}" ${marker}`, cols: 120, rows: 30 }),
+    exec_command: `"${process.execPath}" "${fixture}" ${marker}${profileArguments}`, cols: 120, rows: 30 }),
 });
 assert(response.ok, `Create PTY: ${response.status}`);
 const session: unknown = await response.json();
@@ -44,7 +48,8 @@ try {
   await waitFor(async () => {
     assert(!socketError, 'Terminal WebSocket failed');
     const plain = stripVTControlCharacters(output);
-    return expected.every(line => plain.includes(line));
+    assert(!plain.includes(`profile:${marker}:failed`), 'Service child used an incorrect account/profile environment');
+    return expected.every(line => plain.includes(line)) && (expectedProfile === undefined || plain.includes(`profile:${marker}:ok`));
   }, 'complete PTY output');
   const childPID = Number(stripVTControlCharacters(output).match(/child:([1-9][0-9]*):ready/)?.[1]);
   assert(Number.isSafeInteger(childPID) && childPID > 1);

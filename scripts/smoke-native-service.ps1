@@ -54,6 +54,16 @@ $url = "http://127.0.0.1:$port"
 $fixtureAccount = $null
 $fixtureSid = $null
 $fixtureCredential = $null
+$installerProfile = Join-Path $homeDirectory "webmux-installer-only-$([Guid]::NewGuid())"
+function Install-FixtureService([switch]$SystemAccount) {
+  $previousProfile = $env:USERPROFILE
+  try {
+    # The service must use its SCM account, not an arbitrary installing shell.
+    $env:USERPROFILE = $installerProfile
+    if ($SystemAccount) { & $installer install -LocalSystem -WebMuxHome $homeDirectory }
+    else { & $installer install -WebMuxHome $homeDirectory }
+  } finally { $env:USERPROFILE = $previousProfile }
+}
 function Grant-FixtureAccess([string]$Directory, [string]$Rights) {
   & icacls.exe $Directory /grant:r "*${fixtureSid}:(OI)(CI)$Rights" /T /Q | Out-Null
   if ($LASTEXITCODE -ne 0) { throw "Could not grant fixture account access to $Directory" }
@@ -125,10 +135,10 @@ try {
       return $fixtureCredential
     }
     Write-QualificationPhase $serviceEvidence 'install-custom-account' 'starting'
-    & $installer install -WebMuxHome $homeDirectory
+    Install-FixtureService
   } else {
     Write-QualificationPhase $serviceEvidence 'install-system' 'starting'
-    & $installer install -LocalSystem -WebMuxHome $homeDirectory
+    Install-FixtureService -SystemAccount
   }
   Wait-Healthy
   $definition = [xml][IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml'))
@@ -137,6 +147,10 @@ try {
   $page = Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 5
   if ($page.Content -notmatch '<div id="root">') { throw 'Service did not serve the frontend.' }
   $account = (Get-CimInstance Win32_Service -Filter "Name='WebMux'").StartName
+  $accountSid = if ($UserAccount) { $fixtureSid } else { 'S-1-5-18' }
+  $registeredProfile = (Get-ItemProperty -LiteralPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$accountSid" -Name ProfileImagePath).ProfileImagePath
+  $expectedProfile = [Environment]::ExpandEnvironmentVariables($registeredProfile)
+  $expectedUser = ([Security.Principal.SecurityIdentifier]::new($accountSid)).Translate([Security.Principal.NTAccount]).Value.Split('\')[-1]
   if ($UserAccount) {
     if ($account -notin @(".\$fixtureAccount", "$env:COMPUTERNAME\$fixtureAccount")) { throw 'Service is not running under the fixture account.' }
     if ($definition.SelectSingleNode('/service/serviceaccount')) { throw 'Service account credentials remained in the XML after registration.' }
@@ -166,7 +180,7 @@ try {
   }
   if ((Get-CimInstance Win32_Service -Filter "Name='WebMux'").StartName -ne $account) { throw 'Reconfigure changed the service account.' }
   Write-QualificationPhase $serviceEvidence 'terminal-transcript-shutdown' 'starting'
-  & node (Join-Path $PSScriptRoot 'smoke-windows-service-shutdown.mts') $homeDirectory "$port" $installer
+  & node (Join-Path $PSScriptRoot 'smoke-windows-service-shutdown.mts') $homeDirectory "$port" $installer $expectedProfile $expectedUser $installerProfile
   if ($LASTEXITCODE -ne 0) { throw 'Native service terminal/transcript shutdown checks failed.' }
   $reachable = $false
   try { $null = Invoke-WebRequest -UseBasicParsing -Uri "$url/api/health" -TimeoutSec 2; $reachable = $true } catch { }
