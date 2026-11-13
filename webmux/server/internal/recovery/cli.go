@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -16,31 +14,6 @@ import (
 
 	"golang.org/x/term"
 )
-
-func originalCLI(name string) (string, error) {
-	search := os.Getenv("WEBMUX_BROWSER_ORIGINAL_PATH")
-	if search == "" {
-		search = os.Getenv("PATH")
-	}
-	self, _ := os.Executable()
-	self, _ = filepath.EvalSymlinks(self)
-	for _, dir := range filepath.SplitList(search) {
-		candidate := filepath.Join(dir, name)
-		info, err := os.Stat(candidate)
-		if err != nil || info.IsDir() || info.Mode()&0111 == 0 {
-			continue
-		}
-		resolved, err := filepath.EvalSymlinks(candidate)
-		if err == nil && resolved != self {
-			opener, openerErr := filepath.EvalSymlinks(filepath.Join(dir, "webmux-open"))
-			if openerErr == nil && opener == resolved {
-				continue
-			}
-			return candidate, nil
-		}
-	}
-	return "", fmt.Errorf("%s is not installed on this execution host or is not available on its original PATH", name)
-}
 
 func cliOutput(binary string, args ...string) (string, error) {
 	return cliOutputAt("", binary, args...)
