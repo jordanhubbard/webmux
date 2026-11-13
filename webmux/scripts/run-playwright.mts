@@ -1,6 +1,8 @@
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { spawnSync } from 'node:child_process';
 import { runWithPrivateTmux } from './private-test-tmux.mts';
+import { isolatedPlaywrightRuns } from './playwright-runs.mts';
 
 const require = createRequire(import.meta.url);
 
@@ -13,15 +15,18 @@ const childEnv = {
   NODE_PATH: [nodeModules, process.env.NODE_PATH].filter(Boolean).join(path.delimiter),
 };
 
-// The full suite shares one client address. Keep each shard on a fresh server
-// so accumulated browser requests do not exhaust the production rate limit.
-// Five groups include headroom for the two-viewer mode-query control; with four,
-// its added page loads caused HTTP 429s in the following mouse-selection test.
+// The suite shares one client address. Give each discovered file a fresh server
+// so unrelated browser workflows cannot exhaust its production request budget.
 // Focused invocations retain their exact CLI arguments and output directory.
-const shards = 5;
-const runs = args.length ? [args] : Array.from({ length: shards }, (_, index) => [
-  `--shard=${index + 1}/${shards}`, `--output=test-results/shard-${index + 1}`,
-]);
+let runs = [args];
+if (!args.length) {
+  const discovery = spawnSync(process.execPath, [playwrightCli, 'test', '--list', '--reporter=json'], {
+    cwd: webmuxDir, env: childEnv, encoding: 'utf8', timeout: 60_000, maxBuffer: 8 << 20,
+  });
+  if (discovery.error) throw discovery.error;
+  if (discovery.status !== 0) throw new Error(`Playwright discovery failed (${discovery.status}): ${discovery.stderr.slice(-4000)}`);
+  runs = isolatedPlaywrightRuns(JSON.parse(discovery.stdout));
+}
 let exitCode = 0;
 for (const runArgs of runs) {
   const status = await runWithPrivateTmux(
