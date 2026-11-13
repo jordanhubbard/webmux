@@ -1889,11 +1889,22 @@ in the existing Windows qualification directory; lifecycle rows retain the
 tested owner/process transitions. Earlier native runs and source backup are
 also retained. Local affected race suites and Windows vet passed.
 
+The retained history copy now filters terminal requests before buffering them;
+live output is unchanged. String controls (including browser/recovery metadata
+and clipboard requests), terminal queries and window operations are omitted
+from replay, while display editing, rendition and screen-selection sequences
+are retained. Portable race-tested controls exercise every read boundary, C1
+forms and unbounded unterminated strings. Twenty native Windows history controls
+passed (ten repetitions each of bounded ordering and request filtering with
+unchanged live bytes), using executable SHA-256
+`e950fce0d599929df9ab4f0d352600cb42ad2bb9f11742ec9991b7aca0444aee`.
+This addresses repeated request side effects, not complete screen restoration.
+
 This is a provider primitive, not enabled Windows local-terminal recovery.
 `recovery.EnsureProvider` still fails explicitly. Provider/shell integration,
 replay safety, full-screen restoration and UI/native coding-session qualification
 across restart/update/crash/reboot remain open under #318. The bounded one-MiB
-raw history tail is not a complete terminal-screen snapshot. Replacing a fixture
+filtered history tail is not a complete terminal-screen snapshot. Replacing a fixture
 controller image does not qualify an actual application update.
 
 ## Sources

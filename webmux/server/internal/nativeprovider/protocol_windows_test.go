@@ -29,6 +29,22 @@ func TestProviderHistoryRetainsBoundedOrderedTail(t *testing.T) {
 	}
 }
 
+func TestProviderHistoryDoesNotReplayRequestsOrMutateLiveOutput(t *testing.T) {
+	input := []byte("A\x1b]52;c;clipboard\aB\x1b]777;webmux-recovery;private\aC\x1b]777;webmux-browser;private\aD\x1b[6n\x1b[c\x1bP$qcursor\x1b\\E\x1b[31mF")
+	for split := 0; split <= len(input); split++ {
+		live := bytes.Clone(input)
+		var h history
+		h.add(live[:split])
+		h.add(live[split:])
+		if !bytes.Equal(live, input) {
+			t.Fatal("history filtering mutated live terminal output")
+		}
+		if got := string(h.snapshot()); got != "ABCDE\x1b[31mF" {
+			t.Fatalf("split %d retained replay requests: %q", split, got)
+		}
+	}
+}
+
 func TestProviderProbeCancellationWakesEstablishedHandshake(t *testing.T) {
 	dir, err := os.MkdirTemp("", "wmp-cancel-")
 	if err != nil {
