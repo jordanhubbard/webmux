@@ -2221,11 +2221,54 @@ appending a second TOML assignment was rejected. The executable SHA-256 was
 `0208a51e680fc8527d4e8c0ed7c98c9f7686ed8d5a7c8e4a0ee10da4cc729415`.
 Private evidence is `sandbox-resume-preflight-result.json`.
 
-This follow-up qualifies command reconstruction and native preflight only.
-It submitted no model turn and performed no provider-loss recovery. The earlier
-application invocation also included `--cd`, so that recorded invocation still
-requires manual restoration. A full application recovery action using only the
-supported settings, actual reboot and the other #318 boundaries remain open.
+This preflight submitted no model turn and performed no provider-loss recovery.
+The earlier application invocation also included `--cd`, so that recorded
+invocation still requires manual restoration. The subsequent application run
+below qualifies the native recovery action using only supported settings.
+
+### Windows structured native resume (2026-11-13)
+
+A standalone application built from clean commit
+`b46485c06284f9a8283dc80c1540e25aea0c0e65` qualified the browser's native Resume
+action with authenticated Codex 0.153.0 on Windows AMD64. Its SHA-256 was
+`e35eea77d14923e0c87e60f5af4680305da05a2341b8c38d0f50eee481b932a6`.
+The run used a private application home/cache and the existing native
+conversation in its original project. The invocation preserved
+`--model gpt-6-astra --config windows.sandbox='unelevated' --sandbox read-only
+--ask-for-approval never`; the shell entered the project before launch, without
+an additional `--cd` override.
+
+Codex first acknowledged a fresh marker. An authenticated provider Stop then
+terminated only the fixture's owner and ConPTY job. The application controller
+was forcibly terminated and replaced. Reconnection offered the recorded native
+conversation with retained history and no command replay. Clicking **Resume
+codex conversation** returned `consumed`, cleared waiting, and launched the
+exact recorded native ID with the original restrictions and no initial prompt.
+A new question that omitted the marker received the exact remembered marker in
+a fresh assistant message in that same native conversation file.
+
+Repeating the same recovery request returned the existing `consumed` receipt;
+the owner/root identity and single actual Codex process remained unchanged.
+Another forced controller termination and replacement preserved those same
+identities. A second fresh remembered-marker response verified input and native
+conversation continuity through the replacement controller. The native turn
+records for all three turns confirmed the original project, model, `read-only`
+sandbox and `never` approval policy; no tool calls occurred. Typed follow-up
+questions required a separate later Enter to submit the CLI's retained draft.
+
+Cleanup verified that the owned controllers, providers, roots and coding
+processes exited, and the SSH tunnel stopped. Five nonempty application logs
+were retained: four contain the marker, and one contains only the waiting
+screen and its reconnect boundary. Private evidence uses `app-policy-v1-*` and
+`app-policy-v1-browser/`; the native audit, duplicate-action receipt, process
+identity comparisons and log hashes are retained there.
+
+This qualifies deliberate exact-ID application recovery for these supported
+settings after controlled provider loss, followed by controller crash survival.
+Launch-selector evidence still requires the user's explicit conversation
+choice. Actual Windows host reboot, installed-service recovery, active-thread
+observation, additional CLI/policy/profile coverage and ARM64 hardware execution
+remain open under #318. The screen-profile limits remain under #355.
 
 ## Sources
 

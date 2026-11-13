@@ -86,8 +86,13 @@ Remaining #318 work, in order:
    with unchanged owner/root/CLI identity and a fresh remembered-marker answer
    ([integration scope and remaining limits](session-recovery.md#windows-local-provider-integration-2026-11-13)).
    Manual exact-ID Codex continuation after provider loss is also demonstrated.
-   Structured native resume for configuration overrides and Windows host reboot
-   qualification remain open. Remote native resume is
+   The browser's structured native Resume action also passed with the supported
+   Windows unelevated-sandbox setting, preserved restrictions, a fresh native
+   remembered-marker response and duplicate-action controls; another controller
+   crash preserved the resumed coding process
+   ([action qualification](session-recovery.md#windows-structured-native-resume-2026-11-13)).
+   Broader configuration overrides and Windows host reboot qualification remain
+   open. Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
 2. Codex in default shared-daemon mode is manual-only by owner decision: no
