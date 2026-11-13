@@ -304,6 +304,9 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
     const terminal = page.getByTestId('openrig-terminal');
     await page.getByRole('button', { name: 'Connect dashboard', exact: true }).click();
     await expect(terminal.locator('.xterm-rows')).toContainText('EXPLORER');
+    // Rig also renders EXPLORER while startup is probing. Input then owns
+    // startup navigation and can disable automatic entry into the live page.
+    await expect(terminal.locator('.xterm-rows')).toContainText('TOPOLOGY');
     await terminal.locator('.xterm-helper-textarea').focus();
     await page.keyboard.type(':topology');
     await page.keyboard.press('Enter');
