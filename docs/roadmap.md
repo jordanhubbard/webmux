@@ -72,7 +72,10 @@ Remaining #318 work, in order:
    owner decision: explicit choice until then). Explicit models and other
    ordinary settings are now resumed for Codex, Cursor and OpenCode
    ([details](session-recovery.md#unsupported-invocation-options)); native
-   Windows execution is still open. Remote native resume is
+   Windows lifecycle recovery is still open. An authenticated Windows AMD64
+   Codex 0.153.0 headless exact-ID continuation passed; native lookup tests
+   also reproduced and fixed the Windows executable-resolution gap
+   ([scope and remaining work](session-recovery.md#windows-native-baseline-2026-11-12)). Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
 2. Codex in default shared-daemon mode is manual-only by owner decision: no

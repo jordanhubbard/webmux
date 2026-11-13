@@ -1756,6 +1756,40 @@ into the hang, boot ID `54881e47-2f01-47ba-9331-7332acefacfe` →
 unchanged. Receipt:
 `~/.local/share/webmux/recovery-qualification/rig-ssh-50cc7ffc940b/receipt.json`.
 
+## Windows native baseline (2026-11-12)
+
+On a native Windows 11 Enterprise AMD64 target, Codex 0.153.0 authenticated
+through target-local device login. Two separate native executable invocations
+created and resumed the same exact conversation ID: the second turn returned
+the synthetic marker from the first turn without receiving it again. Both
+used `exec --ignore-user-config --skip-git-repo-check --sandbox read-only
+--json`; resume additionally selected the recorded ID. No tool actions were
+observed. The CLI emitted warnings about an unknown enterprise
+`ultrafast_mode` requirement; these were retained rather than suppressed.
+This is headless native conversation continuity, not a WebMux recovery receipt.
+
+Evidence is retained on that target below
+`%LOCALAPPDATA%\WebMuxRecoveryQualification\native-28f90700c7e54716b2cd025055387a2d\`.
+The native Codex executable SHA-256 is
+`0f8ed9678bca539aa6517adb0c8d50ad9a94ff5df4d21e149ae700d219fff69d`.
+No authentication files were copied between hosts.
+
+Native Windows tests reproduced an adapter lookup defect: the original
+resolver required Unix executable permission bits and did not append `.exe`
+to suffixless resume commands. The fixed resolver accepts native `.exe`
+files, excludes shell wrappers, relative PATH entries, itself and the helper
+directory, and preserves Unix executable/symlink handling. The identical
+Windows tests failed against the prior resolver and passed against the fix
+on the native target. The npm `codex.cmd` wrapper is outside this native
+executable contract; this probe scoped its original PATH to npm's native
+vendor executable directory without changing the account's PATH.
+
+Windows still lacks a qualified durable lifecycle provider, waiting worker
+and shell capture/alias integration. Controller restart/update/crash,
+survivor reattachment, explicit recovery, duplicate prevention and actual
+host reboot remain unqualified on Windows. The shared-daemon/manual-resume
+boundary and unsupported-invocation fallbacks still apply. #318 stays open.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
