@@ -132,3 +132,16 @@ func TestReplayAndTranscriptConsentAreIndependent(t *testing.T) {
 		t.Fatal("shell action accepted transcript as executable context")
 	}
 }
+
+func TestCLIOnlyActivityRetainsItsLifecycleIdentity(t *testing.T) {
+	event := &Event{Kind: "cli", Platform: "windows", Instance: "native-wrapper", Cwd: `C:\project`, CLI: "codex", Version: "0.153.0", SessionID: "12345678-1234-4234-a234-123456789abc", NativeEvidence: "launch-selector", Argv: []string{"codex", "resume", "12345678-1234-4234-a234-123456789abc"}}
+	for _, tc := range []struct {
+		complete *Event
+		running  bool
+	}{{nil, true}, {&Event{Kind: "complete", Instance: "other-shell"}, true}, {&Event{Kind: "complete", Instance: event.Instance}, false}} {
+		a := cachedActivity(HostState{CLI: event, Complete: tc.complete})
+		if a.ShellInstance != event.Instance || a.Platform != "windows" || a.Cwd != event.Cwd || a.Running != tc.running || a.NativeSessionID != event.SessionID || a.Replayable {
+			t.Fatalf("CLI-only lifecycle evidence was lost: %+v", a)
+		}
+	}
+}

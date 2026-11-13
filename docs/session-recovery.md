@@ -2120,6 +2120,89 @@ creation/attachment, launcher integration and actual application lifecycle
 qualification remain open under #318. This startup path prepares that integration
 without changing the tmux requirement in the current local launcher.
 
+### Windows local-provider integration (2026-11-13)
+
+Windows local terminals now create or reattach the independent native provider
+directly, without tmux or a second ConPTY layer. A viewer owns its authenticated
+stream connection; controller close detaches it while retaining the owner and
+job. The launcher initializes durable host evidence and emits a fresh signed
+provider event to start authenticated state polling. It does not replay cached
+shell/CLI observations as live events: the snapshot reconciler uses the current
+control state to determine readiness. A lost provider starts a waiting worker
+when prior activity exists. Failed or unsupported snapshots retain the job and
+return an attachment error rather than creating a replacement.
+
+The local connection button is labeled Localhost across platforms. Windows
+session titles no longer claim tmux. The legacy remote ensure/attach route still
+refuses Windows before allocating an unattachable provider; remote native
+attachment is not enabled by this local path.
+
+Native ConPTY integration controls exercise actual launcher processes. Abrupt
+controller loss preserves the owner instance, owner/root PIDs and one synthetic
+coding job; the replacement can read, send input, resize and detach without
+stopping that job. Explicit provider loss starts a new waiting worker with the
+recorded selector intact and no duplicate CLI. It rejects arbitrary Windows
+command replay before durable consumption, accepts a deliberate shell fallback,
+and recognizes a repeated recovery request as already consumed. CLI-only
+evidence retains its own platform and shell instance, so the fallback completes
+the correct prior activity even without a preceding command hook.
+
+The final Windows AMD64 run passed six targeted cases in 4.562 seconds, with zero
+skips. Controls include remote-path refusal, initial-reset handling and a real
+socket peer verifying that a rejected snapshot closes its unread stream rather
+than leaving Wait blocked. Test executable SHA-256:
+`ee79e569729edf44a3b25243a8ae42346cd0891fafc1d517ad08ac00076de415`.
+Private fixture receipts use `local-provider-v10-*`.
+
+A private production application used local account authentication, the real
+browser connection dialog and terminal, and authenticated Codex 0.153.0 with
+`gpt-6-astra`. Abrupt application termination/restart preserved the measured
+owner, root and actual Codex PIDs, with one coding CLI. Replacing the application
+executable in place with a different compiled image also preserved that owner
+and CLI. Fresh questions through the restored browser returned the remembered
+marker without including its value; answers were verified in the exact selected
+native conversation file. The original project and explicit selector were
+retained, and all three earlier transcript files remained nonempty and contained
+the marker. The initial and replacement application SHA-256 values were
+`ee727fb939ecfaae1d1b4ce429fb6a6b24e95cf540403a46b5473a458b63d5ee` and
+`219b9bdb6dc3748feb340672b0f409fb6f0fac95c74cf2678106fb0ccc093e28`.
+
+The application run also exposed a history/viewport ordering defect on provider
+loss. The waiting provider now establishes pending recovery before its first
+image, including after an earlier consumed action. The viewer reset precedes
+plain history, LF lines become CRLF, and history moves above the native
+viewport before the image and live output arrive. The application bridge removes
+only the provider image's leading reset because the browser already resets on
+connected/viewer status; later program resets remain untouched. Independent
+Chrome comparisons prove matching viewport cells, cursor, wraps and modes with
+old history retained above it. The broker regression fails against the prior
+implementation and runs in the maintained browser suite.
+
+With these fixes, a production image verified a clean waiting viewport, the
+manual-only configuration explanation, a deliberate Start a shell action,
+working input and duplicate-request receipt lookup. The completed CLI activity
+was correctly marked stopped. Manually resuming the exact native ID with its
+recorded project and restrictions restored the conversation; another application
+crash/restart preserved that new CLI and produced a fresh remembered-marker
+answer. This application image's SHA-256 is
+`ce6ce892ba53275db508050dc487b282145c651c2fe5e018ed3d9bd7a2829218`.
+Private application evidence uses `app-local-v1-*`, `app-local-v2-*`,
+`app-local-v5-*` and `app-local-v1-browser/`.
+
+The invocation's configuration overrides remain manual-only, as the preview
+reports. The structured native-resume action for those overrides, automatic
+active-thread observation, actual Windows host reboot, additional CLI/policy
+coverage and ARM64 hardware execution remain unqualified. #318 remains open;
+screen-profile limits remain under #355.
+
+Full local Go race tests, affected final race suites, vet/Windows cross-vet,
+strict TypeScript, 350 frontend tests, production frontend build, fourteen
+Chrome workflow checks and the additional native-history browser regression
+passed. Windows AMD64/ARM64 test compilation passed. A local browser attempt
+could not launch a missing bundled Chromium; completed runs used installed
+Chrome. Synthetic CLI fixture controls remain separate from the authenticated
+application evidence above.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

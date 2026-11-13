@@ -12,7 +12,7 @@ test('empty slots offer local tmux, saved tuples, one-time connections and optio
     const add = page.getByTestId('add-cell-0-0').first();
     await add.click();
     const connection = page.getByRole('dialog', { name: 'Connect to Host', exact: true });
-    await expect(connection.getByRole('button', { name: 'Localhost · tmux' })).toBeFocused();
+    await expect(connection.getByRole('button', { name: 'Localhost' })).toBeFocused();
     await expect(connection.getByLabel('Coordinator', { exact: true })).toHaveValue('none');
     await expect(connection.getByPlaceholder('hostname or IP')).toBeHidden();
     await expect(connection.getByTitle('Connect to saved-user@saved.example.test:2222')).toBeVisible();

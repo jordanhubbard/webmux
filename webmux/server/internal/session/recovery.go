@@ -165,6 +165,24 @@ func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {
 	state := e.value.Recovery
 	if event.Kind == "provider" {
 		e.shellHelper, e.shellPlatform = event.Helper, event.Platform
+		if event.Platform == "windows" {
+			// A prior consumed action can leave Pending false. The new
+			// provider's waiting state is authoritative before its image.
+			if event.Mode == "waiting" {
+				if e.value.Recovery == nil {
+					e.value.Recovery = &recovery.State{Version: 1}
+				}
+				e.value.Recovery.Pending = true
+				state = e.value.Recovery
+			}
+			// The native viewer's fresh provider event precedes its screen
+			// snapshot. Put old history in scrollback before that image, not
+			// later when the asynchronous control-state poll completes.
+			b.markConnectedLocked(e.value.ID, e, r)
+			if !event.Survived || event.Mode == "waiting" {
+				b.restoreRecoveryHistoryLocked(e, r)
+			}
+		}
 		b.startRecoveryPollingLocked(e, r)
 		if state != nil && state.Pending && event.Survived && event.Mode != "waiting" {
 			state.Pending, state.Disposition = false, "reattached"
@@ -268,7 +286,14 @@ func (b *Broker) restoreRecoveryHistoryLocked(e *entry, r *run) {
 		if err != nil || text == "" {
 			continue
 		}
+		text = strings.ReplaceAll(text, "\n", "\r\n")
 		text = "\r\n[Previous recorded output — review Recover work to continue]\r\n" + text + "\r\n[Current terminal]\r\n"
+		if e.shellPlatform == "windows" {
+			// Native console coordinates start at the viewport's top. Move
+			// the complete plain history above it; the next native snapshot
+			// paints the viewport and restores modes/cursor before live bytes.
+			text = "\x1b[?1049l\x1b[?6l\x1b[r\x1b[0m\x1b[?7h" + text + strings.Repeat("\r\n", min(max(e.value.Rows, 1), 200)) + "\x1b[H"
+		}
 		e.appendReplay(text)
 		b.broadcastLocked(e, Event{"type": "output", "session_id": e.value.ID, "data": text})
 		break

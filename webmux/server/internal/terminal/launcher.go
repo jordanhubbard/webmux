@@ -96,7 +96,7 @@ func (l Launcher) Launch(request LaunchRequest, password string) (*Process, erro
 		}
 		command.Path, command.Args = browserShell, []string{"--browser-connect", string(payload)}
 	}
-	process, err := Start(command)
+	process, err := startLaunch(request, command)
 	if process != nil {
 		process.browserLocal = local
 		if request.Transport != "exec" && (local || password == "") {
@@ -198,6 +198,13 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 		}
 		if !regexp.MustCompile(`^[a-f0-9-]{36}$`).MatchString(request.SessionID) {
 			return Command{}, errors.New("invalid local session ID")
+		}
+		if p.platform == "windows" {
+			if p.browserShell == "" || request.RecoveryKey == "" {
+				return Command{}, errors.New("Windows local terminals require a session-owned native provider")
+			}
+			command.Path, command.Args = p.browserShell, []string{"--browser-shell"}
+			break
 		}
 		command.Path, err = resolve("tmux")
 		if err != nil {

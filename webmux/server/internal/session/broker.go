@@ -310,6 +310,9 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 	title := request.Username + "@" + request.Hostname
 	if request.Transport == "local" {
 		title = "localhost · tmux"
+		if runtime.GOOS == "windows" {
+			title = "localhost"
+		}
 	}
 	if request.Transport == "exec" {
 		title = fmt.Sprintf("%s:%d", request.Hostname, request.Port)
@@ -885,6 +888,14 @@ func (b *Broker) output(id string, r *run, data string) {
 			b.transcriptErrorLocked(id, r, r.log, err)
 		}
 	}
+	b.markConnectedLocked(id, e, r)
+	e.appendReplay(data)
+	b.broadcastLocked(e, Event{"type": "output", "session_id": id, "data": data})
+	b.recordAgentActivityLocked(e, r, false)
+}
+
+// markConnectedLocked sends the viewer reset before any initial replay output.
+func (b *Broker) markConnectedLocked(id string, e *entry, r *run) {
 	if r.first {
 		r.first = false
 		e.value.State = "connected"
@@ -905,9 +916,6 @@ func (b *Broker) output(id string, r *run, data string) {
 			b.logger.Error("save terminal connection", "error", err)
 		}
 	}
-	e.appendReplay(data)
-	b.broadcastLocked(e, Event{"type": "output", "session_id": id, "data": data})
-	b.recordAgentActivityLocked(e, r, false)
 }
 
 // appendScrollback tracks UTF-16 length so each output chunk scans only the

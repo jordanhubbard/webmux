@@ -77,12 +77,17 @@ Remaining #318 work, in order:
    also reproduced and fixed the Windows executable-resolution gap
    ([scope and remaining work](session-recovery.md#windows-native-baseline-2026-11-12)).
    The Windows recovery worker now passes native ConPTY input-handoff,
-   cancellation and once-only controls; durable provider/shell integration
-   remains open ([worker scope](session-recovery.md#windows-recovery-worker-2026-11-12)).
+   cancellation and once-only controls
+   ([worker scope](session-recovery.md#windows-recovery-worker-2026-11-12)).
    An independent Windows ConPTY owner now passes native controller/job-loss,
-   duplicate-creation, resize and explicit-replacement controls; it is not yet
-   connected to local-terminal recovery
-   ([provider scope](session-recovery.md#independent-windows-conpty-owner-2026-11-12)). Remote native resume is
+   duplicate-creation, resize and explicit-replacement controls. Windows
+   local terminals now attach directly to that owner, and a real browser with
+   authenticated Codex passed application crash/restart survivor reattachment
+   with unchanged owner/root/CLI identity and a fresh remembered-marker answer
+   ([integration scope and remaining limits](session-recovery.md#windows-local-provider-integration-2026-11-13)).
+   Manual exact-ID Codex continuation after provider loss is also demonstrated.
+   Structured native resume for configuration overrides and Windows host reboot
+   qualification remain open. Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
 2. Codex in default shared-daemon mode is manual-only by owner decision: no

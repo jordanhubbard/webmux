@@ -161,9 +161,9 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
         <div style={styles.field}>
           <label style={styles.label}>Local terminal</label>
           <button type="button" style={localFirst ? styles.connectBtn : styles.hostCardBtn} data-dialog-autofocus={localFirst || undefined} onClick={handleLocalConnect} disabled={submitting}>
-            Localhost · tmux
+            Localhost
           </button>
-          <small>Persistent terminal on this WebMux server, running as its OS user. Requires tmux.</small>
+          <small>Persistent terminal on this WebMux server, running as its OS user.</small>
         </div>
         {hostsError && <p role="alert">{hostsError}</p>}
         {/* Saved hosts as quick-connect cards */}

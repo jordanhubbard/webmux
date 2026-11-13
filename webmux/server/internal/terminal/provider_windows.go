@@ -1,9 +1,14 @@
 package terminal
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"io"
+	"strings"
+	"time"
+
+	"github.com/jordanhubbard/webmux/server/internal/recovery"
 
 	"github.com/jordanhubbard/webmux/server/internal/nativeprovider"
 )
@@ -13,8 +18,8 @@ type providerTerminal struct{ *Process }
 func (p providerTerminal) Wait() (int, error) { exit := p.Process.Wait(); return exit.Code, exit.Err }
 func (p providerTerminal) PID() int           { return p.native.(*windowsProcess).process.Pid }
 
-// RunNativeProviderHelper is a private, framed-stdin entry point. Normal
-// launchers do not use it until durable recovery/shell integration is ready.
+// RunNativeProviderHelper is the private framed-stdin entry point used by
+// the independent owner of a Windows local terminal.
 func RunNativeProviderHelper(ctx context.Context, mode string, input io.Reader, output io.Writer) error {
 	if mode == "--native-provider-bootstrap" {
 		return nativeprovider.Bootstrap(ctx, input, output)
@@ -29,4 +34,80 @@ func RunNativeProviderHelper(ctx context.Context, mode string, input io.Reader, 
 		}
 		return providerTerminal{p}, nil
 	})
+}
+
+// A local viewer owns this connection, not the provider's process tree.
+// Close, including controller shutdown, detaches without stopping the job.
+type nativeViewer struct {
+	*nativeprovider.Client
+	output io.Reader
+}
+
+func (v *nativeViewer) Read(p []byte) (int, error) {
+	n, err := v.output.Read(p)
+	if err != nil {
+		_ = v.Client.Close()
+	}
+	return n, err
+}
+func (v *nativeViewer) resize(cols, rows int) error { return v.Client.Resize(cols, rows) }
+func (v *nativeViewer) kill() error                 { return v.Client.Close() }
+func (v *nativeViewer) wait() Exit                  { code, err := v.Client.Wait(); return Exit{Code: code, Err: err} }
+
+func startLaunch(request LaunchRequest, command Command) (*Process, error) {
+	if request.Transport != "local" {
+		return Start(command)
+	}
+	if err := recovery.InitializeHostEvidence(request.SessionID, request.RecoveryKey, false, request.RecoverySeed); err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	identity, event, err := recovery.EnsureNativeProvider(ctx, request.SessionID, request.RecoveryKey, command.Path, nativeprovider.Launch{Directory: command.Dir, Environment: command.Env, Cols: command.Cols, Rows: command.Rows})
+	if err != nil {
+		return nil, err
+	}
+	client, err := nativeprovider.Attach(ctx, identity, request.RecoveryKey, command.Cols, command.Rows)
+	if err != nil {
+		return nil, err
+	}
+	// This fresh signed event starts the broker's authenticated host-state
+	// polling. Cached shell/CLI events must not be replayed as live events:
+	// the snapshot reconciler uses the control state to determine readiness.
+	packet, err := recovery.SignedPacket(event, request.RecoveryKey)
+	if err != nil {
+		_ = client.Close()
+		return nil, err
+	}
+	return newProcess(&nativeViewer{Client: client, output: io.MultiReader(strings.NewReader(packet), &viewerSnapshot{reader: bufio.NewReader(client)})}), nil
+}
+
+// The browser resets on connected/viewer status before replay. Preserve any
+// restored plain scrollback by removing only the provider image's leading RIS;
+// resets later in the program's live output remain untouched.
+type viewerSnapshot struct {
+	reader  *bufio.Reader
+	started bool
+	err     error
+}
+
+func (s *viewerSnapshot) Read(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if !s.started {
+		s.started = true
+		prefix, err := s.reader.Peek(3)
+		if err != nil {
+			s.err = err
+		} else if string(prefix) != "\x18\x1bc" {
+			s.err = errors.New("native provider snapshot reset changed; retain the job and reconnect manually")
+		} else {
+			_, s.err = s.reader.Discard(3)
+		}
+	}
+	if s.err != nil {
+		return 0, s.err
+	}
+	return s.reader.Read(p)
 }

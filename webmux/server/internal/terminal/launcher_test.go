@@ -295,3 +295,22 @@ func TestLocalTmuxCommand(t *testing.T) {
 		t.Fatalf("missing tmux: %v", err)
 	}
 }
+
+func TestWindowsLocalUsesNativeProviderWithoutTmux(t *testing.T) {
+	p := testPlanner()
+	p.platform = "windows"
+	p.browserShell = `C:\WebMux\webmux.exe`
+	p.lookup = func(name string) (string, error) { t.Fatalf("Windows local launch looked up %s", name); return "", nil }
+	r := LaunchRequest{SessionID: "12345678-1234-4234-a234-123456789abc", RecoveryKey: strings.Repeat("a", 32), Hostname: "localhost", Transport: "local", Cols: 80, Rows: 24}
+	command, err := p.build(r, "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if command.Path != p.browserShell || !reflect.DeepEqual(command.Args, []string{"--browser-shell"}) {
+		t.Fatalf("wrong Windows local launch: %+v", command)
+	}
+	r.RecoveryKey = ""
+	if _, err = p.build(r, "", "", ""); err == nil {
+		t.Fatal("accepted an unowned Windows local terminal")
+	}
+}
