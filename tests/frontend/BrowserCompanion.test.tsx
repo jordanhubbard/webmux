@@ -1,9 +1,85 @@
 import { it, expect, vi } from 'vitest';
-import { render, act, screen } from '@testing-library/react';
+import { render, act, screen, fireEvent } from '@testing-library/react';
 import { BrowserCompanion } from '@frontend/components/BrowserCompanion';
 import type { Session } from '@frontend/types';
 const fixture = vi.hoisted(() => ({ action: vi.fn() }));
 vi.mock('@frontend/utils/api', () => ({ api: { browserAction: fixture.action } }));
+
+it.each(['about:blank', 'https://example.com/previous'])('keeps a URL draft when a delayed %s frame arrives between blur and Go', async previous => {
+ vi.useFakeTimers();
+ const frame = { protocol: 2, image: 'fixture', url: previous, tabs: [], target: 'one' };
+ const destination = 'http://localhost:3000/authorize';
+ const redirect = 'https://provider.example/redirect';
+ let resolveFrame!: (value: typeof frame) => void;
+ fixture.action.mockReset().mockResolvedValueOnce(frame)
+  .mockImplementationOnce(() => new Promise(resolve => { resolveFrame = resolve; }))
+  .mockResolvedValue({ ...frame, url: redirect });
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  await act(async () => { vi.advanceTimersByTime(500); });
+  expect(fixture.action).toHaveBeenLastCalledWith('test', { action: 'frame' });
+  const address = screen.getByLabelText('Remote browser URL');
+  fireEvent.focus(address);
+  fireEvent.change(address, { target: { value: destination } });
+  // Clicking Go blurs the address before the form submits. A completed poll
+  // in that interval must not replace the URL that the user is submitting.
+  fireEvent.blur(address);
+  await act(async () => { resolveFrame(frame); });
+  expect(address).toHaveValue(destination);
+  fireEvent.click(screen.getByRole('button', { name: 'Go' }));
+  await act(async () => { await Promise.resolve(); });
+  expect(fixture.action).toHaveBeenCalledWith('test', { action: 'navigate', url: destination });
+  expect(address).toHaveValue(redirect);
+ } finally { view.unmount(); vi.useRealTimers(); }
+});
+
+it('releases the address draft when the user explicitly navigates back', async () => {
+ const frame = { protocol: 2, image: 'fixture', url: 'https://example.com/work', canBack: true, tabs: [], target: 'one' };
+ fixture.action.mockReset().mockResolvedValueOnce(frame).mockResolvedValue({ ...frame, url: 'https://example.com/previous' });
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  const address = screen.getByLabelText('Remote browser URL');
+  fireEvent.focus(address);
+  fireEvent.change(address, { target: { value: 'https://typed.example/draft' } });
+  fireEvent.blur(address);
+  fireEvent.click(screen.getByRole('button', { name: 'Browser back' }));
+  await act(async () => { await Promise.resolve(); });
+  expect(address).toHaveValue('https://example.com/previous');
+  expect(fixture.action).toHaveBeenCalledWith('test', { action: 'back' });
+ } finally { view.unmount(); }
+});
+
+it.each(['about:blank', 'https://example.com/work'])('Escape cancels a URL draft and resumes address updates for %s', async url => {
+ vi.useFakeTimers();
+ const frame = { protocol: 2, image: 'fixture', url, tabs: [], target: 'one' };
+ fixture.action.mockReset().mockResolvedValueOnce(frame).mockResolvedValue({ ...frame, url: 'https://example.com/redirect' });
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  const address = screen.getByLabelText('Remote browser URL');
+  fireEvent.focus(address);
+  fireEvent.change(address, { target: { value: 'https://typed.example/draft' } });
+  fireEvent.keyDown(address, { key: 'Escape' });
+  expect(address).toHaveValue(url === 'about:blank' ? '' : url);
+  expect(fixture.action).toHaveBeenCalledTimes(1);
+  await act(async () => { vi.advanceTimersByTime(500); });
+  expect(address).toHaveValue('https://example.com/redirect');
+ } finally { view.unmount(); vi.useRealTimers(); }
+});
+
+it('does not navigate when Go is pressed with an empty address', async () => {
+ fixture.action.mockReset().mockResolvedValue({ protocol: 2, image: 'fixture', url: 'about:blank', tabs: [], target: 'one' });
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  fireEvent.click(screen.getByRole('button', { name: 'Go' }));
+  await act(async () => { await Promise.resolve(); });
+  expect(fixture.action.mock.calls.map(call => call[1].action)).toEqual(['start']);
+ } finally { view.unmount(); }
+});
+
 it.each(['frame', 'request'])('keeps polling after a transient %s failure during navigation', async failure => {
   vi.useFakeTimers();
   try {

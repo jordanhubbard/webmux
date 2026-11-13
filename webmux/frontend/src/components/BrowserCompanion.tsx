@@ -8,6 +8,7 @@ import type { Session } from '../types';
 import './BrowserCompanion.css';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const NAVIGATION_ACTIONS = new Set<BrowserAction['action']>(['start', 'navigate', 'back', 'forward', 'reload', 'tab', 'new_tab', 'close_tab']);
 const modifiers = (event: { altKey: boolean; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean }) =>
   (event.altKey ? 1 : 0) | (event.ctrlKey ? 2 : 0) | (event.metaKey ? 4 : 0) | (event.shiftKey ? 8 : 0);
 
@@ -55,11 +56,18 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   const viewportBox = useRef<HTMLDivElement>(null);
   const addressInput = useRef<HTMLInputElement>(null);
   const addressEditing = useRef(false);
+  // Go blurs the input before submitting. Keep an edited draft through that
+  // interval so an in-flight frame cannot replace the user's destination.
+  const addressDraft = useRef(false);
   const lastClick = useRef({ time: 0, x: 0, y: 0, button: -1, count: 0 });
   const dragging = useRef<{ button: string; count: number } | null>(null);
   const lastMove = useRef(0);
 
   const act = useCallback((action: BrowserAction) => {
+    if (NAVIGATION_ACTIONS.has(action.action)) {
+      addressDraft.current = false;
+      addressEditing.current = false;
+    }
     // Coalesce queued pointer motion only within one down/up segment. Key and
     // button events keep their order, even when HTTP is slower than the mouse.
     if (action.action === 'mouse_move' && coalesced.current) {
@@ -79,8 +87,8 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         setFrame(previous => ({ ...metadata, url: metadata.url || previous?.url || '', target: metadata.target || previous?.target || '', tabs: metadata.tabs ?? previous?.tabs ?? [],
           width: metadata.width || previous?.width, height: metadata.height || previous?.height,
           image: metadata.image || (!metadata.target || previous?.target === metadata.target ? previous?.image : undefined) }));
-        if (!addressEditing.current && result.url && result.url !== 'about:blank') setAddress(result.url);
-        else if (!addressEditing.current && result.url === 'about:blank') setAddress('');
+        if (!addressEditing.current && !addressDraft.current && result.url && result.url !== 'about:blank') setAddress(result.url);
+        else if (!addressEditing.current && !addressDraft.current && result.url === 'about:blank') setAddress('');
         setError(result.error ?? '');
         setReady(previous => previous || !result.error);
         if (clipboard !== undefined && !await copyDesktopText(clipboard)) setError('The browser blocked clipboard access for this site.');
@@ -174,6 +182,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
       </header>
       <form className="browser-navigation" onSubmit={event => {
         event.preventDefault(); addressEditing.current = false;
+        if (!address.trim()) return;
         const url = /^https?:\/\//i.test(address.trim()) ? address.trim() : `https://${address.trim()}`;
         void act({ action: 'navigate', url }); viewport.current?.focus();
       }}>
@@ -181,7 +190,15 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         <button type="button" aria-label="Browser forward" disabled={!ready || !frame?.canForward} onClick={() => void act({ action: 'forward' })}>→</button>
         <button type="button" aria-label="Stop browser page" disabled={!ready} onClick={() => void act({ action: 'stop' })}>×</button>
         <button type="button" aria-label="Reload browser page" disabled={!ready} onClick={() => void act({ action: 'reload' })}>↻</button>
-        <input ref={addressInput} aria-label="Remote browser URL" placeholder="Enter a website URL" value={address} onFocus={() => { addressEditing.current = true; }} onBlur={() => { addressEditing.current = false; }} onChange={event => setAddress(event.target.value)} />
+        <input ref={addressInput} aria-label="Remote browser URL" placeholder="Enter a website URL" value={address} onFocus={() => { addressEditing.current = true; }} onBlur={() => { addressEditing.current = false; }}
+          onChange={event => { addressDraft.current = true; setAddress(event.target.value); }}
+          onKeyDown={event => {
+            if (event.key !== 'Escape') return;
+            event.preventDefault(); event.stopPropagation();
+            addressDraft.current = false; addressEditing.current = false;
+            setAddress(frame?.url === 'about:blank' ? '' : frame?.url ?? '');
+            event.currentTarget.blur();
+          }} />
         <button type="submit" disabled={busy}>Go</button>
       </form>
       <div className="browser-tabs">

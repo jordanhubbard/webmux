@@ -12,7 +12,8 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     if (!response.url().endsWith('/browser')) return;
     try {
       const { url, error } = await response.json();
-      replies.push({ status: response.status(), url, error });
+      const sent = response.request().postDataJSON() as { action?: string; url?: string } | null;
+      replies.push({ status: response.status(), action: sent?.action, requestedURL: sent?.url, url, error });
       if (replies.length > 20) replies.shift();
     } catch { /* request may have been canceled during teardown */ }
   });
