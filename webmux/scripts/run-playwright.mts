@@ -15,9 +15,12 @@ const childEnv = {
 
 // The full suite shares one client address. Keep each shard on a fresh server
 // so accumulated browser requests do not exhaust the production rate limit.
+// Five groups include headroom for the two-viewer mode-query control; with four,
+// its added page loads caused HTTP 429s in the following mouse-selection test.
 // Focused invocations retain their exact CLI arguments and output directory.
-const runs = args.length ? [args] : [1, 2, 3, 4].map(shard => [
-  `--shard=${shard}/4`, `--output=test-results/shard-${shard}`,
+const shards = 5;
+const runs = args.length ? [args] : Array.from({ length: shards }, (_, index) => [
+  `--shard=${index + 1}/${shards}`, `--output=test-results/shard-${index + 1}`,
 ]);
 let exitCode = 0;
 for (const runArgs of runs) {
