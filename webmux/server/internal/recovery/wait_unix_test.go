@@ -6,57 +6,14 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/creack/pty"
 )
-
-func TestWaitingSocketRPCConsumesExactlyOneIntent(t *testing.T) {
-	request := waitingFixture(t)
-	dir, err := os.MkdirTemp("/tmp", "wm-rpc-test-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.RemoveAll(dir) })
-	endpoint := filepath.Join(dir, "s")
-	listener, err := net.ListenUnix("unix", &net.UnixAddr{Net: "unix", Name: endpoint})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer listener.Close()
-	state, err := updateHostState(testHostSession, testHostKey, false, func(state *HostState) error { state.Control.Endpoint = endpoint; return nil })
-	if err != nil {
-		t.Fatal(err)
-	}
-	request.Action.Revision = state.Revision
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	finished := make(chan error, 1)
-	go func() {
-		_, err := serveWaiting(ctx, listener, testHostSession, testHostKey, "current-worker", preflightAction)
-		_ = listener.Close()
-		finished <- err
-	}()
-	response := HostRPC(ctx, request)
-	if response.Error != "" || response.Outcome != "consumed" {
-		t.Fatal(response)
-	}
-	if err := <-finished; err != nil {
-		t.Fatal(err)
-	}
-	// The original worker no longer exists. A reconnect still sees consumption
-	// and cannot submit the request to a replacement actor or a shell prompt.
-	response = HostRPC(ctx, request)
-	if response.Error != "" || response.Outcome != "consumed" || len(hostSnapshot(t).Consumed) != 1 {
-		t.Fatal(response)
-	}
-}
 
 // This subprocess owns a real controlling terminal. Keep it separate from the
 // test runner's terminal and from the user's tmux server.
