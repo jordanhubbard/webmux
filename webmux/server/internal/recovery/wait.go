@@ -26,6 +26,10 @@ func cachedActivity(state HostState) Activity {
 		activity = Activity{Platform: event.Platform, ShellInstance: event.Instance, Cwd: event.Cwd, Command: event.Command, Replayable: !event.Redacted, Running: state.Complete == nil}
 	}
 	if event := state.CLI; event != nil {
+		// Windows native aliases can be the first reliable observation: cmd
+		// has no command hook to provide this identity on their behalf.
+		activity.Platform, activity.ShellInstance = event.Platform, event.Instance
+		activity.Running = state.Complete == nil || state.Complete.Instance != event.Instance
 		activity.CLI, activity.CLIVersion, activity.NativeSessionID, activity.NativeStateFile = event.CLI, event.Version, event.SessionID, event.StateFile
 		activity.NativeEvidence = event.NativeEvidence
 		activity.Argv = append([]string(nil), event.Argv...)

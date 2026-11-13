@@ -3,11 +3,15 @@
 package terminal
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -448,6 +452,18 @@ func TestWindowsLocalProviderLossWaitsWithoutDuplicatingWork(t *testing.T) {
 		}
 		return false
 	}, "shell fallback ready")
+	var nativeInstance, completedInstance string
+	for _, event := range snapshot().Events {
+		if event.Kind == "cli" {
+			nativeInstance = event.Instance
+		}
+		if event.Kind == "complete" {
+			completedInstance = event.Instance
+		}
+	}
+	if nativeInstance == "" || completedInstance != nativeInstance {
+		t.Fatal("shell fallback did not complete the CLI-only activity")
+	}
 	second.send(t, localFrame{Kind: "input", Data: []byte("set WM_FIXTURE=RECOVERY\r\necho %WM_FIXTURE%_SHELL_READY\r\n")})
 	waitLocal(t, func() bool { return second.contains("RECOVERY_SHELL_READY") }, "fallback shell input")
 	reply = recovery.HostRPC(context.Background(), rpc)
@@ -475,5 +491,94 @@ func TestWindowsLocalRemoteEnsureDoesNotCreateUnattachableProvider(t *testing.T)
 	}
 	if _, err := os.Stat(filepath.Join(cache, "webmux", "native-providers", id)); !os.IsNotExist(err) {
 		t.Fatal("remote ensure allocated an unattachable provider")
+	}
+}
+
+func TestWindowsLocalSnapshotResetIsRemovedOnce(t *testing.T) {
+	for _, size := range []int{1, 2, 3, 8} {
+		reader := &viewerSnapshot{reader: bufio.NewReaderSize(bytes.NewBufferString("\x18\x1bcIMAGE\x18\x1bcLIVE"), size)}
+		var output strings.Builder
+		chunk := make([]byte, size)
+		for {
+			n, err := reader.Read(chunk)
+			output.Write(chunk[:n])
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		if output.String() != "IMAGE\x18\x1bcLIVE" {
+			t.Fatal("removed live output or retained the initial reset")
+		}
+	}
+	reader := &viewerSnapshot{reader: bufio.NewReader(strings.NewReader("CHANGED IMAGE"))}
+	if _, err := io.ReadAll(reader); err == nil {
+		t.Fatal("accepted an unknown snapshot reset contract")
+	}
+}
+
+func TestWindowsLocalRejectedSnapshotClosesItsStream(t *testing.T) {
+	dir, err := os.MkdirTemp("", "wmv-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	endpoint := filepath.Join(dir, "s")
+	listener, err := net.Listen("unix", endpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	identity := nativeprovider.Identity{Session: "12345678-1234-4234-a234-123456789abc", Instance: strings.Repeat("a", 32), Endpoint: endpoint, OwnerPID: os.Getpid(), Replay: "screen-v1"}
+	closed := make(chan struct{})
+	go func() {
+		defer close(closed)
+		c, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer c.Close()
+		_ = c.SetDeadline(time.Now().Add(5 * time.Second))
+		var header [4]byte
+		if _, err = io.ReadFull(c, header[:]); err != nil {
+			return
+		}
+		if binary.BigEndian.Uint32(header[:]) > 256<<10 {
+			return
+		}
+		if _, err = io.CopyN(io.Discard, c, int64(binary.BigEndian.Uint32(header[:]))); err != nil {
+			return
+		}
+		write := func(value any) {
+			data, _ := json.Marshal(value)
+			binary.BigEndian.PutUint32(header[:], uint32(len(data)))
+			_, _ = c.Write(header[:])
+			_, _ = c.Write(data)
+		}
+		write(map[string]any{"kind": "attached", "identity": identity})
+		write(map[string]any{"kind": "data", "data": []byte("CHANGED RESET")})
+		_, _ = io.Copy(io.Discard, c)
+	}()
+	client, err := nativeprovider.Attach(context.Background(), identity, strings.Repeat("b", 32), 80, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := newProcess(&nativeViewer{Client: client, output: &viewerSnapshot{reader: bufio.NewReader(client)}})
+	defer p.Close()
+	var buf [32]byte
+	if _, err = p.Read(buf[:]); err == nil {
+		t.Fatal("unknown reset was accepted")
+	}
+	select {
+	case <-p.Done():
+	case <-time.After(3 * time.Second):
+		t.Fatal("rejected snapshot left Wait blocked on its unread stream")
+	}
+	select {
+	case <-closed:
+	case <-time.After(3 * time.Second):
+		t.Fatal("rejected viewer retained its connection")
 	}
 }

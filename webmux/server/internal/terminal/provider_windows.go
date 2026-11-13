@@ -1,6 +1,7 @@
 package terminal
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"io"
@@ -42,7 +43,13 @@ type nativeViewer struct {
 	output io.Reader
 }
 
-func (v *nativeViewer) Read(p []byte) (int, error)  { return v.output.Read(p) }
+func (v *nativeViewer) Read(p []byte) (int, error) {
+	n, err := v.output.Read(p)
+	if err != nil {
+		_ = v.Client.Close()
+	}
+	return n, err
+}
 func (v *nativeViewer) resize(cols, rows int) error { return v.Client.Resize(cols, rows) }
 func (v *nativeViewer) kill() error                 { return v.Client.Close() }
 func (v *nativeViewer) wait() Exit                  { code, err := v.Client.Wait(); return Exit{Code: code, Err: err} }
@@ -72,5 +79,35 @@ func startLaunch(request LaunchRequest, command Command) (*Process, error) {
 		_ = client.Close()
 		return nil, err
 	}
-	return newProcess(&nativeViewer{Client: client, output: io.MultiReader(strings.NewReader(packet), client)}), nil
+	return newProcess(&nativeViewer{Client: client, output: io.MultiReader(strings.NewReader(packet), &viewerSnapshot{reader: bufio.NewReader(client)})}), nil
+}
+
+// The browser resets on connected/viewer status before replay. Preserve any
+// restored plain scrollback by removing only the provider image's leading RIS;
+// resets later in the program's live output remain untouched.
+type viewerSnapshot struct {
+	reader  *bufio.Reader
+	started bool
+	err     error
+}
+
+func (s *viewerSnapshot) Read(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if !s.started {
+		s.started = true
+		prefix, err := s.reader.Peek(3)
+		if err != nil {
+			s.err = err
+		} else if string(prefix) != "\x18\x1bc" {
+			s.err = errors.New("native provider snapshot reset changed; retain the job and reconnect manually")
+		} else {
+			_, s.err = s.reader.Discard(3)
+		}
+	}
+	if s.err != nil {
+		return 0, s.err
+	}
+	return s.reader.Read(p)
 }

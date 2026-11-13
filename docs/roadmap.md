@@ -85,8 +85,9 @@ Remaining #318 work, in order:
    authenticated Codex passed application crash/restart survivor reattachment
    with unchanged owner/root/CLI identity and a fresh remembered-marker answer
    ([integration scope and remaining limits](session-recovery.md#windows-local-provider-integration-2026-11-13)).
-   Native process-loss resume, configuration-override support and Windows host
-   reboot qualification remain open. Remote native resume is
+   Manual exact-ID Codex continuation after provider loss is also demonstrated.
+   Structured native resume for configuration overrides and Windows host reboot
+   qualification remain open. Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
 2. Codex in default shared-daemon mode is manual-only by owner decision: no
