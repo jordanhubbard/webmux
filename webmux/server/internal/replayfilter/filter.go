@@ -19,16 +19,22 @@ type Filter struct {
 	// Xterm matches the browser's xterm display profile. Its unsupported DEC
 	// mode 69 must remain off so CSI s saves a cursor, rather than setting
 	// horizontal margins. This affects the mirror only, never live output.
-	Xterm    bool
-	state    byte
-	sequence []byte
-	partial  []byte
-	osc      bool
+	Xterm         bool
+	state         byte
+	sequence      []byte
+	partial       []byte
+	osc           bool
+	repeatable    bool
+	beforeControl bool
 }
 
 // AtBoundary reports whether a new viewer can begin the following live stream
 // without inheriting a partial character, escape sequence or private payload.
 func (f *Filter) AtBoundary() bool { return f.state == 0 && len(f.partial) == 0 }
+
+// CanRepeat reports whether xterm would accept REP at this exact boundary.
+// Complete controls clear that state even when omitted from the mirror copy.
+func (f *Filter) CanRepeat() bool { return f.Xterm && f.repeatable && f.AtBoundary() }
 
 func (f *Filter) Feed(data []byte) []byte {
 	if len(f.partial) > 0 {
@@ -55,22 +61,40 @@ func (f *Filter) Feed(data []byte) []byte {
 		}
 		if r == 0x18 || r == 0x1a {
 			f.state, f.sequence = 0, nil
+			f.repeatable, f.beforeControl = false, false
 			continue
 		}
 		if r == 0x1b {
+			f.beforeControl, f.repeatable = f.repeatable, false
 			f.state, f.sequence = 'e', []byte{0x1b}
 			continue
 		}
 		if r == 0x9b {
+			f.beforeControl, f.repeatable = f.repeatable, false
 			f.state, f.sequence = 'c', []byte{0x1b, '['}
 			continue
 		}
 		if r == 0x90 || r == 0x98 || r == 0x9d || r == 0x9e || r == 0x9f {
+			f.repeatable, f.beforeControl = false, false
 			f.state, f.sequence, f.osc = 's', nil, r == 0x9d
+			continue
+		}
+		if f.state != 0 && (r < 0x20 || r == 0x7f) {
+			// C0 executes inside ESC/CSI without ending the sequence; DEL is
+			// simply ignored. Keep the boundary incomplete until its final byte.
+			if r != 0x7f {
+				f.beforeControl = false
+				if r >= 8 && r <= 15 {
+					out.WriteRune(r)
+				}
+			}
 			continue
 		}
 		switch f.state {
 		case 0:
+			if r != 0x7f { // DEL is ignored by xterm without clearing REP.
+				f.repeatable = r >= 0x20 && (r < 0x7f || r >= 0xa0)
+			}
 			// Omit BEL/ENQ and unrecognized C0/C1 controls. Retain ordinary
 			// display movement and character-set shifts, as well as Unicode.
 			if r >= 0x20 && (r < 0x7f || r >= 0xa0) || r >= 8 && r <= 15 {
@@ -106,6 +130,9 @@ func (f *Filter) Feed(data []byte) []byte {
 					sequence := f.sequence
 					if f.Xterm {
 						sequence = xtermCSI(sequence, r)
+						if r == 'b' && !f.beforeControl {
+							sequence = nil
+						}
 					}
 					if len(sequence) > 0 {
 						out.Write(sequence)
@@ -113,6 +140,7 @@ func (f *Filter) Feed(data []byte) []byte {
 					}
 				}
 				f.state, f.sequence = 0, nil
+				f.repeatable, f.beforeControl = false, false
 			} else if r >= 0x20 && r <= 0x3f {
 				if len(f.sequence) < 128 && f.state == 'c' {
 					f.sequence = append(f.sequence, byte(r))

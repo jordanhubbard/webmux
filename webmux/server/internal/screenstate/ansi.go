@@ -41,21 +41,21 @@ import (
 // The owner supplies only complete filtered states; private strings and mirror
 // replies are never emitted. REP state and filtered OSC display features still
 // need separate qualification. The capture is not modified.
-func replayScreen(st *snapshot.State, main *underlay) []byte {
+func replayScreen(st *snapshot.State, main *underlay, repeat bool) ([]byte, error) {
 	if st == nil {
-		return nil
+		return nil, ErrIncomplete
 	}
 	cp := *st
 	if err := cp.Unpack(); err != nil {
-		return nil
+		return nil, err
 	}
-	return replay(&cp, main)
+	return replay(&cp, main, repeat)
 }
 
 // replay is Replay for a state that is not packed.
-func replay(st *snapshot.State, under *underlay) []byte {
+func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 	if st == nil {
-		return nil
+		return nil, ErrIncomplete
 	}
 	var b bytes.Buffer
 	b.Grow(st.Width * (st.Height + len(st.Scrollback)) * 2)
@@ -197,7 +197,36 @@ func replay(st *snapshot.State, under *underlay) []byte {
 	if len(st.PendingInput) <= vt.MaxPendingInput {
 		b.Write(st.PendingInput)
 	}
-	return b.Bytes()
+	if repeat {
+		// Xterm clears REP after every control. Reprint the last cluster only
+		// after every mode/pen/cursor sequence, leaving no following control
+		// which could clear it again. This also re-arms a pending wrap.
+		x, y := st.CursorX-1, st.CursorY
+		if st.PendingWrap {
+			x = st.CursorX
+		}
+		if y < 0 || y >= len(st.Screen) || x < 0 || x >= len(st.Screen[y]) || st.LastPrinted == "" {
+			return nil, ErrIncomplete
+		}
+		if st.Screen[y][x].Width == 0 && x > 0 {
+			x--
+		}
+		addressX, addressY := x, y
+		if st.Modes[6] {
+			addressX -= left
+			addressY -= top
+		}
+		w.cup(addressX, addressY)
+		if st.ANSIModes[4] {
+			// Delete the cell before re-inserting it so IRM does not shift
+			// the captured row a second time.
+			b.WriteString("\x1b[")
+			b.WriteString(strconv.Itoa(max(st.Screen[y][x].Width, 1)))
+			b.WriteByte('P')
+		}
+		b.WriteString(st.LastPrinted)
+	}
+	return b.Bytes(), nil
 }
 
 // vtWriter writes rows of cells, keeping track of the pen and the link it

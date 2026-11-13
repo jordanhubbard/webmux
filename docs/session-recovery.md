@@ -1983,6 +1983,55 @@ emulator. REP, OSC palette/hyperlink display and complete xterm profile parity
 remain open under #355. Normal Windows recovery, authenticated coding-session
 recovery and actual application lifecycle acceptance remain open under #318.
 
+### REP boundaries and repeatable browser regression (2026-11-13)
+
+The mirror now follows xterm's REP lifetime across arbitrary reads: complete
+controls clear the preceding-print state even when those controls are excluded
+from retained display output. A valid repeat immediately after a printed cluster
+is retained. Snapshots that need to preserve it reprint the final cluster only
+after all mode/pen/cursor setup, so those setup controls cannot clear it again.
+Insert mode removes that cell before re-inserting it to avoid shifting the row
+a second time. Unicode, combining clusters and wide pending wraps are covered.
+Live provider bytes are unchanged and mirror replies remain discarded.
+
+C0 controls and DEL inside an ESC/CSI sequence no longer prematurely finish the
+retained parser boundary. Executable C0 controls retain their display effect;
+DEL is ignored. Attachment still refuses the unfinished sequence until its
+final byte arrives. Controls also clear REP as the frontend parser requires.
+
+Fifteen independent real Chrome/xterm regressions generate actual Go snapshots,
+compare initial cells/styles/wraps/cursor/modes, continue output, then compare a
+second attachment after more output. They also assert that snapshots emit no
+query replies. All fifteen failed against the prior `8f5720f` implementation
+in the matching parent-overlay browser control and pass with these changes.
+The reproducible suite is `screen-replay.spec.ts`; it runs in normal hosted
+browser testing. Strict E2E TypeScript, full local Go race tests and vet passed.
+
+With autowrap disabled at the final column, the current emulator cannot
+represent xterm's distinction between a cursor in that cell and one advanced
+past it. Such snapshots explicitly refuse attachment while retaining the job;
+this remains an open profile limit. The Windows wire-level refusal control
+verifies no terminal close or retained viewer, followed by a successful later
+safe attachment to the same owner. It uses a test terminal, not another native
+coding CLI.
+
+The final native Windows AMD64 provider suite passed fifteen cases with zero
+skips or forced fixture cleanup in 9.750 seconds, including existing real
+ConPTY lifecycle controls and the new refusal control. Executable SHA-256:
+`67cd581694496bdc1c4cc11ba04b0b768d744fe2600472efdd1a3ac5f3f1e9fc`.
+The native Windows fixture generator emitted fifteen fixtures (24,315 bytes),
+using SHA-256
+`0c0b5769b548fb7902d15426a566866a61e84ab25bde26de01fc2a25185b45b3`.
+The Windows fixtures were byte-identical to the fifteen locally generated
+fixtures that passed the Chrome suite. Windows ARM64 test compilation passed;
+no ARM64 hardware run is claimed. Private evidence uses `provider-repeat-v4-*`, `screen-repeat-v4-*`,
+`repeat-parent-v2-*` and `test-results/screen-repeat-355-final`.
+
+Saved origin/pending-wrap behavior, extended underline details, the no-wrap
+edge and OSC display features remain under #355. These changes preserve the
+existing boundary: normal Windows recovery stays disabled, and application
+lifecycle/native-session acceptance remains open under #318.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
