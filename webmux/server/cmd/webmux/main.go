@@ -42,6 +42,12 @@ func main() {
 		}
 		var childExit *exec.ExitError
 		if errors.As(err, &childExit) {
+			// Native CLI aliases preserve the child's own diagnostics. The USB
+			// command adds cleanup context around SSH's status; retain that
+			// explanation as well as its nonzero exit code.
+			if len(os.Args) >= 2 && os.Args[1] == "usb-forward" {
+				slog.Error("USB forwarding stopped", "error", err)
+			}
 			os.Exit(childExit.ExitCode())
 		}
 		slog.Error("server stopped", "error", err)

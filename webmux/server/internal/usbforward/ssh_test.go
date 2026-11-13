@@ -131,13 +131,16 @@ func TestRealSSHTransportAndHostKeyRejection(t *testing.T) {
 							close(gate.done)
 						}
 						status := uint32(0)
-						if workerErr != nil || conn.User() == "failed-eof" {
+						if workerErr != nil || conn.User() == "failed-eof" || conn.User() == "failed-exit" {
 							status = 1
 						}
 						// sshd reports remote completion only after the command exits.
 						_, _ = stream.SendRequest("exit-status", false, ssh.Marshal(struct{ Status uint32 }{status}))
 						_ = stream.Close()
-						return
+						// End the session, then let the SSH client close its
+						// transport. Returning here resets TCP before Windows
+						// OpenSSH can finish its disconnect exchange.
+						break
 					}
 				}
 			}()
@@ -280,6 +283,59 @@ func TestRealSSHTransportAndHostKeyRejection(t *testing.T) {
 			_ = wait()
 		})
 	}
+	t.Run("session-close-keeps-ssh-transport-until-client-disconnect", func(t *testing.T) {
+		signer, err := ssh.NewSignerFromKey(clientKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		client, err := ssh.Dial("tcp", listener.Addr().String(), &ssh.ClientConfig{
+			User: "connection-lifecycle", Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
+			HostKeyCallback: ssh.FixedHostKey(hostSigner.PublicKey()), Timeout: 5 * time.Second,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer client.Close()
+		timer := time.AfterFunc(10*time.Second, func() { client.Close() })
+		defer timer.Stop()
+		remote, err := client.NewSession()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer remote.Close()
+		input, err := remote.StdinPipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		output, err := remote.StdoutPipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := remote.Start("webmux --usb-forward-worker"); err != nil {
+			t.Fatal(err)
+		}
+		w := &wire{ReadWriteCloser: Stdio{In: io.NopCloser(output), Out: input}}
+		if err := w.send(setup, 0, []byte(`{"version":1,"seconds":30}`)); err != nil {
+			t.Fatal(err)
+		}
+		packet, err := w.read()
+		if err != nil || packet.kind != ready {
+			t.Fatalf("worker did not become ready: %v", err)
+		}
+		if err := input.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if err := remote.Wait(); err != nil {
+			t.Fatalf("worker completion: %v", err)
+		}
+		// sshd ends the session channel, then lets the client disconnect its SSH
+		// transport. A fixture that closes TCP first races Windows OpenSSH's final
+		// disconnect and converts a completed command into exit status 255.
+		if _, _, err := client.SendRequest("keepalive@openssh.com", true, nil); err != nil {
+			t.Fatalf("fixture closed SSH transport before client disconnect: %v", err)
+		}
+	})
+
 	for _, name := range []string{"delay-eof", "hung-eof", "failed-eof"} {
 		t.Run("cancellation-"+name, func(t *testing.T) {
 			gate := gates[name]
@@ -369,6 +425,28 @@ func TestRealSSHTransportAndHostKeyRejection(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("cli-worker-completion-error-keeps-cleanup-context", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, binaryPath, "usb-forward", "--host", "failed-exit@127.0.0.1",
+			"--identity", keyFile, "--known-hosts", known, "--ssh-port", strconv.Itoa(listener.Addr().(*net.TCPAddr).Port),
+			"--export-port", strconv.Itoa(exporter.Addr().(*net.TCPAddr).Port), "--duration", "2s")
+		output, err := cmd.CombinedOutput()
+		if err == nil || ctx.Err() != nil {
+			t.Fatalf("CLI did not report failed completion: %v context=%v output=%s", err, ctx.Err(), output)
+		}
+		text := string(output)
+		if !strings.Contains(text, "USB transport ready") {
+			t.Fatalf("CLI never reached forwarding: %s", text)
+		}
+		if !strings.Contains(text, "remote USB forwarding release was not confirmed") && !strings.Contains(text, "SSH USB forwarding ended") {
+			t.Fatalf("CLI discarded cleanup failure context: %s", text)
+		}
+		if strings.Contains(text, "connections released") {
+			t.Fatalf("CLI admitted a failed remote exit: %s", text)
+		}
+	})
 
 	t.Run("cli-lease-and-cleanup", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
