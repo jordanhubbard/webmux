@@ -7,8 +7,20 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
-    "types": ["node"],
-    "paths": { "@playwright/test": ["./node_modules/@playwright/test"] }
+    "types": [
+      "node"
+    ],
+    "paths": {
+      "@playwright/test": [
+        "./node_modules/@playwright/test"
+      ],
+      "@xterm/xterm": [
+        "./node_modules/@xterm/xterm"
+      ]
+    }
   },
-  "include": ["playwright.config.ts", "../tests/e2e/**/*.ts"]
+  "include": [
+    "playwright.config.ts",
+    "../tests/e2e/**/*.ts"
+  ]
 }

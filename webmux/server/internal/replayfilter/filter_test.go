@@ -14,6 +14,8 @@ func TestReplayFilterAcrossEveryReadBoundary(t *testing.T) {
 		{"charset", "\x1b(0q\x1b(B\x1b7\x1b8\x1bM", "\x1b(0q\x1b(B\x1b7\x1b8\x1bM"},
 		{"protected-cells", "\x1b[1\"qKEEP\x1b[0\"q\x1b[?2K", "\x1b[1\"qKEEP\x1b[0\"q\x1b[?2K"},
 		{"invalid-protection", "A\x1b[3\"q\x1b[?1\"qB", "AB"},
+		{"csi-with-c0", "Q\x1b[\n31mZ", "Q\n\x1b[31mZ"},
+		{"csi-with-del", "Q\x1b[\x7f31mZ", "Q\x1b[31mZ"},
 		{"requests", "A\x1b[6n\x1b[c\x1b[>c\x1b[?2004$p\x1b[18t\x1bZB", "AB"},
 		{"osc", "A\x1b]52;c;clipboard\aB\x1b]777;webmux-browser;private\x1b\\C\x1b]777;webmux-recovery;private\aD", "ABCD"},
 		{"strings", "A\x1bP$qcursor\x1b\\B\x1b_hidden\x1b\\C\x1b^private\x1b\\D\x1bXhidden\x1b\\E", "ABCDE"},
@@ -78,6 +80,33 @@ func TestXtermProfilePreservesSupportedModesAcrossReadBoundaries(t *testing.T) {
 			got := append(f.Feed(input[:split]), f.Feed(input[split:])...)
 			if string(got) != tc.want || !bytes.Equal(input, original) {
 				t.Fatalf("profile split %d: %q wanted %q", split, got, tc.want)
+			}
+		}
+	}
+}
+
+func TestXtermRepeatAcrossEveryReadBoundary(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"Q\x1b[3b", "Q\x1b[3b"},
+		{"Q\x1b[\a3b", "Q"},
+		{"Q\x1b[\x7f3b", "Q\x1b[3b"},
+		{"日\x1b[3b", "日\x1b[3b"},
+		{"Q\x1b[2J\x1b[3b", "Q\x1b[2J"},
+		{"Q\x1b[31m\x1b[3b", "Q\x1b[31m"},
+		{"Q\a\x1b[3b", "Q"},
+		{"Q\x1b]777;private\a\x1b[3b", "Q"},
+		{"Q\x1b[2b\x1b[3b", "Q\x1b[2b"},
+		{"Q\x7f\x1b[3b", "Q\x1b[3b"},
+		{"Q\x1b[?69h\x1b[3b", "Q"},
+		{"Q\x1b[6n\x1b[3b", "Q"},
+	} {
+		for split := 0; split <= len(tc.input); split++ {
+			f := Filter{Xterm: true}
+			input := []byte(tc.input)
+			original := bytes.Clone(input)
+			got := append(f.Feed(input[:split]), f.Feed(input[split:])...)
+			if string(got) != tc.want || !bytes.Equal(input, original) {
+				t.Fatalf("split %d: %q wanted %q", split, got, tc.want)
 			}
 		}
 	}

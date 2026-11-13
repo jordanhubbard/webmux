@@ -81,6 +81,9 @@ func TestPartialControlsCannotBecomeReplayRequests(t *testing.T) {
 		{"\x1b]777;webmux-browser;private-browser", "\x1b\\VISIBLE"},
 		{"\x1bPprivate-dcs", "\x1b\\VISIBLE"},
 		{"\x1b[", "6nVISIBLE"},
+		{"\x1b[\a", "6nVISIBLE"},
+		{"\x1b[\n", "6nVISIBLE"},
+		{"\x1b[\x7f", "6nVISIBLE"},
 		{"\x1b[?2026hPARTIAL", "VISIBLE\x1b[?2026l"},
 		{"\xe6\x97", "\xa5VISIBLE"},
 	} {
@@ -239,5 +242,28 @@ func TestMirrorMatchesXtermHorizontalModeHandling(t *testing.T) {
 	}
 	if restored.GetModes()[69] {
 		t.Fatal("enabled a mode xterm ignores")
+	}
+}
+
+func TestNoWrapFinalColumnRefusesAmbiguousCursorWithoutChangingScreen(t *testing.T) {
+	for _, text := range []string{"\x1b[4;79HX", "\x1b[4;80HX", "\x1b[4;79HXX", "\x1b[4;80H"} {
+		s := newScreen(t, 80, 24)
+		if err := s.Feed([]byte("\x1b[?7l" + text)); err != nil {
+			t.Fatal(err)
+		}
+		image, err := s.Capture()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if data, err := image.Bytes(); !errors.Is(err, ErrUnsupported) || data != nil {
+			t.Fatal("ambiguous no-wrap cursor was replayed", err)
+		}
+		// A later unambiguous cursor movement is still accepted by the same mirror.
+		if err := s.Feed([]byte("\x1b[HSAFE")); err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Contains(imageBytes(t, s), []byte("SAFE")) {
+			t.Fatal("refusal damaged the continuing screen")
+		}
 	}
 }
