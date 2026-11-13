@@ -3,8 +3,10 @@ package screenstate
 import (
 	"bytes"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
+	"tuios.dev/vt"
 )
 
 func newScreen(t *testing.T, cols, rows int) *Screen {
@@ -158,5 +160,84 @@ func TestUnattendedStringsAndCombiningFloodStayBounded(t *testing.T) {
 	}
 	if err := s.Feed([]byte("late")); err == nil {
 		t.Fatal("closed mirror accepted output")
+	}
+}
+
+func TestContinuationPreservesHiddenDisplayState(t *testing.T) {
+	for _, tc := range []struct{ name, before, after string }{
+		{"saved-origin", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b[31m\x1b7\x1b[?6l\x1b[10;20H\x1b[32m", "\x1b8X"},
+		{"saved-pending-wrap", "\x1b[4;80HX\x1b7\x1b[10;20H", "\x1b8Y"},
+		{"saved-wide-pending-wrap", "\x1b[4;79H日\x1b7\x1b[10;20H", "\x1b8Y"},
+		{"active-wide-pending-wrap", "\x1b[4;79H日", "Y"},
+		{"protected-wide", "\x1b[1\"q日本\x1b[0\"qTEXT\x1b[H", "\x1b[?2K"},
+		{"protected-main", "\x1b[1\"qKEEP\x1b[0\"q\x1b[?1049hAPP", "\x1b[?1049l\x1b[?2K"},
+		{"protected-blank", "\x1b[41m\x1b[1\"q    \x1b[0\"q\x1b[0m\x1b[H", "\x1b[?2K"},
+		{"saved-cursor", "\x1b[4;8H\x1b[31m\x1b7\x1b[10;20H\x1b[32m", "\x1b8X"},
+		{"saved-alt-cursor", "SHELL\x1b[?1049h\x1b[4;8H\x1b[31m\x1b7\x1b[10;20H\x1b[32m", "\x1b8X"},
+		{"main-origin-after-return", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b[31mSHELL\x1b[?1049h\x1b[32mAPP", "\x1b[?1049l\x1b[1;1HX"},
+		{"saved-main-origin", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b[31mSHELL\x1b[?1049h\x1b[32mAPP", "\x1b[?1049lX"},
+		{"saved-main-pen", "\x1b[31mSHELL\x1b[?1049h\x1b[32mAPP", "\x1b[?1049lX"},
+		{"saved-charset", "\x1b(0\x1b[4;8H\x1b7\x1b(B\x1b[10;20H", "\x1b8q"},
+		{"protected-cells", "\x1b[1\"qKEEP\x1b[0\"q\x1b[H", "\x1b[?2K"},
+		{"protected-pen", "\x1b[1\"q", "KEEP\x1b[H\x1b[?2K"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			screen := newScreen(t, 80, 24)
+			reference := vt.NewEmulator(80, 24)
+			defer reference.Close()
+			restored := vt.NewEmulator(80, 24)
+			defer restored.Close()
+			if err := screen.Feed([]byte(tc.before)); err != nil {
+				t.Fatal(err)
+			}
+			reference.WriteString(tc.before)
+			restored.Write(imageBytes(t, screen))
+			for _, part := range []string{"", tc.after} {
+				reference.WriteString(part)
+				restored.WriteString(part)
+				if err := screen.Feed([]byte(part)); err != nil {
+					t.Fatal(err)
+				}
+				projected := vt.NewEmulator(80, 24)
+				projected.Write(imageBytes(t, screen))
+				if projected.String() != reference.String() || projected.CursorPosition() != reference.CursorPosition() {
+					t.Error("capture changed the continuing mirror")
+				}
+				projected.Close()
+				if reference.String() != restored.String() || reference.CursorPosition() != restored.CursorPosition() {
+					t.Fatalf("continuing output diverged: %q\nreference=%q\nrestored=%q", part, reference.String(), restored.String())
+				}
+				p, _ := reference.CursorPen()
+				q, _ := restored.CursorPen()
+				if !reflect.DeepEqual(p, q) {
+					t.Fatalf("continuing pen diverged: %+v %+v", p, q)
+				}
+			}
+		})
+	}
+}
+
+func TestMirrorMatchesXtermHorizontalModeHandling(t *testing.T) {
+	s := newScreen(t, 80, 24)
+	// xterm ignores private mode 69. CSI 5;15s therefore saves the cursor
+	// after READY, rather than setting margins and homing it.
+	if err := s.Feed([]byte("READY\x1b[?25;69;1004h\x1b[5;15s\x1b[1;14H")); err != nil {
+		t.Fatal(err)
+	}
+	restored := vt.NewEmulator(80, 24)
+	defer restored.Close()
+	restored.Write(imageBytes(t, s))
+	restored.WriteString("ABCDE\x1b[?1049lX")
+	if got := restored.CursorPosition(); got.X != 6 || got.Y != 0 {
+		t.Fatal("xterm cursor-save semantics were lost", got)
+	}
+	if !strings.HasPrefix(restored.String(), "READYX") {
+		t.Fatal("xterm restored at the wrong cell", restored.String())
+	}
+	if !restored.GetModes()[25] || !restored.GetModes()[1004] {
+		t.Fatal("discarded supported batched modes")
+	}
+	if restored.GetModes()[69] {
+		t.Fatal("enabled a mode xterm ignores")
 	}
 }

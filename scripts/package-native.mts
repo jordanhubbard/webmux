@@ -36,6 +36,7 @@ try {
     else throw new Error(`Cannot package non-regular entry: ${from}`);
   }
   fs.copyFileSync(path.join(repo, 'LICENSE'), path.join(stage, 'LICENSE'));
+  fs.copyFileSync(path.join(repo, 'THIRD_PARTY_NOTICES.md'), path.join(stage, 'THIRD_PARTY_NOTICES.md'));
   if (component !== 'client' && goos === 'windows') {
     fs.mkdirSync(path.join(stage, 'service'));
     for (const entry of ['windows-service.ps1', 'runtime.psm1']) {

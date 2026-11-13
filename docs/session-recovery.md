@@ -1919,11 +1919,11 @@ The existing viewer count, queue and socket write limits still apply. A private
 owner's tail-only replay. Mirror-generated terminal responses are discarded.
 
 The mirror uses pinned MIT-licensed `tuios.dev/vt v0.3.2`, with its default
-pure-Go backend. Its ANSI snapshot encoder has known limitations: saved DECSC
-cursor state, left/right margins, protected cells and REP state are not fully
-restored. The retained display filter also omits OSC palette changes and
-hyperlinks. These limitations remain qualification work under #355; this
-primitive is still disabled for normal Windows terminals.
+pure-Go backend. The initial dependency encoder omitted saved DECSC cursor
+state, left/right margins, protected cells and REP state. The local encoder
+and browser profile changes below address the demonstrated saved-cursor and
+protection failures. REP and filtered OSC display features remain qualification
+work under #355; this primitive is still disabled for normal Windows terminals.
 
 Portable race controls retain a header drawn once after more than a MiB of
 subsequent output, exercise partial/private controls, preserve immutable
@@ -1944,6 +1944,44 @@ visible blank, while retaining its style. Private evidence includes
 `provider-screen-v2-capture.json` and `provider-screen-v2-xterm-result.json`.
 This is component evidence; authenticated coding-session recovery and actual
 application restart/update/crash/reboot acceptance remain open.
+
+### Continuation state and xterm profile (2026-11-13)
+
+The local ANSI encoder now restores saved cursor position, pen and character
+sets, protected cells and pen, pending wraps including wide characters, and
+underlying main-screen margins/wrap flags. It is adapted from the pinned
+module's encoder with its MIT notice retained in the source. Native archives
+also carry `THIRD_PARTY_NOTICES.md`; this adds the screen component's notice,
+while the broader dependency inventory remains under #91.
+
+The mirror follows the frontend xterm profile for DEC private mode 69: xterm
+ignores it, so a following CSI s saves the cursor instead of setting horizontal
+margins. The retained mirror strips only that mode from a batch and preserves
+supported modes; live output remains unchanged. Treating mode 69 as supported
+made the mirror disagree with the actual browser even when its own replay was
+internally consistent.
+
+The prior code failed seven initial continuation controls. Expanded portable
+race controls cover saved pen/character sets, active and saved wide pending
+wraps, protected wide/blank cells and the underlying shell's state after leaving
+an alternate screen. A separate explicit xterm-profile control verifies cursor
+save and restoration after ignored/batched mode 69.
+
+The final native Windows AMD64 run passed fourteen cases in 9.578 seconds,
+with zero skips and no forced fixture cleanup. Test executable SHA-256:
+`ec0ea202334b64aab34c64e80e0a1732af32b2398380d5816d97b2a353094fce`.
+Four real ConPTY jobs compared a continuously attached reference with a snapshot
+viewer after subsequent output: saved cursor, underlying main-screen pen,
+mode-69 handling and protected selective erase. Their native captures also
+matched in independent real Chrome/xterm comparisons, including a subsequent
+1049 reset. Private receipts and renderer results use the
+`provider-continuation-v3-*` prefix. Full local Go race tests and vet passed;
+Windows AMD64/ARM64 test compilation passed.
+
+These cases address the confirmed native failures, not every state in either
+emulator. REP, OSC palette/hyperlink display and complete xterm profile parity
+remain open under #355. Normal Windows recovery, authenticated coding-session
+recovery and actual application lifecycle acceptance remain open under #318.
 
 ## Sources
 

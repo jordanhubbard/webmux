@@ -12,6 +12,8 @@ func TestReplayFilterAcrossEveryReadBoundary(t *testing.T) {
 		{"drawing", "\x1b[?1049h\x1b[2J\x1b[H\x1b[31mTEXT\x1b[0m\x1b[?1049l", "\x1b[?1049h\x1b[2J\x1b[H\x1b[31mTEXT\x1b[0m\x1b[?1049l"},
 		{"modes", "\x1b[?2004h\x1b[4h\x1b[?25l\x1b[2 q\x1b[!p", "\x1b[?2004h\x1b[4h\x1b[?25l\x1b[2 q\x1b[!p"},
 		{"charset", "\x1b(0q\x1b(B\x1b7\x1b8\x1bM", "\x1b(0q\x1b(B\x1b7\x1b8\x1bM"},
+		{"protected-cells", "\x1b[1\"qKEEP\x1b[0\"q\x1b[?2K", "\x1b[1\"qKEEP\x1b[0\"q\x1b[?2K"},
+		{"invalid-protection", "A\x1b[3\"q\x1b[?1\"qB", "AB"},
 		{"requests", "A\x1b[6n\x1b[c\x1b[>c\x1b[?2004$p\x1b[18t\x1bZB", "AB"},
 		{"osc", "A\x1b]52;c;clipboard\aB\x1b]777;webmux-browser;private\x1b\\C\x1b]777;webmux-recovery;private\aD", "ABCD"},
 		{"strings", "A\x1bP$qcursor\x1b\\B\x1b_hidden\x1b\\C\x1b^private\x1b\\D\x1bXhidden\x1b\\E", "ABCDE"},
@@ -59,5 +61,24 @@ func TestReplayFilterCannotReleaseBufferedRequestAsText(t *testing.T) {
 	}
 	if got := f.Feed([]byte("\aVISIBLE")); string(got) != "VISIBLE" {
 		t.Fatalf("failed to recover after string: %q", got)
+	}
+}
+
+func TestXtermProfilePreservesSupportedModesAcrossReadBoundaries(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"\x1b[?69hTEXT\x1b[?69l", "TEXT"},
+		{"\x1b[?25;69;1004h", "\x1b[?25;1004h"},
+		{"\x1b[?0069;2004h", "\x1b[?2004h"},
+		{"\x1b[?69:1h", ""},
+	} {
+		for split := 0; split <= len(tc.input); split++ {
+			f := Filter{Xterm: true}
+			input := []byte(tc.input)
+			original := bytes.Clone(input)
+			got := append(f.Feed(input[:split]), f.Feed(input[split:])...)
+			if string(got) != tc.want || !bytes.Equal(input, original) {
+				t.Fatalf("profile split %d: %q wanted %q", split, got, tc.want)
+			}
+		}
 	}
 }

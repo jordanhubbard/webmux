@@ -6,6 +6,7 @@ package replayfilter
 
 import (
 	"bytes"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -15,6 +16,10 @@ import (
 // clipboard/browser/recovery OSC packets and DCS queries. Queries must not be
 // replayed: the viewer's replies would become fresh input to the surviving job.
 type Filter struct {
+	// Xterm matches the browser's xterm display profile. Its unsupported DEC
+	// mode 69 must remain off so CSI s saves a cursor, rather than setting
+	// horizontal margins. This affects the mirror only, never live output.
+	Xterm    bool
 	state    byte
 	sequence []byte
 	partial  []byte
@@ -98,8 +103,14 @@ func (f *Filter) Feed(data []byte) []byte {
 		case 'c', 'd':
 			if r >= 0x40 && r <= 0x7e {
 				if f.state == 'c' && renderingCSI(f.sequence, r) {
-					out.Write(f.sequence)
-					out.WriteRune(r)
+					sequence := f.sequence
+					if f.Xterm {
+						sequence = xtermCSI(sequence, r)
+					}
+					if len(sequence) > 0 {
+						out.Write(sequence)
+						out.WriteRune(r)
+					}
 				}
 				f.state, f.sequence = 0, nil
 			} else if r >= 0x20 && r <= 0x3f {
@@ -116,6 +127,28 @@ func (f *Filter) Feed(data []byte) []byte {
 	return out.Bytes()
 }
 
+func xtermCSI(sequence []byte, final rune) []byte {
+	if final != 'h' && final != 'l' || !bytes.HasPrefix(sequence, []byte("\x1b[?")) {
+		return sequence
+	}
+	params := strings.Split(string(sequence[3:]), ";")
+	kept := make([]string, 0, len(params))
+	for _, p := range params {
+		value, _, _ := strings.Cut(p, ":")
+		number, err := strconv.Atoi(value)
+		if err != nil || number != 69 {
+			kept = append(kept, p)
+		}
+	}
+	if len(kept) == len(params) {
+		return sequence
+	}
+	if len(kept) == 0 {
+		return nil
+	}
+	return []byte("\x1b[?" + strings.Join(kept, ";"))
+}
+
 func renderingCSI(sequence []byte, final rune) bool {
 	// Do not retain device/status/mode queries or window operations. Only
 	// display editing, movement, modes and rendition pass this allowlist.
@@ -124,6 +157,9 @@ func renderingCSI(sequence []byte, final rune) bool {
 		return parameters == "!"
 	} // DEC soft reset
 	if final == 'q' {
+		if parameters == "\"" || parameters == "0\"" || parameters == "1\"" || parameters == "2\"" {
+			return true // DECSCA affects subsequent selective erase.
+		}
 		return strings.HasSuffix(parameters, " ") && strings.Trim(parameters, "0123456789 ") == ""
 	} // cursor style
 	if !strings.ContainsRune("@ABCDEFGHIJKLMPSTXZ`abdefghlmrsu", final) {
