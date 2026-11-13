@@ -58,6 +58,9 @@ test('native recovery history stays above the restored viewport', async ({ page 
     expect(result.restored).toEqual(result.reference);
     expect(result.history).toContain('OLD_HISTORY_MARKER\nSECOND_HISTORY_LINE');
   } finally {
+    // The per-test page is still open here. Close this fixture's connections
+    // explicitly before waiting for its listener, including on Windows.
+    server.closeAllConnections();
     await new Promise<void>(resolve => server.close(() => resolve()));
   }
 });
