@@ -40,6 +40,66 @@ func TestUnrestorableConfigurationDoesNotSilentlyBroadenNativePolicy(t *testing.
 	}
 }
 
+func TestCodexWindowsSandboxOverridePreservesRestrictions(t *testing.T) {
+	for _, flag := range []string{"--config", "-c"} {
+		for _, value := range []string{`windows.sandbox='unelevated'`, `windows.sandbox="unelevated"`, " \twindows.sandbox = 'unelevated'\t"} {
+			for _, assigned := range []bool{false, true} {
+				args := []string{"codex", "--sandbox", "read-only", "--ask-for-approval", "never"}
+				if assigned {
+					args = append(args, flag+"="+value)
+				} else {
+					args = append(args, flag, value)
+				}
+				got, err := nativeResumeOptions("codex", safeArgv(args))
+				want := []string{"--sandbox", "read-only", "--ask-for-approval", "never", flag, value}
+				if err != nil || !reflect.DeepEqual(got, want) {
+					t.Fatalf("changed original restrictions: %q %v", got, err)
+				}
+				cfg := captureNativeInvocationConfiguration("codex", safeArgv(args))
+				if cfg.ManualReason != "" {
+					t.Fatal(cfg.ManualReason)
+				}
+				activity := Activity{CLI: "codex", NativeSessionID: "08bbfe0e-d31c-4cb6-9d18-546eea56a08c", NativeEvidence: "launch-selector", Configuration: cfg}
+				if !activity.NativeRecoverable() || activity.CanAutoResumeNative() {
+					t.Fatal("changed the requirement for a deliberate conversation choice")
+				}
+			}
+		}
+	}
+	for _, suffix := range [][]string{
+		{"-c", `sandbox_mode="danger-full-access"`},
+		{"--remote", "https://example.invalid"},
+		{"--ignore-user-config"},
+		{"--cd", "/different-project"},
+	} {
+		args := append([]string{"codex", "-c", `windows.sandbox='unelevated'`}, suffix...)
+		if _, err := nativeResumeOptions("codex", args); err == nil {
+			t.Fatalf("accepted unsupported policy following the Windows override: %q", args)
+		}
+	}
+}
+
+func TestCodexWindowsSandboxOverrideRejectsOtherTOML(t *testing.T) {
+	for _, value := range []string{
+		"", "windows.sandbox=unelevated", `windows.sandbox='elevated'`,
+		`windows.sandbox='disabled'`, `windows.sandbox='unelevated' # comment`,
+		"windows.sandbox='unelevated'\nsandbox_mode='danger-full-access'",
+		"windows.sandbox='unelevated'\r", `windows.sandbox="unelevated"; other=true`,
+		`windows.sandbox='''unelevated'''`, `windows.sandbox="unelevated\u0022"`,
+		`windows.sandbox='unelevated'junk`, `windows.sandbox=['unelevated']`,
+		"windows.sandbox='unelevated'\x00", `windows.Sandbox='unelevated'`,
+		`other.windows.sandbox='unelevated'`, `windows.sandbox='unelevated'` + "\n",
+	} {
+		args := []string{"codex", "--config", value}
+		if _, err := nativeResumeOptions("codex", args); err == nil {
+			t.Fatalf("accepted unsupported configuration: %q", value)
+		}
+		if cfg := captureNativeInvocationConfiguration("codex", args); cfg.ManualReason == "" {
+			t.Fatalf("preview offered unsupported configuration: %q", value)
+		}
+	}
+}
+
 func TestUnsupportedNativeOptionsRequireManualRecoveryBeforeAction(t *testing.T) {
 	for _, cli := range []string{"codex", "cursor", "opencode"} {
 		for _, flags := range [][]string{{"--future-policy", "restricted"}, {"--model"}, {"--strict-config=false"}, {"--profile", ""}} {

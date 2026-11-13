@@ -2203,6 +2203,30 @@ could not launch a missing bundled Chromium; completed runs used installed
 Chrome. Synthetic CLI fixture controls remain separate from the authenticated
 application evidence above.
 
+### Windows sandbox override preflight (2026-11-13)
+
+Native Codex recovery now preserves a single supported configuration setting:
+`windows.sandbox='unelevated'` (also accepted with double quotes), supplied with
+`--config` or `-c`. The adapter retains the literal assignment and the original
+sandbox, approval, model and other supported restrictions. It rejects other
+configuration assignments, additional TOML content and unsupported project
+overrides. A recorded launch selector still requires a deliberate conversation
+choice; this support does not add active-thread observation.
+
+The production Windows AMD64 executable passed twenty native preflight checks
+against Codex 0.153.0 and the exact previously qualified conversation in its
+original project. Each flag/quote combination restored the expected argv;
+changing the project, adding another policy assignment, supplying `--cd`, or
+appending a second TOML assignment was rejected. The executable SHA-256 was
+`0208a51e680fc8527d4e8c0ed7c98c9f7686ed8d5a7c8e4a0ee10da4cc729415`.
+Private evidence is `sandbox-resume-preflight-result.json`.
+
+This follow-up qualifies command reconstruction and native preflight only.
+It submitted no model turn and performed no provider-loss recovery. The earlier
+application invocation also included `--cd`, so that recorded invocation still
+requires manual restoration. A full application recovery action using only the
+supported settings, actual reboot and the other #318 boundaries remain open.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

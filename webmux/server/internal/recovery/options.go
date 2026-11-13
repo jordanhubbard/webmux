@@ -8,6 +8,11 @@ import (
 
 var namedOption = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`)
 
+// This is the one configuration override supported for native resume.
+// Keep a single TOML string assignment: accepting a suffix or
+// another assignment could change execution policy when the CLI parses it.
+var codexWindowsSandbox = regexp.MustCompile(`^[ \t]*windows\.sandbox[ \t]*=[ \t]*("unelevated"|'unelevated')[ \t]*$`)
+
 // Preserve supported invocation restrictions, rather than silently resuming
 // with a more permissive default. Arbitrary settings payloads can contain
 // credentials or change policy; their invocations require manual recovery.
@@ -32,9 +37,9 @@ func nativeResumeOptions(cli string, original []string) ([]string, error) {
 		case "codex":
 			omitted = key == "--dangerously-bypass-approvals-and-sandbox" || key == "--full-auto" || key == "--last" || key == "--all" || key == "--approve-for-me" || key == "--dangerously-bypass-hook-trust"
 			boolean = key == "--no-daemon" || key == "--no-alt-screen" || key == "--strict-config" || key == "--search" || key == "--oss"
-			valued = key == "--sandbox" || key == "-s" || key == "--profile" || key == "-p" || key == "--ask-for-approval" || key == "-a" || key == "--disable" || key == "--enable" || key == "--model" || key == "-m" || key == "--add-dir" || key == "--local-provider"
-			if key == "--config" || key == "-c" || key == "--remote" || key == "--ignore-user-config" {
-				return nil, errors.New("this Codex invocation uses configuration overrides or a remote app server; restore it manually to preserve its execution policy")
+			valued = key == "--config" || key == "-c" || key == "--sandbox" || key == "-s" || key == "--profile" || key == "-p" || key == "--ask-for-approval" || key == "-a" || key == "--disable" || key == "--enable" || key == "--model" || key == "-m" || key == "--add-dir" || key == "--local-provider"
+			if key == "--remote" || key == "--ignore-user-config" {
+				return nil, errors.New("this Codex invocation uses a remote app server or ignores user configuration; restore it manually to preserve its execution policy")
 			}
 		case "cursor":
 			selector = key == "--resume"
@@ -79,6 +84,9 @@ func nativeResumeOptions(cli string, original []string) ([]string, error) {
 				return nil, errors.New("recorded CLI selector is invalid; restore manually")
 			}
 			continue
+		}
+		if cli == "codex" && (key == "--config" || key == "-c") && !codexWindowsSandbox.MatchString(value) {
+			return nil, errors.New("this Codex configuration override is unsupported; restore it manually to preserve its execution policy")
 		}
 		// Never reintroduce explicit bypass modes from an earlier invocation.
 		if cli == "codex" && (key == "--sandbox" || key == "-s") && value != "read-only" && value != "workspace-write" {
