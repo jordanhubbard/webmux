@@ -2314,9 +2314,66 @@ application logs remained, including the waiting-only reconnect log. Private
 evidence uses `roots-native-*`, `app-roots-v1-*` and `app-roots-v1-browser/`.
 
 This adds original-profile restoration for new snapshots; it does not recover
-unknown profile information from older records. Host reboot, authenticated
-installed-service recovery, active-thread observation and other CLI/platform
-qualification boundaries above remain open under #318.
+unknown profile information from older records. The subsequent standalone
+host-reboot qualification is recorded below. Authenticated installed-service
+recovery, active-thread observation and other CLI/platform qualification
+boundaries remain open under #318.
+
+### Windows native conversation after host reboot (2026-11-13)
+
+An explicitly approved Windows AMD64 host reboot passed authenticated Codex
+0.153.0 continuation through the production browser recovery action. The test
+used the standalone executable from clean source
+`3bc3ea257002ad04954c2accc039f71a995a867c`, SHA-256
+`7ef4387aad35ccc7eab39e63d644d3f4c07dde6ffa4c9ae8c704675dd30c536d`.
+Its Go/frontend source is identical to merged main
+`90cca32a269633a6541307aca386cc4d97da7683`; the intervening differences are
+documentation. No installed service or startup registration was changed.
+
+Before reboot, the private application had one actual Codex process and a fresh
+native marker acknowledgement. The original execution project, exact native
+conversation ID, version-1 configuration, provider identity and transcript were
+retained. One approved `shutdown.exe /r /t 0` command was issued without `/f`.
+SSH disconnected, then returned with a changed
+`Win32_OperatingSystem.LastBootUpTime`. The old authenticated provider probe
+failed. Codex's existing ChatGPT sign-in remained valid; no authentication files
+were copied and no new sign-in was needed.
+
+The standalone application was restarted through SSH under the same account
+and private home/cache. Reconnection offered retained history and native Resume
+for the original conversation, with command replay unavailable. The deliberate
+browser action returned `consumed`, created one new post-boot owner/job and
+resumed the exact conversation with its original project, model, Windows sandbox
+setting, read-only sandbox and never approval policy. A new question omitting
+the marker received the exact pre-reboot marker in a fresh native assistant
+message. This establishes native conversation continuity after the actual OS
+reboot, beyond reopening a window or launching a fresh CLI.
+
+Repeating the action returned the existing `consumed` receipt and preserved the
+single native CLI. A subsequent forced controller termination/replacement
+retained the same post-boot owner/root/CLI identities. Repeating the original
+request against that reconstructed controller again returned `consumed`;
+another fresh remembered-marker response verified continued input and native
+state. All three native turn records confirmed the original project/model and
+read-only/never policy, with zero tool calls. Launch-selector evidence still
+requires the user's explicit conversation choice.
+
+The original 33,614 transcript bytes and 152,049 native-conversation bytes
+remained byte-identical prefixes after reboot and subsequent continuation,
+verified against pre-reboot SHA-256 digests. Five nonempty application logs
+were retained, including one waiting-only reconnect log. Cleanup verified all
+current-boot owned processes exited and the tunnel stopped. Pre-boot PIDs were
+not treated as current process identities or targeted for cleanup. Private
+evidence uses `app-reboot-v1-*` and `app-reboot-v1-browser/`, including the one-shot
+approval/command receipt, changed boot identity, native audit, prefix digests,
+duplicate receipts, process comparisons and cleanup audit.
+
+This qualifies deliberate native continuation for the tested standalone Windows
+AMD64/Codex invocation after a normal host reboot, followed by controller-crash
+survival. It does not qualify installed-service startup/account behavior, power
+loss, automatic active-thread observation, other CLI/policy/profile cases or
+ARM64 hardware execution. Those boundaries remain under #318; the independent
+screen-profile limits remain under #355.
 
 ## Sources
 
