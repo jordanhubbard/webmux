@@ -5,11 +5,9 @@ package recovery
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"os"
 	"path/filepath"
-	"runtime"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -62,62 +60,24 @@ func discardWaitingInput(input *os.File) (func() error, error) {
 	}, nil
 }
 
-func WaitForRecovery(ctx context.Context) error {
-	id, key, instance := os.Getenv("WEBMUX_RECOVERY_SESSION"), os.Getenv("WEBMUX_RECOVERY_KEY"), os.Getenv("WEBMUX_RECOVERY_INSTANCE")
-	if instance == "" {
-		return errors.New("recovery startup identity is missing")
-	}
-	if _, err := updateHostState(id, key, false, nil); err != nil {
-		return err
-	}
-	// Keep the path short enough for macOS sockaddr_un; no user supplied path.
+// Keep the path short enough for macOS sockaddr_un; no user supplied path.
+func newWaitingSocket() (*net.UnixListener, string, func(), error) {
 	dir, err := os.MkdirTemp("/tmp", "wm-recovery-")
 	if err != nil {
-		return err
+		return nil, "", nil, err
 	}
-	defer os.RemoveAll(dir)
+	cleanup := func() { _ = os.RemoveAll(dir) }
 	endpoint := filepath.Join(dir, "s")
 	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: endpoint, Net: "unix"})
+	if err == nil {
+		err = os.Chmod(endpoint, 0600)
+	}
 	if err != nil {
-		return err
-	}
-	defer listener.Close()
-	if err := os.Chmod(endpoint, 0600); err != nil {
-		return err
-	}
-	restore, err := discardWaitingInput(os.Stdin)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if restore != nil {
-			_ = restore()
+		if listener != nil {
+			_ = listener.Close()
 		}
-	}()
-	control := Event{Kind: "control", Mode: "waiting", Endpoint: endpoint, Instance: instance, Helper: os.Getenv("WEBMUX_RECOVERY_HELPER"), Platform: runtime.GOOS}
-	_, err = updateHostState(id, key, false, func(state *HostState) error { state.Control = &control; return nil })
-	if err != nil {
-		return err
+		cleanup()
+		return nil, "", nil, err
 	}
-	_ = Emit(control, os.Stdout)
-	fmt.Fprint(os.Stdout, "\r\n[WebMux] Previous work was interrupted. Open Recover work to review and continue.\r\n")
-	prepared, err := serveWaiting(ctx, listener, id, key, instance, preflightAction)
-	_ = listener.Close()
-	restoreErr := restore()
-	restore = nil
-	if err != nil || restoreErr != nil {
-		return errors.Join(err, restoreErr)
-	}
-	switch prepared.Kind {
-	case "replay":
-		return ExitStatusError(10)
-	case "native":
-		if err := os.Chdir(prepared.Cwd); err != nil {
-			return err
-		}
-		if err := RunConfiguredCLI(prepared.Argv, prepared.CLI, prepared.Configuration); err != nil {
-			fmt.Fprintln(os.Stderr, "\r\n[WebMux] Native recovery exited:", err)
-		}
-	}
-	return nil
+	return listener, endpoint, func() { _ = listener.Close(); cleanup() }, nil
 }

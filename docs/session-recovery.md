@@ -1784,11 +1784,42 @@ on the native target. The npm `codex.cmd` wrapper is outside this native
 executable contract; this probe scoped its original PATH to npm's native
 vendor executable directory without changing the account's PATH.
 
-Windows still lacks a qualified durable lifecycle provider, waiting worker
-and shell capture/alias integration. Controller restart/update/crash,
+Windows still lacks a qualified durable lifecycle provider and shell
+capture/alias integration. The waiting worker is covered separately below.
+Controller restart/update/crash,
 survivor reattachment, explicit recovery, duplicate prevention and actual
 host reboot remain unqualified on Windows. The shared-daemon/manual-resume
 boundary and unsupported-invocation fallbacks still apply. #318 stays open.
+
+## Windows recovery worker (2026-11-12)
+
+The internal Windows recovery worker now shares the Unix worker's authenticated,
+revision-bound action acceptance and durable once-only receipt. It advertises
+an AF_UNIX socket in a temporary directory with a protected DACL granting access
+only to the execution account. It suppresses echo, discards queued console
+input while waiting, joins its input drainer and restores the original console
+mode before handing the console to an approved native CLI or returning to the
+startup shell. Cancellation restores the mode and removes the socket too.
+Windows shell replay is rejected before consumption: Windows command capture
+and a shell evaluation contract remain unimplemented.
+
+The native Windows 11 AMD64 target passed ten repetitions of the socket,
+access-control, replay-rejection and real ConPTY handoff controls. Both approval
+and cancellation discarded complete and partial drafts; the following reader
+received only newly submitted input. Wrong-key requests were rejected, and a
+repeated accepted action retained its consumed receipt after the worker exited.
+The worker test executable SHA-256 is
+`702881137e9ba372ff35c9ec51744326a4fcd23e76915849541b602f05b5d4dd`;
+private receipts are `recovery-worker-v3-native-receipt.json` and
+`recovery-worker-v3-native.log` in the existing Windows qualification directory.
+The full native recovery suite also passed (58 passing cases, five explicit
+skips), retained as `recovery-worker-v3-full-native.log` and its receipt.
+Unix recovery/terminal race suites and vet also passed after sharing the worker.
+
+This verifies the worker primitive. It does not enable Windows local terminals
+or prove native coding-conversation recovery through the UI. The durable
+provider, shell integration and restart/crash/reboot qualification remain open
+under #318; provider creation continues to fail explicitly until implemented.
 
 ## Sources
 
@@ -1799,5 +1830,7 @@ boundary and unsupported-invocation fallbacks still apply. #318 stays open.
 - [OpenCode CLI](https://opencode.ai/docs/cli/), checked against installed CLI help
 - [Cursor CLI sessions](https://cursor.com/docs/cli/overview#sessions)
 - [Mosh screen-state protocol](https://mosh.org/mosh-paper-draft.pdf)
+- [Windows console modes](https://learn.microsoft.com/en-us/windows/console/setconsolemode)
+- [Windows console input-buffer discard](https://learn.microsoft.com/en-us/windows/console/flushconsoleinputbuffer)
 
 - [Agent Deck ownership CLI source at the installed revision](https://github.com/asheshgoplani/agent-deck/blob/f36e77d6170b8d8b54f50c960c3f16e8a2c5df19/cmd/agent-deck/session_ownership_cmd.go)
