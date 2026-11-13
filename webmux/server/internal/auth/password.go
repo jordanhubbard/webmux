@@ -24,6 +24,11 @@ func HashPassword(password string) (string, error) {
 
 func VerifyPassword(encoded, password string) (bool, error) {
 	invalid := errors.New("invalid or unsupported Argon2id password hash")
+	// Bound parsing and base64 allocations before inspecting imported hashes.
+	// The supported costs, salt and digest fit comfortably within this limit.
+	if len(encoded) > 512 {
+		return false, invalid
+	}
 	parts := strings.Split(encoded, "$")
 	if len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" || parts[2] != "v=19" {
 		return false, invalid
@@ -33,15 +38,29 @@ func VerifyPassword(encoded, password string) (bool, error) {
 		return false, invalid
 	}
 	var values [3]uint64
-	for i, prefix := range []string{"m=", "t=", "p="} {
-		if !strings.HasPrefix(params[i], prefix) {
+	var seen uint8
+	for _, param := range params {
+		key, value, ok := strings.Cut(param, "=")
+		var i int
+		switch key {
+		case "m":
+			i = 0
+		case "t":
+			i = 1
+		case "p":
+			i = 2
+		default:
 			return false, invalid
 		}
-		n, err := strconv.ParseUint(strings.TrimPrefix(params[i], prefix), 10, 32)
+		if !ok || value == "" || seen&(1<<i) != 0 || strings.Trim(value, "0123456789") != "" {
+			return false, invalid
+		}
+		n, err := strconv.ParseUint(value, 10, 32)
 		if err != nil {
 			return false, invalid
 		}
 		values[i] = n
+		seen |= 1 << i
 	}
 	memory, iterations, lanes := values[0], values[1], values[2]
 	// Bound resource use even if an operator accidentally imports a corrupted
