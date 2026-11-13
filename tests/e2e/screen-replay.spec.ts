@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 type Fixture = { name: string; cols: number; rows: number; original: string; snapshot: string; future: string; recaptured: string };
-const names = ['immediate', 'unicode', 'combining', 'pending-wrap', 'wide-pending-wrap', 'insert-mode', 'after-sgr', 'after-bell', 'after-private-osc', 'after-query', 'after-repeat', 'c0-inside-csi', 'del-inside-csi', 'after-del', 'after-erased-character'];
+const names = ['immediate', 'colored-underline', 'unicode', 'combining', 'pending-wrap', 'wide-pending-wrap', 'insert-mode', 'after-sgr', 'after-bell', 'after-private-osc', 'after-query', 'after-repeat', 'c0-inside-csi', 'del-inside-csi', 'after-del', 'after-erased-character'];
 let fixtures: Fixture[];
 let server: http.Server;
 let address: string;
@@ -20,9 +20,9 @@ test.beforeAll(async () => {
   const library = readFileSync(path.join(root, 'webmux/node_modules/@xterm/xterm/lib/xterm.js'));
   const css = readFileSync(path.join(root, 'webmux/node_modules/@xterm/xterm/css/xterm.css'));
   server = http.createServer((req, res) => {
-    if (req.url === '/xterm.js') { res.setHeader('Content-Type', 'text/javascript'); res.end(library); }
-    else if (req.url === '/xterm.css') { res.setHeader('Content-Type', 'text/css'); res.end(css); }
-    else { res.setHeader('Content-Type', 'text/html'); res.end('<link rel="stylesheet" href="/xterm.css"><div id="reference"></div><div id="restored"></div><div id="recaptured"></div><script src="/xterm.js"></script>'); }
+    if (req.url === '/xterm.js') { res.setHeader('Content-Type', 'text/javascript; charset=utf-8'); res.end(library); }
+    else if (req.url === '/xterm.css') { res.setHeader('Content-Type', 'text/css; charset=utf-8'); res.end(css); }
+    else { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end('<link rel="stylesheet" href="/xterm.css"><div id="reference"></div><div id="restored"></div><div id="recaptured"></div><script src="/xterm.js"></script>'); }
   });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   address = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
@@ -48,7 +48,10 @@ for (const name of names) {
           wraps.push(line.isWrapped);
           for (let x = 0; x < f.cols; x++) {
             const p = line.getCell(x)!;
-            row.push([p.getWidth() === 1 ? p.getChars() || ' ' : p.getChars(), p.getWidth(), p.getFgColorMode(), p.getFgColor(), p.getBgColorMode(), p.getBgColor(), p.isBold(), p.isItalic(), p.isUnderline(), p.isInverse()]);
+            // The shared renderer stores extended underline details on its
+            // cell object; compare their values, not internal flag bit masks.
+            const underline = p as typeof p & { getUnderlineStyle(): number; getUnderlineColorMode(): number; getUnderlineColor(): number };
+            row.push([p.getWidth() === 1 ? p.getChars() || ' ' : p.getChars(), p.getWidth(), p.getFgColorMode(), p.getFgColor(), p.getBgColorMode(), p.getBgColor(), !!p.isBold(), !!p.isItalic(), !!p.isUnderline(), !!p.isInverse(), underline.getUnderlineStyle(), underline.getUnderlineColorMode(), underline.getUnderlineColor()]);
           }
           cells.push(row);
         }

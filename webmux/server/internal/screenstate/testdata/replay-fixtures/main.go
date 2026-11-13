@@ -21,6 +21,7 @@ type fixture struct {
 func main() {
 	cases := []struct{ name, before, after string }{
 		{"immediate", "Q", "\x1b[3b"},
+		{"colored-underline", "\x1b[1;3;4:3;38;2;220;40;20;48;2;12;24;36;58;2;30;210;60mQ", "\x1b[3b"},
 		{"unicode", "日", "\x1b[3b"},
 		{"combining", "e\u0301", "\x1b[3b"},
 		{"pending-wrap", "\x1b[4;80HX", "\x1b[3b"},

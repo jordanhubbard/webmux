@@ -1999,13 +1999,18 @@ retained parser boundary. Executable C0 controls retain their display effect;
 DEL is ignored. Attachment still refuses the unfinished sequence until its
 final byte arrives. Controls also clear REP as the frontend parser requires.
 
-Fifteen independent real Chrome/xterm regressions generate actual Go snapshots,
+Sixteen independent real Chrome/xterm regressions generate actual Go snapshots,
 compare initial cells/styles/wraps/cursor/modes, continue output, then compare a
 second attachment after more output. They also assert that snapshots emit no
-query replies. All fifteen failed against the prior `8f5720f` implementation
+query replies. All sixteen failed against the prior `8f5720f` implementation
 in the matching parent-overlay browser control and pass with these changes.
 The reproducible suite is `screen-replay.spec.ts`; it runs in normal hosted
 browser testing. Strict E2E TypeScript, full local Go race tests and vet passed.
+The fixture serves scripts and documents with explicit UTF-8 and compares
+attribute flags as booleans plus extended underline style/color values. The
+earlier private character-set mismatch disappeared with corrected fixture
+encoding; it was a harness artifact. The saved-origin/pending-wrap and extended
+underline mismatches persist in the corrected retained controls.
 
 With autowrap disabled at the final column, the current emulator cannot
 represent xterm's distinction between a cursor in that cell and one advanced
@@ -2019,13 +2024,13 @@ The final native Windows AMD64 provider suite passed fifteen cases with zero
 skips or forced fixture cleanup in 9.750 seconds, including existing real
 ConPTY lifecycle controls and the new refusal control. Executable SHA-256:
 `67cd581694496bdc1c4cc11ba04b0b768d744fe2600472efdd1a3ac5f3f1e9fc`.
-The native Windows fixture generator emitted fifteen fixtures (24,315 bytes),
+The native Windows fixture generator emitted sixteen fixtures (26,174 bytes),
 using SHA-256
-`0c0b5769b548fb7902d15426a566866a61e84ab25bde26de01fc2a25185b45b3`.
-The Windows fixtures were byte-identical to the fifteen locally generated
+`8f5324dbf304cad9e3df1a5a7e817ea9d74f3666417f65b565ea81c4c7cd7f53`.
+The Windows fixtures were byte-identical to the sixteen locally generated
 fixtures that passed the Chrome suite. Windows ARM64 test compilation passed;
-no ARM64 hardware run is claimed. Private evidence uses `provider-repeat-v4-*`, `screen-repeat-v4-*`,
-`repeat-parent-v2-*` and `test-results/screen-repeat-355-final`.
+no ARM64 hardware run is claimed. Private evidence uses `provider-repeat-v4-*`, `screen-repeat-v5-*`,
+`repeat-parent-v5-*` and `test-results/screen-repeat-355-utf8-final`.
 
 Saved origin/pending-wrap behavior, extended underline details, the no-wrap
 edge and OSC display features remain under #355. These changes preserve the
