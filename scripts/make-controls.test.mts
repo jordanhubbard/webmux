@@ -125,6 +125,16 @@ test('cold fixture preparation completes before the real startup query deadline'
   const f = prepareLaunchdFixture('state', { state: 'state = running\npid = 123', preparationDelayMs: 1500 });
   try {
     assert(f.preparationMs >= 1500);
+    // The same fake binary, state and delay fail the real checker if its first
+    // invocation has not completed. This reproduces the old stage ordering.
+    const coldDirectory = path.join(f.directory, 'unprepared');
+    fs.mkdirSync(coldDirectory);
+    const cold = spawnSync(process.execPath, f.args.slice(0, 3), {
+      encoding: 'utf8', timeout: 10000, env: { ...f.env, WEBMUX_LAUNCHD_FIXTURE: coldDirectory },
+    });
+    assert.ifError(cold.error);
+    assert.equal(cold.status, 1, cold.stdout + cold.stderr);
+    assert.match(cold.stderr, /launchctl print.*ETIMEDOUT/);
     const result = spawnSync(process.execPath, f.args.slice(0, 3), { encoding: 'utf8', timeout: 10000, env: f.env });
     assert.ifError(result.error);
     assert.equal(result.status, 0, result.stdout + result.stderr);

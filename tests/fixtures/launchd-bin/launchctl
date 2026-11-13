@@ -4,10 +4,16 @@ const directory = process.env.WEBMUX_LAUNCHD_FIXTURE;
 const mode = process.env.WEBMUX_LAUNCHD_MODE;
 if (!directory || !mode || !fs.statSync(directory).isDirectory()) throw new Error('Private launchd fixture configuration is required');
 const action = process.argv[2];
-if (action === 'fixture-ready') {
+// A controlled first invocation can be slower than the production print
+// deadline. Readiness must complete this initialization before timed queries.
+const initialized = directory + '/initialized';
+if (!fs.existsSync(initialized)) {
   const delay = Number(process.env.WEBMUX_LAUNCHD_PREPARATION_DELAY_MS || 0);
   if (!Number.isInteger(delay) || delay < 0 || delay > 5000) throw new Error('Invalid fixture preparation delay');
   if (delay) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
+  fs.writeFileSync(initialized, 'ready', { flag: 'wx', mode: 0o600 });
+}
+if (action === 'fixture-ready') {
   fs.writeFileSync(directory + '/ready.json', JSON.stringify({ version: process.version }), { flag: 'wx', mode: 0o600 });
   process.exit(0);
 }
