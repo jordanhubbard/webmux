@@ -1,7 +1,32 @@
 # Run only on an isolated Windows runner: exercise the actual WinSW lifecycle.
 [CmdletBinding()]
-param([Parameter(Mandatory = $true)][string]$BundleDirectory, [switch]$UserAccount)
+param([Parameter(Mandatory = $true)][string]$BundleDirectory, [switch]$UserAccount,
+      [string]$DiagnosticsDirectory)
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'qualification-process.ps1')
+if (-not $DiagnosticsDirectory) {
+  $DiagnosticsDirectory = Join-Path ([IO.Path]::GetTempPath()) "webmux-service-diagnostics-$([Guid]::NewGuid())"
+}
+$serviceEvidence = Join-Path $DiagnosticsDirectory "service-$([Guid]::NewGuid())"
+[IO.Directory]::CreateDirectory($serviceEvidence) | Out-Null
+Write-QualificationPhase $serviceEvidence 'service-smoke' 'starting'
+function Save-ServiceDiagnostics {
+  # No XML, auth configuration, environment, account passwords or session logs.
+  try {
+    Get-CimInstance Win32_Service -Filter "Name='WebMux'" |
+      Select-Object Name, State, ExitCode, ServiceSpecificExitCode |
+      ConvertTo-Json | Set-Content -LiteralPath (Join-Path $serviceEvidence 'service-status.json')
+    foreach ($entry in @(@($serviceDirectory, 'wrapper'), @((Join-Path $homeDirectory 'logs'), 'server'))) {
+      if (Test-Path -LiteralPath $entry[0]) {
+        Get-ChildItem -LiteralPath $entry[0] -Filter '*.log' -File | ForEach-Object {
+          Get-Content -LiteralPath $_.FullName -Tail 200 |
+            Set-Content -LiteralPath (Join-Path $serviceEvidence ($entry[1] + '-' + $_.Name))
+        }
+      }
+    }
+  } catch { Write-Warning 'Could not collect all service fixture diagnostics.' }
+}
+
 $serviceDirectory = Join-Path $env:ProgramData 'WebMux'
 if ((Get-Service -Name WebMux -ErrorAction SilentlyContinue) -or (Test-Path -LiteralPath $serviceDirectory)) {
   throw 'Service smoke requires an isolated machine without an existing WebMux service or wrapper directory.'
@@ -99,8 +124,10 @@ try {
       param([string]$UserName, [string]$Message)
       return $fixtureCredential
     }
+    Write-QualificationPhase $serviceEvidence 'install-custom-account' 'starting'
     & $installer install -WebMuxHome $homeDirectory
   } else {
+    Write-QualificationPhase $serviceEvidence 'install-system' 'starting'
     & $installer install -LocalSystem -WebMuxHome $homeDirectory
   }
   Wait-Healthy
@@ -128,7 +155,9 @@ try {
   if (-not $rejected) { throw 'Reconfigure accepted a missing backend.' }
   if ([IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml')) -cne $originalConfig) { throw 'Failed preflight changed the definition.' }
   if ((Get-Service -Name WebMux).Status -ne 'Running') { throw 'Failed preflight stopped the service.' }
+  Write-QualificationPhase $serviceEvidence 'reconfigure-rollback' 'starting'
   Test-ReconfigureRollback
+  Write-QualificationPhase $serviceEvidence 'reconfigure' 'starting'
   & $installer reconfigure
   Wait-Healthy
   $reconfigured = [xml][IO.File]::ReadAllText((Join-Path $serviceDirectory 'WebMux.xml'))
@@ -136,6 +165,7 @@ try {
     throw 'Reconfigure changed the installed environment.'
   }
   if ((Get-CimInstance Win32_Service -Filter "Name='WebMux'").StartName -ne $account) { throw 'Reconfigure changed the service account.' }
+  Write-QualificationPhase $serviceEvidence 'terminal-transcript-shutdown' 'starting'
   & node (Join-Path $PSScriptRoot 'smoke-windows-service-shutdown.mts') $homeDirectory "$port" $installer
   if ($LASTEXITCODE -ne 0) { throw 'Native service terminal/transcript shutdown checks failed.' }
   $reachable = $false
@@ -147,6 +177,7 @@ try {
   $stale.SelectSingleNode('/service/executable').InnerText = 'node.exe'
   $stale.SelectSingleNode('/service/arguments').InnerText = '"' + (Join-Path $root 'backend/dist/index.js') + '"'
   $stale.Save($configPath)
+  Write-QualificationPhase $serviceEvidence 'reconfigure' 'starting'
   & $installer reconfigure
   if ((Get-Service -Name WebMux).Status -ne 'Stopped') { throw 'Reconfigure started a previously stopped service.' }
   $native = [xml][IO.File]::ReadAllText($configPath)
@@ -157,6 +188,7 @@ try {
   if ([IO.File]::ReadAllText($appFile) -cne $app) { throw 'Service changed operator configuration.' }
   if (-not (Test-Path -LiteralPath (Join-Path $homeDirectory 'config/auth.yaml'))) { throw 'Service did not initialize authentication.' }
 } catch {
+  Save-ServiceDiagnostics
   # Capture startup evidence before cleanup removes the private fixture. Never
   # print the service XML: registration temporarily writes credentials there.
   $failure = $_
@@ -185,6 +217,8 @@ try {
 } finally {
   try {
     if (Get-Service -Name WebMux -ErrorAction SilentlyContinue) {
+      Save-ServiceDiagnostics
+      Write-QualificationPhase $serviceEvidence 'service-uninstall' 'starting'
       & $installer uninstall
       if (-not (Test-Path -LiteralPath $appFile) -or [IO.File]::ReadAllText($appFile) -cne $app) {
         throw 'Service uninstall removed or changed runtime configuration.'
@@ -208,3 +242,5 @@ try {
 }
 if (Get-Service -Name WebMux -ErrorAction SilentlyContinue) { throw 'Service registration survived uninstall.' }
 Write-Host "Native Windows service passed: install, HTTP/UI, stop, start, preserved config and uninstall (custom account: $UserAccount)."
+
+Write-QualificationPhase $serviceEvidence 'service-smoke' 'passed'

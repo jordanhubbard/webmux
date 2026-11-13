@@ -224,3 +224,29 @@ Development builds use ad-hoc signing unless Developer ID signing and
 notarization are explicitly configured. Store the app at a stable location and
 verify permissions after upgrades. A service starting successfully does not
 prove access to protected folders.
+
+### Windows MSI smoke deadlines and diagnostics
+
+The native Windows packaging jobs retain the real clean-install, Node-to-native
+upgrade, service/account, transcript-shutdown and uninstall assertions.
+`qualification-process.ps1` bounds each MSI transaction and fixture download to
+120 seconds, state seed/verification to 60 seconds, and the installed runtime
+check to 120 seconds. Each complete clean/upgrade smoke process has a 300-second
+deadline inside a 14-minute workflow step. These are qualification deadlines;
+they do not change installed WebMux runtime behavior.
+
+A timeout fails the check and terminates only the owned process tree. An MSI
+timeout retains the installation rather than starting another transaction;
+Windows Installer's service may still be finishing the first operation. The
+isolated runner must be discarded after a failed smoke. Deadline tests run an
+actual stalled parent/child fixture and verify termination, nonzero exit
+propagation, argument fidelity and progress records without argument contents.
+
+The always-run `msi-diagnostics-<platform>` artifact contains timestamped phases,
+PIDs and exit codes, verbose MSI logs, service status and capped fixture service
+logs. Progress is appended before each subprocess so a stalled phase is visible.
+Service logs are copied before cleanup; an independent always-run snapshot also
+collects them if a deadline interrupts cleanup. XML, credentials, configuration,
+upgrade-state snapshots and session transcripts are excluded. Hard runner loss
+or forced cancellation can prevent GitHub from executing even always-run steps;
+no artifact retention is guaranteed in that case.

@@ -1,9 +1,16 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)][string]$Installer,
-  [string]$PreviousInstaller
+  [string]$PreviousInstaller,
+  [string]$DiagnosticsDirectory
 )
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'qualification-process.ps1')
+if (-not $DiagnosticsDirectory) {
+  $DiagnosticsDirectory = Join-Path ([IO.Path]::GetTempPath()) "webmux-msi-diagnostics-$([Guid]::NewGuid())"
+}
+[IO.Directory]::CreateDirectory($DiagnosticsDirectory) | Out-Null
+Write-QualificationPhase $DiagnosticsDirectory 'msi-smoke' 'starting'
 $installerPath = (Resolve-Path -LiteralPath $Installer).Path
 $previousPath = if ($PreviousInstaller) { (Resolve-Path -LiteralPath $PreviousInstaller).Path } else { $null }
 $installRoot = Join-Path $env:LOCALAPPDATA 'Programs\WebMux'
@@ -12,7 +19,7 @@ if ((Test-Path -LiteralPath $installRoot) -or
     (Test-Path -LiteralPath (Join-Path $env:ProgramData 'WebMux'))) {
   throw 'MSI smoke requires an isolated runner without an existing WebMux installation or service.'
 }
-$temporary = Join-Path ([IO.Path]::GetTempPath()) "webmux-native-msi-smoke-$([Guid]::NewGuid())"
+$temporary = Join-Path $DiagnosticsDirectory "msi-$([Guid]::NewGuid())"
 [IO.Directory]::CreateDirectory($temporary) | Out-Null
 function Get-WebMuxProducts {
   # Ask MSI by UpgradeCode rather than assuming an Add/Remove Programs registry
@@ -32,13 +39,13 @@ function Get-WebMuxProducts {
 }
 if (@(Get-WebMuxProducts).Count -ne 0) { throw 'MSI smoke requires no existing WebMux product registration.' }
 $activeInstaller = $installerPath
+$installerTimedOut = $false
 function Invoke-Installer([string]$Operation, [string]$Log, [string]$Package = $installerPath) {
-  $arguments = @($Operation, ('"' + $Package + '"'), '/qn', '/norestart', '/l*v', ('"' + $Log + '"'))
-  $process = Start-Process msiexec.exe -ArgumentList $arguments -Wait -PassThru
-  if ($process.ExitCode -ne 0) {
-    if (Test-Path -LiteralPath $Log) { Get-Content -LiteralPath $Log }
-    throw "MSI $Operation failed with exit code $($process.ExitCode)."
-  }
+  $arguments = @($Operation, $Package, '/qn', '/norestart', '/l*v', $Log)
+  try {
+    Invoke-QualificationProcess -FilePath 'msiexec.exe' -Arguments $arguments -TimeoutSeconds 120 `
+      -DiagnosticsDirectory $DiagnosticsDirectory -Phase ([IO.Path]::GetFileNameWithoutExtension($Log))
+  } catch [TimeoutException] { $script:installerTimedOut = $true; throw }
 }
 try {
   $previousProduct = $null
@@ -49,8 +56,8 @@ try {
     $products = @(Get-WebMuxProducts)
     if ($products.Count -ne 1) { throw 'Expected one legacy product registration.' }
     $previousProduct = $products[0]
-    & node (Join-Path $PSScriptRoot 'smoke-upgrade-state.mts') node seed $installRoot (Join-Path $temporary 'state')
-    if ($LASTEXITCODE -ne 0) { throw 'Could not seed installed legacy state.' }
+    Invoke-QualificationProcess -FilePath 'node' -Arguments @((Join-Path $PSScriptRoot 'smoke-upgrade-state.mts'), 'node', 'seed', $installRoot, (Join-Path $temporary 'state')) `
+      -TimeoutSeconds 60 -DiagnosticsDirectory $DiagnosticsDirectory -Phase 'seed-legacy-state'
   }
   Invoke-Installer '/i' (Join-Path $temporary 'install.log')
   $activeInstaller = $installerPath
@@ -62,19 +69,20 @@ try {
   if (Test-Path -LiteralPath (Join-Path $installRoot 'backend')) { throw 'Native upgrade left legacy backend files.' }
   if (Test-Path -LiteralPath (Join-Path $installRoot 'bin/webmux.js')) { throw 'Native upgrade left the legacy launcher.' }
   if ($previousPath) {
-    & node (Join-Path $PSScriptRoot 'smoke-upgrade-state.mts') go verify $installRoot (Join-Path $temporary 'state')
-    if ($LASTEXITCODE -ne 0) { throw 'Native upgrade did not preserve legacy state.' }
+    Invoke-QualificationProcess -FilePath 'node' -Arguments @((Join-Path $PSScriptRoot 'smoke-upgrade-state.mts'), 'go', 'verify', $installRoot, (Join-Path $temporary 'state')) `
+      -TimeoutSeconds 60 -DiagnosticsDirectory $DiagnosticsDirectory -Phase 'verify-upgrade-state'
   }
-  & node (Join-Path $PSScriptRoot 'smoke-native-package.mts') $installRoot
-  if ($LASTEXITCODE -ne 0) { throw 'Installed native runtime failed smoke checks.' }
-  & (Join-Path $PSScriptRoot 'smoke-native-service.ps1') -BundleDirectory $installRoot
+  Invoke-QualificationProcess -FilePath 'node' -Arguments @((Join-Path $PSScriptRoot 'smoke-native-package.mts'), $installRoot) `
+    -TimeoutSeconds 120 -DiagnosticsDirectory $DiagnosticsDirectory -Phase 'installed-runtime'
+  & (Join-Path $PSScriptRoot 'smoke-native-service.ps1') -BundleDirectory $installRoot -DiagnosticsDirectory $DiagnosticsDirectory
   if (-not $previousPath) {
-    & (Join-Path $PSScriptRoot 'smoke-native-service.ps1') -BundleDirectory $installRoot -UserAccount
+    & (Join-Path $PSScriptRoot 'smoke-native-service.ps1') -BundleDirectory $installRoot -DiagnosticsDirectory $DiagnosticsDirectory -UserAccount
   }
 } catch {
   Write-Error $_ -ErrorAction Continue
   throw
 } finally {
+  if ($installerTimedOut) { throw 'MSI timed out; retaining installation and logs without starting another installer transaction.' }
   # Never remove an installation still referenced by a service after a failed
   # service cleanup. Retain its files and logs for diagnosis on the runner.
   if (Get-Service -Name WebMux -ErrorAction SilentlyContinue) {
@@ -87,5 +95,5 @@ try {
 }
 if (@(Get-WebMuxProducts).Count -ne 0) { throw 'MSI uninstall left a WebMux product registration.' }
 if (Test-Path -LiteralPath (Join-Path $installRoot 'bin\webmux.exe')) { throw 'MSI uninstall left the native executable behind.' }
-Remove-Item -LiteralPath $temporary -Recurse -Force
+Write-QualificationPhase $DiagnosticsDirectory 'msi-smoke' 'passed'
 Write-Host 'Native MSI passed: installation/upgrade, native runtime, service lifecycle and uninstall.'

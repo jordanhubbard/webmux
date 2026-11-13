@@ -1,6 +1,6 @@
 # WebMux active roadmap
 
-Reviewed 2026-11-10 against the implementation, qualification receipts and GitHub
+Reviewed 2026-11-12 against the implementation, qualification receipts and GitHub
 issue states. GitHub issues track implementation and remaining acceptance work.
 
 ## Current reliability work
@@ -92,10 +92,13 @@ status must not be confused with passing checks on this checkpoint.
 
 ### Windows packaging reliability
 
-[#236](https://github.com/jordanhubbard/webmux/issues/236): bound Windows MSI smoke
-operations and preserve progress/installer diagnostics after a stalled packaging
-run. The stall is not established as a product regression. This remains a
-follow-up after #318; it does not displace session-state recovery.
+[#236](https://github.com/jordanhubbard/webmux/issues/236) and
+[#274](https://github.com/jordanhubbard/webmux/issues/274) are addressed by
+[#336](https://github.com/jordanhubbard/webmux/pull/336): bounded MSI/download
+processes, complete-smoke deadlines, stalled-process-tree controls and retained
+phase/installer/service diagnostics. See [packaging](packaging.md#windows-msi-smoke-deadlines-and-diagnostics).
+The observed stalls are not established product regressions. Native Windows
+coding-session recovery in #318 remains separate and unqualified.
 
 ## Runtime compatibility implementation
 
@@ -170,8 +173,11 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   [#65](https://github.com/jordanhubbard/webmux/issues/65), and
   [#152](https://github.com/jordanhubbard/webmux/issues/152): Windows signing,
   WinGet publication and macOS Developer ID notarization.
-- [#186](https://github.com/jordanhubbard/webmux/issues/186): retained exact-release
-  hosted qualification follow-up for v1.3.23. Verify its named runs before closing.
+- [#186](https://github.com/jordanhubbard/webmux/issues/186) is closed: its five
+  named hosted runs were verified completed successfully on 2026-11-12, covering
+  exact-v1.3.23 CI/packaging/publication and formula-update CI/packaging. The
+  [issue evidence](https://github.com/jordanhubbard/webmux/issues/186#issuecomment-6841784248)
+  records the commits and runs; it does not qualify current source or #318.
 
 External credentials, hardware and native-target evidence remain distinct from
 local implementation tests. Existing dependency/contributor PRs need their own
