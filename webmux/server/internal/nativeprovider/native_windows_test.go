@@ -152,6 +152,7 @@ func config(t *testing.T) (nativeprovider.Config, string) {
 fs.appendFileSync(process.argv[2],process.pid+'\n');
 process.stdin.setRawMode(true);process.stdin.resume();
 process.stdin.on('data',d=>process.stdout.write('INPUT:'+d.toString('hex')+';'));
+let pending='';process.stdin.on('data',d=>{pending=(pending+d.toString()).slice(-256);if(pending.includes('SIZE?')){pending='';process.stdout.write('SIZE:'+process.stdout.getWindowSize().join('x')+';');}});
 process.stdout.write('JOB_READY:'+process.pid+';');
 `), 0600); err != nil {
 		t.Fatal(err)
@@ -341,6 +342,20 @@ func TestNativeProviderConcurrentCreationLostReplyAndUncertainState(t *testing.T
 	}
 	p, out := attach(t, c, original)
 	expect(t, out, fmt.Sprintf("JOB_READY:%d;", original.RootPID))
+	t.Logf("provider_lifecycle=created owner=%d root=%d instance=%s", original.OwnerPID, original.RootPID, original.Instance)
+	if err := p.Resize(120, 40); err != nil {
+		t.Fatal(err)
+	}
+	resizeDeadline := time.Now().Add(8 * time.Second)
+	for !strings.Contains(out.text(), "SIZE:120x40;") {
+		if _, err := p.Write([]byte("SIZE?")); err != nil {
+			t.Fatal(err)
+		}
+		if time.Now().After(resizeDeadline) {
+			t.Fatalf("resize did not reach the real child console: %s", out.text())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	if starts(t, counter) != 1 {
 		t.Fatal("lost startup reply started more than one job")
 	}
@@ -402,6 +417,7 @@ func TestNativeProviderConcurrentCreationLostReplyAndUncertainState(t *testing.T
 	if starts(t, counter) != 1 {
 		t.Fatal("uncertain state duplicated the job")
 	}
+	t.Logf("provider_lifecycle=uncertain-cache-refused owner=%d root=%d starts=1", original.OwnerPID, original.RootPID)
 	if err := os.WriteFile(path, saved, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -483,6 +499,7 @@ func TestNativeProviderSurvivesControllerJobLossAndOwnerCrashIsExplicit(t *testi
 	if starts(t, counter) != 1 {
 		t.Fatal("controller loss duplicated the job")
 	}
+	t.Logf("provider_lifecycle=controller-job-loss controller=%d owner=%d root=%d starts=1 image-replaceable=true", parent.Process.Pid, i.OwnerPID, i.RootPID)
 	// Abrupt owner death must reap its own ConPTY job. Only a subsequent
 	// explicit Ensure may create one replacement provider.
 	if err := windows.TerminateProcess(ownerHandle, 1); err != nil {
@@ -500,6 +517,7 @@ func TestNativeProviderSurvivesControllerJobLossAndOwnerCrashIsExplicit(t *testi
 	if starts(t, counter) != 2 {
 		t.Fatal("explicit replacement did not start exactly one job")
 	}
+	t.Logf("provider_lifecycle=explicit-replacement old-owner=%d old-root=%d owner=%d root=%d starts=2", i.OwnerPID, i.RootPID, replacement.OwnerPID, replacement.RootPID)
 }
 
 func TestNativeProviderRefusesRestrictiveControllerJob(t *testing.T) {

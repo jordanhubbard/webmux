@@ -24,11 +24,25 @@ func connect(ctx context.Context, i Identity, key, operation string, cols, rows 
 	}()
 	deadline, _ := ctx.Deadline()
 	_ = c.SetDeadline(deadline)
+	cancelled := make(chan struct{})
+	stop := context.AfterFunc(ctx, func() { _ = c.SetDeadline(time.Now()); close(cancelled) })
+	var once sync.Once
+	stopContext := func() {
+		once.Do(func() {
+			if !stop() {
+				<-cancelled
+			}
+		})
+	}
+	defer stopContext()
 	if err := writeFrame(c, frame{Protocol: 1, Kind: operation, Session: i.Session, Instance: i.Instance, Key: key, Cols: cols, Rows: rows}); err != nil {
 		return nil, Identity{}, err
 	}
 	var reply frame
 	if err := readFrame(c, &reply); err != nil {
+		if ctx.Err() != nil {
+			err = ctx.Err()
+		}
 		return nil, Identity{}, err
 	}
 	if reply.Error != "" {
@@ -46,6 +60,12 @@ func connect(ctx context.Context, i Identity, key, operation string, cols, rows 
 	}
 	if reply.Kind != want {
 		return nil, Identity{}, errors.New("invalid native provider response")
+	}
+	// Attach keeps the connection after this handshake context ends. Join or
+	// stop its callback before clearing the deadline for subsequent streaming.
+	stopContext()
+	if ctx.Err() != nil {
+		return nil, Identity{}, ctx.Err()
 	}
 	_ = c.SetDeadline(time.Time{})
 	failed = false
