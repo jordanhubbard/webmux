@@ -162,8 +162,11 @@ exporter, checking binary payloads and listener cleanup after lease expiry.
 Gated remote-EOF controls keep the listener live after local cancellation and
 verify that successful completion waits for remote cleanup, that a hung worker
 fails within the cleanup bound, and that a failed remote exit never reports
-released connections. The SSH fixture supplies the same remote exit-status
-acknowledgement as sshd. These controls reproduce the premature-success ordering
+released connections. The SSH fixture supplies remote exit status and leaves the transport open for
+the client's disconnect after closing the session channel, matching sshd. A
+completed-worker control verifies that this connection remains usable. A built
+CLI failure control retains the cleanup explanation alongside SSH's nonzero
+exit code; native coding-CLI aliases retain their original diagnostic behavior. These controls reproduce the premature-success ordering
 reported in [#320](https://github.com/jordanhubbard/webmux/issues/320); its separate
 federation and RDP reconnect observations remain open.
 `--known-hosts` selects an explicit verified trust file for isolated environments;
