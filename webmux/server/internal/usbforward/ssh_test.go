@@ -22,6 +22,29 @@ import (
 	"time"
 )
 
+// Hold remote stdin EOF until the test permits cleanup, reproducing a slow
+// execution host without scheduler timing or a blind sleep in the worker.
+type cleanupGate struct {
+	started, allowed, done chan struct{}
+	once                   sync.Once
+}
+
+func (g *cleanupGate) release() { g.once.Do(func() { close(g.allowed) }) }
+
+type gatedEOFReader struct {
+	io.Reader
+	gate *cleanupGate
+}
+
+func (r *gatedEOFReader) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	if err == io.EOF {
+		close(r.gate.started)
+		<-r.gate.allowed
+	}
+	return n, err
+}
+
 func TestRealSSHTransportAndHostKeyRejection(t *testing.T) {
 	sshPath, err := exec.LookPath("ssh")
 	if err != nil {
@@ -54,6 +77,11 @@ func TestRealSSHTransportAndHostKeyRejection(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var workers sync.WaitGroup
+	gates := map[string]*cleanupGate{}
+	for _, name := range []string{"delay-eof", "hung-eof", "failed-eof"} {
+		gates[name] = &cleanupGate{started: make(chan struct{}), allowed: make(chan struct{}), done: make(chan struct{})}
+		defer gates[name].release()
+	}
 	accepted := make(chan struct{})
 	go func() {
 		defer close(accepted)
@@ -94,8 +122,20 @@ func TestRealSSHTransportAndHostKeyRejection(t *testing.T) {
 						_ = req.Reply(true, nil)
 						worker := exec.CommandContext(ctx, binaryPath, "--usb-forward-worker")
 						worker.Stdin, worker.Stdout, worker.Stderr = stream, stream, stream.Stderr()
+						if gate := gates[conn.User()]; gate != nil {
+							worker.Stdin = &gatedEOFReader{Reader: stream, gate: gate}
+						}
 						worker.WaitDelay = time.Second
-						_ = worker.Run()
+						workerErr := worker.Run()
+						if gate := gates[conn.User()]; gate != nil {
+							close(gate.done)
+						}
+						status := uint32(0)
+						if workerErr != nil || conn.User() == "failed-eof" {
+							status = 1
+						}
+						// sshd reports remote completion only after the command exits.
+						_, _ = stream.SendRequest("exit-status", false, ssh.Marshal(struct{ Status uint32 }{status}))
 						_ = stream.Close()
 						return
 					}
@@ -240,6 +280,96 @@ func TestRealSSHTransportAndHostKeyRejection(t *testing.T) {
 			_ = wait()
 		})
 	}
+	for _, name := range []string{"delay-eof", "hung-eof", "failed-eof"} {
+		t.Run("cancellation-"+name, func(t *testing.T) {
+			gate := gates[name]
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			defer gate.release()
+			reader, writer := io.Pipe()
+			defer reader.Close()
+			ports, readDone := make(chan int, 1), make(chan struct{})
+			var diagnostic bytes.Buffer
+			go func() {
+				defer close(readDone)
+				scanner := bufio.NewScanner(reader)
+				for scanner.Scan() {
+					line := scanner.Text()
+					diagnostic.WriteString(line + "\n")
+					var port int
+					if _, err := fmt.Sscanf(line, "USB transport ready on development host 127.0.0.1:%d", &port); err == nil {
+						ports <- port
+					}
+				}
+			}()
+			done := make(chan error, 1)
+			go func() {
+				err := Run(ctx, []string{"--host", name + "@127.0.0.1", "--identity", keyFile, "--known-hosts", known,
+					"--ssh-port", strconv.Itoa(listener.Addr().(*net.TCPAddr).Port),
+					"--export-port", strconv.Itoa(exporter.Addr().(*net.TCPAddr).Port), "--duration", "30s"}, writer)
+				writer.Close()
+				done <- err
+			}()
+			var port int
+			select {
+			case port = <-ports:
+			case err := <-done:
+				<-readDone
+				t.Fatalf("CLI ended before readiness: %v: %s", err, diagnostic.String())
+			case <-time.After(10 * time.Second):
+				t.Fatal("CLI readiness timed out")
+			}
+			t.Logf("canceling lease: remote=127.0.0.1 ssh_port=%d listener_port=%d mode=%s", listener.Addr().(*net.TCPAddr).Port, port, name)
+			cancel()
+			select {
+			case <-gate.started:
+			case <-time.After(5 * time.Second):
+				t.Fatal("Remote worker did not observe stdin EOF")
+			}
+			probe := dial(t, port)
+			probe.Close()
+			select {
+			case err := <-done:
+				<-readDone
+				t.Fatalf("CLI returned before remote cleanup: %v: %s", err, diagnostic.String())
+			case <-time.After(100 * time.Millisecond):
+			}
+			if name != "hung-eof" {
+				gate.release()
+			}
+			select {
+			case err := <-done:
+				if name == "delay-eof" && err != nil {
+					t.Fatal(err)
+				}
+				if name != "delay-eof" && (err == nil || !strings.Contains(err.Error(), "release was not confirmed")) {
+					t.Fatalf("Unconfirmed cleanup admitted: %v", err)
+				}
+				if name == "hung-eof" && !strings.Contains(err.Error(), "cleanup deadline exceeded") {
+					t.Fatal(err)
+				}
+			case <-time.After(10 * time.Second):
+				t.Fatal("CLI cleanup was not bounded")
+			}
+			<-readDone
+			released := strings.Contains(diagnostic.String(), "connections released")
+			if released != (name == "delay-eof") {
+				t.Fatalf("Misleading release diagnostic: %s", diagnostic.String())
+			}
+			gate.release()
+			select {
+			case <-gate.done:
+			case <-time.After(5 * time.Second):
+				t.Fatal("Fixture worker did not finish")
+			}
+			remaining, err := net.DialTimeout("tcp4", fmt.Sprintf("127.0.0.1:%d", port), time.Second)
+			if err == nil {
+				remaining.Close()
+				t.Fatal("Remote listener survived completed worker cleanup")
+			}
+		})
+	}
+
 	t.Run("cli-lease-and-cleanup", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()

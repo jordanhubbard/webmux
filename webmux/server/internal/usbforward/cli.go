@@ -108,7 +108,12 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	probe.Close()
 	ctx, cancel := context.WithTimeout(ctx, o.duration)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "ssh", o.sshArgs()...)
+	// The lease closes the transport first. Killing SSH on that same deadline
+	// can return before the remote worker has closed its listener. Keep the
+	// process alive for a bounded graceful exit after stdin EOF instead.
+	sshContext, stopSSH := context.WithCancel(context.WithoutCancel(ctx))
+	defer stopSSH()
+	cmd := exec.CommandContext(sshContext, "ssh", o.sshArgs()...)
 	cmd.Stderr = out
 	cmd.WaitDelay = 3 * time.Second
 	input, err := cmd.StdinPipe()
@@ -126,13 +131,24 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 		return fmt.Errorf("start SSH: %w", err)
 	}
 	transport := Stdio{In: output, Out: input}
+	ready := false
 	err = Export(ctx, transport, o.exportPort, Config{Version: 1, Port: o.listenPort, Seconds: int(o.duration.Seconds())}, func(port int) {
+		ready = true
 		fmt.Fprintf(out, "USB transport ready on development host 127.0.0.1:%d for at most %s. Select this address in the native USB importer. Device/Xcode availability is not yet verified. Press Ctrl-C to release.\n", port, o.duration)
 	})
 	expired := ctx.Err() != nil
-	cancel() // also ends the dedicated SSH process if the relay encountered an error
-	waitErr := cmd.Wait()
+	cancel()
+	// Export has closed both stdio pipes. A successful SSH exit acknowledges the
+	// remote command's completion; a timeout or missing/nonzero exit status does
+	// not establish that the execution host has released its listener.
+	waitErr := waitSSHCleanup(cmd, stopSSH, 3*time.Second)
 	if expired {
+		if !ready {
+			return fmt.Errorf("USB forwarding ended before transport readiness: %w", err)
+		}
+		if waitErr != nil {
+			return fmt.Errorf("remote USB forwarding release was not confirmed: %w", waitErr)
+		}
 		fmt.Fprintln(out, "USB forwarding lease ended; connections released.")
 		return nil
 	}
@@ -144,6 +160,23 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	}
 	fmt.Fprintln(out, "USB forwarding ended; connections released.")
 	return nil
+}
+
+// A bounded cleanup envelope is separate from the forwarding lease. Only this
+// dedicated SSH child is killed if the execution host does not finish in time.
+func waitSSHCleanup(cmd *exec.Cmd, stop context.CancelFunc, grace time.Duration) error {
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	timer := time.NewTimer(grace)
+	defer timer.Stop()
+	select {
+	case err := <-done:
+		return err
+	case <-timer.C:
+		stop()
+		<-done // reap the child and join its stdio copiers (bounded by WaitDelay)
+		return errors.New("SSH cleanup deadline exceeded")
+	}
 }
 
 // Check for a pipe instead of allowing the binary worker to emit frames into an
