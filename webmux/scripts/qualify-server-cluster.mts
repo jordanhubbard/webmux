@@ -78,10 +78,8 @@ try {
   const localURL = `http://127.0.0.1:${localPort}`, peerURL = `http://127.0.0.1:${forwardPort}`;
   const toPeer = randomBytes(32).toString('hex'), toLocal = randomBytes(32).toString('hex');
   const password = randomBytes(24).toString('hex');
-  // Match the server's canonical PHC parameter order; recent node-argon2
-  // emits the same costs as m,p,t rather than the server's m,t,p.
-  const hash = (await argon2.hash(password, { type: argon2.argon2id }))
-    .replace(/m=(\d+),p=(\d+),t=(\d+)/, 'm=$1,t=$3,p=$2');
+  // Exercise imported node-argon2 hashes without normalizing their parameters.
+  const hash = await argon2.hash(password, { type: argon2.argon2id });
   const auth = yaml.dump({ auth: { mode: 'local', users: [{ username: 'qualifier', password_hash: hash, admin: true }, { username: 'other', password_hash: hash }] } });
   const defaults = fs.readdirSync(path.join(root, 'webmux/config.defaults'), { withFileTypes: true }).filter(e => e.isFile());
   const baseFiles = Object.fromEntries(defaults.map(e => [e.name, fs.readFileSync(path.join(root, 'webmux/config.defaults', e.name), 'utf8')]));

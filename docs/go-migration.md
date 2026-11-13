@@ -290,7 +290,13 @@ Argon2id PHC password storage, HS256 JWTs, one-use WebSocket ticket storage,
 per-client rate limiting, HTTP/TLS listeners and graceful HTTP shutdown. It uses
 the existing `WEBMUX_HOME/config` and `data/events` layout. Authentication config
 updates are serialized and atomically replaced, preserve unknown fields and
-follow configuration symlinks. Catalog updates preserve legacy missing/null
+follow configuration symlinks. Imported Argon2id v19 hashes accept all orderings
+of the required `m`, `t` and `p` parameters, including node-argon2 0.45.1 output.
+Duplicate/unknown parameters, malformed values and unsupported resource costs
+are rejected before derivation; hash parsing is bounded to 512 bytes. Login
+preserves the stored hash. Compatibility tests use an independently generated
+Node hash for all six orderings and the actual HTTP login/token flow (#257).
+Catalog updates preserve legacy missing/null
 fields and custom metadata, serialize concurrent changes, and redact key paths
 and private metadata from API responses. Settings enforce administrator/trusted
 access, preserve nested defaults and disabled agent definitions, and keep
