@@ -3,12 +3,37 @@ package recovery
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+// Model a request whose bytes arrive normally but whose write EOF is delayed.
+// The reply-side test must not depend on that separate transport event.
+type heldEOFReader struct {
+	input   io.Reader
+	release <-chan struct{}
+	eof     bool
+}
+
+func (r *heldEOFReader) Read(p []byte) (int, error) {
+	if r.eof {
+		<-r.release
+		return 0, io.EOF
+	}
+	n, err := r.input.Read(p)
+	if err == io.EOF {
+		r.eof = true
+		if n > 0 {
+			return n, nil
+		}
+		<-r.release
+	}
+	return n, err
+}
 
 func TestWaitingSocketFramesRejectIncompleteOversizedAndMultipleValues(t *testing.T) {
 	for _, message := range []string{
@@ -82,25 +107,48 @@ func TestWaitingClientReadsCompleteReplyWithoutReadEOF(t *testing.T) {
 	}
 	defer cleanup()
 	release := make(chan struct{})
-	defer close(release)
+	finished := make(chan error, 1)
+	var phase atomic.Value
+	phase.Store("waiting for connection")
+	defer func() {
+		close(release)
+		_ = listener.Close()
+		select {
+		case err := <-finished:
+			if err != nil {
+				t.Errorf("fixture peer failed in %s: %v", phase.Load(), err)
+			}
+		case <-time.After(2 * time.Second):
+			t.Error("fixture peer did not stop")
+		}
+	}()
 	go func() {
+		var peerError error
+		defer func() { finished <- peerError }()
 		c, err := listener.Accept()
 		if err != nil {
+			peerError = err
 			return
 		}
 		defer c.Close()
 		var request RPCRequest
-		if readRPC(c, &request) != nil {
+		phase.Store("reading request with write EOF withheld")
+		input := &heldEOFReader{input: c, release: release}
+		if peerError = readWorkerRPC(input, &request); peerError != nil {
 			return
 		}
-		_ = json.NewEncoder(c).Encode(RPCResponse{Protocol: 1, Outcome: "consumed"})
-		<-release // Simulate a delayed read EOF after a complete legacy reply.
+		phase.Store("writing reply")
+		if peerError = json.NewEncoder(c).Encode(RPCResponse{Protocol: 1, Outcome: "consumed"}); peerError != nil {
+			return
+		}
+		phase.Store("complete reply sent; read EOF withheld")
+		<-release // Keep the write side open after sending the complete reply.
 	}()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	response, err := callWaitingWorker(ctx, endpoint, RPCRequest{Protocol: 1})
 	if err != nil || response.Outcome != "consumed" {
-		t.Fatalf("complete reply waited for EOF: %+v %v", response, err)
+		t.Fatalf("complete reply waited for EOF, peer phase=%s: %+v %v", phase.Load(), response, err)
 	}
 }
 
