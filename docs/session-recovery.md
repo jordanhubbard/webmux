@@ -2270,6 +2270,54 @@ choice. Actual Windows host reboot, installed-service recovery, active-thread
 observation, additional CLI/policy/profile coverage and ARM64 hardware execution
 remain open under #318. The screen-profile limits remain under #355.
 
+### Windows profile-root recovery (2026-11-13)
+
+New native configuration snapshots use version 1 and record `USERPROFILE`,
+including its absence, alongside the existing CLI-specific roots. Both the
+preflight subprocess and execution helper restore that snapshot. Windows
+preflight filtering treats environment names without regard to case; Unix
+names retain their case-sensitive behavior. Unknown snapshot versions are
+rejected before execution. Unversioned snapshots retain their prior behavior:
+their missing `USERPROFILE` was never recorded, so it does not clear an
+inherited profile or invent an original value. JSON/YAML persistence and
+snapshot cloning retain the version.
+
+The profile-capture regression fails against the prior implementation. Four
+maintained tests passed on native Windows AMD64 with zero skips, including
+legacy compatibility, an explicitly unset profile, platform case rules and
+both actual helper process boundaries. Their native CLI is a synthetic root
+fixture, kept separate from the authenticated application evidence below.
+The test executable SHA-256 was
+`6df2a5bd55e786dd93e10b275d8a7eca4547d964fd5831015c1187134b8adb58`.
+Affected recovery/session/terminal race suites, recovery vet, Windows cross-vet
+and strict TypeScript checks also passed.
+
+A standalone application from clean source
+`3bc3ea257002ad04954c2accc039f71a995a867c` then qualified authenticated Codex
+0.153.0 recovery with an altered replacement-controller profile. Its SHA-256
+was `7ef4387aad35ccc7eab39e63d644d3f4c07dde6ffa4c9ae8c704675dd30c536d`.
+The original invocation recorded its real `USERPROFILE` in a version-1 snapshot.
+After controlled provider loss, the replacement controller was launched with
+`USERPROFILE` pointing at a different empty directory inside the private fixture.
+The browser preview displayed the original profile. Clicking native Resume
+restored it in the execution helper: the resumed CLI recorded the original
+profile and exact native ID, then answered a fresh remembered-marker question
+in the original conversation. No authentication files were copied.
+
+Repeating the recovery request returned the existing `consumed` receipt without
+another CLI. A further controller crash/replacement, still using the altered
+profile, retained the same owner/root/CLI identities and produced another fresh
+marker answer. All three native turn records confirmed the original project,
+model, read-only sandbox and never approval policy, with zero tool calls.
+Cleanup verified that all owned processes and the tunnel stopped; five nonempty
+application logs remained, including the waiting-only reconnect log. Private
+evidence uses `roots-native-*`, `app-roots-v1-*` and `app-roots-v1-browser/`.
+
+This adds original-profile restoration for new snapshots; it does not recover
+unknown profile information from older records. Host reboot, authenticated
+installed-service recovery, active-thread observation and other CLI/platform
+qualification boundaries above remain open under #318.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

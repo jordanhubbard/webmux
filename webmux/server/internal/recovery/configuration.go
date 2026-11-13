@@ -8,6 +8,7 @@ import (
 	"maps"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 	"unicode"
@@ -17,6 +18,7 @@ import (
 // A non-nil snapshot also records absence: unset roots must not inherit a
 // different terminal's override when the provider is recreated.
 type NativeConfiguration struct {
+	Version      int               `json:"version,omitempty" yaml:"version,omitempty"`
 	Roots        map[string]string `json:"roots" yaml:"roots"`
 	ManualReason string            `json:"manual_reason,omitempty" yaml:"manual_reason,omitempty"`
 }
@@ -25,7 +27,17 @@ func (c *NativeConfiguration) Clone() *NativeConfiguration {
 	if c == nil {
 		return nil
 	}
-	return &NativeConfiguration{Roots: maps.Clone(c.Roots), ManualReason: c.ManualReason}
+	return &NativeConfiguration{Version: c.Version, Roots: maps.Clone(c.Roots), ManualReason: c.ManualReason}
+}
+
+// Version zero predates USERPROFILE capture. Its missing entry is unknown,
+// rather than evidence that the variable was unset on the execution host.
+func (c *NativeConfiguration) rootNames(cli string) []string {
+	names := nativeRootNames(cli)
+	if c.Version == 1 && len(names) != 0 {
+		names = append(names, "USERPROFILE")
+	}
+	return names
 }
 
 func nativeRootNames(cli string) []string {
@@ -43,8 +55,8 @@ func nativeRootNames(cli string) []string {
 }
 
 func captureNativeConfiguration(cli string) *NativeConfiguration {
-	c := &NativeConfiguration{Roots: map[string]string{}}
-	for _, name := range nativeRootNames(cli) {
+	c := &NativeConfiguration{Version: 1, Roots: map[string]string{}}
+	for _, name := range c.rootNames(cli) {
 		if value, exists := os.LookupEnv(name); exists {
 			c.Roots[name] = value
 		}
@@ -53,7 +65,7 @@ func captureNativeConfiguration(cli string) *NativeConfiguration {
 		c.ManualReason = "This OpenCode invocation uses inline configuration or permission settings. Restore it manually; those settings are not recorded."
 	}
 	if err := c.Validate(cli); err != nil {
-		return &NativeConfiguration{Roots: map[string]string{}, ManualReason: "The original coding CLI configuration paths could not be recorded. Restore this invocation manually."}
+		return &NativeConfiguration{Version: 1, Roots: map[string]string{}, ManualReason: "The original coding CLI configuration paths could not be recorded. Restore this invocation manually."}
 	}
 	return c
 }
@@ -74,8 +86,11 @@ func (c *NativeConfiguration) Validate(cli string) error {
 	if c == nil {
 		return nil
 	}
+	if c.Version < 0 || c.Version > 1 {
+		return errors.New("unsupported native configuration version")
+	}
 	allowed := map[string]bool{}
-	for _, name := range nativeRootNames(cli) {
+	for _, name := range c.rootNames(cli) {
 		allowed[name] = true
 	}
 	if len(allowed) == 0 || len(c.Roots) > len(allowed) || len(c.ManualReason) > 512 || strings.ContainsFunc(c.ManualReason, unicode.IsControl) {
@@ -105,7 +120,7 @@ func nativeEnvironment(cli string, c *NativeConfiguration, inherited []string) (
 		return nil, errors.New(c.ManualReason)
 	}
 	remove := map[string]bool{}
-	for _, name := range nativeRootNames(cli) {
+	for _, name := range c.rootNames(cli) {
 		remove[name] = true
 	}
 	// Never accidentally inherit an unrecorded inline policy from a recreated
@@ -116,6 +131,9 @@ func nativeEnvironment(cli string, c *NativeConfiguration, inherited []string) (
 	var environment []string
 	for _, entry := range inherited {
 		name, _, _ := strings.Cut(entry, "=")
+		if runtime.GOOS == "windows" {
+			name = strings.ToUpper(name)
+		}
 		if !remove[name] {
 			environment = append(environment, entry)
 		}
@@ -242,7 +260,7 @@ func RunConfiguredCLI(args []string, cli string, configuration *NativeConfigurat
 	if configuration.ManualReason != "" {
 		return errors.New(configuration.ManualReason)
 	}
-	for _, name := range nativeRootNames(cli) {
+	for _, name := range configuration.rootNames(cli) {
 		var err error
 		if value, exists := configuration.Roots[name]; exists {
 			err = os.Setenv(name, value)
