@@ -21,6 +21,8 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
   // This is a real browser acceptance test, not a mocked frame or protocol.
   let received = '';
   let pageReady = false;
+  const inputReceipts: unknown[] = [];
+  let inputGeometry: unknown;
   const callback = http.createServer((req, res) => {
     const url = new URL(req.url!, 'http://localhost');
     if (url.pathname === '/callback') received = url.searchParams.get('code') ?? '';
@@ -29,12 +31,41 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
   });
   await new Promise<void>(resolve => callback.listen(0, '127.0.0.1', resolve));
   const callbackPort = (callback.address() as { port: number }).port;
-  const identity = http.createServer((_req, res) => {
+  const identity = http.createServer((req, res) => {
+    if (req.url === '/fixture-input' && req.method === 'POST') {
+      // Only this synthetic identity document can send fixture receipts. Bound
+      // storage so diagnostics cannot turn a failing input loop into a leak.
+      let body = '';
+      req.on('data', chunk => { if (body.length <= 8192) body += chunk.toString().slice(0, 8193 - body.length); });
+      req.on('end', () => {
+        if (body.length <= 8192 && inputReceipts.length < 100) {
+          try { inputReceipts.push(JSON.parse(body)); } catch { /* malformed fixture receipt */ }
+        }
+        res.end();
+      });
+      return;
+    }
     res.setHeader('Content-Type', 'text/html');
     res.end(`<html><body style="margin:0"><form action="http://127.0.0.1:${callbackPort}/callback">
       <input name="code" aria-label="Authorization code" style="position:absolute;left:40px;top:40px;width:300px;height:40px">
       <button style="position:absolute;left:40px;top:120px;width:200px;height:40px">Authorize</button>
-      </form><script>addEventListener('DOMContentLoaded', () => fetch('http://127.0.0.1:${callbackPort}/ready', { mode: 'no-cors' }));</script></body></html>`);
+      </form><script>
+      let sequence = 0;
+      for (const type of ['pointerdown', 'focusin', 'focusout', 'keydown', 'beforeinput', 'input', 'submit']) {
+        document.addEventListener(type, event => {
+          const input = document.querySelector('input');
+          const rect = input.getBoundingClientRect();
+          const describe = element => ({ tag: element?.tagName, name: element?.getAttribute?.('name') });
+          navigator.sendBeacon('/fixture-input', JSON.stringify({
+            sequence: ++sequence, type, key: event.key, target: describe(event.target),
+            active: describe(document.activeElement), value: input.value,
+            x: event.clientX, y: event.clientY, width: innerWidth, height: innerHeight,
+            input: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+          }));
+        }, true);
+      }
+      addEventListener('DOMContentLoaded', () => fetch('http://127.0.0.1:${callbackPort}/ready', { mode: 'no-cors' }));
+      </script></body></html>`);
   });
   await new Promise<void>(resolve => identity.listen(0, '127.0.0.1', resolve));
   const identityURL = `http://127.0.0.1:${(identity.address() as { port: number }).port}/authorize`;
@@ -129,6 +160,7 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
       return displayed.width === remote.width && displayed.height === remote.height;
     }).toBe(true);
     const bounds = (await viewport.boundingBox())!;
+    inputGeometry = { bounds, geometry };
     await viewport.click({ position: { x: 100 * bounds.width / geometry.width, y: 60 * bounds.height / geometry.height } });
     if (linkKind === 'gh-browser') {
       // Real combined modifiers previously failed JSON decoding at both hops.
@@ -141,6 +173,17 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     await page.keyboard.press('Enter');
     await expect(page.getByRole('alert')).toHaveCount(0);
     await expect.poll(() => received, { timeout: 15_000 }).toBe('callback-proof');
+    await expect.poll(() => inputReceipts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'pointerdown', target: { tag: 'INPUT', name: 'code' } }),
+      expect.objectContaining({ type: 'input', value: 'callback-proof' }),
+      expect.objectContaining({ type: 'submit', value: 'callback-proof' }),
+    ]));
+    const receiptPath = info.outputPath('browser-input-receipts.json');
+    writeFileSync(receiptPath, JSON.stringify({ linkKind, received, inputGeometry, inputReceipts }));
+    await info.attach('browser-input-receipts', {
+      path: receiptPath,
+      contentType: 'application/json',
+    });
     expect(popups).toBe(0);
     expect(page.context().pages()).toHaveLength(idleViewer ? 2 : 1);
     if (idleViewer) await expect(idleViewer.locator('aside.browser-companion')).toHaveCount(0);
@@ -165,6 +208,16 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     const ended = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
     expect(ended.status()).toBe(503);
   } catch (error) {
+    const viewer = await page.evaluate(() => ({
+      visibility: document.visibilityState,
+      active: { tag: document.activeElement?.tagName, label: document.activeElement?.getAttribute('aria-label') },
+    })).catch(() => null);
+    const diagnosticsPath = info.outputPath('browser-input-diagnostics.json');
+    writeFileSync(diagnosticsPath, JSON.stringify({ linkKind, received, pageReady, inputGeometry, inputReceipts, viewer, replies }));
+    await info.attach('browser-input-diagnostics', {
+      path: diagnosticsPath,
+      contentType: 'application/json',
+    });
     console.error('Browser companion workflow failed:', String(error).split('\n').slice(0, 4).join('\n'));
     throw error;
   } finally {
