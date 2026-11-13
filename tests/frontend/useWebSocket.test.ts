@@ -114,6 +114,64 @@ describe('useWebSocket', () => {
     expect(onMessage).not.toHaveBeenCalled();
   });
 
+  it('ignores messages from a previous session after its replacement opens', async () => {
+    const useWebSocket = await importHook();
+    const previousMessage = vi.fn();
+    const currentMessage = vi.fn();
+    const { rerender } = renderHook(
+      ({ sessionId, onMessage }) => useWebSocket({ sessionId, onMessage }),
+      { initialProps: { sessionId: 'previous', onMessage: previousMessage } },
+    );
+    const previous = MockWebSocket.instances[0];
+    act(() => previous.simulateOpen());
+    rerender({ sessionId: 'current', onMessage: currentMessage });
+    const current = MockWebSocket.instances[1];
+    act(() => {
+      current.simulateOpen();
+      previous.simulateMessage({ type: 'status', status: 'connected' });
+      previous.simulateMessage({ type: 'output', data: 'obsolete output' });
+      current.simulateMessage({ type: 'output', data: 'current output' });
+    });
+    expect(previousMessage).not.toHaveBeenCalled();
+    expect(currentMessage.mock.calls).toEqual([[{ type: 'output', data: 'current output' }]]);
+  });
+
+  it('ignores messages from a disconnected socket during and after reconnect', async () => {
+    const useWebSocket = await importHook();
+    const onMessage = vi.fn();
+    renderHook(() => useWebSocket({ sessionId: 's1', onMessage }));
+    const previous = MockWebSocket.instances[0];
+    act(() => {
+      previous.simulateOpen();
+      previous.simulateClose();
+      previous.simulateMessage({ type: 'output', data: 'during reconnect' });
+      vi.advanceTimersByTime(1000);
+    });
+    act(() => {
+      MockWebSocket.instances[1].simulateOpen();
+      previous.simulateMessage({ type: 'output', data: 'after reconnect' });
+      MockWebSocket.instances[1].simulateMessage({ type: 'output', data: 'current' });
+    });
+    expect(onMessage.mock.calls).toEqual([[{ type: 'output', data: 'current' }]]);
+  });
+
+  it.each(['unmount', 'close', 'auth-expired'] as const)(
+    'ignores messages after %s', async (reason) => {
+      const useWebSocket = await importHook();
+      const onMessage = vi.fn();
+      const { result, unmount } = renderHook(() => useWebSocket({ sessionId: 's1', onMessage }));
+      const ws = MockWebSocket.instances[0];
+      act(() => ws.simulateOpen());
+      act(() => {
+        if (reason === 'unmount') unmount();
+        else if (reason === 'close') result.current.close();
+        else window.dispatchEvent(new Event('webmux:auth-expired'));
+      });
+      act(() => ws.simulateMessage({ type: 'output', data: 'late' }));
+      expect(onMessage).not.toHaveBeenCalled();
+    },
+  );
+
   it('sends messages when connected', async () => {
     const useWebSocket = await importHook();
     const { result } = renderHook(() =>
