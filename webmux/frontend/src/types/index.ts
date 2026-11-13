@@ -49,7 +49,7 @@ export interface RecoveryActivity {
   replayable: boolean; cli?: string; cli_version?: string; native_session_id?: string;
   native_state_file?: string;
   native_evidence?: 'launch-selector' | 'process-state' | 'native-hook' | 'unavailable';
-  configuration?: { roots: Record<string, string>; manual_reason?: string };
+  configuration?: { version?: number; roots: Record<string, string>; manual_reason?: string };
 }
 
 export interface SessionRecovery {
