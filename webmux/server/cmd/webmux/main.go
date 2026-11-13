@@ -56,6 +56,9 @@ func main() {
 }
 
 func run() (resultErr error) {
+	if len(os.Args) == 2 && (os.Args[1] == "--native-provider-bootstrap" || os.Args[1] == "--native-provider-owner") {
+		return terminal.RunNativeProviderHelper(context.Background(), os.Args[1], os.Stdin, os.Stdout)
+	}
 	// Recovery helpers also run through the browser companion's CLI aliases.
 	// Handle the private hook mode before dispatching by executable basename.
 	if len(os.Args) >= 2 && os.Args[1] == "--recovery-claude-hook" {
