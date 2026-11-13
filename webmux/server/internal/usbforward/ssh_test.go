@@ -340,7 +340,7 @@ func TestRealSSHTransportAndHostKeyRejection(t *testing.T) {
 			select {
 			case err := <-done:
 				if name == "delay-eof" && err != nil {
-					t.Fatal(err)
+					t.Fatal(err, diagnostic.String())
 				}
 				if name != "delay-eof" && (err == nil || !strings.Contains(err.Error(), "release was not confirmed")) {
 					t.Fatalf("Unconfirmed cleanup admitted: %v", err)

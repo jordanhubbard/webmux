@@ -137,8 +137,8 @@ installation may expose additional listeners; secure those independently.
 - At most eight TCP streams, 32 KiB frames, socket backpressure and a 15-second
   blocked-write deadline bound resources. Each side enforces the lease and
   closes the listener, sockets and transport on exit. After cancellation or
-  expiry, the CLI closes the transport and waits up to three seconds for SSH to
-  acknowledge remote-command completion before reporting released connections.
+  expiry, the CLI closes relay input while continuing to drain SSH output, and
+  waits up to three seconds for SSH to acknowledge remote-command completion before reporting released connections.
   If that fails, it stops its dedicated SSH child (with up to three more seconds
   to join stdio copiers), exits with an error and says remote release was not
   confirmed. An unreachable worker still has its own lease deadline; check the

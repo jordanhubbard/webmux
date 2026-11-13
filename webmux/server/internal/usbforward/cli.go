@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,6 +25,37 @@ type Stdio struct {
 func (s Stdio) Read(p []byte) (int, error)  { return s.In.Read(p) }
 func (s Stdio) Write(p []byte) (int, error) { return s.Out.Write(p) }
 func (s Stdio) Close() error                { return errors.Join(s.In.Close(), s.Out.Close()) }
+
+// Closing the relay interrupts its reads but leaves SSH stdout draining until
+// the remote exit status arrives. Closing the actual pipe early can make the
+// Windows OpenSSH client exit 255 before remote cleanup is acknowledged.
+type sshStdio struct {
+	reader *io.PipeReader
+	input  io.WriteCloser
+	done   chan struct{}
+	once   sync.Once
+	err    error
+}
+
+func newSSHStdio(input io.WriteCloser, output io.Reader) *sshStdio {
+	reader, writer := io.Pipe()
+	s := &sshStdio{reader: reader, input: input, done: make(chan struct{})}
+	go func() {
+		defer close(s.done)
+		_, err := io.Copy(writer, output)
+		_ = writer.CloseWithError(err)
+		// Once the relay reader closes, discard remaining protocol frames instead
+		// of breaking the SSH client's pipe while it waits for remote completion.
+		_, _ = io.Copy(io.Discard, output)
+	}()
+	return s
+}
+func (s *sshStdio) Read(p []byte) (int, error)  { return s.reader.Read(p) }
+func (s *sshStdio) Write(p []byte) (int, error) { return s.input.Write(p) }
+func (s *sshStdio) Close() error {
+	s.once.Do(func() { s.err = errors.Join(s.input.Close(), s.reader.Close()) })
+	return s.err
+}
 
 type options struct {
 	host, identity, knownHosts      string
@@ -130,7 +162,8 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 		output.Close()
 		return fmt.Errorf("start SSH: %w", err)
 	}
-	transport := Stdio{In: output, Out: input}
+	transport := newSSHStdio(input, output)
+	defer func() { _ = output.Close(); <-transport.done }()
 	ready := false
 	err = Export(ctx, transport, o.exportPort, Config{Version: 1, Port: o.listenPort, Seconds: int(o.duration.Seconds())}, func(port int) {
 		ready = true
@@ -138,7 +171,8 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	})
 	expired := ctx.Err() != nil
 	cancel()
-	// Export has closed both stdio pipes. A successful SSH exit acknowledges the
+	// Export has closed stdin and its relay reader, while stdout drains. An
+	// SSH success exit acknowledges the
 	// remote command's completion; a timeout or missing/nonzero exit status does
 	// not establish that the execution host has released its listener.
 	waitErr := waitSSHCleanup(cmd, stopSSH, 3*time.Second)
