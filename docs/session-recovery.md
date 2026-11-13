@@ -1821,6 +1821,29 @@ or prove native coding-conversation recovery through the UI. The durable
 provider, shell integration and restart/crash/reboot qualification remain open
 under #318; provider creation continues to fail explicitly until implemented.
 
+### Worker RPC latency and cancellation
+
+Post-merge main `88d8086` hit the socket fixture's five-second deadline in
+Windows tooling CI run `43366112445` (job `131690795994`). The independent Go
+race job and Packaging passed. The retained log does not establish whether
+transport EOF, scheduling or durable I/O was delayed; 100 unchanged native
+repetitions passed afterward. [#342](https://github.com/jordanhubbard/webmux/issues/342)
+tracks this qualification gap. Socket tests now use the existing production
+25-second RPC budget, exercise six-second preparation, and retain worker-phase
+diagnostics on failure. The production upper bound is unchanged.
+
+An established socket now wakes when its caller cancels. Cancellation leaves
+an unanswered approved request uncertain; the worker may still commit it, and
+reconnect must see its consumed receipt rather than execute it again. The
+native cancellation control failed with the prior client and passed 20 times
+with the fix. The fixed client also passed 100 normal native round trips and
+the full recovery suite (60 passing cases), including the slow preparation
+control. Fixed test executable SHA-256:
+`500d6514b672f04734bba3bf9b1da9fd4beab8bdc9d916e52881cc11f195f24e`.
+Private evidence includes `socket-fix-native-receipt.json`, stage logs and the
+preserved `main-88d8086-ci-failure.log`. These controls do not prove the cause of
+the original hosted delay or complete Windows lifecycle acceptance.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

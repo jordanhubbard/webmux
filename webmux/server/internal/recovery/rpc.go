@@ -10,6 +10,7 @@ import (
 )
 
 const maxRPCBytes = 256 << 10
+const recoveryWorkerTimeout = 25 * time.Second
 
 // RPCRequest travels through a local pipe or authenticated SSH stdin. Keys must
 // never appear in a URL, command-line argument, terminal input or transcript.
@@ -137,7 +138,7 @@ func hostRPC(ctx context.Context, request RPCRequest) (RPCResponse, error) {
 }
 
 func callWaitingWorker(ctx context.Context, endpoint string, request RPCRequest) (RPCResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, recoveryWorkerTimeout)
 	defer cancel()
 	connection, err := (&net.Dialer{}).DialContext(ctx, "unix", endpoint)
 	if err != nil {
@@ -146,6 +147,10 @@ func callWaitingWorker(ctx context.Context, endpoint string, request RPCRequest)
 	defer connection.Close()
 	deadline, _ := ctx.Deadline()
 	_ = connection.SetDeadline(deadline)
+	// Cancellation can arrive after DialContext succeeds. Wake an established
+	// socket read promptly too; a missing reply remains an uncertain outcome.
+	stopCancellation := context.AfterFunc(ctx, func() { _ = connection.SetDeadline(time.Now()) })
+	defer stopCancellation()
 	if err := json.NewEncoder(connection).Encode(request); err != nil {
 		return RPCResponse{Outcome: "uncertain"}, err
 	}
@@ -156,6 +161,9 @@ func callWaitingWorker(ctx context.Context, endpoint string, request RPCRequest)
 	err = readRPC(connection, &response)
 	if err != nil {
 		response.Outcome = "uncertain"
+		if ctx.Err() != nil {
+			err = ctx.Err()
+		}
 	}
 	return response, err
 }
