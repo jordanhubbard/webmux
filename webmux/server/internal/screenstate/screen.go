@@ -47,6 +47,7 @@ func New(cols, rows int) (*Screen, error) {
 		return nil, errors.New("invalid terminal snapshot dimensions")
 	}
 	e := vt.NewEmulator(cols, rows)
+	installXtermCursorProfile(e)
 	e.SetScrollbackMaxLines(min(512, max(1, historyCells/cols)))
 	return &Screen{emulator: e, filter: replayfilter.Filter{Xterm: true}}, nil
 }

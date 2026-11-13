@@ -650,3 +650,71 @@ func TestNativeProviderContinuationState(t *testing.T) {
 		}
 	}
 }
+
+// Retain three actual ConPTY streams for independent xterm qualification:
+// continuously attached, attached before more output, and attached after it.
+// A live private marker orders each capture after all preceding snapshot bytes.
+func TestNativeProviderSavedCursorCaptures(t *testing.T) {
+	permitBreakaway(t)
+	var records []map[string]any
+	for _, tc := range []struct{ name, before, after string }{
+		{"origin-restore", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b7\x1b[?6l\x1b[10;20H", "\x1b8X"},
+		{"origin-clamp", "\x1b[H\x1b7\x1b[3;20r\x1b[?6h", "\x1b8X"},
+		{"origin-mode-batch", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b[?1048h", "\x1b[?6;1048lX"},
+		{"pending-wrap", "\x1b[4;100HX\x1b7\x1b[10;20H", "\x1b8Y"},
+		{"pending-wrap-alt", "\x1b[4;100HX\x1b[?1049hAPP", "\x1b[?1049lY"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, counter := config(t)
+			before, _ := json.Marshal(tc.before)
+			after, _ := json.Marshal(tc.after)
+			script := `const fs=require('fs');fs.appendFileSync(process.argv[2],process.pid+'\n');process.stdin.setRawMode(true);process.stdin.resume();process.stdout.write('CURSOR_READY;');let pending='';process.stdin.on('data',d=>{pending=(pending+d.toString()).slice(-256);if(pending.includes('BEFORE')){pending='';process.stdout.write(` + string(before) + `+'\x1b]777;BEFORE_CURSOR_MARK\x07');}else if(pending.includes('AFTER')){pending='';process.stdout.write(` + string(after) + `+'\x1b]777;AFTER_CURSOR_MARK\x07');}else if(pending.includes('CHECK')){pending='';process.stdout.write('\x1b]777;SNAPSHOT_CURSOR_MARK\x07');}else if(pending.includes('FINISH')){pending='';process.stdout.write('\x1b]777;FINAL_CURSOR_MARK\x07');}});`
+			if err := os.WriteFile(c.Launch.Args[0], []byte(script), 0600); err != nil {
+				t.Fatal(err)
+			}
+			identity := ensure(t, c)
+			cleanupOwner(t, c, identity)
+			first, reference := attach(t, c, identity)
+			expect(t, reference, "CURSOR_READY;")
+			if _, err := first.Write([]byte("BEFORE")); err != nil {
+				t.Fatal(err)
+			}
+			expect(t, reference, "BEFORE_CURSOR_MARK\a")
+			second, restored := attach(t, c, identity)
+			if _, err := second.Write([]byte("CHECK")); err != nil {
+				t.Fatal(err)
+			}
+			expect(t, reference, "SNAPSHOT_CURSOR_MARK\a")
+			expect(t, restored, "SNAPSHOT_CURSOR_MARK\a")
+			originalBefore, snapshotBefore := reference.text(), restored.text()
+			if _, err := second.Write([]byte("AFTER")); err != nil {
+				t.Fatal(err)
+			}
+			expect(t, reference, "AFTER_CURSOR_MARK\a")
+			expect(t, restored, "AFTER_CURSOR_MARK\a")
+			third, recaptured := attach(t, c, identity)
+			if _, err := third.Write([]byte("FINISH")); err != nil {
+				t.Fatal(err)
+			}
+			for _, view := range []*capture{reference, restored, recaptured} {
+				expect(t, view, "FINAL_CURSOR_MARK\a")
+			}
+			if strings.Contains(restored.text(), "BEFORE_CURSOR_MARK") || strings.Contains(recaptured.text(), "BEFORE_CURSOR_MARK") || strings.Contains(recaptured.text(), "AFTER_CURSOR_MARK") || strings.Contains(recaptured.text(), "SNAPSHOT_CURSOR_MARK") {
+				t.Fatal("snapshot repeated a private marker")
+			}
+			if starts(t, counter) != 1 {
+				t.Fatal("cursor capture created another job")
+			}
+			records = append(records, map[string]any{"name": tc.name, "cols": 100, "rows": 30, "original": reference.text(), "original_before": originalBefore, "snapshot_before": snapshotBefore, "snapshot": restored.text(), "recaptured": recaptured.text(), "owner_pid": identity.OwnerPID, "root_pid": identity.RootPID, "starts": 1})
+		})
+	}
+	if target := os.Getenv("WEBMUX_NATIVE_CURSOR_CAPTURES"); target != "" {
+		data, err := json.Marshal(records)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(target, data, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+}

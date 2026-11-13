@@ -4,6 +4,7 @@ go 1.27.4
 
 require (
 	github.com/charmbracelet/ultraviolet v0.0.0-20260812204455-68fa937c71be
+	github.com/charmbracelet/x/ansi v0.11.8
 	github.com/chromedp/cdproto v0.159.2
 	github.com/chromedp/chromedp v0.23.0
 	github.com/creack/pty v1.1.24
@@ -21,7 +22,6 @@ require (
 
 require (
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
-	github.com/charmbracelet/x/ansi v0.11.8 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect

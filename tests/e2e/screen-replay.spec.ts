@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 type Fixture = { name: string; cols: number; rows: number; original: string; snapshot: string; future: string; recaptured: string };
-const names = ['immediate', 'colored-underline', 'unicode', 'combining', 'pending-wrap', 'wide-pending-wrap', 'insert-mode', 'after-sgr', 'after-bell', 'after-private-osc', 'after-query', 'after-repeat', 'c0-inside-csi', 'del-inside-csi', 'after-del', 'after-erased-character'];
+const names = ['alternate-wrapped-row', 'alternate-wrapped-blank', 'origin-clamp-top', 'origin-clamp-bottom', 'origin-clamp-then-widen', 'origin-batched-reset', 'origin-batched-reset-reverse', 'origin-active-at-restore', 'origin-after-ris', 'origin-after-soft-reset', 'saved-origin', 'saved-pending-wrap', 'saved-origin-csi', 'saved-origin-1048', 'saved-pending-1049', 'immediate', 'colored-underline', 'unicode', 'combining', 'pending-wrap', 'wide-pending-wrap', 'insert-mode', 'after-sgr', 'after-bell', 'after-private-osc', 'after-query', 'after-repeat', 'c0-inside-csi', 'del-inside-csi', 'after-del', 'after-erased-character'];
 let fixtures: Fixture[];
 let server: http.Server;
 let address: string;
@@ -30,7 +30,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => { if (server) await new Promise<void>(resolve => server.close(() => resolve())); });
 
 for (const name of names) {
-  test(`Go screen snapshot preserves xterm REP ${name}`, async ({ page }, info) => {
+  test(`Go screen snapshot matches xterm ${name}`, async ({ page }, info) => {
     const fixture = fixtures.find(f => f.name === name)!;
     await page.goto(address);
     const result = await page.evaluate(async f => {

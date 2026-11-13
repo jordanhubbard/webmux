@@ -2037,6 +2037,51 @@ edge and OSC display features remain under #355. These changes preserve the
 existing boundary: normal Windows recovery stays disabled, and application
 lifecycle/native-session acceptance remains open under #318.
 
+### Saved cursor and alternate-screen wraps (2026-11-13)
+
+Cursor restoration now follows the frontend xterm profile: it preserves the
+current origin mode, clears pending wrap, and clamps the restored position to
+the current viewport or origin-mode margins. Clamping leaves the saved
+coordinates intact for a later restore after widening the margins. Mode
+callbacks correct each individual 1048/1049 operation in order, including
+batched mode changes and the return to the main buffer. RIS and DECSTR reset
+the origin tracker. The profile uses state APIs without recursively parsing
+input, and cursor restoration does not finish a synchronized update.
+Alternate-screen painting now flows through rows so replay retains soft-wrap
+links, including wrapped blank rows.
+
+The independent real Chrome/xterm suite now has 31 cases. Eleven of the thirteen
+new cursor controls failed before the profile correction. The complete suite
+against parent `8be1176` failed thirteen cases, including two alternate-screen
+wrap controls; all 31 pass with this change. Comparisons cover the initial
+attachment, continued output and a second attachment, with semantic attributes,
+extended underline details, wraps, cursor and modes. Full local Go race tests,
+vet, Windows cross-vet and strict E2E TypeScript checks passed.
+
+The final native Windows AMD64 provider suite passed 21 cases in 14.235 seconds,
+with zero skips and no forced fixture cleanup. Executable SHA-256:
+`7e0027c9f50d1506026dac1fba9dee80d0470a99a2dba01c8fb0520d53d79c20`.
+Five real ConPTY jobs cover origin restoration, clamping, batched modes and
+pending wrap on both buffers. Each compares a continuously attached viewer
+with a snapshot viewer before further display output, then again after output
+and another attachment. All ten independently rendered Chrome comparisons
+passed; the collector also verifies one job per case and rejects replayed
+private synchronization markers. These are provider component controls.
+
+The native Windows fixture generator emitted 31 fixtures (53,550 bytes),
+byte-identical to the locally generated fixtures that passed Chrome. Its
+executable SHA-256 is
+`caaf0dd70c7821801636aa3dbed5d1b44d38e1a939c177f087c18eca27b38acf`.
+Windows AMD64 and ARM64 test compilation passed; ARM64 hardware execution is
+not claimed. Private evidence uses `provider-cursor-v2-*`,
+`cursor-native-v2-*`, `screen-cursor-*` and
+`test-results/saved-cursor-355-v2`.
+
+Extended saved underline state, the refused no-wrap edge and OSC display
+features remain open under #355. Normal Windows recovery remains disabled;
+provider/shell/UI integration and application lifecycle/native-session
+acceptance remain open under #318.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)

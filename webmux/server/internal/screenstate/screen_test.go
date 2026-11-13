@@ -187,8 +187,12 @@ func TestContinuationPreservesHiddenDisplayState(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			screen := newScreen(t, 80, 24)
 			reference := vt.NewEmulator(80, 24)
+			// This is a round-trip consistency control for the configured emulator.
+			// The independent browser suite verifies the xterm semantics.
+			installXtermCursorProfile(reference)
 			defer reference.Close()
 			restored := vt.NewEmulator(80, 24)
+			installXtermCursorProfile(restored)
 			defer restored.Close()
 			if err := screen.Feed([]byte(tc.before)); err != nil {
 				t.Fatal(err)
@@ -265,5 +269,89 @@ func TestNoWrapFinalColumnRefusesAmbiguousCursorWithoutChangingScreen(t *testing
 		if !bytes.Contains(imageBytes(t, s), []byte("SAFE")) {
 			t.Fatal("refusal damaged the continuing screen")
 		}
+	}
+}
+
+func TestXtermSavedCursorRetainsCurrentOriginAndClamps(t *testing.T) {
+	for _, tc := range []struct {
+		name, before, after string
+		x, y                int
+		origin              bool
+	}{
+		{"retain-absolute", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b7\x1b[?6l\x1b[10;20H", "\x1b8X", 8, 5, false},
+		{"clamp-top", "\x1b[H\x1b7\x1b[3;20r\x1b[?6h", "\x1b8X", 1, 2, true},
+		{"clamp-bottom", "\x1b[24;1H\x1b7\x1b[3;20r\x1b[?6h", "\x1b8X", 1, 19, true},
+		{"retain-saved-position", "\x1b[24;1H\x1b7\x1b[3;20r\x1b[?6h", "\x1b8X\x1b[?6l\x1b8Y", 1, 23, false},
+		{"batch-reset-first", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b[?1048h", "\x1b[?6;1048lX", 8, 5, false},
+		{"batch-reset-last", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b[?1048h", "\x1b[?1048;6lX", 1, 0, false},
+		{"soft-reset", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b7\x1b[!p", "\x1b8X", 1, 0, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for split := 0; split <= len(tc.before+tc.after); split++ {
+				s := newScreen(t, 80, 24)
+				data := []byte(tc.before + tc.after)
+				if err := s.Feed(data[:split]); err != nil {
+					t.Fatal(err)
+				}
+				if err := s.Feed(data[split:]); err != nil {
+					t.Fatal(err)
+				}
+				image, err := s.Capture()
+				if err != nil {
+					t.Fatal(err)
+				}
+				st := image.state
+				if st.CursorX != tc.x || st.CursorY != tc.y || st.Modes[6] != tc.origin {
+					t.Fatalf("split %d cursor=(%d,%d) origin=%v", split, st.CursorX, st.CursorY, st.Modes[6])
+				}
+				_ = s.Close()
+			}
+		})
+	}
+}
+
+func TestXtermSavedPendingWrapDoesNotWrapOnRestore(t *testing.T) {
+	for _, before := range []string{"\x1b[4;80HX\x1b7\x1b[10;20H", "\x1b[4;79H日\x1b7\x1b[10;20H", "\x1b[4;80HX\x1b[?1049hAPP"} {
+		s := newScreen(t, 80, 24)
+		restore := "\x1b8"
+		if strings.Contains(before, "1049") {
+			restore = "\x1b[?1049l"
+		}
+		if err := s.Feed([]byte(before + restore)); err != nil {
+			t.Fatal(err)
+		}
+		image, err := s.Capture()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if image.state.PendingWrap || image.state.CursorX != 79 || image.state.CursorY != 3 {
+			t.Fatal("saved wrap was re-armed")
+		}
+		if err := s.Feed([]byte("Y")); err != nil {
+			t.Fatal(err)
+		}
+		image, err = s.Capture()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if image.state.Screen[3][79].Content != "Y" || image.state.Screen[4][0].Content == "Y" {
+			t.Fatal("restored cursor wrapped instead of replacing final cell")
+		}
+	}
+}
+
+func TestCursorRestoreDoesNotFinishSynchronizedUpdate(t *testing.T) {
+	s := newScreen(t, 80, 24)
+	if err := s.Feed([]byte("\x1b[?2026h\x1b7\x1b[4;8H\x1b8PARTIAL")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Capture(); !errors.Is(err, ErrIncomplete) {
+		t.Fatal("cursor restore ended the active update", err)
+	}
+	if err := s.Feed([]byte("COMPLETE\x1b[?2026l")); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(imageBytes(t, s), []byte("PARTIALCOMPLETE")) {
+		t.Fatal("completed update was lost")
 	}
 }
