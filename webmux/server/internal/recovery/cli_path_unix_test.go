@@ -26,7 +26,7 @@ func TestOriginalCLIUnixSkipsNonExecutableAndOpenerAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("WEBMUX_BROWSER_ORIGINAL_PATH", plain+string(os.PathListSeparator)+helpers+string(os.PathListSeparator)+native)
-	got, err := originalCLI("codex")
+	got, err := OriginalCLI("codex")
 	if err != nil || got != filepath.Join(native, "codex") {
 		t.Fatalf("selected a non-executable or shim: %q, %v", got, err)
 	}

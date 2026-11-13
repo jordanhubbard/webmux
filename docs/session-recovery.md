@@ -2082,6 +2082,44 @@ features remain open under #355. Normal Windows recovery remains disabled;
 provider/shell/UI integration and application lifecycle/native-session
 acceptance remain open under #318.
 
+### Windows shell startup and native CLI aliases (2026-11-13)
+
+The Windows browser shell now installs aliases for available native coding CLI
+executables, using the same original-PATH resolver as native recovery. Aliases
+share the immutable cached helper image where hard links are supported; other
+filesystems receive copies. The cache identity includes the set of available
+native aliases so later shells do not inherit an obsolete alias over a script
+installation. Script-only `.cmd` installations keep their ordinary shell
+behavior; they have no qualified direct-executable recovery contract.
+
+When launched with recovery metadata, the shell emits its initial signed shell
+event. Native aliases then capture the CLI's version, original arguments,
+configuration and explicit conversation selector through the existing adapter.
+A launch selector remains manual-choice evidence on Windows; it does not prove
+which conversation is selected after an interactive switch.
+
+A recovery-wait launch runs the existing worker on the console before starting
+`cmd.exe`, removes the one-shot wait flag from descendants and starts the shell
+only after a successful choice. A failed worker, including a replay-style exit
+status, returns an error instead of interpreting it as Windows shell input.
+Ordinary command capture and arbitrary Windows command replay remain unsupported.
+
+Native Windows AMD64 passed all five browser-open package cases in 3.063 seconds,
+with zero skips. Three controls use actual ConPTY and `cmd.exe` to verify native
+alias argument preservation and durable launch evidence, `.cmd` pass-through,
+queued-input disposal before the shell choice, and refusal after worker failure.
+The CLI fixture is synthetic; this is shell/worker integration evidence, not a
+new authenticated conversation recovery claim. Test executable SHA-256:
+`2c9a1a330f81da2dd1ed22e9d220b7fdc614c9d621b6df605cdb96b922d65d9f`.
+Private receipts use `browser-shell-v4-*`. Local recovery/browser-open race tests
+and vet passed, as did Windows cross-vet and AMD64/ARM64 compilation. ARM64
+hardware execution is not claimed.
+
+Normal Windows local-terminal recovery remains disabled: durable provider
+creation/attachment, launcher integration and actual application lifecycle
+qualification remain open under #318. This startup path prepares that integration
+without changing the tmux requirement in the current local launcher.
+
 ## Sources
 
 - [Official Codex command reference](https://learn.chatgpt.com/docs/developer-commands#codex-exec)
