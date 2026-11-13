@@ -7,50 +7,7 @@ import { once } from 'node:events';
 import { setTimeout } from 'node:timers/promises';
 import { test } from 'node:test';
 
-// Drive the real CLI/worker boundary without touching any installed service.
-function fixture(mode: string) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-launchd-install-'));
-  const log = path.join(directory, 'install.log');
-  fs.writeFileSync(path.join(directory, 'launchctl'), `#!${process.execPath}
-const fs = require('node:fs');
-const directory = process.env.WEBMUX_LAUNCHD_FIXTURE;
-const mode = process.env.WEBMUX_LAUNCHD_MODE;
-const file = directory + '/state.json';
-const state = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { bootouts: 0, bootstraps: 0 };
-const action = process.argv[2];
-fs.appendFileSync(directory + '/commands', action + '\\n');
-if (action === 'bootout') {
-  state.bootouts++;
-  if (mode === 'fresh' || mode === 'stop-denied') {
-    state.registered = mode === 'stop-denied';
-    fs.writeFileSync(file, JSON.stringify(state));
-    console.error(mode === 'fresh' ? 'Could not find service "fixture"' : 'Stop failed: permission denied');
-    process.exit(5);
-  }
-  state.removingUntil = Date.now() + 500;
-  if (mode === 'interrupt') process.kill(-Number(fs.readFileSync(directory + '/parent.pid', 'utf8')), 'SIGHUP');
-} else if (action === 'bootstrap') {
-  state.bootstraps++;
-  if (Date.now() < state.removingUntil) throw new Error('Registration attempted before removal completed');
-  if (mode === 'denied') { console.error('Bootstrap failed: permission denied'); process.exit(5); }
-  // Exercise a real command failure and a successful but lost registration.
-  state.registered = mode !== 'race' || state.bootstraps > 2;
-  fs.writeFileSync(file, JSON.stringify(state));
-  if (mode === 'race' && state.bootstraps === 1) { console.error('Operation already in progress'); process.exit(5); }
-} else if (action === 'print') {
-  if (Date.now() < state.removingUntil) console.log('state = running\\npid = 111');
-  else if (state.registered) console.log(mode === 'crash' ? 'state = waiting\\nlast exit code = 1' : 'state = running\\npid = 222');
-  else { console.error('Could not find service "fixture" in domain for user gui: 501'); process.exit(113); }
-} else throw new Error('Unexpected launchctl action: ' + action);
-fs.writeFileSync(file, JSON.stringify(state));
-`, { mode: 0o700 });
-  const env = { ...process.env, PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`,
-    WEBMUX_LAUNCHD_FIXTURE: directory, WEBMUX_LAUNCHD_MODE: mode };
-  const args = [path.join(import.meta.dirname, 'check-launchd.mts'), 'gui/501/fixture', log, path.join(directory, 'fixture.plist')];
-  return { directory, log, env, args,
-    state: () => JSON.parse(fs.readFileSync(path.join(directory, 'state.json'), 'utf8')) as { bootouts: number; bootstraps: number; registered: boolean },
-    cleanup: () => fs.rmSync(directory, { recursive: true, force: true }) };
-}
+import { prepareLaunchdFixture as fixture } from './launchd-fixture.mts';
 
 test('installer waits for removal, retries bootstrap errors, and recovers lost registration', { skip: process.platform === 'win32' }, () => {
   const f = fixture('race');
@@ -66,7 +23,7 @@ test('installer waits for removal, retries bootstrap errors, and recovers lost r
 });
 
 test('installer accepts a fresh installation but preserves a service it cannot stop', { skip: process.platform === 'win32' }, () => {
-  for (const mode of ['fresh', 'stop-denied']) {
+  for (const mode of ['fresh', 'stop-denied'] as const) {
     const f = fixture(mode);
     try {
       const result = spawnSync(process.execPath, f.args, { env: f.env, encoding: 'utf8', timeout: 10000 });
@@ -156,7 +113,7 @@ setInterval(() => {}, 1000);
 });
 
 test('installer reports persistent bootstrap errors and does not restart a crashing registered job', { skip: process.platform === 'win32' }, () => {
-  for (const mode of ['denied', 'crash']) {
+  for (const mode of ['denied', 'crash'] as const) {
     const f = fixture(mode);
     try {
       const result = spawnSync(process.execPath, f.args, { env: f.env, encoding: 'utf8', timeout: 20000 });

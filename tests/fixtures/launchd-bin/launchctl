@@ -1,0 +1,53 @@
+#!/usr/bin/env node
+const fs = require('node:fs');
+const directory = process.env.WEBMUX_LAUNCHD_FIXTURE;
+const mode = process.env.WEBMUX_LAUNCHD_MODE;
+if (!directory || !mode || !fs.statSync(directory).isDirectory()) throw new Error('Private launchd fixture configuration is required');
+const action = process.argv[2];
+if (action === 'fixture-ready') {
+  const delay = Number(process.env.WEBMUX_LAUNCHD_PREPARATION_DELAY_MS || 0);
+  if (!Number.isInteger(delay) || delay < 0 || delay > 5000) throw new Error('Invalid fixture preparation delay');
+  if (delay) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
+  fs.writeFileSync(directory + '/ready.json', JSON.stringify({ version: process.version }), { flag: 'wx', mode: 0o600 });
+  process.exit(0);
+}
+const file = directory + '/state.json';
+const state = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { bootouts: 0, bootstraps: 0 };
+fs.appendFileSync(directory + '/commands', action + '\n');
+if (action === 'print' && mode === 'state') {
+  console.log(process.env.WEBMUX_LAUNCHD_STATE || '');
+  process.exit(0);
+}
+if (action === 'print' && mode === 'query-timeout') {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
+  console.log('state = running\npid = 222');
+  process.exit(0);
+}
+if (action === 'print' && mode === 'query-error') {
+  console.error('Query failed: permission denied');
+  process.exit(5);
+}
+if (action === 'bootout') {
+  state.bootouts++;
+  if (mode === 'fresh' || mode === 'stop-denied') {
+    state.registered = mode === 'stop-denied';
+    fs.writeFileSync(file, JSON.stringify(state));
+    console.error(mode === 'fresh' ? 'Could not find service "fixture"' : 'Stop failed: permission denied');
+    process.exit(5);
+  }
+  state.removingUntil = Date.now() + 500;
+  if (mode === 'interrupt') process.kill(-Number(fs.readFileSync(directory + '/parent.pid', 'utf8')), 'SIGHUP');
+} else if (action === 'bootstrap') {
+  state.bootstraps++;
+  if (Date.now() < state.removingUntil) throw new Error('Registration attempted before removal completed');
+  if (mode === 'denied') { console.error('Bootstrap failed: permission denied'); process.exit(5); }
+  // Exercise a real command failure and a successful but lost registration.
+  state.registered = mode !== 'race' || state.bootstraps > 2;
+  fs.writeFileSync(file, JSON.stringify(state));
+  if (mode === 'race' && state.bootstraps === 1) { console.error('Operation already in progress'); process.exit(5); }
+} else if (action === 'print') {
+  if (Date.now() < state.removingUntil) console.log('state = running\npid = 111');
+  else if (state.registered) console.log(mode === 'crash' ? 'state = waiting\nlast exit code = 1' : 'state = running\npid = 222');
+  else { console.error('Could not find service "fixture" in domain for user gui: 501'); process.exit(113); }
+} else throw new Error('Unexpected launchctl action: ' + action);
+fs.writeFileSync(file, JSON.stringify(state));

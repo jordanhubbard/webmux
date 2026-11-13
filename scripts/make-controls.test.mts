@@ -5,6 +5,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { registerService } from './check-launchd.mts';
+import { prepareLaunchdFixture } from './launchd-fixture.mts';
 
 test('missing tmux blocks Unix server installation and startup before service changes', { skip: process.platform === 'win32' }, () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-tmux-check-'));
@@ -104,21 +105,43 @@ install-server:
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('launchd startup verification rejects exited jobs and accepts a stable running PID', { skip: process.platform === 'win32' }, () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-launchd-startup-'));
-  try {
-    fs.writeFileSync(path.join(directory, 'launchctl'), '#!/bin/sh\nprintf "%s\\n" "$WEBMUX_LAUNCHD_STATE"\n', { mode: 0o700 });
-    for (const running of [false, true]) {
-      const result = spawnSync(process.execPath, [path.join(import.meta.dirname, 'check-launchd.mts'), 'gui/501/fixture', '/fixture/server.log'], {
-        encoding: 'utf8', timeout: 15000,
-        env: { ...process.env, PATH: `${directory}:${process.env.PATH ?? '/usr/bin:/bin'}`,
-          WEBMUX_LAUNCHD_STATE: running ? 'state = running\npid = 123' : 'state = not running\nlast exit code = 0' },
-      });
+test('launchd startup verification rejects exited jobs and accepts a stable running PID', { skip: process.platform === 'win32' }, t => {
+  for (const running of [false, true]) {
+    const f = prepareLaunchdFixture('state', { state: running ? 'state = running\npid = 123' : 'state = not running\nlast exit code = 0' });
+    try {
+      t.diagnostic(`Fake manager prepared in ${Math.round(f.preparationMs)} ms`);
+      const result = spawnSync(process.execPath, f.args.slice(0, 3), { encoding: 'utf8', timeout: 15000, env: f.env });
       assert.ifError(result.error);
       assert.equal(result.status, running ? 0 : 1, result.stdout + result.stderr);
-      if (!running) assert.match(result.stderr, /did not remain running.*\/fixture\/server.log/);
-    }
-  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+      if (!running) {
+        assert.match(result.stderr, /did not remain running/);
+        assert(result.stderr.includes(f.log));
+      }
+    } finally { f.cleanup(); }
+  }
+});
+
+test('cold fixture preparation completes before the real startup query deadline', { skip: process.platform === 'win32' }, () => {
+  const f = prepareLaunchdFixture('state', { state: 'state = running\npid = 123', preparationDelayMs: 1500 });
+  try {
+    assert(f.preparationMs >= 1500);
+    const result = spawnSync(process.execPath, f.args.slice(0, 3), { encoding: 'utf8', timeout: 10000, env: f.env });
+    assert.ifError(result.error);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert(fs.readFileSync(path.join(f.directory, 'commands'), 'utf8').trim().split('\n').every(command => command === 'print'));
+  } finally { f.cleanup(); }
+});
+
+test('prepared fake managers still fail closed on query errors and timeouts', { skip: process.platform === 'win32' }, () => {
+  for (const mode of ['query-error', 'query-timeout'] as const) {
+    const f = prepareLaunchdFixture(mode);
+    try {
+      const result = spawnSync(process.execPath, f.args.slice(0, 3), { encoding: 'utf8', timeout: 10000, env: f.env });
+      assert.ifError(result.error);
+      assert.equal(result.status, 1, result.stdout + result.stderr);
+      assert.match(result.stderr, mode === 'query-timeout' ? /launchctl print.*ETIMEDOUT/ : /Query failed: permission denied/);
+    } finally { f.cleanup(); }
+  }
 });
 
 test('Make does not report successful service control after a failed manager command or rebuild', { skip: process.platform === 'win32' }, () => {
