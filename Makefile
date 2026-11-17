@@ -154,15 +154,7 @@ check-tmux:
 	@sh scripts/check-tmux.sh
 
 check-guacd:
-	@if command -v guacd >/dev/null 2>&1; then \
-		printf "$(C_GRN)✓$(C_RST) guacd found: $$(command -v guacd)\n"; \
-	else \
-		printf "$(C_YLW)!$(C_RST) guacd not found — RDP connections will fail.\n"; \
-		printf "  $(C_DIM)Install:$(C_RST)\n"; \
-		printf "  $(C_DIM)  macOS:$(C_RST)  brew install guacamole-server\n"; \
-		printf "  $(C_DIM)  Ubuntu:$(C_RST) sudo apt install guacd\n"; \
-		printf "  $(C_DIM)  RHEL:$(C_RST)   sudo dnf install guacd\n"; \
-	fi
+	@sh scripts/check-guacd.sh
 
 deps:
 	@cd "$(WEBMUX_DIR)" && $(NPM) install $(NPM_WORKSPACES) --no-audit --no-fund
