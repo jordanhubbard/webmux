@@ -2,7 +2,8 @@
 
 This is an incomplete implementation of #427 under #355/#318. Production Screen
 does not enable `EnableXtermUnderline()` and still refuses hidden or
-contradictory states. The existing v1 REP renderer profile is unchanged. Complete
+contradictory states. The v1 REP renderer profile and its default token API remain compatible. An
+unadvertised v2 packet primitive is qualified separately below. Complete
 snapshot painting, final active-pen restoration, versioned viewer negotiation
 and actual native/application qualification remain required before merge.
 
@@ -72,3 +73,38 @@ complete ANSI/renderer-profile restoration, a second frontend attachment, actual
 ConPTY support for these new states, or native coding-session lifecycle recovery.
 Keep #427/#355/#318 open and this candidate draft until their remaining gates
 are satisfied. No new release is qualified by this checkpoint.
+
+## Unadvertised v2 packet primitive
+
+The Go codec and frontend decoder now have a separate v2 packet format that
+combines the two current pen flags and REP cluster in one token-bound update.
+The decoded JSON has exactly `u` (flag code 1..4) and `r` (empty or at most 64
+UTF-8 bytes of printable text). The payload is bounded to 160 decoded bytes.
+An empty cluster explicitly clears repeat state. Validation completes before
+flags change or the single-use token is consumed. The decoder alters only the
+current pen's two flag bits and parser join state; it retains the extended
+object, other attributes, saved cursor slots, protection and charset. It checks
+the renderer's attribute bit layout on a detached clone when arming v2.
+
+Metadata must explicitly arm v2: a default/v1 token cannot authorize a v2
+packet, and a v2 token cannot authorize a v1 packet. The component and native
+transport still advertise v1, and the production screen encoder never calls
+the new codec. This draft primitive is not yet a deployed protocol contract.
+
+Isolated real-renderer checks in `screen-replay.spec.ts` compare 256 initial
+and continued states against an unmodified reference (eight saved/hidden/link/
+alternate/charset/protection states, eight continuations and four REP clusters).
+To test the missing final tail independently, the target starts from the same
+input as the reference and the test deliberately flips only its two current
+pen flags before the packet. These are decoder controls, not Go-generated
+snapshot or actual application attach comparisons. All 79 packet byte splits,
+16 invalid schemas/text payloads, four malformed encodings, empty REP, stale
+and reused nonces, metadata versions, disarming and disposal also pass without
+generating terminal input. See `v2-decoder-results.json` for scope and hashes.
+
+Integration still needs per-cell ANSI construction and full saved-slot-safe
+painting. In particular, a scratch DECSC used to construct cell flags must not
+replace the job's true saved slot during a final pending-wrap repaint. The
+complete encoder must resolve and qualify this ordering before its v2 payload
+and capability contract are finalized. Full native/application acceptance and
+older owner/controller/viewer compatibility remain required.
