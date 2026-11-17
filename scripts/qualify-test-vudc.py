@@ -134,7 +134,8 @@ def main():
                           ('corrected-held', ['--hold-replies']), ('corrected', [])]:
         build = root / name
         subprocess.run([sys.executable, str(source / 'scripts/build-test-vudc.py'), '--kernel', args.kernel,
-                        '--build-root', str(build), *options], check=True, timeout=450)
+                        '--build-root', str(build), '--source-cache', str(root / 'source-cache'),
+                        *options], check=True, timeout=450)
         receipt = json.loads((build / 'receipt.json').read_text())
         install(build / 'usbip-vudc.ko')
         if name == 'unpatched':
