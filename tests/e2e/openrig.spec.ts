@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { nativeAbsenceProof, type NativeAbsenceProof } from './rig-native-absence.mts';
 
 test('home gives a fresh 2 by 2 terminal grid the page without coordinator inventory', async ({ page }) => {
   let coordinationRequests = 0;
@@ -264,10 +265,35 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     expect((await status()).seats).toHaveLength(2);
     let previousId = (await status()).seats.find(value => value.id === coder.id)!.managerSessionId;
     expect(previousId).toBeTruthy();
+    const detachReceipts: { cycle: number; killedAt: string; absence: NativeAbsenceProof; managerSessionId: string; challenge: string }[] = [];
     for (let reconnect = 0; reconnect < 2; reconnect++) {
+      const pane = tmux('display-message', '-p', '-t', coder.id, '#{pane_id}');
+      const killedAt = Date.now();
       const stopped = spawnSync('tmux', ['kill-session', '-t', `=${coder.id}`], { env: tmuxEnv, timeout: 5000 });
       expect(stopped.status).toBe(0);
-      await expect.poll(async () => (await status()).seats.find(value => value.id === coder.id)!.state).toBe('detached');
+      let absence: NativeAbsenceProof | null = null;
+      try {
+        // Rig 0.6.14 reconciles identity every five seconds. Await a NEW
+        // native absence sample for this exact pane, then apply the existing
+        // WebMux projection deadline. Do not infer lifecycle from tmux alone.
+        await expect.poll(() => {
+          const native = spawnSync(path.join(home, 'openrig-bin', 'rig'), ['ps', '--nodes', '-A', '--no-cleanup', '--full', '--json'], {
+            env: { ...process.env, OPENRIG_HOST_SELECTED: 'local' }, timeout: 10000, encoding: 'utf8', maxBuffer: 1 << 20,
+          });
+          expect(native.status, native.stderr).toBe(0);
+          absence = nativeAbsenceProof(JSON.parse(native.stdout) as unknown, coder.id, pane, killedAt);
+          return absence !== null;
+        }, { timeout: 15000 }).toBe(true);
+        await expect.poll(async () => (await status()).seats.find(value => value.id === coder.id)!.state).toBe('detached');
+      } catch (error) {
+        const native = spawnSync(path.join(home, 'openrig-bin', 'rig'), ['ps', '--nodes', '-A', '--no-cleanup', '--full', '--json'], {
+          env: { ...process.env, OPENRIG_HOST_SELECTED: 'local' }, timeout: 10000, encoding: 'utf8', maxBuffer: 1 << 20,
+        });
+        const diagnostic = info.outputPath('detached-native-inventory.json');
+        writeFileSync(diagnostic, JSON.stringify({ cycle: reconnect, webmux: await status(), nativeExit: native.status, native: native.stdout, nativeError: native.stderr }));
+        await info.attach('detached-native-inventory', { path: diagnostic, contentType: 'application/json' });
+        throw error;
+      }
       expect((await openAgent('coder', true)).id).toBe(coderSession.id);
       await expect(page.getByTestId(`tile-cell-${coderSession.id}`).locator('.xterm-rows')).toContainText('FIXTURE_READY');
       const current = (await status()).seats.find(value => value.id === coder.id)!;
@@ -277,7 +303,20 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       expect(current.managerSessionId).not.toBe(previousId);
       previousId = current.managerSessionId;
       expect((await status()).seats).toHaveLength(2);
+      // FIXTURE_READY can remain in this reused viewer's scrollback. A fresh
+      // peer-generated ACK proves the replacement provider actually responds.
+      const challenge = randomBytes(16).toString('hex');
+      const replacementTerminal = page.getByTestId(`tile-cell-${coderSession.id}`);
+      await replacementTerminal.locator('.xterm-helper-textarea').focus();
+      await page.keyboard.insertText(`fixture-send ${reviewer.id} WM_CHALLENGE:${coder.id}:${challenge}`);
+      await page.keyboard.press('Enter');
+      await expect(replacementTerminal.locator('.xterm-rows')).toContainText(`WM_ACK:${challenge}`, { timeout: 30000 });
+      await expect.poll(async () => (await status()).messages.some(value => value.from === reviewer.id && value.to === coder.id && value.body.includes(`WM_ACK:${challenge}`))).toBe(true);
+      detachReceipts.push({ cycle: reconnect, killedAt: new Date(killedAt).toISOString(), absence: absence!, managerSessionId: current.managerSessionId!, challenge });
     }
+    const receipt = info.outputPath('rig-detach-receipts.json');
+    writeFileSync(receipt, JSON.stringify(detachReceipts));
+    await info.attach('rig-detach-receipts', { path: receipt, contentType: 'application/json' });
     await page.screenshot({ path: info.outputPath('managed-rig-workload.png') });
     workloadCompleted = true;
   } finally {
@@ -290,7 +329,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       const file = path.join(state, scope, project, 'project.json');
       if (!existsSync(file)) continue;
       const team = JSON.parse(readFileSync(file, 'utf8')) as { rigId: string };
-      const stopped = spawnSync(path.join(home, 'openrig-bin', 'rig'), ['down', team.rigId], { timeout: 15000, encoding: 'utf8' });
+      const stopped = spawnSync(path.join(home, 'openrig-bin', 'rig'), ['down', team.rigId], { env: { ...process.env, OPENRIG_HOST_SELECTED: 'local' }, timeout: 15000, encoding: 'utf8' });
       if (workloadCompleted && !/already stopped/.test(stopped.stdout + stopped.stderr)) {
         expect(stopped.status, stopped.stdout + stopped.stderr).toBe(0);
       }

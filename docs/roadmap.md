@@ -223,7 +223,10 @@ updates. The dependency-audit gate remains enabled and passed for this release.
 - [#194](https://github.com/jordanhubbard/webmux/issues/194): remaining canonical
   Rig discovery, lifecycle/provenance contract and optional Agents-pane
   reconciliation. Its grid-centered UI work landed in #196; the issue remains
-  open for its other acceptance requirements.
+  open for its other acceptance requirements. Controller queries, lifecycle
+  calls, diagnostic views and new launchers now pin their configured coordinator
+  despite an unrelated CLI host selection
+  ([scope and qualification](openrig.md#coordinator-selection-scope)).
 - [#200](https://github.com/jordanhubbard/webmux/issues/200): remote Rig state over
   the outbound managed-host client. An opt-in bounded canonical-seat report now
   carries host-scoped identity and observation provenance, with stale/offline
@@ -251,7 +254,9 @@ updates. The dependency-audit gate remains enabled and passed for this release.
 - [#63](https://github.com/jordanhubbard/webmux/issues/63),
   [#65](https://github.com/jordanhubbard/webmux/issues/65), and
   [#152](https://github.com/jordanhubbard/webmux/issues/152): Windows signing,
-  WinGet publication and macOS Developer ID notarization.
+  WinGet publication and macOS Developer ID notarization. The [WinGet
+  submission workflow](winget.md) binds inspected MSI identities to release
+  digests; upstream acceptance remains separate.
 - [#186](https://github.com/jordanhubbard/webmux/issues/186) is closed: its five
   named hosted runs were verified completed successfully on 2026-11-12, covering
   exact-v1.3.23 CI/packaging/publication and formula-update CI/packaging. The

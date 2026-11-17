@@ -49,7 +49,7 @@ func TestOpenRigAttachmentIsSharedPerOwnerAndSeparateFromGrid(t *testing.T) {
 			t.Fatalf("unexpected dashboard state: %+v", result)
 		}
 	}
-	if len(requests) != 1 || !slices.Equal(requests[0].ExecArgv, []string{"/test/rig", "tui"}) {
+	if len(requests) != 1 || !slices.Equal(requests[0].ExecArgv, []string{"/usr/bin/env", "OPENRIG_HOST_SELECTED=local", "/test/rig", "tui"}) {
 		t.Fatalf("unexpected launches: %+v", requests)
 	}
 	if len(b.List("owner")) != 0 || b.OpenRigSession("other") != nil {
