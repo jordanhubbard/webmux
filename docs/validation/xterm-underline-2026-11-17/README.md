@@ -5,8 +5,8 @@ now selects the opt-in model for fresh Windows native owners (`screen-v3`),
 and the frontend advertises v2 after validating its renderer layout. Existing
 owners keep their running binary and job. Local bare-reference and application
 contract checks pass. The first fresh Windows matrix found a combining-cell
-recapture mismatch, described below; the corrected candidate needs another
-native run and all final hosted gates before merge. #429 separately tracks the
+recapture mismatch, described below. Corrected source `d76be88` now passes the
+fresh native matrix; the dependency audit still blocks merge and release. #429 separately tracks the
 dependency-audit release blocker. `Screen.New` retains the legacy model for
 explicit legacy controls; the new owner calls `NewWithProfile`.
 
@@ -206,3 +206,25 @@ checks use the current client without a renderer offer, not an old controller
 binary. See `native-followup-results.json` for exact source, artifact and local
 qualification scopes. Keep draft #428 and #427/#355/#318 open. The independent
 #429 audit failure still blocks merge and release.
+
+The corrected runtime checkpoint `d76be88a3df63989a19cb9d048363f81e04fab06`
+subsequently passed fresh hosted Windows qualification in
+[job 134297748797](https://github.com/jordanhubbard/webmux/actions/runs/44156277182/job/134297748797).
+All 28 ConPTY cases executed with zero skips and one job each; the previously
+failing `hidden-wide-edit` recapture now matches. The browser gate passed 1,384
+checks in 3.3 minutes: 1,381 snapshot comparisons, including 259 bare portable
+comparisons, plus three lifecycle controls. Every initial, continued and
+recaptured state matches, no queries replay, bare reference methods remain
+unchanged, and scratch links remain bounded to one per image. Native references
+use the established shared-hyperlink profile, without the snapshot adapter.
+
+[Artifact 14361587981](https://github.com/jordanhubbard/webmux/actions/runs/44156277182/artifacts/14361587981)
+retains raw captures, native test events and renderer receipts (SHA-256
+`e5e1cdcf441634e87791c30474251ca9947aa98e2845f4346c633d897490cf0b`).
+CI checked synthetic merge `2879e2657658e3cee18cdf2f2610024235f75777`;
+its tree `5762e6b422e5007f1bd651a77aafac856b3af272` exactly equals the
+qualified PR head tree. The complete checkpoint gate set is 15 successful jobs,
+one expected release-attachment skip and the failing dependency audit.
+Packaging passed. These scoped results qualify this native snapshot correction,
+not the remaining #318 authenticated coding-session or installed-service
+requirements. No merge or release is qualified while #429 remains unresolved.

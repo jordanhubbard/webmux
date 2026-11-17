@@ -195,8 +195,9 @@ Hidden or contradictory underline flags are being implemented in draft
 [#427](https://github.com/jordanhubbard/webmux/issues/427): opt-in value-copy
 state, bounded v2 snapshot encoding, bare-renderer comparisons and capability
 negotiation. The first 28-case native capture exposed one combining-cell
-recapture mismatch. The correction passes recorded-stream checks; fresh native
-execution and final hosted gates remain unqualified. See the
+recapture mismatch. The correction now passes all 28 fresh ConPTY cases and
+1,384 renderer/lifecycle checks. The dependency audit still blocks merge;
+broader native coding-session acceptance remains separate. See the
 [current scope](validation/xterm-underline-2026-11-17/README.md).
 The dependency audit also remains blocked by
 [#429](https://github.com/jordanhubbard/webmux/issues/429).

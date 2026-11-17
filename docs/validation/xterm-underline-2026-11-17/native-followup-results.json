@@ -1,6 +1,6 @@
 {
   "recorded_utc": "2026-11-17T19:13:20.329054+00:00",
-  "status": "Local correction qualified; fresh corrected Windows execution and hosted gates required. Draft428 and issues427/355/318/429 remain open. No release.",
+  "status": "Corrected runtime checkpoint d76be88 passes fresh Windows native/renderer and other runtime/build/packaging jobs. Audit429 remains failed; draft428 and427/355/318/429 stay open. No merge/release.",
   "source_parent": "60715bd2137af033383f535f4649cb9e64c3dd5c",
   "source_sha256": {
     "tests/e2e/screen-replay.spec.ts": "5f7fabeaedf940800ad16b341f20350071a031f6309141ef9d8687fc671d142d",
@@ -99,6 +99,72 @@
       "explicitly_patched": 16
     }
   },
-  "fresh_windows_after_correction": "PENDING",
-  "audit429": "60715bd hosted audit remains failed on GHSA-fc5q-39xc-vjpf. No suppression or dependency changes."
+  "fresh_windows_after_correction": {
+    "source": "d76be88a3df63989a19cb9d048363f81e04fab06",
+    "run": 44156277182,
+    "job": 134297748797,
+    "artifact": 14361587981,
+    "artifact_sha256": "e5e1cdcf441634e87791c30474251ca9947aa98e2845f4346c633d897490cf0b",
+    "native_capture_pass": true,
+    "native_skips": 0,
+    "all_renderer_comparisons": 1381,
+    "bare_comparisons": 259,
+    "all_three_phases_equal": true,
+    "no_replayed_queries": true,
+    "reference_snapshot_adapter": false,
+    "bare_reference_methods_unchanged": true,
+    "scratch_links_max": 1,
+    "prior_failure_now_passing": [
+      "webmux/webmux/webmux/test-results/run-64add86c-f9c3-4f1b-bea8-684eb82d5973/screen-replay-Go-screen-sn-01602-erm-conpty-hidden-wide-edit-chromium/screen-replay.json"
+    ],
+    "scope": "Fresh actual Windows AMD64 ConPTY on corrected source:28. Other1353 snapshot comparisons and3 lifecycle controls are portable renderer qualification. Does not establish broader318 authenticated coding-session or installed-service acceptance.",
+    "tested_checkout": "2879e2657658e3cee18cdf2f2610024235f75777",
+    "tested_and_pr_tree": "5762e6b422e5007f1bd651a77aafac856b3af272",
+    "checkout_tree_identical_to_pr_head": true,
+    "native_cases": 28,
+    "one_job_each": true,
+    "legacy_hidden_attach_results": [
+      {
+        "name": "hidden-plain-curly-restore",
+        "refused": true
+      },
+      {
+        "name": "hidden-enabled-reset",
+        "refused": true
+      },
+      {
+        "name": "hidden-link-only",
+        "refused": true
+      },
+      {
+        "name": "hidden-1048",
+        "refused": true
+      },
+      {
+        "name": "hidden-1049",
+        "refused": false
+      },
+      {
+        "name": "hidden-wide-edit",
+        "refused": true
+      }
+    ],
+    "browser_tests_passed": 1384,
+    "browser_duration": "3.3m"
+  },
+  "audit429": "Corrected d76be88 audit job134297748867 still fails the same picomatch advisory. No suppression or dependency changes.",
+  "updated_utc": "2026-11-17T19:28:29.818025+00:00",
+  "hosted_checkpoint_gates": {
+    "source": "d76be88a3df63989a19cb9d048363f81e04fab06",
+    "CI": 44156277182,
+    "Packaging": 44156277165,
+    "outcomes": {
+      "SUCCESS": 15,
+      "SKIPPED": 1,
+      "FAILURE": 1
+    },
+    "expected_skip": "Attach release bundles",
+    "failure": "Dependency audit, job134297748867: GHSA-fc5q-39xc-vjpf/12 propagated high entries; unchanged gate",
+    "qualified_issue_comment": "https://github.com/jordanhubbard/webmux/issues/427#issuecomment-6958570415"
+  }
 }
