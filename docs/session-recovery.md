@@ -2518,9 +2518,9 @@ comparison reproduces all three differences through a read-only Go overlay.
 This is portable renderer evidence, not a ConPTY reproduction of this sequence.
 
 The xterm profile now refuses this transition when it cannot distinguish an
-addressed final-column cursor from one advanced past it. Refusal stays in the
-captured image and continuing mirror until a full terminal reset; later output
-or a soft reset cannot repair cells that may already have diverged. The owner,
+addressed final-column cursor from one advanced past it. A captured refusal remains immutable. The continuing mirror refuses new
+attachments until a full terminal reset; later output or a soft reset cannot
+repair cells that may already have diverged. The owner,
 terminal and existing viewers remain alive. A retained pending wrap remains
 representable, as does an explicit movement away from the edge before wrapping
 is enabled. This keeps the existing refusal boundary honest rather than
