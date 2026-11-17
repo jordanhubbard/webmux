@@ -20,6 +20,17 @@ class NativeAdmission(unittest.TestCase):
         for line in log.splitlines():
             self.assertFalse(module.admits_loss(1, log.replace(line, '')))
 
+    def test_old_reply_may_arrive_before_import_handshake(self):
+        log = '\n'.join(['Loaded gadget srcversion verified: abc',
+                         'Genuine native reply queued; direct read is blocked',
+                         'HELD REPLY REATTACH: beginning replacement import',
+                         'usbip: error: USBIP Kernel and tool version mismatch: 0 273:',
+                         'usbip: error: Attach Request for usbip-vudc.0 failed'])
+        self.assertTrue(module.admits_loss(1, log))
+        self.assertFalse(module.admits_loss(124, log))
+        self.assertFalse(module.admits_loss(1, log.replace('Genuine native reply queued;', '')))
+        self.assertFalse(module.admits_loss(1, log.replace('HELD REPLY REATTACH:', '')))
+
     def test_repair_requires_actual_discard_and_successful_new_import(self):
         log = '\n'.join(['Loaded gadget srcversion verified: abc',
                          'Genuine native reply queued; direct read is blocked',

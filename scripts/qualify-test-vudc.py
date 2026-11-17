@@ -18,8 +18,10 @@ def admits_loss(status, log):
     return (status == 1 and 'Loaded gadget srcversion verified:' in log
             and 'Genuine native reply queued; direct read is blocked' in log
             and 'HELD REPLY REATTACH: beginning replacement import' in log
-            and 'cannot find a urb of seqnum' in log
-            and 'Timed out: USB import after held-reply disconnect' in log
+            and (('cannot find a urb of seqnum' in log
+                  and 'Timed out: USB import after held-reply disconnect' in log)
+                 or ('USBIP Kernel and tool version mismatch: 0 273' in log
+                     and 'Attach Request for usbip-vudc.0 failed' in log))
             and 'PASS: held native reply discarded;' not in log)
 
 
@@ -80,15 +82,20 @@ def main():
                    '--user', 'root', '--empty-passwords', '--memory', '1G', '--cpus', '2',
                    '--verbose', '--exec', guest_command]
         print(f'Running {name}; log: {log_path}', flush=True)
-        with log_path.open('wb') as log:
-            child = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT,
-                                     env=env, start_new_session=True)
-            try:
-                status = child.wait(timeout=210)
-            except subprocess.TimeoutExpired:
-                os.killpg(child.pid, signal.SIGKILL)
-                child.wait(timeout=10)
-                raise RuntimeError(f'{name}: outer observation deadline expired')
+        # vng exposes stdout/stderr to the guest independently. A seekable
+        # regular file can have its prefix overwritten by the other stream;
+        # a pipe preserves both streams and the loaded-module identity.
+        child = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                 env=env, start_new_session=True)
+        try:
+            captured, _ = child.communicate(timeout=210)
+        except subprocess.TimeoutExpired:
+            os.killpg(child.pid, signal.SIGKILL)
+            captured, _ = child.communicate(timeout=10)
+            log_path.write_bytes(captured)
+            raise RuntimeError(f'{name}: outer observation deadline expired')
+        status = child.returncode
+        log_path.write_bytes(captured)
         output = log_path.read_text(errors='replace')
         admitted = bool(admit(status, output))
         results.append({'control': name, 'exit': status, 'admitted': admitted,
