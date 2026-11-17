@@ -21,6 +21,17 @@ type fixture struct {
 
 func main() {
 	cases := []struct{ name, before, after string }{
+		{"link-named", "\x1b]8;id=one;https://example.test/a\aA", "B\x1b]8;;\aC"},
+		{"link-anonymous", "\x1b]8;;https://example.test/a\aA\x1b]8;;https://example.test/a\aB", "C\x1b]8;;\aD"},
+		{"link-replace", "\x1b]8;id=a;https://example.test/a\aA\x1b]8;id=b;https://example.test/b\aB", "C"},
+		{"link-unicode", "\x1b]8;id=术;https://example.test/术?q=😀\aA\x1b]8;id=%E6%9C%AF;https://example.test/术?q=😀\aB", "C"},
+		{"link-semicolon", "\x1b]8;id=a:unused=yes;https://example.test/a;b?x=y;z\x1b\\A", "B"},
+		{"link-wrapped", "\x1b]8;;https://example.test/a\a" + strings.Repeat("A", 81), "B"},
+		{"link-id-reuse", "\x1b]8;id=same;https://example.test/a\aA\x1b]8;;\aB", "\x1b]8;id=same;https://example.test/a\aC"},
+		{"link-save", "\x1b]8;id=saved;https://example.test/a\aA\x1b7\x1b]8;id=live;https://example.test/b\aB", "\x1b8C"},
+		{"link-alternate", "\x1b]8;id=main;https://example.test/a\aA\x1b[?1049h\x1b]8;id=alt;https://example.test/b\aB", "\x1b[?1049lC"},
+		{"link-close-params", "\x1b]8;id=one;https://example.test/a\aA\x1b]8;id=ignored;\aB", "C\x1b]8;;\aD"},
+
 		{"palette-short-hex", "\x1b]4;1;#fa3\a\x1b[31mA", "\x1b]4;1;#123456\aB"},
 		{"palette-short-rgb", "\x1b]4;1;rgb:f/a/3\a\x1b[38;5;1mA", "\x1b]4;1;#123456\aB"},
 		{"palette-long-rgb", "\x1b]4;1;RGB:1234/5678/9ABC\a\x1b[31mA", "B"},

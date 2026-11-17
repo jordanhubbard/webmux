@@ -16,6 +16,9 @@
       ],
       "@xterm/xterm": [
         "./node_modules/@xterm/xterm"
+      ],
+      "vite": [
+        "./node_modules/vite/dist/node/index.d.ts"
       ]
     }
   },

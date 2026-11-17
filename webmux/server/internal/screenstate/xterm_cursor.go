@@ -17,11 +17,12 @@ func installXtermCursorProfile(e *vt.Emulator) *xtermCursorProfile {
 	// DEC mode callbacks run after the dependency has restored its full pen.
 	// Capture the global xterm pen before processing the mode batch instead.
 	var modePen uv.Style
+	var modeLink uv.Link
 	e.RegisterCsiHandler(ansi.Command('?', 0, 'l'), func(ansi.Params) bool {
-		modePen, _ = e.CursorPen()
+		modePen, modeLink = e.CursorPen()
 		return false
 	})
-	restore := func(live uv.Style) {
+	restore := func(live uv.Style, liveLink uv.Link) {
 		saved := e.SavedCursor(false)
 		e.RestoreModes(map[int]bool{6: origin})
 		low, high := 0, e.Height()-1
@@ -34,8 +35,8 @@ func installXtermCursorProfile(e *vt.Emulator) *xtermCursorProfile {
 		e.RestoreCursorPosition(min(max(saved.X, 0), e.Width()-1), min(max(saved.Y, low), high))
 		e.RestoreCursorPendingWrap(false)
 		pen := saved.Pen
-		savedExtended := pen.Underline != 0 || pen.UnderlineColor != nil
-		liveExtended := live.Underline != 0 || live.UnderlineColor != nil
+		savedExtended := pen.Underline != 0 || pen.UnderlineColor != nil || saved.Link.URL != ""
+		liveExtended := live.Underline != 0 || live.UnderlineColor != nil || liveLink.URL != ""
 		if savedExtended {
 			// xterm saves foreground/background flags, but leaves the current
 			// extended underline object in place. Both must agree on whether an
@@ -49,12 +50,12 @@ func installXtermCursorProfile(e *vt.Emulator) *xtermCursorProfile {
 			// expose it again; the dependency cannot retain that hidden state.
 			profile.unsupported = true
 		}
-		e.RestoreCursorPen(pen, saved.Link)
-		modePen = pen
+		e.RestoreCursorPen(pen, liveLink)
+		modePen, modeLink = pen, liveLink
 		e.RestoreCursorProtected(saved.Protected)
 		e.RestoreCharsets(saved.Charsets, saved.GL, saved.GR)
 	}
-	restoreLive := func() { pen, _ := e.CursorPen(); restore(pen) }
+	restoreLive := func() { pen, link := e.CursorPen(); restore(pen, link) }
 	e.RegisterEscHandler('8', func() bool { restoreLive(); return true })
 	e.RegisterCsiHandler('u', func(ansi.Params) bool { restoreLive(); return true })
 	previous := e.GetCallbacks()
@@ -75,14 +76,20 @@ func installXtermCursorProfile(e *vt.Emulator) *xtermCursorProfile {
 		// batches such as ?6;1048l in order and selects the main buffer before
 		// correcting a 1049 restore, without recursively feeding the parser.
 		if mode == ansi.ModeSaveCursor || mode == ansi.ModeAltScreenSaveCursor {
-			restore(modePen)
+			restore(modePen, modeLink)
 		}
 		if previous.DisableMode != nil {
 			previous.DisableMode(mode)
 		}
 	}
 	e.SetCallbacks(callbacks)
-	e.RegisterEscHandler('c', func() bool { origin = false; modePen = uv.Style{}; profile.unsupported = false; return false })
+	e.RegisterEscHandler('c', func() bool {
+		origin = false
+		modePen = uv.Style{}
+		modeLink = uv.Link{}
+		profile.unsupported = false
+		return false
+	})
 	e.RegisterCsiHandler(ansi.Command(0, '!', 'p'), func(ansi.Params) bool { origin = false; return false })
 	return profile
 }

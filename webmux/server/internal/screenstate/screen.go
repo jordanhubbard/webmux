@@ -50,6 +50,7 @@ func New(cols, rows int) (*Screen, error) {
 	}
 	e := vt.NewEmulator(cols, rows)
 	profile := installXtermCursorProfile(e)
+	installXtermHyperlinks(e)
 	e.SetScrollbackMaxLines(min(512, max(1, historyCells/cols)))
 	return &Screen{emulator: e, profile: profile, filter: replayfilter.Filter{Xterm: true}}, nil
 }

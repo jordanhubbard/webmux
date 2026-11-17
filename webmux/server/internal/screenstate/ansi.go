@@ -126,6 +126,9 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 		b.WriteString("\x1b[?")
 		b.WriteString(alt)
 		b.WriteString("h\x1b[?6l\x1b[?69l\x1b[r\x1b[0m")
+		// SGR 0 does not close xterm's global OSC 8 pen. Close it after
+		// saving the main cursor, before painting blank alternate cells.
+		w.resetPen()
 		charsets(&b, []int{'B', 'B', 'B', 'B', 0, 0})
 		w.cur, w.set = snapshot.StyleState{}, false
 		w.protect(false)

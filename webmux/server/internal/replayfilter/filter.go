@@ -12,8 +12,8 @@ import (
 )
 
 // Filter accepts arbitrary read boundaries and retains at most one UTF-8 rune
-// and bounded escape/OSC state. String controls are omitted; the Xterm profile
-// retains normalized color overrides separately as metadata. Clipboard/browser/
+// and bounded escape/OSC state. The Xterm profile retains bounded passive
+// hyperlinks and normalized color overrides; other string controls are omitted. Clipboard/browser/
 // recovery OSC and DCS queries never enter replay. Queries must not be
 // replayed: the viewer's replies would become fresh input to the surviving job.
 type Filter struct {
@@ -59,7 +59,10 @@ func (f *Filter) Feed(data []byte) []byte {
 			finished := r == 0x9c || (r == 7 && f.osc) || (f.state == 't' && r == '\\')
 			if finished || cancelled {
 				if finished && !cancelled && f.Xterm && f.osc {
+					link, linkUnsupported := hyperlinkOSC(f.oscData, f.oscOverflow)
+					out.WriteString(link)
 					updates, unsupported := renderingOSC(f.oscData, f.oscOverflow)
+					unsupported = unsupported || linkUnsupported
 					for _, update := range updates {
 						f.colors.apply(update)
 					}
