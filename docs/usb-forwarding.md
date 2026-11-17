@@ -223,6 +223,22 @@ The GPL-2.0-or-later module is a disposable test device; it is not
 linked into or shipped with WebMux. The generic guest kernel, source commit,
 patches, module digests and vermagic remain in the build receipts.
 
+The #445 candidate lets this qualification use an explicit `--source-cache`
+outside its fresh build root. CI restores only public source files through a
+pinned official cache action, using the exact source-manifest hash as its key
+and no broad restore prefix. Every cache read still checks the pinned SHA256;
+corrupt or linked entries fail rather than being replaced or silently downloaded.
+The existing acquisition attempts, timeout budget, fresh build roots and native
+admission controls remain unchanged. Modules and native receipts are never cached.
+
+The change follows a retained HTTP 429 failure in
+[PR #444's source download](https://github.com/jordanhubbard/webmux/actions/runs/44201137569/job/134455210533).
+Deterministic child-boundary tests reuse a verified external cache across three
+independent roots without network access and reject restored corrupt bytes.
+Those tests do not establish a native kernel result or a hosted Actions cache
+hit. A cold cache can still encounter upstream throttling; exact-head native CI
+remains required. See [cache qualification](validation/usb-source-cache-2026-11-17/README.md).
+
 `scripts/qualify-test-vudc.py` checks three module builds in fresh isolated VMs:
 
 - Identical source without the correction must reproduce the specific failure.

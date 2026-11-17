@@ -1,0 +1,34 @@
+{
+  "recordedUTC": "2026-11-17T23:48:25.262777+00:00",
+  "parent": "8f5d3225fac65804554a65bc08381a03a70654fe",
+  "sourceSHA256": {
+    ".github/workflows/ci.yml": "8bfbcd809f12d058f79ccfc8ff33cef9a49e88061c1a822ee800c14093f19dba",
+    "scripts/qualify-test-vudc.py": "609184246d666df7d6c9c30a544ccf6a61c434694c4e6c095c98605ec74b5c0f",
+    "scripts/test_qualify_vudc.py": "656412cc10c1c9ed52b9c229d7002a403b3b915396da92df8e3dbbc0dcb0a8da",
+    "docs/usb-forwarding.md": "6c6320d1a887561f1730c3e8aa41a0232754f5f5a210ffedce4d0b8f67c0a98a",
+    "docs/validation/usb-source-cache-2026-11-17/README.md": "6cf722d7c84382ff811d4551900f1ac4d782404a54c7e24f0f3de1670197e025"
+  },
+  "retainedReceiptSHA256": {
+    "uc445-admission-tests.log": "f6b6033fde77c00b2594d870ba8783f407a47b261ebb5e219626f12d640dbdc1",
+    "uc445-source-tests.log": "35649ccb7621214ac024bd31428022d326fb76b6926043ad7d6527b41cd3c0f8",
+    "uc445-apt-tests.log": "2c37d50a88147ca2ebd5197d74ee37d462dab650d793512e849814c28d5a38f0",
+    "pr444-usb-acquisition.json": "9b72bc8cbc3ee04f0ebefa606d4f91e68bdea87f1eed4bc8d413c23305fe15b6",
+    "pr444-usb-artifact.zip": "6f2ecffeea467a69214e79d49faca8f6823521b00bc0d122c8fe2f6134b1a13d"
+  },
+  "sourceManifestSHA256": "a7a2b6a82181d5ff91e6ede8d1817df2411b30ae54d4ae805efa12299aefa3ca",
+  "cacheAction": {
+    "repository": "actions/cache",
+    "commit": "caa296126883cff596d87d8935842f9db880ef25",
+    "tagObserved": "v5",
+    "using": "node24",
+    "postIf": "success()",
+    "verification": "Official GitHub commit API and action.yml at pinned commit inspected"
+  },
+  "checks": {
+    "sourceAcquisition": "8 PASS",
+    "admissionAndChildBoundary": "8 PASS (6 existing native admission, 2 external-cache child/verifier controls)",
+    "aptPolicy": "3 PASS",
+    "workflow": "YAML parse; pinned action; exact manifest key; no restore prefix; explicit external cache argument; whitespace PASS"
+  },
+  "limits": "No native kernel execution or hosted cache-hit claim from local synthetic controls. Cold upstream HTTP429 still possible; exact-head hosted native qualification pending."
+}
