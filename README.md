@@ -513,6 +513,12 @@ npm run test:e2e
 
 If Playwright does not publish a bundled Chromium build for the host OS, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a compatible installed Chrome or Chromium executable before running `npm run test:e2e`.
 
+Browser test invocations without an explicit `--output` use separate
+`webmux/test-results/run-<id>/` directories, with per-file directories inside a
+full-suite run. This preserves earlier diagnostic receipts when CI later checks
+screenshot repeatability. Use `npm run test:e2e -- --output=chosen-directory`
+to select a fixed directory; Playwright clears that directory when the run starts.
+
 ## Contributing
 
 Public bug reports, feature requests, and proposed changes belong in [GitHub Issues](https://github.com/jordanhubbard/webmux/issues) and pull requests. The project does not use beads. Maintainers use [mac](https://github.com/jordanhubbard/mac) for internal task tracking and work dispatch; contributors do not need mac to file an issue or submit a pull request.
