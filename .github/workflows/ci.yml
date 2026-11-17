@@ -25,6 +25,8 @@ jobs:
           go-version-file: webmux/server/go.mod
       - name: Test USB sysfs detach polling
         run: python3 -m unittest discover -s tests -p test_usb_sysfs.py
+      - name: Test pinned USB source acquisition
+        run: python3 -m unittest discover -s scripts -p test_vudc_sources.py
       - name: Test Ubuntu package mirror configuration
         run: python3 -m unittest discover -s tests -p test_ci_apt.py
       - name: Configure Ubuntu package mirrors and network bounds

@@ -7,7 +7,7 @@ from pathlib import Path
 import platform
 import re
 import subprocess
-import urllib.request
+from vudc_sources import acquire
 
 
 def digest(data):
@@ -18,6 +18,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--kernel', required=True)
     parser.add_argument('--build-root', required=True, type=Path)
+    parser.add_argument('--source-cache', type=Path, help='private per-qualification verified source cache')
     parser.add_argument('--unpatched', action='store_true')
     parser.add_argument('--hold-replies', action='store_true')
     args = parser.parse_args()
@@ -32,13 +33,7 @@ def main():
     tests = Path(__file__).resolve().parents[1] / 'tests'
     manifest = json.loads((tests / 'usb-vudc-sources.json').read_text())
     root.mkdir(parents=True, exist_ok=True)
-    for name, expected in manifest['files'].items():
-        url = f"https://raw.githubusercontent.com/torvalds/linux/{manifest['commit']}/drivers/usb/usbip/{name}"
-        with urllib.request.urlopen(url, timeout=20) as response:
-            data = response.read(1 << 20)
-        if digest(data) != expected:
-            raise RuntimeError(f'kernel fixture source checksum mismatch: {name}')
-        (root / name).write_bytes(data)
+    acquire(manifest, root, args.source_cache.resolve() if args.source_cache else root / 'source-cache')
     patches = {}
     for name, enabled in [('usb-vudc-dequeue.patch', True), ('usb-vudc-schedule.patch', args.hold_replies), ('usb-vudc.patch', not args.unpatched)]:
         if enabled:
