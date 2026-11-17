@@ -1,0 +1,37 @@
+{
+  "why": "a flood of zero-width marks on one cell: with autowrap off, REP repeats a tag-sequence flag a screenful of times onto the last cell, its tag characters pile up there, and each one re-read and copied the whole cell (with 76c5ebf0's cap on what a cell holds removed, the oracles take 8s and allocate 3.5 GB; reduced from corpus entry FuzzEmulatorRenderRoundTrip/49e37e539dca9c10, whose script was pinned by 1d925fd7 with its eight-bit controls turned into U+FFFD and stopped reproducing)",
+  "split_seed": 0,
+  "budget_ms": 1500,
+  "budget_alloc_mb": 64,
+  "script": [
+    {
+      "Kind": "mode",
+      "Bytes": "",
+      "BytesQuoted": "\\x9b?7l",
+      "Desc": "reset DECAWM autowrap, using eight-bit controls",
+      "Cols": 0,
+      "Rows": 0
+    },
+    {
+      "Kind": "resize",
+      "Bytes": "",
+      "Desc": "resize to 120x40",
+      "Cols": 120,
+      "Rows": 40
+    },
+    {
+      "Kind": "text",
+      "Bytes": "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+      "Desc": "a tag sequence flag",
+      "Cols": 0,
+      "Rows": 0
+    },
+    {
+      "Kind": "csi",
+      "Bytes": "\u001b[99999999999999999999;20;40b",
+      "Desc": "REP repeat last character (params 99999999999999999999;20;40)",
+      "Cols": 0,
+      "Rows": 0
+    }
+  ]
+}

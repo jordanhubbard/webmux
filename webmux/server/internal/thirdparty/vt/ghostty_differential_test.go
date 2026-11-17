@@ -1,0 +1,696 @@
+//go:build ghostty
+
+package vt
+
+// The differential harness: the same bytes go to the pure emulator and the
+// libghostty-backed one, and the observable surface must agree. This is the
+// only place both implementations exist in one process; the shipped binary
+// compiles exactly one.
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	uv "github.com/charmbracelet/ultraviolet"
+)
+
+// diffPair drives both emulators in lockstep.
+type diffPair struct {
+	pure *Emulator
+	gh   *GhosttyTerminal
+}
+
+func newDiffPair(t *testing.T, w, h int) *diffPair {
+	t.Helper()
+	p := &diffPair{pure: NewEmulator(w, h), gh: NewGhosttyTerminal(w, h)}
+	t.Cleanup(func() { _ = p.gh.Close() })
+	return p
+}
+
+func (p *diffPair) write(t *testing.T, data []byte) {
+	t.Helper()
+	if _, err := p.pure.Write(data); err != nil {
+		t.Fatalf("pure write: %v", err)
+	}
+	if _, err := p.gh.Write(data); err != nil {
+		t.Fatalf("ghostty write: %v", err)
+	}
+}
+
+// ghDiffCellText renders a cell for comparison messages.
+func ghDiffCellText(c *uv.Cell) string {
+	if c == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("%q w=%d fg=%v bg=%v attrs=%x ul=%d", c.Content, c.Width, c.Style.Fg, c.Style.Bg, c.Style.Attrs, c.Style.Underline)
+}
+
+// compareScreens asserts the visible grids agree cell by cell.
+func (p *diffPair) compareScreens(t *testing.T, context string) {
+	t.Helper()
+	w, h := p.pure.Width(), p.pure.Height()
+	if gw, gh_ := p.gh.Width(), p.gh.Height(); gw != w || gh_ != h {
+		t.Fatalf("%s: size pure=%dx%d ghostty=%dx%d", context, w, h, gw, gh_)
+	}
+	bad := 0
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			pc := p.pure.CellAt(x, y)
+			gc := p.gh.CellAt(x, y)
+			if !cellsEquivalent(pc, gc) {
+				bad++
+				if bad <= 8 {
+					t.Errorf("%s: cell (%d,%d)\n pure    %s\n ghostty %s", context, x, y, ghDiffCellText(pc), ghDiffCellText(gc))
+				}
+			}
+		}
+	}
+	if bad > 8 {
+		t.Errorf("%s: %d differing cells total", context, bad)
+	}
+}
+
+// cellsEquivalent compares what a renderer would draw. Blank forms (nil,
+// empty content, space) are interchangeable when unstyled.
+func cellsEquivalent(a, b *uv.Cell) bool {
+	blank := func(c *uv.Cell) bool {
+		return c == nil || ((c.Content == "" || c.Content == " ") && c.Style.IsZero() && c.Link.URL == "")
+	}
+	if blank(a) && blank(b) {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	ca, cb := a.Content, b.Content
+	if ca == "" {
+		ca = " "
+	}
+	if cb == "" {
+		cb = " "
+	}
+	if ca != cb {
+		return false
+	}
+	wa, wb := a.Width, b.Width
+	if wa == 0 {
+		wa = 1
+	}
+	if wb == 0 {
+		wb = 1
+	}
+	if wa != wb {
+		return false
+	}
+	if !styleEquivalent(&a.Style, &b.Style) {
+		return false
+	}
+	return a.Link.URL == b.Link.URL
+}
+
+func styleEquivalent(a, b *uv.Style) bool {
+	if a.Attrs != b.Attrs || a.Underline != b.Underline {
+		return false
+	}
+	return colorEquivalent(a.Fg, b.Fg) && colorEquivalent(a.Bg, b.Bg) && colorEquivalent(a.UnderlineColor, b.UnderlineColor)
+}
+
+func colorEquivalent(a, b interface {
+	RGBA() (uint32, uint32, uint32, uint32)
+}) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	ar, ag, ab_, _ := a.RGBA()
+	br, bg, bb, _ := b.RGBA()
+	return ar == br && ag == bg && ab_ == bb
+}
+
+// compareRender asserts the two rendered frames display the same thing. The
+// frames are re-parsed through fresh emulators and compared as displayed
+// cells rather than as bytes: the same color legitimately encodes as SGR 30
+// or 38;5;0 depending on which form the guest used, and only one side knows
+// which that was. The grid comparison sees converted cells; this sees the
+// layer that turns them into host output, which is where the style-churn
+// bug lived.
+func (p *diffPair) compareRender(t *testing.T, context string) {
+	t.Helper()
+	pr, gr := p.pure.Render(), p.gh.Render()
+	if pr == gr {
+		return
+	}
+	w, h := p.pure.Width(), p.pure.Height()
+	pe := NewEmulator(w, h)
+	ge := NewEmulator(w, h)
+	_, _ = pe.Write([]byte(pr))
+	_, _ = ge.Write([]byte(gr))
+	bad := 0
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			pc, gc := pe.CellAt(x, y), ge.CellAt(x, y)
+			if !cellsEquivalent(pc, gc) {
+				bad++
+				if bad <= 6 {
+					t.Errorf("%s: rendered frame cell (%d,%d)\n pure    %s\n ghostty %s", context, x, y, ghDiffCellText(pc), ghDiffCellText(gc))
+				}
+			}
+		}
+	}
+	if bad > 6 {
+		t.Errorf("%s: rendered frames differ in %d cells total", context, bad)
+	}
+}
+
+func (p *diffPair) compareCursor(t *testing.T, context string) {
+	t.Helper()
+	pp, gp := p.pure.CursorPosition(), p.gh.CursorPosition()
+	if pp != gp {
+		t.Errorf("%s: cursor pure=%v ghostty=%v", context, pp, gp)
+	}
+	if ph, gh_ := p.pure.IsCursorHidden(), p.gh.IsCursorHidden(); ph != gh_ {
+		t.Errorf("%s: cursor hidden pure=%v ghostty=%v", context, ph, gh_)
+	}
+}
+
+func (p *diffPair) compareScrollback(t *testing.T, context string, maxLines int) {
+	t.Helper()
+	pl, gl := p.pure.ScrollbackLen(), p.gh.ScrollbackLen()
+	if pl != gl {
+		t.Errorf("%s: scrollback len pure=%d ghostty=%d", context, pl, gl)
+		return
+	}
+	n := pl
+	if maxLines > 0 && n > maxLines {
+		n = maxLines
+	}
+	bad := 0
+	for i := pl - n; i < pl; i++ {
+		pline := p.pure.ScrollbackLine(i)
+		gline := p.gh.ScrollbackLine(i)
+		if lineToString(pline) != lineToString(gline) {
+			bad++
+			if bad <= 4 {
+				t.Errorf("%s: scrollback line %d\n pure    %q\n ghostty %q", context, i, lineToString(pline), lineToString(gline))
+			}
+		}
+	}
+}
+
+func lineToString(l uv.Line) string {
+	var b strings.Builder
+	for _, c := range l {
+		if c.Width == 0 && c.Content == "" {
+			continue
+		}
+		if c.Content == "" {
+			b.WriteByte(' ')
+		} else {
+			b.WriteString(c.Content)
+		}
+	}
+	return strings.TrimRight(b.String(), " ")
+}
+
+func TestGhosttyDiffBasicSequences(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+	}{
+		{"plain", "one\r\ntwo\r\nthree"},
+		{"sgr16", "\x1b[31mred \x1b[42mongreen \x1b[1;4mbold-ul\x1b[0m done"},
+		{"sgr256", "\x1b[38;5;42mx\x1b[48;5;200my\x1b[0m"},
+		{"truecolor", "\x1b[38;2;1;2;3ma\x1b[48;2;9;8;7mb\x1b[0m"},
+		{"cursor-move", "abc\x1b[2;2Hx\x1b[Hy\x1b[3Cz"},
+		{"erase-line", "aaaaaa\x1b[3D\x1b[K"},
+		{"erase-display", "line1\r\nline2\x1b[H\x1b[J"},
+		{"clear", "junk\x1b[2J\x1b[Hfresh"},
+		{"wide-chars", "日本語 中文\r\nかな"},
+		{"combining", "é ä test"},
+		{"wrap", strings.Repeat("x", 25)},
+		{"scroll-up", "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7"},
+		{"tabs", "a\tb\tc"},
+		{"reverse-video", "\x1b[7minv\x1b[27mnorm"},
+		{"insert-line", "a\r\nb\r\nc\x1b[2;1H\x1b[L"},
+		// Every row holds text, so the rows a line shift pushes off carry
+		// something and the rows it opens have to come out blank.
+		{"insert-line-over-text", "a\r\nb\r\nc\r\nd\r\ne\x1b[2;1H\x1b[2L"},
+		{"delete-line-over-text", "a\r\nb\r\nc\r\nd\r\ne\x1b[2;1H\x1b[2M"},
+		{"region-delete-line-over-text", "a\r\nb\r\nc\r\nd\r\ne\x1b[2;4r\x1b[2;1H\x1b[M\x1b[r"},
+		{"region-scroll-over-text", "a\r\nb\r\nc\r\nd\r\ne\x1b[2;4r\x1b[4;1H\n\n\x1b[r"},
+		{"delete-char", "abcdef\x1b[1;2H\x1b[2P"},
+		{"alt-screen", "main\x1b[?1049htop\x1b[?1049l"},
+		{"alt-screen-enter-keeps-cursor", "\x1b[2;3Hmain\x1b[?1049hX"},
+		{"alt-screen-1047-enter-keeps-cursor", "\x1b[2;3Hmain\x1b[?1047hX"},
+		{"alt-screen-47", "\x1b[2;3Hmain\x1b[?47hX"},
+		{"alt-screen-47-leave", "main\x1b[?47h\x1b[3;2Hgone\x1b[?47lX"},
+		{"alt-screen-1047-leave", "main\x1b[?1047h\x1b[3;2Hgone\x1b[?1047lX"},
+		{"alt-screen-47-reset-on-main", "\x1b[2;3Hab\x1b[?47lX"},
+		{"alt-screen-1047-reset-on-main", "\x1b[2;3Hab\x1b[?1047lX"},
+		{"scroll-region", "\x1b[2;4rA\r\nB\r\nC\r\nD\r\nE\x1b[r"},
+		{"origin-mode", "\x1b[2;4r\x1b[?6h\x1b[Hx\x1b[?6l\x1b[r"},
+		{"rep", "ab\x1b[3b"},
+		{"underline-styles", "\x1b[4:3mcurly\x1b[4:0m \x1b[4:2mdouble\x1b[24m"},
+		{"sgr21-double-underline", "\x1b[21mx\x1b[24my"},
+		{"hpb", "abcdef\x1b[3jX"},
+		{"hpb-default", "abcdef\x1b[jX"},
+		{"hpb-past-the-edge", "abc\x1b[99jX"},
+		{"vpb", "\x1b[4;3H\x1b[2kX"},
+		{"vpb-default", "\x1b[4;3H\x1b[kX"},
+		{"vpb-past-the-edge", "\x1b[4;3H\x1b[99kX"},
+		{"vpb-at-top-margin", "\x1b[2;4r\x1b[4;3H\x1b[9kX\x1b[r"},
+		{"vpb-origin-mode", "\x1b[2;4r\x1b[?6h\x1b[3;3H\x1b[1kX\x1b[?6l\x1b[r"},
+		{"decsed-below", "ABC\r\nDEF\r\nGHI\x1b[2;2H\x1b[?J"},
+		{"decsed-above", "ABC\r\nDEF\r\nGHI\x1b[2;2H\x1b[?1J"},
+		{"decsed-all", "ABC\r\nDEF\r\nGHI\x1b[2;2H\x1b[?2J"},
+		{"decsel-right", "ABCDEF\x1b[1;3H\x1b[?K"},
+		{"decsel-left", "ABCDEF\x1b[1;3H\x1b[?1K"},
+		{"decsel-all", "ABCDEF\r\nGHI\x1b[1;3H\x1b[?2K"},
+		{"hidden-cursor", "\x1b[?25labc"},
+		{"osc-title", "\x1b]0;my title\abody"},
+		{"charset-linedraw", "\x1b(0qqqq\x1b(B done"},
+		{"decsc-decrc", "A\x1b7\x1b[5;5HB\x1b8C"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := newDiffPair(t, 20, 5)
+			p.write(t, []byte(tc.in))
+			p.compareScreens(t, tc.name)
+			p.compareCursor(t, tc.name)
+			p.compareRender(t, tc.name)
+		})
+	}
+}
+
+// TestGhosttyDiffCorpus replays the captured real-program corpus through
+// both implementations.
+func TestGhosttyDiffCorpus(t *testing.T) {
+	files, err := filepath.Glob("testdata/corpus/*.bin")
+	if err != nil || len(files) == 0 {
+		t.Skip("no corpus")
+	}
+	for _, f := range files {
+		t.Run(filepath.Base(f), func(t *testing.T) {
+			data, err := os.ReadFile(f)
+			if err != nil {
+				t.Fatal(err)
+			}
+			p := newDiffPair(t, 80, 24)
+			// Feed in PTY-sized chunks, and read between chunks: a sync
+			// per chunk is what the app does, and per-snapshot state such
+			// as style IDs only churns when reads interleave writes.
+			for off := 0; off < len(data); off += 4096 {
+				end := off + 4096
+				if end > len(data) {
+					end = len(data)
+				}
+				p.write(t, data[off:end])
+				p.compareScreens(t, fmt.Sprintf("%s@%d", filepath.Base(f), end))
+			}
+			p.compareScreens(t, filepath.Base(f))
+			p.compareCursor(t, filepath.Base(f))
+			p.compareScrollback(t, filepath.Base(f), 50)
+			p.compareRender(t, filepath.Base(f))
+		})
+	}
+}
+
+// TestGhosttyKnownDivergences pins divergences that are understood and
+// accepted, in the spirit of differential_tmux_test.go's allowlist: each
+// entry states which side is right. If an entry starts agreeing, the pure
+// emulator gained the behavior and the entry should be deleted.
+//
+// SGR 21 was an entry until the pure emulator read it as a double underline;
+// it is now an ordinary case in TestGhosttyDiffBasicSequences.
+func TestGhosttyKnownDivergences(t *testing.T) {
+	t.Run("sgr-underline-unknown-style", func(t *testing.T) {
+		// No standard defines underline style 7. libghostty falls back to a
+		// single underline; tmux leaves the underline off, and so does the
+		// pure emulator, which consumes the subparameter and changes
+		// nothing. Neither is wrong by any specification. The pure emulator
+		// follows tmux, and TestThemedSGR_UnderlineSubparamNoLeak pins it.
+		p := newDiffPair(t, 20, 5)
+		p.write(t, []byte("\x1b[4:7mx"))
+		pc := p.pure.CellAt(0, 0)
+		gc := p.gh.CellAt(0, 0)
+		if pc.Style.Underline == gc.Style.Underline {
+			t.Fatalf("pure now agrees with ghostty on SGR 4:7 (ul=%d); delete this entry", pc.Style.Underline)
+		}
+	})
+	t.Run("sgr-implementation-defined-colour", func(t *testing.T) {
+		// "38;0" names colour type 0, implementation defined. xterm and tmux
+		// consume the 0 as the colour type, so "1;38;0" leaves the text bold.
+		// libghostty consumes only 38 and then reads the 0 as SGR 0, which
+		// resets the bold. The pure emulator follows xterm and tmux, which
+		// is right: the 0 is a subordinate parameter of 38, not an SGR.
+		p := newDiffPair(t, 20, 5)
+		p.write(t, []byte("\x1b[1;38;0mx"))
+		pc := p.pure.CellAt(0, 0)
+		gc := p.gh.CellAt(0, 0)
+		if pc.Style.Attrs == gc.Style.Attrs {
+			t.Fatalf("pure now agrees with ghostty on SGR 1;38;0 (attrs=%x); delete this entry", pc.Style.Attrs)
+		}
+	})
+}
+
+func TestGhosttyDiffScrollback(t *testing.T) {
+	p := newDiffPair(t, 20, 5)
+	var b strings.Builder
+	for i := range 40 {
+		fmt.Fprintf(&b, "line %d\r\n", i)
+	}
+	p.write(t, []byte(b.String()))
+	p.compareScreens(t, "scrollback")
+	p.compareScrollback(t, "scrollback", 0)
+	p.compareRender(t, "scrollback")
+}
+
+func TestGhosttyDiffModes(t *testing.T) {
+	p := newDiffPair(t, 20, 5)
+	p.write(t, []byte("\x1b[?1000h\x1b[?1006h\x1b[?2004h\x1b[?1h"))
+	if a, b := p.pure.HasMouseMode(), p.gh.HasMouseMode(); a != b {
+		t.Errorf("HasMouseMode pure=%v ghostty=%v", a, b)
+	}
+	if a, b := p.pure.BracketedPasteEnabled(), p.gh.BracketedPasteEnabled(); a != b {
+		t.Errorf("BracketedPaste pure=%v ghostty=%v", a, b)
+	}
+	if a, b := p.pure.ApplicationCursorKeys(), p.gh.ApplicationCursorKeys(); a != b {
+		t.Errorf("AppCursorKeys pure=%v ghostty=%v", a, b)
+	}
+	pm, gm := p.pure.GetModes(), p.gh.GetModes()
+	for _, num := range []int{1000, 1006, 2004, 1} {
+		if pm[num] != gm[num] {
+			t.Errorf("mode %d pure=%v ghostty=%v", num, pm[num], gm[num])
+		}
+	}
+}
+
+// TestGhosttyDiffDECRQM compares DECRQM answers for the modes the pure
+// emulator used to leave out of its mode table and report as not recognised.
+func TestGhosttyDiffDECRQM(t *testing.T) {
+	readReply := func(term Terminal) string {
+		got := make(chan string, 1)
+		go func() {
+			buf := make([]byte, 512)
+			n, _ := term.Read(buf)
+			got <- string(buf[:n])
+		}()
+		select {
+		case s := <-got:
+			return s
+		case <-time.After(2 * time.Second):
+			return ""
+		}
+	}
+	for _, in := range []string{
+		"\x1b[?47$p", "\x1b[?47h\x1b[?47$p",
+		"\x1b[?1016$p", "\x1b[?1016h\x1b[?1016$p",
+		"\x1b[?2048$p",
+		// A mode neither backend defines.
+		"\x1b[?9999h\x1b[?9999$p",
+	} {
+		t.Run(fmt.Sprintf("%q", in), func(t *testing.T) {
+			p := newDiffPair(t, 20, 5)
+			p.write(t, []byte(in))
+			if a, g := readReply(p.pure), readReply(p.gh); a != g {
+				t.Errorf("reply pure=%q ghostty=%q", a, g)
+			}
+		})
+	}
+
+	// Mode 2027 is answered differently on purpose, and each answer is true
+	// for its own backend. The pure emulator always measures by grapheme
+	// cluster, so it reports 3 (permanently set) and ignores a reset. The
+	// library honours a reset and stops clustering, so it reports 1 and then
+	// 2. See TestGhosttyGraphemeClusteringDefault for the layout half.
+	for _, tc := range []struct{ in, pure, gh string }{
+		{"\x1b[?2027$p", "\x1b[?2027;3$y", "\x1b[?2027;1$y"},
+		{"\x1b[?2027l\x1b[?2027$p", "\x1b[?2027;3$y", "\x1b[?2027;2$y"},
+		{"\x1bc\x1b[?2027$p", "\x1b[?2027;3$y", "\x1b[?2027;1$y"},
+	} {
+		t.Run(fmt.Sprintf("%q", tc.in), func(t *testing.T) {
+			p := newDiffPair(t, 20, 5)
+			p.write(t, []byte(tc.in))
+			if a, g := readReply(p.pure), readReply(p.gh); a != tc.pure || g != tc.gh {
+				t.Errorf("reply pure=%q ghostty=%q, want pure=%q ghostty=%q", a, g, tc.pure, tc.gh)
+			}
+		})
+	}
+}
+
+// TestGhosttyDiffPixelSizeReports compares the answers a guest reads its
+// pixel size from: XTWINOPS 14, 16 and 18 and the mode 2048 report, with no
+// cell size set and with the host's. libghostty sent none of them until the
+// size callback was wired, and a guest that waited for one waited for good
+// (issue #506). After 2048 is on, a new cell size must reach the guest too.
+func TestGhosttyDiffPixelSizeReports(t *testing.T) {
+	read := func(term Terminal) string {
+		got := make(chan string, 1)
+		go func() {
+			buf := make([]byte, 512)
+			n, _ := term.Read(buf)
+			got <- string(buf[:n])
+		}()
+		select {
+		case s := <-got:
+			return s
+		case <-time.After(2 * time.Second):
+			return ""
+		}
+	}
+	for _, cell := range [][2]int{{0, 0}, {8, 16}} {
+		for _, in := range []string{"\x1b[14t", "\x1b[16t", "\x1b[18t", "\x1b[?2048h"} {
+			t.Run(fmt.Sprintf("cell %dx%d %q", cell[0], cell[1], in), func(t *testing.T) {
+				p := newDiffPair(t, 20, 5)
+				p.pure.SetCellSize(cell[0], cell[1])
+				p.gh.SetCellSize(cell[0], cell[1])
+				p.write(t, []byte(in))
+				a, g := read(p.pure), read(p.gh)
+				if a != g {
+					t.Errorf("reply pure=%q ghostty=%q", a, g)
+				}
+				if strings.Contains(a, ";0;0t") || a == "" {
+					t.Errorf("reply %q has no pixel size", a)
+				}
+			})
+		}
+	}
+	t.Run("a new cell size while 2048 is on", func(t *testing.T) {
+		p := newDiffPair(t, 20, 5)
+		p.write(t, []byte("\x1b[?2048h"))
+		_, _ = read(p.pure), read(p.gh)
+		p.pure.SetCellSize(8, 16)
+		p.gh.SetCellSize(8, 16)
+		if a, g := read(p.pure), read(p.gh); a != g || a != "\x1b[48;5;20;80;160t" {
+			t.Errorf("reply pure=%q ghostty=%q, want both %q", a, g, "\x1b[48;5;20;80;160t")
+		}
+		// The same cell again sends nothing. The daemon sets the cell on
+		// every pane resize and every attach.
+		p.pure.SetCellSize(8, 16)
+		p.gh.SetCellSize(8, 16)
+		if a, g := readQuick(p.pure), readQuick(p.gh); a != "" || g != "" {
+			t.Errorf("the same cell twice sent pure=%q ghostty=%q, want nothing", a, g)
+		}
+	})
+}
+
+// readQuick is what term wrote back within a short wait, or "". The reader
+// it starts outlives a wait that saw nothing, so it is used last in a test.
+func readQuick(term Terminal) string {
+	got := make(chan string, 1)
+	go func() {
+		buf := make([]byte, 512)
+		n, _ := term.Read(buf)
+		got <- string(buf[:n])
+	}()
+	select {
+	case s := <-got:
+		return s
+	case <-time.After(300 * time.Millisecond):
+		return ""
+	}
+}
+
+// TestGhosttyDiffAltScreenLegacy checks IsAltScreen under mode 47 on both
+// backends. libghostty switched screens for 47 all along, but the wrapper only
+// asked it about 1047 and 1049, so a program using 47 was reported as being on
+// the main screen, which is what decides mouse forwarding and which history
+// ScrollbackLen reads.
+func TestGhosttyDiffAltScreenLegacy(t *testing.T) {
+	p := newDiffPair(t, 20, 5)
+	p.write(t, []byte("main\x1b[?47h"))
+	if a, g := p.pure.IsAltScreen(), p.gh.IsAltScreen(); !a || !g {
+		t.Fatalf("after 47h: IsAltScreen pure=%v ghostty=%v, want both true", a, g)
+	}
+	p.write(t, []byte("\x1b[?47l"))
+	if a, g := p.pure.IsAltScreen(), p.gh.IsAltScreen(); a || g {
+		t.Fatalf("after 47l: IsAltScreen pure=%v ghostty=%v, want both false", a, g)
+	}
+	p.compareScreens(t, "after 47l")
+}
+
+// TestGhosttyDiffAltScreenScrollback pins the contract yazi's image preview
+// exposed: scrollback is the MAIN screen's history whichever screen is
+// active. The app computes kitty placement lines as ScrollbackLen()+cursorY
+// while a full-screen guest owns the alternate screen, so an implementation
+// answering with the alternate screen's empty history shifts placements by
+// the pane's entire history and previews go blank. That happens only in panes
+// that have history, so the failure looks intermittent.
+func TestGhosttyDiffAltScreenScrollback(t *testing.T) {
+	p := newDiffPair(t, 20, 5)
+	var b strings.Builder
+	for i := range 30 {
+		fmt.Fprintf(&b, "history %d\r\n", i)
+	}
+	p.write(t, []byte(b.String()))
+	p.compareScrollback(t, "before alt", 0)
+
+	// Reading between generations matters: the count must hold across the
+	// switch, not merely at the end.
+	p.write(t, []byte("\x1b[?1049h\x1b[Halt content"))
+	if a, g := p.pure.ScrollbackLen(), p.gh.ScrollbackLen(); a != g {
+		t.Fatalf("alt active: scrollback len pure=%d ghostty=%d", a, g)
+	}
+	p.compareScrollback(t, "alt active", 0)
+	p.compareScreens(t, "alt active")
+
+	// More main-screen history cannot appear while alt is active; leaving
+	// alt must reveal the same history plus nothing.
+	p.write(t, []byte("\x1b[?1049l"))
+	p.compareScrollback(t, "back on main", 0)
+	p.compareScreens(t, "back on main")
+
+	// ClearScrollback during alt applies to the main history, deferred on
+	// the library until the main screen returns.
+	p.write(t, []byte("\x1b[?1049halt again"))
+	p.pure.ClearScrollback()
+	p.gh.ClearScrollback()
+	if a, g := p.pure.ScrollbackLen(), p.gh.ScrollbackLen(); a != g || a != 0 {
+		t.Fatalf("cleared during alt: scrollback len pure=%d ghostty=%d, want 0", a, g)
+	}
+	p.write(t, []byte("\x1b[?1049l"))
+	if a, g := p.pure.ScrollbackLen(), p.gh.ScrollbackLen(); a != g {
+		t.Fatalf("after alt exit: scrollback len pure=%d ghostty=%d", a, g)
+	}
+}
+
+// TestGhosttyDiffKittyPassthroughContext pins what the kitty passthrough
+// pipeline reads at APC time: cursor position, scrollback length and the
+// alt-screen flag, queried from inside the callback exactly as
+// internal/app's handler queries them. All three went stale or wrong on the
+// library backend when the guest switched screens, moved the cursor and
+// drew in one chunk, which is how yazi paints a preview: the placement was
+// computed against the previous frame's cursor and screen, and the image
+// landed clipped in a corner.
+func TestGhosttyDiffKittyPassthroughContext(t *testing.T) {
+	type seen struct {
+		x, y, sb int
+		alt      bool
+		// cbAlt is the alt flag as the AltScreen callback last reported
+		// it, the way terminal.Window tracks it. The callback must have
+		// fired before a passthrough later in the same chunk, or the
+		// placement is stamped with the pre-switch screen and suppressed.
+		cbAlt bool
+	}
+	capture := func(term Terminal) *[]seen {
+		out := &[]seen{}
+		var cbAlt bool
+		term.SetCallbacks(Callbacks{AltScreen: func(v bool) { cbAlt = v }})
+		term.SetKittyPassthroughFunc(func(cmd *KittyCommand, raw []byte) {
+			pos := term.CursorPosition()
+			*out = append(*out, seen{pos.X, pos.Y, term.ScrollbackLen(), term.IsAltScreen(), cbAlt})
+		})
+		return out
+	}
+
+	p := newDiffPair(t, 40, 8)
+	pureSeen := capture(p.pure)
+	ghSeen := capture(p.gh)
+
+	var b strings.Builder
+	for i := range 30 {
+		fmt.Fprintf(&b, "history %d\r\n", i)
+	}
+	// One chunk: junk that parks the cursor bottom-right, then the
+	// alt-screen switch, a cursor move, and the image APC.
+	b.WriteString("\x1b[8;38Hjunk")
+	b.WriteString("\x1b[?1049h\x1b[3;5H")
+	b.WriteString("\x1b_Ga=T,f=32,s=1,v=1,i=7,p=1,q=2;AAAA\x1b\\")
+	// A second APC after more cursor movement, still the same chunk.
+	b.WriteString("\x1b[6;2H\x1b_Ga=p,i=7,p=2,q=2\x1b\\")
+	p.write(t, []byte(b.String()))
+
+	if len(*pureSeen) != 2 || len(*ghSeen) != 2 {
+		t.Fatalf("passthrough calls: pure=%d ghostty=%d, want 2", len(*pureSeen), len(*ghSeen))
+	}
+	for i := range *pureSeen {
+		if (*pureSeen)[i] != (*ghSeen)[i] {
+			t.Errorf("APC %d context: pure=%+v ghostty=%+v", i, (*pureSeen)[i], (*ghSeen)[i])
+		}
+	}
+}
+
+// TestGhosttyDiffEraseDisplayKeepsHistory pins the ED 2 semantics the
+// incremental restore leans on: clearing the screen pushes nothing into
+// history on either backend, and ED 3 is what drops it. The synthesized
+// restore of a surviving emulator clears the screen twice around the lines
+// it types, and both clears must leave the history it is extending alone.
+func TestGhosttyDiffEraseDisplayKeepsHistory(t *testing.T) {
+	p := newDiffPair(t, 20, 5)
+	var b strings.Builder
+	for i := range 12 {
+		fmt.Fprintf(&b, "line %d\r\n", i)
+	}
+	p.write(t, []byte(b.String()))
+	before := p.pure.ScrollbackLen()
+	if before == 0 {
+		t.Fatal("the stream scrolled nothing into history")
+	}
+	p.write(t, []byte("\x1b[2J"))
+	p.compareScrollback(t, "ED 2", 0)
+	if got := p.gh.ScrollbackLen(); got != before {
+		t.Errorf("ED 2 changed the library's history from %d to %d", before, got)
+	}
+	p.write(t, []byte("\x1b[H\x1b[2J"))
+	p.compareScrollback(t, "CUP + ED 2", 0)
+	if got := p.gh.ScrollbackLen(); got != before {
+		t.Errorf("CUP + ED 2 changed the library's history from %d to %d", before, got)
+	}
+	p.write(t, []byte("\x1b[3J"))
+	p.compareScrollback(t, "ED 3", 0)
+	if got := p.gh.ScrollbackLen(); got != 0 {
+		t.Errorf("ED 3 left %d lines of history", got)
+	}
+}
+
+// TestGhosttyDiffScrollbackUnderColouredPen: rows that scroll off under a
+// pen with a background colour are filled by the library with cells that
+// hold the colour where a codepoint would be. The history reader must read
+// them as blanks, as the screen reader does, and not as control characters.
+func TestGhosttyDiffScrollbackUnderColouredPen(t *testing.T) {
+	p := newDiffPair(t, 40, 6)
+	var b strings.Builder
+	for i := range 12 {
+		fmt.Fprintf(&b, "OLD-%d\r\n", i)
+	}
+	b.WriteString("text\x1b[1;33;44m")
+	p.write(t, []byte(b.String()))
+	b.Reset()
+	b.WriteString("\r\n")
+	for i := range 8 {
+		fmt.Fprintf(&b, "NEW-%d\r\n", i)
+	}
+	b.WriteString("more\x1b[0;35m")
+	p.write(t, []byte(b.String()))
+	p.compareScrollback(t, "coloured pen", 0)
+	for i := range p.gh.ScrollbackLen() {
+		for x, c := range p.gh.ScrollbackLine(i) {
+			if c.Content != "" && c.Content < " " {
+				t.Fatalf("history line %d col %d reads as control character %q", i, x, c.Content)
+			}
+		}
+	}
+}

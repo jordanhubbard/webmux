@@ -1,0 +1,799 @@
+package vt
+
+import (
+	uv "github.com/charmbracelet/ultraviolet"
+)
+
+// screen represents a virtual terminal screen.
+type screen struct {
+	// cb is the callbacks struct to use.
+	cb *Callbacks
+	// The buffer of the screen.
+	buf *grid
+	// The cur of the screen.
+	cur, saved Cursor
+	savedExtra savedExtras
+	// scroll is the scroll region.
+	scroll uv.Rectangle
+	// scrollback is the scrollback buffer for lines that have scrolled off the top.
+	scrollback *Scrollback
+	// rf holds the reflow's buffers between reflows (reflow.go).
+	rf reflowScratch
+	// wideCol says the cursor stands on a row a reflow left frozen, at
+	// column cur.X only because the row is narrower than where it was:
+	// wideColX is the column it was at in the line. It holds while the
+	// cursor stays at wideColAt and nothing is written, so the next reflow
+	// puts the cursor back where it was. See screen.cursorCol.
+	wideCol   bool
+	wideColX  int
+	wideColAt uv.Position
+}
+
+// cursorCol is the cursor's column in its line: cur.X, or the column past
+// the width a reflow could not show, while the cursor has not moved.
+func (s *screen) cursorCol() int {
+	if s.wideCol && s.cur.Position == s.wideColAt {
+		return s.wideColX
+	}
+	return s.cur.X
+}
+
+// newScreen creates a new screen.
+func newScreen(w, h int) *screen {
+	s := screen{}
+	s.scrollback = NewScrollback(0) // Use default size
+	s.buf = newGrid(w, h)
+	s.scroll = s.buf.Bounds()
+	return &s
+}
+
+// newAltScreen creates the alternate screen: a 1x1 grid with no scrollback
+// ring. Emulator.altScreen grows it to the main screen's size on first use.
+func newAltScreen() *screen {
+	s := screen{}
+	s.buf = newGrid(1, 1)
+	s.scroll = s.buf.Bounds()
+	return &s
+}
+
+// Reset resets the screen.
+// It clears the screen, sets the cursor to the top left corner, reset the
+// cursor styles, and resets the scroll region.
+func (s *screen) Reset() {
+	s.buf.Clear()
+	s.cur = Cursor{}
+	s.saved = Cursor{}
+	s.savedExtra = savedExtras{}
+	s.scroll = s.buf.Bounds()
+}
+
+// Bounds returns the bounds of the screen.
+func (s *screen) Bounds() uv.Rectangle {
+	return s.buf.Bounds()
+}
+
+// CellAt returns the cell at the given x, y position.
+func (s *screen) CellAt(x int, y int) *uv.Cell {
+	return s.buf.CellAt(x, y)
+}
+
+// SetCell sets the cell at the given x, y position.
+func (s *screen) SetCell(x, y int, c *uv.Cell) {
+	s.wideCol = false
+	pre := s.buf.CellAt(x, y)
+	wasPaired := pre != nil && (pre.Width > 1 || (pre.Width == 0 && pre.Content == ""))
+	s.buf.SetCell(x, y, c)
+	if !wasPaired && (c == nil || c.Width <= 1) {
+		return
+	}
+	// The write may have cut a double-width rune. The buffer empties both
+	// halves of the pair it cut, but the half that no longer follows a lead
+	// is a cell no renderer draws, so the row would come out a column short.
+	// Turn any such orphan next to the write into a blank that holds its
+	// column.
+	w := 1
+	if c != nil && c.Width > 1 {
+		w = c.Width
+	}
+	for _, nx := range [2]int{x - 1, x + w} {
+		if nx < 0 {
+			continue
+		}
+		nc := s.buf.CellAt(nx, y)
+		if nc == nil || nc.Width != 0 || nc.Content != "" {
+			continue
+		}
+		if lead := s.buf.CellAt(nx-1, y); nx > 0 && lead != nil && lead.Width == 2 {
+			continue
+		}
+		s.buf.SetCell(nx, y, nil)
+	}
+}
+
+// Height returns the height of the screen.
+func (s *screen) Height() int {
+	return s.buf.Height()
+}
+
+// Resize resizes the screen.
+func (s *screen) Resize(width int, height int) {
+	s.shrinkRows(height)
+	s.buf.Resize(width, height)
+	s.blankWideRunesCutByTheEdge()
+	s.scroll = s.buf.Bounds()
+
+	// Both the live cursor and the saved one have to come back inside the new
+	// screen. The emulator clamps the cursor of whichever screen is active, but
+	// the other one is resized here too and has to be clamped here: a guest
+	// on the alternate screen that is resized smaller would otherwise come
+	// back to a main screen whose cursor still addresses the old one. The saved cursor has the
+	// same problem on either screen, since a resize can land between a DECSC
+	// and its DECRC.
+	s.cur.X = clamp(s.cur.X, 0, max(s.buf.Width()-1, 0))
+	s.cur.Y = clamp(s.cur.Y, 0, max(s.buf.Height()-1, 0))
+	// The saved column is left as it is: DECRC clamps it to the screen it
+	// lands on, and a later reflow reads it as a place in the line, which
+	// can be past the width when the text it followed fills the row.
+	s.saved.Y = clamp(s.saved.Y, 0, max(s.buf.Height()-1, 0))
+}
+
+// blankWideRunesCutByTheEdge clears a double-width rune left sitting in the
+// last column by a narrowing resize.
+//
+// Dropping columns takes away the continuation cell a wide rune needs without
+// touching the lead, so the grid comes out holding a rune two cells wide in a
+// column one cell from the edge. Every reader then draws it whole and produces
+// a row one cell wider than the screen it came from, which the compositor
+// places over the pane next door: the guest's text appears somewhere it was
+// never written. Blanking the half left standing is what the insert and delete
+// paths already do to a rune they cut, and what ghostty does.
+// shrinkRows makes room for a screen of height rows by taking rows away
+// without losing any that hold text, the way ghostty does: first the blank
+// rows below the cursor, from the bottom, and then rows off the top, which go
+// into the scrollback where the screen keeps one. The cursor and the saved
+// cursor move up with the text they were on.
+//
+// The grid's own Resize cuts rows off the bottom, which is right only for the
+// rows this has already emptied. Cutting it alone lost every row below the
+// cursor: a program that drew a status line at the bottom and left the cursor
+// at the top lost the status line to a pane that got shorter, and the main
+// screen under an alternate screen lost the shell prompt, since only the
+// active screen's cursor was ever kept in view.
+func (s *screen) shrinkRows(height int) {
+	excess := s.buf.Height() - height
+	if excess <= 0 {
+		return
+	}
+	for y := s.buf.Height() - 1; excess > 0 && y > s.cur.Y && !s.rowHoldsText(y); y-- {
+		excess--
+		s.buf.rows = s.buf.rows[:y]
+		s.buf.ext = s.buf.ext[:y]
+		s.buf.wrap = s.buf.wrap[:y]
+		if s.buf.tail != nil {
+			s.buf.tail = s.buf.tail[:y]
+		}
+		if s.buf.prot != nil {
+			s.buf.prot[y] = nil
+			s.buf.prot = s.buf.prot[:y]
+		}
+	}
+	if excess <= 0 {
+		return
+	}
+	// The rows leaving the top go to the scrollback whatever scroll region
+	// the guest set: the region is reset by the resize anyway, and a region
+	// would have the rotation skip the scrollback and drop them.
+	s.scroll = s.buf.Bounds()
+	s.rotateWholeScreenUp(excess, s.scrollback != nil)
+	if s.wideCol && s.cur.Position == s.wideColAt {
+		s.wideColAt.Y = max(s.wideColAt.Y-excess, 0)
+	}
+	s.cur.Y = max(s.cur.Y-excess, 0)
+	s.saved.Y = max(s.saved.Y-excess, 0)
+}
+
+// rowHoldsText reports whether row y has any cell that is not a plain blank.
+// A cell blanked in a colour counts as text: the guest painted it.
+func (s *screen) rowHoldsText(y int) bool {
+	if len(s.buf.rowTail(y)) > 0 {
+		return true
+	}
+	row := s.buf.rows[y]
+	for x := range row[:min(s.buf.ext[y], len(row))] {
+		if !isBlankCell(&row[x]) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *screen) blankWideRunesCutByTheEdge() {
+	x := s.buf.Width() - 1
+	if x < 0 {
+		return
+	}
+	for y := range s.buf.Height() {
+		if c := s.buf.CellAt(x, y); c != nil && c.Width > 1 {
+			s.buf.SetCell(x, y, nil)
+		}
+	}
+}
+
+// Width returns the width of the screen.
+func (s *screen) Width() int {
+	return s.buf.Width()
+}
+
+// Clear clears the screen with blank cells.
+func (s *screen) Clear() {
+	s.ClearArea(s.Bounds())
+}
+
+// ClearArea clears the given area.
+func (s *screen) ClearArea(area uv.Rectangle) {
+	s.buf.ClearArea(area)
+}
+
+// Fill fills the screen or part of it.
+func (s *screen) Fill(c *uv.Cell) {
+	s.FillArea(c, s.Bounds())
+}
+
+// FillArea fills the given area with the given cell.
+func (s *screen) FillArea(c *uv.Cell, area uv.Rectangle) {
+	s.buf.FillArea(c, area)
+}
+
+// setHorizontalMargins sets the horizontal margins.
+func (s *screen) setHorizontalMargins(left, right int) {
+	s.scroll.Min.X = left
+	s.scroll.Max.X = right
+}
+
+// setVerticalMargins sets the vertical margins.
+func (s *screen) setVerticalMargins(top, bottom int) {
+	s.scroll.Min.Y = top
+	s.scroll.Max.Y = bottom
+}
+
+// setCursorX sets the cursor X position. If margins is true, the cursor is
+// only set if it is within the scroll margins.
+func (s *screen) setCursorX(x int, margins bool) {
+	s.setCursor(x, s.cur.Y, margins)
+}
+
+// setCursor sets the cursor position. If margins is true, the cursor is only
+// set if it is within the scroll margins. This follows how [ansi.CUP] works.
+func (s *screen) setCursor(x, y int, margins bool) {
+	old := s.cur.Position
+	w := max(1, s.buf.Width())
+	h := max(1, s.buf.Height())
+	if !margins {
+		x = clamp(x, 0, w-1)
+		y = clamp(y, 0, h-1)
+	} else {
+		minX := min(s.scroll.Min.X, w-1)
+		maxX := max(minX+1, s.scroll.Max.X)
+		x = clamp(s.scroll.Min.X+x, minX, maxX-1)
+
+		minY := min(s.scroll.Min.Y, h-1)
+		maxY := max(minY+1, s.scroll.Max.Y)
+		y = clamp(s.scroll.Min.Y+y, minY, maxY-1)
+	}
+	s.cur.X, s.cur.Y = x, y
+
+	if s.cb.CursorPosition != nil && (old.X != x || old.Y != y) {
+		s.cb.CursorPosition(old, uv.Pos(x, y))
+	}
+}
+
+// moveCursor moves the cursor by the given x and y deltas. If the cursor
+// position is inside the scroll region, it is bounded by the scroll region.
+// Otherwise, it is bounded by the screen bounds.
+// This follows how [ansi.CUU], [ansi.CUD], [ansi.CUF], [ansi.CUB], [ansi.CNL],
+// [ansi.CPL].
+func (s *screen) moveCursor(dx, dy int) {
+	scroll := s.scroll
+	old := s.cur.Position
+	if old.X < scroll.Min.X {
+		scroll.Min.X = 0
+	}
+	if old.X >= scroll.Max.X {
+		scroll.Max.X = s.buf.Width()
+	}
+
+	pt := uv.Pos(s.cur.X+dx, s.cur.Y+dy)
+
+	var x, y int
+	if old.In(scroll) {
+		y = clamp(pt.Y, scroll.Min.Y, scroll.Max.Y-1)
+		x = clamp(pt.X, scroll.Min.X, scroll.Max.X-1)
+	} else {
+		y = clamp(pt.Y, 0, s.buf.Height()-1)
+		x = clamp(pt.X, 0, s.buf.Width()-1)
+	}
+
+	s.cur.X, s.cur.Y = x, y
+
+	if s.cb.CursorPosition != nil && (old.X != x || old.Y != y) {
+		s.cb.CursorPosition(old, uv.Pos(x, y))
+	}
+}
+
+// Cursor returns the cursor.
+func (s *screen) Cursor() Cursor {
+	return s.cur
+}
+
+// CursorPosition returns the cursor position.
+func (s *screen) CursorPosition() (x, y int) {
+	return s.cur.X, s.cur.Y
+}
+
+// ScrollRegion returns the scroll region.
+func (s *screen) ScrollRegion() uv.Rectangle {
+	return s.scroll
+}
+
+// SaveCursor saves the cursor.
+func (s *screen) SaveCursor() {
+	s.saved = s.cur
+}
+
+// savedExtras is the part of the saved cursor that does not live in [Cursor]:
+// the pending-wrap flag and origin mode. xterm's DECSC documentation lists both
+// among what is saved, and they are per-screen because the alternate screen has
+// its own saved cursor.
+//
+// The character set selection is saved here too, once per screen. It used to
+// be held once for the emulator, so a DECSC on the alternate screen replaced
+// the shell's selection, and leaving with 1049 gave the program's sets to the
+// shell. Zero designator bytes read as US ASCII.
+type savedExtras struct {
+	phantom    bool
+	origin     bool
+	charsets   [4]CharSet
+	charsetIDs [4]byte
+	gl, gr     int
+}
+
+// RestoreCursor restores the cursor.
+//
+// The saved position is clamped to the screen, because the screen may not be
+// the one it was saved on. A guest saves the cursor, the window is resized,
+// and the guest restores: that is what every full-screen program does across a
+// window resize, and without the clamp it comes back to a column the screen no
+// longer has. Everything downstream then reads a cursor that is off the grid.
+func (s *screen) RestoreCursor() {
+	old := s.cur.Position
+	s.cur = s.saved
+	s.cur.X = clamp(s.cur.X, 0, max(s.buf.Width()-1, 0))
+	s.cur.Y = clamp(s.cur.Y, 0, max(s.buf.Height()-1, 0))
+
+	if s.cb.CursorPosition != nil && (old.X != s.cur.X || old.Y != s.cur.Y) {
+		s.cb.CursorPosition(old, s.cur.Position)
+	}
+}
+
+// setCursorHidden sets the cursor hidden.
+func (s *screen) setCursorHidden(hidden bool) {
+	changed := s.cur.Hidden != hidden
+	s.cur.Hidden = hidden
+	if changed && s.cb.CursorVisibility != nil {
+		s.cb.CursorVisibility(!hidden)
+	}
+}
+
+// cursorPen returns the cursor pen.
+func (s *screen) cursorPen() uv.Style {
+	return s.cur.Pen
+}
+
+// cursorLink returns the cursor link.
+func (s *screen) cursorLink() uv.Link {
+	return s.cur.Link
+}
+
+// ShowCursor shows the cursor.
+func (s *screen) ShowCursor() {
+	s.setCursorHidden(false)
+}
+
+// HideCursor hides the cursor.
+func (s *screen) HideCursor() {
+	s.setCursorHidden(true)
+}
+
+// InsertCell inserts n blank characters at the cursor position pushing out
+// cells to the right and out of the screen.
+func (s *screen) InsertCell(n int) {
+	s.insertCellAt(s.cur.X, s.cur.Y, n)
+}
+
+// insertCellAt is InsertCell at an explicit position. The print path under IRM
+// needs it: a wrap can have moved the cell it is about to write away from where
+// the cursor still sits, and moving the cursor first would fire the position
+// callback for a step that is not a cursor movement.
+func (s *screen) insertCellAt(x, y, n int) {
+	if n <= 0 {
+		return
+	}
+
+	line, n, ok := s.shiftBounds(x, y, n)
+	if !ok {
+		return
+	}
+	right := s.scroll.Max.X
+
+	// Copied by assignment rather than through the buffer's Set, which blanks
+	// the other half of any wide rune it lands on. That is right for an
+	// overwrite but ruinous inside a shift, where the cells being moved are
+	// still live: blanking the neighbour of a cell that has just been copied
+	// erases the copy, and a single shift over a line of CJK empties the line.
+	for i := right - 1; i >= x+n; i-- {
+		line[i] = line[i-n]
+	}
+	blank := s.blankCell()
+	for i := x; i < x+n; i++ {
+		putBlank(line, i, blank)
+	}
+	repairWide(line)
+	s.buf.shiftProtected(y, x+n, x, right-x-n)
+	s.buf.clearProtected(y, x, x+n)
+}
+
+// DeleteCell deletes n cells at the cursor position moving cells to the left.
+// This has no effect if the cursor is outside the scroll region.
+func (s *screen) DeleteCell(n int) {
+	if n <= 0 {
+		return
+	}
+
+	x, y := s.cur.X, s.cur.Y
+	line, n, ok := s.shiftBounds(x, y, n)
+	if !ok {
+		return
+	}
+	right := s.scroll.Max.X
+
+	for i := x; i < right-n; i++ {
+		line[i] = line[i+n]
+	}
+	blank := s.blankCell()
+	for i := right - n; i < right; i++ {
+		putBlank(line, i, blank)
+	}
+	repairWide(line)
+	s.buf.shiftProtected(y, x, x+n, right-x-n)
+	s.buf.clearProtected(y, right-n, right)
+	// The text that wrapped has been pulled off the row's end. ghostty
+	// clears the row's wrap flag on DCH as well.
+	s.buf.setSoftWrapped(y, false)
+}
+
+// shiftBounds validates a cell shift at (x, y) and returns the row it operates
+// on together with the count clamped to the space between x and the right
+// margin. It reports false when the position is outside the margins or the
+// screen, which is the case every caller treats as a no-op, and also when the
+// row has never been written and the shift would only move blanks into
+// blanks.
+func (s *screen) shiftBounds(x, y, n int) (uv.Line, int, bool) {
+	area := s.scroll
+	if n <= 0 || y < area.Min.Y || y >= area.Max.Y || y >= s.buf.Height() ||
+		x < area.Min.X || x >= area.Max.X || x >= s.buf.Width() {
+		return nil, 0, false
+	}
+	if x+n > area.Max.X {
+		n = area.Max.X - x
+	}
+	if s.buf.Row(y) == nil && s.blankCell() == nil {
+		return nil, 0, false
+	}
+	return s.buf.row(y), n, true
+}
+
+// putBlank overwrites one column with the erase cell. Like the shift itself it
+// assigns rather than calling Set, because the columns it fills have already
+// been vacated and any wide rune the fill cuts is dealt with by repairWide.
+func putBlank(line uv.Line, x int, blank *uv.Cell) {
+	if blank == nil {
+		line[x] = uv.EmptyCell
+		return
+	}
+	line[x] = *blank
+}
+
+// repairWide blanks every half of a wide rune whose partner a shift left
+// behind. A rune that moved by an odd number of columns, or whose second half
+// fell off the right margin, leaves a cell claiming a column it no longer
+// shares with anything; a terminal has no way to draw that, so both ends of the
+// broken pair become spaces.
+//
+// One pass afterwards is deliberate. Proving which end of which shift can orphan
+// which half is fiddly and easy to get subtly wrong, whereas the invariant here
+// (a lead of width w is followed by exactly w-1 continuation cells, and no
+// continuation stands alone) is stated once and checked over the whole row.
+func repairWide(line uv.Line) {
+	for i := 0; i < len(line); i++ {
+		w := line[i].Width
+		switch {
+		case w > 1:
+			whole := true
+			for j := 1; j < w; j++ {
+				if i+j >= len(line) || line[i+j].Width != 0 {
+					whole = false
+					break
+				}
+			}
+			if !whole {
+				line[i].Empty()
+				continue
+			}
+			i += w - 1
+		case w == 0:
+			// Reached without being skipped over above, so there is no lead in
+			// front of it.
+			line[i].Empty()
+		}
+	}
+}
+
+// ScrollUp scrolls the content up n lines within the given region. Lines
+// scrolled past the top margin are saved to the scrollback buffer if the
+// scroll region encompasses the full screen width and starts at the top.
+// This is equivalent to [ansi.SU] which moves the cursor to the top margin
+// and performs a [ansi.DL] operation.
+func (s *screen) ScrollUp(n int) {
+	if n <= 0 {
+		return
+	}
+
+	scroll := s.scroll
+	width := s.buf.Width()
+
+	// Only save to scrollback if we're scrolling the main screen area
+	// (not a limited scroll region) and the scroll region starts at Y=0
+	save := s.scrollback != nil && scroll.Min.Y == 0 && scroll.Min.X == 0 && scroll.Dx() == width
+
+	x, y := s.CursorPosition()
+	s.setCursor(s.cur.X, 0, true)
+	if !s.rotateWholeScreenUp(n, save) {
+		// The rotation did not apply, so the departing rows stay where they are
+		// and have to be copied out before DeleteLine overwrites them.
+		if save {
+			for i := 0; i < n && i < scroll.Dy(); i++ {
+				s.scrollback.PushLine(s.buf.withTail(scroll.Min.Y+i, extractLine(s.buf, scroll.Min.Y+i, width)))
+				s.scrollback.markNewest(s.buf.wrap[scroll.Min.Y+i])
+			}
+		}
+		s.DeleteLine(n)
+	}
+	s.setCursor(x, y, false)
+}
+
+// rotateWholeScreenUp scrolls the whole buffer up n lines by moving line
+// headers instead of cells, and reports whether it applied.
+//
+// It only applies when the scroll region is the entire buffer, which is what a
+// shell printing output uses and so is the overwhelming majority of scrolls. A
+// limited region (DECSTBM) still goes through Buffer.DeleteLineArea.
+//
+// The cost being avoided is real: DeleteLineArea copies every cell of the
+// region up one row in a nested loop, and a uv.Cell is 112 bytes carrying three
+// colour interfaces and three strings, so one newline at 207x55 is 11,178
+// struct copies each with a pointer write barrier, and the garbage collector
+// then scans all of it. Rotating touches the rows themselves and reuses the
+// slices that fall off the top as the new blank rows at the bottom, so nothing
+// is allocated and no cell moves.
+//
+// When save is set, the rows leaving the top go straight into the scrollback
+// instead of being copied there first, and the storage the ring evicts in
+// exchange becomes the new blank rows at the bottom. In the steady state of a
+// pane printing output that is a pure swap: no line is allocated and no cell is
+// copied for a scroll that also has to be retained. The ownership rule is the
+// one extractLine already established, that the ring holds a line nothing else
+// writes; the only new part is that the screen takes back storage the ring has
+// finished with.
+//
+// A row that has never been written is nil in the grid. It is retained as a
+// blank line of the screen's width, and it stays nil at the bottom unless the
+// blank it has to be filled with carries a background colour.
+func (s *screen) rotateWholeScreenUp(n int, save bool) bool {
+	lines := s.buf.rows
+	height := len(lines)
+	area := s.scroll
+	if height == 0 || area.Min.X != 0 || area.Min.Y != 0 ||
+		area.Max.Y != height || area.Dx() != s.buf.Width() {
+		return false
+	}
+
+	// A scroll of the whole screen or more clears it; there is nothing to move.
+	if n >= height {
+		n = height
+	}
+
+	// The rows leaving the top go to the scrollback first, while they and
+	// their extents, wrap flags and tails are still at the top. The
+	// scrollback packs its own copy of each, so the row's storage stays with
+	// the screen and comes back as a blank row at the bottom, and the common
+	// case (one line, printing output) allocates only what the ring keeps.
+	if save {
+		for i, row := range lines[:n] {
+			if row == nil {
+				s.scrollback.PushBlankLine(s.buf.Width())
+			} else {
+				if t := s.buf.rowTail(i); len(t) > 0 {
+					s.scrollback.PushLine(s.buf.withTail(i, row))
+				} else {
+					s.scrollback.pushTrimmed(row, s.buf.ext[i])
+				}
+			}
+			s.scrollback.markNewest(s.buf.wrap[i])
+		}
+	}
+	s.buf.scrollWindow(n)
+
+	s.buf.blankRows(height-n, height, s.blankCell())
+	return true
+}
+
+// ScrollDown scrolls the content down n lines within the given region. Lines
+// scrolled past the bottom margin are lost. This is equivalent to [ansi.SD]
+// which moves the cursor to top margin and performs a [ansi.IL] operation.
+func (s *screen) ScrollDown(n int) {
+	x, y := s.CursorPosition()
+	s.setCursor(s.cur.X, 0, true)
+	s.InsertLine(n)
+	s.setCursor(x, y, false)
+}
+
+// InsertLine inserts n blank lines at the cursor position Y coordinate.
+// Only operates if cursor is within scroll region. Lines below cursor Y
+// are moved down, with those past bottom margin being discarded.
+// It returns true if the operation was successful.
+func (s *screen) InsertLine(n int) bool {
+	if n <= 0 {
+		return false
+	}
+
+	x, y := s.cur.X, s.cur.Y
+
+	// Only operate if cursor Y is within scroll region
+	if y < s.scroll.Min.Y || y >= s.scroll.Max.Y ||
+		x < s.scroll.Min.X || x >= s.scroll.Max.X {
+		return false
+	}
+
+	s.buf.InsertLineArea(y, n, s.blankCell(), s.scroll)
+	s.blankWideRunesCutByMargins()
+
+	return true
+}
+
+// DeleteLine deletes n lines at the cursor position Y coordinate.
+// Only operates if cursor is within scroll region. Lines below cursor Y
+// are moved up, with blank lines inserted at the bottom of scroll region.
+// It returns true if the operation was successful.
+func (s *screen) DeleteLine(n int) bool {
+	if n <= 0 {
+		return false
+	}
+
+	scroll := s.scroll
+	x, y := s.cur.X, s.cur.Y
+
+	// Only operate if cursor Y is within scroll region
+	if y < scroll.Min.Y || y >= scroll.Max.Y ||
+		x < scroll.Min.X || x >= scroll.Max.X {
+		return false
+	}
+
+	s.buf.DeleteLineArea(y, n, s.blankCell(), scroll)
+	s.blankWideRunesCutByMargins()
+
+	return true
+}
+
+// blankWideRunesCutByMargins clears the halves of double-width runes that a
+// margin-bounded line shift severed.
+//
+// With DECLRMM margins narrower than the screen, InsertLineArea and
+// DeleteLineArea move only the cells between the margins, so a rune
+// straddling a margin loses one half: a lead left standing claims two columns
+// and every reader draws the row one cell too wide, and an orphaned
+// continuation is a cell no renderer emits, which shifts the rest of the row
+// left. Blanking both halves is what the resize path already does to a rune
+// it cuts, and what ghostty does.
+func (s *screen) blankWideRunesCutByMargins() {
+	w := s.buf.Width()
+	for _, x := range [2]int{s.scroll.Min.X, s.scroll.Max.X} {
+		if x <= 0 || x >= w {
+			continue
+		}
+		for y := s.scroll.Min.Y; y < s.scroll.Max.Y; y++ {
+			if lead := s.buf.CellAt(x-1, y); lead != nil && lead.Width > 1 {
+				// Blanking the lead empties its whole old span, and the seam
+				// column may hold a freshly shifted cell rather than this
+				// lead's continuation; put such a cell back afterwards.
+				var keep *uv.Cell
+				if c := s.buf.CellAt(x, y); c != nil && (c.Width != 0 || c.Content != "") {
+					saved := *c
+					keep = &saved
+				}
+				s.buf.SetCell(x-1, y, nil)
+				if keep != nil {
+					s.buf.SetCell(x, y, keep)
+				}
+			}
+			if cont := s.buf.CellAt(x, y); cont != nil && cont.Width == 0 && cont.Content == "" {
+				s.buf.SetCell(x, y, nil)
+			}
+		}
+	}
+}
+
+// withBlankPen runs fn with the pen background cleared, so any erase or scroll
+// it performs leaves default-background cells behind instead of inheriting the
+// guest's colour. For screen edits tuios synthesises rather than replays.
+func (s *screen) withBlankPen(fn func()) {
+	bg := s.cur.Pen.Bg
+	s.cur.Pen.Bg = nil
+	defer func() { s.cur.Pen.Bg = bg }()
+	fn()
+}
+
+// blankCell returns the cursor blank cell with the background color set to the
+// current pen background color. If the pen background color is nil, the return
+// value is nil.
+func (s *screen) blankCell() *uv.Cell {
+	if s.cur.Pen.Bg == nil {
+		return nil
+	}
+
+	c := uv.EmptyCell
+	c.Style.Bg = s.cur.Pen.Bg
+	return &c
+}
+
+// Scrollback returns the scrollback buffer for this screen.
+func (s *screen) Scrollback() *Scrollback {
+	return s.scrollback
+}
+
+// DisableScrollback drops this screen's scrollback ring, so lines scrolled off
+// the top are discarded instead of retained. Every other scrollback method here
+// already tolerates the nil, and ScrollUp checks it before pushing.
+func (s *screen) DisableScrollback() {
+	s.scrollback = nil
+}
+
+// ClearScrollback clears all lines from the scrollback buffer.
+func (s *screen) ClearScrollback() {
+	if s.scrollback != nil {
+		s.scrollback.Clear()
+	}
+}
+
+// ScrollbackLen returns the number of lines currently in the scrollback buffer.
+func (s *screen) ScrollbackLen() int {
+	if s.scrollback == nil {
+		return 0
+	}
+	return s.scrollback.Len()
+}
+
+// ScrollbackLine returns the line at the specified index in the scrollback buffer.
+// Index 0 is the oldest line. Returns nil if the index is out of bounds.
+func (s *screen) ScrollbackLine(index int) uv.Line {
+	if s.scrollback == nil {
+		return nil
+	}
+	return s.scrollback.Line(index)
+}
+
+// SetScrollbackMaxLines sets the maximum number of lines for the scrollback buffer.
+func (s *screen) SetScrollbackMaxLines(maxLines int) {
+	if s.scrollback != nil {
+		s.scrollback.SetMaxLines(maxLines)
+	}
+}

@@ -1,0 +1,6 @@
+# Retained upstream source hashes require byte-identical checkouts on all hosts.
+webmux/server/internal/thirdparty/vt/** -text
+# Terminal recordings and Unicode test data contain significant whitespace.
+webmux/server/internal/thirdparty/vt/testdata/*.raw binary -whitespace
+webmux/server/internal/thirdparty/vt/testdata/corpus/*.bin binary -whitespace
+webmux/server/internal/thirdparty/vt/testdata/unicode/*.txt -whitespace

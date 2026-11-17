@@ -1,0 +1,1155 @@
+package vt
+
+import (
+	"fmt"
+	"io"
+	"slices"
+
+	"github.com/charmbracelet/x/ansi"
+	"tuios.dev/progstatus"
+)
+
+// DcsHandler is a function that handles a DCS escape sequence.
+type DcsHandler func(params ansi.Params, data []byte) bool
+
+// CsiHandler is a function that handles a CSI escape sequence.
+type CsiHandler func(params ansi.Params) bool
+
+// OscHandler is a function that handles an OSC escape sequence.
+type OscHandler func(data []byte) bool
+
+// ApcHandler is a function that handles an APC escape sequence.
+type ApcHandler func(data []byte) bool
+
+// SosHandler is a function that handles an SOS escape sequence.
+type SosHandler func(data []byte) bool
+
+// PmHandler is a function that handles a PM escape sequence.
+type PmHandler func(data []byte) bool
+
+// EscHandler is a function that handles an ESC escape sequence.
+type EscHandler func() bool
+
+// CcHandler is a function that handles a control character.
+type CcHandler func() bool
+
+// handlers contains the terminal's escape sequence handlers.
+type handlers struct {
+	// ccHandlers is indexed by the control byte. It is an array rather than
+	// a map because a flood of short lines looks one up for every CR and LF,
+	// and hashing the byte key cost about 13% of the process under `yes`.
+	ccHandlers  [256][]CcHandler
+	dcsHandlers map[int][]DcsHandler
+	csiHandlers map[int][]CsiHandler
+	oscHandlers map[int][]OscHandler
+	escHandler  map[int][]EscHandler
+	apcHandlers []ApcHandler
+	sosHandlers []SosHandler
+	pmHandlers  []PmHandler
+}
+
+// RegisterDcsHandler registers a DCS escape sequence handler.
+func (h *handlers) RegisterDcsHandler(cmd int, handler DcsHandler) {
+	h.dcsHandlers[cmd] = append(h.dcsHandlers[cmd], handler)
+}
+
+// RegisterCsiHandler registers a CSI escape sequence handler.
+func (h *handlers) RegisterCsiHandler(cmd int, handler CsiHandler) {
+	h.csiHandlers[cmd] = append(h.csiHandlers[cmd], handler)
+}
+
+// RegisterOscHandler registers an OSC escape sequence handler.
+func (h *handlers) RegisterOscHandler(cmd int, handler OscHandler) {
+	h.oscHandlers[cmd] = append(h.oscHandlers[cmd], handler)
+}
+
+// RegisterApcHandler registers an APC escape sequence handler.
+func (h *handlers) RegisterApcHandler(handler ApcHandler) {
+	h.apcHandlers = append(h.apcHandlers, handler)
+}
+
+// RegisterSosHandler registers an SOS escape sequence handler.
+func (h *handlers) RegisterSosHandler(handler SosHandler) {
+	h.sosHandlers = append(h.sosHandlers, handler)
+}
+
+// RegisterPmHandler registers a PM escape sequence handler.
+func (h *handlers) RegisterPmHandler(handler PmHandler) {
+	h.pmHandlers = append(h.pmHandlers, handler)
+}
+
+// RegisterEscHandler registers an ESC escape sequence handler.
+func (h *handlers) RegisterEscHandler(cmd int, handler EscHandler) {
+	h.escHandler[cmd] = append(h.escHandler[cmd], handler)
+}
+
+// registerCcHandler registers a control character handler.
+func (h *handlers) registerCcHandler(r byte, handler CcHandler) {
+	h.ccHandlers[r] = append(h.ccHandlers[r], handler)
+}
+
+// handleCc handles a control character.
+// It returns true if the control character was handled.
+func (h *handlers) handleCc(r byte) bool {
+	// Reverse iterate over the handlers so that the last registered handler
+	// is the first to be called.
+	hs := h.ccHandlers[r]
+	for _, h := range slices.Backward(hs) {
+		if h() {
+			return true
+		}
+	}
+	return false
+}
+
+// handleDcs handles a DCS escape sequence.
+// It returns true if the sequence was handled.
+func (h *handlers) handleDcs(cmd ansi.Cmd, params ansi.Params, data []byte) bool {
+	// Reverse iterate over the handlers so that the last registered handler
+	// is the first to be called.
+	if handlers, ok := h.dcsHandlers[int(cmd)]; ok {
+		for _, handler := range slices.Backward(handlers) {
+			if handler(params, data) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// handleCsi handles a CSI escape sequence.
+// It returns true if the sequence was handled.
+func (h *handlers) handleCsi(cmd ansi.Cmd, params ansi.Params) bool {
+	// Reverse iterate over the handlers so that the last registered handler
+	// is the first to be called.
+	if handlers, ok := h.csiHandlers[int(cmd)]; ok {
+		for _, handler := range slices.Backward(handlers) {
+			if handler(params) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// handleOsc handles an OSC escape sequence.
+// It returns true if the sequence was handled.
+func (h *handlers) handleOsc(cmd int, data []byte) bool {
+	// Reverse iterate over the handlers so that the last registered handler
+	// is the first to be called.
+	if handlers, ok := h.oscHandlers[cmd]; ok {
+		for _, handler := range slices.Backward(handlers) {
+			if handler(data) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// handleApc handles an APC escape sequence.
+// It returns true if the sequence was handled.
+func (h *handlers) handleApc(data []byte) bool {
+	// Reverse iterate over the handlers so that the last registered handler
+	// is the first to be called.
+	for _, v := range slices.Backward(h.apcHandlers) {
+		if v(data) {
+			return true
+		}
+	}
+	return false
+}
+
+// handleSos handles an SOS escape sequence.
+// It returns true if the sequence was handled.
+func (h *handlers) handleSos(data []byte) bool {
+	// Reverse iterate over the handlers so that the last registered handler
+	// is the first to be called.
+	for _, v := range slices.Backward(h.sosHandlers) {
+		if v(data) {
+			return true
+		}
+	}
+	return false
+}
+
+// handlePm handles a PM escape sequence.
+// It returns true if the sequence was handled.
+func (h *handlers) handlePm(data []byte) bool {
+	// Reverse iterate over the handlers so that the last registered handler
+	// is the first to be called.
+	for _, v := range slices.Backward(h.pmHandlers) {
+		if v(data) {
+			return true
+		}
+	}
+	return false
+}
+
+// handleEsc handles an ESC escape sequence.
+// It returns true if the sequence was handled.
+func (h *handlers) handleEsc(cmd int) bool {
+	// Reverse iterate over the handlers so that the last registered handler
+	// is the first to be called.
+	if handlers, ok := h.escHandler[cmd]; ok {
+		for _, handler := range slices.Backward(handlers) {
+			if handler() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// registerDefaultHandlers registers the default escape sequence handlers.
+func (e *Emulator) registerDefaultHandlers() {
+	e.registerDefaultCcHandlers()
+	e.registerDefaultCsiHandlers()
+	e.registerDefaultEscHandlers()
+	e.registerDefaultOscHandlers()
+	e.registerReportHandlers()
+}
+
+// registerDefaultCcHandlers registers the default control character handlers.
+func (e *Emulator) registerDefaultCcHandlers() {
+	for i := byte(ansi.NUL); i <= ansi.US; i++ {
+		switch i {
+		case ansi.NUL: // Null [ansi.NUL]
+			// Ignored
+			e.registerCcHandler(i, func() bool {
+				return true
+			})
+		case ansi.BEL: // Bell [ansi.BEL]
+			e.registerCcHandler(i, func() bool {
+				if e.cb.Bell != nil {
+					e.cb.Bell()
+				}
+				return true
+			})
+		case ansi.BS: // Backspace [ansi.BS]
+			e.registerCcHandler(i, func() bool {
+				e.backspace()
+				return true
+			})
+		case ansi.HT: // Horizontal Tab [ansi.HT]
+			e.registerCcHandler(i, func() bool {
+				e.nextTab(1)
+				return true
+			})
+		case ansi.LF, ansi.VT, ansi.FF:
+			// Line Feed [ansi.LF]
+			// Vertical Tab [ansi.VT]
+			// Form Feed [ansi.FF]
+			e.registerCcHandler(i, func() bool {
+				e.linefeed()
+				return true
+			})
+		case ansi.CR: // Carriage Return [ansi.CR]
+			e.registerCcHandler(i, func() bool {
+				e.carriageReturn()
+				return true
+			})
+		case ansi.SO: // Shift Out [ansi.SO], locking shift to G1
+			e.registerCcHandler(i, func() bool {
+				e.gl = 1
+				return true
+			})
+		case ansi.SI: // Shift In [ansi.SI], locking shift back to G0
+			e.registerCcHandler(i, func() bool {
+				e.gl = 0
+				return true
+			})
+		}
+	}
+
+	for i := byte(ansi.PAD); i <= byte(ansi.APC); i++ {
+		switch i {
+		case ansi.HTS: // Horizontal Tab Set [ansi.HTS]
+			e.registerCcHandler(i, func() bool {
+				e.horizontalTabSet()
+				return true
+			})
+		case ansi.RI: // Reverse Index [ansi.RI]
+			e.registerCcHandler(i, func() bool {
+				e.reverseIndex()
+				return true
+			})
+		case ansi.IND: // Index [ansi.IND]
+			e.registerCcHandler(i, func() bool {
+				e.index()
+				return true
+			})
+		case ansi.SS2: // Single Shift 2 [ansi.SS2]
+			e.registerCcHandler(i, func() bool {
+				e.gsingle = 2
+				return true
+			})
+		case ansi.SS3: // Single Shift 3 [ansi.SS3]
+			e.registerCcHandler(i, func() bool {
+				e.gsingle = 3
+				return true
+			})
+		}
+	}
+}
+
+// registerDefaultOscHandlers registers the default OSC escape sequence handlers.
+func (e *Emulator) registerDefaultOscHandlers() {
+	for _, cmd := range []int{
+		0, // Set window title and icon name
+		1, // Set icon name
+		2, // Set window title
+	} {
+		e.RegisterOscHandler(cmd, func(data []byte) bool {
+			e.handleTitle(cmd, data)
+			return true
+		})
+	}
+
+	e.RegisterOscHandler(7, func(data []byte) bool {
+		// Report the shell current working directory
+		// [ansi.NotifyWorkingDirectory].
+		e.handleWorkingDirectory(7, data)
+		return true
+	})
+
+	e.RegisterOscHandler(8, func(data []byte) bool {
+		// Set/Query Hyperlink [ansi.SetHyperlink]
+		e.handleHyperlink(8, data)
+		return true
+	})
+
+	for _, cmd := range []int{
+		10,  // Set/Query foreground color
+		11,  // Set/Query background color
+		12,  // Set/Query cursor color
+		110, // Reset foreground color
+		111, // Reset background color
+		112, // Reset cursor color
+	} {
+		e.RegisterOscHandler(cmd, func(data []byte) bool {
+			e.handleDefaultColor(cmd, data)
+			return true
+		})
+	}
+
+	// OSC 4: Set/Query indexed color palette
+	e.RegisterOscHandler(4, func(data []byte) bool {
+		e.handlePaletteColor(data)
+		return true
+	})
+
+	// OSC 104: Reset indexed colors the guest set with OSC 4
+	e.RegisterOscHandler(104, func(data []byte) bool {
+		e.handleResetPaletteColor(data)
+		return true
+	})
+
+	// OSC 52: Clipboard operations (query/set)
+	e.RegisterOscHandler(52, func(data []byte) bool {
+		e.handleClipboard(data)
+		return true
+	})
+
+	// OSC 66: Kitty text sizing protocol
+	// We can't render scaled text in a cell-grid multiplexer, but we extract
+	// the text content and display it at normal size so it doesn't vanish.
+	e.RegisterOscHandler(66, func(data []byte) bool {
+		e.handleTextSizing(data)
+		return true
+	})
+
+	// OSC 133: Semantic prompt / shell integration (FinalTerm)
+	e.RegisterOscHandler(133, func(data []byte) bool {
+		e.handleSemanticZone(data)
+		return true
+	})
+
+	// OSC 9: iTerm2 desktop notification
+	e.RegisterOscHandler(9, func(data []byte) bool {
+		return e.handleNotify9(data)
+	})
+
+	// OSC 777: urxvt desktop notification
+	e.RegisterOscHandler(777, func(data []byte) bool {
+		return e.handleNotify777(data)
+	})
+
+	// OSC 7501: Program Status Protocol
+	e.RegisterOscHandler(progstatus.Command, func(data []byte) bool {
+		e.handleProgramStatus(data)
+		return true
+	})
+
+	// OSC 99: kitty desktop notification
+	e.RegisterOscHandler(99, func(data []byte) bool {
+		return e.handleNotify99(data)
+	})
+}
+
+// registerDefaultEscHandlers registers the default ESC escape sequence handlers.
+func (e *Emulator) registerDefaultEscHandlers() {
+	e.RegisterEscHandler('=', func() bool {
+		// Keypad Application Mode [ansi.DECKPAM]
+		e.setMode(ansi.ModeNumericKeypad, ansi.ModeSet)
+		return true
+	})
+
+	e.RegisterEscHandler('>', func() bool {
+		// Keypad Numeric Mode [ansi.DECKPNM]
+		e.setMode(ansi.ModeNumericKeypad, ansi.ModeReset)
+		return true
+	})
+
+	e.RegisterEscHandler('7', func() bool {
+		// Save Cursor [ansi.DECSC]. The saved state is the cursor, its pen, and
+		// the character set selection: a program that designates the
+		// line-drawing set, saves, prints text elsewhere and restores expects
+		// to be drawing lines again, and DEC specifies it that way.
+		e.saveCursor()
+		return true
+	})
+
+	e.RegisterEscHandler('8', func() bool {
+		// Restore Cursor [ansi.DECRC]
+		e.restoreCursor()
+		return true
+	})
+
+	for _, cmd := range []int{
+		ansi.Command(0, '(', 'A'), // UK G0
+		ansi.Command(0, ')', 'A'), // UK G1
+		ansi.Command(0, '*', 'A'), // UK G2
+		ansi.Command(0, '+', 'A'), // UK G3
+		ansi.Command(0, '(', 'B'), // USASCII G0
+		ansi.Command(0, ')', 'B'), // USASCII G1
+		ansi.Command(0, '*', 'B'), // USASCII G2
+		ansi.Command(0, '+', 'B'), // USASCII G3
+		ansi.Command(0, '(', '0'), // Special G0
+		ansi.Command(0, ')', '0'), // Special G1
+		ansi.Command(0, '*', '0'), // Special G2
+		ansi.Command(0, '+', '0'), // Special G3
+	} {
+		e.RegisterEscHandler(cmd, func() bool {
+			// Select Character Set [ansi.SCS]
+			c := ansi.Cmd(cmd)
+			set := c.Intermediate() - '('
+			switch c.Final() {
+			case 'A': // UK Character Set
+				e.charsets[set] = charsetUK
+			case 'B': // USASCII Character Set
+				e.charsets[set] = nil // USASCII is the default
+			case '0': // Special Drawing Character Set
+				e.charsets[set] = charsetSpecialDrawing
+			default:
+				return false
+			}
+			// Recorded alongside, because a CharSet is a map and cannot be
+			// compared back to the set it came from. A snapshot has to name
+			// which set is selected, not carry the mapping.
+			e.charsetIDs[set] = byte(c.Final())
+			return true
+		})
+	}
+
+	e.RegisterEscHandler('D', func() bool {
+		// Index [ansi.IND]
+		e.index()
+		return true
+	})
+
+	e.RegisterEscHandler('E', func() bool {
+		// Next Line [ansi.NEL]. terminfo names it `nel`, so it reaches the
+		// emulator from anything that moves down a line through terminfo rather
+		// than by writing CR LF itself.
+		e.index()
+		e.carriageReturn()
+		return true
+	})
+
+	e.RegisterEscHandler('H', func() bool {
+		// Horizontal Tab Set [ansi.HTS]
+		e.horizontalTabSet()
+		return true
+	})
+
+	e.RegisterEscHandler('M', func() bool {
+		// Reverse Index [ansi.RI]
+		e.reverseIndex()
+		return true
+	})
+
+	e.RegisterEscHandler(ansi.Command(0, '#', '8'), func() bool {
+		// Screen Alignment Pattern [ansi.DECALN]. vttest opens with it, and a
+		// terminal that ignores it reports a blank screen for every alignment
+		// check that follows.
+		e.screenAlignmentPattern()
+		return true
+	})
+
+	e.RegisterEscHandler('\\', func() bool {
+		// String Terminator [ansi.ST]. A parser that has already closed the
+		// string it belonged to sees this on its own, and it means nothing
+		// there. Recognising it keeps a legitimate terminator out of the log of
+		// sequences the emulator did not understand, which is a signal worth
+		// keeping clean.
+		return true
+	})
+
+	e.RegisterEscHandler('c', func() bool {
+		// Reset Initial State [ansi.RIS]
+		e.fullReset()
+		// A full reset removes every OSC 7501 record. A soft reset does not.
+		if e.cb.ProgramStatus != nil {
+			e.cb.ProgramStatus(progstatus.Event{Reset: true})
+		}
+		return true
+	})
+
+	e.RegisterEscHandler('N', func() bool {
+		// Single Shift 2 [ansi.SS2]. The eight-bit form is registered with the
+		// other C1 controls; a guest that has not asked for eight-bit controls
+		// sends this one, which is nearly all of them.
+		e.gsingle = 2
+		return true
+	})
+
+	e.RegisterEscHandler('O', func() bool {
+		// Single Shift 3 [ansi.SS3]
+		e.gsingle = 3
+		return true
+	})
+
+	e.RegisterEscHandler('n', func() bool {
+		// Locking Shift G2 [ansi.LS2]
+		e.gl = 2
+		return true
+	})
+
+	e.RegisterEscHandler('o', func() bool {
+		// Locking Shift G3 [ansi.LS3]
+		e.gl = 3
+		return true
+	})
+
+	e.RegisterEscHandler('|', func() bool {
+		// Locking Shift 3 Right [ansi.LS3R]
+		e.gr = 3
+		return true
+	})
+
+	e.RegisterEscHandler('}', func() bool {
+		// Locking Shift 2 Right [ansi.LS2R]
+		e.gr = 2
+		return true
+	})
+
+	e.RegisterEscHandler('~', func() bool {
+		// Locking Shift 1 Right [ansi.LS1R]
+		e.gr = 1
+		return true
+	})
+}
+
+// csiCount reads a CSI parameter whose default and minimum are both one.
+//
+// Reading it with a default of 1 is not enough. A missing parameter comes back
+// as the default, but an explicit zero comes back as zero, and every one of
+// these operations treats a zero as a one: a program that computes a count and
+// gets zero still means "once" as far as xterm and everything that followed it
+// is concerned. Letting the zero through instead makes the operation do
+// nothing: `CSI 0 C` would not move the cursor.
+func csiCount(params ansi.Params, i int) int {
+	n, _, _ := params.Param(i, 1)
+	if n < 1 {
+		return 1
+	}
+	return n
+}
+
+// registerDefaultCsiHandlers registers the default CSI escape sequence handlers.
+func (e *Emulator) registerDefaultCsiHandlers() {
+	e.RegisterCsiHandler('@', func(params ansi.Params) bool {
+		// Insert Character [ansi.ICH]
+		n := csiCount(params, 0)
+		e.scr.InsertCell(n)
+		return true
+	})
+
+	e.RegisterCsiHandler('A', func(params ansi.Params) bool {
+		// Cursor Up [ansi.CUU]
+		n := csiCount(params, 0)
+		e.moveCursor(0, -n)
+		return true
+	})
+
+	e.RegisterCsiHandler('B', func(params ansi.Params) bool {
+		// Cursor Down [ansi.CUD]
+		n := csiCount(params, 0)
+		e.moveCursor(0, n)
+		return true
+	})
+
+	e.RegisterCsiHandler('C', func(params ansi.Params) bool {
+		// Cursor Forward [ansi.CUF]
+		n := csiCount(params, 0)
+		e.moveCursor(n, 0)
+		return true
+	})
+
+	e.RegisterCsiHandler('D', func(params ansi.Params) bool {
+		// Cursor Backward [ansi.CUB]
+		n := csiCount(params, 0)
+		e.moveCursor(-n, 0)
+		return true
+	})
+
+	e.RegisterCsiHandler('E', func(params ansi.Params) bool {
+		// Cursor Next Line [ansi.CNL]
+		n := csiCount(params, 0)
+		e.moveCursor(0, n)
+		e.carriageReturn()
+		return true
+	})
+
+	e.RegisterCsiHandler('F', func(params ansi.Params) bool {
+		// Cursor Previous Line [ansi.CPL]
+		n := csiCount(params, 0)
+		e.moveCursor(0, -n)
+		e.carriageReturn()
+		return true
+	})
+
+	e.RegisterCsiHandler('G', func(params ansi.Params) bool {
+		// Cursor Horizontal Absolute [ansi.CHA]
+		n := csiCount(params, 0)
+		_, y := e.scr.CursorPosition()
+		e.setCursor(n-1, y)
+		return true
+	})
+
+	e.RegisterCsiHandler('H', func(params ansi.Params) bool {
+		// Cursor Position [ansi.CUP]
+		width, height := e.Width(), e.Height()
+		row, _, _ := params.Param(0, 1)
+		col, _, _ := params.Param(1, 1)
+		if row < 1 {
+			row = 1
+		}
+		if col < 1 {
+			col = 1
+		}
+		y := min(height-1, row-1)
+		x := min(width-1, col-1)
+		e.setCursorPosition(x, y)
+		return true
+	})
+
+	e.RegisterCsiHandler('I', func(params ansi.Params) bool {
+		// Cursor Horizontal Tabulation [ansi.CHT]
+		n := csiCount(params, 0)
+		e.nextTab(n)
+		return true
+	})
+
+	// eraseDisplay is ED, or with selective set DECSED, which erases only
+	// the cells DECSCA has not protected. ED itself erases protected cells
+	// too: DEC protection guards a cell against the selective forms only.
+	eraseDisplay := func(selective bool) func(ansi.Params) bool {
+		fill := e.eraseFill(selective)
+		return func(params ansi.Params) bool {
+			return e.eraseDisplay(params, selective, fill)
+		}
+	}
+	e.RegisterCsiHandler('J', eraseDisplay(false))
+	// Selective Erase in Display [ansi.DECSED], "CSI ? Ps J". It erases only
+	// the cells DECSCA has not protected, so on a screen with nothing
+	// protected it is ED, which is what xterm and ghostty do too.
+	e.RegisterCsiHandler(ansi.Command('?', 0, 'J'), eraseDisplay(true))
+
+	eraseLine := func(selective bool) func(ansi.Params) bool {
+		fill := e.eraseFill(selective)
+		return func(params ansi.Params) bool {
+			return e.eraseLine(params, selective, fill)
+		}
+	}
+	e.RegisterCsiHandler('K', eraseLine(false))
+	// Selective Erase in Line [ansi.DECSEL], "CSI ? Ps K": EL that leaves
+	// protected cells alone, for the reason given at DECSED above.
+	e.RegisterCsiHandler(ansi.Command('?', 0, 'K'), eraseLine(true))
+
+	// Select Character Protection Attribute [ansi.DECSCA], "CSI Ps " q".
+	// 1 protects what the guest prints next from DECSED and DECSEL; 0 and 2
+	// stop protecting. Any other value is ignored, as ghostty does.
+	e.RegisterCsiHandler(ansi.Command(0, '"', 'q'), func(params ansi.Params) bool {
+		n, _, _ := params.Param(0, 0)
+		switch n {
+		case 1:
+			e.scr.cur.Protected = true
+		case 0, 2:
+			e.scr.cur.Protected = false
+		}
+		return true
+	})
+
+	e.RegisterCsiHandler('L', func(params ansi.Params) bool {
+		// Insert Line [ansi.IL]
+		n := csiCount(params, 0)
+		if e.scr.InsertLine(n) {
+			// Move to the left margin, keeping the current absolute row. Using
+			// setCursorX(0,true) would re-add the top margin to the absolute
+			// row and jump the cursor down when the scroll region is not
+			// top-anchored.
+			scroll := e.scr.ScrollRegion()
+			_, y := e.scr.CursorPosition()
+			e.scr.setCursor(scroll.Min.X, y, false)
+		}
+		return true
+	})
+
+	e.RegisterCsiHandler('M', func(params ansi.Params) bool {
+		// Delete Line [ansi.DL]
+		n := csiCount(params, 0)
+		if e.scr.DeleteLine(n) {
+			// Move to the left margin, keeping the current absolute row. See
+			// the IL handler above for why margins=true would jump the row.
+			scroll := e.scr.ScrollRegion()
+			_, y := e.scr.CursorPosition()
+			e.scr.setCursor(scroll.Min.X, y, false)
+		}
+		return true
+	})
+
+	e.RegisterCsiHandler('P', func(params ansi.Params) bool {
+		// Delete Character [ansi.DCH]
+		n := csiCount(params, 0)
+		e.scr.DeleteCell(n)
+		return true
+	})
+
+	e.RegisterCsiHandler('S', func(params ansi.Params) bool {
+		// Scroll Up [ansi.SU]
+		n := csiCount(params, 0)
+		e.scr.ScrollUp(n)
+		return true
+	})
+
+	e.RegisterCsiHandler('T', func(params ansi.Params) bool {
+		// Scroll Down [ansi.SD]
+		n := csiCount(params, 0)
+		e.scr.ScrollDown(n)
+		return true
+	})
+
+	e.RegisterCsiHandler(ansi.Command('?', 0, 'W'), func(params ansi.Params) bool {
+		// Set Tab at Every 8 Columns [ansi.DECST8C]
+		if len(params) == 1 && params[0] == 5 {
+			e.resetTabStops()
+			return true
+		}
+		return false
+	})
+
+	e.RegisterCsiHandler('X', func(params ansi.Params) bool {
+		// Erase Character [ansi.ECH]
+		n := csiCount(params, 0)
+		e.eraseCharacter(n)
+		return true
+	})
+
+	e.RegisterCsiHandler('Z', func(params ansi.Params) bool {
+		// Cursor Backward Tabulation [ansi.CBT]
+		n := csiCount(params, 0)
+		e.prevTab(n)
+		return true
+	})
+
+	e.RegisterCsiHandler('`', func(params ansi.Params) bool {
+		// Horizontal Position Absolute [ansi.HPA]
+		n := csiCount(params, 0)
+		width := e.Width()
+		_, y := e.scr.CursorPosition()
+		e.setCursorPosition(min(width-1, n-1), y)
+		return true
+	})
+
+	e.RegisterCsiHandler('a', func(params ansi.Params) bool {
+		// Horizontal Position Relative [ansi.HPR]
+		n := csiCount(params, 0)
+		width := e.Width()
+		x, y := e.scr.CursorPosition()
+		e.setCursorPosition(min(width-1, x+n), y)
+		return true
+	})
+
+	// Horizontal Position Backward [ansi.HPB] and Vertical Position Backward
+	// [ansi.VPB], "CSI Pn j" and "CSI Pn k". ECMA-48 defines them as the
+	// backward moves opposite HPR and VPR. On a terminal whose data and
+	// presentation positions are the same they are CUB and CUU, which is what
+	// ghostty does with them, so they stop at the margins the same way.
+	e.RegisterCsiHandler('j', func(params ansi.Params) bool {
+		n := csiCount(params, 0)
+		e.moveCursor(-n, 0)
+		return true
+	})
+
+	e.RegisterCsiHandler('k', func(params ansi.Params) bool {
+		n := csiCount(params, 0)
+		e.moveCursor(0, -n)
+		return true
+	})
+
+	e.RegisterCsiHandler('b', func(params ansi.Params) bool {
+		// Repeat Previous Character [ansi.REP]
+		n := csiCount(params, 0)
+		e.repeatPreviousCharacter(n)
+		return true
+	})
+
+	e.RegisterCsiHandler('c', func(params ansi.Params) bool {
+		// Primary Device Attributes [ansi.DA1]
+		n, _, _ := params.Param(0, 0)
+		if n != 0 {
+			return false
+		}
+
+		_, _ = io.WriteString(e.pipe, ansi.PrimaryDeviceAttributes(DeviceAttributes(e.sixelOn())...))
+		return true
+	})
+
+	e.RegisterCsiHandler(ansi.Command('?', 0, 'S'), func(params ansi.Params) bool {
+		// XTSMGRAPHICS: sixel colour registers and maximum geometry.
+		item, _, _ := params.Param(0, 0)
+		action, _, _ := params.Param(1, 0)
+		cw, ch := e.CellSize()
+		_, _ = io.WriteString(e.pipe, sixelGraphicsReply(item, action, e.sixelOn(), e.Width()*cw, e.Height()*ch))
+		return true
+	})
+
+	e.RegisterCsiHandler(ansi.Command('>', 0, 'c'), func(params ansi.Params) bool {
+		// Secondary Device Attributes [ansi.DA2]
+		n, _, _ := params.Param(0, 0)
+		if n != 0 {
+			return false
+		}
+
+		// Do we fully support VT220?
+		_, _ = io.WriteString(e.pipe, ansi.SecondaryDeviceAttributes(
+			1,  // VT220
+			10, // Version 1.0
+			0,  // ROM Cartridge is always zero
+		))
+		return true
+	})
+
+	e.RegisterCsiHandler('d', func(params ansi.Params) bool {
+		// Vertical Position Absolute [ansi.VPA]
+		n := csiCount(params, 0)
+		height := e.Height()
+		x, _ := e.scr.CursorPosition()
+		e.setCursorPosition(x, min(height-1, n-1))
+		return true
+	})
+
+	e.RegisterCsiHandler('e', func(params ansi.Params) bool {
+		// Vertical Position Relative [ansi.VPR]
+		n := csiCount(params, 0)
+		height := e.Height()
+		x, y := e.scr.CursorPosition()
+		e.setCursorPosition(x, min(height-1, y+n))
+		return true
+	})
+
+	e.RegisterCsiHandler('f', func(params ansi.Params) bool {
+		// Horizontal and Vertical Position [ansi.HVP]
+		width, height := e.Width(), e.Height()
+		row, _, _ := params.Param(0, 1)
+		col, _, _ := params.Param(1, 1)
+		y := min(height-1, row-1)
+		x := min(width-1, col-1)
+		e.setCursor(x, y)
+		return true
+	})
+
+	e.RegisterCsiHandler('g', func(params ansi.Params) bool {
+		// Tab Clear [ansi.TBC]
+		value, _, _ := params.Param(0, 0)
+		switch value {
+		case 0:
+			x, _ := e.scr.CursorPosition()
+			e.tabstops.Reset(x)
+		case 3:
+			e.tabstops.Clear()
+		default:
+			return false
+		}
+
+		return true
+	})
+
+	e.RegisterCsiHandler('h', func(params ansi.Params) bool {
+		// Set Mode [ansi.SM] (ANSI)
+		e.handleMode(params, true, true)
+		return true
+	})
+
+	e.RegisterCsiHandler(ansi.Command('?', 0, 'h'), func(params ansi.Params) bool {
+		// Set Mode [ansi.SM] (DEC)
+		e.handleMode(params, true, false)
+		return true
+	})
+
+	e.RegisterCsiHandler('l', func(params ansi.Params) bool {
+		// Reset Mode [ansi.RM] (ANSI)
+		e.handleMode(params, false, true)
+		return true
+	})
+
+	e.RegisterCsiHandler(ansi.Command('?', 0, 'l'), func(params ansi.Params) bool {
+		// Reset Mode [ansi.RM] (DEC)
+		e.handleMode(params, false, false)
+		return true
+	})
+
+	e.RegisterCsiHandler('m', func(params ansi.Params) bool {
+		// Select Graphic Rendition [ansi.SGR]
+		e.handleSgr(params)
+		return true
+	})
+
+	e.RegisterCsiHandler('n', func(params ansi.Params) bool {
+		// Device Status Report [ansi.DSR]
+		n, _, ok := params.Param(0, 1)
+		if !ok || n == 0 {
+			return false
+		}
+
+		switch n {
+		case 5: // Operating Status
+			// Always ready. The reply keeps the query's form: the ANSI query
+			// gets the ANSI answer CSI 0 n, as in xterm and kitty. A private
+			// CSI ? 0 n here stalls strict parsers such as ratatui-image,
+			// which read only up to "[0n".
+			// See: https://vt100.net/docs/vt510-rm/DSR-OS.html
+			_, _ = io.WriteString(e.pipe, ansi.DeviceStatusReport(ansi.ANSIStatusReport(0)))
+		case 6: // Cursor Position Report [ansi.CPR]
+			line, col := e.reportedCursorPosition()
+			_, _ = io.WriteString(e.pipe, ansi.CursorPositionReport(line, col))
+		default:
+			return false
+		}
+
+		return true
+	})
+
+	e.RegisterCsiHandler(ansi.Command('?', 0, 'n'), func(params ansi.Params) bool {
+		n, _, ok := params.Param(0, 1)
+		if !ok || n == 0 {
+			return false
+		}
+
+		switch n {
+		case 5: // Operating Status, DEC form: answered CSI ? 0 n.
+			_, _ = io.WriteString(e.pipe, ansi.DeviceStatusReport(ansi.DECStatusReport(0)))
+		case 6: // Extended Cursor Position Report [ansi.DECXCPR]
+			line, col := e.reportedCursorPosition()
+			_, _ = io.WriteString(e.pipe, ansi.ExtendedCursorPositionReport(line, col, 0)) // We don't support page numbers //nolint:errcheck
+		case 996: // Colour scheme: answered as the mode 2031 notice is sent.
+			_, _ = io.WriteString(e.pipe, colorSchemeNotice(e.reportedBackground()))
+		default:
+			return false
+		}
+
+		return true
+	})
+
+	e.RegisterCsiHandler('u', func(ansi.Params) bool {
+		// Restore Current Cursor Position [ansi.SCORC]. The save half has
+		// always been here, in the 's' handler behind DECLRMM; without this
+		// the restore was silently dropped and the cursor stayed where the
+		// program had moved it.
+		e.restoreCursor()
+		return true
+	})
+
+	e.RegisterCsiHandler(ansi.Command(0, '!', 'p'), func(ansi.Params) bool {
+		// Soft Terminal Reset [ansi.DECSTR]
+		e.softReset()
+		return true
+	})
+
+	e.RegisterDcsHandler(ansi.Command(0, '$', 'q'), func(_ ansi.Params, data []byte) bool {
+		// Request Selection or Setting [ansi.DECRQSS]
+		e.reportSetting(string(data))
+		return true
+	})
+
+	e.RegisterCsiHandler('t', func(params ansi.Params) bool {
+		// XTWINOPS: Window Manipulation
+		// See: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Functions-using-CSI-_-ordered-by-the-final-character_s_
+		n, _, ok := params.Param(0, 0)
+
+		// Debug logging
+		debugLog := func(msg string) {
+			if l := debugLogger(); l != nil {
+				l.Printf("VT-XTWINOPS: %s", msg)
+			}
+			if e.logger != nil {
+				e.logger.Printf("XTWINOPS: %s", msg)
+			}
+		}
+
+		if !ok || n == 0 {
+			debugLog(fmt.Sprintf("invalid params ok=%v n=%d", ok, n))
+			return false
+		}
+
+		cellWidth, cellHeight := e.CellSize()
+		debugLog(fmt.Sprintf("handling CSI %d t (cellSize=%dx%d, termSize=%dx%d)",
+			n, cellWidth, cellHeight, e.Width(), e.Height()))
+
+		switch n {
+		case 14: // Report terminal window size in pixels
+			// Respond with: CSI 4 ; height ; width t
+			pixelHeight := e.Height() * cellHeight
+			pixelWidth := e.Width() * cellWidth
+			response := ansi.WindowOp(4, pixelHeight, pixelWidth)
+			debugLog(fmt.Sprintf("responding to CSI 14 t with: %q (pixels: %dx%d)", response, pixelWidth, pixelHeight))
+			_, _ = io.WriteString(e.pipe, response)
+		case 16: // Report cell size in pixels
+			// Respond with: CSI 6 ; cellHeight ; cellWidth t
+			response := ansi.WindowOp(6, cellHeight, cellWidth)
+			debugLog(fmt.Sprintf("responding to CSI 16 t with: %q", response))
+			_, _ = io.WriteString(e.pipe, response)
+		case 18: // Report text area size in characters
+			// Respond with: CSI 8 ; rows ; cols t
+			response := ansi.WindowOp(8, e.Height(), e.Width())
+			debugLog(fmt.Sprintf("responding to CSI 18 t with: %q", response))
+			_, _ = io.WriteString(e.pipe, response)
+		case 22: // Push the icon name and the window title
+			which, _, _ := params.Param(1, 0)
+			return e.pushTitle(which)
+		case 23: // Pop the icon name and the window title
+			which, _, _ := params.Param(1, 0)
+			return e.popTitle(which)
+		default:
+			// Other XTWINOPS commands are not supported
+			debugLog(fmt.Sprintf("unsupported command CSI %d t", n))
+			return false
+		}
+
+		return true
+	})
+
+	e.RegisterCsiHandler(ansi.Command(0, '$', 'p'), func(params ansi.Params) bool {
+		// Request Mode [ansi.DECRQM] (ANSI)
+		e.handleRequestMode(params, true)
+		return true
+	})
+
+	e.RegisterCsiHandler(ansi.Command('?', '$', 'p'), func(params ansi.Params) bool {
+		// Request Mode [ansi.DECRQM] (DEC)
+		e.handleRequestMode(params, false)
+		return true
+	})
+
+	e.RegisterCsiHandler(ansi.Command(0, ' ', 'q'), func(params ansi.Params) bool {
+		// Set Cursor Style [ansi.DECSCUSR]
+		n := 1
+		if param, _, ok := params.Param(0, 0); ok && param > n {
+			n = param
+		}
+		blink := n == 0 || n%2 == 1
+		style := n / 2
+		if !blink {
+			style--
+		}
+		e.cursorStyle, e.cursorSteady = CursorStyle(style), !blink
+		return true
+	})
+
+	e.RegisterCsiHandler('r', func(params ansi.Params) bool {
+		// Set Top and Bottom Margins [ansi.DECSTBM]
+		height := e.Height()
+
+		top, _, _ := params.Param(0, 1)
+		if top < 1 {
+			top = 1
+		}
+
+		bottom, _, _ := params.Param(1, height)
+		if bottom < 1 {
+			bottom = height
+		}
+
+		// A guest is free to name a row the screen does not have, and one does
+		// whenever it sizes its region before it learns it was resized smaller.
+		// Every row here becomes a slice index in ScrollUp and friends, so an
+		// unclamped bottom is an out-of-range panic in the PTY reader: the
+		// whole daemon, not one pane. xterm clamps to the screen instead.
+		if bottom > height {
+			bottom = height
+		}
+		if top > height {
+			top = height
+		}
+
+		if top >= bottom {
+			return false
+		}
+
+		// Rect is [x, y) which means y is exclusive. So the top margin
+		// is the top of the screen minus one.
+		e.scr.setVerticalMargins(top-1, bottom)
+
+		// Move the cursor to the top-left of the screen or scroll region
+		// depending on [ansi.DECOM].
+		e.setCursorPosition(0, 0)
+		return true
+	})
+
+	e.RegisterCsiHandler('s', func(params ansi.Params) bool {
+		// Set Left and Right Margins [ansi.DECSLRM]
+		// These conflict with each other. When [ansi.DECSLRM] is set, the we
+		// set the left and right margins. Otherwise, we save the cursor
+		// position.
+
+		if e.isModeSet(ansi.ModeLeftRightMargin) {
+			// Set Left Right Margins [ansi.DECSLRM]
+			left, _, _ := params.Param(0, 1)
+			if left < 1 {
+				left = 1
+			}
+
+			width := e.Width()
+			right, _, _ := params.Param(1, width)
+			if right < 1 {
+				right = width
+			}
+
+			// Same reasoning as DECSTBM above: a column past the edge becomes
+			// an out-of-range index the first time anything scrolls.
+			if right > width {
+				right = width
+			}
+			if left > width {
+				left = width
+			}
+
+			if left >= right {
+				return false
+			}
+
+			e.scr.setHorizontalMargins(left-1, right)
+
+			// Move the cursor to the top-left of the screen or scroll region
+			// depending on [ansi.DECOM].
+			e.setCursorPosition(0, 0)
+		} else {
+			// Save Current Cursor Position [ansi.SCOSC]
+			e.saveCursor()
+		}
+
+		return true
+	})
+}

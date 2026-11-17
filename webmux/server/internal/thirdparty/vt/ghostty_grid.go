@@ -1,0 +1,745 @@
+//go:build ghostty
+
+package vt
+
+import (
+	"encoding/json"
+	"fmt"
+	"image/color"
+	"strings"
+
+	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/charmbracelet/x/ansi"
+	gh "go.mitchellh.com/libghostty"
+)
+
+// This file keeps the uv shadow grid in step with libghostty's render state.
+// The sync runs on demand: Write marks the grid stale, the first read after
+// that walks the dirty rows. Each cell costs one Go memory read thanks to the
+// packed-cell decoder; only grapheme cells, hyperlinks and style-cache misses
+// call into the library.
+
+// ghosttyCellDecoder decodes packed cell values using the bit layout the
+// library publishes at runtime via TypeJSON. The layout is explicitly not
+// ABI-stable, so it is read from the manifest rather than hardcoded; when the
+// manifest cannot be parsed the decoder is disabled and cells are read
+// through cgo getters instead.
+type ghosttyCellDecoder struct {
+	ok                bool
+	tagLSB, tagMask   uint64
+	cpLSB, cpMask     uint64
+	styleLSB          uint64
+	styleMask         uint64
+	wideLSB, wideMask uint64
+	linkBit           uint64
+	// protBit is DECSCA's bit, when hasProt says the manifest names one. A
+	// library without it reads every cell as unprotected rather than
+	// giving up the fast decoder.
+	protBit uint64
+	hasProt bool
+}
+
+func newGhosttyCellDecoder() ghosttyCellDecoder {
+	var d ghosttyCellDecoder
+	var m struct {
+		Types map[string]struct {
+			Bits map[string]json.RawMessage `json:"bits"`
+		} `json:"types"`
+	}
+	raw := gh.TypeJSON()
+	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+		return d
+	}
+	cell, found := m.Types["GhosttyCell"]
+	if !found {
+		// Some manifest versions nest types differently; give up and use
+		// the getter path.
+		return d
+	}
+	type field struct {
+		LSB   uint64 `json:"lsb"`
+		Width uint64 `json:"width"`
+	}
+	get := func(name string) (field, bool) {
+		rawField, okF := cell.Bits[name]
+		if !okF {
+			return field{}, false
+		}
+		var f field
+		if err := json.Unmarshal(rawField, &f); err != nil {
+			return field{}, false
+		}
+		return f, f.Width > 0
+	}
+	tag, ok1 := get("content_tag")
+	styleID, ok2 := get("style_id")
+	wide, ok3 := get("wide")
+	link, ok4 := get("hyperlink")
+	// The codepoint lives inside the content union; its lsb is the union's
+	// lsb because the CODEPOINT arm places it at offset 0.
+	var content struct {
+		LSB   uint64 `json:"lsb"`
+		Width uint64 `json:"width"`
+		Arms  map[string]struct {
+			Bits map[string]field `json:"bits"`
+		} `json:"arms"`
+	}
+	ok5 := false
+	if rawContent, okC := cell.Bits["content"]; okC {
+		if err := json.Unmarshal(rawContent, &content); err == nil {
+			if arm, okA := content.Arms["CODEPOINT"]; okA {
+				if cp, okB := arm.Bits["codepoint"]; okB {
+					d.cpLSB = content.LSB + cp.LSB
+					d.cpMask = (1 << cp.Width) - 1
+					ok5 = true
+				}
+			}
+		}
+	}
+	if !(ok1 && ok2 && ok3 && ok4 && ok5) {
+		return d
+	}
+	d.tagLSB, d.tagMask = tag.LSB, (1<<tag.Width)-1
+	d.styleLSB, d.styleMask = styleID.LSB, (1<<styleID.Width)-1
+	d.wideLSB, d.wideMask = wide.LSB, (1<<wide.Width)-1
+	d.linkBit = link.LSB
+	if prot, ok := get("protected"); ok {
+		d.protBit, d.hasProt = prot.LSB, true
+	}
+	d.ok = true
+	return d
+}
+
+type decodedCell struct {
+	tag     gh.CellContentTag
+	cp      rune
+	styleID uint16
+	wide    gh.CellWide
+	link    bool
+	prot    bool
+}
+
+func (d *ghosttyCellDecoder) decode(v uint64) decodedCell {
+	return decodedCell{
+		tag:     gh.CellContentTag((v >> d.tagLSB) & d.tagMask),
+		cp:      rune((v >> d.cpLSB) & d.cpMask),
+		styleID: uint16((v >> d.styleLSB) & d.styleMask),
+		wide:    gh.CellWide((v >> d.wideLSB) & d.wideMask),
+		link:    (v>>d.linkBit)&1 != 0,
+		prot:    d.hasProt && (v>>d.protBit)&1 != 0,
+	}
+}
+
+// decodeCellSlow reads the same fields through cgo getters, for builds whose
+// manifest the decoder does not understand.
+func decodeCellSlow(c *gh.Cell) decodedCell {
+	var out decodedCell
+	if tag, err := c.ContentTag(); err == nil {
+		out.tag = tag
+	}
+	if cp, err := c.Codepoint(); err == nil {
+		out.cp = rune(cp)
+	}
+	if id, err := c.StyleID(); err == nil {
+		out.styleID = id
+	}
+	if w, err := c.Wide(); err == nil {
+		out.wide = w
+	}
+	if h, err := c.HasHyperlink(); err == nil {
+		out.link = h
+	}
+	if p, err := c.Protected(); err == nil {
+		out.prot = p
+	}
+	return out
+}
+
+// syncLocked brings the shadow grid and cursor cache up to date. Call with
+// mu held.
+func (t *GhosttyTerminal) syncLocked() {
+	if t.closed.Load() {
+		return
+	}
+	t.flushRestoreLocked()
+	if !t.gridStale {
+		return
+	}
+	t.gridStale = false
+
+	// Screen switches first: dirty tracking restarts on the new screen.
+	activeAlt := t.IsAltScreen()
+	idx := 0
+	if activeAlt {
+		idx = 1
+	}
+	t.active = idx
+	buf := t.bufAt(idx)
+
+	if err := t.rs.Update(t.term); err != nil {
+		return
+	}
+	// Style IDs are only stable within one render snapshot: the library
+	// interns styles and recycles an ID as soon as its last cell is gone.
+	// A conversion cached across snapshots comes back as another style's
+	// colors after a clear, which puts text on a stale background. Cleared, not reallocated, so capacity survives.
+	clear(t.styleCache)
+	if err := t.rs.RowIterator(t.ri); err != nil {
+		return
+	}
+	for {
+		y, ok := t.ri.NextDirty()
+		if !ok {
+			break
+		}
+		if int(y) >= t.height {
+			continue
+		}
+		t.syncRowLocked(buf, int(y))
+	}
+	_ = t.rs.Clean()
+
+	// Cursor cache.
+	if x, err := t.term.CursorX(); err == nil {
+		t.curX = int(x)
+	}
+	if y, err := t.term.CursorY(); err == nil {
+		t.curY = int(y)
+	}
+	if vis, err := t.term.CursorVisible(); err == nil {
+		t.curHidden = !vis
+	}
+}
+
+// syncRowLocked converts one dirty row into uv cells.
+func (t *GhosttyTerminal) syncRowLocked(buf *grid, y int) {
+	view, err := t.ri.CellsRaw()
+	if err != nil {
+		return
+	}
+	n := view.Len()
+	cellsLoaded := false
+	memo := kittyPlaceholderMemo{x: -2}
+	for x := 0; x < n && x < t.width; x++ {
+		cell := view.Cell(x)
+		var dc decodedCell
+		if t.dec.ok {
+			dc = t.dec.decode(cell.PackedValue())
+		} else {
+			dc = decodeCellSlow(cell)
+		}
+
+		switch dc.wide {
+		case gh.CellWideSpacerTail:
+			// uv.Line.Set manages wide-cell placeholders itself when the
+			// leading cell lands; writing one explicitly makes Set blank
+			// the wide cell it belongs to.
+			continue
+		case gh.CellWideSpacerHead:
+			// End-of-row spacer: the wide glyph wrapped to the next line,
+			// so this position holds nothing and must not keep whatever
+			// the previous frame left there.
+			buf.SetCell(x, y, &uv.Cell{Content: " ", Width: 1})
+			continue
+		}
+
+		out := &uv.Cell{Width: 1}
+		if dc.wide == gh.CellWideWide {
+			out.Width = 2
+		}
+
+		switch dc.tag {
+		case gh.CellContentCodepoint:
+			if dc.cp != 0 {
+				out.Content = string(dc.cp)
+			} else {
+				out.Content = " "
+				out.Width = 1
+			}
+		case gh.CellContentCodepointGrapheme:
+			// Multi-codepoint cluster: fetch the tail through the cells
+			// iterator. Rare enough that the extra calls do not matter.
+			if !cellsLoaded {
+				if err := t.ri.Cells(t.rc); err != nil {
+					out.Content = string(dc.cp)
+					break
+				}
+				cellsLoaded = true
+			}
+			if err := t.rc.Select(uint16(x)); err == nil {
+				if cps, err := t.rc.Graphemes(); err == nil && len(cps) > 0 {
+					// Graphemes returns the full cluster, base included.
+					var sb strings.Builder
+					for _, cp := range cps {
+						sb.WriteRune(rune(cp))
+					}
+					out.Content = sb.String()
+				} else {
+					out.Content = string(dc.cp)
+				}
+			} else {
+				out.Content = string(dc.cp)
+			}
+		default:
+			// Background-only cells carry no text.
+			out.Content = " "
+			out.Width = 1
+		}
+
+		out.Style = t.styleFor(dc.styleID, x)
+		// A kitty placeholder cell names its image in its foreground colour,
+		// and the name the guest used is not the one the host knows the image
+		// by. libghostty owns the write side here, so the rewrite happens on
+		// the way out, which is the one place both readers of this buffer go
+		// through.
+		if IsKittyPlaceholder(out.Content) && t.kittyPlaceholderMode == KittyPlaceholdersDrop {
+			// libghostty owns the write side, so a host that cannot draw these
+			// has them blanked on the way out instead.
+			out.Content = " "
+			out.Width = 1
+		}
+		if IsKittyPlaceholder(out.Content) {
+			// Spell out the row and column from the cell to the left, which
+			// this loop has already built, so clipping the left of the row
+			// later cannot orphan what survives. See kitty_placeholder.go.
+			var left *uv.Cell
+			if x > 0 {
+				left = buf.CellAt(x-1, y)
+			}
+			rewriteKittyPlaceholder(out, left, t.kittyImageIDTranslator, &memo, x, y)
+		}
+		if dc.link {
+			if uri := t.hyperlinkAt(x, y); uri != "" {
+				out.Link = uv.Link{URL: LinkURI(uri)}
+			}
+		}
+		buf.SetCell(x, y, out)
+		if dc.prot {
+			buf.setProtected(x, y, out.Width, true)
+		}
+	}
+	// Rows narrower than the shadow (after a resize race) blank the rest.
+	for x := n; x < t.width; x++ {
+		buf.SetCell(x, y, &uv.Cell{Content: " ", Width: 1})
+	}
+}
+
+// styleFor converts a style ID to uv form through the cache. x is the cell
+// column for the miss path, which reads the full style from the current row's
+// cells iterator.
+func (t *GhosttyTerminal) styleFor(styleID uint16, x int) uv.Style {
+	if styleID == 0 {
+		return uv.Style{}
+	}
+	if s, ok := t.styleCache[styleID]; ok {
+		return s
+	}
+	if err := t.ri.Cells(t.rc); err != nil {
+		return uv.Style{}
+	}
+	if err := t.rc.Select(uint16(x)); err != nil {
+		return uv.Style{}
+	}
+	gs, err := t.rc.Style()
+	if err != nil || gs == nil {
+		return uv.Style{}
+	}
+	s := t.convertStyle(gs)
+	t.styleCache[styleID] = s
+	return s
+}
+
+// convertStyle maps a libghostty style onto uv.Style with the pure
+// emulator's color rules: palette indices resolve through the guest's OSC 4
+// overrides first and the user's theme second, and pass through as indices
+// when nothing claimed them.
+func (t *GhosttyTerminal) convertStyle(gs *gh.Style) uv.Style {
+	return t.convertStyleIn(gs, nil)
+}
+
+// convertStyleIn is convertStyle with the palette taken from pal, a copy made
+// under the lock, so a reader that holds no lock can convert. A nil pal reads
+// the terminal's own palette, which needs the lock.
+func (t *GhosttyTerminal) convertStyleIn(gs *gh.Style, pal *ghosttyPalette) uv.Style {
+	var s uv.Style
+	if gs.Bold() {
+		s.Attrs |= uv.AttrBold
+	}
+	if gs.Faint() {
+		s.Attrs |= uv.AttrFaint
+	}
+	if gs.Italic() {
+		s.Attrs |= uv.AttrItalic
+	}
+	if gs.Blink() {
+		s.Attrs |= uv.AttrBlink
+	}
+	if gs.Inverse() {
+		s.Attrs |= uv.AttrReverse
+	}
+	if gs.Invisible() {
+		s.Attrs |= uv.AttrConceal
+	}
+	if gs.Strikethrough() {
+		s.Attrs |= uv.AttrStrikethrough
+	}
+	switch gs.Underline() {
+	case gh.UnderlineSingle:
+		s.Underline = ansi.UnderlineSingle
+	case gh.UnderlineDouble:
+		s.Underline = ansi.UnderlineDouble
+	case gh.UnderlineCurly:
+		s.Underline = ansi.UnderlineCurly
+	case gh.UnderlineDotted:
+		s.Underline = ansi.UnderlineDotted
+	case gh.UnderlineDashed:
+		s.Underline = ansi.UnderlineDashed
+	}
+	s.Fg = t.resolveStyleColor(gs.FgColor(), pal)
+	s.Bg = t.resolveStyleColor(gs.BgColor(), pal)
+	s.UnderlineColor = t.resolveStyleColor(gs.UnderlineColor(), pal)
+	return s
+}
+
+// resolveStyleColor applies the pure emulator's paletteEntry rule.
+func (t *GhosttyTerminal) resolveStyleColor(sc gh.StyleColor, pal *ghosttyPalette) color.Color {
+	switch sc.Tag {
+	case gh.StyleColorRGB:
+		return color.RGBA{R: sc.RGB.R, G: sc.RGB.G, B: sc.RGB.B, A: 0xff}
+	case gh.StyleColorPalette:
+		i := int(sc.Palette)
+		var c color.Color
+		if pal != nil {
+			c = pal[i]
+		} else {
+			c = t.paletteEntryLocked(i)
+		}
+		if c != nil {
+			return c
+		}
+		if i < 16 {
+			return ansi.BasicColor(uint8(i)) //nolint:gosec // bounded above
+		}
+		if i < 256 {
+			return ansi.IndexedColor(uint8(i)) //nolint:gosec // bounded above
+		}
+		return nil
+	default:
+		return nil
+	}
+}
+
+// paletteEntryLocked mirrors the pure emulator: guest OSC 4 first, theme
+// second, nil when the slot is the host terminal's to decide.
+func (t *GhosttyTerminal) paletteEntryLocked(i int) color.Color {
+	if i < 0 || i > 255 {
+		return nil
+	}
+	if c := t.colors[i]; c != nil {
+		return c
+	}
+	if i < 16 {
+		return t.themePal[i]
+	}
+	return nil
+}
+
+// ghosttyPalette is a copy of every paletteEntryLocked answer.
+type ghosttyPalette [256]color.Color
+
+// paletteLocked copies the palette, for a reader that converts styles after
+// it lets go of the lock.
+func (t *GhosttyTerminal) paletteLocked() *ghosttyPalette {
+	var pal ghosttyPalette
+	for i := range pal {
+		pal[i] = t.paletteEntryLocked(i)
+	}
+	return &pal
+}
+
+// hyperlinkAt fetches the hyperlink URI for an active-screen cell.
+func (t *GhosttyTerminal) hyperlinkAt(x, y int) string {
+	if t.closed.Load() {
+		return ""
+	}
+	ref, err := t.term.GridRef(gh.Point{Tag: gh.PointTagActive, X: uint16(x), Y: uint32(y)})
+	if err != nil || ref == nil {
+		return ""
+	}
+	uri, err := ref.HyperlinkURI()
+	if err != nil {
+		return ""
+	}
+	return uri
+}
+
+// cursorLocked returns the cursor position, syncing first.
+func (t *GhosttyTerminal) cursorLocked() (int, int) {
+	t.syncLocked()
+	return t.curX, t.curY
+}
+
+// CursorPosition implements [Terminal.CursorPosition].
+func (t *GhosttyTerminal) CursorPosition() uv.Position {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	x, y := t.cursorLocked()
+	return uv.Pos(x, y)
+}
+
+// IsCursorHidden implements [Terminal.IsCursorHidden].
+func (t *GhosttyTerminal) IsCursorHidden() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.syncLocked()
+	return t.curHidden
+}
+
+// CursorPen returns the SGR state in force, read straight from the library.
+func (t *GhosttyTerminal) CursorPen() (uv.Style, uv.Link) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.closed.Load() {
+		return uv.Style{}, uv.Link{}
+	}
+	t.flushRestoreLocked()
+	gs, err := t.term.CursorStyle()
+	if err != nil || gs == nil {
+		return uv.Style{}, uv.Link{}
+	}
+	// The pen's hyperlink is not exposed as data, so it is read from a
+	// formatter that emits it.
+	link, _ := t.penExtrasLocked()
+	return t.convertStyle(gs), link
+}
+
+// Bounds implements [Terminal.Bounds].
+func (t *GhosttyTerminal) Bounds() uv.Rectangle {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return uv.Rect(0, 0, t.width, t.height)
+}
+
+// CellAt implements [Terminal.CellAt].
+func (t *GhosttyTerminal) CellAt(x, y int) *uv.Cell {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.syncLocked()
+	return t.bufs[t.active].CellAt(x, y)
+}
+
+// MainCellAt implements [Terminal.MainCellAt].
+func (t *GhosttyTerminal) MainCellAt(x, y int) *uv.Cell {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.syncLocked()
+	return t.bufs[0].CellAt(x, y)
+}
+
+// SetCell implements [Terminal.SetCell].
+func (t *GhosttyTerminal) SetCell(x, y int, c *uv.Cell) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.pendingRestore().setActiveCell(t.active, x, y, c)
+}
+
+// SetMainCell implements [Terminal.SetMainCell].
+func (t *GhosttyTerminal) SetMainCell(x, y int, c *uv.Cell) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.pendingRestore().setGridCell(0, x, y, c)
+}
+
+// Render implements [Terminal.Render].
+func (t *GhosttyTerminal) Render() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.syncLocked()
+	return t.bufs[t.active].Render()
+}
+
+// String implements [Terminal.String].
+func (t *GhosttyTerminal) String() string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.syncLocked()
+	return uv.TrimSpace(StripSixelMarkers(t.bufs[t.active].String()))
+}
+
+// TailText mirrors the pure emulator: the last n non-empty screen rows,
+// top-down.
+func (t *GhosttyTerminal) TailText(n int) []string {
+	if n <= 0 {
+		return nil
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.syncLocked()
+	buf := t.bufs[t.active]
+	out := make([]string, 0, n)
+	var b strings.Builder
+	for y := t.height - 1; y >= 0 && len(out) < n; y-- {
+		b.Reset()
+		for x := 0; x < t.width; x++ {
+			if c := buf.CellAt(x, y); c != nil {
+				b.WriteString(CellText(c.Content))
+			}
+		}
+		if line := strings.TrimRight(b.String(), " \t"); line != "" {
+			out = append(out, line)
+		}
+	}
+	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
+		out[i], out[j] = out[j], out[i]
+	}
+	return out
+}
+
+// ReserveImageSpace scrolls to make room below the cursor for a graphics
+// placement, with a blank pen so background-color erase does not paint the
+// reserved rows, then leaves the cursor at column 0 under the image. All
+// synthesized, because the grid is the library's.
+func (t *GhosttyTerminal) ReserveImageSpace(rows, cols int) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.reserveImageSpaceLocked(rows, cols)
+}
+
+func (t *GhosttyTerminal) reserveImageSpaceLocked(rows, _ int) {
+	if rows <= 0 || t.closed.Load() {
+		return
+	}
+	_, startY := t.cursorLocked()
+	height := t.height
+	endY := startY + rows
+	scrollCount := 0
+	if endY > height {
+		// As the pure emulator: a picture taller than the screen runs into
+		// the scrollback, so every row is reserved, up to maxReserveScroll.
+		scrollCount = min(endY-height, maxReserveScroll)
+	}
+	finalY := startY + rows - scrollCount
+	if finalY >= height {
+		finalY = height - 1
+	}
+
+	var seq strings.Builder
+	if scrollCount > 0 {
+		// Save the pen, blank it, scroll from the bottom row, restore.
+		pen, err := t.term.CursorStyle()
+		penSeq := ""
+		if err == nil && pen != nil {
+			s := t.convertStyle(pen)
+			penSeq = penStyleSequence(&s)
+		}
+		seq.WriteString("\x1b[0m")
+		fmt.Fprintf(&seq, "\x1b[%d;1H", height)
+		for range scrollCount {
+			seq.WriteString("\n")
+		}
+		seq.WriteString("\x1b[0m")
+		seq.WriteString(penSeq)
+	}
+	fmt.Fprintf(&seq, "\x1b[%d;1H", finalY+1)
+	t.term.VTWrite([]byte(seq.String()))
+	t.gridStale = true
+	t.scrollGeneration++
+}
+
+// placeSixelLocked marks an image's cells in the grid at the cursor, the
+// ghostty twin of Emulator.placeSixel. The grid is the library's, so the
+// cells are written as text: a scroll of the region (SU, as the pure
+// emulator's ScrollUp), then a run of marker characters on each row, then the
+// pen and cursor put back. Origin mode and insert mode are switched off while
+// the cells are written, so the absolute moves and the prints mean what they
+// say. Each marker keeps the background of the cell it replaces, as in the
+// pure emulator. The pen is read and restored by hand rather than with DECSC,
+// because DECSC's one slot belongs to the guest.
+func (t *GhosttyTerminal) placeSixelLocked(rows, cols int, id uint32) {
+	if rows <= 0 || cols <= 0 || t.closed.Load() {
+		return
+	}
+	startX, startY := t.cursorLocked()
+	height, width := t.height, t.width
+	// One row more than the image: the cursor ends on the row under it, as
+	// in Emulator.placeSixel.
+	scroll := 0
+	if startY+rows+1 > height {
+		scroll = min(startY+rows+1-height, height)
+	}
+	pen, err := t.term.CursorStyle()
+	penSeq := ""
+	if err == nil && pen != nil {
+		s := t.convertStyle(pen)
+		penSeq = penStyleSequence(&s)
+	}
+	insert, _ := t.term.Mode(gh.ModeInsert)
+	origin, _ := t.term.Mode(gh.ModeOrigin)
+
+	var seq strings.Builder
+	seq.WriteString("\x1b[0m")
+	if insert {
+		seq.WriteString("\x1b[4l")
+	}
+	if origin {
+		seq.WriteString("\x1b[?6l")
+	}
+	if scroll > 0 {
+		fmt.Fprintf(&seq, "\x1b[%dS", scroll)
+	}
+	t.term.VTWrite([]byte(seq.String()))
+	seq.Reset()
+
+	// The backgrounds the markers keep, read after the scroll.
+	t.gridStale = true
+	t.syncLocked()
+	var buf *grid
+	if t.activeAltLiveLocked() == (t.active == 1) {
+		buf = t.bufs[t.active]
+	}
+
+	top := startY - scroll
+	n := min(cols, width-startX)
+	for r := range rows {
+		y := top + r
+		if y < 0 || y >= height || n <= 0 {
+			continue
+		}
+		fmt.Fprintf(&seq, "\x1b[%d;%dH", y+1, startX+1)
+		var last color.Color
+		for c := range n {
+			var bg color.Color
+			if buf != nil {
+				if cell := buf.CellAt(startX+c, y); cell != nil {
+					bg = cell.Style.Bg
+				}
+			}
+			if c == 0 || bg != last {
+				seq.WriteString("\x1b[0m")
+				if bg != nil {
+					st := uv.Style{Bg: bg}
+					seq.WriteString(penStyleSequence(&st))
+				}
+				last = bg
+			}
+			seq.WriteString(SixelMarker(id, r, c))
+		}
+	}
+	seq.WriteString("\x1b[0m")
+	if insert {
+		seq.WriteString("\x1b[4h")
+	}
+	finalY := min(startY+rows-scroll, height-1)
+	if origin {
+		// Setting DECOM homes the cursor, so the move comes after it, in
+		// the region's coordinates.
+		seq.WriteString("\x1b[?6h")
+		fmt.Fprintf(&seq, "\x1b[%d;%dH", finalY-t.scrollRegion.Min.Y+1, 1)
+	} else {
+		fmt.Fprintf(&seq, "\x1b[%d;1H", finalY+1)
+	}
+	seq.WriteString(penSeq)
+	t.term.VTWrite([]byte(seq.String()))
+	t.gridStale = true
+	t.scrollGeneration++
+}
