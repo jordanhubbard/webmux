@@ -215,6 +215,11 @@ updates. The dependency-audit gate remains enabled and passed for this release.
 
 ## Integration and feature follow-ups
 
+- [#264](https://github.com/jordanhubbard/webmux/issues/264): the [strict source
+  coverage gate](typescript.md) uses compiler CLIs and is qualified separately
+  against native TypeScript 7; the full compiler upgrade still requires a
+  compatible ESLint toolchain.
+
 - [#275](https://github.com/jordanhubbard/webmux/issues/275): source-backed
   [native bridge integration research](native-bridge-integration.md) for Codex iOS
   is complete and the research issue is closed. Connector implementation, scoped
