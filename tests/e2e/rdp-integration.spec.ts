@@ -141,6 +141,7 @@ test(`real guacd and FreeRDP screen updates, reconnection and keyboard input${st
       ...environment, LD_PRELOAD: [codecShim, registrationShim].filter(Boolean).join(':'),
       ...(registrationShim ? { WEBMUX_RDP_SCHEDULE_MARKER: join(temporary, 'schedule.marker') } : {}),
     });
+
     await listening(guacdPort);
     const response = await request.post('/api/rdp/sessions', { data: { hostname: '127.0.0.1', rdp_port: port, rdp_username: 'fixture' } });
     expect(response.ok()).toBe(true);
