@@ -23,7 +23,9 @@ test('an external Rig seat keeps its execution host unknown across viewer recove
   const suffix = randomBytes(5).toString('hex');
   const project = `external-host-${suffix}`;
   const target = `wm-external-${suffix}`;
-  const tmuxEnv = { ...process.env, TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') };
+  // Direct fixture enrollment targets its private local daemon. Keep the
+  // hostile inherited selection on the app server to verify controller routing.
+  const tmuxEnv = { ...process.env, OPENRIG_HOST_SELECTED: 'local', TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') };
   const run = (binary: string, args: string[]) => {
     const result = spawnSync(binary, args, { env: tmuxEnv, encoding: 'utf8', timeout: 15_000 });
     expect(result.status, result.stdout + result.stderr).toBe(0);

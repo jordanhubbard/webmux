@@ -63,6 +63,15 @@ isolated-file run passes (1 test, 17.1 seconds), including actual input and
 viewer reuse with the same native PID and exactly one start. Strict TypeScript
 checks pass; runtime source hashes remain identical to `4b89fe6`.
 
+The first hosted Linux job passed the older eight cases, then direct fixture
+enrollment inherited CI's deliberately unrelated host selection and failed
+looking for that remote host registry. Direct fixture commands now explicitly
+select their own local daemon; the app server retains the hostile selection.
+The final native run reproduces that environment and passes (1 test, 27.1s),
+including controller routing, input and unchanged native identity. Strict
+TypeScript checks and cleanup pass. The earlier result and its log hash remain
+in the receipt, alongside the final test-source hash.
+
 Keep the repair draft until its exact-head hosted gates pass. The independent
 [#429](https://github.com/jordanhubbard/webmux/issues/429) dependency audit still
 blocks merge and release. This scoped result does not close all of #194/#318.

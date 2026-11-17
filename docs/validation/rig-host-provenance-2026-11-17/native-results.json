@@ -139,5 +139,48 @@
       "private_tmux_directory_removed": true,
       "daemon_state_removed": true
     }
+  },
+  "hostile_selection_followup": {
+    "runtime_unchanged_from": "4b89fe6e7d9d994651b80a5372cf1a8fffdf8909",
+    "app_server_inherited_host_selection": "webmux-ci-unrelated-selection",
+    "direct_fixture_enrollment_host_selection": "local",
+    "test_source_sha256": "e040cab50254848776836787552ceaf9e86bedfa685cb5eb0af8d084d67d5cc0",
+    "outcomes": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 27.1
+    },
+    "native_application": {
+      "contract": "openrig-cli/0.6.14",
+      "rigVersion": "0.6.14 (df1c1517)",
+      "tmuxVersion": "tmux 3.8",
+      "nodeVersion": "v24.21.0",
+      "browserVersion": "157.0.8103.79",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "externalEnrollment": true,
+      "target": "wm-external-1d515303ed",
+      "originalPID": "65577",
+      "finalPID": "65577",
+      "starts": 1,
+      "host": "",
+      "rigHostID": "host-5ed8a5b7",
+      "viewerReused": true,
+      "recoveryHost": "",
+      "canResumeManaged": false,
+      "scope": "Real isolated Rig/tmux + app/browser using an owned synthetic Node terminal. No authenticated CLI or remote execution claimed."
+    },
+    "native_receipt_sha256": "2195b62a548cc17d77b5f54584506deeaab33f75607099fb794f0edb4552e014",
+    "log_sha256": "b2c3647d1f42f2292846c436b2191feac5bf5b65085f0ce5a9ed3c133da294f9",
+    "strict_typescript_log_sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "old_hosted_head": "4b89fe6e7d9d994651b80a5372cf1a8fffdf8909",
+    "old_hosted_failure": "Direct fixture enrollment inherited the unrelated host selection and failed with missing remote host registry. Eight older cases passed.",
+    "old_hosted_job": 134332847076,
+    "old_hosted_log_sha256": "bf9a0d8838ae1b2598e5f0adb3c6f219a833f7ebc68c12ebc2599e1b7ff95196",
+    "cleanup": {
+      "private_tmux_directory_removed": true,
+      "daemon_state_removed": true
+    }
   }
 }
