@@ -25,7 +25,10 @@ def main():
     parser.add_argument('--vm-root', type=Path, required=True)
     parser.add_argument('--binary', type=Path, required=True)
     parser.add_argument('--native-claude', action='store_true', help='qualify guest-native Claude conversation continuation after actual reboot; requires guest login')
+    parser.add_argument('--agent-deck', default='/home/webmuxqa/qualification/agent-deck', help='absolute guest path to the selected private coordinator')
+    parser.add_argument('--agent-deck-version', choices=['1.16.34', '1.16.39'], default='1.16.39')
     args = parser.parse_args()
+    assert args.agent_deck.startswith('/home/webmuxqa/qualification/') and '..' not in Path(args.agent_deck).parts
     root = args.vm_root.resolve()
     launch = json.loads((root / 'launch.json').read_text())
     ssh_args = json.loads((root / 'ssh-argv.json').read_text())
@@ -56,7 +59,7 @@ def main():
     control = 'env XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus systemctl --user '
     unit = 'webmux-managed-qualification.service'
     original_unit = 'webmux-qualification.service'
-    command_path = '/home/webmuxqa/qualification:/usr/bin:/bin' + (':/home/webmuxqa/.local/bin' if args.native_claude else '')
+    command_path = fixture + '/bin:/home/webmuxqa/qualification:/usr/bin:/bin' + (':/home/webmuxqa/.local/bin' if args.native_claude else '')
     deck_env = 'env HOME=' + fixture + '/home XDG_CONFIG_HOME=' + fixture + '/home/.config PATH=' + command_path + ' '
     ident = sid = target = None
     original_stopped = False
@@ -228,9 +231,11 @@ def main():
     try:
         assert text('hostname') == 'webmux-recovery-qa'
         assert ssh('test -f /var/tmp/webmux-qualification-ready').returncode == 0
-        assert 'Agent Deck v1.16.34' in text('/home/webmuxqa/qualification/agent-deck --help')
-        manifest['manager_sha256'] = text('sha256sum /home/webmuxqa/qualification/agent-deck').split()[0]
-        ssh('mkdir -p ' + fixture + '/home/.config/agent-deck ' + fixture + '/project ' + fixture + '/server/config')
+        assert text(shlex.quote(args.agent_deck) + ' version').split()[:3] == ['Agent', 'Deck', 'v' + args.agent_deck_version]
+        manifest['manager_sha256'] = text('sha256sum ' + shlex.quote(args.agent_deck)).split()[0]
+        manifest['manager_version'] = args.agent_deck_version
+        ssh('mkdir -p ' + fixture + '/home/.config/agent-deck ' + fixture + '/project ' + fixture + '/server/config ' + fixture + '/bin')
+        ssh('ln -s ' + shlex.quote(args.agent_deck) + ' ' + fixture + '/bin/agent-deck')
         put(fixture + '/webmux', binary.read_bytes())
         ssh('chmod 700 ' + fixture + '/webmux')
         put(fixture + '/home/.config/agent-deck/config.toml', ('[claude]\nhooks_enabled = false\ndangerous_mode = false\n' if args.native_claude else '') + '[security]\nauto_trust_folders = false\n[launch]\ninject_identity = false\n[tmux]\nsocket_name = "wm-managed-qa"\n')
@@ -349,6 +354,9 @@ def main():
             assert text('readlink /proc/' + native_pid + '/exe') == text('readlink -f /home/webmuxqa/.local/bin/claude')
             assert text('sha256sum /home/webmuxqa/.local/bin/claude').split()[0] == manifest['native_executable_sha256']
             receipt('native duplicate receipt retained across reconstruction')
+        assert text('sha256sum ' + shlex.quote(args.agent_deck)).split()[0] == manifest['manager_sha256'], 'coordinator changed during qualification'
+        assert text('sha256sum ' + fixture + '/webmux').split()[0] == digest, 'controller changed during qualification'
+        assert hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == manifest['qualifier_sha256'], 'qualifier changed during native execution'
         manifest['passed'] = True
         manifest.pop('last_native_pane', None)
     finally:

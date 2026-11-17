@@ -256,7 +256,7 @@ printf '#!/bin/sh\\nprintf "Agent Deck v%s\\\\n"\\n' "$version" > "$bindir/agent
 chmod +x "$bindir/agent-deck"
 `, { mode: 0o700 });
   const run = (target = 'install-agent-deck', ...extra: string[]) => spawnSync('make', ['--no-print-directory', target,
-    `AGENT_DECK_BINDIR=${bin}`, 'AGENT_DECK_VERSION=v1.16.34', ...extra], {
+    `AGENT_DECK_BINDIR=${bin}`, 'AGENT_DECK_VERSION=v1.16.39', ...extra], {
     cwd: root, encoding: 'utf8', timeout: 30000,
     env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? '/usr/bin:/bin'}`,
       AGENT_DECK_INSTALLER_URL: `file://${installer}`, WEBMUX_AGENT_DECK_MARKER: marker },
@@ -272,7 +272,7 @@ chmod +x "$bindir/agent-deck"
     const upgraded = run();
     assert.ifError(upgraded.error); assert.equal(upgraded.status, 0, upgraded.stdout + upgraded.stderr);
     assert.match(upgraded.stdout, /older than WebMux requires/);
-    assert.match(spawnSync(executable, ['version'], { encoding: 'utf8' }).stdout, /v1\.16\.34/);
+    assert.match(spawnSync(executable, ['version'], { encoding: 'utf8' }).stdout, /v1\.16\.39/);
     assert(fs.existsSync(marker), 'old Agent Deck did not run the installer');
 
     fs.rmSync(marker);
@@ -282,7 +282,7 @@ chmod +x "$bindir/agent-deck"
     assert(!fs.existsSync(marker), 'default installation ran the Agent Deck installer');
     const optedIn = run('install-optional-agent-deck', 'INSTALL_AGENT_DECK=yes');
     assert.ifError(optedIn.error); assert.equal(optedIn.status, 0, optedIn.stdout + optedIn.stderr);
-    assert.match(optedIn.stdout, /Agent Deck 1\.16\.34 found/);
+    assert.match(optedIn.stdout, /Agent Deck 1\.16\.39 found/);
 
     const invalid = run('install-optional-agent-deck', 'INSTALL_AGENT_DECK=maybe');
     assert.ifError(invalid.error); assert.notEqual(invalid.status, 0);

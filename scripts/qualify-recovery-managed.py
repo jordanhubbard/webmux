@@ -2,7 +2,7 @@
 """Qualify real Agent Deck / Claude continuity through private WebMux lifecycles.
 
 Requires an existing synthetic manifest from qualify-recovery-native.py and
-Agent Deck 1.16.34. Uses a private manager home/profile and tmux socket, restores
+a version-selected Agent Deck. Uses a private manager home/profile and tmux socket, restores
 only native CLI path variables in its child, and references only the synthetic
 conversation log. Authentication material is never copied. Starts no other
 agents; cleanup stops only the fixture provider and controller.
@@ -25,7 +25,7 @@ import urllib.request
 import uuid
 
 
-def prepare(manifest):
+def prepare(manifest, deck_version):
     entries = json.loads(manifest.read_text())
     if isinstance(entries, dict):
         entries = entries['results']
@@ -36,8 +36,8 @@ def prepare(manifest):
     deck_binary = shutil.which('agent-deck')
     claude_binary = shutil.which('claude', path=os.environ.get('WEBMUX_BROWSER_ORIGINAL_PATH') or os.environ.get('PATH'))
     assert deck_binary and claude_binary
-    version = subprocess.run([deck_binary, '--help'], capture_output=True, text=True, timeout=15)
-    assert 'Agent Deck v1.16.34' in version.stdout, 'This qualification harness requires Agent Deck 1.16.34'
+    version = subprocess.run([deck_binary, 'version'], capture_output=True, text=True, timeout=15)
+    assert version.stdout.split()[:3] == ['Agent', 'Deck', 'v' + deck_version], 'This qualification requires the selected exact Agent Deck version'
     native_version = subprocess.check_output([claude_binary, '--version'], text=True, timeout=15).strip()
     p = pathlib.Path.home() / '.local/share/webmux/recovery-qualification' / ('agent-deck-native-' + str(uuid.uuid4()))
     p.mkdir(mode=0o700, parents=True)
@@ -81,7 +81,7 @@ def prepare(manifest):
     target = fixture_home / '.claude/projects' / files[0].parent.name
     target.mkdir(mode=0o700, parents=True)
     (target / files[0].name).symlink_to(files[0])
-    data = {'fixture': str(p), 'environment_roots': {k: env[k] for k in ['HOME', 'SHELL', 'AGENTDECK_PROFILE', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_STATE_HOME', 'XDG_CACHE_HOME']}, 'entry': entry, 'socket': socket_name, 'settings_sha256_before': settings_sha, 'provider_session': provider, 'deck_binary': deck_binary, 'native_version': native_version, 'native_state_file': str(files[0])}
+    data = {'fixture': str(p), 'environment_roots': {k: env[k] for k in ['HOME', 'SHELL', 'AGENTDECK_PROFILE', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_STATE_HOME', 'XDG_CACHE_HOME']}, 'entry': entry, 'socket': socket_name, 'settings_sha256_before': settings_sha, 'provider_session': provider, 'deck_binary': deck_binary, 'deck_version': deck_version, 'deck_binary_sha256': hashlib.sha256(pathlib.Path(deck_binary).read_bytes()).hexdigest(), 'native_version': native_version, 'native_state_file': str(files[0])}
     (p / 'fixture.json').write_text(json.dumps(data, indent=2) + '\n')
     (p / 'fixture.json').chmod(0o600)
     print(json.dumps({'fixture': str(p), 'provider': 'agent-deck', 'native_cli': native_version}), flush=True)
@@ -92,11 +92,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=pathlib.Path, required=True)
     parser.add_argument('--manifest', type=pathlib.Path, required=True)
+    parser.add_argument('--agent-deck-version', choices=['1.16.34', '1.16.39'], default='1.16.39')
     args = parser.parse_args()
     qualifier_sha256 = hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest()
     assert args.binary.is_file()
     repo = pathlib.Path(__file__).resolve().parents[1]
-    p, d = prepare(args.manifest)
+    p, d = prepare(args.manifest, args.agent_deck_version)
     entry = d['entry']
     ident = d['provider_session']['id']
     pane = json.loads((p / 'before-start.json').read_text())['tmux_session']
@@ -288,8 +289,9 @@ def main():
         receipt('WebMux managed native recovery and durable duplicate receipt', native=after, conversation=answer('provider resumed native conversation'))
         settings = pathlib.Path.home() / '.claude/settings.json'
         assert (hashlib.sha256(settings.read_bytes()).hexdigest() if settings.exists() else None) == d['settings_sha256_before']
+        assert hashlib.sha256(pathlib.Path(d['deck_binary']).read_bytes()).hexdigest() == d['deck_binary_sha256'], 'coordinator changed during qualification'
         assert hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest() == qualifier_sha256, 'qualification source changed during the native run'
-        result = {'passed': True, 'qualifier_sha256': qualifier_sha256, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'provider': 'agent-deck', 'provider_version': '1.16.34', 'native_cli': 'claude', 'native_cli_version': d['native_version'], 'native_session_id': entry['native_session_id'], 'provider_session_id': ident, 'webmux_session_id': sid, 'phases': phases, 'scope': 'Real controller restart, SIGKILL, repeated reconnect, native process loss fallback and explicit provider-owned native continuation. Includes WebMux managed-resume action and duplicate request after restart. Not host reboot.'}
+        result = {'passed': True, 'qualifier_sha256': qualifier_sha256, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'provider': 'agent-deck', 'provider_version': d['deck_version'], 'provider_sha256': d['deck_binary_sha256'], 'native_cli': 'claude', 'native_cli_version': d['native_version'], 'native_session_id': entry['native_session_id'], 'provider_session_id': ident, 'webmux_session_id': sid, 'phases': phases, 'scope': 'Real controller restart, SIGKILL, repeated reconnect, native process loss fallback and explicit provider-owned native continuation. Includes WebMux managed-resume action and duplicate request after restart. Not host reboot.'}
         (p / 'lifecycle-manifest.json').write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(p / 'lifecycle-manifest.json')}), flush=True)
     except Exception as e:
