@@ -55,6 +55,7 @@ type SelectControl struct {
 }
 
 type companion struct {
+	elements        map[string]pageElement
 	pointers        map[target.ID]Request
 	root, current   context.Context
 	tabs            map[target.ID]context.Context
@@ -216,6 +217,9 @@ func (b *companion) selectTab(id target.ID) error {
 }
 
 func (b *companion) step(ctx context.Context, req Request, frame *Frame) error {
+	if req.Action != "frame" && req.Action != "resize" && req.Action != "read_page" && req.Action != "focus_element" && req.Action != "activate_element" {
+		b.elements = nil
+	}
 	id := chromedp.FromContext(b.current).Target.TargetID
 	switch req.Action {
 	case "release_input":
@@ -285,7 +289,9 @@ func (b *companion) step(ctx context.Context, req Request, frame *Frame) error {
 		}
 		return err
 	case "read_page":
-		return readPage(ctx, req, frame)
+		return b.readPage(ctx, req, frame)
+	case "focus_element", "activate_element":
+		return b.actOnElement(ctx, req)
 	case "find":
 		if req.Text == "" || len(req.Text) > 4096 {
 			return errors.New("Find a nonempty phrase of at most 4096 bytes")
@@ -408,6 +414,9 @@ func (b *companion) step(ctx context.Context, req Request, frame *Frame) error {
 }
 
 func (b *companion) tabAction(req Request) error {
+	if req.Action == "tab" || req.Action == "new_tab" || req.Action == "close_tab" {
+		b.elements = nil
+	}
 	switch req.Action {
 	case "tab":
 		return b.selectTab(target.ID(req.Target))
@@ -509,7 +518,7 @@ func (b *companion) snapshot(req Request, actionErr error) Frame {
 		return err
 	}))
 	switch req.Action {
-	case "frame", "navigate", "tab", "new_tab", "close_tab", "resize", "reload", "back", "forward", "dialog", "upload", "select_option", "cancel_select", "find", "stop":
+	case "frame", "navigate", "tab", "new_tab", "close_tab", "resize", "reload", "back", "forward", "dialog", "upload", "select_option", "cancel_select", "find", "stop", "focus_element", "activate_element":
 		quality := int64(75)
 		err := chromedp.Do(ctx, chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
 			result, err := cdp.Call(ctx, t, page.CaptureScreenshot, page.CaptureScreenshotParams{Format: page.CaptureScreenshotFormatJpeg, Quality: &quality})

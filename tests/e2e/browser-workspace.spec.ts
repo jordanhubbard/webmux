@@ -25,6 +25,7 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
    <input id="files" type="file"><div id="context" class="area">Right click here</div>
    <a id="download" href="/download">Download fixture</a><button id="prompt">Prompt</button>
    <input id="text" value=""><button id="popup">Open popup</button>
+   <button id="accessibleActivate" style="left:600px;top:200px">Accessible action</button><input id="accessibleText" aria-label="Accessible input" style="left:600px;top:260px">
    <select id="select"><option>First</option><option>Second</option></select>
    <script>
     const signal=value=>fetch('/signal?value='+encodeURIComponent(value));
@@ -39,6 +40,8 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
     text.oninput=()=>signal('text:'+text.value);
     text.onselect=()=>signal('selection:'+text.selectionStart+':'+text.selectionEnd);
     text.onkeydown=event=>{if(event.key==='Escape')signal('escape')};
+    accessibleActivate.onclick=()=>signal('accessible-activated');
+    accessibleText.oninput=()=>signal('accessible-text:'+accessibleText.value);
     const activate=()=>{hover.onmouseenter=()=>signal('hover');popup.onclick=()=>window.open('/second','_blank')};
     let shown=false,activationTimer;
     if(!${returningDocument})activate();
@@ -106,6 +109,17 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   await expect(readable).not.toContainText('hidden accessibility control');
   const staleRead = await (await controlledPost({ action: 'read_page', target: 'another-tab' })).json();
   expect(staleRead.error).toContain('selected page changed'); expect(staleRead.pageText).toBeUndefined();
+  // A stale read invalidates the old references. Refresh before using them.
+  await page.getByRole('button', { name: 'Read page text', exact: true }).click();
+  await readable.getByRole('button', { name: 'Focus Accessible input', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Type into remote page' })).toBeFocused();
+  await page.keyboard.type('typed through accessible focus');
+  await expect.poll(() => signals).toContain('accessible-text:typed through accessible focus');
+  await page.getByRole('button', { name: 'Read page text', exact: true }).click();
+  await expect(readable).not.toContainText('typed through accessible focus');
+  await readable.getByRole('button', { name: 'Activate Accessible action', exact: true }).click();
+  await expect.poll(() => signals).toContain('accessible-activated');
+  await page.getByRole('button', { name: 'Read page text', exact: true }).click();
   await page.getByRole('button', { name: 'Close page text', exact: true }).click();
   await expect(readable).not.toBeVisible();
   const hover = await position(280, 40); await page.mouse.move(hover.x, hover.y);

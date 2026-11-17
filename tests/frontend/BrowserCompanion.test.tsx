@@ -299,3 +299,27 @@ it('reads accessible text on demand, escapes page markup and clears it on naviga
   expect(screen.queryByRole('region', { name: 'Remote page text' })).toBeNull();
  } finally { view.unmount(); }
 });
+
+it('focuses and activates named page controls with opaque references and clears each snapshot', async () => {
+ const frame = { protocol: 3, control: { owned: true, available: false }, image: 'fixture', url: 'https://example.com/work', tabs: [], target: 'one' };
+ const nodes = [
+  { role: 'textbox', name: 'Search', depth: 1, element: 'opaque-search', canFocus: true },
+  { role: 'button', name: 'Continue', depth: 1, element: 'opaque-button', canFocus: true, canActivate: true },
+ ];
+ fixture.action.mockReset().mockImplementation(async (_id, request) => request.action === 'read_page' ? { ...frame, pageText: { nodes, truncated: false } } : frame);
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Read page text' })); });
+  expect(screen.queryByRole('button', { name: 'Activate Search' })).toBeNull();
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Focus Search' })); });
+  expect(fixture.action).toHaveBeenCalledWith('test', { action: 'focus_element', target: 'one', element: 'opaque-search' });
+  expect(screen.getByRole('textbox', { name: 'Type into remote page' })).toHaveFocus();
+  expect(screen.queryByRole('region', { name: 'Remote page text' })).toBeNull();
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Read page text' })); });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Activate Continue' })); });
+  expect(fixture.action).toHaveBeenCalledWith('test', { action: 'activate_element', target: 'one', element: 'opaque-button' });
+  expect(screen.queryByRole('region', { name: 'Remote page text' })).toBeNull();
+  expect(screen.getByText('Remote control activated. Read page text again for updated controls.')).toHaveAttribute('role', 'status');
+ } finally { view.unmount(); }
+});

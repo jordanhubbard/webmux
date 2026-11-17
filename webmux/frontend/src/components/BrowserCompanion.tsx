@@ -50,6 +50,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   const [findText, setFindText] = useState('');
   const [findMessage, setFindMessage] = useState('');
   const [pageText, setPageText] = useState<{ session: string; target: string; url: string; text: BrowserPageText }>();
+  const [pageActionStatus, setPageActionStatus] = useState('');
   const pageTextPanel = useRef<HTMLElement>(null);
   const findInput = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState(false);
@@ -76,8 +77,11 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
       if (action.profileId !== undefined) profileChoice.current.id = action.profileId;
       else if (profileChoice.current.id !== undefined) action = { ...action, profileId: profileChoice.current.id };
     }
-    if (NAVIGATION_ACTIONS.has(action.action)) {
+    if (!['frame', 'read_page', 'claim', 'resize'].includes(action.action)) {
       setPageText(undefined);
+      setPageActionStatus('');
+    }
+    if (NAVIGATION_ACTIONS.has(action.action)) {
       addressDraft.current = false;
       addressEditing.current = false;
     }
@@ -108,6 +112,11 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         if (!addressEditing.current && !addressDraft.current && result.url && result.url !== 'about:blank') setAddress(result.url);
         else if (!addressEditing.current && !addressDraft.current && result.url === 'about:blank') setAddress('');
         setError(result.error ?? '');
+        if (!result.error && item.action.action === 'focus_element') {
+          keyboard.current?.focus();
+          setPageActionStatus('Remote control focused. Type into the page; Shift+Esc returns to the address bar.');
+        }
+        if (!result.error && item.action.action === 'activate_element') setPageActionStatus('Remote control activated. Read page text again for updated controls.');
         // A v3 reply proves the worker is alive even if its first screenshot
         // was interrupted. Poll frames to recover; never replay navigation.
         setReady(previous => previous || result.protocol === 3);
@@ -328,12 +337,16 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
       </div>
       {visiblePageText && <section ref={pageTextPanel} className="browser-page-text" aria-label="Remote page text" tabIndex={-1}>
         <h2>Remote page text</h2>
-        <p>Snapshot of the selected page’s accessible names and roles. Read again after the page changes. Continue interacting through the page viewport.</p>
+        <p>Snapshot of the selected page’s accessible names and roles. Focus a supported control to type, or activate it here. Read again after an action or page change; other controls remain available through the viewport.</p>
         <button type="button" onClick={() => { setPageText(undefined); keyboard.current?.focus(); }}>Close page text</button>
         {visiblePageText.text.truncated && <p role="status">This page is large. Only part of its accessible content is shown.</p>}
-        <ol>{visiblePageText.text.nodes.map((node, index) => <li key={index}><strong>{node.role}</strong>{node.name ? `: ${node.name}` : ' (unlabeled)'}</li>)}</ol>
+        <ol>{visiblePageText.text.nodes.map((node, index) => <li key={index}><strong>{node.role}</strong>{node.name ? `: ${node.name}` : ' (unlabeled)'}
+          {node.element && node.canFocus && <button type="button" disabled={!controlled || busy} onClick={() => void act({ action: 'focus_element', target: visiblePageText.target, element: node.element })}>Focus {node.name || node.role}</button>}
+          {node.element && node.canActivate && <button type="button" disabled={!controlled || busy} onClick={() => void act({ action: 'activate_element', target: visiblePageText.target, element: node.element })}>Activate {node.name || node.role}</button>}
+        </li>)}</ol>
         {!visiblePageText.text.nodes.length && <p>No accessible content was reported for this page.</p>}
       </section>}
+      {pageActionStatus && <p role="status">{pageActionStatus}</p>}
       <fieldset className="browser-controls" disabled={!controlled || busy}>
       <footer>
         <span>Shift+Esc releases focus. Saved profiles retain cookies after ending; temporary profiles are cleared.</span>

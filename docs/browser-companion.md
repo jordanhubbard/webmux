@@ -261,18 +261,40 @@ Choose **Read page text** to open a keyboard-focusable text view of the selected
 page’s Chromium accessibility names and roles. Headings, links, buttons and form
 labels appear in document order and can be read with the local screen reader.
 **Close page text** returns focus to remote-page input. No new keyboard shortcut
-is reserved. Continue using the page viewport to interact with controls.
+is reserved.
+
+Supported controls offer **Focus** and **Activate** buttons. Focus selects the
+remote field and returns your keyboard to remote-page input; ordinary typing,
+editing keys and Shift+Esc keep their existing behavior. Activate invokes the
+selected button, link or toggle's page click behavior. Use the viewport for
+controls that need a different gesture. Text fields offer focus without an
+activation action; their existing contents are not included in the text view.
 
 This is an on-demand snapshot of the root document, not a live DOM mirror.
 Read it again after dynamic page changes. Navigation or a different selected tab
-hides the old snapshot. Only the current controller can request a reading, and a
-queued request for an old tab is refused. Existing owner, SSH and worker-channel
-boundaries apply.
+hides the old snapshot. An action consumes its references, including failed or
+interrupted actions: read again before another action rather than retrying an
+old reference. Other page input also clears the snapshot. Frame polling and
+viewport resizing preserve semantic references, including when opening this
+panel changes the viewport size.
+
+Only the current controller can read or act, with the lease checked again at
+dispatch. The worker binds each opaque reference to its target, document and
+URL; it verifies the current accessible name, role and availability and refuses
+replaced, renamed, disabled or stale controls. Native DOM identifiers stay in
+the worker; HTTP requests cannot supply selectors or JavaScript. Existing
+owner, SSH and worker-channel boundaries apply.
 
 The worker emits at most 512 entries and 32 KiB of names/roles, with individual
 names limited to 2048 UTF-8 bytes and tree depth to 32. The view reports when
 content was cut off. Ignored nodes, duplicate inline glyph runs, editable values
-and editable descendants are omitted; markup is displayed as text. The view
-does not synthesize form interactions, expose iframe documents, forward a local
-screen reader to the remote OS, or establish real identity-provider acceptance.
-Those broader accessibility and authentication requirements remain under #110.
+and editable descendants are omitted; markup is displayed as text. Action
+references are bounded by that same entry limit and replaced on each reading.
+The view does not expose iframe documents, forward a local screen reader to
+the remote OS, or establish real identity-provider acceptance. Those broader
+accessibility and authentication requirements remain under #110.
+
+Actual macOS/Chromium qualification covers the visible Focus/Activate flow,
+native typing (including a closed shadow root), single-use activation, link
+navigation, disabled controls, page-initiated navigation and renamed controls.
+See [qualification scope](validation/browser-actions-2026-11-17/README.md).
