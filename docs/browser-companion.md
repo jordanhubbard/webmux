@@ -122,6 +122,22 @@ Existing real mouse broadcast/restart/selection controls also pass. These are
 terminal and synthetic callback controls, separate from real identity-provider
 authentication acceptance under #110.
 
+## Interrupted initial frames
+
+A live worker can lose a screenshot while its page navigates. The companion now
+continues frame polling after a protocol-v2 startup response even when the first
+image is interrupted. Recovery requests a new frame; the original sign-in
+navigation executes once. A worker that fails before becoming available keeps
+its startup error and is not polled or relaunched automatically.
+
+The browser control uses a real worker, terminal link and loopback callback,
+replacing only the first start/navigation response images with the interrupted
+rendering response observed on macOS. It fails on the prior frontend and passes
+with frame recovery, one navigation and the independently observed callback.
+The unit controls also cover failed worker startup. This addresses one blank-start
+path under [#282](https://github.com/jordanhubbard/webmux/issues/282); it does not
+establish the cause of the historical macOS URL-poll timeout.
+
 ## Next iterations
 
 Tracked in [#110](https://github.com/jordanhubbard/webmux/issues/110).

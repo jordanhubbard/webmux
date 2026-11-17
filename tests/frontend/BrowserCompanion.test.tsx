@@ -147,3 +147,37 @@ it('reports an older terminal-host worker instead of silently sending unsupporte
   expect(screen.queryByAltText('Interactive remote browser viewport')).toBeNull();
  } finally { view.unmount(); }
 });
+
+it('recovers an interrupted first frame without replaying its authentication navigation', async () => {
+ vi.useFakeTimers();
+ const url = 'http://localhost:3000/authorize?state=fixture';
+ const frame = { protocol: 2, url, tabs: [], target: 'one' };
+ fixture.action.mockReset().mockImplementation((_id, action: { action: string }) => Promise.resolve(
+  action.action === 'frame' ? { ...frame, image: 'recovered-frame' } : { ...frame, error: 'Page rendering was interrupted; retry or open the site in your browser' }
+ ));
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} navigation={{ url }} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  expect(screen.queryByAltText('Interactive remote browser viewport')).not.toBeInTheDocument();
+  await act(async () => { vi.advanceTimersByTime(500); });
+  expect(screen.getByAltText('Interactive remote browser viewport')).toBeVisible();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  const actions = fixture.action.mock.calls.map(call => call[1]);
+  expect(actions.filter(action => action.action === 'start')).toHaveLength(1);
+  expect(actions.filter(action => action.action === 'navigate')).toEqual([{ action: 'navigate', url }]);
+  expect(actions.filter(action => action.action === 'frame')).toHaveLength(1);
+ } finally { view.unmount(); vi.useRealTimers(); }
+});
+
+it('does not poll or relaunch a worker that failed before becoming available', async () => {
+ vi.useFakeTimers();
+ fixture.action.mockReset().mockResolvedValue({ protocol: 0, error: 'Cannot start Chromium.' });
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  await act(async () => { vi.advanceTimersByTime(5000); });
+  expect(screen.getByRole('alert')).toHaveTextContent('Cannot start Chromium.');
+  expect(fixture.action).toHaveBeenCalledTimes(1);
+  expect(screen.queryByAltText('Interactive remote browser viewport')).not.toBeInTheDocument();
+ } finally { view.unmount(); vi.useRealTimers(); }
+});

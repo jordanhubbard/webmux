@@ -4,8 +4,10 @@ import { writeFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-for (const linkKind of ['plain', 'osc8', 'gh-browser', 'browser', 'open', 'xdg-open'] as const) {
-test(`browser companion routes ${linkKind} authentication and completes a loopback callback`, async ({ page, request }, info) => {
+for (const scenario of ['plain', 'plain-interrupted', 'osc8', 'gh-browser', 'browser', 'open', 'xdg-open'] as const) {
+const linkKind = scenario === 'plain-interrupted' ? 'plain' : scenario;
+const interruptFirstFrames = scenario === 'plain-interrupted';
+test(`browser companion routes ${scenario} authentication and completes a loopback callback`, async ({ page, request }, info) => {
   test.setTimeout(90_000);
   const modeTraffic: { viewer: string; direction: string; at: number; controls: string[] }[] = [];
   const traceModes = (viewer: Page, name: string) => viewer.on('websocket', socket => {
@@ -34,7 +36,10 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
   });
   const shellLaunch = linkKind !== 'plain' && linkKind !== 'osc8';
   test.skip(shellLaunch && process.platform === 'win32', 'Local tmux shell handoff requires Unix');
-  // This is a real browser acceptance test, not a mocked frame or protocol.
+  // All cases use the real worker and page. One case replaces only the first
+  // two response images with the actual transient rendering-error shape.
+  const interruptedActions = new Set<string>();
+  let navigationRequests = 0;
   let received = '';
   let pageReady = false;
   const inputReceipts: unknown[] = [];
@@ -88,6 +93,24 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
   const created = await request.post('/api/sessions', { data: { transport: 'local', cols: 80, rows: 24 } });
   expect(created.ok()).toBe(true);
   const session = await created.json();
+  if (interruptFirstFrames) {
+    await page.route(`**/api/sessions/${session.id}/browser`, async route => {
+      if (route.request().method() !== 'POST') { await route.continue(); return; }
+      const action = route.request().postDataJSON() as { action: string };
+      if (action.action === 'navigate') navigationRequests++;
+      if (!['start', 'navigate'].includes(action.action) || interruptedActions.has(action.action)) {
+        await route.continue(); return;
+      }
+      // Execute each real action once; only its screenshot response is lost.
+      const response = await route.fetch();
+      expect(response.ok()).toBe(true);
+      const frame = await response.json();
+      expect(frame.protocol).toBe(2);
+      delete frame.image;
+      interruptedActions.add(action.action);
+      await route.fulfill({ response, json: { ...frame, error: 'Page rendering was interrupted; retry or open the site in your browser' } });
+    });
+  }
   const launchConfig = path.resolve(__dirname, '.test-home', `browser-launch-${session.id}.json`);
   // Keep an earlier viewer connected: the active terminal must claim browser
   // requests instead of allowing the first tab to receive them forever.
@@ -166,15 +189,23 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
     }).toBe(identityURL);
     // Navigation can report its URL before the new document can receive input.
     await expect.poll(() => pageReady).toBe(true);
-    // The viewport now follows the drawer. Match the displayed frame to the
-    // worker geometry before converting page coordinates into viewer pixels.
+    // The viewport follows the drawer after a debounced resize. Match all
+    // three geometries: an old image and worker can agree while that resize
+    // is still pending, causing a precomputed click to miss its field.
     let geometry = { width: 1100, height: 760 };
     await expect.poll(async () => {
       const response = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
       const remote = await response.json();
-      const displayed = await viewport.evaluate(el => ({ width: (el as HTMLImageElement).naturalWidth, height: (el as HTMLImageElement).naturalHeight }));
+      const displayed = await viewport.evaluate(el => {
+        const image = el as HTMLImageElement;
+        const area = image.parentElement!.getBoundingClientRect();
+        return { width: image.naturalWidth, height: image.naturalHeight,
+          requestedWidth: Math.max(320, Math.min(2560, Math.round(area.width))),
+          requestedHeight: Math.max(240, Math.min(1600, Math.round(area.height))) };
+      });
       geometry = { width: remote.width, height: remote.height };
-      return displayed.width === remote.width && displayed.height === remote.height;
+      return displayed.width === remote.width && displayed.height === remote.height
+        && displayed.requestedWidth === remote.width && displayed.requestedHeight === remote.height;
     }).toBe(true);
     const bounds = (await viewport.boundingBox())!;
     inputGeometry = { bounds, geometry };
@@ -210,6 +241,10 @@ test(`browser companion routes ${linkKind} authentication and completes a loopba
       console.error(JSON.stringify({ state, replies }));
       throw error;
     });
+    if (interruptFirstFrames) {
+      expect([...interruptedActions].sort()).toEqual(['navigate', 'start']);
+      expect(navigationRequests).toBe(1);
+    }
     const before = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
     const target = (await before.json()).target;
     await page.screenshot({ path: 'test-results/browser-companion.png' });

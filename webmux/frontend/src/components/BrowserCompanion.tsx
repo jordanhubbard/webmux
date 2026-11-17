@@ -90,7 +90,9 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         if (!addressEditing.current && !addressDraft.current && result.url && result.url !== 'about:blank') setAddress(result.url);
         else if (!addressEditing.current && !addressDraft.current && result.url === 'about:blank') setAddress('');
         setError(result.error ?? '');
-        setReady(previous => previous || !result.error);
+        // A v2 reply proves the worker is alive even if its first screenshot
+        // was interrupted. Poll frames to recover; never replay navigation.
+        setReady(previous => previous || result.protocol === 2);
         if (clipboard !== undefined && !await copyDesktopText(clipboard)) setError('The browser blocked clipboard access for this site.');
         if (file) saveDownload(file);
         if (typeof result.found === 'boolean') setFindMessage(result.found ? 'Match found.' : 'No matches on this page.');
