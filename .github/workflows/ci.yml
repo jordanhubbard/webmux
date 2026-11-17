@@ -62,7 +62,8 @@ jobs:
           printf -v fixture_command '%q ' env GITHUB_ACTIONS=true python3 "$GITHUB_WORKSPACE/tests/usb-kernel.py" "$RUNNER_TEMP/webmux"
           # virtme otherwise locks every synthetic guest account. This guest
           # has no network adapter, and its fixture sshd allows public keys only.
-          sudo -n env PATH="$RUNNER_TEMP/virtme/bin:/usr/sbin:/usr/bin:/sbin:/bin" PYTHONUNBUFFERED=1 timeout --kill-after=15s 180s "$RUNNER_TEMP/virtme/bin/vng" --run "$USB_TEST_KERNEL" --user root --empty-passwords --memory 1G --cpus 2 --verbose --exec "$fixture_command"      - name: Preserve virtual gadget build evidence
+          sudo -n env PATH="$RUNNER_TEMP/virtme/bin:/usr/sbin:/usr/bin:/sbin:/bin" PYTHONUNBUFFERED=1 timeout --kill-after=15s 180s "$RUNNER_TEMP/virtme/bin/vng" --run "$USB_TEST_KERNEL" --user root --empty-passwords --memory 1G --cpus 2 --verbose --exec "$fixture_command"
+      - name: Preserve virtual gadget build evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
