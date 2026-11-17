@@ -7,13 +7,21 @@ from pathlib import Path
 import subprocess
 
 
+def matches_pixel(event, phase, expected):
+    rgba = event.get("rgba", [])
+    tolerance = 3 if event.get("jpeg") is True else 0
+    return (event.get("phase") == phase and len(rgba) == 4 and rgba[3] == expected[3]
+            and all(type(value) is int and 0 <= value <= 255 and abs(value - target) <= tolerance
+                    for value, target in zip(rgba[:3], expected[:3])))
+
+
 def admits_legacy_loss(result, receipt, server_log):
     events = receipt.get("events", [])
     return (result == 1 and receipt.get("stalledPrevious") is False
             and "RDP_SCHEDULE ERROR" not in server_log
             and "initial_size_before_registration=1" in server_log
-            and any(e.get("phase") == "initial" and e.get("rgba") == [0, 0, 255, 255] for e in events)
-            and any(e.get("phase") == "update" and e.get("rgba") == [0, 255, 0, 255] for e in events)
+            and any(matches_pixel(e, "initial", [0, 0, 255, 255]) for e in events)
+            and any(matches_pixel(e, "update", [0, 255, 0, 255]) for e in events)
             and any(e.get("kind") == "failure" and e.get("phase") == "reload" for e in events)
             and any(e.get("kind") == "failure-canvases" and e.get("canvases")
                     and any(c.get("width") == 0 and c.get("height") == 0 for c in e["canvases"])
@@ -24,7 +32,7 @@ def admits_qualified(result, receipt, server_log):
     events = receipt.get("events", [])
     return (result == 0 and receipt.get("stalledPrevious") is False and "RDP_SCHEDULE ERROR" not in server_log
             and "RDP_SCHEDULE delayed registration;" in server_log
-            and all(any(e.get("phase") == phase and e.get("rgba") == color for e in events)
+            and all(any(matches_pixel(e, phase, color) for e in events)
                     for phase, color in [("initial", [0, 0, 255, 255]), ("update", [0, 255, 0, 255]),
                                          ("reload", [0, 255, 0, 255]), ("fullscreen", [0, 255, 0, 255])])
             and any(e.get("kind") == "process-start" and e.get("command") == "xev" for e in events)

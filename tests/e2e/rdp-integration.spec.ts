@@ -6,6 +6,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { verifyXKeyboard } from './x-keyboard-fixture';
+import { rdpPixelMatches } from './rdp-pixels';
 
 for (const stalledPrevious of [false, true]) {
 test(`real guacd and FreeRDP screen updates, reconnection and keyboard input${stalledPrevious ? ' with an unresponsive previous viewer' : ''}`, async ({ page, request }, info) => {
@@ -25,14 +26,20 @@ test(`real guacd and FreeRDP screen updates, reconnection and keyboard input${st
     if (events.length > 512) events.shift();
   };
   const enter = (name: string) => { phase = name; record('phase'); };
-  const connections: { index: number; viewer: string; clientClosed: boolean; guacdId?: string; sent: Record<string, number>; received: Record<string, number> }[] = [];
+  const currentConnection = new Map<Page, { jpeg: boolean }>();
+  const connections: { index: number; viewer: string; clientClosed: boolean; jpeg: boolean; guacdId?: string; sent: Record<string, number>; received: Record<string, number> }[] = [];
   const observe = (viewer: Page, name: string) => viewer.on('websocket', socket => {
     if (!new URL(socket.url()).pathname.startsWith('/api/rdp/ws/')) return;
     expect(connections.length, 'bounded RDP connection inventory').toBeLessThan(16);
-    const connection = { index: connections.length, viewer: name, clientClosed: false, guacdId: undefined as string | undefined, sent: {} as Record<string, number>, received: {} as Record<string, number> };
+    const connection = { index: connections.length, viewer: name, clientClosed: false, jpeg: false, guacdId: undefined as string | undefined, sent: {} as Record<string, number>, received: {} as Record<string, number> };
+    currentConnection.set(viewer, connection);
     connections.push(connection); record('websocket-open', { index: connection.index });
     const frame = (direction: 'sent' | 'received', payload: string | Buffer) => {
       const data = payload.toString();
+      if (direction === 'received' && !connection.jpeg && (/(?:^|;)4\.jpeg,/.test(data) || data.includes(',10.image/jpeg,'))) {
+        connection.jpeg = true;
+        record('image-codec', { index: connection.index, mime: 'image/jpeg' });
+      }
       let opcode = /^\d+\.([a-z]{1,16})[,;]/.exec(data)?.[1] ?? 'unknown';
       const counts = connection[direction];
       if (!(opcode in counts) && Object.keys(counts).length >= 31) opcode = 'other';
@@ -131,26 +138,29 @@ test(`real guacd and FreeRDP screen updates, reconnection and keyboard input${st
     page.on('pageerror', error => errors.push(error.message));
     const readPixel = (viewer: Page) => viewer.locator('canvas[width="1024"]').filter({ visible: true }).first()
       .evaluate(node => Array.from((node as HTMLCanvasElement).getContext('2d')!.getImageData(100, 100, 1, 1).data));
+    const expectPixel = async (viewer: Page, expected: number[], timeout = 5000) => {
+      await expect.poll(async () => {
+        const rgba = await readPixel(viewer);
+        const jpeg = currentConnection.get(viewer)?.jpeg ?? false;
+        record('pixel', { rgba, jpeg, viewer: viewer === page ? 'active' : 'previous' });
+        return rdpPixelMatches(rgba, expected, jpeg);
+      }, { timeout, message: `RDP frame must match ${expected} (JPEG rounding requires wire evidence)` }).toBe(true);
+    };
     enter('initial');
     if (previous) {
       await previous.goto('/');
       await previous.getByRole('button', { name: 'Desktops', exact: true }).click();
-      await expect.poll(() => readPixel(previous!), { timeout: 20000 }).toEqual([0, 0, 255, 255]);
+      await expectPixel(previous, [0, 0, 255, 255], 20000);
       expect(connections.filter(value => value.viewer === 'previous')).toHaveLength(1);
     }
     await page.goto('/');
     await page.getByRole('button', { name: 'Desktops', exact: true }).click();
     const canvas = page.locator('canvas[width="1024"]').filter({ visible: true }).first();
-    const pixel = async () => {
-      const rgba = await readPixel(page);
-      record('pixel', { rgba });
-      return rgba;
-    };
-    await expect.poll(pixel, { timeout: 20000 }).toEqual([0, 0, 255, 255]);
+    await expectPixel(page, [0, 0, 255, 255], 20000);
     enter('update');
     paint('#00ff00');
-    await expect.poll(pixel).toEqual([0, 255, 0, 255]);
-    if (previous) await expect.poll(() => readPixel(previous!)).toEqual([0, 255, 0, 255]);
+    await expectPixel(page, [0, 255, 0, 255]);
+    if (previous) await expectPixel(previous, [0, 255, 0, 255]);
     enter('reload');
     stallOld = stalledPrevious;
     if (stalledPrevious) {
@@ -164,7 +174,7 @@ test(`real guacd and FreeRDP screen updates, reconnection and keyboard input${st
     }
     await page.reload();
     await page.getByRole('button', { name: 'Desktops', exact: true }).click();
-    await expect.poll(pixel, { timeout: 20000 }).toEqual([0, 255, 0, 255]);
+    await expectPixel(page, [0, 255, 0, 255], 20000);
     if (stalledPrevious) {
       await expect.poll(() => held?.blocked ?? 0, { message: 'old viewer acknowledgements must actually be withheld' }).toBeGreaterThan(0);
       expect(held?.closed, 'new viewer must draw before the old upstream expires').toBe(false);
@@ -172,7 +182,7 @@ test(`real guacd and FreeRDP screen updates, reconnection and keyboard input${st
     enter('fullscreen');
     await canvas.locator('xpath=ancestor::div[@data-1p-ignore]/..').dblclick({ position: { x: 100, y: 100 } });
     await expect(page.getByTitle('Back to grid', { exact: true })).toBeVisible();
-    await expect.poll(pixel, { timeout: 20000 }).toEqual([0, 255, 0, 255]);
+    await expectPixel(page, [0, 255, 0, 255], 20000);
     // Guacamole's layered canvases are covered by its input container. Click
     // the same focusable viewer used by the browser interaction parity test.
     await page.locator('div[data-1p-ignore][tabindex="0"]').click({ position: { x: 80, y: 60 }, timeout: 5000 });

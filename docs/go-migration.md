@@ -91,7 +91,9 @@ now retain per-viewer guacd connection IDs, frame-leading opcode counts,
 phase/pixel samples and fixture process start/exit identities. The event ring is capped at
 512 entries, with at most 16 connections and 32 instruction types per direction.
 Failures retain a screenshot and samples from up to 16 canvases before cleanup.
-The existing reload/green-frame assertions and deadlines remain in place.
+The reload/green-frame checks and deadlines remain in place. PNG pixels and
+alpha stay exact; observed JPEG transport admits at most three levels of RGB
+rounding, with raw pixels and codec evidence retained.
 An additional control keeps a previous browser document and its real upstream
 open while withholding its protocol acknowledgements. The new viewer must draw
 before that upstream expires, and browser-generated keys must reach the X
