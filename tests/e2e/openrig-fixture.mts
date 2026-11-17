@@ -46,7 +46,12 @@ readline.createInterface({ input: process.stdin, terminal: false }).on('line', r
   // Simulate an already-running tmux server whose PATH predates the service's
   // dedicated Rig/provider wrappers. Managed launchers must bind the service
   // PATH explicitly, and project shutdown must preserve this unrelated session.
-  const sentinel = spawnSync('tmux', ['-f', '/dev/null', 'new-session', '-d', '-s', 'webmux-fixture-path', '/bin/sleep 600'], { encoding: 'utf8', timeout: 5000 });
+  // tmux 3.8 enables mouse globally by default. Begin with it explicitly off
+  // in this private server so the browser test proves managed attachments only
+  // enable their own session, preserving unrelated sessions and global options.
+  const tmuxConfig = path.join(rigHome, 'tmux.conf');
+  fs.writeFileSync(tmuxConfig, 'set-option -g mouse off\n');
+  const sentinel = spawnSync('tmux', ['-f', tmuxConfig, 'new-session', '-d', '-s', 'webmux-fixture-path', '/bin/sleep 600'], { encoding: 'utf8', timeout: 5000 });
   if (sentinel.status !== 0) throw new Error(`Cannot start isolated tmux fixture: ${sentinel.stderr}`);
   fs.writeFileSync(path.join(home, 'openrig-tmux-directory'), process.env.TMUX_TMPDIR ?? '');
   process.env.PATH = `${directory}${path.delimiter}${process.env.PATH ?? ''}`;
