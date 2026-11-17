@@ -126,20 +126,31 @@ func (s *Screen) Capture() (Image, error) {
 }
 
 func (i Image) Bytes() ([]byte, error) {
+	encoded, err := i.BytesForProfile("")
+	return encoded.Data, err
+}
+
+// BytesForProfile only emits an extension when explicitly requested. The
+// legacy Bytes API remains fail-closed for parser state ANSI cannot reseed.
+func (i Image) BytesForProfile(profile string) (EncodedSnapshot, error) {
+	if profile != "" && profile != XtermRendererProfile {
+		return EncodedSnapshot{}, ErrUnsupported
+	}
 	if i.state == nil {
-		return nil, errors.New("terminal snapshot is missing")
+		return EncodedSnapshot{}, errors.New("terminal snapshot is missing")
 	}
 	if i.unsupported {
-		return nil, ErrUnsupported
+		return EncodedSnapshot{}, ErrUnsupported
 	}
-	data, err := replayScreen(i.state, i.main, i.repeat)
+	encoded, err := replayScreen(i.state, i.main, i.repeat, profile)
 	if err != nil {
-		return nil, err
+		return EncodedSnapshot{}, err
 	}
-	if len(data) > MaxSnapshotBytes-3 {
-		return nil, ErrTooLarge
+	if len(encoded.Data) > MaxSnapshotBytes-3 {
+		return EncodedSnapshot{}, ErrTooLarge
 	}
-	return append([]byte("\x18\x1bc"), data...), nil
+	encoded.Data = append([]byte("\x18\x1bc"), encoded.Data...)
+	return encoded, nil
 }
 
 func (s *Screen) Close() error {

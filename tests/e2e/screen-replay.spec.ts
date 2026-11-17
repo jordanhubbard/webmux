@@ -5,9 +5,10 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { transformWithOxc } from 'vite';
+import { XTERM_SNAPSHOT_PROFILE } from '../../webmux/frontend/src/utils/terminalSnapshotProfile';
 import { isTerminalLocalInput, shouldSuppressTerminalInput } from '../../webmux/frontend/src/utils/terminalInput';
 
-type Fixture = { name: string; cols: number; rows: number; original: string; snapshot: string; future: string; recaptured: string; beforeCols?: number; beforeRows?: number; resizes?: [number, number][]; snapshotError?: string; recapturedError?: string };
+type Fixture = { name: string; cols: number; rows: number; original: string; snapshot: string; future: string; recaptured: string; beforeCols?: number; beforeRows?: number; resizes?: [number, number][]; snapshotError?: string; recapturedError?: string; snapshotProfile?: string; snapshotToken?: string; recapturedProfile?: string; recapturedToken?: string };
 const names = ['wrap-toggle-pending', 'wrap-toggle-resolved', 'link-named', 'link-anonymous', 'link-replace', 'link-unicode', 'link-semicolon', 'link-wrapped', 'link-id-reuse', 'link-save', 'link-alternate', 'link-close-params', 'palette-short-hex', 'palette-short-rgb', 'palette-long-rgb', 'palette-long-hex', 'palette-single', 'palette-batch', 'palette-query', 'palette-reset', 'dynamic-colors', 'dynamic-query', 'dynamic-reset', 'saved-underline-csi', 'saved-underline-single', 'saved-underline-color', 'saved-underline-color-reset', 'saved-underline-batched', 'saved-underline-twice', 'saved-underline', 'saved-underline-1048', 'saved-underline-1049', 'alternate-wrapped-row', 'alternate-wrapped-blank', 'origin-clamp-top', 'origin-clamp-bottom', 'origin-clamp-then-widen', 'origin-batched-reset', 'origin-batched-reset-reverse', 'origin-active-at-restore', 'origin-after-ris', 'origin-after-soft-reset', 'saved-origin', 'saved-pending-wrap', 'saved-origin-csi', 'saved-origin-1048', 'saved-pending-1049', 'immediate', 'colored-underline', 'unicode', 'combining', 'pending-wrap', 'wide-pending-wrap', 'insert-mode', 'after-sgr', 'after-bell', 'after-private-osc', 'after-query', 'after-repeat', 'c0-inside-csi', 'del-inside-csi', 'after-del', 'after-erased-character'];
 const noWrapCases = JSON.parse(readFileSync(path.resolve(__dirname, '../../webmux/server/internal/thirdparty/vt/testdata/webmux-xterm-nowrap.json'), 'utf8')) as { name: string }[];
 noWrapCases.push(...['rep-space', 'rep-ascii', 'rep-wide-placeholder', 'rep-colored-null', 'soft-reset-focus', 'soft-reset-paste', 'soft-reset-sync', 'region-bottom-wrap', 'region-top-reverse-index', 'region-bottom-index', 'region-saved-restore'].map(name => ({ name })));
@@ -70,11 +71,14 @@ test.beforeAll(async () => {
   const css = readFileSync(path.join(root, 'webmux/node_modules/@xterm/xterm/css/xterm.css'));
   const profilePath = path.join(root, 'webmux/frontend/src/utils/terminalHyperlinks.ts');
   const profile = (await transformWithOxc(readFileSync(profilePath, 'utf8'), profilePath)).code;
+  const snapshotProfilePath = path.join(root, 'webmux/frontend/src/utils/terminalSnapshotProfile.ts');
+  const snapshotProfile = (await transformWithOxc(readFileSync(snapshotProfilePath, 'utf8'), snapshotProfilePath)).code;
   server = http.createServer((req, res) => {
     if (req.url === '/xterm.js') { res.setHeader('Content-Type', 'text/javascript; charset=utf-8'); res.end(library); }
+    else if (req.url === '/snapshot-profile.js') { res.setHeader('Content-Type', 'text/javascript'); res.end(snapshotProfile); }
     else if (req.url === '/hyperlink-profile.js') { res.setHeader('Content-Type', 'text/javascript'); res.end(profile); }
     else if (req.url === '/xterm.css') { res.setHeader('Content-Type', 'text/css; charset=utf-8'); res.end(css); }
-    else { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end('<link rel="stylesheet" href="/xterm.css"><div id="reference"></div><div id="restored"></div><div id="recaptured"></div><script src="/xterm.js"></script><script type="module">import{retainActiveTerminalHyperlink}from"/hyperlink-profile.js";window.installHyperlinkProfile=retainActiveTerminalHyperlink;</script>'); }
+    else { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end('<link rel="stylesheet" href="/xterm.css"><div id="reference"></div><div id="restored"></div><div id="recaptured"></div><script src="/xterm.js"></script><script type="module">import{retainActiveTerminalHyperlink}from"/hyperlink-profile.js";import{installTerminalSnapshotProfile}from"/snapshot-profile.js";window.installSnapshotProfile=installTerminalSnapshotProfile;window.installHyperlinkProfile=retainActiveTerminalHyperlink;</script>'); }
   });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   address = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
@@ -84,18 +88,37 @@ test.afterAll(async () => { if (server) await new Promise<void>(resolve => serve
 for (const name of names) {
   test(`Go screen snapshot matches xterm ${name}`, async ({ page }, info) => {
     const fixture = fixtures.find(f => f.name === name)!;
-    expect(fixture.snapshotError, 'required snapshot state remains unsupported').toBeUndefined();
-    expect(fixture.recapturedError, 'required second-attach state remains unsupported').toBeUndefined();
+
+    for (const [legacyError, profile, token] of [[fixture.snapshotError, fixture.snapshotProfile, fixture.snapshotToken], [fixture.recapturedError, fixture.recapturedProfile, fixture.recapturedToken]]) {
+      if (legacyError !== undefined) {
+        expect(legacyError).toBe('terminal screen state cannot be restored safely; retain the existing job and recover manually');
+        expect(profile, 'unsupported ANSI state requires explicit capability').toBe(XTERM_SNAPSHOT_PROFILE);
+        expect(token).toMatch(/^[a-f0-9]{32}$/);
+      } else {
+        expect(profile).toBeUndefined(); expect(token).toBeUndefined();
+      }
+    }
     await page.goto(address);
     const result = await page.evaluate(async f => {
       const Constructor = (window as unknown as { Terminal: typeof Terminal }).Terminal;
+
+      type SnapshotProfile = { setToken(token?: string): void; dispose(): void };
+      const snapshotProfiles: (SnapshotProfile | undefined)[] = [];
+      const profiles: { dispose(): void }[] = [];
       const terminals = ['reference', 'restored', 'recaptured'].map(id => {
         const t = new Constructor({ cols: id === 'reference' ? f.beforeCols ?? f.cols : f.cols, rows: id === 'reference' ? f.beforeRows ?? f.rows : f.rows, allowProposedApi: true });
-        (window as unknown as { installHyperlinkProfile(t: Terminal): { dispose(): void } }).installHyperlinkProfile(t);
+
+        profiles.push((window as unknown as { installHyperlinkProfile(t: Terminal): { dispose(): void } }).installHyperlinkProfile(t));
+        const snapshotProfile = id === 'reference' ? undefined : (window as unknown as { installSnapshotProfile(t: Terminal): SnapshotProfile }).installSnapshotProfile(t);
+        snapshotProfiles.push(snapshotProfile);
+        if (snapshotProfile) profiles.push(snapshotProfile);
         t.open(document.getElementById(id)!);
         return t;
       });
       const [a, b, c] = terminals;
+      snapshotProfiles[1]!.setToken(f.snapshotToken);
+      snapshotProfiles[2]!.setToken(f.recapturedToken);
+      const referenceUsesSnapshotProfile = typeof Object.getOwnPropertyDescriptor((a as unknown as { _core: { _inputHandler: { _parser: object } } })._core._inputHandler._parser, 'precedingJoinState')?.get === 'function';
       const write = (t: Terminal, data: string) => new Promise<void>(resolve => t.write(data, resolve));
       const state = (t: Terminal) => {
         const v = t.buffer.active, cells = [], wraps = [];
@@ -157,12 +180,14 @@ for (const name of names) {
       await write(c, f.recaptured);
       const recaptured = compare(a, c);
       phase = 'teardown';
+      profiles.forEach(profile => profile.dispose());
       terminals.forEach(t => t.dispose());
-      return { initial, continued, recaptured, replayReplies, focusReports };
+      return { initial, continued, recaptured, replayReplies, focusReports, referenceUsesSnapshotProfile };
     }, fixture);
     const receipt = info.outputPath('screen-replay.json');
     writeFileSync(receipt, JSON.stringify(result));
     await info.attach('screen replay', { path: receipt, contentType: 'application/json' });
+    expect(result.referenceUsesSnapshotProfile, 'independent reference must use the unmodified parser').toBe(false);
     expect(result.initial.equal, 'initial snapshot').toBe(true);
     expect(result.continued.equal, 'output after first attachment').toBe(true);
     expect(result.recaptured.equal, 'second attachment after more output').toBe(true);
@@ -225,4 +250,71 @@ test('active hyperlink profile retains the pen and releases disposed targets', a
   expect(result.directResetSize).toBe(0);
   expect(result.scrolled).toBe('https://example.test/scroll');
   expect(result.disposedSize).toBe(0);
+});
+
+
+test('snapshot parser profile is token bound, bounded, split safe and disposable', async ({ page }) => {
+  await page.goto(address);
+  const result = await page.evaluate(async () => {
+    const Constructor = (window as unknown as { Terminal: typeof Terminal }).Terminal;
+    const term = new Constructor({ cols: 12, rows: 4, allowProposedApi: true });
+    term.open(document.getElementById('restored')!);
+    type Profile = { setToken(token?: string): void; dispose(): void };
+    const install = (window as unknown as { installSnapshotProfile(t: Terminal): Profile }).installSnapshotProfile;
+    const parser = (term as unknown as { _core: { _inputHandler: { _parser: { precedingJoinState: number } } } })._core._inputHandler._parser;
+    const write = (data: string) => new Promise<void>(resolve => term.write(data, resolve));
+    const token = '0123456789abcdef0123456789abcdef';
+    const packet = (payload: string, nonce = token) => `\x1b]7777;webmux.replay.v1;${nonce};${payload}\x07`;
+    const input: string[] = []; term.onData(data => input.push(data));
+    await write('Z'); const expected = parser.precedingJoinState;
+    const profile = install(term);
+    let duplicateRefused = false;
+    try { install(term); } catch { duplicateRefused = true; }
+    await write(packet('Wg==')); const unarmed = parser.precedingJoinState;
+    profile.setToken(token);
+    const valid = packet('Wg==');
+    for (let split = 0; split <= valid.length; split++) {
+      term.reset(); profile.setToken(token); await write('Z');
+      await write(valid.slice(0, split)); await write(valid.slice(split));
+      if (parser.precedingJoinState !== expected) throw new Error(`join state lost at split ${split}`);
+      await write('\x1b[2b');
+      if (term.buffer.active.cursorX !== 3 || term.buffer.active.getLine(0)!.translateToString(true) !== 'ZZZ') throw new Error(`REP failed at split ${split}`);
+    }
+    const bad = [packet('Wg==', 'f'.repeat(32)), packet(''), packet('***='), packet('/w=='), packet('AA=='), packet('woU='), packet(btoa('x'.repeat(65))), packet('Wg==') + '\x1b[0m'];
+    for (const data of bad) {
+      term.reset(); profile.setToken(token); await write('Z'); await write(data);
+      if (parser.precedingJoinState !== 0 || term.buffer.active.cursorX !== 1) throw new Error('invalid packet retained repeat state or changed cursor');
+      await write('\x1b[2b');
+      if (term.buffer.active.cursorX !== 1) throw new Error('invalid packet enabled REP');
+    }
+    term.reset(); profile.setToken(token); await write('Z'); await write(valid); await write('\u0301');
+    const combined = term.buffer.active.getLine(0)!.getCell(0)!.getChars();
+    await write(valid); const reused = parser.precedingJoinState;
+    profile.setToken(token); await write(valid); term.reset(); const reset = parser.precedingJoinState;
+    const stock = new Constructor(); await new Promise<void>(resolve => stock.write('Z', resolve)); stock.reset();
+    const stockReset = (stock as unknown as { _core: { _inputHandler: { _parser: { precedingJoinState: number } } } })._core._inputHandler._parser.precedingJoinState; stock.dispose();
+    await write('\x1bc'); const ris = parser.precedingJoinState;
+    profile.setToken(undefined); await write(valid); const disarmed = parser.precedingJoinState;
+    let invalidTokenRefused = false;
+    try { profile.setToken('invalid'); } catch { invalidTokenRefused = true; }
+    profile.setToken(token); await write(valid); const beforeDispose = parser.precedingJoinState;
+    profile.dispose(); profile.dispose();
+    const descriptor = Object.getOwnPropertyDescriptor(parser, 'precedingJoinState')!;
+    const retainedOnDispose = parser.precedingJoinState;
+    await write(valid); const afterDispose = parser.precedingJoinState;
+    const again = install(term); again.dispose(); term.dispose();
+    return { expected, splits: valid.length + 1, duplicateRefused, unarmed, combined, reused, reset, stockReset, ris, disarmed, invalidTokenRefused, beforeDispose, retainedOnDispose, afterDispose, restoredDataProperty: descriptor.writable === true && descriptor.get === undefined, input };
+  });
+  expect(result.expected).toBeGreaterThan(0);
+  expect(result.splits).toBeGreaterThan(50);
+  expect(result.duplicateRefused).toBe(true);
+  expect(result.unarmed).toBe(0);
+  expect(result.combined).toBe('Z\u0301'); expect(result.reused).toBe(0);
+  expect(result.reset).toBe(result.stockReset); expect(result.ris).toBe(0); expect(result.disarmed).toBe(0);
+  expect(result.invalidTokenRefused).toBe(true);
+  expect(result.beforeDispose).toBe(result.expected);
+  expect(result.retainedOnDispose).toBe(result.expected);
+  expect(result.afterDispose).toBe(0);
+  expect(result.restoredDataProperty).toBe(true);
+  expect(result.input).toEqual([]);
 });

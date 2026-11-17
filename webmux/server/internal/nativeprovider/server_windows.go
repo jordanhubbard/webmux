@@ -171,7 +171,8 @@ func (o *owner) handle(connection net.Conn) {
 		return
 	}
 	defer func() { o.mu.Lock(); delete(o.viewers, viewer); o.mu.Unlock() }()
-	snapshot, err := image.Bytes()
+	encoded, err := image.BytesForProfile(request.Renderer)
+	snapshot := encoded.Data
 	if err != nil {
 		_ = writeFrame(connection, frame{Kind: "rejected", Error: err.Error()})
 		return
@@ -179,7 +180,7 @@ func (o *owner) handle(connection net.Conn) {
 	// A snapshot may exceed the live queue's capacity. Send it first with a
 	// total deadline, while the bounded queue captures only subsequent output.
 	_ = connection.SetWriteDeadline(time.Now().Add(5 * time.Second))
-	if writeFrame(connection, frame{Kind: "attached", Identity: &o.identity}) != nil {
+	if writeFrame(connection, frame{Kind: "attached", Identity: &o.identity, RequiredRenderer: encoded.RequiredRenderer, RendererToken: encoded.RendererToken}) != nil {
 		return
 	}
 	for len(snapshot) > 0 {
@@ -291,7 +292,7 @@ func Serve(ctx context.Context, input io.Reader, output io.Writer, start func(La
 		return err
 	}
 	defer screen.Close()
-	o := &owner{identity: Identity{Session: c.Session, Instance: id, Endpoint: endpoint, OwnerPID: os.Getpid(), BinarySHA256: hex.EncodeToString(digest[:]), Replay: "screen-v1"}, key: c.Key, viewers: map[*subscriber]bool{}, screen: screen, changed: make(chan struct{})}
+	o := &owner{identity: Identity{Session: c.Session, Instance: id, Endpoint: endpoint, OwnerPID: os.Getpid(), BinarySHA256: hex.EncodeToString(digest[:]), Replay: "screen-v2"}, key: c.Key, viewers: map[*subscriber]bool{}, screen: screen, changed: make(chan struct{})}
 	if err := writeRecord(c.Root, c.Key, o.identity); err != nil {
 		return err
 	}

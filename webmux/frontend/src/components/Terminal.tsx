@@ -11,6 +11,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { installTerminalQuerySuppressors, isTerminalLocalInput, shouldSuppressTerminalInput } from '../utils/terminalInput';
 import { TERMINAL_FONTS_LOADED_EVENT, loadTerminalFontFamily, normalizeTerminalFontFamily } from '../utils/terminalFont';
+import { installTerminalSnapshotProfile, XTERM_SNAPSHOT_PROFILE, type TerminalSnapshotProfile } from '../utils/terminalSnapshotProfile';
 import { retainActiveTerminalHyperlink } from '../utils/terminalHyperlinks';
 import { scrollTerminalPages } from '../utils/terminalScroll';
 
@@ -97,6 +98,8 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const wsHandleRef = useRef<ReturnType<typeof useWebSocket> | null>(null);
+  const snapshotProfileRef = useRef<TerminalSnapshotProfile | null>(null);
+  const [renderer, setRenderer] = useState<{ ready: boolean; profile?: string }>({ ready: false });
   const userScrolledRef = useRef(false);
   const autoScrollRef = useRef(autoScroll);
   const [inputError, setInputError] = useState('');
@@ -296,7 +299,15 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       case 'status':
         // Queue the reset with output so old asynchronous writes cannot re-enable modes.
         // viewer_id marks an initial snapshot; connected marks a new PTY run.
-        if (msg.viewer_id || msg.state === 'connected') termRef.current?.write('\x18\x1bc');
+        if (msg.viewer_id || msg.state === 'connected') {
+          if (msg.snapshot_profile && (msg.snapshot_profile !== XTERM_SNAPSHOT_PROFILE || !snapshotProfileRef.current || !/^[a-f0-9]{32}$/.test(msg.snapshot_token ?? ''))) {
+            setInputError('Reload WebMux to restore this terminal; the existing job is still running');
+            wsHandleRef.current?.close();
+            break;
+          }
+          snapshotProfileRef.current?.setToken(msg.snapshot_profile ? msg.snapshot_token : undefined);
+          termRef.current?.write('\x18\x1bc');
+        }
         if (msg.state) onStateChangeRef.current(msg.state);
         if (typeof msg.transcript_enabled === 'boolean') setTranscriptEnabled(msg.transcript_enabled);
         break;
@@ -321,6 +332,8 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
 
   const wsHandle = useWebSocket({
     sessionId,
+    enabled: renderer.ready,
+    snapshotProfile: renderer.profile,
     onMessage: handleMessage,
     onSendError: setInputError,
     onOpen: () => {
@@ -372,6 +385,9 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     });
 
     const hyperlinkProfile = retainActiveTerminalHyperlink(term);
+    try { snapshotProfileRef.current = installTerminalSnapshotProfile(term); }
+    catch (error) { console.error(error); snapshotProfileRef.current = null; }
+    setRenderer({ ready: true, profile: snapshotProfileRef.current ? XTERM_SNAPSHOT_PROFILE : undefined });
     const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon(openLink);
     const searchAddon = new SearchAddon();
@@ -473,6 +489,9 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       el.removeEventListener('focusin', focusHandler);
       el.removeEventListener('focusout', cancelClipboardRead);
       window.removeEventListener('blur', cancelClipboardRead);
+      snapshotProfileRef.current?.dispose();
+      snapshotProfileRef.current = null;
+      setRenderer({ ready: false });
       hyperlinkProfile.dispose();
       term.dispose();
       termRef.current = null;

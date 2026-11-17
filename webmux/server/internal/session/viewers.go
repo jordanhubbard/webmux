@@ -1,6 +1,7 @@
 package session
 
 import (
+	"errors"
 	"sync"
 	"time"
 )
@@ -12,15 +13,16 @@ type Event map[string]any
 // Viewer is a bounded subscription. The broker never waits for network writes.
 // On overflow the client reconnects and receives fresh state and scrollback.
 type Viewer struct {
-	ID     string
-	mu     sync.Mutex
-	queue  [128]Event
-	head   int
-	count  int
-	ready  chan struct{}
-	done   chan struct{}
-	code   int
-	reason string
+	renderer string
+	ID       string
+	mu       sync.Mutex
+	queue    [128]Event
+	head     int
+	count    int
+	ready    chan struct{}
+	done     chan struct{}
+	code     int
+	reason   string
 }
 
 // Notify queues an event for this viewer only.
@@ -91,7 +93,12 @@ func (v *Viewer) send(event Event) {
 	}
 }
 
-func (b *Broker) Join(owner, id string) (*Viewer, error) {
+var ErrRendererUnsupported = errors.New("Reload WebMux to restore this terminal; the existing job is still running")
+
+func (b *Broker) Join(owner, id string) (*Viewer, error) { return b.JoinWithProfile(owner, id, "") }
+
+// JoinWithProfile checks capabilities under the same lock as replay and live output.
+func (b *Broker) JoinWithProfile(owner, id, renderer string) (*Viewer, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.closed {
@@ -106,11 +113,14 @@ func (b *Broker) Join(owner, id string) (*Viewer, error) {
 			return nil, err
 		}
 	}
+	if e.requiredRenderer != "" && e.requiredRenderer != renderer {
+		return nil, ErrRendererUnsupported
+	}
 	viewerID, err := uuid()
 	if err != nil {
 		return nil, err
 	}
-	v := &Viewer{ID: viewerID, ready: make(chan struct{}, 1), done: make(chan struct{})}
+	v := &Viewer{renderer: renderer, ID: viewerID, ready: make(chan struct{}, 1), done: make(chan struct{})}
 	if e.viewers == nil {
 		e.viewers = map[string]*Viewer{}
 	}
@@ -119,7 +129,9 @@ func (b *Broker) Join(owner, id string) (*Viewer, error) {
 		e.focus = v.ID
 	}
 	b.broadcastLocked(e, b.presenceLocked(e, "viewer_join", v.ID))
-	v.send(Event{"type": "status", "session_id": id, "state": e.value.State, "viewer_id": v.ID, "transcript_enabled": e.run != nil && e.run.log.active()})
+	status := Event{"type": "status", "session_id": id, "state": e.value.State, "viewer_id": v.ID, "transcript_enabled": e.run != nil && e.run.log.active()}
+	e.snapshotMetadata(status)
+	v.send(status)
 	if e.scrollback != "" {
 		v.send(Event{"type": "output", "session_id": id, "data": e.replayScreen.prefix() + e.scrollback})
 	}
@@ -204,5 +216,27 @@ func (b *Broker) AcknowledgeBrowser(owner, id, requestID string) {
 	e, err := b.ownedLocked(owner, id)
 	if err == nil && e.browserRequest != nil && e.browserRequest["request_id"] == requestID {
 		e.browserRequest = nil
+	}
+}
+
+func (e *entry) snapshotMetadata(event Event) {
+	if e.requiredRenderer != "" {
+		event["snapshot_profile"] = e.requiredRenderer
+		event["snapshot_token"] = e.rendererToken
+	}
+}
+
+// Called before starting the new reader. Incompatible viewers receive no part
+// of the required snapshot; detaching them never closes the owned process.
+func (b *Broker) setSnapshotProfileLocked(e *entry, renderer, token string) {
+	e.requiredRenderer, e.rendererToken = renderer, token
+	for id, v := range e.viewers {
+		if renderer != "" && v.renderer != renderer {
+			v.finish(1008, ErrRendererUnsupported.Error())
+			delete(e.viewers, id)
+			if e.focus == id {
+				e.focus = ""
+			}
+		}
 	}
 }

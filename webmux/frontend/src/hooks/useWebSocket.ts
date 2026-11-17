@@ -5,6 +5,8 @@ import { signalAuthExpired } from '../utils/authSession';
 
 interface UseWebSocketOptions {
   sessionId: string;
+  enabled?: boolean;
+  snapshotProfile?: string;
   onMessage: (msg: WebSocketMessage) => void;
   onOpen?: () => void;
   onClose?: () => void;
@@ -37,7 +39,7 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
   const onSendErrorRef = useRef(options.onSendError);
   onSendErrorRef.current = options.onSendError;
 
-  const { sessionId, onMessage, onOpen, onClose, onUnauthorized } = options;
+  const { sessionId, onMessage, onOpen, onClose, onUnauthorized, enabled = true, snapshotProfile } = options;
 
   const onMessageRef = useRef(onMessage);
   const onOpenRef = useRef(onOpen);
@@ -60,6 +62,7 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     closedRef.current = false;
     attemptRef.current = 0;
     connectedOnceRef.current = false;
@@ -67,7 +70,8 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
     function connect() {
       if (closedRef.current) return;
 
-      const url = buildWsUrl(sessionId);
+      const base = buildWsUrl(sessionId);
+      const url = snapshotProfile ? `${base}${base.includes("?") ? "&" : "?"}snapshot_profile=${encodeURIComponent(snapshotProfile)}` : base;
       const ws = new WebSocket(url);
       wsRef.current = ws;
 
@@ -97,6 +101,11 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
           closedRef.current = true;
           onUnauthorizedRef.current?.();
           signalAuthExpired();
+          return;
+        }
+        if (event.code === 1008 && event.reason.startsWith('Reload WebMux to restore')) {
+          closedRef.current = true;
+          onSendErrorRef.current?.(event.reason);
           return;
         }
         // 1000 = intentional close (component unmount, session deleted)
@@ -135,7 +144,7 @@ export function useWebSocket(options: UseWebSocketOptions): WebSocketHandle {
       pendingBytesRef.current = 0;
       pendingInputRef.current = false;
     };
-  }, [sessionId]);
+  }, [sessionId, enabled, snapshotProfile]);
 
   const send = useCallback((msg: WebSocketMessage) => {
     const serialized = JSON.stringify(msg);

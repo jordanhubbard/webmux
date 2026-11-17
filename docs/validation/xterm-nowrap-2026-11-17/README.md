@@ -4,7 +4,56 @@ Tracks #421 under #355. This checkpoint preserves the engine distinction
 between addressing the final column and printing past it while DECAWM is off.
 The draft candidate now enables the extension in Screen and replaces its
 no-wrap refusal with replay. It is not merged or qualified for release.
-Native ConPTY, resize and margin acceptance remain incomplete.
+The current checkpoint below supersedes the historical results that follow.
+Fresh qualification of the new renderer-profile transport remains required.
+
+
+## Current renderer-profile checkpoint
+
+Issue #424's overlap-grow state now has an explicit negotiated encoder:
+`Image.BytesForProfile("webmux-xterm-state-v1")`. The legacy `Bytes()` API still
+returns `ErrUnsupported` for that same image before and after profile encoding.
+Ordinary snapshots remain standard ANSI and carry no profile requirement.
+
+The encoder restores visible cells with ANSI, then appends a bounded OSC 7777
+packet containing the last printed cluster and a fresh 128-bit snapshot nonce.
+Only the version-qualified adapter for the locked xterm 6.0.0 renderer consumes
+it. It restores parser join/REP state through xterm's own Unicode service and
+leaves the independent reference renderer unmodified. A matching token comes
+from transport metadata, never terminal output. Valid tokens are consumed once;
+malformed, oversized, control-containing, invalid UTF-8 or stale-token packets
+cannot restore state. The adapter has no host action or I/O operation and
+restores its property descriptor on disposal.
+
+Native owners now advertise `screen-v2`. The controller sends the profile field
+only to a v2 owner, leaving old owners' strict frame decoding compatible. The
+owner acknowledges any actual requirement and nonce before sending snapshot
+bytes. Client metadata is immutable; the broker records it before starting the
+reader. Every join checks capabilities under the replay lock. An incompatible
+viewer is detached with a reload explanation while the same owned terminal
+continues running. New-run and joining-viewer status configure the frontend
+before its queued reset and replay. No process restart or navigation/input
+replay is introduced.
+
+The first complete local profile run passed all 411 real Chrome renderer checks
+(initial, continued and second attachment comparisons plus lifecycle controls).
+This includes the two formerly failing overlap-grow controls and byte-split
+packet, malformed/stale token, one-shot, normal parser reset and disposal checks.
+A controlled-frame test of the actual app passed through two page attachments:
+it verified capability advertisement, metadata-before-output, REP, rejection
+of stale tokens and no generated terminal input. That app test isolates the
+frontend contract; it is not native ConPTY evidence.
+
+Fresh Windows artifact 14337553952 at PR head 5a80f2c (workflow 44105321159)
+contains 22 actual native ConPTY captures. All 22 executed with one job each and
+passed initial, continued and second-attach renderer comparisons without replayed
+queries. Its overall gate still failed the two static #424 controls. This proves
+the prior native engine fixes, not the new profile/transport changes in this
+checkpoint. Fresh Windows profile protocol contracts, actual ConPTY captures
+and all hosted checks remain required before this draft can merge. Hidden
+underline and wider native lifecycle qualification remain under #355/#318.
+
+## Historical checkpoints
 
 The retained MIT module has 241 original files with recorded upstream hashes.
 Patched files are emulator.go, utf8.go, cc.go, csi_cursor.go, handlers.go,

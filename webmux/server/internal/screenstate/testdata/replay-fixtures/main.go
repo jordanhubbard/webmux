@@ -10,18 +10,22 @@ import (
 )
 
 type fixture struct {
-	Name            string   `json:"name"`
-	Cols            int      `json:"cols"`
-	Rows            int      `json:"rows"`
-	Original        string   `json:"original"`
-	Snapshot        string   `json:"snapshot"`
-	Future          string   `json:"future"`
-	Recaptured      string   `json:"recaptured"`
-	BeforeCols      int      `json:"beforeCols,omitempty"`
-	BeforeRows      int      `json:"beforeRows,omitempty"`
-	Resizes         [][2]int `json:"resizes,omitempty"`
-	SnapshotError   string   `json:"snapshotError,omitempty"`
-	RecapturedError string   `json:"recapturedError,omitempty"`
+	Name              string   `json:"name"`
+	Cols              int      `json:"cols"`
+	Rows              int      `json:"rows"`
+	Original          string   `json:"original"`
+	Snapshot          string   `json:"snapshot"`
+	Future            string   `json:"future"`
+	Recaptured        string   `json:"recaptured"`
+	BeforeCols        int      `json:"beforeCols,omitempty"`
+	BeforeRows        int      `json:"beforeRows,omitempty"`
+	Resizes           [][2]int `json:"resizes,omitempty"`
+	SnapshotError     string   `json:"snapshotError,omitempty"`
+	RecapturedError   string   `json:"recapturedError,omitempty"`
+	SnapshotProfile   string   `json:"snapshotProfile,omitempty"`
+	SnapshotToken     string   `json:"snapshotToken,omitempty"`
+	RecapturedProfile string   `json:"recapturedProfile,omitempty"`
+	RecapturedToken   string   `json:"recapturedToken,omitempty"`
 }
 
 func main() {
@@ -192,22 +196,14 @@ func main() {
 				}
 				image, err := s.Capture()
 				check(name, err)
-				before, err := image.Bytes()
-				beforeError := ""
-				if err != nil {
-					beforeError = err.Error()
-				}
+				before, beforeError, beforeProfile, beforeToken := qualifiedBytes(name, image)
 				check(name, s.Feed([]byte(tc.after)))
 				image, err = s.Capture()
 				check(name, err)
-				after, err := image.Bytes()
-				afterError := ""
-				if err != nil {
-					afterError = err.Error()
-				}
+				after, afterError, afterProfile, afterToken := qualifiedBytes(name, image)
 				check(name, s.Close())
 				last := plan.sizes[len(plan.sizes)-1]
-				fixtures = append(fixtures, fixture{Name: name, Cols: last[0], Rows: last[1], Original: tc.before, Snapshot: string(before), Future: tc.after, Recaptured: string(after), BeforeCols: 8, BeforeRows: 4, Resizes: plan.sizes, SnapshotError: beforeError, RecapturedError: afterError})
+				fixtures = append(fixtures, fixture{Name: name, Cols: last[0], Rows: last[1], Original: tc.before, Snapshot: string(before), Future: tc.after, Recaptured: string(after), BeforeCols: 8, BeforeRows: 4, Resizes: plan.sizes, SnapshotError: beforeError, RecapturedError: afterError, SnapshotProfile: beforeProfile, SnapshotToken: beforeToken, RecapturedProfile: afterProfile, RecapturedToken: afterToken})
 			}
 		}
 	}
@@ -253,4 +249,18 @@ func check(name string, err error) {
 		fmt.Fprintln(os.Stderr, name+": "+err.Error())
 		os.Exit(1)
 	}
+}
+
+func qualifiedBytes(name string, image screenstate.Image) (data []byte, legacyError, profile, token string) {
+	data, err := image.Bytes()
+	if err == nil {
+		return data, "", "", ""
+	}
+	legacyError = err.Error()
+	encoded, err := image.BytesForProfile(screenstate.XtermRendererProfile)
+	check(name, err)
+	if encoded.RequiredRenderer != screenstate.XtermRendererProfile || len(encoded.RendererToken) != 32 {
+		check(name, fmt.Errorf("missing explicit renderer capability"))
+	}
+	return encoded.Data, legacyError, encoded.RequiredRenderer, encoded.RendererToken
 }

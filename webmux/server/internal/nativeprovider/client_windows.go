@@ -2,19 +2,22 @@ package nativeprovider
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"io"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/jordanhubbard/webmux/server/internal/screenstate"
 )
 
-func connect(ctx context.Context, i Identity, key, operation string, cols, rows int) (net.Conn, Identity, error) {
+func connect(ctx context.Context, i Identity, key, operation string, cols, rows int, renderer string) (net.Conn, frame, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	c, err := (&net.Dialer{}).DialContext(ctx, "unix", i.Endpoint)
 	if err != nil {
-		return nil, Identity{}, err
+		return nil, frame{}, err
 	}
 	failed := true
 	defer func() {
@@ -35,21 +38,25 @@ func connect(ctx context.Context, i Identity, key, operation string, cols, rows 
 		})
 	}
 	defer stopContext()
-	if err := writeFrame(c, frame{Protocol: 1, Kind: operation, Session: i.Session, Instance: i.Instance, Key: key, Cols: cols, Rows: rows}); err != nil {
-		return nil, Identity{}, err
+	request := frame{Protocol: 1, Kind: operation, Session: i.Session, Instance: i.Instance, Key: key, Cols: cols, Rows: rows}
+	if operation == "attach" && i.Replay == "screen-v2" {
+		request.Renderer = renderer
+	}
+	if err := writeFrame(c, request); err != nil {
+		return nil, frame{}, err
 	}
 	var reply frame
 	if err := readFrame(c, &reply); err != nil {
 		if ctx.Err() != nil {
 			err = ctx.Err()
 		}
-		return nil, Identity{}, err
+		return nil, frame{}, err
 	}
 	if reply.Error != "" {
-		return nil, Identity{}, errors.New(reply.Error)
+		return nil, frame{}, errors.New(reply.Error)
 	}
 	if reply.Identity == nil || reply.Identity.Instance != i.Instance || reply.Identity.Session != i.Session || reply.Identity.OwnerPID != i.OwnerPID {
-		return nil, Identity{}, errors.New("native provider identity changed")
+		return nil, frame{}, errors.New("native provider identity changed")
 	}
 	want := "ready"
 	if operation == "attach" {
@@ -59,31 +66,44 @@ func connect(ctx context.Context, i Identity, key, operation string, cols, rows 
 		want = "stopping"
 	}
 	if reply.Kind != want {
-		return nil, Identity{}, errors.New("invalid native provider response")
+		return nil, frame{}, errors.New("invalid native provider response")
 	}
-	if operation == "attach" && reply.Identity.Replay != "screen-v1" {
-		return nil, Identity{}, errors.New("native provider cannot restore a complete terminal view; keep the existing job and recover manually")
+	if operation == "attach" && reply.Identity.Replay != "screen-v1" && reply.Identity.Replay != "screen-v2" {
+		return nil, frame{}, errors.New("native provider cannot restore a complete terminal view; keep the existing job and recover manually")
+	}
+	if reply.RequiredRenderer != "" {
+		if request.Renderer != screenstate.XtermRendererProfile || reply.Identity.Replay != "screen-v2" || reply.RequiredRenderer != request.Renderer || len(reply.RendererToken) != 32 {
+			return nil, frame{}, errors.New("unnegotiated native snapshot profile")
+		}
+		if decoded, err := hex.DecodeString(reply.RendererToken); err != nil || hex.EncodeToString(decoded) != reply.RendererToken {
+			return nil, frame{}, errors.New("invalid native snapshot token")
+		}
+	} else if reply.RendererToken != "" {
+		return nil, frame{}, errors.New("unexpected native snapshot token")
 	}
 	// Attach keeps the connection after this handshake context ends. Join or
 	// stop its callback before clearing the deadline for subsequent streaming.
 	stopContext()
 	if ctx.Err() != nil {
-		return nil, Identity{}, ctx.Err()
+		return nil, frame{}, ctx.Err()
 	}
 	_ = c.SetDeadline(time.Time{})
 	failed = false
-	return c, *reply.Identity, nil
+	return c, reply, nil
 }
 
 func Probe(ctx context.Context, i Identity, key string) (Identity, error) {
-	c, result, err := connect(ctx, i, key, "probe", 0, 0)
+	c, result, err := connect(ctx, i, key, "probe", 0, 0, "")
 	if c != nil {
 		_ = c.Close()
 	}
-	return result, err
+	if err != nil {
+		return Identity{}, err
+	}
+	return *result.Identity, nil
 }
 func Stop(ctx context.Context, i Identity, key string) error {
-	c, _, err := connect(ctx, i, key, "stop", 0, 0)
+	c, _, err := connect(ctx, i, key, "stop", 0, 0, "")
 	if c != nil {
 		_ = c.Close()
 	}
@@ -91,26 +111,36 @@ func Stop(ctx context.Context, i Identity, key string) error {
 }
 
 type Client struct {
-	connection net.Conn
-	reader     *io.PipeReader
-	writer     *io.PipeWriter
-	writeMu    sync.Mutex
-	done       chan struct{}
-	code       int
-	err        error
-	once       sync.Once
+	requiredRenderer string
+	rendererToken    string
+	connection       net.Conn
+	reader           *io.PipeReader
+	writer           *io.PipeWriter
+	writeMu          sync.Mutex
+	done             chan struct{}
+	code             int
+	err              error
+	once             sync.Once
 }
 
 func Attach(ctx context.Context, i Identity, key string, cols, rows int) (*Client, error) {
+	return AttachWithProfile(ctx, i, key, cols, rows, "")
+}
+
+// AttachWithProfile negotiates extensions before receiving any snapshot output.
+func AttachWithProfile(ctx context.Context, i Identity, key string, cols, rows int, renderer string) (*Client, error) {
+	if renderer != "" && renderer != screenstate.XtermRendererProfile {
+		return nil, errors.New("unknown native snapshot profile")
+	}
 	if !validSize(cols, rows) {
 		return nil, errors.New("invalid native provider terminal size")
 	}
-	c, _, err := connect(ctx, i, key, "attach", cols, rows)
+	c, reply, err := connect(ctx, i, key, "attach", cols, rows, renderer)
 	if err != nil {
 		return nil, err
 	}
 	r, w := io.Pipe()
-	client := &Client{connection: c, reader: r, writer: w, done: make(chan struct{}), code: -1}
+	client := &Client{requiredRenderer: reply.RequiredRenderer, rendererToken: reply.RendererToken, connection: c, reader: r, writer: w, done: make(chan struct{}), code: -1}
 	go func() {
 		defer close(client.done)
 		defer c.Close()
@@ -180,3 +210,6 @@ func (c *Client) Close() error {
 	}
 	return err
 }
+
+// SnapshotProfile is immutable handshake metadata, never parsed from job output.
+func (c *Client) SnapshotProfile() (string, string) { return c.requiredRenderer, c.rendererToken }

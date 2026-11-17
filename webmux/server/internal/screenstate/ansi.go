@@ -42,21 +42,21 @@ import (
 // The owner supplies only complete filtered states; private strings and mirror
 // replies are never emitted. REP state and filtered OSC display features still
 // need separate qualification. The capture is not modified.
-func replayScreen(st *snapshot.State, main *underlay, repeat bool) ([]byte, error) {
+func replayScreen(st *snapshot.State, main *underlay, repeat bool, profile string) (EncodedSnapshot, error) {
 	if st == nil {
-		return nil, ErrIncomplete
+		return EncodedSnapshot{}, ErrIncomplete
 	}
 	cp := *st
 	if err := cp.Unpack(); err != nil {
-		return nil, err
+		return EncodedSnapshot{}, err
 	}
-	return replay(&cp, main, repeat)
+	return replay(&cp, main, repeat, profile)
 }
 
 // replay is Replay for a state that is not packed.
-func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
+func replay(st *snapshot.State, under *underlay, repeat bool, profile string) (EncodedSnapshot, error) {
 	if st == nil {
-		return nil, ErrIncomplete
+		return EncodedSnapshot{}, ErrIncomplete
 	}
 	var b bytes.Buffer
 	b.Grow(st.Width * (st.Height + len(st.Scrollback)) * 2)
@@ -231,25 +231,30 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 		}
 		sourceX := logicalX - printedWidth
 		if st.CursorY >= 0 && st.CursorY < len(st.Screen) && sourceX >= 0 && sourceX < len(st.Screen[st.CursorY]) && st.Screen[st.CursorY][sourceX].Content == "" {
-			return b.Bytes(), nil
+			return EncodedSnapshot{Data: b.Bytes()}, nil
 		}
 		if !st.Modes[7] && st.CursorX == st.Width-1 && printedWidth > 1 {
 			w.cup(cx, cy)
 			b.WriteString(st.LastPrinted)
-			return b.Bytes(), nil
+			return EncodedSnapshot{Data: b.Bytes()}, nil
 		}
 		x, y := st.CursorX-1, st.CursorY
 		if st.PendingWrap {
 			x = st.CursorX
 		}
 		if y < 0 || y >= len(st.Screen) || x < 0 || x >= len(st.Screen[y]) || st.LastPrinted == "" {
-			return nil, ErrIncomplete
+			return EncodedSnapshot{}, ErrIncomplete
 		}
 		if x > 0 && x < st.Width-1 && st.Screen[y][x-1].Width == 2 && st.Screen[y][x].Width == 1 {
-			// Printing this REP seed would erase the retained wide lead. Refuse
-			// until its parser state is faithfully restorable; #421's independent
-			// continuation case remains an unsatisfied acceptance gate.
-			return nil, ErrUnsupported
+			if profile != XtermRendererProfile {
+				return EncodedSnapshot{}, ErrUnsupported
+			}
+			packet, token, err := repeatStatePacket(st.LastPrinted)
+			if err != nil {
+				return EncodedSnapshot{}, err
+			}
+			b.WriteString(packet)
+			return EncodedSnapshot{Data: b.Bytes(), RequiredRenderer: XtermRendererProfile, RendererToken: token}, nil
 		}
 		if st.Screen[y][x].Width == 0 && x > 0 {
 			x--
@@ -265,7 +270,7 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 			w.mode(7, false)
 			w.protect(protectedAt(activeProtection, y, x))
 			w.cell(st.Screen[y][x])
-			return b.Bytes(), nil
+			return EncodedSnapshot{Data: b.Bytes()}, nil
 		}
 		w.cup(addressX, addressY)
 		if st.ANSIModes[4] {
@@ -277,7 +282,7 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 		}
 		b.WriteString(st.LastPrinted)
 	}
-	return b.Bytes(), nil
+	return EncodedSnapshot{Data: b.Bytes()}, nil
 }
 
 // vtWriter writes rows of cells, keeping track of the pen and the link it
