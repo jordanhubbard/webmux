@@ -282,7 +282,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       const file = path.join(state, scope, project, 'project.json');
       if (!existsSync(file)) continue;
       const team = JSON.parse(readFileSync(file, 'utf8')) as { rigId: string };
-      const stopped = spawnSync(path.join(home, 'openrig-bin', 'rig'), ['down', team.rigId], { timeout: 15000, encoding: 'utf8' });
+      const stopped = spawnSync(path.join(home, 'openrig-bin', 'rig'), ['down', team.rigId], { env: { ...process.env, OPENRIG_HOST_SELECTED: 'local' }, timeout: 15000, encoding: 'utf8' });
       if (workloadCompleted && !/already stopped/.test(stopped.stdout + stopped.stderr)) {
         expect(stopped.status, stopped.stdout + stopped.stderr).toBe(0);
       }

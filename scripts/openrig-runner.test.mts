@@ -15,6 +15,7 @@ function fixture() {
   const stub = `#!${process.execPath}
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const args=process.argv.slice(2),cwd=process.cwd();
+if(process.env.OPENRIG_HOST_SELECTED!=='local'){console.error('wrong selected host');process.exit(8);}
 fs.appendFileSync(path.join(cwd,'calls'),JSON.stringify(args)+'\\n');
 if(args[0]==='send'){
  const task=args[2],run=task.match(/Run id ([\\w-]+);/)[1],nonce=task.match(/nonce_a ([a-f0-9]+)\\./)[1];
@@ -30,7 +31,7 @@ console.log('unit fixture');
   fs.writeFileSync(path.join(bin, 'rig'), stub, { mode: 0o700 });
   fs.writeFileSync(path.join(bin, 'tmux'), '#!/bin/sh\nexit 0\n', { mode: 0o700 });
   return { directory, invoke: (action: string, mode = '') => spawnSync(process.execPath, [runner, action, directory, team], {
-    env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH ?? ''}`, WM_UNIT_MODE: mode }, encoding: 'utf8', timeout: 15000,
+    env: { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH ?? ''}`, WM_UNIT_MODE: mode, OPENRIG_HOST_SELECTED: 'webmux-qa-shadow' }, encoding: 'utf8', timeout: 15000,
   }), status: () => JSON.parse(fs.readFileSync(path.join(directory, 'status.json'), 'utf8')) as { phase: string; run_id: string; nonce_a: string; digest: string },
   calls: () => fs.readFileSync(path.join(directory, 'calls'), 'utf8').trim().split('\n').map(line => JSON.parse(line) as string[]),
   cleanup: () => fs.rmSync(directory, { recursive: true, force: true }) };

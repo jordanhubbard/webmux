@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"os"
@@ -236,5 +237,29 @@ func setCoordinationIntegrations(t *testing.T, s *Server, providers ...string) {
 	}
 	if err := s.store.WriteConfig("app.yaml", map[string]any{"app": map[string]any{"coordination": map[string]any{"enabled_providers": providers, "default_launch_provider": "webmux", "default_view": "all"}}}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestOpenRigAgentInventoryUsesConfiguredEndpoint(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Rig coordination hosting requires POSIX")
+	}
+	t.Setenv("OPENRIG_HOST_SELECTED", "unrelated-host")
+	t.Setenv("OPENRIG_URL", "http://127.0.0.1:4242")
+	script := filepath.Join(t.TempDir(), "rig")
+	source := `#!/bin/sh
+[ "$OPENRIG_HOST_SELECTED" = local ] || exit 8
+[ "$OPENRIG_URL" = http://127.0.0.1:4242 ] || exit 9
+printf '%s\n' '{"entries":[{"canonicalSessionName":"seat@configured-rig","runtime":"codex","rigName":"configured-rig","sessionStatus":"connected"}]}'
+`
+	if err := os.WriteFile(script, []byte(source), 0700); err != nil {
+		t.Fatal(err)
+	}
+	agents, err := readOpenRigAgents(context.Background(), script)
+	if err != nil || len(agents) != 1 || agents[0].Target != "seat@configured-rig" {
+		t.Fatalf("wrong inventory source: %v, %v", agents, err)
+	}
+	if os.Getenv("OPENRIG_HOST_SELECTED") != "unrelated-host" {
+		t.Fatal("inventory changed its caller's host selection")
 	}
 }

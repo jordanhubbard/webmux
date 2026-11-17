@@ -7,6 +7,8 @@ import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
 
 const [action, directory, team] = process.argv.slice(2) as [string, string, string];
+// Keep the proof on its configured Rig endpoint and sender identity.
+process.env.OPENRIG_HOST_SELECTED = 'local';
 type Proof = { run_id: string; nonce_a: string; nonce_b: string; digest: string; verified: boolean; runtime: string; peer: string };
 type State = { team: string; alpha: string; beta: string; phase: string; run_id: string; nonce_a: string; digest: string; message: string; nonce_b?: string; updated_at?: string };
 const messageOf = (error: unknown) => error instanceof Error ? error.message : String(error);
