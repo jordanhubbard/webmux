@@ -371,3 +371,20 @@ For a running seat whose relay has disappeared, inspect Rig and its execution
 host before launching another provider. Attachment transport is reported
 separately in the coordination inventory; externally discovered seats without
 a WebMux relay observation show unknown.
+
+
+## Agent Deck minimum version
+
+The candidate update in #414 requires Agent Deck 1.16.39 or newer for terminal
+attachments and pins structured native recovery to exactly 1.16.39 until further
+versions are qualified. Upgrade the optional coordinator on the controller and execution hosts before
+using this WebMux update with Agent Deck. Attachments now reject an older local
+coordinator with a clear update instruction while preserving the provider. Older 1.16.34 attachments can discard startup
+keystrokes when terminal queries go unanswered; the candidate removes WebMux's
+startup-query exception in favor of the upstream fix. Existing transcripts and
+manual recovery remain available for unqualified native manager versions.
+
+The ordinary installed coordinator is kept intact during private qualification.
+Native lifecycle, reboot, policy and input-delivery evidence is required before
+this candidate becomes the supported minimum. Rig and built-in coordination
+retain their independent ownership and lifecycle.

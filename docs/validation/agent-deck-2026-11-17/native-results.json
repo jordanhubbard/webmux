@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "date": "2026-11-17",
+  "runtime_source_commit": "60d2f5c",
+  "scope": "Agent Deck 1.16.39 on macOS ARM64 and Linux ARM64; no Windows or remote native automatic recovery claim",
+  "private_receipt_sha256": {
+    "pty": "76c336e3f30fcd1bedec128b1d3ee24317bad517f1e7eb42ba527ef50071e526",
+    "mac": "94d3701511689e3bc4b76f68c474880a3e85bbcb69f5d3f59f9e2fa841ead42f",
+    "reboot": "64d98d1059eea58a41ab13fdea47ed97b2285c578da3fc7d089edfedc334af9c",
+    "remote": "6a1469c739e4cb3c2b9379b1d4fbe793ad001cdda84e662c4ddd327ae9dbb5d8"
+  },
+  "pty": {
+    "qualifier_sha256": "ca96fd9f3bbd0e5c2682fa2741c333c97534e99e3eb5d14a1398352c14daa90f",
+    "versions": [
+      {
+        "version": "1.16.34",
+        "passed": true,
+        "binary_sha256": "bd65d34251f6f4ddf2816a58292c7c2711da29ef083974c7176148368adc60be",
+        "webmux_sha256": "69f0f90df28ea96d471527f5c51d7ece49872c2361ca100960498bf4e219ace9",
+        "startup_seconds": 5.026803162000306,
+        "color_query": true,
+        "cursor_query": true,
+        "early_input_seconds": [
+          0.3,
+          1.0,
+          3.0
+        ],
+        "received_lines_per_trial": [
+          1,
+          1,
+          1
+        ],
+        "same_payload_in_all_trials": true,
+        "native_client_before_late_input": true,
+        "cleanup_payload_exited": true
+      },
+      {
+        "version": "1.16.39",
+        "passed": true,
+        "binary_sha256": "acc4fd000dbf90ad265a9ccfb0df5d5ba58c069743f9dd4b162bd63206b787a3",
+        "webmux_sha256": "69f0f90df28ea96d471527f5c51d7ece49872c2361ca100960498bf4e219ace9",
+        "startup_seconds": 0.008480389999931504,
+        "color_query": false,
+        "cursor_query": false,
+        "early_input_seconds": [
+          0.3,
+          1.0,
+          3.0
+        ],
+        "received_lines_per_trial": [
+          2,
+          2,
+          2
+        ],
+        "same_payload_in_all_trials": true,
+        "native_client_before_late_input": true,
+        "cleanup_payload_exited": true
+      }
+    ]
+  },
+  "mac": {
+    "passed": true,
+    "binary_sha256": "3845014c0038bd8986a6087326ebfe7d1a785dcefcd74ffcc4943879b545a3e5",
+    "qualifier_sha256": "b1fcd6e18acd1308aaf378c849fdbe7a1eb83a8c7232714ca71fcf5dcb4ff7d8",
+    "phases": [
+      "initial managed attachment",
+      "orderly restart",
+      "SIGKILL",
+      "repeated reconnects",
+      "native process loss fallback",
+      "WebMux managed native recovery and durable duplicate receipt"
+    ],
+    "provider_version": "1.16.39",
+    "bootstrap_version": "1.16.34",
+    "provider_sha256": "e6a08a50d40d4a14494fd461a966b28976d46dcbce4766fee1e8c2061958913b",
+    "bootstrap_sha256": "728e02638e643801784f708ad22c8e376cad8ae00c0d28680eee363ed309ef89",
+    "native_cli_version": "2.1.322 (Claude Code)"
+  },
+  "reboot": {
+    "passed": true,
+    "binary_sha256": "69f0f90df28ea96d471527f5c51d7ece49872c2361ca100960498bf4e219ace9",
+    "qualifier_sha256": "53fde3e94ea79f19fa3dae2b25cbaaed3e36c53022aeb86d884726da3df7848d",
+    "phases": [
+      "running",
+      "orderly-restart",
+      "SIGKILL",
+      "host-reboot",
+      "repeated-reconnect",
+      "approved native continuation after actual reboot",
+      "native duplicate receipt retained across reconstruction"
+    ],
+    "manager_version": "1.16.39",
+    "manager_sha256": "acc4fd000dbf90ad265a9ccfb0df5d5ba58c069743f9dd4b162bd63206b787a3",
+    "native_cli_version": "2.1.322",
+    "fresh_native_answers": 2,
+    "original_native_configuration_preserved": true,
+    "cleanup_errors": []
+  },
+  "remote": {
+    "passed": true,
+    "binary_sha256": "3845014c0038bd8986a6087326ebfe7d1a785dcefcd74ffcc4943879b545a3e5",
+    "qualifier_sha256": "c3297aa11d3fb58dfc80cc81972888884196d06c5e889a3a22f3895f74d1ef11",
+    "phases": [
+      "initial managed viewers",
+      "healthy guest, controller restart",
+      "healthy guest, controller SIGKILL",
+      "hung guest, then resumed",
+      "actual guest reboot",
+      "guest powered off"
+    ],
+    "agent_deck": "1.16.39",
+    "local_coordinator_sha256": "e6a08a50d40d4a14494fd461a966b28976d46dcbce4766fee1e8c2061958913b",
+    "guest_coordinator_sha256": "acc4fd000dbf90ad265a9ccfb0df5d5ba58c069743f9dd4b162bd63206b787a3",
+    "actual_boot_id_changed": true,
+    "startup_limit_seconds": 40,
+    "startup_seconds": {
+      "initial managed viewers": 0.5,
+      "healthy guest, controller restart": 1.1,
+      "healthy guest, controller SIGKILL": 1.2,
+      "hung guest, then resumed": 12.8,
+      "actual guest reboot": 1.5,
+      "guest powered off": 0.6
+    },
+    "executions_per_job_before_poweroff": {
+      "local": 1,
+      "remote": 1,
+      "ssh": 1
+    }
+  }
+}

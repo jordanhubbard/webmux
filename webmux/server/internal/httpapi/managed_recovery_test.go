@@ -43,7 +43,7 @@ if [ "$1" = '-p' ]; then
  shift 2
 fi
 case "$*" in
- "version") printf '%s\n' 'Agent Deck v1.16.34' ;;
+ "version") printf '%s\n' 'Agent Deck v1.16.39' ;;
  "list --all --json") cat "$WEBMUX_NATIVE_MANAGER_FIXTURE/inventory.json" ;;
  "group list --json") printf '%s\n' '{"groups":[]}' ;;
  "remote list --json") printf '%s\n' '[]' ;;
@@ -95,7 +95,7 @@ func TestManagedNativeProviderResumesExactConversationThroughOwnerAndReattachesS
 }
 
 func TestManagedNativeProviderRejectsChangedDestinationsAndMissingOrForeignState(t *testing.T) {
-	for _, kind := range []string{"host", "profile", "project", "native-id", "missing", "foreign-native-project", "escaped-process", "unqualified-version"} {
+	for _, kind := range []string{"host", "profile", "project", "native-id", "missing", "foreign-native-project", "escaped-process", "unqualified-version", "old-version"} {
 		t.Run(kind, func(t *testing.T) {
 			p, saved, root := nativeManagerFixture(t)
 			switch kind {
@@ -116,12 +116,16 @@ func TestManagedNativeProviderRejectsChangedDestinationsAndMissingOrForeignState
 				if err := os.WriteFile(saved.NativeStateFile, data, 0600); err != nil {
 					t.Fatal(err)
 				}
-			case "unqualified-version":
+			case "unqualified-version", "old-version":
 				source, err := os.ReadFile(p.executable)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := os.WriteFile(p.executable, []byte(strings.ReplaceAll(string(source), "Agent Deck v1.16.34", "Agent Deck v1.16.340")), 0700); err != nil {
+				replacement := "Agent Deck v1.16.390"
+				if kind == "old-version" {
+					replacement = "Agent Deck v1.16.34"
+				}
+				if err := os.WriteFile(p.executable, []byte(strings.ReplaceAll(string(source), "Agent Deck v1.16.39", replacement)), 0700); err != nil {
 					t.Fatal(err)
 				}
 			case "escaped-process":

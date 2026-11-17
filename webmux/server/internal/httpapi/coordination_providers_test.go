@@ -27,6 +27,7 @@ func fakeAgentDeck(t *testing.T) (string, string) {
 set -eu
 printf '%s\n' "$*" >> "$WEBMUX_AGENT_DECK_TEST_LOG"
 case "$*" in
+ "version") printf '%s\n' 'Agent Deck v1.16.39' ;;
   "list --all --json")
     printf '%s\n' '[{"id":"local-1","title":"local coder","path":"/src/local","group":"webmux","tool":"codex","status":"waiting","substate":"input-required","codex_session_id":"codex-local","conductor_name":"webmux","last_activity_at":"2026-10-26T08:00:00Z"}]'
     ;;

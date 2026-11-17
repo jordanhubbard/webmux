@@ -149,7 +149,7 @@ func (p *agentDeckProvider) prepareManagedClaude(ctx context.Context, saved sess
 	}
 	version, err := exec.CommandContext(ctx, p.executable, "version").Output()
 	fields := strings.Fields(string(version))
-	if err != nil || len(fields) < 3 || fields[0] != "Agent" || fields[1] != "Deck" || fields[2] != "v1.16.34" {
+	if err != nil || len(fields) < 3 || fields[0] != "Agent" || fields[1] != "Deck" || fields[2] != "v1.16.39" {
 		return launch, false, managedRecoveryError("This Agent Deck version has not been qualified for native recovery. Resume through its lifecycle manager.")
 	}
 	if launch.NativeSession != saved.NativeSessionID || launch.NativeStateFile != saved.NativeStateFile || !managedClaudeState(saved.NativeStateFile, saved.NativeSessionID, saved.Workspace) {

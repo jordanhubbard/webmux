@@ -4,7 +4,7 @@ set -eu
 # Install the Agent Deck version qualified by WebMux. The upstream installer
 # verifies the release checksum before extracting the binary; pinning the
 # installer itself to the same tag keeps source installs reproducible.
-version=${AGENT_DECK_VERSION:-v1.16.34}
+version=${AGENT_DECK_VERSION:-v1.16.39}
 bindir=${AGENT_DECK_BINDIR:-"$HOME/.local/bin"}
 installer_url=${AGENT_DECK_INSTALLER_URL:-"https://raw.githubusercontent.com/asheshgoplani/agent-deck/${version}/install.sh"}
 

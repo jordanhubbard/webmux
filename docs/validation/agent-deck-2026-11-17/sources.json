@@ -1,0 +1,16 @@
+[
+  {
+    "version": "1.16.39",
+    "platform": "darwin_arm64",
+    "source": "https://github.com/asheshgoplani/agent-deck/releases/download/v1.16.39/agent-deck_1.16.39_darwin_arm64.tar.gz",
+    "archive_sha256": "976fdf095da9b5182c4d71b9b4e3aebe74f7141a937a694f5fe5d1c5b03ffac1",
+    "binary_sha256": "e6a08a50d40d4a14494fd461a966b28976d46dcbce4766fee1e8c2061958913b"
+  },
+  {
+    "version": "1.16.39",
+    "platform": "linux_arm64",
+    "source": "https://github.com/asheshgoplani/agent-deck/releases/download/v1.16.39/agent-deck_1.16.39_linux_arm64.tar.gz",
+    "archive_sha256": "813ab51c0123830592fad206b6ed93869a1a8cbd5fbd37755ec02e49d7272ebe",
+    "binary_sha256": "acc4fd000dbf90ad265a9ccfb0df5d5ba58c069743f9dd4b162bd63206b787a3"
+  }
+]

@@ -20,6 +20,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jordanhubbard/webmux/server/internal/agentdeckattach"
 	"github.com/jordanhubbard/webmux/server/internal/assets"
 	"github.com/jordanhubbard/webmux/server/internal/authhandoff"
 	"github.com/jordanhubbard/webmux/server/internal/browser"
@@ -36,6 +37,10 @@ import (
 
 func main() {
 	if err := run(); err != nil {
+		if len(os.Args) >= 2 && os.Args[1] == agentdeckattach.Helper {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 		var helperExit recovery.ExitStatusError
 		if errors.As(err, &helperExit) {
 			os.Exit(helperExit.ExitCode())
@@ -56,6 +61,9 @@ func main() {
 }
 
 func run() (resultErr error) {
+	if len(os.Args) >= 2 && os.Args[1] == agentdeckattach.Helper {
+		return agentdeckattach.Run(context.Background(), os.Args[2:])
+	}
 	if len(os.Args) == 2 && (os.Args[1] == "--native-provider-bootstrap" || os.Args[1] == "--native-provider-owner") {
 		return terminal.RunNativeProviderHelper(context.Background(), os.Args[1], os.Stdin, os.Stdout)
 	}
