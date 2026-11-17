@@ -3,6 +3,7 @@ import {
   isTerminalIdentityResponse,
   isTerminalLocalInput,
   shouldSuppressTerminalInput,
+  shouldConsumeTerminalColorQuery,
 } from '@frontend/utils/terminalInput';
 import { fitTerminalSizeToPixels } from '@frontend/utils/terminalSizing';
 
@@ -64,6 +65,22 @@ describe('terminal-local reports', () => {
     }
     for (const value of ['k', '\x1b[A', '\x1b[200~\x1b[<35;6;1M\x1b[201~']) {
       expect(isTerminalLocalInput(value)).toBe(false);
+    }
+  });
+});
+
+describe('terminal color query batches', () => {
+  it('retains color setters alongside queries while consuming pure queries', () => {
+    for (const [id, payload] of [[4, '1;?;2;?'], [10, '?;?;?'], [11, '?'], [12, '?']] as const) {
+      expect(shouldConsumeTerminalColorQuery(id, payload)).toBe(true);
+    }
+    for (const [id, payload] of [[4, '1;?;2;#123456'], [4, '1;#123456;2;?'], [10, '?;#123456;?'], [11, '#123456'], [12, '#123456']] as const) {
+      expect(shouldConsumeTerminalColorQuery(id, payload)).toBe(false);
+    }
+  });
+  it('blocks every generated reply from mixed batches from reaching a PTY', () => {
+    for (const data of ['\x1b]4;1;rgb:1234/5678/9abc\x1b\\', '\x1b]10;rgb:ffff/ffff/ffff\x1b\\', '\x1b]11;rgb:0000/0000/0000\x1b\\']) {
+      expect(shouldSuppressTerminalInput(data)).toBe(true);
     }
   });
 });

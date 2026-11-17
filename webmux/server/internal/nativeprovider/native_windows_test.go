@@ -658,6 +658,8 @@ func TestNativeProviderSavedCursorCaptures(t *testing.T) {
 	permitBreakaway(t)
 	var records []map[string]any
 	for _, tc := range []struct{ name, before, after string }{
+		{"palette-live-change", "\x1b]4;1;#123456\a\x1b[31mA", "\x1b]4;1;#abcdef\aB"},
+		{"dynamic-colors", "\x1b]10;#123456;#345678;#abcdef\aA", "B"},
 		{"underline-restore", "\x1b[4:3;58;2;30;210;60mA\x1b7\x1b[4:5;58;5;9mB", "\x1b8X"},
 		{"underline-1049", "\x1b[4:3;58;5;2mA\x1b[?1049h\x1b[4:5;58;5;9mB", "\x1b[?1049lX"},
 		{"origin-restore", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b7\x1b[?6l\x1b[10;20H", "\x1b8X"},

@@ -15,6 +15,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   recorded project (#318).
 
 ### Fixed
+- Retain guest palette and default colors across Windows screen reattachment,
+  preserving indexed colors when the running job changes its palette. Keep
+  color setters in mixed query/setter batches and block query replies (#355).
 - Preserve live extended underline styles/colors when a Windows terminal screen
   is restored after another attachment. Refuse unrepresentable snapshots while
   retaining the running job, and verify real ConPTY snapshots against the

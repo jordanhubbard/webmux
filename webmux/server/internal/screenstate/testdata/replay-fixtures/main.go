@@ -21,6 +21,18 @@ type fixture struct {
 
 func main() {
 	cases := []struct{ name, before, after string }{
+		{"palette-short-hex", "\x1b]4;1;#fa3\a\x1b[31mA", "\x1b]4;1;#123456\aB"},
+		{"palette-short-rgb", "\x1b]4;1;rgb:f/a/3\a\x1b[38;5;1mA", "\x1b]4;1;#123456\aB"},
+		{"palette-long-rgb", "\x1b]4;1;RGB:1234/5678/9ABC\a\x1b[31mA", "B"},
+		{"palette-long-hex", "\x1b]4;1;#123456789\a\x1b[31mA", "B"},
+		{"palette-single", "\x1b]4;1;#123456\a\x1b[31mA", "B"},
+		{"palette-batch", "\x1b]4;1;#123456;2;rgb:ab/cd/ef\x1b\\\x1b[31mA\x1b[32mB", "C"},
+		{"palette-query", "\x1b]4;1;#123456\a\x1b]4;1;?\a\x1b[31mA", "B"},
+		{"palette-reset", "\x1b]4;1;#123456\a\x1b[31mA", "\x1b]104;1\aB"},
+		{"dynamic-colors", "\x1b]10;#123456;#345678;#abcdef\aA", "B"},
+		{"dynamic-query", "\x1b]10;?;#345678;?\aA", "B"},
+		{"dynamic-reset", "\x1b]10;#123456;#345678;#abcdef\aA", "\x1b]110\a\x1b]111\a\x1b]112\aB"},
+
 		{"saved-underline-csi", "\x1b[4:3;58;5;2mA\x1b[s\x1b[4:4;58;5;9mB", "\x1b[uX"},
 		{"saved-underline-single", "\x1b[4mA\x1b7\x1b[4:5;58;5;9mB", "\x1b8X"},
 		{"saved-underline-color", "\x1b[58;5;2mA\x1b7\x1b[58;5;9mB", "\x1b8X"},

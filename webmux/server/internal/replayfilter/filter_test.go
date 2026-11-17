@@ -134,3 +134,77 @@ func TestXtermUnderlineColorReset(t *testing.T) {
 		}
 	}
 }
+
+func TestXtermOSCColorsAcrossEveryReadBoundary(t *testing.T) {
+	for _, input := range []string{
+		"\x1b]4;1;#123456\a", "\x1b]4;1;#123456;2;#abcdef\x1b\\",
+		"\x1b]4;1;?;2;#123456\a", "\x1b]10;?;#123456;?\a",
+		"\x1b]104;1;2\a", "\x1b]110\a", "\x1b]52;c;#123456\a",
+		"\x1b]777;webmux-browser;private\a",
+	} {
+		complete := Filter{Xterm: true}
+		complete.Feed([]byte(input))
+		for split := 0; split <= len(input); split++ {
+			f := Filter{Xterm: true}
+			got := append(f.Feed([]byte(input[:split])), f.Feed([]byte(input[split:]))...)
+			if len(got) != 0 || f.UnsupportedDisplay() || !f.AtBoundary() || f.Colors() != complete.Colors() {
+				t.Fatalf("split %d: %q", split, got)
+			}
+		}
+	}
+	f := Filter{Xterm: true}
+	f.Feed([]byte("\x1b]4;1;#123456;2;#abcdef\a\x1b]10;#234567;#345678;#456789\a"))
+	c := f.Colors()
+	if c.Palette[1] != "#123456" || c.Palette[2] != "#abcdef" || c.Fg != "#234567" || c.Bg != "#345678" || c.Cursor != "#456789" {
+		t.Fatal(c)
+	}
+	f.Feed([]byte("\x1b]104;1\a\x1b]111\a"))
+	c = f.Colors()
+	if c.Palette[1] != "" || c.Palette[2] != "#abcdef" || c.Bg != "" || c.Fg != "#234567" {
+		t.Fatal(c)
+	}
+	f.Feed([]byte("\x1bc"))
+	if f.Colors() != (ColorState{}) {
+		t.Fatal("RIS retained color overrides")
+	}
+}
+
+func TestUnsupportedOSCColorsRefuseAndRemainBounded(t *testing.T) {
+	for _, payload := range []string{"4;1;" + strings.Repeat("f", maxOSCBytes), "4;999;#123456", "10;not-a-color"} {
+		f := Filter{Xterm: true}
+		if got := f.Feed([]byte("\x1b]" + payload)); len(got) != 0 || f.AtBoundary() {
+			t.Fatal("released partial color")
+		}
+		if len(f.oscData) > maxOSCBytes {
+			t.Fatal("unbounded OSC")
+		}
+		if got := f.Feed([]byte("\a")); len(got) != 0 || !f.UnsupportedDisplay() {
+			t.Fatal("accepted unsupported color")
+		}
+		f.Feed([]byte("\x1bc"))
+		if f.UnsupportedDisplay() {
+			t.Fatal("RIS did not repair profile")
+		}
+	}
+	f := Filter{Xterm: true}
+	f.Feed([]byte("\x1b]10;not-a-color\x18"))
+	if f.UnsupportedDisplay() {
+		t.Fatal("cancelled OSC changed display")
+	}
+}
+
+func TestXtermColorFormats(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"#fa3", "#f0a030"}, {"rgb:f/a/3", "#ffaa33"}, {"RGB:1234/5678/9ABC", "#12569a"}, {"#123456789", "#124578"},
+	} {
+		got, ok := xtermColor(tc.input)
+		if !ok || got != tc.want {
+			t.Fatalf("%s: %q, want %q", tc.input, got, tc.want)
+		}
+	}
+	for _, input := range []string{"red", "rgb:f/aa/333", "#1234", "#ggg", "#1;2;3", "\x1b]52;c;private"} {
+		if color, ok := xtermColor(input); ok {
+			t.Fatal("accepted invalid color", input, color)
+		}
+	}
+}

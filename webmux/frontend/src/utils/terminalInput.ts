@@ -45,6 +45,18 @@ export function shouldSuppressTerminalInput(data: string): boolean {
   return false;
 }
 
+/** Preserve setters in OSC batches that also contain color queries. Replies
+ * from mixed batches remain blocked by shouldSuppressTerminalInput. */
+export function shouldConsumeTerminalColorQuery(ident: number, payload: string): boolean {
+  if (!payload.includes('?')) return false;
+  if (ident === 4) {
+    const specs = payload.split(';').filter((_, i) => i % 2 === 1);
+    return specs.length > 0 && specs.every(spec => spec === '?');
+  }
+  if (ident >= 10 && ident <= 12) return payload.split(';').every(spec => spec === '?');
+  return true;
+}
+
 /**
  * Swallow terminal capability queries in the parser so xterm.js does not emit
  * OSC/CSI replies back through onData to the remote session.
@@ -64,7 +76,7 @@ export function installTerminalQuerySuppressors(term: Terminal): IDisposable {
       return ps === 5 || ps === 6;
     }),
     ...OSC_COLOR_QUERY_IDS.map((ident) =>
-      term.parser.registerOscHandler(ident, (payload) => payload.includes('?')),
+      term.parser.registerOscHandler(ident, (payload) => shouldConsumeTerminalColorQuery(ident, payload)),
     ),
   ];
 

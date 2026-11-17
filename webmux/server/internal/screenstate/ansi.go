@@ -60,6 +60,19 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 	var b bytes.Buffer
 	b.Grow(st.Width * (st.Height + len(st.Scrollback)) * 2)
 	w := &vtWriter{b: &b, width: st.Width}
+	// Guest colors precede both grids: palette/default changes affect cells
+	// drawn earlier as well as subsequent output. They are normalized RGB
+	// setters, never terminal queries or private application requests.
+	if colors := st.GuestColors; colors != nil {
+		for _, entry := range colors.Palette {
+			if entry.Index >= 0 && entry.Index < 256 {
+				oscColor(&b, 4, strconv.Itoa(entry.Index)+";", entry.Color)
+			}
+		}
+		oscColor(&b, 10, "", colors.Fg)
+		oscColor(&b, 11, "", colors.Bg)
+		oscColor(&b, 12, "", colors.Cursor)
+	}
 
 	// Autowrap on and the pen reset, whatever the client was left at.
 	b.WriteString("\x1b[0m\x1b[?7h\x1b[H")
@@ -654,4 +667,21 @@ func (w *vtWriter) margins(m []int, horizontal bool) (top, left int) {
 		w.b.WriteByte('s')
 	}
 	return
+}
+
+func oscColor(b *bytes.Buffer, command int, prefix, wire string) {
+	if len(wire) != 7 || wire[0] != '#' {
+		return
+	}
+	for _, c := range []byte(wire[1:]) {
+		if hexNibble(c) < 0 {
+			return
+		}
+	}
+	b.WriteString("\x1b]")
+	b.WriteString(strconv.Itoa(command))
+	b.WriteByte(';')
+	b.WriteString(prefix)
+	b.WriteString(wire)
+	b.WriteString("\x1b\\")
 }
