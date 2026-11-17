@@ -2110,7 +2110,13 @@ repair. Windows CI additionally collects seven actual ConPTY cases, requires
 zero skipped cases and one job per case, and compares the two attachments and
 continued output with the frontend's real Chrome/xterm renderer. Its retained
 JSON streams and browser receipts establish native interoperability only when
-that exact-head job passes.
+that exact-head job passes. The first hosted attempt correctly failed because
+GitHub's outer Windows process job skipped the independent-provider capture.
+The collector now uses a temporary, deadline-bounded SYSTEM scheduled task on
+the disposable runner to execute only the synthetic native fixture outside
+that restrictive job, then removes its task registration. Chrome remains under
+the runner account. No user sign-in state is used or copied; zero-skip and
+one-job assertions remain mandatory.
 
 Full local Go race tests passed, as did affected vet and Windows cross-vet,
 and Windows AMD64/ARM64 provider-test compilation. Cross-compilation does not

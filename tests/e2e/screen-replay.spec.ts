@@ -22,7 +22,11 @@ test.beforeAll(async () => {
   if (process.platform === 'win32') {
     const target = path.join(test.info().project.outputDir, 'native-screen-captures.json');
     mkdirSync(path.dirname(target), { recursive: true });
-    const output = execFileSync('go', ['test', '-json', '-count=1', '-timeout=120s', './internal/nativeprovider', '-run', '^TestNativeProviderSavedCursorCaptures$'], {
+    const suppliedCaptures = process.env.WEBMUX_NATIVE_SCREEN_CAPTURES;
+    const suppliedLog = process.env.WEBMUX_NATIVE_SCREEN_TEST_LOG;
+    expect(Boolean(suppliedCaptures), 'external native captures and test log must be supplied together').toBe(Boolean(suppliedLog));
+    if (suppliedCaptures) writeFileSync(target, readFileSync(suppliedCaptures));
+    const output = suppliedLog ? readFileSync(suppliedLog, 'utf8') : execFileSync('go', ['test', '-json', '-count=1', '-timeout=120s', './internal/nativeprovider', '-run', '^TestNativeProviderSavedCursorCaptures$'], {
       cwd: path.join(root, 'webmux/server'), encoding: 'utf8', timeout: 150_000, maxBuffer: 4 << 20,
       env: { ...process.env, WEBMUX_NATIVE_CURSOR_CAPTURES: target },
     });
