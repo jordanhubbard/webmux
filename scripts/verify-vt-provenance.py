@@ -15,6 +15,8 @@ for name, digest in original.items():
 additions = {
     "WEBMUX_UPSTREAM.json", "WEBMUX.md", "xterm_no_wrap.go",
     "xterm_no_wrap_test.go", "testdata/webmux-xterm-nowrap.json",
+ "xterm_underline.go", "xterm_underline_test.go",
+ "xterm_underline_reference_test.go", "testdata/webmux-xterm-underline.json",
 }
 actual_files = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
 assert actual_files == original.keys() | additions, "Unrecorded vt source addition or removal"

@@ -45,6 +45,8 @@ func (e *Emulator) restrictXtermCursor() {
 // print overwrites its trailing cell. Preserve that overlapping representation
 // instead of the generic grid operation's wide-character repair.
 func (e *Emulator) setXtermPrintedCell(x, y int, cell *uv.Cell) {
+	normalized := e.xtermPrintedCell(*cell)
+	cell = &normalized
 	var lead uv.Cell
 	keep := false
 	if e.xtermNoWrap && !e.autoWrapMode() && x == e.Width()-1 && x > 0 && cell.Width == 1 {
@@ -52,8 +54,48 @@ func (e *Emulator) setXtermPrintedCell(x, y int, cell *uv.Cell) {
 			lead, keep = *previous, true
 		}
 	}
+	leftRepair, rightRepair := false, false
+	if e.xtermUnderline {
+		if previous := e.scr.CellAt(x, y); previous != nil {
+			leftRepair = !keep && previous.Width == 0 && x > 0
+			rightRepair = previous.Width > cell.Width && previous.Width > 1
+		}
+	}
 	e.scr.SetCell(x, y, cell)
 	if keep {
 		e.scr.buf.rows[y][x-1] = lead
+	}
+	if e.xtermUnderline {
+		row := e.scr.buf.Row(y)
+		if row == nil {
+			return
+		}
+		blank := *cell
+		blank.Content = ""
+		blank.Width = 1
+		clear := func(at int) {
+			if at < 0 || at >= len(row) {
+				return
+			}
+			row[at] = blank
+			if e.scr.buf.prot != nil {
+				e.scr.buf.clearProtected(y, at, at+1)
+			}
+			e.markPrinted(at, y, 1)
+		}
+		if leftRepair {
+			clear(x - 1)
+		}
+		// xterm stores the current attributes on wide placeholders as well.
+		for offset := 1; offset < cell.Width && x+offset < len(row); offset++ {
+			placeholder := *cell
+			placeholder.Content = ""
+			placeholder.Width = 0
+			row[x+offset] = placeholder
+		}
+		right := x + max(cell.Width, 1)
+		if right < len(row) && (rightRepair || row[right].Width == 0 && row[right].Content == "") {
+			clear(right)
+		}
 	}
 }

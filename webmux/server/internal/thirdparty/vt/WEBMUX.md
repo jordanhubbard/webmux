@@ -55,3 +55,25 @@ The profile also retains null cells separately from printed spaces: xterm's
 REP reads literal source-cell text at the logical cursor minus the previous
 character width. The snapshot painter uses erase-and-move for null cells.
 The default upstream profile retains its original blank representation.
+
+
+## Independent underline flags (model checkpoint, #427)
+
+`EnableXtermUnderline()` is a separate opt-in model extension. It preserves
+foreground underline and background extended flags independently of raw style,
+color and global hyperlink state, including saved cursors and buffer switches.
+Cell metadata is an immutable value in the retained ultraviolet style model,
+which survives copies/edits/reflow and bounded snapshot serialization. The
+ordinary emulator profile remains unchanged.
+
+The unmodified xterm reference corpus has 126 cases, each fed whole and one byte
+at a time in Go, comparing initial/continued pens, cells, visible/raw underline,
+colors, links and cursors. Its inputs cover ESC/CSI/1048/1049, colors, unrelated
+SGR, REP/combining, edits, wide cells and resize. `scripts/qualify-xterm-underline.mts`
+regenerates expected state from only names/input bytes and emits source/browser
+hashes. The source reference does not install a snapshot adapter.
+
+Production Screen does not enable this extension yet. Complete ANSI encoding,
+final pen restoration, separately versioned renderer capability negotiation and
+fresh native/application acceptance remain required under #427/#355. Existing
+unsupported-state refusals and the v1 REP profile are unchanged.

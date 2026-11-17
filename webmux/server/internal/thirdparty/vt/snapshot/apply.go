@@ -30,6 +30,15 @@ func Apply(t vt.Terminal, state *State) error {
 	// a daemon older than the packed form, is packed here first. Each style in
 	// the table is resolved for t once, rather than once per cell.
 	state.Pack()
+	validFlags := func(style *StyleState) bool { return style == nil || style.UnderlineFlags <= 4 }
+	if !validFlags(state.Pen) || state.SavedCursor != nil && !validFlags(state.SavedCursor.Pen) || state.MainSavedCursor != nil && !validFlags(state.MainSavedCursor.Pen) {
+		return errors.New("snapshot pen underline flags are unsupported")
+	}
+	for _, style := range state.Styles {
+		if !validFlags(&style) {
+			return errors.New("snapshot cell underline flags are unsupported")
+		}
+	}
 	styles := resolveStyles(t, state.Styles)
 
 	// A snapshot too big for the emulator it is going into used to be taken
