@@ -246,6 +246,31 @@ seconds so a restart uses the same endpoint. Closing WebMux viewers leaves the
 daemon and tmux agents running. Native Windows coordination hosting is not
 supported; Windows WebMux's existing terminals remain available.
 
+## Coordinator selection scope
+
+WebMux's controller queries, lifecycle commands, diagnostic dashboard and new
+local/SSH agent launchers follow their configured Rig endpoint. They bind the
+private CLI host-selection context to `local`, preserving the attachment's
+`OPENRIG_URL` and sender identity. An unrelated host selected in the operator's
+ordinary Rig CLI no longer redirects these commands. User selection settings
+are not rewritten. Existing running agents retain their launch environment;
+apply an updated launcher through an explicit provider restart when needed.
+
+On 2026-11-16, real Rig 0.6.14 (`df1c1517`) in an isolated home reproduced the
+problem: discovery failed with an unrelated selection despite a healthy
+configured daemon, and succeeded with local scope. The fix passed both cases.
+The eight-case browser suite also passed with that unrelated selection,
+including actual Rig enrollment, attributed messages, viewer reuse and dashboard
+detachment that preserved the daemon. Those native cases use a provider stand-in
+and do not qualify authenticated coding conversations. Helper controls cover a
+stale tmux-server environment, local/SSH launchers, preserved endpoint/sender
+identity and live-proof command scope.
+
+This is a provenance repair under #194. Broader canonical inventory/adoption,
+notifications and lifecycle qualification remain open; remote Rig reporting
+through the outbound client (#200) and identity/event bridging (#246) remain
+separate features.
+
 ## Rig owner workflow
 
 1. Click **Coordination**, choose **Rig** as the Launch owner, and inspect
@@ -298,8 +323,14 @@ isolation between users of the same OS account.
 The browser tests use the actual published Rig daemon and text UI without
 provider credentials. They also enroll two interactive provider stand-ins,
 exchange a fresh challenge/ACK through Rig, inspect attributed messages, and
-check grid refresh, tile close/reopen and two consecutive stopped-agent
-reconnections. CI runs this against OpenRig 0.6.14;
+check grid refresh, tile close/reopen and two consecutive attachment-loss
+reconnections. Each loss waits for a fresh native absence verdict tied to the
+exact pane and kill time before applying WebMux's existing projection deadline.
+Rig 0.6.14 samples identity every five seconds; its observation phase is bounded
+to 15 seconds, and the overall case retains its 120-second limit. Every replacement
+must exchange a new peer-generated ACK, because old readiness text can remain in
+the reused viewer's scrollback. Native proofs and enrollment/challenge receipts are
+retained in the test output. CI runs this against OpenRig 0.6.14;
 these stand-ins qualify transport, not provider reasoning. Live cross-host
 qualification additionally uses real
 Codex processes on Puck and sparky, independent nonce/hash receipts, and the
