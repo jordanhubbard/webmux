@@ -671,6 +671,11 @@ func TestNativeProviderSavedCursorCaptures(t *testing.T) {
 	permitBreakaway(t)
 	var records []map[string]any
 	for _, tc := range []struct{ name, before, after string }{
+		{"hyperlink-named", "\x1b]8;id=one;https://example.test/a\aA", "B\x1b]8;;\aC"},
+		{"hyperlink-anonymous", "\x1b]8;;https://example.test/a\aA\x1b]8;;https://example.test/a\aB", "C\x1b]8;;\aD"},
+		{"hyperlink-unicode", "\x1b]8;id=术;https://example.test/术?q=😀\aA", "B"},
+		{"hyperlink-reuse", "\x1b]8;id=same;https://example.test/a\aA\x1b]8;;\aB", "\x1b]8;id=same;https://example.test/a\aC"},
+
 		{"palette-live-change", "\x1b]4;1;#123456\a\x1b[31mA", "\x1b]4;1;#abcdef\aB"},
 		{"dynamic-colors", "\x1b]10;#123456;#345678;#abcdef\aA", "B"},
 		{"underline-restore", "\x1b[4:3;58;2;30;210;60mA\x1b7\x1b[4:5;58;5;9mB", "\x1b8X"},
