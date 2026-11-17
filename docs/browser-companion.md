@@ -144,6 +144,14 @@ The unit controls also cover failed worker startup. This addresses one blank-sta
 path under [#282](https://github.com/jordanhubbard/webmux/issues/282); it does not
 establish the cause of the historical macOS URL-poll timeout.
 
+A temporary layout change also cancels its pending resize when the drawer
+returns to the last requested size. Previously an A → B → A sequence could
+still send B after the drawer had returned to A, leaving the worker viewport
+out of step until another layout change. The deterministic observer control
+fails the old behavior and verifies cancellation plus a later genuine resize.
+Qualification retains bounded drawer/image/worker size samples on failure;
+input still requires all three sizes to agree within the existing deadline.
+
 ## Next iterations
 
 Tracked in [#110](https://github.com/jordanhubbard/webmux/issues/110).

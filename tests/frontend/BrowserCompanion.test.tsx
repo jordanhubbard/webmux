@@ -181,3 +181,25 @@ it('does not poll or relaunch a worker that failed before becoming available', a
   expect(screen.queryByAltText('Interactive remote browser viewport')).not.toBeInTheDocument();
  } finally { view.unmount(); vi.useRealTimers(); }
 });
+
+it('cancels a pending viewport resize when the drawer returns to its last requested size', async () => {
+ vi.useFakeTimers();
+ let resize!: (width: number, height: number) => void;
+ vi.stubGlobal('ResizeObserver', class {
+  constructor(callback: ResizeObserverCallback) {
+   resize = (width, height) => callback([{ contentRect: { width, height } } as ResizeObserverEntry], {} as ResizeObserver);
+  }
+  observe() {} disconnect() {}
+ });
+ fixture.action.mockReset().mockResolvedValue({ protocol: 2, image: 'fixture', url: 'about:blank', width: 800, height: 500, tabs: [], target: 'one' });
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  await act(async () => { resize(800, 500); vi.advanceTimersByTime(120); });
+  await act(async () => { resize(600, 400); vi.advanceTimersByTime(60); resize(800, 500); vi.advanceTimersByTime(120); });
+  const requests = () => fixture.action.mock.calls.map(call => call[1]).filter(value => value.action === 'resize');
+  expect(requests()).toEqual([{ action: 'resize', width: 800, height: 500 }]);
+  await act(async () => { resize(900, 550); vi.advanceTimersByTime(120); });
+  expect(requests()).toEqual([{ action: 'resize', width: 800, height: 500 }, { action: 'resize', width: 900, height: 550 }]);
+ } finally { view.unmount(); vi.unstubAllGlobals(); vi.useRealTimers(); }
+});
