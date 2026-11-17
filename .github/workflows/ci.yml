@@ -314,6 +314,13 @@ jobs:
         run: npm run typecheck
         working-directory: webmux
 
+      - name: Verify native TypeScript 7 source discovery
+        timeout-minutes: 5
+        run: |
+          probe="$RUNNER_TEMP/webmux-typescript7-coverage"
+          npm install --prefix "$probe" --ignore-scripts --no-package-lock --no-audit --no-fund typescript@7.0.2
+          WEBMUX_TEST_TYPESCRIPT_CLI="$probe/node_modules/typescript/bin/tsc" node --test webmux/scripts/typescript-project.test.mts
+
       - name: Lint
         run: npm run lint --workspace=frontend
         working-directory: webmux
@@ -384,6 +391,17 @@ jobs:
       - name: Type check
         run: npm run typecheck
         working-directory: webmux
+
+      - name: Verify native TypeScript 7 source discovery
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          $probe = Join-Path $env:RUNNER_TEMP 'webmux-typescript7-coverage'
+          npm install --prefix $probe --ignore-scripts --no-package-lock --no-audit --no-fund typescript@7.0.2
+          if ($LASTEXITCODE -ne 0) { throw 'Native TypeScript qualification install failed.' }
+          $env:WEBMUX_TEST_TYPESCRIPT_CLI = Join-Path $probe 'node_modules/typescript/bin/tsc'
+          node --test webmux/scripts/typescript-project.test.mts
+          if ($LASTEXITCODE -ne 0) { throw 'Native TypeScript source discovery failed.' }
 
       - name: Lint
         run: npm run lint
