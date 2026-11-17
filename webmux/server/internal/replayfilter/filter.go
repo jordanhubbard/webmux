@@ -12,20 +12,25 @@ import (
 )
 
 // Filter accepts arbitrary read boundaries and retains at most one UTF-8 rune
-// and a bounded escape sequence. All string controls are omitted, including
-// clipboard/browser/recovery OSC packets and DCS queries. Queries must not be
+// and bounded escape/OSC state. String controls are omitted; the Xterm profile
+// retains normalized color overrides separately as metadata. Clipboard/browser/
+// recovery OSC and DCS queries never enter replay. Queries must not be
 // replayed: the viewer's replies would become fresh input to the surviving job.
 type Filter struct {
 	// Xterm matches the browser's xterm display profile. Its unsupported DEC
 	// mode 69 must remain off so CSI s saves a cursor, rather than setting
 	// horizontal margins. This affects the mirror only, never live output.
-	Xterm         bool
-	state         byte
-	sequence      []byte
-	partial       []byte
-	osc           bool
-	repeatable    bool
-	beforeControl bool
+	Xterm              bool
+	state              byte
+	sequence           []byte
+	partial            []byte
+	osc                bool
+	oscData            []byte
+	oscOverflow        bool
+	unsupportedDisplay bool
+	colors             ColorState
+	repeatable         bool
+	beforeControl      bool
 }
 
 // AtBoundary reports whether a new viewer can begin the following live stream
@@ -50,11 +55,27 @@ func (f *Filter) Feed(data []byte) []byte {
 		r, n := utf8.DecodeRune(data)
 		data = data[n:]
 		if f.state == 's' || f.state == 't' {
-			if r == 0x9c || r == 0x18 || r == 0x1a || (r == 7 && f.osc) || (f.state == 't' && r == '\\') {
-				f.state = 0
+			cancelled := r == 0x18 || r == 0x1a
+			finished := r == 0x9c || (r == 7 && f.osc) || (f.state == 't' && r == '\\')
+			if finished || cancelled {
+				if finished && !cancelled && f.Xterm && f.osc {
+					updates, unsupported := renderingOSC(f.oscData, f.oscOverflow)
+					for _, update := range updates {
+						f.colors.apply(update)
+					}
+					f.unsupportedDisplay = f.unsupportedDisplay || unsupported
+				}
+				f.state, f.oscData, f.oscOverflow = 0, nil, false
 			} else if r == 0x1b {
+				if f.state == 't' {
+					f.appendOSC(0x1b)
+				}
 				f.state = 't'
 			} else {
+				if f.state == 't' {
+					f.appendOSC(0x1b)
+				}
+				f.appendOSC(r)
 				f.state = 's'
 			}
 			continue
@@ -109,6 +130,10 @@ func (f *Filter) Feed(data []byte) []byte {
 			case r >= 0x20 && r <= 0x2f:
 				f.state, f.sequence = 'i', append(f.sequence, byte(r))
 			default:
+				if r == 'c' {
+					f.unsupportedDisplay = false
+					f.colors = ColorState{}
+				}
 				if strings.ContainsRune("78DEHMc=>", r) {
 					out.Write(f.sequence)
 					out.WriteRune(r)
@@ -243,4 +268,21 @@ func xtermSGR(sequence []byte) []byte {
 		return sequence
 	}
 	return []byte("\x1b[" + strings.Join(out, ";"))
+}
+
+// UnsupportedDisplay reports a display change outside the bounded OSC color
+// profile. Refuse a new screen attachment until RIS repairs the mirror.
+func (f *Filter) UnsupportedDisplay() bool { return f.unsupportedDisplay }
+
+const maxOSCBytes = 8192
+
+func (f *Filter) appendOSC(r rune) {
+	if !f.Xterm || !f.osc || f.oscOverflow {
+		return
+	}
+	if len(f.oscData)+utf8.RuneLen(r) > maxOSCBytes {
+		f.oscOverflow = true
+		return
+	}
+	f.oscData = utf8.AppendRune(f.oscData, r)
 }

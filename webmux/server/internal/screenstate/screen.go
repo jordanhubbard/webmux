@@ -98,6 +98,13 @@ func (s *Screen) Capture() (Image, error) {
 	if len(state.PendingInput) != 0 {
 		return Image{}, ErrIncomplete
 	}
+	colors := s.filter.Colors()
+	state.GuestColors = &snapshot.GuestColorState{Fg: colors.Fg, Bg: colors.Bg, Cursor: colors.Cursor}
+	for index, color := range colors.Palette {
+		if color != "" {
+			state.GuestColors.Palette = append(state.GuestColors.Palette, snapshot.PaletteColorState{Index: index, Color: color})
+		}
+	}
 	state.Title, state.IconName, state.TitleStack = "", "", nil
 	state.TitlesKnown = false
 	var main *underlay
@@ -113,7 +120,7 @@ func (s *Screen) Capture() (Image, error) {
 		}
 		s.emulator.RestoreAltScreenMode(true)
 	}
-	return Image{state: state, main: main, repeat: s.filter.CanRepeat(), unsupported: s.profile.unsupported}, nil
+	return Image{state: state, main: main, repeat: s.filter.CanRepeat(), unsupported: s.profile.unsupported || s.filter.UnsupportedDisplay()}, nil
 }
 
 func (i Image) Bytes() ([]byte, error) {

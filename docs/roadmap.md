@@ -151,8 +151,12 @@ a full terminal reset repairs the mirror. The portable browser suite covers
 40 initial/continued/second-attachment comparisons, and Windows CI now runs the
 same renderer against real ConPTY captures. See the
 [scope and controls](session-recovery.md#saved-underline-restoration-2026-11-16).
-The refused no-wrap edge, broader underline representation and OSC display
-features remain open. This checkpoint does not close #355 or #318.
+Guest palette/default colors now have a bounded metadata path, preserving
+indexed cells across later palette changes without replaying color queries.
+The portable renderer suite has 51 cases; Windows CI adds nine real ConPTY
+captures ([color scope](session-recovery.md#guest-palette-and-default-colors-2026-11-16)).
+The refused no-wrap edge, broader underline representation and other OSC display
+features remain open. These checkpoints do not close #355 or #318.
 
 ## Runtime compatibility implementation
 

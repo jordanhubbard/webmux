@@ -426,3 +426,36 @@ func TestUnrepresentableSavedUnderlineRefusesSnapshot(t *testing.T) {
 		})
 	}
 }
+
+func TestColorCaptureIsImmutableAndUnsupportedColorRefuses(t *testing.T) {
+	s := newScreen(t, 80, 24)
+	s.Feed([]byte("\x1b]4;1;#123456\a\x1b[31mA"))
+	old, err := s.Capture()
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := old.Bytes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Feed([]byte("\x1b]4;1;#abcdef\aB"))
+	after, err := old.Bytes()
+	if err != nil || !bytes.Equal(before, after) {
+		t.Fatal("palette capture changed", err)
+	}
+	if !bytes.Contains(imageBytes(t, s), []byte("#abcdef")) {
+		t.Fatal("new image missed palette change")
+	}
+	s.Feed([]byte("\x1b]4;1;" + strings.Repeat("f", 9000) + "\a"))
+	unsafe, err := s.Capture()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data, err := unsafe.Bytes(); !errors.Is(err, ErrUnsupported) || data != nil {
+		t.Fatal("accepted oversized color state", err)
+	}
+	s.Feed([]byte("\x1bcSAFE"))
+	if data := imageBytes(t, s); !bytes.Contains(data, []byte("SAFE")) || bytes.Contains(data, []byte("#abcdef")) {
+		t.Fatal("full reset retained colors")
+	}
+}

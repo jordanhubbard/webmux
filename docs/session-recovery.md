@@ -2130,6 +2130,39 @@ no-wrap edge and OSC display features remain under #355. Installed-service
 native conversation acceptance and the other #318 platform/CLI requirements
 remain separate; this change does not claim them.
 
+### Guest palette and default colors (2026-11-16)
+
+The mirror now retains OSC 4 palette overrides and OSC 10/11/12 default
+foreground/background/cursor colors, including batches and the corresponding
+104/110/111/112 resets. Values are normalized to the pinned frontend's RGB
+rules and kept as bounded metadata outside the VT dependency. That separation
+preserves palette indices: later palette changes recolor already-drawn cells,
+instead of baking their old RGB value into the snapshot. Captures own their
+color state, and RIS clears it. Snapshot encoding emits only fixed numeric RGB
+setters, never color queries or clipboard/browser/recovery requests.
+
+Streaming OSC storage is limited to 8192 bytes. Oversized or unsupported color
+updates explicitly refuse a new attachment while retaining the job; wire
+controls cover refusal and repair after RIS. Other string controls keep their
+existing filtering behavior. This does not establish hyperlink restoration or
+complete the other display-profile requirements in #355.
+
+The frontend now preserves setters in OSC batches that also contain queries;
+previously its parser swallowed the entire batch. Pure queries are still
+consumed, and any generated OSC replies remain blocked from terminal input.
+The independent renderer compares the actual palette/default colors as well
+as cells, cursor, wraps and modes. All 11 new color cases fail against the
+prior source; all 51 portable initial/live/second-attachment cases pass with
+the correction. Cases include different hexadecimal/RGB precisions, mixed
+queries/setters, indexed cells that recolor later, and color resets. Two new
+ConPTY capture cases extend the native renderer gate to nine actual jobs.
+Native acceptance for this change requires its own exact-head hosted result.
+
+Local validation includes the full Go race suite, affected vet/Windows
+cross-vet, Windows AMD64/ARM64 provider-test compilation, strict TypeScript,
+352 frontend tests, lint and a production build. These do not qualify an
+authenticated coding conversation or ARM64 hardware execution.
+
 ### Windows shell startup and native CLI aliases (2026-11-13)
 
 The Windows browser shell now installs aliases for available native coding CLI
