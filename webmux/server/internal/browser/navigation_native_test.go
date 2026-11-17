@@ -25,6 +25,7 @@ import (
 )
 
 type firstNavigationEvidence struct {
+	ProfileLocation string                 `json:"profileLocation"`
 	Mode            string                 `json:"mode"`
 	Platform        string                 `json:"platform"`
 	Architecture    string                 `json:"architecture"`
@@ -49,9 +50,15 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 	}
 	t.Setenv("WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS", "1")
 	site, hits := firstNavigationNodeFixture(t)
-	for _, mode := range []string{"direct", "direct-screenshot", "worker-subprocess-temporary", "worker-subprocess-saved"} {
+	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "worker-subprocess-temporary", "worker-subprocess-saved"} {
 		t.Run(mode, func(t *testing.T) {
-			record := firstNavigationEvidence{Mode: mode, Platform: runtime.GOOS, Architecture: runtime.GOARCH}
+			record := firstNavigationEvidence{Mode: mode, Platform: runtime.GOOS, Architecture: runtime.GOARCH, ProfileLocation: "system-temporary"}
+			if strings.Contains(mode, "-home") || mode == "worker-subprocess-temporary" {
+				record.ProfileLocation = "home-temporary"
+			}
+			if mode == "worker-subprocess-saved" {
+				record.ProfileLocation = "home-saved"
+			}
 			before := hits.Load()
 			// Registered before browser cleanup, so the final snapshot is written last.
 			t.Cleanup(func() {
@@ -77,7 +84,7 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 			if strings.HasPrefix(mode, "worker-") {
 				call = firstNavigationWorker(t, mode == "worker-subprocess-saved", &record)
 			} else {
-				call = firstNavigationDirect(t, mode == "direct-screenshot", &record)
+				call = firstNavigationDirect(t, strings.HasSuffix(mode, "screenshot"), strings.Contains(mode, "-home"), &record)
 			}
 			record.NavigateCalls++
 			frame := call(Request{Action: "navigate", URL: site + "/check"})
@@ -305,9 +312,27 @@ func firstNavigationWorker(t *testing.T, saved bool, record *firstNavigationEvid
 	return call
 }
 
-func firstNavigationDirect(t *testing.T, screenshot bool, record *firstNavigationEvidence) func(Request) Frame {
+func firstNavigationDirect(t *testing.T, screenshot, profileAtHome bool, record *firstNavigationEvidence) func(Request) Frame {
 	t.Helper()
-	alloc, stop := chromedp.NewExecAllocator(context.Background(), workerAllocatorOptions(t.TempDir())...)
+	var profile string
+	if profileAtHome {
+		var err error
+		profile, err = temporaryProfile()
+		if err != nil {
+			record.Failure = "direct_home_profile_error"
+			t.Fatal("cannot create private home profile")
+		}
+		// Registered before browser cleanup: Chrome exits before profile removal.
+		t.Cleanup(func() {
+			if os.RemoveAll(profile) != nil {
+				record.CleanupFailed = true
+				t.Error("private home profile cleanup failed")
+			}
+		})
+	} else {
+		profile = t.TempDir()
+	}
+	alloc, stop := chromedp.NewExecAllocator(context.Background(), workerAllocatorOptions(profile)...)
 	root, cancel := chromedp.NewContext(alloc)
 	t.Cleanup(func() { cancel(); stop() })
 	trace := newNavigationTrace()

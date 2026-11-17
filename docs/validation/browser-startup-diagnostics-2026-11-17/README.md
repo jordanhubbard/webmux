@@ -109,3 +109,37 @@ TypeScript, Darwin/Windows vet and workflow YAML checks passed. The full native
 application profile/renderer workflow also passes locally. The new component
 records and source bindings are in [component-manifest.json](component-manifest.json).
 Windows component outcomes and the cause of the abort remain pending.
+
+
+## Windows component outcomes and matched profile locations
+
+At d3ab2aa, the [Windows component records](windows-component-summary.json)
+show both direct CDP cases failing with zero fixture hits, canceled/aborted
+requested documents and no dropped events. The plain direct load is aborted at
+488 ms after blank readiness at 367 ms. The initial-screenshot case is aborted
+at 709 ms after blank readiness at 436 ms. Both production worker subprocess
+cases pass with one fixture request, HTTP 200 and a document commit. The
+application workflows also pass on that exact head; the Windows component gate
+remains failed. Packaging succeeds and audit remains red.
+
+The same symptom therefore occurs without the WebMux browser controller or
+companion. These ordered single samples do not identify a cause or prove a
+worker fix. The direct cases use system-temporary profile directories, while
+the production temporary/saved workers use the original account home. Their
+initialization and process ancestry differ too.
+
+Two new direct controls use exactly the production temporaryProfile() helper in
+the original home, with and without the initial screenshot. The direct CDP
+startup and navigation path otherwise stays the same. The four preceding modes
+remain, and bounded records now label profile location through fixed categories;
+no directory paths or profile keys are added. All six cases create independent
+fresh profiles and make one navigation each. Private home profiles are removed
+after browser shutdown and cleanup errors fail the case. The six [local
+records](native-profile-location-summary.json) pass with one fixture request
+apiece; actual Windows outcomes for these matched controls remain pending.
+
+Only the optional qualification test changes in this follow-up. Browser runtime,
+protection flags, original execution roots and application waits are unchanged.
+The [profile-location manifest](profile-location-manifest.json) binds this source,
+the retained preceding Windows artifact and the new local receipts. Earlier
+manifests continue to describe their original sources.
