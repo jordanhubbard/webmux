@@ -71,7 +71,9 @@ test('retained ${phase} diagnostic', async ({}, info) => {
  await info.attach('diagnostic', { path: receipt, contentType: 'application/json' });
  writeFileSync(${JSON.stringify(index)}, JSON.stringify({ receipt }));
 });`);
-      const run = spawnSync(process.execPath, [path.join(import.meta.dirname, 'run-playwright.mts'), '--config', config, spec], {
+      // Positional arguments are regex filters, not literal filesystem paths;
+      // a Windows absolute path would turn backslashes into regex escapes.
+      const run = spawnSync(process.execPath, [path.join(import.meta.dirname, 'run-playwright.mts'), '--config', config, path.basename(spec)], {
         cwd: webmuxDir, env: { ...process.env, FORCE_COLOR: '0' }, encoding: 'utf8', timeout: 12_000,
       });
       assert.equal(run.status, 0, `${run.error?.message ?? ''}\n${run.stdout}\n${run.stderr}`);
