@@ -1,0 +1,36 @@
+--- a/vudc_dev.c
++++ b/vudc_dev.c
+@@ -91,6 +91,8 @@
+ {
+ 	int i;
+ 	struct urbp *urb_p, *tmp;
++	struct tx_item *txi, *tx_tmp;
++	unsigned int discarded = 0;
+ 
+ 	udc->address = 0;
+ 
+@@ -101,6 +103,24 @@
+ 		list_del(&urb_p->urb_entry);
+ 		free_urbp_and_urb(urb_p);
+ 	}
++
++	/* Completed replies belong to the old TCP connection. A stopped TX
++	 * thread may leave them queued; sending them to a new importer confuses
++	 * its fresh URB sequence space. RX/TX are stopped before shutdown calls
++	 * here, and udc->lock excludes the timer's completion path. */
++	spin_lock(&udc->lock_tx);
++	list_for_each_entry_safe(txi, tx_tmp, &udc->tx_queue, tx_entry) {
++		list_del(&txi->tx_entry);
++		if (txi->type == TX_SUBMIT)
++			free_urbp_and_urb(txi->s);
++		else
++			kfree(txi->u);
++		kfree(txi);
++		discarded++;
++	}
++	spin_unlock(&udc->lock_tx);
++	if (discarded)
++		dev_info(&udc->pdev->dev, "discarded %u stale USB/IP replies\n", discarded);
+ }
+ 
+ struct vep *vudc_find_endpoint(struct vudc *udc, u8 address)

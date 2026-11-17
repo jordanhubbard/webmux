@@ -1,0 +1,12 @@
+--- a/vudc_dev.c
++++ b/vudc_dev.c
+@@ -344,7 +344,8 @@
+ 
+ 	ep = to_vep(_ep);
+ 	req = to_vrequest(_req);
+-	udc = req->udc;
++	/* An allocated request may be dequeued before its first queue. */
++	udc = ep_to_vudc(ep);
+ 
+ 	if (!udc->driver)
+ 		return -ESHUTDOWN;
