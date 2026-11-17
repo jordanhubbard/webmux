@@ -1,6 +1,6 @@
 # WebMux active roadmap
 
-Reviewed 2026-11-16 against the implementation, qualification receipts and GitHub
+Reviewed 2026-11-17 against the implementation, qualification receipts and GitHub
 issue states. GitHub issues track implementation and remaining acceptance work.
 
 ## Current reliability work
@@ -167,6 +167,12 @@ Guest palette/default colors now have a bounded metadata path, preserving
 indexed cells across later palette changes without replaying color queries.
 The portable renderer suite has 51 cases; Windows CI adds nine real ConPTY
 captures ([color scope](session-recovery.md#guest-palette-and-default-colors-2026-11-16)).
+Bounded OSC 8 hyperlink targets, Unicode IDs and link groups now survive initial
+attachment, continued output and a second attachment through [#405](https://github.com/jordanhubbard/webmux/pull/405).
+The production renderer retains the current markerless hyperlink with bounded
+lifecycle cleanup. Its gate passes 61 portable comparisons, 13 actual ConPTY
+cases and an independent renderer lifecycle control
+([hyperlink evidence](validation/screen-links-2026-11-17/README.md)).
 The refused no-wrap edge, broader underline representation and other OSC display
 features remain open. These checkpoints do not close #355 or #318.
 
@@ -245,8 +251,11 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   mobile/accessibility work, Mosh launch and real-provider/SSH-terminal
   authentication qualification remain open. Opt-in saved profiles and exclusive
   viewer control are implemented in [#401](https://github.com/jordanhubbard/webmux/pull/401);
-  see the [profile and lease scope](browser-companion.md). File controls are implemented;
-  packaged Chromium file visibility and a real SSH worker transfer have separate
+  see the [profile and lease scope](browser-companion.md). File controls are implemented.
+  An on-demand [remote-page text view](browser-companion.md#read-remote-page-text)
+  exposes Chromium accessibility names and roles; broader DOM interaction and
+  assistive-technology acceptance remain open.
+  Packaged Chromium file visibility and a real SSH worker transfer have separate
   [qualification evidence](browser-companion.md#packaged-chromium-file-visibility-2026-11-16).
 - [#120](https://github.com/jordanhubbard/webmux/issues/120): opt-in USB forwarding
   and real iPhone/Xcode qualification.

@@ -284,6 +284,8 @@ func (b *companion) step(ctx context.Context, req Request, frame *Frame) error {
 			return errors.New("The page selector has closed or that option is unavailable")
 		}
 		return err
+	case "read_page":
+		return readPage(ctx, req, frame)
 	case "find":
 		if req.Text == "" || len(req.Text) > 4096 {
 			return errors.New("Find a nonempty phrase of at most 4096 bytes")

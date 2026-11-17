@@ -62,7 +62,9 @@ export interface BrowserAction {
   width?: number; height?: number; button?: string; buttons?: number; clickCount?: number;
   backward?: boolean; ignoreCache?: boolean; accept?: boolean; files?: { name: string; data: string }[];
 }
+export interface BrowserPageText { nodes: { role: string; name: string; depth: number }[]; truncated: boolean }
 export interface BrowserFrame {
+  pageText?: BrowserPageText;
   protocol?: number;
   control?: { owned: boolean; available: boolean; expiresAt?: string; token?: string };
   profileId?: string; profileName?: string;
