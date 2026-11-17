@@ -7,6 +7,7 @@ import { useTouchLikeViewport, useVisualViewportSize } from '../utils/viewport';
 import type {
   AgentDefinition,
   AgentRuntimeStatus,
+  AgentStatusSource,
   AgentTmuxSession,
   ConnectionState,
   NamedTheme,
@@ -23,13 +24,15 @@ interface AgentWorkspaceProps {
   themes: NamedTheme[];
   globalTheme: string | null;
   onAgentAccessDenied?: () => void;
+  onOpenTerminals?: () => void;
+  onOpenCoordination?: () => void;
 }
 
 type SortMode = 'recently-ready' | 'waiting-longest' | 'name-asc' | 'name-desc' | 'created-newest' | 'created-oldest';
 
 const SORT_LABELS: Record<SortMode, string> = {
-  'recently-ready': 'Recently ready',
-  'waiting-longest': 'Waiting longest',
+  'recently-ready': 'Waiting, recent activity',
+  'waiting-longest': 'Waiting, oldest activity',
   'name-asc': 'Name A-Z',
   'name-desc': 'Name Z-A',
   'created-newest': 'Created newest',
@@ -77,6 +80,13 @@ function statusColor(status: AgentRuntimeStatus): string {
   if (status === 'working') return '#5a9af7';
   if (status === 'stale') return '#caaa4a';
   return '#777';
+}
+
+function activitySourceLabel(source: AgentStatusSource): string {
+  if (source === 'hook') return 'Hook report';
+  if (source === 'webmux') return 'WebMux report';
+  if (source === 'tmux') return 'tmux activity estimate';
+  return 'Source unknown';
 }
 
 function sortSessions(sessions: AgentTmuxSession[], sortMode: SortMode): AgentTmuxSession[] {
@@ -174,8 +184,8 @@ function TerminalPanel({ session, fontSize, fontFamily, theme, agent, onClose, c
         <div style={styles.panelTitle}>
           <span style={{ color: state === 'connected' ? '#4aaa6a' : state === 'error' ? '#ff5555' : '#caaa4a', fontSize: 9 }}>{'\u25cf'}</span>
           <span style={styles.panelTitleText}>{session.title}</span>
-          {session.agent_role === 'attach' && <span style={styles.roleBadge}>{agent.badge}</span>}
-          {session.agent_role === 'scratch' && <span style={styles.roleBadge}>SHELL</span>}
+          {session.agent_role === 'attach' && <span style={styles.roleBadge} title={`Configured group: ${agent.label}`}>Observed tmux</span>}
+          {session.agent_role === 'scratch' && <span style={styles.roleBadge}>Scratch shell</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <TerminalActions sessionId={session.id} terminalRef={terminalRef} transcriptEnabled={transcriptEnabled} connected={state === 'connected'} />
@@ -215,6 +225,8 @@ export function AgentWorkspace({
   themes,
   globalTheme,
   onAgentAccessDenied,
+  onOpenTerminals,
+  onOpenCoordination,
 }: AgentWorkspaceProps) {
   const combined = agent === undefined;
   const workspaceLabel = agent ? agent.plural_label : 'Agents';
@@ -442,6 +454,15 @@ export function AgentWorkspace({
           </button>
         </div>
 
+        <section aria-label="Session ownership and activity" style={styles.provenance}>
+          <strong>Observed tmux sessions</strong>
+          <p style={{ margin: '5px 0' }}>Activity reports here do not verify Rig ownership or readiness. Use coordinated sessions for project identity and lifecycle.</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {onOpenTerminals && <button type="button" style={styles.shellButton} onClick={onOpenTerminals}>Terminal grid</button>}
+            {onOpenCoordination && <button type="button" style={styles.shellButton} onClick={onOpenCoordination}>Coordinated sessions</button>}
+          </div>
+        </section>
+
         <div style={styles.sidebarControls}>
           <select
             style={styles.sortSelect}
@@ -482,14 +503,15 @@ export function AgentWorkspace({
                   ...(selected ? styles.sessionRowSelected : {}),
                 }}
                 onClick={() => setSelectedKey(key)}
-                title={`${statusLabel(session.status)}; ${session.windows} window${session.windows === 1 ? '' : 's'}, ${session.attached} attached`}
+                title={`Observed tmux; ${statusLabel(session.status)} · ${activitySourceLabel(session.status_source)}; ${session.windows} window${session.windows === 1 ? '' : 's'}, ${session.attached} attached`}
               >
                 <span style={{ ...styles.statusDot, background: statusColor(session.status) }} />
                 <span style={styles.sessionText}>
                   <span style={styles.sessionTopLine}>
                     <span style={styles.sessionName}>{session.display_name}</span>
-                    <span style={styles.kindBadge}>{sessionAgent.badge}</span>
+                    <span style={styles.kindBadge} title={`Configured group: ${sessionAgent.label}`}>{sessionAgent.badge}</span>
                   </span>
+                  <span style={styles.sessionMeta}>{statusLabel(session.status)} · {activitySourceLabel(session.status_source)}</span>
                   <span style={styles.sessionMeta}>{relativeTime(session.last_output_at)}</span>
                 </span>
               </button>
@@ -573,6 +595,14 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#888',
     fontSize: 11,
     marginTop: 2,
+  },
+  provenance: {
+    padding: '8px 10px',
+    color: '#b4b4cb',
+    fontSize: 11,
+    lineHeight: 1.4,
+    borderBottom: '1px solid #242452',
+    flexShrink: 0,
   },
   sidebarControls: {
     display: 'grid',
