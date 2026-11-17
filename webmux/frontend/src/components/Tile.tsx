@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { RigSeatStatus } from './RigSeatStatus';
+import type { CoordinationSeat } from './CoordinationDialog';
 import { Terminal, type TerminalHandle } from './Terminal';
 import { AuthHandoff } from './AuthHandoff';
 import { BrowserCompanion } from './BrowserCompanion';
@@ -16,6 +18,7 @@ import type { Session, ConnectionState, NamedTheme, ManagedClient } from '../typ
 
 interface TileProps {
   session: Session;
+  rigObservations?: CoordinationSeat[];
   canManageHosts?: boolean;
   managedClient?: ManagedClient;
   onManagedClientChanged?: () => void;
@@ -46,6 +49,7 @@ interface TileProps {
 
 export function Tile({
   session,
+  rigObservations,
   canManageHosts = true,
   managedClient,
   onManagedClientChanged,
@@ -274,6 +278,7 @@ export function Tile({
         </div>
       </div>
 
+      <RigSeatStatus session={session} observations={rigObservations} />
       {handoff && <AuthHandoff key={handoff.key} session={session} url={handoff.url}
         onDismiss={() => { if (handoff.requestId) termHandleRef.current?.acknowledgeBrowser(handoff.requestId); setHandoff(null); termHandleRef.current?.focus(); }}
         onCompanion={url => { setBrowserNavigation({ url }); setShowBrowser(true); }} />}

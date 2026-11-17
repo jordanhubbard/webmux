@@ -10,7 +10,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 type Agent = { target: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string };
 type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string };
 type RigRow = { rigId?: string; name?: string; rigName?: string; nodeCount?: number; runningCount?: number; status?: string; lifecycleState?: string; latestSnapshot?: string | null };
-type NodeRow = { rigId?: string; rigName?: string; logicalId?: string; podNamespace?: string; hostSelfId?: string | null; canonicalSessionName?: string; runtime?: string; sessionStatus?: string; lifecycleState?: string; tmuxAttachCommand?: string | null };
+type AgentActivity = { state?: string; evidenceSource?: string; sampledAt?: string; stale?: boolean; generationProvenance?: string };
+type NodeRow = { agentActivity?: AgentActivity; startupStatus?: string; rigId?: string; rigName?: string; logicalId?: string; podNamespace?: string; hostSelfId?: string | null; canonicalSessionName?: string; runtime?: string; sessionStatus?: string; lifecycleState?: string; tmuxAttachCommand?: string | null };
 const [action, directory] = process.argv.slice(2);
 if (!directory) throw new Error('Missing coordination state directory');
 // Controller commands follow the configured coordinator endpoint. A user's
@@ -26,8 +27,12 @@ const write = (file: string, data: unknown) => {
 };
 const records = (): Agent[] => fs.readdirSync(directory).filter(f => f.endsWith('.agent.json')).map(f => JSON.parse(fs.readFileSync(path.join(directory, f), 'utf8')) as Agent);
 const entries = <T,>(value: T[] | { entries?: T[] }): T[] => Array.isArray(value) ? value : value.entries ?? [];
-const rigRows = (archived = false): RigRow[] => entries(JSON.parse(run('rig', ['ps', ...(archived ? ['--include-archived'] : []), '--json', '--fields', 'rigId,name,rigName,nodeCount,runningCount,status,lifecycleState,latestSnapshot'])) as RigRow[] | { entries?: RigRow[] });
-const nodeRows = (): NodeRow[] => entries(JSON.parse(run('rig', ['ps', '--nodes', '-A', '--json', '--fields', 'rigId,rigName,logicalId,podNamespace,hostSelfId,canonicalSessionName,runtime,sessionStatus,lifecycleState,tmuxAttachCommand'])) as NodeRow[] | { entries?: NodeRow[] });
+const observationArgs = action === 'observations' ? ['--no-cleanup'] : [];
+const rigRows = (archived = false): RigRow[] => entries(JSON.parse(run('rig', ['ps', ...observationArgs, ...(archived ? ['--include-archived'] : []), '--json', '--fields', 'rigId,name,rigName,nodeCount,runningCount,status,lifecycleState,latestSnapshot'])) as RigRow[] | { entries?: RigRow[] });
+// Project before enrichment so neither seats nor legacy agent rows carry raw
+// evidence, runtime event text, or provider secrets.
+const activityFacts = (activity?: AgentActivity): AgentActivity | undefined => activity ? { state: activity.state, evidenceSource: activity.evidenceSource, sampledAt: activity.sampledAt, stale: activity.stale, generationProvenance: activity.generationProvenance } : undefined;
+const nodeRows = (): NodeRow[] => entries(JSON.parse(run('rig', ['ps', '--nodes', '-A', ...observationArgs, '--json', '--fields', 'rigId,rigName,logicalId,podNamespace,hostSelfId,canonicalSessionName,runtime,sessionStatus,lifecycleState,tmuxAttachCommand,startupStatus,agentActivity'])) as NodeRow[] | { entries?: NodeRow[] }).map(node => ({ ...node, agentActivity: activityFacts(node.agentActivity) }));
 const identifier = (value: string, field: string) => {
   if (!/^[a-z][a-z0-9-]{0,47}$/.test(value)) throw new Error(`${field}: use a letter followed by letters, digits or hyphens (48 characters maximum).`);
   return value;
@@ -86,7 +91,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const args = ['-c', browser, requested, host];
     const output = host === 'localhost' ? run('python3', args) : run('ssh', [...sshArgs, host, `python3 -c ${q(browser)} ${q(requested)} ${q(host)}`]);
     console.log(output);
-  } else if (action === 'status') {
+  } else if (action === 'status' || action === 'observations') {
     let rigs: RigRow[];
     let nodes: NodeRow[];
     try { rigs = rigRows(true); nodes = nodeRows(); }
@@ -99,7 +104,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       return { ...node, managed: Boolean(agent), host: agent?.host, cwd: agent?.cwd, name: agent?.name, openable: Boolean(match), tmuxTarget: match?.[1] };
     });
     const messages: { from: string; to: string; body: string; time: string; state: string }[] = [];
-    for (const agent of agents.slice(0, 16)) {
+    for (const agent of (action === 'observations' ? [] : agents.slice(0, 16))) {
       const rows = JSON.parse(run('rig', ['queue', 'outbox-list', agent.target, '--limit', '8', '--json'])) as { senderSession: string; destinationSession: string; body: string; tsDispatched: string; deliveryState: string }[];
       for (const row of rows) messages.push({ from: row.senderSession, to: row.destinationSession, body: row.body.slice(0, 2000), time: row.tsDispatched, state: row.deliveryState });
     }

@@ -13,7 +13,11 @@ export interface CoordinationProject {
   provider: string; id: string; name: string; host: string; state: string; historical: boolean;
   readOnly?: boolean; seatCount: number; runningCount: number; detail?: string; contexts?: string[]; attentionCount?: number;
 }
+export interface RigActivity {
+  state: string; evidenceSource: string; sampledAt: string; stale?: boolean; generationProvenance?: string;
+}
 export interface CoordinationSeat {
+  startupStatus?: string; agentActivity?: RigActivity;
   logicalId?: string; attachmentTarget?: string; managerTarget?: string;
   rigHostId?: string;
   provider: string; id: string; projectId: string; projectName: string; name: string; host: string;

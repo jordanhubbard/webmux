@@ -147,38 +147,40 @@ type coordinationProject struct {
 }
 
 type coordinationSeat struct {
-	RigHostID        string `json:"rigHostId,omitempty"`
-	ObservationState string `json:"observationState,omitempty"`
-	ObservedAt       string `json:"observedAt,omitempty"`
-	Profile          string `json:"profile,omitempty"`
-	NativeStateFile  string `json:"nativeStateFile,omitempty"`
-	Provider         string `json:"provider"`
-	ID               string `json:"id"`
-	ProjectID        string `json:"projectId"`
-	ProjectName      string `json:"projectName"`
-	Name             string `json:"name"`
-	Host             string `json:"host"`
-	Workspace        string `json:"workspace,omitempty"`
-	Runtime          string `json:"runtime"`
-	State            string `json:"state"`
-	TransportState   string `json:"transportState,omitempty"`
-	Openable         bool   `json:"openable"`
-	Managed          bool   `json:"managed"`
-	ManagerSession   string `json:"managerSessionId,omitempty"`
-	NativeSession    string `json:"nativeSessionId,omitempty"`
-	ProviderTarget   string `json:"-"`
-	AttachmentTarget string `json:"attachmentTarget,omitempty"`
-	LogicalID        string `json:"logicalId,omitempty"`
-	ManagerTarget    string `json:"managerTarget,omitempty"`
-	Context          string `json:"context,omitempty"`
-	ParentID         string `json:"parentId,omitempty"`
-	ParentName       string `json:"parentName,omitempty"`
-	Role             string `json:"role,omitempty"`
-	Substate         string `json:"substate,omitempty"`
-	LastActivity     string `json:"lastActivityAt,omitempty"`
-	Attention        bool   `json:"attention,omitempty"`
-	CanReceive       bool   `json:"canReceive,omitempty"`
-	ExitCode         *int   `json:"exitCode,omitempty"`
+	StartupStatus    string       `json:"startupStatus,omitempty"`
+	AgentActivity    *rigActivity `json:"agentActivity,omitempty"`
+	RigHostID        string       `json:"rigHostId,omitempty"`
+	ObservationState string       `json:"observationState,omitempty"`
+	ObservedAt       string       `json:"observedAt,omitempty"`
+	Profile          string       `json:"profile,omitempty"`
+	NativeStateFile  string       `json:"nativeStateFile,omitempty"`
+	Provider         string       `json:"provider"`
+	ID               string       `json:"id"`
+	ProjectID        string       `json:"projectId"`
+	ProjectName      string       `json:"projectName"`
+	Name             string       `json:"name"`
+	Host             string       `json:"host"`
+	Workspace        string       `json:"workspace,omitempty"`
+	Runtime          string       `json:"runtime"`
+	State            string       `json:"state"`
+	TransportState   string       `json:"transportState,omitempty"`
+	Openable         bool         `json:"openable"`
+	Managed          bool         `json:"managed"`
+	ManagerSession   string       `json:"managerSessionId,omitempty"`
+	NativeSession    string       `json:"nativeSessionId,omitempty"`
+	ProviderTarget   string       `json:"-"`
+	AttachmentTarget string       `json:"attachmentTarget,omitempty"`
+	LogicalID        string       `json:"logicalId,omitempty"`
+	ManagerTarget    string       `json:"managerTarget,omitempty"`
+	Context          string       `json:"context,omitempty"`
+	ParentID         string       `json:"parentId,omitempty"`
+	ParentName       string       `json:"parentName,omitempty"`
+	Role             string       `json:"role,omitempty"`
+	Substate         string       `json:"substate,omitempty"`
+	LastActivity     string       `json:"lastActivityAt,omitempty"`
+	Attention        bool         `json:"attention,omitempty"`
+	CanReceive       bool         `json:"canReceive,omitempty"`
+	ExitCode         *int         `json:"exitCode,omitempty"`
 }
 
 type coordinationMessage struct {
@@ -277,9 +279,10 @@ type agentDeckProvider struct {
 }
 
 type rigProvider struct {
-	server *Server
-	home   string
-	owner  string
+	factsOnly bool
+	server    *Server
+	home      string
+	owner     string
 }
 
 func (p *rigProvider) Descriptor() coordinationProviderDescriptor {
@@ -319,25 +322,31 @@ type rigStatusEnvelope struct {
 }
 
 type rigCanonicalSeat struct {
-	HostSelfID           string `json:"hostSelfId"`
-	RigID                string `json:"rigId"`
-	RigName              string `json:"rigName"`
-	LogicalID            string `json:"logicalId"`
-	PodNamespace         string `json:"podNamespace"`
-	CanonicalSessionName string `json:"canonicalSessionName"`
-	Runtime              string `json:"runtime"`
-	SessionStatus        string `json:"sessionStatus"`
-	LifecycleState       string `json:"lifecycleState"`
-	Managed              bool   `json:"managed"`
-	Host                 string `json:"host"`
-	Cwd                  string `json:"cwd"`
-	Name                 string `json:"name"`
-	Openable             bool   `json:"openable"`
-	TmuxTarget           string `json:"tmuxTarget"`
+	StartupStatus        string       `json:"startupStatus"`
+	AgentActivity        *rigActivity `json:"agentActivity"`
+	HostSelfID           string       `json:"hostSelfId"`
+	RigID                string       `json:"rigId"`
+	RigName              string       `json:"rigName"`
+	LogicalID            string       `json:"logicalId"`
+	PodNamespace         string       `json:"podNamespace"`
+	CanonicalSessionName string       `json:"canonicalSessionName"`
+	Runtime              string       `json:"runtime"`
+	SessionStatus        string       `json:"sessionStatus"`
+	LifecycleState       string       `json:"lifecycleState"`
+	Managed              bool         `json:"managed"`
+	Host                 string       `json:"host"`
+	Cwd                  string       `json:"cwd"`
+	Name                 string       `json:"name"`
+	Openable             bool         `json:"openable"`
+	TmuxTarget           string       `json:"tmuxTarget"`
 }
 
 func (p *rigProvider) rawStatus(ctx context.Context) (rigStatusEnvelope, error) {
-	output, err := openrigcoord.Run(ctx, p.home, p.owner, "status", "")
+	action := "status"
+	if p.factsOnly {
+		action = "observations"
+	}
+	output, err := openrigcoord.Run(ctx, p.home, p.owner, action, "")
 	if err != nil {
 		return rigStatusEnvelope{}, err
 	}
@@ -420,8 +429,9 @@ func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
 			}
 		}
 		status.Seats = append(status.Seats, coordinationSeat{
-			RigHostID: rigHostID(seat.HostSelfID),
-			Provider:  "rig", ID: id, LogicalID: seat.LogicalID, AttachmentTarget: seat.TmuxTarget, ManagerTarget: seat.CanonicalSessionName, ProjectID: seat.RigID, ProjectName: seat.RigName,
+			RigHostID:     rigHostID(seat.HostSelfID),
+			StartupStatus: canonicalRigStartup(seat.StartupStatus), AgentActivity: canonicalRigActivity(seat.AgentActivity),
+			Provider: "rig", ID: id, LogicalID: seat.LogicalID, AttachmentTarget: seat.TmuxTarget, ManagerTarget: seat.CanonicalSessionName, ProjectID: seat.RigID, ProjectName: seat.RigName,
 			Name: name, Host: host, Workspace: seat.Cwd, Runtime: seat.Runtime, State: state, TransportState: transportState,
 			Openable: openable, Managed: seat.Managed, ManagerSession: managerSession, ProviderTarget: seat.CanonicalSessionName, Context: seat.PodNamespace,
 		})
@@ -530,7 +540,8 @@ func (p *rigProvider) Attach(ctx context.Context, target string) (coordinationLa
 		if name == "" {
 			name = seat.LogicalID
 		}
-		return coordinationLaunch{SeatID: id, AttachmentTarget: seat.TmuxTarget, Provider: "rig", Target: target, Title: name + " · Unknown execution host · " + seat.RigName, Project: seat.RigName, Name: name, RigHostID: rigHostID(seat.HostSelfID), Runtime: seat.Runtime, Argv: []string{tmux, "attach-session", "-t", "=" + seat.TmuxTarget}}, nil
+		return coordinationLaunch{SeatID: id, AttachmentTarget: seat.TmuxTarget, Provider: "rig", Target: target, Title: name + " · Unknown execution host · " + seat.RigName, Project: seat.RigName, Name: name, RigHostID: rigHostID(seat.HostSelfID),
+			Runtime: seat.Runtime, Argv: []string{tmux, "attach-session", "-t", "=" + seat.TmuxTarget}}, nil
 	}
 }
 

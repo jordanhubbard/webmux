@@ -1,6 +1,7 @@
 import { movePair } from '../utils/movePair';
 import { AddSessionCell } from './AddSessionCell';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useRigObservations } from '../utils/useRigObservations';
 import { Tile } from './Tile';
 import { ConnectionDialog } from './ConnectionDialog';
 import { CoordinationDialog } from './CoordinationDialog';
@@ -147,6 +148,7 @@ export function Workspace({
   onGlobalLockChange,
 }: WorkspaceProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const rigObservations = useRigObservations(canManageRig && sessions.some(session => !!session.rig && session.rig.provider !== 'agent-deck'));
   const [managedClients, setManagedClients] = useState<ManagedClient[]>([]);
   const [savedHosts, setSavedHosts] = useState<HostEntry[]>([]);
   const refreshManagedClients = useCallback(() => {
@@ -734,6 +736,7 @@ export function Workspace({
               >
                 <Tile
                   session={session}
+                  rigObservations={rigObservations}
                   canManageHosts={canManageHosts}
                   managedClient={savedHosts.some(host => host.id === session.host_id && host.hostname === session.hostname && host.username === session.username && (host.port || 22) === (session.port || 22))
                     ? managedClients.find(client => client.host_id && client.host_id === session.host_id) : undefined}

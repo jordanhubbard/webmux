@@ -325,6 +325,10 @@ func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner s
 	if os.Getenv("WEBMUX_COORDINATION_DISABLED") != "1" {
 		providers = s.coordinationProviders(owner)
 	}
+	// Grid observation polling must not query Agent Deck or read message bodies.
+	if r.URL.Query().Get("observations") == "rig" && os.Getenv("WEBMUX_COORDINATION_DISABLED") != "1" {
+		providers = []coordinationProvider{&rigProvider{home: s.store.Home, owner: owner, server: s, factsOnly: true}}
+	}
 	selected := r.URL.Query().Get("provider")
 	if selected == "" {
 		selected, _ = preferences["default_view"].(string)

@@ -1,0 +1,58 @@
+{
+  "rigVersion": "0.6.14 (df1c1517)",
+  "tmuxVersion": "tmux 3.8",
+  "nodeVersion": "v24.21.0",
+  "browserVersion": "157.0.8103.79",
+  "platform": "darwin",
+  "architecture": "arm64",
+  "before": {
+    "startupStatus": "ready",
+    "agentActivity": {
+      "state": "running",
+      "evidenceSource": "terminal_activity",
+      "sampledAt": "2026-11-17T21:49:58.138Z"
+    },
+    "rigHostId": "host-05bedad0",
+    "provider": "rig",
+    "id": "local-rig/64d6d257dedaa5f706cd7d051b71d8e14a510d83e0a18f2c7ab0cfcc9c40b6ad",
+    "projectId": "01M7NQSXXHT3KJA6BX3VKQWWBX",
+    "projectName": "activity-5e2c66326e",
+    "name": "agents.first",
+    "host": "",
+    "runtime": "terminal",
+    "state": "running",
+    "transportState": "unknown",
+    "openable": true,
+    "managed": false,
+    "attachmentTarget": "agents-first@activity-5e2c66326e",
+    "logicalId": "agents.first",
+    "managerTarget": "agents-first@activity-5e2c66326e",
+    "context": "agents"
+  },
+  "after": {
+    "startupStatus": "ready",
+    "agentActivity": {
+      "state": "unknown",
+      "evidenceSource": "session_registry",
+      "sampledAt": "2026-11-17T21:50:09.657Z"
+    },
+    "rigHostId": "host-05bedad0",
+    "provider": "rig",
+    "id": "local-rig/64d6d257dedaa5f706cd7d051b71d8e14a510d83e0a18f2c7ab0cfcc9c40b6ad",
+    "projectId": "01M7NQSXXHT3KJA6BX3VKQWWBX",
+    "projectName": "activity-5e2c66326e",
+    "name": "agents.first",
+    "host": "",
+    "runtime": "terminal",
+    "state": "detached",
+    "transportState": "unknown",
+    "openable": false,
+    "managed": false,
+    "logicalId": "agents.first",
+    "managerTarget": "agents-first@activity-5e2c66326e",
+    "context": "agents"
+  },
+  "siblingPIDUnchanged": true,
+  "viewerPreserved": true,
+  "scope": "Real Rig-managed builtin terminals and tmux through native app/browser. No authenticated coding provider or hook activity claimed."
+}

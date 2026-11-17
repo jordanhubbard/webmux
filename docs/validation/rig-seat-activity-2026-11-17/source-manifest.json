@@ -1,0 +1,68 @@
+{
+  "parent": "e6aa2dba768aaf5c223131fcf9654a9833d882f2",
+  "scope": "Native builtin terminals only; no authenticated coding-provider qualification",
+  "native_activity": {
+    "test_fixture_overlay_commit": "6fe00dcaefbd5935929c7744131dc4986f0df5cc",
+    "fixture_sha256": "ec47c609e07aebc7e10480c09fe8bf450e1f8b0a7fdd6abaf13b9c7c1df21fb0",
+    "runtime_source_overlay": false,
+    "restored_fixture_sha256": "7417ac427685eaaca31b16146950a481ba801cb1c934a0d670b5c6502ed1e4c5",
+    "results": [
+      {
+        "spec": "openrig-activity.spec.ts",
+        "name": "rig439-activity-final4",
+        "exit": 0
+      }
+    ]
+  },
+  "browser_regression": {
+    "test_fixture_overlay_commit": "6fe00dcaefbd5935929c7744131dc4986f0df5cc",
+    "fixture_sha256": "ec47c609e07aebc7e10480c09fe8bf450e1f8b0a7fdd6abaf13b9c7c1df21fb0",
+    "runtime_source_overlay": false,
+    "restored_fixture_sha256": "7417ac427685eaaca31b16146950a481ba801cb1c934a0d670b5c6502ed1e4c5",
+    "results": [
+      {
+        "spec": "openrig.spec.ts",
+        "name": "rig439-legacy-final3",
+        "exit": 0
+      },
+      {
+        "spec": "openrig-host.spec.ts",
+        "name": "rig439-host-final3",
+        "exit": 0
+      },
+      {
+        "spec": "openrig-identity.spec.ts",
+        "name": "rig439-identity-final3",
+        "exit": 0
+      },
+      {
+        "spec": "openrig-activity.spec.ts",
+        "name": "rig439-activity-final3",
+        "exit": 0
+      }
+    ]
+  },
+  "sources": {
+    "webmux/server/internal/httpapi/rig_activity.go": "8e6a567712dd9f1a0ec86896a1231420bd5cd80692511cd5de5d6169f97a1c00",
+    "webmux/server/internal/httpapi/rig_activity_test.go": "305e80a82eef1c63fbf05d1763f35631b78d28a70c65c3864269fccaad54df65",
+    "webmux/server/internal/httpapi/coordination_providers.go": "fdf9866cd98d6d967b35499d73512a8b58a94c9bff0b936b9640ac85e9c3cd6b",
+    "webmux/server/internal/httpapi/openrig.go": "a3f5e269f33fd8066d90f50a0deb1007b7d673fec9f1280965dc36341f3b81a3",
+    "webmux/server/internal/openrigcoord/runner.mts": "d31c09731fc3468285096127240f11bae85a992c6384d10ef7a950c3e2420caa",
+    "webmux/server/internal/openrigcoord/observations_test.go": "3efedfd9af1bb7595b1c4369f57228ebcde949e9e34a5ce756f86a8c9658fcad",
+    "webmux/frontend/src/components/RigSeatStatus.tsx": "0ebb822b47db87a223aa83e0e58b668eb391836c92878391a84544fdb956030e",
+    "webmux/frontend/src/components/Tile.tsx": "6f1a2205febbc01cc24f8d899c08770be0f680d046662370566999eb783339a6",
+    "webmux/frontend/src/components/Workspace.tsx": "5af0d3983e8dd639908f27a1c17860a2869451f694e1b517e35a94ed26feada5",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "3085855c9f0b39bc26a7c2e0aaad90a3d5a560c2ec8cce3fe3d0519602753160",
+    "webmux/frontend/src/utils/useRigObservations.ts": "5415dd6f1b9a467700202c253d4ac9095b3f977a7395cf5bbdf62bc9f058ed74",
+    "webmux/frontend/src/utils/api.ts": "b9d068f8c38ad6a2bd6325985a1396cab3e7f35199509bf0e318d724cab8450c",
+    "tests/frontend/RigSeatStatus.test.tsx": "56cb997a69d79406b37034f9421122ed31fc51cde99e4f6262d936f5b24ac649",
+    "tests/frontend/useRigObservations.test.tsx": "ff4f7a1c39e3701ed2db0b48e07d3589a06d644c65a1a0d81307def05c9f5555",
+    "tests/e2e/openrig-activity.spec.ts": "f34c9a574539cfb28105e454082a98b9fb386688cfa4eb8afaae48eae57150d0",
+    ".github/workflows/ci.yml": "b4595493631c7cc162c8a45c157a653a3efb328644a0c797f42a13ef0bdc436d"
+  },
+  "artifacts": {
+    "native-results.json": "203bb2ac624a107c6220fbb4c68944c18ff4eaad7a9a45b0274c838c44aa19c7",
+    "rig-tile-status.png": "1b2db6e0f9b2a201f7f16b98829f30a17d939bde798e997bb32589a4925dd217",
+    "lifecycle-probe.json": "db221ef468b0d5a7f16bf77f6ca34429b260f6276701d6a519faa4cfc5c18195"
+  }
+}

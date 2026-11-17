@@ -447,3 +447,56 @@ records an explicit provider-owned unclaim/rebind with stable seat/viewer/layout
 changed attachment, exact input routing, retained history and preserved old
 provider. Broader lifecycle, adoption and change-notification work remains under
 [#194](https://github.com/jordanhubbard/webmux/issues/194).
+
+
+## Canonical activity in grid tiles
+
+Rig tiles show Rig lifecycle, bootstrap status and activity as separate observations.
+`Bootstrap ready` means Rig completed startup; it does not establish that a coding
+provider can accept an instruction. Fresh, generation-resolved runtime hooks can
+report agent running, idle or needing input. Terminal output is labelled as output;
+other observational sources remain activity estimates. Silence, a connected viewer
+and a surviving tmux session never become provider readiness claims.
+
+The grid reads Rig facts every ten seconds only when an authorized workspace has
+Rig viewers. It does not enable an integration, query Agent Deck or read message
+bodies. Requests do not overlap, have a twenty-second deadline, and expire the
+previous response after thirty seconds. A failed or partially failed discovery
+clears positive observations. Activity samples older than thirty seconds, more
+than five seconds ahead of the browser clock, stale, or of unresolved hook
+occupant provenance are unknown. Clock disagreement can therefore conservatively
+hide activity. These bounds are WebMux display limits, not Rig freshness promises.
+
+Each logical seat is matched by its canonical ID. Activity and bootstrap facts
+also require the viewer's saved manager and attachment targets to match current
+inventory. A changed binding needs explicit Open before those facts can describe
+that viewer. Logical lifecycle can still report `detached` after Rig removes a
+stopped seat's attachment. Missing or duplicate identities remain unknown. These
+checks do not add an atomic occupant-conditional lifecycle contract.
+
+Raw activity evidence, prompt text, runtime event bodies, hook tokens and resume
+tokens are omitted from the observation projection. The terminal-first empty
+workspace, ordinary terminals and Agent Deck tiles keep their existing behavior.
+The older standalone navigator remains unmounted, as established by #228.
+
+The [native activity validation](validation/rig-seat-activity-2026-11-17/README.md)
+covers actual builtin terminal seats, a native seat stop, sibling survival and
+viewer placement. Hook attention and stale/rebind behavior have deterministic
+coverage; authenticated coding-provider readiness remains unqualified.
+
+### Native Stop contract still needed
+
+A private WebMux launch record is not native Rig lifecycle ownership. Current
+WebMux launchers use Rig's adopted/claimed enrollment path; native `rig seat stop`
+refuses those sessions. For an SSH launch, the local tmux process is a relay whose
+exit does not terminate the remote persistent provider. An isolated native test
+confirmed that one natively launched terminal can be stopped without affecting its
+sibling, while an adopted terminal is refused and stays alive.
+
+Published Rig 0.6.14 accepts a stop reference plus reason/operator but no atomic
+expected rig/node/session or occupant-generation precondition. A separate WebMux
+preflight cannot protect a reviewed occupant from replacement before that native
+command executes. Issue #438 tracks ownership, conditional identity and remote
+effect requirements before a Stop control can ship. Hide, reconnect and native
+recovery keep their existing separate contracts; this activity UI adds no stop
+action and does not complete #194.
