@@ -254,8 +254,10 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   viewer control are implemented in [#401](https://github.com/jordanhubbard/webmux/pull/401);
   see the [profile and lease scope](browser-companion.md). File controls are implemented.
   An on-demand [remote-page text view](browser-companion.md#read-remote-page-text)
-  exposes Chromium accessibility names and roles; broader DOM interaction and
-  assistive-technology acceptance remain open.
+  exposes Chromium accessibility names and roles. Explicit Focus/Activate
+  controls now support bounded DOM interaction with native stale-reference,
+  identity and once-only dispatch controls under [#419](https://github.com/jordanhubbard/webmux/issues/419).
+  Broader DOM/iframe, mobile and assistive-technology acceptance remain open.
   Packaged Chromium file visibility and a real SSH worker transfer have separate
   [qualification evidence](browser-companion.md#packaged-chromium-file-visibility-2026-11-16).
 - [#120](https://github.com/jordanhubbard/webmux/issues/120): opt-in USB forwarding

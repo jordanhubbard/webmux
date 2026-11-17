@@ -41,6 +41,7 @@ type Request struct {
 	Y            float64  `json:"y,omitempty"`
 	DeltaY       float64  `json:"deltaY,omitempty"`
 	Target       string   `json:"target,omitempty"`
+	Element      string   `json:"element,omitempty"`
 	Width        int64    `json:"width,omitempty"`
 	Height       int64    `json:"height,omitempty"`
 	DeltaX       float64  `json:"deltaX,omitempty"`

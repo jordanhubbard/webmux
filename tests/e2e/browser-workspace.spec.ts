@@ -1,15 +1,22 @@
 import { test, expect } from '@playwright/test';
 import http from 'node:http';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
-test('browser supports interactive pages, dialogs, clipboard, files, navigation and tabs', async ({ page, request }) => {
+test('browser supports interactive pages, dialogs, clipboard, files, navigation and tabs', async ({ page, request }, info) => {
  test.setTimeout(120_000);
+ const started = performance.now();
+ const timeline: { ms: number; event: string; detail: unknown }[] = [];
+ let dropped = 0;
+ const record = (event: string, detail: unknown) => {
+  if (timeline.length === 256) { dropped++; return; }
+  timeline.push({ ms: Math.round(performance.now() - started), event, detail });
+ };
  const signals: string[] = [];
  let uploaded = Buffer.alloc(0);
  let mainDocuments = 0;
  const downloadBytes = Buffer.from('browser download bytes\n😀\u0000');
  const server = http.createServer((req, res) => {
-  if (req.url?.startsWith('/signal?')) { signals.push(new URL(req.url, 'http://fixture').searchParams.get('value')!); res.end('ok'); return; }
+  if (req.url?.startsWith('/signal?')) { const value = new URL(req.url, 'http://fixture').searchParams.get('value')!; signals.push(value); record('fixture-signal', { kind: value.split(':')[0] }); res.end('ok'); return; }
   if (req.url === '/upload') {
    const chunks: Buffer[] = []; req.on('data', chunk => chunks.push(chunk)); req.on('end', () => { uploaded = Buffer.concat(chunks); res.end('ok'); }); return;
   }
@@ -25,6 +32,7 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
    <input id="files" type="file"><div id="context" class="area">Right click here</div>
    <a id="download" href="/download">Download fixture</a><button id="prompt">Prompt</button>
    <input id="text" value=""><button id="popup">Open popup</button>
+   <button id="accessibleActivate" style="left:600px;top:200px">Accessible action</button><input id="accessibleText" aria-label="Accessible input" style="left:600px;top:260px">
    <select id="select"><option>First</option><option>Second</option></select>
    <script>
     const signal=value=>fetch('/signal?value='+encodeURIComponent(value));
@@ -39,6 +47,8 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
     text.oninput=()=>signal('text:'+text.value);
     text.onselect=()=>signal('selection:'+text.selectionStart+':'+text.selectionEnd);
     text.onkeydown=event=>{if(event.key==='Escape')signal('escape')};
+    accessibleActivate.onclick=()=>signal('accessible-activated');
+    accessibleText.oninput=()=>signal('accessible-text:'+accessibleText.value);
     const activate=()=>{hover.onmouseenter=()=>signal('hover');popup.onclick=()=>window.open('/second','_blank')};
     let shown=false,activationTimer;
     if(!${returningDocument})activate();
@@ -63,7 +73,17 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
  page.on('request', outgoing => {
   if (new URL(outgoing.url()).pathname !== endpoint || outgoing.method() !== 'POST') return;
   const body = outgoing.postDataJSON() as typeof controller;
+  const safe = body as { action?: string; target?: string; text?: string; width?: number; height?: number };
+  record('request', { action: safe.action, target: safe.target, textBytes: safe.text?.length, width: safe.width, height: safe.height });
   if (body.controlToken) controller = { viewer: body.viewer, controlToken: body.controlToken };
+ });
+ page.on('response', async response => {
+  if (new URL(response.url()).pathname !== endpoint || response.request().method() !== 'POST') return;
+  const action = (response.request().postDataJSON() as { action?: string }).action;
+  try {
+   const frame = await response.json();
+   record('response', { action, status: response.status(), target: frame.target, dialog: frame.dialog?.type, error: frame.error, width: frame.width, height: frame.height });
+  } catch { record('response-unavailable', { action, status: response.status() }); }
  });
  const controlledPost = (data: Record<string, unknown>) => {
   expect(controller.viewer).toMatch(/^[a-f0-9]{32}$/);
@@ -106,6 +126,17 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   await expect(readable).not.toContainText('hidden accessibility control');
   const staleRead = await (await controlledPost({ action: 'read_page', target: 'another-tab' })).json();
   expect(staleRead.error).toContain('selected page changed'); expect(staleRead.pageText).toBeUndefined();
+  // A stale read invalidates the old references. Refresh before using them.
+  await page.getByRole('button', { name: 'Read page text', exact: true }).click();
+  await readable.getByRole('button', { name: 'Focus Accessible input', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Type into remote page' })).toBeFocused();
+  await page.keyboard.type('typed through accessible focus');
+  await expect.poll(() => signals).toContain('accessible-text:typed through accessible focus');
+  await page.getByRole('button', { name: 'Read page text', exact: true }).click();
+  await expect(readable).not.toContainText('typed through accessible focus');
+  await readable.getByRole('button', { name: 'Activate Accessible action', exact: true }).click();
+  await expect.poll(() => signals).toContain('accessible-activated');
+  await page.getByRole('button', { name: 'Read page text', exact: true }).click();
   await page.getByRole('button', { name: 'Close page text', exact: true }).click();
   await expect(readable).not.toBeVisible();
   const hover = await position(280, 40); await page.mouse.move(hover.x, hover.y);
@@ -116,7 +147,8 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   const twice = await position(280, 100); await page.mouse.dblclick(twice.x, twice.y);
   await expect.poll(() => signals).toContain('double');
   await click(280, 160, 'right'); await expect.poll(() => signals).toContain('context');
-  await click(50, 100);
+  await page.getByRole('button', { name: 'Read page text', exact: true }).click();
+  await readable.getByRole('button', { name: 'Activate Confirm', exact: true }).click();
   const confirm = page.getByRole('dialog', { name: 'Browser confirm', exact: true });
   await expect(confirm).toBeVisible();
   const wrongDialog = await (await controlledPost({ action: 'dialog', target: 'another-tab', accept: true })).json();
@@ -223,6 +255,9 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   await expect(image).not.toBeVisible();
   expect((await request.post(endpoint, { data: { action: 'frame' } })).status()).toBe(503);
  } finally {
+  const receipt = info.outputPath('browser-workspace-action-trace.json');
+  writeFileSync(receipt, JSON.stringify({ timeline, dropped }));
+  await info.attach('browser-workspace-action-trace', { path: receipt, contentType: 'application/json' });
   await request.delete(`/api/sessions/${id}`);
   await new Promise<void>(resolve => server.close(() => resolve()));
  }

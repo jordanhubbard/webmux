@@ -17,9 +17,12 @@ const maxPageTextNodes = 512
 const maxPageTextBytes = 32 << 10
 
 type PageTextNode struct {
-	Role  string `json:"role"`
-	Name  string `json:"name"`
-	Depth int    `json:"depth"`
+	Role        string `json:"role"`
+	Name        string `json:"name"`
+	Depth       int    `json:"depth"`
+	Element     string `json:"element,omitempty"`
+	CanFocus    bool   `json:"canFocus,omitempty"`
+	CanActivate bool   `json:"canActivate,omitempty"`
 }
 type PageText struct {
 	Nodes     []PageTextNode `json:"nodes"`
@@ -35,9 +38,14 @@ func axString(value *accessibility.Value) string {
 	return text
 }
 
-// Only computed names and roles cross the worker boundary. In particular,
-// editable values, raw link destinations, DOM IDs and AX source objects are omitted.
+// Computed names/roles and optional opaque action references cross the worker
+// boundary. Editable values, raw link destinations, DOM IDs and AX source objects
+// are omitted.
 func pageText(nodes []*accessibility.Node) *PageText {
+	return pageTextWithControls(nodes, nil)
+}
+
+func pageTextWithControls(nodes []*accessibility.Node, bind func(*accessibility.Node, *PageTextNode)) *PageText {
 	result := &PageText{Nodes: []PageTextNode{}}
 	byID := make(map[accessibility.NodeID]*accessibility.Node, len(nodes))
 	for _, node := range nodes {
@@ -87,7 +95,11 @@ func pageText(nodes []*accessibility.Node) *PageText {
 			case "MenuListPopup":
 				label = "options"
 			}
-			result.Nodes = append(result.Nodes, PageTextNode{Role: label, Name: name, Depth: depth})
+			item := PageTextNode{Role: label, Name: name, Depth: depth}
+			if bind != nil {
+				bind(node, &item)
+			}
+			result.Nodes = append(result.Nodes, item)
 		}
 		// Chromium can expose a text field's contents again in descendant
 		// StaticText nodes, even when its AX value is omitted. Keep only the
@@ -120,16 +132,30 @@ func pageText(nodes []*accessibility.Node) *PageText {
 	return result
 }
 
-func readPage(ctx context.Context, req Request, frame *Frame) error {
+func (b *companion) readPage(ctx context.Context, req Request, frame *Frame) error {
+	b.elements = nil
 	return chromedp.Do(ctx, chromedp.Func(func(ctx context.Context, target *chromedp.Target) error {
 		if req.Target == "" || req.Target != string(target.TargetID) {
 			return errors.New("The selected page changed; read the current page again")
 		}
+		before, err := pageDocument(ctx, target)
+		if err != nil {
+			return err
+		}
 		depth := int64(32)
 		tree, err := cdp.Call(ctx, target, accessibility.GetFullAXTree, accessibility.GetFullAXTreeParams{Depth: &depth})
-		if err == nil {
-			frame.PageText = pageText(tree.Nodes)
+		if err != nil {
+			return err
 		}
-		return err
+		after, err := pageDocument(ctx, target)
+		if err != nil || before != after {
+			return errPageElementChanged
+		}
+		text, elements, err := bindPageElements(tree.Nodes, before)
+		if err != nil {
+			return err
+		}
+		frame.PageText, b.elements = text, elements
+		return nil
 	}))
 }

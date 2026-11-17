@@ -60,9 +60,9 @@ export interface BrowserAction {
   action: string; profileId?: string; force?: boolean; url?: string; text?: string; key?: string; code?: string;
   keyCode?: number; modifiers?: number; x?: number; y?: number; deltaY?: number; deltaX?: number; target?: string;
   width?: number; height?: number; button?: string; buttons?: number; clickCount?: number;
-  backward?: boolean; ignoreCache?: boolean; accept?: boolean; files?: { name: string; data: string }[];
+  backward?: boolean; ignoreCache?: boolean; accept?: boolean; element?: string; files?: { name: string; data: string }[];
 }
-export interface BrowserPageText { nodes: { role: string; name: string; depth: number }[]; truncated: boolean }
+export interface BrowserPageText { nodes: { role: string; name: string; depth: number; element?: string; canFocus?: boolean; canActivate?: boolean }[]; truncated: boolean }
 export interface BrowserFrame {
   pageText?: BrowserPageText;
   protocol?: number;
