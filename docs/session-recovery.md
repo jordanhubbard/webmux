@@ -2471,3 +2471,38 @@ screen-profile limits remain under #355.
 - [Windows job ownership and kill-on-close](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)
 
 - [Agent Deck ownership CLI source at the installed revision](https://github.com/asheshgoplani/agent-deck/blob/f36e77d6170b8d8b54f50c960c3f16e8a2c5df19/cmd/agent-deck/session_ownership_cmd.go)
+
+### Windows installed-service security block (2026-11-16)
+
+The Windows 11 Pro AMD64 worker on the ubumeh KubeVirt host ran the official
+ZIP/WinSW installation as LocalSystem. Health checks and an authenticated browser
+login passed. The first local terminal never became shell-ready; no coding CLI
+was launched through that terminal and installed-service recovery remains
+**unqualified**. A separate headless Codex 0.153.0 seed succeeded using existing
+target-local authentication in place; that does not establish service recovery.
+
+The candidate came from PR #380, source
+`0d34ffabdf0f433eea4f9e53049831f2eea73e67`. Its installed executable SHA-256,
+verified before execution, was
+`7c10f7c246bd1ffbdf0050e0e67f3b0df0989478d83af994e844ebc108ab23ef`.
+A later read of that image returned Windows' virus/PUA error. Defender associated
+its path and running controller PID with `Program:Win32/Contebrew.A!ml`, threat
+ID 251873, signature version 1.463.330.0 and product version 4.18.26100.4.
+The earlier unconfirmed-provider timeout does not prove where the block first
+occurred. Artifact provenance and the classification require investigation in
+[#384](https://github.com/jordanhubbard/webmux/issues/384), alongside signing
+[#63](https://github.com/jordanhubbard/webmux/issues/63).
+
+The owned service was stopped and its temporary inbound firewall rule removed.
+Antivirus and real-time protection remained enabled; no exclusions, quarantine
+restores or native authentication copies were used. The private qualification
+state and diagnostic receipts were retained.
+
+Provider startup now retains recognized Windows security-block diagnostics from
+image pinning and both helper launch hops. It still checks the published owner
+until the observation deadline, so a failed helper cannot authorize a duplicate
+job. Only recognized OS codes become child diagnostics; arbitrary child error
+text is discarded. Native tests on the worker passed blocked/unrecognized reply
+controls, credential-text suppression, survivor precedence and the existing
+concurrent-creation/lost-reply/uncertain-cache controls. These are synthetic
+process controls, not acceptance of the blocked product image.

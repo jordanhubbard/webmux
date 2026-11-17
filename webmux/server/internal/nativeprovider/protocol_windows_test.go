@@ -5,9 +5,13 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
+	"golang.org/x/sys/windows"
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -109,5 +113,20 @@ func TestProviderFramesRejectOversizeAndMultipleValues(t *testing.T) {
 	binary.BigEndian.PutUint32(header[:], uint32(len(data)))
 	if err := readFrame(bytes.NewReader(append(header[:], data...)), &value); err == nil {
 		t.Fatal("accepted multiple control messages in one frame")
+	}
+}
+
+func TestSecurityBlockDiagnostic(t *testing.T) {
+	for _, code := range []syscall.Errno{windows.ERROR_VIRUS_INFECTED, windows.ERROR_VIRUS_DELETED} {
+		wrapped := fmt.Errorf("secret launch path: %w", &os.PathError{Op: "open", Path: "secret", Err: code})
+		failure := securityBlockError(wrapped)
+		if failure == nil || !strings.Contains(failure.Error(), "Windows Security protection history") || strings.Contains(failure.Error(), "secret") {
+			t.Fatalf("security block must give an actionable, credential-free diagnostic: %v", failure)
+		}
+	}
+	for _, err := range []error{nil, windows.ERROR_ACCESS_DENIED, windows.ERROR_FILE_NOT_FOUND, context.DeadlineExceeded, errors.New("contains a virus")} {
+		if got := securityBlockError(err); got != nil {
+			t.Fatalf("unrelated error was classified as a security block: %v", err)
+		}
 	}
 }

@@ -64,6 +64,19 @@ func TestNativeProviderHelper(t *testing.T) {
 	}
 	mode := os.Args[len(os.Args)-1]
 	if mode == "--native-provider-bootstrap" || mode == "--native-provider-owner" {
+		if mode == "--native-provider-bootstrap" && os.Getenv("WEBMUX_TEST_SECURITY_REPLY") != "" {
+			if os.Getenv("WEBMUX_TEST_SECURITY_REPLY_WITH_OWNER") == "1" {
+				if err := terminal.RunNativeProviderHelper(context.Background(), mode, os.Stdin, io.Discard); err != nil {
+					os.Exit(2)
+				}
+			}
+			code := int(windows.ERROR_VIRUS_INFECTED)
+			if os.Getenv("WEBMUX_TEST_SECURITY_REPLY") == "unrecognized" {
+				code = int(windows.ERROR_ACCESS_DENIED)
+			}
+			_, _ = os.Stdout.Write(fixtureFrame(map[string]any{"kind": "ready", "code": code, "error": "secret launch credentials"}))
+			os.Exit(0)
+		}
 		var output io.Writer = os.Stdout
 		if mode == "--native-provider-bootstrap" && os.Getenv("WEBMUX_TEST_DROP_PROVIDER_REPLY") == "1" {
 			output = io.Discard
@@ -720,5 +733,44 @@ func TestNativeProviderSavedCursorCaptures(t *testing.T) {
 		if err := os.WriteFile(target, data, 0600); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestNativeProviderSecurityReplyRetainsUncertainOwnership(t *testing.T) {
+	permitBreakaway(t)
+	for _, mode := range []string{"blocked", "unrecognized"} {
+		t.Run(mode, func(t *testing.T) {
+			t.Setenv("WEBMUX_TEST_SECURITY_REPLY", mode)
+			c, counter := config(t)
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			_, _, err := nativeprovider.Ensure(ctx, c)
+			if err == nil || !strings.Contains(err.Error(), "no replacement job was authorized") || strings.Contains(err.Error(), "secret") {
+				t.Fatalf("unsafe startup diagnostic: %v", err)
+			}
+			if strings.Contains(err.Error(), "Windows Security protection history") != (mode == "blocked") {
+				t.Fatalf("incorrect security classification: %v", err)
+			}
+			if ctx.Err() != context.DeadlineExceeded {
+				t.Fatal("bootstrap error bypassed concurrent-owner observation budget")
+			}
+			if _, err := os.Stat(counter); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("error response started a terminal job: %v", err)
+			}
+		})
+	}
+}
+
+func TestNativeProviderSecurityReplyStillFindsSurvivor(t *testing.T) {
+	permitBreakaway(t)
+	t.Setenv("WEBMUX_TEST_SECURITY_REPLY", "blocked")
+	t.Setenv("WEBMUX_TEST_SECURITY_REPLY_WITH_OWNER", "1")
+	c, counter := config(t)
+	i := ensure(t, c)
+	cleanupOwner(t, c, i)
+	_, out := attach(t, c, i)
+	expect(t, out, fmt.Sprintf("JOB_READY:%d;", i.RootPID))
+	if starts(t, counter) != 1 {
+		t.Fatal("security response duplicated surviving job")
 	}
 }

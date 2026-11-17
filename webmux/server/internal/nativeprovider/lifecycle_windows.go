@@ -145,6 +145,15 @@ func pinExecutable(c *Config) (string, error) {
 	return sum, nil
 }
 
+// Keep this message independent of argv, launch environment and filesystem
+// paths: it may cross the private bootstrap pipe into a browser-visible error.
+func securityBlockError(err error) error {
+	if errors.Is(err, windows.ERROR_VIRUS_INFECTED) || errors.Is(err, windows.ERROR_VIRUS_DELETED) {
+		return errors.New("Windows security software blocked the native provider executable; review Windows Security protection history and use a trusted, accepted artifact")
+	}
+	return nil
+}
+
 func detached(command *exec.Cmd) {
 	// Refuse a restrictive outer job rather than pretending that an attached
 	// child can survive it. The second hop also outlives parent-tree cleanup.
@@ -175,7 +184,7 @@ func Ensure(ctx context.Context, c Config) (Identity, bool, error) {
 		return Identity{}, false, err
 	}
 	if _, err := pinExecutable(&c); err != nil {
-		return Identity{}, false, err
+		return Identity{}, false, errors.Join(err, securityBlockError(err))
 	}
 	var payload bytes.Buffer
 	if err := writeFrame(&payload, c); err != nil {
@@ -190,10 +199,18 @@ func Ensure(ctx context.Context, c Config) (Identity, bool, error) {
 	if errors.Is(startErr, windows.ERROR_ACCESS_DENIED) {
 		return Identity{}, false, errors.New("the outer Windows job does not permit an independent native provider")
 	}
+	startupFailure := securityBlockError(startErr)
 	var reply frame
-	if startErr == nil && readFrame(bytes.NewReader(out), &reply) == nil && reply.Kind == "ready" && reply.Error == "" && reply.Identity != nil {
-		if i, err := Probe(ctx, *reply.Identity, c.Key); err == nil {
-			return i, i.Instance == previous.Instance, nil
+	if startErr == nil && readFrame(bytes.NewReader(out), &reply) == nil && reply.Kind == "ready" {
+		if reply.Error == "" && reply.Identity != nil {
+			if i, err := Probe(ctx, *reply.Identity, c.Key); err == nil {
+				return i, i.Instance == previous.Instance, nil
+			}
+		}
+		// Only recognized OS codes become diagnostics. Never expose arbitrary
+		// child error text, which could contain launch credentials.
+		if failure := securityBlockError(syscall.Errno(reply.Code)); failure != nil {
+			startupFailure = failure
 		}
 	}
 	// A lost bootstrap reply is not a reason to start another owner. Resolve
@@ -208,7 +225,7 @@ func Ensure(ctx context.Context, c Config) (Identity, bool, error) {
 		}
 		select {
 		case <-ctx.Done():
-			return Identity{}, false, errors.New("native provider startup could not be confirmed; no replacement job was authorized")
+			return Identity{}, false, errors.Join(errors.New("native provider startup could not be confirmed; no replacement job was authorized"), startupFailure)
 		case <-ticker.C:
 		}
 	}
@@ -237,6 +254,12 @@ func Bootstrap(ctx context.Context, input io.Reader, output io.Writer) error {
 	}
 	defer pipe.Close()
 	if err := command.Start(); err != nil {
+		if failure := securityBlockError(err); failure != nil {
+			var code syscall.Errno
+			if errors.As(err, &code) {
+				return writeFrame(output, frame{Kind: "ready", Error: failure.Error(), Code: int(code)})
+			}
+		}
 		return err
 	}
 	_ = command.Process.Release()

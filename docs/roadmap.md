@@ -99,6 +99,12 @@ Remaining #318 work, in order:
    byte-identical pre-reboot transcript/native-file prefixes and durable
    duplicate receipts across another controller crash
    ([reboot qualification](session-recovery.md#windows-native-conversation-after-host-reboot-2026-11-13)).
+   Installed-service qualification on the Windows 11 AMD64 worker reached
+   authenticated browser login but was blocked by Defender's classification of
+   the verified preview image ([#384](https://github.com/jordanhubbard/webmux/issues/384)).
+   The service was stopped with protection unchanged; native diagnostic and
+   no-duplicate-owner controls passed separately
+   ([evidence](session-recovery.md#windows-installed-service-security-block-2026-11-16)).
    Authenticated installed-service recovery, broader CLI/configuration coverage
    and ARM64 hardware qualification remain open. Remote native resume is
    manual by owner decision. Unqualified cases must
