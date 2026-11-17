@@ -14,8 +14,12 @@ import subprocess
 import sys
 
 
+def kernel_clean(log):
+    return re.search(r'BUG:|Oops:|Kernel panic|general protection fault', log) is None
+
+
 def admits_loss(status, log):
-    return (status == 1 and 'Loaded gadget srcversion verified:' in log
+    return (status == 1 and kernel_clean(log) and 'Loaded gadget srcversion verified:' in log
             and 'Genuine native reply queued; direct read is blocked' in log
             and 'HELD REPLY REATTACH: beginning replacement import' in log
             and (('cannot find a urb of seqnum' in log
@@ -26,7 +30,7 @@ def admits_loss(status, log):
 
 
 def admits_repair(status, log):
-    return (status == 0 and 'Loaded gadget srcversion verified:' in log
+    return (status == 0 and kernel_clean(log) and 'Loaded gadget srcversion verified:' in log
             and 'Genuine native reply queued; direct read is blocked' in log
             and re.search(r'discarded [1-9][0-9]* stale USB/IP replies', log) is not None
             and 'PASS: held native reply discarded; replacement import and exact payload verified' in log)
@@ -97,7 +101,7 @@ def main():
         status = child.returncode
         log_path.write_bytes(captured)
         output = log_path.read_text(errors='replace')
-        admitted = bool(admit(status, output))
+        admitted = kernel_clean(output) and bool(admit(status, output))
         results.append({'control': name, 'exit': status, 'admitted': admitted,
                         'module_sha256': receipt['module_sha256'], 'srcversion': receipt['srcversion']})
         (root / 'receipt.json').write_text(json.dumps({'results': results}, indent=2) + '\n')

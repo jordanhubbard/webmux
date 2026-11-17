@@ -42,6 +42,12 @@ class NativeAdmission(unittest.TestCase):
         for line in log.splitlines():
             self.assertFalse(module.admits_repair(0, log.replace(line, '')))
 
+    def test_kernel_faults_cannot_be_admitted_as_transport_failures_or_passes(self):
+        for fault in ('BUG: kernel NULL pointer dereference', 'Oops: 0000',
+                      'Kernel panic - not syncing', 'general protection fault'):
+            self.assertFalse(module.kernel_clean('PASS: transport completed\n' + fault))
+        self.assertTrue(module.kernel_clean('module verification failed: signature missing - tainting kernel'))
+
 
 if __name__ == '__main__':
     unittest.main()

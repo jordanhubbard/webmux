@@ -213,7 +213,13 @@ USB/IP control that launched no WebMux or SSH process.
 CI uses `scripts/build-test-vudc.py` to build the virtual gadget from pinned Linux
 v6.8 source against the selected guest kernel's headers. It verifies every source
 hash and applies `tests/usb-vudc.patch` without fuzz to discard completed replies
-during teardown. The GPL-2.0-or-later module is a disposable test device; it is not
+during teardown. A shared baseline patch, `tests/usb-vudc-dequeue.patch`, also
+obtains the controller from the endpoint when a request is dequeued before its
+first queue; the original request field is uninitialized and caused a real
+kernel NULL dereference during the repeated direct control. Both sides of the
+stale-reply comparison include this endpoint correction. Kernel BUG/Oops/panic
+output fails qualification even if a userspace command returns success.
+The GPL-2.0-or-later module is a disposable test device; it is not
 linked into or shipped with WebMux. The generic guest kernel, source commit,
 patches, module digests and vermagic remain in the build receipts.
 

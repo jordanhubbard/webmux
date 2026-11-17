@@ -40,7 +40,7 @@ def main():
             raise RuntimeError(f'kernel fixture source checksum mismatch: {name}')
         (root / name).write_bytes(data)
     patches = {}
-    for name, enabled in [('usb-vudc-schedule.patch', args.hold_replies), ('usb-vudc.patch', not args.unpatched)]:
+    for name, enabled in [('usb-vudc-dequeue.patch', True), ('usb-vudc-schedule.patch', args.hold_replies), ('usb-vudc.patch', not args.unpatched)]:
         if enabled:
             patch = (tests / name).read_bytes()
             subprocess.run(['patch', '--batch', '--fuzz=0', '-p1'], cwd=root, input=patch, check=True, timeout=10)
