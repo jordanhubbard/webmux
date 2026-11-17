@@ -48,9 +48,11 @@ keyboard delivery. A separate ordinary test keeps the previous viewer's real
 upstream open while withholding acknowledgements; the new viewer must draw
 before that upstream closes. Screenshots, per-connection frame-leading opcode counts and
 bounded process/frame receipts are retained on failure. The deadlines and
-frame-presence checks remain in place. PNG pixels and alpha are exact. When the
-current connection actually carries a JPEG instruction, saturated fixture RGB
-channels may differ by at most three 8-bit levels, matching lossy encoding rather
-than accepting a missing or stale frame. Raw pixel samples and JPEG wire evidence
-remain in the receipt; opaque black, the previous blue frame during a green
+frame-presence checks remain in place. Lossless RDP/Guacamole pixels and alpha are exact. A JPEG wire instruction or a
+successfully decoded RemoteFX surface on that viewer's actual guacd process
+permits saturated fixture RGB channels to differ by at most three 8-bit levels.
+A test-only observer delegates the FreeRDP surface callback unchanged and records
+the negotiated codec and process identity; it changes no pixels or connection
+options. PNG can contain already quantized upstream RDP pixels. Raw samples,
+codec evidence and the associated guacd process remain in the receipt; opaque black, the previous blue frame during a green
 phase, incorrect alpha, and larger channel errors still fail.

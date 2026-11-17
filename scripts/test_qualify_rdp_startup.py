@@ -37,10 +37,10 @@ class RdpAdmission(unittest.TestCase):
         self.assertFalse(admits_qualified(0, {"events": receipt["events"][1:]}, marker))
         self.assertFalse(admits_qualified(0, receipt, marker + "RDP_SCHEDULE ERROR"))
 
-    def test_jpeg_rounding_needs_transport_evidence_and_still_rejects_stale_frames(self):
+    def test_lossy_rounding_needs_codec_evidence_and_still_rejects_stale_frames(self):
         event = {"phase": "reload", "rgba": [0, 254, 1, 255]}
         self.assertFalse(module.matches_pixel(event, "reload", [0, 255, 0, 255]))
-        event["jpeg"] = True
+        event["codec"] = "remotefx"
         self.assertTrue(module.matches_pixel(event, "reload", [0, 255, 0, 255]))
         for rgba in ([0, 0, 253, 255], [0, 0, 0, 255], [0, 255, 0, 254], []):
             event["rgba"] = rgba

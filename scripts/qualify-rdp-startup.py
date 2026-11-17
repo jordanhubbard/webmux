@@ -9,7 +9,7 @@ import subprocess
 
 def matches_pixel(event, phase, expected):
     rgba = event.get("rgba", [])
-    tolerance = 3 if event.get("jpeg") is True else 0
+    tolerance = 3 if event.get("codec") in ("jpeg", "remotefx") else 0
     return (event.get("phase") == phase and len(rgba) == 4 and rgba[3] == expected[3]
             and all(type(value) is int and 0 <= value <= 255 and abs(value - target) <= tolerance
                     for value, target in zip(rgba[:3], expected[:3])))

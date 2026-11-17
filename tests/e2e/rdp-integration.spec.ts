@@ -4,7 +4,7 @@ import { createServer, createConnection } from 'node:net';
 import { once } from 'node:events';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { verifyXKeyboard } from './x-keyboard-fixture';
 import { rdpPixelMatches } from './rdp-pixels';
 
@@ -15,6 +15,8 @@ test(`real guacd and FreeRDP screen updates, reconnection and keyboard input${st
   const temporary = mkdtempSync(join(tmpdir(), 'webmux-real-rdp-'));
   const children: ChildProcess[] = [];
   let diagnostics = '';
+  let guacdOutput = '';
+  let guacdExecutable: string | undefined;
   let failure: Error | undefined;
   let testFailed = false;
   let id: string | undefined;
@@ -26,7 +28,7 @@ test(`real guacd and FreeRDP screen updates, reconnection and keyboard input${st
     if (events.length > 512) events.shift();
   };
   const enter = (name: string) => { phase = name; record('phase'); };
-  const currentConnection = new Map<Page, { jpeg: boolean }>();
+  const currentConnection = new Map<Page, { jpeg: boolean; guacdId?: string }>();
   const connections: { index: number; viewer: string; clientClosed: boolean; jpeg: boolean; guacdId?: string; sent: Record<string, number>; received: Record<string, number> }[] = [];
   const observe = (viewer: Page, name: string) => viewer.on('websocket', socket => {
     if (!new URL(socket.url()).pathname.startsWith('/api/rdp/ws/')) return;
@@ -63,6 +65,7 @@ test(`real guacd and FreeRDP screen updates, reconnection and keyboard input${st
     child.once('exit', (code, signal) => record('process-exit', { command, pid: child.pid, code, signal }));
     child.on('error', error => { failure = error; });
     for (const stream of [child.stdout!, child.stderr!]) stream.on('data', chunk => {
+      if (command === guacdExecutable) guacdOutput = (guacdOutput + String(chunk)).slice(-131072);
       diagnostics = (diagnostics + `[${Date.now() - startedAt}ms ${command}] ${String(chunk)}`).slice(-131072);
     });
     return child;
@@ -126,9 +129,17 @@ test(`real guacd and FreeRDP screen updates, reconnection and keyboard input${st
     const guacdPort = await availablePort(14823);
     const guacd = process.env.WEBMUX_GUACD_EXECUTABLE || '/usr/sbin/guacd';
     const registrationShim = process.env.WEBMUX_GUACD_REGISTRATION_SHIM;
+    const codecShim = join(temporary, 'codec.so');
+    const flags = spawnSync('pkg-config', ['--cflags', '--libs', 'freerdp2'], { encoding: 'utf8', timeout: 5000 });
+    expect(flags.status, flags.stderr).toBe(0);
+    const compile = spawnSync('cc', ['-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
+      resolve('../tests/e2e/guacd-codec-fixture.c'), '-Wl,--no-as-needed', ...flags.stdout.trim().split(/\s+/), '-ldl', '-o', codecShim],
+      { encoding: 'utf8', timeout: 30000 });
+    expect(compile.status, compile.stderr).toBe(0);
+    guacdExecutable = guacd;
     start(guacd, ['-f', '-b', '127.0.0.1', '-l', String(guacdPort), '-p', join(temporary, 'guacd.pid'), '-L', 'info'], {
-      ...environment,
-      ...(registrationShim ? { LD_PRELOAD: registrationShim, WEBMUX_RDP_SCHEDULE_MARKER: join(temporary, 'schedule.marker') } : {}),
+      ...environment, LD_PRELOAD: [codecShim, registrationShim].filter(Boolean).join(':'),
+      ...(registrationShim ? { WEBMUX_RDP_SCHEDULE_MARKER: join(temporary, 'schedule.marker') } : {}),
     });
     await listening(guacdPort);
     const response = await request.post('/api/rdp/sessions', { data: { hostname: '127.0.0.1', rdp_port: port, rdp_username: 'fixture' } });
@@ -141,10 +152,15 @@ test(`real guacd and FreeRDP screen updates, reconnection and keyboard input${st
     const expectPixel = async (viewer: Page, expected: number[], timeout = 5000) => {
       await expect.poll(async () => {
         const rgba = await readPixel(viewer);
-        const jpeg = currentConnection.get(viewer)?.jpeg ?? false;
-        record('pixel', { rgba, jpeg, viewer: viewer === page ? 'active' : 'previous' });
-        return rdpPixelMatches(rgba, expected, jpeg);
-      }, { timeout, message: `RDP frame must match ${expected} (JPEG rounding requires wire evidence)` }).toBe(true);
+        const connection = currentConnection.get(viewer);
+        const joined = connection?.guacdId && guacdOutput.split('\n').find(line => line.includes(`joined connection "${connection.guacdId}"`));
+        const pid = joined && /guacd\[(\d+)\]/.exec(joined)?.[1];
+        const rfx = pid && guacdOutput.includes(`RDP_CODEC pid=${pid} codec=remotefx`);
+        const codec = connection?.jpeg ? 'jpeg' : rfx ? 'remotefx' : undefined;
+        record('pixel', { rgba, codec, guacdPid: pid, viewer: viewer === page ? 'active' : 'previous' });
+        return rdpPixelMatches(rgba, expected, codec);
+      }, { timeout, message: `RDP frame must match ${expected} (rounding requires actual lossy codec evidence)` }).toBe(true);
+
     };
     enter('initial');
     if (previous) {
