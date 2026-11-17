@@ -257,7 +257,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     expect((await status()).seats).toHaveLength(2);
     let previousId = (await status()).seats.find(value => value.id === coder.id)!.managerSessionId;
     expect(previousId).toBeTruthy();
-    const detachReceipts: { cycle: number; absence: NativeAbsenceProof; managerSessionId: string; challenge: string }[] = [];
+    const detachReceipts: { cycle: number; killedAt: string; absence: NativeAbsenceProof; managerSessionId: string; challenge: string }[] = [];
     for (let reconnect = 0; reconnect < 2; reconnect++) {
       const pane = tmux('display-message', '-p', '-t', coder.id, '#{pane_id}');
       const killedAt = Date.now();
@@ -304,7 +304,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       await page.keyboard.press('Enter');
       await expect(replacementTerminal.locator('.xterm-rows')).toContainText(`WM_ACK:${challenge}`, { timeout: 30000 });
       await expect.poll(async () => (await status()).messages.some(value => value.from === reviewer.id && value.to === coder.id && value.body.includes(`WM_ACK:${challenge}`))).toBe(true);
-      detachReceipts.push({ cycle: reconnect, absence: absence!, managerSessionId: current.managerSessionId!, challenge });
+      detachReceipts.push({ cycle: reconnect, killedAt: new Date(killedAt).toISOString(), absence: absence!, managerSessionId: current.managerSessionId!, challenge });
     }
     const receipt = info.outputPath('rig-detach-receipts.json');
     writeFileSync(receipt, JSON.stringify(detachReceipts));
