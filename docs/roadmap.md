@@ -46,9 +46,9 @@ Current evidence and limits:
 | Local managed recovery | Real Agent Deck/Claude and Rig/Claude process-loss continuation passed. Rig additionally passed original executable/settings checks and an in-flight controller-loss test that refused unsafe retries. |
 | Rig conversation after reboot | Passed on a Linux guest with Rig 0.6.14 (9d0200f3)/Claude 2.1.322: host-reboot detection, approved Resume through Rig, once-only receipt, original settings/roots and a fresh remembered-marker answer. Startup now starts the Rig manager before restoring managed viewers. |
 | Managed shell job after reboot | Real Agent Deck shell-job guest reboot passed: manager/project/log identity retained, explicit fallback, no automatic restart and no duplicate execution after reconnects. This is not native coding-conversation recovery. |
-| Remote managed-host failure | Passed for Agent Deck 1.16.34 remotes and `--ssh` sessions against a hung, rebooted and powered-off guest: clear fallback naming the unreachable remote, bounded startup, unaffected local sessions, retained transcripts, no duplicate execution. Surviving remote sessions now reattach after a WebMux restart. Remote native resume stays with the execution host's own manager (owner decision). |
+| Remote managed-host failure | Passed for Agent Deck 1.16.39 remotes and `--ssh` sessions against a hung, rebooted and powered-off guest: clear fallback naming the unreachable remote, bounded startup, unaffected local sessions, retained transcripts, no duplicate execution. Surviving remote sessions now reattach after a WebMux restart. Remote native resume stays with the execution host's own manager (owner decision). |
 | Rig seats on an SSH host | Passed for Rig 0.6.14 with Claude Code 2.1.322 and (relay-identity attach) Codex 0.167.0 on a hung, rebooted and powered-off guest, and with the local seat lost: truthful fallback naming the host, refused automatic reconnection, retained transcripts, no duplicate CLI. Starting the agent again reattaches a surviving CLI, starts one new conversation after a reboot, and starts nothing when the host is unreachable. |
-| Native managed conversation after reboot | Passed for guest-native Agent Deck 1.16.34/Claude 2.1.322 on a Linux guest: same native conversation, project, roots and launch policy after an actual reboot, a fresh remembered-marker answer, and once-only recovery across reconnects and controller reconstruction. Early input loss on Agent Deck attach was an upstream startup probe, now mitigated ([#325](https://github.com/jordanhubbard/webmux/issues/325)). |
+| Native managed conversation after reboot | Passed for guest-native Agent Deck 1.16.39/Claude 2.1.322 on a Linux guest: same native conversation, project, roots and launch policy after an actual reboot, a fresh remembered-marker answer, and once-only recovery across reconnects and controller reconstruction. The upstream startup probe is fixed in the new minimum 1.16.39; real early-input and old-record migration controls passed ([qualification](validation/agent-deck-2026-11-17/README.md)). |
 
 The implementation/preparatory-harness checkpoint `3afb3bf` passed every hosted
 CI and Packaging check. Local qualification also includes affected Go race
@@ -113,9 +113,10 @@ Remaining #318 work, in order:
    observation point preserves launch mode and sandbox policy after interactive
    switches. Revisit when [openai/codex#60625](https://github.com/openai/codex/issues/60625)
    or an equivalent ships ([details](session-recovery.md#codex-shared-daemon-observation-2026-11-10)).
-3. Remove the Agent Deck attach-probe mitigation ([#325](https://github.com/jordanhubbard/webmux/issues/325))
-   once a release fixing [asheshgoplani/agent-deck#3105](https://github.com/asheshgoplani/agent-deck/issues/3105)
-   is the minimum supported version.
+3. Agent Deck attach-probe retirement is qualified under [#414](https://github.com/jordanhubbard/webmux/issues/414):
+   minimum 1.16.39 contains the upstream fix; old-record migration, native reboot,
+   local/SSH/remote lifecycle and production attach-worker early-input controls
+   passed ([scope and evidence](validation/agent-deck-2026-11-17/README.md)).
 4. Audit #318 against its complete acceptance criteria before closing it. The
    owner-approved merge of #322 does not close this requirement or cut a release.
 
