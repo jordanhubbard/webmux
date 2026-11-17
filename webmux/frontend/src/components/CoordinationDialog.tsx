@@ -14,7 +14,7 @@ export interface CoordinationProject {
 }
 export interface CoordinationSeat {
   provider: string; id: string; projectId: string; projectName: string; name: string; host: string;
-  workspace?: string; runtime: string; state: string; openable: boolean; managed: boolean;
+  workspace?: string; runtime: string; state: string; transportState?: string; openable: boolean; managed: boolean;
   managerSessionId?: string; nativeSessionId?: string; context?: string; parentId?: string; parentName?: string;
   role?: string; substate?: string; lastActivityAt?: string; attention?: boolean; canReceive?: boolean; exitCode?: number;
 }
@@ -317,7 +317,8 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
                   <strong>{seat.name}</strong> {seat.managed && <span className="coordination-rig">{seat.provider === 'rig' ? 'Rig-managed' : 'Agent Deck-managed'}</span>}{seat.role && seat.role !== 'session' && <span className="coordination-role">{seat.role}</span>}{seat.attention && <span className="coordination-attention">Needs attention</span>}
                   <dl className="coordination-worker-facts">
                     <div><dt>Host</dt><dd>{seat.host}</dd></div><div><dt>Runtime</dt><dd>{seat.runtime}</dd></div>
-                    <div><dt>State</dt><dd>{seat.state}{seat.substate ? ` · ${seat.substate}` : ''}{seat.exitCode !== undefined ? ` · exit ${seat.exitCode}` : ''}</dd></div>{seat.context && <div><dt>Context</dt><dd>{seat.context}</dd></div>}
+                    <div><dt>{seat.provider === 'rig' ? 'Rig lifecycle' : 'State'}</dt><dd>{seat.state}{seat.substate ? ` · ${seat.substate}` : ''}{seat.exitCode !== undefined ? ` · exit ${seat.exitCode}` : ''}</dd></div>{seat.context && <div><dt>Context</dt><dd>{seat.context}</dd></div>}
+                    {seat.transportState && <div><dt>Attachment transport</dt><dd>{seat.transportState}</dd></div>}
                     {seat.parentId && <div><dt>Parent</dt><dd>{seat.parentName || seat.parentId}</dd></div>}
                     {seat.workspace && <div><dt>Workspace</dt><dd><code>{seat.workspace}</code></dd></div>}
                     {seat.managerSessionId && <div><dt>Manager session</dt><dd><code>{seat.managerSessionId}</code></dd></div>}
@@ -325,7 +326,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
                     {seat.lastActivityAt && <div><dt>Last activity</dt><dd>{new Date(seat.lastActivityAt).toLocaleString()}</dd></div>}
                   </dl>
                   {seat.openable ? <button type="button" disabled={busy} onClick={() => void openTerminal(seat)}>Open session</button>
-                    : seat.managed && seat.provider === 'rig' && seat.workspace ? <button type="button" disabled={busy} onClick={() => void restartSeat(seat)}>Restart provider and open</button>
+                    : seat.managed && seat.provider === 'rig' && seat.state === 'stopped' && seat.workspace ? <button type="button" disabled={busy} onClick={() => void restartSeat(seat)}>Restart provider and open</button>
                       : <span className="coordination-unavailable">No attach transport reported by this provider</span>}
                   {seat.provider === 'agent-deck' && seat.openable && <button type="button" disabled={busy} onClick={() => { setComposerTarget(current => current === `${seat.provider}:${seat.id}` ? '' : `${seat.provider}:${seat.id}`); setInstruction(''); }}>{composerTarget === `${seat.provider}:${seat.id}` ? 'Cancel instruction' : 'Send instruction'}</button>}
                   {composerTarget === `${seat.provider}:${seat.id}` && <form className="coordination-composer" onSubmit={event => { event.preventDefault(); void sendInstruction(seat); }}>

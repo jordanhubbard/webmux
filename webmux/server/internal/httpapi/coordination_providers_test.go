@@ -535,3 +535,37 @@ func TestAgentDeckDuplicateProfileIDsDoNotSelectAnArbitraryRegistry(t *testing.T
 		t.Fatal("ambiguous profile used for process ownership", live, err)
 	}
 }
+
+// A lost local relay must never authorize a provider restart by inventing a
+// stopped lifecycle. Exercise disagreements in both directions, plus seats
+// discovered without WebMux's local agent registry.
+func TestRigInventoryKeepsLifecycleIndependentOfAttachment(t *testing.T) {
+	for _, tc := range []struct {
+		name, lifecycle, wantState, wantTransport string
+		managed, connected, wantOpenable          bool
+	}{
+		{"running without relay", "running", "running", "unavailable", true, false, false},
+		{"stopped with relay", "stopped", "stopped", "available", true, true, true},
+		{"missing lifecycle", "", "unknown", "unavailable", true, false, false},
+		{"externally discovered", "running", "running", "unknown", false, false, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var raw rigStatusEnvelope
+			if err := json.Unmarshal([]byte(`{"seats":[{"canonicalSessionName":"seat-1","logicalId":"worker","rigId":"rig-1","rigName":"project","openable":true,"tmuxTarget":"seat-1"}]}`), &raw); err != nil {
+				t.Fatal(err)
+			}
+			raw.Seats[0].LifecycleState = tc.lifecycle
+			if tc.managed {
+				raw.Agents = []managedRigAgent{{Target: "seat-1", Connected: tc.connected}}
+			}
+			status := rigCoordinationStatus(raw)
+			if len(status.Seats) != 1 {
+				t.Fatal(status)
+			}
+			seat := status.Seats[0]
+			if seat.State != tc.wantState || seat.TransportState != tc.wantTransport || seat.Openable != tc.wantOpenable || seat.ID != "seat-1" {
+				t.Fatalf("canonical inventory changed by relay observation: %+v", seat)
+			}
+		})
+	}
+}
