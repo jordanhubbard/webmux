@@ -75,10 +75,24 @@ func ValidURL(raw string) bool {
 	return err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Hostname() != "" && u.User == nil
 }
 
+// Packaged browsers can have a private /tmp mount: a matching path there
+// names different files in the worker and browser. The account's home is
+// shared, so uploads, downloads and profile cleanup all address the same
+// private directory. This remains a fresh, ephemeral profile, never the
+// account's everyday browser profile.
+func temporaryProfile() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return os.MkdirTemp(home, "webmux-browser-")
+}
+
 // Worker is also run on SSH hosts. It exposes no listener and exits on stdin EOF.
 func Worker(in io.Reader, out io.Writer) error {
-	profile, err := os.MkdirTemp("", "webmux-browser-")
+	profile, err := temporaryProfile()
 	if err != nil {
+		_ = json.NewEncoder(out).Encode(Frame{Error: "Cannot create a private temporary browser profile in the worker account's home directory."})
 		return err
 	}
 	defer os.RemoveAll(profile)

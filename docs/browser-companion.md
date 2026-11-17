@@ -27,6 +27,12 @@ ephemeral across server restarts. An idle browser expires after 30 minutes witho
 viewer activity, so hiding it is suitable for short interruptions, not long-term
 credential storage.
 
+Temporary profiles and transferred files share one fresh, private directory in
+the worker account's home (named `webmux-browser-*`). This lets packaged
+browsers with a private temporary-file namespace see the same files as the
+worker, including uploads and downloads. Ending the worker removes that
+directory. The companion never opens the account's everyday browser profile.
+
 ## Everyday browser controls
 
 Use **Expand browser** for a full workspace, or resize the drawer. The Chromium
@@ -177,3 +183,26 @@ Unicode insertion, a >1 MiB upload, exact binary download, back/forward, new/clo
 tabs, site popups, hide/reopen and cleanup. These fixtures qualify the controls;
 provider-specific sign-in, native device authentication and SSH-host acceptance
 remain separate qualification work in #110.
+
+
+### Packaged Chromium file visibility (2026-11-16)
+
+Fresh Linux ARM64 qualification with Snap Chromium 156.0.8078.47 reproduced a
+real upload failure: the chooser accepted a 1,126,400-byte selection but the
+page's HTTP receiver got none of its bytes. Moving only the temporary root to
+a shared home path made the unchanged workspace fixture pass, including exact
+upload and binary download checks. The worker now creates its fresh 0700 profile
+in the account home automatically, keeping transfers and cleanup in the same
+filesystem namespace. Browser sandbox protections and test deadlines are
+unchanged. A real Snap browser also passed root-tab lifecycle and profile removal
+after worker stdin closed. See [#387](https://github.com/jordanhubbard/webmux/issues/387).
+
+A separate ordinary Chrome 157.0.8103.79/macOS 27.2 ARM64 worker on puck passed
+protocol-v2 frames and exact >1 MiB upload/download bytes over authenticated,
+strict-host-key-checked SSH. This used a private worker, synthetic loopback site
+and fresh browser profile; it did not copy or use everyday browser credentials.
+It qualifies that worker transport, not the whole SSH-terminal UI or any real
+identity provider. A private Chrome-for-Testing build on ubumeh refused startup
+because that location had no usable browser sandbox; no protection was disabled
+to obtain a pass there. Durable profiles, leases, mobile/accessibility and
+provider/hardware authentication acceptance remain open in #110.
