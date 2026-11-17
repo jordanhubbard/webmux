@@ -3,6 +3,7 @@ package screenstate
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -457,5 +458,71 @@ func TestColorCaptureIsImmutableAndUnsupportedColorRefuses(t *testing.T) {
 	s.Feed([]byte("\x1bcSAFE"))
 	if data := imageBytes(t, s); !bytes.Contains(data, []byte("SAFE")) || bytes.Contains(data, []byte("#abcdef")) {
 		t.Fatal("full reset retained colors")
+	}
+}
+
+func TestXtermNoWrapEnableRefusesLostCursorDistinction(t *testing.T) {
+	for _, text := range []string{"\x1b[4;80HX", "\x1b[4;79H日", "\x1b[4;79HXX", "\x1b[4;80H"} {
+		for _, split := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%q/split=%v", text, split), func(t *testing.T) {
+				s := newScreen(t, 80, 24)
+				if split {
+					if err := s.Feed([]byte("\x1b[?7l" + text)); err != nil {
+						t.Fatal(err)
+					}
+					if err := s.Feed([]byte("\x1b[?7h")); err != nil {
+						t.Fatal(err)
+					}
+				} else {
+					if err := s.Feed([]byte("\x1b[?7l" + text + "\x1b[?7h")); err != nil {
+						t.Fatal(err)
+					}
+				}
+				image, err := s.Capture()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if data, err := image.Bytes(); !errors.Is(err, ErrUnsupported) || data != nil {
+					t.Fatal("ambiguous transition was accepted", err)
+				}
+				// Subsequent output can already have diverged, so merely moving home or
+				// soft-resetting must not clear the refusal. The same mirror keeps running.
+				if err := s.Feed([]byte("Y\x1b[H\x1b[!p")); err != nil {
+					t.Fatal(err)
+				}
+				later, err := s.Capture()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := later.Bytes(); !errors.Is(err, ErrUnsupported) {
+					t.Fatal("lost state was forgotten", err)
+				}
+				if err := s.Feed([]byte("\x1bcSAFE")); err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Contains(imageBytes(t, s), []byte("SAFE")) {
+					t.Fatal("RIS did not repair the mirror")
+				}
+				if _, err := image.Bytes(); !errors.Is(err, ErrUnsupported) {
+					t.Fatal("captured refusal changed after reset", err)
+				}
+			})
+		}
+	}
+}
+
+func TestXtermNoWrapEnableAllowsRepresentableCursor(t *testing.T) {
+	for _, text := range []string{
+		"\x1b[4;80HX\x1b[?7l\x1b[?7h",          // pending wrap retained across both modes
+		"\x1b[?7l\x1b[4;80HX\rSAFE\x1b[?7h",    // CR resolves the distinction before enabling
+		"\x1b[?7l\x1b[4;80HX\x1bcSAFE\x1b[?7h", // RIS resets both mode and profile
+	} {
+		s := newScreen(t, 80, 24)
+		if err := s.Feed([]byte(text)); err != nil {
+			t.Fatal(err)
+		}
+		if len(imageBytes(t, s)) == 0 {
+			t.Fatal("representable screen was refused")
+		}
 	}
 }
