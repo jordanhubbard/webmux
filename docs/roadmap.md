@@ -174,8 +174,24 @@ The production renderer retains the current markerless hyperlink with bounded
 lifecycle cleanup. Its gate passes 61 portable comparisons, 13 actual ConPTY
 cases and an independent renderer lifecycle control
 ([hyperlink evidence](validation/screen-links-2026-11-17/README.md)).
-The refused no-wrap edge, broader underline representation and other OSC display
-features remain open. These checkpoints do not close #355 or #318.
+No-wrap cursor, resize and retained REP parser-state restoration are implemented
+through [#422](https://github.com/jordanhubbard/webmux/pull/422), addressing
+[#421](https://github.com/jordanhubbard/webmux/issues/421) and
+[#424](https://github.com/jordanhubbard/webmux/issues/424). The opt-in engine
+preserves addressed versus advanced edge cursors, wide-cell overlap, saved and
+alternate-screen state, edits, margins and resize truncation. A versioned
+renderer profile restores parser state that ANSI cannot safely reseed. Required
+capabilities and a one-use token precede snapshot output; older incompatible
+viewers are refused while the same job continues.
+
+The exact PR head passed all 17 required outcomes, including fresh Windows
+server/protocol contracts and all 22 actual ConPTY controls. All 431 retained
+initial/continued/second-attachment renderer comparisons matched, with no
+replayed queries and an unmodified reference renderer. Portable/parser and
+controlled-terminal tests have separate scopes from native ConPTY captures;
+see the [qualified sources and limits](validation/xterm-nowrap-2026-11-17/README.md).
+Hidden or contradictory underline flags, other unqualified OSC display features
+and the broader native coding-session lifecycle remain under #355/#318.
 
 ## Runtime compatibility implementation
 
