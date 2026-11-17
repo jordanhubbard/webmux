@@ -74,18 +74,21 @@ func Command(ctx context.Context, s session.Session, store *storage.Store, contr
 }
 
 type limitedOutput struct {
-	bytes.Buffer
+	buffer   bytes.Buffer
 	overflow bool
 }
 
+// Keep the buffer private: promoting ReadFrom would bypass Write in os/exec.
+func (b *limitedOutput) String() string { return b.buffer.String() }
+
 func (b *limitedOutput) Write(p []byte) (int, error) {
 	n := len(p)
-	remaining := 8192 - b.Len()
+	remaining := 8192 - b.buffer.Len()
 	if len(p) > remaining {
 		p = p[:remaining]
 		b.overflow = true
 	}
-	_, _ = b.Buffer.Write(p)
+	_, _ = b.buffer.Write(p)
 	return n, nil
 }
 
