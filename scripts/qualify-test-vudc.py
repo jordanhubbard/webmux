@@ -18,20 +18,40 @@ def kernel_clean(log):
     return re.search(r'BUG:|Oops:|Kernel panic|general protection fault', log) is None
 
 
+def stale_phases_proven(log):
+    # These progress records share the fixture's flushed userspace stream.
+    # Kernel messages can arrive on another console channel, so their textual
+    # order relative to these markers is not used as a clock.
+    phases = ('Loaded gadget srcversion verified:',
+              'Genuine native reply queued; direct read is blocked',
+              'Held native read interrupted by detach',
+              'HELD REPLY REATTACH: beginning replacement import',
+              'Replacement import acknowledged while native TX remained held',
+              'Releasing held native replies after import acknowledgment')
+    offset = 0
+    for phase in phases:
+        found = log.find(phase, offset)
+        if found < 0:
+            return False
+        offset = found + len(phase)
+    return True
+
+
+def handshake_clean(log):
+    return re.search(r'USBIP Kernel and tool version mismatch|recv different busid|Attach Request for .* failed', log) is None
+
+
 def admits_loss(status, log):
-    return (status == 1 and kernel_clean(log) and 'Loaded gadget srcversion verified:' in log
-            and 'Genuine native reply queued; direct read is blocked' in log
-            and 'HELD REPLY REATTACH: beginning replacement import' in log
-            and (('cannot find a urb of seqnum' in log
-                  and 'Timed out: USB import after held-reply disconnect' in log)
-                 or ('USBIP Kernel and tool version mismatch: 0 273' in log
-                     and 'Attach Request for usbip-vudc.0 failed' in log))
+    return (status == 1 and kernel_clean(log) and handshake_clean(log)
+            and stale_phases_proven(log)
+            and 'cannot find a urb of seqnum' in log
+            and 'Timed out: USB import after held-reply disconnect' in log
             and 'PASS: held native reply discarded;' not in log)
 
 
 def admits_repair(status, log):
-    return (status == 0 and kernel_clean(log) and 'Loaded gadget srcversion verified:' in log
-            and 'Genuine native reply queued; direct read is blocked' in log
+    return (status == 0 and kernel_clean(log) and handshake_clean(log)
+            and stale_phases_proven(log)
             and re.search(r'discarded [1-9][0-9]* stale USB/IP replies', log) is not None
             and 'PASS: held native reply discarded; replacement import and exact payload verified' in log)
 

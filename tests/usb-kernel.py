@@ -131,9 +131,16 @@ try:
         run("usbip", "detach", "--port", ports[0])
         until(lambda: imported_disk() is None, "held-reply USB detach")
         assert reader.wait(timeout=10) != 0, "held read must be interrupted by detach"
-        (parameters / "webmux_test_hold_replies").write_text("0")
+        print("Held native read interrupted by detach", flush=True)
         print("HELD REPLY REATTACH: beginning replacement import", flush=True)
+        # Keep native data replies held while usbipd completes the userspace
+        # import handshake. The kernel's stale completion must be observed by
+        # the new native URB receiver, not interleaved with its control header.
         run("usbip", "--tcp-port", "3241", "attach", "--remote", "127.0.0.1", "--busid", busid)
+        assert (parameters / "webmux_test_hold_replies").read_text().strip() in {"Y", "1"}, "native TX hold ended before import acknowledgment"
+        print("Replacement import acknowledged while native TX remained held", flush=True)
+        print("Releasing held native replies after import acknowledgment", flush=True)
+        (parameters / "webmux_test_hold_replies").write_text("0")
         disk = until(imported_disk, "USB import after held-reply disconnect")
         with disk.open("rb", buffering=0) as source:
             assert source.read(len(pattern)) == pattern, "replacement control payload mismatch"
