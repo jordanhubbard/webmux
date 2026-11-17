@@ -591,6 +591,7 @@ func (s *Server) attachCoordinationTerminal(parent context.Context, owner string
 		identityProvider = ""
 	}
 	identity := session.RigIdentity{Provider: identityProvider, Target: viewerTarget, Project: launch.Project, Name: launch.Name, Host: launch.Host, Runtime: launch.Runtime, Workspace: launch.Workspace, ManagerProfile: launch.Profile}
+	identity.RigHostID = launch.RigHostID
 	if launch.Provider == "agent-deck" {
 		identity.NativeSessionID, identity.NativeStateFile = launch.NativeSession, launch.NativeStateFile
 	}

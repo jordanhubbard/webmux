@@ -235,3 +235,41 @@ func TestRigLegacyExecutableRecordRemainsReadableWithoutOfferingNativeStart(t *t
 		}
 	}
 }
+
+func TestExternalRigHostUncertaintySurvivesViewerReuseAndPersistence(t *testing.T) {
+	b, store, launched := fixture(t)
+	identity := RigIdentity{Target: "external-seat", Name: "worker", Project: "project", Runtime: "claude-code", RigHostID: "opaque-native-host"}
+	// Model the localhost label written by older controllers. Opening the
+	// canonical seat must correct that label without replacing its viewer.
+	legacy := identity
+	legacy.Host = "localhost"
+	first, err := b.EnsureRigTerminal("owner", identity.Target, "worker", []string{"attach"}, legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-launched
+	again, err := b.EnsureRigTerminal("owner", identity.Target, "worker", []string{"attach"}, identity)
+	if err != nil || again.ID != first.ID || again.Rig.Host != "" || len(launched) != 0 {
+		t.Fatal("viewer reuse launched another provider", err)
+	}
+	view, err := b.Recovery("owner", first.ID)
+	if err != nil || view.Hostname != "" || view.CanResumeManaged || view.CanResumeCLI || view.CanReplay {
+		t.Fatal("local viewer inferred an execution host or recovery action", view, err)
+	}
+	if err := b.Close(); err != nil {
+		t.Fatal(err)
+	}
+	restored, err := newBroker(store, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	saved, err := restored.Get("owner", first.ID)
+	if err != nil || saved.Rig == nil || saved.Rig.Host != "" || saved.Rig.RigHostID != identity.RigHostID {
+		t.Fatal("execution-host uncertainty lost in persistence", saved, err)
+	}
+	view, err = restored.Recovery("owner", first.ID)
+	if err != nil || view.Hostname != "" || view.CanResumeManaged {
+		t.Fatal("restored viewer invented a host", view, err)
+	}
+}

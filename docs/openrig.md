@@ -271,6 +271,29 @@ notifications and lifecycle qualification remain open; remote Rig reporting
 through the outbound client (#200) and identity/event bridging (#246) remain
 separate features.
 
+## Execution-host evidence for external seats
+
+The [#430](https://github.com/jordanhubbard/webmux/issues/430) candidate keeps an
+externally enrolled Rig seat's execution host unknown until a trusted launch
+record supplies it. A local tmux attachment may front SSH; it establishes where
+the viewer connects, not where the coding process executes. The native Rig
+`hostSelfId`, when available, is retained separately as `rigHostId` in inventory
+and `rig_host_id` in terminal metadata. It is an opaque identity, never an SSH
+destination. WebMux-created local and SSH seats retain their recorded hosts.
+
+Opening an external viewer, reloading or reopening its tile preserves that
+uncertainty and the original provider. Recovery previews show **Unknown execution
+host** and do not offer native resume for an unverified destination. Explicitly
+opening the canonical seat also corrects an older viewer's inferred localhost
+label while reusing that viewer. Missing or unsupported recovery evidence still
+leaves retained logs and manager-based recovery available.
+
+The [qualification record](validation/rig-host-provenance-2026-11-17/README.md)
+includes real Rig enrollment, ordinary terminal input, reload/reopen and one
+unchanged process. It uses a synthetic terminal, not an authenticated coding
+conversation. The broader macOS Rig browser suite has two failures reproduced
+on unchanged main, tracked separately in [#431](https://github.com/jordanhubbard/webmux/issues/431).
+
 ## Rig owner workflow
 
 1. Click **Coordination**, choose **Rig** as the Launch owner, and inspect

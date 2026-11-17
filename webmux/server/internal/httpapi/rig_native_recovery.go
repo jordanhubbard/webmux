@@ -9,6 +9,9 @@ import (
 )
 
 func (p *rigProvider) PlanNativeRecovery(ctx context.Context, saved session.RigIdentity) (func(context.Context) ([]string, error), error) {
+	if saved.Host == "" {
+		return nil, managedRecoveryError("Rig execution host is unverified. Recover through Rig on the original execution host.")
+	}
 	if isRemoteRigTarget(saved.Target) {
 		return nil, managedRecoveryError("Remote Rig conversations must be recovered through Rig on the execution host.")
 	}

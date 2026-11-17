@@ -76,9 +76,9 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 		view.ManagerNativeSession, view.ManagerNativeStateFile = s.Rig.NativeSessionID, s.Rig.NativeStateFile
 		view.ManagerNativeSource, view.ManagerNativeObservedAt = s.Rig.NativeSource, s.Rig.NativeObservedAt
 		view.ManagerTarget, view.ManagerDirectory = s.Rig.Target, s.Rig.Workspace
-		if s.Rig.Host != "" {
-			view.Hostname = s.Rig.Host
-		}
+		// Hostname on an exec viewer describes its local transport, not an
+		// externally enrolled Rig provider's unverified execution host.
+		view.Hostname = s.Rig.Host
 		view.LifecycleOwner = s.Rig.Provider
 		if view.LifecycleOwner == "" {
 			view.LifecycleOwner = "rig"

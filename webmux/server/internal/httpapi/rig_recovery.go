@@ -14,6 +14,9 @@ func (s *Server) captureRigRecovery(ctx context.Context, owner, id string) error
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	return s.sessions.CaptureManagedRecovery(ctx, owner, id, func(ctx context.Context, identity session.RigIdentity) (session.RigIdentity, error) {
+		if identity.Host == "" {
+			return identity, fmt.Errorf("Rig execution host is unverified; use its lifecycle manager on the original host")
+		}
 		if isRemoteRigTarget(identity.Target) {
 			return identity, fmt.Errorf("remote Rig recovery belongs to the execution host")
 		}

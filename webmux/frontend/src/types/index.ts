@@ -7,6 +7,7 @@ export type AgentRuntimeStatus = 'waiting' | 'working' | 'unknown' | 'stale';
 export type AgentStatusSource = 'hook' | 'tmux' | 'webmux' | 'none';
 
 export interface RigIdentity {
+  rig_host_id?: string;
   provider?: string; target: string; project: string; name: string; host: string; runtime: string; workspace?: string;
 }
 

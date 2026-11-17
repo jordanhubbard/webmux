@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from './Dialog';
 import './CoordinationDialog.css';
 import { api } from '../utils/api';
+import { executionHostLabel } from '../utils/sessionIdentity';
 import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
 import type { Session } from '../types';
 
@@ -13,6 +14,7 @@ export interface CoordinationProject {
   readOnly?: boolean; seatCount: number; runningCount: number; detail?: string; contexts?: string[]; attentionCount?: number;
 }
 export interface CoordinationSeat {
+  rigHostId?: string;
   provider: string; id: string; projectId: string; projectName: string; name: string; host: string;
   observationState?: string; observedAt?: string; workspace?: string; runtime: string; state: string; transportState?: string; openable: boolean; managed: boolean;
   managerSessionId?: string; nativeSessionId?: string; context?: string; parentId?: string; parentName?: string;
@@ -316,7 +318,8 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
                 {projectSeats.map(seat => <li key={`${seat.provider}:${seat.id}`}><article aria-label={`${seat.name} in ${seat.projectName}`} className={seat.attention ? 'coordination-worker-attention' : undefined}>
                   <strong>{seat.name}</strong> {seat.managed && <span className="coordination-rig">{seat.provider === 'rig' ? 'Rig-managed' : 'Agent Deck-managed'}</span>}{seat.role && seat.role !== 'session' && <span className="coordination-role">{seat.role}</span>}{seat.attention && <span className="coordination-attention">Needs attention</span>}
                   <dl className="coordination-worker-facts">
-                    <div><dt>Host</dt><dd>{seat.host}</dd></div><div><dt>Runtime</dt><dd>{seat.runtime}</dd></div>
+                    <div><dt>Host</dt><dd>{executionHostLabel(seat.host)}</dd></div><div><dt>Runtime</dt><dd>{seat.runtime}</dd></div>
+                    {seat.rigHostId && <div><dt>Rig host identity</dt><dd><code>{seat.rigHostId}</code></dd></div>}
                     <div><dt>{seat.provider === 'rig' ? (seat.observationState && seat.observationState !== 'current' ? 'Last observed Rig lifecycle' : 'Rig lifecycle') : 'State'}</dt><dd>{seat.state}{seat.substate ? ` · ${seat.substate}` : ''}{seat.exitCode !== undefined ? ` · exit ${seat.exitCode}` : ''}</dd></div>{seat.context && <div><dt>Context</dt><dd>{seat.context}</dd></div>}
                     {seat.observedAt && <div><dt>Host observation</dt><dd>{seat.observationState} · {new Date(seat.observedAt).toLocaleString()}</dd></div>}
                     {seat.transportState && <div><dt>Attachment transport</dt><dd>{seat.transportState}</dd></div>}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../utils/api';
+import { executionHostLabel } from '../utils/sessionIdentity';
 import type { RecoveryRequest, SessionRecovery } from '../types';
 import { Dialog } from './Dialog';
 import './RecoveryDialog.css';
@@ -63,7 +64,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
         <p>{value.message}</p>
         {value.warning && <p role="status">{value.warning}</p>}
         <dl className="recovery-details">
-          <dt>Execution host</dt><dd>{value.hostname}{!value.manager_target && ` · ${value.transport.toUpperCase()}`}</dd>
+          <dt>Execution host</dt><dd>{executionHostLabel(value.hostname)}{!value.manager_target && ` · ${value.transport.toUpperCase()}`}</dd>
           <dt>Session manager</dt><dd>{value.lifecycle_owner === 'webmux' ? 'WebMux' : value.lifecycle_owner}</dd>
           {value.manager_target && <><dt>Managed session</dt><dd>{value.manager_target}</dd></>}
           {value.manager_directory && <><dt>Managed project directory</dt><dd>{value.manager_directory}</dd></>}

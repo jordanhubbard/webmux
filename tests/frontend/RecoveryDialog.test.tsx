@@ -219,3 +219,11 @@ it('asks Rig for an approved checkpoint continuation without sharing terminal hi
  await waitFor(()=>expect(recover).toHaveBeenCalledWith('one',expect.objectContaining({kind:'managed',confirm:true,instance:'rig-proof'})));
  expect(recover.mock.calls[0][1]).not.toHaveProperty('context');
 });
+
+it('shows unknown execution host without substituting the local viewer transport', async () => {
+ const value=evidence();value.hostname='';value.lifecycle_owner='rig';value.manager_target='external-seat';value.can_resume_managed=false;
+ vi.spyOn(api,'getSessionRecovery').mockResolvedValue(value);
+ render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
+ expect(await screen.findByText('Unknown execution host')).toBeInTheDocument();
+ expect(screen.queryByText(/I approve asking/)).toBeNull();
+});

@@ -10,7 +10,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 type Agent = { target: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string };
 type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string };
 type RigRow = { rigId?: string; name?: string; rigName?: string; nodeCount?: number; runningCount?: number; status?: string; lifecycleState?: string; latestSnapshot?: string | null };
-type NodeRow = { rigId?: string; rigName?: string; logicalId?: string; podNamespace?: string; canonicalSessionName?: string; runtime?: string; sessionStatus?: string; lifecycleState?: string; tmuxAttachCommand?: string | null };
+type NodeRow = { rigId?: string; rigName?: string; logicalId?: string; podNamespace?: string; hostSelfId?: string | null; canonicalSessionName?: string; runtime?: string; sessionStatus?: string; lifecycleState?: string; tmuxAttachCommand?: string | null };
 const [action, directory] = process.argv.slice(2);
 if (!directory) throw new Error('Missing coordination state directory');
 // Controller commands follow the configured coordinator endpoint. A user's
@@ -27,7 +27,7 @@ const write = (file: string, data: unknown) => {
 const records = (): Agent[] => fs.readdirSync(directory).filter(f => f.endsWith('.agent.json')).map(f => JSON.parse(fs.readFileSync(path.join(directory, f), 'utf8')) as Agent);
 const entries = <T,>(value: T[] | { entries?: T[] }): T[] => Array.isArray(value) ? value : value.entries ?? [];
 const rigRows = (archived = false): RigRow[] => entries(JSON.parse(run('rig', ['ps', ...(archived ? ['--include-archived'] : []), '--json', '--fields', 'rigId,name,rigName,nodeCount,runningCount,status,lifecycleState,latestSnapshot'])) as RigRow[] | { entries?: RigRow[] });
-const nodeRows = (): NodeRow[] => entries(JSON.parse(run('rig', ['ps', '--nodes', '-A', '--json', '--fields', 'rigId,rigName,logicalId,podNamespace,canonicalSessionName,runtime,sessionStatus,lifecycleState,tmuxAttachCommand'])) as NodeRow[] | { entries?: NodeRow[] });
+const nodeRows = (): NodeRow[] => entries(JSON.parse(run('rig', ['ps', '--nodes', '-A', '--json', '--fields', 'rigId,rigName,logicalId,podNamespace,hostSelfId,canonicalSessionName,runtime,sessionStatus,lifecycleState,tmuxAttachCommand'])) as NodeRow[] | { entries?: NodeRow[] });
 const identifier = (value: string, field: string) => {
   if (!/^[a-z][a-z0-9-]{0,47}$/.test(value)) throw new Error(`${field}: use a letter followed by letters, digits or hyphens (48 characters maximum).`);
   return value;

@@ -1,0 +1,103 @@
+{
+  "recorded_utc": "2026-11-17T20:06:57.121950+00:00",
+  "status": "Local candidate for430 qualified for execution-host metadata, input and viewer reuse. Hosted exact-head gates pending; audit429 and separate macOS baseline431 unresolved. No merge/release.",
+  "source_parent": "8f5d3225fac65804554a65bc08381a03a70654fe",
+  "source_sha256": {
+    "tests/e2e/openrig.spec.ts": "ba85ca17a09b1dc3fb55687845397b26aa34463df793555b9ab21f07af6c591b",
+    "tests/frontend/CoordinationDialog.test.tsx": "bf104e5a7e9238cb046b56c551e2d93e1d6559d9766d5dd9c054598f743c7f61",
+    "tests/frontend/RecoveryDialog.test.tsx": "a3703532a6228c4331cec8e9a7bb70da71ca7972349dc8b24cf7b483bc31443f",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "a6716535126bcc42f433cd84c187088ba4dfc8dd2171456a6d16d85c08763752",
+    "webmux/frontend/src/components/RecoveryDialog.tsx": "130b0e39052b8eb9827386cc15a8091ebe892da1c57fb5b9a3a40311f9cf6a3a",
+    "webmux/frontend/src/components/RigNavigator.tsx": "79c9a4aba23509907fe6095bb759c19499640de5a50d6270406afa828ad4832a",
+    "webmux/frontend/src/components/WorkspaceMinimap.tsx": "0b44bd6baeea56cd9c510d6c1a7f0606a17b6a6d3e541a6b41bdb3b858f2deb4",
+    "webmux/frontend/src/types/index.ts": "65b6bd00d44087607031465636739bd3abdd119ece83707273ce882f53581276",
+    "webmux/frontend/src/utils/sessionIdentity.ts": "23ee15f4d9db6abc4894c2398f3ee060a90f749f37734cd284ef545d384277e1",
+    "webmux/server/internal/httpapi/coordination_providers.go": "4c9c6a0f9ce681043bf1c3eb0e5f64d338f999647872531bad96e77775f09793",
+    "webmux/server/internal/httpapi/coordination_providers_test.go": "66a5f514a198ec11ec999fdb0e5cf1e6a02b3510237aeb61efa3dc75dede1502",
+    "webmux/server/internal/httpapi/openrig.go": "a4852910e1774a62bbdad160cb3a5b4a0dd9aed1aefaba8d24618805f0ca0db1",
+    "webmux/server/internal/httpapi/rig_native_recovery.go": "a1b0be4f9beb93d32e62064fd6d5fb2d37d557413ad46783611a7e7ab2b31866",
+    "webmux/server/internal/httpapi/rig_recovery.go": "f01466be18fb3314480d195b68810218d2dcc5b23cfa7e072a4ef30716bb769a",
+    "webmux/server/internal/openrigcoord/runner.mts": "2d4c958f41dffc1b7246bf489d62e5cece584e25acf21beb73a07043b12bb7b5",
+    "webmux/server/internal/session/managed_recovery_test.go": "2fe43f6c3e0b740e8009e2e89a92affc087ecf989c8e96ef03bd9d446c576f63",
+    "webmux/server/internal/session/model.go": "1fd6bfcbcd6a256695e16298c529d56797c427769cae60bbbff28932eb21af00",
+    "webmux/server/internal/session/recovery.go": "bf85126d5abaf82f1200fd0381eba3bbe856821c8b5a8c26742fc58eb7ffcec8"
+  },
+  "native_application": {
+    "contract": "openrig-cli/0.6.14",
+    "rigVersion": "0.6.14 (df1c1517)",
+    "tmuxVersion": "tmux 3.8",
+    "nodeVersion": "v24.21.0",
+    "browserVersion": "157.0.8103.79",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "externalEnrollment": true,
+    "target": "wm-external-d5d8afed78",
+    "originalPID": "98901",
+    "finalPID": "98901",
+    "starts": 1,
+    "host": "",
+    "rigHostID": "host-8568c8de",
+    "viewerReused": true,
+    "recoveryHost": "",
+    "canResumeManaged": false,
+    "scope": "Real isolated Rig/tmux + app/browser using an owned synthetic Node terminal. No authenticated CLI or remote execution claimed."
+  },
+  "native_receipt_sha256": "c95de7463313c4ddeb64697400db345e6b8f831ee344d94917fd0db8d21966dd",
+  "published_rig_npm_integrity": "sha512-NVG3qEe1xTbG/5Edurf288AUNFw6swN4v72cGg8Ekh9jaZXD7+pen8Diak2RFTNMj3YPoRcLRI1s6gZx6wwrgg==",
+  "node_archive_sha256": "6239d4cf92d864487ec8cd3615038f7b67e7f58b77b21cd2f09ea9fbd68065fe",
+  "negative_control": {
+    "production_source": "8f5d3225fac65804554a65bc08381a03a70654fe",
+    "result": "EXPECTED FAIL: empty execution host required, localhost received",
+    "production_code_unchanged": true,
+    "qualification_test_only_added_then_restored": true,
+    "log_sha256": "c3a6af8b93f8e3b5cf8d7b15dff7d1906685ca323bab620fbb52340aeaf285da"
+  },
+  "checks": {
+    "httpapi_race_seconds": 55.213,
+    "session_race_seconds": 14.54,
+    "frontend": {
+      "files": 39,
+      "tests": 374,
+      "node": "24.21.0",
+      "result": "PASS"
+    },
+    "helpers": {
+      "tests": 64,
+      "skips": 0,
+      "node": "24.21.0",
+      "result": "PASS"
+    },
+    "strict_typescript_and_source_inventory": "PASS",
+    "frontend_build": "PASS on Node24",
+    "frontend_lint": "PASS",
+    "vet": [
+      "Darwin root PASS",
+      "Windows AMD64 root PASS"
+    ],
+    "whitespace": "PASS"
+  },
+  "broader_native_suite": {
+    "candidate_macOS_full": {
+      "passed": 7,
+      "failed": 2
+    },
+    "unchanged_main_macOS_targeted": {
+      "passed": 0,
+      "failed": 2
+    },
+    "source": "8f5d3225fac65804554a65bc08381a03a70654fe",
+    "failures": [
+      "global mouse on instead of off",
+      "diagnostic TUI stopped startup at7433 instead of live fixture endpoint"
+    ],
+    "first_long_baseline_path_additional_failure": "Unix socket too long; after checked git worktree move to rb194 the same two original failures reproduced",
+    "followup": "https://github.com/jordanhubbard/webmux/issues/431",
+    "outcome_assertions_weakened": false
+  },
+  "limits": [
+    "Native terminal is an owned synthetic Node process, not an authenticated coding CLI.",
+    "No remote execution/native conversation recovery or complete194/318 acceptance is claimed.",
+    "Opaque Rig host identity is not a verified SSH destination.",
+    "Old inferred viewer labels are corrected when the canonical seat is explicitly opened; no automatic topology adoption."
+  ]
+}

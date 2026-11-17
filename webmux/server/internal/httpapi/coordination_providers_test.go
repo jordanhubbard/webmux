@@ -571,3 +571,34 @@ func TestRigInventoryKeepsLifecycleIndependentOfAttachment(t *testing.T) {
 		})
 	}
 }
+
+func TestRigExecutionHostRequiresLaunchEvidence(t *testing.T) {
+	for _, host := range []string{"", "localhost", "worker.example"} {
+		var raw rigStatusEnvelope
+		if err := json.Unmarshal([]byte(`{"seats":[{"canonicalSessionName":"external-seat","logicalId":"agents.worker","rigId":"rig-one","host":"untrusted-default","hostSelfId":"opaque-native-host","openable":true,"tmuxTarget":"external-seat"}]}`), &raw); err != nil {
+			t.Fatal(err)
+		}
+		if host != "" {
+			raw.Agents = []managedRigAgent{{Target: "external-seat", Host: host, Connected: true}}
+		}
+		seat := rigCoordinationStatus(raw).Seats[0]
+		if seat.Host != host || seat.RigHostID != "opaque-native-host" || !seat.Openable {
+			t.Fatalf("host inferred from attachment instead of launch evidence: %+v", seat)
+		}
+	}
+	var raw rigStatusEnvelope
+	if err := json.Unmarshal([]byte(`{"seats":[{"hostSelfId":"bad\nidentity"}]}`), &raw); err != nil {
+		t.Fatal(err)
+	}
+	if seat := rigCoordinationStatus(raw).Seats[0]; seat.RigHostID != "" || seat.Host != "" {
+		t.Fatal("unbounded/control-bearing host identity was admitted", seat)
+	}
+}
+
+func TestRigNativeRecoveryRejectsUnknownHostBeforeCallingManager(t *testing.T) {
+	p := &rigProvider{home: t.TempDir(), owner: "owner"}
+	action, err := p.PlanNativeRecovery(context.Background(), session.RigIdentity{Target: "external-seat", RigHostID: "localhost", Runtime: "claude-code"})
+	if err == nil || action != nil || !strings.Contains(err.Error(), "execution host is unverified") {
+		t.Fatal("opaque identity became a recovery destination", err)
+	}
+}

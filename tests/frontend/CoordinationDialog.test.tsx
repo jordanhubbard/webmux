@@ -405,3 +405,14 @@ it.each(['current', 'offline', 'stale', 'unavailable'])('labels %s remote Rig ob
     expect(mocks.attach).not.toHaveBeenCalled();
   }
 });
+
+it('distinguishes an external Rig host identity from its unknown execution destination', async () => {
+ mocks.status.mockResolvedValue({...emptyStatus(),projects:[{provider:'rig',id:'r',name:'external',host:'localhost',state:'running',historical:false,seatCount:1,runningCount:1}],seats:[{provider:'rig',id:'seat',projectId:'r',projectName:'external',name:'worker',host:'',rigHostId:'opaque-native-host',runtime:'codex',state:'running',openable:true,managed:false}]});
+ render(<CoordinationDialog onClose={() => {}} />);
+ const seat=await screen.findByRole('article',{name:'worker in external'});
+ expect(within(seat).getByText('Unknown execution host')).toBeInTheDocument();
+ expect(within(seat).getByText('opaque-native-host')).toBeInTheDocument();
+ fireEvent.click(within(seat).getByRole('button',{name:'Open session'}));
+ await waitFor(()=>expect(mocks.attach).toHaveBeenCalledWith('rig','seat',undefined));
+ expect(mocks.create).not.toHaveBeenCalled();
+});

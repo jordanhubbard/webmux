@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../utils/api';
+import { executionHostLabel } from '../utils/sessionIdentity';
 import type { CoordinationProject, CoordinationSeat } from './CoordinationDialog';
 
 const lifecycleLabel = (seat: CoordinationSeat) => seat.observationState && seat.observationState !== 'current' ? `last observed ${seat.state}; ${seat.observationState}` : seat.state;
@@ -27,10 +28,10 @@ export function RigNavigator({ onOpen, onManage }: { onOpen: (provider: string, 
       {projects.map(project => <div key={`${project.provider}:${project.id}`} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5 }}>
         <strong>{project.name}</strong>
         {seats.filter(seat => seat.projectId === project.id && seat.provider === project.provider).map(seat => <button key={`${seat.provider}:${seat.id}`} type="button" disabled={!!busy || !seat.openable}
-          title={`${seat.name} · ${seat.host} · ${seat.runtime} · ${lifecycleLabel(seat)} · ${seat.transportState ? `attachment ${seat.transportState} · ` : ''} ${seat.workspace || 'workspace unknown'}`}
+          title={`${seat.name} · ${executionHostLabel(seat.host)} · ${seat.runtime} · ${lifecycleLabel(seat)} · ${seat.transportState ? `attachment ${seat.transportState} · ` : ''} ${seat.workspace || 'workspace unknown'}`}
           onClick={() => { const key = `${seat.provider}:${seat.id}`; setBusy(key); void onOpen(seat.provider, seat.id).catch(reason => setError(String(reason))).finally(() => setBusy('')); }}
           style={{ background: '#1a1a3a', color: '#ddd', border: '1px solid #555588', borderRadius: 4, padding: '3px 8px', cursor: 'pointer' }}>
-          {seat.name} · {seat.host} · {lifecycleLabel(seat)} · {seat.provider === 'agent-deck' ? 'Agent Deck' : 'Rig'}
+          {seat.name} · {executionHostLabel(seat.host)} · {lifecycleLabel(seat)} · {seat.provider === 'agent-deck' ? 'Agent Deck' : 'Rig'}
         </button>)}
       </div>)}
       <button type="button" onClick={onManage}>Manage coordination</button>
