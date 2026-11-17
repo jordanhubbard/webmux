@@ -259,7 +259,15 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     for (let reconnect = 0; reconnect < 2; reconnect++) {
       const stopped = spawnSync('tmux', ['kill-session', '-t', `=${coder.id}`], { env: tmuxEnv, timeout: 5000 });
       expect(stopped.status).toBe(0);
-      await expect.poll(async () => (await status()).seats.find(value => value.id === coder.id)!.state).toBe('detached');
+      try {
+        await expect.poll(async () => (await status()).seats.find(value => value.id === coder.id)!.state).toBe('detached');
+      } catch (error) {
+        const native = spawnSync(path.join(home, 'openrig-bin', 'rig'), ['ps', '--nodes', '-A', '--no-cleanup', '--json', '--fields', 'canonicalSessionName,lifecycleState,sessionStatus,storedSessionStatus,startupStatus,storedStartupStatus,identityVerdict,restoreOutcome'], {
+          env: { ...process.env, OPENRIG_HOST_SELECTED: 'local' }, timeout: 10000, encoding: 'utf8', maxBuffer: 1 << 20,
+        });
+        await info.attach('detached-native-inventory', { body: JSON.stringify({ cycle: reconnect, webmux: await status(), nativeExit: native.status, native: native.stdout, nativeError: native.stderr }), contentType: 'application/json' });
+        throw error;
+      }
       expect((await openAgent('coder', true)).id).toBe(coderSession.id);
       await expect(page.getByTestId(`tile-cell-${coderSession.id}`).locator('.xterm-rows')).toContainText('FIXTURE_READY');
       const current = (await status()).seats.find(value => value.id === coder.id)!;
