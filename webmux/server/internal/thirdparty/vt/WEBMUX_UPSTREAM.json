@@ -253,14 +253,14 @@
     "testdata/fuzz/FuzzKittyPayloadDecode/f9d75f20e73594c7": "f9d75f20e73594c796a2b9e2ce6862ebe98b825d35f51cc420eb480924da3f40"
   },
   "webmux_modified_files_sha256": {
-    "emulator.go": "e16956db388c098d2dbfb0fa46066e90ae9312408342ca2f037ae5f82f126c82",
-    "grid.go": "e7e680f373b4202f46ae0a9f872989afa44729e13d59083a97954c02427f3471",
-    "cc.go": "da0dccbbfb93a4001a4b2b97fc5ac625c18d3c55a01099e36a47b82f02be6f8d",
+    "emulator.go": "16a595d017c07809ee99738a1da6c0ce173d1acc2a211c7ae65a387716152af7",
+    "grid.go": "4c6130d0824df3da9283097c744d61841fcd83015e3e07c9e970c39e8b262aa8",
+    "cc.go": "d891208aefbb2b4023aefdcf7786521a3bc8813628453cdeff3a83e832b7667b",
     "screen.go": "30664e4e3c396c4d71fcc87620775e9a6dffbf3a87ff7e3d7cd31c28508d8eb5",
     "handlers.go": "6a2fd854a4bc7865ec3fa3f3f6cbed01d305e460511a67eaba5f51c17523f90a",
     "csi_cursor.go": "a58005bc8483f851c1ba99a7476b5913fd235ef25d76ff2f0c7bf38a8d24e7cc",
     "utf8.go": "bf21be7152f73dc077a4db68c4366fe69b2ab4a78fbc6c09f2f86fa5d7af8bb8",
-    "esc.go": "5ef14ae01155e854a6c37f32da36aeb6620b577d38676bed522188b25b2b9948",
-    "reflow.go": "0ce6115921ddca3de27db1419c1843a8e445f0a8e6421b320ae26af2dd67a689"
+    "esc.go": "6a2989eb3f94126a586f26ef0ff6d835f77e1178ed416cabce8852bd8262bd2b",
+    "reflow.go": "898f9f7bbb2a85b85ac5d6b78881b22545286d77963dcdacd1a6a4100c67b718"
   }
 }

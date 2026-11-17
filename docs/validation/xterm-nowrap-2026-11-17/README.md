@@ -72,3 +72,41 @@ retains the configured erase cell. Generated extent, resize-conservation,
 metamorphic and render-fuzz regression cases then passed together. The full
 race suite and vet then passed after that correction; the intermediate failure
 is not release evidence.
+
+## Resize, margins and real ConPTY follow-up
+
+The candidate adds whole/byte-split resize controls for addressed, advanced,
+wide, overlapped, saved and alternate-screen states, through widening,
+narrowing and growing again. Scroll-region controls cover bottom wrap/index,
+top reverse index and saved-cursor clamping. Fixes preserve xterm's frozen
+cursor line, clipped columns and saved coordinates, retain alternate-buffer
+hidden columns, flush an already drawn grapheme before resize, and restrict
+reverse-index before testing scroll margins.
+
+The visible interior wide/narrow overlap can be reconstructed in ordinary
+ANSI by building it at the edge and moving the pair left with DCH. A retained
+parser repeat state still cannot be seeded by the current encoder without
+clearing that lead. Issue #424 blocks #421. The candidate refuses that unsafe
+state, and its whole/byte-split browser acceptance tests remain failing. They
+are not skipped, and this PR must remain draft until they pass faithfully.
+
+Actual Windows artifact 14337006971 from CI 44100418808/PR head 2c3f923 contains
+22 executed ConPTY captures, each from one native job. The renderer comparison
+passed 21/22; `nowrap-soft-reset` differed only in focus-report mode (1004):
+xterm reset it while the mirror retained it. The candidate now also resets
+focus reports, bracketed paste and synchronized output on DECSTR. Recomputing
+snapshots from all 22 retained actual ConPTY input streams using the current
+mirror passed all 22 independent renderer comparisons locally. That is a
+retained-stream component check, not a fresh Windows execution of this candidate.
+The fresh native gate remains required.
+
+To recompute current mirror snapshots from retained original/future inputs,
+set `WEBMUX_SCREEN_REFERENCE_INPUTS` to a JSON array of bounded objects with
+name, cols, rows, original and future. The qualifier generates new snapshots;
+recorded snapshots are not reused. Select `recorded-conpty` in the browser suite.
+
+The final expanded local browser run executed 410 checks: 408 passed; the two
+required whole/byte-split overlap-grow cases still report `ErrUnsupported`
+and fail their support assertion. This is an incomplete qualification result,
+not a green gate. Full retained-module race/vet passed again (vt 115.815s,
+snapshot 1.110s, vtgen 1.146s); affected screenstate race and platform vet passed.

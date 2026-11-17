@@ -129,7 +129,12 @@ func startsWide(cells uv.Line) bool {
 // wrote. The last row of a line drops its trailing blanks: they are the
 // unwritten rest of the row, not text.
 // sc, when not nil, lends the buffers.
-func joinRows(rows []reflowRow, sc *reflowScratch) reflowSource {
+func joinRows(rows []reflowRow, sc *reflowScratch, xterm ...bool) reflowSource {
+	blank := isBlankCell
+	if len(xterm) > 0 && xterm[0] {
+		blank = func(c *uv.Cell) bool { return c.Content == "" && c.Width == 1 }
+	}
+
 	var at []int
 	var lines []logicalLine
 	var all []uv.Line // every line's segments, in one slice
@@ -162,7 +167,7 @@ func joinRows(rows []reflowRow, sc *reflowScratch) reflowSource {
 			wrapped, cur.carry = false, r.flags&(rowWrapped|rowPadded)
 		}
 		if wrapped && r.flags&rowPadded != 0 && len(cells) > 0 &&
-			isBlankCell(&cells[len(cells)-1]) && startsWide(rows[i+1].cells) {
+			blank(&cells[len(cells)-1]) && startsWide(rows[i+1].cells) {
 			cells = cells[:len(cells)-1]
 		}
 		for x := range cells {
@@ -179,7 +184,7 @@ func joinRows(rows []reflowRow, sc *reflowScratch) reflowSource {
 		cur.segs = all[first:len(all):len(all)]
 		for cur.carry == 0 && len(cur.segs) > 0 {
 			seg := cur.segs[len(cur.segs)-1]
-			for len(seg) > 0 && isBlankCell(&seg[len(seg)-1]) {
+			for len(seg) > 0 && blank(&seg[len(seg)-1]) {
 				seg = seg[:len(seg)-1]
 				cur.cols--
 			}
@@ -273,7 +278,7 @@ type reflowPlan struct {
 
 // newPlan lays out src at width, into one block of cells for all its rows.
 // sc, when not nil, lends the buffers other than the cells.
-func newPlan(src reflowSource, width int, sc *reflowScratch) reflowPlan {
+func newPlan(src reflowSource, width int, sc *reflowScratch, xterm ...bool) reflowPlan {
 	p := reflowPlan{src: src, width: width}
 	if sc != nil {
 		// The scratch's ints hold the source's row tables, so the line
@@ -301,6 +306,9 @@ func newPlan(src reflowSource, width int, sc *reflowScratch) reflowPlan {
 	}
 	for i := range p.cells {
 		p.cells[i] = uv.EmptyCell
+		if len(xterm) > 0 && xterm[0] {
+			p.cells[i].Content = ""
+		}
 	}
 	if sc != nil {
 		sc.flags = grow(sc.flags, total)
@@ -508,6 +516,7 @@ func (s *screen) reflow(width, height int, bottom bool, phantom *bool, prompt in
 	n0 := sb.Len()
 	h0 := s.buf.Height()
 	w0 := s.buf.Width()
+	xterm := s.buf.empty.Content == ""
 	limit := reflowHistoryCap * max(height, h0)
 	sc := &s.rf
 
@@ -519,7 +528,7 @@ func (s *screen) reflow(width, height int, bottom bool, phantom *bool, prompt in
 			cells := s.buf.rows[y]
 			if cells == nil {
 				if len(sc.blank) != w0 {
-					sc.blank = newBlankLine(w0)
+					sc.blank = s.buf.newBlankLine(w0)
 				}
 				cells = sc.blank // read only, shared by every unwritten row
 			}
@@ -530,7 +539,7 @@ func (s *screen) reflow(width, height int, bottom bool, phantom *bool, prompt in
 		}
 		sc.rows = rows
 		curRow := n0 - from + s.cur.Y
-		if prompt >= 0 {
+		if prompt >= 0 && !xterm {
 			// The prompt runs from its mark to the end of the line the
 			// cursor is on: the command being typed can carry on past it.
 			end := curRow
@@ -539,7 +548,17 @@ func (s *screen) reflow(width, height int, bottom bool, phantom *bool, prompt in
 			}
 			freezePrompt(rows, prompt-from, end)
 		}
-		src := joinRows(rows, sc)
+		if xterm {
+			start, end := curRow, curRow
+			for start > 0 && rows[start-1].flags&rowWrapped != 0 {
+				start--
+			}
+			for end+1 < len(rows) && rows[end].flags&rowWrapped != 0 {
+				end++
+			}
+			freezePrompt(rows, start, end)
+		}
+		src := joinRows(rows, sc, xterm)
 		// The cell under the cursor has to exist after the reflow, even
 		// past the end of the text, where a shell's cursor stands after
 		// its prompt.
@@ -591,7 +610,7 @@ func (s *screen) reflow(width, height int, bottom bool, phantom *bool, prompt in
 			}
 			r := historyRows(sb, lf, end, 0, cnt)
 			cnt.rows = r
-			csrc := joinRows(r, cnt)
+			csrc := joinRows(r, cnt, xterm)
 			need -= countRows(&csrc)
 			back = lf
 		}
@@ -601,10 +620,41 @@ func (s *screen) reflow(width, height int, bottom bool, phantom *bool, prompt in
 			total = countRows(&src)
 		}
 	}
-	p := newPlan(src, width, sc)
+	p := newPlan(src, width, sc, xterm)
+	delta := 0
+	if xterm {
+		counts := make([]int, len(src.lines))
+		for _, line := range src.rowLine {
+			if line < len(counts) {
+				counts[line]++
+			}
+		}
+		for i, count := range counts {
+			delta += p.lineRow[i+1] - p.lineRow[i] - count
+		}
+		for i, r := range rows {
+			line := src.rowLine[i]
+			if !r.frozen || line >= len(src.lines) {
+				continue
+			}
+			base := p.lineRow[line]
+			row := p.row(base)
+			for x := range row {
+				row[x] = s.buf.empty
+			}
+			copy(row, r.cells)
+			if row[width-1].Width > 1 {
+				row[width-1] = s.buf.empty
+			}
+			p.tails[base] = nil // xterm truncates this row instead of retaining a hidden tail.
+		}
+	}
 	screenRow := n0 - from // the first screen row among the rows taken
 
 	cr, cc := p.locate(screenRow+s.cur.Y, s.cursorCol())
+	if xterm {
+		cr, cc = screenRow+s.cur.Y+delta, s.cur.X
+	}
 	// A cursor on a frozen row can be past the new width. It stands on the
 	// last column, and remembers where it was for the next reflow.
 	wideX := cc
@@ -635,6 +685,9 @@ func (s *screen) reflow(width, height int, bottom bool, phantom *bool, prompt in
 	// changes under them.
 	taken := len(rows)
 	savR, savC := p.locate(screenRow+s.saved.Y, s.saved.X)
+	if xterm {
+		savR, savC = screenRow+s.saved.Y+delta, s.saved.X
+	}
 	for _, m := range marks {
 		if r := m.abs - from; m.abs >= from && r < taken {
 			nr, nc := p.locate(r, m.col)
@@ -714,7 +767,7 @@ func (s *screen) reflow(width, height int, bottom bool, phantom *bool, prompt in
 	sc.spare, sc.block = sc.block, p.cells
 
 	s.cur.X, s.cur.Y = cc, clamp(cr-top, 0, height-1)
-	s.wideCol = wideX > cc && !newPhantom
+	s.wideCol = !xterm && wideX > cc && !newPhantom
 	s.wideColX, s.wideColAt = wideX, s.cur.Position
 	if savR < top {
 		// The saved cursor's text went into the history. It comes back to

@@ -1,0 +1,35 @@
+{
+  "recorded_utc": "2026-11-17T14:34:19.427617+00:00",
+  "native_workflow": 44100418808,
+  "native_pr_head": "2c3f923462911ecc886b7c6719a5c0e43791cb4f",
+  "native_job": 134098624186,
+  "artifact": 14337006971,
+  "artifact_url": "https://github.com/jordanhubbard/webmux/actions/runs/44100418808/artifacts/14337006971",
+  "native_capture_count": 22,
+  "one_job_per_capture": true,
+  "native_renderer_passed": 21,
+  "native_renderer_failed": [
+    "nowrap-soft-reset: focus-report mode retained after DECSTR"
+  ],
+  "retained_input_current_mirror_renderer_passed": 22,
+  "retained_input_check_scope": "Current Go mirror recomputes snapshots from retained actual native streams, then compares in real local Chrome. Fresh Windows execution on the current candidate remains required.",
+  "retained_input_sha256": "cc7460418a358cc345b6c5e011c225dfe51e381827a860a61951a36aea752420",
+  "retained_input_renderer_log_sha256": "364aa05e3b69551461851f42a65ade999827e4ab94e7e1419da7c4df1a721f82",
+  "current_engine_race": {
+    "vt_seconds": 115.815,
+    "snapshot_seconds": 1.11,
+    "vtgen_seconds": 1.146,
+    "vet": "passed"
+  },
+  "remaining_required_gate": "#424 retains a required failing REP-state continuation control after resizing an overlap; #421 is not complete.",
+  "expanded_current_browser": {
+    "passed": 408,
+    "failed": 2,
+    "required_failures": [
+      "nowrap-resize-overlap-grow",
+      "nowrap-resize-overlap-grow-byte-split"
+    ],
+    "failure_behavior": "ErrUnsupported is fail-closed; required support assertion remains failing under424.",
+    "log_sha256": "c1bcdf0d70fd36e408bd8da595fcef1c462d0d2a9af4c18f38f44380899718cc"
+  }
+}

@@ -223,6 +223,16 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 		// after every mode/pen/cursor sequence, leaving no following control
 		// which could clear it again. This also re-arms a pending wrap.
 		_, printedWidth := ansi.FirstGraphemeCluster(st.LastPrinted, ansi.GraphemeWidth)
+		// Resize can remove the character that set the parser's repeat width.
+		// REP reads the current source cell, not the removed character.
+		logicalX := st.CursorX
+		if st.PendingWrap {
+			logicalX++
+		}
+		sourceX := logicalX - printedWidth
+		if st.CursorY >= 0 && st.CursorY < len(st.Screen) && sourceX >= 0 && sourceX < len(st.Screen[st.CursorY]) && st.Screen[st.CursorY][sourceX].Content == "" {
+			return b.Bytes(), nil
+		}
 		if !st.Modes[7] && st.CursorX == st.Width-1 && printedWidth > 1 {
 			w.cup(cx, cy)
 			b.WriteString(st.LastPrinted)
@@ -234,6 +244,12 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 		}
 		if y < 0 || y >= len(st.Screen) || x < 0 || x >= len(st.Screen[y]) || st.LastPrinted == "" {
 			return nil, ErrIncomplete
+		}
+		if x > 0 && x < st.Width-1 && st.Screen[y][x-1].Width == 2 && st.Screen[y][x].Width == 1 {
+			// Printing this REP seed would erase the retained wide lead. Refuse
+			// until its parser state is faithfully restorable; #421's independent
+			// continuation case remains an unsatisfied acceptance gate.
+			return nil, ErrUnsupported
 		}
 		if st.Screen[y][x].Width == 0 && x > 0 {
 			x--
@@ -326,6 +342,22 @@ func (w *vtWriter) row(row []snapshot.CellState, full, lead bool, protection []b
 			// in its place rather than wrap it onto the next row.
 			c = snapshot.CellState{Content: " ", Width: 1, StyleState: c.StyleState}
 		}
+		if x > 0 && x < w.width-1 && row[x-1].Width == 2 && c.Width == 1 {
+			// Build the overlap at the physical edge, then shift that pair
+			// left. DCH moves the cells without repairing their interior.
+			// This also preserves the prefix already painted on this row.
+			w.b.WriteString("\x1b[" + strconv.Itoa(w.width-1) + "G")
+			w.protect(x-1 < len(protection) && protection[x-1])
+			w.cell(row[x-1])
+			w.mode(7, false)
+			w.protect(x < len(protection) && protection[x])
+			w.cell(c)
+			w.mode(7, true)
+			w.protect(false)
+			w.resetPen()
+			w.b.WriteString("\r\x1b[" + strconv.Itoa(x) + "G\x1b[" + strconv.Itoa(w.width-1-x) + "P\x1b[2C")
+			continue
+		}
 		overlap := x == w.width-1 && x > 0 && row[x-1].Width == 2 && c.Width == 1
 		if overlap {
 			w.mode(7, false)
@@ -335,6 +367,11 @@ func (w *vtWriter) row(row []snapshot.CellState, full, lead bool, protection []b
 			// Keep a null cell distinct from an explicitly printed space:
 			// xterm's REP reads the source cell's literal string.
 			w.pen(c.StyleState)
+			if lead && x == 0 {
+				// Consume the previous row's pending wrap before erasing the
+				// first null cell on this row.
+				w.b.WriteString(" \x1b[D")
+			}
 			w.b.WriteString("\x1b[X\x1b[C")
 			continue
 		}

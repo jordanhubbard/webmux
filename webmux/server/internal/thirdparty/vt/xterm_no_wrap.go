@@ -10,6 +10,7 @@ func (e *Emulator) EnableXtermNoWrap() {
 	for i := range e.scrs {
 		e.scrs[i].buf.empty.Content = ""
 	}
+	e.scrs[1].buf.keepHidden = true
 }
 
 func (e *Emulator) setPrintedCursor(x, y int) {

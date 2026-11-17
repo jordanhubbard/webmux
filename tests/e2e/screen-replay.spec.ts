@@ -7,11 +7,21 @@ import path from 'node:path';
 import { transformWithOxc } from 'vite';
 import { isTerminalLocalInput, shouldSuppressTerminalInput } from '../../webmux/frontend/src/utils/terminalInput';
 
-type Fixture = { name: string; cols: number; rows: number; original: string; snapshot: string; future: string; recaptured: string };
+type Fixture = { name: string; cols: number; rows: number; original: string; snapshot: string; future: string; recaptured: string; beforeCols?: number; beforeRows?: number; resizes?: [number, number][]; snapshotError?: string; recapturedError?: string };
 const names = ['wrap-toggle-pending', 'wrap-toggle-resolved', 'link-named', 'link-anonymous', 'link-replace', 'link-unicode', 'link-semicolon', 'link-wrapped', 'link-id-reuse', 'link-save', 'link-alternate', 'link-close-params', 'palette-short-hex', 'palette-short-rgb', 'palette-long-rgb', 'palette-long-hex', 'palette-single', 'palette-batch', 'palette-query', 'palette-reset', 'dynamic-colors', 'dynamic-query', 'dynamic-reset', 'saved-underline-csi', 'saved-underline-single', 'saved-underline-color', 'saved-underline-color-reset', 'saved-underline-batched', 'saved-underline-twice', 'saved-underline', 'saved-underline-1048', 'saved-underline-1049', 'alternate-wrapped-row', 'alternate-wrapped-blank', 'origin-clamp-top', 'origin-clamp-bottom', 'origin-clamp-then-widen', 'origin-batched-reset', 'origin-batched-reset-reverse', 'origin-active-at-restore', 'origin-after-ris', 'origin-after-soft-reset', 'saved-origin', 'saved-pending-wrap', 'saved-origin-csi', 'saved-origin-1048', 'saved-pending-1049', 'immediate', 'colored-underline', 'unicode', 'combining', 'pending-wrap', 'wide-pending-wrap', 'insert-mode', 'after-sgr', 'after-bell', 'after-private-osc', 'after-query', 'after-repeat', 'c0-inside-csi', 'del-inside-csi', 'after-del', 'after-erased-character'];
 const noWrapCases = JSON.parse(readFileSync(path.resolve(__dirname, '../../webmux/server/internal/thirdparty/vt/testdata/webmux-xterm-nowrap.json'), 'utf8')) as { name: string }[];
-noWrapCases.push(...['rep-space', 'rep-ascii', 'rep-wide-placeholder', 'rep-colored-null'].map(name => ({ name })));
+noWrapCases.push(...['rep-space', 'rep-ascii', 'rep-wide-placeholder', 'rep-colored-null', 'soft-reset-focus', 'soft-reset-paste', 'soft-reset-sync', 'region-bottom-wrap', 'region-top-reverse-index', 'region-bottom-index', 'region-saved-restore'].map(name => ({ name })));
 names.push(...noWrapCases.flatMap(c => [`nowrap-${c.name}`, `nowrap-${c.name}-byte-split`]));
+for (const base of ['address', 'advanced', 'wide', 'overlap', 'overlap-cleared', 'saved', 'saved-wide', 'alternate']) {
+  for (const size of ['grow', 'shrink', 'shrink-grow']) {
+    names.push(`nowrap-resize-${base}-${size}`, `nowrap-resize-${base}-${size}-byte-split`);
+  }
+}
+const recordedInputs = process.env.WEBMUX_SCREEN_REFERENCE_INPUTS;
+if (recordedInputs) {
+  const inputs = JSON.parse(readFileSync(recordedInputs, 'utf8')) as { name: string }[];
+  names.push(...inputs.map(input => `recorded-conpty-${input.name}`));
+}
 const NATIVE_SCREEN = Boolean(process.env.WEBMUX_NATIVE_SCREEN_CAPTURES || process.env.WEBMUX_NATIVE_SCREEN_TEST_LOG) || (process.platform === 'win32' && process.env.WEBMUX_SCREEN_REPLAY_ONLY === '1');
 const nativeNames = ['hyperlink-named', 'hyperlink-anonymous', 'hyperlink-unicode', 'hyperlink-reuse', 'palette-live-change', 'dynamic-colors', 'underline-restore', 'underline-1049', 'origin-restore', 'origin-clamp', 'origin-mode-batch', 'pending-wrap', 'pending-wrap-alt', 'nowrap-address', 'nowrap-advanced', 'nowrap-overwrite', 'nowrap-toggle', 'nowrap-wide', 'nowrap-wide-overlap', 'nowrap-wide-discard', 'nowrap-backspace', 'nowrap-soft-reset'];
 if (NATIVE_SCREEN) names.push(...nativeNames.map(name => `conpty-${name}`));
@@ -74,11 +84,13 @@ test.afterAll(async () => { if (server) await new Promise<void>(resolve => serve
 for (const name of names) {
   test(`Go screen snapshot matches xterm ${name}`, async ({ page }, info) => {
     const fixture = fixtures.find(f => f.name === name)!;
+    expect(fixture.snapshotError, 'required snapshot state remains unsupported').toBeUndefined();
+    expect(fixture.recapturedError, 'required second-attach state remains unsupported').toBeUndefined();
     await page.goto(address);
     const result = await page.evaluate(async f => {
       const Constructor = (window as unknown as { Terminal: typeof Terminal }).Terminal;
       const terminals = ['reference', 'restored', 'recaptured'].map(id => {
-        const t = new Constructor({ cols: f.cols, rows: f.rows, allowProposedApi: true });
+        const t = new Constructor({ cols: id === 'reference' ? f.beforeCols ?? f.cols : f.cols, rows: id === 'reference' ? f.beforeRows ?? f.rows : f.rows, allowProposedApi: true });
         (window as unknown as { installHyperlinkProfile(t: Terminal): { dispose(): void } }).installHyperlinkProfile(t);
         t.open(document.getElementById(id)!);
         return t;
@@ -134,7 +146,9 @@ for (const name of names) {
         else replayReplies.push(data);
       };
       b.onData(onReply); c.onData(onReply);
-      await write(a, f.original); await write(b, f.snapshot);
+      await write(a, f.original);
+      for (const [cols, rows] of f.resizes ?? []) a.resize(cols, rows);
+      await write(b, f.snapshot);
       const initial = compare(a, b);
       phase = 'live';
       await write(a, f.future); await write(b, f.future);

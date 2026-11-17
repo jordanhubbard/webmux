@@ -10,13 +10,18 @@ import (
 )
 
 type fixture struct {
-	Name       string `json:"name"`
-	Cols       int    `json:"cols"`
-	Rows       int    `json:"rows"`
-	Original   string `json:"original"`
-	Snapshot   string `json:"snapshot"`
-	Future     string `json:"future"`
-	Recaptured string `json:"recaptured"`
+	Name            string   `json:"name"`
+	Cols            int      `json:"cols"`
+	Rows            int      `json:"rows"`
+	Original        string   `json:"original"`
+	Snapshot        string   `json:"snapshot"`
+	Future          string   `json:"future"`
+	Recaptured      string   `json:"recaptured"`
+	BeforeCols      int      `json:"beforeCols,omitempty"`
+	BeforeRows      int      `json:"beforeRows,omitempty"`
+	Resizes         [][2]int `json:"resizes,omitempty"`
+	SnapshotError   string   `json:"snapshotError,omitempty"`
+	RecapturedError string   `json:"recapturedError,omitempty"`
 }
 
 func main() {
@@ -102,7 +107,7 @@ func main() {
 		after, err := image.Bytes()
 		check(tc.name, err)
 		check(tc.name, s.Close())
-		fixtures = append(fixtures, fixture{tc.name, 80, 24, tc.before, string(before), tc.after, string(after)})
+		fixtures = append(fixtures, fixture{Name: tc.name, Cols: 80, Rows: 24, Original: tc.before, Snapshot: string(before), Future: tc.after, Recaptured: string(after)})
 	}
 	var noWrap []struct{ Name, Data string }
 	data, err := os.ReadFile("internal/thirdparty/vt/testdata/webmux-xterm-nowrap.json")
@@ -113,6 +118,13 @@ func main() {
 		{"rep-ascii", "\x1b[?7l\x1b[2;6HV\x1b[2;8HX日"},
 		{"rep-wide-placeholder", "\x1b[?7l\x1b[2;5H日\x1b[2;8HX日"},
 		{"rep-colored-null", "\x1b[?7l\x1b[41m\x1b[2;6H\x1b[X\x1b[0m\x1b[2;8HX日"},
+		{"soft-reset-focus", "\x1b[?1004h\x1b[?7l\x1b[2;8HX\x1b[!p"},
+		{"soft-reset-paste", "\x1b[?2004h\x1b[?7l\x1b[2;8HX\x1b[!p"},
+		{"soft-reset-sync", "\x1b[?2026h\x1b[?7l\x1b[2;8HX\x1b[!p"},
+		{"region-bottom-wrap", "\x1b[2;1HTOP\x1b[3;1HBOTTOM\x1b[2;3r\x1b[?7l\x1b[3;8HX\x1b[?7hY"},
+		{"region-top-reverse-index", "\x1b[2;1HTOP\x1b[3;1HBOTTOM\x1b[2;3r\x1b[?7l\x1b[2;8HX\x1bM"},
+		{"region-bottom-index", "\x1b[2;1HTOP\x1b[3;1HBOTTOM\x1b[2;3r\x1b[?7l\x1b[3;8HX\n"},
+		{"region-saved-restore", "\x1b[?7l\x1b[4;8HX\x1b7\x1b[2;3r\x1b[?6h\x1b8"},
 	}...)
 	for _, tc := range noWrap {
 		for _, split := range []bool{false, true} {
@@ -140,7 +152,98 @@ func main() {
 			after, err := image.Bytes()
 			check(name, err)
 			check(name, s.Close())
-			fixtures = append(fixtures, fixture{name, 8, 4, tc.Data, string(before), future, string(after)})
+			fixtures = append(fixtures, fixture{Name: name, Cols: 8, Rows: 4, Original: tc.Data, Snapshot: string(before), Future: future, Recaptured: string(after)})
+		}
+	}
+	for _, tc := range []struct{ name, before, after string }{
+		{"address", "\x1b[?7l\x1b[2;8H", "Z\x1b[?7hQ"},
+		{"advanced", "\x1b[?7l\x1b[2;8HX", "Z\x1b[?7hQ"},
+		{"wide", "\x1b[?7l\x1b[2;7H日", "Z\x1b[?7hQ"},
+		{"overlap", "\x1b[?7l\x1b[2;7H日Z", "\x1b[2bQ\x1b[?7hR"},
+		{"overlap-cleared", "\x1b[?7l\x1b[2;7H日Z\x1b[0m", "\x1b[2bQ\x1b[?7hR"},
+		{"saved", "\x1b[?7l\x1b[2;8HX\x1b7\x1b[H", "\x1b8Z\x1b[?7hQ"},
+		{"saved-wide", "\x1b[?7l\x1b[2;7H日\x1b7\x1b[H", "\x1b8Z\x1b[?7hQ"},
+		{"alternate", "\x1b[?7l\x1b[2;8HX\x1b[?1049hALT", "\x1b[?1049lZ\x1b[?7hQ"},
+	} {
+		for _, plan := range []struct {
+			name  string
+			sizes [][2]int
+		}{
+			{"grow", [][2]int{{12, 4}}},
+			{"shrink", [][2]int{{6, 4}}},
+			{"shrink-grow", [][2]int{{6, 4}, {12, 4}}},
+		} {
+			for _, split := range []bool{false, true} {
+				name := "nowrap-resize-" + tc.name + "-" + plan.name
+				if split {
+					name += "-byte-split"
+				}
+				s, err := screenstate.New(8, 4)
+				check(name, err)
+				if split {
+					for _, b := range []byte(tc.before) {
+						check(name, s.Feed([]byte{b}))
+					}
+				} else {
+					check(name, s.Feed([]byte(tc.before)))
+				}
+				for _, size := range plan.sizes {
+					check(name, s.Resize(size[0], size[1]))
+				}
+				image, err := s.Capture()
+				check(name, err)
+				before, err := image.Bytes()
+				beforeError := ""
+				if err != nil {
+					beforeError = err.Error()
+				}
+				check(name, s.Feed([]byte(tc.after)))
+				image, err = s.Capture()
+				check(name, err)
+				after, err := image.Bytes()
+				afterError := ""
+				if err != nil {
+					afterError = err.Error()
+				}
+				check(name, s.Close())
+				last := plan.sizes[len(plan.sizes)-1]
+				fixtures = append(fixtures, fixture{Name: name, Cols: last[0], Rows: last[1], Original: tc.before, Snapshot: string(before), Future: tc.after, Recaptured: string(after), BeforeCols: 8, BeforeRows: 4, Resizes: plan.sizes, SnapshotError: beforeError, RecapturedError: afterError})
+			}
+		}
+	}
+	if path := os.Getenv("WEBMUX_SCREEN_REFERENCE_INPUTS"); path != "" {
+		file, err := os.Stat(path)
+		check("recorded reference", err)
+		if file.Size() > 16<<20 {
+			check("recorded reference", fmt.Errorf("input exceeds 16MiB"))
+		}
+		data, err := os.ReadFile(path)
+		check("recorded reference", err)
+		var inputs []struct {
+			Name             string
+			Cols, Rows       int
+			Original, Future string
+		}
+		check("recorded reference", json.Unmarshal(data, &inputs))
+		if len(inputs) > 512 {
+			check("recorded reference", fmt.Errorf("more than 512 inputs"))
+		}
+		for _, tc := range inputs {
+			name := "recorded-conpty-" + tc.Name
+			s, err := screenstate.New(tc.Cols, tc.Rows)
+			check(name, err)
+			check(name, s.Feed([]byte(tc.Original)))
+			image, err := s.Capture()
+			check(name, err)
+			before, err := image.Bytes()
+			check(name, err)
+			check(name, s.Feed([]byte(tc.Future)))
+			image, err = s.Capture()
+			check(name, err)
+			after, err := image.Bytes()
+			check(name, err)
+			check(name, s.Close())
+			fixtures = append(fixtures, fixture{Name: name, Cols: tc.Cols, Rows: tc.Rows, Original: tc.Original, Future: tc.Future, Snapshot: string(before), Recaptured: string(after)})
 		}
 	}
 	check("encode", json.NewEncoder(os.Stdout).Encode(fixtures))

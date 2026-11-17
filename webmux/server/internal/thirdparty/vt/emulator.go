@@ -1273,6 +1273,26 @@ func (e *Emulator) Resize(width int, height int) {
 		return
 	}
 
+	if e.xtermNoWrap {
+		// Finish the drawn cluster before forgetting its original cell. Otherwise
+		// the buffered base can be drawn a second time by the next Write.
+		e.flushGrapheme()
+		for i := range e.scrs {
+			s := &e.scrs[i]
+			if s == e.scr && e.atPhantom && s.cur.X == s.buf.Width()-1 {
+				s.cur.X++
+			}
+			if s.savedExtra.phantom && s.saved.X == s.buf.Width()-1 {
+				s.saved.X++
+			}
+			s.cur.X = min(s.cur.X, width-1)
+			s.saved.X = min(s.saved.X, width-1)
+			s.savedExtra.phantom = false
+			s.wideCol = false
+		}
+		e.atPhantom = false
+	}
+
 	// A resize reflows and reclamps, so the cell an open cluster was drawn into
 	// no longer identifies that cluster. Close it, and forget the parked print
 	// for the same reason.

@@ -29,7 +29,8 @@ import (
 // when the shift spans the full width, rows move by header instead of cell
 // by cell.
 type grid struct {
-	empty uv.Cell // Configurable blank content for the opt-in xterm profile.
+	keepHidden bool    // xterm alternate-buffer columns survive a narrow viewport.
+	empty      uv.Cell // Configurable blank content for the opt-in xterm profile.
 	// rows holds the lines. A nil row is a row of blank cells.
 	rows []uv.Line
 	// width is the number of columns; every non-nil row has this length.
@@ -274,7 +275,7 @@ func (g *grid) setTail(y int, t uv.Line) {
 
 // dropTail forgets row y's tail, because the row was written to.
 func (g *grid) dropTail(y int) {
-	if g.tail != nil && y >= 0 && y < len(g.tail) {
+	if !g.keepHidden && g.tail != nil && y >= 0 && y < len(g.tail) {
 		g.tail[y] = nil
 	}
 }
@@ -415,14 +416,31 @@ func (g *grid) SetCell(x, y int, c *uv.Cell) {
 // what falls outside the new size is dropped.
 func (g *grid) Resize(width, height int) {
 	if width != g.width {
-		for y, row := range g.rows {
-			if row == nil {
-				continue
+		if g.keepHidden {
+			tails := make([]uv.Line, len(g.rows))
+			for y, row := range g.rows {
+				if row == nil {
+					continue
+				}
+				full := append(append(uv.Line(nil), row...), g.rowTail(y)...)
+				visible := g.newBlankLine(width)
+				copy(visible, full)
+				g.rows[y] = visible
+				if len(full) > width {
+					tails[y] = append(uv.Line(nil), full[width:]...)
+				}
 			}
-			if width > len(row) {
-				g.rows[y] = append(row, g.newBlankLine(width-len(row))...)
-			} else {
-				g.rows[y] = row[:width]
+			g.tail = tails
+		} else {
+			for y, row := range g.rows {
+				if row == nil {
+					continue
+				}
+				if width > len(row) {
+					g.rows[y] = append(row, g.newBlankLine(width-len(row))...)
+				} else {
+					g.rows[y] = row[:width]
+				}
 			}
 		}
 		g.width = width
@@ -434,7 +452,9 @@ func (g *grid) Resize(width, height int) {
 		// Rows are cut or padded, not reflowed, so a row that wrapped at
 		// the old width does not wrap at the new one.
 		clear(g.wrap)
-		g.tail = nil
+		if !g.keepHidden {
+			g.tail = nil
+		}
 		for y, row := range g.prot {
 			if row == nil {
 				continue

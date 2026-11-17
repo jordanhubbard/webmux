@@ -527,3 +527,29 @@ func TestXtermNoWrapEnableAllowsRepresentableCursor(t *testing.T) {
 		}
 	}
 }
+
+func TestResizeOverlapParserRefusalPreservesMirror(t *testing.T) {
+	s := newScreen(t, 8, 4)
+	if err := s.Feed([]byte("\x1b[?7l\x1b[2;7H日Z")); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Resize(12, 4); err != nil {
+		t.Fatal(err)
+	}
+	image, err := s.Capture()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data, err := image.Bytes(); !errors.Is(err, ErrUnsupported) || data != nil {
+		t.Fatal("unrestored repeat state was accepted", err)
+	}
+	if err := s.Feed([]byte("\x1b[0m")); err != nil {
+		t.Fatal(err)
+	}
+	if len(imageBytes(t, s)) == 0 {
+		t.Fatal("continuing mirror did not recover after parser-state reset")
+	}
+	if _, err := image.Bytes(); !errors.Is(err, ErrUnsupported) {
+		t.Fatal("captured refusal mutated after later output", err)
+	}
+}

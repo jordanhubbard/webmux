@@ -97,6 +97,9 @@ func (e *Emulator) softReset() {
 	if e.xtermNoWrap {
 		// xterm.js resets DECAWM on DECSTR, including a logical edge cursor.
 		e.setMode(ansi.ModeAutoWrap, ansi.ModeSet)
+		e.setMode(ansi.ModeFocusEvent, ansi.ModeReset)
+		e.setMode(ansi.ModeBracketedPaste, ansi.ModeReset)
+		e.setMode(ansi.ModeSynchronizedOutput, ansi.ModeReset)
 	}
 	// Several of the modes below home the cursor when they are set or reset on
 	// their own, DECOM among them, and a soft reset must not move it. Putting

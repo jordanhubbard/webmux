@@ -139,6 +139,7 @@ func (e *Emulator) horizontalTabSet() {
 // reverseIndex moves the cursor up one line, or scrolling down. This does not
 // reset the phantom state i.e. pending wrap state.
 func (e *Emulator) reverseIndex() {
+	e.restrictXtermCursor()
 	x, y := e.scr.CursorPosition()
 	scroll := e.scr.ScrollRegion()
 	if y == scroll.Min.Y && x >= scroll.Min.X && x < scroll.Max.X {
