@@ -26,15 +26,19 @@ function Quote-Literal([string]$Value) { return "'" + $Value.Replace("'", "''") 
 $workerPath = (Split-Path $node) + ';' + (Split-Path $go) + ';' + $env:SystemRoot + '\System32;' + $env:SystemRoot
 $source = @'
 $ErrorActionPreference = 'Stop'
+function Finish([string]$Code) {
+    [IO.File]::WriteAllText(__RESULT__ + '.tmp', $Code)
+    [IO.File]::Move(__RESULT__ + '.tmp', __RESULT__)
+}
 try {
     $env:PATH = __PATH__
     $env:GOTOOLCHAIN = 'local'
     $env:WEBMUX_NATIVE_CURSOR_CAPTURES = __CAPTURES__
-    & __GO__ tool test2json -t -p github.com/jordanhubbard/webmux/server/internal/nativeprovider __IMAGE__ -test.v -test.run '^TestNativeProviderSavedCursorCaptures$' -test.timeout 120s 2>&1 | Set-Content -Encoding UTF8 -LiteralPath __LOG__
-    [IO.File]::WriteAllText(__RESULT__, [string]$LASTEXITCODE)
+    & __GO__ tool test2json -t -p github.com/jordanhubbard/webmux/server/internal/nativeprovider __IMAGE__ '-test.v' '-test.run=^TestNativeProviderSavedCursorCaptures$' '-test.timeout=120s' 2>&1 | Set-Content -Encoding UTF8 -LiteralPath __LOG__
+    Finish ([string]$LASTEXITCODE)
 } catch {
     $_ | Out-String | Set-Content -Encoding UTF8 -LiteralPath __ERROR__
-    [IO.File]::WriteAllText(__RESULT__, '1')
+    Finish '1'
 }
 '@
 foreach ($entry in @{
