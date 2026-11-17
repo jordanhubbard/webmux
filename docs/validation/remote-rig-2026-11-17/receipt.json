@@ -1,0 +1,78 @@
+{
+  "contract": "webmux-remote-rig-qualification/v1",
+  "passed": true,
+  "qualifiedRuntimeRevision": "74d0f2d45319e16aea5ba3e003f0bb5a3942f724",
+  "harness": "scripts/qualify-remote-rig.mts",
+  "harnessSHA256": "3cb71718eba5d66499e29d22f99f7159dab4ff09f4da06319d972d3cef9e84cc",
+  "serverSHA256": "fc360c120c97af43635b7f6e128357339816adf4ac6c98cc9ef514de1a5012ef",
+  "clientSHA256": "0465f7bf024bceeffdbb01054cac6941cf46986d1e426e28166fbab23d960469",
+  "producerObservation": {
+    "version": "1.4.5",
+    "revision": "74d0f2d45319e16aea5ba3e003f0bb5a3942f724",
+    "modified": false,
+    "provenance": "build-producer-self-report",
+    "attested": false
+  },
+  "phases": [
+    {
+      "stage": "check-in",
+      "seat": "host-rig/f24b1510-f752-46fd-93ac-0299268ee4c3/0c4a9b43eeb7f496b539d1907d98a944e0b056de0b1a9971b3931db133bbb701",
+      "remotePanePID": "63484",
+      "rig": "01M7M6Y16RM594RMPMXHR61YNK",
+      "rigVersion": "0.6.14 (df1c1517)"
+    },
+    {
+      "stage": "environment",
+      "controllerOS": "darwin",
+      "controllerArch": "arm64",
+      "node": "v26.8.1",
+      "chromium": "157.0.8103.79",
+      "guest": "Linux 5.15.0-203-generic aarch64",
+      "guestNode": "v24.22.3",
+      "tmux": "tmux 3.2a",
+      "rigVersion": "0.6.14 (df1c1517)"
+    },
+    {
+      "stage": "real-ssh-keyboard",
+      "session": "56b70d4e-884d-497d-8e9d-2d834797ed21",
+      "row": 0,
+      "col": 0,
+      "remotePanePID": "63484"
+    },
+    {
+      "stage": "two-windows-one-viewer",
+      "session": "56b70d4e-884d-497d-8e9d-2d834797ed21",
+      "remotePanePID": "63484"
+    },
+    {
+      "stage": "canonical-before-client-loss",
+      "lifecycle": "attention_required"
+    },
+    {
+      "stage": "client-stopped",
+      "stopped_clients": 1
+    },
+    {
+      "stage": "offline-preserves-canonical-lifecycle",
+      "remotePanePID": "63484"
+    },
+    {
+      "stage": "controller-restart-retains-seat-and-layout",
+      "session": "56b70d4e-884d-497d-8e9d-2d834797ed21",
+      "remotePanePID": "63484"
+    },
+    {
+      "stage": "revocation-preserves-provider",
+      "remotePanePID": "63484"
+    },
+    {
+      "stage": "ordinary-ssh-independent-of-rig",
+      "remotePanePID": "63484"
+    },
+    {
+      "stage": "client-stopped",
+      "stopped_clients": 1
+    }
+  ],
+  "scope": "Disposable real Rig/tmux shell seat and authenticated host channel, SSH viewer, browser input and lifecycle; not native coding-conversation or arbitrary-host acceptance."
+}

@@ -16,18 +16,22 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/jordanhubbard/webmux/server/internal/auth"
+	"github.com/jordanhubbard/webmux/server/internal/rigobservation"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 )
 
 const clientProtocol = 1
 
 type clientSnapshot struct {
-	Hostname string   `json:"hostname" yaml:"hostname"`
-	OS       string   `json:"os" yaml:"os"`
-	Arch     string   `json:"arch" yaml:"arch"`
-	CPUs     int      `json:"cpus" yaml:"cpus"`
-	Load1    *float64 `json:"load1,omitempty" yaml:"load1,omitempty"`
-	At       string   `json:"at" yaml:"at"`
+	LastRig  *rigobservation.Report `json:"-" yaml:"last_rig,omitempty"`
+	RigAt    string                 `json:"-" yaml:"rig_at,omitempty"`
+	Rig      *rigobservation.Report `json:"rig,omitempty" yaml:"rig,omitempty"`
+	Hostname string                 `json:"hostname" yaml:"hostname"`
+	OS       string                 `json:"os" yaml:"os"`
+	Arch     string                 `json:"arch" yaml:"arch"`
+	CPUs     int                    `json:"cpus" yaml:"cpus"`
+	Load1    *float64               `json:"load1,omitempty" yaml:"load1,omitempty"`
+	At       string                 `json:"at" yaml:"at"`
 }
 
 type clientRecord struct {
@@ -337,7 +341,7 @@ func (s *Server) clientSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer connection.Close()
-	connection.SetReadLimit(8192)
+	connection.SetReadLimit(rigobservation.MaxBytes + 8192)
 	state := &clientConnection{conn: connection, pending: make(map[string]chan struct{})}
 	s.clientMu.Lock()
 	if previous := s.clientSockets[client.ID]; previous != nil {
@@ -378,13 +382,27 @@ func (s *Server) clientSocket(w http.ResponseWriter, r *http.Request) {
 			closeSocket(connection, 1008, "Client credential revoked")
 			return
 		}
-		if frame.Type != "snapshot" || frame.Snapshot == nil || len(frame.Snapshot.Hostname) > 255 || len(frame.Snapshot.OS) == 0 || len(frame.Snapshot.OS) > 32 || len(frame.Snapshot.Arch) == 0 || len(frame.Snapshot.Arch) > 32 || frame.Snapshot.CPUs < 1 || frame.Snapshot.CPUs > 65536 || (frame.Snapshot.Load1 != nil && (math.IsNaN(*frame.Snapshot.Load1) || math.IsInf(*frame.Snapshot.Load1, 0) || *frame.Snapshot.Load1 < 0)) {
+		if frame.Type != "snapshot" || frame.Snapshot == nil || rigobservation.Validate(frame.Snapshot.Rig) != nil || len(frame.Snapshot.Hostname) > 255 || len(frame.Snapshot.OS) == 0 || len(frame.Snapshot.OS) > 32 || len(frame.Snapshot.Arch) == 0 || len(frame.Snapshot.Arch) > 32 || frame.Snapshot.CPUs < 1 || frame.Snapshot.CPUs > 65536 || (frame.Snapshot.Load1 != nil && (math.IsNaN(*frame.Snapshot.Load1) || math.IsInf(*frame.Snapshot.Load1, 0) || *frame.Snapshot.Load1 < 0)) {
 			closeSocket(connection, 1008, "Invalid client snapshot")
 			return
 		}
 		frame.Snapshot.At = time.Now().UTC().Format(time.RFC3339)
 		s.clientMu.Lock()
 		if s.clientSockets[client.ID] == state {
+			if frame.Snapshot.Rig != nil {
+				previous := client.Snapshot
+				if latest, ok := s.clientFacts[client.ID]; ok {
+					previous = &latest
+				}
+				if previous != nil {
+					frame.Snapshot.LastRig = previous.LastRig
+					frame.Snapshot.RigAt = previous.RigAt
+				}
+				if frame.Snapshot.Rig.State == "ok" {
+					frame.Snapshot.LastRig = frame.Snapshot.Rig
+					frame.Snapshot.RigAt = frame.Snapshot.At
+				}
+			}
 			s.clientFacts[client.ID] = *frame.Snapshot
 		}
 		s.clientMu.Unlock()

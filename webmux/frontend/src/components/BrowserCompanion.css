@@ -35,3 +35,7 @@
 
 .browser-find { flex-wrap: wrap; }
 .browser-find input { flex-basis: 100px; }
+
+.browser-controls { display: contents; }
+.browser-profiles { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0.4rem; }
+.browser-profiles small { flex-basis: 100%; }

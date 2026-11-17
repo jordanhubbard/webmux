@@ -3,11 +3,11 @@ import { render, act, screen, fireEvent } from '@testing-library/react';
 import { BrowserCompanion } from '@frontend/components/BrowserCompanion';
 import type { Session } from '@frontend/types';
 const fixture = vi.hoisted(() => ({ action: vi.fn() }));
-vi.mock('@frontend/utils/api', () => ({ api: { browserAction: fixture.action } }));
+vi.mock('@frontend/utils/api', () => ({ api: { browserAction: fixture.action, getBrowserProfiles: vi.fn().mockResolvedValue([]), endBrowser: vi.fn().mockResolvedValue(undefined), createBrowserProfile: vi.fn().mockResolvedValue({ id: 'saved', name: 'Work' }), releaseBrowser: vi.fn().mockResolvedValue(undefined) } }));
 
 it.each(['about:blank', 'https://example.com/previous'])('keeps a URL draft when a delayed %s frame arrives between blur and Go', async previous => {
  vi.useFakeTimers();
- const frame = { protocol: 2, image: 'fixture', url: previous, tabs: [], target: 'one' };
+ const frame = { protocol: 3, control: { owned: true, available: false }, image: 'fixture', url: previous, tabs: [], target: 'one' };
  const destination = 'http://localhost:3000/authorize';
  const redirect = 'https://provider.example/redirect';
  let resolveFrame!: (value: typeof frame) => void;
@@ -35,7 +35,7 @@ it.each(['about:blank', 'https://example.com/previous'])('keeps a URL draft when
 });
 
 it('releases the address draft when the user explicitly navigates back', async () => {
- const frame = { protocol: 2, image: 'fixture', url: 'https://example.com/work', canBack: true, tabs: [], target: 'one' };
+ const frame = { protocol: 3, control: { owned: true, available: false }, image: 'fixture', url: 'https://example.com/work', canBack: true, tabs: [], target: 'one' };
  fixture.action.mockReset().mockResolvedValueOnce(frame).mockResolvedValue({ ...frame, url: 'https://example.com/previous' });
  const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
  try {
@@ -53,7 +53,7 @@ it('releases the address draft when the user explicitly navigates back', async (
 
 it.each(['about:blank', 'https://example.com/work'])('Escape cancels a URL draft and resumes address updates for %s', async url => {
  vi.useFakeTimers();
- const frame = { protocol: 2, image: 'fixture', url, tabs: [], target: 'one' };
+ const frame = { protocol: 3, control: { owned: true, available: false }, image: 'fixture', url, tabs: [], target: 'one' };
  fixture.action.mockReset().mockResolvedValueOnce(frame).mockResolvedValue({ ...frame, url: 'https://example.com/redirect' });
  const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
  try {
@@ -70,7 +70,7 @@ it.each(['about:blank', 'https://example.com/work'])('Escape cancels a URL draft
 });
 
 it('does not navigate when Go is pressed with an empty address', async () => {
- fixture.action.mockReset().mockResolvedValue({ protocol: 2, image: 'fixture', url: 'about:blank', tabs: [], target: 'one' });
+ fixture.action.mockReset().mockResolvedValue({ protocol: 3, control: { owned: true, available: false }, image: 'fixture', url: 'about:blank', tabs: [], target: 'one' });
  const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
  try {
   await act(async () => { await Promise.resolve(); });
@@ -83,7 +83,7 @@ it('does not navigate when Go is pressed with an empty address', async () => {
 it.each(['frame', 'request'])('keeps polling after a transient %s failure during navigation', async failure => {
   vi.useFakeTimers();
   try {
-    const frame = { protocol: 2, image: 'fixture', url: 'https://example.com/start', tabs: [], target: 'one' };
+    const frame = { protocol: 3, control: { owned: true, available: false }, image: 'fixture', url: 'https://example.com/start', tabs: [], target: 'one' };
     fixture.action.mockReset().mockResolvedValueOnce(frame);
     if (failure === 'frame') fixture.action.mockResolvedValueOnce({ error: 'Navigation interrupted screenshot' });
     else fixture.action.mockRejectedValueOnce(new Error('Navigation interrupted request'));
@@ -105,7 +105,7 @@ it.each([
  ['https://example.com/auth?redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Fcallback&state=opaque', false],
 ])('offers the correct device-browser path for %s', async (url, direct) => {
  const handoff = vi.fn();
- fixture.action.mockReset().mockResolvedValue({ protocol: 2, image: 'fixture', url, tabs: [{ id: 'one', title: 'Page' }], target: 'one' });
+ fixture.action.mockReset().mockResolvedValue({ protocol: 3, control: { owned: true, available: false }, image: 'fixture', url, tabs: [{ id: 'one', title: 'Page' }], target: 'one' });
  const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} onAuthentication={handoff} />);
  try {
   await act(async () => { await Promise.resolve(); });
@@ -119,7 +119,7 @@ it.each([
 });
 
 it('sends composed text once rather than forwarding intermediate IME keystrokes', async () => {
- fixture.action.mockReset().mockResolvedValue({ protocol: 2, image: 'fixture', url: 'https://example.com', tabs: [], target: 'one' });
+ fixture.action.mockReset().mockResolvedValue({ protocol: 3, control: { owned: true, available: false }, image: 'fixture', url: 'https://example.com', tabs: [], target: 'one' });
  const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
  try {
   await act(async () => { await Promise.resolve(); });
@@ -151,7 +151,7 @@ it('reports an older terminal-host worker instead of silently sending unsupporte
 it('recovers an interrupted first frame without replaying its authentication navigation', async () => {
  vi.useFakeTimers();
  const url = 'http://localhost:3000/authorize?state=fixture';
- const frame = { protocol: 2, url, tabs: [], target: 'one' };
+ const frame = { protocol: 3, control: { owned: true, available: false }, url, tabs: [], target: 'one' };
  fixture.action.mockReset().mockImplementation((_id, action: { action: string }) => Promise.resolve(
   action.action === 'frame' ? { ...frame, image: 'recovered-frame' } : { ...frame, error: 'Page rendering was interrupted; retry or open the site in your browser' }
  ));
@@ -191,7 +191,7 @@ it('cancels a pending viewport resize when the drawer returns to its last reques
   }
   observe() {} disconnect() {}
  });
- fixture.action.mockReset().mockResolvedValue({ protocol: 2, image: 'fixture', url: 'about:blank', width: 800, height: 500, tabs: [], target: 'one' });
+ fixture.action.mockReset().mockResolvedValue({ protocol: 3, control: { owned: true, available: false }, image: 'fixture', url: 'about:blank', width: 800, height: 500, tabs: [], target: 'one' });
  const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
  try {
   await act(async () => { await Promise.resolve(); });
@@ -202,4 +202,80 @@ it('cancels a pending viewport resize when the drawer returns to its last reques
   await act(async () => { resize(900, 550); vi.advanceTimersByTime(120); });
   expect(requests()).toEqual([{ action: 'resize', width: 800, height: 500 }, { action: 'resize', width: 900, height: 550 }]);
  } finally { view.unmount(); vi.unstubAllGlobals(); vi.useRealTimers(); }
+});
+
+it('keeps an observer read-only until an explicit control claim', async () => {
+ const frame = { protocol: 3, control: { owned: false, available: true }, url: 'https://example.com', tabs: [], target: 'one' };
+ fixture.action.mockReset().mockResolvedValue(frame);
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  expect(screen.getByText('View only')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Go' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'End browser' })).toBeDisabled();
+  expect(screen.getByLabelText('Type into remote page')).toBeDisabled();
+  fixture.action.mockResolvedValue({ ...frame, control: { owned: true, available: false } });
+  fireEvent.click(screen.getByRole('button', { name: 'Take control' }));
+  await act(async () => { await Promise.resolve(); });
+  expect(fixture.action).toHaveBeenCalledWith('test', { action: 'claim', force: true });
+  expect(screen.getByText('You control this browser')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Go' })).toBeEnabled();
+ } finally { view.unmount(); }
+});
+
+it('releases a claimed controller when its drawer unmounts', async () => {
+ const frame = { protocol: 3, control: { owned: true, available: false }, url: '', tabs: [], target: 'one' };
+ fixture.action.mockReset().mockResolvedValue(frame);
+ const view = render(<BrowserCompanion session={{ id: 'release', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ await act(async () => { await Promise.resolve(); });
+ view.unmount();
+ await act(async () => { await Promise.resolve(); });
+ // The API wrapper retains the private token. The component never embeds it in the DOM.
+ const { api } = await import('@frontend/utils/api');
+ expect(api.releaseBrowser).toHaveBeenCalledWith('release');
+});
+
+it('opens a saved profile only after explicit selection and worker replacement', async () => {
+ const frame = { protocol: 3, control: { owned: true, available: false }, url: '', tabs: [], target: 'one' };
+ fixture.action.mockReset().mockResolvedValue(frame);
+ const view = render(<BrowserCompanion session={{ id: 'profiles', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  expect(fixture.action).toHaveBeenCalledWith('profiles', { action: 'start' });
+  fireEvent.change(screen.getByLabelText('New browser profile name'), { target: { value: 'Work' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Create saved profile' }));
+  await act(async () => { await Promise.resolve(); });
+  expect(screen.getByLabelText('Browser profile')).toHaveValue('saved');
+  expect(fixture.action).not.toHaveBeenCalledWith('profiles', { action: 'start', profileId: 'saved' });
+  fireEvent.click(screen.getByRole('button', { name: 'Open selected profile' }));
+  await act(async () => { await Promise.resolve(); });
+  const { api } = await import('@frontend/utils/api');
+  expect(api.endBrowser).toHaveBeenCalledWith('profiles');
+  expect(fixture.action).toHaveBeenLastCalledWith('profiles', { action: 'start', profileId: 'saved' });
+ } finally { view.unmount(); }
+});
+
+it('keeps reconnect available after startup fails before a controller grant', async () => {
+ fixture.action.mockReset().mockRejectedValueOnce(new Error('Worker unavailable')).mockResolvedValue({ protocol: 3, control: { owned: true, available: false }, url: '', tabs: [], target: 'one' });
+ const view = render(<BrowserCompanion session={{ id: 'retry', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  const retry = screen.getByRole('button', { name: 'Reconnect browser' });
+  expect(retry).toBeEnabled();
+  fireEvent.click(retry);
+  await act(async () => { await Promise.resolve(); });
+  expect(screen.getByText('You control this browser')).toBeInTheDocument();
+ } finally { view.unmount(); }
+});
+
+it('reconnects the displayed saved profile after a worker error', async () => {
+ const frame = { protocol: 3, control: { owned: true, available: false }, profileId: 'retained', profileName: 'Work', error: 'Interrupted page', url: '', tabs: [], target: 'one' };
+ fixture.action.mockReset().mockResolvedValue(frame);
+ const view = render(<BrowserCompanion session={{ id: 'saved-retry', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  fireEvent.click(screen.getByRole('button', { name: 'Reconnect browser' }));
+  await act(async () => { await Promise.resolve(); });
+  expect(fixture.action).toHaveBeenLastCalledWith('saved-retry', { action: 'start', profileId: 'retained' });
+ } finally { view.unmount(); }
 });

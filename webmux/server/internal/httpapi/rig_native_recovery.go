@@ -9,6 +9,9 @@ import (
 )
 
 func (p *rigProvider) PlanNativeRecovery(ctx context.Context, saved session.RigIdentity) (func(context.Context) ([]string, error), error) {
+	if isRemoteRigTarget(saved.Target) {
+		return nil, managedRecoveryError("Remote Rig conversations must be recovered through Rig on the execution host.")
+	}
 	input, err := json.Marshal(saved)
 	if err != nil {
 		return nil, err

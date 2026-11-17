@@ -57,13 +57,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export interface BrowserAction {
-  action: string; url?: string; text?: string; key?: string; code?: string;
+  action: string; profileId?: string; force?: boolean; url?: string; text?: string; key?: string; code?: string;
   keyCode?: number; modifiers?: number; x?: number; y?: number; deltaY?: number; deltaX?: number; target?: string;
   width?: number; height?: number; button?: string; buttons?: number; clickCount?: number;
   backward?: boolean; ignoreCache?: boolean; accept?: boolean; files?: { name: string; data: string }[];
 }
 export interface BrowserFrame {
   protocol?: number;
+  control?: { owned: boolean; available: boolean; expiresAt?: string; token?: string };
+  profileId?: string; profileName?: string;
   image?: string; url: string; target: string; tabs: { id: string; title: string }[]; error?: string;
   width?: number; height?: number; canBack?: boolean; canForward?: boolean;
   dialog?: { type: string; message: string; prompt: string };
@@ -72,6 +74,20 @@ export interface BrowserFrame {
   downloads?: { id: string; name: string; state: string; bytes: number }[];
   file?: { name: string; data: string };
   clipboard?: string; found?: boolean;
+}
+
+export interface BrowserProfile { id: string; name: string }
+let browserViewer = '';
+const browserTokens = new Map<string, string>();
+function browserIdentity(id: string) {
+  if (!browserViewer) browserViewer = Array.from(crypto.getRandomValues(new Uint8Array(16)), value => value.toString(16).padStart(2, '0')).join('');
+  return { viewer: browserViewer, controlToken: browserTokens.get(id) ?? '' };
+}
+async function browserAction(id: string, action: BrowserAction) {
+  const result = await request<BrowserFrame>(`/sessions/${id}/browser`, { method: 'POST', body: JSON.stringify({ ...action, ...browserIdentity(id) }) });
+  if (result.control?.owned && result.control.token) browserTokens.set(id, result.control.token);
+  else browserTokens.delete(id);
+  return result;
 }
 
 export interface PermissionResult {
@@ -123,8 +139,19 @@ export const api = {
   beginAuthHandoff: (id: string, authorization: string) => request<{ id: string; expires_in: number }>(`/sessions/${id}/auth-handoff`, { method: 'POST', body: JSON.stringify({ authorization }) }),
   deliverAuthHandoff: (id: string, ticket: string, callback: string) => request<{ delivered: boolean }>(`/sessions/${id}/auth-handoff`, { method: 'POST', body: JSON.stringify({ id: ticket, callback }) }),
   endAuthHandoff: (id: string, ticket: string) => request<void>(`/sessions/${id}/auth-handoff`, { method: 'DELETE', body: JSON.stringify({ id: ticket }) }),
-  browserAction: (id: string, action: BrowserAction) => request<BrowserFrame>(`/sessions/${id}/browser`, { method: 'POST', body: JSON.stringify(action) }),
-  endBrowser: (id: string) => request<void>(`/sessions/${id}/browser`, { method: 'DELETE' }),
+  browserAction,
+  endBrowser: async (id: string) => {
+    await request<void>(`/sessions/${id}/browser`, { method: 'DELETE', body: JSON.stringify(browserIdentity(id)) });
+    browserTokens.delete(id);
+  },
+  releaseBrowser: async (id: string) => {
+    if (!browserTokens.has(id)) return;
+    const identity = browserIdentity(id); browserTokens.delete(id);
+    await request<BrowserFrame>(`/sessions/${id}/browser`, { method: 'POST', body: JSON.stringify({ action: 'release', ...identity }) });
+  },
+  getBrowserProfiles: (id: string) => request<BrowserProfile[]>(`/sessions/${id}/browser/profiles`),
+  createBrowserProfile: (id: string, name: string) => request<BrowserProfile>(`/sessions/${id}/browser/profiles`, { method: 'POST', body: JSON.stringify({ name }) }),
+  deleteBrowserProfile: (id: string, profileId: string) => request<void>(`/sessions/${id}/browser/profiles`, { method: 'DELETE', body: JSON.stringify({ profileId }) }),
   // Auth
   getAuthStatus: () => request<AuthStatus>('/auth/status'),
   login: (username: string, password: string) =>
