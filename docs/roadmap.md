@@ -261,6 +261,10 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   persisted recovery metadata are qualified separately; the broader macOS
   mouse-isolation and diagnostic-endpoint failures remain under
   [#431](https://github.com/jordanhubbard/webmux/issues/431).
+  Candidate [#443](https://github.com/jordanhubbard/webmux/issues/443) adds bounded
+  local change notifications that invalidate canonical inventory, with real Rig
+  browser coverage while fallback timers are paused;
+  [qualification and remaining gates](validation/rig-change-notifications-2026-11-17/README.md).
 - [#200](https://github.com/jordanhubbard/webmux/issues/200): remote Rig state over
   the outbound managed-host client. An opt-in bounded canonical-seat report now
   carries host-scoped identity and observation provenance, with stale/offline

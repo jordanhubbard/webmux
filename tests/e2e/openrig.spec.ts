@@ -441,7 +441,8 @@ test('integration enablement, launch owner and inventory view persist independen
     await expect(panel.getByLabel('Enable Agent Deck')).toBeChecked();
     expect(launches).toBe(0);
   } finally {
-    expect((await request.put('/api/config', { data: { app: { coordination: original.app.coordination } } })).ok()).toBe(true);
+    const restored = await request.put('/api/config', { data: { app: { coordination: original.app.coordination } } });
+    expect(restored.ok(), await restored.text()).toBe(true);
   }
 });
 

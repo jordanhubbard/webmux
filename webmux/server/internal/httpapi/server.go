@@ -29,6 +29,8 @@ import (
 )
 
 type Server struct {
+	rigChangesMu       sync.Mutex
+	rigChangesOwners   map[string]bool
 	browserProfileMu   sync.Mutex
 	clientMu           sync.Mutex
 	clientSockets      map[string]*clientConnection
@@ -188,6 +190,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PATCH /api/session-recovery/{id}", s.protected(false, s.patchRecovery))
 	mux.HandleFunc("GET /api/term/{id}", s.terminalSocket)
 	mux.Handle("GET /api/agents/config", s.protected(false, s.getAgentConfig))
+	mux.Handle("GET /api/coordination/changes", s.protected(false, s.getRigChanges))
 	mux.Handle("GET /api/coordination", s.protected(false, s.getCoordination))
 	mux.Handle("POST /api/coordination/agents", s.protected(false, s.createCoordinatedAgent))
 	mux.Handle("POST /api/coordination/workspaces", s.protected(false, s.browseCoordinationWorkspaces))
@@ -223,7 +226,7 @@ func (s *Server) Handler() http.Handler {
 	interactive := newLimiter(1800, globalWindow).wrap(mux)
 	return s.cors(apiPaths(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, pattern := mux.Handler(r)
-		if pattern == "GET /api/servers" || pattern == "GET /api/servers/{server}/sessions" || pattern == "GET /api/federation/sessions" {
+		if pattern == "GET /api/coordination" || pattern == "GET /api/coordination/changes" || pattern == "GET /api/servers" || pattern == "GET /api/servers/{server}/sessions" || pattern == "GET /api/federation/sessions" {
 			discovery.ServeHTTP(w, r)
 			return
 		}

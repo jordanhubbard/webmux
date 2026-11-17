@@ -1,0 +1,8 @@
+{
+  "parent": "cd32c8626fb807a5dc80e4196664ac9166df06bd",
+  "runtimeSourceOverlay": false,
+  "testSHA256": "4b4516aefcadc733ee2ac55a1af98c0f717119946d0370d33d17385a8266e3b2",
+  "expectedFailure": "No subscribed notification response; exact native test reaches ready-header assertion and times out on unmodified parent after canonical running/ready tile was observed.",
+  "sourceWorktreeRestored": true,
+  "logSHA256": "d3140492b6ef42a7eec0a24e0299ecc689aa865ad3a6289d5737f097e808e500"
+}

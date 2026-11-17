@@ -1,0 +1,19 @@
+{
+  "rigVersion": "0.6.14 (df1c1517)",
+  "tmuxVersion": "tmux 3.8",
+  "nodeVersion": "v24.21.0",
+  "browserVersion": "158.0.8127.36",
+  "platform": "darwin",
+  "architecture": "arm64",
+  "invalidation": {
+    "contract": "webmux-rig-changes/v1",
+    "available": true,
+    "changed": true
+  },
+  "canceledSubscriptions": 2,
+  "fallbackTimersPaused": true,
+  "canonicalDetachedObserved": true,
+  "siblingPIDUnchanged": true,
+  "viewerPreserved": true,
+  "scope": "Actual published Rig daemon events through production helper/API/browser to canonical re-read. Builtin terminals only; no authenticated coding provider, remote notifications or Agent Deck bridge."
+}

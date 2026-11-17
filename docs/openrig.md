@@ -545,3 +545,19 @@ to the public projection. Manager-reported enrollment describes registration
 lineage; it neither proves provider liveness nor grants authority to stop a local
 or remote provider. The conditional Stop, native launch/adopt and remote ownership
 requirements in #438 remain open. See the [native enrollment validation](validation/rig-enrollment-origin-2026-11-17/README.md).
+
+
+## Live local Rig changes
+
+The #443 candidate refreshes visible Rig tiles when the qualified local daemon
+reports a change. It re-reads canonical inventory before updating the tile; an
+event itself never establishes lifecycle or provider readiness. Empty workspaces
+and ordinary terminal workspaces do not subscribe. Closing or disabling the
+workspace cancels its wait. Canonical polling and stale-observation expiry remain
+the fallback when the optional stream is unavailable or its build is unqualified.
+
+This path is qualified for local OpenRig 0.6.14 (df1c1517). Other builds and remote
+host notifications remain outside this qualification. It performs no lifecycle
+action, adoption or Agent Deck bridge. See [native notification evidence](validation/rig-change-notifications-2026-11-17/README.md)
+for the paused-fallback-timer browser case, cancellation, bounds and remaining
+integration gates.
