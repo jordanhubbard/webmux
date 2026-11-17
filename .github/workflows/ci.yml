@@ -432,6 +432,8 @@ jobs:
       - name: Run browser tests against Go
         run: npm run test:e2e:go
         working-directory: webmux
+        env:
+          WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS: '1'
 
       - name: Stress Windows terminal reconnect
         run: npm run test:e2e:go -- terminal-mouse.spec.ts --grep restart --repeat-each=10 --output=test-results/reconnect-stress
