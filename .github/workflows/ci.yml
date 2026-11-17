@@ -151,6 +151,7 @@ jobs:
           name: native-screen-interoperability
           path: |
             webmux/test-results
+            test-results
             ${{ runner.temp }}/webmux-native-screen
       - name: Verify Go API contracts
         working-directory: webmux
@@ -259,6 +260,7 @@ jobs:
           path: |
             tests/e2e/.visual-baseline
             webmux/test-results
+            test-results
 
   test:
     name: Frontend and Tooling Tests
@@ -391,3 +393,4 @@ jobs:
           path: |
             tests/e2e/.visual-baseline
             webmux/test-results
+            test-results
