@@ -97,7 +97,9 @@ brew install mosh guacamole-server
 ```
 
 These enable mosh transport and the `guacd` dependency
-for RDP respectively; configure and start `guacd` separately. Password-based SSH
+for RDP respectively; configure and start `guacd` separately. RDP requires
+[guacd 1.6.0 or newer](rdp-proxy.md); older distro packages may lose the initial
+desktop size on reconnect. Password-based SSH
 needs `sshpass`; see the platform guide for installation instructions. The WebMux
 launcher includes Homebrew's bin and sbin directories in PATH so service-launched
 sessions can find these tools.

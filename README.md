@@ -182,7 +182,7 @@ prerequisites, upgrades, and current signing information.
 - (Optional) `sshpass` for password-based SSH auth
 - (Optional) `mosh` on both ends for mosh transport
 - (Optional) a VNC target for VNC sessions
-- (Optional) Apache Guacamole's `guacd` for RDP sessions
+- (Optional) Apache Guacamole's `guacd` 1.6.0 or newer for RDP sessions
 
 ### Supported Platforms
 
@@ -333,7 +333,7 @@ Transcripts contain raw terminal output, including ANSI control sequences and co
 
 Optional tmux-backed agent views are configured under `app.agents` and are disabled by default. See [Agent Views](docs/agent-views.md) and the sample config at [webmux/examples/agent-views/app.yaml](webmux/examples/agent-views/app.yaml).
 
-RDP sessions are proxied through Apache Guacamole's `guacd`; use `make check-guacd` to check the local installation. VNC sessions connect through WebMux's authenticated WebSocket proxy. Enable either protocol per saved host with its configured port.
+RDP sessions are proxied through Apache Guacamole's `guacd`; use `make check-guacd` to check the local installation. Use guacd 1.6.0 or newer; see [RDP proxy setup](docs/rdp-proxy.md) for the qualified version and older-daemon rendering failure. VNC sessions connect through WebMux's authenticated WebSocket proxy. Enable either protocol per saved host with its configured port.
 
 ### `auth.yaml` — Authentication
 

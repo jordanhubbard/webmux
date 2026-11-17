@@ -86,6 +86,23 @@ execution; each desktop step runs both backends and fails if either fails.
 The test does not validate Windows/NLA authentication, clipboard or all input
 layouts/modifiers.
 
+For [#320](https://github.com/jordanhubbard/webmux/issues/320), reconnect receipts
+now retain per-viewer guacd connection IDs, frame-leading opcode counts,
+phase/pixel samples and fixture process start/exit identities. The event ring is capped at
+512 entries, with at most 16 connections and 32 instruction types per direction.
+Failures retain a screenshot and samples from up to 16 canvases before cleanup.
+The existing reload/green-frame assertions and deadlines remain in place.
+An additional control keeps a previous browser document and its real upstream
+open while withholding its protocol acknowledgements. The new viewer must draw
+before that upstream expires, and browser-generated keys must reach the X
+observer after reconnecting in fullscreen. Both controls passed on a disposable
+Ubuntu 22.04 ARM64 guest with guacd 1.3.0 and FreeRDP 2.6.1. A controlled
+startup-order test now reproduces that missing-sized-desktop symptom on guacd 1.3.0 and passes on a signature/checksum-verified 1.6.0 build:
+the legacy RDP thread can send the initial size before user registration.
+CI runs both outcomes and uses 1.6.0 for ordinary reconnect/keyboard checks.
+See [proxy setup and the precise evidence scope](rdp-proxy.md). The historical
+hosted AMD64 run did not record its scheduling order.
+
 The browser's RDP Paste Clipboard path now has an exact multi-packet Unicode
 check at the Guacamole boundary. The initial Node-baseline run exposed invalid
 UTF-8 for supplementary characters: Guacamole 1.5 StringWriter encodes UTF-16
