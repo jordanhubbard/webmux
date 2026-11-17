@@ -122,7 +122,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     const dialog = await openDialog();
     const endpoint = reconnect ? '/api/coordination/agents' : '/api/coordination/attach';
     const response = page.waitForResponse(value => value.url().endsWith(endpoint) && value.request().method() === 'POST');
-    await dialog.locator('article').filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: reconnect ? 'Restart provider and open' : 'Open session', exact: true }).click();
+    await dialog.locator('article').filter({ has: page.getByText(name, { exact: true }) }).getByRole('button', { name: reconnect ? 'Reconnect attachment and open' : 'Open session', exact: true }).click();
     const attached = await response;
     expect(attached.status()).toBe(200);
     const body = await attached.json() as Session | { session: Session };
@@ -259,7 +259,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     for (let reconnect = 0; reconnect < 2; reconnect++) {
       const stopped = spawnSync('tmux', ['kill-session', '-t', `=${coder.id}`], { env: tmuxEnv, timeout: 5000 });
       expect(stopped.status).toBe(0);
-      await expect.poll(async () => (await status()).seats.find(value => value.id === coder.id)!.state).toBe('stopped');
+      await expect.poll(async () => (await status()).seats.find(value => value.id === coder.id)!.state).toBe('detached');
       expect((await openAgent('coder', true)).id).toBe(coderSession.id);
       await expect(page.getByTestId(`tile-cell-${coderSession.id}`).locator('.xterm-rows')).toContainText('FIXTURE_READY');
       const current = (await status()).seats.find(value => value.id === coder.id)!;

@@ -266,8 +266,8 @@ supported; Windows WebMux's existing terminals remain available.
    a pending record alone is not proof of receipt.
 
 Closing a tile detaches the WebMux viewer; **Open session** restores it without
-launching another agent. After an SSH failure, **Restart provider and open** reconnects the
-central attachment to the existing remote tmux session and reuses its tunnel
+launching another agent. If Rig reports a stopped seat after an SSH failure,
+**Restart provider and open** reconnects the central attachment to the existing remote tmux session and reuses its tunnel
 port. Reconnection retains Rig's exact enrolled session ID so historical records
 with the same name do not make later reconnects ambiguous. Restarting WebMux reattaches persisted grid tiles without restarting the
 provider processes. Explicitly exiting a provider stops that agent; reconnecting
@@ -281,7 +281,7 @@ navigate between tiles.
 
 On first use, complete the provider's folder-trust or sign-in prompt inside its
 terminal. If the provider exits during startup, resolve the prompt and use
-**Restart provider and open**. A live tmux attachment alone does not prove the provider is
+**Restart provider and open** once Rig reports the seat stopped. A live tmux attachment alone does not prove the provider is
 ready or that a message was received.
 
 Existing independently launched agents do not inherit environment changes.
@@ -328,3 +328,15 @@ the dashboard attachment; **Detach dashboard** disconnects only that viewer.
 The main Coordination menu retains project and session management. The terminal dock's
 **Pack** action fills visible grid holes from the top left while preserving
 the current occupied column count.
+
+Rig lifecycle comes from canonical `rig ps` rows. A missing WebMux-managed
+tmux relay marks the attachment transport unavailable and disables Open session;
+it does not mark the Rig seat stopped. Seats without a reported lifecycle show
+unknown. Restart provider is offered only when Rig explicitly reports stopped.
+A detached seat with a missing relay instead offers Reconnect attachment and
+open, explaining that a surviving provider is reattached and a new conversation
+starts if none remains.
+For a running seat whose relay has disappeared, inspect Rig and its execution
+host before launching another provider. Attachment transport is reported
+separately in the coordination inventory; externally discovered seats without
+a WebMux relay observation show unknown.

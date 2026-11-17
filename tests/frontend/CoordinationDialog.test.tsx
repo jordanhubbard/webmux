@@ -357,3 +357,31 @@ it('labels manager enrollment separately from provider-native conversations', as
   expect(within(seat).getByText('rig-enrollment-id')).toBeVisible();
   expect(within(seat).queryByText('Native session')).toBeNull();
 });
+
+it.each(['running', 'unknown', 'stopped', 'detached'])('separates %s Rig lifecycle from an unavailable relay', async (state) => {
+  const status = emptyStatus();
+  status.projects = [{ provider: 'rig', id: 'project', name: 'project', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1 }];
+  status.seats = [{ provider: 'rig', id: 'worker', projectId: 'project', projectName: 'project', name: 'worker', host: 'localhost', workspace: '/src', runtime: 'codex', state, transportState: 'unavailable', openable: false, managed: true }];
+  mocks.status.mockResolvedValue(status);
+  render(<CoordinationDialog onClose={() => {}} />);
+  const worker = await screen.findByRole('article', { name: 'worker in project' });
+  expect(within(worker).getByText('Rig lifecycle').nextElementSibling).toHaveTextContent(state);
+  expect(within(worker).getByText('Attachment transport').nextElementSibling).toHaveTextContent('unavailable');
+  expect(within(worker).queryByRole('button', { name: 'Open session' })).toBeNull();
+  const restart = within(worker).queryByRole('button', { name: 'Restart provider and open' });
+  if (state === 'stopped') {
+    expect(restart).toBeVisible();
+    fireEvent.click(restart!);
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
+  } else {
+    expect(restart).toBeNull();
+    if (state === 'detached') {
+      expect(worker).toHaveTextContent('starts a new conversation if none remains');
+      fireEvent.click(within(worker).getByRole('button', { name: 'Reconnect attachment and open' }));
+      await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
+    } else {
+      expect(within(worker).queryByRole('button', { name: 'Reconnect attachment and open' })).toBeNull();
+      expect(mocks.create).not.toHaveBeenCalled();
+    }
+  }
+});

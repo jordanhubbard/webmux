@@ -142,6 +142,7 @@ type coordinationSeat struct {
 	Workspace       string `json:"workspace,omitempty"`
 	Runtime         string `json:"runtime"`
 	State           string `json:"state"`
+	TransportState  string `json:"transportState,omitempty"`
 	Openable        bool   `json:"openable"`
 	Managed         bool   `json:"managed"`
 	ManagerSession  string `json:"managerSessionId,omitempty"`
@@ -311,6 +312,10 @@ func (p *rigProvider) Status(ctx context.Context) (coordinationProviderStatus, e
 	if err != nil {
 		return coordinationProviderStatus{}, err
 	}
+	return rigCoordinationStatus(raw), nil
+}
+
+func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
 	status := coordinationProviderStatus{Projects: []coordinationProject{}, Seats: []coordinationSeat{}, Messages: raw.Messages, Errors: []string{}}
 	contexts := map[string]map[string]bool{}
 	managed := map[string]managedRigAgent{}
@@ -333,19 +338,25 @@ func (p *rigProvider) Status(ctx context.Context) (coordinationProviderStatus, e
 			name = seat.LogicalID
 		}
 		state := seat.LifecycleState
+		if state == "" {
+			state = "unknown"
+		}
+		transportState := "unknown"
 		openable := seat.Openable
 		managerSession := ""
 		if agent, ok := managed[seat.CanonicalSessionName]; ok {
 			// sessionId is Rig enrollment identity, not a coding CLI conversation.
 			managerSession = agent.SessionID
+			// A local relay is attachment evidence, never Rig lifecycle evidence.
+			transportState = "available"
 			if !agent.Connected {
-				state = "stopped"
+				transportState = "unavailable"
 				openable = false
 			}
 		}
 		status.Seats = append(status.Seats, coordinationSeat{
 			Provider: "rig", ID: seat.CanonicalSessionName, ProjectID: seat.RigID, ProjectName: seat.RigName,
-			Name: name, Host: host, Workspace: seat.Cwd, Runtime: seat.Runtime, State: state,
+			Name: name, Host: host, Workspace: seat.Cwd, Runtime: seat.Runtime, State: state, TransportState: transportState,
 			Openable: openable, Managed: seat.Managed, ManagerSession: managerSession, ProviderTarget: seat.CanonicalSessionName, Context: seat.PodNamespace,
 		})
 	}
@@ -367,7 +378,7 @@ func (p *rigProvider) Status(ctx context.Context) (coordinationProviderStatus, e
 		}
 		status.Projects = append(status.Projects, project)
 	}
-	return status, nil
+	return status
 }
 
 func (p *rigProvider) Launch(ctx context.Context, request coordinationLaunchRequest) (coordinationLaunch, error) {
