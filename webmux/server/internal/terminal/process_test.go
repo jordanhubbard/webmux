@@ -21,7 +21,7 @@ func TestTerminalChild(t *testing.T) {
 	fmt.Println("child-ready")
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		switch scanner.Text() {
+		switch command := scanner.Text(); command {
 		case "size":
 			cols, rows, err := childSize()
 			fmt.Printf("size-result:%d,%d,%v\n", cols, rows, err)
@@ -42,6 +42,27 @@ func TestTerminalChild(t *testing.T) {
 			fmt.Println("blocked-ready")
 			for {
 				time.Sleep(time.Hour)
+			}
+		default:
+			if strings.HasPrefix(command, "size-until:") {
+				var wantCols, wantRows int
+				var duration string
+				if _, err := fmt.Sscanf(command, "size-until:%d:%d:%s", &wantCols, &wantRows, &duration); err != nil {
+					t.Fatal(err)
+				}
+				budget, err := time.ParseDuration(duration)
+				if err != nil || budget <= 0 || budget > 5*time.Second {
+					t.Fatal("invalid size observation budget")
+				}
+				deadline := time.Now().Add(budget)
+				for {
+					cols, rows, err := childSize()
+					if err != nil || cols == wantCols && rows == wantRows || !time.Now().Before(deadline) {
+						fmt.Printf("size-result:%d,%d,%v\n", cols, rows, err)
+						break
+					}
+					time.Sleep(5 * time.Millisecond)
+				}
 			}
 		}
 	}
@@ -119,7 +140,10 @@ func TestTerminalInputResizeAndExit(t *testing.T) {
 	if err := p.Resize(120, 44); err != nil {
 		t.Fatal(err)
 	}
-	send(t, p, "size")
+	// ConPTY can accept ResizePseudoConsole before its child observes the new
+	// dimensions. Query the real console until it changes, within the original
+	// parent deadline; an unchanged size still fails.
+	send(t, p, "size-until:120:44:5s")
 	c.expect(t, "size-result:120,44,<nil>")
 	send(t, p, "unicode")
 	c.expect(t, "unicode-result:λ 日本語 😀")
@@ -131,6 +155,17 @@ func TestTerminalInputResizeAndExit(t *testing.T) {
 	}
 	if next := p.Wait(); next.Code != 7 {
 		t.Fatalf("repeated wait: %+v", next)
+	}
+}
+
+func TestTerminalResizeWaitCannotInventSize(t *testing.T) {
+	p, c := child(t)
+	// No resize is requested. The bounded child observation must report its
+	// actual dimensions, rather than echo the requested target as evidence.
+	send(t, p, "size-until:120:44:50ms")
+	c.expect(t, "size-result:91,33,<nil>")
+	if strings.Contains(c.text(), "size-result:120,44,<nil>") {
+		t.Fatal("size observation invented a resize")
 	}
 }
 

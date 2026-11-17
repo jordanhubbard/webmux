@@ -125,8 +125,15 @@ command completion before reporting released connections; real SSH controls
 cover delayed, hung and failed remote cleanup ([details](usb-forwarding.md#verification-and-remaining-work)).
 Peer policy rejection now stays separate from controller authentication, with
 real two-server browser coverage in [#338](https://github.com/jordanhubbard/webmux/pull/338).
-RDP reconnect qualification remains open in #320; the reproduced SSH and peer
-policy fixes do not establish the cause of every historical disconnect.
+RDP reconnect work in #320 now reproduces a legacy guacd startup race on Linux
+ARM64: a size sent before user registration leaves the reloaded desktop unsized.
+A verified guacd 1.6.0 build passes the same ordering control, rendering and
+keyboard checks. CI now runs the comparison and uses the qualified proxy for
+ordinary reconnects, including an unresponsive previous viewer. Bounded
+connection/frame/process receipts retain the failure evidence. Hosted AMD64
+acceptance remains pending; the historical run's scheduling order was not
+recorded ([scope and setup](rdp-proxy.md)). The reproduced SSH and peer policy
+fixes do not establish the cause of every historical disconnect.
 
 [#324](https://github.com/jordanhubbard/webmux/issues/324) separates fake-manager
 preparation from the production service-query deadline. A shared executable
