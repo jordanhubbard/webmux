@@ -1,58 +1,65 @@
-# OSC 8 restoration checkpoint — not accepted
+# OSC 8 restoration qualification
 
-Issue #404, under #355. This branch is a work in progress and must remain a draft
-until the remaining renderer mismatch and native qualification are resolved.
+Issue #404, under #355. Portable validation passes; native ConPTY execution and
+exact-head hosted gates remain required before merge. This does not qualify the
+other terminal profile gaps or authenticated coding-session recovery under #318.
 
-The renderer oracle now compares link destinations, equivalence classes of linked
-cells, and the current pen, alongside text, colors, modes, cursor and wrap state.
-It compares observable link identity rather than renderer-local numeric handles.
-Unicode IDs remain distinct from literal percent escapes. Anonymous openings need
-separate identities, including when their URIs are equal; their active pen must
-continue the correct group after attachment. Existing named IDs must still join
-later live output that reuses them.
+The renderer oracle compares link destinations, equivalence classes of linked
+cells, and the active pen, alongside text, colors, modes, cursor and wrap state.
+Renderer-local numeric handles are excluded from identity. Unicode IDs remain
+distinct from literal percent escapes. Anonymous openings have separate groups,
+even with equal URIs; their active pen continues the same group after attachment.
+Named IDs still join later live output that reuses them.
 
-The implementation admits bounded, passive OSC 8 into the xterm mirror. Other
-string requests remain excluded. Link payload limits match the VT ring's bounded
-URI/parameter representation; unsafe or oversized state refuses attachment. A
-screen-local random namespace separates anonymous groups without rewriting the
-original live output. Cursor restoration preserves xterm's live hyperlink object.
-The painter closes the main link after switching buffers so it cannot leak into
-blank alternate-screen cells.
+The mirror retains bounded, passive OSC 8. Other private string and query requests
+remain excluded. URI and parameter limits match the bounded VT history
+representation; unsafe or oversized state refuses attachment. A screen-local
+random namespace separates anonymous groups without rewriting the live stream.
+Cursor restoration preserves xterm's live hyperlink object. The painter closes
+the main link after switching buffers so it cannot leak into blank alternate cells.
+Hidden extended-link states that the VT representation cannot encode refuse new
+snapshots, consistently with the existing extended-underline profile; reset repairs
+the mirror and earlier captured images remain immutable.
 
-## Evidence so far
+## Active-link lifetime
 
-- Focused Go replay-filter and screen-state suites pass, including arbitrary
-  read boundaries, Unicode IDs, separate anonymous groups, payload/control bounds,
-  exclusion of other private OSCs and capture immutability.
-- All ten new renderer cases fail against pre-feature source using a Go overlay;
-  the working source files were not replaced for that control.
-- The working implementation passes 60 of 61 portable renderer cases: all 51
-  previous cases and nine new hyperlink cases. The alternate case passes initial
-  attachment and continued output, but fails the second attachment comparison.
-- Four actual ConPTY hyperlink controls are added to the existing collector.
-  Their execution and hosted gates are still pending; portable results do not
-  establish native Windows acceptance.
+xterm 6.0.0 stores the current hyperlink outside its buffers, but its link service
+counts row markers. Disposing the final marker can discard the URI while the pen
+still references its numeric handle. A following snapshot would revive a target
+that an existing viewer could no longer resolve. The original failing comparison
+is retained and now passes with the production frontend profile installed on all
+three viewers.
 
-Raw local evidence is retained under `_build/osc8-404-baseline/` and
-`_build/osc8-404-current/` in the canonical checkout. These are synthetic page and
-terminal fixtures, separate from authenticated coding-session acceptance.
+The frontend adapter retains one markerless active entry. Printing on a new row
+returns ownership to normal markers. A new link, close or reset releases the held
+entry. Full resets also dispose old buffer markers before xterm replaces the
+buffers. Disposal removes the adapter and its retained entry. Runtime shape checks
+and actual-renderer controls qualify these xterm 6.0.0 internals; renderer upgrades
+must pass the same controls.
 
-## Remaining failure
+## Evidence
 
-On xterm 6.0.0, leaving an alternate buffer can dispose the last marker of a link
-while its numeric reference remains in the global extended pen. Later cells retain
-that attribute but have no resolvable destination. Both existing viewers agree;
-the Go mirror retains the URI and revives it on a later snapshot. The failing case
-is intentionally retained. It must not be removed, weakened or counted as accepted.
+- Focused Go race suites and vet pass for replayfilter and screenstate, including
+  arbitrary read boundaries, Unicode IDs, anonymous groups, payload/control bounds,
+  exclusion of private OSCs, hidden-state refusal and capture immutability.
+- All ten new snapshot cases fail against pre-feature Go source through a
+  read-only overlay. Working source files are unchanged by that control.
+- All 61 portable initial/continuing/second-attachment comparisons pass, including
+  the previous 51 controls and ten hyperlink cases.
+- A separate actual-renderer lifecycle control reproduces the stock lost target,
+  proves the frontend fix, and checks continued input, scrolling, 64 open/close
+  cycles, explicit/RIS reset, disposal and bounded target retention.
+- Four ConPTY controls are added to the existing native collector. Their execution
+  and hosted acceptance remain pending; portable checks do not establish native
+  Windows acceptance.
 
-The implementation must account for link lifetimes and hidden extended attributes,
-including the effects of row/marker disposal, buffer switches, cursor restore and
-bounded history. The fix must preserve destinations, grouping, visual attributes
-and active pen state across all three comparisons. Unrepresentable states must
-refuse attachment without replacing or stopping the job.
+Local baseline and intermediate failure evidence is retained in
+`_build/osc8-404-baseline/` and `_build/osc8-404-current/` in the canonical checkout.
+Final passing evidence is retained separately under `_build/osc8-404-fixed/`.
+Fixtures use synthetic URLs and terminal output.
 
 The installed renderer's [OSC link service](https://github.com/xtermjs/xterm.js/blob/6.0.0/src/common/services/OscLinkService.ts)
 and [input handler](https://github.com/xtermjs/xterm.js/blob/6.0.0/src/common/InputHandler.ts)
-are the authority for this profile. Upstream also tracks marker retention after
-cell overwrite in [xterm.js #6303](https://github.com/xtermjs/xterm.js/issues/6303);
-that report does not establish a fix for this branch's failing transition.
+define this profile. Upstream also tracks marker retention after overwritten cells
+in [xterm.js #6303](https://github.com/xtermjs/xterm.js/issues/6303); that report alone
+is not acceptance evidence for this implementation.

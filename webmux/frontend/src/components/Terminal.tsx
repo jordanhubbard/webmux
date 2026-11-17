@@ -11,6 +11,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { installTerminalQuerySuppressors, isTerminalLocalInput, shouldSuppressTerminalInput } from '../utils/terminalInput';
 import { TERMINAL_FONTS_LOADED_EVENT, loadTerminalFontFamily, normalizeTerminalFontFamily } from '../utils/terminalFont';
+import { retainActiveTerminalHyperlink } from '../utils/terminalHyperlinks';
 import { scrollTerminalPages } from '../utils/terminalScroll';
 
 export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
@@ -370,6 +371,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       linkHandler: { activate: openLink },
     });
 
+    const hyperlinkProfile = retainActiveTerminalHyperlink(term);
     const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon(openLink);
     const searchAddon = new SearchAddon();
@@ -471,6 +473,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       el.removeEventListener('focusin', focusHandler);
       el.removeEventListener('focusout', cancelClipboardRead);
       window.removeEventListener('blur', cancelClipboardRead);
+      hyperlinkProfile.dispose();
       term.dispose();
       termRef.current = null;
       fitAddonRef.current = null;

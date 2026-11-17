@@ -2,6 +2,7 @@ package screenstate
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 )
 
@@ -30,5 +31,36 @@ func TestHyperlinkCaptureKeepsUnicodeIdentityAndAnonymousGroups(t *testing.T) {
 	after, err := first.Bytes()
 	if err != nil || !bytes.Equal(before, after) {
 		t.Fatal("capture changed with the live mirror", err)
+	}
+}
+
+func TestHiddenSavedHyperlinkRefusesNewSnapshot(t *testing.T) {
+	for _, tc := range []struct{ save, restore string }{{"\x1b7", "\x1b8"}, {"\x1b[?1048h", "\x1b[?1048l"}, {"\x1b[?1049h", "\x1b[?1049l"}} {
+		s := newScreen(t, 80, 24)
+		s.Feed([]byte("A" + tc.save + "\x1b]8;id=hidden;https://example.test/a\aB"))
+		before, err := s.Capture()
+		if err != nil {
+			t.Fatal(err)
+		}
+		original, err := before.Bytes()
+		if err != nil {
+			t.Fatal(err)
+		}
+		s.Feed([]byte(tc.restore + "C"))
+		unsafe, err := s.Capture()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := unsafe.Bytes(); !errors.Is(err, ErrUnsupported) {
+			t.Fatal("hidden extended link state was accepted", err)
+		}
+		if data, err := before.Bytes(); err != nil || !bytes.Equal(data, original) {
+			t.Fatal("earlier image was changed", err)
+		}
+		s.Feed([]byte("\x1bcRESET"))
+		if _, err := s.Capture(); err != nil {
+			t.Fatal(err)
+		}
+		imageBytes(t, s)
 	}
 }
