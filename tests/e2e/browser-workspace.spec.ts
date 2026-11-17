@@ -6,6 +6,7 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
  test.setTimeout(120_000);
  const signals: string[] = [];
  let uploaded = Buffer.alloc(0);
+ let mainDocuments = 0;
  const downloadBytes = Buffer.from('browser download bytes\n😀\u0000');
  const server = http.createServer((req, res) => {
   if (req.url?.startsWith('/signal?')) { signals.push(new URL(req.url, 'http://fixture').searchParams.get('value')!); res.end('ok'); return; }
@@ -15,6 +16,7 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   if (req.url === '/download') { res.setHeader('Content-Disposition', 'attachment; filename="browser-proof.bin"'); res.setHeader('Content-Type', 'application/octet-stream'); res.end(downloadBytes); return; }
   res.setHeader('Content-Type', 'text/html');
   if (req.url === '/second') { res.end('<title>Second page</title><h1>Second page</h1>'); return; }
+  const returningDocument = ++mainDocuments > 1;
   res.end(`<!doctype html><title>Browser work fixture</title><style>body{margin:0;font:16px sans-serif}button,input,a,.area{position:absolute;box-sizing:border-box;height:40px;width:190px}#drag{left:20px;top:20px;background:#bad}#hover{left:240px;top:20px;background:#bda}#confirm{left:20px;top:80px}#double{left:240px;top:80px}#files{left:20px;top:140px}#context{left:240px;top:140px}#download{left:20px;top:200px}#prompt{left:240px;top:200px}#text{left:20px;top:260px;width:400px}#popup{left:20px;top:320px}#select{position:absolute;left:240px;top:320px;height:40px;width:190px}</style>
    <div id="drag" class="area">Drag here</div><div id="hover" class="area">Hover here</div>
    <button id="confirm">Confirm</button><button id="double">Double click</button>
@@ -26,7 +28,7 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
     const signal=value=>fetch('/signal?value='+encodeURIComponent(value));
     let held=false;
     drag.onmousedown=()=>{held=true}; document.onmouseup=()=>{if(held){held=false;signal('drag')}};
-    hover.onmouseenter=()=>signal('hover');
+
     document.getElementById('confirm').onclick=()=>signal('confirm:'+window.confirm('Continue with fixture?'));
     double.ondblclick=()=>signal('double');
     context.oncontextmenu=event=>{event.preventDefault();signal('context')};
@@ -35,7 +37,18 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
     text.oninput=()=>signal('text:'+text.value);
     text.onselect=()=>signal('selection:'+text.selectionStart+':'+text.selectionEnd);
     text.onkeydown=event=>{if(event.key==='Escape')signal('escape')};
-    popup.onclick=()=>window.open('/second','_blank');
+    const activate=()=>{hover.onmouseenter=()=>signal('hover');popup.onclick=()=>window.open('/second','_blank')};
+    let shown=false,activationTimer;
+    if(!${returningDocument})activate();
+    addEventListener('pageshow',()=>{
+      clearTimeout(activationTimer);
+      if(shown||${returningDocument}){
+        hover.onmouseenter=null;popup.onclick=null;
+        activationTimer=setTimeout(activate,1500);
+      }
+      shown=true;
+    });
+    addEventListener('pagehide',()=>clearTimeout(activationTimer));
     document.getElementById('select').onchange=event=>signal('select:'+event.target.value);
    </script>`);
  });
@@ -149,6 +162,18 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   await expect(page.getByLabel('Remote browser page')).toHaveValue(originalTab);
   await page.getByRole('button', { name: 'Browser back', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Remote browser URL' })).toHaveValue(origin + '/');
+  // BEGIN native interactivity proof (#409)
+  // History updates the address before deferred page handlers are ready.
+  // A fresh native hover proves the destination and coordinate mapping work.
+  const earlierHovers = signals.filter(value => value === 'hover').length;
+  let enterHover = false;
+  await expect.poll(async () => {
+    enterHover = !enterHover;
+    const probe = await position(enterHover ? 280 : 10, enterHover ? 40 : 10);
+    await page.mouse.move(probe.x, probe.y);
+    return signals.filter(value => value === 'hover').length;
+  }, { intervals: [150], message: 'destination document accepts native pointer input' }).toBeGreaterThan(earlierHovers);
+  // END native interactivity proof
   await click(50, 340);
   await expect(page.getByLabel('Remote browser page').locator('option')).toHaveCount(2);
   const popup = await page.getByLabel('Remote browser page').locator('option').evaluateAll((options, old) => options.map(option => (option as HTMLOptionElement).value).find(value => value !== old), originalTab);

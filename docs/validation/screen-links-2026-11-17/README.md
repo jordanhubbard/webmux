@@ -1,7 +1,7 @@
 # OSC 8 restoration qualification
 
-Issue #404, under #355. Portable validation passes; native ConPTY execution and
-exact-head hosted gates remain required before merge. This does not qualify the
+Issue #404, under #355. Portable and native ConPTY validation pass. Fresh exact-head hosted gates
+remain required after the workspace-readiness fixture correction. This does not qualify the
 other terminal profile gaps or authenticated coding-session recovery under #318.
 
 The renderer oracle compares link destinations, equivalence classes of linked
@@ -49,9 +49,11 @@ must pass the same controls.
 - A separate actual-renderer lifecycle control reproduces the stock lost target,
   proves the frontend fix, and checks continued input, scrolling, 64 open/close
   cycles, explicit/RIS reset, disposal and bounded target retention.
-- Four ConPTY controls are added to the existing native collector. Their execution
-  and hosted acceptance remain pending; portable checks do not establish native
-  Windows acceptance.
+- Windows AMD64 job 133944222609 at revision
+  `0ddb8819c314db62c285633c06760801e682f97d` executed all 13 real ConPTY cases
+  with zero skips, including four hyperlink cases. The renderer then passed all
+  75 portable/native/lifecycle checks. Each native record was admitted with one
+  owned job. These are component controls, separate from #318 conversation recovery.
 
 Local baseline and intermediate failure evidence is retained in
 `_build/osc8-404-baseline/` and `_build/osc8-404-current/` in the canonical checkout.
@@ -63,3 +65,13 @@ and [input handler](https://github.com/xtermjs/xterm.js/blob/6.0.0/src/common/In
 define this profile. Upstream also tracks marker retention after overwritten cells
 in [xterm.js #6303](https://github.com/xtermjs/xterm.js/issues/6303); that report alone
 is not acceptance evidence for this implementation.
+
+## History navigation readiness
+
+The Linux workspace case exposed a separate address-versus-interactivity race
+(#409). Its fixture now delays hover/popup activation for 1.5 seconds on history
+return, covering reload and back/forward-cache restoration. The old input ordering
+fails that control. The corrected case requires a fresh independently observed
+native hover before clicking the popup. Popup creation and navigation are not
+retried, and the original popup-count and 120-second case deadlines remain.
+Local before/after logs are retained under `_build/browser-409/`.
