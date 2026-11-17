@@ -67,6 +67,12 @@ test('saved Chromium profile survives worker replacement while viewer control is
   const deniedEnd = await request.delete(endpoint, { data: { viewer: b, controlToken: token } });
   expect(deniedEnd.status()).toBe(409);
   await action({ action: 'navigate', url: `${url}/set` });
+  // Navigation is intentionally asynchronous (including OAuth callbacks).
+  // Observe the cookie-setting document before another navigation can cancel it.
+  await expect.poll(async () => {
+   const frame = await action({ action: 'frame' });
+   return frame.url === `${url}/set` && frame.tabs.some((tab: { title: string }) => tab.title === 'empty-profile');
+  }).toBe(true);
   await action({ action: 'navigate', url: `${url}/check` });
   await expect.poll(async () => (await action({ action: 'frame' })).tabs.map((tab: { title: string }) => tab.title)).toContain('retained-cookie');
   await action({ action: 'mouse_down', x: 20, y: 20, button: 'left', buttons: 1, clickCount: 1 });
