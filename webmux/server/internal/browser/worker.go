@@ -58,28 +58,29 @@ type Tab struct {
 }
 
 type Frame struct {
-	PageText    *PageText      `json:"pageText,omitempty"`
-	Control     *Control       `json:"control,omitempty"`
-	ProfileKey  string         `json:"profileKey,omitempty"`
-	ProfileID   string         `json:"profileId,omitempty"`
-	ProfileName string         `json:"profileName,omitempty"`
-	Found       *bool          `json:"found,omitempty"`
-	Protocol    int            `json:"protocol"`
-	Image       []byte         `json:"image,omitempty"`
-	URL         string         `json:"url"`
-	Target      string         `json:"target"`
-	Tabs        []Tab          `json:"tabs"`
-	Error       string         `json:"error,omitempty"`
-	Select      *SelectControl `json:"select,omitempty"`
-	Width       int64          `json:"width"`
-	Height      int64          `json:"height"`
-	CanBack     bool           `json:"canBack"`
-	CanForward  bool           `json:"canForward"`
-	Dialog      *Dialog        `json:"dialog,omitempty"`
-	FileChooser *FileChooser   `json:"fileChooser,omitempty"`
-	Downloads   []Download     `json:"downloads"`
-	File        *Upload        `json:"file,omitempty"`
-	Clipboard   *string        `json:"clipboard,omitempty"`
+	NavigationDiagnostics *NavigationDiagnostics `json:"navigationDiagnostics,omitempty"`
+	PageText              *PageText              `json:"pageText,omitempty"`
+	Control               *Control               `json:"control,omitempty"`
+	ProfileKey            string                 `json:"profileKey,omitempty"`
+	ProfileID             string                 `json:"profileId,omitempty"`
+	ProfileName           string                 `json:"profileName,omitempty"`
+	Found                 *bool                  `json:"found,omitempty"`
+	Protocol              int                    `json:"protocol"`
+	Image                 []byte                 `json:"image,omitempty"`
+	URL                   string                 `json:"url"`
+	Target                string                 `json:"target"`
+	Tabs                  []Tab                  `json:"tabs"`
+	Error                 string                 `json:"error,omitempty"`
+	Select                *SelectControl         `json:"select,omitempty"`
+	Width                 int64                  `json:"width"`
+	Height                int64                  `json:"height"`
+	CanBack               bool                   `json:"canBack"`
+	CanForward            bool                   `json:"canForward"`
+	Dialog                *Dialog                `json:"dialog,omitempty"`
+	FileChooser           *FileChooser           `json:"fileChooser,omitempty"`
+	Downloads             []Download             `json:"downloads"`
+	File                  *Upload                `json:"file,omitempty"`
+	Clipboard             *string                `json:"clipboard,omitempty"`
 }
 
 func ValidURL(raw string) bool {
@@ -238,6 +239,7 @@ func Worker(in io.Reader, out io.Writer) error {
 				finish()
 			}
 			frame := browser.snapshot(req, err)
+			frame.NavigationDiagnostics = browser.navigation.snapshot()
 			frame.ProfileKey = key
 			frame.Clipboard, frame.File, frame.Found, frame.PageText = extra.Clipboard, extra.File, extra.Found, extra.PageText
 
@@ -268,6 +270,9 @@ func perform(ctx context.Context, req Request, width, height int64) error {
 		// page loading while waiting for terminal-side work.
 		actions = append(actions, chromedp.Func(func(ctx context.Context, target *chromedp.Target) error {
 			result, err := cdp.Call(ctx, target, page.Navigate, page.NavigateParams{URL: req.URL})
+			if trace, ok := ctx.Value(navigationTraceKey{}).(*navigationTrace); ok {
+				trace.record(NavigationEvent{Event: "navigate_ack", Target: string(target.TargetID), Frame: string(result.FrameID), Loader: string(result.LoaderID), ErrorClass: navigationErrorClass(result.ErrorText, err)}, "")
+			}
 			if err == nil && result.ErrorText != "" && result.ErrorText != "net::ERR_ABORTED" {
 				err = errors.New("navigation failed")
 			}
