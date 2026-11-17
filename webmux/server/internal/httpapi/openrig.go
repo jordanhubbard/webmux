@@ -557,7 +557,7 @@ func (s *Server) browseCoordinationWorkspaces(w http.ResponseWriter, r *http.Req
 }
 
 func (s *Server) coordinationProviders(owner string) []coordinationProvider {
-	return []coordinationProvider{&rigProvider{home: s.store.Home, owner: owner}, newAgentDeckProvider()}
+	return []coordinationProvider{&rigProvider{home: s.store.Home, owner: owner, server: s}, newAgentDeckProvider()}
 }
 
 func (s *Server) coordinationProvider(owner, id string) coordinationProvider {
@@ -573,7 +573,7 @@ func (s *Server) coordinationProvider(owner, id string) coordinationProvider {
 }
 
 func (s *Server) attachCoordinationTerminal(parent context.Context, owner string, launch coordinationLaunch, row, col *int) (session.Session, error) {
-	if launch.Provider == "rig" && len(launch.Argv) >= 4 {
+	if launch.Provider == "rig" && !launch.Remote && len(launch.Argv) >= 4 {
 		ctx, cancel := context.WithTimeout(parent, 3*time.Second)
 		defer cancel()
 		if err := exec.CommandContext(ctx, launch.Argv[0], "set-option", "-t", strings.TrimPrefix(launch.Argv[3], "="), "mouse", "on").Run(); err != nil {
@@ -596,7 +596,7 @@ func (s *Server) attachCoordinationTerminal(parent context.Context, owner string
 	if err != nil {
 		return value, err
 	}
-	if launch.Provider == "rig" {
+	if launch.Provider == "rig" && !launch.Remote {
 		if err := s.captureRigRecovery(parent, owner, value.ID); err != nil {
 			s.logger.Debug("native Rig recovery metadata unavailable", "session_id", value.ID)
 		}

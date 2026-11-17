@@ -69,8 +69,8 @@ instances; use a user service if automatic startup is wanted.
 ## Relationship to Rig
 
 The managed-host channel is general WebMux infrastructure. Its first capability
-is reporting host facts. Rig enrollment and project/seat observation are separate
-capabilities to add over the same channel. Installing this client does not
+is reporting host facts. Optional canonical Rig observation uses the same
+channel, with its own versioned report. Installing this client does not
 install a coordinator, start a daemon, enroll an arbitrary running agent, or
 make independent projects appear centrally. Run `make install-agent-deck`
 separately on macOS/Linux execution hosts that Agent Deck will manage. Native
@@ -81,3 +81,42 @@ The protocol is versioned. The server accepts one current connection for each
 client ID, stores only a hash of its long-lived credential, and uses the
 client-initiated WebSocket for bounded requests. The client reports its facts;
 they are observations from that machine, not proof of provider readiness.
+
+
+## Observe existing Rig seats
+
+After enrolling and linking the client to its saved SSH host, explicitly opt in:
+
+```sh
+webmux-client --server https://WEBMUX_HOST:8443 --observe-rig
+```
+
+`--background --observe-rig` retains that choice in the background worker's
+arguments. Ordinary clients continue to report only host facts. Rig observation
+uses the host's installed CLI and existing local daemon; it never starts Rig,
+launches a provider, adopts a session or changes host selection. Rig 0.6.14's
+`ps --nodes -A --no-cleanup` contract is required. Missing, unsupported or failed
+CLI observations report unavailable without blocking ordinary host facts.
+
+Enable the Rig integration in Coordination to see the linked host's canonical
+projects, pods and seats. Rig and logical-seat IDs are scoped to the enrolled
+client identity, so identical names on two hosts remain separate. The host
+binding, rather than a reported hostname, supplies the SSH destination. The
+controller does not need a local Rig installation to display these reports.
+
+Open session creates an SSH viewer of the reported existing tmux target. It
+uses the saved host's username, port and optional SSH key, requires existing
+host trust and noninteractive key/agent authentication, and never runs a
+reported shell command or starts a missing tmux session. Password-only hosts
+can still be opened as ordinary SSH terminals. Remote topology is read-only
+here; create, stop, adopt and recover conversations through Rig on that host.
+
+Reports use `webmux-rig-observation/v1`, with a maximum of 256 seats and 128 KiB
+per observation, a three-second CLI deadline and no transcripts, prompts,
+messages or credentials. The server timestamps successful observations. After
+50 seconds without a new successful report, loss of the client, or a failed
+Rig observation, existing seats remain visibly labeled stale, offline or
+unavailable with their last observed lifecycle and timestamp. New attachments
+are disabled until a current report supplies an attachment target. Revoking a
+client or unlinking/deleting its saved host removes its inventory authority;
+existing viewers are not provider-stop commands.

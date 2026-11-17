@@ -385,3 +385,23 @@ it.each(['running', 'unknown', 'stopped', 'detached'])('separates %s Rig lifecyc
     }
   }
 });
+
+it.each(['current', 'offline', 'stale', 'unavailable'])('labels %s remote Rig observations without offering topology mutations', async (observationState) => {
+  const value = emptyStatus();
+  value.projects = [{ provider: 'rig', id: 'host-rig/client/project', name: 'remote project', host: 'worker', state: 'observed', historical: false, readOnly: true, seatCount: 1, runningCount: 1 }];
+  value.seats = [{ provider: 'rig', id: 'host-rig/client/seat', projectId: 'host-rig/client/project', projectName: 'remote project', name: 'remote worker', host: 'worker', runtime: 'codex', state: 'running', transportState: observationState === 'current' ? 'reported' : observationState, observationState, observedAt: '2026-11-17T07:00:00Z', openable: observationState === 'current', managed: false }];
+  mocks.status.mockResolvedValue(value);
+  render(<CoordinationDialog onClose={() => {}} />);
+  const worker = await screen.findByRole('article', { name: 'remote worker in remote project' });
+  expect(within(worker).getByText('Host observation').nextElementSibling).toHaveTextContent(observationState);
+  expect(within(worker).getByText(observationState === 'current' ? 'Rig lifecycle' : 'Last observed Rig lifecycle').nextElementSibling).toHaveTextContent('running');
+  expect(screen.queryByRole('button', { name: 'Create session in this project' })).toBeNull();
+  expect(within(worker).queryByRole('button', { name: 'Restart provider and open' })).toBeNull();
+  if (observationState === 'current') {
+    fireEvent.click(within(worker).getByRole('button', { name: 'Open session' }));
+    await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('rig', 'host-rig/client/seat', undefined));
+  } else {
+    expect(within(worker).queryByRole('button', { name: 'Open session' })).toBeNull();
+    expect(mocks.attach).not.toHaveBeenCalled();
+  }
+});

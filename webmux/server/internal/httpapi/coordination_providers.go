@@ -84,6 +84,13 @@ func (p *agentDeckProvider) remoteSurvives(ctx context.Context, remote, id strin
 }
 
 func (p *rigProvider) Survives(ctx context.Context, target string) (bool, error) {
+	if isRemoteRigTarget(target) {
+		row, err := p.remoteSeat(target)
+		if err != nil {
+			return false, err
+		}
+		return row.seat.SessionStatus == "running", nil
+	}
 	status, err := p.rawStatus(ctx)
 	if err != nil {
 		return false, err
@@ -117,6 +124,7 @@ type coordinationProviderDescriptor struct {
 }
 
 type coordinationProject struct {
+	ReadOnly     bool     `json:"readOnly,omitempty"`
 	Provider     string   `json:"provider"`
 	ID           string   `json:"id"`
 	Name         string   `json:"name"`
@@ -131,32 +139,34 @@ type coordinationProject struct {
 }
 
 type coordinationSeat struct {
-	Profile         string `json:"profile,omitempty"`
-	NativeStateFile string `json:"nativeStateFile,omitempty"`
-	Provider        string `json:"provider"`
-	ID              string `json:"id"`
-	ProjectID       string `json:"projectId"`
-	ProjectName     string `json:"projectName"`
-	Name            string `json:"name"`
-	Host            string `json:"host"`
-	Workspace       string `json:"workspace,omitempty"`
-	Runtime         string `json:"runtime"`
-	State           string `json:"state"`
-	TransportState  string `json:"transportState,omitempty"`
-	Openable        bool   `json:"openable"`
-	Managed         bool   `json:"managed"`
-	ManagerSession  string `json:"managerSessionId,omitempty"`
-	NativeSession   string `json:"nativeSessionId,omitempty"`
-	ProviderTarget  string `json:"-"`
-	Context         string `json:"context,omitempty"`
-	ParentID        string `json:"parentId,omitempty"`
-	ParentName      string `json:"parentName,omitempty"`
-	Role            string `json:"role,omitempty"`
-	Substate        string `json:"substate,omitempty"`
-	LastActivity    string `json:"lastActivityAt,omitempty"`
-	Attention       bool   `json:"attention,omitempty"`
-	CanReceive      bool   `json:"canReceive,omitempty"`
-	ExitCode        *int   `json:"exitCode,omitempty"`
+	ObservationState string `json:"observationState,omitempty"`
+	ObservedAt       string `json:"observedAt,omitempty"`
+	Profile          string `json:"profile,omitempty"`
+	NativeStateFile  string `json:"nativeStateFile,omitempty"`
+	Provider         string `json:"provider"`
+	ID               string `json:"id"`
+	ProjectID        string `json:"projectId"`
+	ProjectName      string `json:"projectName"`
+	Name             string `json:"name"`
+	Host             string `json:"host"`
+	Workspace        string `json:"workspace,omitempty"`
+	Runtime          string `json:"runtime"`
+	State            string `json:"state"`
+	TransportState   string `json:"transportState,omitempty"`
+	Openable         bool   `json:"openable"`
+	Managed          bool   `json:"managed"`
+	ManagerSession   string `json:"managerSessionId,omitempty"`
+	NativeSession    string `json:"nativeSessionId,omitempty"`
+	ProviderTarget   string `json:"-"`
+	Context          string `json:"context,omitempty"`
+	ParentID         string `json:"parentId,omitempty"`
+	ParentName       string `json:"parentName,omitempty"`
+	Role             string `json:"role,omitempty"`
+	Substate         string `json:"substate,omitempty"`
+	LastActivity     string `json:"lastActivityAt,omitempty"`
+	Attention        bool   `json:"attention,omitempty"`
+	CanReceive       bool   `json:"canReceive,omitempty"`
+	ExitCode         *int   `json:"exitCode,omitempty"`
 }
 
 type coordinationMessage struct {
@@ -232,6 +242,7 @@ type coordinationLaunchRequest struct {
 }
 
 type coordinationLaunch struct {
+	Remote          bool
 	Profile         string
 	NativeSession   string
 	NativeStateFile string
@@ -251,15 +262,27 @@ type agentDeckProvider struct {
 }
 
 type rigProvider struct {
-	home  string
-	owner string
+	server *Server
+	home   string
+	owner  string
 }
 
 func (p *rigProvider) Descriptor() coordinationProviderDescriptor {
 	path, message := openRigExecutable()
+	localAvailable := path != ""
+	if p.server != nil && p.server.hasRemoteRigCapability(p.owner) {
+		if path == "" {
+			path = "host-client"
+			message = "Remote Rig observation through linked host clients"
+		}
+	}
+	capabilities := []string{"projects", "topology", "sessions", "remote-observation", "attach"}
+	if localAvailable {
+		capabilities = append(capabilities, "local", "remote-launch", "launch", "peer-messaging")
+	}
 	return coordinationProviderDescriptor{
 		ID: "rig", Label: "Rig", Available: path != "", Message: message,
-		Capabilities: []string{"projects", "topology", "sessions", "local", "remote-launch", "launch", "attach", "peer-messaging"},
+		Capabilities: capabilities,
 		Contract:     "openrig-cli/0.6.14",
 	}
 }
@@ -308,11 +331,22 @@ func (p *rigProvider) rawStatus(ctx context.Context) (rigStatusEnvelope, error) 
 }
 
 func (p *rigProvider) Status(ctx context.Context) (coordinationProviderStatus, error) {
+	remote := p.remoteStatus()
+	if path, _ := openRigExecutable(); path == "" && p.server != nil && p.server.hasRemoteRigCapability(p.owner) {
+		return remote, nil
+	}
 	raw, err := p.rawStatus(ctx)
 	if err != nil {
-		return coordinationProviderStatus{}, err
+		if len(remote.Seats) == 0 {
+			return coordinationProviderStatus{}, err
+		}
+		remote.Errors = append(remote.Errors, "Local Rig inventory unavailable; remote host observations are shown separately")
+		return remote, nil
 	}
-	return rigCoordinationStatus(raw), nil
+	local := rigCoordinationStatus(raw)
+	local.Projects = append(local.Projects, remote.Projects...)
+	local.Seats = append(local.Seats, remote.Seats...)
+	return local, nil
 }
 
 func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
@@ -382,6 +416,9 @@ func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
 }
 
 func (p *rigProvider) Launch(ctx context.Context, request coordinationLaunchRequest) (coordinationLaunch, error) {
+	if isRemoteRigTarget(request.ProjectID) {
+		return coordinationLaunch{}, fmt.Errorf("remote Rig topology is observed only; launch seats on the execution host")
+	}
 	input := map[string]string{
 		"mode": request.Mode, "rigId": request.ProjectID, "rigName": request.ProjectName, "pod": request.Context,
 		"name": request.Name, "host": request.Host, "cwd": request.Workspace, "runtime": request.Runtime,
@@ -407,6 +444,9 @@ func (p *rigProvider) Launch(ctx context.Context, request coordinationLaunchRequ
 }
 
 func (p *rigProvider) Attach(ctx context.Context, target string) (coordinationLaunch, error) {
+	if isRemoteRigTarget(target) {
+		return p.remoteAttach(ctx, target)
+	}
 	raw, err := p.rawStatus(ctx)
 	if err != nil {
 		return coordinationLaunch{}, err

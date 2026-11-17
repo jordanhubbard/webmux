@@ -177,6 +177,14 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     expect(agents).toHaveLength(2);
     expect(agents.every(value => value.openable)).toBe(true);
     const tmuxEnv = { ...process.env, TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') };
+    const observed = spawnSync('go', ['test', './internal/rigobservation', '-run', '^TestPublishedRigObservation$', '-count=1', '-v'], {
+      cwd: path.resolve(__dirname, '../../webmux/server'),
+      env: { ...tmuxEnv, PATH: `${path.join(home, 'openrig-bin')}${path.delimiter}${process.env.PATH ?? ''}`, WEBMUX_TEST_RIG_TARGET: coder.id },
+      encoding: 'utf8', timeout: 30_000,
+    });
+    expect(observed.status, observed.stdout + observed.stderr).toBe(0);
+    expect(observed.stdout).toContain('--- PASS: TestPublishedRigObservation');
+
     const tmux = (...args: string[]) => {
       const result = spawnSync('tmux', args, { env: tmuxEnv, encoding: 'utf8', timeout: 5000 });
       expect(result.status, result.stderr).toBe(0);
