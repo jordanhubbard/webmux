@@ -72,3 +72,18 @@ func TestQueuedBrowserMutationRechecksLeaseAtDispatch(t *testing.T) {
 		t.Fatal("stale request reached worker")
 	}
 }
+
+func TestAccessibleActionsRequireTheControllingViewer(t *testing.T) {
+	for _, action := range []string{"focus_element", "activate_element"} {
+		c := &client{done: make(chan struct{}), stopped: make(chan struct{})}
+		grant, err := c.control.control(strings.Repeat("a", 32), "", true, false, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		m := Manager{clients: map[string]*client{"session": c}}
+		_, err = m.CallControlled(context.Background(), "session", Request{Action: action, Element: strings.Repeat("f", 32) + "-0", Viewer: strings.Repeat("b", 32), ControlToken: grant.Token})
+		if !errors.Is(err, ErrControl) {
+			t.Fatal(action, "reached worker without controller authority", err)
+		}
+	}
+}

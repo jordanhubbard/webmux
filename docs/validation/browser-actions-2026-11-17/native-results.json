@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "date": "2026-11-17",
+  "platform": "macOS 27.2 ARM64",
+  "chromium": "157.0.8103.79",
+  "binary_sha256": "1c74be25877a465def0873f85606656050de4c5613755c11a409cd384e225f8a",
+  "source_parent": "3569b0740fc811ebc837ae4419f79663c07ee206",
+  "source_status": "listed runtime source plus modal correction, qualified before the follow-up commit",
+  "source_sha256": {
+    "webmux/server/internal/browser/accessibility.go": "52ab9e68759df066218b6ccf284bca85a12a02067615d8bb21be7f155e6433b5",
+    "webmux/server/internal/browser/accessibility_test.go": "2df0d9244dc26bfabb62198088177e9044b9d188649e219fa4fb8dd7707f894c",
+    "webmux/server/internal/browser/companion.go": "653656a75d5a73fa28567dfab88b1f0283c3d57331aff1fe061d5ade235a8078",
+    "webmux/server/internal/browser/control.go": "b6ba68fe9aa14a990f4ad245170492d46048ffcf26a9f1481664eab6de5501d2",
+    "webmux/server/internal/browser/control_test.go": "9917292a03ac612369506be92ef08fe10f5bad5dc2fd2b594b1c1c593df749c0",
+    "webmux/server/internal/browser/manager.go": "bde88fc3242e98ec38eddac2ca5ae1ee22a0c2c32ff296ceaa1a8493192958a5",
+    "webmux/server/internal/browser/manager_test.go": "17a4ca16520e1698dddbbc74803e296d2da718433c27c018cacdcef87898bb5d",
+    "webmux/server/internal/browser/page_actions.go": "cb1d2007b0b5c45de7fe902291eb52d684610088cb02c167cf903c80d2ea2e28",
+    "webmux/server/internal/browser/page_actions_test.go": "253f5978668f2b31639d126f24d6dc83f57f41bce5090e8d21d8e139a671f44a",
+    "webmux/server/internal/browser/profile.go": "28941401a22c5b7a4ac6d7df031e789eb63af6ff2ffbf75f73e146612738025a",
+    "webmux/server/internal/browser/profile_native_test.go": "a7346134f65706f6ec6bea3c3db8ae21ffd08b5f80e5fa521b13c1ce602db723",
+    "webmux/server/internal/browser/profile_test.go": "813ca73aa27285855c10ce788339a6cceb87b9727fe5add866526e766164c5c4",
+    "webmux/server/internal/browser/profile_unix.go": "4c761e73ab93f8a7c8f28245c24e11ef0b94b4ebfa126141faca2e165e6d1c38",
+    "webmux/server/internal/browser/profile_windows.go": "7c39486f5ed32025fa68444caa0b875e73fcc4540e1960a60a30f1e9c590116c",
+    "webmux/server/internal/browser/viewport.go": "21614626befd018da19a7a65fba35d32785b7045b77ab576f9dd3868895d54ec",
+    "webmux/server/internal/browser/viewport_test.go": "186b242940ec27b1e83bb904ea7b430eae14f28d2d7edcebb4fd748e7cb9cdb8",
+    "webmux/server/internal/browser/worker.go": "e35f12bc414f9da0d5bebe800a3c24385a423a9d3f665197859f9b8ad1ebc81e",
+    "webmux/server/internal/browser/worker_test.go": "cc73437747c5ce2351843277d3ebe88bb6f9ba1717eb098adddbf5b731b3a421",
+    "webmux/frontend/src/components/BrowserCompanion.tsx": "b478903b79fa79763550b7b31e401be8063439edec9085bdb8d6d878ee380f9b",
+    "webmux/frontend/src/utils/api.ts": "61b9b747de0cde9a538e0e8f4c65d1220e7178c4201a228e679c14ff3e319f40",
+    "tests/e2e/browser-accessible-actions.spec.ts": "6209e2c8f461816215e04c54edcca7df058ed891bb866d9b6f19c98ae304243d",
+    "tests/e2e/browser-workspace.spec.ts": "b15460ca9f329405ee66d0e9966679c4f5283f7fa397a5432c01b44db07e2e88"
+  },
+  "native_tests": [
+    {
+      "file": "browser-accessible-actions.spec.ts",
+      "passed": true,
+      "scope": [
+        "opaque bounded references",
+        "controller denial before dispatch",
+        "single-use activation",
+        "native focus and text input",
+        "closed-shadow-root input",
+        "renamed element refusal without another WebMux mutation",
+        "page-initiated navigation refusal while only polling frames",
+        "disabled controls",
+        "native link activation",
+        "viewport resize preserves semantic references",
+        "modal resize returns within one second and retains actual old dimensions",
+        "deferred viewport applies after confirmation with native resize event",
+        "page input is rejected promptly while dialog remains open",
+        "lease token rotation while a native pointer is held under a modal",
+        "deferred native mouse release exactly once after dialog closes"
+      ]
+    },
+    {
+      "file": "browser-workspace.spec.ts",
+      "passed": true,
+      "scope": [
+        "visible page-text Focus/Activate buttons",
+        "keyboard handoff and native text receipt",
+        "no editable-value export",
+        "existing dialogs/files/clipboard/navigation/tabs workflow",
+        "semantic Confirm activation followed by ordinary Prompt response"
+      ]
+    }
+  ],
+  "limits": [
+    "Synthetic loopback pages only",
+    "No real identity-provider or hardware-key acceptance",
+    "No iframe control or live screen-reader bridge acceptance",
+    "Hosted cross-platform outcomes remain separate"
+  ],
+  "binary_scope": "final native API/lease/input-release control; visible UI control compiled the same runtime source in its preceding run",
+  "retained_logs_sha256": {
+    "browser419-native-final.log": "8e05dde88242893b4ab418bc647c95a8fe619e7d3152d8ce92e01c8f7c4fd75a",
+    "browser419-native-takeover.log": "12b7fab5b7af701a46f642a983bd0780d5e29afbad74b087fd1fdf8bc818975d",
+    "browser419-native-dialog-trace.log": "c4402fee224f30cdce5e3f77a66a1ca2465d90c2fc8db5947056b1bd051d54cf"
+  },
+  "modal_regression": {
+    "before": {
+      "trace_sha256": "5df7a8cddae9b46740ff98d2515be21692ac9cc1094fdbccf69f09028b20e56b",
+      "dropped": 0,
+      "modal_resize_response_ms": [
+        15009
+      ]
+    },
+    "after": {
+      "trace_sha256": "aa93b0b6003a98510919597bdc4f063d6795d4055020a2da6b67dc6a0bf5dbf7",
+      "dropped": 135,
+      "modal_resize_response_ms": []
+    }
+  }
+}
