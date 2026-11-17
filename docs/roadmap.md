@@ -223,8 +223,10 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   multi-server foundation ships; do not treat server federation as proof that
   this separate Rig contract is implemented.
 - [#110](https://github.com/jordanhubbard/webmux/issues/110): browser companion
-  download/upload, durable profiles/controller lease, mobile/accessibility work,
-  and real-provider/SSH authentication qualification.
+  durable profiles/controller lease, mobile/accessibility work and real-provider/
+  SSH-terminal authentication qualification. File controls are implemented;
+  packaged Chromium file visibility and a real SSH worker transfer now have
+  separate [qualification evidence](browser-companion.md#packaged-chromium-file-visibility-2026-11-16).
 - [#120](https://github.com/jordanhubbard/webmux/issues/120): opt-in USB forwarding
   and real iPhone/Xcode qualification.
 

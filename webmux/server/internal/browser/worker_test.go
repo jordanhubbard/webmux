@@ -1,10 +1,13 @@
 package browser
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -13,9 +16,21 @@ func TestWorkerProfileCleanup(t *testing.T) {
 	if os.Getenv("WEBMUX_REAL_BROWSER") != "1" {
 		t.Skip("set WEBMUX_REAL_BROWSER=1 to run installed Chromium")
 	}
-	root := t.TempDir()
-	t.Setenv("TMPDIR", root)
-	t.Setenv("TMP", root)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A real Snap browser must see this path too, so keep this test's private
+	// home below the actual account home rather than an isolated /tmp mount.
+	root, err := os.MkdirTemp(home, "webmux-browser-test-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+	t.Setenv("HOME", root)
+	t.Setenv("USERPROFILE", root)
+	t.Setenv("TMPDIR", t.TempDir())
+	t.Setenv("TMP", t.TempDir())
 	in, send := io.Pipe()
 	receive, out := io.Pipe()
 	done := make(chan error, 1)
@@ -83,5 +98,53 @@ func TestModifierCombinationsSurviveWorkerProtocol(t *testing.T) {
 		if decoded.Modifiers != modifiers {
 			t.Fatalf("modifiers changed: %d -> %d", modifiers, decoded.Modifiers)
 		}
+	}
+}
+
+func TestTemporaryProfileUsesSharedPrivateHome(t *testing.T) {
+	home, isolated := t.TempDir(), t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("TMPDIR", isolated)
+	t.Setenv("TMP", isolated)
+	t.Setenv("TEMP", isolated)
+	profile, err := temporaryProfile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(profile)
+	if filepath.Dir(profile) != home {
+		t.Fatal("profile and transfer files must use the shared account home")
+	}
+	info, err := os.Stat(profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0700 {
+		t.Fatalf("private profile permissions: %o", info.Mode().Perm())
+	}
+	entries, err := os.ReadDir(isolated)
+	if err != nil || len(entries) != 0 {
+		t.Fatal("profile used the browser-isolated temporary directory")
+	}
+}
+
+func TestWorkerRefusesUnavailableSharedProfile(t *testing.T) {
+	home := filepath.Join(t.TempDir(), "private-marker")
+	if err := os.WriteFile(home, []byte("not a directory"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	var output bytes.Buffer
+	if err := Worker(strings.NewReader(""), &output); err == nil {
+		t.Fatal("worker silently fell back to an isolated temporary profile")
+	}
+	var frame Frame
+	if err := json.Unmarshal(output.Bytes(), &frame); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(frame.Error, "home directory") || strings.Contains(frame.Error, "private-marker") {
+		t.Fatalf("missing or private-path-bearing profile diagnostic: %s", frame.Error)
 	}
 }
