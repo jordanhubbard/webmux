@@ -803,7 +803,7 @@ func (e *Emulator) handleGraphemeWithin(content string, width, left, right int) 
 
 	e.lastCellX, e.lastCellY = x, y
 	e.lastCellLeft, e.lastCellRight = left, right
-	e.scr.SetCell(x, y, &cell)
+	e.setXtermPrintedCell(x, y, &cell)
 	e.markPrinted(x, y, cell.Width)
 
 	// Pending wrap: the cursor stays on the character just drawn and the wrap

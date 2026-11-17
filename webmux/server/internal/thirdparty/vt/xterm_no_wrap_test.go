@@ -17,9 +17,10 @@ func TestWebMuxXtermNoWrapReference(t *testing.T) {
 		Name, Data string
 		Cursor     [2]int
 		Lines      []string
+		Cells      [][]string
 		Widths     []int
 	}
-	if err := json.Unmarshal(data, &cases); err != nil || len(cases) != 19 {
+	if err := json.Unmarshal(data, &cases); err != nil || len(cases) != 138 {
 		t.Fatal("missing independent xterm reference", err)
 	}
 	for _, tc := range cases {
@@ -49,22 +50,39 @@ func TestWebMuxXtermNoWrapReference(t *testing.T) {
 				var widths []int
 				for y := range 4 {
 					var line strings.Builder
+					var contents []string
+					skipUntil := 0
 					for x := range 8 {
 						cell := e.CellAt(x, y)
+						content := " "
 						width := 1
 						if cell == nil {
-							line.WriteByte(' ')
+							if x >= skipUntil {
+								line.WriteByte(' ')
+							}
 						} else {
 							width = cell.Width
+							if cell.Content != "" {
+								content = cell.Content
+							}
 							if cell.Content == "" && width == 1 {
-								line.WriteByte(' ')
+								if x >= skipUntil {
+									line.WriteByte(' ')
+								}
 							} else {
-								line.WriteString(cell.Content)
+								if x >= skipUntil {
+									line.WriteString(cell.Content)
+								}
 							}
 						}
+						contents = append(contents, content)
+						skipUntil = max(skipUntil, x+width)
 						if y == 1 {
 							widths = append(widths, width)
 						}
+					}
+					if !slices.Equal(contents, tc.Cells[y]) {
+						t.Errorf("row %d cells got %q; xterm %q", y, contents, tc.Cells[y])
 					}
 					lines = append(lines, line.String())
 				}

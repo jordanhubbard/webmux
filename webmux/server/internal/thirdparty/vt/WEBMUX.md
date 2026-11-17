@@ -10,16 +10,22 @@ The upstream module has private print, parser and cursor state without a public
 extension hook. The local module replacement allows a small opt-in extension
 without modifying the shared Go module cache. `EnableXtermNoWrap()` retains the
 logical cursor at column `Width()` after printing to the final column with
-DECAWM disabled. Cursor motion restricts that coordinate before moving, while
-HT preserves it, matching the captured xterm behavior. Default construction
+DECAWM disabled. Cursor motion and character edits restrict that coordinate before operating;
+tabs, scrolling and soft reset preserve it. DECSTR re-enables wrapping. This
+matches the captured xterm.js behavior. Default construction
 keeps upstream behavior. **WebMux Screen does not enable this extension yet.**
+A no-wrap print over the trailing cell of a wide character intentionally
+retains xterm.js's overlapping lead/last-cell representation. Snapshot encoding
+and frontend restoration of this state still need qualification.
 The existing production refusal for ambiguous no-wrap snapshots remains.
 
-`testdata/webmux-xterm-nowrap.json` contains 19 independently captured real
-xterm results. The Go tests compare cursor, all rows and cell widths with both
+`testdata/webmux-xterm-nowrap.json` contains 138 independently captured real
+xterm results. The Go tests compare cursor, all rows, individual cell contents and cell widths with both
 whole writes and byte-split UTF-8/control sequences. These cases cover edge
 addressing versus printing, repeated overwrite, wrap enable, movement, CR/LF,
-tab, SGR, wide and combining text, saved cursor and alternate screen. They do
+tabs, SGR, erases, character and line edits, scrolling, soft reset, wide and
+combining text, saved cursor and alternate screen. Each of the 46 base cases
+also has subsequent output with wrapping disabled and re-enabled. They do
 not establish snapshot/continuation, resize or real ConPTY acceptance.
 
 After installing the repository's locked npm dependencies, reproduce the

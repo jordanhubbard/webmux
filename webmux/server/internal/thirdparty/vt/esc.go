@@ -94,6 +94,10 @@ func (e *Emulator) restoreCharsets() {
 // deviation. Following the spec would stop the line wrapping of every program
 // that soft-resets and then prints, which is most of them.
 func (e *Emulator) softReset() {
+	if e.xtermNoWrap {
+		// xterm.js resets DECAWM on DECSTR, including a logical edge cursor.
+		e.setMode(ansi.ModeAutoWrap, ansi.ModeSet)
+	}
 	// Several of the modes below home the cursor when they are set or reset on
 	// their own, DECOM among them, and a soft reset must not move it. Putting
 	// it back afterwards keeps that true however the list grows.
@@ -129,7 +133,7 @@ func (e *Emulator) softReset() {
 	e.scr.saved = Cursor{}
 	e.saveCharsets()
 
-	e.scr.setCursor(curX, curY, false)
+	e.restoreXtermCursor(curX, curY)
 }
 
 // fullReset performs a full terminal reset as in [ansi.RIS].

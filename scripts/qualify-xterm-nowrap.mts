@@ -22,7 +22,7 @@ const xterm = require.resolve('@xterm/xterm');
 const hash = (file: string) => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const fixture = path.join(source, 'webmux/server/internal/thirdparty/vt/testdata/webmux-xterm-nowrap.json');
 const cases: { name: string; data: string }[] = JSON.parse(fs.readFileSync(fixture, 'utf8'));
-assert(cases.length === 19 && cases.every(c => typeof c.name === 'string' && typeof c.data === 'string'));
+assert(cases.length === 138 && cases.every(c => typeof c.name === 'string' && typeof c.data === 'string'));
 const browser = await chromium.launch({ headless: true, ...(values.chromium ? { executablePath: values.chromium } : {}) });
 try {
   const page = await browser.newPage();
@@ -37,6 +37,7 @@ try {
       await new Promise<void>(resolve => terminal.write(data, resolve));
       const buffer = terminal.buffer.active;
       out.push({ name, data, cursor: [buffer.cursorX, buffer.cursorY],
+        cells: Array.from({ length: 4 }, (_, y) => Array.from({ length: 8 }, (_, x) => buffer.getLine(y)!.getCell(x)!.getChars() || ' ')),
         lines: Array.from({ length: 4 }, (_, y) => buffer.getLine(y)!.translateToString(false)),
         widths: Array.from({ length: 8 }, (_, x) => buffer.getLine(1)!.getCell(x)!.getWidth()),
       });

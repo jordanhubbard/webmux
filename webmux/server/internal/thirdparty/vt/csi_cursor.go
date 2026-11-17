@@ -56,6 +56,9 @@ func (e *Emulator) nextTab(n int) {
 // valid column and the operation completes.
 func (e *Emulator) prevTab(n int) {
 	x, _ := e.scr.CursorPosition()
+	if e.xtermNoWrap && x >= e.Width() {
+		return
+	}
 	leftmargin := 0
 	scroll := e.scr.ScrollRegion()
 	if e.originMode() {

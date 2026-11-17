@@ -570,6 +570,7 @@ func csiCount(params ansi.Params, i int) int {
 // registerDefaultCsiHandlers registers the default CSI escape sequence handlers.
 func (e *Emulator) registerDefaultCsiHandlers() {
 	e.RegisterCsiHandler('@', func(params ansi.Params) bool {
+		e.restrictXtermCursor()
 		// Insert Character [ansi.ICH]
 		n := csiCount(params, 0)
 		e.scr.InsertCell(n)
@@ -693,6 +694,7 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 	})
 
 	e.RegisterCsiHandler('L', func(params ansi.Params) bool {
+		e.restrictXtermCursor()
 		// Insert Line [ansi.IL]
 		n := csiCount(params, 0)
 		if e.scr.InsertLine(n) {
@@ -708,6 +710,7 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 	})
 
 	e.RegisterCsiHandler('M', func(params ansi.Params) bool {
+		e.restrictXtermCursor()
 		// Delete Line [ansi.DL]
 		n := csiCount(params, 0)
 		if e.scr.DeleteLine(n) {
@@ -721,6 +724,7 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 	})
 
 	e.RegisterCsiHandler('P', func(params ansi.Params) bool {
+		e.restrictXtermCursor()
 		// Delete Character [ansi.DCH]
 		n := csiCount(params, 0)
 		e.scr.DeleteCell(n)
@@ -730,14 +734,22 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 	e.RegisterCsiHandler('S', func(params ansi.Params) bool {
 		// Scroll Up [ansi.SU]
 		n := csiCount(params, 0)
+		x, y := e.scr.CursorPosition()
 		e.scr.ScrollUp(n)
+		if e.xtermNoWrap && x >= e.Width() {
+			e.restoreXtermCursor(x, y)
+		}
 		return true
 	})
 
 	e.RegisterCsiHandler('T', func(params ansi.Params) bool {
 		// Scroll Down [ansi.SD]
 		n := csiCount(params, 0)
+		x, y := e.scr.CursorPosition()
 		e.scr.ScrollDown(n)
+		if e.xtermNoWrap && x >= e.Width() {
+			e.restoreXtermCursor(x, y)
+		}
 		return true
 	})
 
@@ -751,6 +763,7 @@ func (e *Emulator) registerDefaultCsiHandlers() {
 	})
 
 	e.RegisterCsiHandler('X', func(params ansi.Params) bool {
+		e.restrictXtermCursor()
 		// Erase Character [ansi.ECH]
 		n := csiCount(params, 0)
 		e.eraseCharacter(n)
