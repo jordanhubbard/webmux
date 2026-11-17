@@ -53,6 +53,13 @@ checkpoint. Fresh Windows profile protocol contracts, actual ConPTY captures
 and all hosted checks remain required before this draft can merge. Hidden
 underline and wider native lifecycle qualification remain under #355/#318.
 
+The first profile-head Windows run (15e9564, workflow 44112652379) failed the
+new client-negotiation fixture before it reached the handshake: Go's `TempDir`
+embedded the long test/subtest name in the AF_UNIX path, exceeding Windows'
+socket-path limit. The fixture now creates a short owned temporary directory
+and cleans it after closing the listener. No contract is skipped or relaxed;
+fresh Windows execution is still required.
+
 ## Historical checkpoints
 
 The retained MIT module has 241 original files with recorded upstream hashes.

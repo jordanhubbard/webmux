@@ -3,6 +3,7 @@ package nativeprovider
 import (
 	"context"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -26,7 +27,18 @@ func TestClientNegotiatesOnlyWithAdvertisedRendererOwner(t *testing.T) {
 		{"orphan-token", "screen-v2", screenstate.XtermRendererProfile, "", strings.Repeat("a", 32), false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			endpoint := filepath.Join(t.TempDir(), "profile.sock")
+			// AF_UNIX has a short pathname limit on Windows. Go's TempDir
+			// includes this long test/subtest name and exceeds that limit.
+			directory, err := os.MkdirTemp("", "np-")
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := os.RemoveAll(directory); err != nil {
+					t.Error(err)
+				}
+			})
+			endpoint := filepath.Join(directory, "profile.sock")
 			listener, err := net.Listen("unix", endpoint)
 			if err != nil {
 				t.Fatal(err)
