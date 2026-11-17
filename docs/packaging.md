@@ -250,3 +250,21 @@ collects them if a deadline interrupts cleanup. XML, credentials, configuration,
 upgrade-state snapshots and session transcripts are excluded. Hard runner loss
 or forced cancellation can prevent GitHub from executing even always-run steps;
 no artifact retention is guaranteed in that case.
+
+### Apache Guacamole browser provenance
+
+The RDP browser uses Apache Guacamole 1.6.0 sources in a deterministic local npm
+package, replacing the third-party 1.5.0 runtime wrapper. Apache's archive digest
+and release signer are pinned; regeneration verifies both before combining the
+unchanged JavaScript sources and adding an ESM export. Normal builds install the
+checked-in package using the workspace lockfile's integrity digest.
+
+Native server bundles include `licenses/guacamole-common-js/LICENSE` and `NOTICE`.
+Their `components.json` records the upstream archive, signer, per-module hashes
+and local package hash, which packaging verifies. See the
+[reproduction instructions](../webmux/vendor/guacamole-common-js/README.md).
+Development-only DefinitelyTyped declarations remain independently versioned.
+The browser change passed a real Linux ARM64 guacd 1.6.0 screen-update, reload
+and keyboard-input case and 352 frontend tests. Hosted/native-platform checks
+remain separate. This does not inventory an operator's guacd plugins or native
+libraries, and does not complete WiX migration review in #91.
