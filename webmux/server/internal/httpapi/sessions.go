@@ -221,6 +221,9 @@ func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, s
 		return coordinationLaunch{}, fmt.Errorf("The %s lifecycle manager is unavailable or disabled. Retained logs are preserved; reconnect through that manager.", id)
 	}
 	target := saved.Target
+	if id == "rig" && saved.SeatID != "" {
+		target = saved.SeatID
+	}
 	if id != "rig" {
 		prefix := id + ":"
 		if !strings.HasPrefix(target, prefix) {
@@ -248,7 +251,11 @@ func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, s
 	if err != nil {
 		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager could not reattach the original session: %w. Retained logs are preserved; recover it through that manager.", err)
 	}
-	if launch.Provider != id || launch.Target != target || saved.Host != "" && saved.Host != launch.Host || saved.Workspace != "" && saved.Workspace != launch.Workspace || saved.Runtime != "" && saved.Runtime != launch.Runtime {
+	expectedTarget := target
+	if id == "rig" {
+		expectedTarget = saved.Target
+	}
+	if launch.Provider != id || launch.Target != expectedTarget || saved.SeatID != "" && launch.SeatID != saved.SeatID || saved.AttachmentTarget != "" && launch.AttachmentTarget != saved.AttachmentTarget || saved.Host != "" && saved.Host != launch.Host || saved.Workspace != "" && saved.Workspace != launch.Workspace || saved.Runtime != "" && saved.Runtime != launch.Runtime {
 		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager's session destination changed. Review its host, project and coding CLI before opening a new viewer; retained logs are preserved.")
 	}
 	profile := func(value string) string {

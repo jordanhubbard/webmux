@@ -26,7 +26,7 @@ func sameManagedDestination(a, b RigIdentity) bool {
 		}
 		return value
 	}
-	return a.Provider == b.Provider && a.Target == b.Target && a.Host == b.Host && a.Workspace == b.Workspace && a.Runtime == b.Runtime && profile(a.ManagerProfile) == profile(b.ManagerProfile)
+	return a.AttachmentTarget == b.AttachmentTarget && a.SeatID == b.SeatID && a.Provider == b.Provider && a.Target == b.Target && a.Host == b.Host && a.Workspace == b.Workspace && a.Runtime == b.Runtime && profile(a.ManagerProfile) == profile(b.ManagerProfile)
 }
 
 // The coordinator owns these references. They are evidence, never executable

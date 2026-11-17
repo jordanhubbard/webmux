@@ -1,0 +1,169 @@
+{
+  "issue": 436,
+  "parent_issue": 194,
+  "source_parent": "279db1e7654d789175569fc637e5c977f4ea6d79",
+  "dependent_draft": 432,
+  "recorded_utc": "2026-11-17T21:23:26.189870+00:00",
+  "source_sha256": {
+    ".github/workflows/ci.yml": "c8ac1b7c7ad26a17cff5ea1976b846ca31115036547edd0b8914ae25dbdf8dcf",
+    "tests/e2e/openrig-host.spec.ts": "8059163e500bae888e48c0edd86e3c407250a1cab36ea51f216e6f5fa779f975",
+    "tests/e2e/openrig-identity.spec.ts": "56bfbf3c1acb86d5901d5b5ac6cba60699d5ba59b46f1ab86db3e273355607af",
+    "tests/e2e/openrig.spec.ts": "56fafa33486db7588d83d06970aae07d87ab80adef7cd3903d30adca046f677c",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "6bb7d89112a4116405ede56893bfab1b8f3dc5dc9c3628d07e49f19090c28aff",
+    "webmux/frontend/src/types/index.ts": "e3ed986669129cd41516c84e060060e0528e0dd61fcd9141013701d0b84c44c1",
+    "webmux/server/internal/httpapi/coordination_providers.go": "ef972e530eb70afce39e029d6c4af9987d5a880494f2cc1225318e994069cca4",
+    "webmux/server/internal/httpapi/coordination_providers_test.go": "55695956a17408856e7f388a58c7a27b290fc8e7ef121489f6ab3505746fbb1d",
+    "webmux/server/internal/httpapi/openrig.go": "8038b32927382bfac4d2a48517763515bf82df7e8c558ceb2ee9a6dd3dde251f",
+    "webmux/server/internal/httpapi/rig_identity.go": "6d48c9421929a58ed4b66bf2514f48c399599140b6b63cc37af074fd92d72dde",
+    "webmux/server/internal/httpapi/rig_identity_restore_test.go": "62ad06ebaec40dd24887f11bc3be294b419a30b21410bf75cc9190500e986e8e",
+    "webmux/server/internal/httpapi/rig_identity_test.go": "f49e9c00be98a9c79ef13ce03c22406f062bf40a3467a239e35f90818df38036",
+    "webmux/server/internal/httpapi/sessions.go": "1ab68e167ec575c945f5952fbb58d153c6a62f5c554008415feae0f176fac5ff",
+    "webmux/server/internal/session/managed_evidence.go": "5bb6343ba5343a8e7e74f26058739a7c4003164bb059f9d6b71933ade146887e",
+    "webmux/server/internal/session/model.go": "8af1266d480f7a9fb2ee21f9eb3b3641b8a260cd0608f8535d054f25ac791660",
+    "webmux/server/internal/session/openrig.go": "37e65a7c775f3ba8110f335d7fc82b74542e7081522144bc1cd9a64633d6aff0",
+    "webmux/server/internal/session/rig_identity_test.go": "e5ba4f8208a249d38e77ed88fca240cd7db6229a68c28149d0c15b574a363b47"
+  },
+  "native_application": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "node": "v24.21.0",
+    "rig": "0.6.14 (df1c1517)",
+    "tmux": "tmux 3.8",
+    "browser": "157.0.8103.79",
+    "rigId": "01M7NP4TGPZN6RRCYV59NB0D99",
+    "logicalId": "agents.external",
+    "nodeId": "01M7NP4TMCPRYN1SXPSW8142T1",
+    "originalSeat": "local-rig/e4dd764a8114625b2709229781f261f7c3cbbdbbfb65bf8e6695ff2d0fabd09f",
+    "finalSeat": "local-rig/e4dd764a8114625b2709229781f261f7c3cbbdbbfb65bf8e6695ff2d0fabd09f",
+    "viewer": "dda7fc23-89f9-4f04-8843-8f6683a4bc64",
+    "layout": [
+      1,
+      1
+    ],
+    "firstPID": "43709",
+    "secondPID": "44556",
+    "firstSession": "01M7NP4TMC00733A5T4KF6JPMZ",
+    "secondSession": "01M7NP4WHA8MTPE42S3HXAD793",
+    "firstTarget": "wm-first-6f0d5057b8",
+    "secondTarget": "wm-second-6f0d5057b8",
+    "providerStarts": [
+      1,
+      1
+    ],
+    "firstProviderPreserved": true,
+    "inputRoutedToCurrentProvider": true,
+    "retainedHistory": true,
+    "scope": "External owner explicitly unclaims and attaches two synthetic Node terminals. No authenticated coding-conversation or automatic recovery/adoption claim."
+  },
+  "native_receipt_sha256": "b0c46760c0f3229ec6901408799dae0a5c4224bc92469ae4a97bd5e16d1e69c3",
+  "paired_control": {
+    "same_test_source_sha256": "56bfbf3c1acb86d5901d5b5ac6cba60699d5ba59b46f1ab86db3e273355607af",
+    "same_fixture_sha256": "7417ac427685eaaca31b16146950a481ba801cb1c934a0d670b5c6502ed1e4c5",
+    "inherited_app_host_selection": "webmux-ci-unrelated-selection",
+    "positive": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 20.3,
+      "log_sha256": "f0490a84cee834e04053a421ca4d7c866a4ce066c76ef1ca141d2316af7e04e2"
+    },
+    "negative": {
+      "parent": "279db1e7654d789175569fc637e5c977f4ea6d79",
+      "expected_failure": "Seat ID changes from first tmux address to second after explicit native rebind",
+      "only_test_added_then_removed": true,
+      "parent_worktree_clean_afterward": true,
+      "log_sha256": "ca6c294f20be514da6a3cc4efbe373fc33854cb1f2cb96fd75191ec3ba8dfc53"
+    }
+  },
+  "regression_browser_runs": [
+    {
+      "spec": "openrig.spec.ts",
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "reported_duration": "1.1m",
+      "log_sha256": "2cf1bf577de5ac9c59c996349411207ee49835b29e605150be08f8831cb53f9c"
+    },
+    {
+      "spec": "openrig-host.spec.ts",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "reported_duration": "17.8s",
+      "log_sha256": "cb0ce810a2abb6a6b7eb56115f6415e65d6719e3813156706bd6b52e63fdcb38"
+    },
+    {
+      "spec": "openrig-identity.spec.ts",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "reported_duration": "16.0s",
+      "log_sha256": "ab771f1d2c0653dcdeb80ba6ffe2b8f44a91bbf22cedc33eba0d83b01771e6b0"
+    }
+  ],
+  "regression_test_fixture_overlay": {
+    "test_fixture_overlay_commit": "6fe00dcaefbd5935929c7744131dc4986f0df5cc",
+    "fixture_sha256": "ec47c609e07aebc7e10480c09fe8bf450e1f8b0a7fdd6abaf13b9c7c1df21fb0",
+    "runtime_source_overlay": false,
+    "restored_fixture_sha256": "7417ac427685eaaca31b16146950a481ba801cb1c934a0d670b5c6502ed1e4c5",
+    "results": [
+      {
+        "spec": "openrig.spec.ts",
+        "name": "rig436-legacy-finalsource",
+        "exit": 0
+      },
+      {
+        "spec": "openrig-host.spec.ts",
+        "name": "rig436-host-finalsource",
+        "exit": 0
+      },
+      {
+        "spec": "openrig-identity.spec.ts",
+        "name": "rig436-final-finalsource",
+        "exit": 0
+      }
+    ]
+  },
+  "asserted_additional_controls": [
+    "transport_reconnect_refuses_changed_binding",
+    "hidden_viewer_reuses_saved_free_cell",
+    "native_recovery_is_not_offered_without_conversation_evidence",
+    "old_provider_remains_alive_until_owned_test_cleanup",
+    "new_input_does_not_reach_old_provider"
+  ],
+  "checks": {
+    "httpapi_race_seconds": 55.234,
+    "session_race_seconds": 14.779,
+    "frontend": {
+      "files": 39,
+      "passed": 374
+    },
+    "helpers": {
+      "passed": 64,
+      "skipped": 0
+    },
+    "strict_typescript": "PASS",
+    "frontend_lint": "PASS",
+    "frontend_build": "PASS",
+    "workflow_yaml": "PASS",
+    "host_vet": "PASS",
+    "windows_vet": "PASS"
+  },
+  "private_log_sha256": {
+    "go_race": "2b49cb29cde50656cd191f7de3bb1216f31cc79ec60500a8f9a9c4d00883f1d1",
+    "frontend": "05ead8c964930cd01f3a61b05ed612b4573b70f5fe7061ee32d428b6db5f48f6",
+    "helpers": "21932b232aae6266eabde4dec37c7a278df3539f17d96e1fd59287fe7724571a",
+    "strict_typescript": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "frontend_lint": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+    "frontend_build": "947fb8b49f4dcbf7c4cd2f40eb81f60f996b6268a7cba11b5d904bb4fa13efe2",
+    "host_vet": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "windows_vet": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cleanup": {
+    "private_rig_daemon_state_removed": true,
+    "private_tmux_directory_removed": true,
+    "firstPID_exited_after_owned_cleanup": true,
+    "secondPID_exited_after_owned_cleanup": true
+  },
+  "scope": "Four real Rig workflows within three actual app/browser runs; other inventory UI cases retain their mock fixtures. Canonical rebind uses two externally enrolled synthetic Node terminals, one start each. No authenticated coding-conversation or automatic adoption/recovery claim."
+}

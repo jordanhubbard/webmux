@@ -53,8 +53,8 @@ exec ${q(process.execPath)} ${q(child)}
     const pid = readFileSync(starts, 'utf8').trim();
     const panePID = () => run('tmux', ['display-message', '-p', '-t', target, '#{pane_pid}']);
     expect(panePID()).toBe(pid);
-    type Seat = { provider: string; id: string; name: string; projectName: string; host: string; rigHostId?: string; managed: boolean; openable: boolean };
-    const observe = async () => (await (await request.get('/api/coordination?provider=rig')).json() as { seats: Seat[] }).seats.find(s => s.id === target);
+    type Seat = { provider: string; id: string; name: string; projectName: string; host: string; attachmentTarget: string; rigHostId?: string; managed: boolean; openable: boolean };
+    const observe = async () => (await (await request.get('/api/coordination?provider=rig')).json() as { seats: Seat[] }).seats.find(s => s.attachmentTarget === target);
     await expect.poll(async () => (await observe())?.openable).toBe(true);
     const seat = (await observe())!;
     expect(seat.host).toBe(''); expect(seat.managed).toBe(false);

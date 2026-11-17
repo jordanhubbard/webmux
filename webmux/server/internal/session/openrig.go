@@ -1,5 +1,14 @@
 package session
 
+import (
+	"regexp"
+	"slices"
+)
+
+var localRigSeatPattern = regexp.MustCompile(`^local-rig/[a-f0-9]{64}$`)
+
+func localRigProvider(value string) bool { return value == "" || value == "rig" }
+
 // OpenRigSession returns the owner's dashboard attachment, separate from the
 // terminal grid. Closing a viewer never closes the attachment or agent teams.
 func (b *Broker) OpenRigSession(owner string) *Session {
@@ -53,12 +62,18 @@ func (b *Broker) EnsureRigTerminal(owner, target, title string, argv []string, i
 // EnsureRigTerminalAt places a viewer in a requested free cell. Seat identity
 // and provider lifecycle are independent of the viewer's grid position.
 func (b *Broker) EnsureRigTerminalAt(owner, target, title string, argv []string, row, col *int, identity ...RigIdentity) (Session, error) {
+	b.agentMu.Lock()
+	defer b.agentMu.Unlock()
 	var rig *RigIdentity
 	if len(identity) == 1 && identity[0].Target == target {
 		value := identity[0]
 		rig = &value
 	}
-	return b.ensureRigViewAt(owner, "managed:"+target, title, argv, true, rig, row, col)
+	view := "managed:" + target
+	if rig != nil && localRigProvider(rig.Provider) && localRigSeatPattern.MatchString(rig.SeatID) {
+		view = "managed:" + rig.SeatID
+	}
+	return b.ensureRigViewAt(owner, view, title, argv, true, rig, row, col)
 }
 
 func (b *Broker) ensureRigView(owner, view, title string, argv []string, grid bool, rig *RigIdentity) (Session, error) {
@@ -77,6 +92,17 @@ func (b *Broker) ensureRigViewAt(owner, view, title string, argv []string, grid 
 		if e.value.Owner == owner && (e.value.Companion == "openrig" || grid) && (e.value.OpenRigView == view || (view == "dashboard" && e.value.OpenRigView == "")) {
 			selected = e
 			break
+		}
+	}
+	if selected == nil && grid && rig != nil && localRigProvider(rig.Provider) && localRigSeatPattern.MatchString(rig.SeatID) {
+		for _, id := range b.order {
+			e := b.entries[id]
+			if e.value.Owner == owner && e.value.Rig != nil && e.value.Rig.SeatID == "" && localRigProvider(e.value.Rig.Provider) && e.value.Rig.Target == rig.Target {
+				if selected != nil {
+					return Session{}, ErrRecoveryConflict
+				}
+				selected = e
+			}
 		}
 	}
 	created := selected == nil
@@ -133,6 +159,19 @@ func (b *Broker) ensureRigViewAt(owner, view, title string, argv []string, grid 
 			}
 		}
 		row, col, err := limits.next(visible, requestedRow, requestedCol)
+		cellFree := true
+		for _, item := range visible {
+			if item.value.Row == selected.value.Row && item.value.Col == selected.value.Col {
+				cellFree = false
+			}
+		}
+		if requestedRow == nil && cellFree {
+			// A hidden logical viewer keeps its chosen cell when it is free.
+			// If the layout changed or the cell is occupied, choose a free one.
+			if savedRow, savedCol, savedErr := limits.next(visible, &selected.value.Row, &selected.value.Col); savedErr == nil {
+				row, col, err = savedRow, savedCol, nil
+			}
+		}
 		if err != nil {
 			return Session{}, err
 		}
@@ -142,6 +181,25 @@ func (b *Broker) ensureRigViewAt(owner, view, title string, argv []string, grid 
 	if grid && !created && !restoring && requestedRow != nil {
 		selected.value.Row, selected.value.Col = *requestedRow, *requestedCol
 	}
+	if grid && rig != nil && oldValue.Rig != nil && rig.SeatID != "" && rig.SeatID == oldValue.Rig.SeatID && (rig.Target != oldValue.Rig.Target || rig.AttachmentTarget != oldValue.Rig.AttachmentTarget || !slices.Equal(selected.value.ExecArgv, argv)) && selected.run != nil {
+		// Explicit Open follows the freshly resolved canonical binding. Retire
+		// only our old attachment after all placement checks have succeeded.
+		previous := selected.run
+		selected.run = nil
+		previous.stop()
+		previous.log.stop("logical_seat_reattach")
+		b.mu.Unlock()
+		_ = previous.process.Close()
+		b.mu.Lock()
+		if b.closed {
+			return Session{}, ErrClosed
+		}
+		if b.entries[selected.value.ID] != selected || selected.run != nil {
+			return Session{}, ErrRecoveryConflict
+		}
+	}
+
+	selected.value.OpenRigView = view
 	launched := false
 	if selected.run == nil {
 		if view == "dashboard" {

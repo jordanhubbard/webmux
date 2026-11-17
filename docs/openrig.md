@@ -411,3 +411,39 @@ The ordinary installed coordinator is kept intact during private qualification.
 Native lifecycle, reboot, policy and input-delivery evidence is required before
 this candidate becomes the supported minimum. Rig and built-in coordination
 retain their independent ownership and lifecycle.
+
+## Canonical local seat identity
+
+Local Rig inventory uses an opaque `local-rig/<key>` seat ID derived from the
+canonical Rig ID and logical node ID. The key is scoped to this controller's
+configured local coordinator. `projectId` and `logicalId` describe that canonical
+identity. `managerTarget` is Rig's current session address; `attachmentTarget`
+is the current tmux attachment address. Neither address is the logical seat ID.
+The existing authenticated `host-rig/<client>/<key>` remote namespace is separate.
+An opaque host self-ID remains diagnostic metadata, never an SSH destination.
+
+Created viewers persist `rig.seat_id`, alongside the native manager `rig.target`
+and `rig.attachment_target`. These are not coding-conversation IDs. Opening an
+older exact-address viewer can add its freshly resolved canonical key without
+creating a second viewer. Old API clients may still request an exact current
+session address; missing or ambiguous canonical identities fail closed.
+
+After an external owner explicitly rebinds a logical seat in Rig, **Open
+session** follows fresh canonical inventory and reuses the viewer, retained
+history and grid position. It detaches the previous viewer client, leaving the
+old provider alone. A hidden viewer keeps its saved cell when free, falls back
+to another free cell when occupied, and refuses a full grid. Placement failures
+do not detach a running viewer.
+
+Transport reconnect and controller startup reattachment require the original
+canonical seat and native destination. They refuse a changed binding instead
+of following it automatically. An attachment change discards cached native
+process/conversation references; existing lifecycle-manager validation still
+owns any later native recovery. This does not adopt providers, infer execution
+hosts or qualify authenticated coding conversations.
+
+The [native identity qualification](validation/rig-seat-identity-2026-11-17/README.md)
+records an explicit provider-owned unclaim/rebind with stable seat/viewer/layout,
+changed attachment, exact input routing, retained history and preserved old
+provider. Broader lifecycle, adoption and change-notification work remains under
+[#194](https://github.com/jordanhubbard/webmux/issues/194).

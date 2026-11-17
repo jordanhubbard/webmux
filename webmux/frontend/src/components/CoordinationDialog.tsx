@@ -14,6 +14,7 @@ export interface CoordinationProject {
   readOnly?: boolean; seatCount: number; runningCount: number; detail?: string; contexts?: string[]; attentionCount?: number;
 }
 export interface CoordinationSeat {
+  logicalId?: string; attachmentTarget?: string; managerTarget?: string;
   rigHostId?: string;
   provider: string; id: string; projectId: string; projectName: string; name: string; host: string;
   observationState?: string; observedAt?: string; workspace?: string; runtime: string; state: string; transportState?: string; openable: boolean; managed: boolean;

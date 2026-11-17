@@ -260,6 +260,7 @@ jobs:
           export WEBMUX_OPENRIG_CLI="$RUNNER_TEMP/webmux-openrig/node_modules/@openrig/cli/dist/bin-wrapper.js"
           npm run test:e2e:go -- openrig.spec.ts --output=test-results/openrig-go
           npm run test:e2e:go -- openrig-host.spec.ts --output=test-results/openrig-host-go
+          npm run test:e2e:go -- openrig-identity.spec.ts --output=test-results/openrig-identity-go
       - name: Verify real VNC interoperability through Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux

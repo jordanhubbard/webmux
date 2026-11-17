@@ -509,7 +509,11 @@ func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, 
 		s.sessionError(w, err, "Session was created. Open it from Coordination after making room in the grid.")
 		return
 	}
-	writeJSON(w, 200, map[string]any{"target": launch.Target, "session": value})
+	publicTarget := launch.Target
+	if launch.SeatID != "" {
+		publicTarget = launch.SeatID
+	}
+	writeJSON(w, 200, map[string]any{"target": publicTarget, "session": value})
 }
 func (s *Server) browseCoordinationWorkspaces(w http.ResponseWriter, r *http.Request, owner string) {
 	if !s.openRigAccess(w, owner) {
@@ -592,6 +596,8 @@ func (s *Server) attachCoordinationTerminal(parent context.Context, owner string
 	}
 	identity := session.RigIdentity{Provider: identityProvider, Target: viewerTarget, Project: launch.Project, Name: launch.Name, Host: launch.Host, Runtime: launch.Runtime, Workspace: launch.Workspace, ManagerProfile: launch.Profile}
 	identity.RigHostID = launch.RigHostID
+	identity.SeatID = launch.SeatID
+	identity.AttachmentTarget = launch.AttachmentTarget
 	if launch.Provider == "agent-deck" {
 		identity.NativeSessionID, identity.NativeStateFile = launch.NativeSession, launch.NativeStateFile
 	}

@@ -96,6 +96,13 @@ func (p *rigProvider) Survives(ctx context.Context, target string) (bool, error)
 	if err != nil {
 		return false, err
 	}
+	if strings.HasPrefix(target, localRigPrefix) {
+		seat, err := resolveLocalRigSeat(status, target)
+		if err != nil {
+			return false, err
+		}
+		target = seat.CanonicalSessionName
+	}
 	for _, agent := range status.Agents {
 		if agent.Target == target {
 			// The coordinator runner checks this exact managed tmux seat.
@@ -160,6 +167,9 @@ type coordinationSeat struct {
 	ManagerSession   string `json:"managerSessionId,omitempty"`
 	NativeSession    string `json:"nativeSessionId,omitempty"`
 	ProviderTarget   string `json:"-"`
+	AttachmentTarget string `json:"attachmentTarget,omitempty"`
+	LogicalID        string `json:"logicalId,omitempty"`
+	ManagerTarget    string `json:"managerTarget,omitempty"`
 	Context          string `json:"context,omitempty"`
 	ParentID         string `json:"parentId,omitempty"`
 	ParentName       string `json:"parentName,omitempty"`
@@ -244,20 +254,22 @@ type coordinationLaunchRequest struct {
 }
 
 type coordinationLaunch struct {
-	RigHostID       string
-	Remote          bool
-	Profile         string
-	NativeSession   string
-	NativeStateFile string
-	Provider        string
-	Target          string
-	Title           string
-	Project         string
-	Name            string
-	Host            string
-	Workspace       string
-	Runtime         string
-	Argv            []string
+	AttachmentTarget string
+	SeatID           string
+	RigHostID        string
+	Remote           bool
+	Profile          string
+	NativeSession    string
+	NativeStateFile  string
+	Provider         string
+	Target           string
+	Title            string
+	Project          string
+	Name             string
+	Host             string
+	Workspace        string
+	Runtime          string
+	Argv             []string
 }
 
 type agentDeckProvider struct {
@@ -301,25 +313,27 @@ type rigStatusEnvelope struct {
 		LifecycleState string  `json:"lifecycleState"`
 		LatestSnapshot *string `json:"latestSnapshot"`
 	} `json:"rigs"`
-	Seats []struct {
-		HostSelfID           string `json:"hostSelfId"`
-		RigID                string `json:"rigId"`
-		RigName              string `json:"rigName"`
-		LogicalID            string `json:"logicalId"`
-		PodNamespace         string `json:"podNamespace"`
-		CanonicalSessionName string `json:"canonicalSessionName"`
-		Runtime              string `json:"runtime"`
-		SessionStatus        string `json:"sessionStatus"`
-		LifecycleState       string `json:"lifecycleState"`
-		Managed              bool   `json:"managed"`
-		Host                 string `json:"host"`
-		Cwd                  string `json:"cwd"`
-		Name                 string `json:"name"`
-		Openable             bool   `json:"openable"`
-		TmuxTarget           string `json:"tmuxTarget"`
-	} `json:"seats"`
+	Seats    []rigCanonicalSeat    `json:"seats"`
 	Agents   []managedRigAgent     `json:"agents"`
 	Messages []coordinationMessage `json:"messages"`
+}
+
+type rigCanonicalSeat struct {
+	HostSelfID           string `json:"hostSelfId"`
+	RigID                string `json:"rigId"`
+	RigName              string `json:"rigName"`
+	LogicalID            string `json:"logicalId"`
+	PodNamespace         string `json:"podNamespace"`
+	CanonicalSessionName string `json:"canonicalSessionName"`
+	Runtime              string `json:"runtime"`
+	SessionStatus        string `json:"sessionStatus"`
+	LifecycleState       string `json:"lifecycleState"`
+	Managed              bool   `json:"managed"`
+	Host                 string `json:"host"`
+	Cwd                  string `json:"cwd"`
+	Name                 string `json:"name"`
+	Openable             bool   `json:"openable"`
+	TmuxTarget           string `json:"tmuxTarget"`
 }
 
 func (p *rigProvider) rawStatus(ctx context.Context) (rigStatusEnvelope, error) {
@@ -360,7 +374,17 @@ func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
 	for _, agent := range raw.Agents {
 		managed[agent.Target] = agent
 	}
+	counts := localRigIdentityCounts(raw)
+	addresses := map[string]int{}
 	for _, seat := range raw.Seats {
+		addresses[seat.CanonicalSessionName]++
+	}
+	for _, seat := range raw.Seats {
+		id := localRigSeatID(seat.RigID, seat.LogicalID)
+		if id == "" || counts[id] != 1 {
+			status.Errors = append(status.Errors, "Canonical Rig identity is missing or ambiguous; refresh the coordinator before opening this seat")
+			continue
+		}
 		if contexts[seat.RigID] == nil {
 			contexts[seat.RigID] = map[string]bool{}
 		}
@@ -379,7 +403,10 @@ func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
 			state = "unknown"
 		}
 		transportState := "unknown"
-		openable := seat.Openable
+		openable := seat.Openable && seat.CanonicalSessionName != "" && seat.TmuxTarget != "" && addresses[seat.CanonicalSessionName] == 1
+		if seat.Openable && !openable {
+			status.Errors = append(status.Errors, "Canonical Rig attachment is missing or ambiguous")
+		}
 		managerSession := ""
 		if agent, ok := managed[seat.CanonicalSessionName]; ok {
 			host = agent.Host
@@ -394,7 +421,7 @@ func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
 		}
 		status.Seats = append(status.Seats, coordinationSeat{
 			RigHostID: rigHostID(seat.HostSelfID),
-			Provider:  "rig", ID: seat.CanonicalSessionName, ProjectID: seat.RigID, ProjectName: seat.RigName,
+			Provider:  "rig", ID: id, LogicalID: seat.LogicalID, AttachmentTarget: seat.TmuxTarget, ManagerTarget: seat.CanonicalSessionName, ProjectID: seat.RigID, ProjectName: seat.RigName,
 			Name: name, Host: host, Workspace: seat.Cwd, Runtime: seat.Runtime, State: state, TransportState: transportState,
 			Openable: openable, Managed: seat.Managed, ManagerSession: managerSession, ProviderTarget: seat.CanonicalSessionName, Context: seat.PodNamespace,
 		})
@@ -448,10 +475,22 @@ func (p *rigProvider) Launch(ctx context.Context, request coordinationLaunchRequ
 	if err != nil {
 		return coordinationLaunch{}, err
 	}
+	raw, err := p.rawStatus(ctx)
+	if err != nil {
+		return coordinationLaunch{}, err
+	}
+	seat, err := resolveLocalRigSeat(raw, agent.Target)
+	if err != nil {
+		return coordinationLaunch{}, err
+	}
+	if !seat.Openable || seat.TmuxTarget == "" {
+		return coordinationLaunch{}, fmt.Errorf("created Rig seat has no verified tmux attachment; refresh the canonical inventory")
+	}
 	return coordinationLaunch{
+		SeatID: localRigSeatID(seat.RigID, seat.LogicalID), AttachmentTarget: seat.TmuxTarget,
 		Provider: "rig", Target: agent.Target, Title: agent.Name + " · " + agent.Host + " · " + agent.Project,
 		Project: agent.Project, Name: agent.Name, Host: agent.Host, Workspace: agent.Cwd, Runtime: agent.Runtime,
-		Argv: []string{tmux, "attach-session", "-t", "=" + agent.Tmux},
+		Argv: []string{tmux, "attach-session", "-t", "=" + seat.TmuxTarget},
 	}, nil
 }
 
@@ -463,6 +502,12 @@ func (p *rigProvider) Attach(ctx context.Context, target string) (coordinationLa
 	if err != nil {
 		return coordinationLaunch{}, err
 	}
+	seat, err := resolveLocalRigSeat(raw, target)
+	if err != nil {
+		return coordinationLaunch{}, err
+	}
+	id := localRigSeatID(seat.RigID, seat.LogicalID)
+	target = seat.CanonicalSessionName
 	for _, agent := range raw.Agents {
 		if agent.Target != target {
 			continue
@@ -471,12 +516,9 @@ func (p *rigProvider) Attach(ctx context.Context, target string) (coordinationLa
 		if err != nil {
 			return coordinationLaunch{}, err
 		}
-		return coordinationLaunch{Provider: "rig", Target: agent.Target, Title: agent.Name + " · " + agent.Host + " · " + agent.Project, Project: agent.Project, Name: agent.Name, Host: agent.Host, Workspace: agent.Cwd, Runtime: agent.Runtime, Argv: []string{tmux, "attach-session", "-t", "=" + agent.Tmux}}, nil
+		return coordinationLaunch{SeatID: id, AttachmentTarget: seat.TmuxTarget, Provider: "rig", Target: agent.Target, Title: agent.Name + " · " + agent.Host + " · " + agent.Project, Project: agent.Project, Name: agent.Name, Host: agent.Host, Workspace: agent.Cwd, Runtime: agent.Runtime, Argv: []string{tmux, "attach-session", "-t", "=" + seat.TmuxTarget}}, nil
 	}
-	for _, seat := range raw.Seats {
-		if seat.CanonicalSessionName != target {
-			continue
-		}
+	{
 		if !seat.Openable || seat.TmuxTarget == "" {
 			return coordinationLaunch{}, fmt.Errorf("this canonical Rig seat has no local tmux viewer; open it on its execution host or start a managed seat in this topology")
 		}
@@ -488,9 +530,8 @@ func (p *rigProvider) Attach(ctx context.Context, target string) (coordinationLa
 		if name == "" {
 			name = seat.LogicalID
 		}
-		return coordinationLaunch{Provider: "rig", Target: target, Title: name + " · Unknown execution host · " + seat.RigName, Project: seat.RigName, Name: name, RigHostID: rigHostID(seat.HostSelfID), Runtime: seat.Runtime, Argv: []string{tmux, "attach-session", "-t", "=" + seat.TmuxTarget}}, nil
+		return coordinationLaunch{SeatID: id, AttachmentTarget: seat.TmuxTarget, Provider: "rig", Target: target, Title: name + " · Unknown execution host · " + seat.RigName, Project: seat.RigName, Name: name, RigHostID: rigHostID(seat.HostSelfID), Runtime: seat.Runtime, Argv: []string{tmux, "attach-session", "-t", "=" + seat.TmuxTarget}}, nil
 	}
-	return coordinationLaunch{}, fmt.Errorf("unknown Rig seat; refresh the canonical project list")
 }
 
 func newAgentDeckProvider() *agentDeckProvider {

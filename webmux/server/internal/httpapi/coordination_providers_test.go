@@ -565,7 +565,7 @@ func TestRigInventoryKeepsLifecycleIndependentOfAttachment(t *testing.T) {
 				t.Fatal(status)
 			}
 			seat := status.Seats[0]
-			if seat.State != tc.wantState || seat.TransportState != tc.wantTransport || seat.Openable != tc.wantOpenable || seat.ID != "seat-1" {
+			if seat.State != tc.wantState || seat.TransportState != tc.wantTransport || seat.Openable != tc.wantOpenable || seat.ID != localRigSeatID("rig-1", "worker") {
 				t.Fatalf("canonical inventory changed by relay observation: %+v", seat)
 			}
 		})
@@ -587,7 +587,7 @@ func TestRigExecutionHostRequiresLaunchEvidence(t *testing.T) {
 		}
 	}
 	var raw rigStatusEnvelope
-	if err := json.Unmarshal([]byte(`{"seats":[{"hostSelfId":"bad\nidentity"}]}`), &raw); err != nil {
+	if err := json.Unmarshal([]byte(`{"seats":[{"rigId":"rig-one","logicalId":"worker","hostSelfId":"bad\nidentity"}]}`), &raw); err != nil {
 		t.Fatal(err)
 	}
 	if seat := rigCoordinationStatus(raw).Seats[0]; seat.RigHostID != "" || seat.Host != "" {
