@@ -21,72 +21,80 @@ func (t *snapshotTerminal) Wait() (int, error)          { return 0, nil }
 func (t *snapshotTerminal) PID() int                    { return 3344 }
 
 func TestSnapshotRefusalPreservesOwnerTerminal(t *testing.T) {
-	screen, err := screenstate.New(80, 24)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer screen.Close()
-	if err := screen.Feed([]byte("\x1b[?7l\x1b[4;80HX")); err != nil {
-		t.Fatal(err)
-	}
-	terminal := &snapshotTerminal{}
-	o := &owner{identity: Identity{Session: "owned-session", Instance: "one-instance", OwnerPID: 1122, RootPID: terminal.PID(), Replay: "screen-v1"}, key: strings.Repeat("a", 32), terminal: terminal, screen: screen, changed: make(chan struct{}), viewers: make(map[*subscriber]bool)}
-	connect := func() (net.Conn, <-chan struct{}) {
-		server, client := net.Pipe()
-		t.Cleanup(func() { _ = client.Close(); _ = server.Close() })
-		done := make(chan struct{})
-		go func() { defer close(done); o.handle(server) }()
-		_ = client.SetDeadline(time.Now().Add(3 * time.Second))
-		if err := writeFrame(client, frame{Protocol: 1, Kind: "attach", Session: o.identity.Session, Instance: o.identity.Instance, Key: o.key, Cols: 80, Rows: 24}); err != nil {
-			t.Fatal(err)
-		}
-		return client, done
-	}
-	first, done := connect()
-	var reply frame
-	if err := readFrame(first, &reply); err != nil {
-		t.Fatal(err)
-	}
-	if reply.Kind != "rejected" || reply.Error != screenstate.ErrUnsupported.Error() {
-		t.Fatal("unsafe snapshot was not refused", reply.Kind, reply.Error)
-	}
-	select {
-	case <-done:
-	case <-time.After(3 * time.Second):
-		t.Fatal("refused attachment did not finish")
-	}
-	if terminal.closed.Load() != 0 || len(o.viewers) != 0 {
-		t.Fatal("refusal stopped the terminal or retained a viewer")
-	}
-	// Later output makes the cut unambiguous; the same owner accepts a viewer.
-	o.publish(frame{Kind: "data", Data: []byte("\x1b[HSAFE")})
-	second, done := connect()
-	if err := readFrame(second, &reply); err != nil {
-		t.Fatal(err)
-	}
-	if reply.Kind != "attached" || reply.Identity == nil || *reply.Identity != o.identity {
-		t.Fatal("refusal replaced the owner", reply.Kind)
-	}
-	var output []byte
-	for !bytes.Contains(output, []byte("SAFE")) {
-		if err := readFrame(second, &reply); err != nil {
-			t.Fatal(err)
-		}
-		if reply.Kind != "data" {
-			t.Fatal("unexpected snapshot frame", reply.Kind)
-		}
-		output = append(output, reply.Data...)
-		if len(output) > screenstate.MaxSnapshotBytes {
-			t.Fatal("unbounded snapshot")
-		}
-	}
-	_ = second.Close()
-	select {
-	case <-done:
-	case <-time.After(3 * time.Second):
-		t.Fatal("detached viewer did not finish")
-	}
-	if terminal.closed.Load() != 0 {
-		t.Fatal("viewer detach closed the retained terminal")
+	for _, tc := range []struct{ name, before, repair string }{
+		{"no-wrap", "\x1b[?7l\x1b[4;80HX", "\x1b[HSAFE"},
+		{"underline-reset", "\x1b[4:3mA\x1b7\x1b[0mB\x1b8X", "\x1bcSAFE"},
+		{"underline-hidden", "A\x1b7\x1b[4:3mB\x1b8X", "\x1bcSAFE"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			screen, err := screenstate.New(80, 24)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer screen.Close()
+			if err := screen.Feed([]byte(tc.before)); err != nil {
+				t.Fatal(err)
+			}
+			terminal := &snapshotTerminal{}
+			o := &owner{identity: Identity{Session: "owned-session", Instance: "one-instance", OwnerPID: 1122, RootPID: terminal.PID(), Replay: "screen-v1"}, key: strings.Repeat("a", 32), terminal: terminal, screen: screen, changed: make(chan struct{}), viewers: make(map[*subscriber]bool)}
+			connect := func() (net.Conn, <-chan struct{}) {
+				server, client := net.Pipe()
+				t.Cleanup(func() { _ = client.Close(); _ = server.Close() })
+				done := make(chan struct{})
+				go func() { defer close(done); o.handle(server) }()
+				_ = client.SetDeadline(time.Now().Add(3 * time.Second))
+				if err := writeFrame(client, frame{Protocol: 1, Kind: "attach", Session: o.identity.Session, Instance: o.identity.Instance, Key: o.key, Cols: 80, Rows: 24}); err != nil {
+					t.Fatal(err)
+				}
+				return client, done
+			}
+			first, done := connect()
+			var reply frame
+			if err := readFrame(first, &reply); err != nil {
+				t.Fatal(err)
+			}
+			if reply.Kind != "rejected" || reply.Error != screenstate.ErrUnsupported.Error() {
+				t.Fatal("unsafe snapshot was not refused", reply.Kind, reply.Error)
+			}
+			select {
+			case <-done:
+			case <-time.After(3 * time.Second):
+				t.Fatal("refused attachment did not finish")
+			}
+			if terminal.closed.Load() != 0 || len(o.viewers) != 0 {
+				t.Fatal("refusal stopped the terminal or retained a viewer")
+			}
+			// Later output repairs the display profile; the same owner accepts a viewer.
+			o.publish(frame{Kind: "data", Data: []byte(tc.repair)})
+			second, done := connect()
+			if err := readFrame(second, &reply); err != nil {
+				t.Fatal(err)
+			}
+			if reply.Kind != "attached" || reply.Identity == nil || *reply.Identity != o.identity {
+				t.Fatal("refusal replaced the owner", reply.Kind)
+			}
+			var output []byte
+			for !bytes.Contains(output, []byte("SAFE")) {
+				if err := readFrame(second, &reply); err != nil {
+					t.Fatal(err)
+				}
+				if reply.Kind != "data" {
+					t.Fatal("unexpected snapshot frame", reply.Kind)
+				}
+				output = append(output, reply.Data...)
+				if len(output) > screenstate.MaxSnapshotBytes {
+					t.Fatal("unbounded snapshot")
+				}
+			}
+			_ = second.Close()
+			select {
+			case <-done:
+			case <-time.After(3 * time.Second):
+				t.Fatal("detached viewer did not finish")
+			}
+			if terminal.closed.Load() != 0 {
+				t.Fatal("viewer detach closed the retained terminal")
+			}
+		})
 	}
 }

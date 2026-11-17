@@ -5,11 +5,12 @@ const TEST_PORT = Number(process.env.WEBMUX_E2E_PORT || 18080);
 const TEST_HOME = path.resolve(__dirname, '../tests/e2e/.test-home');
 const WEBMUX_DIR = path.resolve(__dirname);
 const CHROMIUM_EXECUTABLE = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const SCREEN_REPLAY_ONLY = process.env.WEBMUX_SCREEN_REPLAY_ONLY === '1';
 const VISUAL_PARITY = process.env.WEBMUX_VISUAL_PARITY === '1';
 
 export default defineConfig({
   testDir: '../tests/e2e',
-  testMatch: '*.spec.ts',
+  testMatch: SCREEN_REPLAY_ONLY ? 'screen-replay.spec.ts' : '*.spec.ts',
   timeout: 30_000,
   retries: 0,
   workers: 1,
@@ -34,7 +35,7 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
+  webServer: SCREEN_REPLAY_ONLY ? undefined : {
     command: 'node ../tests/e2e/start-server.mts',
     port: TEST_PORT,
     cwd: WEBMUX_DIR,

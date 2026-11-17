@@ -2,20 +2,48 @@ import { test, expect } from '@playwright/test';
 import type { Terminal } from '@xterm/xterm';
 import http from 'node:http';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 type Fixture = { name: string; cols: number; rows: number; original: string; snapshot: string; future: string; recaptured: string };
-const names = ['alternate-wrapped-row', 'alternate-wrapped-blank', 'origin-clamp-top', 'origin-clamp-bottom', 'origin-clamp-then-widen', 'origin-batched-reset', 'origin-batched-reset-reverse', 'origin-active-at-restore', 'origin-after-ris', 'origin-after-soft-reset', 'saved-origin', 'saved-pending-wrap', 'saved-origin-csi', 'saved-origin-1048', 'saved-pending-1049', 'immediate', 'colored-underline', 'unicode', 'combining', 'pending-wrap', 'wide-pending-wrap', 'insert-mode', 'after-sgr', 'after-bell', 'after-private-osc', 'after-query', 'after-repeat', 'c0-inside-csi', 'del-inside-csi', 'after-del', 'after-erased-character'];
+const names = ['saved-underline-csi', 'saved-underline-single', 'saved-underline-color', 'saved-underline-color-reset', 'saved-underline-batched', 'saved-underline-twice', 'saved-underline', 'saved-underline-1048', 'saved-underline-1049', 'alternate-wrapped-row', 'alternate-wrapped-blank', 'origin-clamp-top', 'origin-clamp-bottom', 'origin-clamp-then-widen', 'origin-batched-reset', 'origin-batched-reset-reverse', 'origin-active-at-restore', 'origin-after-ris', 'origin-after-soft-reset', 'saved-origin', 'saved-pending-wrap', 'saved-origin-csi', 'saved-origin-1048', 'saved-pending-1049', 'immediate', 'colored-underline', 'unicode', 'combining', 'pending-wrap', 'wide-pending-wrap', 'insert-mode', 'after-sgr', 'after-bell', 'after-private-osc', 'after-query', 'after-repeat', 'c0-inside-csi', 'del-inside-csi', 'after-del', 'after-erased-character'];
+const nativeNames = ['underline-restore', 'underline-1049', 'origin-restore', 'origin-clamp', 'origin-mode-batch', 'pending-wrap', 'pending-wrap-alt'];
+if (process.platform === 'win32') names.push(...nativeNames.map(name => `conpty-${name}`));
 let fixtures: Fixture[];
 let server: http.Server;
 let address: string;
 
 test.beforeAll(async () => {
+  test.setTimeout(process.platform === 'win32' ? 240_000 : 60_000);
   const root = path.resolve(__dirname, '../..');
   fixtures = JSON.parse(execFileSync('go', ['run', './internal/screenstate/testdata/replay-fixtures'], {
     cwd: path.join(root, 'webmux/server'), encoding: 'utf8', timeout: 60_000, maxBuffer: 2 << 20,
   })) as Fixture[];
+  if (process.platform === 'win32') {
+    const target = path.join(test.info().project.outputDir, 'native-screen-captures.json');
+    mkdirSync(path.dirname(target), { recursive: true });
+    const output = execFileSync('go', ['test', '-json', '-count=1', '-timeout=120s', './internal/nativeprovider', '-run', '^TestNativeProviderSavedCursorCaptures$'], {
+      cwd: path.join(root, 'webmux/server'), encoding: 'utf8', timeout: 150_000, maxBuffer: 4 << 20,
+      env: { ...process.env, WEBMUX_NATIVE_CURSOR_CAPTURES: target },
+    });
+    writeFileSync(path.join(path.dirname(target), 'native-screen-tests.jsonl'), output);
+    const events = output.trim().split('\n').map(line => JSON.parse(line) as { Action: string; Test?: string });
+    expect(events.filter(event => event.Action === 'skip'), 'native capture cases must execute').toEqual([]);
+    expect(events.some(event => event.Action === 'pass' && event.Test === 'TestNativeProviderSavedCursorCaptures')).toBe(true);
+    const captures = JSON.parse(readFileSync(target, 'utf8')) as {
+      name: string; cols: number; rows: number; original: string; original_before: string;
+      snapshot_before: string; snapshot: string; recaptured: string; starts: number;
+    }[];
+    expect(captures.map(c => c.name)).toEqual(nativeNames);
+    for (const c of captures) {
+      expect(c.starts, 'one native job per control').toBe(1);
+      expect(c.original.startsWith(c.original_before)).toBe(true);
+      expect(c.snapshot.startsWith(c.snapshot_before)).toBe(true);
+      const future = c.original.slice(c.original_before.length);
+      expect(c.snapshot.slice(c.snapshot_before.length), 'both viewers receive identical later ConPTY output').toBe(future);
+      fixtures.push({ name: `conpty-${c.name}`, cols: c.cols, rows: c.rows, original: c.original_before, snapshot: c.snapshot_before, future, recaptured: c.recaptured });
+    }
+  }
   expect(fixtures.map(f => f.name)).toEqual(names);
   const library = readFileSync(path.join(root, 'webmux/node_modules/@xterm/xterm/lib/xterm.js'));
   const css = readFileSync(path.join(root, 'webmux/node_modules/@xterm/xterm/css/xterm.css'));

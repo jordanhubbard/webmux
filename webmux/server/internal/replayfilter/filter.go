@@ -156,6 +156,9 @@ func (f *Filter) Feed(data []byte) []byte {
 }
 
 func xtermCSI(sequence []byte, final rune) []byte {
+	if final == 'm' {
+		return xtermSGR(sequence)
+	}
 	if final != 'h' && final != 'l' || !bytes.HasPrefix(sequence, []byte("\x1b[?")) {
 		return sequence
 	}
@@ -194,4 +197,50 @@ func renderingCSI(sequence []byte, final rune) bool {
 		return false
 	}
 	return strings.Trim(parameters, "0123456789;:?>") == ""
+}
+
+// The pinned frontend stores SGR 59's -1 underline-color sentinel in a
+// 26-bit extended-color field. While extended attributes are enabled, that
+// renders as RGB white rather than the foreground default. Mirror the actual
+// renderer, including subsequent SGR 4, instead of the generic VT interpretation.
+func xtermSGR(sequence []byte) []byte {
+	params := strings.Split(string(sequence[2:]), ";")
+	var out []string
+	changed := false
+	for i := 0; i < len(params); i++ {
+		p := params[i]
+		code, _, subparams := strings.Cut(p, ":")
+		number, err := strconv.Atoi(code)
+		if err != nil {
+			number = -1
+		}
+		switch number {
+		case 59:
+			out = append(out, "58", "2", "255", "255", "255")
+			changed = true
+		case 38, 48, 58:
+			out = append(out, p)
+			// Semicolon colors consume their numeric payloads, even when one of
+			// the channels is 59. Colon colors are a single entry and pass intact.
+			if !subparams && i+1 < len(params) {
+				n := 0
+				mode, _ := strconv.Atoi(params[i+1])
+				switch mode {
+				case 2:
+					n = 4
+				case 5:
+					n = 2
+				}
+				n = min(n, len(params)-i-1)
+				out = append(out, params[i+1:i+1+n]...)
+				i += n
+			}
+		default:
+			out = append(out, p)
+		}
+	}
+	if !changed {
+		return sequence
+	}
+	return []byte("\x1b[" + strings.Join(out, ";"))
 }

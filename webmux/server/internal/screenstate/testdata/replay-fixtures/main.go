@@ -21,6 +21,15 @@ type fixture struct {
 
 func main() {
 	cases := []struct{ name, before, after string }{
+		{"saved-underline-csi", "\x1b[4:3;58;5;2mA\x1b[s\x1b[4:4;58;5;9mB", "\x1b[uX"},
+		{"saved-underline-single", "\x1b[4mA\x1b7\x1b[4:5;58;5;9mB", "\x1b8X"},
+		{"saved-underline-color", "\x1b[58;5;2mA\x1b7\x1b[58;5;9mB", "\x1b8X"},
+		{"saved-underline-color-reset", "\x1b[4:3;58;5;2mA\x1b7\x1b[59mB", "\x1b8X"},
+		{"saved-underline-batched", "\x1b[4:3;58;5;2mA\x1b[?1048h\x1b[4:5;58;5;9mB", "\x1b[?6;1048lX"},
+		{"saved-underline-twice", "\x1b[4:3;58;5;2mA\x1b7\x1b[4:5;58;5;9mB", "\x1b8X\x1b[4:4;58;5;6m\x1b8Y"},
+		{"saved-underline", "\x1b[4:3;58;2;30;210;60mA\x1b7\x1b[4:5;58;5;9mB", "\x1b8X"},
+		{"saved-underline-1048", "\x1b[4:3;58;5;2mA\x1b[?1048h\x1b[4:5;58;5;9mB", "\x1b[?1048lX"},
+		{"saved-underline-1049", "\x1b[4:3;58;5;2mA\x1b[?1049h\x1b[4:5;58;5;9mB", "\x1b[?1049lX"},
 		{"alternate-wrapped-row", "SHELL\x1b[?1049h\x1b[H" + strings.Repeat("A", 80) + "B", "C"},
 		{"alternate-wrapped-blank", "SHELL\x1b[?1049h\x1b[H" + strings.Repeat("A", 80) + " ", "Y"},
 		{"origin-clamp-top", "\x1b[H\x1b7\x1b[3;20r\x1b[?6h", "\x1b8X"},

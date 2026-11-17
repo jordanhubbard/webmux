@@ -355,3 +355,74 @@ func TestCursorRestoreDoesNotFinishSynchronizedUpdate(t *testing.T) {
 		t.Fatal("completed update was lost")
 	}
 }
+
+// xterm can restore basic underline flags independently of the live extended
+// style object. vt cannot encode contradictory or hidden flags; do not send a
+// plausible but incorrect screen. Existing captures remain immutable.
+func TestUnrepresentableSavedUnderlineRefusesSnapshot(t *testing.T) {
+	for _, tc := range []struct{ name, before, after string }{
+		{"reset", "\x1b[4:3;58;5;2mA\x1b7\x1b[0mB", "\x1b8X"},
+		{"disabled", "\x1b[4:3mA\x1b7\x1b[24mB", "\x1b8X"},
+		{"hidden", "A\x1b7\x1b[4:3;58;5;2mB", "\x1b8X"},
+		{"color-hidden", "A\x1b7\x1b[58;5;2mB", "\x1b8X"},
+		{"color-to-underline", "\x1b[58;5;2mA\x1b7\x1b[4:3mB", "\x1b8X"},
+		{"csi-reset", "\x1b[4:3mA\x1b[s\x1b[0mB", "\x1b[uX"},
+		{"1048-reset", "\x1b[4:3mA\x1b[?1048h\x1b[0mB", "\x1b[?1048lX"},
+		{"1049-reset", "\x1b[4:3mA\x1b[?1049h\x1b[0mB", "\x1b[?1049lX"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newScreen(t, 80, 24)
+			if err := s.Feed([]byte(tc.before)); err != nil {
+				t.Fatal(err)
+			}
+			before, err := s.Capture()
+			if err != nil {
+				t.Fatal(err)
+			}
+			original, err := before.Bytes()
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Feed byte by byte, including the mode callbacks' batch boundary.
+			for _, b := range []byte(tc.after) {
+				if err := s.Feed([]byte{b}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			image, err := s.Capture()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if data, err := image.Bytes(); !errors.Is(err, ErrUnsupported) || data != nil {
+				t.Fatal("unsafe screen accepted", err)
+			}
+			if data, err := before.Bytes(); err != nil || !bytes.Equal(data, original) {
+				t.Fatal("prior capture changed", err)
+			}
+			// Neither movement, SGR reset, erase nor DECSTR repairs already damaged
+			// cell/hidden state; a full terminal reset clears both buffers safely.
+			if err := s.Resize(90, 25); err != nil {
+				t.Fatal(err)
+			}
+			if err := s.Feed([]byte("\x1b[H\x1b[0m\x1b[2J\x1b[!p")); err != nil {
+				t.Fatal(err)
+			}
+			still, err := s.Capture()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := still.Bytes(); !errors.Is(err, ErrUnsupported) {
+				t.Fatal("partial reset accepted", err)
+			}
+			if err := s.Feed([]byte("\x1bcSAFE")); err != nil {
+				t.Fatal(err)
+			}
+			if data := imageBytes(t, s); !bytes.Contains(data, []byte("SAFE")) {
+				t.Fatal("reset did not recover mirror")
+			}
+			if _, err := image.Bytes(); !errors.Is(err, ErrUnsupported) {
+				t.Fatal("unsafe capture changed after reset", err)
+			}
+		})
+	}
+}
