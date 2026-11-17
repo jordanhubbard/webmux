@@ -10,11 +10,11 @@ export interface CoordinationProvider {
 }
 export interface CoordinationProject {
   provider: string; id: string; name: string; host: string; state: string; historical: boolean;
-  seatCount: number; runningCount: number; detail?: string; contexts?: string[]; attentionCount?: number;
+  readOnly?: boolean; seatCount: number; runningCount: number; detail?: string; contexts?: string[]; attentionCount?: number;
 }
 export interface CoordinationSeat {
   provider: string; id: string; projectId: string; projectName: string; name: string; host: string;
-  workspace?: string; runtime: string; state: string; transportState?: string; openable: boolean; managed: boolean;
+  observationState?: string; observedAt?: string; workspace?: string; runtime: string; state: string; transportState?: string; openable: boolean; managed: boolean;
   managerSessionId?: string; nativeSessionId?: string; context?: string; parentId?: string; parentName?: string;
   role?: string; substate?: string; lastActivityAt?: string; attention?: boolean; canReceive?: boolean; exitCode?: number;
 }
@@ -98,7 +98,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const selectedProvider = status.providers.find(value => value.id === provider);
   const visibleProjects = status.projects.filter(value => view === 'all' || value.provider === view);
   const visibleSeats = status.seats.filter(value => view === 'all' || value.provider === view);
-  const projects = status.projects.filter(value => value.provider === provider);
+  const projects = status.projects.filter(value => value.provider === provider && !value.readOnly);
   const seats = status.seats.filter(value => value.provider === provider);
   const providerMessages = status.messages.filter(value => view === 'all' || value.provider === view);
   const selectedProject = projects.find(value => value.id === projectID);
@@ -299,7 +299,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
         <p className="coordination-hint">Names are editable labels, not commands. We suggest a project from your folder and a session from the agent and purpose. The purpose names the session; give the agent its instructions after it opens.</p>
         </details>
         {browser && <section className="coordination-browser" aria-label={`Workspaces on ${host}`}><div><strong>{host}</strong> · <code>{browser.path}</code> {browser.repository && <span className="coordination-repository">Git repository</span>}</div><div className="coordination-browser-actions"><button type="button" onClick={chooseFolder}>Choose this folder</button>{browser.parent && <button type="button" onClick={() => void browse(browser.parent!)}>Parent folder</button>}<button type="button" aria-pressed={showAllFolders} onClick={() => setShowAllFolders(value => !value)}>{showAllFolders ? 'Hide hidden folders' : 'Show all'}</button></div><ul>{browser.entries.filter(entry => showAllFolders || !entry.name.startsWith('.')).map(entry => <li key={entry.path}><button type="button" onClick={() => void browse(entry.path)}>{entry.name}/</button>{entry.repository && <span>Git repository</span>}</li>)}</ul></section>}
-        <p><button type="submit" disabled={busy || !selectedProvider?.available || !selectedProvider.enabled || (mode === 'existing' && (!selectedProject || (provider === 'rig' && !context)))}>{busy ? 'Connecting…' : 'Start agent and open terminal'}</button></p>
+        <p><button type="submit" disabled={busy || !selectedProvider?.available || !selectedProvider.enabled || !selectedProvider.capabilities.includes('launch') || (mode === 'existing' && (!selectedProject || (provider === 'rig' && !context)))}>{busy ? 'Connecting…' : 'Start agent and open terminal'}</button></p>
       </form>
       </>}
       {!launchOnly && <>
@@ -317,7 +317,8 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
                   <strong>{seat.name}</strong> {seat.managed && <span className="coordination-rig">{seat.provider === 'rig' ? 'Rig-managed' : 'Agent Deck-managed'}</span>}{seat.role && seat.role !== 'session' && <span className="coordination-role">{seat.role}</span>}{seat.attention && <span className="coordination-attention">Needs attention</span>}
                   <dl className="coordination-worker-facts">
                     <div><dt>Host</dt><dd>{seat.host}</dd></div><div><dt>Runtime</dt><dd>{seat.runtime}</dd></div>
-                    <div><dt>{seat.provider === 'rig' ? 'Rig lifecycle' : 'State'}</dt><dd>{seat.state}{seat.substate ? ` · ${seat.substate}` : ''}{seat.exitCode !== undefined ? ` · exit ${seat.exitCode}` : ''}</dd></div>{seat.context && <div><dt>Context</dt><dd>{seat.context}</dd></div>}
+                    <div><dt>{seat.provider === 'rig' ? (seat.observationState && seat.observationState !== 'current' ? 'Last observed Rig lifecycle' : 'Rig lifecycle') : 'State'}</dt><dd>{seat.state}{seat.substate ? ` · ${seat.substate}` : ''}{seat.exitCode !== undefined ? ` · exit ${seat.exitCode}` : ''}</dd></div>{seat.context && <div><dt>Context</dt><dd>{seat.context}</dd></div>}
+                    {seat.observedAt && <div><dt>Host observation</dt><dd>{seat.observationState} · {new Date(seat.observedAt).toLocaleString()}</dd></div>}
                     {seat.transportState && <div><dt>Attachment transport</dt><dd>{seat.transportState}</dd></div>}
                     {seat.parentId && <div><dt>Parent</dt><dd>{seat.parentName || seat.parentId}</dd></div>}
                     {seat.workspace && <div><dt>Workspace</dt><dd><code>{seat.workspace}</code></dd></div>}
@@ -338,7 +339,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
                   {deliveries[`${seat.provider}:${seat.id}`] && <p role="status" className="coordination-delivery">Delivery: {deliveries[`${seat.provider}:${seat.id}`].state || deliveries[`${seat.provider}:${seat.id}`].verdict || deliveries[`${seat.provider}:${seat.id}`].delivery || 'accepted'}{deliveries[`${seat.provider}:${seat.id}`].confirmation ? ` · ${deliveries[`${seat.provider}:${seat.id}`].confirmation}` : ''}{deliveries[`${seat.provider}:${seat.id}`].reason ? ` · ${deliveries[`${seat.provider}:${seat.id}`].reason}` : ''}</p>}
                 </article></li>)}
               </ul>}
-              {project.provider !== 'webmux' && !project.historical && <button type="button" disabled={busy || (project.provider === 'rig' && (project.contexts?.length ?? 0) === 0)} onClick={() => { chooseProvider(project.provider); setMode('existing'); setProjectID(project.id); setHost(project.host); document.getElementById('coordination-create-seat')?.scrollIntoView({ block: 'nearest' }); }}>Create session in this project</button>}
+              {project.provider !== 'webmux' && !project.historical && !project.readOnly && <button type="button" disabled={busy || (project.provider === 'rig' && (project.contexts?.length ?? 0) === 0)} onClick={() => { chooseProvider(project.provider); setMode('existing'); setProjectID(project.id); setHost(project.host); document.getElementById('coordination-create-seat')?.scrollIntoView({ block: 'nearest' }); }}>Create session in this project</button>}
             </details>;
           })}
         </div>

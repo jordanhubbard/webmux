@@ -119,21 +119,20 @@ Remaining #318 work, in order:
 4. Audit #318 against its complete acceptance criteria before closing it. The
    owner-approved merge of #322 does not close this requirement or cut a release.
 
-[#320](https://github.com/jordanhubbard/webmux/issues/320) tracks intermittent
-hosted SSH/lease/reconnect failures. The USB-forwarding CLI now waits for remote
-command completion before reporting released connections; real SSH controls
-cover delayed, hung and failed remote cleanup ([details](usb-forwarding.md#verification-and-remaining-work)).
-Peer policy rejection now stays separate from controller authentication, with
-real two-server browser coverage in [#338](https://github.com/jordanhubbard/webmux/pull/338).
-RDP reconnect work in #320 now reproduces a legacy guacd startup race on Linux
-ARM64: a size sent before user registration leaves the reloaded desktop unsized.
-A verified guacd 1.6.0 build passes the same ordering control, rendering and
-keyboard checks. CI now runs the comparison and uses the qualified proxy for
-ordinary reconnects, including an unresponsive previous viewer. Bounded
-connection/frame/process receipts retain the failure evidence. Hosted AMD64
-acceptance remains pending; the historical run's scheduling order was not
-recorded ([scope and setup](rdp-proxy.md)). The reproduced SSH and peer policy
-fixes do not establish the cause of every historical disconnect.
+[#320](https://github.com/jordanhubbard/webmux/issues/320) is closed through
+[#381](https://github.com/jordanhubbard/webmux/pull/381). Real Linux ARM64 and
+hosted AMD64 controls reproduce the legacy guacd initial-size registration race;
+the verified guacd 1.6.0 build passes the same ordering control, ordinary and
+stalled-previous-viewer reconnects, real pixels and keyboard delivery. Bounded
+connection/frame/process receipts retain raw pixels and codec evidence. The
+Windows resize observer also passed twenty repeated real measurement controls,
+including a negative case that cannot invent the requested size. All seventeen
+expected PR-head outcomes passed; exact-main CI and Packaging passed at
+`232dbdce8b18698e0363a3fd288896e1fd33b8a1` before subsequent work.
+The USB-forwarding CLI's real SSH delayed/hung/failed cleanup controls and
+[#338](https://github.com/jordanhubbard/webmux/pull/338)'s peer-policy separation
+remain separate evidence. These reproduced fixes do not establish the cause of
+every historical disconnect. See [RDP scope and setup](rdp-proxy.md).
 
 [#324](https://github.com/jordanhubbard/webmux/issues/324) separates fake-manager
 preparation from the production service-query deadline. A shared executable
@@ -229,9 +228,14 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   despite an unrelated CLI host selection
   ([scope and qualification](openrig.md#coordinator-selection-scope)).
 - [#200](https://github.com/jordanhubbard/webmux/issues/200): remote Rig state over
-  the outbound managed-host client. Review its relationship to #238 after the
-  multi-server foundation ships; do not treat server federation as proof that
-  this separate Rig contract is implemented.
+  the outbound managed-host client. An opt-in bounded canonical-seat report now
+  carries host-scoped identity and observation provenance, with stale/offline
+  inventory and read-only SSH attachment. The published-Rig observer and
+  authenticated channel controls are covered separately. A real Linux ARM64
+  guest now also passes authenticated host check-in, browser/SSH input, multiple
+  windows, client loss/reconnect, controller restart with stable seat/layout,
+  revocation and ordinary SSH with Rig disabled. See [managed-host observation](managed-hosts.md#observe-existing-rig-seats).
+  Server federation is separate from this contract.
 - [#110](https://github.com/jordanhubbard/webmux/issues/110): browser companion
   durable profiles/controller lease, mobile/accessibility work and real-provider/
   SSH-terminal authentication qualification. File controls are implemented;

@@ -14,6 +14,9 @@ func (s *Server) captureRigRecovery(ctx context.Context, owner, id string) error
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	return s.sessions.CaptureManagedRecovery(ctx, owner, id, func(ctx context.Context, identity session.RigIdentity) (session.RigIdentity, error) {
+		if isRemoteRigTarget(identity.Target) {
+			return identity, fmt.Errorf("remote Rig recovery belongs to the execution host")
+		}
 		if s.openRigPermission(owner) != nil || s.coordinationProvider(owner, "rig") == nil {
 			return identity, fmt.Errorf("Rig access is unavailable")
 		}

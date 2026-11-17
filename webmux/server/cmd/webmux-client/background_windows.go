@@ -11,12 +11,15 @@ import (
 	"syscall"
 )
 
-func startBackground(server, state string, allowHTTP bool) error {
+func startBackground(server, state string, allowHTTP, observeRig bool) error {
 	executable, err := os.Executable()
 	if err != nil {
 		return err
 	}
 	args := []string{"--server", server, "--state", state, "--run-child"}
+	if observeRig {
+		args = append(args, "--observe-rig")
+	}
 	if allowHTTP {
 		args = append(args, "--allow-insecure-http")
 	}
