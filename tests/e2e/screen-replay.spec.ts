@@ -7,19 +7,20 @@ import path from 'node:path';
 
 type Fixture = { name: string; cols: number; rows: number; original: string; snapshot: string; future: string; recaptured: string };
 const names = ['saved-underline-csi', 'saved-underline-single', 'saved-underline-color', 'saved-underline-color-reset', 'saved-underline-batched', 'saved-underline-twice', 'saved-underline', 'saved-underline-1048', 'saved-underline-1049', 'alternate-wrapped-row', 'alternate-wrapped-blank', 'origin-clamp-top', 'origin-clamp-bottom', 'origin-clamp-then-widen', 'origin-batched-reset', 'origin-batched-reset-reverse', 'origin-active-at-restore', 'origin-after-ris', 'origin-after-soft-reset', 'saved-origin', 'saved-pending-wrap', 'saved-origin-csi', 'saved-origin-1048', 'saved-pending-1049', 'immediate', 'colored-underline', 'unicode', 'combining', 'pending-wrap', 'wide-pending-wrap', 'insert-mode', 'after-sgr', 'after-bell', 'after-private-osc', 'after-query', 'after-repeat', 'c0-inside-csi', 'del-inside-csi', 'after-del', 'after-erased-character'];
+const NATIVE_SCREEN = process.platform === 'win32' && process.env.WEBMUX_SCREEN_REPLAY_ONLY === '1';
 const nativeNames = ['underline-restore', 'underline-1049', 'origin-restore', 'origin-clamp', 'origin-mode-batch', 'pending-wrap', 'pending-wrap-alt'];
-if (process.platform === 'win32') names.push(...nativeNames.map(name => `conpty-${name}`));
+if (NATIVE_SCREEN) names.push(...nativeNames.map(name => `conpty-${name}`));
 let fixtures: Fixture[];
 let server: http.Server;
 let address: string;
 
 test.beforeAll(async () => {
-  test.setTimeout(process.platform === 'win32' ? 240_000 : 60_000);
+  test.setTimeout(NATIVE_SCREEN ? 240_000 : 60_000);
   const root = path.resolve(__dirname, '../..');
   fixtures = JSON.parse(execFileSync('go', ['run', './internal/screenstate/testdata/replay-fixtures'], {
     cwd: path.join(root, 'webmux/server'), encoding: 'utf8', timeout: 60_000, maxBuffer: 2 << 20,
   })) as Fixture[];
-  if (process.platform === 'win32') {
+  if (NATIVE_SCREEN) {
     const target = path.join(test.info().project.outputDir, 'native-screen-captures.json');
     mkdirSync(path.dirname(target), { recursive: true });
     const suppliedCaptures = process.env.WEBMUX_NATIVE_SCREEN_CAPTURES;
