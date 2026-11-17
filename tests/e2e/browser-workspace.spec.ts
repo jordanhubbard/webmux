@@ -44,6 +44,17 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
  const created = await request.post('/api/sessions', { data: { transport: 'local' } });
  expect(created.ok()).toBe(true); const { id } = await created.json();
  const endpoint = `/api/sessions/${id}/browser`;
+ let controller: { viewer?: string; controlToken?: string } = {};
+ page.on('request', outgoing => {
+  if (new URL(outgoing.url()).pathname !== endpoint || outgoing.method() !== 'POST') return;
+  const body = outgoing.postDataJSON() as typeof controller;
+  if (body.controlToken) controller = { viewer: body.viewer, controlToken: body.controlToken };
+ });
+ const controlledPost = (data: Record<string, unknown>) => {
+  expect(controller.viewer).toMatch(/^[a-f0-9]{32}$/);
+  expect(controller.controlToken).toMatch(/^[a-f0-9]{64}$/);
+  return request.post(endpoint, { data: { ...data, ...controller } });
+ };
  try {
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/');
@@ -80,7 +91,7 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   await click(50, 100);
   const confirm = page.getByRole('dialog', { name: 'Browser confirm', exact: true });
   await expect(confirm).toBeVisible();
-  const wrongDialog = await (await request.post(endpoint, { data: { action: 'dialog', target: 'another-tab', accept: true } })).json();
+  const wrongDialog = await (await controlledPost({ action: 'dialog', target: 'another-tab', accept: true })).json();
   expect(wrongDialog.error).toContain('another tab'); expect(wrongDialog.dialog.type).toBe('confirm');
   await confirm.getByRole('button', { name: 'OK', exact: true }).click();
   await expect.poll(() => signals).toContain('confirm:true');
@@ -110,9 +121,9 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   await expect(page.getByRole('dialog', { name: 'Choose a page option' })).not.toBeVisible();
   await click(50, 160);
   await expect(page.getByLabel('Choose files for page')).toBeVisible();
-  const invalidUpload = await (await request.post(endpoint, { data: { action: 'upload', files: [{ name: '../escape', data: 'aGVsbG8=' }] } })).json();
+  const invalidUpload = await (await controlledPost({ action: 'upload', files: [{ name: '../escape', data: 'aGVsbG8=' }] })).json();
   expect(invalidUpload.error).toContain('Invalid upload filename');
-  const invalidDownload = await (await request.post(endpoint, { data: { action: 'download', target: '../../config/auth.yaml' } })).json();
+  const invalidDownload = await (await controlledPost({ action: 'download', target: '../../config/auth.yaml' })).json();
   expect(invalidDownload.error).toContain('Invalid download'); expect(invalidDownload.file).toBeUndefined();
   const file = Buffer.alloc(1100 * 1024, 0x5a); file.write('larger-than-the-old-protocol-limit');
   await page.getByLabel('Choose files for page').setInputFiles({ name: 'upload-proof.bin', mimeType: 'application/octet-stream', buffer: file });

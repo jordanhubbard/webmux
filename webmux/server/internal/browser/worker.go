@@ -1,4 +1,4 @@
-// Package browser provides an ephemeral browser over private stdio pipes.
+// Package browser provides a session browser over private stdio pipes.
 package browser
 
 import (
@@ -20,29 +20,35 @@ import (
 )
 
 const Width, Height = 1100, 760
+const Protocol = 3
 
 type Request struct {
-	Backward    bool     `json:"backward,omitempty"`
-	IgnoreCache bool     `json:"ignoreCache,omitempty"`
-	Action      string   `json:"action"`
-	URL         string   `json:"url,omitempty"`
-	Text        string   `json:"text,omitempty"`
-	Key         string   `json:"key,omitempty"`
-	Code        string   `json:"code,omitempty"`
-	KeyCode     int64    `json:"keyCode,omitempty"`
-	Modifiers   int64    `json:"modifiers,omitempty"`
-	X           float64  `json:"x,omitempty"`
-	Y           float64  `json:"y,omitempty"`
-	DeltaY      float64  `json:"deltaY,omitempty"`
-	Target      string   `json:"target,omitempty"`
-	Width       int64    `json:"width,omitempty"`
-	Height      int64    `json:"height,omitempty"`
-	DeltaX      float64  `json:"deltaX,omitempty"`
-	Button      string   `json:"button,omitempty"`
-	Buttons     int64    `json:"buttons,omitempty"`
-	ClickCount  int64    `json:"clickCount,omitempty"`
-	Accept      bool     `json:"accept,omitempty"`
-	Files       []Upload `json:"files,omitempty"`
+	Viewer       string   `json:"viewer,omitempty"`
+	ControlToken string   `json:"controlToken,omitempty"`
+	Force        bool     `json:"force,omitempty"`
+	ProfileID    *string  `json:"profileId,omitempty"`
+	ProfileKey   string   `json:"profileKey,omitempty"`
+	Backward     bool     `json:"backward,omitempty"`
+	IgnoreCache  bool     `json:"ignoreCache,omitempty"`
+	Action       string   `json:"action"`
+	URL          string   `json:"url,omitempty"`
+	Text         string   `json:"text,omitempty"`
+	Key          string   `json:"key,omitempty"`
+	Code         string   `json:"code,omitempty"`
+	KeyCode      int64    `json:"keyCode,omitempty"`
+	Modifiers    int64    `json:"modifiers,omitempty"`
+	X            float64  `json:"x,omitempty"`
+	Y            float64  `json:"y,omitempty"`
+	DeltaY       float64  `json:"deltaY,omitempty"`
+	Target       string   `json:"target,omitempty"`
+	Width        int64    `json:"width,omitempty"`
+	Height       int64    `json:"height,omitempty"`
+	DeltaX       float64  `json:"deltaX,omitempty"`
+	Button       string   `json:"button,omitempty"`
+	Buttons      int64    `json:"buttons,omitempty"`
+	ClickCount   int64    `json:"clickCount,omitempty"`
+	Accept       bool     `json:"accept,omitempty"`
+	Files        []Upload `json:"files,omitempty"`
 }
 
 type Tab struct {
@@ -51,6 +57,10 @@ type Tab struct {
 }
 
 type Frame struct {
+	Control     *Control       `json:"control,omitempty"`
+	ProfileKey  string         `json:"profileKey,omitempty"`
+	ProfileID   string         `json:"profileId,omitempty"`
+	ProfileName string         `json:"profileName,omitempty"`
 	Found       *bool          `json:"found,omitempty"`
 	Protocol    int            `json:"protocol"`
 	Image       []byte         `json:"image,omitempty"`
@@ -90,12 +100,50 @@ func temporaryProfile() (string, error) {
 
 // Worker is also run on SSH hosts. It exposes no listener and exits on stdin EOF.
 func Worker(in io.Reader, out io.Writer) error {
-	profile, err := temporaryProfile()
-	if err != nil {
-		_ = json.NewEncoder(out).Encode(Frame{Error: "Cannot create a private temporary browser profile in the worker account's home directory."})
+	scanner := bufio.NewScanner(in)
+	scanner.Buffer(make([]byte, 4096), MaxMessageBytes)
+	if !scanner.Scan() {
+		return scanner.Err()
+	}
+	var first Request
+	if err := json.Unmarshal(scanner.Bytes(), &first); err != nil {
 		return err
 	}
-	defer os.RemoveAll(profile)
+	key := ""
+	if first.Action == "configure" {
+		key = first.ProfileKey
+		first.Action = "frame"
+	}
+	profile, err := temporaryProfile()
+	if key != "" {
+		if err == nil {
+			_ = os.RemoveAll(profile)
+		}
+		var lock *os.File
+		profile, lock, err = savedProfile(key)
+		if lock != nil {
+			defer lock.Close()
+		}
+	} else if err == nil {
+		defer os.RemoveAll(profile)
+	}
+	if err != nil {
+		message := "Cannot open the private saved browser profile; it may be in use or unavailable on the terminal host."
+		if key == "" {
+			message = "Cannot create a private temporary browser profile in the worker account's home directory."
+		}
+		_ = json.NewEncoder(out).Encode(Frame{Error: message})
+		return err
+	}
+	files := profile
+	if key != "" {
+		home, _ := os.UserHomeDir()
+		files, err = os.MkdirTemp(home, "webmux-transfer-")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(files)
+	}
 	// Retain Chromium's normal isolation and safe-browsing defaults. The generic
 	// automation defaults disable protections that are useful for an auth browser.
 	opts := []chromedp.ExecAllocatorOption{
@@ -114,6 +162,15 @@ func Worker(in io.Reader, out io.Writer) error {
 	defer stop()
 	root, cancel := chromedp.NewContext(alloc)
 	defer cancel()
+	if key != "" {
+		// Ordinary context cancellation terminates Chromium before its cookie store
+		// necessarily reaches disk. Close through CDP before cancelling its owner.
+		defer func() {
+			closing, finish := context.WithTimeout(root, 5*time.Second)
+			defer finish()
+			_ = chromedp.Cancel(closing)
+		}()
+	}
 	// Start outside an operation timeout: cancelling the first Run context would
 	// otherwise tear down the browser after a successful first response.
 	startup := time.AfterFunc(20*time.Second, cancel)
@@ -123,7 +180,7 @@ func Worker(in io.Reader, out io.Writer) error {
 		_ = json.NewEncoder(out).Encode(Frame{Error: "Cannot start Chromium. Install Chrome/Chromium on the terminal host and run as a non-root user."})
 		return err
 	}
-	browser, err := newCompanion(root, profile)
+	browser, err := newCompanion(root, files)
 	if err != nil {
 		return err
 	}
@@ -135,8 +192,11 @@ func Worker(in io.Reader, out io.Writer) error {
 	defer close(done)
 	go func() {
 		defer close(requests)
-		scanner := bufio.NewScanner(in)
-		scanner.Buffer(make([]byte, 4096), MaxMessageBytes)
+		select {
+		case requests <- first:
+		case <-done:
+			return
+		}
 		for scanner.Scan() {
 			var req Request
 			if json.Unmarshal(scanner.Bytes(), &req) != nil {
@@ -176,6 +236,7 @@ func Worker(in io.Reader, out io.Writer) error {
 				finish()
 			}
 			frame := browser.snapshot(req, err)
+			frame.ProfileKey = key
 			frame.Clipboard, frame.File, frame.Found = extra.Clipboard, extra.File, extra.Found
 
 			if err := encoder.Encode(frame); err != nil {

@@ -106,7 +106,7 @@ test(`browser companion routes ${scenario} authentication and completes a loopba
       const response = await route.fetch();
       expect(response.ok()).toBe(true);
       const frame = await response.json();
-      expect(frame.protocol).toBe(2);
+      expect(frame.protocol).toBe(3);
       delete frame.image;
       interruptedActions.add(action.action);
       await route.fulfill({ response, json: { ...frame, error: 'Page rendering was interrupted; retry or open the site in your browser' } });

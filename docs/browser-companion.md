@@ -21,17 +21,40 @@ between pages opened by the site stay inside the companion.
 **Return to terminal** hides the drawer and retains browser state. Reopening it
 reattaches to that terminal's browser. **End browser** closes Chromium and removes
 its temporary profile, including cookies. Deleting the terminal or stopping
-WebMux also ends its browser. Profiles are separate for every terminal and user;
-they do not import the host's everyday browser credentials. Browser state is
-ephemeral across server restarts. An idle browser expires after 30 minutes without
-viewer activity, so hiding it is suitable for short interruptions, not long-term
-credential storage.
+WebMux also ends its browser. A worker expires after 30 minutes without viewer
+activity. Profiles never import the host's everyday browser credentials.
 
-Temporary profiles and transferred files share one fresh, private directory in
-the worker account's home (named `webmux-browser-*`). This lets packaged
-browsers with a private temporary-file namespace see the same files as the
-worker, including uploads and downloads. Ending the worker removes that
-directory. The companion never opens the account's everyday browser profile.
+Temporary profiles are the default. For an explicit saved profile, enter a name,
+choose **Create saved profile**, then **Open selected profile**. Opening a selected
+profile ends the current worker first. Saved cookies and site storage survive
+worker and server restarts. The registry is scoped to the signed-in WebMux owner
+and execution host/account (local server, or SSH username, hostname and port).
+Changing an SSH key does not change that principal. Host aliases remain separate.
+Only one worker may use a saved profile at a time, including other controllers
+running under that execution account. An OS lock is released when its worker exits.
+The execution account can read its own saved data; this is not OS-account isolation.
+
+Saved data lives in private `~/webmux-browser-profiles/` directories named by opaque
+keys. The API never accepts filesystem paths or exposes those keys. **Delete saved
+profile** removes its data on the execution host, then its registry entry. End its
+browsers first. A failed or unavailable-host deletion keeps the registry entry for
+retry. Keep access to the original execution host/account until deletion succeeds.
+
+Transferred files always remain temporary. A temporary worker uses a fresh private
+`~/webmux-browser-*` directory; a saved worker uses a separate `~/webmux-transfer-*`
+directory, removed when the worker exits. These home locations work with packaged
+Chromium browsers that have a private temporary-file namespace. Abrupt host/process
+termination can leave temporary files for the execution account to remove.
+
+Viewers signed in as the terminal owner share its page, but one viewer controls
+navigation, input, resizing, transfers, dialogs and ending. Other viewers see
+**View only**. **Take control** explicitly replaces an active viewer after a
+confirmation; **Release control** permits another viewer to claim it. The server
+checks a private viewer token again when queued work reaches the worker. Leases
+expire after 30 seconds without controller activity; visible polling renews them.
+Hiding the drawer releases control. Hidden tabs stop polling. Handoff releases held
+pointer buttons before further input. Update both controller and terminal-host
+WebMux: these guarantees require browser worker protocol 3.
 
 ## Everyday browser controls
 
@@ -57,7 +80,7 @@ appear in **Downloads**; choose **Save** to transfer completed files to your dev
 Downloads are limited to 10 MiB each, 20 retained files and 50 MiB per browser.
 Files travel through the authenticated browser worker connection, including when
 the worker is on an SSH host; the remote host does not need access to your local
-file paths. Ending the browser removes its private files together with its profile.
+file paths. Ending the browser removes transfer files; saved profile cookies remain until explicitly deleted.
 Directory pickers and OS-native browser UI are not forwarded.
 
 For a site that rejects automated Chromium or needs your device's passkey, native
@@ -131,7 +154,7 @@ authentication acceptance under #110.
 ## Interrupted initial frames
 
 A live worker can lose a screenshot while its page navigates. The companion now
-continues frame polling after a protocol-v2 startup response even when the first
+continues frame polling after a matching worker startup response even when the first
 image is interrupted. Recovery requests a new frame; the original sign-in
 navigation executes once. A worker that fails before becoming available keeps
 its startup error and is not polled or relaunched automatically.
@@ -192,8 +215,8 @@ exists, this companion cannot complete that sign-in. Do not disable account 2FA.
 
 The companion transmits compressed snapshots, aimed at interactive pages and forms,
 not video. Clipboard paste is explicit; clipboard contents are never fetched
-automatically. All viewers authenticated as the terminal owner share its browser;
-it does not provide a multi-person control arbitration protocol.
+automatically. Control leases apply to viewers authenticated as the terminal owner;
+other owners cannot access the terminal or its browser.
 
 Earlier companion checks passed macOS Chrome 154 and Chromium 145 headless-shell.
 The expanded workspace is locally qualified with macOS Chrome 156; CI records its

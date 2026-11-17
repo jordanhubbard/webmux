@@ -237,10 +237,12 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   revocation and ordinary SSH with Rig disabled. See [managed-host observation](managed-hosts.md#observe-existing-rig-seats).
   Server federation is separate from this contract.
 - [#110](https://github.com/jordanhubbard/webmux/issues/110): browser companion
-  durable profiles/controller lease, mobile/accessibility work and real-provider/
-  SSH-terminal authentication qualification. File controls are implemented;
-  packaged Chromium file visibility and a real SSH worker transfer now have
-  separate [qualification evidence](browser-companion.md#packaged-chromium-file-visibility-2026-11-16).
+  mobile/accessibility work, Mosh launch and real-provider/SSH-terminal
+  authentication qualification remain open. Opt-in saved profiles and exclusive
+  viewer control are implemented in [#401](https://github.com/jordanhubbard/webmux/pull/401);
+  see the [profile and lease scope](browser-companion.md). File controls are implemented;
+  packaged Chromium file visibility and a real SSH worker transfer have separate
+  [qualification evidence](browser-companion.md#packaged-chromium-file-visibility-2026-11-16).
 - [#120](https://github.com/jordanhubbard/webmux/issues/120): opt-in USB forwarding
   and real iPhone/Xcode qualification.
 
