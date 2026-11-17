@@ -51,8 +51,9 @@ if os.geteuid() != 0 or os.environ.get("GITHUB_ACTIONS") != "true" or socket.get
     sys.exit("Run only as root in a disposable GitHub Actions Linux VM.")
 binary = str(Path(sys.argv[1]).resolve(strict=True))
 direct_control = sys.argv[2:] == ["--direct-control"]
-if sys.argv[2:] and not direct_control:
-    sys.exit("Expected only an optional --direct-control flag.")
+stale_control = sys.argv[2:] == ["--stale-control"]
+if sys.argv[2:] and not (direct_control or stale_control):
+    sys.exit("Expected an optional --direct-control or --stale-control flag.")
 modules = ["usbip_vudc", "g_mass_storage", "vhci_hcd"]
 if any(Path("/sys/module", module).exists() for module in modules):
     sys.exit("Fixture requires a fresh VM with no existing USB forwarding modules.")
@@ -88,6 +89,11 @@ try:
     for module in ["usbip_vudc", "vhci_hcd"]:
         run("modprobe", module)
         loaded.append(module)
+    expected_module = os.environ.get("WEBMUX_USB_EXPECTED_SRCVERSION")
+    if expected_module:
+        actual_module = Path("/sys/module/usbip_vudc/srcversion").read_text().strip()
+        assert actual_module == expected_module, "loaded virtual gadget identity mismatch"
+        print(f"Loaded gadget srcversion verified: {actual_module}", flush=True)
     image = root / "storage.img"
     pattern = bytes(range(256)) * 16
     with image.open("wb") as output:
@@ -105,6 +111,36 @@ try:
     busid = until(gadget_bus, "virtual USB gadget binding")
     start("usbipd", "usbipd", "--device", "-4", "--tcp-port", "3241")
     until(lambda: listening(3241), "USB/IP exporter startup")
+
+    if stale_control:
+        print("STALE REPLY CONTROL: real native completion held before disconnect", flush=True)
+        run("usbip", "--tcp-port", "3241", "attach", "--remote", "127.0.0.1", "--busid", busid)
+        disk = until(imported_disk, "initial stale-control enumeration")
+        with disk.open("rb", buffering=0) as source:
+            assert source.read(len(pattern)) == pattern, "initial control payload mismatch"
+        parameters = Path("/sys/module/usbip_vudc/parameters")
+        held = parameters / "webmux_test_held_replies"
+        before = int(held.read_text())
+        (parameters / "webmux_test_hold_replies").write_text("1")
+        reader = start("held-read", "dd", f"if={disk}", "of=/dev/null", "bs=4096", "skip=256", "count=1", "iflag=direct", "status=none")
+        until(lambda: int(held.read_text()) > before, "real native completion queued under TX hold")
+        assert reader.poll() is None, "direct read completed instead of remaining held"
+        print("Genuine native reply queued; direct read is blocked", flush=True)
+        ports = re.findall(r"Port (\d+):", run("usbip", "port"))
+        assert len(ports) == 1, "Expected exactly one control import"
+        run("usbip", "detach", "--port", ports[0])
+        until(lambda: imported_disk() is None, "held-reply USB detach")
+        assert reader.wait(timeout=10) != 0, "held read must be interrupted by detach"
+        (parameters / "webmux_test_hold_replies").write_text("0")
+        print("HELD REPLY REATTACH: beginning replacement import", flush=True)
+        run("usbip", "--tcp-port", "3241", "attach", "--remote", "127.0.0.1", "--busid", busid)
+        disk = until(imported_disk, "USB import after held-reply disconnect")
+        with disk.open("rb", buffering=0) as source:
+            assert source.read(len(pattern)) == pattern, "replacement control payload mismatch"
+        kernel_log = run("dmesg")
+        assert re.search(r"discarded [1-9][0-9]* stale USB/IP replies", kernel_log), "correction did not discard the held completion"
+        print("PASS: held native reply discarded; replacement import and exact payload verified", flush=True)
+        sys.exit(0)
 
     if direct_control:
         # The same virtual gadget, native importer and kernel are used, but no
@@ -201,6 +237,7 @@ X11Forwarding no
     until(lambda: not Path(f"/proc/{worker_pid}").exists(), "SSH worker process teardown")
     print("PASS: virtual USB enumeration, read/write, detach, interruption and worker cleanup", flush=True)
 finally:
+    run("dmesg", check=False)
     for port in re.findall(r"Port (\d+):", run("usbip", "port", check=False)):
         run("usbip", "detach", "--port", port, check=False)
     for child in reversed(children):

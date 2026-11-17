@@ -18,6 +18,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--kernel', required=True)
     parser.add_argument('--build-root', required=True, type=Path)
+    parser.add_argument('--unpatched', action='store_true')
+    parser.add_argument('--hold-replies', action='store_true')
     args = parser.parse_args()
     if platform.system() != 'Linux' or not re.fullmatch(r'[A-Za-z0-9.+_-]+', args.kernel):
         parser.error('requires Linux and a kernel release name')
@@ -37,8 +39,12 @@ def main():
         if digest(data) != expected:
             raise RuntimeError(f'kernel fixture source checksum mismatch: {name}')
         (root / name).write_bytes(data)
-    patch = (tests / 'usb-vudc.patch').read_bytes()
-    subprocess.run(['patch', '--batch', '--fuzz=0', '-p1'], cwd=root, input=patch, check=True, timeout=10)
+    patches = {}
+    for name, enabled in [('usb-vudc-schedule.patch', args.hold_replies), ('usb-vudc.patch', not args.unpatched)]:
+        if enabled:
+            patch = (tests / name).read_bytes()
+            subprocess.run(['patch', '--batch', '--fuzz=0', '-p1'], cwd=root, input=patch, check=True, timeout=10)
+            patches[name] = digest(patch)
     (root / 'Makefile').write_text('obj-m := usbip-vudc.o\nusbip-vudc-y := vudc_main.o vudc_dev.o vudc_sysfs.o vudc_rx.o vudc_tx.o vudc_transfer.o\n')
     with (root / 'build.log').open('wb') as log:
         subprocess.run(['make', '-C', str(headers), 'M=' + str(root), '-j2', 'modules'],
@@ -47,7 +53,10 @@ def main():
     vermagic = subprocess.check_output(['modinfo', '-F', 'vermagic', str(module)], text=True, timeout=10).strip()
     if vermagic.split()[0] != args.kernel:
         raise RuntimeError('built module targets a different kernel')
-    receipt = {'kernel': args.kernel, 'source': manifest, 'patch_sha256': digest(patch),
+    srcversion = subprocess.check_output(['modinfo', '-F', 'srcversion', str(module)], text=True, timeout=10).strip()
+    if not srcversion:
+        raise RuntimeError('module source identity is missing')
+    receipt = {'kernel': args.kernel, 'source': manifest, 'patches': patches, 'srcversion': srcversion,
                'module_sha256': digest(module.read_bytes()), 'vermagic': vermagic,
                'scope': 'disposable virtual gadget; not a WebMux runtime dependency'}
     (root / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
