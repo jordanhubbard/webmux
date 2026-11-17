@@ -173,6 +173,23 @@ To test an extracted bundle:
 node scripts/smoke-native-package.mts /absolute/path/to/extracted/webmux-version-platform-arch-native
 ```
 
+On Windows, first build the disposable smoke-test process owner from the source
+checkout and set its path (Packaging does this automatically):
+
+```powershell
+Push-Location webmux/server
+go build -o "$env:TEMP/webmux-qualification-owner.exe" ./cmd/qualification-owner
+Pop-Location
+$env:WEBMUX_QUALIFICATION_OWNER = "$env:TEMP/webmux-qualification-owner.exe"
+```
+
+The owner assigns the suspended test server to a non-breakaway Job Object
+before it runs. Explicit shutdown must produce a versioned receipt with zero
+active processes. Control-pipe loss or owner exit also closes the job, but is
+not admitted as a successful smoke test. Native controls cover immediate child
+creation, normal stop, lost control and owner crash, including actual root and
+child handle waits. The owner is qualification tooling and is not shipped.
+
 On Windows, install Go 1.26 or newer, Node.js 24 and WiX 5, then build the
 native Go ZIP and MSI from PowerShell:
 
