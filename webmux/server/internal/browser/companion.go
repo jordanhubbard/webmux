@@ -55,6 +55,7 @@ type SelectControl struct {
 }
 
 type companion struct {
+	pointers        map[target.ID]Request
 	root, current   context.Context
 	tabs            map[target.ID]context.Context
 	cancels         map[target.ID]context.CancelFunc
@@ -217,6 +218,29 @@ func (b *companion) selectTab(id target.ID) error {
 func (b *companion) step(ctx context.Context, req Request, frame *Frame) error {
 	id := chromedp.FromContext(b.current).Target.TargetID
 	switch req.Action {
+	case "release_input":
+		for targetID, held := range b.pointers {
+			targetCtx, ok := b.tabs[targetID]
+			if !ok {
+				delete(b.pointers, targetID)
+				continue
+			}
+			for i, button := range []string{"left", "right", "middle"} {
+				bit := int64(1 << i)
+				if held.Buttons&bit == 0 {
+					continue
+				}
+				held.Buttons &^= bit
+				releaseCtx, cancel := context.WithTimeout(targetCtx, 2*time.Second)
+				err := perform(releaseCtx, Request{Action: "mouse_up", Button: button, X: held.X, Y: held.Y, Buttons: held.Buttons, ClickCount: 1}, b.width, b.height)
+				cancel()
+				if err != nil {
+					return err
+				}
+			}
+			delete(b.pointers, targetID)
+		}
+		return nil
 	case "resize":
 		if req.Width < 320 || req.Width > 2560 || req.Height < 240 || req.Height > 1600 {
 			return errors.New("Browser viewport must be 320–2560 by 240–1600 pixels")
@@ -358,7 +382,26 @@ func (b *companion) step(ctx context.Context, req Request, frame *Frame) error {
 		}
 		return err
 	default:
-		return perform(ctx, req, b.width, b.height)
+		err := perform(ctx, req, b.width, b.height)
+		if err == nil && (req.Action == "mouse_down" || req.Action == "mouse_up" || req.Action == "mouse_move") {
+			if b.pointers == nil {
+				b.pointers = map[target.ID]Request{}
+			}
+			held := req
+			bit := map[string]int64{"left": 1, "right": 2, "middle": 4}[req.Button]
+			if req.Action == "mouse_down" {
+				held.Buttons |= bit
+			}
+			if req.Action == "mouse_up" {
+				held.Buttons &^= bit
+			}
+			if held.Buttons == 0 {
+				delete(b.pointers, id)
+			} else {
+				b.pointers[id] = held
+			}
+		}
+		return err
 	}
 }
 
@@ -420,7 +463,7 @@ func (b *companion) tabAction(req Request) error {
 
 func (b *companion) snapshot(req Request, actionErr error) Frame {
 	id := chromedp.FromContext(b.current).Target.TargetID
-	frame := Frame{Protocol: 2, Target: string(id), Tabs: []Tab{}, Width: b.width, Height: b.height, Downloads: []Download{}}
+	frame := Frame{Protocol: Protocol, Target: string(id), Tabs: []Tab{}, Width: b.width, Height: b.height, Downloads: []Download{}}
 	infos, _ := chromedp.Targets(b.root)
 	for _, info := range infos {
 		if info.Type == "page" {

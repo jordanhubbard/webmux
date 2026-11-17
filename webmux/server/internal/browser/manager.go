@@ -17,14 +17,18 @@ import (
 )
 
 type client struct {
-	mu      sync.Mutex
-	cmd     *exec.Cmd
-	in      io.WriteCloser
-	lines   *bufio.Scanner
-	done    chan struct{}
-	owner   string
-	stopped chan struct{}
-	once    sync.Once
+	control      controllerLease
+	profile      Profile
+	initialized  bool
+	resetPending bool
+	mu           sync.Mutex
+	cmd          *exec.Cmd
+	in           io.WriteCloser
+	lines        *bufio.Scanner
+	done         chan struct{}
+	owner        string
+	stopped      chan struct{}
+	once         sync.Once
 }
 
 type Manager struct {
@@ -39,7 +43,7 @@ func command(s session.Session, store *storage.Store) (*exec.Cmd, error) {
 
 // WorkerCommand uses only fixed worker modes, never user URLs or shell text.
 func WorkerCommand(ctx context.Context, s session.Session, store *storage.Store, mode string) (*exec.Cmd, error) {
-	if mode != "--browser-worker" && mode != "--auth-callback" {
+	if mode != "--browser-worker" && mode != "--auth-callback" && mode != "--browser-profile-remove" {
 		return nil, errors.New("Unsupported worker mode")
 	}
 	if s.Transport == "local" || s.BrowserLocal {
@@ -88,6 +92,10 @@ func WorkerCommand(ctx context.Context, s session.Session, store *storage.Store,
 }
 
 func (m *Manager) Start(s session.Session, store *storage.Store) error {
+	return m.StartProfile(s, store, nil)
+}
+
+func (m *Manager) StartProfile(s session.Session, store *storage.Store, profile *Profile) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.closed {
@@ -104,8 +112,18 @@ func (m *Manager) Start(s session.Session, store *storage.Store) error {
 		default:
 		}
 	}
-	if m.clients[s.ID] != nil {
+	if existing := m.clients[s.ID]; existing != nil {
+		if profile != nil && profile.Key != existing.profile.Key {
+			return errors.New("End the current browser before changing profiles")
+		}
 		return nil
+	}
+	if profile != nil && profile.Key != "" {
+		for _, existing := range m.clients {
+			if existing.profile.Key == profile.Key {
+				return errors.New("Saved browser profile is already open; end that browser first")
+			}
+		}
 	}
 	owned := 0
 	for _, c := range m.clients {
@@ -136,20 +154,29 @@ func (m *Manager) Start(s session.Session, store *storage.Store) error {
 		return errors.New("Cannot launch browser worker; check the WebMux binary and SSH installation")
 	}
 	c := &client{cmd: cmd, in: in, lines: bufio.NewScanner(out), done: make(chan struct{}), owner: s.Owner, stopped: make(chan struct{})}
+	if profile != nil {
+		c.profile = *profile
+	}
 	c.lines.Buffer(make([]byte, 4096), MaxMessageBytes)
 	m.clients[s.ID] = c
 	go func() { _ = cmd.Wait(); _ = in.Close(); close(c.done) }()
 	return nil
 }
 
+// Call is an internal worker operation. HTTP viewers use CallControlled.
 func (m *Manager) Call(ctx context.Context, id string, req Request) (Frame, error) {
+	return m.call(ctx, id, req, false)
+}
+func (m *Manager) CallControlled(ctx context.Context, id string, req Request) (Frame, error) {
+	return m.call(ctx, id, req, true)
+}
+func (m *Manager) call(ctx context.Context, id string, req Request, guard bool) (Frame, error) {
 	m.mu.Lock()
 	c := m.clients[id]
 	m.mu.Unlock()
 	if c == nil {
 		return Frame{}, errors.New("Browser has ended; reopen it to start a new browser")
 	}
-	// Serialize input and frame responses across viewers of the same session.
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	select {
@@ -157,6 +184,65 @@ func (m *Manager) Call(ctx context.Context, id string, req Request) (Frame, erro
 		return Frame{}, errors.New("Browser has stopped; end and reopen it")
 	default:
 	}
+	// Check at the actual worker boundary, after waiting for earlier requests.
+	if guard && req.Action != "frame" {
+		if err := c.control.authorize(req.Viewer, req.ControlToken); err != nil {
+			return Frame{}, err
+		}
+	}
+	viewer, token := req.Viewer, req.ControlToken
+	req.Viewer, req.ControlToken = "", ""
+	req.ProfileID = nil
+	req.ProfileKey = ""
+	req.Force = false
+	if c.resetPending && c.initialized {
+		frame, err := c.exchange(ctx, Request{Action: "release_input"})
+		if err != nil {
+			return frame, err
+		}
+		if frame.Error != "" {
+			c.close()
+			return Frame{}, errors.New("Cannot release browser input; end and reopen it")
+		}
+		c.resetPending = false
+	}
+	wire := req
+	configuring := !c.initialized && c.profile.Key != ""
+	if configuring {
+		wire = Request{Action: "configure", ProfileKey: c.profile.Key}
+	}
+	frame, err := c.exchange(ctx, wire)
+	if err != nil {
+		return frame, err
+	}
+	if frame.Protocol != 0 && frame.Protocol != Protocol {
+		c.close()
+		return Frame{}, errors.New("Update WebMux on the terminal host; browser profiles and controller leases require a matching worker")
+	}
+	if frame.Protocol == Protocol && frame.ProfileKey != c.profile.Key {
+		c.close()
+		return Frame{}, errors.New("Update WebMux on the terminal host before using saved browser profiles")
+	}
+	c.initialized = frame.Protocol == Protocol
+	if configuring {
+		c.resetPending = false
+	}
+	if configuring && req.Action != "frame" && c.initialized {
+		frame, err = c.exchange(ctx, req)
+		if err != nil {
+			return frame, err
+		}
+	}
+	frame.ProfileKey = ""
+	frame.ProfileID = c.profile.ID
+	frame.ProfileName = c.profile.Name
+	if guard {
+		control, _ := c.control.control(viewer, token, false, false, false)
+		frame.Control = &control
+	}
+	return frame, nil
+}
+func (c *client) exchange(ctx context.Context, req Request) (Frame, error) {
 	result := make(chan Frame, 1)
 	failure := make(chan error, 1)
 	go func() {
@@ -189,6 +275,45 @@ func (m *Manager) Call(ctx context.Context, id string, req Request) (Frame, erro
 	case <-ctx.Done():
 		c.close()
 		return Frame{}, ctx.Err()
+	}
+}
+func (m *Manager) ProfileInUse(key string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, c := range m.clients {
+		if c.profile.Key == key {
+			select {
+			case <-c.done:
+			default:
+				return true
+			}
+		}
+	}
+	return false
+}
+func (m *Manager) EndControlled(id, viewer, token string) error {
+	m.mu.Lock()
+	c := m.clients[id]
+	m.mu.Unlock()
+	if c == nil {
+		return nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.control.authorize(viewer, token); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	if m.clients[id] == c {
+		delete(m.clients, id)
+	}
+	m.mu.Unlock()
+	c.close()
+	select {
+	case <-c.done:
+		return nil
+	case <-time.After(22 * time.Second):
+		return errors.New("Browser is still stopping; wait before reopening its saved profile")
 	}
 }
 

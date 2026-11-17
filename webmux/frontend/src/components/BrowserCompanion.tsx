@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { api, type BrowserFrame, type BrowserAction } from '../utils/api';
+import { api, type BrowserFrame, type BrowserAction, type BrowserProfile } from '../utils/api';
 import { copyDesktopText } from '../utils/terminalClipboard';
 import { handoffLink } from '../utils/authHandoff';
 import { Dialog } from './Dialog';
@@ -32,6 +32,10 @@ function saveDownload(file: { name: string; data: string }) {
 export function BrowserCompanion({ session, navigation, onHide, onAuthentication }: {
   session: Session; navigation?: { url: string } | null; onHide: () => void; onAuthentication?: (url: string) => void;
 }) {
+  const [profiles, setProfiles] = useState<BrowserProfile[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState('');
+  const [profileName, setProfileName] = useState('');
+  const control = useRef(false);
   const [frame, setFrame] = useState<BrowserFrame>();
   const [address, setAddress] = useState('');
   const [error, setError] = useState('');
@@ -80,9 +84,12 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
       if (coalesced.current === item) coalesced.current = null;
       try {
         if (!mounted.current) return;
+        if (!['start', 'frame', 'claim', 'release'].includes(item.action.action) && !control.current) return;
         const result = await api.browserAction(session.id, item.action);
         if (!mounted.current) return;
-        if (!result.error && result.protocol !== 2) throw new Error('Update WebMux on the terminal host before reopening this browser; its browser worker uses an older protocol.');
+        if (!result.error && result.protocol !== 3) throw new Error('Update WebMux on the terminal host before reopening this browser; its browser worker uses an older protocol.');
+        control.current = result.control?.owned === true;
+        if (!control.current) dragging.current = null;
         const { file, clipboard, ...metadata } = result;
         setFrame(previous => ({ ...metadata, url: metadata.url || previous?.url || '', target: metadata.target || previous?.target || '', tabs: metadata.tabs ?? previous?.tabs ?? [],
           width: metadata.width || previous?.width, height: metadata.height || previous?.height,
@@ -90,9 +97,9 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         if (!addressEditing.current && !addressDraft.current && result.url && result.url !== 'about:blank') setAddress(result.url);
         else if (!addressEditing.current && !addressDraft.current && result.url === 'about:blank') setAddress('');
         setError(result.error ?? '');
-        // A v2 reply proves the worker is alive even if its first screenshot
+        // A v3 reply proves the worker is alive even if its first screenshot
         // was interrupted. Poll frames to recover; never replay navigation.
-        setReady(previous => previous || result.protocol === 2);
+        setReady(previous => previous || result.protocol === 3);
         if (clipboard !== undefined && !await copyDesktopText(clipboard)) setError('The browser blocked clipboard access for this site.');
         if (file) saveDownload(file);
         if (typeof result.found === 'boolean') setFindMessage(result.found ? 'Match found.' : 'No matches on this page.');
@@ -108,8 +115,16 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
 
   useEffect(() => {
     mounted.current = true; void act({ action: 'start' });
-    return () => { mounted.current = false; };
-  }, [act]);
+    return () => { mounted.current = false; void queue.current.then(() => api.releaseBrowser(session.id)).catch(() => {}); };
+  }, [act, session.id]);
+
+  useEffect(() => {
+    let active = true;
+    void api.getBrowserProfiles(session.id).then(values => { if (active) setProfiles(values); }).catch(err => { if (active) setError(String(err)); });
+    return () => { active = false; };
+  }, [session.id]);
+
+  const controlled = frame?.control?.owned === true;
 
   useEffect(() => {
     if (!navigation) return;
@@ -126,7 +141,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   }, [act, ready]);
 
   useEffect(() => {
-    if (!ready || !viewportBox.current || typeof ResizeObserver === 'undefined') return;
+    if (!ready || !controlled || !viewportBox.current || typeof ResizeObserver === 'undefined') return;
     let timer: ReturnType<typeof setTimeout>;
     let size = '';
     const observer = new ResizeObserver(entries => {
@@ -141,7 +156,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
     });
     observer.observe(viewportBox.current);
     return () => { clearTimeout(timer); observer.disconnect(); };
-  }, [act, ready]);
+  }, [act, ready, controlled]);
 
   useEffect(() => { if (showFind) findInput.current?.focus(); }, [showFind]);
 
@@ -179,11 +194,38 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   return createPortal(
     <aside className={`browser-companion${expanded ? ' browser-expanded' : ''}`} aria-label={`Browser for ${session.title}`} onKeyDown={event => event.stopPropagation()}>
       <header>
-        <div><strong>Browser · {session.title}</strong><small>Runs on {session.transport === 'local' || session.browser_local ? 'the WebMux server' : `${session.username ? `${session.username}@` : ''}${session.hostname}`} · private temporary profile</small></div>
+        <div><strong>Browser · {session.title}</strong><small>Runs on {session.transport === 'local' || session.browser_local ? 'the WebMux server' : `${session.username ? `${session.username}@` : ''}${session.hostname}`} · {frame?.profileName ? `Saved profile: ${frame.profileName}` : 'Temporary profile'}</small></div>
         <button onClick={() => setExpanded(value => !value)} aria-expanded={expanded}>{expanded ? 'Restore browser size' : 'Expand browser'}</button>
         <button onClick={onHide}>Return to terminal</button>
-        <button onClick={() => void end()} disabled={busy}>End browser</button>
+        <button onClick={() => void end()} disabled={busy || !controlled}>End browser</button>
       </header>
+      <div className="browser-profiles">
+        <span role="status">{controlled ? 'You control this browser' : 'View only'}</span>
+        {controlled ? <button onClick={() => void act({ action: 'release' })}>Release control</button>
+          : <button disabled={!ready} onClick={() => { if (frame?.control?.available || window.confirm('Take control from the other viewer?')) void act({ action: 'claim', force: true }); }}>Take control</button>}
+        <label>Profile <select aria-label="Browser profile" value={selectedProfile} onChange={event => setSelectedProfile(event.target.value)}>
+          <option value="">Temporary</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+        </select></label>
+        <button disabled={busy || !controlled} onClick={async () => {
+          setBusy(true); await queue.current;
+          try { await api.endBrowser(session.id); control.current = false; setFrame(undefined); await act({ action: 'start', profileId: selectedProfile }); }
+          catch (err) { setError(String(err)); } finally { setBusy(false); }
+        }}>Open selected profile</button>
+        <input aria-label="New browser profile name" value={profileName} onChange={event => setProfileName(event.target.value)} maxLength={64} />
+        <button disabled={busy || !profileName.trim()} onClick={async () => {
+          setBusy(true);
+          try { const profile = await api.createBrowserProfile(session.id, profileName); setProfiles(values => [...values, profile]); setSelectedProfile(profile.id); setProfileName(''); }
+          catch (err) { setError(String(err)); } finally { setBusy(false); }
+        }}>Create saved profile</button>
+        <button disabled={busy || !selectedProfile} onClick={async () => {
+          if (!window.confirm('Delete this saved profile and its cookies on the execution host? End browsers using it first.')) return;
+          setBusy(true);
+          try { await api.deleteBrowserProfile(session.id, selectedProfile); setProfiles(values => values.filter(value => value.id !== selectedProfile)); setSelectedProfile(''); }
+          catch (err) { setError(String(err)); } finally { setBusy(false); }
+        }}>Delete saved profile</button>
+        <small>Saved profiles keep sign-in cookies on the execution host after ending. Temporary profiles and transfer files are cleared when the worker exits.</small>
+      </div>
+      <fieldset className="browser-controls" disabled={!controlled}>
       <form className="browser-navigation" onSubmit={event => {
         event.preventDefault(); addressEditing.current = false;
         if (!address.trim()) return;
@@ -217,9 +259,10 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
       {frame?.url.includes('/sessions/two-factor/webauthn') && <div role="note" className="browser-message">Use “Sign-in handoff” for device-local passkeys, security keys and existing sign-in sessions.</div>}
       {error ? <div role="alert" className="browser-message">{error} <button onClick={() => void act({ action: 'start' })}>Reconnect browser</button></div>
         : !frame && <div role="status" className="browser-message">Starting browser on the terminal host…</div>}
+      </fieldset>
       <div className="browser-viewport" ref={viewportBox}>
         {frame?.image && <img ref={viewport} src={`data:image/jpeg;base64,${frame.image}`} alt="Interactive remote browser viewport" tabIndex={0}
-          draggable={false} style={{ pointerEvents: tabBusy ? 'none' : undefined }}
+          draggable={false} style={{ pointerEvents: tabBusy || !controlled ? 'none' : undefined }}
           onPointerDown={event => {
             event.preventDefault(); keyboard.current?.focus({ preventScroll: true }); event.currentTarget.setPointerCapture(event.pointerId);
             const p = point(event); const previous = lastClick.current;
@@ -244,7 +287,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
           onWheel={event => { event.stopPropagation(); void act({ action: 'scroll', ...point(event), deltaX: Math.max(-3000, Math.min(3000, event.deltaX)), deltaY: Math.max(-3000, Math.min(3000, event.deltaY)), modifiers: modifiers(event) }); }}
           onFocus={() => keyboard.current?.focus({ preventScroll: true })}
         />}
-        <textarea ref={keyboard} disabled={tabBusy} className="browser-keyboard" aria-label="Type into remote page" tabIndex={-1} autoCapitalize="off" autoCorrect="off" spellCheck={false}
+        <textarea ref={keyboard} disabled={tabBusy || !controlled} className="browser-keyboard" aria-label="Type into remote page" tabIndex={-1} autoCapitalize="off" autoCorrect="off" spellCheck={false}
           onCompositionStart={() => { composing.current = true; }}
           onCompositionEnd={event => { composing.current = false; if (event.data) void act({ action: 'text', text: event.data }); event.currentTarget.value = ''; }}
           onInput={event => { if (!composing.current && event.currentTarget.value) { void act({ action: 'text', text: event.currentTarget.value }); event.currentTarget.value = ''; } }}
@@ -270,8 +313,9 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
           onPaste={event => { event.preventDefault(); void act({ action: 'text', text: event.clipboardData.getData('text/plain') }); }}
         />
       </div>
+      <fieldset className="browser-controls" disabled={!controlled}>
       <footer>
-        <span>Shift+Esc releases focus. Hiding keeps cookies; ending clears this private browser.</span>
+        <span>Shift+Esc releases focus. Saved profiles retain cookies after ending; temporary profiles are cleared.</span>
         <button onClick={() => setShowFind(value => !value)} disabled={!ready}>Find text</button>
         <button onClick={() => void act({ action: 'copy' })} disabled={!ready}>Copy selection</button>
         <button onClick={() => setShowPaste(value => !value)} disabled={!ready}>Paste text</button>
@@ -290,19 +334,20 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         <input aria-label="Text to paste into remote browser" value={paste} onChange={event => setPaste(event.target.value)} autoComplete="off" />
         <button type="submit">Send to page</button>
       </form>}
-      {frame?.dialog && <Dialog title={`Browser ${frame.dialog.type}`} onClose={() => void act({ action: 'dialog', target: frame.target, accept: false })}>
+      </fieldset>
+      {controlled && frame?.dialog && <Dialog title={`Browser ${frame.dialog.type}`} onClose={() => void act({ action: 'dialog', target: frame.target, accept: false })}>
         <p>{frame.dialog.message}</p>
         {frame.dialog.type === 'prompt' && <input aria-label="Browser prompt response" data-dialog-autofocus value={prompt} onChange={event => setPrompt(event.target.value)} />}
         <button onClick={() => void act({ action: 'dialog', target: frame.target, accept: true, text: prompt })}>OK</button>
         {frame.dialog.type !== 'alert' && <button onClick={() => void act({ action: 'dialog', target: frame.target, accept: false })}>Cancel</button>}
       </Dialog>}
-      {frame?.select && <Dialog title="Choose a page option" onClose={() => void act({ action: 'cancel_select', target: frame.target })}>
+      {controlled && frame?.select && <Dialog title="Choose a page option" onClose={() => void act({ action: 'cancel_select', target: frame.target })}>
         <label>Option <select aria-label="Page option" data-dialog-autofocus value={frame.select.options.find(option => option.selected)?.value ?? ''} onChange={event => void act({ action: 'select_option', target: frame.target, text: event.target.value })}>
           {frame.select.options.map((option, index) => <option key={index} value={option.value} disabled={option.disabled}>{option.label}</option>)}
         </select></label>
         <button onClick={() => void act({ action: 'cancel_select', target: frame.target })}>Cancel</button>
       </Dialog>}
-      {frame?.fileChooser && <Dialog title="Upload files to this page" onClose={() => void act({ action: 'cancel_upload' })}>
+      {controlled && frame?.fileChooser && <Dialog title="Upload files to this page" onClose={() => void act({ action: 'cancel_upload' })}>
         <p>Choose {frame.fileChooser.multiple ? 'files' : 'a file'} from your computer. Up to 10 MiB per selection.</p>
         <input aria-label="Choose files for page" type="file" multiple={frame.fileChooser.multiple} disabled={busy} onChange={event => void upload(event.target.files)} />
         <button onClick={() => void act({ action: 'cancel_upload' })}>Cancel</button>

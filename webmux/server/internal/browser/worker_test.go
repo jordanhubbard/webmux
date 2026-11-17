@@ -137,7 +137,7 @@ func TestWorkerRefusesUnavailableSharedProfile(t *testing.T) {
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
 	var output bytes.Buffer
-	if err := Worker(strings.NewReader(""), &output); err == nil {
+	if err := Worker(strings.NewReader("{\"action\":\"frame\"}\n"), &output); err == nil {
 		t.Fatal("worker silently fell back to an isolated temporary profile")
 	}
 	var frame Frame

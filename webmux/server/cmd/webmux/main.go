@@ -140,6 +140,9 @@ func run() (resultErr error) {
 	if len(os.Args) == 2 && os.Args[1] == "--auth-callback" {
 		return authhandoff.Worker(os.Stdin, os.Stdout)
 	}
+	if len(os.Args) == 2 && os.Args[1] == "--browser-profile-remove" {
+		return browser.RemoveProfile(os.Stdin, os.Stdout)
+	}
 	if len(os.Args) == 2 && os.Args[1] == "--browser-worker" {
 		return browser.Worker(os.Stdin, os.Stdout)
 	}

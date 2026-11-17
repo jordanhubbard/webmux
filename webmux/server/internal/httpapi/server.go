@@ -29,6 +29,7 @@ import (
 )
 
 type Server struct {
+	browserProfileMu   sync.Mutex
 	clientMu           sync.Mutex
 	clientSockets      map[string]*clientConnection
 	clientFacts        map[string]clientSnapshot
@@ -202,6 +203,9 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/agents/{agentId}/sessions", s.protected(false, s.listAgents))
 	mux.Handle("POST /api/agents/{agentId}/attach", s.protected(false, s.attachAgent))
 	mux.Handle("POST /api/agents/{agentId}/scratch", s.protected(false, s.scratchAgent))
+	mux.Handle("GET /api/sessions/{id}/browser/profiles", s.protected(false, s.browserProfiles))
+	mux.Handle("POST /api/sessions/{id}/browser/profiles", s.protected(false, s.browserProfiles))
+	mux.Handle("DELETE /api/sessions/{id}/browser/profiles", s.protected(false, s.browserProfiles))
 	mux.Handle("POST /api/sessions/{id}/browser", s.protected(false, s.browserAction))
 	mux.Handle("DELETE /api/sessions/{id}/browser", s.protected(false, s.browserAction))
 	mux.Handle("POST /api/sessions/{id}/auth-handoff", s.protected(false, s.authHandoff))
