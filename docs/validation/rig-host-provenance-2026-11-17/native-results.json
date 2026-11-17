@@ -1,6 +1,6 @@
 {
   "recorded_utc": "2026-11-17T20:06:57.121950+00:00",
-  "status": "Local candidate for430 qualified for execution-host metadata, input and viewer reuse. Hosted exact-head gates pending; audit429 and separate macOS baseline431 unresolved. No merge/release.",
+  "status": "Local execution-host control qualified. PR433 resolves the older macOS fixture assumptions. A combined file hit the shared-address request budget; external-seat qualification now owns a separate file/server and explicit CI invocation. Hosted exact-head gates and audit429 still prevent merge/release.",
   "source_parent": "8f5d3225fac65804554a65bc08381a03a70654fe",
   "source_sha256": {
     "tests/e2e/openrig.spec.ts": "ba85ca17a09b1dc3fb55687845397b26aa34463df793555b9ab21f07af6c591b",
@@ -99,5 +99,45 @@
     "No remote execution/native conversation recovery or complete194/318 acceptance is claimed.",
     "Opaque Rig host identity is not a verified SSH destination.",
     "Old inferred viewer labels are corrected when the canonical seat is explicitly opened; no automatic topology adoption."
-  ]
+  ],
+  "source_sha256_checkpoint": "4b89fe6e7d9d994651b80a5372cf1a8fffdf8909 before test-file isolation; historical hashes retained",
+  "isolated_file_followup": {
+    "runtime_unchanged_from": "4b89fe6e7d9d994651b80a5372cf1a8fffdf8909",
+    "test_file": "tests/e2e/openrig-host.spec.ts",
+    "test_source_sha256": "c6df562a527b893bd1b59a27cef4596b8f4033978f6e9d898fc299a398d66ce1",
+    "workflow_sha256": "49d90db9d563172d2c5c6ae17238369b7cff3b5ace69368fe57d70be18b575f8",
+    "outcomes": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 17.1
+    },
+    "native_application": {
+      "contract": "openrig-cli/0.6.14",
+      "rigVersion": "0.6.14 (df1c1517)",
+      "tmuxVersion": "tmux 3.8",
+      "nodeVersion": "v24.21.0",
+      "browserVersion": "157.0.8103.79",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "externalEnrollment": true,
+      "target": "wm-external-bafc55d332",
+      "originalPID": "12699",
+      "finalPID": "12699",
+      "starts": 1,
+      "host": "",
+      "rigHostID": "host-ed74f87d",
+      "viewerReused": true,
+      "recoveryHost": "",
+      "canResumeManaged": false,
+      "scope": "Real isolated Rig/tmux + app/browser using an owned synthetic Node terminal. No authenticated CLI or remote execution claimed."
+    },
+    "native_receipt_sha256": "e6da8a9ab6073461c413f5ba61ea90c1f18f68f865f5fa9580a874b3d49f2b1b",
+    "log_sha256": "92ead27a220f0a87ca999116e9599a312ae610460bad7908eb362cef93f7a0f4",
+    "strict_typescript_log_sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "cleanup": {
+      "private_tmux_directory_removed": true,
+      "daemon_state_removed": true
+    }
+  }
 }

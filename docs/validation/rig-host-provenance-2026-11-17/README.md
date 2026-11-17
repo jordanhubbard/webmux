@@ -43,15 +43,25 @@ frontend tests on Node24,64 helper tests, strict TypeScript/source inventory,
 frontend build, lint and whitespace checks pass. The final native receipt and
 source hashes are retained in `native-results.json`.
 
-The complete nine-case macOS Rig/browser run is **7 passed, 2 failed**. Both
-older failures also reproduce on unchanged `8f5d322` with the same published
-CLI, Node24 and tmux3.8: global mouse mode becomes on instead of remaining off,
-and the diagnostic TUI selects its stopped-daemon page at port7433 instead of
-the fixture's live endpoint. A first, longer baseline path additionally exceeded
-the native Unix-socket limit; the shorter registered baseline reproduced the
-two original failures. These are tracked in
-[#431](https://github.com/jordanhubbard/webmux/issues/431); no assertions or
-production deadlines were weakened.
+The original nine-case macOS run was **7 passed, 2 failed**; both older
+failures reproduced on unchanged `8f5d322`. Investigation in
+[#433](https://github.com/jordanhubbard/webmux/pull/433) established that tmux3.8
+starts with global mouse on before Rig/WebMux runs. Its fixture repair sets
+an explicit private baseline with mouse off, retaining all outcome assertions.
+The apparent dashboard endpoint failure followed the failed worker's `afterAll`
+stopping the shared daemon; with that fixture repaired all eight older cases
+pass, including live dashboard reuse and detach.
+
+Combining that repair with the new external-seat case passed the older eight,
+then hit the production shared-address request budget at the ninth case. The
+external-seat control now lives in `openrig-host.spec.ts`, giving it its own
+server/home/socket and request budget through the existing per-file runner.
+Hosted native Rig CI invokes both files separately with distinct evidence
+folders. No rate limit, outcome assertion or timeout was changed. The original
+before/after receipts remain checkpointed in `native-results.json`. The final
+isolated-file run passes (1 test, 17.1 seconds), including actual input and
+viewer reuse with the same native PID and exactly one start. Strict TypeScript
+checks pass; runtime source hashes remain identical to `4b89fe6`.
 
 Keep the repair draft until its exact-head hosted gates pass. The independent
 [#429](https://github.com/jordanhubbard/webmux/issues/429) dependency audit still
