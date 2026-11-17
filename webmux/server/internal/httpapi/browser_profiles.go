@@ -74,13 +74,15 @@ func (s *Server) selectedBrowserProfile(owner, scope, id string) (*browser.Profi
 	return nil, &responseError{404, "Saved browser profile not found on this execution host"}
 }
 
-type profileOutput struct{ bytes.Buffer }
+type profileOutput struct{ buffer bytes.Buffer }
+
+func (b *profileOutput) Bytes() []byte { return b.buffer.Bytes() }
 
 func (b *profileOutput) Write(p []byte) (int, error) {
-	if b.Len()+len(p) > 4096 {
+	if b.buffer.Len()+len(p) > 4096 {
 		return 0, errors.New("oversized profile response")
 	}
-	return b.Buffer.Write(p)
+	return b.buffer.Write(p)
 }
 func (s *Server) browserProfiles(w http.ResponseWriter, r *http.Request, owner string) {
 	w.Header().Set("Cache-Control", "no-store")
