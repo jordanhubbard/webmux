@@ -160,6 +160,17 @@ jobs:
           $roots = @(Get-ChildItem $extract -Directory)
           if ($roots.Count -ne 1) { throw 'Expected exactly one extracted installation.' }
           ./scripts/windows-service-runtime.test.ps1 -RuntimeModule (Join-Path $roots[0].FullName 'service/runtime.psm1')
+          Push-Location webmux/server
+          try {
+            $race = @()
+            if ((go env GOARCH) -eq 'amd64') { $race = @('-race') }
+            go test @race ./cmd/qualification-owner -count=1 -v
+            if ($LASTEXITCODE -ne 0) { throw 'Windows ownership controls failed.' }
+            $env:WEBMUX_QUALIFICATION_OWNER = Join-Path $env:RUNNER_TEMP 'webmux-qualification-owner.exe'
+            go build -o $env:WEBMUX_QUALIFICATION_OWNER ./cmd/qualification-owner
+            if ($LASTEXITCODE -ne 0) { throw 'Windows qualification owner build failed.' }
+            "WEBMUX_QUALIFICATION_OWNER=$env:WEBMUX_QUALIFICATION_OWNER" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          } finally { Pop-Location }
           node scripts/smoke-native-package.mts $roots[0].FullName
           if ($LASTEXITCODE -ne 0) { throw 'Native runtime smoke failed.' }
       - name: Exercise installed native MSI and service
