@@ -28,6 +28,9 @@ const nativeNames = ['hyperlink-named', 'hyperlink-anonymous', 'hyperlink-unicod
 names.push(...names.map(name => `underline-baseline-${name}`));
 const underlineInputs = JSON.parse(readFileSync(path.resolve(__dirname, '../../webmux/server/internal/thirdparty/vt/testdata/webmux-xterm-underline.json'), 'utf8')) as { name: string }[];
 const bareReferenceNames = new Set(underlineInputs.flatMap(input => [`underline-${input.name}`, `underline-${input.name}-byte-split`]));
+for (const name of ['rep-wide-edit-orphan-mark', 'sgr-orphan-marks', 'cursor-orphan-mark']) {
+  bareReferenceNames.add(`underline-${name}`); bareReferenceNames.add(`underline-${name}-byte-split`);
+}
 underlineInputs.push(...JSON.parse(readFileSync(path.resolve(__dirname, '../../webmux/server/internal/screenstate/testdata/underline-cases.json'), 'utf8')) as { name: string }[]);
 names.push(...underlineInputs.flatMap(input => [`underline-${input.name}`, `underline-${input.name}-byte-split`]));
 names.push(...[...bareReferenceNames].map(name => `bare-${name}`));

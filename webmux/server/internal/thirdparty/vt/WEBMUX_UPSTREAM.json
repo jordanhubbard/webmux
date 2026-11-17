@@ -262,11 +262,12 @@
     "osc.go": "e02893ddfecb85b6009adc2d36104fc7108a884875382abda456aef57eae6f83",
     "screen.go": "30664e4e3c396c4d71fcc87620775e9a6dffbf3a87ff7e3d7cd31c28508d8eb5",
     "handlers.go": "6a2fd854a4bc7865ec3fa3f3f6cbed01d305e460511a67eaba5f51c17523f90a",
-    "csi_cursor.go": "a58005bc8483f851c1ba99a7476b5913fd235ef25d76ff2f0c7bf38a8d24e7cc",
-    "utf8.go": "af27812a88686ae60b52940d61d8e5bc177414c5e03964f82fcb3c646060f82f",
+    "csi_cursor.go": "86cfc21d784cdde7e6764e3eb8030443084b444154cf0a68a070a1efcdb77a2f",
+    "utf8.go": "c5f13a9d0fd3962a5ff2f2811e010473632b33278ad0650c37a534275ca083d4",
     "esc.go": "6a2989eb3f94126a586f26ef0ff6d835f77e1178ed416cabce8852bd8262bd2b",
     "reflow.go": "898f9f7bbb2a85b85ac5d6b78881b22545286d77963dcdacd1a6a4100c67b718",
     "snapshot/state.go": "b40a538b132ca311edb0ead5ff1adab7905419094f6e15a7cdec8cefea0f356e",
-    "snapshot/apply.go": "8053a96f72bafac0bbe197db9f8d52d6763b675c36deeb5de9b1fb32a6d10f30"
+    "snapshot/apply.go": "8053a96f72bafac0bbe197db9f8d52d6763b675c36deeb5de9b1fb32a6d10f30",
+    "csi.go": "5bea786bf1b70835fc6c203551bb227f5e072613c86bf46c9ef0205bb626bfdf"
   }
 }

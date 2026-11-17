@@ -61,5 +61,20 @@
     "name": "protection-sgr-reset",
     "data": "\u001b[1\"qA\u001b[0mB",
     "future": "\r\u001b[?2K"
+  },
+  {
+    "name": "rep-wide-edit-orphan-mark",
+    "data": "ABC\u001b7\u001b[4:3m\u001b8日Z\u001b[D\u001b[@",
+    "future": "\u001b[2b́\u001b[59mX"
+  },
+  {
+    "name": "sgr-orphan-marks",
+    "data": "A\u001b[31ḿ̀",
+    "future": "\u001b[2bX\u001b[4:3ḿ\u001b[2bY"
+  },
+  {
+    "name": "cursor-orphan-mark",
+    "data": "日Z\u001b[D́X",
+    "future": "\u001b[2ĆY"
   }
 ]

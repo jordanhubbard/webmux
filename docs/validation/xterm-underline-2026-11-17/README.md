@@ -4,8 +4,9 @@ This is an incomplete implementation of #427 under #355/#318. The candidate
 now selects the opt-in model for fresh Windows native owners (`screen-v3`),
 and the frontend advertises v2 after validating its renderer layout. Existing
 owners keep their running binary and job. Local bare-reference and application
-contract checks pass; fresh execution of the new Windows native matrix and all
-final hosted gates remain required before merge. #429 separately tracks the
+contract checks pass. The first fresh Windows matrix found a combining-cell
+recapture mismatch, described below; the corrected candidate needs another
+native run and all final hosted gates before merge. #429 separately tracks the
 dependency-audit release blocker. `Screen.New` retains the legacy model for
 explicit legacy controls; the new owner calls `NewWithProfile`.
 
@@ -174,3 +175,34 @@ may normalize hidden state, so the actual streams and results must be inspected
 before claiming native hidden-state coverage. Windows vet is compilation
 coverage; no local Windows execution is claimed. See `capability-results.json`
 for the local evidence and outstanding hosted qualification.
+
+## Native-discovered standalone combining cells
+
+Hosted Windows source `60715bd` executed all 28 ConPTY producers with no native
+skips and one job per case. The native capture passed; its renderer gate passed
+1,371 controls and failed the second capture of `hidden-wide-edit`. Initial and
+continued output already matched. The reference retained an isolated U+0301 in
+a zero-width cell; the mirror had attached it to the preceding wide character.
+
+The locked xterm parser clears Unicode join state after every CSI, including
+SGR and REP. Without join state it stores the mark in its own cell and advances
+one column. The corrected opt-in model follows that rule, treats REP after such
+a mark as a no-op, and distinguishes a standalone zero-width cell from a wide
+placeholder during overwrites. ANSI row painting positions the cursor before
+printing that cell, clearing parser join state without changing its pen. The
+upstream default grapheme policy is unchanged. Provenance now declares 16
+patched VT originals; all 241 originals remain retained.
+
+Three portable regressions cover wide-edit/REP, SGR and cursor-movement
+boundaries in whole and byte-split feeds, with additional bare-xterm comparisons.
+Rebuilding snapshots locally from all 28 retained Windows streams passes the
+renderer comparisons, including the original failing stream. That is recorded
+stream evidence, not a fresh Windows execution of the corrected binary.
+
+The native capture also observed five ANSI-only refusals among the six new
+producers; `hidden-1049` was still representable at the tested boundary and
+accepted. All probes retained the same owner/root identity and one job. These
+checks use the current client without a renderer offer, not an old controller
+binary. See `native-followup-results.json` for exact source, artifact and local
+qualification scopes. Keep draft #428 and #427/#355/#318 open. The independent
+#429 audit failure still blocks merge and release.

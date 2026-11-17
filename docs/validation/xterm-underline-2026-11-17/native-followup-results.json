@@ -1,0 +1,104 @@
+{
+  "recorded_utc": "2026-11-17T19:13:20.329054+00:00",
+  "status": "Local correction qualified; fresh corrected Windows execution and hosted gates required. Draft428 and issues427/355/318/429 remain open. No release.",
+  "source_parent": "60715bd2137af033383f535f4649cb9e64c3dd5c",
+  "source_sha256": {
+    "tests/e2e/screen-replay.spec.ts": "5f7fabeaedf940800ad16b341f20350071a031f6309141ef9d8687fc671d142d",
+    "webmux/server/internal/screenstate/ansi.go": "aff4eeab65b955a5fb69094a6feee6a95a20ba0301da7949cb194c1b1fe2c481",
+    "webmux/server/internal/screenstate/testdata/underline-cases.json": "f442cc2c65a030acd1c79d7fb7548df0bcd5767dfd50def27b18546503c4b8da",
+    "webmux/server/internal/thirdparty/vt/csi.go": "5bea786bf1b70835fc6c203551bb227f5e072613c86bf46c9ef0205bb626bfdf",
+    "webmux/server/internal/thirdparty/vt/csi_cursor.go": "86cfc21d784cdde7e6764e3eb8030443084b444154cf0a68a070a1efcdb77a2f",
+    "webmux/server/internal/thirdparty/vt/utf8.go": "c5f13a9d0fd3962a5ff2f2811e010473632b33278ad0650c37a534275ca083d4",
+    "webmux/server/internal/thirdparty/vt/xterm_no_wrap.go": "202874b324832604d78b330bd9fd2a9373a555da20737b079a4d32062a40a5e7",
+    "webmux/server/internal/thirdparty/vt/xterm_underline_test.go": "86be591e40cf9018dd2db8f78464cb9a86e326ee6be40d265461a9deda343e27",
+    "webmux/server/internal/thirdparty/vt/WEBMUX_UPSTREAM.json": "4f300f46d5137833afee19221520937330a2f88e545bfbc57b960e577a5b33f5"
+  },
+  "native_before_correction": {
+    "source": "60715bd2137af033383f535f4649cb9e64c3dd5c",
+    "run": 44150782927,
+    "job": 134278208271,
+    "artifact": 14358639225,
+    "artifact_sha256": "6e9953bae5f3c0c43a938b3479a39629f315290d6a36c74461bc57be1611e432",
+    "native_cases": 28,
+    "one_job_each": true,
+    "v3_each": true,
+    "native_capture_pass": true,
+    "native_skips": 0,
+    "snapshot_receipts": 1369,
+    "failed": [
+      {
+        "path": "webmux/webmux/webmux/test-results/run-f11b5754-d189-4635-8802-bea37ded9463/screen-replay-Go-screen-sn-01602-erm-conpty-hidden-wide-edit-chromium/screen-replay.json",
+        "phases": [
+          "recaptured"
+        ]
+      }
+    ],
+    "hidden_ansi_only_attach": [
+      {
+        "name": "hidden-plain-curly-restore",
+        "refused": true
+      },
+      {
+        "name": "hidden-enabled-reset",
+        "refused": true
+      },
+      {
+        "name": "hidden-link-only",
+        "refused": true
+      },
+      {
+        "name": "hidden-1048",
+        "refused": true
+      },
+      {
+        "name": "hidden-1049",
+        "refused": false
+      },
+      {
+        "name": "hidden-wide-edit",
+        "refused": true
+      }
+    ]
+  },
+  "local_corrected": {
+    "browser_tests_passed": 1356,
+    "browser_duration": "4.2m",
+    "renderer": {
+      "comparisons": 1353,
+      "bare_references": 259,
+      "all_three_phases_equal": true,
+      "no_replayed_queries": true,
+      "reference_snapshot_adapter": false,
+      "bare_methods_unchanged": true,
+      "inventory_sha256": "78291cc518d048baa0823f2a86bb1b4841dce8ae4b16f81f36ce098ed2394bb4"
+    },
+    "focused_orphan_comparisons": 12,
+    "recorded_windows_streams": {
+      "comparisons": 28,
+      "bare_references": 0,
+      "all_three_phases_equal": true,
+      "no_replayed_queries": true,
+      "reference_snapshot_adapter": false,
+      "bare_methods_unchanged": true,
+      "inventory_sha256": "a7fb16e77e3d0951dd85696d4e960009580dcad1619ff163136a9739de77e35a"
+    },
+    "recorded_scope": "Re-encode retained60715bd continuous output locally through corrected Go model. Feed original_before, then its original suffix including final private marker; compare initial/continued/recaptured browser state. No fresh Windows binary execution claimed.",
+    "retained_vt_race_seconds": 122.042,
+    "retained_snapshot_race_seconds": 1.188,
+    "retained_vtgen_race": "PASS cached unchanged",
+    "screenstate_race_seconds": 5.315,
+    "replayfilter_race": "PASS cached unchanged",
+    "vet": [
+      "Darwin root",
+      "Windows AMD64 root",
+      "retained VT"
+    ],
+    "strict_typescript": "PASS",
+    "vt_provenance": {
+      "originals": 241,
+      "explicitly_patched": 16
+    }
+  },
+  "fresh_windows_after_correction": "PENDING",
+  "audit429": "60715bd hosted audit remains failed on GHSA-fc5q-39xc-vjpf. No suppression or dependency changes."
+}

@@ -175,3 +175,39 @@ func TestXtermSGRResetClearsProtectionWithoutChangingDefaultProfile(t *testing.T
 		ordinary.Close()
 	}
 }
+
+// Expected cells follow the locked xterm parser: each CSI clears Unicode join
+// state, so an ensuing mark occupies its own zero-width cell and advances X.
+func TestXtermOrphanCombiningCells(t *testing.T) {
+	for _, split := range []bool{false, true} {
+		e := vt.NewEmulator(8, 4)
+		e.EnableXtermNoWrap()
+		e.EnableXtermUnderline()
+		const data = "A\x1b[31m\u0301\u0300\x1b[2bX"
+		if split {
+			for _, b := range []byte(data) {
+				e.Write([]byte{b})
+			}
+		} else {
+			e.WriteString(data)
+		}
+		for x, want := range []struct {
+			content string
+			width   int
+		}{{"A", 1}, {"\u0301", 0}, {"\u0300", 0}, {"X", 1}} {
+			c := e.CellAt(x, 0)
+			if c == nil || c.Content != want.content || c.Width != want.width {
+				t.Fatalf("split=%v col=%d: %+v, want %+v", split, x, c, want)
+			}
+		}
+		if pos := e.CursorPosition(); pos.X != 4 || pos.Y != 0 {
+			t.Fatalf("split=%v cursor=%v", split, pos)
+		}
+		// Replacing the standalone mark must not clear its left neighbour.
+		e.WriteString("\x1b[3GZ")
+		if c := e.CellAt(1, 0); c.Content != "\u0301" || c.Width != 0 {
+			t.Fatalf("standalone mark treated as wide placeholder: %+v", c)
+		}
+		e.Close()
+	}
+}

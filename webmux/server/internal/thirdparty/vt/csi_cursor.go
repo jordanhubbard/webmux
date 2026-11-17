@@ -133,6 +133,11 @@ func (e *Emulator) carriageReturn() {
 // equivalent to typing the same character n times. This performs the same as
 // [ansi.REP].
 func (e *Emulator) repeatPreviousCharacter(n int) {
+	if e.xtermUnderline && e.lastClusterWidth == 0 {
+		// A standalone zero-width codepoint leaves xterm's Unicode join
+		// property zero, which makes a following REP a no-op.
+		return
+	}
 	if e.lastCluster == "" {
 		return
 	}

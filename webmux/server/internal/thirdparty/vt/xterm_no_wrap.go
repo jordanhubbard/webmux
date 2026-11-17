@@ -57,7 +57,7 @@ func (e *Emulator) setXtermPrintedCell(x, y int, cell *uv.Cell) {
 	leftRepair, rightRepair := false, false
 	if e.xtermUnderline {
 		if previous := e.scr.CellAt(x, y); previous != nil {
-			leftRepair = !keep && previous.Width == 0 && x > 0
+			leftRepair = !keep && previous.Width == 0 && previous.Content == "" && x > 0
 			rightRepair = previous.Width > cell.Width && previous.Width > 1
 		}
 	}

@@ -9,6 +9,13 @@ import (
 )
 
 func (e *Emulator) handleCsi(cmd ansi.Cmd, params ansi.Params) {
+	if e.xtermUnderline {
+		// The locked xterm parser clears its Unicode join state after every
+		// CSI, including SGR and REP. Keep the upstream grapheme policy below
+		// for callers that have not selected that renderer profile.
+		e.flushGrapheme()
+		defer e.flushGrapheme()
+	}
 	switch cmd.Final() {
 	case 'm', 'b':
 		// SGR and REP neither print nor move the cursor, so they do not end

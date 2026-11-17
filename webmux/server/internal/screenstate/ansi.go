@@ -404,6 +404,12 @@ func (w *vtWriter) row(row []snapshot.CellState, full, lead bool, protection []b
 			w.mode(7, false)
 		}
 		w.protect(x < len(protection) && protection[x])
+		if c.Width == 0 && c.Content != "" {
+			// A standalone zero-width codepoint consumes a column in xterm
+			// when its parser join state is empty. Reset that state without
+			// changing the pen before painting this cell.
+			w.b.WriteString("\x1b[" + strconv.Itoa(x+1) + "G")
+		}
 		if w.enhanced && c.Content == "" && c.Width == 1 && x == w.width-1 && full {
 			// A wide print at the final column leaves a genuine null cell
 			// there and consumes the wrap. The following row replaces its
