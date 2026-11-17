@@ -169,6 +169,7 @@ jobs:
             $env:WEBMUX_QUALIFICATION_OWNER = Join-Path $env:RUNNER_TEMP 'webmux-qualification-owner.exe'
             go build -o $env:WEBMUX_QUALIFICATION_OWNER ./cmd/qualification-owner
             if ($LASTEXITCODE -ne 0) { throw 'Windows qualification owner build failed.' }
+            "WEBMUX_QUALIFICATION_OWNER=$env:WEBMUX_QUALIFICATION_OWNER" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           } finally { Pop-Location }
           node scripts/smoke-native-package.mts $roots[0].FullName
           if ($LASTEXITCODE -ne 0) { throw 'Native runtime smoke failed.' }
