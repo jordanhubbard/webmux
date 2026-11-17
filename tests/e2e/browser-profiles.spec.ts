@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import http from 'node:http';
+import { writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 test('saved Chromium profile survives worker replacement while viewer control is exclusive', async ({ request }, info) => {
@@ -105,6 +106,8 @@ test('saved Chromium profile survives worker replacement while viewer control is
   if (process.platform !== 'win32') { try { execFileSync('tmux', ['kill-session', '-t', `webmux-${session.id}`]); } catch { /* already closed */ } }
   origin.closeAllConnections();
   await new Promise<void>(resolve => origin.close(() => resolve()));
-  await info.attach('browser-profile-action-trace', { body: JSON.stringify({ timeline, dropped }), contentType: 'application/json' });
+  const receipt = info.outputPath('browser-profile-action-trace.json');
+  writeFileSync(receipt, JSON.stringify({ timeline, dropped }));
+  await info.attach('browser-profile-action-trace', { path: receipt, contentType: 'application/json' });
  }
 });
