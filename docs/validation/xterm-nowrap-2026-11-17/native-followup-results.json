@@ -69,5 +69,36 @@
       "nowrap424-profile-app-final.log": "8187a2c2009e8bc6342f9a3aa867a8e745f9d778dec8687900122edaadadbc6a",
       "nowrap424-profile-go-final.log": "265cc09847ff9bd3212ac917e62ca315e5cda0c67a385c931d4f25b777cf3d03"
     }
+  },
+  "current_checkpoint_key": "qualified_b12c7b5",
+  "qualified_b12c7b5": {
+    "source_pr_head": "b12c7b5810fdc1ef94d0c3e133940ef6e21cf3fd",
+    "workflow": 44113591855,
+    "artifact": 14343035933,
+    "artifact_sha256": "677cc6d8f1c66bb95697e3f9605447a6f223225b71b5cbd5f01daaa30b64f7cd",
+    "captures": 22,
+    "each_starts_one_job": true,
+    "native_test_pass": true,
+    "native_skips": 0,
+    "all_renderer_comparisons": 431,
+    "all_three_phases_equal": true,
+    "no_replayed_queries": true,
+    "reference_adapter_never_installed": true,
+    "scope": "Actual hosted Windows AMD64 ConPTY:22. Other409 static Go snapshot cases plus2lifecycle controls qualify parser profile separately. Controlled-terminal Windows protocol tests passed earlier in native server suite. Does not prove wider #355 hidden underline/#318 coding lifecycle.",
+    "merged_pr": 422,
+    "merge_commit": "7090e1e98629287020cdf569028297be63df8b8a",
+    "pr_ci": 44113591855,
+    "pr_packaging": 44113591900,
+    "pr_expected_outcomes": 17,
+    "pr_success": 16,
+    "pr_intentionally_skipped": [
+      "Attach release bundles"
+    ],
+    "usb_initial_failure": "HTTP429 on checksum-pinned source after three bounded attempts; isolated retry succeeded on unchanged source.",
+    "main_ci": 44117724104,
+    "main_packaging": 44117724720,
+    "main_ci_status": "success",
+    "main_packaging_status": "success",
+    "remaining": "Hidden or contradictory underline and other unqualified OSC display features remain under #355; broader native coding-session lifecycle under #318."
   }
 }

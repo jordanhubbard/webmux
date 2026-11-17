@@ -1,168 +1,115 @@
-# Opt-in no-wrap engine checkpoint — 2026-11-17
+# No-wrap restoration qualification — 2026-11-17
 
-Tracks #421 under #355. This checkpoint preserves the engine distinction
-between addressing the final column and printing past it while DECAWM is off.
-The draft candidate now enables the extension in Screen and replaces its
-no-wrap refusal with replay. It is not merged or qualified for release.
-The current checkpoint below supersedes the historical results that follow.
-Fresh qualification of the new renderer-profile transport remains required.
+[PR #422](https://github.com/jordanhubbard/webmux/pull/422) implements #421/#424
+under the broader #355 screen-restoration requirement. It merged as
+`7090e1e98629287020cdf569028297be63df8b8a` from tested PR head
+`b12c7b5810fdc1ef94d0c3e133940ef6e21cf3fd`. The merge tree equals the qualified
+PR tree. This checkpoint does not close the broader #355/#318 requirements.
 
+## Source and gates
 
-## Current renderer-profile checkpoint
+All 17 expected PR-head outcomes passed: 16 succeeded and Attach release bundles
+was intentionally skipped. [CI 44113591855](https://github.com/jordanhubbard/webmux/actions/runs/44113591855)
+includes the affected Windows race/protocol contracts, the complete retained
+engine suite and real native/browser controls. The first USB job exhausted its
+three bounded source-download attempts with HTTP429; an isolated retry passed
+on unchanged source, with checksums, deadlines and acceptance assertions intact.
+[Packaging 44113591900](https://github.com/jordanhubbard/webmux/actions/runs/44113591900)
+also passed all required native bundle, package and artifact-verification gates.
 
-Issue #424's overlap-grow state now has an explicit negotiated encoder:
-`Image.BytesForProfile("webmux-xterm-state-v1")`. The legacy `Bytes()` API still
-returns `ErrUnsupported` for that same image before and after profile encoding.
-Ordinary snapshots remain standard ANSI and carry no profile requirement.
+Exact-merge [CI 44117724104](https://github.com/jordanhubbard/webmux/actions/runs/44117724104)
+and [Packaging 44117724720](https://github.com/jordanhubbard/webmux/actions/runs/44117724720)
+both passed on 7090e1e. These gates and artifact hashes are recorded in
+`native-followup-results.json`.
 
-The encoder restores visible cells with ANSI, then appends a bounded OSC 7777
-packet containing the last printed cluster and a fresh 128-bit snapshot nonce.
-Only the version-qualified adapter for the locked xterm 6.0.0 renderer consumes
-it. It restores parser join/REP state through xterm's own Unicode service and
-leaves the independent reference renderer unmodified. A matching token comes
-from transport metadata, never terminal output. Valid tokens are consumed once;
-malformed, oversized, control-containing, invalid UTF-8 or stale-token packets
-cannot restore state. The adapter has no host action or I/O operation and
-restores its property descriptor on disposal.
+The retained MIT vt 0.3.2 module contains 241 original files with per-file hashes.
+Nine original source files have explicit patch hashes. Upstream default
+behavior remains unchanged; CI and npm test include the full nested module
+suite, and the provenance verifier checks original bytes, patches and additions.
+The extension is opt-in at engine level and enabled by the Windows Screen mirror.
+Reproduction is documented in
+[`WEBMUX.md`](../../../webmux/server/internal/thirdparty/vt/WEBMUX.md).
 
-Native owners now advertise `screen-v2`. The controller sends the profile field
-only to a v2 owner, leaving old owners' strict frame decoding compatible. The
-owner acknowledges any actual requirement and nonce before sending snapshot
-bytes. Client metadata is immutable; the broker records it before starting the
-reader. Every join checks capabilities under the replay lock. An incompatible
-viewer is detached with a reload explanation while the same owned terminal
-continues running. New-run and joining-viewer status configure the frontend
-before its queued reset and replay. No process restart or navigation/input
-replay is introduced.
+## Behavior
 
-The first complete local profile run passed all 411 real Chrome renderer checks
-(initial, continued and second attachment comparisons plus lifecycle controls).
-This includes the two formerly failing overlap-grow controls and byte-split
-packet, malformed/stale token, one-shot, normal parser reset and disposal checks.
-A controlled-frame test of the actual app passed through two page attachments:
-it verified capability advertisement, metadata-before-output, REP, rejection
-of stale tokens and no generated terminal input. That app test isolates the
-frontend contract; it is not native ConPTY evidence.
+The mirror distinguishes addressing the final column from printing past it
+with DECAWM off. Whole/byte-split controls cover overwrite, wrap-mode changes,
+wide/combining characters, saved and alternate-screen state, cursor movements,
+tabs, edits, scrolling, margins, soft reset and resize through shrinking,
+growing and regrowing. It preserves frozen cursor-line truncation, clipped
+alternate-buffer columns, null cells versus printed spaces and xterm REP's
+source-cell behavior.
 
-Fresh Windows artifact 14337553952 at PR head 5a80f2c (workflow 44105321159)
-contains 22 actual native ConPTY captures. All 22 executed with one job each and
-passed initial, continued and second-attach renderer comparisons without replayed
-queries. Its overall gate still failed the two static #424 controls. This proves
-the prior native engine fixes, not the new profile/transport changes in this
-checkpoint. Fresh Windows profile protocol contracts, actual ConPTY captures
-and all hosted checks remain required before this draft can merge. Hidden
-underline and wider native lifecycle qualification remain under #355/#318.
+Visible wide/narrow overlap is reconstructed with ANSI edge painting and DCH.
+When ordinary printing would erase that overlap while reseeding REP, explicit
+`Image.BytesForProfile("webmux-xterm-state-v1")` encoding adds a bounded final
+OSC 7777 packet. Legacy `Image.Bytes()` still refuses that same unsafe image
+before and after explicit encoding. Ordinary snapshots use ANSI and require no
+profile metadata.
 
-The first profile-head Windows run (15e9564, workflow 44112652379) failed the
-new client-negotiation fixture before it reached the handshake: Go's `TempDir`
-embedded the long test/subtest name in the AF_UNIX path, exceeding Windows'
-socket-path limit. The fixture now creates a short owned temporary directory
-and cleans it after closing the listener. No contract is skipped or relaxed;
-fresh Windows execution is still required.
+The locked xterm 6.0.0 adapter computes join/REP state through its own Unicode
+service. A fresh 128-bit nonce arrives in transport metadata before snapshot
+bytes. It authorizes one packet; malformed, oversized, invalid UTF-8,
+control-containing, stale or reused packets cannot restore state. The adapter
+has no host action or I/O operation and restores its property descriptor on
+disposal. The reference terminal never installs this adapter.
+
+Owners advertise `screen-v2`; controllers omit new request fields for old
+strict v1 owners. The owner acknowledges any actual requirement and token
+before output. Immutable metadata passes through the process and broker before
+the reader starts. Every viewer join checks capabilities under the replay lock;
+new-run and joining-viewer status configure the frontend before reset/replay.
+Incompatible viewers receive a reload explanation while the same terminal job
+continues. Controller/viewer detachment does not replace or stop that job.
+
+## Evidence and limits
+
+[Native artifact 14343035933](https://github.com/jordanhubbard/webmux/actions/runs/44113591855/artifacts/14343035933)
+is bound to PR head b12c7b5. Inspection confirmed:
+
+- 22 actual hosted Windows AMD64 ConPTY captures; each executed one native job.
+  `TestNativeProviderSavedCursorCaptures` passed with zero skipped cases.
+- 431 retained renderer receipts compare initial restoration, continuation and
+  second attachment. All three phases match in every receipt; no terminal
+  queries are replayed. Local focus reports are classified separately.
+- Those receipts comprise 22 native captures and 409 portable Go snapshot cases.
+  Two additional renderer lifecycle controls pass in the same browser job,
+  for 433 browser tests total. The portable reference uses the unmodified
+  renderer, apart from the independently qualified active-hyperlink profile.
+
+The local renderer run passed 411 portable/lifecycle checks, including both
+formerly failing whole/byte-split overlap-grow cases. Separate controls cover
+all packet splits, bounds, stale/one-use tokens, combining/REP continuation,
+normal parser resets and disposal. Three actual app browser workflows passed:
+two-viewer query suppression, truncated replay, and controlled owned metadata
+through two page attachments with stale-token rejection and no generated input.
+The controlled-frame app test and controlled-terminal Windows negotiation tests
+isolate transport/renderer contracts; they are not additional ConPTY captures.
+
+Affected screenstate/session/httpapi/terminal race suites, Windows AMD64 vet,
+strict TypeScript/source inventory, 372 existing frontend tests, lint, build,
+provenance and whitespace checks passed locally. The last complete upstream
+engine race run passed (vt 115.815s, snapshot 1.110s, vtgen 1.146s); hosted gates
+also execute the complete retained module on each platform.
+
+Hidden or contradictory extended underline flags still refuse attachment.
+Other unqualified OSC display features, installed-service coding-session
+recovery, broader CLI/policy coverage and physical ARM64 qualification remain
+separate under #355/#318. This evidence does not qualify those cases or a new
+release.
 
 ## Historical checkpoints
 
-The retained MIT module has 241 original files with recorded upstream hashes.
-Patched files are emulator.go, utf8.go, cc.go, csi_cursor.go, handlers.go,
-esc.go, grid.go, screen.go and reflow.go; new extension,
-reference tests and provenance files are listed by the integrity verifier.
-Upstream default behavior remains covered by the full original suite.
+`native-followup-results.json` retains earlier failed and component results:
 
-Validation performed locally:
+- Head 2c3f923: 22 native captures executed; 21 matched. Soft reset incorrectly
+  retained focus-report mode. Correcting focus/paste/sync resets fixed it.
+- Head 5a80f2c: all 22 fresh native captures matched, but two required portable
+  overlap-grow controls still failed safely with `ErrUnsupported`.
+- Head 15e9564: new client negotiation tests failed before their handshake
+  because Go's long test-name temporary path exceeded Windows AF_UNIX bounds.
+  A short owned temporary directory fixed the fixture without skipping tests
+  or relaxing assertions. Head b12c7b5 qualified that correction.
 
-- Full retained module suite, then full race suite and vet passed. Race results:
-  vt 114.670s, snapshot 1.158s, vtgen 1.136s (Go 1.27.3, Darwin ARM64).
-- Existing server screenstate race suite passed (Go 1.27.4, Darwin ARM64).
-- Strict TypeScript/source inventory checks passed.
-- Real Chrome xterm recapture equals all 138 checked-in expected results.
-  The receipt records browser version and hashes of qualifier, installed
-  xterm bundle, fixture and output. Comparison decodes JSON, so formatting
-  differences do not affect acceptance.
-- Provenance verifier and staged whitespace checks passed. Terminal recordings
-  and Unicode fixtures retain their significant original bytes.
-
-The Go reference test runs each case as a whole write and one byte per write,
-including split UTF-8 and combining characters. It compares cursor, all four
-screen rows and second-row cell widths and individual cell contents on all four rows. It does not prove untested controls,
-resize, margins, Screen snapshot replay, continuation, second attach or native
-Windows ConPTY behavior. Complete those comparisons before enabling the
-extension or removing production refusals. Hidden underline remains separate.
-
-Reproduction instructions are in
-`webmux/server/internal/thirdparty/vt/WEBMUX.md`.
-
-The expanded 46 base cases add backward/forward tabs, character and line
-edits, erases, scrolling, soft reset and cursor controls. Every base case also
-runs with subsequent printing, with DECAWM unchanged and re-enabled (138 total).
-This exposed fixes for edit-time cursor restriction, scroll/tab cursor retention,
-DECSTR restoring DECAWM, and xterm's overlapping wide-lead/trailing-cell state.
-The latter remains an explicit snapshot-encoding qualification boundary.
-
-## Snapshot integration checkpoint
-
-Actual Go Screen snapshots were independently rendered in Chrome/xterm. All
-348 browser tests passed, covering the previous screen cases, 138 no-wrap
-states each with whole/byte-split input (276 controls), and four additional
-REP source-cell states each whole/byte-split. Every snapshot control compares
-initial restoration, subsequent output and a second attachment, plus modes,
-cell contents, widths, styles, links, wrap flags, palette and cursor, with no
-replayed terminal queries.
-
-The first no-wrap run passed 274/276; the two failures exposed REP reading an
-untouched blank after a discarded wide character. Retaining null cells distinct
-from printed spaces and painting those nulls with erase-and-move fixed that
-case. Explicit controls include a printed space, ASCII source, wide placeholder
-and a colored null. A follow-up full run exposed loss of an explicitly printed
-space in the upstream grid's blank-row optimization; recording it also preserved
-the previously tested alternate-screen wrapped blank. The final complete run
-passed 348/348 in 1.1 minutes.
-
-Nine real ConPTY controls have been added for edge addressing, advancement,
-overwrite, wrap enable, wide fit/overlap/discard, backspace and soft reset. They
-have not yet run on this candidate. Do not treat these test definitions as
-native Windows evidence. Existing hidden-underline refusals remain.
-
-The full upstream default-profile race suite exposed a missed grid reconstruction
-in reflow after adding the configurable null cell. That reconstruction now
-retains the configured erase cell. Generated extent, resize-conservation,
-metamorphic and render-fuzz regression cases then passed together. The full
-race suite and vet then passed after that correction; the intermediate failure
-is not release evidence.
-
-## Resize, margins and real ConPTY follow-up
-
-The candidate adds whole/byte-split resize controls for addressed, advanced,
-wide, overlapped, saved and alternate-screen states, through widening,
-narrowing and growing again. Scroll-region controls cover bottom wrap/index,
-top reverse index and saved-cursor clamping. Fixes preserve xterm's frozen
-cursor line, clipped columns and saved coordinates, retain alternate-buffer
-hidden columns, flush an already drawn grapheme before resize, and restrict
-reverse-index before testing scroll margins.
-
-The visible interior wide/narrow overlap can be reconstructed in ordinary
-ANSI by building it at the edge and moving the pair left with DCH. A retained
-parser repeat state still cannot be seeded by the current encoder without
-clearing that lead. Issue #424 blocks #421. The candidate refuses that unsafe
-state, and its whole/byte-split browser acceptance tests remain failing. They
-are not skipped, and this PR must remain draft until they pass faithfully.
-
-Actual Windows artifact 14337006971 from CI 44100418808/PR head 2c3f923 contains
-22 executed ConPTY captures, each from one native job. The renderer comparison
-passed 21/22; `nowrap-soft-reset` differed only in focus-report mode (1004):
-xterm reset it while the mirror retained it. The candidate now also resets
-focus reports, bracketed paste and synchronized output on DECSTR. Recomputing
-snapshots from all 22 retained actual ConPTY input streams using the current
-mirror passed all 22 independent renderer comparisons locally. That is a
-retained-stream component check, not a fresh Windows execution of this candidate.
-The fresh native gate remains required.
-
-To recompute current mirror snapshots from retained original/future inputs,
-set `WEBMUX_SCREEN_REFERENCE_INPUTS` to a JSON array of bounded objects with
-name, cols, rows, original and future. The qualifier generates new snapshots;
-recorded snapshots are not reused. Select `recorded-conpty` in the browser suite.
-
-The final expanded local browser run executed 410 checks: 408 passed; the two
-required whole/byte-split overlap-grow cases still report `ErrUnsupported`
-and fail their support assertion. This is an incomplete qualification result,
-not a green gate. Full retained-module race/vet passed again (vt 115.815s,
-snapshot 1.110s, vtgen 1.146s); affected screenstate race and platform vet passed.
+Earlier 348/410-case browser runs, retained-input recomputations and their
+limits are historical evidence, not substitutes for the fresh qualified head.
