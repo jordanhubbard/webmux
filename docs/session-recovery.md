@@ -2506,3 +2506,42 @@ text is discarded. Native tests on the worker passed blocked/unrecognized reply
 controls, credential-text suppression, survivor precedence and the existing
 concurrent-creation/lost-reply/uncertain-cache controls. These are synthetic
 process controls, not acceptance of the blocked product image.
+
+### Re-enabling wrapping at an ambiguous edge (2026-11-17)
+
+Issue #412 reproduces an accepted-but-inaccurate snapshot after disabling
+wrapping, printing in the final column and re-enabling wrapping. On an 80-column
+screen the continuously attached xterm retains column 80, while the mirror has
+clamped it to 79. The next character wraps in the reference but overwrites the
+last cell in both the restored viewer and a second mirror capture. A real Chrome
+comparison reproduces all three differences through a read-only Go overlay.
+This is portable renderer evidence, not a ConPTY reproduction of this sequence.
+
+The xterm profile now refuses this transition when it cannot distinguish an
+addressed final-column cursor from one advanced past it. A captured refusal remains immutable. The continuing mirror refuses new
+attachments until a full terminal reset; later output or a soft reset cannot
+repair cells that may already have diverged. The owner,
+terminal and existing viewers remain alive. A retained pending wrap remains
+representable, as does an explicit movement away from the edge before wrapping
+is enabled. This keeps the existing refusal boundary honest rather than
+implementing full no-wrap restoration.
+
+Eight single/split-feed refusal controls fail against the previous profile and
+pass with the guard. Go race tests and vet pass. The real Chrome suite passes 63
+portable initial/continued/second-attachment comparisons and its additional
+hyperlink lifecycle control, including two positive wrap-toggle controls.
+The Windows owner-wire test adds refusal/reset coverage with a test terminal;
+its native execution and the ordinary ConPTY renderer suite remain hosted gates.
+Broader no-wrap, underline and application/native-session acceptance remain open
+under #355 and #318.
+
+
+The first #412 Windows browser gate failed separately in the saved-profile
+qualification's final temporary-worker navigation: the title stayed
+`about:blank` instead of the synthetic `empty-profile` page. Earlier persistence,
+lease and worker-replacement checks passed. The retained failure does not
+establish a cause. That fixture now attaches a bounded phase/action/frame and
+loopback-document timeline under #282, omitting tokens, internal profile keys,
+images, clipboard and file bodies. Browser behavior, actions and deadlines are
+unchanged; a later pass cannot by itself establish that this historical failure
+was fixed.

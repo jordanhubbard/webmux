@@ -21,6 +21,8 @@ type fixture struct {
 
 func main() {
 	cases := []struct{ name, before, after string }{
+		{"wrap-toggle-pending", "\x1b[4;80HX\x1b[?7l\x1b[?7h", "Y"},
+		{"wrap-toggle-resolved", "\x1b[?7l\x1b[4;80HX\rSAFE\x1b[?7h", "Y"},
 		{"link-named", "\x1b]8;id=one;https://example.test/a\aA", "B\x1b]8;;\aC"},
 		{"link-anonymous", "\x1b]8;;https://example.test/a\aA\x1b]8;;https://example.test/a\aB", "C\x1b]8;;\aD"},
 		{"link-replace", "\x1b]8;id=a;https://example.test/a\aA\x1b]8;id=b;https://example.test/b\aB", "C"},

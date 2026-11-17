@@ -22,6 +22,7 @@ func (t *snapshotTerminal) PID() int                    { return 3344 }
 
 func TestSnapshotRefusalPreservesOwnerTerminal(t *testing.T) {
 	for _, tc := range []struct{ name, before, repair string }{
+		{"no-wrap-reenabled", "\x1b[?7l\x1b[4;80HX\x1b[?7hY\x1b[H", "\x1bcSAFE"},
 		{"no-wrap", "\x1b[?7l\x1b[4;80HX", "\x1b[HSAFE"},
 		{"underline-reset", "\x1b[4:3mA\x1b7\x1b[0mB\x1b8X", "\x1bcSAFE"},
 		{"color-overflow", "\x1b]4;1;" + strings.Repeat("f", 9000) + "\a", "\x1bcSAFE"},

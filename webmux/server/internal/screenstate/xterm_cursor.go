@@ -14,6 +14,7 @@ type xtermCursorProfile struct{ unsupported bool }
 func installXtermCursorProfile(e *vt.Emulator) *xtermCursorProfile {
 	profile := &xtermCursorProfile{}
 	origin := e.GetModes()[6]
+	autoWrap := e.GetModes()[7]
 	// DEC mode callbacks run after the dependency has restored its full pen.
 	// Capture the global xterm pen before processing the mode batch instead.
 	var modePen uv.Style
@@ -61,6 +62,17 @@ func installXtermCursorProfile(e *vt.Emulator) *xtermCursorProfile {
 	previous := e.GetCallbacks()
 	callbacks := previous
 	callbacks.EnableMode = func(mode ansi.Mode) {
+		if mode == ansi.ModeAutoWrap {
+			// With wrapping off, vt clamps an addressed final-column cursor
+			// and one advanced past the final cell to the same coordinate.
+			// Re-enabling wrapping cannot recover that lost distinction. A
+			// retained pending wrap is representable; otherwise refuse until
+			// RIS rather than silently overwriting the final cell on replay.
+			if !autoWrap && e.CursorPosition().X == e.Width()-1 && !e.CursorPendingWrap() {
+				profile.unsupported = true
+			}
+			autoWrap = true
+		}
 		if mode == ansi.ModeOrigin {
 			origin = true
 		}
@@ -69,6 +81,9 @@ func installXtermCursorProfile(e *vt.Emulator) *xtermCursorProfile {
 		}
 	}
 	callbacks.DisableMode = func(mode ansi.Mode) {
+		if mode == ansi.ModeAutoWrap {
+			autoWrap = false
+		}
 		if mode == ansi.ModeOrigin {
 			origin = false
 		}
@@ -84,7 +99,7 @@ func installXtermCursorProfile(e *vt.Emulator) *xtermCursorProfile {
 	}
 	e.SetCallbacks(callbacks)
 	e.RegisterEscHandler('c', func() bool {
-		origin = false
+		origin, autoWrap = false, true
 		modePen = uv.Style{}
 		modeLink = uv.Link{}
 		profile.unsupported = false
