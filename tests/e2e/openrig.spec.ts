@@ -104,7 +104,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   const project = 'browser-workload';
   const sessions: string[] = [];
   let workloadCompleted = false;
-  type Agent = { managerTarget: string; attachmentTarget: string; name: string; id: string; state: string; openable: boolean; managerSessionId?: string; nativeSessionId?: string };
+  type Agent = { managerTarget: string; managed: boolean; enrollmentOrigin: string; attachmentTarget: string; name: string; id: string; state: string; openable: boolean; managerSessionId?: string; nativeSessionId?: string };
   type Session = { id: string; row: number; col: number; openrig_view?: string; rig?: { target: string; project: string; name: string; host: string; runtime: string } };
   const status = async () => {
     const value = await (await request.get('/api/coordination')).json() as { seats: (Agent & { provider: string })[]; messages: { provider: string; from: string; to: string; body: string }[] };
@@ -157,6 +157,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       expect((await response).status()).toBe(200);
       await expect(dialog).toHaveCount(0);
       const agent = (await status()).seats.find(value => value.name === name)!;
+      expect(agent.managed).toBe(true); expect(agent.enrollmentOrigin).toBe('claimed');
       const listing: Session[] = await (await request.get('/api/sessions')).json();
       const session = listing.find(value => value.openrig_view === `managed:${agent.id}`)!;
       if (index === 0) expect([session.row, session.col]).toEqual([0, 0]);
@@ -166,7 +167,8 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       await expect(page.getByTestId('workspace-scroll')).toBeVisible();
       await expect(terminal).toBeInViewport({ ratio: 0.1 });
       await expect(terminal.locator('.xterm-helper-textarea')).toBeFocused();
-      await expect(terminal.getByLabel('Rig-managed worker')).toHaveAttribute('title', new RegExp(project));
+      await expect(terminal.getByLabel('Rig viewer')).toHaveAttribute('title', new RegExp(project));
+      await expect(terminal.getByLabel('Rig seat status')).toContainText('Enrollment Adopted by Rig');
       await expect(terminal.getByText(`${project} / ${name}`, { exact: true })).toBeVisible();
       await expect(page).toHaveTitle(new RegExp(project));
       await expect(terminal.locator('.xterm-rows')).toContainText('FIXTURE_READY');

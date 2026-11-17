@@ -55,3 +55,13 @@ describe('Rig tile observations', () => {
     expect(screen.queryByLabelText('Rig seat status')).toBeNull();
   });
 });
+
+it('distinguishes manager-reported enrollment from a WebMux launch record or lifecycle authority', () => {
+  const seat = observation({ managed: false, enrollmentOrigin: 'launched', enrollmentSource: 'rig-session-registry' });
+  const view = render(<RigSeatStatus session={session} observations={[seat]} />);
+  expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Enrollment Launched by Rig');
+  view.rerender(<RigSeatStatus session={session} observations={[{ ...seat, managed: true, enrollmentOrigin: 'claimed' }]} />);
+  expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Enrollment Adopted by Rig');
+  view.rerender(<RigSeatStatus session={session} observations={[{ ...seat, enrollmentSource: 'unavailable' }]} />);
+  expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Enrollment unknown');
+});

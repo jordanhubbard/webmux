@@ -229,7 +229,7 @@ export function Tile({
           )}
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
           {session.transport === 'ssh' && managedClient && <span style={{ ...styles.transport, color: managedClient.online ? '#50fa7b' : '#aaa' }} title={`Managed host ${managedClient.online ? 'connected' : 'offline'}`}>Host {managedClient.online ? '●' : '○'}</span>}
-          {session.rig && <span aria-label={session.rig.provider === 'agent-deck' ? 'Agent Deck-managed worker' : 'Rig-managed worker'} title={`${identity.source} · ${identity.project} · ${identity.name} · ${identity.host} · ${session.rig.target}`} style={{ ...styles.transport, color: '#c5b8ff' }}>{identity.source}</span>}
+          {session.rig && <span aria-label={session.rig.provider === 'agent-deck' ? 'Agent Deck-managed worker' : 'Rig viewer'} title={`${identity.source} · ${identity.project} · ${identity.name} · ${identity.host} · ${session.rig.target}`} style={{ ...styles.transport, color: '#c5b8ff' }}>{identity.source}</span>}
           {!session.rig && <button style={{ ...styles.browserBtn, flexShrink: 0 }} onClick={editProject}>{identity.project ? 'Edit project' : 'Set project'}</button>}
         </div>
         <div style={styles.chromeRight}>

@@ -17,6 +17,7 @@ export interface RigActivity {
   state: string; evidenceSource: string; sampledAt: string; stale?: boolean; generationProvenance?: string;
 }
 export interface CoordinationSeat {
+  enrollmentOrigin?: string; enrollmentSource?: string; enrollmentId?: string; enrollmentObservedAt?: string;
   startupStatus?: string; agentActivity?: RigActivity;
   logicalId?: string; attachmentTarget?: string; managerTarget?: string;
   rigHostId?: string;
@@ -321,8 +322,9 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
               <details className="coordination-identity"><summary>Project details</summary><code>{project.id}</code>{project.detail && <p>{project.detail}</p>}</details>
               {projectSeats.length === 0 ? <p>No sessions in this project.</p> : <ul aria-label={`${project.name} sessions`} className="coordination-workers">
                 {projectSeats.map(seat => <li key={`${seat.provider}:${seat.id}`}><article aria-label={`${seat.name} in ${seat.projectName}`} className={seat.attention ? 'coordination-worker-attention' : undefined}>
-                  <strong>{seat.name}</strong> {seat.managed && <span className="coordination-rig">{seat.provider === 'rig' ? 'Rig-managed' : 'Agent Deck-managed'}</span>}{seat.role && seat.role !== 'session' && <span className="coordination-role">{seat.role}</span>}{seat.attention && <span className="coordination-attention">Needs attention</span>}
+                  <strong>{seat.name}</strong> {seat.managed && <span className="coordination-rig">{seat.provider === 'rig' ? 'WebMux launch record' : 'Agent Deck-managed'}</span>}{seat.role && seat.role !== 'session' && <span className="coordination-role">{seat.role}</span>}{seat.attention && <span className="coordination-attention">Needs attention</span>}
                   <dl className="coordination-worker-facts">
+                    {seat.provider === 'rig' && <div><dt>Enrollment</dt><dd title="Manager-reported enrollment lineage; this does not authorize lifecycle actions or establish ownership of a remote provider.">{seat.enrollmentSource === 'rig-session-registry' && seat.enrollmentOrigin === 'launched' ? 'Launched by Rig' : seat.enrollmentSource === 'rig-session-registry' && seat.enrollmentOrigin === 'claimed' ? 'Adopted by Rig' : 'Unknown'}</dd></div>}
                     <div><dt>Host</dt><dd>{executionHostLabel(seat.host)}</dd></div><div><dt>Runtime</dt><dd>{seat.runtime}</dd></div>
                     {seat.rigHostId && <div><dt>Rig host identity</dt><dd><code>{seat.rigHostId}</code></dd></div>}
                     <div><dt>{seat.provider === 'rig' ? (seat.observationState && seat.observationState !== 'current' ? 'Last observed Rig lifecycle' : 'Rig lifecycle') : 'State'}</dt><dd>{seat.state}{seat.substate ? ` · ${seat.substate}` : ''}{seat.exitCode !== undefined ? ` · exit ${seat.exitCode}` : ''}</dd></div>{seat.context && <div><dt>Context</dt><dd>{seat.context}</dd></div>}

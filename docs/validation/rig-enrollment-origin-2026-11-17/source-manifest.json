@@ -1,0 +1,57 @@
+{
+  "parent": "14827c7a580695d713cc37bc1a8b810c404b5147",
+  "qualification": {
+    "test_fixture_overlay_commit": "6fe00dcaefbd5935929c7744131dc4986f0df5cc",
+    "fixture_sha256": "ec47c609e07aebc7e10480c09fe8bf450e1f8b0a7fdd6abaf13b9c7c1df21fb0",
+    "runtime_source_overlay": false,
+    "restored_fixture_sha256": "7417ac427685eaaca31b16146950a481ba801cb1c934a0d670b5c6502ed1e4c5",
+    "results": [
+      {
+        "spec": "openrig.spec.ts",
+        "name": "rig438-legacy-finalsource",
+        "exit": 0
+      },
+      {
+        "spec": "openrig-host.spec.ts",
+        "name": "rig438-host-finalsource",
+        "exit": 0
+      },
+      {
+        "spec": "openrig-identity.spec.ts",
+        "name": "rig438-identity-finalsource",
+        "exit": 0
+      },
+      {
+        "spec": "openrig-activity.spec.ts",
+        "name": "rig438-activity-finalsource",
+        "exit": 0
+      }
+    ]
+  },
+  "scope": "Real Rig manager, native builtin terminals and owned synthetic CLI terminals. No authenticated provider or runtime-hook readiness qualification. Other UI browser cases use mocks. Enrollment lineage is not lifecycle authority.",
+  "sources": {
+    "webmux/server/internal/openrigcoord/rig-enrollment.mts": "22da5292692a07d60c486c7f8614bd0983706b2fe478614d9d01971dfa5ce9ef",
+    "webmux/server/internal/openrigcoord/runner.mts": "57075fac30b4925dc6bfab0154498af8d7694cacf61c3ca9bf20573c5c7015cb",
+    "webmux/server/internal/openrigcoord/coord.go": "9c30b4a7dfe4be4d51e6352bffc173eb19ffcf4828404c24135ad50363124724",
+    "webmux/server/internal/openrigcoord/observations_test.go": "c39103f8bb30c7690fac4c9458240a3893522bf277b2ccf307629e28438bbf82",
+    "webmux/server/internal/httpapi/rig_enrollment.go": "df6a85df0d8a3c7fd0771a3c5377fb8d272cc96373cc94fb5976d576743f5944",
+    "webmux/server/internal/httpapi/rig_enrollment_test.go": "93df79fc70b9fdfaabacdfd36d3207cf3ec09b9358482f61941be1a9bbdec981",
+    "webmux/server/internal/httpapi/coordination_providers.go": "46abcc53708b593586dcd1ff022b3f49cb0266c73cf92d31d0e39d7c97a1aa0c",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "503e7f0ebb66a500f0afd119f1e9810072342a7456905058785056e0fbe24bb9",
+    "webmux/frontend/src/components/RigSeatStatus.tsx": "c58057a58aee544f2a7d98afab0d4f06b98fe8000d730a009a2f31e53b660b0c",
+    "webmux/frontend/src/components/Tile.tsx": "833a58e3f218eb27f0b8ad854c0b9bf537a0bcb2958184f40f0021cd489741b5",
+    "tests/e2e/openrig.spec.ts": "b2346fb1d344561b0c0ca6d7cad1f69168709506215d66a74498641b795409af",
+    "tests/e2e/openrig-host.spec.ts": "969bdc6776f99a21b60d3c3bc5d90d4247151a9e5109008910f8bd7bccda2f41",
+    "tests/e2e/openrig-activity.spec.ts": "3103ff194db3a9b5e570cdcebcef28b1603074d78e9037618cb122f71ed05433",
+    "tests/frontend/CoordinationDialog.test.tsx": "8e4d3b34cfd087ec861f9e2472143ddbef128e1cc6c0406a8a3f3f53697a4c1d",
+    "tests/frontend/RigSeatStatus.test.tsx": "12a244c3d1a32e8c83121bed2210d80b78e1cca113865b18457a01d2cf0abe03",
+    "tests/frontend/Tile.test.tsx": "fb192b9d917d9fe43ca03e1d8b5a2d26942dda771317aae9180becedc0449565",
+    "scripts/rig-enrollment.test.mts": "805ac44e1e484e78d9821828ad30221dd4eb1eea56e0594ebf7545834428d154",
+    "webmux/package.json": "bc4f3307b43356fac4e4583662882cbb824650b187760773efa638a6d0cc5aca"
+  },
+  "artifacts": {
+    "native-launched.json": "c620c9604ba56b756a7368986dc9a591c7205fcefe08d75505a6f542b664808e",
+    "native-adopted.json": "3037931caa8252dac67555b4eb1aaa2a66f9da11a66037a5687429317ef84bdd",
+    "rig-tile-status.png": "f7aa2f1da3e4a650c77c983446a1151cb176eeb342171abdc1150d5703f73fb8"
+  }
+}

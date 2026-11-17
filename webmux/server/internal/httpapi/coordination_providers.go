@@ -147,6 +147,7 @@ type coordinationProject struct {
 }
 
 type coordinationSeat struct {
+	rigEnrollment
 	StartupStatus    string       `json:"startupStatus,omitempty"`
 	AgentActivity    *rigActivity `json:"agentActivity,omitempty"`
 	RigHostID        string       `json:"rigHostId,omitempty"`
@@ -322,6 +323,7 @@ type rigStatusEnvelope struct {
 }
 
 type rigCanonicalSeat struct {
+	rigEnrollment
 	StartupStatus        string       `json:"startupStatus"`
 	AgentActivity        *rigActivity `json:"agentActivity"`
 	HostSelfID           string       `json:"hostSelfId"`
@@ -341,8 +343,12 @@ type rigCanonicalSeat struct {
 	TmuxTarget           string       `json:"tmuxTarget"`
 }
 
-func (p *rigProvider) rawStatus(ctx context.Context) (rigStatusEnvelope, error) {
+// Enrollment is display metadata, never a dependency of attach or recovery.
+func (p *rigProvider) rawStatus(ctx context.Context, includeEnrollment ...bool) (rigStatusEnvelope, error) {
 	action := "status"
+	if len(includeEnrollment) > 0 && includeEnrollment[0] {
+		action = "status-enrollment"
+	}
 	if p.factsOnly {
 		action = "observations"
 	}
@@ -362,7 +368,7 @@ func (p *rigProvider) Status(ctx context.Context) (coordinationProviderStatus, e
 	if path, _ := openRigExecutable(); path == "" && p.server != nil && p.server.hasRemoteRigCapability(p.owner) {
 		return remote, nil
 	}
-	raw, err := p.rawStatus(ctx)
+	raw, err := p.rawStatus(ctx, true)
 	if err != nil {
 		if len(remote.Seats) == 0 {
 			return coordinationProviderStatus{}, err
@@ -431,7 +437,8 @@ func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
 		status.Seats = append(status.Seats, coordinationSeat{
 			RigHostID:     rigHostID(seat.HostSelfID),
 			StartupStatus: canonicalRigStartup(seat.StartupStatus), AgentActivity: canonicalRigActivity(seat.AgentActivity),
-			Provider: "rig", ID: id, LogicalID: seat.LogicalID, AttachmentTarget: seat.TmuxTarget, ManagerTarget: seat.CanonicalSessionName, ProjectID: seat.RigID, ProjectName: seat.RigName,
+			rigEnrollment: canonicalRigEnrollment(seat.rigEnrollment),
+			Provider:      "rig", ID: id, LogicalID: seat.LogicalID, AttachmentTarget: seat.TmuxTarget, ManagerTarget: seat.CanonicalSessionName, ProjectID: seat.RigID, ProjectName: seat.RigName,
 			Name: name, Host: host, Workspace: seat.Cwd, Runtime: seat.Runtime, State: state, TransportState: transportState,
 			Openable: openable, Managed: seat.Managed, ManagerSession: managerSession, ProviderTarget: seat.CanonicalSessionName, Context: seat.PodNamespace,
 		})

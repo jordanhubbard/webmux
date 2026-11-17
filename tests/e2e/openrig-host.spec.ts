@@ -53,11 +53,12 @@ exec ${q(process.execPath)} ${q(child)}
     const pid = readFileSync(starts, 'utf8').trim();
     const panePID = () => run('tmux', ['display-message', '-p', '-t', target, '#{pane_pid}']);
     expect(panePID()).toBe(pid);
-    type Seat = { provider: string; id: string; name: string; projectName: string; host: string; attachmentTarget: string; rigHostId?: string; managed: boolean; openable: boolean };
+    type Seat = { provider: string; id: string; name: string; projectName: string; host: string; attachmentTarget: string; rigHostId?: string; managed: boolean; enrollmentOrigin: string; enrollmentSource: string; openable: boolean };
     const observe = async () => (await (await request.get('/api/coordination?provider=rig')).json() as { seats: Seat[] }).seats.find(s => s.attachmentTarget === target);
     await expect.poll(async () => (await observe())?.openable).toBe(true);
     const seat = (await observe())!;
     expect(seat.host).toBe(''); expect(seat.managed).toBe(false);
+    expect(seat.enrollmentOrigin).toBe('claimed'); expect(seat.enrollmentSource).toBe('rig-session-registry');
     const attach = async () => {
       await page.getByRole('button', { name: 'Coordination', exact: true }).click();
       const panel = page.getByRole('region', { name: 'Coordination', exact: true });
@@ -75,7 +76,8 @@ exec ${q(process.execPath)} ${q(child)}
     expect(first.rig.host).toBe(''); expect(first.rig.rig_host_id).toBe(seat.rigHostId);
     const tile = page.getByTestId(`tile-cell-${viewer}`);
     await expect(tile.locator('.xterm-rows')).toContainText(`EXTERNAL_READY:${pid};`);
-    await expect(tile.getByLabel('Rig-managed worker')).toHaveAttribute('title', /Unknown execution host/);
+    await expect(tile.getByLabel('Rig seat status')).toContainText('Enrollment Adopted by Rig');
+    await expect(tile.getByLabel('Rig viewer')).toHaveAttribute('title', /Unknown execution host/);
     await tile.locator('.xterm-helper-textarea').focus();
     await page.keyboard.insertText('native-key');
     await expect(tile.locator('.xterm-rows')).toContainText(`EXTERNAL_INPUT:${Buffer.from('native-key').toString('hex')};`);
@@ -89,7 +91,7 @@ exec ${q(process.execPath)} ${q(child)}
     expect(reopened.id).toBe(viewer); expect(reopened.rig).toEqual(first.rig);
     expect(panePID()).toBe(pid); expect(readFileSync(starts, 'utf8').trim().split(/\r?\n/)).toEqual([pid]);
     const receipt = info.outputPath('external-rig-host.json');
-    writeFileSync(receipt, JSON.stringify({ contract: 'openrig-cli/0.6.14', rigVersion: run(rig, ['--version']), tmuxVersion: run('tmux', ['-V']), nodeVersion: process.version, browserVersion: page.context().browser()?.version(), platform: process.platform, architecture: process.arch, externalEnrollment: true, target, originalPID: pid, finalPID: panePID(), starts: 1, host: seat.host, rigHostID: seat.rigHostId, viewerReused: true, recoveryHost: recovery.hostname, canResumeManaged: recovery.can_resume_managed, scope: 'Real isolated Rig/tmux + app/browser using an owned synthetic Node terminal. No authenticated CLI or remote execution claimed.' }));
+    writeFileSync(receipt, JSON.stringify({ contract: 'openrig-cli/0.6.14', rigVersion: run(rig, ['--version']), tmuxVersion: run('tmux', ['-V']), nodeVersion: process.version, browserVersion: page.context().browser()?.version(), platform: process.platform, architecture: process.arch, externalEnrollment: true, enrollmentOrigin: seat.enrollmentOrigin, enrollmentSource: seat.enrollmentSource, webmuxLaunchRecord: seat.managed, target, originalPID: pid, finalPID: panePID(), starts: 1, host: seat.host, rigHostID: seat.rigHostId, viewerReused: true, recoveryHost: recovery.hostname, canResumeManaged: recovery.can_resume_managed, scope: 'Real isolated Rig/tmux + app/browser using an owned synthetic Node terminal. No authenticated CLI or remote execution claimed.' }));
     await info.attach('external Rig execution-host provenance', { path: receipt, contentType: 'application/json' });
   } finally {
     if (viewer) await request.delete(`/api/sessions/${viewer}`);

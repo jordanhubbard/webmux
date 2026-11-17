@@ -1,6 +1,7 @@
 // WebMux owns the control plane; SSH carries each remote CLI's terminal and a
 // loopback-only reverse forward. No remote daemon or provider credentials copied.
 import fs from 'node:fs';
+import { observeRigEnrollments } from './rig-enrollment.mts';
 import type { RigRecoveryIdentity } from './rig-recovery.mts';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -91,17 +92,18 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const args = ['-c', browser, requested, host];
     const output = host === 'localhost' ? run('python3', args) : run('ssh', [...sshArgs, host, `python3 -c ${q(browser)} ${q(requested)} ${q(host)}`]);
     console.log(output);
-  } else if (action === 'status' || action === 'observations') {
+  } else if (action === 'status' || action === 'status-enrollment' || action === 'observations') {
     let rigs: RigRow[];
     let nodes: NodeRow[];
     try { rigs = rigRows(true); nodes = nodeRows(); }
     catch { throw new Error('Canonical Rig discovery requires OpenRig CLI 0.6.14 or newer and a reachable daemon.'); }
     const managed = records();
     const agents = managed.map(agent => ({ ...agent, ...(nodes.find(e => e.canonicalSessionName === agent.target) ?? {}), connected: (() => { try { run('tmux', ['has-session', '-t', `=${agent.tmux}`], 3000); return true; } catch { return false; } })() }));
-    const seats = nodes.map(node => {
+    const enrollments = action === 'status' ? [] : await observeRigEnrollments(run, nodes);
+    const seats = nodes.map((node, index) => {
       const agent = managed.find(value => value.target === node.canonicalSessionName);
       const match = typeof node.tmuxAttachCommand === 'string' ? /^tmux attach(?:-session)? -t ([a-zA-Z0-9_.:@-]{1,256})$/.exec(node.tmuxAttachCommand) : null;
-      return { ...node, managed: Boolean(agent), host: agent?.host, cwd: agent?.cwd, name: agent?.name, openable: Boolean(match), tmuxTarget: match?.[1] };
+      return { ...node, ...enrollments[index], managed: Boolean(agent), host: agent?.host, cwd: agent?.cwd, name: agent?.name, openable: Boolean(match), tmuxTarget: match?.[1] };
     });
     const messages: { from: string; to: string; body: string; time: string; state: string }[] = [];
     for (const agent of (action === 'observations' ? [] : agents.slice(0, 16))) {

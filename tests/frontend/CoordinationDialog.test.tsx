@@ -269,7 +269,7 @@ it('shows all owners together and routes colliding IDs to the original provider'
   const deck = await screen.findByRole('article', { name: 'agent-deck worker in agent-deck project' });
   const rig = screen.getByRole('article', { name: 'rig worker in rig project' });
   const native = screen.getByRole('article', { name: 'webmux worker in webmux project' });
-  expect(within(rig).getByText('Rig-managed')).toBeVisible();
+  expect(within(rig).getByText('WebMux launch record')).toBeVisible();
   expect(within(deck).getByText('Agent Deck-managed')).toBeVisible();
   fireEvent.click(within(deck).getByRole('button', { name: 'Send instruction' }));
   expect(within(rig).queryByRole('textbox')).toBeNull();

@@ -28,7 +28,7 @@ test('grid observes native Rig bootstrap and lifecycle without inferring provide
   writeFileSync(spec, JSON.stringify({ version: '0.2', name: project, pods: [{ id: 'agents', label: project,
     members: ['first', 'sibling'].map(id => ({ id, label: id, agent_ref: 'builtin:terminal', profile: 'none', runtime: 'terminal', cwd: home })) }], edges: [] }));
   const { rigId } = JSON.parse(run(rig, ['up', spec, '--yes', '--json'])) as { rigId: string };
-  type Seat = { id: string; logicalId: string; projectId: string; managerTarget: string; attachmentTarget: string; startupStatus: string; state: string; agentActivity?: Record<string, unknown> };
+  type Seat = { id: string; logicalId: string; projectId: string; managerTarget: string; attachmentTarget: string; startupStatus: string; state: string; managed: boolean; enrollmentOrigin: string; enrollmentSource: string; agentActivity?: Record<string, unknown> };
   const observe = async () => (await (await request.get('/api/coordination?provider=rig')).json() as { seats: Seat[] }).seats.filter(s => s.projectId === rigId);
   let viewer = '';
   try {
@@ -37,6 +37,7 @@ test('grid observes native Rig bootstrap and lifecycle without inferring provide
     const sibling = seats.find(s => s.logicalId === 'agents.sibling')!;
     expect(first).toBeTruthy(); expect(sibling).toBeTruthy();
     expect(first.startupStatus).toBe('ready');
+    expect(first.managed).toBe(false); expect(first.enrollmentOrigin).toBe('launched'); expect(first.enrollmentSource).toBe('rig-session-registry');
     expect(first.agentActivity).toBeTruthy();
     expect(Object.keys(first.agentActivity!).every(key => ['state', 'evidenceSource', 'sampledAt', 'stale', 'generationProvenance'].includes(key))).toBe(true);
     const siblingPID = run('tmux', ['display-message', '-p', '-t', sibling.attachmentTarget, '#{pane_pid}']);
@@ -47,6 +48,7 @@ test('grid observes native Rig bootstrap and lifecycle without inferring provide
     const tile = page.getByTestId(`tile-cell-${viewer}`);
     const status = tile.getByLabel('Rig seat status');
     await expect(status).toContainText('Rig running · Bootstrap ready');
+    await expect(status).toContainText('Enrollment Launched by Rig');
     await expect(status).not.toContainText('Agent running');
     await expect(status).not.toContainText('Agent ready');
     await tile.locator('.xterm-helper-textarea').focus();

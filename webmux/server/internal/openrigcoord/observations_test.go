@@ -53,3 +53,41 @@ esac
 		t.Fatalf("unsafe observation projection: %s", output)
 	}
 }
+
+func TestBasicStatusDoesNotDependOnEnrollmentDiscovery(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Rig terminal integration is Unix-only")
+	}
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("Node is required by the coordinator")
+	}
+	home, bin := t.TempDir(), t.TempDir()
+	log := filepath.Join(home, "commands")
+	t.Setenv("WEBMUX_ENROLLMENT_TEST_LOG", log)
+	scripts := map[string]string{
+		"tmux": "#!/bin/sh\nif [ \"$1\" = -V ]; then echo 'tmux 3.8'; fi\n",
+		"rig": `#!/bin/sh
+printf '%s\n' "$*" >> "$WEBMUX_ENROLLMENT_TEST_LOG"
+case "$*" in
+ ps*) printf '%s\n' '{"entries":[]}' ;;
+ *) exit 23 ;;
+esac
+`,
+	}
+	for name, script := range scripts {
+		if err := os.WriteFile(filepath.Join(bin, name), []byte(script), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if _, err := Run(context.Background(), home, "owner", "status", ""); err != nil {
+		t.Fatal(err)
+	}
+	calls, err := os.ReadFile(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(calls), "--version") || strings.Contains(string(calls), "daemon") {
+		t.Fatalf("basic discovery depends on enrollment probe: %s", calls)
+	}
+}

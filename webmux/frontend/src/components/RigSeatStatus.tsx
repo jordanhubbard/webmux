@@ -38,10 +38,12 @@ export function RigSeatStatus({ session, observations = [] }: { session: Session
     else if (activity.state !== 'unknown' && ['running', 'idle', 'needs_input'].includes(activity.state)) label = `Activity estimate: ${activity.state.replace(/_/g, ' ')}`;
   }
   const startup = ({ pending: 'pending', ready: 'ready', attention_required: 'needs attention', failed: 'failed' } as Record<string, string>)[bindingMatches ? seat?.startupStatus || '' : ''] || 'unknown';
+  const enrollment = bindingMatches && seat?.enrollmentSource === 'rig-session-registry' ? ({ launched: 'Launched by Rig', claimed: 'Adopted by Rig' } as Record<string, string>)[seat.enrollmentOrigin || ''] || 'unknown' : 'unknown';
   const attention = seat?.state === 'attention_required' || (bindingMatches && (seat?.startupStatus === 'attention_required' || seat?.startupStatus === 'failed'))
     || (fresh && activity.evidenceSource === 'runtime_hook' && activity.state === 'needs_input');
   return <div aria-label="Rig seat status" style={{ fontSize: 11, padding: '2px 8px', background: '#17172c', color: attention ? '#f1d494' : '#b5adc9', flexShrink: 0 }}
     title="Rig observations; bootstrap completion and terminal output do not establish readiness for instructions. Viewer connection is shown separately.">
+    <span title="Manager-reported enrollment lineage; this does not establish remote provider ownership or authorize Stop.">Enrollment {enrollment}</span>{' · '}
     <span>Rig {seat ? seat.state.replace(/_/g, ' ') : 'state unknown'}</span>{' · '}
     <span>Bootstrap {startup}</span>{' · '}
     <span>{label} ({source}{activity && !fresh ? '; stale or unverified' : ''})</span>

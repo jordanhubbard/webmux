@@ -102,7 +102,8 @@ The Coordination tab groups workers under expandable project headings. Each
 worker shows its registered name (such as coder or reviewer), execution host,
 runtime and observed state. Expand or collapse a project with its summary button
 or Enter/Space; **Open session** attaches an existing viewer and **Restart
-provider and open** is reserved for a stopped managed Rig seat.
+provider and open** appears for a stopped seat with a WebMux launch record and
+registered workspace. A WebMux launch record is not native Rig lifecycle ownership.
 A worker name is the registered name, not an inferred permission or capability.
 
 Opening a managed terminal records its coordinator target, project, name, host
@@ -111,8 +112,9 @@ host separately from the terminal's editable title and transport badge. For
 remote workers the viewer still attaches locally to an SSH relay: its EXEC
 transport is not a claim that the provider executes locally. Existing tiles gain
 this metadata when opened again from Coordination. Renaming an ordinary terminal
-does not make it Rig-managed. Tile identity is retained registration metadata,
-not a live activity or verified-process indicator; consult Coordination for state.
+does not turn it into a Rig viewer. Tile identity is retained registration metadata,
+not a live activity or verified-process indicator. The separate tile status strip
+labels current lifecycle, bootstrap and activity observations.
 
 ## One coordinator, multiple execution hosts
 
@@ -500,3 +502,46 @@ command executes. Issue #438 tracks ownership, conditional identity and remote
 effect requirements before a Stop control can ship. Hide, reconnect and native
 recovery keep their existing separate contracts; this activity UI adds no stop
 action and does not complete #194.
+
+
+## Enrollment origin and launch records
+
+The **Rig** badge identifies a viewer linked to a recorded Rig seat. It does not
+claim that Rig launched the process or can stop it. Coordination labels its saved
+WebMux launcher as **WebMux launch record**, independently of manager-reported
+**Launched by Rig**, **Adopted by Rig**, or unknown enrollment. Tiles show the same
+enrollment distinction only when their saved native binding matches inventory.
+A changed binding or unavailable observation shows unknown for that viewer.
+
+The optional coordination fields are `enrollmentOrigin` (`launched`, `claimed`,
+`unknown`), `enrollmentSource` (`rig-session-registry`, `unavailable`),
+`enrollmentId` and `enrollmentObservedAt`. The enrollment ID is a Rig registration
+record, not a coding conversation or a resume token. Existing `managed` remains
+compatible: it means a WebMux private launch record for Rig seats. A native Rig
+launch can therefore have `managed: false`; a WebMux-launched process enrolled
+with `attach --self` can have `managed: true` and `enrollmentOrigin: claimed`.
+
+This read-only projection is qualified for published OpenRig 0.6.14 (df1c1517).
+It joins the manager's node inventory and session registry within each immutable
+rig ID, checks the logical seat, node, latest enrollment and native address, and
+uses that build's greatest-session-ULID selection rule. History, conflicting
+bindings, duplicate identities and malformed rows cannot establish current
+lineage. Other builds, including the separate native recovery qualification,
+remain unknown until their enrollment contract is qualified. Native recovery's
+existing version and policy checks are unchanged.
+
+Only display discovery requests these facts. Attach, survival and recovery reads
+keep their original discovery path without enrollment HTTP requests. The reader
+uses GET against the local daemon port reported by the configured CLI, refuses
+redirects, caps each response at 512 KiB and each sweep at 8 MiB, uses two rig
+workers (up to four simultaneous requests), and has an eight-second deadline.
+At most 256 seats, 32 rigs and 4096 rows per response are accepted; excessive or
+incomplete inventories degrade to unknown. One failed rig does not lend its
+lineage to another. Host-client Rig observations retain their existing protocol
+and report no enrollment origin through it.
+
+Raw session tokens, prompt or activity evidence, and event bodies are not copied
+to the public projection. Manager-reported enrollment describes registration
+lineage; it neither proves provider liveness nor grants authority to stop a local
+or remote provider. The conditional Stop, native launch/adopt and remote ownership
+requirements in #438 remain open. See the [native enrollment validation](validation/rig-enrollment-origin-2026-11-17/README.md).
