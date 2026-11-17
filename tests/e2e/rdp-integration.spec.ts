@@ -68,7 +68,8 @@ test('real guacd and FreeRDP screen updates, reconnection and keyboard input', a
     });
     await listening(port);
     const guacdPort = await availablePort(14823);
-    start('/usr/sbin/guacd', ['-f', '-b', '127.0.0.1', '-l', String(guacdPort), '-p', join(temporary, 'guacd.pid'), '-L', 'info']);
+    const guacd = process.env.WEBMUX_GUACD_EXECUTABLE || '/usr/sbin/guacd';
+    start(guacd, ['-f', '-b', '127.0.0.1', '-l', String(guacdPort), '-p', join(temporary, 'guacd.pid'), '-L', 'info']);
     await listening(guacdPort);
     const response = await request.post('/api/rdp/sessions', { data: { hostname: '127.0.0.1', rdp_port: port, rdp_username: 'fixture' } });
     expect(response.ok()).toBe(true);

@@ -27,3 +27,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+# Apache Guacamole browser library
+
+The RDP browser uses Apache Guacamole 1.6.0 under Apache License 2.0, repackaged
+from the verified Apache source release with an ESM export. Upstream source,
+signer, file digests and reproduction instructions are in
+`webmux/vendor/guacamole-common-js/`. Its unchanged LICENSE and NOTICE accompany
+native server bundles under `licenses/guacamole-common-js/`. Development-only
+DefinitelyTyped declarations are separately recorded in the npm lockfile.
