@@ -544,6 +544,7 @@ func TestRigInventoryKeepsLifecycleIndependentOfAttachment(t *testing.T) {
 		name, lifecycle, wantState, wantTransport string
 		managed, connected, wantOpenable          bool
 	}{
+		{"detached without relay", "detached", "detached", "unavailable", true, false, false},
 		{"running without relay", "running", "running", "unavailable", true, false, false},
 		{"stopped with relay", "stopped", "stopped", "available", true, true, true},
 		{"missing lifecycle", "", "unknown", "unavailable", true, false, false},

@@ -333,6 +333,9 @@ Rig lifecycle comes from canonical `rig ps` rows. A missing WebMux-managed
 tmux relay marks the attachment transport unavailable and disables Open session;
 it does not mark the Rig seat stopped. Seats without a reported lifecycle show
 unknown. Restart provider is offered only when Rig explicitly reports stopped.
+A detached seat with a missing relay instead offers Reconnect attachment and
+open, explaining that a surviving provider is reattached and a new conversation
+starts if none remains.
 For a running seat whose relay has disappeared, inspect Rig and its execution
 host before launching another provider. Attachment transport is reported
 separately in the coordination inventory; externally discovered seats without
