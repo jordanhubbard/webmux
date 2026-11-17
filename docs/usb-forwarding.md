@@ -227,9 +227,14 @@ patches, module digests and vermagic remain in the build receipts.
 
 - Identical source without the correction must reproduce the specific failure.
   A test-only scheduling hook pauses transmission of a real completed native
-  read, then the fixture detaches the importer. It creates no synthetic USB/IP
-  requests or replies. Setup failures, observation timeouts and unrelated errors
-  do not count as the expected failure.
+  read, then the fixture detaches the importer. Native TX stays held until the
+  real replacement attach command acknowledges its import handshake. The fixture
+  verifies that the hold is still active before releasing it, isolating stale
+  delivery to the new native URB receiver. It creates no synthetic USB/IP requests
+  or replies. The baseline must report the unknown URB and fail enumeration;
+  handshake errors, setup failures, outer observation timeouts and unrelated errors
+  do not qualify. Ordered native hold/detach/import/release records are required
+  on both sides of the comparison. Existing deadlines are unchanged.
 - The corrected source with the same hook must actually discard the held reply,
   reimport the device and read the exact expected bytes.
 - The corrected source without the hook must pass 20 direct import/read/write/
