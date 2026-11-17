@@ -36,6 +36,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   const [selectedProfile, setSelectedProfile] = useState('');
   const [profileName, setProfileName] = useState('');
   const control = useRef(false);
+  const profileChoice = useRef<{ session: string; id?: string }>({ session: session.id });
   const [frame, setFrame] = useState<BrowserFrame>();
   const [address, setAddress] = useState('');
   const [error, setError] = useState('');
@@ -68,6 +69,11 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   const lastMove = useRef(0);
 
   const act = useCallback((action: BrowserAction) => {
+    if (profileChoice.current.session !== session.id) { profileChoice.current = { session: session.id }; control.current = false; }
+    if (action.action === 'start') {
+      if (action.profileId !== undefined) profileChoice.current.id = action.profileId;
+      else if (profileChoice.current.id !== undefined) action = { ...action, profileId: profileChoice.current.id };
+    }
     if (NAVIGATION_ACTIONS.has(action.action)) {
       addressDraft.current = false;
       addressEditing.current = false;
@@ -89,6 +95,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         if (!mounted.current) return;
         if (!result.error && result.protocol !== 3) throw new Error('Update WebMux on the terminal host before reopening this browser; its browser worker uses an older protocol.');
         control.current = result.control?.owned === true;
+        if (result.protocol === 3) profileChoice.current.id = result.profileId ?? '';
         if (!control.current) dragging.current = null;
         const { file, clipboard, ...metadata } = result;
         setFrame(previous => ({ ...metadata, url: metadata.url || previous?.url || '', target: metadata.target || previous?.target || '', tabs: metadata.tabs ?? previous?.tabs ?? [],
@@ -207,7 +214,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
           <option value="">Temporary</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
         </select></label>
         <button disabled={busy || !controlled} onClick={async () => {
-          setBusy(true); await queue.current;
+          setBusy(true); setReady(false); await queue.current;
           try { await api.endBrowser(session.id); control.current = false; setFrame(undefined); await act({ action: 'start', profileId: selectedProfile }); }
           catch (err) { setError(String(err)); } finally { setBusy(false); }
         }}>Open selected profile</button>
@@ -225,7 +232,9 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         }}>Delete saved profile</button>
         <small>Saved profiles keep sign-in cookies on the execution host after ending. Temporary profiles and transfer files are cleared when the worker exits.</small>
       </div>
-      <fieldset className="browser-controls" disabled={!controlled}>
+      {error ? <div role="alert" className="browser-message">{error} <button onClick={() => void act({ action: 'start' })}>Reconnect browser</button></div>
+        : !frame && <div role="status" className="browser-message">Starting browser on the terminal host…</div>}
+      <fieldset className="browser-controls" disabled={!controlled || busy}>
       <form className="browser-navigation" onSubmit={event => {
         event.preventDefault(); addressEditing.current = false;
         if (!address.trim()) return;
@@ -257,12 +266,10 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         {external && onAuthentication && <button onClick={() => onAuthentication(external.url)}>Sign-in handoff</button>}
       </div>
       {frame?.url.includes('/sessions/two-factor/webauthn') && <div role="note" className="browser-message">Use “Sign-in handoff” for device-local passkeys, security keys and existing sign-in sessions.</div>}
-      {error ? <div role="alert" className="browser-message">{error} <button onClick={() => void act({ action: 'start' })}>Reconnect browser</button></div>
-        : !frame && <div role="status" className="browser-message">Starting browser on the terminal host…</div>}
       </fieldset>
       <div className="browser-viewport" ref={viewportBox}>
         {frame?.image && <img ref={viewport} src={`data:image/jpeg;base64,${frame.image}`} alt="Interactive remote browser viewport" tabIndex={0}
-          draggable={false} style={{ pointerEvents: tabBusy || !controlled ? 'none' : undefined }}
+          draggable={false} style={{ pointerEvents: tabBusy || !controlled || busy ? 'none' : undefined }}
           onPointerDown={event => {
             event.preventDefault(); keyboard.current?.focus({ preventScroll: true }); event.currentTarget.setPointerCapture(event.pointerId);
             const p = point(event); const previous = lastClick.current;
@@ -287,7 +294,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
           onWheel={event => { event.stopPropagation(); void act({ action: 'scroll', ...point(event), deltaX: Math.max(-3000, Math.min(3000, event.deltaX)), deltaY: Math.max(-3000, Math.min(3000, event.deltaY)), modifiers: modifiers(event) }); }}
           onFocus={() => keyboard.current?.focus({ preventScroll: true })}
         />}
-        <textarea ref={keyboard} disabled={tabBusy || !controlled} className="browser-keyboard" aria-label="Type into remote page" tabIndex={-1} autoCapitalize="off" autoCorrect="off" spellCheck={false}
+        <textarea ref={keyboard} disabled={tabBusy || !controlled || busy} className="browser-keyboard" aria-label="Type into remote page" tabIndex={-1} autoCapitalize="off" autoCorrect="off" spellCheck={false}
           onCompositionStart={() => { composing.current = true; }}
           onCompositionEnd={event => { composing.current = false; if (event.data) void act({ action: 'text', text: event.data }); event.currentTarget.value = ''; }}
           onInput={event => { if (!composing.current && event.currentTarget.value) { void act({ action: 'text', text: event.currentTarget.value }); event.currentTarget.value = ''; } }}
@@ -313,7 +320,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
           onPaste={event => { event.preventDefault(); void act({ action: 'text', text: event.clipboardData.getData('text/plain') }); }}
         />
       </div>
-      <fieldset className="browser-controls" disabled={!controlled}>
+      <fieldset className="browser-controls" disabled={!controlled || busy}>
       <footer>
         <span>Shift+Esc releases focus. Saved profiles retain cookies after ending; temporary profiles are cleared.</span>
         <button onClick={() => setShowFind(value => !value)} disabled={!ready}>Find text</button>

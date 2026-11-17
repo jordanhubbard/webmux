@@ -254,3 +254,28 @@ it('opens a saved profile only after explicit selection and worker replacement',
   expect(fixture.action).toHaveBeenLastCalledWith('profiles', { action: 'start', profileId: 'saved' });
  } finally { view.unmount(); }
 });
+
+it('keeps reconnect available after startup fails before a controller grant', async () => {
+ fixture.action.mockReset().mockRejectedValueOnce(new Error('Worker unavailable')).mockResolvedValue({ protocol: 3, control: { owned: true, available: false }, url: '', tabs: [], target: 'one' });
+ const view = render(<BrowserCompanion session={{ id: 'retry', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  const retry = screen.getByRole('button', { name: 'Reconnect browser' });
+  expect(retry).toBeEnabled();
+  fireEvent.click(retry);
+  await act(async () => { await Promise.resolve(); });
+  expect(screen.getByText('You control this browser')).toBeInTheDocument();
+ } finally { view.unmount(); }
+});
+
+it('reconnects the displayed saved profile after a worker error', async () => {
+ const frame = { protocol: 3, control: { owned: true, available: false }, profileId: 'retained', profileName: 'Work', error: 'Interrupted page', url: '', tabs: [], target: 'one' };
+ fixture.action.mockReset().mockResolvedValue(frame);
+ const view = render(<BrowserCompanion session={{ id: 'saved-retry', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  fireEvent.click(screen.getByRole('button', { name: 'Reconnect browser' }));
+  await act(async () => { await Promise.resolve(); });
+  expect(fixture.action).toHaveBeenLastCalledWith('saved-retry', { action: 'start', profileId: 'retained' });
+ } finally { view.unmount(); }
+});
