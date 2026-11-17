@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -265,7 +265,9 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
         const native = spawnSync(path.join(home, 'openrig-bin', 'rig'), ['ps', '--nodes', '-A', '--no-cleanup', '--json', '--fields', 'canonicalSessionName,lifecycleState,sessionStatus,storedSessionStatus,startupStatus,storedStartupStatus,identityVerdict,restoreOutcome'], {
           env: { ...process.env, OPENRIG_HOST_SELECTED: 'local' }, timeout: 10000, encoding: 'utf8', maxBuffer: 1 << 20,
         });
-        await info.attach('detached-native-inventory', { body: JSON.stringify({ cycle: reconnect, webmux: await status(), nativeExit: native.status, native: native.stdout, nativeError: native.stderr }), contentType: 'application/json' });
+        const diagnostic = info.outputPath('detached-native-inventory.json');
+        writeFileSync(diagnostic, JSON.stringify({ cycle: reconnect, webmux: await status(), nativeExit: native.status, native: native.stdout, nativeError: native.stderr }));
+        await info.attach('detached-native-inventory', { path: diagnostic, contentType: 'application/json' });
         throw error;
       }
       expect((await openAgent('coder', true)).id).toBe(coderSession.id);
