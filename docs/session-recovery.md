@@ -2534,3 +2534,14 @@ The Windows owner-wire test adds refusal/reset coverage with a test terminal;
 its native execution and the ordinary ConPTY renderer suite remain hosted gates.
 Broader no-wrap, underline and application/native-session acceptance remain open
 under #355 and #318.
+
+
+The first #412 Windows browser gate failed separately in the saved-profile
+qualification's final temporary-worker navigation: the title stayed
+`about:blank` instead of the synthetic `empty-profile` page. Earlier persistence,
+lease and worker-replacement checks passed. The retained failure does not
+establish a cause. That fixture now attaches a bounded phase/action/frame and
+loopback-document timeline under #282, omitting tokens, internal profile keys,
+images, clipboard and file bodies. Browser behavior, actions and deadlines are
+unchanged; a later pass cannot by itself establish that this historical failure
+was fixed.
