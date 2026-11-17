@@ -8,6 +8,10 @@ available without it.
 
 WebMux's Go backend runs natively on modern Windows using ConPTY. It resolves `ssh.exe` from `PATH`, uses `cmd.exe` for local command templates and scratch shells, and stores runtime state under the hosting user's profile by default.
 
+WinGet publication and maintainer generation steps are tracked in
+[docs/winget.md](docs/winget.md). Community-source availability still requires
+upstream acceptance.
+
 ## Prerequisites
 
 1. A current Windows release with ConPTY support, on x64 or ARM64. Published MSIs are available for both architectures. Installing the Windows service also requires .NET Framework 4.6.1 or newer, included with supported Windows releases.

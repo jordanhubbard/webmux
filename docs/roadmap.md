@@ -250,7 +250,9 @@ updates. The dependency-audit gate remains enabled and passed for this release.
 - [#63](https://github.com/jordanhubbard/webmux/issues/63),
   [#65](https://github.com/jordanhubbard/webmux/issues/65), and
   [#152](https://github.com/jordanhubbard/webmux/issues/152): Windows signing,
-  WinGet publication and macOS Developer ID notarization.
+  WinGet publication and macOS Developer ID notarization. The [WinGet
+  submission workflow](winget.md) binds inspected MSI identities to release
+  digests; upstream acceptance remains separate.
 - [#186](https://github.com/jordanhubbard/webmux/issues/186) is closed: its five
   named hosted runs were verified completed successfully on 2026-11-12, covering
   exact-v1.3.23 CI/packaging/publication and formula-update CI/packaging. The
