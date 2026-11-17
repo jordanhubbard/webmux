@@ -1,0 +1,34 @@
+{
+  "recorded_utc": "2026-11-17T13:53:11.321245+00:00",
+  "scope": "Draft Screen snapshot restoration and continuation; not native ConPTY or resize acceptance",
+  "browser": "157.0.8103.79",
+  "screen_replay": {
+    "passed": 348,
+    "failed": 0,
+    "log_sha256": "7ac83e86f1e72d75c34eef81c3a9be2baafdbc940f9a9abd4a76d8e3312edba4",
+    "no_wrap_controls": 284,
+    "comparisons_per_control": [
+      "initial snapshot",
+      "subsequent REP and wrap-on output",
+      "second attachment"
+    ],
+    "segmentation": [
+      "whole input",
+      "byte-split input"
+    ]
+  },
+  "upstream_default_and_extension_race": {
+    "vt_seconds": 114.67,
+    "snapshot_seconds": 1.158,
+    "vtgen_seconds": 1.136,
+    "vet": "passed"
+  },
+  "screenstate_race_seconds": 4.877,
+  "typescript": "all maintained sources strict checked",
+  "native_conpty": "9 added controls pending actual Windows execution",
+  "remaining": [
+    "resize and margin qualification",
+    "real Windows ConPTY execution",
+    "hidden underline under355"
+  ]
+}

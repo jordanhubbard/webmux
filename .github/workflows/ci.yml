@@ -130,6 +130,14 @@ jobs:
       - name: Test native server with race detector
         working-directory: webmux/server
         run: go test -race ./...
+      - name: Verify terminal engine provenance
+        run: python3 scripts/verify-vt-provenance.py
+      - name: Test retained terminal engine
+        working-directory: webmux/server/internal/thirdparty/vt
+        run: go test -race ./...
+      - name: Vet retained terminal engine
+        working-directory: webmux/server/internal/thirdparty/vt
+        run: go vet ./...
       - name: Repeat Windows SSH CLI lifecycle
         if: runner.os == 'Windows'
         working-directory: webmux/server

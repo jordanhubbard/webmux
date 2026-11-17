@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/recovery"
+	"github.com/jordanhubbard/webmux/server/internal/screenstate"
 
 	"github.com/jordanhubbard/webmux/server/internal/nativeprovider"
 )
@@ -67,7 +68,7 @@ func startLaunch(request LaunchRequest, command Command) (*Process, error) {
 	if err != nil {
 		return nil, err
 	}
-	client, err := nativeprovider.Attach(ctx, identity, request.RecoveryKey, command.Cols, command.Rows)
+	client, err := nativeprovider.AttachWithProfile(ctx, identity, request.RecoveryKey, command.Cols, command.Rows, screenstate.XtermRendererProfile)
 	if err != nil {
 		return nil, err
 	}

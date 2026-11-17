@@ -1,0 +1,2083 @@
+package vt
+
+import (
+	"encoding/binary"
+	"image/color"
+	"io"
+	"slices"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/charmbracelet/x/ansi/parser"
+)
+
+// Logger represents a logger interface.
+type Logger interface {
+	// Printf logs a message formatted as fmt.Printf does.
+	Printf(format string, v ...any)
+}
+
+// Emulator represents a virtual terminal emulator.
+type Emulator struct {
+	handlers
+
+	xtermNoWrap bool
+
+	// The palette is two layers. colors holds what the guest set with OSC 4,
+	// which is the guest's own business and outlives a theme change. themePal
+	// holds the sixteen the user's tuios theme asks for, and is empty whenever
+	// no theme is active.
+	//
+	// A slot nobody has set stays nil in both, which is what lets an index
+	// travel to the host as an index and be resolved by the user's own terminal
+	// palette. Substituting anything there would repaint panes in shades the
+	// user never chose, which is the same reasoning as colorToWire in
+	// internal/session.
+	colors   [256]color.Color
+	themePal [16]color.Color
+	// paletteClaimed is whether either layer has claimed any of the sixteen,
+	// which is what decides whether SGR reads through the palette at all.
+	paletteClaimed bool
+
+	// Both main and alt screens and a pointer to the currently active screen.
+	scrs [2]screen
+	scr  *screen
+	// altSized records that scrs[1] has been given the main screen's size.
+	// The alternate screen starts as a 1x1 grid and grows on the first switch
+	// to it, so a pane that never runs a full-screen program never pays for
+	// a second grid of cells: at 112 bytes a cell that is 1.3 MB per pane at
+	// 207x55, on each side of the socket. See altScreen.
+	altSized bool
+
+	// The shape DECSCUSR asked for. See CursorStyle for why it lives here
+	// rather than on a Screen.
+	cursorStyle  CursorStyle
+	cursorSteady bool
+
+	// Character sets, and the designator byte each was selected by. The sets
+	// themselves are maps and cannot be compared back to the set they came
+	// from, so a snapshot names them from here.
+	charsets   [4]CharSet
+	charsetIDs [4]byte
+
+	// log is the logger to use.
+	logger Logger
+
+	// terminal default colors.
+	defaultFg, defaultBg, defaultCur color.Color
+	fgColor, bgColor, curColor       color.Color
+	// reportFg and reportBg answer an OSC 10 or 11 query while the guest has
+	// not set its own colour, which guestFg and guestBg record. See
+	// SetReportColors.
+	reportFg, reportBg color.Color
+	guestFg, guestBg   bool
+	// reportPal answers an OSC 4 query for a slot nothing else has set. See
+	// SetReportColors.
+	reportPal [16]color.Color
+
+	// Terminal modes. Written only by the PTY reader goroutine (via setMode,
+	// RestoreModes, resetModes) but read from the input/render goroutine
+	// (isModeSet). modesMu serializes those cross-goroutine accesses.
+	modes   ansi.Modes
+	modesMu sync.RWMutex
+
+	// Thread-safe cached mouse mode flags (updated on mode set/reset)
+	cachedHasMouse  atomic.Bool
+	cachedAllMotion atomic.Bool
+	cachedPixelMode atomic.Bool
+	// Thread-safe cached synchronized-output flag (DEC 2026, updated on set/reset)
+	cachedSyncOutput atomic.Bool
+	// Thread-safe cached auto-wrap flag (DECAWM ?7, updated on set/reset).
+	//
+	// handleGrapheme consults auto-wrap once per printed character, and reading
+	// it out of the modes map cost an RWMutex round trip plus a lookup keyed by
+	// an interface, which profiled at 8% of the whole process during a `cat` of
+	// a large file: more than the cell write it guards. The map stays
+	// authoritative; this is a read-side shortcut for the one mode the hot loop
+	// asks about every character.
+	cachedAutoWrap atomic.Bool
+	// Thread-safe cached insert-mode flag (IRM, updated on set/reset). Read
+	// once per printed character, for the same reason as cachedAutoWrap.
+	cachedInsertMode atomic.Bool
+	// Thread-safe cached LNM flag (ANSI mode 20, updated on set/reset). Read
+	// once per line feed, for the same reason as cachedAutoWrap.
+	cachedLineFeedNewLine atomic.Bool
+	// Thread-safe cached origin-mode flag (DECOM ?6). Read on every carriage
+	// return and cursor address, for the same reason as cachedAutoWrap: the
+	// map read profiled at 13% of the daemon in a `yes` flood. It is kept in
+	// step by setMode, restoreCursor and RestoreModes, the three writers of
+	// that entry.
+	cachedOrigin atomic.Bool
+	// Unix-nanos timestamp of the last sync begin, for the present-anyway timeout
+	syncSetAtNanos atomic.Int64
+	// syncOpens counts the synchronized updates the guest has opened: it
+	// moves on a reset-to-set transition only, so a repeated 2026h inside one
+	// update keeps the serial of the update it extends. See SyncUpdate.
+	syncOpens atomic.Uint64
+	// Thread-safe cached kitty keyboard flags (updated on push/pop/set/reset)
+	cachedKittyFlags atomic.Int32
+	// kkpUnavailable is set by DisableKittyKeyboardProtocol, which says why.
+	// Atomic because a client sets it from a snapshot after the pane's output
+	// has started.
+	kkpUnavailable atomic.Bool
+
+	// The last cluster written, and the columns it took, for REP. A rune is
+	// not enough: a double-width character and a base carrying combining marks
+	// are both single characters a guest can ask to have repeated, and storing
+	// only an ASCII rune dropped them.
+	lastCluster      string
+	lastClusterWidth int
+	// grapheme holds, as UTF-8, the non-ASCII text waiting to be split into
+	// clusters and drawn. It only ever holds utf8.AppendRune output, so it is
+	// always valid UTF-8.
+	grapheme []byte
+	// rgbCache holds recently used truecolor SGR colours, made on the first
+	// one. See rgbColor.
+	rgbCache *[256]rgbSlot
+	// rgbSlab is the unused rest of the slab rgbColor boxes a missed colour
+	// into. See boxRGB.
+	rgbSlab []color.RGBA
+	// clusters holds recently drawn clusters, made on the first one outside
+	// ASCII and the symbol block. See clusterRun.
+	clusters *[clusterTableLen]string
+	// The cell handleGrapheme last drew into, and the line edges it was drawn
+	// under. A pending wrap makes the target differ from the cursor position
+	// observed beforehand, and the margins are read before the wrap is
+	// consumed, so both are recorded rather than recomputed.
+	lastCellX, lastCellY        int
+	lastCellLeft, lastCellRight int
+	// The cell a print at the right margin left the cursor standing on, or
+	// x=-1. Unlike atPhantom it is kept whether or not autowrap is on, and it
+	// goes stale the moment the cursor moves off it, which is why it is a
+	// position to compare rather than a flag to clear.
+	parkedX, parkedY int
+	// The cluster left open across a Write boundary, if any.
+	openGrapheme openGrapheme
+
+	// The ANSI parser to use.
+	parser *seqParser
+	// The last parser state.
+	lastState parser.State
+
+	cb Callbacks
+
+	// The terminal's icon name and title.
+	iconName, title string
+	// titleStack holds what XTWINOPS 22 saved, oldest first. See pushTitle.
+	titleStack []savedTitle
+	// The current reported working directory. This is not validated.
+	cwd string
+
+	// tabstop is the list of tab stops.
+	tabstops *uv.TabStops
+
+	// Response pipe: the emulator writes query responses here from inside Write
+	// (under the window IO lock), so writes must never block. bufPipe buffers.
+	pipe *bufPipe
+
+	// The GL and GR character set identifiers.
+	gl, gr  int
+	gsingle int // temporarily select GL or GR
+
+	// Indicates if the terminal is closed (atomic for thread-safety).
+	closed atomic.Bool
+
+	// atPhantom indicates if the cursor is out of bounds.
+	// When true, and a character is written, the cursor is moved to the next line.
+	atPhantom bool
+
+	// Cell size in pixels for size reporting (XTWINOPS)
+	cellWidth  int
+	cellHeight int
+
+	// Kitty graphics state for main and alt screens
+	kittyMain *KittyState
+	kittyAlt  *KittyState
+
+	// Kitty graphics passthrough callback
+	kittyPassthroughFunc func(cmd *KittyCommand, rawData []byte)
+	// kittyHeaderOnly parses graphics commands with ParseKittyHeader and
+	// passes no rawData. See SetKittyHeaderOnly.
+	kittyHeaderOnly bool
+	// kittyImages is what the guest's image numbers stand for, and the
+	// answer owed to an upload still arriving. See KittyGuestImages.
+	kittyImages KittyGuestImages
+	// kittyImageIDTranslator rewrites the image id a placeholder cell names.
+	// See kitty_placeholder.go.
+	kittyImageIDTranslator KittyImageIDTranslator
+	// kittyPlaceholderMode decides whether placeholder cells are stored or
+	// dropped. See kitty_placeholder.go.
+	kittyPlaceholderMode KittyPlaceholderMode
+	// kittyPlaceholderMemo is the last placeholder cell rewritten; see
+	// rewriteKittyPlaceholder.
+	kittyPlaceholderMemo kittyPlaceholderMemo
+
+	// Sixel graphics passthrough callback
+	sixelPassthroughFunc SixelPassthroughFunc
+	// sixelAdvertised says whether a sixel image this pane draws will be
+	// shown, which is what DA1 and XTSMGRAPHICS report.
+	sixelAdvertised func() bool
+
+	// Text sizing (OSC 66) passthrough callback
+	textSizingFunc func(rawOSC []byte, cursorX, cursorY, scale, textLen int)
+
+	// Kitty keyboard protocol state
+	kittyKbd *kittyKeyboardState
+
+	// modifyOtherKeys is the level XTMODKEYS set: 0, 1 or 2. Atomic because
+	// the input path reads it from the UI goroutine.
+	modifyOtherKeys atomic.Int32
+
+	// semanticMarkers tracks OSC 133 shell integration markers
+	semanticMarkers *SemanticMarkerList
+
+	// onReflow is called after a reflow with where rows went.
+	onReflow func(remap func(absLine int) int)
+
+	// pending is the input since the parser last left its ground state,
+	// which a snapshot carries. See PendingInput.
+	pending []byte
+
+	// guestCur records that the guest set the cursor colour with OSC 12,
+	// for GuestColors.
+	guestCur bool
+}
+
+// maxSequenceData is the most bytes of one OSC, DCS or APC payload the
+// emulator keeps: a sixel image or a large OSC 52 clipboard write. A payload
+// past it is cut at it. The parser's buffer grows towards this on demand
+// rather than being allocated at it, so a pane pays for it only once a
+// payload that size has arrived.
+const maxSequenceData = 4 << 20
+
+// NewEmulator creates a new virtual terminal emulator.
+func NewEmulator(w, h int) *Emulator {
+	t := new(Emulator)
+	t.scrs[0] = *newScreen(w, h)
+	// The alternate screen keeps no scrollback, which every accessor on this
+	// type already assumes: Scrollback, ScrollbackLen, ScrollbackLine,
+	// ClearScrollback and SetScrollbackMaxLines all read scrs[0]. Its ring was
+	// still being filled by every scroll a full-screen application made, at a
+	// terminal width of cells per line and 112 bytes per cell, up to the
+	// default 10000 lines that SetScrollbackMaxLines never reached because that
+	// only resizes the main screen's. Nothing could read a line of it.
+	//
+	// It also starts at 1x1: altScreen sizes it on first use.
+	t.scrs[1] = *newAltScreen()
+	t.scr = &t.scrs[0]
+	t.scrs[0].cb = &t.cb
+	t.scrs[1].cb = &t.cb
+	t.parser = newSeqParser(maxSequenceData)
+	t.parser.SetHandler(ansi.Handler{
+		Print:     t.handlePrint,
+		Execute:   t.handleControl,
+		HandleCsi: t.handleCsi,
+		HandleEsc: t.handleEsc,
+		HandleDcs: t.handleDcs,
+		HandleOsc: t.handleOsc,
+		HandleApc: t.handleApc,
+		HandlePm:  t.handlePm,
+		HandleSos: t.handleSos,
+	})
+	t.pipe = newBufPipe()
+	t.parkedX = -1
+	t.resetModes()
+	t.charsetIDs = defaultCharsetIDs
+	t.tabstops = uv.DefaultTabStops(w)
+	t.cursorStyle, t.cursorSteady = defaultCursorStyle, defaultCursorSteady
+
+	// Initialize handler maps upfront to avoid nil checks during registration
+	t.dcsHandlers = make(map[int][]DcsHandler)
+	t.csiHandlers = make(map[int][]CsiHandler)
+	t.oscHandlers = make(map[int][]OscHandler)
+	t.escHandler = make(map[int][]EscHandler)
+
+	t.registerDefaultHandlers()
+
+	// Default colors (prevents nil color panics)
+	t.defaultFg = color.White
+	t.defaultBg = color.Black
+	t.defaultCur = color.White
+
+	t.kittyMain = NewKittyState()
+	t.kittyAlt = NewKittyState()
+	t.registerKittyGraphicsHandler()
+
+	t.registerSixelGraphicsHandler()
+
+	t.kittyKbd = newKittyKeyboardState()
+	t.registerKittyKeyboardHandlers()
+	t.registerModifyOtherKeysHandlers()
+
+	t.semanticMarkers = NewSemanticMarkerList(10000)
+
+	// Wire scrollback trim to semantic markers adjustment
+	if sb := t.scrs[0].Scrollback(); sb != nil {
+		sb.SetOnTrim(func(n int) {
+			t.semanticMarkers.AdjustForScrollbackTrim(n)
+		})
+	}
+
+	return t
+}
+
+// SetCallbacks sets the terminal's callbacks.
+func (e *Emulator) SetCallbacks(cb Callbacks) {
+	e.cb = cb
+	e.scrs[0].cb = &e.cb
+	e.scrs[1].cb = &e.cb
+}
+
+// GetCallbacks returns the terminal's current callbacks.
+func (e *Emulator) GetCallbacks() Callbacks {
+	return e.cb
+}
+
+// SetScreenClearFunc sets the ScreenClear callback without replacing other callbacks.
+func (e *Emulator) SetScreenClearFunc(f func()) {
+	e.cb.ScreenClear = f
+}
+
+// SetLogger sets the terminal's logger.
+func (e *Emulator) SetLogger(l Logger) {
+	e.logger = l
+}
+
+// String returns a string representation of the underlying screen buffer.
+func (e *Emulator) String() string {
+	s := e.scr.buf.String()
+	return uv.TrimSpace(StripSixelMarkers(s))
+}
+
+// clusterBreak is written between two cells whose contents would otherwise
+// re-parse as one cluster: the cursor steps back and forward, which draws
+// nothing and ends any cluster the receiving parser has open. Plain text has
+// no other way to say that two neighbouring regional indicators are two
+// characters rather than one flag.
+const clusterBreak = "\b\x1b[C"
+
+// clustersJoin reports whether b would extend a cluster ending in a.
+func clustersJoin(a, b string) bool {
+	if a == "" || b == "" {
+		return false
+	}
+	if len(a) == 1 && a[0] < 0x80 && len(b) == 1 && b[0] < 0x80 {
+		// Two printable ASCII cells never join; this is nearly every cell of
+		// a text screen.
+		return false
+	}
+	cl, _ := ansi.FirstGraphemeCluster(a+b, ansi.GraphemeWidth)
+	return len(cl) > len(a)
+}
+
+// Render renders a snapshot of the terminal screen as a string with styles and
+// links encoded as ANSI escape codes.
+//
+// The frame must redraw the screen when replayed, and concatenation alone
+// cannot: a lone regional indicator in one cell and another in the next are
+// two characters on the grid but one flag to any parser reading them back. A
+// cluster break separates such neighbours.
+func (e *Emulator) Render() string {
+	return e.scr.buf.Render()
+}
+
+// renderRowBreakingClusters renders one row into b, inserting a cluster
+// break wherever two neighbouring cells would re-parse as a single cluster.
+// It mirrors ultraviolet's renderLine cell by cell rather than delegating to
+// it, because delegating per segment cost a builder per row and the app's
+// render path draws every unfocused pane through here.
+func renderRowBreakingClusters(b *strings.Builder, line uv.Line) {
+	var pen uv.Style
+	var link uv.Link
+	blanks := 0
+	prev := ""
+	for x := range line {
+		c := &line[x]
+		if c.IsZero() {
+			// A continuation cell; the wide cell before it stays prev.
+			continue
+		}
+		if isBlankCell(c) {
+			if !pen.IsZero() {
+				b.WriteString(ansi.ResetStyle)
+				pen = uv.Style{}
+			}
+			if link.URL != "" {
+				b.WriteString(ansi.ResetHyperlink())
+				link = uv.Link{}
+			}
+			blanks++
+			prev = " "
+			continue
+		}
+		for ; blanks > 0; blanks-- {
+			b.WriteByte(' ')
+		}
+		if clustersJoin(prev, c.Content) {
+			b.WriteString(clusterBreak)
+		}
+		if c.Style.IsZero() && !pen.IsZero() {
+			b.WriteString(ansi.ResetStyle)
+			pen = uv.Style{}
+		}
+		if !penStyleEqual(&c.Style, &pen) {
+			b.WriteString(penDiff(&pen, &c.Style))
+			pen = c.Style
+		}
+		if c.Link != link && link.URL != "" {
+			b.WriteString(ansi.ResetHyperlink())
+			link = uv.Link{}
+		}
+		if c.Link != link {
+			b.WriteString(ansi.SetHyperlink(c.Link.URL, c.Link.Params))
+			link = c.Link
+		}
+		b.WriteString(c.String())
+		prev = c.Content
+	}
+	for ; blanks > 0; blanks-- {
+		b.WriteByte(' ')
+	}
+	if link.URL != "" {
+		b.WriteString(ansi.ResetHyperlink())
+	}
+	if !pen.IsZero() {
+		b.WriteString(ansi.ResetStyle)
+	}
+}
+
+// penDiff returns to.Diff(from), the SGR that changes the pen from one style
+// to the other. On a coloured screen nearly every change is a palette
+// foreground or background and nothing else, and uv's diff builds an
+// ansi.Style and allocates its string for each one. Those changes come from
+// a table built with the same ansi.Style call uv makes, so the bytes are the
+// same. Anything else goes to uv.
+func penDiff(from, to *uv.Style) string {
+	if from.Attrs == to.Attrs && from.Underline == to.Underline &&
+		penColorEqual(from.UnderlineColor, to.UnderlineColor) {
+		fgSame, bgSame := penColorEqual(from.Fg, to.Fg), penColorEqual(from.Bg, to.Bg)
+		switch {
+		case fgSame && bgSame:
+			return ""
+		case bgSame:
+			if s, ok := paletteSGR(to.Fg, fgSGR); ok {
+				return s
+			}
+		case fgSame:
+			if s, ok := paletteSGR(to.Bg, bgSGR); ok {
+				return s
+			}
+		}
+	}
+	return to.Diff(from)
+}
+
+// fgSGR and bgSGR hold the SGR that sets each palette colour as the
+// foreground or the background: the sixteen basic colours first, then the
+// 256 indexed ones.
+var (
+	fgSGR = paletteSGRTable(ansi.Style.ForegroundColor)
+	bgSGR = paletteSGRTable(ansi.Style.BackgroundColor)
+)
+
+func paletteSGRTable(set func(ansi.Style, ansi.Color) ansi.Style) *[16 + 256]string {
+	var t [16 + 256]string
+	for i := range 16 {
+		t[i] = set(ansi.Style{}, ansi.BasicColor(i)).String()
+	}
+	for i := range 256 {
+		t[16+i] = set(ansi.Style{}, ansi.IndexedColor(i)).String()
+	}
+	return &t
+}
+
+// paletteSGR looks c up in table, reporting false for a colour that is not a
+// palette colour.
+func paletteSGR(c color.Color, table *[16 + 256]string) (string, bool) {
+	switch v := c.(type) {
+	case ansi.BasicColor:
+		if v < 16 {
+			return table[v], true
+		}
+	case ansi.IndexedColor:
+		return table[16+int(v)], true
+	}
+	return "", false
+}
+
+// penStyleEqual reports whether a and b are equal in the sense of
+// uv.Style.Equal. It is the render loop's per-cell test, and uv's version
+// converts both sides of every colour to RGBA even when they are the same value
+// copied from one pen, which is nearly always the case for neighbouring cells.
+func penStyleEqual(a, b *uv.Style) bool {
+	return a.Attrs == b.Attrs &&
+		a.Underline == b.Underline &&
+		penColorEqual(a.Fg, b.Fg) &&
+		penColorEqual(a.Bg, b.Bg) &&
+		penColorEqual(a.UnderlineColor, b.UnderlineColor)
+}
+
+// penColorEqual reports whether a and b have the same RGBA value, as uv's
+// colorEqual does. Two values of the same concrete colour type the emulator
+// produces are compared by value first, which needs no RGBA call. Values that
+// differ there can still look the same (indexed 15 and 231 are both white), so
+// anything not settled by that falls back to comparing RGBA.
+func penColorEqual(a, b color.Color) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch av := a.(type) {
+	case ansi.BasicColor:
+		if bv, ok := b.(ansi.BasicColor); ok && av == bv {
+			return true
+		}
+	case ansi.IndexedColor:
+		if bv, ok := b.(ansi.IndexedColor); ok && av == bv {
+			return true
+		}
+	case ansi.RGBColor:
+		if bv, ok := b.(ansi.RGBColor); ok && av == bv {
+			return true
+		}
+	case color.RGBA:
+		if bv, ok := b.(color.RGBA); ok && av == bv {
+			return true
+		}
+	}
+	ar, ag, ab, aa := a.RGBA()
+	br, bg, bb, ba := b.RGBA()
+	return ar == br && ag == bg && ab == bb && aa == ba
+}
+
+var _ uv.Screen = (*Emulator)(nil)
+
+// Bounds returns the bounds of the terminal.
+func (e *Emulator) Bounds() uv.Rectangle {
+	return e.scr.Bounds()
+}
+
+// AtGround reports whether the parser is between sequences: no escape
+// sequence, string or character is half read.
+func (e *Emulator) AtGround() bool {
+	return e.parser.state == parser.GroundState
+}
+
+// CellAt returns the current focused screen cell at the given x, y position.
+// It returns nil if the cell is out of bounds.
+func (e *Emulator) CellAt(x, y int) *uv.Cell {
+	return e.scr.CellAt(x, y)
+}
+
+// SetCell sets the current focused screen cell at the given x, y position.
+func (e *Emulator) SetCell(x, y int, c *uv.Cell) {
+	e.scr.SetCell(x, y, c)
+}
+
+// MainCellAt reads a cell from the normal screen whether or not the alternate
+// one is active. It is what the guest is not looking at while a full-screen
+// program is running, and what quitting that program reveals.
+func (e *Emulator) MainCellAt(x, y int) *uv.Cell {
+	return e.scrs[0].CellAt(x, y)
+}
+
+// SetMainCell writes a cell into the normal screen whether or not the alternate
+// one is active.
+func (e *Emulator) SetMainCell(x, y int, c *uv.Cell) {
+	e.scrs[0].SetCell(x, y, c)
+}
+
+// Scrollback returns the scrollback buffer of the main screen.
+// Note: The alternate screen does not maintain scrollback.
+func (e *Emulator) Scrollback() *Scrollback {
+	return e.scrs[0].Scrollback()
+}
+
+// PushScrollbackLine appends a line to the main screen's scrollback. It exists
+// for snapshot restore, where history arrives as decoded lines rather than as
+// a byte stream.
+func (e *Emulator) PushScrollbackLine(line uv.Line) {
+	e.scrs[0].Scrollback().PushLine(line)
+}
+
+// DiscardScrollback makes the main screen drop the lines that scroll off its
+// top instead of keeping them. See Scrollback.Discard.
+func (e *Emulator) DiscardScrollback() {
+	if sb := e.scrs[0].Scrollback(); sb != nil {
+		sb.Discard()
+	}
+}
+
+// ClearScrollback clears the scrollback buffer of the main screen.
+func (e *Emulator) ClearScrollback() {
+	e.scrs[0].ClearScrollback()
+}
+
+// ScrollbackLen returns the number of lines in the scrollback buffer.
+func (e *Emulator) ScrollbackLen() int {
+	return e.scrs[0].ScrollbackLen()
+}
+
+// SemanticMarkers returns the list of OSC 133 semantic zone markers.
+func (e *Emulator) SemanticMarkers() *SemanticMarkerList {
+	return e.semanticMarkers
+}
+
+// extractCommandText extracts the command text between a B marker position
+// and a C marker position, for OSC 133 command capture.
+func (e *Emulator) extractCommandText(bLine, bCol, cLine, _ int) string {
+	return extractCommandTextFrom(e, bLine, bCol, cLine)
+}
+
+// markerGridReader is the read surface extractCommandTextFrom needs. Both
+// emulator implementations satisfy it; the ghostty backend passes a wrapper
+// that reads without re-taking its lock.
+type markerGridReader interface {
+	Width() int
+	Height() int
+	ScrollbackLen() int
+	ScrollbackLine(index int) uv.Line
+	CellAt(x, y int) *uv.Cell
+}
+
+// extractCommandTextFrom extracts the command text between a B marker
+// position and a C marker position.
+func extractCommandTextFrom(e markerGridReader, bLine, bCol, cLine int) string {
+	sbLen := e.ScrollbackLen()
+	width := e.Width()
+	height := e.Height()
+
+	readLine := func(absLine int) string {
+		if absLine < sbLen {
+			line := e.ScrollbackLine(absLine)
+			if line == nil {
+				return ""
+			}
+			var sb strings.Builder
+			for _, cell := range line {
+				if cell.Content != "" {
+					sb.WriteString(string(cell.Content))
+				} else {
+					sb.WriteByte(' ')
+				}
+			}
+			return strings.TrimRight(sb.String(), " ")
+		}
+		screenY := absLine - sbLen
+		if screenY < 0 || screenY >= height {
+			return ""
+		}
+		var sb strings.Builder
+		for x := range width {
+			cell := e.CellAt(x, screenY)
+			if cell != nil && cell.Content != "" {
+				sb.WriteString(string(cell.Content))
+			} else {
+				sb.WriteByte(' ')
+			}
+		}
+		return strings.TrimRight(sb.String(), " ")
+	}
+
+	// Single-line command (most common case)
+	if bLine == cLine || cLine == bLine+1 {
+		full := readLine(bLine)
+		runes := []rune(full)
+		if bCol >= len(runes) {
+			return ""
+		}
+		return strings.TrimSpace(string(runes[bCol:]))
+	}
+
+	// Multi-line command
+	var parts []string
+	firstLine := readLine(bLine)
+	runes := []rune(firstLine)
+	if bCol < len(runes) {
+		parts = append(parts, strings.TrimSpace(string(runes[bCol:])))
+	}
+	for line := bLine + 1; line < cLine; line++ {
+		parts = append(parts, readLine(line))
+	}
+	return strings.Join(parts, "\n")
+}
+
+// ScrollbackLine returns a line from the scrollback buffer at the given index.
+// Index 0 is the oldest line. Returns nil if index is out of bounds.
+func (e *Emulator) ScrollbackLine(index int) uv.Line {
+	return e.scrs[0].ScrollbackLine(index)
+}
+
+// SetScrollbackMaxLines sets the maximum number of lines for the scrollback buffer.
+func (e *Emulator) SetScrollbackMaxLines(maxLines int) {
+	e.scrs[0].SetScrollbackMaxLines(maxLines)
+}
+
+// WidthMethod returns the width method used by the terminal.
+//
+// It is always grapheme width, because that is what handleGrapheme measures
+// every printed cluster with, whatever DEC mode 2027 says. This is not a free
+// choice: ultraviolet asks a uv.Screen which method it uses before building a
+// cell to write into it, so answering wcwidth here while placing by grapheme
+// width had ultraviolet build a cell one column narrower than the emulator
+// would have written for the same text. That happens for exactly two classes,
+// a base with an emoji presentation selector and a regional indicator pair,
+// and one column is the whole bug: everything after the cluster shifts along
+// the row, and in a multiplexer it shifts into the pane next door.
+//
+// Reporting the method actually in use is the fix. Honouring mode 2027 would
+// mean changing placement to match, which is a different and much larger
+// change than making the answer true. For the same reason 2027 is permanently
+// set: DECRQM answers 3, and a guest that resets it is ignored, so the answer
+// stays true after the guest asks to change it. The ghostty backend does honour
+// a reset of 2027, and its DECRQM answer says so.
+func (e *Emulator) WidthMethod() uv.WidthMethod {
+	return ansi.GraphemeWidth
+}
+
+// Height returns the height of the terminal.
+func (e *Emulator) Height() int {
+	return e.scr.Height()
+}
+
+// Width returns the width of the terminal.
+func (e *Emulator) Width() int {
+	return e.scr.Width()
+}
+
+// SetCellSize sets the pixel dimensions of a single character cell.
+// Used for XTWINOPS terminal size reporting.
+//
+// A guest with in-band resize reports on (mode 2048) is sent a new report
+// when the size in pixels changes, as it is on a resize: it scales SGR-pixel
+// mouse reports by the size it was last told.
+func (e *Emulator) SetCellSize(width, height int) {
+	// A size that is not one is ignored, as the ghostty backend ignores it:
+	// the cell set before, or the fallback, stays.
+	if width <= 0 || height <= 0 {
+		return
+	}
+	oldW, oldH := e.CellSize()
+	e.cellWidth = width
+	e.cellHeight = height
+	if newW, newH := e.CellSize(); (newW != oldW || newH != oldH) && e.isModeSet(ansi.ModeInBandResize) {
+		e.sendInBandResize()
+	}
+}
+
+// CellSize returns the pixel dimensions of a single character cell, or the
+// fallback cell when none was set. It is never zero.
+func (e *Emulator) CellSize() (width, height int) {
+	return cellSizeOr(e.cellWidth, e.cellHeight)
+}
+
+// sendInBandResize sends the guest a mode 2048 report: the size in cells and
+// in pixels. Textual divides every SGR-pixel mouse report by pixels per cell
+// from this report, so the pixels are never zero (issue #506).
+func (e *Emulator) sendInBandResize() {
+	cw, ch := e.CellSize()
+	h, w := e.Height(), e.Width()
+	_, _ = io.WriteString(e.pipe, ansi.InBandResize(h, w, h*ch, w*cw))
+}
+
+// CursorPosition returns the terminal's cursor position.
+func (e *Emulator) CursorPosition() uv.Position {
+	x, y := e.scr.CursorPosition()
+	return uv.Pos(x, y)
+}
+
+// maxReserveScroll bounds the rows ReserveImageSpace scrolls for one picture:
+// the default scrollback, as rows past it are gone anyway.
+const maxReserveScroll = DefaultScrollbackSize
+
+// ReserveImageSpace reserves space for an image by moving cursor and outputting placeholders.
+// This ensures subsequent output appears below the image rather than on top of it.
+func (e *Emulator) ReserveImageSpace(rows, cols int) {
+	if rows <= 0 {
+		return
+	}
+	_, startY := e.scr.CursorPosition()
+	height := e.scr.Height()
+
+	// Calculate how many scrolls are needed
+	endY := startY + rows
+	scrollCount := 0
+	if endY > height {
+		// Clamped to maxReserveScroll: a hostile r= could otherwise drive
+		// ~1e9 ScrollUp calls while holding the IO lock. The clamp is not the
+		// screen height: a picture taller than the screen, a long diagram,
+		// runs into the scrollback, and every row of it has to be reserved
+		// or the next output is drawn over its bottom.
+		scrollCount = min(endY-height, maxReserveScroll)
+		// Scroll with a blank pen. ScrollUp fills the rows it exposes with the
+		// pen background (background-colour erase), which is right for a scroll
+		// the guest caused by printing, but this one is ours: the guest emitted
+		// a graphics command and no text at all. Leaving the pen alone paints
+		// every reserved row full width in whatever colour the guest happened
+		// to have set, and the image only covers its own columns, so an app
+		// that transmits with a background set (a shell with a coloured prompt
+		// segment, a TUI mid-draw) gets a solid block around its image.
+		e.scr.withBlankPen(func() {
+			for range scrollCount {
+				e.scr.ScrollUp(1)
+			}
+		})
+	}
+
+	// Final cursor position accounts for scrolling
+	// After scrolling, the original startY has moved up by scrollCount
+	finalY := startY + rows - scrollCount
+	if finalY >= height {
+		finalY = height - 1
+	}
+	e.scr.setCursor(0, finalY, false)
+}
+
+// IsCursorHidden returns whether the cursor is currently hidden.
+// Applications can hide the cursor using ANSI escape sequences (DECTCEM mode).
+func (e *Emulator) IsCursorHidden() bool {
+	return e.scr.Cursor().Hidden
+}
+
+// IsAltScreen returns whether the terminal is currently using the alternate screen buffer.
+// The alternate screen is used by full-screen applications like vim, less, htop, btop, etc.
+// This is important for mouse event forwarding: mouse events should only be forwarded
+// to applications when they are in alternate screen mode.
+func (e *Emulator) IsAltScreen() bool {
+	return e.isModeSet(ansi.ModeAltScreen) || e.isModeSet(ansi.ModeAltScreenSaveCursor) ||
+		e.isModeSet(modeAltScreenLegacy)
+}
+
+// ActiveScreenIsAlt reports whether the active screen pointer currently
+// addresses the alternate buffer. This is a diagnostic accessor: it exists so
+// the render trace can distinguish the buffer actually being read from the mode
+// bits reported by IsAltScreen, which RestoreAltScreenMode deliberately leaves
+// untouched. It is not part of the emulator's behavioural contract, so do not
+// build rendering or input logic on it.
+func (e *Emulator) ActiveScreenIsAlt() bool {
+	return e.scr == &e.scrs[1]
+}
+
+// altScreen returns the alternate screen, sized to match the main screen the
+// first time it is asked for. Every switch onto it goes through here, so the
+// grid exists whenever scr can point at it; a resize while the main screen is
+// active leaves a never-used alternate screen at 1x1.
+func (e *Emulator) altScreen() *screen {
+	if !e.altSized {
+		e.scrs[1].Resize(e.scrs[0].buf.Width(), e.scrs[0].buf.Height())
+		e.altSized = true
+	}
+	return &e.scrs[1]
+}
+
+// ReleaseAltScreen drops the alternate screen's cells while the main screen
+// is shown. A pane that has run one full-screen program keeps that grid
+// otherwise, 1.7 MB at 171x83, and nothing reads it: every switch onto the
+// alternate screen clears it first. The screen keeps its size, and a row
+// nothing has written reads as blank, so the next switch finds what the clear
+// would leave. Dropping the cells at the switch back to the main screen
+// instead would make a pager launched over and over allocate its grid each
+// time.
+func (e *Emulator) ReleaseAltScreen() {
+	if e.scr == &e.scrs[1] {
+		return
+	}
+	g := e.scrs[1].buf
+	clear(g.rows)
+	clear(g.ext)
+	clear(g.wrap)
+	g.tail = nil
+}
+
+// RestoreAltScreenMode restores the alternate screen mode state.
+// This is used when reconnecting to a daemon session to restore the emulator state
+// without re-sending the escape sequences that would trigger the mode change.
+// This method ONLY switches the screen buffer pointer. It does NOT modify the
+// modes map to avoid concurrent map access issues.
+func (e *Emulator) RestoreAltScreenMode(enabled bool) {
+	if enabled {
+		// Switch to alt screen buffer if not already there
+		// Don't clear it: we want to preserve any content that gets restored
+		if e.scr != &e.scrs[1] {
+			e.scr = e.altScreen()
+		}
+	} else {
+		// Switch to main screen buffer if not already there
+		if e.scr != &e.scrs[0] {
+			e.scr = &e.scrs[0]
+		}
+	}
+	// The kitty keyboard stack follows the screen, without the reset a live
+	// switch gives the alternate one: RestoreKittyKeyboardState puts back the
+	// stack that was in use.
+	if e.kittyKbd != nil {
+		e.kittyKbd.SelectScreen(enabled)
+		e.updateKittyKeyboardCache()
+	}
+	// NOTE: We don't modify e.modes[] here to avoid concurrent map access.
+	// The modes will be updated naturally when PTY output is processed.
+}
+
+// RestoreCursorPosition puts the cursor back where a restored snapshot had it.
+// It is the counterpart of CursorPosition and, like RestoreAltScreenMode, it
+// exists so reconnecting does not have to re-send escape sequences whose side
+// effects would undo the restore.
+func (e *Emulator) RestoreCursorPosition(x, y int) {
+	e.setCursor(x, y)
+}
+
+// CursorPendingWrap reports whether a wrap is pending at the cursor.
+func (e *Emulator) CursorPendingWrap() bool {
+	return e.atPhantom
+}
+
+// RestoreCursorPendingWrap arms or clears the pending wrap a restored snapshot
+// had at the cursor. Call it after RestoreCursorPosition, which clears it.
+//
+// The cursor is also recorded as standing on the cell it was printed into, as
+// the print that armed the wrap left it, so a combining mark that arrives next
+// joins that cell rather than the one after it.
+func (e *Emulator) RestoreCursorPendingWrap(pending bool) {
+	e.atPhantom = pending
+	if !pending {
+		return
+	}
+	pos := e.scr.Cursor().Position
+	x := pos.X
+	if c := e.scr.CellAt(x, pos.Y); x > 0 && c != nil && c.Width == 0 {
+		x--
+	}
+	e.parkedX, e.parkedY = x, pos.Y
+}
+
+// defaultCharsetIDs is US ASCII in all four slots, which is what an emulator
+// that has been sent no SCS sequence is using.
+var defaultCharsetIDs = [4]byte{'B', 'B', 'B', 'B'}
+
+// ScrollRegion returns the margins scrolling is confined to, as the rectangle
+// of the active screen they cover.
+func (e *Emulator) ScrollRegion() uv.Rectangle {
+	return e.scr.ScrollRegion()
+}
+
+// RestoreScrollRegion puts back the margins a guest set with DECSTBM or DECSLRM.
+// A guest sets them once to hold a header or a status line out of the scrolling
+// part of the screen, so a client that comes back without them scrolls the whole
+// screen and takes the fixed rows with it.
+func (e *Emulator) RestoreScrollRegion(r uv.Rectangle) {
+	if r.Empty() {
+		return
+	}
+	e.scr.scroll = r.Intersect(e.scr.Bounds())
+}
+
+// ResetScrollRegion puts scrolling back to the whole screen, which is where a
+// pane whose guest has set no margins scrolls.
+func (e *Emulator) ResetScrollRegion() {
+	e.scr.scroll = e.scr.Bounds()
+}
+
+// Charsets returns the designator byte of the character set selected into each
+// of G0 to G3, and which of them GL and GR are pointing at.
+func (e *Emulator) Charsets() (ids [4]byte, gl, gr int) {
+	return e.charsetIDs, e.gl, e.gr
+}
+
+// RestoreCharsets puts back a character set selection. A program that draws
+// boxes selects the DEC line-drawing set once and then sends the box characters
+// as plain letters, so a client that comes back with G0 at US ASCII draws qqqq
+// where the guest drew a horizontal rule.
+func (e *Emulator) RestoreCharsets(ids [4]byte, gl, gr int) {
+	for i, id := range ids {
+		switch id {
+		case 'A':
+			e.charsets[i] = charsetUK
+		case '0':
+			e.charsets[i] = charsetSpecialDrawing
+		default:
+			e.charsets[i] = nil
+			id = 'B'
+		}
+		e.charsetIDs[i] = id
+	}
+	if gl >= 0 && gl < 4 {
+		e.gl = gl
+	}
+	if gr >= 0 && gr < 4 {
+		e.gr = gr
+	}
+}
+
+// CursorPen returns the graphic rendition in force: the style and hyperlink
+// everything written next will be painted with. A guest sets it once with an
+// SGR sequence and every character until the next one inherits it, so it is
+// state a snapshot has to carry and not something the cells can be read back
+// from.
+func (e *Emulator) CursorPen() (uv.Style, uv.Link) {
+	return e.scr.cursorPen(), e.scr.cursorLink()
+}
+
+// RestoreCursorPen puts back the rendition a snapshot was taken under, so the
+// output that arrives after the snapshot is painted the colour the guest set
+// rather than whatever this emulator was left in.
+func (e *Emulator) RestoreCursorPen(pen uv.Style, link uv.Link) {
+	e.scr.cur.Pen = pen
+	e.scr.cur.Link = link
+}
+
+// CursorStyle returns the shape DECSCUSR last asked for, and whether it is
+// steady (not blinking). It reads the terminal-level copy rather than the
+// active screen's, because DECSCUSR is a property of the terminal: a guest that
+// asks for a bar and then enters the alternate screen still wants a bar. The
+// per-screen Cursor.Style is left alone so DECSC/DECRC keep behaving as they
+// did.
+func (e *Emulator) CursorStyle() (CursorStyle, bool) {
+	return e.cursorStyle, e.cursorSteady
+}
+
+// RestoreCursorStyle puts back the shape a snapshot was taken under. A pane the
+// client is rebuilding from the daemon has emitted its DECSCUSR long ago, so
+// without this the pane comes back as a block whatever the guest asked for.
+func (e *Emulator) RestoreCursorStyle(style CursorStyle, steady bool) {
+	e.cursorStyle, e.cursorSteady = style, steady
+}
+
+// GetModes returns a copy of the current terminal DEC private modes.
+// This is used for session state serialization to preserve terminal modes
+// across reconnections (mouse tracking, bracketed paste, etc.).
+//
+// It captures every DEC mode the emulator tracks rather than a hand-picked
+// list: a guest sets a sticky mode once at startup (a browser enables
+// 1003/1006/1016 and never repeats them), and any mode missing here is
+// silently lost on reattach once the enable sequence has scrolled out of the
+// daemon's bounded output buffer.
+func (e *Emulator) GetModes() map[int]bool {
+	modes := make(map[int]bool)
+
+	e.modesMu.RLock()
+	for mode, setting := range e.modes {
+		dec, ok := mode.(ansi.DECMode)
+		if !ok {
+			// ANSI modes share the int keyspace with DEC modes in this
+			// serialization, so they cannot be restored unambiguously.
+			continue
+		}
+		if dec == ansi.ModeSynchronizedOutput {
+			// Transient frame gate: restoring it would hold the first frame
+			// after attach until the sync timeout expires.
+			continue
+		}
+		switch {
+		case setting.IsSet():
+			modes[int(dec)] = true
+		case setting.IsReset():
+			modes[int(dec)] = false
+		}
+	}
+	e.modesMu.RUnlock()
+
+	return modes
+}
+
+// RestoreModes restores terminal modes from a saved state.
+// This is used when reconnecting to a daemon session to restore mouse tracking
+// and other terminal modes without triggering mode change side effects.
+func (e *Emulator) RestoreModes(modes map[int]bool) {
+	if modes == nil {
+		return
+	}
+
+	// Restore each mode by directly updating the modes map
+	// This avoids triggering side effects like screen clearing
+	e.modesMu.Lock()
+	for modeNum, enabled := range modes {
+		// Convert int back to Mode
+		mode := ansi.DECMode(modeNum)
+		// A snapshot from another backend or an older build can carry modes
+		// this emulator does not implement, or a value for one it fixes.
+		// Neither is taken, so DECRQM stays truthful after a reattach.
+		if !modeRecognised(mode) || modePermanent(mode) {
+			continue
+		}
+
+		if enabled {
+			e.modes[mode] = ansi.ModeSet
+		} else {
+			e.modes[mode] = ansi.ModeReset
+		}
+		// This is the one write path that bypasses setMode, so the read-side
+		// caches it maintains have to be refreshed here or they go stale.
+		switch mode {
+		case ansi.ModeAutoWrap:
+			e.cachedAutoWrap.Store(enabled)
+		case ansi.ModeOrigin:
+			e.cachedOrigin.Store(enabled)
+		}
+	}
+	e.modesMu.Unlock()
+
+	// Refresh the atomic mouse-mode caches that HasMouseMode and
+	// HasAllMotionMode read. Leaving them stale broke mouse routing on every
+	// daemon reattach: the modes map said 1003 was set, but the input layer
+	// consults the cache, saw false, and sent wheel/motion/click to
+	// scrollback and copy mode instead of the pane. Must run after the map
+	// lock is released; it re-reads the map through isModeSet.
+	e.updateMouseModeCache()
+
+	// setMode's cursor-visibility side effect, for the same reason: a guest
+	// that hid its cursor (DECTCEM reset) must not get it back on reattach.
+	if enabled, ok := modes[int(ansi.ModeTextCursorEnable)]; ok {
+		e.scr.setCursorHidden(!enabled)
+	}
+}
+
+// HasMouseMode returns true if any mouse tracking mode is enabled.
+// HasMouseMode returns true if any mouse tracking mode is enabled.
+// Thread-safe: reads from an atomic cache updated on mode set/reset.
+func (e *Emulator) HasMouseMode() bool {
+	return e.cachedHasMouse.Load()
+}
+
+// HasAllMotionMode returns true only if the child app requested mode 1003.
+// Thread-safe: reads from an atomic cache updated on mode set/reset.
+func (e *Emulator) HasAllMotionMode() bool {
+	return e.cachedAllMotion.Load()
+}
+
+// syncMaxHold bounds how long a synchronized update is honored. An app that
+// opens sync and never closes it (a crash, or a screen switch mid-frame) must
+// not freeze the window; real terminals present anyway after a short timeout.
+//
+// Neither the DEC 2026 spec nor the iTerm2 proposal it derives from names a
+// value, so this is a choice about which guests get honored. The range in the
+// wild runs from Windows Terminal at 100ms through Alacritty and mintty at
+// 150ms, st at 200ms, foot, Ghostty, iTerm2, Konsole, xterm.js and tmux at 1s,
+// kitty at 2s, with contour, WezTerm and Zellij declining to bound it at all.
+//
+// 150ms was the floor of that range, and it was too low to hold the guests
+// tuios actually hosts. Ink writes the opening escape, the frame and the
+// closing escape as three separate writes, so a slow reader strands the update
+// open for as long as the middle write blocks; Neovim spans partial flushes
+// deliberately, and Textual opens the update before it renders. None of the
+// three re-open the update, and the deadline only extends on a repeated open,
+// so for them it ran from the first byte with no way to ask for more. Expiry
+// is indistinguishable from a close by the time the renderer asks, so every
+// overrun was a torn frame.
+//
+// 1s follows tmux, which sits where tuios sits: a multiplexer holding someone
+// else's frame. Transport does not spend it (a 207x55 SGR-heavy repaint is
+// 100-200KiB and clears the pipeline in well under 15ms), so the budget is
+// there for the guest.
+const syncMaxHold = time.Second
+
+// SyncMaxHold is how long a synchronized update is honored. It is for a host
+// that holds a program's output during an update, as the tuios kitty
+// passthrough holds a guest's graphics, so it waits no longer than this.
+const SyncMaxHold = syncMaxHold
+
+// IsSyncActive reports whether the guest has an open synchronized update
+// (DEC private mode 2026): it has begun drawing a frame and does not want it
+// presented until it resets the mode. Thread-safe: reads from atomics updated on
+// mode set/reset. Returns false once the update has been open past syncMaxHold.
+func (e *Emulator) IsSyncActive() bool {
+	if !e.cachedSyncOutput.Load() {
+		return false
+	}
+	return time.Now().UnixNano()-e.syncSetAtNanos.Load() < int64(syncMaxHold)
+}
+
+// SyncUpdate reports whether the guest has an open synchronized update, as
+// IsSyncActive does, and a serial that names that update. Two calls that both
+// report open with the same serial saw the same update; a different serial
+// means the one seen before has been closed and a new one opened. Thread-safe.
+func (e *Emulator) SyncUpdate() (open bool, serial uint64) {
+	return e.IsSyncActive(), e.syncOpens.Load()
+}
+
+// updateMouseModeCache recalculates the cached mouse mode flags.
+// Must be called from the VT processing goroutine after mode changes.
+func (e *Emulator) updateMouseModeCache() {
+	hasMouse := false
+	for _, m := range []ansi.DECMode{
+		ansi.ModeMouseX10,
+		ansi.ModeMouseNormal,
+		ansi.ModeMouseHighlight,
+		ansi.ModeMouseButtonEvent,
+		ansi.ModeMouseAnyEvent,
+	} {
+		if e.isModeSet(m) {
+			hasMouse = true
+			break
+		}
+	}
+	e.cachedHasMouse.Store(hasMouse)
+	e.cachedAllMotion.Store(e.isModeSet(ansi.ModeMouseAnyEvent))
+	e.cachedPixelMode.Store(hasMouse && e.isModeSet(ansi.ModeMouseExtSgrPixel))
+}
+
+// HasPixelMouseMode reports whether the guest tracks the mouse and asked for
+// SGR-pixel reports (DEC 1016). Thread-safe: reads the atomic cache.
+func (e *Emulator) HasPixelMouseMode() bool {
+	return e.cachedPixelMode.Load()
+}
+
+// HasCellMotionMode returns true if the child app requested mode 1002
+// (button-event tracking), which reports motion while a button is pressed.
+func (e *Emulator) HasCellMotionMode() bool {
+	return e.isModeSet(ansi.ModeMouseButtonEvent)
+}
+
+// SupportsMotionEvents returns true if the child app's mouse mode supports
+// motion events (modes 1002 or 1003). Modes 1000/1001 only support click/release.
+func (e *Emulator) SupportsMotionEvents() bool {
+	return e.isModeSet(ansi.ModeMouseButtonEvent) || e.isModeSet(ansi.ModeMouseAnyEvent)
+}
+
+// EncodeMouseEvent encodes a mouse event as an escape sequence string.
+// Returns empty string if no mouse mode is enabled.
+// This is used for daemon mode where mouse events need to be sent through the PTY.
+func (e *Emulator) EncodeMouseEvent(m Mouse) string {
+	return e.EncodeMouseEventAt(m, MousePixel{})
+}
+
+// EncodeMouseEventAt is EncodeMouseEvent with the pointer's pixel position
+// inside the pane, which a guest in SGR-pixel mode is told instead of the cell
+// centre.
+func (e *Emulator) EncodeMouseEventAt(m Mouse, at MousePixel) string {
+	r, _, ok := e.mouseReportFor(m, at)
+	if !ok {
+		return ""
+	}
+	return r.encode()
+}
+
+// Resize resizes the terminal.
+func (e *Emulator) Resize(width int, height int) {
+	// Guard against 0 or negative terminal dimensions (e.g., laptop lid close or display disconnect)
+	if width < 1 {
+		width = 1
+	}
+	if height < 1 {
+		height = 1
+	}
+
+	// A resize to the size the terminal already is, is not a resize. Saying so
+	// here rather than at each caller is what makes it true everywhere: a
+	// resize resets the scroll region, so a caller that re-announces a size
+	// nothing changed drops the margins a full-screen program set, and every
+	// client of a session announces every pane's size for itself.
+	if width == e.Width() && height == e.Height() {
+		return
+	}
+
+	if e.xtermNoWrap {
+		// Finish the drawn cluster before forgetting its original cell. Otherwise
+		// the buffered base can be drawn a second time by the next Write.
+		e.flushGrapheme()
+		for i := range e.scrs {
+			s := &e.scrs[i]
+			if s == e.scr && e.atPhantom && s.cur.X == s.buf.Width()-1 {
+				s.cur.X++
+			}
+			if s.savedExtra.phantom && s.saved.X == s.buf.Width()-1 {
+				s.saved.X++
+			}
+			s.cur.X = min(s.cur.X, width-1)
+			s.saved.X = min(s.saved.X, width-1)
+			s.savedExtra.phantom = false
+			s.wideCol = false
+		}
+		e.atPhantom = false
+	}
+
+	// A resize reflows and reclamps, so the cell an open cluster was drawn into
+	// no longer identifies that cluster. Close it, and forget the parked print
+	// for the same reason.
+	e.openGrapheme = openGrapheme{}
+	e.parkedX = -1
+
+	main := &e.scrs[0]
+	reflowMain := main.scrollback != nil && main.buf.Width() > 0 &&
+		(width != main.buf.Width() ||
+			height > main.buf.Height() && main.cur.Y == main.buf.Height()-1 && main.scrollback.Len() > 0) &&
+		!main.fitsWithoutReflow(width, height)
+
+	// The active screen's cursor in pending wrap. A reflow of the main
+	// screen carries it; any other resize moves the cursor past the
+	// character when the screen now has room for it.
+	x := e.scr.cur.X
+	if e.atPhantom && !(reflowMain && e.scr == main) {
+		if x < width-1 {
+			e.atPhantom = false
+			x++
+		}
+	}
+	x = clamp(x, 0, width-1)
+
+	// The main screen lays its text out again at the new width (reflow.go).
+	// The alternate screen does not, as in ghostty: the program on it
+	// redraws on SIGWINCH. Either way a screen that gets shorter keeps its
+	// text, moving rows into the scrollback where it has one
+	// (Screen.shrinkRows), so the cursor row comes out in view and so does
+	// the main screen's prompt under an alternate screen.
+	if reflowMain {
+		e.reflowMain(width, height)
+		if e.scr == main {
+			x = main.cur.X
+		}
+	} else {
+		main.Resize(width, height)
+	}
+	if e.altSized {
+		e.scrs[1].Resize(width, height)
+	}
+	y := e.scr.cur.Y
+	e.tabstops = uv.DefaultTabStops(width)
+
+	// A cursor left on the last column keeps its pending wrap, whether the
+	// main screen reflowed it there or no reflow moved it.
+	phantom := e.atPhantom && (reflowMain && e.scr == main || x == width-1)
+	e.setCursor(x, y)
+	e.atPhantom = phantom
+
+	if e.isModeSet(ansi.ModeInBandResize) {
+		e.sendInBandResize()
+	}
+}
+
+// reflowMain reflows the main screen to width x height, carrying the
+// cursor, its pending wrap when the main screen is the active one, and the
+// OSC 133 marks with the text they are on.
+func (e *Emulator) reflowMain(width, height int) {
+	main := &e.scrs[0]
+	sb := main.scrollback
+	var phantom *bool
+	if e.scr == main {
+		phantom = &e.atPhantom
+	}
+	bottom := main.cur.Y == main.buf.Height()-1
+
+	var marks []SemanticMarker
+	var points []*reflowPoint
+	// A prompt is open, and the shell is editing it, once it has marked the
+	// prompt's start (A) and the start of the command line (B) and has not
+	// yet run it (C) or finished it (D). A lone A is not enough: a shell
+	// that marks only its prompts leaves A standing over every command's
+	// output, and freezing that would hold the output out of the reflow.
+	prompt := -1
+	if e.semanticMarkers != nil {
+		marks = e.semanticMarkers.Markers()
+		points = make([]*reflowPoint, len(marks))
+		backing := make([]reflowPoint, len(marks))
+		start, typing := -1, false
+		for i, m := range marks {
+			backing[i] = reflowPoint{abs: m.AbsLine, col: m.Col}
+			points[i] = &backing[i]
+			switch m.Type {
+			case MarkerPromptStart:
+				start, typing = m.AbsLine, false
+			case MarkerCommandStart:
+				typing = start >= 0
+			case MarkerCommandExecuted, MarkerCommandFinished:
+				start, typing = -1, false
+			}
+		}
+		if typing && start <= sb.Len()+main.cur.Y {
+			prompt = start
+		}
+	}
+
+	// The marks move first and the ring's trims apply to them after, so the
+	// trim callback is held back while the reflow runs.
+	sb.holdTrims, sb.heldTrims = true, 0
+	remap := main.reflow(width, height, bottom, phantom, prompt, points, e.onReflow != nil)
+	trimmed := sb.heldTrims
+	sb.holdTrims, sb.heldTrims = false, 0
+	onTrim := sb.onTrim
+
+	if e.semanticMarkers != nil {
+		for i := range marks {
+			marks[i].AbsLine, marks[i].Col = points[i].abs, points[i].col
+		}
+		e.semanticMarkers.replace(marks)
+	}
+	if trimmed > 0 && onTrim != nil {
+		onTrim(trimmed)
+	}
+	if e.onReflow != nil {
+		e.onReflow(func(abs int) int { return remap(abs) - trimmed })
+	}
+}
+
+// Read reads data from the terminal input buffer.
+func (e *Emulator) Read(p []byte) (n int, err error) {
+	if e.closed.Load() {
+		return 0, io.EOF
+	}
+
+	return e.pipe.Read(p) //nolint:wrapcheck
+}
+
+// TakeResponses removes and returns the replies queued for the program, or
+// nil when there are none. Unlike Read it never blocks, so a host can drain
+// the replies after each Write on the same goroutine. It returns nil after
+// Close.
+func (e *Emulator) TakeResponses() []byte {
+	if e.closed.Load() {
+		return nil
+	}
+	return e.pipe.take()
+}
+
+// OnResponse sets a function called each time a reply is queued, on the
+// goroutine that queued it. It must not block. nil clears it.
+func (e *Emulator) OnResponse(fn func()) { e.pipe.setNotify(fn) }
+
+// Close closes the terminal.
+func (e *Emulator) Close() error {
+	if e.closed.Load() {
+		return nil
+	}
+
+	e.closed.Store(true)
+	// Close the response pipe so a reader blocked in Read (the terminal-response
+	// forwarder) unblocks with EOF instead of leaking.
+	if e.pipe != nil {
+		_ = e.pipe.Close()
+	}
+	return nil
+}
+
+// Write writes data to the terminal output buffer.
+func (e *Emulator) Write(p []byte) (n int, err error) {
+	if e.closed.Load() {
+		return 0, io.ErrClosedPipe
+	}
+	from, need := e.parser.State(), 0
+	if from == parser.Utf8State {
+		need = e.parser.runeNeed()
+	}
+
+	for i := 0; i < len(p); i++ {
+		if b := p[i]; b >= ansi.SP && b < ansi.DEL && e.parser.State() == parser.GroundState && len(e.grapheme) == 0 {
+			// A run of printable ASCII in the ground state is what most of
+			// a flood is, and the parser would hand it over one byte at a
+			// time with nothing to decide: in this state every such byte
+			// is a print and the state does not change. Take the whole run
+			// here; see printASCIIRun.
+			j := i + 1
+			for j < len(p) && p[j] >= ansi.SP && p[j] < ansi.DEL {
+				j++
+			}
+			e.printASCIIRun(p[i:j])
+			e.lastState = parser.GroundState
+			i = j - 1
+			continue
+		}
+		if st := e.parser.State(); (st == parser.ApcStringState || st == parser.DcsStringState) &&
+			isStringPayload(p[i]) && len(e.grapheme) == 0 {
+			// The payload of an APC or DCS string: a kitty graphics
+			// transmission or a sixel image, megabytes of base64 or sixel
+			// data that the state machine would take one byte at a time with
+			// nothing to decide. Every such byte is a PutAction with no state
+			// change, so the run is handed over whole; the terminator (ESC,
+			// BEL, CAN, SUB) goes through the parser as before.
+			j := i + 1 + stringPayloadRun(p[i+1:])
+			e.parser.putRun(p[i:j])
+			e.lastState = st
+			i = j - 1
+			continue
+		}
+		// A byte that cannot continue a rune ends it unfinished: the parser
+		// prints U+FFFD and reads the byte again from the ground state. Seen
+		// from here that is a rune completed in the ground state followed by
+		// this byte, so the grapheme is flushed the same way.
+		if e.parser.State() == parser.Utf8State && p[i]&0xc0 != 0x80 {
+			e.lastState = parser.GroundState
+		}
+		e.parser.Advance(p[i])
+		state := e.parser.State()
+		// flush grapheme if we transitioned to a non-utf8 state or we have
+		// written the whole byte slice.
+		if len(e.grapheme) > 0 {
+			if e.lastState == parser.GroundState && state != parser.Utf8State {
+				// A sequence is starting, but which one is not known yet, so
+				// draw the buffered cluster and leave it open: the handler
+				// closes it unless the sequence is transparent to clustering
+				// (SGR, OSC, REP), across which ghostty keeps pairing
+				// regional indicators.
+				e.flushGraphemeAtWriteEnd()
+			} else if i == len(p)-1 {
+				// Out of bytes, possibly mid-cluster: draw what we have but
+				// keep the trailing cluster open for the next Write.
+				e.flushGraphemeAtWriteEnd()
+			}
+		}
+		e.lastState = state
+	}
+	e.notePending(p, from, need)
+	return len(p), nil
+}
+
+// isStringPayload reports whether b is plain payload inside a string
+// sequence: anything but a C0 control. Every such byte is payload in each
+// string state the parser has (DEL included, and a byte with the top bit
+// set, which advance() treats as payload in a string state). The controls
+// are left to the parser, since some of them end the string.
+func isStringPayload(b byte) bool {
+	return b >= 0x20
+}
+
+// stringPayloadRun returns how many bytes at the start of p are string
+// payload (see isStringPayload). It tests eight bytes at a time and finishes
+// one byte at a time from the first word that holds a byte that is not. One
+// byte at a time, the loop ran at the speed of the instruction fetch, and how
+// that went depended on where the linker put the loop: an unrelated change
+// to Write made BenchmarkWriteBareAPC a quarter slower at the same
+// instruction count.
+func stringPayloadRun(p []byte) int {
+	const (
+		ones  = 0x0101010101010101
+		highs = 0x8080808080808080
+	)
+	n := 0
+	for len(p)-n >= 8 {
+		x := binary.LittleEndian.Uint64(p[n:])
+		// A byte below 0x20, a C0 control, sets the top bit of its lane.
+		// A byte with the top bit set is payload, and &^x masks its lane
+		// out. A lane borrows from the next only when it is below 0x20
+		// itself, so the test is exact for "any byte in the word", which
+		// is all the loop asks.
+		if (x-0x20*ones)&^x&highs != 0 {
+			break
+		}
+		n += 8
+	}
+	for n < len(p) && isStringPayload(p[n]) {
+		n++
+	}
+	return n
+}
+
+// WriteString writes a string to the terminal output buffer.
+func (e *Emulator) WriteString(s string) (n int, err error) {
+	return e.Write([]byte(s)) //nolint:wrapcheck
+}
+
+// InputPipe returns the terminal's input pipe.
+// This can be used to send input to the terminal.
+func (e *Emulator) InputPipe() io.Writer {
+	return e.pipe
+}
+
+// ForegroundColor returns the terminal's foreground color. This returns nil if
+// the foreground color is not set which means the outer terminal color is
+// used.
+func (e *Emulator) ForegroundColor() color.Color {
+	if e.fgColor != nil {
+		return e.fgColor
+	}
+	if e.defaultFg != nil {
+		return e.defaultFg
+	}
+	return color.White // ultimate fallback
+}
+
+// SetForegroundColor sets the terminal's foreground color.
+func (e *Emulator) SetForegroundColor(c color.Color) {
+	if c == nil {
+		c = e.defaultFg
+	}
+	e.fgColor = c
+	if e.cb.ForegroundColor != nil {
+		e.cb.ForegroundColor(c)
+	}
+}
+
+// SetDefaultForegroundColor sets the terminal's default foreground color.
+func (e *Emulator) SetDefaultForegroundColor(c color.Color) {
+	e.defaultFg = c
+}
+
+// BackgroundColor returns the terminal's background color. This returns nil if
+// the background color is not set which means the outer terminal color is
+// used.
+func (e *Emulator) BackgroundColor() color.Color {
+	if e.bgColor != nil {
+		return e.bgColor
+	}
+	if e.defaultBg != nil {
+		return e.defaultBg
+	}
+	return color.Black // ultimate fallback
+}
+
+// SetBackgroundColor sets the terminal's background color.
+func (e *Emulator) SetBackgroundColor(c color.Color) {
+	if c == nil {
+		c = e.defaultBg
+	}
+	e.bgColor = c
+	if e.cb.BackgroundColor != nil {
+		e.cb.BackgroundColor(c)
+	}
+}
+
+// SetDefaultBackgroundColor sets the terminal's default background color.
+func (e *Emulator) SetDefaultBackgroundColor(c color.Color) {
+	e.defaultBg = c
+}
+
+// SetReportColors sets the colours an OSC 10 and OSC 11 query is answered with
+// while the guest has not set its own, and the colours an OSC 4 query for one
+// of the sixteen ANSI slots is answered with while neither the guest nor a
+// theme has set the slot. A nil colour keeps the default answer.
+//
+// When any of them changes and the guest turned on mode 2031, the guest is
+// sent one colour scheme notice for the whole change. See color_scheme.go.
+func (e *Emulator) SetReportColors(fg, bg color.Color, pal [16]color.Color) {
+	changed := !sameReport(e.reportFg, e.reportBg, e.reportPal, fg, bg, pal)
+	e.reportFg, e.reportBg, e.reportPal = fg, bg, pal
+	if changed && e.isModeSet(ansi.ModeLightDark) {
+		_, _ = io.WriteString(e.pipe, colorSchemeNotice(e.reportedBackground()))
+	}
+}
+
+// reportedIndexedColor is the answer to an OSC 4 query: the guest's or the
+// theme's colour for the slot when one is set, the reported colour when there
+// is one, and the xterm default otherwise.
+func (e *Emulator) reportedIndexedColor(i int) color.Color {
+	if i >= 0 && i < 16 && e.paletteEntry(i) == nil && e.reportPal[i] != nil {
+		return e.reportPal[i]
+	}
+	return e.IndexedColor(i)
+}
+
+// reportedForeground is the answer to an OSC 10 query: the guest's own colour
+// when it set one, the reported colour when there is one, and the default
+// otherwise.
+func (e *Emulator) reportedForeground() color.Color {
+	if !e.guestFg && e.reportFg != nil {
+		return e.reportFg
+	}
+	return e.ForegroundColor()
+}
+
+// reportedBackground is reportedForeground for OSC 11.
+func (e *Emulator) reportedBackground() color.Color {
+	if !e.guestBg && e.reportBg != nil {
+		return e.reportBg
+	}
+	return e.BackgroundColor()
+}
+
+// CursorColor returns the terminal's cursor color. This returns nil if the
+// cursor color is not set which means the outer terminal color is used.
+func (e *Emulator) CursorColor() color.Color {
+	if e.curColor == nil {
+		return e.defaultCur
+	}
+	return e.curColor
+}
+
+// GuestCursorColor is the cursor colour the guest set with OSC 12, or nil
+// when it set none or reset it with OSC 112.
+func (e *Emulator) GuestCursorColor() color.Color {
+	if !e.guestCur {
+		return nil
+	}
+	return e.curColor
+}
+
+// SetCursorColor sets the terminal's cursor color.
+func (e *Emulator) SetCursorColor(c color.Color) {
+	if c == nil {
+		c = e.defaultCur
+	}
+	e.curColor = c
+	if e.cb.CursorColor != nil {
+		e.cb.CursorColor(c)
+	}
+}
+
+// SetDefaultCursorColor sets the terminal's default cursor color.
+func (e *Emulator) SetDefaultCursorColor(c color.Color) {
+	if c == nil {
+		c = color.White
+	}
+	e.defaultCur = c
+}
+
+// IndexedColor returns a terminal's indexed color. An indexed color is a color
+// between 0 and 255.
+func (e *Emulator) IndexedColor(i int) color.Color {
+	if i < 0 || i > 255 {
+		return nil
+	}
+
+	c := e.paletteEntry(i)
+	if c == nil {
+		// Return the default color. Safe conversion: i is already validated to be in [0, 255]
+		// #nosec G115 - false positive, i is validated to be in valid uint8 range above
+		return ansi.IndexedColor(uint8(i))
+	}
+
+	return c
+}
+
+// PaletteColor resolves one of the sixteen ANSI palette slots the way handleSgr
+// resolves SGR 30-37 and 90-97: through the user's theme when one is set, and
+// as a plain palette entry otherwise.
+//
+// A cell rebuilt from a snapshot has to be coloured by the same rule as a cell
+// the guest writes live, or a pane comes back in one palette and carries on in
+// another.
+func (e *Emulator) PaletteColor(i int) color.Color {
+	if i < 0 || i > 15 {
+		return nil
+	}
+	if c := e.paletteEntry(i); c != nil {
+		return c
+	}
+	// #nosec G115 - i is validated to be in [0, 15] above
+	return ansi.BasicColor(uint8(i))
+}
+
+// paletteEntry returns whatever has been set for a palette slot, guest first,
+// theme second, and nil when the slot is still the user terminal's to decide.
+func (e *Emulator) paletteEntry(i int) color.Color {
+	if i < 0 || i > 255 {
+		return nil
+	}
+	if c := e.colors[i]; c != nil {
+		return c
+	}
+	if i < 16 {
+		return e.themePal[i]
+	}
+	return nil
+}
+
+// SetIndexedColor sets a terminal's indexed color.
+// The index must be between 0 and 255.
+func (e *Emulator) SetIndexedColor(i int, c color.Color) {
+	if i < 0 || i > 255 {
+		return
+	}
+
+	e.colors[i] = c
+	e.refreshPaletteClaims()
+}
+
+// refreshPaletteClaims records whether any of the sixteen is spoken for. It is
+// kept as a flag rather than recounted because the SGR handler asks on every
+// escape the guest writes, which is the hottest path the emulator has.
+func (e *Emulator) refreshPaletteClaims() {
+	e.paletteClaimed = false
+	for i := range 16 {
+		if e.colors[i] != nil || e.themePal[i] != nil {
+			e.paletteClaimed = true
+			return
+		}
+	}
+}
+
+// SetThemeColors sets the terminal's color palette from a theme.
+// This sets the default foreground, background, cursor colors and the
+// first 16 ANSI colors (0-15) which are used by terminal applications.
+//
+// A nil fg and bg mean no theme is active. That has to put the sixteen back the
+// way they were, not merely stop writing them: a theme the user has turned off
+// that stays in the color table goes on painting every pane in its own red and
+// blue, which is the "going back to none messes up the ANSI 16" report.
+func (e *Emulator) SetThemeColors(fg, bg, cur color.Color, ansiPalette [16]color.Color) {
+	e.SetDefaultForegroundColor(fg)
+	e.SetDefaultBackgroundColor(bg)
+	e.SetDefaultCursorColor(cur)
+
+	if fg == nil && bg == nil {
+		e.themePal = [16]color.Color{}
+	} else {
+		e.themePal = ansiPalette
+	}
+	e.refreshPaletteClaims()
+}
+
+// hasThemeColors reports whether anything has claimed one of the sixteen
+// palette slots, from a theme or from the guest's own OSC 4. When nothing has,
+// SGR indices are left alone so they reach the host as indices.
+func (e *Emulator) hasThemeColors() bool {
+	return e.paletteClaimed
+}
+
+// resetTabStops resets the terminal tab stops to the default set.
+func (e *Emulator) resetTabStops() {
+	e.tabstops = uv.DefaultTabStops(e.Width())
+}
+
+// WriteResponse writes data to the emulator's response pipe.
+// This allows external code (e.g., daemon-side Kitty query handlers)
+// to inject responses that will be forwarded to the PTY.
+func (e *Emulator) WriteResponse(data []byte) {
+	_, _ = e.pipe.Write(data)
+}
+
+func (e *Emulator) registerKittyGraphicsHandler() {
+	e.RegisterApcHandler(func(data []byte) bool {
+		if len(data) < 1 || data[0] != 'G' {
+			return false
+		}
+
+		cmd, rawData, err := parseKittyAPC(data, e.kittyHeaderOnly)
+		if err != nil || cmd == nil {
+			return false
+		}
+
+		// An undecodable payload is answered here, once, whoever renders the
+		// pane: the emulator's responses reach the guest in every mode (and a
+		// daemon client's are drained, so there is no second copy). A query
+		// is finished by that answer; anything else still goes to the
+		// passthrough, which has to drop the transmission it belonged to.
+		if cmd.PayloadErr != nil {
+			if resp := KittyPayloadErrorResponse(cmd); resp != nil {
+				_, _ = e.pipe.Write(resp)
+			}
+			if cmd.Action == KittyActionQuery {
+				return true
+			}
+		}
+
+		// Image numbers become ids, and an upload that named its image is
+		// answered, here and nowhere else. See KittyGuestImages.
+		if !e.kittyImages.Handle(cmd, func(b []byte) { _, _ = e.pipe.Write(b) }) {
+			return true
+		}
+
+		if e.kittyPassthroughFunc != nil {
+			e.kittyPassthroughFunc(cmd, rawData)
+			return true
+		}
+
+		// No passthrough is a test-only situation: every production entry
+		// point installs one before any guest runs. Queries still deserve an
+		// answer so a probing guest does not hang.
+		if cmd.Action == KittyActionQuery {
+			_, _ = e.pipe.Write(BuildKittyResponse(true, cmd.ImageID, ""))
+		}
+		return true
+	})
+}
+
+func (e *Emulator) logf(format string, v ...any) {
+	if e.logger != nil {
+		e.logger.Printf(format, v...)
+	}
+}
+
+// SetKittyImageIDTranslator installs the guest-to-host image id mapping used
+// for kitty Unicode placeholder cells. Nil leaves every cell as the guest
+// wrote it.
+func (e *Emulator) SetKittyImageIDTranslator(fn KittyImageIDTranslator) {
+	e.kittyImageIDTranslator = fn
+}
+
+// SetKittyPlaceholderMode says whether placeholder cells are kept or dropped.
+func (e *Emulator) SetKittyPlaceholderMode(m KittyPlaceholderMode) {
+	e.kittyPlaceholderMode = m
+}
+
+// SetKittyPassthroughFunc installs the reader of every graphics command. fn
+// must not write to rawData: cmd.RawPayload shares its bytes.
+func (e *Emulator) SetKittyPassthroughFunc(fn func(cmd *KittyCommand, rawData []byte)) {
+	e.kittyPassthroughFunc = fn
+}
+
+// SetKittyUploadAnswers says whether this emulator answers kitty uploads and
+// placements. See KittyGuestImages.
+func (e *Emulator) SetKittyUploadAnswers(on bool) { e.kittyImages.SetAnswers(on) }
+
+// SetKittyFilesElsewhere says the pane runs on another machine. See
+// KittyGuestImages.SetFilesElsewhere.
+func (e *Emulator) SetKittyFilesElsewhere(on bool) { e.kittyImages.SetFilesElsewhere(on) }
+
+// KittyGuestImagesState returns the ids given to the guest's image numbers,
+// for a client that attaches. Nil when there are none.
+func (e *Emulator) KittyGuestImagesState() *KittyGuestImagesState { return e.kittyImages.State() }
+
+// RestoreKittyGuestImages takes the daemon's ids for the guest's image
+// numbers. Nil leaves them as they are.
+func (e *Emulator) RestoreKittyGuestImages(s *KittyGuestImagesState) { e.kittyImages.Restore(s) }
+
+// SetKittyHeaderOnly says whether the passthrough acts on the control keys
+// alone. When it does, commands are parsed with ParseKittyHeader and the
+// passthrough gets a nil rawData.
+func (e *Emulator) SetKittyHeaderOnly(on bool) {
+	e.kittyHeaderOnly = on
+}
+
+// kittyRawAPC rebuilds the whole graphics sequence, ESC _ G<params>;<payload>
+// ESC \, for the passthrough.
+func kittyRawAPC(data []byte) []byte {
+	rawData := make([]byte, len(data)+4)
+	rawData[0] = '\x1b'
+	rawData[1] = '_'
+	copy(rawData[2:], data)
+	rawData[len(rawData)-2] = '\x1b'
+	rawData[len(rawData)-1] = '\\'
+	return rawData
+}
+
+// KittyState returns the kitty image state of the active screen.
+func (e *Emulator) KittyState() *KittyState {
+	if e.IsAltScreen() {
+		return e.kittyAlt
+	}
+	return e.kittyMain
+}
+
+// KittyMainState returns the kitty image state of the main screen.
+func (e *Emulator) KittyMainState() *KittyState {
+	return e.kittyMain
+}
+
+// KittyAltState returns the kitty image state of the alternate screen.
+func (e *Emulator) KittyAltState() *KittyState {
+	return e.kittyAlt
+}
+
+func (e *Emulator) registerSixelGraphicsHandler() {
+	// Sixel DCS format: ESC P <p1>;<p2>;<p3> q <sixel-data> ST
+	// The DCS command byte is 'q' (the sixel introducer)
+	// The ansi library uses Command(0, 0, 'q') for simple DCS commands
+	e.RegisterDcsHandler(int('q'), func(params ansi.Params, data []byte) bool {
+		// Reconstruct the full DCS data (params + 'q' + data)
+		// The params have already been parsed by the ansi library
+		var fullData []byte
+
+		// Build parameter string
+		for i, p := range params {
+			if i > 0 {
+				fullData = append(fullData, ';')
+			}
+			val := p.Param(0)
+			// Convert int to string bytes
+			if val == 0 {
+				fullData = append(fullData, '0')
+			} else {
+				digits := make([]byte, 0, 10)
+				for val > 0 {
+					digits = append(digits, byte('0'+val%10))
+					val /= 10
+				}
+				// Reverse digits
+				for _, digit := range slices.Backward(digits) {
+					fullData = append(fullData, digit)
+				}
+			}
+		}
+
+		// Add 'q' introducer and data
+		fullData = append(fullData, 'q')
+		fullData = append(fullData, data...)
+
+		cmd := ParseSixelCommand(fullData)
+		if cmd == nil {
+			return false
+		}
+
+		cellWidth, cellHeight := e.CellSize()
+		cmd.CellWidth, cmd.CellHeight = cellWidth, cellHeight
+		rows, cols := SixelCells(cmd, cellWidth, cellHeight)
+		cursorX, cursorY := e.scr.CursorPosition()
+		// The passthrough decodes the picture and names it. Without one (the
+		// daemon's emulator, and tests) the cells are still reserved, under
+		// id 0, so the cursor and the grid end up where a sixel terminal
+		// would leave them.
+		var id uint32
+		if e.sixelPassthroughFunc != nil {
+			id = e.sixelPassthroughFunc(cmd, cursorX, cursorY)
+		}
+		e.placeSixel(rows, cols, id)
+		return true
+	})
+}
+
+// placeSixel writes an image's marker cells at the cursor and leaves the
+// cursor at column 0 of the row under the image, scrolling first so that row
+// exists. That is xterm's placement with sixel scrolling on (DECSDM reset,
+// the default): a carriage return and an index after the image's last row.
+// Leaving the cursor on the last row instead let the next text a program
+// printed overwrite the picture's bottom row. See sixel_marker.go.
+func (e *Emulator) placeSixel(rows, cols int, id uint32) {
+	if rows <= 0 || cols <= 0 {
+		return
+	}
+	startX, startY := e.scr.CursorPosition()
+	height, width := e.scr.Height(), e.scr.Width()
+	scroll := 0
+	if startY+rows+1 > height {
+		// Clamped: rows past a full screen cannot be shown, and a hostile
+		// raster size would otherwise drive a scroll per row.
+		scroll = min(startY+rows+1-height, height)
+		// A blank pen, as in ReserveImageSpace: the guest printed no text,
+		// so background-colour erase must not paint the rows it exposes.
+		e.scr.withBlankPen(func() {
+			for range scroll {
+				e.scr.ScrollUp(1)
+			}
+		})
+	}
+	top := startY - scroll
+	for r := range rows {
+		y := top + r
+		if y < 0 || y >= height {
+			continue
+		}
+		for c := range cols {
+			x := startX + c
+			if x >= width {
+				break
+			}
+			cell := uv.Cell{Content: SixelMarker(id, r, c), Width: 1}
+			if old := e.scr.CellAt(x, y); old != nil {
+				// The compositor keeps only the background, which shows
+				// through the image's transparent pixels.
+				cell.Style.Bg = old.Style.Bg
+			}
+			e.scr.SetCell(x, y, &cell)
+		}
+	}
+	e.scr.setCursor(0, min(startY+rows-scroll, height-1), false)
+}
+
+// SetSixelPassthroughFunc installs the function that decodes a guest's sixel
+// image and returns the id its marker cells carry. See sixel_marker.go.
+func (e *Emulator) SetSixelPassthroughFunc(fn SixelPassthroughFunc) {
+	e.sixelPassthroughFunc = fn
+}
+
+// SetSixelAdvertised installs the function that decides whether DA1 lists
+// sixel and XTSMGRAPHICS answers. Nil advertises nothing.
+func (e *Emulator) SetSixelAdvertised(fn func() bool) {
+	e.sixelAdvertised = fn
+}
+
+func (e *Emulator) sixelOn() bool {
+	return e.sixelAdvertised != nil && e.sixelAdvertised()
+}
+
+// SetReflowFunc sets the function a reflow calls with where rows went. See
+// Terminal.SetReflowFunc.
+func (e *Emulator) SetReflowFunc(fn func(remap func(absLine int) int)) {
+	e.onReflow = fn
+}
+
+// SetTextSizingFunc installs the function that takes each OSC 66 text
+// sizing sequence, rebuilt for the host terminal, with the cursor position,
+// the scale and the length of the text in characters.
+func (e *Emulator) SetTextSizingFunc(fn func(rawOSC []byte, cursorX, cursorY, scale, textLen int)) {
+	e.textSizingFunc = fn
+}

@@ -154,7 +154,7 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 		rejectSocket(connection, "Unauthorized")
 		return
 	}
-	viewer, err := s.sessions.Join(owner, id)
+	viewer, err := s.sessions.JoinWithProfile(owner, id, r.URL.Query().Get("snapshot_profile"))
 	if err != nil {
 		var access *agent.AccessError
 		if errors.As(err, &access) {
@@ -164,6 +164,10 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 					s.logger.Warn("clean up denied agent session", "error", cleanupErr)
 				}
 			}
+			return
+		}
+		if errors.Is(err, session.ErrRendererUnsupported) {
+			rejectSocket(connection, err.Error())
 			return
 		}
 		message := "Session not found"

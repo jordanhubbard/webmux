@@ -30,6 +30,7 @@ import (
 	"strconv"
 
 	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/charmbracelet/x/ansi"
 
 	"tuios.dev/vt"
 	"tuios.dev/vt/snapshot"
@@ -41,21 +42,21 @@ import (
 // The owner supplies only complete filtered states; private strings and mirror
 // replies are never emitted. REP state and filtered OSC display features still
 // need separate qualification. The capture is not modified.
-func replayScreen(st *snapshot.State, main *underlay, repeat bool) ([]byte, error) {
+func replayScreen(st *snapshot.State, main *underlay, repeat bool, profile string) (EncodedSnapshot, error) {
 	if st == nil {
-		return nil, ErrIncomplete
+		return EncodedSnapshot{}, ErrIncomplete
 	}
 	cp := *st
 	if err := cp.Unpack(); err != nil {
-		return nil, err
+		return EncodedSnapshot{}, err
 	}
-	return replay(&cp, main, repeat)
+	return replay(&cp, main, repeat, profile)
 }
 
 // replay is Replay for a state that is not packed.
-func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
+func replay(st *snapshot.State, under *underlay, repeat bool, profile string) (EncodedSnapshot, error) {
 	if st == nil {
-		return nil, ErrIncomplete
+		return EncodedSnapshot{}, ErrIncomplete
 	}
 	var b bytes.Buffer
 	b.Grow(st.Width * (st.Height + len(st.Scrollback)) * 2)
@@ -171,8 +172,9 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 	// leaves the cursor where it is with the wrap armed, which no cursor
 	// movement can do.
 	w.cup(cx, cy)
-	if st.PendingWrap {
-		w.reprint(st.Screen, activeProtection, st.CursorX, st.CursorY, cx, cy)
+	if st.PendingWrap || st.CursorX >= st.Width {
+		x := min(st.CursorX, st.Width-1)
+		w.reprint(st.Screen, activeProtection, x, st.CursorY, cx+x-st.CursorX, cy)
 		w.resetPen()
 	}
 
@@ -220,12 +222,39 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 		// Xterm clears REP after every control. Reprint the last cluster only
 		// after every mode/pen/cursor sequence, leaving no following control
 		// which could clear it again. This also re-arms a pending wrap.
+		_, printedWidth := ansi.FirstGraphemeCluster(st.LastPrinted, ansi.GraphemeWidth)
+		// Resize can remove the character that set the parser's repeat width.
+		// REP reads the current source cell, not the removed character.
+		logicalX := st.CursorX
+		if st.PendingWrap {
+			logicalX++
+		}
+		sourceX := logicalX - printedWidth
+		if st.CursorY >= 0 && st.CursorY < len(st.Screen) && sourceX >= 0 && sourceX < len(st.Screen[st.CursorY]) && st.Screen[st.CursorY][sourceX].Content == "" {
+			return EncodedSnapshot{Data: b.Bytes()}, nil
+		}
+		if !st.Modes[7] && st.CursorX == st.Width-1 && printedWidth > 1 {
+			w.cup(cx, cy)
+			b.WriteString(st.LastPrinted)
+			return EncodedSnapshot{Data: b.Bytes()}, nil
+		}
 		x, y := st.CursorX-1, st.CursorY
 		if st.PendingWrap {
 			x = st.CursorX
 		}
 		if y < 0 || y >= len(st.Screen) || x < 0 || x >= len(st.Screen[y]) || st.LastPrinted == "" {
-			return nil, ErrIncomplete
+			return EncodedSnapshot{}, ErrIncomplete
+		}
+		if x > 0 && x < st.Width-1 && st.Screen[y][x-1].Width == 2 && st.Screen[y][x].Width == 1 {
+			if profile != XtermRendererProfile {
+				return EncodedSnapshot{}, ErrUnsupported
+			}
+			packet, token, err := repeatStatePacket(st.LastPrinted)
+			if err != nil {
+				return EncodedSnapshot{}, err
+			}
+			b.WriteString(packet)
+			return EncodedSnapshot{Data: b.Bytes(), RequiredRenderer: XtermRendererProfile, RendererToken: token}, nil
 		}
 		if st.Screen[y][x].Width == 0 && x > 0 {
 			x--
@@ -234,6 +263,14 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 		if st.Modes[6] {
 			addressX -= left
 			addressY -= top
+		}
+		if x == st.Width-1 && x > 0 && st.Screen[y][x-1].Width == 2 && st.Screen[y][x].Width == 1 && !st.Modes[7] {
+			w.mode(7, true)
+			w.reprint(st.Screen, activeProtection, x-1, y, addressX-1, addressY)
+			w.mode(7, false)
+			w.protect(protectedAt(activeProtection, y, x))
+			w.cell(st.Screen[y][x])
+			return EncodedSnapshot{Data: b.Bytes()}, nil
 		}
 		w.cup(addressX, addressY)
 		if st.ANSIModes[4] {
@@ -245,7 +282,7 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 		}
 		b.WriteString(st.LastPrinted)
 	}
-	return b.Bytes(), nil
+	return EncodedSnapshot{Data: b.Bytes()}, nil
 }
 
 // vtWriter writes rows of cells, keeping track of the pen and the link it
@@ -310,8 +347,43 @@ func (w *vtWriter) row(row []snapshot.CellState, full, lead bool, protection []b
 			// in its place rather than wrap it onto the next row.
 			c = snapshot.CellState{Content: " ", Width: 1, StyleState: c.StyleState}
 		}
+		if x > 0 && x < w.width-1 && row[x-1].Width == 2 && c.Width == 1 {
+			// Build the overlap at the physical edge, then shift that pair
+			// left. DCH moves the cells without repairing their interior.
+			// This also preserves the prefix already painted on this row.
+			w.b.WriteString("\x1b[" + strconv.Itoa(w.width-1) + "G")
+			w.protect(x-1 < len(protection) && protection[x-1])
+			w.cell(row[x-1])
+			w.mode(7, false)
+			w.protect(x < len(protection) && protection[x])
+			w.cell(c)
+			w.mode(7, true)
+			w.protect(false)
+			w.resetPen()
+			w.b.WriteString("\r\x1b[" + strconv.Itoa(x) + "G\x1b[" + strconv.Itoa(w.width-1-x) + "P\x1b[2C")
+			continue
+		}
+		overlap := x == w.width-1 && x > 0 && row[x-1].Width == 2 && c.Width == 1
+		if overlap {
+			w.mode(7, false)
+		}
 		w.protect(x < len(protection) && protection[x])
+		if c.Content == "" && c.Width == 1 && x < w.width-1 {
+			// Keep a null cell distinct from an explicitly printed space:
+			// xterm's REP reads the source cell's literal string.
+			w.pen(c.StyleState)
+			if lead && x == 0 {
+				// Consume the previous row's pending wrap before erasing the
+				// first null cell on this row.
+				w.b.WriteString(" \x1b[D")
+			}
+			w.b.WriteString("\x1b[X\x1b[C")
+			continue
+		}
 		w.cell(c)
+		if overlap {
+			w.mode(7, true)
+		}
 	}
 }
 
@@ -619,8 +691,9 @@ func (w *vtWriter) savedCursor(c *snapshot.SavedCursorState, grid [][]snapshot.C
 		y -= top
 	}
 	w.cup(max(x, 0), max(y, 0))
-	if c.PendingWrap {
-		w.reprint(grid, protection, c.X, c.Y, x, y)
+	if c.PendingWrap || c.X >= w.width {
+		column := min(c.X, w.width-1)
+		w.reprint(grid, protection, column, c.Y, x+column-c.X, y)
 	}
 
 	if c.Pen != nil {
@@ -639,6 +712,14 @@ func (w *vtWriter) reprint(grid [][]snapshot.CellState, protection [][]bool, x, 
 	col := x
 	if grid[y][col].Width == 0 && col > 0 && grid[y][col-1].Width == 2 {
 		col--
+	}
+	if col == w.width-1 && col > 0 && grid[y][col-1].Width == 2 && grid[y][col].Width == 1 {
+		w.reprint(grid, protection, col-1, y, addressX-1, addressY)
+		w.mode(7, false)
+		w.protect(protectedAt(protection, y, col))
+		w.cell(grid[y][col])
+		w.mode(7, true)
+		return
 	}
 	w.cup(max(addressX+col-x, 0), max(addressY, 0))
 	charsets(w.b, []int{'B', 'B', 'B', 'B', 0, 0})

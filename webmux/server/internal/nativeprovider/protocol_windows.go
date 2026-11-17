@@ -60,17 +60,20 @@ type record struct {
 }
 
 type frame struct {
-	Protocol int       `json:"protocol,omitempty"`
-	Kind     string    `json:"kind"`
-	Session  string    `json:"session,omitempty"`
-	Instance string    `json:"instance,omitempty"`
-	Key      string    `json:"key,omitempty"`
-	Identity *Identity `json:"identity,omitempty"`
-	Error    string    `json:"error,omitempty"`
-	Data     []byte    `json:"data,omitempty"`
-	Cols     int       `json:"cols,omitempty"`
-	Rows     int       `json:"rows,omitempty"`
-	Code     int       `json:"code,omitempty"`
+	Renderer         string    `json:"renderer,omitempty"`
+	RequiredRenderer string    `json:"required_renderer,omitempty"`
+	RendererToken    string    `json:"renderer_token,omitempty"`
+	Protocol         int       `json:"protocol,omitempty"`
+	Kind             string    `json:"kind"`
+	Session          string    `json:"session,omitempty"`
+	Instance         string    `json:"instance,omitempty"`
+	Key              string    `json:"key,omitempty"`
+	Identity         *Identity `json:"identity,omitempty"`
+	Error            string    `json:"error,omitempty"`
+	Data             []byte    `json:"data,omitempty"`
+	Cols             int       `json:"cols,omitempty"`
+	Rows             int       `json:"rows,omitempty"`
+	Code             int       `json:"code,omitempty"`
 }
 
 func secretDigest(key string) string {

@@ -49,6 +49,7 @@ func New(cols, rows int) (*Screen, error) {
 		return nil, errors.New("invalid terminal snapshot dimensions")
 	}
 	e := vt.NewEmulator(cols, rows)
+	e.EnableXtermNoWrap()
 	profile := installXtermCursorProfile(e)
 	installXtermHyperlinks(e)
 	e.SetScrollbackMaxLines(min(512, max(1, historyCells/cols)))
@@ -125,23 +126,31 @@ func (s *Screen) Capture() (Image, error) {
 }
 
 func (i Image) Bytes() ([]byte, error) {
+	encoded, err := i.BytesForProfile("")
+	return encoded.Data, err
+}
+
+// BytesForProfile only emits an extension when explicitly requested. The
+// legacy Bytes API remains fail-closed for parser state ANSI cannot reseed.
+func (i Image) BytesForProfile(profile string) (EncodedSnapshot, error) {
+	if profile != "" && profile != XtermRendererProfile {
+		return EncodedSnapshot{}, ErrUnsupported
+	}
 	if i.state == nil {
-		return nil, errors.New("terminal snapshot is missing")
+		return EncodedSnapshot{}, errors.New("terminal snapshot is missing")
 	}
-	// With autowrap disabled, this emulator clamps both a cursor addressed to
-	// the final cell and one advanced past it to the same coordinate. Xterm
-	// distinguishes them. Never guess which cell to reprint at this boundary.
-	if i.unsupported || !i.state.Modes[7] && i.state.CursorX == i.state.Width-1 {
-		return nil, ErrUnsupported
+	if i.unsupported {
+		return EncodedSnapshot{}, ErrUnsupported
 	}
-	data, err := replayScreen(i.state, i.main, i.repeat)
+	encoded, err := replayScreen(i.state, i.main, i.repeat, profile)
 	if err != nil {
-		return nil, err
+		return EncodedSnapshot{}, err
 	}
-	if len(data) > MaxSnapshotBytes-3 {
-		return nil, ErrTooLarge
+	if len(encoded.Data) > MaxSnapshotBytes-3 {
+		return EncodedSnapshot{}, ErrTooLarge
 	}
-	return append([]byte("\x18\x1bc"), data...), nil
+	encoded.Data = append([]byte("\x18\x1bc"), encoded.Data...)
+	return encoded, nil
 }
 
 func (s *Screen) Close() error {

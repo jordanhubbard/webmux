@@ -1,0 +1,107 @@
+package vt
+
+import (
+	"image/color"
+
+	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/charmbracelet/x/ansi"
+
+	"tuios.dev/progstatus"
+)
+
+// Callbacks represents a set of callbacks for a terminal.
+type Callbacks struct {
+	// Bell callback. When set, this function is called when a bell character is
+	// received.
+	Bell func()
+
+	// Title callback. When set, this function is called when the terminal title
+	// changes.
+	Title func(string)
+
+	// IconName callback. When set, this function is called when the terminal
+	// icon name changes.
+	IconName func(string)
+
+	// AltScreen callback. When set, this function is called when the alternate
+	// screen is activated or deactivated.
+	AltScreen func(bool)
+
+	// CursorPosition callback. When set, this function is called when the cursor
+	// position changes.
+	CursorPosition func(old, new uv.Position) //nolint:predeclared,revive
+
+	// CursorVisibility callback. When set, this function is called when the
+	// cursor visibility changes.
+	CursorVisibility func(visible bool)
+
+	// CursorColor callback. When set, this function is called when the cursor
+	// color changes. Nil indicates the default terminal color.
+	CursorColor func(color color.Color)
+
+	// BackgroundColor callback. When set, this function is called when the
+	// background color changes. Nil indicates the default terminal color.
+	BackgroundColor func(color color.Color)
+
+	// ForegroundColor callback. When set, this function is called when the
+	// foreground color changes. Nil indicates the default terminal color.
+	ForegroundColor func(color color.Color)
+
+	// WorkingDirectory callback. When set, this function is called when the
+	// current working directory changes.
+	WorkingDirectory func(string)
+
+	// EnableMode callback. When set, this function is called when a mode is
+	// enabled.
+	EnableMode func(mode ansi.Mode)
+
+	// DisableMode callback. When set, this function is called when a mode is
+	// disabled.
+	DisableMode func(mode ansi.Mode)
+
+	// ScreenClear callback. When set, this function is called when the screen
+	// is cleared (ED 2 or ED 3).
+	ScreenClear func()
+
+	// ClipboardSet callback. Called when a guest app sets clipboard via OSC 52.
+	ClipboardSet func(selection, content string)
+
+	// ClipboardQuery callback. Called when a guest app queries clipboard via OSC 52.
+	// Returns the current clipboard content for the given selection. The
+	// answer is written to the guest's input, base64 encoded. Leave this nil
+	// to answer with empty content, which is xterm's default, unless the
+	// person chose to share the clipboard with the guest.
+	ClipboardQuery func(selection string) string
+
+	// Notify callback. Called when a guest app requests a desktop notification
+	// via OSC 9, OSC 777, or OSC 99.
+	Notify func(title, body string)
+
+	// Progress callback. Called when a guest app reports its progress via the
+	// OSC 9;4 sequence. percent is 0 for the states that carry no percentage.
+	Progress func(state ProgressState, percent int)
+
+	// ProgramStatus callback. Called for every OSC 7501 report that passed
+	// every check of the Program Status Protocol, and with Reset set on a full
+	// reset (RIS), which removes every record. The feature detection query is
+	// answered by the emulator and never reaches it. Like SemanticMark it fires
+	// with the emulator's lock held on backends that have one, so it must only
+	// record.
+	ProgramStatus func(ev progstatus.Event)
+
+	// SemanticMark callback. Called for every OSC 133 mark a shell sends (A
+	// prompt start, B input start, C command executed, D command finished),
+	// after the mark is recorded in SemanticMarkers. A C mark carries the
+	// command line read off the screen and a D mark its exit code, -1 when the
+	// shell sent none. It fires with the emulator's lock held on backends that
+	// have one, so it must only record and never call back into the terminal.
+	SemanticMark func(mark SemanticMarker)
+
+	// PrivateOSC callback. Called for an OSC sequence whose number the
+	// emulator does not interpret, so a host can give meaning to a private
+	// number of its own. cmd is the OSC number and data the whole body,
+	// number included, as an [OscHandler] receives it. data is only valid for
+	// the call. A sequence with no valid number, such as ESC ] foo BEL, is
+	// not passed on. Both backends call it for the same numbers.
+	PrivateOSC func(cmd int, data []byte)
+}

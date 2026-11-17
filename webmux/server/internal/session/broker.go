@@ -69,22 +69,24 @@ func (r *run) stop() {
 }
 
 type entry struct {
-	shellHelper     string
-	shellPlatform   string
-	historyRestored bool
-	shellReady      bool
-	shellInstance   string
-	replayScreen    replayScreen
-	browserRequest  Event
-	browserExpires  time.Time
-	value           Session
-	run             *run
-	scrollback      string
-	scrollbackUnits int
-	viewers         map[string]*Viewer
-	focus           string
-	generation      uint64
-	logOperation    sync.Mutex
+	requiredRenderer string
+	rendererToken    string
+	shellHelper      string
+	shellPlatform    string
+	historyRestored  bool
+	shellReady       bool
+	shellInstance    string
+	replayScreen     replayScreen
+	browserRequest   Event
+	browserExpires   time.Time
+	value            Session
+	run              *run
+	scrollback       string
+	scrollbackUnits  int
+	viewers          map[string]*Viewer
+	focus            string
+	generation       uint64
+	logOperation     sync.Mutex
 }
 
 // Broker owns sessions and PTYs. Viewers do not own process lifetime. All map,
@@ -372,6 +374,11 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 		e.value.UpdatedAt = now()
 		return err
 	}
+	renderer, token := "", ""
+	if source, ok := p.(interface{ SnapshotProfile() (string, string) }); ok {
+		renderer, token = source.SnapshotProfile()
+	}
+	b.setSnapshotProfileLocked(e, renderer, token)
 	if source, ok := p.(interface{ BrowserOnServer() bool }); ok {
 		e.value.BrowserLocal = source.BrowserOnServer()
 	}
@@ -889,7 +896,9 @@ func (b *Broker) markConnectedLocked(id string, e *entry, r *run) {
 		r.first = false
 		e.value.State = "connected"
 		e.value.UpdatedAt = now()
-		b.broadcastLocked(e, Event{"type": "status", "session_id": id, "state": "connected"})
+		status := Event{"type": "status", "session_id": id, "state": "connected"}
+		e.snapshotMetadata(status)
+		b.broadcastLocked(e, status)
 		if r.initial != "" {
 			r.timer = time.AfterFunc(800*time.Millisecond, func() {
 				b.mu.Lock()

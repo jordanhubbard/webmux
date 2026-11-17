@@ -38,3 +38,5 @@ require (
 	golang.org/x/sync v0.24.0 // indirect
 	tuios.dev/progstatus v0.1.0 // indirect
 )
+
+replace tuios.dev/vt => ./internal/thirdparty/vt

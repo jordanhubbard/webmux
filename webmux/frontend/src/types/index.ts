@@ -138,6 +138,8 @@ export interface AuthUserInfo {
 }
 
 export interface WebSocketMessage {
+  snapshot_profile?: string;
+  snapshot_token?: string;
   type: 'input' | 'resize' | 'output' | 'status' | 'focus' | 'viewer_join' | 'viewer_leave' | 'error' | 'transcript_toggle' | 'transcript_status' | 'browser_open' | 'browser_ack' | 'clipboard' | 'clipboard_read' | 'clipboard_reply' | 'input_error';
   session_id?: string;
   data?: string;

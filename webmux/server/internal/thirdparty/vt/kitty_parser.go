@@ -1,0 +1,418 @@
+package vt
+
+import (
+	"bytes"
+	"encoding/base64"
+	"errors"
+	"strconv"
+	"strings"
+	"unsafe"
+)
+
+// ParseKittyCommand parses the body of a kitty graphics APC, the bytes after
+// the leading 'G'. A payload that is not valid base64 is not an error here:
+// the command is returned with PayloadErr set and no Data or FilePath, so the
+// caller can still answer the guest and drop the transmission it was part of.
+func ParseKittyCommand(data []byte) (*KittyCommand, error) {
+	return parseKittyCommand(data, false, false)
+}
+
+// ParseKittyHeader parses the body of a kitty graphics APC like
+// ParseKittyCommand, but leaves the image data undecoded: Data stays empty,
+// and RawPayload is kept only when it is short enough to be an echoed reply
+// (see IsKittyResponsePayload). The payload of a shared memory (t=s) or temp
+// file (t=t) transmission is decoded into FilePath, because it is only a name
+// and the daemon deletes the objects no client reads.
+//
+// It is for a reader that acts on the control keys alone, such as the daemon,
+// which answers queries and refuses animation and never draws. Decoding a
+// 1.5 MB frame there only to throw it away cost more than parsing it.
+//
+// The payload is still decoded when an EINVAL reply would be owed for it (see
+// KittyPayloadErrorResponse), so PayloadErr is set whenever it decides a
+// reply. That is the first chunk of a transmission with an id and without
+// q=2, or a query. The later chunks of a transmission carry no id, and a
+// stream sent with q=2 owes no reply, so neither is decoded.
+func ParseKittyHeader(data []byte) (*KittyCommand, error) {
+	return parseKittyCommand(data, true, false)
+}
+
+// parseKittyAPC parses the data of a graphics APC, from its leading 'G', and
+// returns with the command the whole sequence for the passthrough (see
+// kittyRawAPC), nil when headerOnly says no passthrough reads it.
+//
+// The sequence is the one copy of the payload made here: the command is
+// parsed from it rather than from data, and RawPayload is a view of its
+// payload bytes instead of a second copy. A 1.5 MB frame cost three copies
+// before, the sequence, RawPayload and the decoded image.
+func parseKittyAPC(data []byte, headerOnly bool) (*KittyCommand, []byte, error) {
+	if headerOnly {
+		cmd, err := parseKittyCommand(data[1:], true, false)
+		return cmd, nil, err
+	}
+	rawData := kittyRawAPC(data)
+	cmd, err := parseKittyCommand(rawData[3:len(rawData)-2], false, true)
+	return cmd, rawData, err
+}
+
+// parseKittyCommand parses an APC body after its 'G'. owned says data is
+// never written again, so RawPayload may share its bytes instead of copying
+// them.
+func parseKittyCommand(data []byte, headerOnly, owned bool) (*KittyCommand, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+
+	cmd := &KittyCommand{
+		Action: KittyActionTransmit,
+		Medium: KittyMediumDirect,
+		Format: KittyFormatRGBA,
+	}
+
+	controlPart, dataPart, _ := bytes.Cut(data, []byte{';'})
+
+	if len(controlPart) > 0 {
+		parseKittyControlParams(string(controlPart), cmd)
+	}
+
+	if len(dataPart) > 0 && headerOnly {
+		if len(dataPart) <= maxKittyResponsePayload {
+			cmd.RawPayload = string(dataPart)
+		}
+		if kittyHasPNGHead(cmd) {
+			// The PNG header is in the first 33 bytes, 44 characters.
+			n := min(len(dataPart), 44) / 4 * 4
+			if head, err := DecodeKittyPayload(dataPart[:n]); err == nil {
+				cmd.pngHead = head
+			}
+		}
+		switch {
+		case kittyHeaderNamesObject(cmd, dataPart):
+			// The payload of a file medium transmission is only the
+			// object's name. The reader still needs it: the daemon deletes
+			// the frames no client reads, and with no name it deletes
+			// nothing and /dev/shm fills up. It also opens a file before it
+			// answers OK for it.
+			decoded, err := DecodeKittyPayload(dataPart)
+			if err != nil {
+				cmd.PayloadErr = err
+			} else {
+				cmd.FilePath = string(decoded)
+			}
+		case kittyPayloadErrorOwed(cmd):
+			_, cmd.PayloadErr = DecodeKittyPayload(dataPart)
+		}
+		return cmd, nil
+	}
+
+	if len(dataPart) > 0 {
+		// Always preserve raw payload for passthrough (avoids decode→re-encode cycle)
+		if owned {
+			// #nosec G103 - the caller guarantees data is never written
+			// again; see parseKittyAPC.
+			cmd.RawPayload = unsafe.String(&dataPart[0], len(dataPart))
+		} else {
+			cmd.RawPayload = string(dataPart)
+		}
+
+		decoded, err := DecodeKittyPayload(dataPart)
+		if err != nil {
+			// Undecodable text is never handed on as image data: a guest that
+			// sent it gets EINVAL (see KittyPayloadErrorResponse) and the
+			// passthrough drops the transmission it belonged to.
+			cmd.PayloadErr = err
+		} else {
+			switch cmd.Medium {
+			case KittyMediumFile, KittyMediumTempFile, KittyMediumSharedMemory:
+				cmd.FilePath = string(decoded)
+			default:
+				cmd.Data = decoded
+				if kittyHasPNGHead(cmd) {
+					cmd.pngHead = decoded[:min(len(decoded), 33)]
+				}
+			}
+		}
+	}
+
+	return cmd, nil
+}
+
+// kittyHasPNGHead reports whether a command's payload starts a PNG the
+// emulator checks. See kittyPNGHeadError.
+func kittyHasPNGHead(cmd *KittyCommand) bool {
+	return (cmd.Action == KittyActionTransmit || cmd.Action == KittyActionTransmitPlace) &&
+		cmd.Format == KittyFormatPNG && cmd.Medium == KittyMediumDirect &&
+		cmd.Compression != KittyCompressionZlib
+}
+
+// DecodeKittyPayload decodes a kitty graphics payload, padded or not.
+//
+// The protocol says the payload is base64 and leaves padding to the sender.
+// kitten icat sends none: its Go encoder is RawStdEncoding, so the final chunk
+// of a stream, and any file path whose length is not a multiple of three, has
+// no '=' at the end. Only a chunk that is not the last has to be a multiple of
+// four characters. Other senders (chafa, timg, mpv) pad. Both are accepted, and
+// so is a payload built by joining padded groups, which is what a sender that
+// pads every chunk produces if two chunks are ever sent as one.
+//
+// Each run of '=' ends one group. The text before it is decoded without
+// padding, which accepts a group with its padding stripped and rejects one
+// that was cut short (a single character left over), and the rest of the
+// payload is decoded the same way.
+func DecodeKittyPayload(payload []byte) ([]byte, error) {
+	out := make([]byte, 0, base64.RawStdEncoding.DecodedLen(len(payload)))
+	rest := payload
+	for len(rest) > 0 {
+		end := bytes.IndexByte(rest, '=')
+		if end < 0 {
+			end = len(rest)
+		}
+		group := rest[:end]
+		rest = rest[end:]
+		// The padding run, and any line break inside it, which a wrapped
+		// encoding can put between two '='.
+		pad, skip := 0, 0
+		for skip < len(rest) && (rest[skip] == '=' || rest[skip] == '\n' || rest[skip] == '\r') {
+			if rest[skip] == '=' {
+				pad++
+			}
+			skip++
+		}
+		rest = rest[skip:]
+		// Padding only ever completes a group of four, with one or two '='.
+		// Anything else is not base64. Line breaks are not counted: the
+		// decoder below skips them, as base64 does everywhere, and a shell
+		// sender piping an image through base64 without -w 0 gets one every
+		// 76 characters. Counted, they made a wrapped payload's padding look
+		// misplaced whenever the breaks were not a multiple of four, and the
+		// image was refused (FuzzKittyPayloadDecode).
+		chars := len(group) - bytes.Count(group, []byte{'\n'}) - bytes.Count(group, []byte{'\r'})
+		if pad > 0 && (pad > 2 || (chars+pad)%4 != 0) {
+			return nil, errKittyPadding
+		}
+		// Decoded in place: out was sized for the whole payload, padding
+		// included, so the groups always fit and a frame is copied once.
+		n, err := base64.RawStdEncoding.Decode(out[len(out):cap(out)], group)
+		if err != nil {
+			return nil, err
+		}
+		out = out[:len(out)+n]
+	}
+	return out, nil
+}
+
+// errKittyPadding is a payload whose '=' padding cannot end a base64 group.
+var errKittyPadding = errors.New("misplaced base64 padding")
+
+// KittyPayloadErrorResponse is the reply owed to a guest whose command carried
+// a payload that could not be decoded, or nil when none is owed.
+//
+// kitty answers an error unless the guest asked for silence with q=2, and only
+// when the command names its image with i= or I=, because a reply without an
+// id cannot be matched to anything. A query is the exception: it is answered
+// with or without an id, the way tuios has always answered it, because a
+// probing guest waits for that reply.
+//
+// A payload shaped like a reply ("EINVAL:...") is a guest echoing one back,
+// usually a shell that received it as input. Answering that would echo again,
+// forever, so it gets nothing.
+func KittyPayloadErrorResponse(cmd *KittyCommand) []byte {
+	if cmd == nil || cmd.PayloadErr == nil || !kittyPayloadErrorOwed(cmd) {
+		return nil
+	}
+	return BuildKittyResponse(false, cmd.ImageID, "EINVAL:payload is not valid base64")
+}
+
+// maxKittyObjectName bounds the payload ParseKittyHeader decodes as an object
+// name: base64 of PATH_MAX bytes, rounded up. A longer payload is not a name.
+const maxKittyObjectName = 8192
+
+// kittyHeaderNamesObject reports whether ParseKittyHeader decodes the payload
+// of cmd as the name of a shared memory object, temp file or file. The daemon
+// needs the name to delete unread frames, and to check that a file it
+// answers OK for can be opened.
+func kittyHeaderNamesObject(cmd *KittyCommand, payload []byte) bool {
+	return (cmd.Medium == KittyMediumSharedMemory || cmd.Medium == KittyMediumTempFile ||
+		cmd.Medium == KittyMediumFile) &&
+		len(payload) <= maxKittyObjectName
+}
+
+// kittyPayloadErrorOwed reports whether cmd would be answered with EINVAL if
+// its payload did not decode. ParseKittyHeader decodes exactly these.
+func kittyPayloadErrorOwed(cmd *KittyCommand) bool {
+	if cmd.Quiet >= 2 || IsKittyEchoedResponse(cmd) {
+		return false
+	}
+	return cmd.Action == KittyActionQuery || cmd.ImageID != 0 || cmd.ImageNumber != 0
+}
+
+// IsKittyEchoedResponse reports whether a parsed graphics command is a
+// terminal's reply coming back as input rather than a command from a guest.
+//
+// The payload shape alone is not enough. A chunk of real image data can be
+// all capital letters behind a leading E: a run of dark pixels encodes to
+// "EAAAAAAA", and the last chunk of a chunked transmission is often short
+// enough to pass the length cap. Dropping it as an echo left the transmission
+// without its m=0, so the image never appeared. A reply carries no key but
+// the ids (i=, I=, p=), and every transmission carries at least one other key
+// (a=, f=, s=, v=, t= on the first chunk, m= on every later one), so a command
+// is an echo only when it has the reply's keys and the reply's payload.
+func IsKittyEchoedResponse(cmd *KittyCommand) bool {
+	return cmd != nil && !cmd.otherKeys && IsKittyResponsePayload(cmd.RawPayload)
+}
+
+// maxKittyResponsePayload is the longest payload IsKittyResponsePayload takes
+// for an echoed reply.
+const maxKittyResponsePayload = 256
+
+// IsKittyResponsePayload reports whether a graphics payload looks like an
+// echoed kitty protocol response rather than image data.
+//
+// It is matched against the raw wire payload (the base64 text between ';' and
+// the APC terminator), not the decoded bytes. A real transmit payload is a
+// base64 string; an echoed response is a short status token: "OK", or a POSIX
+// error name optionally followed by a ":message" (e.g. "ENOENT", "EINVAL:bad
+// params"). Matching the decoded bytes instead let arbitrary binary chunks (a
+// chafa or mpv direct stream) collide with the 'E'+A-Z shape about 0.04% of
+// the time and silently drop a chunk, corrupting the image.
+//
+// The shape required is ^(OK|E[A-Z]+(:.*)?)$ with a hard length cap so that a
+// legitimate (necessarily longer, mixed-case) base64 payload cannot match.
+func IsKittyResponsePayload(payload string) bool {
+	if len(payload) == 0 || len(payload) > maxKittyResponsePayload {
+		return false
+	}
+	if payload == "OK" {
+		return true
+	}
+	// POSIX error name: 'E' followed by one or more uppercase letters, then an
+	// optional ":<message>". A base64 image payload is not all-uppercase.
+	if payload[0] != 'E' {
+		return false
+	}
+	i := 1
+	for i < len(payload) && payload[i] >= 'A' && payload[i] <= 'Z' {
+		i++
+	}
+	if i < 2 {
+		// Need at least one uppercase letter after the leading 'E'.
+		return false
+	}
+	if i == len(payload) {
+		return true
+	}
+	return payload[i] == ':'
+}
+
+func parseKittyControlParams(control string, cmd *KittyCommand) {
+	for pair := range strings.SplitSeq(control, ",") {
+		if pair == "" {
+			continue
+		}
+		key, value, ok := strings.Cut(pair, "=")
+		if !ok {
+			continue
+		}
+		if key != "i" && key != "I" && key != "p" {
+			cmd.otherKeys = true
+		}
+
+		switch key {
+		case "a":
+			if len(value) > 0 {
+				cmd.Action = KittyGraphicsAction(value[0])
+			}
+		case "q":
+			cmd.Quiet, _ = strconv.Atoi(value)
+		case "i":
+			if v, err := strconv.ParseUint(value, 10, 32); err == nil {
+				cmd.ImageID = uint32(v)
+			}
+		case "I":
+			if v, err := strconv.ParseUint(value, 10, 32); err == nil {
+				cmd.ImageNumber = uint32(v)
+			}
+		case "p":
+			if v, err := strconv.ParseUint(value, 10, 32); err == nil {
+				cmd.PlacementID = uint32(v)
+			}
+		case "f":
+			if v, err := strconv.Atoi(value); err == nil {
+				cmd.Format = KittyGraphicsFormat(v)
+			}
+		case "t":
+			if len(value) > 0 {
+				cmd.Medium = KittyGraphicsMedium(value[0])
+			}
+		case "o":
+			if len(value) > 0 {
+				if value[0] == 'z' {
+					cmd.Compression = KittyCompressionZlib
+				}
+			}
+		case "s":
+			cmd.Width, _ = strconv.Atoi(value)
+		case "v":
+			cmd.Height, _ = strconv.Atoi(value)
+		case "S":
+			cmd.Size, _ = strconv.Atoi(value)
+		case "O":
+			cmd.Offset, _ = strconv.Atoi(value)
+		case "m":
+			cmd.More = value == "1"
+		case "d":
+			if len(value) > 0 {
+				cmd.Delete = KittyDeleteTarget(value[0])
+			}
+		case "x":
+			cmd.SourceX, _ = strconv.Atoi(value)
+		case "y":
+			cmd.SourceY, _ = strconv.Atoi(value)
+		case "w":
+			cmd.SourceWidth, _ = strconv.Atoi(value)
+		case "h":
+			cmd.SourceHeight, _ = strconv.Atoi(value)
+		case "X":
+			cmd.XOffset, _ = strconv.Atoi(value)
+		case "Y":
+			cmd.YOffset, _ = strconv.Atoi(value)
+			if v, err := strconv.ParseUint(value, 10, 32); err == nil {
+				cmd.BackgroundColor = uint32(v)
+			}
+		case "c":
+			cmd.Columns, _ = strconv.Atoi(value)
+		case "r":
+			cmd.Rows, _ = strconv.Atoi(value)
+		case "z":
+			if v, err := strconv.ParseInt(value, 10, 32); err == nil {
+				cmd.ZIndex = int32(v)
+			}
+		case "C":
+			cmd.CursorMove, _ = strconv.Atoi(value)
+		case "U":
+			cmd.Virtual = value == "1"
+		}
+	}
+}
+
+// BuildKittyResponse returns a kitty graphics reply for imageID: OK when ok
+// is true, otherwise message, or ENOENT when message is empty. An imageID of
+// 0 leaves the i key out.
+func BuildKittyResponse(ok bool, imageID uint32, message string) []byte {
+	var buf bytes.Buffer
+	buf.WriteString("\x1b_G")
+	if imageID > 0 {
+		buf.WriteString("i=")
+		buf.WriteString(strconv.FormatUint(uint64(imageID), 10))
+		buf.WriteByte(';')
+	}
+	if ok {
+		buf.WriteString("OK")
+	} else if message != "" {
+		buf.WriteString(message)
+	} else {
+		buf.WriteString("ENOENT:file not found")
+	}
+	buf.WriteString("\x1b\\")
+	return buf.Bytes()
+}

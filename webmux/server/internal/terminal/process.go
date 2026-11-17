@@ -147,3 +147,11 @@ func traceSlowOperation(operation string) func() {
 }
 
 func (p *Process) BrowserOnServer() bool { return p.browserLocal }
+
+// SnapshotProfile forwards only immutable native-owner handshake metadata.
+func (p *Process) SnapshotProfile() (string, string) {
+	if source, ok := p.native.(interface{ SnapshotProfile() (string, string) }); ok {
+		return source.SnapshotProfile()
+	}
+	return "", ""
+}

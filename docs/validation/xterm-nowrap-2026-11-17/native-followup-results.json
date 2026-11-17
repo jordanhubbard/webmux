@@ -1,0 +1,73 @@
+{
+  "recorded_utc": "2026-11-17T14:34:19.427617+00:00",
+  "native_workflow": 44100418808,
+  "native_pr_head": "2c3f923462911ecc886b7c6719a5c0e43791cb4f",
+  "native_job": 134098624186,
+  "artifact": 14337006971,
+  "artifact_url": "https://github.com/jordanhubbard/webmux/actions/runs/44100418808/artifacts/14337006971",
+  "native_capture_count": 22,
+  "one_job_per_capture": true,
+  "native_renderer_passed": 21,
+  "native_renderer_failed": [
+    "nowrap-soft-reset: focus-report mode retained after DECSTR"
+  ],
+  "retained_input_current_mirror_renderer_passed": 22,
+  "retained_input_check_scope": "Current Go mirror recomputes snapshots from retained actual native streams, then compares in real local Chrome. Fresh Windows execution on the current candidate remains required.",
+  "retained_input_sha256": "cc7460418a358cc345b6c5e011c225dfe51e381827a860a61951a36aea752420",
+  "retained_input_renderer_log_sha256": "364aa05e3b69551461851f42a65ade999827e4ab94e7e1419da7c4df1a721f82",
+  "current_engine_race": {
+    "vt_seconds": 115.815,
+    "snapshot_seconds": 1.11,
+    "vtgen_seconds": 1.146,
+    "vet": "passed"
+  },
+  "remaining_required_gate": "#424 retains a required failing REP-state continuation control after resizing an overlap; #421 is not complete.",
+  "expanded_current_browser": {
+    "passed": 408,
+    "failed": 2,
+    "required_failures": [
+      "nowrap-resize-overlap-grow",
+      "nowrap-resize-overlap-grow-byte-split"
+    ],
+    "failure_behavior": "ErrUnsupported is fail-closed; required support assertion remains failing under424.",
+    "log_sha256": "c1bcdf0d70fd36e408bd8da595fcef1c462d0d2a9af4c18f38f44380899718cc"
+  },
+  "historical_results_note": "Original fields describe pre-profile checkpoints; latest evidence is recorded in the checkpoints below.",
+  "fresh_native_5a80f2c": {
+    "workflow": 44105321159,
+    "artifact": 14337553952,
+    "source_head": "5a80f2c4c969989df5db52a10a22233195276c33",
+    "actual_conpty_captures": 22,
+    "one_job_each": true,
+    "native_test_pass": true,
+    "renderer_initial_continued_recaptured_passed": 22,
+    "overall_gate": "Failed the two static overlap-grow controls before the explicit renderer profile existed. Does not qualify later source."
+  },
+  "renderer_profile_checkpoint": {
+    "recorded_utc": "2026-11-17T15:15:50.816052+00:00",
+    "profile": "webmux-xterm-state-v1",
+    "native_replay": "screen-v2",
+    "locked_xterm": "6.0.0",
+    "local_browser": {
+      "passed": 411,
+      "failed": 0,
+      "reference_uses_snapshot_adapter": false,
+      "scope": "Go profile snapshots versus unmodified xterm reference; initial, continued, second attach; parser token/bounds/splits/lifecycle controls"
+    },
+    "local_app": {
+      "passed": 3,
+      "failed": 0,
+      "scope": "Actual app/Go server; two-viewer mode-query suppression, truncated replay, controlled owned metadata/profile REP and stale-token rejection through two attachments; not native ConPTY evidence."
+    },
+    "go_race": "screenstate, session, httpapi and terminal passed",
+    "windows_amd64_vet": "passed including added Windows protocol contracts",
+    "frontend": "372 existing tests, strict source inventory/typecheck, lint and build passed",
+    "legacy_api": "still refuses required overlap state before and after explicit encoding",
+    "required_next": "Fresh exact-head Windows protocol and actual ConPTY execution, artifact inspection and all 17 hosted outcomes before merge. Broader #355/#318 lifecycle and hidden underline remain separate.",
+    "logs_sha256": {
+      "nowrap424-profile-full-final.log": "66e8a48e91678905666cf35b7345879eea946980fa234120b097b49c0213aaba",
+      "nowrap424-profile-app-final.log": "8187a2c2009e8bc6342f9a3aa867a8e745f9d778dec8687900122edaadadbc6a",
+      "nowrap424-profile-go-final.log": "265cc09847ff9bd3212ac917e62ca315e5cda0c67a385c931d4f25b777cf3d03"
+    }
+  }
+}
