@@ -746,11 +746,11 @@ func (s *screen) withBlankPen(fn func()) {
 // current pen background color. If the pen background color is nil, the return
 // value is nil.
 func (s *screen) blankCell() *uv.Cell {
-	if s.cur.Pen.Bg == nil {
+	if s.cur.Pen.Bg == nil && s.buf.empty.Content != "" {
 		return nil
 	}
 
-	c := uv.EmptyCell
+	c := s.buf.empty
 	c.Style.Bg = s.cur.Pen.Bg
 	return &c
 }

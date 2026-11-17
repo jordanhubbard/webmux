@@ -5,7 +5,12 @@ import uv "github.com/charmbracelet/ultraviolet"
 // EnableXtermNoWrap preserves xterm's logical cursor one column past the right
 // edge after a print with DECAWM disabled. Call before the first Write. This is
 // an opt-in WebMux extension; NewEmulator's upstream behavior is unchanged.
-func (e *Emulator) EnableXtermNoWrap() { e.xtermNoWrap = true }
+func (e *Emulator) EnableXtermNoWrap() {
+	e.xtermNoWrap = true
+	for i := range e.scrs {
+		e.scrs[i].buf.empty.Content = ""
+	}
+}
 
 func (e *Emulator) setPrintedCursor(x, y int) {
 	if !e.xtermNoWrap || e.autoWrapMode() || x < e.scr.Width() {

@@ -250,25 +250,27 @@ func TestMirrorMatchesXtermHorizontalModeHandling(t *testing.T) {
 	}
 }
 
-func TestNoWrapFinalColumnRefusesAmbiguousCursorWithoutChangingScreen(t *testing.T) {
-	for _, text := range []string{"\x1b[4;79HX", "\x1b[4;80HX", "\x1b[4;79HXX", "\x1b[4;80H"} {
+func TestNoWrapFinalColumnRetainsAddressedAndAdvancedCursor(t *testing.T) {
+	for _, tc := range []struct {
+		text string
+		x    int
+	}{
+		{"\x1b[4;79HX", 79}, {"\x1b[4;80HX", 80},
+		{"\x1b[4;79HXX", 80}, {"\x1b[4;80H", 79},
+	} {
 		s := newScreen(t, 80, 24)
-		if err := s.Feed([]byte("\x1b[?7l" + text)); err != nil {
+		if err := s.Feed([]byte("\x1b[?7l" + tc.text)); err != nil {
 			t.Fatal(err)
 		}
 		image, err := s.Capture()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if data, err := image.Bytes(); !errors.Is(err, ErrUnsupported) || data != nil {
-			t.Fatal("ambiguous no-wrap cursor was replayed", err)
+		if image.state.CursorX != tc.x {
+			t.Fatalf("%q cursor %d, want %d", tc.text, image.state.CursorX, tc.x)
 		}
-		// A later unambiguous cursor movement is still accepted by the same mirror.
-		if err := s.Feed([]byte("\x1b[HSAFE")); err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Contains(imageBytes(t, s), []byte("SAFE")) {
-			t.Fatal("refusal damaged the continuing screen")
+		if data, err := image.Bytes(); err != nil || len(data) == 0 {
+			t.Fatal("no-wrap snapshot refused", err)
 		}
 	}
 }
@@ -461,50 +463,49 @@ func TestColorCaptureIsImmutableAndUnsupportedColorRefuses(t *testing.T) {
 	}
 }
 
-func TestXtermNoWrapEnableRefusesLostCursorDistinction(t *testing.T) {
-	for _, text := range []string{"\x1b[4;80HX", "\x1b[4;79H日", "\x1b[4;79HXX", "\x1b[4;80H"} {
+func TestXtermNoWrapEnablePreservesCursorAndContinuation(t *testing.T) {
+	for _, tc := range []struct {
+		text              string
+		x, afterX, afterY int
+	}{
+		{"\x1b[4;80HX", 80, 1, 4}, {"\x1b[4;79H日", 80, 1, 4},
+		{"\x1b[4;79HXX", 80, 1, 4}, {"\x1b[4;80H", 79, 79, 3},
+	} {
 		for _, split := range []bool{false, true} {
-			t.Run(fmt.Sprintf("%q/split=%v", text, split), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%q/split=%v", tc.text, split), func(t *testing.T) {
 				s := newScreen(t, 80, 24)
+				data := []byte("\x1b[?7l" + tc.text + "\x1b[?7h")
 				if split {
-					if err := s.Feed([]byte("\x1b[?7l" + text)); err != nil {
-						t.Fatal(err)
+					for _, b := range data {
+						if err := s.Feed([]byte{b}); err != nil {
+							t.Fatal(err)
+						}
 					}
-					if err := s.Feed([]byte("\x1b[?7h")); err != nil {
-						t.Fatal(err)
-					}
-				} else {
-					if err := s.Feed([]byte("\x1b[?7l" + text + "\x1b[?7h")); err != nil {
-						t.Fatal(err)
-					}
+				} else if err := s.Feed(data); err != nil {
+					t.Fatal(err)
 				}
 				image, err := s.Capture()
 				if err != nil {
 					t.Fatal(err)
 				}
-				if data, err := image.Bytes(); !errors.Is(err, ErrUnsupported) || data != nil {
-					t.Fatal("ambiguous transition was accepted", err)
+				if image.state.CursorX != tc.x {
+					t.Fatalf("cursor %d, want %d", image.state.CursorX, tc.x)
 				}
-				// Subsequent output can already have diverged, so merely moving home or
-				// soft-resetting must not clear the refusal. The same mirror keeps running.
-				if err := s.Feed([]byte("Y\x1b[H\x1b[!p")); err != nil {
+				if _, err := image.Bytes(); err != nil {
+					t.Fatal(err)
+				}
+				if err := s.Feed([]byte("Y")); err != nil {
 					t.Fatal(err)
 				}
 				later, err := s.Capture()
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := later.Bytes(); !errors.Is(err, ErrUnsupported) {
-					t.Fatal("lost state was forgotten", err)
+				if later.state.CursorX != tc.afterX || later.state.CursorY != tc.afterY {
+					t.Fatalf("continuation cursor %d,%d, want %d,%d", later.state.CursorX, later.state.CursorY, tc.afterX, tc.afterY)
 				}
-				if err := s.Feed([]byte("\x1bcSAFE")); err != nil {
+				if _, err := later.Bytes(); err != nil {
 					t.Fatal(err)
-				}
-				if !bytes.Contains(imageBytes(t, s), []byte("SAFE")) {
-					t.Fatal("RIS did not repair the mirror")
-				}
-				if _, err := image.Bytes(); !errors.Is(err, ErrUnsupported) {
-					t.Fatal("captured refusal changed after reset", err)
 				}
 			})
 		}

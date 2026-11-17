@@ -29,6 +29,7 @@ import (
 // when the shift spans the full width, rows move by header instead of cell
 // by cell.
 type grid struct {
+	empty uv.Cell // Configurable blank content for the opt-in xterm profile.
 	// rows holds the lines. A nil row is a row of blank cells.
 	rows []uv.Line
 	// width is the number of columns; every non-nil row has this length.
@@ -298,14 +299,8 @@ func (g *grid) withTail(y int, row uv.Line) uv.Line {
 	return append(row[:len(row):len(row)], t...)
 }
 
-// gridBlank is the cell CellAt returns for a column of a row that has not
-// been written. It is shared by every grid and must never be written to:
-// CellAt hands out a pointer for reading, and a write through it would show
-// on every blank cell everywhere.
-var gridBlank = uv.EmptyCell
-
 func newGrid(width, height int) *grid {
-	return &grid{rows: make([]uv.Line, height), ext: make([]int, height), wrap: make([]rowFlag, height), width: width}
+	return &grid{rows: make([]uv.Line, height), ext: make([]int, height), wrap: make([]rowFlag, height), width: width, empty: uv.EmptyCell}
 }
 
 // raiseExt records that row y may hold something other than a blank up to
@@ -335,7 +330,7 @@ func (g *grid) CellAt(x, y int) *uv.Cell {
 	}
 	row := g.rows[y]
 	if row == nil {
-		return &gridBlank
+		return &g.empty
 	}
 	return &row[x]
 }
@@ -355,9 +350,17 @@ func (g *grid) row(y int) uv.Line {
 	g.dropTail(y)
 	g.ext[y] = g.width
 	if g.rows[y] == nil {
-		g.rows[y] = newBlankLine(g.width)
+		g.rows[y] = g.newBlankLine(g.width)
 	}
 	return g.rows[y]
+}
+
+func (g *grid) newBlankLine(width int) uv.Line {
+	line := make(uv.Line, width)
+	for x := range line {
+		line[x] = g.empty
+	}
+	return line
 }
 
 func newBlankLine(width int) uv.Line {
@@ -381,11 +384,15 @@ func (g *grid) SetCell(x, y int, c *uv.Cell) {
 		return
 	}
 	g.dropTail(y)
+	printedSpace := g.empty.Content == "" && c != nil && c.Content == " "
 	if g.rows[y] == nil {
-		if isBlankFill(c) || x < 0 || x >= g.width {
+		if isBlankFill(c) && !printedSpace || x < 0 || x >= g.width {
 			return
 		}
-		g.rows[y] = newBlankLine(g.width)
+		g.rows[y] = g.newBlankLine(g.width)
+	}
+	if c == nil {
+		c = &g.empty
 	}
 	g.rows[y].Set(x, c)
 	if g.prot != nil {
@@ -398,7 +405,7 @@ func (g *grid) SetCell(x, y int, c *uv.Cell) {
 	// A blank written over a wide character leaves its other half as a
 	// styled space, but that half was already inside the extent the wide
 	// character raised it to, so only a non-blank write can move it.
-	if !isBlankFill(c) && x >= 0 {
+	if (!isBlankFill(c) || printedSpace) && x >= 0 {
 		g.raiseExt(y, x+max(c.Width, 1))
 	}
 }
@@ -413,7 +420,7 @@ func (g *grid) Resize(width, height int) {
 				continue
 			}
 			if width > len(row) {
-				g.rows[y] = append(row, newBlankLine(width-len(row))...)
+				g.rows[y] = append(row, g.newBlankLine(width-len(row))...)
 			} else {
 				g.rows[y] = row[:width]
 			}
@@ -470,7 +477,7 @@ func (g *grid) Resize(width, height int) {
 func (g *grid) Clear() {
 	for y, row := range g.rows {
 		for x := range row[:g.ext[y]] {
-			row[x] = uv.EmptyCell
+			row[x] = g.empty
 		}
 		g.ext[y] = 0
 	}
@@ -544,7 +551,7 @@ func (g *grid) FillArea(c *uv.Cell, area uv.Rectangle) {
 		}
 		return
 	}
-	fill := uv.EmptyCell
+	fill := g.empty
 	if c != nil {
 		fill = *c
 	}
@@ -558,7 +565,7 @@ func (g *grid) FillArea(c *uv.Cell, area uv.Rectangle) {
 			continue
 		}
 		if g.rows[y] == nil {
-			g.rows[y] = newBlankLine(g.width)
+			g.rows[y] = g.newBlankLine(g.width)
 		}
 		row := g.rows[y]
 		row.Set(x0, c)
@@ -597,7 +604,7 @@ func (g *grid) blankRows(y, end int, c *uv.Cell) {
 		for i := y; i < end; i++ {
 			row := g.rows[i]
 			for x := range row[:g.ext[i]] {
-				row[x] = uv.EmptyCell
+				row[x] = g.empty
 			}
 			g.ext[i] = 0
 		}

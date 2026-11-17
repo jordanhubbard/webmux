@@ -104,6 +104,45 @@ func main() {
 		check(tc.name, s.Close())
 		fixtures = append(fixtures, fixture{tc.name, 80, 24, tc.before, string(before), tc.after, string(after)})
 	}
+	var noWrap []struct{ Name, Data string }
+	data, err := os.ReadFile("internal/thirdparty/vt/testdata/webmux-xterm-nowrap.json")
+	check("read no-wrap reference", err)
+	check("decode no-wrap reference", json.Unmarshal(data, &noWrap))
+	noWrap = append(noWrap, []struct{ Name, Data string }{
+		{"rep-space", "\x1b[?7l\x1b[2;6H \x1b[2;8HX日"},
+		{"rep-ascii", "\x1b[?7l\x1b[2;6HV\x1b[2;8HX日"},
+		{"rep-wide-placeholder", "\x1b[?7l\x1b[2;5H日\x1b[2;8HX日"},
+		{"rep-colored-null", "\x1b[?7l\x1b[41m\x1b[2;6H\x1b[X\x1b[0m\x1b[2;8HX日"},
+	}...)
+	for _, tc := range noWrap {
+		for _, split := range []bool{false, true} {
+			name := "nowrap-" + tc.Name
+			if split {
+				name += "-byte-split"
+			}
+			s, err := screenstate.New(8, 4)
+			check(name, err)
+			if split {
+				for _, b := range []byte(tc.Data) {
+					check(name, s.Feed([]byte{b}))
+				}
+			} else {
+				check(name, s.Feed([]byte(tc.Data)))
+			}
+			image, err := s.Capture()
+			check(name, err)
+			before, err := image.Bytes()
+			check(name, err)
+			future := "\x1b[2b\x1b[?7hZ"
+			check(name, s.Feed([]byte(future)))
+			image, err = s.Capture()
+			check(name, err)
+			after, err := image.Bytes()
+			check(name, err)
+			check(name, s.Close())
+			fixtures = append(fixtures, fixture{name, 8, 4, tc.Data, string(before), future, string(after)})
+		}
+	}
 	check("encode", json.NewEncoder(os.Stdout).Encode(fixtures))
 }
 func check(name string, err error) {

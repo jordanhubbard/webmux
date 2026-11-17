@@ -152,6 +152,17 @@ func (e *Emulator) repeatPreviousCharacter(n int) {
 	// and stamping the cluster n times instead leaves adjacent cells that
 	// any re-parse of the row would join differently.
 	cluster := e.lastCluster
+	if e.xtermNoWrap && e.lastClusterWidth > 0 {
+		x, y := e.scr.CursorPosition()
+		if e.atPhantom && x == e.Width()-1 {
+			x++
+		}
+		cell := e.scr.CellAt(x-e.lastClusterWidth, y)
+		if cell == nil || cell.Content == "" {
+			return
+		}
+		cluster = cell.Content
+	}
 	for range n {
 		for _, r := range cluster {
 			e.handlePrint(r)

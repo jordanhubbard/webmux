@@ -757,6 +757,9 @@ func (e *Emulator) handleGraphemeWithin(content string, width, left, right int) 
 	// wrap the cluster whole.
 	if cell.Width > 1 && x+cell.Width > right {
 		if !awm {
+			if e.xtermNoWrap {
+				e.lastCluster, e.lastClusterWidth = content, width
+			}
 			// Nothing to wrap to. A cluster wide from its first rune (a CJK
 			// character) is discarded whole and the cell keeps what it
 			// already held, which is what ghostty does. A cluster a selector

@@ -677,6 +677,7 @@ func (s *screen) reflow(width, height int, bottom bool, phantom *bool, prompt in
 	// The grid's tables are reused: the rows taken hold their own copy of
 	// every row header the reflow reads.
 	g := grid{
+		empty: s.buf.empty,
 		rows:  grow(s.buf.rows, height),
 		ext:   grow(s.buf.ext, height),
 		wrap:  grow(s.buf.wrap, height),

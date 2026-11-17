@@ -49,6 +49,7 @@ func New(cols, rows int) (*Screen, error) {
 		return nil, errors.New("invalid terminal snapshot dimensions")
 	}
 	e := vt.NewEmulator(cols, rows)
+	e.EnableXtermNoWrap()
 	profile := installXtermCursorProfile(e)
 	installXtermHyperlinks(e)
 	e.SetScrollbackMaxLines(min(512, max(1, historyCells/cols)))
@@ -128,10 +129,7 @@ func (i Image) Bytes() ([]byte, error) {
 	if i.state == nil {
 		return nil, errors.New("terminal snapshot is missing")
 	}
-	// With autowrap disabled, this emulator clamps both a cursor addressed to
-	// the final cell and one advanced past it to the same coordinate. Xterm
-	// distinguishes them. Never guess which cell to reprint at this boundary.
-	if i.unsupported || !i.state.Modes[7] && i.state.CursorX == i.state.Width-1 {
+	if i.unsupported {
 		return nil, ErrUnsupported
 	}
 	data, err := replayScreen(i.state, i.main, i.repeat)

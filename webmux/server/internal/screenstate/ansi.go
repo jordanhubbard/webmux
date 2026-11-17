@@ -30,6 +30,7 @@ import (
 	"strconv"
 
 	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/charmbracelet/x/ansi"
 
 	"tuios.dev/vt"
 	"tuios.dev/vt/snapshot"
@@ -171,8 +172,9 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 	// leaves the cursor where it is with the wrap armed, which no cursor
 	// movement can do.
 	w.cup(cx, cy)
-	if st.PendingWrap {
-		w.reprint(st.Screen, activeProtection, st.CursorX, st.CursorY, cx, cy)
+	if st.PendingWrap || st.CursorX >= st.Width {
+		x := min(st.CursorX, st.Width-1)
+		w.reprint(st.Screen, activeProtection, x, st.CursorY, cx+x-st.CursorX, cy)
 		w.resetPen()
 	}
 
@@ -220,6 +222,12 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 		// Xterm clears REP after every control. Reprint the last cluster only
 		// after every mode/pen/cursor sequence, leaving no following control
 		// which could clear it again. This also re-arms a pending wrap.
+		_, printedWidth := ansi.FirstGraphemeCluster(st.LastPrinted, ansi.GraphemeWidth)
+		if !st.Modes[7] && st.CursorX == st.Width-1 && printedWidth > 1 {
+			w.cup(cx, cy)
+			b.WriteString(st.LastPrinted)
+			return b.Bytes(), nil
+		}
 		x, y := st.CursorX-1, st.CursorY
 		if st.PendingWrap {
 			x = st.CursorX
@@ -234,6 +242,14 @@ func replay(st *snapshot.State, under *underlay, repeat bool) ([]byte, error) {
 		if st.Modes[6] {
 			addressX -= left
 			addressY -= top
+		}
+		if x == st.Width-1 && x > 0 && st.Screen[y][x-1].Width == 2 && st.Screen[y][x].Width == 1 && !st.Modes[7] {
+			w.mode(7, true)
+			w.reprint(st.Screen, activeProtection, x-1, y, addressX-1, addressY)
+			w.mode(7, false)
+			w.protect(protectedAt(activeProtection, y, x))
+			w.cell(st.Screen[y][x])
+			return b.Bytes(), nil
 		}
 		w.cup(addressX, addressY)
 		if st.ANSIModes[4] {
@@ -310,8 +326,22 @@ func (w *vtWriter) row(row []snapshot.CellState, full, lead bool, protection []b
 			// in its place rather than wrap it onto the next row.
 			c = snapshot.CellState{Content: " ", Width: 1, StyleState: c.StyleState}
 		}
+		overlap := x == w.width-1 && x > 0 && row[x-1].Width == 2 && c.Width == 1
+		if overlap {
+			w.mode(7, false)
+		}
 		w.protect(x < len(protection) && protection[x])
+		if c.Content == "" && c.Width == 1 && x < w.width-1 {
+			// Keep a null cell distinct from an explicitly printed space:
+			// xterm's REP reads the source cell's literal string.
+			w.pen(c.StyleState)
+			w.b.WriteString("\x1b[X\x1b[C")
+			continue
+		}
 		w.cell(c)
+		if overlap {
+			w.mode(7, true)
+		}
 	}
 }
 
@@ -619,8 +649,9 @@ func (w *vtWriter) savedCursor(c *snapshot.SavedCursorState, grid [][]snapshot.C
 		y -= top
 	}
 	w.cup(max(x, 0), max(y, 0))
-	if c.PendingWrap {
-		w.reprint(grid, protection, c.X, c.Y, x, y)
+	if c.PendingWrap || c.X >= w.width {
+		column := min(c.X, w.width-1)
+		w.reprint(grid, protection, column, c.Y, x+column-c.X, y)
 	}
 
 	if c.Pen != nil {
@@ -639,6 +670,14 @@ func (w *vtWriter) reprint(grid [][]snapshot.CellState, protection [][]bool, x, 
 	col := x
 	if grid[y][col].Width == 0 && col > 0 && grid[y][col-1].Width == 2 {
 		col--
+	}
+	if col == w.width-1 && col > 0 && grid[y][col-1].Width == 2 && grid[y][col].Width == 1 {
+		w.reprint(grid, protection, col-1, y, addressX-1, addressY)
+		w.mode(7, false)
+		w.protect(protectedAt(protection, y, col))
+		w.cell(grid[y][col])
+		w.mode(7, true)
+		return
 	}
 	w.cup(max(addressX+col-x, 0), max(addressY, 0))
 	charsets(w.b, []int{'B', 'B', 'B', 'B', 0, 0})

@@ -101,3 +101,27 @@ func TestWebMuxNoWrapExtensionIsOptIn(t *testing.T) {
 		t.Fatal("changed upstream default cursor behavior")
 	}
 }
+
+func TestWebMuxXtermNoWrapRepeatReadsLiteralSourceCell(t *testing.T) {
+	for _, tc := range []struct {
+		name, prefix string
+		wantX        int
+		last         string
+	}{
+		{"null", "", 7, "X"},
+		{"space", "\x1b[2;6H ", 8, " "},
+		{"text", "\x1b[2;6HV", 8, "V"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := NewEmulator(8, 4)
+			e.EnableXtermNoWrap()
+			_, _ = e.Write([]byte("\x1b[?7l" + tc.prefix + "\x1b[2;8HX日\x1b[2b"))
+			if got := e.CursorPosition().X; got != tc.wantX {
+				t.Fatalf("cursor %d, want %d", got, tc.wantX)
+			}
+			if got := e.CellAt(7, 1).Content; got != tc.last {
+				t.Fatalf("last cell %q, want %q", got, tc.last)
+			}
+		})
+	}
+}

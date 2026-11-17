@@ -13,11 +13,12 @@ logical cursor at column `Width()` after printing to the final column with
 DECAWM disabled. Cursor motion and character edits restrict that coordinate before operating;
 tabs, scrolling and soft reset preserve it. DECSTR re-enables wrapping. This
 matches the captured xterm.js behavior. Default construction
-keeps upstream behavior. **WebMux Screen does not enable this extension yet.**
+keeps upstream behavior. **This draft candidate enables the extension in Screen. It is not merged or qualified for release.**
 A no-wrap print over the trailing cell of a wide character intentionally
-retains xterm.js's overlapping lead/last-cell representation. Snapshot encoding
-and frontend restoration of this state still need qualification.
-The existing production refusal for ambiguous no-wrap snapshots remains.
+retains xterm.js's overlapping lead/last-cell representation. The independent Screen replay controls cover initial restore, subsequent output,
+and second attach for this state.
+The candidate replaces the ambiguous no-wrap refusal with logical cursor replay;
+separate unsupported underline state still refuses replay.
 
 `testdata/webmux-xterm-nowrap.json` contains 138 independently captured real
 xterm results. The Go tests compare cursor, all rows, individual cell contents and cell widths with both
@@ -25,8 +26,8 @@ whole writes and byte-split UTF-8/control sequences. These cases cover edge
 addressing versus printing, repeated overwrite, wrap enable, movement, CR/LF,
 tabs, SGR, erases, character and line edits, scrolling, soft reset, wide and
 combining text, saved cursor and alternate screen. Each of the 46 base cases
-also has subsequent output with wrapping disabled and re-enabled. They do
-not establish snapshot/continuation, resize or real ConPTY acceptance.
+also has subsequent output with wrapping disabled and re-enabled. A separate browser suite tests actual Screen snapshots and continuation.
+Resize, margins and real ConPTY acceptance remain to complete.
 
 After installing the repository's locked npm dependencies, reproduce the
 reference using an installed browser (or omit `--chromium` for Playwright's):
@@ -49,3 +50,8 @@ Before enabling the extension, complete Screen snapshot restoration and
 continuation comparisons (including second attach and resize), broaden cursor
 control coverage, and run real Windows ConPTY cases. Issue #355 also retains
 its separate hidden-underline and lifecycle acceptance requirements.
+
+The profile also retains null cells separately from printed spaces: xterm's
+REP reads literal source-cell text at the logical cursor minus the previous
+character width. The snapshot painter uses erase-and-move for null cells.
+The default upstream profile retains its original blank representation.

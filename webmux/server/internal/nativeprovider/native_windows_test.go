@@ -685,6 +685,15 @@ func TestNativeProviderSavedCursorCaptures(t *testing.T) {
 		{"origin-mode-batch", "\x1b[3;20r\x1b[?6h\x1b[4;8H\x1b[?1048h", "\x1b[?6;1048lX"},
 		{"pending-wrap", "\x1b[4;100HX\x1b7\x1b[10;20H", "\x1b8Y"},
 		{"pending-wrap-alt", "\x1b[4;100HX\x1b[?1049hAPP", "\x1b[?1049lY"},
+		{"nowrap-address", "\x1b[?7l\x1b[4;100H", "Y\x1b[?7hZ"},
+		{"nowrap-advanced", "\x1b[?7l\x1b[4;100HX", "Y\x1b[?7hZ"},
+		{"nowrap-overwrite", "\x1b[?7l\x1b[4;100HXY", "Z\x1b[?7hQ"},
+		{"nowrap-toggle", "\x1b[?7l\x1b[4;100HX\x1b[?7h", "Y"},
+		{"nowrap-wide", "\x1b[?7l\x1b[4;99H日", "Z\x1b[?7hQ"},
+		{"nowrap-wide-overlap", "\x1b[?7l\x1b[4;99H日Z", "Q\x1b[?7hR"},
+		{"nowrap-wide-discard", "\x1b[?7l\x1b[4;100HX日", "Y\x1b[?7hZ"},
+		{"nowrap-backspace", "\x1b[?7l\x1b[4;100HX\b", "Y\x1b[?7hZ"},
+		{"nowrap-soft-reset", "\x1b[?7l\x1b[4;100HX\x1b[!p", "Y"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c, counter := config(t)
