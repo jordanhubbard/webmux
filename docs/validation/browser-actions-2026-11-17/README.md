@@ -8,6 +8,21 @@ reused reference and controller isolation. The visible browser-workspace flow
 also passed Focus/Activate, keyboard handoff, editable-value omission and its
 existing dialogs/files/clipboard/navigation/tabs checks.
 
+An additional semantic Confirm/Prompt control reproduced a 15,009-ms viewport
+request while a JavaScript dialog was open, blocking the same serial worker's
+dialog response. The worker now keeps only the latest requested viewport while
+modal, reports the actual old dimensions and applies the pending size after
+the dialog closes. The UI cancels its pending resize observer work while modal.
+Queued page input is refused before CDP dispatch. A forced lease rotation with
+a native pointer held also returns promptly and releases that pointer exactly
+once after confirmation. The native API control requires the modal resize,
+rejected input and lease rotation each to return within one second, observes
+the real page's resize/mouse-release events, and keeps the original assertions.
+
+The failed trace and later successful controls are retained separately. The
+workspace trace contains at most 256 selected metadata events and reports any
+drops; it includes no controller tokens, clipboard data or form input bodies.
+
 The native tests are `tests/e2e/browser-accessible-actions.spec.ts` and
 `tests/e2e/browser-workspace.spec.ts`. [native-results.json](native-results.json)
 records the actual executable, tested source-content hashes, browser version

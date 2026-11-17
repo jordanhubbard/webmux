@@ -25,6 +25,8 @@ const MaxFileBytes = 10 << 20
 const maxRetainedBytes = 50 << 20
 const MaxMessageBytes = 24 << 20
 
+var errDialogOpen = errors.New("Close the current browser dialog before interacting with the page")
+
 type Upload struct {
 	Name string `json:"name"`
 	Data []byte `json:"data"`
@@ -69,6 +71,9 @@ type companion struct {
 	uploaded        int
 	operation       context.CancelFunc
 	operationTarget target.ID
+
+	pendingWidth, pendingHeight int64
+	pendingInputRelease         bool
 }
 
 func newCompanion(ctx context.Context, profile string) (*companion, error) {
@@ -221,12 +226,21 @@ func (b *companion) step(ctx context.Context, req Request, frame *Frame) error {
 		b.elements = nil
 	}
 	id := chromedp.FromContext(b.current).Target.TargetID
+	if b.hasDialog(id) && req.Action != "frame" && req.Action != "dialog" && req.Action != "resize" && req.Action != "release_input" {
+		b.elements = nil
+		return errDialogOpen
+	}
 	switch req.Action {
 	case "release_input":
+		b.pendingInputRelease = false
 		for targetID, held := range b.pointers {
 			targetCtx, ok := b.tabs[targetID]
 			if !ok {
 				delete(b.pointers, targetID)
+				continue
+			}
+			if b.hasDialog(targetID) {
+				b.pendingInputRelease = true
 				continue
 			}
 			for i, button := range []string{"left", "right", "middle"} {
@@ -246,11 +260,7 @@ func (b *companion) step(ctx context.Context, req Request, frame *Frame) error {
 		}
 		return nil
 	case "resize":
-		if req.Width < 320 || req.Width > 2560 || req.Height < 240 || req.Height > 1600 {
-			return errors.New("Browser viewport must be 320–2560 by 240–1600 pixels")
-		}
-		b.width, b.height = req.Width, req.Height
-		return chromedp.Do(ctx, chromedp.EmulateViewport(b.width, b.height))
+		return b.resizeViewport(ctx, id, req.Width, req.Height)
 	case "dialog":
 		b.mu.Lock()
 		dialog := b.dialogs[id]
@@ -268,6 +278,11 @@ func (b *companion) step(ctx context.Context, req Request, frame *Frame) error {
 				b.dialogs[id] = dialog
 			}
 			b.mu.Unlock()
+		} else {
+			err = b.applyViewport(ctx, id)
+			if err == nil && b.pendingInputRelease {
+				err = b.step(ctx, Request{Action: "release_input"}, &Frame{})
+			}
 		}
 		return err
 	case "select_option", "cancel_select":
@@ -416,6 +431,9 @@ func (b *companion) step(ctx context.Context, req Request, frame *Frame) error {
 func (b *companion) tabAction(req Request) error {
 	if req.Action == "tab" || req.Action == "new_tab" || req.Action == "close_tab" {
 		b.elements = nil
+		if b.hasDialog(chromedp.FromContext(b.current).Target.TargetID) {
+			return errDialogOpen
+		}
 	}
 	switch req.Action {
 	case "tab":

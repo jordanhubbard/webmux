@@ -6,22 +6,29 @@ test('accessible controls retain live identity, refuse stale references and disp
  test.setTimeout(90_000);
  let presses = 0, dynamicPresses = 0, linkDocuments = 0, label = 'Original action', observed = '';
  let automaticNavigation = false;
+ let viewport: { width: number; height: number } | undefined, confirmed = false, releases = 0;
  const entered: string[] = [];
  const site = http.createServer((req, res) => {
   if (req.url === '/press') { presses++; res.end(); return; }
   if (req.url === '/dynamic-press') { dynamicPresses++; res.end(); return; }
   if (req.url === '/label') { res.end(label); return; }
   if (req.url === '/route') { res.end(automaticNavigation ? 'leave' : 'stay'); return; }
+  if (req.url === '/confirmed') { confirmed = true; res.end(); return; }
+  if (req.url === '/released') { releases++; res.end(); return; }
+  if (req.url?.startsWith('/viewport?')) { const query = new URL(req.url, 'http://fixture').searchParams; viewport = { width: Number(query.get('width')), height: Number(query.get('height')) }; res.end(); return; }
   if (req.url?.startsWith('/observed?')) { observed = new URL(req.url, 'http://fixture').searchParams.get('name')!; res.end(); return; }
   if (req.url?.startsWith('/typed?')) { entered.push(new URL(req.url, 'http://fixture').searchParams.get('value')!); res.end(); return; }
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   if (req.url === '/second') { linkDocuments++; res.end('<title>Accessible destination</title><h1>Destination</h1>'); return; }
   res.end(`<!doctype html><title>Accessible control fixture</title>
-   <button id="press">Submit action</button><button id="dynamic">Original action</button>
+   <button id="press">Submit action</button><button id="dynamic">Original action</button><button id="confirm">Confirm action</button>
    <input id="entry" aria-label="Private entry" value="private-native-value"><button disabled>Unavailable action</button>
    <a href="/second">Open destination</a><div id="shadow"></div>
    <script>
    press.onclick=()=>fetch('/press');dynamic.onclick=()=>fetch('/dynamic-press');
+   document.getElementById('confirm').onclick=()=>{if(window.confirm('Confirm accessible action?'))fetch('/confirmed')};
+   addEventListener('resize',()=>fetch('/viewport?width='+innerWidth+'&height='+innerHeight));
+   addEventListener('mouseup',()=>fetch('/released'));
    entry.oninput=()=>fetch('/typed?value='+encodeURIComponent(entry.value));
    const shadowRoot=shadow.attachShadow({mode:'closed'});shadowRoot.innerHTML='<input aria-label="Shadow entry">';
    shadowRoot.querySelector('input').oninput=event=>fetch('/typed?value='+encodeURIComponent(event.target.value));
@@ -67,6 +74,34 @@ test('accessible controls retain live identity, refuse stale references and disp
   expect((await call(action)).error).toBeUndefined();
   await expect.poll(() => presses).toBe(1);
   expect((await call(action)).error).toContain('changed');
+  expect(presses).toBe(1);
+
+  await call({ action: 'mouse_down', x: 800, y: 500, button: 'left', buttons: 1, clickCount: 1 });
+  snapshot = await read();
+  const confirm = snapshot.nodes.find(n => n.name === 'Confirm action')!;
+  const opened = await call({ action: 'activate_element', target: snapshot.target, element: confirm.element });
+  expect(opened.dialog?.type).toBe('confirm');
+  const began = performance.now();
+  const deferred = await call({ action: 'resize', width: 900, height: 650 });
+  expect(performance.now() - began).toBeLessThan(1000);
+  expect(deferred.error).toBeUndefined();
+  expect([deferred.width, deferred.height]).toEqual([opened.width, opened.height]);
+  const inputBegan = performance.now();
+  const blocked = await call({ action: 'text', text: 'must-not-reach-page-under-modal' });
+  expect(performance.now() - inputBegan).toBeLessThan(1000);
+  expect(blocked.error).toContain('Close the current browser dialog');
+  expect(blocked.dialog?.type).toBe('confirm');
+  const previousToken = token, claimBegan = performance.now();
+  const claimed = await call({ action: 'claim', force: true });
+  expect(performance.now() - claimBegan).toBeLessThan(1000);
+  expect(token).not.toBe(previousToken);
+  expect(claimed.dialog?.type).toBe('confirm');
+  const handled = await call({ action: 'dialog', target: snapshot.target, accept: true });
+  expect(handled.error).toBeUndefined();
+  expect([handled.width, handled.height]).toEqual([900, 650]);
+  await expect.poll(() => viewport).toEqual({ width: 900, height: 650 });
+  await expect.poll(() => confirmed).toBe(true);
+  await expect.poll(() => releases).toBe(1);
   expect(presses).toBe(1);
 
   snapshot = await read();

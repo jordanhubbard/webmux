@@ -145,6 +145,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   }, [session.id]);
 
   const controlled = frame?.control?.owned === true;
+  const dialogOpen = !!frame?.dialog;
 
   useEffect(() => {
     if (!navigation) return;
@@ -161,7 +162,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   }, [act, ready]);
 
   useEffect(() => {
-    if (!ready || !controlled || !viewportBox.current || typeof ResizeObserver === 'undefined') return;
+    if (!ready || !controlled || dialogOpen || !viewportBox.current || typeof ResizeObserver === 'undefined') return;
     let timer: ReturnType<typeof setTimeout>;
     let size = '';
     const observer = new ResizeObserver(entries => {
@@ -176,7 +177,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
     });
     observer.observe(viewportBox.current);
     return () => { clearTimeout(timer); observer.disconnect(); };
-  }, [act, ready, controlled]);
+  }, [act, ready, controlled, dialogOpen]);
 
   useEffect(() => { if (showFind) findInput.current?.focus(); }, [showFind]);
   const visiblePageText = pageText?.session === session.id && pageText?.target === frame?.target && pageText?.url === frame?.url ? pageText : undefined;

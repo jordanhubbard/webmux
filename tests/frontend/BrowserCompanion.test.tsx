@@ -204,6 +204,31 @@ it('cancels a pending viewport resize when the drawer returns to its last reques
  } finally { view.unmount(); vi.unstubAllGlobals(); vi.useRealTimers(); }
 });
 
+it('cancels queued resizes while a browser dialog is open and resumes observation after closing it', async () => {
+ vi.useFakeTimers();
+ let resize!: (width: number, height: number) => void;
+ vi.stubGlobal('ResizeObserver', class {
+  constructor(callback: ResizeObserverCallback) {
+   resize = (width, height) => callback([{ contentRect: { width, height } } as ResizeObserverEntry], {} as ResizeObserver);
+  }
+  observe() {} disconnect() {}
+ });
+ const frame = { protocol: 3, control: { owned: true, available: false }, image: 'fixture', url: 'about:blank', tabs: [], target: 'one' };
+ fixture.action.mockReset().mockImplementation(async (_id, request) => request.action === 'read_page' ? { ...frame, dialog: { type: 'confirm', message: 'Continue?', prompt: '' } } : frame);
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  await act(async () => { resize(800, 500); vi.advanceTimersByTime(60); });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Read page text' })); });
+  await act(async () => { vi.advanceTimersByTime(120); });
+  const requests = () => fixture.action.mock.calls.map(call => call[1]).filter(value => value.action === 'resize');
+  expect(requests()).toEqual([]);
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Cancel' })); });
+  await act(async () => { resize(900, 550); vi.advanceTimersByTime(120); });
+  expect(requests()).toEqual([{ action: 'resize', width: 900, height: 550 }]);
+ } finally { view.unmount(); vi.unstubAllGlobals(); vi.useRealTimers(); }
+});
+
 it('keeps an observer read-only until an explicit control claim', async () => {
  const frame = { protocol: 3, control: { owned: false, available: true }, url: 'https://example.com', tabs: [], target: 'one' };
  fixture.action.mockReset().mockResolvedValue(frame);

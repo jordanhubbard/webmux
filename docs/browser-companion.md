@@ -278,6 +278,12 @@ old reference. Other page input also clears the snapshot. Frame polling and
 viewport resizing preserve semantic references, including when opening this
 panel changes the viewport size.
 
+If an action opens a JavaScript dialog, answer it before further page input.
+Viewport changes wait until the dialog closes; the frame keeps reporting the
+actual size during that wait. A control takeover also defers held-pointer
+release until the dialog can accept it. Queued page input is refused rather
+than sent into the page after dismissing the dialog.
+
 Only the current controller can read or act, with the lease checked again at
 dispatch. The worker binds each opaque reference to its target, document and
 URL; it verifies the current accessible name, role and availability and refuses
