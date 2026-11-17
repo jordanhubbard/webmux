@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 /** Turn Playwright's own discovery into complete, isolated file invocations. */
-export function isolatedPlaywrightRuns(report: unknown): string[][] {
+export function isolatedPlaywrightRuns(report: unknown, outputRoot = 'test-results'): string[][] {
   if (!report || typeof report !== 'object') throw new Error('Invalid Playwright discovery');
   const { config, errors, suites } = report as {
     config?: { rootDir?: unknown }; errors?: unknown; suites?: unknown;
@@ -17,6 +17,15 @@ export function isolatedPlaywrightRuns(report: unknown): string[][] {
   }
   return [...files].map((file, index) => [
     `^${file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
-    `--output=test-results/spec-${index + 1}`,
+    `--output=${path.join(outputRoot, `spec-${index + 1}`)}`,
   ]);
+}
+
+/** Playwright clears its output directory at startup. Never implicitly reuse
+ * the parent that contains another invocation's diagnostics. */
+export function withPlaywrightOutput(args: string[], outputRoot: string): string[] {
+  const separator = args.indexOf('--');
+  const options = separator < 0 ? args : args.slice(0, separator);
+  if (options.some(arg => arg === '--output' || arg.startsWith('--output='))) return args;
+  return [`--output=${outputRoot}`, ...args];
 }
