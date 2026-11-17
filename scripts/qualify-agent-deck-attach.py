@@ -50,9 +50,11 @@ def observe(argv, env, directory, inputs, *, timeout=7, late=None, attached=None
             # Observe this exact PTY client's native handoff before the late
             # control; early input and the fixed version's latency oracle stay
             # unchanged. No terminal query is ever answered.
-            if late and len(sent) == len(inputs) and elapsed > inputs[-1][0] + .1 and attached(pid):
-                os.write(master, (late + '\r').encode())
-                sent.append({'token': late, 'seconds': elapsed, 'native_client_observed': True})
+            if late and len(sent) == len(inputs) and elapsed > inputs[-1][0] + .1:
+                client = attached(pid)
+                if client:
+                    os.write(master, (late + '\r').encode())
+                    sent.append({'token': late, 'seconds': elapsed, 'native_client_observed': True, 'native_client_pid': client})
             if late and len(sent) > len(inputs) and delivered(late):
                 break
             readable, _, _ = select.select([master], [], [], .02)
@@ -81,12 +83,12 @@ def observe(argv, env, directory, inputs, *, timeout=7, late=None, attached=None
                 os.killpg(pid, signal.SIGKILL)
                 _, status = os.waitpid(pid, 0)
         os.close(master)
-    return {'duration': time.monotonic() - start, 'sent': sent,
+    return {'duration': time.monotonic() - start, 'sent': sent, 'pty_root_pid': pid,
             'status': status, 'color_query': b'\x1b]11;?' in output,
             'cursor_query': b'\x1b[6n' in output}, bytes(output), start
 
 
-def qualify(binary, version, directory):
+def qualify(binary, version, directory, webmux=None):
     directory.mkdir(mode=0o700)
     env = {k: v for k, v in os.environ.items()
            if not k.startswith(('AGENTDECK_', 'AGENT_DECK_')) and k not in ['TMUX', 'TMUX_PANE', 'CLAUDE_CONFIG_DIR', 'ANTHROPIC_API_KEY']}
@@ -128,6 +130,13 @@ def qualify(binary, version, directory):
             time.sleep(.02)
         assert delivered.exists(), 'real payload did not start'
         ready = json.loads(delivered.read_text().splitlines()[0])
+        if version == '1.16.34' and webmux:
+            blocked, raw, _ = observe([str(webmux), '--agent-deck-attach-worker', str(binary), 'session', 'attach', ident], env, directory, [])
+            (directory / 'old-version-refusal.pty').write_bytes(raw)
+            assert os.waitstatus_to_exitcode(blocked['status']) != 0 and blocked['duration'] < 1
+            assert b'requires Agent Deck 1.16.39' in raw
+            assert not blocked['color_query'] and not blocked['cursor_query']
+            assert len(delivered.read_text().splitlines()) == 1, 'refusal wrote input to the provider'
         trials = []
         for index, early_at in enumerate([.3, 1., 3.]):
             prior = len(delivered.read_text().splitlines())
@@ -135,15 +144,31 @@ def qualify(binary, version, directory):
             early, late = challenge + '-early', challenge + '-late'
             def attached(pid):
                 clients = subprocess.run(['tmux', '-L', socket, 'list-clients', '-F', '#{client_pid}'], env=env, capture_output=True, text=True, timeout=2)
-                return str(pid) in clients.stdout.splitlines()
+                for value in clients.stdout.splitlines():
+                    candidate = int(value)
+                    current = candidate
+                    for _ in range(16):
+                        if current == pid:
+                            return candidate
+                        try:
+                            # stat's command name may contain spaces, so split
+                            # only after its final closing parenthesis.
+                            current = int(Path(f'/proc/{current}/stat').read_text().rsplit(')', 1)[1].split()[1])
+                        except (FileNotFoundError, ProcessLookupError):
+                            break
+                        if current <= 1: break
+                return None
             def seen(token):
                 return any(json.loads(line).get('line') == token for line in delivered.read_text().splitlines()[prior:])
-            attach, raw, started = observe([str(binary), 'session', 'attach', ident], env, directory,
+            argv = [str(binary), 'session', 'attach', ident]
+            if version == '1.16.39' and webmux: argv = [str(webmux), '--agent-deck-attach-worker', *argv]
+            attach, raw, started = observe(argv, env, directory,
                                            [(early_at, early)], timeout=early_at + 7,
                                            late=late, attached=attached, delivered=seen)
             (directory / f'attach-{index}.pty').write_bytes(raw)
             rows = [json.loads(line) for line in delivered.read_text().splitlines()[prior:]]
             received = [row['line'] for row in rows if 'line' in row]
+            (directory / f'observation-{index}.json').write_text(json.dumps({'attach': attach, 'received': rows}, indent=2)+'\n')
             assert len(attach['sent']) == 2 and attach['sent'][1]['native_client_observed']
             assert received.count(late) == 1, 'late control did not reach the same live native payload'
             assert all(row['pid'] == ready['pid'] for row in rows), 'payload identity changed'
@@ -157,7 +182,7 @@ def qualify(binary, version, directory):
             trials.append({'early_at': early_at, 'attach': attach, 'received': rows})
         assert digest(binary) == before
         result = {'version': version, 'binary_sha256': before, 'startup': startup, 'trials': trials,
-                  'same_payload_pid': ready['pid'], 'passed': True}
+                  'same_payload_pid': ready['pid'], 'webmux_sha256': digest(webmux) if webmux else None, 'passed': True}
         return result
     finally:
         stopping = subprocess.run([str(binary), 'session', 'stop', ident, '--json'], env=env, capture_output=True, timeout=20)
@@ -187,6 +212,7 @@ def main():
     parser.add_argument('--baseline', required=True, type=Path)
     parser.add_argument('--candidate', required=True, type=Path)
     parser.add_argument('--evidence', required=True, type=Path)
+    parser.add_argument('--webmux', type=Path, help='exercise the candidate through the actual attach worker and require old-version refusal')
     args = parser.parse_args()
     if sys.platform != 'linux':
         parser.error('requires a disposable Linux qualification worker')
@@ -194,7 +220,7 @@ def main():
     root.mkdir(mode=0o700)
     results = []
     for binary, version in [(args.baseline, '1.16.34'), (args.candidate, '1.16.39')]:
-        result = qualify(binary.resolve(strict=True), version, root / version)
+        result = qualify(binary.resolve(strict=True), version, root / version, args.webmux.resolve(strict=True) if args.webmux else None)
         results.append(result)
         print(json.dumps({'version': version, 'passed': result['passed'], 'startup_seconds': result['startup']['duration']}), flush=True)
     (root / 'receipt.json').write_text(json.dumps({'results': results, 'qualifier_sha256': digest(Path(__file__)), 'scope': 'Real native PTY startup and input delivery, not conversation or reboot acceptance.'}, indent=2) + '\n')

@@ -25,7 +25,7 @@ import urllib.request
 import uuid
 
 
-def prepare(manifest, deck_version):
+def prepare(manifest, deck_version, bootstrap_binary=None, bootstrap_version=None):
     entries = json.loads(manifest.read_text())
     if isinstance(entries, dict):
         entries = entries['results']
@@ -38,6 +38,10 @@ def prepare(manifest, deck_version):
     assert deck_binary and claude_binary
     version = subprocess.run([deck_binary, 'version'], capture_output=True, text=True, timeout=15)
     assert version.stdout.split()[:3] == ['Agent', 'Deck', 'v' + deck_version], 'This qualification requires the selected exact Agent Deck version'
+    bootstrap_binary = str(bootstrap_binary.resolve(strict=True)) if bootstrap_binary else deck_binary
+    bootstrap_version = bootstrap_version or deck_version
+    observed = subprocess.check_output([bootstrap_binary, 'version'], text=True, timeout=15)
+    assert observed.split()[:3] == ['Agent', 'Deck', 'v' + bootstrap_version]
     native_version = subprocess.check_output([claude_binary, '--version'], text=True, timeout=15).strip()
     p = pathlib.Path.home() / '.local/share/webmux/recovery-qualification' / ('agent-deck-native-' + str(uuid.uuid4()))
     p.mkdir(mode=0o700, parents=True)
@@ -62,7 +66,7 @@ def prepare(manifest, deck_version):
     (config / 'config.toml').write_text('[claude]\ncommand = ' + json.dumps(str(wrapper)) + '\ndangerous_mode = false\nhooks_enabled = false\n[security]\nauto_trust_folders = false\n[launch]\ninject_identity = false\n[tmux]\nsocket_name = ' + json.dumps(socket_name) + '\n')
     settings = pathlib.Path.home() / '.claude/settings.json'
     settings_sha = hashlib.sha256(settings.read_bytes()).hexdigest() if settings.exists() else None
-    command = [deck_binary, 'add', entry['project'], '-c', 'claude', '--resume-session', entry['native_session_id'], '--no-identity', '--no-parent', '--tmux-socket', socket_name, '--extra-arg=--safe-mode', '--extra-arg=--tools', '--extra-arg=', '--extra-arg=--permission-mode', '--extra-arg=plan', '--title', 'WebMux recovery native fixture', '--json']
+    command = [bootstrap_binary, 'add', entry['project'], '-c', 'claude', '--resume-session', entry['native_session_id'], '--no-identity', '--no-parent', '--tmux-socket', socket_name, '--extra-arg=--safe-mode', '--extra-arg=--tools', '--extra-arg=', '--extra-arg=--permission-mode', '--extra-arg=plan', '--title', 'WebMux recovery native fixture', '--json']
     created = subprocess.run(command, env=env, capture_output=True, text=True, timeout=30)
     (p / 'add.stdout').write_text(created.stdout)
     (p / 'add.stderr').write_text(created.stderr)
@@ -70,9 +74,9 @@ def prepare(manifest, deck_version):
         raise RuntimeError('Cannot create private Agent Deck fixture: ' + created.stderr[:300])
     provider = json.loads(created.stdout)
     ident = provider['id']
-    changed = subprocess.run([deck_binary, 'session', 'set', ident, 'command', str(wrapper), '--json'], env=env, capture_output=True, text=True, timeout=20)
+    changed = subprocess.run([bootstrap_binary, 'session', 'set', ident, 'command', str(wrapper), '--json'], env=env, capture_output=True, text=True, timeout=20)
     assert changed.returncode == 0, changed.stderr
-    shown = subprocess.run([deck_binary, 'session', 'show', ident, '--json'], env=env, capture_output=True, text=True, timeout=20)
+    shown = subprocess.run([bootstrap_binary, 'session', 'show', ident, '--json'], env=env, capture_output=True, text=True, timeout=20)
     assert shown.returncode == 0, shown.stderr
     (p / 'before-start.json').write_text(shown.stdout)
     native_root = pathlib.Path(roots['CLAUDE_CONFIG_DIR']) if roots['CLAUDE_CONFIG_DIR'] else pathlib.Path.home() / '.claude'
@@ -81,7 +85,7 @@ def prepare(manifest, deck_version):
     target = fixture_home / '.claude/projects' / files[0].parent.name
     target.mkdir(mode=0o700, parents=True)
     (target / files[0].name).symlink_to(files[0])
-    data = {'fixture': str(p), 'environment_roots': {k: env[k] for k in ['HOME', 'SHELL', 'AGENTDECK_PROFILE', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_STATE_HOME', 'XDG_CACHE_HOME']}, 'entry': entry, 'socket': socket_name, 'settings_sha256_before': settings_sha, 'provider_session': provider, 'deck_binary': deck_binary, 'deck_version': deck_version, 'deck_binary_sha256': hashlib.sha256(pathlib.Path(deck_binary).read_bytes()).hexdigest(), 'native_version': native_version, 'native_state_file': str(files[0])}
+    data = {'fixture': str(p), 'environment_roots': {k: env[k] for k in ['HOME', 'SHELL', 'AGENTDECK_PROFILE', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_STATE_HOME', 'XDG_CACHE_HOME']}, 'entry': entry, 'socket': socket_name, 'settings_sha256_before': settings_sha, 'provider_session': provider, 'deck_binary': deck_binary, 'deck_version': deck_version, 'bootstrap_version': bootstrap_version, 'bootstrap_binary': bootstrap_binary, 'bootstrap_sha256': hashlib.sha256(pathlib.Path(bootstrap_binary).read_bytes()).hexdigest(), 'deck_binary_sha256': hashlib.sha256(pathlib.Path(deck_binary).read_bytes()).hexdigest(), 'native_version': native_version, 'native_state_file': str(files[0])}
     (p / 'fixture.json').write_text(json.dumps(data, indent=2) + '\n')
     (p / 'fixture.json').chmod(0o600)
     print(json.dumps({'fixture': str(p), 'provider': 'agent-deck', 'native_cli': native_version}), flush=True)
@@ -93,11 +97,13 @@ def main():
     parser.add_argument('--binary', type=pathlib.Path, required=True)
     parser.add_argument('--manifest', type=pathlib.Path, required=True)
     parser.add_argument('--agent-deck-version', choices=['1.16.34', '1.16.39'], default='1.16.39')
+    parser.add_argument('--bootstrap-agent-deck', type=pathlib.Path, help='create the private record with an older coordinator before exercising the selected version')
+    parser.add_argument('--bootstrap-agent-deck-version', choices=['1.16.34', '1.16.39'], default='1.16.34')
     args = parser.parse_args()
     qualifier_sha256 = hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest()
     assert args.binary.is_file()
     repo = pathlib.Path(__file__).resolve().parents[1]
-    p, d = prepare(args.manifest, args.agent_deck_version)
+    p, d = prepare(args.manifest, args.agent_deck_version, args.bootstrap_agent_deck, args.bootstrap_agent_deck_version if args.bootstrap_agent_deck else None)
     entry = d['entry']
     ident = d['provider_session']['id']
     pane = json.loads((p / 'before-start.json').read_text())['tmux_session']
@@ -184,6 +190,19 @@ def main():
     def native_ready():
         capture = subprocess.run(['tmux', '-L', d['socket'], 'capture-pane', '-pt', pane, '-S', '-200'], capture_output=True, text=True)
         text = capture.stdout
+        if 'Is this a project you created or one you trust?' in text or 'Do you trust the files in this folder?' in text:
+            if entry['project'] not in text or 'Yes, I trust this folder' not in text:
+                raise RuntimeError('Unrecognized synthetic-project trust dialog; no choice was submitted')
+            if any(line.lstrip().startswith('❯ No, exit') for line in text.splitlines()):
+                keys = ['Down', 'Enter']
+            elif any(line.lstrip().startswith('❯ Yes, I trust this folder') for line in text.splitlines()):
+                keys = ['Enter']
+            else:
+                raise RuntimeError('Cannot verify project trust selection; no choice was submitted')
+            subprocess.run(['tmux', '-L', d['socket'], 'send-keys', '-t', pane, *keys], check=True)
+            with (p / 'native-ui-decisions.jsonl').open('a') as f:
+                f.write(json.dumps({'decision': 'trust only the created synthetic project', 'project': entry['project']}) + '\n')
+            return None
         if 'Make auto mode your default permission mode?' in text:
             # Decline a global-default migration in this synthetic fixture.
             # The native child already has explicit plan mode and no tools.
@@ -289,9 +308,10 @@ def main():
         receipt('WebMux managed native recovery and durable duplicate receipt', native=after, conversation=answer('provider resumed native conversation'))
         settings = pathlib.Path.home() / '.claude/settings.json'
         assert (hashlib.sha256(settings.read_bytes()).hexdigest() if settings.exists() else None) == d['settings_sha256_before']
+        assert hashlib.sha256(pathlib.Path(d['bootstrap_binary']).read_bytes()).hexdigest() == d['bootstrap_sha256'], 'bootstrap coordinator changed during qualification'
         assert hashlib.sha256(pathlib.Path(d['deck_binary']).read_bytes()).hexdigest() == d['deck_binary_sha256'], 'coordinator changed during qualification'
         assert hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest() == qualifier_sha256, 'qualification source changed during the native run'
-        result = {'passed': True, 'qualifier_sha256': qualifier_sha256, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'provider': 'agent-deck', 'provider_version': d['deck_version'], 'provider_sha256': d['deck_binary_sha256'], 'native_cli': 'claude', 'native_cli_version': d['native_version'], 'native_session_id': entry['native_session_id'], 'provider_session_id': ident, 'webmux_session_id': sid, 'phases': phases, 'scope': 'Real controller restart, SIGKILL, repeated reconnect, native process loss fallback and explicit provider-owned native continuation. Includes WebMux managed-resume action and duplicate request after restart. Not host reboot.'}
+        result = {'passed': True, 'qualifier_sha256': qualifier_sha256, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'provider': 'agent-deck', 'provider_version': d['deck_version'], 'provider_sha256': d['deck_binary_sha256'], 'bootstrap_version': d['bootstrap_version'], 'bootstrap_sha256': d['bootstrap_sha256'], 'native_cli': 'claude', 'native_cli_version': d['native_version'], 'native_session_id': entry['native_session_id'], 'provider_session_id': ident, 'webmux_session_id': sid, 'phases': phases, 'scope': 'Real controller restart, SIGKILL, repeated reconnect, native process loss fallback and explicit provider-owned native continuation. Includes WebMux managed-resume action and duplicate request after restart. Not host reboot.'}
         (p / 'lifecycle-manifest.json').write_text(json.dumps(result, indent=2) + '\n')
         print(json.dumps({'passed': True, 'manifest': str(p / 'lifecycle-manifest.json')}), flush=True)
     except Exception as e:

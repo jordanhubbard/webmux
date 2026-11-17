@@ -40,7 +40,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--vm-root', type=Path, required=True)
     parser.add_argument('--binary', type=Path, required=True, help='WebMux build for this machine')
+    parser.add_argument('--agent-deck-version', choices=['1.16.34', '1.16.39'], default='1.16.39')
+    parser.add_argument('--guest-agent-deck', default=GUEST_DECK)
     args = parser.parse_args()
+    assert args.guest_agent_deck.startswith('/home/webmuxqa/qualification/') and '..' not in Path(args.guest_agent_deck).parts
     repo = Path(__file__).resolve().parents[1]
     root = args.vm_root.resolve()
     binary = args.binary.resolve(strict=True)
@@ -50,7 +53,7 @@ def main():
     process = subprocess.run(['ps', '-p', str(launch['pid']), '-o', 'command='], capture_output=True, text=True)
     assert 'qemu-system-aarch64' in process.stdout and str(root / 'disk.qcow2') in process.stdout, 'start the disposable guest first'
     deck_binary = shutil.which('agent-deck')
-    assert deck_binary and 'Agent Deck v1.16.34' in subprocess.run([deck_binary, 'version'], capture_output=True, text=True).stdout
+    assert deck_binary and subprocess.run([deck_binary, 'version'], capture_output=True, text=True, timeout=15).stdout.split()[:3] == ['Agent', 'Deck', 'v'+args.agent_deck_version]
 
     def qmp(command):
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
@@ -74,7 +77,6 @@ def main():
     assert qmp('query-status')['running']
     assert guest('hostname') == 'webmux-recovery-qa', 'Refusing a host that is not the disposable guest'
     assert guest('test -f /var/tmp/webmux-qualification-ready && echo ok') == 'ok'
-    assert guest(GUEST_DECK + ' version').startswith('Agent Deck v1.16.34')
 
     tag = uuid.uuid4().hex[:12]
     p = Path.home() / '.local/share/webmux/recovery-qualification' / ('remote-managed-' + tag)
@@ -109,7 +111,7 @@ def main():
 
     record_path = p / 'receipt.json'
     record = {'passed': False, 'scope': __doc__.strip().splitlines()[0], 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
-              'qualifier_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'agent_deck': '1.16.34', 'fixture': str(p), 'guest_fixture': g, 'phases': []}
+              'qualifier_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'agent_deck': args.agent_deck_version, 'fixture': str(p), 'guest_fixture': g, 'phases': []}
 
     def save():
         record_path.write_text(json.dumps(record, indent=2) + '\n')
@@ -133,6 +135,15 @@ def main():
     markers = {name: 'WM_REMOTE_MANAGED_' + name.upper() + '_' + uuid.uuid4().hex[:8] for name in ('remote', 'ssh', 'local')}
     guest('mkdir -p ' + g + '/remote ' + g + '/ssh && cat > ' + g + '/job.py <<"EOF"\n' + job + 'EOF')
     (p / 'local-project/job.py').write_text(job)
+    guest('mkdir -p ' + g + '/bin ' + g + '/home/.config/agent-deck')
+    guest_config = '[tmux]\nsocket_name = "wm-remote-guest-' + tag + '"\n[security]\nauto_trust_folders = false\n[launch]\ninject_identity = false\n'
+    guest('printf %s ' + shlex.quote(guest_config) + ' > ' + g + '/home/.config/agent-deck/config.toml')
+    guest_wrapper = '#!/bin/sh\nexport HOME=' + shlex.quote(g + '/home') + '\nexport XDG_CONFIG_HOME="$HOME/.config"\nexport XDG_DATA_HOME="$HOME/.local/share"\nexport XDG_STATE_HOME="$HOME/.local/state"\nexport XDG_CACHE_HOME="$HOME/.cache"\nexec ' + shlex.quote(args.guest_agent_deck) + ' "$@"\n'
+    guest('printf %s ' + shlex.quote(guest_wrapper) + ' > ' + g + '/bin/agent-deck && chmod 700 ' + g + '/bin/agent-deck')
+    record['guest_private_coordinator_sha256'] = guest('sha256sum ' + shlex.quote(args.guest_agent_deck)).split()[0]
+    record['local_coordinator_sha256'] = hashlib.sha256(Path(deck_binary).read_bytes()).hexdigest()
+    assert guest(shlex.quote(g + '/bin/agent-deck') + ' version').split()[:3] == ['Agent', 'Deck', 'v'+args.agent_deck_version]
+
 
     def executions():
         counts = {'local': len((p / 'local-executions').read_text().splitlines()) if (p / 'local-executions').exists() else 0}
@@ -219,7 +230,7 @@ def main():
     sids = {}
     try:
         # Lifecycle owners: the guest's own Agent Deck, local --ssh, local.
-        deck('remote', 'add', 'qa', alias, '--agent-deck-path', GUEST_DECK)
+        deck('remote', 'add', 'qa', alias, '--agent-deck-path', g + '/bin/agent-deck')
         remote = deck('remote', 'qa', 'add', g + '/remote', '--cmd', '/usr/bin/python3 ' + g + '/job.py ' + g + '/remote-executions ' + markers['remote'], '--no-parent', '--no-identity', '--title', 'wm-remote-' + tag, '--json')
         ssh_job = deck('add', str(p / 'local-project'), '--ssh', alias, '--remote-path', g + '/ssh', '--cmd', '/usr/bin/python3 ' + g + '/job.py ' + g + '/ssh-executions ' + markers['ssh'], '--no-parent', '--no-identity', '--title', 'wm-ssh-' + tag, '--json')
         local = deck('add', str(p / 'local-project'), '--cmd', '/usr/bin/python3 ' + str(p / 'local-project/job.py') + ' ' + str(p / 'local-executions') + ' ' + markers['local'], '--no-parent', '--no-identity', '--title', 'wm-local-' + tag, '--json')
@@ -313,6 +324,8 @@ def main():
         assert executions()['local'] == 1
         phase('guest powered off', startup_seconds=startup, remote=disposition('remote'), ssh=disposition('ssh'), local=disposition('local'), remote_reconnect=refused)
         assert hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == record['qualifier_sha256']
+        assert hashlib.sha256(Path(deck_binary).read_bytes()).hexdigest() == record['local_coordinator_sha256'], 'local coordinator changed during qualification'
+        assert hashlib.sha256(Path(__file__).read_bytes()).hexdigest() == record['qualifier_sha256'], 'qualifier changed during execution'
         record['passed'] = True
     except Exception as error:
         record['error'] = repr(error)
