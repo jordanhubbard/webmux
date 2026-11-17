@@ -84,13 +84,15 @@ func Validate(r *Report) error {
 	return nil
 }
 
-type boundedOutput struct{ bytes.Buffer }
+type boundedOutput struct{ buffer bytes.Buffer }
+
+func (b *boundedOutput) Bytes() []byte { return b.buffer.Bytes() }
 
 func (b *boundedOutput) Write(p []byte) (int, error) {
-	if b.Len()+len(p) > MaxBytes {
+	if b.buffer.Len()+len(p) > MaxBytes {
 		return 0, errors.New("Rig output exceeds bound")
 	}
-	return b.Buffer.Write(p)
+	return b.buffer.Write(p)
 }
 
 // Observe never runs start/up/attach or cleanup. The version-qualified ps path
