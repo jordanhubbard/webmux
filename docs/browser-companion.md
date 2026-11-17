@@ -304,3 +304,21 @@ Actual macOS/Chromium qualification covers the visible Focus/Activate flow,
 native typing (including a closed shadow root), single-use activation, link
 navigation, disabled controls, page-initiated navigation and renamed controls.
 See [qualification scope](validation/browser-actions-2026-11-17/README.md).
+
+## Opt-in navigation diagnostics
+
+For worker-side diagnosis, set `WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS=1` in the
+browser worker's environment. Local workers inherit the controller environment;
+set it on the terminal host for an SSH/Mosh worker. The default is off.
+
+Frames then include bounded `navigationDiagnostics`: the first 128 events and
+an explicit dropped count. The trace records navigation requests and CDP
+acknowledgments, document requests/responses/failures and frame commits. Opaque
+frame/loader/request IDs correlate events; errors use fixed classes. URL
+correlation is a boolean computed from an in-memory hash. The trace does not
+retain URLs, cookies, headers, profile keys or page bodies.
+
+This observes the existing asynchronous navigation behavior. It does not wait
+for a document to load, repeat a request, change ownership or increase a
+navigation/assertion deadline. Windows browser CI enables it and retains it
+inside the existing browser-profile action trace.

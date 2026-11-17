@@ -57,6 +57,7 @@ type SelectControl struct {
 }
 
 type companion struct {
+	navigation      *navigationTrace
 	elements        map[string]pageElement
 	pointers        map[target.ID]Request
 	root, current   context.Context
@@ -78,7 +79,7 @@ type companion struct {
 
 func newCompanion(ctx context.Context, profile string) (*companion, error) {
 	id := chromedp.FromContext(ctx).Target.TargetID
-	b := &companion{root: ctx, current: ctx, tabs: map[target.ID]context.Context{id: ctx}, cancels: map[target.ID]context.CancelFunc{}, profile: profile, width: Width, height: Height, dialogs: map[target.ID]*Dialog{}, choosers: map[target.ID]*FileChooser{}, downloads: map[string]*Download{}}
+	b := &companion{navigation: newNavigationTrace(), root: ctx, current: ctx, tabs: map[target.ID]context.Context{id: ctx}, cancels: map[target.ID]context.CancelFunc{}, profile: profile, width: Width, height: Height, dialogs: map[target.ID]*Dialog{}, choosers: map[target.ID]*FileChooser{}, downloads: map[string]*Download{}}
 	b.watchTab(ctx)
 	directory := filepath.Join(profile, "downloads")
 	if err := os.MkdirAll(directory, 0700); err != nil {
@@ -152,6 +153,7 @@ func (b *companion) cancelDownload(id string) {
 }
 
 func (b *companion) watchTab(ctx context.Context) {
+	b.navigation.watch(ctx)
 	id := chromedp.FromContext(ctx).Target.TargetID
 	dialogs := chromedp.Events(ctx, page.JavascriptDialogOpening)
 	choosers := chromedp.Events(ctx, page.FileChooserOpened)
@@ -222,6 +224,10 @@ func (b *companion) selectTab(id target.ID) error {
 }
 
 func (b *companion) step(ctx context.Context, req Request, frame *Frame) error {
+	if req.Action == "navigate" && b.navigation != nil {
+		b.navigation.begin(string(chromedp.FromContext(b.current).Target.TargetID), req.URL)
+		ctx = context.WithValue(ctx, navigationTraceKey{}, b.navigation)
+	}
 	if req.Action != "frame" && req.Action != "resize" && req.Action != "read_page" && req.Action != "focus_element" && req.Action != "activate_element" {
 		b.elements = nil
 	}

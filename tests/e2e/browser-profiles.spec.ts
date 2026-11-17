@@ -41,8 +41,10 @@ test('saved Chromium profile survives worker replacement while viewer control is
    action: body.action, protocol: frame.protocol, target: String(frame.target ?? '').slice(0, 128),
    url: String(frame.url ?? '').slice(0, 512), error: String(frame.error ?? '').slice(0, 512),
    profileId: String(frame.profileId ?? '').slice(0, 128), owned: frame.control?.owned,
+   navigationDiagnostics: frame.navigationDiagnostics,
    tabs: Array.isArray(frame.tabs) ? frame.tabs.slice(0, 4).map((tab: { id?: string; title?: string }) => ({ id: String(tab.id ?? '').slice(0, 128), title: String(tab.title ?? '').slice(0, 128) })) : [],
   });
+  if (process.env.WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS === '1') expect(frame.navigationDiagnostics).toBeDefined();
   expect(frame.profileKey).toBeUndefined();
   if (frame.error) expect(frame.error).toBe('Page rendering was interrupted; retry or open the site in your browser');
   return frame;
