@@ -8,7 +8,7 @@ import { transformWithOxc } from 'vite';
 import { XTERM_SNAPSHOT_PROFILE, XTERM_UNDERLINE_SNAPSHOT_PROFILE } from '../../webmux/frontend/src/utils/terminalSnapshotProfile';
 import { isTerminalLocalInput, shouldSuppressTerminalInput } from '../../webmux/frontend/src/utils/terminalInput';
 
-type Fixture = { name: string; cols: number; rows: number; original: string; snapshot: string; future: string; recaptured: string; beforeCols?: number; beforeRows?: number; resizes?: [number, number][]; snapshotError?: string; recapturedError?: string; snapshotProfile?: string; snapshotToken?: string; recapturedProfile?: string; recapturedToken?: string; futureResizes?: [number, number][]; afterCols?: number; afterRows?: number };
+type Fixture = { name: string; cols: number; rows: number; original: string; snapshot: string; future: string; recaptured: string; beforeCols?: number; beforeRows?: number; resizes?: [number, number][]; snapshotError?: string; recapturedError?: string; snapshotProfile?: string; snapshotToken?: string; recapturedProfile?: string; recapturedToken?: string; futureResizes?: [number, number][]; afterCols?: number; afterRows?: number; bareReference?: boolean; legacySnapshot?: string; legacyRecaptured?: string };
 const names = ['wrap-toggle-pending', 'wrap-toggle-resolved', 'link-named', 'link-anonymous', 'link-replace', 'link-unicode', 'link-semicolon', 'link-wrapped', 'link-id-reuse', 'link-save', 'link-alternate', 'link-close-params', 'palette-short-hex', 'palette-short-rgb', 'palette-long-rgb', 'palette-long-hex', 'palette-single', 'palette-batch', 'palette-query', 'palette-reset', 'dynamic-colors', 'dynamic-query', 'dynamic-reset', 'saved-underline-csi', 'saved-underline-single', 'saved-underline-color', 'saved-underline-color-reset', 'saved-underline-batched', 'saved-underline-twice', 'saved-underline', 'saved-underline-1048', 'saved-underline-1049', 'alternate-wrapped-row', 'alternate-wrapped-blank', 'origin-clamp-top', 'origin-clamp-bottom', 'origin-clamp-then-widen', 'origin-batched-reset', 'origin-batched-reset-reverse', 'origin-active-at-restore', 'origin-after-ris', 'origin-after-soft-reset', 'saved-origin', 'saved-pending-wrap', 'saved-origin-csi', 'saved-origin-1048', 'saved-pending-1049', 'immediate', 'colored-underline', 'unicode', 'combining', 'pending-wrap', 'wide-pending-wrap', 'insert-mode', 'after-sgr', 'after-bell', 'after-private-osc', 'after-query', 'after-repeat', 'c0-inside-csi', 'del-inside-csi', 'after-del', 'after-erased-character'];
 const noWrapCases = JSON.parse(readFileSync(path.resolve(__dirname, '../../webmux/server/internal/thirdparty/vt/testdata/webmux-xterm-nowrap.json'), 'utf8')) as { name: string }[];
 noWrapCases.push(...['rep-space', 'rep-ascii', 'rep-wide-placeholder', 'rep-colored-null', 'soft-reset-focus', 'soft-reset-paste', 'soft-reset-sync', 'region-bottom-wrap', 'region-top-reverse-index', 'region-bottom-index', 'region-saved-restore'].map(name => ({ name })));
@@ -24,11 +24,14 @@ if (recordedInputs) {
   names.push(...inputs.map(input => `recorded-conpty-${input.name}`));
 }
 const NATIVE_SCREEN = Boolean(process.env.WEBMUX_NATIVE_SCREEN_CAPTURES || process.env.WEBMUX_NATIVE_SCREEN_TEST_LOG) || (process.platform === 'win32' && process.env.WEBMUX_SCREEN_REPLAY_ONLY === '1');
-const nativeNames = ['hyperlink-named', 'hyperlink-anonymous', 'hyperlink-unicode', 'hyperlink-reuse', 'palette-live-change', 'dynamic-colors', 'underline-restore', 'underline-1049', 'origin-restore', 'origin-clamp', 'origin-mode-batch', 'pending-wrap', 'pending-wrap-alt', 'nowrap-address', 'nowrap-advanced', 'nowrap-overwrite', 'nowrap-toggle', 'nowrap-wide', 'nowrap-wide-overlap', 'nowrap-wide-discard', 'nowrap-backspace', 'nowrap-soft-reset'];
+const nativeNames = ['hyperlink-named', 'hyperlink-anonymous', 'hyperlink-unicode', 'hyperlink-reuse', 'palette-live-change', 'dynamic-colors', 'underline-restore', 'underline-1049', 'origin-restore', 'origin-clamp', 'origin-mode-batch', 'pending-wrap', 'pending-wrap-alt', 'nowrap-address', 'nowrap-advanced', 'nowrap-overwrite', 'nowrap-toggle', 'nowrap-wide', 'nowrap-wide-overlap', 'nowrap-wide-discard', 'nowrap-backspace', 'nowrap-soft-reset', 'hidden-plain-curly-restore', 'hidden-enabled-reset', 'hidden-link-only', 'hidden-1048', 'hidden-1049', 'hidden-wide-edit'];
 names.push(...names.map(name => `underline-baseline-${name}`));
 const underlineInputs = JSON.parse(readFileSync(path.resolve(__dirname, '../../webmux/server/internal/thirdparty/vt/testdata/webmux-xterm-underline.json'), 'utf8')) as { name: string }[];
+const bareReferenceNames = new Set(underlineInputs.flatMap(input => [`underline-${input.name}`, `underline-${input.name}-byte-split`]));
 underlineInputs.push(...JSON.parse(readFileSync(path.resolve(__dirname, '../../webmux/server/internal/screenstate/testdata/underline-cases.json'), 'utf8')) as { name: string }[]);
 names.push(...underlineInputs.flatMap(input => [`underline-${input.name}`, `underline-${input.name}-byte-split`]));
+names.push(...[...bareReferenceNames].map(name => `bare-${name}`));
+names.push('bare-legacy-protection-sgr-reset');
 if (NATIVE_SCREEN) names.push(...nativeNames.map(name => `conpty-${name}`));
 let fixtures: Fixture[];
 let server: http.Server;
@@ -37,10 +40,17 @@ let address: string;
 test.beforeAll(async () => {
   test.setTimeout(NATIVE_SCREEN ? 240_000 : 60_000);
   const root = path.resolve(__dirname, '../..');
-  fixtures = JSON.parse(execFileSync('go', ['run', './internal/screenstate/testdata/replay-fixtures'], {
+  const generated = execFileSync('go', ['run', './internal/screenstate/testdata/replay-fixtures'], {
     // This is the aggregate fixture inventory, not the per-snapshot wire bound.
     cwd: path.join(root, 'webmux/server'), encoding: 'utf8', timeout: 60_000, maxBuffer: 8 << 20,
-  })) as Fixture[];
+  });
+  mkdirSync(test.info().project.outputDir, { recursive: true });
+  writeFileSync(path.join(test.info().project.outputDir, `go-screen-fixtures-worker-${test.info().workerIndex}.json`), generated, { mode: 0o600 });
+  fixtures = JSON.parse(generated) as Fixture[];
+  fixtures.push(...fixtures.filter(f => bareReferenceNames.has(f.name)).map(f => ({ ...f, name: `bare-${f.name}`, bareReference: true })));
+  const legacy = fixtures.find(f => f.name === 'underline-protection-sgr-reset')!;
+  if (!legacy.legacySnapshot || !legacy.legacyRecaptured || legacy.snapshotError || legacy.recapturedError) throw new Error('Missing legacy protection fixture');
+  fixtures.push({ ...legacy, name: 'bare-legacy-protection-sgr-reset', bareReference: true, snapshot: legacy.legacySnapshot, recaptured: legacy.legacyRecaptured, snapshotProfile: undefined, snapshotToken: undefined, recapturedProfile: undefined, recapturedToken: undefined });
   if (NATIVE_SCREEN) {
     const target = path.join(test.info().project.outputDir, 'native-screen-captures.json');
     mkdirSync(path.dirname(target), { recursive: true });
@@ -58,17 +68,22 @@ test.beforeAll(async () => {
     expect(events.some(event => event.Action === 'pass' && event.Test === 'TestNativeProviderSavedCursorCaptures')).toBe(true);
     const captures = JSON.parse(readFileSync(target, 'utf8')) as {
       name: string; cols: number; rows: number; original: string; original_before: string;
-      snapshot_before: string; snapshot: string; recaptured: string; starts: number;
+      snapshot_before: string; snapshot: string; recaptured: string; starts: number; replay: string; snapshot_profile: string; snapshot_token: string; recaptured_profile: string; recaptured_token: string; legacy_attempted: boolean; legacy_refused: boolean;
     }[];
     expect(captures.map(c => c.name)).toEqual(nativeNames);
     for (const c of captures) {
       expect(c.starts, 'one native job per control').toBe(1);
+      expect(c.replay).toBe('screen-v3');
+      expect(c.snapshot_profile).toBe(XTERM_UNDERLINE_SNAPSHOT_PROFILE); expect(c.recaptured_profile).toBe(XTERM_UNDERLINE_SNAPSHOT_PROFILE);
+      expect(c.snapshot_token).toMatch(/^[a-f0-9]{32}$/); expect(c.recaptured_token).toMatch(/^[a-f0-9]{32}$/); expect(c.snapshot_token).not.toBe(c.recaptured_token);
+      expect(c.legacy_attempted).toBe(c.name.startsWith('hidden-'));
+      expect(typeof c.legacy_refused).toBe('boolean');
       if (c.name.startsWith('hyperlink-')) expect(c.original_before, 'ConPTY must actually carry the hyperlink').toContain('\x1b]8;');
       expect(c.original.startsWith(c.original_before)).toBe(true);
       expect(c.snapshot.startsWith(c.snapshot_before)).toBe(true);
       const future = c.original.slice(c.original_before.length);
       expect(c.snapshot.slice(c.snapshot_before.length), 'both viewers receive identical later ConPTY output').toBe(future);
-      fixtures.push({ name: `conpty-${c.name}`, cols: c.cols, rows: c.rows, original: c.original_before, snapshot: c.snapshot_before, future, recaptured: c.recaptured });
+      fixtures.push({ name: `conpty-${c.name}`, cols: c.cols, rows: c.rows, original: c.original_before, snapshot: c.snapshot_before, future, recaptured: c.recaptured, snapshotProfile: c.snapshot_profile, snapshotToken: c.snapshot_token, recapturedProfile: c.recaptured_profile, recapturedToken: c.recaptured_token });
     }
   }
   expect(fixtures.map(f => f.name)).toEqual(names);
@@ -96,7 +111,7 @@ for (const name of names) {
 
     for (const [legacyError, profile, token] of [[fixture.snapshotError, fixture.snapshotProfile, fixture.snapshotToken], [fixture.recapturedError, fixture.recapturedProfile, fixture.recapturedToken]]) {
       if (profile === XTERM_UNDERLINE_SNAPSHOT_PROFILE) {
-        expect(name.startsWith('underline-')).toBe(true); expect(token).toMatch(/^[a-f0-9]{32}$/);
+        expect(name.startsWith('underline-') || name.startsWith('bare-underline-') || name.startsWith('conpty-')).toBe(true); expect(token).toMatch(/^[a-f0-9]{32}$/);
         if (legacyError !== undefined) expect(legacyError).toBe('terminal screen state cannot be restored safely; retain the existing job and recover manually');
       } else if (legacyError !== undefined) {
         expect(legacyError).toBe('terminal screen state cannot be restored safely; retain the existing job and recover manually');
@@ -113,10 +128,16 @@ for (const name of names) {
       type SnapshotProfile = { setToken(token?: string, profile?: string): void; dispose(): void };
       const snapshotProfiles: (SnapshotProfile | undefined)[] = [];
       const profiles: { dispose(): void }[] = [];
+      let referenceLinkMethod: unknown;
+      let referenceReset: unknown;
       const terminals = ['reference', 'restored', 'recaptured'].map(id => {
         const t = new Constructor({ cols: id === 'reference' ? f.beforeCols ?? f.cols : id === 'recaptured' ? f.afterCols ?? f.cols : f.cols, rows: id === 'reference' ? f.beforeRows ?? f.rows : id === 'recaptured' ? f.afterRows ?? f.rows : f.rows, allowProposedApi: true });
 
-        profiles.push((window as unknown as { installHyperlinkProfile(t: Terminal): { dispose(): void } }).installHyperlinkProfile(t));
+        if (id === 'reference') {
+          referenceLinkMethod = (t as unknown as { _core: { _oscLinkService: { _removeMarkerFromLink: unknown } } })._core._oscLinkService._removeMarkerFromLink;
+          referenceReset = t.reset;
+        }
+        if (id !== 'reference' || !f.bareReference) profiles.push((window as unknown as { installHyperlinkProfile(t: Terminal): { dispose(): void } }).installHyperlinkProfile(t));
         const snapshotProfile = id === 'reference' ? undefined : (window as unknown as { installSnapshotProfile(t: Terminal): SnapshotProfile }).installSnapshotProfile(t);
         snapshotProfiles.push(snapshotProfile);
         if (snapshotProfile) profiles.push(snapshotProfile);
@@ -164,7 +185,7 @@ for (const name of names) {
           const raw = p.extended.underlineColor, mode = raw & 0x3000000;
           return { fg: p.fg, bg: p.bg, u: p.extended._ext >>> 26 & 7, color: mode ? mode | raw & (mode === 0x3000000 ? 0xffffff : 0xff) : 0, uri: core._oscLinkService.getLinkData(p.extended.urlId)?.uri ?? '' };
         };
-        const raw = f.name.startsWith('underline-') ? { pen: rawAttr(core._inputHandler._curAttrData as unknown as RawAttr),
+        const raw = (f.name.startsWith('underline-') || f.bareReference || f.name.startsWith('conpty-')) ? { pen: rawAttr(core._inputHandler._curAttrData as unknown as RawAttr),
           rows: Array.from({ length: t.rows }, (_, y) => Array.from({ length: t.cols }, (_, x) => { const c = v.getLine(v.baseY + y)!.getCell(x)!; return { c: c.getChars(), w: c.getWidth(), s: rawAttr(c as unknown as RawAttr) }; })),
         } : undefined;
         return { cells, wraps, colors, link: link(core._inputHandler._curAttrData), cursor: [v.cursorX, v.cursorY], buffer: v.type, modes: t.modes, raw };
@@ -203,14 +224,16 @@ for (const name of names) {
       await write(c, f.recaptured);
       const recaptured = compare(a, c);
       const recapturedScratchLinks = scratchCount(c);
+      const referenceMethodsUnchanged = referenceReset === a.reset && referenceLinkMethod === (a as unknown as { _core: { _oscLinkService: { _removeMarkerFromLink: unknown } } })._core._oscLinkService._removeMarkerFromLink;
       phase = 'teardown';
       profiles.forEach(profile => profile.dispose());
       terminals.forEach(t => t.dispose());
-      return { initial, continued, recaptured, replayReplies, focusReports, referenceUsesSnapshotProfile, initialScratchLinks, recapturedScratchLinks };
+      return { initial, continued, recaptured, replayReplies, focusReports, referenceUsesSnapshotProfile, referenceProfile: f.bareReference ? 'bare' : 'shared-hyperlink', referenceMethodsUnchanged, initialScratchLinks, recapturedScratchLinks };
     }, fixture);
     const receipt = info.outputPath('screen-replay.json');
     writeFileSync(receipt, JSON.stringify(result));
     await info.attach('screen replay', { path: receipt, contentType: 'application/json' });
+    if (fixture.bareReference) { expect(result.referenceProfile).toBe('bare'); expect(result.referenceMethodsUnchanged).toBe(true); }
     expect(result.referenceUsesSnapshotProfile, 'independent reference must use the unmodified parser').toBe(false);
     expect(result.initialScratchLinks).toBeLessThanOrEqual(1); expect(result.recapturedScratchLinks).toBeLessThanOrEqual(1);
     expect(result.initial.equal, 'initial snapshot').toBe(true);

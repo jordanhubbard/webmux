@@ -1,12 +1,13 @@
 # Independent underline-state model checkpoint — 2026-11-17
 
-This is an incomplete implementation of #427 under #355/#318. Production
-`Screen.New` retains the v1 model and its existing refusals. The opt-in
-`NewWithProfile(..., XtermUnderlineRendererProfile)` now includes a candidate
-snapshot encoder. Native owners and the application do not yet select or
-advertise it. Versioned owner/controller/viewer compatibility and fresh actual
-native/application acceptance remain required before merge. #429 separately
-tracks the dependency-audit release blocker.
+This is an incomplete implementation of #427 under #355/#318. The candidate
+now selects the opt-in model for fresh Windows native owners (`screen-v3`),
+and the frontend advertises v2 after validating its renderer layout. Existing
+owners keep their running binary and job. Local bare-reference and application
+contract checks pass; fresh execution of the new Windows native matrix and all
+final hosted gates remain required before merge. #429 separately tracks the
+dependency-audit release blocker. `Screen.New` retains the legacy model for
+explicit legacy controls; the new owner calls `NewWithProfile`.
 
 ## Model and provenance
 
@@ -75,41 +76,13 @@ ConPTY support for these new states, or native coding-session lifecycle recovery
 Keep #427/#355/#318 open and this candidate draft until their remaining gates
 are satisfied. No new release is qualified by this checkpoint.
 
-## Initial unadvertised decoder checkpoint (37ca51e)
+## Initial decoder checkpoint
 
-The Go codec and frontend decoder now have a separate v2 packet format that
-combines the two current pen flags and REP cluster in one token-bound update.
-The decoded JSON has exactly `u` (flag code 1..4) and `r` (empty or at most 64
-UTF-8 bytes of printable text). The payload is bounded to 160 decoded bytes.
-An empty cluster explicitly clears repeat state. Validation completes before
-flags change or the single-use token is consumed. The decoder alters only the
-current pen's two flag bits and parser join state; it retains the extended
-object, other attributes, saved cursor slots, protection and charset. It checks
-the renderer's attribute bit layout on a detached clone when arming v2.
-
-Metadata must explicitly arm v2: a default/v1 token cannot authorize a v2
-packet, and a v2 token cannot authorize a v1 packet. The component and native
-transport still advertise v1, and the production screen encoder never calls
-the new codec. This draft primitive is not yet a deployed protocol contract.
-
-Isolated real-renderer checks in `screen-replay.spec.ts` compare 256 initial
-and continued states against an unmodified reference (eight saved/hidden/link/
-alternate/charset/protection states, eight continuations and four REP clusters).
-To test the missing final tail independently, the target starts from the same
-input as the reference and the test deliberately flips only its two current
-pen flags before the packet. These are decoder controls, not Go-generated
-snapshot or actual application attach comparisons. All 79 packet byte splits,
-16 invalid schemas/text payloads, four malformed encodings, empty REP, stale
-and reused nonces, metadata versions, disarming and disposal also pass without
-generating terminal input. See `v2-decoder-results.json` for scope and hashes.
-
-At this initial checkpoint, integration still needed per-cell ANSI construction
-and full saved-slot-safe painting. The encoder checkpoint below supersedes that
-investigation-only boundary. In particular, a scratch DECSC used to construct cell flags must not
-replace the job's true saved slot during a final pending-wrap repaint. The
-complete encoder must resolve and qualify this ordering before its v2 payload
-and capability contract are finalized. Full native/application acceptance and
-older owner/controller/viewer compatibility remain required.
+`v2-decoder-results.json` retains the 37ca51e primitive checkpoint and its
+historical source hashes: 256 component controls, 79 packet splits and the
+original two-field/160-byte payload. The encoder below adds bounded columns
+and a 192-byte limit. `encoder-results.json` records the subsequent a4f2920
+encoder checkpoint. Current capability and bare-reference results are separate.
 
 ## Opt-in snapshot encoder
 
@@ -157,6 +130,47 @@ suite. Exact run results and current source hashes are in
 checkpoint and its historical source hashes.
 
 This is component qualification. It does not yet prove native owner capability
-negotiation, actual application second attachment, fresh ConPTY hidden-state
+negotiation, native-owner-to-application second attachment, fresh ConPTY hidden-state
 capture or the remaining #318 native coding-session lifecycle requirements.
 Keep this PR draft and #427/#355/#318 open. Production and release remain gated.
+
+## Bare reference and capability candidate
+
+The 126 model-reference inputs now also have full Go snapshot comparisons
+against a bare xterm instance, with whole and byte-split mirror feeds: 252
+cases at initial, continued and recaptured boundaries. No reference adapter is
+installed. Receipts check that the reference parser, hyperlink method and reset
+method remain unchanged. The original shared-hyperlink baseline remains a
+separate product-profile comparison. Exact Go-generated fixture bytes are now
+retained per Playwright worker, alongside the renderer receipts.
+
+The capability relation accepts v2 viewers for v1 snapshots and refuses
+unknown profile names. New controllers request v2 from `screen-v3` owners,
+request v1 from older `screen-v2` owners, and omit the renderer field entirely
+for strict `screen-v1` owners. A reply cannot change the owner's advertised
+replay version or introduce an unsupported requirement/token. Controllers that
+predate `screen-v3` continue to refuse that unknown owner version; no job stop
+or replacement is authorized by this refusal. Broker transitions detach only
+incompatible viewers. New frontend instances validate v2 before advertising it
+and arm the exact v1/v2 version named by trusted metadata.
+
+The real application/Go-server contract tests cover both metadata versions,
+two viewer attachments, stale tokens and no generated input. Handshake/output
+frames are injected to isolate application ordering; these are not native-owner
+or ConPTY acceptance. The pinned DOM renderer uses raw style0 for the CSS class
+of an FG-only underline flag; the v2 test checks that actual `underline-0` state
+rather than replacing it with the public getter's fallback style1.
+
+Ordinary ANSI painting now reapplies captured protection after SGR0 and clears
+its protection cache explicitly on reset. A bare-reference legacy ANSI control
+checks protected text, SGR reset and subsequent selective erase without any
+renderer packet. This retains older-viewer support for that ordinary state.
+
+The Windows candidate adds v3/v2/downlevel/unsolicited-version/token contracts,
+a real-owner controlled-terminal refusal test, and six new ConPTY producers
+alongside the existing22. Capture records include fresh v2 requirements/tokens,
+owner identity, one-job counts and the observed ANSI-only attach result from the current client. ConPTY
+may normalize hidden state, so the actual streams and results must be inspected
+before claiming native hidden-state coverage. Windows vet is compilation
+coverage; no local Windows execution is claimed. See `capability-results.json`
+for the local evidence and outstanding hosted qualification.

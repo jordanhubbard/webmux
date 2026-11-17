@@ -68,7 +68,7 @@ func startLaunch(request LaunchRequest, command Command) (*Process, error) {
 	if err != nil {
 		return nil, err
 	}
-	client, err := nativeprovider.AttachWithProfile(ctx, identity, request.RecoveryKey, command.Cols, command.Rows, screenstate.XtermRendererProfile)
+	client, err := nativeprovider.AttachWithProfile(ctx, identity, request.RecoveryKey, command.Cols, command.Rows, screenstate.XtermUnderlineRendererProfile)
 	if err != nil {
 		return nil, err
 	}

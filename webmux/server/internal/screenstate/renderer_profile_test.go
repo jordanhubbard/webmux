@@ -180,3 +180,15 @@ func TestUnderlineModelProfileIsOptInAndLegacyRemainsFailClosed(t *testing.T) {
 		t.Fatal("profile encoding mutated the captured image", err)
 	}
 }
+
+func TestRendererCompatibilityDoesNotGuessFutureProfiles(t *testing.T) {
+	profiles := []string{"", XtermRendererProfile, XtermUnderlineRendererProfile, "unknown"}
+	expected := [4][4]bool{{true, false, false, false}, {true, true, false, false}, {true, true, true, false}, {false, false, false, false}}
+	for i, offered := range profiles {
+		for j, required := range profiles {
+			if got := RendererSupports(offered, required); got != expected[i][j] {
+				t.Fatalf("offered%q required%q: %v want%v", offered, required, got, expected[i][j])
+			}
+		}
+	}
+}

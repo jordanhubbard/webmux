@@ -37,5 +37,6 @@
     "Actual frontend initial/continued/second-attach acceptance",
     "Real ConPTY hidden-state captures and same-job/legacy-refusal acceptance",
     "Full final exact-head gates before merge"
-  ]
+  ],
+  "source_checkpoint": "37ca51eac241433f7f276bad006bf80bd119a775"
 }

@@ -97,5 +97,6 @@
     "Dependency audit429 remediation and all final exact-head gates"
   ],
   "known_boundary": "One-column mirrors with wrapped null rows still refuse safely.",
-  "production_new_uses_underline_model": false
+  "production_new_uses_underline_model": false,
+  "source_checkpoint": "a4f292039b8907185ab5527f03aa9b98e7c4477f"
 }

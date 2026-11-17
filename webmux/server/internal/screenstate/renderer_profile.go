@@ -17,6 +17,21 @@ const XtermRendererProfile = "webmux-xterm-state-v1"
 // v1 until native and actual application acceptance qualify this extension.
 const XtermUnderlineRendererProfile = "webmux-xterm-state-v2"
 
+// RendererProfileKnown excludes future names until their wire semantics have
+// been qualified. An empty name advertises ordinary ANSI only.
+func RendererProfileKnown(profile string) bool {
+	return profile == "" || profile == XtermRendererProfile || profile == XtermUnderlineRendererProfile
+}
+
+// RendererSupports encodes the known backwards compatibility relation, not a
+// lexical version comparison. Every viewer must support the required profile.
+func RendererSupports(offered, required string) bool {
+	if !RendererProfileKnown(offered) || !RendererProfileKnown(required) {
+		return false
+	}
+	return required == "" || offered == required || offered == XtermUnderlineRendererProfile && required == XtermRendererProfile
+}
+
 // EncodedSnapshot names any renderer extension actually used by Data. Owners
 // must negotiate RequiredRenderer before sending these bytes to a viewer.
 type EncodedSnapshot struct {

@@ -471,11 +471,12 @@ func (w *vtWriter) resetPen() {
 	if w.cur.LinkURL != "" {
 		w.b.WriteString("\x1b]8;;\x1b\\")
 	}
-	w.b.WriteString("\x1b[0m")
-	w.cur, w.set = snapshot.StyleState{}, false
-	if w.enhanced {
+	if w.protected {
+		w.b.WriteString("\x1b[0\"q")
 		w.protected = false
 	}
+	w.b.WriteString("\x1b[0m")
+	w.cur, w.set = snapshot.StyleState{}, false
 }
 
 // pen sets the pen to s: one SGR from a reset, and the link when it changed.
@@ -521,7 +522,7 @@ func (w *vtWriter) plainPen(s snapshot.StyleState) {
 	sgrColor(w.b, s.BgColor, 40, 100, "48")
 	sgrColor(w.b, s.UlColor, -1, -1, "58")
 	w.b.WriteByte('m')
-	if w.enhanced && w.protected {
+	if w.protected {
 		w.b.WriteString("\x1b[1\"q")
 	}
 	w.cur, w.set = s, true

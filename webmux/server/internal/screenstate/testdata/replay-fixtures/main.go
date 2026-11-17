@@ -10,6 +10,8 @@ import (
 )
 
 type fixture struct {
+	LegacySnapshot    string   `json:"legacySnapshot,omitempty"`
+	LegacyRecaptured  string   `json:"legacyRecaptured,omitempty"`
 	Name              string   `json:"name"`
 	Cols              int      `json:"cols"`
 	Rows              int      `json:"rows"`
@@ -267,16 +269,17 @@ func main() {
 		}
 		image, err := s.Capture()
 		check(name, err)
-		_, legacyErr := image.Bytes()
+		legacyBytes, legacyErr := image.Bytes()
 		before, err := image.BytesForProfile(screenstate.XtermUnderlineRendererProfile)
 		check(name, err)
 		check(name, s.Feed([]byte(input.Future)))
 		image, err = s.Capture()
 		check(name, err)
-		_, nextLegacyErr := image.Bytes()
+		nextLegacyBytes, nextLegacyErr := image.Bytes()
 		after, err := image.BytesForProfile(screenstate.XtermUnderlineRendererProfile)
 		check(name, err)
 		f := input
+		f.LegacySnapshot, f.LegacyRecaptured = string(legacyBytes), string(nextLegacyBytes)
 		f.Name, f.Snapshot, f.Recaptured = name, string(before.Data), string(after.Data)
 		f.SnapshotProfile, f.SnapshotToken, f.RecapturedProfile, f.RecapturedToken = before.RequiredRenderer, before.RendererToken, after.RequiredRenderer, after.RendererToken
 		f.SnapshotError, f.RecapturedError = "", ""
@@ -323,7 +326,7 @@ func main() {
 			}
 			image, err := s.Capture()
 			check(name, err)
-			_, legacyErr := image.Bytes()
+			legacyBytes, legacyErr := image.Bytes()
 			before, err := image.BytesForProfile(screenstate.XtermUnderlineRendererProfile)
 			check(name, err)
 			for _, size := range tc.FutureResizes {
@@ -332,7 +335,7 @@ func main() {
 			check(name, s.Feed([]byte(tc.Future)))
 			image, err = s.Capture()
 			check(name, err)
-			_, nextLegacyErr := image.Bytes()
+			nextLegacyBytes, nextLegacyErr := image.Bytes()
 			after, err := image.BytesForProfile(screenstate.XtermUnderlineRendererProfile)
 			check(name, err)
 			cols, rows := 8, 4
@@ -340,7 +343,7 @@ func main() {
 				last := tc.Resizes[len(tc.Resizes)-1]
 				cols, rows = last[0], last[1]
 			}
-			f := fixture{Name: name, Cols: cols, Rows: rows, Original: tc.Data, Future: tc.Future, Snapshot: string(before.Data), Recaptured: string(after.Data), SnapshotProfile: before.RequiredRenderer, SnapshotToken: before.RendererToken, RecapturedProfile: after.RequiredRenderer, RecapturedToken: after.RendererToken}
+			f := fixture{LegacySnapshot: string(legacyBytes), LegacyRecaptured: string(nextLegacyBytes), Name: name, Cols: cols, Rows: rows, Original: tc.Data, Future: tc.Future, Snapshot: string(before.Data), Recaptured: string(after.Data), SnapshotProfile: before.RequiredRenderer, SnapshotToken: before.RendererToken, RecapturedProfile: after.RequiredRenderer, RecapturedToken: after.RendererToken}
 			if legacyErr != nil {
 				f.SnapshotError = legacyErr.Error()
 			}

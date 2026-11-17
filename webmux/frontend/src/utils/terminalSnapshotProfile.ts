@@ -2,6 +2,9 @@ import type { IDisposable, Terminal } from '@xterm/xterm';
 
 export const XTERM_SNAPSHOT_PROFILE = 'webmux-xterm-state-v1';
 export const XTERM_UNDERLINE_SNAPSHOT_PROFILE = 'webmux-xterm-state-v2';
+export function isTerminalSnapshotProfile(profile: string): boolean {
+  return profile === XTERM_SNAPSHOT_PROFILE || profile === XTERM_UNDERLINE_SNAPSHOT_PROFILE;
+}
 const V1_PREFIX = 'webmux.replay.v1;';
 const V2_PREFIX = 'webmux.replay.v2;';
 const UNDERLINE_BIT = 0x10000000;
