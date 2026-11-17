@@ -147,21 +147,7 @@ func Worker(in io.Reader, out io.Writer) error {
 		}
 		defer os.RemoveAll(files)
 	}
-	// Retain Chromium's normal isolation and safe-browsing defaults. The generic
-	// automation defaults disable protections that are useful for an auth browser.
-	opts := []chromedp.ExecAllocatorOption{
-		chromedp.NoFirstRun, chromedp.NoDefaultBrowserCheck, chromedp.Headless,
-		chromedp.UserDataDir(profile), chromedp.WindowSize(Width, Height),
-		chromedp.Flag("no-sandbox", false), chromedp.Flag("enable-automation", true),
-		chromedp.Flag("disable-backgrounding-occluded-windows", true),
-		chromedp.Flag("disable-renderer-backgrounding", true),
-		chromedp.Flag("disable-background-timer-throttling", true),
-		chromedp.Flag("disable-dev-shm-usage", true),
-	}
-	if path := os.Getenv("WEBMUX_BROWSER_EXECUTABLE"); path != "" {
-		opts = append(opts, chromedp.ExecPath(path))
-	}
-	alloc, stop := chromedp.NewExecAllocator(context.Background(), opts...)
+	alloc, stop := chromedp.NewExecAllocator(context.Background(), workerAllocatorOptions(profile)...)
 	defer stop()
 	root, cancel := chromedp.NewContext(alloc)
 	defer cancel()
@@ -375,4 +361,23 @@ func perform(ctx context.Context, req Request, width, height int64) error {
 		return errors.New("unknown browser action")
 	}
 	return chromedp.Do(ctx, actions...)
+}
+
+// Shared by the worker and its native component qualification controls.
+func workerAllocatorOptions(profile string) []chromedp.ExecAllocatorOption {
+	// Retain Chromium's normal isolation and safe-browsing defaults. The generic
+	// automation defaults disable protections that are useful for an auth browser.
+	opts := []chromedp.ExecAllocatorOption{
+		chromedp.NoFirstRun, chromedp.NoDefaultBrowserCheck, chromedp.Headless,
+		chromedp.UserDataDir(profile), chromedp.WindowSize(Width, Height),
+		chromedp.Flag("no-sandbox", false), chromedp.Flag("enable-automation", true),
+		chromedp.Flag("disable-backgrounding-occluded-windows", true),
+		chromedp.Flag("disable-renderer-backgrounding", true),
+		chromedp.Flag("disable-background-timer-throttling", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
+	}
+	if path := os.Getenv("WEBMUX_BROWSER_EXECUTABLE"); path != "" {
+		opts = append(opts, chromedp.ExecPath(path))
+	}
+	return opts
 }

@@ -426,6 +426,7 @@ jobs:
         working-directory: webmux
 
       - name: Install Playwright Chromium
+        id: windows_browser_tools
         run: npx playwright install chromium
         working-directory: webmux
 
@@ -442,6 +443,24 @@ jobs:
       - name: Check Go screenshot repeatability
         run: npm run test:visual
         working-directory: webmux
+
+      - name: Qualify first browser navigation components
+        if: ${{ !cancelled() && steps.windows_browser_tools.outcome == 'success' }}
+        timeout-minutes: 5
+        working-directory: webmux
+        shell: pwsh
+        env:
+          WEBMUX_REAL_BROWSER: '1'
+          WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS: '1'
+        run: |
+          $env:WEBMUX_BROWSER_EXECUTABLE = (node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())").Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the qualified Chromium executable.' }
+          $env:WEBMUX_BROWSER_NAVIGATION_ARTIFACT_DIR = Join-Path $PWD 'test-results/native-first-navigation'
+          Push-Location server
+          try {
+            go test ./internal/browser -run '^TestNativeFirstNavigationComponents$' -count=1 -timeout=3m -v
+            if ($LASTEXITCODE -ne 0) { throw 'Native first-navigation component qualification failed.' }
+          } finally { Pop-Location }
 
       - name: Preserve browser parity evidence
         if: always()

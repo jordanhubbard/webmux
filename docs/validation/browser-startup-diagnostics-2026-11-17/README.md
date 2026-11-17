@@ -65,3 +65,47 @@ The [source manifest](source-manifest.json) binds code, test and retained receip
 Actual Windows execution of these new observations remains a hosted-CI gate.
 A passing run does not prove the intermittent abort fixed. The dependency audit
 in #429 and the broader roadmap/release gates also remain required.
+
+
+## Windows follow-up and component isolation
+
+PR #442 head 618b36e reproduced the abort in the initial saved worker, before its
+first /set document, in [Windows job 134419891067](https://github.com/jordanhubbard/webmux/actions/runs/44190954805/job/134419891067).
+The [new bounded summary](windows-startup-abort-summary.json) has 27 outer trace
+events and zero dropped events. Explicit blank startup completes at 2154 ms,
+worker readiness at 2156 ms, and the user navigation starts at 2690 ms. Its
+matching document request is canceled with ERR_ABORTED at 2976 ms. No fixture
+document arrives, no intervening renderer navigation is recorded, and the target
+remains about:blank. Thus this occurrence is not an overlap with the explicit
+blank-page navigation, nor is it limited to temporary-profile replacement.
+Other browser initialization or policy causes remain unproven.
+
+The native component probe adds four separate first loads against one private
+Node HTTP fixture: direct CDP, direct CDP with an initial screenshot, and the
+production WorkerCommand/Worker subprocess with temporary or saved profiles.
+They share the production allocator options, including normal sandbox and
+safe-browsing behavior. Each trial creates a fresh private browser profile and
+issues one fixture navigation. Original execution roots remain intact; no
+credentials are copied. Version metadata is queried only after a direct trial.
+The test executable supplies the private worker entry point; this does not
+qualify an installed service image, user authentication, or reboot recovery.
+
+[Local component records](native-component-summary.json) show all four loads
+passing on macOS ARM64 with one fixture request apiece and no cleanup errors.
+These ordered single samples do not establish statistical equivalence or a
+Windows fix. Initial unqualified harness attempts changed HOME or had setup/build
+errors; they are retained privately and excluded from acceptance. The qualified
+harness preserves the original roots and uses an actual worker subprocess.
+
+Windows CI runs this opt-in probe after the application workflows, including
+when those workflows fail, provided Chromium installation succeeded and the job
+was not canceled. Its bounded records join browser-parity-windows. Failures still
+fail the job; there is no continue-on-error, navigation replay, protection
+bypass or longer application navigation deadline. The application workflow is
+left ahead of the controls so they do not warm its first browser beforehand.
+
+Browser/HTTP race suites passed after the allocator-options extraction; strict
+TypeScript, Darwin/Windows vet and workflow YAML checks passed. The full native
+application profile/renderer workflow also passes locally. The new component
+records and source bindings are in [component-manifest.json](component-manifest.json).
+Windows component outcomes and the cause of the abort remain pending.

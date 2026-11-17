@@ -1,0 +1,149 @@
+{
+  "head": "618b36e6d69966e49b37ef5ce5b625555a566912",
+  "ci": 44190954805,
+  "job": 134419891067,
+  "artifact": 14377396791,
+  "trace_sha256": "18202a95d2e4547d8e2bff428d16054e743a9ac6bb0269745c72f2f19d7fc1ea",
+  "timeline_events": 27,
+  "dropped": 0,
+  "phase": "initial-saved-worker",
+  "navigate_after_blank_ready_ms": 536,
+  "document_failed_after_navigate_ms": 286,
+  "fixture_documents_in_phase": 0,
+  "final_about_blank": true,
+  "diagnostics": {
+    "events": [
+      {
+        "stage": "startup",
+        "ms": 2140,
+        "sequence": 0,
+        "event": "startup_blank_begin",
+        "target": "C265844AB7985BAB5232381F7142D443"
+      },
+      {
+        "stage": "startup",
+        "ms": 2140,
+        "sequence": 0,
+        "event": "observer_ready",
+        "target": "C265844AB7985BAB5232381F7142D443"
+      },
+      {
+        "stage": "startup",
+        "ms": 2150,
+        "sequence": 0,
+        "event": "navigation_started",
+        "target": "C265844AB7985BAB5232381F7142D443",
+        "frame": "C265844AB7985BAB5232381F7142D443",
+        "loader": "3C3477A277F4F0042129113CA3378EE7",
+        "matchesRequested": true
+      },
+      {
+        "stage": "startup",
+        "ms": 2150,
+        "sequence": 0,
+        "event": "frame_loading_started",
+        "target": "C265844AB7985BAB5232381F7142D443",
+        "frame": "C265844AB7985BAB5232381F7142D443"
+      },
+      {
+        "stage": "startup",
+        "ms": 2150,
+        "sequence": 0,
+        "event": "navigation_committed",
+        "target": "C265844AB7985BAB5232381F7142D443",
+        "frame": "C265844AB7985BAB5232381F7142D443",
+        "loader": "3C3477A277F4F0042129113CA3378EE7",
+        "matchesRequested": true,
+        "main": true
+      },
+      {
+        "stage": "startup",
+        "ms": 2154,
+        "sequence": 0,
+        "event": "frame_loading_stopped",
+        "target": "C265844AB7985BAB5232381F7142D443",
+        "frame": "C265844AB7985BAB5232381F7142D443"
+      },
+      {
+        "stage": "startup",
+        "ms": 2154,
+        "sequence": 0,
+        "event": "startup_blank_ready",
+        "errorClass": "accepted"
+      },
+      {
+        "stage": "ready",
+        "ms": 2156,
+        "sequence": 0,
+        "event": "worker_ready"
+      },
+      {
+        "stage": "navigation",
+        "ms": 2690,
+        "sequence": 1,
+        "event": "navigate_request",
+        "target": "C265844AB7985BAB5232381F7142D443"
+      },
+      {
+        "stage": "navigation",
+        "ms": 2693,
+        "sequence": 1,
+        "event": "navigation_started",
+        "target": "C265844AB7985BAB5232381F7142D443",
+        "frame": "C265844AB7985BAB5232381F7142D443",
+        "loader": "54562ABEEA713A8AEE364B750578F8E4",
+        "matchesRequested": true
+      },
+      {
+        "stage": "navigation",
+        "ms": 2694,
+        "sequence": 1,
+        "event": "frame_loading_started",
+        "target": "C265844AB7985BAB5232381F7142D443",
+        "frame": "C265844AB7985BAB5232381F7142D443"
+      },
+      {
+        "stage": "navigation",
+        "initiator": "other",
+        "ms": 2695,
+        "sequence": 1,
+        "event": "document_request",
+        "target": "C265844AB7985BAB5232381F7142D443",
+        "frame": "C265844AB7985BAB5232381F7142D443",
+        "loader": "54562ABEEA713A8AEE364B750578F8E4",
+        "request": "54562ABEEA713A8AEE364B750578F8E4",
+        "matchesRequested": true
+      },
+      {
+        "stage": "navigation",
+        "ms": 2976,
+        "sequence": 1,
+        "event": "document_failed",
+        "target": "C265844AB7985BAB5232381F7142D443",
+        "request": "54562ABEEA713A8AEE364B750578F8E4",
+        "errorClass": "aborted",
+        "canceled": true
+      },
+      {
+        "stage": "navigation",
+        "ms": 2976,
+        "sequence": 1,
+        "event": "frame_loading_stopped",
+        "target": "C265844AB7985BAB5232381F7142D443",
+        "frame": "C265844AB7985BAB5232381F7142D443"
+      },
+      {
+        "stage": "navigation",
+        "ms": 2976,
+        "sequence": 1,
+        "event": "navigate_ack",
+        "target": "C265844AB7985BAB5232381F7142D443",
+        "frame": "C265844AB7985BAB5232381F7142D443",
+        "loader": "54562ABEEA713A8AEE364B750578F8E4",
+        "errorClass": "aborted"
+      }
+    ],
+    "dropped": 0
+  },
+  "cause_proven": false
+}

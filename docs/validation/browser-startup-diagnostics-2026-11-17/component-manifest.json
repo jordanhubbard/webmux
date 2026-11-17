@@ -1,0 +1,22 @@
+{
+  "recordedUTC": "2026-11-17T23:10:34.719058+00:00",
+  "parent": "618b36e6d69966e49b37ef5ce5b625555a566912",
+  "purpose": "First-navigation component isolation; no Windows fix or root-cause claim",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/worker.go": "ea0f52b4718995e934537cf59b983e2a40d1b5637436cb0bf145b442fa08495c",
+    "webmux/server/internal/browser/navigation_native_test.go": "b618e54c4d90c51b32fd103474b80bac23d96606ba54273efe5c2ce864b4dcb1",
+    ".github/workflows/ci.yml": "42e8c37bc280661afae8a486f58845eba78fe50e6c78845a7bdb6bb1eeef4ea6",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-startup-abort-summary.json": "b2719b319d05ae94f6cc1940790b8ae720445824bb487eda3834fbcf02dedaee",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-component-summary.json": "5118dcda6fe6ab5d1848666cb13d6b308d9177c5cf766f8ea232910966e89777"
+  },
+  "privateReceiptSHA256": {
+    "nav282-matrix-verified.log": "d1c4195fcae5e4bb5afb5b6f159b2b06fb53a3d6eb99df5aa0da223ef3d88ed9",
+    "nav282-probe-app-regression.log": "0c98a16b29d935b9b02e979c3d3c7eddd0db95100814bf3ffa81a1c7bdeef3d9",
+    "nav282-probe-go-race.log": "200494207c4170d9b99c9a7c1df721afc978ec95a2d3fb08601d04a0fe62c0ac",
+    "nav282-probe-types.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "nav282-probe-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-probe-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "localResult": "Four independent native macOS ARM64 first-navigation controls pass; original execution roots; actual worker subprocesses; one navigation each. Application browser profile/renderer workflow passes. Browser/HTTP race passed after allocator refactor; final opt-in cleanup/metadata edits covered by native run and vet.",
+  "windowsResult": "618b36e application failure: startup blank complete before first saved-worker document cancellation; new component controls pending hosted execution."
+}
