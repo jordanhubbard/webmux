@@ -153,7 +153,15 @@ test(`real guacd and FreeRDP screen updates, reconnection and keyboard input${st
     if (previous) await expect.poll(() => readPixel(previous!)).toEqual([0, 255, 0, 255]);
     enter('reload');
     stallOld = stalledPrevious;
-    if (stalledPrevious) record('old-upstream-stalled');
+    if (stalledPrevious) {
+      record('old-upstream-stalled');
+      // guacd 1.6 does not keep sending frames for an unchanged desktop.
+      // Produce a real update so this control proves acknowledgements were
+      // withheld before the replacement viewer connects.
+      paint('#ff00ff');
+      await expect.poll(() => held?.blocked ?? 0, { message: 'old viewer must withhold a real update acknowledgement' }).toBeGreaterThan(0);
+      paint('#00ff00');
+    }
     await page.reload();
     await page.getByRole('button', { name: 'Desktops', exact: true }).click();
     await expect.poll(pixel, { timeout: 20000 }).toEqual([0, 255, 0, 255]);
