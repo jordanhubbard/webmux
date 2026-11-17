@@ -323,8 +323,14 @@ isolation between users of the same OS account.
 The browser tests use the actual published Rig daemon and text UI without
 provider credentials. They also enroll two interactive provider stand-ins,
 exchange a fresh challenge/ACK through Rig, inspect attributed messages, and
-check grid refresh, tile close/reopen and two consecutive stopped-agent
-reconnections. CI runs this against OpenRig 0.6.14;
+check grid refresh, tile close/reopen and two consecutive attachment-loss
+reconnections. Each loss waits for a fresh native absence verdict tied to the
+exact pane and kill time before applying WebMux's existing projection deadline.
+Rig 0.6.14 samples identity every five seconds; its observation phase is bounded
+to 15 seconds, and the overall case retains its 120-second limit. Every replacement
+must exchange a new peer-generated ACK, because old readiness text can remain in
+the reused viewer's scrollback. Native proofs and enrollment/challenge receipts are
+retained in the test output. CI runs this against OpenRig 0.6.14;
 these stand-ins qualify transport, not provider reasoning. Live cross-host
 qualification additionally uses real
 Codex processes on Puck and sparky, independent nonce/hash receipts, and the
