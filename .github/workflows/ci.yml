@@ -43,6 +43,12 @@ jobs:
       - name: Build CLI and separate worker
         working-directory: webmux/server
         run: go build -o "$RUNNER_TEMP/webmux" ./cmd/webmux
+      - name: Diagnose direct virtual USB reconnects without WebMux
+        run: |
+          printf -v fixture_command '%q ' env GITHUB_ACTIONS=true python3 "$GITHUB_WORKSPACE/tests/usb-kernel.py" "$RUNNER_TEMP/webmux" --direct-control
+          # virtme otherwise locks every synthetic guest account. This guest
+          # has no network adapter, and its fixture sshd allows public keys only.
+          sudo -n env PATH="$RUNNER_TEMP/virtme/bin:/usr/sbin:/usr/bin:/sbin:/bin" PYTHONUNBUFFERED=1 timeout --kill-after=15s 180s "$RUNNER_TEMP/virtme/bin/vng" --run "$USB_TEST_KERNEL" --user root --empty-passwords --memory 1G --cpus 2 --verbose --exec "$fixture_command"
       - name: Exercise virtual USB over SSH
         run: |
           printf -v fixture_command '%q ' env GITHUB_ACTIONS=true python3 "$GITHUB_WORKSPACE/tests/usb-kernel.py" "$RUNNER_TEMP/webmux"

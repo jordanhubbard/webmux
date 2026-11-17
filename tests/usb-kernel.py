@@ -50,6 +50,9 @@ def listening(port):
 if os.geteuid() != 0 or os.environ.get("GITHUB_ACTIONS") != "true" or socket.gethostname() != "virtme-ng":
     sys.exit("Run only as root in a disposable GitHub Actions Linux VM.")
 binary = str(Path(sys.argv[1]).resolve(strict=True))
+direct_control = sys.argv[2:] == ["--direct-control"]
+if sys.argv[2:] and not direct_control:
+    sys.exit("Expected only an optional --direct-control flag.")
 modules = ["usbip_vudc", "g_mass_storage", "vhci_hcd"]
 if any(Path("/sys/module", module).exists() for module in modules):
     sys.exit("Fixture requires a fresh VM with no existing USB forwarding modules.")
@@ -102,6 +105,31 @@ try:
     busid = until(gadget_bus, "virtual USB gadget binding")
     start("usbipd", "usbipd", "--device", "-4", "--tcp-port", "3241")
     until(lambda: listening(3241), "USB/IP exporter startup")
+
+    if direct_control:
+        # The same virtual gadget, native importer and kernel are used, but no
+        # WebMux CLI, worker or SSH transport exists in this control.
+        print("DIRECT USB/IP CONTROL: bypassing WebMux and SSH", flush=True)
+        for cycle in range(1, 21):
+            run("usbip", "--tcp-port", "3241", "attach", "--remote", "127.0.0.1", "--busid", busid)
+            disk = until(imported_disk, f"direct USB mass storage enumeration, cycle {cycle}")
+            with disk.open("rb", buffering=0) as source:
+                assert source.read(len(pattern)) == pattern, "direct USB read payload mismatch"
+            changed = bytes([cycle]) * len(pattern)
+            with disk.open("r+b", buffering=0) as device:
+                device.seek(1024 * 1024)
+                device.write(changed)
+                os.fsync(device.fileno())
+            with image.open("rb", buffering=0) as backing:
+                backing.seek(1024 * 1024)
+                assert backing.read(len(changed)) == changed, "direct USB write payload mismatch"
+            ports = re.findall(r"Port (\d+):", run("usbip", "port"))
+            assert len(ports) == 1, "Expected exactly one direct imported fixture device"
+            run("usbip", "detach", "--port", ports[0])
+            until(lambda: imported_disk() is None, f"direct USB detach, cycle {cycle}")
+            print(f"Direct cycle {cycle}/20 passed", flush=True)
+        print("PASS: 20 direct USB/IP enumeration, read/write and detach cycles", flush=True)
+        sys.exit(0)
 
     run("ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(root / "host"))
     os.chown(root / "host", account.pw_uid, account.pw_gid)
