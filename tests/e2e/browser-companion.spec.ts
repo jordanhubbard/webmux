@@ -44,6 +44,7 @@ test(`browser companion routes ${scenario} authentication and completes a loopba
   let pageReady = false;
   const inputReceipts: unknown[] = [];
   let inputGeometry: unknown;
+  const geometrySamples: unknown[] = [];
   const callback = http.createServer((req, res) => {
     const url = new URL(req.url!, 'http://localhost');
     if (url.pathname === '/callback') received = url.searchParams.get('code') ?? '';
@@ -204,6 +205,8 @@ test(`browser companion routes ${scenario} authentication and completes a loopba
           requestedHeight: Math.max(240, Math.min(1600, Math.round(area.height))) };
       });
       geometry = { width: remote.width, height: remote.height };
+      geometrySamples.push({ displayed, remote: { width: remote.width, height: remote.height, error: remote.error } });
+      if (geometrySamples.length > 20) geometrySamples.shift();
       return displayed.width === remote.width && displayed.height === remote.height
         && displayed.requestedWidth === remote.width && displayed.requestedHeight === remote.height;
     }).toBe(true);
@@ -265,7 +268,7 @@ test(`browser companion routes ${scenario} authentication and completes a loopba
       active: { tag: document.activeElement?.tagName, label: document.activeElement?.getAttribute('aria-label') },
     })).catch(() => null);
     const diagnosticsPath = info.outputPath('browser-input-diagnostics.json');
-    writeFileSync(diagnosticsPath, JSON.stringify({ linkKind, received, pageReady, inputGeometry, inputReceipts, viewer, replies }));
+    writeFileSync(diagnosticsPath, JSON.stringify({ linkKind, received, pageReady, inputGeometry, geometrySamples, inputReceipts, viewer, replies }));
     await info.attach('browser-input-diagnostics', {
       path: diagnosticsPath,
       contentType: 'application/json',

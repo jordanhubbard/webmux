@@ -133,8 +133,10 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
       const { width, height } = entries[0].contentRect;
       const w = Math.max(320, Math.min(2560, Math.round(width)));
       const h = Math.max(240, Math.min(1600, Math.round(height)));
-      if (`${w}x${h}` === size) return;
+      // Returning to the last requested size must also cancel an older
+      // pending resize for an intermediate layout (for example an alert).
       clearTimeout(timer);
+      if (`${w}x${h}` === size) return;
       timer = setTimeout(() => { size = `${w}x${h}`; void act({ action: 'resize', width: w, height: h }); }, 120);
     });
     observer.observe(viewportBox.current);
