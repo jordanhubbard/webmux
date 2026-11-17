@@ -201,3 +201,37 @@ with every kernel. Linux gadget emulation does not establish compatibility
 with VirtualHere, Windows/macOS drivers, or iPhone/Xcode. Physical acceptance stays
 in #120. See the [kernel gadget API](https://www.kernel.org/doc/html/latest/driver-api/usb/gadget.html)
 and [USB/IP setup](https://github.com/torvalds/linux/blob/master/tools/usb/usbip/README).
+
+### Virtual gadget teardown qualification (#382)
+
+The Ubuntu 6.8.0-146 virtual gadget can retain completed USB/IP replies after its
+transmit thread exits. The next importer may receive an old URB reply, either
+before its import handshake (reported as a protocol-version mismatch) or after
+attachment (an unknown URB sequence number). This was reproduced in a direct
+USB/IP control that launched no WebMux or SSH process.
+
+CI uses `scripts/build-test-vudc.py` to build the virtual gadget from pinned Linux
+v6.8 source against the selected guest kernel's headers. It verifies every source
+hash and applies `tests/usb-vudc.patch` without fuzz to discard completed replies
+during teardown. The GPL-2.0-or-later module is a disposable test device; it is not
+linked into or shipped with WebMux. The generic guest kernel, source commit,
+patches, module digests and vermagic remain in the build receipts.
+
+`scripts/qualify-test-vudc.py` checks three module builds in fresh isolated VMs:
+
+- Identical source without the correction must reproduce the specific failure.
+  A test-only scheduling hook pauses transmission of a real completed native
+  read, then the fixture detaches the importer. It creates no synthetic USB/IP
+  requests or replies. Setup failures, observation timeouts and unrelated errors
+  do not count as the expected failure.
+- The corrected source with the same hook must actually discard the held reply,
+  reimport the device and read the exact expected bytes.
+- The corrected source without the hook must pass 20 direct import/read/write/
+  detach cycles, followed by the unchanged WebMux-over-SSH lifecycle in another
+  fresh VM. That lifecycle includes explicit reattach, interruption and worker/
+  listener cleanup.
+
+Each VM compares the loaded module's source identity with the build receipt.
+Logs, admission results and build receipts are retained. This qualifies WebMux's
+opaque relay with the corrected virtual device; it does not qualify the stock
+buggy virtual gadget, every Linux kernel, or physical phone/Xcode integration.
