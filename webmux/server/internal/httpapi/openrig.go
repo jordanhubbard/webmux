@@ -194,7 +194,9 @@ type openRigAgent struct {
 func readOpenRigAgents(parent context.Context, executable string) ([]openRigAgent, error) {
 	ctx, cancel := context.WithTimeout(parent, 8*time.Second)
 	defer cancel()
-	output, err := exec.CommandContext(ctx, executable, "ps", "--nodes", "-A", "--fields", "canonicalSessionName,runtime,rigName,sessionStatus", "--json").Output()
+	command := exec.CommandContext(ctx, executable, "ps", "--nodes", "-A", "--fields", "canonicalSessionName,runtime,rigName,sessionStatus", "--json")
+	command.Env = openrigcoord.ControlEnvironment()
+	output, err := command.Output()
 	if err != nil {
 		return nil, err
 	}

@@ -13,6 +13,9 @@ type RigRow = { rigId?: string; name?: string; rigName?: string; nodeCount?: num
 type NodeRow = { rigId?: string; rigName?: string; logicalId?: string; podNamespace?: string; canonicalSessionName?: string; runtime?: string; sessionStatus?: string; lifecycleState?: string; tmuxAttachCommand?: string | null };
 const [action, directory] = process.argv.slice(2);
 if (!directory) throw new Error('Missing coordination state directory');
+// Controller commands follow the configured coordinator endpoint. A user's
+// CLI host-selection preference must not redirect discovery or lifecycle work.
+process.env.OPENRIG_HOST_SELECTED = 'local';
 fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
 const q = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 const run = (cmd: string, args: string[], timeout = 25000) => execFileSync(cmd, args, { encoding: 'utf8', timeout, stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 4 * 1024 * 1024 }).trim();
@@ -64,7 +67,7 @@ try {
       attached.env.OPENRIG_RELAY_RUN = remote.run.replaceAll(q('__OPENRIG_SENDER_ADDRESS__'), sender);
       keys.push('OPENRIG_RELAY_SETUP', 'OPENRIG_RELAY_RUN');
     }
-    write(path.join(directory, `${tmux}.env`), keys.filter(key => typeof attached.env?.[key] === 'string').map(key => `export ${key}=${q(String(attached.env?.[key]))}`).join('\n') + '\n');
+    write(path.join(directory, `${tmux}.env`), 'export OPENRIG_HOST_SELECTED=local\n' + keys.filter(key => typeof attached.env?.[key] === 'string').map(key => `export ${key}=${q(String(attached.env?.[key]))}`).join('\n') + '\n');
   } else if (action === 'browse') {
     const input = JSON.parse(fs.readFileSync(0, 'utf8')) as Input;
     const host = input.host?.trim() || 'localhost';
@@ -213,7 +216,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       const envFile = path.join(directory, `${tmux}.env`);
       const remotePort = local ? 0 : existing?.remotePort ?? Number(run('ssh', [...sshArgs, host, "python3 -c 'import socket; s=socket.socket(); s.bind((\"127.0.0.1\",0)); print(s.getsockname()[1])'"]));
       if (!local && (!Number.isInteger(remotePort) || remotePort < 1024 || remotePort > 65535)) throw new Error('Cannot allocate a private SSH reverse forward.');
-      const remoteAgent = `export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; export OPENRIG_URL=http://127.0.0.1:${remotePort}; export OPENRIG_SESSION_NAME=${q('__OPENRIG_SENDER_ADDRESS__')}; cd ${q(cwd)} && exec ${cli}`;
+      const remoteAgent = `export PATH="$PATH:$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"; export OPENRIG_HOST_SELECTED=local; export OPENRIG_URL=http://127.0.0.1:${remotePort}; export OPENRIG_SESSION_NAME=${q('__OPENRIG_SENDER_ADDRESS__')}; cd ${q(cwd)} && exec ${cli}`;
       // The patched coordinator proves this exact attach command against the local
       // SSH process, then independently observes the remote pane. Agent prompts
       // and session creation are kept out of the identity-bearing attach argv.
@@ -231,7 +234,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       const command = local ? `cd ${q(cwd)}\nexec ${cli}` : `${relayIdentity ? `ssh ${sshArgs.map(q).join(' ')} ${q(host)} "$OPENRIG_RELAY_SETUP"\n` : ''}PORT=$(${endpoint})\nexec ssh ${sshArgs.map(q).join(' ')} -o ExitOnForwardFailure=yes -tt -R ${q(`127.0.0.1:${remotePort}:127.0.0.1:`)}"$PORT" ${q(host)} ${relayIdentity ? q(remoteAttach) : '"$OPENRIG_RELAY_RUN"'}`;
       // An existing tmux server retains its original environment. Bind the
       // service PATH explicitly rather than inheriting that server's stale PATH.
-      write(launcher, `#!/bin/sh\nset -eu\nexport PATH=${q(process.env.PATH ?? '')}:"$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"\n${attach} > ${q(attached + '.tmp')} || { mv -f ${q(attached + '.tmp')} ${q(attached)}; exit 1; }\nmv -f ${q(attached + '.tmp')} ${q(attached)}\n${q(process.execPath)} ${q(process.argv[1])} environment ${q(directory)} ${q(tmux)}\n. ${q(envFile)}\n${command}\n`);
+      write(launcher, `#!/bin/sh\nset -eu\nexport OPENRIG_HOST_SELECTED=local\nexport PATH=${q(process.env.PATH ?? '')}:"$HOME/.local/bin:/opt/homebrew/bin:/home/linuxbrew/.linuxbrew/bin"\n${attach} > ${q(attached + '.tmp')} || { mv -f ${q(attached + '.tmp')} ${q(attached)}; exit 1; }\nmv -f ${q(attached + '.tmp')} ${q(attached)}\n${q(process.execPath)} ${q(process.argv[1])} environment ${q(directory)} ${q(tmux)}\n. ${q(envFile)}\n${command}\n`);
       fs.chmodSync(launcher, 0o700);
       if (existing) {
         // Reattachments retain historical records with the same session name.
