@@ -279,3 +279,23 @@ it('reconnects the displayed saved profile after a worker error', async () => {
   expect(fixture.action).toHaveBeenLastCalledWith('saved-retry', { action: 'start', profileId: 'retained' });
  } finally { view.unmount(); }
 });
+
+
+it('reads accessible text on demand, escapes page markup and clears it on navigation', async () => {
+ const frame = { protocol: 3, control: { owned: true, available: false }, image: 'fixture', url: 'https://example.com/work', canBack: true, tabs: [], target: 'one' };
+ fixture.action.mockReset().mockImplementation(async (_id, request) => request.action === 'read_page' ? { ...frame, pageText: { nodes: [{ role: 'heading', name: '<img src=x onerror=alert(1)>', depth: 0 }], truncated: true } } : frame);
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  expect(fixture.action.mock.calls.map(call => call[1].action)).toEqual(['start']);
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Read page text' })); });
+  const region = screen.getByRole('region', { name: 'Remote page text' });
+  expect(region).toHaveFocus();
+  expect(region).toHaveTextContent('heading: <img src=x onerror=alert(1)>');
+  expect(region.querySelector('img')).toBeNull();
+  expect(region).toHaveTextContent('Only part');
+  expect(fixture.action).toHaveBeenCalledWith('test', { action: 'read_page', target: 'one' });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Browser back' })); });
+  expect(screen.queryByRole('region', { name: 'Remote page text' })).toBeNull();
+ } finally { view.unmount(); }
+});

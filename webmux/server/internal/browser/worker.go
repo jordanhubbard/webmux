@@ -57,6 +57,7 @@ type Tab struct {
 }
 
 type Frame struct {
+	PageText    *PageText      `json:"pageText,omitempty"`
 	Control     *Control       `json:"control,omitempty"`
 	ProfileKey  string         `json:"profileKey,omitempty"`
 	ProfileID   string         `json:"profileId,omitempty"`
@@ -237,7 +238,7 @@ func Worker(in io.Reader, out io.Writer) error {
 			}
 			frame := browser.snapshot(req, err)
 			frame.ProfileKey = key
-			frame.Clipboard, frame.File, frame.Found = extra.Clipboard, extra.File, extra.Found
+			frame.Clipboard, frame.File, frame.Found, frame.PageText = extra.Clipboard, extra.File, extra.Found, extra.PageText
 
 			if err := encoder.Encode(frame); err != nil {
 				return err
