@@ -1,0 +1,14 @@
+{
+  "commit": "e8f897f4afef0031fe618a8e94127a0934896aba",
+  "license": "GPL-2.0-or-later",
+  "files": {
+    "vudc_main.c": "343c32e1b09f386cc0445232dfb38cbf18ad1ac967338ca9893812eb4dd38d8d",
+    "vudc_dev.c": "78edeb5a3ec546133cd132d65e4b3a5de2c0f3ceb9985c299180598194926dd5",
+    "vudc_sysfs.c": "fb7a2add97dd1b0523e0201db0e01967f17e85acd925bef0b967b991b0541f74",
+    "vudc_rx.c": "29025089da237844c6df30eb10076206231efe3af3141d4888bf5690e19062e4",
+    "vudc_tx.c": "2edb66b03230a2ee0d676c9067081f4b0559a473b76b82d80fd383f23c357d01",
+    "vudc_transfer.c": "f9c5ba690a16556539f5cd99b1207661e86d132a4148733346ba4000445428e5",
+    "vudc.h": "8ac3bbd08233bf25b17b6633197e74915b024f3c15a64ece8a8dedc9cb716115",
+    "usbip_common.h": "19d22e2f8642c2fdbdd913a7e523ca487e40f04d6cc920e35de69f9f232d5b20"
+  }
+}

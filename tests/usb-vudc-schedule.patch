@@ -1,0 +1,58 @@
+--- a/vudc_tx.c
++++ b/vudc_tx.c
+@@ -11,6 +11,23 @@
+ 
+ #include "usbip_common.h"
+ #include "vudc.h"
++#include <linux/moduleparam.h>
++#include <linux/atomic.h>
++
++/* Test-only scheduling control. Retain real completed native URBs until the
++ * importer disconnects. No USB/IP request or reply is manufactured. */
++static bool webmux_hold_replies;
++module_param_named(webmux_test_hold_replies, webmux_hold_replies, bool, 0600);
++static atomic_t webmux_held_replies = ATOMIC_INIT(0);
++static int webmux_held_get(char *buffer, const struct kernel_param *kp)
++{
++	(void)kp;
++	return sysfs_emit(buffer, "%d\n", atomic_read(&webmux_held_replies));
++}
++static const struct kernel_param_ops webmux_held_ops = {
++	.get = webmux_held_get,
++};
++module_param_cb(webmux_test_held_replies, &webmux_held_ops, NULL, 0400);
+ 
+ static inline void setup_base_pdu(struct usbip_header_basic *base,
+ 				  __u32 command, __u32 seqnum)
+@@ -190,6 +207,10 @@
+ 
+ 	spin_lock_irqsave(&udc->lock_tx, flags);
+ 	while (!list_empty(&udc->tx_queue)) {
++		if (READ_ONCE(webmux_hold_replies)) {
++			spin_unlock_irqrestore(&udc->lock_tx, flags);
++			return total_size;
++		}
+ 		txi = list_first_entry(&udc->tx_queue, struct tx_item,
+ 				       tx_entry);
+ 		list_del(&txi->tx_entry);
+@@ -225,6 +246,12 @@
+ 	int ret;
+ 
+ 	while (!kthread_should_stop()) {
++		if (READ_ONCE(webmux_hold_replies)) {
++			wait_event_interruptible_timeout(udc->tx_waitq,
++				!READ_ONCE(webmux_hold_replies) || kthread_should_stop(),
++				msecs_to_jiffies(10));
++			continue;
++		}
+ 		if (usbip_event_happened(&udc->ud))
+ 			break;
+ 		ret = v_send_ret(udc);
+@@ -281,4 +308,6 @@
+ 	txi->s = urb_p;
+ 
+ 	list_add_tail(&txi->tx_entry, &udc->tx_queue);
+-}
++	if (READ_ONCE(webmux_hold_replies))
++		atomic_inc(&webmux_held_replies);
++}
