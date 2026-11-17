@@ -4,10 +4,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
-import { execFile, spawn, type ChildProcess } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { randomBytes } from 'node:crypto';
-import { promisify, stripVTControlCharacters } from 'node:util';
+import { stopWindowsOwner } from './native-smoke-owner.mts';
+import { stripVTControlCharacters } from 'node:util';
 
 function record(value: unknown): Record<string, unknown> {
   assert(value && typeof value === 'object' && !Array.isArray(value));
@@ -24,20 +25,16 @@ async function until(check: () => boolean | Promise<boolean>, label: string | ((
   } while (Date.now() < deadline);
   throw new Error(`Timed out: ${typeof label === 'function' ? label() : label}`);
 }
+let ownerReceipt = '';
 async function stop(child: ChildProcess): Promise<void> {
+  if (process.platform === 'win32') return stopWindowsOwner(child, ownerReceipt);
   if (child.exitCode !== null || child.signalCode !== null) return;
   const closed = once(child, 'close');
-  // Node cannot deliver a graceful SIGTERM on Windows. Kill the isolated
-  // fixture tree so a failed PTY assertion cannot leave a shell holding cwd.
-  const termination = process.platform === 'win32' && child.pid !== undefined
-    ? promisify(execFile)('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { timeout: 10000 })
-    : Promise.resolve(child.kill('SIGTERM'));
+  child.kill('SIGTERM');
   const timer = setTimeout(() => child.kill('SIGKILL'), 10000);
   try {
-    await termination;
     const [code, signal] = await closed;
-    if (process.platform !== 'win32') assert.equal(code, 0, `Shutdown: ${String(signal)}`);
-    else assert(code !== null || signal);
+    assert.equal(code, 0, `Shutdown: ${String(signal)}`);
   } finally { clearTimeout(timer); }
 }
 
@@ -71,8 +68,11 @@ const failures: unknown[] = [];
 try {
   for (let attempt = 0; attempt < 2; attempt++) {
     let launchError: Error | undefined;
-    child = spawn(executable, ['--listen', `127.0.0.1:${port}`], {
-      cwd: home, stdio: ['ignore', 'pipe', 'pipe'],
+    const owner = process.platform === 'win32' ? process.env.WEBMUX_QUALIFICATION_OWNER : undefined;
+    if (process.platform === 'win32') assert(owner && fs.existsSync(owner), 'Build and set WEBMUX_QUALIFICATION_OWNER for the Windows smoke fixture');
+    ownerReceipt = path.join(home, `ownership-${attempt}.json`);
+    child = spawn(owner || executable, [...(owner ? ['--receipt', ownerReceipt, '--', executable] : []), '--listen', `127.0.0.1:${port}`], {
+      cwd: home, stdio: [owner ? 'pipe' : 'ignore', 'pipe', 'pipe'],
       env: { ...process.env, WEBMUX_HOME: home, WEBMUX_ROOT: '', HTTP_PORT: String(port), HTTPS_PORT: '0',
         JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '', SHELL: '/bin/sh', WEBMUX_SMOKE_WORD: 'ok',
         WEBMUX_EXEC_COMMAND: process.platform === 'win32' ? 'cmd.exe /d /q' : '/bin/sh' },
