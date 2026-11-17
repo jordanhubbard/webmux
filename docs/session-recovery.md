@@ -2116,7 +2116,12 @@ The collector now uses a temporary, deadline-bounded SYSTEM scheduled task on
 the disposable runner to execute only the synthetic native fixture outside
 that restrictive job, then removes its task registration. Chrome remains under
 the runner account. No user sign-in state is used or copied; zero-skip and
-one-job assertions remain mandatory.
+one-job assertions remain mandatory. The renderer also records the focus
+notifications xterm sends immediately when DECSET 1004 is restored, checking
+them against the production owner-local input policy. They are not device,
+status or color query replies; every such replay reply remains forbidden.
+The seven actual Windows captures from source `7fa692e` also passed the
+corrected renderer locally alongside all 40 portable cases (47 total).
 
 Full local Go race tests passed, as did affected vet and Windows cross-vet,
 and Windows AMD64/ARM64 provider-test compilation. Cross-compilation does not
