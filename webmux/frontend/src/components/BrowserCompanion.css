@@ -39,3 +39,7 @@
 .browser-controls { display: contents; }
 .browser-profiles { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0.4rem; }
 .browser-profiles small { flex-basis: 100%; }
+
+.browser-page-text { flex: 0 0 auto; max-height: 50vh; overflow: auto; padding: 12px; overflow-wrap: anywhere; }
+.browser-page-text h2 { font-size: 16px; }
+.browser-page-text li { margin-block: 6px; }

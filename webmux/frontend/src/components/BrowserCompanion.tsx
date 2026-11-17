@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { api, type BrowserFrame, type BrowserAction, type BrowserProfile } from '../utils/api';
+import { api, type BrowserFrame, type BrowserAction, type BrowserProfile, type BrowserPageText } from '../utils/api';
 import { copyDesktopText } from '../utils/terminalClipboard';
 import { handoffLink } from '../utils/authHandoff';
 import { Dialog } from './Dialog';
@@ -49,6 +49,8 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   const [showFind, setShowFind] = useState(false);
   const [findText, setFindText] = useState('');
   const [findMessage, setFindMessage] = useState('');
+  const [pageText, setPageText] = useState<{ session: string; target: string; url: string; text: BrowserPageText }>();
+  const pageTextPanel = useRef<HTMLElement>(null);
   const findInput = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState(false);
   const mounted = useRef(true);
@@ -75,6 +77,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
       else if (profileChoice.current.id !== undefined) action = { ...action, profileId: profileChoice.current.id };
     }
     if (NAVIGATION_ACTIONS.has(action.action)) {
+      setPageText(undefined);
       addressDraft.current = false;
       addressEditing.current = false;
     }
@@ -97,7 +100,8 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         control.current = result.control?.owned === true;
         if (result.protocol === 3) profileChoice.current.id = result.profileId ?? '';
         if (!control.current) dragging.current = null;
-        const { file, clipboard, ...metadata } = result;
+        const { file, clipboard, pageText: text, ...metadata } = result;
+        if (text) setPageText({ session: session.id, target: result.target, url: result.url, text });
         setFrame(previous => ({ ...metadata, url: metadata.url || previous?.url || '', target: metadata.target || previous?.target || '', tabs: metadata.tabs ?? previous?.tabs ?? [],
           width: metadata.width || previous?.width, height: metadata.height || previous?.height,
           image: metadata.image || (!metadata.target || previous?.target === metadata.target ? previous?.image : undefined) }));
@@ -166,6 +170,8 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   }, [act, ready, controlled]);
 
   useEffect(() => { if (showFind) findInput.current?.focus(); }, [showFind]);
+  const visiblePageText = pageText?.session === session.id && pageText?.target === frame?.target && pageText?.url === frame?.url ? pageText : undefined;
+  useEffect(() => { if (visiblePageText) pageTextPanel.current?.focus(); }, [visiblePageText]);
 
   useEffect(() => { setPrompt(frame?.dialog?.prompt ?? ''); }, [frame?.dialog?.message, frame?.dialog?.prompt]);
 
@@ -320,9 +326,18 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
           onPaste={event => { event.preventDefault(); void act({ action: 'text', text: event.clipboardData.getData('text/plain') }); }}
         />
       </div>
+      {visiblePageText && <section ref={pageTextPanel} className="browser-page-text" aria-label="Remote page text" tabIndex={-1}>
+        <h2>Remote page text</h2>
+        <p>Snapshot of the selected page’s accessible names and roles. Read again after the page changes. Continue interacting through the page viewport.</p>
+        <button type="button" onClick={() => { setPageText(undefined); keyboard.current?.focus(); }}>Close page text</button>
+        {visiblePageText.text.truncated && <p role="status">This page is large. Only part of its accessible content is shown.</p>}
+        <ol>{visiblePageText.text.nodes.map((node, index) => <li key={index}><strong>{node.role}</strong>{node.name ? `: ${node.name}` : ' (unlabeled)'}</li>)}</ol>
+        {!visiblePageText.text.nodes.length && <p>No accessible content was reported for this page.</p>}
+      </section>}
       <fieldset className="browser-controls" disabled={!controlled || busy}>
       <footer>
         <span>Shift+Esc releases focus. Saved profiles retain cookies after ending; temporary profiles are cleared.</span>
+        <button onClick={() => void act({ action: 'read_page', target: frame?.target })} disabled={!ready || !frame?.target}>Read page text</button>
         <button onClick={() => setShowFind(value => !value)} disabled={!ready}>Find text</button>
         <button onClick={() => void act({ action: 'copy' })} disabled={!ready}>Copy selection</button>
         <button onClick={() => setShowPaste(value => !value)} disabled={!ready}>Paste text</button>

@@ -14,10 +14,12 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
    const chunks: Buffer[] = []; req.on('data', chunk => chunks.push(chunk)); req.on('end', () => { uploaded = Buffer.concat(chunks); res.end('ok'); }); return;
   }
   if (req.url === '/download') { res.setHeader('Content-Disposition', 'attachment; filename="browser-proof.bin"'); res.setHeader('Content-Type', 'application/octet-stream'); res.end(downloadBytes); return; }
-  res.setHeader('Content-Type', 'text/html');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
   if (req.url === '/second') { res.end('<title>Second page</title><h1>Second page</h1>'); return; }
   const returningDocument = ++mainDocuments > 1;
   res.end(`<!doctype html><title>Browser work fixture</title><style>body{margin:0;font:16px sans-serif}button,input,a,.area{position:absolute;box-sizing:border-box;height:40px;width:190px}#drag{left:20px;top:20px;background:#bad}#hover{left:240px;top:20px;background:#bda}#confirm{left:20px;top:80px}#double{left:240px;top:80px}#files{left:20px;top:140px}#context{left:240px;top:140px}#download{left:20px;top:200px}#prompt{left:240px;top:200px}#text{left:20px;top:260px;width:400px}#popup{left:20px;top:320px}#select{position:absolute;left:240px;top:320px;height:40px;width:190px}</style>
+   <h1 style="position:absolute;left:600px;top:20px">Readable workspace 😀</h1>
+   <textarea aria-label="Private notes" style="position:absolute;left:600px;top:140px">private-editable-descendant-not-for-export</textarea><span hidden>hidden accessibility control</span><input type="password" aria-label="Private access code" value="fixture-password-not-for-export" style="left:600px;top:80px">
    <div id="drag" class="area">Drag here</div><div id="hover" class="area">Hover here</div>
    <button id="confirm">Confirm</button><button id="double">Double click</button>
    <input id="files" type="file"><div id="context" class="area">Right click here</div>
@@ -93,6 +95,19 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   const click = async (x: number, y: number, button: 'left' | 'right' = 'left') => {
    const p = await position(x, y); await page.mouse.click(p.x, p.y, { button });
   };
+  await page.getByRole('button', { name: 'Read page text', exact: true }).click();
+  const readable = page.getByRole('region', { name: 'Remote page text', exact: true });
+  await expect(readable).toBeFocused();
+  await expect(readable).toContainText('heading: Readable workspace 😀');
+  await expect(readable).toContainText('button: Confirm');
+  await expect(readable).toContainText('Private access code');
+  await expect(readable).not.toContainText('fixture-password-not-for-export');
+  await expect(readable).not.toContainText('private-editable-descendant-not-for-export');
+  await expect(readable).not.toContainText('hidden accessibility control');
+  const staleRead = await (await controlledPost({ action: 'read_page', target: 'another-tab' })).json();
+  expect(staleRead.error).toContain('selected page changed'); expect(staleRead.pageText).toBeUndefined();
+  await page.getByRole('button', { name: 'Close page text', exact: true }).click();
+  await expect(readable).not.toBeVisible();
   const hover = await position(280, 40); await page.mouse.move(hover.x, hover.y);
   await expect.poll(() => signals).toContain('hover');
   const start = await position(50, 40); const end = await position(150, 50);

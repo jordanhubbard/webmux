@@ -253,3 +253,26 @@ identity provider. A private Chrome-for-Testing build on ubumeh refused startup
 because that location had no usable browser sandbox; no protection was disabled
 to obtain a pass there. Durable profiles, leases, mobile/accessibility and
 provider/hardware authentication acceptance remain open in #110.
+
+
+## Read remote page text
+
+Choose **Read page text** to open a keyboard-focusable text view of the selected
+page’s Chromium accessibility names and roles. Headings, links, buttons and form
+labels appear in document order and can be read with the local screen reader.
+**Close page text** returns focus to remote-page input. No new keyboard shortcut
+is reserved. Continue using the page viewport to interact with controls.
+
+This is an on-demand snapshot of the root document, not a live DOM mirror.
+Read it again after dynamic page changes. Navigation or a different selected tab
+hides the old snapshot. Only the current controller can request a reading, and a
+queued request for an old tab is refused. Existing owner, SSH and worker-channel
+boundaries apply.
+
+The worker emits at most 512 entries and 32 KiB of names/roles, with individual
+names limited to 2048 UTF-8 bytes and tree depth to 32. The view reports when
+content was cut off. Ignored nodes, duplicate inline glyph runs, editable values
+and editable descendants are omitted; markup is displayed as text. The view
+does not synthesize form interactions, expose iframe documents, forward a local
+screen reader to the remote OS, or establish real identity-provider acceptance.
+Those broader accessibility and authentication requirements remain under #110.
