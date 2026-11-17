@@ -121,6 +121,10 @@ jobs:
         if: runner.os == 'Windows'
         working-directory: webmux/server
         run: go test -race ./internal/usbforward -run TestRealSSHTransportAndHostKeyRejection -count=3
+      - name: Repeat native Windows resize acceptance
+        if: runner.os == 'Windows'
+        working-directory: webmux/server
+        run: go test -race ./internal/terminal -run 'TestTerminal(InputResizeAndExit|ResizeWaitCannotInventSize)' -count=20
       - name: Vet native server
         working-directory: webmux/server
         run: go vet ./...
