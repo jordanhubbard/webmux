@@ -120,3 +120,64 @@ unavailable with their last observed lifecycle and timestamp. New attachments
 are disabled until a current report supplies an attachment target. Revoking a
 client or unlinking/deleting its saved host removes its inventory authority;
 existing viewers are not provider-stop commands.
+
+
+## Remote Rig qualification
+
+The bounded observer has ordinary Go tests, authenticated socket lifecycle
+controls, browser controls for read-only/offline inventory, and an observation
+check inside the real published-Rig/tmux browser fixture. These are distinct
+from actual SSH viewer qualification.
+
+`scripts/qualify-remote-rig.mts` runs the complete path against an already owned,
+disposable Linux QEMU guest. It requires the guest's `launch.json` (live PID,
+VM identity, noninteractive loopback-forwarded SSH with a private known-hosts
+file), a prepared shell-seat fixture, native server/client binaries built at
+one known revision, Chrome, and a new output directory. It never uses the
+controller's installed Rig or starts a Rig daemon. It creates an isolated,
+authenticated controller, enrolls its own client, and transfers its disposable
+client credential over the existing SSH connection. It uploads the client only
+to the prepared fixture directory and verifies its digest before execution.
+
+The prepared guest fixture is intentionally explicit: its directory is
+`/home/<user>/qualification/rig-200/run-<hex>`, it has a private Rig instance and
+`bin/rig` wrapper, and its existing `wm-remote200-<hex>` tmux seat is enrolled
+through `rig attach --self` in a one-seat Rig. Its shell prints
+`REMOTE-SEAT-READY`, then echoes each complete input line with
+`printf 'REMOTE-SEAT:%s\n' "$line"`. This is a shell transport fixture, not a
+coding agent or an authenticated coding-conversation claim. The input JSON has
+`contract: "webmux-remote-rig-fixture/v1"`, `root`, `rig_id`, `tmux`, the absolute
+`node` path, and `version` from the installed Rig CLI. Rig is started only by
+explicit fixture preparation, separately from observation.
+
+```sh
+node scripts/qualify-remote-rig.mts \
+  --vm-root /path/to/owned-vm \
+  --guest-fixture /path/to/guest-fixture.json \
+  --server-binary /path/to/native-controller \
+  --client-binary /path/to/linux-arm64-client \
+  --chromium /path/to/chrome \
+  --expected-revision <full-commit> \
+  --output /path/to/new-evidence-directory
+```
+
+The command checks browser-rendered SSH text and keyboard output, two browser
+windows sharing one viewer, loss of the actual client process, preservation of
+the canonical Rig lifecycle, reconnect, controller restart with stable identity
+and coordinates, a fresh post-restart response, revocation without stopping
+the provider, and ordinary SSH with Rig disabled. It records payload digests,
+producer/build observations, browser/guest versions and each acceptance phase.
+It terminates its controller, tunnels and client processes; the prepared Rig
+seat stays running for independent inspection and explicit fixture teardown.
+Keep the output directory private because it contains disposable controller
+configuration. Never publish its authentication files as evidence.
+
+The [2026-11-17 qualification receipt](validation/remote-rig-2026-11-17/receipt.json)
+records the successful run at runtime revision `74d0f2d`: macOS ARM64 controller,
+actual Chrome, an owned Linux ARM64 guest, published Rig 0.6.14 and tmux 3.2a.
+The same remote pane PID survived every phase. The retained canonical lifecycle
+was `attention_required`, and going offline preserved it. This qualifies the
+read/attach path against that existing tmux seat; WebMux's separate local Rig
+launcher still requires its documented tmux minimum. It does not qualify
+coding-session resume, provider credentials, every SSH configuration or Windows
+execution hosts. Those boundaries remain under #318 and the broader roadmap.

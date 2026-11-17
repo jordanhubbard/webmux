@@ -228,8 +228,10 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   the outbound managed-host client. An opt-in bounded canonical-seat report now
   carries host-scoped identity and observation provenance, with stale/offline
   inventory and read-only SSH attachment. The published-Rig observer and
-  authenticated channel controls are covered separately; full real SSH/grid
-  qualification remains pending. See [managed-host observation](managed-hosts.md#observe-existing-rig-seats).
+  authenticated channel controls are covered separately. A real Linux ARM64
+  guest now also passes authenticated host check-in, browser/SSH input, multiple
+  windows, client loss/reconnect, controller restart with stable seat/layout,
+  revocation and ordinary SSH with Rig disabled. See [managed-host observation](managed-hosts.md#observe-existing-rig-seats).
   Server federation is separate from this contract.
 - [#110](https://github.com/jordanhubbard/webmux/issues/110): browser companion
   durable profiles/controller lease, mobile/accessibility work and real-provider/
