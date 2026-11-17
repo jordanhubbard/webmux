@@ -225,8 +225,10 @@ updates. The dependency-audit gate remains enabled and passed for this release.
 ## External distribution and qualification
 
 - [#91](https://github.com/jordanhubbard/webmux/issues/91): WiX migration review,
-  Apache-source browser package migration and deployment-specific component
-  inventories.
+  deployment-specific component inventories. The browser library now uses a
+  reproducible local package from verified Apache Guacamole 1.6.0 sources, with
+  license/notices and source/package digests retained in native bundles
+  ([provenance](../webmux/vendor/guacamole-common-js/README.md)).
 - [#63](https://github.com/jordanhubbard/webmux/issues/63),
   [#65](https://github.com/jordanhubbard/webmux/issues/65), and
   [#152](https://github.com/jordanhubbard/webmux/issues/152): Windows signing,

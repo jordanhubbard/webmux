@@ -71,6 +71,14 @@ try {
     const lock = JSON.parse(fs.readFileSync(path.join(source, 'package-lock.json'), 'utf8')) as {
       packages: Record<string, { version?: string; resolved?: string; integrity?: string; dev?: boolean; link?: boolean }>;
     };
+    const apacheBrowser = path.join(source, 'vendor/guacamole-common-js');
+    const provenance = JSON.parse(fs.readFileSync(path.join(apacheBrowser, 'provenance.json'), 'utf8')) as { packageSHA256?: string };
+    const packageSHA256 = createHash('sha256').update(fs.readFileSync(path.join(apacheBrowser, 'package.tgz'))).digest('hex');
+    if (packageSHA256 !== provenance.packageSHA256) throw new Error('Apache browser package provenance mismatch');
+    inventory.apacheGuacamoleBrowser = provenance;
+    fs.mkdirSync(path.join(stage, 'licenses/guacamole-common-js'), { recursive: true });
+    copyTree(path.join(apacheBrowser, 'LICENSE'), path.join(stage, 'licenses/guacamole-common-js/LICENSE'));
+    copyTree(path.join(apacheBrowser, 'NOTICE'), path.join(stage, 'licenses/guacamole-common-js/NOTICE'));
     inventory.binarySHA256 = createHash('sha256').update(fs.readFileSync(executable)).digest('hex');
     inventory.goBuild = execFileSync('go', ['version', '-m', executable], { cwd: path.join(source, 'server'), encoding: 'utf8' }).trim();
     inventory.browserDependencies = Object.entries(lock.packages).filter(([location, entry]) => location.includes('node_modules/') && !entry.dev && !entry.link)
