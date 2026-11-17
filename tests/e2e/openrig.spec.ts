@@ -262,7 +262,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       try {
         await expect.poll(async () => (await status()).seats.find(value => value.id === coder.id)!.state).toBe('detached');
       } catch (error) {
-        const native = spawnSync(path.join(home, 'openrig-bin', 'rig'), ['ps', '--nodes', '-A', '--no-cleanup', '--json', '--fields', 'canonicalSessionName,lifecycleState,sessionStatus,storedSessionStatus,startupStatus,storedStartupStatus,identityVerdict,restoreOutcome'], {
+        const native = spawnSync(path.join(home, 'openrig-bin', 'rig'), ['ps', '--nodes', '-A', '--no-cleanup', '--full', '--json'], {
           env: { ...process.env, OPENRIG_HOST_SELECTED: 'local' }, timeout: 10000, encoding: 'utf8', maxBuffer: 1 << 20,
         });
         const diagnostic = info.outputPath('detached-native-inventory.json');
