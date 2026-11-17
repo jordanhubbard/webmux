@@ -1,0 +1,70 @@
+{
+  "source_head": "14827c7a580695d713cc37bc1a8b810c404b5147",
+  "source_ci": 44184265934,
+  "source_job": 134396447356,
+  "source_artifact": 14375185972,
+  "trace_sha256": "8f5f31da8ac9cb6c29c645cedb17209bd49c9b0a01905e064c65ad9d773aaff5",
+  "trace_events": 72,
+  "dropped": 0,
+  "phase": "replacement-temporary-worker",
+  "navigate_diagnostics": {
+    "events": [
+      {
+        "ms": 0,
+        "sequence": 0,
+        "event": "observer_ready",
+        "target": "E53F30043BA7B783FB7739E09F22FC61"
+      },
+      {
+        "ms": 74,
+        "sequence": 1,
+        "event": "navigate_request",
+        "target": "E53F30043BA7B783FB7739E09F22FC61"
+      },
+      {
+        "ms": 78,
+        "sequence": 1,
+        "event": "navigation_started",
+        "target": "E53F30043BA7B783FB7739E09F22FC61",
+        "frame": "E53F30043BA7B783FB7739E09F22FC61",
+        "loader": "80593D6D501E3F0C34820D3019C16A78",
+        "matchesRequested": true
+      },
+      {
+        "ms": 81,
+        "sequence": 1,
+        "event": "document_request",
+        "target": "E53F30043BA7B783FB7739E09F22FC61",
+        "frame": "E53F30043BA7B783FB7739E09F22FC61",
+        "loader": "80593D6D501E3F0C34820D3019C16A78",
+        "request": "80593D6D501E3F0C34820D3019C16A78",
+        "matchesRequested": true
+      },
+      {
+        "ms": 110,
+        "sequence": 1,
+        "event": "document_failed",
+        "target": "E53F30043BA7B783FB7739E09F22FC61",
+        "request": "80593D6D501E3F0C34820D3019C16A78",
+        "errorClass": "aborted",
+        "canceled": true
+      },
+      {
+        "ms": 110,
+        "sequence": 1,
+        "event": "navigate_ack",
+        "target": "E53F30043BA7B783FB7739E09F22FC61",
+        "frame": "E53F30043BA7B783FB7739E09F22FC61",
+        "loader": "80593D6D501E3F0C34820D3019C16A78",
+        "errorClass": "aborted"
+      }
+    ],
+    "dropped": 0
+  },
+  "fixture_documents_during_phase": 0,
+  "last_frame_is_about_blank": true,
+  "last_titles": [
+    "about:blank"
+  ],
+  "cause_proven": false
+}

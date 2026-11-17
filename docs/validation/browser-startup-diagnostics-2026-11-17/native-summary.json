@@ -1,0 +1,247 @@
+{
+  "platform": "darwin",
+  "architecture": "arm64",
+  "node_version": "v24.21.0",
+  "go_version": "go1.27.4",
+  "browser": "Google Chrome 157.0.8103.79",
+  "scope": "Real private browser workers and loopback fixture. No authenticated site, navigation retry or Windows runtime fix claimed.",
+  "test_sha256": "e4595a79475daa1357b0b0cde16fb5e25c1c34de65c65005f3fb5a84702fcf2d",
+  "timeline_events": 68,
+  "dropped": 0,
+  "startup_snapshots": {
+    "initial-saved-worker": {
+      "events": [
+        {
+          "stage": "startup",
+          "ms": 352,
+          "sequence": 0,
+          "event": "startup_blank_begin",
+          "target": "D3B0BFAB132EC7A5E424C7FEDAC53514"
+        },
+        {
+          "stage": "startup",
+          "ms": 352,
+          "sequence": 0,
+          "event": "observer_ready",
+          "target": "D3B0BFAB132EC7A5E424C7FEDAC53514"
+        },
+        {
+          "stage": "startup",
+          "ms": 354,
+          "sequence": 0,
+          "event": "navigation_started",
+          "target": "D3B0BFAB132EC7A5E424C7FEDAC53514",
+          "frame": "D3B0BFAB132EC7A5E424C7FEDAC53514",
+          "loader": "A75746788FCD15F976227179FA6D95C8",
+          "matchesRequested": true
+        },
+        {
+          "stage": "startup",
+          "ms": 354,
+          "sequence": 0,
+          "event": "frame_loading_started",
+          "target": "D3B0BFAB132EC7A5E424C7FEDAC53514",
+          "frame": "D3B0BFAB132EC7A5E424C7FEDAC53514"
+        },
+        {
+          "stage": "startup",
+          "ms": 355,
+          "sequence": 0,
+          "event": "navigation_committed",
+          "target": "D3B0BFAB132EC7A5E424C7FEDAC53514",
+          "frame": "D3B0BFAB132EC7A5E424C7FEDAC53514",
+          "loader": "A75746788FCD15F976227179FA6D95C8",
+          "matchesRequested": true,
+          "main": true
+        },
+        {
+          "stage": "startup",
+          "ms": 357,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "startup",
+          "ms": 357,
+          "sequence": 0,
+          "event": "frame_loading_stopped",
+          "target": "D3B0BFAB132EC7A5E424C7FEDAC53514",
+          "frame": "D3B0BFAB132EC7A5E424C7FEDAC53514"
+        },
+        {
+          "stage": "ready",
+          "ms": 359,
+          "sequence": 0,
+          "event": "worker_ready"
+        }
+      ],
+      "dropped": 0
+    },
+    "replacement-saved-worker": {
+      "events": [
+        {
+          "stage": "startup",
+          "ms": 299,
+          "sequence": 0,
+          "event": "startup_blank_begin",
+          "target": "136E295E6973BC0798AA2FE69D6E1A16"
+        },
+        {
+          "stage": "startup",
+          "ms": 299,
+          "sequence": 0,
+          "event": "observer_ready",
+          "target": "136E295E6973BC0798AA2FE69D6E1A16"
+        },
+        {
+          "stage": "startup",
+          "ms": 300,
+          "sequence": 0,
+          "event": "navigation_started",
+          "target": "136E295E6973BC0798AA2FE69D6E1A16",
+          "frame": "136E295E6973BC0798AA2FE69D6E1A16",
+          "loader": "B626354AF371A2EFA99E9A1D9DC8D455",
+          "matchesRequested": true
+        },
+        {
+          "stage": "startup",
+          "ms": 300,
+          "sequence": 0,
+          "event": "frame_loading_started",
+          "target": "136E295E6973BC0798AA2FE69D6E1A16",
+          "frame": "136E295E6973BC0798AA2FE69D6E1A16"
+        },
+        {
+          "stage": "startup",
+          "ms": 301,
+          "sequence": 0,
+          "event": "navigation_committed",
+          "target": "136E295E6973BC0798AA2FE69D6E1A16",
+          "frame": "136E295E6973BC0798AA2FE69D6E1A16",
+          "loader": "B626354AF371A2EFA99E9A1D9DC8D455",
+          "matchesRequested": true,
+          "main": true
+        },
+        {
+          "stage": "startup",
+          "ms": 302,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "startup",
+          "ms": 302,
+          "sequence": 0,
+          "event": "frame_loading_stopped",
+          "target": "136E295E6973BC0798AA2FE69D6E1A16",
+          "frame": "136E295E6973BC0798AA2FE69D6E1A16"
+        },
+        {
+          "stage": "ready",
+          "ms": 303,
+          "sequence": 0,
+          "event": "worker_ready"
+        }
+      ],
+      "dropped": 0
+    },
+    "replacement-temporary-worker": {
+      "events": [
+        {
+          "stage": "startup",
+          "ms": 272,
+          "sequence": 0,
+          "event": "startup_blank_begin",
+          "target": "2B086487307168DFF1713B2EF0434F7C"
+        },
+        {
+          "stage": "startup",
+          "ms": 272,
+          "sequence": 0,
+          "event": "observer_ready",
+          "target": "2B086487307168DFF1713B2EF0434F7C"
+        },
+        {
+          "stage": "startup",
+          "ms": 273,
+          "sequence": 0,
+          "event": "navigation_started",
+          "target": "2B086487307168DFF1713B2EF0434F7C",
+          "frame": "2B086487307168DFF1713B2EF0434F7C",
+          "loader": "ADB2E9CE0BFF4AB114A70D22B4541B79",
+          "matchesRequested": true
+        },
+        {
+          "stage": "startup",
+          "ms": 274,
+          "sequence": 0,
+          "event": "frame_loading_started",
+          "target": "2B086487307168DFF1713B2EF0434F7C",
+          "frame": "2B086487307168DFF1713B2EF0434F7C"
+        },
+        {
+          "stage": "startup",
+          "ms": 276,
+          "sequence": 0,
+          "event": "navigation_committed",
+          "target": "2B086487307168DFF1713B2EF0434F7C",
+          "frame": "2B086487307168DFF1713B2EF0434F7C",
+          "loader": "ADB2E9CE0BFF4AB114A70D22B4541B79",
+          "matchesRequested": true,
+          "main": true
+        },
+        {
+          "stage": "startup",
+          "ms": 278,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "startup",
+          "ms": 278,
+          "sequence": 0,
+          "event": "frame_loading_stopped",
+          "target": "2B086487307168DFF1713B2EF0434F7C",
+          "frame": "2B086487307168DFF1713B2EF0434F7C"
+        },
+        {
+          "stage": "ready",
+          "ms": 280,
+          "sequence": 0,
+          "event": "worker_ready"
+        }
+      ],
+      "dropped": 0
+    }
+  },
+  "renderer_navigation": [
+    {
+      "stage": "navigation",
+      "reason": "scriptInitiated",
+      "disposition": "currentTab",
+      "ms": 387,
+      "sequence": 2,
+      "event": "renderer_navigation",
+      "target": "2B086487307168DFF1713B2EF0434F7C",
+      "frame": "2B086487307168DFF1713B2EF0434F7C",
+      "matchesRequested": false
+    },
+    {
+      "stage": "navigation",
+      "initiator": "script",
+      "ms": 389,
+      "sequence": 2,
+      "event": "document_request",
+      "target": "2B086487307168DFF1713B2EF0434F7C",
+      "frame": "2B086487307168DFF1713B2EF0434F7C",
+      "loader": "F163CA0EBDE9DE14C62C03DB43303402",
+      "request": "F163CA0EBDE9DE14C62C03DB43303402",
+      "matchesRequested": false
+    }
+  ],
+  "final_fixture_check_loaded": true,
+  "retained_cookie_and_control_assertions_passed": true
+}

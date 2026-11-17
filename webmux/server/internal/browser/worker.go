@@ -176,20 +176,29 @@ func Worker(in io.Reader, out io.Writer) error {
 	}
 	// Start outside an operation timeout: cancelling the first Run context would
 	// otherwise tear down the browser after a successful first response.
+	navigation := newNavigationTrace()
 	startup := time.AfterFunc(20*time.Second, cancel)
-	err = chromedp.Do(root, chromedp.EmulateViewport(Width, Height), chromedp.Navigate("about:blank"))
+	err = chromedp.Do(root, chromedp.EmulateViewport(Width, Height), chromedp.Func(func(ctx context.Context, target *chromedp.Target) error {
+		// Observe before the explicit startup navigation. No extra CDP commands or
+		// URL-bearing browser logs are enabled; diagnostics remain opt-in.
+		navigation.startup(string(target.TargetID))
+		navigation.watch(root)
+		return nil
+	}), chromedp.Navigate("about:blank"))
 	startup.Stop()
+	navigation.startupResult(err)
 	if err != nil {
-		_ = json.NewEncoder(out).Encode(Frame{Error: "Cannot start Chromium. Install Chrome/Chromium on the terminal host and run as a non-root user."})
+		_ = json.NewEncoder(out).Encode(Frame{Error: "Cannot start Chromium. Install Chrome/Chromium on the terminal host and run as a non-root user.", NavigationDiagnostics: navigation.snapshot()})
 		return err
 	}
-	browser, err := newCompanion(root, files)
+	browser, err := newCompanion(root, files, navigation)
 	if err != nil {
 		return err
 	}
 	if err := chromedp.Do(root, protocolAction(page.SetInterceptFileChooserDialog, page.SetInterceptFileChooserDialogParams{Enabled: true})); err != nil {
 		return err
 	}
+	navigation.ready()
 	requests := make(chan Request)
 	done := make(chan struct{})
 	defer close(done)
