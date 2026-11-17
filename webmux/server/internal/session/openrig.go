@@ -144,6 +144,11 @@ func (b *Broker) ensureRigViewAt(owner, view, title string, argv []string, grid 
 	}
 	launched := false
 	if selected.run == nil {
+		if view == "dashboard" {
+			// The diagnostic client follows this controller's Rig endpoint,
+			// independently of the operator's general CLI host selection.
+			argv = append([]string{"/usr/bin/env", "OPENRIG_HOST_SELECTED=local"}, argv...)
+		}
 		selected.value.ExecArgv = append([]string(nil), argv...)
 		if err := b.startLocked(selected, "", ""); err != nil {
 			if !created {

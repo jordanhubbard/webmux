@@ -23,6 +23,20 @@ var rigRecovery []byte
 // Serialize launches and spec creation across simultaneous browser requests.
 var mutation sync.Mutex
 
+// ControlEnvironment follows the configured Rig endpoint instead of an
+// unrelated host-selection preference, without changing the caller's routing.
+func ControlEnvironment() []string {
+	inherited := os.Environ()
+	env := make([]string, 0, len(inherited)+1)
+	for _, entry := range inherited {
+		key, _, _ := strings.Cut(entry, "=")
+		if !strings.EqualFold(key, "OPENRIG_HOST_SELECTED") {
+			env = append(env, entry)
+		}
+	}
+	return append(env, "OPENRIG_HOST_SELECTED=local")
+}
+
 func Run(ctx context.Context, home, owner, action, input string) ([]byte, error) {
 	mutation.Lock()
 	defer mutation.Unlock()
@@ -39,6 +53,7 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 		return nil, err
 	}
 	cmd := exec.CommandContext(ctx, "node", script, action, directory)
+	cmd.Env = ControlEnvironment()
 	cmd.Stdin = strings.NewReader(input)
 	output, err := cmd.Output()
 	if err != nil {

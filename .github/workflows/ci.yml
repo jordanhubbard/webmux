@@ -244,6 +244,7 @@ jobs:
         working-directory: webmux
         env:
           WEBMUX_REAL_OPENRIG: '1'
+          OPENRIG_HOST_SELECTED: 'webmux-ci-unrelated-selection'
         run: |
           npm install --prefix "$RUNNER_TEMP/webmux-openrig" --no-audit --no-fund @openrig/cli@0.6.14
           export WEBMUX_OPENRIG_CLI="$RUNNER_TEMP/webmux-openrig/node_modules/@openrig/cli/dist/bin-wrapper.js"
