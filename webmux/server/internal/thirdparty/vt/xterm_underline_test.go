@@ -137,3 +137,41 @@ func TestUnknownUnderlineWireFlagsRefuseBeforeTerminalMutation(t *testing.T) {
 		})
 	}
 }
+
+func TestXtermSGRResetClearsProtectionWithoutChangingDefaultProfile(t *testing.T) {
+	for _, reset := range []string{"\x1b[m", "\x1b[0m", "\x1b[31;0;4m"} {
+		for _, split := range []bool{false, true} {
+			e := vt.NewEmulator(8, 4)
+			e.EnableXtermNoWrap()
+			e.EnableXtermUnderline()
+			data := "\x1b[1\"qA" + reset + "B"
+			if split {
+				for _, b := range []byte(data) {
+					if _, err := e.Write([]byte{b}); err != nil {
+						t.Fatal(err)
+					}
+				}
+			} else {
+				if _, err := e.Write([]byte(data)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if e.CursorProtected() {
+				t.Fatal("SGR0 retained protection", reset, split)
+			}
+			if _, err := e.Write([]byte("\r\x1b[?2K")); err != nil {
+				t.Fatal(err)
+			}
+			if e.CellAt(0, 0).Content != "A" || e.CellAt(1, 0).Content != "" {
+				t.Fatal("selective erase did not distinguish protected cells", reset, split)
+			}
+			e.Close()
+		}
+		ordinary := vt.NewEmulator(8, 4)
+		ordinary.Write([]byte("\x1b[1\"q" + reset))
+		if !ordinary.CursorProtected() {
+			t.Fatal("upstream default profile changed")
+		}
+		ordinary.Close()
+	}
+}

@@ -127,6 +127,11 @@ func TestXtermUnderlineColorReset(t *testing.T) {
 			if string(got) != tc.want {
 				t.Fatalf("split %d: %q, want %q", split, got, tc.want)
 			}
+			modeled := Filter{Xterm: true, XtermUnderline: true}
+			kept := append(modeled.Feed([]byte(tc.input[:split])), modeled.Feed([]byte(tc.input[split:]))...)
+			if string(kept) != tc.input {
+				t.Fatalf("modeled SGR59 changed at split%d: %q", split, kept)
+			}
 			var plain Filter
 			if got := string(plain.Feed([]byte(tc.input))); got != tc.input {
 				t.Fatal("changed generic history profile", got)

@@ -1,11 +1,12 @@
 # Independent underline-state model checkpoint — 2026-11-17
 
-This is an incomplete implementation of #427 under #355/#318. Production Screen
-does not enable `EnableXtermUnderline()` and still refuses hidden or
-contradictory states. The v1 REP renderer profile and its default token API remain compatible. An
-unadvertised v2 packet primitive is qualified separately below. Complete
-snapshot painting, final active-pen restoration, versioned viewer negotiation
-and actual native/application qualification remain required before merge.
+This is an incomplete implementation of #427 under #355/#318. Production
+`Screen.New` retains the v1 model and its existing refusals. The opt-in
+`NewWithProfile(..., XtermUnderlineRendererProfile)` now includes a candidate
+snapshot encoder. Native owners and the application do not yet select or
+advertise it. Versioned owner/controller/viewer compatibility and fresh actual
+native/application acceptance remain required before merge. #429 separately
+tracks the dependency-audit release blocker.
 
 ## Model and provenance
 
@@ -74,7 +75,7 @@ ConPTY support for these new states, or native coding-session lifecycle recovery
 Keep #427/#355/#318 open and this candidate draft until their remaining gates
 are satisfied. No new release is qualified by this checkpoint.
 
-## Unadvertised v2 packet primitive
+## Initial unadvertised decoder checkpoint (37ca51e)
 
 The Go codec and frontend decoder now have a separate v2 packet format that
 combines the two current pen flags and REP cluster in one token-bound update.
@@ -102,9 +103,60 @@ snapshot or actual application attach comparisons. All 79 packet byte splits,
 and reused nonces, metadata versions, disarming and disposal also pass without
 generating terminal input. See `v2-decoder-results.json` for scope and hashes.
 
-Integration still needs per-cell ANSI construction and full saved-slot-safe
-painting. In particular, a scratch DECSC used to construct cell flags must not
+At this initial checkpoint, integration still needed per-cell ANSI construction
+and full saved-slot-safe painting. The encoder checkpoint below supersedes that
+investigation-only boundary. In particular, a scratch DECSC used to construct cell flags must not
 replace the job's true saved slot during a final pending-wrap repaint. The
 complete encoder must resolve and qualify this ordering before its v2 payload
 and capability contract are finalized. Full native/application acceptance and
 older owner/controller/viewer compatibility remain required.
+
+## Opt-in snapshot encoder
+
+The candidate now reconstructs each independent cell pen with ordinary ANSI
+and a scratch DECSC/DECRC while painting. It installs the job's real saved slots
+only after their buffer is painted. The active pen then uses ordinary SGR and
+one final nonce-bound v2 packet, without repainting cells or overwriting those
+slots. The packet restores independent pen flags and REP state, plus optional
+logical columns `x` (active), `n` (normal saved) and `a` (alternate saved).
+Every column is an integer from zero through the renderer's current width;
+the encoder's absolute bound is 500. The payload now has a 192-byte decoded
+limit. Unknown fields or invalid coordinates refuse before any state changes.
+The initial two-field prototype remains accepted; v1 semantics are unchanged.
+
+These columns preserve a cursor just past the right edge, which scratch DECRC
+would clamp. Wrapped-row painting consumes a pending wrap before a scratch
+restore. A temporary wide print constructs a genuine trailing null cell on a
+wrapped row, then the next row replaces that temporary glyph. This preserves
+null cells separately from printed spaces, including the state REP observes.
+A wrapped null row in a one-column mirror remains explicitly unsupported.
+
+A scratch hyperlink is never printed. One random, image-local named link ID is
+reused across rows, bounding scratch entries to one per image. Renderer checks
+assert that bound at both snapshot boundaries. Protection is reapplied after
+painting SGR0, which clears xterm's protection bit. The opt-in engine follows
+that reset too; its default upstream profile is unchanged. In the new model,
+the filter passes SGR59 through instead of rewriting it to SGR58 RGB-white:
+the two controls produce the same color but recompute hidden flags differently.
+
+The expanded real-Chrome suite compares Go-produced snapshots against original
+output at initial, continued and second-capture boundaries. Its reference uses
+the shared hyperlink-retention adapter but never the snapshot adapter. Expected
+states are produced by the renderer; the fixture generator reads only corpus
+input bytes and resize plans, not expected cell states. Raw flags, raw underline
+style, canonical colors, null strings, links, protection, cursor, wraps, modes
+and existing visible state are compared.
+
+The candidate covers the 409 existing portable inputs through the v2 path,
+126 underline-reference inputs with whole and byte-split feeds (252 cases),
+and nine additional saved/protected/charset/link/wrap/resize-after-attachment
+inputs with both feed forms (18 cases). The original 409 production-path
+comparisons and three renderer lifecycle/decoder controls remain in the same
+suite. Exact run results and current source hashes are in
+`encoder-results.json`; `v2-decoder-results.json` retains the earlier primitive
+checkpoint and its historical source hashes.
+
+This is component qualification. It does not yet prove native owner capability
+negotiation, actual application second attachment, fresh ConPTY hidden-state
+capture or the remaining #318 native coding-session lifecycle requirements.
+Keep this PR draft and #427/#355/#318 open. Production and release remain gated.

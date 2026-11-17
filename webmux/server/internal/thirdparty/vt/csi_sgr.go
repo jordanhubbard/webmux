@@ -156,6 +156,9 @@ func (e *Emulator) handleSgr(params ansi.Params) {
 // This is based on uv.ReadStyle but uses IndexedColor to resolve theme colors.
 func (e *Emulator) readStyleWithTheme(params ansi.Params, pen *uv.Style) {
 	if len(params) == 0 {
+		if e.xtermUnderline {
+			e.scr.cur.Protected = false
+		}
 		*pen = uv.Style{}
 		return
 	}
@@ -164,6 +167,9 @@ func (e *Emulator) readStyleWithTheme(params ansi.Params, pen *uv.Style) {
 		param, hasMore, _ := params.Param(i, 0)
 		switch param {
 		case 0: // Reset
+			if e.xtermUnderline {
+				e.scr.cur.Protected = false
+			}
 			*pen = uv.Style{}
 		case 1: // Bold
 			pen.Attrs |= uv.AttrBold

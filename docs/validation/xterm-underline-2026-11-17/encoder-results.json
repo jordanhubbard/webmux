@@ -1,0 +1,101 @@
+{
+  "recorded_utc": "2026-11-17T17:54:11.249341+00:00",
+  "scope": "Local Go Screen encoder/real-renderer component qualification only. Reference uses shared hyperlink-retention adapter, never the snapshot adapter. No actual application attach or new ConPTY hidden-state acceptance implied.",
+  "native_and_application_select_v2": false,
+  "required_renderer": "webmux-xterm-state-v2",
+  "packet_schema": {
+    "required": [
+      "u",
+      "r"
+    ],
+    "optional": [
+      "x",
+      "n",
+      "a"
+    ],
+    "decoded_byte_limit": 192,
+    "repeat_utf8_byte_limit": 64,
+    "columns": "integer 0..current renderer width; encoder absolute maximum500",
+    "nonce": "128-bit, one use, metadata version bound"
+  },
+  "checks": {
+    "browser_suite": "1091 passed (3.4m)",
+    "portable_snapshots": 1088,
+    "production_snapshots": 409,
+    "opt_in_v2_snapshots": 679,
+    "v2_baseline": 409,
+    "v2_reference_whole_and_byte_split": 252,
+    "v2_additional_whole_and_byte_split": 18,
+    "comparison_phases": [
+      "initial",
+      "continued",
+      "recaptured"
+    ],
+    "all_phases_equal": true,
+    "reference_snapshot_adapter_installed": false,
+    "replayed_queries": 0,
+    "scratch_link_entries_at_either_snapshot_boundary_max": 1,
+    "decoder": {
+      "controls": 256,
+      "failures": [],
+      "splits": 79,
+      "cursorSplits": 107,
+      "invalid": 24,
+      "badEncoding": 4,
+      "clearedRepeat": true,
+      "reusedRefused": true,
+      "disarmed": true,
+      "disposed": true,
+      "replies": []
+    },
+    "retained_vt_race": "vt125.720s; snapshot1.169s; vtgen1.160s PASS",
+    "affected_race": "Screen5.661s; replayfilter2.353s PASS",
+    "frontend_tests": "372 passed",
+    "frontend_build": "PASS; output on NAS",
+    "vet": "Darwin root+VT and Windows AMD64 root PASS",
+    "strict_typescript_and_source_inventory": "PASS",
+    "frontend_lint": "PASS",
+    "provenance": "241 VT originals/15 explicit patches;104 UV originals/3 explicit patches PASS",
+    "decoder_targeted_after_test_label_change": "1 passed (14.1s); same assertions as full suite"
+  },
+  "fixture_capture": {
+    "fixtures": 1088,
+    "bytes": 1988807,
+    "sha256": "a98f87b99cab2b9e8865c4bf1bb09c3e051bcff053d0cb0127d2437be8203216",
+    "v2": 679,
+    "v2_baseline": 409,
+    "v2_model_and_additional": 270,
+    "packets_validated": 1358,
+    "largest_decoded_packet": 34,
+    "scope": "Separate fresh Go fixture recapture on the same source; nonce and scratch IDs differ from the browser run. Validates packet structure and bounds, not byte-identical playback streams."
+  },
+  "receipt_inventory_sha256": "691805634841870fc6998361166fb224ac18f96d1efab121aa5c966e53120a70",
+  "xterm_sha256": "14903579ff54664cd72f8e8699e6961a6272c21863ec1c3b118cdc8af5d4a972",
+  "source_sha256": {
+    "tests/e2e/screen-replay.spec.ts": "4f99bceed7c1e526518235841f91c9a54bc7c596d6cf1a7304a8b93a7c15d3dc",
+    "webmux/frontend/src/utils/terminalSnapshotProfile.ts": "bb0cd41b7af895661a968256597997532c3693638d507b7252e744f35c5a7973",
+    "webmux/server/internal/replayfilter/filter.go": "7fb669fdd9b57beaf5bb0fb36f6c0ed8bfb5063821ada842f46eb6b9833852cb",
+    "webmux/server/internal/replayfilter/filter_test.go": "169354b3eba2a596785b00314da6d02cdaf52d19836d5f7caceb11ba9b46d794",
+    "webmux/server/internal/screenstate/ansi.go": "e4aaf39d6c1cf0dad4997d41e65c0497619078fedfa7a38162867ce113f50730",
+    "webmux/server/internal/screenstate/screen.go": "a325dc7b3dfbe3698dae0d207b2e2928239c071439035e78f3da41f03fa265b9",
+    "webmux/server/internal/screenstate/hyperlink.go": "06f507bf6e079e8cf549df42b96f946edf7d2afb34697670a5202952476ff35b",
+    "webmux/server/internal/screenstate/xterm_cursor.go": "e325b7bd6f5fdc7a1c3626d32f05d76a3459edf0b61dbc64dc24c0dfcfb5195e",
+    "webmux/server/internal/screenstate/renderer_profile.go": "c241b357e42ab8bd94800dc5954cf3d6fbbfa072661d74d708cad2bd316be902",
+    "webmux/server/internal/screenstate/renderer_profile_test.go": "755d6f35f66b21d42db6ff4d1fd5fd69de58cc8d7168d33a687a5f5837380d1e",
+    "webmux/server/internal/screenstate/underline_encoder.go": "1deab02b24b720527bc29c417a7479c3108bcf9ea9737d95ca309e0e95641eab",
+    "webmux/server/internal/screenstate/testdata/replay-fixtures/main.go": "b82cdbd5bf4bb5163944897da1bcadf856ae4c109be463a962c514c0015a8593",
+    "webmux/server/internal/screenstate/testdata/underline-cases.json": "ada26ecb94c1db2694a56655f43d91b6bb021e4b899de2b75700291ff9c50697",
+    "webmux/server/internal/thirdparty/vt/csi_sgr.go": "f12420c7f9d30859ac3406e6776c849bac712ecd57b7c201364066d79d781a7c",
+    "webmux/server/internal/thirdparty/vt/xterm_underline_test.go": "d35119a764e8b1e4f095da1b4c277566e06936e8bb4aaaa4ff7220c9c9016d4a",
+    "webmux/server/internal/thirdparty/vt/WEBMUX_UPSTREAM.json": "9decf91f36d07bd23122a0fd309f8937f74964d419e28784cadbb93bca5a7a4e"
+  },
+  "remaining": [
+    "Versioned owner/controller/viewer negotiation and old-peer compatibility",
+    "Actual application initial/continued/second attachment",
+    "Fresh real ConPTY hidden-state and same-job/legacy-refusal acceptance",
+    "Broader355/318 coding lifecycle acceptance",
+    "Dependency audit429 remediation and all final exact-head gates"
+  ],
+  "known_boundary": "One-column mirrors with wrapped null rows still refuse safely.",
+  "production_new_uses_underline_model": false
+}

@@ -12,9 +12,9 @@ import (
 // adapter. It is not a capability of an arbitrary ANSI terminal.
 const XtermRendererProfile = "webmux-xterm-state-v1"
 
-// XtermUnderlineRendererProfile additionally restores the independent current
-// pen flags. Production negotiation remains on v1 until the complete encoder
-// and native attach path qualify this extension.
+// XtermUnderlineRendererProfile restores independent pen flags, logical cursor
+// columns and REP state after ANSI painting. Production negotiation remains on
+// v1 until native and actual application acceptance qualify this extension.
 const XtermUnderlineRendererProfile = "webmux-xterm-state-v2"
 
 // EncodedSnapshot names any renderer extension actually used by Data. Owners
@@ -35,15 +35,25 @@ func repeatStatePacket(cluster string) (packet, token string, err error) {
 // underlineStatePacket combines both flags and the final parser state in one
 // one-use packet. An empty cluster explicitly restores a cleared REP state;
 // sending two packets would consume the token before the second could apply.
-func underlineStatePacket(flags uint8, cluster string) (packet, token string, err error) {
-	if flags < 1 || flags > 4 || !validRepeatCluster(cluster) {
+type underlineRendererState struct {
+	Underline uint8  `json:"u"`
+	Repeat    string `json:"r"`
+	X         *int   `json:"x,omitempty"`
+	NormalX   *int   `json:"n,omitempty"`
+	AltX      *int   `json:"a,omitempty"`
+}
+
+func underlineStatePacket(state underlineRendererState) (packet, token string, err error) {
+	if state.Underline < 1 || state.Underline > 4 || !validRepeatCluster(state.Repeat) {
 		return "", "", ErrUnsupported
 	}
-	data, err := json.Marshal(struct {
-		Underline uint8  `json:"u"`
-		Repeat    string `json:"r"`
-	}{flags, cluster})
-	if err != nil || len(data) > 160 {
+	for _, column := range []*int{state.X, state.NormalX, state.AltX} {
+		if column != nil && (*column < 0 || *column > 500) {
+			return "", "", ErrUnsupported
+		}
+	}
+	data, err := json.Marshal(state)
+	if err != nil || len(data) > 192 {
 		return "", "", ErrUnsupported
 	}
 	return rendererStatePacket("v2", data)
