@@ -2082,6 +2082,54 @@ features remain open under #355. Normal Windows recovery remains disabled;
 provider/shell/UI integration and application lifecycle/native-session
 acceptance remain open under #318.
 
+### Saved underline restoration (2026-11-16)
+
+The screen mirror now follows the frontend's split saved-attribute behavior:
+cursor restore reinstates basic attributes while keeping the live extended
+underline style and color. ESC 8, CSI u and DEC 1048/1049, including mode
+batches, share the correction. The mirror also follows the pinned xterm
+renderer’s SGR 59 color-reset behavior; numeric RGB/indexed color payloads are
+not mistaken for reset commands. Generic retained-history filtering is unchanged.
+
+Some xterm states cannot be represented by the dependency's single underline
+field: a restored basic underline flag can contradict the live extended style,
+or hide an extended object that later output can expose again. Those states
+now refuse new snapshot attachments explicitly instead of silently changing
+styles. Refusal preserves the owner/job and existing viewers. Movement, erase,
+SGR reset, resize and DECSTR do not clear the refusal because they cannot repair
+previously affected cells/hidden state. RIS clears both buffers and repairs the
+mirror; previously captured images retain their original acceptance/refusal.
+
+Four of five initial exploratory Chrome controls failed against the previous
+implementation, all on second attachment after continued output. The expanded
+portable suite has 40 initial/live/recaptured comparisons; all pass locally on
+Linux ARM64. Eight portable refusal controls cover ESC/CSI/1048/1049, immutable
+captures, partial input boundaries and reset behavior. Windows wire controls
+cover refusal without owner/job replacement and successful attachment after
+repair. Windows CI additionally collects seven actual ConPTY cases, requires
+zero skipped cases and one job per case, and compares the two attachments and
+continued output with the frontend's real Chrome/xterm renderer. Its retained
+JSON streams and browser receipts establish native interoperability only when
+that exact-head job passes. The first hosted attempt correctly failed because
+GitHub's outer Windows process job skipped the independent-provider capture.
+The collector now uses a temporary, deadline-bounded SYSTEM scheduled task on
+the disposable runner to execute only the synthetic native fixture outside
+that restrictive job, then removes its task registration. Chrome remains under
+the runner account. No user sign-in state is used or copied; zero-skip and
+one-job assertions remain mandatory. The renderer also records the focus
+notifications xterm sends immediately when DECSET 1004 is restored, checking
+them against the production owner-local input policy. They are not device,
+status or color query replies; every such replay reply remains forbidden.
+The seven actual Windows captures from source `7fa692e` also passed the
+corrected renderer locally alongside all 40 portable cases (47 total).
+
+Full local Go race tests passed, as did affected vet and Windows cross-vet,
+and Windows AMD64/ARM64 provider-test compilation. Cross-compilation does not
+establish native execution. Broader underline-state support, the refused
+no-wrap edge and OSC display features remain under #355. Installed-service
+native conversation acceptance and the other #318 platform/CLI requirements
+remain separate; this change does not claim them.
+
 ### Windows shell startup and native CLI aliases (2026-11-13)
 
 The Windows browser shell now installs aliases for available native coding CLI

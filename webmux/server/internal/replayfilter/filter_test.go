@@ -111,3 +111,26 @@ func TestXtermRepeatAcrossEveryReadBoundary(t *testing.T) {
 		}
 	}
 }
+
+func TestXtermUnderlineColorReset(t *testing.T) {
+	for _, tc := range []struct{ input, want string }{
+		{"\x1b[59m", "\x1b[58;2;255;255;255m"},
+		{"\x1b[4:3;59;31m", "\x1b[4:3;58;2;255;255;255;31m"},
+		{"\x1b[38;2;59;59;59;59m", "\x1b[38;2;59;59;59;58;2;255;255;255m"},
+		{"\x1b[48;5;59m", "\x1b[48;5;59m"},
+		{"\x1b[58;2;59;59;59m", "\x1b[58;2;59;59;59m"},
+		{"\x1b[38:2::59:59:59;59m", "\x1b[38:2::59:59:59;58;2;255;255;255m"},
+	} {
+		for split := 0; split <= len(tc.input); split++ {
+			f := Filter{Xterm: true}
+			got := append(f.Feed([]byte(tc.input[:split])), f.Feed([]byte(tc.input[split:]))...)
+			if string(got) != tc.want {
+				t.Fatalf("split %d: %q, want %q", split, got, tc.want)
+			}
+			var plain Filter
+			if got := string(plain.Feed([]byte(tc.input))); got != tc.input {
+				t.Fatal("changed generic history profile", got)
+			}
+		}
+	}
+}

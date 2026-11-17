@@ -1,6 +1,6 @@
 # WebMux active roadmap
 
-Reviewed 2026-11-12 against the implementation, qualification receipts and GitHub
+Reviewed 2026-11-16 against the implementation, qualification receipts and GitHub
 issue states. GitHub issues track implementation and remaining acceptance work.
 
 ## Current reliability work
@@ -139,6 +139,20 @@ processes, complete-smoke deadlines, stalled-process-tree controls and retained
 phase/installer/service diagnostics. See [packaging](packaging.md#windows-msi-smoke-deadlines-and-diagnostics).
 The observed stalls are not established product regressions. Native Windows
 coding-session recovery in #318 remains separate and unqualified.
+
+### Windows screen restoration
+
+[#355](https://github.com/jordanhubbard/webmux/issues/355) tracks screen-state
+restoration separately from native conversation recovery. Saved-cursor restores
+now preserve the frontend's live extended underline style/color, including
+1048/1049 and batched modes. Unrepresentable hidden or contradictory underline
+flags explicitly refuse new attachments while preserving the existing job;
+a full terminal reset repairs the mirror. The portable browser suite covers
+40 initial/continued/second-attachment comparisons, and Windows CI now runs the
+same renderer against real ConPTY captures. See the
+[scope and controls](session-recovery.md#saved-underline-restoration-2026-11-16).
+The refused no-wrap edge, broader underline representation and OSC display
+features remain open. This checkpoint does not close #355 or #318.
 
 ## Runtime compatibility implementation
 

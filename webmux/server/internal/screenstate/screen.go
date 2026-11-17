@@ -16,11 +16,12 @@ const historyCells = 16 << 10
 
 var ErrIncomplete = errors.New("terminal screen is between complete updates; retry attachment")
 var ErrTooLarge = errors.New("terminal snapshot is too large; reduce the viewport and reconnect")
-var ErrUnsupported = errors.New("terminal cursor cannot be restored safely; retain the existing job and recover manually")
+var ErrUnsupported = errors.New("terminal screen state cannot be restored safely; retain the existing job and recover manually")
 
 type Screen struct {
 	mu       sync.Mutex
 	emulator *vt.Emulator
+	profile  *xtermCursorProfile
 	filter   replayfilter.Filter
 	closed   bool
 }
@@ -28,9 +29,10 @@ type Screen struct {
 // Image owns a copy of the screen at one output boundary. Encoding it may run
 // after the caller registers a live-output queue and releases its owner lock.
 type Image struct {
-	state  *snapshot.State
-	main   *underlay
-	repeat bool
+	state       *snapshot.State
+	main        *underlay
+	repeat      bool
+	unsupported bool
 }
 
 // The upstream capture includes the main cells, but only active-buffer margins
@@ -47,9 +49,9 @@ func New(cols, rows int) (*Screen, error) {
 		return nil, errors.New("invalid terminal snapshot dimensions")
 	}
 	e := vt.NewEmulator(cols, rows)
-	installXtermCursorProfile(e)
+	profile := installXtermCursorProfile(e)
 	e.SetScrollbackMaxLines(min(512, max(1, historyCells/cols)))
-	return &Screen{emulator: e, filter: replayfilter.Filter{Xterm: true}}, nil
+	return &Screen{emulator: e, profile: profile, filter: replayfilter.Filter{Xterm: true}}, nil
 }
 
 func (s *Screen) Feed(data []byte) error {
@@ -111,7 +113,7 @@ func (s *Screen) Capture() (Image, error) {
 		}
 		s.emulator.RestoreAltScreenMode(true)
 	}
-	return Image{state: state, main: main, repeat: s.filter.CanRepeat()}, nil
+	return Image{state: state, main: main, repeat: s.filter.CanRepeat(), unsupported: s.profile.unsupported}, nil
 }
 
 func (i Image) Bytes() ([]byte, error) {
@@ -121,7 +123,7 @@ func (i Image) Bytes() ([]byte, error) {
 	// With autowrap disabled, this emulator clamps both a cursor addressed to
 	// the final cell and one advanced past it to the same coordinate. Xterm
 	// distinguishes them. Never guess which cell to reprint at this boundary.
-	if !i.state.Modes[7] && i.state.CursorX == i.state.Width-1 {
+	if i.unsupported || !i.state.Modes[7] && i.state.CursorX == i.state.Width-1 {
 		return nil, ErrUnsupported
 	}
 	data, err := replayScreen(i.state, i.main, i.repeat)

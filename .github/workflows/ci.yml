@@ -127,6 +127,31 @@ jobs:
       - name: Install test dependencies
         working-directory: webmux
         run: npm ci
+      - name: Install browser for native screen interoperability
+        if: runner.os == 'Windows'
+        working-directory: webmux
+        run: npx playwright install chromium
+      - name: Collect real ConPTY streams outside the restrictive runner job
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./scripts/collect-native-screen.ps1 -OutputDirectory "$env:RUNNER_TEMP/webmux-native-screen"
+          "WEBMUX_NATIVE_SCREEN_CAPTURES=$env:RUNNER_TEMP/webmux-native-screen/captures.json" >> $env:GITHUB_ENV
+          "WEBMUX_NATIVE_SCREEN_TEST_LOG=$env:RUNNER_TEMP/webmux-native-screen/tests.jsonl" >> $env:GITHUB_ENV
+      - name: Compare real ConPTY snapshots with the frontend renderer
+        if: runner.os == 'Windows'
+        working-directory: webmux
+        env:
+          WEBMUX_SCREEN_REPLAY_ONLY: '1'
+        run: npm run test:e2e -- screen-replay.spec.ts
+      - name: Preserve native screen interoperability receipts
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: native-screen-interoperability
+          path: |
+            webmux/test-results
+            ${{ runner.temp }}/webmux-native-screen
       - name: Verify Go API contracts
         working-directory: webmux
         run: npm run test:contract

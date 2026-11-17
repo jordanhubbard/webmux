@@ -14,6 +14,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   observing the chat store the running agent holds open, limited to the
   recorded project (#318).
 
+### Fixed
+- Preserve live extended underline styles/colors when a Windows terminal screen
+  is restored after another attachment. Refuse unrepresentable snapshots while
+  retaining the running job, and verify real ConPTY snapshots against the
+  frontend renderer in Windows CI (#355).
+
 ### Security
 - Require Go 1.27.4 to address the net/http MaxBytesReader header race
   (GO-2026-6859) reported by the dependency audit.
