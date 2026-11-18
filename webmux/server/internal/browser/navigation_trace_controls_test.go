@@ -23,9 +23,10 @@ func TestFirstNavigationTraceProjection(t *testing.T) {
 		json.RawMessage(`{"name":"Navigator::CancelNavigation","ph":"X","ts":1006,"args":{"reason":"secret arbitrary reason","render_frame_host":"0xsecretpointer"}}`),
 		json.RawMessage(`{"name":"Navigation: http://private.invalid/check","ph":"X","ts":1007,"args":{}}`),
 		json.RawMessage(`{"name":"NavigationRequest::Create","ph":"X","ts":1008,"args":{"url":"about:blank"}}`),
+		json.RawMessage(`{"name":"NavigationURLLoaderImpl::NotifyRequestFailed","ph":"X","ts":1009,"args":{"diagnostic_blob":"secret-url-and-headers"}}`),
 	}
 	r := projectFirstNavigationTrace(values, "http://private.invalid/check")
-	if len(r.Events) != 4 || r.MatchedEvents != 2 || r.Events[1].Navigation != 1 || r.Events[1].Reason != "explicit_cancellation" || r.Events[1].Phase != "other" || *r.Events[1].NetError != -3 || r.Events[1].Microseconds != 5 || r.Events[2].Reason != "other" || r.Events[0].Frame != 1 || r.Events[1].Frame != 1 || r.Events[0].MainFrame == nil || !*r.Events[0].MainFrame || r.Events[0].URLClass != "fixture" || r.Events[3].URLClass != "about_blank" {
+	if len(r.Events) != 5 || r.MatchedEvents != 2 || r.Events[1].Navigation != 1 || r.Events[1].Reason != "explicit_cancellation" || r.Events[1].Phase != "other" || *r.Events[1].NetError != -3 || r.Events[1].Microseconds != 5 || r.Events[2].Reason != "other" || r.Events[0].Frame != 1 || r.Events[1].Frame != 1 || r.Events[0].MainFrame == nil || !*r.Events[0].MainFrame || r.Events[0].URLClass != "fixture" || r.Events[3].URLClass != "about_blank" {
 		t.Fatal("trace projection lost navigation or cancellation metadata", r)
 	}
 	encoded, _ := json.Marshal(r)

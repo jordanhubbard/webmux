@@ -1,0 +1,39 @@
+{
+  "recordedUTC": "2026-11-18T02:42:06.610743+00:00",
+  "parent": "9d065f7b9dacf85b42e513daaa31c1af3db9f975",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "e6dcdbd437dc4cb298fee2f83b573db43aa20b5aa21aa188dbc9edf09dee7230",
+    "webmux/server/internal/browser/navigation_trace_test.go": "39606c3bd81b3aa06e004b4d84d7d6c76304b92cb308777f5f3accaee6ed7373",
+    "webmux/server/internal/browser/navigation_trace_controls_test.go": "f3742f3ec772d5427f449fa2214fd676b3ee3fcd980a2d0dea66ecf52475a063",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "4fff230c39551a0cb179013890fd029154c4791df42ca93a97214f7493a34128",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "5381a6935bb6591cfadb3cdf4be5542bdb86f8b0aea1c2972fe1228b6ba2bf01",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-late-abort-summary.json": "93f29c346d3d85d3d66de9bafcc0484dd3809fc8cd73a3c62f1e44c609fd2242"
+  },
+  "privateReceiptSHA256": {
+    "nav282-trace-loader-full.log": "3e186778b134ee3969e5293613324ed47f4c94ce1dba7dce6222a287ee7a5690",
+    "nav282-trace-loader-full-binding.json": "c25bc2f05085568c7b6667aec9f1483d3c112c3a1804154d2a9d5249eaff7173",
+    "nav282-trace-loader-samples-binding.json": "37b4d17112b991b71d4a2474adcbd0c98faec0255656cc417c00ea211ceadecb",
+    "nav282-trace-loader-browser-race.log": "b2e6dc235f67314d5897f15f4ea2d0269222ec7b01b0a65d44464553dd347e33",
+    "nav282-trace-loader-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-trace-loader-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-9d065f7-fast-windows.zip": "d2a27c328b0e2e83ecf8758773f4d6bbcf845b9e24c543d87e1cbb31e5be0cc1",
+    "pr442-9d065f7-fast-job.log": "56aeed4adeb8f1fc9f8b78c6deee00327e13971eb9d115f854a0f150ff842603",
+    "nav282-trace-loader-sample-1.log": "a2cc5f5c5bc7a9a108785d9d06a3456321fbc83eee772c99f04bd01fdb0c426b",
+    "nav282-trace-loader-sample-2.log": "e97bb2c6ba0924d4a8d40ac8749a5444ddeff9a694004c100eb25291df09368d",
+    "nav282-trace-loader-sample-3.log": "b2019f08fbd478f1deacd0db296a5f24e9d382c0aab2cf6eaeb950b955f0b820"
+  },
+  "chromiumReference": {
+    "tag": "158.0.8127.18",
+    "host": "chromium.googlesource.com/chromium/src",
+    "privateSourceSHA256": {
+      "navigation_request.h": "24c337de679d8a0c98d049db3d619c9e8846c615429647ac978e4d4024482c63",
+      "navigation_request.cc": "99117babab9e836fa475a4f96bf2cef034f505a24a59695e60e2378118e96b08",
+      "navigation_url_loader_impl.cc": "752d7549b64af826e1f6750407c8a87edf4d0737a244ddcfb7da267e05941927",
+      "navigation_throttle_runner.cc": "ed90f81f851d1172e4e794df3ede6af1be4fb2d12670357b7c3b1ec23884fdff",
+      "navigation_throttle.h": "df38f03fd97e783475c02dd1ac2037c328fdee5def52bbf49c88f0e8f6428a79"
+    },
+    "verified": "NavigationState3=WILL_START_REQUEST,8=DID_COMMIT,9=CANCELING,10=WILL_FAIL_REQUEST. OnRequestFailedInternal setsWILL_FAIL_REQUEST;ERR_ABORTED is silentlyreset. This maps observedstatesandhandling,notinitialfailurecause."
+  },
+  "checks": "FinalsourcefullnativeMac16ordinary+1intentionalPASS9.374s;3rounds12ordinary+3intentionalPASS;2Windows-onlyNetLogSKIPSexplicit. Full/samplinghashesequal/beforeafterbound. Browserrace1.740s/privacy/bounds/correlation+Darwin/WindowsbrowservetPASS;JSON/links/privacy/whitespace verified.",
+  "scope": "Only6morefixedloadernames projectedfromexistingnavigationtracebucketsAFTERtrial. No collection-stage/command/category/buffer/deadline/runtime/CIselector changes fromparent9d. Windows6-nameprojectionPENDING. Parent9dactual2unexplainedlateaborts havecompleteend-acked/lossless4matchingevents,state10/-3/uncommitted,noStop;all4knowncancelcontrolsPASSdifferentrecordedstate3. No cause/fixclaim."
+}

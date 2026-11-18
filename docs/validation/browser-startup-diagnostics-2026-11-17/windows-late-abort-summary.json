@@ -1,0 +1,564 @@
+{
+  "head": "9d065f7b9dacf85b42e513daaa31c1af3db9f975",
+  "run": 44223235655,
+  "job": 134530021617,
+  "artifact": 14391538021,
+  "scope": "Two unexplained late-observer first loads fail with complete lossless traces; no Stop event retained. Known explicit-Stop control follows a different recorded state path. Origin of aborted loader status remains unproven.",
+  "stateMappingSource": "Chromium refs/tags/158.0.8127.18 navigation_request.h",
+  "stateNames": {
+    "3": "WILL_START_REQUEST",
+    "8": "DID_COMMIT",
+    "9": "CANCELING",
+    "10": "WILL_FAIL_REQUEST"
+  },
+  "failedLateCases": [
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-trace-late",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "failure": "fixture_document_not_loaded",
+      "browserTrace": {
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "bytes": 69641,
+        "scanned": 230,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "events": [
+          {
+            "name": "NavigationRequest::Create",
+            "phase": "X",
+            "relativeUs": 0
+          },
+          {
+            "name": "NavigationRequest::NavigationRequest",
+            "phase": "X",
+            "relativeUs": 13,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 0,
+            "netError": 0,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "Navigator::Navigate",
+            "phase": "X",
+            "relativeUs": 170
+          },
+          {
+            "name": "FrameTreeNode::CancelRestartingBackForwardCacheNavigation",
+            "phase": "X",
+            "relativeUs": 182
+          },
+          {
+            "name": "NavigationRequest::BeginNavigation",
+            "phase": "X",
+            "relativeUs": 2789
+          },
+          {
+            "name": "NavigationRequest::BeginNavigationImpl",
+            "phase": "X",
+            "relativeUs": 2816
+          },
+          {
+            "name": "NavigationRequest::StartNavigation",
+            "phase": "X",
+            "relativeUs": 2820
+          },
+          {
+            "name": "WebContentsImpl::DidStartNavigation",
+            "phase": "X",
+            "relativeUs": 2951,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 3,
+            "netError": 0,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "NavigationRequest::WillStartRequest",
+            "phase": "X",
+            "relativeUs": 3769
+          },
+          {
+            "name": "NavigationThrottleRegistryImpl::RegisterNavigationThrottles",
+            "phase": "X",
+            "relativeUs": 3781
+          },
+          {
+            "name": "NavigationThrottleRunner::ProcessInternal",
+            "phase": "X",
+            "relativeUs": 4370,
+            "throttleEvent": 1
+          },
+          {
+            "name": "NavigationRequest::OnStartChecksComplete",
+            "phase": "X",
+            "relativeUs": 4477
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Start",
+            "phase": "X",
+            "relativeUs": 4670
+          },
+          {
+            "name": "FrameTreeNode::DidStopLoading",
+            "phase": "X",
+            "relativeUs": 170642
+          },
+          {
+            "name": "FrameTreeNode::DidStopLoading",
+            "phase": "X",
+            "relativeUs": 192423
+          },
+          {
+            "name": "NavigationRequest::OnRequestFailedInternal",
+            "phase": "X",
+            "relativeUs": 461461
+          },
+          {
+            "name": "FrameTreeNode::CancelRestartingBackForwardCacheNavigation",
+            "phase": "X",
+            "relativeUs": 462373
+          },
+          {
+            "name": "NavigationRequest::~NavigationRequest",
+            "phase": "X",
+            "relativeUs": 462416
+          },
+          {
+            "name": "WebContentsImpl::DidFinishNavigation",
+            "phase": "X",
+            "relativeUs": 462459,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 10,
+            "netError": -3,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "FrameTreeNode::DidStopLoading",
+            "phase": "X",
+            "relativeUs": 463360
+          },
+          {
+            "name": "RenderFrameHostImpl::ResetChildren",
+            "phase": "X",
+            "relativeUs": 463765,
+            "frame": 1
+          },
+          {
+            "name": "NavigationRequest::NavigationRequest",
+            "phase": "s",
+            "relativeUs": 13
+          },
+          {
+            "name": "NavigationRequest::NavigationRequest",
+            "phase": "f",
+            "relativeUs": 2789
+          },
+          {
+            "name": "NavigationRequest::BeginNavigation",
+            "phase": "s",
+            "relativeUs": 2789
+          },
+          {
+            "name": "NavigationRequest::BeginNavigation",
+            "phase": "f",
+            "relativeUs": 2816
+          },
+          {
+            "name": "NavigationRequest::BeginNavigationImpl",
+            "phase": "s",
+            "relativeUs": 2816
+          },
+          {
+            "name": "NavigationRequest::BeginNavigationImpl",
+            "phase": "f",
+            "relativeUs": 2820
+          },
+          {
+            "name": "NavigationRequest::StartNavigation",
+            "phase": "s",
+            "relativeUs": 2820
+          },
+          {
+            "name": "NavigationRequest::StartNavigation",
+            "phase": "f",
+            "relativeUs": 3769
+          },
+          {
+            "name": "NavigationRequest::WillStartRequest",
+            "phase": "s",
+            "relativeUs": 3769
+          },
+          {
+            "name": "NavigationRequest::WillStartRequest",
+            "phase": "f",
+            "relativeUs": 4477
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Start",
+            "phase": "s",
+            "relativeUs": 4670
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Start",
+            "phase": "f",
+            "relativeUs": 4675
+          },
+          {
+            "name": "NavigationRequest::OnStartChecksComplete",
+            "phase": "s",
+            "relativeUs": 4477
+          },
+          {
+            "name": "NavigationRequest::OnStartChecksComplete",
+            "phase": "f",
+            "relativeUs": 461461
+          },
+          {
+            "name": "NavigationRequest::OnRequestFailedInternal",
+            "phase": "s",
+            "relativeUs": 461461
+          },
+          {
+            "name": "NavigationRequest::OnRequestFailedInternal",
+            "phase": "f",
+            "relativeUs": 462416
+          },
+          {
+            "name": "NavigationRequest",
+            "phase": "b",
+            "relativeUs": 46,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 0,
+            "netError": 0,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "NavigationRequest",
+            "phase": "e",
+            "relativeUs": 462419
+          }
+        ]
+      },
+      "traceStartStage": "after_blank"
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-trace-late",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "failure": "fixture_document_not_loaded",
+      "browserTrace": {
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "bytes": 69984,
+        "scanned": 232,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "events": [
+          {
+            "name": "NavigationRequest::Create",
+            "phase": "X",
+            "relativeUs": 0
+          },
+          {
+            "name": "NavigationRequest::NavigationRequest",
+            "phase": "X",
+            "relativeUs": 11,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 0,
+            "netError": 0,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "Navigator::Navigate",
+            "phase": "X",
+            "relativeUs": 165
+          },
+          {
+            "name": "FrameTreeNode::CancelRestartingBackForwardCacheNavigation",
+            "phase": "X",
+            "relativeUs": 176
+          },
+          {
+            "name": "NavigationRequest::BeginNavigation",
+            "phase": "X",
+            "relativeUs": 2958
+          },
+          {
+            "name": "NavigationRequest::BeginNavigationImpl",
+            "phase": "X",
+            "relativeUs": 2991
+          },
+          {
+            "name": "NavigationRequest::StartNavigation",
+            "phase": "X",
+            "relativeUs": 2995
+          },
+          {
+            "name": "WebContentsImpl::DidStartNavigation",
+            "phase": "X",
+            "relativeUs": 3084,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 3,
+            "netError": 0,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "NavigationRequest::WillStartRequest",
+            "phase": "X",
+            "relativeUs": 4021
+          },
+          {
+            "name": "NavigationThrottleRegistryImpl::RegisterNavigationThrottles",
+            "phase": "X",
+            "relativeUs": 4026
+          },
+          {
+            "name": "NavigationThrottleRunner::ProcessInternal",
+            "phase": "X",
+            "relativeUs": 4333,
+            "throttleEvent": 1
+          },
+          {
+            "name": "NavigationRequest::OnStartChecksComplete",
+            "phase": "X",
+            "relativeUs": 4422
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Start",
+            "phase": "X",
+            "relativeUs": 4598
+          },
+          {
+            "name": "FrameTreeNode::DidStopLoading",
+            "phase": "X",
+            "relativeUs": 446826
+          },
+          {
+            "name": "FrameTreeNode::DidStopLoading",
+            "phase": "X",
+            "relativeUs": 446991
+          },
+          {
+            "name": "NavigationRequest::OnRequestFailedInternal",
+            "phase": "X",
+            "relativeUs": 452884
+          },
+          {
+            "name": "FrameTreeNode::CancelRestartingBackForwardCacheNavigation",
+            "phase": "X",
+            "relativeUs": 453730
+          },
+          {
+            "name": "NavigationRequest::~NavigationRequest",
+            "phase": "X",
+            "relativeUs": 453779
+          },
+          {
+            "name": "WebContentsImpl::DidFinishNavigation",
+            "phase": "X",
+            "relativeUs": 453814,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 10,
+            "netError": -3,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "FrameTreeNode::DidStopLoading",
+            "phase": "X",
+            "relativeUs": 454653
+          },
+          {
+            "name": "RenderFrameHostImpl::ResetChildren",
+            "phase": "X",
+            "relativeUs": 455005,
+            "frame": 1
+          },
+          {
+            "name": "NavigationRequest::NavigationRequest",
+            "phase": "s",
+            "relativeUs": 11
+          },
+          {
+            "name": "NavigationRequest::NavigationRequest",
+            "phase": "f",
+            "relativeUs": 2958
+          },
+          {
+            "name": "NavigationRequest::BeginNavigation",
+            "phase": "s",
+            "relativeUs": 2958
+          },
+          {
+            "name": "NavigationRequest::BeginNavigation",
+            "phase": "f",
+            "relativeUs": 2991
+          },
+          {
+            "name": "NavigationRequest::BeginNavigationImpl",
+            "phase": "s",
+            "relativeUs": 2991
+          },
+          {
+            "name": "NavigationRequest::BeginNavigationImpl",
+            "phase": "f",
+            "relativeUs": 2995
+          },
+          {
+            "name": "NavigationRequest::StartNavigation",
+            "phase": "s",
+            "relativeUs": 2995
+          },
+          {
+            "name": "NavigationRequest::StartNavigation",
+            "phase": "f",
+            "relativeUs": 4021
+          },
+          {
+            "name": "NavigationRequest::WillStartRequest",
+            "phase": "s",
+            "relativeUs": 4021
+          },
+          {
+            "name": "NavigationRequest::WillStartRequest",
+            "phase": "f",
+            "relativeUs": 4422
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Start",
+            "phase": "s",
+            "relativeUs": 4598
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Start",
+            "phase": "f",
+            "relativeUs": 4604
+          },
+          {
+            "name": "NavigationRequest::OnStartChecksComplete",
+            "phase": "s",
+            "relativeUs": 4422
+          },
+          {
+            "name": "NavigationRequest::OnStartChecksComplete",
+            "phase": "f",
+            "relativeUs": 452884
+          },
+          {
+            "name": "NavigationRequest::OnRequestFailedInternal",
+            "phase": "s",
+            "relativeUs": 452884
+          },
+          {
+            "name": "NavigationRequest::OnRequestFailedInternal",
+            "phase": "f",
+            "relativeUs": 453779
+          },
+          {
+            "name": "NavigationRequest",
+            "phase": "b",
+            "relativeUs": 40,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 0,
+            "netError": 0,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "NavigationRequest",
+            "phase": "e",
+            "relativeUs": 453783
+          }
+        ]
+      },
+      "traceStartStage": "after_blank"
+    }
+  ],
+  "knownCancellation": {
+    "mode": "controlled-stop-trace",
+    "platform": "windows",
+    "architecture": "amd64",
+    "intentionalCancellation": true,
+    "stopIssued": true,
+    "controlConfirmed": true,
+    "navigateCalls": 1,
+    "fixtureRequests": 1
+  },
+  "knownCancellationEvents": [
+    {
+      "name": "WebContentsImpl::DidFinishNavigation",
+      "phase": "X",
+      "relativeUs": 1291495,
+      "navigation": 2,
+      "frame": 1,
+      "mainFrame": true,
+      "urlClass": "fixture",
+      "matchesRequested": true,
+      "state": 3,
+      "netError": -3,
+      "committed": false,
+      "browserInitiated": true
+    },
+    {
+      "name": "RenderFrameHostImpl::Stop",
+      "phase": "X",
+      "relativeUs": 1295072,
+      "frame": 1
+    }
+  ]
+}

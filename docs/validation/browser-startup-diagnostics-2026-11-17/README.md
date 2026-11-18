@@ -384,3 +384,45 @@ Darwin/Windows browser vet, workflow checks and source bindings pass. Actual
 Windows late-start results remain pending; neither local success nor a missing
 abort under instrumentation demonstrates a runtime fix. See
 [position-manifest.json](position-manifest.json).
+
+
+## Complete unexplained-abort traces
+
+At9d065f7, the [paired Windows probe](windows-late-abort-summary.json) captures
+both unexplained late-observer failures in its full matrix. Each makes one
+fixture navigation, receives zero fixture document requests and retains four
+matching navigation events. Both traces acknowledge Tracing.end, complete with
+zero loss/drops, and report the requested uncommitted navigation ending with
+net_error-3/state10. Neither retained trace contains RenderFrameHostImpl::Stop.
+The known Stop control succeeds and ends the requested navigation at state3
+with a Stop event. This is a difference in recorded execution paths, not proof
+of the initiating cause. All three later sampling rounds pass both observer
+positions, preserving the intermittent nature of the failure.
+
+The [navigation state enum](https://chromium.googlesource.com/chromium/src/+/refs/tags/158.0.8127.18/content/browser/renderer_host/navigation_request.h)
+for the reported Chromium158.0.8127.18 maps state3 to WILL_START_REQUEST and
+state10 to WILL_FAIL_REQUEST. The
+[request implementation](https://chromium.googlesource.com/chromium/src/+/refs/tags/158.0.8127.18/content/browser/renderer_host/navigation_request.cc)
+sets WILL_FAIL_REQUEST in OnRequestFailedInternal. Its failure handling silently
+resets an ERR_ABORTED navigation, consistent with the observed about:blank state;
+that handling does not identify the source of the failure status. The retained
+sequence includes start checks, URL-loader startup, then OnRequestFailedInternal.
+There is no response/commit before failure in these captures.
+
+Six additional fixed URL-loader event names are now retained from the existing
+navigation category: interceptor creation, restart, throttling-loader creation,
+URL-loader throttle creation, response-interceptor selection and request-failure
+notification. The exact names come from the matching
+[loader source](https://chromium.googlesource.com/chromium/src/+/refs/tags/158.0.8127.18/content/browser/loader/navigation_url_loader_impl.cc).
+This only expands projection after the trial. It adds no observer commands,
+category, buffer, pre-navigation delay, runtime behavior or deadline change.
+Raw URLs, dictionaries and traces remain excluded; all existing bounds remain.
+The aim is to distinguish the next loader stage, not to infer a cause from the
+currently incomplete path.
+
+Local acceptance for this projection passes the full sixteen ordinary native
+first loads and intentional control, plus twelve ordinary loads and three
+controls in the paired rounds. Two Windows-only NetLog cases remain explicit
+skips. Browser race, privacy/bounds/correlation controls and host/Windows vet
+pass. Actual Windows expanded-loader records remain pending. Source and receipt
+bindings are in [loader-manifest.json](loader-manifest.json).
