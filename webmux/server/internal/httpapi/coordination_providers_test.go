@@ -513,8 +513,72 @@ func TestAgentDeckLocalProfileScopesAttachmentAndOwnership(t *testing.T) {
 	}
 }
 
+func TestAgentDeckLocalProfileScopesMessagesAndCompletions(t *testing.T) {
+	for _, profile := range []string{"work", "default"} {
+		t.Run(profile, func(t *testing.T) {
+			t.Setenv("AGENTDECK_PROFILE", "unrelated")
+			executable, calls := fakeAgentDeck(t)
+			script, err := os.ReadFile(executable)
+			if err != nil {
+				t.Fatal(err)
+			}
+			text := strings.ReplaceAll(string(script), `"id":"local-1","title"`, `"id":"local-1","profile":"`+profile+`","title"`)
+			commands := []string{
+				"session ownership inspect local-1 --json",
+				"inbox peek --json local-1",
+				"session send local-1 --message-file - --json --require-input-prompt --queue",
+				"session send-status send-local --json",
+				"remote drain sparky --into local-1 --json",
+			}
+			for _, command := range commands {
+				text = strings.ReplaceAll(text, `"`+command+`")`, `"-p `+profile+` `+command+`")`)
+			}
+			if err := os.WriteFile(executable, []byte(text), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			p := &agentDeckProvider{executable: executable}
+			launch, err := p.Attach(context.Background(), "local:local-1")
+			if err != nil || !reflect.DeepEqual(launch.Argv, []string{executable, "-p", profile, "session", "attach", "local-1"}) {
+				t.Fatal("attachment did not override the unrelated ambient profile", launch, err)
+			}
+			if live, err := p.Survives(context.Background(), "local:local-1"); err != nil || !live {
+				t.Fatal("ownership did not override the unrelated ambient profile", live, err)
+			}
+			status, err := p.Status(context.Background())
+			if err != nil || len(status.Errors) != 0 || len(status.Messages) != 1 {
+				t.Fatal("inbox did not use the owning local profile", status, err)
+			}
+			queued, err := p.Send(context.Background(), coordinationSendRequest{Target: "local:local-1", Message: "profile-scoped review", Queue: true})
+			if err != nil || queued.SendID != "send-local" || !queued.Queued || queued.Submitted {
+				t.Fatal("send lost the local profile or guarded queue semantics", queued, err)
+			}
+			delivery, err := p.SendStatus(context.Background(), "local:local-1", "send-local")
+			if err != nil || delivery["state"] != "landed" || delivery["message"] != nil {
+				t.Fatal("delivery lookup lost its profile or exposed the body", delivery, err)
+			}
+			drain, err := p.Drain(context.Background(), "sparky", "local:local-1")
+			if err != nil || drain.Written != 1 || len(drain.Messages) != 1 || drain.Messages[0].SourceRemote != "sparky" {
+				t.Fatal("drain lost its local destination profile or remote provenance", drain, err)
+			}
+			data, err := os.ReadFile(calls)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, command := range commands {
+				if !strings.Contains("\n"+string(data), "\n-p "+profile+" "+command+"\n") || strings.Contains("\n"+string(data), "\n"+command+"\n") {
+					t.Fatalf("operation escaped its owning profile: %q", command)
+				}
+			}
+			body, err := os.ReadFile(calls + ".message")
+			if err != nil || string(body) != "profile-scoped review" || strings.Contains(string(data), "profile-scoped review") {
+				t.Fatal("message must be passed only over stdin", err)
+			}
+		})
+	}
+}
+
 func TestAgentDeckDuplicateProfileIDsDoNotSelectAnArbitraryRegistry(t *testing.T) {
-	executable, _ := fakeAgentDeck(t)
+	executable, calls := fakeAgentDeck(t)
 	script, err := os.ReadFile(executable)
 	if err != nil {
 		t.Fatal(err)
@@ -534,6 +598,19 @@ func TestAgentDeckDuplicateProfileIDsDoNotSelectAnArbitraryRegistry(t *testing.T
 	}
 	if live, err := p.Survives(context.Background(), "local:local-1"); err == nil || live {
 		t.Fatal("ambiguous profile used for process ownership", live, err)
+	}
+	if _, err := p.Send(context.Background(), coordinationSendRequest{Target: "local:local-1", Message: "must not send", Queue: true}); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatal("ambiguous profile accepted a message", err)
+	}
+	if _, err := p.SendStatus(context.Background(), "local:local-1", "send-local"); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatal("ambiguous profile selected a delivery registry", err)
+	}
+	if _, err := p.Drain(context.Background(), "sparky", "local:local-1"); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatal("ambiguous profile accepted remote completions", err)
+	}
+	data, err := os.ReadFile(calls)
+	if err != nil || strings.Contains(string(data), "session send") || strings.Contains(string(data), "remote drain") {
+		t.Fatal("ambiguous identity reached a messaging operation", err)
 	}
 }
 

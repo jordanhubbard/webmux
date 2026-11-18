@@ -938,7 +938,7 @@ func (p *agentDeckProvider) status(ctx context.Context, allRemotes bool, only st
 		}
 		peeked++
 		var records []agentDeckInboxEvent
-		if err := p.runJSON(ctx, &records, "inbox", "peek", "--json", seat.ProviderTarget); err != nil {
+		if err := p.runJSON(ctx, &records, agentDeckLocalArgs(seat.Profile, "inbox", "peek", "--json", seat.ProviderTarget)...); err != nil {
 			status.Errors = append(status.Errors, fmt.Sprintf("%s inbox: %v", seat.Name, err))
 			continue
 		}
@@ -1031,6 +1031,8 @@ func (p *agentDeckProvider) Send(ctx context.Context, request coordinationSendRe
 	}
 	if remote != "" {
 		args = append([]string{"remote", remote}, args...)
+	} else {
+		args = agentDeckLocalArgs(seat.Profile, args...)
 	}
 	var output struct {
 		SendID       string `json:"send_id"`
@@ -1053,7 +1055,8 @@ func (p *agentDeckProvider) Send(ctx context.Context, request coordinationSendRe
 }
 
 func (p *agentDeckProvider) SendStatus(ctx context.Context, target, sendID string) (map[string]any, error) {
-	if _, err := p.agentDeckSeat(ctx, target); err != nil {
+	seat, err := p.agentDeckSeat(ctx, target)
+	if err != nil {
 		return nil, err
 	}
 	if sendID == "" || len(sendID) > 256 || strings.ContainsAny(sendID, "\x00\r\n") {
@@ -1066,6 +1069,8 @@ func (p *agentDeckProvider) SendStatus(ctx context.Context, target, sendID strin
 	args := []string{"session", "send-status", sendID, "--json"}
 	if remote != "" {
 		args = append([]string{"remote", remote}, args...)
+	} else {
+		args = agentDeckLocalArgs(seat.Profile, args...)
 	}
 	result := map[string]any{}
 	if err := p.runJSON(ctx, &result, args...); err != nil {
@@ -1122,7 +1127,7 @@ func (p *agentDeckProvider) Drain(ctx context.Context, remoteName, target string
 			Detail  string `json:"detail"`
 		} `json:"writer"`
 	}
-	if err := p.runJSON(ctx, &output, "remote", "drain", remoteName, "--into", id, "--json"); err != nil {
+	if err := p.runJSON(ctx, &output, agentDeckLocalArgs(seat.Profile, "remote", "drain", remoteName, "--into", id, "--json")...); err != nil {
 		return coordinationDrainResult{}, err
 	}
 	result := coordinationDrainResult{Remote: output.Remote, Target: target, Fetched: output.Fetched, Written: output.Written, Duplicates: output.Duplicates, Unknown: output.Unknown, Woke: output.Woke, Messages: []coordinationMessage{}}
@@ -1154,8 +1159,8 @@ func (p *agentDeckProvider) Attach(ctx context.Context, target string) (coordina
 	argv := []string{p.executable, "session", "attach", id}
 	if remote != "" {
 		argv = []string{p.executable, "remote", "attach", remote, id}
-	} else if seat.Profile != "" && seat.Profile != "default" {
-		argv = append([]string{p.executable, "-p", seat.Profile}, argv[1:]...)
+	} else {
+		argv = append([]string{p.executable}, agentDeckLocalArgs(seat.Profile, argv[1:]...)...)
 	}
 	return coordinationLaunch{Provider: "agent-deck", Target: target, Profile: seat.Profile, NativeSession: seat.NativeSession, NativeStateFile: seat.NativeStateFile, Title: seat.Name + " · " + seat.Host + " · " + seat.ProjectName, Project: seat.ProjectName, Name: seat.Name, Host: seat.Host, Workspace: seat.Workspace, Runtime: seat.Runtime, Argv: argv}, nil
 }

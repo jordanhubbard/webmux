@@ -1,0 +1,44 @@
+{
+  "recordedUTC": "2026-11-18T01:17:50.766479+00:00",
+  "parent": "8f5d3225fac65804554a65bc08381a03a70654fe",
+  "issue": 448,
+  "sourceSHA256": {
+    "webmux/server/internal/httpapi/coordination_providers.go": "ce4ca3ce81fdceb30e593215de0de4c0b75535962a4080c56fe4546133aed080",
+    "webmux/server/internal/httpapi/coordination_providers_test.go": "73c7e61e75738ab98410e7fee652c78f0b3cc250968d2f638662539cc3688523",
+    "webmux/server/internal/httpapi/managed_recovery.go": "0b839280bf287a0e3b0da0baf5b559211e1d1be38c62d1226a8f014d984202a8",
+    "docs/openrig.md": "e06315006d6ef4cd79e84b1c168b493fd8edffd15c24fe05dc9e0c3f0a5fcb0b",
+    "docs/validation/agent-deck-profile-routing-2026-11-17/README.md": "ed6cd126026ab3db3530c03832e694bb701bdaa0e9024e6f56bcc3cd2d9e96da",
+    "docs/validation/agent-deck-profile-routing-2026-11-17/parent-negative.json": "e0883ae988082969a67a75e31a2f27477e1f70beb0b1f5727198fd0678e3f75e"
+  },
+  "privateReceiptSHA256": {
+    "ad448-final-http-race.log": "2987382e96eaf42c621da628f7254c3c33ff8be265b78c9d77564d42abb8b8eb",
+    "ad448-final-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "ad448-final-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "ad448-parent-negative-final.log": "7f17935a961430182b0f23b4009a9efc1e208ab9c7b5f57ce8524fe21ed55cd1",
+    "ad448-parent-negative-final.json": "e0883ae988082969a67a75e31a2f27477e1f70beb0b1f5727198fd0678e3f75e"
+  },
+  "upstream": {
+    "repository": "asheshgoplani/agent-deck",
+    "version": "1.16.39",
+    "commit": "d62c2898d623e5353392a06f9a77c19f97b33438",
+    "retainedSourceSHA256": {
+      "session_send_queue_cmd.go": "bc5472c9896c321d98d98fcbc5c462579784eb959eaa123406efa4d83ff15b69",
+      "inbox_peek_cmd.go": "91683b5fb2c886a81c044ac4f0a81842e3fda4d7ebc548dcecaf01f98848a40f",
+      "main.go": "eb4d11089993461c6af00be4a370add8d3fc325e7d5a8890ffd6763389b7f71d",
+      "._main.go": "fc80fa0780f1322c8e031b3da99950606b588d707474d5ea93ea3b0674b899c7",
+      "._issue2831_remote_drain_profile_test.go": "fc80fa0780f1322c8e031b3da99950606b588d707474d5ea93ea3b0674b899c7",
+      "remote_drain_cmd.go": "4a9337471933d622ef6c738f4aed117f0481bf65c8bb8374dcbe0f0ac472438e",
+      "issue2831_remote_drain_profile_test.go": "43eeaf3af408c2d0617924d1fdc1ccad571e9e35a14d3902aa36b7feb0673658",
+      "._remote_drain_cmd.go": "fc80fa0780f1322c8e031b3da99950606b588d707474d5ea93ea3b0674b899c7",
+      "._session_send_queue_cmd.go": "fc80fa0780f1322c8e031b3da99950606b588d707474d5ea93ea3b0674b899c7",
+      "._inbox_peek_cmd.go": "fc80fa0780f1322c8e031b3da99950606b588d707474d5ea93ea3b0674b899c7"
+    }
+  },
+  "checks": {
+    "httpRace": "PASS54.542s",
+    "darwinRootVet": "PASS",
+    "windowsAMD64RootVet": "PASS",
+    "parentNegative": "EXPECTEDFAIL for nondefault inbox and explicit-default attachment; unchanged parent runtime; final test source/restoration verified"
+  },
+  "scope": "Deterministic adapter routing/argument/privacy/refusal evidence, published native source-contract inspection. No authenticated provider, remote-native completion, reboot or Rig bridge acceptance claim. Existing default/remote cases retained; explicit-default metadata now overrides ambient profile."
+}

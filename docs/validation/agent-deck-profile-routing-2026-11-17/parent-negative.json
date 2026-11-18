@@ -1,0 +1,9 @@
+{
+  "parent": "8f5d3225fac65804554a65bc08381a03a70654fe",
+  "testSHA256": "73c7e61e75738ab98410e7fee652c78f0b3cc250968d2f638662539cc3688523",
+  "exitCode": 1,
+  "runtimeOverlay": false,
+  "testOverlayRestored": true,
+  "worktreeClean": true,
+  "result": "Expected failures: work-profile unqualified inbox read; explicit default attachment inherits unrelated ambient selection. Same final test source; no native provider claim."
+}

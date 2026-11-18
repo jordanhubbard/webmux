@@ -98,7 +98,9 @@ func (p *agentDeckProvider) PlanNativeRecovery(ctx context.Context, saved sessio
 }
 
 func agentDeckLocalArgs(profile string, args ...string) []string {
-	if profile != "" && profile != "default" {
+	// Even "default" is an explicit registry choice: omitting it would inherit
+	// AGENTDECK_PROFILE from the controller's service environment.
+	if profile != "" {
 		return append([]string{"-p", profile}, args...)
 	}
 	return args
