@@ -1,0 +1,50 @@
+{
+  "recordedUTC": "2026-11-18T08:12:20.442452+00:00",
+  "issue": 473,
+  "base": "b357ca694b390bbca1377a0a759d44ede0331220",
+  "sourceSHA256": {
+    ".github/workflows/browser-navigation.yml": "6e12fb429d71b447534842d7877b5afcff898ec70306d672e4f84c02134ebca9",
+    "docs/validation/profile-cleanup-2026-11-18/README.md": "a5a9289868a61a444d0a0eb2c2cc05823e9f3e9c1680c73e4e2b05ed2801b3b5",
+    "webmux/server/internal/browser/navigation_cleanup_other_test.go": "2df6c1e4c1caee4522508940531e43a96b2a25c0145ba24cafdf152533dfc674",
+    "webmux/server/internal/browser/navigation_cleanup_test.go": "95953f94823ed3523696805b8d75a9c05bd7ab2866d896eaa06696b5610bf355",
+    "webmux/server/internal/browser/navigation_cleanup_windows_test.go": "2e718cd5b6c29cfb51aa9bc92636eddc1a25c46fd49cf9cb877c22d145d4ae7c",
+    "webmux/server/internal/browser/navigation_native_test.go": "3f2ed9d0f7021a879026e3ab5f54959ebb17d419e5a270b345a568d106c53217"
+  },
+  "originalFailure": {
+    "head": "8e90c3ba68f1e037c592a24b4c22e463cc53e071",
+    "run": 44258246960,
+    "job": 134645042243,
+    "artifact": 14408200737,
+    "artifactSHA256": "c88881a431fa85b386f5f00aa41a04cc3294468399d06ee4c05d1a5b5f66e3cc",
+    "phase": "direct-home-websocket removal after successful load",
+    "originalErrorDiscarded": true,
+    "causeEstablished": false
+  },
+  "local": {
+    "browserPackageRace": "PASS",
+    "privacyControls": "PASS",
+    "realMacOSPrivateHomeWebSocketCase": "PASS",
+    "yamlAndExistingGateInvariants": "PASS",
+    "originalRemovalAndAssertionUnchanged": true,
+    "processObservationDefaultOff": true
+  },
+  "crossCompiledImages": {
+    "amd64": {
+      "sha256": "07a7fcd9028cdb75836df92cc3c7c01b9e17dd419c9be65ef75d2bc7b21f3dc6",
+      "peMachine": "0x8664",
+      "scope": "Cross-compilation only, not executed locally"
+    },
+    "arm64": {
+      "sha256": "72fe7a1801830391fa4a34120eacc95aa825a5d21bd5a5ce92f4027f3a92421f",
+      "peMachine": "0xaa64",
+      "scope": "Cross-compilation only, not executed locally"
+    }
+  },
+  "privateLogSHA256": {
+    "cleanup473-final-browser-race.log": "9b28856109230a6bec2b66d66c47f7866d0353de6d80d840a84d84f146edbb4e",
+    "cleanup473-qualified-mac-native.log": "9d8b908c81c71f5faece80a9074fe5d46ed688651a7d1592f5cf71d635fbbc87",
+    "cleanup473-qualified-windows-amd64-compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cleanup473-qualified-windows-arm64-compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "nativeWindows": "Pending. Actual held-file and process observation need native execution. No repair claim."
+}

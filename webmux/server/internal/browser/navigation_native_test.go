@@ -26,26 +26,28 @@ import (
 )
 
 type firstNavigationEvidence struct {
-	Transport       string                         `json:"transport"`
-	ProfileLocation string                         `json:"profileLocation"`
-	Mode            string                         `json:"mode"`
-	Platform        string                         `json:"platform"`
-	Architecture    string                         `json:"architecture"`
-	BrowserProduct  string                         `json:"browserProduct,omitempty"`
-	Loaded          bool                           `json:"loaded"`
-	FixtureRequests int64                          `json:"fixtureRequests"`
-	NavigateCalls   int                            `json:"navigateCalls"`
-	TargetSelection string                         `json:"targetSelection,omitempty"`
-	ExtraTargets    int                            `json:"extraTargets,omitempty"`
-	CleanupFailed   bool                           `json:"cleanupFailed,omitempty"`
-	Failure         string                         `json:"failure,omitempty"`
-	Diagnostics     *NavigationDiagnostics         `json:"diagnostics,omitempty"`
-	NetLog          *firstNavigationNetLog         `json:"netLog,omitempty"`
-	BrowserTrace    *firstNavigationTrace          `json:"browserTrace,omitempty"`
-	NetworkSandbox  *firstNavigationNetworkSandbox `json:"networkSandbox,omitempty"`
-	ProcessOutput   *firstNavigationOutput         `json:"processOutput,omitempty"`
-	TraceLoading    bool                           `json:"traceLoading,omitempty"`
-	TraceStartStage string                         `json:"traceStartStage,omitempty"`
+	Transport        string                           `json:"transport"`
+	ProfileLocation  string                           `json:"profileLocation"`
+	Mode             string                           `json:"mode"`
+	Platform         string                           `json:"platform"`
+	Architecture     string                           `json:"architecture"`
+	BrowserProduct   string                           `json:"browserProduct,omitempty"`
+	Loaded           bool                             `json:"loaded"`
+	FixtureRequests  int64                            `json:"fixtureRequests"`
+	NavigateCalls    int                              `json:"navigateCalls"`
+	TargetSelection  string                           `json:"targetSelection,omitempty"`
+	ExtraTargets     int                              `json:"extraTargets,omitempty"`
+	CleanupFailed    bool                             `json:"cleanupFailed,omitempty"`
+	CleanupRemoval   *firstNavigationRemovalError     `json:"cleanupRemoval,omitempty"`
+	CleanupProcesses *firstNavigationCleanupProcesses `json:"cleanupProcesses,omitempty"`
+	Failure          string                           `json:"failure,omitempty"`
+	Diagnostics      *NavigationDiagnostics           `json:"diagnostics,omitempty"`
+	NetLog           *firstNavigationNetLog           `json:"netLog,omitempty"`
+	BrowserTrace     *firstNavigationTrace            `json:"browserTrace,omitempty"`
+	NetworkSandbox   *firstNavigationNetworkSandbox   `json:"networkSandbox,omitempty"`
+	ProcessOutput    *firstNavigationOutput           `json:"processOutput,omitempty"`
+	TraceLoading     bool                             `json:"traceLoading,omitempty"`
+	TraceStartStage  string                           `json:"traceStartStage,omitempty"`
 }
 
 // These are independent first loads in fresh private browser processes. A failed
@@ -349,9 +351,10 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 		}
 		// Registered before browser cleanup: Chrome exits before profile removal.
 		t.Cleanup(func() {
-			if os.RemoveAll(profile) != nil {
+			if err := os.RemoveAll(profile); err != nil {
 				record.CleanupFailed = true
-				t.Error("private home profile cleanup failed")
+				record.CleanupRemoval = classifyFirstNavigationRemoval(err, profile)
+				t.Errorf("private home profile cleanup failed: %+v", record.CleanupRemoval)
 			}
 		})
 	} else {
@@ -388,6 +391,8 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 	alloc, stop := chromedp.NewExecAllocator(context.Background(), opts...)
 	root, cancel := chromedp.NewContext(alloc)
 	t.Cleanup(func() {
+		finishObservation := observeFirstNavigationCleanup(root)
+		defer func() { record.CleanupProcesses = finishObservation() }()
 		if options.netLog {
 			closing, finish := context.WithTimeout(root, 5*time.Second)
 			if chromedp.Cancel(closing) != nil {
