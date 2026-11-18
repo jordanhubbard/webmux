@@ -24,7 +24,8 @@ its temporary profile, including cookies. Deleting the terminal or stopping
 WebMux also ends its browser. A worker expires after 30 minutes without viewer
 activity. Profiles never import the host's everyday browser credentials.
 
-Temporary profiles are the default. For an explicit saved profile, enter a name,
+Temporary profiles are the default. Open **Browser settings** to configure saved
+profiles. For an explicit saved profile, enter a name,
 choose **Create saved profile**, then **Open selected profile**. Opening a selected
 profile ends the current worker first. Saved cookies and site storage survive
 worker and server restarts. The registry is scoped to the signed-in WebMux owner
@@ -60,6 +61,13 @@ WebMux: these guarantees require browser worker protocol 3.
 
 Use **Expand browser** for a full workspace, or resize the drawer. The Chromium
 viewport follows the available area instead of scaling a fixed desktop layout.
+On narrow screens the companion fills the screen, with an address row below the
+navigation buttons and touch-sized controls. **Browser settings** holds profile
+setup; controller ownership and **Return to terminal** remain directly available.
+Scroll the companion when the screen or keyboard leaves less vertical room.
+The [small-screen qualification](validation/browser-mobile-2026-11-17/README.md)
+covers browser-emulated touch and reduced heights, with physical-device keyboard
+and assistive-technology acceptance still open under #110.
 Back, forward, reload, stop, new tab, close tab, and tab selection are available.
 **Find text** searches the page, with previous/next matches. Cmd/Ctrl+F, R, T and
 W provide page search, reload, new tab and close/hide respectively.

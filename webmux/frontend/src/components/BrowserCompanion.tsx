@@ -226,32 +226,37 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         <span role="status">{controlled ? 'You control this browser' : 'View only'}</span>
         {controlled ? <button onClick={() => void act({ action: 'release' })}>Release control</button>
           : <button disabled={!ready} onClick={() => { if (frame?.control?.available || window.confirm('Take control from the other viewer?')) void act({ action: 'claim', force: true }); }}>Take control</button>}
-        <label>Profile <select aria-label="Browser profile" value={selectedProfile} onChange={event => setSelectedProfile(event.target.value)}>
-          <option value="">Temporary</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
-        </select></label>
-        <button disabled={busy || !controlled} onClick={async () => {
-          setBusy(true); setReady(false); await queue.current;
-          try { await api.endBrowser(session.id); control.current = false; setFrame(undefined); await act({ action: 'start', profileId: selectedProfile }); }
-          catch (err) { setError(String(err)); } finally { setBusy(false); }
-        }}>Open selected profile</button>
-        <input aria-label="New browser profile name" value={profileName} onChange={event => setProfileName(event.target.value)} maxLength={64} />
-        <button disabled={busy || !profileName.trim()} onClick={async () => {
-          setBusy(true);
-          try { const profile = await api.createBrowserProfile(session.id, profileName); setProfiles(values => [...values, profile]); setSelectedProfile(profile.id); setProfileName(''); }
-          catch (err) { setError(String(err)); } finally { setBusy(false); }
-        }}>Create saved profile</button>
-        <button disabled={busy || !selectedProfile} onClick={async () => {
-          if (!window.confirm('Delete this saved profile and its cookies on the execution host? End browsers using it first.')) return;
-          setBusy(true);
-          try { await api.deleteBrowserProfile(session.id, selectedProfile); setProfiles(values => values.filter(value => value.id !== selectedProfile)); setSelectedProfile(''); }
-          catch (err) { setError(String(err)); } finally { setBusy(false); }
-        }}>Delete saved profile</button>
-        <small>Saved profiles keep sign-in cookies on the execution host after ending. Temporary profiles and transfer files are cleared when the worker exits.</small>
       </div>
+      <details className="browser-settings">
+        <summary>Browser settings</summary>
+        <div className="browser-profiles">
+          <label>Profile <select aria-label="Browser profile" value={selectedProfile} onChange={event => setSelectedProfile(event.target.value)}>
+            <option value="">Temporary</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+          </select></label>
+          <button disabled={busy || !controlled} onClick={async () => {
+            setBusy(true); setReady(false); await queue.current;
+            try { await api.endBrowser(session.id); control.current = false; setFrame(undefined); await act({ action: 'start', profileId: selectedProfile }); }
+            catch (err) { setError(String(err)); } finally { setBusy(false); }
+          }}>Open selected profile</button>
+          <input aria-label="New browser profile name" value={profileName} onChange={event => setProfileName(event.target.value)} maxLength={64} />
+          <button disabled={busy || !profileName.trim()} onClick={async () => {
+            setBusy(true);
+            try { const profile = await api.createBrowserProfile(session.id, profileName); setProfiles(values => [...values, profile]); setSelectedProfile(profile.id); setProfileName(''); }
+            catch (err) { setError(String(err)); } finally { setBusy(false); }
+          }}>Create saved profile</button>
+          <button disabled={busy || !selectedProfile} onClick={async () => {
+            if (!window.confirm('Delete this saved profile and its cookies on the execution host? End browsers using it first.')) return;
+            setBusy(true);
+            try { await api.deleteBrowserProfile(session.id, selectedProfile); setProfiles(values => values.filter(value => value.id !== selectedProfile)); setSelectedProfile(''); }
+            catch (err) { setError(String(err)); } finally { setBusy(false); }
+          }}>Delete saved profile</button>
+          <small>Saved profiles keep sign-in cookies on the execution host after ending. Temporary profiles and transfer files are cleared when the worker exits.</small>
+        </div>
+      </details>
       {error ? <div role="alert" className="browser-message">{error} <button onClick={() => void act({ action: 'start' })}>Reconnect browser</button></div>
         : !frame && <div role="status" className="browser-message">Starting browser on the terminal host…</div>}
       <fieldset className="browser-controls" disabled={!controlled || busy}>
-      <form className="browser-navigation" onSubmit={event => {
+      <form className="browser-navigation browser-address" onSubmit={event => {
         event.preventDefault(); addressEditing.current = false;
         if (!address.trim()) return;
         const url = /^https?:\/\//i.test(address.trim()) ? address.trim() : `https://${address.trim()}`;

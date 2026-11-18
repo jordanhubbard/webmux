@@ -190,11 +190,11 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   await expect.poll(() => uploaded.length, { timeout: 15_000 }).toBe(file.length); expect(uploaded).toEqual(file);
   await expect(page.getByRole('dialog', { name: 'Upload files to this page' })).not.toBeVisible();
   await click(60, 220);
-  await page.locator('.browser-companion summary').click();
+  await page.locator('.browser-companion footer summary').click();
   const save = page.getByRole('button', { name: 'Save browser-proof.bin', exact: true }); await expect(save).toBeEnabled({ timeout: 15_000 });
   const received = page.waitForEvent('download'); await save.click(); const downloaded = await received;
   expect(readFileSync((await downloaded.path())!)).toEqual(downloadBytes);
-  await page.locator('.browser-companion summary').click();
+  await page.locator('.browser-companion footer summary').click();
   const originalTab = await page.getByLabel('Remote browser page').inputValue();
   await page.getByRole('textbox', { name: 'Remote browser URL' }).fill(origin + '/second'); await page.getByRole('button', { name: 'Go', exact: true }).click();
   await expect.poll(async () => (await (await request.post(endpoint, { data: { action: 'frame' } })).json()).url).toBe(origin + '/second');

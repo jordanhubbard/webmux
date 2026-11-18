@@ -43,3 +43,28 @@
 .browser-page-text { flex: 0 0 auto; max-height: 50vh; overflow: auto; padding: 12px; overflow-wrap: anywhere; }
 .browser-page-text h2 { font-size: 16px; }
 .browser-page-text li { margin-block: 6px; }
+
+.browser-settings { flex: 0 0 auto; }
+.browser-settings > summary { padding: 8px; cursor: pointer; }
+.browser-settings .browser-profiles { padding-top: 0; }
+
+@media (max-width: 650px) {
+  .browser-companion, .browser-companion.browser-expanded {
+    inset: 0; width: 100%; max-width: none; min-width: 0;
+    box-sizing: border-box; border-radius: 0; resize: none;
+  }
+  .browser-companion header {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 8px; gap: 6px;
+  }
+  .browser-companion header div { grid-column: 1 / -1; min-width: 0; }
+  .browser-companion header button { min-width: 0; padding: 6px; font-size: 12px; }
+  .browser-companion button, .browser-companion select,
+  .browser-companion input { min-height: 44px; box-sizing: border-box; }
+  .browser-companion input { font-size: 16px; max-width: 100%; }
+  .browser-settings > summary { min-height: 44px; box-sizing: border-box; }
+  .browser-address { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .browser-address input { grid-column: 1 / 4; width: 100%; }
+  .browser-profiles label { min-width: 0; max-width: 100%; }
+  .browser-profiles select { max-width: 100%; }
+}
