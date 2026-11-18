@@ -1,5 +1,10 @@
 # Native Rig/Codex installed-service executable upgrade
 
+A later [restricted-policy public recovery qualification](../codex-restricted-recovery-2026-11-18/README.md)
+covers read-only/on-request and workspace-write/on-request controller
+restart/crash cases. This installed-service receipt retains its default-policy
+scope; it does not qualify restricted-policy service upgrades.
+
 The actual Go application and Chrome pass a functional server-executable upgrade
 through the shipped macOS Make installer and real launchd. The private service,
 app bundle, state, loopback listener, Rig daemon and tmux server are isolated

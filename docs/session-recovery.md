@@ -2632,3 +2632,45 @@ startup settings, platforms/service accounts and release-package upgrades
 remain open. Earlier failed probe attempts remain excluded and retained by
 hash. Required review/current-head CI and full #318/#438/release acceptance
 remain separate requirements.
+
+## Native Rig/Codex restricted-policy recovery (2026-11-18)
+
+The [restricted-policy qualification](validation/codex-restricted-recovery-2026-11-18/README.md)
+now covers actual public Go/Chrome recovery on macOS with native workspace-write
+and read-only policies, both with on-request approval and network disabled.
+Every native coding turn retains the original policy and model. Fresh correlated
+tool outputs before and after recovery prove owner HOME/tmp/PATH, paired Rig,
+tool discovery and inherited values without manager-only values.
+
+Workspace-write allows the project and configured extra root, while denying
+writes outside those roots, into protected git/configuration directories and
+into the excluded owner TMPDIR. Read-only denies all six write targets. Both
+deny a connection to a fixture endpoint proven available outside the sandbox.
+Denied files remain absent and allowed files contain the expected bytes after
+cleanup. Codex's read-only journal omits the default false network field; the
+verifier requires its exact recorded shape, the resolved network-disabled plan
+and actual EPERM network results. The original failed schema-verification run
+remains retained and excluded; a fresh complete run passes.
+
+Both cases pass original-operation creation uncertainty/duplicates, graceful
+controller restart with the same provider, survivor reattachment without Resume,
+owned CLI loss plus explicit checked Stop of its idle seat, and controller
+SIGKILL during public original-only recovery. Explicit completion retains the
+original native UUID/body/revision. The original conversation recalls the removed
+challenge without tools, retains its native history prefix and appends fresh
+tool results under the same policy. Terminal-log paths/prefixes, viewer, sibling,
+consumed-duplicate and private daemon/tmux cleanup checks pass.
+
+Project trust is reviewed in the native CLI without a model turn. The read-only
+fixture temporarily uses workspace-write only for that private trust setup,
+then restores the final read-only configuration before managed creation; its
+configuration hash and all actual coding policies are checked. A disabled
+project layer still refuses before an owner launch/member POST. Public trust
+refusal guidance is tracked in [#529](https://github.com/jordanhubbard/webmux/issues/529).
+
+This does not extend the installed-service upgrade receipt to restricted
+policies or qualify native Rig/Codex host reboot, other policy variants,
+interactive escalation/permission changes, selected profiles/permission graphs,
+broader startup settings or all platforms. The native account stays in its
+original home; the private browser is loopback auth-none. Full #318/#438,
+review/current-head CI and release acceptance remain open.
