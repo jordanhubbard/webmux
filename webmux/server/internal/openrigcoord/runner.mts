@@ -120,6 +120,18 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const args = ['-c', browser, requested, host];
     const output = host === 'localhost' ? run('python3', args) : run('ssh', [...sshArgs, host, `python3 -c ${q(browser)} ${q(requested)} ${q(host)}`]);
     console.log(output);
+  } else if (action === 'project-pods') {
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as { projectId: string; projectName: string };
+    if (structuredAttachmentBuild()) {
+      const { readRigProjectPods } = await import('./rig-project-pods.mts');
+      console.log(JSON.stringify(await readRigProjectPods(input.projectId, input.projectName, { run })));
+    } else {
+      // Preserve the published legacy contract, which exposes only observed pods.
+      const rig = rigRows().filter(value => value.rigId === input.projectId);
+      if (rig.length !== 1 || (rig[0].rigName || rig[0].name) !== input.projectName) throw new Error('The selected Rig project is unavailable.');
+      const pods = [...new Set(nodeRows().filter(value => value.rigId === input.projectId).map(value => value.podNamespace).filter((value): value is string => !!value))].sort();
+      console.log(JSON.stringify({ projectId: input.projectId, projectName: input.projectName, pods, source: 'legacy-seats' }));
+    }
   } else if (action === 'stop-preview') {
     const { reviewRigStop } = await import('./rig-stop.mts');
     console.log(JSON.stringify(await reviewRigStop(run, JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-stop.mts').RigStopSelection)));
@@ -265,12 +277,16 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     if (mode === 'existing') {
       rigId = input.rigId ?? '';
       if (!/^[0-9A-HJKMNP-TV-Z]{26}$/.test(rigId)) throw new Error('Choose a canonical Rig project.');
-      const canonical = rigRows().find(value => value.rigId === rigId);
+      const canonical = rigRows(structuredAttachmentBuild()).find(value => value.rigId === rigId);
       if (!canonical) throw new Error('The selected Rig project is no longer available. Refresh and choose again.');
       rig = canonical.rigName || canonical.name || '';
       if (!rig || (input.rigName && input.rigName !== rig)) throw new Error('The selected Rig identity changed. Refresh and choose again.');
       pod = identifier(input.pod ?? '', 'Rig pod');
-      if (!nodeRows().some(value => value.rigId === rigId && value.podNamespace === pod)) throw new Error('The selected Rig pod is no longer available. Refresh and choose again.');
+      if (structuredAttachmentBuild()) {
+        const { readRigProjectPods } = await import('./rig-project-pods.mts');
+        const namespace = await readRigProjectPods(rigId, rig, { run });
+        if (!namespace.pods.includes(pod)) throw new Error('The selected Rig pod is no longer available. Refresh and choose again.');
+      } else if (!nodeRows().some(value => value.rigId === rigId && value.podNamespace === pod)) throw new Error('The selected Rig pod is no longer available. Refresh and choose again.');
       project = rig;
     } else {
       project = identifier(input.rigName ?? input.project ?? '', 'Rig name');
