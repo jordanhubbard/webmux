@@ -4,6 +4,8 @@
 No physical device is selected. A USB/IP virtual controller owns a temporary mass
 storage gadget, and the importer must enumerate it below vhci_hcd.
 """
+import base64
+import json
 import os
 from pathlib import Path
 import pwd
@@ -15,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 
 from usb_sysfs import imported_disk
 

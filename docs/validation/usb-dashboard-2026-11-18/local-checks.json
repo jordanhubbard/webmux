@@ -8,7 +8,7 @@
     "scripts/test_qualify_vudc.py": "10cf643895f5ddf2dabe30214812d4d29a6513c79217ec3cfd89552a5ea4f979",
     "tests/e2e/usb-forwarding.spec.ts": "3b6008177d00ec93668efcb2182055e8cf54d86bf3c9431afd23180056d5c66d",
     "tests/frontend/USBForwardDialog.test.tsx": "1984aa9cee6adee9d52b58598ff7359c969115567210942a611d831d280670c0",
-    "tests/usb-kernel.py": "09ae9748bddd0ebd8c8f684cf3a4a2b6f730263800fc9e809afc8db1997cfd60",
+    "tests/usb-kernel.py": "517ff97b1a017a2f255aae89aaf92d71e7cb8506da73152678965e2e3ac153c3",
     "webmux/frontend/src/components/USBForwardDialog.css": "ba23d6879ae5942f0f0b9a974bc8f23762ca745e76dad9d64ba21d8764c0835a",
     "webmux/frontend/src/components/USBForwardDialog.tsx": "ed88cbe326c49b8adb45162405520cf54950526721cb7b00d5e9d86d5a4669e0",
     "webmux/frontend/src/utils/api.ts": "9db00a6954a4aacca785258fbb1f37ee9bb2575d9f7e8fb3e4a9b222ee3c33da",
@@ -59,5 +59,6 @@
       "scope": "cross-compilation only"
     }
   },
-  "native_usb_dashboard": "pending exact-source hosted VM result"
+  "native_usb_dashboard": "pending exact-source hosted VM result",
+  "fixture_followup": "Added missing base64, json and urllib.request imports; ruff F821 and Python compilation pass; native VM acceptance remains pending."
 }
