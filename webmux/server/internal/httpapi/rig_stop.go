@@ -142,7 +142,7 @@ func (s *Server) previewRigStop(w http.ResponseWriter, r *http.Request, owner st
 			case "claimed_session":
 				message = "This seat was adopted by Rig. Rig refuses to stop it; use its original lifecycle owner. Nothing was stopped."
 			case "unsupported_version", "unsupported_manager_build":
-				message = "Checked local Stop requires the qualified published Rig CLI and daemon build. Nothing was stopped."
+				message = "Checked local Stop requires OpenRig 0.7.18 (3bf87c62) for both CLI and daemon. Nothing was stopped."
 			case "local_manager_unverified":
 				message = "Cannot verify Rig as a local daemon owned by this WebMux service account. Local listener and process evidence (lsof and ps) is required. Nothing was stopped."
 			case "selection_changed":
