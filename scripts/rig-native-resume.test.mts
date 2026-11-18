@@ -147,3 +147,12 @@ posixTest('preparation cannot reset a consumed operation or change a banked sele
   await assert.rejects(resumeRigNativeCodex({ ...f.input, prepare: true, inspect: true }, f.deps));
   assert.equal(f.posts.length, 1);
 });
+posixTest('an unqualified Node runtime refuses before native metadata, owner observation or dispatch', async t => {
+  const f = fixture(t), descriptor = Object.getOwnPropertyDescriptor(process.versions, 'node');
+  if (!descriptor?.configurable) throw new Error('Native runtime version cannot be isolated for this control');
+  Object.defineProperty(process.versions, 'node', { ...descriptor, value: '26.0.0' });
+  try {
+    await assert.rejects(resumeRigNativeCodex({ ...f.input, prepare: true }, f.deps), /native_resume_runtime_unqualified/);
+    assert.deepEqual(f.counts(), { gets: 0, handoffs: 0, closed: 0 }); assert.equal(f.posts.length, 0);
+  } finally { Object.defineProperty(process.versions, 'node', descriptor); }
+});

@@ -28,7 +28,7 @@ const operation = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const digest = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 const json = (value: unknown) => Buffer.from(JSON.stringify(value));
-const refuse = (): never => { throw new Error('native_resume_original_unavailable'); };
+const refuse = (reason = 'original_unavailable'): never => { throw new Error('native_resume_' + reason); };
 function consume(file: string, bytes: Buffer, inspect: boolean) {
   let fd: number;
   try { fd = fs.openSync(file, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL, 0o600); }
@@ -65,12 +65,12 @@ async function request(fetcher: typeof fetch, port: number, route: string, body?
 }
 
 export async function resumeRigNativeCodex(input: NativeCodexResumeInput, deps: Dependencies): Promise<NativeCodexResumeResult> {
-  if (!['darwin', 'linux'].includes(process.platform) || Number(process.versions.node.split('.')[0]) !== 24
-    || ![input.rigId, input.nodeId, input.snapshotId, input.historySessionId].every(id => ulid.test(id))
+  if (!['darwin', 'linux'].includes(process.platform) || Number(process.versions.node.split('.')[0]) !== 24) return refuse('runtime_unqualified');
+  if (![input.rigId, input.nodeId, input.snapshotId, input.historySessionId].every(id => ulid.test(id))
     || (input.prepare === true && input.inspect === true)
     || !operation.test(input.operationId) || !uuid.test(input.nativeSessionId)
     || !/^[a-z][a-z0-9-]{0,47}$/.test(input.pod) || !/^[a-z][a-z0-9-]{0,63}$/.test(input.member)
-    || !/^[a-zA-Z0-9_.:@-]{1,256}$/.test(input.sessionName) || !path.isAbsolute(input.cwd)) return refuse();
+    || !/^[a-zA-Z0-9_.:@-]{1,256}$/.test(input.sessionName) || !path.isAbsolute(input.cwd)) return refuse('selection_invalid');
   const cwd = fs.realpathSync(input.cwd), base = artifacts.ownedRoot(input.directory);
   const key = digest(JSON.stringify([input.rigId, input.pod, input.member]));
   const original = artifacts.ownedRoot(path.join(artifacts.ownedRoot(path.join(base, 'requests')), key));
@@ -85,8 +85,8 @@ export async function resumeRigNativeCodex(input: NativeCodexResumeInput, deps: 
   try { saved = JSON.parse(artifacts.read(file).toString('utf8')) as typeof saved; }
   catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
   if (saved !== undefined && (!object(saved) || saved.contract !== 'webmux-native-codex-resume/v1'
-    || JSON.stringify(saved.selection) !== JSON.stringify(selection) || typeof saved.requestText !== 'string')) return refuse();
-  if (!saved && (input.inspect || fs.existsSync(dispatched))) return refuse();
+    || JSON.stringify(saved.selection) !== JSON.stringify(selection) || typeof saved.requestText !== 'string')) return refuse('selection_changed');
+  if (!saved && (input.inspect || fs.existsSync(dispatched))) return refuse('request_missing');
   const summary = { operationId: input.operationId, logicalId: `${input.pod}.${input.member}`, nativeSessionId: input.nativeSessionId };
   // A normal duplicate cannot re-observe an account or accidentally turn a
   // previous uncertainty into new launch authority, even after process loss.
@@ -105,24 +105,24 @@ export async function resumeRigNativeCodex(input: NativeCodexResumeInput, deps: 
   const fetcher = deps.fetcher ?? fetch;
   const reviewManager = deps.review ?? (() => reviewRigCreateManager(deps.run, fetcher));
   const manager = await reviewManager();
-  if (saved && (saved.port !== manager.port || saved.managerIdentity !== manager.managerIdentity)) return refuse();
+  if (saved && (saved.port !== manager.port || saved.managerIdentity !== manager.managerIdentity)) return refuse('manager_changed');
   if (!saved) {
     const created = JSON.parse(artifacts.read(path.join(original, 'launch.json')).toString('utf8')) as unknown;
     if (!object(created) || !object(created.intent) || created.cwd !== cwd || created.member !== input.member
       || created.intent.rigId !== input.rigId || created.intent.pod !== input.pod || created.intent.managerIdentity !== manager.managerIdentity
-      || created.intent.port !== manager.port || typeof created.intent.requestText !== 'string') return refuse();
+      || created.intent.port !== manager.port || typeof created.intent.requestText !== 'string') return refuse('launch_changed');
     const initial = JSON.parse(created.intent.requestText) as unknown;
-    if (!object(initial) || !object(initial.member) || initial.member.runtime !== 'codex') return refuse();
+    if (!object(initial) || !object(initial.member) || initial.member.runtime !== 'codex') return refuse('launch_changed');
     const snapshot = await request(fetcher, manager.port, `/api/rigs/${input.rigId}/snapshots/${input.snapshotId}`);
     if (snapshot.status !== 200 || !object(snapshot.value) || snapshot.value.id !== input.snapshotId
-      || snapshot.value.rigId !== input.rigId || !object(snapshot.value.data)) return refuse();
+      || snapshot.value.rigId !== input.rigId || !object(snapshot.value.data)) return refuse('snapshot_unavailable');
     const nodes = rows(snapshot.value.data.nodes).filter(node => node.id === input.nodeId);
     const sessions = rows(snapshot.value.data.sessions).filter(session => session.id === input.historySessionId);
     if (nodes.length !== 1 || nodes[0].rigId !== input.rigId || nodes[0].logicalId !== summary.logicalId || nodes[0].runtime !== 'codex'
       || nodes[0].cwd !== cwd || JSON.stringify(nodes[0].launchWrapper) !== JSON.stringify(initial.member.launch_wrapper)
       || !Array.isArray(nodes[0].launchWrapper) || nodes[0].launchWrapper[2] !== path.join(original, 'launch-manifest.json')
       || sessions.length !== 1 || sessions[0].nodeId !== input.nodeId || sessions[0].sessionName !== input.sessionName
-      || sessions[0].resumeType !== 'codex_id' || sessions[0].resumeToken !== input.nativeSessionId || sessions[0].origin !== 'launched') return refuse();
+      || sessions[0].resumeType !== 'codex_id' || sessions[0].resumeToken !== input.nativeSessionId || sessions[0].origin !== 'launched') return refuse('snapshot_changed');
     const query = new URLSearchParams({ snapshotId: input.snapshotId, historySessionId: input.historySessionId });
     const review = await request(fetcher, manager.port, route + '?' + query);
     const value = review.value;
@@ -130,7 +130,7 @@ export async function resumeRigNativeCodex(input: NativeCodexResumeInput, deps: 
       || value.rigId !== input.rigId || value.nodeId !== input.nodeId || value.logicalId !== summary.logicalId
       || value.snapshotId !== input.snapshotId || value.historySessionId !== input.historySessionId
       || typeof value.revision !== 'string' || !/^[a-f0-9]{64}$/.test(value.revision)
-      || !object(value.observed) || value.observed.state !== 'stopped') return refuse();
+      || !object(value.observed) || value.observed.state !== 'stopped') return refuse('review_unverified');
     const requestText = JSON.stringify({ action: 'resume', snapshotId: input.snapshotId, historySessionId: input.historySessionId,
       revision: value.revision, operationId: input.operationId,
       expectedOriginal: { nodeId: input.nodeId, sessionName: input.sessionName, runtime: 'codex', nativeId: input.nativeSessionId } });
@@ -143,7 +143,7 @@ export async function resumeRigNativeCodex(input: NativeCodexResumeInput, deps: 
   if (Object.keys(body).sort().join(',') !== 'action,expectedOriginal,historySessionId,operationId,revision,snapshotId'
     || body.action !== 'resume' || body.snapshotId !== input.snapshotId || body.historySessionId !== input.historySessionId
     || body.operationId !== input.operationId || typeof body.revision !== 'string' || !/^[a-f0-9]{64}$/.test(body.revision)
-    || JSON.stringify(body.expectedOriginal) !== JSON.stringify({ nodeId: input.nodeId, sessionName: input.sessionName, runtime: 'codex', nativeId: input.nativeSessionId })) return refuse();
+    || JSON.stringify(body.expectedOriginal) !== JSON.stringify({ nodeId: input.nodeId, sessionName: input.sessionName, runtime: 'codex', nativeId: input.nativeSessionId })) return refuse('body_changed');
   // Public recovery must bank this exact reviewed request before consuming
   // its own operation. Preparation creates no environment channel, observes no
   // account and dispatches nothing. Explicit completion after a controller
