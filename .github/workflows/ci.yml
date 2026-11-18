@@ -376,6 +376,9 @@ jobs:
       - name: Test native component inventory controls
         run: python3 -m unittest discover -s scripts -p test_native_components.py
 
+      - name: Verify native Codex qualification witness controls
+        run: python3 -m unittest discover -s tests -p test_native_codex_launch_witness.py -v
+
       - name: Verify native TypeScript 7 source discovery
         timeout-minutes: 5
         run: |
