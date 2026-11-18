@@ -2601,3 +2601,34 @@ different-executable service upgrade or host reboot for this Rig/Codex flow,
 restricted policies, unobserved interactive changes, selected profiles/graphs
 or all platforms. The earlier native Windows and other-manager results above
 keep their separate versioned scopes. Full #318 acceptance remains open.
+
+## Native Rig/Codex installed-service executable upgrade (2026-11-18)
+
+The [installed-service qualification](validation/codex-service-upgrade-2026-11-18/README.md)
+now covers a real macOS launchd service upgraded through the shipped Make
+installer from the retained capture-capable executable to a clean build with
+public original-conversation recovery. Both identify as version 1.4.5; their
+installed executable hashes and server PIDs differ. App signatures verify and
+the executable payloads match their respective inputs after the documented
+signing-metadata normalization. The baseline retains its original dirty-build
+provenance; this is not a released-version or notarized-package migration.
+
+An actual native coding conversation, provider PID, pane and viewer survive
+replacement. The new server captures that same conversation; public survivor
+reattachment sends no native Resume. After owned Codex loss and explicit checked
+Stop of its idle seat, actual service SIGKILL during recovery dispatch causes
+launchd to restart the private service automatically. Ordinary duplicates send
+no native POST; explicit completion retains the original UUID/body/revision.
+The native conversation recalls the removed challenge without tools and fresh
+correlated tools verify its original model, owner environment, default
+full-access/never policy and four allowed writes. Native history and the same
+terminal log paths retain their original byte prefixes and append. Sibling,
+viewer, duplicate and private cleanup checks pass; the user's live service
+retains its PID.
+
+This extends the macOS default-owner service scope. Native Rig/Codex host
+reboot, restricted policies, selected profiles/permission graphs, broader
+startup settings, platforms/service accounts and release-package upgrades
+remain open. Earlier failed probe attempts remain excluded and retained by
+hash. Required review/current-head CI and full #318/#438/release acceptance
+remain separate requirements.

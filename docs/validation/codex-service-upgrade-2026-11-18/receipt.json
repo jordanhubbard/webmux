@@ -1,0 +1,249 @@
+{
+  "scope": "Actual private macOS launchd installed-service functional server-executable upgrade, native survivor reattachment, and public original-only recovery after owned provider loss plus service SIGKILL/launchd restart. Existing native account in place; private loopback auth-none browser.",
+  "passed": true,
+  "sourceRevision": "6f88f21485879e430e6e09a6bd3ad0614fee3d2c",
+  "sourcesSHA256": {
+    "webmux/server/internal/openrigcoord/rig-native-launch.mts": "9424088b4082a8f04724f9e3029f3b6d4b1ef58101c4319c9ab77d2e7975bac9",
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "e68d505f8b1810f92c16a91cf46d76e5e4f9c38e9d8915a724ce0fa95eecfee1",
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": "b6217395e932162b2e16d50829ad40338d8a4814a84dbd07496afb8af8d86cc9",
+    "webmux/server/internal/openrigcoord/rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "ee18fb484c048c845afa9f8f841e2b62cce46dd5ea9eba5c1f91b7087cfcc486",
+    "webmux/server/internal/openrigcoord/rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "webmux/server/internal/openrigcoord/runner.mts": "0f01ed0fbcac77d4eaf8fd84503d52bf34ce8bd47c6dda087ba53d33a44c53cd",
+    "webmux/server/internal/openrigcoord/coord.go": "7a4f17d2b36f29cb9a4d39268f7d94f7f41a0aef7d60f84a18c74e3d375530cb",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "webmux/server/internal/openrigcoord/codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "webmux/server/internal/openrigcoord/codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+    "webmux/server/internal/httpapi/coordination_creation.go": "ca6f7f4f8c662b37a8bddf25e8caac7431bb250d4eb3657bce14e71d52e24135",
+    "webmux/server/internal/httpapi/coordination_providers.go": "10f163fcc9d52654d395c51e2e4a0a74a478f8367129e157674d5a4e06afb478",
+    "webmux/server/internal/httpapi/openrig.go": "cd78603493cdcf833414c1081baa0ef09ebc072b5113aa537d26f1192622fa7f",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "83ef008e0bc74599fb5f9f864d21bec151d7c2cf061bf2fbe15f483cf5b06df6",
+    "webmux/frontend/src/utils/api.ts": "96bf8fb9d9f01014498ea42ca78e2e986319ec9786dd29f1a4c397e718713e1d",
+    "webmux/server/internal/session/native_rig_reference.go": "15e35ef463160eebc6ced21064c88d3702ac1c2a74782a66301323979b19fc08",
+    "webmux/server/internal/session/native_rig_recovery.go": "5352dc2e4bf4f7858d69351ab3adba76f5f4bc6113b13b88a421c91bd02e82f2",
+    "webmux/server/internal/session/managed_evidence.go": "7a543f14facb1ed5938a0cdf701fd50144e923ab7bbe89e27319047e71c1ff9c",
+    "webmux/server/internal/session/managed_capture.go": "359ab3faf353549508fb432ff8668caafead22a8e1f8e0939953c0ae203e7900",
+    "webmux/server/internal/session/managed_recovery.go": "bf9068ce0bec82653c84e87fc3efebbc3306f3d6b6dd641961ef66af4c29b062",
+    "webmux/server/internal/session/recovery.go": "c066ccb5e0c6b02a3801f002b6e1dc06f3bc17d3e972871ff28314a63138ca53",
+    "webmux/server/internal/session/recovery_control.go": "560cfee99916dfd6aa1dc6304478f47e6d9926c13762ef35d399be9de9d0bf0d",
+    "webmux/server/internal/session/model.go": "7e91f7a4e9743efcf5977e408b0faf21d9e4485270336329ea16b5bb920d3293",
+    "webmux/server/internal/httpapi/native_rig_recovery.go": "5d206f2bdbfdf13e2438a76a95f9f5ce578308e1a7b9ca5dfa6414082f737c08",
+    "webmux/server/internal/httpapi/rig_recovery.go": "0a7323a4d72bd22d9043a8e7fadf7b3ac17be32648773dc134c5ac29bef224bc",
+    "webmux/server/internal/httpapi/sessions.go": "a4abf105ef398f2d0584077a217269c28833e4217213c9a03b0a378c29676f52",
+    "webmux/server/internal/httpapi/coordination_service.go": "896718a1c32b156fb8d3a8aa9c35c62c1d2ef71bbea753f37f31f3b0cd00b585",
+    "webmux/server/internal/httpapi/server.go": "f15d486b299fa23b6b722de239ee08c71dde662f8ca0e08ce26067cdecb25ad3",
+    "webmux/frontend/src/components/RecoveryDialog.tsx": "cb3e1b08e6541af5e5e1cdf2948bcc95f55605ea701830437911a611214acb48",
+    "webmux/frontend/src/types/index.ts": "0e1ca849089d4645c6db7f039e4eaeced843cc6b2fa796c359db65e5efc601ca",
+    "webmux/server/internal/recovery/state.go": "4ab1020a33edc1a4757bc35f7433163a8d146868b8f80834d6b1d3a0df9fd1ef"
+  },
+  "baseline": {
+    "sourceBinding": "6bcbb07c4361f0013aeaaa10ed81eee331caebb7",
+    "sourceBindingReceipt": "../codex-native-capture-2026-11-18/receipt.json",
+    "binarySHA256": "caa031bfcc6e2cbbf78865279a679d3d30bdecfcb13828137fc8409520072797",
+    "buildProducerSelfReport": {
+      "version": "1.4.5",
+      "revision": "e3aab103a2217526e3315fb79553e2902e9562fc",
+      "modified": true,
+      "provenance": "build-producer-self-report",
+      "attested": false
+    },
+    "emittedNativeHelperSourceBinding": {
+      "sourceRevision": "6bcbb07c4361f0013aeaaa10ed81eee331caebb7",
+      "emittedNativeSourcesMatchCommit": true,
+      "sourcesSHA256": {
+        "codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+        "codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+        "codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+        "codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+        "codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+        "rig-native-create.mts": "ee18fb484c048c845afa9f8f841e2b62cce46dd5ea9eba5c1f91b7087cfcc486",
+        "rig-native-launch.mts": "9424088b4082a8f04724f9e3029f3b6d4b1ef58101c4319c9ab77d2e7975bac9",
+        "rig-native-capture.mts": "e900546c2f94fbbedd986a273267853676ecd826b45501f520bc3aca79d850b5",
+        "runner.mts": "c5bb40b046ba36eaa6d4ce2d2055af126cfb83915e65cab6fc0c4161436370f5"
+      }
+    },
+    "note": "Retained qualification binary built from then-uncommitted source; not a clean release artifact. Its nine emitted native helper sources independently match the retained source binding."
+  },
+  "upgrade": {
+    "binarySHA256": "27ef76fcb6c3b2e87feada194d6d8f7a29a32aa3c763c333938a302535f23bd4",
+    "buildProducerSelfReport": {
+      "version": "1.4.5",
+      "revision": "6f88f21485879e430e6e09a6bd3ad0614fee3d2c",
+      "modified": false,
+      "provenance": "build-producer-self-report",
+      "attested": false
+    },
+    "cleanSourceBuild": true,
+    "differentInstalledExecutable": true,
+    "differentServerPID": true,
+    "sameProductVersion": "1.4.5"
+  },
+  "installer": {
+    "command": "make -o build-server install-server with private WEBMUX_DIR, WEBMUX_HOME, PLIST, LAUNCHD_SVC and MACOS_APP overrides",
+    "prebuiltExecutables": true,
+    "agentDeckInstall": "disabled; explicit private AGENT_DECK_BINDIR preserves qualified tool precedence",
+    "appSignatures": "ad-hoc hardened runtime; codesign --verify --deep --strict passed",
+    "payloadComparison": "On private copies only, remove code signatures and zero the __LINKEDIT segment vmsize field changed by codesign; all remaining bytes must have identical SHA-256. Original input and installed signed digests are retained separately.",
+    "installations": [
+      {
+        "pid": 27732,
+        "binarySHA256": "547ff660a7ca6430dcd38ee41f2a8c103703df4dfb426920958d4b6fd2dece32",
+        "sourceBinarySHA256": "caa031bfcc6e2cbbf78865279a679d3d30bdecfcb13828137fc8409520072797",
+        "sourcePayloadSHA256": "c9d33693de3c696bbe87e9b284f008c2c7474e44056b9d6bb1122ffb3cea11b0",
+        "installedPayloadSHA256": "c9d33693de3c696bbe87e9b284f008c2c7474e44056b9d6bb1122ffb3cea11b0",
+        "signatureVerified": true,
+        "registeredExecutableMatches": true,
+        "runningExecutableMatches": true
+      },
+      {
+        "pid": 35656,
+        "binarySHA256": "dbcf07c07e1315970d7ce7aca495281e99575b734554eda41a6e3d0410acdd96",
+        "sourceBinarySHA256": "27ef76fcb6c3b2e87feada194d6d8f7a29a32aa3c763c333938a302535f23bd4",
+        "sourcePayloadSHA256": "d209b275d444178c85e0d5b0b3fe8a17185862b5db5121c01bba1838de04f229",
+        "installedPayloadSHA256": "d209b275d444178c85e0d5b0b3fe8a17185862b5db5121c01bba1838de04f229",
+        "signatureVerified": true,
+        "registeredExecutableMatches": true,
+        "runningExecutableMatches": true
+      }
+    ]
+  },
+  "rawReceipt": "native-service-upgrade-wm-native-service-upgrade-xmfpw7re.json",
+  "rawSHA256": "4061f9ebd4ebbd24c1930882f371942e1fe0490901e084beb6ed3ee2ac048ade",
+  "probeSHA256": "d1843325d29be7cd9e158ae512b82908d20d4ba035bd16ddb66b701e48a14c14",
+  "browserDriverSHA256": "20448487315d48b5def91adb5506c7dc765befd9889c1b24f9f66b7a99419c71",
+  "loadedBrowserDriverSHA256": "20448487315d48b5def91adb5506c7dc765befd9889c1b24f9f66b7a99419c71",
+  "preloadSHA256": "94f8b96f0cfff7838b0e6a503c60e49bb850f09e245bb595e2e916e362214ec2",
+  "gateSHA256": "d9d400f095e7a707a0baea7e1e1c35dda72581722671e099da9fe335f9300671",
+  "versions": {
+    "rig": "0.7.18 (3bf87c62)",
+    "codex": "0.169.0",
+    "node": "24.21.0",
+    "tmux": "3.8",
+    "chrome": "158.0.8127.36"
+  },
+  "checks": {
+    "nativeUncertaintyHasOneOriginalNodeAndNoViewer": true,
+    "frozenNativeOperationAcrossExplicitChecks": true,
+    "readyDuplicateRetainsProviderAndViewer": true,
+    "actualNativeCodingChallenge": true,
+    "baselineLacksNewNativeRecoveryContract": true,
+    "actualMakeInstalledDifferentServerExecutable": true,
+    "upgradeAddsPublicRecoveryForOriginalConversation": true,
+    "gracefulControllerRestartRetainsOriginalProvider": true,
+    "publicSurvivorReattachmentSendsNoResume": true,
+    "publicBrokerRetainsOriginalNativeConversation": true,
+    "onlyOwnedNativeProviderKilled": true,
+    "actualControllerSigkillDuringOriginalDispatch": true,
+    "launchdRestartsOwnedCrashedService": true,
+    "ordinaryRecoveryDuplicateAfterCrashDoesNotPost": true,
+    "explicitPublicCompletionUsesSameNativeRequest": true,
+    "sameNativeConversationRecallWithoutTools": true,
+    "nativeHistoryPrefixAndAppendRetained": true,
+    "consumedRecoveryDuplicatePreservesProviderAndSibling": true,
+    "finalCheckedStopAndViewerAndSiblingRetained": true,
+    "sameTerminalLogPathsAndPrefixesRetained": true
+  },
+  "resumePosts": 5,
+  "nativeConversationIdentityRetained": true,
+  "nativeWitnesses": [
+    {
+      "passed": true,
+      "contexts": 4,
+      "nativeNodeMatches": true,
+      "correlatedProbeOutputs": 1,
+      "allowedWrites": 4,
+      "environmentChecks": {
+        "homePreserved": true,
+        "tmpPreserved": true,
+        "ownerPathRetainedAsSuffix": true,
+        "pairedRigFound": true,
+        "managerToolPathAbsent": true,
+        "ownerToolFound": true,
+        "ownerToolRuns": true,
+        "inheritedValueMatches": true,
+        "managerOnlyValueAbsent": true
+      },
+      "nativeSessionSHA256": "312d79c60b3bbc0153147e8d901fa1f95abaf8e451067056ff38294879cecd0b"
+    },
+    {
+      "passed": true,
+      "contexts": 4,
+      "nativeNodeMatches": true,
+      "correlatedProbeOutputs": 1,
+      "allowedWrites": 4,
+      "environmentChecks": {
+        "homePreserved": true,
+        "tmpPreserved": true,
+        "ownerPathRetainedAsSuffix": true,
+        "pairedRigFound": true,
+        "managerToolPathAbsent": true,
+        "ownerToolFound": true,
+        "ownerToolRuns": true,
+        "inheritedValueMatches": true,
+        "managerOnlyValueAbsent": true
+      },
+      "nativeSessionSHA256": "312d79c60b3bbc0153147e8d901fa1f95abaf8e451067056ff38294879cecd0b"
+    }
+  ],
+  "nativeHistoryPrefix": {
+    "bytes": 190010,
+    "SHA256": "23c7fbacb5f81666c7085f590ec57de77e2db04168b754196e555b11de4d0dca"
+  },
+  "terminalLogs": [
+    {
+      "file": "session-a82acf5e-a017-4d2c-b842-b71aaafbed54-20261118T211801Z-g1-8199767c.log",
+      "prefixSHA256": "a1a5dd26d88bb05b6bfda7ed63c8b5c339ed504a38dd3996b46ecdc796a7eec7",
+      "prefixBytes": 35752,
+      "finalBytes": 38142
+    }
+  ],
+  "cleanup": {
+    "passed": true,
+    "daemonStateRemoved": true,
+    "originalDaemonPIDAbsent": true,
+    "shutdownPhase": "complete",
+    "shutdownOutcome": "clean",
+    "shutdownReceiptSHA256": "aec976275904e15dbc073b7476463b8dead2070255578adac47fd7f852bde401",
+    "privateServiceAbsent": true,
+    "privateTmuxStopped": true,
+    "liveUserServicePIDUnchanged": true
+  },
+  "cleanupObservedSHA256": "9045c231f5d7d6e09d5a239e797ed11da0a2abb8c2a487cd3f6adf43da6436d5",
+  "excludedEarlierAttempts": [
+    {
+      "receipt": "native-service-upgrade-wm-native-service-upgrade-3m3n5xan.json",
+      "SHA256": "608327485836eada40e2f84f028095175a3c53a0a0c3064a439001b36bea5365",
+      "passed": false
+    },
+    {
+      "receipt": "native-service-upgrade-wm-native-service-upgrade-gvraxay_.json",
+      "SHA256": "d9735ac1f1d3cfc5e8ba965c4a0f32381a610a1c0314eab6a4a0f47ea0d5b842",
+      "passed": false
+    },
+    {
+      "receipt": "native-service-upgrade-wm-native-service-upgrade-o7vj_ttn.json",
+      "SHA256": "78220921b0736df890202f7378e561c1a0f1020bd702ca21e6384a7d7324cf48",
+      "passed": false
+    },
+    {
+      "receipt": "native-service-upgrade-wm-native-service-upgrade-s4virgc_.json",
+      "SHA256": "2471ebe46c3c8afc320da044b0b5b365a14d57cb4ab6729fc44426d88e81ad5d",
+      "passed": false
+    },
+    {
+      "receipt": "native-service-upgrade-wm-native-service-upgrade-uy98cbtp.json",
+      "SHA256": "30a52946b5c66ea447a214695d90e341ca5ebf903b33182a8a315f2af770dd3e",
+      "passed": false
+    }
+  ],
+  "remaining": [
+    "Native Rig/Codex host reboot on this composition",
+    "Restricted policies, selected profiles/permission graphs and broader startup settings",
+    "Other provider, route and platform combinations, including Windows different-executable installed-service upgrades",
+    "Signed/notarized release-package upgrade and broader service-account coverage",
+    "Current-head CI/review and full roadmap/release acceptance"
+  ]
+}
