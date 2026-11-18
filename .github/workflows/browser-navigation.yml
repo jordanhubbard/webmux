@@ -59,7 +59,7 @@ jobs:
           $env:WEBMUX_BROWSER_NAVIGATION_ARTIFACT_DIR = Join-Path $env:RUNNER_TEMP 'native-first-navigation'
           Push-Location server
           try {
-            go test ./internal/browser -run '^(TestNativeFirstNavigationComponents|TestFirstNavigationNetLog.*)$' -count=1 -timeout=3m -v
+            go test ./internal/browser -run '^(TestNativeFirstNavigationComponents|TestNativeNavigationTraceCancellation|TestFirstNavigation(NetLog|Trace).*)$' -count=1 -timeout=3m -v
             if ($LASTEXITCODE -ne 0) { throw 'Native first-navigation diagnostics failed.' }
           } finally { Pop-Location }
       - name: Preserve bounded diagnostic records

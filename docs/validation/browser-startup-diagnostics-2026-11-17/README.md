@@ -251,3 +251,54 @@ See [network-diagnostics-manifest.json](network-diagnostics-manifest.json) for
 source and receipt scopes. This remains investigation work under #282; no
 production listener, sleep, navigation replay, protection bypass or runtime fix
 is introduced.
+
+
+## Internal navigation trace and a known-cancellation control
+
+At923d404, the isolated Windows workflow completes in3m16s and retains all
+fourteen [first-load outcomes](windows-network-summary.json): seven pass and
+seven fail. The saved-worker subprocess also aborts in this occurrence. All
+trials issue one navigation, with zero dropped CDP observations or cleanup
+failures. Both bounded NetLog projections are valid but contain zero matching
+fixture requests. Logger startup can lag, and no positive native matching-request
+NetLog control is established; absence of a record does not locate the abort.
+
+Two additional direct controls now collect Chromium's `navigation` tracing
+category at system-temp and home profile locations. Tracing starts after the
+browser connection opens, before initial target attachment and explicit blank
+setup, and ends after the trial. The producer buffer is oneMiB, record-until-full;
+raw in-memory collection is limited to twoMiB/8192events. Projection retains up
+to256fixed-name events,64locally aliased navigation identities, relative times,
+URL-equality booleans, bounded numeric state/error/throttle codes and fixed
+cancellation-reason enums. URLs, dynamic event names containing URLs, raw
+argument dictionaries, browser/process/frame metadata, page data and raw traces
+are not uploaded. Unknown names are omitted; incomplete/truncated captures fail.
+Raw buckets are copied under a lock and projected after tracingComplete, keeping
+protocol callbacks free of commands and trace parsing.
+
+A separate positive capture control starts one request to a private hanging
+fixture. Only after the fixture confirms receipt does the test send Stop Loading.
+It requires the requested navigation to appear in the completed trace with
+net_error-3, unchanged one-request count and an explicit stop-issued flag. This
+intentional cancellation is separate from first-load success; it neither retries
+a failed load nor changes production navigation behavior. Both CI probe selectors
+include this control, so an unestablished Windows control fails its job.
+
+[Final local evidence](native-trace-summary.json) passes fourteen ordinary native
+first loads plus that cancellation control. The two Windows-only NetLog cases
+remain explicit skips. The reference capture includes RenderFrameHostImpl::Stop
+and the requested, uncommitted navigation with net_error-3, with no trace loss or
+dropped events. Privacy/enum/correlation/bounds unit controls, browser race and
+Darwin/Windows AMD64 browser vet pass. Final source bytes are bound before/after
+native execution. Exploratory schema probes and an intermediate test compile
+error are retained privately and excluded from acceptance.
+
+The [DevTools Tracing contract](https://chromedevtools.github.io/devtools-protocol/tot/Tracing/)
+and actual local Chromium158 trace schema informed the projection. Numeric states
+and error codes are observations, not a cancellation-initiator verdict. Tracing
+itself changes startup timing; Windows execution and an actual unexplained-abort
+trace remain pending. See [trace-manifest.json](trace-manifest.json).
+No runtime workaround, protection change, extra application wait or replay is
+introduced. The original CI delta in this follow-up only adds the positive
+control to its existing native-probe selection; other CI/audit/package gates
+remain intact.

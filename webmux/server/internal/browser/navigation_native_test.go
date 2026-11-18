@@ -41,6 +41,7 @@ type firstNavigationEvidence struct {
 	Failure         string                 `json:"failure,omitempty"`
 	Diagnostics     *NavigationDiagnostics `json:"diagnostics,omitempty"`
 	NetLog          *firstNavigationNetLog `json:"netLog,omitempty"`
+	BrowserTrace    *firstNavigationTrace  `json:"browserTrace,omitempty"`
 }
 
 // These are independent first loads in fresh private browser processes. A failed
@@ -55,7 +56,7 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 	}
 	t.Setenv("WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS", "1")
 	site, hits := firstNavigationNodeFixture(t)
-	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "direct-child", "direct-child-original", "direct-home-child", "direct-home-child-original", "direct-netlog", "direct-home-netlog", "worker-subprocess-temporary", "worker-subprocess-saved"} {
+	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "direct-child", "direct-child-original", "direct-home-child", "direct-home-child-original", "direct-netlog", "direct-home-netlog", "direct-trace", "direct-home-trace", "worker-subprocess-temporary", "worker-subprocess-saved"} {
 		t.Run(mode, func(t *testing.T) {
 			if strings.HasSuffix(mode, "-netlog") && runtime.GOOS != "windows" {
 				t.Skip("Windows-only bounded anonymous NetLog capture; macOS sandbox refuses its scratch directory")
@@ -99,6 +100,7 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 					screenshot: strings.HasSuffix(mode, "screenshot"), profileAtHome: strings.Contains(mode, "-home"),
 					websocket: strings.Contains(mode, "websocket"), createChild: strings.Contains(mode, "-child"),
 					selectOriginal: strings.HasSuffix(mode, "-original"), netLog: strings.HasSuffix(mode, "-netlog"),
+					browserTrace: strings.HasSuffix(mode, "-trace"),
 				}, &record)
 			}
 			record.NavigateCalls++
@@ -132,7 +134,7 @@ func firstNavigationNodeFixture(t *testing.T) (string, *atomic.Int64) {
 		t.Fatal("Node is required by native first-navigation qualification")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	script := `const http=require('node:http');const s=http.createServer((q,r)=>{if(q.url==='/check')process.stdout.write('{"hit":true}\n');r.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});r.end('<title>FIRST_NAVIGATION_OK</title>')});s.listen(0,'127.0.0.1',()=>process.stdout.write(JSON.stringify({port:s.address().port})+'\n'));process.stdin.resume();process.stdin.on('end',()=>s.close(()=>process.exit(0)));`
+	script := `const http=require('node:http');const s=http.createServer((q,r)=>{if(q.url==='/check'||q.url==='/pending')process.stdout.write('{"hit":true}\n');if(q.url==='/pending')return;r.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});r.end('<title>FIRST_NAVIGATION_OK</title>')});s.listen(0,'127.0.0.1',()=>process.stdout.write(JSON.stringify({port:s.address().port})+'\n'));process.stdin.resume();process.stdin.on('end',()=>s.close(()=>process.exit(0)));`
 	cmd := exec.CommandContext(ctx, node, "-e", script)
 	in, err := cmd.StdinPipe()
 	if err != nil {
@@ -328,7 +330,7 @@ func firstNavigationWorker(t *testing.T, saved bool, record *firstNavigationEvid
 }
 
 type firstNavigationDirectOptions struct {
-	screenshot, profileAtHome, websocket, createChild, selectOriginal, netLog bool
+	screenshot, profileAtHome, websocket, createChild, selectOriginal, netLog, browserTrace bool
 }
 
 func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, record *firstNavigationEvidence) func(Request) Frame {
@@ -390,6 +392,23 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 	})
 	trace := newNavigationTrace()
 	startup := time.AfterFunc(20*time.Second, cancel)
+	t.Cleanup(func() { startup.Stop() })
+	if options.browserTrace {
+		capture, err := startFirstNavigationTrace(root)
+		if err != nil {
+			record.Failure = "browser_trace_start_error"
+			t.Fatal("anonymous navigation trace could not start")
+		}
+		t.Cleanup(func() {
+			record.BrowserTrace, err = capture.finish(root, requested)
+			if err != nil || record.BrowserTrace.MatchedEvents == 0 {
+				if record.Failure == "" {
+					record.Failure = "browser_trace_capture_error"
+				}
+				t.Error("anonymous navigation trace did not retain a matching navigation")
+			}
+		})
+	}
 	err := chromedp.Do(root, chromedp.EmulateViewport(Width, Height), chromedp.Func(func(_ context.Context, target *chromedp.Target) error {
 		trace.startup(string(target.TargetID))
 		trace.watch(root)
@@ -471,6 +490,7 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 			t.Fatal("direct initial screenshot failed")
 		}
 	}
+
 	trace.ready()
 	return func(req Request) Frame {
 		t.Helper()
