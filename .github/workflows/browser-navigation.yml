@@ -24,7 +24,12 @@ on:
         type: choice
         required: false
         default: '0'
-        options: ['0', '20']
+        options: ['0', '20', '100']
+      cleanup_processes:
+        description: 'Observe owned Chrome process handles after each trial'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -106,21 +111,24 @@ jobs:
           } finally { Pop-Location }
           if ($failed) { throw 'One or more independent navigation trace samples failed.' }
       - name: Observe independent private-profile cleanup samples
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.cleanup_samples == '20' && !cancelled() && steps.browser_tools.outcome == 'success' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.cleanup_samples != '0' && !cancelled() && steps.browser_tools.outcome == 'success' }}
         working-directory: webmux
         shell: pwsh
         env:
           WEBMUX_REAL_BROWSER: '1'
           WEBMUX_BROWSER_REQUIRE_NETWORK_APPCONTAINER: '1'
           WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS: '1'
-          WEBMUX_BROWSER_CLEANUP_PROCESSES: '1'
+          WEBMUX_BROWSER_CLEANUP_PROCESSES: ${{ inputs.cleanup_processes && '1' || '0' }}
+          WEBMUX_PROFILE_CLEANUP_SAMPLES: ${{ inputs.cleanup_samples }}
         run: |
           $env:WEBMUX_BROWSER_EXECUTABLE = (node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())").Trim()
           if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the qualified Chromium executable.' }
+          $samples = [int]$env:WEBMUX_PROFILE_CLEANUP_SAMPLES
+          if ($samples -notin @(20, 100)) { throw 'Expected a fixed independent sample count.' }
           $failed = $false
           Push-Location server
           try {
-            foreach ($trial in 1..20) {
+            foreach ($trial in 1..$samples) {
               $env:WEBMUX_BROWSER_NAVIGATION_ARTIFACT_DIR = Join-Path $env:RUNNER_TEMP "native-first-navigation/cleanup-sample-$trial"
               go test ./internal/browser -run '^TestNativeFirstNavigationComponents$/^direct-home-websocket$' -count=1 -timeout=3m -v
               if ($LASTEXITCODE -ne 0) { $failed = $true }

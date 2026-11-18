@@ -15,8 +15,9 @@ Portable controls check bounded serialization and refusal to export private data
 A Windows-only control holds an owned file open without delete sharing, requires
 the actual sharing refusal, closes that handle and requires successful removal.
 
-Normal qualification adds no process query before shutdown. An optional manual
-20-sample run enables a read-only observation after each trial. It retains native
+Normal qualification adds no process query before shutdown. Optional manual
+sampling supports fixed sets of 20 or 100 independent trials. Process observation
+is separately opt-in, so unobserved samples preserve the original timing. It retains native
 handles for CDP-reported processes matching the owned browser's image and creation
 ordering, then checks those handles without waiting after normal shutdown. It
 exports cardinalities and parent state, never IDs, image paths, commands or tokens.
@@ -32,7 +33,17 @@ removal retry, sleep, extra shutdown action or navigation replay.
 Local browser-package race tests, the privacy controls, a real macOS private-home
 WebSocket case, YAML/gate invariants and Windows AMD64/ARM64 compilation pass.
 Compilation does not establish native Windows execution. [Source/log bindings](source-manifest.json)
-record the local evidence. Native held-file/process observation and the original
-failure's actual resource/cause still require Windows evidence. This change is
-diagnostic, not a repair claim; a later passing run does not explain the retained
-failure. No production runtime or dependency change is made.
+record the local evidence.
+
+Native Windows run `44265066746` on diagnostic source `f09b5eb` passes the actual
+held-file sharing/refusal control and all 70 records: 46 ordinary first loads,
+four Stop controls and 20 additional observed cleanup samples. All 20 samples
+observe the parent exited. Four still observe one or two validated children
+running at that point; removal nevertheless succeeds in every sample. This
+confirms the parent-only completion boundary does not establish child exit, but
+does not identify the historical removal failure's resource or cause. Artifact
+`14410715059` SHA-256 is `133d39a0c4a17ddf252e1268a3484ffa850b3f11f4a4b1de6d01c76c800ee6f0`.
+
+Further unobserved sampling remains diagnostic, not a repair claim. The original
+failure's resource/cause is still unknown, and a later passing run does not
+explain it. No production runtime or dependency change is made.

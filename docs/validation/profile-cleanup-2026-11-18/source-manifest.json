@@ -1,10 +1,10 @@
 {
-  "recordedUTC": "2026-11-18T08:12:20.442452+00:00",
+  "recordedUTC": "2026-11-18T08:24:59.898882+00:00",
   "issue": 473,
   "base": "b357ca694b390bbca1377a0a759d44ede0331220",
   "sourceSHA256": {
-    ".github/workflows/browser-navigation.yml": "6e12fb429d71b447534842d7877b5afcff898ec70306d672e4f84c02134ebca9",
-    "docs/validation/profile-cleanup-2026-11-18/README.md": "a5a9289868a61a444d0a0eb2c2cc05823e9f3e9c1680c73e4e2b05ed2801b3b5",
+    ".github/workflows/browser-navigation.yml": "3db81dfd6bacdb0195c9cc77bd99eab55505ccb9c9584a70e895f01a3b4e6046",
+    "docs/validation/profile-cleanup-2026-11-18/README.md": "8b4d14286b5e5f17a716d502d939a260dcefc003edcaae412c9b625054eed863",
     "webmux/server/internal/browser/navigation_cleanup_other_test.go": "2df6c1e4c1caee4522508940531e43a96b2a25c0145ba24cafdf152533dfc674",
     "webmux/server/internal/browser/navigation_cleanup_test.go": "95953f94823ed3523696805b8d75a9c05bd7ab2866d896eaa06696b5610bf355",
     "webmux/server/internal/browser/navigation_cleanup_windows_test.go": "2e718cd5b6c29cfb51aa9bc92636eddc1a25c46fd49cf9cb877c22d145d4ae7c",
@@ -44,7 +44,25 @@
     "cleanup473-final-browser-race.log": "9b28856109230a6bec2b66d66c47f7866d0353de6d80d840a84d84f146edbb4e",
     "cleanup473-qualified-mac-native.log": "9d8b908c81c71f5faece80a9074fe5d46ed688651a7d1592f5cf71d635fbbc87",
     "cleanup473-qualified-windows-amd64-compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "cleanup473-qualified-windows-arm64-compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    "cleanup473-qualified-windows-arm64-compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cleanup473-first-windows.log": "d2211418515a17403648b09b23bf3460506361f4b26d4b5d3d8462a3ddbdd95e"
   },
-  "nativeWindows": "Pending. Actual held-file and process observation need native execution. No repair claim."
+  "nativeWindows": {
+    "head": "f09b5eb3450e97fa591e5535573777347b61781c",
+    "run": 44265066746,
+    "job": 134667445125,
+    "conclusion": "success",
+    "artifact": 14410715059,
+    "artifactSHA256": "133d39a0c4a17ddf252e1268a3484ffa850b3f11f4a4b1de6d01c76c800ee6f0",
+    "heldFileSharingRefusalControl": "PASS",
+    "records": 70,
+    "ordinaryLoads": 46,
+    "stopControls": 4,
+    "observedCleanupSamples": 20,
+    "samplesWithExitedParent": 20,
+    "samplesWithRunningChildren": 4,
+    "cleanupFailures": 0,
+    "causeEstablished": false,
+    "scope": "Passing diagnostics establish no repair. Current workflow adds optional 100 unobserved samples; Go source unchanged from this qualified head."
+  }
 }
