@@ -1,7 +1,10 @@
-import { createContext, useContext, useCallback, useRef, useState, useMemo, useEffect } from 'react';
+import { createContext, useContext, useCallback, useRef, useState, useMemo } from 'react';
 import type { ReactNode } from 'react';
 
 type SendFn = (data: string) => void;
+// null retains default broadcast behavior until the owner chooses recipients.
+type Recipients = ReadonlySet<string> | null;
+const includesRecipient = (recipients: Recipients, id: string) => recipients === null || recipients.has(id);
 
 interface InputBroadcastState {
   broadcastMode: boolean;
@@ -10,10 +13,10 @@ interface InputBroadcastState {
   setFocusedSessionId: (id: string) => void;
   registerSend: (sessionId: string, send: SendFn) => void;
   unregisterSend: (sessionId: string) => void;
-  /** Route input: if broadcast mode, send to all; otherwise send to focused only. */
+  /** Route broadcast input to its selected viewers; ordinary input stays at its source. */
   routeInput: (fromSessionId: string, data: string) => void;
-  /** Sessions excluded from broadcast */
-  broadcastExcluded: Set<string>;
+  broadcastScope: 'all' | 'selected';
+  isBroadcastRecipient: (sessionId: string) => boolean;
   toggleBroadcastExclude: (sessionId: string) => void;
   setBroadcastRecipients: (allIds: string[], selectedIds: string[]) => void;
 }
@@ -21,15 +24,17 @@ interface InputBroadcastState {
 const InputBroadcastContext = createContext<InputBroadcastState | null>(null);
 
 export function InputBroadcastProvider({ children }: { children: ReactNode }) {
-  const [broadcastMode, setBroadcastMode] = useState(false);
+  const [broadcastMode, setBroadcastModeState] = useState(false);
   const [focusedSessionId, setFocusedSessionIdState] = useState<string | null>(null);
-  const [broadcastExcluded, setBroadcastExcluded] = useState<Set<string>>(new Set());
+  const [recipients, setRecipients] = useState<Recipients>(null);
   const sendFns = useRef(new Map<string, SendFn>());
-  const broadcastModeRef = useRef(broadcastMode);
-  const broadcastExcludedRef = useRef(broadcastExcluded);
+  const broadcastModeRef = useRef(false);
+  const recipientsRef = useRef<Recipients>(null);
 
-  useEffect(() => { broadcastModeRef.current = broadcastMode; }, [broadcastMode]);
-  useEffect(() => { broadcastExcludedRef.current = broadcastExcluded; }, [broadcastExcluded]);
+  const setBroadcastMode = useCallback((on: boolean) => {
+    broadcastModeRef.current = on;
+    setBroadcastModeState(on);
+  }, []);
 
   const registerSend = useCallback((sessionId: string, send: SendFn) => {
     sendFns.current.set(sessionId, send);
@@ -43,32 +48,35 @@ export function InputBroadcastProvider({ children }: { children: ReactNode }) {
     setFocusedSessionIdState(id);
   }, []);
 
-  const toggleBroadcastExclude = useCallback((sessionId: string) => {
-    setBroadcastExcluded(prev => {
-      const next = new Set(prev);
-      if (next.has(sessionId)) {
-        next.delete(sessionId);
-      } else {
-        next.add(sessionId);
-      }
-      return next;
-    });
+  const commitRecipients = useCallback((next: ReadonlySet<string>) => {
+    // Input may be routed in this same event, before React commits a render.
+    recipientsRef.current = next;
+    setRecipients(next);
   }, []);
 
+  const toggleBroadcastExclude = useCallback((sessionId: string) => {
+    const current = recipientsRef.current;
+    const next = new Set(current ?? sendFns.current.keys());
+    if (includesRecipient(current, sessionId)) next.delete(sessionId);
+    else next.add(sessionId);
+    commitRecipients(next);
+  }, [commitRecipients]);
+
   const setBroadcastRecipients = useCallback((allIds: string[], selectedIds: string[]) => {
-    const selected = new Set(selectedIds);
-    setBroadcastExcluded(new Set(allIds.filter(id => !selected.has(id))));
-  }, []);
+    const known = new Set(allIds);
+    commitRecipients(new Set(selectedIds.filter(id => known.has(id))));
+  }, [commitRecipients]);
+
+  const isBroadcastRecipient = useCallback((sessionId: string) => includesRecipient(recipients, sessionId), [recipients]);
 
   const routeInput = useCallback((fromSessionId: string, data: string) => {
     if (broadcastModeRef.current) {
-      const excluded = broadcastExcludedRef.current;
+      const selected = recipientsRef.current;
       sendFns.current.forEach((send, id) => {
-        if (!excluded.has(id)) send(data);
+        if (includesRecipient(selected, id)) send(data);
       });
     } else {
-      const send = sendFns.current.get(fromSessionId);
-      if (send) send(data);
+      sendFns.current.get(fromSessionId)?.(data);
     }
   }, []);
 
@@ -80,10 +88,11 @@ export function InputBroadcastProvider({ children }: { children: ReactNode }) {
     registerSend,
     unregisterSend,
     routeInput,
-    broadcastExcluded,
+    broadcastScope: recipients === null ? 'all' as const : 'selected' as const,
+    isBroadcastRecipient,
     toggleBroadcastExclude,
     setBroadcastRecipients,
-  }), [broadcastMode, focusedSessionId, setFocusedSessionId, registerSend, unregisterSend, routeInput, broadcastExcluded, toggleBroadcastExclude, setBroadcastRecipients]);
+  }), [broadcastMode, setBroadcastMode, focusedSessionId, setFocusedSessionId, registerSend, unregisterSend, routeInput, recipients, isBroadcastRecipient, toggleBroadcastExclude, setBroadcastRecipients]);
 
   return (
     <InputBroadcastContext.Provider value={value}>

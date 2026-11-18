@@ -95,8 +95,8 @@ export function Tile({
   const identity = sessionIdentity({ ...session, project_label: projectLabel });
   useEffect(() => { setProjectLabel(session.project_label); }, [session.project_label]);
   const editProject = () => { setProjectDraft(projectLabel || ''); setProjectError(''); setShowTools(false); setShowProject(true); };
-  const { focusedSessionId, broadcastMode, broadcastExcluded, toggleBroadcastExclude } = useInputBroadcast();
-  const isExcluded = broadcastExcluded.has(session.id);
+  const { focusedSessionId, broadcastMode, isBroadcastRecipient, toggleBroadcastExclude } = useInputBroadcast();
+  const isExcluded = !isBroadcastRecipient(session.id);
   const termHandleRef = useRef<TerminalHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const showScrollStrip = useTouchLikeViewport();

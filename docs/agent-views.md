@@ -14,9 +14,14 @@ only reconnects the viewer transport. Rig's own session status and attention
 are shown separately from the WebMux viewer connection state. When Rig has no
 verified activity state, WebMux reports it as unknown.
 
-With **Type to All** enabled, the recipient strip above the grid lets you
-select all terminals, one Rig project, individual tiles, or none. The selected
-names remain visible while typing.
+With **Type to All** enabled, input initially goes to all registered terminals.
+The recipient strip lets you choose all current terminals, one Rig project,
+individual tiles, or none. After a choice, recipients stay fixed: new terminals
+remain unselected until you choose them. **None** stays empty as terminals open,
+and reconnecting the same viewer keeps its selection. The selected names remain
+visible while typing. Turning broadcast off restores input to its own terminal.
+See the [routing qualification](validation/broadcast-recipients-2026-11-17/README.md)
+for controls and acceptance limits.
 
 The top-bar **Coordination** dialog provides provider selection, canonical
 project/session status, remote workspace browsing, and creation. Rig messages

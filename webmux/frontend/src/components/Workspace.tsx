@@ -180,7 +180,7 @@ export function Workspace({
   const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(new Set());
   const [sessionToReveal, setSessionToReveal] = useState<{ id: string; request: number } | null>(null);
   const sessionRequestRef = useRef(0);
-  const { focusedSessionId, setFocusedSessionId, broadcastMode, broadcastExcluded, setBroadcastRecipients, toggleBroadcastExclude } = useInputBroadcast();
+  const { focusedSessionId, setFocusedSessionId, broadcastMode, broadcastScope, isBroadcastRecipient, setBroadcastRecipients, toggleBroadcastExclude } = useInputBroadcast();
   useEffect(() => () => { document.title = appName; }, [appName]);
 
   useEffect(() => {
@@ -647,10 +647,11 @@ export function Workspace({
       {operationError && <div role="alert">{operationError} <button onClick={() => setOperationError('')}>Dismiss</button></div>}
       {broadcastMode && <div role="group" aria-label="Type to All recipients" style={{ padding: '5px 10px', background: '#3a2a1a', color: '#f1d494', display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
         <strong>Type to All recipients</strong>
+        {broadcastScope === 'selected' && <span>New sessions stay unselected until you choose them.</span>}
         <button type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), sessions.map(s => s.id))}>All</button>
         {[...new Set(sessions.flatMap(s => s.rig ? [s.rig.project] : []))].sort().map(project => <button key={project} type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), sessions.filter(s => s.rig?.project === project).map(s => s.id))}>Project: {project}</button>)}
         <button type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), [])}>None</button>
-        {sessions.map(session => <label key={session.id} style={{ whiteSpace: 'nowrap' }}><input type="checkbox" checked={!broadcastExcluded.has(session.id)} onChange={() => toggleBroadcastExclude(session.id)} />{session.rig ? `${session.rig.project}/${session.rig.name}` : session.title}</label>)}
+        {sessions.map(session => <label key={session.id} style={{ whiteSpace: 'nowrap' }}><input type="checkbox" checked={isBroadcastRecipient(session.id)} onChange={() => toggleBroadcastExclude(session.id)} />{session.rig ? `${session.rig.project}/${session.rig.name}` : session.title}</label>)}
       </div>}
       {sessions.length > 0 && (
         <div style={styles.dock} role="toolbar" aria-label="Terminal layout">
