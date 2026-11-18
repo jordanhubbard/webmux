@@ -158,6 +158,7 @@ it('retains the saved trust request after a transport error and dismisses withou
   fireEvent.click(screen.getByRole('button', { name: 'Retry original request after trust review' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Cannot reach server');
   expect(screen.getByRole('status', { name: 'Codex project trust required' })).toHaveTextContent('/work/original');
+  expect(screen.getByRole('status', { name: 'Codex project trust required' })).toHaveTextContent('may already be starting or running');
   expect(screen.getByRole('button', { name: 'Retry original request after trust review' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Dismiss notice' }));
   expect(screen.queryByRole('status', { name: 'Codex project trust required' })).toBeNull();

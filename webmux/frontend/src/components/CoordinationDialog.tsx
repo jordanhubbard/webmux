@@ -65,6 +65,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const [pendingCreationStage, setPendingCreationStage] = useState<'project' | 'agent'>('project');
   const [trustRequest, setTrustRequest] = useState<string | null>(null);
   const [trustReviewed, setTrustReviewed] = useState(false);
+  const [trustRetryUnknown, setTrustRetryUnknown] = useState(false);
   const [stopSeat, setStopSeat] = useState<CoordinationSeat | null>(null);
   const [mode, setMode] = useState<'existing' | 'new'>('new');
   const [projectID, setProjectID] = useState('');
@@ -185,19 +186,19 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
         // Retain the submitted values even if the form is edited afterward.
         setPendingCreation({ ...input, inspect: undefined });
         setPendingCreationStage(launched.creation.stage);
-        setTrustRequest(null); setTrustReviewed(false);
+        setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false);
         return;
       }
-      setPendingCreation(null); setTrustRequest(null); setTrustReviewed(false);
+      setPendingCreation(null); setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false);
       revealSession(launched.session);
     } catch (err) {
       if (err instanceof CoordinationTrustRequiredError) {
         setPendingCreation({ ...input, inspect: undefined });
-        setTrustRequest(err.requestId); setTrustReviewed(false);
+        setTrustRequest(err.requestId); setTrustReviewed(false); setTrustRetryUnknown(false);
       } else if (input.trustRequest) {
         // Keep the saved selection after a transport or validation failure.
-        setTrustReviewed(false); setError(String(err));
-      } else { setPendingCreation(null); setTrustRequest(null); setTrustReviewed(false); setError(String(err)); }
+        setTrustReviewed(false); setTrustRetryUnknown(true); setError(String(err));
+      } else { setPendingCreation(null); setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false); setError(String(err)); }
     }
     finally { setBusy(false); }
   };
@@ -303,12 +304,13 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
       </section>}
       {pendingCreation && trustRequest && <section role="status" aria-label="Codex project trust required">
         <h3>Review this folder's trust in native Codex</h3>
-        <p>Codex reported disabled project settings for <code>{pendingCreation.workspace}</code> when this request was checked. The original request for {pendingCreation.name} in {pendingCreation.projectName} is saved. WebMux has not started its coding session.</p>
+        <p>Codex reported disabled project settings for <code>{pendingCreation.workspace}</code> when this request was checked. The original request for {pendingCreation.name} in {pendingCreation.projectName} is saved. The blocked check started no coding session.</p>
+        {trustRetryUnknown && <p>The last retry did not confirm its outcome. The coding session may already be starting or running. The saved original request is retained.</p>}
         <p>On the computer running WebMux, use your native Codex account to run the review command below. Confirm “Trust and continue” for this folder, wait for the main Codex screen, then exit without starting a task. This one-time review session uses workspace-write and on-request approval; WebMux checks your intended project settings again when you retry.</p>
         <pre><code>{`codex --no-daemon --sandbox workspace-write --ask-for-approval on-request -C '${pendingCreation.workspace.replace(/'/g, "'\\''")}'`}</code></pre>
         <label><input type="checkbox" checked={trustReviewed} disabled={busy} onChange={event => setTrustReviewed(event.target.checked)} />I reviewed project trust in native Codex and exited the review session</label>
         <button type="button" disabled={busy || !trustReviewed} onClick={() => void createSeat({ ...pendingCreation, inspect: undefined, trustRequest })}>Retry original request after trust review</button>
-        <button type="button" disabled={busy} onClick={() => { setPendingCreation(null); setTrustRequest(null); setTrustReviewed(false); }}>Dismiss notice</button>
+        <button type="button" disabled={busy} onClick={() => { setPendingCreation(null); setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false); }}>Dismiss notice</button>
       </section>}
       {pendingCreation && !trustRequest && <section role="status" aria-label={pendingCreationStage === 'agent' ? 'Session creation pending' : 'Project creation pending'}>
         <h3>{pendingCreationStage === 'agent' ? 'Session creation is not yet confirmed' : 'Project creation is not yet confirmed'}</h3>
