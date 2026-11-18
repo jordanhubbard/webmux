@@ -1,0 +1,38 @@
+{
+  "recordedUTC": "2026-11-18T01:31:40.676047+00:00",
+  "parent": "55f86e8f3c7cc9b4d084444d8f061affce85632c",
+  "issue": 282,
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "c05a49ce1ef19e3ccbf291f30e40349c09e3ec7ecd400c4ba2bcb24ea1d1042a",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "8bfdb35139ddc0f698629e275a6193708f9603539892ea99150b00b98c1c6777",
+    ".github/workflows/browser-navigation.yml": "a741747decdd13a7552d0c53cff13666950fb9cda5f3b606d0865959eae71d03",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "e7fbed09146afd8cda56e98c7c8be7feef9b6c96cc137f675a928fa6a43cdae2",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-target-summary.json": "7ff80330e276c8f9fb39f173cd08ffc136ca8ae7b7eca95cb2adc063f81656f3",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-network-diagnostics-summary.json": "dc9889dcbf5a348e02f575efd4901815adc9eb63dcc6ea86955fbba4f968a681"
+  },
+  "privateReceiptSHA256": {
+    "nav282-netlog-final.log": "b718498a57d4bb01545dfd801a4f33f4c120507e5ec6a0d10b6b2cdd9e2c3fe8",
+    "nav282-netlog-final-binding.json": "ad83c8d977d4163f046b57810407bde06a92bca778fb8bcb3d4f6897b90f211e",
+    "nav282-netlog-scoped-browser-race.log": "3d38f87f26688a4c1bd1ec75d8ef445cc54fe401ba868deeb867101b5d11dc45",
+    "nav282-netlog-scoped-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-netlog-scoped-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-55f86e8-windows-artifact.zip": "212ac62658b998555b07317a72511ff1ec5e83bd283e930f0619a91ee239b6dc"
+  },
+  "privateNativeRecordSHA256": {
+    "direct": "923a2827469986410e3b29aee11fa8971c8a594450a0b920790e684904f9b85b",
+    "direct-screenshot": "7ffb88ca15f05cbe027f41be6930112cf8988bfc64e5450bba50482194f8c39c",
+    "direct-home": "0d51aca3a1a3915365ce90ae0aa40ba0b330137df158723e5c4a5b511a4f6c93",
+    "direct-home-screenshot": "d825631c573d84c1742060dbc8d70305de7c93df18d4fae10276f2ef44638b53",
+    "direct-websocket": "ab4df88519effb2824b9c482ea078b9cf4ab0edcf5b574fa15d5eb45a51f8821",
+    "direct-home-websocket": "411e20ce577187e8ce26a6baea5925499f4cf675364ceabb356532a1a5d547f6",
+    "direct-child": "a22a41b75b5441eeefee0066042be7063deb6b3526ee6d3a57891754dcfdd1d5",
+    "direct-child-original": "8e3d87f6660cb02354cc960b018ea01ee0ef4391812aed5cc3367c71892284e4",
+    "direct-home-child": "c1c5d4a50003bc055f958c838a646144f2fe1e4de054c00371dacf7527ca35ec",
+    "direct-home-child-original": "7c0d9373708ba2df880a21a9f563fa1d0539f194ddf56bf8f82fdf0b4cfea885",
+    "worker-subprocess-temporary": "80900cc480debf7753042bfb5bb7bf75ff22b7328af650a5e881ae1f8e2ddb8a",
+    "worker-subprocess-saved": "7c0c9c31a73a743dd49f2c95714d3b17c113659b50d457b2e120b14b2a23cd53"
+  },
+  "checks": "12nativeMacfirstloadsPASS,2Windows-onlycaptureSKIPSexplicit;finalsourcehashesunchangedacrossrun. Browserrace/privacy/boundsunitcontrolsPASS;Darwin/WindowsAMD64browservetPASS. WorkflowYAML/uniquecheck/read-onlypermissions/triggers/artifactscope verified. NativeWindowsnetworkcapture/fastworkflowPENDING.",
+  "excluded": "Initial bounded-netlog native attempt fails empty-log projection due macOS sandboxed network-service scratch-directory refusal. Private blank-browser format probes, including uncapped format-only sample, are not acceptance. No uncapped logging adopted.",
+  "scope": "Test-only anonymous NetLog producer4MiB/input8MiB/source64/projected256/scanned32768 bounds; fixed projection only. Runtime and original CI workflow unchanged. Unique optional diagnostic workflow adds a distinct check and does not replace audit/CI/packaging gates. Abort cause/fix still unproven."
+}

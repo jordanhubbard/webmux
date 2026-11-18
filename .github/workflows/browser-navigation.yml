@@ -1,0 +1,70 @@
+name: Browser startup diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'webmux/server/internal/browser/**'
+      - 'webmux/server/go.mod'
+      - 'webmux/server/go.sum'
+      - 'webmux/package*.json'
+      - '.github/workflows/browser-navigation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'webmux/server/internal/browser/**'
+      - 'webmux/server/go.mod'
+      - 'webmux/server/go.sum'
+      - 'webmux/package*.json'
+      - '.github/workflows/browser-navigation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  first-navigation:
+    name: Windows first-navigation diagnostics
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: webmux/package-lock.json
+      - name: Check diagnostic worker resources
+        shell: pwsh
+        run: |
+          Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'" | Select-Object DeviceID, Size, FreeSpace
+          Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize, FreePhysicalMemory
+      - run: npm ci
+        working-directory: webmux
+      - run: npx playwright install chromium
+        working-directory: webmux
+      - name: Qualify fresh first-navigation controls
+        working-directory: webmux
+        shell: pwsh
+        env:
+          WEBMUX_REAL_BROWSER: '1'
+          WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS: '1'
+        run: |
+          $env:WEBMUX_BROWSER_EXECUTABLE = (node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())").Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the qualified Chromium executable.' }
+          $env:WEBMUX_BROWSER_NAVIGATION_ARTIFACT_DIR = Join-Path $env:RUNNER_TEMP 'native-first-navigation'
+          Push-Location server
+          try {
+            go test ./internal/browser -run '^(TestNativeFirstNavigationComponents|TestFirstNavigationNetLog.*)$' -count=1 -timeout=3m -v
+            if ($LASTEXITCODE -ne 0) { throw 'Native first-navigation diagnostics failed.' }
+          } finally { Pop-Location }
+      - name: Preserve bounded diagnostic records
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: first-navigation-windows
+          path: ${{ runner.temp }}/native-first-navigation/*.json

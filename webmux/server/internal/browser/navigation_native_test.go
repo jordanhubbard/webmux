@@ -40,6 +40,7 @@ type firstNavigationEvidence struct {
 	CleanupFailed   bool                   `json:"cleanupFailed,omitempty"`
 	Failure         string                 `json:"failure,omitempty"`
 	Diagnostics     *NavigationDiagnostics `json:"diagnostics,omitempty"`
+	NetLog          *firstNavigationNetLog `json:"netLog,omitempty"`
 }
 
 // These are independent first loads in fresh private browser processes. A failed
@@ -54,8 +55,11 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 	}
 	t.Setenv("WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS", "1")
 	site, hits := firstNavigationNodeFixture(t)
-	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "direct-child", "direct-child-original", "direct-home-child", "direct-home-child-original", "worker-subprocess-temporary", "worker-subprocess-saved"} {
+	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "direct-child", "direct-child-original", "direct-home-child", "direct-home-child-original", "direct-netlog", "direct-home-netlog", "worker-subprocess-temporary", "worker-subprocess-saved"} {
 		t.Run(mode, func(t *testing.T) {
+			if strings.HasSuffix(mode, "-netlog") && runtime.GOOS != "windows" {
+				t.Skip("Windows-only bounded anonymous NetLog capture; macOS sandbox refuses its scratch directory")
+			}
 			record := firstNavigationEvidence{Mode: mode, Platform: runtime.GOOS, Architecture: runtime.GOARCH, Transport: "pipe", ProfileLocation: "system-temporary"}
 			if strings.Contains(mode, "websocket") {
 				record.Transport = "websocket"
@@ -91,7 +95,11 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 			if strings.HasPrefix(mode, "worker-") {
 				call = firstNavigationWorker(t, mode == "worker-subprocess-saved", &record)
 			} else {
-				call = firstNavigationDirect(t, strings.HasSuffix(mode, "screenshot"), strings.Contains(mode, "-home"), strings.Contains(mode, "websocket"), strings.Contains(mode, "-child"), strings.HasSuffix(mode, "-original"), &record)
+				call = firstNavigationDirect(t, firstNavigationDirectOptions{
+					screenshot: strings.HasSuffix(mode, "screenshot"), profileAtHome: strings.Contains(mode, "-home"),
+					websocket: strings.Contains(mode, "websocket"), createChild: strings.Contains(mode, "-child"),
+					selectOriginal: strings.HasSuffix(mode, "-original"), netLog: strings.HasSuffix(mode, "-netlog"),
+				}, &record)
 			}
 			record.NavigateCalls++
 			frame := call(Request{Action: "navigate", URL: site + "/check"})
@@ -319,10 +327,14 @@ func firstNavigationWorker(t *testing.T, saved bool, record *firstNavigationEvid
 	return call
 }
 
-func firstNavigationDirect(t *testing.T, screenshot, profileAtHome, websocket, createChild, selectOriginal bool, record *firstNavigationEvidence) func(Request) Frame {
+type firstNavigationDirectOptions struct {
+	screenshot, profileAtHome, websocket, createChild, selectOriginal, netLog bool
+}
+
+func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, record *firstNavigationEvidence) func(Request) Frame {
 	t.Helper()
 	var profile string
-	if profileAtHome {
+	if options.profileAtHome {
 		var err error
 		profile, err = temporaryProfile()
 		if err != nil {
@@ -340,14 +352,42 @@ func firstNavigationDirect(t *testing.T, screenshot, profileAtHome, websocket, c
 		profile = t.TempDir()
 	}
 	opts := workerAllocatorOptions(profile)
-	if websocket {
+	var requested string
+	if options.netLog {
+		// Anonymous fixture browsers only. Raw logs stay in the owned profile;
+		// upload only a bounded projection after a graceful browser shutdown.
+		path := filepath.Join(profile, "native-netlog.json")
+		opts = append(opts, chromedp.Flag("log-net-log", path), chromedp.Flag("net-log-capture-mode", "Default"), chromedp.Flag("net-log-max-size-mb", "4"))
+		t.Cleanup(func() {
+			var err error
+			record.NetLog, err = readFirstNavigationNetLog(path, requested)
+			if err != nil {
+				if record.Failure == "" {
+					record.Failure = "netlog_projection_error"
+				}
+				t.Error("cannot project anonymous native network diagnostics")
+			}
+		})
+	}
+	if options.websocket {
 		// Fresh test profiles only. Keep the ephemeral diagnostic listener on loopback;
 		// the actual worker continues using private pipes with its original flags.
 		opts = append(opts, remote.WebSocket, chromedp.Flag("remote-debugging-address", "127.0.0.1"))
 	}
 	alloc, stop := chromedp.NewExecAllocator(context.Background(), opts...)
 	root, cancel := chromedp.NewContext(alloc)
-	t.Cleanup(func() { cancel(); stop() })
+	t.Cleanup(func() {
+		if options.netLog {
+			closing, finish := context.WithTimeout(root, 5*time.Second)
+			if chromedp.Cancel(closing) != nil {
+				record.CleanupFailed = true
+				t.Error("anonymous netlog browser did not close gracefully")
+			}
+			finish()
+		}
+		cancel()
+		stop()
+	})
 	trace := newNavigationTrace()
 	startup := time.AfterFunc(20*time.Second, cancel)
 	err := chromedp.Do(root, chromedp.EmulateViewport(Width, Height), chromedp.Func(func(_ context.Context, target *chromedp.Target) error {
@@ -364,7 +404,7 @@ func firstNavigationDirect(t *testing.T, screenshot, profileAtHome, websocket, c
 	}
 	active := root
 	record.TargetSelection = "initial"
-	if createChild {
+	if options.createChild {
 		// Both members of each matched pair create and initialize a fresh target
 		// in the original browser context. Only the selected navigation target
 		// differs; extra setup is not exclusive to the child-target trial.
@@ -388,7 +428,7 @@ func firstNavigationDirect(t *testing.T, screenshot, profileAtHome, websocket, c
 		}
 		record.ExtraTargets = 1
 		record.TargetSelection = "initial-after-child"
-		if !selectOriginal {
+		if !options.selectOriginal {
 			active = child
 			record.TargetSelection = "child"
 		}
@@ -419,7 +459,7 @@ func firstNavigationDirect(t *testing.T, screenshot, profileAtHome, websocket, c
 		}
 	})
 
-	if screenshot {
+	if options.screenshot {
 		ctx, finish := context.WithTimeout(root, 3*time.Second)
 		err = chromedp.Do(ctx, chromedp.Func(func(ctx context.Context, target *chromedp.Target) error {
 			_, err := cdp.Call(ctx, target, page.CaptureScreenshot, page.CaptureScreenshotParams{Format: page.CaptureScreenshotFormatJpeg})
@@ -437,6 +477,7 @@ func firstNavigationDirect(t *testing.T, screenshot, profileAtHome, websocket, c
 		ctx, finish := context.WithTimeout(active, 15*time.Second)
 		defer finish()
 		if req.Action == "navigate" {
+			requested = req.URL
 			target := chromedp.FromContext(active).Target
 			trace.begin(string(target.TargetID), req.URL)
 			result, err := cdp.Call(ctx, target, page.Navigate, page.NavigateParams{URL: req.URL})

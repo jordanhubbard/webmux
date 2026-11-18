@@ -201,3 +201,53 @@ fixture request each and no cleanup failures. The four new controls use private
 pipes. Actual Windows outcomes remain pending; target ownership is a hypothesis,
 not an established cause or production fix. The [target manifest](target-manifest.json)
 binds these sources, the preceding Windows evidence and the local receipts.
+
+
+## Target-control outcome and Windows network diagnostics
+
+At 55f86e8, [Windows job 134497265523](https://github.com/jordanhubbard/webmux/actions/runs/44213446168/job/134497265523)
+records all twelve [target-selection outcomes](windows-target-summary.json).
+The system-temp child target passes, but the home child and both original-after-
+child cases abort with zero fixture hits. Both direct WebSocket cases also abort
+in this occurrence, despite passing at 351f653. Both initial-screenshot cases and
+both worker subprocess cases pass. All twelve issue one navigation and report
+zero dropped events. The application browser workflow also fails in this run.
+Neither target selection nor the WebSocket path is a demonstrated reliable fix.
+
+Two new anonymous first-load controls add bounded Chromium NetLog at each profile
+location, keeping private pipes and ordinary sandbox/protection flags. They use
+Default capture mode, a four-MiB producer limit and an eight-MiB input limit.
+After the trial, graceful browser shutdown precedes projection and profile
+removal. Only requests with the exact private fixture URL and their dependency
+sources are selected. The projection retains numeric event/source types, fixed
+allowlisted names, relative times and bounded numeric net errors. Native source
+IDs become local aliases. It omits URLs, paths, hostnames, addresses, headers,
+command lines, raw parameter dictionaries and unknown event names. Limits are
+64 sources, 256 projected events and 32768 scanned events; truncation is explicit.
+Raw files stay inside the disposable anonymous profile and are never uploaded.
+An absent matching request is inconclusive: asynchronous logger initialization
+can miss early activity. Logging may also change startup timing.
+
+The [Chromium logging documentation](https://www.chromium.org/for-testers/providing-network-details/)
+describes the startup flags and bounded capture. Local macOS trials hit the
+network service's scratch-directory refusal with the normal sandbox. Their
+empty-log failures are retained privately and excluded from acceptance. The two
+capture controls therefore target Windows explicitly and are skipped on other
+platforms. The twelve existing native macOS controls pass; those two skips are
+not claimed as successful native capture. Unit controls independently cover
+projection privacy, dependency selection, input/source/event bounds, corrupt
+input and invalid timestamps. Actual Windows capture remains a hosted gate.
+
+A separate `Browser startup diagnostics` workflow runs the same controls on
+Windows without waiting for frontend/application suites. Its unique check name
+is `Windows first-navigation diagnostics`; it does not reuse or replace any CI,
+audit or packaging check. Path-scoped pull-request/main triggers and manual
+dispatch support the isolated diagnostic job. All original CI steps, including
+the later application-adjacent component probe, remain unchanged. Failures still
+fail the job. Only bounded projected JSON records are uploaded. The new workflow
+itself also awaits actual hosted acceptance.
+
+See [network-diagnostics-manifest.json](network-diagnostics-manifest.json) for
+source and receipt scopes. This remains investigation work under #282; no
+production listener, sleep, navigation replay, protection bypass or runtime fix
+is introduced.
