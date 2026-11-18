@@ -7,3 +7,5 @@ import "context"
 func observeFirstNavigationCleanup(context.Context) func() *firstNavigationCleanupProcesses {
 	return func() *firstNavigationCleanupProcesses { return nil }
 }
+
+func queryFirstNavigationRemovalHolders(error, string) *firstNavigationRemovalHolders { return nil }

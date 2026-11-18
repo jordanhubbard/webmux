@@ -39,6 +39,7 @@ type firstNavigationEvidence struct {
 	ExtraTargets     int                              `json:"extraTargets,omitempty"`
 	CleanupFailed    bool                             `json:"cleanupFailed,omitempty"`
 	CleanupRemoval   *firstNavigationRemovalError     `json:"cleanupRemoval,omitempty"`
+	CleanupHolders   *firstNavigationRemovalHolders   `json:"cleanupHolders,omitempty"`
 	CleanupProcesses *firstNavigationCleanupProcesses `json:"cleanupProcesses,omitempty"`
 	Failure          string                           `json:"failure,omitempty"`
 	Diagnostics      *NavigationDiagnostics           `json:"diagnostics,omitempty"`
@@ -354,6 +355,7 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 			if err := os.RemoveAll(profile); err != nil {
 				record.CleanupFailed = true
 				record.CleanupRemoval = classifyFirstNavigationRemoval(err, profile)
+				record.CleanupHolders = queryFirstNavigationRemovalHolders(err, profile)
 				t.Errorf("private home profile cleanup failed: %+v", record.CleanupRemoval)
 			}
 		})

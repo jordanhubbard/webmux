@@ -44,6 +44,24 @@ confirms the parent-only completion boundary does not establish child exit, but
 does not identify the historical removal failure's resource or cause. Artifact
 `14410715059` SHA-256 is `133d39a0c4a17ddf252e1268a3484ffa850b3f11f4a4b1de6d01c76c800ee6f0`.
 
-Further unobserved sampling remains diagnostic, not a repair claim. The original
-failure's resource/cause is still unknown, and a later passing run does not
-explain it. No production runtime or dependency change is made.
+Native Windows run `44266839675`, exact `16afd2326f2303188e3c16a07a1a4633c538c8a7`,
+completed all 100 unobserved trials and failed as required: trials 41 and 58
+both loaded successfully with one request/navigation, then reported `unlinkat`,
+Windows error 32 (`sharing_violation`), category `profile_child`. All 150 records
+were retained. Artifact `14411052386` SHA-256 is
+`786418709d562c69e7962559c4a8ac3acb40d83832985c68d1e9668d2fc6f69a`.
+The reproduced failure establishes an actual sharing refusal, not its holder.
+
+Further diagnosis refines fixed file categories and, only after a sharing
+failure, asks Windows Restart Manager about that single refused regular file.
+Only counts and fixed states leave the fixture. Native process creation-time
+validation rejects PID reuse. A matching browser image is labeled as such; it
+does not prove ancestry or ownership. Names, PIDs, image paths, timestamps and
+session keys remain private. The query never calls shutdown/restart APIs and
+does not retry removal. Unsupported/unavailable/no-holder results stay explicit;
+absence of a reported holder does not establish absence of a lock. The native
+held-file control also checks the probe's identification of its own process.
+
+Current holder-probe changes require native Windows qualification. The actual
+failed resource/holder and shutdown repair remain open. No production runtime
+or dependency change is made.

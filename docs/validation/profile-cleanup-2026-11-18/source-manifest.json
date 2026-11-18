@@ -1,14 +1,15 @@
 {
-  "recordedUTC": "2026-11-18T08:24:59.898882+00:00",
+  "recordedUTC": "2026-11-18T08:38:44.096020+00:00",
   "issue": 473,
   "base": "b357ca694b390bbca1377a0a759d44ede0331220",
   "sourceSHA256": {
     ".github/workflows/browser-navigation.yml": "3db81dfd6bacdb0195c9cc77bd99eab55505ccb9c9584a70e895f01a3b4e6046",
-    "docs/validation/profile-cleanup-2026-11-18/README.md": "8b4d14286b5e5f17a716d502d939a260dcefc003edcaae412c9b625054eed863",
-    "webmux/server/internal/browser/navigation_cleanup_other_test.go": "2df6c1e4c1caee4522508940531e43a96b2a25c0145ba24cafdf152533dfc674",
-    "webmux/server/internal/browser/navigation_cleanup_test.go": "95953f94823ed3523696805b8d75a9c05bd7ab2866d896eaa06696b5610bf355",
-    "webmux/server/internal/browser/navigation_cleanup_windows_test.go": "2e718cd5b6c29cfb51aa9bc92636eddc1a25c46fd49cf9cb877c22d145d4ae7c",
-    "webmux/server/internal/browser/navigation_native_test.go": "3f2ed9d0f7021a879026e3ab5f54959ebb17d419e5a270b345a568d106c53217"
+    "docs/validation/profile-cleanup-2026-11-18/README.md": "c10e137fcd8ad01057c0673a12f956710982d2e596c4120615dc98ce935b8cd4",
+    "webmux/server/internal/browser/navigation_cleanup_other_test.go": "97c12b574842ff89bdaaf0c7924e0e000a4e321f58d1fd45685a38e4d484ff97",
+    "webmux/server/internal/browser/navigation_cleanup_test.go": "f9aa3620d516aab11baa4905f05268b82fb4d6dda9b98e41097cc70a2e391e0a",
+    "webmux/server/internal/browser/navigation_cleanup_windows_test.go": "26d8bd49ca388b6dda111864eaf2cbf2fead64aa3822ec4ea9e6aded4714e3a1",
+    "webmux/server/internal/browser/navigation_native_test.go": "b1a582c66b150d64ce4591e160c072496bfa8dfd1f82ecd53d3703399eb25924",
+    "webmux/server/internal/browser/navigation_cleanup_holders_windows_test.go": "c0c3f5ca2044d1ab9ae8443e67a8ac5f2f23a3475b119b5cf7068760918a8f21"
   },
   "originalFailure": {
     "head": "8e90c3ba68f1e037c592a24b4c22e463cc53e071",
@@ -30,12 +31,12 @@
   },
   "crossCompiledImages": {
     "amd64": {
-      "sha256": "07a7fcd9028cdb75836df92cc3c7c01b9e17dd419c9be65ef75d2bc7b21f3dc6",
+      "sha256": "4ed551295e3a8b0a91438799945f7207bc7176f9151420686193e9ad86f5dbfd",
       "peMachine": "0x8664",
       "scope": "Cross-compilation only, not executed locally"
     },
     "arm64": {
-      "sha256": "72fe7a1801830391fa4a34120eacc95aa825a5d21bd5a5ce92f4027f3a92421f",
+      "sha256": "d5bde299aa9da0a415083af0e1f81b562e4ce6dc7adb61e0ba83c42b5018e6f2",
       "peMachine": "0xaa64",
       "scope": "Cross-compilation only, not executed locally"
     }
@@ -45,7 +46,13 @@
     "cleanup473-qualified-mac-native.log": "9d8b908c81c71f5faece80a9074fe5d46ed688651a7d1592f5cf71d635fbbc87",
     "cleanup473-qualified-windows-amd64-compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "cleanup473-qualified-windows-arm64-compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "cleanup473-first-windows.log": "d2211418515a17403648b09b23bf3460506361f4b26d4b5d3d8462a3ddbdd95e"
+    "cleanup473-first-windows.log": "d2211418515a17403648b09b23bf3460506361f4b26d4b5d3d8462a3ddbdd95e",
+    "cleanup473-holders-browser-race.log": "497de4229304f7c6a0f705f3c45267e9cf3283524896c7589b64ddd156e1c84f",
+    "cleanup473-holders-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cleanup473-holders-mac-native.log": "e560d0a1814412b905bc91ed0b79ca0d7a5fb62abedec95e0b3a6061d637c9e8",
+    "cleanup473-holders-windows-amd64-compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cleanup473-holders-windows-arm64-compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cleanup473-unobserved-windows-failed.log": "749e1082949196c80cc68d1d6a1e8f6ad9bda38f158b73f082970840c97525a0"
   },
   "nativeWindows": {
     "head": "f09b5eb3450e97fa591e5535573777347b61781c",
@@ -63,6 +70,31 @@
     "samplesWithRunningChildren": 4,
     "cleanupFailures": 0,
     "causeEstablished": false,
-    "scope": "Passing diagnostics establish no repair. Current workflow adds optional 100 unobserved samples; Go source unchanged from this qualified head."
-  }
+    "scope": "Prior diagnostic source only. Does not qualify the new holder probe."
+  },
+  "unobservedWindows": {
+    "head": "16afd2326f2303188e3c16a07a1a4633c538c8a7",
+    "run": 44266839675,
+    "artifact": 14411052386,
+    "artifactSHA256": "786418709d562c69e7962559c4a8ac3acb40d83832985c68d1e9668d2fc6f69a",
+    "conclusion": "failure",
+    "records": 150,
+    "independentTrials": 100,
+    "processObservation": false,
+    "failedTrials": [
+      41,
+      58
+    ],
+    "failures": {
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "operation": "unlinkat",
+      "class": "sharing_violation",
+      "osCode": 32,
+      "fileCategory": "profile_child"
+    },
+    "holderEstablished": false
+  },
+  "currentHolderProbe": "Pending native Windows control and failure execution. Test-only failure-time query; no removal retry or repair claim."
 }

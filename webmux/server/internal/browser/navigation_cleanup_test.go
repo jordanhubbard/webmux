@@ -29,6 +29,16 @@ type firstNavigationCleanupProcesses struct {
 	Unqueryable      int    `json:"unqueryable"`
 }
 
+type firstNavigationRemovalHolders struct {
+	State          string `json:"state"`
+	OSCode         uint32 `json:"osCode,omitempty"`
+	Reported       int    `json:"reported"`
+	CurrentProcess int    `json:"currentProcess"`
+	FixtureImage   int    `json:"fixtureImage"`
+	OtherImage     int    `json:"otherImage"`
+	Unqueryable    int    `json:"unqueryable"`
+}
+
 // Only fixed categories and OS error numbers leave the anonymous fixture.
 // PathError.Error(), raw paths and arbitrary error strings are never retained.
 func classifyFirstNavigationRemoval(err error, profile string) *firstNavigationRemovalError {
@@ -56,11 +66,26 @@ func classifyFirstNavigationRemoval(err error, profile string) *firstNavigationR
 				r.FileCategory = "history_store"
 			case "local state", "devtoolsactiveport", "singletoncookie", "singletonlock", "singletonsocket":
 				r.FileCategory = "browser_control"
+			case "lock", "log", "log.old", "current", "manifest-000001":
+				r.FileCategory = "database_control"
+			case "preferences", "secure preferences":
+				r.FileCategory = "preferences"
+			case "network persistent state", "transportsecurity", "reporting and nel", "trust tokens":
+				r.FileCategory = "network_state"
+			case "visited links", "favicons", "web data", "dips":
+				r.FileCategory = "browser_database"
 			default:
+				parts := strings.Split(strings.ToLower(filepath.ToSlash(rel)), "/")
 				if strings.Contains(strings.ToLower(filepath.ToSlash(rel)), "cache") {
 					r.FileCategory = "cache"
 				} else {
 					r.FileCategory = "profile_child"
+					for _, part := range parts {
+						switch part {
+						case "browsermetrics", "crashpad", "session storage", "local storage", "indexeddb", "sharedstorage", "network":
+							r.FileCategory = map[string]string{"browsermetrics": "metrics", "crashpad": "crash_report", "session storage": "session_storage", "local storage": "local_storage", "indexeddb": "indexed_database", "sharedstorage": "shared_storage", "network": "network_state"}[part]
+						}
+					}
 				}
 			}
 		}
@@ -93,6 +118,8 @@ func TestFirstNavigationCleanupProjectionDoesNotRetainPrivatePathsOrErrors(t *te
 		{".", "profile_root"}, {"Default/Cookies", "cookie_store"}, {"Default/History-journal", "history_store"},
 		{"Local State", "browser_control"}, {"Default/Cache/opaque-private-file", "cache"},
 		{"Default/private-cookie-token", "profile_child"}, {"../outside-private-cookie-token", "outside_profile"},
+		{"Default/Session Storage/LOCK", "database_control"}, {"Default/Network/Network Persistent State", "network_state"},
+		{"BrowserMetrics/private-cookie-token.pma", "metrics"}, {"Default/Preferences", "preferences"},
 	} {
 		err := &os.PathError{Op: "remove", Path: filepath.Join(root, filepath.FromSlash(item.rel)), Err: fs.ErrPermission}
 		r := classifyFirstNavigationRemoval(err, root)

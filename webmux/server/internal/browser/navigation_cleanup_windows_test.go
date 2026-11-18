@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/systeminfo"
@@ -120,6 +121,9 @@ func observeFirstNavigationCleanup(root context.Context) func() *firstNavigation
 }
 
 func TestFirstNavigationCleanupHeldFileReportsNativeSharingViolation(t *testing.T) {
+	if unsafe.Sizeof(cleanupRMInfo{}) != 668 || unsafe.Sizeof(cleanupRMProcess{}) != 12 {
+		t.Fatal("Restart Manager native record layout differs from the Windows ABI")
+	}
 	profile := t.TempDir()
 	if err := os.Mkdir(filepath.Join(profile, "Default"), 0700); err != nil {
 		t.Fatal(err)
@@ -137,12 +141,16 @@ func TestFirstNavigationCleanupHeldFileReportsNativeSharingViolation(t *testing.
 		t.Fatal(err)
 	}
 	removeErr := os.RemoveAll(profile)
+	holders := queryFirstNavigationRemovalHolders(removeErr, profile)
 	closeErr := windows.CloseHandle(handle)
 	if closeErr != nil {
 		t.Fatal(closeErr)
 	}
 	if removeErr == nil {
 		t.Fatal("retained native file handle did not refuse profile removal")
+	}
+	if holders == nil || holders.State != "queried" || holders.CurrentProcess != 1 {
+		t.Fatalf("native owned-file holder was not identified: %+v", holders)
 	}
 	r := classifyFirstNavigationRemoval(removeErr, profile)
 	if r.Class != "sharing_violation" || r.OSCode != 32 || r.FileCategory != "cookie_store" {
