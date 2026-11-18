@@ -363,14 +363,30 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
   const home = path.resolve(__dirname, '.test-home');
   const daemon = readFileSync(path.join(home, 'openrig-daemon-url'), 'utf8');
   let id: string | null = null;
+  // This fixture has no authenticated provider. Retain bounded client input,
+  // including terminal reports, so startup navigation failures can be traced
+  // without replacing the native TUI or changing its readiness deadline.
+  const started = Date.now();
+  let stage = 'connecting';
+  const clientFrames: { ms: number; stage: string; frame: unknown }[] = [];
+  let droppedFrames = 0;
+  page.on('websocket', socket => socket.on('framesent', event => {
+    if (clientFrames.length >= 128) { droppedFrames++; return; }
+    const text = typeof event.payload === 'string' ? event.payload : event.payload.toString('utf8');
+    if (Buffer.byteLength(text) > 2048) { droppedFrames++; return; }
+    try { clientFrames.push({ ms: Date.now() - started, stage, frame: JSON.parse(text) }); }
+    catch { clientFrames.push({ ms: Date.now() - started, stage, frame: { unparsedBytes: Buffer.byteLength(text) } }); }
+  }));
   try {
     await page.goto('/?panel=openrig');
     const terminal = page.getByTestId('openrig-terminal');
     await page.getByRole('button', { name: 'Connect dashboard', exact: true }).click();
     await expect(terminal.locator('.xterm-rows')).toContainText('EXPLORER');
+    stage = 'awaiting-native-live-page';
     // Rig also renders EXPLORER while startup is probing. Input then owns
     // startup navigation and can disable automatic entry into the live page.
     await expect(terminal.locator('.xterm-rows')).toContainText('TOPOLOGY');
+    stage = 'requesting-topology';
     await terminal.locator('.xterm-helper-textarea').focus();
     await page.keyboard.type(':topology');
     await page.keyboard.press('Enter');
@@ -389,6 +405,16 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
     expect((await (await request.get('/api/openrig')).json()).session).toBeNull();
     expect((await request.get(`${daemon}/healthz`)).ok()).toBe(true);
   } finally {
+    const terminal = page.getByTestId('openrig-terminal');
+    const screen = await terminal.locator('.xterm-rows').textContent({ timeout: 500 }).catch(() => null);
+    const diagnostic = info.outputPath('native-dashboard-startup.json');
+    writeFileSync(diagnostic, JSON.stringify({
+      scope: 'Unauthenticated isolated Rig fixture; client frames and final rendered text only',
+      stage, elapsedMs: Date.now() - started, clientFrames, droppedFrames,
+      session: await terminal.getAttribute('data-session-id', { timeout: 500 }).catch(() => null),
+      viewport: page.viewportSize(), screen: screen?.slice(-32768) ?? null,
+    }, null, 2));
+    await info.attach('native-dashboard-startup', { contentType: 'application/json', path: diagnostic });
     if (id) await request.delete(`/api/sessions/${id}`);
   }
 });

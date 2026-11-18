@@ -283,6 +283,13 @@ jobs:
           npm run test:e2e:go -- openrig-activity.spec.ts --output=test-results/openrig-activity-go
           npm run test:e2e:go -- openrig-notifications.spec.ts --output=test-results/openrig-notifications-go
           WEBMUX_REAL_AGENTS=1 npm run test:e2e:go -- agent-integration.spec.ts --output=test-results/agents-rig-coexistence
+      - name: Preserve native Rig browser diagnostics
+        if: ${{ always() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: native-rig-browser-diagnostics
+          path: webmux/test-results/openrig-go/
+          if-no-files-found: warn
       - name: Verify checked local Rig Stop with the published native contract
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux
