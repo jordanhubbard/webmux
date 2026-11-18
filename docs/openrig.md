@@ -579,3 +579,45 @@ without transferring ownership. Hidden terminal panes now suspend Rig metadata
 observation while their terminal viewers stay mounted. This remains a candidate
 pending hosted/review/audit gates; the broader lifecycle, recovery and bridge
 requirements remain separate.
+
+## Checked local seat Stop
+
+The checked Stop candidate under #438 requires the published OpenRig CLI and
+daemon `0.7.18 (3bf87c62)`, a native local Unix manager, and `lsof`/`ps` process
+and listener evidence. The manager's stamped build, OS owner, listener PID,
+process start and daemon entry point are checked before a review is issued and
+again before dispatch. Unverified, tunneled or changed destinations refuse.
+
+For a running seat whose native enrollment says **Launched by Rig**, choose
+**Review local seat Stop** in Coordination, supply a reason, inspect the
+current destination and explicitly confirm. The reviewed node and enrollment
+IDs are passed unchanged to Rig's `seat-stop.v1` checked HTTP operation. Rig
+owns the final binding/occupant guard and terminal effects. Typing protection
+and other native refusals remain effective.
+
+The stated effect is the manager-owned local tmux seat and all its attached
+viewers. Jobs outside that session, including remote providers, may continue.
+The viewer's grid tile, placement and retained log stay available. Native
+**Adopted by Rig** seats are ineligible; a WebMux launch record does not grant
+lifecycle authority. WebMux-created adopted launchers and SSH relays therefore
+remain outside this Stop action. Native launch conversion and actual remote
+relay lifecycle acceptance remain open under #438/#194.
+
+A review expires after three minutes. Before dispatch, WebMux durably claims
+the immutable native enrollment, with private owner-scoped reviews/results and
+an enrollment-wide claim that also covers another admin or a changed daemon
+port. File contents and directory links are synced before lifecycle dispatch.
+Duplicate requests return the retained result. A lost response or interrupted
+controller leaves an uncertain consumed claim, including after the review
+expires; no automatic retry is offered. A confirmed no-effect refusal permits
+a new explicit review. A detach receipt is distinct from a kill attempt.
+
+[Qualification and limits](validation/rig-checked-stop-2026-11-18/README.md)
+cover real native replacement/adoption refusal, selected-seat termination,
+sibling survival, retained layout/history and duplicate receipts. The CI
+fixture installs 0.7.18 separately from the existing 0.6.14 compatibility lane.
+These synthetic terminal controls do not qualify authenticated coding-session
+recovery, a remote provider Stop, or an installed manager upgrade. Optional
+manager dependency review remains part of #91; the isolated 0.7.18 audit
+snapshot records the existing Hono static-middleware advisory separately from
+WebMux's unchanged dependency-audit gate #429.

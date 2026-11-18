@@ -1,4 +1,5 @@
 import type { CoordinationDrainResult, CoordinationSendResult, CoordinationStatus, WorkspaceListing } from '../components/CoordinationDialog';
+import type { RigStopPreview, RigStopReceipt } from '../components/RigStopDialog';
 import type {
   AgentTmuxSession,
   AppConfig,
@@ -126,6 +127,8 @@ export const api = {
   reconnectServerSession: (server: string, id: string) => request<Session>(`/servers/${encodeURIComponent(server)}/sessions/${encodeURIComponent(id)}/reconnect`, { method: 'POST', body: '{}' }),
   sendServerMessage: (server: string, id: string, message: string) => request<{ queued: boolean; processed: boolean }>(`/servers/${encodeURIComponent(server)}/sessions/${encodeURIComponent(id)}/messages`, { method: 'POST', body: JSON.stringify({ message }) }),
   getCoordination: (provider?: string) => request<CoordinationStatus>(`/coordination${provider ? `?provider=${encodeURIComponent(provider)}` : ''}`),
+  previewRigStop: (target: string, reason: string) => request<RigStopPreview>('/coordination/stop/preview', { method: 'POST', body: JSON.stringify({ provider: 'rig', target, reason }) }),
+  executeRigStop: (id: string) => request<RigStopReceipt>('/coordination/stop', { method: 'POST', body: JSON.stringify({ id, confirm: true }) }),
   getRigChanges: (signal?: AbortSignal) => request<{ contract: string; available: boolean; changed: boolean }>('/coordination/changes', { signal }),
   getRigObservations: (signal?: AbortSignal) => request<CoordinationStatus>('/coordination?provider=rig&observations=rig', { signal }),
   createCoordinatedAgent: (input: { provider: string; mode: 'new' | 'existing'; projectId?: string; projectName: string; context?: string; name: string; host: string; workspace: string; runtime: string; row?: number; col?: number }) => request<{ target: string; session: Session }>('/coordination/agents', { method: 'POST', body: JSON.stringify(input) }),

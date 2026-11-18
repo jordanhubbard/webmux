@@ -116,6 +116,13 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const args = ['-c', browser, requested, host];
     const output = host === 'localhost' ? run('python3', args) : run('ssh', [...sshArgs, host, `python3 -c ${q(browser)} ${q(requested)} ${q(host)}`]);
     console.log(output);
+  } else if (action === 'stop-preview') {
+    const { reviewRigStop } = await import('./rig-stop.mts');
+    console.log(JSON.stringify(await reviewRigStop(run, JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-stop.mts').RigStopSelection)));
+  } else if (action === 'stop-execute') {
+    const { executeRigStop } = await import('./rig-stop.mts');
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as { review: import('./rig-stop.mts').RigStopReview; reason: string; operator: string };
+    console.log(JSON.stringify(await executeRigStop(run, input.review, input.reason, input.operator)));
   } else if (action === 'status' || action === 'status-enrollment' || action === 'observations') {
     let rigs: RigRow[];
     let nodes: NodeRow[];
@@ -142,7 +149,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const seats = nodes.map((node, index) => {
       const agent = managed.find(value => value.target === node.canonicalSessionName);
       const attachment = rigTmuxAttachment(node, structuredAttachments === true);
-      return { ...node, ...enrollments[index], ...attachment, managed: Boolean(agent), host: agent?.host, cwd: agent?.cwd, name: agent?.name, openable: Boolean(attachment) };
+      return { ...node, ...enrollments[index], ...attachment, checkedStop: structuredAttachments === true, managed: Boolean(agent), host: agent?.host, cwd: agent?.cwd, name: agent?.name, openable: Boolean(attachment) };
     });
     const messages: { from: string; to: string; body: string; time: string; state: string }[] = [];
     for (const agent of (action === 'observations' ? [] : agents.slice(0, 16))) {

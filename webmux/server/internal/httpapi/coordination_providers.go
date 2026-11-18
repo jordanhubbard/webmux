@@ -150,6 +150,7 @@ type coordinationProject struct {
 
 type coordinationSeat struct {
 	rigEnrollment
+	CanReviewStop    bool         `json:"canReviewStop,omitempty"`
 	SenderAddress    string       `json:"senderAddress,omitempty"`
 	TmuxServerFlag   string       `json:"tmuxServerFlag,omitempty"`
 	TmuxServerValue  string       `json:"tmuxServerValue,omitempty"`
@@ -331,6 +332,7 @@ type rigStatusEnvelope struct {
 
 type rigCanonicalSeat struct {
 	rigEnrollment
+	CheckedStop          bool         `json:"checkedStop"`
 	TmuxServerFlag       string       `json:"tmuxServerFlag"`
 	TmuxServerValue      string       `json:"tmuxServerValue"`
 	StartupStatus        string       `json:"startupStatus"`
@@ -447,6 +449,7 @@ func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
 			}
 		}
 		status.Seats = append(status.Seats, coordinationSeat{
+			CanReviewStop:  seat.CheckedStop && seat.TmuxServerFlag == "-S" && openable && seat.SessionStatus == "running" && canonicalRigEnrollment(seat.rigEnrollment).EnrollmentOrigin == "launched",
 			SenderAddress:  senderAddress,
 			TmuxServerFlag: seat.TmuxServerFlag, TmuxServerValue: seat.TmuxServerValue,
 			RigHostID:     rigHostID(seat.HostSelfID),

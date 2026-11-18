@@ -277,6 +277,20 @@ jobs:
           npm run test:e2e:go -- openrig-activity.spec.ts --output=test-results/openrig-activity-go
           npm run test:e2e:go -- openrig-notifications.spec.ts --output=test-results/openrig-notifications-go
           WEBMUX_REAL_AGENTS=1 npm run test:e2e:go -- agent-integration.spec.ts --output=test-results/agents-rig-coexistence
+      - name: Verify checked local Rig Stop with the published native contract
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_OPENRIG: '1'
+          OPENRIG_HOST_SELECTED: 'webmux-ci-unrelated-selection'
+        run: |
+          df -Pk "$RUNNER_TEMP" "$PWD" "$HOME/.npm"
+          sudo -n apt-get install -y lsof
+          npm install --prefix "$RUNNER_TEMP/webmux-openrig-stop" --ignore-scripts --no-audit --no-fund @openrig/cli@0.7.18
+          export WEBMUX_OPENRIG_CLI="$RUNNER_TEMP/webmux-openrig-stop/node_modules/@openrig/cli/dist/bin-wrapper.js"
+          test "$(node "$WEBMUX_OPENRIG_CLI" --version)" = '0.7.18 (3bf87c62)'
+          npm run test:e2e:go -- openrig-stop.spec.ts --output=test-results/openrig-checked-stop
+          cp -f "$RUNNER_TEMP/webmux-openrig-stop/package-lock.json" test-results/openrig-stop-install-lock.json
       - name: Verify real VNC interoperability through Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux
