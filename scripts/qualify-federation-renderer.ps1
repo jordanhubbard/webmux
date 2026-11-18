@@ -54,7 +54,7 @@ try {
     Get-Content -LiteralPath $log | Write-Output
     if ((Get-Content -LiteralPath $result -Raw).Trim() -ne '0') { throw 'Native federation task failed' }
     $events = @(Get-Content -LiteralPath $log | ForEach-Object { $_ | ConvertFrom-Json })
-    $passes = @($events | Where-Object { $_.Action -eq 'pass' -and $_.Test -eq 'TestFederationNativeRendererProfilePreservesOwner' })
+    $passes = @($events | Where-Object { $_.Action -eq 'pass' -and $null -ne $_.PSObject.Properties['Test'] -and $_.Test -eq 'TestFederationNativeRendererProfilePreservesOwner' })
     if ($passes.Count -ne 1 -or @($events | Where-Object Action -eq 'skip').Count -ne 0) { throw 'Native contract requires one actual pass and no skips' }
     Get-FileHash -Algorithm SHA256 -LiteralPath $image | Format-List | Out-String | Write-Output
 } finally {
