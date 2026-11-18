@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from './Dialog';
 import { RigStopDialog } from './RigStopDialog';
 import './CoordinationDialog.css';
-import { api } from '../utils/api';
+import { api, type CoordinationCreateRequest } from '../utils/api';
 import { executionHostLabel } from '../utils/sessionIdentity';
 import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
 import type { Session } from '../types';
@@ -61,6 +61,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const [statusError, setStatusError] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pendingCreation, setPendingCreation] = useState<CoordinationCreateRequest | null>(null);
   const [stopSeat, setStopSeat] = useState<CoordinationSeat | null>(null);
   const [mode, setMode] = useState<'existing' | 'new'>('new');
   const [projectID, setProjectID] = useState('');
@@ -173,17 +174,24 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
     catch (err) { setError(String(err)); }
     finally { setBusy(false); }
   };
-  const restartSeat = async (seat: CoordinationSeat) => {
+  const createSeat = async (input: CoordinationCreateRequest) => {
     setBusy(true); setError('');
     try {
-      const launched = await api.createCoordinatedAgent({
-        provider: seat.provider, mode: 'existing', projectId: seat.projectId, projectName: seat.projectName,
-        context: seat.context, name: seat.name, host: seat.host, workspace: seat.workspace || '', runtime: seat.runtime, ...position,
-      });
+      const launched = await api.createCoordinatedAgent(input);
+      if (launched.creation) {
+        // Retain the submitted values even if the form is edited afterward.
+        setPendingCreation({ ...input, inspect: undefined });
+        return;
+      }
+      setPendingCreation(null);
       revealSession(launched.session);
-    } catch (err) { setError(String(err)); }
+    } catch (err) { setPendingCreation(null); setError(String(err)); }
     finally { setBusy(false); }
   };
+  const restartSeat = async (seat: CoordinationSeat) => createSeat({
+    provider: seat.provider, mode: 'existing', projectId: seat.projectId, projectName: seat.projectName,
+    context: seat.context, name: seat.name, host: seat.host, workspace: seat.workspace || '', runtime: seat.runtime, ...position,
+  });
   const browse = async (path?: string) => {
     setBusy(true); setError('');
     try {
@@ -280,12 +288,18 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
         <p>No external coordinator is required. Agent Deck adds managed projects and guarded instruction queues. Rig adds team topology and peer messaging. Enable either or both above; existing sessions keep their owner.</p>
         <button type="button" onClick={() => { setActivePane('terminals'); onClose(); }}>Open terminals and servers</button>
       </section>}
+      {pendingCreation && <section role="status" aria-label="Project creation pending">
+        <h3>Project creation is not yet confirmed</h3>
+        <p>The original request for {pendingCreation.projectName} is saved. Checking it may finish the original creation if it was not received. No agent starts until the project is confirmed.</p>
+        <button type="button" disabled={busy} onClick={() => void createSeat({ ...pendingCreation, inspect: true })}>Check and complete original request</button>
+        <button type="button" disabled={busy} onClick={() => setPendingCreation(null)}>Dismiss notice</button>
+      </section>}
       {provider && provider !== 'webmux' && <>
 
       <form id="coordination-create-seat" onSubmit={event => {
-        event.preventDefault(); setBusy(true); setError('');
+        event.preventDefault(); if (busy || pendingCreation) return;
         const input = { provider, mode, projectId: mode === 'existing' ? projectID : undefined, projectName: mode === 'existing' ? selectedProject?.name || '' : resolvedProjectName, context: mode === 'existing' ? context : undefined, name: resolvedName, host, workspace, runtime, ...position };
-        void api.createCoordinatedAgent(input).then(value => revealSession(value.session)).catch(err => setError(String(err))).finally(() => setBusy(false));
+        void createSeat(input);
       }}>
         <h3>Start a coding agent</h3>
         <p>Choose your code folder and an agent. WebMux opens its terminal there so you can describe the task. Localhost is the computer running WebMux.</p>
@@ -312,7 +326,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
         <p className="coordination-hint">Names are editable labels, not commands. We suggest a project from your folder and a session from the agent and purpose. The purpose names the session; give the agent its instructions after it opens.</p>
         </details>
         {browser && <section className="coordination-browser" aria-label={`Workspaces on ${host}`}><div><strong>{host}</strong> · <code>{browser.path}</code> {browser.repository && <span className="coordination-repository">Git repository</span>}</div><div className="coordination-browser-actions"><button type="button" onClick={chooseFolder}>Choose this folder</button>{browser.parent && <button type="button" onClick={() => void browse(browser.parent!)}>Parent folder</button>}<button type="button" aria-pressed={showAllFolders} onClick={() => setShowAllFolders(value => !value)}>{showAllFolders ? 'Hide hidden folders' : 'Show all'}</button></div><ul>{browser.entries.filter(entry => showAllFolders || !entry.name.startsWith('.')).map(entry => <li key={entry.path}><button type="button" onClick={() => void browse(entry.path)}>{entry.name}/</button>{entry.repository && <span>Git repository</span>}</li>)}</ul></section>}
-        <p><button type="submit" disabled={busy || !selectedProvider?.available || !selectedProvider.enabled || !selectedProvider.capabilities.includes('launch') || (mode === 'existing' && (!selectedProject || (provider === 'rig' && !context)))}>{busy ? 'Connecting…' : 'Start agent and open terminal'}</button></p>
+        <p><button type="submit" disabled={busy || !!pendingCreation || !selectedProvider?.available || !selectedProvider.enabled || !selectedProvider.capabilities.includes('launch') || (mode === 'existing' && (!selectedProject || (provider === 'rig' && !context)))}>{busy ? 'Connecting…' : 'Start agent and open terminal'}</button></p>
       </form>
       </>}
       {!launchOnly && <>

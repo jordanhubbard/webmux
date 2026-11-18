@@ -56,6 +56,12 @@ posixTest('first dispatch is recorded before HTTP; ordinary duplicate requests n
   assert.equal(duplicate.posted, false); assert.equal(duplicate.operationId, first.operationId);
   assert.equal(f.posts.length, 1);
 });
+posixTest('a lost original intent after dispatch never allocates a replacement operation', async t => {
+  const f = fixture(t); await dispatchRigCreateIntent(f.directory, key, f.intent, f.fetcher);
+  const file = path.join(f.directory, key + '.intent.json'); fs.unlinkSync(file);
+  await assert.rejects(dispatchRigCreateIntent(f.directory, key, f.intent, f.fetcher), /invalid_native_create_record/);
+  assert.equal(fs.existsSync(file), false); assert.equal(f.posts.length, 1);
+});
 posixTest('a failed journal-parent flush prevents every native mutation', t => {
   for (const preexisting of [false, true]) {
     const f = fixture(t);

@@ -68,3 +68,8 @@ Read-only/workspace enforcement, selected profiles, named permission graphs,
 other platforms and broader settings remain separate qualification work.
 Native observation still has the documented concurrent-MCP-startup limitation.
 Review, exact-head CI, audit #429 and the full roadmap/release gates remain open.
+
+This receipt is a historical environment checkpoint. The later
+[topology checkpoint](../codex-native-topology-2026-11-18/) binds the changed
+journal/factory sources and qualifies public namespace uncertainty and restart.
+Public native-owned coding and environment-bearing conversation recovery remain open.

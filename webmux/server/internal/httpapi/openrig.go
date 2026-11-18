@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/jordanhubbard/webmux/server/internal/openrigcoord"
 	"github.com/jordanhubbard/webmux/server/internal/openrigproof"
@@ -498,6 +499,10 @@ func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, 
 		writeError(w, 400, "Invalid coordination request.")
 		return
 	}
+	if request.Inspect && (request.Provider != "rig" || request.Mode != "new") {
+		writeError(w, 400, "Only an original Rig project creation request can be inspected here.")
+		return
+	}
 	provider := s.coordinationProvider(owner, request.Provider)
 	if provider == nil || !provider.Descriptor().Available {
 		writeError(w, 409, "The selected coordination provider is unavailable.")
@@ -507,6 +512,11 @@ func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, 
 	defer cancel()
 	launch, err := provider.Launch(ctx, request.coordinationLaunchRequest)
 	if err != nil {
+		var pending *coordinationCreationPending
+		if errors.As(err, &pending) {
+			writeJSON(w, http.StatusAccepted, map[string]any{"creation": pending.Creation})
+			return
+		}
 		writeError(w, 502, "Coordination: "+err.Error())
 		return
 	}

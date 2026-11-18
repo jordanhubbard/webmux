@@ -46,6 +46,9 @@ function publish(file: string, bytes: Buffer) {
   try { fs.writeFileSync(fd, bytes); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
   sync(path.dirname(file));
 }
+// Shared by the topology allocator so all native creation artifacts use the
+// same owner, file-type, exclusive-publication and durability checks.
+export const nativeCreateArtifacts = { ownedRoot, read, publish };
 const json = (value: unknown) => Buffer.from(JSON.stringify(value));
 const agentBytes = json({ name: 'webmux-native-codex', version: '1.0', description: 'Owner Codex with native lifecycle',
   defaults: { runtime: 'codex' }, profiles: { default: { uses: { skills: [], guidance: [], subagents: [], plugins: [], runtime_resources: [] } } } });

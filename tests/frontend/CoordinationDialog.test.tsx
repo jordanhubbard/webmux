@@ -108,6 +108,42 @@ it('uses canonical Rig topology and state instead of stale private project recor
   await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('rig', 'canonical-seat', undefined));
 });
 
+it('keeps an uncertain project request frozen and completes it only on an explicit action', async () => {
+  const close = vi.fn(), operationId = '11111111-1111-4111-8111-111111111111';
+  mocks.create.mockResolvedValueOnce({ creation: { state: 'uncertain', stage: 'project', code: 'native_create_response_unavailable', operationId } });
+  render(<CoordinationDialog onClose={close} />);
+  fireEvent.click(await screen.findByLabelText('Start a new project'));
+  fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'original-project' } });
+  fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'original-agent' } });
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/original' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
+  expect(await screen.findByRole('status', { name: 'Project creation pending' })).toHaveTextContent('original-project');
+  expect(close).not.toHaveBeenCalled(); expect(mocks.create).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole('button', { name: 'Start agent and open terminal' })).toBeDisabled();
+  expect(screen.queryByText(operationId)).toBeNull();
+  const original = { ...mocks.create.mock.calls[0][0] };
+  fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'edited-project' } });
+  fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'edited-agent' } });
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/edited' } });
+  expect(mocks.create).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Check and complete original request' }));
+  await waitFor(() => expect(close).toHaveBeenCalledOnce());
+  expect(mocks.create).toHaveBeenLastCalledWith({ ...original, inspect: true });
+});
+
+it('dismissing an uncertain project notice does not cancel, complete or retry its saved request', async () => {
+  const close = vi.fn();
+  mocks.create.mockResolvedValueOnce({ creation: { state: 'uncertain', stage: 'project', code: 'native_create_already_dispatched', operationId: '11111111-1111-4111-8111-111111111111' } });
+  render(<CoordinationDialog onClose={close} />);
+  fireEvent.click(await screen.findByLabelText('Start a new project'));
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/project' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
+  expect(await screen.findByRole('status', { name: 'Project creation pending' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss notice' }));
+  expect(screen.queryByRole('status', { name: 'Project creation pending' })).toBeNull();
+  expect(mocks.create).toHaveBeenCalledTimes(1); expect(mocks.attach).not.toHaveBeenCalled(); expect(close).not.toHaveBeenCalled();
+});
+
 it('creates a seat in an existing canonical Rig pod', async () => {
   const value = emptyStatus();
   value.projects = [{ provider: 'rig', id: 'rig-id', name: 'shared-rig', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: ['reviewers', 'workers'] }];

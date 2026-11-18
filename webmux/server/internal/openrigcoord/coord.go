@@ -50,6 +50,9 @@ var rigCreateIntent []byte
 //go:embed rig-native-create.mts
 var rigNativeCreate []byte
 
+//go:embed rig-native-project.mts
+var rigNativeProject []byte
+
 // Serialize launches and spec creation across simultaneous browser requests.
 var mutation sync.Mutex
 
@@ -97,6 +100,7 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 		"codex-launch-environment.mts":  codexLaunchEnvironment,
 		"codex-environment-channel.mts": codexEnvironmentChannel,
 		"rig-native-create.mts":         rigNativeCreate,
+		"rig-native-project.mts":        rigNativeProject,
 	} {
 		if err := os.WriteFile(filepath.Join(directory, name), source, 0600); err != nil {
 			return nil, err

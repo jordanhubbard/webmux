@@ -260,6 +260,7 @@ type coordinationLaunchRequest struct {
 	Workspace   string `json:"workspace"`
 	Runtime     string `json:"runtime"`
 	Context     string `json:"context"`
+	Inspect     bool   `json:"inspect,omitempty"`
 }
 
 type coordinationLaunch struct {
@@ -492,14 +493,26 @@ func (p *rigProvider) Launch(ctx context.Context, request coordinationLaunchRequ
 	if isRemoteRigTarget(request.ProjectID) {
 		return coordinationLaunch{}, fmt.Errorf("remote Rig topology is observed only; launch seats on the execution host")
 	}
-	input := map[string]string{
+	input := map[string]any{
 		"mode": request.Mode, "rigId": request.ProjectID, "rigName": request.ProjectName, "pod": request.Context,
 		"name": request.Name, "host": request.Host, "cwd": request.Workspace, "runtime": request.Runtime,
+	}
+	if request.Inspect {
+		input["inspect"] = true
 	}
 	body, _ := json.Marshal(input)
 	output, err := openrigcoord.Run(ctx, p.home, p.owner, "create", string(body))
 	if err != nil {
 		return coordinationLaunch{}, err
+	}
+	var outcome struct {
+		Creation *coordinationCreation `json:"creation"`
+	}
+	if json.Unmarshal(output, &outcome) == nil && outcome.Creation != nil {
+		if !validCoordinationCreation(*outcome.Creation) {
+			return coordinationLaunch{}, fmt.Errorf("invalid project creation response")
+		}
+		return coordinationLaunch{}, &coordinationCreationPending{Creation: *outcome.Creation}
 	}
 	var agent managedRigAgent
 	if err := json.Unmarshal(output, &agent); err != nil || agent.Tmux == "" || agent.Target == "" {
