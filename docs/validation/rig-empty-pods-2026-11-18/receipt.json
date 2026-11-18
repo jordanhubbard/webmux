@@ -119,5 +119,21 @@
     "Selected profiles, named graphs and broader startup settings under #438/#194",
     "Broader authenticated platforms, service upgrades/reboot and full release acceptance under #318/#452",
     "Security/vendor/signing decisions and reviewed exact-main release gates"
-  ]
+  ],
+  "hostIndependentHTTPFixture": {
+    "originalHead": "d21722acd7e3e93e87748840356c187419d9d88b",
+    "failedRun": 44412603712,
+    "failedMacOSJob": 135184445648,
+    "failure": "HTTP 409 instead of 200: fixture omitted required tmux executable and inherited host PATH.",
+    "reproducedWithoutHostTmux": true,
+    "explicitTmuxFixtureAndPrivatePATHPass": true,
+    "productionRuntimeChanged": false,
+    "logsSHA256": {
+      "httpapi-no-tmux-before.log": "af52ddda56cccc5cd4895c16dae1b8fcd87c5ecc2a0e7e7013a0250b260623b2",
+      "httpapi-no-tmux-after.log": "6f34eb68ffb89e732d6518046fef05dd87cab0c3c441a2f2ff0bef0bd4b231e7",
+      "go-race-vet-hermetic.log": "7d0d7c041164030202ba2a81a27268ba6ca07b4c5e2ac122c280897b48a9618e"
+    },
+    "fullServerGoRaceAndVetPass": true,
+    "nativeRuntimeSourceHashesRechecked": true
+  }
 }

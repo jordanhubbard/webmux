@@ -54,6 +54,15 @@ pass. All eight actual legacy published-Rig browser cases and the maintained
 one-failure/replacement-worker/original-daemon/final-cleanup control also pass.
 Protocol and UI refusal controls are listed in [receipt.json](receipt.json).
 
+The first hosted CI run on `d21722a` exposed a test fixture dependency: the pod
+HTTP test supplied fake Rig and Node executables but inherited tmux from the
+host. Its macOS race-test job refused discovery with HTTP 409. Running the
+compiled race-test binary with only `/usr/bin:/bin` reproduces that failure.
+The fixture now supplies tmux explicitly and uses only its own executable
+directory as PATH; the same test passes without host tmux. This changes test
+isolation only. The production availability check and the native runtime source
+above are unchanged. The failed hosted run remains part of the evidence.
+
 The browser uses private loopback auth-none and the native provider account stays
 in place on macOS. This is first-member discovery/creation and a fresh coding
 check, not selected profiles, named graphs, recovery/reboot or broader platform
