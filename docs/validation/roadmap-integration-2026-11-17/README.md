@@ -27,8 +27,12 @@ owned tmux/Node processes and Chrome, including active Rig/observed-terminal
 coexistence, host identity, recovered-view identity, activity, notification
 cancellation and profile-routed Agent Deck fixture actions. These are not
 new authenticated-provider or remote native recovery claims. All 1,356 real
-Chrome screen replay tests pass against the independent reference and production
-renderer/snapshot paths; this is not Windows ConPTY acceptance.
+Chrome renderer/lifecycle checks pass. Their 1,353 three-stage comparison
+receipts comprise 259 bare references and 1,094 references sharing the hyperlink
+profile; three additional checks cover lifecycle behavior. Every reference keeps
+the snapshot parser profile disabled. The shared hyperlink profile changes link
+lifecycle methods, so those cases are not bare-renderer evidence. This local run
+is not Windows ConPTY acceptance.
 
 The source checkpoint, exact inputs, private log hashes and limits are in
 [source-manifest.json](source-manifest.json) and [local-results.json](local-results.json).
@@ -53,10 +57,26 @@ This establishes inherited component provenance; it does not qualify the entire
 combined candidate on Windows. The unchanged native protected-token requirements
 and all 50 browser records remain in combined CI.
 
+## Exact combined-head Windows checks
+
+The combined head `10b365c` now has its own passing Windows server/ConPTY and
+protected first-navigation jobs. All 28 ConPTY cases execute, and all 1,384
+renderer/lifecycle checks pass. The 1,381 three-stage comparison receipts include
+259 bare and 1,122 shared-hyperlink references, with all initial/continued/second
+attachment comparisons equal. All references exclude the snapshot parser
+profile; only the bare group preserves every checked reference method.
+
+Fresh protected navigation passes 46 ordinary loads plus four deliberate Stop
+controls, with all 36 traces complete/lossless and eight observed AppContainer
+network-service primary tokens. Zero executable-denial or service-restart reports
+remain. See [combined-windows-results.json](combined-windows-results.json) for
+exact job/artifact bindings. These results do not complete the overall roadmap,
+the separate #450 diagnosis, or the unchanged dependency audit.
+
 ## Remaining gates
 
-Combined CI must pass, including Windows ConPTY/rendering, native protected first
-loads, Rig coexistence/notification checks and real kernel qualification. A
+The remaining combined CI outcomes must be inspected; a passing Windows subset
+does not establish the full hosted result. A
 Windows non-race full-VT-package repetition retains the context of the earlier
 [#450](https://github.com/jordanhubbard/webmux/issues/450) panic. A later pass is
 not a demonstrated repair for that separate failure.

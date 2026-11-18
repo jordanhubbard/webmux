@@ -69,7 +69,11 @@
   "screenReplay": {
     "tests": 1356,
     "result": "PASS",
-    "scope": "Real Chrome, unmodified reference and production renderer/snapshot; not Windows ConPTY."
+    "scope": "Real Chrome renderer/snapshot comparisons: 259 bare references and 1094 references sharing the hyperlink lifecycle profile. All references keep snapshot parser profile disabled; shared hyperlink references are not unmodified bare renderers. Local run is not Windows ConPTY acceptance.",
+    "comparisonReceipts": 1353,
+    "bareReferenceComparisons": 259,
+    "sharedHyperlinkReferenceComparisons": 1094,
+    "lifecycleChecks": 3
   },
   "nativeApplicationBuild": "PASS",
   "provenance": {
