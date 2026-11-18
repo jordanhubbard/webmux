@@ -1,10 +1,73 @@
 import importlib.util
+import hashlib
+import json
 from pathlib import Path
+import subprocess
+import tempfile
 import unittest
 
 spec = importlib.util.spec_from_file_location('vudc', Path(__file__).with_name('qualify-test-vudc.py'))
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
+
+
+class PersistentSourceCache(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.source = self.root / 'source'
+        scripts = self.source / 'scripts'
+        scripts.mkdir(parents=True)
+        self.cache = self.root / 'shared-cache'
+        self.cache.mkdir()
+        self.body = b'public fixture source\n'
+        self.manifest = {'commit': '1' * 40,
+                         'files': {'vudc.c': hashlib.sha256(self.body).hexdigest()}}
+        (self.source / 'fixture-source-manifest.json').write_text(json.dumps(self.manifest))
+        self.cached = self.cache / (self.manifest['commit'] + '-vudc.c')
+        self.cached.write_bytes(self.body)
+        # A child at the native-build boundary runs the real source verifier.
+        # It refuses all network access and does not pretend to build a module.
+        (scripts / 'build-test-vudc.py').write_text(
+            'import argparse,json,sys\nfrom pathlib import Path\n'
+            f'sys.path.insert(0, {str(Path(module.__file__).parent)!r})\n'
+            'from vudc_sources import acquire\n'
+            'p=argparse.ArgumentParser()\n'
+            "p.add_argument('--kernel');p.add_argument('--build-root',type=Path)\n"
+            "p.add_argument('--source-cache',type=Path)\n"
+            "p.add_argument('--unpatched',action='store_true')\n"
+            "p.add_argument('--hold-replies',action='store_true')\na=p.parse_args()\n"
+            "manifest=json.loads((Path(__file__).parents[1]/'fixture-source-manifest.json').read_text())\n"
+            'a.build_root.mkdir(parents=True)\n'
+            "def no_network(*args,**kwargs):raise AssertionError('unexpected source download')\n"
+            'acquire(manifest,a.build_root,a.source_cache,opener=no_network)\n')
+
+    def test_three_independent_builds_reuse_verified_external_cache_without_network(self):
+        for name, options in [('unpatched', ['--unpatched', '--hold-replies']),
+                              ('corrected-held', ['--hold-replies']), ('corrected', [])]:
+            build = self.root / name / 'build'
+            module.build_fixture(self.source, '6.8.0-fixture', build, self.cache, options)
+            self.assertEqual((build / 'vudc.c').read_bytes(), self.body)
+            receipt = json.loads((build / 'source-acquisition.json').read_text())
+            self.assertTrue(receipt['passed'])
+            self.assertTrue(receipt['files'][0]['from_cache'])
+            self.assertEqual(receipt['files'][0]['attempts'], [])
+            self.assertEqual(receipt['files'][0]['verified_sha256'],
+                             self.manifest['files']['vudc.c'])
+        self.assertEqual(self.cached.read_bytes(), self.body)
+
+    def test_restored_corrupt_bytes_refuse_without_download_or_replacement(self):
+        self.cached.write_bytes(b'corrupt')
+        build = self.root / 'bad' / 'build'
+        with self.assertRaises(subprocess.CalledProcessError):
+            module.build_fixture(self.source, '6.8.0-fixture', build, self.cache, [])
+        self.assertFalse((build / 'vudc.c').exists())
+        self.assertEqual(self.cached.read_bytes(), b'corrupt')
+        receipt = json.loads((build / 'source-acquisition.json').read_text())
+        self.assertFalse(receipt['passed'])
+        self.assertTrue(receipt['files'][0]['from_cache'])
+        self.assertEqual(receipt['files'][0]['attempts'], [])
 
 
 class NativeAdmission(unittest.TestCase):

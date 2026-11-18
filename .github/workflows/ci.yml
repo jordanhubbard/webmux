@@ -45,12 +45,17 @@ jobs:
       - name: Build CLI and separate worker
         working-directory: webmux/server
         run: go build -o "$RUNNER_TEMP/webmux" ./cmd/webmux
+      - name: Reuse checksum-verified virtual USB source files
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ runner.temp }}/webmux-vudc-source-cache
+          key: ${{ runner.os }}-webmux-vudc-sources-v1-${{ hashFiles('tests/usb-vudc-sources.json') }}
       - name: Qualify virtual gadget teardown and USB over SSH
         run: |
           sudo -n apt-get install -y build-essential "linux-headers-$USB_TEST_KERNEL"
           df -Pk "$RUNNER_TEMP" /tmp
           python3 scripts/test_qualify_vudc.py
-          sudo -n env GITHUB_ACTIONS=true PATH="$RUNNER_TEMP/virtme/bin:/usr/sbin:/usr/bin:/sbin:/bin" python3 scripts/qualify-test-vudc.py --kernel "$USB_TEST_KERNEL" --vm-runner "$RUNNER_TEMP/virtme/bin/vng" --binary "$RUNNER_TEMP/webmux" --build-root "$RUNNER_TEMP/webmux-vudc"
+          sudo -n env GITHUB_ACTIONS=true PATH="$RUNNER_TEMP/virtme/bin:/usr/sbin:/usr/bin:/sbin:/bin" python3 scripts/qualify-test-vudc.py --kernel "$USB_TEST_KERNEL" --vm-runner "$RUNNER_TEMP/virtme/bin/vng" --binary "$RUNNER_TEMP/webmux" --build-root "$RUNNER_TEMP/webmux-vudc" --source-cache "$RUNNER_TEMP/webmux-vudc-source-cache"
       - name: Preserve virtual gadget qualification evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
