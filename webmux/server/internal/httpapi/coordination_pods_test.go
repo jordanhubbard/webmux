@@ -17,7 +17,7 @@ func TestRigPodDiscoveryRequiresCurrentProjectAndNeverCreatesViewer(t *testing.T
 	setCoordinationIntegrations(t, s, "rig")
 	bins, state := t.TempDir(), filepath.Join(t.TempDir(), "input.json")
 	t.Setenv("WEBMUX_POD_INPUT", state)
-	t.Setenv("WEBMUX_POD_REPLY", `{"projectId":"01JQPWV4E7QP26M799M3S0MR6E","projectName":"empty-project","pods":["research","workers"],"source":"native-spec"}`)
+	t.Setenv("WEBMUX_POD_REPLY", `{"projectId":"01JQPWV4E7QP26M799M3S0MR6E","projectName":"empty-project","pods":["research","Review_Team","workers"],"source":"native-spec"}`)
 	for name, body := range map[string]string{
 		"rig":  "#!/bin/sh\nexit 0\n",
 		"node": "#!/bin/sh\n[ \"$2\" = project-pods ] || exit 8\n/bin/cat > \"$WEBMUX_POD_INPUT\"\nprintf '%s\\n' \"$WEBMUX_POD_REPLY\"\n",
@@ -36,7 +36,7 @@ func TestRigPodDiscoveryRequiresCurrentProjectAndNeverCreatesViewer(t *testing.T
 	}
 	response := request(handler, "POST", "/api/coordination/rig/pods", valid, "")
 	requireStatus(t, response, 200)
-	if !strings.Contains(response.Body.String(), `"research"`) || len(s.sessions.List("anonymous")) != 0 {
+	if !strings.Contains(response.Body.String(), `"research"`) || !strings.Contains(response.Body.String(), `"Review_Team"`) || len(s.sessions.List("anonymous")) != 0 {
 		t.Fatal("namespace discovery omitted the empty pod or created a viewer")
 	}
 	for _, reply := range []string{

@@ -55,8 +55,9 @@ test('unbounded or malformed native replies refuse without returning private spe
 
 test('a larger canonical topology retains every pod within the bounded response', async () => {
   const f = fixture();
-  f.state.spec = { name: 'empty-project', pods: Array.from({ length: 130 }, (_, i) => ({ id: `pod-${i}`, members: [] })) };
+  f.state.spec = { name: 'empty-project', pods: [...Array.from({ length: 130 }, (_, i) => ({ id: `pod-${i}`, members: [] })), { id: 'Review_Team', members: [] }] };
   const result = await readRigProjectPods(id, 'empty-project', f.deps);
-  assert.equal(result.pods.length, 130);
+  assert.equal(result.pods.length, 131);
+  assert(result.pods.includes('Review_Team'), 'Discovery must not discard a canonical pod because it uses a different launch-name format');
   assert(result.pods.includes('pod-129'));
 });

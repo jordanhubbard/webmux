@@ -35,7 +35,7 @@ export async function readRigProjectPods(projectId: string, projectName: string,
   if (!object(spec) || spec.name !== projectName || !Array.isArray(spec.pods) || spec.pods.length > 4096) return refuse();
   const pods: string[] = [];
   for (const pod of spec.pods) {
-    if (!object(pod) || typeof pod.id !== 'string' || !/^[a-z][a-z0-9-]{0,47}$/.test(pod.id) || pods.includes(pod.id)) return refuse();
+    if (!object(pod) || typeof pod.id !== 'string' || !pod.id || /[.\x00-\x1f\x7f]/.test(pod.id) || pods.includes(pod.id)) return refuse();
     pods.push(pod.id);
   }
   const after = await review();

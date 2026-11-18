@@ -12,7 +12,8 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/openrigcoord"
 )
 
-var rigPodName = regexp.MustCompile(`^[a-z][a-z0-9-]{0,47}$`)
+// Pod labels are metadata; existing launch admission is checked separately.
+var rigCanonicalPodLabel = regexp.MustCompile(`^[^.\x00-\x1f\x7f]+$`)
 
 func (s *Server) coordinationRigPods(w http.ResponseWriter, r *http.Request, owner string) {
 	if !s.openRigAccess(w, owner) {
@@ -54,7 +55,7 @@ func (s *Server) coordinationRigPods(w http.ResponseWriter, r *http.Request, own
 	}
 	seen := map[string]bool{}
 	for _, pod := range result.Pods {
-		if !rigPodName.MatchString(pod) || seen[pod] {
+		if !rigCanonicalPodLabel.MatchString(pod) || seen[pod] {
 			writeError(w, 502, "Rig returned an ambiguous project namespace.")
 			return
 		}
