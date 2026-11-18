@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 test('explicit recipients survive new registration and deliver bytes only after selection', async ({ page, request }, info) => {
   test.setTimeout(60_000);
@@ -62,12 +62,16 @@ test('explicit recipients survive new registration and deliver bytes only after 
     expect(sent.get(a)!.join('')).toBe('xy');
     expect(sent.get(b)!.join('')).toBe('b');
     expect(sent.get(c)!.join('')).toBe('y');
-    await info.attach('native-broadcast-receipts', { body: JSON.stringify({
+    const receipt = {
       selectedOriginalHex: readFileSync(files.get(a)!).toString('hex'),
       explicitlyIncludedLaterHex: readFileSync(files.get(c)!).toString('hex'),
       ordinaryAfterModeOffHex: readFileSync(files.get(b)!).toString('hex'),
       receiptSource: 'Actual PTY child append-only byte files, not terminal screen text',
-    }, null, 2), contentType: 'application/json' });
+    };
+    mkdirSync(info.outputDir, { recursive: true });
+    const receiptPath = info.outputPath('native-broadcast-receipts.json');
+    writeFileSync(receiptPath, JSON.stringify(receipt, null, 2) + '\n');
+    await info.attach('native-broadcast-receipts', { path: receiptPath, contentType: 'application/json' });
   } finally {
     for (const id of ids) await request.delete(`/api/sessions/${id}`);
   }

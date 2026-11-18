@@ -1,0 +1,54 @@
+{
+  "recordedUTC": "2026-11-18T06:27:19.946111+00:00",
+  "issue": 461,
+  "base": "447554456ff5e1dde3000b13c5d08e35bbfdee69",
+  "localSourceCheckpoint": "b34734aac2fd5efca79c9691c6971e8516e2b383",
+  "qualificationWorkingEdit": "Native test persists its existing byte receipt as an explicit artifact file; application routing source unchanged.",
+  "sourceSHA256": {
+    "webmux/frontend/src/contexts/InputBroadcastContext.tsx": "b2b0b25a52e1a9275f023a6cd514c8614d0f47c9af0e5a97cfcfda53a45272d3",
+    "webmux/frontend/src/components/Workspace.tsx": "52275a02fc48fecc3ea09bed978484753e1e3c764485bca6165e0a88babc19d8",
+    "webmux/frontend/src/components/Tile.tsx": "f32d2616607a35a2fe8227a3764255ea3ead3e775866789639a474a0a9041b48",
+    "webmux/frontend/src/components/HelpDialog.tsx": "a70827a953d862b3ee946fdc67fd6cc7ede0c7fdd8386533cff644dfa218b015",
+    "tests/frontend/InputBroadcastContext.test.tsx": "0711dea0a5171a850d1fc610f7a8b019eb6f4095d93a5c52c9c30c0f09f8db52",
+    "tests/e2e/broadcast-scope.spec.ts": "db75fb1fe08beca7af97be8f7481896999782e4fe5e2236e5d1efdffd5dc4f77",
+    "tests/e2e/broadcast-terminal-fixture.mts": "9f75cbfede6a69679d27aa658c233d7c615253ad5d145df99c99ad644d03e096"
+  },
+  "lockfileSHA256": "45c39a2a9b254ac87a33b6ca83f90cda1bf9dbdb1a0f90038cd0024b45e015fa",
+  "hostPlatform": "darwin/arm64",
+  "parentNegative": {
+    "head": "447554456ff5e1dde3000b13c5d08e35bbfdee69",
+    "testSHA256": "615298f84dfdb356be1229a8a44943a99a9be16f375c3a0241eead6d358ee07e",
+    "exit": 1,
+    "scope": "Final same regression controls on unchanged parent context; intended failure. No runtime overlay.",
+    "failed": 7,
+    "passed": 3,
+    "controlBodiesRetainedUnchanged": true
+  },
+  "originalSevenTestBodiesRetainedVerbatim": true,
+  "originalTestBodySHA256": "9bff7b406c732240a6c9965a56abb860a6a0bfe6b9d159dddc47c8154272e2e5",
+  "contextControls": 19,
+  "frontendTests": 410,
+  "frontendFiles": 41,
+  "strictTypes": "PASS",
+  "lint": "PASS",
+  "frontendBuild": "PASS",
+  "nativeBrowserCases": 5,
+  "nativeReceipt": {
+    "selectedOriginalHex": "7879",
+    "explicitlyIncludedLaterHex": "79",
+    "ordinaryAfterModeOffHex": "62",
+    "receiptSource": "Actual PTY child append-only byte files, not terminal screen text"
+  },
+  "nativeReceiptSHA256": "45427b9ef0be108122cd5cc2d19bc0827de5e3e3e655c14a5a16066943a9a02b",
+  "privateLogSHA256": {
+    "broadcast461-parent-final-unit.log": "13982fa398c2c03c4647b7a74a0a5fd88547e568fd83d3bcc04a919f29137ac5",
+    "broadcast461-evidence-types.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "broadcast461-final4-lint.log": "a6d413fb36e8645661145aecac8d27dc160bdd0b77844fd8b52122d1798bcd52",
+    "broadcast461-final4-tests.log": "65520d310b524c7f56ac501020b9c5f777a3a8f5052c39c1ef8897b955d1a31e",
+    "broadcast461-final2-build.log": "466d2d54a07fcf3aa9554a008dd7f2bb1758deb84c365052ac69809291609ecb",
+    "broadcast461-evidence-browser.log": "20303c67c835e2939e13a9c9e4e0ea9f4c45e5748791fc64856535b853a879f2"
+  },
+  "runtimeOverlay": false,
+  "existingMouseFixtureOverlay": false,
+  "localAcceptanceScope": "Frontend routing on macOS ARM64 with real Chrome and controlled Node PTY children. Accepted unit logs retain all original controls; explicit byte receipt is persisted. Hosted exact-head, authenticated providers, remote/Windows and broader lifecycle acceptance remain pending."
+}
