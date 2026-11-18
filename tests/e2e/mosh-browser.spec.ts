@@ -155,7 +155,7 @@ test('real Mosh carries an automatic browser request without logging and acknowl
     const file = info.outputPath('native-mosh-browser-receipt.json'); writeFileSync(file, JSON.stringify(receipt, null, 2) + '\n');
     writeFileSync(info.outputPath('private-ssh-diagnostics.log'), diagnostics);
     await info.attach('native-mosh-browser-receipt', { path: file, contentType: 'application/json' });
-    expect(receipt.providerStopped).toBe(true); expect(receipt.sshDaemonExited).toBe(true);
     if (cleanupErrors.length) throw new AggregateError(cleanupErrors, 'Owned Mosh fixture cleanup failed');
+    expect(receipt.providerStopped).toBe(true); expect(receipt.sshDaemonExited).toBe(true);
   }
 });
