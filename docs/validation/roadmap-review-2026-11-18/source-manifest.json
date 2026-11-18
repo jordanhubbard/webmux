@@ -1,0 +1,66 @@
+{
+  "recordedUTC": "2026-11-18T11:28:06.302714+00:00",
+  "issue": 452,
+  "qualifiedApplicationSourceCommit": "0c34e126543a578da1499f8975cc7bb3ab9855a0",
+  "pinnedInputs": [
+    {
+      "pr": 496,
+      "head": "d77c29a60d589969e96c557abad6111f0e325592"
+    },
+    {
+      "pr": 497,
+      "head": "4e55003ca13808ee68ab496d87be96d68c1aa878"
+    },
+    {
+      "pr": 498,
+      "head": "f9b26c79c16f7620977a0f55ea4ff20f7ba308c9"
+    },
+    {
+      "pr": 499,
+      "head": "d65e0c9e6767883468af9d73580bb54d6578dca6"
+    }
+  ],
+  "allInputAncestors": true,
+  "sourceSHA256": {
+    ".github/workflows/ci-apt.yml": "2f3979e86ee96c24f8e349e51b03574c047fd77f938d6755a52f915746942af5",
+    ".github/workflows/windows-vt-diagnostics.yml": "b7116be3e894a40f0cd156a0dd2e1aeeb5076d3dfd6b4d19c89ad60242447931",
+    "docs/roadmap.md": "6fb2eb09a14d946e0c374df3fa8a43bc809ef7cab14acc46f0450a86f76ca654",
+    "docs/session-recovery.md": "4a23e07ad8f1aa15bdf6ec3927fcbeb164ec16bc6db980d7685e8ec43a2cef50",
+    "docs/validation/ci-apt-controls-2026-11-18/README.md": "1a2aa112a5960e49080288e7192483171543c023ef7a3c4d88558a353dd28bd1",
+    "docs/validation/ci-apt-controls-2026-11-18/results.json": "f0089c6b1527f02f708c8e13bfefc2f4430eebb9cb110566d544ec100c3d7359",
+    "docs/validation/ci-apt-source-scope-2026-11-18/README.md": "0e71b66892f3200c17e98cbe479cc9df096c2c83fd438416ee065d65504406af",
+    "docs/validation/ci-apt-source-scope-2026-11-18/receipt.json": "8a17b760279443db93ffb765cb115c1be7ebb6f7faa3f44168345a8e65e45187",
+    "docs/validation/roadmap-signin-recovery-2026-11-18/README.md": "b0d3710e1f5081cb961a8ecffd0be6ffd2f896546dcd6313943a4719a184d0ef",
+    "docs/validation/roadmap-signin-recovery-2026-11-18/receipt.json": "bd4730e2bace887cda1810f9f3953e20a7ede9eb9399cbe293349bc90b19fa17",
+    "docs/validation/vt-native-exit-2026-11-18/README.md": "170eb79d55411845bc0cb5ea9756deab975b73684e7afb106284fdf9d8e09bbe",
+    "docs/validation/vt-native-exit-2026-11-18/source-manifest.json": "a1b5f5ccaa12130dcbda53a42f59a006bcbfd8159fccc9d7fe8fd23601efca1e",
+    "docs/validation/windows-installed-recovery-2026-11-17/README.md": "67b66942b0fddb84c538b4325d5c8b3059813ae326358dd5bfed9aadb8e297d7",
+    "docs/validation/windows-installed-recovery-2026-11-17/qualification.json": "984c0a0187a2ebe2994aeb76f0823486303c9e1d5cc3703864c5e333c7d02066",
+    "scripts/qualify-ci-apt.py": "ae3d8787873ce3b51455362ad6a2360464a6648b9db94779df21d3464f1707af",
+    "scripts/vt-native-exit.py": "c8d594ff732ad8d00903d2ca829d83643bcd9eda8d9494487f33875895f6a5f7",
+    "tests/frontend/LoginPage.test.tsx": "856ddede1f9b710af2423adedf5784c7211e0b6e44f360db4b35b7fc45dd5f89",
+    "tests/test_vt_native_exit.py": "25bc8c054fb00917cf24c930b60f19aacca8d033130661c3496f272088697112",
+    "webmux/frontend/src/components/LoginPage.tsx": "19ecb2d10580b0c7159cebf59e2914564bc2af4ab81f41fc1ae6879c5dc180c8",
+    "docs/validation/roadmap-review-2026-11-18/README.md": "f7af31784138c7b267c4ceea8e4309874c2b5b480b69fb60aec4978c07f5440f"
+  },
+  "acceptedEvidenceSHA256": {
+    "int452-review-frontend.log": "f740764d1fbdd41b98b18d787ceb2c8d8f35c03bdaee3e121c1be9a03471753f",
+    "int452-review-types.log": "bfbdeb0b9d52b9f5fa57d9bcbafdf0c45c715936935db99e8f5fb542c0d290f0",
+    "int452-review-build.log": "f56bd73579acc1434f61c6ceecbc9cb9db119b65c18089119e9e1425b711d312",
+    "int452-review-lint.log": "a6d413fb36e8645661145aecac8d27dc160bdd0b77844fd8b52122d1798bcd52",
+    "int452-review-lock.log": "c537bfbb1f94cc218f1c9f8870f1d49cadacdffadb3183a8d5fca84d70a921c2",
+    "int452-review-vt-controls-root.log": "20a792a012bc6910a752aa6aedb1ccfc1e7b08d67ca1738fcc302f0cbb8c678a",
+    "int452-review-apt-controls-root.log": "ff7538204d7935e6955c2f1f5ea0594ed0f409e06257e0c53d30a20169e1956a",
+    "int452-review-native-browser-final.log": "31be35ae1573c702fc9b0ff4c5618899f17a7940ab2aeb7d1d750aa0f00995ef"
+  },
+  "nativeBrowserReceiptSHA256": "3ada339a00840337af7ab104ab4a52f6973d7a7d43e52883451696b03bb44033",
+  "privateBrowserQualifierSHA256": "005ebdd098eca9327e7ea6213737362efb588c4766458dd2eeca0a26524fc3a8",
+  "serverTree": "51e3e25e84a2793fe3fa1262748be2eb7aae18ea",
+  "lockBlob": "f18ab6505e59b175161cbd2b465a174992a4341e",
+  "requiredCIUnchanged": true,
+  "aptComponentsIdenticalTo498": true,
+  "supervisorComponentsIdenticalTo499": true,
+  "retainedGoRaceVetAndHelperScope": "identical components qualified on496; not fresh runs on this metadata head",
+  "hostedExactHead": "pending",
+  "releaseReady": false
+}
