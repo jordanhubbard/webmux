@@ -571,3 +571,45 @@ scope/bounds controls and Darwin/Windows AMD64 browser vet pass. See
 [native-network-output-summary.json](native-network-output-summary.json) and
 [network-output-manifest.json](network-output-manifest.json). Native Windows
 restart observation is pending; no network-service crash or runtime fix is claimed.
+
+
+## Distinguishing sandbox launch access and the fixture's network request
+
+Windows `9708ffc` run 44229946781 retains all 50 records and 36 complete,
+end-acknowledged traces with zero loss/drops. Full ordinary results are 15 PASS /
+7 FAIL; the fixed rounds are 21 PASS / 3 FAIL. All four deliberate Stop controls pass.
+All eight output-reader conditions load the fixture successfully and observe
+one network-service restart report while the reader is in its startup phase,
+with no dropped output. This is positive native Windows observation of that
+report, not proof of a crash or the originating abort cause. Reader overhead and
+fixed condition ordering may affect startup. See
+[windows-restart-summary.json](windows-restart-summary.json).
+
+The matching [sandbox source](https://chromium.googlesource.com/chromium/src/+/refs/tags/158.0.8127.18/sandbox/policy/win/sandbox_win.cc)
+emits a distinct ERROR when the configured AppContainer fails its executable
+GENERIC_READ|GENERIC_EXECUTE access check. The reader now counts only that exact
+source/severity/message pattern, with the existing read-time phases. It never
+exports the executable path or raw message. This adds no logging flag, Chrome
+command, permission change or protection bypass. Split messages, unrelated
+source/severity refusal and path privacy are covered deterministically.
+The previous head did not measure this denial; no denial is claimed yet.
+
+The matching [network request constructor](https://chromium.googlesource.com/chromium/src/+/refs/tags/158.0.8127.18/services/network/cors/cors_url_loader.cc)
+includes its URL in the loading trace. Projection now retains only a complete X
+constructor scope whose URL exactly equals the fixture request, exporting only
+URL class and equality. Other constructor URLs and all raw process/request IDs
+are omitted. This supplies a fixture-specific positive observation, unlike a
+global factory timestamp. Missing events can still reflect producer registration;
+no absence-only assertion is introduced. Buffers, deadlines and hard truncation
+failures are unchanged. The Windows artifact remains 50 records.
+
+Final native macOS acceptance passes 44 ordinary loads and four separate Stop
+controls, all captures complete/lossless with no drops. All 16 loading trials
+observe one fixture-matched network constructor; all eight output readers see
+nonempty bounded output and zero denial/restart reports. Two Windows-only NetLog
+cases remain explicit skips. Browser race/privacy/source/severity/phase/bounds
+controls and Darwin/Windows browser vet pass. See
+[native-sandbox-signal-summary.json](native-sandbox-signal-summary.json) and
+[sandbox-signal-manifest.json](sandbox-signal-manifest.json). Native Windows
+access-denial and fixture-constructor observation are pending; no runtime fix,
+ACL change or release is claimed.

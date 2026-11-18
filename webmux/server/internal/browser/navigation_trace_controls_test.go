@@ -210,3 +210,21 @@ func TestFirstNavigationTraceBackgroundLoadingDoesNotHideFailure(t *testing.T) {
 		t.Fatal("background lifecycle bookkeeping hid the requested failure")
 	}
 }
+
+func TestFirstNavigationTraceNetworkConstructorFixtureOnly(t *testing.T) {
+	values := []json.RawMessage{
+		json.RawMessage(`{"name":"CorsURLLoader::CorsURLLoader","ph":"X","ts":1,"args":{"url":"https://private.invalid/background","process_id":12345,"request_id":555}}`),
+		json.RawMessage(`{"name":"CorsURLLoader::CorsURLLoader","ph":"X","ts":2,"args":{"url":"http://private.invalid/check","process_id":12345,"request_id":777,"headers":"secret-cookie"}}`),
+		json.RawMessage(`{"name":"CorsURLLoader::CorsURLLoader","ph":"s","ts":2,"id":"0xdeadbeef","args":{"url":"http://private.invalid/check"}}`),
+	}
+	r := projectFirstNavigationTrace(values, "http://private.invalid/check")
+	if len(r.Events) != 1 || r.MatchedEvents != 1 || r.Events[0].MatchesRequested == nil || !*r.Events[0].MatchesRequested || r.Events[0].URLClass != "fixture" || r.Dropped != 0 {
+		t.Fatal("network constructor fixture identity missing")
+	}
+	data, _ := json.Marshal(r)
+	for _, secret := range []string{"private.invalid", "12345", "secret-cookie", "deadbeef", "request_id"} {
+		if strings.Contains(string(data), secret) {
+			t.Fatal("network constructor leaked raw identity")
+		}
+	}
+}
