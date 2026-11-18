@@ -62,6 +62,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [pendingCreation, setPendingCreation] = useState<CoordinationCreateRequest | null>(null);
+  const [pendingCreationStage, setPendingCreationStage] = useState<'project' | 'agent'>('project');
   const [stopSeat, setStopSeat] = useState<CoordinationSeat | null>(null);
   const [mode, setMode] = useState<'existing' | 'new'>('new');
   const [projectID, setProjectID] = useState('');
@@ -181,6 +182,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
       if (launched.creation) {
         // Retain the submitted values even if the form is edited afterward.
         setPendingCreation({ ...input, inspect: undefined });
+        setPendingCreationStage(launched.creation.stage);
         return;
       }
       setPendingCreation(null);
@@ -288,9 +290,11 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
         <p>No external coordinator is required. Agent Deck adds managed projects and guarded instruction queues. Rig adds team topology and peer messaging. Enable either or both above; existing sessions keep their owner.</p>
         <button type="button" onClick={() => { setActivePane('terminals'); onClose(); }}>Open terminals and servers</button>
       </section>}
-      {pendingCreation && <section role="status" aria-label="Project creation pending">
-        <h3>Project creation is not yet confirmed</h3>
-        <p>The original request for {pendingCreation.projectName} is saved. Checking it may finish the original creation if it was not received. No agent starts until the project is confirmed.</p>
+      {pendingCreation && <section role="status" aria-label={pendingCreationStage === 'agent' ? 'Session creation pending' : 'Project creation pending'}>
+        <h3>{pendingCreationStage === 'agent' ? 'Session creation is not yet confirmed' : 'Project creation is not yet confirmed'}</h3>
+        <p>{pendingCreationStage === 'agent'
+          ? `The original request for ${pendingCreation.name} in ${pendingCreation.projectName} is saved. The session may already be starting or running. Checking reuses that request and does not create a replacement.`
+          : `The original request for ${pendingCreation.projectName} is saved. Checking it may finish the original creation if it was not received. No agent starts until the project is confirmed.`}</p>
         <button type="button" disabled={busy} onClick={() => void createSeat({ ...pendingCreation, inspect: true })}>Check and complete original request</button>
         <button type="button" disabled={busy} onClick={() => setPendingCreation(null)}>Dismiss notice</button>
       </section>}

@@ -332,6 +332,7 @@ type rigStatusEnvelope struct {
 }
 
 type rigCanonicalSeat struct {
+	NodeID string `json:"nodeId"`
 	rigEnrollment
 	CheckedStop          bool         `json:"checkedStop"`
 	TmuxServerFlag       string       `json:"tmuxServerFlag"`
@@ -510,7 +511,7 @@ func (p *rigProvider) Launch(ctx context.Context, request coordinationLaunchRequ
 	}
 	if json.Unmarshal(output, &outcome) == nil && outcome.Creation != nil {
 		if !validCoordinationCreation(*outcome.Creation) {
-			return coordinationLaunch{}, fmt.Errorf("invalid project creation response")
+			return coordinationLaunch{}, fmt.Errorf("invalid native creation response")
 		}
 		return coordinationLaunch{}, &coordinationCreationPending{Creation: *outcome.Creation}
 	}
@@ -518,19 +519,42 @@ func (p *rigProvider) Launch(ctx context.Context, request coordinationLaunchRequ
 	if err := json.Unmarshal(output, &agent); err != nil || agent.Tmux == "" || agent.Target == "" {
 		return coordinationLaunch{}, fmt.Errorf("invalid managed Rig agent response")
 	}
+	pendingNative := func() (coordinationLaunch, error) {
+		value := coordinationCreation{State: "uncertain", Stage: "agent", Code: "native_attachment_unverified", OperationID: agent.CreationOperationID}
+		if !validCoordinationCreation(value) {
+			return coordinationLaunch{}, fmt.Errorf("invalid original native creation identity")
+		}
+		return coordinationLaunch{}, &coordinationCreationPending{Creation: value}
+	}
 	tmux, err := exec.LookPath("tmux")
 	if err != nil {
 		return coordinationLaunch{}, err
 	}
 	raw, err := p.rawStatus(ctx)
 	if err != nil {
+		if agent.NativeOwned {
+			return pendingNative()
+		}
 		return coordinationLaunch{}, err
 	}
-	seat, err := resolveLocalRigSeat(raw, agent.Target)
+	selection := agent.Target
+	if agent.NativeOwned {
+		selection = localRigSeatID(agent.RigID, agent.LogicalID)
+	}
+	seat, err := resolveLocalRigSeat(raw, selection)
 	if err != nil {
+		if agent.NativeOwned {
+			return pendingNative()
+		}
 		return coordinationLaunch{}, err
+	}
+	if agent.NativeOwned && (seat.NodeID != agent.NativeNodeID || !enrollmentID.MatchString(agent.NativeNodeID) || seat.CanonicalSessionName != agent.Target) {
+		return pendingNative()
 	}
 	if !seat.Openable || seat.TmuxTarget == "" {
+		if agent.NativeOwned {
+			return pendingNative()
+		}
 		return coordinationLaunch{}, fmt.Errorf("created Rig seat has no verified tmux attachment; refresh the canonical inventory")
 	}
 	args, err := rigTmuxArgs(seat.TmuxServerFlag, seat.TmuxServerValue, "attach-session", seat.TmuxTarget)

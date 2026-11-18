@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 const runner = path.resolve(import.meta.dirname, '../webmux/server/internal/openrigcoord/runner.mts');
 for (const [host, runtime, modern, mismatch] of [['worker', 'codex', false, false], ['localhost', 'codex', false, false], ['worker', 'claude-code', false, false], ['legacy', 'codex', false, false], ['localhost', 'codex', true, false], ['localhost', 'codex', true, true]] as const) {
   test(`relay registration and launch grammar for ${host}/${runtime} modern=${modern} mismatch=${mismatch}`, { skip: process.platform === 'win32' ? 'Executes the POSIX shell/tmux launcher; qualified on macOS and Linux.' : false }, () => {
@@ -37,7 +38,14 @@ if(name==='rig'){
       // This control covers the earlier managed-launch record migration and
       // relay grammar, not native topology allocation (qualified separately).
       fs.mkdirSync(path.join(dir, 'test'));
-      fs.writeFileSync(path.join(dir, 'test', 'project.json'), JSON.stringify({ rigId: '01M5H000000000000000000000' }), { mode: 0o600 });
+      const rigId = '01M5H000000000000000000000';
+      fs.writeFileSync(path.join(dir, 'test', 'project.json'), JSON.stringify({ rigId }), { mode: 0o600 });
+      const scope = createHash('sha256').update(dir).digest('hex').slice(0, 10);
+      const member = `agent-${createHash('sha256').update(host).digest('hex').slice(0, 8)}`;
+      const tmux = `wm-${scope}-${rigId.slice(-8).toLowerCase()}-${member}`;
+      // A stopped adopted record must stay on its original attach path, even
+      // when this CLI also supports native creation for new local members.
+      fs.writeFileSync(path.join(dir, tmux + '.agent.json'), JSON.stringify({ target: tmux, tmux, rigId, sessionId: 'original-adopted-session', project: 'test', rigName: 'test', pod: 'agents', name: 'agent', host, cwd: dir, runtime }), { mode: 0o600 });
     }
     try {
       const result = spawnSync(process.execPath,[runner,'create',dir],{input:JSON.stringify({project:'test',name:'agent',host,cwd:dir,runtime}),env:{...process.env,WM_RELAY_TEST:dir,WM_MODERN:modern?'1':'0',WM_MISMATCH:mismatch?'1':'0',OPENRIG_HOST_SELECTED:'webmux-qa-shadow',WM_LEGACY:host==='legacy'?'1':'0',PATH:`${bin}:${process.env.PATH}`},encoding:'utf8',timeout:20000});
@@ -48,7 +56,8 @@ if(name==='rig'){
         return;
       }
       assert.equal(result.status,0,result.stdout+result.stderr);
-      const registered=JSON.parse(result.stdout) as {target:string;tmux:string};
+      const registered=JSON.parse(result.stdout) as {target:string;tmux:string;nativeOwned?:boolean};
+      if (modern) assert.equal(registered.nativeOwned, undefined, 'Existing adopted record must not gain native ownership');
       assert.equal(registered.target,modern?registered.tmux:'canonical@test');
       const calls=fs.readFileSync(path.join(dir,'calls'),'utf8').trim().split('\n').map(line=>JSON.parse(line) as string[]);
       if (host === 'localhost' && runtime === 'codex') {

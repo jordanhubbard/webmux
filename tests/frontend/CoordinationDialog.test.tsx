@@ -144,6 +144,25 @@ it('dismissing an uncertain project notice does not cancel, complete or retry it
   expect(mocks.create).toHaveBeenCalledTimes(1); expect(mocks.attach).not.toHaveBeenCalled(); expect(close).not.toHaveBeenCalled();
 });
 
+it('keeps native session uncertainty distinct from project creation and inspects only the frozen request', async () => {
+  const close = vi.fn();
+  mocks.create.mockResolvedValueOnce({ creation: { state: 'uncertain', stage: 'agent', code: 'native_provider_not_verified', operationId: '11111111-1111-4111-8111-111111111111' } });
+  render(<CoordinationDialog onClose={close} />);
+  fireEvent.click(await screen.findByLabelText('Start a new project'));
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/original-native' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
+  const notice = await screen.findByRole('status', { name: 'Session creation pending' });
+  expect(notice).toHaveTextContent('may already be starting or running');
+  expect(notice).not.toHaveTextContent('No agent starts until');
+  expect(close).not.toHaveBeenCalled(); expect(mocks.attach).not.toHaveBeenCalled();
+  const original = { ...mocks.create.mock.calls[0][0] };
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/edited-native' } });
+  expect(mocks.create).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Check and complete original request' }));
+  await waitFor(() => expect(close).toHaveBeenCalledOnce());
+  expect(mocks.create).toHaveBeenLastCalledWith({ ...original, inspect: true });
+});
+
 it('creates a seat in an existing canonical Rig pod', async () => {
   const value = emptyStatus();
   value.projects = [{ provider: 'rig', id: 'rig-id', name: 'shared-rig', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: ['reviewers', 'workers'] }];
