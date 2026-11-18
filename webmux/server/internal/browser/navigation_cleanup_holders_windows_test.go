@@ -30,7 +30,7 @@ type cleanupRMInfo struct {
 	Restartable     int32
 }
 
-func queryFirstNavigationRemovalHolders(removal error, profile string) *firstNavigationRemovalHolders {
+func queryFirstNavigationRemovalHolders(removal error, profile string, owned map[uint32]uint64) *firstNavigationRemovalHolders {
 	var pathError *os.PathError
 	var code syscall.Errno
 	if !errors.As(removal, &pathError) || !errors.As(removal, &code) || (code != 32 && code != 33) {
@@ -112,6 +112,11 @@ func queryFirstNavigationRemovalHolders(removal error, profile string) *firstNav
 		if err != nil || created != row.Process.Started {
 			r.Unqueryable++
 			continue
+		}
+		// This map was captured from the fixture browser CDP set before close,
+		// after validating image and process creation ordering. Keep it private.
+		if expected, ok := owned[row.Process.PID]; ok && expected == uint64(created.HighDateTime)<<32|uint64(created.LowDateTime) {
+			r.OwnedObservedProcesses++
 		}
 		if row.Process.PID == uint32(os.Getpid()) {
 			r.CurrentProcess++

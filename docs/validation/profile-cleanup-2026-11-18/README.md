@@ -65,3 +65,22 @@ held-file control also checks the probe's identification of its own process.
 Current holder-probe changes require native Windows qualification. The actual
 failed resource/holder and shutdown repair remain open. No production runtime
 or dependency change is made.
+
+Observed Windows run `44270302359` on the same `f15e3fd` source completes all
+100 trials and fails on 12 sharing refusals (11 cache, one profile child).
+All 12 failures observe the parent exited and one or two validated children
+still running. Successful trials include 66 with no running child and 22 with
+one, two or five running children. Liveness alone is therefore insufficient to
+identify a file holder. In trial 71, Restart Manager reports one holder matching
+the fixture Chrome executable; the other 11 report none at query time. This
+positive image match still lacks captured-process membership correlation.
+Artifact `14413080612` SHA-256 is
+`2686c331c06fd4b0d5e5a77d2e75e9216392064a28fbdfd9ea76f15e56b470ee`.
+
+The next probe keeps the validated CDP process ID/creation-time set in an
+unexported map. A failure-time holder is counted as observed-owned only when its
+native creation time matches both Restart Manager and that captured identity.
+Only the match count is serialized. The native held-file control requires a
+correct identity match and rejects the same PID with a different creation time.
+This correlation change still requires native qualification; it is not a
+shutdown repair.

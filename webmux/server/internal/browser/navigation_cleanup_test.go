@@ -30,13 +30,14 @@ type firstNavigationCleanupProcesses struct {
 }
 
 type firstNavigationRemovalHolders struct {
-	State          string `json:"state"`
-	OSCode         uint32 `json:"osCode,omitempty"`
-	Reported       int    `json:"reported"`
-	CurrentProcess int    `json:"currentProcess"`
-	FixtureImage   int    `json:"fixtureImage"`
-	OtherImage     int    `json:"otherImage"`
-	Unqueryable    int    `json:"unqueryable"`
+	OwnedObservedProcesses int    `json:"ownedObservedProcesses"`
+	State                  string `json:"state"`
+	OSCode                 uint32 `json:"osCode,omitempty"`
+	Reported               int    `json:"reported"`
+	CurrentProcess         int    `json:"currentProcess"`
+	FixtureImage           int    `json:"fixtureImage"`
+	OtherImage             int    `json:"otherImage"`
+	Unqueryable            int    `json:"unqueryable"`
 }
 
 // Only fixed categories and OS error numbers leave the anonymous fixture.
@@ -133,6 +134,10 @@ func TestFirstNavigationCleanupProjectionDoesNotRetainPrivatePathsOrErrors(t *te
 	}
 	if got := classifyFirstNavigationRemoval(errors.New("private-url?token=not-exported"), root); got.Class != "other" || got.FileCategory != "unknown" {
 		t.Fatal(got)
+	}
+	privateEvidence, privateErr := json.Marshal(firstNavigationEvidence{cleanupProcessIdentities: map[uint32]uint64{987654321: 876543219}})
+	if privateErr != nil || strings.Contains(string(privateEvidence), "987654321") || strings.Contains(string(privateEvidence), "876543219") {
+		t.Fatal("private process identity map was exported")
 	}
 	if classifyFirstNavigationRemoval(nil, root) != nil {
 		t.Fatal("successful removal reported an error")

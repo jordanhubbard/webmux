@@ -20,7 +20,7 @@ import (
 // Observe only processes reported by this fixture's private CDP browser. Keep
 // read-only native handles across shutdown, so later PID reuse cannot change
 // the exit observation. No PID, image path, command line or token is exported.
-func observeFirstNavigationCleanup(root context.Context) func() *firstNavigationCleanupProcesses {
+func observeFirstNavigationCleanup(root context.Context, record *firstNavigationEvidence) func() *firstNavigationCleanupProcesses {
 	if os.Getenv("WEBMUX_BROWSER_CLEANUP_PROCESSES") != "1" {
 		return func() *firstNavigationCleanupProcesses { return nil }
 	}
@@ -93,6 +93,7 @@ func observeFirstNavigationCleanup(root context.Context) func() *firstNavigation
 		r.State = "parent_not_reported"
 		return finish
 	}
+	record.cleanupProcessIdentities = map[uint32]uint64{uint32(c.Browser.Process().Pid): parentCreated}
 	r.State = "observed"
 	for _, p := range info.ProcessInfo {
 		if p.ID == int64(c.Browser.Process().Pid) {
@@ -114,6 +115,7 @@ func observeFirstNavigationCleanup(root context.Context) func() *firstNavigation
 			r.Unqueryable++
 			continue
 		}
+		record.cleanupProcessIdentities[uint32(p.ID)] = created
 		children = append(children, process)
 		r.ObservedChildren++
 	}
@@ -141,7 +143,11 @@ func TestFirstNavigationCleanupHeldFileReportsNativeSharingViolation(t *testing.
 		t.Fatal(err)
 	}
 	removeErr := os.RemoveAll(profile)
-	holders := queryFirstNavigationRemovalHolders(removeErr, profile)
+	var created, exited, kernel, user windows.Filetime
+	identityErr := windows.GetProcessTimes(windows.CurrentProcess(), &created, &exited, &kernel, &user)
+	birth := uint64(created.HighDateTime)<<32 | uint64(created.LowDateTime)
+	holders := queryFirstNavigationRemovalHolders(removeErr, profile, map[uint32]uint64{uint32(os.Getpid()): birth})
+	wrongIdentity := queryFirstNavigationRemovalHolders(removeErr, profile, map[uint32]uint64{uint32(os.Getpid()): birth + 1})
 	closeErr := windows.CloseHandle(handle)
 	if closeErr != nil {
 		t.Fatal(closeErr)
@@ -149,8 +155,11 @@ func TestFirstNavigationCleanupHeldFileReportsNativeSharingViolation(t *testing.
 	if removeErr == nil {
 		t.Fatal("retained native file handle did not refuse profile removal")
 	}
-	if holders == nil || holders.State != "queried" || holders.CurrentProcess != 1 {
+	if holders == nil || holders.State != "queried" || holders.CurrentProcess != 1 || identityErr != nil || holders.OwnedObservedProcesses != 1 {
 		t.Fatalf("native owned-file holder was not identified: %+v", holders)
+	}
+	if wrongIdentity == nil || wrongIdentity.State != "queried" || wrongIdentity.CurrentProcess != 1 || wrongIdentity.OwnedObservedProcesses != 0 {
+		t.Fatalf("mismatched process creation time was accepted: %+v", wrongIdentity)
 	}
 	r := classifyFirstNavigationRemoval(removeErr, profile)
 	if r.Class != "sharing_violation" || r.OSCode != 32 || r.FileCategory != "cookie_store" {

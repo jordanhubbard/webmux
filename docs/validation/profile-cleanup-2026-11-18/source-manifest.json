@@ -1,15 +1,15 @@
 {
-  "recordedUTC": "2026-11-18T08:38:44.096020+00:00",
+  "recordedUTC": "2026-11-18T09:05:36.216959+00:00",
   "issue": 473,
   "base": "b357ca694b390bbca1377a0a759d44ede0331220",
   "sourceSHA256": {
     ".github/workflows/browser-navigation.yml": "3db81dfd6bacdb0195c9cc77bd99eab55505ccb9c9584a70e895f01a3b4e6046",
-    "docs/validation/profile-cleanup-2026-11-18/README.md": "c10e137fcd8ad01057c0673a12f956710982d2e596c4120615dc98ce935b8cd4",
-    "webmux/server/internal/browser/navigation_cleanup_other_test.go": "97c12b574842ff89bdaaf0c7924e0e000a4e321f58d1fd45685a38e4d484ff97",
-    "webmux/server/internal/browser/navigation_cleanup_test.go": "f9aa3620d516aab11baa4905f05268b82fb4d6dda9b98e41097cc70a2e391e0a",
-    "webmux/server/internal/browser/navigation_cleanup_windows_test.go": "26d8bd49ca388b6dda111864eaf2cbf2fead64aa3822ec4ea9e6aded4714e3a1",
-    "webmux/server/internal/browser/navigation_native_test.go": "b1a582c66b150d64ce4591e160c072496bfa8dfd1f82ecd53d3703399eb25924",
-    "webmux/server/internal/browser/navigation_cleanup_holders_windows_test.go": "c0c3f5ca2044d1ab9ae8443e67a8ac5f2f23a3475b119b5cf7068760918a8f21"
+    "docs/validation/profile-cleanup-2026-11-18/README.md": "96123025c053ed7c3bda488b0c9847e4fbad764e5792c1d37753672c4f97f9fa",
+    "webmux/server/internal/browser/navigation_cleanup_other_test.go": "efd89090071affe5dd9c27c27c647eebb7592d719230eb77443d46b0cb62a648",
+    "webmux/server/internal/browser/navigation_cleanup_test.go": "3f1593d4dcc539c667d8c5c5fdfde94466e4199877c72709115e6fd4798313c7",
+    "webmux/server/internal/browser/navigation_cleanup_windows_test.go": "e81634dc9155277eb7771f091b4d66549e12f223710998c60398b14173c499c8",
+    "webmux/server/internal/browser/navigation_native_test.go": "b670a5b6e16fc331360153453e22bf99657b2cccc8e5e0e30976739bd8e5faed",
+    "webmux/server/internal/browser/navigation_cleanup_holders_windows_test.go": "546d5c315128451d65ca5228ee4097e7d1a95774a06626cc14abd52038c9739a"
   },
   "originalFailure": {
     "head": "8e90c3ba68f1e037c592a24b4c22e463cc53e071",
@@ -31,12 +31,12 @@
   },
   "crossCompiledImages": {
     "amd64": {
-      "sha256": "4ed551295e3a8b0a91438799945f7207bc7176f9151420686193e9ad86f5dbfd",
+      "sha256": "5fa7ccd75f04eed41dd872ebbe1eed1bc2f4bce629b4a30f1f49c5ca8869cfbe",
       "peMachine": "0x8664",
       "scope": "Cross-compilation only, not executed locally"
     },
     "arm64": {
-      "sha256": "d5bde299aa9da0a415083af0e1f81b562e4ce6dc7adb61e0ba83c42b5018e6f2",
+      "sha256": "2c7e42e69ca650ca72574d9590f7fa32d5b183b102bbea31f02467918ec3baab",
       "peMachine": "0xaa64",
       "scope": "Cross-compilation only, not executed locally"
     }
@@ -52,7 +52,13 @@
     "cleanup473-holders-mac-native.log": "e560d0a1814412b905bc91ed0b79ca0d7a5fb62abedec95e0b3a6061d637c9e8",
     "cleanup473-holders-windows-amd64-compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "cleanup473-holders-windows-arm64-compile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "cleanup473-unobserved-windows-failed.log": "749e1082949196c80cc68d1d6a1e8f6ad9bda38f158b73f082970840c97525a0"
+    "cleanup473-unobserved-windows-failed.log": "749e1082949196c80cc68d1d6a1e8f6ad9bda38f158b73f082970840c97525a0",
+    "cleanup473-identity-browser-race.log": "d3cd9aacadc523b76a2600f470b2edc34bb2aa848ed7d4e0983eb49720c3d484",
+    "cleanup473-identity-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cleanup473-identity-windows-amd64.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cleanup473-identity-windows-arm64.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cleanup473-identity-mac-native.log": "5e846153b8eb2595688d9acad4a070a21517c6341e5136d4a08559c8da0981b3",
+    "cleanup473-observed100-windows.log": "c6e8748c955ee23dd6f4eb612d29a5240126636053f3e949157386a710ef3e93"
   },
   "nativeWindows": {
     "head": "f09b5eb3450e97fa591e5535573777347b61781c",
@@ -96,5 +102,57 @@
     },
     "holderEstablished": false
   },
-  "currentHolderProbe": "Pending native Windows control and failure execution. Test-only failure-time query; no removal retry or repair claim."
+  "currentHolderProbe": "Captured-set membership correlation added. Local race/vet/Mac browser/AMD64+ARM64 compilation pass; native controlled match/wrong-creation-time refusal and failure correlation pending. No repair claim.",
+  "failureHolderProbeWindows": {
+    "head": "f15e3fd",
+    "run": 44268827026,
+    "conclusion": "failure",
+    "heldFileNativeControl": "PASS",
+    "records": 150,
+    "unobservedTrials": 100,
+    "failedTrials": [
+      8,
+      9,
+      27,
+      53
+    ],
+    "categories": {
+      "cache": 3,
+      "profile_child": 1
+    },
+    "allHolderQueriesReportedZero": true,
+    "artifact": 14411094831,
+    "artifactSHA256": "a222363c94cc7add81d73d30b91b6a4071cdf907b1d0c34bea606f4edd2d36da"
+  },
+  "observedHolderProbeWindows": {
+    "head": "f15e3fd",
+    "run": 44270302359,
+    "conclusion": "failure",
+    "records": 150,
+    "observedTrials": 100,
+    "failedTrials": [
+      7,
+      15,
+      16,
+      32,
+      37,
+      47,
+      69,
+      71,
+      72,
+      88,
+      96,
+      98
+    ],
+    "categories": {
+      "cache": 11,
+      "profile_child": 1
+    },
+    "allFailuresParentExitedAndOneOrTwoChildrenRunning": true,
+    "successWithZeroRunningChildren": 66,
+    "successWithRunningChildren": 22,
+    "trial71": "Restart Manager reports one process matching fixture image; captured-set membership not established on this source.",
+    "artifact": 14413080612,
+    "artifactSHA256": "2686c331c06fd4b0d5e5a77d2e75e9216392064a28fbdfd9ea76f15e56b470ee"
+  }
 }
