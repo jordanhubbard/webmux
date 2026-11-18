@@ -1,0 +1,127 @@
+{
+  "scope": "Actual native creation factory, verified manager, durable manifest/bundle/journal and default authenticated Codex owner policy and execution environment after creation-helper SIGKILL before handoff; not WebMux HTTP/UI activation or provider-loss recovery qualification",
+  "platform": "macOS ARM64",
+  "codexVersion": "codex-cli 0.169.0",
+  "rigVersion": "0.7.18 (3bf87c62)",
+  "nodeVersion": "v24.21.0",
+  "sources": {
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "caa9048e726b9d4b1884d5dbd999faaa12cbf7c930f5f276784d3b7e96fc0fc4",
+    "webmux/server/internal/openrigcoord/codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "e7fd8c550818095c8d2f5e198fb649e9629efbadda13ef6f5fc7693c71d8799b",
+    "webmux/server/internal/openrigcoord/rig-create-intent.mts": "2e4f6b47ecb5ee21aa5a73ff85dacb1f510093f00c5e736286c2d92e336dd693",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "webmux/server/internal/openrigcoord/codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "webmux/server/internal/openrigcoord/codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+    "webmux/server/internal/openrigcoord/coord.go": "b6b72b274e82c0ca6c802e689b4e04aad2dbf6af291a2316c63c1f49c7793135",
+    "webmux/server/internal/openrigcoord/native_create_test.go": "81f91bae5368cc20dff018260bd6266ce317eba9cb291c73876b7fbaf6baa0b1",
+    "scripts/codex-launch-policy.test.mts": "8dc17a5d12391a521a377377c9f9e9fb9c29c3123fe6b23f77a72a141b5053fd",
+    "scripts/codex-launch-environment.test.mts": "a5336f9948ec12e9599116ebc47fa5b914c0312668791a3936e93686b7baf70f",
+    "scripts/codex-environment-channel.test.mts": "59b014ade7765cea9b5722518630089644c89308b483c04035b754cb03b7d7cb",
+    "scripts/rig-native-create.test.mts": "da0f1428e43f16bfeaa9da1386fa73019b5b6b024c3f6856cf2148e095aae914",
+    "webmux/package.json": "7d4143d864315b302e89400a783e29ee3f55d5cfad6f097325cd390c04f6c40b"
+  },
+  "native": {
+    "passed": true,
+    "checks": {
+      "onlyOriginalCreationHelperKilledBeforeHandoff": true,
+      "sameOriginalEnrollmentAndReconstructedHandoffAfterHelperLoss": true,
+      "environmentSocketRemovedAfterHandoff": true,
+      "noPlaintextFixtureValueInDurableState": true,
+      "actualDefaultNativeOwnerPolicyUsed": true,
+      "actualNativeArgvPreservesOwnerPolicy": true,
+      "freshChallengeReadByActualProvider": true,
+      "projectAndOwnerExtraWritable": true,
+      "ownerFullAccessNotNarrowed": true,
+      "wrapperReplacedByNativeExecutable": true,
+      "nativeIdentityRetained": true,
+      "nativeOwnerEnvironmentPreserved": true,
+      "nativePolicyAndCorrelatedTools": true,
+      "duplicateFactoryAndExplicitInspectRetainNativeOccupant": true,
+      "siblingRetainsOriginalPID": true,
+      "checkedStopEndsOnlyNativeCodingSeat": true
+    },
+    "witness": {
+      "passed": true,
+      "contexts": 2,
+      "nativeNodeMatches": true,
+      "coordinatorReachable": true,
+      "correlatedProbeOutputs": 1,
+      "allowedWrites": 4,
+      "deniedWrites": 0,
+      "ownerFullAccessPreserved": true,
+      "environmentChecks": {
+        "homePreserved": true,
+        "tmpPreserved": true,
+        "ownerPathRetainedAsSuffix": true,
+        "pairedRigFound": true,
+        "managerToolPathAbsent": true,
+        "ownerToolFound": true,
+        "ownerToolRuns": true,
+        "inheritedValueMatches": true,
+        "managerOnlyValueAbsent": true
+      },
+      "nativeSessionSHA256": "384cb0886d16ede9e9542485ceda36e8bea950275242af6866b8d81b86663fcf"
+    },
+    "originalNativeNodeIdObservedBeforeHelperKill": true,
+    "originalNodeIdRetained": true,
+    "originalOperationInspected": true,
+    "ordinaryDuplicatePosted": false,
+    "nativeOwner": {
+      "model": "gpt-6.1-sol",
+      "provider": "openai",
+      "effort": "medium",
+      "serviceTier": null,
+      "policy": {
+        "type": "dangerFullAccess"
+      },
+      "approval": "never"
+    },
+    "nativeStopExitObservedMs": 0,
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true,
+    "sourceUnchanged": true,
+    "privateReportSHA256": "dbe90971d1c21e7756eb1a9f515e4aceb11d1587ce22d9e2bba43d7821e8fe90",
+    "probeSHA256": "03a0f59ca1dee659ce04bd3e7cb29f9a1d28d617a311e7feaf56e7817d7259ef"
+  },
+  "localValidation": {
+    "helpersPassed": 191,
+    "focusedEnvironmentLaunchCreationControls": 31,
+    "strictTypeScriptProjects": 5,
+    "installedLockIdentities": 272,
+    "coordinatorGoRace": "pass",
+    "coordinatorGoVet": "pass",
+    "whitespace": "pass"
+  },
+  "limits": [
+    "Internal creation/helper-loss path only. Public HTTP/UI creation, durable namespace allocation, uncertainty controls and recovery composition remain incomplete.",
+    "A handoff receipt proves environment delivery, not provider readiness or authority to launch a second provider. Explicit recovery must create a fresh matching handoff.",
+    "Only default authenticated owner full-access execution is qualified here. Earlier workspace/conversation recovery evidence binds older wrapper sources.",
+    "Selected profiles, named permission graphs, other platforms, WebMux controller/manager loss, host reboot, browser acceptance and concurrent-MCP startup remain open.",
+    "All exact-head CI, review, audit and release gates remain required."
+  ],
+  "excludedRuns": [
+    {
+      "privateReportSHA256": "28010fef691a3ad6c430e4920715ff7688a6756cfb4df0eae5fdfc0bebd66495",
+      "reason": "Inherited-only environment candidate refused before native execution; replaced by private handoff."
+    },
+    {
+      "privateReportSHA256": "407744c6c7c9f45a15b2eb9345546c00320c6b43a740c05318115565ddf3ef48",
+      "reason": "Handoff delivered values, but the original PATH assertion incorrectly assumed only one prefix; native tool checks corrected in final run."
+    },
+    {
+      "privateReportSHA256": "83be395c85bd0bb9c3380a1a346a17a801cdb2b9a6b6797f7420c8cc99f60253",
+      "reason": "Missing handoff raced helper reconstruction; added bounded same-wrapper waiting. CLI view also omitted nodeId; final control uses supported native nodes API and checks nonempty IDs."
+    },
+    {
+      "privateReportSHA256": "1fb84778d70e8d5b9fffe88aa346fdb042979b1c60a61428071adcd600a6d333",
+      "reason": "Diagnostic-only wire alteration; no native provider executed. Excluded from qualification."
+    }
+  ],
+  "testGateAnomaly": {
+    "description": "One full helper run failed the unchanged private-tmux live-listener cleanup control. Isolated repeat and subsequent full runs passed with the same test/implementation.",
+    "firstLogSHA256": "f4df1b1ddcdc8d473b3d5182f040b35a414b7f62697da5b0d15b4513e9bd4378",
+    "isolatedRepeatLogSHA256": "f0a42319542b2e060ffd461ed51fc296381725e854eb9b31916768b6c345aa83",
+    "finalFullLogSHA256": "2169114eff03fda988e773ba86e4bbc9bde5eb5d7535b8486e246d83dd9e62af"
+  }
+}

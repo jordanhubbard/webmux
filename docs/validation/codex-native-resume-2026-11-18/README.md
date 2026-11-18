@@ -1,9 +1,13 @@
 # Native Codex continuation through the launch wrapper
 
-The wrapper/policy source bindings below remain unchanged. The
-[later creation-factory checkpoint](../codex-native-create-2026-11-18/README.md)
-adds internal Go embedding and durable launch composition; the unembedded
-descriptions below record the state when this recovery evidence was captured.
+The source bindings below describe the earlier wrapper revision. The
+[creation-factory checkpoint](../codex-native-create-2026-11-18/README.md) adds
+internal Go embedding and durable launch composition; the subsequent
+[environment checkpoint](../codex-native-environment-2026-11-18/README.md) adds
+a private handoff for new factory launches. The unembedded descriptions below
+record this recovery capture. The new environment-bearing wrapper requires a
+fresh handoff before native recovery; this earlier receipt does not qualify
+that composition or the current public UI.
 
 Rig's managed resume uses an explicit native UUID, its `-m` model alias and a
 shell working directory rather than a `-C` argument. The original fresh-only
