@@ -16,6 +16,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/jordanhubbard/webmux/server/internal/auth"
+	"github.com/jordanhubbard/webmux/server/internal/session"
 )
 
 // Federation configuration is administrator-managed. Read APIs never return
@@ -319,6 +320,12 @@ func (s *Server) serverTerminal(w http.ResponseWriter, r *http.Request) {
 		target.Scheme = "ws"
 	}
 	target.Path = "/api/federation/term/" + id
+	// Renderer selection belongs to the viewer, while the destination and
+	// credential belong to this controller. Match terminalSocket's first-value
+	// semantics without forwarding any browser credentials or other query keys.
+	if profile := r.URL.Query().Get("snapshot_profile"); profile != "" {
+		target.RawQuery = url.Values{"snapshot_profile": {profile}}.Encode()
+	}
 	upstream, _, err := (&websocket.Dialer{HandshakeTimeout: 5 * time.Second}).DialContext(r.Context(), target.String(), http.Header{"Authorization": {"Bearer " + token}})
 	if err != nil {
 		writeError(w, 502, "Connected server terminal is unavailable")
@@ -393,6 +400,9 @@ func (s *Server) serverTerminal(w http.ResponseWriter, r *http.Request) {
 					// failure. The browser reserves "Unauthorized" for local
 					// authentication and otherwise signs out every viewer.
 					code, reason = 1008, "Connected server access revoked"
+					if closed.Text == session.ErrRendererUnsupported.Error() {
+						code, reason = closed.Code, closed.Text
+					}
 				}
 			}
 			// Revocation can close the upstream before this controller's next
