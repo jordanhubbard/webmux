@@ -1,0 +1,72 @@
+{
+  "parent": "1d97a22832b16ba809cb69c8eca8e841ef828ad7",
+  "sourceSHA256": {
+    "docs/managed-hosts.md": "04bf485448601b17202cbd8743cfaf946e2628bd3bce908ec3411c3a9afe2acf",
+    "scripts/openrig-relay-runner.test.mts": "f740c160920853d7042dcffdcd92a70d700841c77f81e05e5dfbb64d3f1c3b56",
+    "tests/e2e/openrig-fixture.mts": "d01518e23c59f72908addf4b707c55a7c3375ce0d3fd29991e7349a4d7cde4c6",
+    "tests/e2e/openrig.spec.ts": "41d215c9dd7b15df75017f81ba459feac611765edf5cc49f2257615f32a8522b",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "95bf1519a8f283fc367efdb8d0d40990041ac4b97dc41fa7435ad420cbc052c9",
+    "webmux/server/internal/httpapi/coordination_providers.go": "7cd485e593452b87450e6ee188cfe838c0beff9572094db900cd949eaa86422f",
+    "webmux/server/internal/httpapi/openrig.go": "8e94de724ffd680b28de5e853099bc1b591a1d51212fa72aedc36581a5650afd",
+    "webmux/server/internal/httpapi/remote_rig.go": "1b9a9d7c0eeed05d5474197d371ed025c186c8f2b6adf8906fd06dda487087b1",
+    "webmux/server/internal/httpapi/remote_rig_test.go": "519ee77276f3e58bf4e222526b2261db4a10b01d05dc87b71a84f88f8cf19b2e",
+    "webmux/server/internal/openrigcoord/runner.mts": "80f4deb4b15e65922aca8117869f28f804f56928b340a58fdf428badec738826",
+    "webmux/server/internal/rigobservation/report.go": "5e3fe875fbddf74e0d991845a3a1210d6de8a821836ee02d9d5b5ee57b7b72c1",
+    "webmux/server/internal/rigobservation/report_test.go": "7d1268732cfdc9f8a0e29d14a9339c26c6cdef9f0d54ebb5985d22feb4947447",
+    "webmux/server/internal/httpapi/rig_dashboard.go": "b83e9a4092c2588806491b43c271b58e733c87095079ff70c5af3e0ed504e812",
+    "webmux/server/internal/httpapi/rig_dashboard_test.go": "00a1598e0d28733fa76065ebda534604b6eba96e413646b0f9d955ee69b8ab33"
+  },
+  "privateReceiptSHA256": {
+    "final-compat469/legacy-openrig.spec.ts.log": "a16b548da4c967a77bbe991daf97046d542e21d911f53b7ac425f59f90d0fd1a",
+    "final-compat469/modern-openrig-notifications.spec.ts.log": "5b8b7b654a8644a5605270fddecad4730c2af52d986fd2a11b070c8d888f5060",
+    "final-compat469/modern-openrig-activity.spec.ts.log": "10d18ed7fab4ab0826bf37652f311b5a32bf447f4b1f6c924126e39be430aa7b",
+    "final-compat469/modern-openrig-identity.spec.ts.log": "fa76efe8249ee185e2b62277702c80d78d8d3fccc5371e1e34dd521310b2aed0",
+    "final-compat469/legacy-openrig-host.spec.ts.log": "d66c7cad9b0e683cdf3829d9f3e7aa2f065bd232ffff076c9beabca665b398bc",
+    "final-compat469/legacy-agent-integration.spec.ts.log": "e5ae9f2749de9d9c8e0e4e0b82ee81b088c7ee20ecc328f9edad2106e1ea6419",
+    "final-compat469/modern-openrig-host.spec.ts.log": "1fdb98141608c0d60a589359148287ed393ca4fef851803391341941704bca12",
+    "final-compat469/modern-openrig.spec.ts.log": "0b277a50b2b8df89529a3206d8c0d2506e83d203f4a16459cdab86dbc7b7e110",
+    "final-compat469/modern-agent-integration.spec.ts.log": "5bf84d65701007254a54b47ee0917ecd1dacb6b33b54ffd6a7b614c258ab8ce8",
+    "final-compat469/legacy-openrig-activity.spec.ts.log": "b1a91171f5aa7d9bd5331bd02d9943b5bd8b4233d67802d9c325de8b7f1ab668",
+    "final-compat469/legacy-openrig-notifications.spec.ts.log": "c9ce847fb6e03f733e3caaea1a54bd4d513c34050a4303425d01989f53914ad2",
+    "final-compat469/legacy-openrig-identity.spec.ts.log": "bb04113f6fe5bc82dfe2394465b2057c0f5bc053f7ebdd4d7d2e14ca99633a80",
+    "final-compat469/results.json": "30cb55cba016b1eb898a20df58b5e2ab6394877660c084b4b2e7567e5482b13a",
+    "helpers-destinations469-final.log": "d72b1292658e895b56b013460f5b63abbe75a54de60d0fbadd447055bdcdb175"
+  },
+  "nativeCasesPassed": {
+    "modern": 13,
+    "legacy": 13
+  },
+  "nativeFailed": 0,
+  "nativeSkipped": 0,
+  "helperTestsPassed": 101,
+  "strictTypeScriptProjects": 5,
+  "goRacePackages": [
+    "httpapi",
+    "openrigcoord",
+    "rigobservation"
+  ],
+  "goVetPackages": [
+    "httpapi",
+    "openrigcoord",
+    "rigobservation"
+  ],
+  "runtime": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "node": "24.21.0",
+    "tmux": "3.8",
+    "rigBuilds": [
+      "0.6.14 (df1c1517)",
+      "0.7.18 (3bf87c62)"
+    ],
+    "browserVersions": [
+      "158.0.8127.36"
+    ],
+    "go": "go version go1.27.3 darwin/arm64"
+  },
+  "scope": [
+    "Actual published Rig daemons, real tmux, WebMux and browser; synthetic interactive provider stands in for credentialed coding CLI.",
+    "New remote source/SSH socket quoting additionally covered by authenticated loopback client protocol and local recording-tmux shell-boundary controls; not native SSH to a modern remote Rig deployment.",
+    "Checked Stop, bridge, installed CLI upgrade, native authenticated 0.7 conversation recovery, global vendor security qualification, release and merge acceptance remain separate."
+  ]
+}

@@ -9,7 +9,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
-type Agent = { target: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string };
+type Agent = { target: string; senderAddress?: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string };
 type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string };
 type RigRow = { rigId?: string; name?: string; rigName?: string; nodeCount?: number; runningCount?: number; status?: string; lifecycleState?: string; latestSnapshot?: string | null };
 type AgentActivity = { state?: string; evidenceSource?: string; sampledAt?: string; stale?: boolean; generationProvenance?: string };
@@ -35,11 +35,15 @@ const rigRows = (archived = false): RigRow[] => entries(JSON.parse(run('rig', ['
 // evidence, runtime event text, or provider secrets.
 const activityFacts = (activity?: AgentActivity): AgentActivity | undefined => activity ? { state: activity.state, evidenceSource: activity.evidenceSource, sampledAt: activity.sampledAt, stale: activity.stale, generationProvenance: activity.generationProvenance } : undefined;
 let structuredAttachments: boolean | undefined;
-const nodeRows = (): NodeRow[] => {
+const structuredAttachmentBuild = () => {
   if (structuredAttachments === undefined) {
     try { structuredAttachments = run('rig', ['--version']).trim() === '0.7.18 (3bf87c62)'; }
     catch { structuredAttachments = false; }
   }
+  return structuredAttachments;
+};
+const nodeRows = (): NodeRow[] => {
+  structuredAttachmentBuild();
   const fields = 'rigId,rigName,logicalId,podNamespace,hostSelfId,canonicalSessionName,runtime,sessionStatus,lifecycleState,tmuxAttachCommand,startupStatus,agentActivity'
     + (structuredAttachments ? ',attachmentType,tmuxServerArgs' : '');
   // 0.7.18 emits structured attachment fields in full JSON but its CLI
@@ -142,7 +146,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     });
     const messages: { from: string; to: string; body: string; time: string; state: string }[] = [];
     for (const agent of (action === 'observations' ? [] : agents.slice(0, 16))) {
-      const rows = JSON.parse(run('rig', ['queue', 'outbox-list', agent.target, '--limit', '8', '--json'])) as { senderSession: string; destinationSession: string; body: string; tsDispatched: string; deliveryState: string }[];
+      const rows = JSON.parse(run('rig', ['queue', 'outbox-list', agent.senderAddress ?? agent.target, '--limit', '8', '--json'])) as { senderSession: string; destinationSession: string; body: string; tsDispatched: string; deliveryState: string }[];
       for (const row of rows) messages.push({ from: row.senderSession, to: row.destinationSession, body: row.body.slice(0, 2000), time: row.tsDispatched, state: row.deliveryState });
     }
     messages.sort((a, b) => b.time.localeCompare(a.time));
@@ -294,11 +298,18 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       const deadline = Date.now() + 10000;
       while (!fs.existsSync(attached) && Date.now() < deadline) await delay(100);
       if (!fs.existsSync(attached)) throw new Error('Agent did not register with the coordinator.');
-      const registration = JSON.parse(fs.readFileSync(attached, 'utf8')) as { ok?: boolean; error?: string; attachmentType?: string; sessionId?: string; env?: { OPENRIG_SESSION_NAME?: string } };
+      const registration = JSON.parse(fs.readFileSync(attached, 'utf8')) as { ok?: boolean; error?: string; attachmentType?: string; sessionId?: string; sessionName?: string; env?: { OPENRIG_SESSION_NAME?: string } };
       if (registration.ok === false || registration.attachmentType !== 'tmux' || !registration.sessionId) throw new Error(registration.error || 'Agent transport registration failed.');
       agent.sessionId = registration.sessionId;
       if (typeof registration.env?.OPENRIG_SESSION_NAME !== 'string') throw new Error('Coordinator did not return a sender address.');
-      agent.target = registration.env.OPENRIG_SESSION_NAME;
+      if (!/^[a-zA-Z0-9_.:@-]{1,256}$/.test(registration.env.OPENRIG_SESSION_NAME)) throw new Error('Coordinator returned an invalid sender address.');
+      agent.senderAddress = registration.env.OPENRIG_SESSION_NAME;
+      if (structuredAttachmentBuild()) {
+        if (registration.sessionName !== tmux) throw new Error('Coordinator did not verify the created physical tmux session.');
+        agent.target = registration.sessionName;
+      } else {
+        agent.target = registration.env.OPENRIG_SESSION_NAME;
+      }
       // Keep a registered seat discoverable even if provider startup fails.
       // The owner can fix authentication and explicitly reconnect that seat.
       write(recordFile, agent);

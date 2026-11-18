@@ -75,6 +75,7 @@ func (s *Server) attachOpenRig(w http.ResponseWriter, r *http.Request, owner str
 	argv := []string{path, "tui"}
 	switch body.View {
 	case "dashboard":
+		argv = rigDashboardArgv(r.Context(), path)
 	case "agent":
 		agents, err := readOpenRigAgents(r.Context(), path)
 		if err != nil {
@@ -244,18 +245,19 @@ func (s *Server) getOpenRigAgents(w http.ResponseWriter, r *http.Request, owner 
 
 // Managed agents attach through a server-verified transport, never arbitrary argv.
 type managedRigAgent struct {
-	Target    string `json:"target"`
-	Project   string `json:"project"`
-	RigID     string `json:"rigId"`
-	RigName   string `json:"rigName"`
-	Pod       string `json:"pod"`
-	Name      string `json:"name"`
-	Host      string `json:"host"`
-	Cwd       string `json:"cwd"`
-	Runtime   string `json:"runtime"`
-	Tmux      string `json:"tmux"`
-	SessionID string `json:"sessionId,omitempty"`
-	Connected bool   `json:"connected,omitempty"`
+	SenderAddress string `json:"senderAddress,omitempty"`
+	Target        string `json:"target"`
+	Project       string `json:"project"`
+	RigID         string `json:"rigId"`
+	RigName       string `json:"rigName"`
+	Pod           string `json:"pod"`
+	Name          string `json:"name"`
+	Host          string `json:"host"`
+	Cwd           string `json:"cwd"`
+	Runtime       string `json:"runtime"`
+	Tmux          string `json:"tmux"`
+	SessionID     string `json:"sessionId,omitempty"`
+	Connected     bool   `json:"connected,omitempty"`
 }
 
 func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner string) {

@@ -150,6 +150,7 @@ type coordinationProject struct {
 
 type coordinationSeat struct {
 	rigEnrollment
+	SenderAddress    string       `json:"senderAddress,omitempty"`
 	TmuxServerFlag   string       `json:"tmuxServerFlag,omitempty"`
 	TmuxServerValue  string       `json:"tmuxServerValue,omitempty"`
 	StartupStatus    string       `json:"startupStatus,omitempty"`
@@ -432,7 +433,9 @@ func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
 			status.Errors = append(status.Errors, "Canonical Rig attachment is missing or ambiguous")
 		}
 		managerSession := ""
+		senderAddress := ""
 		if agent, ok := managed[seat.CanonicalSessionName]; ok {
+			senderAddress = agent.SenderAddress
 			host = agent.Host
 			// sessionId is Rig enrollment identity, not a coding CLI conversation.
 			managerSession = agent.SessionID
@@ -444,6 +447,7 @@ func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
 			}
 		}
 		status.Seats = append(status.Seats, coordinationSeat{
+			SenderAddress:  senderAddress,
 			TmuxServerFlag: seat.TmuxServerFlag, TmuxServerValue: seat.TmuxServerValue,
 			RigHostID:     rigHostID(seat.HostSelfID),
 			StartupStatus: canonicalRigStartup(seat.StartupStatus), AgentActivity: canonicalRigActivity(seat.AgentActivity),
