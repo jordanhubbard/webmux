@@ -1,15 +1,10 @@
 import { test, expect } from '@playwright/test';
 import type { Response } from '@playwright/test';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 
-test.afterAll(() => {
-  if (process.env.WEBMUX_REAL_OPENRIG !== '1') return;
-  const rig = path.resolve(__dirname, '.test-home/openrig-bin/rig');
-  if (existsSync(rig)) expect(spawnSync(rig, ['daemon', 'stop'], { timeout: 15000 }).status).toBe(0);
-});
 
 test('native Rig notification refreshes canonical tile state while fallback timers are paused', async ({ page, request }, info) => {
   test.skip(process.env.WEBMUX_REAL_OPENRIG !== '1', 'Requires isolated published Rig and actual tmux');

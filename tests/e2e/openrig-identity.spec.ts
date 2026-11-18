@@ -4,13 +4,6 @@ import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 
-test.afterAll(() => {
-  if (process.env.WEBMUX_REAL_OPENRIG !== '1') return;
-  const executable = path.resolve(__dirname, '.test-home/openrig-bin/rig');
-  if (!existsSync(executable)) return;
-  const stopped = spawnSync(executable, ['daemon', 'stop'], { timeout: 15000, encoding: 'utf8' });
-  expect(stopped.status, stopped.stdout + stopped.stderr).toBe(0);
-});
 
 test('logical Rig seat keeps its viewer and layout after an explicit native rebind', async ({ page, request }, info) => {
   test.skip(process.env.WEBMUX_REAL_OPENRIG !== '1', 'Requires isolated published Rig and tmux');

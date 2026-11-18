@@ -5,15 +5,6 @@ import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 
 // Own a fresh server/request budget, as other native browser files do.
-test.afterAll(() => {
-  if (process.env.WEBMUX_REAL_OPENRIG !== '1') return;
-  const executable = path.resolve(__dirname, '.test-home', 'openrig-bin', 'rig');
-  if (!existsSync(executable)) return;
-  // Stop before Playwright terminates the web-server process group. Waiting for
-  // the server's exit handler alone can leave the detached Rig daemon behind.
-  const stopped = spawnSync(executable, ['daemon', 'stop'], { timeout: 15000, encoding: 'utf8' });
-  expect(stopped.status, stopped.stdout + stopped.stderr).toBe(0);
-});
 
 test('an external Rig seat keeps its execution host unknown across viewer recovery', async ({ page, request }, info) => {
   test.skip(process.env.WEBMUX_REAL_OPENRIG !== '1', 'Requires the isolated published-Rig/tmux fixture');

@@ -1,0 +1,15 @@
+# Shared Rig fixture lifecycle qualification
+
+The failed source84f4ee1 Linux run44352721234 first failed the managed-agent wheel assertion, then rendered a stopped dashboard at the default loopback port. The original artifact and final error context remain retained. The daemon belonged to the shared Playwright web server, but each native Rig spec stopped it in `afterAll`. Playwright executes that hook when discarding a failed worker, so the next worker inherited a running WebMux server with no fixture daemon or routing state.
+
+Move native daemon shutdown to one Playwright global teardown, before the web-server process group disappears. Keep the server exit cleanup as an idempotent fallback. Remove the equivalent worker hook from all eight native Rig specs. Existing workflow bodies, assertions, deadlines and CLI versions remain unchanged.
+
+A controlled real Go/Chrome/Rig0.6.14 run intentionally fails worker0. The original hook leaves worker1 with failed health and no daemon state; the control refuses dashboard contact against an unverified endpoint. With final teardown, worker1 remains healthy and completes the actual dashboard navigation/detach test. A private Node pre-module guard independently verifies that the published TUI uses the original ephemeral fixture endpoint; it does not override routing or send early input.
+
+The maintained `scripts/qualify-openrig-fixture-lifecycle.mts` generates a private control spec from the actual native browser spec. It expects exactly one deliberate failed test, then a successful unchanged dashboard in a different worker with the same daemon PID and port. It rejects additional test/global errors and verifies daemon death and state removal after the complete run. Each invocation retains its own report/output directory. Linux CI runs this control beside the normal native Rig suite. An intentional child failure is accepted only by this explicit control; it is not represented as an ordinary green test run.
+
+A counterfactual generated spec restoring the old worker hook produces two failures and is rejected by this same maintained verifier; its report and log remain retained.
+
+Local normal qualification passes all eight real-Rig browser cases, all five strict TypeScript projects, the frontend build and workflow YAML parsing. The managed-agent case uses line-oriented coding fixtures, not authenticated native Codex. See `receipt.json` for source hashes, preparation exclusions and evidence scope. Hosted exact-head CI/ARM, integration review and the full remaining roadmap/release acceptance remain required.
+
+Private raw evidence is retained under `_build/dashboard525/` and the matching NAS evidence directory: original artifact/error context, before/after native controls, actual TUI endpoint guard, normal eight-case output, maintained control reports and logs. The original before-control JSON path was reused by the after-control run; its failed health/missing-state observation remains in the tool record and assertion log rather than a separately preserved original JSON file.

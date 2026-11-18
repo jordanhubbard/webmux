@@ -64,9 +64,11 @@ test('explicit recipients survive new registration and deliver bytes only after 
     // exclude only these exact two protocol frames from the typing assertion.
     const typedHex = (id: string) => Buffer.from(sent.get(id)!
       .filter(data => data !== '\x1b[I' && data !== '\x1b[O').join('')).toString('hex');
-    expect(typedHex(a)).toBe('7879');
-    expect(typedHex(b)).toBe('62');
-    expect(typedHex(c)).toBe('79');
+    // Child-file writes and Playwright frame notifications arrive independently.
+    // Observe both receipts before checking the exact input stream.
+    await expect.poll(() => typedHex(a)).toBe('7879');
+    await expect.poll(() => typedHex(b)).toBe('62');
+    await expect.poll(() => typedHex(c)).toBe('79');
   } finally {
     const received = (index: number) => {
       const file = files.get(ids[index]);

@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "recordedUTC": "2026-11-18T18:56:38.063370+00:00",
+  "parent": "b4f742ca078e4de18a52dc6c9f18e2b1ad8d51a1",
+  "issue": 525,
+  "originalFailure": {
+    "source": "84f4ee1c2878634ac3eaffbc79f59a31cc12828d",
+    "run": 44352721234,
+    "job": 134972447375,
+    "artifact": 14452361830,
+    "artifactSHA256": "c3d5613da9f3c5668fbac7ae4ec379d681f92c6fa574086cd13edc8afc4ce4ba",
+    "finalScreen": "Default loopback7433, daemon stopped. Original preceding managed-agent wheel assertion failed."
+  },
+  "cause": "Spec afterAll kills shared fixture daemon when Playwright discards a failed worker. Replacement worker reuses web server without its original daemon/state.",
+  "counterfactual": {
+    "intentionalWorkerFailure": true,
+    "replacementWorkerHealthy": false,
+    "daemonStateExists": false,
+    "dashboardRefusedBeforeUnverifiedEndpoint": true,
+    "receiptScope": "Observed before-control JSON in tool output and retained assertion failure log; before JSON path was reused by subsequent after-control run."
+  },
+  "fixedControl": {
+    "intentionalWorkerFailure": true,
+    "replacementWorkerHealthy": true,
+    "daemonStateExists": true,
+    "unchangedDashboardPass": true,
+    "privatePreModuleGuardActualTUIEndpointMatchesFixture": true,
+    "deadlineMilliseconds": 5000
+  },
+  "normalSuite": {
+    "testsPassed": 8,
+    "failed": 0,
+    "retries": 0,
+    "managedAgentDuration": "1.1m",
+    "dashboardDuration": "1.3s"
+  },
+  "maintainedRegression": {
+    "childDeliberateFailures": 1,
+    "dashboardPassed": true,
+    "differentWorker": true,
+    "sameOriginalNativeDaemonPID": true,
+    "sameOriginalPort": true,
+    "daemonDeadAndStateRemovedAfterCompleteRun": true,
+    "uniqueOutputDirectory": true,
+    "counterfactualOldHookRejected": true,
+    "counterfactualUnexpectedTests": 2
+  },
+  "checks": {
+    "fiveStrictTypeScriptProjects": true,
+    "finalToolsTypeScript": true,
+    "frontendBuild": true,
+    "workflowYAML": true,
+    "whitespace": true
+  },
+  "productionAndDependenciesUnchanged": true,
+  "sourceSHA256": {
+    "scripts/qualify-openrig-fixture-lifecycle.mts": "ce0c2fc11a172ecdc4bd8c54b4debf151fe42634041ea51464a8ef240cf3af5e",
+    "tests/e2e/stop-openrig.mts": "e7a6b1f9f98fb706c1a6d8465d65e4af253a669529a56ded64b2f9dfa833ca1e",
+    "tests/e2e/openrig.spec.ts": "0c2588a4d9eb0edbee33c48480802f5ab652d7663cf66a536c5c47dcfef87f27",
+    "webmux/playwright.config.ts": "e07c01f3814c37c6150a7d204ab7a75b15616c21e68b3894c218fc16ca9e4d8b",
+    ".github/workflows/ci.yml": "413d3dd0c00063617453404b77b5d096ff860df602bb678f6fa8b9a4c65b6587"
+  },
+  "preparationExclusions": [
+    "First new-worktree native launch ended before tests because frontend build output was absent; retained control-before-setup.log.",
+    "Initial frontend build ended before tests because its nested node_modules link was absent; retained frontend-build.log. Restored normal existing shared links and built frontend successfully; no dependency install/cache mutation."
+  ],
+  "scope": "PublishedRig0.6.14(df1c1517), actual native Go/Chrome/tmux on macOS ARM64. Coding children in existing managed-agent case are line-oriented fixtures, not authenticated Codex. No production routing/timeout/dependency changes. Fresh hosted exact-head CI/ARM and combined review/roadmap/release gates required."
+}

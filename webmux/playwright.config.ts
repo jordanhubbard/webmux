@@ -13,6 +13,7 @@ export default defineConfig({
   testMatch: SCREEN_REPLAY_ONLY ? 'screen-replay.spec.ts' : '*.spec.ts',
   timeout: 30_000,
   retries: 0,
+  globalTeardown: SCREEN_REPLAY_ONLY ? undefined : path.resolve(__dirname, '../tests/e2e/stop-openrig.mts'),
   workers: 1,
   reporter: [['list']],
   snapshotPathTemplate: '{testDir}/.visual-baseline/{platform}/{arg}{ext}',
