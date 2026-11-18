@@ -30,7 +30,7 @@ jobs:
       - name: Test Ubuntu package mirror configuration
         run: python3 -m unittest discover -s tests -p test_ci_apt.py
       - name: Configure Ubuntu package mirrors and network bounds
-        run: sudo -n python3 scripts/configure-ci-apt.py
+        run: sudo -n python3 scripts/configure-ci-apt.py --ubuntu-only
       - name: Install native kernel USB fixture prerequisites
         run: |
           sudo -n apt-get update
@@ -210,7 +210,7 @@ jobs:
         run: npm run build --workspace=frontend
       - name: Configure Ubuntu package mirrors and network bounds
         if: runner.os == 'Linux'
-        run: sudo -n python3 scripts/configure-ci-apt.py
+        run: sudo -n python3 scripts/configure-ci-apt.py --ubuntu-only
       - name: Install browser for Go tests
         if: runner.os == 'Linux'
         working-directory: webmux

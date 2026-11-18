@@ -1,0 +1,46 @@
+{
+  "issue": 487,
+  "base": "29e1f02a2b6f34e383f15281dd2228428e9b8185",
+  "sourceSHA256": {
+    "scripts/configure-ci-apt.py": "56afbabaec2dd87719245eb147a2a515097c3e96f807967fb4a6e7298922d2b7",
+    "scripts/qualify-ci-apt.py": "3ee73cec04fdde28cafb3f5038c02e1b314ed0161378fd8c8023d53b3cde6574",
+    "tests/test_ci_apt.py": "9595789c352fe243b409f5c450e201b8b7f106f98101c7620ddd3260c8463036",
+    ".github/workflows/ci.yml": "9d74b3a8ce75d3df6b2f8920cf6fd98392809cc22ca3ac34570202ee79c22192",
+    ".github/workflows/ci-apt.yml": "2f3979e86ee96c24f8e349e51b03574c047fd77f938d6755a52f915746942af5"
+  },
+  "nativeLinuxARM64": {
+    "passed": true,
+    "platform": "Linux",
+    "architecture": "aarch64",
+    "apt": "apt 2.8.3 (arm64)",
+    "suite": "noble",
+    "archiveKeyringSHA256": "80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31",
+    "helperSHA256": "56afbabaec2dd87719245eb147a2a515097c3e96f807967fb4a6e7298922d2b7",
+    "qualifierSHA256": "3ee73cec04fdde28cafb3f5038c02e1b314ed0161378fd8c8023d53b3cde6574",
+    "mixedDeb822URIControl": true,
+    "scope": "Declared signed Ubuntu release/security sources in both APT formats, private configuration/lists/cache and a controlled HTTP 429 feed. System sources, installed trust keyrings and installed packages are unchanged. Full CI separately provisions its original configured Ubuntu entries and mirror aliases.",
+    "unscopedExit": 100,
+    "unscopedVendorRequests": 6,
+    "selectedExit": 0,
+    "selectedVendorRequests": 0,
+    "originalVendorConfigurationRetained": true,
+    "untrustedKeyExit": 100,
+    "nativeNoPublicKeyRefusal": true
+  },
+  "reportSHA256": "bb45df2542b76ffca9f8bf9b7f37b336a9f4b53b72d96575b4f852c80802ce34",
+  "updateLogSHA256": {
+    "selected-update.log": "4035dda58eec5639893b944dc2119a4544f669b12118c5b04a83e6c895183b55",
+    "untrusted-key-update.log": "60c591c4e72722ba8bcd6df21485ca3cf0422a92c48b2caafdf75146039015b8",
+    "unscoped-update.log": "39bf9056f4237797b79cd6829e72f2ed9dac9f81a9cd18631f38d836f18be007"
+  },
+  "unitControls": 6,
+  "unitControlsPassed": true,
+  "pythonCompilation": true,
+  "originalCI": {
+    "run": 44281413355,
+    "job": 134722768930,
+    "failure": "Unrelated packages.microsoft.com index HTTP429; Ubuntu indexes loaded; strict APT update exited100 before native desktop/Rig/relay checks"
+  },
+  "scope": "Explicit --ubuntu-only for the existing ephemeral Ubuntu CI configuration steps. Signing keys, suites, components, architecture restrictions and disabled states retained. Default mode retains vendor configuration. No index errors ignored, new retries, insecure flags or changed native-test deadlines.",
+  "hosted": "Ubuntu22.04/24.04 native controls and full Linux CI pending publication"
+}
