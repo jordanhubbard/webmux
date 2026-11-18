@@ -7,9 +7,11 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"fmt"
+	"github.com/jordanhubbard/webmux/server/internal/nativeobserve"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -109,6 +111,11 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 	cmd := exec.CommandContext(ctx, "node", script, action, directory)
 	if action == "native-create" {
 		configureNativeCreateCancellation(cmd)
+	}
+	if action == "native-create" && runtime.GOOS == "linux" {
+		if err := nativeobserve.WriteReference(directory); err != nil {
+			return nil, err
+		}
 	}
 	cmd.Env = ControlEnvironment()
 	cmd.Stdin = strings.NewReader(input)

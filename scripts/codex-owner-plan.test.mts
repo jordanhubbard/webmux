@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { projectCodexOwnerPlan, resolveCodexOwnerPlan as nativeResolveCodexOwnerPlan, codexObservationCommand } from '../webmux/server/internal/openrigcoord/codex-owner-plan.mts';
 
 
@@ -222,4 +223,19 @@ macTest('macOS guards only policy startup and keeps the actual CLI arguments int
   assert.match(guarded.args[1], /deny network\*/); assert.match(guarded.args[1], /deny process-fork/);
   assert.ok(guarded.args[1].includes('(literal ' + JSON.stringify(executable) + ')'));
   assert.throws(() => codexObservationCommand('/a/line\nbreak', args, 'policy'), /native_owner_plan_unavailable/);
+});
+
+posixTest('Linux helper provenance is pinned before either account or policy startup', t => {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'wm-linux-observer-')));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const executable = path.join(root, 'helper'); fs.writeFileSync(executable, 'synthetic helper metadata fixture', { mode: 0o700 });
+  const helper = { contract: 'webmux-native-codex-observer/v1' as const, executable,
+    executableSHA256: createHash('sha256').update(fs.readFileSync(executable)).digest('hex') };
+  const args = ['-C', '/project', 'app-server', '--listen', 'stdio://'];
+  assert.deepEqual(codexObservationCommand('/native/codex', args, 'policy', 'linux', helper, 'a'.repeat(64)), {
+    executable, args: ['--native-codex-policy-observer', helper.executableSHA256, '/native/codex', 'a'.repeat(64), ...args],
+  });
+  assert.deepEqual(codexObservationCommand('/native/codex', args, 'account', 'linux', helper), { executable: '/native/codex', args });
+  fs.appendFileSync(executable, 'changed');
+  for (const stage of ['account', 'policy'] as const) assert.throws(() => codexObservationCommand('/native/codex', args, stage, 'linux', helper), /helper_changed/);
 });

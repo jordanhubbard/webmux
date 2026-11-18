@@ -20,7 +20,7 @@ function fixture(t: { after(fn: () => void): void }) {
   { cwd, home: root, executable: '/native/codex', executableSHA256: 'a'.repeat(64), profile: null });
   const posts: Array<{ id: string; text: string }> = []; let resolves = 0, reviews = 0, loseReply = false, changed = false;
   const manager = { port: 4242, managerPid: 123, managerIdentity: 'b'.repeat(64), processIdentity: 'c'.repeat(64) };
-  const deps = { handoffLifetime: 20, env: { HOME: root, PATH: process.env.PATH!, TOOL_API_KEY: 'PRIVATE_CREATE_VALUE_NEVER_SAVE' }, run: () => '[]', review: async () => { reviews++; return { ...manager }; },
+  const deps = { observationHelper: { contract: 'webmux-native-codex-observer/v1' as const, executable: '/observer/PRIVATE_HELPER_NEVER_EXPORT', executableSHA256: 'b'.repeat(64) }, handoffLifetime: 20, env: { HOME: root, PATH: process.env.PATH!, TOOL_API_KEY: 'PRIVATE_CREATE_VALUE_NEVER_SAVE' }, run: () => '[]', review: async () => { reviews++; return { ...manager }; },
     resolve: async () => { resolves++; if (changed && resolves > 1) { const { fingerprint: _old, ...content } = plan; content.model = 'different-owner-model'; return { ...content, fingerprint: createHash('sha256').update(JSON.stringify(content)).digest('hex') }; } return plan; },
     fetcher: (async (url: string | URL | Request, init?: RequestInit) => {
       if (String(url).endsWith('/capabilities')) return new Response(JSON.stringify({ contract: 'operation-correlation.v1', kinds: ['member.add'] }));
@@ -42,6 +42,8 @@ posixTest('creation persists exact plan and immutable source bundle before one c
   assert.equal(envelope.environment.values.HOME, f.root);
   assert.equal(fs.readFileSync(manifest, 'utf8').includes(f.deps.env.TOOL_API_KEY), false);
   assert.equal(f.posts[0].text.includes(f.deps.env.TOOL_API_KEY), false);
+  assert.equal(JSON.stringify(envelope).includes('PRIVATE_HELPER_NEVER_EXPORT'), false);
+  assert.equal(f.posts[0].text.includes('PRIVATE_HELPER_NEVER_EXPORT'), false);
   assert.equal(fs.statSync(manifest).mode & 0o777, 0o600); assert.equal(fs.statSync(path.dirname(manifest)).mode & 0o777, 0o700);
   const bundle = body.member.launch_wrapper[1]; assert.ok(fs.existsSync(bundle));
   assert.equal(JSON.stringify(result).includes('private-user'), false); assert.equal(JSON.stringify(result).includes(f.root), false);

@@ -121,15 +121,34 @@ function executableAt(name: string, env: NodeJS.ProcessEnv) {
   throw new Error('qualified_codex_unavailable');
 }
 
+export interface CodexObservationHelper { contract: 'webmux-native-codex-observer/v1'; executable: string; executableSHA256: string }
 export type CodexObservationStage = 'account' | 'policy';
 export type CodexObservationCommand = (executable: string, args: string[], stage: CodexObservationStage) => { executable: string; args: string[] };
 // Only the disposable policy observer is restricted. The actual coding process
 // keeps its original owner policy and environment. Never fall back unguarded.
 export function codexObservationCommand(executable: string, args: string[], stage: CodexObservationStage,
-  platform: NodeJS.Platform = process.platform) {
-  if (platform !== 'darwin') throw new Error('native_owner_observation_isolation_unqualified');
+  platform: NodeJS.Platform = process.platform, helper?: CodexObservationHelper, nativeSHA256?: string) {
+  if (platform !== 'darwin' && platform !== 'linux') throw new Error('native_owner_observation_isolation_unqualified');
   text(executable, 4096);
   if (!path.isAbsolute(executable)) throw new Error('qualified_codex_unavailable');
+  if (platform === 'linux') {
+    if (!helper || helper.contract !== 'webmux-native-codex-observer/v1'
+      || Object.keys(helper).sort().join(',') !== 'contract,executable,executableSHA256'
+      || typeof helper.executable !== 'string' || !path.isAbsolute(helper.executable)
+      || !/^[a-f0-9]{64}$/.test(helper.executableSHA256)) throw new Error('native_owner_observation_isolation_unqualified');
+    try {
+      text(helper.executable, 4096);
+      const stat = fs.lstatSync(helper.executable);
+      if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o022) !== 0 || stat.size > 512 * 1024 * 1024
+        || fs.realpathSync(helper.executable) !== helper.executable
+        || createHash('sha256').update(fs.readFileSync(helper.executable)).digest('hex') !== helper.executableSHA256) throw new Error();
+      fs.accessSync(helper.executable, fs.constants.X_OK);
+    } catch { throw new Error('native_owner_observation_helper_changed'); }
+    if (stage === 'account') return { executable, args };
+    const expected = nativeSHA256 ?? createHash('sha256').update(fs.readFileSync(executable)).digest('hex');
+    if (!/^[a-f0-9]{64}$/.test(expected)) throw new Error('qualified_codex_unavailable');
+    return { executable: helper.executable, args: ['--native-codex-policy-observer', helper.executableSHA256, executable, expected, ...args] };
+  }
   if (stage === 'account') return { executable, args };
   const guard = '/usr/bin/sandbox-exec';
   fs.accessSync(guard, fs.constants.X_OK);
@@ -216,7 +235,7 @@ async function observeNativeCodex<T>(command: { executable: string; args: string
   }
 }
 
-export async function resolveCodexOwnerPlan(cwd: string, options: { profile?: string; executable?: string; env?: NodeJS.ProcessEnv } = {},
+export async function resolveCodexOwnerPlan(cwd: string, options: { profile?: string; executable?: string; env?: NodeJS.ProcessEnv; observationHelper?: CodexObservationHelper } = {},
   dependencies: { command?: CodexObservationCommand } = {}): Promise<CodexOwnerPlan> {
   if (process.platform !== 'darwin' && process.platform !== 'linux') throw new Error('native_owner_plan_platform_unqualified');
   const env = { ...(options.env ?? process.env) };
@@ -239,12 +258,12 @@ export async function resolveCodexOwnerPlan(cwd: string, options: { profile?: st
   env.CODEX_HOME = home;
   // Never join a caller's active Codex conversation or Rig enrollment.
   for (const name of Object.keys(env)) if (name.startsWith('OPENRIG_') || ['CODEX_THREAD_ID', 'TMUX', 'TMUX_PANE'].includes(name)) delete env[name];
-  const command = dependencies.command ?? codexObservationCommand;
+  const command: CodexObservationCommand = dependencies.command ?? ((exe, args, stage) => codexObservationCommand(exe, args, stage, process.platform, options.observationHelper, executableSHA256));
   // Disable startup integrations at process creation, including the no-thread
   // account stage; these feature flags never become the coding launch policy.
   const features = ['hooks', 'plugins', 'apps', 'shell_snapshot'];
   const args = ['-C', cwd, ...features.flatMap(name => ['-c', `features.${name}=false`]), 'app-server', '--listen', 'stdio://'];
-  const policyCommand = command(executable, args, 'policy');
+  command(executable, args, 'policy'); // Preflight before any account lookup.
   const accountCommand = command(executable, args, 'account');
   // Workspace routing needs network even with refreshToken:false. This process
   // never starts a thread. Reap it before the guarded policy observer starts.
@@ -253,6 +272,7 @@ export async function resolveCodexOwnerPlan(cwd: string, options: { profile?: st
     const account = await rpc('account/read', { refreshToken: false });
     return { configFingerprint: digest(stableConfig(config)), account };
   });
+  const policyCommand = command(executable, args, 'policy'); // Revalidate after account lookup.
   return observeNativeCodex(policyCommand, cwd, env, async rpc => {
     const config = nativeConfig(await rpc('config/read', { cwd, includeLayers: true }));
     if (digest(stableConfig(config)) !== observed.configFingerprint) throw new Error('native_owner_config_changed');

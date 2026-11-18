@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { resolveCodexOwnerPlan, type CodexOwnerPlan } from './codex-owner-plan.mts';
+import { resolveCodexOwnerPlan, type CodexOwnerPlan, type CodexObservationHelper } from './codex-owner-plan.mts';
 import { validateCodexLaunchPlan } from './codex-launch-policy.mts';
 import { captureCodexLaunchEnvironment, validateCodexLaunchEnvironment, type CodexLaunchEnvironment } from './codex-launch-environment.mts';
 import { openCodexEnvironmentChannel } from './codex-environment-channel.mts';
@@ -86,6 +86,7 @@ interface SavedCreate {
   plan: CodexOwnerPlan; environment: CodexLaunchEnvironment; intent: RigCreateIntent;
 }
 interface Dependencies {
+  observationHelper?: CodexObservationHelper;
   run: RigStopRun; fetcher?: typeof fetch; source?: string; env?: NodeJS.ProcessEnv; handoffLifetime?: number;
   review?: () => Promise<RigCreateManager>;
   resolve?: (cwd: string, env: NodeJS.ProcessEnv) => Promise<CodexOwnerPlan>;
@@ -106,7 +107,7 @@ export async function createRigNativeCodex(input: NativeCodexCreateInput, deps: 
   const savedFile = path.join(directory, 'launch.json');
   const review = deps.review ?? (() => reviewRigCreateManager(deps.run, deps.fetcher));
   const ownerEnvironment = { ...(deps.env ?? process.env) };
-  const resolve = deps.resolve ?? ((value: string, env: NodeJS.ProcessEnv) => resolveCodexOwnerPlan(value, { env }));
+  const resolve = deps.resolve ?? ((value: string, env: NodeJS.ProcessEnv) => resolveCodexOwnerPlan(value, { env, observationHelper: deps.observationHelper }));
   const manager = await review();
   let saved: SavedCreate;
   try { saved = JSON.parse(read(savedFile).toString('utf8')) as SavedCreate; }

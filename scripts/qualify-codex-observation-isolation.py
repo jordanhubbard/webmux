@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Qualify native macOS observation isolation, optionally with an existing account.
+"""Qualify native observation isolation, optionally with an existing account.
 
 Default cases use private, unauthenticated homes. The optional account check
 uses the existing native account in place. No model turn or credential copy.
@@ -21,12 +21,13 @@ from importlib.util import spec_from_file_location, module_from_spec
 
 
 def main():
-    if sys.platform != 'darwin':
+    if sys.platform not in ['darwin', 'linux']:
         raise RuntimeError('native_observation_guard_platform_unqualified')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--codex', required=True)
     parser.add_argument('--node', required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--helper', type=Path, help='Pinned WebMux executable providing the Linux observer helper')
     parser.add_argument('--authenticated-cwd', type=Path,
                         help='Also inspect the existing native account in this project; no turn or credential copy')
     args = parser.parse_args()
@@ -38,6 +39,13 @@ def main():
     spec.loader.exec_module(controls)
     module = Path(__file__).resolve().parents[1] / 'webmux/server/internal/openrigcoord/codex-owner-plan.mts'
     source_sha = controls.sha(module)
+    helper = None
+    if sys.platform == 'linux':
+        if args.helper is None:
+            raise RuntimeError('native_observation_helper_required')
+        helper_path = args.helper.resolve()
+        helper = {'contract': 'webmux-native-codex-observer/v1', 'executable': str(helper_path),
+                  'executableSHA256': controls.sha(helper_path)}
     root = Path(tempfile.mkdtemp(prefix='wm-owner-os-guard-')).resolve()
     (root / 'mcp.py').write_text(controls.MCP)
     requests = []
@@ -57,12 +65,14 @@ def main():
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     report = {'scope': __doc__.strip(), 'cases': [], 'passed': False, 'moduleSHA256': source_sha,
-              'nativeSHA256': controls.sha(codex), 'probeSHA256': controls.sha(Path(__file__))}
+              'nativeSHA256': controls.sha(codex), 'probeSHA256': controls.sha(Path(__file__)),
+              'controlsSHA256': controls.sha(Path(__file__).with_name('qualify-codex-observer-startup.py')),
+              'platform': sys.platform, 'helperSHA256': helper['executableSHA256'] if helper else None}
 
     def command(executable, argv, stage):
         code = 'import {codexObservationCommand as c} from ' + json.dumps(module.as_uri()) + ';console.log(JSON.stringify(c(...JSON.parse(process.argv[1]))));'
         result = subprocess.check_output([str(node), '--input-type=module', '-e', code,
-                                          json.dumps([str(executable), argv, stage])], text=True, timeout=5)
+                                          json.dumps([str(executable), argv, stage, sys.platform, helper])], text=True, timeout=5)
         value = json.loads(result)
         return [value['executable'], *value['args']]
 
@@ -129,6 +139,8 @@ def main():
                         'features.hooks': False, 'features.plugins': False,
                         'features.apps': False, 'features.shell_snapshot': False}})
                     time.sleep(1)
+                    case['projectMatches'] = thread['cwd'] == str(cwd.resolve()) and str(cwd.resolve()) in thread.get('runtimeWorkspaceRoots', [])
+                    assert case['projectMatches'], 'native observer used a different physical project'
                     case['lateProcessStarted'] = marker.exists()
                     case['httpRequests'] = len(requests) - before
                     policy = {k: thread.get(k) for k in ['cwd', 'runtimeWorkspaceRoots', 'sandbox', 'approvalPolicy',
@@ -162,6 +174,20 @@ def main():
         denied = subprocess.run(command(python, ['-c', parent], 'policy'), capture_output=True, timeout=5)
         report['sameExecutableForkDenied'] = denied.returncode != 0 and not marker.exists() and b'Operation not permitted' in denied.stderr
         assert report['sameExecutableForkDenied']
+        home = root / 'missing-auth'
+        home.mkdir(mode=0o700)
+        cwd = home / 'project'
+        cwd.mkdir()
+        (home / 'config.toml').write_text('cli_auth_credentials_store="file"\napproval_policy="never"\nsandbox_mode="danger-full-access"\n')
+        bridge = home / 'refusal.mjs'
+        bridge.write_text('import {resolveCodexOwnerPlan} from ' + json.dumps(module.as_uri()) + ';'
+            + 'try{await resolveCodexOwnerPlan(' + json.dumps(str(cwd)) + ',{executable:' + json.dumps(str(codex))
+            + ',observationHelper:' + json.dumps(helper) + '});process.exitCode=1;}'
+            + 'catch(e){console.log(JSON.stringify({error:e.message}));if(e.message!=="native_account_identity_unavailable")process.exitCode=1;}')
+        env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': str(home), 'CODEX_HOME': str(home), 'LANG': 'en_US.UTF-8'}
+        absent = subprocess.run([str(node), str(bridge)], env=env, capture_output=True, text=True, timeout=50)
+        report['missingAuthentication'] = dict(json.loads(absent.stdout), exit=absent.returncode)
+        assert absent.returncode == 0 and report['missingAuthentication']['error'] == 'native_account_identity_unavailable'
         if args.authenticated_cwd:
             marker = root / 'authenticated-mcp.marker'
             bridge = root / 'authenticated.mjs'
@@ -171,7 +197,7 @@ def main():
             bridge.write_text('import {resolveCodexOwnerPlan,codexObservationCommand} from ' + json.dumps(module.as_uri()) + ';'
                 + 'try{const p=await resolveCodexOwnerPlan(' + json.dumps(str(args.authenticated_cwd.resolve()))
                 + ',{executable:' + json.dumps(str(codex)) + '},{command:(exe,args,stage)=>codexObservationCommand(exe,['
-                + '...' + json.dumps(overrides) + ',...args],stage)});'
+                + '...' + json.dumps(overrides) + ',...args],stage,process.platform,' + json.dumps(helper) + ')});'
                 + 'console.log(JSON.stringify({version:p.version,policyType:p.policy.type,approval:p.approval}));}'
                 + 'catch(e){console.log(JSON.stringify({error:e.message}));process.exitCode=1;}')
             before = len(requests)

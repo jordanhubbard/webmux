@@ -75,3 +75,7 @@ failures and unsupported-runtime invocations are excluded from positive evidence
 Public native-owned member creation/readiness/attachment and conversation
 recovery remain open, as do canonical empty-pod selection, profiles/platforms,
 review, dependency audit #429 and the full roadmap/release acceptance.
+
+The [Linux observation checkpoint](../codex-linux-observation-2026-11-18/)
+adds a pinned controller helper and repeats current-source native controls.
+This receipt retains its historical module hashes and platform boundary.
