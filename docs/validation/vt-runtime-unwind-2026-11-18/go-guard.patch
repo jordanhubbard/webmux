@@ -1,0 +1,52 @@
+From 071f5c2ee6820eef88de81c20700d9772d64e4b8 Mon Sep 17 00:00:00 2001
+From: qmuntal <quimmuntal@gmail.com>
+Date: Mon, 31 Aug 2026 14:27:22 +0200
+Subject: [PATCH] [release-branch.go1.27] runtime: crash if a Windows exception is dispatched below the goroutine stack
+
+Windows delivers exceptions on the faulting goroutine's own stack, and the
+stackSystem reserve below the stack guard exists to hold that OS-written
+frame. If the reserve is too small the kernel writes past stack.lo and
+silently corrupts the neighboring goroutine's stack, surfacing later as
+bogus tracebacks on an unrelated goroutine (see #70288).
+
+Check in sigtrampgo that the caller SP is still within a user
+goroutine's stack; if not, throw immediately instead of running on
+corrupted memory.
+
+For #82978.
+
+Cq-Include-Trybots: luci.golang.try:gotip-windows-amd64-longtest
+Change-Id: I2b1f1003ced3a61dda1a692614407eed90e25baf
+Reviewed-on: https://go-review.googlesource.com/c/go/+/824724
+Reviewed-by: Michael Pratt <mpratt@google.com>
+Reviewed-by: David Chase <drchase@google.com>
+LUCI-TryBot-Result: golang-scoped@luci-project-accounts.iam.gserviceaccount.com <golang-scoped@luci-project-accounts.iam.gserviceaccount.com>
+(cherry picked from commit d58290fefd4a6d0f68b291d598af908654221389)
+---
+
+diff --git a/src/runtime/signal_windows.go b/src/runtime/signal_windows.go
+index 40547b8..3423a66 100644
+--- a/src/runtime/signal_windows.go
++++ b/src/runtime/signal_windows.go
+@@ -6,6 +6,7 @@
+ 
+ import (
+ 	"internal/abi"
++	"internal/runtime/sys"
+ 	"internal/runtime/syscall/windows"
+ 	"unsafe"
+ )
+@@ -133,6 +134,13 @@
+ 		return windows.EXCEPTION_CONTINUE_SEARCH
+ 	}
+ 
++	// Windows delivers exceptions on the faulting goroutine's own stack. If the
++	// OS wrote past the bottom of that stack, the neighboring goroutine's stack
++	// is already corrupted, so crash now instead of running on bad memory.
++	if gp != gp.m.g0 && gp.stack.lo != 0 && sys.GetCallerSP() < gp.stack.lo {
++		throw("exception dispatched below goroutine stack bottom")
++	}
++
+ 	var fn func(info *windows.ExceptionRecord, r *windows.Context, gp *g) int32
+ 	switch kind {
+ 	case callbackVEH:

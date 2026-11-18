@@ -477,6 +477,13 @@ jobs:
         shell: pwsh
         working-directory: webmux/server/internal/thirdparty/vt
         run: |
+          $context = @{ source = (git rev-parse HEAD); goVersion = (go version); cpu = @(); enabledXStateFeatures = 'unavailable' }
+          try { $context.cpu = @(Get-CimInstance Win32_Processor -ErrorAction Stop | Select-Object Name, Manufacturer, NumberOfCores, NumberOfLogicalProcessors) } catch { $context.cpuState = 'unavailable' }
+          try {
+            Add-Type -TypeDefinition 'using System.Runtime.InteropServices; public static class WebMuxVtCpu { [DllImport("kernel32.dll")] public static extern ulong GetEnabledXStateFeatures(); }' -ErrorAction Stop
+            $context.enabledXStateFeatures = ('0x{0:x}' -f [WebMuxVtCpu]::GetEnabledXStateFeatures())
+          } catch { $context.xstateState = 'unavailable' }
+          $context | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 "$env:RUNNER_TEMP/webmux-vt-runtime-context.json"
           go test -json . -count=10 -timeout=10m | Tee-Object -FilePath "$env:RUNNER_TEMP/webmux-vt-repeat.jsonl"
           if ($LASTEXITCODE -ne 0) { throw 'Native Windows VT repetition failed' }
 
@@ -485,7 +492,9 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: windows-vt-repeat
-          path: ${{ runner.temp }}/webmux-vt-repeat.jsonl
+          path: |
+            ${{ runner.temp }}/webmux-vt-repeat.jsonl
+            ${{ runner.temp }}/webmux-vt-runtime-context.json
 
       - name: Build
         run: npm run build
