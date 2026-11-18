@@ -42,7 +42,6 @@ jobs:
             machine: aarch64
             triple: aarch64-unknown-linux-musl
     env:
-      WM_OBSERVER_RECEIPTS: ${{ runner.temp }}/webmux-native-observation
       WM_EXPECTED_GOARCH: ${{ matrix.goarch }}
       WM_EXPECTED_NODEARCH: ${{ matrix.nodearch }}
       WM_EXPECTED_MACHINE: ${{ matrix.machine }}
@@ -52,7 +51,10 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Record worker identity and headroom
+        env:
+          WM_OBSERVER_RECEIPTS: ${{ runner.temp }}/webmux-native-observation
         run: |
+          echo "WM_OBSERVER_RECEIPTS=$WM_OBSERVER_RECEIPTS" >> "$GITHUB_ENV"
           mkdir -p "$WM_OBSERVER_RECEIPTS"
           python3 - <<'PY'
           import json, os, pathlib, platform, shutil, subprocess
