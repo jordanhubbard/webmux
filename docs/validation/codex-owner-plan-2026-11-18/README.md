@@ -1,5 +1,11 @@
 # Native Codex owner-plan observation
 
+This directory retains the earlier source-bound observation checkpoint. The
+[later creation-factory checkpoint](../codex-native-create-2026-11-18/README.md)
+adds project-trust refusal, physical child working-directory pinning,
+cancellation cleanup and internal Go embedding. Its receipt binds the current
+resolver; the earlier hashes and test counts below describe their capture.
+
 `resolveCodexOwnerPlan` asks the qualified Codex0.169.0 CLI's stdio app-server
 for default effective configuration, native account identity and an explicitly
 ephemeral thread. It submits no coding turn. The result projects native model,

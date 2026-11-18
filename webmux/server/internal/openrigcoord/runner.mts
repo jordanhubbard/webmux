@@ -178,6 +178,11 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const { prepareRigNativeRecovery, executeRigNativeRecovery } = await import('./rig-recovery.mts');
     const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
     console.log(JSON.stringify(await (action === 'recovery-prepare' ? prepareRigNativeRecovery : executeRigNativeRecovery)(run, identity)));
+  } else if (action === 'native-create') {
+    const { createRigNativeCodex } = await import('./rig-native-create.mts');
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-native-create.mts').NativeCodexCreateInput;
+    // The authenticated caller's owner namespace always wins over input paths.
+    console.log(JSON.stringify(await createRigNativeCodex({ ...input, directory }, { run })));
   } else if (action === 'create') {
     const input = JSON.parse(fs.readFileSync(0, 'utf8')) as Input;
     const mode = input.mode ?? 'new';

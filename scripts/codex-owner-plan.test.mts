@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { projectCodexOwnerPlan, resolveCodexOwnerPlan } from '../webmux/server/internal/openrigcoord/codex-owner-plan.mts';
 
 const identity = { executable: '/bin/codex', executableSHA256: 'a'.repeat(64), home: '/account', cwd: '/project', profile: null };
@@ -74,7 +75,7 @@ function fixture(t: { after: (fn: () => void) => void }, mode = '', config?: Rec
     const mode=${JSON.stringify(mode)}, log=${JSON.stringify(log)};
     if(process.argv.includes('--version')){console.log('codex-cli '+(mode==='version'?'0.168.0':'0.169.0'));process.exit(0);}
     const data=JSON.parse(fs.readFileSync(${JSON.stringify(data)},'utf8'));
-    fs.appendFileSync(log,JSON.stringify({pid:process.pid,args:process.argv.slice(2)})+'\\n');
+    fs.appendFileSync(log,JSON.stringify({pid:process.pid,args:process.argv.slice(2),cwd:process.cwd()})+'\\n');
     process.on('SIGTERM',()=>{if(mode==='ignore-term')return;fs.writeFileSync(${JSON.stringify(stopped)},'stopped');process.exit(0);});
     process.stdout.on('error',()=>process.exit(0));
     if(mode==='exit')process.exit(3);
@@ -85,7 +86,7 @@ function fixture(t: { after: (fn: () => void) => void }, mode = '', config?: Rec
       if(mode==='hang')return;
       if(mode==='request'){console.log(JSON.stringify({id:999,method:'item/commandExecution/requestApproval'}));return;}
       if(mode==='oversize'){console.log('x'.repeat(3*1024*1024));return;}
-      const result=request.method==='initialize'?{}:request.method==='config/read'?{config:data.config}:
+      const result=request.method==='initialize'?{}:request.method==='config/read'?{config:data.config,layers:mode==='untrusted'?[{name:{type:'project'},version:'fixture',disabledReason:'untrusted',config:{private:'NEVER_EXPORT_LAYER'}}]:[]}:
         request.method==='account/read'?data.account:request.method==='thread/start'?data.thread:null;
       console.log(JSON.stringify({id:request.id,result}));
     });`);
@@ -96,9 +97,10 @@ posixTest('native RPC sequence submits no turn and reaps its private process', a
   const f = fixture(t); const plan = await resolveCodexOwnerPlan(f.cwd, f);
   const events = fs.readFileSync(f.log, 'utf8').trim().split('\n').map(line => JSON.parse(line) as Record<string, unknown>);
   assert.deepEqual(events.slice(1).map(e => e.method), ['initialize', 'initialized', 'config/read', 'account/read', 'thread/start']);
-  assert.deepEqual(events.at(-1)?.params, { cwd: fs.realpathSync(f.cwd), ephemeral: true, config: {
+  assert.deepEqual(events.at(-1)?.params, { ephemeral: true, config: {
     'features.hooks': false, 'features.plugins': false, 'features.apps': false, 'features.shell_snapshot': false } });
   assert.deepEqual(events[0].args, ['-C', fs.realpathSync(f.cwd), 'app-server', '--listen', 'stdio://']);
+  assert.equal(events[0].cwd, fs.realpathSync(f.cwd));
   assert.equal(plan.profile, null); assert.equal(fs.existsSync(f.stopped), true);
   assert.equal(JSON.stringify(plan).includes('NEVER_EXPORT'), false);
 });
@@ -148,5 +150,37 @@ posixTest('a silent native server hits the resolution deadline and is reaped', a
   const f = fixture(t, 'hang'), start = Date.now();
   await assert.rejects(resolveCodexOwnerPlan(f.cwd, f), /native_owner_resolution_failed/);
   assert.ok(Date.now() - start < 24000);
+  assert.equal(fs.existsSync(f.stopped), true);
+});
+
+posixTest('server cancellation reaps the private app-server before the observer exits', async t => {
+  const f = fixture(t, 'hang');
+  const parentScript = path.join(path.dirname(f.home), 'parent.mjs');
+  const module = new URL('../webmux/server/internal/openrigcoord/codex-owner-plan.mts', import.meta.url).href;
+  fs.writeFileSync(parentScript, `import {resolveCodexOwnerPlan} from ${JSON.stringify(module)};try{await resolveCodexOwnerPlan(${JSON.stringify(f.cwd)},${JSON.stringify({ executable: f.executable })});}catch(e){console.log(e.message);process.exitCode=1;}`);
+  const parent = spawn(process.execPath, [parentScript], { env: f.env, stdio: ['ignore', 'pipe', 'pipe'] });
+  let nativePid = 0, output = ''; parent.stdout.on('data', data => { output += String(data); }); parent.stderr.resume();
+  t.after(() => { parent.kill('SIGKILL'); if (nativePid && !fs.existsSync(f.stopped)) { try { process.kill(-nativePid, 'SIGKILL'); } catch { /* Already exited. */ } } });
+  const exited = new Promise<number | null>(resolve => parent.once('close', resolve));
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const lines = fs.existsSync(f.log) ? fs.readFileSync(f.log, 'utf8') : '';
+    if (lines.includes('"method":"initialize"')) { nativePid = JSON.parse(lines.split('\n')[0]).pid; break; }
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+  assert.ok(nativePid); parent.kill('SIGTERM');
+  let timer: ReturnType<typeof setTimeout>;
+  const status = await Promise.race([exited, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error('observer cancellation timed out')), 6000); })]).finally(() => clearTimeout(timer));
+  assert.equal(status, 1); assert.match(output, /native_owner_resolution_cancelled/);
+  assert.equal(fs.existsSync(f.stopped), true);
+  assert.throws(() => process.kill(nativePid, 0), (error: NodeJS.ErrnoException) => error.code === 'ESRCH');
+});
+
+posixTest('untrusted project configuration refuses before account/thread start without granting trust', async t => {
+  const f = fixture(t, 'untrusted');
+  await assert.rejects(resolveCodexOwnerPlan(f.cwd, f), /native_project_trust_required/);
+  const events = fs.readFileSync(f.log, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+  assert.equal(events.at(-1).method, 'config/read'); assert.equal(events.at(-1).params.includeLayers, true);
+  assert.equal(events.some(e => e.method === 'thread/start' || e.method === 'account/read'), false);
   assert.equal(fs.existsSync(f.stopped), true);
 });
