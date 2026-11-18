@@ -1,0 +1,49 @@
+{
+  "recordedUTC": "2026-11-18T11:03:55.618221+00:00",
+  "issue": 450,
+  "base": "d77c29a60d589969e96c557abad6111f0e325592",
+  "nativeFailure": {
+    "run": 44288848654,
+    "job": 134748491744,
+    "artifact": 14420483094,
+    "artifactSHA256": "47d8345eb9f1681452d1e04951400521d06ecfac1da3304b50b42755e45cc079",
+    "context": {
+      "cpu": [
+        {
+          "Name": "Intel(R) Xeon(R) 6973P-C",
+          "Manufacturer": "GenuineIntel",
+          "NumberOfCores": 2,
+          "NumberOfLogicalProcessors": 4
+        }
+      ],
+      "enabledXStateFeatures": "0x608e7",
+      "goVersion": "go version go1.27.4 windows/amd64",
+      "source": "d77c29a60d589969e96c557abad6111f0e325592"
+    },
+    "events": {
+      "start": 1,
+      "run": 1957,
+      "output": 3936,
+      "pass": 1951,
+      "skip": 5,
+      "fail": 1
+    },
+    "lastStartedTest": "TestGridFillAreaMatchesUVBuffer",
+    "elapsedSeconds": 25.384,
+    "nativeExitCode": null,
+    "causeEstablished": false
+  },
+  "sourceSHA256": {
+    "scripts/vt-native-exit.py": "c8d594ff732ad8d00903d2ca829d83643bcd9eda8d9494487f33875895f6a5f7",
+    "tests/test_vt_native_exit.py": "25bc8c054fb00917cf24c930b60f19aacca8d033130661c3496f272088697112",
+    ".github/workflows/windows-vt-diagnostics.yml": "b7116be3e894a40f0cd156a0dd2e1aeeb5076d3dfd6b4d19c89ad60242447931",
+    "docs/validation/vt-native-exit-2026-11-18/README.md": "170eb79d55411845bc0cb5ea9756deab975b73684e7afb106284fdf9d8e09bbe"
+  },
+  "localEvidenceSHA256": {
+    "vt450-exit-workflow-invariants.log": "80d0a9af342e61513a00253c71b5e6f21e7ce0c00ff666201f00bb92bb0842c9",
+    "vt450-exit-local-controls.log": "184487ab93c1b8bd8394659632bc543a9aba33d3622241f41876cca42b6bdee9"
+  },
+  "requiredCiAndApplicationUnchanged": true,
+  "nativeQualification": "pending",
+  "repairClaim": false
+}
