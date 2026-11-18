@@ -439,6 +439,10 @@ jobs:
         run: npm test
         working-directory: webmux
 
+      - name: Repeat retained Windows terminal failure context
+        working-directory: webmux/server/internal/thirdparty/vt
+        run: go test . -count=10 -timeout=4m
+
       - name: Build
         run: npm run build
         working-directory: webmux

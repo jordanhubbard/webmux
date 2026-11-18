@@ -12,6 +12,16 @@ this checkpoint enter `main` for fix-forward work in a Claude session. This is
 an integration handoff, not completed acceptance: #318 remains open and first
 priority ahead of the other reliability and integration follow-ups.
 
+### Combined candidate qualification
+
+[#452](https://github.com/jordanhubbard/webmux/issues/452) composes the independent
+underline/snapshot profile, Rig/Agents integration, owning-profile routing and
+Windows Chromium AppContainer installation repair. Local combined-source race,
+renderer and native coordinator checks pass; full hosted combined qualification
+and audit #429 remain required. The [source bindings and scope](validation/roadmap-integration-2026-11-17/README.md)
+preserve the separate #318, #438 and #246 acceptance gaps. This candidate does
+not mark those items or the overall roadmap complete and does not cut a release.
+
 ### Recover active work after interruption
 
 [#318](https://github.com/jordanhubbard/webmux/issues/318) adds session-state
