@@ -56,6 +56,38 @@ posixTest('first dispatch is recorded before HTTP; ordinary duplicate requests n
   assert.equal(duplicate.posted, false); assert.equal(duplicate.operationId, first.operationId);
   assert.equal(f.posts.length, 1);
 });
+posixTest('a failed journal-parent flush prevents every native mutation', t => {
+  for (const preexisting of [false, true]) {
+    const f = fixture(t);
+    if (preexisting) fs.mkdirSync(f.directory, { mode: 0o700 });
+    const source = new URL('../webmux/server/internal/openrigcoord/rig-create-intent.mts', import.meta.url).href;
+    const child = spawnSync(process.execPath, ['--input-type=module', '-e', `
+      import fs from 'node:fs';
+      import {dispatchRigCreateIntent} from ${JSON.stringify(source)};
+      const [directory,key,raw,parent]=process.argv.slice(1);
+      const expected=fs.statSync(parent), original=fs.fsyncSync;
+      fs.fsyncSync=fd=>{
+        const stat=fs.fstatSync(fd);
+        if(stat.isDirectory() && stat.ino===expected.ino && stat.dev===expected.dev)
+          throw Object.assign(new Error('owned fixture parent flush failure'),{code:'EIO'});
+        return original(fd);
+      };
+      let posts=0, refused=false;
+      const fetcher=async (_address,init)=>{
+        if(init.method==='GET')return Response.json({contract:'operation-correlation.v1',kinds:['member.add']});
+        posts++;
+        return Response.json({operation:{contract:'operation-correlation.v1',
+          operationId:new Headers(init.headers).get('X-OpenRig-Operation-Id'),
+          rigId:JSON.parse(raw).rigId,nodeIds:[${JSON.stringify(nodeId)}]}},{status:201});
+      };
+      try {await dispatchRigCreateIntent(directory,key,JSON.parse(raw),fetcher);}
+      catch(error){refused=error.code==='EIO';}
+      console.log(JSON.stringify({posts,refused}));`,
+      f.directory, key, JSON.stringify(f.intent), f.parent], { encoding: 'utf8' });
+    assert.equal(child.status, 0, child.stderr);
+    assert.deepEqual(JSON.parse(child.stdout), { posts: 0, refused: true });
+  }
+});
 posixTest('lost response stays consumed; explicit inspection uses the identical operation and bytes', async t => {
   const f = fixture(t); f.lose(true);
   const first = await dispatchRigCreateIntent(f.directory, key, f.intent, f.fetcher);
