@@ -110,13 +110,13 @@ jobs:
             }
           } finally { Pop-Location }
           if ($failed) { throw 'One or more independent navigation trace samples failed.' }
-      - name: Verify owned-file handle snapshot controls
+      - name: Verify owned-file handle and exit-wait controls
         id: cleanup_handle_controls
         if: ${{ !cancelled() && steps.browser_tools.outcome == 'success' }}
         working-directory: webmux/server
         shell: pwsh
         run: |
-          go test ./internal/browser -run '^TestFirstNavigationHandleSnapshotOwnedFileAndIdentityRefusal$' -count=1 -timeout=1m -v
+          go test ./internal/browser -run '^(TestFirstNavigationHandleSnapshotOwnedFileAndIdentityRefusal|TestBrowserProcessExitWaitsForOwnedChildAndPreservesSibling)$' -count=1 -timeout=1m -v
           if ($LASTEXITCODE -ne 0) { throw 'Owned-file snapshot controls failed; do not run the sampling cohort.' }
       - name: Observe independent private-profile cleanup samples
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.cleanup_samples != '0' && !cancelled() && steps.browser_tools.outcome == 'success' && steps.cleanup_handle_controls.outcome == 'success' }}

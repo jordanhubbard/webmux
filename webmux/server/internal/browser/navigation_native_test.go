@@ -28,31 +28,33 @@ import (
 type firstNavigationEvidence struct {
 	cleanupProcessIdentities map[uint32]uint64
 	cleanupHandleProbe       func(error, string) *firstNavigationHandleReport
+	cleanupExitFailed        bool
 
-	Transport        string                           `json:"transport"`
-	ProfileLocation  string                           `json:"profileLocation"`
-	Mode             string                           `json:"mode"`
-	Platform         string                           `json:"platform"`
-	Architecture     string                           `json:"architecture"`
-	BrowserProduct   string                           `json:"browserProduct,omitempty"`
-	Loaded           bool                             `json:"loaded"`
-	FixtureRequests  int64                            `json:"fixtureRequests"`
-	NavigateCalls    int                              `json:"navigateCalls"`
-	TargetSelection  string                           `json:"targetSelection,omitempty"`
-	ExtraTargets     int                              `json:"extraTargets,omitempty"`
-	CleanupFailed    bool                             `json:"cleanupFailed,omitempty"`
-	CleanupRemoval   *firstNavigationRemovalError     `json:"cleanupRemoval,omitempty"`
-	CleanupHandles   *firstNavigationHandleReport     `json:"cleanupHandles,omitempty"`
-	CleanupHolders   *firstNavigationRemovalHolders   `json:"cleanupHolders,omitempty"`
-	CleanupProcesses *firstNavigationCleanupProcesses `json:"cleanupProcesses,omitempty"`
-	Failure          string                           `json:"failure,omitempty"`
-	Diagnostics      *NavigationDiagnostics           `json:"diagnostics,omitempty"`
-	NetLog           *firstNavigationNetLog           `json:"netLog,omitempty"`
-	BrowserTrace     *firstNavigationTrace            `json:"browserTrace,omitempty"`
-	NetworkSandbox   *firstNavigationNetworkSandbox   `json:"networkSandbox,omitempty"`
-	ProcessOutput    *firstNavigationOutput           `json:"processOutput,omitempty"`
-	TraceLoading     bool                             `json:"traceLoading,omitempty"`
-	TraceStartStage  string                           `json:"traceStartStage,omitempty"`
+	Transport           string                           `json:"transport"`
+	ProfileLocation     string                           `json:"profileLocation"`
+	Mode                string                           `json:"mode"`
+	Platform            string                           `json:"platform"`
+	Architecture        string                           `json:"architecture"`
+	BrowserProduct      string                           `json:"browserProduct,omitempty"`
+	Loaded              bool                             `json:"loaded"`
+	FixtureRequests     int64                            `json:"fixtureRequests"`
+	NavigateCalls       int                              `json:"navigateCalls"`
+	TargetSelection     string                           `json:"targetSelection,omitempty"`
+	ExtraTargets        int                              `json:"extraTargets,omitempty"`
+	CleanupFailed       bool                             `json:"cleanupFailed,omitempty"`
+	CleanupRemoval      *firstNavigationRemovalError     `json:"cleanupRemoval,omitempty"`
+	CleanupExitVerified bool                             `json:"cleanupExitVerified,omitempty"`
+	CleanupHandles      *firstNavigationHandleReport     `json:"cleanupHandles,omitempty"`
+	CleanupHolders      *firstNavigationRemovalHolders   `json:"cleanupHolders,omitempty"`
+	CleanupProcesses    *firstNavigationCleanupProcesses `json:"cleanupProcesses,omitempty"`
+	Failure             string                           `json:"failure,omitempty"`
+	Diagnostics         *NavigationDiagnostics           `json:"diagnostics,omitempty"`
+	NetLog              *firstNavigationNetLog           `json:"netLog,omitempty"`
+	BrowserTrace        *firstNavigationTrace            `json:"browserTrace,omitempty"`
+	NetworkSandbox      *firstNavigationNetworkSandbox   `json:"networkSandbox,omitempty"`
+	ProcessOutput       *firstNavigationOutput           `json:"processOutput,omitempty"`
+	TraceLoading        bool                             `json:"traceLoading,omitempty"`
+	TraceStartStage     string                           `json:"traceStartStage,omitempty"`
 }
 
 // These are independent first loads in fresh private browser processes. A failed
@@ -356,6 +358,14 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 		}
 		// Registered before browser cleanup: Chrome exits before profile removal.
 		t.Cleanup(func() {
+			if record.cleanupExitFailed {
+				record.CleanupFailed = true
+				t.Error("private home profile retained because browser process exit was not verified")
+				if record.cleanupHandleProbe != nil {
+					record.cleanupHandleProbe(nil, profile)
+				}
+				return
+			}
 			err := os.RemoveAll(profile)
 			if record.cleanupHandleProbe != nil {
 				record.CleanupHandles = record.cleanupHandleProbe(err, profile)
@@ -406,16 +416,14 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 			record.cleanupHandleProbe = prepareFirstNavigationHandleProbe(record.cleanupProcessIdentities)
 		}
 		defer func() { record.CleanupProcesses = finishObservation() }()
-		if options.netLog {
-			closing, finish := context.WithTimeout(root, 5*time.Second)
-			if chromedp.Cancel(closing) != nil {
-				record.CleanupFailed = true
-				t.Error("anonymous netlog browser did not close gracefully")
-			}
-			finish()
+		if err := closeBrowserProcesses(root, cancel, stop, options.netLog); err != nil {
+			record.cleanupExitFailed = true
+			record.CleanupFailed = true
+			t.Errorf("browser process exit did not pass bounded verification: %v", err)
+		} else if runtime.GOOS == "windows" {
+			record.CleanupExitVerified = true
 		}
-		cancel()
-		stop()
+
 	})
 	if output != nil {
 		t.Cleanup(func() {

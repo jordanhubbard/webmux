@@ -102,7 +102,7 @@ func temporaryProfile() (string, error) {
 }
 
 // Worker is also run on SSH hosts. It exposes no listener and exits on stdin EOF.
-func Worker(in io.Reader, out io.Writer) error {
+func Worker(in io.Reader, out io.Writer) (result error) {
 	scanner := bufio.NewScanner(in)
 	scanner.Buffer(make([]byte, 4096), MaxMessageBytes)
 	if !scanner.Scan() {
@@ -117,6 +117,7 @@ func Worker(in io.Reader, out io.Writer) error {
 		key = first.ProfileKey
 		first.Action = "frame"
 	}
+	canRemove := true
 	profile, err := temporaryProfile()
 	if key != "" {
 		if err == nil {
@@ -128,7 +129,13 @@ func Worker(in io.Reader, out io.Writer) error {
 			defer lock.Close()
 		}
 	} else if err == nil {
-		defer os.RemoveAll(profile)
+		defer func() {
+			if canRemove {
+				if err := os.RemoveAll(profile); err != nil {
+					result = errors.Join(result, errors.New("Cannot remove private temporary browser files"))
+				}
+			}
+		}()
 	}
 	if err != nil {
 		message := "Cannot open the private saved browser profile; it may be in use or unavailable on the terminal host."
@@ -145,21 +152,23 @@ func Worker(in io.Reader, out io.Writer) error {
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(files)
-	}
-	alloc, stop := chromedp.NewExecAllocator(context.Background(), workerAllocatorOptions(profile)...)
-	defer stop()
-	root, cancel := chromedp.NewContext(alloc)
-	defer cancel()
-	if key != "" {
-		// Ordinary context cancellation terminates Chromium before its cookie store
-		// necessarily reaches disk. Close through CDP before cancelling its owner.
 		defer func() {
-			closing, finish := context.WithTimeout(root, 5*time.Second)
-			defer finish()
-			_ = chromedp.Cancel(closing)
+			if canRemove {
+				if err := os.RemoveAll(files); err != nil {
+					result = errors.Join(result, errors.New("Cannot remove private browser transfer files"))
+				}
+			}
 		}()
 	}
+	alloc, stop := chromedp.NewExecAllocator(context.Background(), workerAllocatorOptions(profile)...)
+	root, cancel := chromedp.NewContext(alloc)
+	defer func() {
+		if err := closeBrowserProcesses(root, cancel, stop, key != ""); err != nil {
+			canRemove = false
+			result = errors.Join(result, err)
+		}
+	}()
+
 	// Start outside an operation timeout: cancelling the first Run context would
 	// otherwise tear down the browser after a successful first response.
 	navigation := newNavigationTrace()
