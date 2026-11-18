@@ -149,3 +149,55 @@ posixTest('parent-directory flush failure prevents all native mutation', async t
   finally { fs.fsyncSync = original; }
   assert.equal(injected, true); assert.equal(f.posts.length, 0);
 });
+
+posixTest('project trust blocks before launch and only explicit saved-selection retry can resolve it', async t => {
+  const f = fixture(t), resolve = f.deps.resolve; let trusted = false, calls = 0;
+  f.deps.resolve = async () => { calls++; if (!trusted) throw new Error('native_project_trust_required'); return resolve(); };
+  const first = await createRigNativeCodex(f.input, f.deps);
+  if (first.state !== 'blocked') throw new Error('expected native trust refusal');
+  assert.match(first.requestId, /^[a-f0-9]{64}$/); assert.equal(first.operationId, undefined);
+  const directory = path.join(f.input.directory, 'requests', fs.readdirSync(path.join(f.input.directory, 'requests'))[0]);
+  assert.equal(fs.existsSync(path.join(directory, 'launch.json')), false);
+  assert.equal(fs.existsSync(path.join(directory, 'journal')), false);
+  for (const name of ['selection.json', 'trust-required.json']) {
+    assert.equal(fs.statSync(path.join(directory, name)).mode & 0o777, 0o600);
+    assert.equal(fs.readFileSync(path.join(directory, name), 'utf8').includes(f.deps.env.TOOL_API_KEY), false);
+  }
+  const duplicate = await createRigNativeCodex(f.input, f.deps);
+  assert.deepEqual(duplicate, first); assert.equal(calls, 1); assert.equal(f.posts.length, 0);
+  await assert.rejects(createRigNativeCodex({ ...f.input, inspect: true, trustRequest: first.requestId }, f.deps), /original_request_missing/);
+  assert.equal(calls, 1);
+  const stillBlocked = await createRigNativeCodex({ ...f.input, trustRequest: first.requestId }, f.deps);
+  assert.deepEqual(stillBlocked, first); assert.equal(calls, 2); assert.equal(f.posts.length, 0);
+  trusted = true;
+  assert.equal((await createRigNativeCodex(f.input, f.deps)).state, 'blocked', 'A duplicate must not notice trust changes or launch');
+  assert.equal(calls, 2);
+  const completed = await createRigNativeCodex({ ...f.input, trustRequest: first.requestId }, f.deps);
+  assert.equal(completed.state, 'recorded'); assert.equal(f.posts.length, 1);
+  const count = calls;
+  const consumed = await createRigNativeCodex({ ...f.input, trustRequest: first.requestId }, f.deps);
+  assert.equal(consumed.operationId, completed.operationId); assert.equal(consumed.posted, false);
+  assert.equal(calls, count); assert.equal(f.posts.length, 1);
+});
+
+posixTest('trust retry rejects foreign, changed and corrupted selections before owner resolution or POST', async t => {
+  const f = fixture(t); let calls = 0;
+  f.deps.resolve = async () => { calls++; throw new Error('native_project_trust_required'); };
+  const first = await createRigNativeCodex(f.input, f.deps);
+  if (first.state !== 'blocked') throw new Error('expected native trust refusal');
+  const other = path.join(f.root, 'different-project'); fs.mkdirSync(other);
+  for (const input of [{ ...f.input, trustRequest: '0'.repeat(64) }, { ...f.input, cwd: other, trustRequest: first.requestId }]) {
+    await assert.rejects(createRigNativeCodex(input, f.deps), /trust_request_unavailable/);
+  }
+  f.deps.env.TOOL_API_KEY = 'CHANGED_PRIVATE_VALUE';
+  await assert.rejects(createRigNativeCodex({ ...f.input, trustRequest: first.requestId }, f.deps), /original_request_changed/);
+  const fresh = fixture(t);
+  await assert.rejects(createRigNativeCodex({ ...fresh.input, trustRequest: first.requestId }, fresh.deps), /trust_request_unavailable/);
+  assert.equal(fresh.counts().resolves, 0); assert.equal(fresh.posts.length, 0);
+  f.manager.managerIdentity = 'd'.repeat(64);
+  await assert.rejects(createRigNativeCodex({ ...f.input, trustRequest: first.requestId }, f.deps), /original_request_changed/);
+  const directory = path.join(f.input.directory, 'requests', fs.readdirSync(path.join(f.input.directory, 'requests'))[0]);
+  fs.appendFileSync(path.join(directory, 'selection.json'), '\n');
+  await assert.rejects(createRigNativeCodex({ ...f.input, trustRequest: first.requestId }, f.deps), /trust_request_unavailable/);
+  assert.equal(calls, 1); assert.equal(f.posts.length, 0);
+});

@@ -10,7 +10,11 @@ import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
 type Agent = { target: string; senderAddress?: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string; nativeOwned?: true; nativeNodeId?: string; logicalId?: string; creationOperationId?: string };
-type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string; inspect?: boolean };
+type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string; inspect?: boolean; trustRequest?: string };
+class BlockedCreation extends Error {
+  value: { state: 'blocked'; code: 'native_project_trust_required'; requestId: string };
+  constructor(value: BlockedCreation['value']) { super('native_creation_blocked'); this.value = value; }
+}
 class PendingCreation extends Error {
   value: { state: 'uncertain'; stage: 'project' | 'agent'; code: string; operationId: string };
   constructor(code: string, operationId: string, stage: 'project' | 'agent' = 'project') { super('native_creation_pending'); this.value = { state: 'uncertain', stage, code, operationId }; }
@@ -249,6 +253,20 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const runtime = input.runtime ?? 'codex';
     if (!['codex', 'claude-code'].includes(runtime)) throw new Error('Unsupported agent runtime.');
     const local = host === 'localhost';
+    if (input.trustRequest !== undefined && (!/^[a-f0-9]{64}$/.test(input.trustRequest) || !structuredAttachmentBuild()
+      || !local || runtime !== 'codex')) throw new Error('The saved native trust request is unavailable for this selection.');
+    const trustSelection = Buffer.from(JSON.stringify({ mode, rigId: input.rigId ?? '', rigName: input.rigName ?? input.project ?? '',
+      pod: input.pod ?? '', name, host, cwd, runtime }));
+    if (input.trustRequest) {
+      // Bind the browser selection BEFORE the topology allocator. A changed
+      // project/name must not allocate a namespace and only then fail the
+      // member's saved-selection check.
+      const { nativeCreateArtifacts: artifacts } = await import('./rig-native-create.mts');
+      try {
+        const requests = artifacts.ownedRoot(path.join(directory, 'trust-requests'));
+        if (!artifacts.read(path.join(requests, input.trustRequest + '.json')).equals(trustSelection)) throw new Error();
+      } catch { throw new Error('native_create_original_request_changed'); }
+    }
     if (input.inspect && (!structuredAttachmentBuild() || (mode !== 'new' && !(mode === 'existing' && local && runtime === 'codex')))) throw new Error('This request has no supported original creation to inspect.');
     // Older published coordinators retain their existing transport, with no
     // remote identity claim. Explicit relay enrollment needs both new options.
@@ -330,7 +348,12 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       const { launchRigNativeCodex } = await import('./rig-native-launch.mts');
       const { nativeCreateArtifacts } = await import('./rig-native-create.mts');
       const observationHelper = process.platform === 'linux' ? JSON.parse(nativeCreateArtifacts.read(path.join(directory, '.native-codex-observer.json')).toString('utf8')) as import('./codex-owner-plan.mts').CodexObservationHelper : undefined;
-      const result = await launchRigNativeCodex({ directory, rigId, pod, member, cwd, inspect: input.inspect }, { run, observationHelper });
+      const result = await launchRigNativeCodex({ directory, rigId, pod, member, cwd, inspect: input.inspect, trustRequest: input.trustRequest }, { run, observationHelper });
+      if (result.state === 'blocked') {
+        const requests = nativeCreateArtifacts.ownedRoot(path.join(directory, 'trust-requests'));
+        nativeCreateArtifacts.publish(path.join(requests, result.requestId + '.json'), trustSelection);
+        throw new BlockedCreation({ state: 'blocked', code: result.code, requestId: result.requestId });
+      }
       if (result.state !== 'attached') throw new PendingCreation(result.code, result.operationId, 'agent');
       const agent: Agent = { target: result.target, senderAddress: result.target, project, rigId, rigName: rig, pod, name, host, cwd,
         runtime, tmux: result.target, sessionId: result.sessionId, nativeOwned: true, nativeNodeId: result.nodeId, logicalId: `${pod}.${member}`, creationOperationId: result.operationId };
@@ -424,7 +447,9 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     }
   } else throw new Error('Unknown coordinator action');
 } catch (error) {
-  if (error instanceof PendingCreation) {
+  if (error instanceof BlockedCreation) {
+    console.log(JSON.stringify({ blocked: error.value }));
+  } else if (error instanceof PendingCreation) {
     console.log(JSON.stringify({ creation: error.value }));
   } else {
     console.error((action === 'native-resume' || action === 'native-recovery-resume')

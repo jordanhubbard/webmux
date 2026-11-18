@@ -63,6 +63,14 @@ posixTest('lost native enrollment reply creates no attachment and does not infer
   const f = fixture(t); f.lose(); const result = await launchRigNativeCodex(f.input, f.deps);
   assert.equal(result.state, 'pending'); assert.equal(result.operationId, operationId); assert.equal(f.counts().observations, 0);
 });
+posixTest('native trust refusal cannot become enrollment, attachment or provider observation', async t => {
+  const f = fixture(t);
+  f.deps.create = async () => ({ state: 'blocked', code: 'native_project_trust_required', requestId: 'a'.repeat(64), posted: false });
+  const result = await launchRigNativeCodex(f.input, f.deps);
+  assert.deepEqual(result, { state: 'blocked', code: 'native_project_trust_required', requestId: 'a'.repeat(64), posted: false });
+  assert.equal(fs.existsSync(path.join(f.directory, 'native-registration.json')), false);
+  assert.equal(f.counts().observations, 0);
+});
 posixTest('claimed and stale original registrations cannot become native ready attachments', async t => {
   const f = fixture(t); f.session.origin = 'claimed';
   assert.equal((await launchRigNativeCodex(f.input, f.deps)).state, 'pending'); assert.equal(f.counts().observations, 0);

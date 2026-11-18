@@ -79,7 +79,25 @@ function nativeRequest(plan: CodexOwnerPlan, member: string, agent: string, wrap
 }
 
 export interface NativeCodexCreateInput {
-  directory: string; rigId: string; pod: string; member: string; cwd: string; inspect?: boolean;
+  directory: string; rigId: string; pod: string; member: string; cwd: string; inspect?: boolean; trustRequest?: string;
+}
+export interface NativeCodexTrustBlocked {
+  state: 'blocked'; code: 'native_project_trust_required'; requestId: string; posted: false; operationId?: never;
+}
+// This identifies the selected launch before native policy resolution is
+// possible. It is not a native operation UUID or a resolved launch plan.
+export function validateNativeTrustRequest(input: NativeCodexCreateInput, directory: string) {
+  try {
+    const bytes = read(path.join(directory, 'selection.json')), value: unknown = JSON.parse(bytes.toString('utf8'));
+    if (!/^[a-f0-9]{64}$/.test(input.trustRequest ?? '') || digest(bytes) !== input.trustRequest || !object(value)
+      || Object.keys(value).sort().join(',') !== 'contract,cwd,environmentFingerprint,managerIdentity,member,pod,port,rigId'
+      || value.contract !== 'webmux-native-codex-selection/v1' || value.rigId !== input.rigId || value.pod !== input.pod
+      || value.member !== input.member || value.cwd !== fs.realpathSync(input.cwd)
+      || typeof value.managerIdentity !== 'string' || !/^[a-f0-9]{64}$/.test(value.managerIdentity)
+      || typeof value.environmentFingerprint !== 'string' || !/^[a-f0-9]{64}$/.test(value.environmentFingerprint)
+      || !Number.isSafeInteger(value.port) || Number(value.port) < 1024 || Number(value.port) > 65535
+      || !read(path.join(directory, 'trust-required.json')).equals(json({ contract: 'webmux-native-codex-trust-required/v1', requestId: input.trustRequest }))) throw new Error();
+  } catch { throw new Error('native_create_trust_request_unavailable'); }
 }
 interface SavedCreate {
   contract: 'webmux-native-codex-create/v2'; cwd: string; member: string; bundle: string;
@@ -96,7 +114,7 @@ interface Dependencies {
 // recovery operation. This opens no provider and grants no resume authority:
 // the caller still needs Rig's reviewed, original-only operation contract.
 export async function openRigNativeCodexRecoveryHandoff(
-  input: Omit<NativeCodexCreateInput, 'inspect'> & { operationId: string }, deps: Dependencies,
+  input: Omit<NativeCodexCreateInput, 'inspect' | 'trustRequest'> & { operationId: string }, deps: Dependencies,
 ) {
   if (!['darwin', 'linux'].includes(process.platform) || Number(process.versions.node.split('.')[0]) !== 24
     || !/^[0-7][0-9A-HJKMNP-TV-Z]{25}$/.test(input.rigId) || !/^[a-z][a-z0-9-]{0,47}$/.test(input.pod)
@@ -168,17 +186,40 @@ export async function createRigNativeCodex(input: NativeCodexCreateInput, deps: 
   const ownerEnvironment = { ...(deps.env ?? process.env) };
   const resolve = deps.resolve ?? ((value: string, env: NodeJS.ProcessEnv) => resolveCodexOwnerPlan(value, { env, observationHelper: deps.observationHelper }));
   const manager = await review();
+  if (input.trustRequest) validateNativeTrustRequest(input, directory);
   let saved: SavedCreate;
   try { saved = JSON.parse(read(savedFile).toString('utf8')) as SavedCreate; }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     if (input.inspect) throw new Error('native_create_original_request_missing');
+    const selectionFile = path.join(directory, 'selection.json');
+    const selection = json({ contract: 'webmux-native-codex-selection/v1', rigId: input.rigId, pod: input.pod,
+      member: input.member, cwd, managerIdentity: manager.managerIdentity, port: manager.port,
+      environmentFingerprint: captureCodexLaunchEnvironment(ownerEnvironment,
+        ownerEnvironment.CODEX_HOME || path.join(ownerEnvironment.HOME || '', '.codex')).fingerprint });
+    if (fs.existsSync(selectionFile) && !read(selectionFile).equals(selection)) throw new Error('native_create_original_request_changed');
+    publish(selectionFile, selection);
+    const requestId = digest(selection), blockedFile = path.join(directory, 'trust-required.json');
+    const blocked = (): NativeCodexTrustBlocked => ({ state: 'blocked', code: 'native_project_trust_required', requestId, posted: false });
+    const blockedBytes = json({ contract: 'webmux-native-codex-trust-required/v1', requestId });
+    if (fs.existsSync(blockedFile)) {
+      if (!read(blockedFile).equals(blockedBytes)) return refuse();
+      // Native trust can change only through a deliberate owner action. A
+      // duplicate does not start another account/policy observer or factory.
+      if (!input.trustRequest) return blocked();
+    }
     // An unrelated current member is not evidence of our original operation.
     const raw: unknown = JSON.parse(deps.run('rig', ['ps', '--nodes', '-A', '--no-cleanup', '--json', '--full']));
     const rows = Array.isArray(raw) ? raw : object(raw) ? raw.entries : undefined;
     if (!Array.isArray(rows) || rows.length > 4096 || !rows.every(object)) return refuse();
     if (rows.some(row => row.rigId === input.rigId && row.logicalId === `${input.pod}.${input.member}`)) throw new Error('native_create_member_already_exists');
-    const plan = validateCodexLaunchPlan(await resolve(cwd, ownerEnvironment));
+    let plan: CodexOwnerPlan;
+    try { plan = validateCodexLaunchPlan(await resolve(cwd, ownerEnvironment)); }
+    catch (error) {
+      if (!(error instanceof Error) || error.message !== 'native_project_trust_required') throw error;
+      publish(blockedFile, blockedBytes);
+      return blocked();
+    }
     if (plan.cwd !== cwd) return refuse();
     const environment = captureCodexLaunchEnvironment(ownerEnvironment, plan.home);
     const bundle = publishCodexLaunchBundle(base, deps.source);

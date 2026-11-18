@@ -251,16 +251,17 @@ type coordinationDrainer interface {
 }
 
 type coordinationLaunchRequest struct {
-	Provider    string `json:"provider"`
-	Mode        string `json:"mode"`
-	ProjectID   string `json:"projectId"`
-	ProjectName string `json:"projectName"`
-	Name        string `json:"name"`
-	Host        string `json:"host"`
-	Workspace   string `json:"workspace"`
-	Runtime     string `json:"runtime"`
-	Context     string `json:"context"`
-	Inspect     bool   `json:"inspect,omitempty"`
+	Provider     string `json:"provider"`
+	Mode         string `json:"mode"`
+	ProjectID    string `json:"projectId"`
+	ProjectName  string `json:"projectName"`
+	Name         string `json:"name"`
+	Host         string `json:"host"`
+	Workspace    string `json:"workspace"`
+	Runtime      string `json:"runtime"`
+	Context      string `json:"context"`
+	Inspect      bool   `json:"inspect,omitempty"`
+	TrustRequest string `json:"trustRequest,omitempty"`
 }
 
 type coordinationLaunch struct {
@@ -501,15 +502,34 @@ func (p *rigProvider) Launch(ctx context.Context, request coordinationLaunchRequ
 	if request.Inspect {
 		input["inspect"] = true
 	}
+	if request.TrustRequest != "" {
+		input["trustRequest"] = request.TrustRequest
+	}
 	body, _ := json.Marshal(input)
 	output, err := openrigcoord.Run(ctx, p.home, p.owner, "create", string(body))
 	if err != nil {
 		return coordinationLaunch{}, err
 	}
 	var outcome struct {
-		Creation *coordinationCreation `json:"creation"`
+		Creation *coordinationCreation        `json:"creation"`
+		Blocked  *coordinationCreationBlocked `json:"blocked"`
 	}
-	if json.Unmarshal(output, &outcome) == nil && outcome.Creation != nil {
+	if json.Unmarshal(output, &outcome) != nil {
+		return coordinationLaunch{}, fmt.Errorf("invalid native creation response")
+	}
+	if outcome.Blocked != nil {
+		var exact struct {
+			Blocked coordinationCreationBlocked `json:"blocked"`
+		}
+		decoder := json.NewDecoder(bytes.NewReader(output))
+		decoder.DisallowUnknownFields()
+		if outcome.Creation != nil || !validCoordinationBlocked(*outcome.Blocked) || request.Runtime != "codex" ||
+			(request.Host != "" && request.Host != "localhost") || (request.Mode != "new" && request.Mode != "existing") || decoder.Decode(&exact) != nil {
+			return coordinationLaunch{}, fmt.Errorf("invalid native trust response")
+		}
+		return coordinationLaunch{}, &coordinationCreationNeedsOwner{Blocked: *outcome.Blocked}
+	}
+	if outcome.Creation != nil {
 		if !validCoordinationCreation(*outcome.Creation) {
 			return coordinationLaunch{}, fmt.Errorf("invalid native creation response")
 		}

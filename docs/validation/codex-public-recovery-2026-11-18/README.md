@@ -1,5 +1,15 @@
 # Public native Rig/Codex original-conversation recovery
 
+A later [installed-service qualification](../codex-service-upgrade-2026-11-18/README.md)
+adds a real macOS launchd/Make functional executable upgrade and automatic
+service restart after SIGKILL. This earlier receipt retains its own source
+binding and interruption scope below.
+
+A separate [restricted-policy qualification](../codex-restricted-recovery-2026-11-18/README.md)
+now covers public restart/crash recovery with native read-only/on-request and
+workspace-write/on-request policies. It retains its own source binding and
+does not change this earlier default-policy receipt.
+
 The actual Go application and Chrome pass the public recovery flow at the
 revision in [receipt.json](receipt.json), using Rig 0.7.18, Codex 0.169.0 and
 Node 24 on macOS. The browser is private loopback auth-none. The coding CLI uses

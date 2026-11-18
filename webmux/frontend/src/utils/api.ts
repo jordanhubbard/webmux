@@ -24,6 +24,13 @@ import { signalAuthExpired } from './authSession';
 
 const API_BASE = '/api';
 
+class ApiError extends Error {
+  constructor(message: string, readonly status: number, readonly body: unknown) { super(message); }
+}
+export class CoordinationTrustRequiredError extends Error {
+  constructor(readonly requestId: string) { super('Review project trust in native Codex before retrying the saved request.'); }
+}
+
 function getToken(): string | null {
   return localStorage.getItem('webmux_token');
 }
@@ -50,7 +57,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     if (res.status === 401 && getToken()) signalAuthExpired();
     const err = await res.json().catch(() => ({ error: `${res.status} ${res.statusText}` }));
-    throw new Error((err as { error?: string }).error || `${res.status} ${res.statusText}`);
+    throw new ApiError((err as { error?: string }).error || `${res.status} ${res.statusText}`, res.status, err);
   }
 
   if (res.status === 204) return undefined as T;
@@ -123,10 +130,29 @@ export interface USBForwardingTicket { lease: USBForwardingLease; pair_code: str
 
 export interface CoordinationCreateRequest {
   provider: string; mode: 'new' | 'existing'; projectId?: string; projectName: string; context?: string;
-  name: string; host: string; workspace: string; runtime: string; row?: number; col?: number; inspect?: boolean;
+  name: string; host: string; workspace: string; runtime: string; row?: number; col?: number; inspect?: boolean; trustRequest?: string;
 }
 export type CoordinationCreateResponse = { target: string; session: Session; creation?: never }
   | { creation: { state: 'uncertain'; stage: 'project' | 'agent'; code: string; operationId: string }; session?: never; target?: never };
+
+async function createCoordinatedAgent(input: CoordinationCreateRequest): Promise<CoordinationCreateResponse> {
+  try { return await request<CoordinationCreateResponse>('/coordination/agents', { method: 'POST', body: JSON.stringify(input) }); }
+  catch (error) {
+    if (error instanceof ApiError && error.status === 409 && input.provider === 'rig' && input.runtime === 'codex'
+      && (!input.host || input.host === 'localhost') && (input.mode === 'new' || input.mode === 'existing')
+      && error.body && typeof error.body === 'object' && 'blocked' in error.body
+      && !('creation' in error.body) && !('session' in error.body)) {
+      const blocked = error.body.blocked;
+      if (blocked && typeof blocked === 'object' && Object.keys(blocked).sort().join(',') === 'code,requestId,state'
+        && 'state' in blocked && blocked.state === 'blocked'
+        && 'code' in blocked && blocked.code === 'native_project_trust_required' && 'requestId' in blocked
+        && typeof blocked.requestId === 'string' && /^[a-f0-9]{64}$/.test(blocked.requestId)) {
+        throw new CoordinationTrustRequiredError(blocked.requestId);
+      }
+    }
+    throw error;
+  }
+}
 
 export const api = {
   getUSBForwardings: (signal?: AbortSignal) => request<USBForwardingLease[]>('/usb-forwardings', { signal, cache: 'no-store' }),
@@ -151,7 +177,7 @@ export const api = {
   executeRigStop: (id: string) => request<RigStopReceipt>('/coordination/stop', { method: 'POST', body: JSON.stringify({ id, confirm: true }) }),
   getRigChanges: (signal?: AbortSignal) => request<{ contract: string; available: boolean; changed: boolean }>('/coordination/changes', { signal }),
   getRigObservations: (signal?: AbortSignal) => request<CoordinationStatus>('/coordination?provider=rig&observations=rig', { signal }),
-  createCoordinatedAgent: (input: CoordinationCreateRequest) => request<CoordinationCreateResponse>('/coordination/agents', { method: 'POST', body: JSON.stringify(input) }),
+  createCoordinatedAgent,
   browseCoordinationWorkspaces: (provider: string, host: string, path?: string) => request<WorkspaceListing>('/coordination/workspaces', { method: 'POST', body: JSON.stringify({ provider, host, path }) }),
   attachCoordinatedAgent: (provider: string, target: string, position?: { row: number; col: number }) => request<Session>('/coordination/attach', { method: 'POST', body: JSON.stringify({ provider, target, ...position }) }),
   sendCoordinationMessage: (provider: string, target: string, message: string, queue: boolean) => request<CoordinationSendResult>('/coordination/messages', { method: 'POST', body: JSON.stringify({ provider, target, message, queue }) }),

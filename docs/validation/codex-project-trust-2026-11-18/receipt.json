@@ -1,0 +1,329 @@
+{
+  "scope": "Actual private macOS Go/Chrome local native Rig/Codex project-trust refusal, saved-selection retry and public response-loss handling, composed with read-only/on-request exact-conversation restart/crash recovery. Native account stays in place; browser is private loopback auth-none.",
+  "sourceRevision": "f427e4b748714d00905d03c2f6e7175f3b080958",
+  "passed": true,
+  "binarySHA256": "8a819343c5386da563618e530262960ecca03b5f16cff1fc117138349b20389b",
+  "buildProducerSelfReport": {
+    "version": "1.4.5",
+    "revision": "f427e4b748714d00905d03c2f6e7175f3b080958",
+    "modified": false,
+    "provenance": "build-producer-self-report",
+    "attested": false
+  },
+  "sourcesSHA256": {
+    "webmux/server/internal/openrigcoord/rig-native-launch.mts": "fd74271f961f5d183b600d0c7eaae030aa2b8f237d458694a10d86dcef6f056c",
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "e68d505f8b1810f92c16a91cf46d76e5e4f9c38e9d8915a724ce0fa95eecfee1",
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": "b6217395e932162b2e16d50829ad40338d8a4814a84dbd07496afb8af8d86cc9",
+    "webmux/server/internal/openrigcoord/rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "e715cebb9fe49811aa4a5f0348af704ade1ad9f2bb31e9696a569623236069b1",
+    "webmux/server/internal/openrigcoord/rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "webmux/server/internal/openrigcoord/runner.mts": "e903d21ffef7664ef7086881b5d26f4a9ffb98fe1f4a8e7fe5e34d5aae78ad3a",
+    "webmux/server/internal/openrigcoord/coord.go": "7a4f17d2b36f29cb9a4d39268f7d94f7f41a0aef7d60f84a18c74e3d375530cb",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "webmux/server/internal/openrigcoord/codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "webmux/server/internal/openrigcoord/codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+    "webmux/server/internal/httpapi/coordination_creation.go": "70bd8849ce8be36112dd7470e71770ab0558505e45b25d23b9adb733bf07d19b",
+    "webmux/server/internal/httpapi/coordination_providers.go": "8c3ded53b34440e6559c336c6b25cea102f7da6872bc95c7d86bcf81a4d50d00",
+    "webmux/server/internal/httpapi/openrig.go": "fdc2ef45da2864a2c80962da40a276365d5ea697f708d52a1dee1e6e87b763e1",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "030f78ce5f8b3aa6bf09d2dd37ffd233ebeae5b1e4663e9aa6c50ce1feed763a",
+    "webmux/frontend/src/utils/api.ts": "d10f6f3f7c59c4fbcf9d7ff6d56d9099ea21e533f4bcf74ef6ea7bafdcf25dcd",
+    "webmux/server/internal/session/native_rig_reference.go": "15e35ef463160eebc6ced21064c88d3702ac1c2a74782a66301323979b19fc08",
+    "webmux/server/internal/session/native_rig_recovery.go": "5352dc2e4bf4f7858d69351ab3adba76f5f4bc6113b13b88a421c91bd02e82f2",
+    "webmux/server/internal/session/managed_evidence.go": "7a543f14facb1ed5938a0cdf701fd50144e923ab7bbe89e27319047e71c1ff9c",
+    "webmux/server/internal/session/managed_capture.go": "359ab3faf353549508fb432ff8668caafead22a8e1f8e0939953c0ae203e7900",
+    "webmux/server/internal/session/managed_recovery.go": "bf9068ce0bec82653c84e87fc3efebbc3306f3d6b6dd641961ef66af4c29b062",
+    "webmux/server/internal/session/recovery.go": "c066ccb5e0c6b02a3801f002b6e1dc06f3bc17d3e972871ff28314a63138ca53",
+    "webmux/server/internal/session/recovery_control.go": "560cfee99916dfd6aa1dc6304478f47e6d9926c13762ef35d399be9de9d0bf0d",
+    "webmux/server/internal/session/model.go": "7e91f7a4e9743efcf5977e408b0faf21d9e4485270336329ea16b5bb920d3293",
+    "webmux/server/internal/httpapi/native_rig_recovery.go": "5d206f2bdbfdf13e2438a76a95f9f5ce578308e1a7b9ca5dfa6414082f737c08",
+    "webmux/server/internal/httpapi/rig_recovery.go": "0a7323a4d72bd22d9043a8e7fadf7b3ac17be32648773dc134c5ac29bef224bc",
+    "webmux/server/internal/httpapi/sessions.go": "a4abf105ef398f2d0584077a217269c28833e4217213c9a03b0a378c29676f52",
+    "webmux/server/internal/httpapi/coordination_service.go": "896718a1c32b156fb8d3a8aa9c35c62c1d2ef71bbea753f37f31f3b0cd00b585",
+    "webmux/server/internal/httpapi/server.go": "f15d486b299fa23b6b722de239ee08c71dde662f8ca0e08ce26067cdecb25ad3",
+    "webmux/frontend/src/components/RecoveryDialog.tsx": "cb3e1b08e6541af5e5e1cdf2948bcc95f55605ea701830437911a611214acb48",
+    "webmux/frontend/src/types/index.ts": "0e1ca849089d4645c6db7f039e4eaeced843cc6b2fa796c359db65e5efc601ca",
+    "webmux/server/internal/recovery/state.go": "4ab1020a33edc1a4757bc35f7433163a8d146868b8f80834d6b1d3a0df9fd1ef",
+    "webmux/frontend/src/components/CoordinationDialog.css": "3dc699ad2b1f28ee91443d504352af48be66c27246c96505fc6953d84a0a2d08"
+  },
+  "rawReceipt": "trust529-public-wm-trust529-public-nzhuxxp7.json",
+  "rawSHA256": "ed49b8bfebc114125338a8088e3df2a4145e3aa8befb2642cd3952cb427ab78d",
+  "probeSHA256": "fd180e1dbc5620860484342fdfcfcf659a4320c5713a5ce3b550b82e3c26deba",
+  "browserDriverSHA256": "a5aea084d0f01f7619c929261bd6ca3ab1c669488a0ebc20d8e02f7f3afeaf20",
+  "loadedBrowserDriverSHA256": "a5aea084d0f01f7619c929261bd6ca3ab1c669488a0ebc20d8e02f7f3afeaf20",
+  "preloadSHA256": "ed441ade85dd3ac554ed34dffee566c91828ab315554f9bd0d025f6acc60828a",
+  "gateSHA256": "3962bd2c6c853e007c8d2078a5d01e5631abb871663ec6d73ae30dcdd9549c08",
+  "checks": {
+    "typedTrustRefusalHasNoMemberOrViewer": true,
+    "blockedDuplicateDoesNotObserveOrPost": true,
+    "quotedNativeReviewCommandFitsNotice": true,
+    "explicitRetryStillRefusesDisabledProject": true,
+    "blockedControllerRestartRetainsSelection": true,
+    "changedSelectionRefusedBeforeTopology": true,
+    "nativeTrustDoesNotAutoLaunchOrObserve": true,
+    "lostPublicTrustRetryResponseRetainsUncertainty": true,
+    "duplicateAfterLostTrustReplyDoesNotObserveOrPost": true,
+    "nativeUncertaintyHasOneOriginalNodeAndNoViewer": true,
+    "approvedRetryRetainsOriginalTrustSelection": true,
+    "frozenNativeOperationAcrossExplicitChecks": true,
+    "readyDuplicateRetainsProviderAndViewer": true,
+    "actualNativeCodingChallenge": true,
+    "gracefulControllerRestartRetainsOriginalProvider": true,
+    "publicSurvivorReattachmentSendsNoResume": true,
+    "publicBrokerRetainsOriginalNativeConversation": true,
+    "onlyOwnedNativeProviderKilled": true,
+    "actualControllerSigkillDuringOriginalDispatch": true,
+    "ordinaryRecoveryDuplicateAfterCrashDoesNotPost": true,
+    "explicitPublicCompletionUsesSameNativeRequest": true,
+    "sameNativeConversationRecallWithoutTools": true,
+    "nativeHistoryPrefixAndAppendRetained": true,
+    "consumedRecoveryDuplicatePreservesProviderAndSibling": true,
+    "finalCheckedStopAndViewerAndSiblingRetained": true,
+    "sameTerminalLogPathsAndPrefixesRetained": true
+  },
+  "blockedContract": {
+    "httpStatus": 409,
+    "state": "blocked",
+    "code": "native_project_trust_required",
+    "requestIdKind": "Owner-scoped durable selection fingerprint; not a native operation UUID",
+    "privateFilesVerified": true,
+    "currentManagerEnvironmentAndFolderBound": true,
+    "originalBrowserSelectionCheckedBeforeTopology": true,
+    "noMemberOrViewerBeforeApproval": true,
+    "noObserverOrPOSTOnOrdinaryDuplicates": true,
+    "noAutomaticRetryAfterNativeTrustOrStatusRefresh": true
+  },
+  "nativeTrustReview": {
+    "exactNativePrompt": true,
+    "explicitNativeTrustChoice": true,
+    "nativeUpdaterSkipped": true,
+    "noModelTurnSubmitted": true,
+    "projectConfigUnchanged": true,
+    "projectPolicySHA256": "503103d4727b27e92408283f98d111bd6871c5ab2f2b5bbdca74d62a96592a03",
+    "displayedCommandExecutedWithoutPolicyFileEdits": true,
+    "observationsBeforeApprovedRetry": 2,
+    "originalProjectPOSTs": 1
+  },
+  "nativeReviewAdditionalCodingTurnContexts": 0,
+  "standaloneNativeReview": {
+    "rawReceipt": "trust529-native-cli-review-wm-native-trust529-wn5w4k9f.json",
+    "rawSHA256": "6f73bc8285935cfd6f23fe313b758b2d00a54683aeeef5450ceb70d895567c50",
+    "probeSHA256": "54afb85fd3eac170254638ec322bc8f5c46f7e6e8ff510dc9a819910ed3d4393",
+    "exactNativeTrustChoice": true,
+    "projectConfigUnchanged": true,
+    "nativeRecordedTurnContexts": 0,
+    "guardedNativeResolution": {
+      "policy": {
+        "type": "readOnly",
+        "networkAccess": false
+      },
+      "approval": "on-request",
+      "version": "0.169.0"
+    }
+  },
+  "publicResponseLoss": {
+    "discardedHTTPStatus": 202,
+    "discardedState": "uncertain",
+    "frozenSelectionRetained": true,
+    "outcomeRemainsUncertainInUI": true,
+    "ordinaryDuplicateNoObserverOrNativePOST": true,
+    "explicitOriginalRetryOnly": true
+  },
+  "nativeTraces": {
+    "project": {
+      "POSTs": 3,
+      "uniqueOperationIDs": 1,
+      "uniqueBodies": 1,
+      "bodySHA256": "a9545c1ae7a781bcf008134b81d0c2f7da97f75816faf32dc0dc7cd9808e80f6"
+    },
+    "member": {
+      "POSTs": 3,
+      "uniqueOperationIDs": 1,
+      "uniqueBodies": 1,
+      "bodySHA256": "37bf14d55152ddd2e0f44c7d2af314207128095635b1bae212440053d74a3bf5"
+    },
+    "resume": {
+      "POSTs": 5,
+      "uniqueOperationIDs": 1,
+      "uniqueBodies": 1,
+      "bodySHA256": "4a5a378e7b6de13c398c0424f4e948e02f2dec6f22a7bf221279ce53861576db"
+    }
+  },
+  "nativeConversationIdentityRetained": true,
+  "nativeWitnesses": [
+    {
+      "passed": true,
+      "contexts": 4,
+      "nativeNodeMatches": true,
+      "correlatedProbeOutputs": 1,
+      "policy": {
+        "type": "readOnly",
+        "networkAccess": false
+      },
+      "approval": "on-request",
+      "observedNativePolicy": {
+        "type": "read-only"
+      },
+      "allowedWrites": 0,
+      "deniedWrites": 6,
+      "networkDenied": true,
+      "writeResults": {
+        "project": {
+          "errno": 1
+        },
+        "extra": {
+          "errno": 1
+        },
+        "outside": {
+          "errno": 1
+        },
+        "git": {
+          "errno": 1
+        },
+        "tmpdir": {
+          "errno": 1
+        },
+        "config": {
+          "errno": 1
+        }
+      },
+      "environmentChecks": {
+        "homePreserved": true,
+        "tmpPreserved": true,
+        "ownerPathRetainedAsSuffix": true,
+        "pairedRigFound": true,
+        "managerToolPathAbsent": true,
+        "ownerToolFound": true,
+        "ownerToolRuns": true,
+        "inheritedValueMatches": true,
+        "managerOnlyValueAbsent": true
+      },
+      "nativeSessionSHA256": "cb9071547a7198ebd8822a41a10678f1b41b714e2afdae0d7e3f82f367916d94"
+    },
+    {
+      "passed": true,
+      "contexts": 4,
+      "nativeNodeMatches": true,
+      "correlatedProbeOutputs": 1,
+      "policy": {
+        "type": "readOnly",
+        "networkAccess": false
+      },
+      "approval": "on-request",
+      "observedNativePolicy": {
+        "type": "read-only"
+      },
+      "allowedWrites": 0,
+      "deniedWrites": 6,
+      "networkDenied": true,
+      "writeResults": {
+        "project": {
+          "errno": 1
+        },
+        "extra": {
+          "errno": 1
+        },
+        "outside": {
+          "errno": 1
+        },
+        "git": {
+          "errno": 1
+        },
+        "tmpdir": {
+          "errno": 1
+        },
+        "config": {
+          "errno": 1
+        }
+      },
+      "environmentChecks": {
+        "homePreserved": true,
+        "tmpPreserved": true,
+        "ownerPathRetainedAsSuffix": true,
+        "pairedRigFound": true,
+        "managerToolPathAbsent": true,
+        "ownerToolFound": true,
+        "ownerToolRuns": true,
+        "inheritedValueMatches": true,
+        "managerOnlyValueAbsent": true
+      },
+      "nativeSessionSHA256": "cb9071547a7198ebd8822a41a10678f1b41b714e2afdae0d7e3f82f367916d94"
+    }
+  ],
+  "nativeHistoryPrefixBytes": 202822,
+  "nativeHistoryPrefixSHA256": "eb836b38042ead083b754e6add6b678b86897ef3a0a7ffa859c8b82de47f2bd5",
+  "terminalLogs": [
+    {
+      "file": "session-29f0b915-ef7b-438d-97b8-e908e03f7418-20261118T222221Z-g1-9a402de0.log",
+      "prefixSHA256": "7385cb72f6856234cef26a46c566ec63b0485397677b757f96ade3866f96fea5",
+      "prefixBytes": 28193,
+      "finalBytes": 41663
+    }
+  ],
+  "screenshotSHA256": "7258f34cce2e21cdd2e97145a1b82dec6b47f22be0dd0f0055d39c0bbcf9a911",
+  "versions": {
+    "rig": "0.7.18 (3bf87c62)",
+    "codex": "0.169.0",
+    "node": "24.21.0",
+    "tmux": "3.8",
+    "chrome": "158.0.8127.36"
+  },
+  "cleanup": {
+    "passed": true,
+    "daemonStateRemoved": true,
+    "originalDaemonPIDAbsent": true,
+    "shutdownPhase": "complete",
+    "shutdownOutcome": "clean",
+    "shutdownReceiptSHA256": "682c4b88c1a1c9bb849b767c3fab49d3ffb7dbc3da0d68bbc2b017011be8fef9",
+    "privateTmuxStopped": true
+  },
+  "baseline174e052": {
+    "rawReceipt": "trust529-public-wm-trust529-public-lwji3vgp.json",
+    "rawSHA256": "14d10e0bce7f29e4bc8cce85a3fe0d112b5201c42a5c3fb1ea23d7c5c71f8724",
+    "passed": true,
+    "scope": "Before additional public trust-retry response-loss control; own source/binary retained."
+  },
+  "localChecks": {
+    "helpers": 233,
+    "frontend": 427,
+    "strictTypeScriptProjects": 5,
+    "affectedGoRace": true,
+    "affectedGoVet": true,
+    "frontendLint": true,
+    "frontendProductionBuild": true,
+    "windowsARM64CrossBuild": true,
+    "retainedLogsSHA256": {
+      "trust529-all-helpers-final.log": "430ef6a1c432ef5363982cbf35892e30643f8ee913e32df040887133dd7d461b",
+      "trust529-frontend-final.log": "56fe80a4c4a32f42350c836ea8576221d9d4da21cc34eedf9835e299cb0a8b3e",
+      "trust529-typecheck-final-v4.log": "bfbdeb0b9d52b9f5fa57d9bcbafdf0c45c715936935db99e8f5fb542c0d290f0",
+      "trust529-go-race-final.log": "394a97b923a0f85850535fee3d767b0398c06c3aef44704120c263dc937be804",
+      "trust529-lint-final.log": "a6d413fb36e8645661145aecac8d27dc160bdd0b77844fd8b52122d1798bcd52",
+      "trust529-build-final.log": "4961a8c0c670fcd1ff192170b2a9963d6f3b1a1fab314d99bbfaf8e33cc7f25f",
+      "trust529-windows-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "remaining": [
+    "Review, merge and current-head CI; #529 stays open until the reviewed PR lands",
+    "Initial public creation-response loss before a trust request is known, and broader creation/restore cases under #438/#318",
+    "Other policy variants, interactive escalation/permission changes, selected profiles/permission graphs and startup options",
+    "Restricted-policy service upgrade, native Rig/Codex host reboot and broader authenticated platform/route/provider combinations",
+    "Complete release-roadmap acceptance"
+  ],
+  "initialPublicResponseLossFollowUp": 530,
+  "excludedNativeReviewAttempts": [
+    {
+      "rawReceipt": "trust529-native-cli-review-wm-native-trust529-70m5s76g.json",
+      "rawSHA256": "8900d6fad9acd64099bc7390b51bf7a427c3bbd6b99f50c0907bd996296e6a06",
+      "probeSHA256": "c3f66411638c5ea1027ed2edfd130a3b5d507d538258be6f3a5fb3d66a405bb5",
+      "passed": false
+    },
+    {
+      "rawReceipt": "trust529-native-cli-review-wm-native-trust529-kmdff9ig.json",
+      "rawSHA256": "5dba1d8e8acd21b92b1e2989d2e2c6b3613ef8a2c4b60cfb28f1f645795015e6",
+      "probeSHA256": "4e9af35d8cee25b86399fff673159727c9459f7cafe8e448f70328ad1e42c45d",
+      "passed": false
+    }
+  ]
+}
