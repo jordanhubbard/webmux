@@ -1,9 +1,9 @@
 {
-  "recordedUTC": "2026-11-18T05:32:31.085036+00:00",
+  "recordedUTC": "2026-11-18T05:44:08.338501+00:00",
   "issue": 456,
   "base": "3b80d0d4174a366f8fc0a3d0175b30e0323377b8",
   "sourceSHA256": {
-    ".github/workflows/windows-arm-native.yml": "6b3850286fae843b52c2989af7170bbddeba469cc57f4f56bd5e57312c854dd3",
+    ".github/workflows/windows-arm-native.yml": "3366ace494d094ea195707a01b4f26bc6d73a53498820fed0cc6155873fb0406",
     "scripts/windows-native-architecture.mts": "f449ee33e0a081e42bffd1e53237711cb0375b2bb0487c50409fae5b7ba2e5fb",
     "scripts/windows-native-architecture.test.mts": "0a51e8daef2dd1a576f630045f3e64d94e9673c207e05df1d9623766adc09fe9"
   },
@@ -42,5 +42,24 @@
       "negativeHeldReplyDirect20RealSSH": "PASS",
       "scope": "Disposable virtual kernel; not physical devices."
     }
+  },
+  "aggregateBudget": {
+    "minutes": 60,
+    "previousMinutes": 30,
+    "basis": {
+      "head": "2e0fdd3f60dbfcb89f296f8a2853b98d141ff268",
+      "run": 44242526435,
+      "job": 134593581688,
+      "conclusion": "cancelled at 30-minute job deadline",
+      "artifact": 14401767083,
+      "artifactSHA256": "3177669a6a8ecc2efa1832c800768eac237cea3deda598c79d1795b1df2e9a23",
+      "nativeConPTYCasePasses": 28,
+      "rendererExpectedCases": 1384,
+      "rendererCompletedCases": 735,
+      "completedComparisonsEqualAtAllThreePhases": true,
+      "rendererComplete": false,
+      "scope": "Partial run only. Original renderer executable selection was not explicitly pinned; does not qualify newer source or authenticated recovery."
+    },
+    "unchanged": "All test cases, individual assertion/native suite/browser deadlines, single worker and zero retries; existing CI/packaging/audit bytes unchanged."
   }
 }

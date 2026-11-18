@@ -44,3 +44,16 @@ native ARM64 results. The original ARM64 input reached actual native server,
 UV/VT and 28-case ConPTY success, but its renderer comparison was not explicitly
 bound to the PE-inspected executable. The new explicit binding closes that
 provenance gap without claiming the old browser receipt proved actual selection.
+
+The first native run at `2e0fdd3` reached its initial 30-minute job deadline
+after passing 735 of 1,384 serial renderer cases. It was still completing
+cases at approximately 1.6 seconds each, with no renderer assertion failure.
+The renderer started about nine minutes after job setup; that observed rate
+requires approximately 38 minutes for all renderer cases, before native tests,
+dependency installation and cleanup. The job now has a 60-minute aggregate
+budget. Per-test, browser, native-suite and production deadlines, the single
+worker, zero retries and all cases remain unchanged. This is a measured job
+budget correction, not a successful full ARM64 renderer qualification.
+The canceled run's artifact `14401767083` (SHA256
+`3177669a6a8ecc2efa1832c800768eac237cea3deda598c79d1795b1df2e9a23`)
+retains raw native captures, architecture admission and partial comparisons.

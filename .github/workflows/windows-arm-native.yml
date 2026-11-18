@@ -13,7 +13,9 @@ jobs:
   native-arm64:
     name: Windows ARM64 server and ConPTY
     runs-on: windows-11-arm
-    timeout-minutes: 30
+    # 1,384 serial renderer cases took ~1.6s each on Windows ARM64, in
+    # addition to native tests/setup. Keep every case and assertion deadline.
+    timeout-minutes: 60
     steps:
       - name: Verify native OS and worker headroom
         shell: pwsh
