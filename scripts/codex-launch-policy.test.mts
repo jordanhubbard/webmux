@@ -4,10 +4,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { projectCodexOwnerPlan } from '../webmux/server/internal/openrigcoord/codex-owner-plan.mts';
 import { filterRigCodexLaunch } from '../webmux/server/internal/openrigcoord/codex-launch-policy.mts';
+import { captureCodexLaunchEnvironment } from '../webmux/server/internal/openrigcoord/codex-launch-environment.mts';
+import { openCodexEnvironmentChannel } from '../webmux/server/internal/openrigcoord/codex-environment-channel.mts';
 const wrapper = fileURLToPath(new URL('../webmux/server/internal/openrigcoord/codex-launch-wrapper.mts', import.meta.url));
 
 function plan(cwd = '/project', home = '/account', executable = '/bin/codex', executableSHA256 = 'a'.repeat(64)) {
@@ -102,17 +104,27 @@ function fixture(t: { after(fn: () => void): void }) {
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.chmodSync(root, 0o700);
   const cwd = path.join(root, 'project'), home = path.join(root, 'home'); fs.mkdirSync(cwd); fs.mkdirSync(home);
+  const rigHome = path.join(root, 'rig'), nativeNode = fs.realpathSync(process.execPath);
+  const rigBin = path.join(rigHome, 'run', 'seat-bin', createHash('sha256').update(nativeNode).digest('hex'));
+  fs.mkdirSync(rigBin, { recursive: true, mode: 0o700 }); fs.symlinkSync(nativeNode, path.join(rigBin, 'rig'));
   const capture = path.join(root, 'capture.mjs');
-  fs.writeFileSync(capture, `console.log(JSON.stringify({pid:process.pid,args:process.argv.slice(2),node:process.env.OPENRIG_NODE_ID,home:process.env.CODEX_HOME}));`);
+  fs.writeFileSync(capture, `console.log(JSON.stringify({pid:process.pid,args:process.argv.slice(2),node:process.env.OPENRIG_NODE_ID,home:process.env.CODEX_HOME,environment:{HOME:process.env.HOME,PATH:process.env.PATH,TMPDIR:process.env.TMPDIR,opaqueMatches:process.env.TOOL_API_KEY==='WRAPPER_PRIVATE_REFERENCE',managerOnlyKeyAbsent:process.env.MANAGER_ONLY_KEY===undefined,parentThreadAbsent:process.env.CODEX_THREAD_ID===undefined}}));`);
   const executable = path.join(root, 'native');
   const q = (s: string) => `'${s.replaceAll("'", "'\\''")}'`;
   fs.writeFileSync(executable, `#!/bin/sh\nexec ${q(process.execPath)} ${q(capture)} "$@"\n`, { mode: 0o700 });
   const digest = createHash('sha256').update(fs.readFileSync(executable)).digest('hex');
   const value = plan(cwd, home, executable, digest), manifest = path.join(root, 'plan.json');
   fs.writeFileSync(manifest, JSON.stringify(value), { mode: 0o600 });
-  const run = () => spawnSync(process.execPath, [wrapper, manifest, executable, ...args(cwd)],
-    { cwd, env: { ...process.env, OPENRIG_NODE_ID: 'fixture-node', OPENRIG_OCCUPANT_GENERATION: 'fixture-generation', CODEX_HOME: home }, encoding: 'utf8', timeout: 5000 });
-  return { root, manifest, executable, value, run };
+  const run = (overrides: NodeJS.ProcessEnv = {}) => spawnSync(process.execPath, [wrapper, manifest, executable, ...args(cwd)],
+    { cwd, env: { ...process.env, OPENRIG_HOME: rigHome, OPENRIG_NODE_ID: 'fixture-node', OPENRIG_OCCUPANT_GENERATION: 'fixture-generation', CODEX_HOME: home, PATH: rigBin + path.delimiter + process.env.PATH, ...overrides }, encoding: 'utf8', timeout: 5000 });
+  const runAsync = (overrides: NodeJS.ProcessEnv = {}) => new Promise<{ status: number | null; pid: number | undefined; stdout: string; stderr: string }>((resolve, reject) => {
+    const child = spawn(process.execPath, [wrapper, manifest, executable, ...args(cwd)], { cwd,
+      env: { ...process.env, OPENRIG_HOME: rigHome, OPENRIG_NODE_ID: 'fixture-node', OPENRIG_OCCUPANT_GENERATION: 'fixture-generation', CODEX_HOME: home, PATH: rigBin + ':' + process.env.PATH, ...overrides }, stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '', stderr = ''; child.stdout.on('data', data => { stdout += String(data); }); child.stderr.on('data', data => { stderr += String(data); });
+    const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('wrapper deadline')); }, 36000);
+    child.once('error', reject); child.once('close', status => { clearTimeout(timer); resolve({ status, pid: child.pid, stdout, stderr }); });
+  });
+  return { root, manifest, executable, value, run, runAsync, rigBin };
 }
 posixTest('wrapper execve retains PID and native identity while applying the policy', t => {
   const f = fixture(t), result = f.run();
@@ -130,4 +142,34 @@ posixTest('unsafe manifest modes, symlinks and changed executable bytes never ex
     const result = f.run(); assert.equal(result.status, 1); assert.equal(result.stdout, '');
     assert.match(result.stderr, /native Codex launch policy could not be preserved/); assert.equal(result.stderr.includes(f.root), false);
   }
+});
+posixTest('environment envelope restores owner paths and in-memory credentials across execve', async t => {
+  const f = fixture(t), owner = { HOME: f.value.home, PATH: '/owner/bin:/usr/bin', TMPDIR: '/owner/tmp', TOOL_API_KEY: 'WRAPPER_PRIVATE_REFERENCE' };
+  const environmentSocket = path.join(f.root, 'env.sock');
+  const envelope = { contract: 'webmux-codex-launch/v2', plan: f.value, environment: captureCodexLaunchEnvironment(owner, f.value.home), environmentSocket };
+  let delivered = 0;
+  const channel = await openCodexEnvironmentChannel(environmentSocket, envelope.environment, owner, () => { delivered++; });
+  t.after(() => channel.close());
+  const bytes = JSON.stringify(envelope); assert.equal(bytes.includes(owner.TOOL_API_KEY), false); fs.writeFileSync(f.manifest, bytes);
+  const result = await f.runAsync({ HOME: '/manager', PATH: f.rigBin + ':/manager/bin', TMPDIR: '/manager/tmp', TOOL_API_KEY: undefined,
+    MANAGER_ONLY_KEY: 'NEVER_INHERIT_MANAGER_VALUE', CODEX_THREAD_ID: 'parent-thread' });
+  assert.equal(result.status, 0, result.stderr);
+  const captured = JSON.parse(result.stdout); assert.equal(captured.pid, result.pid); assert.equal(captured.node, 'fixture-node');
+  assert.deepEqual(captured.environment, { HOME: owner.HOME, PATH: f.rigBin + ':' + owner.PATH, TMPDIR: owner.TMPDIR,
+    opaqueMatches: true, managerOnlyKeyAbsent: true, parentThreadAbsent: true });
+  assert.equal(await channel.wait(), true); assert.equal(delivered, 1);
+});
+posixTest('environment wrapper refuses an unverified manager tool prefix', async t => {
+  const f = fixture(t), environment = captureCodexLaunchEnvironment({ HOME: f.value.home, PATH: '/bin' }, f.value.home);
+  const environmentSocket = path.join(f.root, 'env.sock');
+  const channel = await openCodexEnvironmentChannel(environmentSocket, environment, {}, () => {}); t.after(() => channel.close());
+  fs.writeFileSync(f.manifest, JSON.stringify({ contract: 'webmux-codex-launch/v2', plan: f.value, environment, environmentSocket }));
+  fs.writeFileSync(path.join(f.rigBin, 'another-tool'), 'unrelated');
+  const result = await f.runAsync(); assert.equal(result.status, 1); assert.equal(result.stdout, '');
+});
+posixTest('unavailable environment handoff prevents native execution without credential errors', async t => {
+  const f = fixture(t), environment = captureCodexLaunchEnvironment({ HOME: f.value.home, PATH: '/bin', TOOL_API_KEY: 'ORIGINAL_PRIVATE_VALUE' }, f.value.home);
+  fs.writeFileSync(f.manifest, JSON.stringify({ contract: 'webmux-codex-launch/v2', plan: f.value, environment, environmentSocket: path.join(f.root, 'env.sock') }));
+  const result = await f.runAsync({ TOOL_API_KEY: undefined }); assert.equal(result.status, 1); assert.equal(result.stdout, '');
+  assert.equal(result.stderr, 'WebMux: native Codex launch policy could not be preserved.\n');
 });

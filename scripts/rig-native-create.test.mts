@@ -20,7 +20,7 @@ function fixture(t: { after(fn: () => void): void }) {
   { cwd, home: root, executable: '/native/codex', executableSHA256: 'a'.repeat(64), profile: null });
   const posts: Array<{ id: string; text: string }> = []; let resolves = 0, reviews = 0, loseReply = false, changed = false;
   const manager = { port: 4242, managerPid: 123, managerIdentity: 'b'.repeat(64), processIdentity: 'c'.repeat(64) };
-  const deps = { run: () => '[]', review: async () => { reviews++; return { ...manager }; },
+  const deps = { handoffLifetime: 20, env: { HOME: root, PATH: process.env.PATH!, TOOL_API_KEY: 'PRIVATE_CREATE_VALUE_NEVER_SAVE' }, run: () => '[]', review: async () => { reviews++; return { ...manager }; },
     resolve: async () => { resolves++; if (changed && resolves > 1) { const { fingerprint: _old, ...content } = plan; content.model = 'different-owner-model'; return { ...content, fingerprint: createHash('sha256').update(JSON.stringify(content)).digest('hex') }; } return plan; },
     fetcher: (async (url: string | URL | Request, init?: RequestInit) => {
       if (String(url).endsWith('/capabilities')) return new Response(JSON.stringify({ contract: 'operation-correlation.v1', kinds: ['member.add'] }));
@@ -37,7 +37,11 @@ posixTest('creation persists exact plan and immutable source bundle before one c
   assert.equal(body.member.permission_policy, 'builtin:yolo'); assert.equal(body.member.codex_permissions, undefined);
   assert.equal(body.member.model, f.plan.model); assert.equal(body.member.effort, f.plan.effort);
   assert.deepEqual(body.member.env, { CODEX_HOME: f.plan.home });
-  assert.deepEqual(JSON.parse(fs.readFileSync(manifest, 'utf8')), f.plan);
+  const envelope = JSON.parse(fs.readFileSync(manifest, 'utf8'));
+  assert.equal(envelope.contract, 'webmux-codex-launch/v2'); assert.deepEqual(envelope.plan, f.plan);
+  assert.equal(envelope.environment.values.HOME, f.root);
+  assert.equal(fs.readFileSync(manifest, 'utf8').includes(f.deps.env.TOOL_API_KEY), false);
+  assert.equal(f.posts[0].text.includes(f.deps.env.TOOL_API_KEY), false);
   assert.equal(fs.statSync(manifest).mode & 0o777, 0o600); assert.equal(fs.statSync(path.dirname(manifest)).mode & 0o777, 0o700);
   const bundle = body.member.launch_wrapper[1]; assert.ok(fs.existsSync(bundle));
   assert.equal(JSON.stringify(result).includes('private-user'), false); assert.equal(JSON.stringify(result).includes(f.root), false);
@@ -76,6 +80,14 @@ posixTest('inspection refuses changed agent configuration without replaying the 
   const body = JSON.parse(f.posts[0].text), agent = body.member.agent_ref.slice('path:'.length);
   fs.appendFileSync(path.join(agent, 'agent.yaml'), '\ncorrupted: true\n');
   await assert.rejects(createRigNativeCodex({ ...f.input, inspect: true }, f.deps), /original_request_changed/);
+  assert.equal(f.posts.length, 1);
+});
+posixTest('changed execution environment blocks inspection without a new operation or replay', async t => {
+  const f = fixture(t); f.lose(); const original = await createRigNativeCodex(f.input, f.deps);
+  f.deps.env.TOOL_API_KEY = 'CHANGED_PRIVATE_VALUE';
+  const duplicate = await createRigNativeCodex(f.input, f.deps);
+  assert.equal(duplicate.operationId, original.operationId); assert.equal(duplicate.posted, false);
+  await assert.rejects(createRigNativeCodex({ ...f.input, inspect: true }, f.deps), /native_create_owner_environment_changed/);
   assert.equal(f.posts.length, 1);
 });
 posixTest('parent-directory flush failure prevents all native mutation', async t => {

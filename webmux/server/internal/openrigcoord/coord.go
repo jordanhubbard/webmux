@@ -38,6 +38,12 @@ var codexLaunchPolicy []byte
 //go:embed codex-launch-wrapper.mts
 var codexLaunchWrapper []byte
 
+//go:embed codex-launch-environment.mts
+var codexLaunchEnvironment []byte
+
+//go:embed codex-environment-channel.mts
+var codexEnvironmentChannel []byte
+
 //go:embed rig-create-intent.mts
 var rigCreateIntent []byte
 
@@ -88,7 +94,9 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 	for name, source := range map[string][]byte{
 		"codex-owner-plan.mts": codexOwnerPlan, "codex-launch-policy.mts": codexLaunchPolicy,
 		"codex-launch-wrapper.mts": codexLaunchWrapper, "rig-create-intent.mts": rigCreateIntent,
-		"rig-native-create.mts": rigNativeCreate,
+		"codex-launch-environment.mts":  codexLaunchEnvironment,
+		"codex-environment-channel.mts": codexEnvironmentChannel,
+		"rig-native-create.mts":         rigNativeCreate,
 	} {
 		if err := os.WriteFile(filepath.Join(directory, name), source, 0600); err != nil {
 			return nil, err

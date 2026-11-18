@@ -1,5 +1,10 @@
 # Native Codex creation factory
 
+The [later environment/handoff checkpoint](../codex-native-environment-2026-11-18/README.md)
+adds in-memory environment transfer and qualifies creation-helper loss before
+delivery. This directory retains its earlier source-bound capture; its
+environment limitation and source hashes below describe that earlier revision.
+
 The internal `native-create` runner action composes the qualified manager,
 default native owner-plan resolver, launch wrapper and durable creation journal.
 Go embeds its dependencies and supplies the authenticated owner's storage

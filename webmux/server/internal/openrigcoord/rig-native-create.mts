@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { resolveCodexOwnerPlan, type CodexOwnerPlan } from './codex-owner-plan.mts';
 import { validateCodexLaunchPlan } from './codex-launch-policy.mts';
+import { captureCodexLaunchEnvironment, validateCodexLaunchEnvironment, type CodexLaunchEnvironment } from './codex-launch-environment.mts';
+import { openCodexEnvironmentChannel } from './codex-environment-channel.mts';
 import { reviewRigCreateManager, type RigCreateManager, type RigStopRun } from './rig-stop.mts';
 import { dispatchRigCreateIntent, inspectRigCreateIntent, type RigCreateIntent } from './rig-create-intent.mts';
 
@@ -47,7 +49,7 @@ function publish(file: string, bytes: Buffer) {
 const json = (value: unknown) => Buffer.from(JSON.stringify(value));
 const agentBytes = json({ name: 'webmux-native-codex', version: '1.0', description: 'Owner Codex with native lifecycle',
   defaults: { runtime: 'codex' }, profiles: { default: { uses: { skills: [], guidance: [], subagents: [], plugins: [], runtime_resources: [] } } } });
-const bundleFiles = ['codex-owner-plan.mts', 'codex-launch-policy.mts', 'codex-launch-wrapper.mts'] as const;
+const bundleFiles = ['codex-owner-plan.mts', 'codex-launch-policy.mts', 'codex-launch-wrapper.mts', 'codex-launch-environment.mts', 'codex-environment-channel.mts'] as const;
 export function publishCodexLaunchBundle(directory: string, source = path.dirname(fileURLToPath(import.meta.url))) {
   const base = ownedRoot(directory), bundles = ownedRoot(path.join(base, 'launchers'));
   const files = bundleFiles.map(name => {
@@ -77,13 +79,13 @@ export interface NativeCodexCreateInput {
   directory: string; rigId: string; pod: string; member: string; cwd: string; inspect?: boolean;
 }
 interface SavedCreate {
-  contract: 'webmux-native-codex-create/v1'; cwd: string; member: string; bundle: string;
-  plan: CodexOwnerPlan; intent: RigCreateIntent;
+  contract: 'webmux-native-codex-create/v2'; cwd: string; member: string; bundle: string;
+  plan: CodexOwnerPlan; environment: CodexLaunchEnvironment; intent: RigCreateIntent;
 }
 interface Dependencies {
-  run: RigStopRun; fetcher?: typeof fetch; source?: string;
+  run: RigStopRun; fetcher?: typeof fetch; source?: string; env?: NodeJS.ProcessEnv; handoffLifetime?: number;
   review?: () => Promise<RigCreateManager>;
-  resolve?: (cwd: string) => Promise<CodexOwnerPlan>;
+  resolve?: (cwd: string, env: NodeJS.ProcessEnv) => Promise<CodexOwnerPlan>;
 }
 export async function createRigNativeCodex(input: NativeCodexCreateInput, deps: Dependencies) {
   if (!['darwin', 'linux'].includes(process.platform) || Number(process.versions.node.split('.')[0]) !== 24
@@ -93,9 +95,15 @@ export async function createRigNativeCodex(input: NativeCodexCreateInput, deps: 
   if (!fs.statSync(cwd).isDirectory()) return refuse();
   const key = digest(JSON.stringify([input.rigId, input.pod, input.member]));
   const requests = ownedRoot(path.join(base, 'requests')), directory = ownedRoot(path.join(requests, key));
+  // Unix socket paths have a much smaller bound than durable profile paths.
+  // A deterministic owner-private runtime directory also permits stale-socket
+  // refusal/reclamation after controller failure without moving the journal.
+  const channelRoot = path.join(fs.realpathSync('/tmp'), `wm-env-${process.geteuid!()}-${digest(base).slice(0, 16)}`);
+  const environmentSocket = path.join(channelRoot, key.slice(0, 24) + '.sock');
   const savedFile = path.join(directory, 'launch.json');
   const review = deps.review ?? (() => reviewRigCreateManager(deps.run, deps.fetcher));
-  const resolve = deps.resolve ?? ((value: string) => resolveCodexOwnerPlan(value));
+  const ownerEnvironment = { ...(deps.env ?? process.env) };
+  const resolve = deps.resolve ?? ((value: string, env: NodeJS.ProcessEnv) => resolveCodexOwnerPlan(value, { env }));
   const manager = await review();
   let saved: SavedCreate;
   try { saved = JSON.parse(read(savedFile).toString('utf8')) as SavedCreate; }
@@ -107,36 +115,60 @@ export async function createRigNativeCodex(input: NativeCodexCreateInput, deps: 
     const rows = Array.isArray(raw) ? raw : object(raw) ? raw.entries : undefined;
     if (!Array.isArray(rows) || rows.length > 4096 || !rows.every(object)) return refuse();
     if (rows.some(row => row.rigId === input.rigId && row.logicalId === `${input.pod}.${input.member}`)) throw new Error('native_create_member_already_exists');
-    const plan = validateCodexLaunchPlan(await resolve(cwd));
+    const plan = validateCodexLaunchPlan(await resolve(cwd, ownerEnvironment));
     if (plan.cwd !== cwd) return refuse();
+    const environment = captureCodexLaunchEnvironment(ownerEnvironment, plan.home);
     const bundle = publishCodexLaunchBundle(base, deps.source);
     const agent = ownedRoot(path.join(directory, 'agent'));
     publish(path.join(agent, 'agent.yaml'), agentBytes);
-    const manifest = path.join(directory, 'owner-plan.json'); publish(manifest, json(plan));
+    const manifest = path.join(directory, 'launch-manifest.json');
+    publish(manifest, json({ contract: 'webmux-codex-launch/v2', plan, environment, environmentSocket }));
     const requestText = nativeRequest(plan, input.member, agent, bundle.wrapper, manifest, directory);
-    saved = { contract: 'webmux-native-codex-create/v1', cwd, member: input.member, bundle: bundle.identity, plan,
+    saved = { contract: 'webmux-native-codex-create/v2', cwd, member: input.member, bundle: bundle.identity, plan, environment,
       intent: { managerIdentity: manager.managerIdentity, port: manager.port, rigId: input.rigId, pod: input.pod, requestText } };
     publish(savedFile, json(saved));
   }
-  if (!object(saved) || saved.contract !== 'webmux-native-codex-create/v1' || saved.cwd !== cwd || saved.member !== input.member
+  if (!object(saved) || saved.contract !== 'webmux-native-codex-create/v2' || saved.cwd !== cwd || saved.member !== input.member
     || saved.intent?.rigId !== input.rigId || saved.intent.pod !== input.pod || saved.intent.managerIdentity !== manager.managerIdentity
     || saved.intent.port !== manager.port) throw new Error('native_create_original_request_changed');
   validateCodexLaunchPlan(saved.plan);
+  validateCodexLaunchEnvironment(saved.environment, saved.plan.home);
   if (!/^[a-f0-9]{64}$/.test(saved.bundle) || saved.intent.requestText !== nativeRequest(saved.plan, input.member,
-    path.join(directory, 'agent'), path.join(base, 'launchers', saved.bundle, 'codex-launch-wrapper.mts'), path.join(directory, 'owner-plan.json'), directory)
-    || !read(path.join(directory, 'owner-plan.json')).equals(json(saved.plan))
+    path.join(directory, 'agent'), path.join(base, 'launchers', saved.bundle, 'codex-launch-wrapper.mts'), path.join(directory, 'launch-manifest.json'), directory)
+    || !read(path.join(directory, 'launch-manifest.json')).equals(json({ contract: 'webmux-codex-launch/v2', plan: saved.plan, environment: saved.environment, environmentSocket }))
     || !read(path.join(directory, 'agent', 'agent.yaml')).equals(agentBytes)) throw new Error('native_create_original_request_changed');
   const journal = ownedRoot(path.join(directory, 'journal'));
   // Ordinary duplicates go straight to the consumed journal. They never start
   // another native policy-observation process or rebuild the original bytes.
+  let channel: Awaited<ReturnType<typeof openCodexEnvironmentChannel>> | undefined;
   if (!fs.existsSync(path.join(journal, key + '.dispatched')) || input.inspect) {
-    const current = validateCodexLaunchPlan(await resolve(cwd));
+    const currentEnvironment = { ...(deps.env ?? process.env) };
+    if (captureCodexLaunchEnvironment(currentEnvironment, saved.plan.home).fingerprint !== saved.environment.fingerprint) throw new Error('native_create_owner_environment_changed');
+    const current = validateCodexLaunchPlan(await resolve(cwd, currentEnvironment));
     if (current.fingerprint !== saved.plan.fingerprint) throw new Error('native_create_owner_plan_changed');
     const bundle = publishCodexLaunchBundle(base, deps.source);
     if (bundle.identity !== saved.bundle) throw new Error('native_create_launch_bundle_changed');
     const after = await review();
     if (after.managerIdentity !== manager.managerIdentity || after.processIdentity !== manager.processIdentity || after.port !== manager.port) throw new Error('native_create_manager_changed');
+    const receipt = path.join(directory, 'environment-consumed.json');
+    const consumed = json({ contract: 'webmux-codex-environment-consumed/v1', fingerprint: saved.environment.fingerprint });
+    let needsHandoff = true;
+    try { if (!read(receipt).equals(consumed)) return refuse(); needsHandoff = false; }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    if (needsHandoff) {
+      ownedRoot(channelRoot);
+      channel = await openCodexEnvironmentChannel(environmentSocket, saved.environment, currentEnvironment,
+        () => publish(receipt, consumed), deps.handoffLifetime);
+    }
   }
-  const result = await (input.inspect ? inspectRigCreateIntent : dispatchRigCreateIntent)(journal, key, saved.intent, deps.fetcher);
-  return { ...result, logicalId: `${input.pod}.${input.member}`, planFingerprint: saved.plan.fingerprint };
+  try {
+    const result = await (input.inspect ? inspectRigCreateIntent : dispatchRigCreateIntent)(journal, key, saved.intent, deps.fetcher);
+    if (channel && result.posted) await channel.wait();
+    return { ...result, logicalId: `${input.pod}.${input.member}`, planFingerprint: saved.plan.fingerprint };
+  } finally {
+    await channel?.close();
+    if (channel) { try { fs.rmdirSync(channelRoot); } catch (error) {
+      if (!['ENOENT', 'ENOTEMPTY'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
+    } }
+  }
 }
