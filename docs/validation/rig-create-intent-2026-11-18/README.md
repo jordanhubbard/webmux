@@ -27,7 +27,7 @@ new client's explicit inspection recovers that original enrollment.
 
 Eleven journal controls cover separate client processes, concurrency, response
 loss, drift, unsupported correlation, malformed/empty receipts, partial files,
-missing dispatch authority and unsafe directory access. All 140 helper controls
+missing dispatch authority and unsafe directory access. All 144 helper controls
 and five strict TypeScript projects pass locally. Tests join ordinary helper CI;
 POSIX cases are explicitly skipped on Windows, where the journal refuses.
 
@@ -48,3 +48,30 @@ the correction refuses before any POST for both new and preexisting journals.
 The third native receipt binds this corrected source and repeats actual response
 loss, separate-client duplicate/inspection, manager restart and cleanup controls.
 These are process/durability protocol checks, not a physical power-cut test.
+
+## Verified native manager binding
+
+The read-only `reviewRigCreateManager` check reuses the qualified version,
+loopback listener, OS owner, executable/entry-point and process-start checks.
+The published health response's selfHostId supplies the native host identity.
+All three observations must agree on it. The durable hash binds that identity,
+owner and qualified build; a separate process fingerprint detects a process
+change during observation. No private database or credential file is read.
+The Stop response projects its original fields and retains its original
+process/occupant checks; creation identity does not authorize Stop.
+
+The [manager-binding receipt](manager-binding.json) binds an actual published
+Rig daemon before and after its private restart. Its PID/process fingerprint
+change, while the verified durable identity stays equal. That identity is used
+by the journal fixture: response loss stays consumed, a new client's duplicate
+makes no POST, exact inspection keeps the same native occupant/pane PID,
+manager restart preserves it, checked Stop removes the selected terminal and
+keeps its sibling, and private cleanup passes.
+
+Four new controls reject absent/malformed self identity, foreign/unverified
+listeners or proxies, process changes and self identity changes during an
+observation; they also verify stable binding across a simulated process restart.
+All 24 manager/Stop controls and 144 total helpers pass. Actual acceptance here
+is macOS ARM64; the new manager binding still needs native Linux qualification.
+This is a caller building block, not WebMux native-create activation, caller
+permission, an atomic mutation precondition or provider readiness evidence.

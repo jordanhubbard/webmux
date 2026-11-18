@@ -1,0 +1,50 @@
+{
+  "scope": "Read-only native creation-manager binding plus actual terminal enrollment correlation on macOS ARM64; not activation of WebMux native create.",
+  "versions": {
+    "rig": "0.7.18 (3bf87c62)",
+    "node": "v24.21.0",
+    "tmux": "tmux 3.8"
+  },
+  "binding": {
+    "usesNativeSelfHostId": true,
+    "requiresSameUIDAndQualifiedBuild": true,
+    "localListenerAndProcessVerified": true,
+    "stableIdentityAcrossRestart": true,
+    "pidChangedAcrossRestart": true,
+    "processFingerprintChangedAcrossRestart": true,
+    "allObservationsRequireConsistentSelfHostId": true
+  },
+  "checks": {
+    "actualNativeReplyLossLeavesIntentConsumed": true,
+    "originalUUIDRouteAndExactBodySavedBeforeNativeDispatch": true,
+    "newClientProcessDuplicateDoesNotPOST": true,
+    "explicitInspectionReplaysSameOperationWithoutNewOccupant": true,
+    "changedExactBodyRefusesBeforeNativePOST": true,
+    "OSVerifiedStableManagerBindingSurvivesDaemonRestart": true,
+    "sameNativeEnrollmentAndSiblingSurviveManagerRestart": true,
+    "checkedStopRemovesSelectedTerminalAndPreservesSibling": true
+  },
+  "cleanup": {
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true
+  },
+  "sourceBindings": {
+    "managerModuleSHA256": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "journalModuleSHA256": "2e4f6b47ecb5ee21aa5a73ff85dacb1f510093f00c5e736286c2d92e336dd693",
+    "nativeProbeSHA256": "358696c8a094c830f84ff9d93de31ac7c24e9b958c08b55753413adc4d9cee54",
+    "nativeReportSHA256": "48b8604cf31c96812c0ea0f93a18df23b6b450812ecfa7ccade334132e9b3bef"
+  },
+  "localControls": {
+    "totalHelpers": 144,
+    "managerAndStopControls": 24,
+    "newManagerControls": 4,
+    "embeddedCoordinationGoRace": "pass",
+    "embeddedCoordinationGoVet": "pass"
+  },
+  "limits": [
+    "Native actual manager binding/restart acceptance is macOS ARM64; native Linux acceptance of the new binding remains required before claiming that scope.",
+    "The manager check is an observation, not a native atomic mutation precondition or readiness proof. Caller authorization and launch-plan preservation remain required.",
+    "No new adoption authority; existing Stop continues to use its original reviewed occupant and process fingerprint.",
+    "No provider authentication, provider-loss recovery, host reboot or WebMux UI creation proof in this terminal fixture."
+  ]
+}

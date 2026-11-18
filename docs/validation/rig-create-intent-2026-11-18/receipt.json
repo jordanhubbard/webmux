@@ -74,12 +74,13 @@
   ],
   "localValidation": {
     "strictTypeScriptProjects": 5,
-    "helperTestsPassed": 140,
+    "helperTestsPassed": 144,
     "helperSkips": 0,
     "journalTestsPassed": 11,
     "nativePositiveReports": 3,
     "lockIdentity": "272 package identities match",
-    "whitespace": "pass"
+    "whitespace": "pass",
+    "managerAndStopControlsPassed": 24
   },
   "limits": [
     "No owner launch-plan resolution, manager identity authorization or production create/UI integration in this module. The caller must establish these before dispatch.",
