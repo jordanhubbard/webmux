@@ -77,3 +77,13 @@ Production Screen does not enable this extension yet. Complete ANSI encoding,
 final pen restoration, separately versioned renderer capability negotiation and
 fresh native/application acceptance remain required under #427/#355. Existing
 unsupported-state refusals and the v1 REP profile are unchanged.
+
+## Grid test diagnostic labels (#450)
+
+The retained grid property tests pass an untyped nil only when formatting a nil
+cell in an operation label. Formatting a typed nil `*uv.Cell` otherwise calls
+its dereferencing `String` method before `fmt` recovers and prints `<nil>`.
+The label bytes, nil operation inputs, seeds and assertions remain unchanged.
+This avoids unnecessary recovered nil faults in diagnostics; it does not modify
+terminal behavior or repair the Windows Go runtime. The file hash is recorded
+as an explicit local test-only patch.

@@ -1,0 +1,51 @@
+{
+  "recordedUTC": "2026-11-18T11:47:57.405137+00:00",
+  "issue": 450,
+  "base": "789b125d27ba797c6d4d68bfbcc3ddad8966aee4",
+  "sourceSHA256": {
+    "webmux/server/internal/thirdparty/vt/grid_test.go": "9dc02e74681ee83cf5c27bdc727a3ca964925b13b171cb17ab17162072246395",
+    "webmux/server/internal/thirdparty/vt/WEBMUX.md": "1823130164e2ba74c8f8768f617e61a118eab0bb95ae26cc9130acc6db7277a2",
+    "webmux/server/internal/thirdparty/vt/WEBMUX_UPSTREAM.json": "c160accba97e1e6f0c728a8d72620b5e31aecf5d884491acc376829172113b2a",
+    "docs/validation/vt-grid-labels-2026-11-18/README.md": "716734ae2163ba42d0e735c8a323e6d5d9345795350b1998995e4473d927ac7d"
+  },
+  "privateEvidenceSHA256": {
+    "vt450-label-probe-result.json": "a3fc6b61ca1fac0eebca1ba0706c65dd35572af4188a5ec3a15747cb1029b892",
+    "vt450-label-probe-before.log": "d9d72c23ea8f9b36114a0bb49839c44d54d5f8eede1bb187ef4b88bd4470634c",
+    "vt450-label-probe-after.log": "4203be18ab03f571c1e9b9edc611a6a9b8e12a77337ad5c1638082a45b158df4",
+    "vt450-label-source-invariant.json": "84196306be4bab1e456855941f50cf856b2fdff8441dde95990ff238f424a214",
+    "vt450-label-full-race-vet.log": "8af2f015d51d7b0591f073006ff11006c645064dd0c44ada55424c0679cff57c",
+    "vt450-label-crosscompile-result.json": "6aebba4a10a79097745aceb0ec8334881d51092e25cb337ec2705327883eb88f",
+    "vt450-original-cell-string-assembly.log": "e83b4b30dc8da41b06db4abb7452e7b98cf9a601a1f0d0b0c26a4a3c49fcd899"
+  },
+  "privateProbeSHA256": "0a1b665ecec0bd8157831395f9f4b6661fca57d46ad96b7c6a1fc401edf62b3b",
+  "originalWindowsAssemblyEvidence": {
+    "run": 44281255921,
+    "artifact": 14417129323,
+    "binarySHA256": "06b94de1712ecd9edc418e6388568467c3f7851c69894c93f501b30e5efdd66b",
+    "method": "github.com/charmbracelet/ultraviolet.(*Cell).String",
+    "receiverRelativeNilLoadVerified": true
+  },
+  "labelsCompared": 36040,
+  "labelSHA256": "b6b7477a3f6d11b0a65d071ebbcb14d9f74b4cc2bc3ea5c8ff97c8d86fedb82c",
+  "nilStringDispatchesBefore": 2486,
+  "nilStringDispatchesAfter": 0,
+  "originalSourceInvertible": true,
+  "localFullVTRaceVet": "PASS",
+  "vtUvProvenance": "PASS",
+  "windowsCrosscompile": {
+    "amd64": {
+      "machine": "0x8664",
+      "sha256": "e2a26fbbcd87ddc8023ba33bc2b5137edbce41b2cadd38cd52415d6fb4ed927e",
+      "scope": "cross-compilation only"
+    },
+    "arm64": {
+      "machine": "0xaa64",
+      "sha256": "5e9d420733bcab1841e9496809de07ffa8dd2188adb348bcf856d3c2c1fd1e8c",
+      "scope": "cross-compilation only"
+    }
+  },
+  "nativeExactHead": "pending",
+  "originalFailureCauseEstablished": false,
+  "runtimeRepairClaim": false,
+  "releaseReady": false
+}
