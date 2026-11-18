@@ -1,5 +1,10 @@
 # Native conversation recovery with the current owner environment
 
+The shared product handoff helper now passes the original-only native recovery
+composition at source `292039c`. Its [current receipt](shared-handoff.json)
+binds the helper, test driver, native results and checks. The earlier
+[prototype receipt](receipt.json) below is retained as a separate checkpoint.
+
 On 2026-11-18, the current environment-bearing Codex wrapper passed an actual
 macOS native recovery composition at source `b9de5bf`. The private fixture uses
 published Rig 0.7.18, native Codex 0.169.0, Node 24 and an existing native account
@@ -48,3 +53,30 @@ No response deadline or permission assertion was relaxed. Private raw receipts,
 probe and bridge remain in `_build/openrig-0718-contract/` with their hashes in
 the receipt. No model turns or authentication files are included in this public
 artifact.
+
+The shared `openRigNativeCodexRecoveryHandoff` verifies the original creation
+manifest, agent, prior environment acknowledgement, immutable launch bundle,
+current native owner plan/environment and verified manager. It persists only a
+private operation UUID and environment fingerprint after acknowledgement. A
+repeat acknowledgement opens no socket, observes no replacement account and
+launches no CLI. Missing/changed original state, changed owner state and a live
+competing sender refuse; a competing sender cannot replace the original socket.
+The helper grants no native Resume authority.
+
+The native authority in this composition is Rig's reviewed original-only
+endpoint, not the earlier single-node snapshot-launch endpoint. The driver
+freezes the selected snapshot/history, reviewed revision, operation UUID and
+banked node/session/runtime/native conversation before dispatch. After the
+unchanged ten-second response deadline, it inspects the original node without
+reposting. Later replays use exactly the original request and operation UUID;
+Rig reports `already_running_original` with `nativeEffect: false` and retains
+both provider PIDs. Fresh no-tool recall, history-prefix preservation, owner
+execution environment, correlated tools, selected Stop and private cleanup all
+pass through the shared helper. All 206 helper tests, five strict TypeScript
+projects and affected Go race suites pass locally.
+
+Public controller dispatch and UI integration still remain. The native durable
+operation implementation and live replay proof are not a WebMux controller-crash
+or reboot acceptance result. Linux native authentication expired; its private
+guest is shut down with the overlay retained. No authenticated Linux, Windows,
+restricted-policy or release-completion claim follows from this checkpoint.

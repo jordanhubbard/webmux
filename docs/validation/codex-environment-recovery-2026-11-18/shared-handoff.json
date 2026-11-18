@@ -1,0 +1,116 @@
+{
+  "scope": "Shared product environment handoff plus actual native original-only recovery, with a private API driver; no public WebMux recovery activation",
+  "sourceRevision": "292039c19430bddbf727716853b923786c14a4fe",
+  "passed": true,
+  "nativeVersions": {
+    "nodeVersion": "v24.21.0",
+    "rigVersion": "0.7.18 (3bf87c62)",
+    "tmuxVersion": "tmux 3.8",
+    "codexVersion": "codex-cli 0.169.0"
+  },
+  "moduleSHA256": {
+    "codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "rig-native-create.mts": "ee18fb484c048c845afa9f8f841e2b62cce46dd5ea9eba5c1f91b7087cfcc486",
+    "rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd"
+  },
+  "rawReceipt": "native-create-factory-wm438shared-w7pwgaps.json",
+  "rawSHA256": "1102ca92fafb40e7336c4b04365bcda51c72eff80d4c6f4ec1cd2b7c2309e389",
+  "probeSHA256": "f9c9adcaba77f02e6c74c224a00aced1270bd333148803bdc0f1ab2310c1dc0c",
+  "bridgeSHA256": "1ac662b2e60a7ac0715bd7a07bedacb9c89175beb7496564e81a484d2dde463c",
+  "checks": {
+    "onlyOriginalCreationHelperKilledBeforeHandoff": true,
+    "sameOriginalEnrollmentAndReconstructedHandoffAfterHelperLoss": true,
+    "environmentSocketRemovedAfterHandoff": true,
+    "noPlaintextFixtureValueInDurableState": true,
+    "actualDefaultNativeOwnerPolicyUsed": true,
+    "actualNativeArgvPreservesOwnerPolicy": true,
+    "freshChallengeReadByActualProvider": true,
+    "projectAndOwnerExtraWritable": true,
+    "ownerFullAccessNotNarrowed": true,
+    "wrapperReplacedByNativeExecutable": true,
+    "nativeIdentityRetained": true,
+    "nativeOwnerEnvironmentPreserved": true,
+    "nativePolicyAndCorrelatedTools": true,
+    "duplicateFactoryAndExplicitInspectRetainNativeOccupant": true,
+    "siblingRetainsOriginalPID": true,
+    "snapshotBindsOriginalConversation": true,
+    "originalOnlyReviewMatchesBankedConversation": true,
+    "freshEnvironmentHandoffConsumed": true,
+    "sharedHandoffDurableHashOnlyReceipt": true,
+    "originalResumeInspectedWithoutRepost": true,
+    "sameConversationRecallWithoutTools": true,
+    "originalNativeLogPrefixAndEnvironmentRetained": true,
+    "duplicateResumeRetainsBothNativeProcesses": true,
+    "sameOriginalOperationReplayedWithoutNativeEffect": true,
+    "checkedStopEndsOnlyNativeCodingSeat": true
+  },
+  "resumeResponse": {
+    "status": null,
+    "state": "uncertain",
+    "reason": "original_10s_response_deadline",
+    "reposted": false
+  },
+  "nativeAuthority": {
+    "reviewContract": "startup-history.v1",
+    "intent": "resume-original",
+    "route": "/api/startup/{rigId}/nodes/{nodeId}/original",
+    "bankedFields": [
+      "snapshotId",
+      "historySessionId",
+      "revision",
+      "operationId",
+      "expectedOriginal"
+    ],
+    "duplicateCode": "already_running_original",
+    "duplicateNativeEffect": false
+  },
+  "handoff": {
+    "entrypoint": "openRigNativeCodexRecoveryHandoff",
+    "receiptContract": "webmux-codex-recovery-environment/v1",
+    "receiptFields": [
+      "contract",
+      "operationId",
+      "fingerprint"
+    ],
+    "receiptMode": "0600",
+    "opensProvider": false
+  },
+  "resumedEnvironment": {
+    "homePreserved": true,
+    "tmpPreserved": true,
+    "ownerPathRetainedAsSuffix": true,
+    "pairedRigFound": true,
+    "managerToolPathAbsent": true,
+    "ownerToolFound": true,
+    "ownerToolRuns": true,
+    "inheritedValueMatches": true,
+    "managerOnlyValueAbsent": true
+  },
+  "checksLocal": {
+    "helperTestsPassed": 206,
+    "strictTypeScriptProjectsPassed": 5,
+    "affectedGoRaceSuitesPassed": true
+  },
+  "cleanup": {
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true,
+    "sourceUnchanged": true
+  },
+  "earlierOriginalOnlyPrototype": {
+    "raw": "native-create-factory-wm438original-4r3jptk5.json",
+    "passed": true,
+    "limit": "Private handoff bridge; superseded for shared-helper qualification only"
+  },
+  "limits": [
+    "Native macOS default full-access/never owner; no restricted-policy, Linux or Windows recovery qualification.",
+    "The shared helper supplies environment only. Public controller dispatch, durable WebMux recovery receipts and UI are not integrated.",
+    "Native original-only operation replays were qualified while the original provider remained live; no daemon/controller-crash replay acceptance is inferred.",
+    "Original ten-second HTTP response remained uncertain. Explicit original-node inspection and native conversation/tool/PID evidence establish the observed outcome; no automatic new launch.",
+    "No installed-service, upgrade, host reboot, full roadmap or release completion claim."
+  ]
+}
