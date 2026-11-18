@@ -37,7 +37,7 @@ jobs:
           cache: npm
           cache-dependency-path: webmux/package-lock.json
       - name: Configure bounded Ubuntu mirrors
-        run: sudo -n python3 scripts/configure-ci-apt.py
+        run: sudo -n env GITHUB_ACTIONS=true python3 scripts/configure-ci-apt.py
       - name: Install native tools
         run: |
           sudo -n apt-get update

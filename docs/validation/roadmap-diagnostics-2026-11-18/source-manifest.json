@@ -1,0 +1,48 @@
+{
+  "recordedUTC": "2026-11-18T10:38:38.651470+00:00",
+  "issue": 452,
+  "pinnedInputs": [
+    {
+      "pr": 489,
+      "head": "29e1f02a2b6f34e383f15281dd2228428e9b8185"
+    },
+    {
+      "pr": 491,
+      "head": "bbca7ee009234612f125ceab7812dcd28ee0b194"
+    },
+    {
+      "pr": 492,
+      "head": "593d9b4f28bfb56659589c673cc3d9664af1b577"
+    },
+    {
+      "pr": 493,
+      "head": "cc5d3d6504649e291c75b67302ec8182e8e2346b"
+    }
+  ],
+  "allInputAncestorsVerified": true,
+  "preparedFromMergeCommit": "79436fe8ccbf260081ad9d6ae14762ea00056833",
+  "sourceSHA256": {
+    ".github/workflows/ci.yml": "669e37c0dd16ef9a837d76fec6c23c59f4aae983115d08153a27f07b4dff0723",
+    ".github/workflows/mosh-browser-diagnostics.yml": "f0dc33d43c2074eabc3b451066c2fd75011619b69c41731f8c109dbf6eb2c2a0",
+    ".github/workflows/windows-vt-diagnostics.yml": "686d3dd8d236608b70ca1d86d6c3429eec430d3a58ac32cfa8723eca8f705734",
+    "scripts/configure-ci-apt.py": "87b74c97379a35dd63ffdbcf3b01fbbca548d0f18a202aac76d53639617cc93f",
+    "tests/test_ci_apt.py": "9c77d0969ef3ee20bc909dd6ac520a6acabf3441755611b8fee961231743bc48",
+    "scripts/private-test-tmux.test.mts": "415695f1b6f6efeb71363874d73bdc61680a77827ac6f5173894e654a6ee17b7",
+    "webmux/scripts/private-test-tmux.mts": "cabb806b165310fd2ba21781e4846d6d9d06605476b04a14ac9d8fc71fca1fc2",
+    "tests/e2e/mosh-browser.spec.ts": "33baa2832c1d6012946bd3c1e4c8db8896a54d1df8431cd18b9f3b01fd0fc6b1",
+    "docs/validation/roadmap-diagnostics-2026-11-18/README.md": "0253b0a0d53115e0fa105a7037599b7991f7d0472725a1b24a0a9d67127d1e92"
+  },
+  "privateEvidenceSHA256": {
+    "int452-diag-invariants.log": "fe56fffe5d5ae3fdc571c48f8e969345390f8cd233383a1b7ff96f5c8a8e97bb",
+    "int452-diag-types.log": "bfbdeb0b9d52b9f5fa57d9bcbafdf0c45c715936935db99e8f5fb542c0d290f0",
+    "int452-diag-native-mosh.log": "ad4544bc30454a55fd76f5a98dd4b54a8e125e68cf37da839c41531591312c11",
+    "int452-diag-apt-mac.log": "ff7538204d7935e6955c2f1f5ea0594ed0f409e06257e0c53d30a20169e1956a",
+    "int452-diag-local-tmux.log": "91d58dff0da90eb4503636092554a18f8c16453ac7c051c23a8a9a738103f8f2",
+    "int452-diag-build.log": "2d3371e1dce35992741e36412c0ad1dfd3ca138a44cfeab7b5a77739efeec5fb",
+    "int452-diag-apt-linux.log": "20ee73b296d86395172f5443544931f86c81405cc9b4d61978a52cf6aa504676"
+  },
+  "nativeMoshReceiptSHA256": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+  "applicationAndLockSourceIdenticalToBase": true,
+  "hostedExactCombinedResult": "pending",
+  "releaseReady": false
+}

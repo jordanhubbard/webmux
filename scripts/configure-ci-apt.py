@@ -103,7 +103,7 @@ def configure(root: Path) -> None:
 
 if __name__ == "__main__":
     root = Path(sys.argv[1]) if len(sys.argv) == 2 else Path("/etc/apt")
-    if root.resolve() == Path("/etc/apt") and os.environ.get("GITHUB_ACTIONS") != "true":
+    if root.resolve() == Path("/etc/apt").resolve() and os.environ.get("GITHUB_ACTIONS") != "true":
         sys.exit("System APT configuration is restricted to ephemeral GitHub CI")
     configure(root)
     print("Selected signed Ubuntu HTTPS sources and bounded APT networking; original sources retained")
