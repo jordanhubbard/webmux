@@ -8,9 +8,20 @@ code flows; state-bound localhost OAuth can use the callback relay. See
 [CLI authentication](authentication-handoff.md) for the flow and prerequisites.
 
 Each terminal also retains a **Tools → Open browser** action. It opens a resizable
-companion drawer, leaving the terminal running beside it. Choose **Use browser on
-terminal host** in the sign-in panel when you need this fallback. The drawer
-identifies the terminal and host where the browser runs. A redirect alone is not
+companion pane, leaving the terminal running beside it. On desktop, choose **Undock browser**
+to move it inside the workspace, or **Dock browser** to return it to the right
+edge. Drag the **Move** button or the resize handle. Focus either handle and use
+arrow keys for the same controls; hold Shift for larger steps. **Expand browser**
+temporarily fills the workspace and restores the previous size and position.
+The same page and control lease remain active while arranging the pane.
+
+Layout preferences survive hiding, reopening and reloading. Only the docking
+mode, size and position are stored for this browser device; URLs, sessions,
+profiles and control credentials are excluded. On small screens the pane fills
+the display, retaining desktop preferences for a larger display.
+
+Choose **Use browser on terminal host** in the sign-in panel when you need this
+fallback. The pane identifies the terminal and host where the browser runs. A redirect alone is not
 evidence that authentication succeeded.
 
 The page executes on the shell host: `localhost` callbacks reach the CLI there.

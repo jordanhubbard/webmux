@@ -1,7 +1,15 @@
+.browser-companion-layer { position: fixed; inset: 0; pointer-events: none; }
+.browser-companion-layer > .browser-companion { pointer-events: auto; }
+.browser-pane-move { cursor: move !important; touch-action: none; }
+.browser-pane-resize { position: fixed; z-index: 901; pointer-events: auto; touch-action: none; }
+.browser-pane-resize-edge { cursor: ew-resize; }
+.browser-pane-resize-edge:hover, .browser-pane-resize-edge:focus-visible { background: #ac9bff88; }
+.browser-pane-resize-corner { cursor: nwse-resize; padding: 0; border: 1px solid #7c6af7; border-radius: 3px; color: #eee; background: #303052; line-height: 1; }
+.browser-pane-resize:focus-visible { outline: 2px solid #ac9bff; outline-offset: 2px; }
 .browser-companion {
-  position: fixed; z-index: 900; right: 8px; top: 64px; bottom: 8px;
+  box-sizing: border-box; position: fixed; z-index: 900; right: 8px; top: 64px; bottom: 8px;
   width: min(880px, 65vw); min-width: 340px; max-width: calc(100vw - 16px);
-  display: flex; flex-direction: column; overflow: auto; resize: horizontal;
+  display: flex; flex-direction: column; overflow: auto; resize: none;
   color: #ddd; background: #111124; border: 1px solid #7c6af7;
   border-radius: 8px; box-shadow: 0 8px 32px #0008; font: 13px system-ui;
 }

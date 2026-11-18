@@ -4,6 +4,7 @@ import { api, type BrowserFrame, type BrowserAction, type BrowserProfile, type B
 import { copyDesktopText } from '../utils/terminalClipboard';
 import { handoffLink } from '../utils/authHandoff';
 import { Dialog } from './Dialog';
+import { useBrowserPaneLayout } from '../utils/useBrowserPaneLayout';
 import type { Session } from '../types';
 import './BrowserCompanion.css';
 
@@ -54,6 +55,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   const pageTextPanel = useRef<HTMLElement>(null);
   const findInput = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState(false);
+  const pane = useBrowserPaneLayout(expanded);
   const mounted = useRef(true);
   const pending = useRef(0);
   const queue = useRef<Promise<void>>(Promise.resolve());
@@ -215,9 +217,12 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   };
 
   return createPortal(
-    <aside className={`browser-companion${expanded ? ' browser-expanded' : ''}`} aria-label={`Browser for ${session.title}`} onKeyDown={event => event.stopPropagation()}>
+    <div className="browser-companion-layer" style={{ zIndex: pane.active ? 902 : 901 }} onPointerDownCapture={pane.activate} onFocusCapture={pane.activate} onKeyDown={event => event.stopPropagation()}>
+    <aside id={pane.id} className={`browser-companion${expanded ? ' browser-expanded' : ''}${pane.layout.mode === 'floating' ? ' browser-floating' : ''}`} style={pane.style} aria-label={`Browser for ${session.title}`}>
       <header>
         <div><strong>Browser · {session.title}</strong><small>Runs on {session.transport === 'local' || session.browser_local ? 'the WebMux server' : `${session.username ? `${session.username}@` : ''}${session.hostname}`} · {frame?.profileName ? `Saved profile: ${frame.profileName}` : 'Temporary profile'}</small></div>
+        {!pane.narrow && <button type="button" onClick={pane.toggleDock} disabled={expanded}>{pane.layout.mode === 'floating' ? 'Dock browser' : 'Undock browser'}</button>}
+        {!pane.narrow && !expanded && pane.layout.mode === 'floating' && <button type="button" className="browser-pane-move" aria-label="Move browser pane" title="Drag to move; use arrow keys when focused (Shift moves farther)" {...pane.move}>Move</button>}
         <button onClick={() => setExpanded(value => !value)} aria-expanded={expanded}>{expanded ? 'Restore browser size' : 'Expand browser'}</button>
         <button onClick={onHide}>Return to terminal</button>
         <button onClick={() => void end()} disabled={busy || !controlled}>End browser</button>
@@ -393,6 +398,10 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         <input aria-label="Choose files for page" type="file" multiple={frame.fileChooser.multiple} disabled={busy} onChange={event => void upload(event.target.files)} />
         <button onClick={() => void act({ action: 'cancel_upload' })}>Cancel</button>
       </Dialog>}
-    </aside>, document.body,
+    </aside>
+    {!pane.narrow && !expanded && (pane.layout.mode === 'docked'
+      ? <div role="separator" aria-label="Resize browser width" aria-orientation="vertical" aria-controls={pane.id} aria-valuemin={0} aria-valuemax={2560} aria-valuenow={pane.rect.width} aria-valuetext={`${pane.rect.width} pixels`} tabIndex={0} className="browser-pane-resize browser-pane-resize-edge" style={pane.resizeStyle} title="Drag to resize; use Left/Right arrows when focused" {...pane.resize} />
+      : <button type="button" aria-label="Resize browser pane" aria-controls={pane.id} className="browser-pane-resize browser-pane-resize-corner" style={pane.resizeStyle} title="Drag to resize; use arrow keys when focused (Shift resizes farther)" {...pane.resize}><span aria-hidden="true">↘</span></button>)}
+    </div>, document.body,
   );
 }
