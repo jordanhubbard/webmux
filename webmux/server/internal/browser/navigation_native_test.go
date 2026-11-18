@@ -26,6 +26,8 @@ import (
 )
 
 type firstNavigationEvidence struct {
+	cleanupProcessIdentities map[uint32]uint64
+
 	Transport        string                           `json:"transport"`
 	ProfileLocation  string                           `json:"profileLocation"`
 	Mode             string                           `json:"mode"`
@@ -355,7 +357,7 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 			if err := os.RemoveAll(profile); err != nil {
 				record.CleanupFailed = true
 				record.CleanupRemoval = classifyFirstNavigationRemoval(err, profile)
-				record.CleanupHolders = queryFirstNavigationRemovalHolders(err, profile)
+				record.CleanupHolders = queryFirstNavigationRemovalHolders(err, profile, record.cleanupProcessIdentities)
 				t.Errorf("private home profile cleanup failed: %+v", record.CleanupRemoval)
 			}
 		})
@@ -393,7 +395,7 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 	alloc, stop := chromedp.NewExecAllocator(context.Background(), opts...)
 	root, cancel := chromedp.NewContext(alloc)
 	t.Cleanup(func() {
-		finishObservation := observeFirstNavigationCleanup(root)
+		finishObservation := observeFirstNavigationCleanup(root, record)
 		defer func() { record.CleanupProcesses = finishObservation() }()
 		if options.netLog {
 			closing, finish := context.WithTimeout(root, 5*time.Second)

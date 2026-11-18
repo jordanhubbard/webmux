@@ -4,8 +4,10 @@ package browser
 
 import "context"
 
-func observeFirstNavigationCleanup(context.Context) func() *firstNavigationCleanupProcesses {
+func observeFirstNavigationCleanup(context.Context, *firstNavigationEvidence) func() *firstNavigationCleanupProcesses {
 	return func() *firstNavigationCleanupProcesses { return nil }
 }
 
-func queryFirstNavigationRemovalHolders(error, string) *firstNavigationRemovalHolders { return nil }
+func queryFirstNavigationRemovalHolders(error, string, map[uint32]uint64) *firstNavigationRemovalHolders {
+	return nil
+}
