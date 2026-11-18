@@ -1,0 +1,57 @@
+{
+  "scope": "Test-only lifecycle diagnostics and capture controls; not a federation failure repair. Native Windows cause remains unproven.",
+  "runtimeApplicationBase": "d871ac60421c37485f7044f5323f3a71291d7a65",
+  "sourceSHA256": {
+    "tests/e2e/server-federation.spec.ts": "3c3a6892d45c149f71b081910f06aa240d1a80a734a1906a53d855c261ade7a0",
+    "tests/e2e/federation-diagnostics.ts": "626969965a1ce02eecf5d7bfd34580f9298fd844e78835f7443116a9d2486725",
+    "tests/e2e/federation-diagnostic-facts.mts": "eacffa4b6494a00bf2dca451f0cfb672a9ff0bc49c828262f8203bc58674de54",
+    "tests/e2e/federation-fixture.mts": "dfca1f78246c99b183bee4e31a4fb8446e2608cc47779a6a0a3c6748b522738e",
+    "scripts/federation-diagnostics.test.mts": "98adec4cb80354218648d3e33b61ce924641994f86eb7dcfa965fd1be2b5abc8",
+    ".github/workflows/federation-native.yml": "cba6c09b0965652641f4fb6ea1aebc644be60dfc3925edfe3e600b3e47684807",
+    "webmux/package.json": "2b4f48e66121640d0480b85cd8cc398f3746ea5492bc6f8c1dc4044bbb385771",
+    "webmux/server/internal/httpapi/federation.go": "8113c6458b8f80bfdf6ca213cf5f0846d994a0881ad49128cfd50553a06778a2",
+    "webmux/frontend/src/components/ServerWorkspace.tsx": "ed80dd0bbb2930d897f58ff59d0fe0e318cc1d9a6a8ef72c74a1214eca79849f",
+    "webmux/frontend/src/components/Terminal.tsx": "019e89d13131224f28ed7f481b8234a19243dc60a529b6801a8dae32361fcfc7"
+  },
+  "nativeMacNormal": {
+    "passed": true,
+    "caseSeconds": 8.7,
+    "totalSeconds": 11.2,
+    "platform": "darwin",
+    "architecture": "arm64",
+    "events": 220,
+    "sockets": 17,
+    "localStarts": 1,
+    "peerStarts": 2,
+    "explicitPeerRestarts": 1,
+    "fixtureTokenExcluded": true,
+    "fixtureProvidersRemovedAfterCleanup": true,
+    "receiptSHA256": "46e72cbbfd8b3e7642a5bbcc61f9afa3d6a47490be2a7c5013e91aa1fe435e48",
+    "receiptBytes": 51078
+  },
+  "nativeFailureControl": {
+    "expectedFailure": true,
+    "phase": "diagnostic-control-before-revocation",
+    "peerRunningAtCapture": true,
+    "providerStartsPresentAtCapture": 2,
+    "viewsConnectedAtCapture": true,
+    "originalAssertionStackRetained": true,
+    "providersRemovedAfterCleanup": true,
+    "receiptSHA256": "9953cae52b774057c9b786b231e217526710baedc6aa489993962351b7d01982",
+    "receiptBytes": 8849
+  },
+  "checks": {
+    "helperTestsPassed": 123,
+    "strictTypeScriptProjectsPassed": 5,
+    "frontendBuild": true,
+    "workflowYAMLParsed": true,
+    "diffWhitespace": true
+  },
+  "nativeWindows": "pending exact-head diagnostic samples; no repaired/green qualification claim",
+  "originalFailure": {
+    "run": 44267347627,
+    "job": 134675161963,
+    "artifact": 14412470818,
+    "artifactUploadedSHA256": "8523e8b810eaf9076a63ea02cbbd4f02cc24a475e8414c6fac8a1cb9ee492c19"
+  }
+}
