@@ -9,10 +9,10 @@ import type { CodexObservationHelper } from './codex-owner-plan.mts';
 
 export interface NativeCodexResumeInput extends Omit<NativeCodexCreateInput, 'inspect'> {
   operationId: string; nodeId: string; snapshotId: string; historySessionId: string;
-  nativeSessionId: string; sessionName: string; inspect?: boolean;
+  nativeSessionId: string; sessionName: string; inspect?: boolean; prepare?: boolean;
 }
 export interface NativeCodexResumeResult {
-  state: 'confirmed' | 'uncertain'; code: string; posted: boolean;
+  state: 'prepared' | 'confirmed' | 'uncertain'; code: string; posted: boolean;
   operationId: string; logicalId: string; nativeSessionId: string;
   previouslyConfirmed?: boolean;
   nativeCode?: string;
@@ -67,6 +67,7 @@ async function request(fetcher: typeof fetch, port: number, route: string, body?
 export async function resumeRigNativeCodex(input: NativeCodexResumeInput, deps: Dependencies): Promise<NativeCodexResumeResult> {
   if (!['darwin', 'linux'].includes(process.platform) || Number(process.versions.node.split('.')[0]) !== 24
     || ![input.rigId, input.nodeId, input.snapshotId, input.historySessionId].every(id => ulid.test(id))
+    || (input.prepare === true && input.inspect === true)
     || !operation.test(input.operationId) || !uuid.test(input.nativeSessionId)
     || !/^[a-z][a-z0-9-]{0,47}$/.test(input.pod) || !/^[a-z][a-z0-9-]{0,63}$/.test(input.member)
     || !/^[a-zA-Z0-9_.:@-]{1,256}$/.test(input.sessionName) || !path.isAbsolute(input.cwd)) return refuse();
@@ -143,6 +144,11 @@ export async function resumeRigNativeCodex(input: NativeCodexResumeInput, deps: 
     || body.action !== 'resume' || body.snapshotId !== input.snapshotId || body.historySessionId !== input.historySessionId
     || body.operationId !== input.operationId || typeof body.revision !== 'string' || !/^[a-f0-9]{64}$/.test(body.revision)
     || JSON.stringify(body.expectedOriginal) !== JSON.stringify({ nodeId: input.nodeId, sessionName: input.sessionName, runtime: 'codex', nativeId: input.nativeSessionId })) return refuse();
+  // Public recovery must bank this exact reviewed request before consuming
+  // its own operation. Preparation creates no environment channel, observes no
+  // account and dispatches nothing. Explicit completion after a controller
+  // loss can then use the same bytes even before the first native POST.
+  if (input.prepare) return { ...summary, state: 'prepared', code: 'native_resume_prepared', posted: false };
   const handoff = await (deps.handoff ?? openRigNativeCodexRecoveryHandoff)(input, { run: deps.run, fetcher, observationHelper: deps.observationHelper });
   try {
     if (handoff.manager.managerIdentity !== manager.managerIdentity || handoff.manager.port !== manager.port

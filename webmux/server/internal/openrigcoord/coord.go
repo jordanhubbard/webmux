@@ -58,6 +58,9 @@ var rigNativeResume []byte
 //go:embed rig-native-launch.mts
 var rigNativeLaunch []byte
 
+//go:embed rig-native-capture.mts
+var rigNativeCapture []byte
+
 //go:embed rig-native-project.mts
 var rigNativeProject []byte
 
@@ -110,6 +113,7 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 		"rig-native-create.mts":         rigNativeCreate,
 		"rig-native-resume.mts":         rigNativeResume,
 		"rig-native-launch.mts":         rigNativeLaunch,
+		"rig-native-capture.mts":        rigNativeCapture,
 		"rig-native-project.mts":        rigNativeProject,
 	} {
 		if err := os.WriteFile(filepath.Join(directory, name), source, 0600); err != nil {

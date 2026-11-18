@@ -117,3 +117,33 @@ posixTest('consumption flush failure leaves the original operation uncertain and
   fs.fsyncSync = originalSync;
   assert.equal(f.posts.length, 0); assert.equal((await resumeRigNativeCodex(f.input, f.deps)).posted, false);
 });
+
+posixTest('preparation banks the exact native review without handoff or dispatch; explicit completion can be first POST', async t => {
+  const f = fixture(t);
+  const prepared = await resumeRigNativeCodex({ ...f.input, prepare: true }, f.deps);
+  assert.equal(prepared.state, 'prepared'); assert.equal(prepared.posted, false);
+  assert.equal(f.posts.length, 0); assert.equal(f.counts().handoffs, 0);
+  const before = f.counts().gets;
+  // A later invocation must use the banked review, even if a fresh review
+  // would refuse the current state. No replacement review or UUID is allowed.
+  f.review.observed.state = 'running';
+  const again = await resumeRigNativeCodex({ ...f.input, prepare: true }, f.deps);
+  assert.equal(again.state, 'prepared'); assert.equal(f.counts().gets, before);
+  const result = await resumeRigNativeCodex({ ...f.input, inspect: true }, f.deps);
+  assert.equal(result.state, 'confirmed'); assert.equal(f.posts.length, 1);
+  assert.equal(f.counts().gets, before);
+  const body = JSON.parse(f.posts[0]);
+  assert.equal(body.operationId, f.input.operationId);
+  assert.equal(body.snapshotId, f.input.snapshotId);
+});
+posixTest('preparation cannot reset a consumed operation or change a banked selection', async t => {
+  const f = fixture(t); f.lose();
+  await resumeRigNativeCodex(f.input, f.deps);
+  const before = f.counts();
+  const duplicate = await resumeRigNativeCodex({ ...f.input, prepare: true }, f.deps);
+  assert.equal(duplicate.state, 'uncertain'); assert.equal(duplicate.posted, false);
+  assert.deepEqual(f.counts(), before); assert.equal(f.posts.length, 1);
+  await assert.rejects(resumeRigNativeCodex({ ...f.input, prepare: true, nativeSessionId: operationId }, f.deps));
+  await assert.rejects(resumeRigNativeCodex({ ...f.input, prepare: true, inspect: true }, f.deps));
+  assert.equal(f.posts.length, 1);
+});
