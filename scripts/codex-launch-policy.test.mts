@@ -78,6 +78,24 @@ test('representable read-only and full-access choices keep their original sandbo
     assert.deepEqual(result.args.slice(0, 6), ['-s', sandbox, '-a', 'never', '-C', '/project']);
   }
 });
+test('explicit native resume retains UUID, policy and model alias and pins the omitted cwd', () => {
+  const id = '01a1eed1-6ed1-75e1-9b58-cc26733d1392';
+  const original = args().filter((arg, i, all) => arg !== '-C' && all[i - 1] !== '-C');
+  const result = filterRigCodexLaunch(plan(), [...original, '-m', 'owner-model', 'resume', id]);
+  assert.equal(result.resumeId, id);
+  assert.deepEqual(result.args.slice(0, 2), ['-C', '/project']);
+  assert.deepEqual(result.args.slice(-4), ['-m', 'owner-model', 'resume', id]);
+  assert.equal(result.args.filter(arg => arg === id).length, 1);
+  assert.equal(result.args.includes('--add-dir'), false);
+});
+test('ambiguous resume, prompts, duplicate targets and duplicate model aliases refuse', () => {
+  const id = '01a1eed1-6ed1-75e1-9b58-cc26733d1392';
+  for (const tail of [['resume'], ['resume', 'name'], ['resume', '--last'], ['resume', id, 'a prompt'],
+    ['fork', id], ['resume', id, 'resume', id], ['-m', 'owner-model', '--model', 'owner-model'],
+    ['resume', '00000000-0000-0000-0000-000000000000']]) {
+    assert.throws(() => filterRigCodexLaunch(plan(), [...args(), ...tail]), /codex_launch_policy_mismatch/);
+  }
+});
 const posixTest = process.platform === 'win32' ? test.skip : test;
 function fixture(t: { after(fn: () => void): void }) {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'wm-launch-policy-')));
