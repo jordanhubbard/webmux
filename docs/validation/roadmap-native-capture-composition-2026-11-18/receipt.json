@@ -1,0 +1,103 @@
+{
+  "recordedUTC": "2026-11-18T20:56:29.054089+00:00",
+  "scope": "Preparation of published internal native capture/request preparation on the combined roadmap; not canonical promotion, public recovery UI or fresh composed native coding/recovery acceptance.",
+  "runtimeSource": "5961ab8140c82f6c4ac57d96416aa3ccf4bc882d",
+  "previousCanonical": "951cf93e7c3a901f94e1379a612edf49826c26ce",
+  "input511": "d41ac091160fe0fcc3e14b57108b368fa55a8609",
+  "sourcesSHA256": {
+    "docs/validation/codex-environment-recovery-2026-11-18/README.md": "7d6190929f1b3d1afbeadf3de93ec0df43c6327976516820e40dba53aba059b1",
+    "docs/validation/codex-native-capture-2026-11-18/README.md": "f3f8da8613b830216a097a922157e62694c1843fc457c30390f6606d023239b7",
+    "docs/validation/codex-native-capture-2026-11-18/prepared-recovery.json": "a9d3c8ad5ebaced7713c857028e6819bc9ee6c149aac572caac71787c1fc1637",
+    "docs/validation/codex-native-capture-2026-11-18/receipt.json": "d30d7667e3e68eabd9a0f84be8c5d2e9d08f4c71c5d1dccbcb3736300c8dbdf8",
+    "scripts/rig-native-capture.test.mts": "2dae0b7f001b3dbac05b843e17e418710a7a9fcbddcaabc3aa90adc5db517aca",
+    "scripts/rig-native-resume.test.mts": "a3b94c82b19980a6e3c98a712758519cfe5bab1181cb91eb49156645eae9cfb1",
+    "webmux/package.json": "a085baf9a369b1fdb51cee81c30ee3d754ca6c7cffb286d9dc22b8a98a7cedf7",
+    "webmux/server/internal/openrigcoord/coord.go": "8ce1b63b110b9d05f3de36e92564d3d375adf76d91ac7b7fc9e6b5c25af7c965",
+    "webmux/server/internal/openrigcoord/native_create_test.go": "1d9120009dd26956b745e6f084c95102f6ae46989483551464eb436f558acfe5",
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "e900546c2f94fbbedd986a273267853676ecd826b45501f520bc3aca79d850b5",
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": "b6217395e932162b2e16d50829ad40338d8a4814a84dbd07496afb8af8d86cc9",
+    "webmux/server/internal/openrigcoord/runner.mts": "c5bb40b046ba36eaa6d4ce2d2055af126cfb83915e65cab6fc0c4161436370f5"
+  },
+  "local": {
+    "strictTypeScriptProjects": 5,
+    "helperTests": 226,
+    "helperSkipped": 0,
+    "helperFailed": 0,
+    "affectedGoRace": [
+      "internal/openrigcoord",
+      "internal/httpapi"
+    ],
+    "affectedGoVet": [
+      "internal/openrigcoord",
+      "internal/httpapi"
+    ]
+  },
+  "publishedNamedSourceEvidence": {
+    "receipt.json": {
+      "sourceRevision": "6bcbb07c4361f0013aeaaa10ed81eee331caebb7",
+      "matchingSources": [
+        "webmux/server/internal/openrigcoord/rig-native-launch.mts",
+        "webmux/server/internal/openrigcoord/rig-native-capture.mts",
+        "webmux/server/internal/openrigcoord/rig-native-project.mts",
+        "webmux/server/internal/openrigcoord/rig-native-create.mts",
+        "webmux/server/internal/openrigcoord/rig-create-intent.mts",
+        "webmux/server/internal/openrigcoord/rig-stop.mts",
+        "webmux/server/internal/openrigcoord/runner.mts",
+        "webmux/server/internal/openrigcoord/coord.go",
+        "webmux/server/internal/openrigcoord/codex-owner-plan.mts",
+        "webmux/server/internal/openrigcoord/codex-launch-policy.mts",
+        "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts",
+        "webmux/server/internal/openrigcoord/codex-launch-environment.mts",
+        "webmux/server/internal/openrigcoord/codex-environment-channel.mts",
+        "webmux/server/internal/httpapi/coordination_creation.go",
+        "webmux/server/internal/httpapi/coordination_providers.go",
+        "webmux/server/internal/httpapi/openrig.go",
+        "webmux/frontend/src/components/CoordinationDialog.tsx",
+        "webmux/frontend/src/utils/api.ts"
+      ],
+      "laterPreparedResumeDelta": [
+        "webmux/server/internal/openrigcoord/rig-native-resume.mts"
+      ],
+      "rawSHA256": "d5124264f8c7347c73b68cf6a9dcf2ee7e8a0abd5fc2532d7386d902b263e0b5",
+      "rawReceiptHashVerified": true,
+      "scope": "Actual public native-owned coding followed by internal embedded Go conversation capture and snapshot reuse; no public recovery API/UI or application crash/reboot claim",
+      "inheritedNamedSourceOnly": true
+    },
+    "prepared-recovery.json": {
+      "sourceRevision": "4dc175bbdffe200e3013dbdfa69f45c43df233aa",
+      "matchingSources": [
+        "webmux/server/internal/openrigcoord/codex-owner-plan.mts",
+        "webmux/server/internal/openrigcoord/codex-launch-policy.mts",
+        "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts",
+        "webmux/server/internal/openrigcoord/rig-native-create.mts",
+        "webmux/server/internal/openrigcoord/rig-create-intent.mts",
+        "webmux/server/internal/openrigcoord/rig-stop.mts",
+        "webmux/server/internal/openrigcoord/codex-launch-environment.mts",
+        "webmux/server/internal/openrigcoord/codex-environment-channel.mts",
+        "webmux/server/internal/openrigcoord/rig-native-resume.mts",
+        "webmux/server/internal/openrigcoord/runner.mts",
+        "webmux/server/internal/openrigcoord/coord.go"
+      ],
+      "laterPreparedResumeDelta": [],
+      "rawSHA256": "afac3e5939e7624d4d6eb8aff83c1b02d4c7cd558fc925041e3d8379f262b1da",
+      "rawReceiptHashVerified": true,
+      "scope": "Exact reviewed original-only native recovery preparation across separate Go coordinator invocations before first dispatch; not a public recovery API/UI or actual application crash/reboot result",
+      "inheritedNamedSourceOnly": true
+    }
+  },
+  "source511CI": {
+    "run": 44390021212,
+    "conclusion": "failure",
+    "failedJob": 135104820646,
+    "failedStep": "Verify browser workflows against Go",
+    "failure": "Immediate raw child-B broadcast assertion expected62 received empty; original522 fix absent from source511, retained in composition. No rerun or native-capture defect conclusion."
+  },
+  "remaining": [
+    "Own hosted qualification and composed native capture/preparation acceptance before promotion",
+    "Public recovery broker/API/UI",
+    "Actual application/controller/service crash and reboot",
+    "Restricted or selected profiles, named graphs and broader startup selection",
+    "Authenticated Linux and broader Windows acceptance",
+    "Full remaining roadmap, review, exact-main and release gates"
+  ]
+}
