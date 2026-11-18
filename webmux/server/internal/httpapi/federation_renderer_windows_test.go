@@ -92,7 +92,7 @@ func TestFederationNativeRendererProfilePreservesOwner(t *testing.T) {
 			}
 		}
 	}
-	c := dialSocket(t, endpoint+"&snapshot_profile="+screenstate.XtermRendererProfile)
+	c := dialSocket(t, endpoint+"&snapshot_profile="+screenstate.XtermUnderlineRendererProfile)
 	waitOutput(c, "READY;")
 	pid, err := os.ReadFile(starts)
 	if err != nil {
@@ -111,7 +111,7 @@ func TestFederationNativeRendererProfilePreservesOwner(t *testing.T) {
 	if _, err := b.sessions.Reconnect("owner", current.ID, ""); err != nil {
 		t.Fatal(err)
 	}
-	for _, profile := range []string{"", "unknown"} {
+	for _, profile := range []string{"", "unknown", screenstate.XtermRendererProfile} {
 		refused := dialSocket(t, endpoint+"&snapshot_profile="+profile)
 		event := socketEvent(t, refused, "error")
 		if event["message"] != session.ErrRendererUnsupported.Error() {
@@ -123,13 +123,13 @@ func TestFederationNativeRendererProfilePreservesOwner(t *testing.T) {
 			t.Fatal("lost native refusal", err)
 		}
 	}
-	c = dialSocket(t, endpoint+"&snapshot_profile="+screenstate.XtermRendererProfile)
+	c = dialSocket(t, endpoint+"&snapshot_profile="+screenstate.XtermUnderlineRendererProfile)
 	socketEvent(t, c, "viewer_join")
 	status := socketEvent(t, c, "status")
-	if status["snapshot_profile"] != screenstate.XtermRendererProfile {
+	if status["snapshot_profile"] != screenstate.XtermUnderlineRendererProfile {
 		t.Fatal("native profile not negotiated", status)
 	}
-	waitOutput(c, "\x1b]7777;webmux.replay.v1;")
+	waitOutput(c, "\x1b]7777;webmux.replay.v2;")
 	if err := c.WriteJSON(session.Event{"type": "input", "data": "C"}); err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +147,7 @@ func TestFederationNativeRendererProfilePreservesOwner(t *testing.T) {
 	if inventory := b.sessions.List("owner"); len(inventory) != 1 || inventory[0].ID != current.ID {
 		t.Fatal("provider inventory changed")
 	}
-	if _, err := b.sessions.JoinWithProfile("other", current.ID, screenstate.XtermRendererProfile); !errors.Is(err, session.ErrNotFound) {
+	if _, err := b.sessions.JoinWithProfile("other", current.ID, screenstate.XtermUnderlineRendererProfile); !errors.Is(err, session.ErrNotFound) {
 		t.Fatal("profile bypassed owner", err)
 	}
 	t.Log("native ConPTY: original owner and shell PID retained; absent/unknown viewer refused; negotiated replay and continued output passed")
