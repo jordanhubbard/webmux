@@ -1,5 +1,10 @@
 # Public local Codex native launch
 
+A later [public original-operation recovery qualification](../codex-public-recovery-2026-11-18/README.md)
+now covers the broker/UI and actual controller restart/SIGKILL on macOS with the
+default native owner policy. The historical results below keep their own source
+bindings and limits.
+
 The actual Go application and Chrome passed public local Codex creation through
 published Rig 0.7.18 at the source revision in [receipt.json](receipt.json).
 This private loopback browser uses authentication mode `none`; the coding CLI

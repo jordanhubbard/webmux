@@ -1,5 +1,10 @@
 # Native conversation recovery with the current owner environment
 
+A later [public original-operation recovery qualification](../codex-public-recovery-2026-11-18/README.md)
+now covers the broker/UI and actual controller restart/SIGKILL on macOS with the
+default native owner policy. The historical results below keep their own source
+bindings and limits.
+
 Fresh public native-owned creation and verified attachment now pass a separate
 [actual Go/Chrome qualification](../codex-public-native-2026-11-18/README.md).
 That result does not complete the public recovery composition described here.
