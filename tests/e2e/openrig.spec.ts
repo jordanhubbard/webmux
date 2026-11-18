@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -17,15 +17,6 @@ test('home gives a fresh 2 by 2 terminal grid the page without coordinator inven
   expect(coordinationRequests).toBe(0);
 });
 
-test.afterAll(() => {
-  if (process.env.WEBMUX_REAL_OPENRIG !== '1') return;
-  const executable = path.resolve(__dirname, '.test-home', 'openrig-bin', 'rig');
-  if (!existsSync(executable)) return;
-  // Stop before Playwright terminates the web-server process group. Waiting for
-  // the server's exit handler alone can leave the detached Rig daemon behind.
-  const stopped = spawnSync(executable, ['daemon', 'stop'], { timeout: 15000, encoding: 'utf8' });
-  expect(stopped.status, stopped.stdout + stopped.stderr).toBe(0);
-});
 
 test('coordination lives in its own tab and leaves the terminal grid intact', async ({ page, request }) => {
   const original = await (await request.get('/api/sessions')).json();
@@ -399,7 +390,6 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
   }
 });
 
-
 test('coordination groups provider-owned sessions in keyboard-expandable projects', async ({ page }) => {
   await page.route(/\/api\/coordination(?:\?.*)?$/, route => route.fulfill({ json: {
     contract: 'webmux-coordination/v1',
@@ -435,7 +425,6 @@ test('coordination groups provider-owned sessions in keyboard-expandable project
   expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
 });
 
-
 test('integration enablement, launch owner and inventory view persist independently', async ({ page, request }) => {
   const original = await (await request.get('/api/config')).json();
   let launches = 0;
@@ -466,7 +455,6 @@ test('integration enablement, launch owner and inventory view persist independen
     expect(restored.ok(), await restored.text()).toBe(true);
   }
 });
-
 
 test('All sessions keeps overlapping provider IDs separate and fits a narrow screen', async ({ page }, info) => {
   const providers = ['webmux', 'agent-deck', 'rig'];

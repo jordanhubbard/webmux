@@ -1,16 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 
-test.afterAll(() => {
-  if (process.env.WEBMUX_REAL_OPENRIG !== '1') return;
-  const rig = path.resolve(__dirname, '.test-home/openrig-bin/rig');
-  if (!existsSync(rig)) return;
-  const result = spawnSync(rig, ['daemon', 'stop'], { timeout: 15000, encoding: 'utf8' });
-  expect(result.status, result.stdout + result.stderr).toBe(0);
-});
 
 test('checked local Rig Stop refuses replaced and adopted occupants, then stops only the confirmed native seat', async ({ page, request }, info) => {
   test.skip(process.env.WEBMUX_REAL_OPENRIG !== '1', 'Requires the isolated published Rig fixture');

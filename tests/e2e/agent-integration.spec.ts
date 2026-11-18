@@ -1,22 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { captureBoth } from './visual-capture';
 
 test.use({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, locale: 'en-US', timezoneId: 'UTC', colorScheme: 'dark', contextOptions: { reducedMotion: 'reduce' } });
 
-test.afterAll(() => {
-  if (process.env.WEBMUX_REAL_OPENRIG !== '1') return;
-  const executable = path.resolve(__dirname, '.test-home/openrig-bin/rig');
-  if (!existsSync(executable)) return;
-  // This optional coexistence run owns the fixture daemon. Stop before the
-  // web-server process group disappears, as the native Rig tests do.
-  const stopped = spawnSync(executable, ['daemon', 'stop'], { timeout: 15000, encoding: 'utf8' });
-  expect(stopped.status, stopped.stdout + stopped.stderr).toBe(0);
-});
 
 test('real tmux discovery, browser attachment, reload and scratch shell', async ({ page, request }, info) => {
   test.skip(process.env.WEBMUX_REAL_AGENTS !== '1', 'Requires an isolated Unix tmux fixture');

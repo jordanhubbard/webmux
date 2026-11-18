@@ -1,16 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 
-test.afterAll(() => {
-  if (process.env.WEBMUX_REAL_OPENRIG !== '1') return;
-  const rig = path.resolve(__dirname, '.test-home/openrig-bin/rig');
-  if (!existsSync(rig)) return;
-  const result = spawnSync(rig, ['daemon', 'stop'], { timeout: 15000, encoding: 'utf8' });
-  expect(result.status, result.stdout + result.stderr).toBe(0);
-});
 
 test('checked local Rig Stop ends its actual SSH relay while the remote tmux owner and provider survive', async ({ page, request }, info) => {
   test.skip(process.env.WEBMUX_REAL_OPENRIG !== '1' || !process.env.WEBMUX_RIG_RELAY_MANIFEST, 'Requires the owned Linux SSH/tmux fixture');
