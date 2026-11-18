@@ -64,7 +64,7 @@ def main():
 
     server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    report = {'scope': __doc__.strip(), 'cases': [], 'passed': False, 'moduleSHA256': source_sha,
+    report = {'scope': __doc__.strip(), 'cases': [], 'nativeProcesses': [], 'passed': False, 'moduleSHA256': source_sha,
               'nativeSHA256': controls.sha(codex), 'probeSHA256': controls.sha(Path(__file__)),
               'controlsSHA256': controls.sha(Path(__file__).with_name('qualify-codex-observer-startup.py')),
               'platform': sys.platform, 'helperSHA256': helper['executableSHA256'] if helper else None}
@@ -84,7 +84,9 @@ def main():
         executable = home / ('start-' + stage)
         executable.write_text('#!/bin/sh\nexec ' + shlex.join(command(codex, argv, stage)) + '\n')
         executable.chmod(0o700)
-        native = controls.Native(executable, cwd, home)
+        diagnostic = {'case': home.name, 'stage': stage}
+        report['nativeProcesses'].append(diagnostic)
+        native = controls.Native(executable, cwd, home, diagnostics=diagnostic)
         try:
             native.rpc('initialize', {'clientInfo': {'name': 'webmux-os-isolation', 'version': '1'},
                                       'capabilities': {'experimentalApi': True}})
