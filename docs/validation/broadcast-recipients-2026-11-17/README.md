@@ -42,3 +42,13 @@ controlled local PTY acceptance, not authenticated Rig/Agent Deck, remote-host,
 Windows or lifecycle-ownership acceptance. #194/#318/#438/#246 remain separate;
 #429 still blocks merge/release. No provider lifecycle, terminal key mapping,
 backend authentication, dependency or release change is introduced.
+
+Hosted head `7527664` passed packaging, browser startup diagnostics and six CI
+jobs. Besides the known #429 audit failure, Windows failed the new test's exact
+WebSocket-frame assertion after all three actual PTY byte checks passed. Its
+default failure rendering shows identical expected/received strings, so it does
+not identify the differing bytes. The test now compares the same exact bytes as
+hex and persists both PTY and per-frame hex receipts in its failure path. It does
+not filter or normalize traffic. Strict types and all five local native cases
+pass again. The Windows cause remains unestablished until the diagnostic head
+runs; this is not reported as a fixed Windows product failure.

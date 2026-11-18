@@ -59,20 +59,29 @@ test('explicit recipients survive new registration and deliver bytes only after 
     await tile(b).locator('.xterm-helper-textarea').focus(); await page.keyboard.type('b');
     await expect.poll(() => bytes(b)).toBe('b');
     expect(bytes(a)).toBe('xy'); expect(bytes(c)).toBe('y');
-    expect(sent.get(a)!.join('')).toBe('xy');
-    expect(sent.get(b)!.join('')).toBe('b');
-    expect(sent.get(c)!.join('')).toBe('y');
+    // Hex keeps control bytes visible even when a reporter strips ANSI output.
+    expect(Buffer.from(sent.get(a)!.join('')).toString('hex')).toBe('7879');
+    expect(Buffer.from(sent.get(b)!.join('')).toString('hex')).toBe('62');
+    expect(Buffer.from(sent.get(c)!.join('')).toString('hex')).toBe('79');
+  } finally {
+    const received = (index: number) => {
+      const file = files.get(ids[index]);
+      return file ? readFileSync(file).toString('hex') : null;
+    };
     const receipt = {
-      selectedOriginalHex: readFileSync(files.get(a)!).toString('hex'),
-      explicitlyIncludedLaterHex: readFileSync(files.get(c)!).toString('hex'),
-      ordinaryAfterModeOffHex: readFileSync(files.get(b)!).toString('hex'),
+      selectedOriginalHex: received(0),
+      explicitlyIncludedLaterHex: received(2),
+      ordinaryAfterModeOffHex: received(1),
+      outboundFramesHex: ids.map(id => ({ fixture: title.get(id), frames: sent.get(id)!.map(data => Buffer.from(data).toString('hex')) })),
       receiptSource: 'Actual PTY child append-only byte files, not terminal screen text',
     };
     mkdirSync(info.outputDir, { recursive: true });
     const receiptPath = info.outputPath('native-broadcast-receipts.json');
     writeFileSync(receiptPath, JSON.stringify(receipt, null, 2) + '\n');
-    await info.attach('native-broadcast-receipts', { path: receiptPath, contentType: 'application/json' });
-  } finally {
-    for (const id of ids) await request.delete(`/api/sessions/${id}`);
+    try {
+      await info.attach('native-broadcast-receipts', { path: receiptPath, contentType: 'application/json' });
+    } finally {
+      for (const id of ids) await request.delete(`/api/sessions/${id}`);
+    }
   }
 });
