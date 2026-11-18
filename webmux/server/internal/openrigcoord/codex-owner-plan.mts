@@ -75,6 +75,26 @@ export function projectCodexOwnerPlan(config: unknown, thread: unknown, account:
   return { ...base, fingerprint: digest(JSON.stringify(base)) };
 }
 
+// These overrides belong only to the disposable observation thread. They must
+// never become launch settings: the actual provider retains its integrations.
+// No-turn/ephemeral alone does not prevent native MCP process startup.
+export function codexObservationConfig(config: unknown): Row {
+  if (!object(config)) throw new Error('native_owner_resolution_failed');
+  const servers = config.mcp_servers ?? {};
+  if (!object(servers) || Object.keys(servers).length > 128) throw new Error('native_startup_config_unavailable');
+  const overrides: Row = { 'features.hooks': false, 'features.plugins': false,
+    'features.apps': false, 'features.shell_snapshot': false };
+  const disabled: Array<[string, { enabled: false }]> = [];
+  for (const name of Object.keys(servers)) {
+    if (!name || name.length > 256 || /[\x00-\x1f\x7f]/.test(name) || !object(servers[name])) throw new Error('native_startup_config_unavailable');
+    disabled.push([name, { enabled: false }]);
+  }
+  // Supply a table, not a dotted override key: native request keys do not
+  // interpret TOML quotes, and a server name may itself contain a dot.
+  if (disabled.length) overrides.mcp_servers = Object.fromEntries(disabled);
+  return overrides;
+}
+
 function executableAt(name: string, env: NodeJS.ProcessEnv) {
   if (!path.isAbsolute(name) && !/^[a-zA-Z0-9_.-]+$/.test(name)) throw new Error('qualified_codex_unavailable');
   const candidates = path.isAbsolute(name) ? [name] : (env.PATH ?? '').split(path.delimiter)
@@ -150,7 +170,8 @@ export async function resolveCodexOwnerPlan(cwd: string, options: { profile?: st
     const configReply = await rpc('config/read', { cwd, includeLayers: false });
     if (!object(configReply)) throw new Error('native_owner_resolution_failed');
     const account = await rpc('account/read', { refreshToken: false });
-    const thread = await rpc('thread/start', { cwd, ephemeral: true });
+    const config = codexObservationConfig(configReply.config);
+    const thread = await rpc('thread/start', { cwd, ephemeral: true, config });
     return projectCodexOwnerPlan(configReply.config, thread, account, { executable, executableSHA256, home, cwd, profile });
   } finally {
     clearTimeout(deadline);
