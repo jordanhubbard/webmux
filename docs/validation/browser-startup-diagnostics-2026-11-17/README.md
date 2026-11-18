@@ -520,3 +520,54 @@ pass. See [native-handoff-summary.json](native-handoff-summary.json). Source and
 receipt bindings are recorded in
 [handoff-manifest.json](handoff-manifest.json). Actual Windows focused-projection
 acceptance remains pending; no runtime fix or release is claimed.
+
+
+## Network-service restart observation
+
+Windows `0c4e5e7` run 44228077044 retains all 42 records and 28 complete,
+end-acknowledged traces with zero loss/drops. The full ordinary matrix is
+12 PASS / 8 FAIL; the three fixed rounds are 17 PASS / 1 FAIL. All four deliberate Stop
+controls pass. In two ordinary loading failures, StartNow occurs before the
+requested navigation aborts, and the first recorded network-factory event occurs
+afterward. One abort is at 15459 us (first factory 29089 us); the other at 144503 us
+(first factory 156899 us). These are capture-local relative times. No buffer loss
+does not guarantee that a newly started process registered its trace producer
+before the relevant operation. See [windows-factory-summary.json](windows-factory-summary.json).
+
+The matching [network-service source](https://chromium.googlesource.com/chromium/src/+/refs/tags/158.0.8127.18/content/browser/network_service_instance_impl.cc)
+reports `Network service crashed or was terminated, restarting service.` at ERROR
+level when recreating a previously bound out-of-process service. This report
+does not distinguish a crash from other termination, and may follow the actual
+disconnection. The [reconnectable factory](https://chromium.googlesource.com/chromium/src/+/refs/tags/158.0.8127.18/content/browser/loader/reconnectable_url_loader_factory.cc)
+checks its connection when obtaining a factory; that code alone does not prove
+which branch ran in the failure.
+
+Two additional conditions, direct-trace-loading-log-late and its home-profile
+counterpart, observe the allocator's existing output stream. All existing
+conditions remain. No Chrome logging flag is added. Only a fixed counter for
+the exact source/ERROR/restart message is retained, divided into startup,
+navigate-call and after-navigate-call phases. Phases describe when the reader
+completes a line, not a Chromium event timestamp. Observation ends before owned
+browser shutdown; the last phase can include fixture assertion and trace flush.
+Raw lines, paths, addresses, headers and process IDs are never serialized.
+The reader examines at most 256 KiB, retains at most 4096 bytes of an in-memory
+line, and reports discarded bytes/lines and pending length. Discarded input
+fails its native condition. A missing report alone does not prove the service
+never disconnected. Split-line matching, unrelated-message refusal, privacy,
+phase counters and both bounds have deterministic controls.
+
+Four fixed network-context creation scopes from the same source are also
+projected from the already-enabled loading category. They carry no exported
+arguments or global object identity. Buffers, navigation/fixture/trace deadlines
+and browser protections are unchanged. The full Windows matrix now has 22
+ordinary conditions plus the Stop control; each of three fixed rounds has eight
+ordinary trace conditions plus the Stop control (50 records total).
+
+Final native macOS acceptance is 44 ordinary first loads and four separate Stop
+controls, all successful with complete lossless captures. Two Windows-only
+NetLog cases are explicit skips. All eight output-reader trials observe nonempty
+output without dropped input or restart reports. Browser race, output/privacy/
+scope/bounds controls and Darwin/Windows AMD64 browser vet pass. See
+[native-network-output-summary.json](native-network-output-summary.json) and
+[network-output-manifest.json](network-output-manifest.json). Native Windows
+restart observation is pending; no network-service crash or runtime fix is claimed.

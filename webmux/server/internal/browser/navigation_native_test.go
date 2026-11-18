@@ -42,6 +42,7 @@ type firstNavigationEvidence struct {
 	Diagnostics     *NavigationDiagnostics `json:"diagnostics,omitempty"`
 	NetLog          *firstNavigationNetLog `json:"netLog,omitempty"`
 	BrowserTrace    *firstNavigationTrace  `json:"browserTrace,omitempty"`
+	ProcessOutput   *firstNavigationOutput `json:"processOutput,omitempty"`
 	TraceLoading    bool                   `json:"traceLoading,omitempty"`
 	TraceStartStage string                 `json:"traceStartStage,omitempty"`
 }
@@ -58,7 +59,7 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 	}
 	t.Setenv("WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS", "1")
 	site, hits := firstNavigationNodeFixture(t)
-	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "direct-child", "direct-child-original", "direct-home-child", "direct-home-child-original", "direct-netlog", "direct-home-netlog", "direct-trace", "direct-home-trace", "direct-trace-late", "direct-home-trace-late", "direct-trace-loading-late", "direct-home-trace-loading-late", "worker-subprocess-temporary", "worker-subprocess-saved"} {
+	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "direct-child", "direct-child-original", "direct-home-child", "direct-home-child-original", "direct-netlog", "direct-home-netlog", "direct-trace", "direct-home-trace", "direct-trace-late", "direct-home-trace-late", "direct-trace-loading-late", "direct-home-trace-loading-late", "direct-trace-loading-log-late", "direct-home-trace-loading-log-late", "worker-subprocess-temporary", "worker-subprocess-saved"} {
 		t.Run(mode, func(t *testing.T) {
 			if strings.HasSuffix(mode, "-netlog") && runtime.GOOS != "windows" {
 				t.Skip("Windows-only bounded anonymous NetLog capture; macOS sandbox refuses its scratch directory")
@@ -102,7 +103,7 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 					screenshot: strings.HasSuffix(mode, "screenshot"), profileAtHome: strings.Contains(mode, "-home"),
 					websocket: strings.Contains(mode, "websocket"), createChild: strings.Contains(mode, "-child"),
 					selectOriginal: strings.HasSuffix(mode, "-original"), netLog: strings.HasSuffix(mode, "-netlog"),
-					browserTrace: strings.Contains(mode, "-trace"), traceLate: strings.HasSuffix(mode, "-late"), traceLoading: strings.Contains(mode, "-loading-"),
+					browserTrace: strings.Contains(mode, "-trace"), traceLate: strings.HasSuffix(mode, "-late"), traceLoading: strings.Contains(mode, "-loading-"), processOutput: strings.Contains(mode, "-log-"),
 				}, &record)
 			}
 			record.NavigateCalls++
@@ -332,7 +333,7 @@ func firstNavigationWorker(t *testing.T, saved bool, record *firstNavigationEvid
 }
 
 type firstNavigationDirectOptions struct {
-	screenshot, profileAtHome, websocket, createChild, selectOriginal, netLog, browserTrace, traceLate, traceLoading bool
+	screenshot, profileAtHome, websocket, createChild, selectOriginal, netLog, browserTrace, traceLate, traceLoading, processOutput bool
 }
 
 func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, record *firstNavigationEvidence) func(Request) Frame {
@@ -378,6 +379,11 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 		// the actual worker continues using private pipes with its original flags.
 		opts = append(opts, remote.WebSocket, chromedp.Flag("remote-debugging-address", "127.0.0.1"))
 	}
+	var output *firstNavigationOutputCapture
+	if options.processOutput {
+		output = &firstNavigationOutputCapture{}
+		opts = append(opts, chromedp.CombinedOutput(output))
+	}
 	alloc, stop := chromedp.NewExecAllocator(context.Background(), opts...)
 	root, cancel := chromedp.NewContext(alloc)
 	t.Cleanup(func() {
@@ -392,6 +398,15 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 		cancel()
 		stop()
 	})
+	if output != nil {
+		t.Cleanup(func() {
+			snapshot := output.snapshot()
+			record.ProcessOutput = &snapshot
+			if snapshot.DroppedBytes != 0 || snapshot.DroppedLines != 0 {
+				t.Error("anonymous browser output observation exceeded bounds")
+			}
+		})
+	}
 	trace := newNavigationTrace()
 	startup := time.AfterFunc(20*time.Second, cancel)
 	t.Cleanup(func() { startup.Stop() })
@@ -508,6 +523,10 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 		defer finish()
 		if req.Action == "navigate" {
 			requested = req.URL
+			if output != nil {
+				output.setPhase("navigation")
+				defer output.setPhase("after_navigation")
+			}
 			target := chromedp.FromContext(active).Target
 			trace.begin(string(target.TargetID), req.URL)
 			result, err := cdp.Call(ctx, target, page.Navigate, page.NavigateParams{URL: req.URL})
