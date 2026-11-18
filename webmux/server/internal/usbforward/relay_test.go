@@ -8,11 +8,41 @@ import (
 	"errors"
 	"io"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 )
+
+type endedProcessPipe struct{ err error }
+
+func (p endedProcessPipe) Read([]byte) (int, error)    { return 0, p.err }
+func (p endedProcessPipe) Write(b []byte) (int, error) { return len(b), nil }
+func (p endedProcessPipe) Close() error                { return nil }
+
+// exec can close a process pipe before parent cancellation has propagated to
+// the relay context. Exercise that ordering without depending on scheduler or
+// Windows OpenSSH timing; this is already past the authenticated handshake.
+func TestEstablishedRelayClosedProcessPipe(t *testing.T) {
+	for _, err := range []error{os.ErrClosed, &os.PathError{Op: "read", Path: "|0", Err: os.ErrClosed}} {
+		ctx, cancel := context.WithCancel(context.Background())
+		if got := newRelay(ctx, &wire{ReadWriteCloser: endedProcessPipe{err}}, "").run(nil); got != nil {
+			t.Errorf("closed process pipe must end the established relay: %v", got)
+		}
+		cancel()
+	}
+}
+
+func TestEstablishedRelayRetainsProtocolAndTruncationFailures(t *testing.T) {
+	for _, err := range []error{errProtocol, io.ErrUnexpectedEOF, os.ErrPermission} {
+		ctx, cancel := context.WithCancel(context.Background())
+		if got := newRelay(ctx, &wire{ReadWriteCloser: endedProcessPipe{err}}, "").run(nil); !errors.Is(got, err) {
+			t.Errorf("unexpected transport failure must remain visible: got %v, want %v", got, err)
+		}
+		cancel()
+	}
+}
 
 func backend(t *testing.T, handle func(net.Conn)) net.Listener {
 	t.Helper()
