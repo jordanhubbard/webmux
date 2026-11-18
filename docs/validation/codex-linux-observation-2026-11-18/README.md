@@ -1,5 +1,25 @@
 # Linux native observation guard
 
+Follow-up [#533](https://github.com/jordanhubbard/webmux/issues/533) found a gap
+in the earlier startup evidence: the helper allowed unnamed socket pairs but
+blocked the addressless send/receive forms used by native signal delivery.
+The new bounded stderr fixture exposed a signal-thread panic and forced cleanup
+in receipts whose policy assertions had passed. Those earlier receipts retain
+their original results; they do not prove healthy signal handling.
+
+The candidate fix admits only addressless, read/write-equivalent send/receive
+forms with restricted flags and canonical zero address/length words. External
+socket creation, connect/bind/listen/accept, addressed I/O, message/descriptor
+transfer, child creation and later exec/filter replacement remain denied. New
+kernel controls exercise real signal-pair data I/O plus both positive and
+refused address/flag/message forms. The native fixture now refuses observed
+panics, forced cleanup, incomplete stderr and unexpected exits; panic detection
+survives truncation of the retained 32 KiB tail. Native AMD64/ARM64 qualification
+of this candidate is required before calling the signal-path repair qualified.
+The dependency's [UnixStream signal pair](https://raw.githubusercontent.com/vorner/signal-hook/v0.3.18/src/iterator/mod.rs)
+provides source context for the recorded native failure.
+
+
 The internal Codex owner resolver now has an enforced Linux AMD64/ARM64 guard,
 provided by the actual WebMux executable. An explicit native-create action
 snapshots the running controller into a private directory under the owner

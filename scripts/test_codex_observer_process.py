@@ -46,7 +46,7 @@ class NativeDiagnosticsTest(unittest.TestCase):
         diagnostic = {}
         native = self.native('''import json,sys
 request=json.loads(sys.stdin.buffer.readline())
-sys.stderr.buffer.write(b'x' * (1024 * 1024) + b'DIAGNOSTIC_END\\n')
+sys.stderr.buffer.write(b'panicked at fixture_start\\n' + b'x' * (1024 * 1024) + b'DIAGNOSTIC_END\\n')
 sys.stderr.buffer.flush()
 print(json.dumps({'id':request['id'],'result':{'ready':True}}),flush=True)
 sys.stdin.buffer.read()
@@ -55,8 +55,12 @@ sys.stdin.buffer.read()
         native.close()
         self.assertEqual(len(native.stderr_tail), 32768)
         self.assertTrue(diagnostic['stderrTail'].endswith('DIAGNOSTIC_END\n'))
-        self.assertEqual(diagnostic['stderrBytesSeen'], 1024 * 1024 + len(b'DIAGNOSTIC_END\n'))
+        self.assertEqual(diagnostic['stderrBytesSeen'], 1024 * 1024 + len(b'panicked at fixture_start\nDIAGNOSTIC_END\n'))
         self.assertTrue(diagnostic['stderrTruncated'])
+        self.assertTrue(diagnostic['stderrPanicObserved'])
+        self.assertNotIn('panicked at', diagnostic['stderrTail'])
+        with self.assertRaisesRegex(RuntimeError, 'native_diagnostic_panic'):
+            controls.validate_native_diagnostics([diagnostic])
         self.assertTrue(diagnostic['stderrComplete'])
         self.assertIsNone(diagnostic['exitBeforeCleanup'])
         self.assertTrue(diagnostic['processTerminationRequested'])
@@ -110,6 +114,17 @@ sys.stdin.buffer.read()
             controls.Native(self.root / 'missing-executable', self.project, self.home, diagnostics=diagnostic)
         self.assertEqual(diagnostic, {'case': 'fixture', 'stage': 'policy',
                                      'launchErrorType': 'FileNotFoundError', 'launchErrno': errno.ENOENT})
+
+    def test_diagnostic_gate_refuses_forced_cleanup_incomplete_capture_and_bad_exit(self):
+        valid = {'exitBeforeCleanup': None, 'returnCodeAfterCleanup': 0, 'stderrComplete': True,
+                 'cleanupEscalated': False, 'stderrTail': '', 'stderrPanicObserved': False}
+        controls.validate_native_diagnostics([valid])
+        for change, code in [({'cleanupEscalated': True}, 'forced_cleanup'),
+                             ({'stderrComplete': False}, 'incomplete'),
+                             ({'exitBeforeCleanup': 17}, 'exit'),
+                             ({'returnCodeAfterCleanup': -signal.SIGKILL}, 'exit')]:
+            with self.subTest(change=change), self.assertRaisesRegex(RuntimeError, 'native_diagnostic_' + code):
+                controls.validate_native_diagnostics([{**valid, **change}])
 
     def test_capture_requires_explicit_opt_in(self):
         native = self.native('''import json,sys

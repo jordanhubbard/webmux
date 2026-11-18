@@ -23,22 +23,27 @@ import (
 )
 
 type observation struct {
-	Threads        int
-	SocketPair     bool
-	Network        bool
-	NetworkDenied  bool
-	Child          bool
-	ChildDenied    bool
-	SameExecutable bool
-	SameDenied     bool
-	ReplaceFilter  bool
-	ReplaceDenied  bool
-	SeccompDenied  bool
-	Reexec         bool
-	ReexecDenied   bool
-	ExecAtDenied   bool
-	NoListener     bool
-	SamePID        bool
+	Threads            int
+	AddressedIOControl bool
+	MessageIODenied    bool
+	MessageIOControl   bool
+	SocketPairSendRecv bool
+	AddressedIODenied  bool
+	SocketPair         bool
+	Network            bool
+	NetworkDenied      bool
+	Child              bool
+	ChildDenied        bool
+	SameExecutable     bool
+	SameDenied         bool
+	ReplaceFilter      bool
+	ReplaceDenied      bool
+	SeccompDenied      bool
+	Reexec             bool
+	ReexecDenied       bool
+	ExecAtDenied       bool
+	NoListener         bool
+	SamePID            bool
 }
 
 func TestObserverProcess(t *testing.T) {
@@ -103,6 +108,32 @@ func TestObserverProcess(t *testing.T) {
 		var b [1]byte
 		_, r := unix.Read(pair[1], b[:])
 		v.SocketPair = e == nil && r == nil && b[0] == 'x'
+		sent := unix.Sendto(pair[0], []byte{'s'}, unix.MSG_NOSIGNAL, nil)
+		var n uintptr
+		received := unix.EIO
+		if sent == nil {
+			n, _, received = unix.Syscall6(unix.SYS_RECVFROM, uintptr(pair[1]), uintptr(unsafe.Pointer(&b[0])), 1, 0, 0, 0)
+		}
+		_, _, empty := unix.Syscall6(unix.SYS_RECVFROM, uintptr(pair[1]), uintptr(unsafe.Pointer(&b[0])), 1, unix.MSG_DONTWAIT, 0, 0)
+		runtime.KeepAlive(b)
+		v.SocketPairSendRecv = sent == nil && received == 0 && n == 1 && b[0] == 's' && empty == unix.EAGAIN
+		// No endpoint addresses, address-output pointers, noncanonical flag
+		// words or out-of-contract flags may enter these two exceptions.
+		v.AddressedIODenied = true
+		v.AddressedIOControl = true
+		for _, nr := range []uintptr{unix.SYS_SENDTO, unix.SYS_RECVFROM} {
+			for _, args := range [][3]uintptr{{unix.MSG_OOB, 0, 0}, {1 << 32, 0, 0}, {0, 1, 0}, {0, 1 << 32, 0}, {0, 0, 1}, {0, 0, 1 << 32}} {
+				_, _, errno := unix.Syscall6(nr, ^uintptr(0), 0, 0, args[0], args[1], args[2])
+				v.AddressedIODenied = v.AddressedIODenied && errno == unix.EPERM
+				v.AddressedIOControl = v.AddressedIOControl && errno == unix.EBADF
+			}
+		}
+		v.MessageIODenied, v.MessageIOControl = true, true
+		for _, nr := range []uintptr{unix.SYS_SENDMSG, unix.SYS_RECVMSG, unix.SYS_SENDMMSG, unix.SYS_RECVMMSG} {
+			_, _, errno := unix.Syscall6(nr, ^uintptr(0), 0, 1, 0, 0, 0)
+			v.MessageIODenied = v.MessageIODenied && errno == unix.EPERM
+			v.MessageIOControl = v.MessageIOControl && errno == unix.EBADF
+		}
 		unix.Close(pair[0])
 		unix.Close(pair[1])
 	}
@@ -172,14 +203,14 @@ func TestNativeGuardEffects(t *testing.T) {
 			if e = json.Unmarshal(out, &v); e != nil {
 				t.Fatalf("probe response: %v %s", e, out)
 			}
-			if v.Threads != 4 || !v.SocketPair || !v.NoListener {
+			if v.Threads != 4 || !v.SocketPair || !v.SocketPairSendRecv || !v.NoListener {
 				t.Fatalf("native runtime or descriptor cleanup: %+v", v)
 			}
 			if guarded {
-				if !v.NetworkDenied || !v.ChildDenied || !v.SameDenied || !v.ReplaceDenied || !v.SeccompDenied || !v.ReexecDenied || !v.ExecAtDenied || !v.SamePID || v.Network || v.Child || v.SameExecutable || v.ReplaceFilter || v.Reexec {
+				if !v.MessageIODenied || !v.AddressedIODenied || !v.NetworkDenied || !v.ChildDenied || !v.SameDenied || !v.ReplaceDenied || !v.SeccompDenied || !v.ReexecDenied || !v.ExecAtDenied || !v.SamePID || v.Network || v.Child || v.SameExecutable || v.ReplaceFilter || v.Reexec {
 					t.Fatalf("guard escaped or changed PID: %+v", v)
 				}
-			} else if !v.Network || !v.Child || !v.SameExecutable || !v.ReplaceFilter || !v.Reexec {
+			} else if !v.MessageIOControl || !v.AddressedIOControl || !v.Network || !v.Child || !v.SameExecutable || !v.ReplaceFilter || !v.Reexec {
 				t.Fatalf("positive controls unavailable: %+v", v)
 			}
 		})
