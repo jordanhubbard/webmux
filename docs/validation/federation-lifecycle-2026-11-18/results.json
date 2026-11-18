@@ -1,5 +1,5 @@
 {
-  "scope": "Test-only lifecycle diagnostics and capture controls; not a federation failure repair. Native Windows cause remains unproven.",
+  "scope": "Test harness visibility correction and bounded lifecycle diagnostics, backed by native Windows and macOS scheduling controls. No production runtime change; unique causes of every historical failure are not established.",
   "runtimeApplicationBase": "d871ac60421c37485f7044f5323f3a71291d7a65",
   "sourceSHA256": {
     "tests/e2e/server-federation.spec.ts": "3c3a6892d45c149f71b081910f06aa240d1a80a734a1906a53d855c261ade7a0",
@@ -47,7 +47,7 @@
     "workflowYAMLParsed": true,
     "diffWhitespace": true
   },
-  "nativeWindows": "Initial one-sample and expected-failure controls passed. Source 28f32b5 ten-sample cohort retained 9 pass/1 fail; geometry source 3cceb89 cohort retained 10 pass/0 fail. No repaired qualification claim.",
+  "nativeWindows": "Native offscreen negative control and one unfaulted lifecycle pass at fea9cb8. Corrected visible-card assertion workflow is pending exact new-head qualification.",
   "originalFailure": {
     "run": 44267347627,
     "job": 134675161963,
@@ -84,7 +84,7 @@
       "afterDOMHasMarker": true,
       "noAdditionalTerminalWrites": true
     },
-    "nativeWindowsCounterfactual": "pending; preserve initial assertion failure, scroll existing viewer and count new frames/sockets; no cause/repair established",
+    "nativeWindowsCounterfactual": "Controlled native Windows scheduling intervention passed at fea9cb8; historical spontaneous occurrence has no geometry and is not uniquely attributed.",
     "geometryWindowsStudy": {
       "run": 44276326962,
       "head": "3cceb89457bd420d97bdf77cb954c778fdd75522",
@@ -126,6 +126,42 @@
       "bothOriginalProvidersPresent": true,
       "receiptSHA256": "6ab5640716e9bcc3e7da8e0a77dd1a9d2b647a83d9ebb10ffaf0f4d7af0d6d82"
     },
-    "nativeWindows": "pending same scheduling control and one unfaulted lifecycle on the new collector source"
+    "nativeWindows": {
+      "run": 44280531734,
+      "source": "fea9cb81c727c4f21995c83bb2fcb3d991ba7857",
+      "artifact": 14417565130,
+      "artifactReportedDigest": "sha256:31800c52188150c5e8ad01c0e1890ab60b955f00d94478bfef07ca4c51b96f6a",
+      "originalBlankAssertionFailed": true,
+      "originalAssertionSeconds": 5,
+      "phase": "diagnostic-offscreen-replay",
+      "peerVisibleHeightBefore": 0,
+      "originalMarkerRevealedAfterScroll": true,
+      "traceComplete": true,
+      "newReceivedFrames": 0,
+      "newOutputFrames": 0,
+      "newSockets": 0,
+      "bothOriginalProvidersAlive": true,
+      "barrier": {
+        "armed": true,
+        "held": 1,
+        "delivered": 1,
+        "callbackError": false,
+        "expectedPID": 5876
+      },
+      "receiptSHA256": "51dec97aac878103674218dbca8dacc8552e176d920f6ff23114e1c719df08a6"
+    }
+  },
+  "visibilityFix": {
+    "sourceSHA256": {
+      "tests/e2e/server-federation.spec.ts": "4edd2eee061ead722fe192e386d1e99d58b996d43a9d91073f7e4fdf754c2005",
+      "tests/e2e/federation-replay-control.ts": "5f2c21a3173989de56f58b052d652537442bd7c162b2ec162f0a13518b0108fe",
+      "tests/e2e/federation-diagnostics.ts": "c5c60749ccb4a8ce93aa8281b8e1ba369d185e16e237047199f11352c29d80f1",
+      ".github/workflows/federation-native.yml": "479038d6f374d97ade25fb962f9af3d312cb8e0de171243fcfec97622f13049e"
+    },
+    "action": "Scroll stable terminal card before reading its virtualized xterm DOM; preserve all marker/provider/input/isolation assertions and the five-second marker and 90-second case deadlines. No added sleep, native write, reconnect or replay request.",
+    "nativeMacFullLifecycleSeconds": 13.4,
+    "nativeMacFullLifecyclePassed": true,
+    "negativeControlStillFailsOriginalBlankAssertion": true,
+    "nativeWindowsCorrectedLifecycle": "pending"
   }
 }

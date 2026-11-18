@@ -1,4 +1,4 @@
-# Federation lifecycle diagnostics
+# Federation lifecycle visibility and diagnostics
 
 Issue #478 retains a native Windows failure in which the initial remote
 provider marker was visible, but a later reconnect/refresh expected that same
@@ -25,10 +25,10 @@ one local provider start and two peer starts including its explicit restart.
 Its actual generated service token is absent from the receipt. Source and
 receipt hashes are in `results.json`.
 
-All 123 helper controls, five strict TypeScript projects, the frontend build,
-workflow YAML parsing and whitespace checks pass. This is qualification of the
-observations, not repair of #478. Instrumentation can affect timing; a later
-green sample alone does not establish a cause or fix.
+The initial diagnostics snapshot passed all 123 helper controls, five strict
+TypeScript projects, the frontend build, workflow YAML parsing and whitespace
+checks. Instrumentation can affect timing; green samples alone do not establish
+a cause or fix. The subsequent visibility correction is described below.
 
 The separate Windows workflow checks the intentional failure and then runs
 one or ten independent fresh samples. Every outcome is retained and any
@@ -52,7 +52,8 @@ outcome. This is an explicit post-failure diagnostic intervention, not a retry,
 reconnect or replay. Installed xterm source pauses offscreen painting; a separate
 macOS library control has a populated native xterm buffer and blank offscreen
 DOM, then displays the marker after scrolling with no additional terminal
-writes. The analogous observation on the failing Windows sample is pending.
+writes. The historical failing sample has no geometry; the controlled Windows
+observation below establishes this measurement hazard independently.
 
 The geometry follow-up at `3cceb89` completed all ten Windows samples in run
 44276326962. Each retained receipt has `completed: true`; its separate expected
@@ -68,6 +69,23 @@ providers alive and both viewers connected. Scrolling exposes the original
 provider marker with a complete trace and zero new received frames, output
 frames or sockets. Event recording includes the read-only diagnostic queries
 before the scroll. A normal native lifecycle also passes (14.1 seconds).
-The same controlled schedule is required by the Windows diagnostic workflow;
-its outcome is pending. This proves a visibility hazard in the DOM oracle,
-without identifying a unique cause for all historical failures.
+The same schedule passed on native Windows AMD64 in [run 44280531734](https://github.com/jordanhubbard/webmux/actions/runs/44280531734),
+source `fea9cb8`: the actual five-second assertion failed on a blank view; both
+original providers and both viewers stayed connected. Scrolling revealed the
+original marker with a complete trace, zero new received/output frames and zero
+new sockets. The ordinary full lifecycle also passed. Artifact 14417565130
+and its reported digest are recorded in `results.json`. This establishes a
+visibility hazard in the DOM oracle, without uniquely attributing all historical
+failures.
+
+The corrected lifecycle test exposes the stable terminal card before reading
+xterm rows, including negative isolation checks. Refresh replaces the inner
+xterm screen, so scrolling that disposable inner element races the refresh;
+scrolling its stable card avoids that race. All original expected markers,
+provider identity, session count, input, resize and failure checks remain.
+Marker assertions retain five seconds and the case retains 90 seconds, with no
+added sleep or replay/reconnect request. The full native macOS case passes
+(13.4 seconds); the deliberate unscrolled control still fails its original
+blank assertion and recovers the old marker solely on visibility. The control
+receipt is now written only for that exact matcher failure with blank actual
+text. Native Windows qualification of the corrected lifecycle is pending.

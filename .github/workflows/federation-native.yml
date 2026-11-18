@@ -101,7 +101,7 @@ jobs:
           $before = @($visibility.views | Where-Object role -eq 'peer')
           $after = @($visibility.visibilityProbe.after | Where-Object role -eq 'peer')
           if ($visibility.completed -or $visibility.phase -ne 'diagnostic-offscreen-replay' -or $visibility.peer.exited -or @($visibility.starts).Count -ne 2 -or @($visibility.starts | Where-Object presence -ne 'exists').Count -ne 0) { throw 'Offscreen control did not retain the original live providers and failure.' }
-          if (-not $barrier.armed -or $barrier.callbackError -or $barrier.held -lt 1 -or $barrier.held -ne $barrier.delivered) { throw 'Real replay callbacks did not cross the scheduling barrier unchanged.' }
+          if (-not $barrier.originalBlankAssertionFailed -or -not $barrier.armed -or $barrier.callbackError -or $barrier.held -lt 1 -or $barrier.held -ne $barrier.delivered) { throw 'Real replay callbacks did not cross the scheduling barrier unchanged or the expected assertion did not fail.' }
           if ($before.Count -ne 1 -or -not $before[0].blank -or $before[0].screen.visibleHeight -ne 0 -or $before[0].viewer -ne 'Viewer: connected' -or $after.Count -ne 1 -or $after[0].blank -or $after[0].readyPIDs -notcontains $barrier.expectedPID) { throw 'Visibility did not expose the original provider marker.' }
           if (-not $visibility.visibilityProbe.scrollCompleted -or -not $visibility.visibilityProbe.traceComplete -or $visibility.visibilityProbe.newReceivedFrames -ne 0 -or $visibility.visibilityProbe.newOutputFrames -ne 0 -or $visibility.visibilityProbe.newSockets -ne 0) { throw 'Visibility control received new transport data or did not retain a complete trace.' }
           $failed = $false
