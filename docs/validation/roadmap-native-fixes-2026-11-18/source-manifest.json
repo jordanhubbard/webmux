@@ -1,0 +1,226 @@
+{
+  "recordedUTC": "2026-11-18T10:18:32.338290+00:00",
+  "issue": 452,
+  "sourceCommit": "4deeab7f4b08b38acf6f4681521c05cb82450418",
+  "integrationBase": "45151c356368b52eb20ccea92a34866472041e31",
+  "pinnedInputs": [
+    {
+      "pr": 482,
+      "head": "45151c356368b52eb20ccea92a34866472041e31"
+    },
+    {
+      "pr": 474,
+      "head": "d871ac60421c37485f7044f5323f3a71291d7a65"
+    },
+    {
+      "pr": 481,
+      "head": "2f9a13d84ac27f126769d100c71ce7ef884414bd"
+    },
+    {
+      "pr": 477,
+      "head": "1302d7c53039d3c3ce6624dcd5113e2c00963615"
+    },
+    {
+      "pr": 486,
+      "head": "95b8327afe69bb3f7e3eba16183df7e6bf66190b"
+    }
+  ],
+  "priorInputAncestors": [
+    "10b365c6a5405848d1630d6fbd2f096a830a5998",
+    "52a8527e7e8a3e0ed0d0af09eadbd9457eae9854",
+    "3b80d0d4174a366f8fc0a3d0175b30e0323377b8",
+    "447554456ff5e1dde3000b13c5d08e35bbfdee69",
+    "8e90c3ba68f1e037c592a24b4c22e463cc53e071",
+    "b357ca694b390bbca1377a0a759d44ede0331220",
+    "49b1809c94296db7ee1f3c5dd962c00cc6f1bc31",
+    "4ce5d90f20a0960f47d090e91ae1b0252c9bae81",
+    "fd1a44161e9735509e8c02cbdc36e9143e1c46d1"
+  ],
+  "originalInputAncestors": [
+    "f2af9dc691909e4fc9f1920ae325edd8ca5b02ac",
+    "ffa3a17b8d8ace9da38e4c142079bfc41aeb9737",
+    "7f9f6bc853b85468e3801984f3bec1e89feeb5e1",
+    "89ee7197d20bca5e23db03cbfae615b97960973d"
+  ],
+  "allInputAncestorsVerified": true,
+  "sourceTrees": {
+    ".github": "706688c3886152f2761cd748f3725834b217ccbe",
+    "scripts": "738cdaf6d28a0bc4b15ba1391fe1c882d9d58b7a",
+    "tests": "9a36562bca3103a64711889edd634984cd5d0d9b",
+    "webmux": "062f6ce9a500b21b0660ea2bf6a4fd6d3a606659"
+  },
+  "sourceSHA256": {
+    ".github/workflows/ci.yml": "8f308432c95ba47e6c69801440f61e8e678c80a725d6615ba547e1a35a0291c9",
+    ".github/workflows/federation-native.yml": "479038d6f374d97ade25fb962f9af3d312cb8e0de171243fcfec97622f13049e",
+    ".github/workflows/federation-renderer.yml": "becf1ca8c73e24d3b0b1981e9bac8c7c4cb673a50f291b11aecad97fecf2cccd",
+    "scripts/federation-diagnostics.test.mts": "98adec4cb80354218648d3e33b61ce924641994f86eb7dcfa965fd1be2b5abc8",
+    "scripts/openrig-recovery.test.mts": "ad7dbec3a24388a2af043f8a0380127e1e2b1f2383553b81116350d418f02c8c",
+    "scripts/openrig-relay-runner.test.mts": "f740c160920853d7042dcffdcd92a70d700841c77f81e05e5dfbb64d3f1c3b56",
+    "scripts/qualify-federation-renderer.ps1": "f0abb412a3f22c909c6dfeca70b11b5bd128e354e3f1513294815b741a364fb9",
+    "scripts/qualify-rig-stop-relay.py": "131bb56dea3f057f70aaee01bf80500d48b075bb6f9693c34935ae22b7d3b805",
+    "scripts/rig-attachment.test.mts": "e86026143369c5c8c65d4343d3725f13a7fc8172a459ee0440353ac5aae2dafb",
+    "scripts/rig-changes.test.mts": "4572f8434192f2cabe7f58208f54eab9ff25350a4fb3048fa4f7b0e7e3fb9d66",
+    "scripts/rig-enrollment.test.mts": "57e278c0812e9d09f6ede620df87eacb0bb7a85575e9b7da357ce18385c0a6fb",
+    "scripts/rig-stop.test.mts": "24e4de503ec7407bcd828626680344ceaf2d73e037603ec1d6bc4d8215824032",
+    "tests/e2e/federation-diagnostic-facts.mts": "eacffa4b6494a00bf2dca451f0cfb672a9ff0bc49c828262f8203bc58674de54",
+    "tests/e2e/federation-diagnostics.ts": "c5c60749ccb4a8ce93aa8281b8e1ba369d185e16e237047199f11352c29d80f1",
+    "tests/e2e/federation-fixture.mts": "dfca1f78246c99b183bee4e31a4fb8446e2608cc47779a6a0a3c6748b522738e",
+    "tests/e2e/federation-replay-control.ts": "5f2c21a3173989de56f58b052d652537442bd7c162b2ec162f0a13518b0108fe",
+    "tests/e2e/openrig-activity.spec.ts": "b16433c6ae9358dbd28ee554c8785375118ed115dff2bd90b43e0fc1529acaec",
+    "tests/e2e/openrig-fixture.mts": "d01518e23c59f72908addf4b707c55a7c3375ce0d3fd29991e7349a4d7cde4c6",
+    "tests/e2e/openrig-stop-relay.spec.ts": "d8885ca3e28ecd03675a93d527e0f78ebb7b3195b9b5acb9be08370a5adac28a",
+    "tests/e2e/openrig-stop.spec.ts": "0a2584c019ddc1715514d467daf589701a7418c4a76851b80e93ffc0ef110309",
+    "tests/e2e/openrig.spec.ts": "41d215c9dd7b15df75017f81ba459feac611765edf5cc49f2257615f32a8522b",
+    "tests/e2e/server-federation.spec.ts": "4edd2eee061ead722fe192e386d1e99d58b996d43a9d91073f7e4fdf754c2005",
+    "tests/frontend/RigSeatStatus.test.tsx": "3550c4518451b28ab0704c3c7a08daae54d9ae801bc330a5dc66eb5ff8a6cd1d",
+    "tests/frontend/RigStopDialog.test.tsx": "6f32187c790c94205742e7a536b4b54d68baa924814162829a4f97bf8a71ca0e",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "a298d621b1dde07ead08b5f7b21bfed5a322e1d4837b7813d95c9df2a234a728",
+    "webmux/frontend/src/components/RigSeatStatus.tsx": "38da7b635670248f50ffe2212deb946259725bd03ffe45f6f36a7f387709cf8b",
+    "webmux/frontend/src/components/RigStopDialog.tsx": "fb0b73825915801a52d457d08069053f100a2e4cc5e3a953d82ad2bd30d62dc3",
+    "webmux/frontend/src/types/index.ts": "3e8b19134bea85a70fb37506965e6d73fce5a89b3f0b83a7ee1c142862c357a8",
+    "webmux/frontend/src/utils/api.ts": "fb832cb13fbfbf97d4f020c26ce6b03061252d35acc9b53a201ba3602955ecbb",
+    "webmux/package.json": "2b4f48e66121640d0480b85cd8cc398f3746ea5492bc6f8c1dc4044bbb385771",
+    "webmux/server/internal/httpapi/coordination_providers.go": "dfdf36282f611dbae6ba1b4b0b6e6eb96efe755db056249a965e7e60540b3b50",
+    "webmux/server/internal/httpapi/coordination_providers_test.go": "8d69cbd8c418547719a2c0eb87e19b7c64549bafa96e2fe94824ed548b9ae73f",
+    "webmux/server/internal/httpapi/federation.go": "2f39be097dae6f2ad70a03a9f4a8c4b6f0cea27566f47c5e293b2dd6df6168ed",
+    "webmux/server/internal/httpapi/federation_renderer_helper_test.go": "d6c8f99694e4b9cac90531b2578337f008b3442d30abac9dd4a4ef063351a51b",
+    "webmux/server/internal/httpapi/federation_renderer_windows_test.go": "04d74ab87efc69df3fbf2e9d615e292bc9d226939683402ad7e46a3abcaef57e",
+    "webmux/server/internal/httpapi/federation_test.go": "593825be1e090630825c23720b5062092652c6f7927828a545ab070afcf41e0e",
+    "webmux/server/internal/httpapi/main_test.go": "d2120c34af7f6be8da2d630c87a021dde74f06685948de4cd3aadded7ba7538b",
+    "webmux/server/internal/httpapi/openrig.go": "8e94de724ffd680b28de5e853099bc1b591a1d51212fa72aedc36581a5650afd",
+    "webmux/server/internal/httpapi/openrig_test.go": "6195035aa508889da59d87d661ca61b2d0df781e1c449d6dafa53619a4fbd737",
+    "webmux/server/internal/httpapi/remote_rig.go": "1b9a9d7c0eeed05d5474197d371ed025c186c8f2b6adf8906fd06dda487087b1",
+    "webmux/server/internal/httpapi/remote_rig_test.go": "519ee77276f3e58bf4e222526b2261db4a10b01d05dc87b71a84f88f8cf19b2e",
+    "webmux/server/internal/httpapi/rig_dashboard.go": "b83e9a4092c2588806491b43c271b58e733c87095079ff70c5af3e0ed504e812",
+    "webmux/server/internal/httpapi/rig_dashboard_test.go": "00a1598e0d28733fa76065ebda534604b6eba96e413646b0f9d955ee69b8ab33",
+    "webmux/server/internal/httpapi/rig_native_recovery.go": "04dc453f00c899a7c041519f4d0e1c5ed88bf8640384e4b3f64269d18c49d1c0",
+    "webmux/server/internal/httpapi/rig_stop.go": "165e212e9fc6d110fea927128bdb7c6e61a6cb92d6b54f214b7746a95f69ff6a",
+    "webmux/server/internal/httpapi/rig_stop_test.go": "8483d55c6f156f2b1593297ef0db14dd482c44543a0daf1db4c91f02a93e47af",
+    "webmux/server/internal/httpapi/rig_tmux.go": "b8956614a2aa253d6cf5ebdf9d2fafbceff8e2e8f01d76306add3efba129e61f",
+    "webmux/server/internal/httpapi/rig_tmux_native_test.go": "ddee92d420d802eeb35050702f579c693b465268e8dfc43aa163f2e8c6d2a16e",
+    "webmux/server/internal/httpapi/rig_tmux_test.go": "861ebf48e5d71c099b98f75227a5373d22eb6213d19d564f8038eec4f45e643d",
+    "webmux/server/internal/httpapi/server.go": "c70cade0b2378475ac1bd858a042e92736000e19240e840ba96b728bc5e02a2e",
+    "webmux/server/internal/httpapi/sessions.go": "2bcc6899c49c3bbb5982c20f05c6826106de2d81fa9869729e2daf40eb9cbeee",
+    "webmux/server/internal/openrigcoord/coord.go": "c2db86304f4c497f3972ff64f9408fb39c6f3e7321862a824cc9b4e9c2d6824c",
+    "webmux/server/internal/openrigcoord/observations_test.go": "ea9420c1f0b6434c51c95654c9e3f20468a11e4251b0f86b84149f1fe3e534ee",
+    "webmux/server/internal/openrigcoord/rig-attachment.mts": "b1658a52932cd9e7912725cd8db74f461179bfde8bc6199faede74392fadefe4",
+    "webmux/server/internal/openrigcoord/rig-changes.mts": "ebed56143f5054b520de9c61edd8bc73cca0546b7a3a89e45237cc7fbdfd2a60",
+    "webmux/server/internal/openrigcoord/rig-enrollment.mts": "48b2c4f927d6ac0ab80137459b9713f1ccb87fb3644b463118d3a89a01a9d185",
+    "webmux/server/internal/openrigcoord/rig-recovery.mts": "e40bdea4ec56d7992a3264af4ed3bd870c2d914860273641af67fc29d3928730",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "d5f3f7bdd28b43b0a90aa681310e59f318999789177ad430c217e1f97d61b5ba",
+    "webmux/server/internal/openrigcoord/runner.mts": "06eec29f9321341ade27a8145a293fc1e287e1cec2ddf704d2ddf1e7a2d69df4",
+    "webmux/server/internal/rigobservation/report.go": "5e3fe875fbddf74e0d991845a3a1210d6de8a821836ee02d9d5b5ee57b7b72c1",
+    "webmux/server/internal/rigobservation/report_test.go": "7d1268732cfdc9f8a0e29d14a9339c26c6cdef9f0d54ebb5985d22feb4947447",
+    "webmux/server/internal/session/managed_capture_test.go": "9642616217f828fc4318f013803bbc2c490232fb2a44c6eea7e677a728eef950",
+    "webmux/server/internal/session/managed_evidence.go": "c12b7f22f8fe88ac4b9b63757c367af95254f59394e491d643065fdc931674a4",
+    "webmux/server/internal/session/model.go": "4151d7200a7f9df374972b89073f991dce86205d79fddf05f83b44c093a9077d"
+  },
+  "worker": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "node": "24.21.0",
+    "go": "1.27.3",
+    "tmux": "3.8",
+    "chrome": "158.0.8127.36"
+  },
+  "checks": {
+    "serverRace": "PASS",
+    "serverVet": "PASS",
+    "retainedVTRace": "PASS",
+    "retainedVTVet": "PASS",
+    "ultravioletRace": "PASS",
+    "ultravioletVet": "PASS",
+    "frontendTests": 414,
+    "helpers": 123,
+    "strictTypeScriptProjects": 5,
+    "frontendLint": "PASS",
+    "fullBuild": "PASS",
+    "inventoryUnitControls": 11,
+    "linuxOnlyLiveInventory": "not executed on macOS; explicitly skipped",
+    "crossCompilation": [
+      "Windows AMD64 httpapi test package",
+      "Windows ARM64 server",
+      "Linux AMD64 server"
+    ],
+    "nativeMacBrowserCases": 14,
+    "nativeMacBrowserSpecs": 7,
+    "browserSkippedCases": 0
+  },
+  "nativeProofs": {
+    "checkedStop": {
+      "receiptSHA256": "104f3f93708f13710626a6abfd38cb30074f7257779ed9308f6bd00a95307614",
+      "checks": {
+        "staleReviewRefused": true,
+        "adoptedReviewRefused": true,
+        "confirmedSeatStopped": true,
+        "siblingAndAdoptedSurvive": true,
+        "retainedLayoutAndHistory": true,
+        "duplicateConsumed": true
+      }
+    },
+    "mosh": {
+      "receiptSHA256": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "checks": {
+        "nativeMosh": true,
+        "loggingDisabled": true,
+        "noLaunchURLInTerminalOutput": true,
+        "automaticPanel": true,
+        "callbackOnOriginalHost": true,
+        "callbackViaSSH": true,
+        "acknowledgedNotReplayed": true,
+        "providerStopped": true,
+        "moshServerExited": true,
+        "sshDaemonExited": true
+      }
+    },
+    "coexistence": {
+      "receiptSHA256": "73dfeaafed0e7ed96b8d2e7ca0f1eaa44f2152134e01c30437b3dfd9cee2bf62",
+      "checks": {
+        "activeRigSeat": true,
+        "rigViewerPreserved": true,
+        "rigProviderPIDUnchanged": true,
+        "viewerReusedAfterReload": true,
+        "coordinationAndGridNavigation": true,
+        "noRigIdentityInferred": true,
+        "scratchClosed": true,
+        "liveRigInventory": true
+      }
+    }
+  },
+  "relay": {
+    "scope": "Actual native Rig/WebMux/browser/local SSH relay and an isolated Linux SSH/tmux endpoint; synthetic persistent sleep provider, no authenticated coding recovery or physical-host failure qualification.",
+    "checks": {
+      "actualSSHTransportObserved": true,
+      "localRelayStopped": true,
+      "localSSHPIDExited": true,
+      "remotePersistentPIDUnchanged": true,
+      "remoteExecutableUnchanged": true,
+      "siblingUnchanged": true,
+      "duplicateConsumed": true,
+      "viewerLayoutAndHistoryRetained": true,
+      "remotePersistentPIDSurvivesAfterBrowserTest": true,
+      "ownedContainerRemoved": true,
+      "ownedImageRemoved": true,
+      "generatedClientKeyRemoved": true
+    },
+    "resultsSHA256": "5e3966470ab36af3aef026c5f612c736baad51304278460a5aa773708be7a4fc",
+    "baseImage": "ubuntu@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852"
+  },
+  "renderer": {
+    "passedCases": 1356,
+    "independentReplayReceipts": 1353,
+    "allInitialContinuedRecapturedEqual": true,
+    "bareReferenceReceipts": 259,
+    "allBareReferenceMethodsUnchanged": true,
+    "replayedQueries": 0,
+    "nativeConPTYOnThisCombinedSource": "pending Windows qualification; portable controls are not native captures"
+  },
+  "hostedQualification": "pending publication and exact-head jobs; no inherited green claim",
+  "remaining": [
+    "#429 actual security remediation; audit not suppressed",
+    "#473 Windows profile removal holder/cause and shutdown fix unresolved",
+    "#487 unrelated vendor APT feed can prevent native Linux qualification",
+    "#450 retained Windows runtime failure reconciliation remains open",
+    "Full #318/#355/#438/#246 acceptance and release gates remain open"
+  ]
+}
