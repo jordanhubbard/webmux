@@ -1,5 +1,9 @@
 # Native Codex project-trust refusal and original-request retry
 
+The later [initial-response qualification](../codex-initial-response-loss-2026-11-18/README.md)
+adds the distinct #530 trusted-project case. The receipt here retains the scope
+and remaining work recorded for the earlier #529 run.
+
 The public application now distinguishes a pre-launch native project-trust
 refusal from an uncertain native launch. The source revision and clean server
 build in [receipt.json](receipt.json) pass actual Go/Chrome qualification on macOS

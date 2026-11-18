@@ -1,0 +1,276 @@
+{
+  "scope": "Actual private macOS Go/Chrome trusted local native Rig/Codex creation: first request not delivered, first received native creation response discarded, frozen public original continuation and controller reconstruction, composed with read-only/on-request exact-conversation restart/crash recovery. Native account stays in place; browser is loopback auth-none.",
+  "sourceRevision": "1c58810aa0a0010b4faa44469ad626d89d1530f4",
+  "passed": true,
+  "binarySHA256": "0db903339de863ec1a9220475304969e1268301da8699367bbbe5654985c6ef5",
+  "buildProducerSelfReport": {
+    "version": "1.4.5",
+    "revision": "1c58810aa0a0010b4faa44469ad626d89d1530f4",
+    "modified": false,
+    "provenance": "build-producer-self-report",
+    "attested": false
+  },
+  "sourcesSHA256": {
+    "webmux/server/internal/openrigcoord/rig-native-launch.mts": "fd74271f961f5d183b600d0c7eaae030aa2b8f237d458694a10d86dcef6f056c",
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "e68d505f8b1810f92c16a91cf46d76e5e4f9c38e9d8915a724ce0fa95eecfee1",
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": "b6217395e932162b2e16d50829ad40338d8a4814a84dbd07496afb8af8d86cc9",
+    "webmux/server/internal/openrigcoord/rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c",
+    "webmux/server/internal/openrigcoord/rig-http-create.mts": "bf0cc940ccdbb7700253c6e9c92690bd8b7e7c263b24848ead4dcb87ca56b742",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "e715cebb9fe49811aa4a5f0348af704ade1ad9f2bb31e9696a569623236069b1",
+    "webmux/server/internal/openrigcoord/rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "webmux/server/internal/openrigcoord/runner.mts": "6a137afcc5f3a3eb455b872b8d5fed15391d5ccc64cd7de0e6f70fcff28f9b9d",
+    "webmux/server/internal/openrigcoord/coord.go": "db678dc7d45b5fd470b34a46e12d7e20fcd39513e0e87df7f5f2142d8df2f331",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "webmux/server/internal/openrigcoord/codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "webmux/server/internal/openrigcoord/codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+    "webmux/server/internal/httpapi/coordination_creation.go": "70bd8849ce8be36112dd7470e71770ab0558505e45b25d23b9adb733bf07d19b",
+    "webmux/server/internal/httpapi/coordination_providers.go": "4f9a06a3bd2ee472a6bc08e969baf30b4f0f2a61ea5e54828499084edfa8e557",
+    "webmux/server/internal/httpapi/openrig.go": "16b3b5f4037c03fdf4e38547a0d02082340ff393ca5a59e3f46cbd7ad7a7dd35",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "a7ba2cf8fd13832a94115dd937a23e4db48f3fb902c40a7cfac98437e27716fb",
+    "webmux/frontend/src/utils/api.ts": "037a691d0fdae597c2b454021e24b558619079d0d79c7900abd8f47a8e77f260",
+    "webmux/server/internal/session/native_rig_reference.go": "15e35ef463160eebc6ced21064c88d3702ac1c2a74782a66301323979b19fc08",
+    "webmux/server/internal/session/native_rig_recovery.go": "5352dc2e4bf4f7858d69351ab3adba76f5f4bc6113b13b88a421c91bd02e82f2",
+    "webmux/server/internal/session/managed_evidence.go": "7a543f14facb1ed5938a0cdf701fd50144e923ab7bbe89e27319047e71c1ff9c",
+    "webmux/server/internal/session/managed_capture.go": "359ab3faf353549508fb432ff8668caafead22a8e1f8e0939953c0ae203e7900",
+    "webmux/server/internal/session/managed_recovery.go": "bf9068ce0bec82653c84e87fc3efebbc3306f3d6b6dd641961ef66af4c29b062",
+    "webmux/server/internal/session/recovery.go": "c066ccb5e0c6b02a3801f002b6e1dc06f3bc17d3e972871ff28314a63138ca53",
+    "webmux/server/internal/session/recovery_control.go": "560cfee99916dfd6aa1dc6304478f47e6d9926c13762ef35d399be9de9d0bf0d",
+    "webmux/server/internal/session/model.go": "7e91f7a4e9743efcf5977e408b0faf21d9e4485270336329ea16b5bb920d3293",
+    "webmux/server/internal/httpapi/native_rig_recovery.go": "5d206f2bdbfdf13e2438a76a95f9f5ce578308e1a7b9ca5dfa6414082f737c08",
+    "webmux/server/internal/httpapi/rig_recovery.go": "0a7323a4d72bd22d9043a8e7fadf7b3ac17be32648773dc134c5ac29bef224bc",
+    "webmux/server/internal/httpapi/sessions.go": "a4abf105ef398f2d0584077a217269c28833e4217213c9a03b0a378c29676f52",
+    "webmux/server/internal/httpapi/coordination_service.go": "896718a1c32b156fb8d3a8aa9c35c62c1d2ef71bbea753f37f31f3b0cd00b585",
+    "webmux/server/internal/httpapi/server.go": "6660d46b45798ff330a29671243364ec2f5b456c9558641c3fe8ca0a6ef2bf39",
+    "webmux/frontend/src/components/RecoveryDialog.tsx": "cb3e1b08e6541af5e5e1cdf2948bcc95f55605ea701830437911a611214acb48",
+    "webmux/frontend/src/types/index.ts": "0e1ca849089d4645c6db7f039e4eaeced843cc6b2fa796c359db65e5efc601ca",
+    "webmux/server/internal/recovery/state.go": "4ab1020a33edc1a4757bc35f7433163a8d146868b8f80834d6b1d3a0df9fd1ef",
+    "webmux/frontend/src/components/CoordinationDialog.css": "3dc699ad2b1f28ee91443d504352af48be66c27246c96505fc6953d84a0a2d08"
+  },
+  "rawReceipt": "create530-public-wm-create530-public-2fc76hkh.json",
+  "rawSHA256": "7c75ead7213663531f2ae564013bad3a4d8b0c0f07bd96b803e58762976cab01",
+  "probeSHA256": "d49867a4f1d3cedabc9f5436204a0960ffefa45a11f88aa726c57375ee6292a7",
+  "browserDriverSHA256": "1dfdbc64791d2a6eea8c46b7ad88856d14473f6a5f117a4ebd15ca7fbc3cf1cb",
+  "loadedBrowserDriverSHA256": "1dfdbc64791d2a6eea8c46b7ad88856d14473f6a5f117a4ebd15ca7fbc3cf1cb",
+  "preloadSHA256": "c63c37291b37776589e79cbfca582fa0d993c6fb2660dcad0b597cc3ab501666",
+  "gateSHA256": "5e41793b76ed59b20112043a18621c66743f75095b6876609c56d657b3ba3e84",
+  "checks": {
+    "firstRequestNeverReceivedHasNoNativeEffect": true,
+    "continuationAfterNeverReceivedUsesOriginalSelection": true,
+    "actualInitialNativePublicResponseDiscarded": true,
+    "ordinaryLostReplyDuplicateDoesNotPostOrObserve": true,
+    "changedPublicSelectionRejectedBeforeTopology": true,
+    "legacyEndpointRejectsTrackedInput": true,
+    "controllerReconstructionRetainsPublicOriginal": true,
+    "nativeUncertaintyHasOneOriginalNodeAndNoViewer": true,
+    "publicContinuationRetainsOriginalRequestId": true,
+    "frozenNativeOperationAcrossExplicitChecks": true,
+    "readyDuplicateRetainsProviderAndViewer": true,
+    "actualNativeCodingChallenge": true,
+    "gracefulControllerRestartRetainsOriginalProvider": true,
+    "publicSurvivorReattachmentSendsNoResume": true,
+    "publicBrokerRetainsOriginalNativeConversation": true,
+    "onlyOwnedNativeProviderKilled": true,
+    "actualControllerSigkillDuringOriginalDispatch": true,
+    "ordinaryRecoveryDuplicateAfterCrashDoesNotPost": true,
+    "explicitPublicCompletionUsesSameNativeRequest": true,
+    "sameNativeConversationRecallWithoutTools": true,
+    "nativeHistoryPrefixAndAppendRetained": true,
+    "consumedRecoveryDuplicatePreservesProviderAndSibling": true,
+    "finalCheckedStopAndViewerAndSiblingRetained": true,
+    "sameTerminalLogPathsAndPrefixesRetained": true
+  },
+  "publicRequest": {
+    "privateSelectionVerified": true,
+    "ownerPrivateModesVerified": true,
+    "firstRequestNotReceived": true,
+    "continuedFirstExecutionUsesSamePublicUUID": true,
+    "firstReceivedNativeResponseHTTPStatus": 202,
+    "outcomeRemainsUnknownInUI": true,
+    "formEditsDoNotChangeContinuation": true,
+    "ordinaryDuplicateNoObserverOrNativePOST": true,
+    "changedSelectionRefusedBeforeTopology": true,
+    "controllerReconstructionRetainsSelection": true,
+    "publicUUIDSeparateFromNativeOperationUUID": true,
+    "subsequentExplicitNativeInspection": true,
+    "placementInNativeCase": "No explicit position requested; viewer uses normal initial placement. Frozen explicit placement is covered by Go/runner/UI contract tests."
+  },
+  "nativeTrustReview": {
+    "exactNativePrompt": true,
+    "explicitNativeTrustChoice": true,
+    "noModelTurnSubmitted": true,
+    "projectConfigUnchanged": true,
+    "projectPolicySHA256": "503103d4727b27e92408283f98d111bd6871c5ab2f2b5bbdca74d62a96592a03",
+    "reviewedBeforeFirstPublicCreation": true
+  },
+  "nativeReviewAdditionalCodingTurnContexts": 0,
+  "nativeTraces": {
+    "project": {
+      "POSTs": 3,
+      "uniqueOperationIDs": 1,
+      "uniqueBodies": 1,
+      "bodySHA256": "a9545c1ae7a781bcf008134b81d0c2f7da97f75816faf32dc0dc7cd9808e80f6"
+    },
+    "member": {
+      "POSTs": 3,
+      "uniqueOperationIDs": 1,
+      "uniqueBodies": 1,
+      "bodySHA256": "27c64784c516e907d986ace42fa009b1d4beace9e3ac99b1061c81192a9a61bc"
+    },
+    "resume": {
+      "POSTs": 5,
+      "uniqueOperationIDs": 1,
+      "uniqueBodies": 1,
+      "bodySHA256": "b362f5a21d5fe294f48d3ab6e89975d697a88173827b2a7b1d2aea140363a34e"
+    }
+  },
+  "nativeConversationIdentityRetained": true,
+  "nativeWitnesses": [
+    {
+      "passed": true,
+      "contexts": 4,
+      "nativeNodeMatches": true,
+      "correlatedProbeOutputs": 1,
+      "policy": {
+        "type": "readOnly",
+        "networkAccess": false
+      },
+      "approval": "on-request",
+      "observedNativePolicy": {
+        "type": "read-only"
+      },
+      "allowedWrites": 0,
+      "deniedWrites": 6,
+      "networkDenied": true,
+      "writeResults": {
+        "project": {
+          "errno": 1
+        },
+        "extra": {
+          "errno": 1
+        },
+        "outside": {
+          "errno": 1
+        },
+        "git": {
+          "errno": 1
+        },
+        "tmpdir": {
+          "errno": 1
+        },
+        "config": {
+          "errno": 1
+        }
+      },
+      "environmentChecks": {
+        "homePreserved": true,
+        "tmpPreserved": true,
+        "ownerPathRetainedAsSuffix": true,
+        "pairedRigFound": true,
+        "managerToolPathAbsent": true,
+        "ownerToolFound": true,
+        "ownerToolRuns": true,
+        "inheritedValueMatches": true,
+        "managerOnlyValueAbsent": true
+      },
+      "nativeSessionSHA256": "9e724608f1258e934ffb59173a94ccf7af943edeaadd2163e1701877a50ccd81"
+    },
+    {
+      "passed": true,
+      "contexts": 4,
+      "nativeNodeMatches": true,
+      "correlatedProbeOutputs": 1,
+      "policy": {
+        "type": "readOnly",
+        "networkAccess": false
+      },
+      "approval": "on-request",
+      "observedNativePolicy": {
+        "type": "read-only"
+      },
+      "allowedWrites": 0,
+      "deniedWrites": 6,
+      "networkDenied": true,
+      "writeResults": {
+        "project": {
+          "errno": 1
+        },
+        "extra": {
+          "errno": 1
+        },
+        "outside": {
+          "errno": 1
+        },
+        "git": {
+          "errno": 1
+        },
+        "tmpdir": {
+          "errno": 1
+        },
+        "config": {
+          "errno": 1
+        }
+      },
+      "environmentChecks": {
+        "homePreserved": true,
+        "tmpPreserved": true,
+        "ownerPathRetainedAsSuffix": true,
+        "pairedRigFound": true,
+        "managerToolPathAbsent": true,
+        "ownerToolFound": true,
+        "ownerToolRuns": true,
+        "inheritedValueMatches": true,
+        "managerOnlyValueAbsent": true
+      },
+      "nativeSessionSHA256": "9e724608f1258e934ffb59173a94ccf7af943edeaadd2163e1701877a50ccd81"
+    }
+  ],
+  "nativeHistoryPrefixBytes": 202804,
+  "nativeHistoryPrefixSHA256": "e2c9a82b86f0f3cdc5839c71a3b5f4d047d9353588dac3a09894d556da62af0c",
+  "terminalLogs": [
+    {
+      "file": "session-05cb821b-c1ea-47e1-bda5-d7df576baa8d-20261118T230535Z-g1-e9a2be35.log",
+      "prefixSHA256": "afe98f95c051e8bc228e9535adecf0ae19a2383d20ece47cf0d137798f3fd58d",
+      "prefixBytes": 36484,
+      "finalBytes": 48704
+    }
+  ],
+  "screenshotSHA256": "bf682032577eb20d906b12ea0014ae2797b8a58cd0ce36c2861934baf6f8b1a0",
+  "versions": {
+    "rig": "0.7.18 (3bf87c62)",
+    "codex": "0.169.0",
+    "node": "24.21.0",
+    "tmux": "3.8",
+    "chrome": "158.0.8127.36"
+  },
+  "cleanup": {
+    "passed": true,
+    "daemonStateRemoved": true,
+    "originalDaemonPIDAbsent": true,
+    "shutdownPhase": "complete",
+    "shutdownOutcome": "clean",
+    "shutdownReceiptSHA256": "f296e1d46c7974309cf285df1e52a402d8d82c7cd7f61ee7b14bc20fe53b402e",
+    "privateTmuxStopped": true,
+    "browserAndControllerStopped": true
+  },
+  "remaining": [
+    "Review, merge and current-head CI; #530 stays open until the reviewed PR lands",
+    "Broader #438/#318 launch, restore and release acceptance",
+    "Other policy variants, interactive escalation/permission changes, selected profiles/permission graphs and startup options",
+    "Restricted-policy service upgrade, native Rig/Codex host reboot and broader authenticated platform/route/provider/service-account combinations",
+    "Complete release-roadmap acceptance"
+  ],
+  "integrationCIAtPublication": {
+    "run": 44417317826,
+    "sourceRevision": "1c58810aa0a0010b4faa44469ad626d89d1530f4",
+    "knownFailedJob": 135200898909,
+    "failedStep": "Test retained cell model",
+    "failure": "Retained ultraviolet TestReader cancellation timeout and data race",
+    "failureIssue": 532,
+    "originalLogSHA256": "3a8d47c2dc41cf2b48fe31bab445c4f1b31a61e7d94df4a005f4bdc736ca564a",
+    "nativeQualificationScopeUnaffected": true,
+    "integrationGreen": false
+  }
+}

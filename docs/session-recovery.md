@@ -2723,7 +2723,7 @@ original recovery, exact-conversation no-tool recall, fresh owner environment
 and denied-write/network probes, native/terminal log prefixes, duplicates,
 sibling/viewer retention and private cleanup. Review/merge remains required.
 Loss of the initial public creation response before a trust selection is known
-is tracked in [#530](https://github.com/jordanhubbard/webmux/issues/530). Broader
+now has separate [#530 native qualification](validation/codex-initial-response-loss-2026-11-18/README.md). Broader
 #438/#318 startup/profile/platform, service/reboot and release acceptance
 remains open.
 
@@ -2751,8 +2751,23 @@ POST; a returned native operation then uses the existing explicit inspection
 flow. There is no automatic retry or fallback to a legacy endpoint. A refusal
 of a continuation does not prove that the first request had no effect.
 
-Contract, runner-process, API and UI tests cover these boundaries. Actual
-Go/Chrome/authenticated native qualification of the lost INITIAL response is
-still required by [#530](https://github.com/jordanhubbard/webmux/issues/530).
-The earlier #529 receipt covers loss after an approved trust retry and does
-not establish this new case.
+Contract, runner-process, API and UI tests cover these boundaries, including
+explicit grid placement and inventory refresh changing suggested names. The
+separate [native qualification](validation/codex-initial-response-loss-2026-11-18/README.md)
+passes 24 actual Go/Chrome/native controls on clean 1c58810 code. With project
+trust already reviewed, the first browser request is not delivered; after a
+controller restart, the same public UUID executes for the first time. The test
+then discards the actual initial native/public creation responses and preserves
+uncertainty. Ordinary duplicates and controller reconstruction send no creation
+POST and start no account observer. Changed selections refuse before topology.
+Explicit continuation and subsequent native inspection retain the original
+request, node, provider and conversation.
+
+The same run proves native coding, restart survivor reattachment, owned CLI loss
+plus explicit idle-seat Stop, controller SIGKILL during original recovery,
+no-tool recall, read-only/on-request restrictions, retained owner environment,
+native/terminal log prefixes, duplicates, sibling/viewer retention and cleanup.
+The live case uses normal initial viewer placement; explicit placement is covered
+by contract tests. The earlier #529 receipt remains a separate trust-retry case.
+[#530](https://github.com/jordanhubbard/webmux/issues/530) awaits review/merge;
+broader #438/#318 and release acceptance remain open.
