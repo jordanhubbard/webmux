@@ -11,7 +11,11 @@ adapter incorrectly required to end in `node`. The follow-up uses the kernel
 executable link rather than admitting a thread name. Controls cover MainThread,
 non-Node/deleted/malformed executable links and executable replacement after
 review; the MainThread control fails against the parent adapter. Hosted native
-Linux acceptance of the follow-up remains pending.
+Linux acceptance of the follow-up remains pending. All 121 helper controls,
+strict TypeScript, affected Go race/vet and the native macOS browser case pass
+for the executable-identity fix. The original hashes in `sourceSHA256` identify
+the initial `6fa9435` snapshot; `linuxManagerIdentityFollowup` records the newer
+adapter hash and its separately scoped checks.
 
 The owner reviews the exact local tmux seat, native node/enrollment, reason and effect. The checked HTTP operation receives the original expected IDs unchanged. Native guards remain responsible for binding/occupant changes, typing protection and terminal effects; no unchecked fallback or direct tmux kill is used in the product path. A detach phase never becomes a claim that a kill occurred.
 

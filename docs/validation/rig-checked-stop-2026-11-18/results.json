@@ -111,6 +111,8 @@
       "seconds": 10.3,
       "scope": "actual Rig0.7.18/tmux3.8/browser; synthetic terminal/sleep"
     },
-    "hostedNativeLinuxFollowup": "pending; no new-head native Linux success claim"
-  }
+    "hostedNativeLinuxFollowup": "pending; no new-head native Linux success claim",
+    "vendorLockRetention": "Copy install lock before version/native assertions, so failed checks retain resolved dependencies."
+  },
+  "sourceSnapshotCommit": "6fa9435a6f9a8e106f402b9a3dfee3346474d8d8"
 }

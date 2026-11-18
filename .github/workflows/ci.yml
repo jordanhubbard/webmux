@@ -288,9 +288,10 @@ jobs:
           sudo -n apt-get install -y lsof
           npm install --prefix "$RUNNER_TEMP/webmux-openrig-stop" --ignore-scripts --no-audit --no-fund @openrig/cli@0.7.18
           export WEBMUX_OPENRIG_CLI="$RUNNER_TEMP/webmux-openrig-stop/node_modules/@openrig/cli/dist/bin-wrapper.js"
+          mkdir -p test-results
+          cp -f "$RUNNER_TEMP/webmux-openrig-stop/package-lock.json" test-results/openrig-stop-install-lock.json
           test "$(node "$WEBMUX_OPENRIG_CLI" --version)" = '0.7.18 (3bf87c62)'
           npm run test:e2e:go -- openrig-stop.spec.ts --output=test-results/openrig-checked-stop
-          cp -f "$RUNNER_TEMP/webmux-openrig-stop/package-lock.json" test-results/openrig-stop-install-lock.json
       - name: Verify real VNC interoperability through Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux
