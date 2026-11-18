@@ -36,10 +36,20 @@ func TestNativeCreateUsesOwnerDirectoryAndMaterializesDependencies(t *testing.T)
 	if err != nil || len(directories) != 1 {
 		t.Fatalf("owner directory missing: %v %v", directories, err)
 	}
-	for _, name := range []string{"codex-owner-plan.mts", "codex-launch-policy.mts", "codex-launch-wrapper.mts", "codex-launch-environment.mts", "codex-environment-channel.mts", "rig-create-intent.mts", "rig-native-create.mts", "rig-native-project.mts"} {
+	for _, name := range []string{"codex-owner-plan.mts", "codex-launch-policy.mts", "codex-launch-wrapper.mts", "codex-launch-environment.mts", "codex-environment-channel.mts", "rig-create-intent.mts", "rig-native-create.mts", "rig-native-resume.mts", "rig-native-project.mts"} {
 		if _, err := os.Stat(filepath.Join(filepath.Dir(directories[0]), name)); err != nil {
 			t.Fatal(err)
 		}
+	}
+	resume, _ := json.Marshal(map[string]string{"directory": foreign, "cwd": home, "rigId": "01JQPWV4E7QP26M799M3S0MR6E",
+		"pod": "agents", "member": "alpha", "nodeId": "01JQPWV4E7QP26M799M3S0MR6F", "snapshotId": "01JQPWV4E7QP26M799M3S0MR6G",
+		"historySessionId": "01JQPWV4E7QP26M799M3S0MR6H", "sessionName": "agents-alpha@qualified",
+		"nativeSessionId": "01a1eff2-f58a-7082-be6b-69f9eca4a07c", "operationId": "9aa1753a-1d61-4420-af42-e6b6fa591c47"})
+	if _, err := Run(ctx, home, "owner", "native-resume", string(resume)); err == nil {
+		t.Fatal("resume without an original owner launch was accepted")
+	}
+	if _, err := os.Stat(foreign); !os.IsNotExist(err) {
+		t.Fatal("resume input escaped the owner namespace")
 	}
 }
 
