@@ -227,3 +227,27 @@ it('shows unknown execution host without substituting the local viewer transport
  expect(await screen.findByText('Unknown execution host')).toBeInTheDocument();
  expect(screen.queryByText(/I approve asking/)).toBeNull();
 });
+
+it('keeps an uncertain original Rig request open and checks its exact saved identity after refresh', async () => {
+ const value: SessionRecovery={...evidence(),hostname:'localhost',lifecycle_owner:'rig',host_revision:0,instance:'original-native-reference',can_resume_managed:true,managed_original_contract:true,manager_native_session:'original-cid'};
+ let banked: import('@frontend/types').RecoveryRequest | undefined;
+ vi.spyOn(api,'getSessionRecovery').mockImplementation(async()=>banked?{...value,can_resume_managed:false,message:'Refreshed pending original',state:{...value.state!,revision:6},managed_original_request:{...banked,inspect:true}}:value);
+ const recover=vi.spyOn(api,'recoverSession').mockImplementationOnce(async(_id,input)=>{banked={...input};return{outcome:'uncertain',code:'native_resume_response_unavailable'};}).mockResolvedValueOnce({outcome:'consumed'});
+ const close=vi.fn();render(<RecoveryDialog sessionId="one" onClose={close}/>);
+ fireEvent.click(await screen.findByLabelText(/I approve asking Rig/));fireEvent.click(screen.getByRole('button',{name:'Resume through Rig'}));
+ await screen.findByText('Refreshed pending original');expect(screen.getByRole('status',{name:'Rig recovery pending'})).toBeInTheDocument();expect(close).not.toHaveBeenCalled();
+ expect(screen.queryByRole('button',{name:'Resume through Rig'})).toBeNull();
+ const check=screen.getByRole('button',{name:'Check and complete original Rig recovery'});expect(check).toBeDisabled();
+ fireEvent.click(screen.getByLabelText('I approve checking and completing the original Rig recovery request'));fireEvent.click(check);
+ await waitFor(()=>expect(close).toHaveBeenCalledOnce());expect(recover).toHaveBeenCalledTimes(2);
+ expect(recover.mock.calls[1][1]).toEqual({...banked,inspect:true});expect(recover.mock.calls[1][1].revision).toBe(4);
+});
+
+it('restores only the original Rig completion action when the dialog is reconstructed', async()=>{
+ const original={id:'9aa1753a-1d61-4420-af42-e6b6fa591c47',kind:'managed' as const,revision:4,host_revision:0,instance:'original-native-reference',confirm:true,inspect:true};
+ const value:SessionRecovery={...evidence(),hostname:'localhost',lifecycle_owner:'rig',instance:original.instance,host_revision:0,can_resume_managed:false,managed_original_contract:true,managed_original_request:original};
+ vi.spyOn(api,'getSessionRecovery').mockResolvedValue(value);const recover=vi.spyOn(api,'recoverSession').mockResolvedValue({outcome:'uncertain'});
+ render(<RecoveryDialog sessionId="one" onClose={vi.fn()}/>);await screen.findByRole('status',{name:'Rig recovery pending'});
+ expect(screen.queryByRole('button',{name:'Resume through Rig'})).toBeNull();fireEvent.click(screen.getByLabelText('I approve checking and completing the original Rig recovery request'));
+ fireEvent.click(screen.getByRole('button',{name:'Check and complete original Rig recovery'}));await waitFor(()=>expect(recover).toHaveBeenCalledWith('one',original));
+});

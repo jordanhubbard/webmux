@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 )
 
 //go:embed runner.mts
@@ -65,7 +64,27 @@ var rigNativeCapture []byte
 var rigNativeProject []byte
 
 // Serialize launches and spec creation across simultaneous browser requests.
-var mutation sync.Mutex
+type mutationGate chan struct{}
+
+func (g mutationGate) Lock()   { _ = g.LockContext(context.Background()) }
+func (g mutationGate) Unlock() { <-g }
+func (g mutationGate) LockContext(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case g <- struct{}{}:
+		if err := ctx.Err(); err != nil {
+			g.Unlock()
+			return err
+		}
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+var mutation = make(mutationGate, 1)
 
 // ControlEnvironment follows the configured Rig endpoint instead of an
 // unrelated host-selection preference, without changing the caller's routing.
@@ -82,7 +101,9 @@ func ControlEnvironment() []string {
 }
 
 func Run(ctx context.Context, home, owner, action, input string) ([]byte, error) {
-	mutation.Lock()
+	if err := mutation.LockContext(ctx); err != nil {
+		return nil, err
+	}
 	defer mutation.Unlock()
 	scope := sha256.Sum256([]byte(owner))
 	directory := filepath.Join(home, "data", "coordination", hex.EncodeToString(scope[:12]))
@@ -121,10 +142,10 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 		}
 	}
 	cmd := exec.CommandContext(ctx, "node", script, action, directory)
-	if action == "native-create" || action == "native-resume" || action == "create" {
+	if action == "native-create" || action == "native-resume" || action == "native-recovery-resume" || action == "create" {
 		configureNativeCreateCancellation(cmd)
 	}
-	if (action == "native-create" || action == "native-resume" || action == "create") && runtime.GOOS == "linux" {
+	if (action == "native-create" || action == "native-resume" || action == "native-recovery-resume" || action == "create") && runtime.GOOS == "linux" {
 		if err := nativeobserve.WriteReference(directory); err != nil {
 			return nil, err
 		}
