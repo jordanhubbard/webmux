@@ -217,6 +217,17 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           sudo -n apt-get install -y tmux
+      - name: Verify native iframe ownership and control dispatch
+        if: runner.os == 'Linux'
+        shell: bash
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_BROWSER: '1'
+        run: |
+          set -o pipefail
+          export WEBMUX_BROWSER_EXECUTABLE="$(node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())")"
+          cd server
+          go test -race ./internal/browser -run '^TestNativePageFrameControls$' -count=1 -timeout=2m -json | tee "$RUNNER_TEMP/browser-frame-controls.jsonl"
       - name: Install qualified tmux for Rig coordination
         if: runner.os == 'Linux'
         run: |
@@ -348,6 +359,7 @@ jobs:
             ${{ runner.temp }}/webmux-guacd-build/*.json
             ${{ runner.temp }}/webmux-guacd-build/*.txt
             ${{ runner.temp }}/webmux-native-components
+            ${{ runner.temp }}/browser-frame-controls.jsonl
             test-results
 
   test:
