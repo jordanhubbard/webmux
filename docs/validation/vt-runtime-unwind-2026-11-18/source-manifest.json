@@ -1,0 +1,36 @@
+{
+  "recordedUTC": "2026-11-18T09:53:56.604352+00:00",
+  "issue": 450,
+  "base": "45151c356368b52eb20ccea92a34866472041e31",
+  "sourceSHA256": {
+    ".github/workflows/windows-vt-diagnostics.yml": "607ed0f683a15d7bdb7b87c2e838bd5d670b7e98ea19209feb6f31ffaca29a6a",
+    "docs/validation/vt-runtime-unwind-2026-11-18/go-guard.patch": "75477d4f91502a4b9c3bf71e0ec7fa815e4cd89e7c76053cb348ae585351b939",
+    "docs/validation/vt-runtime-unwind-2026-11-18/GO-LICENSE.txt": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "docs/validation/vt-runtime-unwind-2026-11-18/README.md": "eeb40d804fad0727adb2f6df98331eb74a545a000b1045b6a4810e12154fa07e",
+    ".github/workflows/ci.yml": "454d1dcf1039cbd5f67fad1045576f532e31243ad8ae9eeb39045dcdd0c9c6a2"
+  },
+  "upstream": {
+    "change": 863173,
+    "statusAtInspection": "NEW",
+    "revision": "071f5c2ee6820eef88de81c20700d9772d64e4b8",
+    "masterChange": 824724,
+    "masterStatus": "MERGED",
+    "masterRevision": "d58290fefd4a6d0f68b291d598af908654221389"
+  },
+  "localPatchVerification": {
+    "result": "PASS on private file copy; original installed SDK unchanged",
+    "beforeGitBlob": "40547b8113fffb5a27aa9a2e02af5efebd6090f2",
+    "afterGitBlob": "3423a660b5b5b112993cd64d1ab75a0c12c363a5",
+    "beforeSHA256": "19742597c5c6375893852292cc846127eac45759e9e397e8c10bb897fb470397",
+    "afterSHA256": "aea5a9d09fec009dab1158f0710321cd6c0d9079f427afdc89e8628e53910084"
+  },
+  "native": "Pending; diagnostic only, not a supported toolchain or repair",
+  "originalProjectSourcesAndGatesUnchanged": "Project/VT source and required test command/assertions/deadlines unchanged. Core CI additionally records read-only CPU/XSTATE facts and retains them beside original repeat JSON.",
+  "localCrossCompilation": {
+    "target": "Windows AMD64 runtime tests",
+    "peMachine": "0x8664",
+    "diagnosticGuardStringPresent": true,
+    "imageSHA256": "9740f9ae36a2abc08ef9f1fb91919947fd3f7a482e5be5aee0acb121aae61446",
+    "scope": "Cross-compilation only; not run locally. Installed source unchanged."
+  }
+}

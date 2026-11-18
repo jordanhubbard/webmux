@@ -1,0 +1,129 @@
+name: Windows VT runtime diagnostics
+
+on:
+  push:
+    branches: ['diagnostics/vt-runtime-450']
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/windows-vt-diagnostics.yml'
+      - 'docs/validation/vt-runtime-unwind-2026-11-18/**'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    name: Stock and fail-fast diagnostic runtime
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      GOTOOLCHAIN: local
+      GOWORK: 'off'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: webmux/server/go.mod
+          architecture: x64
+          cache-dependency-path: |
+            webmux/server/go.sum
+            webmux/server/internal/thirdparty/vt/go.sum
+            webmux/server/internal/thirdparty/ultraviolet/go.sum
+      - name: Admit native tools and record worker facts
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'vt-runtime-diagnostics'
+          New-Item -ItemType Directory -Path $root -ErrorAction Stop | Out-Null
+          "VT_DIAGNOSTIC_ROOT=$root" >> $env:GITHUB_ENV
+          $memory = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+          $drive = Get-PSDrive -Name C -ErrorAction Stop
+          if ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString() -ne 'X64') { throw 'A native AMD64 Windows OS is required' }
+          if ($drive.Free -lt 5GB -or $memory.FreePhysicalMemory -lt (2 * 1024 * 1024)) { throw 'Insufficient worker headroom' }
+          $cpu = @(Get-CimInstance Win32_Processor -ErrorAction Stop | Select-Object Name, Manufacturer, NumberOfCores, NumberOfLogicalProcessors)
+          Add-Type -TypeDefinition @'
+          using System.Runtime.InteropServices;
+          public static class XStateDiagnostic {
+            [DllImport("kernel32.dll")] public static extern ulong GetEnabledXStateFeatures();
+          }
+          '@
+          $version = (go version).Trim()
+          if ($LASTEXITCODE -ne 0 -or $version -ne 'go version go1.27.4 windows/amd64') { throw 'Expected unmodified Go 1.27.4 AMD64' }
+          $architecture = @(go env GOOS GOARCH GOHOSTARCH)
+          if ($LASTEXITCODE -ne 0 -or ($architecture -join ',') -ne 'windows,amd64,amd64') { throw 'Expected native Windows AMD64 compiler and target' }
+          $stock = (go env GOROOT).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve stock GOROOT' }
+          $stock | Set-Content -Encoding utf8 "$root/stock-root.txt"
+          @{ source = (git rev-parse HEAD); stockVersion = $version; compilerSHA256 = (Get-FileHash -Algorithm SHA256 "$stock/bin/go.exe").Hash.ToLowerInvariant(); cpu = $cpu; enabledXStateFeatures = ('0x{0:x}' -f [XStateDiagnostic]::GetEnabledXStateFeatures()); freeMemoryKiB = $memory.FreePhysicalMemory; totalMemoryKiB = $memory.TotalVisibleMemorySize; freeDiskBytes = $drive.Free } |
+            ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 "$root/worker.json"
+      - name: Repeat stock VT cases
+        id: stock
+        continue-on-error: true
+        shell: pwsh
+        working-directory: webmux/server/internal/thirdparty/vt
+        run: |
+          $exe = Join-Path $env:VT_DIAGNOSTIC_ROOT 'stock-vt.test.exe'
+          go test -c . -o $exe
+          if ($LASTEXITCODE -ne 0) { throw 'Stock VT compilation failed' }
+          if ([Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($exe)).Contains('exception dispatched below goroutine stack bottom')) { throw 'Stock binary unexpectedly contains the diagnostic guard' }
+          (Get-FileHash -Algorithm SHA256 $exe).Hash.ToLowerInvariant() | Set-Content -Encoding utf8 "$env:VT_DIAGNOSTIC_ROOT/stock-executable.sha256"
+          go tool test2json -t -p tuios.dev/vt $exe -test.v=test2json -test.count=10 -test.timeout=10m | Tee-Object -FilePath "$env:VT_DIAGNOSTIC_ROOT/stock-vt.jsonl"
+          if ($LASTEXITCODE -ne 0) { throw 'Stock VT diagnostic failed; its result remains required in the final status' }
+      - name: Prepare verified source overlay
+        id: prepare
+        shell: pwsh
+        run: |
+          $root = $env:VT_DIAGNOSTIC_ROOT
+          $stock = (Get-Content -Raw "$root/stock-root.txt").Trim()
+          $overlay = Join-Path $root 'overlay'
+          New-Item -ItemType Directory -Path "$overlay/src/runtime" -ErrorAction Stop | Out-Null
+          $patch = Join-Path $env:GITHUB_WORKSPACE 'docs/validation/vt-runtime-unwind-2026-11-18/go-guard.patch'
+          if ((Get-FileHash -Algorithm SHA256 $patch).Hash.ToLowerInvariant() -ne '75477d4f91502a4b9c3bf71e0ec7fa815e4cd89e7c76053cb348ae585351b939') { throw 'Diagnostic patch identity differs' }
+          $original = Join-Path $stock 'src/runtime/signal_windows.go'
+          $patched = Join-Path $overlay 'src/runtime/signal_windows.go'
+          $before = (Get-FileHash -Algorithm SHA256 $original).Hash.ToLowerInvariant()
+          if ($before -ne '19742597c5c6375893852292cc846127eac45759e9e397e8c10bb897fb470397') { throw 'Stock runtime source differs from reviewed Go 1.27.4' }
+          Copy-Item -LiteralPath $original -Destination $patched
+          git -c core.autocrlf=false -C $overlay apply --check $patch
+          if ($LASTEXITCODE -ne 0) { throw 'Diagnostic guard does not apply exactly' }
+          git -c core.autocrlf=false -C $overlay apply $patch
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot apply diagnostic guard' }
+          $after = (Get-FileHash -Algorithm SHA256 $patched).Hash.ToLowerInvariant()
+          if ($after -ne 'aea5a9d09fec009dab1158f0710321cd6c0d9079f427afdc89e8628e53910084') { throw 'Patched runtime source differs from reviewed diagnostic file' }
+          $replace = @{}; $replace[$original] = $patched
+          @{ Replace = $replace } | ConvertTo-Json -Depth 3 | Set-Content -Encoding utf8 "$root/overlay.json"
+          @{ role = 'DIAGNOSTIC TEST EXECUTABLE ONLY; not a supported release runtime or repair'; upstreamChange = 863173; upstreamRevision = '071f5c2ee6820eef88de81c20700d9772d64e4b8'; sourceBeforeSHA256 = $before; sourceAfterSHA256 = $after } |
+            ConvertTo-Json | Set-Content -Encoding utf8 "$root/runtime-source.json"
+          Copy-Item 'docs/validation/vt-runtime-unwind-2026-11-18/GO-LICENSE.txt' "$root/GO-LICENSE.txt"
+      - name: Repeat identical cases with diagnostic runtime overlay
+        id: guard
+        continue-on-error: true
+        shell: pwsh
+        working-directory: webmux/server/internal/thirdparty/vt
+        run: |
+          $root = $env:VT_DIAGNOSTIC_ROOT
+          $exe = Join-Path $root 'guard-vt.test.exe'
+          go test -c -overlay "$root/overlay.json" . -o $exe
+          if ($LASTEXITCODE -ne 0) { throw 'Guarded VT compilation failed' }
+          if (-not [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($exe)).Contains('exception dispatched below goroutine stack bottom')) { throw 'Compiled test executable does not contain the verified diagnostic guard' }
+          (Get-FileHash -Algorithm SHA256 $exe).Hash.ToLowerInvariant() | Set-Content -Encoding utf8 "$root/guard-executable.sha256"
+          go tool test2json -t -p tuios.dev/vt $exe -test.v=test2json -test.count=10 -test.timeout=10m | Tee-Object -FilePath "$root/guard-vt.jsonl"
+          $testExit = $LASTEXITCODE
+          $stock = (Get-Content -Raw "$root/stock-root.txt").Trim()
+          if ((Get-FileHash -Algorithm SHA256 "$stock/src/runtime/signal_windows.go").Hash.ToLowerInvariant() -ne '19742597c5c6375893852292cc846127eac45759e9e397e8c10bb897fb470397') { throw 'Installed SDK source changed' }
+          if ($testExit -ne 0) { throw 'Guarded VT diagnostic failed; retain its actual witness' }
+      - name: Preserve native diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-vt-runtime-diagnostics
+          path: ${{ runner.temp }}/vt-runtime-diagnostics
+      - name: Keep every failed diagnostic visible
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.stock.outcome }}' -ne 'success' -or '${{ steps.prepare.outcome }}' -ne 'success' -or '${{ steps.guard.outcome }}' -ne 'success') {
+            throw 'A stock/prepare/guard diagnostic failed or did not complete. No required gate or release claim is waived.'
+          }
