@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "recordedUTC": "2026-11-18T15:46:16.757230+00:00",
+  "issue": 519,
+  "base": "ae00c27da2f0cb34a9773e85f5e44dc65e3b55ad",
+  "witnessSource": "fa8ad07038586c21dd35d863a2108cc2a5271aae",
+  "parentTestAndHelperMatchWitness": true,
+  "originalFailureLogSHA256": "f4df1b1ddcdc8d473b3d5182f040b35a414b7f62697da5b0d15b4513e9bd4378",
+  "testSourceSHA256": "c2747ce71197b1d1b5c8f98332e7fd39026a04807871b35fef4911122ff7d824",
+  "productionHelperSHA256": "cabb806b165310fd2ba21781e4846d6d9d06605476b04a14ac9d8fc71fca1fc2",
+  "productionHelperByteIdenticalToParent": true,
+  "controlledReproduction": {
+    "node": "v24.21.0",
+    "emptyReceiptObserved": true,
+    "selectedRelativeSocket": true,
+    "actualPrivateDirectoryDifferent": true,
+    "childAndCleanupResult": 0,
+    "childExits": [
+      {
+        "pid": 9910,
+        "code": 0,
+        "signal": null
+      }
+    ],
+    "shutdownResults": [
+      {
+        "status": 1,
+        "signal": null
+      }
+    ],
+    "selectedSocketIdentity": {
+      "device": 16777235,
+      "inode": 886464763
+    },
+    "probeEvents": [
+      "ENOENT"
+    ],
+    "listenerStillBound": true,
+    "listenerPathStillSocket": true,
+    "sameInode": true,
+    "actualPrivateDirectoryRemoved": true
+  },
+  "reproductionScriptSHA256": "ee1c6c9a1b2d7758b767c0454924766b9a369490dedebb0b0e813e2c44d101cb",
+  "negativeScope": "Only publisher restored to original direct write, keeping new deterministic barrier and outcome assertions. Full helper run fails exactly one readiness check. Historical original event code was not captured; this demonstrates a concrete race matching the observed resolution and leftover relative directory.",
+  "fullHelperRuns": [
+    {
+      "kind": "counterfactual original publisher",
+      "trial": 0,
+      "exit": 1,
+      "seconds": 32.65,
+      "sha256": "3fbeb2fd55686248b5699da519bbe9bd2d58a9602d0e98f047385de16f4a2600",
+      "log": "full-parent-negative.log"
+    },
+    {
+      "kind": "atomic publisher",
+      "trial": 1,
+      "exit": 0,
+      "seconds": 32.685,
+      "sha256": "6fa75ddb48f83e17336b14035c894827e081ee0a73f0d7c933251d0d8ed09256",
+      "log": "full-fixed-1.log"
+    },
+    {
+      "kind": "atomic publisher",
+      "trial": 2,
+      "exit": 0,
+      "seconds": 33.201,
+      "sha256": "65f150a9feb34c07af75083a726b0c2a7a8b6756697802adc707632bdae3d702",
+      "log": "full-fixed-2.log"
+    },
+    {
+      "kind": "atomic publisher",
+      "trial": 3,
+      "exit": 0,
+      "seconds": 32.353,
+      "sha256": "406aa9d6cffd02210dd1c608a553a8a88d9d8167715df908fa4969f3073b331c",
+      "log": "full-fixed-3.log"
+    }
+  ],
+  "fixedFullRuns": 3,
+  "fixedFullTestsEach": 129,
+  "fixedFullSkips": 0,
+  "affectedRepeats": 20,
+  "affectedTestsEach": 9,
+  "affectedFailures": 0,
+  "strictTypeScriptProjects": 5,
+  "deadlinesAndProductionCleanup": "unchanged",
+  "scope": "Native macOS Node24.21.0/tmux3.8 controlled fixture repair. Fresh hosted final-head Linux/Windows checks remain required; no production leak or general atomic/durability guarantee claimed."
+}
