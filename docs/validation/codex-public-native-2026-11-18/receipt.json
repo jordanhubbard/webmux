@@ -1,0 +1,129 @@
+{
+  "scope": "Public Go/Chrome native-owned local Codex creation, duplicate controls, native owner environment and checked Stop. No recovery/crash/reboot or authenticated browser claim.",
+  "sourceRevision": "3da91d547dcb22dfe3d4e1d43993b23ce5b4ada1",
+  "passed": true,
+  "sourcesSHA256": {
+    "webmux/server/internal/openrigcoord/rig-native-launch.mts": "9424088b4082a8f04724f9e3029f3b6d4b1ef58101c4319c9ab77d2e7975bac9",
+    "webmux/server/internal/openrigcoord/rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "ee18fb484c048c845afa9f8f841e2b62cce46dd5ea9eba5c1f91b7087cfcc486",
+    "webmux/server/internal/openrigcoord/rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "webmux/server/internal/openrigcoord/runner.mts": "cbeb0686c18e2b59dd993c93454bbfdf96c77acc7d24aa656552df1a436fec29",
+    "webmux/server/internal/openrigcoord/coord.go": "3a956234759677fc7e66834b0bc755a95c3ab1bd8e17fc98021bbdcdce57db10",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "webmux/server/internal/openrigcoord/codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "webmux/server/internal/openrigcoord/codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+    "webmux/server/internal/httpapi/coordination_creation.go": "ca6f7f4f8c662b37a8bddf25e8caac7431bb250d4eb3657bce14e71d52e24135",
+    "webmux/server/internal/httpapi/coordination_providers.go": "10f163fcc9d52654d395c51e2e4a0a74a478f8367129e157674d5a4e06afb478",
+    "webmux/server/internal/httpapi/openrig.go": "cd78603493cdcf833414c1081baa0ef09ebc072b5113aa537d26f1192622fa7f",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "83ef008e0bc74599fb5f9f864d21bec151d7c2cf061bf2fbe15f483cf5b06df6",
+    "webmux/frontend/src/utils/api.ts": "106ccc1dd94ccd01eaa98f024d1953ea7d1b45ed1f89604bd0113a656d85336f"
+  },
+  "binarySHA256": "0c08fbb522999589299f59a3976c1dfa9105279f9ab7b2863c41194da4ac4e28",
+  "rawReceipt": "native-public-wm-native-public-yvwbx1qu.json",
+  "rawSHA256": "83c405e08e6dc74a59ca6408ed26f0784a7cdf5cb74881f7f77e486d115e6d57",
+  "probeSHA256": "d4ee5a4c9fcda5a947d3cada2ba01c60f92fda29f2d739717b7d68490411a82b",
+  "browserDriverSHA256": "f2be3e1372978a1d47b2d763314ab4cb1a3d08e17b592263b268ec2d107aa723",
+  "preloadSHA256": "4847eccbd3c9b83e7a3068eba713fe0253d94405c445cf1426e3b6d51833ca98",
+  "versions": {
+    "rig": "0.7.18 (3bf87c62)",
+    "codex": "0.169.0",
+    "node": "24.21.0",
+    "tmux": "3.8",
+    "chrome": "158.0.8127.36"
+  },
+  "checks": {
+    "nativeUncertaintyHasOneOriginalNodeAndNoViewer": true,
+    "frozenNativeOperationAcrossExplicitChecks": true,
+    "readyDuplicateRetainsProviderAndViewer": true,
+    "actualNativeCodingChallenge": true,
+    "browserCheckedStopAndSiblingAndViewerRetained": true
+  },
+  "nativeWitness": {
+    "passed": true,
+    "contexts": 2,
+    "nativeNodeMatches": true,
+    "correlatedProbeOutputs": 1,
+    "allowedWrites": 4,
+    "environmentChecks": {
+      "homePreserved": true,
+      "tmpPreserved": true,
+      "ownerPathRetainedAsSuffix": true,
+      "pairedRigFound": true,
+      "managerToolPathAbsent": true,
+      "ownerToolFound": true,
+      "ownerToolRuns": true,
+      "inheritedValueMatches": true,
+      "managerOnlyValueAbsent": true
+    },
+    "nativeSessionSHA256": "b4dcf74cba75d4e02e4189f3089318cc7826a9232590f96bc3d78fb5db248983"
+  },
+  "nativeMemberPosts": 3,
+  "publicOutcomes": [
+    {
+      "status": 202,
+      "inspect": false,
+      "creation": {
+        "state": "uncertain",
+        "stage": "agent",
+        "code": "native_create_response_unavailable",
+        "operationId": "d442e2ae-2bf7-4e33-8d52-e7b02cb706f9"
+      }
+    },
+    {
+      "status": 202,
+      "inspect": true,
+      "creation": {
+        "state": "uncertain",
+        "stage": "agent",
+        "code": "native_create_response_unavailable",
+        "operationId": "d442e2ae-2bf7-4e33-8d52-e7b02cb706f9"
+      }
+    },
+    {
+      "status": 200,
+      "inspect": true,
+      "creation": null
+    }
+  ],
+  "privateTmuxStopped": true,
+  "sourceUnchanged": true,
+  "localChecks": {
+    "helpers": 219,
+    "frontend": 421,
+    "strictTypeScriptProjects": 5,
+    "affectedGoRace": true,
+    "affectedGoVet": true,
+    "frontendLint": true,
+    "frontendProductionBuild": true,
+    "windowsARM64CrossBuild": true,
+    "logSHA256": {
+      "native-public-all-helpers-fixed.log": "13ceebc89168307b89528b1b48f3f9fb62b6c20f770f8691f2d5366aa1b0c498",
+      "native-public-typecheck-final.log": "bfbdeb0b9d52b9f5fa57d9bcbafdf0c45c715936935db99e8f5fb542c0d290f0",
+      "native-public-go-race.log": "53de60c27e1dff433d614b3224cfb1d9d77040eb345d3c61abee5c5586120f3b",
+      "native-public-go-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native-public-frontend-all.log": "b7dbbcb37630f70831dc0353b95f08617259c9fda376b6527b25436e329a12e5",
+      "native-public-frontend-lint.log": "a6d413fb36e8645661145aecac8d27dc160bdd0b77844fd8b52122d1798bcd52",
+      "native-public-windows-crossbuild.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native-public-launch-frontend-build.log": "3582e007e80361e05668c9e56fed59714bcc70cd2c315202ff6ed91132e43cc6"
+    }
+  },
+  "excludedAttempts": [
+    {
+      "rawReceipt": "native-public-wm-native-public-s46n1ruy.json",
+      "reason": "Private manager PATH lacked Codex; no native provider attachment. Native uncertainty remained pending without a viewer."
+    },
+    {
+      "rawReceipt": "native-public-wm-native-public-3c2s0zo1.json",
+      "reason": "Creation/attachment/duplicate controls passed, but challenge stayed in native composer and was absent from native history. Driver typing now settles before Enter. Loaded old source retained; later live-file hash ambiguity explicitly annotated."
+    }
+  ],
+  "remaining": [
+    "Public recovery HTTP/UI composition and actual controller crash/service update/reboot",
+    "Restricted owner policies and authenticated Linux/broader Windows native composition",
+    "Selected profiles, named graphs, empty-pod selection and broader startup settings",
+    "Required PR review and current-head hosted CI; no full-roadmap or release completion"
+  ]
+}

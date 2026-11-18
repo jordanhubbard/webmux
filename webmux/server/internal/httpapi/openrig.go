@@ -246,19 +246,23 @@ func (s *Server) getOpenRigAgents(w http.ResponseWriter, r *http.Request, owner 
 
 // Managed agents attach through a server-verified transport, never arbitrary argv.
 type managedRigAgent struct {
-	SenderAddress string `json:"senderAddress,omitempty"`
-	Target        string `json:"target"`
-	Project       string `json:"project"`
-	RigID         string `json:"rigId"`
-	RigName       string `json:"rigName"`
-	Pod           string `json:"pod"`
-	Name          string `json:"name"`
-	Host          string `json:"host"`
-	Cwd           string `json:"cwd"`
-	Runtime       string `json:"runtime"`
-	Tmux          string `json:"tmux"`
-	SessionID     string `json:"sessionId,omitempty"`
-	Connected     bool   `json:"connected,omitempty"`
+	NativeOwned         bool   `json:"nativeOwned,omitempty"`
+	NativeNodeID        string `json:"nativeNodeId,omitempty"`
+	LogicalID           string `json:"logicalId,omitempty"`
+	CreationOperationID string `json:"creationOperationId,omitempty"`
+	SenderAddress       string `json:"senderAddress,omitempty"`
+	Target              string `json:"target"`
+	Project             string `json:"project"`
+	RigID               string `json:"rigId"`
+	RigName             string `json:"rigName"`
+	Pod                 string `json:"pod"`
+	Name                string `json:"name"`
+	Host                string `json:"host"`
+	Cwd                 string `json:"cwd"`
+	Runtime             string `json:"runtime"`
+	Tmux                string `json:"tmux"`
+	SessionID           string `json:"sessionId,omitempty"`
+	Connected           bool   `json:"connected,omitempty"`
 }
 
 func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner string) {
@@ -499,8 +503,8 @@ func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, 
 		writeError(w, 400, "Invalid coordination request.")
 		return
 	}
-	if request.Inspect && (request.Provider != "rig" || request.Mode != "new") {
-		writeError(w, 400, "Only an original Rig project creation request can be inspected here.")
+	if request.Inspect && (request.Provider != "rig" || (request.Mode != "new" && !(request.Mode == "existing" && request.Runtime == "codex" && (request.Host == "" || request.Host == "localhost")))) {
+		writeError(w, 400, "Only an original Rig creation request can be inspected here.")
 		return
 	}
 	provider := s.coordinationProvider(owner, request.Provider)

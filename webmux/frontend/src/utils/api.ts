@@ -126,7 +126,7 @@ export interface CoordinationCreateRequest {
   name: string; host: string; workspace: string; runtime: string; row?: number; col?: number; inspect?: boolean;
 }
 export type CoordinationCreateResponse = { target: string; session: Session; creation?: never }
-  | { creation: { state: 'uncertain'; stage: 'project'; code: string; operationId: string }; session?: never; target?: never };
+  | { creation: { state: 'uncertain'; stage: 'project' | 'agent'; code: string; operationId: string }; session?: never; target?: never };
 
 export const api = {
   getUSBForwardings: (signal?: AbortSignal) => request<USBForwardingLease[]>('/usb-forwardings', { signal, cache: 'no-store' }),

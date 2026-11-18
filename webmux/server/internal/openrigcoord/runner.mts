@@ -9,15 +9,15 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
-type Agent = { target: string; senderAddress?: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string };
+type Agent = { target: string; senderAddress?: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string; nativeOwned?: true; nativeNodeId?: string; logicalId?: string; creationOperationId?: string };
 type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string; inspect?: boolean };
 class PendingCreation extends Error {
-  value: { state: 'uncertain'; stage: 'project'; code: string; operationId: string };
-  constructor(code: string, operationId: string) { super('native_project_pending'); this.value = { state: 'uncertain', stage: 'project', code, operationId }; }
+  value: { state: 'uncertain'; stage: 'project' | 'agent'; code: string; operationId: string };
+  constructor(code: string, operationId: string, stage: 'project' | 'agent' = 'project') { super('native_creation_pending'); this.value = { state: 'uncertain', stage, code, operationId }; }
 }
 type RigRow = { rigId?: string; name?: string; rigName?: string; nodeCount?: number; runningCount?: number; status?: string; lifecycleState?: string; latestSnapshot?: string | null };
 type AgentActivity = { state?: string; evidenceSource?: string; sampledAt?: string; stale?: boolean; generationProvenance?: string };
-type NodeRow = RigAttachmentNode & { agentActivity?: AgentActivity; startupStatus?: string; rigId?: string; rigName?: string; logicalId?: string; podNamespace?: string; hostSelfId?: string | null; runtime?: string; sessionStatus?: string; lifecycleState?: string };
+type NodeRow = RigAttachmentNode & { nodeId?: string; agentActivity?: AgentActivity; startupStatus?: string; rigId?: string; rigName?: string; logicalId?: string; podNamespace?: string; hostSelfId?: string | null; runtime?: string; sessionStatus?: string; lifecycleState?: string };
 const [action, directory] = process.argv.slice(2);
 if (!directory) throw new Error('Missing coordination state directory');
 // Controller commands follow the configured coordinator endpoint. A user's
@@ -59,7 +59,7 @@ const nodeRows = (): NodeRow[] => {
       hostSelfId: node.hostSelfId, canonicalSessionName: node.canonicalSessionName, runtime: node.runtime,
       sessionStatus: node.sessionStatus, lifecycleState: node.lifecycleState, tmuxAttachCommand: node.tmuxAttachCommand,
       startupStatus: node.startupStatus, agentActivity: activityFacts(node.agentActivity),
-      ...(structuredAttachments ? { attachmentType: node.attachmentType, tmuxServerArgs: node.tmuxServerArgs } : {}),
+      ...(structuredAttachments ? { nodeId: node.nodeId, attachmentType: node.attachmentType, tmuxServerArgs: node.tmuxServerArgs } : {}),
     }));
 };
 const identifier = (value: string, field: string) => {
@@ -134,7 +134,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     catch { throw new Error('Canonical Rig discovery requires OpenRig CLI 0.6.14 or newer and a reachable daemon.'); }
     const managed = records();
     const agents = managed.map(agent => {
-      const matches = nodes.filter(node => node.canonicalSessionName === agent.target);
+      const matches = nodes.filter(node => agent.logicalId ? node.rigId === agent.rigId && node.logicalId === agent.logicalId : node.canonicalSessionName === agent.target);
       const node = matches.length === 1 ? matches[0] : undefined;
       const attachment = node ? rigTmuxAttachment(node, structuredAttachments === true) : undefined;
       const connected = (() => {
@@ -151,7 +151,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     });
     const enrollments = action === 'status' ? [] : await observeRigEnrollments(run, nodes);
     const seats = nodes.map((node, index) => {
-      const agent = managed.find(value => value.target === node.canonicalSessionName);
+      const agent = managed.find(value => value.logicalId ? value.rigId === node.rigId && value.logicalId === node.logicalId : value.target === node.canonicalSessionName);
       const attachment = rigTmuxAttachment(node, structuredAttachments === true);
       return { ...node, ...enrollments[index], ...attachment, checkedStop: structuredAttachments === true, managed: Boolean(agent), host: agent?.host, cwd: agent?.cwd, name: agent?.name, openable: Boolean(attachment) };
     });
@@ -208,8 +208,8 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     if (!cwd.startsWith('/') || /[\x00\r\n]/.test(cwd) || cwd.length > 2048) throw new Error('Choose an absolute project directory on the execution host.');
     const runtime = input.runtime ?? 'codex';
     if (!['codex', 'claude-code'].includes(runtime)) throw new Error('Unsupported agent runtime.');
-    if (input.inspect && (mode !== 'new' || !structuredAttachmentBuild())) throw new Error('This request has no supported original project creation to inspect.');
     const local = host === 'localhost';
+    if (input.inspect && (!structuredAttachmentBuild() || (mode !== 'new' && !(mode === 'existing' && local && runtime === 'codex')))) throw new Error('This request has no supported original creation to inspect.');
     // Older published coordinators retain their existing transport, with no
     // remote identity claim. Explicit relay enrollment needs both new options.
     const attachHelp = !local && runtime === 'codex' ? run('rig', ['attach', '--help']) : '';
@@ -280,11 +280,24 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const tmux = `wm-${scope}-${rigId.slice(-8).toLowerCase()}-${member}`;
     const target = tmux;
     const recordFile = path.join(directory, `${tmux}.agent.json`);
-    const existing = records().find(a => a.tmux === tmux);
+    const existing = records().find(a => a.tmux === tmux || (a.nativeOwned === true && a.rigId === rigId && a.pod === pod && a.name === name && a.host === host));
     let alive = false;
     try { run('tmux', ['has-session', '-t', `=${tmux}`], 3000); alive = true; } catch { /* A stopped relay can be explicitly reconnected. */ }
     if (existing && (existing.cwd !== cwd || existing.runtime !== runtime || existing.rigId !== rigId)) throw new Error('This agent has a different topology, directory or runtime. Choose another name.');
-    if (existing && alive) {
+    const native = existing?.nativeOwned === true || (!existing && structuredAttachmentBuild() && local && runtime === 'codex');
+    if (input.inspect && mode === 'existing' && !native) throw new Error('This session has no original native creation request to inspect.');
+    if (native) {
+      const { launchRigNativeCodex } = await import('./rig-native-launch.mts');
+      const { nativeCreateArtifacts } = await import('./rig-native-create.mts');
+      const observationHelper = process.platform === 'linux' ? JSON.parse(nativeCreateArtifacts.read(path.join(directory, '.native-codex-observer.json')).toString('utf8')) as import('./codex-owner-plan.mts').CodexObservationHelper : undefined;
+      const result = await launchRigNativeCodex({ directory, rigId, pod, member, cwd, inspect: input.inspect }, { run, observationHelper });
+      if (result.state !== 'attached') throw new PendingCreation(result.code, result.operationId, 'agent');
+      const agent: Agent = { target: result.target, senderAddress: result.target, project, rigId, rigName: rig, pod, name, host, cwd,
+        runtime, tmux: result.target, sessionId: result.sessionId, nativeOwned: true, nativeNodeId: result.nodeId, logicalId: `${pod}.${member}`, creationOperationId: result.operationId };
+      run('tmux', [result.tmuxServerFlag, result.tmuxServerValue, 'set-option', '-t', result.target, 'mouse', 'on'], 3000);
+      write(recordFile, agent);
+      console.log(JSON.stringify(agent));
+    } else if (existing && alive) {
       if (existing.cwd !== cwd || existing.runtime !== runtime) throw new Error('This agent already exists with a different directory or runtime. Choose another name.');
       run('tmux', ['has-session', '-t', `=${tmux}`], 3000);
       run('tmux', ['set-option', '-t', tmux, 'mouse', 'on'], 3000);
