@@ -298,6 +298,13 @@ jobs:
         run: |
           sudo -n apt-get install -y build-essential pkg-config libcairo2-dev libjpeg-turbo8-dev libpng-dev uuid-dev libssl-dev freerdp2-dev libpango1.0-dev
           python3 scripts/build-guacd.py --prefix "$RUNNER_TEMP/webmux-guacd" --build-root "$RUNNER_TEMP/webmux-guacd-build"
+      - name: Verify live native component inventory
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.rdp-proxy.outcome == 'success' }}
+        env:
+          WEBMUX_NATIVE_COMPONENTS_GUACD: ${{ runner.temp }}/webmux-guacd/sbin/guacd
+          WEBMUX_NATIVE_COMPONENTS_OUTPUT: ${{ runner.temp }}/webmux-native-components
+          LD_LIBRARY_PATH: ${{ runner.temp }}/webmux-guacd/lib
+        run: python3 scripts/test_native_components_live.py
       - name: Verify RDP startup registration ordering
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.rdp-proxy.outcome == 'success' }}
         run: |
@@ -323,6 +330,7 @@ jobs:
             ${{ runner.temp }}/webmux-guacd-build/*.log
             ${{ runner.temp }}/webmux-guacd-build/*.json
             ${{ runner.temp }}/webmux-guacd-build/*.txt
+            ${{ runner.temp }}/webmux-native-components
             test-results
 
   test:
@@ -347,6 +355,9 @@ jobs:
       - name: Type check
         run: npm run typecheck
         working-directory: webmux
+
+      - name: Test native component inventory controls
+        run: python3 -m unittest discover -s scripts -p test_native_components.py
 
       - name: Verify native TypeScript 7 source discovery
         timeout-minutes: 5
