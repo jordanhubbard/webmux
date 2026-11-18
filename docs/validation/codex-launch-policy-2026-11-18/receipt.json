@@ -90,5 +90,7 @@
     "No Linux/Windows wrapper, provider-loss, manager/host failure or reboot recovery qualification.",
     "Observation startup integration and named/inherited permission graph limitations remain as documented by #508.",
     "Failed, incomplete and source-unbound harness reports remain retained privately and are excluded from these positive cases."
-  ]
+  ],
+  "sourceRevision": "4995a071e06d519ba3e345c6202beb9eb8a9e852",
+  "historicalScope": "Fresh-launch baseline at 4995a07; current source and native resume evidence are in ../codex-native-resume-2026-11-18/receipt.json."
 }

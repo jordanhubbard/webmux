@@ -1,0 +1,191 @@
+{
+  "scope": "Actual fresh and explicit-UUID native Codex recovery through supported Rig single-seat snapshot launch after injected provider-process loss. Not WebMux caller/UI, manager/host failure, reboot or release qualification.",
+  "platform": "macOS ARM64",
+  "codexVersion": "codex-cli 0.169.0",
+  "rigVersion": "0.7.18 (3bf87c62)",
+  "nodeVersion": "v24.21.0",
+  "sources": {
+    "codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "codex-launch-wrapper.mts": "3fce62867bcca49b3789af89fe40882e23549ba9297440576b103d5f279a27ed",
+    "codex-launch-policy.test.mts": "68ca5130b9e21e32fb4d941ff692111eb2b16e7668b3c17a9af88441cda1d40e",
+    "nativePlanResolverSHA256": "7caabfd523808f4f3f78c2b22dd304d0e5969049c6d0b1435ca681e99066d561",
+    "auditPrefixSHA256": "be019e9cdeda59e23a53fa07c13ab1e7e5561975266ea2c9d6145d4d27037592"
+  },
+  "nativeCases": [
+    {
+      "case": "network-enabled",
+      "checks": {
+        "freshChallengeReadByActualProvider": true,
+        "projectAndOwnerExtraWritable": true,
+        "otherAndGeneratedRootsNotWritable": true,
+        "wrapperReplacedByNativeExecutable": true,
+        "nativeIdentityRetained": true,
+        "nativePolicyAndCorrelatedTools": true,
+        "sameUUIDRetainsSameNativeOccupant": true,
+        "siblingRetainsOriginalPID": true,
+        "originalProviderLossConfirmed": true,
+        "checkedStopOnlyOriginalIdleSeat": true,
+        "sameConversationRecallWithoutTools": true,
+        "originalLogRetainedAndAppended": true,
+        "resumedNativePolicyAndCorrelatedTools": true,
+        "exactlyOneRestoredProvider": true,
+        "survivingSiblingAcrossProviderLoss": true,
+        "originalOperationReplayAfterRecoveryStartsNothing": true,
+        "checkedStopEndsOnlyNativeCodingSeat": true
+      },
+      "freshNativeWitness": {
+        "passed": true,
+        "contexts": 2,
+        "nativeNodeMatches": true,
+        "coordinatorReachable": true,
+        "correlatedProbeOutputs": 1,
+        "allowedWrites": 2,
+        "deniedWrites": 5,
+        "allDenialsEPERM": true,
+        "nativeSessionSHA256": "4b962dfac80d10101102b7c7f0bb9fd1917c8b735b17d7867c62ff7a71f4b2ce"
+      },
+      "nativeRecoveryHttpStatus": 201,
+      "nonTargetEffects": {
+        "mode": "unchanged",
+        "reason": null,
+        "affected": []
+      },
+      "privateTmuxStopped": true,
+      "daemonStateRemoved": true,
+      "sourceUnchanged": true,
+      "privateReportSHA256": "e26879fa93a13a370b53b9a6640d461179f1aa3d098088a57ff04d24477c434d",
+      "probeSHA256": "2c67604868d20c29c37e4f4d238a5676738f073da76463571de46c9e4b6ef341",
+      "resumedNativeWitness": {
+        "passed": true,
+        "contexts": 4,
+        "nativeNodeMatches": true,
+        "coordinatorReachable": true,
+        "correlatedProbeOutputs": 1,
+        "allowedWrites": 2,
+        "deniedWrites": 5,
+        "allDenialsEPERM": true,
+        "nativeSessionSHA256": "7f97f7cc0a55d00262c4160195110b20d24dab7cdc09468193022aaebc3367cf"
+      },
+      "sameOriginalConversationAndNativeLog": true,
+      "successfulRestoredProviders": 1
+    },
+    {
+      "case": "network-disabled",
+      "checks": {
+        "freshChallengeReadByActualProvider": true,
+        "projectAndOwnerExtraWritable": true,
+        "otherAndGeneratedRootsNotWritable": true,
+        "wrapperReplacedByNativeExecutable": true,
+        "nativeIdentityRetained": true,
+        "nativePolicyAndCorrelatedTools": true,
+        "sameUUIDRetainsSameNativeOccupant": true,
+        "siblingRetainsOriginalPID": true,
+        "originalProviderLossConfirmed": true,
+        "checkedStopOnlyOriginalIdleSeat": true,
+        "sameConversationRecallWithoutTools": true,
+        "originalLogRetainedAndAppended": true,
+        "resumedNativePolicyAndCorrelatedTools": true,
+        "exactlyOneRestoredProvider": true,
+        "survivingSiblingAcrossProviderLoss": true,
+        "duplicateNativeRecoveryStartsNothing": true,
+        "originalOperationReplayAfterRecoveryStartsNothing": true,
+        "checkedStopEndsOnlyNativeCodingSeat": true
+      },
+      "freshNativeWitness": {
+        "passed": true,
+        "contexts": 2,
+        "nativeNodeMatches": true,
+        "coordinatorReachable": false,
+        "correlatedProbeOutputs": 1,
+        "allowedWrites": 2,
+        "deniedWrites": 5,
+        "allDenialsEPERM": true,
+        "nativeSessionSHA256": "10b43b206aff3f420c87d583050f867c072a92645bedfb58a4a09c3974d2dc99"
+      },
+      "nativeRecoveryHttpStatus": 201,
+      "nonTargetEffects": {
+        "mode": "unchanged",
+        "reason": null,
+        "affected": []
+      },
+      "privateTmuxStopped": true,
+      "daemonStateRemoved": true,
+      "sourceUnchanged": true,
+      "privateReportSHA256": "c4b2794f43c6632e52985e66210f433f8db5cff76478c88c267731abc5b1a8a0",
+      "probeSHA256": "2829fb281debb9d3476530bf4605757175aab7336cb35024753c15e99f6646bf",
+      "resumedNativeWitness": {
+        "passed": true,
+        "contexts": 4,
+        "nativeNodeMatches": true,
+        "coordinatorReachable": false,
+        "correlatedProbeOutputs": 1,
+        "allowedWrites": 2,
+        "deniedWrites": 5,
+        "allDenialsEPERM": true,
+        "nativeSessionSHA256": "2de86879ad8171bda377586d0a0f78f8d13ebb744449ce23eebcfb498984aa0a"
+      },
+      "sameOriginalConversationAndNativeLog": true,
+      "successfulRestoredProviders": 1
+    },
+    {
+      "case": "missing-conversation",
+      "checks": {
+        "freshChallengeReadByActualProvider": true,
+        "projectAndOwnerExtraWritable": true,
+        "otherAndGeneratedRootsNotWritable": true,
+        "wrapperReplacedByNativeExecutable": true,
+        "nativeIdentityRetained": true,
+        "nativePolicyAndCorrelatedTools": true,
+        "sameUUIDRetainsSameNativeOccupant": true,
+        "siblingRetainsOriginalPID": true,
+        "originalProviderLossConfirmed": true,
+        "checkedStopOnlyOriginalIdleSeat": true,
+        "missingNativeIdRefusesFreshReplacement": true,
+        "originalHistoryRetained": true,
+        "onlyOriginalConversationRecorded": true,
+        "survivingSiblingAcrossRefusal": true
+      },
+      "freshNativeWitness": {
+        "passed": true,
+        "contexts": 2,
+        "nativeNodeMatches": true,
+        "coordinatorReachable": true,
+        "correlatedProbeOutputs": 1,
+        "allowedWrites": 2,
+        "deniedWrites": 5,
+        "allDenialsEPERM": true,
+        "nativeSessionSHA256": "5c146f9493c885772d0d370e8080d42eab0f611f48c371941ba494b0ab35ebaf"
+      },
+      "nativeRecoveryHttpStatus": 409,
+      "nonTargetEffects": {
+        "mode": "unchanged",
+        "reason": null,
+        "affected": []
+      },
+      "privateTmuxStopped": true,
+      "daemonStateRemoved": true,
+      "sourceUnchanged": true,
+      "privateReportSHA256": "945495ae9f9504d36c8d8ddbad573afbeaa1eb54d17a0619ae0a463ac7470cbe",
+      "probeSHA256": "a39366620d9909bb094038b29af3a5cf783df2becf850b00e88b3bd97feb5808",
+      "nativeRefusal": "awaiting-decision",
+      "freshReplacementAttempts": 0,
+      "onlyOriginalConversationRecorded": true
+    }
+  ],
+  "localValidation": {
+    "helpersPassed": 168,
+    "launchPolicyControls": 10,
+    "strictTypeScriptProjects": 5,
+    "installedLockIdentities": 272,
+    "whitespace": "pass"
+  },
+  "limits": [
+    "Not embedded or activated in WebMux. Owner authorization, durable manifest/journal composition, caller/UI conversion and frozen-plan revalidation remain open.",
+    "The explicit native conversation UUID is syntax/policy checked, not authorized by the wrapper. The manager/caller must select and verify the original conversation and immutable occupant.",
+    "Recovery requires supported checked Stop of the original idle seat after provider loss, then the single-seat launch endpoint using its explicit snapshot. Whole-rig restore refuses a live sibling; the macOS account-restart observer refuses unverified process settings. Neither refusal was bypassed.",
+    "Native policies are documented per-thread workspace overrides projected through the existing native account. Selected/default owner workspace configuration, named permission graphs, Linux/Windows, read-only/full-access execution and non-default tier remain unqualified here.",
+    "Only the network-disabled case tests duplicate native recovery POSTs. Both positive cases test original member.add replay after recovery without another provider launch.",
+    "Missing-conversation control deliberately records an unused UUID through the supported operator CLI before snapshot capture. It retains all original conversation data; it does not simulate physical deletion/corruption of native storage.",
+    "No provider-loss creation/decision/recovery UI, manager-process-loss or host-reboot acceptance claim. All roadmap/review/CI/audit/release gates remain open."
+  ]
+}

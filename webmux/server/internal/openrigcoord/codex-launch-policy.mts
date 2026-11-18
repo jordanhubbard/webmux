@@ -1,4 +1,4 @@
-// Scoped to fresh WebMux-created Codex seats on the qualified Rig 0.7.18 path.
+// Scoped to WebMux-created Codex seats on the qualified Rig 0.7.18 path.
 // This transforms launch arguments; it grants no creation or recovery authority.
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -47,6 +47,7 @@ export function filterRigCodexLaunch(value: unknown, args: string[]) {
   }
   const sandbox = { dangerFullAccess: 'danger-full-access', readOnly: 'read-only', workspaceWrite: 'workspace-write' }[plan.policy.type];
   const seen = new Set<string>(), kept: string[] = [], removedDirectories: string[] = [];
+  let resumeId: string | null = null;
   let removedLoginShellOverride = false, removedManagedInstructions = false;
   const once = (key: string) => { if (seen.has(key)) fail(); seen.add(key); };
   for (let i = 0; i < args.length; i++) {
@@ -54,15 +55,23 @@ export function filterRigCodexLaunch(value: unknown, args: string[]) {
     if (flag === '--no-daemon') { once(flag); kept.push(flag); continue; }
     const next = args[++i];
     if (next === undefined) return fail();
+    if (flag === 'resume') {
+      once('resume');
+      // Only an explicit native UUID: never a picker, name, --last or prompt.
+      // The caller/manager must authorize which conversation is being resumed.
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(next)) return fail();
+      resumeId = next; kept.push(flag, next); continue;
+    }
     if (flag === '--add-dir') {
       // The qualified member path receives owner roots in the explicit legacy
-      // envelope, not --add-dir. Every fresh --add-dir here is Rig-generated.
+      // envelope, not --add-dir. Manager-added roots are never owner grants.
       if (!absolute(next) || removedDirectories.includes(next)) return fail();
       removedDirectories.push(next); continue;
     }
-    if (flag === '-s' || flag === '-a' || flag === '-C' || flag === '--model') {
-      once(flag);
-      const wanted = { '-s': sandbox, '-a': plan.approval, '-C': plan.cwd, '--model': plan.model }[flag];
+    if (flag === '-s' || flag === '-a' || flag === '-C' || flag === '--model' || flag === '-m') {
+      const canonical = flag === '-m' ? '--model' : flag;
+      once(canonical);
+      const wanted = { '-s': sandbox, '-a': plan.approval, '-C': plan.cwd, '--model': plan.model }[canonical];
       if (next !== wanted) return fail();
       kept.push(flag, next); continue;
     }
@@ -88,11 +97,17 @@ export function filterRigCodexLaunch(value: unknown, args: string[]) {
     if (!expected.has(key) || JSON.stringify(expected.get(key)) !== JSON.stringify(parsed)) return fail();
     kept.push(flag, next);
   }
-  if (!['-s', '-a', '-C'].every(key => seen.has(key)) || [...expected.keys()].some(key => !seen.has(key))) return fail();
+  if (!['-s', '-a'].every(key => seen.has(key)) || (!resumeId && !seen.has('-C'))
+    || [...expected.keys()].some(key => !seen.has(key))) return fail();
   // Freeze native model choices even when Rig omitted an argument and would
   // otherwise let a subsequently edited default configuration choose it.
-  if (!seen.has('--model')) kept.push('--model', plan.model);
-  if (!seen.has('model_reasoning_effort') && plan.effort !== null) kept.push('-c', `model_reasoning_effort=${JSON.stringify(plan.effort)}`);
-  if (plan.serviceTier !== null) kept.push('-c', `service_tier=${JSON.stringify(plan.serviceTier)}`);
-  return { executable: plan.executable, args: kept, removedDirectories, removedLoginShellOverride, removedManagedInstructions };
+  const frozen: string[] = [];
+  // Rig's resume command relies on the shell cwd instead of emitting -C. The
+  // wrapper verifies that cwd, and an explicit global flag also pins Codex's cwd.
+  if (!seen.has('-C')) frozen.push('-C', plan.cwd);
+  if (!seen.has('--model')) frozen.push('--model', plan.model);
+  if (!seen.has('model_reasoning_effort') && plan.effort !== null) frozen.push('-c', `model_reasoning_effort=${JSON.stringify(plan.effort)}`);
+  if (plan.serviceTier !== null) frozen.push('-c', `service_tier=${JSON.stringify(plan.serviceTier)}`);
+  if (resumeId) kept.unshift(...frozen); else kept.push(...frozen);
+  return { executable: plan.executable, args: kept, resumeId, removedDirectories, removedLoginShellOverride, removedManagedInstructions };
 }

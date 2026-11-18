@@ -6,7 +6,7 @@ The supported `launch_wrapper` path can remove them while keeping the native
 Codex executable, process ID and Rig lifecycle identity.
 
 The [policy transformer](../../../webmux/server/internal/openrigcoord/codex-launch-policy.mts)
-checks a frozen native owner plan and the qualified fresh-launch argument shape.
+checks a frozen native owner plan and qualified fresh/explicit-UUID resume shapes.
 It requires matching sandbox, approval, project, writable roots, network and
 temporary-directory choices; drift, duplicates and unknown options refuse.
 Owner roots remain in the explicit native envelope. The fresh member contract
@@ -27,7 +27,8 @@ creation/recovery authorization. The caller still must authorize its owner,
 verify the manager, durably publish the manifest and original operation intent,
 revalidate the observation and inspect uncertain outcomes.
 
-The [source-bound receipt](receipt.json) covers actual Rig0.7.18, Codex0.169 and
+The [historical fresh-launch receipt](receipt.json), source `4995a07`, covers
+actual Rig0.7.18, Codex0.169 and
 Node24 on macOS ARM64. Two private fixtures project a documented native workspace
 policy, reference the existing authenticated native account without copying
 credentials, and launch the actual wrapper through native `member.add`.
@@ -51,10 +52,19 @@ TypeScript projects, 272 installed lock identities and whitespace checks. These
 controls include policy drift, fingerprint/manifest/executable changes, model
 choices and a real subprocess proving PID/environment preservation.
 
+Current source also accepts an explicit native conversation UUID on resume,
+including Rig's `-m` alias and omitted cwd flag. The wrapper pins the original
+cwd and model choices before that subcommand; picker/name/last/fork/prompt and
+drifting arguments refuse. The caller/manager must authorize the original UUID.
+See [current native recovery evidence](../codex-native-resume-2026-11-18/README.md)
+for provider-loss continuation, original log append, repeated policy execution,
+duplicate-request controls and a missing-conversation refusal.
+
 This remains unactivated. Native UI/creation conversion, manifest persistence,
-authorization and uncertainty handling must compose with #504/#508. This wrapper
-currently refuses resume/fork arguments; it does not qualify recovery, native
-selected-profile selection, Linux/Windows or host reboot. Native acceptance here
-covers an explicit workspace policy, not a selected/default owner workspace
-configuration. Read-only/full-access and non-default service-tier cases have
-unit coverage only. Existing adopted seats gain no native Stop authority.
+authorization and uncertainty handling must compose with #504/#508. Native
+selected-profile selection, Linux/Windows and host reboot remain unqualified.
+Acceptance covers explicit workspace policies, not a selected/default owner
+workspace configuration. Read-only/full-access and non-default service-tier
+execution have unit coverage only. Existing adopted seats gain no native Stop
+authority. The counts above describe the historical fresh-launch baseline;
+current local validation is 168 helpers and ten launch controls.
