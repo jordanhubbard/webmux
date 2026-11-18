@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reviewRigStop, executeRigStop, type RigStopResult } from '../webmux/server/internal/openrigcoord/rig-stop.mts';
+import { reviewRigStop, executeRigStop, reviewRigCreateManager, type RigStopResult } from '../webmux/server/internal/openrigcoord/rig-stop.mts';
 
 const rigId = '01M71ZM6DE3RTCXHPJRXJ6XKPE';
 const nodeId = '01M71ZM6TZ91BH689AGCFP2WCN';
@@ -13,7 +13,7 @@ function fixture() {
   let listener = 123, managerUID = 501, managerCommit = '3bf87c62a24fcb0a441334d7f8b0b1f2687ecf64';
   let processRecord = '501 Tue Nov 17 12:00:00 2026 node';
   let daemonCommand = 'node /fixture/@openrig/cli/daemon/dist/index.js';
-  let executable = '/fixture/bin/node';
+  let executable = '/fixture/bin/node', selfHostId: unknown = 'fixture-self';
   const calls: { method: string; path: string; body?: unknown }[] = [];
   const run = (command: string, args: string[]) => {
     if (command.endsWith('lsof')) return 'p' + listener;
@@ -39,7 +39,7 @@ function fixture() {
       if (lost) throw new Error('Lost after dispatch; native effect unknown');
       return Response.json(reply ?? { ok: true, seat: { rigId, nodeId, logicalId: input.logicalId }, sessionName: input.sessionName, sessionId: session }, { status: reply ? status : 200 });
     }
-    if (call.path === '/healthz') return Response.json({pid:123,euid:managerUID,semver:'0.7.18',commit:managerCommit,dirty:false});
+    if (call.path === '/healthz') return Response.json({pid:123,euid:managerUID,semver:'0.7.18',commit:managerCommit,dirty:false,selfHostId});
     if (call.path.includes('stop-precondition')) return Response.json({ contract: malformed ? 'unknown' : 'seat-stop.v1', expected: { nodeId, sessionId: session } });
     if (call.path.endsWith('/nodes')) return Response.json([{ rigId, nodeId, logicalId: input.logicalId, canonicalSessionName: input.sessionName }]);
     if (call.path.endsWith('/sessions')) return Response.json([{ nodeId, id: session, sessionName: input.sessionName, origin, status: 'running' }]);
@@ -52,8 +52,49 @@ function fixture() {
     restart: () => { processRecord = '501 Wed Nov 18 12:00:00 2026 node'; },
     proxy: () => { daemonCommand = 'node /fixture/forwarder.js'; },
     processName: (name: string) => { processRecord = `501 Tue Nov 17 12:00:00 2026 ${name}`; },
-    executable: (name: string) => { executable = name; } };
+    executable: (name: string) => { executable = name; }, selfHost: (id: unknown) => { selfHostId = id; } };
 }
+test('creation manager identity survives a verified restart but process identity changes', async () => {
+  const f = fixture();
+  const before = await reviewRigCreateManager(f.run, f.fetcher, 501, 'darwin');
+  f.restart();
+  const after = await reviewRigCreateManager(f.run, f.fetcher, 501, 'darwin');
+  assert.equal(after.managerIdentity, before.managerIdentity);
+  assert.notEqual(after.processIdentity, before.processIdentity);
+  f.selfHost('different-self');
+  assert.notEqual((await reviewRigCreateManager(f.run, f.fetcher, 501, 'darwin')).managerIdentity, before.managerIdentity);
+  assert(f.calls.every(call => call.method === 'GET'));
+});
+test('creation refuses missing or malformed native identity and locally unverified managers', async () => {
+  for (const id of [null, '', 'bad\nidentity', 'x'.repeat(129)]) {
+    const f = fixture(); f.selfHost(id);
+    await assert.rejects(reviewRigCreateManager(f.run, f.fetcher, 501, 'darwin'), /native_manager_identity_unavailable/);
+    assert(f.calls.every(call => call.method === 'GET'));
+  }
+  for (const change of ['tunnel', 'proxy', 'foreign'] as const) {
+    const f = fixture(); f[change]();
+    await assert.rejects(reviewRigCreateManager(f.run, f.fetcher, 501, 'darwin'), /local_manager_unverified/);
+    assert(f.calls.every(call => call.method === 'GET'));
+  }
+});
+test('creation rejects a manager changing during identity observation', async () => {
+  const f = fixture(); let reads = 0;
+  const fetcher = (async (...args: Parameters<typeof fetch>) => {
+    if (++reads === 2) f.restart();
+    return f.fetcher(...args);
+  }) as typeof fetch;
+  await assert.rejects(reviewRigCreateManager(f.run, fetcher, 501, 'darwin'), /local_manager_unverified/);
+  assert(f.calls.every(call => call.method === 'GET'));
+});
+test('creation rejects a self-host identity changing inside the same daemon process', async () => {
+  const f = fixture(); let reads = 0;
+  const fetcher = (async (...args: Parameters<typeof fetch>) => {
+    if (++reads === 3) f.selfHost('changed-self');
+    return f.fetcher(...args);
+  }) as typeof fetch;
+  await assert.rejects(reviewRigCreateManager(f.run, fetcher, 501, 'darwin'), /native_manager_identity_changed/);
+  assert(f.calls.every(call => call.method === 'GET'));
+});
 test('Linux Node MainThread uses the kernel executable identity and still dispatches only once', async () => {
   const f = fixture();
   f.processName('MainThread');
