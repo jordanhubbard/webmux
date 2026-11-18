@@ -2674,3 +2674,55 @@ interactive escalation/permission changes, selected profiles/permission graphs,
 broader startup settings or all platforms. The native account stays in its
 original home; the private browser is loopback auth-none. Full #318/#438,
 review/current-head CI and release acceptance remain open.
+
+## Native Codex project trust and original creation retry (2026-11-18)
+
+[#529](https://github.com/jordanhubbard/webmux/issues/529) now has an implemented,
+[native-qualified public flow](validation/codex-project-trust-2026-11-18/README.md).
+For a disabled project configuration layer encountered before preparing a
+native coding launch, the API returns HTTP 409 with a typed blocked selection.
+Its request ID is a durable selection fingerprint; the member's native operation
+is reserved after the owner policy can be resolved. The original empty Rig
+namespace may already exist. This differs from HTTP 202 for an already uncertain
+native creation.
+
+The browser retains the submitted values, shows a safely quoted native review
+command for the original folder, and requires confirmation before retry. On the
+computer running WebMux, the native owner can use the displayed qualified CLI:
+
+```sh
+codex --no-daemon --sandbox workspace-write --ask-for-approval on-request -C '/path/to/project'
+```
+
+Confirm the exact folder's “Trust and continue” prompt, wait for the main native
+screen, then exit without starting a task. Those flags apply to the temporary
+review CLI. WebMux re-resolves the intended project policy after that CLI exits.
+The application itself never executes the review command or grants trust.
+
+Owner-checked, fsynced private records preserve the selected topology, member,
+folder and environment across controller reconstruction. A retry token is
+checked against the original browser selection before topology allocation and
+against the original native selection before owner resolution. Ordinary
+duplicates and status refresh start no observer and send no creation POST, even
+after native trust becomes enabled. An explicit premature retry still refuses
+the disabled layer. The original empty Rig namespace may already exist; the
+blocked check starts no coding member or viewer.
+
+Actual Go/Chrome/native qualification executes the displayed command for a
+folder containing an apostrophe and a space, confirms native trust without a
+model turn, and preserves the intended read-only configuration byte for byte.
+The test discards an actual public HTTP 202 response after approved creation.
+The UI preserves uncertainty and the original selection; another ordinary
+request posts nothing and starts no observer. Deliberate continuation reaches
+the existing original-operation inspection flow. All member, topology and
+recovery POSTs retain their respective original UUIDs/bodies.
+
+The same run passes read-only/on-request coding, survivor reattachment after
+restart, owned CLI loss plus explicit idle-seat Stop, controller SIGKILL during
+original recovery, exact-conversation no-tool recall, fresh owner environment
+and denied-write/network probes, native/terminal log prefixes, duplicates,
+sibling/viewer retention and private cleanup. Review/merge remains required.
+Loss of the initial public creation response before a trust selection is known
+is tracked in [#530](https://github.com/jordanhubbard/webmux/issues/530). Broader
+#438/#318 startup/profile/platform, service/reboot and release acceptance
+remains open.

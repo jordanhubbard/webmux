@@ -1,5 +1,11 @@
 # Native Rig/Codex recovery with restricted owner policies
 
+A later [project-trust qualification](../codex-project-trust-2026-11-18/README.md)
+adds typed refusal and frozen original-request retry in the real public app,
+including native trust review with an unchanged read-only project configuration
+and loss of an approved public retry response. This earlier receipt retains its
+own trust setup, failed probes and source binding.
+
 The actual Go application and Chrome pass public original-conversation recovery
 on macOS with two native Codex owner policies. The server is a clean build of the
 source revision in [receipt.json](receipt.json), using Rig 0.7.18, Codex 0.169.0
