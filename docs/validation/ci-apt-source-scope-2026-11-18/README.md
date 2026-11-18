@@ -29,3 +29,16 @@ local socket error; the signed index and APT exit were verified separately.
 The receipt binds source and retained logs by SHA256. Exact-head hosted Linux
 provisioning and native tests still require completion; this local control is
 not a passing hosted gate, dependency-audit #429 remediation or release proof.
+
+The combined integration #494 found a CLI guard portability issue: macOS
+resolves /etc through a filesystem alias. The standalone follow-up now
+canonicalizes both sides of that comparison too. All seven tests pass on Linux;
+puck.local passes six with the effective-APT test explicitly skipped because
+APT is unavailable. The existing guard test checks the actual macOS path. The
+receipt preserves the original signed-index source binding separately from
+this CLI-only follow-up. New-head hosted checks remain required.
+
+Before this follow-up, hosted source cc5d3d6 passed signed Ubuntu24 provisioning
+and the complete native USB kernel suite in run44286524931/job134740499929.
+That result does not replace the remaining full Ubuntu22 desktop job or the
+new-head gates.

@@ -21,5 +21,29 @@
   "unit_tests": 7,
   "independent_gpgv_exit": 0,
   "key_fingerprint_suffix": "871920D1991BC93C",
-  "hosted_native_ci": "pending exact-head Linux execution"
+  "hosted_native_ci": "pending exact-head Linux execution",
+  "entrypoint_guard_followup": {
+    "change": "Canonicalize /etc/apt on both sides so macOS /etc aliases remain guarded; same correction as combined source 1bd474d in PR494.",
+    "current_script_sha256": "87b74c97379a35dd63ffdbcf3b01fbbca548d0f18a202aac76d53639617cc93f",
+    "linux": {
+      "passed": 7,
+      "skipped": 0,
+      "log_sha256": "bba69393211f4e9c0af4bc3ed09a15509753129438f4a83e1fe47a01ef65333e"
+    },
+    "macos": {
+      "host": "puck.local",
+      "passed": 6,
+      "skipped": 1,
+      "skip": "APT executable unavailable",
+      "log_sha256": "57b641959f5cc3c9c3564318a165ac0dadbb1fd0d6a7538063e9e72831d63c85"
+    },
+    "scope": "Only the CLI system-path comparison changed; original source/index receipt above remains tied to its original script digest. New-head hosted checks remain required."
+  },
+  "prior_source_hosted_kernel": {
+    "source": "cc5d3d6504649e291c75b67302ec8182e8e2346b",
+    "run": 44286524931,
+    "job": 134740499929,
+    "conclusion": "success",
+    "scope": "Signed Ubuntu24 provisioning and complete native USB kernel fixture; full Linux22 desktop job still required."
+  }
 }
