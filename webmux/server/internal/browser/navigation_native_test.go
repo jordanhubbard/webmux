@@ -35,6 +35,8 @@ type firstNavigationEvidence struct {
 	Loaded          bool                   `json:"loaded"`
 	FixtureRequests int64                  `json:"fixtureRequests"`
 	NavigateCalls   int                    `json:"navigateCalls"`
+	TargetSelection string                 `json:"targetSelection,omitempty"`
+	ExtraTargets    int                    `json:"extraTargets,omitempty"`
 	CleanupFailed   bool                   `json:"cleanupFailed,omitempty"`
 	Failure         string                 `json:"failure,omitempty"`
 	Diagnostics     *NavigationDiagnostics `json:"diagnostics,omitempty"`
@@ -52,7 +54,7 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 	}
 	t.Setenv("WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS", "1")
 	site, hits := firstNavigationNodeFixture(t)
-	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "worker-subprocess-temporary", "worker-subprocess-saved"} {
+	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "direct-child", "direct-child-original", "direct-home-child", "direct-home-child-original", "worker-subprocess-temporary", "worker-subprocess-saved"} {
 		t.Run(mode, func(t *testing.T) {
 			record := firstNavigationEvidence{Mode: mode, Platform: runtime.GOOS, Architecture: runtime.GOARCH, Transport: "pipe", ProfileLocation: "system-temporary"}
 			if strings.Contains(mode, "websocket") {
@@ -89,7 +91,7 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 			if strings.HasPrefix(mode, "worker-") {
 				call = firstNavigationWorker(t, mode == "worker-subprocess-saved", &record)
 			} else {
-				call = firstNavigationDirect(t, strings.HasSuffix(mode, "screenshot"), strings.Contains(mode, "-home"), strings.Contains(mode, "websocket"), &record)
+				call = firstNavigationDirect(t, strings.HasSuffix(mode, "screenshot"), strings.Contains(mode, "-home"), strings.Contains(mode, "websocket"), strings.Contains(mode, "-child"), strings.HasSuffix(mode, "-original"), &record)
 			}
 			record.NavigateCalls++
 			frame := call(Request{Action: "navigate", URL: site + "/check"})
@@ -317,7 +319,7 @@ func firstNavigationWorker(t *testing.T, saved bool, record *firstNavigationEvid
 	return call
 }
 
-func firstNavigationDirect(t *testing.T, screenshot, profileAtHome, websocket bool, record *firstNavigationEvidence) func(Request) Frame {
+func firstNavigationDirect(t *testing.T, screenshot, profileAtHome, websocket, createChild, selectOriginal bool, record *firstNavigationEvidence) func(Request) Frame {
 	t.Helper()
 	var profile string
 	if profileAtHome {
@@ -360,6 +362,37 @@ func firstNavigationDirect(t *testing.T, screenshot, profileAtHome, websocket bo
 		record.Diagnostics = trace.snapshot()
 		t.Fatal("direct native Chromium startup failed")
 	}
+	active := root
+	record.TargetSelection = "initial"
+	if createChild {
+		// Both members of each matched pair create and initialize a fresh target
+		// in the original browser context. Only the selected navigation target
+		// differs; extra setup is not exclusive to the child-target trial.
+		child, closeChild := chromedp.NewContext(root)
+		t.Cleanup(closeChild)
+		childStartup := time.AfterFunc(20*time.Second, closeChild)
+		err = chromedp.Do(child, chromedp.EmulateViewport(Width, Height), chromedp.Func(func(_ context.Context, target *chromedp.Target) error {
+			trace.watch(child)
+			return nil
+		}), chromedp.Navigate("about:blank"))
+		childStartup.Stop()
+		if err != nil {
+			record.Failure = "direct_child_startup_error"
+			record.Diagnostics = trace.snapshot()
+			t.Fatal("direct child target startup failed")
+		}
+		originalContext, childContext := chromedp.FromContext(root), chromedp.FromContext(child)
+		if originalContext.Browser != childContext.Browser || originalContext.BrowserContextID != childContext.BrowserContextID || originalContext.Target.TargetID == childContext.Target.TargetID {
+			record.Failure = "direct_child_identity_mismatch"
+			t.Fatal("child must be a distinct target in the same browser and browser context")
+		}
+		record.ExtraTargets = 1
+		record.TargetSelection = "initial-after-child"
+		if !selectOriginal {
+			active = child
+			record.TargetSelection = "child"
+		}
+	}
 	// Query version only after the trial, so metadata collection cannot warm
 	// the browser before its first network navigation.
 	t.Cleanup(func() {
@@ -401,10 +434,10 @@ func firstNavigationDirect(t *testing.T, screenshot, profileAtHome, websocket bo
 	trace.ready()
 	return func(req Request) Frame {
 		t.Helper()
-		ctx, finish := context.WithTimeout(root, 15*time.Second)
+		ctx, finish := context.WithTimeout(active, 15*time.Second)
 		defer finish()
 		if req.Action == "navigate" {
-			target := chromedp.FromContext(root).Target
+			target := chromedp.FromContext(active).Target
 			trace.begin(string(target.TargetID), req.URL)
 			result, err := cdp.Call(ctx, target, page.Navigate, page.NavigateParams{URL: req.URL})
 			trace.record(NavigationEvent{Event: "navigate_ack", Target: string(target.TargetID), Frame: string(result.FrameID), Loader: string(result.LoaderID), ErrorClass: navigationErrorClass(result.ErrorText, err)}, "")
@@ -419,7 +452,7 @@ func firstNavigationDirect(t *testing.T, screenshot, profileAtHome, websocket bo
 			record.Failure = "direct_target_query_error"
 			t.Fatal("direct target query failed")
 		}
-		frame := Frame{Target: string(chromedp.FromContext(root).Target.TargetID), NavigationDiagnostics: trace.snapshot()}
+		frame := Frame{Target: string(chromedp.FromContext(active).Target.TargetID), NavigationDiagnostics: trace.snapshot()}
 		for _, info := range infos {
 			if info.Type == "page" {
 				frame.Tabs = append(frame.Tabs, Tab{ID: string(info.TargetID), Title: info.Title})

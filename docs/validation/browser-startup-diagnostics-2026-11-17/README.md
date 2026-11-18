@@ -171,3 +171,33 @@ passing Windows WebSocket case would not itself justify opening a listener in
 the production authentication browser or identify the cause of pipe-path aborts.
 Actual Windows results remain pending. The [transport manifest](transport-manifest.json)
 binds the optional test, compact safe summaries and full private receipts.
+
+
+## Transport outcome and matched target selection
+
+At 351f653, [Windows job 134469638981](https://github.com/jordanhubbard/webmux/actions/runs/44205320390/job/134469638981)
+retains all eight [transport controls](windows-transport-summary.json). All four
+direct pipe cases fail with zero fixture requests and ERR_ABORTED, regardless
+of profile location or initial screenshot. Both direct WebSocket controls and
+both production worker subprocess controls pass with one fixture request each.
+The application browser workflows pass in this occurrence. All controls issue
+one navigation and report zero dropped events. This does not establish a pipe
+defect: the successful workers also use pipes, and WebSocket allocation changes
+the startup handshake. Screenshot priming is not a demonstrated fix.
+
+The installed chromedp 0.23.0 implementation attaches the first context to a
+browser-created page. A subsequent child context creates a new target/window in
+the same browser context. Four additional optional pipe controls test target
+selection at both profile locations. Each matched pair creates and initializes
+one child target with the same viewport and blank navigation. One navigates the
+child; the other navigates the original page after that identical setup. They
+assert distinct target IDs, the same Browser and BrowserContextID, and record
+only fixed selection categories and an extra-target count. Both browser pages
+remain owned until test cleanup. No additional external fixture navigation,
+retry, arbitrary delay or production behavior change is introduced.
+
+All twelve [local controls](native-target-summary.json) pass with exactly one
+fixture request each and no cleanup failures. The four new controls use private
+pipes. Actual Windows outcomes remain pending; target ownership is a hypothesis,
+not an established cause or production fix. The [target manifest](target-manifest.json)
+binds these sources, the preceding Windows evidence and the local receipts.
