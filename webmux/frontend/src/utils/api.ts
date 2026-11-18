@@ -27,6 +27,9 @@ const API_BASE = '/api';
 class ApiError extends Error {
   constructor(message: string, readonly status: number, readonly body: unknown) { super(message); }
 }
+export class CoordinationCreationUnconfirmedError extends Error {
+  constructor(message: string) { super(message); }
+}
 export class CoordinationTrustRequiredError extends Error {
   constructor(readonly requestId: string) { super('Review project trust in native Codex before retrying the saved request.'); }
 }
@@ -130,13 +133,32 @@ export interface USBForwardingTicket { lease: USBForwardingLease; pair_code: str
 
 export interface CoordinationCreateRequest {
   provider: string; mode: 'new' | 'existing'; projectId?: string; projectName: string; context?: string;
-  name: string; host: string; workspace: string; runtime: string; row?: number; col?: number; inspect?: boolean; trustRequest?: string;
+  name: string; host: string; workspace: string; runtime: string; row?: number; col?: number; inspect?: boolean; trustRequest?: string; creationRequestId?: string; continueOriginal?: boolean;
 }
 export type CoordinationCreateResponse = { target: string; session: Session; creation?: never }
   | { creation: { state: 'uncertain'; stage: 'project' | 'agent'; code: string; operationId: string }; session?: never; target?: never };
 
 async function createCoordinatedAgent(input: CoordinationCreateRequest): Promise<CoordinationCreateResponse> {
-  try { return await request<CoordinationCreateResponse>('/coordination/agents', { method: 'POST', body: JSON.stringify(input) }); }
+  try {
+    const endpoint = input.creationRequestId
+      ? '/coordination/creation-requests/' + encodeURIComponent(input.creationRequestId) : '/coordination/agents';
+    const result = await request<CoordinationCreateResponse>(endpoint, { method: 'POST', body: JSON.stringify(input) });
+    if (input.creationRequestId) {
+      const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
+      if (!object(result)) throw new Error('Creation response was incomplete.');
+      const creation = result.creation;
+      const pending = object(creation) && Object.keys(result).join(',') === 'creation'
+        && Object.keys(creation).sort().join(',') === 'code,operationId,stage,state'
+        && creation.state === 'uncertain' && ['project', 'agent'].includes(String(creation.stage))
+        && typeof creation.code === 'string' && /^[a-z][a-z0-9_]{0,95}$/.test(creation.code)
+        && typeof creation.operationId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(creation.operationId);
+      const attached = !('creation' in result) && !('blocked' in result) && !('refused' in result)
+        && typeof result.target === 'string' && !!result.target && object(result.session)
+        && typeof result.session.id === 'string' && !!result.session.id;
+      if (!pending && !attached) throw new Error('Creation response was incomplete.');
+    }
+    return result;
+  }
   catch (error) {
     if (error instanceof ApiError && error.status === 409 && input.provider === 'rig' && input.runtime === 'codex'
       && (!input.host || input.host === 'localhost') && (input.mode === 'new' || input.mode === 'existing')
@@ -149,6 +171,17 @@ async function createCoordinatedAgent(input: CoordinationCreateRequest): Promise
         && typeof blocked.requestId === 'string' && /^[a-f0-9]{64}$/.test(blocked.requestId)) {
         throw new CoordinationTrustRequiredError(blocked.requestId);
       }
+    }
+    if (input.creationRequestId) {
+      // Only an explicit pre-dispatch refusal can clear the first attempt.
+      // A refusal of a continuation says nothing about the ORIGINAL outcome.
+      const refused = error instanceof ApiError && error.body && typeof error.body === 'object'
+        && !('creation' in error.body) && !('session' in error.body) && !('blocked' in error.body)
+        && 'refused' in error.body ? error.body.refused : null;
+      if (error instanceof ApiError && [400, 409].includes(error.status) && !input.continueOriginal && !input.inspect && !input.trustRequest && refused && typeof refused === 'object'
+        && Object.keys(refused).sort().join(',') === 'code,state' && 'state' in refused && refused.state === 'refused'
+        && 'code' in refused && refused.code === 'invalid_creation_request') throw error;
+      throw new CoordinationCreationUnconfirmedError(error instanceof Error ? error.message : 'Creation response was not confirmed.');
     }
     throw error;
   }

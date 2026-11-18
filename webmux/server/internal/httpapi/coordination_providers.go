@@ -203,11 +203,12 @@ type coordinationMessage struct {
 }
 
 type coordinationProviderStatus struct {
-	Projects  []coordinationProject `json:"projects"`
-	Seats     []coordinationSeat    `json:"seats"`
-	Messages  []coordinationMessage `json:"messages,omitempty"`
-	Errors    []string              `json:"errors,omitempty"`
-	Attention int                   `json:"attentionCount,omitempty"`
+	NativeCreationRequests bool                  `json:"-"`
+	Projects               []coordinationProject `json:"projects"`
+	Seats                  []coordinationSeat    `json:"seats"`
+	Messages               []coordinationMessage `json:"messages,omitempty"`
+	Errors                 []string              `json:"errors,omitempty"`
+	Attention              int                   `json:"attentionCount,omitempty"`
 }
 
 type coordinationSendRequest struct {
@@ -251,17 +252,21 @@ type coordinationDrainer interface {
 }
 
 type coordinationLaunchRequest struct {
-	Provider     string `json:"provider"`
-	Mode         string `json:"mode"`
-	ProjectID    string `json:"projectId"`
-	ProjectName  string `json:"projectName"`
-	Name         string `json:"name"`
-	Host         string `json:"host"`
-	Workspace    string `json:"workspace"`
-	Runtime      string `json:"runtime"`
-	Context      string `json:"context"`
-	Inspect      bool   `json:"inspect,omitempty"`
-	TrustRequest string `json:"trustRequest,omitempty"`
+	Provider          string `json:"provider"`
+	Mode              string `json:"mode"`
+	ProjectID         string `json:"projectId"`
+	ProjectName       string `json:"projectName"`
+	Name              string `json:"name"`
+	Host              string `json:"host"`
+	Workspace         string `json:"workspace"`
+	Runtime           string `json:"runtime"`
+	Context           string `json:"context"`
+	Inspect           bool   `json:"inspect,omitempty"`
+	TrustRequest      string `json:"trustRequest,omitempty"`
+	CreationRequestID string `json:"creationRequestId,omitempty"`
+	ContinueOriginal  bool   `json:"continueOriginal,omitempty"`
+	Row               *int   `json:"row,omitempty"`
+	Col               *int   `json:"col,omitempty"`
 }
 
 type coordinationLaunch struct {
@@ -317,7 +322,8 @@ func (p *rigProvider) Descriptor() coordinationProviderDescriptor {
 }
 
 type rigStatusEnvelope struct {
-	Rigs []struct {
+	NativeCreationRequests bool `json:"nativeCreationRequests"`
+	Rigs                   []struct {
 		RigID          string  `json:"rigId"`
 		Name           string  `json:"name"`
 		RigName        string  `json:"rigName"`
@@ -397,7 +403,7 @@ func (p *rigProvider) Status(ctx context.Context) (coordinationProviderStatus, e
 }
 
 func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
-	status := coordinationProviderStatus{Projects: []coordinationProject{}, Seats: []coordinationSeat{}, Messages: raw.Messages, Errors: []string{}}
+	status := coordinationProviderStatus{NativeCreationRequests: raw.NativeCreationRequests, Projects: []coordinationProject{}, Seats: []coordinationSeat{}, Messages: raw.Messages, Errors: []string{}}
 	contexts := map[string]map[string]bool{}
 	managed := map[string]managedRigAgent{}
 	for _, agent := range raw.Agents {
@@ -504,6 +510,11 @@ func (p *rigProvider) Launch(ctx context.Context, request coordinationLaunchRequ
 	}
 	if request.TrustRequest != "" {
 		input["trustRequest"] = request.TrustRequest
+	}
+	if request.CreationRequestID != "" {
+		input["creationRequestId"] = request.CreationRequestID
+		input["continueOriginal"] = request.ContinueOriginal
+		input["row"], input["col"] = request.Row, request.Col
 	}
 	body, _ := json.Marshal(input)
 	output, err := openrigcoord.Run(ctx, p.home, p.owner, "create", string(body))

@@ -171,3 +171,63 @@ func TestInvalidNativeTrustResponsesCannotAuthorizeOwnerRetry(t *testing.T) {
 		}
 	}
 }
+
+func TestTrackedNativeCreationPreservesPublicIdentityAndPlacement(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		t.Skip("native creation requires POSIX")
+	}
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "")
+	s, handler := fixture(t, "none")
+	setCoordinationIntegrations(t, s, "rig")
+	bins, input := t.TempDir(), filepath.Join(t.TempDir(), "input.json")
+	t.Setenv("WEBMUX_PENDING_INPUT", input)
+	for name, contents := range map[string]string{
+		"rig": "#!/bin/sh\nexit 0\n", "tmux": "#!/bin/sh\nexit 0\n",
+		"node": "#!/bin/sh\n/bin/cat > \"$WEBMUX_PENDING_INPUT\"\nprintf '%s\\n' '{\"creation\":{\"state\":\"uncertain\",\"stage\":\"agent\",\"code\":\"native_create_response_unavailable\",\"operationId\":\"11111111-1111-4111-8111-111111111111\"}}'\n",
+	} {
+		if err := os.WriteFile(filepath.Join(bins, name), []byte(contents), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", bins+string(os.PathListSeparator)+os.Getenv("PATH"))
+	id := "2d438c43-c962-4b1d-b8ed-a35e07a8e964"
+	endpoint := "/api/coordination/creation-requests/" + id
+	original := map[string]any{"provider": "rig", "mode": "new", "projectName": "original", "name": "coder", "workspace": "/work", "runtime": "codex", "host": "localhost", "row": 1, "col": 2, "creationRequestId": id}
+	for _, continuation := range []bool{false, true} {
+		original["continueOriginal"] = continuation
+		body, _ := json.Marshal(original)
+		response := request(handler, "POST", endpoint, string(body), "")
+		requireStatus(t, response, 202)
+		var forwarded map[string]any
+		raw, err := os.ReadFile(input)
+		if err != nil || json.Unmarshal(raw, &forwarded) != nil || forwarded["creationRequestId"] != id || forwarded["continueOriginal"] != continuation || forwarded["row"] != float64(1) || forwarded["col"] != float64(2) || forwarded["rigName"] != "original" {
+			t.Fatalf("original public identity changed: %s %v", raw, err)
+		}
+		if len(s.sessions.List("anonymous")) != 0 {
+			t.Fatal("unconfirmed creation opened a viewer")
+		}
+	}
+	for _, change := range []map[string]any{{"creationRequestId": "foreign"}, {"creationRequestId": "11111111-1111-4111-8111-111111111111"}, {"provider": "agent-deck"}, {"host": "worker"}, {"runtime": "claude-code"}, {"row": -1}, {"col": nil}, {"mode": "other"}} {
+		body := map[string]any{}
+		for key, value := range original {
+			body[key] = value
+		}
+		for key, value := range change {
+			body[key] = value
+		}
+		encoded, _ := json.Marshal(body)
+		if err := os.Remove(input); err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		response := request(handler, "POST", endpoint, string(encoded), "")
+		requireStatus(t, response, 400)
+		if !strings.Contains(response.Body.String(), `"refused"`) {
+			t.Fatalf("missing pre-dispatch refusal: %s", response.Body.String())
+		}
+		if _, err := os.Stat(input); !os.IsNotExist(err) {
+			t.Fatal("invalid tracked request reached coordinator")
+		}
+	}
+	encoded, _ := json.Marshal(original)
+	requireStatus(t, request(handler, "POST", "/api/coordination/agents", string(encoded), ""), 400)
+}

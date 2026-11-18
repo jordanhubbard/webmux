@@ -48,6 +48,9 @@ var codexEnvironmentChannel []byte
 //go:embed rig-create-intent.mts
 var rigCreateIntent []byte
 
+//go:embed rig-http-create.mts
+var rigHTTPCreate []byte
+
 //go:embed rig-native-create.mts
 var rigNativeCreate []byte
 
@@ -132,6 +135,7 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 		"codex-launch-environment.mts":  codexLaunchEnvironment,
 		"codex-environment-channel.mts": codexEnvironmentChannel,
 		"rig-native-create.mts":         rigNativeCreate,
+		"rig-http-create.mts":           rigHTTPCreate,
 		"rig-native-resume.mts":         rigNativeResume,
 		"rig-native-launch.mts":         rigNativeLaunch,
 		"rig-native-capture.mts":        rigNativeCapture,

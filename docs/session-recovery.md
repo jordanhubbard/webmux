@@ -2726,3 +2726,33 @@ Loss of the initial public creation response before a trust selection is known
 is tracked in [#530](https://github.com/jordanhubbard/webmux/issues/530). Broader
 #438/#318 startup/profile/platform, service/reboot and release acceptance
 remains open.
+
+
+## Lost initial native creation response (#530)
+
+The browser now assigns a separate public request UUID before a qualified local
+Rig/Codex creation. It posts to the dedicated native creation-request endpoint;
+an older server cannot execute a legacy launch by silently ignoring the new
+identity. Inventory advertises this path only for the pinned Rig 0.7.18 build
+on Node 24. Other provider routes retain their existing behavior.
+
+Before topology allocation, the controller durably binds that UUID in the
+current owner's private namespace to the submitted project, pod, member, host,
+folder, runtime and grid position. A changed selection or a legacy/adopted member
+refuses before a member launch. Both first dispatch and continuation require the
+native path; the public UUID never replaces a native operation UUID.
+
+Transport loss, response JSON failure, an incomplete success response, or an
+unclassified server error retains the submitted selection. The dialog offers
+an explicit continuation using the same UUID and values. If the request never
+arrived, this can perform its first native execution. If native dispatch was
+already consumed, the existing journal returns uncertainty without another
+POST; a returned native operation then uses the existing explicit inspection
+flow. There is no automatic retry or fallback to a legacy endpoint. A refusal
+of a continuation does not prove that the first request had no effect.
+
+Contract, runner-process, API and UI tests cover these boundaries. Actual
+Go/Chrome/authenticated native qualification of the lost INITIAL response is
+still required by [#530](https://github.com/jordanhubbard/webmux/issues/530).
+The earlier #529 receipt covers loss after an approved trust retry and does
+not establish this new case.

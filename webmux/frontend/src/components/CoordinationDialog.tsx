@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from './Dialog';
 import { RigStopDialog } from './RigStopDialog';
 import './CoordinationDialog.css';
-import { api, CoordinationTrustRequiredError, type CoordinationCreateRequest } from '../utils/api';
+import { api, CoordinationCreationUnconfirmedError, CoordinationTrustRequiredError, type CoordinationCreateRequest } from '../utils/api';
 import { executionHostLabel } from '../utils/sessionIdentity';
 import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
 import type { Session } from '../types';
@@ -66,6 +66,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const [trustRequest, setTrustRequest] = useState<string | null>(null);
   const [trustReviewed, setTrustReviewed] = useState(false);
   const [trustRetryUnknown, setTrustRetryUnknown] = useState(false);
+  const [creationResponseUnknown, setCreationResponseUnknown] = useState(false);
   const [stopSeat, setStopSeat] = useState<CoordinationSeat | null>(null);
   const [mode, setMode] = useState<'existing' | 'new'>('new');
   const [projectID, setProjectID] = useState('');
@@ -178,27 +179,40 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
     catch (err) { setError(String(err)); }
     finally { setBusy(false); }
   };
-  const createSeat = async (input: CoordinationCreateRequest) => {
+  const createSeat = async (submitted: CoordinationCreateRequest) => {
+    const input = { ...submitted };
+    const supportsTracking = status?.providers.find(value => value.id === input.provider)?.capabilities.includes('native-creation-requests');
+    if (!input.creationRequestId && !input.inspect && !input.trustRequest && !input.continueOriginal
+      && supportsTracking && input.provider === 'rig' && input.runtime === 'codex' && (!input.host || input.host === 'localhost')) {
+      // getRandomValues also works on HTTP origins where randomUUID is absent.
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 15) | 64; bytes[8] = (bytes[8] & 63) | 128;
+      const hex = Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('');
+      input.creationRequestId = [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');
+    }
     setBusy(true); setError('');
     try {
       const launched = await api.createCoordinatedAgent(input);
       if (launched.creation) {
         // Retain the submitted values even if the form is edited afterward.
         setPendingCreation({ ...input, inspect: undefined });
-        setPendingCreationStage(launched.creation.stage);
+        setPendingCreationStage(launched.creation.stage); setCreationResponseUnknown(false);
         setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false);
         return;
       }
-      setPendingCreation(null); setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false);
+      setPendingCreation(null); setCreationResponseUnknown(false); setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false);
       revealSession(launched.session);
     } catch (err) {
       if (err instanceof CoordinationTrustRequiredError) {
         setPendingCreation({ ...input, inspect: undefined });
-        setTrustRequest(err.requestId); setTrustReviewed(false); setTrustRetryUnknown(false);
+        setTrustRequest(err.requestId); setTrustReviewed(false); setTrustRetryUnknown(false); setCreationResponseUnknown(false);
       } else if (input.trustRequest) {
         // Keep the saved selection after a transport or validation failure.
         setTrustReviewed(false); setTrustRetryUnknown(true); setError(String(err));
-      } else { setPendingCreation(null); setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false); setError(String(err)); }
+      } else if (err instanceof CoordinationCreationUnconfirmedError) {
+        setPendingCreation({ ...input, inspect: undefined, continueOriginal: true });
+        setCreationResponseUnknown(true); setError(String(err));
+      } else { setPendingCreation(null); setCreationResponseUnknown(false); setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false); setError(String(err)); }
     }
     finally { setBusy(false); }
   };
@@ -312,7 +326,13 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
         <button type="button" disabled={busy || !trustReviewed} onClick={() => void createSeat({ ...pendingCreation, inspect: undefined, trustRequest })}>Retry original request after trust review</button>
         <button type="button" disabled={busy} onClick={() => { setPendingCreation(null); setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false); }}>Dismiss notice</button>
       </section>}
-      {pendingCreation && !trustRequest && <section role="status" aria-label={pendingCreationStage === 'agent' ? 'Session creation pending' : 'Project creation pending'}>
+      {pendingCreation && !trustRequest && creationResponseUnknown && <section role="status" aria-label="Creation response not confirmed">
+        <h3>Creation response is not confirmed</h3>
+        <p>The original request for {pendingCreation.name} in {pendingCreation.projectName} is saved. The coding session may already be starting or running. Continuing uses the same selection and may execute it for the first time if it never arrived. Dismissing this notice does not cancel the request.</p>
+        <button type="button" disabled={busy} onClick={() => void createSeat({ ...pendingCreation, continueOriginal: true, inspect: undefined })}>Continue original creation request</button>
+        <button type="button" disabled={busy} onClick={() => { setPendingCreation(null); setCreationResponseUnknown(false); }}>Dismiss notice</button>
+      </section>}
+      {pendingCreation && !trustRequest && !creationResponseUnknown && <section role="status" aria-label={pendingCreationStage === 'agent' ? 'Session creation pending' : 'Project creation pending'}>
         <h3>{pendingCreationStage === 'agent' ? 'Session creation is not yet confirmed' : 'Project creation is not yet confirmed'}</h3>
         <p>{pendingCreationStage === 'agent'
           ? `The original request for ${pendingCreation.name} in ${pendingCreation.projectName} is saved. The session may already be starting or running. Checking reuses that request and does not create a replacement.`

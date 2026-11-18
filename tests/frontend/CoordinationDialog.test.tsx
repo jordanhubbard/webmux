@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { CoordinationDialog, type CoordinationStatus } from '@frontend/components/CoordinationDialog';
-import { CoordinationTrustRequiredError } from '@frontend/utils/api';
+import { CoordinationCreationUnconfirmedError, CoordinationTrustRequiredError } from '@frontend/utils/api';
 
 const mocks = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn(), attach: vi.fn(), browse: vi.fn(), updateConfig: vi.fn(), send: vi.fn(), sendStatus: vi.fn(), drain: vi.fn() }));
 vi.mock('@frontend/utils/api', async importOriginal => ({ ...await importOriginal<typeof import('@frontend/utils/api')>(), api: {
@@ -163,6 +163,41 @@ it('retains the saved trust request after a transport error and dismisses withou
   fireEvent.click(screen.getByRole('button', { name: 'Dismiss notice' }));
   expect(screen.queryByRole('status', { name: 'Codex project trust required' })).toBeNull();
   expect(mocks.create).toHaveBeenCalledTimes(2);
+});
+
+it('retains the first unconfirmed native request across form edits and retries without a new identity', async () => {
+  const status = emptyStatus(); status.providers[0].capabilities.push('native-creation-requests');
+  mocks.status.mockResolvedValue(status);
+  mocks.create.mockRejectedValueOnce(new CoordinationCreationUnconfirmedError('Cannot reach server'));
+  mocks.create.mockRejectedValueOnce(new CoordinationCreationUnconfirmedError('Response JSON incomplete'));
+  mocks.create.mockResolvedValueOnce({ creation: { state: 'uncertain', stage: 'agent', code: 'native_create_response_unavailable', operationId: '11111111-1111-4111-8111-111111111111' } });
+  const close = vi.fn();
+  render(<CoordinationDialog onClose={close} position={{ row: 1, col: 2 }} />);
+  fireEvent.click(await screen.findByLabelText('Start a new project'));
+  fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'original-project' } });
+  fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'original-agent' } });
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/original' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
+  const notice = await screen.findByRole('status', { name: 'Creation response not confirmed' });
+  expect(notice).toHaveTextContent('original-agent');
+  const original = { ...mocks.create.mock.calls[0][0] };
+  expect(original.creationRequestId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  expect(original).toMatchObject({ row: 1, col: 2 });
+  expect(screen.getByRole('button', { name: 'Start agent and open terminal' })).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'replacement' } });
+  fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'replacement' } });
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/replacement' } });
+  fireEvent.change(screen.getByLabelText('Run on host'), { target: { value: 'other-host' } });
+  fireEvent.change(screen.getByLabelText('Coding agent'), { target: { value: 'claude-code' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Continue original creation request' }));
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(2));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Response JSON incomplete');
+  expect(mocks.create.mock.calls[1][0]).toEqual({ ...original, continueOriginal: true, inspect: undefined });
+  fireEvent.click(screen.getByRole('button', { name: 'Continue original creation request' }));
+  expect(await screen.findByRole('status', { name: 'Session creation pending' })).toHaveTextContent('original-agent');
+  fireEvent.click(screen.getByRole('button', { name: 'Check and complete original request' }));
+  await waitFor(() => expect(close).toHaveBeenCalledOnce());
+  expect(mocks.create.mock.calls[3][0]).toEqual({ ...original, continueOriginal: true, inspect: true });
 });
 
 it('keeps an uncertain project request frozen and completes it only on an explicit action', async () => {

@@ -489,37 +489,55 @@ func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, 
 	if !s.openRigAccess(w, owner) {
 		return
 	}
+	// Only this endpoint admits browser-generated identities. An old server's
+	// unknown route cannot silently execute a legacy launch while ignoring them.
+	tracked := r.PathValue("requestId") != ""
+	refuse := func(status int, message string) {
+		if tracked {
+			writeJSON(w, status, map[string]any{"error": message, "refused": map[string]string{"state": "refused", "code": "invalid_creation_request"}})
+		} else {
+			writeError(w, status, message)
+		}
+	}
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 8192))
 	if err != nil {
-		writeError(w, 400, "Invalid coordination request.")
+		refuse(400, "Invalid coordination request.")
 		return
 	}
-	var request struct {
-		coordinationLaunchRequest
-		Row *int `json:"row"`
-		Col *int `json:"col"`
-	}
+	var request coordinationLaunchRequest
 	if json.Unmarshal(body, &request) != nil || request.Provider == "" || (request.Row == nil) != (request.Col == nil) {
-		writeError(w, 400, "Invalid coordination request.")
+		refuse(400, "Invalid coordination request.")
+		return
+	}
+	if tracked {
+		if !creationOperationID.MatchString(request.CreationRequestID) || request.CreationRequestID != r.PathValue("requestId") ||
+			request.Provider != "rig" || request.Runtime != "codex" || (request.Host != "" && request.Host != "localhost") ||
+			(request.Mode != "new" && request.Mode != "existing") || (runtime.GOOS != "darwin" && runtime.GOOS != "linux") ||
+			(request.Row != nil && (*request.Row < 0 || *request.Col < 0)) {
+			refuse(400, "This endpoint requires an original local native Codex creation request.")
+			return
+		}
+	} else if request.CreationRequestID != "" || request.ContinueOriginal {
+		refuse(400, "Use the native creation request endpoint for an original request identity.")
 		return
 	}
 	if request.Inspect && (request.Provider != "rig" || (request.Mode != "new" && !(request.Mode == "existing" && request.Runtime == "codex" && (request.Host == "" || request.Host == "localhost")))) {
-		writeError(w, 400, "Only an original Rig creation request can be inspected here.")
+		refuse(400, "Only an original Rig creation request can be inspected here.")
 		return
 	}
 	if request.TrustRequest != "" && (!creationSelectionID.MatchString(request.TrustRequest) || request.Provider != "rig" || request.Runtime != "codex" ||
 		(request.Host != "" && request.Host != "localhost") || (request.Mode != "new" && request.Mode != "existing")) {
-		writeError(w, 400, "Only the saved local Codex request can be retried after a trust review.")
+		refuse(400, "Only the saved local Codex request can be retried after a trust review.")
 		return
 	}
 	provider := s.coordinationProvider(owner, request.Provider)
 	if provider == nil || !provider.Descriptor().Available {
-		writeError(w, 409, "The selected coordination provider is unavailable.")
+		refuse(409, "The selected coordination provider is unavailable.")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 75*time.Second)
 	defer cancel()
-	launch, err := provider.Launch(ctx, request.coordinationLaunchRequest)
+	launch, err := provider.Launch(ctx, request)
 	if err != nil {
 		var blocked *coordinationCreationNeedsOwner
 		if errors.As(err, &blocked) {
@@ -682,6 +700,9 @@ func discoverCoordination(ctx context.Context, providers []coordinationProvider,
 			check, cancel := context.WithTimeout(ctx, 20*time.Second)
 			defer cancel()
 			results[index].status, results[index].err = provider.Status(check)
+			if descriptor.ID == "rig" && results[index].err == nil && results[index].status.NativeCreationRequests {
+				results[index].descriptor.Capabilities = append(results[index].descriptor.Capabilities, "native-creation-requests")
+			}
 			// Adapter identity is authoritative even when a CLI omits attribution.
 			for i := range results[index].status.Projects {
 				results[index].status.Projects[i].Provider = descriptor.ID
