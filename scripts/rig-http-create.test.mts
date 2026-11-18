@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 import { retainHttpCreateRequest, type HttpCreateSelection } from '../webmux/server/internal/openrigcoord/rig-http-create.mts';
 const posixTest = process.platform === 'win32' ? test.skip : test;
 const requestId = '2d438c43-c962-4b1d-b8ed-a35e07a8e964';
@@ -101,14 +102,34 @@ posixTest('runner permanently refuses an adopted legacy seat for the tracked ori
   const record = path.join(f.directory, 'legacy.agent.json');
   const agent = { ...selection, project: selection.rigName, tmux, target: tmux };
   fs.writeFileSync(record, JSON.stringify(agent));
+  // Canonical namespace verification has independent API/manager controls.
+  // Isolate it here to exercise permanent adopted-seat refusal in the runner.
+  const namespaceReads = path.join(f.root, 'namespace-reads');
+  const namespace = path.join(f.root, 'namespace.mjs');
+  fs.writeFileSync(namespace, `import fs from 'node:fs';
+export async function readRigProjectPods(id, name) {
+  if (id !== ${JSON.stringify(rigId)} || name !== 'original') throw Error('wrong namespace');
+  fs.appendFileSync(${JSON.stringify(namespaceReads)}, 'read\\n');
+  return { projectId: id, projectName: name, pods: ['agents'], source: 'native-spec' };
+}`);
+  const loader = path.join(f.root, 'namespace-loader.mjs');
+  const discovery = pathToFileURL(path.resolve(import.meta.dirname, '../webmux/server/internal/openrigcoord/rig-project-pods.mts')).href;
+  fs.writeFileSync(loader, `import { registerHooks } from 'node:module';
+registerHooks({ resolve(specifier, context, nextResolve) {
+  if (context.parentURL && new URL(specifier, context.parentURL).href === ${JSON.stringify(discovery)}) {
+    return { url: ${JSON.stringify(pathToFileURL(namespace).href)}, shortCircuit: true };
+  }
+  return nextResolve(specifier, context);
+} });`);
   fs.writeFileSync(path.join(bin, 'tmux'), '#!/bin/sh\nif [ "$1" = "-V" ]; then printf "tmux 3.8\\n"; fi\n', { mode: 0o700 });
   const stub = '#!' + process.execPath + '\nconst fs=require("node:fs"),a=process.argv.slice(2);fs.appendFileSync(' + JSON.stringify(calls) + ',JSON.stringify(a)+"\\n");if(a[0]==="--version"){console.log("0.7.18 (3bf87c62)")}else if(a[0]==="ps"){console.log(JSON.stringify(a.includes("--nodes")?[{rigId:' + JSON.stringify(rigId) + ',podNamespace:"agents"}]:[{rigId:' + JSON.stringify(rigId) + ',rigName:"original"}]))}else{process.exitCode=77}\n';
   fs.writeFileSync(path.join(bin, 'rig'), stub, { mode: 0o700 });
-  const invoke = () => spawnSync(process.execPath, [path.resolve(import.meta.dirname, '../webmux/server/internal/openrigcoord/runner.mts'), 'create', f.directory], {
+  const invoke = () => spawnSync(process.execPath, ['--import', loader, path.resolve(import.meta.dirname, '../webmux/server/internal/openrigcoord/runner.mts'), 'create', f.directory], {
     input: JSON.stringify({ ...selection, creationRequestId: requestId }), encoding: 'utf8', timeout: 5000,
     env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH },
   });
   const first = invoke(); assert.equal(first.status, 1); assert.match(first.stderr, /legacy_route_refused/);
+  assert.equal(fs.readFileSync(namespaceReads, 'utf8'), 'read\n');
   const observed = fs.readFileSync(calls, 'utf8').trim().split('\n').map(line => JSON.parse(line) as string[]);
   assert.ok(observed.every(args => args[0] === '--version' || args[0] === 'ps'));
   fs.writeFileSync(record, JSON.stringify({ ...agent, nativeOwned: true }));
@@ -116,4 +137,5 @@ posixTest('runner permanently refuses an adopted legacy seat for the tracked ori
   const changed = invoke(); assert.equal(changed.status, 1); assert.match(changed.stderr, /legacy_route_refused/);
   const retried = fs.readFileSync(calls, 'utf8').trim().split('\n').map(line => JSON.parse(line) as string[]);
   assert.deepEqual(retried, [['--version']], 'A refused legacy original must not consult topology again');
+  assert.equal(fs.readFileSync(namespaceReads, 'utf8'), 'read\n', 'A refused original must not rediscover pods');
 });
