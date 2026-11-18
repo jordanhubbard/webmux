@@ -54,3 +54,7 @@ adopted seats. Selected profiles, named permission graphs, Windows/native
 platform acceptance, review, dependency audit #429 and full release gates remain
 open. Earlier receipts retain their historical hashes; this receipt supersedes
 the environment checkpoint only for the current source composition above.
+
+The later [observation isolation checkpoint](../codex-observation-isolation-2026-11-18/)
+binds the changed owner resolver and repeats native creation and public namespace
+qualification with the rebuilt controller. This receipt retains its historical hashes.
