@@ -1,9 +1,10 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { CoordinationDialog, type CoordinationStatus } from '@frontend/components/CoordinationDialog';
+import { CoordinationTrustRequiredError } from '@frontend/utils/api';
 
 const mocks = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn(), attach: vi.fn(), browse: vi.fn(), updateConfig: vi.fn(), send: vi.fn(), sendStatus: vi.fn(), drain: vi.fn() }));
-vi.mock('@frontend/utils/api', () => ({ api: {
+vi.mock('@frontend/utils/api', async importOriginal => ({ ...await importOriginal<typeof import('@frontend/utils/api')>(), api: {
   getCoordination: mocks.status,
   createCoordinatedAgent: mocks.create,
   attachCoordinatedAgent: mocks.attach,
@@ -106,6 +107,61 @@ it('uses canonical Rig topology and state instead of stale private project recor
   expect(screen.queryByText('trickle-release')).not.toBeInTheDocument();
   fireEvent.click(within(project).getByRole('button', { name: 'Open session' }));
   await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('rig', 'canonical-seat', undefined));
+});
+
+it('keeps native trust review separate from uncertainty and retries only the reviewed original selection', async () => {
+  const requestId = 'a'.repeat(64);
+  mocks.create.mockRejectedValueOnce(new CoordinationTrustRequiredError(requestId));
+  const close = vi.fn(); render(<CoordinationDialog onClose={close} />);
+  await waitFor(() => expect(screen.getByLabelText('Launch owner')).toHaveValue('rig'));
+  fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'original-project' } });
+  fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'original-coder' } });
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: "/work/owner's project" } });
+  fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
+  const notice = await screen.findByRole('status', { name: 'Codex project trust required' });
+  expect(notice).toHaveTextContent("/work/owner's project");
+  expect(notice.querySelector('pre')).toHaveTextContent("-C '/work/owner'\\''s project'");
+  expect(screen.queryByRole('status', { name: 'Session creation pending' })).toBeNull();
+  const retry = () => screen.getByRole('button', { name: 'Retry original request after trust review' });
+  expect(retry()).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Start agent and open terminal' })).toBeDisabled();
+  const original = mocks.create.mock.calls[0][0];
+  fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'edited-project' } });
+  fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'edited-coder' } });
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/edited' } });
+  mocks.create.mockRejectedValueOnce(new CoordinationTrustRequiredError(requestId));
+  fireEvent.click(screen.getByLabelText('I reviewed project trust in native Codex and exited the review session'));
+  fireEvent.click(retry());
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(retry()).toBeDisabled());
+  expect(mocks.create.mock.calls[1][0]).toEqual({ ...original, inspect: undefined, trustRequest: requestId });
+  expect(close).not.toHaveBeenCalled();
+  mocks.create.mockResolvedValueOnce({ creation: { state: 'uncertain', stage: 'agent', code: 'native_create_response_unavailable', operationId: '11111111-1111-4111-8111-111111111111' } });
+  fireEvent.click(screen.getByLabelText('I reviewed project trust in native Codex and exited the review session'));
+  fireEvent.click(retry());
+  expect(await screen.findByRole('status', { name: 'Session creation pending' })).toHaveTextContent('original-coder');
+  expect(screen.queryByRole('status', { name: 'Codex project trust required' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Check and complete original request' }));
+  await waitFor(() => expect(close).toHaveBeenCalledOnce());
+  expect(mocks.create.mock.calls[3][0]).toEqual({ ...original, trustRequest: requestId, inspect: true });
+});
+
+it('retains the saved trust request after a transport error and dismisses without a retry', async () => {
+  mocks.create.mockRejectedValueOnce(new CoordinationTrustRequiredError('b'.repeat(64)));
+  render(<CoordinationDialog onClose={() => {}} />);
+  await waitFor(() => expect(screen.getByLabelText('Launch owner')).toHaveValue('rig'));
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/original' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
+  await screen.findByRole('status', { name: 'Codex project trust required' });
+  mocks.create.mockRejectedValueOnce(new Error('Cannot reach server'));
+  fireEvent.click(screen.getByLabelText('I reviewed project trust in native Codex and exited the review session'));
+  fireEvent.click(screen.getByRole('button', { name: 'Retry original request after trust review' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Cannot reach server');
+  expect(screen.getByRole('status', { name: 'Codex project trust required' })).toHaveTextContent('/work/original');
+  expect(screen.getByRole('button', { name: 'Retry original request after trust review' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss notice' }));
+  expect(screen.queryByRole('status', { name: 'Codex project trust required' })).toBeNull();
+  expect(mocks.create).toHaveBeenCalledTimes(2);
 });
 
 it('keeps an uncertain project request frozen and completes it only on an explicit action', async () => {

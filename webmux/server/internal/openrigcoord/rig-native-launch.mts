@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { createRigNativeCodex, nativeCreateArtifacts as artifacts, type NativeCodexCreateInput } from './rig-native-create.mts';
+import { createRigNativeCodex, nativeCreateArtifacts as artifacts, validateNativeTrustRequest, type NativeCodexCreateInput } from './rig-native-create.mts';
 import { validateCodexLaunchPlan } from './codex-launch-policy.mts';
 import { validateCodexLaunchEnvironment } from './codex-launch-environment.mts';
 import { rigTmuxAttachment, type RigTmuxAttachment } from './rig-attachment.mts';
@@ -92,6 +92,7 @@ export async function launchRigNativeCodex(input: NativeCodexCreateInput, deps: 
   const base = artifacts.ownedRoot(input.directory), cwd = fs.realpathSync(input.cwd);
   const key = hash(JSON.stringify([input.rigId, input.pod, input.member]));
   const directory = artifacts.ownedRoot(path.join(artifacts.ownedRoot(path.join(base, 'requests')), key));
+  if (input.trustRequest) validateNativeTrustRequest(input, directory);
   const registration = path.join(directory, 'native-registration.json');
   let saved: { contract: string; rigId: string; pod: string; member: string; cwd: string; nodeId: string; operationId: string } | undefined;
   try { saved = JSON.parse(artifacts.read(registration).toString('utf8')) as typeof saved; }
@@ -99,6 +100,7 @@ export async function launchRigNativeCodex(input: NativeCodexCreateInput, deps: 
   if (saved !== undefined && !object(saved)) return refuse();
   if (!saved) {
     const result = await (deps.create ?? createRigNativeCodex)({ ...input, directory: base }, { run: deps.run, fetcher: deps.fetcher, observationHelper: deps.observationHelper });
+    if (result.state === 'blocked') return result;
     if (result.state !== 'recorded') return { state: 'pending' as const, code: result.code, operationId: result.operationId };
     if (!result.nodeIds || result.nodeIds.length !== 1 || !ulid.test(result.nodeIds[0]) || !uuid.test(result.operationId)) return refuse();
     saved = { contract: 'webmux-native-codex-registration/v1', rigId: input.rigId, pod: input.pod, member: input.member,

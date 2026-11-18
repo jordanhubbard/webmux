@@ -7,6 +7,32 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 const runner = path.resolve(import.meta.dirname, '../webmux/server/internal/openrigcoord/runner.mts');
+test('native trust retries reject changed project selections before any topology or manager query', { skip: process.platform === 'win32' }, () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'wm-trust-selection-'));
+  try {
+    const bin = path.join(root, 'bin'), state = path.join(root, 'state'), cwd = path.join(root, 'project');
+    fs.mkdirSync(bin); fs.mkdirSync(state, { mode: 0o700 }); fs.mkdirSync(cwd);
+    const records = path.join(state, 'trust-requests'); fs.mkdirSync(records, { mode: 0o700 });
+    const requestId = 'a'.repeat(64), calls = path.join(root, 'manager-called');
+    const selection = { mode: 'new', rigId: '', rigName: 'original', pod: '', name: 'coder', host: 'localhost', cwd, runtime: 'codex' };
+    fs.writeFileSync(path.join(records, requestId + '.json'), JSON.stringify(selection), { mode: 0o600 });
+    fs.writeFileSync(path.join(bin, 'tmux'), '#!/bin/sh\nprintf "tmux 3.8\\n"\n', { mode: 0o700 });
+    fs.writeFileSync(path.join(bin, 'rig'), `#!${process.execPath}\nif(process.argv[2]==='--version'){console.log('0.7.18 (3bf87c62)')}else{require('node:fs').writeFileSync(${JSON.stringify(calls)},'called');console.error('manager-probe-control');process.exitCode=77}\n`, { mode: 0o700 });
+    const invoke = (change: object) => spawnSync(process.execPath, [runner, 'create', state], {
+      input: JSON.stringify({ ...selection, trustRequest: requestId, ...change }), encoding: 'utf8', timeout: 5000,
+      env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH },
+    });
+    for (const change of [{ rigName: 'replacement' }, { name: 'replacement' }, { cwd: root },
+      { mode: 'existing', rigId: '01JQPWV4E7QP26M799M3S0MR6E', pod: 'agents' }, { trustRequest: 'b'.repeat(64) }]) {
+      const result = invoke(change);
+      assert.equal(result.status, 1); assert.match(result.stderr, /native_create_original_request_changed/);
+      assert.equal(fs.existsSync(calls), false, 'A changed selection must not allocate a project before rejecting its token');
+    }
+    const original = invoke({});
+    assert.equal(original.status, 1); assert.match(original.stderr, /manager-probe-control/);
+    assert.equal(fs.existsSync(calls), true, 'The matching original must pass the selection gate');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 for (const [host, runtime, modern, mismatch] of [['worker', 'codex', false, false], ['localhost', 'codex', false, false], ['worker', 'claude-code', false, false], ['legacy', 'codex', false, false], ['localhost', 'codex', true, false], ['localhost', 'codex', true, true]] as const) {
   test(`relay registration and launch grammar for ${host}/${runtime} modern=${modern} mismatch=${mismatch}`, { skip: process.platform === 'win32' ? 'Executes the POSIX shell/tmux launcher; qualified on macOS and Linux.' : false }, () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wm-relay-contract-'));

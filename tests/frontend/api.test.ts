@@ -52,6 +52,36 @@ describe('api utilities', () => {
       clearStorage();
     });
 
+    it('types a local native trust refusal while preserving the selected retry token', async () => {
+      const { api, CoordinationTrustRequiredError } = await import('@frontend/utils/api');
+      const requestId = 'a'.repeat(64);
+      const input = { provider: 'rig', mode: 'new' as const, projectName: 'project', name: 'coder', host: 'localhost', workspace: '/work', runtime: 'codex', trustRequest: requestId };
+      fetchSpy.mockResolvedValue({ ok: false, status: 409, json: async () => ({ error: 'Review trust', blocked: { state: 'blocked', code: 'native_project_trust_required', requestId } }) });
+      const error = await api.createCoordinatedAgent(input).catch(value => value);
+      expect(error).toBeInstanceOf(CoordinationTrustRequiredError);
+      expect(error.requestId).toBe(requestId);
+      expect(JSON.parse(fetchSpy.mock.calls[0][1].body)).toEqual(input);
+    });
+
+    it('does not reinterpret malformed, ambiguous, remote or unrelated failures as native trust authority', async () => {
+      const { api, CoordinationTrustRequiredError } = await import('@frontend/utils/api');
+      const input = { provider: 'rig', mode: 'new' as const, projectName: 'project', name: 'coder', host: 'localhost', workspace: '/work', runtime: 'codex' };
+      const blocked = { state: 'blocked', code: 'native_project_trust_required', requestId: 'a'.repeat(64) };
+      for (const [status, body, selected] of [
+        [502, { error: 'native failure', blocked }, input],
+        [409, { error: 'native failure', blocked: { ...blocked, requestId: '../foreign' } }, input],
+        [409, { error: 'native failure', blocked: { ...blocked, code: 'foreign' } }, input],
+        [409, { error: 'native failure', blocked, session: {} }, input],
+        [409, { error: 'native failure', blocked }, { ...input, host: 'remote' }],
+        [409, { error: 'native failure', blocked }, { ...input, provider: 'agent-deck' }],
+      ] as const) {
+        fetchSpy.mockResolvedValue({ ok: false, status, json: async () => body });
+        const error = await api.createCoordinatedAgent(selected).catch(value => value);
+        expect(error).not.toBeInstanceOf(CoordinationTrustRequiredError);
+        expect(String(error)).toContain('native failure');
+      }
+    });
+
     it('getAuthStatus calls correct endpoint', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,

@@ -507,6 +507,11 @@ func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, 
 		writeError(w, 400, "Only an original Rig creation request can be inspected here.")
 		return
 	}
+	if request.TrustRequest != "" && (!creationSelectionID.MatchString(request.TrustRequest) || request.Provider != "rig" || request.Runtime != "codex" ||
+		(request.Host != "" && request.Host != "localhost") || (request.Mode != "new" && request.Mode != "existing")) {
+		writeError(w, 400, "Only the saved local Codex request can be retried after a trust review.")
+		return
+	}
 	provider := s.coordinationProvider(owner, request.Provider)
 	if provider == nil || !provider.Descriptor().Available {
 		writeError(w, 409, "The selected coordination provider is unavailable.")
@@ -516,6 +521,11 @@ func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, 
 	defer cancel()
 	launch, err := provider.Launch(ctx, request.coordinationLaunchRequest)
 	if err != nil {
+		var blocked *coordinationCreationNeedsOwner
+		if errors.As(err, &blocked) {
+			writeJSON(w, http.StatusConflict, map[string]any{"error": blocked.Error(), "blocked": blocked.Blocked})
+			return
+		}
 		var pending *coordinationCreationPending
 		if errors.As(err, &pending) {
 			writeJSON(w, http.StatusAccepted, map[string]any{"creation": pending.Creation})

@@ -86,3 +86,88 @@ func TestCreationInspectionRejectsUnsupportedProviderOrDestination(t *testing.T)
 		requireStatus(t, request(handler, "POST", "/api/coordination/agents", body, ""), 400)
 	}
 }
+
+func TestNativeTrustRefusalReturnsTypedConflictWithoutViewer(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Rig uses POSIX helper transport")
+	}
+	t.Setenv("WEBMUX_COORDINATION_DISABLED", "")
+	s, handler := fixture(t, "none")
+	setCoordinationIntegrations(t, s, "rig")
+	bins := t.TempDir()
+	input := filepath.Join(t.TempDir(), "input.json")
+	t.Setenv("WEBMUX_PENDING_INPUT", input)
+	payload := `{"blocked":{"state":"blocked","code":"native_project_trust_required","requestId":"` + strings.Repeat("a", 64) + `"}}`
+	for name, contents := range map[string]string{
+		"rig": "#!/bin/sh\nexit 0\n", "tmux": "#!/bin/sh\nexit 0\n",
+		"node": "#!/bin/sh\n/bin/cat > \"$WEBMUX_PENDING_INPUT\"\nprintf '%s\\n' '" + payload + "'\n",
+	} {
+		if err := os.WriteFile(filepath.Join(bins, name), []byte(contents), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", bins+string(os.PathListSeparator)+os.Getenv("PATH"))
+	for _, mode := range []string{"new", "existing"} {
+		for _, token := range []string{"", strings.Repeat("a", 64)} {
+			body := map[string]any{"provider": "rig", "mode": mode, "projectName": "project", "projectId": "01JQPWV4E7QP26M799M3S0MR6E", "context": "agents", "name": "coder", "workspace": "/work", "host": "localhost", "runtime": "codex"}
+			if token != "" {
+				body["trustRequest"] = token
+			}
+			encoded, _ := json.Marshal(body)
+			response := request(handler, "POST", "/api/coordination/agents", string(encoded), "")
+			requireStatus(t, response, 409)
+			var result struct {
+				Blocked coordinationCreationBlocked `json:"blocked"`
+				Error   string                      `json:"error"`
+				Session json.RawMessage             `json:"session"`
+			}
+			if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil || !validCoordinationBlocked(result.Blocked) || len(result.Session) != 0 || !strings.Contains(result.Error, "native Codex") {
+				t.Fatalf("invalid owner-action response: %s", response.Body.String())
+			}
+			var forwarded map[string]any
+			raw, _ := os.ReadFile(input)
+			if json.Unmarshal(raw, &forwarded) != nil || (token != "" && forwarded["trustRequest"] != token) || forwarded["cwd"] != "/work" {
+				t.Fatalf("changed saved selection: %s", raw)
+			}
+			if len(s.sessions.List("anonymous")) != 0 {
+				t.Fatal("blocked creation opened a viewer")
+			}
+		}
+	}
+	for _, invalid := range []string{
+		strings.Replace(payload, `"state":"blocked"`, `"state":"uncertain"`, 1),
+		payload + " trailing",
+		strings.TrimSuffix(payload, "}") + `,"target":"foreign"}`,
+		strings.Replace(payload, `"requestId":`, `"operationId":"11111111-1111-4111-8111-111111111111","requestId":`, 1),
+	} {
+		contents := "#!/bin/sh\n/bin/cat > \"$WEBMUX_PENDING_INPUT\"\nprintf '%s\\n' '" + invalid + "'\n"
+		if err := os.WriteFile(filepath.Join(bins, "node"), []byte(contents), 0700); err != nil {
+			t.Fatal(err)
+		}
+		body := `{"provider":"rig","mode":"new","projectName":"project","name":"coder","workspace":"/work","host":"localhost","runtime":"codex"}`
+		requireStatus(t, request(handler, "POST", "/api/coordination/agents", body, ""), 502)
+		if len(s.sessions.List("anonymous")) != 0 {
+			t.Fatal("invalid trust response opened a viewer")
+		}
+	}
+	for _, body := range []string{
+		`{"provider":"rig","mode":"new","runtime":"codex","host":"remote","trustRequest":"` + strings.Repeat("a", 64) + `"}`,
+		`{"provider":"agent-deck","mode":"new","runtime":"codex","trustRequest":"` + strings.Repeat("a", 64) + `"}`,
+		`{"provider":"rig","mode":"new","runtime":"claude-code","trustRequest":"` + strings.Repeat("a", 64) + `"}`,
+		`{"provider":"rig","mode":"new","runtime":"codex","trustRequest":"foreign"}`,
+	} {
+		requireStatus(t, request(handler, "POST", "/api/coordination/agents", body, ""), 400)
+	}
+}
+
+func TestInvalidNativeTrustResponsesCannotAuthorizeOwnerRetry(t *testing.T) {
+	for _, value := range []coordinationCreationBlocked{
+		{State: "uncertain", Code: "native_project_trust_required", RequestID: strings.Repeat("a", 64)},
+		{State: "blocked", Code: "unrelated", RequestID: strings.Repeat("a", 64)},
+		{State: "blocked", Code: "native_project_trust_required", RequestID: "../foreign"},
+	} {
+		if validCoordinationBlocked(value) {
+			t.Fatalf("accepted foreign trust response: %+v", value)
+		}
+	}
+}
