@@ -94,6 +94,7 @@ func TestRigCaptureRejectsChangedDestinationsAndInvalidReferences(t *testing.T) 
 		func(v *RigIdentity) { v.Workspace = "/other" }, func(v *RigIdentity) { v.Host = "foreign" }, func(v *RigIdentity) { v.Target = "other" }, func(v *RigIdentity) { v.ManagerProfile = "other" },
 		func(v *RigIdentity) { v.ManagerSnapshotID = "--force" }, func(v *RigIdentity) { v.ManagerPolicyHash = "" }, func(v *RigIdentity) { v.NativeStateFile = "relative" }, func(v *RigIdentity) { v.NativeSource = "agent-deck-inventory" },
 		func(v *RigIdentity) { v.ManagerProcess = `{"native_pid":-1}` },
+		func(v *RigIdentity) { v.TmuxServerFlag, v.TmuxServerValue = "-S", "/tmp/other.sock" },
 	} {
 		changed := original
 		mutate(&changed)

@@ -18,9 +18,11 @@ function fixture(origin = 'claimed') {
   };
   return f;
 }
-for (const origin of ['launched', 'claimed']) test(`projects manager-reported ${origin} origin without private runtime metadata`, async () => {
+for (const build of ['0.6.14 (df1c1517)', '0.7.18 (3bf87c62)'])
+for (const origin of ['launched', 'claimed']) test(`projects manager-reported ${origin} origin without private runtime metadata on ${build}`, async () => {
   const f = fixture(origin);
-  const [result] = await observeRigEnrollments(f.run, f.seats, f.fetcher);
+  const run = (command: string, args: string[]) => { const value = f.run(command, args); return args[0] === '--version' ? build : value; };
+  const [result] = await observeRigEnrollments(run, f.seats, f.fetcher);
   assert.equal(result.enrollmentOrigin, origin); assert.equal(result.enrollmentId, sessionId);
   assert.equal(result.enrollmentSource, 'rig-session-registry'); assert(Number.isFinite(Date.parse(result.enrollmentObservedAt!)));
   assert(!JSON.stringify(result).includes('PRIVATE_'));
@@ -50,7 +52,7 @@ for (const scenario of ['duplicate_seat', 'duplicate_address', 'duplicate_node',
 });
 test('unsupported builds and invalid daemon endpoints never initiate network reads', async () => {
   const f = fixture();
-  for (const run of [() => '0.6.14 (unqualified)', (_c: string, a: string[]) => a[0] === '--version' ? '0.6.14 (df1c1517)' : 'Daemon running on port 65536']) {
+  for (const run of [() => '0.6.14 (unqualified)', () => '0.7.18 (unqualified)', () => '0.7.19 (future)', (_c: string, a: string[]) => a[0] === '--version' ? '0.6.14 (df1c1517)' : 'Daemon running on port 65536']) {
     assert.equal((await observeRigEnrollments(run, f.seats, f.fetcher))[0].enrollmentSource, 'unavailable');
   }
   assert.equal(f.calls.length, 0);

@@ -6,7 +6,7 @@ const unavailable = (): RigChange => ({ available: false, changed: false });
 export async function waitForRigChange(run: Run, fetcher: typeof fetch = fetch, waitMs = 20000, onReady: () => void = () => {}): Promise<RigChange> {
   let port: number;
   try {
-    if (run('rig', ['--version']).trim() !== '0.6.14 (df1c1517)') return unavailable();
+    if (!['0.6.14 (df1c1517)', '0.7.18 (3bf87c62)'].includes(run('rig', ['--version']).trim())) return unavailable();
     port = Number(/running on port (\d+)/.exec(run('rig', ['daemon', 'status']))?.[1]);
     if (!Number.isSafeInteger(port) || port < 1024 || port > 65535) return unavailable();
   } catch { return unavailable(); }

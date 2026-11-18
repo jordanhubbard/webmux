@@ -48,6 +48,14 @@ describe('Rig tile observations', () => {
     view.rerender(<RigSeatStatus session={session} observations={[observation({ observationState: 'offline' })]} />);
     expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Rig state unknown');
   });
+  it('requires explicit viewer rebinding when only the tmux socket changes', () => {
+    const bound = { ...session, rig: { ...session.rig!, tmux_server_flag: '-S', tmux_server_value: '/tmp/first' } };
+    const seat = observation({ tmuxServerFlag: '-S', tmuxServerValue: '/tmp/second' });
+    const view = render(<RigSeatStatus session={bound} observations={[seat]} />);
+    expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Bootstrap unknown · Agent activity unknown');
+    view.rerender(<RigSeatStatus session={{ ...bound, rig: { ...bound.rig, tmux_server_value: '/tmp/second' } }} observations={[seat]} />);
+    expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Agent needs input');
+  });
   it('leaves ordinary and Agent Deck viewers alone', () => {
     const view = render(<RigSeatStatus session={{} as Session} />);
     expect(screen.queryByLabelText('Rig seat status')).toBeNull();

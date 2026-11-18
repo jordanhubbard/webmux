@@ -96,26 +96,28 @@ func (p *rigProvider) Survives(ctx context.Context, target string) (bool, error)
 	if err != nil {
 		return false, err
 	}
-	if strings.HasPrefix(target, localRigPrefix) {
+	if strings.HasPrefix(target, localRigPrefix) || len(status.Seats) > 0 {
 		seat, err := resolveLocalRigSeat(status, target)
 		if err != nil {
 			return false, err
 		}
-		target = seat.CanonicalSessionName
+		if !seat.Openable || seat.TmuxTarget == "" {
+			return false, fmt.Errorf("canonical Rig attachment is unavailable")
+		}
+		args, err := rigTmuxArgs(seat.TmuxServerFlag, seat.TmuxServerValue, "has-session", seat.TmuxTarget)
+		if err != nil {
+			return false, err
+		}
+		binary, err := exec.LookPath("tmux")
+		if err != nil {
+			return false, err
+		}
+		return exec.CommandContext(ctx, binary, args...).Run() == nil, nil
 	}
 	for _, agent := range status.Agents {
 		if agent.Target == target {
 			// The coordinator runner checks this exact managed tmux seat.
 			return agent.Connected, nil
-		}
-	}
-	for _, seat := range status.Seats {
-		if seat.CanonicalSessionName == target && seat.Openable && seat.TmuxTarget != "" {
-			binary, err := exec.LookPath("tmux")
-			if err != nil {
-				return false, err
-			}
-			return exec.CommandContext(ctx, binary, "has-session", "-t", "="+seat.TmuxTarget).Run() == nil, nil
 		}
 	}
 	return false, nil
@@ -148,6 +150,10 @@ type coordinationProject struct {
 
 type coordinationSeat struct {
 	rigEnrollment
+	CanReviewStop    bool         `json:"canReviewStop,omitempty"`
+	SenderAddress    string       `json:"senderAddress,omitempty"`
+	TmuxServerFlag   string       `json:"tmuxServerFlag,omitempty"`
+	TmuxServerValue  string       `json:"tmuxServerValue,omitempty"`
 	StartupStatus    string       `json:"startupStatus,omitempty"`
 	AgentActivity    *rigActivity `json:"agentActivity,omitempty"`
 	RigHostID        string       `json:"rigHostId,omitempty"`
@@ -257,6 +263,8 @@ type coordinationLaunchRequest struct {
 }
 
 type coordinationLaunch struct {
+	TmuxServerFlag   string
+	TmuxServerValue  string
 	AttachmentTarget string
 	SeatID           string
 	RigHostID        string
@@ -324,6 +332,9 @@ type rigStatusEnvelope struct {
 
 type rigCanonicalSeat struct {
 	rigEnrollment
+	CheckedStop          bool         `json:"checkedStop"`
+	TmuxServerFlag       string       `json:"tmuxServerFlag"`
+	TmuxServerValue      string       `json:"tmuxServerValue"`
 	StartupStatus        string       `json:"startupStatus"`
 	AgentActivity        *rigActivity `json:"agentActivity"`
 	HostSelfID           string       `json:"hostSelfId"`
@@ -418,12 +429,15 @@ func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
 			state = "unknown"
 		}
 		transportState := "unknown"
-		openable := seat.Openable && seat.CanonicalSessionName != "" && seat.TmuxTarget != "" && addresses[seat.CanonicalSessionName] == 1
+		_, serverErr := rigTmuxServerArgs(seat.TmuxServerFlag, seat.TmuxServerValue)
+		openable := seat.Openable && serverErr == nil && seat.CanonicalSessionName != "" && seat.TmuxTarget != "" && addresses[seat.CanonicalSessionName] == 1
 		if seat.Openable && !openable {
 			status.Errors = append(status.Errors, "Canonical Rig attachment is missing or ambiguous")
 		}
 		managerSession := ""
+		senderAddress := ""
 		if agent, ok := managed[seat.CanonicalSessionName]; ok {
+			senderAddress = agent.SenderAddress
 			host = agent.Host
 			// sessionId is Rig enrollment identity, not a coding CLI conversation.
 			managerSession = agent.SessionID
@@ -435,6 +449,9 @@ func rigCoordinationStatus(raw rigStatusEnvelope) coordinationProviderStatus {
 			}
 		}
 		status.Seats = append(status.Seats, coordinationSeat{
+			CanReviewStop:  seat.CheckedStop && seat.TmuxServerFlag == "-S" && openable && seat.SessionStatus == "running" && canonicalRigEnrollment(seat.rigEnrollment).EnrollmentOrigin == "launched",
+			SenderAddress:  senderAddress,
+			TmuxServerFlag: seat.TmuxServerFlag, TmuxServerValue: seat.TmuxServerValue,
 			RigHostID:     rigHostID(seat.HostSelfID),
 			StartupStatus: canonicalRigStartup(seat.StartupStatus), AgentActivity: canonicalRigActivity(seat.AgentActivity),
 			rigEnrollment: canonicalRigEnrollment(seat.rigEnrollment),
@@ -503,11 +520,16 @@ func (p *rigProvider) Launch(ctx context.Context, request coordinationLaunchRequ
 	if !seat.Openable || seat.TmuxTarget == "" {
 		return coordinationLaunch{}, fmt.Errorf("created Rig seat has no verified tmux attachment; refresh the canonical inventory")
 	}
+	args, err := rigTmuxArgs(seat.TmuxServerFlag, seat.TmuxServerValue, "attach-session", seat.TmuxTarget)
+	if err != nil {
+		return coordinationLaunch{}, err
+	}
 	return coordinationLaunch{
+		TmuxServerFlag: seat.TmuxServerFlag, TmuxServerValue: seat.TmuxServerValue,
 		SeatID: localRigSeatID(seat.RigID, seat.LogicalID), AttachmentTarget: seat.TmuxTarget,
 		Provider: "rig", Target: agent.Target, Title: agent.Name + " · " + agent.Host + " · " + agent.Project,
 		Project: agent.Project, Name: agent.Name, Host: agent.Host, Workspace: agent.Cwd, Runtime: agent.Runtime,
-		Argv: []string{tmux, "attach-session", "-t", "=" + seat.TmuxTarget},
+		Argv: append([]string{tmux}, args...),
 	}, nil
 }
 
@@ -524,6 +546,13 @@ func (p *rigProvider) Attach(ctx context.Context, target string) (coordinationLa
 		return coordinationLaunch{}, err
 	}
 	id := localRigSeatID(seat.RigID, seat.LogicalID)
+	if !seat.Openable || seat.TmuxTarget == "" {
+		return coordinationLaunch{}, fmt.Errorf("this canonical Rig seat has no local tmux viewer; open it on its execution host or start a managed seat in this topology")
+	}
+	args, err := rigTmuxArgs(seat.TmuxServerFlag, seat.TmuxServerValue, "attach-session", seat.TmuxTarget)
+	if err != nil {
+		return coordinationLaunch{}, err
+	}
 	target = seat.CanonicalSessionName
 	for _, agent := range raw.Agents {
 		if agent.Target != target {
@@ -533,12 +562,9 @@ func (p *rigProvider) Attach(ctx context.Context, target string) (coordinationLa
 		if err != nil {
 			return coordinationLaunch{}, err
 		}
-		return coordinationLaunch{SeatID: id, AttachmentTarget: seat.TmuxTarget, Provider: "rig", Target: agent.Target, Title: agent.Name + " · " + agent.Host + " · " + agent.Project, Project: agent.Project, Name: agent.Name, Host: agent.Host, Workspace: agent.Cwd, Runtime: agent.Runtime, Argv: []string{tmux, "attach-session", "-t", "=" + seat.TmuxTarget}}, nil
+		return coordinationLaunch{TmuxServerFlag: seat.TmuxServerFlag, TmuxServerValue: seat.TmuxServerValue, SeatID: id, AttachmentTarget: seat.TmuxTarget, Provider: "rig", Target: agent.Target, Title: agent.Name + " · " + agent.Host + " · " + agent.Project, Project: agent.Project, Name: agent.Name, Host: agent.Host, Workspace: agent.Cwd, Runtime: agent.Runtime, Argv: append([]string{tmux}, args...)}, nil
 	}
 	{
-		if !seat.Openable || seat.TmuxTarget == "" {
-			return coordinationLaunch{}, fmt.Errorf("this canonical Rig seat has no local tmux viewer; open it on its execution host or start a managed seat in this topology")
-		}
 		tmux, err := exec.LookPath("tmux")
 		if err != nil {
 			return coordinationLaunch{}, err
@@ -547,8 +573,8 @@ func (p *rigProvider) Attach(ctx context.Context, target string) (coordinationLa
 		if name == "" {
 			name = seat.LogicalID
 		}
-		return coordinationLaunch{SeatID: id, AttachmentTarget: seat.TmuxTarget, Provider: "rig", Target: target, Title: name + " · Unknown execution host · " + seat.RigName, Project: seat.RigName, Name: name, RigHostID: rigHostID(seat.HostSelfID),
-			Runtime: seat.Runtime, Argv: []string{tmux, "attach-session", "-t", "=" + seat.TmuxTarget}}, nil
+		return coordinationLaunch{TmuxServerFlag: seat.TmuxServerFlag, TmuxServerValue: seat.TmuxServerValue, SeatID: id, AttachmentTarget: seat.TmuxTarget, Provider: "rig", Target: target, Title: name + " · Unknown execution host · " + seat.RigName, Project: seat.RigName, Name: name, RigHostID: rigHostID(seat.HostSelfID),
+			Runtime: seat.Runtime, Argv: append([]string{tmux}, args...)}, nil
 	}
 }
 

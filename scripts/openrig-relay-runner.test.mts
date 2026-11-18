@@ -6,8 +6,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 const runner = path.resolve(import.meta.dirname, '../webmux/server/internal/openrigcoord/runner.mts');
-for (const [host, runtime] of [['worker', 'codex'], ['localhost', 'codex'], ['worker', 'claude-code'], ['legacy', 'codex']]) {
-  test(`relay registration and launch grammar for ${host}/${runtime}`, { skip: process.platform === 'win32' ? 'Executes the POSIX shell/tmux launcher; qualified on macOS and Linux.' : false }, () => {
+for (const [host, runtime, modern, mismatch] of [['worker', 'codex', false, false], ['localhost', 'codex', false, false], ['worker', 'claude-code', false, false], ['legacy', 'codex', false, false], ['localhost', 'codex', true, false], ['localhost', 'codex', true, true]] as const) {
+  test(`relay registration and launch grammar for ${host}/${runtime} modern=${modern} mismatch=${mismatch}`, { skip: process.platform === 'win32' ? 'Executes the POSIX shell/tmux launcher; qualified on macOS and Linux.' : false }, () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wm-relay-contract-'));
     const bin = path.join(dir, 'bin'); fs.mkdirSync(bin);
     const stub = `#!${process.execPath}
@@ -16,9 +16,10 @@ const name=path.basename(process.argv[1]),a=process.argv.slice(2),root=process.e
 fs.appendFileSync(path.join(root,'calls'),JSON.stringify([name,...a])+'\\n');
 if(name==='rig'){
  if(process.env.OPENRIG_HOST_SELECTED!=='local'){console.error('wrong selected host');process.exit(8);}
+ if(a[0]==='--version'){console.log(process.env.WM_MODERN==='1'?'0.7.18 (3bf87c62)':'0.6.14 (df1c1517)');process.exit(0);}
  if(a[0]==='up') console.log(JSON.stringify({rigId:'01M5H000000000000000000000'}));
  if(a[0]==='attach'&&a.includes('--help')){console.log(process.env.WM_LEGACY==='1'?'--self --rig':'--self --rig --relay-ssh-host --relay-tmux-session');process.exit(0);}
- if(a[0]==='attach') {const tmux=process.env.TEST_TMUX;console.log(JSON.stringify({ok:true,attachmentType:'tmux',sessionName:tmux,senderAddress:'canonical@test',sessionId:'private-session',env:{OPENRIG_URL:'http://127.0.0.1:4567',OPENRIG_SESSION_NAME:'canonical@test'}}));}
+ if(a[0]==='attach') {const tmux=process.env.TEST_TMUX;console.log(JSON.stringify({ok:true,attachmentType:'tmux',sessionName:process.env.WM_MISMATCH==='1'?'another-physical-session':tmux,senderAddress:'canonical@test',sessionId:'private-session',env:{OPENRIG_URL:'http://127.0.0.1:4567',OPENRIG_SESSION_NAME:'canonical@test'}}));}
 }else if(name==='codex'||name==='claude'){
  if(process.env.OPENRIG_HOST_SELECTED!=='local'||process.env.OPENRIG_URL!=='http://127.0.0.1:4567'||process.env.OPENRIG_SESSION_NAME!=='canonical@test')process.exit(9);
 }else if(name==='ssh'){
@@ -32,9 +33,16 @@ if(name==='rig'){
 `;
     for (const name of ['rig', 'ssh', 'tmux', 'codex', 'claude']) fs.writeFileSync(path.join(bin,name),stub,{mode:0o700});
     try {
-      const result = spawnSync(process.execPath,[runner,'create',dir],{input:JSON.stringify({project:'test',name:'agent',host,cwd:dir,runtime}),env:{...process.env,WM_RELAY_TEST:dir,OPENRIG_HOST_SELECTED:'webmux-qa-shadow',WM_LEGACY:host==='legacy'?'1':'0',PATH:`${bin}:${process.env.PATH}`},encoding:'utf8',timeout:20000});
+      const result = spawnSync(process.execPath,[runner,'create',dir],{input:JSON.stringify({project:'test',name:'agent',host,cwd:dir,runtime}),env:{...process.env,WM_RELAY_TEST:dir,WM_MODERN:modern?'1':'0',WM_MISMATCH:mismatch?'1':'0',OPENRIG_HOST_SELECTED:'webmux-qa-shadow',WM_LEGACY:host==='legacy'?'1':'0',PATH:`${bin}:${process.env.PATH}`},encoding:'utf8',timeout:20000});
+      if(mismatch){
+        assert.notEqual(result.status,0);
+        const calls=fs.readFileSync(path.join(dir,'calls'),'utf8').trim().split('\n').map(line=>JSON.parse(line) as string[]);
+        assert(!calls.some(a=>a[0]==='codex'));
+        return;
+      }
       assert.equal(result.status,0,result.stdout+result.stderr);
-      assert.equal(JSON.parse(result.stdout).target,'canonical@test');
+      const registered=JSON.parse(result.stdout) as {target:string;tmux:string};
+      assert.equal(registered.target,modern?registered.tmux:'canonical@test');
       const calls=fs.readFileSync(path.join(dir,'calls'),'utf8').trim().split('\n').map(line=>JSON.parse(line) as string[]);
       const attach=calls.find(a=>a[0]==='rig'&&a[1]==='attach'&&!a.includes('--help'))!;
       const expected=host!=='localhost'&&host!=='legacy'&&runtime==='codex';

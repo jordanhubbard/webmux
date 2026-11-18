@@ -2,17 +2,18 @@
 // loopback-only reverse forward. No remote daemon or provider credentials copied.
 import fs from 'node:fs';
 import { observeRigEnrollments } from './rig-enrollment.mts';
+import { rigTmuxAttachment, type RigAttachmentNode } from './rig-attachment.mts';
 import type { RigRecoveryIdentity } from './rig-recovery.mts';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
-type Agent = { target: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string };
+type Agent = { target: string; senderAddress?: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string };
 type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string };
 type RigRow = { rigId?: string; name?: string; rigName?: string; nodeCount?: number; runningCount?: number; status?: string; lifecycleState?: string; latestSnapshot?: string | null };
 type AgentActivity = { state?: string; evidenceSource?: string; sampledAt?: string; stale?: boolean; generationProvenance?: string };
-type NodeRow = { agentActivity?: AgentActivity; startupStatus?: string; rigId?: string; rigName?: string; logicalId?: string; podNamespace?: string; hostSelfId?: string | null; canonicalSessionName?: string; runtime?: string; sessionStatus?: string; lifecycleState?: string; tmuxAttachCommand?: string | null };
+type NodeRow = RigAttachmentNode & { agentActivity?: AgentActivity; startupStatus?: string; rigId?: string; rigName?: string; logicalId?: string; podNamespace?: string; hostSelfId?: string | null; runtime?: string; sessionStatus?: string; lifecycleState?: string };
 const [action, directory] = process.argv.slice(2);
 if (!directory) throw new Error('Missing coordination state directory');
 // Controller commands follow the configured coordinator endpoint. A user's
@@ -33,7 +34,30 @@ const rigRows = (archived = false): RigRow[] => entries(JSON.parse(run('rig', ['
 // Project before enrichment so neither seats nor legacy agent rows carry raw
 // evidence, runtime event text, or provider secrets.
 const activityFacts = (activity?: AgentActivity): AgentActivity | undefined => activity ? { state: activity.state, evidenceSource: activity.evidenceSource, sampledAt: activity.sampledAt, stale: activity.stale, generationProvenance: activity.generationProvenance } : undefined;
-const nodeRows = (): NodeRow[] => entries(JSON.parse(run('rig', ['ps', '--nodes', '-A', ...observationArgs, '--json', '--fields', 'rigId,rigName,logicalId,podNamespace,hostSelfId,canonicalSessionName,runtime,sessionStatus,lifecycleState,tmuxAttachCommand,startupStatus,agentActivity'])) as NodeRow[] | { entries?: NodeRow[] }).map(node => ({ ...node, agentActivity: activityFacts(node.agentActivity) }));
+let structuredAttachments: boolean | undefined;
+const structuredAttachmentBuild = () => {
+  if (structuredAttachments === undefined) {
+    try { structuredAttachments = run('rig', ['--version']).trim() === '0.7.18 (3bf87c62)'; }
+    catch { structuredAttachments = false; }
+  }
+  return structuredAttachments;
+};
+const nodeRows = (): NodeRow[] => {
+  structuredAttachmentBuild();
+  const fields = 'rigId,rigName,logicalId,podNamespace,hostSelfId,canonicalSessionName,runtime,sessionStatus,lifecycleState,tmuxAttachCommand,startupStatus,agentActivity'
+    + (structuredAttachments ? ',attachmentType,tmuxServerArgs' : '');
+  // 0.7.18 emits structured attachment fields in full JSON but its CLI
+  // --fields allow-list omits them. Project immediately; never export the
+  // remaining full inventory (including recovery/runtime metadata).
+  return entries(JSON.parse(run('rig', ['ps', '--nodes', '-A', ...observationArgs, '--json', ...(structuredAttachments ? ['--full'] : ['--fields', fields])])) as NodeRow[] | { entries?: NodeRow[] })
+    .map(node => ({
+      rigId: node.rigId, rigName: node.rigName, logicalId: node.logicalId, podNamespace: node.podNamespace,
+      hostSelfId: node.hostSelfId, canonicalSessionName: node.canonicalSessionName, runtime: node.runtime,
+      sessionStatus: node.sessionStatus, lifecycleState: node.lifecycleState, tmuxAttachCommand: node.tmuxAttachCommand,
+      startupStatus: node.startupStatus, agentActivity: activityFacts(node.agentActivity),
+      ...(structuredAttachments ? { attachmentType: node.attachmentType, tmuxServerArgs: node.tmuxServerArgs } : {}),
+    }));
+};
 const identifier = (value: string, field: string) => {
   if (!/^[a-z][a-z0-9-]{0,47}$/.test(value)) throw new Error(`${field}: use a letter followed by letters, digits or hyphens (48 characters maximum).`);
   return value;
@@ -92,22 +116,44 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const args = ['-c', browser, requested, host];
     const output = host === 'localhost' ? run('python3', args) : run('ssh', [...sshArgs, host, `python3 -c ${q(browser)} ${q(requested)} ${q(host)}`]);
     console.log(output);
+  } else if (action === 'stop-preview') {
+    const { reviewRigStop } = await import('./rig-stop.mts');
+    console.log(JSON.stringify(await reviewRigStop(run, JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-stop.mts').RigStopSelection)));
+  } else if (action === 'stop-execute') {
+    const { executeRigStop } = await import('./rig-stop.mts');
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as { review: import('./rig-stop.mts').RigStopReview; reason: string; operator: string };
+    console.log(JSON.stringify(await executeRigStop(run, input.review, input.reason, input.operator)));
   } else if (action === 'status' || action === 'status-enrollment' || action === 'observations') {
     let rigs: RigRow[];
     let nodes: NodeRow[];
     try { rigs = rigRows(true); nodes = nodeRows(); }
     catch { throw new Error('Canonical Rig discovery requires OpenRig CLI 0.6.14 or newer and a reachable daemon.'); }
     const managed = records();
-    const agents = managed.map(agent => ({ ...agent, ...(nodes.find(e => e.canonicalSessionName === agent.target) ?? {}), connected: (() => { try { run('tmux', ['has-session', '-t', `=${agent.tmux}`], 3000); return true; } catch { return false; } })() }));
+    const agents = managed.map(agent => {
+      const matches = nodes.filter(node => node.canonicalSessionName === agent.target);
+      const node = matches.length === 1 ? matches[0] : undefined;
+      const attachment = node ? rigTmuxAttachment(node, structuredAttachments === true) : undefined;
+      const connected = (() => {
+        // A canonical inventory must select its exact server. Only the legacy
+        // agents-only protocol may use the environment-selected namespace.
+        if (matches.length && !attachment || structuredAttachments && !attachment) return false;
+        try {
+          run('tmux', [...(attachment?.tmuxServerFlag ? [attachment.tmuxServerFlag, attachment.tmuxServerValue] : []),
+            'has-session', '-t', `=${attachment?.tmuxTarget ?? agent.tmux}`], 3000);
+          return true;
+        } catch { return false; }
+      })();
+      return { ...agent, ...(node ?? {}), connected };
+    });
     const enrollments = action === 'status' ? [] : await observeRigEnrollments(run, nodes);
     const seats = nodes.map((node, index) => {
       const agent = managed.find(value => value.target === node.canonicalSessionName);
-      const match = typeof node.tmuxAttachCommand === 'string' ? /^tmux attach(?:-session)? -t ([a-zA-Z0-9_.:@-]{1,256})$/.exec(node.tmuxAttachCommand) : null;
-      return { ...node, ...enrollments[index], managed: Boolean(agent), host: agent?.host, cwd: agent?.cwd, name: agent?.name, openable: Boolean(match), tmuxTarget: match?.[1] };
+      const attachment = rigTmuxAttachment(node, structuredAttachments === true);
+      return { ...node, ...enrollments[index], ...attachment, checkedStop: structuredAttachments === true, managed: Boolean(agent), host: agent?.host, cwd: agent?.cwd, name: agent?.name, openable: Boolean(attachment) };
     });
     const messages: { from: string; to: string; body: string; time: string; state: string }[] = [];
     for (const agent of (action === 'observations' ? [] : agents.slice(0, 16))) {
-      const rows = JSON.parse(run('rig', ['queue', 'outbox-list', agent.target, '--limit', '8', '--json'])) as { senderSession: string; destinationSession: string; body: string; tsDispatched: string; deliveryState: string }[];
+      const rows = JSON.parse(run('rig', ['queue', 'outbox-list', agent.senderAddress ?? agent.target, '--limit', '8', '--json'])) as { senderSession: string; destinationSession: string; body: string; tsDispatched: string; deliveryState: string }[];
       for (const row of rows) messages.push({ from: row.senderSession, to: row.destinationSession, body: row.body.slice(0, 2000), time: row.tsDispatched, state: row.deliveryState });
     }
     messages.sort((a, b) => b.time.localeCompare(a.time));
@@ -259,11 +305,18 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       const deadline = Date.now() + 10000;
       while (!fs.existsSync(attached) && Date.now() < deadline) await delay(100);
       if (!fs.existsSync(attached)) throw new Error('Agent did not register with the coordinator.');
-      const registration = JSON.parse(fs.readFileSync(attached, 'utf8')) as { ok?: boolean; error?: string; attachmentType?: string; sessionId?: string; env?: { OPENRIG_SESSION_NAME?: string } };
+      const registration = JSON.parse(fs.readFileSync(attached, 'utf8')) as { ok?: boolean; error?: string; attachmentType?: string; sessionId?: string; sessionName?: string; env?: { OPENRIG_SESSION_NAME?: string } };
       if (registration.ok === false || registration.attachmentType !== 'tmux' || !registration.sessionId) throw new Error(registration.error || 'Agent transport registration failed.');
       agent.sessionId = registration.sessionId;
       if (typeof registration.env?.OPENRIG_SESSION_NAME !== 'string') throw new Error('Coordinator did not return a sender address.');
-      agent.target = registration.env.OPENRIG_SESSION_NAME;
+      if (!/^[a-zA-Z0-9_.:@-]{1,256}$/.test(registration.env.OPENRIG_SESSION_NAME)) throw new Error('Coordinator returned an invalid sender address.');
+      agent.senderAddress = registration.env.OPENRIG_SESSION_NAME;
+      if (structuredAttachmentBuild()) {
+        if (registration.sessionName !== tmux) throw new Error('Coordinator did not verify the created physical tmux session.');
+        agent.target = registration.sessionName;
+      } else {
+        agent.target = registration.env.OPENRIG_SESSION_NAME;
+      }
       // Keep a registered seat discoverable even if provider startup fails.
       // The owner can fix authentication and explicitly reconnect that seat.
       write(recordFile, agent);

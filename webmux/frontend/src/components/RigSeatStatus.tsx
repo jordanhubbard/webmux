@@ -14,7 +14,9 @@ export function RigSeatStatus({ session, observations = [] }: { session: Session
   // an old viewer which has not explicitly opened the new native binding.
   const candidate = matches.length === 1 ? matches[0] : undefined;
   const seat = candidate && (!candidate.observationState || candidate.observationState === 'current') ? candidate : undefined;
-  const bindingMatches = !!seat && rig?.target === seat.managerTarget && rig?.attachment_target === seat.attachmentTarget;
+  const bindingMatches = !!seat && rig?.target === seat.managerTarget && rig?.attachment_target === seat.attachmentTarget
+    && (rig?.tmux_server_flag || '') === (seat.tmuxServerFlag || '')
+    && (rig?.tmux_server_value || '') === (seat.tmuxServerValue || '');
   const activity = bindingMatches ? seat?.agentActivity : undefined;
   const [now, setNow] = useState(Date.now);
   useEffect(() => {

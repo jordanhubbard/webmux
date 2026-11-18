@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -95,6 +96,79 @@ printf '%s\n' '{"entries":[{"rigId":"r","rigName":"project","logicalId":"agents.
 	data, _ := json.Marshal(r)
 	if len(data) > MaxBytes {
 		t.Fatal("oversized report")
+	}
+}
+
+func TestStructuredObserverPreservesServerAndProjectsOnlyPublicFields(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Rig supports Unix hosts")
+	}
+	root := t.TempDir()
+	script := `#!/bin/sh
+case "$*" in
+ --version) echo '0.7.18 (3bf87c62)' ;;
+ 'ps --nodes -A --no-cleanup --json --full') printf '%s\n' "$RIG_STRUCTURED_TEST_JSON" ;;
+ *) exit 23 ;;
+esac
+`
+	if err := os.WriteFile(filepath.Join(root, "rig"), []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", root)
+	for _, row := range []struct {
+		args   string
+		socket string
+	}{
+		{``, "/tmp/tmux-" + strconv.Itoa(os.Getuid()) + "/default"},
+		{`,"tmuxServerArgs":[]`, "/tmp/tmux-" + strconv.Itoa(os.Getuid()) + "/default"},
+		{`,"tmuxServerArgs":["-L","label"]`, "/tmp/tmux-" + strconv.Itoa(os.Getuid()) + "/label"},
+		{`,"tmuxServerArgs":["-S","/tmp/a space/'literal'/socket"]`, "/tmp/a space/'literal'/socket"},
+		{`,"tmuxServerArgs":null`, ""},
+		{`,"tmuxServerArgs":["-S","relative"]`, ""},
+		{`,"tmuxServerArgs":["-f","/tmp/config"]`, ""},
+		{`,"tmuxServerArgs":["-S","/tmp/x","attach"]`, ""},
+		{`,"tmuxServerArgs":["-L","../other"]`, ""},
+	} {
+		t.Setenv("RIG_STRUCTURED_TEST_JSON", `[{"rigId":"r","rigName":"project","logicalId":"agents.worker","canonicalSessionName":"seat","attachmentType":"tmux","tmuxTarget":"unverified-wire-target","tmuxServerFlag":"-S","tmuxServerValue":"/tmp/unverified-wire-socket","resumeToken":"PRIVATE_TOKEN","recoveryGuidance":"PRIVATE_GUIDANCE"`+row.args+`}]`)
+		r := Observe(context.Background())
+		if r.State != "ok" || r.Source != StructuredSource || len(r.Seats) != 1 || r.Seats[0].TmuxServerValue != row.socket {
+			t.Fatalf("invalid structured projection for %s: %+v", row.args, r)
+		}
+		seat := r.Seats[0]
+		if row.socket != "" && (seat.TmuxServerFlag != "-S" || seat.TmuxTarget != "seat") || row.socket == "" && (seat.TmuxServerFlag != "" || seat.TmuxTarget != "") {
+			t.Fatal("malformed selection reached an ambient or unverified server", seat)
+		}
+		data, _ := json.Marshal(r)
+		if strings.Contains(string(data), "PRIVATE_") || strings.Contains(string(data), "unverified-wire") {
+			t.Fatal("observer exported unverified metadata", string(data))
+		}
+	}
+}
+
+func TestReportValidatesStructuredSourceAndCompleteSocketIdentity(t *testing.T) {
+	base := Seat{RigID: "r", RigName: "project", LogicalID: "agents.worker", CanonicalSessionName: "seat", TmuxTarget: "seat", TmuxServerFlag: "-S", TmuxServerValue: "/tmp/socket"}
+	r := Report{Contract: Contract, Source: StructuredSource, State: "ok", Seats: []Seat{base}}
+	if err := Validate(&r); err != nil {
+		t.Fatal(err)
+	}
+	r.Source = Source
+	if Validate(&r) == nil {
+		t.Fatal("legacy source accepted structured authority")
+	}
+	r.Source = StructuredSource
+	for _, change := range []func(*Seat){
+		func(s *Seat) { s.TmuxServerFlag = "" },
+		func(s *Seat) { s.TmuxServerFlag = "-L" },
+		func(s *Seat) { s.TmuxServerValue = "relative" },
+		func(s *Seat) { s.TmuxServerValue = "/tmp/x\nnext" },
+		func(s *Seat) { s.TmuxTarget = "" },
+	} {
+		seat := base
+		change(&seat)
+		r.Seats = []Seat{seat}
+		if Validate(&r) == nil {
+			t.Fatal("invalid structured socket accepted", seat)
+		}
 	}
 }
 

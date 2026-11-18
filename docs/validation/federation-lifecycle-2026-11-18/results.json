@@ -1,0 +1,167 @@
+{
+  "scope": "Test harness visibility correction and bounded lifecycle diagnostics, backed by native Windows and macOS scheduling controls. No production runtime change; unique causes of every historical failure are not established.",
+  "runtimeApplicationBase": "d871ac60421c37485f7044f5323f3a71291d7a65",
+  "sourceSHA256": {
+    "tests/e2e/server-federation.spec.ts": "3c3a6892d45c149f71b081910f06aa240d1a80a734a1906a53d855c261ade7a0",
+    "tests/e2e/federation-diagnostics.ts": "626969965a1ce02eecf5d7bfd34580f9298fd844e78835f7443116a9d2486725",
+    "tests/e2e/federation-diagnostic-facts.mts": "eacffa4b6494a00bf2dca451f0cfb672a9ff0bc49c828262f8203bc58674de54",
+    "tests/e2e/federation-fixture.mts": "dfca1f78246c99b183bee4e31a4fb8446e2608cc47779a6a0a3c6748b522738e",
+    "scripts/federation-diagnostics.test.mts": "98adec4cb80354218648d3e33b61ce924641994f86eb7dcfa965fd1be2b5abc8",
+    ".github/workflows/federation-native.yml": "cba6c09b0965652641f4fb6ea1aebc644be60dfc3925edfe3e600b3e47684807",
+    "webmux/package.json": "2b4f48e66121640d0480b85cd8cc398f3746ea5492bc6f8c1dc4044bbb385771",
+    "webmux/server/internal/httpapi/federation.go": "8113c6458b8f80bfdf6ca213cf5f0846d994a0881ad49128cfd50553a06778a2",
+    "webmux/frontend/src/components/ServerWorkspace.tsx": "ed80dd0bbb2930d897f58ff59d0fe0e318cc1d9a6a8ef72c74a1214eca79849f",
+    "webmux/frontend/src/components/Terminal.tsx": "019e89d13131224f28ed7f481b8234a19243dc60a529b6801a8dae32361fcfc7"
+  },
+  "nativeMacNormal": {
+    "passed": true,
+    "caseSeconds": 8.7,
+    "totalSeconds": 11.2,
+    "platform": "darwin",
+    "architecture": "arm64",
+    "events": 220,
+    "sockets": 17,
+    "localStarts": 1,
+    "peerStarts": 2,
+    "explicitPeerRestarts": 1,
+    "fixtureTokenExcluded": true,
+    "fixtureProvidersRemovedAfterCleanup": true,
+    "receiptSHA256": "46e72cbbfd8b3e7642a5bbcc61f9afa3d6a47490be2a7c5013e91aa1fe435e48",
+    "receiptBytes": 51078
+  },
+  "nativeFailureControl": {
+    "expectedFailure": true,
+    "phase": "diagnostic-control-before-revocation",
+    "peerRunningAtCapture": true,
+    "providerStartsPresentAtCapture": 2,
+    "viewsConnectedAtCapture": true,
+    "originalAssertionStackRetained": true,
+    "providersRemovedAfterCleanup": true,
+    "receiptSHA256": "9953cae52b774057c9b786b231e217526710baedc6aa489993962351b7d01982",
+    "receiptBytes": 8849
+  },
+  "checks": {
+    "helperTestsPassed": 123,
+    "strictTypeScriptProjectsPassed": 5,
+    "frontendBuild": true,
+    "workflowYAMLParsed": true,
+    "diffWhitespace": true
+  },
+  "nativeWindows": "Native offscreen negative control and one unfaulted lifecycle pass at fea9cb8. Corrected visible-card assertion workflow is pending exact new-head qualification.",
+  "originalFailure": {
+    "run": 44267347627,
+    "job": 134675161963,
+    "artifact": 14412470818,
+    "artifactUploadedSHA256": "8523e8b810eaf9076a63ea02cbbd4f02cc24a475e8414c6fac8a1cb9ee492c19"
+  },
+  "sourceSnapshotCommit": "28f32b5eebddb52b5d2381d343fd0dbdb2c395f3",
+  "visibilityFollowup": {
+    "collectorSHA256": "a509ad493d1d008b55c13eaaf15d54ebd4eb3f4ba6f7b02ff30bb4442f8911f8",
+    "nativeWindowsStudy": {
+      "run": 44273974857,
+      "samples": 10,
+      "passed": 9,
+      "failed": 1,
+      "failedPhase": "pack",
+      "artifact": 14412934196,
+      "artifactReportedDigest": "sha256:5991ed00c54ba4ab26d387ecf1be218bca3acdca27152d9c86e9d7e1c782e034",
+      "providersPresentBeforeCleanup": 2,
+      "viewersConnectedBeforeCleanup": 2,
+      "replayBytesReceivedOnFailedPeerSocket": 49
+    },
+    "macGeometryControl": {
+      "remoteScreenTop": 700,
+      "viewportHeight": 650,
+      "remoteVisibleHeight": 0,
+      "nativeReadyMarkerAlreadyRendered": true
+    },
+    "libraryControl": {
+      "scope": "Actual installed xterm and Chrome visibility control on macOS; not proof of the failing Windows sample by itself",
+      "browser": "158.0.8127.36",
+      "offscreen": true,
+      "beforeDOMBlank": true,
+      "beforeNativeBufferHasMarker": true,
+      "afterDOMHasMarker": true,
+      "noAdditionalTerminalWrites": true
+    },
+    "nativeWindowsCounterfactual": "Controlled native Windows scheduling intervention passed at fea9cb8; historical spontaneous occurrence has no geometry and is not uniquely attributed.",
+    "geometryWindowsStudy": {
+      "run": 44276326962,
+      "head": "3cceb89457bd420d97bdf77cb954c778fdd75522",
+      "artifact": 14415107530,
+      "artifactReportedDigest": "sha256:eb96f9827a4581c3ef7d5161e038be2520ca97f7d6303cf8da2a6941eb2ac17f",
+      "samples": 10,
+      "passed": 10,
+      "failed": 0,
+      "expectedFailureControls": 1,
+      "capturedSpontaneousBlankFailure": false
+    }
+  },
+  "offscreenReplayControl": {
+    "scope": "Negative control delays only real native WebSocket output callbacks until existing viewer is offscreen. Bytes, native transport and provider remain unchanged. It demonstrates an invalid offscreen DOM oracle, not the unique cause of every historical failure.",
+    "sourceSHA256": {
+      "tests/e2e/federation-replay-control.ts": "5f2c21a3173989de56f58b052d652537442bd7c162b2ec162f0a13518b0108fe",
+      "tests/e2e/server-federation.spec.ts": "1b5cd186ffcc23f5f58d14aa71806626d4812df512bbc2d7a913071cacbf7d8e",
+      "tests/e2e/federation-diagnostics.ts": "c5c60749ccb4a8ce93aa8281b8e1ba369d185e16e237047199f11352c29d80f1",
+      ".github/workflows/federation-native.yml": "ae5957be383b81ba3fe60c9afc6e240eb347528d170df02e8d35539ca7a047c4"
+    },
+    "nativeMac": {
+      "originalAssertionFailed": true,
+      "phase": "diagnostic-offscreen-replay",
+      "barrier": {
+        "armed": true,
+        "held": 1,
+        "delivered": 1,
+        "callbackError": false,
+        "expectedPID": 15348
+      },
+      "visibilityProbe": {
+        "scrollCompleted": true,
+        "traceComplete": true,
+        "newReceivedFrames": 0,
+        "newOutputFrames": 0,
+        "newSockets": 0
+      },
+      "originalProviderMarkerAfterScroll": true,
+      "bothOriginalProvidersPresent": true,
+      "receiptSHA256": "6ab5640716e9bcc3e7da8e0a77dd1a9d2b647a83d9ebb10ffaf0f4d7af0d6d82"
+    },
+    "nativeWindows": {
+      "run": 44280531734,
+      "source": "fea9cb81c727c4f21995c83bb2fcb3d991ba7857",
+      "artifact": 14417565130,
+      "artifactReportedDigest": "sha256:31800c52188150c5e8ad01c0e1890ab60b955f00d94478bfef07ca4c51b96f6a",
+      "originalBlankAssertionFailed": true,
+      "originalAssertionSeconds": 5,
+      "phase": "diagnostic-offscreen-replay",
+      "peerVisibleHeightBefore": 0,
+      "originalMarkerRevealedAfterScroll": true,
+      "traceComplete": true,
+      "newReceivedFrames": 0,
+      "newOutputFrames": 0,
+      "newSockets": 0,
+      "bothOriginalProvidersAlive": true,
+      "barrier": {
+        "armed": true,
+        "held": 1,
+        "delivered": 1,
+        "callbackError": false,
+        "expectedPID": 5876
+      },
+      "receiptSHA256": "51dec97aac878103674218dbca8dacc8552e176d920f6ff23114e1c719df08a6"
+    }
+  },
+  "visibilityFix": {
+    "sourceSHA256": {
+      "tests/e2e/server-federation.spec.ts": "4edd2eee061ead722fe192e386d1e99d58b996d43a9d91073f7e4fdf754c2005",
+      "tests/e2e/federation-replay-control.ts": "5f2c21a3173989de56f58b052d652537442bd7c162b2ec162f0a13518b0108fe",
+      "tests/e2e/federation-diagnostics.ts": "c5c60749ccb4a8ce93aa8281b8e1ba369d185e16e237047199f11352c29d80f1",
+      ".github/workflows/federation-native.yml": "479038d6f374d97ade25fb962f9af3d312cb8e0de171243fcfec97622f13049e"
+    },
+    "action": "Scroll stable terminal card before reading its virtualized xterm DOM; preserve all marker/provider/input/isolation assertions and the five-second marker and 90-second case deadlines. No added sleep, native write, reconnect or replay request.",
+    "nativeMacFullLifecycleSeconds": 13.4,
+    "nativeMacFullLifecyclePassed": true,
+    "negativeControlStillFailsOriginalBlankAssertion": true,
+    "nativeWindowsCorrectedLifecycle": "pending"
+  }
+}

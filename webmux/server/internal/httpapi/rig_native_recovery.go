@@ -49,7 +49,7 @@ func (p *rigProvider) PlanNativeRecovery(ctx context.Context, saved session.RigI
 		if err != nil {
 			return nil, err
 		}
-		if launch.Provider != "rig" || launch.Target != saved.Target || launch.Host != saved.Host || launch.Workspace != saved.Workspace || launch.Runtime != saved.Runtime || launch.Profile != "" && launch.Profile != saved.ManagerProfile {
+		if launch.TmuxServerFlag != saved.TmuxServerFlag || launch.TmuxServerValue != saved.TmuxServerValue || launch.Provider != "rig" || launch.Target != saved.Target || launch.Host != saved.Host || launch.Workspace != saved.Workspace || launch.Runtime != saved.Runtime || launch.Profile != "" && launch.Profile != saved.ManagerProfile {
 			return nil, managedRecoveryError("The Rig viewer destination changed after recovery.")
 		}
 		return launch.Argv, nil

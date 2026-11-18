@@ -255,7 +255,7 @@ func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, s
 	if id == "rig" {
 		expectedTarget = saved.Target
 	}
-	if launch.Provider != id || launch.Target != expectedTarget || saved.SeatID != "" && launch.SeatID != saved.SeatID || saved.AttachmentTarget != "" && launch.AttachmentTarget != saved.AttachmentTarget || saved.Host != "" && saved.Host != launch.Host || saved.Workspace != "" && saved.Workspace != launch.Workspace || saved.Runtime != "" && saved.Runtime != launch.Runtime {
+	if launch.TmuxServerFlag != saved.TmuxServerFlag || launch.TmuxServerValue != saved.TmuxServerValue || launch.Provider != id || launch.Target != expectedTarget || saved.SeatID != "" && launch.SeatID != saved.SeatID || saved.AttachmentTarget != "" && launch.AttachmentTarget != saved.AttachmentTarget || saved.Host != "" && saved.Host != launch.Host || saved.Workspace != "" && saved.Workspace != launch.Workspace || saved.Runtime != "" && saved.Runtime != launch.Runtime {
 		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager's session destination changed. Review its host, project and coding CLI before opening a new viewer; retained logs are preserved.")
 	}
 	profile := func(value string) string {

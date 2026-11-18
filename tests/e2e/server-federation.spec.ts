@@ -1,11 +1,21 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
+import { createFederationDiagnostics } from './federation-diagnostics';
+import { installFederationReplayBarrier, releaseFederationReplayOffscreen } from './federation-replay-control';
 
-test('two servers share interactive terminal views, messages and failure state without duplicating providers', async ({ page, request }) => {
+// xterm pauses offscreen painting. Its DOM is an output oracle only after
+// exposing the existing screen; this neither reconnects nor requests replay.
+async function visibleRows(terminal: Locator) {
+  // Refresh replaces xterm's screen element inside the stable terminal card.
+  await terminal.scrollIntoViewIfNeeded({ timeout: 5000 });
+  return terminal.locator('.xterm-rows');
+}
+
+test('two servers share interactive terminal views, messages and failure state without duplicating providers', async ({ page, request }, info) => {
   test.setTimeout(90000);
   const controllerHome = path.resolve(__dirname, '.test-home');
   const directoryFile = path.join(controllerHome, 'config/servers.yaml');
@@ -27,6 +37,11 @@ test('two servers share interactive terminal views, messages and failure state w
   peer.stdout?.on('data', chunk => { diagnostics = (diagnostics + String(chunk)).slice(-8000); });
   peer.stderr?.on('data', chunk => { diagnostics = (diagnostics + String(chunk)).slice(-8000); });
   const peerURL = `http://127.0.0.1:${port}`;
+  const startsFile = path.join(peerHome, 'provider-starts.jsonl');
+  const observation = createFederationDiagnostics(page, request, info, peerURL, startsFile);
+  const offscreenControl = observation.enabled && process.env.WEBMUX_FEDERATION_DIAGNOSTIC_CONTROL === 'offscreen-replay';
+  if (offscreenControl) await installFederationReplayBarrier(page);
+  let completed = false;
   const ids: string[] = [];
   const stopPeer = async () => {
     if (peer.exitCode !== null || peer.signalCode !== null) return;
@@ -42,13 +57,14 @@ test('two servers share interactive terminal views, messages and failure state w
     // Start with no peers: management must be discoverable before the selector exists.
     fs.writeFileSync(directoryFile, 'version: 1\nservers: []\ngrants: []\n');
     for (const base of ['', peerURL]) {
-      const created = await request.post(`${base}/api/sessions`, { data: { hostname: 'localhost', username: 'fixture', transport: 'exec', exec_command: `"${process.execPath}" "${path.resolve(__dirname, 'federation-fixture.mts')}"` } });
+      const fixtureArgs = observation.enabled ? ` "${startsFile}" ${base ? 'peer' : 'local'}` : '';
+      const created = await request.post(`${base}/api/sessions`, { data: { hostname: 'localhost', username: 'fixture', transport: 'exec', exec_command: `"${process.execPath}" "${path.resolve(__dirname, 'federation-fixture.mts')}"${fixtureArgs}` } });
       expect(created.ok()).toBe(true);
       const id = (await created.json()).id as string;
       if (!base) ids.push(id);
       expect((await request.patch(`${base}/api/sessions/${id}`, { data: { project_label: 'WebMux' } })).ok()).toBe(true);
     }
-    await page.setViewportSize({ width: 900, height: 650 });
+    await page.setViewportSize({ width: 900, height: offscreenControl ? 1100 : 650 });
     await page.goto('/');
     await expect(page.getByRole('button', { name: 'More', exact: true })).toBeInViewport();
     const cluster = page.getByRole('group', { name: 'WebMux cluster' });
@@ -76,8 +92,9 @@ test('two servers share interactive terminal views, messages and failure state w
     await expect(selector.locator('option[value="all"]')).toHaveText('Show all connected servers’ windows');
     await expect(page.locator('[data-testid^="server-terminal-"]')).toHaveCount(0);
     await page.getByRole('combobox', { name: 'Server view' }).selectOption('all');
+    observation.phase('initial-federated-view');
     const remote = page.locator(`[data-testid^="server-terminal-${peerID}-"]`);
-    await expect(remote.locator('.xterm-rows')).toContainText('FEDERATION_READY:');
+    await expect(await visibleRows(remote)).toContainText('FEDERATION_READY:');
     await expect(page.locator('[data-testid^="server-terminal-local-"]')).toHaveCount(1);
     await expect(remote).toHaveAccessibleName(/Other host · WebMux/);
     await expect(remote.locator('.server-badge')).toHaveText(`Other host · ${peerID}`);
@@ -86,6 +103,40 @@ test('two servers share interactive terminal views, messages and failure state w
     expect(await remote.evaluate(el => el.parentElement === document.querySelector('[aria-label="Server terminal matrix"]'))).toBe(true);
     expect(await local.evaluate(el => el.parentElement === document.querySelector('[aria-label="Server terminal matrix"]'))).toBe(true);
     const providerPid = (await remote.locator('.xterm-rows').innerText()).match(/FEDERATION_READY:(\d+)/)![1];
+    if (offscreenControl) {
+      observation.phase('diagnostic-offscreen-replay');
+      await page.evaluate(() => window.federationReplayBarrier!.arm());
+      await remote.getByRole('button', { name: 'Reconnect viewer', exact: true }).click();
+      await page.setViewportSize({ width: 900, height: 650 });
+      await expect.poll(() => page.evaluate(() => window.federationReplayBarrier!.held)).toBeGreaterThan(0);
+      // Confirm that connected status cleared the old paint before releasing
+      // the same native replay bytes outside xterm's visible render region.
+      await expect(remote.locator('.xterm-rows')).not.toContainText(`FEDERATION_READY:${providerPid}`);
+      await releaseFederationReplayOffscreen(page);
+      await expect.poll(() => page.evaluate(() => window.federationReplayBarrier!.delivered)).toBeGreaterThan(0);
+      const control = await page.evaluate(() => {
+        const { armed, held, delivered, callbackError } = window.federationReplayBarrier!;
+        return { armed, held, delivered, callbackError };
+      });
+      expect(control.callbackError).toBe(false);
+      const controlFile = info.outputPath('offscreen-replay-control.json');
+      // This intentionally retains the original, unscrolled DOM assertion.
+      // Its failure must survive the diagnostic visibility intervention.
+      try {
+        await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
+      } catch (error) {
+        const failure = error as { matcherResult?: { name?: unknown; actual?: unknown } };
+        if (failure.matcherResult?.name === 'toContainText' && typeof failure.matcherResult.actual === 'string' && !failure.matcherResult.actual.trim()) {
+          fs.writeFileSync(controlFile, JSON.stringify({ ...control, expectedPID: Number(providerPid), originalBlankAssertionFailed: true }));
+        }
+        throw error;
+      }
+      throw new Error('Offscreen replay control did not reproduce blank paint');
+    }
+    if (observation.enabled && process.env.WEBMUX_FEDERATION_DIAGNOSTIC_CONTROL === 'fail-before-revocation') {
+      observation.phase('diagnostic-control-before-revocation');
+      expect(false, 'FEDERATION_DIAGNOSTIC_CONTROL_478').toBe(true);
+    }
     // A peer may revoke its incoming grant while the controller login remains
     // valid. That must close only the remote viewer, never all local sockets.
     const peerDirectory = path.join(peerHome, 'config/servers.yaml');
@@ -96,14 +147,16 @@ test('two servers share interactive terminal views, messages and failure state w
       fs.renameSync(temporary, peerDirectory);
     };
     await expect(local.getByTitle('Browser viewer connection')).toHaveText('Viewer: connected');
+    observation.phase('grant-revocation');
     replacePeerGrants('version: 1\nservers: []\ngrants: []\n');
     await expect(remote.getByTitle('Browser viewer connection')).toHaveText('Viewer: disconnected', { timeout: 10000 });
     await expect(local.getByTitle('Browser viewer connection')).toHaveText('Viewer: connected');
     expect((await request.post(`/api/servers/local/sessions/${ids[0]}/messages`, { data: { message: 'local-after-peer-revocation' } })).ok()).toBe(true);
-    await expect(local.locator('.xterm-rows')).toContainText('FEDERATION_REPLY:[WebMux local:anonymous] local-after-peer-revocation');
+    await expect(await visibleRows(local)).toContainText('FEDERATION_REPLY:[WebMux local:anonymous] local-after-peer-revocation');
     replacePeerGrants(peerGrants);
+    observation.phase('reconnect-after-grant-restoration');
     await remote.getByRole('button', { name: 'Reconnect viewer', exact: true }).click();
-    await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
+    await expect(await visibleRows(remote)).toContainText(`FEDERATION_READY:${providerPid}`);
     expect((await request.get(`${peerURL}/api/sessions`).then(response => response.json())).length).toBe(1);
     const overview = page.getByTitle('Workspace overview — click or drag to jump', { exact: true });
     await expect(overview).toBeVisible();
@@ -115,34 +168,40 @@ test('two servers share interactive terminal views, messages and failure state w
     await expect.poll(() => scrollArea.evaluate(element => element.scrollTop)).toBeGreaterThan(0);
     // The navigator stays in the viewport while the terminal grid scrolls.
     await expect(overview).toBeInViewport();
+    observation.phase('refresh-after-overview-scroll');
     await page.getByRole('button', { name: 'Refresh Other host', exact: true }).click();
-    await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
+    await expect(await visibleRows(remote)).toContainText(`FEDERATION_READY:${providerPid}`);
     // Reproduce an unavailable service credential, repair it through the UI,
     // and prove the existing provider survives both failure and reattachment.
     fs.writeFileSync(directoryFile, `version: 1\nservers:\n  - id: ${peerID}\n    name: Other host\n    url: ${peerURL}\n    allow_http: true\n    token_env: WEBMUX_E2E_MISSING_TOKEN\ngrants: []\n`);
+    observation.phase('credential-unavailable');
     await page.getByRole('button', { name: 'Refresh Other host', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Other host sessions', exact: true }).getByRole('alert')).toContainText('Manage servers');
     await page.getByRole('button', { name: 'Manage connection to Other host' }).click();
     await manager.getByRole('button', { name: 'Edit Other host' }).click();
     await manager.getByLabel('Replacement credential').fill(fs.readFileSync(path.join(controllerHome, 'federation-token'), 'utf8'));
+    observation.phase('credential-repair');
     await manager.getByRole('button', { name: 'Save server', exact: true }).click();
     await expect(manager.getByRole('status')).toContainText('Saved');
     await page.keyboard.press('Escape');
     await page.getByRole('group', { name: 'WebMux cluster' }).getByRole('button', { name: 'Refresh servers', exact: true }).click();
-    await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
+    await expect(await visibleRows(remote)).toContainText(`FEDERATION_READY:${providerPid}`);
     expect((await (await request.get(`${peerURL}/api/sessions`)).json()).length).toBe(1);
+    observation.phase('pack');
     await page.getByRole('toolbar', { name: 'Terminal layout' }).getByRole('button', { name: 'Pack', exact: true }).click();
     const matrix = page.getByLabel('Server terminal matrix');
     await expect(matrix.locator('.server-terminal')).toHaveCount(2);
     await expect(overview).toBeVisible();
     await expect(overview.locator('rect title')).toHaveCount(2);
-    await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
+    await expect(await visibleRows(remote)).toContainText(`FEDERATION_READY:${providerPid}`);
     await remote.locator('.xterm-helper-textarea').focus();
+    observation.phase('native-input');
     await page.keyboard.type('native-input-proof');
     await page.keyboard.press('Enter');
-    await expect(remote.locator('.xterm-rows')).toContainText('FEDERATION_REPLY:native-input-proof');
-    await expect(local.locator('.xterm-rows')).not.toContainText('native-input-proof');
+    await expect(await visibleRows(remote)).toContainText('FEDERATION_REPLY:native-input-proof');
+    await expect(await visibleRows(local)).not.toContainText('native-input-proof');
     const initialSize = await request.get(`/api/servers/${peerID}/sessions`).then(r => r.json()).then(s => `${s[0].cols}x${s[0].rows}`);
+    observation.phase('resize');
     // Change width as well as height: terminal tiles have a fixed height.
     await page.setViewportSize({ width: 1100, height: 720 });
     await expect.poll(async () => {
@@ -150,30 +209,34 @@ test('two servers share interactive terminal views, messages and failure state w
       return `${sessions[0].cols}x${sessions[0].rows}`;
     }).not.toBe(initialSize);
     await page.setViewportSize({ width: 1440, height: 900 });
+    observation.phase('explicit-reconnect');
     await remote.getByRole('button', { name: 'Reconnect viewer', exact: true }).click();
-    await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
+    await expect(await visibleRows(remote)).toContainText(`FEDERATION_READY:${providerPid}`);
     await remote.getByRole('button', { name: 'Message', exact: true }).click();
+    observation.phase('message');
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('textbox', { name: 'Message' }).fill('agent-message-proof');
     await dialog.getByRole('button', { name: 'Send to this session' }).click();
     await expect(dialog.getByRole('status')).toContainText('processing is not confirmed');
     await page.keyboard.press('Escape');
-    await expect(remote.locator('.xterm-rows')).toContainText('FEDERATION_REPLY:[WebMux controller] agent-message-proof');
+    await expect(await visibleRows(remote)).toContainText('FEDERATION_REPLY:[WebMux controller] agent-message-proof');
     // Leave room for one terminal below the wrapped cluster toolbar.
     await page.setViewportSize({ width: 900, height: 750 });
+    observation.phase('hide-and-show');
     await remote.getByRole('button', { name: 'Hide', exact: true }).click();
     await expect(remote).toHaveCount(0);
     await expect(overview).toBeHidden();
     await page.getByRole('button', { name: 'Show hidden viewers' }).click();
-    await expect(remote.locator('.xterm-rows')).toContainText('native-input-proof');
-    await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
+    await expect(await visibleRows(remote)).toContainText('native-input-proof');
+    await expect(await visibleRows(remote)).toContainText(`FEDERATION_READY:${providerPid}`);
     await expect(overview).toBeVisible();
     await page.getByRole('combobox', { name: 'Server view' }).selectOption(peerID);
+    observation.phase('selected-peer-and-reload');
     await expect(page.locator('[data-testid^="server-terminal-local-"]')).toHaveCount(0);
     await page.reload();
     await expect(page.getByRole('combobox', { name: 'Server view' })).toHaveValue(peerID);
     await expect(page.getByLabel('Server terminal matrix').locator('.server-terminal')).toHaveCount(1);
-    await expect(remote.locator('.xterm-rows')).toContainText('native-input-proof');
+    await expect(await visibleRows(remote)).toContainText('native-input-proof');
     await page.setViewportSize({ width: 900, height: 380 });
     await expect(overview).toBeVisible();
     await expect(overview.locator('rect title')).toHaveCount(1);
@@ -183,27 +246,31 @@ test('two servers share interactive terminal views, messages and failure state w
     await page.setViewportSize({ width: 900, height: 650 });
     expect((await (await request.get(`${peerURL}/api/sessions`)).json()).length).toBe(1);
     await selector.selectOption('local');
+    observation.phase('switch-local-and-peer');
     await expect(page.locator('[data-testid^="server-terminal-"]')).toHaveCount(0);
-    await expect(page.getByTestId(`tile-cell-${ids[0]}`).locator('.xterm-rows')).toContainText('FEDERATION_READY:');
+    await expect(await visibleRows(page.getByTestId(`tile-cell-${ids[0]}`))).toContainText('FEDERATION_READY:');
     await selector.selectOption(peerID);
-    await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
+    await expect(await visibleRows(remote)).toContainText(`FEDERATION_READY:${providerPid}`);
     await remote.locator('.xterm-helper-textarea').focus();
     await page.keyboard.type('finish-provider');
+    observation.phase('explicit-provider-stop');
     await page.keyboard.press('Enter');
     await expect(remote.getByText('disconnected', { exact: true })).toBeVisible();
     await expect(remote.getByText('Viewer: connected', { exact: true })).toBeVisible();
     await expect(remote.getByRole('button', { name: 'Restart provider' })).toBeVisible();
     page.once('dialog', dialog => { void dialog.accept(); });
+    observation.phase('explicit-provider-restart');
     await remote.getByRole('button', { name: 'Restart provider' }).click();
     await expect(remote.getByText('connected', { exact: true })).toBeVisible();
-    await expect(remote.locator('.xterm-rows')).toContainText('FEDERATION_READY:');
+    await expect(await visibleRows(remote)).toContainText('FEDERATION_READY:');
     await page.getByRole('combobox', { name: 'Server view' }).selectOption('all');
+    observation.phase('peer-outage');
     await stopPeer();
     await expect(page.getByRole('region', { name: 'Other host sessions', exact: true }).locator('.server-heading').getByRole('alert')).toContainText('Unavailable', { timeout: 15000 });
     await expect(remote.getByText('Viewer: disconnected', { exact: true })).toBeVisible();
     // The server outage makes provider state stale; it does not prove a stop.
     await expect(remote.getByText('connected', { exact: true })).toBeVisible();
-    await expect(page.locator('[data-testid^="server-terminal-local-"] .xterm-rows')).toContainText('FEDERATION_READY:');
+    await expect(await visibleRows(page.locator('[data-testid^="server-terminal-local-"]'))).toContainText('FEDERATION_READY:');
     await page.screenshot({ path: path.resolve(__dirname, '../../webmux/test-results/server-federation.png'), fullPage: true });
     await cluster.getByRole('button', { name: 'Manage servers', exact: true }).click();
     page.once('dialog', dialog => { void dialog.accept(); });
@@ -211,13 +278,21 @@ test('two servers share interactive terminal views, messages and failure state w
     await expect(manager.getByText('No server peers configured. Add a server to browse its terminals.')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('combobox', { name: 'Server view' })).toHaveCount(0);
+    observation.phase('complete');
+    completed = true;
   } catch (error) {
-    throw new Error(`${String(error)}\nPeer diagnostics: ${diagnostics}`);
+    // Keep Playwright's original assertion stack and locator information.
+    console.error('Federation peer diagnostics bytes:', Buffer.byteLength(diagnostics));
+    throw error;
   } finally {
+    let observationError: unknown;
+    try { await observation.capture(completed, peer, Buffer.byteLength(diagnostics)); }
+    catch (error) { observationError = error; console.error('Federation diagnostic capture failed'); }
     await page.evaluate(() => sessionStorage.removeItem('webmux-server-view')).catch(() => {});
     fs.writeFileSync(directoryFile, original);
     await stopPeer();
     for (const id of ids) await request.delete(`/api/sessions/${id}`);
     fs.rmSync(peerHome, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+    if (completed && observationError) throw observationError;
   }
 });

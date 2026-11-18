@@ -38,7 +38,7 @@ readline.createInterface({ input: process.stdin, terminal: false }).on('line', r
   try {
     const send = line.match(/^fixture-send (\\S+) (.+)$/);
     if (send) { console.log(run(['send', send[1], send[2], '--json'])); return; }
-    const challenge = line.match(/WM_CHALLENGE:([a-z0-9-]+):([a-f0-9]+)/);
+    const challenge = line.match(/WM_CHALLENGE:([a-zA-Z0-9_.@-]+):([a-f0-9]+)/);
     if (challenge) console.log(run(['send', challenge[1], 'WM_ACK:' + challenge[2], '--json']));
   } catch (error) { console.log('FIXTURE_ERROR ' + error.message); }
 });

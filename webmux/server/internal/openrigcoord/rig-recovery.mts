@@ -12,6 +12,7 @@ export interface RigRecoveryIdentity {
   manager_rig_id?: string; manager_node_id?: string; manager_logical_id?: string;
   manager_snapshot_id?: string; manager_snapshot_hash?: string;
   manager_policy_hash?: string; manager_record_identity?: string; manager_process?: string;
+  tmux_server_flag?: string; tmux_server_value?: string;
 }
 export type RigRecoveryRun = (command: string, args: string[]) => string;
 const ulid = /^[0-9A-HJKMNP-TV-Z]{26}$/;
@@ -103,6 +104,7 @@ function policyFiles(cwd: string, file: string) {
 }
 
 async function destination(run: RigRecoveryRun, identity: RigRecoveryIdentity) {
+  if (identity.tmux_server_flag || identity.tmux_server_value) throw new Error('Native recovery for this Rig tmux server selection is not qualified. Reopen the surviving seat through its manager.');
   if ((identity.provider && identity.provider !== 'rig') || identity.host !== 'localhost' || identity.runtime !== 'claude-code') {
     throw new Error('Native Rig recovery metadata is unsupported for this destination.');
   }
@@ -259,6 +261,7 @@ export interface RigNativeProcess {
 // independently joined to the OS executable and kernel cwd, is process proof.
 // Read arguments only for this owned pane's bounded descendant set.
 export function observeRigNativeProcess(run: RigRecoveryRun, saved: RigRecoveryIdentity, allowInitial = false, platform = process.platform): RigNativeProcess {
+  if (saved.tmux_server_flag || saved.tmux_server_value) throw new Error('Native recovery for this Rig tmux server selection is not qualified.');
   if (!['darwin', 'linux'].includes(platform) || saved.host !== 'localhost' || saved.runtime !== 'claude-code' || saved.provider && saved.provider !== 'rig') throw new Error('Native Rig process proof is unsupported.');
   const target = text(saved.target, 256), cwd = text(saved.workspace);
   if (!/^[a-zA-Z0-9_@-]+$/.test(target) || !path.isAbsolute(cwd)) throw new Error('Native Rig process destination is invalid.');

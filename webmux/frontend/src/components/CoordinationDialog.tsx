@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from './Dialog';
+import { RigStopDialog } from './RigStopDialog';
 import './CoordinationDialog.css';
 import { api } from '../utils/api';
 import { executionHostLabel } from '../utils/sessionIdentity';
@@ -17,9 +18,12 @@ export interface RigActivity {
   state: string; evidenceSource: string; sampledAt: string; stale?: boolean; generationProvenance?: string;
 }
 export interface CoordinationSeat {
+  canReviewStop?: boolean;
   enrollmentOrigin?: string; enrollmentSource?: string; enrollmentId?: string; enrollmentObservedAt?: string;
   startupStatus?: string; agentActivity?: RigActivity;
   logicalId?: string; attachmentTarget?: string; managerTarget?: string;
+  tmuxServerFlag?: string; tmuxServerValue?: string;
+  senderAddress?: string;
   rigHostId?: string;
   provider: string; id: string; projectId: string; projectName: string; name: string; host: string;
   observationState?: string; observedAt?: string; workspace?: string; runtime: string; state: string; transportState?: string; openable: boolean; managed: boolean;
@@ -57,6 +61,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const [statusError, setStatusError] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [stopSeat, setStopSeat] = useState<CoordinationSeat | null>(null);
   const [mode, setMode] = useState<'existing' | 'new'>('new');
   const [projectID, setProjectID] = useState('');
   const [projectName, setProjectName] = useState<string | null>(null);
@@ -341,6 +346,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
                       : seat.managed && seat.provider === 'rig' && seat.state === 'detached' && seat.transportState === 'unavailable' && seat.workspace ? <><p>The attachment has ended. Reconnecting attaches a surviving provider or starts a new conversation if none remains.</p><button type="button" disabled={busy} onClick={() => void restartSeat(seat)}>Reconnect attachment and open</button></>
                         : <span className="coordination-unavailable">No attach transport reported by this provider</span>}
                   {seat.provider === 'agent-deck' && seat.openable && <button type="button" disabled={busy} onClick={() => { setComposerTarget(current => current === `${seat.provider}:${seat.id}` ? '' : `${seat.provider}:${seat.id}`); setInstruction(''); }}>{composerTarget === `${seat.provider}:${seat.id}` ? 'Cancel instruction' : 'Send instruction'}</button>}
+                  {seat.provider === 'rig' && seat.canReviewStop && <button type="button" disabled={busy} onClick={() => setStopSeat(seat)}>Review local seat Stop</button>}
                   {composerTarget === `${seat.provider}:${seat.id}` && <form className="coordination-composer" onSubmit={event => { event.preventDefault(); void sendInstruction(seat); }}>
                     <label>Instruction for {seat.name}<textarea required value={instruction} onChange={event => setInstruction(event.target.value)} placeholder="Describe the bounded task or question" /></label>
                     <label className="coordination-inline"><input type="checkbox" checked={queueInstruction} onChange={event => setQueueInstruction(event.target.checked)} /> Queue safely until the target can accept input</label>
@@ -370,6 +376,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
 
       <details><summary>Provider contracts</summary><ul>{status.providers.map(value => <li key={value.id}><strong>{value.label}</strong> · <code>{value.contract}</code> · {value.capabilities.join(', ')}</li>)}</ul></details>
       {status.enabledProviders.includes('rig') && (view === 'all' || view === 'rig') && <details><summary>Rig diagnostics</summary><p><a href="?panel=openrig" target="_blank" rel="noreferrer">Open Rig text dashboard (Rig provider only)</a></p></details>}
+      {stopSeat && <RigStopDialog seat={stopSeat} onClose={() => setStopSeat(null)} onComplete={() => { void refresh(); }} />}
       </>}
     </div>
   </>;

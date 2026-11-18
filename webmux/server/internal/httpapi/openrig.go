@@ -75,6 +75,7 @@ func (s *Server) attachOpenRig(w http.ResponseWriter, r *http.Request, owner str
 	argv := []string{path, "tui"}
 	switch body.View {
 	case "dashboard":
+		argv = rigDashboardArgv(r.Context(), path)
 	case "agent":
 		agents, err := readOpenRigAgents(r.Context(), path)
 		if err != nil {
@@ -244,18 +245,19 @@ func (s *Server) getOpenRigAgents(w http.ResponseWriter, r *http.Request, owner 
 
 // Managed agents attach through a server-verified transport, never arbitrary argv.
 type managedRigAgent struct {
-	Target    string `json:"target"`
-	Project   string `json:"project"`
-	RigID     string `json:"rigId"`
-	RigName   string `json:"rigName"`
-	Pod       string `json:"pod"`
-	Name      string `json:"name"`
-	Host      string `json:"host"`
-	Cwd       string `json:"cwd"`
-	Runtime   string `json:"runtime"`
-	Tmux      string `json:"tmux"`
-	SessionID string `json:"sessionId,omitempty"`
-	Connected bool   `json:"connected,omitempty"`
+	SenderAddress string `json:"senderAddress,omitempty"`
+	Target        string `json:"target"`
+	Project       string `json:"project"`
+	RigID         string `json:"rigId"`
+	RigName       string `json:"rigName"`
+	Pod           string `json:"pod"`
+	Name          string `json:"name"`
+	Host          string `json:"host"`
+	Cwd           string `json:"cwd"`
+	Runtime       string `json:"runtime"`
+	Tmux          string `json:"tmux"`
+	SessionID     string `json:"sessionId,omitempty"`
+	Connected     bool   `json:"connected,omitempty"`
 }
 
 func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner string) {
@@ -584,9 +586,22 @@ func (s *Server) coordinationProvider(owner, id string) coordinationProvider {
 
 func (s *Server) attachCoordinationTerminal(parent context.Context, owner string, launch coordinationLaunch, row, col *int) (session.Session, error) {
 	if launch.Provider == "rig" && !launch.Remote && len(launch.Argv) >= 4 {
+		// set-option does not accept tmux's '=name' exact-match syntax.
+		// Resolve a verified session ID on this socket first, so it cannot
+		// prefix-match another session if the named seat disappeared.
+		args, err := rigTmuxArgs(launch.TmuxServerFlag, launch.TmuxServerValue, "display-message", launch.AttachmentTarget, "-p", "#{session_id}")
+		if err != nil {
+			return session.Session{}, err
+		}
 		ctx, cancel := context.WithTimeout(parent, 3*time.Second)
 		defer cancel()
-		if err := exec.CommandContext(ctx, launch.Argv[0], "set-option", "-t", strings.TrimPrefix(launch.Argv[3], "="), "mouse", "on").Run(); err != nil {
+		output, err := exec.CommandContext(ctx, launch.Argv[0], args...).Output()
+		if err != nil || !rigTmuxSessionID.MatchString(strings.TrimSpace(string(output))) {
+			return session.Session{}, fmt.Errorf("coordinated terminal session identity is unavailable")
+		}
+		server, _ := rigTmuxServerArgs(launch.TmuxServerFlag, launch.TmuxServerValue)
+		args = append(server, "set-option", "-t", strings.TrimSpace(string(output)), "mouse", "on")
+		if err := exec.CommandContext(ctx, launch.Argv[0], args...).Run(); err != nil {
 			return session.Session{}, fmt.Errorf("enable coordinated terminal scrollback: %w", err)
 		}
 	}
@@ -602,6 +617,7 @@ func (s *Server) attachCoordinationTerminal(parent context.Context, owner string
 	identity.RigHostID = launch.RigHostID
 	identity.SeatID = launch.SeatID
 	identity.AttachmentTarget = launch.AttachmentTarget
+	identity.TmuxServerFlag, identity.TmuxServerValue = launch.TmuxServerFlag, launch.TmuxServerValue
 	if launch.Provider == "agent-deck" {
 		identity.NativeSessionID, identity.NativeStateFile = launch.NativeSession, launch.NativeStateFile
 	}

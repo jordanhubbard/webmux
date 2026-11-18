@@ -25,7 +25,7 @@ export async function observeRigEnrollments(run: Run, seats: EnrollmentSeat[], f
   try {
     // This lineage join follows the qualified inventory's greatest-session-ULID
     // rule. Other builds degrade, independently of attach and native recovery.
-    if (run('rig', ['--version']).trim() !== '0.6.14 (df1c1517)') return result;
+    if (!['0.6.14 (df1c1517)', '0.7.18 (3bf87c62)'].includes(run('rig', ['--version']).trim())) return result;
     port = Number(/running on port (\d+)/.exec(run('rig', ['daemon', 'status']))?.[1]);
     if (!Number.isSafeInteger(port) || port < 1024 || port > 65535) return result;
   } catch { return result; }
