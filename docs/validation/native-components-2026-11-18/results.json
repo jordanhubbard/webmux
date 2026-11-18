@@ -1,0 +1,2276 @@
+{
+  "schema": 1,
+  "observedUTC": "2026-11-18T06:04:06.838869+00:00",
+  "issue": 91,
+  "parent": "447554456ff5e1dde3000b13c5d08e35bbfdee69",
+  "sourceSHA256": {
+    "scripts/native-components.py": "b156cde76c63af5ba8763663509cb962f329d08d8fe4a9167d4018eb971f5661",
+    "scripts/test_native_components.py": "aef8e24c6ab68befb8ba5e83097f3a26054d80f846b76d2dc29659bc8be3af35",
+    "scripts/test_native_components_live.py": "eec831138e3a898f4f3c1e710d03d869226fd91c314ab6fbd2a12a3acee8dad1",
+    ".github/workflows/ci.yml": "c0d6838aeb2821aa175acf1081cc152c74d074fae856f6c580bf6c17ef043992"
+  },
+  "portableControls": {
+    "macOS": {
+      "passed": 9,
+      "optionalLiveSkipped": 1
+    },
+    "linuxARM64": {
+      "passed": 9,
+      "skipped": 0
+    }
+  },
+  "linuxARM64": {
+    "summary": {
+      "passed": true,
+      "mappedELFFiles": 79,
+      "packageRecords": 76,
+      "plugins": [
+        "libguac-client-rdp.so.0.0.0"
+      ],
+      "versionProbeMatchesExecutable": true,
+      "duplicateOutputRefused": true,
+      "differentPathToolRefused": true,
+      "scope": "Private guacd/plugin inventory only; not functional RDP, authentication, vulnerability or complete-deployment acceptance",
+      "ownedParentExited": true,
+      "ownedListenerStopped": true
+    },
+    "uniqueBinaryPackages": 69,
+    "processVersionProbe": {
+      "state": "ok",
+      "exit": 0,
+      "output": "Guacamole proxy daemon (guacd) version 1.6.0\n",
+      "truncated": false
+    },
+    "mismatchedToolProcessVersionProbe": {
+      "state": "not_observed",
+      "reason": "PATH/selected guacd tool does not match this process image"
+    },
+    "components": [
+      {
+        "filename": "libguac-client-rdp.so.0.0.0",
+        "sha256": "4b5d0afb56a71fc4a39cdc49939c1d79ac7cbb5762aba5e7766d3ab7f7c28204",
+        "package": {
+          "state": "unowned",
+          "reason": "No exact dpkg path owner; retain source-build provenance separately"
+        }
+      },
+      {
+        "filename": "libguac.so.25.0.0",
+        "sha256": "7a80806983fac63190ff58367a3b84129d90fd1d9a329f4aa2187f8a88cabc11",
+        "package": {
+          "state": "unowned",
+          "reason": "No exact dpkg path owner; retain source-build provenance separately"
+        }
+      },
+      {
+        "filename": "guacd",
+        "sha256": "3b47a92a8d4fda7a8dd12b152981572cf885db2be0073c4cf9dffcb0b11463c3",
+        "package": {
+          "state": "unowned",
+          "reason": "No exact dpkg path owner; retain source-build provenance separately"
+        }
+      },
+      {
+        "filename": "ld-linux-aarch64.so.1",
+        "sha256": "3213b75b3e2a415ab89f3b73644d6c12cdecc6f04269c09281137b9aaaa0cbc4",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libc6:arm64",
+              "version": "2.35-0ubuntu3.18",
+              "architecture": "arm64",
+              "sourcePackage": "glibc",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libc6/copyright",
+                "sha256": "d3c95b56fa33e28b57860580f0baf4e4f4de2a268a2b80f1d031a5191bade265",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libFLAC.so.8.3.0",
+        "sha256": "7e9743bd6a8dc90f8fa033e9cccbd218280beb0e0b30baa59212301929cf877c",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libflac8:arm64",
+              "version": "1.3.3-2ubuntu0.2",
+              "architecture": "arm64",
+              "sourcePackage": "flac",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libflac8/copyright",
+                "sha256": "388966ff54c5ae54111132b6d4066e95c1b16d32909a5d932be80e58fc1666ad",
+                "declaredLicenseFields": [
+                  "BSD-3-clause",
+                  "GFDL-1.1+",
+                  "GPL-2+",
+                  "GPL-2+ or LGPL-2.1+",
+                  "ISC",
+                  "LGPL-2+",
+                  "LGPL-2.1+",
+                  "Public-domain"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libX11-xcb.so.1.0.0",
+        "sha256": "2d3d8519fee8310d52037497c4aa90a3c8271a5cf8166f9228f397031defb111",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libx11-xcb1:arm64",
+              "version": "2:1.7.5-1ubuntu0.4",
+              "architecture": "arm64",
+              "sourcePackage": "libx11",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libx11-xcb1/copyright",
+                "sha256": "0b380a7fd5b2228f26e9585e56f14812efd3350f3df307507d2bc055dfd8de3e",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libX11.so.6.4.0",
+        "sha256": "8535eea54929c6f7879831e6f96a14dd62b3f9984104a3d1246ced2b27cbd8bc",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libx11-6:arm64",
+              "version": "2:1.7.5-1ubuntu0.4",
+              "architecture": "arm64",
+              "sourcePackage": "libx11",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libx11-6/copyright",
+                "sha256": "0b380a7fd5b2228f26e9585e56f14812efd3350f3df307507d2bc055dfd8de3e",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libXau.so.6.0.0",
+        "sha256": "2f3da902398675fd45293e2a28a028bbfd6b33d3f19fcad7d594143f15b7fd39",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libxau6:arm64",
+              "version": "1:1.0.9-1build5",
+              "architecture": "arm64",
+              "sourcePackage": "libxau",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libxau6/copyright",
+                "sha256": "118dd263a7b91c8f21c489f949bf13281dff9e766deea92b829dac4dce66601a",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libXdmcp.so.6.0.0",
+        "sha256": "78ba0f2dd443f0204adc701df9327e4a6ea1c61442f08025155f27a5d1fd16e8",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libxdmcp6:arm64",
+              "version": "1:1.1.3-0ubuntu5",
+              "architecture": "arm64",
+              "sourcePackage": "libxdmcp",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libxdmcp6/copyright",
+                "sha256": "1bcbb50f8603fe8b86d330bfa460b772ea04fbd3c70e4499f0768b5340b9fd6e",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libXext.so.6.4.0",
+        "sha256": "51a696f3cd1a9e1ef060fb7a0a1f72d2d81328ab7c987c9ae05c17d2ce8eaebc",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libxext6:arm64",
+              "version": "2:1.3.4-1build1",
+              "architecture": "arm64",
+              "sourcePackage": "libxext",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libxext6/copyright",
+                "sha256": "bc57e445ca1d9fe082c8d54189dd411ff26caa8552c9c63d44ea06a982f32124",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libXrender.so.1.3.0",
+        "sha256": "54c7064bb91b4da63688b6f7952faeac7165e3bfd5079f989fa1f4f13d921435",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libxrender1:arm64",
+              "version": "1:0.9.10-1build4",
+              "architecture": "arm64",
+              "sourcePackage": "libxrender",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libxrender1/copyright",
+                "sha256": "ed2a78123a5076b4f11da38cb1ffb85b5cb9fdc26b5746c517b1d7e7a9029704",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libapparmor.so.1.8.2",
+        "sha256": "a346ae202420d8f23f048ba8f1bfecddd47eb23ddf5cc023e0b22484ceb50c7b",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libapparmor1:arm64",
+              "version": "3.0.4-2ubuntu2.5",
+              "architecture": "arm64",
+              "sourcePackage": "apparmor",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libapparmor1/copyright",
+                "sha256": "52b7cf37d674ca47296cf6270a95ecda0ecbef976cc090d702acbd741e36b3b4",
+                "declaredLicenseFields": [
+                  "BSD-3-clause",
+                  "BSD-3-clause or GPL-2+",
+                  "GPL-2",
+                  "GPL-2+",
+                  "LGPL-2.1+"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libasound.so.2.0.0",
+        "sha256": "117f4e42f921a6a10e8fdf6d422f0ad6a35a4b92e378ea0ffa215f08e7aeb5b2",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libasound2:arm64",
+              "version": "1.2.6.1-1ubuntu1.2",
+              "architecture": "arm64",
+              "sourcePackage": "alsa-lib",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libasound2/copyright",
+                "sha256": "1e389062b3d44557d569d488e6075b162efd946e4bced56d20cbf62f9f53d7f6",
+                "declaredLicenseFields": [
+                  "LPGL-2.1+"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libasyncns.so.0.3.1",
+        "sha256": "3bc90377ce38f481c49ba0233ce17273380991dbc9680b1353b8ead26a8f0f30",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libasyncns0:arm64",
+              "version": "0.8-6build2",
+              "architecture": "arm64",
+              "sourcePackage": "libasyncns",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libasyncns0/copyright",
+                "sha256": "26f98be71539b8f1038fbaf51551598d0e2eb16f98db9a62094fc85db5f1c25d",
+                "declaredLicenseFields": [
+                  "LGPL-2.1+"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libavahi-client.so.3.2.9",
+        "sha256": "980f91188701bc3248f5cb468ca8dfcbdd90dd6ecc39e98d14e7a664dda5fd03",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libavahi-client3:arm64",
+              "version": "0.8-5ubuntu5.5",
+              "architecture": "arm64",
+              "sourcePackage": "avahi",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libavahi-client3/copyright",
+                "sha256": "d604305bf515c09da9bb985e08fa872d8e5e15e26c08dddb9367cb31a0c1c6bd",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libavahi-common.so.3.5.4",
+        "sha256": "9bf8d3bdd5e92d534a46caafe2bb3acf77fb0a3805ac0a0d2549b9efa2eaf3aa",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libavahi-common3:arm64",
+              "version": "0.8-5ubuntu5.5",
+              "architecture": "arm64",
+              "sourcePackage": "avahi",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libavahi-common3/copyright",
+                "sha256": "d604305bf515c09da9bb985e08fa872d8e5e15e26c08dddb9367cb31a0c1c6bd",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libbrotlicommon.so.1.0.9",
+        "sha256": "a36835a55afc2e6af432fc2237930cfb9e949029d8d8d6c0d3d4a8becd057904",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libbrotli1:arm64",
+              "version": "1.0.9-2ubuntu0.1",
+              "architecture": "arm64",
+              "sourcePackage": "brotli",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libbrotli1/copyright",
+                "sha256": "24a64e5bb83d0960d1835696a1e23c0896ad6055b0ca47c66ab0eb9a766324b1",
+                "declaredLicenseFields": [
+                  "MIT"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libbrotlidec.so.1.0.9",
+        "sha256": "4465b9ae130d075e7a592056f20ba7bf8f93e6bbb20b68f1da3c45244032a7be",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libbrotli1:arm64",
+              "version": "1.0.9-2ubuntu0.1",
+              "architecture": "arm64",
+              "sourcePackage": "brotli",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libbrotli1/copyright",
+                "sha256": "24a64e5bb83d0960d1835696a1e23c0896ad6055b0ca47c66ab0eb9a766324b1",
+                "declaredLicenseFields": [
+                  "MIT"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libbsd.so.0.11.5",
+        "sha256": "71d59d1c5daf452f3b8c44c7000507aa2e0dbc1d48e354781d4d25be041c716b",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libbsd0:arm64",
+              "version": "0.11.5-1",
+              "architecture": "arm64",
+              "sourcePackage": "libbsd",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libbsd0/copyright",
+                "sha256": "3761714adb9c45fa588b77b372d6e75dcc9e6822cc2d6baa712007241aec714e",
+                "declaredLicenseFields": [
+                  "BSD-2-clause",
+                  "BSD-2-clause-NetBSD",
+                  "BSD-2-clause-author",
+                  "BSD-2-clause-verbatim",
+                  "BSD-3-clause",
+                  "BSD-3-clause-John-Birrell",
+                  "BSD-3-clause-Regents",
+                  "BSD-3-clause-Regents and BSD-2-clause-NetBSD",
+                  "BSD-3-clause-author",
+                  "BSD-4-clause-Christopher-G-Demetriou",
+                  "BSD-4-clause-Niels-Provos",
+                  "BSD-5-clause-Peter-Wemm",
+                  "Beerware",
+                  "Expat",
+                  "ISC",
+                  "ISC-Original",
+                  "public-domain"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libc.so.6",
+        "sha256": "00da885fa75663f9c2463eac537c041b71716674cab7d7e8d5ab9b9d1f93b636",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libc6:arm64",
+              "version": "2.35-0ubuntu3.18",
+              "architecture": "arm64",
+              "sourcePackage": "glibc",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libc6/copyright",
+                "sha256": "d3c95b56fa33e28b57860580f0baf4e4f4de2a268a2b80f1d031a5191bade265",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libcairo.so.2.11600.0",
+        "sha256": "32c533acc54cd7ea0e108445d245df19e7ab67baec683fa4563086ff4bb48b61",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libcairo2:arm64",
+              "version": "1.16.0-5ubuntu2.1",
+              "architecture": "arm64",
+              "sourcePackage": "cairo",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libcairo2/copyright",
+                "sha256": "e4dfd72c31eeb9054ea6fcbf7838cc3eb8058ffbc1b297811540cf60be070196",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libcap.so.2.44",
+        "sha256": "8511f469ce6a8fbe33fe9df4e425b13e965c1e1b6c3b73a984941dd367e8db6a",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libcap2:arm64",
+              "version": "1:2.44-1ubuntu0.22.04.3",
+              "architecture": "arm64",
+              "sourcePackage": "libcap2",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libcap2/copyright",
+                "sha256": "a906104348c333a96d63c3573e6eb9c2cc3b410d045f3ad512dcafa4b3e4cff3",
+                "declaredLicenseFields": [
+                  "BSD-3-clause",
+                  "BSD-3-clause or GPL-2",
+                  "BSD-3-clause or GPL-2+",
+                  "GPL-2",
+                  "GPL-2+"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libcom_err.so.2.1",
+        "sha256": "d1a4ee523c967c1d9280b5909b42db2b0494e72529a608971968d45ec397e390",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libcom-err2:arm64",
+              "version": "1.46.5-2ubuntu1.2",
+              "architecture": "arm64",
+              "sourcePackage": "e2fsprogs",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libcom-err2/copyright",
+                "sha256": "9e3a4384b6d8d2358d44103f62bcd948328b3f8a63a1a6baa66abeb43302d581",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libcrypto.so.3",
+        "sha256": "6df6c9ca3eb2a0ecded968b7aafb9e97d0942ffeebdcf916a35d3be2bf6a5810",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libssl3:arm64",
+              "version": "3.0.2-0ubuntu1.30",
+              "architecture": "arm64",
+              "sourcePackage": "openssl",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libssl3/copyright",
+                "sha256": "6a7da622fe0637a334d2a8fc470852d2ffb77d9a2b2f930f854e32a41ad6ef35",
+                "declaredLicenseFields": [
+                  "Apache-2.0",
+                  "Artistic",
+                  "Artistic or GPL-1+",
+                  "GPL-1+"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libcups.so.2",
+        "sha256": "59c4d74b74e65a243066c0a2f3e92787b18632b05195926178c3bd73c3cfd0ec",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libcups2:arm64",
+              "version": "2.4.1op1-1ubuntu4.21",
+              "architecture": "arm64",
+              "sourcePackage": "cups",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libcups2/copyright",
+                "sha256": "9813b915f19c2e0a87fefcbd5a88cdef15be9c4382294f94a6ff3a5ebf873a6e",
+                "declaredLicenseFields": [
+                  "Apache-2.0",
+                  "Apache-2.0-with-GPL2-LGPL2-Exception",
+                  "Apache-2.0-with-GPL2-LGPL2-Exception or BSD-2-clause",
+                  "BSD-2-Clause",
+                  "FSFUL",
+                  "Zlib"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libdbus-1.so.3.19.13",
+        "sha256": "60318833358e86e5ab0069b01002f66c7258e6aef787fdbeb4394a3af3ab7a6f",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libdbus-1-3:arm64",
+              "version": "1.12.20-2ubuntu4.1",
+              "architecture": "arm64",
+              "sourcePackage": "dbus",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libdbus-1-3/copyright",
+                "sha256": "151007a06fd9409b5fd1d743ce5749a1bbd94def4caee0e2bedf33318058a1a9",
+                "declaredLicenseFields": [
+                  "AFL-2.1",
+                  "BSD-3-clause",
+                  "BSD-3-clause-generic",
+                  "Expat",
+                  "GPL-2+",
+                  "GPL-2+ or AFL-2.1",
+                  "GPL-2+ or AFL-2.1, and Tcl-BSDish",
+                  "Tcl-BSDish",
+                  "g10-permissive"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libexpat.so.1.8.7",
+        "sha256": "96c872449f41ac16cf6c974ea93e053713b41ea103165cb2c99bb0ebdc2e94be",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libexpat1:arm64",
+              "version": "2.4.7-1ubuntu0.9",
+              "architecture": "arm64",
+              "sourcePackage": "expat",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libexpat1/copyright",
+                "sha256": "60919fe1a156395ff14511bb6ff79756c50ade2fff59ac60c9bae1d8a7fe6292",
+                "declaredLicenseFields": [
+                  "MIT"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libffi.so.8.1.0",
+        "sha256": "b0c75d5a51c7ee793f7b8ac587a32fcf6d7c6ae08864581b6577478f75ff61f0",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libffi8:arm64",
+              "version": "3.4.2-4",
+              "architecture": "arm64",
+              "sourcePackage": "libffi",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libffi8/copyright",
+                "sha256": "7258c8acc378030d8dbe1fcdf394e915769fa31dcbaf3d2991d9a79891f3bcdc",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libfontconfig.so.1.12.0",
+        "sha256": "c163c9d320099602fc847e3c35d10c52b10b98db45ae910f743894e44f4539ee",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libfontconfig1:arm64",
+              "version": "2.13.1-4.2ubuntu5",
+              "architecture": "arm64",
+              "sourcePackage": "fontconfig",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libfontconfig1/copyright",
+                "sha256": "b215a61cdd3e62b5b17cc28b1852c78acb3dd38be0fb30706f7efc050dba91db",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libfreerdp-client2.so.2.6.1",
+        "sha256": "4e6818c35065016ad6fa49c487c998771339b4b99a3b76d101d72fb73cc2ae68",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libfreerdp-client2-2:arm64",
+              "version": "2.6.1+dfsg1-3ubuntu2.11",
+              "architecture": "arm64",
+              "sourcePackage": "freerdp2",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libfreerdp-client2-2/copyright",
+                "sha256": "15dc5502214e3e42dcf661593bc4b321c1adf5237cdb32951b2e9dbab6f300ed",
+                "declaredLicenseFields": [
+                  "Apache-2.0",
+                  "Apache-2.0 or BSD-2-clause or BSD-3-clause or BSL-1.0 or Expat or ISC or X11 or zlib/libpng or public-domain",
+                  "BSD-2-clause",
+                  "BSD-3-clause",
+                  "BSL-1.0",
+                  "Expat",
+                  "FMILIB",
+                  "ISC",
+                  "LGPL-2.1+",
+                  "NTP~legal-disclaimer",
+                  "X11",
+                  "public-domain",
+                  "zlib/libpng"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libfreerdp2.so.2.6.1",
+        "sha256": "5e2c6c68cbd3d1471b4178e4e5e1dfd7dbaaf622404e2bfd52b6f810979928d4",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libfreerdp2-2:arm64",
+              "version": "2.6.1+dfsg1-3ubuntu2.11",
+              "architecture": "arm64",
+              "sourcePackage": "freerdp2",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libfreerdp2-2/copyright",
+                "sha256": "15dc5502214e3e42dcf661593bc4b321c1adf5237cdb32951b2e9dbab6f300ed",
+                "declaredLicenseFields": [
+                  "Apache-2.0",
+                  "Apache-2.0 or BSD-2-clause or BSD-3-clause or BSL-1.0 or Expat or ISC or X11 or zlib/libpng or public-domain",
+                  "BSD-2-clause",
+                  "BSD-3-clause",
+                  "BSL-1.0",
+                  "Expat",
+                  "FMILIB",
+                  "ISC",
+                  "LGPL-2.1+",
+                  "NTP~legal-disclaimer",
+                  "X11",
+                  "public-domain",
+                  "zlib/libpng"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libfreetype.so.6.18.1",
+        "sha256": "f03196eee23e71f5a4b45e4f1881c89aa28fbaeaeb8de19185703ad05e54098f",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libfreetype6:arm64",
+              "version": "2.11.1+dfsg-1ubuntu0.4",
+              "architecture": "arm64",
+              "sourcePackage": "freetype",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libfreetype6/copyright",
+                "sha256": "992b869abf2c114288dafb51c37f19c0afc3455477b9d589371d45ad214a8b07",
+                "declaredLicenseFields": [
+                  "BSD-3-Clause",
+                  "BSL-1.0",
+                  "FSFAP",
+                  "FTL",
+                  "FTL and MIT",
+                  "GPL-2+",
+                  "GPL-3+",
+                  "MIT",
+                  "OpenGroup-BSD-like",
+                  "Public-Domain",
+                  "Zlib"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libgcc_s.so.1",
+        "sha256": "d4bbb45d5d80f4b15d4bf50bfc8ded0a26a44c638859df97be40a6339adb3485",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libgcc-s1:arm64",
+              "version": "12.3.0-1ubuntu1~22.04.3",
+              "architecture": "arm64",
+              "sourcePackage": "gcc-12",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libgcc-s1/copyright",
+                "sha256": "da8191658b3452ce9caf31638ba61dab31a38c619fa39df119812e050f592fd3",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libgcrypt.so.20.3.4",
+        "sha256": "9007b17d837ca48565070b64f3e5236714617a9d7e89223774a39fdac06b134d",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libgcrypt20:arm64",
+              "version": "1.9.4-3ubuntu3.3",
+              "architecture": "arm64",
+              "sourcePackage": "libgcrypt20",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libgcrypt20/copyright",
+                "sha256": "8bf0ea526b7b497bf7b31842e799c37caa69090cc53fd080c76403cc8b79f659",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libgmp.so.10.4.1",
+        "sha256": "6d289461cd290a243e1a48cb98d8a83740124fc93c98df0a144b04ed753afb13",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libgmp10:arm64",
+              "version": "2:6.2.1+dfsg-3ubuntu1",
+              "architecture": "arm64",
+              "sourcePackage": "gmp",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libgmp10/copyright",
+                "sha256": "f73f781beb9f85b3f921f9bf540fc89d6eff9e20689ef9323ce510d077a30878",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libgnutls.so.30.31.0",
+        "sha256": "3a8b752e1d2b0a49f723d088895a2bbed5166157ee42affeef61e26f5a037ed4",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libgnutls30:arm64",
+              "version": "3.7.3-4ubuntu1.9",
+              "architecture": "arm64",
+              "sourcePackage": "gnutls28",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libgnutls30/copyright",
+                "sha256": "c2a08ee31ea9f0a4fc0f4d590c5481f5b7fc2d325b04ae74c719fa7894dcbdd7",
+                "declaredLicenseFields": [
+                  "Apache-2.0",
+                  "BSD-3-Clause",
+                  "CC0 license",
+                  "Expat",
+                  "GPLv3+",
+                  "LGPLv2.1+",
+                  "LGPLv3+_or_GPLv2+",
+                  "The main library is licensed under GNU Lesser"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libgpg-error.so.0.32.1",
+        "sha256": "06777d614f3789db885c7081d41fe6efa5ad4864fda3d5b44b627b7a6df67413",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libgpg-error0:arm64",
+              "version": "1.43-3",
+              "architecture": "arm64",
+              "sourcePackage": "libgpg-error",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libgpg-error0/copyright",
+                "sha256": "ef74578dd392759954c80d4ad3986273d05d8c2098b2e9ee18980f88e0ad3342",
+                "declaredLicenseFields": [
+                  "BSD-3-clause",
+                  "GPL-3+",
+                  "LGPL-2.1+",
+                  "LGPL-2.1+ or BSD-3-clause",
+                  "g10-permissive"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libgssapi_krb5.so.2.2",
+        "sha256": "dca937a5d36a79bd16e058bb4a828d5b54875485e4c57bfdcfccb5f98b942a8b",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libgssapi-krb5-2:arm64",
+              "version": "1.19.2-2ubuntu0.10",
+              "architecture": "arm64",
+              "sourcePackage": "krb5",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libgssapi-krb5-2/copyright",
+                "sha256": "4a2d321ab57260e8de4b67bde8cff76c07d28be69c2d8b22dfc2bfa42f5c41b9",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libhogweed.so.6.4",
+        "sha256": "3b52125644f4ce281b8a47c3afccb8e42b2e104c49fa5be315e5b47f3bbf895a",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libhogweed6:arm64",
+              "version": "3.7.3-1build2",
+              "architecture": "arm64",
+              "sourcePackage": "nettle",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libhogweed6/copyright",
+                "sha256": "d8b51ce04d337e49df2f6258a5c8558f3080ff2cf629deb9f07c0361d1757e7b",
+                "declaredLicenseFields": [
+                  "Expat",
+                  "GAP",
+                  "GPL-2",
+                  "GPL-2+",
+                  "GPL-3+",
+                  "GPL-3+ with Autoconf exception",
+                  "LGPL-2+",
+                  "LGPL-3+",
+                  "LGPL-3+ or GPL-2+",
+                  "public-domain"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libicudata.so.70.1",
+        "sha256": "727b7186c2197c7f354b0131792a37922b52760e6bb1d6fbe765c5357b2faf31",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libicu70:arm64",
+              "version": "70.1-2",
+              "architecture": "arm64",
+              "sourcePackage": "icu",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libicu70/copyright",
+                "sha256": "170fd65a4a836530290d4b3f7572cafcf1c4d66e7357ae42d76861bbbecd4767",
+                "declaredLicenseFields": [
+                  "GPL-3",
+                  "MIT"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libicuuc.so.70.1",
+        "sha256": "6ab538560fba1f82e80459e3d5eac8ba258ac18fa29f974ac1e2a532db150488",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libicu70:arm64",
+              "version": "70.1-2",
+              "architecture": "arm64",
+              "sourcePackage": "icu",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libicu70/copyright",
+                "sha256": "170fd65a4a836530290d4b3f7572cafcf1c4d66e7357ae42d76861bbbecd4767",
+                "declaredLicenseFields": [
+                  "GPL-3",
+                  "MIT"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libidn2.so.0.3.7",
+        "sha256": "9e252f7bd13e01998af4c0c46d5a7f0262e7062856e84e53151adb423875eaa9",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libidn2-0:arm64",
+              "version": "2.3.2-2build1",
+              "architecture": "arm64",
+              "sourcePackage": "libidn2",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libidn2-0/copyright",
+                "sha256": "41702469f28e8ff406345e3d1dd0c741f11bdfca319264f67036efd6aaa79e4b",
+                "declaredLicenseFields": [
+                  "GPL-2+",
+                  "GPL-3+",
+                  "LGPL-3+",
+                  "LGPL-3+ or GPL-2+",
+                  "Unicode"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libjpeg.so.8.2.2",
+        "sha256": "bd56375d246a0e3b8807c34dd4ed8f65bfbb6fea014220e62d2befa6f92fb9da",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libjpeg-turbo8:arm64",
+              "version": "2.1.2-0ubuntu1",
+              "architecture": "arm64",
+              "sourcePackage": "libjpeg-turbo",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libjpeg-turbo8/copyright",
+                "sha256": "193468d9eb043a180f6f9e3386f7205104908dcb8525ad39c8236990dfd452ef",
+                "declaredLicenseFields": [
+                  "JPEG",
+                  "LGPL-2.1"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libk5crypto.so.3.1",
+        "sha256": "e4a9a2b1c7e9ada56a699a3d4cd107d56ab0b1ddd0aa6dad177ab136c1ca9eff",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libk5crypto3:arm64",
+              "version": "1.19.2-2ubuntu0.10",
+              "architecture": "arm64",
+              "sourcePackage": "krb5",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libk5crypto3/copyright",
+                "sha256": "4a2d321ab57260e8de4b67bde8cff76c07d28be69c2d8b22dfc2bfa42f5c41b9",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libkeyutils.so.1.9",
+        "sha256": "a2c33366483cb3ef7e0d3e14fb9314a58c067160a1ef1d3796d240bae0586126",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libkeyutils1:arm64",
+              "version": "1.6.1-2ubuntu3",
+              "architecture": "arm64",
+              "sourcePackage": "keyutils",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libkeyutils1/copyright",
+                "sha256": "6ab5c541723d8211cab7ebc1643d53aa51c4863c1c838e4625d797ece9472ee8",
+                "declaredLicenseFields": [
+                  "GPL-2+",
+                  "LGPL-2+"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libkrb5.so.3.3",
+        "sha256": "b55945ce02e2461dd5be870b66428767ef72931ad71655043b141e09a4f639df",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libkrb5-3:arm64",
+              "version": "1.19.2-2ubuntu0.10",
+              "architecture": "arm64",
+              "sourcePackage": "krb5",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libkrb5-3/copyright",
+                "sha256": "4a2d321ab57260e8de4b67bde8cff76c07d28be69c2d8b22dfc2bfa42f5c41b9",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libkrb5support.so.0.1",
+        "sha256": "a88f80a18c97db47975d871bb520bdba73e3a2bbb274bd521d228b8152faf299",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libkrb5support0:arm64",
+              "version": "1.19.2-2ubuntu0.10",
+              "architecture": "arm64",
+              "sourcePackage": "krb5",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libkrb5support0/copyright",
+                "sha256": "4a2d321ab57260e8de4b67bde8cff76c07d28be69c2d8b22dfc2bfa42f5c41b9",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "liblz4.so.1.9.3",
+        "sha256": "72a50edc3a3b9b5879b50d708ab36bc0d29e17522f7f50ff0e5328386509587c",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "liblz4-1:arm64",
+              "version": "1.9.3-2build2",
+              "architecture": "arm64",
+              "sourcePackage": "lz4",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/liblz4-1/copyright",
+                "sha256": "a82c5d50439c6d9f32b874dbc75ae5292ba5a3e50318bed80e82a8f5254689ca",
+                "declaredLicenseFields": [
+                  "BSD-2-clause",
+                  "GPL-2",
+                  "GPL-2+"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "liblzma.so.5.2.5",
+        "sha256": "56469ac7786588ebdb34f803472b8d2eb8193c6a8da6f494ec8c2d5cddf34efb",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "liblzma5:arm64",
+              "version": "5.2.5-2ubuntu1.2",
+              "architecture": "arm64",
+              "sourcePackage": "xz-utils",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/liblzma5/copyright",
+                "sha256": "a2dc8fac0f496e1c58aff67018cf0c6b88336316afa5642f9335b71642e28aa8",
+                "declaredLicenseFields": [
+                  "Autoconf",
+                  "GPL-2",
+                  "GPL-2+",
+                  "LGPL-2.1+",
+                  "PD",
+                  "PD-debian",
+                  "config-h",
+                  "noderivs",
+                  "none",
+                  "permissive-fsf",
+                  "permissive-nowarranty",
+                  "probably-PD"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libm.so.6",
+        "sha256": "a3f650e70ff4a897ba4b2c1e18ce4bed425561eb4f03c1ef7f3ddc9131d7e879",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libc6:arm64",
+              "version": "2.35-0ubuntu3.18",
+              "architecture": "arm64",
+              "sourcePackage": "glibc",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libc6/copyright",
+                "sha256": "d3c95b56fa33e28b57860580f0baf4e4f4de2a268a2b80f1d031a5191bade265",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libmd.so.0.0.5",
+        "sha256": "852d6d5ee1fe6f375911baa68cdab8c98c4cc51c816eae8790c2f6830e297187",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libmd0:arm64",
+              "version": "1.0.4-1build1",
+              "architecture": "arm64",
+              "sourcePackage": "libmd",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libmd0/copyright",
+                "sha256": "4365ef6255ad553fce69dd4bc0e093472c5d0e41b8ea493a545cc926ce171aa6",
+                "declaredLicenseFields": [
+                  "BSD-2-clause",
+                  "BSD-2-clause-NetBSD",
+                  "BSD-3-clause",
+                  "BSD-3-clause-Aaron-D-Gifford",
+                  "Beerware",
+                  "ISC",
+                  "public-domain-md4",
+                  "public-domain-md5",
+                  "public-domain-sha1"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libnettle.so.8.4",
+        "sha256": "18a17fdfc5d324225fe220120a227e3f1cc5c5868520463a7e043110a663601b",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libnettle8:arm64",
+              "version": "3.7.3-1build2",
+              "architecture": "arm64",
+              "sourcePackage": "nettle",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libnettle8/copyright",
+                "sha256": "d8b51ce04d337e49df2f6258a5c8558f3080ff2cf629deb9f07c0361d1757e7b",
+                "declaredLicenseFields": [
+                  "Expat",
+                  "GAP",
+                  "GPL-2",
+                  "GPL-2+",
+                  "GPL-3+",
+                  "GPL-3+ with Autoconf exception",
+                  "LGPL-2+",
+                  "LGPL-3+",
+                  "LGPL-3+ or GPL-2+",
+                  "public-domain"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libogg.so.0.8.5",
+        "sha256": "9fd67c9e20376f8789c94803e268e79f193bdd9e32d3f80b391f717085e1e4b1",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libogg0:arm64",
+              "version": "1.3.5-0ubuntu3",
+              "architecture": "arm64",
+              "sourcePackage": "libogg",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libogg0/copyright",
+                "sha256": "8d1a49b03fb9d41209aa10a8ea883ab01283004bc47f2e9737097565cb451da1",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libopus.so.0.8.0",
+        "sha256": "411d7d9e17e94a735f3610a68c02c94cf0587fe3c2d5b9e1503a1aba61808646",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libopus0:arm64",
+              "version": "1.3.1-0.1build2",
+              "architecture": "arm64",
+              "sourcePackage": "opus",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libopus0/copyright",
+                "sha256": "f32791ccd72618ea616193ea2cd0e79307f0f6ffe1613975be1cbd3337ffe5c4",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libp11-kit.so.0.3.0",
+        "sha256": "e8dcae3c055bdc8ec43b0511be2fa9dd5e291a1deb7509a4e3b6928462f4e03c",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libp11-kit0:arm64",
+              "version": "0.24.0-6ubuntu0.1",
+              "architecture": "arm64",
+              "sourcePackage": "p11-kit",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libp11-kit0/copyright",
+                "sha256": "b19d4f3a62c6257c770607ba0e872ac21ba22806710ede0384c622882f84d61b",
+                "declaredLicenseFields": [
+                  "Apache-2.0",
+                  "BSD-3-Clause",
+                  "ISC",
+                  "ISC+IBM",
+                  "LGPL-2.1+",
+                  "permissive-like-automake-output",
+                  "same-as-rest-of-p11kit"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libpixman-1.so.0.40.0",
+        "sha256": "e409a9c1114f416446b02d3b6f2091cf2591bbbab81bd02e5be7df1f19e75a4f",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libpixman-1-0:arm64",
+              "version": "0.40.0-1ubuntu0.22.04.1",
+              "architecture": "arm64",
+              "sourcePackage": "pixman",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libpixman-1-0/copyright",
+                "sha256": "1b3fb5690861e15ca4fd6640fd4def4b2576617942eec04b6fcb7d8bc6c4c9da",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libpng16.so.16.37.0",
+        "sha256": "187124a7f617402e50462e6b72e97f02e42f8f24f209ee8183ee7c33b66b5584",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libpng16-16:arm64",
+              "version": "1.6.37-3ubuntu0.7",
+              "architecture": "arm64",
+              "sourcePackage": "libpng1.6",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libpng16-16/copyright",
+                "sha256": "b2d88c45221e2016a5a0bb98406b45faf911f1aff87242eec12af05abae1de0a",
+                "declaredLicenseFields": [
+                  "Apache-2.0",
+                  "BSD-3-clause",
+                  "BSD-like-with-advertising-clause",
+                  "GPL-2+",
+                  "GPL-2+ or BSD-like-with-advertising-clause",
+                  "expat",
+                  "libpng",
+                  "libpng OR Apache-2.0 OR BSD-3-clause"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libpulse.so.0.24.1",
+        "sha256": "708c8d654810c6e5eb3afe4baa44df8918c2ace0e808d932272e5f5877e1ccb7",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libpulse0:arm64",
+              "version": "1:15.99.1+dfsg1-1ubuntu2.2",
+              "architecture": "arm64",
+              "sourcePackage": "pulseaudio",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libpulse0/copyright",
+                "sha256": "aff3f1d729168de06e34d940dc493cc305a6e4a6278f1ac38ee52ec0f69e342c",
+                "declaredLicenseFields": [
+                  "GPL-2+",
+                  "LGPL-2+",
+                  "LGPL-2.1+",
+                  "other"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libresolv.so.2",
+        "sha256": "95d35eea7a0039f3534ee02501fe1d464cd99f2c3b87372ec3e6d8b734c0fbbe",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libc6:arm64",
+              "version": "2.35-0ubuntu3.18",
+              "architecture": "arm64",
+              "sourcePackage": "glibc",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libc6/copyright",
+                "sha256": "d3c95b56fa33e28b57860580f0baf4e4f4de2a268a2b80f1d031a5191bade265",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libsndfile.so.1.0.31",
+        "sha256": "13aae3c7385e56be8bbec3c91acc815512c94ca82f6ff5a07bc3560ee63dbf6f",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libsndfile1:arm64",
+              "version": "1.0.31-2ubuntu0.2",
+              "architecture": "arm64",
+              "sourcePackage": "libsndfile",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libsndfile1/copyright",
+                "sha256": "7674ac4776930b305e581c16c1249f51911b156619045ae82ab4e9c89d912b95",
+                "declaredLicenseFields": [
+                  "Apache-2.0",
+                  "BSD-3-clause",
+                  "BSD-3-clause and LGPL-2.1+",
+                  "FSFAP",
+                  "GPL-2+",
+                  "LGPL-2+",
+                  "LGPL-2.1+",
+                  "gsm",
+                  "sun"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libssl.so.3",
+        "sha256": "f901613b60ff2d9e1e486c8ac3404467f90b1708502cda3fe7d082a1570723cc",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libssl3:arm64",
+              "version": "3.0.2-0ubuntu1.30",
+              "architecture": "arm64",
+              "sourcePackage": "openssl",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libssl3/copyright",
+                "sha256": "6a7da622fe0637a334d2a8fc470852d2ffb77d9a2b2f930f854e32a41ad6ef35",
+                "declaredLicenseFields": [
+                  "Apache-2.0",
+                  "Artistic",
+                  "Artistic or GPL-1+",
+                  "GPL-1+"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libstdc++.so.6.0.30",
+        "sha256": "03efc8de2eb1f016fa59a937b8858c48ad893558737ef61fe16bbb622283c759",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libstdc++6:arm64",
+              "version": "12.3.0-1ubuntu1~22.04.3",
+              "architecture": "arm64",
+              "sourcePackage": "gcc-12",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libstdc++6/copyright",
+                "sha256": "da8191658b3452ce9caf31638ba61dab31a38c619fa39df119812e050f592fd3",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libsystemd.so.0.32.0",
+        "sha256": "9a211ae57cf2e40753c89a472b244f7eb12f342a7f3e15782068384d96ef0155",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libsystemd0:arm64",
+              "version": "249.11-0ubuntu3.23",
+              "architecture": "arm64",
+              "sourcePackage": "systemd",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libsystemd0/copyright",
+                "sha256": "8541750aba2193c885f0c77df20870ef454c2ae8f905077105922bf3130108ad",
+                "declaredLicenseFields": [
+                  "CC0-1.0",
+                  "Expat",
+                  "GPL-2",
+                  "GPL-2 with Linux-syscall-note exception",
+                  "GPL-2+",
+                  "LGPL-2.1+",
+                  "public-domain"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libtasn1.so.6.6.2",
+        "sha256": "2ae6a893bba8cda48e489ebf5ff352aab4252175def78927f62418315ebcff05",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libtasn1-6:arm64",
+              "version": "4.18.0-4ubuntu0.2",
+              "architecture": "arm64",
+              "sourcePackage": "libtasn1-6",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libtasn1-6/copyright",
+                "sha256": "88a94e40a34bb28145805747cad4018e7eb976b5fd0bf2329dedf90088ebc6e4",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libudev.so.1.7.2",
+        "sha256": "a1923d79bff7cd955cf779bbe99cf33983f928ec9ef283e5e5debb99a4f37963",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libudev1:arm64",
+              "version": "249.11-0ubuntu3.23",
+              "architecture": "arm64",
+              "sourcePackage": "systemd",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libudev1/copyright",
+                "sha256": "8541750aba2193c885f0c77df20870ef454c2ae8f905077105922bf3130108ad",
+                "declaredLicenseFields": [
+                  "CC0-1.0",
+                  "Expat",
+                  "GPL-2",
+                  "GPL-2 with Linux-syscall-note exception",
+                  "GPL-2+",
+                  "LGPL-2.1+",
+                  "public-domain"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libunistring.so.2.2.0",
+        "sha256": "bfe189f1348df9f6c930c8bf3d5521e8548dbaf4bca777255e975584e9716209",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libunistring2:arm64",
+              "version": "1.0-1",
+              "architecture": "arm64",
+              "sourcePackage": "libunistring",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libunistring2/copyright",
+                "sha256": "0035f89e5317f3cec389383e8727788521b0fde3e75cea881fa0e92e1d48cb57",
+                "declaredLicenseFields": [
+                  "FreeSoftware",
+                  "GFDL-1.2+",
+                  "GPL-2+",
+                  "GPL-2+ with distribution exception",
+                  "GPL-3+",
+                  "GPL-3+ or GFDL-1.2+",
+                  "LGPL-3+",
+                  "LGPL-3+ or GPL-2+",
+                  "MIT"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libusb-1.0.so.0.3.0",
+        "sha256": "6caa4325c5645b598501ed08d7b4ff28b4fda8a1eaa5eae2d1e4c62ae0b7a8a4",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libusb-1.0-0:arm64",
+              "version": "2:1.0.25-1ubuntu2",
+              "architecture": "arm64",
+              "sourcePackage": "libusb-1.0",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libusb-1.0-0/copyright",
+                "sha256": "22184ce520ea729f24fb9ec9ee0849c9c7c6828cb796fe2cd174a480ce806420",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libuuid.so.1.3.0",
+        "sha256": "234f1296a11511401f5533cbcebd20ffdf0e1a73da6211d884437a3b1ed51b81",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libuuid1:arm64",
+              "version": "2.37.2-4ubuntu3.6",
+              "architecture": "arm64",
+              "sourcePackage": "util-linux",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libuuid1/copyright",
+                "sha256": "2c447817698777e3b2365a5afe2a58ececb85367dfdf0ea2c0df49add90e93eb",
+                "declaredLicenseFields": [
+                  "BSD-2-clause",
+                  "BSD-3-clause",
+                  "BSD-4-clause",
+                  "GPL-2",
+                  "GPL-2+",
+                  "GPL-3+",
+                  "LGPL",
+                  "LGPL-2+",
+                  "LGPL-2.1+",
+                  "LGPL-3+",
+                  "MIT",
+                  "public-domain"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libvorbis.so.0.4.9",
+        "sha256": "30b2626064d1c8adb4041a9cbd0bbbc0d90a4ff84397604ea7946054e7f963e7",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libvorbis0a:arm64",
+              "version": "1.3.7-1build2",
+              "architecture": "arm64",
+              "sourcePackage": "libvorbis",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libvorbis0a/copyright",
+                "sha256": "47badad9f7f750f92cd12f44db08b6937e5b4d47935ba1cc60de0ea3a2adff9b",
+                "declaredLicenseFields": [
+                  "BSD-3-Clause",
+                  "RFC-special"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libvorbisenc.so.2.0.12",
+        "sha256": "168c9ed94c1b52af1e61cb21cfa1df61f54b3afed7585434a54e03ffce2b9f01",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libvorbisenc2:arm64",
+              "version": "1.3.7-1build2",
+              "architecture": "arm64",
+              "sourcePackage": "libvorbis",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libvorbisenc2/copyright",
+                "sha256": "47badad9f7f750f92cd12f44db08b6937e5b4d47935ba1cc60de0ea3a2adff9b",
+                "declaredLicenseFields": [
+                  "BSD-3-Clause",
+                  "RFC-special"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libwebp.so.7.1.3",
+        "sha256": "157d7b17f241cf3f09b4fb333e613fa40286625df1e4eda4877ccadfc42f0870",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libwebp7:arm64",
+              "version": "1.2.2-2ubuntu0.22.04.2",
+              "architecture": "arm64",
+              "sourcePackage": "libwebp",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libwebp7/copyright",
+                "sha256": "01eb328708a9454061dd13931b19135e1c2c6251a7e6a6d0efc4b9bc436109c7",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libwinpr2.so.2.6.1",
+        "sha256": "490d886fdcc04f070ce3a81db4e9b3ede1b108465260e859a5d09f8de41fcb31",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libwinpr2-2:arm64",
+              "version": "2.6.1+dfsg1-3ubuntu2.11",
+              "architecture": "arm64",
+              "sourcePackage": "freerdp2",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libwinpr2-2/copyright",
+                "sha256": "15dc5502214e3e42dcf661593bc4b321c1adf5237cdb32951b2e9dbab6f300ed",
+                "declaredLicenseFields": [
+                  "Apache-2.0",
+                  "Apache-2.0 or BSD-2-clause or BSD-3-clause or BSL-1.0 or Expat or ISC or X11 or zlib/libpng or public-domain",
+                  "BSD-2-clause",
+                  "BSD-3-clause",
+                  "BSL-1.0",
+                  "Expat",
+                  "FMILIB",
+                  "ISC",
+                  "LGPL-2.1+",
+                  "NTP~legal-disclaimer",
+                  "X11",
+                  "public-domain",
+                  "zlib/libpng"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libxcb-render.so.0.0.0",
+        "sha256": "3a37e40945cad795ab1dca8e538b3a8eb849fce6fcc83ca6eab1f4d135cdfc48",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libxcb-render0:arm64",
+              "version": "1.14-3ubuntu3",
+              "architecture": "arm64",
+              "sourcePackage": "libxcb",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libxcb-render0/copyright",
+                "sha256": "4f7cb9db6bf6542f5417e3d674c780d3a5fd12291a54d63054fb576ee0cfae80",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libxcb-shm.so.0.0.0",
+        "sha256": "a0d18f340e2281ae5fdb7457d0ca52870cc906e7f7eeaca40e60f0db02ee0d35",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libxcb-shm0:arm64",
+              "version": "1.14-3ubuntu3",
+              "architecture": "arm64",
+              "sourcePackage": "libxcb",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libxcb-shm0/copyright",
+                "sha256": "4f7cb9db6bf6542f5417e3d674c780d3a5fd12291a54d63054fb576ee0cfae80",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libxcb.so.1.1.0",
+        "sha256": "39b55d0f909201b0dcce23244d1ce72c73baf675a3536a5b13a76fbc1a38c13a",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libxcb1:arm64",
+              "version": "1.14-3ubuntu3",
+              "architecture": "arm64",
+              "sourcePackage": "libxcb",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libxcb1/copyright",
+                "sha256": "4f7cb9db6bf6542f5417e3d674c780d3a5fd12291a54d63054fb576ee0cfae80",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libxkbfile.so.1.0.2",
+        "sha256": "d27b9181a5c76237fc9011545ec428f6397c5115dd4005ff684f88b2643e627a",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libxkbfile1:arm64",
+              "version": "1:1.1.0-1build3",
+              "architecture": "arm64",
+              "sourcePackage": "libxkbfile",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libxkbfile1/copyright",
+                "sha256": "41044d815bd99a5d1267fdabc79b5041fa83c7134639bb81e84f367cefe68316",
+                "declaredLicenseFields": [],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libz.so.1.2.11",
+        "sha256": "8cd4dd1e893bc67102bbe7d2f0e895a98dd142857228c70bef7878a55eb58bb6",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "zlib1g:arm64",
+              "version": "1:1.2.11.dfsg-2ubuntu9.2",
+              "architecture": "arm64",
+              "sourcePackage": "zlib",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/zlib1g/copyright",
+                "sha256": "d77204eee882807240f6351c4f5ae2a4bcdb5b773ff77d10647b9b66b826b2fb",
+                "declaredLicenseFields": [
+                  "Zlib"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libzstd.so.1.4.8",
+        "sha256": "a1561916ef6f9bfdcf3246b4cb1eab98771a9f689422cae645d89e3cc589035d",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libzstd1:arm64",
+              "version": "1.4.8+dfsg-3build1",
+              "architecture": "arm64",
+              "sourcePackage": "libzstd",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libzstd1/copyright",
+                "sha256": "8cf66791fbe72801cb1d701c832b7e395dad0000bb9699dc42df94b49d699e91",
+                "declaredLicenseFields": [
+                  "BSD-3-clause",
+                  "BSD-3-clause and GPL-2",
+                  "Expat",
+                  "GPL-2",
+                  "zlib"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      },
+      {
+        "filename": "libpulsecommon-15.99.so",
+        "sha256": "a02a141d162f07af1bb83cd3b9d681db12da40ce2bc407462b942fecb5332f6b",
+        "package": {
+          "state": "recorded",
+          "packages": [
+            {
+              "name": "libpulse0:arm64",
+              "version": "1:15.99.1+dfsg1-1ubuntu2.2",
+              "architecture": "arm64",
+              "sourcePackage": "pulseaudio",
+              "copyright": {
+                "state": "recorded",
+                "path": "/usr/share/doc/libpulse0/copyright",
+                "sha256": "aff3f1d729168de06e34d940dc493cc305a6e4a6278f1ac38ee52ec0f69e342c",
+                "declaredLicenseFields": [
+                  "GPL-2+",
+                  "LGPL-2+",
+                  "LGPL-2.1+",
+                  "other"
+                ],
+                "licenseFieldsTruncated": false,
+                "scope": "Distributor copyright document; fields are declarations, not a license determination"
+              }
+            }
+          ],
+          "scope": "Package database attribution; does not prove unmodified package bytes"
+        }
+      }
+    ]
+  },
+  "macOS": {
+    "scope": "Tool identities/version probes only; no live guacd process or dpkg attribution",
+    "tools": {
+      "ssh": {
+        "state": "recorded",
+        "sha256": "2e9c9f8f01f7f1fb77e0b79598fa29fe10e443ef474ff2d338bb86e417b2f1c9",
+        "versionProbe": {
+          "state": "ok",
+          "exit": 0,
+          "output": "OpenSSH_10.5p1, LibreSSL 3.3.6\n",
+          "truncated": false
+        }
+      },
+      "mosh": {
+        "state": "recorded",
+        "sha256": "34933973c4489a7dbb4bd2becff7110a5547850654a5720c5d4c7dc05ddecce6",
+        "versionProbe": {
+          "state": "ok",
+          "exit": 0,
+          "output": "mosh 1.4.0 [build mosh 1.4.0]\nCopyright 2012 Keith Winstein <mosh-devel@mit.edu>\nLicense GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n",
+          "truncated": false
+        }
+      },
+      "mosh-client": {
+        "state": "recorded",
+        "sha256": "c058122dbd8880c9011223f4ccfaac2ff22b931bb39a15c3e82554d4d2c8faf2",
+        "versionProbe": {
+          "state": "ok",
+          "exit": 0,
+          "output": "mosh-client (mosh 1.4.0) [build mosh 1.4.0]\nCopyright 2012 Keith Winstein <mosh-devel@mit.edu>\nLicense GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n",
+          "truncated": false
+        }
+      },
+      "mosh-server": {
+        "state": "recorded",
+        "sha256": "c22da1beaa65129858a1f2a1e0a9b9294b81536826d3519fb6e83be0b411d7a5",
+        "versionProbe": {
+          "state": "ok",
+          "exit": 0,
+          "output": "mosh-server (mosh 1.4.0) [build mosh 1.4.0]\nCopyright 2012 Keith Winstein <mosh-devel@mit.edu>\nLicense GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n",
+          "truncated": false
+        }
+      },
+      "tmux": {
+        "state": "recorded",
+        "sha256": "bbef48222414b0f85da1c980b77fab95fdb5e1ecf5ab5195cb6da37ab21af6d4",
+        "versionProbe": {
+          "state": "ok",
+          "exit": 0,
+          "output": "tmux next-3.7\n",
+          "truncated": false
+        }
+      },
+      "guacd": {
+        "state": "recorded",
+        "sha256": "7c07dfc1da4717e0292506cec9a92e9e6250bb800389bfeb864926549e41b366",
+        "versionProbe": {
+          "state": "ok",
+          "exit": 0,
+          "output": "Guacamole proxy daemon (guacd) version 1.6.0\n",
+          "truncated": false
+        }
+      }
+    }
+  },
+  "privateEvidenceSHA256": {
+    "publish-native-results.tgz": "ba454eb2bb1a2553c95892520b65acada181bda7f041887e1e8567994f0c6cfd",
+    "publish-native-units.log": "44da5ff3d8732677572559b618a09686fa21efd87af4d2b415dc65f98118d47f",
+    "publish-native-live.log": "e18ca369f8a29d45f2318708906195c387ae1fafe944df278195e168f782d1b8",
+    "publish-macos-tools.json": "76d4308e6cfec412a58edbb6d7e2ef6e7b4656b088705fafda1a8f668e2ce946"
+  },
+  "workflowYAML": "PASS",
+  "existingCIGatesUnchanged": "PASS; only two added steps and one artifact path",
+  "pythonCompilation": "PASS",
+  "scope": "Collector qualification only, not full deployment/security/license/functional RDP/native conversation acceptance. Source-build and external acceptance remain explicit."
+}

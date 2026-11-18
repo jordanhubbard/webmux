@@ -5,6 +5,9 @@ Use guacd 1.6.0 or newer with its matching RDP plugin and native libraries.
 Run `make check-guacd` on the proxy host to check the installed version. This
 optional check warns without preventing unrelated terminals from starting.
 For a remote proxy, check its version on that host.
+Use the [native component collector](native-components.md) on the proxy host to
+record tool identities and, on Linux, a selected process's loaded plugins and
+libraries with package versions and copyright-document references.
 
 Older distro packages are insufficient for reliable reconnects. In a real Linux
 ARM64 browser test, guacd 1.3.0 loses the initial 1024×768 size when the RDP

@@ -316,7 +316,11 @@ updates. The dependency-audit gate remains enabled and passed for this release.
 ## External distribution and qualification
 
 - [#91](https://github.com/jordanhubbard/webmux/issues/91): WiX migration review,
-  deployment-specific component inventories. The browser library now uses a
+  deployment-specific component inventories. A [read-only collector](native-components.md)
+  records native tool identities and a selected Linux guacd process's loaded
+  plugins/libraries, with exact Debian package versions and copyright evidence.
+  It is qualified separately on macOS tools and a private Linux ARM64 proxy;
+  deployment-specific security/license review remains open. The browser library now uses a
   reproducible local package from verified Apache Guacamole 1.6.0 sources, with
   license/notices and source/package digests retained in native bundles
   ([provenance](../webmux/vendor/guacamole-common-js/README.md)).
