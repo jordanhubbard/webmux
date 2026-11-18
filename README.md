@@ -49,7 +49,8 @@ ssh -N -L 18081:127.0.0.1:8080 your-user@webmux-server
 
 ## Experimental USB transport
 
-Use **More → USB redirection** for setup guidance and a local forwarding command.
+Use **More → USB redirection** to create a local forwarding command, view its
+transport status and stop your forwarding leases.
 Linux, Windows and macOS peers need compatible native USB exporter/importer
 software; the peers do not need to run the same OS.
 

@@ -11,6 +11,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   physical hardware, an iPhone and Xcode are optional (#120).
 
 ### Added
+- Show owner-scoped USB forwarding leases and request Stop from the browser.
+  Pair the foreground helper once, retain control through a dashboard restart,
+  and distinguish requested cleanup from acknowledged remote release (#485, #120).
 - Keep explicit models and other ordinary settings (Codex `--search` and
   `--add-dir`, Cursor `--add-dir`, named OpenCode agents and display options)
   when recovering Codex, Cursor and OpenCode conversations, instead of

@@ -281,7 +281,10 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   simulated device is sufficient for device acceptance; the existing Linux
   USB/IP mass-storage gadget exercises enumeration, exact reads/writes, detach,
   interruption and cleanup. Physical hardware, iPhone and Xcode are not required.
-  Live browser status/control integration remains open.
+  Owner-scoped browser lease status and Stop controls are implemented under
+  [#485](https://github.com/jordanhubbard/webmux/issues/485), with one-use helper
+  pairing, durable stop requests and separate confirmed/uncertain cleanup states.
+  Exact-source native simulation and normal merge gates remain required.
 
 ## External distribution and qualification
 

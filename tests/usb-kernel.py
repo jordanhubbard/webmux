@@ -57,7 +57,7 @@ if sys.argv[2:] and not (direct_control or stale_control):
 modules = ["usbip_vudc", "g_mass_storage", "vhci_hcd"]
 if any(Path("/sys/module", module).exists() for module in modules):
     sys.exit("Fixture requires a fresh VM with no existing USB forwarding modules.")
-if any(listening(port) for port in [23422, 3241, 3242]):
+if any(listening(port) for port in [23422, 23423, 3241, 3242]):
     sys.exit("Fixture ports are already in use.")
 # Run the key-only fixture sshd unprivileged, as in the real SSH browser tests.
 # It cannot read host shadow data or launch a worker as a different user.
@@ -203,15 +203,59 @@ X11Forwarding no
     start("sshd", "/usr/sbin/sshd", "-D", "-e", "-f", str(config),
           user=account.pw_uid, group=account.pw_gid)
     until(lambda: listening(23422), "fixture SSH server startup")
+    # The actual WebMux controller owns the lease, independently of the
+    # foreground data helper and its SSH worker. No physical USB is selected.
+    dashboard_home = root / "dashboard"
+    (dashboard_home / "config").mkdir(parents=True)
+    (dashboard_home / "config" / "auth.yaml").write_text("auth:\n  mode: none\n  users: []\n")
+    defaults = Path(__file__).resolve().parents[1] / "webmux"
+    app = (defaults / "config.defaults" / "app.yaml").read_text()
+    app = app.replace("listen_host: 0.0.0.0", "listen_host: 127.0.0.1")
+    (dashboard_home / "config" / "app.yaml").write_text(app)
+    for entry in [dashboard_home, dashboard_home / "config", *list((dashboard_home / "config").iterdir())]:
+        os.chown(entry, account.pw_uid, account.pw_gid)
+
+    def start_dashboard(name):
+        return start(name, "env", "WEBMUX_COORDINATION_DISABLED=1", binary,
+                     "--root", str(defaults), "--home", str(dashboard_home),
+                     "--listen", "127.0.0.1:23423", user=account.pw_uid, group=account.pw_gid)
+
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    def dashboard_api(path, data=None):
+        body = None if data is None else json.dumps(data).encode()
+        request = urllib.request.Request("http://127.0.0.1:23423/api/" + path, data=body,
+                                         headers={"Content-Type": "application/json"})
+        with opener.open(request, timeout=3) as response:
+            return json.load(response)
+
+    def dashboard_ready():
+        try:
+            return dashboard_api("health").get("status") == "ok"
+        except (OSError, ValueError):
+            return False
+
+    controller = start_dashboard("dashboard")
+    until(dashboard_ready, "actual WebMux dashboard readiness")
+    ticket = dashboard_api("usb-forwardings", {"host": f"{account.pw_name}@127.0.0.1",
+                          "ssh_port": 23422, "export_port": 3241, "seconds": 180})
+    lease_id = ticket["lease"]["id"]
+    link = base64.urlsafe_b64encode(json.dumps({"version": 1, "server": "http://127.0.0.1:23423",
+             "id": lease_id, "pair_code": ticket["pair_code"], "allow_http": True}).encode()).decode().rstrip("=")
     cli = start("webmux", binary, "usb-forward", "--host", f"{account.pw_name}@127.0.0.1",
                 "--ssh-port", "23422", "--identity", str(root / "identity"),
                 "--known-hosts", str(root / "known_hosts"), "--export-port", "3241",
-                "--listen-port", "3242", "--duration", "3m")
+                "--listen-port", "3242", "--duration", "3m", "--dashboard-link", link)
     def cli_ready():
         if cli.poll() is not None:
             raise RuntimeError("WebMux CLI exited before readiness; see captured SSH/CLI logs")
         return listening(3242)
     until(cli_ready, "WebMux SSH worker readiness")
+    def current_lease():
+        values = dashboard_api("usb-forwardings")
+        return next(value for value in values if value["id"] == lease_id)
+
+    until(lambda: current_lease()["phase"] == "ready", "native helper dashboard report")
+
     run("usbip", "--tcp-port", "3242", "list", "--remote", "127.0.0.1")
 
     def attach():
@@ -235,13 +279,44 @@ X11Forwarding no
     assert len(ports) == 1, "Expected exactly one imported fixture device"
     run("usbip", "detach", "--port", ports[0])
     until(lambda: imported_disk() is None, "explicit USB detach")
-    attach()
-    cli.send_signal(signal.SIGINT)
-    assert cli.wait(timeout=20) == 0, "CLI cancellation failed"
+    disk = attach()
+    controller.kill()
+    assert controller.wait(timeout=5) != 0, "owned controller crash was not observed"
+    until(lambda: not listening(23423), "crashed dashboard listener teardown")
+    controller = start_dashboard("dashboard-replacement")
+    until(dashboard_ready, "replacement dashboard readiness")
+    with disk.open("rb", buffering=0) as source:
+        assert source.read(len(pattern)) == pattern, "USB data did not survive controller loss"
+    stop = dashboard_api("usb-forwardings/" + lease_id + "/stop", {})
+    assert stop["phase"] == "stopping" and not stop["release_confirmed"], "Stop request claimed remote release"
+    assert cli.wait(timeout=20) == 0, "dashboard Stop failed"
+    ended = current_lease()
+    assert ended["phase"] == "ended" and ended["release_confirmed"], "missing acknowledged remote release"
+
     until(lambda: imported_disk() is None, "USB detach after relay interruption")
     until(lambda: not listening(3242), "receiving listener teardown")
     worker_pid = int((root / "worker.pid").read_text())
     until(lambda: not Path(f"/proc/{worker_pid}").exists(), "SSH worker process teardown")
+    controller.send_signal(signal.SIGTERM)
+    assert controller.wait(timeout=10) == 0, "dashboard controller cleanup failed"
+    until(lambda: not listening(23423), "dashboard listener cleanup")
+    # Preserve the original signal-interruption acceptance using the ordinary
+    # unmonitored CLI as well; dashboard Stop is an additional control.
+    for port in re.findall(r"Port (\d+):", run("usbip", "port")):
+        run("usbip", "detach", "--port", port)
+    cli = start("webmux-legacy-interrupt", binary, "usb-forward", "--host", f"{account.pw_name}@127.0.0.1",
+                "--ssh-port", "23422", "--identity", str(root / "identity"),
+                "--known-hosts", str(root / "known_hosts"), "--export-port", "3241",
+                "--listen-port", "3242", "--duration", "3m")
+    until(cli_ready, "ordinary WebMux SSH worker readiness")
+    attach()
+    cli.send_signal(signal.SIGINT)
+    assert cli.wait(timeout=20) == 0, "ordinary CLI signal cancellation failed"
+    until(lambda: imported_disk() is None, "USB detach after ordinary CLI interruption")
+    until(lambda: not listening(3242), "ordinary receiving listener teardown")
+    worker_pid = int((root / "worker.pid").read_text())
+    until(lambda: not Path(f"/proc/{worker_pid}").exists(), "ordinary SSH worker process teardown")
+    print("PASS: dashboard pairing, controller-loss continuity, owner Stop and confirmed listener release", flush=True)
     print("PASS: virtual USB enumeration, read/write, detach, interruption and worker cleanup", flush=True)
 finally:
     run("dmesg", check=False)

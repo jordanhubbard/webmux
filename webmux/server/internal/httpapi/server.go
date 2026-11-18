@@ -26,6 +26,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/session"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 	"github.com/jordanhubbard/webmux/server/internal/upload"
+	"github.com/jordanhubbard/webmux/server/internal/usbforward"
 )
 
 type Server struct {
@@ -36,6 +37,7 @@ type Server struct {
 	coordinationOnce   sync.Once
 	coordinationCancel context.CancelFunc
 	macSetup           macsetup.Manager
+	usbLeases          usbforward.LeaseManager
 	restart            func() error
 	handoffs           authhandoff.Manager
 	browsers           browser.Manager
@@ -92,7 +94,7 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil), clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
+	return &Server{usbLeases: usbforward.LeaseManager{Store: store}, restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil), clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
 }
 
 func (s *Server) RestoreSessions() error {
@@ -135,6 +137,7 @@ func (s *Server) Close() error {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.registerFederation(mux)
+	s.registerUSBForwardings(mux)
 	mux.Handle("GET /api/setup/macos", s.protected(false, s.getMacSetup))
 	mux.Handle("POST /api/setup/macos", s.protected(false, s.macSetupAction))
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {

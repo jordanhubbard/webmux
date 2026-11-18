@@ -56,6 +56,12 @@ def admits_repair(status, log):
             and 'PASS: held native reply discarded; replacement import and exact payload verified' in log)
 
 
+def admits_webmux(status, log):
+    return (status == 0 and kernel_clean(log)
+            and 'PASS: virtual USB enumeration, read/write, detach, interruption and worker cleanup' in log
+            and 'PASS: dashboard pairing, controller-loss continuity, owner Stop and confirmed listener release' in log)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--kernel', required=True)
@@ -145,8 +151,7 @@ def main():
         else:
             guest('direct-20', receipt, ['--direct-control'], lambda status, log:
                   status == 0 and 'PASS: 20 direct USB/IP enumeration, read/write and detach cycles' in log)
-            guest('webmux-ssh', receipt, [], lambda status, log:
-                  status == 0 and 'PASS: virtual USB enumeration, read/write, detach, interruption and worker cleanup' in log)
+            guest('webmux-ssh', receipt, [], admits_webmux)
 
 
 if __name__ == '__main__':

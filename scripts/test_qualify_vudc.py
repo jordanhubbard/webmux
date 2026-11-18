@@ -62,6 +62,15 @@ class NativeAdmission(unittest.TestCase):
         # replacement handshake. Kernel console ordering is independent.
         self.assertTrue(module.admits_repair(0, '\n'.join(self.repaired[:1] + self.phases + self.repaired[1:])))
 
+    def test_dashboard_and_data_path_both_require_completion(self):
+        data = 'PASS: virtual USB enumeration, read/write, detach, interruption and worker cleanup'
+        dashboard = 'PASS: dashboard pairing, controller-loss continuity, owner Stop and confirmed listener release'
+        self.assertTrue(module.admits_webmux(0, data + '\\n' + dashboard))
+        self.assertFalse(module.admits_webmux(0, data))
+        self.assertFalse(module.admits_webmux(0, dashboard))
+        self.assertFalse(module.admits_webmux(1, data + '\\n' + dashboard))
+        self.assertFalse(module.admits_webmux(0, data + '\\n' + dashboard + '\\nOops: fault'))
+
     def test_kernel_faults_cannot_be_admitted_as_transport_failures_or_passes(self):
         for fault in ('BUG: kernel NULL pointer dereference', 'Oops: 0000',
                       'Kernel panic - not syncing', 'general protection fault'):
