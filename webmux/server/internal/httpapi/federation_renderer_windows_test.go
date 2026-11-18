@@ -9,8 +9,10 @@ import (
 	"log/slog"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -18,9 +20,21 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/nativeprovider"
 	"github.com/jordanhubbard/webmux/server/internal/screenstate"
 	"github.com/jordanhubbard/webmux/server/internal/session"
+	"golang.org/x/sys/windows"
 )
 
 func TestFederationNativeRendererProfilePreservesOwner(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	probe := exec.CommandContext(ctx, "cmd.exe", "/d", "/c", "exit", "0")
+	probe.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.DETACHED_PROCESS | windows.CREATE_NEW_PROCESS_GROUP | windows.CREATE_BREAKAWAY_FROM_JOB}
+	err := probe.Run()
+	cancel()
+	if err != nil {
+		if errors.Is(err, windows.ERROR_ACCESS_DENIED) && os.Getenv("WEBMUX_REQUIRE_NATIVE_FEDERATION") != "1" {
+			t.Skip("outer runner job forbids independent providers; dedicated native federation task requires a real pass")
+		}
+		t.Fatal("native provider breakaway unavailable", err)
+	}
 	cache := t.TempDir()
 	starts := filepath.Join(cache, "fixture-pid")
 	t.Setenv("WEBMUX_TEST_FEDERATION_RENDERER", "1")
@@ -32,7 +46,6 @@ func TestFederationNativeRendererProfilePreservesOwner(t *testing.T) {
 	if err := b.sessions.Close(); err != nil {
 		t.Fatal(err)
 	}
-	var err error
 	b.sessions, err = session.New(b.store, slog.Default())
 	if err != nil {
 		t.Fatal(err)
@@ -125,7 +138,7 @@ func TestFederationNativeRendererProfilePreservesOwner(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitOutput(c, "P:"+string(pid)+";")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	identity, err := nativeprovider.Probe(ctx, saved.Identity, current.RecoveryKey)
 	if err != nil || identity != saved.Identity {
