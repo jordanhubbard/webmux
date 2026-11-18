@@ -131,7 +131,7 @@ export async function resolveCodexOwnerPlan(cwd: string, options: { profile?: st
   env.CODEX_HOME = home;
   // Never join a caller's active Codex conversation or Rig enrollment.
   for (const name of Object.keys(env)) if (name.startsWith('OPENRIG_') || ['CODEX_THREAD_ID', 'TMUX', 'TMUX_PANE'].includes(name)) delete env[name];
-  const child = spawn(executable, ['-C', cwd, 'app-server', '--listen', 'stdio://'], { env, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
+  const child = spawn(executable, ['-C', cwd, 'app-server', '--listen', 'stdio://'], { cwd, env, detached: true, stdio: ['pipe', 'pipe', 'pipe'] });
   let ended = false, failed: Error | null = null, nextId = 0, buffer = '', total = 0;
   const pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
   const fail = () => { failed = new Error('native_owner_resolution_failed'); for (const item of pending.values()) item.reject(failed); pending.clear(); };
@@ -164,14 +164,27 @@ export async function resolveCodexOwnerPlan(cwd: string, options: { profile?: st
     child.stdin.write(JSON.stringify({ id, method, params }) + '\n', error => { if (error) fail(); });
   });
   const deadline = setTimeout(fail, 20000);
+  // The owning server cancels this helper with SIGTERM. Reject the pending RPC
+  // so finally reaps the detached private app-server before this process exits.
+  let interrupted = false;
+  const cancel = () => { interrupted = true; fail(); };
+  process.once('SIGTERM', cancel);
+  process.once('SIGINT', cancel);
   try {
     await rpc('initialize', { clientInfo: { name: 'webmux-owner-plan', version: '1' }, capabilities: { experimentalApi: true } });
     child.stdin.write(JSON.stringify({ method: 'initialized' }) + '\n');
-    const configReply = await rpc('config/read', { cwd, includeLayers: false });
-    if (!object(configReply)) throw new Error('native_owner_resolution_failed');
+    const configReply = await rpc('config/read', { cwd, includeLayers: true });
+    if (!object(configReply) || !Array.isArray(configReply.layers) || configReply.layers.length > 128
+      || !configReply.layers.every(layer => object(layer) && object(layer.name) && typeof layer.name.type === 'string')) throw new Error('native_config_layers_unavailable');
+    if (configReply.layers.some(layer => object(layer) && object(layer.name) && layer.name.type === 'project' && layer.disabledReason != null)) {
+      throw new Error('native_project_trust_required');
+    }
     const account = await rpc('account/read', { refreshToken: false });
     const config = codexObservationConfig(configReply.config);
-    const thread = await rpc('thread/start', { cwd, ephemeral: true, config });
+    // Supplying cwd here makes native 0.169 persist project trust from writable
+    // permissions and reload previously disabled project integrations. The
+    // private process already has the exact cwd; do not grant trust to inspect.
+    const thread = await rpc('thread/start', { ephemeral: true, config });
     return projectCodexOwnerPlan(configReply.config, thread, account, { executable, executableSHA256, home, cwd, profile });
   } finally {
     clearTimeout(deadline);
@@ -185,6 +198,9 @@ export async function resolveCodexOwnerPlan(cwd: string, options: { profile?: st
       if (timer) clearTimeout(timer);
     }
     child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy();
+    process.removeListener('SIGTERM', cancel);
+    process.removeListener('SIGINT', cancel);
     if (!ended) throw new Error('native_owner_child_cleanup_unconfirmed');
+    if (interrupted) throw new Error('native_owner_resolution_cancelled');
   }
 }

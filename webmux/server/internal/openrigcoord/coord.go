@@ -29,6 +29,21 @@ var rigAttachment []byte
 //go:embed rig-stop.mts
 var rigStop []byte
 
+//go:embed codex-owner-plan.mts
+var codexOwnerPlan []byte
+
+//go:embed codex-launch-policy.mts
+var codexLaunchPolicy []byte
+
+//go:embed codex-launch-wrapper.mts
+var codexLaunchWrapper []byte
+
+//go:embed rig-create-intent.mts
+var rigCreateIntent []byte
+
+//go:embed rig-native-create.mts
+var rigNativeCreate []byte
+
 // Serialize launches and spec creation across simultaneous browser requests.
 var mutation sync.Mutex
 
@@ -70,7 +85,19 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 	if err := os.WriteFile(filepath.Join(directory, "rig-stop.mts"), rigStop, 0600); err != nil {
 		return nil, err
 	}
+	for name, source := range map[string][]byte{
+		"codex-owner-plan.mts": codexOwnerPlan, "codex-launch-policy.mts": codexLaunchPolicy,
+		"codex-launch-wrapper.mts": codexLaunchWrapper, "rig-create-intent.mts": rigCreateIntent,
+		"rig-native-create.mts": rigNativeCreate,
+	} {
+		if err := os.WriteFile(filepath.Join(directory, name), source, 0600); err != nil {
+			return nil, err
+		}
+	}
 	cmd := exec.CommandContext(ctx, "node", script, action, directory)
+	if action == "native-create" {
+		configureNativeCreateCancellation(cmd)
+	}
 	cmd.Env = ControlEnvironment()
 	cmd.Stdin = strings.NewReader(input)
 	output, err := cmd.Output()

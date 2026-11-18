@@ -1,5 +1,10 @@
 # Native Codex continuation through the launch wrapper
 
+The wrapper/policy source bindings below remain unchanged. The
+[later creation-factory checkpoint](../codex-native-create-2026-11-18/README.md)
+adds internal Go embedding and durable launch composition; the unembedded
+descriptions below record the state when this recovery evidence was captured.
+
 Rig's managed resume uses an explicit native UUID, its `-m` model alias and a
 shell working directory rather than a `-C` argument. The original fresh-only
 wrapper refused that shape. The transformer now accepts one explicit UUID and

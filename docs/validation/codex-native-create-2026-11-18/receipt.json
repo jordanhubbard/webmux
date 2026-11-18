@@ -1,0 +1,157 @@
+{
+  "scope": "Actual native creation factory, verified manager, durable manifest/bundle/journal and default authenticated Codex owner policy; not WebMux HTTP/UI activation or provider-loss recovery qualification",
+  "platform": "macOS ARM64",
+  "codexVersion": "codex-cli 0.169.0",
+  "rigVersion": "0.7.18 (3bf87c62)",
+  "nodeVersion": "v24.21.0",
+  "sources": {
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "caa9048e726b9d4b1884d5dbd999faaa12cbf7c930f5f276784d3b7e96fc0fc4",
+    "webmux/server/internal/openrigcoord/codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts": "3fce62867bcca49b3789af89fe40882e23549ba9297440576b103d5f279a27ed",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "241ef8e1d685301eb21682e0d2068521e5141f57a11fa2b5ce2d9bd4d14a6b43",
+    "webmux/server/internal/openrigcoord/rig-create-intent.mts": "2e4f6b47ecb5ee21aa5a73ff85dacb1f510093f00c5e736286c2d92e336dd693",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "webmux/server/internal/openrigcoord/coord.go": "5670cd5eb02c153a02b959fdab1d5e549679b7c4c5b96900f8b3b805a40d7b23",
+    "webmux/server/internal/openrigcoord/runner.mts": "17a4ff88cc62de1fa6f9f4ffe1e5c9abdd72d9c7c12ebc03935ba20b7a717c1b",
+    "webmux/server/internal/openrigcoord/native_cancel_unix.go": "2efabb08295bdc6294a46820f8b18ed2aa6ebeabd0daeff2cd5efebf9b303659",
+    "webmux/server/internal/openrigcoord/native_cancel_other.go": "7391bded4ebb1cf61084f2101b0094769b7d407d41b22a96004eca448cfcebd7",
+    "webmux/server/internal/openrigcoord/native_create_test.go": "b89c90b89f8f923eb695f5d12707efeef58f4a742fe896fef652150bca458ee4",
+    "scripts/rig-native-create.test.mts": "c7fa62eb14dded6418840b4ef9d1ccbc873d62d4ffbcf4173bdb019105d509a4",
+    "scripts/codex-owner-plan.test.mts": "4bfd310c508a01495f6398cf7339d9e9a0efcb1479eefeac017f425b88d9969f",
+    "scripts/qualify-codex-project-trust.py": "bb43de74ee75221fb7a4857a8bb9b9bbf0d0c7fda5bc2ef29c6eeab636edf8c7",
+    "webmux/package.json": "15bd27a4172da59075c7994b02515e9434b326965d0988711fe2ecd8ff97685b"
+  },
+  "nativeFactory": {
+    "passed": true,
+    "checks": {
+      "actualDefaultNativeOwnerPolicyUsed": true,
+      "actualNativeArgvPreservesOwnerPolicy": true,
+      "freshChallengeReadByActualProvider": true,
+      "projectAndOwnerExtraWritable": true,
+      "ownerFullAccessNotNarrowed": true,
+      "wrapperReplacedByNativeExecutable": true,
+      "nativeIdentityRetained": true,
+      "nativePolicyAndCorrelatedTools": true,
+      "duplicateFactoryAndExplicitInspectRetainNativeOccupant": true,
+      "siblingRetainsOriginalPID": true,
+      "checkedStopEndsOnlyNativeCodingSeat": true
+    },
+    "nativeWitness": {
+      "passed": true,
+      "contexts": 2,
+      "nativeNodeMatches": true,
+      "coordinatorReachable": true,
+      "correlatedProbeOutputs": 1,
+      "allowedWrites": 4,
+      "deniedWrites": 0,
+      "ownerFullAccessPreserved": true,
+      "nativeSessionSHA256": "5bc6d47fda2416f6a90a1033098f874254e18d3a3b563871fb6b4a60bfc6a2e0"
+    },
+    "initialResponseState": "uncertain",
+    "originalOperationExplicitlyInspected": true,
+    "nativeOwner": {
+      "model": "gpt-6.1-sol",
+      "provider": "openai",
+      "effort": "medium",
+      "serviceTier": null,
+      "policy": {
+        "type": "dangerFullAccess"
+      },
+      "approval": "never"
+    },
+    "nativeStopExitObservedMs": 0,
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true,
+    "sourceUnchanged": true,
+    "privateReportSHA256": "9e2b9d0a8b2a215169c35fdf6651e745928c31728c07c3d68590ff7f49572963",
+    "probeSHA256": "ccf47fc50ba38f78ea739a396d11bc73177c29efcf119bb486cea786e1dd4806"
+  },
+  "nativeProjectTrust": {
+    "scope": "Native 0.169 untrusted project configuration; disposable homes, no authentication or coding turn",
+    "cliSHA256": "739cda86e15d30a6e2b40cf8dcbbfb988aaf48b305b27065573bb8e9fd41d002",
+    "moduleSHA256": "caa9048e726b9d4b1884d5dbd999faaa12cbf7c930f5f276784d3b7e96fc0fc4",
+    "probeSHA256": "bb43de74ee75221fb7a4857a8bb9b9bbf0d0c7fda5bc2ef29c6eeab636edf8c7",
+    "cases": [
+      {
+        "mode": "native-explicit-cwd-control",
+        "disabledProjectLayerBefore": true,
+        "homeConfigChanged": true,
+        "projectMcpStarted": true,
+        "ownedAppServerStopped": true
+      },
+      {
+        "mode": "actual-owner-resolver",
+        "refusal": "native_project_trust_required",
+        "homeConfigUnchanged": true,
+        "projectMcpStarted": false,
+        "noPersistedSession": true
+      }
+    ],
+    "passed": true,
+    "privateReportSHA256": "a446b2d80a29035b662d007e84693a80c0ac807f259c1a40badf9e9611c73678"
+  },
+  "nativeMcpMergeLimit": {
+    "scope": "Native Codex0.169 MCP config replacement including a server added after config/read; private homes, no auth or coding turn",
+    "cases": [
+      {
+        "mode": "control",
+        "readServerNames": [
+          "before"
+        ],
+        "beforeStarted": true,
+        "lateStarted": true,
+        "policy": {
+          "type": "dangerFullAccess"
+        },
+        "approval": "never"
+      },
+      {
+        "mode": "enumerated",
+        "readServerNames": [
+          "before"
+        ],
+        "beforeStarted": false,
+        "lateStarted": true,
+        "policy": {
+          "type": "dangerFullAccess"
+        },
+        "approval": "never"
+      },
+      {
+        "mode": "empty",
+        "readServerNames": [
+          "before"
+        ],
+        "beforeStarted": true,
+        "lateStarted": true,
+        "policy": {
+          "type": "dangerFullAccess"
+        },
+        "approval": "never"
+      }
+    ],
+    "probeSHA256": "009ea471e028d7edcf12745361a5baed4bb50d234eb590e355ab60aa08cbd5ff",
+    "privateReportSHA256": "409bc7948510aa49111fadb4fd4d3499673c0c6f1a56a82d7cca8e9a2a321ac2"
+  },
+  "localValidation": {
+    "helpersPassed": 177,
+    "nativeCreateControls": 7,
+    "ownerPlanControls": 16,
+    "strictTypeScriptProjects": 5,
+    "installedLockIdentities": 272,
+    "coordinatorGoRace": "pass",
+    "coordinatorGoVet": "pass",
+    "whitespace": "pass"
+  },
+  "excludedRun": {
+    "reason": "Immediate process-existence assertion after native Stop HTTP acknowledgment failed; no positive Stop result claimed. Repeated with bounded process-exit observation before cleanup.",
+    "privateReportSHA256": "bbbd4922921b5b51a768ed89315e05dc22f82f3023f605529611359aec2ffa75"
+  },
+  "limits": [
+    "Internal owned runner action only. Public HTTP creation, namespace durability, execution-environment preservation and browser uncertainty/recovery controls remain incomplete.",
+    "CODEX_HOME is preserved by reference. General environment equivalence is not yet qualified; no provider credentials are stored in member.env.",
+    "Native MCP table merge permits late-added integrations to start. Observation is not generally inert; no background/status GET activation.",
+    "Only the existing authenticated default full-access owner is qualified by this creation case. Earlier workspace resume evidence remains separate; selected profiles, named permission graphs, Linux/Windows, manager/host failure and reboot are not qualified here.",
+    "All roadmap, review, exact-head CI, dependency-audit and release gates remain required."
+  ]
+}
