@@ -601,9 +601,12 @@ The stated effect is the manager-owned local tmux seat and all its attached
 viewers. Jobs outside that session, including remote providers, may continue.
 The viewer's grid tile, placement and retained log stay available. Native
 **Adopted by Rig** seats are ineligible; a WebMux launch record does not grant
-lifecycle authority. WebMux-created adopted launchers and SSH relays therefore
-remain outside this Stop action. Native launch conversion and actual remote
-relay lifecycle acceptance remain open under #438/#194.
+lifecycle authority. WebMux-created adopted launchers, including their SSH
+relays, remain ineligible. A [controlled SSH relay qualification](validation/rig-stop-relay-2026-11-18/README.md)
+uses a native Rig terminal whose owner starts an actual SSH transport: confirmed
+Stop ends that local transport while the remote Linux tmux process survives.
+Native WebMux launch conversion, authenticated remote coding and host-failure
+acceptance remain open under #438/#194/#318.
 
 A review expires after three minutes. Before dispatch, WebMux durably claims
 the immutable native enrollment, with private owner-scoped reviews/results and

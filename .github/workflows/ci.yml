@@ -292,6 +292,8 @@ jobs:
           cp -f "$RUNNER_TEMP/webmux-openrig-stop/package-lock.json" test-results/openrig-stop-install-lock.json
           test "$(node "$WEBMUX_OPENRIG_CLI" --version)" = '0.7.18 (3bf87c62)'
           npm run test:e2e:go -- openrig-stop.spec.ts --output=test-results/openrig-checked-stop
+          df -Pk "$(docker info --format '{{.DockerRootDir}}')" "$RUNNER_TEMP" "$PWD"
+          python3 ../scripts/qualify-rig-stop-relay.py --cli "$WEBMUX_OPENRIG_CLI" --output "$PWD/test-results/openrig-stop-relay"
       - name: Verify real VNC interoperability through Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux
