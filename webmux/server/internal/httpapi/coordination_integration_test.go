@@ -114,3 +114,30 @@ func TestNativeCoordinationInventoryReopensOwnedViewerWithoutLaunching(t *testin
 	}
 	requireStatus(t, request(handler, "POST", "/api/coordination/attach", fmt.Sprintf(`{"provider":"webmux","target":%q}`, foreign.ID), ""), 404)
 }
+
+func TestNativeCreationTrackingRequiresObservedQualifiedInventory(t *testing.T) {
+	app := config.Object{"coordination": config.Object{"enabled_providers": []string{"rig", "agent-deck"}}}
+	for _, id := range []string{"rig", "agent-deck"} {
+		for _, observed := range []bool{false, true} {
+			for _, failed := range []bool{false, true} {
+				provider := inventoryProvider{id: id, status: func(context.Context) (coordinationProviderStatus, error) {
+					status := coordinationProviderStatus{NativeCreationRequests: observed}
+					if failed {
+						return status, errors.New("inventory unavailable")
+					}
+					return status, nil
+				}}
+				result := discoverCoordination(context.Background(), []coordinationProvider{provider}, app)[0]
+				found := false
+				for _, capability := range result.descriptor.Capabilities {
+					if capability == "native-creation-requests" {
+						found = true
+					}
+				}
+				if found != (id == "rig" && observed && !failed) {
+					t.Fatalf("tracking advertised without qualified inventory: %s observed=%v failed=%v: %+v", id, observed, failed, result.descriptor)
+				}
+			}
+		}
+	}
+}

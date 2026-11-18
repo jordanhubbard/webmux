@@ -2723,6 +2723,51 @@ original recovery, exact-conversation no-tool recall, fresh owner environment
 and denied-write/network probes, native/terminal log prefixes, duplicates,
 sibling/viewer retention and private cleanup. Review/merge remains required.
 Loss of the initial public creation response before a trust selection is known
-is tracked in [#530](https://github.com/jordanhubbard/webmux/issues/530). Broader
+now has separate [#530 native qualification](validation/codex-initial-response-loss-2026-11-18/README.md). Broader
 #438/#318 startup/profile/platform, service/reboot and release acceptance
 remains open.
+
+
+## Lost initial native creation response (#530)
+
+The browser now assigns a separate public request UUID before a qualified local
+Rig/Codex creation. It posts to the dedicated native creation-request endpoint;
+an older server cannot execute a legacy launch by silently ignoring the new
+identity. Inventory advertises this path only for the pinned Rig 0.7.18 build
+on Node 24. Other provider routes retain their existing behavior.
+
+Before topology allocation, the controller durably binds that UUID in the
+current owner's private namespace to the submitted project, pod, member, host,
+folder, runtime and grid position. A changed selection or a legacy/adopted member
+refuses before a member launch. Both first dispatch and continuation require the
+native path; the public UUID never replaces a native operation UUID.
+
+Transport loss, response JSON failure, an incomplete success response, or an
+unclassified server error retains the submitted selection. The dialog offers
+an explicit continuation using the same UUID and values. If the request never
+arrived, this can perform its first native execution. If native dispatch was
+already consumed, the existing journal returns uncertainty without another
+POST; a returned native operation then uses the existing explicit inspection
+flow. There is no automatic retry or fallback to a legacy endpoint. A refusal
+of a continuation does not prove that the first request had no effect.
+
+Contract, runner-process, API and UI tests cover these boundaries, including
+explicit grid placement and inventory refresh changing suggested names. The
+separate [native qualification](validation/codex-initial-response-loss-2026-11-18/README.md)
+passes 24 actual Go/Chrome/native controls on clean 1c58810 code. With project
+trust already reviewed, the first browser request is not delivered; after a
+controller restart, the same public UUID executes for the first time. The test
+then discards the actual initial native/public creation responses and preserves
+uncertainty. Ordinary duplicates and controller reconstruction send no creation
+POST and start no account observer. Changed selections refuse before topology.
+Explicit continuation and subsequent native inspection retain the original
+request, node, provider and conversation.
+
+The same run proves native coding, restart survivor reattachment, owned CLI loss
+plus explicit idle-seat Stop, controller SIGKILL during original recovery,
+no-tool recall, read-only/on-request restrictions, retained owner environment,
+native/terminal log prefixes, duplicates, sibling/viewer retention and cleanup.
+The live case uses normal initial viewer placement; explicit placement is covered
+by contract tests. The earlier #529 receipt remains a separate trust-retry case.
+[#530](https://github.com/jordanhubbard/webmux/issues/530) awaits review/merge;
+broader #438/#318 and release acceptance remain open.

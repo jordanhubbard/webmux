@@ -13,7 +13,7 @@ for name, digest in original.items():
     actual = hashlib.sha256((root / name).read_bytes()).hexdigest()
     assert actual == expected, f"Unrecorded ultraviolet source change: {name}"
 additions = {
- "WEBMUX_UPSTREAM.json", "WEBMUX.md", "underline_flags.go", "underline_flags_test.go",
+ "WEBMUX_UPSTREAM.json", "WEBMUX.md", "underline_flags.go", "underline_flags_test.go", "poll_select_test.go",
 }
 actual_files = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
 assert actual_files == original.keys() | additions, "Unrecorded ultraviolet source addition or removal"

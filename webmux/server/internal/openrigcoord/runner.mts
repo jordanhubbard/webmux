@@ -10,7 +10,7 @@ import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
 type Agent = { target: string; senderAddress?: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string; nativeOwned?: true; nativeNodeId?: string; logicalId?: string; creationOperationId?: string };
-type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string; inspect?: boolean; trustRequest?: string };
+type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string; inspect?: boolean; trustRequest?: string; creationRequestId?: string; continueOriginal?: boolean; row?: number; col?: number };
 class BlockedCreation extends Error {
   value: { state: 'blocked'; code: 'native_project_trust_required'; requestId: string };
   constructor(value: BlockedCreation['value']) { super('native_creation_blocked'); this.value = value; }
@@ -177,7 +177,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       for (const row of rows) messages.push({ from: row.senderSession, to: row.destinationSession, body: row.body.slice(0, 2000), time: row.tsDispatched, state: row.deliveryState });
     }
     messages.sort((a, b) => b.time.localeCompare(a.time));
-    console.log(JSON.stringify({ rigs, seats, agents, messages: messages.slice(0, 24), contract: 'openrig-cli/0.6.14' }));
+    console.log(JSON.stringify({ rigs, seats, agents, nativeCreationRequests: structuredAttachments === true && Number(process.versions.node.split('.')[0]) === 24 && ['darwin', 'linux'].includes(process.platform), messages: messages.slice(0, 24), contract: 'openrig-cli/0.6.14' }));
   } else if (action === 'recovery-observe') {
     const { observeRigRecovery } = await import('./rig-recovery.mts');
     const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
@@ -267,6 +267,15 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const local = host === 'localhost';
     if (input.trustRequest !== undefined && (!/^[a-f0-9]{64}$/.test(input.trustRequest) || !structuredAttachmentBuild()
       || !local || runtime !== 'codex')) throw new Error('The saved native trust request is unavailable for this selection.');
+    if (input.continueOriginal !== undefined && (typeof input.continueOriginal !== 'boolean' || !input.creationRequestId)) throw new Error('native_http_create_invalid_continuation');
+    let publicRequest: { requireNative(native: boolean): void } | undefined;
+    if (input.creationRequestId !== undefined) {
+      const { retainHttpCreateRequest } = await import('./rig-http-create.mts');
+      publicRequest = retainHttpCreateRequest(directory, input.creationRequestId, {
+        mode, rigId: input.rigId ?? '', rigName: input.rigName ?? input.project ?? '', pod: input.pod ?? '',
+        name, host, cwd, runtime, row: input.row ?? null, col: input.col ?? null,
+      }, structuredAttachmentBuild());
+    }
     const trustSelection = Buffer.from(JSON.stringify({ mode, rigId: input.rigId ?? '', rigName: input.rigName ?? input.project ?? '',
       pod: input.pod ?? '', name, host, cwd, runtime }));
     if (input.trustRequest) {
@@ -359,6 +368,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     try { run('tmux', ['has-session', '-t', `=${tmux}`], 3000); alive = true; } catch { /* A stopped relay can be explicitly reconnected. */ }
     if (existing && (existing.cwd !== cwd || existing.runtime !== runtime || existing.rigId !== rigId)) throw new Error('This agent has a different topology, directory or runtime. Choose another name.');
     const native = existing?.nativeOwned === true || (!existing && structuredAttachmentBuild() && local && runtime === 'codex');
+    publicRequest?.requireNative(native);
     if (input.inspect && mode === 'existing' && !native) throw new Error('This session has no original native creation request to inspect.');
     if (native) {
       const { launchRigNativeCodex } = await import('./rig-native-launch.mts');
