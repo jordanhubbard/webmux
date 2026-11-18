@@ -7,15 +7,16 @@ The new bounded stderr fixture exposed a signal-thread panic and forced cleanup
 in receipts whose policy assertions had passed. Those earlier receipts retain
 their original results; they do not prove healthy signal handling.
 
-The candidate fix admits only addressless, read/write-equivalent send/receive
+The #533 repair admits only addressless, read/write-equivalent send/receive
 forms with restricted flags and canonical zero address/length words. External
 socket creation, connect/bind/listen/accept, addressed I/O, message/descriptor
 transfer, child creation and later exec/filter replacement remain denied. New
 kernel controls exercise real signal-pair data I/O plus both positive and
 refused address/flag/message forms. The native fixture now refuses observed
 panics, forced cleanup, incomplete stderr and unexpected exits; panic detection
-survives truncation of the retained 32 KiB tail. Native AMD64/ARM64 qualification
-of this candidate is required before calling the signal-path repair qualified.
+survives truncation of the retained 32 KiB tail. The separate [native signal-path qualification](../codex-observer-signal-2026-11-18/README.md)
+passes on AMD64 and ARM64 with no panic or forced cleanup. The original early
+stdout EOF had no stderr; its exact historical cause remains unproven.
 The dependency's [UnixStream signal pair](https://raw.githubusercontent.com/vorner/signal-hook/v0.3.18/src/iterator/mod.rs)
 provides source context for the recorded native failure.
 
@@ -53,8 +54,9 @@ The helper permits no later seccomp/prctl filter replacement. This is targeted
 startup enforcement for the qualified native CLI, not a general filesystem
 sandbox or a permission policy for coding tools.
 
-The [receipt](receipt.json) binds current sources to actual Linux ARM64 kernel
-and native Codex0.169 controls. Native ordinary and race tests verify usable
+The original [receipt](receipt.json) records the earlier Linux ARM64 kernel
+and policy-snapshot controls. Use the #533 qualification above for healthy
+native signal delivery; the original artifacts retain their original scope. Native ordinary and race tests verify usable
 runtime threads/private signal pairs, positive and denied network/child/exec
 operations, same-executable denial, filter-replacement denial, unchanged PID,
 closed listener, executable-digest refusal and private immutable references.
