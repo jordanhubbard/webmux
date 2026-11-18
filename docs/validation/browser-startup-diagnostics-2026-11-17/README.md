@@ -347,3 +347,40 @@ Darwin/Windows browser vet, workflow policy, source bindings, JSON, links and
 whitespace pass. Actual Windows sampling and frame correlation remain pending;
 tracing can perturb startup, so successful instrumented loads alone cannot
 establish a fix. See [sampling-manifest.json](sampling-manifest.json).
+
+
+## Paired observer placement
+
+At8248058, [Windows sampling](windows-sampling-summary.json) retains all26
+records: the full matrix has six passes and ten failures, all eight early-traced
+first loads pass, and all four intentional cancellation controls pass. The
+sampling step passes while the failed full matrix keeps the job failed. Traces
+are complete without loss/drops. Frame aliases place observed browser-internal
+startup commits on a separate frame from the fixture. This does not establish
+what canceled the uninstrumented loads; early observation can perturb startup.
+
+Two more first-load controls now start the same navigation tracer after target
+initialization, viewport setup and the explicit blank navigation, immediately
+before the one fixture navigation. Their matched early controls still start
+before target attachment. Both positions use the same protected allocator,
+profile locations, trace collector and caps. A fixed traceStartStage category
+labels before_target or after_blank. No sleep, navigation retry, production
+readiness barrier or application timeout change is added. The three bounded
+sampling rounds include both positions at both locations plus the separate
+known-cancellation control. The full matrix remains first and retains failures.
+
+One intermediate local sample loaded the fixture but received no trace data
+within the existing five-second drain deadline. It is retained as an incomplete
+capture, not navigation failure or accepted trace evidence. The record now also
+labels whether Tracing.end was acknowledged and projects only a fixed error
+class. The diagnostic drain deadline and all navigation deadlines remain
+unchanged. Final accepted captures require completion without loss or truncation.
+
+[Final local source](native-position-summary.json) passes sixteen ordinary first
+loads plus one separate intentional cancellation, then twelve ordinary first
+loads and three separate cancellations across the three paired rounds. Two
+Windows-only NetLog skips remain explicit. Browser race, privacy/bounds controls,
+Darwin/Windows browser vet, workflow checks and source bindings pass. Actual
+Windows late-start results remain pending; neither local success nor a missing
+abort under instrumentation demonstrates a runtime fix. See
+[position-manifest.json](position-manifest.json).

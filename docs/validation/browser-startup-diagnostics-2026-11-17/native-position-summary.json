@@ -1,0 +1,440 @@
+{
+  "scope": "Final-source macOS ARM64: full16ordinaryfirstloads+1intentionalcontrol and 3rounds12ordinaryfirstloads+3intentionalcontrolsPASS. TwoWindows-onlyNetLogskips. NoWindowslate-traceacceptanceorfixed-causeclaim.",
+  "fullFirstLoads": [
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial"
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-screenshot",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial"
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial"
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-screenshot",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial"
+    },
+    {
+      "transport": "websocket",
+      "profileLocation": "system-temporary",
+      "mode": "direct-websocket",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial"
+    },
+    {
+      "transport": "websocket",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-websocket",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial"
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-child",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "child",
+      "extraTargets": 1
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-child-original",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial-after-child",
+      "extraTargets": 1
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-child",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "child",
+      "extraTargets": 1
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-child-original",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial-after-child",
+      "extraTargets": 1
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-trace",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "traceStartStage": "before_target",
+      "capture": {
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "bytes": 205712,
+        "scanned": 577,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-trace",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "traceStartStage": "before_target",
+      "capture": {
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "bytes": 207565,
+        "scanned": 582,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-trace-late",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "traceStartStage": "after_blank",
+      "capture": {
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "bytes": 115241,
+        "scanned": 354,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-trace-late",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/158.0.8127.36",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "traceStartStage": "after_blank",
+      "capture": {
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "bytes": 115186,
+        "scanned": 354,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "worker-subprocess-temporary",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-saved",
+      "mode": "worker-subprocess-saved",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    }
+  ],
+  "rounds": [
+    {
+      "trial": 1,
+      "cases": [
+        {
+          "transport": "pipe",
+          "profileLocation": "system-temporary",
+          "mode": "direct-trace",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "browserProduct": "Chrome/158.0.8127.36",
+          "loaded": true,
+          "fixtureRequests": 1,
+          "navigateCalls": 1,
+          "targetSelection": "initial",
+          "traceStartStage": "before_target"
+        },
+        {
+          "transport": "pipe",
+          "profileLocation": "home-temporary",
+          "mode": "direct-home-trace",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "browserProduct": "Chrome/158.0.8127.36",
+          "loaded": true,
+          "fixtureRequests": 1,
+          "navigateCalls": 1,
+          "targetSelection": "initial",
+          "traceStartStage": "before_target"
+        },
+        {
+          "transport": "pipe",
+          "profileLocation": "system-temporary",
+          "mode": "direct-trace-late",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "browserProduct": "Chrome/158.0.8127.36",
+          "loaded": true,
+          "fixtureRequests": 1,
+          "navigateCalls": 1,
+          "targetSelection": "initial",
+          "traceStartStage": "after_blank"
+        },
+        {
+          "transport": "pipe",
+          "profileLocation": "home-temporary",
+          "mode": "direct-home-trace-late",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "browserProduct": "Chrome/158.0.8127.36",
+          "loaded": true,
+          "fixtureRequests": 1,
+          "navigateCalls": 1,
+          "targetSelection": "initial",
+          "traceStartStage": "after_blank"
+        },
+        {
+          "mode": "controlled-stop-trace",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "intentionalCancellation": true,
+          "stopIssued": true,
+          "controlConfirmed": true,
+          "navigateCalls": 1,
+          "fixtureRequests": 1
+        }
+      ]
+    },
+    {
+      "trial": 2,
+      "cases": [
+        {
+          "transport": "pipe",
+          "profileLocation": "system-temporary",
+          "mode": "direct-trace",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "browserProduct": "Chrome/158.0.8127.36",
+          "loaded": true,
+          "fixtureRequests": 1,
+          "navigateCalls": 1,
+          "targetSelection": "initial",
+          "traceStartStage": "before_target"
+        },
+        {
+          "transport": "pipe",
+          "profileLocation": "home-temporary",
+          "mode": "direct-home-trace",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "browserProduct": "Chrome/158.0.8127.36",
+          "loaded": true,
+          "fixtureRequests": 1,
+          "navigateCalls": 1,
+          "targetSelection": "initial",
+          "traceStartStage": "before_target"
+        },
+        {
+          "transport": "pipe",
+          "profileLocation": "system-temporary",
+          "mode": "direct-trace-late",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "browserProduct": "Chrome/158.0.8127.36",
+          "loaded": true,
+          "fixtureRequests": 1,
+          "navigateCalls": 1,
+          "targetSelection": "initial",
+          "traceStartStage": "after_blank"
+        },
+        {
+          "transport": "pipe",
+          "profileLocation": "home-temporary",
+          "mode": "direct-home-trace-late",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "browserProduct": "Chrome/158.0.8127.36",
+          "loaded": true,
+          "fixtureRequests": 1,
+          "navigateCalls": 1,
+          "targetSelection": "initial",
+          "traceStartStage": "after_blank"
+        },
+        {
+          "mode": "controlled-stop-trace",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "intentionalCancellation": true,
+          "stopIssued": true,
+          "controlConfirmed": true,
+          "navigateCalls": 1,
+          "fixtureRequests": 1
+        }
+      ]
+    },
+    {
+      "trial": 3,
+      "cases": [
+        {
+          "transport": "pipe",
+          "profileLocation": "system-temporary",
+          "mode": "direct-trace",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "browserProduct": "Chrome/158.0.8127.36",
+          "loaded": true,
+          "fixtureRequests": 1,
+          "navigateCalls": 1,
+          "targetSelection": "initial",
+          "traceStartStage": "before_target"
+        },
+        {
+          "transport": "pipe",
+          "profileLocation": "home-temporary",
+          "mode": "direct-home-trace",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "browserProduct": "Chrome/158.0.8127.36",
+          "loaded": true,
+          "fixtureRequests": 1,
+          "navigateCalls": 1,
+          "targetSelection": "initial",
+          "traceStartStage": "before_target"
+        },
+        {
+          "transport": "pipe",
+          "profileLocation": "system-temporary",
+          "mode": "direct-trace-late",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "browserProduct": "Chrome/158.0.8127.36",
+          "loaded": true,
+          "fixtureRequests": 1,
+          "navigateCalls": 1,
+          "targetSelection": "initial",
+          "traceStartStage": "after_blank"
+        },
+        {
+          "transport": "pipe",
+          "profileLocation": "home-temporary",
+          "mode": "direct-home-trace-late",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "browserProduct": "Chrome/158.0.8127.36",
+          "loaded": true,
+          "fixtureRequests": 1,
+          "navigateCalls": 1,
+          "targetSelection": "initial",
+          "traceStartStage": "after_blank"
+        },
+        {
+          "mode": "controlled-stop-trace",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "intentionalCancellation": true,
+          "stopIssued": true,
+          "controlConfirmed": true,
+          "navigateCalls": 1,
+          "fixtureRequests": 1
+        }
+      ]
+    }
+  ]
+}

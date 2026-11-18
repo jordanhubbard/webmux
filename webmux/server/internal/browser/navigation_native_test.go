@@ -42,6 +42,7 @@ type firstNavigationEvidence struct {
 	Diagnostics     *NavigationDiagnostics `json:"diagnostics,omitempty"`
 	NetLog          *firstNavigationNetLog `json:"netLog,omitempty"`
 	BrowserTrace    *firstNavigationTrace  `json:"browserTrace,omitempty"`
+	TraceStartStage string                 `json:"traceStartStage,omitempty"`
 }
 
 // These are independent first loads in fresh private browser processes. A failed
@@ -56,7 +57,7 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 	}
 	t.Setenv("WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS", "1")
 	site, hits := firstNavigationNodeFixture(t)
-	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "direct-child", "direct-child-original", "direct-home-child", "direct-home-child-original", "direct-netlog", "direct-home-netlog", "direct-trace", "direct-home-trace", "worker-subprocess-temporary", "worker-subprocess-saved"} {
+	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "direct-child", "direct-child-original", "direct-home-child", "direct-home-child-original", "direct-netlog", "direct-home-netlog", "direct-trace", "direct-home-trace", "direct-trace-late", "direct-home-trace-late", "worker-subprocess-temporary", "worker-subprocess-saved"} {
 		t.Run(mode, func(t *testing.T) {
 			if strings.HasSuffix(mode, "-netlog") && runtime.GOOS != "windows" {
 				t.Skip("Windows-only bounded anonymous NetLog capture; macOS sandbox refuses its scratch directory")
@@ -100,7 +101,7 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 					screenshot: strings.HasSuffix(mode, "screenshot"), profileAtHome: strings.Contains(mode, "-home"),
 					websocket: strings.Contains(mode, "websocket"), createChild: strings.Contains(mode, "-child"),
 					selectOriginal: strings.HasSuffix(mode, "-original"), netLog: strings.HasSuffix(mode, "-netlog"),
-					browserTrace: strings.HasSuffix(mode, "-trace"),
+					browserTrace: strings.Contains(mode, "-trace"), traceLate: strings.HasSuffix(mode, "-late"),
 				}, &record)
 			}
 			record.NavigateCalls++
@@ -330,7 +331,7 @@ func firstNavigationWorker(t *testing.T, saved bool, record *firstNavigationEvid
 }
 
 type firstNavigationDirectOptions struct {
-	screenshot, profileAtHome, websocket, createChild, selectOriginal, netLog, browserTrace bool
+	screenshot, profileAtHome, websocket, createChild, selectOriginal, netLog, browserTrace, traceLate bool
 }
 
 func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, record *firstNavigationEvidence) func(Request) Frame {
@@ -393,7 +394,8 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 	trace := newNavigationTrace()
 	startup := time.AfterFunc(20*time.Second, cancel)
 	t.Cleanup(func() { startup.Stop() })
-	if options.browserTrace {
+	beginCapture := func(stage string) {
+		record.TraceStartStage = stage
 		capture, err := startFirstNavigationTrace(root)
 		if err != nil {
 			record.Failure = "browser_trace_start_error"
@@ -409,6 +411,9 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 			}
 		})
 	}
+	if options.browserTrace && !options.traceLate {
+		beginCapture("before_target")
+	}
 	err := chromedp.Do(root, chromedp.EmulateViewport(Width, Height), chromedp.Func(func(_ context.Context, target *chromedp.Target) error {
 		trace.startup(string(target.TargetID))
 		trace.watch(root)
@@ -420,6 +425,9 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 		record.Failure = "direct_startup_error"
 		record.Diagnostics = trace.snapshot()
 		t.Fatal("direct native Chromium startup failed")
+	}
+	if options.browserTrace && options.traceLate {
+		beginCapture("after_blank")
 	}
 	active := root
 	record.TargetSelection = "initial"

@@ -14,14 +14,16 @@ import (
 )
 
 type firstNavigationTrace struct {
-	Complete      bool                        `json:"complete"`
-	DataLoss      bool                        `json:"dataLoss"`
-	Bytes         int                         `json:"bytes"`
-	Scanned       int                         `json:"scanned"`
-	Dropped       int                         `json:"dropped"`
-	MatchedEvents int                         `json:"matchedEvents"`
-	IdentityLimit bool                        `json:"identityLimit,omitempty"`
-	Events        []firstNavigationTraceEvent `json:"events"`
+	EndAcknowledged bool                        `json:"endAcknowledged"`
+	ErrorClass      string                      `json:"errorClass,omitempty"`
+	Complete        bool                        `json:"complete"`
+	DataLoss        bool                        `json:"dataLoss"`
+	Bytes           int                         `json:"bytes"`
+	Scanned         int                         `json:"scanned"`
+	Dropped         int                         `json:"dropped"`
+	MatchedEvents   int                         `json:"matchedEvents"`
+	IdentityLimit   bool                        `json:"identityLimit,omitempty"`
+	Events          []firstNavigationTraceEvent `json:"events"`
 }
 
 type firstNavigationTraceEvent struct {
@@ -109,6 +111,7 @@ func (c *firstNavigationTraceCapture) finish(root context.Context, requested str
 	ctx, cancel := context.WithTimeout(root, 5*time.Second)
 	defer cancel()
 	_, err := cdp.Call(ctx, chromedp.FromContext(root).Browser, tracing.End, cdp.Empty{})
+	endAcknowledged := err == nil
 	if err == nil {
 		select {
 		case <-c.done:
@@ -119,10 +122,16 @@ func (c *firstNavigationTraceCapture) finish(root context.Context, requested str
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	result := projectFirstNavigationTrace(c.values, requested)
+	result.EndAcknowledged = endAcknowledged
 	result.Complete, result.DataLoss = c.complete, c.lost
 	result.Bytes, result.Scanned = c.bytes, c.scanned
 	result.Dropped += c.dropped
 	if err != nil || !result.Complete || result.DataLoss || result.Dropped != 0 || result.IdentityLimit {
+		if err != nil {
+			result.ErrorClass = navigationErrorClass("", err)
+		} else {
+			result.ErrorClass = "incomplete_or_truncated"
+		}
 		return result, fmt.Errorf("anonymous navigation trace incomplete or truncated")
 	}
 	return result, nil
