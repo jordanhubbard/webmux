@@ -302,3 +302,48 @@ No runtime workaround, protection change, extra application wait or replay is
 introduced. The original CI delta in this follow-up only adds the positive
 control to its existing native-probe selection; other CI/audit/package gates
 remain intact.
+
+
+## Windows trace acceptance and bounded independent samples
+
+At2e309f4, the [isolated Windows evidence](windows-first-trace-summary.json)
+confirms the positive cancellation control: its hanging fixture receives one
+request, Stop Loading is issued, and the complete trace retains the requested
+uncommitted net_error-3 navigation and RenderFrameHostImpl::Stop. Both ordinary
+trace cases pass with committed requested documents. Twelve of the sixteen
+ordinary first loads pass; four fail, so there is still no unexplained-abort
+internal trace or runtime fix. One NetLog case also passes with three matching
+URL-bearing source objects and exactly one fixture request. The diagnostic
+counter is now named matchedURLSources; the old matchedRequests label did not
+count HTTP requests. The original artifact values are retained with that
+clarification. Known-control and ordinary traces report no capture loss/drops.
+
+The diagnostic workflow now runs three additional independent rounds of just
+the two trace cases and their known-cancellation control. Every case owns a
+fresh browser and each round has its own artifact directory. This is bounded
+sampling of an intermittent failure, with one fixture navigation per browser.
+The full first-load matrix still runs first and its failure remains a job
+failure. Sampling proceeds after a matrix failure only when browser installation
+succeeded and the job was not canceled. Any sample failure also fails its step.
+No continue-on-error, failed-load replay or replacement of another gate is added.
+Only projected JSON below the owned artifact root is collected recursively.
+
+The trace projection also adds locally aliased frame-tree-node identities,
+main-frame booleans and fixed URL classes (fixture, about_blank, data,
+browser_internal, other). These distinguish other startup navigation activity
+from the requested frame without retaining a URL or raw frame/process dictionary.
+Both navigation and frame aliases are capped at64. Chromium can encode optional
+frame metadata as an object or an opaque pointer string; only object snapshots
+supply aliases, and pointer strings remain unprojected/unknown. Unit controls
+cover both forms, privacy and both identity limits. The first native correlation
+attempt rejected the pointer variant; that failed attempt is excluded, and the
+corrected final source is requalified.
+
+[Final local sampling](native-sampling-summary.json) passes the full fourteen
+ordinary first loads and separate control, then six more ordinary first loads
+and three separate cancellation controls across the three sampling rounds.
+The two Windows-only NetLog cases remain explicit skips. Browser race,
+Darwin/Windows browser vet, workflow policy, source bindings, JSON, links and
+whitespace pass. Actual Windows sampling and frame correlation remain pending;
+tracing can perturb startup, so successful instrumented loads alone cannot
+establish a fix. See [sampling-manifest.json](sampling-manifest.json).

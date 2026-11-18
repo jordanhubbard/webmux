@@ -1,0 +1,326 @@
+{
+  "scope": "Final-source macOS ARM64 acceptance: full14normalfirstloads+1intentionalcontrol,plus3independentrounds6normalfirstloads+3intentionalcontrols. TwoWindows-onlyNetLogskips remain explicit. NoWindowsabortcause/fixclaim.",
+  "rounds": [
+    {
+      "trial": 1,
+      "cases": [
+        {
+          "mode": "direct-trace",
+          "firstLoadPassed": true,
+          "intentionalCancellation": false,
+          "controlConfirmed": null,
+          "navigateCalls": 1,
+          "fixtureRequests": 1,
+          "trace": {
+            "complete": true,
+            "dataLoss": false,
+            "bytes": 206294,
+            "scanned": 583,
+            "dropped": 0,
+            "matchedEvents": 4
+          },
+          "keyEvents": [
+            {
+              "name": "WebContentsImpl::DidFinishNavigation",
+              "phase": "X",
+              "relativeUs": 12668,
+              "navigation": 2,
+              "frame": 1,
+              "mainFrame": true,
+              "urlClass": "fixture",
+              "matchesRequested": true,
+              "state": 8,
+              "netError": 0,
+              "committed": true,
+              "browserInitiated": true
+            }
+          ]
+        },
+        {
+          "mode": "direct-home-trace",
+          "firstLoadPassed": true,
+          "intentionalCancellation": false,
+          "controlConfirmed": null,
+          "navigateCalls": 1,
+          "fixtureRequests": 1,
+          "trace": {
+            "complete": true,
+            "dataLoss": false,
+            "bytes": 206153,
+            "scanned": 582,
+            "dropped": 0,
+            "matchedEvents": 4
+          },
+          "keyEvents": [
+            {
+              "name": "WebContentsImpl::DidFinishNavigation",
+              "phase": "X",
+              "relativeUs": 18534,
+              "navigation": 2,
+              "frame": 1,
+              "mainFrame": true,
+              "urlClass": "fixture",
+              "matchesRequested": true,
+              "state": 8,
+              "netError": 0,
+              "committed": true,
+              "browserInitiated": true
+            }
+          ]
+        },
+        {
+          "mode": "controlled-stop-trace",
+          "firstLoadPassed": null,
+          "intentionalCancellation": true,
+          "controlConfirmed": true,
+          "navigateCalls": 1,
+          "fixtureRequests": 1,
+          "trace": {
+            "complete": true,
+            "dataLoss": false,
+            "bytes": 145693,
+            "scanned": 381,
+            "dropped": 0,
+            "matchedEvents": 4
+          },
+          "keyEvents": [
+            {
+              "name": "WebContentsImpl::DidFinishNavigation",
+              "phase": "X",
+              "relativeUs": 17917,
+              "navigation": 2,
+              "frame": 1,
+              "mainFrame": true,
+              "urlClass": "fixture",
+              "matchesRequested": true,
+              "state": 3,
+              "netError": -3,
+              "committed": false,
+              "browserInitiated": true
+            },
+            {
+              "name": "RenderFrameHostImpl::Stop",
+              "phase": "X",
+              "relativeUs": 18726,
+              "frame": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "trial": 2,
+      "cases": [
+        {
+          "mode": "direct-trace",
+          "firstLoadPassed": true,
+          "intentionalCancellation": false,
+          "controlConfirmed": null,
+          "navigateCalls": 1,
+          "fixtureRequests": 1,
+          "trace": {
+            "complete": true,
+            "dataLoss": false,
+            "bytes": 208923,
+            "scanned": 594,
+            "dropped": 0,
+            "matchedEvents": 4
+          },
+          "keyEvents": [
+            {
+              "name": "WebContentsImpl::DidFinishNavigation",
+              "phase": "X",
+              "relativeUs": 89572,
+              "navigation": 2,
+              "frame": 1,
+              "mainFrame": true,
+              "urlClass": "fixture",
+              "matchesRequested": true,
+              "state": 8,
+              "netError": 0,
+              "committed": true,
+              "browserInitiated": true
+            }
+          ]
+        },
+        {
+          "mode": "direct-home-trace",
+          "firstLoadPassed": true,
+          "intentionalCancellation": false,
+          "controlConfirmed": null,
+          "navigateCalls": 1,
+          "fixtureRequests": 1,
+          "trace": {
+            "complete": true,
+            "dataLoss": false,
+            "bytes": 206288,
+            "scanned": 583,
+            "dropped": 0,
+            "matchedEvents": 4
+          },
+          "keyEvents": [
+            {
+              "name": "WebContentsImpl::DidFinishNavigation",
+              "phase": "X",
+              "relativeUs": 16432,
+              "navigation": 2,
+              "frame": 1,
+              "mainFrame": true,
+              "urlClass": "fixture",
+              "matchesRequested": true,
+              "state": 8,
+              "netError": 0,
+              "committed": true,
+              "browserInitiated": true
+            }
+          ]
+        },
+        {
+          "mode": "controlled-stop-trace",
+          "firstLoadPassed": null,
+          "intentionalCancellation": true,
+          "controlConfirmed": true,
+          "navigateCalls": 1,
+          "fixtureRequests": 1,
+          "trace": {
+            "complete": true,
+            "dataLoss": false,
+            "bytes": 145664,
+            "scanned": 381,
+            "dropped": 0,
+            "matchedEvents": 4
+          },
+          "keyEvents": [
+            {
+              "name": "WebContentsImpl::DidFinishNavigation",
+              "phase": "X",
+              "relativeUs": 16670,
+              "navigation": 2,
+              "frame": 1,
+              "mainFrame": true,
+              "urlClass": "fixture",
+              "matchesRequested": true,
+              "state": 3,
+              "netError": -3,
+              "committed": false,
+              "browserInitiated": true
+            },
+            {
+              "name": "RenderFrameHostImpl::Stop",
+              "phase": "X",
+              "relativeUs": 17419,
+              "frame": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "trial": 3,
+      "cases": [
+        {
+          "mode": "direct-trace",
+          "firstLoadPassed": true,
+          "intentionalCancellation": false,
+          "controlConfirmed": null,
+          "navigateCalls": 1,
+          "fixtureRequests": 1,
+          "trace": {
+            "complete": true,
+            "dataLoss": false,
+            "bytes": 206321,
+            "scanned": 583,
+            "dropped": 0,
+            "matchedEvents": 4
+          },
+          "keyEvents": [
+            {
+              "name": "WebContentsImpl::DidFinishNavigation",
+              "phase": "X",
+              "relativeUs": 18505,
+              "navigation": 2,
+              "frame": 1,
+              "mainFrame": true,
+              "urlClass": "fixture",
+              "matchesRequested": true,
+              "state": 8,
+              "netError": 0,
+              "committed": true,
+              "browserInitiated": true
+            }
+          ]
+        },
+        {
+          "mode": "direct-home-trace",
+          "firstLoadPassed": true,
+          "intentionalCancellation": false,
+          "controlConfirmed": null,
+          "navigateCalls": 1,
+          "fixtureRequests": 1,
+          "trace": {
+            "complete": true,
+            "dataLoss": false,
+            "bytes": 205543,
+            "scanned": 577,
+            "dropped": 0,
+            "matchedEvents": 4
+          },
+          "keyEvents": [
+            {
+              "name": "WebContentsImpl::DidFinishNavigation",
+              "phase": "X",
+              "relativeUs": 15454,
+              "navigation": 2,
+              "frame": 1,
+              "mainFrame": true,
+              "urlClass": "fixture",
+              "matchesRequested": true,
+              "state": 8,
+              "netError": 0,
+              "committed": true,
+              "browserInitiated": true
+            }
+          ]
+        },
+        {
+          "mode": "controlled-stop-trace",
+          "firstLoadPassed": null,
+          "intentionalCancellation": true,
+          "controlConfirmed": true,
+          "navigateCalls": 1,
+          "fixtureRequests": 1,
+          "trace": {
+            "complete": true,
+            "dataLoss": false,
+            "bytes": 144677,
+            "scanned": 379,
+            "dropped": 0,
+            "matchedEvents": 4
+          },
+          "keyEvents": [
+            {
+              "name": "WebContentsImpl::DidFinishNavigation",
+              "phase": "X",
+              "relativeUs": 19567,
+              "navigation": 2,
+              "frame": 1,
+              "mainFrame": true,
+              "urlClass": "fixture",
+              "matchesRequested": true,
+              "state": 3,
+              "netError": -3,
+              "committed": false,
+              "browserInitiated": true
+            },
+            {
+              "name": "RenderFrameHostImpl::Stop",
+              "phase": "X",
+              "relativeUs": 20445,
+              "frame": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

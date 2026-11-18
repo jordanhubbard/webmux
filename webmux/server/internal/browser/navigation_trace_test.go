@@ -29,6 +29,9 @@ type firstNavigationTraceEvent struct {
 	Phase            string `json:"phase"`
 	Microseconds     int64  `json:"relativeUs"`
 	Navigation       int    `json:"navigation,omitempty"`
+	Frame            int    `json:"frame,omitempty"`
+	MainFrame        *bool  `json:"mainFrame,omitempty"`
+	URLClass         string `json:"urlClass,omitempty"`
 	MatchesRequested *bool  `json:"matchesRequested,omitempty"`
 	State            *int   `json:"state,omitempty"`
 	NetError         *int   `json:"netError,omitempty"`
@@ -134,11 +137,18 @@ type firstNavigationTraceNav struct {
 	BrowserInitiated *bool           `json:"browser_initiated"`
 	Discard          json.RawMessage `json:"navigation_discard_reason"`
 	Reason           json.RawMessage `json:"discard_reason"`
+	Frame            json.RawMessage `json:"frame_tree_node"`
+}
+
+type firstNavigationTraceFrame struct {
+	ID   int64 `json:"frame_tree_node_id"`
+	Main *bool `json:"is_main_frame"`
 }
 
 func projectFirstNavigationTrace(values []json.RawMessage, requested string) *firstNavigationTrace {
 	result := &firstNavigationTrace{Events: []firstNavigationTraceEvent{}}
 	aliases := map[int64]int{}
+	frames := map[int64]int{}
 	var origin int64
 	for _, value := range values {
 		var raw struct {
@@ -150,6 +160,9 @@ func projectFirstNavigationTrace(values []json.RawMessage, requested string) *fi
 				Reason       json.RawMessage          `json:"reason"`
 				Discard      json.RawMessage          `json:"navigation_discard_reason"`
 				CurrentEvent *int                     `json:"current_event"`
+				Frame        json.RawMessage          `json:"frame_tree_node"`
+				FrameInfo    json.RawMessage          `json:"frame_tree_node_info"`
+				FrameHost    json.RawMessage          `json:"render_frame_host"`
 				Navigation   *firstNavigationTraceNav `json:"navigation"`
 				Request      *firstNavigationTraceNav `json:"navigation_request"`
 				Handle       *firstNavigationTraceNav `json:"navigation_handle"`
@@ -187,11 +200,21 @@ func projectFirstNavigationTrace(values []json.RawMessage, requested string) *fi
 			nav = raw.Args.Handle
 		}
 		url := raw.Args.URL
+		frame := firstNavigationFrame(raw.Args.Frame)
+		if frame == nil {
+			frame = firstNavigationFrame(raw.Args.FrameInfo)
+		}
+		if frame == nil {
+			frame = firstNavigationFrame(raw.Args.FrameHost)
+		}
 		reason := raw.Args.Reason
 		if len(raw.Args.Discard) != 0 {
 			reason = raw.Args.Discard
 		}
 		if nav != nil {
+			if navFrame := firstNavigationFrame(nav.Frame); navFrame != nil {
+				frame = navFrame
+			}
 			if nav.ID > 0 && nav.ID < 1<<53 && (aliases[nav.ID] != 0 || len(aliases) < 64) {
 				if aliases[nav.ID] == 0 {
 					aliases[nav.ID] = len(aliases) + 1
@@ -209,12 +232,36 @@ func projectFirstNavigationTrace(values []json.RawMessage, requested string) *fi
 				reason = nav.Reason
 			}
 		}
+		if frame != nil {
+			row.MainFrame = frame.Main
+			if frame.ID > 0 && frame.ID < 1<<53 && (frames[frame.ID] != 0 || len(frames) < 64) {
+				if frames[frame.ID] == 0 {
+					frames[frame.ID] = len(frames) + 1
+				}
+				row.Frame = frames[frame.ID]
+			} else if frame.ID > 0 && frame.ID < 1<<53 {
+				result.IdentityLimit = true
+			}
+		}
 		if url != "" && requested != "" {
 			matches := url == requested
 			row.MatchesRequested = &matches
 			if matches {
 				result.MatchedEvents++
 			}
+		}
+		switch {
+		case url == "":
+		case requested != "" && url == requested:
+			row.URLClass = "fixture"
+		case url == "about:blank":
+			row.URLClass = "about_blank"
+		case strings.HasPrefix(url, "data:"):
+			row.URLClass = "data"
+		case strings.HasPrefix(url, "chrome://") || strings.HasPrefix(url, "chrome-extension://"):
+			row.URLClass = "browser_internal"
+		default:
+			row.URLClass = "other"
 		}
 		if len(reason) != 0 && string(reason) != "null" {
 			var number int
@@ -228,6 +275,16 @@ func projectFirstNavigationTrace(values []json.RawMessage, requested string) *fi
 		result.Events = append(result.Events, row)
 	}
 	return result
+}
+
+// Chromium uses both object snapshots and opaque pointer strings for these
+// optional fields. Only the object form contributes a local frame alias.
+func firstNavigationFrame(value json.RawMessage) *firstNavigationTraceFrame {
+	var frame firstNavigationTraceFrame
+	if json.Unmarshal(value, &frame) != nil || (frame.ID == 0 && frame.Main == nil) {
+		return nil
+	}
+	return &frame
 }
 
 func traceBoundedInt(value *int) *int {

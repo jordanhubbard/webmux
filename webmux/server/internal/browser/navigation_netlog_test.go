@@ -14,13 +14,13 @@ import (
 // Test-only projection. Never forward raw NetLog dictionaries, parameters,
 // headers, URLs, DNS names, addresses, command lines or profile information.
 type firstNavigationNetLog struct {
-	Bytes           int                       `json:"bytes"`
-	Scanned         int                       `json:"scanned"`
-	MatchedRequests int                       `json:"matchedRequests"`
-	Sources         int                       `json:"sources"`
-	SourcesLimited  bool                      `json:"sourcesLimited,omitempty"`
-	Dropped         int                       `json:"dropped"`
-	Events          []firstNavigationNetEvent `json:"events"`
+	Bytes             int                       `json:"bytes"`
+	Scanned           int                       `json:"scanned"`
+	MatchedURLSources int                       `json:"matchedURLSources"`
+	Sources           int                       `json:"sources"`
+	SourcesLimited    bool                      `json:"sourcesLimited,omitempty"`
+	Dropped           int                       `json:"dropped"`
+	Events            []firstNavigationNetEvent `json:"events"`
 }
 
 type firstNavigationNetEvent struct {
@@ -77,7 +77,7 @@ func readFirstNavigationNetLog(path, requested string) (*firstNavigationNetLog, 
 				continue
 			}
 			selected[event.Source.ID] = len(selected) + 1
-			result.MatchedRequests++
+			result.MatchedURLSources++
 		}
 	}
 	// Follow only dependencies of matched requests, never unrelated startup
@@ -142,14 +142,14 @@ func TestFirstNavigationNetLogProjection(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "netlog.json")
 	raw := `{"constants":{"logEventTypes":{"URL_REQUEST_START_JOB":1,"SECRET_PRIVATE":2,"CANCELLED":3}},"events":[
 {"source":{"id":900,"type":1},"time":"1000","type":1,"phase":1,"params":{"url":"http://fixture.invalid/check","headers":"secret-cookie","source_dependency":{"id":901,"type":2}}},
-{"source":{"id":901,"type":2},"time":"1001","type":2,"phase":0,"params":{"address":"private-address","net_error":-3}},
+{"source":{"id":901,"type":2},"time":"1001","type":2,"phase":0,"params":{"address":"private-address","url":"http://fixture.invalid/check","net_error":-3}},
 {"source":{"id":900,"type":1},"time":"1002","type":3,"phase":0,"params":{"reason":"secret-reason","net_error":-3}},
 {"source":{"id":999,"type":1},"time":"1003","type":1,"phase":1,"params":{"url":"https://unrelated.invalid/secret"}}]}`
 	if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
 		t.Fatal(err)
 	}
 	result, err := readFirstNavigationNetLog(path, "http://fixture.invalid/check")
-	if err != nil || result.MatchedRequests != 1 || result.Sources != 2 || len(result.Events) != 3 || result.Events[1].Name != "other" || result.Events[0].Dependency != 2 || *result.Events[2].NetError != -3 {
+	if err != nil || result.MatchedURLSources != 2 || result.Sources != 2 || len(result.Events) != 3 || result.Events[1].Name != "other" || result.Events[0].Dependency != 2 || *result.Events[2].NetError != -3 {
 		t.Fatal("request dependency projection failed", result, err)
 	}
 	encoded, _ := json.Marshal(result)
@@ -162,7 +162,7 @@ func TestFirstNavigationNetLogProjection(t *testing.T) {
 		}
 	}
 	empty, err := readFirstNavigationNetLog(path, "http://other.invalid/check")
-	if err != nil || empty.MatchedRequests != 0 || len(empty.Events) != 0 {
+	if err != nil || empty.MatchedURLSources != 0 || len(empty.Events) != 0 {
 		t.Fatal("unrelated traffic selected", empty, err)
 	}
 }

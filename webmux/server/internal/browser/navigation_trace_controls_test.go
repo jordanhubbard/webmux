@@ -18,17 +18,18 @@ import (
 
 func TestFirstNavigationTraceProjection(t *testing.T) {
 	values := []json.RawMessage{
-		json.RawMessage(`{"name":"NavigationRequest::NavigationRequest","ph":"X","ts":1000,"args":{"navigation":{"url":"http://private.invalid/check","navigation_id":987654,"state":0,"net_error":0,"browser_initiated":true,"has_committed":false,"frame_tree_node":{"current_frame_host":{"origin":"secret-origin"}}}}}`),
-		json.RawMessage(`{"name":"WebContentsImpl::DidFinishNavigation","ph":"secret-phase","ts":1005,"args":{"navigation_handle":{"url":"http://private.invalid/check","navigation_id":987654,"net_error":-3,"discard_reason":"kExplicitCancellation"},"headers":"secret-cookie"}}`),
-		json.RawMessage(`{"name":"Navigator::CancelNavigation","ph":"X","ts":1006,"args":{"reason":"secret arbitrary reason"}}`),
+		json.RawMessage(`{"name":"NavigationRequest::NavigationRequest","ph":"X","ts":1000,"args":{"navigation":{"url":"http://private.invalid/check","navigation_id":987654,"state":0,"net_error":0,"browser_initiated":true,"has_committed":false,"frame_tree_node":{"frame_tree_node_id":998877,"is_main_frame":true,"current_frame_host":{"origin":"secret-origin"}}}}}`),
+		json.RawMessage(`{"name":"WebContentsImpl::DidFinishNavigation","ph":"secret-phase","ts":1005,"args":{"navigation_handle":{"url":"http://private.invalid/check","navigation_id":987654,"net_error":-3,"discard_reason":"kExplicitCancellation","frame_tree_node":{"frame_tree_node_id":998877,"is_main_frame":true}},"headers":"secret-cookie"}}`),
+		json.RawMessage(`{"name":"Navigator::CancelNavigation","ph":"X","ts":1006,"args":{"reason":"secret arbitrary reason","render_frame_host":"0xsecretpointer"}}`),
 		json.RawMessage(`{"name":"Navigation: http://private.invalid/check","ph":"X","ts":1007,"args":{}}`),
+		json.RawMessage(`{"name":"NavigationRequest::Create","ph":"X","ts":1008,"args":{"url":"about:blank"}}`),
 	}
 	r := projectFirstNavigationTrace(values, "http://private.invalid/check")
-	if len(r.Events) != 3 || r.MatchedEvents != 2 || r.Events[1].Navigation != 1 || r.Events[1].Reason != "explicit_cancellation" || r.Events[1].Phase != "other" || *r.Events[1].NetError != -3 || r.Events[1].Microseconds != 5 || r.Events[2].Reason != "other" {
+	if len(r.Events) != 4 || r.MatchedEvents != 2 || r.Events[1].Navigation != 1 || r.Events[1].Reason != "explicit_cancellation" || r.Events[1].Phase != "other" || *r.Events[1].NetError != -3 || r.Events[1].Microseconds != 5 || r.Events[2].Reason != "other" || r.Events[0].Frame != 1 || r.Events[1].Frame != 1 || r.Events[0].MainFrame == nil || !*r.Events[0].MainFrame || r.Events[0].URLClass != "fixture" || r.Events[3].URLClass != "about_blank" {
 		t.Fatal("trace projection lost navigation or cancellation metadata", r)
 	}
 	encoded, _ := json.Marshal(r)
-	for _, private := range []string{"secret", "987654", "http", "private.invalid", "origin", "headers"} {
+	for _, private := range []string{"secret", "987654", "998877", "http", "private.invalid", "origin", "headers"} {
 		if strings.Contains(string(encoded), private) {
 			t.Fatalf("private trace content escaped: %q", private)
 		}
@@ -49,10 +50,10 @@ func TestFirstNavigationTraceBounds(t *testing.T) {
 	}
 	var values []json.RawMessage
 	for i := 1; i <= 300; i++ {
-		values = append(values, json.RawMessage(fmt.Sprintf(`{"name":"NavigationRequest","ph":"b","ts":1000,"args":{"navigation":{"navigation_id":%d,"url":"fixture"}}}`, i)))
+		values = append(values, json.RawMessage(fmt.Sprintf(`{"name":"NavigationRequest","ph":"b","ts":1000,"args":{"navigation":{"navigation_id":%d,"url":"fixture","frame_tree_node":{"frame_tree_node_id":%d}}}}`, i, i)))
 	}
 	r := projectFirstNavigationTrace(values, "fixture")
-	if len(r.Events) != 256 || r.Dropped != 44 || !r.IdentityLimit || r.Events[63].Navigation != 64 || r.Events[64].Navigation != 0 {
+	if len(r.Events) != 256 || r.Dropped != 44 || !r.IdentityLimit || r.Events[63].Navigation != 64 || r.Events[64].Navigation != 0 || r.Events[63].Frame != 64 || r.Events[64].Frame != 0 {
 		t.Fatal("projection bounds not enforced", r)
 	}
 	invalid := projectFirstNavigationTrace([]json.RawMessage{json.RawMessage(`{`), json.RawMessage(`{"name":"NavigationRequest","ts":-1}`)}, "fixture")

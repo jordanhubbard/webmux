@@ -1,0 +1,297 @@
+{
+  "head": "2e309f4971e87609247408b60b0c1fb41e2ffb98",
+  "run": 44219196108,
+  "job": 134516548580,
+  "artifact": 14389892058,
+  "counterNote": "Legacy NetLog matchedRequests counts distinct URL-bearing source objects. FixtureRequests is the actual fixture document request count. Current producer renames that diagnostic counter to matchedURLSources.",
+  "firstLoads": [
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-child",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "child",
+      "extraTargets": 1
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-child-original",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial-after-child",
+      "extraTargets": 1
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-child-original",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial-after-child",
+      "extraTargets": 1
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-child",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "child",
+      "extraTargets": 1
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-screenshot",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial"
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-netlog",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "netLog": {
+        "bytes": 442746,
+        "scanned": 1396,
+        "matchedRequests": 3,
+        "sources": 9,
+        "dropped": 0
+      }
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-trace",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "trace": {
+        "complete": true,
+        "dataLoss": false,
+        "bytes": 224293,
+        "scanned": 686,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "keyEvents": [
+          {
+            "name": "WebContentsImpl::DidFinishNavigation",
+            "phase": "X",
+            "relativeUs": 636169,
+            "navigation": 3,
+            "matchesRequested": true,
+            "state": 8,
+            "netError": 0,
+            "committed": true,
+            "browserInitiated": true
+          }
+        ]
+      }
+    },
+    {
+      "transport": "websocket",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-websocket",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial"
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial"
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-netlog",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "failure": "fixture_document_not_loaded",
+      "netLog": {
+        "bytes": 378489,
+        "scanned": 998,
+        "matchedRequests": 0,
+        "sources": 0,
+        "dropped": 0
+      }
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-screenshot",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial"
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-trace",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "trace": {
+        "complete": true,
+        "dataLoss": false,
+        "bytes": 203280,
+        "scanned": 594,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "keyEvents": [
+          {
+            "name": "WebContentsImpl::DidFinishNavigation",
+            "phase": "X",
+            "relativeUs": 724541,
+            "navigation": 2,
+            "matchesRequested": true,
+            "state": 8,
+            "netError": 0,
+            "committed": true,
+            "browserInitiated": true
+          }
+        ]
+      }
+    },
+    {
+      "transport": "websocket",
+      "profileLocation": "system-temporary",
+      "mode": "direct-websocket",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-saved",
+      "mode": "worker-subprocess-saved",
+      "platform": "windows",
+      "architecture": "amd64",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "worker-subprocess-temporary",
+      "platform": "windows",
+      "architecture": "amd64",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    }
+  ],
+  "controlledCancellation": {
+    "mode": "controlled-stop-trace",
+    "platform": "windows",
+    "architecture": "amd64",
+    "intentionalCancellation": true,
+    "stopIssued": true,
+    "controlConfirmed": true,
+    "navigateCalls": 1,
+    "fixtureRequests": 1,
+    "trace": {
+      "complete": true,
+      "dataLoss": false,
+      "bytes": 250036,
+      "scanned": 714,
+      "dropped": 0,
+      "matchedEvents": 4,
+      "keyEvents": [
+        {
+          "name": "WebContentsImpl::DidFinishNavigation",
+          "phase": "X",
+          "relativeUs": 981575,
+          "navigation": 3,
+          "matchesRequested": true,
+          "state": 3,
+          "netError": -3,
+          "committed": false,
+          "browserInitiated": true
+        },
+        {
+          "name": "RenderFrameHostImpl::Stop",
+          "phase": "X",
+          "relativeUs": 985321
+        }
+      ]
+    }
+  }
+}
