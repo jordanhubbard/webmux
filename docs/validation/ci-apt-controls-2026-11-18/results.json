@@ -1,0 +1,49 @@
+{
+  "issue": 487,
+  "base": "d77c29a60d589969e96c557abad6111f0e325592",
+  "canonicalProvisioner": "#493 as composed by #494/#496; unchanged by this follow-up",
+  "sourceSHA256": {
+    "scripts/configure-ci-apt.py": "87b74c97379a35dd63ffdbcf3b01fbbca548d0f18a202aac76d53639617cc93f",
+    "scripts/qualify-ci-apt.py": "ae3d8787873ce3b51455362ad6a2360464a6648b9db94779df21d3464f1707af",
+    "tests/test_ci_apt.py": "9c77d0969ef3ee20bc909dd6ac520a6acabf3441755611b8fee961231743bc48",
+    ".github/workflows/ci-apt.yml": "2f3979e86ee96c24f8e349e51b03574c047fd77f938d6755a52f915746942af5"
+  },
+  "unchangedSourceTrees": {
+    "webmux": "08aa615af50320fa681384e08da5c30b604b7000",
+    "tests": "7fc3cb53b58f6a02e262db5973e919af947540f7"
+  },
+  "nativeLinuxARM64": {
+    "passed": true,
+    "platform": "Linux",
+    "architecture": "aarch64",
+    "apt": "apt 2.8.3 (arm64)",
+    "suite": "noble",
+    "archiveKeyringSHA256": "80a36b0a6de2f69f49d2df75ef473ccde121e9e190b9ea01d20a4f63778d5c31",
+    "helperSHA256": "87b74c97379a35dd63ffdbcf3b01fbbca548d0f18a202aac76d53639617cc93f",
+    "qualifierSHA256": "ae3d8787873ce3b51455362ad6a2360464a6648b9db94779df21d3464f1707af",
+    "mixedDeb822URIControl": true,
+    "scope": "Declared signed Ubuntu release/security sources in both APT formats, private configuration/lists/cache and a controlled HTTP 429 feed. System sources, installed trust keyrings and installed packages are unchanged. Full CI separately provisions its original configured Ubuntu entries and mirror aliases.",
+    "unscopedExit": 100,
+    "unscopedVendorRequests": 6,
+    "selectedExit": 0,
+    "selectedVendorRequests": 0,
+    "originalVendorConfigurationRetained": true,
+    "untrustedKeyExit": 100,
+    "nativeNoPublicKeyRefusal": true
+  },
+  "reportSHA256": "0ec7fef6928a9c88ae4cb0ca827530a2658a2eecfee4d7e666a867c1edbf4417",
+  "updateLogSHA256": {
+    "selected-update.log": "4035dda58eec5639893b944dc2119a4544f669b12118c5b04a83e6c895183b55",
+    "untrusted-key-update.log": "60c591c4e72722ba8bcd6df21485ca3cf0422a92c48b2caafdf75146039015b8",
+    "unscoped-update.log": "749a4234984b1c7652dee1c85fa5f94a61fd02caf5c7c12c014c25f19d7de245"
+  },
+  "unitControls": {
+    "nativeLinuxPassed": 7,
+    "nativeLinuxSkipped": 0,
+    "macOSPassed": 6,
+    "macOSSkipped": 1,
+    "macOSSkipReason": "APT executable unavailable; not native APT evidence"
+  },
+  "origin": "The actual outage/signature controls from #495 are retained on the canonical guarded provisioner. This branch does not carry the alternative #495 provisioner/CI policy implementation.",
+  "hosted": "Native Ubuntu22.04/24.04 control jobs pending; existing #496 application qualification remains separate."
+}
