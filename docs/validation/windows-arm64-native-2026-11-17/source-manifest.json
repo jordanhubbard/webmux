@@ -1,14 +1,14 @@
 {
-  "recordedUTC": "2026-11-18T05:11:06.036768+00:00",
+  "recordedUTC": "2026-11-18T05:32:31.085036+00:00",
   "issue": 456,
-  "base": "443ea62e8c10ade1dd8ed1699a07a4422d22a553",
+  "base": "3b80d0d4174a366f8fc0a3d0175b30e0323377b8",
   "sourceSHA256": {
-    ".github/workflows/windows-arm-native.yml": "07ae6f08e049d24f24ce92c20c1ab4678113d0ddfaeca4ccb4c89cf43b39a9f9",
+    ".github/workflows/windows-arm-native.yml": "6b3850286fae843b52c2989af7170bbddeba469cc57f4f56bd5e57312c854dd3",
     "scripts/windows-native-architecture.mts": "f449ee33e0a081e42bffd1e53237711cb0375b2bb0487c50409fae5b7ba2e5fb",
     "scripts/windows-native-architecture.test.mts": "0a51e8daef2dd1a576f630045f3e64d94e9673c207e05df1d9623766adc09fe9"
   },
   "unchangedExistingWorkflows": {
-    ".github/workflows/ci.yml": "60a30ae1fc2e660792a329e8a4cbb9da4ecf0a07216cc95f839902b290f7925b",
+    ".github/workflows/ci.yml": "d8d60771fc3369574a494a6a5301fccb27b0141b25454cd9be320993fb1cb4ee",
     ".github/workflows/packaging.yml": "26d8206985dc195c89c5e423e3033a3b29c84d158e8c6c1983f859598135413f"
   },
   "lockfileSHA256": "45c39a2a9b254ac87a33b6ca83f90cda1bf9dbdb1a0f90038cd0024b45e015fa",
@@ -18,5 +18,29 @@
   "strictProjectTypes": "PASS",
   "workflowYAML": "PASS",
   "nativeWindowsARM64Result": "PENDING",
-  "scope": "New native architecture/capture qualification gate and portable admission controls. No native Windows, physical device, authenticated provider or broad #318 completion claim."
+  "scope": "New native architecture/capture qualification gate and portable admission controls. No native Windows, physical device, authenticated provider or broad #318 completion claim.",
+  "rendererBinding": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH points to the exact PE-inspected Chromium image; default headless-shell architecture is not substituted.",
+  "originalArmSourceCheckpoint": "2e0fdd3f60dbfcb89f296f8a2853b98d141ff268",
+  "inputHeads": {
+    "ARM64Qualification": "2e0fdd3f60dbfcb89f296f8a2853b98d141ff268",
+    "USBReadiness": "3b80d0d4174a366f8fc0a3d0175b30e0323377b8",
+    "WindowsVTBudget": "52a8527e7e8a3e0ed0d0af09eadbd9457eae9854"
+  },
+  "inheritedNativeEvidence": {
+    "windowsVT": {
+      "head": "52a8527",
+      "run": 44242847564,
+      "artifact": 14400652297,
+      "tenRunsSameNonRaceProcess": "PASS",
+      "packageElapsedSeconds": 234.947,
+      "scope": "Aggregate-budget correction, not #450 panic repair."
+    },
+    "usb": {
+      "head": "3b80d0d",
+      "run": 44244114652,
+      "artifact": 14400937228,
+      "negativeHeldReplyDirect20RealSSH": "PASS",
+      "scope": "Disposable virtual kernel; not physical devices."
+    }
+  }
 }

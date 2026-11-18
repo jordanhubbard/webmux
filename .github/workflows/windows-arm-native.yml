@@ -107,6 +107,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Renderer browser lookup failed' }
           node scripts/windows-native-architecture.mts --capture "$env:WEBMUX_ARM_RECEIPTS/captures/native-screen.test.exe" --browser ($browser.Trim()) --output "$env:WEBMUX_ARM_RECEIPTS/capture-architecture.json"
           if ($LASTEXITCODE -ne 0) { throw 'Native capture architecture admission failed' }
+          "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$($browser.Trim())" >> $env:GITHUB_ENV
       - name: Compare ARM64 captures with the frontend renderer
         working-directory: webmux
         env:

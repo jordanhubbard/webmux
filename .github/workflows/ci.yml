@@ -440,8 +440,18 @@ jobs:
         working-directory: webmux
 
       - name: Repeat retained Windows terminal failure context
+        shell: pwsh
         working-directory: webmux/server/internal/thirdparty/vt
-        run: go test . -count=10 -timeout=4m
+        run: |
+          go test -json . -count=10 -timeout=10m | Tee-Object -FilePath "$env:RUNNER_TEMP/webmux-vt-repeat.jsonl"
+          if ($LASTEXITCODE -ne 0) { throw 'Native Windows VT repetition failed' }
+
+      - name: Preserve Windows terminal repetition receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-vt-repeat
+          path: ${{ runner.temp }}/webmux-vt-repeat.jsonl
 
       - name: Build
         run: npm run build

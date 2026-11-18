@@ -16,7 +16,7 @@ import sys
 import tempfile
 import time
 
-from usb_sysfs import imported_disk
+from usb_sysfs import imported_disk, imported_disk_with_payload
 
 
 def run(*args, check=True):
@@ -115,9 +115,7 @@ try:
     if stale_control:
         print("STALE REPLY CONTROL: real native completion held before disconnect", flush=True)
         run("usbip", "--tcp-port", "3241", "attach", "--remote", "127.0.0.1", "--busid", busid)
-        disk = until(imported_disk, "initial stale-control enumeration")
-        with disk.open("rb", buffering=0) as source:
-            assert source.read(len(pattern)) == pattern, "initial control payload mismatch"
+        disk = until(lambda: imported_disk_with_payload(pattern), "initial stale-control enumeration")
         parameters = Path("/sys/module/usbip_vudc/parameters")
         held = parameters / "webmux_test_held_replies"
         before = int(held.read_text())
@@ -141,9 +139,7 @@ try:
         print("Replacement import acknowledged while native TX remained held", flush=True)
         print("Releasing held native replies after import acknowledgment", flush=True)
         (parameters / "webmux_test_hold_replies").write_text("0")
-        disk = until(imported_disk, "USB import after held-reply disconnect")
-        with disk.open("rb", buffering=0) as source:
-            assert source.read(len(pattern)) == pattern, "replacement control payload mismatch"
+        disk = until(lambda: imported_disk_with_payload(pattern), "USB import after held-reply disconnect")
         kernel_log = run("dmesg")
         assert re.search(r"discarded [1-9][0-9]* stale USB/IP replies", kernel_log), "correction did not discard the held completion"
         print("PASS: held native reply discarded; replacement import and exact payload verified", flush=True)
@@ -155,9 +151,7 @@ try:
         print("DIRECT USB/IP CONTROL: bypassing WebMux and SSH", flush=True)
         for cycle in range(1, 21):
             run("usbip", "--tcp-port", "3241", "attach", "--remote", "127.0.0.1", "--busid", busid)
-            disk = until(imported_disk, f"direct USB mass storage enumeration, cycle {cycle}")
-            with disk.open("rb", buffering=0) as source:
-                assert source.read(len(pattern)) == pattern, "direct USB read payload mismatch"
+            disk = until(lambda: imported_disk_with_payload(pattern), f"direct USB mass storage enumeration, cycle {cycle}")
             changed = bytes([cycle]) * len(pattern)
             with disk.open("r+b", buffering=0) as device:
                 device.seek(1024 * 1024)
@@ -216,10 +210,8 @@ X11Forwarding no
 
     def attach():
         run("usbip", "--tcp-port", "3242", "attach", "--remote", "127.0.0.1", "--busid", busid)
-        disk = until(imported_disk, "USB mass storage enumeration through WebMux")
-        print(f"Imported fixture device: {disk}", flush=True)
-        with disk.open("rb", buffering=0) as source:
-            assert source.read(len(pattern)) == pattern, "USB read payload mismatch"
+        disk = until(lambda: imported_disk_with_payload(pattern), "USB mass storage enumeration through WebMux")
+        print(f"Imported fixture device with exact payload verified: {disk}", flush=True)
         return disk
 
     disk = attach()
