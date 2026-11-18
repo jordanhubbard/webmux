@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "recordedUTC": "2026-11-18T20:35:50.235095+00:00",
+  "runtimeSource": "10295c941de93d5313d96019db79d3ec61591333",
+  "previousPreparation": "d294b37daac020a3d91e27a1605306c567ec4a77",
+  "nativeInput": "e3aab103a2217526e3315fb79553e2902e9562fc",
+  "currentCanonicalAtQualification": "82aa338705e09d6a219f9a9b08d097ecfcdc26b7",
+  "local": {
+    "strictTSProjects": 5,
+    "frontendTests": 428,
+    "frontendLint": true,
+    "helpers": 219,
+    "helperSkipped": 0,
+    "frontendBuild": true,
+    "installedPackageIdentities": 272,
+    "fullServerRaceVet": true,
+    "affectedGoRaceRepeatedAfterSystemPathFix": true,
+    "legacyPublishedRigBrowserCases": 8,
+    "managedDuration": "48.6s",
+    "dashboardDuration": "1.7s",
+    "legacySuiteDuration": "1.2m",
+    "workerFailureOriginalDaemonAndFinalCleanupControl": true
+  },
+  "freshActualNativePublicQualification": {
+    "recordedUTC": "2026-11-18T20:29:16.897549+00:00",
+    "composedSource": "10295c941de93d5313d96019db79d3ec61591333",
+    "passed": true,
+    "rawReceiptName": "native-public-wm-native-public-nu439dit.json",
+    "rawReceiptSHA256": "e4dc351f3398f7123cfff3a9af398fe615ad39fbd6741d471ac0058a487382b8",
+    "binarySHA256": "fa0a21acf8e2dd04b6344b1b48c1cefb4e8579faceaeded9c89725422c3bde80",
+    "browserChecks": {
+      "nativeUncertaintyHasOneOriginalNodeAndNoViewer": true,
+      "frozenNativeOperationAcrossExplicitChecks": true,
+      "readyDuplicateRetainsProviderAndViewer": true,
+      "noNativeTrustGrant": true,
+      "actualNativeCodingChallenge": true,
+      "browserCheckedStopAndSiblingAndViewerRetained": true
+    },
+    "nativeWitness": {
+      "passed": true,
+      "contexts": 2,
+      "nativeNodeMatches": true,
+      "correlatedProbeOutputs": 1,
+      "allowedWrites": 4,
+      "environmentChecks": {
+        "homePreserved": true,
+        "tmpPreserved": true,
+        "ownerPathRetainedAsSuffix": true,
+        "pairedRigFound": true,
+        "managerToolPathAbsent": true,
+        "ownerToolFound": true,
+        "ownerToolRuns": true,
+        "inheritedValueMatches": true,
+        "managerOnlyValueAbsent": true
+      },
+      "nativeSessionSHA256": "7606aac4fb819b256eec448ed4d48e14eeeb870e3d3d1c688d621992f1534f42"
+    },
+    "nativeCLIVersionFromSessionMetadata": "0.169.0",
+    "nativeToolCallCounts": {
+      "exec": 2
+    },
+    "nativeMemberPosts": 3,
+    "sameOriginalUUIDAndBodyAllPosts": true,
+    "sourceUnchanged": true,
+    "privateTmuxStopped": true,
+    "ownedBrowserControllerProcessesExited": true,
+    "noArbitraryWitnessPlaintextInDurableCoordinatorFiles": true,
+    "scope": "Fresh composed Go/Chrome actual native-owned Codex creation/uncertainty/duplicates/coding/checkedStop. Existing native account in place; private loopback browser auth-none. No authenticated WebMux browser, public recovery HTTP/UI, app crash/service/reboot, restricted-profile or Linux/Windows native coding acceptance.",
+    "nativeNoDelegationToolCalls": true,
+    "nativeToolRoutes": {
+      "exec_command": 2
+    }
+  },
+  "publishedParentComponentBindings": {
+    "publishedSourceRevision": "3da91d547dcb22dfe3d4e1d43993b23ce5b4ada1",
+    "sourceBindings": {
+      "webmux/server/internal/openrigcoord/rig-native-launch.mts": true,
+      "webmux/server/internal/openrigcoord/rig-native-project.mts": true,
+      "webmux/server/internal/openrigcoord/rig-native-create.mts": true,
+      "webmux/server/internal/openrigcoord/rig-create-intent.mts": true,
+      "webmux/server/internal/openrigcoord/rig-stop.mts": true,
+      "webmux/server/internal/openrigcoord/runner.mts": true,
+      "webmux/server/internal/openrigcoord/coord.go": true,
+      "webmux/server/internal/openrigcoord/codex-owner-plan.mts": true,
+      "webmux/server/internal/openrigcoord/codex-launch-policy.mts": true,
+      "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts": true,
+      "webmux/server/internal/openrigcoord/codex-launch-environment.mts": true,
+      "webmux/server/internal/openrigcoord/codex-environment-channel.mts": true,
+      "webmux/server/internal/httpapi/coordination_creation.go": true,
+      "webmux/server/internal/httpapi/coordination_providers.go": true,
+      "webmux/server/internal/httpapi/openrig.go": true,
+      "webmux/frontend/src/components/CoordinationDialog.tsx": true,
+      "webmux/frontend/src/utils/api.ts": true
+    },
+    "rawReceiptFound": true,
+    "rawHashMatches": true,
+    "publishedNativeWitnessPassed": true,
+    "remaining": [
+      "Public recovery HTTP/UI composition and actual controller crash/service update/reboot",
+      "Restricted owner policies and authenticated Linux/broader Windows native composition",
+      "Selected profiles, named graphs, empty-pod selection and broader startup settings",
+      "Required PR review and current-head hosted CI; no full-roadmap or release completion"
+    ],
+    "scope": "Source/raw provenance binding to named published actual native public-creation receipt; no new composed authenticated/native provider run."
+  },
+  "harness": {
+    "parentProbeSHA256": "d4ee5a4c9fcda5a947d3cada2ba01c60f92fda29f2d739717b7d68490411a82b",
+    "parentBrowserDriverSHA256": "f2be3e1372978a1d47b2d763314ab4cb1a3d08e17b592263b268ec2d107aa723",
+    "adaptedProbeSHA256": "77de0ffa1e6c7da8805290b95be740fdfe411fc14139cd7195fbaa2eeb3b7103",
+    "adaptedBrowserDriverSHA256": "0c84e018c6467f22c21e609ee2d0ed268f864fff63e50837b6673116e4ca811a",
+    "changes": [
+      "Select composed source10295c9 and separate binary/evidence directory",
+      "Reuse retained published Rig CLI read-only; no package installation",
+      "Remove legacy RIGGED routing from private fixture baseline",
+      "Refuse native trust prompts instead of pressing Enter",
+      "Retain owned root/browser/controller identity metadata",
+      "Supervise the private browser/controller process group on outer timeout"
+    ],
+    "scope": "Fresh private native public-creation qualification. Existing owner account in place; no credential copies or recovery/crash/reboot claim."
+  },
+  "preparationExclusions": [
+    {
+      "file": "helpers-tests-missing-lsof.log",
+      "outcome": "218pass/1fail in initial219test run",
+      "cause": "Private validation PATH omitted/usr/sbin; unchanged observer returnedfalse after lsof ENOENT. Native readiness correctly refused.",
+      "resolution": "Include standard system directories while retaining selected Node/Go/tmux prefixes. Controlled missing-tool/complete-tool probes prove refusal/loaded-image success; all219 unchanged tests thenPASS. No product/expectation/deadline/source-cache change."
+    },
+    {
+      "file": "actual/archive-receipt.json",
+      "outcome": "Initial post-run fixture archive copy was partial on a leftover tmux socket",
+      "resolution": "Retained separately as excluded copy attempt; regular-only fixture archive and link manifest copied successfully. No credential-file symlinks observed/copied. Functional native-run result remains separate."
+    }
+  ],
+  "scope": "Fresh composed macOS Go/Chrome native-owned local Codex creation, uncertainty/original duplicates, actual coding and checkedStop. Existing native account in place, private auth-none browser. No public recovery HTTP/UI, authenticated WebMux browser, app/service crash/reboot, restricted/named policies or Linux/Windows native coding acceptance.",
+  "privateLogSHA256": {
+    "typecheck.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "frontend-tests.log": "71319ccf2463c14920148e577adee984cb7ab86d135867a3ece6ebcb7c77d32b",
+    "frontend-lint.log": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+    "helpers-tests-missing-lsof.log": "7a8a821e45e641835e378678d06e6604ae1974b8e8b9add21fbc53be52e0b757",
+    "helpers-tests.log": "572e49a5c115ced744356d1f6fcb8e7296661aee4e5079106aeff6e44d9f3fad",
+    "frontend-build.log": "d59aaba62bb858dcc3cded4d2a9340c1a59c232bc7b3c94c29373290e35b1d0c",
+    "lock-identity.log": "6db02789bb32257b87e607610702e250bea6d73877f98763e902f59ed739c03c",
+    "go-race.log": "45d0ccb38db5e6dbe2254119a4fcdae992a30c9b692cdfdee26d90a04b21cfa1",
+    "go-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "go-race-system-tools.log": "a72bac69825502f38af96ca3e61d2db0e4e5254e43e0c8e3392bcd2c0c6712a0",
+    "go-vet-system-tools.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "normal-eight.log": "da7a437cd910d85734ff8897cb0314ad1487bd2387409912bfa2808d869fc0ff",
+    "worker-lifecycle.log": "b20b1f960cca29eeaca969d79a77230852a104a18a2621b844e4134ddba72854",
+    "observer-missing-system-tools.json": "0288ab812f0790a02f52c16c036b44d9596850629482484e65de488beb4f5c0c",
+    "observer-complete-system-tools.json": "7b5b93ce0d235475e10f4158c1de87a8bec50f00106b3857812efd000ad58860"
+  }
+}
