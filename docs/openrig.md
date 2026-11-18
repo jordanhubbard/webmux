@@ -191,6 +191,12 @@ source-host attribution stays attached to every imported record. The toolbar
 badge and project/session rows surface waiting, completed, and failed work that
 needs attention.
 
+Local Agent Deck messaging, delivery lookup, inbox reads and completion collection
+select the discovered session profile, including an explicit `default` profile.
+Ambiguous session IDs across profiles are refused for targeted actions; remote
+session actions retain their registered-remote routing. See the
+[profile-routing qualification](validation/agent-deck-profile-routing-2026-11-17/README.md).
+
 Rig provides canonical topology and peer messaging. Both integrations can be enabled together. They retain separate ownership and
 project databases; a shared-agent identity and event bridge is future work. Additional coordinators can implement
 the same internal status, launch, attach, messaging, delivery-status, and drain
