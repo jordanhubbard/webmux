@@ -1,0 +1,68 @@
+{
+  "scope": "POSIX durable member-add correlation module, tested against the published native daemon with private terminal seats and separate client processes. Not activated in the WebMux creation path.",
+  "platform": "macOS ARM64",
+  "reports": [
+    {
+      "privateReportSHA256": "6d62908dc01b257ba505ca4876bebba67b6274291bf34f65c3b0c7c98582cd5a",
+      "probeSHA256": "98d3a5d89149baee3da1cd91c9b60b46ef0d3bc1bb0e2e59b005a778c781a8aa",
+      "moduleSHA256": "c0466f0c9dd8e03c1874ee5af857e29551a87812430acc5c7dc86dcc64e96c3a",
+      "versions": {
+        "rig": "0.7.18 (3bf87c62)",
+        "node": "v24.21.0",
+        "tmux": "tmux 3.8"
+      },
+      "checks": {
+        "originalUUIDRouteAndExactBodySavedBeforeNativeDispatch": true,
+        "newClientProcessDuplicateDoesNotPOST": true,
+        "explicitInspectionReplaysSameOperationWithoutNewOccupant": true,
+        "changedExactBodyRefusesBeforeNativePOST": true,
+        "sameNativeEnrollmentAndSiblingSurviveManagerRestart": true,
+        "checkedStopRemovesSelectedTerminalAndPreservesSibling": true
+      },
+      "cleanup": {
+        "privateTmuxStopped": true,
+        "daemonStateRemoved": true
+      }
+    },
+    {
+      "privateReportSHA256": "428194097558e71d806540edcc3f3f98e5c5de392b4d99aaec611062f279b918",
+      "probeSHA256": "10c7bd566ce5f67dc8a1e72c04ebc50645390ad6754ff3d1bbbdc0d456576ce0",
+      "moduleSHA256": "c0466f0c9dd8e03c1874ee5af857e29551a87812430acc5c7dc86dcc64e96c3a",
+      "versions": {
+        "rig": "0.7.18 (3bf87c62)",
+        "node": "v24.21.0",
+        "tmux": "tmux 3.8"
+      },
+      "checks": {
+        "actualNativeReplyLossLeavesIntentConsumed": true,
+        "originalUUIDRouteAndExactBodySavedBeforeNativeDispatch": true,
+        "newClientProcessDuplicateDoesNotPOST": true,
+        "explicitInspectionReplaysSameOperationWithoutNewOccupant": true,
+        "changedExactBodyRefusesBeforeNativePOST": true,
+        "sameNativeEnrollmentAndSiblingSurviveManagerRestart": true,
+        "checkedStopRemovesSelectedTerminalAndPreservesSibling": true
+      },
+      "cleanup": {
+        "privateTmuxStopped": true,
+        "daemonStateRemoved": true
+      }
+    }
+  ],
+  "localValidation": {
+    "strictTypeScriptProjects": 5,
+    "helperTestsPassed": 139,
+    "helperSkips": 0,
+    "journalTestsPassed": 10,
+    "nativePositiveReports": 2,
+    "lockIdentity": "272 package identities match",
+    "whitespace": "pass"
+  },
+  "limits": [
+    "No owner launch-plan resolution, manager identity authorization or production create/UI integration in this module. The caller must establish these before dispatch.",
+    "Journal keys are caller-supplied logical-request identities, not browser-provided authorization. Manager identity and exact route/body are immutable per key.",
+    "Explicit inspection uses the same correlated POST. If the first POST never reached the daemon, inspection can be its first execution. It cannot invent a replacement UUID or a different request.",
+    "Native receipts correlate enrollment IDs, not process readiness, current liveness or authenticated coding.",
+    "Native tests use terminal seats, not authenticated provider sessions or reboot. Native manager restart and separate client process checks are included.",
+    "POSIX-only journal; Windows refuses before creating a journal. Normal review/CI/audit/release gates remain open."
+  ]
+}
