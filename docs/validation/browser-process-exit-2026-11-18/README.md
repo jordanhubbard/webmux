@@ -83,3 +83,35 @@ Require the native child/sibling/refusal control and fresh exact-source browser,
 profile, ordinary/observed cleanup and normal CI evidence. A passing sample set
 alone does not erase the retained failures or establish all possible Windows
 cleanup causes. Audit #429 and the other roadmap/release gates remain separate.
+
+## First native Windows result and trace-lifetime correction
+
+At `43016312ff368f8b8512bfb7174e5d7d8ba45d36`, the native selected-child/sibling/
+identity/deadline control passed. The fixed 100-sample observed cohort also passed
+its step: every sample loaded/requested/navigated once, verified exit, and passed
+one-shot profile removal. The independent process observer saw all eight children
+exited in 99 samples and all seven exited in the other; none were still running
+or unqueryable. This is paired with the retained diagnostic source's four failures
+in 100 samples and actual file-membership evidence, not a passing rerun alone.
+
+[Run 44314149768](https://github.com/jordanhubbard/webmux/actions/runs/44314149768)
+is nevertheless terminal **FAILURE**: eight ordinary/trace-sample records failed
+shutdown verification in the two modes that begin tracing before target creation.
+All 150 records remain in artifact `14431414653`, SHA-256
+`1ba9b53f8d8a1b4b3958185a3f4afe704d6bc63b2a4cd7760be273f719891bcf`.
+
+The SDK's `ListenBrowser` allocates Chromium on its first call using that call's
+context. The early-trace helper had used the cancellable listener context; ending
+trace collection therefore stopped Chromium before owned shutdown could verify
+it. Bind allocation/listening to the stable root and use the listener context as
+a callback guard instead. This retains tracing before target attachment and adds
+no navigation. A native regression checks that finishing the first trace leaves
+the original browser serving protocol work and able to attach its first target.
+It fails against the prior listener ownership and passes with the correction.
+
+The complete local native browser race package passes with this correction
+(log SHA-256 `fb333769289985f19b0dd01fd3a587f4aa9b006c71fdfba8f3cb3793677c5a24`),
+as do Windows AMD64/ARM64 test cross-compiles. The production shutdown, worker,
+manager and native process-wait control files are unchanged from the 100-sample
+source. Fresh hosted qualification of the trace correction remains necessary;
+the old run's overall failure is retained and is not relabeled green.

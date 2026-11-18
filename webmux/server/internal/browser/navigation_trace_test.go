@@ -63,7 +63,14 @@ func startFirstNavigationTrace(root context.Context, loading bool) (*firstNaviga
 	c := &firstNavigationTraceCapture{done: make(chan struct{})}
 	listen, unlisten := context.WithCancel(root)
 	c.unlisten = unlisten
-	err := chromedp.ListenBrowser(listen, func(event any) {
+	// ListenBrowser can allocate Chromium on its first call. Bind that
+	// allocation to the stable owner, while using listen only as a callback
+	// guard. Canceling a first listener context would otherwise kill Chromium
+	// as soon as trace collection finishes, before owned shutdown can run.
+	err := chromedp.ListenBrowser(root, func(event any) {
+		if listen.Err() != nil {
+			return
+		}
 		c.mu.Lock()
 		defer c.mu.Unlock()
 		switch e := event.(type) {
