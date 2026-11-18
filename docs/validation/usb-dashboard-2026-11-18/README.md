@@ -62,7 +62,7 @@ disabled its focused button. Explicit focus moves to the generated command or
 status region after the corresponding action; the original containment and
 narrow-screen assertions pass unchanged.
 
-## Native USB acceptance still required
+## Native USB acceptance
 
 The dedicated virtual-kernel fixture now starts the actual WebMux controller,
 pairs the actual CLI, forwards the USB/IP mass-storage simulator over real SSH,
@@ -76,7 +76,13 @@ Both the data-path and dashboard completion receipts are now required by native
 admission. Python admission controls reject a legacy data-only receipt, missing
 dashboard completion, nonzero exit and kernel faults.
 
-This fixture extension requires a new passing exact-source hosted run. Earlier
-main-source simulation results do not qualify it. Hosted Windows and packaging
-checks, dependency audit #429, review and final integration remain gates. No
-release or broad peripheral/OS compatibility claim is made here.
+The exact-source [hosted kernel job](https://github.com/jordanhubbard/webmux/actions/runs/44284270303/job/134732754160) passed on `80f7c65b3159f5ace1317077c18015948939ce7b`. The
+[native receipt](native-checks.json) records all four admitted outcomes, the
+artifact digest and individual log digests. The unpatched negative control
+failed in its required way; corrected held-reply, twenty direct cycles and
+WebMux over SSH passed. Both required data-path and dashboard completion
+markers are present. This receipt update changes documentation only.
+
+Hosted Windows and packaging checks, dependency audit #429, review and final
+integration remain gates. No release or broad peripheral/OS compatibility claim
+is made here.

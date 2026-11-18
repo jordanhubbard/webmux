@@ -59,6 +59,6 @@
       "scope": "cross-compilation only"
     }
   },
-  "native_usb_dashboard": "pending exact-source hosted VM result",
+  "native_usb_dashboard": "Passed on source 80f7c65b3159f5ace1317077c18015948939ce7b; see native-checks.json for exact job and artifact identity.",
   "fixture_followup": "Added missing base64, json and urllib.request imports; ruff F821 and Python compilation pass; native VM acceptance remains pending."
 }
