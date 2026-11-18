@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -26,6 +27,16 @@ func TestFederationNativeRendererProfilePreservesOwner(t *testing.T) {
 	t.Setenv("WEBMUX_TEST_FEDERATION_START", starts)
 	t.Setenv("WEBMUX_RECOVERY_CACHE_HOME", cache)
 	a, b, handler, _, _ := federationPair(t)
+	// Retain launch diagnostics from this isolated broker; the general HTTP
+	// fixture deliberately discards logs and Create reports failures as state.
+	if err := b.sessions.Close(); err != nil {
+		t.Fatal(err)
+	}
+	var err error
+	b.sessions, err = session.New(b.store, slog.Default())
+	if err != nil {
+		t.Fatal(err)
+	}
 	current, err := b.sessions.Create("owner", session.CreateRequest{Transport: "local", Cols: 8, Rows: 4})
 	if err != nil || current.State == "error" {
 		t.Fatal("native local owner", current.State, err)
