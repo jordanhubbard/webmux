@@ -1,0 +1,49 @@
+{
+  "recordedUTC": "2026-11-18T05:24:01.654625+00:00",
+  "issue": 459,
+  "base": "52a8527e7e8a3e0ed0d0af09eadbd9457eae9854",
+  "sourceSHA256": {
+    "tests/usb_sysfs.py": "a5e12f16b2a2f46794fbfff4bfdb8f7d5d03e7813da1f893b598dc95382267f6",
+    "tests/test_usb_sysfs.py": "1c25181aeca041467c21c2677f7dff6491be907ecea647d39af294b782f168d0",
+    "tests/usb-kernel.py": "0063588478713bcbc65f8402bdf047175838cf260970da28c0adda5865674ab5"
+  },
+  "unchangedQualifierAndBuilderSHA256": {
+    "scripts/qualify-test-vudc.py": "609184246d666df7d6c9c30a544ccf6a61c434694c4e6c095c98605ec74b5c0f",
+    "scripts/build-test-vudc.py": "abc5b391b29be416d36e2a3729277af8fcb153f59cdff964c66afaa25b4f8092"
+  },
+  "failedNativeRun": 44242847564,
+  "failedNativeJob": 134594632622,
+  "failedNativeArtifact": 14399524652,
+  "failedArtifactZIP_SHA256": "f321598e9f7739bb490f3cd48618f485a8ff5c8d548e3a10dcf723932ef99656",
+  "localControls": [
+    {
+      "suite": "test_usb_sysfs.py",
+      "exit": 0,
+      "tests": 10
+    },
+    {
+      "suite": "test_vudc_sources.py",
+      "exit": 0,
+      "tests": 8
+    },
+    {
+      "suite": "test_ci_apt.py",
+      "exit": 0,
+      "tests": 3
+    },
+    {
+      "suite": "test_qualify_vudc.py",
+      "exit": 0,
+      "tests": 8
+    }
+  ],
+  "privateLogSHA256": {
+    "usb459-test_ci_apt-initial-wrong-discovery.log": "e70fec2825d9bf206d27463a792768195039599cb39bcca66339f47283f84cce",
+    "usb459-test_ci_apt.py.log": "721b18846e77886f194a613e5b6acfc7c693f4a62b48edf4e4055b61261ec7e4",
+    "usb459-test_usb_sysfs.py.log": "36402b6996f607b1974d2a98e57cf9eb7926da3531118eb863c49de78e6ccbc7",
+    "usb459-test_vudc_sources.py.log": "3bdc5fa557a3b707c4cf06545b6f60aeb5d414fa61ef3369688e0d0630768700",
+    "usb459-test_qualify_vudc.py.log": "4e3028367efdc4deaf976dd6e8162eac98d26053296eae99c211e6123a8a530f"
+  },
+  "nativeCandidateResult": "PENDING",
+  "scope": "Portable fixture readiness/admission controls; no native kernel or physical-device success claim. Existing negative controls and kernel/source patches unchanged."
+}
