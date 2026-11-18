@@ -1,0 +1,84 @@
+{
+  "recordedUTC": "2026-11-18T09:08:54.105792+00:00",
+  "issue": 452,
+  "pinnedInputAncestors": [
+    "10b365c6a5405848d1630d6fbd2f096a830a5998",
+    "52a8527e7e8a3e0ed0d0af09eadbd9457eae9854",
+    "3b80d0d4174a366f8fc0a3d0175b30e0323377b8",
+    "447554456ff5e1dde3000b13c5d08e35bbfdee69",
+    "8e90c3ba68f1e037c592a24b4c22e463cc53e071",
+    "b357ca694b390bbca1377a0a759d44ede0331220",
+    "49b1809c94296db7ee1f3c5dd962c00cc6f1bc31",
+    "4ce5d90f20a0960f47d090e91ae1b0252c9bae81",
+    "fd1a44161e9735509e8c02cbdc36e9143e1c46d1"
+  ],
+  "sourceSHA256": {
+    ".github/workflows/ci.yml": "ce982b8d220c3534c9bb719d15272194e9efd3ca67313f05c492cc129a7a5a68",
+    ".github/workflows/windows-arm-native.yml": "5752bf0a232623f75ef7a5e2e016165c023dffbe5eec47bd21e2357e2e17a7c6",
+    ".github/workflows/browser-navigation.yml": "3db81dfd6bacdb0195c9cc77bd99eab55505ccb9c9584a70e895f01a3b4e6046",
+    "scripts/native-components.py": "731ad27d599379a396273c55a74ecfdbc819650a787f72f985d5124db71dfa75",
+    "scripts/test_native_components.py": "096ef730d8d6f5791f315f82626e299553886ac03586050ea2b74da52d8a4d5f",
+    "scripts/test_native_components_live.py": "2cb2250c1c148ec90cd4bae991415d481ecef00439ce1c56bde973944308d45f",
+    "tests/e2e/mosh-browser.spec.ts": "09ca9703699ab7db893ec19abbfe5e4a21dadd9e1d57691be89fafe64466596e",
+    "webmux/scripts/private-test-tmux.mts": "bf9c3efeab63bdd54f30abf72aea9336d3d287aa3ee31919adaa16f52e20a2b5",
+    "docs/validation/roadmap-followups-2026-11-18/README.md": "f464474228a4a6aafd851a69302d2208638d3aaaa8074f4452d5d4eaf14f324e"
+  },
+  "invariants": {
+    "productionGoSourceUnchangedFrom": "b357ca6",
+    "frontendProductSourceUnchangedFrom": "b357ca6",
+    "currentGoTestSourceIdenticalTo": "4ce5d90",
+    "originalCIControlsPreserved": true,
+    "onlyARMCommandChange": "--workers=2 --fully-parallel",
+    "armJobBudgetMinutes": 60
+  },
+  "local": {
+    "fullServerRaceAndVet": {
+      "result": "PASS",
+      "source": "16e2713",
+      "laterTestOnlyBrowserDelta": "4ce5d90 separately browser-race/vet/privacy qualified; current Go tree identical"
+    },
+    "frontendTests": 410,
+    "helpers": 92,
+    "strictTypecheck": "PASS after fixture delta",
+    "frontendLint": "PASS",
+    "finalBuild": "PASS",
+    "inventoryControls": 11,
+    "nativeTmuxOwnershipControl": "PASS after fixture delta",
+    "nativeMacBrowserCases": 8,
+    "nativeMacBrowserSeconds": 21.8,
+    "nativeMoshReceipt": {
+      "nativeMosh": true,
+      "loggingDisabled": true,
+      "noLaunchURLInTerminalOutput": true,
+      "automaticPanel": true,
+      "callbackOnOriginalHost": true,
+      "callbackViaSSH": true,
+      "acknowledgedNotReplayed": true,
+      "providerStopped": true,
+      "moshServerExited": true,
+      "sshDaemonExited": true
+    },
+    "nativeMoshReceiptSHA256": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b"
+  },
+  "initialFailuresRetained": {
+    "missingFrontendDependencyLink": "Typecheck environment error; no product source fix",
+    "moshFixtureSocketPath": "Native tmux refused110byte socket path. No durable provider; original panel assertion failed. Short owned runtime socket and stronger admission/absence controls pass."
+  },
+  "privateLogSHA256": {
+    "int452-followups-go-race.log": "b2c613d128735b52421034cf317d18f187676fb2b5cff28833e1d9ce64d956b3",
+    "int452-followups-go-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "int452-followups-qualified-typecheck.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "int452-followups-qualified-frontend-lint.log": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+    "int452-followups-qualified-frontend-tests.log": "13f5f8b2a3f5de0fed41a59a8a99289da4c799decbcb0a3d3ed0d13ae426ebcc",
+    "int452-followups-qualified-helpers.log": "f72c92f5fce4ccf3b69a9276b700b6fd5cb0b29da877afbaff1679bf26adff23",
+    "int452-followups-inventory-controls.log": "c79ad62473431f49ba140466f08eefd8e61f605077aa65be57bab74e6626ebe1",
+    "int452-followups-native-browser.log": "4b42b05f031569f1588584e57ce31e8eaef3bde97f284000e7027d77e2853941",
+    "int452-followups-short-socket-native-browser.log": "7da2984aa49327197226689538efbc3fc2023c726f4a693f836519044a4d6057",
+    "int452-followups-short-socket-typecheck.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "int452-followups-short-socket-tmux-ownership.log": "5759435bb8c919793d20e919d42c86953683c733c20ad09a3037081e4420e224",
+    "int452-followups-final-build.log": "621179f49ef2fcdaca81bb1b9f27a8fac2b8541688c01fd487ae8e8b38addad6",
+    "int452-followups-mosh-path-diagnosis.json": "bc452d2c9317c4a0bf98ad19db2d08095758dff4cd5ef0111c706ab1211a8473",
+    "int452-followups-qualified-mac-components.json": "81e1fa2da6d77588b8b7ffd3ee5ad5491ef4a6d84b9b4305893ca46f9f5bb2bf"
+  },
+  "hostedCombinedHead": "Pending. No gate/merge/release claim."
+}

@@ -3,9 +3,10 @@ import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer, createConnection } from 'node:net';
 import http from 'node:http';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { userInfo } from 'node:os';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir, userInfo } from 'node:os';
 import path from 'node:path';
+import { socketIsStopped } from '../../webmux/scripts/private-test-tmux.mts';
 
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 
@@ -14,12 +15,15 @@ test('real Mosh carries an automatic browser request without logging and acknowl
   test.setTimeout(120_000);
   const testHome = path.resolve(__dirname, '.test-home');
   const root = mkdtempSync(path.join(testHome, 'mosh-owned-'));
-  for (const dir of ['home', 'bin', 'tmux', 'cache']) mkdirSync(path.join(root, dir), { mode: 0o700 });
+  for (const dir of ['home', 'bin', 'cache']) mkdirSync(path.join(root, dir), { mode: 0o700 });
   const lookup = (name: string) => {
     const result = spawnSync('/usr/bin/which', [name], { encoding: 'utf8', timeout: 5000 });
     expect(result.status, result.stderr).toBe(0); return result.stdout.trim();
   };
   const tmux = lookup('tmux'), moshServer = lookup('mosh-server');
+  // AF_UNIX socket paths must fit even in deeply nested linked worktrees.
+  const tmuxDirectory = mkdtempSync(path.join(tmpdir(), 'wm-mosh-'));
+  const tmuxSocket = path.join(tmuxDirectory, `tmux-${process.getuid!()}`, 'default');
   let daemon: ChildProcess | undefined, id: string | undefined, serverPID: number | undefined;
   let startupError: Error | undefined;
   let diagnostics = '', callbackURL = '', identityURL = '', outputTail = '', printedIdentityURL = false;
@@ -53,7 +57,7 @@ test('real Mosh carries an automatic browser request without logging and acknowl
     writeFileSync(path.join(root, 'bin', 'mosh-server'), `#!/bin/sh\n: > ${quote(path.join(root, 'mosh-invoked'))}\nexec ${quote(moshServer)} "$@" 2>${quote(path.join(root, 'mosh-server.log'))}\n`, { mode: 0o700 });
     writeFileSync(path.join(root, 'remote'), [
       '#!/bin/sh', `export HOME=${quote(path.join(root, 'home'))}`, 'export SHELL=/bin/bash',
-      `export PATH=${quote(remotePath)}`, `export TMUX_TMPDIR=${quote(path.join(root, 'tmux'))}`,
+      `export PATH=${quote(remotePath)}`, `export TMUX_TMPDIR=${quote(tmuxDirectory)}`,
       `export WEBMUX_RECOVERY_CACHE_HOME=${quote(path.join(root, 'cache'))}`,
       // Fixture-only cleanup bound; ordinary Mosh roaming policy is unchanged.
       'export MOSH_SERVER_NETWORK_TMOUT=15', 'unset TMUX TMUX_PANE',
@@ -90,6 +94,8 @@ test('real Mosh carries an automatic browser request without logging and acknowl
     const tile = page.getByTestId(`tile-cell-${id}`), terminal = tile.locator('.xterm-helper-textarea');
     await terminal.focus(); await page.keyboard.type("printf '\\nMOSH_%s\\n' FEATURE_READY"); await page.keyboard.press('Enter');
     await expect(tile.locator('.xterm-rows')).toContainText('MOSH_FEATURE_READY', { timeout: 20_000 });
+    expect(spawnSync(tmux, ['-S', tmuxSocket, 'has-session', '-t', `=webmux-${id}`], { timeout: 5000, stdio: 'ignore' }).status,
+      'The native Mosh fixture requires its actual durable tmux provider').toBe(0);
     const sessions = await (await request.get('/api/sessions')).json() as { id: string; transport: string }[];
     expect(sessions.find(value => value.id === id)?.transport).toBe('mosh');
     expect(readFileSync(path.join(root, 'mosh-invoked'), 'utf8')).toBe('');
@@ -127,10 +133,10 @@ test('real Mosh carries an automatic browser request without logging and acknowl
     const clean = async (action: () => unknown | Promise<unknown>) => { try { await action(); } catch (error) { cleanupErrors.push(error); } };
     if (id) await clean(() => request.delete(`/api/sessions/${id}`));
     await clean(() => request.delete(`/api/keys/${keyID}`));
-    await clean(() => {
-      const env: NodeJS.ProcessEnv = { ...process.env, TMUX_TMPDIR: path.join(root, 'tmux') }; delete env.TMUX; delete env.TMUX_PANE;
-      spawnSync(tmux, ['kill-server'], { env, timeout: 5000, stdio: 'ignore' });
-      receipt.providerStopped = spawnSync(tmux, ['list-sessions'], { env, timeout: 5000, stdio: 'ignore' }).status !== 0;
+    await clean(async () => {
+      spawnSync(tmux, ['-S', tmuxSocket, 'kill-server'], { timeout: 5000, stdio: 'ignore' });
+      await expect.poll(() => socketIsStopped(tmuxSocket), { timeout: 5000 }).toBe(true);
+      receipt.providerStopped = true;
     });
     if (serverPID) await clean(async () => {
       await expect.poll(() => { try { process.kill(serverPID!, 0); return false; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error; return true; } }, { timeout: 20_000 }).toBe(true);
@@ -143,6 +149,7 @@ test('real Mosh carries an automatic browser request without logging and acknowl
       try { await exited; } finally { clearTimeout(timer); }
     });
     receipt.sshDaemonExited = !daemon || daemon.exitCode !== null || daemon.signalCode !== null;
+    if (receipt.providerStopped && receipt.moshServerExited && receipt.sshDaemonExited) rmSync(tmuxDirectory, { recursive: true, force: true });
     await clean(async () => { identity.closeAllConnections(); await new Promise<void>(resolve => identity.close(() => resolve())); });
     mkdirSync(info.outputDir, { recursive: true });
     const file = info.outputPath('native-mosh-browser-receipt.json'); writeFileSync(file, JSON.stringify(receipt, null, 2) + '\n');

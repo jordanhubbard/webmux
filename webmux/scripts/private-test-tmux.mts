@@ -4,7 +4,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn, spawnSync } from 'node:child_process';
 
-async function socketIsStopped(socket: string): Promise<boolean> {
+export async function socketIsStopped(socket: string): Promise<boolean> {
   const connection = net.createConnection(socket);
   try {
     return await new Promise<boolean>((resolve, reject) => {
