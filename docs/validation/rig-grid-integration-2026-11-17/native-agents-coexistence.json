@@ -1,0 +1,23 @@
+{
+  "scope": "Published Rig builtin terminal plus independent observed Node terminal. The passing final case checks both provider PIDs after closing WebMux viewers, before explicit owned fixture teardown. No authenticated coding-provider or bridge claim.",
+  "receipt": {
+    "activeRigSeat": true,
+    "rigViewerPreserved": true,
+    "rigProviderPIDUnchanged": true,
+    "platform": "darwin",
+    "node": "v24.21.0",
+    "browser": "158.0.8127.36",
+    "tmux": "tmux 3.8",
+    "originalPID": "35120",
+    "finalPID": "35120",
+    "observedViewer": "d5268b35-8152-406e-93f1-27719be5b57c",
+    "viewerReusedAfterReload": true,
+    "coordinationAndGridNavigation": true,
+    "noRigIdentityInferred": true,
+    "scratchClosed": true,
+    "liveRigInventory": true,
+    "providerSessions": [
+      "fixture-task"
+    ]
+  }
+}

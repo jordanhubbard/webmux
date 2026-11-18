@@ -148,7 +148,8 @@ export function Workspace({
   onGlobalLockChange,
 }: WorkspaceProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
-  const rigObservations = useRigObservations(canManageRig && sessions.some(session => !!session.rig && session.rig.provider !== 'agent-deck'));
+  const { activePane } = useWorkspacePane();
+  const rigObservations = useRigObservations(activePane === 'terminals' && canManageRig && sessions.some(session => !!session.rig && session.rig.provider !== 'agent-deck'));
   const [managedClients, setManagedClients] = useState<ManagedClient[]>([]);
   const [savedHosts, setSavedHosts] = useState<HostEntry[]>([]);
   const refreshManagedClients = useCallback(() => {
@@ -180,7 +181,6 @@ export function Workspace({
   const [sessionToReveal, setSessionToReveal] = useState<{ id: string; request: number } | null>(null);
   const sessionRequestRef = useRef(0);
   const { focusedSessionId, setFocusedSessionId, broadcastMode, broadcastExcluded, setBroadcastRecipients, toggleBroadcastExclude } = useInputBroadcast();
-  const { activePane } = useWorkspacePane();
   useEffect(() => () => { document.title = appName; }, [appName]);
 
   useEffect(() => {

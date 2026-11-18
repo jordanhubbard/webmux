@@ -561,3 +561,15 @@ host notifications remain outside this qualification. It performs no lifecycle
 action, adoption or Agent Deck bridge. See [native notification evidence](validation/rig-change-notifications-2026-11-17/README.md)
 for the paused-fallback-timer browser case, cancellation, bounds and remaining
 integration gates.
+
+
+## Combined grid and Agents qualification
+
+The [Rig integration candidate](validation/rig-grid-integration-2026-11-17/README.md)
+reconciles canonical seat identity/activity/enrollment and notifications with the
+observed Agents pane. Its live case keeps a real Rig terminal seat and a separate
+observed tmux terminal active through navigation, reload and viewer closure,
+without transferring ownership. Hidden terminal panes now suspend Rig metadata
+observation while their terminal viewers stay mounted. This remains a candidate
+pending hosted/review/audit gates; the broader lifecycle, recovery and bridge
+requirements remain separate.

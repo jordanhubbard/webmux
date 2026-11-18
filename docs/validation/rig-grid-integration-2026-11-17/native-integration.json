@@ -1,0 +1,46 @@
+{
+  "fixture_sha256": "ec47c609e07aebc7e10480c09fe8bf450e1f8b0a7fdd6abaf13b9c7c1df21fb0",
+  "fixture_overlay": false,
+  "runtime_source_overlay": false,
+  "results": [
+    {
+      "spec": "openrig.spec.ts",
+      "name": "ri194-legacy-final",
+      "exit": 0,
+      "passedCases": 8
+    },
+    {
+      "spec": "openrig-host.spec.ts",
+      "name": "ri194-host-final",
+      "exit": 0,
+      "passedCases": 1
+    },
+    {
+      "spec": "openrig-identity.spec.ts",
+      "name": "ri194-identity-final",
+      "exit": 0,
+      "passedCases": 1
+    },
+    {
+      "spec": "openrig-activity.spec.ts",
+      "name": "ri194-activity-final",
+      "exit": 0,
+      "passedCases": 1
+    },
+    {
+      "spec": "openrig-notifications.spec.ts",
+      "name": "ri194-notifications-final",
+      "exit": 0,
+      "passedCases": 1
+    },
+    {
+      "spec": "agent-integration.spec.ts",
+      "name": "ri194-agents-final-evidence",
+      "exit": 0,
+      "passedCases": 1
+    }
+  ],
+  "scope": "Final local native integration: thirteen cases on the assembled candidate, including visible-only Rig observation and active Rig/observed-tmux coexistence. Base commit precedes final UI/test edits; source manifest binds the actual qualified bytes. No authenticated coding-provider or bridge claim. The Agents case was rerun after strengthening both provider-PID checks following viewer closure; implementation and other five native files are unchanged.",
+  "passedCases": 13,
+  "baseCommit": "a159a493e4c4c3a863ae63dfce6a707392138a9c"
+}

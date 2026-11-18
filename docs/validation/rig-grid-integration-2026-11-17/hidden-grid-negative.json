@@ -1,0 +1,8 @@
+{
+  "parent": "a159a493e4c4c3a863ae63dfce6a707392138a9c",
+  "testSHA256": "3b40dff791b22ad03d21ab195218c5734dd87cda880761222fb0d3f3a942d862",
+  "oldComponentSHA256": "5af0d3983e8dd639908f27a1c17860a2869451f694e1b517e35a94ed26feada5",
+  "newComponentSHA256": "7b273f2c3628a5a1133d6323687234c682d0fd0248f5bf49fca6110e7920cf90",
+  "restored": true,
+  "scope": "Old Workspace component overlay for unit negative only; no native parent qualification claimed."
+}

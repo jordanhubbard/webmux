@@ -274,3 +274,11 @@ server {
 
 Use your normal TLS, authentication, and network controls for any real
 deployment.
+
+
+The [combined Rig grid candidate](validation/rig-grid-integration-2026-11-17/README.md)
+also qualifies an active Rig terminal seat alongside the observed Node terminal.
+Their provider PIDs, distinct identities and viewers survive navigation/reload;
+viewer closure preserves the native Rig provider until explicit fixture cleanup.
+This adds coexistence evidence without adopting the observed terminal or enabling
+an Agent Deck/Rig bridge.

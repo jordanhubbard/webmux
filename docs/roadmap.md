@@ -352,3 +352,10 @@ passes, as do deterministic split-query/broadcast controls with real PTY
 keyboard/paste receipts and existing mouse lifecycle checks. See the
 [evidence and scope](browser-companion.md#acceptance); real identity-provider
 qualification remains under #110.
+
+
+The [Rig grid integration candidate](validation/rig-grid-integration-2026-11-17/README.md)
+reconciles pending #432/#433/#435/#437/#440/#441/#444/#446 with final local native
+coverage and a hidden-grid observation fix. It remains pending hosted checks,
+review and audit remediation; it does not close the broader roadmap or authorize
+a release.
