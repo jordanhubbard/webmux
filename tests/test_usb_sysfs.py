@@ -29,6 +29,44 @@ class ImportedDiskTests(unittest.TestCase):
         self.serial.write_text('another-device')
         self.assertIsNone(imported_disk(self.blocks))
 
+    def test_detach_during_resolution_is_not_a_failure(self):
+        original = Path.resolve
+        for code in (errno.ENOENT, errno.ENODEV):
+            with self.subTest(errno=code):
+                def resolve(path, *args, **kwargs):
+                    if path == self.blocks / 'sda':
+                        raise OSError(code, 'device disappeared')
+                    return original(path, *args, **kwargs)
+                with patch.object(Path, 'resolve', resolve):
+                    self.assertIsNone(imported_disk(self.blocks))
+
+    def test_resolution_disappearance_does_not_hide_a_surviving_candidate(self):
+        stale = self.blocks / 'sda'
+        surviving = self.blocks / 'sdb'
+        surviving.symlink_to(self.disk, target_is_directory=True)
+        original_resolve, original_iterdir = Path.resolve, Path.iterdir
+        def resolve(path, *args, **kwargs):
+            if path == stale:
+                raise FileNotFoundError(errno.ENOENT, 'detached after enumeration')
+            return original_resolve(path, *args, **kwargs)
+        def iterdir(path):
+            return iter([stale, surviving]) if path == self.blocks else original_iterdir(path)
+        with patch.object(Path, 'iterdir', iterdir), patch.object(Path, 'resolve', resolve):
+            self.assertEqual(imported_disk(self.blocks), Path('/dev/sdb'))
+
+    def test_unexpected_resolution_errors_remain_failures(self):
+        original = Path.resolve
+        for code in (errno.EACCES, errno.EIO, errno.ENXIO, errno.ELOOP, None):
+            with self.subTest(errno=code):
+                def resolve(path, *args, **kwargs):
+                    if path == self.blocks / 'sda':
+                        raise OSError(code, 'unexpected resolution error')
+                    return original(path, *args, **kwargs)
+                with patch.object(Path, 'resolve', resolve):
+                    with self.assertRaises(OSError) as raised:
+                        imported_disk(self.blocks)
+                    self.assertEqual(raised.exception.errno, code)
+
     def test_detach_during_serial_read_is_not_a_failure(self):
         original = Path.read_text
         for code in (errno.ENOENT, errno.ENODEV):

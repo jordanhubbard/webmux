@@ -5,7 +5,13 @@ from pathlib import Path
 
 def imported_disk(block_root=Path('/sys/class/block')):
     for entry in block_root.iterdir():
-        resolved = entry.resolve()
+        try:
+            resolved = entry.resolve()
+        except OSError as error:
+            # Detach can remove a link after iterdir yielded its name.
+            if error.errno in (errno.ENOENT, errno.ENODEV):
+                continue
+            raise
         if 'vhci_hcd' not in str(resolved) or (entry / 'partition').exists():
             continue
         for parent in resolved.parents:
