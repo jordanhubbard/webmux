@@ -521,3 +521,20 @@ it('ignores a late namespace response after selecting a different project', asyn
   expect(screen.getByLabelText('Rig pod')).toHaveValue('second-pod');
   expect(screen.queryByRole('option', { name: 'foreign-pod' })).not.toBeInTheDocument();
 });
+
+
+it('refreshes the selected project namespace without creating a session or changing projects', async () => {
+  const value = emptyStatus();
+  value.projects = [{ provider: 'rig', id: 'empty', name: 'project', host: 'localhost', state: 'stopped', historical: true, seatCount: 0, runningCount: 0 }];
+  mocks.status.mockResolvedValue(value);
+  mocks.pods.mockResolvedValueOnce({ projectId: 'empty', projectName: 'project', pods: ['removed'], source: 'native-spec' })
+    .mockResolvedValueOnce({ projectId: 'empty', projectName: 'project', pods: ['remaining'], source: 'native-spec' });
+  render(<CoordinationDialog onClose={() => {}} initialProvider="rig" launchOnly />);
+  fireEvent.click(await screen.findByLabelText('Add an agent to an existing project'));
+  await waitFor(() => expect(screen.getByLabelText('Rig pod')).toHaveValue('removed'));
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh pods' }));
+  await waitFor(() => expect(screen.getByLabelText('Rig pod')).toHaveValue('remaining'));
+  expect(screen.getByLabelText('Project')).toHaveValue('empty');
+  expect(mocks.pods).toHaveBeenCalledTimes(2);
+  expect(mocks.create).not.toHaveBeenCalled();
+});

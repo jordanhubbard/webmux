@@ -338,6 +338,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
           <label>Project<select required value={projectID} onChange={event => setProjectID(event.target.value)}><option value="">Choose a project</option>{launchProjects.map(value => <option key={value.id} value={value.id}>{value.name} · {value.host} · {value.state}</option>)}</select></label>
           {provider === 'rig' && <>
             <label>Rig pod<select required disabled={!podsReady} value={context} onChange={event => setContext(event.target.value)}><option value="">Choose a pod</option>{contexts.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+            <button type="button" disabled={podState.key === podKey && podState.loading} onClick={() => setPodRefresh(value => value + 1)}>Refresh pods</button>
             {!podsReady && !podState.error && <p role="status">Checking this project's current pods…</p>}
             {podState.key === podKey && podState.error && <p role="alert">{podState.error}</p>}
             {podsReady && contexts.length === 0 && <p>No pods are defined in this project. Add a pod in Rig, then refresh.</p>}
