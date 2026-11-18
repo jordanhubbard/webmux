@@ -46,9 +46,12 @@ backend authentication, dependency or release change is introduced.
 Hosted head `7527664` passed packaging, browser startup diagnostics and six CI
 jobs. Besides the known #429 audit failure, Windows failed the new test's exact
 WebSocket-frame assertion after all three actual PTY byte checks passed. Its
-default failure rendering shows identical expected/received strings, so it does
-not identify the differing bytes. The test now compares the same exact bytes as
-hex and persists both PTY and per-frame hex receipts in its failure path. It does
-not filter or normalize traffic. Strict types and all five local native cases
-pass again. The Windows cause remains unestablished until the diagnostic head
-runs; this is not reported as a fixed Windows product failure.
+default failure rendering showed identical expected/received strings. Diagnostic
+head `b23caaa` persisted [the actual Windows frame receipt](windows-b23-frame-receipt.json):
+all PTY bytes are correct, and every extra wire frame is exactly `ESC[I` or
+`ESC[O`. ConPTY enables these terminal-local focus reports and consumes them
+before application input. The typing oracle now separates only those two whole
+frames; unknown control bytes and extra ordinary input still fail, and every raw
+frame is retained. Strict types and all five local native cases pass again.
+New-head Windows qualification remains required. No Windows product change was
+needed for this test-oracle mismatch.

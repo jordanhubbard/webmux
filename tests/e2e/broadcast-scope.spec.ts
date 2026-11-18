@@ -59,10 +59,14 @@ test('explicit recipients survive new registration and deliver bytes only after 
     await tile(b).locator('.xterm-helper-textarea').focus(); await page.keyboard.type('b');
     await expect.poll(() => bytes(b)).toBe('b');
     expect(bytes(a)).toBe('xy'); expect(bytes(c)).toBe('y');
-    // Hex keeps control bytes visible even when a reporter strips ANSI output.
-    expect(Buffer.from(sent.get(a)!.join('')).toString('hex')).toBe('7879');
-    expect(Buffer.from(sent.get(b)!.join('')).toString('hex')).toBe('62');
-    expect(Buffer.from(sent.get(c)!.join('')).toString('hex')).toBe('79');
+    // ConPTY enables terminal-local focus reports. They are consumed by the
+    // console, not typed into this child. Keep all raw frames in the receipt;
+    // exclude only these exact two protocol frames from the typing assertion.
+    const typedHex = (id: string) => Buffer.from(sent.get(id)!
+      .filter(data => data !== '\x1b[I' && data !== '\x1b[O').join('')).toString('hex');
+    expect(typedHex(a)).toBe('7879');
+    expect(typedHex(b)).toBe('62');
+    expect(typedHex(c)).toBe('79');
   } finally {
     const received = (index: number) => {
       const file = files.get(ids[index]);
