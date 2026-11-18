@@ -168,11 +168,11 @@ func TestNativeNavigationTraceCancellation(t *testing.T) {
 
 func TestFirstNavigationTraceFlowAliases(t *testing.T) {
 	values := []json.RawMessage{
-		json.RawMessage(`{"name":"ThrottlingURLLoader::Start","ph":"s","ts":1,"id":"0xdeadbeef"}`),
-		json.RawMessage(`{"name":"ThrottlingURLLoader::StartNow","ph":"f","ts":2,"id":"0xdeadbeef"}`),
-		json.RawMessage(`{"name":"ThrottlingURLLoader::Start","ph":"s","ts":3,"pid":1,"id2":{"local":"0xdeadbeef"}}`),
-		json.RawMessage(`{"name":"ThrottlingURLLoader::Start","ph":"s","ts":4,"pid":2,"id2":{"local":"0xdeadbeef"}}`),
-		json.RawMessage(`{"name":"ThrottlingURLLoader::Start","ph":"s","ts":5,"id":{"url":"secret"}}`),
+		json.RawMessage(`{"name":"NavigationURLLoaderImpl::Start","ph":"s","ts":1,"id":"0xdeadbeef"}`),
+		json.RawMessage(`{"name":"NavigationURLLoaderImpl::NotifyRequestFailed","ph":"f","ts":2,"id":"0xdeadbeef"}`),
+		json.RawMessage(`{"name":"NavigationURLLoaderImpl::Start","ph":"s","ts":3,"pid":1,"id2":{"local":"0xdeadbeef"}}`),
+		json.RawMessage(`{"name":"NavigationURLLoaderImpl::Start","ph":"s","ts":4,"pid":2,"id2":{"local":"0xdeadbeef"}}`),
+		json.RawMessage(`{"name":"NavigationURLLoaderImpl::Start","ph":"s","ts":5,"id":{"url":"secret"}}`),
 	}
 	r := projectFirstNavigationTrace(values, "http://private.invalid/check")
 	if len(r.Events) != 5 || r.Events[0].Flow != 1 || r.Events[1].Flow != 1 || r.Events[2].Flow != 2 || r.Events[3].Flow != 3 || r.Events[4].Flow != 0 {
@@ -184,10 +184,29 @@ func TestFirstNavigationTraceFlowAliases(t *testing.T) {
 	}
 	values = nil
 	for i := 0; i < 65; i++ {
-		values = append(values, json.RawMessage(fmt.Sprintf(`{"name":"ThrottlingURLLoader::Start","ph":"s","ts":1,"id":%d}`, i)))
+		values = append(values, json.RawMessage(fmt.Sprintf(`{"name":"NavigationURLLoaderImpl::Start","ph":"s","ts":1,"id":%d}`, i)))
 	}
 	r = projectFirstNavigationTrace(values, "http://private.invalid/check")
 	if !r.IdentityLimit || r.Events[63].Flow != 64 || r.Events[64].Flow != 0 {
 		t.Fatal("flow aliases must fail bounded identity exhaustion")
+	}
+}
+
+func TestFirstNavigationTraceBackgroundLoadingDoesNotHideFailure(t *testing.T) {
+	var values []json.RawMessage
+	for i := range 80 {
+		for _, name := range []string{"ThrottlingURLLoader::ThrottlingURLLoader", "ThrottlingURLLoader::Start", "ThrottlingURLLoader::OnReceiveResponse", "ThrottlingURLLoader::~ThrottlingURLLoader"} {
+			values = append(values, json.RawMessage(fmt.Sprintf(`{"name":%q,"ph":"X","ts":%d}`, name, i)))
+		}
+		for _, name := range []string{"ThrottlingURLLoader::StartNow", "CorsURLLoaderFactory::CreateLoaderAndStart"} {
+			for _, phase := range []string{"X", "s", "f"} {
+				values = append(values, json.RawMessage(fmt.Sprintf(`{"name":%q,"ph":%q,"ts":%d,"id":%d}`, name, phase, i, i)))
+			}
+		}
+	}
+	values = append(values, json.RawMessage(`{"name":"WebContentsImpl::DidFinishNavigation","ph":"X","ts":100,"args":{"navigation_handle":{"url":"http://private.invalid/check","navigation_id":1,"net_error":-3,"has_committed":false}}}`))
+	r := projectFirstNavigationTrace(values, "http://private.invalid/check")
+	if len(r.Events) != 161 || r.Dropped != 0 || r.MatchedEvents != 1 || r.Events[160].NetError == nil || *r.Events[160].NetError != -3 {
+		t.Fatal("background lifecycle bookkeeping hid the requested failure")
 	}
 }

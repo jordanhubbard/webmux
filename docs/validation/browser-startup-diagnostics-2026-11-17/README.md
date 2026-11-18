@@ -446,8 +446,8 @@ home-profile counterpart, add only Chromium's `loading` category to the late
 collector. Navigation-only conditions are retained. Fixed ThrottlingURLLoader
 constructor/start/StartNow/response/destructor names come from the matching
 [Chromium loader source](https://chromium.googlesource.com/chromium/src/+/refs/tags/158.0.8127.18/third_party/blink/common/loader/throttling_url_loader.cc).
-StartNow distinguishes handing the request to the loader factory from stopping
-inside the URL-loader throttle path. Bounded capture-local flow aliases preserve
+StartNow records passing the initial throttle-start stage; its internal redirect
+branch can still return before calling the loader factory. Bounded capture-local flow aliases preserve
 recorded flow equality and explicit process-local scope. They are flow edges,
 not universal object IDs. Raw IDs, process IDs, scope strings and request IDs
 are omitted. Each alias namespace remains bounded to 64; existing event/byte
@@ -476,3 +476,47 @@ The preceding full CI failed before browser qualification in a separate native
 Windows retained-VT test, tracked in [#450](https://github.com/jordanhubbard/webmux/issues/450).
 Its USB job hit HTTP 429 fetching pinned sources. Packaging passed. These failures
 and audit #429 remain required gates; none is waived by the diagnostic results.
+
+
+## Focused loader and network-factory handoffs
+
+Windows `35205bd` run 44226836358 retains all 42 expected records. The full
+ordinary matrix has 12 loaded documents and 8 failures; the three sampling rounds
+have 13 loaded documents and 5 failures. Two deliberate Stop controls pass; two
+abort before reaching the fixture and never issue Stop, so remain failed controls.
+All 28 trace collectors acknowledge End, complete without producer data loss,
+and flush in 64 ms or less. Six loading projections exceed the 256-event bound;
+these remain failed captures and are excluded from accepted path evidence.
+[Windows records and scope](windows-loading-summary.json).
+
+Two ordinary loading-category failures, one for each profile location, retain
+complete projections with zero drops and four matching navigation events. Each
+shows StartNow shortly after the navigation-loader startup, followed by
+NotifyRequestFailed/OnRequestFailedInternal and the requested state 10 / -3,
+uncommitted, before any fixture hit. Background requests also appear; timestamps
+alone do not establish universal object identity or the initiating error source.
+
+The next projection keeps only two loading handoff names, as complete X scopes:
+ThrottlingURLLoader::StartNow and CorsURLLoaderFactory::CreateLoaderAndStart.
+Loading constructors, responses, destructors and flow bookkeeping are omitted;
+navigation-category events and their bounded flow aliases remain. The factory
+scope is defined in the matching
+[Chromium source](https://chromium.googlesource.com/chromium/src/+/refs/tags/158.0.8127.18/services/network/cors/cors_url_loader_factory.cc).
+This reduces background projection pressure and tests whether the network
+service factory stage is observed. It does not change collection categories,
+placement, commands, buffers, deadlines or navigation. The256-event limit and
+all truncation failures remain. A regression drives 80 background loader
+lifecycles before the requested failed navigation and verifies that the failure
+remains projected without truncation.
+
+Native macOS full matrix passes 18 ordinary first loads and one deliberate Stop
+control, with two explicit Windows-only NetLog skips. Both focused loading
+conditions observe the network factory stage with 70–72 projected events and
+zero drops. All three fixed rounds also pass (18 ordinary loads and three deliberate Stop
+controls), with complete captures and positive factory observations in all eight
+focused loading trials across the full matrix and rounds. Browser race,
+privacy/scope/bounds/background-noise controls and Darwin/Windows browser vet
+pass. See [native-handoff-summary.json](native-handoff-summary.json). Source and
+receipt bindings are recorded in
+[handoff-manifest.json](handoff-manifest.json). Actual Windows focused-projection
+acceptance remains pending; no runtime fix or release is claimed.
