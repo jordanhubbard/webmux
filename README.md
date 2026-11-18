@@ -53,10 +53,12 @@ Use **More → USB redirection** for setup guidance and a local forwarding comma
 Linux, Windows and macOS peers need compatible native USB exporter/importer
 software; the peers do not need to run the same OS.
 
-`webmux usb-forward --host developer@build-mac` runs beside a physical USB device
+`webmux usb-forward --host developer@development-host` runs beside a USB device
 and forwards a separately configured native USB exporter over SSH to a loopback
-listener on the development host. Native exporter/importer software is required;
-iPhone/Xcode hardware compatibility is not yet qualified. See
+listener on the receiving host. Devices can include robots, USB security keys
+and other peripherals with compatible native exporter/importer software. A simple
+simulated USB device is sufficient for roadmap acceptance; physical hardware is
+optional. See
 [setup, transport limits and acceptance status](docs/usb-forwarding.md).
 
 ## Local terminals

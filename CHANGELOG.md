@@ -5,6 +5,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Changed
+- Generalize USB forwarding guidance to robots, USB security keys and other
+  peripherals. Accept a simple simulated USB device for roadmap qualification;
+  physical hardware, an iPhone and Xcode are optional (#120).
+
 ### Added
 - Keep explicit models and other ordinary settings (Codex `--search` and
   `--add-dir`, Cursor `--add-dir`, named OpenCode agents and display options)

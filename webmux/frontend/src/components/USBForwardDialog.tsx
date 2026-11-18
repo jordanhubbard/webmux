@@ -22,7 +22,7 @@ export function USBForwardDialog({ onClose }: { onClose: () => void }) {
   async function copyCommand() {
     try {
       await navigator.clipboard.writeText(command);
-      setCopyStatus('Command copied. Run it on the computer holding the physical device.');
+      setCopyStatus('Command copied. Run it on the computer hosting the USB device or simulator.');
     } catch {
       setCopyStatus('Clipboard unavailable. Select and copy the command below.');
     }
@@ -31,7 +31,7 @@ export function USBForwardDialog({ onClose }: { onClose: () => void }) {
   return (
     <Dialog title="USB redirection" subtitle="Experimental · native USB software required" onClose={onClose} width={620}>
       <div className="usb-forward">
-        <p className="usb-forward-route"><span aria-hidden="true">🔌</span> Physical device computer → SSH → Computer using the device</p>
+        <p className="usb-forward-route"><span aria-hidden="true">🔌</span> Device or simulator computer → SSH → Computer using the device</p>
         <p>Linux, Windows and macOS peers can use different operating systems. Both ends need
           compatible USB sharing software; the receiving computer also needs the device’s driver.</p>
         <ol>
@@ -59,7 +59,7 @@ export function USBForwardDialog({ onClose }: { onClose: () => void }) {
             </select></label>
           </div>
         </div>
-        <p>Run this in a <strong>local shell on the computer holding the physical device</strong>.
+        <p>Run this in a <strong>local shell on the computer hosting the USB device or simulator</strong>.
           A WebMux terminal on the receiving computer is the wrong end.</p>
         <textarea aria-label="USB forwarding command" readOnly rows={3} value={command}
           placeholder="Enter a valid host and ports to generate the command." />
@@ -68,8 +68,8 @@ export function USBForwardDialog({ onClose }: { onClose: () => void }) {
         <p>When the command prints a ready address, connect the native importer on the receiving
           computer to that <code>127.0.0.1:PORT</code> and select the device. Release it in the importer,
           then press Ctrl-C in the local shell to disconnect. Lease expiry also disconnects it.</p>
-        <p>For iPhone development, the receiving computer must be a Mac with Xcode.
-          Physical iPhone discovery, installation and debugging remain unverified.</p>
+        <p>Use compatible native USB software for your robot, USB security key or other peripheral.
+          A simulated USB device can be used for testing.</p>
         <p className="usb-forward-note">Setup only: this dialog does not start a tunnel or monitor devices.
           Connection status is available in the local helper and native importer.</p>
       </div>

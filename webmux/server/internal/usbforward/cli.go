@@ -116,7 +116,7 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	fs.IntVar(&o.listenPort, "listen-port", 0, "development host loopback port (0 chooses a free port)")
 	fs.DurationVar(&o.duration, "duration", 30*time.Minute, "foreground forwarding lease, maximum 1h")
 	fs.Usage = func() {
-		fmt.Fprintln(out, "Experimental USB transport. Run beside the physical device with a separately configured native USB exporter; matching WebMux and a USB importer are required on the receiving computer. This does not establish iPhone/Xcode compatibility.\nUsage: webmux usb-forward --host user@build-host [options]")
+		fmt.Fprintln(out, "Experimental USB transport. Run beside the USB device or simulator with a separately configured native USB exporter; matching WebMux and a USB importer are required on the receiving computer. Supports general USB peripherals through compatible native software.\nUsage: webmux usb-forward --host user@build-host [options]")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {
@@ -167,7 +167,7 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	ready := false
 	err = Export(ctx, transport, o.exportPort, Config{Version: 1, Port: o.listenPort, Seconds: int(o.duration.Seconds())}, func(port int) {
 		ready = true
-		fmt.Fprintf(out, "USB transport ready on development host 127.0.0.1:%d for at most %s. Select this address in the native USB importer. Device/Xcode availability is not yet verified. Press Ctrl-C to release.\n", port, o.duration)
+		fmt.Fprintf(out, "USB transport ready on development host 127.0.0.1:%d for at most %s. Select this address in the native USB importer. USB device availability is not yet verified. Press Ctrl-C to release.\n", port, o.duration)
 	})
 	expired := ctx.Err() != nil
 	cancel()
