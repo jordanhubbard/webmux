@@ -134,8 +134,10 @@ test('real Mosh carries an automatic browser request without logging and acknowl
     if (id) await clean(() => request.delete(`/api/sessions/${id}`));
     await clean(() => request.delete(`/api/keys/${keyID}`));
     await clean(async () => {
-      spawnSync(tmux, ['-S', tmuxSocket, 'kill-server'], { timeout: 5000, stdio: 'ignore' });
-      await expect.poll(() => socketIsStopped(tmuxSocket), { timeout: 5000 }).toBe(true);
+      const killed = spawnSync(tmux, ['-S', tmuxSocket, 'kill-server'], { timeout: 5000, stdio: 'ignore' });
+      const code = (killed.error as NodeJS.ErrnoException | undefined)?.code ?? 'none';
+      await expect.poll(() => socketIsStopped(tmuxSocket), { timeout: 5000,
+        message: `Owned tmux socket must stop (kill exit=${killed.status}, error=${code})` }).toBe(true);
       receipt.providerStopped = true;
     });
     if (serverPID) await clean(async () => {
@@ -155,7 +157,7 @@ test('real Mosh carries an automatic browser request without logging and acknowl
     const file = info.outputPath('native-mosh-browser-receipt.json'); writeFileSync(file, JSON.stringify(receipt, null, 2) + '\n');
     writeFileSync(info.outputPath('private-ssh-diagnostics.log'), diagnostics);
     await info.attach('native-mosh-browser-receipt', { path: file, contentType: 'application/json' });
+    if (cleanupErrors.length) throw new AggregateError(cleanupErrors, 'Owned Mosh fixture cleanup failed', { cause: cleanupErrors[0] });
     expect(receipt.providerStopped).toBe(true); expect(receipt.sshDaemonExited).toBe(true);
-    if (cleanupErrors.length) throw new AggregateError(cleanupErrors, 'Owned Mosh fixture cleanup failed');
   }
 });

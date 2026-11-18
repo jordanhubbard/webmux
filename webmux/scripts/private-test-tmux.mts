@@ -11,6 +11,9 @@ export async function socketIsStopped(socket: string): Promise<boolean> {
       connection.once('connect', () => resolve(false));
       connection.once('error', (error: NodeJS.ErrnoException) => {
         if (error.code === 'ENOENT' || error.code === 'ECONNREFUSED') resolve(true);
+        // A reset can race server shutdown. It does not prove absence: let the
+        // caller poll again and require a later absent/refused connection.
+        else if (error.code === 'ECONNRESET') resolve(false);
         else reject(error);
       });
       connection.setTimeout(1000, () => reject(new Error(`Timed out checking private test socket ${socket}`)));
