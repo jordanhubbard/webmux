@@ -25,7 +25,8 @@ type Logger interface {
 type Emulator struct {
 	handlers
 
-	xtermNoWrap bool
+	xtermNoWrap    bool
+	xtermUnderline bool
 
 	// The palette is two layers. colors holds what the guest set with OSC 4,
 	// which is the guest's own business and outlives a theme change. themePal

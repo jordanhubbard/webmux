@@ -190,8 +190,19 @@ initial/continued/second-attachment renderer comparisons matched, with no
 replayed queries and an unmodified reference renderer. Portable/parser and
 controlled-terminal tests have separate scopes from native ConPTY captures;
 see the [qualified sources and limits](validation/xterm-nowrap-2026-11-17/README.md).
-Hidden or contradictory underline flags, other unqualified OSC display features
-and the broader native coding-session lifecycle remain under #355/#318.
+Hidden or contradictory underline flags are being implemented in draft
+[#428](https://github.com/jordanhubbard/webmux/pull/428) under
+[#427](https://github.com/jordanhubbard/webmux/issues/427): opt-in value-copy
+state, bounded v2 snapshot encoding, bare-renderer comparisons and capability
+negotiation. The first 28-case native capture exposed one combining-cell
+recapture mismatch. The correction now passes all 28 fresh ConPTY cases and
+1,384 renderer/lifecycle checks. The dependency audit still blocks merge;
+broader native coding-session acceptance remains separate. See the
+[current scope](validation/xterm-underline-2026-11-17/README.md).
+The dependency audit also remains blocked by
+[#429](https://github.com/jordanhubbard/webmux/issues/429).
+Other unqualified OSC display features and the broader native coding-session
+lifecycle remain under #355/#318.
 
 ## Runtime compatibility implementation
 

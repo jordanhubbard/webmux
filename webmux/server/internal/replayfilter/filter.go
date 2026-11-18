@@ -20,7 +20,11 @@ type Filter struct {
 	// Xterm matches the browser's xterm display profile. Its unsupported DEC
 	// mode 69 must remain off so CSI s saves a cursor, rather than setting
 	// horizontal margins. This affects the mirror only, never live output.
-	Xterm              bool
+	Xterm bool
+
+	// XtermUnderline selects an engine that models SGR59 flag recomputation
+	// itself. The older display-only model still needs the RGB rewrite.
+	XtermUnderline     bool
 	state              byte
 	sequence           []byte
 	partial            []byte
@@ -157,7 +161,7 @@ func (f *Filter) Feed(data []byte) []byte {
 				if f.state == 'c' && renderingCSI(f.sequence, r) {
 					sequence := f.sequence
 					if f.Xterm {
-						sequence = xtermCSI(sequence, r)
+						sequence = xtermCSI(sequence, r, f.XtermUnderline)
 						if r == 'b' && !f.beforeControl {
 							sequence = nil
 						}
@@ -183,8 +187,8 @@ func (f *Filter) Feed(data []byte) []byte {
 	return out.Bytes()
 }
 
-func xtermCSI(sequence []byte, final rune) []byte {
-	if final == 'm' {
+func xtermCSI(sequence []byte, final rune, underline bool) []byte {
+	if final == 'm' && !underline {
 		return xtermSGR(sequence)
 	}
 	if final != 'h' && final != 'l' || !bytes.HasPrefix(sequence, []byte("\x1b[?")) {

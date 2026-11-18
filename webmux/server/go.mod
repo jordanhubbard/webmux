@@ -40,3 +40,5 @@ require (
 )
 
 replace tuios.dev/vt => ./internal/thirdparty/vt
+
+replace github.com/charmbracelet/ultraviolet => ./internal/thirdparty/ultraviolet

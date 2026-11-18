@@ -10,6 +10,8 @@ import (
 )
 
 type fixture struct {
+	LegacySnapshot    string   `json:"legacySnapshot,omitempty"`
+	LegacyRecaptured  string   `json:"legacyRecaptured,omitempty"`
 	Name              string   `json:"name"`
 	Cols              int      `json:"cols"`
 	Rows              int      `json:"rows"`
@@ -26,6 +28,9 @@ type fixture struct {
 	SnapshotToken     string   `json:"snapshotToken,omitempty"`
 	RecapturedProfile string   `json:"recapturedProfile,omitempty"`
 	RecapturedToken   string   `json:"recapturedToken,omitempty"`
+	FutureResizes     [][2]int `json:"futureResizes,omitempty"`
+	AfterCols         int      `json:"afterCols,omitempty"`
+	AfterRows         int      `json:"afterRows,omitempty"`
 }
 
 func main() {
@@ -240,6 +245,121 @@ func main() {
 			check(name, err)
 			check(name, s.Close())
 			fixtures = append(fixtures, fixture{Name: name, Cols: tc.Cols, Rows: tc.Rows, Original: tc.Original, Future: tc.Future, Snapshot: string(before), Recaptured: string(after)})
+		}
+	}
+
+	baseline := append([]fixture(nil), fixtures...)
+	for _, input := range baseline {
+		name := "underline-baseline-" + input.Name
+		cols, rows := input.Cols, input.Rows
+		if input.BeforeCols != 0 {
+			cols, rows = input.BeforeCols, input.BeforeRows
+		}
+		s, err := screenstate.NewWithProfile(cols, rows, screenstate.XtermUnderlineRendererProfile)
+		check(name, err)
+		if strings.HasSuffix(input.Name, "-byte-split") {
+			for _, b := range []byte(input.Original) {
+				check(name, s.Feed([]byte{b}))
+			}
+		} else {
+			check(name, s.Feed([]byte(input.Original)))
+		}
+		for _, size := range input.Resizes {
+			check(name, s.Resize(size[0], size[1]))
+		}
+		image, err := s.Capture()
+		check(name, err)
+		legacyBytes, legacyErr := image.Bytes()
+		before, err := image.BytesForProfile(screenstate.XtermUnderlineRendererProfile)
+		check(name, err)
+		check(name, s.Feed([]byte(input.Future)))
+		image, err = s.Capture()
+		check(name, err)
+		nextLegacyBytes, nextLegacyErr := image.Bytes()
+		after, err := image.BytesForProfile(screenstate.XtermUnderlineRendererProfile)
+		check(name, err)
+		f := input
+		f.LegacySnapshot, f.LegacyRecaptured = string(legacyBytes), string(nextLegacyBytes)
+		f.Name, f.Snapshot, f.Recaptured = name, string(before.Data), string(after.Data)
+		f.SnapshotProfile, f.SnapshotToken, f.RecapturedProfile, f.RecapturedToken = before.RequiredRenderer, before.RendererToken, after.RequiredRenderer, after.RendererToken
+		f.SnapshotError, f.RecapturedError = "", ""
+		if legacyErr != nil {
+			f.SnapshotError = legacyErr.Error()
+		}
+		if nextLegacyErr != nil {
+			f.RecapturedError = nextLegacyErr.Error()
+		}
+		fixtures = append(fixtures, f)
+		check(name, s.Close())
+	}
+	type underlineInput struct {
+		Name, Data, Future     string
+		Resizes, FutureResizes [][2]int
+	}
+	var underline []underlineInput
+	data, err = os.ReadFile("internal/thirdparty/vt/testdata/webmux-xterm-underline.json")
+	check("read underline inputs", err)
+	check("decode underline inputs", json.Unmarshal(data, &underline))
+	var extra []underlineInput
+	data, err = os.ReadFile("internal/screenstate/testdata/underline-cases.json")
+	check("read encoder inputs", err)
+	check("decode encoder inputs", json.Unmarshal(data, &extra))
+	underline = append(underline, extra...)
+
+	for _, tc := range underline {
+		for _, split := range []bool{false, true} {
+			name := "underline-" + tc.Name
+			if split {
+				name += "-byte-split"
+			}
+			s, err := screenstate.NewWithProfile(8, 4, screenstate.XtermUnderlineRendererProfile)
+			check(name, err)
+			if split {
+				for _, b := range []byte(tc.Data) {
+					check(name, s.Feed([]byte{b}))
+				}
+			} else {
+				check(name, s.Feed([]byte(tc.Data)))
+			}
+			for _, size := range tc.Resizes {
+				check(name, s.Resize(size[0], size[1]))
+			}
+			image, err := s.Capture()
+			check(name, err)
+			legacyBytes, legacyErr := image.Bytes()
+			before, err := image.BytesForProfile(screenstate.XtermUnderlineRendererProfile)
+			check(name, err)
+			for _, size := range tc.FutureResizes {
+				check(name, s.Resize(size[0], size[1]))
+			}
+			check(name, s.Feed([]byte(tc.Future)))
+			image, err = s.Capture()
+			check(name, err)
+			nextLegacyBytes, nextLegacyErr := image.Bytes()
+			after, err := image.BytesForProfile(screenstate.XtermUnderlineRendererProfile)
+			check(name, err)
+			cols, rows := 8, 4
+			if len(tc.Resizes) > 0 {
+				last := tc.Resizes[len(tc.Resizes)-1]
+				cols, rows = last[0], last[1]
+			}
+			f := fixture{LegacySnapshot: string(legacyBytes), LegacyRecaptured: string(nextLegacyBytes), Name: name, Cols: cols, Rows: rows, Original: tc.Data, Future: tc.Future, Snapshot: string(before.Data), Recaptured: string(after.Data), SnapshotProfile: before.RequiredRenderer, SnapshotToken: before.RendererToken, RecapturedProfile: after.RequiredRenderer, RecapturedToken: after.RendererToken}
+			if legacyErr != nil {
+				f.SnapshotError = legacyErr.Error()
+			}
+			if nextLegacyErr != nil {
+				f.RecapturedError = nextLegacyErr.Error()
+			}
+			if len(tc.Resizes) > 0 {
+				f.BeforeCols, f.BeforeRows, f.Resizes = 8, 4, tc.Resizes
+			}
+			f.FutureResizes = tc.FutureResizes
+			if len(tc.FutureResizes) > 0 {
+				last := tc.FutureResizes[len(tc.FutureResizes)-1]
+				f.AfterCols, f.AfterRows = last[0], last[1]
+			}
+			fixtures = append(fixtures, f)
+			check(name, s.Close())
 		}
 	}
 	check("encode", json.NewEncoder(os.Stdout).Encode(fixtures))

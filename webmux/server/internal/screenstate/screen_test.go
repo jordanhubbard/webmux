@@ -190,10 +190,10 @@ func TestContinuationPreservesHiddenDisplayState(t *testing.T) {
 			reference := vt.NewEmulator(80, 24)
 			// This is a round-trip consistency control for the configured emulator.
 			// The independent browser suite verifies the xterm semantics.
-			installXtermCursorProfile(reference)
+			installXtermCursorProfile(reference, false)
 			defer reference.Close()
 			restored := vt.NewEmulator(80, 24)
-			installXtermCursorProfile(restored)
+			installXtermCursorProfile(restored, false)
 			defer restored.Close()
 			if err := screen.Feed([]byte(tc.before)); err != nil {
 				t.Fatal(err)

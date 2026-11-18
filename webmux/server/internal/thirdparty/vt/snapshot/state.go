@@ -400,25 +400,27 @@ type CellState struct {
 // separate from what it holds. It describes both a cell and the pen, which are
 // the same rendition seen at two moments.
 type StyleState struct {
-	FgColor    string `json:"fg,omitempty"` // Foreground color, encoded by colorToWire
-	BgColor    string `json:"bg,omitempty"` // Background color
-	UlColor    string `json:"uc,omitempty"` // Underline color (SGR 58)
-	Attrs      uint8  `json:"a,omitempty"`  // uv.Attr* bitmask: bold, faint, italic, blink, reverse, conceal, strikethrough
-	Underline  uint8  `json:"u,omitempty"`  // ansi.Underline style: none, single, double, curly, dotted, dashed
-	LinkURL    string `json:"l,omitempty"`  // OSC 8 hyperlink target
-	LinkParams string `json:"lp,omitempty"` // OSC 8 hyperlink parameters
+	UnderlineFlags uint8  `json:"uf,omitempty"` // Optional independent underline/extended flags; zero is ordinary style-derived state.
+	FgColor        string `json:"fg,omitempty"` // Foreground color, encoded by colorToWire
+	BgColor        string `json:"bg,omitempty"` // Background color
+	UlColor        string `json:"uc,omitempty"` // Underline color (SGR 58)
+	Attrs          uint8  `json:"a,omitempty"`  // uv.Attr* bitmask: bold, faint, italic, blink, reverse, conceal, strikethrough
+	Underline      uint8  `json:"u,omitempty"`  // ansi.Underline style: none, single, double, curly, dotted, dashed
+	LinkURL        string `json:"l,omitempty"`  // OSC 8 hyperlink target
+	LinkParams     string `json:"lp,omitempty"` // OSC 8 hyperlink parameters
 }
 
 // styleToWire encodes a graphic rendition and the hyperlink that travels with it.
 func styleToWire(s uv.Style, link uv.Link) StyleState {
 	return StyleState{
-		FgColor:    colorToWire(s.Fg),
-		BgColor:    colorToWire(s.Bg),
-		UlColor:    colorToWire(s.UnderlineColor),
-		Attrs:      s.Attrs,
-		Underline:  uint8(s.Underline),
-		LinkURL:    link.URL,
-		LinkParams: link.Params,
+		UnderlineFlags: s.UnderlineFlags.Code(),
+		FgColor:        colorToWire(s.Fg),
+		BgColor:        colorToWire(s.Bg),
+		UlColor:        colorToWire(s.UnderlineColor),
+		Attrs:          s.Attrs,
+		Underline:      uint8(s.Underline),
+		LinkURL:        link.URL,
+		LinkParams:     link.Params,
 	}
 }
 
@@ -428,7 +430,9 @@ func styleFromWire(t vt.Terminal, ss StyleState) (uv.Style, uv.Link) {
 	// literals, because gofmt 1.26 and 1.27 indent that construct differently
 	// and each rejects the other's output. Naming them keeps the file
 	// formatted the same way under both toolchains.
+	flags, _ := uv.UnderlineFlagsFromCode(ss.UnderlineFlags)
 	style := uv.Style{
+		UnderlineFlags: flags,
 		Fg:             colorFromWire(t, ss.FgColor),
 		Bg:             colorFromWire(t, ss.BgColor),
 		UnderlineColor: colorFromWire(t, ss.UlColor),
@@ -573,13 +577,14 @@ func (c colorWireCache) cellState(cell *uv.Cell) CellState {
 		Content: cell.Content,
 		Width:   cell.Width,
 		StyleState: StyleState{
-			FgColor:    c.encode(cell.Style.Fg),
-			BgColor:    c.encode(cell.Style.Bg),
-			UlColor:    c.encode(cell.Style.UnderlineColor),
-			Attrs:      cell.Style.Attrs,
-			Underline:  uint8(cell.Style.Underline),
-			LinkURL:    cell.Link.URL,
-			LinkParams: cell.Link.Params,
+			UnderlineFlags: cell.Style.UnderlineFlags.Code(),
+			FgColor:        c.encode(cell.Style.Fg),
+			BgColor:        c.encode(cell.Style.Bg),
+			UlColor:        c.encode(cell.Style.UnderlineColor),
+			Attrs:          cell.Style.Attrs,
+			Underline:      uint8(cell.Style.Underline),
+			LinkURL:        cell.Link.URL,
+			LinkParams:     cell.Link.Params,
 		},
 	}
 }

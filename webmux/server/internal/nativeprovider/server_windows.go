@@ -287,12 +287,12 @@ func Serve(ctx context.Context, input io.Reader, output io.Writer, start func(La
 		return err
 	}
 	digest := sha256.Sum256(image)
-	screen, err := screenstate.New(c.Launch.Cols, c.Launch.Rows)
+	screen, err := screenstate.NewWithProfile(c.Launch.Cols, c.Launch.Rows, screenstate.XtermUnderlineRendererProfile)
 	if err != nil {
 		return err
 	}
 	defer screen.Close()
-	o := &owner{identity: Identity{Session: c.Session, Instance: id, Endpoint: endpoint, OwnerPID: os.Getpid(), BinarySHA256: hex.EncodeToString(digest[:]), Replay: "screen-v2"}, key: c.Key, viewers: map[*subscriber]bool{}, screen: screen, changed: make(chan struct{})}
+	o := &owner{identity: Identity{Session: c.Session, Instance: id, Endpoint: endpoint, OwnerPID: os.Getpid(), BinarySHA256: hex.EncodeToString(digest[:]), Replay: "screen-v3"}, key: c.Key, viewers: map[*subscriber]bool{}, screen: screen, changed: make(chan struct{})}
 	if err := writeRecord(c.Root, c.Key, o.identity); err != nil {
 		return err
 	}

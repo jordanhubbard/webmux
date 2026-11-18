@@ -156,6 +156,9 @@ func (e *Emulator) handleSgr(params ansi.Params) {
 // This is based on uv.ReadStyle but uses IndexedColor to resolve theme colors.
 func (e *Emulator) readStyleWithTheme(params ansi.Params, pen *uv.Style) {
 	if len(params) == 0 {
+		if e.xtermUnderline {
+			e.scr.cur.Protected = false
+		}
 		*pen = uv.Style{}
 		return
 	}
@@ -164,6 +167,9 @@ func (e *Emulator) readStyleWithTheme(params ansi.Params, pen *uv.Style) {
 		param, hasMore, _ := params.Param(i, 0)
 		switch param {
 		case 0: // Reset
+			if e.xtermUnderline {
+				e.scr.cur.Protected = false
+			}
 			*pen = uv.Style{}
 		case 1: // Bold
 			pen.Attrs |= uv.AttrBold
@@ -172,6 +178,21 @@ func (e *Emulator) readStyleWithTheme(params ansi.Params, pen *uv.Style) {
 		case 3: // Italic
 			pen.Attrs |= uv.AttrItalic
 		case 4: // Underline
+			if e.xtermUnderline {
+				style := 1
+				if hasMore && i+1 < len(params) {
+					style = params[i+1].Param(-1)
+					if style < 0 || style > 5 {
+						style = 1
+					}
+					for i+1 < len(params) && params[i].HasMore() {
+						i++
+					}
+				}
+				pen.Underline = ansi.Underline(style)
+				e.updateXtermUnderline(pen)
+				continue
+			}
 			nextParam, _, ok := params.Param(i+1, 0)
 			if hasMore && ok {
 				// A colon subparameter follows (e.g. 4:3). Always consume it,
@@ -212,12 +233,14 @@ func (e *Emulator) readStyleWithTheme(params ansi.Params, pen *uv.Style) {
 			// and kitty follow them. Some older terminals used it for "bold
 			// off", which is why 22 exists; uv.ReadStyle drops it entirely.
 			pen.Underline = ansi.UnderlineDouble
+			e.updateXtermUnderline(pen)
 		case 22: // Normal Intensity
 			pen.Attrs &^= uv.AttrBold | uv.AttrFaint
 		case 23: // Not italic
 			pen.Attrs &^= uv.AttrItalic
 		case 24: // Not underlined
 			pen.Underline = ansi.UnderlineNone
+			e.updateXtermUnderline(pen)
 		case 25: // Blink off
 			pen.Attrs &^= uv.AttrBlink | uv.AttrRapidBlink
 		case 27: // Positive (not reverse)
@@ -254,6 +277,11 @@ func (e *Emulator) readStyleWithTheme(params ansi.Params, pen *uv.Style) {
 			}
 		case 59: // Default underline color
 			pen.UnderlineColor = nil
+			if e.xtermUnderline {
+				// xterm masks its -1 sentinel into the raw RGB/color-mode word.
+				pen.UnderlineColor = e.rgbColor(255, 255, 255)
+			}
+			e.updateXtermExtended(pen)
 		case 90, 91, 92, 93, 94, 95, 96, 97: // Set bright foreground
 			pen.Fg = e.PaletteColor(int(param - 90 + 8)) // 8-15 are bright colors
 		case 100, 101, 102, 103, 104, 105, 106, 107: // Set bright background

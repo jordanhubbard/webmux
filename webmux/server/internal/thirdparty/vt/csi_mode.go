@@ -45,6 +45,7 @@ const modeAltScreenLegacy = ansi.DECMode(47)
 
 // setAltScreenMode sets the alternate screen mode.
 func (e *Emulator) setAltScreenMode(on bool) {
+	livePen, liveLink := e.CursorPen()
 	if (on && e.scr == &e.scrs[1]) || (!on && e.scr == &e.scrs[0]) {
 		// Already in alternate screen mode, or normal screen, do nothing.
 		return
@@ -60,6 +61,9 @@ func (e *Emulator) setAltScreenMode(on bool) {
 		e.scr.Clear()
 	} else {
 		e.scr = &e.scrs[0]
+	}
+	if e.xtermUnderline {
+		e.RestoreCursorPen(livePen, liveLink)
 	}
 	// A screen switch ends any frame in progress; clear a stuck sync flag so a
 	// window is never left holding a stale frame (e.g. when an app exits without
@@ -91,6 +95,7 @@ func (e *Emulator) saveCursor() {
 
 // restoreCursor is the DECRC half of saveCursor.
 func (e *Emulator) restoreCursor() {
+	livePen, liveLink := e.CursorPen()
 	// Origin mode goes back first, and through the map rather than through
 	// setMode: setting DECOM homes the cursor, which would undo the position
 	// this is about to restore.
@@ -104,6 +109,9 @@ func (e *Emulator) restoreCursor() {
 	e.cachedOrigin.Store(e.scr.savedExtra.origin)
 
 	e.scr.RestoreCursor()
+	if e.xtermUnderline {
+		e.RestoreCursorPen(XtermRestoredPen(e.scr.cur.Pen, e.scr.cur.Link, livePen, liveLink), liveLink)
+	}
 	e.restoreCharsets()
 	e.atPhantom = e.scr.savedExtra.phantom
 }

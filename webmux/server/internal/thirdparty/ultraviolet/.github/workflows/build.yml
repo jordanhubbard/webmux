@@ -1,0 +1,24 @@
+name: build
+# push is scoped to main so a push to a PR branch fires only the
+# pull_request run, not both. Merges to main still build via push.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    uses: charmbracelet/meta/.github/workflows/build.yml@main
+
+  build-go-mod:
+    uses: charmbracelet/meta/.github/workflows/build.yml@main
+    with:
+      go-version: ""
+      go-version-file: ./go.mod
+
+  build-examples:
+    uses: charmbracelet/meta/.github/workflows/build.yml@main
+    with:
+      go-version: ""
+      go-version-file: ./examples/go.mod
+      working-directory: ./examples

@@ -137,6 +137,14 @@ jobs:
         run: go test -race ./...
       - name: Verify terminal engine provenance
         run: python3 scripts/verify-vt-provenance.py
+      - name: Verify retained cell model provenance
+        run: python3 scripts/verify-uv-provenance.py
+      - name: Test retained cell model
+        working-directory: webmux/server/internal/thirdparty/ultraviolet
+        run: go test -race ./...
+      - name: Vet retained cell model
+        working-directory: webmux/server/internal/thirdparty/ultraviolet
+        run: go vet ./...
       - name: Test retained terminal engine
         working-directory: webmux/server/internal/thirdparty/vt
         run: go test -race ./...

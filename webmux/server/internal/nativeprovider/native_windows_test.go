@@ -22,6 +22,7 @@ import (
 	"unsafe"
 
 	"github.com/jordanhubbard/webmux/server/internal/nativeprovider"
+	"github.com/jordanhubbard/webmux/server/internal/screenstate"
 	"github.com/jordanhubbard/webmux/server/internal/terminal"
 	"golang.org/x/sys/windows"
 	"tuios.dev/vt"
@@ -257,10 +258,13 @@ type capture struct {
 func (c *capture) Write(b []byte) (int, error) { c.Lock(); defer c.Unlock(); return c.data.Write(b) }
 func (c *capture) text() string                { c.Lock(); defer c.Unlock(); return c.data.String() }
 func attach(t *testing.T, c nativeprovider.Config, i nativeprovider.Identity) (*nativeprovider.Client, *capture) {
+	return attachProfile(t, c, i, screenstate.XtermUnderlineRendererProfile)
+}
+func attachProfile(t *testing.T, c nativeprovider.Config, i nativeprovider.Identity, renderer string) (*nativeprovider.Client, *capture) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	p, err := nativeprovider.Attach(ctx, i, c.Key, 100, 30)
+	p, err := nativeprovider.AttachWithProfile(ctx, i, c.Key, 100, 30, renderer)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -694,6 +698,12 @@ func TestNativeProviderSavedCursorCaptures(t *testing.T) {
 		{"nowrap-wide-discard", "\x1b[?7l\x1b[4;100HX日", "Y\x1b[?7hZ"},
 		{"nowrap-backspace", "\x1b[?7l\x1b[4;100HX\b", "Y\x1b[?7hZ"},
 		{"nowrap-soft-reset", "\x1b[?7l\x1b[4;100HX\x1b[!p", "Y"},
+		{"hidden-plain-curly-restore", "A\x1b7\x1b[4:3;58;5;9mB\x1b8", "\x1b[59mX"},
+		{"hidden-enabled-reset", "\x1b[4:3mA\x1b7\x1b[0mB\x1b8", "\x1b[24mX"},
+		{"hidden-link-only", "\x1b]8;id=live;https://example.test/live\aA\x1b7\x1b]8;;\a\x1b[4:5mB\x1b8", "\x1b[59mX\x1b]8;;\aY"},
+		{"hidden-1048", "A\x1b[?1048h\x1b[4:3;58;5;9mB\x1b[?1048l", "\x1b[58;5;4mX\x1b[4mY"},
+		{"hidden-1049", "\x1b[4:3mA\x1b[?1049h\x1b[0mB", "\x1b[?1049lX\x1b[59mY"},
+		{"hidden-wide-edit", "\x1b7\x1b[4:3m\x1b8日Z\x1b[D\x1b[@", "\x1b[2b\u0301\x1b[59mX"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c, counter := config(t)
@@ -705,12 +715,35 @@ func TestNativeProviderSavedCursorCaptures(t *testing.T) {
 			}
 			identity := ensure(t, c)
 			cleanupOwner(t, c, identity)
-			first, reference := attach(t, c, identity)
+			if identity.Replay != "screen-v3" {
+				t.Fatal("capture did not use current owner model", identity.Replay)
+			}
+			first, reference := attachProfile(t, c, identity, "")
 			expect(t, reference, "CURSOR_READY;")
 			if _, err := first.Write([]byte("BEFORE")); err != nil {
 				t.Fatal(err)
 			}
 			expect(t, reference, "BEFORE_CURSOR_MARK\a")
+			legacyAttempted, legacyRefused := false, false
+			if strings.HasPrefix(tc.name, "hidden-") {
+				legacyAttempted = true
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				older, err := nativeprovider.Attach(ctx, identity, c.Key, 100, 30)
+				if err != nil {
+					if !strings.Contains(err.Error(), screenstate.ErrUnsupported.Error()) {
+						cancel()
+						t.Fatal("unexpected legacy refusal", err)
+					}
+					legacyRefused = true
+				} else {
+					_ = older.Close()
+				}
+				probed, err := nativeprovider.Probe(ctx, identity, c.Key)
+				cancel()
+				if err != nil || probed.Instance != identity.Instance || probed.RootPID != identity.RootPID {
+					t.Fatal("legacy negotiation replaced job", err)
+				}
+			}
 			second, restored := attach(t, c, identity)
 			if _, err := second.Write([]byte("CHECK")); err != nil {
 				t.Fatal(err)
@@ -736,7 +769,12 @@ func TestNativeProviderSavedCursorCaptures(t *testing.T) {
 			if starts(t, counter) != 1 {
 				t.Fatal("cursor capture created another job")
 			}
-			records = append(records, map[string]any{"name": tc.name, "cols": 100, "rows": 30, "original": reference.text(), "original_before": originalBefore, "snapshot_before": snapshotBefore, "snapshot": restored.text(), "recaptured": recaptured.text(), "owner_pid": identity.OwnerPID, "root_pid": identity.RootPID, "starts": 1})
+			profile, token := second.SnapshotProfile()
+			nextProfile, nextToken := third.SnapshotProfile()
+			if profile != screenstate.XtermUnderlineRendererProfile || nextProfile != profile || len(token) != 32 || len(nextToken) != 32 || token == nextToken {
+				t.Fatal("fresh v2 metadata missing")
+			}
+			records = append(records, map[string]any{"name": tc.name, "cols": 100, "rows": 30, "original": reference.text(), "original_before": originalBefore, "snapshot_before": snapshotBefore, "snapshot": restored.text(), "recaptured": recaptured.text(), "owner_pid": identity.OwnerPID, "root_pid": identity.RootPID, "starts": 1, "replay": identity.Replay, "snapshot_profile": profile, "snapshot_token": token, "recaptured_profile": nextProfile, "recaptured_token": nextToken, "legacy_attempted": legacyAttempted, "legacy_refused": legacyRefused})
 		})
 	}
 	if target := os.Getenv("WEBMUX_NATIVE_CURSOR_CAPTURES"); target != "" {

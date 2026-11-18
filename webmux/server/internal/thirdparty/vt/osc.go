@@ -441,14 +441,12 @@ func (e *Emulator) handleHyperlink(cmd int, data []byte) {
 		return
 	}
 
-	e.scr.cur.Link.Params = LinkParams(string(parts[1]))
-	e.scr.cur.Link.URL = LinkURI(string(parts[2]))
-	// An empty URI closes the link, whatever parameters came with it. Keeping
-	// the parameters would leave every following cell carrying a link value
-	// with no address, which no reader of a cell expects.
-	if e.scr.cur.Link.URL == "" {
-		e.scr.cur.Link = uv.Link{}
+	link := uv.Link{Params: LinkParams(string(parts[1])), URL: LinkURI(string(parts[2]))}
+	// An empty URI closes the link, including its parameters.
+	if link.URL == "" {
+		link = uv.Link{}
 	}
+	e.SetXtermHyperlink(link)
 }
 
 // StripControls returns s without C0 controls, DEL, C1 controls (as raw bytes

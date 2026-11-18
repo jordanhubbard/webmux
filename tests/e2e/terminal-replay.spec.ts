@@ -1,5 +1,6 @@
 import { test, expect, type WebSocketRoute } from '@playwright/test';
 import path from 'node:path';
+import { writeFileSync } from 'node:fs';
 
 test('rejoining a truncated full-screen replay keeps status bars out of scrollback', async ({ page, request }) => {
   const captures: string[] = [];
@@ -42,7 +43,8 @@ test('rejoining a truncated full-screen replay keeps status bars out of scrollba
 });
 
 
-test('terminal negotiates the renderer profile and configures metadata before replay', async ({ page, request }) => {
+for (const profile of ['webmux-xterm-state-v1', 'webmux-xterm-state-v2']) {
+test(`terminal advertises v2 and configures ${profile} metadata before replay`, async ({ page, request }) => {
   // The real app and Go server carry ordinary PTY traffic. Inject owned
   // handshake/output frames to isolate the frontend ordering contract; native
   // owner negotiation and unmodified ConPTY streams have separate coverage.
@@ -56,7 +58,7 @@ test('terminal negotiates the renderer profile and configures metadata before re
   const sockets: WebSocketRoute[] = [];
   const inputs: string[] = [];
   await page.routeWebSocket(new RegExp(`/api/term/${id}`), socket => {
-    expect(new URL(socket.url()).searchParams.get('snapshot_profile')).toBe('webmux-xterm-state-v1');
+    expect(new URL(socket.url()).searchParams.get('snapshot_profile')).toBe('webmux-xterm-state-v2');
     sockets.push(socket); socket.connectToServer();
   });
   page.on('websocket', socket => socket.on('framesent', frame => {
@@ -71,15 +73,25 @@ test('terminal negotiates the renderer profile and configures metadata before re
       await expect.poll(() => sockets.length).toBe(join + 1);
       const socket = sockets[join];
       const token = (join ? 'b' : 'a').repeat(32);
-      socket.send(JSON.stringify({ type: 'status', session_id: id, state: 'connected', viewer_id: 'profile-test', snapshot_profile: 'webmux-xterm-state-v1', snapshot_token: token }));
-      socket.send(JSON.stringify({ type: 'output', session_id: id, data: `Z\x1b]7777;webmux.replay.v1;${token};Wg==\x07\x1b[2b` }));
+      socket.send(JSON.stringify({ type: 'status', session_id: id, state: 'connected', viewer_id: 'profile-test', snapshot_profile: profile, snapshot_token: token }));
+      const version = profile.endsWith('v2') ? 'v2' : 'v1';
+      const payload = version === 'v2' ? Buffer.from(JSON.stringify({ u: 2, r: 'Z' })).toString('base64') : 'Wg==';
+      socket.send(JSON.stringify({ type: 'output', session_id: id, data: `Z\x1b]7777;webmux.replay.${version};${token};${payload}\x07\x1b[2b` }));
       await expect(rows).toContainText('ZZZ');
+      // The pinned DOM renderer uses raw extended style0 for an FG-only
+      // underline flag, even though the public fallback style getter says1.
+      if (profile.endsWith('v2')) await expect(rows.locator('.xterm-underline-0')).toContainText('ZZ');
       // Replaying an old token after changing trusted metadata cannot seed REP.
-      socket.send(JSON.stringify({ type: 'status', session_id: id, state: 'connected', viewer_id: 'profile-test', snapshot_profile: 'webmux-xterm-state-v1', snapshot_token: 'c'.repeat(32) }));
-      socket.send(JSON.stringify({ type: 'output', session_id: id, data: `Z\x1b]7777;webmux.replay.v1;${token};Wg==\x07\x1b[2b` }));
+      socket.send(JSON.stringify({ type: 'status', session_id: id, state: 'connected', viewer_id: 'profile-test', snapshot_profile: profile, snapshot_token: 'c'.repeat(32) }));
+      socket.send(JSON.stringify({ type: 'output', session_id: id, data: `Z\x1b]7777;webmux.replay.${version};${token};${payload}\x07\x1b[2b` }));
       await expect(rows).toContainText('Z');
       await expect(rows).not.toContainText('ZZ');
     }
     expect(inputs).toEqual([]);
+    const receipt = test.info().outputPath('snapshot-profile-application-contract.json');
+    writeFileSync(receipt, JSON.stringify({ advertised: 'webmux-xterm-state-v2', required: profile, attachments: 2, staleTokenIgnored: true, generatedInput: inputs, rawUnderlineClass: profile.endsWith('v2') ? 'xterm-underline-0' : undefined, scope: 'Actual app/Go server with injected handshake/output frames; not a native producer test' }));
+    await test.info().attach('snapshot-profile-application-contract', { path: receipt, contentType: 'application/json' });
   } finally { await request.delete(`/api/sessions/${id}`); }
 });
+
+}

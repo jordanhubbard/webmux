@@ -253,14 +253,21 @@
     "testdata/fuzz/FuzzKittyPayloadDecode/f9d75f20e73594c7": "f9d75f20e73594c796a2b9e2ce6862ebe98b825d35f51cc420eb480924da3f40"
   },
   "webmux_modified_files_sha256": {
-    "emulator.go": "16a595d017c07809ee99738a1da6c0ce173d1acc2a211c7ae65a387716152af7",
+    "emulator.go": "5edd05d81ce4fcc1b117c5d9505ae654ce411338fdc6e58b4834d415eed367f2",
+    "csi_sgr.go": "f12420c7f9d30859ac3406e6776c849bac712ecd57b7c201364066d79d781a7c",
+    "go.mod": "8c9febd08246841e82ad8c0aee04124598e44b9915d407715939190c020f29e4",
+    "csi_mode.go": "9ee0d7ba26961b9fc574cc5444de36264fb6f14148180ea54adfdb14954ac2d8",
     "grid.go": "4c6130d0824df3da9283097c744d61841fcd83015e3e07c9e970c39e8b262aa8",
     "cc.go": "d891208aefbb2b4023aefdcf7786521a3bc8813628453cdeff3a83e832b7667b",
+    "osc.go": "e02893ddfecb85b6009adc2d36104fc7108a884875382abda456aef57eae6f83",
     "screen.go": "30664e4e3c396c4d71fcc87620775e9a6dffbf3a87ff7e3d7cd31c28508d8eb5",
     "handlers.go": "6a2fd854a4bc7865ec3fa3f3f6cbed01d305e460511a67eaba5f51c17523f90a",
-    "csi_cursor.go": "a58005bc8483f851c1ba99a7476b5913fd235ef25d76ff2f0c7bf38a8d24e7cc",
-    "utf8.go": "bf21be7152f73dc077a4db68c4366fe69b2ab4a78fbc6c09f2f86fa5d7af8bb8",
+    "csi_cursor.go": "86cfc21d784cdde7e6764e3eb8030443084b444154cf0a68a070a1efcdb77a2f",
+    "utf8.go": "c5f13a9d0fd3962a5ff2f2811e010473632b33278ad0650c37a534275ca083d4",
     "esc.go": "6a2989eb3f94126a586f26ef0ff6d835f77e1178ed416cabce8852bd8262bd2b",
-    "reflow.go": "898f9f7bbb2a85b85ac5d6b78881b22545286d77963dcdacd1a6a4100c67b718"
+    "reflow.go": "898f9f7bbb2a85b85ac5d6b78881b22545286d77963dcdacd1a6a4100c67b718",
+    "snapshot/state.go": "b40a538b132ca311edb0ead5ff1adab7905419094f6e15a7cdec8cefea0f356e",
+    "snapshot/apply.go": "8053a96f72bafac0bbe197db9f8d52d6763b675c36deeb5de9b1fb32a6d10f30",
+    "csi.go": "5bea786bf1b70835fc6c203551bb227f5e072613c86bf46c9ef0205bb626bfdf"
   }
 }
