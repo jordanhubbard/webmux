@@ -40,6 +40,24 @@ type firstNavigationRemovalHolders struct {
 	Unqueryable            int    `json:"unqueryable"`
 }
 
+// A projection of a private bounded process-handle query. Never add native
+// handles, PIDs, timestamps, paths, object names or file identities here.
+type firstNavigationHandleReport struct {
+	OSCode               uint32 `json:"osCode,omitempty"`
+	State                string `json:"state"`
+	ProcessesVerified    int    `json:"processesVerified"`
+	IdentityRejected     int    `json:"identityRejected"`
+	ProcessesUnavailable int    `json:"processesUnavailable"`
+	ExitedProcesses      int    `json:"exitedProcesses"`
+	ProcessesCaptured    int    `json:"processesCaptured"`
+	SnapshotUnavailable  int    `json:"snapshotUnavailable"`
+	HandlesExamined      int    `json:"handlesExamined"`
+	DuplicateFailed      int    `json:"duplicateFailed"`
+	FilesUnqueryable     int    `json:"filesUnqueryable"`
+	MatchedHandles       int    `json:"matchedHandles"`
+	MatchedProcesses     int    `json:"matchedProcesses"`
+}
+
 // Only fixed categories and OS error numbers leave the anonymous fixture.
 // PathError.Error(), raw paths and arbitrary error strings are never retained.
 func classifyFirstNavigationRemoval(err error, profile string) *firstNavigationRemovalError {

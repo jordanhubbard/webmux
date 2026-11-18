@@ -27,6 +27,7 @@ import (
 
 type firstNavigationEvidence struct {
 	cleanupProcessIdentities map[uint32]uint64
+	cleanupHandleProbe       func(error, string) *firstNavigationHandleReport
 
 	Transport        string                           `json:"transport"`
 	ProfileLocation  string                           `json:"profileLocation"`
@@ -41,6 +42,7 @@ type firstNavigationEvidence struct {
 	ExtraTargets     int                              `json:"extraTargets,omitempty"`
 	CleanupFailed    bool                             `json:"cleanupFailed,omitempty"`
 	CleanupRemoval   *firstNavigationRemovalError     `json:"cleanupRemoval,omitempty"`
+	CleanupHandles   *firstNavigationHandleReport     `json:"cleanupHandles,omitempty"`
 	CleanupHolders   *firstNavigationRemovalHolders   `json:"cleanupHolders,omitempty"`
 	CleanupProcesses *firstNavigationCleanupProcesses `json:"cleanupProcesses,omitempty"`
 	Failure          string                           `json:"failure,omitempty"`
@@ -354,7 +356,11 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 		}
 		// Registered before browser cleanup: Chrome exits before profile removal.
 		t.Cleanup(func() {
-			if err := os.RemoveAll(profile); err != nil {
+			err := os.RemoveAll(profile)
+			if record.cleanupHandleProbe != nil {
+				record.CleanupHandles = record.cleanupHandleProbe(err, profile)
+			}
+			if err != nil {
 				record.CleanupFailed = true
 				record.CleanupRemoval = classifyFirstNavigationRemoval(err, profile)
 				record.CleanupHolders = queryFirstNavigationRemovalHolders(err, profile, record.cleanupProcessIdentities)
@@ -396,6 +402,9 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 	root, cancel := chromedp.NewContext(alloc)
 	t.Cleanup(func() {
 		finishObservation := observeFirstNavigationCleanup(root, record)
+		if options.profileAtHome && os.Getenv("WEBMUX_BROWSER_CLEANUP_PROCESSES") == "1" {
+			record.cleanupHandleProbe = prepareFirstNavigationHandleProbe(record.cleanupProcessIdentities)
+		}
 		defer func() { record.CleanupProcesses = finishObservation() }()
 		if options.netLog {
 			closing, finish := context.WithTimeout(root, 5*time.Second)
