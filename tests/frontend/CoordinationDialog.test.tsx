@@ -564,6 +564,34 @@ it('refuses unavailable canonical pods instead of falling back to prior seat-der
   expect(mocks.create).not.toHaveBeenCalled();
 });
 
+it('retains the original empty-pod selection across trust review and a later pod refresh', async () => {
+  const value = emptyStatus();
+  value.projects = [{ provider: 'rig', id: 'empty-rig', name: 'empty-project', host: 'localhost', state: 'stopped', historical: true, seatCount: 0, runningCount: 0 }];
+  mocks.status.mockResolvedValue(value);
+  mocks.pods.mockResolvedValueOnce({ projectId: 'empty-rig', projectName: 'empty-project', pods: ['research'], source: 'native-spec' })
+    .mockResolvedValueOnce({ projectId: 'empty-rig', projectName: 'empty-project', pods: ['research', 'workers'], source: 'native-spec' });
+  const requestId = 'c'.repeat(64);
+  mocks.create.mockRejectedValueOnce(new CoordinationTrustRequiredError(requestId));
+  const close = vi.fn();
+  render(<CoordinationDialog onClose={close} position={{ row: 1, col: 1 }} initialProvider="rig" launchOnly />);
+  fireEvent.click(await screen.findByLabelText('Add an agent to an existing project'));
+  await waitFor(() => expect(screen.getByLabelText('Rig pod')).toHaveValue('research'));
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/original' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
+  await screen.findByRole('status', { name: 'Codex project trust required' });
+  const original = mocks.create.mock.calls[0][0];
+  expect(original).toEqual(expect.objectContaining({ projectId: 'empty-rig', context: 'research', row: 1, col: 1 }));
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh pods' }));
+  await screen.findByRole('option', { name: 'workers' });
+  fireEvent.change(screen.getByLabelText('Rig pod'), { target: { value: 'workers' } });
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/edited' } });
+  expect(mocks.create).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByLabelText('I reviewed project trust in native Codex and exited the review session'));
+  fireEvent.click(screen.getByRole('button', { name: 'Retry original request after trust review' }));
+  await waitFor(() => expect(close).toHaveBeenCalledOnce());
+  expect(mocks.create.mock.calls[1][0]).toEqual({ ...original, inspect: undefined, trustRequest: requestId });
+});
+
 it('ignores a late namespace response after selecting a different project', async () => {
   const value = emptyStatus();
   value.projects = ['first', 'second'].map(id => ({ provider: 'rig', id, name: id, host: 'localhost', state: 'stopped', historical: true, seatCount: 0, runningCount: 0 }));
