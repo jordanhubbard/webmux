@@ -15,12 +15,40 @@ assertion; that failed run is retained, without attributing it to capture.
 The published capture receipt's 18 unchanged sources match; its resume module
 has the separately published later preparation change. All 11 prepared-recovery
 module hashes match this composition. Both retained raw receipt hashes were
-verified. These remain proofs for their named component revisions, not a fresh
-native capture/recovery result for this merged runtime. Prior fresh composed
+verified. These original receipts remain proofs for their named component revisions. Prior fresh composed
 creation/coding/checked-Stop proof belongs to `10295c9` under the
 [public native composition receipt](../roadmap-public-native-composition-2026-11-18/README.md).
 
 See [receipt.json](receipt.json) for source hashes, checks and remaining scope.
 PR #500 stays at `951cf93` while its original hosted handles finish. This
-preparation needs its own hosted and composed native acceptance before promotion.
+preparation still needs its own hosted qualification before promotion.
 No main, version, tag or release publication is changed.
+
+
+## Fresh composed native acceptance
+
+Actual Go/Chrome/native Codex 0.169.0 on macOS arm64 now passes public creation,
+discarded-reply and duplicate controls, a fresh coding turn and two calls to the
+embedded-Go original-conversation capture action. Both captures select the same
+native conversation and reuse the same snapshot. Checked Stop preserves its
+viewer and sibling, and owned controller/browser/daemon/tmux cleanup passes.
+
+A separate fresh fixture passes native original-only preparation and recovery.
+Two separate Go invocations bank and reread the exact reviewed request without
+POST, dispatch marker or environment handoff. Explicit completion first posts
+the banked operation; its response stays uncertain, an ordinary duplicate posts
+nothing, immediate explicit inspection remains operation-in-progress, and later
+inspection confirms the original conversation. The native conversation recalls
+the removed challenge without tools. Both recorded witness byte prefixes occur
+unchanged in the final conversation file, with appended records. Fresh correlated
+tools preserve the default owner policy, model, environment and allowed writes.
+Duplicate recovery retains provider/sibling PIDs; checked Stop and cleanup pass.
+
+Both runs pin/report actual controller Node 24.21.0 and refuse native trust
+prompts. Their native records contain no delegation calls, and durable coordinator
+files contain no plaintext arbitrary fixture environment witness. Private raw
+records, adapted drivers, owned fixture files and the exact controlled native
+conversations are retained separately by hash. Neither fixture copies account
+authentication. The browser is loopback auth-none and the native account remains
+in place. These are separate capture/preparation proofs for runtime `5961ab8`;
+public recovery API/UI and actual controller crash/reboot are not qualified here.

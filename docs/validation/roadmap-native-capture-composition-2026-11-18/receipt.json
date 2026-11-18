@@ -1,6 +1,6 @@
 {
   "recordedUTC": "2026-11-18T20:56:29.054089+00:00",
-  "scope": "Preparation of published internal native capture/request preparation on the combined roadmap; not canonical promotion, public recovery UI or fresh composed native coding/recovery acceptance.",
+  "scope": "Fresh composed macOS native coding/capture and separate embedded-Go original request preparation/recovery after owned provider loss. No public recovery API/UI, actual app crash/reboot or broader policy/platform acceptance.",
   "runtimeSource": "5961ab8140c82f6c4ac57d96416aa3ccf4bc882d",
   "previousCanonical": "951cf93e7c3a901f94e1379a612edf49826c26ce",
   "input511": "d41ac091160fe0fcc3e14b57108b368fa55a8609",
@@ -93,11 +93,159 @@
     "failure": "Immediate raw child-B broadcast assertion expected62 received empty; original522 fix absent from source511, retained in composition. No rerun or native-capture defect conclusion."
   },
   "remaining": [
-    "Own hosted qualification and composed native capture/preparation acceptance before promotion",
+    "Own hosted qualification before canonical promotion; fresh proofs are for the named composed source",
     "Public recovery broker/API/UI",
     "Actual application/controller/service crash and reboot",
     "Restricted or selected profiles, named graphs and broader startup selection",
     "Authenticated Linux and broader Windows acceptance",
     "Full remaining roadmap, review, exact-main and release gates"
-  ]
+  ],
+  "freshComposedCapture": {
+    "runtimeSource": "5961ab8140c82f6c4ac57d96416aa3ccf4bc882d",
+    "testedPreparation": "4539af8f870da26ad46ebfbf7db095e858588015",
+    "passed": true,
+    "rawReceiptName": "native-capture-wm-native-capture452-75p98jxp.json",
+    "rawReceiptSHA256": "ad486dc5bffaebe8bd88fc1bb7a925c4e81192c67b64f952acc56e1b741be4a3",
+    "binarySHA256": "4cfdae63553df13fed83a9dd9e748588c9375bd3603d9516c98372b2ec2da37f",
+    "coordinatorSHA256": "8e1f22ac3aec73baa3ceec7191e21750b3c6df54436b14efa926736aee73e2ce",
+    "checks": {
+      "nativeUncertaintyHasOneOriginalNodeAndNoViewer": true,
+      "frozenNativeOperationAcrossExplicitChecks": true,
+      "readyDuplicateRetainsProviderAndViewer": true,
+      "noNativeTrustGrant": true,
+      "actualNativeCodingChallenge": true,
+      "actualEmbeddedGoCaptureAndRepeat": true,
+      "browserCheckedStopAndSiblingAndViewerRetained": true
+    },
+    "actualControllerNode": "v24.21.0",
+    "sameNativeConversationCaptureAndSnapshotReuse": true,
+    "nativeWitness": {
+      "passed": true,
+      "contexts": 2,
+      "nativeNodeMatches": true,
+      "correlatedProbeOutputs": 1,
+      "allowedWrites": 4,
+      "environmentChecks": {
+        "homePreserved": true,
+        "tmpPreserved": true,
+        "ownerPathRetainedAsSuffix": true,
+        "pairedRigFound": true,
+        "managerToolPathAbsent": true,
+        "ownerToolFound": true,
+        "ownerToolRuns": true,
+        "inheritedValueMatches": true,
+        "managerOnlyValueAbsent": true
+      },
+      "nativeSessionSHA256": "3d32f4002d66640f67382c5ea7f6e82682ba081aeb4b78e6924b1032719a0465"
+    },
+    "nativeToolCallCounts": {
+      "exec": 2
+    },
+    "noDelegationToolCalls": true,
+    "nativeMemberPosts": 3,
+    "sameOriginalUUIDAndBodyAllPosts": true,
+    "ownedProcessesExited": true,
+    "privateTmuxStopped": true,
+    "durableArbitraryWitnessAbsent": true,
+    "selectedNativeExecutableDescription": "Mach-O 64-bit executable arm64",
+    "selectedNativeExecutableSHA256": "739cda86e15d30a6e2b40cf8dcbbfb988aaf48b305b27065573bb8e9fd41d002",
+    "scope": "Fresh composed Go/Chrome/native macOS coding then embedded-Go original-conversation capture/repeat. Existing native account in place; loopback browser auth-none. No public recovery API/UI, fresh composed resume preparation, actual app crash/reboot, restricted policies or Linux/Windows coding acceptance."
+  },
+  "freshComposedPreparedRecovery": {
+    "runtimeSource": "5961ab8140c82f6c4ac57d96416aa3ccf4bc882d",
+    "testedPreparation": "4539af8f870da26ad46ebfbf7db095e858588015",
+    "passed": true,
+    "rawReceiptName": "native-create-factory-wm452prepared-_ldgj6sy.json",
+    "rawReceiptSHA256": "357a7c4c4e151b4d6c0fd62b2025c1909f1bde18749c5e2d45a8e50c9f09fc00",
+    "checks": {
+      "onlyOriginalCreationHelperKilledBeforeHandoff": true,
+      "sameOriginalEnrollmentAndReconstructedHandoffAfterHelperLoss": true,
+      "environmentSocketRemovedAfterHandoff": true,
+      "noPlaintextFixtureValueInDurableState": true,
+      "actualDefaultNativeOwnerPolicyUsed": true,
+      "noNativeTrustGrant": true,
+      "actualNativeArgvPreservesOwnerPolicy": true,
+      "freshChallengeReadByActualProvider": true,
+      "projectAndOwnerExtraWritable": true,
+      "ownerFullAccessNotNarrowed": true,
+      "wrapperReplacedByNativeExecutable": true,
+      "nativeIdentityRetained": true,
+      "nativeOwnerEnvironmentPreserved": true,
+      "nativePolicyAndCorrelatedTools": true,
+      "duplicateFactoryAndExplicitInspectRetainNativeOccupant": true,
+      "siblingRetainsOriginalPID": true,
+      "snapshotBindsOriginalConversation": true,
+      "preparedAcrossFreshGoInvocationsWithoutDispatchOrHandoff": true,
+      "explicitCompletionCanBeFirstNativePostAfterPreparation": true,
+      "embeddedGoCoordinatorUsesOwnerNamespace": true,
+      "originalOnlyReviewMatchesBankedConversation": true,
+      "newControllerInvocationReusesOriginalBytesAndOperation": true,
+      "unconfirmedNativeResponseNeverBecomesSuccess": true,
+      "sharedHandoffDurableHashOnlyReceipt": true,
+      "freshEnvironmentHandoffConsumed": true,
+      "originalResumeInspectedWithoutRepost": true,
+      "sameConversationRecallWithoutTools": true,
+      "originalNativeLogPrefixAndEnvironmentRetained": true,
+      "duplicateResumeRetainsBothNativeProcesses": true,
+      "sameOriginalOperationReplayedWithoutNativeEffect": true,
+      "checkedStopEndsOnlyNativeCodingSeat": true
+    },
+    "actualControllerNode": "v24.21.0",
+    "controllerResults": [
+      {
+        "state": "prepared",
+        "code": "native_resume_prepared",
+        "posted": false
+      },
+      {
+        "state": "prepared",
+        "code": "native_resume_prepared",
+        "posted": false
+      },
+      {
+        "state": "uncertain",
+        "code": "native_resume_response_unavailable",
+        "posted": true
+      },
+      {
+        "state": "uncertain",
+        "code": "native_resume_already_dispatched",
+        "posted": false,
+        "previouslyConfirmed": false
+      },
+      {
+        "state": "uncertain",
+        "code": "native_resume_unconfirmed",
+        "posted": true,
+        "nativeCode": "operation_in_progress"
+      },
+      {
+        "state": "confirmed",
+        "code": "already_running_original",
+        "posted": true
+      },
+      {
+        "state": "confirmed",
+        "code": "already_running_original",
+        "posted": true
+      }
+    ],
+    "oneOriginalOperationAndConversation": true,
+    "originalAndResumedWitnessBytePrefixesVerified": {
+      "original": 190283,
+      "resumed": 217972
+    },
+    "nativeFileBytesAfterStop": 221325,
+    "nativeToolCallCounts": {
+      "exec": 4
+    },
+    "noDelegationToolCalls": true,
+    "nativeSessionFinalSHA256": "8e59654b45e3c95e3154ef01d3d6ca87b19b0136587cc66127b5775493d2814a",
+    "durableRequestAndMarkerHashMatch": true,
+    "durableArbitraryWitnessAbsent": true,
+    "ownedNativeProviderExited": true,
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true,
+    "scope": "Fresh composed embedded-Go original request preparation and native resume after owned provider loss; existing native account/default full-access-never policy on macOS. No public recovery API/UI, actual app crash/service upgrade/reboot or Linux/Windows coding acceptance."
+  }
 }
