@@ -12,8 +12,6 @@ import (
 
 	"github.com/chromedp/cdproto/accessibility"
 	"github.com/chromedp/cdproto/cdp"
-	"github.com/chromedp/cdproto/dom"
-	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
@@ -30,6 +28,7 @@ type documentIdentity struct {
 }
 
 type pageElement struct {
+	ancestry []documentIdentity
 	document documentIdentity
 	backend  cdp.BackendNodeID
 	role     string
@@ -38,17 +37,13 @@ type pageElement struct {
 	activate bool
 }
 
-func pageDocument(ctx context.Context, t *chromedp.Target) (documentIdentity, error) {
-	r, err := cdp.Call(ctx, t, page.GetFrameTree, cdp.Empty{})
-	if err != nil {
-		return documentIdentity{}, err
+func (e pageElement) documentChain() []documentIdentity {
+	if len(e.ancestry) > 0 {
+		return e.ancestry
 	}
-	if r.FrameTree == nil || r.FrameTree.Frame == nil {
-		return documentIdentity{}, errPageElementChanged
-	}
-	f := r.FrameTree.Frame
-	return documentIdentity{target: t.TargetID, frame: f.ID, loader: f.LoaderID, url: sha256.Sum256([]byte(f.URL + "\x00" + f.URLFragment))}, nil
+	return []documentIdentity{e.document}
 }
+func (e pageElement) rootDocument() documentIdentity { return e.documentChain()[0] }
 
 func axProperty(node *accessibility.Node, name accessibility.PropertyName) bool {
 	for _, property := range node.Properties {
@@ -137,52 +132,79 @@ func (b *companion) actOnElement(ctx context.Context, req Request) error {
 	// never cause this worker to dispatch a second activation with that handle.
 	b.elements = nil
 	activate := req.Action == "activate_element"
-	if !ok || req.Target == "" || req.Target != string(element.document.target) || !element.focus || activate && !element.activate {
+	if !ok || req.Target == "" || req.Target != string(element.rootDocument().target) || !element.focus || activate && !element.activate {
 		return errPageElementChanged
 	}
 	return chromedp.Do(ctx, chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
-		document, err := pageDocument(ctx, t)
-		if err != nil || document != element.document {
+		if t.TargetID != element.rootDocument().target {
 			return errPageElementChanged
 		}
-		no := false
-		nodes, err := cdp.Call(ctx, t, accessibility.GetPartialAXTree, accessibility.GetPartialAXTreeParams{BackendNodeID: element.backend, FetchRelatives: &no})
-		if err != nil || !element.matches(nodes.Nodes, activate) {
-			return errPageElementChanged
-		}
-		resolved, err := cdp.Call(ctx, t, dom.ResolveNode, dom.ResolveNodeParams{BackendNodeID: element.backend})
-		if err != nil || resolved.Object == nil || resolved.Object.ObjectID == "" {
-			return errPageElementChanged
-		}
-		object := resolved.Object.ObjectID
-		defer func() {
-			// A dialog can cancel this operation. Release through its still-live
-			// tab, bounded independently of the canceled action context.
-			cleanup, cancel := context.WithTimeout(b.current, 2*time.Second)
-			defer cancel()
-			_, _ = cdp.Call(cleanup, t, runtime.ReleaseObject, runtime.ReleaseObjectParams{ObjectID: object})
-		}()
-		yes := true
-		argument := json.RawMessage("false")
-		if activate {
-			argument = json.RawMessage("true")
-		}
-		result, err := cdp.Call(ctx, t, runtime.CallFunctionOn, runtime.CallFunctionOnParams{ObjectID: object, FunctionDeclaration: actOnPageElement,
-			Arguments: []*runtime.CallArgument{{Value: argument}}, ReturnByValue: &yes, UserGesture: &yes})
+		frames, err := discoverPageFrames(ctx, t)
+		defer frames.close()
 		if err != nil {
-			return err
-		}
-		if result.ExceptionDetails != nil || result.Result == nil {
-			return errPageElementUnavailable
-		}
-		var status string
-		_ = json.Unmarshal(result.Result.Value, &status)
-		if status == "stale" {
 			return errPageElementChanged
 		}
-		if status != "ok" {
-			return errPageElementUnavailable
+		var selected *pageFrame
+		for _, f := range frames.frames {
+			if f.document == element.document && sameDocuments(f.chain(), element.documentChain()) {
+				selected = f
+				break
+			}
 		}
-		return nil
+		if selected == nil {
+			return errPageElementChanged
+		}
+		// Pin the execution world before the final document checks.
+		if _, err := selected.isolatedWorld(ctx); err != nil {
+			return errPageElementChanged
+		}
+		if err := selected.validate(ctx); err != nil {
+			return errPageElementChanged
+		}
+		return b.dispatchPageElement(ctx, selected, element, activate)
 	}))
+}
+
+// The native-node check and action execute in one call in the pinned world.
+// Do not resolve using the node's default realm after ancestry validation.
+func (b *companion) dispatchPageElement(ctx context.Context, selected *pageFrame, element pageElement, activate bool) error {
+	t := selected.target
+	no := false
+	nodes, err := cdp.Call(ctx, t, accessibility.GetPartialAXTree, accessibility.GetPartialAXTreeParams{BackendNodeID: element.backend, FetchRelatives: &no})
+	if err != nil || !element.matches(nodes.Nodes, activate) {
+		return errPageElementChanged
+	}
+	object, err := selected.resolve(ctx, element.backend)
+	if err != nil {
+		return errPageElementChanged
+	}
+	defer func() {
+		// A dialog can cancel this operation. Release through its still-live
+		// tab, bounded independently of the canceled action context.
+		cleanup, cancel := context.WithTimeout(b.current, 2*time.Second)
+		defer cancel()
+		_, _ = cdp.Call(cleanup, t, runtime.ReleaseObject, runtime.ReleaseObjectParams{ObjectID: object})
+	}()
+	yes := true
+	argument := json.RawMessage("false")
+	if activate {
+		argument = json.RawMessage("true")
+	}
+	result, err := cdp.Call(ctx, t, runtime.CallFunctionOn, runtime.CallFunctionOnParams{ObjectID: object, FunctionDeclaration: actOnPageElement,
+		Arguments: []*runtime.CallArgument{{Value: argument}}, ReturnByValue: &yes, UserGesture: &yes})
+	if err != nil {
+		return err
+	}
+	if result.ExceptionDetails != nil || result.Result == nil {
+		return errPageElementUnavailable
+	}
+	var status string
+	_ = json.Unmarshal(result.Result.Value, &status)
+	if status == "stale" {
+		return errPageElementChanged
+	}
+	if status != "ok" {
+		return errPageElementUnavailable
+	}
+	return nil
 }

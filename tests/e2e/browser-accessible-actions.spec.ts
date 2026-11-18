@@ -8,6 +8,8 @@ test('accessible controls retain live identity, refuse stale references and disp
  let automaticNavigation = false;
  let viewport: { width: number; height: number } | undefined, confirmed = false, releases = 0;
  const entered: string[] = [];
+ const framePresses: Record<string, number> = {};
+ const frameTyped: Record<string, string> = {};
  const site = http.createServer((req, res) => {
   if (req.url === '/press') { presses++; res.end(); return; }
   if (req.url === '/dynamic-press') { dynamicPresses++; res.end(); return; }
@@ -18,12 +20,23 @@ test('accessible controls retain live identity, refuse stale references and disp
   if (req.url?.startsWith('/viewport?')) { const query = new URL(req.url, 'http://fixture').searchParams; viewport = { width: Number(query.get('width')), height: Number(query.get('height')) }; res.end(); return; }
   if (req.url?.startsWith('/observed?')) { observed = new URL(req.url, 'http://fixture').searchParams.get('name')!; res.end(); return; }
   if (req.url?.startsWith('/typed?')) { entered.push(new URL(req.url, 'http://fixture').searchParams.get('value')!); res.end(); return; }
+  if (req.url?.startsWith('/frame-press?')) { const frame = new URL(req.url, 'http://fixture').searchParams.get('frame')!; framePresses[frame] = (framePresses[frame] || 0) + 1; res.end(); return; }
+  if (req.url?.startsWith('/frame-typed?')) { const query = new URL(req.url, 'http://fixture').searchParams; frameTyped[query.get('frame')!] = query.get('value')!; res.end(); return; }
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  if (req.url?.startsWith('/embedded?')) {
+   const frame = new URL(req.url, 'http://fixture').searchParams.get('frame')!;
+   res.end(`<title>Embedded fixture</title><button onclick="fetch('/frame-press?frame=${frame}')">${frame} frame action</button>
+    <input aria-label="${frame} frame field" value="private-native-value" oninput="fetch('/frame-typed?frame=${frame}&amp;value='+encodeURIComponent(this.value))">
+    ${frame === 'cross' ? `<button onclick="if(confirm('Confirm accessible action?'))fetch('/confirmed')">Cross confirm action</button><iframe src="/embedded?frame=nested"></iframe>` : ''}`);
+   return;
+  }
+
   if (req.url === '/second') { linkDocuments++; res.end('<title>Accessible destination</title><h1>Destination</h1>'); return; }
   res.end(`<!doctype html><title>Accessible control fixture</title>
    <button id="press">Submit action</button><button id="dynamic">Original action</button><button id="confirm">Confirm action</button>
    <input id="entry" aria-label="Private entry" value="private-native-value"><button disabled>Unavailable action</button>
    <a href="/second">Open destination</a><div id="shadow"></div>
+   <iframe src="/embedded?frame=same"></iframe><iframe src="http://localhost:${(site.address() as { port: number }).port}/embedded?frame=cross"></iframe>
    <script>
    press.onclick=()=>fetch('/press');dynamic.onclick=()=>fetch('/dynamic-press');
    document.getElementById('confirm').onclick=()=>{if(window.confirm('Confirm accessible action?'))fetch('/confirmed')};
@@ -76,9 +89,29 @@ test('accessible controls retain live identity, refuse stale references and disp
   expect((await call(action)).error).toContain('changed');
   expect(presses).toBe(1);
 
+  for (const frame of ['same', 'cross', 'nested']) {
+   snapshot = await read();
+   const control = snapshot.nodes.find(n => n.name === `${frame} frame action`)!;
+   expect(control.canActivate).toBe(true);
+   const refused = await request.post(endpoint, { data: { action: 'activate_element', target: snapshot.target, element: control.element, viewer: 'd'.repeat(32), controlToken: token } });
+   expect(refused.status()).toBe(409);
+   expect(framePresses[frame] || 0).toBe(0);
+   const activate = { action: 'activate_element', target: snapshot.target, element: control.element };
+   expect((await call(activate)).error).toBeUndefined();
+   await expect.poll(() => framePresses[frame]).toBe(1);
+   expect((await call(activate)).error).toContain('changed');
+   snapshot = await read();
+   const entry = snapshot.nodes.find(n => n.name === `${frame} frame field`)!;
+   expect((await call({ action: 'focus_element', target: snapshot.target, element: entry.element })).error).toBeUndefined();
+   await call({ action: 'key', key: 'a', code: 'KeyA', modifiers: process.platform === 'darwin' ? 4 : 2 });
+   await call({ action: 'text', text: `typed into ${frame} frame` });
+   await expect.poll(() => frameTyped[frame]).toBe(`typed into ${frame} frame`);
+   expect(framePresses[frame]).toBe(1);
+  }
+
   await call({ action: 'mouse_down', x: 800, y: 500, button: 'left', buttons: 1, clickCount: 1 });
   snapshot = await read();
-  const confirm = snapshot.nodes.find(n => n.name === 'Confirm action')!;
+  const confirm = snapshot.nodes.find(n => n.name === 'Cross confirm action')!;
   const opened = await call({ action: 'activate_element', target: snapshot.target, element: confirm.element });
   expect(opened.dialog?.type).toBe('confirm');
   const began = performance.now();
@@ -103,6 +136,14 @@ test('accessible controls retain live identity, refuse stale references and disp
   await expect.poll(() => confirmed).toBe(true);
   await expect.poll(() => releases).toBe(1);
   expect(presses).toBe(1);
+
+  // Preserve the original root-dialog control alongside the OOPIF case.
+  snapshot = await read();
+  const rootConfirm = snapshot.nodes.find(n => n.name === 'Confirm action')!;
+  confirmed = false;
+  expect((await call({ action: 'activate_element', target: snapshot.target, element: rootConfirm.element })).dialog?.type).toBe('confirm');
+  expect((await call({ action: 'dialog', target: snapshot.target, accept: true })).error).toBeUndefined();
+  await expect.poll(() => confirmed).toBe(true);
 
   snapshot = await read();
   const field = snapshot.nodes.find(n => n.name === 'Private entry')!;
