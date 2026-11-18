@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/jordanhubbard/webmux/server/internal/auth"
+	"github.com/jordanhubbard/webmux/server/internal/screenstate"
 	"github.com/jordanhubbard/webmux/server/internal/session"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 )
@@ -47,6 +49,81 @@ func federationPair(t *testing.T) (*Server, *Server, http.Handler, string, strin
 	federationConfig(t, a, serverDirectory{Version: 1, Servers: []serverPeer{{ID: "remote", Name: "Remote host", URL: remote.URL, TokenEnv: "WEBMUX_TEST_PEER_TOKEN", AllowHTTP: true}}})
 	federationConfig(t, b, serverDirectory{Version: 1, Grants: []serverGrant{{ID: "controller", Owner: "owner", TokenEnv: "WEBMUX_TEST_PEER_TOKEN"}}})
 	return a, b, handler, remote.URL, secret
+}
+
+func TestFederationTerminalForwardsOnlyRendererCapability(t *testing.T) {
+	for _, profile := range []string{"", screenstate.XtermRendererProfile, "unknown +&?#/renderer"} {
+		t.Run(profile, func(t *testing.T) {
+			a, handler := fixture(t, "local")
+			federationAccounts(t, a)
+			secret := strings.Repeat("peer-only-credential", 3)
+			peer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				connection, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
+				if err != nil {
+					return
+				}
+				defer connection.Close()
+				_ = connection.WriteJSON(map[string]any{"path": r.URL.Path, "query": r.URL.Query(),
+					"authorization": r.Header.Get("Authorization"), "cookie": r.Header.Get("Cookie"), "origin": r.Header.Get("Origin")})
+				// A controlled profile-requiring peer verifies refusal propagation.
+				// Native-owner qualification is separate from this proxy contract.
+				if r.URL.Query().Get("snapshot_profile") != screenstate.XtermRendererProfile {
+					rejectSocket(connection, session.ErrRendererUnsupported.Error())
+					return
+				}
+				// Keep the peer alive until the test closes its viewer.
+				for {
+					if _, _, err := connection.ReadMessage(); err != nil {
+						return
+					}
+				}
+			}))
+			defer peer.Close()
+			federationConfig(t, a, serverDirectory{Version: 1, Servers: []serverPeer{{ID: "remote", Name: "Remote", URL: peer.URL, Credential: secret, AllowHTTP: true}}})
+			controller := httptest.NewServer(handler)
+			defer controller.Close()
+			query := url.Values{"token": {token(t, a, "owner")}, "url": {"https://untrusted.invalid/stolen"}, "path": {"/api/config"}, "arbitrary": {"browser-secret"}}
+			if profile != "" {
+				query["snapshot_profile"] = []string{profile, "ignored-second-value"}
+			}
+			headers := http.Header{"Cookie": {"browser-session=private"}, "Origin": {controller.URL}}
+			connection, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(controller.URL, "http")+"/api/servers/remote/term/fixture?"+query.Encode(), headers)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer connection.Close()
+			_ = connection.SetReadDeadline(time.Now().Add(5 * time.Second))
+			var got struct {
+				Path                          string
+				Query                         url.Values
+				Authorization, Cookie, Origin string
+			}
+			if err := connection.ReadJSON(&got); err != nil {
+				t.Fatal(err)
+			}
+			if got.Path != "/api/federation/term/fixture" || got.Authorization != "Bearer "+secret || got.Cookie != "" || got.Origin != "" {
+				t.Fatal("terminal proxy changed its destination or credential boundary")
+			}
+			want := url.Values{}
+			if profile != "" {
+				want.Set("snapshot_profile", profile)
+			}
+			if got.Query.Encode() != want.Encode() {
+				t.Fatalf("renderer capability or query isolation changed: got %q, want %q", got.Query.Encode(), want.Encode())
+			}
+			if profile != screenstate.XtermRendererProfile {
+				var event session.Event
+				if err := connection.ReadJSON(&event); err != nil || event["type"] != "error" || event["message"] != session.ErrRendererUnsupported.Error() {
+					t.Fatal("profile refusal lost", event, err)
+				}
+				_, _, err := connection.ReadMessage()
+				var closed *websocket.CloseError
+				if !errors.As(err, &closed) || closed.Code != 1008 || closed.Text != session.ErrRendererUnsupported.Error() {
+					t.Fatalf("profile refusal became another policy failure: %v", err)
+				}
+			}
+		})
+	}
 }
 func TestFederationDirectoryAuthenticationAndIsolation(t *testing.T) {
 	a, b, handler, _, secret := federationPair(t)
