@@ -57,11 +57,16 @@ jobs:
       - name: Build exact application
         working-directory: webmux
         run: npm run build
-      - name: Exercise real Mosh and retain cleanup error
+      - name: Exercise twenty independent real Mosh cleanup samples
         working-directory: webmux
         env:
           WEBMUX_REAL_MOSH: '1'
-        run: npm run test:e2e -- mosh-browser.spec.ts --output=test-results/mosh-cleanup
+        run: |
+          failed=0
+          for trial in {1..20}; do
+            npm run test:e2e -- mosh-browser.spec.ts --output="test-results/mosh-cleanup/trial-$trial" || failed=1
+          done
+          test "$failed" -eq 0
       - name: Retain native tool identities
         if: always()
         run: python3 scripts/native-components.py --output webmux/test-results/mosh-tools.json
