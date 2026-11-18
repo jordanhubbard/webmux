@@ -1,0 +1,45 @@
+{
+  "scope": "Native no-auth no-turn comparison of removed legacy network override; not authenticated public UI creation",
+  "cases": [
+    {
+      "legacyNetworkOverride": false,
+      "policy": {
+        "type": "workspaceWrite",
+        "writableRoots": [],
+        "networkAccess": false,
+        "excludeTmpdirEnvVar": false,
+        "excludeSlashTmp": false
+      },
+      "approval": "never",
+      "ownerConfigUnchanged": true,
+      "noCodingTurn": true
+    },
+    {
+      "legacyNetworkOverride": true,
+      "policy": {
+        "type": "workspaceWrite",
+        "writableRoots": [],
+        "networkAccess": true,
+        "excludeTmpdirEnvVar": false,
+        "excludeSlashTmp": false
+      },
+      "approval": "never",
+      "ownerConfigUnchanged": true,
+      "noCodingTurn": true
+    }
+  ],
+  "cliSHA256": "739cda86e15d30a6e2b40cf8dcbbfb988aaf48b305b27065573bb8e9fd41d002",
+  "passed": true,
+  "probeSHA256": "42e47a6b3338ae373c1a7a8fa617fc69cf492c342897f2d7345332a231c4c7bc",
+  "privateReportSHA256": "ad352e423a908ca329f4a1584e19bcbcb30d5f1cbad03090271ee10e241874d0",
+  "sources": {
+    "webmux/server/internal/openrigcoord/runner.mts": "d97aacd6f38b8e2042d85ea4e932605710af6f60164914ca56b7ed06292f7e35",
+    "scripts/openrig-relay-runner.test.mts": "0f5147f8478926889fefb679474b0a7ca9239172d63454c50f7daeedc4375a65"
+  },
+  "localRelayGrammarControls": 6,
+  "limits": [
+    "Native control proves effective policy inheritance only; no authentication or coding turn.",
+    "Local launcher uses executed stub argv; SSH launcher uses retained generated command controls. Authenticated public UI/native creation remains unqualified.",
+    "Existing adopted sessions gain no lifecycle authority."
+  ]
+}

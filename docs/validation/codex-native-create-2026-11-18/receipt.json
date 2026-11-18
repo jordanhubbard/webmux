@@ -1,4 +1,5 @@
 {
+  "sourceRevision": "25ac5dbf05e6fbe665b9aa0f2cc1f14bf7811969",
   "scope": "Actual native creation factory, verified manager, durable manifest/bundle/journal and default authenticated Codex owner policy; not WebMux HTTP/UI activation or provider-loss recovery qualification",
   "platform": "macOS ARM64",
   "codexVersion": "codex-cli 0.169.0",

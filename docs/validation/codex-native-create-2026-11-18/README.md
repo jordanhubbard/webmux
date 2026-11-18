@@ -6,6 +6,9 @@ Go embeds its dependencies and supplies the authenticated owner's storage
 namespace. This checkpoint does not connect the public HTTP creation route or
 browser controls to that action.
 
+The creation receipt captures source revision `25ac5db`; the factory and
+wrapper sources remain unchanged by the subsequent adopted-launch fix below.
+
 Before dispatch, the factory durably publishes a frozen owner plan, minimal
 agent definition, exact member request and immutable wrapper bundle. The
 bundle directory is named by its source hash; later helper extraction cannot
@@ -62,3 +65,17 @@ conversation/log retention and duplicate controls. It does not compose the new
 factory with WebMux UI recovery. Linux/Windows authenticated creation, manager
 loss, host reboot, review, CI, audit and release gates remain open. Existing
 adopted seats retain their existing lifecycle authority.
+
+## Existing adopted launch policy
+
+The existing local/SSH creation route previously added
+`-c sandbox_workspace_write.network_access=true` to every Codex command. It now
+supplies only the existing identity prompt and inherits native permission
+configuration. Local shell-execution and remote generated-command controls
+verify the override is absent. A separate [native control](adopted-launch-policy.json)
+uses fresh homes and no authentication or coding turn: a workspace owner with
+network disabled remains disabled without the flag, while the removed flag
+changes the effective native policy to network enabled. Coordination access
+remains subject to the owner's network policy. This change does not convert
+adopted seats into native manager-owned seats or qualify authenticated public
+UI creation.
