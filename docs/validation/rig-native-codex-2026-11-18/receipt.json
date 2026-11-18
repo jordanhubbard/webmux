@@ -1,0 +1,71 @@
+{
+  "recordedUTC": "2026-11-18T11:29:03.205402+00:00",
+  "scope": "Published native Rig member.add with a real authenticated Codex provider under a deliberately selected read-only/never fixture envelope. No WebMux native-create implementation or reboot claim.",
+  "platform": "macOS ARM64",
+  "rig": "0.7.18 (3bf87c62)",
+  "node": "v24.21.0",
+  "tmux": "tmux 3.8",
+  "codex": "codex-cli 0.169.0",
+  "member": {
+    "runtime": "codex",
+    "profile": "default",
+    "agentRef": "private empty qualification agent",
+    "codexPermissions": {
+      "sandbox": "read-only",
+      "approval": "never"
+    },
+    "nativeHome": "reference to existing local Codex home; credentials not read/copied"
+  },
+  "checks": {
+    "freshChallengeReadByActualProvider": true,
+    "noWritableFileCreated": true,
+    "toolWriteRefusalVisible": true,
+    "sameUUIDRetainsSameNativeOccupant": true,
+    "siblingRetainsOriginalPID": true,
+    "checkedStopAcceptedAndSiblingSurvives": true
+  },
+  "nativeTurnContexts": [
+    {
+      "approvalPolicy": "never",
+      "sandboxPolicy": {
+        "type": "read-only"
+      },
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "approvalPolicy": "never",
+      "sandboxPolicy": {
+        "type": "read-only"
+      },
+      "model": "gpt-6.1-sol"
+    }
+  ],
+  "actualNativeToolEvidence": [
+    {
+      "readCommand": "cat challenge.txt",
+      "readExit": 0,
+      "freshChallengeSHA256": "5b60ba538c5e6deed493290e0d81e8aa97981d5d737cd9ce2086e9af1522ab98",
+      "writeCommand": "printf 'DENIED' > readonly-denied.txt",
+      "writeExit": 1,
+      "writeOutput": "readonly-denied.txt: Operation not permitted"
+    }
+  ],
+  "cleanup": {
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true
+  },
+  "sourceBindings": {
+    "probeSHA256": "cfdfbc345e7c50102b7c209344102e5d91959d8b8df423a92d8335eebdeef68a",
+    "privateReportSHA256": "3b71b2da46f02d5fee132acf440c0cbac332dbb76e10bd1f338ef235f5b7723e",
+    "nativeSessionSHA256": "dcdfb89b89210dc8d9ac34cbb072fd7776d6647162ce966f2a45959ed94ac08e"
+  },
+  "limits": [
+    "Native Rig contract qualification, not WebMux launch conversion.",
+    "Explicit fixture envelope, not automatic equivalence with every owner profile/account or policy.",
+    "Same-operation replay preserves the original native occupant; native CLI process-loss recovery and host reboot are not exercised.",
+    "The generated startup identity probe reports daemonReachable=false; successful in-sandbox coordination/network access is not established.",
+    "Prompt submission required one explicit later Enter after native startup; the public probe must wait for readiness and separate paste from Enter.",
+    "The preliminary fixture had a private PATH/tmux-target error, retained separately, and is excluded from positive evidence.",
+    "Checked Stop returned success with original selected node/session IDs and sibling survival; the fixture did not separately sample the selected coding PID after Stop."
+  ]
+}
