@@ -1,0 +1,11 @@
+# Durable recovery dispatch composition checkpoint
+
+Preparation runtime source `ab27908f782fb8c7fcebfb0b4326bc07c92b0ae5` composes current canonical82 with native Rig input155469f. Original input commits remain ancestors. Incoming work adds the banked original-operation recovery dispatcher, embedded Go action handling and explicit native fixture endpoint recording. The shared-daemon global teardown and worker-failure regression remain present.
+
+The textual merge was clean but strict TypeScript correctly rejected a semantic conflict: the existing lifecycle fix had removed an unused `existsSync` import, while the incoming endpoint diagnostic uses it. Restore that import. Retain the original failed compiler log as the counterfactual; no assertion, deadline or production behavior is relaxed.
+
+Local qualification passes all five strict TypeScript projects,214helper tests with zero skips, coordinator/HTTP API Go race tests, full server vet, frontend build and272installed lock identities. All eight actual Rig0.6.14/Go/Chrome browser cases pass, followed by the maintained deliberate-worker-failure/original-daemon/final-cleanup control. Both dashboard receipts verify the expected native fixture endpoint at CLI entry, no input frames before native readiness, actual input afterward and zero dropped diagnostic frames.
+
+Frontend application/tests, lockfile and qualification workflows match canonical82 byte-for-byte. Earlier427frontend tests/lint remain evidence for those unchanged source files; they were not rerun here. All11native module hashes in the published embedded-Go recovery receipt match this preparation source. That preserves its named private macOS component scope, not new composed authenticated, public HTTP/UI, crash/reboot or Linux/Windows recovery acceptance.
+
+Canonical PR500 remains at82 while its current checks finish. Raw logs, endpoint diagnostics, lifecycle reports, source bindings and hashes are retained privately under `_build/native-dispatch452/` and the corresponding NAS directory. This preparation is not a release; all remaining roadmap, native policy/authentication/platform/recovery, review, signing/vendor/security and exact-main release gates remain open.

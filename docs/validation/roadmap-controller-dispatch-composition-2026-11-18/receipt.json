@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "recordedUTC": "2026-11-18T19:55:40.624522+00:00",
+  "runtimeSource": "ab27908f782fb8c7fcebfb0b4326bc07c92b0ae5",
+  "previousCanonical": "82aa338705e09d6a219f9a9b08d097ecfcdc26b7",
+  "nativeInput": "155469f091faaf5b2b4a42ca389811f9575429fb",
+  "merge": "091bdbaf037ff6ae1fddac0b85eb3dee4a9fc0ae",
+  "allOriginalInputsAncestors": true,
+  "mergeResolution": {
+    "file": "tests/e2e/openrig.spec.ts",
+    "originalMergedTypecheck": "TS2304 Cannot find name existsSync",
+    "change": "Restore only existsSync import for newly added endpoint diagnostic; retain global teardown and native endpoint selection/recording assertions",
+    "negativeLog": "merge-types-before.log"
+  },
+  "local": {
+    "strictTSProjects": 5,
+    "helpers": 214,
+    "helperSkipped": 0,
+    "coordinatorAndHttpApiRace": true,
+    "fullServerVet": true,
+    "frontendBuild": true,
+    "installedPackageIdentities": 272,
+    "nativePublishedRigBrowser": 8,
+    "managedDuration": "52.8s",
+    "dashboardDuration": "1.7s",
+    "normalSuiteDuration": "1.3m",
+    "workerLifecycleControl": "PASS:1deliberatefailure+1dashboardpass/differentworker/samePID+port/finalcleanup",
+    "normalAndControlEndpointDiagnostics": [
+      {
+        "expectedEndpointAtCLIEntry": true,
+        "earlyInputFrames": 0,
+        "postReadinessInputFrames": 17,
+        "droppedFrames": 0
+      },
+      {
+        "expectedEndpointAtCLIEntry": true,
+        "earlyInputFrames": 0,
+        "postReadinessInputFrames": 17,
+        "droppedFrames": 0
+      }
+    ]
+  },
+  "unchangedSources": {
+    "frontendApplicationAndTests": "Byte-identical to82; prior427test/lint evidence remains named-source evidence, not a repeated test claim",
+    "dependencyLock": "Byte-identical to82",
+    "qualificationWorkflows": "Byte-identical to82"
+  },
+  "publishedNativeReceiptBindings": {
+    "publishedReceiptSource": "cd602ded5edabd89a145f4fbc2aba18c912bddae",
+    "bindings": {
+      "codex-owner-plan.mts": true,
+      "codex-launch-policy.mts": true,
+      "codex-launch-wrapper.mts": true,
+      "rig-native-create.mts": true,
+      "rig-create-intent.mts": true,
+      "rig-stop.mts": true,
+      "codex-launch-environment.mts": true,
+      "codex-environment-channel.mts": true,
+      "rig-native-resume.mts": true,
+      "runner.mts": true,
+      "coord.go": true
+    },
+    "scope": "Static equality to named published actual native receipt, not new composed authenticated recovery execution."
+  },
+  "limits": [
+    "Private native recovery receipt has default macOS full-access owner scope and excludes public HTTP/UI, controller-crash/reboot and authenticated Linux/Windows acceptance. Static11module hash equality preserves that named component evidence; no new authenticated composed run is claimed.",
+    "Current canonical82 CI/ARM receipts remain associated with82. No source substitution into running jobs.",
+    "Public native-owned creation/readiness/attachment, public recovery HTTP/UI, empty-pod selection/profiles/graphs/settings, broader native platform/auth/policy/crash/reboot, signing/vendor/security review and full release acceptance remain open."
+  ],
+  "privateLogSHA256": {
+    "merge-types-before.log": "dc0879d9052d004c4b48cc08ee9059afbaa65ee6a177b8d73a6a29278cfc2e75",
+    "typecheck.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "helpers-tests.log": "6fa4d96d3ff5bb00cb8f6fb6461c2dc0332101963f517078ef4f65f9fa4a3c41",
+    "frontend-build.log": "8a6c2afc4d0b9b3ea9d7d16ee0e45f595162ce4d0a3fc2527301924a26188110",
+    "lock-identity.log": "6db02789bb32257b87e607610702e250bea6d73877f98763e902f59ed739c03c",
+    "go-race.log": "d9d0d17fcb2faf8c710ac8b63dd04c79d1b13fdec2ff4a5dea89eb5cab2eafec",
+    "go-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "normal-eight.log": "d7bec31cc5c3f89a02d90c71c94ac2c0ad0e511425961730a40b73fd2d944b48",
+    "worker-lifecycle.log": "b20b1f960cca29eeaca969d79a77230852a104a18a2621b844e4134ddba72854"
+  }
+}
