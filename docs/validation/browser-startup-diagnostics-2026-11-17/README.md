@@ -424,5 +424,55 @@ Local acceptance for this projection passes the full sixteen ordinary native
 first loads and intentional control, plus twelve ordinary loads and three
 controls in the paired rounds. Two Windows-only NetLog cases remain explicit
 skips. Browser race, privacy/bounds/correlation controls and host/Windows vet
-pass. Actual Windows expanded-loader records remain pending. Source and receipt
-bindings are in [loader-manifest.json](loader-manifest.json).
+pass. Actual Windows expanded-loader outcomes are retained below. Source and receipt
+bindings for that projection are in [loader-manifest.json](loader-manifest.json).
+
+
+## Loader failure boundary and separate loading-category trials
+
+At `376a666`, Windows diagnostics run 44225190775 retained all 34 records:
+full ordinary matrix 13 PASS / 5 FAIL; sampled ordinary loads 10 PASS / 2 FAIL; three
+intentional Stop controls PASS. The full control aborted before the fixture was
+hit and never issued Stop; it remains a failed control. Three ordinary failures
+and that control have complete, end-acknowledged traces with zero loss/drops.
+The sequence includes interceptor/restart/throttling-loader stages, then
+MaybeCreateLoaderForResponse and NotifyRequestFailed before the requested
+uncommitted navigation finishes with state 10 / net_error -3. Raw events without
+explicit identities cannot by themselves prove object association. See
+[windows-loader-summary.json](windows-loader-summary.json).
+
+Two additional independent conditions, `direct-trace-loading-late` and its
+home-profile counterpart, add only Chromium's `loading` category to the late
+collector. Navigation-only conditions are retained. Fixed ThrottlingURLLoader
+constructor/start/StartNow/response/destructor names come from the matching
+[Chromium loader source](https://chromium.googlesource.com/chromium/src/+/refs/tags/158.0.8127.18/third_party/blink/common/loader/throttling_url_loader.cc).
+StartNow distinguishes handing the request to the loader factory from stopping
+inside the URL-loader throttle path. Bounded capture-local flow aliases preserve
+recorded flow equality and explicit process-local scope. They are flow edges,
+not universal object IDs. Raw IDs, process IDs, scope strings and request IDs
+are omitted. Each alias namespace remains bounded to 64; existing event/byte
+bounds and hard failures remain. Three fixed rounds now sample all six trace
+conditions and the separate known-cancellation control (42 Windows records).
+
+During local qualification, intermediate five-second capture deadlines expired
+after Tracing.end acknowledgment despite successful fixture loads. The matching
+[TracingHandler source](https://chromium.googlesource.com/chromium/src/+/refs/tags/158.0.8127.18/content/browser/devtools/protocol/tracing_handler.cc)
+acknowledges End before asynchronously stopping Perfetto and reading the trace.
+The post-navigation collection deadline is now 15 seconds, with `endElapsedMs`
+retained. One final-source sample completed in 5022 ms. This changes collection
+only; no navigation, fixture, startup, protection or retry behavior changes.
+Incomplete, lost, truncated and over-limit captures still fail.
+
+Final local acceptance: full 18 ordinary first loads plus one intentional control,
+and three fixed rounds totaling 18 ordinary loads plus three intentional controls,
+all PASS with complete captures. Two Windows-only NetLog cases are explicit skips.
+Browser race (1.680s), flow privacy/scope/bounds controls and Darwin/Windows AMD64
+browser vet pass. Earlier incomplete captures remain retained and excluded.
+See [native-loading-summary.json](native-loading-summary.json) and
+[loading-manifest.json](loading-manifest.json). Native Windows loading-category
+acceptance is pending; no originating-cause or runtime-fix claim is made.
+
+The preceding full CI failed before browser qualification in a separate native
+Windows retained-VT test, tracked in [#450](https://github.com/jordanhubbard/webmux/issues/450).
+Its USB job hit HTTP 429 fetching pinned sources. Packaging passed. These failures
+and audit #429 remain required gates; none is waived by the diagnostic results.

@@ -42,6 +42,7 @@ type firstNavigationEvidence struct {
 	Diagnostics     *NavigationDiagnostics `json:"diagnostics,omitempty"`
 	NetLog          *firstNavigationNetLog `json:"netLog,omitempty"`
 	BrowserTrace    *firstNavigationTrace  `json:"browserTrace,omitempty"`
+	TraceLoading    bool                   `json:"traceLoading,omitempty"`
 	TraceStartStage string                 `json:"traceStartStage,omitempty"`
 }
 
@@ -57,7 +58,7 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 	}
 	t.Setenv("WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS", "1")
 	site, hits := firstNavigationNodeFixture(t)
-	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "direct-child", "direct-child-original", "direct-home-child", "direct-home-child-original", "direct-netlog", "direct-home-netlog", "direct-trace", "direct-home-trace", "direct-trace-late", "direct-home-trace-late", "worker-subprocess-temporary", "worker-subprocess-saved"} {
+	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "direct-child", "direct-child-original", "direct-home-child", "direct-home-child-original", "direct-netlog", "direct-home-netlog", "direct-trace", "direct-home-trace", "direct-trace-late", "direct-home-trace-late", "direct-trace-loading-late", "direct-home-trace-loading-late", "worker-subprocess-temporary", "worker-subprocess-saved"} {
 		t.Run(mode, func(t *testing.T) {
 			if strings.HasSuffix(mode, "-netlog") && runtime.GOOS != "windows" {
 				t.Skip("Windows-only bounded anonymous NetLog capture; macOS sandbox refuses its scratch directory")
@@ -101,7 +102,7 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 					screenshot: strings.HasSuffix(mode, "screenshot"), profileAtHome: strings.Contains(mode, "-home"),
 					websocket: strings.Contains(mode, "websocket"), createChild: strings.Contains(mode, "-child"),
 					selectOriginal: strings.HasSuffix(mode, "-original"), netLog: strings.HasSuffix(mode, "-netlog"),
-					browserTrace: strings.Contains(mode, "-trace"), traceLate: strings.HasSuffix(mode, "-late"),
+					browserTrace: strings.Contains(mode, "-trace"), traceLate: strings.HasSuffix(mode, "-late"), traceLoading: strings.Contains(mode, "-loading-"),
 				}, &record)
 			}
 			record.NavigateCalls++
@@ -331,7 +332,7 @@ func firstNavigationWorker(t *testing.T, saved bool, record *firstNavigationEvid
 }
 
 type firstNavigationDirectOptions struct {
-	screenshot, profileAtHome, websocket, createChild, selectOriginal, netLog, browserTrace, traceLate bool
+	screenshot, profileAtHome, websocket, createChild, selectOriginal, netLog, browserTrace, traceLate, traceLoading bool
 }
 
 func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, record *firstNavigationEvidence) func(Request) Frame {
@@ -396,7 +397,8 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 	t.Cleanup(func() { startup.Stop() })
 	beginCapture := func(stage string) {
 		record.TraceStartStage = stage
-		capture, err := startFirstNavigationTrace(root)
+		record.TraceLoading = options.traceLoading
+		capture, err := startFirstNavigationTrace(root, options.traceLoading)
 		if err != nil {
 			record.Failure = "browser_trace_start_error"
 			t.Fatal("anonymous navigation trace could not start")

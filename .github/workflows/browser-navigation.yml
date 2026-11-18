@@ -78,7 +78,7 @@ jobs:
           try {
             foreach ($trial in 1..3) {
               $env:WEBMUX_BROWSER_NAVIGATION_ARTIFACT_DIR = Join-Path $env:RUNNER_TEMP "native-first-navigation/trace-sample-$trial"
-              go test ./internal/browser -run '^(TestNativeFirstNavigationComponents|TestNativeNavigationTraceCancellation)$/direct(-home)?-trace(-late)?$' -count=1 -timeout=3m -v
+              go test ./internal/browser -run '^(TestNativeFirstNavigationComponents|TestNativeNavigationTraceCancellation)$/direct(-home)?-trace(-loading)?(-late)?$' -count=1 -timeout=3m -v
               if ($LASTEXITCODE -ne 0) { $failed = $true }
             }
           } finally { Pop-Location }

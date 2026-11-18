@@ -23,10 +23,11 @@ func TestFirstNavigationTraceProjection(t *testing.T) {
 		json.RawMessage(`{"name":"Navigator::CancelNavigation","ph":"X","ts":1006,"args":{"reason":"secret arbitrary reason","render_frame_host":"0xsecretpointer"}}`),
 		json.RawMessage(`{"name":"Navigation: http://private.invalid/check","ph":"X","ts":1007,"args":{}}`),
 		json.RawMessage(`{"name":"NavigationRequest::Create","ph":"X","ts":1008,"args":{"url":"about:blank"}}`),
+		json.RawMessage(`{"name":"ThrottlingURLLoader::StartNow","ph":"X","ts":1008,"args":{"request_id":12345,"url":"https://private.invalid/secret","diagnostic_blob":"secret-url-and-headers"}}`),
 		json.RawMessage(`{"name":"NavigationURLLoaderImpl::NotifyRequestFailed","ph":"X","ts":1009,"args":{"diagnostic_blob":"secret-url-and-headers"}}`),
 	}
 	r := projectFirstNavigationTrace(values, "http://private.invalid/check")
-	if len(r.Events) != 5 || r.MatchedEvents != 2 || r.Events[1].Navigation != 1 || r.Events[1].Reason != "explicit_cancellation" || r.Events[1].Phase != "other" || *r.Events[1].NetError != -3 || r.Events[1].Microseconds != 5 || r.Events[2].Reason != "other" || r.Events[0].Frame != 1 || r.Events[1].Frame != 1 || r.Events[0].MainFrame == nil || !*r.Events[0].MainFrame || r.Events[0].URLClass != "fixture" || r.Events[3].URLClass != "about_blank" {
+	if len(r.Events) != 6 || r.MatchedEvents != 2 || r.Events[1].Navigation != 1 || r.Events[1].Reason != "explicit_cancellation" || r.Events[1].Phase != "other" || *r.Events[1].NetError != -3 || r.Events[1].Microseconds != 5 || r.Events[2].Reason != "other" || r.Events[0].Frame != 1 || r.Events[1].Frame != 1 || r.Events[0].MainFrame == nil || !*r.Events[0].MainFrame || r.Events[0].URLClass != "fixture" || r.Events[3].URLClass != "about_blank" {
 		t.Fatal("trace projection lost navigation or cancellation metadata", r)
 	}
 	encoded, _ := json.Marshal(r)
@@ -111,7 +112,7 @@ func TestNativeNavigationTraceCancellation(t *testing.T) {
 	t.Cleanup(func() { cancel(); stop() })
 	startup := time.AfterFunc(20*time.Second, cancel)
 	t.Cleanup(func() { startup.Stop() })
-	capture, err := startFirstNavigationTrace(root)
+	capture, err := startFirstNavigationTrace(root, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,5 +163,31 @@ func TestNativeNavigationTraceCancellation(t *testing.T) {
 		}
 	case <-ctx.Done():
 		t.Fatal("controlled navigation did not finish")
+	}
+}
+
+func TestFirstNavigationTraceFlowAliases(t *testing.T) {
+	values := []json.RawMessage{
+		json.RawMessage(`{"name":"ThrottlingURLLoader::Start","ph":"s","ts":1,"id":"0xdeadbeef"}`),
+		json.RawMessage(`{"name":"ThrottlingURLLoader::StartNow","ph":"f","ts":2,"id":"0xdeadbeef"}`),
+		json.RawMessage(`{"name":"ThrottlingURLLoader::Start","ph":"s","ts":3,"pid":1,"id2":{"local":"0xdeadbeef"}}`),
+		json.RawMessage(`{"name":"ThrottlingURLLoader::Start","ph":"s","ts":4,"pid":2,"id2":{"local":"0xdeadbeef"}}`),
+		json.RawMessage(`{"name":"ThrottlingURLLoader::Start","ph":"s","ts":5,"id":{"url":"secret"}}`),
+	}
+	r := projectFirstNavigationTrace(values, "http://private.invalid/check")
+	if len(r.Events) != 5 || r.Events[0].Flow != 1 || r.Events[1].Flow != 1 || r.Events[2].Flow != 2 || r.Events[3].Flow != 3 || r.Events[4].Flow != 0 {
+		t.Fatal("flow aliases must retain equality and explicit local scope")
+	}
+	data, _ := json.Marshal(r)
+	if strings.Contains(string(data), "deadbeef") || strings.Contains(string(data), "secret") {
+		t.Fatal("raw flow identity escaped projection")
+	}
+	values = nil
+	for i := 0; i < 65; i++ {
+		values = append(values, json.RawMessage(fmt.Sprintf(`{"name":"ThrottlingURLLoader::Start","ph":"s","ts":1,"id":%d}`, i)))
+	}
+	r = projectFirstNavigationTrace(values, "http://private.invalid/check")
+	if !r.IdentityLimit || r.Events[63].Flow != 64 || r.Events[64].Flow != 0 {
+		t.Fatal("flow aliases must fail bounded identity exhaustion")
 	}
 }

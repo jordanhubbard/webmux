@@ -14,6 +14,7 @@ import (
 )
 
 type firstNavigationTrace struct {
+	EndElapsedMs    int64                       `json:"endElapsedMs"`
 	EndAcknowledged bool                        `json:"endAcknowledged"`
 	ErrorClass      string                      `json:"errorClass,omitempty"`
 	Complete        bool                        `json:"complete"`
@@ -32,6 +33,7 @@ type firstNavigationTraceEvent struct {
 	Microseconds     int64  `json:"relativeUs"`
 	Navigation       int    `json:"navigation,omitempty"`
 	Frame            int    `json:"frame,omitempty"`
+	Flow             int    `json:"flow,omitempty"`
 	MainFrame        *bool  `json:"mainFrame,omitempty"`
 	URLClass         string `json:"urlClass,omitempty"`
 	MatchesRequested *bool  `json:"matchesRequested,omitempty"`
@@ -57,7 +59,7 @@ type firstNavigationTraceCapture struct {
 	unlisten context.CancelFunc
 }
 
-func startFirstNavigationTrace(root context.Context) (*firstNavigationTraceCapture, error) {
+func startFirstNavigationTrace(root context.Context, loading bool) (*firstNavigationTraceCapture, error) {
 	c := &firstNavigationTraceCapture{done: make(chan struct{})}
 	listen, unlisten := context.WithCancel(root)
 	c.unlisten = unlisten
@@ -80,11 +82,15 @@ func startFirstNavigationTrace(root context.Context) (*firstNavigationTraceCaptu
 	}
 	ctx, finish := context.WithTimeout(root, 5*time.Second)
 	defer finish()
+	categories := []string{"navigation"}
+	if loading {
+		categories = append(categories, "loading")
+	}
 	_, err = cdp.Call(ctx, chromedp.FromContext(root).Browser, tracing.Start, tracing.StartParams{
 		TransferMode: tracing.StartTransferModeReportEvents,
 		TraceConfig: &tracing.TraceConfig{
 			RecordMode: tracing.TraceConfigRecordModeRecordUntilFull, TraceBufferSizeInKb: 1024,
-			IncludedCategories: []string{"navigation"}, ExcludedCategories: []string{"*"},
+			IncludedCategories: categories, ExcludedCategories: []string{"*"},
 		},
 	})
 	if err != nil {
@@ -108,7 +114,11 @@ func (c *firstNavigationTraceCapture) appendValue(value []byte) {
 
 func (c *firstNavigationTraceCapture) finish(root context.Context, requested string) (*firstNavigationTrace, error) {
 	defer c.unlisten()
-	ctx, cancel := context.WithTimeout(root, 5*time.Second)
+	// Chromium acknowledges End before asynchronously stopping Perfetto and
+	// reading the trace (TracingHandler::End / OnTracingSessionStopped).
+	// Keep this post-navigation collection deadline separate from navigation.
+	started := time.Now()
+	ctx, cancel := context.WithTimeout(root, 15*time.Second)
 	defer cancel()
 	_, err := cdp.Call(ctx, chromedp.FromContext(root).Browser, tracing.End, cdp.Empty{})
 	endAcknowledged := err == nil
@@ -122,6 +132,7 @@ func (c *firstNavigationTraceCapture) finish(root context.Context, requested str
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	result := projectFirstNavigationTrace(c.values, requested)
+	result.EndElapsedMs = time.Since(started).Milliseconds()
 	result.EndAcknowledged = endAcknowledged
 	result.Complete, result.DataLoss = c.complete, c.lost
 	result.Bytes, result.Scanned = c.bytes, c.scanned
@@ -158,12 +169,20 @@ func projectFirstNavigationTrace(values []json.RawMessage, requested string) *fi
 	result := &firstNavigationTrace{Events: []firstNavigationTraceEvent{}}
 	aliases := map[int64]int{}
 	frames := map[int64]int{}
+	flows := map[string]int{}
 	var origin int64
 	for _, value := range values {
 		var raw struct {
-			Name string  `json:"name"`
-			Ph   string  `json:"ph"`
-			Ts   float64 `json:"ts"`
+			Name  string          `json:"name"`
+			Ph    string          `json:"ph"`
+			Ts    float64         `json:"ts"`
+			ID    json.RawMessage `json:"id"`
+			PID   int64           `json:"pid"`
+			Scope string          `json:"scope"`
+			ID2   struct {
+				Global json.RawMessage `json:"global"`
+				Local  json.RawMessage `json:"local"`
+			} `json:"id2"`
 			Args struct {
 				URL          string                   `json:"url"`
 				Reason       json.RawMessage          `json:"reason"`
@@ -182,7 +201,7 @@ func projectFirstNavigationTrace(values []json.RawMessage, requested string) *fi
 			continue
 		}
 		switch raw.Name {
-		case "NavigationRequest::Create", "NavigationRequest::NavigationRequest", "NavigationRequest::~NavigationRequest", "NavigationRequest::BeginNavigation", "NavigationRequest::BeginNavigationImpl", "NavigationRequest::StartNavigation", "NavigationRequest::WillStartRequest", "NavigationRequest::OnStartChecksComplete", "NavigationRequest::OnResponseStarted", "NavigationRequest::OnRequestFailed", "NavigationRequest::OnRequestFailedInternal", "NavigationRequest::OnFailureChecksComplete", "NavigationRequest::CancelDeferredNavigation", "NavigationRequest::ReadyToCommitNavigation", "NavigationRequest::CommitNavigation", "NavigationRequest::DidCommitNavigation", "Navigator::Navigate", "Navigator::CancelNavigation", "FrameTreeNode::ResetNavigationRequest", "FrameTreeNode::CancelRestartingBackForwardCacheNavigation", "FrameTreeNode::DidStopLoading", "RenderFrameHostImpl::NavigationRequestCancelled", "RenderFrameHostImpl::Stop", "RenderFrameHostImpl::ResetChildren", "NavigationThrottleRegistryImpl::RegisterNavigationThrottles", "NavigationThrottleRunner::ProcessInternal", "NavigationURLLoaderImpl::CreateInterceptors", "NavigationURLLoaderImpl::Restart", "NavigationURLLoaderImpl::CreateThrottlingLoaderAndStart", "NavigationURLLoaderImpl::CreateURLLoaderThrottles", "NavigationURLLoaderImpl::MaybeCreateLoaderForResponse", "NavigationURLLoaderImpl::NotifyRequestFailed", "NavigationURLLoaderImpl::Start", "NavigationURLLoaderImpl::OnComplete", "NavigationURLLoaderImpl::OnReceiveResponse", "WebContentsImpl::DidStartNavigation", "WebContentsImpl::DidFinishNavigation", "NavigationRequest":
+		case "ThrottlingURLLoader::ThrottlingURLLoader", "ThrottlingURLLoader::~ThrottlingURLLoader", "ThrottlingURLLoader::Start", "ThrottlingURLLoader::StartNow", "ThrottlingURLLoader::OnReceiveResponse", "NavigationRequest::Create", "NavigationRequest::NavigationRequest", "NavigationRequest::~NavigationRequest", "NavigationRequest::BeginNavigation", "NavigationRequest::BeginNavigationImpl", "NavigationRequest::StartNavigation", "NavigationRequest::WillStartRequest", "NavigationRequest::OnStartChecksComplete", "NavigationRequest::OnResponseStarted", "NavigationRequest::OnRequestFailed", "NavigationRequest::OnRequestFailedInternal", "NavigationRequest::OnFailureChecksComplete", "NavigationRequest::CancelDeferredNavigation", "NavigationRequest::ReadyToCommitNavigation", "NavigationRequest::CommitNavigation", "NavigationRequest::DidCommitNavigation", "Navigator::Navigate", "Navigator::CancelNavigation", "FrameTreeNode::ResetNavigationRequest", "FrameTreeNode::CancelRestartingBackForwardCacheNavigation", "FrameTreeNode::DidStopLoading", "RenderFrameHostImpl::NavigationRequestCancelled", "RenderFrameHostImpl::Stop", "RenderFrameHostImpl::ResetChildren", "NavigationThrottleRegistryImpl::RegisterNavigationThrottles", "NavigationThrottleRunner::ProcessInternal", "NavigationURLLoaderImpl::CreateInterceptors", "NavigationURLLoaderImpl::Restart", "NavigationURLLoaderImpl::CreateThrottlingLoaderAndStart", "NavigationURLLoaderImpl::CreateURLLoaderThrottles", "NavigationURLLoaderImpl::MaybeCreateLoaderForResponse", "NavigationURLLoaderImpl::NotifyRequestFailed", "NavigationURLLoaderImpl::Start", "NavigationURLLoaderImpl::OnComplete", "NavigationURLLoaderImpl::OnReceiveResponse", "WebContentsImpl::DidStartNavigation", "WebContentsImpl::DidFinishNavigation", "NavigationRequest":
 		default:
 			continue
 		}
@@ -200,6 +219,26 @@ func projectFirstNavigationTrace(values []json.RawMessage, requested string) *fi
 			phase = "other"
 		}
 		row := firstNavigationTraceEvent{Name: raw.Name, Phase: phase, Microseconds: int64(raw.Ts) - origin}
+		// Flow identities are opaque, bounded, capture-local aliases. Preserve
+		// explicit process-local versus global scope without exporting raw IDs.
+		if phase == "s" || phase == "f" {
+			key := traceFlowIdentifier(raw.ID)
+			if global := traceFlowIdentifier(raw.ID2.Global); global != "" {
+				key = "global:" + global
+			} else if local := traceFlowIdentifier(raw.ID2.Local); local != "" {
+				key = fmt.Sprintf("local:%d:%s", raw.PID, local)
+			}
+			if key != "" && len(raw.Scope) <= 64 {
+				key += ":" + raw.Scope
+				if flows[key] == 0 && len(flows) < 64 {
+					flows[key] = len(flows) + 1
+				}
+				row.Flow = flows[key]
+				if row.Flow == 0 {
+					result.IdentityLimit = true
+				}
+			}
+		}
 		row.ThrottleEvent = traceBoundedInt(raw.Args.CurrentEvent)
 		nav := raw.Args.Navigation
 		if nav == nil {
@@ -336,4 +375,27 @@ func firstNavigationDiscardReason(value string) string {
 	default:
 		return "other"
 	}
+}
+
+// A trace ID can be an integer or a hex string. Reject structured/unbounded
+// input; only the resulting local alias is ever included in a record.
+func traceFlowIdentifier(raw json.RawMessage) string {
+	if len(raw) == 0 || len(raw) > 80 {
+		return ""
+	}
+	value := string(raw)
+	if raw[0] == '"' {
+		if json.Unmarshal(raw, &value) != nil {
+			return ""
+		}
+	}
+	if len(value) == 0 || len(value) > 64 {
+		return ""
+	}
+	for _, r := range value {
+		if !(r >= '0' && r <= '9' || r >= 'a' && r <= 'f' || r >= 'A' && r <= 'F' || r == 'x') {
+			return ""
+		}
+	}
+	return value
 }
