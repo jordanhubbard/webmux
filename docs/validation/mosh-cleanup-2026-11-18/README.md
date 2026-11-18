@@ -29,3 +29,18 @@ full-CI context is also being inspected in `44279746826`. The additional explici
 cause and fixed-cohort changes pass strict typechecks and the public reporter
 control; their native cohort remains pending. No production behavior, required CI
 gate, cleanup condition or deadline is weakened. Keep #468/#452 open.
+
+The fixed cohort on `895933e` completed in run `44283713352`: nineteen
+samples pass; trial 5 passes all functional controls but fails cleanup with
+`connect ECONNRESET` from the owned tmux socket probe. Artifact `14418327193`
+retains every sample. The explicit cause identifies a probe shutdown race: a
+reset throws before the existing poll can confirm that the listener is gone.
+It does not establish the cause of the earlier masked failure on `45151c3`.
+
+The probe now returns **false** on a reset, requiring another observation within
+the unchanged five-second deadline. Only ENOENT or ECONNREFUSED returns true;
+a connected listener remains false and unrelated errors still throw. Controls
+cover all five outcomes and connection destruction; existing real tmux, unrelated
+server survival, stale socket and live listener preservation controls also pass.
+This changes test infrastructure only. Native qualification of this correction
+is pending; it does not repair a production Mosh shutdown defect.

@@ -6,7 +6,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn, spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { runWithPrivateTmux } from '../webmux/scripts/private-test-tmux.mts';
+import { runWithPrivateTmux, socketIsStopped } from '../webmux/scripts/private-test-tmux.mts';
 
 test('outer browser runner cleans real tmux after success, failure, fixture death and interruption', {
   skip: process.platform === 'win32', timeout: 30_000,
@@ -54,7 +54,7 @@ else process.exit(Number(process.argv[2]));
     fs.unlinkSync(receipt);
     const wrapper = path.join(root, 'wrapper.mts');
     const moduleURL = pathToFileURL(path.resolve(import.meta.dirname, '../webmux/scripts/private-test-tmux.mts')).href;
-    fs.writeFileSync(wrapper, `import { runWithPrivateTmux } from ${JSON.stringify(moduleURL)};
+    fs.writeFileSync(wrapper, `import { runWithPrivateTmux, socketIsStopped } from ${JSON.stringify(moduleURL)};
 process.exitCode = await runWithPrivateTmux(process.execPath, [${JSON.stringify(fixture)}, 'wait'], {cwd: ${JSON.stringify(root)}, env: process.env});`);
     const child = spawn(process.execPath, [wrapper], { env, stdio: 'inherit' });
     const exited = new Promise<number | null>((resolve, reject) => { child.once('exit', resolve); child.once('error', reject); });
@@ -157,5 +157,24 @@ fs.writeFileSync(process.env.RECEIPT, process.env.TMUX_TMPDIR);`);
     if (directory) fs.rmSync(directory, { recursive: true, force: true });
     if (fs.existsSync(receipt)) fs.rmSync(fs.readFileSync(receipt, 'utf8'), { recursive: true, force: true });
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
+test('socket shutdown probe requires absence after a reset and rejects unrelated errors', async t => {
+  for (const [event, expected] of [['ECONNRESET', false], ['connect', false], ['ECONNREFUSED', true], ['ENOENT', true], ['ENOTDIR', 'reject']] as const) {
+    await t.test(event, async context => {
+      const socket = new net.Socket();
+      context.mock.method(net, 'createConnection', () => {
+        queueMicrotask(() => {
+          if (event === 'connect') socket.emit('connect');
+          else socket.emit('error', Object.assign(new Error(event), { code: event }));
+        });
+        return socket;
+      });
+      if (expected === 'reject') await assert.rejects(socketIsStopped('owned-test-socket'), { code: event });
+      else assert.equal(await socketIsStopped('owned-test-socket'), expected);
+      assert.equal(socket.destroyed, true, 'every probe releases its connection');
+    });
   }
 });
