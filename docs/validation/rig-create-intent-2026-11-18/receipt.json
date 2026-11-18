@@ -46,14 +46,38 @@
         "privateTmuxStopped": true,
         "daemonStateRemoved": true
       }
+    },
+    {
+      "privateReportSHA256": "83408262721a85f524541fef757ee58e51cdf7b3c398a139a28e7b4ac012ade9",
+      "probeSHA256": "10c7bd566ce5f67dc8a1e72c04ebc50645390ad6754ff3d1bbbdc0d456576ce0",
+      "moduleSHA256": "2e4f6b47ecb5ee21aa5a73ff85dacb1f510093f00c5e736286c2d92e336dd693",
+      "versions": {
+        "rig": "0.7.18 (3bf87c62)",
+        "node": "v24.21.0",
+        "tmux": "tmux 3.8"
+      },
+      "checks": {
+        "actualNativeReplyLossLeavesIntentConsumed": true,
+        "originalUUIDRouteAndExactBodySavedBeforeNativeDispatch": true,
+        "newClientProcessDuplicateDoesNotPOST": true,
+        "explicitInspectionReplaysSameOperationWithoutNewOccupant": true,
+        "changedExactBodyRefusesBeforeNativePOST": true,
+        "sameNativeEnrollmentAndSiblingSurviveManagerRestart": true,
+        "checkedStopRemovesSelectedTerminalAndPreservesSibling": true
+      },
+      "cleanup": {
+        "privateTmuxStopped": true,
+        "daemonStateRemoved": true
+      },
+      "scope": "Current module with parent-directory entry flush; earlier reports retain their older source bindings."
     }
   ],
   "localValidation": {
     "strictTypeScriptProjects": 5,
-    "helperTestsPassed": 139,
+    "helperTestsPassed": 140,
     "helperSkips": 0,
-    "journalTestsPassed": 10,
-    "nativePositiveReports": 2,
+    "journalTestsPassed": 11,
+    "nativePositiveReports": 3,
     "lockIdentity": "272 package identities match",
     "whitespace": "pass"
   },
@@ -64,5 +88,19 @@
     "Native receipts correlate enrollment IDs, not process readiness, current liveness or authenticated coding.",
     "Native tests use terminal seats, not authenticated provider sessions or reboot. Native manager restart and separate client process checks are included.",
     "POSIX-only journal; Windows refuses before creating a journal. Normal review/CI/audit/release gates remain open."
-  ]
+  ],
+  "currentModuleSHA256": "2e4f6b47ecb5ee21aa5a73ff85dacb1f510093f00c5e736286c2d92e336dd693",
+  "parentFlushRegression": {
+    "priorModuleSHA256": "c0466f0c9dd8e03c1874ee5af857e29551a87812430acc5c7dc86dcc64e96c3a",
+    "currentTestSHA256": "7721daef444187771efd43d7b42b57bad04ab96bcfa60712827ac6933d1cd9c9",
+    "priorFirstDispatchWhenParentFlushInjectedEIO": {
+      "posts": 1,
+      "refused": false
+    },
+    "currentNewOrPreexistingJournalWhenParentFlushInjectedEIO": {
+      "posts": 0,
+      "refused": true
+    },
+    "scope": "Fault injection only inside an owned child process; separate actual native response-loss fixture passes on current source. Not a physical power-loss test."
+  }
 }

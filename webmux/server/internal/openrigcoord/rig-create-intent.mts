@@ -42,7 +42,11 @@ function root(directory: string, key: string) {
   if (!stat.isDirectory() || stat.isSymbolicLink() || stat.uid !== process.geteuid?.() || (stat.mode & 0o077) !== 0) {
     throw new Error('unsafe_native_create_journal');
   }
-  const base = path.join(fs.realpathSync(directory), key);
+  const canonical = fs.realpathSync(directory);
+  // Flushing entries inside a new directory does not flush its own name in
+  // the parent. Also cover a previous process dying between mkdir and fsync.
+  syncDirectory(canonical);
+  const base = path.join(canonical, key);
   return { intent: `${base}.intent.json`, consumed: `${base}.dispatched` };
 }
 function syncDirectory(file: string) {
