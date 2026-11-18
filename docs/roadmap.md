@@ -105,7 +105,12 @@ Remaining #318 work, in order:
    The service was stopped with protection unchanged; native diagnostic and
    no-duplicate-owner controls passed separately
    ([evidence](session-recovery.md#windows-installed-service-security-block-2026-11-16)).
-   Authenticated installed-service recovery, broader CLI/configuration coverage
+   A newer main artifact now passes authenticated ZIP/WinSW LocalSystem service
+   recovery with Codex 0.153.0: controller crash survival, actual guest reboot,
+   explicit exact-conversation Resume and durable duplicate-action controls
+   ([qualification](validation/windows-installed-recovery-2026-11-17/README.md)).
+   The earlier image's Defender classification remains unresolved. Other service
+   accounts, broader CLI/configuration coverage, different-executable upgrades
    and ARM64 hardware qualification remain open. Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
