@@ -11,3 +11,9 @@
 .usb-forward button { background: #6653cf; border: 1px solid #9785ff; border-radius: 4px; color: white; padding: 8px 12px; cursor: pointer; margin-top: 8px; }
 .usb-forward button:disabled { opacity: 0.5; cursor: default; }
 .usb-forward [aria-invalid=true] { border-color: #ff9393; }
+
+.usb-forward-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.usb-forward-leases { list-style: none; padding: 0; }
+.usb-forward-leases li { border-top: 1px solid #44445e; padding: 10px 0; overflow-wrap: anywhere; }
+.usb-forward-leases p { margin: 6px 0; }
+.usb-forward-lease-details { display: block; margin-top: 4px; color: #b2b2c8; }

@@ -317,7 +317,14 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   Packaged Chromium file visibility and a real SSH worker transfer have separate
   [qualification evidence](browser-companion.md#packaged-chromium-file-visibility-2026-11-16).
 - [#120](https://github.com/jordanhubbard/webmux/issues/120): opt-in USB forwarding
-  and real iPhone/Xcode qualification.
+  for general USB devices, including robots and USB security keys. A simple
+  simulated device is sufficient for device acceptance; the existing Linux
+  USB/IP mass-storage gadget exercises enumeration, exact reads/writes, detach,
+  interruption and cleanup. Physical hardware, iPhone and Xcode are not required.
+  Owner-scoped browser lease status and Stop controls are implemented under
+  [#485](https://github.com/jordanhubbard/webmux/issues/485), with one-use helper
+  pairing, durable stop requests and separate confirmed/uncertain cleanup states.
+  Exact-source native simulation and normal merge gates remain required.
 
 ## External distribution and qualification
 

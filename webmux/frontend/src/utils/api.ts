@@ -112,7 +112,20 @@ export interface ServerGrant { id: string; owner: string; token_env: string; cre
 export interface ServerDirectory { servers: ManagedServer[]; grants: ServerGrant[] }
 export interface ServerCredentialInput { token_env: string; credential: string }
 
+export interface USBForwardingSpec { host: string; ssh_port: number; export_port: number; seconds: number }
+export interface USBForwardingLease {
+  id: string; spec: USBForwardingSpec;
+  phase: 'pending' | 'starting' | 'ready' | 'stopping' | 'ended' | 'failed' | 'uncertain' | 'expired';
+  created_at: string; expires_at: string; last_seen: string; remote_port: number;
+  stop_requested: boolean; release_confirmed: boolean; stale: boolean;
+}
+export interface USBForwardingTicket { lease: USBForwardingLease; pair_code: string }
+
 export const api = {
+  getUSBForwardings: (signal?: AbortSignal) => request<USBForwardingLease[]>('/usb-forwardings', { signal, cache: 'no-store' }),
+  createUSBForwarding: (spec: USBForwardingSpec) => request<USBForwardingTicket>('/usb-forwardings', { method: 'POST', body: JSON.stringify(spec) }),
+  stopUSBForwarding: (id: string) => request<USBForwardingLease>(`/usb-forwardings/${encodeURIComponent(id)}/stop`, { method: 'POST' }),
+
   getSessionRecovery: (id: string, signal?: AbortSignal) => request<SessionRecovery>(`/session-recovery/${encodeURIComponent(id)}`, { signal, cache: 'no-store' }),
   recoverSession: (id: string, input: RecoveryRequest) => request<{ outcome: string }>(`/session-recovery/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify(input) }),
   setAutoRecovery: (id: string, enabled: boolean) => request<{ auto_resume: boolean }>(`/session-recovery/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ auto_resume: enabled }) }),

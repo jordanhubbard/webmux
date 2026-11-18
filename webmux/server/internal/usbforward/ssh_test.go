@@ -78,7 +78,7 @@ func TestRealSSHTransportAndHostKeyRejection(t *testing.T) {
 	defer cancel()
 	var workers sync.WaitGroup
 	gates := map[string]*cleanupGate{}
-	for _, name := range []string{"delay-eof", "hung-eof", "failed-eof"} {
+	for _, name := range []string{"delay-eof", "hung-eof", "failed-eof", "dashboard-held-eof"} {
 		gates[name] = &cleanupGate{started: make(chan struct{}), allowed: make(chan struct{}), done: make(chan struct{})}
 		defer gates[name].release()
 	}
@@ -162,6 +162,10 @@ func TestRealSSHTransportAndHostKeyRejection(t *testing.T) {
 		t.Fatal(err)
 	}
 	exporter := backend(t, func(c net.Conn) { _, _ = io.Copy(c, c) })
+	t.Run("dashboard-stop-awaits-remote-release-after-manager-reload", func(t *testing.T) {
+		exerciseDashboardSSH(t, binaryPath, listener.Addr().(*net.TCPAddr).Port, exporter.Addr().(*net.TCPAddr).Port, keyFile, known, gates["dashboard-held-eof"])
+	})
+
 	for _, failure := range []string{"exporter-unavailable", "unknown-host", "changed-host", "worker-startup"} {
 		t.Run("cli-"+failure, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)

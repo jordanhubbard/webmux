@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "source_commit": "80f7c65b3159f5ace1317077c18015948939ce7b",
+  "run": 44284270303,
+  "job": 134732754160,
+  "job_url": "https://github.com/jordanhubbard/webmux/actions/runs/44284270303/job/134732754160",
+  "conclusion": "success",
+  "artifact": {
+    "id": 14418647333,
+    "name": "virtual-usb-gadget-build",
+    "sha256": "7cc7ef834b248309c4c0cb24850912ba725873135ec07f9660cb77c8ff4fc9a7"
+  },
+  "artifact_log_sha256": {
+    "unpatched.log": "c26aa8317a6f564cbaae4303584b254056c676dbd260f168879f7cbc4fa3009e",
+    "corrected-held.log": "09959694313b4912d51494a083dcc7dbc6095980c990c0f9d79ed2f421857b9f",
+    "direct-20.log": "302a8cdf0219ac6e86c58c7a42de362725a328a613f922d07f2501fc1904bbf5",
+    "webmux-ssh.log": "f7c7b523a6ce60b12deedc4a4be9dc5ead80531c3492f1bf9abd4047e6088161"
+  },
+  "results": [
+    {
+      "control": "unpatched",
+      "exit": 1,
+      "admitted": true,
+      "module_sha256": "fd8a3c726992231073b2f82e2fc48585f3b1d8f6ab913ffd644925b641aa3012",
+      "srcversion": "0E77E9FAE1ED8C902094921"
+    },
+    {
+      "control": "corrected-held",
+      "exit": 0,
+      "admitted": true,
+      "module_sha256": "b3159f95270e75a0822411ace8ecc54b01db402a51a431a2ac34217564316892",
+      "srcversion": "AFA0841746AD954FEFE2CCF"
+    },
+    {
+      "control": "direct-20",
+      "exit": 0,
+      "admitted": true,
+      "module_sha256": "63b791ba18898cda92febc83476c531f065aa512e794705162f8eb76fc71fbf6",
+      "srcversion": "CEF310F2896192F4A8FAE09"
+    },
+    {
+      "control": "webmux-ssh",
+      "exit": 0,
+      "admitted": true,
+      "module_sha256": "63b791ba18898cda92febc83476c531f065aa512e794705162f8eb76fc71fbf6",
+      "srcversion": "CEF310F2896192F4A8FAE09"
+    }
+  ],
+  "kernel": "6.8.0-146-generic",
+  "source_sha256": {
+    "scripts/qualify-test-vudc.py": "bbfd0157314a2358b6260070fc0d42a309397f4d663dafda60872e1cedb5b814",
+    "scripts/test_qualify_vudc.py": "10cf643895f5ddf2dabe30214812d4d29a6513c79217ec3cfd89552a5ea4f979",
+    "tests/e2e/usb-forwarding.spec.ts": "3b6008177d00ec93668efcb2182055e8cf54d86bf3c9431afd23180056d5c66d",
+    "tests/frontend/USBForwardDialog.test.tsx": "1984aa9cee6adee9d52b58598ff7359c969115567210942a611d831d280670c0",
+    "tests/usb-kernel.py": "517ff97b1a017a2f255aae89aaf92d71e7cb8506da73152678965e2e3ac153c3",
+    "webmux/frontend/src/components/USBForwardDialog.css": "ba23d6879ae5942f0f0b9a974bc8f23762ca745e76dad9d64ba21d8764c0835a",
+    "webmux/frontend/src/components/USBForwardDialog.tsx": "ed88cbe326c49b8adb45162405520cf54950526721cb7b00d5e9d86d5a4669e0",
+    "webmux/frontend/src/utils/api.ts": "9db00a6954a4aacca785258fbb1f37ee9bb2575d9f7e8fb3e4a9b222ee3c33da",
+    "webmux/server/internal/httpapi/server.go": "0f656eed1b5ac4c8911b8b1d25efad108ee984339e8b8b2ad4e85d3e866ce057",
+    "webmux/server/internal/httpapi/usb_forwardings.go": "39c449a5b10371eb230a38358a324f3192f811930d2ee5fa876c64c317b9dbae",
+    "webmux/server/internal/httpapi/usb_forwardings_test.go": "9ef3449b2074578fd8e0ecab8f453ff4344c4b7286642af678d4ea83cd14710a",
+    "webmux/server/internal/usbforward/cli.go": "5e5a8153e1f9bc5d50774e52ba79d2ef271d37430bb2ce5e0f29ffa94e14c8cc",
+    "webmux/server/internal/usbforward/dashboard.go": "0be75eaa9a584e2da5f3974bf4440b6d1f9fb856fd7761f030ee6c0236ca18d8",
+    "webmux/server/internal/usbforward/dashboard_test.go": "8e9f34748b30eaafdcaca972f71ffc2b6689b5f0852ded11e5693741db88c1aa",
+    "webmux/server/internal/usbforward/leases.go": "aeb53bb15d289af928269dfb3730aa5ae94243ca1dc0425c0ce381c88ffeed3b",
+    "webmux/server/internal/usbforward/leases_test.go": "96c9f5516e2a11760bb4f0207299e415fc885c86427031ff723cf6605047de7b",
+    "webmux/server/internal/usbforward/ssh_test.go": "3beeb9d32e320dfef976920a3404c3c64de4be8a75befc41b9d7c2b811fbd138"
+  },
+  "scope": "Isolated Linux USB/IP mass-storage simulator over actual CLI, worker, SSH and dashboard. Includes exact reads/writes, reattach, controller kill/reconstruction, owner Stop and confirmed release, plus ordinary SIGINT cleanup. Does not qualify every USB device or operating-system pair. All normal merge gates remain required."
+}
