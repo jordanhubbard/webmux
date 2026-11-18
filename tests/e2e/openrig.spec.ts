@@ -228,7 +228,13 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     for (let index = 0; index < 20; index++) await page.mouse.wheel(0, -120);
     await expect.poll(() => tmux('display-message', '-p', '-t', coder.attachmentTarget, '#{pane_in_mode}')).toBe('1');
-    await expect(rows).toContainText('WM_SCROLL_OLD');
+    // Native history depth varies with pane size. Keep using real wheel input
+    // until the marker is visible, within the existing assertion deadline.
+    await expect.poll(async () => {
+      const visible = await rows.textContent() ?? '';
+      if (!visible.includes('WM_SCROLL_OLD')) await page.mouse.wheel(0, -120);
+      return visible;
+    }, { intervals: [50] }).toContain('WM_SCROLL_OLD');
     expect(await workspace.evaluate(el => ({ x: el.scrollLeft, y: el.scrollTop }))).toEqual(beforeWheel);
     tmux('send-keys', '-t', coder.attachmentTarget, 'q');
     const nonce = randomBytes(16).toString('hex');
