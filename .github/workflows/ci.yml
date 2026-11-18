@@ -217,6 +217,26 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           sudo -n apt-get install -y tmux
+      - name: Update Ubuntu C library security baseline
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          . /etc/os-release
+          test "$ID" = ubuntu
+          test "$VERSION_ID" = 22.04
+          package="libc6:$(dpkg --print-architecture)"
+          evidence="$RUNNER_TEMP/webmux-ci-libc"
+          mkdir -p "$evidence"
+          # Playwright's preceding --with-deps refreshes the signed APT indexes.
+          dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' "$package" > "$evidence/before.txt"
+          apt-cache policy "$package" > "$evidence/candidate.txt"
+          sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y --only-upgrade --no-remove --no-install-recommends "$package"
+          dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' "$package" > "$evidence/after.txt"
+          installed=$(dpkg-query -W -f='${Version}' "$package")
+          echo 'USN-9065-1 requires Jammy libc6 >= 2.35-0ubuntu3.18'
+          cat "$evidence/after.txt"
+          dpkg --compare-versions "$installed" ge 2.35-0ubuntu3.18
       - name: Verify native iframe ownership and control dispatch
         if: runner.os == 'Linux'
         shell: bash
@@ -359,6 +379,7 @@ jobs:
             ${{ runner.temp }}/webmux-guacd-build/*.json
             ${{ runner.temp }}/webmux-guacd-build/*.txt
             ${{ runner.temp }}/webmux-native-components
+            ${{ runner.temp }}/webmux-ci-libc
             ${{ runner.temp }}/browser-frame-controls.jsonl
             test-results
 
