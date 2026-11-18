@@ -1,5 +1,9 @@
 # Native conversation recovery with the current owner environment
 
+Fresh public native-owned creation and verified attachment now pass a separate
+[actual Go/Chrome qualification](../codex-public-native-2026-11-18/README.md).
+That result does not complete the public recovery composition described here.
+
 The embedded Go coordinator `native-resume` action now passes the actual native
 recovery composition at source `cd602de`. Its [controller receipt](controller-dispatch.json)
 binds the code, driver binary, native evidence and checks. Public HTTP/UI and
