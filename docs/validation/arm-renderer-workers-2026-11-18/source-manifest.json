@@ -1,0 +1,50 @@
+{
+  "recordedUTC": "2026-11-18T08:44:21.910692+00:00",
+  "issue": 456,
+  "base": "b357ca694b390bbca1377a0a759d44ede0331220",
+  "sourceSHA256": {
+    ".github/workflows/windows-arm-native.yml": "5752bf0a232623f75ef7a5e2e016165c023dffbe5eec47bd21e2357e2e17a7c6",
+    "tests/e2e/screen-replay.spec.ts": "5f7fabeaedf940800ad16b341f20350071a031f6309141ef9d8687fc671d142d",
+    "webmux/playwright.config.ts": "88a58bc9b555f95d3348bf98583ca11bbb1f0412ac0f1799996f106b765ab848",
+    "docs/validation/arm-renderer-workers-2026-11-18/README.md": "3ecf68229a1dbb7c8b375dd1e94f9c9bb5ba7372405792b0852b22e1bca19a75"
+  },
+  "nativeParent": {
+    "run": 44260396875,
+    "conclusion": "cancelled",
+    "reason": "60-minute maximum execution time",
+    "artifact": 14411377406,
+    "artifactSHA256": "6170eb6a569e862b4e414243ac28739688e8a5347224cf6078bb84e6f1a9098b",
+    "completedChecks": 1383,
+    "requiredChecks": 1384,
+    "completeComparisonReceipts": 1381,
+    "gatePassed": false
+  },
+  "invariants": {
+    "sameNativeModeTestIdentities": 1384,
+    "onlyWorkflowSemanticChange": "renderer command --workers=2 --fully-parallel",
+    "testSourceUnchanged": true,
+    "configUnchanged": true,
+    "jobTimeoutMinutes": 60,
+    "perTestTimeoutSeconds": 30,
+    "retries": 0
+  },
+  "localMacOS": {
+    "result": "PASS",
+    "checks": 1356,
+    "workers": 2,
+    "comparisonReceipts": 1353,
+    "threeStagesEqual": true,
+    "referenceProfiles": {
+      "shared-hyperlink": 1094,
+      "bare": 259
+    },
+    "replayedQueries": 0,
+    "noWindowsConPTYClaim": true
+  },
+  "privateLogSHA256": {
+    "arm456-workers-mac-renderer.log": "a1b6c514fb50b4b849be8e994fb205e73055d3df9d49820658b5fc676e435195",
+    "arm456-workers-serial-list.log": "23c2bbb007ae4c722e3c3ab865f220fc7a86b3333a7ee7b7553ee3686961e426",
+    "arm456-workers-parallel-list.log": "a32a588461cef40c45ef361f2aee1477902bb86fedfd1f56f82e1f8c5825a6fc"
+  },
+  "nativeCandidate": "Pending. No source gate inferred from listing/local execution."
+}
