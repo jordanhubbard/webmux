@@ -222,5 +222,16 @@
     "#487 unrelated vendor APT feed can prevent native Linux qualification",
     "#450 retained Windows runtime failure reconciliation remains open",
     "Full #318/#355/#438/#246 acceptance and release gates remain open"
-  ]
+  ],
+  "nativeRendererIntegration": {
+    "firstRun": 44284259014,
+    "firstSource": "a9ef93de501e8f584eeffb2253eb981e0cb6d8bb",
+    "firstResult": "FAIL: v1-only test viewer correctly refused by composed production v2 owner before READY; production negotiation unchanged",
+    "testCorrection": "Offer and require production v2; retain unknown/absent refusal and add explicit v1 refusal; preserve original native owner identity, PID, replay, continued input and ownership assertions",
+    "changedTestSHA256": {
+      "webmux/server/internal/httpapi/federation_test.go": "ad6692e931351f70e174e6d49d7512f44d44e71138334871c4e9a6adf80dbd8c",
+      "webmux/server/internal/httpapi/federation_renderer_windows_test.go": "6d296e0aad1ae25ea7d4bee851b3fc0fc8b9467ced83ef20404855aa0e55c369"
+    },
+    "nativeOutcome": "pending new-head outside-job Windows contract"
+  }
 }

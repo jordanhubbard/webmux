@@ -52,7 +52,7 @@ func federationPair(t *testing.T) (*Server, *Server, http.Handler, string, strin
 }
 
 func TestFederationTerminalForwardsOnlyRendererCapability(t *testing.T) {
-	for _, profile := range []string{"", screenstate.XtermRendererProfile, "unknown +&?#/renderer"} {
+	for _, profile := range []string{"", screenstate.XtermRendererProfile, screenstate.XtermUnderlineRendererProfile, "unknown +&?#/renderer"} {
 		t.Run(profile, func(t *testing.T) {
 			a, handler := fixture(t, "local")
 			federationAccounts(t, a)
@@ -67,7 +67,7 @@ func TestFederationTerminalForwardsOnlyRendererCapability(t *testing.T) {
 					"authorization": r.Header.Get("Authorization"), "cookie": r.Header.Get("Cookie"), "origin": r.Header.Get("Origin")})
 				// A controlled profile-requiring peer verifies refusal propagation.
 				// Native-owner qualification is separate from this proxy contract.
-				if r.URL.Query().Get("snapshot_profile") != screenstate.XtermRendererProfile {
+				if !screenstate.RendererSupports(r.URL.Query().Get("snapshot_profile"), screenstate.XtermRendererProfile) {
 					rejectSocket(connection, session.ErrRendererUnsupported.Error())
 					return
 				}
@@ -111,7 +111,7 @@ func TestFederationTerminalForwardsOnlyRendererCapability(t *testing.T) {
 			if got.Query.Encode() != want.Encode() {
 				t.Fatalf("renderer capability or query isolation changed: got %q, want %q", got.Query.Encode(), want.Encode())
 			}
-			if profile != screenstate.XtermRendererProfile {
+			if !screenstate.RendererSupports(profile, screenstate.XtermRendererProfile) {
 				var event session.Event
 				if err := connection.ReadJSON(&event); err != nil || event["type"] != "error" || event["message"] != session.ErrRendererUnsupported.Error() {
 					t.Fatal("profile refusal lost", event, err)

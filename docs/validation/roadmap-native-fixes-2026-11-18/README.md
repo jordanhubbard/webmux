@@ -52,3 +52,13 @@ unneeded preinstalled Microsoft APT index returns HTTP 429 before native desktop
 and relay steps. No failure is suppressed, retried as a repair or treated as a
 successful skipped qualification. No merge, release or complete-roadmap claim
 is made by composing this candidate.
+
+The first combined Windows renderer contract (44284259014, `a9ef93d`)
+failed before READY because the imported test offered only v1 to the already
+composed v2 native owner. The refusal preserves the intended capability
+boundary. The integration-only test correction offers the production v2
+profile, requires its exact v2 metadata/replay packet, and additionally refuses
+a v1-only viewer alongside absent/unknown selections. Original owner/PID,
+continued input and ownership assertions remain. No production negotiation
+changes; new native qualification is pending. The two changed test hashes are
+recorded separately from the original full local source snapshot.
