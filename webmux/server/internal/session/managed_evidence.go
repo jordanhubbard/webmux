@@ -26,7 +26,7 @@ func sameManagedDestination(a, b RigIdentity) bool {
 		}
 		return value
 	}
-	return a.AttachmentTarget == b.AttachmentTarget && a.SeatID == b.SeatID && a.Provider == b.Provider && a.Target == b.Target && a.Host == b.Host && a.Workspace == b.Workspace && a.Runtime == b.Runtime && profile(a.ManagerProfile) == profile(b.ManagerProfile)
+	return a.TmuxServerFlag == b.TmuxServerFlag && a.TmuxServerValue == b.TmuxServerValue && a.AttachmentTarget == b.AttachmentTarget && a.SeatID == b.SeatID && a.Provider == b.Provider && a.Target == b.Target && a.Host == b.Host && a.Workspace == b.Workspace && a.Runtime == b.Runtime && profile(a.ManagerProfile) == profile(b.ManagerProfile)
 }
 
 // The coordinator owns these references. They are evidence, never executable
@@ -47,7 +47,7 @@ var rigRecoveryULID = regexp.MustCompile(`^[0-9A-HJKMNP-TV-Z]{26}$`)
 var rigRecoveryHash = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
 func validRigRecoveryReference(value RigIdentity) bool {
-	return (value.Provider == "" || value.Provider == "rig") && value.Host == "localhost" && value.Runtime == "claude-code" &&
+	return value.TmuxServerFlag == "" && value.TmuxServerValue == "" && (value.Provider == "" || value.Provider == "rig") && value.Host == "localhost" && value.Runtime == "claude-code" &&
 		value.NativeSource == "rig-snapshot" && filepath.IsAbs(value.Workspace) && filepath.IsAbs(value.NativeStateFile) && recovery.ValidNativeID("claude", value.NativeSessionID) && rigRecoveryULID.MatchString(value.ManagerRigID) && rigRecoveryULID.MatchString(value.ManagerNodeID) &&
 		rigRecoveryULID.MatchString(value.ManagerSnapshotID) && value.ManagerLogicalID != "" && len(value.ManagerLogicalID) <= 256 && !strings.ContainsFunc(value.ManagerLogicalID, unicode.IsControl) &&
 		rigRecoveryHash.MatchString(value.ManagerSnapshotHash) && rigRecoveryHash.MatchString(value.ManagerPolicyHash) && rigRecoveryHash.MatchString(value.ManagerRecordIdentity) && validRigProcessReference(value.ManagerProcess, value.NativeSessionID)

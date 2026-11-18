@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -87,7 +88,50 @@ esac
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(calls), "--version") || strings.Contains(string(calls), "daemon") {
+	if strings.Contains(string(calls), "daemon") {
 		t.Fatalf("basic discovery depends on enrollment probe: %s", calls)
+	}
+	if strings.Count(string(calls), "--version") != 1 {
+		t.Fatalf("expected one attachment-contract version probe: %s", calls)
+	}
+}
+
+func TestStructuredAttachmentProjectsFullInventoryWithoutPrivateMetadata(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Rig terminal integration is Unix-only")
+	}
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("Node is required by the coordinator")
+	}
+	home, bin := t.TempDir(), t.TempDir()
+	for name, script := range map[string]string{
+		"tmux": "#!/bin/sh\necho 'tmux 3.8'\n",
+		"rig": `#!/bin/sh
+case "$*" in
+ --version) echo '0.7.18 (3bf87c62)' ;;
+ 'ps --nodes -A --json --full') printf '%s\n' '[{"rigId":"r","logicalId":"agents.one","canonicalSessionName":"same","attachmentType":"tmux","tmuxServerArgs":["-S","/tmp/exact socket"],"recoveryGuidance":"PRIVATE_GUIDANCE","env":{"token":"PRIVATE_TOKEN"},"agentActivity":{"state":"running","rawEvent":"PRIVATE_EVENT"}}]' ;;
+ 'ps --include-archived --json --fields '*) echo '[]' ;;
+ *) exit 23 ;;
+esac
+`,
+	} {
+		if err := os.WriteFile(filepath.Join(bin, name), []byte(script), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	output, err := Run(context.Background(), home, "owner", "status", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var data struct {
+		Seats []struct {
+			Openable bool   `json:"openable"`
+			Flag     string `json:"tmuxServerFlag"`
+			Socket   string `json:"tmuxServerValue"`
+		} `json:"seats"`
+	}
+	if err := json.Unmarshal(output, &data); err != nil || strings.Contains(string(output), "PRIVATE_") || len(data.Seats) != 1 || !data.Seats[0].Openable || data.Seats[0].Flag != "-S" || data.Seats[0].Socket != "/tmp/exact socket" {
+		t.Fatalf("structured inventory selection/projection failed: %s, %v", output, err)
 	}
 }

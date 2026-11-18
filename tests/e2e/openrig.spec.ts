@@ -154,7 +154,8 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       await dialog.getByRole('combobox', { name: 'Coding agent', exact: true }).selectOption('codex');
       const response = page.waitForResponse(value => value.url().endsWith('/api/coordination/agents') && value.request().method() === 'POST');
       await dialog.getByRole('button', { name: 'Start agent and open terminal', exact: true }).click();
-      expect((await response).status()).toBe(200);
+      const reply = await response;
+      expect(reply.status(), (await reply.text()).slice(0, 6000)).toBe(200);
       await expect(dialog).toHaveCount(0);
       const agent = (await status()).seats.find(value => value.name === name)!;
       expect(agent.managed).toBe(true); expect(agent.enrollmentOrigin).toBe('claimed');

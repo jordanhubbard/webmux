@@ -353,7 +353,7 @@ func TestRigSSHSeatRefusalExplainsTheWayBack(t *testing.T) {
 	}
 	data, _ := os.ReadFile(calls)
 	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
-		if !strings.HasPrefix(line, "ps ") {
+		if line != "--version" && !strings.HasPrefix(line, "ps ") {
 			t.Fatal("refusing a reattachment ran a Rig mutation", line)
 		}
 	}

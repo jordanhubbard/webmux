@@ -8,6 +8,7 @@ export type AgentStatusSource = 'hook' | 'tmux' | 'webmux' | 'none';
 
 export interface RigIdentity {
   seat_id?: string; attachment_target?: string;
+  tmux_server_flag?: string; tmux_server_value?: string;
   rig_host_id?: string;
   provider?: string; target: string; project: string; name: string; host: string; runtime: string; workspace?: string;
 }

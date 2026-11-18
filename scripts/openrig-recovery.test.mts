@@ -61,6 +61,20 @@ async function fixture() {
   return { root, cwd, directory, file, run, identity, node, policy, calls, plan, snapshots, inherit: () => { inheritedPolicy = true; }, created: () => created, metadataStatus: (value: number) => { metadataStatus = value; }, corruptSnapshot: () => { corruptSnapshot = true; }, close: async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); fs.rmSync(root, { recursive: true, force: true }); } };
 }
 
+test('structured tmux selection cannot reach the legacy native recovery adapter', async () => {
+  const f = await fixture();
+  try {
+    for (const selection of [{ tmux_server_flag: '-S', tmux_server_value: '/tmp/other.sock' },
+      { tmux_server_flag: '-S' }, { tmux_server_value: '/tmp/other.sock' }]) {
+      const identity = { ...f.identity, ...selection };
+      const run = () => { assert.fail('unsupported socket reached a native command'); };
+      await assert.rejects(observeRigRecovery(run, identity, f.directory), /not qualified/);
+      assert.throws(() => observeRigNativeProcess(run, identity), /not qualified/);
+    }
+    assert.equal(f.calls.length, 0);
+  } finally { await f.close(); }
+});
+
 test('native Rig capture binds exact snapshot and record, reuses unchanged state, and exports no conversation or settings', async () => {
   const f = await fixture();
   try {

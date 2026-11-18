@@ -10,9 +10,10 @@ function response(chunks: string[], headers = { 'content-type': 'text/event-stre
   return new Response(new ReadableStream({ start(c) { for (const chunk of chunks) c.enqueue(encoder.encode(chunk)); c.close(); } }), { headers });
 }
 
-test('Rig change is a payload-free invalidation across every stream split', async () => {
+for (const build of ['0.6.14 (df1c1517)', '0.7.18 (3bf87c62)'])
+test(`Rig change is a payload-free invalidation across every stream split on ${build}`, async () => {
   for (let split = 0; split <= event.length; split++) {
-    const result = await waitForRigChange(run, async (url, init) => {
+    const result = await waitForRigChange((command, args) => args[0] === '--version' ? build : run(command, args), async (url, init) => {
       assert.equal(url, 'http://127.0.0.1:4242/api/events?replay=0');
       assert.equal(init?.method, 'GET'); assert.equal(init?.redirect, 'error');
       assert.deepEqual(init?.headers, { Accept: 'text/event-stream' });
@@ -33,7 +34,7 @@ test('CRLF, mixed separators and keepalive comments work without history', async
 });
 
 test('unknown builds, invalid ports and command failures never open streams', async () => {
-  for (const bad of [() => '0.6.15', () => '0.6.14 (other)', (_c: string, a: string[]) => a[0] === '--version' ? '0.6.14 (df1c1517)' : 'running on port 65536', () => { throw Error('PRIVATE'); }]) {
+  for (const bad of [() => '0.6.15', () => '0.6.14 (other)', () => '0.7.18 (other)', () => '0.7.19 (future)', (_c: string, a: string[]) => a[0] === '--version' ? '0.6.14 (df1c1517)' : 'running on port 65536', () => { throw Error('PRIVATE'); }]) {
     assert.deepEqual(await waitForRigChange(bad, async () => { throw Error('unexpected request'); }), unavailable);
   }
 });

@@ -1,0 +1,11 @@
+# Rig tmux server identity qualification
+
+Issue #464 preserves a canonical Rig seat's native tmux socket through viewer attachment, scrollback setup, liveness checks, stored identity, automatic reconnect and controller restore. Explicit Open can rebind a reviewed socket while retaining the same viewer, placement and history. Socket changes clear previous native recovery references and prevent activity/enrollment from being attributed to an older viewer.
+
+The structured path is admitted only for published `0.7.18 (3bf87c62)`. It reads bounded `ps --nodes -A --json --full` output and immediately projects approved fields because this build's `--fields` allow-list omits the server fields. Socket options are validated as data, never shell text. Standard default/label choices are resolved to absolute sockets; malformed selections cannot fall back to the attaching process's environment. The existing0.6.14 human-command grammar remains restricted to its exact canonical session name.
+
+The native test deliberately gives two real private tmux servers the same session name and points the controller environment at the other server. Real WebMux PTYs route input only to the selected server, leave the decoy's mouse setting alone, refuse changed-socket reconnect and persisted controller restoration, then explicitly rebind the same viewer and retain both providers and their history without additional provider starts. Its manager inventory is a protocol fixture; this test is not a live Rig or authenticated coding-session claim.
+
+All13 existing browser/Rig cases pass on0.6.14. On actual published0.7.18, the host, identity, activity, notification and ordinary tmux coexistence files pass, and six of eight general workflow cases pass. The remaining managed-address and dashboard-endpoint differences are retained failures under #469. Full0.7 compatibility and release acceptance are not established. `results.json` binds source and private receipt hashes, counts and scope. No credentials or provider transcripts are published.
+
+Checked Stop #438 and authenticated recovery #318 remain separate. The structured destination is deliberately refused by the old native coding recovery adapter. Dependency audit #429 is unchanged; this candidate must remain unmerged until its required gates and review pass.

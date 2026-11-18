@@ -20,6 +20,7 @@ export interface CoordinationSeat {
   enrollmentOrigin?: string; enrollmentSource?: string; enrollmentId?: string; enrollmentObservedAt?: string;
   startupStatus?: string; agentActivity?: RigActivity;
   logicalId?: string; attachmentTarget?: string; managerTarget?: string;
+  tmuxServerFlag?: string; tmuxServerValue?: string;
   rigHostId?: string;
   provider: string; id: string; projectId: string; projectName: string; name: string; host: string;
   observationState?: string; observedAt?: string; workspace?: string; runtime: string; state: string; transportState?: string; openable: boolean; managed: boolean;

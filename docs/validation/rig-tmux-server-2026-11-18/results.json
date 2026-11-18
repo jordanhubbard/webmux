@@ -1,0 +1,71 @@
+{
+  "parent": "5d207854d4cf32e6cd99790f6af432cd90bcd18b",
+  "sourceSHA256": {
+    "scripts/openrig-recovery.test.mts": "ad7dbec3a24388a2af043f8a0380127e1e2b1f2383553b81116350d418f02c8c",
+    "scripts/rig-changes.test.mts": "4572f8434192f2cabe7f58208f54eab9ff25350a4fb3048fa4f7b0e7e3fb9d66",
+    "scripts/rig-enrollment.test.mts": "57e278c0812e9d09f6ede620df87eacb0bb7a85575e9b7da357ce18385c0a6fb",
+    "tests/e2e/openrig-activity.spec.ts": "b16433c6ae9358dbd28ee554c8785375118ed115dff2bd90b43e0fc1529acaec",
+    "tests/e2e/openrig.spec.ts": "8ac709ca0c46af3615c83cc0d18a1b411c378a9782e2b59b2cd2d486ca0f7853",
+    "tests/frontend/RigSeatStatus.test.tsx": "3550c4518451b28ab0704c3c7a08daae54d9ae801bc330a5dc66eb5ff8a6cd1d",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "3dc19f19bf20799a1f51e40e7a2cd923e4bf36fd19e23ed6a0e816ff236208ce",
+    "webmux/frontend/src/components/RigSeatStatus.tsx": "38da7b635670248f50ffe2212deb946259725bd03ffe45f6f36a7f387709cf8b",
+    "webmux/frontend/src/types/index.ts": "3e8b19134bea85a70fb37506965e6d73fce5a89b3f0b83a7ee1c142862c357a8",
+    "webmux/package.json": "278d2308b76a05bfd53515ba958501b5449602cc89b9b2e23ad43dce8103301b",
+    "webmux/server/internal/httpapi/coordination_providers.go": "68123ad88635e2effb3644103cf0db4550db9d92fbe9b120e7265561d3b63a8f",
+    "webmux/server/internal/httpapi/coordination_providers_test.go": "8d69cbd8c418547719a2c0eb87e19b7c64549bafa96e2fe94824ed548b9ae73f",
+    "webmux/server/internal/httpapi/openrig.go": "a9b1f1f456b720f219d2d12eacef0f6be9aacf53be381ae46366a0b3fff9018e",
+    "webmux/server/internal/httpapi/rig_native_recovery.go": "04dc453f00c899a7c041519f4d0e1c5ed88bf8640384e4b3f64269d18c49d1c0",
+    "webmux/server/internal/httpapi/sessions.go": "2bcc6899c49c3bbb5982c20f05c6826106de2d81fa9869729e2daf40eb9cbeee",
+    "webmux/server/internal/openrigcoord/coord.go": "ed02c86c97cb6c3c6c8ea28a5c935fea304c303e4bdc6bb0b8026b69535dee0f",
+    "webmux/server/internal/openrigcoord/observations_test.go": "ea9420c1f0b6434c51c95654c9e3f20468a11e4251b0f86b84149f1fe3e534ee",
+    "webmux/server/internal/openrigcoord/rig-changes.mts": "ebed56143f5054b520de9c61edd8bc73cca0546b7a3a89e45237cc7fbdfd2a60",
+    "webmux/server/internal/openrigcoord/rig-enrollment.mts": "48b2c4f927d6ac0ab80137459b9713f1ccb87fb3644b463118d3a89a01a9d185",
+    "webmux/server/internal/openrigcoord/rig-recovery.mts": "e40bdea4ec56d7992a3264af4ed3bd870c2d914860273641af67fc29d3928730",
+    "webmux/server/internal/openrigcoord/runner.mts": "a29599727b0554adbbc301d916256e71985ecf82163701926c59d8abe3eafd4d",
+    "webmux/server/internal/session/managed_capture_test.go": "9642616217f828fc4318f013803bbc2c490232fb2a44c6eea7e677a728eef950",
+    "webmux/server/internal/session/managed_evidence.go": "c12b7f22f8fe88ac4b9b63757c367af95254f59394e491d643065fdc931674a4",
+    "webmux/server/internal/session/model.go": "3173fe7c352a4600f590cd462fdb2ecdfb99ae88d490dab237978b14c2cc7aba",
+    "scripts/rig-attachment.test.mts": "e86026143369c5c8c65d4343d3725f13a7fc8172a459ee0440353ac5aae2dafb",
+    "webmux/server/internal/httpapi/rig_tmux.go": "e7e502558a08ee7017b129e57900ea6fc025e483ca249854c2d1257fb846321e",
+    "webmux/server/internal/httpapi/rig_tmux_native_test.go": "ddee92d420d802eeb35050702f579c693b465268e8dfc43aa163f2e8c6d2a16e",
+    "webmux/server/internal/httpapi/rig_tmux_test.go": "861ebf48e5d71c099b98f75227a5373d22eb6213d19d564f8038eec4f45e643d",
+    "webmux/server/internal/openrigcoord/rig-attachment.mts": "b1658a52932cd9e7912725cd8db74f461179bfde8bc6199faede74392fadefe4"
+  },
+  "privateReceiptSHA256": {
+    "helpers-socket.log": "4876f25a45ffe208ca80152a8fbb11d349d327324b28a4efd7f447ef993caae6",
+    "legacy-socket-openrig.log": "55deb6c3505c1218744688bfbcee87a31a462a40983fb097905fcbaad963e3ee",
+    "legacy-socket-rest/results.json": "f21caab451baf87e8c6ea39801172aa44e4c91a0b2b8fafa30638fa431d5dc3f",
+    "compat-socket-candidate/results.json": "61c70e8b7286a34e7d1b3d2adc61e430e15dd37c900ada59e01917ad78298efc",
+    "webmux-0718-activity-session-id.log": "6d4e3a959e6c9107254f25bf11628c25c7fc17094bc925a9ed518cfd12b07906"
+  },
+  "runtime": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "node": "24.21.0",
+    "tmux": "3.8",
+    "legacyRig": "0.6.14 (df1c1517)",
+    "modernRig": "0.7.18 (3bf87c62)"
+  },
+  "checks": {
+    "affectedGoRacePackages": [
+      "httpapi",
+      "session",
+      "openrigcoord"
+    ],
+    "affectedGoVet": true,
+    "strictTypeScriptProjects": 5,
+    "helperTestsPassed": 99,
+    "rigStatusFrontendTestsPassed": 13,
+    "legacyNativeBrowserCasesPassed": 13,
+    "modernNativeBrowserCasesPassed": 11,
+    "modernNativeBrowserCasesFailed": 2,
+    "nativeTwoSocketPTYRestoreRebind": true
+  },
+  "limitations": [
+    "Modern managed launch/address and dashboard endpoint compatibility remains open in #469.",
+    "The two-socket test uses a manager protocol fixture and two real tmux servers/provider shells/WebMux PTYs; it does not impersonate live Rig.",
+    "The five passing modern native files use actual published Rig.",
+    "Native authenticated conversation recovery is not qualified for the structured 0.7 destination; the old adapter refuses those references.",
+    "Checked Stop #438, bridge #246, broader #318 and release audit #429 remain open."
+  ]
+}
