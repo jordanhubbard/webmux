@@ -1,0 +1,64 @@
+{
+  "issue": 434,
+  "parent_issue": 194,
+  "recorded_utc": "2026-11-17T20:41:47.687202+00:00",
+  "base": "8f5d3225fac65804554a65bc08381a03a70654fe",
+  "source_sha256": {
+    "webmux/frontend/src/App.tsx": "7b27fe2628e6ce03061fb11ab9b64aa542e06c272deb4825d682594e524fc62b",
+    "webmux/frontend/src/components/AgentWorkspace.tsx": "4cccd906f52982b7cf6be5a28d244b613b364c94bf0ce2a490e7b2d8109cc5a4",
+    "tests/frontend/AgentWorkspace.test.tsx": "1638160ead24e69ac48e69167e78a57ca5f4f3e5f3ddaab3c3513785d20c4a43",
+    "tests/e2e/agent-integration.spec.ts": "7fec7ad0074e642d8a5b1c56c227b6b651e32f959dd9632ce77ad36cf4c51fc4",
+    ".github/workflows/ci.yml": "61dc57b9233029a286ca0fbacb36cb9dd59c168594df8075b36f9333320ccf32"
+  },
+  "native_application": {
+    "platform": "darwin",
+    "node": "v24.21.0",
+    "browser": "157.0.8103.79",
+    "tmux": "tmux 3.8",
+    "originalPID": "79352",
+    "finalPID": "79352",
+    "observedViewer": "de2c3aca-86f9-423d-b81c-bfa1028ba3dc",
+    "viewerReusedAfterReload": true,
+    "coordinationAndGridNavigation": true,
+    "noRigIdentityInferred": true,
+    "scratchClosed": true,
+    "liveRigInventory": true,
+    "providerSessions": [
+      "fixture-task"
+    ]
+  },
+  "published_rig_version": "0.6.14 (df1c1517)",
+  "app_inherited_host_selection": "webmux-ci-unrelated-selection",
+  "outcomes": {
+    "native": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 14.4
+    },
+    "frontend": {
+      "files": 39,
+      "passed": 376,
+      "failed": 0
+    },
+    "strict_typescript": "PASS",
+    "lint": "PASS",
+    "frontend_build": "PASS",
+    "workflow_yaml": "PASS"
+  },
+  "cleanup": {
+    "observed_provider_exited": true,
+    "private_rig_daemon_state_removed": true,
+    "private_outer_tmux_directory_removed": true
+  },
+  "native_receipt_sha256": "eaaf027ff9f42e120bea2c9596942674823d8d3c42cfba8745fc2bb7837c8e32",
+  "screenshot_sha256": "666d093bc62496b0c164d0c028b05bd00cd59ebeb04b75c2c9c3ddd2ce18bbe6",
+  "private_log_sha256": {
+    "native_coexistence": "8b6ca81498a32b938411468efd01c819f63194c5231974230d7d9908503a874d",
+    "frontend": "55761ccacfb85f0de898d3611da3aed89bc3f57ecee69569e23682bcb7ae8b7f",
+    "strict_typescript": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "frontend_lint": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+    "frontend_build": "84dcbf577b001aeb102179bd22fb8dfa1f31ff997847c5db01f91ca58b6df58d"
+  },
+  "scope": "Real isolated tmux + app/browser and reachable published Rig inventory; observed provider is a synthetic Node terminal. No authenticated coding-provider or canonical Rig adoption qualification."
+}

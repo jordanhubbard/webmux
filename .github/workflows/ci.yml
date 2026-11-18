@@ -263,6 +263,7 @@ jobs:
           npm run test:e2e:go -- openrig-identity.spec.ts --output=test-results/openrig-identity-go
           npm run test:e2e:go -- openrig-activity.spec.ts --output=test-results/openrig-activity-go
           npm run test:e2e:go -- openrig-notifications.spec.ts --output=test-results/openrig-notifications-go
+          WEBMUX_REAL_AGENTS=1 npm run test:e2e:go -- agent-integration.spec.ts --output=test-results/agents-rig-coexistence
       - name: Verify real VNC interoperability through Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux

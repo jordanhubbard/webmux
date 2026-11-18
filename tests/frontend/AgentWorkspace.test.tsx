@@ -168,6 +168,32 @@ describe('AgentWorkspace', () => {
     expect(await screen.findByTestId('terminal-agent-session-1')).toBeDefined();
     expect(screen.getByTestId('agent-layout-codex')).toHaveStyle('grid-template-columns: minmax(0, 1fr)');
     expect(apiMock.createAgentScratch).not.toHaveBeenCalled();
+    expect(screen.getByRole('region', { name: 'Session ownership and activity' })).toHaveTextContent('do not verify Rig ownership or readiness');
+    expect(screen.queryByRole('button', { name: 'Coordinated sessions' })).toBeNull();
+  });
+
+  it.each([
+    ['hook', 'Hook report'],
+    ['webmux', 'WebMux report'],
+    ['tmux', 'tmux activity estimate'],
+    ['none', 'Source unknown'],
+  ])('shows %s provenance without turning an observed session into a Rig seat', async (source, label) => {
+    apiMock.getAllAgentSessions.mockResolvedValue([makeAgentSession('codex', 'codex-a', { status_source: source })]);
+    const openTerminals = vi.fn();
+    const openCoordination = vi.fn();
+    render(<AgentWorkspace agentDefinitions={[codexDefinition]} {...defaultProps}
+      onOpenTerminals={openTerminals} onOpenCoordination={openCoordination} />);
+    const row = await screen.findByTestId('agent-session-row');
+    expect(row).toHaveTextContent(`Waiting for input · ${label}`);
+    expect(row).toHaveAttribute('title', expect.stringContaining('Observed tmux'));
+    expect(await screen.findByText('Observed tmux', { exact: true })).toHaveAttribute('title', 'Configured group: Codex');
+    fireEvent.click(screen.getByRole('button', { name: 'Terminal grid' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Coordinated sessions' }));
+    expect(openTerminals).toHaveBeenCalledOnce();
+    expect(openCoordination).toHaveBeenCalledOnce();
+    expect(apiMock.attachAgentSession).toHaveBeenCalledTimes(1);
+    expect(apiMock.createAgentScratch).not.toHaveBeenCalled();
+    expect(apiMock.deleteSession).not.toHaveBeenCalled();
   });
 
   it('uses a viewport-sized attach request on touch devices', async () => {

@@ -33,6 +33,18 @@ The agent attach sessions are internal WebMux sessions. They do not appear in
 the normal terminal grid, do not occupy terminal layout cells, and are launched
 with `exec_argv` instead of shell-interpolated command strings.
 
+The pane labels attached terminals **Observed tmux** and separate ordinary
+terminals **Scratch shell**. Runtime badges identify the configured socket group;
+they do not establish the program's identity or Rig ownership. Each row shows
+its activity source: **Hook report**, **WebMux report**, **tmux activity
+estimate**, or **Source unknown**. Waiting/activity reports do not establish
+canonical Rig readiness. Sorting by waiting and activity uses these same reports.
+
+Use **Terminal grid** to return to the main layout or **Coordinated sessions**
+to inspect project identity and provider lifecycle. The latter is available to
+administrators with Coordination access. Navigation preserves the observed
+viewer and its tmux process; it does not adopt, launch or stop an agent.
+
 ## Runtime Requirements
 
 - `tmux` installed on the WebMux host.
