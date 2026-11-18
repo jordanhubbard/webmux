@@ -3,6 +3,8 @@
 Fresh public native-owned creation and verified attachment now pass a separate
 [actual Go/Chrome qualification](../codex-public-native-2026-11-18/README.md).
 That result does not complete the public recovery composition described here.
+[Verified native capture and prepared dispatch](../codex-native-capture-2026-11-18/README.md)
+now cover the next internal integration prerequisites, with separate source bindings.
 
 The embedded Go coordinator `native-resume` action now passes the actual native
 recovery composition at source `cd602de`. Its [controller receipt](controller-dispatch.json)

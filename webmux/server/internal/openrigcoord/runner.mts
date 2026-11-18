@@ -182,6 +182,16 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const { prepareRigNativeRecovery, executeRigNativeRecovery } = await import('./rig-recovery.mts');
     const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
     console.log(JSON.stringify(await (action === 'recovery-prepare' ? prepareRigNativeRecovery : executeRigNativeRecovery)(run, identity)));
+  } else if (action === 'native-recovery-observe') {
+    const { captureRigNativeCodex } = await import('./rig-native-capture.mts');
+    const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
+    const matches = records().filter(agent => agent.nativeOwned === true && agent.target === identity.target
+      && agent.host === identity.host && agent.cwd === identity.workspace && agent.runtime === identity.runtime);
+    if (matches.length !== 1) throw new Error('native_recovery_original_agent_unavailable');
+    const agent = matches[0], logical = agent.logicalId?.split('.');
+    if (!agent.rigId || !agent.nativeNodeId || logical?.length !== 2 || agent.pod !== logical[0]) throw new Error('native_recovery_original_agent_unavailable');
+    console.log(JSON.stringify(await captureRigNativeCodex({ directory, identity, rigId: agent.rigId, nodeId: agent.nativeNodeId,
+      pod: logical[0], member: logical[1], cwd: agent.cwd }, { run })));
   } else if (action === 'native-project') {
     const { createRigNativeProject } = await import('./rig-native-project.mts');
     const input = JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-native-project.mts').NativeRigProjectInput;

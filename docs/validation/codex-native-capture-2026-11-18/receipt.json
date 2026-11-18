@@ -1,0 +1,92 @@
+{
+  "scope": "Actual public native-owned coding followed by internal embedded Go conversation capture and snapshot reuse; no public recovery API/UI or application crash/reboot claim",
+  "sourceRevision": "6bcbb07c4361f0013aeaaa10ed81eee331caebb7",
+  "passed": true,
+  "sourcesSHA256": {
+    "webmux/server/internal/openrigcoord/rig-native-launch.mts": "9424088b4082a8f04724f9e3029f3b6d4b1ef58101c4319c9ab77d2e7975bac9",
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "e900546c2f94fbbedd986a273267853676ecd826b45501f520bc3aca79d850b5",
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": "daf7d921a8154a0b099b2a90deaea3a55c660cfe329b7d7b3b9ec92c8fb7b15a",
+    "webmux/server/internal/openrigcoord/rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "ee18fb484c048c845afa9f8f841e2b62cce46dd5ea9eba5c1f91b7087cfcc486",
+    "webmux/server/internal/openrigcoord/rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "webmux/server/internal/openrigcoord/runner.mts": "c5bb40b046ba36eaa6d4ce2d2055af126cfb83915e65cab6fc0c4161436370f5",
+    "webmux/server/internal/openrigcoord/coord.go": "8ce1b63b110b9d05f3de36e92564d3d375adf76d91ac7b7fc9e6b5c25af7c965",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "webmux/server/internal/openrigcoord/codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "webmux/server/internal/openrigcoord/codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+    "webmux/server/internal/httpapi/coordination_creation.go": "ca6f7f4f8c662b37a8bddf25e8caac7431bb250d4eb3657bce14e71d52e24135",
+    "webmux/server/internal/httpapi/coordination_providers.go": "10f163fcc9d52654d395c51e2e4a0a74a478f8367129e157674d5a4e06afb478",
+    "webmux/server/internal/httpapi/openrig.go": "cd78603493cdcf833414c1081baa0ef09ebc072b5113aa537d26f1192622fa7f",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "83ef008e0bc74599fb5f9f864d21bec151d7c2cf061bf2fbe15f483cf5b06df6",
+    "webmux/frontend/src/utils/api.ts": "106ccc1dd94ccd01eaa98f024d1953ea7d1b45ed1f89604bd0113a656d85336f"
+  },
+  "binarySHA256": "caa031bfcc6e2cbbf78865279a679d3d30bdecfcb13828137fc8409520072797",
+  "coordinatorSHA256": "ce3d4dfae9cf44d693844823de9f1aed5129b2459da52f874c253f7db5605ec7",
+  "rawReceipt": "native-capture-wm-native-capture-lcv7jv8j.json",
+  "rawSHA256": "d5124264f8c7347c73b68cf6a9dcf2ee7e8a0abd5fc2532d7386d902b263e0b5",
+  "probeSHA256": "7fbcd741550f05f336a06feff1fa776ea246302d00bc5fc80a360a7820067b8e",
+  "browserDriverSHA256": "9a1fe90744c753b4d8a0c150e97c4b642c8d40348c34ecf89915ce9eed0186f7",
+  "loadedBrowserDriverSHA256": "9a1fe90744c753b4d8a0c150e97c4b642c8d40348c34ecf89915ce9eed0186f7",
+  "preloadSHA256": "137eb1ad0f677a2d43902add39b56fe18cee874eea9f0307f24d03e627af32f3",
+  "versions": {
+    "rig": "0.7.18 (3bf87c62)",
+    "codex": "0.169.0",
+    "node": "24.21.0",
+    "tmux": "3.8",
+    "chrome": "158.0.8127.36"
+  },
+  "checks": {
+    "nativeUncertaintyHasOneOriginalNodeAndNoViewer": true,
+    "frozenNativeOperationAcrossExplicitChecks": true,
+    "readyDuplicateRetainsProviderAndViewer": true,
+    "actualNativeCodingChallenge": true,
+    "actualEmbeddedGoCaptureAndRepeat": true,
+    "browserCheckedStopAndSiblingAndViewerRetained": true
+  },
+  "nativeWitness": {
+    "passed": true,
+    "contexts": 2,
+    "nativeNodeMatches": true,
+    "correlatedProbeOutputs": 1,
+    "allowedWrites": 4,
+    "environmentChecks": {
+      "homePreserved": true,
+      "tmpPreserved": true,
+      "ownerPathRetainedAsSuffix": true,
+      "pairedRigFound": true,
+      "managerToolPathAbsent": true,
+      "ownerToolFound": true,
+      "ownerToolRuns": true,
+      "inheritedValueMatches": true,
+      "managerOnlyValueAbsent": true
+    },
+    "nativeSessionSHA256": "5b5bee92a12c95d53c97b51f87c79231b2bd5f5c778df5d47aa74d9ef97e51ba"
+  },
+  "capture": {
+    "contract": "webmux-rig-native-codex-recovery/v1",
+    "snapshotSHA256": "2af9862927db6258c9a2eb6eca7c29ca6d21088fe94bd507c8c51695321efbd7",
+    "nativeRecordIdentity": "59742ba386066a29bcd394c7fc8a5094c2d4e900d1ed88e1d624b65d3d35fdb4",
+    "planFingerprint": "16b0d92e43dd4a6da637e7a90911f5ce4a9ebe8cd999011efa9bddd4d50406ba",
+    "matchesActualNativeConversation": true,
+    "repeatUsesSameSnapshot": true,
+    "ownerNamespaceOverridesInputDirectory": true
+  },
+  "privateTmuxStopped": true,
+  "sourceUnchanged": true,
+  "localChecks": {
+    "helpers": 225,
+    "strictTypeScriptProjects": 5,
+    "affectedGoRace": true,
+    "affectedGoVet": true,
+    "windowsARM64CrossBuild": true
+  },
+  "remaining": [
+    "Broker retention and public original-only recovery HTTP/UI with explicit original-operation inspection",
+    "Actual application crash/service update/reboot",
+    "Restricted owner policies and authenticated Linux/broader Windows composition",
+    "Current-head hosted CI and review; full roadmap remains open"
+  ]
+}
