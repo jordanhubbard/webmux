@@ -178,6 +178,7 @@ export const api = {
   getRigChanges: (signal?: AbortSignal) => request<{ contract: string; available: boolean; changed: boolean }>('/coordination/changes', { signal }),
   getRigObservations: (signal?: AbortSignal) => request<CoordinationStatus>('/coordination?provider=rig&observations=rig', { signal }),
   createCoordinatedAgent,
+  getRigProjectPods: (projectId: string, projectName: string) => request<{ projectId: string; projectName: string; pods: string[]; source: 'native-spec' | 'legacy-seats' }>('/coordination/rig/pods', { method: 'POST', body: JSON.stringify({ projectId, projectName }) }),
   browseCoordinationWorkspaces: (provider: string, host: string, path?: string) => request<WorkspaceListing>('/coordination/workspaces', { method: 'POST', body: JSON.stringify({ provider, host, path }) }),
   attachCoordinatedAgent: (provider: string, target: string, position?: { row: number; col: number }) => request<Session>('/coordination/attach', { method: 'POST', body: JSON.stringify({ provider, target, ...position }) }),
   sendCoordinationMessage: (provider: string, target: string, message: string, queue: boolean) => request<CoordinationSendResult>('/coordination/messages', { method: 'POST', body: JSON.stringify({ provider, target, message, queue }) }),

@@ -71,6 +71,8 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const [projectID, setProjectID] = useState('');
   const [projectName, setProjectName] = useState<string | null>(null);
   const [context, setContext] = useState('');
+  const [podRefresh, setPodRefresh] = useState(0);
+  const [podState, setPodState] = useState<{ key: string; pods: string[]; loading: boolean; error: string }>({ key: '', pods: [], loading: false, error: '' });
   const [name, setName] = useState<string | null>(null);
   const [purpose, setPurpose] = useState('builder');
   const [host, setHost] = useState(initialHost);
@@ -120,7 +122,23 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const seats = status.seats.filter(value => value.provider === provider);
   const providerMessages = status.messages.filter(value => view === 'all' || value.provider === view);
   const selectedProject = projects.find(value => value.id === projectID);
-  const contexts = selectedProject?.contexts || [];
+  const launchProjects = projects.filter(value => provider === 'rig' || !value.historical);
+  const podKey = `${projectID}\0${selectedProject?.name ?? ''}`;
+  const podsReady = provider !== 'rig' || (podState.key === podKey && !podState.loading && !podState.error);
+  const contexts = provider === 'rig' ? (podsReady ? podState.pods : []) : selectedProject?.contexts || [];
+  useEffect(() => {
+    if (provider !== 'rig' || mode !== 'existing' || !selectedProject) return;
+    let current = true;
+    setPodState({ key: podKey, pods: [], loading: true, error: '' });
+    void api.getRigProjectPods(projectID, selectedProject.name).then(value => {
+      if (!current) return;
+      if (value.projectId !== projectID || value.projectName !== selectedProject.name) throw new Error('Rig returned a different project. Refresh and choose again.');
+      setPodState({ key: podKey, pods: value.pods, loading: false, error: '' });
+    }).catch((error: unknown) => {
+      if (current) setPodState({ key: podKey, pods: [], loading: false, error: error instanceof Error ? error.message : 'Rig pods could not be verified.' });
+    });
+    return () => { current = false; };
+  }, [provider, mode, projectID, selectedProject?.name, podKey, podRefresh]);
   const hostOptions = useMemo(() => [...new Set(['localhost', ...projects.map(value => value.host), ...seats.map(value => value.host)])].filter(Boolean), [projects, seats]);
   const drainRemotes = useMemo(() => [...new Set(status.projects.filter(value => value.provider === 'agent-deck').map(value => value.host).filter(value => value && value !== 'localhost'))], [status.projects]);
   const drainTargets = status.seats.filter(value => value.provider === 'agent-deck').filter(value => value.canReceive && value.id.startsWith('local:'));
@@ -280,7 +298,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
           <option value="all">All sessions</option><option value="webmux">WebMux</option><option value="agent-deck">Agent Deck</option><option value="rig">Rig</option>
         </select></label>
         {view !== status.defaultView && <button type="button" disabled={busy} onClick={() => void savePreferences({ default_view: view as CoordinationStatus['defaultView'] })}>Make default view</button>}
-        <button type="button" disabled={busy} onClick={() => void refresh()}>Refresh projects and sessions</button>
+        <button type="button" disabled={busy} onClick={() => { setPodRefresh(value => value + 1); void refresh(); }}>Refresh projects and sessions</button>
       </div>
       <div className="coordination-toolbar">
         <label>Launch owner<select aria-label="Launch owner" disabled={busy} value={provider || 'webmux'} onChange={event => chooseProvider(event.target.value)}>
@@ -323,7 +341,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
       {provider && provider !== 'webmux' && <>
 
       <form id="coordination-create-seat" onSubmit={event => {
-        event.preventDefault(); if (busy || pendingCreation) return;
+        event.preventDefault(); if (busy || pendingCreation || (provider === 'rig' && mode === 'existing' && (!podsReady || !context))) return;
         const input = { provider, mode, projectId: mode === 'existing' ? projectID : undefined, projectName: mode === 'existing' ? selectedProject?.name || '' : resolvedProjectName, context: mode === 'existing' ? context : undefined, name: resolvedName, host, workspace, runtime, ...position };
         void createSeat(input);
       }}>
@@ -336,11 +354,17 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
         </div>
         <fieldset className="coordination-choice"><legend>Where should this agent belong?</legend>
           <label><input type="radio" name="coordination-mode" checked={mode === 'new'} onChange={() => setMode('new')} /> Start a new project</label>
-          <label><input type="radio" name="coordination-mode" checked={mode === 'existing'} onChange={() => setMode('existing')} disabled={projects.filter(value => !value.historical).length === 0} /> Add an agent to an existing project</label>
+          <label><input type="radio" name="coordination-mode" checked={mode === 'existing'} onChange={() => setMode('existing')} disabled={launchProjects.length === 0} /> Add an agent to an existing project</label>
         </fieldset>
         {mode === 'existing' && <div className="coordination-fields">
-          <label>Project<select required value={projectID} onChange={event => setProjectID(event.target.value)}><option value="">Choose a project</option>{projects.filter(value => !value.historical).map(value => <option key={value.id} value={value.id}>{value.name} · {value.host} · {value.state}</option>)}</select></label>
-          {provider === 'rig' && <label>Rig pod<select required value={context} onChange={event => setContext(event.target.value)}><option value="">Choose a pod</option>{contexts.map(value => <option key={value} value={value}>{value}</option>)}</select></label>}
+          <label>Project<select required value={projectID} onChange={event => setProjectID(event.target.value)}><option value="">Choose a project</option>{launchProjects.map(value => <option key={value.id} value={value.id}>{value.name} · {value.host} · {value.state}</option>)}</select></label>
+          {provider === 'rig' && <>
+            <label>Rig pod<select required disabled={!podsReady} value={context} onChange={event => setContext(event.target.value)}><option value="">Choose a pod</option>{contexts.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+            <button type="button" disabled={podState.key === podKey && podState.loading} onClick={() => setPodRefresh(value => value + 1)}>Refresh pods</button>
+            {!podsReady && !podState.error && <p role="status">Checking this project's current pods…</p>}
+            {podState.key === podKey && podState.error && <p role="alert">{podState.error}</p>}
+            {podsReady && contexts.length === 0 && <p>No pods are defined in this project. Add a pod in Rig, then refresh.</p>}
+          </>}
         </div>}
         <details open={!launchOnly || undefined}><summary>Optional names and session role</summary>
         <div className="coordination-fields coordination-names">
@@ -352,7 +376,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
         <p className="coordination-hint">Names are editable labels, not commands. We suggest a project from your folder and a session from the agent and purpose. The purpose names the session; give the agent its instructions after it opens.</p>
         </details>
         {browser && <section className="coordination-browser" aria-label={`Workspaces on ${host}`}><div><strong>{host}</strong> · <code>{browser.path}</code> {browser.repository && <span className="coordination-repository">Git repository</span>}</div><div className="coordination-browser-actions"><button type="button" onClick={chooseFolder}>Choose this folder</button>{browser.parent && <button type="button" onClick={() => void browse(browser.parent!)}>Parent folder</button>}<button type="button" aria-pressed={showAllFolders} onClick={() => setShowAllFolders(value => !value)}>{showAllFolders ? 'Hide hidden folders' : 'Show all'}</button></div><ul>{browser.entries.filter(entry => showAllFolders || !entry.name.startsWith('.')).map(entry => <li key={entry.path}><button type="button" onClick={() => void browse(entry.path)}>{entry.name}/</button>{entry.repository && <span>Git repository</span>}</li>)}</ul></section>}
-        <p><button type="submit" disabled={busy || !!pendingCreation || !selectedProvider?.available || !selectedProvider.enabled || !selectedProvider.capabilities.includes('launch') || (mode === 'existing' && (!selectedProject || (provider === 'rig' && !context)))}>{busy ? 'Connecting…' : 'Start agent and open terminal'}</button></p>
+        <p><button type="submit" disabled={busy || !!pendingCreation || !selectedProvider?.available || !selectedProvider.enabled || !selectedProvider.capabilities.includes('launch') || (mode === 'existing' && (!selectedProject || (provider === 'rig' && (!podsReady || !context))))}>{busy ? 'Connecting…' : 'Start agent and open terminal'}</button></p>
       </form>
       </>}
       {!launchOnly && <>
@@ -395,7 +419,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
                   {deliveries[`${seat.provider}:${seat.id}`] && <p role="status" className="coordination-delivery">Delivery: {deliveries[`${seat.provider}:${seat.id}`].state || deliveries[`${seat.provider}:${seat.id}`].verdict || deliveries[`${seat.provider}:${seat.id}`].delivery || 'accepted'}{deliveries[`${seat.provider}:${seat.id}`].confirmation ? ` · ${deliveries[`${seat.provider}:${seat.id}`].confirmation}` : ''}{deliveries[`${seat.provider}:${seat.id}`].reason ? ` · ${deliveries[`${seat.provider}:${seat.id}`].reason}` : ''}</p>}
                 </article></li>)}
               </ul>}
-              {project.provider !== 'webmux' && !project.historical && !project.readOnly && <button type="button" disabled={busy || (project.provider === 'rig' && (project.contexts?.length ?? 0) === 0)} onClick={() => { chooseProvider(project.provider); setMode('existing'); setProjectID(project.id); setHost(project.host); document.getElementById('coordination-create-seat')?.scrollIntoView({ block: 'nearest' }); }}>Create session in this project</button>}
+              {project.provider !== 'webmux' && (!project.historical || project.provider === 'rig') && !project.readOnly && <button type="button" disabled={busy} onClick={() => { chooseProvider(project.provider); setMode('existing'); setProjectID(project.id); setHost(project.host); document.getElementById('coordination-create-seat')?.scrollIntoView({ block: 'nearest' }); }}>Create session in this project</button>}
             </details>;
           })}
         </div>

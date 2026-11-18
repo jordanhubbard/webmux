@@ -1,0 +1,139 @@
+{
+  "recordedUTC": "2026-11-18T22:27:49.853017+00:00",
+  "issue": 528,
+  "runtimeSource": "771d310a7ace4efadf15ad8fba784293882a54cb",
+  "base": "a252b1e9dcdb6f97e6a0f38c6bd21476478a5d08",
+  "scope": "Current canonical pod discovery and first native Codex member in a selected empty pod, with stale-pod refusal and explicit refresh. Private macOS/default-owner native account; loopback browser auth-none. No selected profiles/graphs, recovery/reboot or broader platform qualification.",
+  "native": {
+    "issue": 528,
+    "runtimeSource": "771d310a7ace4efadf15ad8fba784293882a54cb",
+    "passed": true,
+    "parentSource": "a252b1e9dcdb6f97e6a0f38c6bd21476478a5d08",
+    "parentRuntime": "2cba3a8e12404dbaa03b5a982ca6270a8b1fe7fe",
+    "parentBinaryMatchesPublishedPublicRecoveryProof": true,
+    "parentEmptyCanonicalPodSelectionRefused": true,
+    "parentRawSHA256": "20414f87e13336f046ff3b1e2948fd4787f142ff4ffc20787a5ac016a1070149",
+    "candidateRawSHA256": "563595e0f26743e788608bb6b2fcfca1a55acc6268fb290026e1260a566d407d",
+    "candidateBinarySHA256": "77f7e98d6ada5cef1ee7ca5be6962c3cca2c828c7e9e3d01471c351cb863cf39",
+    "nativePodsInitially": [
+      "research",
+      "workers",
+      "Review_Team"
+    ],
+    "nativeMembersInitially": 0,
+    "changedCanonicalPodRefusedWithoutMember": true,
+    "remainingCanonicalPodSelectedAfterRefresh": "research",
+    "firstNativeOwnedMemberCreatedInSelectedPod": true,
+    "chosenGridCell": {
+      "row": 1,
+      "col": 1
+    },
+    "onlyOneDurableNativeLaunchRecord": true,
+    "originalRigRetainedWithoutReplacementTopology": true,
+    "actualLoadedNativeImage": "Mach-O 64-bit executable arm64",
+    "loadedNativeSHA256": "739cda86e15d30a6e2b40cf8dcbbfb988aaf48b305b27065573bb8e9fd41d002",
+    "checkedStopRetainsViewer": true,
+    "ownedControllerAndNativeExited": true,
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true,
+    "noNativeTrustGrant": true,
+    "nativeSessionMetadataObserved": true,
+    "nativeToolCallCounts": {
+      "exec": 2
+    },
+    "nativeCodingChallengeRequested": true,
+    "nativeCodingWitness": {
+      "passed": true,
+      "nativeRigNodeAndPodMatch": true,
+      "freshCorrelatedWorkspaceReadWrite": true,
+      "nativePolicyAndModelPreserved": true,
+      "toolCalls": 2,
+      "noDelegationCalls": true,
+      "nativeSessionSHA256": "ddab30bde162da43a00a0dfd760aca72dae46c9bbee3ed84235fafcd2cffb20b"
+    },
+    "sourcesSHA256": {
+      "webmux/server/internal/openrigcoord/runner.mts": "a37f24b75bdb1e3c4e35e9c3258290d39fe50a6e41cffbe654f21e9a3d71bb6a",
+      "webmux/server/internal/openrigcoord/coord.go": "7f6f3e7373d88f55b4b2604cd5c18e98338f3a3c89b25ad991b41727f4834ec6",
+      "webmux/server/internal/openrigcoord/rig-project-pods.mts": "6ce1d4c32589a5699fc6b40d32c2e99296fbcfbbbec8068bcdc1608888cc40ad",
+      "webmux/server/internal/httpapi/coordination_pods.go": "6174dc06fa6151214718f5d08e13983340da5116bff78a91ce31ccbd35583e55",
+      "webmux/server/internal/httpapi/coordination_providers.go": "10f163fcc9d52654d395c51e2e4a0a74a478f8367129e157674d5a4e06afb478",
+      "webmux/server/internal/httpapi/server.go": "3fcc21b4eedd6d17b9f21b936f7ead4d80cc692152c42b4ca7de4bec8865ac60",
+      "webmux/frontend/src/components/CoordinationDialog.tsx": "ab3f13f56ea49a9f781003977ac526ed643cce4f23c1e1fa96d7a85b1f9d9f25",
+      "webmux/frontend/src/utils/api.ts": "1d5c8d736192f4121214a25c2800e5ee1039a74e5be4c932d85020a465e878d1"
+    },
+    "excludedAttempts": [
+      {
+        "name": "candidate",
+        "reason": "Driver exact project-label selector did not match; no member launched."
+      },
+      {
+        "name": "candidate2",
+        "reason": "Driver attempted the optional session name before opening its details section; no member launched."
+      }
+    ],
+    "scope": "Actual private Rig0.7.18/Go/Chrome/macOS native-owned first-member creation in an existing empty canonical pod, changed-pod refusal, requested position and checkedStop. Default owner account in place; fresh coding is qualified only when the separate correlated nativeCodingWitness is present; selected profiles/graphs, crash/reboot and broader platforms remain unqualified."
+  },
+  "local": {
+    "frontendTests": 434,
+    "frontendFiles": 43,
+    "helperTests": 234,
+    "helperSkipped": 0,
+    "strictTypeScriptProjects": 5,
+    "frontendLint": true,
+    "frontendProductionBuild": true,
+    "installedLockIdentities": 272,
+    "fullServerGoRace": true,
+    "fullServerGoVet": true,
+    "actualLegacyRigBrowserCases": 8,
+    "actualLegacySuiteDuration": "1.4m",
+    "actualWorkerReplacementControl": {
+      "intentionalFailures": 1,
+      "dashboardPassed": true,
+      "replacementWorker": true,
+      "originalDaemonPreserved": true,
+      "daemonStoppedAfterRun": true
+    }
+  },
+  "privateLogsSHA256": {
+    "canonical-labels-final.log": "ad47a846ffd0ac782ef16d6e26a4ee317f89b31a4e6e0fb7039fb33f062c25cb",
+    "canonical-label-http-final.log": "66c164633f1da59ce8087b0365d773d64eea7308766ebfa2ed9de508837f4f12",
+    "go-race-vet-canonical-labels.log": "6c92fc4788166810a1e74d26eb7104f2893befd10acfc7cfddc02864dbb056e9",
+    "refresh-control-verified.log": "1947fa10537bfc2924fcf1fcfbe00ce43eea6f6e18f2a9935785a1fa861ab8ac",
+    "normal-eight-canonical.log": "215667eb64a882ae2f6c6f7797babeac6a87727c4903cae382f0c15ecd6d5958",
+    "worker-lifecycle-canonical.log": "b20b1f960cca29eeaca969d79a77230852a104a18a2621b844e4134ddba72854",
+    "lock-identity.log": "6db02789bb32257b87e607610702e250bea6d73877f98763e902f59ed739c03c"
+  },
+  "protocolControls": [
+    "Read-only, bounded selected-project discovery; no observer/provider called",
+    "Current active native Rig ID/name and spec pod identities; manager process rechecked",
+    "Archived/missing/renamed/duplicate project and foreign/ambiguous/invalid pod definitions refuse",
+    "Malformed/oversized native replies do not leak private spec text",
+    "Larger canonical topology retains 131 pod labels including a non-default format",
+    "HTTP owner access, provider enablement, foreign/unknown input and response identity checked",
+    "UI disables launch until lookup succeeds; no prior-seat fallback on failure; stale async replies ignored",
+    "Explicit Refresh pods retains project selection and starts no session"
+  ],
+  "admission": "Existing native launch-name validation is unchanged. Discovery preserves canonical labels and does not infer launch authority from them.",
+  "remaining": [
+    "Own exact-head CI/ARM/review gates before merge",
+    "Selected profiles, named graphs and broader startup settings under #438/#194",
+    "Broader authenticated platforms, service upgrades/reboot and full release acceptance under #318/#452",
+    "Security/vendor/signing decisions and reviewed exact-main release gates"
+  ],
+  "hostIndependentHTTPFixture": {
+    "originalHead": "d21722acd7e3e93e87748840356c187419d9d88b",
+    "failedRun": 44412603712,
+    "failedMacOSJob": 135184445648,
+    "failure": "HTTP 409 instead of 200: fixture omitted required tmux executable and inherited host PATH.",
+    "reproducedWithoutHostTmux": true,
+    "explicitTmuxFixtureAndPrivatePATHPass": true,
+    "productionRuntimeChanged": false,
+    "logsSHA256": {
+      "httpapi-no-tmux-before.log": "af52ddda56cccc5cd4895c16dae1b8fcd87c5ecc2a0e7e7013a0250b260623b2",
+      "httpapi-no-tmux-after.log": "6f34eb68ffb89e732d6518046fef05dd87cab0c3c441a2f2ff0bef0bd4b231e7",
+      "go-race-vet-hermetic.log": "7d0d7c041164030202ba2a81a27268ba6ca07b4c5e2ac122c280897b48a9618e"
+    },
+    "fullServerGoRaceAndVetPass": true,
+    "nativeRuntimeSourceHashesRechecked": true
+  }
+}

@@ -626,3 +626,20 @@ recovery, a remote provider Stop, or an installed manager upgrade. Optional
 manager dependency review remains part of #91; the isolated 0.7.18 audit
 snapshot records the existing Hono static-middleware advisory separately from
 WebMux's unchanged dependency-audit gate #429.
+
+### Choose a pod in an existing Rig project
+
+With the qualified Rig 0.7.18 integration, an empty pod can receive its first
+agent. Click the desired empty grid cell, choose **Rig** as the coordinator, then
+choose **Add an agent to an existing project**. Select the project and its current
+**Rig pod**, choose the code folder and start the agent. Stopped projects remain
+selectable when Rig confirms that their namespace still exists.
+
+**Refresh pods** rereads that project's current definitions, including pods that
+have no seats. Discovery starts no agent. If the project was archived or a chosen
+pod was removed, WebMux refuses the launch; refresh the choices before trying
+again. It does not create a replacement project or guess a default pod.
+
+The legacy integration continues to expose its observed pod choices. The native
+empty-pod contract and live qualification are recorded in
+[canonical empty-pod selection](validation/rig-empty-pods-2026-11-18/README.md).

@@ -3,12 +3,13 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { CoordinationDialog, type CoordinationStatus } from '@frontend/components/CoordinationDialog';
 import { CoordinationTrustRequiredError } from '@frontend/utils/api';
 
-const mocks = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn(), attach: vi.fn(), browse: vi.fn(), updateConfig: vi.fn(), send: vi.fn(), sendStatus: vi.fn(), drain: vi.fn() }));
+const mocks = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn(), attach: vi.fn(), browse: vi.fn(), pods: vi.fn(), updateConfig: vi.fn(), send: vi.fn(), sendStatus: vi.fn(), drain: vi.fn() }));
 vi.mock('@frontend/utils/api', async importOriginal => ({ ...await importOriginal<typeof import('@frontend/utils/api')>(), api: {
   getCoordination: mocks.status,
   createCoordinatedAgent: mocks.create,
   attachCoordinatedAgent: mocks.attach,
   browseCoordinationWorkspaces: mocks.browse,
+  getRigProjectPods: mocks.pods,
   updateConfig: mocks.updateConfig,
   sendCoordinationMessage: mocks.send,
   getCoordinationSendStatus: mocks.sendStatus,
@@ -31,6 +32,7 @@ beforeEach(() => {
   mocks.create.mockResolvedValue({ target: 'new-seat', session: { id: 'viewer' } });
   mocks.attach.mockResolvedValue({ id: 'viewer' });
   mocks.browse.mockResolvedValue({ host: 'localhost', path: '/work/project', parent: '/work', repository: true, entries: [] });
+  mocks.pods.mockImplementation(async (projectId, projectName) => ({ projectId, projectName, pods: (await mocks.status()).projects.find((p: { id: string }) => p.id === projectId)?.contexts ?? [], source: 'legacy-seats' }));
   mocks.updateConfig.mockImplementation(async ({ app }) => {
     const previous = await mocks.status();
     const patch = app.coordination;
@@ -228,6 +230,7 @@ it('creates a seat in an existing canonical Rig pod', async () => {
   render(<CoordinationDialog onClose={() => {}} />);
   await screen.findByText('shared-rig');
   fireEvent.click(screen.getByLabelText('Add an agent to an existing project'));
+  await screen.findByRole('option', { name: 'reviewers' });
   fireEvent.change(screen.getByLabelText('Rig pod'), { target: { value: 'reviewers' } });
   fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'reviewer' } });
   fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work' } });
@@ -336,6 +339,7 @@ it('avoids name collisions and adds an agent to an existing project', async () =
   expect(screen.getByLabelText('Project name')).toHaveValue('webmux-2');
   fireEvent.click(screen.getByLabelText('Add an agent to an existing project'));
   expect(screen.getByLabelText('Session name')).toHaveValue('codex-builder-2');
+  await waitFor(() => expect(screen.getByLabelText('Rig pod')).toHaveValue('agents'));
   fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
   await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ mode: 'existing', projectId: 'project-one', projectName: 'webmux', context: 'agents', name: 'codex-builder-2' })));
 });
@@ -527,4 +531,67 @@ it('distinguishes an external Rig host identity from its unknown execution desti
  fireEvent.click(within(seat).getByRole('button',{name:'Open session'}));
  await waitFor(()=>expect(mocks.attach).toHaveBeenCalledWith('rig','seat',undefined));
  expect(mocks.create).not.toHaveBeenCalled();
+});
+
+
+it('discovers an empty named pod in a stopped but current Rig project before allowing creation', async () => {
+  const value = emptyStatus();
+  value.projects = [{ provider: 'rig', id: 'empty-rig', name: 'empty-project', host: 'localhost', state: 'stopped', historical: true, seatCount: 0, runningCount: 0, contexts: [] }];
+  mocks.status.mockResolvedValue(value);
+  let resolve!: (value: unknown) => void;
+  mocks.pods.mockReturnValue(new Promise(done => { resolve = done; }));
+  render(<CoordinationDialog onClose={() => {}} position={{ row: 1, col: 1 }} />);
+  const choose = await screen.findByLabelText('Add an agent to an existing project');
+  expect(choose).toBeEnabled(); fireEvent.click(choose);
+  expect(screen.getByLabelText('Rig pod')).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Start agent and open terminal' })).toBeDisabled();
+  await act(async () => resolve({ projectId: 'empty-rig', projectName: 'empty-project', pods: ['research'], source: 'native-spec' }));
+  await waitFor(() => expect(screen.getByLabelText('Rig pod')).toHaveValue('research'));
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ mode: 'existing', projectId: 'empty-rig', context: 'research', row: 1, col: 1 })));
+});
+
+it('refuses unavailable canonical pods instead of falling back to prior seat-derived choices', async () => {
+  const value = emptyStatus();
+  value.projects = [{ provider: 'rig', id: 'rig-id', name: 'project', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: ['stale-pod'] }];
+  mocks.status.mockResolvedValue(value); mocks.pods.mockRejectedValue(new Error('The project is archived or changed.'));
+  render(<CoordinationDialog onClose={() => {}} />);
+  fireEvent.click(await screen.findByLabelText('Add an agent to an existing project'));
+  expect(await screen.findByRole('alert')).toHaveTextContent('archived or changed');
+  expect(screen.queryByRole('option', { name: 'stale-pod' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Start agent and open terminal' })).toBeDisabled();
+  expect(mocks.create).not.toHaveBeenCalled();
+});
+
+it('ignores a late namespace response after selecting a different project', async () => {
+  const value = emptyStatus();
+  value.projects = ['first', 'second'].map(id => ({ provider: 'rig', id, name: id, host: 'localhost', state: 'stopped', historical: true, seatCount: 0, runningCount: 0 }));
+  mocks.status.mockResolvedValue(value); let resolve!: (value: unknown) => void;
+  mocks.pods.mockImplementation((id, name) => id === 'first' ? new Promise(done => { resolve = done; }) : Promise.resolve({ projectId: id, projectName: name, pods: ['second-pod'], source: 'native-spec' }));
+  render(<CoordinationDialog onClose={() => {}} />);
+  fireEvent.click(await screen.findByLabelText('Add an agent to an existing project'));
+  await waitFor(() => expect(mocks.pods).toHaveBeenCalledWith('first', 'first'));
+  fireEvent.change(screen.getByLabelText('Project'), { target: { value: 'second' } });
+  await waitFor(() => expect(screen.getByLabelText('Rig pod')).toHaveValue('second-pod'));
+  await act(async () => resolve({ projectId: 'first', projectName: 'first', pods: ['foreign-pod'], source: 'native-spec' }));
+  expect(screen.getByLabelText('Rig pod')).toHaveValue('second-pod');
+  expect(screen.queryByRole('option', { name: 'foreign-pod' })).not.toBeInTheDocument();
+});
+
+
+it('refreshes the selected project namespace without creating a session or changing projects', async () => {
+  const value = emptyStatus();
+  value.projects = [{ provider: 'rig', id: 'empty', name: 'project', host: 'localhost', state: 'stopped', historical: true, seatCount: 0, runningCount: 0 }];
+  mocks.status.mockResolvedValue(value);
+  mocks.pods.mockResolvedValueOnce({ projectId: 'empty', projectName: 'project', pods: ['removed'], source: 'native-spec' })
+    .mockResolvedValueOnce({ projectId: 'empty', projectName: 'project', pods: ['remaining'], source: 'native-spec' });
+  render(<CoordinationDialog onClose={() => {}} initialProvider="rig" launchOnly />);
+  fireEvent.click(await screen.findByLabelText('Add an agent to an existing project'));
+  await waitFor(() => expect(screen.getByLabelText('Rig pod')).toHaveValue('removed'));
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh pods' }));
+  await waitFor(() => expect(screen.getByLabelText('Rig pod')).toHaveValue('remaining'));
+  expect(screen.getByLabelText('Project')).toHaveValue('empty');
+  expect(mocks.pods).toHaveBeenCalledTimes(2);
+  expect(mocks.create).not.toHaveBeenCalled();
 });
