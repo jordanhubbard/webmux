@@ -1,0 +1,628 @@
+{
+  "scope": "Actual macOS ARM64 Chrome component controls; Windows execution pending; not a fix or complete browser authentication qualification.",
+  "execution_roots_preserved": true,
+  "cases": [
+    {
+      "mode": "direct",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/157.0.8103.79",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "diagnostics": {
+        "events": [
+          {
+            "stage": "startup",
+            "ms": 362,
+            "sequence": 0,
+            "event": "startup_blank_begin",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B"
+          },
+          {
+            "stage": "startup",
+            "ms": 362,
+            "sequence": 0,
+            "event": "observer_ready",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B"
+          },
+          {
+            "stage": "startup",
+            "ms": 364,
+            "sequence": 0,
+            "event": "navigation_started",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "frame": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "loader": "5DBD38874374F88D57B69DC4DECC7500",
+            "matchesRequested": true
+          },
+          {
+            "stage": "startup",
+            "ms": 364,
+            "sequence": 0,
+            "event": "frame_loading_started",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "frame": "E2B8BAB8F688A1A8134E117C7F0C041B"
+          },
+          {
+            "stage": "startup",
+            "ms": 367,
+            "sequence": 0,
+            "event": "navigation_committed",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "frame": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "loader": "5DBD38874374F88D57B69DC4DECC7500",
+            "matchesRequested": true,
+            "main": true
+          },
+          {
+            "stage": "startup",
+            "ms": 369,
+            "sequence": 0,
+            "event": "startup_blank_ready",
+            "errorClass": "accepted"
+          },
+          {
+            "stage": "ready",
+            "ms": 369,
+            "sequence": 0,
+            "event": "worker_ready"
+          },
+          {
+            "stage": "navigation",
+            "ms": 369,
+            "sequence": 1,
+            "event": "navigate_request",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B"
+          },
+          {
+            "stage": "navigation",
+            "ms": 369,
+            "sequence": 1,
+            "event": "frame_loading_stopped",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "frame": "E2B8BAB8F688A1A8134E117C7F0C041B"
+          },
+          {
+            "stage": "navigation",
+            "ms": 370,
+            "sequence": 1,
+            "event": "navigation_started",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "frame": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "loader": "EA7BDADE1FFEE9B8A39971E3BCEE99D3",
+            "matchesRequested": true
+          },
+          {
+            "stage": "navigation",
+            "ms": 370,
+            "sequence": 1,
+            "event": "frame_loading_started",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "frame": "E2B8BAB8F688A1A8134E117C7F0C041B"
+          },
+          {
+            "stage": "navigation",
+            "initiator": "other",
+            "ms": 371,
+            "sequence": 1,
+            "event": "document_request",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "frame": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "loader": "EA7BDADE1FFEE9B8A39971E3BCEE99D3",
+            "request": "EA7BDADE1FFEE9B8A39971E3BCEE99D3",
+            "matchesRequested": true
+          },
+          {
+            "stage": "navigation",
+            "ms": 375,
+            "sequence": 1,
+            "event": "document_response",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "frame": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "loader": "EA7BDADE1FFEE9B8A39971E3BCEE99D3",
+            "request": "EA7BDADE1FFEE9B8A39971E3BCEE99D3",
+            "matchesRequested": true,
+            "status": 200
+          },
+          {
+            "stage": "navigation",
+            "ms": 375,
+            "sequence": 1,
+            "event": "navigate_ack",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "frame": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "loader": "EA7BDADE1FFEE9B8A39971E3BCEE99D3",
+            "errorClass": "accepted"
+          },
+          {
+            "stage": "navigation",
+            "ms": 376,
+            "sequence": 1,
+            "event": "navigation_committed",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "frame": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "loader": "EA7BDADE1FFEE9B8A39971E3BCEE99D3",
+            "matchesRequested": true,
+            "main": true
+          },
+          {
+            "stage": "navigation",
+            "ms": 381,
+            "sequence": 1,
+            "event": "frame_loading_stopped",
+            "target": "E2B8BAB8F688A1A8134E117C7F0C041B",
+            "frame": "E2B8BAB8F688A1A8134E117C7F0C041B"
+          }
+        ],
+        "dropped": 0
+      }
+    },
+    {
+      "mode": "direct-screenshot",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "browserProduct": "Chrome/157.0.8103.79",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "diagnostics": {
+        "events": [
+          {
+            "stage": "startup",
+            "ms": 289,
+            "sequence": 0,
+            "event": "startup_blank_begin",
+            "target": "D3738C43C14478764CB602E848C168C4"
+          },
+          {
+            "stage": "startup",
+            "ms": 289,
+            "sequence": 0,
+            "event": "observer_ready",
+            "target": "D3738C43C14478764CB602E848C168C4"
+          },
+          {
+            "stage": "startup",
+            "ms": 290,
+            "sequence": 0,
+            "event": "navigation_started",
+            "target": "D3738C43C14478764CB602E848C168C4",
+            "frame": "D3738C43C14478764CB602E848C168C4",
+            "loader": "8CE0A1C5F0F9C69A77EA562C21F3CBE7",
+            "matchesRequested": true
+          },
+          {
+            "stage": "startup",
+            "ms": 290,
+            "sequence": 0,
+            "event": "frame_loading_started",
+            "target": "D3738C43C14478764CB602E848C168C4",
+            "frame": "D3738C43C14478764CB602E848C168C4"
+          },
+          {
+            "stage": "startup",
+            "ms": 292,
+            "sequence": 0,
+            "event": "navigation_committed",
+            "target": "D3738C43C14478764CB602E848C168C4",
+            "frame": "D3738C43C14478764CB602E848C168C4",
+            "loader": "8CE0A1C5F0F9C69A77EA562C21F3CBE7",
+            "matchesRequested": true,
+            "main": true
+          },
+          {
+            "stage": "startup",
+            "ms": 295,
+            "sequence": 0,
+            "event": "startup_blank_ready",
+            "errorClass": "accepted"
+          },
+          {
+            "stage": "startup",
+            "ms": 296,
+            "sequence": 0,
+            "event": "frame_loading_stopped",
+            "target": "D3738C43C14478764CB602E848C168C4",
+            "frame": "D3738C43C14478764CB602E848C168C4"
+          },
+          {
+            "stage": "ready",
+            "ms": 340,
+            "sequence": 0,
+            "event": "worker_ready"
+          },
+          {
+            "stage": "navigation",
+            "ms": 340,
+            "sequence": 1,
+            "event": "navigate_request",
+            "target": "D3738C43C14478764CB602E848C168C4"
+          },
+          {
+            "stage": "navigation",
+            "ms": 341,
+            "sequence": 1,
+            "event": "navigation_started",
+            "target": "D3738C43C14478764CB602E848C168C4",
+            "frame": "D3738C43C14478764CB602E848C168C4",
+            "loader": "79F21535AE3AC713D0904586E10881B6",
+            "matchesRequested": true
+          },
+          {
+            "stage": "navigation",
+            "ms": 341,
+            "sequence": 1,
+            "event": "frame_loading_started",
+            "target": "D3738C43C14478764CB602E848C168C4",
+            "frame": "D3738C43C14478764CB602E848C168C4"
+          },
+          {
+            "stage": "navigation",
+            "initiator": "other",
+            "ms": 342,
+            "sequence": 1,
+            "event": "document_request",
+            "target": "D3738C43C14478764CB602E848C168C4",
+            "frame": "D3738C43C14478764CB602E848C168C4",
+            "loader": "79F21535AE3AC713D0904586E10881B6",
+            "request": "79F21535AE3AC713D0904586E10881B6",
+            "matchesRequested": true
+          },
+          {
+            "stage": "navigation",
+            "ms": 344,
+            "sequence": 1,
+            "event": "document_response",
+            "target": "D3738C43C14478764CB602E848C168C4",
+            "frame": "D3738C43C14478764CB602E848C168C4",
+            "loader": "79F21535AE3AC713D0904586E10881B6",
+            "request": "79F21535AE3AC713D0904586E10881B6",
+            "matchesRequested": true,
+            "status": 200
+          },
+          {
+            "stage": "navigation",
+            "ms": 344,
+            "sequence": 1,
+            "event": "navigate_ack",
+            "target": "D3738C43C14478764CB602E848C168C4",
+            "frame": "D3738C43C14478764CB602E848C168C4",
+            "loader": "79F21535AE3AC713D0904586E10881B6",
+            "errorClass": "accepted"
+          },
+          {
+            "stage": "navigation",
+            "ms": 345,
+            "sequence": 1,
+            "event": "navigation_committed",
+            "target": "D3738C43C14478764CB602E848C168C4",
+            "frame": "D3738C43C14478764CB602E848C168C4",
+            "loader": "79F21535AE3AC713D0904586E10881B6",
+            "matchesRequested": true,
+            "main": true
+          },
+          {
+            "stage": "navigation",
+            "ms": 350,
+            "sequence": 1,
+            "event": "frame_loading_stopped",
+            "target": "D3738C43C14478764CB602E848C168C4",
+            "frame": "D3738C43C14478764CB602E848C168C4"
+          }
+        ],
+        "dropped": 0
+      }
+    },
+    {
+      "mode": "worker-subprocess-temporary",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "diagnostics": {
+        "events": [
+          {
+            "stage": "startup",
+            "ms": 292,
+            "sequence": 0,
+            "event": "startup_blank_begin",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A"
+          },
+          {
+            "stage": "startup",
+            "ms": 292,
+            "sequence": 0,
+            "event": "observer_ready",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A"
+          },
+          {
+            "stage": "startup",
+            "ms": 294,
+            "sequence": 0,
+            "event": "navigation_started",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A",
+            "frame": "A7141420F29F296CAFB9723ECCD6B66A",
+            "loader": "45E529AB23970CD0DD5E021BA8E42E97",
+            "matchesRequested": true
+          },
+          {
+            "stage": "startup",
+            "ms": 294,
+            "sequence": 0,
+            "event": "frame_loading_started",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A",
+            "frame": "A7141420F29F296CAFB9723ECCD6B66A"
+          },
+          {
+            "stage": "startup",
+            "ms": 296,
+            "sequence": 0,
+            "event": "navigation_committed",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A",
+            "frame": "A7141420F29F296CAFB9723ECCD6B66A",
+            "loader": "45E529AB23970CD0DD5E021BA8E42E97",
+            "matchesRequested": true,
+            "main": true
+          },
+          {
+            "stage": "startup",
+            "ms": 299,
+            "sequence": 0,
+            "event": "frame_loading_stopped",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A",
+            "frame": "A7141420F29F296CAFB9723ECCD6B66A"
+          },
+          {
+            "stage": "startup",
+            "ms": 299,
+            "sequence": 0,
+            "event": "startup_blank_ready",
+            "errorClass": "accepted"
+          },
+          {
+            "stage": "ready",
+            "ms": 300,
+            "sequence": 0,
+            "event": "worker_ready"
+          },
+          {
+            "stage": "navigation",
+            "ms": 346,
+            "sequence": 1,
+            "event": "navigate_request",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A"
+          },
+          {
+            "stage": "navigation",
+            "ms": 347,
+            "sequence": 1,
+            "event": "navigation_started",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A",
+            "frame": "A7141420F29F296CAFB9723ECCD6B66A",
+            "loader": "68B908E46436C2DEE7C2A166B75A4BC2",
+            "matchesRequested": true
+          },
+          {
+            "stage": "navigation",
+            "ms": 347,
+            "sequence": 1,
+            "event": "frame_loading_started",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A",
+            "frame": "A7141420F29F296CAFB9723ECCD6B66A"
+          },
+          {
+            "stage": "navigation",
+            "initiator": "other",
+            "ms": 347,
+            "sequence": 1,
+            "event": "document_request",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A",
+            "frame": "A7141420F29F296CAFB9723ECCD6B66A",
+            "loader": "68B908E46436C2DEE7C2A166B75A4BC2",
+            "request": "68B908E46436C2DEE7C2A166B75A4BC2",
+            "matchesRequested": true
+          },
+          {
+            "stage": "navigation",
+            "ms": 351,
+            "sequence": 1,
+            "event": "document_response",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A",
+            "frame": "A7141420F29F296CAFB9723ECCD6B66A",
+            "loader": "68B908E46436C2DEE7C2A166B75A4BC2",
+            "request": "68B908E46436C2DEE7C2A166B75A4BC2",
+            "matchesRequested": true,
+            "status": 200
+          },
+          {
+            "stage": "navigation",
+            "ms": 351,
+            "sequence": 1,
+            "event": "navigate_ack",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A",
+            "frame": "A7141420F29F296CAFB9723ECCD6B66A",
+            "loader": "68B908E46436C2DEE7C2A166B75A4BC2",
+            "errorClass": "accepted"
+          },
+          {
+            "stage": "navigation",
+            "ms": 352,
+            "sequence": 1,
+            "event": "navigation_committed",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A",
+            "frame": "A7141420F29F296CAFB9723ECCD6B66A",
+            "loader": "68B908E46436C2DEE7C2A166B75A4BC2",
+            "matchesRequested": true,
+            "main": true
+          },
+          {
+            "stage": "navigation",
+            "ms": 357,
+            "sequence": 1,
+            "event": "frame_loading_stopped",
+            "target": "A7141420F29F296CAFB9723ECCD6B66A",
+            "frame": "A7141420F29F296CAFB9723ECCD6B66A"
+          }
+        ],
+        "dropped": 0
+      }
+    },
+    {
+      "mode": "worker-subprocess-saved",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "diagnostics": {
+        "events": [
+          {
+            "stage": "startup",
+            "ms": 281,
+            "sequence": 0,
+            "event": "startup_blank_begin",
+            "target": "FAA65663321FB28ACEEBC047A05442A3"
+          },
+          {
+            "stage": "startup",
+            "ms": 281,
+            "sequence": 0,
+            "event": "observer_ready",
+            "target": "FAA65663321FB28ACEEBC047A05442A3"
+          },
+          {
+            "stage": "startup",
+            "ms": 281,
+            "sequence": 0,
+            "event": "navigation_started",
+            "target": "FAA65663321FB28ACEEBC047A05442A3",
+            "frame": "FAA65663321FB28ACEEBC047A05442A3",
+            "loader": "848D92327C59EE29EE2BB0B6C8036857",
+            "matchesRequested": true
+          },
+          {
+            "stage": "startup",
+            "ms": 282,
+            "sequence": 0,
+            "event": "frame_loading_started",
+            "target": "FAA65663321FB28ACEEBC047A05442A3",
+            "frame": "FAA65663321FB28ACEEBC047A05442A3"
+          },
+          {
+            "stage": "startup",
+            "ms": 283,
+            "sequence": 0,
+            "event": "navigation_committed",
+            "target": "FAA65663321FB28ACEEBC047A05442A3",
+            "frame": "FAA65663321FB28ACEEBC047A05442A3",
+            "loader": "848D92327C59EE29EE2BB0B6C8036857",
+            "matchesRequested": true,
+            "main": true
+          },
+          {
+            "stage": "startup",
+            "ms": 284,
+            "sequence": 0,
+            "event": "startup_blank_ready",
+            "errorClass": "accepted"
+          },
+          {
+            "stage": "startup",
+            "ms": 285,
+            "sequence": 0,
+            "event": "frame_loading_stopped",
+            "target": "FAA65663321FB28ACEEBC047A05442A3",
+            "frame": "FAA65663321FB28ACEEBC047A05442A3"
+          },
+          {
+            "stage": "ready",
+            "ms": 286,
+            "sequence": 0,
+            "event": "worker_ready"
+          },
+          {
+            "stage": "navigation",
+            "ms": 333,
+            "sequence": 1,
+            "event": "navigate_request",
+            "target": "FAA65663321FB28ACEEBC047A05442A3"
+          },
+          {
+            "stage": "navigation",
+            "ms": 334,
+            "sequence": 1,
+            "event": "navigation_started",
+            "target": "FAA65663321FB28ACEEBC047A05442A3",
+            "frame": "FAA65663321FB28ACEEBC047A05442A3",
+            "loader": "A8A8F005807E576342AABE1A12C80598",
+            "matchesRequested": true
+          },
+          {
+            "stage": "navigation",
+            "ms": 334,
+            "sequence": 1,
+            "event": "frame_loading_started",
+            "target": "FAA65663321FB28ACEEBC047A05442A3",
+            "frame": "FAA65663321FB28ACEEBC047A05442A3"
+          },
+          {
+            "stage": "navigation",
+            "initiator": "other",
+            "ms": 335,
+            "sequence": 1,
+            "event": "document_request",
+            "target": "FAA65663321FB28ACEEBC047A05442A3",
+            "frame": "FAA65663321FB28ACEEBC047A05442A3",
+            "loader": "A8A8F005807E576342AABE1A12C80598",
+            "request": "A8A8F005807E576342AABE1A12C80598",
+            "matchesRequested": true
+          },
+          {
+            "stage": "navigation",
+            "ms": 340,
+            "sequence": 1,
+            "event": "document_response",
+            "target": "FAA65663321FB28ACEEBC047A05442A3",
+            "frame": "FAA65663321FB28ACEEBC047A05442A3",
+            "loader": "A8A8F005807E576342AABE1A12C80598",
+            "request": "A8A8F005807E576342AABE1A12C80598",
+            "matchesRequested": true,
+            "status": 200
+          },
+          {
+            "stage": "navigation",
+            "ms": 340,
+            "sequence": 1,
+            "event": "navigate_ack",
+            "target": "FAA65663321FB28ACEEBC047A05442A3",
+            "frame": "FAA65663321FB28ACEEBC047A05442A3",
+            "loader": "A8A8F005807E576342AABE1A12C80598",
+            "errorClass": "accepted"
+          },
+          {
+            "stage": "navigation",
+            "ms": 342,
+            "sequence": 1,
+            "event": "navigation_committed",
+            "target": "FAA65663321FB28ACEEBC047A05442A3",
+            "frame": "FAA65663321FB28ACEEBC047A05442A3",
+            "loader": "A8A8F005807E576342AABE1A12C80598",
+            "matchesRequested": true,
+            "main": true
+          },
+          {
+            "stage": "navigation",
+            "ms": 346,
+            "sequence": 1,
+            "event": "frame_loading_stopped",
+            "target": "FAA65663321FB28ACEEBC047A05442A3",
+            "frame": "FAA65663321FB28ACEEBC047A05442A3"
+          }
+        ],
+        "dropped": 0
+      }
+    }
+  ]
+}

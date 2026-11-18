@@ -1,0 +1,86 @@
+{
+  "recordedUTC": "2026-11-18T02:08:59.085359+00:00",
+  "parent": "2e309f4971e87609247408b60b0c1fb41e2ffb98",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "f72b2658ef90bdb4f497e7cf6f2be04f28ed16dd35ce618b0a94be76c27086d8",
+    "webmux/server/internal/browser/navigation_trace_test.go": "015906eaf5b8e2acd4a15475aaf61e1c4a5cfd92609049e35e4734eff50493f9",
+    "webmux/server/internal/browser/navigation_trace_controls_test.go": "84bed07f7bccd66a8d78ef23a3687975ba8cc50c27479b865cb1f44f3adc474c",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "4fff230c39551a0cb179013890fd029154c4791df42ca93a97214f7493a34128",
+    ".github/workflows/browser-navigation.yml": "7787752725e9ef25713e408f82a15ede1544b57baad1b537fb1496fa604e6c97",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "f591a7f6b3de8df075c1d5a2cf9c245af3198eaca9cf27449c0c9f1b063b00b8",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-first-trace-summary.json": "aa5046e8f6288755383baab64c5e5fc9afd10b8ba753088575413d342676c501",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-sampling-summary.json": "ec06e5718f970d9eef56fba80db8f7b8bfd11dc0e116b087381ac3ff721fa390"
+  },
+  "privateReceiptSHA256": {
+    "nav282-trace-sampling-final-full.log": "c1ee83a3e51dfd5042479041f4f84d8a317a23944b1afeb8e3c8537bd54dc428",
+    "nav282-trace-sampling-final-full-binding.json": "b74d8cd0f91be128f790e4be205b365e0980adebcb27f7d0fc6d96c835620b7c",
+    "nav282-trace-sampling-final-samples-binding.json": "bf5518ce23d2a6d6cb0c30e1f4d06bae5bf41f507c1d7b5c771642d257964943",
+    "nav282-trace-sampling-final-browser-race.log": "9d01cdc71d20c3522eb7cc2e874d277c6d35d70a8c08b1d06e960ee3a8306cb2",
+    "nav282-trace-sampling-final-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-trace-sampling-final-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-2e309f4-fast-windows.zip": "54ec7a8fca35523884e10ae6c980cfb3fa98f0ec8fba911fdd8e237ad196ee0e",
+    "pr442-2e309f4-fast-job.log": "2efa99baa2132377e48e2232f603065527260208327cfb8764181d295d411d82",
+    "nav282-trace-sampling-final-sample-1.log": "00dfa83e9c2e19b96d2c6bb62d5d2e7157da385f02d7a55d69086c6e83848d12",
+    "nav282-trace-sampling-final-sample-2.log": "316e2c8ffd19b385a56a40750d4a2579bbef6f75e2e8b922132bb51b8a86ca1a",
+    "nav282-trace-sampling-final-sample-3.log": "f47b0e96efcd586cda92af10788430705cc530d65f42f2bb31f49126b200ea37"
+  },
+  "rounds": [
+    {
+      "trial": 1,
+      "records": [
+        {
+          "mode": "direct-trace",
+          "SHA256": "c889eb5a8c34f61a41756b4dba89ea7b47c67cb201af8fcbfd2ea612513ebeb9"
+        },
+        {
+          "mode": "direct-home-trace",
+          "SHA256": "21df576bf0d3d77da18a4b06a06f9776590d23a3b8811fc5e550266ca56ca123"
+        },
+        {
+          "mode": "controlled-stop-trace",
+          "SHA256": "cf5ebc262c9dc28f3ae732a189be90fa2f206cc2e8b38b1b6eb0b7dc644dc4ef"
+        }
+      ],
+      "logSHA256": "00dfa83e9c2e19b96d2c6bb62d5d2e7157da385f02d7a55d69086c6e83848d12"
+    },
+    {
+      "trial": 2,
+      "records": [
+        {
+          "mode": "direct-trace",
+          "SHA256": "6efce9e3e5d49d06be3955b6de25107aeb8ffed70af83a264ae71887bd0c184e"
+        },
+        {
+          "mode": "direct-home-trace",
+          "SHA256": "95f7d9fa8115a76293206cf8642cd4b8bea103f5e06bafae01ca158469e06ace"
+        },
+        {
+          "mode": "controlled-stop-trace",
+          "SHA256": "beae2430a7946e1d0f712be33858e0ae3601744902c486faba8639d55e224166"
+        }
+      ],
+      "logSHA256": "316e2c8ffd19b385a56a40750d4a2579bbef6f75e2e8b922132bb51b8a86ca1a"
+    },
+    {
+      "trial": 3,
+      "records": [
+        {
+          "mode": "direct-trace",
+          "SHA256": "45b5e725e9df4b427919037369ff5864e464d322f9955c2d6a216856025fc903"
+        },
+        {
+          "mode": "direct-home-trace",
+          "SHA256": "c95bfcd42ab57303e31b31031dee38a4b6fab92a6ffe5f364ef3170b6a8930c0"
+        },
+        {
+          "mode": "controlled-stop-trace",
+          "SHA256": "4eb2e5bd2fc92933886a841bb18ebcf3a05721eac8f769f40fbae9aacd047bbf"
+        }
+      ],
+      "logSHA256": "f47b0e96efcd586cda92af10788430705cc530d65f42f2bb31f49126b200ea37"
+    }
+  ],
+  "checks": "FinalsourcefullnativeMac14ordinaryfirstloads+1intentionalcontrolPASS;2Windows-onlyNetLogSKIPSexplicit. Threeindependentrounds6ordinaryfirstloads+3intentionalcontrolsPASS usingexactworkflowGo selector. Full/samplessourceSHAidenticalbefore/after. Browserrace1.598s+privacy/correlation/boundsunits/Darwin+WindowsbrowservetPASS. YAMLfullmatrix/failureretention/3rounds/scopedartifactpolicy,JSON/links/privacy/whitespacePASS.",
+  "scope": "Testonly. Framealiases64/mainframebool/fixedURLclasshelp distinguishotherstartupnavigations;rawframe/processdictsandopaque pointers omitted. Bothobject/pointerframevariantsqualified. RenamedNetLogmatchedRequests tomatchedURLSourcesbecausemultipleURLsourceobjectsneednotimplymultipleHTTPrequests. RuntimeandoriginalCIunchanged;fullmatrix retainedbefore3independentsamplingrounds;allfailuresstillfailjob. ActualWindowsnewroundsandframecorrelationPENDING.",
+  "excluded": "Firstframecorrelationnativeattemptsmarkedcapturesincompleteonvalidopaque-pointerframevariants. Correctedoptionalfieldparser+privacyfixturethenfullnative/three-roundsamples/race/vetsrerunPASS. PriorMacnativepositivefirst-traceacceptanceandWindows2e309knowncancellationacceptancearehistoricalseparatelybound;noneprovesanunexplainedabortcause."
+}

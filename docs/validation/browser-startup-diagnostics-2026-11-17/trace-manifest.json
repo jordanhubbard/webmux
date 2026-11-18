@@ -1,0 +1,34 @@
+{
+  "recordedUTC": "2026-11-18T01:53:13.123065+00:00",
+  "parent": "923d4041a5664ba1c6861796dab68126db5b6716",
+  "issue": 282,
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "f72b2658ef90bdb4f497e7cf6f2be04f28ed16dd35ce618b0a94be76c27086d8",
+    "webmux/server/internal/browser/navigation_trace_test.go": "53e2bb715fa3245e6efc3f49a6bd1aee5d6220c0d835b0150e7a4da47cc628dd",
+    "webmux/server/internal/browser/navigation_trace_controls_test.go": "49248ce33a246c218e334d6a68d44053d2277f7eaefc4eea81fda777d4eb74ef",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "8bfdb35139ddc0f698629e275a6193708f9603539892ea99150b00b98c1c6777",
+    ".github/workflows/browser-navigation.yml": "56a838ef390d59e6930eb5fb7da5cadc2f4b80e8dd00f2ec1be9b185e2f5c03a",
+    ".github/workflows/ci.yml": "319660fbaa3d86098fa620d9f8daa7c3dd1da0a9cb84d3322db9e641b680cee4",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "21502c84de921259bc04987f134177c3f5fea80a85b040a5a1709d3da8883496",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-trace-summary.json": "f67d3a8a4f0e137ec021f92134e76a3059e6ef8ff85ee6c64a93c4d4d1594cad",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-network-summary.json": "ece800b9f124170f8b7dc49f3b3f2f2112666ecb122bdadd9ccf1af2c752c8b3"
+  },
+  "privateReceiptSHA256": {
+    "nav282-trace-qualified.log": "bbf6b68123b4b8a0629df5646c68fc5113dc69b4065ee33a91a0bad51d457ca8",
+    "nav282-trace-qualified-binding.json": "124a64ec45cbdd168ffd535656171e631f870cbb1adf85eba952c18bf9c97539",
+    "nav282-trace-qualified-browser-race.log": "a4787dbeb511ac5eebadda20d060477787a4f32f3e4894c5b7fcb8b37a64bf44",
+    "nav282-trace-qualified-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-trace-qualified-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-923d404-fast-windows.zip": "88e2be0437820fac0e812b21c9cb14d9f534ac42827e4ce39fada5b70e2c7f71",
+    "pr442-923d404-fast-job.log": "7c397b4219416f33a58b0f894c6f33810ae9c391d15a6ee481516a81a16842bd",
+    "pr442-923d404-full-windows.zip": "008a97e297166afce3b58de28eb2b762452f83fe71dc5fa852d7bfb5997f0433"
+  },
+  "privateNativeRecordSHA256": {
+    "direct-trace": "51d586c82caa438ef47664ccaee0be768806093c16c0e14ebf9303e1ae4e5f87",
+    "direct-home-trace": "fdf5f71197cb8168a5ff6835926384a0a1292551c2bc8171c141d3a000c62888",
+    "controlled-stop-trace": "3e3b81b5f0146b1831fd40a1eba6b38e899fd89a5cdb5ebacb79b062a3e825f5"
+  },
+  "checks": "14normalnativeMacfirstloads+1separateintentionalcancellationcontrolPASS7.350s;2Windows-onlyNetLogSKIPSexplicit. Finalsourcebefore/afterSHAverified. Browserrace1.715s/privacy/bounds/correlationunitsPASS;Darwin/WindowsAMD64browservetPASS. YAML/originalCIdeltaonlypositivecontrolselector/JSON/links/privacy/whitespace verified.",
+  "scope": "Anonymous test-only browser-level navigation tracing afterbrowserconnection/beforetargetattachment andexplicitblank. Producer1MiB recordUntilFull;raw2MiB/8192events;projection256events/64aliases;fixednames/enums,boundednumericcodes,relativeclocks,URLmatchboolonly. Rawtrace bucketsneveruploaded. Runtimeworkerunchanged;allnormalCI/audit/packaginggates retained. ActualWindowsinternaltrace/knownstopcontrolPENDING.",
+  "excluded": "Exploratorynative schema captures useanonymousfreshprofiles andremainprivate,notacceptance. Intermediate early-start positive-control compile error (err redeclaration) corrected; qualifiedfullsuite rerunpasses. First YAML checker used JS replacement-string $-suffix expansion and falsely rejected the one-line selector delta; corrected literal callback check passes."
+}

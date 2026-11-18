@@ -1,0 +1,37 @@
+{
+  "recordedUTC": "2026-11-18T02:55:34.081897+00:00",
+  "parent": "376a66634b46e85ed61373d1ad411205abef387e",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "2b31f3987b74d1e05de25c7d9f10590adac17d97530be04ea63b2fc0ecf8a17d",
+    "webmux/server/internal/browser/navigation_trace_test.go": "f43e2bf69e365da6f91dc0a1a2f1c2c04ca814133552ba5bead455290eb3f9e4",
+    "webmux/server/internal/browser/navigation_trace_controls_test.go": "dbba5246b721414e0140c359becf6e765f49d9836976576ff4161df7e4c766a0",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "4fff230c39551a0cb179013890fd029154c4791df42ca93a97214f7493a34128",
+    ".github/workflows/browser-navigation.yml": "f151e30ca7e5f80e20e53736da551e42a5db3401e78b909cc0e843fd99e706b6",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "ce69e3655ab6a7f307efb4f21e6aabc092454b892a6569370bddbbad415ddd15",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-loading-summary.json": "9462e57cca465bf0ed2fd1344768c85688a1af8fd3aca2fad4dd385d75b91dd9",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-loader-summary.json": "09affcdd9137dae1ff12439fba7002595f13d9af59ecda0e642bae1c9a7fa37c"
+  },
+  "privateReceiptSHA256": {
+    "nav282-trace-loading-flush-full.log": "3b0f0bd9fb282f0365e7051923cfccb065a955a58d63819e13cb292181e2e753",
+    "nav282-trace-loading-flush-full-binding.json": "734334ced8d841fb685b687a519f3713469e2d228239228150f3914e30959687",
+    "nav282-trace-loading-flush-samples-binding.json": "1e16b6047bf2937f1297487fd61fb3cd63cea646f04bd585ff0c2249e8e85cc4",
+    "nav282-trace-loading-flush-browser-race.log": "56ca7931b603d46e317036139e81317cd4ccf08c655b6393d008cff6a0a40a14",
+    "nav282-trace-loading-flush-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-trace-loading-flush-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-376a666-fast.zip": "09072d201422dccefbaea13af644025ae3968d9f4aca47824ca6b90e5e6e5138",
+    "pr442-376a666-fast-summary.json": "bc1e8122d14b61ae1a48192d75d9c40c0587a9593049dbe7ee55f4c0f0112b69",
+    "pr442-9d065f7-full-windows.zip": "6371b327a22c3c0239a034c6f3c4932ddd3fdac92c6d25b7c38f29b1807c206e",
+    "pr442-9d065f7-full-summary.json": "842e8cfc9a376fc22da461e6a688ba9985637a403d86cbe0815a006da58245c3",
+    "pr442-376a666-full-windows.log": "047f902f2e0f8cb84d72c3d4a751fee23eac3f3238ae89daa1775cf2d4d4c6b6",
+    "pr442-376a666-usb-job.log": "8d78b1dadba7cd1e474657fb5823e2b5553b0fb6598e504fa416ef4a66e37bc5",
+    "nav282-trace-loading-flush-sample-1.log": "8403417670e635cfdf33ee8421c98c66f54e2e125ac12b0c82c033cd93af9668",
+    "nav282-trace-loading-flush-sample-2.log": "e88b3a98fb8d8b594c72e126834caed7df77637ec3314fdd3b78e4f0c17d5fd9",
+    "nav282-trace-loading-flush-sample-3.log": "55242189460f4139492a7fe06b219621c7ea92039a42dd2576b7140e197c060c"
+  },
+  "matchingChromiumSourceSHA256": {
+    "throttling_url_loader.cc": "b70c866bed068fd3c275b499da0550145a99e1576b7266f59c74e0f5d07f95b4",
+    "tracing_handler.cc": "330ca378d3bcd862811076be004528845c11579b553c96d1c1a54601e412950c"
+  },
+  "checks": "36ordinarynativeMacfirstloads+4separateintentionalStopcontrolsPASS;allfinalcapturescomplete/lossless;twoexplicitWindowsNetLogskips. Browserrace/privacy/scope/bounds+Darwin/WindowsbrowservetPASS. Onecaptureflush5022ms;15scapture-onlylimit. No runtime/normalCI/dependency/lock change.",
+  "scope": "SeparateextraLoadingcategorylateconditionsand6traceconditionsperfixedround;20ordinaryWindowsmatrix/18Mac+2skips;42Windowsrecords. WindowsPENDING. No cause/fix/merge/release."
+}

@@ -1,0 +1,393 @@
+{
+  "head": "351f65364833d82922cfc0e88831b8ac50a6a1e3",
+  "job": 134469638981,
+  "artifact": 14383787879,
+  "cases": [
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-screenshot",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 379,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 487,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 487,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 511,
+          "sequence": 1,
+          "event": "document_failed",
+          "errorClass": "aborted",
+          "canceled": true
+        },
+        {
+          "stage": "navigation",
+          "ms": 512,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "aborted"
+        }
+      ]
+    },
+    {
+      "transport": "websocket",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-websocket",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 379,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 379,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 379,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 1258,
+          "sequence": 1,
+          "event": "document_response",
+          "matchesRequested": true,
+          "status": 200
+        },
+        {
+          "stage": "navigation",
+          "ms": 1259,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "accepted"
+        }
+      ]
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 356,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 356,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 356,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 605,
+          "sequence": 1,
+          "event": "document_failed",
+          "errorClass": "aborted",
+          "canceled": true
+        },
+        {
+          "stage": "navigation",
+          "ms": 605,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "aborted"
+        }
+      ]
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-screenshot",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 424,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 460,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 460,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 675,
+          "sequence": 1,
+          "event": "document_failed",
+          "errorClass": "aborted",
+          "canceled": true
+        },
+        {
+          "stage": "navigation",
+          "ms": 676,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "aborted"
+        }
+      ]
+    },
+    {
+      "transport": "websocket",
+      "profileLocation": "system-temporary",
+      "mode": "direct-websocket",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 361,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 361,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 361,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 1362,
+          "sequence": 1,
+          "event": "document_response",
+          "matchesRequested": true,
+          "status": 200
+        },
+        {
+          "stage": "navigation",
+          "ms": 1362,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "accepted"
+        }
+      ]
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 426,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 426,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 426,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 667,
+          "sequence": 1,
+          "event": "document_failed",
+          "errorClass": "aborted",
+          "canceled": true
+        },
+        {
+          "stage": "navigation",
+          "ms": 668,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "aborted"
+        }
+      ]
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "worker-subprocess-temporary",
+      "platform": "windows",
+      "architecture": "amd64",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 403,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 814,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 861,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 1445,
+          "sequence": 1,
+          "event": "document_response",
+          "matchesRequested": true,
+          "status": 200
+        },
+        {
+          "stage": "navigation",
+          "ms": 1445,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "accepted"
+        }
+      ]
+    },
+    {
+      "transport": "pipe",
+      "profileLocation": "home-saved",
+      "mode": "worker-subprocess-saved",
+      "platform": "windows",
+      "architecture": "amd64",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 358,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 361,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 656,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 1495,
+          "sequence": 1,
+          "event": "document_response",
+          "matchesRequested": true,
+          "status": 200
+        },
+        {
+          "stage": "navigation",
+          "ms": 1495,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "accepted"
+        }
+      ]
+    }
+  ]
+}

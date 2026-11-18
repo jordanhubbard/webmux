@@ -18,6 +18,7 @@ test('saved Chromium profile survives worker replacement while viewer control is
   if (req.url === '/released') { released++; res.end(); return; }
   record('fixture-document', { path: req.url?.split('?')[0].slice(0, 128), retainedCookie: req.headers.cookie?.includes('saved=fixture') === true });
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  if (req.url === '/renderer-redirect') { res.end('<title>redirecting</title><script>location.replace("/check")</script>'); return; }
   if (req.url === '/set') res.setHeader('Set-Cookie', 'saved=fixture; Path=/; Max-Age=3600; SameSite=Lax');
   res.end(`<title>${req.headers.cookie?.includes('saved=fixture') ? 'retained-cookie' : 'empty-profile'}</title><p>synthetic browser profile</p><script>document.addEventListener('pointerdown',()=>fetch('/pressed'));document.addEventListener('pointerup',()=>fetch('/released'))</script>`);
  });
@@ -44,7 +45,16 @@ test('saved Chromium profile survives worker replacement while viewer control is
    navigationDiagnostics: frame.navigationDiagnostics,
    tabs: Array.isArray(frame.tabs) ? frame.tabs.slice(0, 4).map((tab: { id?: string; title?: string }) => ({ id: String(tab.id ?? '').slice(0, 128), title: String(tab.title ?? '').slice(0, 128) })) : [],
   });
-  if (process.env.WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS === '1') expect(frame.navigationDiagnostics).toBeDefined();
+  if (process.env.WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS === '1') {
+   expect(frame.navigationDiagnostics).toBeDefined();
+   if (body.action === 'start') {
+    const events = frame.navigationDiagnostics.events as { event: string; sequence: number; stage?: string; target?: string }[];
+    expect(events.some(event => event.event === 'startup_blank_begin' && event.sequence === 0 && event.stage === 'startup')).toBe(true);
+    expect(events.some(event => event.event === 'startup_blank_ready' && event.sequence === 0)).toBe(true);
+    expect(events.some(event => event.event === 'worker_ready' && event.stage === 'ready')).toBe(true);
+    expect(events.filter(event => event.event === 'observer_ready' && event.target === frame.target)).toHaveLength(1);
+   }
+  }
   expect(frame.profileKey).toBeUndefined();
   if (frame.error) expect(frame.error).toBe('Page rendering was interrupted; retry or open the site in your browser');
   return frame;
@@ -107,6 +117,17 @@ test('saved Chromium profile survives worker replacement while viewer control is
   frame = await action({ action: 'start', profileId: '' }); token = frame.control.token;
   await action({ action: 'navigate', url: `${url}/check` });
   await expect.poll(async () => (await action({ action: 'frame' })).tabs.map((tab: { title: string }) => tab.title)).toContain('empty-profile');
+  if (process.env.WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS === '1') {
+   phase = 'renderer-navigation-observation';
+   await action({ action: 'navigate', url: `${url}/renderer-redirect` });
+   await expect.poll(async () => {
+    const frame = await action({ action: 'frame' });
+    const events = frame.navigationDiagnostics.events as { event: string; reason?: string; initiator?: string; matchesRequested?: boolean }[];
+    return frame.url === `${url}/check`
+      && events.some(event => event.event === 'renderer_navigation' && event.reason === 'scriptInitiated' && event.matchesRequested === false)
+      && events.some(event => event.event === 'document_request' && event.initiator === 'script' && event.matchesRequested === false);
+   }).toBe(true);
+  }
  } finally {
   await request.delete(endpoint, { data: { viewer: a, controlToken: token } }).catch(() => {});
   if (saved) await request.delete(`${endpoint}/profiles`, { data: { profileId: saved } }).catch(() => {});

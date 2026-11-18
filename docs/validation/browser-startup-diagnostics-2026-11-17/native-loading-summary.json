@@ -1,0 +1,592 @@
+{
+  "platform": "darwin/arm64",
+  "browserProduct": "Chrome/158.0.8127.36",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "2b31f3987b74d1e05de25c7d9f10590adac17d97530be04ea63b2fc0ecf8a17d",
+    "webmux/server/internal/browser/navigation_trace_test.go": "f43e2bf69e365da6f91dc0a1a2f1c2c04ca814133552ba5bead455290eb3f9e4",
+    "webmux/server/internal/browser/navigation_trace_controls_test.go": "dbba5246b721414e0140c359becf6e765f49d9836976576ff4161df7e4c766a0",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "4fff230c39551a0cb179013890fd029154c4791df42ca93a97214f7493a34128"
+  },
+  "records": [
+    {
+      "phase": "full",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "0edb501e05559f66d7c597fce0869bc2b1304c45ae8e4b5e6b2479dcdb2afee6",
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 18
+    },
+    {
+      "phase": "full",
+      "mode": "direct-child-original",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "afecb8279ffb5fdaa2c173c293654e83ab04c4ed8450051130432e1d81925a3d",
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-child",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "2682b7f4263be1034560bd2a8cd20498219bb083084b832720eec04f5cd49041",
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-child-original",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "b83e6676f1a23aad966a19bbfa10d0559ea9349bfb28b96b3c761f7243cc3099",
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-child",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "7da8ea9ae20641ecd5bed67d0b45323a1b1f735a6383627e1d9a8a8e59583ee8",
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-screenshot",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "bb72c752037080ce91d77f01653f92a212c47de6ceedc812b6fb774dd7959d70",
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "2b0d2f0fe59f8d0d951949bdcb3bcd9c921ea75c6b9b21cfd5f3971e2529e1af",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-loading-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "72b5bdb99797dc71b279b2f81b9ad6d73f6c81b26c900e75852977ff173f11ec",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 41
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "5fbf113c2ac8827b64cd0ff0c42e92b48464a191b0d423e3ec4d0e5f65bd6fb7",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 19,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 24
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-websocket",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "eb77de085fc40df19f282d8fb257c9f80d2bcb48a8340f2bfc255a43dde9d942",
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "96e428a571c5eeb2376c5a63e12ca4438abbedd4a4eed6f9c066df31edaf4dae",
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-screenshot",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "5319c5d8e7149d4c195bb3a091f5a024e0dc5664bd5bceecc090a71ec37827e0",
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "c9efc94b858a19dfadc2c7cf4706e5c2eba34ea09d3f9ad5c7d3078b07ec9f4c",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-loading-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "1bf3aef6a038c1cb32593f4ab966de54cf74ba34470c4da0b2816bcaa60a9274",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 41
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "3b7798ec2e012b89cb2a32d688ed507765a3a1e6641b1e3b7839cf0bafec7f82",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 14,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 24
+    },
+    {
+      "phase": "full",
+      "mode": "direct-websocket",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "2989226f77d4932f0c4736fadfe50ac9937cfc04b57cd976e580ab1e852204e7",
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "5f1900cc5c34893adf14fb2d1cfe29f19589538fe67a8cbca1da581357ac8699",
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "worker-subprocess-saved",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "2e886f5ca6c8eda845d09d658dccd4dc5aa93c1bfce2430631ad0a8491d2ca4c",
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "worker-subprocess-temporary",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "b2189c39446e7086e3fcfcfc97d3b64bbf9c7b4a39e2f50b3e5118ab041b6e89",
+      "loaded": true
+    },
+    {
+      "phase": "sample-1",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "07ea113114acf72416354a1daba8f28543fe87a2fa630d28eb7e853e1389c652",
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 18
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "1a5da906c3502d67aa54b3c643b28ff8f4553668fd8cced5b35d277470b78928",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-loading-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "554263eabbdeb52405055fdc4548d00d7709508b896c14afe12928bb32ea41fe",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 5022,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 37
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "17f5f6ef48a67ca912c430477c36751698a10078c8a8c16b08f85e79b314c7bb",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 24
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "a9670ac0e7868004b7b5c7f0a1b8d9d1cecbab3af9644033671058b8df46dadc",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-loading-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "1964c5c0f384acca8e626ec8e8a42956236b4703597a4463ddadb626839e8796",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 12,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 37
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "b6db2925181b6eb5c238b058aa832b8f4394ed77ed368ecdd01c25a4b5e49320",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 24
+    },
+    {
+      "phase": "sample-2",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "645d7e6aa6b8ba2b243c86979f59af533281f0b18fd4089c0d89cafc1d81802b",
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "trace": {
+        "endElapsedMs": 12,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 18
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "f4921d349df9202fa8f3d4b52582439f62419fbb614e91b4737f8835dcfe12f1",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-loading-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "680b1190bc297575478991b466730d3ae29169527a9665bc3dad50eaf9891289",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 37
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "c6bf4906f518892e392b4ec0edb20eb2e44a8f30dd9796a70eeaecec6d55c519",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 14,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 24
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "b825761bb8ec8dcc49d7fa0ba675d8fa3c12c1f9be5e36695f77807b86fc536f",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-loading-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "11b759126d304ecad3c0d80f695bbc9e1859f515858898a976b2f3c8bb1a9b97",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 12,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 41
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "96fa10b760d2791ffd40faa0ca0f6fa1928eb8329755c22a56b29ef150f40bc6",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 24
+    },
+    {
+      "phase": "sample-3",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "9c0cea198a2aa298f9499940264cfbeb34cadc3d75d7d063e25683664b5bf2ec",
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "trace": {
+        "endElapsedMs": 12,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 18
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "01c0b6b4f9a65152710edde2d9b2b3c511e6e0f550a2a563c82da316bc3d9b2a",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 10,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-loading-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "915dca0d2a0be2900520107c5cc3dc9db071af124c6bcd89a251f708875f747c",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 41
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "fc4ea66ac1c2cbaa25ac620aad2c49068f3ec04be87d7387275192add99dfd2e",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 15,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 24
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "a7bffd28b763a9bfe1546e31ae6ee77202ba87ad1e35d1dd6686876b2c7b57e3",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-loading-late",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "2da5d31edecb60d653bf4f98ea6e53966c2ee1639cccf4f788a08f64d2c1da81",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 34
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "SHA256": "334fb9cab2365e6fa619dc7d8f98d997769f23ad37dbabd8ad412a39b0bd1518",
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 14,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "identityLimit": null
+      },
+      "flowAliases": 24
+    }
+  ],
+  "ordinaryLoads": 36,
+  "intentionalControls": 4,
+  "explicitWindowsOnlyNetLogSkips": 2,
+  "scope": "Full18ordinary+1intentional;3fixedrounds18ordinary+3intentional. AllfinalsourcedocumentsandcapturesPASS. Initial5sdeadlinefailuresretainedandexcluded;onefinalcapturecompleted5022mswith15scapture-onlydeadline. NoWindowscause/fixclaim."
+}

@@ -1,0 +1,33 @@
+{
+  "recordedUTC": "2026-11-18T03:06:28.549892+00:00",
+  "parent": "35205bde765723f61eafe6599233c483ecd03340",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "2b31f3987b74d1e05de25c7d9f10590adac17d97530be04ea63b2fc0ecf8a17d",
+    "webmux/server/internal/browser/navigation_trace_test.go": "d04b33f1b0ed15e79bc9bc190613bbc04a3f13408b138c3b4f855c6fd02ef06b",
+    "webmux/server/internal/browser/navigation_trace_controls_test.go": "92135bdcdb95ea9e2eb0022c084ea77ac539151b4c4e78c19bc5ba938a8d0821",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "4fff230c39551a0cb179013890fd029154c4791df42ca93a97214f7493a34128",
+    ".github/workflows/browser-navigation.yml": "f151e30ca7e5f80e20e53736da551e42a5db3401e78b909cc0e843fd99e706b6",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "3a83d7960cc191fe3b608c9a8bbb5bc6de3de06994d410bfce0b61fdc514ed23",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-handoff-summary.json": "4e61d273c493132bf80da6472f1e51709a9d4d341b70cf3ea8e1435e037cf221",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-loading-summary.json": "e39b7c600556371240aabe3bb1abeec64b0b802eea513cb42cd51e2f742b58c0"
+  },
+  "privateReceiptSHA256": {
+    "nav282-trace-handoff-full.log": "695e12b33e3e1d0074b1c05c0f8f1418ce5c0716a2091f7ceb685ddd3548e6df",
+    "nav282-trace-handoff-full-binding.json": "245c8f7c7b172a30bfe6c4b3833d7d1677597c9742e66ecf676a60309eec9083",
+    "nav282-trace-handoff-samples-binding.json": "4b411d60587cb23f273e5f5e9a690175facd04ab0075e5676b96d6d92f310ab8",
+    "nav282-trace-handoff-browser-race.log": "8a561551f02f693561e65ec4d10aa3baa875d18ec5437c9ab76eca0691b67d45",
+    "nav282-trace-handoff-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-trace-handoff-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-35205bd-fast.zip": "e03679b0256f5a0e52a11fdf376973cd3d621f1121889c70301551c73daae630",
+    "pr442-35205bd-fast-summary.json": "f05c7e83cba02bdb7bc9b60389fc936cb8f12caa16264ed9d7f0a31092546d5d",
+    "pr442-35205bd-fast-analysis.log": "5da6541e0bfed0b477f8c18a74abb9e94e9a5bfde63c9ab95b065e713891d263",
+    "nav282-trace-handoff-sample-1.log": "7ccd93c387f6d13909c3277eb2dfdf3ddea097ce9d08be15d8d161494dd318d0",
+    "nav282-trace-handoff-sample-2.log": "82fd25d6af6e95956e9024ea81fb6ab0df34662f3954297d26595768666d80ca",
+    "nav282-trace-handoff-sample-3.log": "58de6239ecb33101518380031c4ddd0787132efb88fbe03e52ec0ab0a82c404e"
+  },
+  "matchingChromiumSourceSHA256": {
+    "services_network_cors_cors_url_loader_factory.cc": "8150ecdfa54cc0898fa2984e64676237ba62050d2548888b25ce541fac394fe9"
+  },
+  "checks": "ok  \tgithub.com/jordanhubbard/webmux/server/internal/browser\t1.764s;native36ordinary+4intentionalPASS;allcapturescomplete/zerodrops;8positivefocusedloadingfactoryobservations;2explicitWindowsNetLogskips;privacy/scope/bounds/noisybackgroundtests+Darwin/WindowsbrowservetPASS.",
+  "scope": "Projectionaftertrialonly. Keep2loadingXhandoffnamesandoriginalnavigationevents/flows. Originalcollectioncategories/placement/commands/buffers/15spostnavigationcollectiondeadline/workflowselector/runtimeunchanged. 256projectionboundnotraised;truncationstillfails. WindowsPENDING;nocause/runtimefix/merge/release."
+}

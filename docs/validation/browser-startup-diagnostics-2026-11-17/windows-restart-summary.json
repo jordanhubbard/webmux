@@ -1,0 +1,880 @@
+{
+  "head": "9708ffc5bdcc4d55e5c1492e7f66ac34115e1678",
+  "run": 44229946781,
+  "job": 134552230935,
+  "artifact": 14394149361,
+  "artifactSHA256": "31a7bcda1948d43c8527882c3f99ffe9b2a694e1d075aeb6160eccb63fee534a",
+  "phaseCounts": {
+    "full": 23,
+    "sample-1": 9,
+    "sample-2": 9,
+    "sample-3": 9
+  },
+  "records": [
+    {
+      "phase": "full",
+      "mode": "direct-child-original",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-child",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "full",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 47,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 33
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-child-original",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-child",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-netlog",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-screenshot",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 39,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 47,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 48,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "bytes": 438,
+        "lines": 2,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 1,
+        "startupReports": 1,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 51,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-websocket",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-netlog",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "full",
+      "mode": "direct-screenshot",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 37,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 45,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 36,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 17,
+      "processOutput": {
+        "bytes": 438,
+        "lines": 2,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 1,
+        "startupReports": 1,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 42,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "full",
+      "mode": "direct-websocket",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "full",
+      "mode": "direct",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "sample-1",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 47,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 33
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 55,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 50,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 39,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 35
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 52,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "bytes": 438,
+        "lines": 2,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 1,
+        "startupReports": 1,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 41,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 50,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 46,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-2",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 48,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 33
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 49,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "bytes": 438,
+        "lines": 2,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 1,
+        "startupReports": 1,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 40,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 44,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 44,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 45,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "bytes": 437,
+        "lines": 2,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 1,
+        "startupReports": 1,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 39,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 47,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 48,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "bytes": 438,
+        "lines": 2,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 1,
+        "startupReports": 1,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 43,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-3",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 46,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 33
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 38,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 50,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "bytes": 436,
+        "lines": 2,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 1,
+        "startupReports": 1,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-late",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 35,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 28
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 43,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-late",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 35,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 28
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 40,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 17,
+      "processOutput": {
+        "bytes": 437,
+        "lines": 2,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 1,
+        "startupReports": 1,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 49,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 45,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "full",
+      "mode": "worker-subprocess-saved",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "worker-subprocess-temporary",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    }
+  ],
+  "scope": "All50records/36completeendacknowledgedtraces;zeroloss/drops. Fullordinary15PASS7FAIL;sample21PASS3FAIL;4separateStopcontrolsPASS. Eightreaderconditionsallloadsuccessfullywithoneobservedstartuprestartreporteachandnodroppedinput. PositiveWindowsrestartobservation,notcause/fixproof. Readerconditionsandordercanperturbstartup. Sandboxaccessdenialnotyetmeasuredatthishead."
+}
