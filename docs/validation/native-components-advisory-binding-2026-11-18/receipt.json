@@ -1,0 +1,131 @@
+{
+  "recordedUTC": "2026-11-18T19:14:39.572956+00:00",
+  "inventorySource": "5763dfd247428eb0f181ac139c723fb0032826ff",
+  "artifact": 14452166671,
+  "archiveSHA256": "b581f69edabdb958c97e2112f71da38c69a1bd429135d4ed05a743776ca04f56",
+  "componentsSHA256": "387cf21f0e00edd168ba5a08c35db46484e2c2be7dc6da7920c473a0c039464c",
+  "oldInventorySource": "49b1809c94296db7ee1f3c5dd962c00cc6f1bc31",
+  "distinctDistroPackages": 70,
+  "matchedPackages": 43,
+  "unmatchedPackages": [
+    "libasyncns0",
+    "libbsd0",
+    "libffi8",
+    "libfontconfig1",
+    "libgmp10",
+    "libgpg-error0",
+    "libhogweed6",
+    "libidn2-0",
+    "libkeyutils1",
+    "liblz4-1",
+    "libmd0",
+    "libnettle8",
+    "libogg0",
+    "libopus0",
+    "libpulse0",
+    "libunistring2",
+    "libusb-1.0-0",
+    "libvorbis0a",
+    "libvorbisenc2",
+    "libxau6",
+    "libxcb-render0",
+    "libxcb-shm0",
+    "libxcb1",
+    "libxdmcp6",
+    "libxext6",
+    "libxkbfile1",
+    "mosh"
+  ],
+  "feedGenerator": {
+    "product_name": "Canonical OVAL Generator",
+    "product_version": "2",
+    "schema_version": "5.11.1",
+    "timestamp": "2026-11-17T08:57:09"
+  },
+  "feedCompressedSHA256": "a202e26afa0feed7bd411a8cbd30c7c4f2a1fd1105179cd5c87b6cf9004166f4",
+  "screens": {
+    "meets-fix-boundary": 549,
+    "presence-test-without-version-bound": 784
+  },
+  "belowFixRows": 0,
+  "sixPreviousBelowRowsNowMeetBounds": [
+    {
+      "package": "libc6",
+      "observed": "2.35-0ubuntu3.18",
+      "definition": "oval:com.ubuntu.jammy:def:202686740000000",
+      "title": "CVE-2026-8674 on Ubuntu 22.04 LTS (jammy) - medium",
+      "fixedBoundary": "2.35-0ubuntu3.18",
+      "screen": "meets-fix-boundary"
+    },
+    {
+      "package": "libc6",
+      "observed": "2.35-0ubuntu3.18",
+      "definition": "oval:com.ubuntu.jammy:def:2026183740000000",
+      "title": "CVE-2026-18374 on Ubuntu 22.04 LTS (jammy) - medium",
+      "fixedBoundary": "2.35-0ubuntu3.18",
+      "screen": "meets-fix-boundary"
+    },
+    {
+      "package": "libc6",
+      "observed": "2.35-0ubuntu3.18",
+      "definition": "oval:com.ubuntu.jammy:def:2026842430000000",
+      "title": "CVE-2026-84243 on Ubuntu 22.04 LTS (jammy) - medium",
+      "fixedBoundary": "2.35-0ubuntu3.18",
+      "screen": "meets-fix-boundary"
+    },
+    {
+      "package": "libc6",
+      "observed": "2.35-0ubuntu3.18",
+      "definition": "oval:com.ubuntu.jammy:def:2026868050000000",
+      "title": "CVE-2026-86805 on Ubuntu 22.04 LTS (jammy) - medium",
+      "fixedBoundary": "2.35-0ubuntu3.18",
+      "screen": "meets-fix-boundary"
+    },
+    {
+      "package": "libc6",
+      "observed": "2.35-0ubuntu3.18",
+      "definition": "oval:com.ubuntu.jammy:def:2026958180000000",
+      "title": "CVE-2026-95818 on Ubuntu 22.04 LTS (jammy) - medium",
+      "fixedBoundary": "2.35-0ubuntu3.18",
+      "screen": "meets-fix-boundary"
+    },
+    {
+      "package": "libc6",
+      "observed": "2.35-0ubuntu3.18",
+      "definition": "oval:com.ubuntu.jammy:def:2026973990000000",
+      "title": "CVE-2026-97399 on Ubuntu 22.04 LTS (jammy) - medium",
+      "fixedBoundary": "2.35-0ubuntu3.18",
+      "screen": "meets-fix-boundary"
+    }
+  ],
+  "changesFromOldInventory": {
+    "added": [
+      "mosh"
+    ],
+    "removed": [],
+    "versionChanges": [
+      {
+        "package": "libc6:amd64",
+        "from": "2.35-0ubuntu3.15",
+        "to": "2.35-0ubuntu3.18"
+      }
+    ]
+  },
+  "versionComparatorInstalled": "python-debian1.1.1",
+  "limits": [
+    "Retained Canonical feed timestamp2026-11-17, not a newly downloaded feed or current host scan.",
+    "Presence-only784rows remain candidate constraints, not784confirmed distinct vulnerabilities.",
+    "27packages, including Mosh, have no matching supported constraints; absence is not safety proof.",
+    "Not complete Boolean/architecture/OS OVAL evaluation, package-byte authenticity, source-built guacd/tmux audit, exploitability, license determination or global vulnerability clearance.",
+    "Release qualification and issue91 remain open."
+  ],
+  "privateEvidenceHashes": {
+    "summary.json": "2b2c3b062860b7aaa98a92d3c4127d6ca586367d1d64243fcd7743867dc4546b",
+    "components.json": "387cf21f0e00edd168ba5a08c35db46484e2c2be7dc6da7920c473a0c039464c",
+    "inventory.json": "b7eba117f418d66f138927cc99e63961abcea2ccb4de9003478c9ab8c86d60d0",
+    "screen_oval.py": "5e434c448bbf334749173dbda7845dc052291158a67425b7b44d271297d90846",
+    "oval-version-screen.json": "fb44e1d33833108804e66ffd69e11d4095a094f7dc016aa4d3e43f8c998b4a4a",
+    "screen.log": "e7f08182c50094a920328fe23383a36bc1c50ece5cdca59328daa7dd9daa0b40",
+    "requirements.txt": "891d395220687a5388ba8cd4ed2fdf66ed215439ef00a16d6ed49529a287f8b1"
+  }
+}
