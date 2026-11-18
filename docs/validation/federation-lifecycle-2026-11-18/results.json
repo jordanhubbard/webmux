@@ -47,7 +47,7 @@
     "workflowYAMLParsed": true,
     "diffWhitespace": true
   },
-  "nativeWindows": "pending exact-head diagnostic samples; no repaired/green qualification claim",
+  "nativeWindows": "Initial one-sample and expected-failure controls passed. Source 28f32b5 ten-sample cohort retained 9 pass/1 fail; geometry source 3cceb89 cohort retained 10 pass/0 fail. No repaired qualification claim.",
   "originalFailure": {
     "run": 44267347627,
     "job": 134675161963,
@@ -84,6 +84,17 @@
       "afterDOMHasMarker": true,
       "noAdditionalTerminalWrites": true
     },
-    "nativeWindowsCounterfactual": "pending; preserve initial assertion failure, scroll existing viewer and count new frames/sockets; no cause/repair established"
+    "nativeWindowsCounterfactual": "pending; preserve initial assertion failure, scroll existing viewer and count new frames/sockets; no cause/repair established",
+    "geometryWindowsStudy": {
+      "run": 44276326962,
+      "head": "3cceb89457bd420d97bdf77cb954c778fdd75522",
+      "artifact": 14415107530,
+      "artifactReportedDigest": "sha256:eb96f9827a4581c3ef7d5161e038be2520ca97f7d6303cf8da2a6941eb2ac17f",
+      "samples": 10,
+      "passed": 10,
+      "failed": 0,
+      "expectedFailureControls": 1,
+      "capturedSpontaneousBlankFailure": false
+    }
   }
 }

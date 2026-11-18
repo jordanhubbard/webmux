@@ -35,8 +35,8 @@ one or ten independent fresh samples. Every outcome is retained and any
 unexpected failure or missing receipt fails the job. Existing federation
 assertions, the five-second marker checks, the 90-second case deadline,
 protected Chromium preparation and standard CI gates remain in place.
-Native Windows evidence is still required. Profile cleanup #473 and dependency
-audit #429 remain separate blockers.
+Native Windows diagnostic outcomes are recorded below. Profile cleanup #473
+and dependency audit #429 remain separate blockers.
 
 The first ten-sample Windows run (44273974857, initial source `28f32b5`)
 retained nine passing samples and one failure during Pack. Before cleanup,
@@ -53,3 +53,9 @@ reconnect or replay. Installed xterm source pauses offscreen painting; a separat
 macOS library control has a populated native xterm buffer and blank offscreen
 DOM, then displays the marker after scrolling with no additional terminal
 writes. The analogous observation on the failing Windows sample is pending.
+
+The geometry follow-up at `3cceb89` completed all ten Windows samples in run
+44276326962. Each retained receipt has `completed: true`; its separate expected
+failure control was retained before cleanup. No spontaneous blank failure was
+captured, so this cohort cannot settle the visibility hypothesis. The earlier
+nine-pass/one-failure cohort remains evidence; no runtime repair is claimed.
