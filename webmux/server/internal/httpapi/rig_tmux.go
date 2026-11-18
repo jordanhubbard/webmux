@@ -2,7 +2,7 @@ package httpapi
 
 import (
 	"fmt"
-	"path/filepath"
+	"path"
 	"regexp"
 	"strings"
 	"unicode"
@@ -14,7 +14,7 @@ func rigTmuxServerArgs(flag, value string) ([]string, error) {
 	if flag == "" && value == "" {
 		return nil, nil
 	}
-	if flag != "-S" || value == "" || len(value) > 2048 || !filepath.IsAbs(value) || strings.ContainsFunc(value, unicode.IsControl) {
+	if flag != "-S" || value == "" || len(value) > 2048 || !path.IsAbs(value) || strings.ContainsFunc(value, unicode.IsControl) {
 		return nil, fmt.Errorf("Rig tmux server selection is invalid or unsupported; refresh the canonical inventory")
 	}
 	return []string{flag, value}, nil
