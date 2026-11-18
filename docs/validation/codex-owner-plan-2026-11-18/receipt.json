@@ -1,0 +1,79 @@
+{
+  "scope": "Installed native Codex0.169 default owner resolution plus ephemeral per-thread policy projection controls; no coding turn, selected-profile support or Rig launch conversion claim",
+  "platform": "macOS ARM64",
+  "codexVersion": "0.169.0",
+  "nativeDefaultResolver": {
+    "modelProviderProjected": true,
+    "accountIdentityHashed": true,
+    "selectedProfile": null,
+    "noTurnSubmitted": true
+  },
+  "nativeProjectionCases": [
+    {
+      "case": "default",
+      "policy": {
+        "type": "dangerFullAccess"
+      },
+      "approval": "never",
+      "nativeEphemeral": true,
+      "projectPreserved": true,
+      "sameNativeAccountAsDefault": true
+    },
+    {
+      "case": "read",
+      "policy": {
+        "type": "readOnly",
+        "networkAccess": false
+      },
+      "approval": "never",
+      "nativeEphemeral": true,
+      "projectPreserved": true,
+      "sameNativeAccountAsDefault": true
+    },
+    {
+      "case": "workspace",
+      "policy": {
+        "type": "workspaceWrite",
+        "networkAccess": false,
+        "writableRoots": [
+          "<fixture>/extra root"
+        ],
+        "excludeSlashTmp": true,
+        "excludeTmpdirEnvVar": true
+      },
+      "approval": "on-request",
+      "nativeEphemeral": true,
+      "projectPreserved": true,
+      "sameNativeAccountAsDefault": true
+    }
+  ],
+  "nativeChecks": {
+    "threeNativePoliciesProjected": true,
+    "accountSameAcrossNativeContexts": true,
+    "noCodingTurnSubmitted": true,
+    "ownedAppServerStopped": true
+  },
+  "sourceBindings": {
+    "moduleSHA256": "1e5f3c86abe58f263de1696f3f5557273c37f0a77e42178f2c2f2711a16b2d8f",
+    "testSHA256": "d562015f15d20afcaa7c8193d8464510c3519058fded9625bc9a5169017d4781",
+    "nativeProbeSHA256": "c88818ac97b25ac8fdb6099721fa191e8ce988ca42035f87db38ed5e15dff9f8",
+    "nativeReportSHA256": "b92cbc9f74b6034f731e0a6a9f18537dc947fca529d442463e78a85cc9c3ac86",
+    "cliSHA256": "739cda86e15d30a6e2b40cf8dcbbfb988aaf48b305b27065573bb8e9fd41d002"
+  },
+  "localValidation": {
+    "strictTypeScriptProjects": 5,
+    "helperTestsPassed": 156,
+    "helperSkips": 0,
+    "ownerPlanControls": 12,
+    "installedLockIdentities": 272,
+    "whitespace": "pass"
+  },
+  "limits": [
+    "Not wired into WebMux creation; a snapshot is not permission to launch, readiness or coding/recovery evidence.",
+    "Actual end-to-end resolver acceptance is default CLI configuration on macOS ARM64; other policy cases use documented ephemeral per-thread native overrides and verify projection only.",
+    "Native Codex0.169 app-server rejects --profile. The resolver refuses selected configuration profiles; it never substitutes default configuration. Temporary profile admission failure is retained and excluded from positive evidence.",
+    "Named/inherited permission graphs, granular approvals, non-user reviewers, non-OpenAI providers and accounts without stable native ChatGPT user/workspace IDs refuse.",
+    "The creation adapter still must preserve provider execution environment and revalidate its plan before dispatch. Rig-generated writable directories must be suppressed or the workspace-write case refused.",
+    "The helper uses native account/read; it does not open/copy auth files itself. Raw account IDs, email, credentials, native stderr and arbitrary config contents are excluded from the returned plan."
+  ]
+}
