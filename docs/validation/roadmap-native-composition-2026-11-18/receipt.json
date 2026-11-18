@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "recordedUTC": "2026-11-18T16:15:07.593589+00:00",
+  "sourceMerge": "dc030e45b1712154e4cc29291d7ac6e1e73dd91f",
+  "inputs": {
+    "canonical500": "4468d49c14f899b5c90d085e56cfe1db1d5d9081",
+    "nativeLibc518": "ae00c27da2f0cb34a9773e85f5e44dc65e3b55ad",
+    "privateTmux520": "ce7546dc43287496eb9406cf3afca8efd9bfe069",
+    "nativeCodex511": "fa8ad07038586c21dd35d863a2108cc2a5271aae"
+  },
+  "allInputsAncestors": true,
+  "byteIdentity": [
+    {
+      "input": "nativeCodex511",
+      "paths": [
+        "webmux/server/internal/openrigcoord"
+      ],
+      "equal": true
+    },
+    {
+      "input": "privateTmux520",
+      "paths": [
+        "webmux/frontend",
+        "scripts/private-test-tmux.test.mts",
+        "webmux/scripts/private-test-tmux.mts"
+      ],
+      "equal": true
+    },
+    {
+      "input": "origin/main",
+      "paths": [
+        "webmux/package-lock.json"
+      ],
+      "equal": true
+    }
+  ],
+  "local": {
+    "platform": "Darwin ARM64",
+    "node": "24.21.0",
+    "go": "1.27.4",
+    "frontendTests": 425,
+    "helperTests": 191,
+    "helperSkips": 0,
+    "nativeWitnessControls": 10,
+    "strictTypeScriptProjects": 5,
+    "frontendLint": true,
+    "applicationBuild": true,
+    "lockIdentities": 272,
+    "goRace": [
+      "internal/httpapi",
+      "internal/openrigcoord"
+    ],
+    "goVet": [
+      "internal/httpapi",
+      "internal/openrigcoord"
+    ],
+    "whitespace": true
+  },
+  "excludedAttempt": {
+    "log": "go-race.log",
+    "cause": "Initial invocation omitted Node24 PATH; default Node26.8.1 triggered explicit native-create Node24 admission refusal before requests directory. Coordinator test failed; source was unchanged. HTTP API race suite passed in same invocation.",
+    "correction": "Coordinator race suite rerun with selected Node24 PATH passes in go-coordinator-node24.log. Original failure retained, not relabeled."
+  },
+  "logSHA256": {
+    "helpers.log": "84523f7a42d09f31c24c4060200bb396e28db07beb116893f7222a9c83a9986b",
+    "native-witness.log": "5b0a67fff6dcd08ee91a717a60d971bddf2bca7ae46148c288a513a5d72bc572",
+    "go-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "frontend.log": "db776a75ab55184cf712cc3140b3891a83297bab0c2dae81b075b1593c62140b",
+    "go-coordinator-node24.log": "db52b229ed67f1c10ed24c43ad1b57c98101394651a0acf980ba8e688445597b",
+    "build-types-lint-lock.log": "9f1ad222222c64ca3a79ba7154914388154eed05ad9aefe963e60f51251e0370",
+    "go-race.log": "abd91220ec946b371be667a7a82031841e465402c2a5b62aaf3eb87f0dc07e74"
+  },
+  "componentRuns": {
+    "511": {
+      "ci": 44334572218,
+      "ciResult": "All seven non-audit jobs pass; audit429 fails.",
+      "arm": 44334467320,
+      "armArtifact": 14443574024,
+      "armSHA256": "1ad25598ba8fe7fce5d1d6408631b0bad1f159d068047b4ff036bf3ef2cd7e3f",
+      "captures": 28,
+      "comparisons": 1381,
+      "allThreeStagesEqual": true,
+      "replayedQueries": 0,
+      "nativeGoNodeCapture": true,
+      "rendererNativeARM64": false
+    },
+    "518": {
+      "ci": 44330541956,
+      "arm": 44330551101,
+      "result": "All seven non-audit CI jobs and ARM pass; audit429 fails.",
+      "nativeLinuxArtifact": 14440383152,
+      "nativeLinuxSHA256": "9d4f78bb7ee1f5bbd47b6d652f572da8403d9457b0b465549126c6b928000419",
+      "libcBefore": "2.35-0ubuntu3.15",
+      "libcAfterAndLoaded": "2.35-0ubuntu3.18"
+    },
+    "520": {
+      "ci": 44339808172,
+      "result": "All seven non-audit CI jobs pass; audit429 fails.",
+      "arm": 44339862340,
+      "armStatusAtComposition": "in_progress; not treated as passed"
+    }
+  },
+  "security": "GitHub withdrew GHSA-fc5q-39xc-vjpf at2026-11-18T15:38:56Z. Unchanged npm audit still exits1 with12high package entries at16:04UTC. No algorithm-fix, suppression, downgrade or green-gate claim.",
+  "scope": [
+    "Combined local validation and source identity only; fresh exact-final-head hosted workflows remain required.",
+    "Native creation is an internal factory. Public HTTP/UI creation, durable namespace allocation, typed uncertain-request controls and recovery composition are incomplete.",
+    "Older authenticated native component evidence retains its recorded version/platform/source scope; it does not prove combined browser/controller/manager loss, host reboot, selected profiles or every permission graph.",
+    "ARM renderer uses AMD64 browser emulation; native ARM64 server/tools/capture is separate from authenticated ARM64 conversation recovery.",
+    "No merge to main, version change, tag or release publication; full roadmap acceptance remains open."
+  ]
+}
