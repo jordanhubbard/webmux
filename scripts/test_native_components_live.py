@@ -27,6 +27,7 @@ class LiveNativeInventory(unittest.TestCase):
             reservation.bind(("127.0.0.1", 0))
             port = reservation.getsockname()[1]
         client = None
+        worker_fd = None
         summary = {"passed": False}
         with (root / "guacd.log").open("wb") as log:
             process = subprocess.Popen([str(executable), "-f", "-b", "127.0.0.1", "-l", str(port), "-L", "info"],
@@ -53,6 +54,19 @@ class LiveNativeInventory(unittest.TestCase):
                         pass
                 workers = [pid for pid in candidates if "libguac-client-rdp" in Path(f"/proc/{pid}/maps").read_text()]
                 self.assertEqual(len(workers), 1)
+                # This intentionally incomplete handshake has a short native
+                # deadline. Freeze only our plugin-loaded child for the maps
+                # snapshot, using a pidfd so cleanup cannot signal a reused PID.
+                worker_fd = os.pidfd_open(workers[0])
+                signal.pidfd_send_signal(worker_fd, signal.SIGSTOP)
+                until = time.monotonic() + 2
+                while time.monotonic() < until:
+                    state = Path(f"/proc/{workers[0]}/status").read_text()
+                    if any(line.startswith("State:") and "T (stopped)" in line for line in state.splitlines()):
+                        break
+                    time.sleep(.01)
+                else:
+                    self.fail("Owned plugin worker did not stop for its inventory snapshot")
                 output = root / "components.json"
                 command = ["python3", str(script), "--output", str(output), "--tool", "guacd=" + str(executable),
                            "--guacd-pid", str(workers[0])]
@@ -92,8 +106,16 @@ class LiveNativeInventory(unittest.TestCase):
                                plugins=[Path(path).name for path in observed["observedPlugins"]],
                                versionProbeMatchesExecutable=True, duplicateOutputRefused=True,
                                differentPathToolRefused=mismatch is not None,
+                               pluginWorkerPausedForSnapshot=True,
                                scope="Private guacd/plugin inventory only; not functional RDP, authentication, vulnerability or complete-deployment acceptance")
             finally:
+                if worker_fd is not None:
+                    try:
+                        signal.pidfd_send_signal(worker_fd, signal.SIGCONT)
+                    except ProcessLookupError:
+                        pass
+                    finally:
+                        os.close(worker_fd)
                 if client:
                     client.close()
                 if process.poll() is None:
