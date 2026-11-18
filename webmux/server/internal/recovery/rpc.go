@@ -16,13 +16,15 @@ const recoveryWorkerTimeout = 25 * time.Second
 // RPCRequest travels through a local pipe or authenticated SSH stdin. Keys must
 // never appear in a URL, command-line argument, terminal input or transcript.
 type RPCRequest struct {
-	Protocol  int             `json:"protocol"`
-	SessionID string          `json:"session_id"`
-	Key       string          `json:"key"`
-	Operation string          `json:"operation"`
-	Recording *bool           `json:"recording,omitempty"`
-	Action    *RecoveryAction `json:"action,omitempty"`
-	Seed      *Activity       `json:"seed,omitempty"`
+	BrowserControl bool            `json:"browser_control,omitempty"`
+	BrowserAck     string          `json:"browser_ack,omitempty"`
+	Protocol       int             `json:"protocol"`
+	SessionID      string          `json:"session_id"`
+	Key            string          `json:"key"`
+	Operation      string          `json:"operation"`
+	Recording      *bool           `json:"recording,omitempty"`
+	Action         *RecoveryAction `json:"action,omitempty"`
+	Seed           *Activity       `json:"seed,omitempty"`
 }
 
 type RecoveryAction struct {
@@ -35,12 +37,14 @@ type RecoveryAction struct {
 }
 
 type RPCResponse struct {
-	Protocol  int     `json:"protocol"`
-	Revision  uint64  `json:"revision,omitempty"`
-	Recording bool    `json:"recording"`
-	Events    []Event `json:"events,omitempty"`
-	Outcome   string  `json:"outcome,omitempty"`
-	Error     string  `json:"error,omitempty"`
+	BrowserRequest    *BrowserRequest `json:"browser_request,omitempty"`
+	BrowserObservedAt int64           `json:"browser_observed_at,omitempty"`
+	Protocol          int             `json:"protocol"`
+	Revision          uint64          `json:"revision,omitempty"`
+	Recording         bool            `json:"recording"`
+	Events            []Event         `json:"events,omitempty"`
+	Outcome           string          `json:"outcome,omitempty"`
+	Error             string          `json:"error,omitempty"`
 }
 
 func readRPC(input io.Reader, value any) error {
@@ -113,6 +117,14 @@ func hostRPC(ctx context.Context, request RPCRequest) (RPCResponse, error) {
 		if err := InitializeHostEvidence(request.SessionID, request.Key, *request.Recording, request.Seed); err != nil {
 			return RPCResponse{}, err
 		}
+		if request.BrowserControl {
+			if _, err := updateHostState(request.SessionID, request.Key, false, func(state *HostState) error {
+				state.BrowserControl = true
+				return nil
+			}); err != nil {
+				return RPCResponse{}, err
+			}
+		}
 		if _, err := EnsureProvider(ctx, request.SessionID, request.Key); err != nil {
 			return RPCResponse{}, err
 		}
@@ -131,6 +143,9 @@ func hostRPC(ctx context.Context, request RPCRequest) (RPCResponse, error) {
 		}
 		state, err = updateHostState(request.SessionID, request.Key, false, func(state *HostState) error {
 			state.Recording = *request.Recording
+			if pending := state.BrowserRequest; pending != nil && (pending.ID == request.BrowserAck || pending.Expires <= time.Now().UnixMilli()) {
+				state.BrowserRequest = nil
+			}
 			return nil
 		})
 	case "action":
@@ -153,7 +168,11 @@ func hostRPC(ctx context.Context, request RPCRequest) (RPCResponse, error) {
 		return RPCResponse{}, err
 	}
 	events, err := SignedHostEvents(state, request.Key)
-	return RPCResponse{Revision: state.Revision, Recording: state.Recording, Events: events}, err
+	var observedAt int64
+	if state.BrowserRequest != nil {
+		observedAt = time.Now().UnixMilli()
+	}
+	return RPCResponse{Revision: state.Revision, Recording: state.Recording, Events: events, BrowserRequest: state.BrowserRequest, BrowserObservedAt: observedAt}, err
 }
 
 func callWaitingWorker(ctx context.Context, endpoint string, request RPCRequest) (RPCResponse, error) {

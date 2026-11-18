@@ -212,13 +212,25 @@ func (b *Broker) closeViewersLocked(e *entry, code int, reason string) {
 }
 
 // Acknowledged launch requests are never replayed from scrollback or snapshots.
-func (b *Broker) AcknowledgeBrowser(owner, id, requestID string) {
+func (b *Broker) AcknowledgeBrowser(owner, id, requestID string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	e, err := b.ownedLocked(owner, id)
+	if err != nil {
+		return err
+	}
 	if err == nil && e.browserRequest != nil && e.browserRequest["request_id"] == requestID {
+		if e.browserControlID == requestID {
+			previous := e.value.LastBrowserAck
+			e.value.LastBrowserAck = requestID
+			if err := b.persistLocked(); err != nil {
+				e.value.LastBrowserAck = previous
+				return err
+			}
+		}
 		e.browserRequest = nil
 	}
+	return nil
 }
 
 func (e *entry) snapshotMetadata(event Event) {

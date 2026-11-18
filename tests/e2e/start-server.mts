@@ -46,8 +46,8 @@ process.env.WEBMUX_HOME = testHome;
 const testRequire = createRequire(path.resolve(import.meta.dirname, '../../webmux/package.json'));
 const { chromium } = testRequire('playwright-core') as { chromium: { executablePath(): string } };
 process.env.WEBMUX_BROWSER_EXECUTABLE ||= process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || chromium.executablePath();
-if (process.env.WEBMUX_REAL_SSH === '1') {
-  if (process.platform !== 'linux') throw new Error('The real SSH fixture requires Linux');
+if (process.env.WEBMUX_REAL_SSH === '1' || process.env.WEBMUX_REAL_MOSH === '1') {
+  if (process.platform !== 'linux' && !(process.env.WEBMUX_REAL_MOSH === '1' && process.platform === 'darwin')) throw new Error('The real SSH/Mosh fixture requires Linux, or macOS for Mosh');
   const directory = path.join(testHome, 'ssh-bin');
   fs.mkdirSync(directory, { mode: 0o700 });
   const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
@@ -57,7 +57,7 @@ if (process.env.WEBMUX_REAL_SSH === '1') {
   fs.writeFileSync(path.join(directory, 'ssh'), `#!/bin/sh\nexec /usr/bin/ssh ${args.map(quote).join(' ')} "$@"\n`, { mode: 0o700 });
   process.env.PATH = `${directory}${path.delimiter}${process.env.PATH ?? ''}`;
 }
-if (process.env.WEBMUX_VISUAL_PARITY === '1' || process.env.WEBMUX_REAL_VNC === '1' || process.env.WEBMUX_REAL_RDP === '1') process.env.WEBMUX_ALLOW_LOCAL_TARGETS = '1';
+if (process.env.WEBMUX_VISUAL_PARITY === '1' || process.env.WEBMUX_REAL_VNC === '1' || process.env.WEBMUX_REAL_RDP === '1' || process.env.WEBMUX_REAL_MOSH === '1') process.env.WEBMUX_ALLOW_LOCAL_TARGETS = '1';
 const binary = path.join(testHome, process.platform === 'win32' ? 'webmux.exe' : 'webmux');
 const build = spawnSync('go', ['run', './cmd/build', '-o', binary], {
   cwd: path.resolve(import.meta.dirname, '../../webmux/server'), stdio: 'inherit',

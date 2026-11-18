@@ -59,9 +59,10 @@ func (b *Broker) syncRecovery(e *entry, r *run) {
 		return
 	}
 	recording := r.log.active()
+	browserAck := e.value.LastBrowserAck
 	b.mu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	response := controller.RecoveryRPC(ctx, recovery.RPCRequest{Operation: "policy", Recording: &recording})
+	response := controller.RecoveryRPC(ctx, recovery.RPCRequest{Operation: "policy", Recording: &recording, BrowserAck: browserAck})
 	cancel()
 	b.mu.Lock()
 	var automatic *RecoveryRequest
@@ -96,6 +97,7 @@ func (b *Broker) applyRecoverySnapshotLocked(e *entry, r *run, response recovery
 		}
 	}
 	r.recoveryReady = true
+	b.applyBrowserControlLocked(e, r, response.BrowserRequest, response.BrowserObservedAt)
 	if response.Revision == r.recoveryRevision {
 		return
 	}

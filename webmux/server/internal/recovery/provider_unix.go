@@ -66,6 +66,11 @@ func ensureProvider(ctx context.Context, id, key, helper string) (Event, error) 
 		}
 		quote := func(value string) string { return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'" }
 		args := []string{"new-session", "-d", "-s", quote(session), "-e", quote("WEBMUX_RECOVERY_SESSION=" + id), "-e", quote("WEBMUX_RECOVERY_KEY=" + key), "-e", quote("WEBMUX_RECOVERY_CACHE_HOME=" + cacheRoot)}
+		browserControl := "0"
+		if state.BrowserControl {
+			browserControl = "1"
+		}
+		args = append(args, "-e", quote("WEBMUX_BROWSER_CONTROL="+browserControl))
 		// Explicit environment overrides prevent a shared tmux server from
 		// accidentally passing another terminal's key or wait policy to a pane.
 		wait := "0"

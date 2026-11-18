@@ -125,14 +125,25 @@ This does not claim that remote hardware authentication is supported.
   also route into the sign-in panel. No user startup files or OS associations change.
 - SSH probes for the matching helper with verified host keys and key/agent access
   before starting a browser-linked shell. Missing support leaves a normal shell
-  silently; clicked links still open the sign-in panel. Mosh uses manual link
-  clicks because its terminal protocol does not reliably carry the launch control
-  sequence.
-- Launch requests travel through the existing PTY, including through local tmux,
+  silently; clicked links still open the sign-in panel.
+- New Mosh terminals with the matching terminal-host helper carry automatic
+  browser requests through the existing authenticated SSH control channel.
+  This works with logging disabled; Mosh's screen protocol does not have to carry
+  a browser escape sequence. After updating the terminal-host helper, create a
+  new Mosh terminal to get the shell integration. Existing providers are not
+  restarted automatically. Older/missing helpers retain manual link clicks.
+- Local and SSH launch requests travel through the existing PTY, including through local tmux,
   without a public listener or bearer token in the shell. The focused viewer
   receives the request; an unacknowledged request is retained for up to five
   minutes so reconnecting can open it. Owner-checked acknowledgements prevent
   replay after it has been delivered.
+- Mosh keeps its latest pending request sealed in the terminal host's private
+  control cache for a five-minute delivery window. Only the opaque acknowledged
+  request ID is saved by the controller. Acknowledgements clear that exact host
+  request and preserve a newer replacement. Durably acknowledged requests stay
+  dismissed across reconnects and controller restarts. The normal SSH control synchronization
+  removes acknowledged or expired pending records. No new listener or polling
+  loop is added, and the request is separate from terminal activity capture.
 - Terminal viewers consume ANSI/DEC mode queries (DECRQM) in the parser, alongside
   the existing identity/status/color query policy. Multiple viewers must not send
   duplicate replies into a shell or broadcast them into another terminal. Programs

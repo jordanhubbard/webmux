@@ -37,6 +37,7 @@ type RigIdentity struct {
 }
 
 type Session struct {
+	LastBrowserAck    string          `json:"-" yaml:"last_browser_ack,omitempty"`
 	TranscriptEnabled *bool           `json:"transcript_enabled,omitempty" yaml:"transcript_enabled,omitempty"`
 	RecoveryKey       string          `json:"-" yaml:"recovery_key,omitempty"`
 	Recovery          *recovery.State `json:"recovery,omitempty" yaml:"recovery,omitempty"`

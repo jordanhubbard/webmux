@@ -78,6 +78,7 @@ type entry struct {
 	shellInstance    string
 	replayScreen     replayScreen
 	browserRequest   Event
+	browserControlID string
 	browserExpires   time.Time
 	value            Session
 	run              *run
@@ -358,6 +359,7 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 	e.shellHelper, e.shellPlatform = "", ""
 	e.historyRestored = false
 	e.browserRequest = nil
+	e.browserControlID = ""
 	e.generation++
 	e.value.State = "connecting"
 	e.value.UpdatedAt = now()
@@ -868,16 +870,8 @@ func (b *Broker) output(id string, r *run, data string) {
 		if err != nil {
 			continue
 		}
-		e.browserRequest = Event{"type": "browser_open", "session_id": id, "url": url, "request_id": requestID}
-		e.browserExpires = time.Now().Add(5 * time.Minute)
-		if viewer := e.viewers[e.focus]; viewer != nil {
-			viewer.send(e.browserRequest)
-		} else {
-			for _, viewer := range e.viewers {
-				viewer.send(e.browserRequest)
-				break
-			}
-		}
+		e.browserControlID = ""
+		b.publishBrowserRequestLocked(e, requestID, url, time.Now().Add(5*time.Minute))
 	}
 	if r.log != nil {
 		if err := r.log.append(data); err != nil {
