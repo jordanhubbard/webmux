@@ -70,9 +70,10 @@ export function createFederationDiagnostics(page: Page, request: APIRequestConte
     async capture(completed: boolean, peer: { pid?: number; exitCode: number | null; signalCode: string | null }, diagnosticsBytes: number) {
       if (!enabled) return;
       append({ kind: 'capture', completed });
-      recording = false;
-      // Freeze events before diagnostics and before fixture cleanup destroys the
-      // failed view/provider. All extra requests here are read-only and bounded.
+      const captureSequence = sequence;
+      // Keep recording through the read-only queries as well as the visibility
+      // probe, so no received frame between the original capture and scrolling
+      // can be omitted from the counterfactual's transport counts.
       const [views, controller, remote] = await Promise.all([
         viewFacts(), sessions(''), sessions(peerURL),
       ]);
@@ -81,7 +82,7 @@ export function createFederationDiagnostics(page: Page, request: APIRequestConte
         // Counterfactual only AFTER the original assertion failed: expose the
         // existing viewer, without reconnecting or replaying anything. Retain
         // the original failure and count any new transport data during it.
-        const originalPhase = phase, before = sequence;
+        const originalPhase = phase, before = captureSequence;
         phase = 'post-failure-visibility-probe'; recording = true;
         append({ kind: 'visibility-probe' });
         const scroll = await bounded(page.locator('[data-testid^="server-terminal-"]:not([data-server-id="local"])').first().scrollIntoViewIfNeeded({ timeout: 1000 }));
@@ -95,6 +96,7 @@ export function createFederationDiagnostics(page: Page, request: APIRequestConte
           newSockets: events.filter(event => event.kind === 'created').length };
         recording = false; phase = originalPhase;
       }
+      recording = false;
       const starts: { pid: number; instance: string; role: string; presence: string }[] = [];
       if (fs.existsSync(startsFile) && fs.statSync(startsFile).size <= 65536) {
         for (const line of fs.readFileSync(startsFile, 'utf8').split('\n').filter(Boolean).slice(0, 32)) {

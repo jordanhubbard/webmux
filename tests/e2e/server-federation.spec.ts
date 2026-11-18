@@ -5,6 +5,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { createFederationDiagnostics } from './federation-diagnostics';
+import { installFederationReplayBarrier, releaseFederationReplayOffscreen } from './federation-replay-control';
 
 test('two servers share interactive terminal views, messages and failure state without duplicating providers', async ({ page, request }, info) => {
   test.setTimeout(90000);
@@ -30,6 +31,8 @@ test('two servers share interactive terminal views, messages and failure state w
   const peerURL = `http://127.0.0.1:${port}`;
   const startsFile = path.join(peerHome, 'provider-starts.jsonl');
   const observation = createFederationDiagnostics(page, request, info, peerURL, startsFile);
+  const offscreenControl = observation.enabled && process.env.WEBMUX_FEDERATION_DIAGNOSTIC_CONTROL === 'offscreen-replay';
+  if (offscreenControl) await installFederationReplayBarrier(page);
   let completed = false;
   const ids: string[] = [];
   const stopPeer = async () => {
@@ -53,7 +56,7 @@ test('two servers share interactive terminal views, messages and failure state w
       if (!base) ids.push(id);
       expect((await request.patch(`${base}/api/sessions/${id}`, { data: { project_label: 'WebMux' } })).ok()).toBe(true);
     }
-    await page.setViewportSize({ width: 900, height: 650 });
+    await page.setViewportSize({ width: 900, height: offscreenControl ? 1100 : 650 });
     await page.goto('/');
     await expect(page.getByRole('button', { name: 'More', exact: true })).toBeInViewport();
     const cluster = page.getByRole('group', { name: 'WebMux cluster' });
@@ -92,6 +95,30 @@ test('two servers share interactive terminal views, messages and failure state w
     expect(await remote.evaluate(el => el.parentElement === document.querySelector('[aria-label="Server terminal matrix"]'))).toBe(true);
     expect(await local.evaluate(el => el.parentElement === document.querySelector('[aria-label="Server terminal matrix"]'))).toBe(true);
     const providerPid = (await remote.locator('.xterm-rows').innerText()).match(/FEDERATION_READY:(\d+)/)![1];
+    if (offscreenControl) {
+      observation.phase('diagnostic-offscreen-replay');
+      await page.evaluate(() => window.federationReplayBarrier!.arm());
+      await remote.getByRole('button', { name: 'Reconnect viewer', exact: true }).click();
+      await page.setViewportSize({ width: 900, height: 650 });
+      await expect.poll(() => page.evaluate(() => window.federationReplayBarrier!.held)).toBeGreaterThan(0);
+      // Confirm that connected status cleared the old paint before releasing
+      // the same native replay bytes outside xterm's visible render region.
+      await expect(remote.locator('.xterm-rows')).not.toContainText(`FEDERATION_READY:${providerPid}`);
+      await releaseFederationReplayOffscreen(page);
+      await expect.poll(() => page.evaluate(() => window.federationReplayBarrier!.delivered)).toBeGreaterThan(0);
+      const control = await page.evaluate(() => {
+        const { armed, held, delivered, callbackError } = window.federationReplayBarrier!;
+        return { armed, held, delivered, callbackError };
+      });
+      expect(control.callbackError).toBe(false);
+      const controlFile = info.outputPath('offscreen-replay-control.json');
+      fs.writeFileSync(controlFile, JSON.stringify({ ...control, expectedPID: Number(providerPid) }));
+      await info.attach('offscreen replay control', { path: controlFile, contentType: 'application/json' });
+      // This intentionally retains the original, unscrolled DOM assertion.
+      // Its failure must survive the diagnostic visibility intervention.
+      await expect(remote.locator('.xterm-rows')).toContainText(`FEDERATION_READY:${providerPid}`);
+      throw new Error('Offscreen replay control did not reproduce blank paint');
+    }
     if (observation.enabled && process.env.WEBMUX_FEDERATION_DIAGNOSTIC_CONTROL === 'fail-before-revocation') {
       observation.phase('diagnostic-control-before-revocation');
       expect(false, 'FEDERATION_DIAGNOSTIC_CONTROL_478').toBe(true);

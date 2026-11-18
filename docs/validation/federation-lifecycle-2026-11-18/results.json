@@ -96,5 +96,36 @@
       "expectedFailureControls": 1,
       "capturedSpontaneousBlankFailure": false
     }
+  },
+  "offscreenReplayControl": {
+    "scope": "Negative control delays only real native WebSocket output callbacks until existing viewer is offscreen. Bytes, native transport and provider remain unchanged. It demonstrates an invalid offscreen DOM oracle, not the unique cause of every historical failure.",
+    "sourceSHA256": {
+      "tests/e2e/federation-replay-control.ts": "5f2c21a3173989de56f58b052d652537442bd7c162b2ec162f0a13518b0108fe",
+      "tests/e2e/server-federation.spec.ts": "1b5cd186ffcc23f5f58d14aa71806626d4812df512bbc2d7a913071cacbf7d8e",
+      "tests/e2e/federation-diagnostics.ts": "c5c60749ccb4a8ce93aa8281b8e1ba369d185e16e237047199f11352c29d80f1",
+      ".github/workflows/federation-native.yml": "ae5957be383b81ba3fe60c9afc6e240eb347528d170df02e8d35539ca7a047c4"
+    },
+    "nativeMac": {
+      "originalAssertionFailed": true,
+      "phase": "diagnostic-offscreen-replay",
+      "barrier": {
+        "armed": true,
+        "held": 1,
+        "delivered": 1,
+        "callbackError": false,
+        "expectedPID": 15348
+      },
+      "visibilityProbe": {
+        "scrollCompleted": true,
+        "traceComplete": true,
+        "newReceivedFrames": 0,
+        "newOutputFrames": 0,
+        "newSockets": 0
+      },
+      "originalProviderMarkerAfterScroll": true,
+      "bothOriginalProvidersPresent": true,
+      "receiptSHA256": "6ab5640716e9bcc3e7da8e0a77dd1a9d2b647a83d9ebb10ffaf0f4d7af0d6d82"
+    },
+    "nativeWindows": "pending same scheduling control and one unfaulted lifecycle on the new collector source"
   }
 }

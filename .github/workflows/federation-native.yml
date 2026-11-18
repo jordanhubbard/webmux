@@ -88,6 +88,22 @@ jobs:
           if ($controlExit -eq 0 -or $controls.Count -ne 1) { throw 'Expected the controlled assertion failure and its receipt.' }
           $control = Get-Content $controls[0].FullName -Raw | ConvertFrom-Json
           if ($control.completed -or $control.phase -ne 'diagnostic-control-before-revocation' -or $control.peer.exited -or @($control.starts).Count -ne 2 -or @($control.starts | Where-Object presence -ne 'exists').Count -ne 0) { throw 'Controlled failure was not observed before fixture cleanup.' }
+          $env:WEBMUX_FEDERATION_DIAGNOSTIC_CONTROL = 'offscreen-replay'
+          try {
+            npm run test:e2e:go -- server-federation.spec.ts --output=test-results/federation-native/offscreen-control
+            $visibilityExit = $LASTEXITCODE
+          } finally { Remove-Item Env:WEBMUX_FEDERATION_DIAGNOSTIC_CONTROL }
+          $visibilityReceipts = @(Get-ChildItem test-results/federation-native/offscreen-control -Recurse -Filter federation-diagnostics.json)
+          $barrierReceipts = @(Get-ChildItem test-results/federation-native/offscreen-control -Recurse -Filter offscreen-replay-control.json)
+          if ($visibilityExit -eq 0 -or $visibilityReceipts.Count -ne 1 -or $barrierReceipts.Count -ne 1) { throw 'Expected the offscreen assertion failure and both native control receipts.' }
+          $visibility = Get-Content $visibilityReceipts[0].FullName -Raw | ConvertFrom-Json
+          $barrier = Get-Content $barrierReceipts[0].FullName -Raw | ConvertFrom-Json
+          $before = @($visibility.views | Where-Object role -eq 'peer')
+          $after = @($visibility.visibilityProbe.after | Where-Object role -eq 'peer')
+          if ($visibility.completed -or $visibility.phase -ne 'diagnostic-offscreen-replay' -or $visibility.peer.exited -or @($visibility.starts).Count -ne 2 -or @($visibility.starts | Where-Object presence -ne 'exists').Count -ne 0) { throw 'Offscreen control did not retain the original live providers and failure.' }
+          if (-not $barrier.armed -or $barrier.callbackError -or $barrier.held -lt 1 -or $barrier.held -ne $barrier.delivered) { throw 'Real replay callbacks did not cross the scheduling barrier unchanged.' }
+          if ($before.Count -ne 1 -or -not $before[0].blank -or $before[0].screen.visibleHeight -ne 0 -or $before[0].viewer -ne 'Viewer: connected' -or $after.Count -ne 1 -or $after[0].blank -or $after[0].readyPIDs -notcontains $barrier.expectedPID) { throw 'Visibility did not expose the original provider marker.' }
+          if (-not $visibility.visibilityProbe.scrollCompleted -or -not $visibility.visibilityProbe.traceComplete -or $visibility.visibilityProbe.newReceivedFrames -ne 0 -or $visibility.visibilityProbe.newOutputFrames -ne 0 -or $visibility.visibilityProbe.newSockets -ne 0) { throw 'Visibility control received new transport data or did not retain a complete trace.' }
           $failed = $false
           foreach ($trial in 1..$samples) {
             $output = "test-results/federation-native/sample-$trial"

@@ -59,3 +59,15 @@ The geometry follow-up at `3cceb89` completed all ten Windows samples in run
 failure control was retained before cleanup. No spontaneous blank failure was
 captured, so this cohort cannot settle the visibility hypothesis. The earlier
 nine-pass/one-failure cohort remains evidence; no runtime repair is claimed.
+
+A deterministic application control now delays only delivery of real native
+WebSocket output callbacks until an IntersectionObserver has observed the
+existing peer viewer offscreen. It forwards every original message unchanged.
+On macOS the ordinary five-second DOM assertion then fails with both native
+providers alive and both viewers connected. Scrolling exposes the original
+provider marker with a complete trace and zero new received frames, output
+frames or sockets. Event recording includes the read-only diagnostic queries
+before the scroll. A normal native lifecycle also passes (14.1 seconds).
+The same controlled schedule is required by the Windows diagnostic workflow;
+its outcome is pending. This proves a visibility hazard in the DOM oracle,
+without identifying a unique cause for all historical failures.
