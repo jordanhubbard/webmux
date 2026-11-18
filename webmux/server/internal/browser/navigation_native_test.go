@@ -26,25 +26,26 @@ import (
 )
 
 type firstNavigationEvidence struct {
-	Transport       string                 `json:"transport"`
-	ProfileLocation string                 `json:"profileLocation"`
-	Mode            string                 `json:"mode"`
-	Platform        string                 `json:"platform"`
-	Architecture    string                 `json:"architecture"`
-	BrowserProduct  string                 `json:"browserProduct,omitempty"`
-	Loaded          bool                   `json:"loaded"`
-	FixtureRequests int64                  `json:"fixtureRequests"`
-	NavigateCalls   int                    `json:"navigateCalls"`
-	TargetSelection string                 `json:"targetSelection,omitempty"`
-	ExtraTargets    int                    `json:"extraTargets,omitempty"`
-	CleanupFailed   bool                   `json:"cleanupFailed,omitempty"`
-	Failure         string                 `json:"failure,omitempty"`
-	Diagnostics     *NavigationDiagnostics `json:"diagnostics,omitempty"`
-	NetLog          *firstNavigationNetLog `json:"netLog,omitempty"`
-	BrowserTrace    *firstNavigationTrace  `json:"browserTrace,omitempty"`
-	ProcessOutput   *firstNavigationOutput `json:"processOutput,omitempty"`
-	TraceLoading    bool                   `json:"traceLoading,omitempty"`
-	TraceStartStage string                 `json:"traceStartStage,omitempty"`
+	Transport       string                         `json:"transport"`
+	ProfileLocation string                         `json:"profileLocation"`
+	Mode            string                         `json:"mode"`
+	Platform        string                         `json:"platform"`
+	Architecture    string                         `json:"architecture"`
+	BrowserProduct  string                         `json:"browserProduct,omitempty"`
+	Loaded          bool                           `json:"loaded"`
+	FixtureRequests int64                          `json:"fixtureRequests"`
+	NavigateCalls   int                            `json:"navigateCalls"`
+	TargetSelection string                         `json:"targetSelection,omitempty"`
+	ExtraTargets    int                            `json:"extraTargets,omitempty"`
+	CleanupFailed   bool                           `json:"cleanupFailed,omitempty"`
+	Failure         string                         `json:"failure,omitempty"`
+	Diagnostics     *NavigationDiagnostics         `json:"diagnostics,omitempty"`
+	NetLog          *firstNavigationNetLog         `json:"netLog,omitempty"`
+	BrowserTrace    *firstNavigationTrace          `json:"browserTrace,omitempty"`
+	NetworkSandbox  *firstNavigationNetworkSandbox `json:"networkSandbox,omitempty"`
+	ProcessOutput   *firstNavigationOutput         `json:"processOutput,omitempty"`
+	TraceLoading    bool                           `json:"traceLoading,omitempty"`
+	TraceStartStage string                         `json:"traceStartStage,omitempty"`
 }
 
 // These are independent first loads in fresh private browser processes. A failed
@@ -402,6 +403,16 @@ func firstNavigationDirect(t *testing.T, options firstNavigationDirectOptions, r
 		t.Cleanup(func() {
 			snapshot := output.snapshot()
 			record.ProcessOutput = &snapshot
+			if runtime.GOOS == "windows" {
+				record.NetworkSandbox = inspectFirstNavigationNetworkSandbox(root)
+				if os.Getenv("WEBMUX_BROWSER_REQUIRE_NETWORK_APPCONTAINER") == "1" &&
+					(record.NetworkSandbox == nil || !record.NetworkSandbox.Observed || !record.NetworkSandbox.AppContainer || snapshot.ExecutableDeniedReports != 0 || snapshot.RestartReports != 0) {
+					if record.Failure == "" {
+						record.Failure = "network_service_sandbox_unverified"
+					}
+					t.Error("protected network service did not pass native AppContainer verification")
+				}
+			}
 			if snapshot.DroppedBytes != 0 || snapshot.DroppedLines != 0 {
 				t.Error("anonymous browser output observation exceeded bounds")
 			}

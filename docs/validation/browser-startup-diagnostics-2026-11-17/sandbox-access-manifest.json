@@ -1,0 +1,38 @@
+{
+  "recordedUTC": "2026-11-18T03:53:41.991457+00:00",
+  "parent": "ffeaa02152ee9d6d4c775fc7536fb278eff4b943",
+  "issue": 451,
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "7d597caa8a80d03430ccbedb4b1b876779eeed8e212d760bb516291ccde34e24",
+    "webmux/server/internal/browser/navigation_trace_test.go": "dbca0f07de21a6ecf0f098ad2f5e11f0cbe94f67f92d9145b5e1ec39af871f0b",
+    "webmux/server/internal/browser/navigation_trace_controls_test.go": "90ed298e90f9e1d22f380f29f260068048d81deb868b6a16184a7f0d6f4e817a",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "4fff230c39551a0cb179013890fd029154c4791df42ca93a97214f7493a34128",
+    "webmux/server/internal/browser/navigation_output_test.go": "e758d45fb46ea12bcf7ce0f85b681d851c332f37fd911811aa253c8c62e640d0",
+    "webmux/server/internal/browser/navigation_sandbox_windows_test.go": "8afb097293a85cba5e9a05cc6ea1c2fa53815543e66db677b4ccab66c713d747",
+    "webmux/server/internal/browser/navigation_sandbox_other_test.go": "ae83e8e852edfba0aaa965b1c87f65b7c644c18fd9a319fb50d72a6959b8e973",
+    "scripts/prepare-windows-chromium-sandbox.ps1": "7950edefa8160ab39f78bdcee1ec5e72d3b19a52a1fd8e2332b58785734ed765",
+    "scripts/test-windows-chromium-sandbox.ps1": "9baf18c3e0015c6e5d0879b95a4a1b73a5b876b046b3273fca00123e5aac2975",
+    ".github/workflows/ci.yml": "72259dcde23cfee719c677d4685ae595affa448723b787dbb86e526b3745e8c3",
+    ".github/workflows/browser-navigation.yml": "91e2d85fecb2b868e4ceb49f1b6397ac8a0f6fdf183cc8f1eb0270d951a7ea03",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "422da9a62584d2c6f62ecd1c26c54617b9ae44a294bedf49aa1c79f8d724e977",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-sandbox-denial-summary.json": "0d861d193650530c6152f76f0d76da62d25a8f21e23540ea6fe958b9d38a480a",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-sandbox-access-local-summary.json": "270f3a257caf39739f4e5c8a13fdfdbc5892ec1887559aabfcd3fd4da520f4dd"
+  },
+  "privateReceiptSHA256": {
+    "nav282-sandbox-access-full.log": "6699e748dc33de0b9fa0357cc785bf912c334c92181bc2c57e8682cc5c6593fe",
+    "nav282-sandbox-access-full-binding.json": "548dedbd20f66c64d66b969216d9cc25212353b41a7dce686d079e7d684cfacd",
+    "nav282-sandbox-access-samples-binding.json": "0604b6df5da33963087fd1801fe2be161a81a4ccef2fd198a58b3504edb4cc91",
+    "nav282-sandbox-access-browser-race.log": "489d9f1a58c4768ee110b05106e4c676dc9700c296fb261c6ca1500d3b991170",
+    "nav282-sandbox-access-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-sandbox-access-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-ffeaa02-fast.zip": "90f87a67c01ca65031eed7c8cff5a58807bd7cba5f0e983c1975d2b9755ae22f",
+    "pr442-ffeaa02-fast-summary.json": "ef4ca25625f40b56194dea7d5ce09c9da7ef827b32d3eaa992f47d09cc0289e1",
+    "pr442-ffeaa02-fast-analysis.log": "20c4c0f83d41b8a0bdde75f5680b667d643cbed7b617a2be9e953d2dd1acc643",
+    "nav282-sandbox-access-sample-1.log": "823063345776a9d6b38ef34c8e7b8ee6be1867b59b31e7b0cd4c1b4317bb07c4",
+    "nav282-sandbox-access-sample-2.log": "3aef06b43cb4e2c64eddf34661f23079f4b929ca09dafee1414b2dc1fd7a9ebf",
+    "nav282-sandbox-access-sample-3.log": "2ebb49ef0aa23184bd5a732f3476405a9f24a9a631f2603090f8de82b4052bcd"
+  },
+  "checks": "ok  \tgithub.com/jordanhubbard/webmux/server/internal/browser\t1.667s;44ordinaryMac+4StopPASS;capture/source/privacy/bounds/JSON/links/YAML/whitespace+Darwin/WindowsAMD64browservetPASS.",
+  "windowsNativeACLAndTokenAcceptance": "PENDING;MacdoesnotexecutePowerShellACLcontrolsorWindowsprimarytokenprobe. No localnativeWindowsclaim.",
+  "scope": "CIownedPlaywrightbrowserbundlecapabilityRXonly;preservebytesandotherACL/owner/group/protection;outsidepath/reparse/explicitdenyrefusal+idempotencecontrolsadded;positiveAppContainertoken/no-denial/no-restartgateaddedposttrial. Originalbrowserflags/protections/deadlines/nav/replay/runtimeunchanged. Audit429/review/fullCIrequired;no merge/release."
+}

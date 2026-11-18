@@ -430,6 +430,19 @@ jobs:
         run: npx playwright install chromium
         working-directory: webmux
 
+      - name: Prepare protected Windows Chromium access
+        shell: pwsh
+        working-directory: webmux
+        run: |
+          $browser = (node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())").Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the qualified Chromium executable.' }
+          $cache = Join-Path $env:LOCALAPPDATA 'ms-playwright'
+          if ($env:PLAYWRIGHT_BROWSERS_PATH) {
+            if (-not [IO.Path]::IsPathRooted($env:PLAYWRIGHT_BROWSERS_PATH)) { throw 'Expected an absolute owned Playwright cache.' }
+            $cache = $env:PLAYWRIGHT_BROWSERS_PATH
+          }
+          & ../scripts/test-windows-chromium-sandbox.ps1 -TestRoot (Join-Path $env:RUNNER_TEMP 'chromium-sandbox-scope-controls') -ReceiptPath (Join-Path $PWD 'test-results/chromium-sandbox-scope.json')
+          & ../scripts/prepare-windows-chromium-sandbox.ps1 -BrowserPath $browser -InstallRoot $cache -ReceiptPath (Join-Path $PWD 'test-results/chromium-sandbox-access.json')
       - name: Run browser tests against Go
         run: npm run test:e2e:go
         working-directory: webmux
@@ -451,6 +464,7 @@ jobs:
         shell: pwsh
         env:
           WEBMUX_REAL_BROWSER: '1'
+          WEBMUX_BROWSER_REQUIRE_NETWORK_APPCONTAINER: '1'
           WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS: '1'
         run: |
           $env:WEBMUX_BROWSER_EXECUTABLE = (node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())").Trim()

@@ -48,11 +48,25 @@ jobs:
       - run: npx playwright install chromium
         id: browser_tools
         working-directory: webmux
+      - name: Prepare protected Windows Chromium access
+        shell: pwsh
+        working-directory: webmux
+        run: |
+          $browser = (node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())").Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the qualified Chromium executable.' }
+          $cache = Join-Path $env:LOCALAPPDATA 'ms-playwright'
+          if ($env:PLAYWRIGHT_BROWSERS_PATH) {
+            if (-not [IO.Path]::IsPathRooted($env:PLAYWRIGHT_BROWSERS_PATH)) { throw 'Expected an absolute owned Playwright cache.' }
+            $cache = $env:PLAYWRIGHT_BROWSERS_PATH
+          }
+          & ../scripts/test-windows-chromium-sandbox.ps1 -TestRoot (Join-Path $env:RUNNER_TEMP 'chromium-sandbox-scope-controls') -ReceiptPath (Join-Path $env:RUNNER_TEMP 'chromium-sandbox-scope.json')
+          & ../scripts/prepare-windows-chromium-sandbox.ps1 -BrowserPath $browser -InstallRoot $cache -ReceiptPath (Join-Path $env:RUNNER_TEMP 'chromium-sandbox-access.json')
       - name: Qualify fresh first-navigation controls
         working-directory: webmux
         shell: pwsh
         env:
           WEBMUX_REAL_BROWSER: '1'
+          WEBMUX_BROWSER_REQUIRE_NETWORK_APPCONTAINER: '1'
           WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS: '1'
         run: |
           $env:WEBMUX_BROWSER_EXECUTABLE = (node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())").Trim()
@@ -69,6 +83,7 @@ jobs:
         shell: pwsh
         env:
           WEBMUX_REAL_BROWSER: '1'
+          WEBMUX_BROWSER_REQUIRE_NETWORK_APPCONTAINER: '1'
           WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS: '1'
         run: |
           $env:WEBMUX_BROWSER_EXECUTABLE = (node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())").Trim()
@@ -89,3 +104,11 @@ jobs:
         with:
           name: first-navigation-windows
           path: ${{ runner.temp }}/native-first-navigation/**/*.json
+      - name: Preserve native sandbox access receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: chromium-sandbox-access-windows
+          path: |
+            ${{ runner.temp }}/chromium-sandbox-scope.json
+            ${{ runner.temp }}/chromium-sandbox-access.json

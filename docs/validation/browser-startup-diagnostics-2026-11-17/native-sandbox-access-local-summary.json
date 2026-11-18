@@ -1,0 +1,816 @@
+{
+  "platform": "darwin/arm64",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "7d597caa8a80d03430ccbedb4b1b876779eeed8e212d760bb516291ccde34e24",
+    "webmux/server/internal/browser/navigation_trace_test.go": "dbca0f07de21a6ecf0f098ad2f5e11f0cbe94f67f92d9145b5e1ec39af871f0b",
+    "webmux/server/internal/browser/navigation_trace_controls_test.go": "90ed298e90f9e1d22f380f29f260068048d81deb868b6a16184a7f0d6f4e817a",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "4fff230c39551a0cb179013890fd029154c4791df42ca93a97214f7493a34128",
+    "webmux/server/internal/browser/navigation_output_test.go": "e758d45fb46ea12bcf7ce0f85b681d851c332f37fd911811aa253c8c62e640d0",
+    "webmux/server/internal/browser/navigation_sandbox_windows_test.go": "8afb097293a85cba5e9a05cc6ea1c2fa53815543e66db677b4ccab66c713d747",
+    "webmux/server/internal/browser/navigation_sandbox_other_test.go": "ae83e8e852edfba0aaa965b1c87f65b7c644c18fd9a319fb50d72a6959b8e973"
+  },
+  "records": [
+    {
+      "phase": "full",
+      "mode": "controlled-stop-trace",
+      "SHA256": "4250f249280cf9762f126143af3f2b172cd30998463d07c5a1218e900cd1ef7c",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-child-original",
+      "SHA256": "3c393ecd036956b7f12101c52c9163f15548b7e966316b233d0587e5f003bea8",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-child",
+      "SHA256": "6b6f2eef19076e8e80d8109241c9f8dfc8c41b94492ce8cf3e856dd30b6dfa23",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-child-original",
+      "SHA256": "fc8bbf75e37fc10f41438f9012938a69dd4eb3c66cb99f7b6c14bd14f57462f4",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-child",
+      "SHA256": "9002b4d13bc031901644328e2fc49fe3f820e7ec50cff53d38b6b1ae855824ba",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-screenshot",
+      "SHA256": "8a51429f7801bbfc2159a4abda41a493bf716dacf66bbcd30a07bd631f7fba98",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-late",
+      "SHA256": "6f24ba5b9b98a6f52144961e5f1a3c1d904939b338d72ea5f05e2aff8a4c32a7",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 12,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-loading-late",
+      "SHA256": "0e92101067c6c8030725bca036b1491f58462ca004cb3a830685bf56d0f0858e",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-loading-log-late",
+      "SHA256": "5fd056a6ae229adbb7aaa4f1305604066f86fa68dd9d353a36ff1523a7e220f9",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      },
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 922,
+        "lines": 7,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace",
+      "SHA256": "342f15d7d061dfcb7622139dff8bc5369a47b0b2ceec7cc0b668dcf00be48d33",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 15,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-websocket",
+      "SHA256": "ba96298e4f49c50679ea35104abedd7a0ad50ea02f05e335ee2fd6993e6bb186",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home",
+      "SHA256": "a29bccb60f2af1cf5f21ede1071cfaee17fd6f670661c6fcbeba303662f7c437",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-screenshot",
+      "SHA256": "a4222ac83b40c3d5faa4421c2f0fdb54b8d403a4d8c657cd2131c852256346b2",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-late",
+      "SHA256": "8792cd65fdd10b76425c3c259d27ab62c4830755d14084db18476dc1b0419d60",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 10,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-loading-late",
+      "SHA256": "15bce2032aa48a86a0b2fc7b146fe0d086dbc29c7aa1cf3db603f5439b9fb098",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 12,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-loading-log-late",
+      "SHA256": "fab0030a4761fbd8df03c6417bd3d85e8eddfe546623afb6e8213c91d8d88f8b",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      },
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 922,
+        "lines": 7,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace",
+      "SHA256": "7004936e5b1cce3ec3161c9f734f50a15861ae372b09a01f59773b17b4ed4654",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 14,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-websocket",
+      "SHA256": "9b39915d52c24cd35369ca3fd2b82b1826ba2c896e163d389101a3212e5f5cdf",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct",
+      "SHA256": "71666041fd06b46d539336edb7639360ec6021b7f7f8fda4968192f1c9f0e387",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "worker-subprocess-saved",
+      "SHA256": "c6035f0b0c9bac9506820df7ba6e0ca02245772b972964ed5985cc2dc6f394ec",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "worker-subprocess-temporary",
+      "SHA256": "2fa2737f32426f0e4661bb6b5cbd3b7273dbe6f582c7b03e5ce7166f282e2109",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "sample-1",
+      "mode": "controlled-stop-trace",
+      "SHA256": "c93766a7b13f1e0c3b22aaf5eb269e1f43008b7428e1d752f190d512fee6be56",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endElapsedMs": 12,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-late",
+      "SHA256": "8e165b02e6b1f0b1bc449bb85584c2060ea71c6a5d88812c371c47c23cdda38a",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 10,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-loading-late",
+      "SHA256": "c90503f6622ee636b70968163acdf425acf1fa869432f61555843f48d169aae4",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-loading-log-late",
+      "SHA256": "5cf314f08282e75f9f3f60f869eef7808f3fc1ba5fd6b4034272c912b2039acb",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      },
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 922,
+        "lines": 7,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace",
+      "SHA256": "9fb1ff82a195f3c0e66f2cda33257c03b22a3619d9803882b7461c21da6fe605",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-late",
+      "SHA256": "aef3cd6241990966e260ec9d08e0805c51aacd504a65e177f67d86a03bcde874",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 11,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-loading-late",
+      "SHA256": "fefe987ecc0c919c0a5993aee820062159c92e78bed4c6ec2b9dcf4e71922eae",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 12,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-loading-log-late",
+      "SHA256": "f1a7922f78be25763364c4d83dd6e9f3a38f58feeee80844f84bb4f88d72f569",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 12,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      },
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 922,
+        "lines": 7,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace",
+      "SHA256": "d3d4cf6dd065250c8141c6526ae560d139d03e7a7f7409ce76a29032168cea73",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "controlled-stop-trace",
+      "SHA256": "fdeabf0b9f9dc045e63206e3732029213fa84323e900b1c08f7ebf0d13a92d6f",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endElapsedMs": 11,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-late",
+      "SHA256": "d049916001f9d2fed8f39143581f9d01b27350b46ace4afd78b16190da85caf8",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 10,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-loading-late",
+      "SHA256": "2d34a8e94d100f2fc304271d295c975f218caf90355f13678470ed1e533b0644",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-loading-log-late",
+      "SHA256": "bb6c72a79783263e8194899edc2daa957ba2fc40d8844a9e41e384476b612c59",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 12,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      },
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 922,
+        "lines": 7,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace",
+      "SHA256": "f763ef5d7fa0d1f810d16d7d314bf42b802710291ba706b42f6e329ec141abc6",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-late",
+      "SHA256": "83c92185ed025f14e29b4fbd4d3854cf2e6df141916cffcc327fb6ee905f6c34",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 11,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-loading-late",
+      "SHA256": "193cf9cc5cebd31fba75ffc5ad7a843d0d0a69b6b481ce488bfca3d44a40b218",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-loading-log-late",
+      "SHA256": "33ed3acb3367fcddc2ec5645a4a71e5a47b4eb5677e1cbcb0de7b0cded88a113",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 12,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      },
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 922,
+        "lines": 7,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace",
+      "SHA256": "d3ca189ea75161f81ede02a0a6e11fcf4f0b3829907f3a7089ea91010b1e5480",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "controlled-stop-trace",
+      "SHA256": "e225436e0ee2ba3ef2e25bcc265d8719c8072eb28d6f9b4d3ed30c05727fbbab",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endElapsedMs": 11,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-late",
+      "SHA256": "e8a830b1a5bbbda318b9f1382693afbde673251b0c5d40808f58b86e4499f776",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 11,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-loading-late",
+      "SHA256": "6541c39c9fa114e8fc77599730a25dce0710a5dcb3120f48360c941997b76998",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-loading-log-late",
+      "SHA256": "a88bdb872cf0188b2cac03117d216c286e4c23c336bb0c144f987d5209018554",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 12,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      },
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 910,
+        "lines": 7,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace",
+      "SHA256": "03887cb0627ea5c1589373e039d7a651856a2e1052b7a95de8ae656d69c1f357",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-late",
+      "SHA256": "b61aee10fa96c77e1ad5d9938a91314515ff251cd365b1dc9e39b533e0fc31c2",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 11,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-loading-late",
+      "SHA256": "62ee257de592633d42ea93e9b20b9a8d03d5ebf9eccf87e509164faa9199a8b1",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 12,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-loading-log-late",
+      "SHA256": "3928dd96ad7e8115be09933f08f1c52b663f6bb3ad40bb1bfc74d17c53a5f1be",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 13,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5
+      },
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 910,
+        "lines": 7,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace",
+      "SHA256": "617053f9f2afc52461ef2a6b8bdaaa4cd738873353244a95205fd970a6722586",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "capture": {
+        "endElapsedMs": 14,
+        "complete": true,
+        "endAcknowledged": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      }
+    }
+  ],
+  "ordinaryLoads": 44,
+  "intentionalControls": 4,
+  "explicitWindowsNetLogSkips": 2,
+  "windowsACLTestsExecuted": false,
+  "windowsTokenProbeExecuted": false,
+  "scope": "44ordinaryMacfirstloads+4separateStopcontrolsPASS;allcapturescomplete/lossless/zerodrops. Windowsbackendcross-vetonly;nativePSscopecontrols/ACLapplication/AppContainertokenproofPENDING. ThisdoesnotqualifytheWindowsrepair."
+}

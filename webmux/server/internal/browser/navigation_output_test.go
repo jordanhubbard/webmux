@@ -161,3 +161,10 @@ func TestFirstNavigationOutputSandboxExecutableAccess(t *testing.T) {
 		t.Fatal("sandbox report disclosed raw output")
 	}
 }
+
+type firstNavigationNetworkSandbox struct {
+	Observed     bool   `json:"observed"`
+	AppContainer bool   `json:"appContainer"`
+	ProcessCount int    `json:"processCount"`
+	ErrorClass   string `json:"errorClass,omitempty"`
+}

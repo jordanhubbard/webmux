@@ -613,3 +613,58 @@ controls and Darwin/Windows browser vet pass. See
 [sandbox-signal-manifest.json](sandbox-signal-manifest.json). Native Windows
 access-denial and fixture-constructor observation are pending; no runtime fix,
 ACL change or release is claimed.
+
+
+## Confirmed executable-access fault and scoped repair candidate (#451)
+
+Windows `ffeaa02` run 44231424862 retains all 50 records: full ordinary 14 PASS /
+8 FAIL, sampled 19 PASS / 5 FAIL, and four separate deliberate Stop controls PASS.
+All eight readers observe one startup AppContainer executable-access denial and
+one network-service restart report, with no dropped output. Two of those loads
+abort before any fixture request. The fixture-matched network constructor is
+observed in all 13 successful loading trials and none of the three failed ones.
+[Native denial evidence](windows-sandbox-denial-summary.json). This establishes
+an actual executable-access fault; before/after native repair acceptance remains
+required. See [#451](https://github.com/jordanhubbard/webmux/issues/451).
+
+The candidate [preparation helper](../../../scripts/prepare-windows-chromium-sandbox.ps1)
+adds read/execute and synchronize access only for Chromium's named
+`lpacChromeInstallFiles` capability on the selected owned Playwright Chromium
+bundle. The SID comes from Windows'
+[documented derivation API](https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-derivecapabilitysidsfromname).
+It refuses a system/other browser path, a path outside the selected cache,
+reparse points and an explicit capability read/execute denial. It preserves
+other root rules, owner/group and inheritance protection, verifies the
+executable's resulting allow rule and unchanged bytes, and emits a bounded
+receipt. An allow rule is not by itself proof of effective sandbox launch.
+The helper does not touch browser profiles, disable protections, change browser
+flags, start a browser or replay navigation. Existing grants are not rewritten.
+
+The native [scope controls](../../../scripts/test-windows-chromium-sandbox.ps1)
+use a never-executed fixture file to check the grant, idempotence, refusal for
+an outside private-profile canary, a junction and an explicit deny, and unchanged
+canary ACL/bytes. They do not establish native browser acceptance. Both scripts
+require PowerShell 7 and run only on Windows. CI runs preparation immediately
+after installing the owned browser and retains access/scope receipts separately
+from the 50 navigation records.
+
+After each observed fixture trial and trace flush, Windows logging conditions
+query the browser's own process list and the single network-service process's
+primary token. Only process cardinality, observed/AppContainer booleans and a
+fixed error category are exported. No PID is serialized. The native API is
+[GetTokenInformation](https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-gettokeninformation)
+with TokenIsAppContainer; the observation does not claim a distinct LPAC token
+class. Windows CI now requires a positively observed AppContainer token, zero
+executable-access denials and zero network-service restart reports in those
+conditions. Unknown/unprotected status fails. The existing first-load and known
+cancellation checks remain. All observation occurs after the navigation trial;
+no readiness probe, wait or retry is added.
+
+Final local source passes 44 ordinary native macOS loads and four separate Stop
+controls with complete lossless traces, browser race/privacy/bounds controls,
+and Darwin/Windows AMD64 browser vet. Two Windows-only NetLog cases are explicit
+skips. Mac tests execute the non-Windows stub: the PowerShell ACL controls,
+permission application and Windows primary-token query are NOT locally verified.
+See [local-only scope](native-sandbox-access-local-summary.json) and
+[sandbox-access-manifest.json](sandbox-access-manifest.json). Native Windows
+repair qualification is pending; no fix, merge or release acceptance is claimed.
