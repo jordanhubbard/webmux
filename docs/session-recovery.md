@@ -2545,3 +2545,15 @@ loopback-document timeline under #282, omitting tokens, internal profile keys,
 images, clipboard and file bodies. Browser behavior, actions and deadlines are
 unchanged; a later pass cannot by itself establish that this historical failure
 was fixed.
+
+
+### Windows ARM64 native component qualification candidate (2026-11-17)
+
+[#456](https://github.com/jordanhubbard/webmux/issues/456) adds an independent
+Windows 11 ARM64 server/UV/VT and real ConPTY renderer gate, with exact source,
+tool/capture PE architecture and raw result receipts. Existing race gates remain
+unchanged. The renderer browser's architecture is recorded separately to avoid
+calling emulation native browser execution. The [candidate scope](validation/windows-arm64-native-2026-11-17/README.md)
+has portable admission controls and strict types passing; native execution is
+pending. This does not establish authenticated ARM64 conversation or
+installed-service recovery, and does not close #318 or the earlier #450 panic.

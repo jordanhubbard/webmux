@@ -1,0 +1,22 @@
+{
+  "recordedUTC": "2026-11-18T05:11:06.036768+00:00",
+  "issue": 456,
+  "base": "443ea62e8c10ade1dd8ed1699a07a4422d22a553",
+  "sourceSHA256": {
+    ".github/workflows/windows-arm-native.yml": "07ae6f08e049d24f24ce92c20c1ab4678113d0ddfaeca4ccb4c89cf43b39a9f9",
+    "scripts/windows-native-architecture.mts": "f449ee33e0a081e42bffd1e53237711cb0375b2bb0487c50409fae5b7ba2e5fb",
+    "scripts/windows-native-architecture.test.mts": "0a51e8daef2dd1a576f630045f3e64d94e9673c207e05df1d9623766adc09fe9"
+  },
+  "unchangedExistingWorkflows": {
+    ".github/workflows/ci.yml": "60a30ae1fc2e660792a329e8a4cbb9da4ecf0a07216cc95f839902b290f7925b",
+    ".github/workflows/packaging.yml": "26d8206985dc195c89c5e423e3033a3b29c84d158e8c6c1983f859598135413f"
+  },
+  "lockfileSHA256": "45c39a2a9b254ac87a33b6ca83f90cda1bf9dbdb1a0f90038cd0024b45e015fa",
+  "existingCollectorSHA256": "ee00a971284fab1243a5475579e5ce7fa453fe2442c3b86bc9bf7bfb27f4a56d",
+  "localAdmissionTestCount": 2,
+  "localAdmissionResult": "PASS",
+  "strictProjectTypes": "PASS",
+  "workflowYAML": "PASS",
+  "nativeWindowsARM64Result": "PENDING",
+  "scope": "New native architecture/capture qualification gate and portable admission controls. No native Windows, physical device, authenticated provider or broad #318 completion claim."
+}

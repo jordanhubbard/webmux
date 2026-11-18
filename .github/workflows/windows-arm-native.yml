@@ -1,0 +1,123 @@
+name: Windows ARM64 native qualification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-arm64:
+    name: Windows ARM64 server and ConPTY
+    runs-on: windows-11-arm
+    timeout-minutes: 30
+    steps:
+      - name: Verify native OS and worker headroom
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'webmux-arm64-native'
+          New-Item -ItemType Directory -Path $root -ErrorAction Stop | Out-Null
+          "WEBMUX_ARM_RECEIPTS=$root" >> $env:GITHUB_ENV
+          $os = [Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+          $memory = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+          $drives = @('C', ([IO.Path]::GetPathRoot($env:GITHUB_WORKSPACE).TrimEnd('\').TrimEnd(':'))) | Select-Object -Unique
+          $space = @($drives | ForEach-Object { Get-PSDrive -Name $_ -ErrorAction Stop | Select-Object Name, Used, Free })
+          @{ osArchitecture = $os; freeMemoryKiB = $memory.FreePhysicalMemory; totalMemoryKiB = $memory.TotalVisibleMemorySize; drives = $space } |
+            ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 (Join-Path $root 'worker-health.json')
+          if ($os -ne 'Arm64') { throw 'A native Windows ARM64 OS is required' }
+          foreach ($drive in $space) { if ($drive.Free -lt 2GB) { throw 'Insufficient worker disk headroom' } }
+          if ($memory.FreePhysicalMemory -lt ($memory.TotalVisibleMemorySize * 0.05)) { throw 'Insufficient worker memory headroom' }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: webmux/server/go.mod
+          architecture: arm64
+          cache-dependency-path: webmux/server/go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          architecture: arm64
+          cache: npm
+          cache-dependency-path: webmux/package-lock.json
+      - name: Check architecture refusal controls and native tool images
+        shell: pwsh
+        run: |
+          node --test scripts/windows-native-architecture.test.mts
+          if ($LASTEXITCODE -ne 0) { throw 'Architecture refusal controls failed' }
+          node scripts/windows-native-architecture.mts --output "$env:WEBMUX_ARM_RECEIPTS/tool-architecture.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Native ARM64 tool admission failed' }
+          git rev-parse HEAD | Set-Content -Encoding utf8 "$env:WEBMUX_ARM_RECEIPTS/source-head.txt"
+      - name: Test native ARM64 server
+        shell: pwsh
+        working-directory: webmux/server
+        run: |
+          go test -json ./... -timeout=8m | Tee-Object -FilePath "$env:WEBMUX_ARM_RECEIPTS/server-tests.jsonl"
+          if ($LASTEXITCODE -ne 0) { throw 'Native ARM64 server tests failed' }
+          go vet ./...
+          if ($LASTEXITCODE -ne 0) { throw 'Native ARM64 server vet failed' }
+      - name: Verify source provenance
+        run: |
+          python scripts/verify-vt-provenance.py
+          if ($LASTEXITCODE -ne 0) { throw 'VT source provenance failed' }
+          python scripts/verify-uv-provenance.py
+          if ($LASTEXITCODE -ne 0) { throw 'UV source provenance failed' }
+      - name: Test native ARM64 retained cell model
+        shell: pwsh
+        working-directory: webmux/server/internal/thirdparty/ultraviolet
+        run: |
+          go test -json ./... -timeout=6m | Tee-Object -FilePath "$env:WEBMUX_ARM_RECEIPTS/cell-tests.jsonl"
+          if ($LASTEXITCODE -ne 0) { throw 'Native ARM64 cell tests failed' }
+          go vet ./...
+          if ($LASTEXITCODE -ne 0) { throw 'Native ARM64 cell vet failed' }
+      - name: Test native ARM64 retained terminal engine
+        shell: pwsh
+        working-directory: webmux/server/internal/thirdparty/vt
+        run: |
+          go test -json ./... -timeout=6m | Tee-Object -FilePath "$env:WEBMUX_ARM_RECEIPTS/terminal-tests.jsonl"
+          if ($LASTEXITCODE -ne 0) { throw 'Native ARM64 terminal tests failed' }
+          go vet ./...
+          if ($LASTEXITCODE -ne 0) { throw 'Native ARM64 terminal vet failed' }
+      - name: Install renderer dependencies
+        working-directory: webmux
+        run: npm ci
+      - name: Install renderer browser
+        working-directory: webmux
+        run: npx playwright install chromium
+      - name: Collect actual ARM64 ConPTY streams
+        shell: pwsh
+        run: |
+          ./scripts/collect-native-screen.ps1 -OutputDirectory "$env:WEBMUX_ARM_RECEIPTS/captures"
+          $captures = @(Get-Content -Raw "$env:WEBMUX_ARM_RECEIPTS/captures/captures.json" | ConvertFrom-Json)
+          if ($captures.Count -ne 28 -or @($captures.name | Select-Object -Unique).Count -ne 28) { throw 'Expected all 28 distinct real ConPTY captures' }
+          $events = @(Get-Content "$env:WEBMUX_ARM_RECEIPTS/captures/tests.jsonl" | ForEach-Object { $_ | ConvertFrom-Json })
+          if (@($events | Where-Object { $_.Action -in @('fail', 'skip') }).Count -ne 0) { throw 'Native capture tests failed or skipped' }
+          $passed = @($events | Where-Object { $_.Action -eq 'pass' -and $_.Test -like 'TestNativeProviderSavedCursorCaptures/*' })
+          if ($passed.Count -ne 28) { throw 'Expected all 28 real native capture test cases to pass' }
+          "WEBMUX_NATIVE_SCREEN_CAPTURES=$env:WEBMUX_ARM_RECEIPTS/captures/captures.json" >> $env:GITHUB_ENV
+          "WEBMUX_NATIVE_SCREEN_TEST_LOG=$env:WEBMUX_ARM_RECEIPTS/captures/tests.jsonl" >> $env:GITHUB_ENV
+      - name: Bind capture and renderer image architectures
+        shell: pwsh
+        run: |
+          $browser = node -e "console.log(require('./webmux/node_modules/playwright-core').chromium.executablePath())"
+          if ($LASTEXITCODE -ne 0) { throw 'Renderer browser lookup failed' }
+          node scripts/windows-native-architecture.mts --capture "$env:WEBMUX_ARM_RECEIPTS/captures/native-screen.test.exe" --browser ($browser.Trim()) --output "$env:WEBMUX_ARM_RECEIPTS/capture-architecture.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Native capture architecture admission failed' }
+      - name: Compare ARM64 captures with the frontend renderer
+        working-directory: webmux
+        env:
+          WEBMUX_SCREEN_REPLAY_ONLY: '1'
+        run: npm run test:e2e -- screen-replay.spec.ts
+      - name: Preserve ARM64 native qualification receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-arm64-native-screen
+          path: |
+            ${{ runner.temp }}/webmux-arm64-native
+            webmux/test-results
+            test-results
