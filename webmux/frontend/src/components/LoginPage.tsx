@@ -16,6 +16,7 @@ export function LoginPage({ auth }: LoginPageProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setLocalError(null);
 
     if (isBootstrap && password !== confirmPassword) {
@@ -87,6 +88,12 @@ export function LoginPage({ auth }: LoginPageProps) {
               onChange={e => setPassword(e.target.value)}
               style={styles.input}
               autoComplete={isBootstrap ? 'new-password' : 'current-password'}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  if (!e.repeat && !submitting) e.currentTarget.form?.requestSubmit();
+                }
+              }}
               disabled={submitting}
             />
           </div>

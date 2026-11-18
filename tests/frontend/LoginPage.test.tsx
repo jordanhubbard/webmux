@@ -60,6 +60,30 @@ describe('LoginPage', () => {
     expect(screen.getByText('Invalid credentials')).toBeDefined();
   });
 
+  it('signs in once when Return is pressed in the password field', async () => {
+    const auth = makeAuth({ login: vi.fn(() => new Promise<void>(() => {})) });
+    render(<LoginPage auth={auth} />);
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'admin' } });
+    const password = screen.getByLabelText('Password');
+    fireEvent.change(password, { target: { value: 'secret' } });
+    fireEvent.keyDown(password, { key: 'Enter' });
+    fireEvent.keyDown(password, { key: 'Enter', repeat: true });
+    await waitFor(() => {
+      expect(auth.login).toHaveBeenCalledExactlyOnceWith('admin', 'secret');
+    });
+    expect(screen.getByRole('button', { name: /please wait/i })).toBeDisabled();
+  });
+
+  it('does not sign in while composing text in the password field', () => {
+    const auth = makeAuth();
+    render(<LoginPage auth={auth} />);
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'admin' } });
+    const password = screen.getByLabelText('Password');
+    fireEvent.change(password, { target: { value: 'secret' } });
+    fireEvent.keyDown(password, { key: 'Enter', isComposing: true });
+    expect(auth.login).not.toHaveBeenCalled();
+  });
+
   it('shows validation error for empty password', async () => {
     const auth = makeAuth();
     render(<LoginPage auth={auth} />);
