@@ -1,0 +1,101 @@
+{
+  "recordedUTC": "2026-11-18T19:08:38.633931+00:00",
+  "head": "dffcc3aaf24ae164ce326c6d6e3ffe7a50cd6ed6",
+  "tree": "e41ccfa49b550922e21cc47d37fdcc05355088e4",
+  "inputs": {
+    "canonical500": "a9cf258425f91f91669d5292e0cbeef8a7958e2c",
+    "broadcast522": "5763dfd247428eb0f181ac139c723fb0032826ff",
+    "wheel526": "b4f742ca078e4de18a52dc6c9f18e2b1ad8d51a1",
+    "lifecycle527": "b136a3a0adefd6c95cc90bc90aa026e73e08fb0c",
+    "native511": "ec98c8cb12f135d16864d110064b1043a5cb23a8",
+    "libc518": "ae00c27da2f0cb34a9773e85f5e44dc65e3b55ad",
+    "tmux520": "ce7546dc43287496eb9406cf3afca8efd9bfe069"
+  },
+  "allAncestors": {
+    "canonical500": true,
+    "broadcast522": true,
+    "wheel526": true,
+    "lifecycle527": true,
+    "native511": true,
+    "libc518": true,
+    "tmux520": true
+  },
+  "canonicalUnchanged": true,
+  "componentGatesPending": true,
+  "role": "Preparation branch; canonical PR500 remains a9cf while component CI/ARM pending",
+  "local": {
+    "recordedUTC": "2026-11-18T19:05:58.705575+00:00",
+    "source": "dffcc3aaf24ae164ce326c6d6e3ffe7a50cd6ed6",
+    "typeScriptProjects": 5,
+    "frontendTests": 427,
+    "helperTests": 206,
+    "helperSkipped": 0,
+    "frontendLint": true,
+    "frontendBuild": true,
+    "lockIdentity": true,
+    "goRaceExit": 0,
+    "goVetExit": 0,
+    "nativeRig": {
+      "normalTests": 8,
+      "failures": 0,
+      "managed": "1.1m",
+      "dashboard": "1.7s",
+      "allCases": "1.5m",
+      "scope": "PublishedRig0.6.14 actual native Go/tmux/Chrome; coding children are fixtures"
+    },
+    "scope": "Local merged source only; hosted/component/native platform acceptance separate. Canonical500/main unchanged.",
+    "lifecycle": {
+      "deliberateChildFailures": 1,
+      "dashboardPass": true,
+      "differentWorker": true,
+      "samePIDAndPort": true,
+      "finalDaemonCleanup": true
+    },
+    "sourceEqualityToEc98": {
+      "webmux/server/internal/openrigcoord": true,
+      "webmux/server/internal/nativeobserve": true,
+      "webmux/server/cmd/webmux/main.go": true,
+      "webmux/frontend/src/components/CoordinationDialog.tsx": true
+    }
+  },
+  "broadcast": {
+    "tests": 1,
+    "passed": 1,
+    "native": "Actual Go/Chrome typed recipient/frame workflow",
+    "duration": "7.6s"
+  },
+  "hosted": {
+    "lifecycle527": {
+      "head": "b136a3a0adefd6c95cc90bc90aa026e73e08fb0c",
+      "ci": 44375465145,
+      "arm": 44375431209,
+      "status": "in_progress"
+    },
+    "native511": {
+      "head": "ec98c8cb12f135d16864d110064b1043a5cb23a8",
+      "ci": 44374415276,
+      "arm": 44374430149,
+      "status": "in_progress"
+    },
+    "broadcast522AndWheel526": "Both exact-head CI/ARM pass; retained component receipts remain named evidence only"
+  },
+  "sourceBindings": {
+    "runtimeSourceCommit": "dffcc3aaf24ae164ce326c6d6e3ffe7a50cd6ed6",
+    "tree": "e41ccfa49b550922e21cc47d37fdcc05355088e4",
+    "lockfileUnchangedFromCanonical": true
+  },
+  "remaining": "Component/combined hosted qualification, review, public native-owned creation/readiness/attachment and durable controller recovery/UI, selected profiles/named graphs/startup settings, authenticated Linux, Windows/platform/crash/reboot, signing/vendor/security boundaries, exact-main release gates. No publication or full-roadmap completion.",
+  "privateLogSHA256": {
+    "typecheck.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "frontend-tests.log": "0948b0f3ccc2186816695e6d05643d83f185eac61cb9c21b4a169ec359a08a5f",
+    "frontend-lint.log": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+    "helpers-tests.log": "b70dbda23f8a8eb741c2f7bbfc76e7aa77e6aae5df37399b4179e276aef79f30",
+    "frontend-build.log": "f5de2bc20b22afafd15a1f1b65bb3d2be85452952b6085ce08d9224eeda5ee5d",
+    "lock-identity.log": "6db02789bb32257b87e607610702e250bea6d73877f98763e902f59ed739c03c",
+    "go-race.log": "d56e9657ab820f4af08714a2e731351170f11650de987bbcb15273ee1a176469",
+    "go-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "normal-eight.log": "f2ff99760b6d5c69f36ddad53e219241b5d50406294567a83197977940bc0379",
+    "worker-lifecycle.log": "b20b1f960cca29eeaca969d79a77230852a104a18a2621b844e4134ddba72854",
+    "broadcast.log": "d15c9c49a2529b9f68291dd0a022f9c2ddcbfe73f246d75e3b875d6112c78f6f"
+  }
+}
