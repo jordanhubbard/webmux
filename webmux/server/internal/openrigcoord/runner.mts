@@ -178,6 +178,11 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const { prepareRigNativeRecovery, executeRigNativeRecovery } = await import('./rig-recovery.mts');
     const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
     console.log(JSON.stringify(await (action === 'recovery-prepare' ? prepareRigNativeRecovery : executeRigNativeRecovery)(run, identity)));
+  } else if (action === 'native-create') {
+    const { createRigNativeCodex } = await import('./rig-native-create.mts');
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-native-create.mts').NativeCodexCreateInput;
+    // The authenticated caller's owner namespace always wins over input paths.
+    console.log(JSON.stringify(await createRigNativeCodex({ ...input, directory }, { run })));
   } else if (action === 'create') {
     const input = JSON.parse(fs.readFileSync(0, 'utf8')) as Input;
     const mode = input.mode ?? 'new';
@@ -262,7 +267,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       const attached = path.join(directory, `${tmux}.attached.json`);
       const launcher = path.join(directory, `${tmux}.sh`);
       const role = `You are ${name}, a WebMux coordinated agent in Rig ${rig} (${rigId}), executing on ${host} in ${cwd}. OpenRig is already connected through OPENRIG_URL and OPENRIG_SESSION_NAME. Run rig whoami --json and rig ps --nodes --rig ${rig} --json to discover teammates. Use rig send <canonicalSessionName> <message> for coordination; do not override sender identity. Rig identity is shared, files are host-local. Keep the owner's project instructions and permission policy. Report READY and wait for the owner or a teammate. Do not launch other agents automatically.`;
-      const cli = runtime === 'codex' ? `codex -c sandbox_workspace_write.network_access=true ${q(role)}` : `claude --append-system-prompt ${q(role)} ${q('Verify your coordination identity, discover teammates, report READY and wait.')}`;
+      const cli = runtime === 'codex' ? `codex ${q(role)}` : `claude --append-system-prompt ${q(role)} ${q('Verify your coordination identity, discover teammates, report READY and wait.')}`;
       const attach = `rig attach --self --rig ${q(rigId)} ${existing ? `--node ${q((existing.pod ?? pod) + '.' + member)}` : `--pod ${q(pod)} --member ${q(member)}`} --runtime ${q(runtime)} --cwd ${q(cwd)}${relayIdentity ? ` --relay-ssh-host ${q(host)} --relay-tmux-session ${q(tmux)}` : ''} --json`;
       // Get the actual daemon URL from the supported attach response, not a
       // guessed service port. Node writes a shell-quoted env file from JSON.

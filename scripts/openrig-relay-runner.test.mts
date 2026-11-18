@@ -44,6 +44,13 @@ if(name==='rig'){
       const registered=JSON.parse(result.stdout) as {target:string;tmux:string};
       assert.equal(registered.target,modern?registered.tmux:'canonical@test');
       const calls=fs.readFileSync(path.join(dir,'calls'),'utf8').trim().split('\n').map(line=>JSON.parse(line) as string[]);
+      if (host === 'localhost' && runtime === 'codex') {
+        const coding = calls.filter(a => a[0] === 'codex');
+        assert.equal(coding.length, 1);
+        // Only the identity prompt is supplied; permissions come from native
+        // owner configuration rather than a WebMux network/sandbox override.
+        assert.equal(coding[0].length, 2); assert.match(coding[0][1], /^You are agent,/);
+      }
       const attach=calls.find(a=>a[0]==='rig'&&a[1]==='attach'&&!a.includes('--help'))!;
       const expected=host!=='localhost'&&host!=='legacy'&&runtime==='codex';
       assert.equal(attach.includes('--relay-ssh-host'),expected);
@@ -59,6 +66,10 @@ if(name==='rig'){
         const saved=fs.readdirSync(dir).find(name=>name.endsWith('.remote.json'))!;
         const commands=JSON.parse(fs.readFileSync(path.join(dir,saved),'utf8')) as {setup:string;run:string};
         assert(commands.setup.includes('export OPENRIG_HOST_SELECTED=local'));
+        if (runtime === 'codex') {
+          assert(commands.setup.includes('codex '));
+          assert.equal(commands.setup.includes('sandbox_workspace_write'), false);
+        }
         assert.match(commands.setup,/tmux set-option -t 'wm-[a-z0-9-]+' mouse on/);
         assert.match(commands.run,/tmux set-option -t 'wm-[a-z0-9-]+' mouse on && exec tmux attach-session/);
         if (!expected) assert.match(calls.filter(a=>a[0]==='ssh').at(-1)!.at(-1)!,/tmux set-option -t 'wm-[a-z0-9-]+' mouse on/);

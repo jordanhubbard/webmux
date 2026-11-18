@@ -18,6 +18,9 @@ export interface RigStopResult {
   state: 'stopped' | 'refused' | 'uncertain'; code: string; posted: boolean;
   stopPhase: 'none' | 'detach_attempted' | 'detached' | 'kill_attempted' | 'unknown';
 }
+export interface RigCreateManager {
+  port: number; managerPid: number; managerIdentity: string; processIdentity: string;
+}
 const ulid = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
 const token = /^[a-zA-Z0-9_.:@-]{1,256}$/;
 const object = (value: unknown): value is Row => !!value && typeof value === 'object' && !Array.isArray(value);
@@ -99,7 +102,28 @@ async function localManager(run: RigStopRun, port: number, fetcher: typeof fetch
   if (!nodeExecutable || daemonCommand.length > 4096
     || !/\/daemon\/dist\/index\.js(?:\s|$)/.test(daemonCommand)) throw new Refusal('local_manager_unverified');
   // Only the fingerprint is retained; process arguments never leave this probe.
-  return { managerPid: Number(value.pid), managerIdentity: createHash('sha256').update(observedProcess + '\n' + daemonCommand + '\n' + executable).digest('hex') };
+  return { managerPid: Number(value.pid), managerIdentity: createHash('sha256').update(observedProcess + '\n' + daemonCommand + '\n' + executable).digest('hex'), selfHostId: value.selfHostId };
+}
+
+// Creation correlation outlives a daemon process. Keep the verified local
+// process fingerprint for this observation, but bind the durable request to the
+// native self-host identity, owner and qualified build instead of a PID/start.
+export async function reviewRigCreateManager(run: RigStopRun, fetcher: typeof fetch = fetch, uid = process.geteuid?.(), platform: NodeJS.Platform = process.platform): Promise<RigCreateManager> {
+  if (platform !== 'darwin' && platform !== 'linux') throw new Refusal('unsupported_manager_platform');
+  const port = connection(run);
+  const before = await localManager(run, port, fetcher, uid, platform);
+  const health = await request(fetcher, port, '/healthz');
+  const value = health.body;
+  if (health.status !== 200 || !object(value) || value.pid !== before.managerPid || value.euid !== uid
+    || value.semver !== '0.7.18' || value.commit !== '3bf87c62a24fcb0a441334d7f8b0b1f2687ecf64' || value.dirty !== false
+    || typeof value.selfHostId !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/.test(value.selfHostId)) {
+    throw new Refusal('native_manager_identity_unavailable');
+  }
+  const after = await localManager(run, port, fetcher, uid, platform);
+  if (before.managerPid !== after.managerPid || before.managerIdentity !== after.managerIdentity) throw new Refusal('local_manager_unverified');
+  if (before.selfHostId !== value.selfHostId || after.selfHostId !== value.selfHostId) throw new Refusal('native_manager_identity_changed');
+  return { port, managerPid: before.managerPid, processIdentity: before.managerIdentity,
+    managerIdentity: createHash('sha256').update(JSON.stringify([uid, value.selfHostId, value.semver, value.commit])).digest('hex') };
 }
 
 export async function reviewRigStop(run: RigStopRun, input: RigStopSelection, fetcher: typeof fetch = fetch, uid = process.geteuid?.(), platform: NodeJS.Platform = process.platform): Promise<RigStopReview> {
@@ -140,7 +164,7 @@ export async function reviewRigStop(run: RigStopRun, input: RigStopSelection, fe
   if (latest.status !== 'running') throw new Refusal('session_not_live');
   const after = await localManager(run, port, fetcher, uid, platform);
   if (after.managerPid !== manager.managerPid || after.managerIdentity !== manager.managerIdentity) throw new Refusal('local_manager_unverified');
-  return { contract: 'webmux-rig-stop/v1', ...input, ...manager, port, runtime: typeof node.runtime === 'string' ? node.runtime.slice(0, 128) : 'unknown',
+  return { contract: 'webmux-rig-stop/v1', ...input, managerPid: manager.managerPid, managerIdentity: manager.managerIdentity, port, runtime: typeof node.runtime === 'string' ? node.runtime.slice(0, 128) : 'unknown',
     expected: { nodeId: expected.nodeId, sessionId: expected.sessionId } };
 }
 

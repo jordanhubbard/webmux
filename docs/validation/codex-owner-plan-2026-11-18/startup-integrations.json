@@ -1,0 +1,195 @@
+{
+  "scope": "Disposable native homes, no auth or coding turn; configured MCP startup suppression and policy equivalence only",
+  "version": "codex-cli 0.169.0",
+  "moduleSHA256": "cdbd5db9c0c9765589892602c51b88e7d9f35cb33cc920b6953d42396c7f6f20",
+  "probeSHA256": "3251bcf60a4bce13ecb8fdb750caf56ed9d87fb5c17545a9292e1ccc59036cbe",
+  "cliSHA256": "739cda86e15d30a6e2b40cf8dcbbfb988aaf48b305b27065573bb8e9fd41d002",
+  "cases": [
+    {
+      "mode": "full",
+      "isolated": false,
+      "mcpEvents": [
+        "started",
+        "initialize",
+        "notifications/initialized",
+        "tools/list"
+      ],
+      "hookMarker": false,
+      "policy": {
+        "cwd": "<fixture>/project",
+        "runtimeWorkspaceRoots": [
+          "<fixture>/project",
+          "<fixture>/extra root"
+        ],
+        "sandbox": {
+          "type": "dangerFullAccess"
+        },
+        "approvalPolicy": "never",
+        "approvalsReviewer": "user",
+        "model": "gpt-6.1-sol",
+        "modelProvider": "openai",
+        "reasoningEffort": null,
+        "serviceTier": null,
+        "activePermissionProfile": null
+      },
+      "configUnchanged": true,
+      "noCodingTurn": true,
+      "ownedAppServerStopped": true
+    },
+    {
+      "mode": "full",
+      "isolated": true,
+      "mcpEvents": [],
+      "hookMarker": false,
+      "policy": {
+        "cwd": "<fixture>/project",
+        "runtimeWorkspaceRoots": [
+          "<fixture>/project",
+          "<fixture>/extra root"
+        ],
+        "sandbox": {
+          "type": "dangerFullAccess"
+        },
+        "approvalPolicy": "never",
+        "approvalsReviewer": "user",
+        "model": "gpt-6.1-sol",
+        "modelProvider": "openai",
+        "reasoningEffort": null,
+        "serviceTier": null,
+        "activePermissionProfile": null
+      },
+      "configUnchanged": true,
+      "noCodingTurn": true,
+      "ownedAppServerStopped": true
+    },
+    {
+      "mode": "read",
+      "isolated": false,
+      "mcpEvents": [
+        "started",
+        "initialize",
+        "notifications/initialized",
+        "tools/list"
+      ],
+      "hookMarker": false,
+      "policy": {
+        "cwd": "<fixture>/project",
+        "runtimeWorkspaceRoots": [
+          "<fixture>/project",
+          "<fixture>/extra root"
+        ],
+        "sandbox": {
+          "type": "readOnly",
+          "networkAccess": false
+        },
+        "approvalPolicy": "never",
+        "approvalsReviewer": "user",
+        "model": "gpt-6.1-sol",
+        "modelProvider": "openai",
+        "reasoningEffort": null,
+        "serviceTier": null,
+        "activePermissionProfile": null
+      },
+      "configUnchanged": true,
+      "noCodingTurn": true,
+      "ownedAppServerStopped": true
+    },
+    {
+      "mode": "read",
+      "isolated": true,
+      "mcpEvents": [],
+      "hookMarker": false,
+      "policy": {
+        "cwd": "<fixture>/project",
+        "runtimeWorkspaceRoots": [
+          "<fixture>/project",
+          "<fixture>/extra root"
+        ],
+        "sandbox": {
+          "type": "readOnly",
+          "networkAccess": false
+        },
+        "approvalPolicy": "never",
+        "approvalsReviewer": "user",
+        "model": "gpt-6.1-sol",
+        "modelProvider": "openai",
+        "reasoningEffort": null,
+        "serviceTier": null,
+        "activePermissionProfile": null
+      },
+      "configUnchanged": true,
+      "noCodingTurn": true,
+      "ownedAppServerStopped": true
+    },
+    {
+      "mode": "workspace",
+      "isolated": false,
+      "mcpEvents": [
+        "started",
+        "initialize",
+        "notifications/initialized",
+        "tools/list"
+      ],
+      "hookMarker": false,
+      "policy": {
+        "cwd": "<fixture>/project",
+        "runtimeWorkspaceRoots": [
+          "<fixture>/project",
+          "<fixture>/extra root"
+        ],
+        "sandbox": {
+          "type": "workspaceWrite",
+          "writableRoots": [
+            "<fixture>/extra root"
+          ],
+          "networkAccess": false,
+          "excludeTmpdirEnvVar": true,
+          "excludeSlashTmp": true
+        },
+        "approvalPolicy": "never",
+        "approvalsReviewer": "user",
+        "model": "gpt-6.1-sol",
+        "modelProvider": "openai",
+        "reasoningEffort": null,
+        "serviceTier": null,
+        "activePermissionProfile": null
+      },
+      "configUnchanged": true,
+      "noCodingTurn": true,
+      "ownedAppServerStopped": true
+    },
+    {
+      "mode": "workspace",
+      "isolated": true,
+      "mcpEvents": [],
+      "hookMarker": false,
+      "policy": {
+        "cwd": "<fixture>/project",
+        "runtimeWorkspaceRoots": [
+          "<fixture>/project",
+          "<fixture>/extra root"
+        ],
+        "sandbox": {
+          "type": "workspaceWrite",
+          "writableRoots": [
+            "<fixture>/extra root"
+          ],
+          "networkAccess": false,
+          "excludeTmpdirEnvVar": true,
+          "excludeSlashTmp": true
+        },
+        "approvalPolicy": "never",
+        "approvalsReviewer": "user",
+        "model": "gpt-6.1-sol",
+        "modelProvider": "openai",
+        "reasoningEffort": null,
+        "serviceTier": null,
+        "activePermissionProfile": null
+      },
+      "configUnchanged": true,
+      "noCodingTurn": true,
+      "ownedAppServerStopped": true
+    }
+  ],
+  "passed": true
+}
