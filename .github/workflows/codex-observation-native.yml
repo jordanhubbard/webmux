@@ -8,6 +8,7 @@ on:
       - 'webmux/server/cmd/webmux/main.go'
       - 'webmux/server/go.*'
       - 'scripts/qualify-codex-observ*.py'
+      - 'scripts/test_codex_observer_process.py'
       - '.github/workflows/codex-observation-native.yml'
   push:
     branches: [main]
@@ -16,6 +17,7 @@ on:
       - 'webmux/server/internal/openrigcoord/**'
       - 'webmux/server/cmd/webmux/main.go'
       - 'scripts/qualify-codex-observ*.py'
+      - 'scripts/test_codex_observer_process.py'
       - '.github/workflows/codex-observation-native.yml'
   workflow_dispatch:
 
@@ -84,6 +86,8 @@ jobs:
           test "$(go env GOHOSTARCH)" = "$WM_EXPECTED_GOARCH"
           test "$(go env GOARCH)" = "$WM_EXPECTED_GOARCH"
           node -e 'if(process.arch!==process.env.WM_EXPECTED_NODEARCH||process.versions.node.split(".")[0]!=="24")process.exit(1)'
+      - name: Test disposable observer process diagnostics
+        run: python3 -m unittest discover -s scripts -p test_codex_observer_process.py -v
       - name: Test kernel enforcement and build the actual controller helper
         working-directory: webmux/server
         run: |
