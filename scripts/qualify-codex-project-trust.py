@@ -22,6 +22,7 @@ def main():
     parser.add_argument("--codex", required=True)
     parser.add_argument("--node", required=True)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--helper", type=Path, help="Pinned controller helper on Linux")
     args = parser.parse_args()
     codex, node = [Path(shutil.which(p) or p).resolve() for p in [args.codex, args.node]]
     assert subprocess.check_output([str(codex), "--version"], text=True, timeout=5).strip() == "codex-cli 0.169.0"
@@ -30,6 +31,9 @@ def main():
     controls = module_from_spec(spec)
     spec.loader.exec_module(controls)
     module = source.parents[1] / "webmux/server/internal/openrigcoord/codex-owner-plan.mts"
+    helper = None
+    if args.helper is not None:
+        helper = {"contract": "webmux-native-codex-observer/v1", "executable": str(args.helper.resolve()), "executableSHA256": sha(args.helper.resolve())}
     root = Path(tempfile.mkdtemp(prefix="wm-owner-trust-")).resolve()
     (root / "mcp.py").write_text(controls.MCP)
     report = {"scope": "Native 0.169 untrusted project configuration; disposable homes, no authentication or coding turn",
@@ -71,7 +75,7 @@ def main():
                     case["ownedAppServerStopped"] = native.process.poll() is not None
             else:
                 env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home), "CODEX_HOME": str(home), "LANG": "en_US.UTF-8"}
-                code = 'import {resolveCodexOwnerPlan} from ' + json.dumps(module.as_uri()) + ';try{await resolveCodexOwnerPlan(process.argv[1],{executable:process.argv[2]});process.exitCode=1}catch(e){if(e.message!=="native_project_trust_required")throw e;console.log(e.message)}'
+                code = 'import {resolveCodexOwnerPlan} from ' + json.dumps(module.as_uri()) + ';try{await resolveCodexOwnerPlan(process.argv[1],{executable:process.argv[2],observationHelper:' + json.dumps(helper) + '});process.exitCode=1}catch(e){if(e.message!=="native_project_trust_required")throw e;console.log(e.message)}'
                 result = subprocess.run([str(node), "--input-type=module", "-e", code, str(cwd), str(codex)], env=env, text=True, capture_output=True, timeout=30)
                 assert result.returncode == 0 and result.stdout.strip() == "native_project_trust_required", "Actual resolver did not refuse untrusted project"
                 assert config.read_text() == original and not marker.exists()

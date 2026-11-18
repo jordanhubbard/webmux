@@ -24,7 +24,7 @@ class Native:
                "CODEX_HOME": str(home), "LANG": "en_US.UTF-8"}
         self.process = subprocess.Popen(
             [str(executable), "-C", str(cwd), "app-server", "--listen", "stdio://"],
-            env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            cwd=cwd, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, start_new_session=True)
         self.selector = selectors.DefaultSelector()
         self.selector.register(self.process.stdout, selectors.EVENT_READ)

@@ -18,6 +18,7 @@ if(name==='rig'){
  if(process.env.OPENRIG_HOST_SELECTED!=='local'){console.error('wrong selected host');process.exit(8);}
  if(a[0]==='--version'){console.log(process.env.WM_MODERN==='1'?'0.7.18 (3bf87c62)':'0.6.14 (df1c1517)');process.exit(0);}
  if(a[0]==='up') console.log(JSON.stringify({rigId:'01M5H000000000000000000000'}));
+ if(a[0]==='ps') console.log(JSON.stringify(a.includes('--nodes')?[{rigId:'01M5H000000000000000000000',podNamespace:'agents',logicalId:'agents.previous'}]:[{rigId:'01M5H000000000000000000000',name:'test',rigName:'test',lifecycleState:'running'}]));
  if(a[0]==='attach'&&a.includes('--help')){console.log(process.env.WM_LEGACY==='1'?'--self --rig':'--self --rig --relay-ssh-host --relay-tmux-session');process.exit(0);}
  if(a[0]==='attach') {const tmux=process.env.TEST_TMUX;console.log(JSON.stringify({ok:true,attachmentType:'tmux',sessionName:process.env.WM_MISMATCH==='1'?'another-physical-session':tmux,senderAddress:'canonical@test',sessionId:'private-session',env:{OPENRIG_URL:'http://127.0.0.1:4567',OPENRIG_SESSION_NAME:'canonical@test'}}));}
 }else if(name==='codex'||name==='claude'){
@@ -32,6 +33,12 @@ if(name==='rig'){
 }
 `;
     for (const name of ['rig', 'ssh', 'tmux', 'codex', 'claude']) fs.writeFileSync(path.join(bin,name),stub,{mode:0o700});
+    if (modern) {
+      // This control covers the earlier managed-launch record migration and
+      // relay grammar, not native topology allocation (qualified separately).
+      fs.mkdirSync(path.join(dir, 'test'));
+      fs.writeFileSync(path.join(dir, 'test', 'project.json'), JSON.stringify({ rigId: '01M5H000000000000000000000' }), { mode: 0o600 });
+    }
     try {
       const result = spawnSync(process.execPath,[runner,'create',dir],{input:JSON.stringify({project:'test',name:'agent',host,cwd:dir,runtime}),env:{...process.env,WM_RELAY_TEST:dir,WM_MODERN:modern?'1':'0',WM_MISMATCH:mismatch?'1':'0',OPENRIG_HOST_SELECTED:'webmux-qa-shadow',WM_LEGACY:host==='legacy'?'1':'0',PATH:`${bin}:${process.env.PATH}`},encoding:'utf8',timeout:20000});
       if(mismatch){

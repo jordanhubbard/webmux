@@ -10,7 +10,11 @@ import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
 type Agent = { target: string; senderAddress?: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string };
-type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string };
+type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string; inspect?: boolean };
+class PendingCreation extends Error {
+  value: { state: 'uncertain'; stage: 'project'; code: string; operationId: string };
+  constructor(code: string, operationId: string) { super('native_project_pending'); this.value = { state: 'uncertain', stage: 'project', code, operationId }; }
+}
 type RigRow = { rigId?: string; name?: string; rigName?: string; nodeCount?: number; runningCount?: number; status?: string; lifecycleState?: string; latestSnapshot?: string | null };
 type AgentActivity = { state?: string; evidenceSource?: string; sampledAt?: string; stale?: boolean; generationProvenance?: string };
 type NodeRow = RigAttachmentNode & { agentActivity?: AgentActivity; startupStatus?: string; rigId?: string; rigName?: string; logicalId?: string; podNamespace?: string; hostSelfId?: string | null; runtime?: string; sessionStatus?: string; lifecycleState?: string };
@@ -178,11 +182,16 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const { prepareRigNativeRecovery, executeRigNativeRecovery } = await import('./rig-recovery.mts');
     const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
     console.log(JSON.stringify(await (action === 'recovery-prepare' ? prepareRigNativeRecovery : executeRigNativeRecovery)(run, identity)));
+  } else if (action === 'native-project') {
+    const { createRigNativeProject } = await import('./rig-native-project.mts');
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-native-project.mts').NativeRigProjectInput;
+    console.log(JSON.stringify(await createRigNativeProject({ ...input, directory }, { run })));
   } else if (action === 'native-create') {
-    const { createRigNativeCodex } = await import('./rig-native-create.mts');
+    const { createRigNativeCodex, nativeCreateArtifacts } = await import('./rig-native-create.mts');
     const input = JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-native-create.mts').NativeCodexCreateInput;
     // The authenticated caller's owner namespace always wins over input paths.
-    console.log(JSON.stringify(await createRigNativeCodex({ ...input, directory }, { run })));
+    const observationHelper = process.platform === 'linux' ? JSON.parse(nativeCreateArtifacts.read(path.join(directory, '.native-codex-observer.json')).toString('utf8')) as import('./codex-owner-plan.mts').CodexObservationHelper : undefined;
+    console.log(JSON.stringify(await createRigNativeCodex({ ...input, directory }, { run, observationHelper })));
   } else if (action === 'create') {
     const input = JSON.parse(fs.readFileSync(0, 'utf8')) as Input;
     const mode = input.mode ?? 'new';
@@ -193,6 +202,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     if (!cwd.startsWith('/') || /[\x00\r\n]/.test(cwd) || cwd.length > 2048) throw new Error('Choose an absolute project directory on the execution host.');
     const runtime = input.runtime ?? 'codex';
     if (!['codex', 'claude-code'].includes(runtime)) throw new Error('Unsupported agent runtime.');
+    if (input.inspect && (mode !== 'new' || !structuredAttachmentBuild())) throw new Error('This request has no supported original project creation to inspect.');
     const local = host === 'localhost';
     // Older published coordinators retain their existing transport, with no
     // remote identity claim. Explicit relay enrollment needs both new options.
@@ -225,14 +235,38 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       const spec = path.join(projectDir, 'rig.yaml');
       const projectState = path.join(projectDir, 'project.json');
       const saved = fs.existsSync(projectState) ? (JSON.parse(fs.readFileSync(projectState, 'utf8')) as { rigId?: string }) : undefined;
-      const savedRig = saved?.rigId ? rigRows(true).find(value => value.rigId === saved.rigId) : undefined;
-      if (!saved?.rigId || !savedRig || savedRig.lifecycleState === 'stopped') {
-        write(spec, { version: '0.2', name: rig, summary: `Coordinated project ${project}`, pods: [{ id: pod, label: project, members: [] }], edges: [] });
-        const result = JSON.parse(run('rig', ['up', spec, '--yes', '--json'])) as { rigId?: string };
-        if (!result.rigId || !/^[0-9A-HJKMNP-TV-Z]{26}$/.test(result.rigId)) throw new Error('Coordinator did not create the project.');
-        write(projectState, result);
+      const nativeOriginal = path.join(directory, 'projects', crypto.createHash('sha256').update(project).digest('hex'), 'original.json');
+      if (structuredAttachmentBuild()) {
+        const { createRigNativeProject } = await import('./rig-native-project.mts');
+        const { nativeCreateArtifacts: artifacts } = await import('./rig-native-create.mts');
+        const requests = artifacts.ownedRoot(path.join(directory, 'project-requests'));
+        const key = crypto.createHash('sha256').update(JSON.stringify([project, name, host])).digest('hex');
+        const original = path.join(requests, key + '.json');
+        if (input.inspect && !fs.existsSync(original)) throw new Error('The original project creation request is unavailable.');
+        artifacts.publish(original, Buffer.from(JSON.stringify({ contract: 'webmux-project-launch/v1', project, name, host, cwd, runtime })));
+        if (input.inspect || fs.existsSync(nativeOriginal) || !saved?.rigId) {
+          // Namespace allocation is controller-local even for an SSH member.
+          // Every member retains its own execution-host cwd below.
+          const result = await createRigNativeProject({ directory, name: project, cwd: directory, inspect: input.inspect }, { run });
+          if (result.state !== 'recorded' || !result.rigId) throw new PendingCreation(result.code, result.operationId);
+          rigId = result.rigId;
+        } else {
+          // Keep earlier WebMux launch records attached to their original rig;
+          // a stopped/missing namespace is not authority to allocate another.
+          const originalRig = rigRows().find(value => value.rigId === saved.rigId);
+          if (!originalRig || (originalRig.rigName || originalRig.name) !== rig) throw new Error('The saved project is unavailable. Recover its original Rig project or choose another project.');
+          rigId = saved.rigId;
+        }
+      } else {
+        const savedRig = saved?.rigId ? rigRows(true).find(value => value.rigId === saved.rigId) : undefined;
+        if (!saved?.rigId || !savedRig || savedRig.lifecycleState === 'stopped') {
+          write(spec, { version: '0.2', name: rig, summary: `Coordinated project ${project}`, pods: [{ id: pod, label: project, members: [] }], edges: [] });
+          const result = JSON.parse(run('rig', ['up', spec, '--yes', '--json'])) as { rigId?: string };
+          if (!result.rigId || !/^[0-9A-HJKMNP-TV-Z]{26}$/.test(result.rigId)) throw new Error('Coordinator did not create the project.');
+          write(projectState, result);
+        }
+        rigId = (JSON.parse(fs.readFileSync(projectState, 'utf8')) as { rigId: string }).rigId;
       }
-      rigId = (JSON.parse(fs.readFileSync(projectState, 'utf8')) as { rigId: string }).rigId;
     }
     const mapping = records().find(agent => (agent.rigId === rigId || (!agent.rigId && agent.project === project)) && agent.host === host);
     if (mapping && mapping.cwd !== cwd) throw new Error(`Rig ${rig} already maps ${host} to ${mapping.cwd}. Use that directory or choose another topology.`);
@@ -331,6 +365,10 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     }
   } else throw new Error('Unknown coordinator action');
 } catch (error) {
-  console.error(error instanceof Error ? error.message.slice(0, 3000) : String(error).slice(0, 3000));
-  process.exitCode = 1;
+  if (error instanceof PendingCreation) {
+    console.log(JSON.stringify({ creation: error.value }));
+  } else {
+    console.error(error instanceof Error ? error.message.slice(0, 3000) : String(error).slice(0, 3000));
+    process.exitCode = 1;
+  }
 }

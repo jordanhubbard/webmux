@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { createRigNativeCodex, publishCodexLaunchBundle } from '../webmux/server/internal/openrigcoord/rig-native-create.mts';
+import { createRigNativeCodex, openRigNativeCodexRecoveryHandoff, publishCodexLaunchBundle } from '../webmux/server/internal/openrigcoord/rig-native-create.mts';
+import { receiveCodexEnvironment } from '../webmux/server/internal/openrigcoord/codex-environment-channel.mts';
 import { projectCodexOwnerPlan } from '../webmux/server/internal/openrigcoord/codex-owner-plan.mts';
 
 const posixTest = process.platform === 'win32' ? test.skip : test;
@@ -18,18 +19,67 @@ function fixture(t: { after(fn: () => void): void }) {
     reasoningEffort: 'medium', approvalPolicy: 'never', approvalsReviewer: 'user', sandbox: { type: 'dangerFullAccess' } },
   { requiresOpenaiAuth: true, userId: 'private-user', account: { type: 'chatgpt' }, workspaceRouting: { chatgptAccountId: 'private-workspace', backendOrigin: 'https://example.invalid', accountRoutingOverride: 'NO_CONSTRAINT' } },
   { cwd, home: root, executable: '/native/codex', executableSHA256: 'a'.repeat(64), profile: null });
-  const posts: Array<{ id: string; text: string }> = []; let resolves = 0, reviews = 0, loseReply = false, changed = false;
+  const posts: Array<{ id: string; text: string }> = []; let resolves = 0, reviews = 0, loseReply = false, changed = false, consume = false;
   const manager = { port: 4242, managerPid: 123, managerIdentity: 'b'.repeat(64), processIdentity: 'c'.repeat(64) };
-  const deps = { handoffLifetime: 20, env: { HOME: root, PATH: process.env.PATH!, TOOL_API_KEY: 'PRIVATE_CREATE_VALUE_NEVER_SAVE' }, run: () => '[]', review: async () => { reviews++; return { ...manager }; },
+  const deps = { observationHelper: { contract: 'webmux-native-codex-observer/v1' as const, executable: '/observer/PRIVATE_HELPER_NEVER_EXPORT', executableSHA256: 'b'.repeat(64) }, handoffLifetime: 20, env: { HOME: root, PATH: process.env.PATH!, TOOL_API_KEY: 'PRIVATE_CREATE_VALUE_NEVER_SAVE' }, run: () => '[]', review: async () => { reviews++; return { ...manager }; },
     resolve: async () => { resolves++; if (changed && resolves > 1) { const { fingerprint: _old, ...content } = plan; content.model = 'different-owner-model'; return { ...content, fingerprint: createHash('sha256').update(JSON.stringify(content)).digest('hex') }; } return plan; },
     fetcher: (async (url: string | URL | Request, init?: RequestInit) => {
       if (String(url).endsWith('/capabilities')) return new Response(JSON.stringify({ contract: 'operation-correlation.v1', kinds: ['member.add'] }));
       const id = new Headers(init?.headers).get('X-OpenRig-Operation-Id')!; posts.push({ id, text: String(init?.body) });
       if (loseReply) throw new Error('response discarded');
+      if (consume) {
+        const envelope = JSON.parse(fs.readFileSync(JSON.parse(String(init?.body)).member.launch_wrapper[2], 'utf8'));
+        await receiveCodexEnvironment(envelope.environmentSocket, envelope.environment);
+      }
       return new Response(JSON.stringify({ operation: { contract: 'operation-correlation.v1', operationId: id, rigId, nodeIds: [nodeId] } }), { status: 201 });
     }) as typeof fetch };
-  return { root, input, plan, deps, manager, posts, counts: () => ({ resolves, reviews }), lose: () => { loseReply = true; }, restore: () => { loseReply = false; }, change: () => { changed = true; } };
+  return { root, input, plan, deps, manager, posts, counts: () => ({ resolves, reviews }), lose: () => { loseReply = true; }, restore: () => { loseReply = false; }, change: () => { changed = true; }, consume: () => { consume = true; } };
 }
+
+const recoveryOperation = '9aa1753a-1d61-4420-af42-e6b6fa591c47';
+posixTest('fresh recovery handoff persists only an acknowledgement and cannot launch or redeliver', async t => {
+  const f = fixture(t); f.consume(); f.deps.handoffLifetime = 1000;
+  await createRigNativeCodex(f.input, f.deps);
+  const manifest = JSON.parse(f.posts[0].text).member.launch_wrapper[2];
+  const envelope = JSON.parse(fs.readFileSync(manifest, 'utf8'));
+  const input = { ...f.input, operationId: recoveryOperation };
+  const handoff = await openRigNativeCodexRecoveryHandoff(input, f.deps);
+  try {
+    assert.equal(handoff.alreadyDelivered, false);
+    const values = await receiveCodexEnvironment(envelope.environmentSocket, envelope.environment);
+    assert.equal(values.TOOL_API_KEY, f.deps.env.TOOL_API_KEY);
+    assert.equal(await handoff.wait(), true);
+  } finally { await handoff.close(); }
+  assert.equal(fs.existsSync(envelope.environmentSocket), false);
+  const receipt = path.join(path.dirname(manifest), 'recovery-handoffs', recoveryOperation + '.json');
+  assert.equal(fs.statSync(receipt).mode & 0o777, 0o600);
+  assert.equal(fs.readFileSync(receipt, 'utf8').includes(f.deps.env.TOOL_API_KEY), false);
+  const before = f.counts(); f.deps.env.TOOL_API_KEY = 'replacement-owner-value';
+  const duplicate = await openRigNativeCodexRecoveryHandoff(input, f.deps);
+  assert.equal(duplicate.alreadyDelivered, true); assert.equal(await duplicate.wait(), true); await duplicate.close();
+  assert.equal(f.counts().resolves, before.resolves);
+  assert.equal(fs.existsSync(envelope.environmentSocket), false);
+  assert.equal(f.posts.length, 1, 'Handoff must never dispatch creation or resume');
+});
+posixTest('recovery handoff refuses missing original delivery and changed current owner', async t => {
+  const pending = fixture(t); await createRigNativeCodex(pending.input, pending.deps);
+  await assert.rejects(openRigNativeCodexRecoveryHandoff({ ...pending.input, operationId: recoveryOperation }, pending.deps));
+  const f = fixture(t); f.consume(); f.deps.handoffLifetime = 1000; await createRigNativeCodex(f.input, f.deps);
+  f.deps.env.TOOL_API_KEY = 'changed';
+  await assert.rejects(openRigNativeCodexRecoveryHandoff({ ...f.input, operationId: recoveryOperation }, f.deps), /owner_environment_changed/);
+  assert.equal(f.posts.length, 1);
+});
+posixTest('a competing recovery helper cannot replace a live handoff', async t => {
+  const f = fixture(t); f.consume(); f.deps.handoffLifetime = 1000; await createRigNativeCodex(f.input, f.deps);
+  const envelope = JSON.parse(fs.readFileSync(JSON.parse(f.posts[0].text).member.launch_wrapper[2], 'utf8'));
+  const input = { ...f.input, operationId: recoveryOperation };
+  const handoff = await openRigNativeCodexRecoveryHandoff(input, f.deps);
+  try {
+    await assert.rejects(openRigNativeCodexRecoveryHandoff(input, f.deps), /handoff_unavailable/);
+    assert.equal((await receiveCodexEnvironment(envelope.environmentSocket, envelope.environment)).TOOL_API_KEY, f.deps.env.TOOL_API_KEY);
+    assert.equal(await handoff.wait(), true);
+  } finally { await handoff.close(); }
+});
 posixTest('creation persists exact plan and immutable source bundle before one correlated POST', async t => {
   const f = fixture(t), result = await createRigNativeCodex(f.input, f.deps);
   assert.equal(result.state, 'recorded'); assert.equal(f.posts.length, 1); assert.deepEqual(f.counts(), { resolves: 2, reviews: 2 });
@@ -42,6 +92,8 @@ posixTest('creation persists exact plan and immutable source bundle before one c
   assert.equal(envelope.environment.values.HOME, f.root);
   assert.equal(fs.readFileSync(manifest, 'utf8').includes(f.deps.env.TOOL_API_KEY), false);
   assert.equal(f.posts[0].text.includes(f.deps.env.TOOL_API_KEY), false);
+  assert.equal(JSON.stringify(envelope).includes('PRIVATE_HELPER_NEVER_EXPORT'), false);
+  assert.equal(f.posts[0].text.includes('PRIVATE_HELPER_NEVER_EXPORT'), false);
   assert.equal(fs.statSync(manifest).mode & 0o777, 0o600); assert.equal(fs.statSync(path.dirname(manifest)).mode & 0o777, 0o700);
   const bundle = body.member.launch_wrapper[1]; assert.ok(fs.existsSync(bundle));
   assert.equal(JSON.stringify(result).includes('private-user'), false); assert.equal(JSON.stringify(result).includes(f.root), false);

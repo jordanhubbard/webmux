@@ -4,7 +4,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { projectCodexOwnerPlan, resolveCodexOwnerPlan } from '../webmux/server/internal/openrigcoord/codex-owner-plan.mts';
+import { createHash } from 'node:crypto';
+import { projectCodexOwnerPlan, resolveCodexOwnerPlan as nativeResolveCodexOwnerPlan, codexObservationCommand } from '../webmux/server/internal/openrigcoord/codex-owner-plan.mts';
+
+
+// RPC protocol fixtures do not execute the native CLI. Native qualification
+// separately exercises the default OS guard; unit fixtures inject transport.
+const resolveCodexOwnerPlan = (cwd: string, options: Parameters<typeof nativeResolveCodexOwnerPlan>[1]) =>
+  nativeResolveCodexOwnerPlan(cwd, options, { command: (executable, args) => ({ executable, args }) });
 
 const identity = { executable: '/bin/codex', executableSHA256: 'a'.repeat(64), home: '/account', cwd: '/project', profile: null };
 function snapshot() {
@@ -75,7 +82,7 @@ function fixture(t: { after: (fn: () => void) => void }, mode = '', config?: Rec
     const mode=${JSON.stringify(mode)}, log=${JSON.stringify(log)};
     if(process.argv.includes('--version')){console.log('codex-cli '+(mode==='version'?'0.168.0':'0.169.0'));process.exit(0);}
     const data=JSON.parse(fs.readFileSync(${JSON.stringify(data)},'utf8'));
-    fs.appendFileSync(log,JSON.stringify({pid:process.pid,args:process.argv.slice(2),cwd:process.cwd()})+'\\n');
+    fs.appendFileSync(log,JSON.stringify({pid:process.pid,args:process.argv.slice(2),cwd:process.cwd(),priorStopped:fs.existsSync(${JSON.stringify(stopped)})})+'\\n');
     process.on('SIGTERM',()=>{if(mode==='ignore-term')return;fs.writeFileSync(${JSON.stringify(stopped)},'stopped');process.exit(0);});
     process.stdout.on('error',()=>process.exit(0));
     if(mode==='exit')process.exit(3);
@@ -88,6 +95,7 @@ function fixture(t: { after: (fn: () => void) => void }, mode = '', config?: Rec
       if(mode==='oversize'){console.log('x'.repeat(3*1024*1024));return;}
       const result=request.method==='initialize'?{}:request.method==='config/read'?{config:data.config,layers:mode==='untrusted'?[{name:{type:'project'},version:'fixture',disabledReason:'untrusted',config:{private:'NEVER_EXPORT_LAYER'}}]:[]}:
         request.method==='account/read'?data.account:request.method==='thread/start'?data.thread:null;
+      if(mode==='config-change'&&request.method==='account/read')fs.writeFileSync(${JSON.stringify(data)},JSON.stringify({...data,config:{...data.config,model:'changed'}}));
       console.log(JSON.stringify({id:request.id,result}));
     });`);
   const executable = path.join(root, 'codex'); fs.writeFileSync(executable, `#!/bin/sh\nexec ${q(process.execPath)} ${q(script)} "$@"\n`, { mode: 0o700 });
@@ -96,26 +104,30 @@ function fixture(t: { after: (fn: () => void) => void }, mode = '', config?: Rec
 posixTest('native RPC sequence submits no turn and reaps its private process', async t => {
   const f = fixture(t); const plan = await resolveCodexOwnerPlan(f.cwd, f);
   const events = fs.readFileSync(f.log, 'utf8').trim().split('\n').map(line => JSON.parse(line) as Record<string, unknown>);
-  assert.deepEqual(events.slice(1).map(e => e.method), ['initialize', 'initialized', 'config/read', 'account/read', 'thread/start']);
+  assert.deepEqual(events.filter(e => e.method).map(e => e.method), ['initialize', 'initialized', 'config/read', 'account/read', 'initialize', 'initialized', 'config/read', 'thread/start']);
   assert.deepEqual(events.at(-1)?.params, { ephemeral: true, config: {
     'features.hooks': false, 'features.plugins': false, 'features.apps': false, 'features.shell_snapshot': false } });
-  assert.deepEqual(events[0].args, ['-C', fs.realpathSync(f.cwd), 'app-server', '--listen', 'stdio://']);
+  assert.deepEqual(events[0].args, ['-C', fs.realpathSync(f.cwd), ...['hooks', 'plugins', 'apps', 'shell_snapshot'].flatMap(name => ['-c', `features.${name}=false`]), 'app-server', '--listen', 'stdio://']);
   assert.equal(events[0].cwd, fs.realpathSync(f.cwd));
+  const children = events.filter(e => typeof e.pid === 'number');
+  assert.equal(children.length, 2); assert.equal(children[0].priorStopped, false); assert.equal(children[1].priorStopped, true);
+  assert.notEqual(children[0].pid, children[1].pid);
   assert.equal(plan.profile, null); assert.equal(fs.existsSync(f.stopped), true);
   assert.equal(JSON.stringify(plan).includes('NEVER_EXPORT'), false);
 });
 posixTest('observation disables configured MCP startup without overriding owner policy', async t => {
-  const f = fixture(t, '', { mcp_servers: { 'with.dot': { command: 'NEVER_RUN' }, plain: { url: 'https://example.invalid' } } });
+  const f = fixture(t, '', { mcp_servers: { 'with.dot': { command: 'NEVER_RUN', args: ['--fixture'], env: { PRIVATE: 'NEVER_EXPORT_CONFIG' }, tools: null }, plain: { url: 'https://example.invalid', http_headers: { Authorization: 'NEVER_EXPORT_HEADER' } } } });
   const plan = await resolveCodexOwnerPlan(f.cwd, f);
   const events = fs.readFileSync(f.log, 'utf8').trim().split('\n').map(line => JSON.parse(line));
   const overrides = events.at(-1).params.config;
   assert.deepEqual(overrides, { 'features.hooks': false, 'features.plugins': false, 'features.apps': false,
-    'features.shell_snapshot': false, mcp_servers: { 'with.dot': { enabled: false }, plain: { enabled: false } } });
+    'features.shell_snapshot': false, mcp_servers: { 'with.dot': { command: 'NEVER_RUN', args: ['--fixture'], enabled: false }, plain: { url: 'https://example.invalid', enabled: false } } });
   assert.deepEqual(plan.policy, { type: 'dangerFullAccess' });
   assert.equal(JSON.stringify(plan).includes('NEVER_RUN'), false);
+  assert.equal(JSON.stringify(overrides).includes('NEVER_EXPORT'), false);
 });
 posixTest('malformed or unbounded startup config refuses before thread creation', async t => {
-  for (const servers of [[], 'invalid', { bad: null }, { ['bad\nname']: {} },
+  for (const servers of [[], 'invalid', { bad: null }, { missing: {} }, { invalidArgs: { command: 'never', args: [42] } }, { ['bad\nname']: {} },
     Object.fromEntries(Array.from({ length: 129 }, (_, i) => [String(i), {}]))]) {
     const f = fixture(t, '', { mcp_servers: servers });
     await assert.rejects(resolveCodexOwnerPlan(f.cwd, f), /native_startup_config_unavailable/);
@@ -157,7 +169,7 @@ posixTest('server cancellation reaps the private app-server before the observer 
   const f = fixture(t, 'hang');
   const parentScript = path.join(path.dirname(f.home), 'parent.mjs');
   const module = new URL('../webmux/server/internal/openrigcoord/codex-owner-plan.mts', import.meta.url).href;
-  fs.writeFileSync(parentScript, `import {resolveCodexOwnerPlan} from ${JSON.stringify(module)};try{await resolveCodexOwnerPlan(${JSON.stringify(f.cwd)},${JSON.stringify({ executable: f.executable })});}catch(e){console.log(e.message);process.exitCode=1;}`);
+  fs.writeFileSync(parentScript, `import {resolveCodexOwnerPlan} from ${JSON.stringify(module)};try{await resolveCodexOwnerPlan(${JSON.stringify(f.cwd)},${JSON.stringify({ executable: f.executable })},{command:(executable,args)=>({executable,args})});}catch(e){console.log(e.message);process.exitCode=1;}`);
   const parent = spawn(process.execPath, [parentScript], { env: f.env, stdio: ['ignore', 'pipe', 'pipe'] });
   let nativePid = 0, output = ''; parent.stdout.on('data', data => { output += String(data); }); parent.stderr.resume();
   t.after(() => { parent.kill('SIGKILL'); if (nativePid && !fs.existsSync(f.stopped)) { try { process.kill(-nativePid, 'SIGKILL'); } catch { /* Already exited. */ } } });
@@ -183,4 +195,47 @@ posixTest('untrusted project configuration refuses before account/thread start w
   assert.equal(events.at(-1).method, 'config/read'); assert.equal(events.at(-1).params.includeLayers, true);
   assert.equal(events.some(e => e.method === 'thread/start' || e.method === 'account/read'), false);
   assert.equal(fs.existsSync(f.stopped), true);
+});
+
+posixTest('config changes between account and isolated policy observation refuse before a thread', async t => {
+  const f = fixture(t, 'config-change');
+  await assert.rejects(resolveCodexOwnerPlan(f.cwd, f), /native_owner_config_changed/);
+  const events = fs.readFileSync(f.log, 'utf8');
+  assert.equal(events.includes('thread/start'), false);
+  for (const row of events.trim().split('\n').map(line => JSON.parse(line)).filter(row => row.pid)) {
+    assert.throws(() => process.kill(row.pid, 0), (error: NodeJS.ErrnoException) => error.code === 'ESRCH');
+  }
+});
+
+test('unqualified observation platforms refuse instead of silently starting an unguarded thread', () => {
+  for (const platform of ['linux', 'win32', 'freebsd'] as const) {
+    assert.throws(() => codexObservationCommand('/bin/codex', [], 'policy', platform), /isolation_unqualified/);
+    assert.throws(() => codexObservationCommand('/bin/codex', [], 'account', platform), /isolation_unqualified/);
+  }
+});
+const macTest = process.platform === 'darwin' ? test : test.skip;
+macTest('macOS guards only policy startup and keeps the actual CLI arguments intact', () => {
+  const executable = '/a/native "codex"', args = ['-C', '/project', 'app-server', '--listen', 'stdio://'];
+  assert.deepEqual(codexObservationCommand(executable, args, 'account'), { executable, args });
+  const guarded = codexObservationCommand(executable, args, 'policy');
+  assert.equal(guarded.executable, '/usr/bin/sandbox-exec');
+  assert.deepEqual(guarded.args.slice(2), [executable, ...args]);
+  assert.match(guarded.args[1], /deny network\*/); assert.match(guarded.args[1], /deny process-fork/);
+  assert.ok(guarded.args[1].includes('(literal ' + JSON.stringify(executable) + ')'));
+  assert.throws(() => codexObservationCommand('/a/line\nbreak', args, 'policy'), /native_owner_plan_unavailable/);
+});
+
+posixTest('Linux helper provenance is pinned before either account or policy startup', t => {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'wm-linux-observer-')));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const executable = path.join(root, 'helper'); fs.writeFileSync(executable, 'synthetic helper metadata fixture', { mode: 0o700 });
+  const helper = { contract: 'webmux-native-codex-observer/v1' as const, executable,
+    executableSHA256: createHash('sha256').update(fs.readFileSync(executable)).digest('hex') };
+  const args = ['-C', '/project', 'app-server', '--listen', 'stdio://'];
+  assert.deepEqual(codexObservationCommand('/native/codex', args, 'policy', 'linux', helper, 'a'.repeat(64)), {
+    executable, args: ['--native-codex-policy-observer', helper.executableSHA256, '/native/codex', 'a'.repeat(64), ...args],
+  });
+  assert.deepEqual(codexObservationCommand('/native/codex', args, 'account', 'linux', helper), { executable: '/native/codex', args });
+  fs.appendFileSync(executable, 'changed');
+  for (const stage of ['account', 'policy'] as const) assert.throws(() => codexObservationCommand('/native/codex', args, stage, 'linux', helper), /helper_changed/);
 });

@@ -1,0 +1,616 @@
+{
+  "scope": "Enforced Linux native observation and owner-private controller helper; public native-owned coding and authenticated Linux creation/recovery remain incomplete",
+  "sources": {
+    "webmux/server/cmd/webmux/main.go": "59af43dbc0831b0c4c5bc042b582a770f7d3a83a746c164272a8a5f29ca001f9",
+    "webmux/server/internal/openrigcoord/coord.go": "5dc46a9c9de30a9aac90128eb20f3ab4f3ebd902e04bfb29751c0f7da8c57c7e",
+    "webmux/server/internal/openrigcoord/observation_helper_linux_test.go": "5f4208be9031fb68729dc70b84fe04d15d05f84f9c81e6f0fcdec69836e5fd45",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "8e5e4562609ca356e01a3d274eb7ad7168d8e068703db5b7456308c69c125b0b",
+    "webmux/server/internal/openrigcoord/runner.mts": "ec3611f1e075c8e7bd949ded9fcd2099d57f760ee8d25dd9e8b6b74ab0b8c399",
+    "scripts/codex-owner-plan.test.mts": "edc359fcc27f4374410411b304d87aa32ee61e4df82174ecb14fdd5493dc4b4b",
+    "scripts/rig-native-create.test.mts": "49ad0bae1627d376968c71050fd14def30711f840710e59806bf961fbb04fc1b",
+    "scripts/qualify-codex-observation-isolation.py": "344d4a81fbed4d604c86836ed2521cbc95d1b98d436ace2b6b3a62530e6bae88",
+    "scripts/qualify-codex-observer-startup.py": "c744196b7263798d96bbea1a70e24e1477cf33d48fe606991472a215331e1a25",
+    "scripts/qualify-codex-project-trust.py": "d8bc09c80086be1379852b2d1f69f4f74608382b189667316d255c1ea8ca59fe",
+    ".github/workflows/codex-observation-native.yml": "45ba7258e60c83f571f5c8e6b13961fc575a507658309d94169018100ce99053",
+    "webmux/server/internal/nativeobserve/reference_test.go": "f234e2d4869af6f1776ff3bd3ad99e428da573a364a8f664437aeafb6b44cd43",
+    "webmux/server/internal/nativeobserve/helper_other.go": "719a4fe9b55870a61c42e877d014d53043a9ef8f7a37f4fb74a1b6153fd57359",
+    "webmux/server/internal/nativeobserve/reference.go": "9dda34d2ae04cb985df3d5a9501937a901ab3f39d857b908cf23e53e0e28d9c0",
+    "webmux/server/internal/nativeobserve/helper.go": "5772de1b277b9ce508eada1fdb062a4d40d472bcf5b83baa12dfe0920accca5d",
+    "webmux/server/internal/nativeobserve/helper_linux_test.go": "dcc2f7cbaa3f5a021aa36f6fbd0be48e8a7cbaa3e55e8f0fbde01f0fda861c71",
+    "webmux/server/internal/nativeobserve/helper_linux.go": "c4fc7e33d30c19af8a38a8f00959c95e1766ba5d6b2f639b597cd81cfca1555c"
+  },
+  "linux": {
+    "scope": "Qualify native observation isolation, optionally with an existing account.\n\nDefault cases use private, unauthenticated homes. The optional account check\nuses the existing native account in place. No model turn or credential copy.",
+    "cases": [
+      {
+        "mode": "full",
+        "guarded": false,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "projectMatches": true,
+        "lateProcessStarted": true,
+        "httpRequests": 1,
+        "policy": {
+          "cwd": "<fixture>/project",
+          "runtimeWorkspaceRoots": [
+            "<fixture>/project",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "dangerFullAccess"
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "full",
+        "guarded": true,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "projectMatches": true,
+        "lateProcessStarted": false,
+        "httpRequests": 0,
+        "policy": {
+          "cwd": "<fixture>/project",
+          "runtimeWorkspaceRoots": [
+            "<fixture>/project",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "dangerFullAccess"
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "read",
+        "guarded": false,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "projectMatches": true,
+        "lateProcessStarted": true,
+        "httpRequests": 1,
+        "policy": {
+          "cwd": "<fixture>/project",
+          "runtimeWorkspaceRoots": [
+            "<fixture>/project",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "readOnly",
+            "networkAccess": false
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "read",
+        "guarded": true,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "projectMatches": true,
+        "lateProcessStarted": false,
+        "httpRequests": 0,
+        "policy": {
+          "cwd": "<fixture>/project",
+          "runtimeWorkspaceRoots": [
+            "<fixture>/project",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "readOnly",
+            "networkAccess": false
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "workspace",
+        "guarded": false,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "projectMatches": true,
+        "lateProcessStarted": true,
+        "httpRequests": 1,
+        "policy": {
+          "cwd": "<fixture>/project",
+          "runtimeWorkspaceRoots": [
+            "<fixture>/project",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [
+              "<fixture>/extra"
+            ],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": true,
+            "excludeSlashTmp": true
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "workspace",
+        "guarded": true,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "projectMatches": true,
+        "lateProcessStarted": false,
+        "httpRequests": 0,
+        "policy": {
+          "cwd": "<fixture>/project",
+          "runtimeWorkspaceRoots": [
+            "<fixture>/project",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [
+              "<fixture>/extra"
+            ],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": true,
+            "excludeSlashTmp": true
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      }
+    ],
+    "passed": true,
+    "moduleSHA256": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "nativeSHA256": "3bb41c9a80187773e2a59278d4fc355b1a163c31bb5a79581e37d4fe428af047",
+    "probeSHA256": "344d4a81fbed4d604c86836ed2521cbc95d1b98d436ace2b6b3a62530e6bae88",
+    "controlsSHA256": "c744196b7263798d96bbea1a70e24e1477cf33d48fe606991472a215331e1a25",
+    "platform": "linux",
+    "helperSHA256": "d25ddf14700cd546c4cbbd7410fa238709a351d2cedc25dea3af0c5dc7b004e9",
+    "sameExecutableForkDenied": true,
+    "missingAuthentication": {
+      "error": "native_account_identity_unavailable",
+      "exit": 0
+    },
+    "sourceUnchanged": true
+  },
+  "linuxProvenance": {
+    "kernel": "5.15.0-203-generic",
+    "machine": "aarch64",
+    "nativeSHA256": "3bb41c9a80187773e2a59278d4fc355b1a163c31bb5a79581e37d4fe428af047",
+    "helperSHA256": "d25ddf14700cd546c4cbbd7410fa238709a351d2cedc25dea3af0c5dc7b004e9",
+    "package": {
+      "version": "0.169.0-linux-arm64",
+      "integrity": "sha512-NZ/DaQUpcQmxmqee7Z9uC1rzw3GhSbooawcaTe1LN5Yk+WlinUKGdTXJgClRT/9ogQEEM9TWxYzvxPfj5G/xFg==",
+      "resolved": "https://registry.npmjs.org/@openai/codex/-/codex-0.169.0-linux-arm64.tgz"
+    },
+    "nativeAccountAuthenticated": false,
+    "diskFreeBytes": 18308698112
+  },
+  "mac": {
+    "scope": "Qualify native observation isolation, optionally with an existing account.\n\nDefault cases use private, unauthenticated homes. The optional account check\nuses the existing native account in place. No model turn or credential copy.",
+    "cases": [
+      {
+        "mode": "full",
+        "guarded": false,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "projectMatches": true,
+        "lateProcessStarted": true,
+        "httpRequests": 1,
+        "policy": {
+          "cwd": "<fixture>/project",
+          "runtimeWorkspaceRoots": [
+            "<fixture>/project",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "dangerFullAccess"
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "full",
+        "guarded": true,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "projectMatches": true,
+        "lateProcessStarted": false,
+        "httpRequests": 0,
+        "policy": {
+          "cwd": "<fixture>/project",
+          "runtimeWorkspaceRoots": [
+            "<fixture>/project",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "dangerFullAccess"
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "read",
+        "guarded": false,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "projectMatches": true,
+        "lateProcessStarted": true,
+        "httpRequests": 1,
+        "policy": {
+          "cwd": "<fixture>/project",
+          "runtimeWorkspaceRoots": [
+            "<fixture>/project",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "readOnly",
+            "networkAccess": false
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "read",
+        "guarded": true,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "projectMatches": true,
+        "lateProcessStarted": false,
+        "httpRequests": 0,
+        "policy": {
+          "cwd": "<fixture>/project",
+          "runtimeWorkspaceRoots": [
+            "<fixture>/project",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "readOnly",
+            "networkAccess": false
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "workspace",
+        "guarded": false,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "projectMatches": true,
+        "lateProcessStarted": true,
+        "httpRequests": 1,
+        "policy": {
+          "cwd": "<fixture>/project",
+          "runtimeWorkspaceRoots": [
+            "<fixture>/project",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [
+              "<fixture>/extra"
+            ],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": true,
+            "excludeSlashTmp": true
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "workspace",
+        "guarded": true,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "projectMatches": true,
+        "lateProcessStarted": false,
+        "httpRequests": 0,
+        "policy": {
+          "cwd": "<fixture>/project",
+          "runtimeWorkspaceRoots": [
+            "<fixture>/project",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [
+              "<fixture>/extra"
+            ],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": true,
+            "excludeSlashTmp": true
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      }
+    ],
+    "passed": true,
+    "moduleSHA256": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "nativeSHA256": "739cda86e15d30a6e2b40cf8dcbbfb988aaf48b305b27065573bb8e9fd41d002",
+    "probeSHA256": "344d4a81fbed4d604c86836ed2521cbc95d1b98d436ace2b6b3a62530e6bae88",
+    "controlsSHA256": "c744196b7263798d96bbea1a70e24e1477cf33d48fe606991472a215331e1a25",
+    "platform": "darwin",
+    "helperSHA256": null,
+    "sameExecutableForkDenied": true,
+    "missingAuthentication": {
+      "error": "native_account_identity_unavailable",
+      "exit": 0
+    },
+    "authenticated": {
+      "version": "0.169.0",
+      "policyType": "dangerFullAccess",
+      "approval": "never",
+      "stdioStarted": false,
+      "httpRequests": 0,
+      "noTurn": true,
+      "credentialCopy": false,
+      "exit": 0
+    },
+    "sourceUnchanged": true
+  },
+  "factory": {
+    "passed": true,
+    "checks": {
+      "emptyTopologyReplyLossRetainsOneNativeRig": true,
+      "topologyInspectionExactUUIDBodyHeaders": true,
+      "emptyStoppedTopologyReusedWithoutPost": true,
+      "materializationStartsNoSessionOrProvider": true,
+      "onlyOriginalCreationHelperKilledBeforeHandoff": true,
+      "sameOriginalEnrollmentAndReconstructedHandoffAfterHelperLoss": true,
+      "environmentSocketRemovedAfterHandoff": true,
+      "noPlaintextFixtureValueInDurableState": true,
+      "actualDefaultNativeOwnerPolicyUsed": true,
+      "actualNativeArgvPreservesOwnerPolicy": true,
+      "freshChallengeReadByActualProvider": true,
+      "projectAndOwnerExtraWritable": true,
+      "ownerFullAccessNotNarrowed": true,
+      "wrapperReplacedByNativeExecutable": true,
+      "nativeIdentityRetained": true,
+      "nativeOwnerEnvironmentPreserved": true,
+      "nativePolicyAndCorrelatedTools": true,
+      "duplicateFactoryAndExplicitInspectRetainNativeOccupant": true,
+      "siblingRetainsOriginalPID": true,
+      "topologyReplayPreservesRunningMembers": true,
+      "checkedStopEndsOnlyNativeCodingSeat": true
+    },
+    "moduleSHA256": {
+      "codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+      "codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+      "codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+      "rig-native-create.mts": "8e5e4562609ca356e01a3d274eb7ad7168d8e068703db5b7456308c69c125b0b",
+      "rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+      "rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+      "codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+      "codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+      "rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c"
+    },
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true,
+    "sourceUnchanged": true
+  },
+  "public": {
+    "passed": true,
+    "checks": {
+      "pendingHasNoSessionProviderOrHostProbe": true,
+      "serverRejectsChangedOriginalBeforeHostProbe": true,
+      "controllerRestartRetainsOriginalOperationAndRig": true,
+      "browserRetainsOriginalInputAfterEdits": true,
+      "actualNativeReplayUsesSameUUIDBytesHeaders": true,
+      "unavailableHostCheckedOnlyAfterProjectConfirmation": true,
+      "noDuplicateTopologyOrCodingLaunch": true
+    },
+    "postStatuses": [
+      202,
+      202,
+      502
+    ],
+    "sources": {
+      "webmux/server/internal/openrigcoord/rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c",
+      "webmux/server/internal/openrigcoord/rig-native-create.mts": "8e5e4562609ca356e01a3d274eb7ad7168d8e068703db5b7456308c69c125b0b",
+      "webmux/server/internal/openrigcoord/rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+      "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+      "webmux/server/internal/openrigcoord/runner.mts": "ec3611f1e075c8e7bd949ded9fcd2099d57f760ee8d25dd9e8b6b74ab0b8c399",
+      "webmux/server/internal/openrigcoord/coord.go": "5dc46a9c9de30a9aac90128eb20f3ab4f3ebd902e04bfb29751c0f7da8c57c7e",
+      "webmux/server/internal/httpapi/coordination_creation.go": "e85a2215a7dd45069e69ee6a5106625605142c7412d5612419a6a519d09f647b",
+      "webmux/server/internal/httpapi/coordination_providers.go": "fa098afd071e72c6d0e862df18b52181f699535ee7e0573f98e240acf8a7eddc",
+      "webmux/server/internal/httpapi/openrig.go": "0a9f095c69e1a10a375b4ba90d66aa51706e028073066e836c1636b32d7c52ae",
+      "webmux/frontend/src/components/CoordinationDialog.tsx": "20ce063f621d574c720980542a03ef7dde0071e883edbfae2cc2a102bd60d1b5",
+      "webmux/frontend/src/utils/api.ts": "9a1ed086f1a4d7fd4a8f6b336f30a3f805519bd6561f668d934b2c9782a17f48"
+    },
+    "binarySHA256": "4bf4e49fcc1c4c42058cb143fb46e4d6a7b3cabcf4da633f33afdebe39300993",
+    "sourceUnchanged": true,
+    "browserExit": 0,
+    "privateTmuxStopped": true
+  },
+  "local": {
+    "helpers": 203,
+    "strictTypeScriptProjects": 5,
+    "checks": [
+      "nativeobserve/openrigcoord/cmd-webmux Go race",
+      "Go vet",
+      "native Linux ARM64 coordinator bridge",
+      "native Linux ARM64 kernel race controls",
+      "Linux ARM64 build",
+      "macOS build",
+      "Windows ARM64 cross-build",
+      "workflow YAML parse and read-only permissions",
+      "whitespace"
+    ]
+  },
+  "trust": {
+    "mac": {
+      "scope": "Native 0.169 untrusted project configuration; disposable homes, no authentication or coding turn",
+      "passed": true,
+      "moduleSHA256": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+      "probeSHA256": "d8bc09c80086be1379852b2d1f69f4f74608382b189667316d255c1ea8ca59fe",
+      "cases": [
+        {
+          "mode": "native-explicit-cwd-control",
+          "disabledProjectLayerBefore": true,
+          "homeConfigChanged": true,
+          "projectMcpStarted": true,
+          "ownedAppServerStopped": true
+        },
+        {
+          "mode": "actual-owner-resolver",
+          "refusal": "native_project_trust_required",
+          "homeConfigUnchanged": true,
+          "projectMcpStarted": false,
+          "noPersistedSession": true
+        }
+      ]
+    },
+    "linux": {
+      "scope": "Native 0.169 untrusted project configuration; disposable homes, no authentication or coding turn",
+      "passed": true,
+      "moduleSHA256": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+      "probeSHA256": "d8bc09c80086be1379852b2d1f69f4f74608382b189667316d255c1ea8ca59fe",
+      "cases": [
+        {
+          "mode": "native-explicit-cwd-control",
+          "disabledProjectLayerBefore": true,
+          "homeConfigChanged": true,
+          "projectMcpStarted": true,
+          "ownedAppServerStopped": true
+        },
+        {
+          "mode": "actual-owner-resolver",
+          "refusal": "native_project_trust_required",
+          "homeConfigUnchanged": true,
+          "projectMcpStarted": false,
+          "noPersistedSession": true
+        }
+      ]
+    }
+  },
+  "rawEvidenceSHA256": {
+    "observer523-linux-native-publish.json": "cdefe411e002791f5322363a56c120ebac0f146d39aff978752fb05575eab0a2",
+    "observer523-mac-native-final.json": "d463c2af8fdff62057260a39159b31a16a0f9eb5bae8d27ee7fb33465d86f599",
+    "observer523-linux-provenance.json": "66575b0c7f576d1606fd063d385e8d99efe7f744ffc9a8911579886e47273c51",
+    "native-create-factory-wm438topology-5mv4js6b.json": "d5e453a522094c16fc2190d91cd9ccd08fd9ddde58d365367b9cf78300a7d209",
+    "topology-public-wm-public-topology-4dd6p1do.json": "3063782150bb9dfe0003e64554f2dbd68acc3abb79b55307fdd800857cb8a8ef",
+    "observer523-kernel-race-publish.log": "88f2965e39dc44c9fc4a39e213a12897858c0948e801af8535e837f520dd47e7",
+    "observer523-local-publish-final.log": "55ba9efc1a8a0afdda64a7be8456eea5b0a81a7c4bfdf031f35bfda58390068c",
+    "observer523-helpers-final.log": "4a8ec7ab6bc739f450665147c5adbe84216a4fde2a0011e4d0fb97ece2ad7eae"
+  },
+  "excluded": [
+    "First Linux prototype denied unnamed Unix pairs required by native Tokio signal handling; final guard allows private pairs and still denies external socket/connect operations.",
+    "First kernel race positive-control fixture did not lock its OS thread across per-thread no-new-privs and filter setup; corrected fixture retains unchanged enforcement assertions.",
+    "Initial private-directory tests did not explicitly set fixture ownership permissions; corrected fixtures use mode0700 and a separate negative case refuses shared directories.",
+    "Earlier package extraction assumed an older vendor layout. Final installed native npm package and integrity are recorded above."
+  ],
+  "limits": [
+    "Linux ARM64 kernel/native controls are actual; hosted AMD64/ARM64 workflow terminal evidence remains required.",
+    "Linux native account is not signed in; authenticated creation/environment handoff/conversation recovery is not qualified.",
+    "Authenticated macOS creation-helper-loss is one fresh coding conversation, not restored-conversation/controller-crash/reboot recovery.",
+    "Public coding launch remains adopted attach--self; native-owned member/readiness/attachment/uncertainty and fresh-handoff recovery remain unactivated.",
+    "Canonical empty-pod selection, profiles, named graphs, broader settings, other native platforms, review, audit429, legacy wheel524/dashboard525 and full roadmap/release gates remain open."
+  ]
+}

@@ -1,0 +1,316 @@
+{
+  "scope": "macOS native owner-account lookup and OS-isolated policy observation, plus current-source creation and namespace composition; public native-owned coding remains incomplete",
+  "versions": {
+    "nativeCodex": "0.169.0",
+    "node": "v24.21.0",
+    "rig": "0.7.18 (3bf87c62)",
+    "tmux": "tmux 3.8"
+  },
+  "sources": {
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "ad7dc8f81ced979b3d716bdfcaf79f70a813d664504492aad2b5541f7074f646",
+    "scripts/qualify-codex-observation-isolation.py": "46ff9fbb98c8226a14070bac851925d699c67f82b0efc59b55047cf30c88f1b2",
+    "scripts/codex-owner-plan.test.mts": "68c3368dd711fa09c1e829e91fb77027c740558a69e82afbfdddb72c60a48c8e"
+  },
+  "matrix": {
+    "passed": true,
+    "cases": [
+      {
+        "mode": "full",
+        "guarded": false,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "lateProcessStarted": true,
+        "httpRequests": 1,
+        "policy": {
+          "cwd": "/Users/jkh/Src/webmux/.worktrees/codex-launch438",
+          "runtimeWorkspaceRoots": [
+            "/Users/jkh/Src/webmux/.worktrees/codex-launch438",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "dangerFullAccess"
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "full",
+        "guarded": true,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "lateProcessStarted": false,
+        "httpRequests": 0,
+        "policy": {
+          "cwd": "/Users/jkh/Src/webmux/.worktrees/codex-launch438",
+          "runtimeWorkspaceRoots": [
+            "/Users/jkh/Src/webmux/.worktrees/codex-launch438",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "dangerFullAccess"
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "read",
+        "guarded": false,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "lateProcessStarted": true,
+        "httpRequests": 1,
+        "policy": {
+          "cwd": "/Users/jkh/Src/webmux/.worktrees/codex-launch438",
+          "runtimeWorkspaceRoots": [
+            "/Users/jkh/Src/webmux/.worktrees/codex-launch438",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "readOnly",
+            "networkAccess": false
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "read",
+        "guarded": true,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "lateProcessStarted": false,
+        "httpRequests": 0,
+        "policy": {
+          "cwd": "/Users/jkh/Src/webmux/.worktrees/codex-launch438",
+          "runtimeWorkspaceRoots": [
+            "/Users/jkh/Src/webmux/.worktrees/codex-launch438",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "readOnly",
+            "networkAccess": false
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "workspace",
+        "guarded": false,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "lateProcessStarted": true,
+        "httpRequests": 1,
+        "policy": {
+          "cwd": "/Users/jkh/Src/webmux/.worktrees/codex-launch438",
+          "runtimeWorkspaceRoots": [
+            "/Users/jkh/Src/webmux/.worktrees/codex-launch438",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [
+              "<fixture>/extra"
+            ],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": true,
+            "excludeSlashTmp": true
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      },
+      {
+        "mode": "workspace",
+        "guarded": true,
+        "accountStartsNoMCP": true,
+        "accountStopped": true,
+        "lateProcessStarted": false,
+        "httpRequests": 0,
+        "policy": {
+          "cwd": "/Users/jkh/Src/webmux/.worktrees/codex-launch438",
+          "runtimeWorkspaceRoots": [
+            "/Users/jkh/Src/webmux/.worktrees/codex-launch438",
+            "<fixture>/extra"
+          ],
+          "sandbox": {
+            "type": "workspaceWrite",
+            "writableRoots": [
+              "<fixture>/extra"
+            ],
+            "networkAccess": false,
+            "excludeTmpdirEnvVar": true,
+            "excludeSlashTmp": true
+          },
+          "approvalPolicy": "never",
+          "approvalsReviewer": "user",
+          "model": "gpt-6.1-sol",
+          "modelProvider": "openai",
+          "reasoningEffort": null,
+          "serviceTier": null,
+          "activePermissionProfile": null
+        },
+        "configUnchanged": true,
+        "noTurn": true,
+        "policyStopped": true
+      }
+    ],
+    "sameExecutableForkDenied": true,
+    "authenticated": {
+      "version": "0.169.0",
+      "policyType": "dangerFullAccess",
+      "approval": "never",
+      "stdioStarted": false,
+      "httpRequests": 0,
+      "noTurn": true,
+      "credentialCopy": false,
+      "exit": 0
+    },
+    "nativeSHA256": "739cda86e15d30a6e2b40cf8dcbbfb988aaf48b305b27065573bb8e9fd41d002",
+    "sourceUnchanged": true
+  },
+  "factory": {
+    "checks": {
+      "emptyTopologyReplyLossRetainsOneNativeRig": true,
+      "topologyInspectionExactUUIDBodyHeaders": true,
+      "emptyStoppedTopologyReusedWithoutPost": true,
+      "materializationStartsNoSessionOrProvider": true,
+      "onlyOriginalCreationHelperKilledBeforeHandoff": true,
+      "sameOriginalEnrollmentAndReconstructedHandoffAfterHelperLoss": true,
+      "environmentSocketRemovedAfterHandoff": true,
+      "noPlaintextFixtureValueInDurableState": true,
+      "actualDefaultNativeOwnerPolicyUsed": true,
+      "actualNativeArgvPreservesOwnerPolicy": true,
+      "freshChallengeReadByActualProvider": true,
+      "projectAndOwnerExtraWritable": true,
+      "ownerFullAccessNotNarrowed": true,
+      "wrapperReplacedByNativeExecutable": true,
+      "nativeIdentityRetained": true,
+      "nativeOwnerEnvironmentPreserved": true,
+      "nativePolicyAndCorrelatedTools": true,
+      "duplicateFactoryAndExplicitInspectRetainNativeOccupant": true,
+      "siblingRetainsOriginalPID": true,
+      "topologyReplayPreservesRunningMembers": true,
+      "checkedStopEndsOnlyNativeCodingSeat": true
+    },
+    "passed": true,
+    "moduleSHA256": {
+      "codex-owner-plan.mts": "ad7dc8f81ced979b3d716bdfcaf79f70a813d664504492aad2b5541f7074f646",
+      "codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+      "codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+      "rig-native-create.mts": "6d23b4764ec2a46a2868513ecd8c0e30a91fb2e15b5bc37ee8aba8bc166d4589",
+      "rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+      "rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+      "codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+      "codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+      "rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c"
+    },
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true,
+    "sourceUnchanged": true
+  },
+  "public": {
+    "checks": {
+      "pendingHasNoSessionProviderOrHostProbe": true,
+      "serverRejectsChangedOriginalBeforeHostProbe": true,
+      "controllerRestartRetainsOriginalOperationAndRig": true,
+      "browserRetainsOriginalInputAfterEdits": true,
+      "actualNativeReplayUsesSameUUIDBytesHeaders": true,
+      "unavailableHostCheckedOnlyAfterProjectConfirmation": true,
+      "noDuplicateTopologyOrCodingLaunch": true
+    },
+    "postStatuses": [
+      202,
+      202,
+      502
+    ],
+    "passed": true,
+    "browserExit": 0,
+    "binarySHA256": "2536473df4571892ec1124c7cb790cfc50e6e90e21d753c2b29d0c8a6413c8a4",
+    "sources": {
+      "webmux/server/internal/openrigcoord/rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c",
+      "webmux/server/internal/openrigcoord/rig-native-create.mts": "6d23b4764ec2a46a2868513ecd8c0e30a91fb2e15b5bc37ee8aba8bc166d4589",
+      "webmux/server/internal/openrigcoord/rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+      "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+      "webmux/server/internal/openrigcoord/runner.mts": "216d382655795582622f2d3f42e2070eadde984e4985b5e7dc87bfde214bc888",
+      "webmux/server/internal/openrigcoord/coord.go": "20361df43f0b380b6f42d4a96b124d9ccd508b28136e913a3eebf75b76d17b80",
+      "webmux/server/internal/httpapi/coordination_creation.go": "e85a2215a7dd45069e69ee6a5106625605142c7412d5612419a6a519d09f647b",
+      "webmux/server/internal/httpapi/coordination_providers.go": "fa098afd071e72c6d0e862df18b52181f699535ee7e0573f98e240acf8a7eddc",
+      "webmux/server/internal/httpapi/openrig.go": "0a9f095c69e1a10a375b4ba90d66aa51706e028073066e836c1636b32d7c52ae",
+      "webmux/frontend/src/components/CoordinationDialog.tsx": "20ce063f621d574c720980542a03ef7dde0071e883edbfae2cc2a102bd60d1b5",
+      "webmux/frontend/src/utils/api.ts": "9a1ed086f1a4d7fd4a8f6b336f30a3f805519bd6561f668d934b2c9782a17f48"
+    },
+    "sourceUnchanged": true,
+    "privateTmuxStopped": true
+  },
+  "rawEvidenceSHA256": {
+    "owner-os-guard-native-matrix-final.json": "eeb4a1194f770b4fdc8b0efe09171e3827ff47aff47a644e6705172bf1c350f1",
+    "native-create-factory-wm438topology-0ohu45jw.json": "27c455d3d3e932bc2d2f1b9b60f45aa0d94ccf03ffbe0d2125793d116b97353a",
+    "topology-public-wm-public-topology-e12w_zyy.json": "863f4518590587650ad3e10b981ce8dd3bedda848fc23d7ab7f246bea55bd110"
+  },
+  "local": {
+    "helpers": 202,
+    "strictTypeScriptProjects": 5,
+    "checks": [
+      "coordinator Go race",
+      "coordinator Go vet",
+      "Go controller build",
+      "git diff --check"
+    ],
+    "runtime": "Node 24.21.0"
+  },
+  "excluded": [
+    "Single-process network denial fails native authenticated account workspace routing; it is not the final architecture.",
+    "Partial MCP request overrides lose CLI-supplied transports; complete normalized MCP entries contain non-roundtrippable null/default fields. Final minimal transport fields pass.",
+    "Early helper/coordinator invocations used an unsupported Node runtime; passing gates use required Node 24."
+  ],
+  "limits": [
+    "Only macOS observation isolation is qualified. Linux and other unqualified platforms refuse without starting account or policy app servers.",
+    "Native account lookup uses network and may update native state; this is startup isolation, not a filesystem-read-only guarantee.",
+    "Public coding member creation remains adopted attach--self. Native-owned member readiness/attachment/uncertainty and recovery with fresh environment handoff are unfinished.",
+    "Current authenticated creation proof is fresh coding after creation-helper loss, not restored-conversation/controller-crash/reboot coding recovery.",
+    "Selected profiles, named permission graphs, canonical empty-pod selection, platform acceptance, review, audit429 and full roadmap/release gates remain open."
+  ]
+}

@@ -121,6 +121,13 @@ export interface USBForwardingLease {
 }
 export interface USBForwardingTicket { lease: USBForwardingLease; pair_code: string }
 
+export interface CoordinationCreateRequest {
+  provider: string; mode: 'new' | 'existing'; projectId?: string; projectName: string; context?: string;
+  name: string; host: string; workspace: string; runtime: string; row?: number; col?: number; inspect?: boolean;
+}
+export type CoordinationCreateResponse = { target: string; session: Session; creation?: never }
+  | { creation: { state: 'uncertain'; stage: 'project'; code: string; operationId: string }; session?: never; target?: never };
+
 export const api = {
   getUSBForwardings: (signal?: AbortSignal) => request<USBForwardingLease[]>('/usb-forwardings', { signal, cache: 'no-store' }),
   createUSBForwarding: (spec: USBForwardingSpec) => request<USBForwardingTicket>('/usb-forwardings', { method: 'POST', body: JSON.stringify(spec) }),
@@ -144,7 +151,7 @@ export const api = {
   executeRigStop: (id: string) => request<RigStopReceipt>('/coordination/stop', { method: 'POST', body: JSON.stringify({ id, confirm: true }) }),
   getRigChanges: (signal?: AbortSignal) => request<{ contract: string; available: boolean; changed: boolean }>('/coordination/changes', { signal }),
   getRigObservations: (signal?: AbortSignal) => request<CoordinationStatus>('/coordination?provider=rig&observations=rig', { signal }),
-  createCoordinatedAgent: (input: { provider: string; mode: 'new' | 'existing'; projectId?: string; projectName: string; context?: string; name: string; host: string; workspace: string; runtime: string; row?: number; col?: number }) => request<{ target: string; session: Session }>('/coordination/agents', { method: 'POST', body: JSON.stringify(input) }),
+  createCoordinatedAgent: (input: CoordinationCreateRequest) => request<CoordinationCreateResponse>('/coordination/agents', { method: 'POST', body: JSON.stringify(input) }),
   browseCoordinationWorkspaces: (provider: string, host: string, path?: string) => request<WorkspaceListing>('/coordination/workspaces', { method: 'POST', body: JSON.stringify({ provider, host, path }) }),
   attachCoordinatedAgent: (provider: string, target: string, position?: { row: number; col: number }) => request<Session>('/coordination/attach', { method: 'POST', body: JSON.stringify({ provider, target, ...position }) }),
   sendCoordinationMessage: (provider: string, target: string, message: string, queue: boolean) => request<CoordinationSendResult>('/coordination/messages', { method: 'POST', body: JSON.stringify({ provider, target, message, queue }) }),

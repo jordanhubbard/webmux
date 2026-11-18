@@ -1,0 +1,112 @@
+{
+  "scope": "Native empty topology allocation and public original-request inspection; internal native coding creation composition",
+  "platform": "macOS ARM64",
+  "versions": {
+    "nodeVersion": "v24.21.0",
+    "rigVersion": "0.7.18 (3bf87c62)",
+    "tmuxVersion": "tmux 3.8",
+    "codexVersion": "codex-cli 0.169.0"
+  },
+  "sources": {
+    "webmux/server/internal/openrigcoord/rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "6d23b4764ec2a46a2868513ecd8c0e30a91fb2e15b5bc37ee8aba8bc166d4589",
+    "webmux/server/internal/openrigcoord/rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "webmux/server/internal/openrigcoord/runner.mts": "216d382655795582622f2d3f42e2070eadde984e4985b5e7dc87bfde214bc888",
+    "webmux/server/internal/openrigcoord/coord.go": "20361df43f0b380b6f42d4a96b124d9ccd508b28136e913a3eebf75b76d17b80",
+    "webmux/server/internal/httpapi/coordination_creation.go": "e85a2215a7dd45069e69ee6a5106625605142c7412d5612419a6a519d09f647b",
+    "webmux/server/internal/httpapi/coordination_providers.go": "fa098afd071e72c6d0e862df18b52181f699535ee7e0573f98e240acf8a7eddc",
+    "webmux/server/internal/httpapi/openrig.go": "0a9f095c69e1a10a375b4ba90d66aa51706e028073066e836c1636b32d7c52ae",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "20ce063f621d574c720980542a03ef7dde0071e883edbfae2cc2a102bd60d1b5",
+    "webmux/frontend/src/utils/api.ts": "9a1ed086f1a4d7fd4a8f6b336f30a3f805519bd6561f668d934b2c9782a17f48"
+  },
+  "internalModules": {
+    "codex-owner-plan.mts": "caa9048e726b9d4b1884d5dbd999faaa12cbf7c930f5f276784d3b7e96fc0fc4",
+    "codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "rig-native-create.mts": "6d23b4764ec2a46a2868513ecd8c0e30a91fb2e15b5bc37ee8aba8bc166d4589",
+    "rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+    "rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c"
+  },
+  "public": {
+    "checks": {
+      "pendingHasNoSessionProviderOrHostProbe": true,
+      "serverRejectsChangedOriginalBeforeHostProbe": true,
+      "controllerRestartRetainsOriginalOperationAndRig": true,
+      "browserRetainsOriginalInputAfterEdits": true,
+      "actualNativeReplayUsesSameUUIDBytesHeaders": true,
+      "unavailableHostCheckedOnlyAfterProjectConfirmation": true,
+      "noDuplicateTopologyOrCodingLaunch": true
+    },
+    "statuses": [
+      202,
+      202,
+      502
+    ],
+    "passed": true,
+    "browserExit": 0,
+    "controllerBinarySHA256": "201451792f32a8ee50f8b75aa56db45f6de7f3de79ece49b41cea55d1165eeb4",
+    "sourceUnchanged": true,
+    "privateTmuxStopped": true
+  },
+  "internal": {
+    "checks": {
+      "emptyTopologyReplyLossRetainsOneNativeRig": true,
+      "topologyInspectionExactUUIDBodyHeaders": true,
+      "emptyStoppedTopologyReusedWithoutPost": true,
+      "materializationStartsNoSessionOrProvider": true,
+      "onlyOriginalCreationHelperKilledBeforeHandoff": true,
+      "sameOriginalEnrollmentAndReconstructedHandoffAfterHelperLoss": true,
+      "environmentSocketRemovedAfterHandoff": true,
+      "noPlaintextFixtureValueInDurableState": true,
+      "actualDefaultNativeOwnerPolicyUsed": true,
+      "actualNativeArgvPreservesOwnerPolicy": true,
+      "freshChallengeReadByActualProvider": true,
+      "projectAndOwnerExtraWritable": true,
+      "ownerFullAccessNotNarrowed": true,
+      "wrapperReplacedByNativeExecutable": true,
+      "nativeIdentityRetained": true,
+      "nativeOwnerEnvironmentPreserved": true,
+      "nativePolicyAndCorrelatedTools": true,
+      "duplicateFactoryAndExplicitInspectRetainNativeOccupant": true,
+      "siblingRetainsOriginalPID": true,
+      "topologyReplayPreservesRunningMembers": true,
+      "checkedStopEndsOnlyNativeCodingSeat": true
+    },
+    "passed": true,
+    "sourceUnchanged": true,
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true
+  },
+  "rawEvidenceSHA256": {
+    "topology-public-wm-public-topology-prph53zc.json": "c688bb872f88be14d9a3dbeba2b33ec0fc058f2fac3f35c4412ee1cacd4cfa4c",
+    "native-create-factory-wm438topology-l9c378cs.json": "a12b1b061e75bfeb3722aec64ab25619bebd08fea2cf7092db019206cd452ed3"
+  },
+  "local": {
+    "helpers": 199,
+    "frontend": 420,
+    "strictTypeScriptProjects": 5,
+    "lockIdentities": 272,
+    "checks": [
+      "frontend lint",
+      "HTTP API and coordinator Go race",
+      "HTTP API and coordinator Go vet",
+      "frontend build",
+      "Go controller build",
+      "git diff --check"
+    ]
+  },
+  "excluded": [
+    "Initial browser harness used frontend/dist instead of actual web assets; corrected harness repeated successfully."
+  ],
+  "limits": [
+    "Public coding member launch still uses existing adopted attach --self flow.",
+    "Native-owned Codex factory remains internal pending startup observation isolation and public member/recovery composition.",
+    "Public browser fixture qualifies lost topology reply and graceful controller restart, not controller crash or authenticated coding recovery.",
+    "Internal authenticated coding fixture recovers creation-helper loss before the first conversation; it does not prove restored-conversation or host-reboot recovery.",
+    "Empty existing-project pod selection, selected profiles, named permission graphs, other platforms, review, audit and release gates remain open."
+  ]
+}

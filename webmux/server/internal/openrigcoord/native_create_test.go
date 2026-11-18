@@ -36,7 +36,7 @@ func TestNativeCreateUsesOwnerDirectoryAndMaterializesDependencies(t *testing.T)
 	if err != nil || len(directories) != 1 {
 		t.Fatalf("owner directory missing: %v %v", directories, err)
 	}
-	for _, name := range []string{"codex-owner-plan.mts", "codex-launch-policy.mts", "codex-launch-wrapper.mts", "codex-launch-environment.mts", "codex-environment-channel.mts", "rig-create-intent.mts", "rig-native-create.mts"} {
+	for _, name := range []string{"codex-owner-plan.mts", "codex-launch-policy.mts", "codex-launch-wrapper.mts", "codex-launch-environment.mts", "codex-environment-channel.mts", "rig-create-intent.mts", "rig-native-create.mts", "rig-native-project.mts"} {
 		if _, err := os.Stat(filepath.Join(filepath.Dir(directories[0]), name)); err != nil {
 			t.Fatal(err)
 		}

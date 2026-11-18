@@ -7,9 +7,11 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"fmt"
+	"github.com/jordanhubbard/webmux/server/internal/nativeobserve"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -49,6 +51,9 @@ var rigCreateIntent []byte
 
 //go:embed rig-native-create.mts
 var rigNativeCreate []byte
+
+//go:embed rig-native-project.mts
+var rigNativeProject []byte
 
 // Serialize launches and spec creation across simultaneous browser requests.
 var mutation sync.Mutex
@@ -97,6 +102,7 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 		"codex-launch-environment.mts":  codexLaunchEnvironment,
 		"codex-environment-channel.mts": codexEnvironmentChannel,
 		"rig-native-create.mts":         rigNativeCreate,
+		"rig-native-project.mts":        rigNativeProject,
 	} {
 		if err := os.WriteFile(filepath.Join(directory, name), source, 0600); err != nil {
 			return nil, err
@@ -105,6 +111,11 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 	cmd := exec.CommandContext(ctx, "node", script, action, directory)
 	if action == "native-create" {
 		configureNativeCreateCancellation(cmd)
+	}
+	if action == "native-create" && runtime.GOOS == "linux" {
+		if err := nativeobserve.WriteReference(directory); err != nil {
+			return nil, err
+		}
 	}
 	cmd.Env = ControlEnvironment()
 	cmd.Stdin = strings.NewReader(input)

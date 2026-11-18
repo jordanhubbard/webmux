@@ -29,6 +29,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/discovery"
 	"github.com/jordanhubbard/webmux/server/internal/httpapi"
 	"github.com/jordanhubbard/webmux/server/internal/macsetup"
+	"github.com/jordanhubbard/webmux/server/internal/nativeobserve"
 	"github.com/jordanhubbard/webmux/server/internal/recovery"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 	"github.com/jordanhubbard/webmux/server/internal/terminal"
@@ -61,6 +62,9 @@ func main() {
 }
 
 func run() (resultErr error) {
+	if len(os.Args) >= 2 && os.Args[1] == nativeobserve.Helper {
+		return nativeobserve.Run(os.Args[2:])
+	}
 	if len(os.Args) >= 2 && os.Args[1] == agentdeckattach.Helper {
 		return agentdeckattach.Run(context.Background(), os.Args[2:])
 	}
