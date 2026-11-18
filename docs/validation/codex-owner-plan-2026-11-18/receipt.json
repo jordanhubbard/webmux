@@ -54,17 +54,17 @@
     "ownedAppServerStopped": true
   },
   "sourceBindings": {
-    "moduleSHA256": "1e5f3c86abe58f263de1696f3f5557273c37f0a77e42178f2c2f2711a16b2d8f",
-    "testSHA256": "d562015f15d20afcaa7c8193d8464510c3519058fded9625bc9a5169017d4781",
+    "moduleSHA256": "cdbd5db9c0c9765589892602c51b88e7d9f35cb33cc920b6953d42396c7f6f20",
+    "testSHA256": "895171451cc9e251ad86da7e69acf8dcf99e66d311c60f7bbe597d8657517b41",
     "nativeProbeSHA256": "c88818ac97b25ac8fdb6099721fa191e8ce988ca42035f87db38ed5e15dff9f8",
-    "nativeReportSHA256": "b92cbc9f74b6034f731e0a6a9f18537dc947fca529d442463e78a85cc9c3ac86",
+    "nativeReportSHA256": "28305adfe5b3da6b2f758c246722d9f0a24575ba746f76650ee8a91c799f6a44",
     "cliSHA256": "739cda86e15d30a6e2b40cf8dcbbfb988aaf48b305b27065573bb8e9fd41d002"
   },
   "localValidation": {
     "strictTypeScriptProjects": 5,
-    "helperTestsPassed": 156,
+    "helperTestsPassed": 158,
     "helperSkips": 0,
-    "ownerPlanControls": 12,
+    "ownerPlanControls": 14,
     "installedLockIdentities": 272,
     "whitespace": "pass"
   },
@@ -74,6 +74,19 @@
     "Native Codex0.169 app-server rejects --profile. The resolver refuses selected configuration profiles; it never substitutes default configuration. Temporary profile admission failure is retained and excluded from positive evidence.",
     "Named/inherited permission graphs, granular approvals, non-user reviewers, non-OpenAI providers and accounts without stable native ChatGPT user/workspace IDs refuse.",
     "The creation adapter still must preserve provider execution environment and revalidate its plan before dispatch. Rig-generated writable directories must be suppressed or the workspace-write case refused.",
-    "The helper uses native account/read; it does not open/copy auth files itself. Raw account IDs, email, credentials, native stderr and arbitrary config contents are excluded from the returned plan."
-  ]
+    "The helper uses native account/read; it does not open/copy auth files itself. Raw account IDs, email, credentials, native stderr and arbitrary config contents are excluded from the returned plan.",
+    "Ephemeral/no-turn alone starts configured MCP servers in native Codex0.169. Observation-only overrides disable enumerated MCP servers, hooks/plugins/apps and shell snapshots; these settings must never be copied into the actual provider launch.",
+    "Native startup fixture qualifies a configured stdio MCP marker and hook inventory under static private configurations. Concurrent config edits between config/read and thread/start, plugin-provided integrations and other startup callbacks remain unqualified. Do not activate this observer as a general side-effect-free policy reader."
+  ],
+  "startupIntegrationControls": {
+    "receipt": "startup-integrations.json",
+    "cases": 6,
+    "positiveMcpControls": 3,
+    "suppressedMcpControls": 3,
+    "sameNativePolicyPerPair": true,
+    "configUnchanged": true,
+    "ownedProcessesStopped": true,
+    "noAuthOrCodingTurn": true,
+    "hookScope": "Native inventory confirms trusted/enabled SessionStart in controls and absent in observation threads. No hook execution positive control; no blanket callback-free claim."
+  }
 }

@@ -28,11 +28,37 @@ configuration file was copied or edited.
 
 Named/inherited permission graphs are refused because the legacy sandbox
 summary can omit restrictions. Granular approvals, non-user reviewers, other
-providers or missing stable account IDs also refuse. Twelve controls cover
+providers or missing stable account IDs also refuse. Fourteen controls cover
 these boundaries, exact roots/flags and identity fingerprints; actual child
 processes verify no coding/approval request, bounded output, early exit, a silent
-server deadline and reaping after ignored graceful shutdown. All 156 helper
+server deadline and reaping after ignored graceful shutdown. All 158 helper
 controls, five strict TypeScript projects, lock identity and whitespace pass.
+
+Native startup controls found that an ephemeral thread starts configured MCP
+servers even with no coding turn. The observer now passes native per-thread
+config overrides to disable each enumerated MCP server plus hooks, plugins,
+apps and shell snapshots only in its disposable thread. These settings are not
+part of the returned plan and must never be copied to a real provider launch.
+The MCP table is passed as a nested object: quoted dotted request keys are not
+TOML paths in this API and failed native admission; that failed fixture is
+retained privately and excluded from positive evidence.
+
+The [startup receipt](startup-integrations.json) and reproducible
+[native control](../../../scripts/qualify-codex-observer-startup.py) cover three
+paired full-access/read-only/workspace-write contexts in fresh homes with no
+credentials or coding turn. The three controls initialize and list tools from
+an actual stdio marker MCP server whose name contains a dot; the three observer
+threads start none. Native model/provider, effort/tier, approval/reviewer,
+sandbox and roots match in each pair, including workspace network/tmp flags.
+The original config bytes remain unchanged, and the app-server/MCP processes
+are confirmed stopped. Native hook inventory shows a trusted enabled marker
+hook in controls and no hooks in observer threads. This does not supply a
+positive hook-execution control or prove all startup behavior is inert.
+
+Concurrent configuration changes between native reads and thread creation,
+plugin-provided integrations and other startup callbacks remain unqualified.
+The observer must stay unactivated until that boundary is resolved; this receipt
+is not permission to treat it as a generally side-effect-free configuration API.
 
 This is an observation for the future creation caller. It grants no launch
 authority and is not yet embedded or activated in WebMux. That caller must

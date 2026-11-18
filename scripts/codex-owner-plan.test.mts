@@ -62,11 +62,11 @@ test('missing native account ids refuse instead of falling back to email or disp
 
 const posixTest = process.platform === 'win32' ? test.skip : test;
 const q = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
-function fixture(t: { after: (fn: () => void) => void }, mode = '') {
+function fixture(t: { after: (fn: () => void) => void }, mode = '', config?: Record<string, unknown>) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'wm-owner-plan-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const home = path.join(root, 'home'), cwd = path.join(root, 'project'); fs.mkdirSync(home); fs.mkdirSync(cwd);
-  const state = snapshot(); state.thread.cwd = fs.realpathSync(cwd);
+  const state = snapshot(); if (config) Object.assign(state.config, config); state.thread.cwd = fs.realpathSync(cwd);
   const data = path.join(root, 'data.json'), log = path.join(root, 'protocol.jsonl'), stopped = path.join(root, 'stopped');
   fs.writeFileSync(data, JSON.stringify(state));
   const script = path.join(root, 'native.mjs');
@@ -96,10 +96,30 @@ posixTest('native RPC sequence submits no turn and reaps its private process', a
   const f = fixture(t); const plan = await resolveCodexOwnerPlan(f.cwd, f);
   const events = fs.readFileSync(f.log, 'utf8').trim().split('\n').map(line => JSON.parse(line) as Record<string, unknown>);
   assert.deepEqual(events.slice(1).map(e => e.method), ['initialize', 'initialized', 'config/read', 'account/read', 'thread/start']);
-  assert.deepEqual(events.at(-1)?.params, { cwd: fs.realpathSync(f.cwd), ephemeral: true });
+  assert.deepEqual(events.at(-1)?.params, { cwd: fs.realpathSync(f.cwd), ephemeral: true, config: {
+    'features.hooks': false, 'features.plugins': false, 'features.apps': false, 'features.shell_snapshot': false } });
   assert.deepEqual(events[0].args, ['-C', fs.realpathSync(f.cwd), 'app-server', '--listen', 'stdio://']);
   assert.equal(plan.profile, null); assert.equal(fs.existsSync(f.stopped), true);
   assert.equal(JSON.stringify(plan).includes('NEVER_EXPORT'), false);
+});
+posixTest('observation disables configured MCP startup without overriding owner policy', async t => {
+  const f = fixture(t, '', { mcp_servers: { 'with.dot': { command: 'NEVER_RUN' }, plain: { url: 'https://example.invalid' } } });
+  const plan = await resolveCodexOwnerPlan(f.cwd, f);
+  const events = fs.readFileSync(f.log, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+  const overrides = events.at(-1).params.config;
+  assert.deepEqual(overrides, { 'features.hooks': false, 'features.plugins': false, 'features.apps': false,
+    'features.shell_snapshot': false, mcp_servers: { 'with.dot': { enabled: false }, plain: { enabled: false } } });
+  assert.deepEqual(plan.policy, { type: 'dangerFullAccess' });
+  assert.equal(JSON.stringify(plan).includes('NEVER_RUN'), false);
+});
+posixTest('malformed or unbounded startup config refuses before thread creation', async t => {
+  for (const servers of [[], 'invalid', { bad: null }, { ['bad\nname']: {} },
+    Object.fromEntries(Array.from({ length: 129 }, (_, i) => [String(i), {}]))]) {
+    const f = fixture(t, '', { mcp_servers: servers });
+    await assert.rejects(resolveCodexOwnerPlan(f.cwd, f), /native_startup_config_unavailable/);
+    const lines = fs.readFileSync(f.log, 'utf8');
+    assert.equal(lines.includes('thread/start'), false); assert.equal(fs.existsSync(f.stopped), true);
+  }
 });
 posixTest('native approval requests are never answered or approved', async t => {
   const f = fixture(t, 'request');
