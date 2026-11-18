@@ -109,9 +109,9 @@ test('browser docking preserves the live page, control and desktop layout', asyn
     expect(leases.size).toBe(1);
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(move).toBeHidden();
-    expect(await bounds()).toEqual({ x: 0, y: 0, width: 390, height: 844 });
+    await expect.poll(bounds).toEqual({ x: 0, y: 0, width: 390, height: 844 });
     await page.setViewportSize({ width: 1440, height: 1000 });
-    expect(await bounds()).toEqual(floating);
+    await expect.poll(bounds).toEqual(floating);
     await page.getByRole('button', { name: 'Return to terminal', exact: true }).click();
     await expect(companion).toHaveCount(0);
     await open();
