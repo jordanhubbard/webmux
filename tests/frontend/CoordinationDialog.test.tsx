@@ -623,6 +623,7 @@ it('refuses unavailable canonical pods instead of falling back to prior seat-der
 
 it('retains the original empty-pod selection across trust review and a later pod refresh', async () => {
   const value = emptyStatus();
+  value.providers[0].capabilities.push('native-creation-requests');
   value.projects = [{ provider: 'rig', id: 'empty-rig', name: 'empty-project', host: 'localhost', state: 'stopped', historical: true, seatCount: 0, runningCount: 0 }];
   mocks.status.mockResolvedValue(value);
   mocks.pods.mockResolvedValueOnce({ projectId: 'empty-rig', projectName: 'empty-project', pods: ['research'], source: 'native-spec' })
@@ -647,6 +648,38 @@ it('retains the original empty-pod selection across trust review and a later pod
   fireEvent.click(screen.getByRole('button', { name: 'Retry original request after trust review' }));
   await waitFor(() => expect(close).toHaveBeenCalledOnce());
   expect(mocks.create.mock.calls[1][0]).toEqual({ ...original, inspect: undefined, trustRequest: requestId });
+});
+
+it('continues the original empty-pod request after a lost response and refreshed pod choices', async () => {
+  const value = emptyStatus();
+  value.providers[0].capabilities.push('native-creation-requests');
+  value.projects = [{ provider: 'rig', id: 'empty-rig', name: 'empty-project', host: 'localhost', state: 'stopped', historical: true, seatCount: 0, runningCount: 0 }];
+  mocks.status.mockResolvedValue(value);
+  mocks.pods.mockResolvedValueOnce({ projectId: 'empty-rig', projectName: 'empty-project', pods: ['research'], source: 'native-spec' })
+    .mockResolvedValueOnce({ projectId: 'empty-rig', projectName: 'empty-project', pods: ['research', 'workers'], source: 'native-spec' });
+  mocks.create.mockRejectedValueOnce(new CoordinationCreationUnconfirmedError('Initial response lost'));
+  mocks.create.mockResolvedValueOnce({ creation: { state: 'uncertain', stage: 'agent', code: 'native_create_response_unavailable', operationId: '11111111-1111-4111-8111-111111111111' } });
+  const close = vi.fn();
+  render(<CoordinationDialog onClose={close} position={{ row: 1, col: 1 }} initialProvider="rig" launchOnly />);
+  fireEvent.click(await screen.findByLabelText('Add an agent to an existing project'));
+  await waitFor(() => expect(screen.getByLabelText('Rig pod')).toHaveValue('research'));
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/original' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Start agent and open terminal' }));
+  await screen.findByRole('status', { name: 'Creation response not confirmed' });
+  const original = { ...mocks.create.mock.calls[0][0] };
+  expect(original).toMatchObject({ projectId: 'empty-rig', context: 'research', row: 1, col: 1 });
+  expect(original.creationRequestId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh pods' }));
+  await screen.findByRole('option', { name: 'workers' });
+  fireEvent.change(screen.getByLabelText('Rig pod'), { target: { value: 'workers' } });
+  fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/edited' } });
+  expect(mocks.create).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Continue original creation request' }));
+  await screen.findByRole('status', { name: 'Session creation pending' });
+  expect(mocks.create.mock.calls[1][0]).toEqual({ ...original, continueOriginal: true, inspect: undefined });
+  fireEvent.click(screen.getByRole('button', { name: 'Check and complete original request' }));
+  await waitFor(() => expect(close).toHaveBeenCalledOnce());
+  expect(mocks.create.mock.calls[2][0]).toEqual({ ...original, continueOriginal: true, inspect: true });
 });
 
 it('ignores a late namespace response after selecting a different project', async () => {
