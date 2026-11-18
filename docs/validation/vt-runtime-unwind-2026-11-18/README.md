@@ -55,3 +55,12 @@ requirements or waive an existing CI/audit/release gate. Its final status fails
 if stock, build or guard execution fails or does not complete. A passing guarded
 run is not a repair, and two passing runs mean no failure was reproduced on that
 worker.
+
+The first native probe, `44280465179` on `f150801`, did not execute the VT
+inventory: PowerShell split its unquoted dotted test flags (`-test` was rejected).
+The overlay admission then rejected checkout-converted patch bytes. Artifact
+`14417165945` retains those harness failures and an AMD EPYC 9V45/XSTATE `0x8e7`
+worker context, not evidence of a VT failure or of absence of the suspected bug.
+The corrected workflow quotes each test flag and byte-preserves the pinned patch
+through Git attributes. A simulated Windows CRLF checkout now preserves the
+expected patch SHA-256; it previously changed all 52 line endings.

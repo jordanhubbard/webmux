@@ -69,7 +69,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Stock VT compilation failed' }
           if ([Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($exe)).Contains('exception dispatched below goroutine stack bottom')) { throw 'Stock binary unexpectedly contains the diagnostic guard' }
           (Get-FileHash -Algorithm SHA256 $exe).Hash.ToLowerInvariant() | Set-Content -Encoding utf8 "$env:VT_DIAGNOSTIC_ROOT/stock-executable.sha256"
-          go tool test2json -t -p tuios.dev/vt $exe -test.v=test2json -test.count=10 -test.timeout=10m | Tee-Object -FilePath "$env:VT_DIAGNOSTIC_ROOT/stock-vt.jsonl"
+          go tool test2json -t -p tuios.dev/vt $exe '-test.v=test2json' '-test.count=10' '-test.timeout=10m' | Tee-Object -FilePath "$env:VT_DIAGNOSTIC_ROOT/stock-vt.jsonl"
           if ($LASTEXITCODE -ne 0) { throw 'Stock VT diagnostic failed; its result remains required in the final status' }
       - name: Prepare verified source overlay
         id: prepare
@@ -80,7 +80,9 @@ jobs:
           $overlay = Join-Path $root 'overlay'
           New-Item -ItemType Directory -Path "$overlay/src/runtime" -ErrorAction Stop | Out-Null
           $patch = Join-Path $env:GITHUB_WORKSPACE 'docs/validation/vt-runtime-unwind-2026-11-18/go-guard.patch'
-          if ((Get-FileHash -Algorithm SHA256 $patch).Hash.ToLowerInvariant() -ne '75477d4f91502a4b9c3bf71e0ec7fa815e4cd89e7c76053cb348ae585351b939') { throw 'Diagnostic patch identity differs' }
+          $patchHash = (Get-FileHash -Algorithm SHA256 $patch).Hash.ToLowerInvariant()
+          @{ patchSHA256 = $patchHash; gitAutoCrlf = (git config --get core.autocrlf) } | ConvertTo-Json | Set-Content -Encoding utf8 "$root/checkout.json"
+          if ($patchHash -ne '75477d4f91502a4b9c3bf71e0ec7fa815e4cd89e7c76053cb348ae585351b939') { throw 'Diagnostic patch identity differs' }
           $original = Join-Path $stock 'src/runtime/signal_windows.go'
           $patched = Join-Path $overlay 'src/runtime/signal_windows.go'
           $before = (Get-FileHash -Algorithm SHA256 $original).Hash.ToLowerInvariant()
@@ -109,7 +111,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Guarded VT compilation failed' }
           if (-not [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($exe)).Contains('exception dispatched below goroutine stack bottom')) { throw 'Compiled test executable does not contain the verified diagnostic guard' }
           (Get-FileHash -Algorithm SHA256 $exe).Hash.ToLowerInvariant() | Set-Content -Encoding utf8 "$root/guard-executable.sha256"
-          go tool test2json -t -p tuios.dev/vt $exe -test.v=test2json -test.count=10 -test.timeout=10m | Tee-Object -FilePath "$root/guard-vt.jsonl"
+          go tool test2json -t -p tuios.dev/vt $exe '-test.v=test2json' '-test.count=10' '-test.timeout=10m' | Tee-Object -FilePath "$root/guard-vt.jsonl"
           $testExit = $LASTEXITCODE
           $stock = (Get-Content -Raw "$root/stock-root.txt").Trim()
           if ((Get-FileHash -Algorithm SHA256 "$stock/src/runtime/signal_windows.go").Hash.ToLowerInvariant() -ne '19742597c5c6375893852292cc846127eac45759e9e397e8c10bb897fb470397') { throw 'Installed SDK source changed' }
