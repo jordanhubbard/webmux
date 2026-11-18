@@ -45,6 +45,11 @@ func (s *Server) getSession(w http.ResponseWriter, r *http.Request, owner string
 }
 
 func (s *Server) getSessionRecovery(w http.ResponseWriter, r *http.Request, owner string) {
+	// Opening this owner-scoped preview may refresh native identity while its
+	// original process is live. No account observer or provider is started.
+	if saved, err := s.sessions.Get(owner, r.PathValue("id")); err == nil && saved.Rig != nil && saved.Rig.Host == "localhost" && saved.Rig.Runtime == "codex" && saved.Rig.TmuxServerFlag != "" {
+		_ = s.captureRigRecovery(r.Context(), owner, saved.ID)
+	}
 	value, err := s.sessions.Recovery(owner, r.PathValue("id"))
 	if err != nil {
 		s.sessionError(w, err, "Failed to read session recovery")
@@ -71,7 +76,14 @@ func (s *Server) recoverSession(w http.ResponseWriter, r *http.Request, owner st
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 45*time.Second)
 		defer cancel()
-		value, err = s.sessions.RecoverManaged(ctx, owner, r.PathValue("id"), input, s.planManagedRecovery)
+		saved, getErr := s.sessions.Get(owner, r.PathValue("id"))
+		if getErr != nil {
+			err = getErr
+		} else if saved.Rig != nil && saved.Rig.NativeRigRecovery != "" {
+			value, err = s.sessions.RecoverRigNative(ctx, owner, saved.ID, input, s.nativeRigRecoveryOperation)
+		} else {
+			value, err = s.sessions.RecoverManaged(ctx, owner, r.PathValue("id"), input, s.planManagedRecovery)
+		}
 	} else {
 		value, err = s.sessions.Recover(owner, r.PathValue("id"), input)
 	}
@@ -80,7 +92,11 @@ func (s *Server) recoverSession(w http.ResponseWriter, r *http.Request, owner st
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, 200, value)
+	status := 200
+	if value.Outcome == "uncertain" {
+		status = 202
+	}
+	writeJSON(w, status, value)
 }
 
 func (s *Server) patchRecovery(w http.ResponseWriter, r *http.Request, owner string) {
@@ -266,6 +282,13 @@ func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, s
 	}
 	if profile(saved.ManagerProfile) != profile(launch.Profile) {
 		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager's recorded profile changed. Review it through that manager; retained logs are preserved.")
+	}
+	if saved.NativeRigRecovery != "" {
+		argv, err := s.nativeRigOriginalAttachment(ctx, owner, saved)
+		if err != nil {
+			return coordinationLaunch{}, fmt.Errorf("Rig could not verify the original native conversation: %w", err)
+		}
+		launch.Argv = argv
 	}
 	return launch, nil
 }

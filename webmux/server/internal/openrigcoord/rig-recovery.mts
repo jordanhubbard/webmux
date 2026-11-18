@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 
 type ObjectValue = Record<string, unknown>;
 export interface RigRecoveryIdentity {
+  native_rig_recovery?: string;
   provider?: string; target: string; project: string; name: string;
   host: string; runtime: string; workspace?: string; manager_profile?: string;
   native_session_id?: string; native_state_file?: string; native_source?: string;

@@ -1,0 +1,206 @@
+{
+  "scope": "Actual public Go/Chrome native Rig/Codex original-operation recovery after owned provider SIGKILL and deliberate checked Stop, plus graceful controller survivor restart and controller SIGKILL during original Resume dispatch. Private auth-none loopback browser/native account in place. No service upgrade/reboot or other policy/platform claim.",
+  "sourceRevision": "efb5c505c8cebce3264adac0e9372cc8649d9b2f",
+  "passed": true,
+  "sourcesSHA256": {
+    "webmux/server/internal/openrigcoord/rig-native-launch.mts": "9424088b4082a8f04724f9e3029f3b6d4b1ef58101c4319c9ab77d2e7975bac9",
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "e68d505f8b1810f92c16a91cf46d76e5e4f9c38e9d8915a724ce0fa95eecfee1",
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": "b6217395e932162b2e16d50829ad40338d8a4814a84dbd07496afb8af8d86cc9",
+    "webmux/server/internal/openrigcoord/rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "ee18fb484c048c845afa9f8f841e2b62cce46dd5ea9eba5c1f91b7087cfcc486",
+    "webmux/server/internal/openrigcoord/rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "webmux/server/internal/openrigcoord/runner.mts": "0f01ed0fbcac77d4eaf8fd84503d52bf34ce8bd47c6dda087ba53d33a44c53cd",
+    "webmux/server/internal/openrigcoord/coord.go": "7a4f17d2b36f29cb9a4d39268f7d94f7f41a0aef7d60f84a18c74e3d375530cb",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "webmux/server/internal/openrigcoord/codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "webmux/server/internal/openrigcoord/codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+    "webmux/server/internal/httpapi/coordination_creation.go": "ca6f7f4f8c662b37a8bddf25e8caac7431bb250d4eb3657bce14e71d52e24135",
+    "webmux/server/internal/httpapi/coordination_providers.go": "10f163fcc9d52654d395c51e2e4a0a74a478f8367129e157674d5a4e06afb478",
+    "webmux/server/internal/httpapi/openrig.go": "cd78603493cdcf833414c1081baa0ef09ebc072b5113aa537d26f1192622fa7f",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "83ef008e0bc74599fb5f9f864d21bec151d7c2cf061bf2fbe15f483cf5b06df6",
+    "webmux/frontend/src/utils/api.ts": "96bf8fb9d9f01014498ea42ca78e2e986319ec9786dd29f1a4c397e718713e1d",
+    "webmux/server/internal/session/native_rig_reference.go": "15e35ef463160eebc6ced21064c88d3702ac1c2a74782a66301323979b19fc08",
+    "webmux/server/internal/session/native_rig_recovery.go": "5352dc2e4bf4f7858d69351ab3adba76f5f4bc6113b13b88a421c91bd02e82f2",
+    "webmux/server/internal/session/managed_evidence.go": "7a543f14facb1ed5938a0cdf701fd50144e923ab7bbe89e27319047e71c1ff9c",
+    "webmux/server/internal/session/managed_capture.go": "359ab3faf353549508fb432ff8668caafead22a8e1f8e0939953c0ae203e7900",
+    "webmux/server/internal/session/managed_recovery.go": "bf9068ce0bec82653c84e87fc3efebbc3306f3d6b6dd641961ef66af4c29b062",
+    "webmux/server/internal/session/recovery.go": "c066ccb5e0c6b02a3801f002b6e1dc06f3bc17d3e972871ff28314a63138ca53",
+    "webmux/server/internal/session/recovery_control.go": "560cfee99916dfd6aa1dc6304478f47e6d9926c13762ef35d399be9de9d0bf0d",
+    "webmux/server/internal/session/model.go": "7e91f7a4e9743efcf5977e408b0faf21d9e4485270336329ea16b5bb920d3293",
+    "webmux/server/internal/httpapi/native_rig_recovery.go": "5d206f2bdbfdf13e2438a76a95f9f5ce578308e1a7b9ca5dfa6414082f737c08",
+    "webmux/server/internal/httpapi/rig_recovery.go": "0a7323a4d72bd22d9043a8e7fadf7b3ac17be32648773dc134c5ac29bef224bc",
+    "webmux/server/internal/httpapi/sessions.go": "a4abf105ef398f2d0584077a217269c28833e4217213c9a03b0a378c29676f52",
+    "webmux/server/internal/httpapi/coordination_service.go": "896718a1c32b156fb8d3a8aa9c35c62c1d2ef71bbea753f37f31f3b0cd00b585",
+    "webmux/server/internal/httpapi/server.go": "f15d486b299fa23b6b722de239ee08c71dde662f8ca0e08ce26067cdecb25ad3",
+    "webmux/frontend/src/components/RecoveryDialog.tsx": "cb3e1b08e6541af5e5e1cdf2948bcc95f55605ea701830437911a611214acb48",
+    "webmux/frontend/src/types/index.ts": "0e1ca849089d4645c6db7f039e4eaeced843cc6b2fa796c359db65e5efc601ca",
+    "webmux/server/internal/recovery/state.go": "4ab1020a33edc1a4757bc35f7433163a8d146868b8f80834d6b1d3a0df9fd1ef"
+  },
+  "binarySHA256": "cdf933dfa5d9db6c7a5f79ce31e63a7add2474ee05f4b64aa6f957449d80c4d4",
+  "binaryBuiltFromVerifiedWorktreeBeforeCommit": true,
+  "rawReceipt": "public-native-recovery2-wm-public-native-recovery2-vzp9vaxr.json",
+  "rawSHA256": "eea55bb09c73ef1ad9d8041e36998f5beb893dba3e26d0c80f7e47cccd695149",
+  "probeSHA256": "f0e028b2f9b9f88c1b7a18e6baa81435dad4fcb85d4d0ef0ae1112d7d587ae48",
+  "browserDriverSHA256": "f5124d3024e756b0a6d9906d2faf2c18cefef869b1a0dc05ed702db73178a6ef",
+  "loadedBrowserDriverSHA256": "f5124d3024e756b0a6d9906d2faf2c18cefef869b1a0dc05ed702db73178a6ef",
+  "gateSHA256": "e7738c2238d36e6a2d6007d0aa11a91d8af6e870c7b537d9fd0ff2153dd6f4f3",
+  "preloadSHA256": "9c3bd91b35910ec7e45f3821ada6a73443f6826540f008fa1f90f706de6c5127",
+  "versions": {
+    "rig": "0.7.18 (3bf87c62)",
+    "codex": "0.169.0",
+    "node": "24.21.0",
+    "tmux": "3.8",
+    "chrome": "158.0.8127.36"
+  },
+  "checks": {
+    "nativeUncertaintyHasOneOriginalNodeAndNoViewer": true,
+    "frozenNativeOperationAcrossExplicitChecks": true,
+    "readyDuplicateRetainsProviderAndViewer": true,
+    "actualNativeCodingChallenge": true,
+    "gracefulControllerRestartRetainsOriginalProvider": true,
+    "publicSurvivorReattachmentSendsNoResume": true,
+    "publicBrokerRetainsOriginalNativeConversation": true,
+    "onlyOwnedNativeProviderKilled": true,
+    "actualControllerSigkillDuringOriginalDispatch": true,
+    "ordinaryRecoveryDuplicateAfterCrashDoesNotPost": true,
+    "explicitPublicCompletionUsesSameNativeRequest": true,
+    "sameNativeConversationRecallWithoutTools": true,
+    "nativeHistoryPrefixAndAppendRetained": true,
+    "consumedRecoveryDuplicatePreservesProviderAndSibling": true,
+    "finalCheckedStopAndViewerAndSiblingRetained": true,
+    "sameTerminalLogPathsAndPrefixesRetained": true
+  },
+  "initialNativeWitness": {
+    "passed": true,
+    "contexts": 4,
+    "nativeNodeMatches": true,
+    "correlatedProbeOutputs": 1,
+    "allowedWrites": 4,
+    "environmentChecks": {
+      "homePreserved": true,
+      "tmpPreserved": true,
+      "ownerPathRetainedAsSuffix": true,
+      "pairedRigFound": true,
+      "managerToolPathAbsent": true,
+      "ownerToolFound": true,
+      "ownerToolRuns": true,
+      "inheritedValueMatches": true,
+      "managerOnlyValueAbsent": true
+    },
+    "nativeSessionSHA256": "4d201e84e9b29cff1e759a0d86d4d45c385f30f198a4505796deb420ad02d822"
+  },
+  "resumedNativeWitness": {
+    "passed": true,
+    "contexts": 4,
+    "nativeNodeMatches": true,
+    "correlatedProbeOutputs": 1,
+    "allowedWrites": 4,
+    "environmentChecks": {
+      "homePreserved": true,
+      "tmpPreserved": true,
+      "ownerPathRetainedAsSuffix": true,
+      "pairedRigFound": true,
+      "managerToolPathAbsent": true,
+      "ownerToolFound": true,
+      "ownerToolRuns": true,
+      "inheritedValueMatches": true,
+      "managerOnlyValueAbsent": true
+    },
+    "nativeSessionSHA256": "4d201e84e9b29cff1e759a0d86d4d45c385f30f198a4505796deb420ad02d822"
+  },
+  "nativeHistoryPrefixSHA256": "d3961ca6a1a5422e9bb596380f75973cf4f8ba69a71fe61d364df82f631b74b2",
+  "nativeHistoryPrefixBytes": 194091,
+  "terminalLogPrefixes": [
+    {
+      "prefixSHA256": "ba2a5558f0995c41390dbddb011a6679bbc66159a9ec50c292d53798beced1a5",
+      "prefixBytes": 21537,
+      "finalBytes": 30342
+    }
+  ],
+  "originalRequestReusedAfterCrash": true,
+  "nativeResumePosts": 5,
+  "allNativeResumePostsSameBodyAndUUID": true,
+  "publicRequestKinds": [
+    {
+      "inspect": false,
+      "kind": "managed"
+    },
+    {
+      "inspect": false,
+      "kind": "managed"
+    },
+    {
+      "inspect": true,
+      "kind": "managed"
+    },
+    {
+      "inspect": true,
+      "kind": "managed"
+    },
+    {
+      "inspect": true,
+      "kind": "managed"
+    },
+    {
+      "inspect": true,
+      "kind": "managed"
+    }
+  ],
+  "privateTmuxStopped": true,
+  "sourceUnchanged": true,
+  "localChecks": {
+    "helpers": 229,
+    "frontend": 423,
+    "strictTypeScriptProjects": 5,
+    "affectedGoRacePackages": 3,
+    "affectedGoVet": true,
+    "canceledCoordinatorWaitNoHelperOrArtifacts": true,
+    "frontendLint": true,
+    "productionFrontendAndGoBuild": true,
+    "windowsARM64CrossBuild": true,
+    "nativeBroadcastBrowser": true,
+    "logSHA256": {
+      "public-native-recovery-all-helpers.log": "452164ba053ff4a1faeeb6a1072dd7500ff0c8a092131b1fe0778bd9a037140b",
+      "public-native-recovery-frontend-all.log": "04e1aad5d264e0805b77c72cd113ae87df36de24571534ff445d59a5e6f7d35e",
+      "public-native-recovery-frontend-lint.log": "a6d413fb36e8645661145aecac8d27dc160bdd0b77844fd8b52122d1798bcd52",
+      "public-native-recovery-types-final.log": "bfbdeb0b9d52b9f5fa57d9bcbafdf0c45c715936935db99e8f5fb542c0d290f0",
+      "public-native-recovery-go-race-final.log": "b56b8728aef09c2b6a437181ea851cf89c22468267de9b7737ccd99aadefcac6",
+      "public-native-recovery-lock-race.log": "9eb885287d52de634112d798e488a70f37e3ab766298b9db4925661b0e372985",
+      "public-native-recovery-vet-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "public-native-recovery-windows-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "public-native-recovery-frontend-build.log": "d83fbe6ff3f88bee5d0a46fc4f17c628027bf79c4bc3f743c718133b0d8e4e7e",
+      "d41-broadcast-fix-native.log": "42bbad1d6b5907f57aa58f4b8afbc096fdde5fdd4fc1cea5996cd9a583beb666"
+    }
+  },
+  "ci521": {
+    "failedRun": 44390021212,
+    "failedSource": "d41ac091160fe0fcc3e14b57108b368fa55a8609",
+    "failedReceipt": "d41-native-broadcast-receipt.json",
+    "failedReceiptSHA256": "0bd9e6f6a84b3b0317619bb04e14e6eb76501eb33f637477161ecb9b207d0e3b",
+    "observed": "PTY-child B received hex62, browser outbound observer was still empty.",
+    "upstreamPR": 522,
+    "upstreamCommit": "5763dfd247428eb0f181ac139c723fb0032826ff",
+    "appliedCommit": "9566c03",
+    "nativeFixedReceipt": "d41-broadcast-fix-native-receipt.json",
+    "nativeFixedReceiptSHA256": "864daa9268dc1fad675fe70293dfa2a2a7d6c225a51885313c6c3d958ac4cd75",
+    "noDeadlineOrByteAssertionRelaxation": true
+  },
+  "remaining": [
+    "Actual different-executable service upgrade and native Rig/Codex host reboot qualification",
+    "Restricted policies, selected profiles, graphs/startup options and broader native platforms",
+    "Current-head hosted CI/review and full #438/#194/#318/roadmap acceptance audit"
+  ],
+  "daemonCleanup": {
+    "passed": true,
+    "daemonStateRemoved": true,
+    "originalDaemonPIDAbsent": true,
+    "shutdownPhase": "complete",
+    "shutdownOutcome": "clean",
+    "shutdownReceiptSHA256": "b8460724edb2878920de2717d5afae0ee98fb9480fef02919667c1df2d0b0b92",
+    "rawReceipt": "public-native-recovery2-cleanup-observed.json",
+    "rawSHA256": "7ff71c00d0c51a24b699f58f46af23c7d853a490881e2669dd37038b6039cdac"
+  }
+}

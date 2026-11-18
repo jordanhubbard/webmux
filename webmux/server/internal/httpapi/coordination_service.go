@@ -33,6 +33,7 @@ func (s *Server) startCoordination() {
 				case <-ticker.C:
 				}
 				s.ensureCoordinator(ctx)
+				s.captureNativeRigConversations(ctx)
 			}
 		}()
 	})

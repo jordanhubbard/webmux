@@ -11,6 +11,7 @@ var ErrClosed = errors.New("session broker is shutting down")
 
 // RigIdentity is recorded only from the server coordinator, never a terminal title.
 type RigIdentity struct {
+	NativeRigRecovery     string `json:"native_rig_recovery,omitempty" yaml:"native_rig_recovery,omitempty"`
 	TmuxServerFlag        string `json:"tmux_server_flag,omitempty" yaml:"tmux_server_flag,omitempty"`
 	TmuxServerValue       string `json:"tmux_server_value,omitempty" yaml:"tmux_server_value,omitempty"`
 	AttachmentTarget      string `json:"attachment_target,omitempty" yaml:"attachment_target,omitempty"`

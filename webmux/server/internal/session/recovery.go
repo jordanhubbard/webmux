@@ -13,30 +13,32 @@ import (
 // RecoveryView is owner-scoped like the terminal itself. History is plain text;
 // browser/clipboard/shell protocol packets are never replayed from disk.
 type RecoveryView struct {
-	ManagerSnapshotID       string          `json:"manager_snapshot_id,omitempty"`
-	CanResumeManaged        bool            `json:"can_resume_managed"`
-	ManagerProfile          string          `json:"manager_profile,omitempty"`
-	ManagerNativeSession    string          `json:"manager_native_session,omitempty"`
-	ManagerNativeStateFile  string          `json:"manager_native_state_file,omitempty"`
-	ManagerNativeSource     string          `json:"manager_native_source,omitempty"`
-	ManagerNativeObservedAt string          `json:"manager_native_observed_at,omitempty"`
-	ManagerTarget           string          `json:"manager_target,omitempty"`
-	ManagerDirectory        string          `json:"manager_directory,omitempty"`
-	Waiting                 bool            `json:"waiting"`
-	HostRevision            uint64          `json:"host_revision"`
-	Instance                string          `json:"instance"`
-	Warning                 string          `json:"warning,omitempty"`
-	CanResumeCLI            bool            `json:"can_resume_cli"`
-	CanReplay               bool            `json:"can_replay"`
-	SessionID               string          `json:"session_id"`
-	Hostname                string          `json:"hostname"`
-	Transport               string          `json:"transport"`
-	LifecycleOwner          string          `json:"lifecycle_owner"`
-	State                   *recovery.State `json:"state,omitempty"`
-	History                 string          `json:"history"`
-	HistoryAvailable        bool            `json:"history_available"`
-	ShellReady              bool            `json:"shell_ready"`
-	Message                 string          `json:"message"`
+	ManagedOriginalContract bool             `json:"managed_original_contract,omitempty"`
+	ManagedOriginalRequest  *RecoveryRequest `json:"managed_original_request,omitempty"`
+	ManagerSnapshotID       string           `json:"manager_snapshot_id,omitempty"`
+	CanResumeManaged        bool             `json:"can_resume_managed"`
+	ManagerProfile          string           `json:"manager_profile,omitempty"`
+	ManagerNativeSession    string           `json:"manager_native_session,omitempty"`
+	ManagerNativeStateFile  string           `json:"manager_native_state_file,omitempty"`
+	ManagerNativeSource     string           `json:"manager_native_source,omitempty"`
+	ManagerNativeObservedAt string           `json:"manager_native_observed_at,omitempty"`
+	ManagerTarget           string           `json:"manager_target,omitempty"`
+	ManagerDirectory        string           `json:"manager_directory,omitempty"`
+	Waiting                 bool             `json:"waiting"`
+	HostRevision            uint64           `json:"host_revision"`
+	Instance                string           `json:"instance"`
+	Warning                 string           `json:"warning,omitempty"`
+	CanResumeCLI            bool             `json:"can_resume_cli"`
+	CanReplay               bool             `json:"can_replay"`
+	SessionID               string           `json:"session_id"`
+	Hostname                string           `json:"hostname"`
+	Transport               string           `json:"transport"`
+	LifecycleOwner          string           `json:"lifecycle_owner"`
+	State                   *recovery.State  `json:"state,omitempty"`
+	History                 string           `json:"history"`
+	HistoryAvailable        bool             `json:"history_available"`
+	ShellReady              bool             `json:"shell_ready"`
+	Message                 string           `json:"message"`
 }
 
 func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
@@ -70,7 +72,15 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	}
 	if s.Rig != nil {
 		view.Instance = managedInstance(*s.Rig)
+		_, view.ManagedOriginalContract = NativeRigReference(*s.Rig)
 		view.CanResumeManaged = s.Recovery != nil && managedNativeSupported(*s.Rig)
+		if nativeRigPending(s.Recovery) {
+			if request, ok := originalManagedRequest(s.Recovery); ok && request.Instance == view.Instance {
+				request.Inspect = true
+				view.ManagedOriginalRequest = &request
+				view.CanResumeManaged = false
+			}
+		}
 		view.ManagerProfile = s.Rig.ManagerProfile
 		view.ManagerSnapshotID = s.Rig.ManagerSnapshotID
 		view.ManagerNativeSession, view.ManagerNativeStateFile = s.Rig.NativeSessionID, s.Rig.NativeStateFile

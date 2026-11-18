@@ -2573,3 +2573,31 @@ See [source bindings, controls and limits](validation/windows-installed-recovery
 This newer artifact does not resolve the earlier image's Defender classification
 or qualify other service accounts, every CLI/profile, different-executable
 updates or Windows ARM64 hardware. Broader #318 remains open.
+
+
+## Public native Rig/Codex original-operation recovery (2026-11-18)
+
+The [public qualification](validation/codex-public-recovery-2026-11-18/README.md)
+now covers native-owned local Codex creation and recorded-conversation recovery
+through the actual Go/Chrome application on macOS with Rig 0.7.18, Codex 0.169.0,
+Node 24 and the default native owner policy. Existing adopted seats remain
+adopted. Logging captures the original native generation/file and snapshot;
+a pending operation freezes that reference and approved request.
+
+A surviving original process is verified and reattached without Resume. After
+owned coding-process loss and browser-confirmed Stop of its idle seat, the
+public action prepares the exact original-only request before the broker banks
+its intent. Actual controller SIGKILL during dispatch retains uncertainty.
+Ordinary duplicates post nothing; explicit completion reuses the original UUID,
+body, review and native conversation across reconstruction. The original
+conversation recalls the removed challenge without tools, retains its native
+prefix and owner environment/policy, and appends fresh tool results. The same
+terminal log paths and byte prefixes, viewer and sibling survive; checked Stop
+and cleanup pass.
+
+This qualifies that explicit idle-seat Stop path and controller restart/crash
+scope. It does not qualify automatic cleanup of every orphaned seat, an actual
+different-executable service upgrade or host reboot for this Rig/Codex flow,
+restricted policies, unobserved interactive changes, selected profiles/graphs
+or all platforms. The earlier native Windows and other-manager results above
+keep their separate versioned scopes. Full #318 acceptance remains open.

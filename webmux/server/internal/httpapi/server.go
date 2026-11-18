@@ -30,6 +30,7 @@ import (
 )
 
 type Server struct {
+	rigCaptureCursor   int
 	rigChangesMu       sync.Mutex
 	rigChangesOwners   map[string]bool
 	browserProfileMu   sync.Mutex

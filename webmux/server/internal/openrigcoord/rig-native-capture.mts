@@ -108,3 +108,54 @@ export async function captureRigNativeCodex(input: NativeCodexCaptureInput, deps
     snapshotSHA256: hash(JSON.stringify(snapshot)), planFingerprint: plan.fingerprint };
   artifacts.publish(cached, Buffer.from(JSON.stringify(result))); return result;
 }
+
+// Recheck banked historical evidence without requiring a surviving provider.
+// This does not select a new generation, create a snapshot or observe an account.
+export async function verifyRigNativeCodexReference(input: NativeCodexCaptureInput, reference: NativeCodexRecoveryReference, deps: Dependencies) {
+  if (!object(reference) || reference.contract !== 'webmux-rig-native-codex-recovery/v1'
+    || reference.rigId !== input.rigId || reference.nodeId !== input.nodeId || reference.pod !== input.pod || reference.member !== input.member
+    || reference.cwd !== input.cwd || reference.cwd !== input.identity.workspace || reference.sessionName !== input.identity.target
+    || ![reference.rigId, reference.nodeId, reference.snapshotId, reference.historySessionId].every(id => typeof id === 'string' && ulid.test(id))
+    || typeof reference.nativeSessionId !== 'string' || !uuid.test(reference.nativeSessionId)
+    || ![reference.nativeRecordIdentity, reference.snapshotSHA256, reference.planFingerprint].every(value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value))) return refuse();
+  const base = artifacts.ownedRoot(input.directory), key = hash(JSON.stringify([input.rigId, input.pod, input.member]));
+  const directory = artifacts.ownedRoot(path.join(artifacts.ownedRoot(path.join(base, 'requests')), key));
+  const registration: unknown = JSON.parse(artifacts.read(path.join(directory, 'native-registration.json')).toString('utf8'));
+  const launch: unknown = JSON.parse(artifacts.read(path.join(directory, 'launch.json')).toString('utf8'));
+  if (!object(registration) || registration.nodeId !== reference.nodeId || registration.rigId !== reference.rigId
+    || registration.member !== reference.member || registration.pod !== reference.pod || registration.cwd !== reference.cwd
+    || !object(launch) || !object(launch.intent)) return refuse();
+  const plan = validateCodexLaunchPlan(launch.plan);
+  if (plan.fingerprint !== reference.planFingerprint || plan.cwd !== reference.cwd) return refuse();
+  // The tuple here reopens the banked file; it makes no claim about the live
+  // conversation. Its immutable identity must still equal the captured hash.
+  const stat = fs.statSync(reference.nativeStateFile);
+  const record = nativeRecord({ runtime: 'codex', sessionId: reference.nativeSessionId,
+    generationId: JSON.stringify([reference.nativeSessionId, reference.nativeSessionId, reference.nativeStateFile, stat.dev, stat.ino, stat.birthtimeMs]) }, plan.home, reference.cwd);
+  if (record.identity !== reference.nativeRecordIdentity) return refuse();
+  const fetcher = deps.fetcher ?? fetch, review = deps.review ?? (() => reviewRigCreateManager(deps.run, fetcher)), manager = await review();
+  if (manager.managerIdentity !== launch.intent.managerIdentity || manager.port !== launch.intent.port) return refuse();
+  const snapshot = await request(fetcher, manager.port, `/api/rigs/${reference.rigId}/snapshots/${reference.snapshotId}`);
+  if (hash(JSON.stringify(snapshot)) !== reference.snapshotSHA256) return refuse();
+}
+
+// A surviving original conversation can be reattached without any Resume POST.
+export async function observeRigNativeOriginalAttachment(input: NativeCodexCaptureInput, reference: NativeCodexRecoveryReference, deps: Dependencies) {
+  await verifyRigNativeCodexReference(input, reference, deps);
+  const ready = await (deps.launch ?? launchRigNativeCodex)(input, { run: deps.run, fetcher: deps.fetcher,
+    create: async () => { throw new Error('native_recovery_cannot_create'); } });
+  if (ready.state !== 'attached') return undefined;
+  if (ready.nodeId !== reference.nodeId || ready.target !== reference.sessionName || ready.tmuxServerFlag !== input.identity.tmux_server_flag
+    || ready.tmuxServerValue !== input.identity.tmux_server_value) return refuse();
+  const key = hash(JSON.stringify([input.rigId, input.pod, input.member]));
+  const launch = JSON.parse(artifacts.read(path.join(input.directory, 'requests', key, 'launch.json')).toString('utf8')) as { plan: unknown };
+  const plan = validateCodexLaunchPlan(launch.plan), fetcher = deps.fetcher ?? fetch;
+  const review = deps.review ?? (() => reviewRigCreateManager(deps.run, fetcher)), manager = await review();
+  const route = `/api/sessions/${encodeURIComponent(ready.target)}/generation-record`;
+  const before = nativeRecord(await request(fetcher, manager.port, route), plan.home, input.cwd);
+  if (before.id !== reference.nativeSessionId || before.identity !== reference.nativeRecordIdentity) return refuse();
+  const after = nativeRecord(await request(fetcher, manager.port, route), plan.home, input.cwd), finalManager = await review();
+  if (after.generationId !== before.generationId || finalManager.managerIdentity !== manager.managerIdentity
+    || finalManager.processIdentity !== manager.processIdentity || finalManager.port !== manager.port) return refuse();
+  return ready;
+}

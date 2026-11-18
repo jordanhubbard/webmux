@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { captureRigNativeCodex } from '../webmux/server/internal/openrigcoord/rig-native-capture.mts';
+import { captureRigNativeCodex, verifyRigNativeCodexReference, observeRigNativeOriginalAttachment } from '../webmux/server/internal/openrigcoord/rig-native-capture.mts';
 import { nativeCreateArtifacts as a } from '../webmux/server/internal/openrigcoord/rig-native-create.mts';
 import { projectCodexOwnerPlan } from '../webmux/server/internal/openrigcoord/codex-owner-plan.mts';
 import type { launchRigNativeCodex } from '../webmux/server/internal/openrigcoord/rig-native-launch.mts';
@@ -66,4 +66,28 @@ posix('foreign snapshot conversation/wrapper and a changed generation cannot bec
   await assert.rejects(captureRigNativeCodex(f.input, f.deps)); assert.equal(fs.readdirSync(path.join(f.owned, 'recovery-captures')).length, 0);
   const g = fixture(t); g.snapshot.data.nodes[0].launchWrapper[2] = '/foreign/manifest'; await assert.rejects(captureRigNativeCodex(g.input, g.deps));
   const h = fixture(t); h.switch(); await assert.rejects(captureRigNativeCodex(h.input, h.deps)); assert.equal(fs.readdirSync(path.join(h.owned, 'recovery-captures')).length, 0);
+});
+
+posix('a banked capture remains verifiable after provider loss without selecting or launching a current generation', async t => {
+  const f = fixture(t), reference = await captureRigNativeCodex(f.input, f.deps), before = f.counts(); f.unready();
+  await verifyRigNativeCodexReference(f.input, reference, f.deps);
+  assert.deepEqual(f.counts(), before, 'Historical revalidation must not probe a new live generation or create a snapshot');
+});
+posix('banked reference rejects replaced native files, changed snapshots and a foreign selection', async t => {
+  const f = fixture(t), reference = await captureRigNativeCodex(f.input, f.deps);
+  await assert.rejects(verifyRigNativeCodexReference(f.input, { ...reference, nodeId: snapshotId }, f.deps));
+  f.snapshot.data.nodes[0].cwd = '/foreign'; await assert.rejects(verifyRigNativeCodexReference(f.input, reference, f.deps));
+  const g = fixture(t), other = await captureRigNativeCodex(g.input, g.deps);
+  const old = g.file + '.retained'; fs.renameSync(g.file, old); fs.writeFileSync(g.file, fs.readFileSync(old));
+  await assert.rejects(verifyRigNativeCodexReference(g.input, other, g.deps));
+});
+
+posix('survivor attachment verifies the banked native conversation and never becomes a new snapshot or launch', async t => {
+  const f = fixture(t), reference = await captureRigNativeCodex(f.input, f.deps);
+  assert.equal((await observeRigNativeOriginalAttachment(f.input, reference, f.deps))?.state, 'attached');
+  assert.equal(f.counts().posts, 1); f.unready();
+  assert.equal(await observeRigNativeOriginalAttachment(f.input, reference, f.deps), undefined); assert.equal(f.counts().posts, 1);
+  const g = fixture(t), original = await captureRigNativeCodex(g.input, g.deps);
+  g.record.sessionId = generationId;
+  await assert.rejects(observeRigNativeOriginalAttachment(g.input, original, g.deps)); assert.equal(g.counts().posts, 1);
 });

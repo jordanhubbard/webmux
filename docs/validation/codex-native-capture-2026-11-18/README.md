@@ -1,5 +1,10 @@
 # Native Codex recovery conversation capture
 
+A later [public original-operation recovery qualification](../codex-public-recovery-2026-11-18/README.md)
+now covers the broker/UI and actual controller restart/SIGKILL on macOS with the
+default native owner policy. The historical results below keep their own source
+bindings and limits.
+
 The internal `native-recovery-observe` action now captures the original native
 conversation for a WebMux-created local Codex seat. Actual Go/Chrome/native
 qualification at the revision in [receipt.json](receipt.json) first creates the

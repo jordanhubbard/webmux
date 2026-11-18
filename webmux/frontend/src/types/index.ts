@@ -56,6 +56,7 @@ export interface RecoveryActivity {
 }
 
 export interface SessionRecovery {
+  managed_original_contract?: boolean; managed_original_request?: RecoveryRequest;
   manager_target?: string; manager_directory?: string; manager_profile?: string; manager_snapshot_id?: string;
   manager_native_session?: string; manager_native_state_file?: string; manager_native_source?: string; manager_native_observed_at?: string;
   waiting?: boolean; host_revision?: number; instance?: string; warning?: string;
@@ -68,7 +69,7 @@ export interface SessionRecovery {
 
 export interface RecoveryRequest {
   id: string; kind: 'native' | 'replay' | 'shell' | 'managed'; revision: number; host_revision: number;
-  instance: string; confirm: boolean; context?: string;
+  instance: string; confirm: boolean; context?: string; inspect?: boolean;
 }
 
 export interface TerminalTheme {

@@ -23,7 +23,7 @@ func (b *Broker) CaptureManagedRecovery(ctx context.Context, owner, id string, c
 		b.mu.Unlock()
 		return ErrClosed
 	}
-	if e.value.Rig == nil || e.run == nil || !e.run.log.active() || capture == nil {
+	if e.value.Rig == nil || e.run == nil || !e.run.log.active() || capture == nil || nativeRigPending(e.value.Recovery) {
 		b.mu.Unlock()
 		return nil
 	}

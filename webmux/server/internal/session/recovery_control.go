@@ -195,6 +195,7 @@ func (b *Broker) applyRecoverySnapshotLocked(e *entry, r *run, response recovery
 }
 
 type RecoveryRequest struct {
+	Inspect      bool   `json:"inspect,omitempty"`
 	ID           string `json:"id"`
 	Kind         string `json:"kind"`
 	Revision     uint64 `json:"revision"`
@@ -206,6 +207,7 @@ type RecoveryRequest struct {
 
 type RecoveryResult struct {
 	Outcome string `json:"outcome"`
+	Code    string `json:"code,omitempty"`
 }
 
 func (b *Broker) Recover(owner, id string, input RecoveryRequest) (RecoveryResult, error) {
@@ -232,7 +234,7 @@ func (b *Broker) Recover(owner, id string, input RecoveryRequest) (RecoveryResul
 		b.mu.Unlock()
 		return RecoveryResult{}, &config.ValidationError{Message: "Invalid recovery action or oversized context."}
 	}
-	if input.Kind != "native" && input.Kind != "shell" && input.Kind != "replay" || input.Kind == "replay" && !input.Confirm || input.Context != "" && (!input.Confirm || input.Kind != "native") {
+	if input.Inspect || input.Kind != "native" && input.Kind != "shell" && input.Kind != "replay" || input.Kind == "replay" && !input.Confirm || input.Context != "" && (!input.Confirm || input.Kind != "native") {
 		b.mu.Unlock()
 		return RecoveryResult{}, &config.ValidationError{Message: "Command replay and transcript handoff require explicit approval."}
 	}

@@ -44,9 +44,10 @@ type State struct {
 }
 
 type Intent struct {
-	ID      string `json:"id" yaml:"id"`
-	Hash    string `json:"-" yaml:"hash"`
-	Outcome string `json:"outcome" yaml:"outcome"`
+	ManagedRequest string `json:"-" yaml:"managed_request,omitempty"`
+	ID             string `json:"id" yaml:"id"`
+	Hash           string `json:"-" yaml:"hash"`
+	Outcome        string `json:"outcome" yaml:"outcome"`
 }
 
 func (s *State) Clone() *State {

@@ -182,6 +182,36 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const { prepareRigNativeRecovery, executeRigNativeRecovery } = await import('./rig-recovery.mts');
     const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
     console.log(JSON.stringify(await (action === 'recovery-prepare' ? prepareRigNativeRecovery : executeRigNativeRecovery)(run, identity)));
+  } else if (action === 'native-recovery-resume' || action === 'native-recovery-attachment') {
+    const { verifyRigNativeCodexReference, observeRigNativeOriginalAttachment } = await import('./rig-native-capture.mts');
+    const { resumeRigNativeCodex } = await import('./rig-native-resume.mts');
+    const { nativeCreateArtifacts } = await import('./rig-native-create.mts');
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as { identity: RigRecoveryIdentity; operationId?: string; prepare?: boolean; inspect?: boolean };
+    const identity = input.identity;
+    if (!identity.native_rig_recovery) throw new Error('native_resume_reference_missing');
+    const reference = JSON.parse(identity.native_rig_recovery) as import('./rig-native-capture.mts').NativeCodexRecoveryReference;
+    const matches = records().filter(agent => agent.nativeOwned === true && agent.target === identity.target
+      && agent.host === identity.host && agent.cwd === identity.workspace && agent.runtime === identity.runtime
+      && agent.rigId === reference.rigId && agent.nativeNodeId === reference.nodeId && agent.logicalId === `${reference.pod}.${reference.member}`);
+    if (matches.length !== 1) throw new Error('native_resume_original_agent_unavailable');
+    const selection = { directory, identity, rigId: reference.rigId, nodeId: reference.nodeId, pod: reference.pod, member: reference.member, cwd: reference.cwd };
+    await verifyRigNativeCodexReference(selection, reference, { run });
+    const surviving = (input.prepare || action === 'native-recovery-attachment') ? await observeRigNativeOriginalAttachment(selection, reference, { run }) : undefined;
+    if (surviving) console.log(JSON.stringify({ state: input.prepare ? 'surviving' : 'attached', code: 'native_original_surviving', posted: false,
+      operationId: input.operationId, nativeSessionId: reference.nativeSessionId, logicalId: `${reference.pod}.${reference.member}`, attachment: surviving }));
+    else if (action === 'native-recovery-attachment') throw new Error('native_resume_original_not_running');
+    else {
+      if (!input.operationId) throw new Error('native_resume_selection_invalid');
+      const observationHelper = process.platform === 'linux' ? JSON.parse(nativeCreateArtifacts.read(path.join(directory, '.native-codex-observer.json')).toString('utf8')) as import('./codex-owner-plan.mts').CodexObservationHelper : undefined;
+      const result = await resumeRigNativeCodex({ directory, rigId: reference.rigId, nodeId: reference.nodeId, pod: reference.pod, member: reference.member,
+        cwd: reference.cwd, snapshotId: reference.snapshotId, historySessionId: reference.historySessionId, nativeSessionId: reference.nativeSessionId,
+        sessionName: reference.sessionName, operationId: input.operationId, prepare: input.prepare, inspect: input.inspect }, { run, observationHelper });
+      if (result.state !== 'confirmed') console.log(JSON.stringify(result));
+      else {
+        const attachment = await observeRigNativeOriginalAttachment(selection, reference, { run });
+        console.log(JSON.stringify(attachment ? { ...result, attachment } : { ...result, state: 'uncertain', code: 'native_resume_attachment_unverified' }));
+      }
+    }
   } else if (action === 'native-recovery-observe') {
     const { captureRigNativeCodex } = await import('./rig-native-capture.mts');
     const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
@@ -397,7 +427,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
   if (error instanceof PendingCreation) {
     console.log(JSON.stringify({ creation: error.value }));
   } else {
-    console.error(action === 'native-resume'
+    console.error((action === 'native-resume' || action === 'native-recovery-resume')
       ? error instanceof Error && /^native_(?:resume|create)_[a-z_]+$/.test(error.message) ? error.message : 'native_resume_original_unavailable'
       : error instanceof Error ? error.message.slice(0, 3000) : String(error).slice(0, 3000));
     process.exitCode = 1;
