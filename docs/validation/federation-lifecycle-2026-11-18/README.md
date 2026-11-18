@@ -37,3 +37,19 @@ assertions, the five-second marker checks, the 90-second case deadline,
 protected Chromium preparation and standard CI gates remain in place.
 Native Windows evidence is still required. Profile cleanup #473 and dependency
 audit #429 remain separate blockers.
+
+The first ten-sample Windows run (44273974857, initial source `28f32b5`)
+retained nine passing samples and one failure during Pack. Before cleanup,
+the failed sample had connected viewers/APIs and both original fixture
+providers present; the peer received 49 replay bytes and then no additional
+output for the five-second assertion window. This narrows that occurrence
+without establishing its cause.
+
+The follow-up records terminal clipping geometry. If an assertion fails with a
+blank peer view, it then scrolls that existing viewer into view and captures the
+result, counting any new frames/connections and preserving the original failed
+outcome. This is an explicit post-failure diagnostic intervention, not a retry,
+reconnect or replay. Installed xterm source pauses offscreen painting; a separate
+macOS library control has a populated native xterm buffer and blank offscreen
+DOM, then displays the marker after scrolling with no additional terminal
+writes. The analogous observation on the failing Windows sample is pending.

@@ -53,5 +53,37 @@
     "job": 134675161963,
     "artifact": 14412470818,
     "artifactUploadedSHA256": "8523e8b810eaf9076a63ea02cbbd4f02cc24a475e8414c6fac8a1cb9ee492c19"
+  },
+  "sourceSnapshotCommit": "28f32b5eebddb52b5d2381d343fd0dbdb2c395f3",
+  "visibilityFollowup": {
+    "collectorSHA256": "a509ad493d1d008b55c13eaaf15d54ebd4eb3f4ba6f7b02ff30bb4442f8911f8",
+    "nativeWindowsStudy": {
+      "run": 44273974857,
+      "samples": 10,
+      "passed": 9,
+      "failed": 1,
+      "failedPhase": "pack",
+      "artifact": 14412934196,
+      "artifactReportedDigest": "sha256:5991ed00c54ba4ab26d387ecf1be218bca3acdca27152d9c86e9d7e1c782e034",
+      "providersPresentBeforeCleanup": 2,
+      "viewersConnectedBeforeCleanup": 2,
+      "replayBytesReceivedOnFailedPeerSocket": 49
+    },
+    "macGeometryControl": {
+      "remoteScreenTop": 700,
+      "viewportHeight": 650,
+      "remoteVisibleHeight": 0,
+      "nativeReadyMarkerAlreadyRendered": true
+    },
+    "libraryControl": {
+      "scope": "Actual installed xterm and Chrome visibility control on macOS; not proof of the failing Windows sample by itself",
+      "browser": "158.0.8127.36",
+      "offscreen": true,
+      "beforeDOMBlank": true,
+      "beforeNativeBufferHasMarker": true,
+      "afterDOMHasMarker": true,
+      "noAdditionalTerminalWrites": true
+    },
+    "nativeWindowsCounterfactual": "pending; preserve initial assertion failure, scroll existing viewer and count new frames/sockets; no cause/repair established"
   }
 }
