@@ -143,3 +143,31 @@ protection flags, original execution roots and application waits are unchanged.
 The [profile-location manifest](profile-location-manifest.json) binds this source,
 the retained preceding Windows artifact and the new local receipts. Earlier
 manifests continue to describe their original sources.
+
+
+## Profile-factor outcome and transport/startup control
+
+At 540d7d2, the [matched Windows records](windows-profile-location-summary.json)
+show both plain direct cases aborting: system-temp at 518 ms, home at 511 ms,
+with zero fixture hits. Both screenshot cases and both worker subprocess cases
+pass. The application initial saved-worker document also aborts at 689 ms after
+blank readiness at 399 ms and a user navigation at 576 ms. Location alone is
+not a sufficient explanation. Screenshot cases pass here but a screenshot case
+failed at d3ab2aa, so no screenshot/readiness workaround is established.
+
+The installed chromedp 0.23.0 exec allocator uses pipes by default. Its optional
+remote.WebSocket allocator uses a debugging-port startup path instead. Two more
+fresh direct controls compare that path at system-temp and home locations,
+without adding the initial screenshot. Each retains the same protected allocator
+flags and one fixture navigation. The experimental listener is explicitly
+127.0.0.1 on an ephemeral port, and only fresh anonymous test profiles use it.
+No port, WebSocket URL, credentials or extra raw protocol logs enter the records.
+The production worker continues to use private pipes.
+
+All eight [native local cases](native-transport-summary.json) pass. This is a
+transport/startup-path comparison, not a pure timing-independent wire comparison:
+the WebSocket allocator waits for Chrome's advertised debugging endpoint. A
+passing Windows WebSocket case would not itself justify opening a listener in
+the production authentication browser or identify the cause of pipe-path aborts.
+Actual Windows results remain pending. The [transport manifest](transport-manifest.json)
+binds the optional test, compact safe summaries and full private receipts.

@@ -21,10 +21,12 @@ import (
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/remote"
 	"github.com/jordanhubbard/webmux/server/internal/session"
 )
 
 type firstNavigationEvidence struct {
+	Transport       string                 `json:"transport"`
 	ProfileLocation string                 `json:"profileLocation"`
 	Mode            string                 `json:"mode"`
 	Platform        string                 `json:"platform"`
@@ -50,9 +52,12 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 	}
 	t.Setenv("WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS", "1")
 	site, hits := firstNavigationNodeFixture(t)
-	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "worker-subprocess-temporary", "worker-subprocess-saved"} {
+	for _, mode := range []string{"direct", "direct-screenshot", "direct-home", "direct-home-screenshot", "direct-websocket", "direct-home-websocket", "worker-subprocess-temporary", "worker-subprocess-saved"} {
 		t.Run(mode, func(t *testing.T) {
-			record := firstNavigationEvidence{Mode: mode, Platform: runtime.GOOS, Architecture: runtime.GOARCH, ProfileLocation: "system-temporary"}
+			record := firstNavigationEvidence{Mode: mode, Platform: runtime.GOOS, Architecture: runtime.GOARCH, Transport: "pipe", ProfileLocation: "system-temporary"}
+			if strings.Contains(mode, "websocket") {
+				record.Transport = "websocket"
+			}
 			if strings.Contains(mode, "-home") || mode == "worker-subprocess-temporary" {
 				record.ProfileLocation = "home-temporary"
 			}
@@ -84,7 +89,7 @@ func TestNativeFirstNavigationComponents(t *testing.T) {
 			if strings.HasPrefix(mode, "worker-") {
 				call = firstNavigationWorker(t, mode == "worker-subprocess-saved", &record)
 			} else {
-				call = firstNavigationDirect(t, strings.HasSuffix(mode, "screenshot"), strings.Contains(mode, "-home"), &record)
+				call = firstNavigationDirect(t, strings.HasSuffix(mode, "screenshot"), strings.Contains(mode, "-home"), strings.Contains(mode, "websocket"), &record)
 			}
 			record.NavigateCalls++
 			frame := call(Request{Action: "navigate", URL: site + "/check"})
@@ -312,7 +317,7 @@ func firstNavigationWorker(t *testing.T, saved bool, record *firstNavigationEvid
 	return call
 }
 
-func firstNavigationDirect(t *testing.T, screenshot, profileAtHome bool, record *firstNavigationEvidence) func(Request) Frame {
+func firstNavigationDirect(t *testing.T, screenshot, profileAtHome, websocket bool, record *firstNavigationEvidence) func(Request) Frame {
 	t.Helper()
 	var profile string
 	if profileAtHome {
@@ -332,7 +337,13 @@ func firstNavigationDirect(t *testing.T, screenshot, profileAtHome bool, record 
 	} else {
 		profile = t.TempDir()
 	}
-	alloc, stop := chromedp.NewExecAllocator(context.Background(), workerAllocatorOptions(profile)...)
+	opts := workerAllocatorOptions(profile)
+	if websocket {
+		// Fresh test profiles only. Keep the ephemeral diagnostic listener on loopback;
+		// the actual worker continues using private pipes with its original flags.
+		opts = append(opts, remote.WebSocket, chromedp.Flag("remote-debugging-address", "127.0.0.1"))
+	}
+	alloc, stop := chromedp.NewExecAllocator(context.Background(), opts...)
 	root, cancel := chromedp.NewContext(alloc)
 	t.Cleanup(func() { cancel(); stop() })
 	trace := newNavigationTrace()
