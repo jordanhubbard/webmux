@@ -18,6 +18,10 @@ are created exclusively, with mode 0600 on POSIX; select a new output name for
 each observation. They contain local filesystem paths, so review them before
 sharing.
 
+Tool, mapped-library and copyright-document reads require regular files. FIFOs,
+devices and other special files are reported unavailable without reading them;
+a path replaced with a FIFO during admission is refused on POSIX.
+
 ## Loaded guacd plugins and libraries on Linux
 
 Choose an active guacd connection process owned by your current account, after

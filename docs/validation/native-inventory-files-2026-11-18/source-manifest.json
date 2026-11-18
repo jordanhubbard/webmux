@@ -1,0 +1,29 @@
+{
+  "recordedUTC": "2026-11-18T06:51:38.084680+00:00",
+  "issue": 466,
+  "parent": "5d207854d4cf32e6cd99790f6af432cd90bcd18b",
+  "sourceSHA256": {
+    "scripts/native-components.py": "731ad27d599379a396273c55a74ecfdbc819650a787f72f985d5124db71dfa75",
+    "scripts/test_native_components.py": "096ef730d8d6f5791f315f82626e299553886ac03586050ea2b74da52d8a4d5f"
+  },
+  "parentNegative": {
+    "exit": 1,
+    "fifoTimeouts": 3,
+    "deadlineSecondsEach": 3,
+    "replacementRefusalMissing": true
+  },
+  "final": {
+    "unitTests": 11,
+    "unitPass": true,
+    "originalNineTestBodiesRetainedVerbatim": true,
+    "realMacOSInventory": "PASS",
+    "pythonCompilation": "PASS",
+    "whitespace": "PASS"
+  },
+  "privateLogSHA256": {
+    "native-inventory-files-466-parent-tests.log": "1a9918729c3aa21bf20985efedbec7a26cce2978a3810e3be62c0659194f6eeb",
+    "native-inventory-files-466-tests.log": "7e4e55aa7b9f6a51701f8727145342dc4330d471a3228accca3d8aa6a5edbd4e",
+    "native-inventory-files-466-macos.log": "8a73799bb33ad831cf81789a756040c1a3928a7ae907f790363f28ebbea9447e"
+  },
+  "scope": "Local macOS ARM64 file admission and native tool inventory. Existing Linux guacd live control and hosted exact-head jobs remain required. No new native Linux or Windows acceptance claimed."
+}

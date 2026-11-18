@@ -5,6 +5,7 @@ This is an observation, not a vulnerability scan or a complete deployment SBOM.
 No process arguments, environment, credentials or network destinations are read.
 """
 import argparse
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -13,12 +14,30 @@ from pathlib import Path
 import platform
 import re
 import shutil
+import stat
 import subprocess
 import time
 
 TOOLS = {"ssh": ["-V"], "mosh": ["--version"], "mosh-client": ["--version"],
          "mosh-server": ["--version"], "tmux": ["-V"], "guacd": ["-v"]}
 MAX_MAPS = 2 << 20
+
+
+@contextmanager
+def regular_file(path):
+    """Refuse special files without waiting for a FIFO writer or reading devices.
+
+    Validate the opened descriptor, rather than a preceding path stat: the path
+    can be replaced between validation and open. NONBLOCK has no effect on
+    regular files; BINARY preserves byte hashes on Windows.
+    """
+    if not stat.S_ISREG(os.stat(path).st_mode):
+        raise ValueError(f"Not a regular file: {path}")
+    flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_BINARY", 0)
+    with os.fdopen(os.open(path, flags), "rb") as source:
+        if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+            raise ValueError(f"Not a regular file: {path}")
+        yield source
 
 
 def command(argv, timeout=5):
@@ -38,7 +57,7 @@ def file_identity(path, deadline=None):
     path = Path(path).resolve(strict=True)
     deadline = deadline or time.monotonic() + 5
     value = hashlib.sha256()
-    with path.open("rb") as source:
+    with regular_file(path) as source:
         before = os.fstat(source.fileno())
         if before.st_size > 512 << 20:
             raise ValueError(f"File exceeds hash bound: {path}")
@@ -96,7 +115,7 @@ def process_identity(proc):
 def copyright_evidence(package):
     path = Path("/usr/share/doc") / package.split(":")[0] / "copyright"
     try:
-        with path.open("rb") as source:
+        with regular_file(path) as source:
             data = source.read((512 << 10) + 1)
         if len(data) > 512 << 10:
             return {"state": "too_large", "path": str(path)}
@@ -105,7 +124,7 @@ def copyright_evidence(package):
                 "declaredLicenseFields": [value[:256] for value in licenses[:100]],
                 "licenseFieldsTruncated": len(licenses) > 100 or any(len(value) > 256 for value in licenses),
                 "scope": "Distributor copyright document; fields are declarations, not a license determination"}
-    except OSError as error:
+    except (OSError, ValueError) as error:
         return {"state": "unavailable", "error": str(error)}
 
 
@@ -175,7 +194,7 @@ def observe_guacd(pid, packages, proc_root=Path("/proc")):
             try:
                 # Fonts and other data mappings are not native executable
                 # components. Read only the ELF magic before hashing a file.
-                with Path(mapping["path"]).open("rb") as source:
+                with regular_file(mapping["path"]) as source:
                     if source.read(4) != b"\x7fELF":
                         continue
                 identity = file_identity(mapping["path"], deadline)

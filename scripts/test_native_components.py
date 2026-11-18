@@ -4,6 +4,8 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import subprocess
+import sys
 import unittest
 from unittest.mock import Mock, patch
 
@@ -13,6 +15,78 @@ spec.loader.exec_module(inventory)
 
 
 class NativeInventory(unittest.TestCase):
+    @unittest.skipUnless(hasattr(os, "mkfifo") and hasattr(os, "O_NONBLOCK"), "POSIX named-pipe controls")
+    def test_fifo_tool_and_mapped_file_reads_are_bounded(self):
+        # Run the real blocking-open shapes in children. A regression cannot
+        # hang this test runner, even when there is deliberately no FIFO writer.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fifo = root / "pipe"
+            os.mkfifo(fifo, 0o600)
+            (root / "package").mkdir()
+            (root / "package" / "copyright").symlink_to(fifo)
+            proc = root / "77"
+            proc.mkdir()
+            (proc / "exe").symlink_to(root / "guacd")
+            info = fifo.stat()
+            (proc / "maps").write_text(
+                f"1000-2000 r-xp 0 {os.major(info.st_dev):x}:{os.minor(info.st_dev):x} {info.st_ino} {fifo}\n")
+            script = '''import importlib.util, json, pathlib, sys
+from unittest.mock import Mock, patch
+spec = importlib.util.spec_from_file_location("inventory", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+root = pathlib.Path(sys.argv[2])
+if sys.argv[3] == "tool":
+    with patch("sys.argv", ["inventory", "--output", str(root / "result.json"), "--tool", "ssh=" + str(root / "pipe")]), patch.object(m.shutil, "which", return_value=None):
+        m.main()
+    result = json.loads((root / "result.json").read_text())["tools"]["ssh"]
+    assert result["state"] == "unavailable" and "Not a regular file" in result["error"], result
+    assert "versionProbe" not in result
+elif sys.argv[3] == "mapped":
+    with patch.object(m, "process_identity", return_value=("stable", 1, 2)):
+        result = m.observe_guacd(77, Mock(), root)["mappedFiles"][0]
+    assert result["state"] == "unavailable" and "Not a regular file" in result["error"], result
+else:
+    original = pathlib.Path
+    with patch.object(m, "Path", side_effect=lambda value: root if value == "/usr/share/doc" else original(value)):
+        result = m.copyright_evidence("package")
+    assert result["state"] == "unavailable" and "Not a regular file" in result["error"], result
+'''
+            for mode in ("tool", "mapped", "copyright"):
+                with self.subTest(mode=mode):
+                    child = subprocess.run([sys.executable, "-c", script, str(Path(inventory.__file__).resolve()),
+                                            str(root), mode], capture_output=True, text=True, timeout=3)
+                    self.assertEqual(child.returncode, 0, child.stderr)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo") and hasattr(os, "O_NONBLOCK"), "POSIX replacement control")
+    def test_regular_path_replaced_by_fifo_before_open_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "tool"
+            path.write_bytes(b"regular executable fixture")
+            script = '''import importlib.util, os, pathlib, sys
+from unittest.mock import patch
+spec = importlib.util.spec_from_file_location("inventory", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+path = pathlib.Path(sys.argv[2])
+original = os.open
+def replace_and_open(target, flags, *args, **kwargs):
+    path.unlink()
+    os.mkfifo(path, 0o600)
+    return original(target, flags, *args, **kwargs)
+with patch.object(m.os, "open", side_effect=replace_and_open):
+    try:
+        m.file_identity(path)
+    except ValueError as error:
+        assert "Not a regular file" in str(error)
+    else:
+        raise AssertionError("A changed path supplied file identity")
+'''
+            child = subprocess.run([sys.executable, "-c", script, str(Path(inventory.__file__).resolve()), str(path)],
+                                   capture_output=True, text=True, timeout=3)
+            self.assertEqual(child.returncode, 0, child.stderr)
+
     def test_maps_deduplicate_segments_but_keep_deleted_identity(self):
         line = "1000-2000 r-xp 00000000 08:02 17 /tmp/libguac-client-rdp.so"
         data = inventory.parse_maps(line + "\n" + line.replace("r-xp", "r--p") + "\n" + line + " (deleted)\n"
