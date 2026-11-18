@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "qualified_source": "e9f4b97711bf0676b13c0a1e82c84ed6d09f3865",
+  "inputs": {
+    "usb_candidate": "d77c29a60d589969e96c557abad6111f0e325592",
+    "signin_Return": "efb04e52fdc2ae9d95e3d725baa11ce49be7e7e4",
+    "windows_service_evidence": "c020d81eea119f0aa6ed569e35d0731840d78ffa",
+    "apt_guard_evidence": "3e9a82bd4c15acac9284e824e25fb7d437ed5b12"
+  },
+  "ancestry_verified": true,
+  "server_tree": "51e3e25e84a2793fe3fa1262748be2eb7aae18ea",
+  "lockfile_blob": "f18ab6505e59b175161cbd2b465a174992a4341e",
+  "production_changes_from_usb_candidate": [
+    "webmux/frontend/src/components/LoginPage.tsx"
+  ],
+  "frontend": {
+    "files": 42,
+    "passed": 418
+  },
+  "strict_typescript_projects": 5,
+  "frontend_lint": "pass",
+  "build": "pass",
+  "actual_browser": {
+    "browser": "156.0.8078.47",
+    "chromium_sandbox": true,
+    "actual_go_controller": true,
+    "auth_mode": "local",
+    "password_Return_login_posts": 1,
+    "workspace_visible": true,
+    "usb_pair_report_stop_release": true,
+    "usb_reporter": "synthetic fixture; no USB device claimed",
+    "source_sha256": {
+      "webmux/frontend/src/components/LoginPage.tsx": "19ecb2d10580b0c7159cebf59e2914564bc2af4ab81f41fc1ae6879c5dc180c8",
+      "webmux/bin/webmux": "0d5d60b38f862bcdc8d9ed81743a6083d18133b6634688118a458581a8fb3605"
+    }
+  },
+  "source_sha256": {
+    "webmux/frontend/src/components/LoginPage.tsx": "19ecb2d10580b0c7159cebf59e2914564bc2af4ab81f41fc1ae6879c5dc180c8",
+    "tests/frontend/LoginPage.test.tsx": "856ddede1f9b710af2423adedf5784c7211e0b6e44f360db4b35b7fc45dd5f89",
+    "scripts/configure-ci-apt.py": "87b74c97379a35dd63ffdbcf3b01fbbca548d0f18a202aac76d53639617cc93f"
+  },
+  "log_sha256": {
+    "frontend-tests.log": "ca36bc09e8bf689f5a4744bd46ecf6a41d462cbbc62169582612751910e3dfaf",
+    "types.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "lint.log": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+    "build.log": "564eda5cc9dfdd6a86b19ae170b684077fb2589bb7609d1f35a9e0bc7cf46baf",
+    "browser-final.log": "34ccfeadadb7a2d1acd31341269c225771840379690acc463581ad921c1ac3a6"
+  },
+  "native_service_scope": "Historical source 8f5d322 as qualified in imported receipt; not new combined-source native conversation acceptance.",
+  "hosted_checks": "New exact combined-head CI and Packaging required; unchanged audit #429 blocks merge."
+}

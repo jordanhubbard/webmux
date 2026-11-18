@@ -2557,3 +2557,19 @@ calling emulation native browser execution. The [candidate scope](validation/win
 has portable admission controls and strict types passing; native execution is
 pending. This does not establish authenticated ARM64 conversation or
 installed-service recovery, and does not close #318 or the earlier #450 panic.
+
+### Windows installed-service conversation recovery (2026-11-17)
+
+The CI-built main artifact `8f5d3225fac65804554a65bc08381a03a70654fe` passed
+authenticated ZIP/WinSW LocalSystem recovery with Codex 0.153.0 on Windows 11
+AMD64. An actual controller crash preserved the owner/root/CLI identities and a
+fresh native conversation answer. An actual guest reboot preserved native-file
+and transcript prefixes, automatically started the service, and offered explicit
+native recovery without starting a coding process. The browser's Resume action
+continued the original conversation/project/policy; fresh answers and duplicate
+requests were verified through another ordinary service restart.
+
+See [source bindings, controls and limits](validation/windows-installed-recovery-2026-11-17/README.md).
+This newer artifact does not resolve the earlier image's Defender classification
+or qualify other service accounts, every CLI/profile, different-executable
+updates or Windows ARM64 hardware. Broader #318 remains open.

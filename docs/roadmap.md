@@ -115,11 +115,16 @@ Remaining #318 work, in order:
    The service was stopped with protection unchanged; native diagnostic and
    no-duplicate-owner controls passed separately
    ([evidence](session-recovery.md#windows-installed-service-security-block-2026-11-16)).
-   Authenticated installed-service recovery, broader CLI/configuration coverage
-   and ARM64 hardware qualification remain open. A separate [native ARM64
-   component candidate](validation/windows-arm64-native-2026-11-17/README.md)
+   A newer main artifact now passes authenticated ZIP/WinSW LocalSystem service
+   recovery with Codex 0.153.0: controller crash survival, actual guest reboot,
+   explicit exact-conversation Resume and durable duplicate-action controls
+   ([qualification](validation/windows-installed-recovery-2026-11-17/README.md)).
+   The earlier image's Defender classification remains unresolved. Other service
+   accounts, broader CLI/configuration coverage, different-executable upgrades
+   and authenticated ARM64 conversation recovery remain open. A separate
+   [native ARM64 component candidate](validation/windows-arm64-native-2026-11-17/README.md)
    under #456 adds architecture-bound server/ConPTY qualification; its native
-   results are pending and do not establish authenticated conversation recovery. Remote native resume is
+   results remain separate from authenticated conversation recovery. Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
 2. Codex in default shared-daemon mode is manual-only by owner decision: no
