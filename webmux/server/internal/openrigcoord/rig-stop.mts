@@ -70,7 +70,7 @@ async function request(fetcher: typeof fetch, port: number, route: string, body?
   } finally { clearTimeout(timer); }
 }
 
-async function localManager(run: RigStopRun, port: number, fetcher: typeof fetch, uid: number | undefined) {
+async function localManager(run: RigStopRun, port: number, fetcher: typeof fetch, uid: number | undefined, platform: NodeJS.Platform) {
   const response = await request(fetcher, port, '/healthz');
   const value = response.body;
   if (uid === undefined || response.status !== 200 || !object(value) || !Number.isSafeInteger(value.pid) || Number(value.pid) < 1 || value.euid !== uid) throw new Refusal('local_manager_unverified');
@@ -80,24 +80,32 @@ async function localManager(run: RigStopRun, port: number, fetcher: typeof fetch
   let listeners: string;
   let observedProcess: string;
   let daemonCommand: string;
+  let executable = '';
   try {
-    listeners = run(process.platform === 'darwin' ? '/usr/sbin/lsof' : 'lsof', ['-nP', '-a', `-iTCP:${port}`, '-sTCP:LISTEN', '-Fp']);
+    listeners = run(platform === 'darwin' ? '/usr/sbin/lsof' : 'lsof', ['-nP', '-a', `-iTCP:${port}`, '-sTCP:LISTEN', '-Fp']);
     observedProcess = run('/bin/ps', ['-p', String(value.pid), '-o', 'uid=,lstart=,comm=']).trim();
     daemonCommand = run('/bin/ps', ['-p', String(value.pid), '-o', 'command=']).trim();
+    // Linux Node 24 calls its main thread MainThread, which ps comm reports
+    // instead of the executable name. Use the kernel's executable link there;
+    // accepting that thread name alone would also admit unrelated processes.
+    if (platform === 'linux') executable = run('/usr/bin/readlink', ['--', `/proc/${value.pid}/exe`]).trim();
   } catch { throw new Refusal('local_manager_unverified'); }
   const pids = [...new Set(listeners.split(/\r?\n/).filter(line => /^p\d+$/.test(line)).map(line => Number(line.slice(1))))];
   if (pids.length !== 1 || pids[0] !== value.pid) throw new Refusal('local_manager_unverified');
   if (observedProcess.length > 2048 || Number(/^(\d+)\s+/.exec(observedProcess)?.[1]) !== uid) throw new Refusal('local_manager_unverified');
-  if (!/(?:^|[\/\s])node(?:js)?$/.test(observedProcess) || daemonCommand.length > 4096
+  const nodeExecutable = platform === 'linux'
+    ? executable.length <= 4096 && /^\/[^\r\n]*\/node(?:js)?$/.test(executable)
+    : /(?:^|[\/\s])node(?:js)?$/.test(observedProcess);
+  if (!nodeExecutable || daemonCommand.length > 4096
     || !/\/daemon\/dist\/index\.js(?:\s|$)/.test(daemonCommand)) throw new Refusal('local_manager_unverified');
   // Only the fingerprint is retained; process arguments never leave this probe.
-  return { managerPid: Number(value.pid), managerIdentity: createHash('sha256').update(observedProcess + '\n' + daemonCommand).digest('hex') };
+  return { managerPid: Number(value.pid), managerIdentity: createHash('sha256').update(observedProcess + '\n' + daemonCommand + '\n' + executable).digest('hex') };
 }
 
-export async function reviewRigStop(run: RigStopRun, input: RigStopSelection, fetcher: typeof fetch = fetch, uid = process.geteuid?.()): Promise<RigStopReview> {
+export async function reviewRigStop(run: RigStopRun, input: RigStopSelection, fetcher: typeof fetch = fetch, uid = process.geteuid?.(), platform: NodeJS.Platform = process.platform): Promise<RigStopReview> {
   selection(input);
   const port = connection(run);
-  const manager = await localManager(run, port, fetcher, uid);
+  const manager = await localManager(run, port, fetcher, uid, platform);
   const raw = JSON.parse(run('rig', ['ps', '--nodes', '-A', '--no-cleanup', '--json', '--full'])) as unknown;
   const inventory = rows(Array.isArray(raw) ? raw : object(raw) ? raw.entries : undefined);
   const candidates = inventory.filter(row => row.rigId === input.rigId && row.logicalId === input.logicalId);
@@ -130,18 +138,18 @@ export async function reviewRigStop(run: RigStopRun, input: RigStopSelection, fe
   if (sessions.filter(row => row.id === latest.id).length !== 1 || latest.id !== expected.sessionId || latest.sessionName !== input.sessionName) throw new Refusal('selection_changed');
   if (latest.origin !== 'launched') throw new Refusal('claimed_session');
   if (latest.status !== 'running') throw new Refusal('session_not_live');
-  const after = await localManager(run, port, fetcher, uid);
+  const after = await localManager(run, port, fetcher, uid, platform);
   if (after.managerPid !== manager.managerPid || after.managerIdentity !== manager.managerIdentity) throw new Refusal('local_manager_unverified');
   return { contract: 'webmux-rig-stop/v1', ...input, ...manager, port, runtime: typeof node.runtime === 'string' ? node.runtime.slice(0, 128) : 'unknown',
     expected: { nodeId: expected.nodeId, sessionId: expected.sessionId } };
 }
 
-export async function executeRigStop(run: RigStopRun, review: RigStopReview, reason: string, operator: string, fetcher: typeof fetch = fetch, uid = process.geteuid?.()): Promise<RigStopResult> {
+export async function executeRigStop(run: RigStopRun, review: RigStopReview, reason: string, operator: string, fetcher: typeof fetch = fetch, uid = process.geteuid?.(), platform: NodeJS.Platform = process.platform): Promise<RigStopResult> {
   const refusal = (code: string): RigStopResult => ({ state: 'refused', code, posted: false, stopPhase: 'none' });
   try {
     if (review.contract !== 'webmux-rig-stop/v1' || !review.expected || !ulid.test(review.expected.nodeId) || !ulid.test(review.expected.sessionId)
       || !reason.trim() || reason.length > 1024 || !operator || operator.length > 256) return refusal('invalid_review');
-    const current = await reviewRigStop(run, review, fetcher, uid);
+    const current = await reviewRigStop(run, review, fetcher, uid, platform);
     if (current.port !== review.port || current.managerPid !== review.managerPid || current.managerIdentity !== review.managerIdentity || current.expected.nodeId !== review.expected.nodeId || current.expected.sessionId !== review.expected.sessionId) return refusal('selection_changed');
   } catch (error) { return refusal(error instanceof Refusal ? error.code : 'preflight_unavailable'); }
   // The caller must persist a consumed/uncertain receipt BEFORE entering this

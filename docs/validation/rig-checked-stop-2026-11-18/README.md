@@ -2,7 +2,16 @@
 
 The #438 candidate adds review and explicit confirmation for a running local seat launched by native Rig. Native enrollment lineage, rather than WebMux's private launch record, determines whether the review action is offered. Adopted seats remain ineligible.
 
-The adapter admits only CLI 0.7.18 (3bf87c62) and the matching stamped daemon build. It corroborates the health PID/effective UID against the local listener, OS owner, process start, Node process name and daemon entry point before review and before dispatch. Only a process fingerprint is retained. A basic loopback tunnel, a proxy process, another account, an unstamped build, changed process or changed socket refuses without lifecycle dispatch. These are accidental-routing and process-provenance controls within the service account's trusted environment, not authentication against a malicious same-account process.
+The adapter admits only CLI 0.7.18 (3bf87c62) and the matching stamped daemon build. It corroborates the health PID/effective UID against the local listener, OS owner, process start, Node executable identity and daemon entry point before review and before dispatch. Linux uses the kernel's `/proc/<pid>/exe` link; macOS uses the process executable name. Only a process fingerprint is retained. A basic loopback tunnel, a proxy process, another account, an unstamped build, changed process or changed socket refuses without lifecycle dispatch. These are accidental-routing and process-provenance controls within the service account's trusted environment, not authentication against a malicious same-account process.
+
+The first hosted Linux checked-Stop run at `6d178b5` refused its initial review
+with `local_manager_unverified` (run 44263510039, job 134662317906).
+Official Node 24.21.0 on Linux reproduces `ps comm=MainThread`, which the first
+adapter incorrectly required to end in `node`. The follow-up uses the kernel
+executable link rather than admitting a thread name. Controls cover MainThread,
+non-Node/deleted/malformed executable links and executable replacement after
+review; the MainThread control fails against the parent adapter. Hosted native
+Linux acceptance of the follow-up remains pending.
 
 The owner reviews the exact local tmux seat, native node/enrollment, reason and effect. The checked HTTP operation receives the original expected IDs unchanged. Native guards remain responsible for binding/occupant changes, typing protection and terminal effects; no unchecked fallback or direct tmux kill is used in the product path. A detach phase never becomes a claim that a kill occurred.
 

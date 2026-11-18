@@ -77,5 +77,40 @@
     "No authenticated coding-session recovery or installed CLI upgrade qualification.",
     "Optional manager dependency review under #91 includes one moderate Hono static-middleware advisory propagated across three vendor package records; no general reachability or security-clearance claim.",
     "Unchanged first-party dependency audit #429 and normal review/merge/release gates remain."
-  ]
+  ],
+  "linuxManagerIdentityFollowup": {
+    "reason": "Linux Node24 ps comm is MainThread; first hosted native Stop preview refused local_manager_unverified",
+    "failedRun": 44263510039,
+    "failedJob": 134662317906,
+    "failedArtifact": 14411040439,
+    "parentHead": "6d178b5e0331615edaf2b94f434980eb02a031b0",
+    "kernelProbe": {
+      "version": "v24.21.0",
+      "platform": "linux",
+      "uid": 0,
+      "record": "0 Wed Nov 18 08:26:35 2026 MainThread",
+      "executable": "/qual/node"
+    },
+    "officialLinuxARM64NodeTarSHA256": "6ad1325edbdb5649c379b75a237147a666c95d4f9ae8d340fef2d1575d289ad2",
+    "adapterSHA256": "d5f3f7bdd28b43b0a90aa681310e59f318999789177ad430c217e1f97d61b5ba",
+    "helperTestsPassed": 121,
+    "strictTypeScriptProjectsPassed": 5,
+    "affectedGoRaceAndVetPassed": [
+      "httpapi",
+      "openrigcoord"
+    ],
+    "adapterControlsOnLinuxARM64Node24": {
+      "passed": 20,
+      "skipped": 0,
+      "scope": "Node native runtime in isolated Ubuntu24 container; command/HTTP adapter fixtures, not full native Rig/browser acceptance"
+    },
+    "mainThreadControlFailsParent": true,
+    "macNativeBrowser": {
+      "passed": 1,
+      "skipped": 0,
+      "seconds": 10.3,
+      "scope": "actual Rig0.7.18/tmux3.8/browser; synthetic terminal/sleep"
+    },
+    "hostedNativeLinuxFollowup": "pending; no new-head native Linux success claim"
+  }
 }

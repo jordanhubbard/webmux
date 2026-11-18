@@ -584,7 +584,9 @@ requirements remain separate.
 
 The checked Stop candidate under #438 requires the published OpenRig CLI and
 daemon `0.7.18 (3bf87c62)`, a native local Unix manager, and `lsof`/`ps` process
-and listener evidence. The manager's stamped build, OS owner, listener PID,
+and listener evidence. Linux also requires `readlink` and the manager's
+`/proc/<pid>/exe` link; Node 24's `MainThread` thread name is not executable
+identity. The manager's stamped build, OS owner, listener PID,
 process start and daemon entry point are checked before a review is issued and
 again before dispatch. Unverified, tunneled or changed destinations refuse.
 
