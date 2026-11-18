@@ -83,6 +83,13 @@ func (r *epollReader) Read(p []byte) (int, error) {
 	}
 	r.mu.Unlock()
 
+	// Terminal.Start calls Read directly. Wait on the cancellable descriptor
+	// poll before entering an underlying file read, which Cancel cannot wake.
+	if len(p) > 0 {
+		if _, err := r.Poll(-1); err != nil {
+			return 0, err
+		}
+	}
 	return r.reader.Read(p)
 }
 
