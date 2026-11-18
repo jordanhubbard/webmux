@@ -186,6 +186,12 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const { createRigNativeProject } = await import('./rig-native-project.mts');
     const input = JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-native-project.mts').NativeRigProjectInput;
     console.log(JSON.stringify(await createRigNativeProject({ ...input, directory }, { run })));
+  } else if (action === 'native-resume') {
+    const { resumeRigNativeCodex } = await import('./rig-native-resume.mts');
+    const { nativeCreateArtifacts } = await import('./rig-native-create.mts');
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-native-resume.mts').NativeCodexResumeInput;
+    const observationHelper = process.platform === 'linux' ? JSON.parse(nativeCreateArtifacts.read(path.join(directory, '.native-codex-observer.json')).toString('utf8')) as import('./codex-owner-plan.mts').CodexObservationHelper : undefined;
+    console.log(JSON.stringify(await resumeRigNativeCodex({ ...input, directory }, { run, observationHelper })));
   } else if (action === 'native-create') {
     const { createRigNativeCodex, nativeCreateArtifacts } = await import('./rig-native-create.mts');
     const input = JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-native-create.mts').NativeCodexCreateInput;
@@ -368,7 +374,9 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
   if (error instanceof PendingCreation) {
     console.log(JSON.stringify({ creation: error.value }));
   } else {
-    console.error(error instanceof Error ? error.message.slice(0, 3000) : String(error).slice(0, 3000));
+    console.error(action === 'native-resume'
+      ? error instanceof Error && /^native_(?:resume|create)_[a-z_]+$/.test(error.message) ? error.message : 'native_resume_original_unavailable'
+      : error instanceof Error ? error.message.slice(0, 3000) : String(error).slice(0, 3000));
     process.exitCode = 1;
   }
 }

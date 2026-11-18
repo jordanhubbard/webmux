@@ -48,4 +48,8 @@ func TestNativeCreatePinsControllerHelperBeforeNode(t *testing.T) {
 	if strings.Contains(string(out), foreign) {
 		t.Fatal("input path entered helper reference")
 	}
+	resumed, err := Run(ctx, home, "owner", "native-resume", `{"directory":"`+foreign+`"}`)
+	if err != nil || string(resumed) != string(out) {
+		t.Fatalf("resume did not receive the same pinned owner helper: %v", err)
+	}
 }

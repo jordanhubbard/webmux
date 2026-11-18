@@ -379,6 +379,7 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
     const terminal = page.getByTestId('openrig-terminal');
     await page.getByRole('button', { name: 'Connect dashboard', exact: true }).click();
     await expect(terminal.locator('.xterm-rows')).toContainText('EXPLORER');
+    expect(readFileSync(path.join(home, 'openrig-tui-url'), 'utf8')).toBe(daemon);
     stage = 'awaiting-native-live-page';
     // Rig also renders EXPLORER while startup is probing. Input then owns
     // startup navigation and can disable automatic entry into the live page.
@@ -410,6 +411,8 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
       stage, elapsedMs: Date.now() - started, clientFrames, droppedFrames,
       session: await terminal.getAttribute('data-session-id', { timeout: 500 }).catch(() => null),
       viewport: page.viewportSize(), screen: screen?.slice(-32768) ?? null,
+      expectedDaemon: daemon,
+      selectedDashboardEndpoint: existsSync(path.join(home, 'openrig-tui-url')) ? readFileSync(path.join(home, 'openrig-tui-url'), 'utf8') : null,
     }, null, 2));
     await info.attach('native-dashboard-startup', { contentType: 'application/json', path: diagnostic });
     if (id) await request.delete(`/api/sessions/${id}`);

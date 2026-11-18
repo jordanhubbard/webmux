@@ -1,0 +1,152 @@
+{
+  "scope": "Actual embedded Go coordinator native-resume action and native original conversation recovery; no public HTTP/UI or controller-crash/reboot claim",
+  "sourceRevision": "cd602ded5edabd89a145f4fbc2aba18c912bddae",
+  "passed": true,
+  "moduleSHA256": {
+    "codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "rig-native-create.mts": "ee18fb484c048c845afa9f8f841e2b62cce46dd5ea9eba5c1f91b7087cfcc486",
+    "rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+    "rig-native-resume.mts": "afa26decf9045c91fe068ef6458de1ae7f697e594306b16394a6c3f75330b337",
+    "runner.mts": "4a273f687d1eba769a74aaee8c415ce51ce53ae380914f42ffcb70f53538e055",
+    "coord.go": "34a1346faa6267cf55a1179b037e9712611056a0450e77f4fb77173936c9f5a8"
+  },
+  "rawReceipt": "native-create-factory-wm438controller-9tdsfzuc.json",
+  "rawSHA256": "aebcbbc85ce4c8bb4b91eb39b1aaee9da1216228b9e8ef738f75e18c7f92999c",
+  "probeSHA256": "9d4c0eaedae2edc23a546c83e13ebc26fefe40b21eddd20915e518f6aac1e965",
+  "driverSHA256": "3f9b175921ef347a1070c32851af7b7f2f02776b78e648dbbb7e03a782ad74b2",
+  "driverSourceSHA256": "b7ba5cc8f5fcffce21f49005af25dfba3626e0d2839c50e2f808a072ff996413",
+  "nativeVersions": {
+    "nodeVersion": "v24.21.0",
+    "rigVersion": "0.7.18 (3bf87c62)",
+    "tmuxVersion": "tmux 3.8",
+    "codexVersion": "codex-cli 0.169.0"
+  },
+  "checks": {
+    "onlyOriginalCreationHelperKilledBeforeHandoff": true,
+    "sameOriginalEnrollmentAndReconstructedHandoffAfterHelperLoss": true,
+    "environmentSocketRemovedAfterHandoff": true,
+    "noPlaintextFixtureValueInDurableState": true,
+    "actualDefaultNativeOwnerPolicyUsed": true,
+    "actualNativeArgvPreservesOwnerPolicy": true,
+    "freshChallengeReadByActualProvider": true,
+    "projectAndOwnerExtraWritable": true,
+    "ownerFullAccessNotNarrowed": true,
+    "wrapperReplacedByNativeExecutable": true,
+    "nativeIdentityRetained": true,
+    "nativeOwnerEnvironmentPreserved": true,
+    "nativePolicyAndCorrelatedTools": true,
+    "duplicateFactoryAndExplicitInspectRetainNativeOccupant": true,
+    "siblingRetainsOriginalPID": true,
+    "snapshotBindsOriginalConversation": true,
+    "embeddedGoCoordinatorUsesOwnerNamespace": true,
+    "originalOnlyReviewMatchesBankedConversation": true,
+    "newControllerInvocationReusesOriginalBytesAndOperation": true,
+    "unconfirmedNativeResponseNeverBecomesSuccess": true,
+    "sharedHandoffDurableHashOnlyReceipt": true,
+    "freshEnvironmentHandoffConsumed": true,
+    "originalResumeInspectedWithoutRepost": true,
+    "sameConversationRecallWithoutTools": true,
+    "originalNativeLogPrefixAndEnvironmentRetained": true,
+    "duplicateResumeRetainsBothNativeProcesses": true,
+    "sameOriginalOperationReplayedWithoutNativeEffect": true,
+    "checkedStopEndsOnlyNativeCodingSeat": true
+  },
+  "controllerResults": [
+    {
+      "logicalId": "agents.new",
+      "state": "uncertain",
+      "code": "native_resume_response_unavailable",
+      "posted": true
+    },
+    {
+      "logicalId": "agents.new",
+      "state": "uncertain",
+      "code": "native_resume_already_dispatched",
+      "posted": false,
+      "previouslyConfirmed": false
+    },
+    {
+      "logicalId": "agents.new",
+      "state": "uncertain",
+      "code": "native_resume_unconfirmed",
+      "posted": true,
+      "nativeCode": "operation_in_progress"
+    },
+    {
+      "logicalId": "agents.new",
+      "state": "confirmed",
+      "code": "already_running_original",
+      "posted": true
+    },
+    {
+      "logicalId": "agents.new",
+      "state": "confirmed",
+      "code": "already_running_original",
+      "posted": true
+    }
+  ],
+  "durableState": {
+    "intent": "webmux-native-codex-resume/v1",
+    "intentFields": [
+      "selection",
+      "port",
+      "managerIdentity",
+      "requestText"
+    ],
+    "consumptionFields": [
+      "operationId",
+      "requestSHA256"
+    ],
+    "confirmation": "webmux-native-codex-resume-confirmation/v1",
+    "mode": "0600 in owner-private directories",
+    "historicalConfirmationIsCurrentLiveness": false
+  },
+  "localChecks": {
+    "helperTestsPassed": 214,
+    "strictTypeScriptProjectsPassed": 5,
+    "privateTmuxControlsPassed": 9,
+    "affectedGoRacePassed": true,
+    "WindowsARM64CrossBuildPassed": true
+  },
+  "prerequisites": [
+    {
+      "issue": 519,
+      "upstream": "ce7546dc43287496eb9406cf3afca8efd9bfe069",
+      "integrated": "156d6f5",
+      "reason": "Actual helper gate reproduced empty receipt and relative tmux-501 EEXIST; failed raw retained. Exact existing atomic fixture receipt fix applied."
+    },
+    {
+      "issue": 524,
+      "upstream": "b4f742ca078e4de18a52dc6c9f18e2b1ad8d51a1",
+      "integrated": "cd374c1",
+      "reason": "Separate native wheel-history failure in prior hosted gate; existing bounded real-wheel repair consumed."
+    }
+  ],
+  "excludedAttempts": [
+    {
+      "raw": "native-create-factory-wm438controller-k9a8j6xr.json",
+      "reason": "Qualifier required immediate confirmed state while native original operation was still in progress. Failed receipt and exact controller/probe sources retained; not accepted as a passing recovery."
+    },
+    {
+      "raw": "native-resume-controller-helpers-final.log",
+      "reason": "213 pass/1 fail: existing private tmux empty-receipt race. Verified owned fixture was stopped after its root/release file had already been removed. Gate failed, then changed by prerequisite519 before rerun."
+    }
+  ],
+  "cleanup": {
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true,
+    "sourceUnchanged": true
+  },
+  "limits": [
+    "Internal coordinator action is implemented; public native-owned creation/readiness/attachment/recovery UI remains unactivated.",
+    "Fresh coordinator invocations preserve original intent after an uncertain response; no application/server crash during dispatch or host reboot is qualified.",
+    "Actual macOS default full-access/never owner only; no restricted-policy or authenticated Linux/Windows recovery claim.",
+    "Explicit inspection reuses only the original body/revision/operation UUID and may remain uncertain with native operation_in_progress. No automatic repost loop.",
+    "A retained historical confirmation does not prove the provider is still live. No full roadmap or release claim."
+  ]
+}

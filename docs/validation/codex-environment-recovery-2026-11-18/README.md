@@ -1,5 +1,11 @@
 # Native conversation recovery with the current owner environment
 
+The embedded Go coordinator `native-resume` action now passes the actual native
+recovery composition at source `cd602de`. Its [controller receipt](controller-dispatch.json)
+binds the code, driver binary, native evidence and checks. Public HTTP/UI and
+crash/reboot qualification remain open. Earlier receipts below retain their
+original checkpoints.
+
 The shared product handoff helper now passes the original-only native recovery
 composition at source `292039c`. Its [current receipt](shared-handoff.json)
 binds the helper, test driver, native results and checks. The earlier
@@ -80,3 +86,35 @@ operation implementation and live replay proof are not a WebMux controller-crash
 or reboot acceptance result. Linux native authentication expired; its private
 guest is shut down with the overlay retained. No authenticated Linux, Windows,
 restricted-policy or release-completion claim follows from this checkpoint.
+
+The coordinator banks the exact original-only request before dispatch: native
+snapshot/history, reviewed revision, banked original conversation, operation
+UUID and complete request bytes. It checks the snapshot's native node and launch
+wrapper against the owner's original creation record. Atomic exclusive
+consumption and fsync precede the POST. Ordinary duplicates do not post or start
+account observation. Explicit inspection can send only that same banked body and
+UUID; it does not refresh the review or select another conversation.
+
+The actual exported Go coordinator, with embedded Node modules, passes owner
+namespace enforcement and recovery across fresh coordinator invocations. The
+first native response exceeded the unchanged ten-second deadline; the ordinary
+duplicate posted nothing. Immediate explicit inspection returned native
+`operation_in_progress` and correctly remained uncertain. After exact original
+conversation recall and fresh native tool execution, later explicit inspections
+confirmed `already_running_original`, with the same request bytes, operation and
+provider/sibling PIDs. Private confirmation receipts retain the native outcome;
+ordinary duplicates expose that fact as historical evidence, not current
+provider liveness. Account or arbitrary environment values are not copied into
+these recovery receipts.
+
+The complete composition retains the native history prefix, owner environment,
+selected Stop, sibling and private cleanup controls. A first qualifier attempt
+incorrectly required immediate confirmation and remains excluded. The final
+qualifier requires truthful uncertainty while the native operation is still in
+progress, then exact-conversation proof and later confirmation; no deadline or
+permission check was relaxed. An unrelated helper gate reproduced #519's empty
+receipt race and was retained as failed. The existing #520 atomic-receipt fix
+was applied unchanged as a prerequisite; the changed gate passes all214 helpers
+and the nine affected controls. The existing #526 real-wheel fix was consumed
+separately. Public dispatch/UI integration, actual server crash, service upgrade,
+reboot and other policies/platforms remain open.

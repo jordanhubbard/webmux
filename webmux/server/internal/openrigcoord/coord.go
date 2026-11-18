@@ -52,6 +52,9 @@ var rigCreateIntent []byte
 //go:embed rig-native-create.mts
 var rigNativeCreate []byte
 
+//go:embed rig-native-resume.mts
+var rigNativeResume []byte
+
 //go:embed rig-native-project.mts
 var rigNativeProject []byte
 
@@ -102,6 +105,7 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 		"codex-launch-environment.mts":  codexLaunchEnvironment,
 		"codex-environment-channel.mts": codexEnvironmentChannel,
 		"rig-native-create.mts":         rigNativeCreate,
+		"rig-native-resume.mts":         rigNativeResume,
 		"rig-native-project.mts":        rigNativeProject,
 	} {
 		if err := os.WriteFile(filepath.Join(directory, name), source, 0600); err != nil {
@@ -109,10 +113,10 @@ func Run(ctx context.Context, home, owner, action, input string) ([]byte, error)
 		}
 	}
 	cmd := exec.CommandContext(ctx, "node", script, action, directory)
-	if action == "native-create" {
+	if action == "native-create" || action == "native-resume" {
 		configureNativeCreateCancellation(cmd)
 	}
-	if action == "native-create" && runtime.GOOS == "linux" {
+	if (action == "native-create" || action == "native-resume") && runtime.GOOS == "linux" {
 		if err := nativeobserve.WriteReference(directory); err != nil {
 			return nil, err
 		}
