@@ -8,17 +8,73 @@ changes are used. Retains evidence and removes only its own container/image.
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
 import re
 import shlex
+import ssl
 import subprocess
 import time
 import uuid
 
 BASE_IMAGE = 'ubuntu@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852'
 LOG_STREAM_LIMIT = 1024 * 1024
+
+
+def write_build_inputs(output):
+    # The pinned minimal image has the Ubuntu archive keyring, but no CA
+    # bundle. Export public trust anchors only; no private keys or native
+    # account state enter the build context.
+    certificates = ssl.create_default_context().get_ca_certs(binary_form=True)
+    if not certificates or len(certificates) > 4096:
+        raise RuntimeError('Public host CA trust roots unavailable or oversized')
+    bundle = ''.join(ssl.DER_cert_to_PEM_cert(cert) for cert in sorted(set(certificates))).encode('ascii')
+    if len(bundle) > 4 * 1024 * 1024:
+        raise RuntimeError('Public host CA bundle oversized')
+    helper = Path(__file__).with_name('configure-ci-apt.py')
+    spec = importlib.util.spec_from_file_location('webmux_ci_apt', helper)
+    apt = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(apt)
+    sources = apt.deb822_sources('''Types: deb
+URIs: https://archive.ubuntu.com/ubuntu/
+Suites: noble noble-updates noble-backports
+Components: main restricted universe multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+Types: deb
+URIs: https://security.ubuntu.com/ubuntu/
+Suites: noble-security
+Components: main restricted universe multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+''')
+    settings = (apt.network_settings(Path('/etc/apt/webmux-ci-sources'))
+                + 'Acquire::https::CAInfo "/etc/ssl/certs/ca-certificates.crt";\n')
+    (output / 'ca-certificates.crt').write_bytes(bundle)
+    (output / 'ubuntu.sources').write_text(sources)
+    (output / 'apt-ci.conf').write_text(settings)
+    (output / '.dockerignore').write_text('*\n!Dockerfile\n!client.pub\n!sshd_config\n!ca-certificates.crt\n!ubuntu.sources\n!apt-ci.conf\n')
+    dockerfile = (
+        'FROM ' + BASE_IMAGE + '\n'
+        'COPY ca-certificates.crt /etc/ssl/certs/ca-certificates.crt\n'
+        'COPY ubuntu.sources /etc/apt/webmux-ci-sources/ubuntu.sources\n'
+        'COPY apt-ci.conf /etc/apt/apt.conf.d/99-webmux-ci-network\n'
+        'RUN . /etc/os-release && test "$ID" = ubuntu && test "$VERSION_CODENAME" = noble && '
+        'apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends openssh-server tmux && '
+        'useradd --create-home --shell /bin/sh --password x worker && '
+        'mkdir -p /run/sshd && rm -f /etc/ssh/ssh_host_*\n'
+        'COPY client.pub /etc/ssh/fixture_authorized_keys\n'
+        'COPY sshd_config /etc/ssh/sshd_config.fixture\n'
+        'RUN chmod 644 /etc/ssh/fixture_authorized_keys\n'
+        """CMD ["/bin/sh", "-c", "ssh-keygen -q -t ed25519 -N '' -f /etc/ssh/ssh_host_ed25519_key && exec /usr/sbin/sshd -D -e -f /etc/ssh/sshd_config.fixture"]
+""")
+    (output / 'Dockerfile').write_text(dockerfile)
+    return {'baseImage': BASE_IMAGE, 'publicHostCAUniqueCertificates': len(set(certificates)),
+            'publicHostCABundleSHA256': hashlib.sha256(bundle).hexdigest(),
+            'ubuntuSourcesSHA256': hashlib.sha256(sources.encode()).hexdigest(),
+            'aptSettingsSHA256': hashlib.sha256(settings.encode()).hexdigest(),
+            'aptHelperSHA256': hashlib.sha256(helper.read_bytes()).hexdigest()}
 
 
 def _log_stream(value):
@@ -97,7 +153,6 @@ def main():
     try:
         run(['/usr/bin/ssh-keygen', '-q', '-t', 'ed25519', '-N', '', '-f', str(output / 'client')])
         client_key_hash = hashlib.sha256((output / 'client').read_bytes()).digest()
-        (output / '.dockerignore').write_text('*\n!Dockerfile\n!client.pub\n!sshd_config\n')
         (output / 'sshd_config').write_text('''ListenAddress 0.0.0.0
 Port 22
 HostKey /etc/ssh/ssh_host_ed25519_key
@@ -116,16 +171,7 @@ PermitUserRC no
 PrintMotd no
 LogLevel VERBOSE
 ''')
-        (output / 'Dockerfile').write_text('FROM ' + BASE_IMAGE + '''
-RUN apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 update && \
-    DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install -y --no-install-recommends openssh-server tmux && \
-    useradd --create-home --shell /bin/sh --password x worker && \
-    mkdir -p /run/sshd && rm -f /etc/ssh/ssh_host_*
-COPY client.pub /etc/ssh/fixture_authorized_keys
-COPY sshd_config /etc/ssh/sshd_config.fixture
-RUN chmod 644 /etc/ssh/fixture_authorized_keys
-CMD ["/bin/sh", "-c", "ssh-keygen -q -t ed25519 -N '' -f /etc/ssh/ssh_host_ed25519_key && exec /usr/sbin/sshd -D -e -f /etc/ssh/sshd_config.fixture"]
-''')
+        report['buildInputs'] = write_build_inputs(output)
         print('Building the isolated Linux SSH/tmux fixture.', flush=True)
         report['stage'] = 'image-build'
         run(['docker', 'build', '--label', label + '=' + nonce, '--tag', image, str(output)], timeout=180)

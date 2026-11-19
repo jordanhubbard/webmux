@@ -71,6 +71,11 @@ def deb822_sources(text):
     return "\n\n".join(selected) + ("\n" if selected else "")
 
 
+def network_settings(source_parts: Path) -> str:
+    return ('Acquire::Retries "2";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nDpkg::Lock::Timeout "120";\nAPT::Update::Error-Mode "any";\n'
+            f'Dir::Etc::sourcelist "-";\nDir::Etc::sourceparts "{source_parts}";\n')
+
+
 def configure(root: Path) -> None:
     root = root.resolve()
     if not root.is_dir():
@@ -97,8 +102,7 @@ def configure(root: Path) -> None:
     (private / "ubuntu.list").write_text("".join(legacy))
     (private / "ubuntu.sources").write_text("\n".join(modern))
     settings.parent.mkdir(exist_ok=True)
-    settings.write_text('Acquire::Retries "2";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nDpkg::Lock::Timeout "120";\nAPT::Update::Error-Mode "any";\n'
-                        f'Dir::Etc::sourcelist "-";\nDir::Etc::sourceparts "{private}";\n')
+    settings.write_text(network_settings(private))
 
 
 if __name__ == "__main__":

@@ -30,3 +30,7 @@ signed-HTTPS relay provisioning correction. No unchanged failed native job was
 restarted, no timeout increased and no native gate was exempted.
 
 Refs #550, #120, #445, #452, #91.
+
+The subsequent [composition](../relay-usb-composition-2026-11-19/README.md)
+now includes the published signed-HTTPS relay build inputs. Its combined native
+qualification remains pending; local/static pass is not guest or relay acceptance.

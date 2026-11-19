@@ -1,0 +1,31 @@
+{
+  "base": "3dfbd67",
+  "publishedHTTPSInput": "4623b2290d4664b752bd6c2fe9b4b4b9928717cf",
+  "boundedLoggerASTIdentical4860": true,
+  "HTTPSBuildGeneratorASTIdentical4623": true,
+  "nativeAssertionsASTIdentical4860": true,
+  "nativeRunCallsASTIdentical4860": true,
+  "cleanupFinallyASTIdentical4860": true,
+  "hostAPTConfigureOutputByteIdenticalOnPrivateMixedFeedTree": true,
+  "originalUSBManifestUnchanged": true,
+  "sourceSHA256": {
+    "scripts/qualify-rig-stop-relay.py": "be79a545b0ed013e743108a373a51a4ddd13225ab6a8b92e6453d0d62b02b18b",
+    "scripts/configure-ci-apt.py": "fdc5c885e57b65483c95774f25d684c513e3a722a60a486f8b533847333d7bc1",
+    "scripts/vudc_sources.py": "fdaee26a2a148f677948a74e2c32177350f02c07c637b5c6d62cc9bcfbeb5900",
+    "scripts/test_qualify_rig_stop_relay.py": "fd3e998a4c93ceed6df24a217e9b105ce03472599e582a45dae60685c13c96c6"
+  },
+  "scope": "Static/local source composition controls, not currentnativeDocker/USBacceptance",
+  "localValidation": {
+    "relayControlsRun": 12,
+    "relayPass": 11,
+    "relayAPTPrintURISkippedOnMac": 1,
+    "hostAPTControlsRun": 7,
+    "hostAPTPass": 6,
+    "hostAPTNativeCheckSkippedOnMac": 1,
+    "USBAcquisitionPass": 11,
+    "USBQualifierBuilderPass": 9,
+    "totalPass": 37,
+    "platformSkips": 2,
+    "nativeDockerAndUSBOnCombinedSource": "PENDING"
+  }
+}
