@@ -1,0 +1,86 @@
+{
+  "issue": 456,
+  "auditedMain": "694ee835b3b46fd56e4c7a4aa75588a1ca00f367",
+  "nativeHead": "bb16ac823a40b3d15f4b55fc55c91318ec803b3e",
+  "nativeRun": 44608762013,
+  "nativeArtifact": 14574383516,
+  "artifactSHA256": "e84ec98c61992a26b1576896a72f31c0968110dafdba2fc38605c832da685521",
+  "allArchiveMembersReadback": 2782,
+  "captureImageMachine": "arm64",
+  "captureImageSHA256": "46fd457a9e83b3af069a638eb2d2aaecc9a9924d86a4e11c87e8f4a595a740fa",
+  "architecture": {
+    "OS": "ARM64",
+    "GoHostAndTarget": "ARM64",
+    "Node": "ARM64",
+    "capture": "ARM64",
+    "browser": "AMD64 emulated",
+    "nativeARM64BrowserClaimed": false
+  },
+  "nativeStages": {
+    "server-tests.jsonl": {
+      "topLevelPass": 495,
+      "skipEvents": 105,
+      "failEvents": 0
+    },
+    "cell-tests.jsonl": {
+      "topLevelPass": 156,
+      "skipEvents": 1,
+      "failEvents": 0
+    },
+    "terminal-tests.jsonl": {
+      "topLevelPass": 317,
+      "skipEvents": 3,
+      "failEvents": 0
+    }
+  },
+  "distinctConPTYCases": 28,
+  "captureTestsFailedOrSkipped": 0,
+  "rendererCases": 1384,
+  "actualRendererTitleMultisetMatchesSource": true,
+  "threeStageComparisonReceipts": 1381,
+  "bareReferenceComparisons": 259,
+  "sharedHyperlinkReferenceComparisons": 1122,
+  "allInitialContinuedRecapturedEqual": true,
+  "replayQueries": 0,
+  "freshSnapshotTokens": 56,
+  "portableCurrentArchitectureRefusalControls": 2,
+  "currentCriticalSourceByteEqualNativeHead": [
+    "tests/e2e/screen-replay.spec.ts",
+    "webmux/vendor",
+    "webmux/package-lock.json",
+    "webmux/server/internal/thirdparty/vt",
+    "webmux/server/internal/thirdparty/ultraviolet",
+    "webmux/server/internal/screenstate",
+    "webmux/server/internal/nativeprovider",
+    "webmux/frontend",
+    "webmux/playwright.config.ts",
+    "scripts/windows-native-architecture.mts",
+    "scripts/windows-native-architecture.test.mts",
+    ".github/workflows/windows-arm-native.yml",
+    "scripts/collect-native-screen.ps1"
+  ],
+  "currentDelta": {
+    "changedApplicationTreePaths": [
+      "webmux/server/internal/httpapi/coordination_creation_test.go",
+      "webmux/server/internal/recovery/claude_hook_ancestry_darwin.go",
+      "webmux/server/internal/recovery/claude_hook_ancestry_darwin_test.go",
+      "webmux/server/internal/recovery/claude_hook_ancestry_linux.go",
+      "webmux/server/internal/recovery/claude_hook_unix.go"
+    ],
+    "remainingServerTestChange": "Existing Windows skip guard unchanged; newly extended POSIX trust case not claimed native Windows execution",
+    "otherChangedGoFiles": "Darwin/Linux filename or existing darwin||linux build constraint; excluded on Windows"
+  },
+  "workflowPreservation": {
+    "currentCIAndPackagingByteEqualNativeBB16": true,
+    "independentWorkflowRetainsNativeNonRaceAndOtherPlatformsRaceScopes": true,
+    "existingCIAndPackagingEqualUpdatedParent3b80AtARMCheckpoint447": true
+  },
+  "evidenceMethod": "Read and semantically verify original retained source-bound artifacts/job log; no new native run or Actions dispatch",
+  "limits": [
+    "Actual native execution remains attributed to bb16; no fresh694 native test-executable claim.",
+    "Architecture receipts and workflow/artifact source binding are not an independent signed VCS attestation.",
+    "No native ARM64 browser, authenticated coding conversation/reboot, installed-service recovery or450 panic repair acceptance.",
+    "Full318/438 and current-release qualification remain open."
+  ],
+  "liveGitHubRunArtifactBindingVerified": true
+}
