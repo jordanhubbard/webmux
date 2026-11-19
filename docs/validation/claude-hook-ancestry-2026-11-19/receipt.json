@@ -1,0 +1,52 @@
+{
+  "base": "73a64145bb43196e2bc50fbdef661d05e3e25e32",
+  "sourceSHA256": {
+    "claude_hook_unix.go": "e16026f186553200120260480d0c9503ce008ee5a14a46e6a1e0b2a0c78b22d6",
+    "claude_hook_ancestry_linux.go": "77bbc3d5366d2360c1dc4a13bc4ae5785503dd02adff74f8b8775fdf3f7bee39",
+    "claude_hook_ancestry_darwin.go": "0f3d4d8de854c7e237df5fe4c55c3614dd6bcfa1621449c9eabdbda0164f33bd",
+    "claude_hook_ancestry_darwin_test.go": "9e37f08b51524774dc81594779c8a6cdd5c262c6ba5d2e27fa6887262a4e6af4"
+  },
+  "results": [
+    {
+      "command": "full-server-race",
+      "startedUnix": 1795122210.383615,
+      "status": 0,
+      "observerTimedOut": false,
+      "elapsedSeconds": 63.20960629195906,
+      "samples": 59,
+      "droppedSamples": 0
+    },
+    {
+      "command": "server-vet",
+      "startedUnix": 1795122273.605498,
+      "status": 0,
+      "observerTimedOut": false,
+      "elapsedSeconds": 1.0619354590307921,
+      "samples": 1,
+      "droppedSamples": 0
+    },
+    {
+      "command": "linux-recovery-compile",
+      "startedUnix": 1795122274.680696,
+      "status": 0,
+      "observerTimedOut": false,
+      "elapsedSeconds": 1.0598275830270723,
+      "samples": 1,
+      "droppedSamples": 0
+    }
+  ],
+  "scope": "Actual nativeMacfullserverrace/vet;Linuxcrosscompileonly,notnativeLinuxexecution",
+  "topLevelTests": {
+    "pass": 537,
+    "skip": 11
+  },
+  "linuxFunctionUnchanged": true,
+  "node": "24.22.2",
+  "go": "1.27.4",
+  "originalRegressionExit": 1,
+  "fixedFocusedExit": 0,
+  "testBytesIdenticalBeforeAfter": true,
+  "firstHistoricalFailureCauseProven": false,
+  "nativeAuthenticatedClaudeConversation": false,
+  "runnerCorrection": "First full runner incorrectly selected host Node26; retained separately. Corrected PATH selects pinned Node24. Tests and deadlines unchanged."
+}
