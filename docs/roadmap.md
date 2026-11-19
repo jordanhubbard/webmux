@@ -51,6 +51,12 @@ verified owned-child exit precedes one-shot private-file removal. Original
 cleanup and trace-helper failures remain retained; broader navigation #282 and
 recovery/release acceptance remain open.
 
+Federated renderer capability forwarding #484 has completed its
+[native acceptance audit](validation/federation-profile-acceptance-2026-11-19/README.md),
+including credential/query isolation and a profile-requiring original ConPTY
+owner. The historical blank-rendered-replay cause under #478 remains separate
+and open; broader recovery and release acceptance are unchanged.
+
 ### Recover active work after interruption
 
 [#318](https://github.com/jordanhubbard/webmux/issues/318) adds session-state
