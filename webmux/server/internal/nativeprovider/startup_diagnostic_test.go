@@ -18,8 +18,11 @@ func TestStartupDiagnosticRetainsOnlyRecognizedEvidence(t *testing.T) {
 	if got := startupDiagnostic("bootstrap-start", 0, 0xc0000142); !strings.Contains(got, "exit=dll_initialization_failed") {
 		t.Fatal(got)
 	}
-	if got := startupDiagnostic("bootstrap-owner-exit", 0xc0000142, 0); !strings.Contains(got, "os=dll_initialization_failed") {
+	if got := startupDiagnostic("bootstrap-owner-exit", 0xc0000142, 0); !strings.Contains(got, "os=unavailable exit=dll_initialization_failed") {
 		t.Fatal(got)
+	}
+	if got := startupDiagnostic("bootstrap-owner-exit", 2, 0); !strings.Contains(got, "os=unavailable exit=exit_code_2") {
+		t.Fatalf("an owner process exit was misreported as a Win32 error: %s", got)
 	}
 	got := startupDiagnostic(private, 0x12345678, 0x87654321)
 	if got != "phase=unavailable os=unavailable exit=unavailable" || strings.Contains(got, private) {

@@ -25,6 +25,11 @@ func startupDiagnostic(phase string, code, exit uint32) string {
 	default:
 		phase = "unavailable"
 	}
+	// The owner-exit ready frame carries a process status, not a Win32 error.
+	// In particular, process exit 2 must not become ERROR_FILE_NOT_FOUND.
+	if phase == "bootstrap-owner-exit" {
+		exit, code = code, 0
+	}
 	names := map[uint32]string{
 		2: "file_not_found", 3: "path_not_found", 5: "access_denied", 8: "not_enough_memory", 14: "out_of_memory",
 		32: "sharing_violation", 33: "lock_violation", 50: "not_supported", 87: "invalid_parameter", 109: "broken_pipe",
@@ -44,8 +49,13 @@ func startupDiagnostic(phase string, code, exit uint32) string {
 	switch exit {
 	case 0:
 		exitName = "none"
+		if phase == "bootstrap-owner-exit" {
+			exitName = "exit_code_0"
+		}
 	case 1:
 		exitName = "exit_failure"
+	case 2:
+		exitName = "exit_code_2"
 	case 0xc0000005:
 		exitName = "access_violation"
 	case 0xc000001d:
