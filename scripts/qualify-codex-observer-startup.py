@@ -27,6 +27,7 @@ class Native:
         self.diagnostics = diagnostics
         self.stderr_tail = bytearray()
         self.stderr_bytes = 0
+        self.stderr_panic = False
         self.stderr_eof = False
         self.stdout_closed = False
         self.closed = False
@@ -64,6 +65,7 @@ class Native:
                 return
             self.stderr_bytes += len(data)
             self.stderr_tail.extend(data)
+            self.stderr_panic |= b'panicked at' in self.stderr_tail.lower()
             del self.stderr_tail[:-32768]
 
     def rpc(self, method, params):
@@ -143,6 +145,7 @@ class Native:
                     'stderrTail': self.stderr_tail.decode('utf-8', errors='replace'),
                     'stderrBytesSeen': self.stderr_bytes,
                     'stderrTruncated': self.stderr_bytes > 32768,
+                    'stderrPanicObserved': self.stderr_panic,
                     'stderrComplete': self.stderr_eof,
                     'methods': list(self.methods),
                 })
@@ -151,6 +154,18 @@ class Native:
                 if stream is not None:
                     stream.close()
             self.closed = True
+
+
+def validate_native_diagnostics(processes):
+    for value in processes:
+        if value.get('stderrPanicObserved') or 'panicked at' in value.get('stderrTail', ''):
+            raise RuntimeError('native_diagnostic_panic')
+        if value.get('cleanupEscalated'):
+            raise RuntimeError('native_diagnostic_forced_cleanup')
+        if not value.get('stderrComplete'):
+            raise RuntimeError('native_diagnostic_incomplete')
+        if value.get('exitBeforeCleanup') not in [None, 0] or value.get('returnCodeAfterCleanup') not in [0, -signal.SIGTERM]:
+            raise RuntimeError('native_diagnostic_exit')
 
 
 MCP = r'''import sys,json,pathlib,os
@@ -253,6 +268,7 @@ def main():
                                 continue
                             raise RuntimeError("owned_mcp_cleanup_unconfirmed")
             assert policies[0] == policies[1], "observation changed owner policy"
+        validate_native_diagnostics([case["nativeProcess"] for case in report["cases"]])
         report["passed"] = True
     finally:
         args.output.write_text(json.dumps(report, indent=2) + "\n")

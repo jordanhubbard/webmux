@@ -39,6 +39,26 @@ func jump(c uint16, k uint32, t, f uint8) unix.SockFilter {
 	return unix.SockFilter{Code: c, K: k, Jt: t, Jf: f}
 }
 
+// addresslessSocketIO permits read/write-equivalent operations on connected descriptors
+// only. New sockets, addressed sends/receives and descriptor transfer remain
+// denied below. Native signal-hook uses recv/send on its unnamed Unix pair.
+func addresslessSocketIO(nr, allowedFlags, deny uint32) []unix.SockFilter {
+	rule := []unix.SockFilter{
+		stmt(unix.BPF_LD|unix.BPF_W|unix.BPF_ABS, 40), // flags, argument 3
+		stmt(unix.BPF_ALU|unix.BPF_AND|unix.BPF_K, ^allowedFlags),
+		jump(unix.BPF_JMP|unix.BPF_JEQ|unix.BPF_K, 0, 1, 0),
+		stmt(unix.BPF_RET|unix.BPF_K, deny),
+	}
+	// Require canonical flags and NULL address/length in both 32-bit halves.
+	// recvfrom's last argument is a pointer; sendto's is an address length.
+	for _, offset := range []uint32{44, 48, 52, 56, 60} {
+		rule = append(rule, stmt(unix.BPF_LD|unix.BPF_W|unix.BPF_ABS, offset),
+			jump(unix.BPF_JMP|unix.BPF_JEQ|unix.BPF_K, 0, 1, 0), stmt(unix.BPF_RET|unix.BPF_K, deny))
+	}
+	rule = append(rule, stmt(unix.BPF_RET|unix.BPF_K, unix.SECCOMP_RET_ALLOW))
+	return append([]unix.SockFilter{jump(unix.BPF_JMP|unix.BPF_JEQ|unix.BPF_K, nr, 0, uint8(len(rule)))}, rule...)
+}
+
 // Run verifies an ELF executable before installing the filter on the locked
 // exec thread. Call it only in a dedicated helper process: installed restrictions
 // are irreversible. The native program replaces this helper in the same PID.
@@ -121,7 +141,9 @@ func Run(args []string) error {
 	}
 	deny := uint32(unix.SECCOMP_RET_ERRNO) | uint32(unix.EPERM)
 	filters := []unix.SockFilter{stmt(unix.BPF_LD|unix.BPF_W|unix.BPF_ABS, 4), jump(unix.BPF_JMP|unix.BPF_JEQ|unix.BPF_K, arch, 1, 0), stmt(unix.BPF_RET|unix.BPF_K, unix.SECCOMP_RET_KILL_PROCESS), stmt(unix.BPF_LD|unix.BPF_W|unix.BPF_ABS, 0), jump(unix.BPF_JMP|unix.BPF_JGE|unix.BPF_K, 0x40000000, 0, 1), stmt(unix.BPF_RET|unix.BPF_K, deny)}
-	blocked := []uint32{unix.SYS_SOCKET, unix.SYS_CONNECT, unix.SYS_BIND, unix.SYS_LISTEN, unix.SYS_ACCEPT, unix.SYS_ACCEPT4, unix.SYS_SENDTO, unix.SYS_SENDMSG, unix.SYS_SENDMMSG, unix.SYS_RECVFROM, unix.SYS_RECVMSG, unix.SYS_RECVMMSG, unix.SYS_IO_URING_SETUP, unix.SYS_IO_URING_ENTER, unix.SYS_IO_URING_REGISTER, unix.SYS_PTRACE, unix.SYS_PROCESS_VM_WRITEV, unix.SYS_PROCESS_VM_READV, unix.SYS_PIDFD_GETFD, unix.SYS_SECCOMP}
+	filters = append(filters, addresslessSocketIO(unix.SYS_SENDTO, unix.MSG_DONTWAIT|unix.MSG_NOSIGNAL, deny)...)
+	filters = append(filters, addresslessSocketIO(unix.SYS_RECVFROM, unix.MSG_DONTWAIT, deny)...)
+	blocked := []uint32{unix.SYS_SOCKET, unix.SYS_CONNECT, unix.SYS_BIND, unix.SYS_LISTEN, unix.SYS_ACCEPT, unix.SYS_ACCEPT4, unix.SYS_SENDMSG, unix.SYS_SENDMMSG, unix.SYS_RECVMSG, unix.SYS_RECVMMSG, unix.SYS_IO_URING_SETUP, unix.SYS_IO_URING_ENTER, unix.SYS_IO_URING_REGISTER, unix.SYS_PTRACE, unix.SYS_PROCESS_VM_WRITEV, unix.SYS_PROCESS_VM_READV, unix.SYS_PIDFD_GETFD, unix.SYS_SECCOMP}
 	if runtime.GOARCH == "amd64" {
 		blocked = append(blocked, 57, 58)
 	}

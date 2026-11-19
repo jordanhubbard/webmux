@@ -2635,6 +2635,12 @@ remain separate requirements.
 
 ## Native Rig/Codex restricted-policy recovery (2026-11-18)
 
+Additional [never-approval qualification](validation/codex-never-recovery-2026-11-18/README.md)
+passes the same public lifecycle for workspace-write/never and read-only/never
+on clean source d453528, with fresh before/after policy/environment probes and
+32 lifecycle controls. The original failed read-only checker receipt is retained
+alongside its separate corrected offline audit; no extra coding turn was used.
+
 The [restricted-policy qualification](validation/codex-restricted-recovery-2026-11-18/README.md)
 now covers actual public Go/Chrome recovery on macOS with native workspace-write
 and read-only policies, both with on-request approval and network disabled.
@@ -2771,3 +2777,22 @@ The live case uses normal initial viewer placement; explicit placement is covere
 by contract tests. The earlier #529 receipt remains a separate trust-retry case.
 [#530](https://github.com/jordanhubbard/webmux/issues/530) awaits review/merge;
 broader #438/#318 and release acceptance remain open.
+
+
+## Linux observer signal delivery follow-up (#533)
+
+Bounded disposable-fixture diagnostics exposed a signal-thread panic and forced
+cleanup even when the earlier policy assertions passed. The policy helper now
+permits only addressless signal-pair send/receive forms with restricted flags;
+endpoint creation, connections, addressed I/O, message/descriptor transfer and
+process/exec/filter replacement remain denied. Strict qualification refuses
+panics, forced cleanup, incomplete diagnostics and unexpected exits.
+
+The [native receipt](validation/codex-observer-signal-2026-11-18/README.md) binds
+646c4ce to actual AMD64/ARM64 kernel controls and twelve native startup cases.
+All 24 subprocesses stop without panic or forced kill, and full/read/workspace
+policy snapshots and late-integration denials remain unchanged. These are
+disposable unauthenticated startup controls, with no model turn. Authenticated
+Linux coding/conversation recovery under #523 and broad #438/#318 acceptance
+remain open. The earlier stdout EOF lacked stderr; the recorded signal defect
+is repaired, while that exact historical exit cause remains unproven.

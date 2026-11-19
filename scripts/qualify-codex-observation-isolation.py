@@ -210,6 +210,7 @@ def main():
             assert completed.returncode == 0 and not marker.exists() and len(requests) == before
         report['sourceUnchanged'] = controls.sha(module) == source_sha
         assert report['sourceUnchanged']
+        controls.validate_native_diagnostics(report['nativeProcesses'])
         report['passed'] = True
     finally:
         server.shutdown(); server.server_close()
