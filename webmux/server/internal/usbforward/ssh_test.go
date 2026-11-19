@@ -508,6 +508,36 @@ func TestRealSSHTransportAndHostKeyRejection(t *testing.T) {
 			t.Fatalf("CLI startup timed out: %s", diagnostic.String())
 		}
 		c := dial(t, port)
+		// Keep the original payload/lease control, with distinct peers on the
+		// same built CLI and real SSH worker. In-process relay coverage alone
+		// cannot establish stream isolation through this carrier.
+		peers := make([]*net.TCPConn, maxStreams-1)
+		for i := range peers {
+			peers[i] = dial(t, port)
+		}
+		start := make(chan struct{})
+		peerResults := make(chan error, len(peers))
+		for i, peer := range peers {
+			go func(index int, stream *net.TCPConn) {
+				defer stream.Close()
+				<-start
+				body := bytes.Repeat([]byte{byte(index), 255, 10, 42}, 20000)
+				written := make(chan error, 1)
+				go func() { _, err := stream.Write(body); written <- err }()
+				received := make([]byte, len(body))
+				_, readErr := io.ReadFull(stream, received)
+				if readErr != nil {
+					stream.Close() // Also release a writer blocked by failed delivery.
+				}
+				writeErr := <-written
+				if readErr != nil || writeErr != nil || !bytes.Equal(body, received) {
+					peerResults <- fmt.Errorf("stream %d: read=%v write=%v exact=%t", index, readErr, writeErr, bytes.Equal(body, received))
+					return
+				}
+				peerResults <- nil
+			}(i+1, peer)
+		}
+		close(start)
 		payload := bytes.Repeat([]byte{0, 255, 10, 42}, 20000)
 		go func() { _, _ = c.Write(payload) }()
 		got := make([]byte, len(payload))
@@ -515,6 +545,11 @@ func TestRealSSHTransportAndHostKeyRejection(t *testing.T) {
 			t.Fatalf("CLI payload mismatch: %v", err)
 		}
 		c.Close()
+		for range peers {
+			if err := <-peerResults; err != nil {
+				t.Errorf("CLI SSH stream isolation: %v", err)
+			}
+		}
 		<-readDone // The real lease must end the CLI without an external kill.
 		if err := wait(); err != nil {
 			t.Fatalf("CLI lease cleanup: %v: %s", err, diagnostic.String())
