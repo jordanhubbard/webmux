@@ -534,6 +534,11 @@ jobs:
         env:
           WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS: '1'
 
+      - name: Qualify connected local application in disposable hosted fixture
+        if: ${{ !cancelled() && steps.windows_browser_tools.outcome == 'success' }}
+        shell: pwsh
+        run: ./scripts/qualify-windows-local-application.ps1 -OutputDirectory "$env:RUNNER_TEMP/webmux-native-local-application"
+
       - name: Stress Windows terminal reconnect
         run: npm run test:e2e:go -- terminal-mouse.spec.ts --grep restart --repeat-each=10 --output=test-results/reconnect-stress
         working-directory: webmux
@@ -571,3 +576,4 @@ jobs:
             tests/e2e/.visual-baseline
             webmux/test-results
             test-results
+            ${{ runner.temp }}/webmux-native-local-application/public
