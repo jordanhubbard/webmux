@@ -160,6 +160,9 @@ Remaining #318 work, in order:
    passed ([scope and evidence](validation/agent-deck-2026-11-17/README.md)).
 4. Audit #318 against its complete acceptance criteria before closing it. The
    owner-approved merge of #322 does not close this requirement or cut a release.
+   The [seven-criterion audit](validation/recovery-acceptance-audit-2026-11-19/README.md)
+   maps the implementation and retained native evidence to every requirement;
+   it records outstanding coverage and integration, not completed acceptance.
 
 [#320](https://github.com/jordanhubbard/webmux/issues/320) is closed through
 [#381](https://github.com/jordanhubbard/webmux/pull/381). Real Linux ARM64 and
