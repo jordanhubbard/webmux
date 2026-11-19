@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "scope": "Native CLI preflight only. WebMux controller/recovery/upgrade not started. Overall planned strict policy prerequisite FAILED.",
+  "platform": "Windows 11 Enterprise AMD64 10.0.26100",
+  "cliVersion": "0.153.0",
+  "cliSHA256": "0f8ed9678bca539aa6517adb0c8d50ad9a94ff5df4d21e149ae700d219fff69d",
+  "model": "gpt-6-astra",
+  "sandbox": "read-only",
+  "approval": "never",
+  "windowsSandbox": "unelevated",
+  "nativeSessionId": "01a1f18e-4e05-76b1-b676-d27fc1c92312",
+  "correlatedNativeTurns": 4,
+  "sameProjectAndPolicyAcrossTurns": true,
+  "nativeExitDoesNotImplyToolSuccess": true,
+  "powershell": {
+    "toolExit": -1073741502,
+    "hexExit": "0xc0000142",
+    "outputEmpty": true,
+    "directControlExit": 0,
+    "directControlReadNonce": true,
+    "result": "FAIL"
+  },
+  "cmdQuotedPython": {
+    "toolExit": 1,
+    "result": "REJECTED harness quoting error; immutable raw retained"
+  },
+  "cmdFixedPython": {
+    "toolExit": 0,
+    "nonceRead": true,
+    "result": "PASS"
+  },
+  "policyProbe": {
+    "toolExit": 0,
+    "readNonce": true,
+    "writeAllowed": [
+      false,
+      false
+    ],
+    "writeErrno": [
+      13,
+      13
+    ],
+    "canaryExistsAfter": [
+      false,
+      false
+    ],
+    "directWriteControlsPassed": [
+      true,
+      true
+    ],
+    "networkTarget": "private IPv4 loopback listener only",
+    "nativeConnectionAllowed": true,
+    "directConnectionsBeforeAndAfter": true,
+    "acceptedConnections": 3,
+    "networkDenialResult": "FAIL; no external-network denial claim"
+  },
+  "observer": {
+    "sessionId": 0,
+    "windowStationKind": "Service",
+    "scope": "SSH observer, not sandbox child"
+  },
+  "baseline": {
+    "source": "8f5d3225fac65804554a65bc08381a03a70654fe",
+    "artifact": 14346284768,
+    "run": 44125272035,
+    "outerSHA256": "1c8980a5c28491172f6ea97173ebaf36f77589cdd14cf6bc0269a6503853aa03",
+    "archives": [
+      {
+        "name": "webmux-1.4.5-windows-x64-native.zip",
+        "sha256": "8eb55ac872c74a63e4271fa60a712b1dddfc8b8fdc36fc96c2ec54678c81e382"
+      },
+      {
+        "name": "webmux-client-1.4.5-windows-x64-native.zip",
+        "sha256": "38bd8573c982b1e3091fe93baa4af5d33abb6d4672c3315ad672380ce2873502"
+      },
+      {
+        "name": "webmux-server-1.4.5-windows-x64-native.zip",
+        "sha256": "ecf1cd1e827ec416b198b44130418e3216c29dee5d2c1234827871596ba51aa6"
+      }
+    ],
+    "binarySHA256": "e796eed792dbe78c30401ffdd8a795dd3cfb52671004981213f7676369da5434",
+    "archive": "webmux-server-1.4.5-windows-x64-native.zip",
+    "archiveSHA256": "ecf1cd1e827ec416b198b44130418e3216c29dee5d2c1234827871596ba51aa6"
+  },
+  "privateEvidenceSHA256": {
+    "windows318-tool-probe-latest.json": "c81193d57b541e57561f92401c6f72ce1327010f1e34920327a71b4a701fbf2f",
+    "windows318-cmd-probe-latest.json": "c68829c462836143efb61d4e9faa61007ef8709477e44bc395d1b606519cf643",
+    "windows318-cmd-fixed-probe-latest.json": "6d992ff46c80d711fb9eb1ce14a05b06d49720b63e57740699b46059421a6aa2",
+    "windows318-policy-probe-latest.json": "d7cbce27708b2f213cac3253e96fe8bbe9e27add1cf64c8ddd862488e064ae52",
+    "windows318-tool-probe-control.json": "9e8b52653f7312a9de00dc1c0d5fcd4b6fced6470cbe8d44f415215cea6d863f",
+    "windows318-preflight-final-observation.json": "3b6f66b2b862ec5618672e287441f85b0ab668e3cbfcd11e5fb1a5115194e30a"
+  },
+  "cleanup": {
+    "knownDriverAndNativeProcessesAbsent": 8,
+    "privateListenerPortAvailable": true,
+    "canaryExists": [
+      false,
+      false
+    ],
+    "fixtureBytesRetained": 46052,
+    "noDeletion": true,
+    "scope": "Recorded driver/native process IDs and listener only; no system-wide process absence claim"
+  }
+}

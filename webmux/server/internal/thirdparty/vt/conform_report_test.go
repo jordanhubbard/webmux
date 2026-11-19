@@ -14,6 +14,8 @@ package vt_test
 // charproc.c actually sends for CASE_DSR.
 
 import (
+	"errors"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -319,7 +321,7 @@ func TestConform_PixelSizeReports(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			emu := vt.NewEmulator(80, 24)
 			emu.SetCellSize(tc.cw, tc.ch)
-			next := replies(emu)
+			next, _ := replies(t, emu)
 			if _, err := emu.WriteString(tc.in); err != nil {
 				t.Fatal(err)
 			}
@@ -331,7 +333,7 @@ func TestConform_PixelSizeReports(t *testing.T) {
 
 	t.Run("a new cell size is reported once while 2048 is on", func(t *testing.T) {
 		emu := vt.NewEmulator(80, 24)
-		next := replies(emu)
+		next, _ := replies(t, emu)
 		if _, err := emu.WriteString("\x1b[?2048h"); err != nil {
 			t.Fatal(err)
 		}
@@ -350,7 +352,7 @@ func TestConform_PixelSizeReports(t *testing.T) {
 
 	t.Run("a zero cell size keeps the cell set before", func(t *testing.T) {
 		emu := vt.NewEmulator(80, 24)
-		next := replies(emu)
+		next, _ := replies(t, emu)
 		emu.SetCellSize(8, 16)
 		emu.SetCellSize(0, 0)
 		if _, err := emu.WriteString("\x1b[16t"); err != nil {
@@ -363,7 +365,7 @@ func TestConform_PixelSizeReports(t *testing.T) {
 
 	t.Run("a new cell size is not reported while 2048 is off", func(t *testing.T) {
 		emu := vt.NewEmulator(80, 24)
-		next := replies(emu)
+		next, _ := replies(t, emu)
 		emu.SetCellSize(8, 16)
 		if got := next(); got != "" {
 			t.Fatalf("a new cell size with 2048 off sent %q, want nothing", got)
@@ -374,15 +376,32 @@ func TestConform_PixelSizeReports(t *testing.T) {
 // replies starts one reader of what the emulator writes back to the guest.
 // Each call of the function it returns is the next chunk, or "" when nothing
 // came within a short wait. One reader serves every call, so a call that
-// timed out cannot leave a reader behind that eats the next chunk.
-func replies(emu *vt.Emulator) func() string {
+// timed out cannot leave a reader behind that eats the next chunk. The owning
+// test closes the emulator and joins its reader, including a full reply queue.
+func replies(t *testing.T, emu *vt.Emulator) (func() string, <-chan struct{}) {
+	t.Helper()
 	ch := make(chan string, 16)
+	stop, done := make(chan struct{}), make(chan struct{})
+	t.Cleanup(func() {
+		close(stop)
+		_ = emu.Close()
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Error("reply reader did not stop at test cleanup")
+		}
+	})
 	go func() {
+		defer close(done)
 		buf := make([]byte, 512)
 		for {
 			n, err := emu.Read(buf)
 			if n > 0 {
-				ch <- string(buf[:n])
+				select {
+				case ch <- string(buf[:n]):
+				case <-stop:
+					return
+				}
 			}
 			if err != nil {
 				return
@@ -396,5 +415,52 @@ func replies(emu *vt.Emulator) func() string {
 		case <-time.After(300 * time.Millisecond):
 			return ""
 		}
+	}, done
+}
+
+func TestRepliesReaderStopsAtOwnerCleanup(t *testing.T) {
+	for _, buffered := range []bool{false, true} {
+		name := "blocked read"
+		if buffered {
+			name = "reply queue backpressure"
+		}
+		t.Run(name, func(t *testing.T) {
+			var emu *vt.Emulator
+			var done <-chan struct{}
+			t.Cleanup(func() {
+				if emu != nil {
+					_ = emu.Close()
+				}
+			})
+			t.Run("owner", func(t *testing.T) {
+				emu = vt.NewEmulator(80, 24)
+				var next func() string
+				next, done = replies(t, emu)
+				if _, err := emu.WriteString("\x1b[c"); err != nil {
+					t.Fatal(err)
+				}
+				if next() == "" {
+					t.Fatal("response reader did not reach its reply barrier")
+				}
+				if buffered {
+					// More responses than the 16 x 512-byte channel can hold.
+					// Teardown must also release a reader blocked sending a reply.
+					if _, err := emu.WriteString(strings.Repeat("\x1b[c", 2048)); err != nil {
+						t.Fatal(err)
+					}
+				}
+			})
+			if emu == nil { // The owner subtest may be excluded by -run.
+				return
+			}
+			select {
+			case <-done:
+			default:
+				t.Fatal("reply reader survived its owning test")
+			}
+			if _, err := emu.WriteString("after cleanup"); !errors.Is(err, io.ErrClosedPipe) {
+				t.Fatalf("emulator survived its owning test: %v", err)
+			}
+		})
 	}
 }

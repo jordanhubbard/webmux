@@ -1,0 +1,26 @@
+File: vt450-combined-windows-amd64.test.exe
+Type: cpu
+Time: 2026-11-18 16:54:30 PST
+Duration: 600.01s, Total samples = 783.62s (130.60%)
+Showing nodes accounting for 165.13s, 21.07% of 783.62s total
+Dropped 1840 nodes (cum <= 3.92s)
+Showing top 18 nodes out of 204
+      flat  flat%   sum%        cum   cum%
+     0.51s 0.065% 0.065%    315.48s 40.26%  runtime.systemstack
+         0     0% 0.065%    268.37s 34.25%  testing.tRunner
+     0.02s 0.0026% 0.068%    241.30s 30.79%  runtime.gcBgMarkWorker.func2
+    10.16s  1.30%  1.36%    241.16s 30.78%  runtime.gcDrain
+         0     0%  1.36%    138.78s 17.71%  runtime.gcDrainMarkWorkerIdle (inline)
+    37.63s  4.80%  6.17%       130s 16.59%  runtime.preemptM
+     0.06s 0.0077%  6.17%    128.97s 16.46%  runtime.preemptone
+     0.16s  0.02%  6.19%    122.95s 15.69%  runtime.gcBgMarkWorker
+     0.36s 0.046%  6.24%    122.09s 15.58%  runtime.(*gcControllerState).enlistWorker
+     0.02s 0.0026%  6.24%    118.26s 15.09%  runtime.lockWithRank (inline)
+     0.05s 0.0064%  6.25%    118.24s 15.09%  runtime.lock (partial-inline)
+     2.26s  0.29%  6.54%    118.24s 15.09%  runtime.lock2
+   113.30s 14.46% 21.00%    113.31s 14.46%  runtime.semasleep
+         0     0% 21.00%    102.38s 13.07%  runtime.gcDrainMarkWorkerDedicated (inline)
+     0.16s  0.02% 21.02%    100.59s 12.84%  runtime.goschedImpl
+     0.21s 0.027% 21.04%     98.22s 12.53%  runtime.newstack
+         0     0% 21.04%     97.64s 12.46%  runtime.gopreempt_m (inline)
+     0.23s 0.029% 21.07%     97.05s 12.38%  runtime.morestack
