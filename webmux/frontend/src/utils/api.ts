@@ -67,6 +67,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export interface CoordinationSendInput {
+  requestId: string; scope: string; provider: string; target: string; message: string; queue: boolean;
+}
+export function checkedCoordinationSendOutcome(value: CoordinationSendResult, id: string, scope: string): CoordinationSendResult {
+  if (!value || value.requestId !== id || !['unobserved', 'pending', 'uncertain', 'completed', 'refused', 'cancelled'].includes(value.requestState || '')
+    || (value.request && (value.request.requestId !== id || value.request.scope !== scope || value.request.provider !== 'agent-deck' || !value.request.target || typeof value.request.message !== 'string' || typeof value.request.queue !== 'boolean'))) {
+    throw new Error('The original send outcome is unconfirmed. Keep its saved request; do not resend as a new instruction.');
+  }
+  return value;
+}
+
 export interface BrowserAction {
   action: string; profileId?: string; force?: boolean; url?: string; text?: string; key?: string; code?: string;
   keyCode?: number; modifiers?: number; x?: number; y?: number; deltaY?: number; deltaX?: number; target?: string;
@@ -214,7 +225,10 @@ export const api = {
   getRigProjectPods: (projectId: string, projectName: string) => request<{ projectId: string; projectName: string; pods: string[]; source: 'native-spec' | 'legacy-seats' }>('/coordination/rig/pods', { method: 'POST', body: JSON.stringify({ projectId, projectName }) }),
   browseCoordinationWorkspaces: (provider: string, host: string, path?: string) => request<WorkspaceListing>('/coordination/workspaces', { method: 'POST', body: JSON.stringify({ provider, host, path }) }),
   attachCoordinatedAgent: (provider: string, target: string, position?: { row: number; col: number }) => request<Session>('/coordination/attach', { method: 'POST', body: JSON.stringify({ provider, target, ...position }) }),
-  sendCoordinationMessage: (provider: string, target: string, message: string, queue: boolean) => request<CoordinationSendResult>('/coordination/messages', { method: 'POST', body: JSON.stringify({ provider, target, message, queue }) }),
+  sendCoordinationMessage: async (input: CoordinationSendInput) => checkedCoordinationSendOutcome(await request<CoordinationSendResult>('/coordination/messages', { method: 'POST', body: JSON.stringify(input) }), input.requestId, input.scope),
+  getCoordinationSendScope: () => request<{ scope: string }>('/coordination/send-intents', { cache: 'no-store' }),
+  inspectCoordinationSend: async (id: string, scope: string) => checkedCoordinationSendOutcome(await request<CoordinationSendResult>(`/coordination/send-intents/${encodeURIComponent(id)}`, { cache: 'no-store', headers: { 'X-WebMux-Send-Scope': scope } }), id, scope),
+  dismissCoordinationSend: async (id: string, scope: string) => checkedCoordinationSendOutcome(await request<CoordinationSendResult>(`/coordination/send-intents/${encodeURIComponent(id)}/dismiss`, { method: 'POST', headers: { 'X-WebMux-Send-Scope': scope } }), id, scope),
   getCoordinationSendStatus: (provider: string, target: string, sendId: string) => request<Record<string, unknown>>('/coordination/send-status', { method: 'POST', body: JSON.stringify({ provider, target, sendId }) }),
   drainCoordinationRemote: (provider: string, remote: string, target: string) => request<CoordinationDrainResult>('/coordination/drain', { method: 'POST', body: JSON.stringify({ provider, remote, target }) }),
   getOpenRig: () => request<{ available: boolean; message: string; session: Session | null; views?: Record<string, Session>; proof?: { phase: string; run_id: string; message: string; nonce_a?: string; nonce_b?: string; digest?: string } | null }>('/openrig'),

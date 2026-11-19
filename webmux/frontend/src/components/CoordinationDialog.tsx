@@ -3,6 +3,7 @@ import { Dialog } from './Dialog';
 import { RigStopDialog } from './RigStopDialog';
 import './CoordinationDialog.css';
 import { api, CoordinationCreationUnconfirmedError, CoordinationTrustRequiredError, type CoordinationCreateRequest } from '../utils/api';
+import { useCoordinationSendIntent } from '../hooks/useCoordinationSendIntent';
 import { executionHostLabel } from '../utils/sessionIdentity';
 import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
 import type { Session } from '../types';
@@ -35,8 +36,20 @@ export interface CoordinationMessage {
   kind?: string; level?: string; sourceRemote?: string;
 }
 export interface CoordinationSendResult {
+  requestId?: string; requestState?: 'unobserved' | 'pending' | 'uncertain' | 'completed' | 'refused' | 'cancelled'; requestCode?: string;
+  request?: import('../utils/api').CoordinationSendInput;
   target: string; sendId?: string; state?: string; verdict?: string; delivery?: string;
   confirmation?: string; reason?: string; queued: boolean; submitted: boolean;
+}
+function deliveryLabel(value: CoordinationSendResult) {
+  switch (value.requestState) {
+    case 'unobserved': return 'not observed';
+    case 'pending': return 'not dispatched';
+    case 'uncertain': return 'outcome unknown';
+    case 'refused': return 'refused before dispatch';
+    case 'cancelled': return 'cancelled before dispatch';
+    default: return value.state || value.verdict || value.delivery || 'unknown';
+  }
 }
 export interface CoordinationDrainResult {
   remote: string; target: string; fetched: number; written: number; duplicates: number; unknown: number;
@@ -89,6 +102,12 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const [drainTarget, setDrainTarget] = useState('');
   const [drainResult, setDrainResult] = useState<CoordinationDrainResult | null>(null);
   const { setActivePane } = useWorkspacePane();
+  const instructionReturned = useCallback((target: string, result: CoordinationSendResult) => {
+    setDeliveries(current => ({ ...current, [`agent-deck:${target}`]: result }));
+    if (result.requestState === 'completed') setInstruction('');
+  }, []);
+  const sendIntent = useCoordinationSendIntent(!launchOnly, instructionReturned);
+
 
   const refresh = useCallback((): Promise<void> => {
     if (refreshing.current) return refreshing.current;
@@ -274,13 +293,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const sendInstruction = async (seat: CoordinationSeat) => {
     const message = instruction.trim();
     if (!message) return;
-    setBusy(true); setError('');
-    try {
-      const result = await api.sendCoordinationMessage(seat.provider, seat.id, message, queueInstruction);
-      setDeliveries(current => ({ ...current, [`${seat.provider}:${seat.id}`]: result }));
-      setInstruction('');
-    } catch (err) { setError(String(err)); }
-    finally { setBusy(false); }
+    await sendIntent.send({ provider: seat.provider, target: seat.id, message, queue: queueInstruction });
   };
   const drainRemoteCompletions = async () => {
     if (!drainRemote || !drainTarget) return;
@@ -293,6 +306,19 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   };
 
   const content = <>
+    {sendIntent.pending && <section aria-label="Saved instruction" className="coordination-delivery" aria-live="polite">
+      <strong>Saved instruction{sendIntent.pending.input ? ` for ${sendIntent.pending.input.target}` : ''}</strong>
+      <p>{sendIntent.pending.outcome?.requestState === 'completed' ? 'The owner returned a send receipt. Delivery progress is shown on its session.'
+        : sendIntent.pending.outcome?.requestState === 'refused' ? 'This request was refused before provider dispatch.'
+          : sendIntent.pending.outcome?.requestState === 'cancelled' ? 'The original instruction was stopped before dispatch and will not be sent.'
+            : 'Its outcome is not confirmed. The original request stays saved; no new instruction is sent automatically.'}</p>
+      {sendIntent.pending.input && <details><summary>Original instruction</summary><pre>{sendIntent.pending.input.message}</pre></details>}
+      <button type="button" disabled={sendIntent.busy} onClick={() => void sendIntent.inspect()}>Check original send</button>
+      {sendIntent.canContinue && <button type="button" disabled={sendIntent.busy} onClick={() => void sendIntent.continueOriginal()}>Continue original request</button>}
+      <button type="button" disabled={sendIntent.busy} onClick={() => { void sendIntent.dismiss().then(done => { if (done) setInstruction(''); }); }}>Dismiss saved request and compose another</button>
+      <p>Dismissing lets you compose a different instruction. It does not cancel a send whose outcome is unknown.</p>
+    </section>}
+    {sendIntent.error && <p role="alert">{sendIntent.error}</p>}
     <div className="coordination-dialog">
       {!launchOnly && <p>WebMux provides built-in terminals and messaging across connected servers. You can enable Agent Deck and Rig together to manage agent projects and sessions.</p>}
       {statusError && <p role="alert" className="coordination-error">{statusError}</p>}
@@ -429,14 +455,14 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
                     : seat.managed && seat.provider === 'rig' && seat.state === 'stopped' && seat.workspace ? <button type="button" disabled={busy} onClick={() => void restartSeat(seat)}>Restart provider and open</button>
                       : seat.managed && seat.provider === 'rig' && seat.state === 'detached' && seat.transportState === 'unavailable' && seat.workspace ? <><p>The attachment has ended. Reconnecting attaches a surviving provider or starts a new conversation if none remains.</p><button type="button" disabled={busy} onClick={() => void restartSeat(seat)}>Reconnect attachment and open</button></>
                         : <span className="coordination-unavailable">No attach transport reported by this provider</span>}
-                  {seat.provider === 'agent-deck' && seat.openable && <button type="button" disabled={busy} onClick={() => { setComposerTarget(current => current === `${seat.provider}:${seat.id}` ? '' : `${seat.provider}:${seat.id}`); setInstruction(''); }}>{composerTarget === `${seat.provider}:${seat.id}` ? 'Cancel instruction' : 'Send instruction'}</button>}
+                  {seat.provider === 'agent-deck' && seat.openable && <button type="button" disabled={busy || sendIntent.busy || !!sendIntent.pending || !sendIntent.ready} onClick={() => { setComposerTarget(current => current === `${seat.provider}:${seat.id}` ? '' : `${seat.provider}:${seat.id}`); setInstruction(''); }}>{composerTarget === `${seat.provider}:${seat.id}` ? 'Cancel instruction' : 'Send instruction'}</button>}
                   {seat.provider === 'rig' && seat.canReviewStop && <button type="button" disabled={busy} onClick={() => setStopSeat(seat)}>Review local seat Stop</button>}
                   {composerTarget === `${seat.provider}:${seat.id}` && <form className="coordination-composer" onSubmit={event => { event.preventDefault(); void sendInstruction(seat); }}>
-                    <label>Instruction for {seat.name}<textarea required value={instruction} onChange={event => setInstruction(event.target.value)} placeholder="Describe the bounded task or question" /></label>
-                    <label className="coordination-inline"><input type="checkbox" checked={queueInstruction} onChange={event => setQueueInstruction(event.target.checked)} /> Queue safely until the target can accept input</label>
-                    <button type="submit" disabled={busy || !instruction.trim()}>{queueInstruction ? 'Queue instruction' : 'Send now'}</button>
+                    <label>Instruction for {seat.name}<textarea required readOnly={!!sendIntent.pending} value={instruction} onChange={event => setInstruction(event.target.value)} placeholder="Describe the bounded task or question" /></label>
+                    <label className="coordination-inline"><input type="checkbox" checked={queueInstruction} disabled={!!sendIntent.pending} onChange={event => setQueueInstruction(event.target.checked)} /> Queue safely until the target can accept input</label>
+                    <button type="submit" disabled={busy || sendIntent.busy || !!sendIntent.pending || !sendIntent.ready || !instruction.trim()}>{queueInstruction ? 'Queue instruction' : 'Send now'}</button>
                   </form>}
-                  {deliveries[`${seat.provider}:${seat.id}`] && <p role="status" className="coordination-delivery">Delivery: {deliveries[`${seat.provider}:${seat.id}`].state || deliveries[`${seat.provider}:${seat.id}`].verdict || deliveries[`${seat.provider}:${seat.id}`].delivery || 'accepted'}{deliveries[`${seat.provider}:${seat.id}`].confirmation ? ` · ${deliveries[`${seat.provider}:${seat.id}`].confirmation}` : ''}{deliveries[`${seat.provider}:${seat.id}`].reason ? ` · ${deliveries[`${seat.provider}:${seat.id}`].reason}` : ''}</p>}
+                  {deliveries[`${seat.provider}:${seat.id}`] && <p role="status" className="coordination-delivery">Delivery: {deliveryLabel(deliveries[`${seat.provider}:${seat.id}`])}{deliveries[`${seat.provider}:${seat.id}`].confirmation ? ` · ${deliveries[`${seat.provider}:${seat.id}`].confirmation}` : ''}{deliveries[`${seat.provider}:${seat.id}`].reason ? ` · ${deliveries[`${seat.provider}:${seat.id}`].reason}` : ''}</p>}
                 </article></li>)}
               </ul>}
               {project.provider !== 'webmux' && (!project.historical || project.provider === 'rig') && !project.readOnly && <button type="button" disabled={busy} onClick={() => { chooseProvider(project.provider); setMode('existing'); setProjectID(project.id); setHost(project.host); document.getElementById('coordination-create-seat')?.scrollIntoView({ block: 'nearest' }); }}>Create session in this project</button>}

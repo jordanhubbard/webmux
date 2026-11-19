@@ -399,31 +399,42 @@ func (s *Server) sendCoordinationMessage(w http.ResponseWriter, r *http.Request,
 	if !s.openRigAccess(w, owner) {
 		return
 	}
-	var body struct {
-		Provider string `json:"provider"`
-		coordinationSendRequest
-	}
-	if json.NewDecoder(http.MaxBytesReader(w, r.Body, 264*1024)).Decode(&body) != nil || body.Provider == "" || body.Target == "" || strings.TrimSpace(body.Message) == "" {
+	var body coordinationSendInput
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 264*1024))
+	decoder.DisallowUnknownFields()
+	if decoder.Decode(&body) != nil || decoder.Decode(new(any)) != io.EOF {
 		writeError(w, 400, "Invalid coordination message.")
 		return
 	}
-	provider := s.coordinationProvider(owner, body.Provider)
-	if provider == nil || !provider.Descriptor().Available {
-		writeError(w, 409, "The selected coordination provider is unavailable.")
+	if body.Provider != "agent-deck" {
+		writeError(w, 409, "The selected coordination provider does not support structured messaging.")
 		return
 	}
-	messenger, ok := provider.(coordinationMessenger)
-	if !ok {
-		writeError(w, 409, "The selected coordination provider does not support structured messaging.")
+	if !validCoordinationSendInput(body) {
+		writeError(w, 400, "A request UUID and a frozen instruction are required.")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
 	defer cancel()
-	result, err := messenger.Send(ctx, body.coordinationSendRequest)
+	result, err := consumeCoordinationSend(ctx, s.store.Home, owner, body, func(ctx context.Context, input coordinationSendRequest) (coordinationSendResult, error) {
+		if s.openRigPermission(owner) != nil {
+			return coordinationSendResult{}, coordinationSendRefusal("access_changed")
+		}
+		provider := s.coordinationProvider(owner, body.Provider)
+		if provider == nil || !provider.Descriptor().Available {
+			return coordinationSendResult{}, coordinationSendRefusal("provider_unavailable")
+		}
+		messenger, ok := provider.(coordinationMessenger)
+		if !ok {
+			return coordinationSendResult{}, coordinationSendRefusal("messaging_unsupported")
+		}
+		return messenger.Send(ctx, input)
+	})
 	if err != nil {
-		writeError(w, 502, "Coordination message: "+err.Error())
+		writeError(w, 409, err.Error())
 		return
 	}
+	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, result)
 }
 

@@ -42,7 +42,7 @@ test('coordination lives in its own tab and leaves the terminal grid intact', as
   expect(await (await request.get('/api/sessions')).json()).toEqual(original);
 });
 
-test('Agent Deck UI queues work and drains remote completion records', async ({ page }) => {
+test('Agent Deck UI queues work and drains remote completion records', async ({ page, request }) => {
   const status = {
     contract: 'webmux-coordination/v1', defaultLaunchProvider: 'agent-deck', defaultView: 'agent-deck', enabledProviders: ['agent-deck'], errors: {}, attentionCount: 1,
     providers: [{ id: 'agent-deck', label: 'Agent Deck', available: true, enabled: true, contract: 'agent-deck-cli/v1', capabilities: ['sessions', 'remote', 'parent-child', 'send', 'queue', 'send-status', 'completion-inbox', 'remote-drain'] }],
@@ -61,7 +61,7 @@ test('Agent Deck UI queues work and drains remote completion records', async ({ 
   await page.route(/\/api\/coordination(?:\?.*)?$/, route => route.fulfill({ json: status }));
   await page.route('**/api/coordination/messages', async route => {
     sent = route.request().postDataJSON();
-    await route.fulfill({ json: { target: 'sparky:worker', sendId: 'send-1', state: 'queued', queued: true, submitted: true } });
+    await route.fulfill({ json: { requestId: route.request().postDataJSON().requestId, requestState: 'completed', target: 'sparky:worker', sendId: 'send-1', state: 'queued', queued: true, submitted: true } });
   });
   await page.route('**/api/coordination/send-status', route => route.fulfill({ json: { state: 'landed', confirmation: 'accepted', submitted: true } }));
   await page.route('**/api/coordination/drain', async route => {
@@ -79,7 +79,7 @@ test('Agent Deck UI queues work and drains remote completion records', async ({ 
   await worker.getByLabel('Instruction for reviewer').fill('Review the authentication changes');
   await worker.getByRole('button', { name: 'Queue instruction' }).click();
   await expect(worker.getByRole('status')).toContainText('queued');
-  expect(sent).toEqual({ provider: 'agent-deck', target: 'sparky:worker', message: 'Review the authentication changes', queue: true });
+  expect(sent).toEqual({ provider: 'agent-deck', target: 'sparky:worker', message: 'Review the authentication changes', queue: true, requestId: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/), scope: (await (await request.get('/api/coordination/send-intents')).json()).scope });
   await dialog.getByRole('button', { name: 'Collect completions' }).click();
   await expect(dialog.getByText(/Collected 1 new of 2 records/)).toBeVisible();
   expect(drained).toEqual({ provider: 'agent-deck', remote: 'sparky', target: 'local:conductor' });

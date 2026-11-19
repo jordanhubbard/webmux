@@ -22,7 +22,7 @@ func TestOpenRigRequiresAdministratorAndReportsMissingInstallation(t *testing.T)
 	admin := responseToken(t, request(handler, "POST", "/api/auth/bootstrap", `{"username":"owner","password":"owner-password"}`, ""))
 	requireStatus(t, request(handler, "POST", "/api/auth/register", `{"username":"member","password":"member-password"}`, admin), 201)
 	member := responseToken(t, request(handler, "POST", "/api/auth/login", `{"username":"member","password":"member-password"}`, ""))
-	for _, endpoint := range []struct{ method, path string }{{"GET", "/api/coordination/changes"}, {"GET", "/api/coordination"}, {"POST", "/api/coordination/agents"}, {"POST", "/api/coordination/workspaces"}, {"POST", "/api/coordination/rig/pods"}, {"POST", "/api/coordination/attach"}, {"POST", "/api/coordination/stop/preview"}, {"POST", "/api/coordination/stop"}, {"POST", "/api/coordination/messages"}, {"POST", "/api/coordination/send-status"}, {"POST", "/api/coordination/drain"}, {"GET", "/api/openrig"}, {"GET", "/api/openrig/agents"}, {"POST", "/api/openrig/attach"}, {"POST", "/api/openrig/proof/stop"}} {
+	for _, endpoint := range []struct{ method, path string }{{"GET", "/api/coordination/send-intents"}, {"GET", "/api/coordination/send-intents/c19a6ca1-ce5c-4c51-9750-1e7ab6f6fcaa"}, {"POST", "/api/coordination/send-intents/c19a6ca1-ce5c-4c51-9750-1e7ab6f6fcaa/dismiss"}, {"GET", "/api/coordination/changes"}, {"GET", "/api/coordination"}, {"POST", "/api/coordination/agents"}, {"POST", "/api/coordination/workspaces"}, {"POST", "/api/coordination/rig/pods"}, {"POST", "/api/coordination/attach"}, {"POST", "/api/coordination/stop/preview"}, {"POST", "/api/coordination/stop"}, {"POST", "/api/coordination/messages"}, {"POST", "/api/coordination/send-status"}, {"POST", "/api/coordination/drain"}, {"GET", "/api/openrig"}, {"GET", "/api/openrig/agents"}, {"POST", "/api/openrig/attach"}, {"POST", "/api/openrig/proof/stop"}} {
 		requireStatus(t, request(handler, endpoint.method, endpoint.path, "", member), 403)
 	}
 	requireStatus(t, request(handler, "GET", "/api/openrig", "", admin), 200)
@@ -38,7 +38,7 @@ func TestAgentDeckCommunicationEndpointsPreserveProviderIdentity(t *testing.T) {
 	executable, _ := fakeAgentDeck(t)
 	t.Setenv("PATH", filepath.Dir(executable)+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	sent := request(handler, "POST", "/api/coordination/messages", `{"provider":"agent-deck","target":"local:local-1","message":"review this","queue":true}`, "")
+	sent := request(handler, "POST", "/api/coordination/messages", `{"scope":"`+coordinationSendScope(s.store.Home, "anonymous")+`","requestId":"c19a6ca1-ce5c-4c51-9750-1e7ab6f6fcaa","provider":"agent-deck","target":"local:local-1","message":"review this","queue":true}`, "")
 	requireStatus(t, sent, 200)
 	if !strings.Contains(sent.Body.String(), `"sendId":"send-local"`) || !strings.Contains(sent.Body.String(), `"queued":true`) {
 		t.Fatalf("unexpected send response: %s", sent.Body.String())
