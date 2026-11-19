@@ -20,6 +20,28 @@ import uuid
 BASE_IMAGE = 'ubuntu@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852'
 
 
+def run_logged(command, log, *, check=True, timeout=30):
+    log.write(json.dumps({'command': command, 'event': 'start', 'timeoutSeconds': timeout}) + '\n')
+    log.flush()
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired as error:
+        # TimeoutExpired retains bytes even with text=True, possibly ending in
+        # an incomplete UTF-8 sequence. Keep that evidence before propagating
+        # the original failure to the qualifier's existing cleanup/report path.
+        def text(value):
+            return value.decode('utf-8', errors='replace') if isinstance(value, bytes) else value or ''
+        log.write(json.dumps({'command': command, 'timedOut': True, 'timeoutSeconds': error.timeout})
+                  + '\n' + text(error.stdout) + text(error.stderr) + '\n')
+        log.flush()
+        raise
+    log.write(json.dumps({'command': command, 'exit': result.returncode}) + '\n' + result.stdout + result.stderr + '\n')
+    log.flush()
+    if check and result.returncode:
+        raise RuntimeError(f'{Path(command[0]).name} failed ({result.returncode}); inspect private fixture.log')
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cli', required=True, type=Path)
@@ -40,12 +62,7 @@ def main():
     log = (output / 'fixture.log').open('w')
 
     def run(command, *, check=True, timeout=30):
-        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
-        log.write(json.dumps({'command': command, 'exit': result.returncode}) + '\n' + result.stdout + result.stderr + '\n')
-        log.flush()
-        if check and result.returncode:
-            raise RuntimeError(f'{Path(command[0]).name} failed ({result.returncode}); inspect private fixture.log')
-        return result
+        return run_logged(command, log, check=check, timeout=timeout)
 
     def owned(kind, identity):
         result = run(['docker', kind, 'inspect', identity, '--format', '{{json .Config.Labels}}'])
