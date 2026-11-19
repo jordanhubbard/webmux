@@ -1,4 +1,39 @@
-# Native Windows ARM64 qualification candidate
+# Native Windows ARM64 qualification
+
+## Component acceptance verified 2026-11-19
+
+The component requirements in #456 are verified against original native source
+`bb16ac823a40b3d15f4b55fc55c91318ec803b3e`,
+[run 44608762013](https://github.com/jordanhubbard/webmux/actions/runs/44608762013)
+and artifact `14574383516`. This is a readback and semantic audit of retained
+native evidence; no new workflow or native run was started.
+
+| Requirement | Verified evidence |
+| --- | --- |
+| Native OS, compiler and tools | Windows ARM64 OS; native ARM64 Go host/target and Node; actual capture executable independently PE-inspected as ARM64 and hash-bound to its receipt. |
+| Server and retained models | 495 server, 156 cell-model and 317 terminal-engine top-level passes; no failures. Existing platform skips remain recorded, and no race-detector support is claimed. |
+| Actual ConPTY streams | All 28 distinct source-defined capture cases execute and pass with no capture failures/skips, one job per case and 56 distinct snapshot tokens. |
+| Renderer comparison | All 1,384 source-derived case titles match the completed job log. All 1,381 comparison receipts match at initial, continued and recaptured stages; zero replay queries. The 259 bare-reference cases retain unmodified renderer methods; 1,122 use the separately identified shared-hyperlink reference. |
+| Refusal and existing gates | Wrong OS/Node/Go host/target and mismatched/malformed PE controls pass. The reviewed ARM candidate preserves CI/Packaging bytes versus updated parent `3b80d0d`; the independent native gate retains its separate non-race scope. |
+| Source and artifact binding | Original exact-head workflow, artifact metadata, source-head record, native capture PE/hash and all 2,782 extracted member hashes verify. |
+
+The renderer browser is **AMD64 under emulation**, explicitly PE-inspected and
+selected by the workflow. This does not claim a native ARM64 browser.
+
+The [acceptance receipt](acceptance-2026-11-19.json) also reconciles current main
+`694ee835b3b46fd56e4c7a4aa75588a1ca00f367`: runtime/capture/renderer trees,
+dependencies, architecture admission and the native workflow equal the qualified
+head. Subsequent application-tree changes are Darwin/Linux-only hook files and
+an expanded POSIX test whose Windows skip guard is unchanged. Actual native
+execution remains attributed to `bb16`, not relabeled as a fresh `694` run.
+Workflow/artifact source binding is not an independent signed VCS attestation.
+
+This completes #456's component scope. Authenticated Windows ARM64 coding
+conversation/reboot recovery remains under #318/#438; installed-service recovery,
+physical/provider acceptance and the original #450 corruption are separate.
+Current-candidate release checks and the full roadmap remain open.
+
+## Historical implementation and first qualification attempts
 
 [#456](https://github.com/jordanhubbard/webmux/issues/456) adds a separate native
 Windows 11 ARM64 gate under #318/#355. The existing AMD64, macOS and Linux CI and
@@ -28,12 +63,11 @@ these portable controls are not native Windows acceptance. Strict project types,
 YAML structure and unchanged existing-gate checks also pass. Source bindings
 are in [source-manifest.json](source-manifest.json).
 
-Native ARM64 results are **pending**, not established by this documentation.
-Authenticated coding-conversation recovery, installed-service recovery and the
-separate unexplained #450 panic remain open. The pre-existing #429 audit gate
-continues to block merge/release. Actual native results will be recorded in the
-issue and private receipts without moving this qualification head for every
-result update.
+At this original preparation checkpoint, native ARM64 results were pending and
+#429 blocked its merge/release gate. The historical source manifest retains
+that status; the later acceptance review above records the completed native
+component evidence. It does not establish authenticated coding-conversation or
+installed-service recovery, or repair the separate unexplained #450 panic.
 
 
 The combined candidate also retains the native-qualified VT aggregate-budget
