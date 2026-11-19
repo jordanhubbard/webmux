@@ -70,3 +70,7 @@ at this receipt. Other lifecycle managers, accounts/policies, service/MSI
 upgrades, authenticated ARM64 and full #318/#438 acceptance remain separate.
 The legacy shell/network failures (#538), private VT timeout (#536), original
 corruption cause (#450) and full roadmap/release completion remain open.
+
+Subsequent hosted CI exposed browser-fixture cleanup assumptions; the
+[fixture follow-up](ci-fixtures.md) preserves the Stop/retention contract and
+separates the pre-existing hosted native-startup gap (#543) from browser controls.

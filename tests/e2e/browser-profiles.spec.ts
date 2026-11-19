@@ -1,3 +1,4 @@
+import { disposeFixtureTerminal } from './terminal-lifecycle.mts';
 import { test, expect } from '@playwright/test';
 import http from 'node:http';
 import { writeFileSync } from 'node:fs';
@@ -131,7 +132,7 @@ test('saved Chromium profile survives worker replacement while viewer control is
  } finally {
   await request.delete(endpoint, { data: { viewer: a, controlToken: token } }).catch(() => {});
   if (saved) await request.delete(`${endpoint}/profiles`, { data: { profileId: saved } }).catch(() => {});
-  await request.delete(`/api/sessions/${session.id}`).catch(() => {});
+  await disposeFixtureTerminal(request, session.id, info);
   if (process.platform !== 'win32') { try { execFileSync('tmux', ['kill-session', '-t', `webmux-${session.id}`]); } catch { /* already closed */ } }
   origin.closeAllConnections();
   await new Promise<void>(resolve => origin.close(() => resolve()));
