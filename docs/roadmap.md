@@ -17,8 +17,9 @@ priority ahead of the other reliability and integration follow-ups.
 [#452](https://github.com/jordanhubbard/webmux/issues/452) composes the independent
 underline/snapshot profile, Rig/Agents integration, owning-profile routing and
 Windows Chromium AppContainer installation repair. Local combined-source race,
-renderer and native coordinator checks pass; full hosted combined qualification
-and audit #429 remain required. The [source bindings and scope](validation/roadmap-integration-2026-11-17/README.md)
+renderer and native coordinator checks pass. Earlier canonicalc195 completed all
+ten exact-head workflows; the newer Windows Stop/Hide and startup-gate composition
+requires fresh qualification. #429 retains exposure-classification review. The [source bindings and scope](validation/roadmap-integration-2026-11-17/README.md)
 preserve the separate #318, #438 and #246 acceptance gaps. This candidate does
 not mark those items or the overall roadmap complete and does not cut a release.
 
@@ -236,11 +237,12 @@ Hidden or contradictory underline flags are being implemented in draft
 state, bounded v2 snapshot encoding, bare-renderer comparisons and capability
 negotiation. The first 28-case native capture exposed one combining-cell
 recapture mismatch. The correction now passes all 28 fresh ConPTY cases and
-1,384 renderer/lifecycle checks. The dependency audit still blocks merge;
+1,384 renderer/lifecycle checks. The unchanged audit now passes after advisory withdrawal; #429 classification review remains open;
 broader native coding-session acceptance remains separate. See the
 [current scope](validation/xterm-underline-2026-11-17/README.md).
-The dependency audit also remains blocked by
-[#429](https://github.com/jordanhubbard/webmux/issues/429).
+The unchanged dependency gate passes;
+[#429](https://github.com/jordanhubbard/webmux/issues/429) retains source-bound
+runtime/build-input classification review, without claiming the matcher repaired.
 Other unqualified OSC display features and the broader native coding-session
 lifecycle remain under #355/#318.
 
@@ -424,6 +426,15 @@ qualification remains under #110.
 
 The [Rig grid integration candidate](validation/rig-grid-integration-2026-11-17/README.md)
 reconciles pending #432/#433/#435/#437/#440/#441/#444/#446 with final local native
-coverage and a hidden-grid observation fix. It remains pending hosted checks,
-review and audit remediation; it does not close the broader roadmap or authorize
+coverage and a hidden-grid observation fix. It remains subject to current-head qualification,
+review and #429 exposure classification; it does not close the broader roadmap or authorize
 a release.
+
+Ordinary-local Windows Stop/Hide is composed under #541, including a
+[preparation-save error-state repair](validation/windows-local-preparation-save-2026-11-19/README.md).
+Native application startup on hosted Windows remains under
+[#543](https://github.com/jordanhubbard/webmux/issues/543): bounded phase/error
+diagnostics and a mandatory fresh-shell/confirmed-Stop browser gate are prepared,
+with [native execution still pending](validation/windows-provider-startup-2026-11-19/README.md).
+Browser-companion anchors and passing ConPTY unit/capture tests do not close that
+application gap. Full recovery, native archive review and release remain open.

@@ -1,0 +1,31 @@
+{
+  "recordedUTC": "2026-11-19T05:05:55.057024+00:00",
+  "implementation": "e19b88b998f3501716ad01d0d37b28aa30093ed3",
+  "negativeControl": {
+    "parent": "43d00df1fb167c785f50d06ffd3a93da1a138e3a",
+    "finalTestSHA256": "4f1cb2532cb5f3c18c4eb09486290e6f5c73e31476bb87327d877629cd0739c6",
+    "parentBrokerSHA256": "7511eb97d71c0311be50feeefe8910e130b844f75993c14c670e3fb00b75a5ae",
+    "fixedBrokerSHA256": "c2e35c7f4b50bae93b3379efe9c5da433b9cb9af3c6f8dc9e59dc6b68db0afbb",
+    "negativeExit": 1,
+    "negativeLogSHA256": "43fc51ed194ca047a2c85139b7fed05e8cce8a2e61384a5a61ea7945c59b13df",
+    "originalFailure": "Actual real-store transient prelaunch save failure leaves connecting persisted without launch; no native Windows execution claim."
+  },
+  "raceRepetitions": 20,
+  "raceSuites": [
+    "ok  \tgithub.com/jordanhubbard/webmux/server/internal/session\t16.190s",
+    "ok  \tgithub.com/jordanhubbard/webmux/server/internal/httpapi\t67.305s"
+  ],
+  "vet": "macOS and Windows AMD64 session/httpapi PASS",
+  "scope": "Broker real-store fault sequence, without native Windows execution or an HTTP-level injected Create/save stub.",
+  "initialPositiveTestCorrection": "The initial retry assertion expected connected before fake PTY output; corrected to the existing connecting-with-live-observed-run readiness contract. The earlier failure log is retained.",
+  "sourceSHA256": {
+    "webmux/server/internal/session/broker.go": "c2e35c7f4b50bae93b3379efe9c5da433b9cb9af3c6f8dc9e59dc6b68db0afbb",
+    "webmux/server/internal/session/local_lifecycle_test.go": "4f1cb2532cb5f3c18c4eb09486290e6f5c73e31476bb87327d877629cd0739c6"
+  },
+  "logSHA256": {
+    "preparation-save-final-test-negative.log": "43fc51ed194ca047a2c85139b7fed05e8cce8a2e61384a5a61ea7945c59b13df",
+    "preparation-save-positive-corrected.log": "855358baeb47c6e6b7e10995b5765552115d1a657f55bbd255029c1c7c24b90e",
+    "preparation-save-full-checks.log": "551c7e5be924cf53cd8d977f1580cbfef45f2b74138022360941a78dd1a971c7",
+    "preparation-save-positive.log": "2ff2786a5929cb8969bea12d6c21df67a483193d4c552547da5060dbff831f6d"
+  }
+}

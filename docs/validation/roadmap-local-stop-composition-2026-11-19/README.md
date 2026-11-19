@@ -47,3 +47,13 @@ The same checkpoint publishes the separate
 [read-only packaged-service case](../packaged-service-upgrade-2026-11-19/readonly-receipt.json)
 and [matcher build-input review](../picomatch-build-inputs-2026-11-19/README.md),
 each with its original exact-source scope.
+
+Subsequent preparation includes the [real-store save-state repair](../windows-local-preparation-save-2026-11-19/README.md)
+and published283 fixture-lifecycle correction. The helper-list merge adds only
+the lifecycle test file and preserves all existing arguments in order. All263
+helpers and eleven actual macOS Go/Chrome cases in five isolated file invocations
+pass ([fixture receipt](fixture41f.json)). The new
+[Windows startup evidence and live-shell gate](../windows-provider-startup-2026-11-19/README.md)
+have separate source/target limits. Earlier canonicalc195 completed all ten
+original workflows with27 ZIP digests, scoped semantics and NAS readbacks; those
+results do not qualify this newer preparation.

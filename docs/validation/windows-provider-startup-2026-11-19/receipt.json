@@ -1,0 +1,35 @@
+{
+  "recordedUTC": "2026-11-19T05:05:55.057024+00:00",
+  "source": "5a3e2896f2a300bc9db61162fc21b6047f87cd2d",
+  "issue": 543,
+  "sourceSHA256": {
+    "webmux/server/internal/nativeprovider/startup_diagnostic.go": "001dd40241e6e7ad955cbb1b355a6d79a1d65c7bcfd36b0575029d99c87286e4",
+    "webmux/server/internal/nativeprovider/startup_diagnostic_test.go": "028ff230c07860c867dc8c7bff946c8b7d081fff55c5fccf430f6066737db7db",
+    "webmux/server/internal/nativeprovider/startup_diagnostic_windows_test.go": "ea3bd2301cade2573c36dcd9e1dfa861970ad1043d330e7af0018ded5e41b9aa",
+    "webmux/server/internal/nativeprovider/lifecycle_windows.go": "cddc3e760ea9baa28016f0f7b8b515f172964c5d596589bb5b9b7d9f6f2e51b2",
+    "webmux/server/internal/nativeprovider/server_windows.go": "783a2057ca4740732846a25906eb1cb36a44d88e166486d75647fb6127901e53",
+    "tests/e2e/windows-local-provider.spec.ts": "a1c7ce621a79418ea3b72236d41cd25456163457cf3b4d10ce87e841532d52a1"
+  },
+  "baseline": {
+    "run": 44453505091,
+    "job": 135322901102,
+    "genericStartupWarnings": 7,
+    "rawJobLogSHA256": "8b1ccb757d0938993ef869e0f563b14faa1ae853b848649068bed082797dac9a",
+    "cause": "Unproven; original message contains no bootstrap/owner phase."
+  },
+  "portablePrivacyTest": "PASS with race; known phase/OS/exit mapping, wrapped OS code and arbitrary child-text rejection",
+  "windowsFaultControl": "Compiled for AMD64/ARM64, not locally executed; real owner startup setup with injected terminal access-denial verifies framed phase/code and no private launch values.",
+  "windowsApplicationGate": "Discovered and strictly typechecked; native Windows execution pending. Requires public connected state, fresh output absent from literal input, original authenticated Stop and observed owner/root disappearance before DELETE.",
+  "platformBuilds": "Windows AMD64/ARM64 provider test images and application cross-builds PASS; not native execution.",
+  "strictTypeScriptProjects": 5,
+  "nativeRuntimeReady": false,
+  "unchanged": "12s Ensure/10s bootstrap/15s caller waits, authentication, lifetime mutex, original owner selection, no replacement after uncertainty, protection/service/account settings and all existing native test operations.",
+  "logSHA256": {
+    "initial-checks.log": "934ae3659d7e27bca2c76ffa96612359ac65a2f8cef4b50e9019f3bcb2f5bfa1",
+    "final2-diagnostic-checks.log": "e0d3df24f0bc1b93f11be717a0dbe7abfefb68342b69be389eb8b05b2a7236d2",
+    "final-ts-discovery.log": "505677618ab07ac959655d85315552f8dd424f866e352d0a52957933869ed64d",
+    "typecheck-and-discovery.log": "a416926bc47597cafe77b7267f2c551324e44a5069919a0d423ea93a32b4b3d8",
+    "application-builds.log": "cd3896036132a5bd2cbdb46ed119b13892ddcc12190d4087f5b4920639660a56"
+  },
+  "setupCorrection": "First discovery used import.meta in a CommonJS spec and found no tests; corrected to __dirname. Final discovery identifies exactly one Windows-only application test."
+}
