@@ -34,6 +34,7 @@ function fixture(t: { after(fn: () => void): void }) {
   const operationFile = path.join(original, 'recovery-operations', operationId + '.json');
   const marker = path.join(original, 'recovery-operations', operationId + '.dispatched');
   const deps = {
+    verifyPolicy: () => {},
     run: () => { throw new Error('No arbitrary command may be replayed'); }, review: async () => manager,
     handoff: async () => { handoffs++; return { alreadyDelivered: false, manager, wait: async () => true, close: async () => { closed++; } }; },
     fetcher: (async (url: string | URL | Request, init?: RequestInit) => {
@@ -155,4 +156,20 @@ posixTest('an unqualified Node runtime refuses before native metadata, owner obs
     await assert.rejects(resumeRigNativeCodex({ ...f.input, prepare: true }, f.deps), /native_resume_runtime_unqualified/);
     assert.deepEqual(f.counts(), { gets: 0, handoffs: 0, closed: 0 }); assert.equal(f.posts.length, 0);
   } finally { Object.defineProperty(process.versions, 'node', descriptor); }
+});
+
+posixTest('policy refusal precedes preparation and dispatch; a handoff-time change closes the channel', async t => {
+  const f = fixture(t); f.deps.verifyPolicy = () => { throw Error('native_resume_policy_changed'); };
+  await assert.rejects(resumeRigNativeCodex({ ...f.input, prepare: true }, f.deps), /native_resume_policy_changed/);
+  assert.equal(f.posts.length, 0); assert.equal(f.counts().handoffs, 0); assert.equal(fs.existsSync(f.marker), false);
+  const g = fixture(t); let checks = 0;
+  g.deps.verifyPolicy = () => { if (++checks === 2) throw Error('native_resume_policy_changed'); };
+  await assert.rejects(resumeRigNativeCodex(g.input, g.deps), /native_resume_policy_changed/);
+  assert.equal(g.posts.length, 0); assert.equal(g.counts().closed, 1); assert.equal(fs.existsSync(g.marker), false);
+});
+posixTest('ordinary duplicate never rechecks policy or reopens a handoff', async t => {
+  const f = fixture(t); await resumeRigNativeCodex(f.input, f.deps);
+  f.deps.verifyPolicy = () => { throw Error('must not inspect an ordinary duplicate'); };
+  const counts = f.counts(); assert.equal((await resumeRigNativeCodex(f.input, f.deps)).posted, false);
+  assert.deepEqual(f.counts(), counts); assert.equal(f.posts.length, 1);
 });
