@@ -3,17 +3,33 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 type FixtureMode = 'race' | 'fresh' | 'stop-denied' | 'interrupt' | 'denied' | 'crash' | 'state' | 'query-error' | 'query-timeout';
 
-// Prepare the fake manager before entering the production command deadlines.
-// A new generated executable per case makes cold fixture initialization part
-// of the one-second state query. The shared executable never calls launchctl;
-// each case still has its own state, environment, commands and log directory.
+let nativeBin: string | undefined;
+function managerBin() {
+  if (nativeBin) return nativeBin;
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-launchd-manager-'));
+  try {
+    const compiled = spawnSync('go', ['build', '-trimpath', '-o', path.join(bin, 'launchctl'), path.resolve(import.meta.dirname, '../tests/fixtures/launchd-native/main.go')], {
+      env: { ...process.env, CGO_ENABLED: '0' }, encoding: 'utf8', timeout: 60_000,
+    });
+    assert.ifError(compiled.error);
+    assert.equal(compiled.status, 0, `Cannot prepare native launchd fixture: ${compiled.stderr}`);
+  } catch (error) { fs.rmSync(bin, { recursive: true, force: true }); throw error; }
+  process.once('exit', () => fs.rmSync(bin, { recursive: true, force: true }));
+  nativeBin = bin;
+  return bin;
+}
+
+// Compile and prepare before entering the unchanged production deadlines.
+// Timed queries execute a native fake manager with no Node startup dependency.
+// It never calls launchctl; cases retain separate state, commands and logs.
 export function prepareLaunchdFixture(mode: FixtureMode, options: { state?: string; preparationDelayMs?: number } = {}) {
+  const bin = managerBin();
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-launchd-install-'));
   const log = path.join(directory, 'install.log');
-  const bin = path.resolve(import.meta.dirname, '../tests/fixtures/launchd-bin');
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     PATH: [bin, path.dirname(process.execPath), process.env.PATH || '/usr/bin:/bin'].join(path.delimiter),
@@ -27,7 +43,9 @@ export function prepareLaunchdFixture(mode: FixtureMode, options: { state?: stri
     const prepared = spawnSync(path.join(bin, 'launchctl'), ['fixture-ready'], { env, encoding: 'utf8', timeout: 10000 });
     assert.ifError(prepared.error);
     assert.equal(prepared.status, 0, `Launchd fixture preparation failed: ${prepared.stdout}${prepared.stderr}`);
-    assert.equal(JSON.parse(fs.readFileSync(path.join(directory, 'ready.json'), 'utf8')).version, process.version);
+    const ready = JSON.parse(fs.readFileSync(path.join(directory, 'ready.json'), 'utf8'));
+    assert.equal(ready.kind, 'webmux-native-launchd-fixture/v1');
+    assert.equal(ready.imageSHA256, createHash('sha256').update(fs.readFileSync(path.join(bin, 'launchctl'))).digest('hex'));
     // Preparation must not simulate any service-manager command or operation.
     assert(!fs.existsSync(path.join(directory, 'commands')));
     assert(!fs.existsSync(path.join(directory, 'state.json')));

@@ -154,6 +154,28 @@ test('prepared fake managers still fail closed on query errors and timeouts', { 
   }
 });
 
+test('timed manager queries have no Node interpreter startup dependency', { skip: process.platform === 'win32' }, () => {
+  const f = prepareLaunchdFixture('state', { state: 'state = running\npid = 123' });
+  try {
+    const trap = path.join(f.directory, 'blocked-node'); fs.mkdirSync(trap);
+    fs.writeFileSync(path.join(trap, 'node'), '#!/bin/sh\nexit 87\n', { mode: 0o700 });
+    const parts = f.env.PATH!.split(path.delimiter); parts.splice(1, 0, trap);
+    const env = { ...f.env, PATH: parts.join(path.delimiter) };
+    assert.equal(spawnSync('node', ['--version'], { env }).status, 87);
+    // The old Node fake deterministically fails the same real checker. Its
+    // readiness has already completed; only per-query interpreter startup fails.
+    const legacy = path.resolve(import.meta.dirname, '../tests/fixtures/launchd-bin');
+    const negative = spawnSync(process.execPath, f.args.slice(0, 3), {
+      env: { ...env, PATH: [legacy, trap, ...parts].join(path.delimiter) }, encoding: 'utf8', timeout: 10000,
+    });
+    assert.ifError(negative.error); assert.equal(negative.status, 1);
+    assert.match(negative.stderr, /launchctl print/);
+    const positive = spawnSync(process.execPath, f.args.slice(0, 3), { env, encoding: 'utf8', timeout: 10000 });
+    assert.ifError(positive.error); assert.equal(positive.status, 0, positive.stdout + positive.stderr);
+    assert(fs.readFileSync(path.join(f.directory, 'commands'), 'utf8').trim().split('\n').every(command => command === 'print'));
+  } finally { f.cleanup(); }
+});
+
 test('Make does not report successful service control after a failed manager command or rebuild', { skip: process.platform === 'win32' }, () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-make-failure-'));
   const marker = path.join(home, 'restarted');

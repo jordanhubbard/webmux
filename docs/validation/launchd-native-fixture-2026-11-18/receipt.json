@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "issue": 324,
+  "scope": "Native fake service-manager preparation and timed-query interpreter dependency; production launchctl commands and deadlines unchanged.",
+  "modifiedSourcesOver": "283d35d0ce8e44db4acd5033fbae225a35bd2d03",
+  "sourceSHA256": {
+    "scripts/launchd-fixture.mts": "ef3d5ab9c5bcd584a6aaf4cfce3c31799e4b6d35d900d375596903ae6e0d40d6",
+    "scripts/make-controls.test.mts": "2d0e612201e01b633dd6bcc18273d52b9aafed4778186a2703461a2c29698f43",
+    "tests/fixtures/launchd-native/main.go": "7da446ee00fcc59f17cda6fd606e8f25a098581a16f5b2d68c0e68f10d741fbc",
+    "scripts/check-launchd.mts": "1d1bada0ad2ae9e1e6108835e600a9a0142085f6b4c5c3dba8151eeb112206ce",
+    "tests/fixtures/launchd-bin/launchctl": "d2b273f8d8296fd96b32c8e15729c553fed3d11b0c1cb4cf5765928e434c37f3"
+  },
+  "failedCI": {
+    "run": 44458135080,
+    "job": 135338092460,
+    "expected": "did not remain running",
+    "actual": "launchctl print gui/501/fixture: spawnSync launchctl ETIMEDOUT",
+    "rootSchedulerCause": "unproven"
+  },
+  "validation": {
+    "affectedMakeAndLaunchdControls": 17,
+    "fullHelperTests": 253,
+    "fullHelperFailures": 0,
+    "fullHelperSkips": 0,
+    "fileConcurrency": "default",
+    "strictTypeScriptProjects": 5,
+    "unchangedProductionChecker": true,
+    "sameOneSecondQueryBudget": true,
+    "sameStablePIDCrashRetryAndHungQueryAssertions": true,
+    "newDependencyControl": "Block PATH node after fixture preparation: old Node fake fails same real checker; native prepared fake passes. Checker itself uses its original absolute Node executable.",
+    "coldPreparationControl": "Unprepared1500ms fake still exceeds real1000ms checker budget; prepared fake passes.",
+    "queryFailureControls": "Permission-denied and actual2000ms query sleep continue to fail closed.",
+    "nativeLaunchdScope": "Existing private macOS launchd replacement control passes; no installed service change."
+  },
+  "privateEvidence": {
+    "files": 8,
+    "manifestSHA256": "f577181bfe51624546aa517e31408ef34d0c3c9c0ec18b8e80f3bf096075c068"
+  },
+  "limits": [
+    "Hosted CI on the corrected source remains pending; issue stays open for that gate.",
+    "This removes Node interpreter startup from fake timed queries; it does not prove the scheduler cause of every prior timeout or make an unresponsive real manager healthy.",
+    "No production service query, PID stability requirement, registration retry count, deadline or assertion was relaxed."
+  ]
+}
