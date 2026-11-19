@@ -40,6 +40,11 @@ binds the original failures, controls and native results to the relevant current
 sources. This does not qualify the whole current main revision or the release;
 the changed-source private Windows VT timeout under #536 remains unresolved.
 
+The [native-platform follow-up audit](validation/native-platform-acceptance-2026-11-19/README.md)
+also completes #543's Windows connected-shell fixture, #466's regular-file
+inventory admission and #517's frozen Ubuntu qualification-image libc minimum.
+Their broader recovery, vulnerability/license and deployment boundaries remain.
+
 ### Recover active work after interruption
 
 [#318](https://github.com/jordanhubbard/webmux/issues/318) adds session-state
@@ -162,12 +167,16 @@ Remaining #318 work, in order:
    results remain separate from authenticated conversation recovery. Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
-   Hosted Windows browser fixtures also report unconfirmed native-provider
-   startup, including on the last green baseline. [#543](https://github.com/jordanhubbard/webmux/issues/543)
-   tracks diagnosis and an actual connected-shell application gate. The
+   Hosted Windows fixtures originally reported unconfirmed native-provider
+   startup. [#543](https://github.com/jordanhubbard/webmux/issues/543) is now
+   closed after diagnostics identified a restrictive immediate-job boundary
+   and the mandatory actual connected-shell/confirmed-Stop gate passed through
+   the bounded disposable SYSTEM fixture. The
+   [acceptance audit](validation/native-platform-acceptance-2026-11-19/README.md)
+   preserves native user-account evidence and the synthetic hosted scope. The
    [browser-fixture lifecycle repair](validation/windows-local-stop-2026-11-18/ci-fixtures.md)
-   retains unresolved access and closes owned browser workers; it does not
-   qualify the unconfirmed native launch.
+   retains unresolved access and closes owned browser workers; application
+   gate evidence remains separate from authenticated coding recovery.
 2. Codex in default shared-daemon mode is manual-only by owner decision: no
    observation point preserves launch mode and sandbox policy after interactive
    switches. Revisit when [openai/codex#60625](https://github.com/openai/codex/issues/60625)

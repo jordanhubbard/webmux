@@ -1,0 +1,299 @@
+{
+  "schema": 1,
+  "publicationBase": "5896a2e7098dd2944b876800143ec7a8f703f859",
+  "method": "Read original retained source-bound native artifacts, live GitHub source/run/artifact bindings and relevant current source equality. Execute 11 portable regular-file controls locally. No new hosted/native Windows or Linux jobs.",
+  "issue543": {
+    "state": "CLOSED",
+    "auditedMain": "eb2e0ce98d50e0dc694c6b7ea2faa947859210e8",
+    "relevantSourcesStillByteEqualOnPublicationBase": [
+      "webmux/server/internal/nativeprovider",
+      "tests/e2e/windows-local-provider.native.spec.ts",
+      "tests/e2e/windows-local-child.mts",
+      "scripts/qualify-windows-local-application.ps1",
+      "webmux/server/internal/session/local_lifecycle.go",
+      "webmux/server/internal/session/recovery_control.go",
+      "webmux/server/internal/httpapi/sessions.go",
+      "webmux/server/internal/terminal/local_owner_windows.go",
+      "webmux/server/internal/terminal/provider_windows.go"
+    ],
+    "privateDetailedAuditSHA256": "aee51fcf611685009fc1cd653e99f68d67f6185ab7a5413796933fa8189a4e77",
+    "originalFailedHostedBoundary": {
+      "run": 44463372933,
+      "source": "d4b3e457e8cf13f89861b632378df8d8e8e3b6c7",
+      "conclusion": "failure",
+      "rawJobLogSHA256": "4e91b98827526fa2fb8dd8f1a558196959cc472eeb1ff1fda24cc6a50a7746c8",
+      "observations": [
+        "immediate job disallows breakaway",
+        "owner_process Windows error5"
+      ]
+    },
+    "nativeDiagnostics": {
+      "resultSHA256": "5d2fea8bdc980945d81041dfc9d9232ba9930576b05595b0bdecb065d7df0e9c",
+      "exit": 0,
+      "safeOwnerFailureAndOneReplyPassed": true
+    },
+    "privateUserPositive": {
+      "source": "d4b3e457e8cf13f89861b632378df8d8e8e3b6c7",
+      "imageSHA256": "7f49cecf13bd25398e37d6d6b47333fa4a756e884df594d978d91813c5edd482",
+      "resultSHA256": "cb52da1a6c2c296c488c33ae7f776cf13ebc536c75d6413ba8bda36fff2b7560",
+      "passed": 1,
+      "zeroSkipsRetriesFailures": true,
+      "zeroSavedSessionsNoImageHoldersPortFree": true
+    },
+    "integratedHostedPositive": {
+      "source": "84a331a8aa0848a247543b6c3abb7b8b23c1a871",
+      "run": 44591424467,
+      "job": 135798140947,
+      "artifact": 14566070667,
+      "archiveSHA256": "f8371065847a450d9adbbdbb97b70369f5b72d468e2a09f859829c0fface11d2",
+      "publicMemberSHA256": {
+        "application-receipt.json": "05371f7aeee7fafce837ebf78d8f4a2ef4b81b45895892357d951ccbc4252689",
+        "account-scope.json": "171524d8dfa4606c371b05d7b389624353fba1384115362fee2a58eb38b24581",
+        "webmux-app.exe": "4cc56d86727ca7e7bc8aa7203b2bcf3cf58fc0b90097c3bb65736697b4339d70",
+        "tests.json": "a0e7dc5e80dc691ac2bf2e9d94f51a153afe152adf94145ecd060b1ce9a91541"
+      },
+      "twoOriginalCasesPassed": true,
+      "zeroSkipsRetriesFailures": true,
+      "actualSYSTEM": true,
+      "taskRemoved": true,
+      "freshOutputOriginalStopChildExitAndDeletion": true,
+      "publicOnlyArtifact": true,
+      "fullCISuccess": true
+    },
+    "uncertainNativeOperation": {
+      "source": "346de8a111494934f2091f9bf623827cef0b2ea2",
+      "rawReceiptSHA256": "7c7c4a928b57743d1243598a26574babdc4f54153926dc5a73acf74ba7fd8e8c",
+      "HTTP202OriginalOperationPreserved": true,
+      "inspectOnlyNoStopRedispatch": true,
+      "currentRelevantLifecycleSourcesByteEqual": [
+        "webmux/server/internal/session/local_lifecycle.go",
+        "webmux/server/internal/session/recovery_control.go",
+        "webmux/server/internal/httpapi/sessions.go",
+        "webmux/server/internal/terminal/local_owner_windows.go",
+        "webmux/server/internal/terminal/provider_windows.go"
+      ]
+    },
+    "limits": [
+      "Historical failures retain original outcomes; no inference about every possible generic startup failure or all ancestor jobs.",
+      "Synthetic hosted SYSTEM shell/application coverage is separate from authenticated user coding, installed services/MSI, reboot and ARM64 conversations.",
+      "Actual executions retain original source attribution; no fresh current-main native executable or full-roadmap/release claim.",
+      "No new hosted jobs, retries, protection/service/account/default-sandbox or production launch flag changes."
+    ]
+  },
+  "issues466and517": {
+    "states": {
+      "466": "CLOSED",
+      "517": "CLOSED"
+    },
+    "privateDetailedAuditSHA256": "b5d57d87968f92d5a0d9551cedad499f1f4e1711d67076a84ebce2c4cda9e6a2",
+    "issues": [
+      466,
+      517
+    ],
+    "auditedMain": "5896a2e7098dd2944b876800143ec7a8f703f859",
+    "recordedUTC": "2026-11-19T22:36:07.833713+00:00",
+    "originalNegativeLogsSHA256": {
+      "native-inventory-files-466-parent-tests.log": "1a9918729c3aa21bf20985efedbec7a26cce2978a3810e3be62c0659194f6eeb",
+      "native-inventory-files-466-tests.log": "7e4e55aa7b9f6a51701f8727145342dc4330d471a3228accca3d8aa6a5edbd4e",
+      "native-inventory-files-466-macos.log": "8a73799bb33ad831cf81789a756040c1a3928a7ae907f790363f28ebbea9447e"
+    },
+    "originalNineTestMethodsVerbatim": true,
+    "currentPortableTestMethods": 11,
+    "currentPortableTestsExit": 0,
+    "currentPortableTestsLogSHA256": "03fa93e757226ba368763e369e6a3bac52b9385faa9634700b10488678784206",
+    "currentCollectorSourcesByteEqualOriginalAndLaterNative": [
+      "scripts/native-components.py",
+      "scripts/test_native_components.py",
+      "scripts/test_native_components_live.py"
+    ],
+    "nativeEvidence": [
+      {
+        "label": "original466",
+        "source": "49b1809c94296db7ee1f3c5dd962c00cc6f1bc31",
+        "run": 44254746343,
+        "artifact": 14406029563,
+        "archiveSHA256": "291edf627c11dc3ea64ec4db3c5b67d2a54855ccfd1107295078c8ba1c1605af",
+        "runConclusion": "failure",
+        "memberSHA256": {
+          "_temp/webmux-native-components/native-components-jxlmp_eo/components.json": "4dda35c0bc2977637e44c8969f594cac3fd8e2877e5d612b6ade6cc01d587670",
+          "_temp/webmux-native-components/native-components-jxlmp_eo/native-summary.json": "74873f3f51057af03a2a361b48c749e85a8b9a0999cabf38b9f153bce3e647cf"
+        },
+        "mappedFiles": 78,
+        "nativeSummary": {
+          "passed": true,
+          "mappedELFFiles": 78,
+          "packageRecords": 75,
+          "plugins": [
+            "libguac-client-rdp.so.0.0.0"
+          ],
+          "versionProbeMatchesExecutable": true,
+          "duplicateOutputRefused": true,
+          "differentPathToolRefused": true,
+          "pluginWorkerPausedForSnapshot": true,
+          "scope": "Private guacd/plugin inventory only; not functional RDP, authentication, vulnerability or complete-deployment acceptance",
+          "ownedParentExited": true,
+          "ownedListenerStopped": true
+        },
+        "mappedLibc": {
+          "state": "recorded",
+          "fileSHA256": "b2cf6c33b74d2f22543b7a469a75b538911e690f769d0b238843a49465b83793",
+          "packageName": "libc6:amd64",
+          "packageVersion": "2.35-0ubuntu3.15"
+        },
+        "packageEvidence": {}
+      },
+      {
+        "label": "baseline517",
+        "source": "6ceeca4ecf1d047cf816ece0e61c1ea9ed6558de",
+        "run": 44323084812,
+        "artifact": 14436833717,
+        "archiveSHA256": "43b2b543c58dc0790aa19e23e3a6fc18de01dc99ca5eb87f689f82373dfb0cd6",
+        "runConclusion": "failure",
+        "memberSHA256": {
+          "_temp/webmux-native-components/native-components-bwn8r01r/components.json": "97370741793220d5ee176e376101e732535c06f4e29f6256585964b2a5bce2df",
+          "_temp/webmux-native-components/native-components-bwn8r01r/native-summary.json": "74873f3f51057af03a2a361b48c749e85a8b9a0999cabf38b9f153bce3e647cf"
+        },
+        "mappedFiles": 78,
+        "nativeSummary": {
+          "passed": true,
+          "mappedELFFiles": 78,
+          "packageRecords": 75,
+          "plugins": [
+            "libguac-client-rdp.so.0.0.0"
+          ],
+          "versionProbeMatchesExecutable": true,
+          "duplicateOutputRefused": true,
+          "differentPathToolRefused": true,
+          "pluginWorkerPausedForSnapshot": true,
+          "scope": "Private guacd/plugin inventory only; not functional RDP, authentication, vulnerability or complete-deployment acceptance",
+          "ownedParentExited": true,
+          "ownedListenerStopped": true
+        },
+        "mappedLibc": {
+          "state": "recorded",
+          "fileSHA256": "b2cf6c33b74d2f22543b7a469a75b538911e690f769d0b238843a49465b83793",
+          "packageName": "libc6:amd64",
+          "packageVersion": "2.35-0ubuntu3.15"
+        },
+        "packageEvidence": {}
+      },
+      {
+        "label": "original517",
+        "source": "ae00c27da2f0cb34a9773e85f5e44dc65e3b55ad",
+        "run": 44330541956,
+        "artifact": 14440383152,
+        "archiveSHA256": "9d4f78bb7ee1f5bbd47b6d652f572da8403d9457b0b465549126c6b928000419",
+        "runConclusion": "failure",
+        "memberSHA256": {
+          "_temp/webmux-native-components/native-components-jtxqv7d9/components.json": "344c454328fdefe072f3f6155f6d76f50a512570afee65e024c9811071edc5a9",
+          "_temp/webmux-native-components/native-components-jtxqv7d9/native-summary.json": "74873f3f51057af03a2a361b48c749e85a8b9a0999cabf38b9f153bce3e647cf",
+          "libc/before.txt": "d74c5e07372aae6d6b913e5e8e03f1f45ea79c61a0d05b12f6157a572ac09f3f",
+          "libc/candidate.txt": "9b0fd44ee36be153eebf5394cfae468ecd155d9f574a6b43797c7c70fca50458",
+          "libc/after.txt": "11ee6cf02e072a4b0da6156e90e7678a1710b6e79296e46062a7427f285225cc"
+        },
+        "mappedFiles": 78,
+        "nativeSummary": {
+          "passed": true,
+          "mappedELFFiles": 78,
+          "packageRecords": 75,
+          "plugins": [
+            "libguac-client-rdp.so.0.0.0"
+          ],
+          "versionProbeMatchesExecutable": true,
+          "duplicateOutputRefused": true,
+          "differentPathToolRefused": true,
+          "pluginWorkerPausedForSnapshot": true,
+          "scope": "Private guacd/plugin inventory only; not functional RDP, authentication, vulnerability or complete-deployment acceptance",
+          "ownedParentExited": true,
+          "ownedListenerStopped": true
+        },
+        "mappedLibc": {
+          "state": "recorded",
+          "fileSHA256": "4ebb1967c395ca547dcfeaeeab7a2819724604a331aede44e8a749a7e1a4628e",
+          "packageName": "libc6:amd64",
+          "packageVersion": "2.35-0ubuntu3.18"
+        },
+        "packageEvidence": {
+          "before": "libc6\t2.35-0ubuntu3.15\tamd64\n",
+          "candidate": "libc6:\n  Installed: 2.35-0ubuntu3.15\n  Candidate: 2.35-0ubuntu3.18\n  Version table:\n     2.35-0ubuntu3.18 500\n        500 https://archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages\n        500 https://archive.ubuntu.com/ubuntu jammy-security/main amd64 Packages\n *** 2.35-0ubuntu3.15 100\n        100 /var/lib/dpkg/status\n     2.35-0ubuntu3 500\n        500 https://archive.ubuntu.com/ubuntu jammy/main amd64 Packages\n",
+          "after": "libc6\t2.35-0ubuntu3.18\tamd64\n"
+        }
+      },
+      {
+        "label": "laterComposition",
+        "source": "bb16ac823a40b3d15f4b55fc55c91318ec803b3e",
+        "run": 44608762275,
+        "artifact": 14572004539,
+        "archiveSHA256": "7653daad320059253af1279df96ae4a1e62c826d2e45c7c0f8f8d633a4d7dabd",
+        "runConclusion": "success",
+        "memberSHA256": {
+          "_temp/webmux-native-components/native-components-d9ofeqer/components.json": "78c262af16f18a1f7c72897a818c253152689dc650484ac19225aa8316319e0f",
+          "_temp/webmux-native-components/native-components-d9ofeqer/native-summary.json": "74873f3f51057af03a2a361b48c749e85a8b9a0999cabf38b9f153bce3e647cf",
+          "libc/before.txt": "d74c5e07372aae6d6b913e5e8e03f1f45ea79c61a0d05b12f6157a572ac09f3f",
+          "libc/candidate.txt": "82ab5d11a61504d6fb8593475dca748b042c0f925ef12062dab2ac241aee2593",
+          "libc/after.txt": "11ee6cf02e072a4b0da6156e90e7678a1710b6e79296e46062a7427f285225cc"
+        },
+        "mappedFiles": 78,
+        "nativeSummary": {
+          "passed": true,
+          "mappedELFFiles": 78,
+          "packageRecords": 75,
+          "plugins": [
+            "libguac-client-rdp.so.0.0.0"
+          ],
+          "versionProbeMatchesExecutable": true,
+          "duplicateOutputRefused": true,
+          "differentPathToolRefused": true,
+          "pluginWorkerPausedForSnapshot": true,
+          "scope": "Private guacd/plugin inventory only; not functional RDP, authentication, vulnerability or complete-deployment acceptance",
+          "ownedParentExited": true,
+          "ownedListenerStopped": true
+        },
+        "mappedLibc": {
+          "state": "recorded",
+          "fileSHA256": "4ebb1967c395ca547dcfeaeeab7a2819724604a331aede44e8a749a7e1a4628e",
+          "packageName": "libc6:amd64",
+          "packageVersion": "2.35-0ubuntu3.18"
+        },
+        "packageEvidence": {
+          "before": "libc6\t2.35-0ubuntu3.15\tamd64\n",
+          "candidate": "libc6:\n  Installed: 2.35-0ubuntu3.15\n  Candidate: 2.35-0ubuntu3.18\n  Version table:\n     2.35-0ubuntu3.18 500\n        500 https://azure.archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages\n        500 https://azure.archive.ubuntu.com/ubuntu jammy-security/main amd64 Packages\n *** 2.35-0ubuntu3.15 100\n        100 /var/lib/dpkg/status\n     2.35-0ubuntu3 500\n        500 https://azure.archive.ubuntu.com/ubuntu jammy/main amd64 Packages\n",
+          "after": "libc6\t2.35-0ubuntu3.18\tamd64\n"
+        }
+      }
+    ],
+    "laterLinuxJob": {
+      "run": 44608762275,
+      "job": 135859402246,
+      "conclusion": "success",
+      "requiredSteps": [
+        {
+          "name": "Update Ubuntu C library security baseline",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify native iframe ownership and control dispatch",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify browser workflows against Go",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify live native component inventory",
+          "conclusion": "success"
+        }
+      ]
+    },
+    "libcUpdateBlockByteEqualOriginalAndLaterNative": "52ebf9ad6450606c04fe9897cab62aa99609761b162f591ab5651121dc94e82c",
+    "limits": [
+      "The frozen Jammy minimum is the scoped issue requirement, not a current full vulnerability/advisory clearance.",
+      "Package database attribution does not prove unmodified installed package bytes.",
+      "The native inventory and regular-file refusal qualify reliability, not functional RDP, licenses, exploitability, fleet or all deployments.",
+      "Original enclosing audit-failed CI retains failure; later successful source-bound composition supplies integration acceptance.",
+      "No new hosted/native Linux runs or operator APT changes; current portable controls only. Actual native executions retain original source attribution; no fresh current-main or full-roadmap/release claim."
+    ]
+  },
+  "newHostedJobs": 0,
+  "fullRoadmapAndReleaseComplete": false
+}
