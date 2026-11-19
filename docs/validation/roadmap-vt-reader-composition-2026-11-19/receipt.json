@@ -1,0 +1,121 @@
+{
+  "composition": {
+    "mergeHead": "e6d9645b24b77ea7414487460c1737a332eaefb7",
+    "incoming": "0c75112d82df33d318266e3d6f232d1414867af6",
+    "base": "6156a5adf350df484ae41f2649094f1e62542dac",
+    "changed": [
+      "docs/validation/vt-reader-lifetimes-2026-11-18/README.md",
+      "docs/validation/vt-reader-lifetimes-2026-11-18/native-results.json",
+      "docs/validation/vt-reader-lifetimes-2026-11-18/profile-cumulative.txt",
+      "docs/validation/vt-reader-lifetimes-2026-11-18/profile-top.txt",
+      "docs/validation/vt-reader-lifetimes-2026-11-18/receipt.json",
+      "docs/validation/windows-coding-preflight-2026-11-18/README.md",
+      "docs/validation/windows-coding-preflight-2026-11-18/receipt.json",
+      "webmux/server/internal/thirdparty/vt/WEBMUX.md",
+      "webmux/server/internal/thirdparty/vt/WEBMUX_UPSTREAM.json",
+      "webmux/server/internal/thirdparty/vt/conform_report_test.go",
+      "webmux/server/internal/thirdparty/vt/kitty_payload_test.go"
+    ],
+    "onlyTestAndProvenanceChangesToVT": true,
+    "VTTreeIdenticalToPublishedOwner": true,
+    "all8OwnerCIJobsVerifiedSuccess": true,
+    "localLogSHA256": "efa279e1eacb3fd49767f8b099fe93b9d9c534fa2cb8cc69cbed0f0642e9ce84",
+    "fullVTRaceThreePackages": [
+      "116.759s",
+      "1.232s",
+      "1.269s"
+    ],
+    "provenance": {
+      "VT": [
+        241,
+        19
+      ],
+      "UV": [
+        104,
+        7
+      ]
+    },
+    "scope": "Current merge native macOS full VT race and vet; separate source-bound5fad hosted native inventories. No fresh combined Windows, private deadline or original450repair claim."
+  },
+  "nativeInventory": {
+    "head": "5fadbbc5a4fbe2212fde1e6e5c54f42c2bf91c27",
+    "recordedUTC": "2026-11-19T02:46:45.157800+00:00",
+    "requiredCIRun": 44434794421,
+    "diagnosticRun": 44434798810,
+    "oldIdentities": 2186,
+    "newIdentities": 2193,
+    "passesEach": 21930,
+    "allOriginalCountsPreserved": true,
+    "addedTenEach": [
+      "TestRepliesReaderStopsAtOwnerCleanup",
+      "TestRepliesReaderStopsAtOwnerCleanup/blocked_read",
+      "TestRepliesReaderStopsAtOwnerCleanup/blocked_read/owner",
+      "TestRepliesReaderStopsAtOwnerCleanup/reply_queue_backpressure",
+      "TestRepliesReaderStopsAtOwnerCleanup/reply_queue_backpressure/owner",
+      "TestResponseReaderStopsAtOwnerCleanup",
+      "TestResponseReaderStopsAtOwnerCleanup/owner"
+    ],
+    "sameSkips": {
+      "TestDepDiffVT": 10,
+      "TestDepDiffResize": 10,
+      "TestGhosttyParkedCursorJoinsLines": 10
+    },
+    "requiredWorker": {
+      "enabledXStateFeatures": "0x8e7",
+      "source": "5fadbbc5a4fbe2212fde1e6e5c54f42c2bf91c27",
+      "goVersion": "go version go1.27.4 windows/amd64",
+      "cpu": [
+        {
+          "Name": "AMD EPYC 9V45 96-Core Processor                ",
+          "Manufacturer": "AuthenticAMD",
+          "NumberOfCores": 2,
+          "NumberOfLogicalProcessors": 4
+        }
+      ]
+    },
+    "allThreePassAndSkipMultisetsEqual": true,
+    "actualDiagnosticPEsVerified": true,
+    "NASRawZIPReadbacks": [
+      14489380971,
+      14489271318,
+      14489032581,
+      14489022595,
+      14488756603,
+      14488738807,
+      14488289835,
+      14487877482,
+      14488158598
+    ],
+    "scope": "Native hosted fixture-reader cleanup inventories/PEs/source/digests verified. Private deadline and original450corruption remain unresolved; no full-private-pass/AMX repair or authenticated coding claim."
+  },
+  "sourceInversion": {
+    "sourceBefore": "16cdbcf24d726f99897bf3314eee1042947d7c07",
+    "sourceAfter": "5fadbbc5a4fbe2212fde1e6e5c54f42c2bf91c27",
+    "method": "Go parser AST ranges identify exact test bodies; normalize only helper argument/extra-return assignment changes.",
+    "files": [
+      {
+        "file": "conform_report_test.go",
+        "allOriginalTestBodiesByteIdenticalAfterHelperCallNormalization": true,
+        "originalTests": 7,
+        "newTests": [
+          "TestRepliesReaderStopsAtOwnerCleanup"
+        ],
+        "normalizedOriginalSHA256": "6661740328d75232463e1ac310b377236e3fb22393cce06214947c43e48e4960"
+      },
+      {
+        "file": "kitty_payload_test.go",
+        "allOriginalTestBodiesByteIdenticalAfterHelperCallNormalization": true,
+        "originalTests": 6,
+        "newTests": [
+          "TestResponseReaderStopsAtOwnerCleanup"
+        ],
+        "normalizedOriginalSHA256": "d27f8b26595dc6fe00e94053c27f0aab96af239180452f69d043d0ff1f38637e"
+      }
+    ]
+  },
+  "diagnosticSummarySHA256": "4fc005b872e94a63a2548f86774d0521982c0c79c5b6149c89137e814ddf1e82",
+  "oldCanonicalGateScope": "Canonical6156 ten gates remain source-bound; fresh composed Windows/full roadmap acceptance pending.",
+  "nativeWindowsPreflight538": "Imported original0c75 receipt retains strict legacy-unelevated loopback denial failure. No new application upgrade or strict Windows network qualification is claimed.",
+  "privateDeadline536": "Original/private ten-minute deadline remains failed, even though retained reader stacks are corrected; no cause/repair claim.",
+  "nativeInteractivePolicy539": "Separate draftPR540 source4b0d4b0 has native policy refusal proof, observer and Packaging green; CI/ARM original runs live. Not integrated in this composition."
+}
