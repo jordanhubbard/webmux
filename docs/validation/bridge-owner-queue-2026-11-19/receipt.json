@@ -1,0 +1,107 @@
+{
+  "issue": 246,
+  "followup": 598,
+  "scope": "Published owner-queue contract observation; no bridge/coding/delivery acceptance.",
+  "bridgeAccepted": false,
+  "limitedNativeObservationVerified": true,
+  "originalRawPassedValue": false,
+  "webmuxSource": "d8159018d301dba60ee2e873e0b3bac2b0d75346",
+  "webmuxSourceSHA256": {
+    "webmux/server/internal/httpapi/openrig.go": "e6b09f1c047c0fa29ce98785a8e20610466828ca65bf021ea10762280843ff17",
+    "webmux/server/internal/httpapi/coordination_providers.go": "7a9b36bd7ecd35b823ef232d38aabea166b1752222716f724958f1654520b6ba",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "6840f6bdfff8c0c955df18614cb2c7a9ef6e955bdce4402dda47d8ff6089020e",
+    "webmux/frontend/src/utils/api.ts": "1618d9b09a81dd3e7fc91bc66755a7a68a65370c0d36e91f4ef5408e425bb562"
+  },
+  "ownerVersion": "Agent Deck1.16.39",
+  "ownerPlatform": "macOS ARM64",
+  "ownerBinarySHA256": "e6a08a50d40d4a14494fd461a966b28976d46dcbce4766fee1e8c2061958913b",
+  "publishedSource": {
+    "release": "v1.16.39",
+    "gitTree": "d62c2898d623e5353392a06f9a77c19f97b33438",
+    "files": {
+      "cmd/agent-deck/session_send_queue_cmd.go": {
+        "gitBlob": "f6b7cbfc694c8075599dfd56e22cc2f45cb48fb1",
+        "sha256": "bc5472c9896c321d98d98fcbc5c462579784eb959eaa123406efa4d83ff15b69",
+        "bytes": 42004
+      },
+      "cmd/agent-deck/session_send_queue_restart_test.go": {
+        "gitBlob": "308d2f7a6277416e10eb5bd3e0bd86f2cd41ba3e",
+        "sha256": "05993005860361f834f81cef753a3d7eaf91fbd10e7822f01e5761bfd831b0f2",
+        "bytes": 8222
+      },
+      "internal/sendqueue/enqueue.go": {
+        "gitBlob": "217858293377af44f5bd554b0e7056f39b7fa960",
+        "sha256": "48e2e1cc0617bea03eb487139427cdd11913ffe1d0d8cc69e9bffdc233b8d8d9",
+        "bytes": 8629
+      },
+      "internal/sendqueue/sendqueue.go": {
+        "gitBlob": "5193d27528c46c91f95ff8ed40161eb3cd5f900b",
+        "sha256": "c58f8b658d4041ae50950ea676adccee12a54420842425d7c4b3d24f2814f02c",
+        "bytes": 12918
+      },
+      "cmd/agent-deck/session_send_cmd.go": {
+        "gitBlob": "3252c4eda7899a98813033927b476cf4ab9b640e",
+        "sha256": "bd74755a748ec7da891250f8f511883bb594eca5ec8a57803ae7ae986f88f5d0",
+        "bytes": 89453
+      },
+      "cmd/agent-deck/session_queue_cmd.go": {
+        "gitBlob": "bd99e97b6ac722d353da52fc92a7d2c0729a24d4",
+        "sha256": "5897bad84ac30b3c5fe2fa416ee2d78e7300cce96dae514da137b82c7d6bd724",
+        "bytes": 15521
+      },
+      "internal/session/send_capability.go": {
+        "gitBlob": "f8f9aab67878692bda282cd23e1761c23bbd28a9",
+        "sha256": "d96f70e216a579b915767691208f6ea074fab0c215eb669d84205e38d6ba7867",
+        "bytes": 666
+      },
+      "internal/session/send_lock.go": {
+        "gitBlob": "9583c7884e4274ee094390d38f7a9b75083e0923",
+        "sha256": "ee0a7ce87d08d2074518563bc517c101d05e8e85b1e6d47c26b9ac7808d930c2",
+        "bytes": 1919
+      }
+    }
+  },
+  "observation": {
+    "identicalGuardedCLIEnqueues": 2,
+    "distinctDurableSendIDs": 2,
+    "sameOwnerSession": true,
+    "bothRepliesQueued": true,
+    "bothRepliesSubmittedFalse": true,
+    "inputPromptGuardPreserved": true,
+    "ownerQueueListContainsBoth": true,
+    "ownerQueueListStates": [
+      "typing",
+      "queued"
+    ],
+    "payloadInputLines": 0,
+    "nativeCodingConversations": 0
+  },
+  "findings": {
+    "ordinaryCLIEnqueue": "queueSend calls sendqueue.Enqueue; every accepted call allocates a new send ID.",
+    "internalIdempotency": "EnqueueOnce exists for keyed library callers, separate from ordinary CLI queue sends.",
+    "webmuxResponseLoss": "The handler has no durable caller request ID before messenger.Send; a provider error becomes502 and the composer retains editable input.",
+    "requiredBrokerBehavior": "Persist a frozen owner-scoped intent and durably consume its once-only dispatch right; duplicate requests return retained outcome; possible dispatch with missing response stays uncertain.",
+    "nativeIdentityLimit": "This experiment does not establish an atomic expected-native-CID owner-queue contract. Snapshot/recheck and guarded typing must not be relabelled as one."
+  },
+  "cleanup": {
+    "ownerStopSucceeded": true,
+    "payloadExited": true,
+    "privateOwnerQueueProcessesRemaining": 0,
+    "privateTmuxServerAbsent": true,
+    "staleSocketAndInactiveHomesRetained": true,
+    "binaryUnchanged": true,
+    "noGlobalUpdateAuthCopyOrModelTurn": true
+  },
+  "sha256": {
+    "rawReceipt": "f0f671c5382520fd8ac6e9b40e1e8cec4d17fa27378ec63632790d8e5caa581e",
+    "independentReview": "1eed92c455169785fffb10e1b293b543035936c18d231c48e61e36e285c18ee0",
+    "probeDriver": "0ce9be43bdcc7ec48431de8be37feb28b7bbd9aedc929fc9f5678ab3f7f92459"
+  },
+  "retention": {
+    "designatedFilesReadback": 51,
+    "firstLongSocketSetupExcluded": true,
+    "rawPassedFalseRetained": true,
+    "note": "Limited queue-record observation only; no original raw case promoted to full bridge success."
+  },
+  "newActionsDispatched": 0
+}
