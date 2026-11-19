@@ -3,6 +3,7 @@
 package nativeobserve
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -57,13 +58,29 @@ func TestObserverProcess(t *testing.T) {
 			panic(e)
 		}
 		digest := sha256.Sum256(body)
-		expected := hex.EncodeToString(digest[:])
+		nativePath := os.Args[0]
+		nativeBody := body
+		if target := os.Getenv("WEBMUX_TEST_OBSERVER_TARGET"); target != "" {
+			nativePath = target
+			nativeBody, e = os.ReadFile(target)
+			if e != nil {
+				panic(e)
+			}
+		}
+		nativeDigest := sha256.Sum256(nativeBody)
+		expected := hex.EncodeToString(nativeDigest[:])
 		if os.Getenv("WEBMUX_TEST_BAD_DIGEST") == "1" {
 			expected = strings.Repeat("0", 64)
 		}
 		os.Setenv("WEBMUX_TEST_OBSERVER_ROLE", "probe")
 		os.Setenv("WEBMUX_TEST_INITIAL_PID", strconv.Itoa(os.Getpid()))
-		err := Run([]string{hex.EncodeToString(digest[:]), os.Args[0], expected, "-test.run=^TestObserverProcess$"})
+		args := []string{hex.EncodeToString(digest[:]), nativePath, expected, "-test.run=^TestObserverProcess$"}
+		var err error
+		if os.Getenv("WEBMUX_TEST_NOTIFICATION_BARRIER") == "1" {
+			err = run(args, notificationBarrier())
+		} else {
+			err = Run(args)
+		}
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
@@ -195,13 +212,15 @@ func TestNativeGuardEffects(t *testing.T) {
 				role = "guard"
 			}
 			cmd.Env = append(os.Environ(), "WEBMUX_TEST_OBSERVER_ROLE="+role, "GOMAXPROCS=1")
-			out, e := cmd.CombinedOutput()
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			out, e := cmd.Output()
 			if e != nil {
-				t.Fatalf("probe: %v %s", e, out)
+				t.Fatalf("probe: %v stdout=%s stderr=%s", e, out, stderr.String())
 			}
 			var v observation
 			if e = json.Unmarshal(out, &v); e != nil {
-				t.Fatalf("probe response: %v %s", e, out)
+				t.Fatalf("probe response: %v stdout=%s stderr=%s", e, out, stderr.String())
 			}
 			if v.Threads != 4 || !v.SocketPair || !v.SocketPairSendRecv || !v.NoListener {
 				t.Fatalf("native runtime or descriptor cleanup: %+v", v)
@@ -224,5 +243,26 @@ func TestChangedExecutableRefused(t *testing.T) {
 	out, e := cmd.CombinedOutput()
 	if e == nil || !strings.Contains(string(out), "executable changed") {
 		t.Fatalf("bad digest was not refused: %v %s", e, out)
+	}
+}
+
+func TestInitialExecFailureDoesNotBecomeBrokerKill(t *testing.T) {
+	body, err := os.ReadFile(os.Args[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A regular, correctly hashed file with the right ELF ABI passes the
+	// selection checks, but has no program headers for the kernel to execute.
+	target := t.TempDir() + "/truncated-elf"
+	if err := os.WriteFile(target, body[:64], 0o700); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestObserverProcess$")
+	cmd.Env = append(os.Environ(), "WEBMUX_TEST_OBSERVER_ROLE=guard", "WEBMUX_TEST_OBSERVER_TARGET="+target, "GOMAXPROCS=1")
+	out, err := cmd.CombinedOutput()
+	if err == nil || cmd.ProcessState.ExitCode() != 1 || !strings.Contains(string(out), "native policy observer exec failed") {
+		t.Fatalf("initial exec error was lost or changed to a kill: %v %s", err, out)
 	}
 }

@@ -1,0 +1,39 @@
+{
+  "parent": "31acdf9e1df38317d92006e547bdf27413faa824",
+  "issue": 533,
+  "originalCanonicalFailure": 44492652035,
+  "allExecutableDigestAndABISelectionChecksByteIdentical": true,
+  "entireBPFAndListenerCLOEXECSetupByteIdentical": true,
+  "exactRequestTIDArchitectureSyscallFDAndFlagsConditionUnchanged": true,
+  "callerPolicyAndDeadlinesAndDependencyGraphByteIdentical": [
+    "scripts/qualify-codex-observer-startup.py",
+    "scripts/qualify-codex-observation-isolation.py",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts",
+    "webmux/server/internal/nativeobserve/helper.go",
+    "webmux/server/internal/nativeobserve/reference.go",
+    "webmux/server/internal/nativeobserve/helper_other.go",
+    "webmux/server/go.mod",
+    "webmux/server/go.sum"
+  ],
+  "parentLogicWithPrivateOrderingSeam": "Real kernel signal withdraws a live received notification; original broker decision kills its own process before native exec, empty stderr",
+  "parentControlledNegative": true,
+  "correctedControlledPositive": true,
+  "kernelControls": "Existing process/network/addressedIO/messageIO/filterreplacement/reexec/sameExecutable denial, thread/Unixpair support, samePID and listener absence pass; bad digest/ref/private immutability and initialexec failure controls pass",
+  "retryDiagnostic": "exactly1 fixed message in controlled interruption; remaining broker faults retain fixed phase/numericerrno",
+  "nativeContext": {
+    "OS": "linux",
+    "architecture": "aarch64",
+    "kernel": "7.0.14-linuxkit",
+    "Go": "1.27.4",
+    "CGO": "0",
+    "execution": "Native ARM64 DockerVM; unprivilegedUID1000/capabilitiesnone/networknone/readOnly; Docker outerseccomp disabled so productfilter alone is tested"
+  },
+  "AMD64": "crossbuild/vet only, nativeexecution pending",
+  "ARM64": "nativekernel controls +crossbuild/vet PASS",
+  "workingSourceSHA256": {
+    "webmux/server/internal/nativeobserve/helper_linux.go": "bc426ee6629c3104abf3b6ba2aa104dbb19461cc2e2cba343763f4d9a8536dd3",
+    "webmux/server/internal/nativeobserve/helper_linux_test.go": "e57f5876a998ffb437a02b5639c5627958b71af771162e7a03bc5187a3e45e36",
+    "webmux/server/internal/nativeobserve/notification_linux_test.go": "0e57cc6888e5e631b7bbb6f171ea426369f1b3f1da0fb598e680e754d985f8df"
+  },
+  "scope": "Controlled kernel causality and guard regression. Exact broker branch in the original uninstrumented SIGKILL remains unproven; fresh real nativeCodex AMD64/ARM64 and full qualification still required."
+}

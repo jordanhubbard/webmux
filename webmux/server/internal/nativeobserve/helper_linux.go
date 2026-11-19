@@ -63,6 +63,12 @@ func addresslessSocketIO(nr, allowedFlags, deny uint32) []unix.SockFilter {
 // exec thread. Call it only in a dedicated helper process: installed restrictions
 // are irreversible. The native program replaces this helper in the same PID.
 func Run(args []string) error {
+	return run(args, nil)
+}
+
+// beforeReply lets same-package kernel tests pause a received notification.
+// The public helper always passes nil; no command or environment enables it.
+func run(args []string, beforeReply func(uintptr, uint32, notification)) error {
 	if len(args) < 3 || !filepath.IsAbs(args[1]) {
 		return fmt.Errorf("invalid native observer invocation")
 	}
@@ -178,35 +184,89 @@ func Run(args []string) error {
 		return fmt.Errorf("listener is not close-on-exec")
 	}
 	tid := uint32(unix.Gettid())
+	execReturned := make(chan struct{})
 	go func() {
-		fatal := func() { _ = unix.Kill(os.Getpid(), unix.SIGKILL) }
+		fatal := func(phase string, code unix.Errno) {
+			select {
+			case <-execReturned:
+				return
+			default:
+			}
+			// Fixed internal phase and numeric errno only: no executable,
+			// arguments, configuration, account or notification contents.
+			fmt.Fprintf(os.Stderr, "native_observer_broker_failed phase=%s errno=%d\n", phase, code)
+			_ = unix.Kill(os.Getpid(), unix.SIGKILL)
+		}
+		retried := false
+		noteRetry := func() {
+			if !retried {
+				fmt.Fprintln(os.Stderr, "native_observer_exec_notification_retried")
+				retried = true
+			}
+		}
 		var n notification
 		for {
 			n = notification{} // The kernel requires a zeroed buffer on every receive.
 			_, _, e := unix.Syscall(unix.SYS_IOCTL, listener, unix.SECCOMP_IOCTL_NOTIF_RECV, uintptr(unsafe.Pointer(&n)))
-			if e == unix.EINTR {
+			if e == unix.EINTR || e == unix.ENOENT {
+				if e == unix.ENOENT {
+					noteRetry()
+				}
 				continue
 			}
 			if e != 0 {
-				fatal()
+				fatal("receive", e)
 				return
 			}
-			break
-		}
-		if n.PID != tid || n.Data.Arch != arch || n.Data.Nr != unix.SYS_EXECVEAT || n.Data.Args[0] != uint64(fd) || n.Data.Args[4] != unix.AT_EMPTY_PATH || n.Flags != 0 {
-			fatal()
-			return
-		}
-		r := response{ID: n.ID, Flags: unix.SECCOMP_USER_NOTIF_FLAG_CONTINUE}
-		_, _, e := unix.Syscall(unix.SYS_IOCTL, listener, unix.SECCOMP_IOCTL_NOTIF_SEND, uintptr(unsafe.Pointer(&r)))
-		if e != 0 {
-			fatal()
+			if beforeReply != nil {
+				beforeReply(listener, tid, n)
+			}
+			for {
+				// A signal may withdraw a request after receive. Ignore only
+				// IDs the kernel says no longer exist; authorize each live
+				// replacement afresh against the original exact selection.
+				id := n.ID
+				_, _, e = unix.Syscall(unix.SYS_IOCTL, listener, unix.SECCOMP_IOCTL_NOTIF_ID_VALID, uintptr(unsafe.Pointer(&id)))
+				if e == unix.EINTR {
+					continue
+				}
+				if e == unix.ENOENT {
+					noteRetry()
+					break
+				}
+				if e != 0 {
+					fatal("id-valid", e)
+					return
+				}
+				if n.PID != tid || n.Data.Arch != arch || n.Data.Nr != unix.SYS_EXECVEAT || n.Data.Args[0] != uint64(fd) || n.Data.Args[4] != unix.AT_EMPTY_PATH || n.Flags != 0 {
+					fatal("request", 0)
+					return
+				}
+				r := response{ID: n.ID, Flags: unix.SECCOMP_USER_NOTIF_FLAG_CONTINUE}
+				_, _, e = unix.Syscall(unix.SYS_IOCTL, listener, unix.SECCOMP_IOCTL_NOTIF_SEND, uintptr(unsafe.Pointer(&r)))
+				if e == unix.EINTR {
+					continue // Revalidate this ID before retrying its response.
+				}
+				if e == unix.ENOENT {
+					noteRetry()
+					break
+				}
+				if e != 0 {
+					fatal("send", e)
+					return
+				}
+				break
+			}
+			// CONTINUE can itself be followed by an interrupted syscall.
+			// Stay ready until successful exec kills this trusted helper
+			// thread and closes the sole close-on-exec listener.
 		}
 	}()
 	// Enter a schedulable syscall so the broker runs even with GOMAXPROCS=1.
 	// Successful exec kills helper threads and closes the only listener; later
 	// exec requests then fail ENOSYS in the kernel, without a resident broker.
 	_, _, errno = unix.Syscall6(unix.SYS_EXECVEAT, uintptr(fd), uintptr(unsafe.Pointer(file)), uintptr(unsafe.Pointer(&argv[0])), uintptr(unsafe.Pointer(&env[0])), unix.AT_EMPTY_PATH, 0)
+	close(execReturned)
 	runtime.KeepAlive(file)
 	runtime.KeepAlive(argv)
 	runtime.KeepAlive(env)
