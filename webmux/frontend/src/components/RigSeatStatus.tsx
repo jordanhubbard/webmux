@@ -39,6 +39,7 @@ export function RigSeatStatus({ session, observations = [] }: { session: Session
     } else if (activity.evidenceSource === 'terminal_activity' && activity.state === 'running') label = 'Terminal output observed';
     else if (activity.state !== 'unknown' && ['running', 'idle', 'needs_input'].includes(activity.state)) label = `Activity estimate: ${activity.state.replace(/_/g, ' ')}`;
   }
+  const attachment = bindingMatches ? ({ available: 'available', unavailable: 'unavailable', reported: 'reported' } as Record<string, string>)[seat?.transportState || ''] || 'unknown' : 'unknown';
   const startup = ({ pending: 'pending', ready: 'ready', attention_required: 'needs attention', failed: 'failed' } as Record<string, string>)[bindingMatches ? seat?.startupStatus || '' : ''] || 'unknown';
   const enrollment = bindingMatches && seat?.enrollmentSource === 'rig-session-registry' ? ({ launched: 'Launched by Rig', claimed: 'Adopted by Rig' } as Record<string, string>)[seat.enrollmentOrigin || ''] || 'unknown' : 'unknown';
   const attention = seat?.state === 'attention_required' || (bindingMatches && (seat?.startupStatus === 'attention_required' || seat?.startupStatus === 'failed'))
@@ -47,6 +48,7 @@ export function RigSeatStatus({ session, observations = [] }: { session: Session
     title="Rig observations; bootstrap completion and terminal output do not establish readiness for instructions. Viewer connection is shown separately.">
     <span title="Manager-reported enrollment lineage; this does not establish remote provider ownership or authorize Stop.">Enrollment {enrollment}</span>{' · '}
     <span>Rig {seat ? seat.state.replace(/_/g, ' ') : 'state unknown'}</span>{' · '}
+    <span title="Observed attachment availability, separate from this viewer's connection and the provider's lifecycle or readiness.">Attachment {attachment}</span>{' · '}
     <span>Bootstrap {startup}</span>{' · '}
     <span>{label} ({source}{activity && !fresh ? '; stale or unverified' : ''})</span>
     {attention && <strong> · Rig attention</strong>}

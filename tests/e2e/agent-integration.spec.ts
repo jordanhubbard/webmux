@@ -126,7 +126,7 @@ test('real tmux discovery, browser attachment, reload and scratch shell', async 
     await page.getByRole('button', { name: 'Terminal grid', exact: true }).click();
     await expect(page.getByTestId('workspace-scroll')).toBeVisible();
     if (rigViewer) {
-      await expect(page.getByTestId(`tile-cell-${rigViewer}`).getByLabel('Rig seat status')).toContainText('Rig running · Bootstrap ready');
+      await expect(page.getByTestId(`tile-cell-${rigViewer}`).getByLabel('Rig seat status')).toContainText('Rig running · Attachment unknown · Bootstrap ready');
       const nativeViewer = await (await request.get(`/api/sessions/${rigViewer}`)).json();
       expect([nativeViewer.id, nativeViewer.row, nativeViewer.col, nativeViewer.rig.seat_id]).toEqual([rigViewer, 1, 1, rigSeat]);
       expect(rigRun('tmux', ['display-message', '-p', '-t', rigTarget, '#{pane_pid}'])).toBe(rigPID);
