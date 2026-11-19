@@ -36,7 +36,9 @@ jobs:
           sudo -n apt-get update
           # Hosted Azure kernels omit gadget drivers. Boot an isolated generic
           # kernel with matching modules instead of mutating the host kernel.
-          sudo -n apt-get install -y openssh-server qemu-system-x86 busybox-static python3-venv "linux-image-$USB_TEST_KERNEL" "linux-modules-extra-$USB_TEST_KERNEL" "linux-tools-$USB_TEST_KERNEL"
+          # This console-only guest needs no recommended GUI/audio stack.
+          # Keep QEMU tools explicit while leaving native budgets unchanged.
+          sudo -n apt-get install -y --no-install-recommends openssh-server qemu-system-x86 qemu-utils busybox-static python3-venv "linux-image-$USB_TEST_KERNEL" "linux-modules-extra-$USB_TEST_KERNEL" "linux-tools-$USB_TEST_KERNEL"
           for module in usbip-vudc g_mass_storage vhci-hcd; do
             modinfo -k "$USB_TEST_KERNEL" -F filename "$module"
           done

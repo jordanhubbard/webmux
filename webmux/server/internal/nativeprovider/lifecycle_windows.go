@@ -281,6 +281,7 @@ func Bootstrap(ctx context.Context, input io.Reader, output io.Writer) (startupE
 	defer pipe.Close()
 	phase = "bootstrap-owner-start"
 	if err := command.Start(); err != nil {
+		phase = ownerProcessFailurePhase()
 		return err
 	}
 	started = true

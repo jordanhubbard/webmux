@@ -81,8 +81,8 @@ class RelayBuildInputs(unittest.TestCase):
         self.assertEqual(hashlib.sha256(bundle).hexdigest(), receipt['publicHostCABundleSHA256'])
         self.assertNotIn(b'PRIVATE KEY', bundle)
         sources = (root / 'ubuntu.sources').read_text()
-        self.assertIn('URIs: https://archive.ubuntu.com/ubuntu/', sources)
-        self.assertIn('URIs: https://security.ubuntu.com/ubuntu/', sources)
+        self.assertEqual(sources.count('URIs: https://azure.archive.ubuntu.com/ubuntu/'), 2)
+        self.assertIn('Suites: noble-security', sources)
         self.assertEqual(sources.count('Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg'), 2)
         self.assertNotIn('http://', sources)
         settings = (root / 'apt-ci.conf').read_text()
@@ -192,8 +192,8 @@ class RelayBuildInputs(unittest.TestCase):
                                  'update', '--print-uris'], capture_output=True, text=True, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)
         for suite in ['noble', 'noble-updates', 'noble-backports']:
-            self.assertIn(f'https://archive.ubuntu.com/ubuntu/dists/{suite}/InRelease', result.stdout)
-        self.assertIn('https://security.ubuntu.com/ubuntu/dists/noble-security/InRelease', result.stdout)
+            self.assertIn(f'https://azure.archive.ubuntu.com/ubuntu/dists/{suite}/InRelease', result.stdout)
+        self.assertIn('https://azure.archive.ubuntu.com/ubuntu/dists/noble-security/InRelease', result.stdout)
         self.assertNotIn('http://', result.stdout)
 
 

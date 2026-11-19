@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "issue": 543,
+  "scope": "Sanitized startup phase evidence and a required connected Windows application gate; hosted startup cause and repair remain unproven.",
+  "modifiedNativeSourcesOver": "283d35d0ce8e44db4acd5033fbae225a35bd2d03",
+  "sourceSHA256": {
+    "webmux/server/internal/nativeprovider/startup_windows.go": "5a0e37a1be70d4d2eeebfa4317c7814535ae3bb5f2cc0d175625ccd85ceb69bf",
+    "webmux/server/internal/nativeprovider/startup_windows_test.go": "ca296b9b877f66ab6f6ba55498eaa75ddd40fec86c9bc4fba492a0c5fd39979c",
+    "webmux/server/internal/nativeprovider/startup_integration_windows_test.go": "74cf4cc531a8a5d1c1182c973fffc0a45d851da4967fcdc9ae8be22d315327cb",
+    "webmux/server/internal/nativeprovider/server_windows.go": "bba95441968a4d5806b3ee74e3d820a2ee87ade82c00e40601e60f41dd1e64c4",
+    "webmux/server/internal/nativeprovider/lifecycle_windows.go": "6f7c0e35b7b98c5cee86d89f5472c14a70c900921cbb8d552698c6cef3d3786a",
+    "webmux/server/internal/nativeprovider/native_windows_test.go": "833fe3be26ca1a887308859014f6475025e7f29345fb38ecc16ed9696398d9f7",
+    "webmux/server/internal/nativeprovider/client_windows.go": "0047c1a88d8e5cc2651498fe2018c22de5706c4bfe13fc4f081c06d457fd7695",
+    "tests/e2e/windows-local-provider.spec.ts": "3a51f4cd5341b251fa1153e10753c962823d6fe6de9f4df4ba631072e01b63ce",
+    "tests/e2e/windows-local-child.mts": "49f0ea9b6fd46473430a366333279cae1120b945e77b064a921c3aa0ffbab2d9"
+  },
+  "protocol": "Existing ready/Error/Code fields; fixed phase labels only, numeric codes only from typed syscall errno; unknown child text ignored. No new durable credential or launch payload.",
+  "nativePlatform": "Windows 11 Enterprise AMD64; Go1.27.4 CGO0 test binary",
+  "nativeBinarySHA256": "9f01e6e6b8d207149a8a87f51a0ea4c5c04d6ec45df26f2276736b1abc9394b3",
+  "negativeBinarySHA256": "30115a85ff998c4ffebfd44fde3c15f528f5a27986b32e94a363abf12b21a980",
+  "validation": {
+    "negativeControl": "Parent lifecycle/server implementation with the same new focused Serve test fails: generic terminal creation error/code0 instead of one fixed phase/code2 frame. Expected native exit1.",
+    "targetedNative": {
+      "topLevelTests": 3,
+      "testAndSubtestPassEvents": 15,
+      "exit": 0,
+      "elapsedSeconds": 12.554396390914917
+    },
+    "fullNativePackage": {
+      "topLevelTests": 23,
+      "testAndSubtestPassEvents": 91,
+      "failures": 0,
+      "skips": 0,
+      "elapsedSeconds": 68.58677172660828,
+      "existingExternalTestBodiesByteIdentical": true
+    },
+    "privacy": "All twelve fixed phase labels retain typed OS codes without raw path/key/environment text; arbitrary reply.Error is ignored. Actual missing-executable Ensure fails at terminal, starts no job and emits no invented errno.",
+    "initialCandidateFailure": "The first new integration expectation required Windows error2 from exec.LookPath. Native execution showed the correct terminal phase but no typed errno; the new test was corrected to reject invented codes. Failed logs and original candidate binary retained; no old test was weakened.",
+    "runtimeOverrides": [],
+    "crossBuilds": [
+      "Windows AMD64 nativeprovider tests",
+      "Windows ARM64 nativeprovider tests"
+    ],
+    "vet": "Windows-target nativeprovider/terminal/recovery PASS",
+    "strictTypeScriptProjects": 5,
+    "relatedHelperSuite": "253 PASS at default concurrency; no failures/skips; includes separate #324 fixture repair."
+  },
+  "newApplicationGate": {
+    "file": "tests/e2e/windows-local-provider.spec.ts",
+    "scope": "Actual Windows app, not authenticated coding-session recovery",
+    "requirements": [
+      "native lifecycle selection exists; error-state creation fails gate",
+      "fresh bounded shell child produces a nonce and owned PID receipt",
+      "same original owner selection before explicit Stop",
+      "matching original Stop confirmation and child absence before independent expiry",
+      "same original duplicate Stop is idempotent; cleanup preserves unresolved metadata"
+    ],
+    "runtimeStatus": "Not yet executed on hosted final source; deliberately cannot count an unconfirmed native terminal as browser-anchor success."
+  },
+  "cleanup": {
+    "temporaryProviderRootsAbsent": 43,
+    "restartManagerNoHolders": true,
+    "registeredImageFiles": 3,
+    "caseProcessesWaitedToExit": true,
+    "forcedOwnerCleanup": false
+  },
+  "privateEvidence": {
+    "files": 20,
+    "manifestSHA256": "aad5d370935ca7a6535add0700ebb1e877c2647f08ddbe3442efaf5b7985b68c"
+  },
+  "limits": [
+    "This adds diagnosis and a real application gate; it does not establish or fix the hosted startup cause. #543 remains open.",
+    "No arbitrary child diagnostic text is exposed; missing untyped errors get a phase only, not an invented OS code.",
+    "Bootstrap/owner/handshake budgets, lifetime mutex, survivor lookup and no-replacement-on-timeout behavior are unchanged. Existing native tests are unchanged.",
+    "ARM64 cross-compilation is not native ARM64 execution or authenticated conversation recovery.",
+    "No new login, auth storage read/copy, CLI installation, installed service/account/protection/firewall change or reboot."
+  ]
+}

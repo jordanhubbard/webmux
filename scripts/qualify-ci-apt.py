@@ -28,7 +28,10 @@ def qualify(output: Path) -> dict:
     if release.get("ID", "").strip('"') != "ubuntu" or not re.fullmatch(r"[a-z][a-z0-9-]+", suite) or not keyring.is_file():
         raise RuntimeError("APT controls require an Ubuntu worker with its installed archive keyring")
     if architecture == "amd64":
-        archive, security = "https://archive.ubuntu.com/ubuntu/", "https://security.ubuntu.com/ubuntu/"
+        # Use the same reachable signed mirror for the unscoped positive
+        # repositories: that negative control should fail on its controlled
+        # 429 feed, not depend on a central Ubuntu endpoint being available.
+        archive = security = "https://azure.archive.ubuntu.com/ubuntu/"
     elif architecture == "arm64":
         archive = security = "https://ports.ubuntu.com/ubuntu-ports/"
     else:

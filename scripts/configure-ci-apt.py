@@ -9,8 +9,8 @@ from urllib.parse import urlsplit
 
 def ubuntu_uri(value):
     mirrors = {
-        "mirror+file:/etc/apt/apt-mirrors.txt": "https://archive.ubuntu.com/ubuntu/",
-        "mirror+file:/etc/apt/apt-mirrors-security.txt": "https://security.ubuntu.com/ubuntu/",
+        "mirror+file:/etc/apt/apt-mirrors.txt": "https://azure.archive.ubuntu.com/ubuntu/",
+        "mirror+file:/etc/apt/apt-mirrors-security.txt": "https://azure.archive.ubuntu.com/ubuntu/",
     }
     if value in mirrors:
         return mirrors[value]
@@ -20,7 +20,10 @@ def ubuntu_uri(value):
     if (u.scheme not in {"http", "https"} or u.netloc not in hosts
             or u.path.rstrip("/") != hosts[u.netloc] or u.query or u.fragment):
         return None
-    host = "archive.ubuntu.com" if u.netloc == "azure.archive.ubuntu.com" else u.netloc
+    # Hosted runners use the signed Azure Ubuntu mirror. Keep their archive
+    # reachable when the central release/security endpoints are unavailable;
+    # preserve each suite and keyring below, and keep ARM64 on its ports archive.
+    host = "ports.ubuntu.com" if u.netloc == "ports.ubuntu.com" else "azure.archive.ubuntu.com"
     return f"https://{host}{hosts[u.netloc]}/"
 
 

@@ -1,0 +1,46 @@
+{
+  "source": "025d24503acfbbfb2aeb5d102fd9746be76f009e",
+  "run": 44468055939,
+  "artifact": 14503151484,
+  "rawZIPDigest": "sha256:5f6d2f43745df2168f5dfa9d87e96314fa23e2dd2a7a0a4993a4f4a8f4d19443",
+  "nativeReceipt": {
+    "executionAccount": "SYSTEM",
+    "source": "025d24503acfbbfb2aeb5d102fd9746be76f009e",
+    "outcome": "passed",
+    "osArchitecture": "X64",
+    "taskRemoved": true,
+    "testSHA256": "69c91d94b06a332ee936272a2514d6554e64fe4cecaaba2b55e98f5d77d3c19a",
+    "imageSHA256": "f1685fb0a856f98f6ba740464b379e43ed6cd376828001dcd9bb1eca32c8bd2e",
+    "scope": "Synthetic hosted SYSTEM application fixture; no authenticated coding/session recovery"
+  },
+  "peMachine": "amd64/0x8664",
+  "imageBytes": 25089024,
+  "imageSHA256": "f1685fb0a856f98f6ba740464b379e43ed6cd376828001dcd9bb1eca32c8bd2e",
+  "goBuildInfoTargetMatch": true,
+  "linkedSourceMetadata": {
+    "revision": "025d24503acfbbfb2aeb5d102fd9746be76f009e",
+    "version": "1.4.5",
+    "modified": "false"
+  },
+  "actualSystemAccountVerified": true,
+  "gitGateBodyUnchanged": true,
+  "gitGateSHA256": "3a51f4cd5341b251fa1153e10753c962823d6fe6de9f4df4ba631072e01b63ce",
+  "windowsCheckoutCRLFSHA256": "69c91d94b06a332ee936272a2514d6554e64fe4cecaaba2b55e98f5d77d3c19a",
+  "passed": 1,
+  "skipped": 0,
+  "retries": 0,
+  "durationMs": 1681,
+  "originalIdentityAndStopAttachmentMatch": true,
+  "verifiedGateAssertions": [
+    "fresh TTY output",
+    "original selection",
+    "confirmed authenticated original Stop",
+    "child gone before independent expiry",
+    "duplicate Stop idempotent",
+    "fixture deletion after confirmed Stop"
+  ],
+  "taskRemoved": true,
+  "noPrivateKeyStoreInArtifact": true,
+  "scope": "Synthetic SYSTEM hosted application/ConPTY; not authenticated user coding/conversation recovery",
+  "auditCorrection": "Initial verifier omitted CRLF checkout normalization and expected a VCS field in generic staged Go build info. Both checkout/Git source digests and the actual linked PE revision/version/modified variables are now verified. No test, producer or native run changed."
+}
