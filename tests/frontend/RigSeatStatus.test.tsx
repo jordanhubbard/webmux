@@ -13,7 +13,7 @@ afterEach(() => vi.useRealTimers());
 describe('Rig tile observations', () => {
   it('separates bootstrap from fresh runtime-hook input attention', () => {
     render(<RigSeatStatus session={session} observations={[observation()]} />);
-    expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Rig running · Bootstrap ready · Agent needs input (runtime hook) · Rig attention');
+    expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Rig running · Attachment unknown · Bootstrap ready · Agent needs input (runtime hook) · Rig attention');
   });
   it('does not call terminal motion agent readiness or work', () => {
     render(<RigSeatStatus session={session} observations={[observation({ agentActivity: { state: 'running', evidenceSource: 'terminal_activity', sampledAt: new Date().toISOString() } })]} />);
@@ -38,7 +38,7 @@ describe('Rig tile observations', () => {
   it('refuses reattribution after a stable seat rebind and accepts explicit viewer rebinding', () => {
     const seat = observation({ managerTarget: 'native-second', attachmentTarget: 'second' });
     const view = render(<RigSeatStatus session={session} observations={[seat]} />);
-    expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Rig running · Bootstrap unknown · Agent activity unknown');
+    expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Rig running · Attachment unknown · Bootstrap unknown · Agent activity unknown');
     view.rerender(<RigSeatStatus session={{ ...session, rig: { ...session.rig!, target: 'native-second', attachment_target: 'second' } }} observations={[seat]} />);
     expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Agent needs input');
   });
@@ -72,4 +72,35 @@ it('distinguishes manager-reported enrollment from a WebMux launch record or lif
   expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Enrollment Adopted by Rig');
   view.rerender(<RigSeatStatus session={session} observations={[{ ...seat, enrollmentSource: 'unavailable' }]} />);
   expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Enrollment unknown');
+});
+
+it('keeps attachment availability separate from lifecycle, activity and the saved viewer binding', () => {
+  const view = render(<RigSeatStatus session={session} observations={[observation({ transportState: 'unavailable' })]} />);
+  expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Rig running · Attachment unavailable · Bootstrap ready');
+  expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Agent needs input');
+  view.rerender(<RigSeatStatus session={session} observations={[observation({ transportState: 'available' })]} />);
+  expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Attachment available');
+  view.rerender(<RigSeatStatus session={session} observations={[observation({ transportState: 'reported' })]} />);
+  expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Attachment reported');
+  for (const patch of [
+    { transportState: undefined },
+    { transportState: 'unexpected' },
+    { transportState: 'toString' },
+    { transportState: '__proto__' },
+    { transportState: 'available', observationState: 'offline' },
+    { transportState: 'available', managerTarget: 'replacement' },
+    { transportState: 'available', tmuxServerFlag: '-S', tmuxServerValue: '/tmp/replacement' },
+  ]) {
+    view.rerender(<RigSeatStatus session={session} observations={[observation(patch)]} />);
+    expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Attachment unknown');
+    expect(screen.getByLabelText('Rig seat status')).not.toHaveTextContent('Attachment available');
+  }
+});
+
+it('names the saved execution host without inferring it from the viewer or Rig host identity', () => {
+  const bound = { ...session, hostname: 'localhost', rig: { ...session.rig!, host: '', rig_host_id: 'host-native' } };
+  const view = render(<RigSeatStatus session={bound} observations={[observation({ host: 'different-worker' })]} />);
+  expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Host Unknown execution host');
+  view.rerender(<RigSeatStatus session={{ ...bound, rig: { ...bound.rig, host: 'worker.example' } }} observations={[observation()]} />);
+  expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Host worker.example');
 });

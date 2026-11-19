@@ -44,7 +44,7 @@ test('native Rig notification refreshes canonical tile state while fallback time
     expect(opened.status()).toBe(200); viewer = (await opened.json() as { id: string }).id;
     await page.goto('/');
     const status = page.getByTestId(`tile-cell-${viewer}`).getByLabel('Rig seat status');
-    await expect(status).toContainText('Rig running · Bootstrap ready');
+    await expect(status).toContainText('Rig running · Attachment unknown · Bootstrap ready');
     // The ready header is flushed only after the real daemon accepts a live-only
     // SSE subscription. Avoid a sleep or a request-start assumption.
     await expect.poll(() => active.size).toBeGreaterThan(0);

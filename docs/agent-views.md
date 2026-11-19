@@ -11,8 +11,12 @@ Opening a viewer does not create or restart a provider. **Restart provider and
 open** is a separate action for a stopped tmux attachment. Closing a Rig tile
 detaches its viewer and leaves the seat running; the tile's reconnect control
 only reconnects the viewer transport. Rig's own session status and attention
-are shown separately from the WebMux viewer connection state. When Rig has no
-verified activity state, WebMux reports it as unknown.
+are shown separately from the WebMux viewer connection state. Each Rig tile
+names its execution host in its status strip, including an explicit unknown host
+when unverified. Attachment availability is also shown separately on the tile.
+It stays unknown when Rig has no matching current observation for that viewer's
+saved native target and tmux server; a connected viewer alone does not establish
+it. When Rig has no verified activity state, WebMux reports it as unknown.
 
 With **Type to All** enabled, input initially goes to all registered terminals.
 The recipient strip lets you choose all current terminals, one Rig project,
