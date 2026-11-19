@@ -2796,3 +2796,33 @@ disposable unauthenticated startup controls, with no model turn. Authenticated
 Linux coding/conversation recovery under #523 and broad #438/#318 acceptance
 remain open. The earlier stdout EOF lacked stderr; the recorded signal defect
 is repaired, while that exact historical exit cause remains unproven.
+
+
+## Windows native active-tool executable upgrade (2026-11-18)
+
+The [native receipt](validation/windows-functional-upgrade-2026-11-18/README.md)
+qualifies a private user-run Windows AMD64/Codex 0.153.0 case with explicit
+cmd.exe tools and read-only/never policy. An actual active Python tool survives
+replacement of main8f by clean 5fad: provider, native CLI and tool PIDs, creation
+times and image hashes stay unchanged. The original native tool session exits
+zero after release without Resume or duplicate launch. Fresh no-tool recall and
+a new tool read follow through the replacement controller.
+
+After owned provider loss, explicit Reconnect opens the wait screen; the public
+Resume action targets the original conversation, project, model, policy and
+profile roots without replaying the initial prompt. Fresh no-tool recall and
+actual tool results verify the new nonce and both filesystem write denials.
+Repeating the same recovery action across another controller crash remains
+consumed, with the provider/native CLI, sibling environment and two persistent
+browser pages retained. All 28 captured transcript/native-journal prefixes match.
+
+This is scoped functional evidence, not complete Windows acceptance. The legacy
+default PowerShell and loopback-denial failures in #538 remain open. Public local
+session DELETE detaches durable jobs while removing saved entries; #541 tracks
+explicit stop and retained authenticated access. The first fixture cleanup
+therefore found live owners; verified explicit private-owner termination was
+required. Final checks find all 23 recorded processes gone and no holders for
+ten fixture image/log files. Failed attempts and the initial partial cleanup are
+retained alongside the passing results. Installed-service/MSI upgrades, other
+accounts/policies, authenticated ARM64, additional reboot coverage and the full
+#318 roadmap audit remain separate requirements.
