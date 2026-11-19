@@ -40,3 +40,9 @@ matcher and the same single compilation of fixed Vite defaults. All six final
 output hashes match the actual frontend files on disk. Its
 [separate receipt](preparation4ef.json) does not claim packaged-server HTTP or
 archive inspection for that newer source.
+
+The later [candidate exposure disposition](../picomatch-disposition-2026-11-19/README.md)
+records the technical review on b155, including fresh 450-test/146-module
+execution and native-package evidence. It preserves this report's historical
+source scope and the generic failures; documentation integration and exact-main
+reconciliation remain required under #429.

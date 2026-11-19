@@ -75,3 +75,9 @@ adds actual compile-pattern traces, a full 444-test pass, static origin checks a
 six unchanged final asset hashes on sourcec195. It proposes the repository
 classification for #429 review, with generic matcher and external-deployment
 limits retained.
+
+The later [candidate exposure disposition](../picomatch-disposition-2026-11-19/README.md)
+records the technical review on b155, including fresh 450-test/146-module
+execution and native-package evidence. It preserves this report's historical
+source scope and the generic failures; documentation integration and exact-main
+reconciliation remain required under #429.

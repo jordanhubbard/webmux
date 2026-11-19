@@ -1,0 +1,69 @@
+{
+  "schema": "webmux.picomatch-exposure-review.v1",
+  "runtimeSource": "b155f4ca58a895c17fbaf8dc484ae44478bcac51",
+  "reviewedDefaultInvocationSource": "b155f4ca58a895c17fbaf8dc484ae44478bcac51",
+  "technicalReviewDecision": "Accept inspected native runtime non-presence and current default build/test trusted-pattern boundary",
+  "issue429": "Open: documentation integration/final-source/exact-main reconciliation",
+  "genericMatcherRepaired": false,
+  "untrustedArbitraryPatternsSafe": false,
+  "productionModules": 146,
+  "forbiddenProductionModules": 0,
+  "defaultBuildCompileCalls": 1,
+  "frontendCompileScanCalls": 13,
+  "frontendTestFiles": 44,
+  "frontendTests": 450,
+  "allSixFreshOutputsMatchActualPackagedMacHTTP": true,
+  "sourceAndDependenciesUnmodifiedByReview": true,
+  "installedBuildDependencySourceSHA256": {
+    "picomatch/index.js": "02ae26406508e28f9ba0865be16cf77f0b33de6c4d4d49c212c4176df1d5625a",
+    "picomatch/lib/picomatch.js": "fdd249d7ffff853f3bb1c77eafc8baa1a437bea85a94c35877b83c6a40d9ca94",
+    "picomatch/lib/parse.js": "4e1e05447668aa1e94366c5516a2bcd8f5fff800cc92b1d0cd7d77703b8618c4",
+    "vite/dist/node/chunks/node.js": "5d40302b2d86ff8f3501df6503a69908dce2c2eab4ce03c154cd8745c0bec5f2",
+    "vitest/dist/chunks/index.Di8au7q4.js": "30444e3faa04d61f6641ebbb1fa4604edf338c69c460d24d5dcb37dee712db01",
+    "vitest/dist/chunks/cli-api.COfZo8lK.js": "a42f8ed8a242f47856eae9bbbb1ea403dc15279b1bb8c2dd59286513e6c12193",
+    "tinyglobby/dist/index.mjs": "fc1bed0d5da56d4638002af7deaf6d179e183a85de648c180839ca36b21b3b50",
+    "fdir/dist/index.mjs": "4a0266bf60373bc08bcac35a813587ead767864b3a80b5dca10bff999e05e32d"
+  },
+  "currentReviewSHA256": "f08f849baedac9ecd9d02e555701afd6e9d7e8dfe606d8ba20d7be4f9f7ad930",
+  "currentExecutionEvidenceSHA256": {
+    "build-trace.jsonl": "b28ac20f020d3e2e53f9e39ee3e64f99ce348da9a3234f959f6ec06ee40576e9",
+    "frontend-module-graph.json": "ae33969813447cbf3a5f9cd0864186e2a1da6e10260ec035cafcabb0f7308f28",
+    "frontend-tests-trace.jsonl": "7be9344c458f4ae5499e0ad17b8ae66eabfe19ebfcaf1d347987697ba432a3f6",
+    "picomatch-current.json": "f45a37d49e26b5386836db60670d7901f3134843bdc468b50f4812be502f7ecd",
+    "ghsa-current.json": "c623ccee8b273ba1cebcbe9120aa0b7cd041a5b86e3d51bf7a7719a6c785f408",
+    "positive-control.jsonl": "65c751a5043d8a5907b2e9c68b8fa795d38ef366fe71586d17738603443c4c58",
+    "cve-current.json": "192119cc685482e94acebd1618a1951d6805770f9cb5952bf8a54e35b277892e",
+    "build.mjs": "404bbef36447be2c6785a83b41d174960c0bbfdc1c8bd1bf0d2dfbe0e4d314f6",
+    "frontend-tests.log": "0954430734b823aced08ab7781a362777c8830225f0e331635561b74c942d43c",
+    "trace-picomatch.mjs": "c0e20c218bae1495361fd05ce03e0d17dc270821d41fcec34365d7b97e6b0dfa",
+    "execution.json": "d1d4c9d6cabf37e5f8ac531ad4cbf4b2cfd16822b8bfba54761f17e25294ab3a",
+    "build.log": "b9957e763b0b26818a43f2b1111478ec24a1c93fac9af5e0054cb7a3db982e12",
+    "positive-control.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "nativePackageReviewSHA256": "1c64ad49d256b42ccffaaa3d7acdbcf0b391dbbeb2b5213bbec1e20c417a74be",
+  "originalTenGateSummarySHA256": "81d71f3030229294784732d12780c493a690fc8854374cd05f56d445caff12d6",
+  "nativePackageReview": {
+    "packagingRun": 44503086702,
+    "nativeArchives": 12,
+    "independentlyUnpackedMSIs": 2,
+    "actualMacHTTPBodies": 6,
+    "strictWindowsHTMLComparison": false,
+    "fullCurrentCRLFBuildReproduction": true,
+    "installerExecuted": false,
+    "producerMetadataAttested": false
+  },
+  "primarySources": {
+    "advisory": "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
+    "CVE": "https://cveawg.mitre.org/api/cve/CVE-2026-112366",
+    "registry": "https://registry.npmjs.org/picomatch/latest",
+    "maintainer": "https://github.com/micromatch/picomatch/pull/235#issuecomment-6315749381"
+  },
+  "limits": [
+    "Candidate b155 only; no current-main/released-version clearance",
+    "No generic matcher repair or arbitrary-pattern safety",
+    "No arbitrary-code absence or external deployment/manager inventory clearance",
+    "No native Windows/Linux HTTP or installer execution",
+    "Historical generic failure and strict Windows HTML mismatch retained",
+    "No full roadmap/release/signing/vendor/license acceptance"
+  ]
+}
