@@ -2635,6 +2635,12 @@ remain separate requirements.
 
 ## Native Rig/Codex restricted-policy recovery (2026-11-18)
 
+Additional [never-approval qualification](validation/codex-never-recovery-2026-11-18/README.md)
+passes the same public lifecycle for workspace-write/never and read-only/never
+on clean source d453528, with fresh before/after policy/environment probes and
+32 lifecycle controls. The original failed read-only checker receipt is retained
+alongside its separate corrected offline audit; no extra coding turn was used.
+
 The [restricted-policy qualification](validation/codex-restricted-recovery-2026-11-18/README.md)
 now covers actual public Go/Chrome recovery on macOS with native workspace-write
 and read-only policies, both with on-request approval and network disabled.
