@@ -9,7 +9,8 @@ brew install jordanhubbard/webmux/webmux
 brew services start jordanhubbard/webmux/webmux
 ```
 
-The stable formula builds v1.4.1 with built-in WebMux coordination by default.
+The stable formula builds the [published release selected in the formula](../Formula/webmux.rb)
+with built-in WebMux coordination by default.
 Agent Deck and Rig are optional integrations and can be enabled together.
 Neither is a formula dependency. See the [coordination setup](openrig.md) to
 install and enable an integration.
@@ -119,8 +120,14 @@ Agent Deck is not embedded in native archives. On macOS or Linux, install the
 qualified release only if you select the optional Agent Deck coordinator:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/asheshgoplani/agent-deck/v1.16.34/install.sh | bash -s -- --version v1.16.34 --non-interactive
+curl -fsSL https://raw.githubusercontent.com/asheshgoplani/agent-deck/v1.16.39/install.sh | bash -s -- --version v1.16.39 --non-interactive
 ```
+
+Current source requires Agent Deck 1.16.39 or newer for terminal attachments.
+Structured native recovery is qualified only for 1.16.39. Upgrade the optional
+coordinator on the controller and execution hosts before using this WebMux update;
+see the [version and migration boundary](openrig.md#agent-deck-minimum-version)
+and [native qualification](validation/agent-deck-2026-11-17/README.md).
 
 For Agent Deck, ensure `~/.local/bin` is on the server service PATH. Native
 Windows supports built-in WebMux coordination; the optional external coordinator
