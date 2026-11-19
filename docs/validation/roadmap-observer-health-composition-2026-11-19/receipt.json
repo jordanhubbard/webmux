@@ -1,0 +1,173 @@
+{
+  "schema": "webmux-roadmap-observer-health-composition/v1",
+  "codeSource": "0d5dac6fd5f56f4c89f948de9944525f9825436b",
+  "canonicalSourceUnchanged": "47c72614a05412c072fb0563ffb5ac9f15a6e261",
+  "inputs": {
+    "windowsFixture": "cc8aaa8d5bb3ab4adc07e196f1c505c1dc5e98c3",
+    "publishedOwner": "16cdbcf24d726f99897bf3314eee1042947d7c07"
+  },
+  "allInputAncestors": true,
+  "oldObserverReaudit": {
+    "source": "47c72614a05412c072fb0563ffb5ac9f15a6e261",
+    "run": 44429823595,
+    "workflowConclusion": "success",
+    "healthyNativeObserverQualified": false,
+    "findings": [
+      {
+        "architecture": "amd64",
+        "index": 3,
+        "case": "full-guarded",
+        "stage": "policy",
+        "panic": true,
+        "forcedCleanup": true,
+        "exitBeforeCleanup": null,
+        "returnCodeAfterCleanup": -9
+      },
+      {
+        "architecture": "amd64",
+        "index": 7,
+        "case": "read-guarded",
+        "stage": "policy",
+        "panic": true,
+        "forcedCleanup": true,
+        "exitBeforeCleanup": null,
+        "returnCodeAfterCleanup": -9
+      },
+      {
+        "architecture": "amd64",
+        "index": 11,
+        "case": "workspace-guarded",
+        "stage": "policy",
+        "panic": true,
+        "forcedCleanup": true,
+        "exitBeforeCleanup": null,
+        "returnCodeAfterCleanup": -9
+      },
+      {
+        "architecture": "arm64",
+        "index": 3,
+        "case": "full-guarded",
+        "stage": "policy",
+        "panic": true,
+        "forcedCleanup": true,
+        "exitBeforeCleanup": null,
+        "returnCodeAfterCleanup": -9
+      },
+      {
+        "architecture": "arm64",
+        "index": 7,
+        "case": "read-guarded",
+        "stage": "policy",
+        "panic": true,
+        "forcedCleanup": true,
+        "exitBeforeCleanup": null,
+        "returnCodeAfterCleanup": -9
+      },
+      {
+        "architecture": "arm64",
+        "index": 11,
+        "case": "workspace-guarded",
+        "stage": "policy",
+        "panic": true,
+        "forcedCleanup": true,
+        "exitBeforeCleanup": null,
+        "returnCodeAfterCleanup": -9
+      }
+    ],
+    "rawArtifactsAndOriginalSummariesPreserved": true
+  },
+  "correctedOwnerComponent": {
+    "source": "646c4cea2fd11af314481f64bf28afb05b444bb0",
+    "run": 44424131750,
+    "architectures": [
+      {
+        "architecture": "amd64",
+        "nativeSHA256": "b452ca20f838a8855a88a41050ee4a694033fff4ea3ecdad5633e6e0e8d13f2b",
+        "helperSHA256": "9d8cfb2fff91c021035793b73e85401539b1acd4d0d03d38b188adb418a372bc",
+        "sameNativeBinaryAsOldFailure": true,
+        "startupCases": 6,
+        "healthyNativeProcesses": 12,
+        "panics": 0,
+        "forcedCleanup": 0,
+        "kernelPassed": true
+      },
+      {
+        "architecture": "arm64",
+        "nativeSHA256": "3bb41c9a80187773e2a59278d4fc355b1a163c31bb5a79581e37d4fe428af047",
+        "helperSHA256": "99e9092071619d7cff26f79b9afab52b8aaf2d72b1971d998aa383f72d070bec",
+        "sameNativeBinaryAsOldFailure": true,
+        "startupCases": 6,
+        "healthyNativeProcesses": 12,
+        "panics": 0,
+        "forcedCleanup": 0,
+        "kernelPassed": true
+      }
+    ]
+  },
+  "localAdmission": {
+    "sourceMerge": "0d5dac6fd5f56f4c89f948de9944525f9825436b",
+    "inputAncestors": [
+      "47c72614a05412c072fb0563ffb5ac9f15a6e261",
+      "cc8aaa8d5bb3ab4adc07e196f1c505c1dc5e98c3",
+      "16cdbcf24d726f99897bf3314eee1042947d7c07"
+    ],
+    "retainedSourceProvenance": {
+      "VT": {
+        "upstream": 241,
+        "patched": 17
+      },
+      "UV": {
+        "upstream": 104,
+        "patched": 7
+      }
+    },
+    "unchangedFromCC8": [
+      "frontend",
+      "native coordinator runtime",
+      "all retained VT/UV source"
+    ],
+    "pythonControls": {
+      "tests": 7,
+      "passed": true
+    },
+    "crossVet": [
+      {
+        "architecture": "amd64",
+        "machine": 62,
+        "SHA256": "57eea3e467b8928b08e75fadefcc92c8877377de03145ca54f7f8bccfbf274e6",
+        "fullServerVetPassed": true,
+        "nativeKernelExecution": false
+      },
+      {
+        "architecture": "arm64",
+        "machine": 183,
+        "SHA256": "5cc02f93b4bd75bddb7d73592079cb58d3796650d72c4c97491a64ca35ef8583",
+        "fullServerVetPassed": true,
+        "nativeKernelExecution": false
+      }
+    ],
+    "actualArtifacts": {
+      "validatorSHA256": "2d082f6d5c23d23657e4138cb56db33d6fc08809fe0453a887607996fb04991b",
+      "cases": [
+        {
+          "architecture": "amd64",
+          "oldPanicArtifactRefused": true,
+          "correctedHealthyArtifactAccepted": true,
+          "oldSHA256": "7b19a702cc4203b1e1efed5b749d276b3821590da3874014b9c72ef9fc7ca647",
+          "newSHA256": "1b2a257d34c35d60f121f9837278e7f99a89e3cac454f4649193a376a9a1f9e2"
+        },
+        {
+          "architecture": "arm64",
+          "oldPanicArtifactRefused": true,
+          "correctedHealthyArtifactAccepted": true,
+          "oldSHA256": "0519ff8c97a7625ac72f72902508b0cf6cbb1eac9f971583d393b744601a0346",
+          "newSHA256": "f8a92b17cf9b15095ba57a431d0a7e6d65a98a6530cf0cced30ba49dde8a15fc"
+        }
+      ],
+      "scope": "Actual composed Python validator against original native artifacts, no new authenticated coding or current-head Linux execution claim."
+    },
+    "scope": "Preparation only; actual composed-head native Linux/hosted checks pending; owner component646 independently verified."
+  },
+  "freshComposedNativeQualification": "pending",
+  "broaderAcceptance": "Review, current-head native/hosted gates, authenticated Linux, interactive permission changes, selected profiles, native platform/service/reboot, security/vendor/signing and release requirements remain separate. No Go runtime adoption or450cause/repair claim."
+}
