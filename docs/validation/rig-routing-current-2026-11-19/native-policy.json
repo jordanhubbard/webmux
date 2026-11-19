@@ -82,5 +82,10 @@
     "daemon-shutdown.json": "64d4765cbf2c5260be4c48af258076f3b496c4f2d8dd9a08feae118d2759d71e",
     "admission.json": "6e96506b31ef58e4b03e19b66c9acd399c3cc6704b924297d63dddbccac1f326",
     "tool-attempts.json": "94c12cfd29c55245ae1fcfdca2db3781cdddf9dda5403b2972cce33c18c909ad"
+  },
+  "postExecutionIntegration": {
+    "main": "94ee2e920703164821d87e11b0d6ed855b9dac12",
+    "nativeAdapterTreeUnchanged": true,
+    "newPublicCoordinationSendWrappersQualifiedByThisProbe": false
   }
 }

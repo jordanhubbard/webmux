@@ -73,6 +73,8 @@ complete, and private tmux stops. Source, intended project policy and all 42
 private SDK files remain unchanged. The existing account stays in place, with
 no authentication-store copy. This additional failed probe does not replace
 any original matrix result or close #603, #464 or #469.
+Later main `94ee2e9` adds durable coordination-send handling; this probe retains
+its executed `3920286` source and does not qualify those newer public wrappers.
 
 The remaining work is actual current modern native-creation qualification.
 Native version/account spoofing, policy bypass, provider substitution or dropping
