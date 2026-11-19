@@ -39,8 +39,9 @@ class OverlayAdmission(unittest.TestCase):
         negative = json.loads((out / 'negative-overlay.json').read_text())['Replace']
         changed = [name for name in normal if normal[name] != negative[name]]
         self.assertEqual(changed, [str(self.stock / self.lock['negativeControl']['path'])])
-        expected = Path(normal[changed[0]]).read_text().replace(self.lock['negativeControl']['removeExactly'], '', 1)
-        self.assertEqual(Path(negative[changed[0]]).read_text(), expected)
+        expected = Path(normal[changed[0]]).read_bytes().replace(
+            self.lock['negativeControl']['removeExactly'].encode('utf-8'), b'', 1)
+        self.assertEqual(Path(negative[changed[0]]).read_bytes(), expected)
         for name, identity in self.lock['files'].items():
             self.assertEqual(RESERVE.sha(self.stock / name), identity['beforeSHA256'])
 

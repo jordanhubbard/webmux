@@ -66,12 +66,15 @@ def prepare(goroot, output, documents=DOCUMENTS):
         replacement[str(goroot / name)] = str(patched)
     (output / 'reserve-overlay.json').write_text(json.dumps({'Replace': replacement}, indent=2) + '\n')
     control = lock['negativeControl']
-    original = (source_root / control['path']).read_text()
-    if original.count(control['removeExactly']) != 1:
+    # Source includes UTF-8 comments. Never decode through the Windows locale
+    # or translate newlines while constructing a hash-pinned byte control.
+    original = (source_root / control['path']).read_bytes()
+    anchor = control['removeExactly'].encode('utf-8')
+    if original.count(anchor) != 1:
         raise ValueError('negative control shrink-accounting anchor differs')
     negative = output / 'negative-source' / control['path']
     negative.parent.mkdir(parents=True)
-    negative.write_bytes(original.replace(control['removeExactly'], '', 1).encode('utf-8'))
+    negative.write_bytes(original.replace(anchor, b'', 1))
     if sha(negative) != control['afterSHA256']:
         raise ValueError('negative control source identity differs')
     broken = dict(replacement)

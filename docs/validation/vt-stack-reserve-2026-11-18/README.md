@@ -73,3 +73,11 @@ Windows AMD64 cross-compilations. The stock VT image has no reserve marker; the
 other three images contain it. Three portable supervisor controls passed; its
 Win32 high-bit status control requires native Windows and was skipped on macOS.
 Retained VT provenance passed for 241 upstream and 17 explicitly patched files.
+
+The initial native run [44428491622](https://github.com/jordanhubbard/webmux/actions/runs/44428491622)
+failed admission on all four workers before compiling or executing the comparison:
+constructing the negative file through Python's Windows locale changed UTF-8
+source bytes, and the pinned hash correctly refused them. The correction uses
+byte reads and replacement throughout; none of the expected source hashes or
+runtime assertions changed. The failed run remains evidence of a diagnostic
+setup failure, with no stock/reserve outcome.
