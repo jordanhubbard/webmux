@@ -14,6 +14,12 @@ export interface RigIdentity {
 }
 
 export interface Session {
+	local_lifecycle?: {
+	  contract: 'webmux-local-provider-lifecycle/v1';
+	  state: 'running' | 'unavailable' | 'requested' | 'uncertain' | 'stopped';
+	  selection?: string;
+	  operation_id?: string;
+	};
   rig?: RigIdentity;
   companion?: 'openrig';
   openrig_view?: string;

@@ -42,7 +42,10 @@ func RunNativeProviderHelper(ctx context.Context, mode string, input io.Reader, 
 type nativeViewer struct {
 	*nativeprovider.Client
 	output io.Reader
+	owner  LocalOwnerTarget
 }
+
+func (v *nativeViewer) LocalOwnerTarget() LocalOwnerTarget { return v.owner }
 
 func (v *nativeViewer) Read(p []byte) (int, error) {
 	n, err := v.output.Read(p)
@@ -68,6 +71,10 @@ func startLaunch(request LaunchRequest, command Command) (*Process, error) {
 	if err != nil {
 		return nil, err
 	}
+	owner, err := captureLocalOwner(identity)
+	if err != nil {
+		return nil, errors.New("native provider lifecycle identity is unavailable; retain the job and reconnect manually")
+	}
 	client, err := nativeprovider.AttachWithProfile(ctx, identity, request.RecoveryKey, command.Cols, command.Rows, screenstate.XtermUnderlineRendererProfile)
 	if err != nil {
 		return nil, err
@@ -80,7 +87,7 @@ func startLaunch(request LaunchRequest, command Command) (*Process, error) {
 		_ = client.Close()
 		return nil, err
 	}
-	return newProcess(&nativeViewer{Client: client, output: io.MultiReader(strings.NewReader(packet), &viewerSnapshot{reader: bufio.NewReader(client)})}), nil
+	return newProcess(&nativeViewer{Client: client, owner: owner, output: io.MultiReader(strings.NewReader(packet), &viewerSnapshot{reader: bufio.NewReader(client)})}), nil
 }
 
 // The browser resets on connected/viewer status before replay. Preserve any

@@ -2835,3 +2835,30 @@ ConPTY root/child teardown, ten repetitions of both new controls, a failing
 acknowledgement-only negative control and the full native-provider package pass.
 This does not yet expose an application Stop action or change window deletion;
 #541's API/UI, durable-intent and ownership acceptance remain open.
+
+### Explicit local Windows close and Stop (#541)
+
+The local Windows Close control now offers **Hide and keep running** or a
+separate **Stop terminal and close** action. Hide persists the existing minimized
+session; it remains in the window list with its authenticated recovery path.
+The server refuses DELETE until the original owned provider's stop is confirmed.
+Controller shutdown remains a viewer detach. Rig, Agent Deck, SSH and other
+manager-owned sessions retain their existing lifecycle routes.
+
+The broker banks a native session/key and execution-host/account scope before
+launch, so a failed post-launch save retains recoverable access. A private owner
+snapshot binds instance, endpoint, image digest, PID and creation time. The
+browser receives only a selection fingerprint. Stop requires a deliberate
+request with a UUID and matching selection; its original target and intent are
+saved before authenticated dispatch. Pending/uncertain stops block automatic
+restore, reconnect and terminal input. Ordinary duplicates only inspect the
+original process; deliberate continuation addresses the same original target.
+Lost replies or failed result saves retain the intent. A different host/account
+or stale owner refuses rather than selecting a replacement. No browser-supplied
+PID or executable is accepted.
+
+Broker/API and browser-component tests cover ownership, pre/post-dispatch save
+failures, reconstruction without a new launch, concurrent requests, original-only
+continuation, stale selections, metadata redaction and lost replies. Native
+application qualification of this complete workflow and exact-source review/CI
+remain required; the earlier component Stop receipt alone does not close #541.

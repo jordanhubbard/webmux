@@ -3,6 +3,7 @@ import { AddSessionCell } from './AddSessionCell';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRigObservations } from '../utils/useRigObservations';
 import { Tile } from './Tile';
+import { LocalTerminalCloseDialog } from './LocalTerminalCloseDialog';
 import { ConnectionDialog } from './ConnectionDialog';
 import { CoordinationDialog } from './CoordinationDialog';
 import { WorkspaceMinimap } from './WorkspaceMinimap';
@@ -171,6 +172,7 @@ export function Workspace({
   }, []);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
+  const [localClose, setLocalClose] = useState<Session | null>(null);
   const [coordinator, setCoordinator] = useState<'agent-deck' | 'rig' | null>(null);
   const [coordinatorHost, setCoordinatorHost] = useState('localhost');
   const [themeOverrides, setThemeOverrides] = useState<Map<string, string>>(() => loadSessionThemeOverrides());
@@ -276,11 +278,16 @@ export function Workspace({
 
   const handleClose = useCallback((id: string) => {
     if (movePendingRef.current) return;
+    const value = sessions.find(session => session.id === id);
+    if (value?.local_lifecycle?.contract === 'webmux-local-provider-lifecycle/v1') {
+      setLocalClose(value);
+      return;
+    }
     api.deleteSession(id)
       .then(() => api.getSessions())
       .then(setSessions)
       .catch(err => setOperationError(`Could not delete session: ${String(err)}`));
-  }, []);
+  }, [sessions]);
 
   const handleReconnect = useCallback((id: string) => {
     api.reconnectSession(id).then(updated => {
@@ -802,6 +809,8 @@ export function Workspace({
         )}
 
         {dialogPos && coordinator && <CoordinationDialog position={dialogPos} initialProvider={coordinator} initialHost={coordinatorHost} launchOnly onBack={() => setCoordinator(null)} onClose={() => setDialogPos(null)} />}
+        {localClose && <LocalTerminalCloseDialog key={localClose.id} session={localClose} onClose={() => setLocalClose(null)}
+          onChanged={() => { api.getSessions().then(setSessions).catch(err => setOperationError(String(err))); }} />}
         {dialogPos && !coordinator && (
           <ConnectionDialog
             localFirst

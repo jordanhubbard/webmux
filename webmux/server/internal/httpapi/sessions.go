@@ -21,7 +21,7 @@ func (s *Server) sessionError(w http.ResponseWriter, err error, message string) 
 		writeError(w, access.Status, access.Message)
 	case errors.Is(err, session.ErrNotFound):
 		writeError(w, 404, "Session not found")
-	case errors.Is(err, session.ErrRecoveryConflict):
+	case errors.Is(err, session.ErrRecoveryConflict), errors.Is(err, session.ErrLocalStopRequired):
 		writeError(w, 409, err.Error())
 	case errors.As(err, &validation):
 		writeError(w, 400, validation.Error())
@@ -31,6 +31,25 @@ func (s *Server) sessionError(w http.ResponseWriter, err error, message string) 
 		s.logger.Error(message, "error", err)
 		writeError(w, 500, message)
 	}
+}
+
+func (s *Server) stopLocalSession(w http.ResponseWriter, r *http.Request, owner string) {
+	var input session.LocalStopRequest
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	result, err := s.sessions.StopLocal(ctx, owner, r.PathValue("id"), input)
+	if err != nil {
+		s.sessionError(w, err, "Could not confirm the original local stop")
+		return
+	}
+	status := http.StatusOK
+	if result.Outcome != "stopped" {
+		status = http.StatusAccepted
+	}
+	writeJSON(w, status, result)
 }
 func (s *Server) listSessions(w http.ResponseWriter, r *http.Request, owner string) {
 	writeJSON(w, 200, s.sessions.List(owner))

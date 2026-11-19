@@ -130,9 +130,9 @@ Remaining #318 work, in order:
    fresh filesystem denials, retained prefixes and durable duplicate/sibling
    controls ([qualification](validation/windows-functional-upgrade-2026-11-18/README.md)).
    This explicitly selected cmd.exe case retains the legacy default-shell and
-   network-denial failures under #538. Public local delete also leaves durable
-   jobs running after their saved entries are removed; explicit stop and retained
-   access require #541. Installed-package different-executable upgrades and
+   network-denial failures under #538. The observed public-delete orphaning gap
+   now has an owner-bound Stop/hide API and UI implementation under #541; actual
+   application qualification, error/restart coverage and review remain required. Installed-package different-executable upgrades and
    authenticated ARM64 conversation recovery remain open. A separate
    [native ARM64 component candidate](validation/windows-arm64-native-2026-11-17/README.md)
    under #456 adds architecture-bound server/ConPTY qualification; its native
