@@ -184,6 +184,13 @@ and prove that slow or failed manager queries still fail. Production launchd
 commands and deadlines are unchanged; real private launchd replacement remains
 part of qualification.
 
+The shared Node fake's per-query interpreter startup still reached the unchanged
+one-second query deadline in hosted CI. #324 is reopened. A prepared native fake
+now passes all seventeen affected controls and all 253 helper tests at default
+concurrency; blocked-Node, cold-start, failed-query and hung-query controls retain
+the production boundaries. Hosted CI remains pending
+([qualification](validation/launchd-native-fixture-2026-11-18/README.md)).
+
 ### Windows packaging reliability
 
 [#236](https://github.com/jordanhubbard/webmux/issues/236) and
