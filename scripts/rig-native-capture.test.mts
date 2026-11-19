@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { captureRigNativeCodex, verifyRigNativeCodexReference, observeRigNativeOriginalAttachment } from '../webmux/server/internal/openrigcoord/rig-native-capture.mts';
+import { captureRigNativeCodex, verifyRigNativeCodexReference, observeRigNativeOriginalAttachment, verifyRigNativeCodexResumePolicy } from '../webmux/server/internal/openrigcoord/rig-native-capture.mts';
 import { nativeCreateArtifacts as a } from '../webmux/server/internal/openrigcoord/rig-native-create.mts';
 import { projectCodexOwnerPlan } from '../webmux/server/internal/openrigcoord/codex-owner-plan.mts';
 import type { launchRigNativeCodex } from '../webmux/server/internal/openrigcoord/rig-native-launch.mts';
@@ -40,7 +40,7 @@ function fixture(t: { after(fn: () => void): void }) {
       if (init?.method === 'POST') posts++;
       return new Response(JSON.stringify(snapshot));
     }) as typeof fetch };
-  return { input, deps, record, snapshot, owned, file, counts: () => ({ posts, records, launches }), switch: () => { switchAfterRead = true; }, unready: () => { ready = false; } };
+  return { input, deps, record, snapshot, owned, file, plan, counts: () => ({ posts, records, launches }), switch: () => { switchAfterRead = true; }, unready: () => { ready = false; } };
 }
 posix('capture joins original registration, live attachment, native generation/header and snapshot; repeats reuse one snapshot', async t => {
   const f = fixture(t), first = await captureRigNativeCodex(f.input, f.deps);
@@ -90,4 +90,47 @@ posix('survivor attachment verifies the banked native conversation and never bec
   const g = fixture(t), original = await captureRigNativeCodex(g.input, g.deps);
   g.record.sessionId = generationId;
   await assert.rejects(observeRigNativeOriginalAttachment(g.input, original, g.deps)); assert.equal(g.counts().posts, 1);
+});
+
+function settingsFixture(t: { after(fn: () => void): void }) {
+  const f = fixture(t);
+  const initial = { cwd: f.input.cwd, model: f.plan.model, model_provider_id: 'openai', service_tier: 'default', reasoning_effort: 'high',
+    approval_policy: 'never', approvals_reviewer: 'user', requested_approvals_reviewer: 'user',
+    permission_profile: { type: 'managed', file_system: { type: 'unrestricted' }, network: 'enabled' },
+    runtime_workspace_roots: [f.input.cwd] };
+  const applied = (settings: unknown) => JSON.stringify({ type: 'event_msg', payload: { type: 'thread_settings_applied', thread_id: nativeId, thread_settings: settings } }) + '\n';
+  const reset = () => fs.writeFileSync(f.file, JSON.stringify({ type: 'session_meta', payload: { id: nativeId, cwd: f.input.cwd } }) + '\n' + applied(initial));
+  reset(); return { ...f, initial, applied, reset };
+}
+posix('unchanged applied native settings qualify without reading transcript suffixes from the manager', async t => {
+  const f = settingsFixture(t), reference = await captureRigNativeCodex(f.input, f.deps), before = f.counts();
+  fs.appendFileSync(f.file, f.applied({ ...f.initial, unrelated_ui_setting: true }));
+  verifyRigNativeCodexResumePolicy(f.input.directory, reference); assert.deepEqual(f.counts(), before);
+});
+posix('interactive read-only selection without another model turn refuses the frozen launch policy', async t => {
+  const f = settingsFixture(t), reference = await captureRigNativeCodex(f.input, f.deps);
+  fs.appendFileSync(f.file, f.applied({ ...f.initial, approval_policy: 'on-request', active_permission_profile: { id: ':read-only' },
+    permission_profile: { type: 'managed', file_system: { type: 'restricted', entries: [] }, network: 'restricted' } }));
+  assert.throws(() => verifyRigNativeCodexResumePolicy(f.input.directory, reference), /native_resume_policy_changed/);
+  // Live original attachment preserves its actual permissions without a Resume.
+  assert.equal((await observeRigNativeOriginalAttachment(f.input, reference, f.deps))?.state, 'attached');
+});
+posix('latest model, approval reviewer, roots and permission graph changes all refuse', async t => {
+  const f = settingsFixture(t), reference = await captureRigNativeCodex(f.input, f.deps);
+  for (const change of [{ model: 'changed' }, { approvals_reviewer: 'guardian' }, { runtime_workspace_roots: ['/foreign'] },
+    { permission_profile: { ...f.initial.permission_profile, network: 'restricted' } }, { service_tier: 'fast' }]) {
+    f.reset(); fs.appendFileSync(f.file, f.applied({ ...f.initial, ...change }));
+    assert.throws(() => verifyRigNativeCodexResumePolicy(f.input.directory, reference), /native_resume_policy_changed/);
+  }
+});
+posix('missing, partial, oversized and foreign applied-setting records cannot authorize resume', async t => {
+  const f = settingsFixture(t), reference = await captureRigNativeCodex(f.input, f.deps);
+  for (const suffix of ['{', f.applied({ ...f.initial, model: undefined }), ' '.repeat(1024 * 1024 + 1) + '\n',
+    JSON.stringify({ type: 'event_msg', payload: { type: 'thread_settings_applied', thread_id: generationId, thread_settings: f.initial } }) + '\n']) {
+    f.reset(); fs.appendFileSync(f.file, suffix); assert.throws(() => verifyRigNativeCodexResumePolicy(f.input.directory, reference));
+  }
+  fs.writeFileSync(f.file, JSON.stringify({ type: 'session_meta', payload: { id: nativeId, cwd: f.input.cwd } }) + '\n');
+  assert.throws(() => verifyRigNativeCodexResumePolicy(f.input.directory, reference), /native_resume_policy_unavailable/);
+  f.reset(); fs.truncateSync(f.file, 32 * 1024 * 1024 + 1);
+  assert.throws(() => verifyRigNativeCodexResumePolicy(f.input.directory, reference), /native_resume_policy_unavailable/);
 });

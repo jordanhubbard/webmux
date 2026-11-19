@@ -25,6 +25,8 @@ func TestPublicNativeRigRecoveryKeepsTypedUncertaintyAndExactOriginalCompletion(
 import sys,json,os
 if sys.argv[2]!='native-recovery-resume':sys.exit(6)
 p=json.load(sys.stdin)
+if os.environ.get('WEBMUX_NATIVE_POLICY_TEST_ERROR'):
+ sys.stderr.write(os.environ['WEBMUX_NATIVE_POLICY_TEST_ERROR']);sys.exit(1)
 with open(os.environ['WEBMUX_NATIVE_ORIGINAL_TEST_LOG'],'a') as out:out.write(json.dumps(p)+'\n')
 i=p['identity'];r=json.loads(i['native_rig_recovery']);v={'operationId':p['operationId'],'nativeSessionId':r['nativeSessionId'],'logicalId':r['pod']+'.'+r['member']}
 if p.get('prepare'):v.update(state='prepared',code='native_resume_prepared',posted=False)
@@ -59,6 +61,14 @@ print(json.dumps(v))
 		t.Fatal("native capture not offered", view, err)
 	}
 	input := session.RecoveryRequest{ID: "9aa1753a-1d61-4420-af42-e6b6fa591c47", Kind: "managed", Confirm: true, Revision: view.State.Revision, Instance: view.Instance}
+	for _, code := range []string{"native_resume_policy_changed", "native_resume_policy_unavailable"} {
+		t.Setenv("WEBMUX_NATIVE_POLICY_TEST_ERROR", code)
+		_, err := s.nativeRigRecoveryOperation(context.Background(), "anonymous", identity, input, true)
+		if err == nil || !strings.Contains(err.Error(), "No new Resume was sent") || !strings.Contains(err.Error(), "Continue manually") {
+			t.Fatalf("policy refusal must explain retained manual recovery: %v", err)
+		}
+	}
+	t.Setenv("WEBMUX_NATIVE_POLICY_TEST_ERROR", "")
 	endpoint := "/api/session-recovery/" + saved.ID
 	body, _ := json.Marshal(input)
 	first := request(handler, "POST", endpoint, string(body), "")

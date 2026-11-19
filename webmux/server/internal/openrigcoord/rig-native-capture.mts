@@ -159,3 +159,68 @@ export async function observeRigNativeOriginalAttachment(input: NativeCodexCaptu
     || finalManager.processIdentity !== manager.processIdentity || finalManager.port !== manager.port) return refuse();
   return ready;
 }
+
+// Resume arguments freeze the launch policy. A native interactive change is
+// session-local and need not edit either configuration file. Read only the
+// original local journal, including settings applied without a subsequent turn;
+// never send conversation contents to a manager or use them as launch arguments.
+export function verifyRigNativeCodexResumePolicy(directory: string, reference: NativeCodexRecoveryReference) {
+  const unavailable = (): never => { throw new Error('native_resume_policy_unavailable'); };
+  try {
+    const key = hash(JSON.stringify([reference.rigId, reference.pod, reference.member]));
+    const launch = JSON.parse(artifacts.read(path.join(directory, 'requests', key, 'launch.json')).toString('utf8')) as { plan: unknown };
+    const plan = validateCodexLaunchPlan(launch.plan);
+    if (plan.fingerprint !== reference.planFingerprint || plan.cwd !== reference.cwd) return unavailable();
+    const file = fs.realpathSync(reference.nativeStateFile), sessions = fs.realpathSync(path.join(plan.home, 'sessions'));
+    if (file !== reference.nativeStateFile || !file.startsWith(sessions + path.sep)) return unavailable();
+    const fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK);
+    try {
+      const stat = fs.fstatSync(fd);
+      if (!stat.isFile() || stat.uid !== process.geteuid?.() || stat.nlink !== 1 || stat.size > 32 * 1024 * 1024
+        || hash(JSON.stringify([reference.nativeSessionId, file, stat.dev, stat.ino, stat.birthtimeMs])) !== reference.nativeRecordIdentity) return unavailable();
+      let first: Record<string, unknown> | undefined, latest: Record<string, unknown> | undefined, header = false;
+      let pending = Buffer.alloc(0), offset = 0;
+      const chunk = Buffer.alloc(65536);
+      while (offset < stat.size) {
+        const count = fs.readSync(fd, chunk, 0, Math.min(chunk.length, stat.size - offset), offset);
+        if (!count) return unavailable();
+        offset += count; pending = Buffer.concat([pending, chunk.subarray(0, count)]);
+        let newline: number;
+        while ((newline = pending.indexOf(10)) >= 0) {
+          if (newline > 1024 * 1024) return unavailable();
+          const event: unknown = JSON.parse(pending.subarray(0, newline).toString('utf8')); pending = pending.subarray(newline + 1);
+          if (!object(event) || !object(event.payload)) return unavailable();
+          if (!header) {
+            if (event.type !== 'session_meta' || event.payload.id !== reference.nativeSessionId || event.payload.cwd !== plan.cwd) return unavailable();
+            header = true;
+          }
+          if (event.type === 'event_msg' && event.payload.type === 'thread_settings_applied') {
+            if (event.payload.thread_id !== reference.nativeSessionId || !object(event.payload.thread_settings)) return unavailable();
+            latest = event.payload.thread_settings; first ??= latest;
+          }
+        }
+        if (pending.length > 1024 * 1024) return unavailable();
+      }
+      const after = fs.fstatSync(fd);
+      if (pending.length || !header || !first || !latest || stat.size !== after.size || stat.mtimeMs !== after.mtimeMs
+        || stat.ctimeMs !== after.ctimeMs || stat.ino !== after.ino || stat.dev !== after.dev) return unavailable();
+      // The first applied settings belong to the original frozen launch. Do
+      // not accept a selected permission profile as a new owner-plan authority.
+      if (first.cwd !== plan.cwd || first.model !== plan.model || first.model_provider_id !== plan.provider
+        || first.approval_policy !== plan.approval || first.approvals_reviewer !== 'user'
+        || first.requested_approvals_reviewer !== 'user' || !object(first.permission_profile)
+        || first.active_permission_profile != null || (plan.effort !== null && first.reasoning_effort !== plan.effort)
+        || (plan.serviceTier !== null && first.service_tier !== plan.serviceTier)) return unavailable();
+      const project = (settings: Record<string, unknown>) => Object.fromEntries([
+        'cwd', 'model', 'model_provider_id', 'service_tier', 'reasoning_effort', 'runtime_workspace_roots',
+        'approval_policy', 'approvals_reviewer', 'requested_approvals_reviewer', 'permission_profile', 'active_permission_profile',
+      ].map(key => [key, settings[key] ?? null]));
+      const canonical = (value: unknown): unknown => Array.isArray(value) ? value.map(canonical)
+        : object(value) ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+      if (JSON.stringify(canonical(project(first))) !== JSON.stringify(canonical(project(latest)))) throw new Error('native_resume_policy_changed');
+    } finally { fs.closeSync(fd); }
+  } catch (error) {
+    if (error instanceof Error && error.message === 'native_resume_policy_changed') throw error;
+    return unavailable();
+  }
+}

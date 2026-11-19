@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os/exec"
+	"strings"
 
 	"github.com/jordanhubbard/webmux/server/internal/openrigcoord"
 	"github.com/jordanhubbard/webmux/server/internal/session"
@@ -67,6 +68,9 @@ func (s *Server) nativeRigRecoveryOperation(ctx context.Context, owner string, s
 	payload, _ := json.Marshal(map[string]any{"identity": saved, "operationId": input.ID, "prepare": prepare, "inspect": input.Inspect && !prepare})
 	output, err := openrigcoord.Run(ctx, s.store.Home, owner, "native-recovery-resume", string(payload))
 	if err != nil {
+		if strings.Contains(err.Error(), "native_resume_policy_changed") || strings.Contains(err.Error(), "native_resume_policy_unavailable") {
+			return session.NativeRigOperationResult{}, managedRecoveryError("Codex permissions or settings changed, or could not be verified. No new Resume was sent. Continue manually with the original conversation and review its permissions.")
+		}
 		return session.NativeRigOperationResult{}, managedRecoveryError("Rig could not verify the original recovery: " + err.Error())
 	}
 	var result nativeRigReply
