@@ -47,11 +47,15 @@ test('logical Rig seat keeps its viewer and layout after an explicit native rebi
   type Viewer = { id: string; row: number; col: number; rig: { target: string; seat_id?: string } };
   const observe = async () => (await (await request.get('/api/coordination?provider=rig')).json() as { seats: Seat[] }).seats.find(s => s.projectId === rigId && s.name === 'agents.external');
   const open = async () => {
-    await page.getByRole('button', { name: 'Coordination', exact: true }).click();
-    const panel = page.getByRole('region', { name: 'Coordination', exact: true });
-    await panel.getByLabel('Show sessions').selectOption('rig');
+    const summary = page.locator('summary').filter({ hasText: 'Coordinated sessions' });
+    if (!viewer) {
+      await page.getByTestId('add-cell-0-0').first().click();
+      await page.getByRole('button', { name: 'Open existing agent seat' }).click();
+      await expect(page.getByText('Choose a coordinated seat for row 1, column 1.')).toBeVisible();
+    } else await summary.click();
+    const navigator = page.locator('details').filter({ has: summary });
     const response = page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/api/coordination/attach'));
-    await panel.getByRole('article', { name: `agents.external in ${project}` }).getByRole('button', { name: 'Open session', exact: true }).click();
+    await navigator.getByRole('button', { name: /^agents\.external · / }).click();
     const reply = await response;
     expect(reply.status()).toBe(200);
     return await reply.json() as Viewer;
@@ -65,6 +69,7 @@ test('logical Rig seat keeps its viewer and layout after an explicit native rebi
     const original = (await observe())!;
     await page.goto('/');
     const firstView = await open(); viewer = firstView.id;
+    expect([firstView.row, firstView.col]).toEqual([0, 0]);
     const tile = page.getByTestId(`tile-cell-${viewer}`);
     await expect(tile.locator('.xterm-rows')).toContainText(`FIRST_READY:${first.pid};`);
     expect((await request.patch(`/api/sessions/${viewer}`, { data: { row: 1, col: 1 } })).ok()).toBe(true);

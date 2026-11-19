@@ -68,6 +68,20 @@ topologies remain visible with their provider IDs.
 4. Select **Start agent and open terminal**. Its terminal opens in the ordinary
    grid; give the agent its actual task there.
 
+In an empty grid cell, choose **Open existing agent seat** to select a canonical
+seat for that position. The Coordinator selector continues to offer creating a
+new agent; Localhost and remote connections remain separate choices.
+
+In the terminal grid, expand **Coordinated sessions** to see projects and seats
+from enabled integrations. Selecting a seat reveals its existing viewer. For a
+seat without an open viewer, choose an empty grid cell to place it, or choose
+**Cancel seat placement**. Opening a viewer does not create a new coding agent.
+The navigator preserves the existing tile's position and uses the coordinator's
+current attachment identity. **Manage coordination** opens the full inspector.
+The collapsed navigator does not request an inventory; hiding the grid suspends
+its requests. An unavailable inventory removes its seat actions until a fresh
+observation succeeds.
+
 Existing sessions can be opened from **Your projects and sessions**. Activity
 and provider diagnostics remain collapsed until requested. Merely visiting the
 tab never creates a project or starts an agent.
