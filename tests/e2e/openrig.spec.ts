@@ -174,7 +174,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       await expect(terminal).toBeInViewport({ ratio: 0.1 });
       await expect(terminal.locator('.xterm-helper-textarea')).toBeFocused();
       await expect(terminal.getByLabel('Rig viewer')).toHaveAttribute('title', new RegExp(project));
-      await expect(terminal.getByLabel('Rig viewer')).toHaveText('Rig · localhost');
+      await expect(terminal.getByLabel('Rig seat status')).toContainText('Host localhost');
       await expect(terminal.getByLabel('Rig seat status')).toContainText('Enrollment Adopted by Rig');
       await expect(terminal.getByLabel('Rig seat status')).toContainText('Attachment available');
       await expect(terminal.getByText(`${project} / ${name}`, { exact: true })).toBeVisible();

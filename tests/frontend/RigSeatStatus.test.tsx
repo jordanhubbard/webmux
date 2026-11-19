@@ -96,3 +96,11 @@ it('keeps attachment availability separate from lifecycle, activity and the save
     expect(screen.getByLabelText('Rig seat status')).not.toHaveTextContent('Attachment available');
   }
 });
+
+it('names the saved execution host without inferring it from the viewer or Rig host identity', () => {
+  const bound = { ...session, hostname: 'localhost', rig: { ...session.rig!, host: '', rig_host_id: 'host-native' } };
+  const view = render(<RigSeatStatus session={bound} observations={[observation({ host: 'different-worker' })]} />);
+  expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Host Unknown execution host');
+  view.rerender(<RigSeatStatus session={{ ...bound, rig: { ...bound.rig, host: 'worker.example' } }} observations={[observation()]} />);
+  expect(screen.getByLabelText('Rig seat status')).toHaveTextContent('Host worker.example');
+});

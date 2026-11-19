@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CoordinationSeat } from './CoordinationDialog';
 import type { Session } from '../types';
+import { executionHostLabel } from '../utils/sessionIdentity';
 
 const sources: Record<string, string> = {
   runtime_hook: 'runtime hook', pane_heuristic: 'pane estimate', terminal_activity: 'terminal output',
@@ -46,6 +47,7 @@ export function RigSeatStatus({ session, observations = [] }: { session: Session
     || (fresh && activity.evidenceSource === 'runtime_hook' && activity.state === 'needs_input');
   return <div aria-label="Rig seat status" style={{ fontSize: 11, padding: '2px 8px', background: '#17172c', color: attention ? '#f1d494' : '#b5adc9', flexShrink: 0 }}
     title="Rig observations; bootstrap completion and terminal output do not establish readiness for instructions. Viewer connection is shown separately.">
+    <span>Host {executionHostLabel(rig.host)}</span>{' · '}
     <span title="Manager-reported enrollment lineage; this does not establish remote provider ownership or authorize Stop.">Enrollment {enrollment}</span>{' · '}
     <span>Rig {seat ? seat.state.replace(/_/g, ' ') : 'state unknown'}</span>{' · '}
     <span title="Observed attachment availability, separate from this viewer's connection and the provider's lifecycle or readiness.">Attachment {attachment}</span>{' · '}
