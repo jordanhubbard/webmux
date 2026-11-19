@@ -47,6 +47,35 @@ named fixture flag are retained separately. The tarball-only dependency error
 was corrected by selecting an already complete installation of the identical
 CLI build, with no package installation or global upgrade.
 
+A separate [genuine native policy probe](native-policy.json) uses clean main
+`3920286ed8d70a5736610064d7c60cb13333a3c3`, the same pinned modern Rig and
+Codex 0.169.0 on macOS ARM64. Two real seats are created through the browser's
+tracked requests and each completes a canary-reading native tool. Five native
+turn contexts and both launch plans retain gpt-6.2-astra and read-only/on-request
+with network access disabled. The first model initially omits its canary tool's
+seat argument and corrects it; both tool outputs remain retained. There is one
+successful correlated canary result per seat, rather than one attempt each.
+
+That probe's messaging gate **fails**. The first provider's actual `rig send`
+tool exits 1 with `fetch failed (EPERM)` at the loopback daemon. Rig reports
+**Delivery UNCONFIRMED**; the 30-second WebMux observation sees no challenge or
+peer ACK. This establishes a policy boundary, not a newly proven routing defect
+or definitive non-delivery. No escalation is approved and the policy is not
+relaxed. Reload, reconnect, loss-recovery, history and sibling phases after the
+message gate are not reached. Both private producer processes exit 0 while their
+JSON reports say false; acceptance explicitly reads those failed reports and
+the native tool result instead of treating process exit as success.
+
+The private archive retains the drivers, binary, bound source, both selected
+native journals and failed reports. All 18 sampled owned controller/tmux/provider
+PIDs and the separately recorded daemon PID exit; daemon shutdown is clean and
+complete, and private tmux stops. Source, intended project policy and all 42
+private SDK files remain unchanged. The existing account stays in place, with
+no authentication-store copy. This additional failed probe does not replace
+any original matrix result or close #603, #464 or #469.
+Later main `94ee2e9` adds durable coordination-send handling; this probe retains
+its executed `3920286` source and does not qualify those newer public wrappers.
+
 The remaining work is actual current modern native-creation qualification.
 Native version/account spoofing, policy bypass, provider substitution or dropping
 the managed case would not establish it. Older 26-case receipts retain their
