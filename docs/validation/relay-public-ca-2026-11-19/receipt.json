@@ -1,0 +1,25 @@
+{
+  "parent": "2618d8de244b86780a4dbec2b091a34679a245e1",
+  "entireNativeMainASTUnchanged": true,
+  "boundedLoggerASTUnchanged": true,
+  "streamBoundsASTUnchanged": true,
+  "mainIncludes": "all native assertions, Docker180s/browser120s deadlines, SSH controls, stage reporting and finally cleanup",
+  "modifiedSources": {
+    "scripts/qualify-rig-stop-relay.py": "36614a466023b95b9387a630cbffca69e4e7dba3cfe48fad97c7e493659c2374",
+    "scripts/test_qualify_rig_stop_relay.py": "9766255ea79bfcee5c699e22883b79c4f97ffe3af03027b14d491106594448c7"
+  },
+  "localMac": {
+    "tests": 14,
+    "passed": 13,
+    "APTPlatformSkip": 1
+  },
+  "isolatedLinux": {
+    "tests": 14,
+    "passed": 14,
+    "skipped": 0,
+    "network": "none",
+    "runtime": "existing AMD64 image on ARM64 Docker host; CPU emulation",
+    "unavailableDefaultCAPaths": true
+  },
+  "scope": "Regression and unchanged-native-contract review; native relay positive still pending"
+}

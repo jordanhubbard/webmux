@@ -2,6 +2,7 @@ import importlib.util
 import io
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -95,6 +96,46 @@ class RelayBuildInputs(unittest.TestCase):
         self.assertTrue(dockerfile.startswith('FROM ' + module.BASE_IMAGE + '\n'))
         self.assertIn('test "$VERSION_CODENAME" = noble', dockerfile)
         self.assertIn('--no-install-recommends openssh-server tmux', dockerfile)
+
+    def test_linux_system_bundle_survives_unavailable_python_default_store(self):
+        root = self.fixture()
+        # Use actual public certificates and actual OpenSSL parsing. Simulate a
+        # relocated interpreter with absent default CA paths, not an SSL mock.
+        context = (ssl.create_default_context(cafile=module.LINUX_CA_BUNDLE)
+                   if sys.platform.startswith('linux') else ssl.create_default_context())
+        certificates = context.get_ca_certs(binary_form=True)
+        self.assertTrue(certificates)
+        system_bundle = root / 'system-ca.pem'
+        system_bundle.write_text(ssl.DER_cert_to_PEM_cert(certificates[0]))
+        output = root / 'build'
+        output.mkdir()
+        with patch.dict(os.environ, {'SSL_CERT_FILE': str(root / 'absent.pem'),
+                                     'SSL_CERT_DIR': str(root / 'absent-directory')}):
+            self.assertEqual(ssl.create_default_context().get_ca_certs(binary_form=True), [])
+            with patch.object(module.sys, 'platform', 'linux'), \
+                    patch.object(module, 'LINUX_CA_BUNDLE', str(system_bundle)):
+                receipt = module.write_build_inputs(output)
+        self.assertEqual(receipt['publicHostCAUniqueCertificates'], 1)
+        self.assertEqual(receipt['publicHostCASource'], 'ubuntu-system-bundle')
+        verifier = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        verifier.load_verify_locations(cafile=str(output / 'ca-certificates.crt'))
+        self.assertEqual(verifier.get_ca_certs(binary_form=True), [certificates[0]])
+        self.assertEqual(verifier.verify_mode, ssl.CERT_REQUIRED)
+        self.assertTrue(verifier.check_hostname)
+
+    def test_linux_missing_or_invalid_system_bundle_refuses_before_writes(self):
+        root = self.fixture()
+        invalid = root / 'invalid.pem'
+        invalid.write_text('not a certificate')
+        for bundle in [root / 'absent.pem', invalid]:
+            output = root / bundle.stem
+            output.mkdir()
+            with self.subTest(bundle=bundle.name), \
+                    patch.object(module.sys, 'platform', 'linux'), \
+                    patch.object(module, 'LINUX_CA_BUNDLE', str(bundle)):
+                with self.assertRaises((OSError, ssl.SSLError)):
+                    module.write_build_inputs(output)
+            self.assertEqual(list(output.iterdir()), [])
 
     def test_empty_or_oversized_trust_refuses_before_writing_build_inputs(self):
         for certificates in [[], [b'x'] * 4097, [b'x' * (4 * 1024 * 1024)]]:

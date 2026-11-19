@@ -16,18 +16,27 @@ import re
 import shlex
 import ssl
 import subprocess
+import sys
 import time
 import uuid
 
 BASE_IMAGE = 'ubuntu@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852'
 LOG_STREAM_LIMIT = 1024 * 1024
+LINUX_CA_BUNDLE = '/etc/ssl/certs/ca-certificates.crt'
 
 
 def write_build_inputs(output):
     # The pinned minimal image has the Ubuntu archive keyring, but no CA
     # bundle. Export public trust anchors only; no private keys or native
     # account state enter the build context.
-    certificates = ssl.create_default_context().get_ca_certs(binary_form=True)
+    # A relocated Python/OpenSSL can have no usable compiled-in CA file even
+    # though the Ubuntu runner has its normal system trust bundle. Directory
+    # stores are also loaded lazily, so get_ca_certs() alone cannot enumerate
+    # them. Load Ubuntu's public bundle explicitly, without changing host trust.
+    linux = sys.platform.startswith('linux')
+    context = (ssl.create_default_context(cafile=LINUX_CA_BUNDLE) if linux
+               else ssl.create_default_context())
+    certificates = context.get_ca_certs(binary_form=True)
     if not certificates or len(certificates) > 4096:
         raise RuntimeError('Public host CA trust roots unavailable or oversized')
     bundle = ''.join(ssl.DER_cert_to_PEM_cert(cert) for cert in sorted(set(certificates))).encode('ascii')
@@ -71,6 +80,7 @@ Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 """)
     (output / 'Dockerfile').write_text(dockerfile)
     return {'baseImage': BASE_IMAGE, 'publicHostCAUniqueCertificates': len(set(certificates)),
+            'publicHostCASource': 'ubuntu-system-bundle' if linux else 'python-default-store',
             'publicHostCABundleSHA256': hashlib.sha256(bundle).hexdigest(),
             'ubuntuSourcesSHA256': hashlib.sha256(sources.encode()).hexdigest(),
             'aptSettingsSHA256': hashlib.sha256(settings.encode()).hexdigest(),
