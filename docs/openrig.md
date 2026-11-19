@@ -45,6 +45,40 @@ completion records; Rig adds canonical team topology and peer messaging. Native
 terminal state is observed transport state, not proof that a coding agent is
 ready. Merely viewing inventories never launches an agent.
 
+### Saved Agent Deck instructions
+
+WebMux saves an instruction's original target, text and queue choice before
+calling Agent Deck. If the reply is lost, **Saved instruction** keeps that
+request selected. **Check original send** inspects its saved outcome;
+**Continue original request**, when available, repeats only the original request
+identity and frozen input. Reloading the tab never sends it automatically.
+An uncertain outcome means the owner may have accepted the instruction. Native
+queue admission and delivery progress remain separate from this request state.
+
+**Dismiss saved request and compose another** clears the composer after the
+server confirms dismissal. An original request that has not dispatched is
+prevented from sending later. Dismissing an accepted or uncertain send does not
+cancel native delivery. Compose another only for a different intended instruction.
+
+The browser tab stores only an opaque request UUID in session storage,
+partitioned by WebMux home and authenticated owner. The frozen instruction is
+retained in private mode-0600 records under the WebMux home's
+`data/coordination-sends/`. Preserve this directory across updates. The durable
+Agent Deck send path requires a Linux or macOS WebMux host.
+
+API clients first read `GET /api/coordination/send-intents` for the current
+`scope`, then include it and a caller-generated UUIDv4 `requestId` with the
+existing `provider`, `target`, `message` and `queue` fields in
+`POST /api/coordination/messages`. Older calls without these fields are refused.
+The scope identifies owner/home context; normal authentication and administrator
+access still apply. Inspect with
+`GET /api/coordination/send-intents/{requestId}` or dismiss with
+`POST /api/coordination/send-intents/{requestId}/dismiss`, supplying
+`X-WebMux-Send-Scope` on either request. Preserve the UUID and all original input
+through transport errors; never allocate a new UUID automatically for a retry.
+See the [native queue and crash qualification](validation/coordination-send-intent-2026-11-19/README.md)
+for supported behavior and its boundaries.
+
 The following sections describe the optional external integrations.
 
 The browser deliberately keeps three concepts separate: a coordinator project

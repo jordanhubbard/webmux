@@ -2,6 +2,11 @@
 
 Refs #246 and #598. The bridge remains unimplemented. This source-bound review identifies a concrete prerequisite; it does not qualify shared topology, coding execution, completion forwarding or native identity binding.
 
+The missing WebMux request-identity behavior described below is the historical
+baseline at `567f0e9`. It is addressed by the subsequent
+[durable send-intent implementation and native qualification](../coordination-send-intent-2026-11-19/README.md).
+The larger bridge and native identity-binding requirements remain open.
+
 ## Native observation
 
 Two identical `session send --queue --require-input-prompt` calls against one owned synthetic shell worker produce two different durable send IDs under the published Agent Deck1.16.39 binary on macOS ARM64. Both immediate replies say queued and not submitted. A subsequent native queue listing contains both IDs; one is typing and the other queued. These are queue states, not proof of delivery. The shell's append-only input witness contains only its startup row and no received message. No model or authenticated coding conversation is used.

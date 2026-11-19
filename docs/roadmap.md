@@ -351,6 +351,14 @@ updates. The dependency-audit gate remains enabled and passed for this release.
 
 ## Integration and feature follow-ups
 
+- [#598](https://github.com/jordanhubbard/webmux/issues/598): durable,
+  owner-scoped Agent Deck send intent now consumes an exclusive dispatch right
+  before the provider call. Browser reload, lost replies and controller crash
+  preserve the original request rather than enqueueing it again. The
+  [source-bound local/native qualification](validation/coordination-send-intent-2026-11-19/README.md)
+  covers real queue acceptance and delayed-request dismissal. The shared-identity
+  and completion-event bridge under #246 remains separate and incomplete.
+
 - [#264](https://github.com/jordanhubbard/webmux/issues/264): the [strict source
   coverage gate](typescript.md) uses compiler CLIs and is qualified separately
   against native TypeScript 7; the full compiler upgrade still requires a

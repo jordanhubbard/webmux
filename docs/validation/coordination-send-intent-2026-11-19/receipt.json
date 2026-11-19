@@ -1,0 +1,124 @@
+{
+  "issue": 598,
+  "status": "Scoped implementation and local qualification complete; full roadmap/release remains incomplete",
+  "nativeQualificationSource": "f9d94b3ca6c43864fa0be81393c59a8805d60373",
+  "serverRaceExecutionSource": "cdd24416858ea7b22ad19bff018a6e090ae3e593",
+  "serverTreeEqualNativeSource": true,
+  "integratedBrowserSource": "88e7451ca1e7d8c46bc7949c657da2ad2ea02861",
+  "productionAndFrontendUnitSourcesEqualAfterIntegration": true,
+  "nativeSourceFileSHA256": {
+    "tests/e2e/openrig.spec.ts": "3ce8939a45d14c06caac05c3813da59efcfb5f320aec07961824446f4ed9e680",
+    "tests/frontend/CoordinationDialog.test.tsx": "3c03942ca133c02751ca7cffb33e7c442f03e54ed6a9e652fda6f481d5e09dee",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "9cd6b6fc904c0e3f7bc86b5f1bfa4299b5dff8a737b1c1acca3b50520dfc566f",
+    "webmux/frontend/src/hooks/useCoordinationSendIntent.ts": "4af2ed524c224956c12f2957097b7edeaeb64c0abedbb902ed02c693bf28a132",
+    "webmux/frontend/src/utils/api.ts": "56f6e9802d4d1e827cce3b2e87b0cb4c1d8399afc3313e3d1b916ac77aed1639",
+    "webmux/server/internal/httpapi/coordination_send.go": "1b59965327d76f4041e47ad36ff9140410a3a4350a3d2cbd9888b89c39597842",
+    "webmux/server/internal/httpapi/coordination_send_test.go": "08fc2a9578bb7af36b31fbdac16d51c0dfed0e60544fb368583989f2f2bb4883",
+    "webmux/server/internal/httpapi/openrig.go": "38e7991462af4a9c358ad8e06353279b519a6e5aa959649ff204e0ecc32ce575",
+    "webmux/server/internal/httpapi/openrig_test.go": "77615344ee08df16520fdcd3249699422059e025d3cfa619af92ebd864e8f2f2",
+    "webmux/server/internal/httpapi/server.go": "16c252645b535366517d9a0ca81824f4812385b54b5757e1e51bc9ad1b16cf93"
+  },
+  "localChecks": {
+    "serverRaceTopLevel": {
+      "pass": 548,
+      "skip": 11
+    },
+    "httpapiVetExit": 0,
+    "windowsAMD64TestCrossCompileExit": 0,
+    "windowsExecution": false,
+    "strictTypeScriptProjects": 5,
+    "frontendTestsPassed": 472,
+    "lintExit": 0,
+    "frontendBuildExit": 0,
+    "linuxARM64SendControlTestsPassed": 11,
+    "linuxSource": "f9d94b3ca6c43864fa0be81393c59a8805d60373",
+    "linuxContainerImage": "sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f",
+    "originalBrowserCases": {
+      "expected": 8,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "integratedBrowserCases": {
+      "expected": 8,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  },
+  "negativeControl": {
+    "kind": "Previous-handler source overlay, not an original released executable",
+    "overlayHandlerSource": "567f0e99b19ba706543c96e511f842424af970c5",
+    "test": "TestCoordinationSendHTTPRepeatedAcceptedRequestKeepsOwnerSendID",
+    "expectedFailure": "owner invoked 2 times; want exactly one",
+    "failedAsExpected": true
+  },
+  "native": {
+    "platform": "darwin/arm64",
+    "ownerVersion": "Agent Deck 1.16.39",
+    "nativeBinarySHA256": "e6a08a50d40d4a14494fd461a966b28976d46dcbce4766fee1e8c2061958913b",
+    "webmuxBinarySHA256": "06969edcf4e2b0fed2c1fa2837e1e3e87f0a48bdbd34e83595a7fce5353dc86b",
+    "rawResultSHA256": "d4ad96ea85c5fee70deb53fe7a3c096affa2bf812774e3b24c47e8e564f458c0",
+    "browserChecks": {
+      "publicReplyLossAfterActualAcceptance": true,
+      "reloadAndDuplicateRetainOriginalOwnerSendID": true,
+      "changedBodyRefused": true,
+      "nativeReplyLossRetainsUncertaintyWithoutReenqueue": true,
+      "controllerCrashAndBrowserReloadRetainConsumedOriginal": true,
+      "unobservedDismissalFencesDelayedOriginal": true,
+      "unobservedOwnerScopeMismatchRefused": true
+    },
+    "actualProducerCalls": 2,
+    "nativeQueueRecords": 2,
+    "privateControllerIncarnations": 2,
+    "ledgerFiles": 7,
+    "dispatchClaims": 2,
+    "dismissalClaims": 1,
+    "allLedgerFiles0600": true,
+    "profilePinned": true,
+    "inputPromptGuardPreserved": true,
+    "originalSyntheticPayloadAliveAcrossControllerCrash": true,
+    "buildIdentity": "Clean-source producer self-report; not attested"
+  },
+  "cleanup": {
+    "ownedPayloadExited": true,
+    "remainingPrivateProcesses": [],
+    "readOnlyOpenFileAndTmuxControlsPassed": true,
+    "retainedInactiveSocketInodes": true,
+    "linuxContainerRemoved": true
+  },
+  "excludedAttempts": [
+    {
+      "name": "native-cdd2441",
+      "passed": false,
+      "reason": "Qualifier assumed Ungrouped; actual native add selected its generated group. No send."
+    },
+    {
+      "name": "native-cdd2441-group",
+      "passed": false,
+      "reason": "Qualifier asserted native completion from immediate in-flight UI before second HTTP response. Only one producer call; no second native reply was dropped. Scoped late worker cleanup completed."
+    }
+  ],
+  "qualifierCorrections": [
+    "Use actual native-created group",
+    "Wait for authoritative HTTP outcome after deliberately dropped native reply",
+    "Observe late private worker children during bounded cleanup",
+    "Distinguish client request in progress from verified not-dispatched status; Go tree unchanged"
+  ],
+  "limits": [
+    "Auth-none loopback WebMux and owned synthetic shell; no authenticated coding or model execution",
+    "No Rig/Agent Deck identity/event bridge or atomic expected-native-CID dispatch contract",
+    "No native Windows execution, host reboot, installed package migration or full release acceptance",
+    "Linux container covers filesystem/process/HTTP controls with fake CLI, not authenticated native coding",
+    "Immutable intent durability is within the retained WebMux home; preserve its data during upgrades",
+    "Scope binds owner/home context and is not an authorization credential"
+  ],
+  "hostedActionsDispatched": false,
+  "retention": {
+    "archiveName": "roadmap-send598-f9d94b3-20261119",
+    "manifestSHA256": "ec179861506c27d523ae2fe9c02c3750717321831c07dd3e8f4c0daba53f1656",
+    "files": 139,
+    "bytes": 113325765,
+    "readbackAllSHA256": true
+  }
+}
