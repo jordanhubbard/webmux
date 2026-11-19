@@ -1,0 +1,42 @@
+{
+  "scope": "Independent frozen b2b9fce historical native lifecycle evidence audit, not current combined-source qualification",
+  "manifestFiles": 146,
+  "sourceFilesMatched": 20,
+  "assertions": 223,
+  "checks": {
+    "hide_retains_original": true,
+    "hide_no_stop_or_delete": true,
+    "live_delete_409": true,
+    "lost_reply_original_stopped_record_retained": true,
+    "browser/repeat-original-session.json:same_request": true,
+    "browser/repeat-original-session.json:same_operation": true,
+    "browser/repeat-original-after-restart-session.json:same_request": true,
+    "browser/repeat-original-after-restart-session.json:same_operation": true,
+    "uncertain_stop_202": true,
+    "browser/inspect-original-sibling.json:inspect_original_only": true,
+    "browser/inspect-original-after-release-sibling.json:inspect_original_only": true,
+    "late_completion_then_delete": true,
+    "eleven_process_objects_survive_controller_restart": true,
+    "two_provider_identities_survive": true,
+    "uncertain_provider_identity_survives_restart": true,
+    "two_viewers_no_prestop_disconnect": true,
+    "two_viewers_original_hidden_restored": true,
+    "two_viewers_real_shell_output": true,
+    "two_viewers_confirmed_original_stop": true,
+    "both_viewers_close_after_stop": true,
+    "fourteen_reported_prefixes": true,
+    "one_native_journal": true,
+    "four_completed_native_turns": true,
+    "one_actual_native_read_tool": true,
+    "matching_tool_output_exit_zero": true,
+    "native_assistant_recalled_marker": true,
+    "twenty_recorded_process_objects_gone": true,
+    "cleanup_no_holders_and_port_free": true
+  },
+  "boundaries": [
+    "No new native work or login",
+    "Original legacy Windows sandbox only; no shell/network denial acceptance",
+    "Historical source bindings retained; no current-head native acceptance",
+    "No interrupted persistence/dispatch-window native fault claim"
+  ]
+}
