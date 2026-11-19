@@ -1,0 +1,48 @@
+{
+  "issue": 545,
+  "base": "67019a3f8361a472b987a6c3ac206235b9d3c0d0",
+  "originalCI": 44471142427,
+  "failedLinuxJob": 135380639885,
+  "failedArtifact": 14505783073,
+  "failedArtifactDigest": "sha256:3bcfa07332dcbdd7d2aea2bc2dfbfd2751b9312d35f813ca0b3adf309b323cd7",
+  "observedFailure": {
+    "stage": "Docker SSH/tmux fixture image build",
+    "deadlineSeconds": 180,
+    "localCheckedStopBrowserCasePassed": true,
+    "relayBrowserAttempted": false,
+    "underlyingBuildCause": "unknown; partial output discarded on original timeout path"
+  },
+  "parentNegative": {
+    "parent": "67019a3f8361a472b987a6c3ac206235b9d3c0d0",
+    "sourceSHA256": "131bb56dea3f057f70aaee01bf80500d48b075bb6f9693c34935ae22b7d3b805",
+    "originalNestedFunctionExecutedFromAST": true,
+    "realChildEmittedBothStreams": true,
+    "originalTimeoutPreserved": true,
+    "originalLogBytes": 0,
+    "diagnosticLossReproduced": true,
+    "nativeDockerOrStopRerun": false
+  },
+  "localControls": {
+    "realChildTimeoutBothStreams": "PASS",
+    "boundedLogPreservesUntruncatedSuccessfulResult": "PASS",
+    "actualNonzeroExitAndCheckFalse": "PASS",
+    "actualSpawnError": "PASS",
+    "testCount": 4,
+    "syntaxCompile": "PASS"
+  },
+  "sourceSHA256": {
+    "scripts/qualify-rig-stop-relay.py": "f9802b80ae3f8abfd87d426e6bb0556ad9a7809df73140e51880bda7d41de3a0",
+    "scripts/test_rig_stop_relay.py": "390300d32994b160102b9ce4b401120fbec5cb305470cb90110363d4f8b8fad8",
+    ".github/workflows/ci.yml": "f440c0b61fb60873cd262c1508801f7b84b36a36ab23d25cd2ac12808dd7eb7a"
+  },
+  "limits": {
+    "logExcerptPerRawStreamBytes": 1048576,
+    "processCaptureMemoryBehavior": "unchanged subprocess.run capture_output; not a bounded-memory claim",
+    "DockerBuildDeadlineSeconds": 180,
+    "nativeBrowserDeadlineSeconds": 120,
+    "nativeStopAssertionsAndOwnership": "unchanged",
+    "DockerClientTimeoutDoesNotProveDaemonBuildEnded": true,
+    "originalCauseOrTimeoutRepairClaim": false,
+    "changedDiagnosticNativeRun": "PENDING"
+  }
+}

@@ -329,6 +329,7 @@ jobs:
           WEBMUX_REAL_OPENRIG: '1'
           OPENRIG_HOST_SELECTED: 'webmux-ci-unrelated-selection'
         run: |
+          python3 -m unittest discover -s ../scripts -p test_rig_stop_relay.py -v
           df -Pk "$RUNNER_TEMP" "$PWD" "$(npm config get cache)"
           sudo -n apt-get install -y lsof
           npm install --prefix "$RUNNER_TEMP/webmux-openrig-stop" --ignore-scripts --no-audit --no-fund @openrig/cli@0.7.18

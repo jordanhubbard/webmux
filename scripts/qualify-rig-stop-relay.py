@@ -18,6 +18,53 @@ import time
 import uuid
 
 BASE_IMAGE = 'ubuntu@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852'
+LOG_STREAM_LIMIT = 1024 * 1024
+
+
+def _log_stream(value):
+    data = value.encode('utf-8') if isinstance(value, str) else (value or b'')
+    observed = len(data)
+    omitted = max(0, observed - LOG_STREAM_LIMIT)
+    if omitted:
+        half = LOG_STREAM_LIMIT // 2
+        data = data[:half] + f'\n[omitted {omitted} bytes]\n'.encode() + data[-half:]
+    return data.decode('utf-8', errors='replace'), observed, omitted
+
+
+def run_recorded(command, log, *, check=True, timeout=30):
+    """Keep bounded output even when subprocess.run raises on its deadline.
+
+    Capture and command return semantics remain subprocess.run's. In particular,
+    a Docker client timeout does not establish that its daemon finished building.
+    """
+    identity = uuid.uuid4().hex
+    started = time.monotonic()
+
+    def record(event, **fields):
+        log.write(json.dumps({'event': event, 'commandId': identity,
+                              'elapsedSeconds': time.monotonic() - started, **fields}) + '\n')
+        log.flush()
+
+    def streams(stdout, stderr):
+        result = {}
+        for name, value in [('stdout', stdout), ('stderr', stderr)]:
+            text, observed, omitted = _log_stream(value)
+            result.update({name: text, name + 'Bytes': observed, name + 'OmittedBytes': omitted})
+        return result
+
+    record('command_start', command=command, timeoutSeconds=timeout)
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired as error:
+        record('command_timeout', timeoutSeconds=timeout, **streams(error.stdout, error.stderr))
+        raise
+    except OSError as error:
+        record('command_start_error', errorType=type(error).__name__)
+        raise
+    record('command_exit', exit=result.returncode, **streams(result.stdout, result.stderr))
+    if check and result.returncode:
+        raise RuntimeError(f'{Path(command[0]).name} failed ({result.returncode}); inspect private fixture.log')
+    return result
 
 
 def main():
@@ -36,16 +83,11 @@ def main():
     container = None
     client_key_hash = None
     report = {'scope': 'Actual native Rig/WebMux/browser/local SSH relay and an isolated Linux SSH/tmux endpoint; synthetic persistent sleep provider, no authenticated coding recovery or physical-host failure qualification.',
-              'checks': {}, 'passed': False}
+              'checks': {}, 'passed': False, 'stage': 'preparation', 'nativeBrowserAttempted': False}
     log = (output / 'fixture.log').open('w')
 
     def run(command, *, check=True, timeout=30):
-        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
-        log.write(json.dumps({'command': command, 'exit': result.returncode}) + '\n' + result.stdout + result.stderr + '\n')
-        log.flush()
-        if check and result.returncode:
-            raise RuntimeError(f'{Path(command[0]).name} failed ({result.returncode}); inspect private fixture.log')
-        return result
+        return run_recorded(command, log, check=check, timeout=timeout)
 
     def owned(kind, identity):
         result = run(['docker', kind, 'inspect', identity, '--format', '{{json .Config.Labels}}'])
@@ -85,8 +127,10 @@ RUN chmod 644 /etc/ssh/fixture_authorized_keys
 CMD ["/bin/sh", "-c", "ssh-keygen -q -t ed25519 -N '' -f /etc/ssh/ssh_host_ed25519_key && exec /usr/sbin/sshd -D -e -f /etc/ssh/sshd_config.fixture"]
 ''')
         print('Building the isolated Linux SSH/tmux fixture.', flush=True)
+        report['stage'] = 'image-build'
         run(['docker', 'build', '--label', label + '=' + nonce, '--tag', image, str(output)], timeout=180)
         owned('image', image)
+        report['stage'] = 'container-start'
         report['baseImage'] = BASE_IMAGE
         report['image'] = json.loads(run(['docker', 'image', 'inspect', image]).stdout)[0]['Id']
         container = run(['docker', 'run', '--detach', '--rm', '--memory', '256m', '--cpus', '1',
@@ -98,6 +142,7 @@ CMD ["/bin/sh", "-c", "ssh-keygen -q -t ed25519 -N '' -f /etc/ssh/ssh_host_ed255
         details = json.loads(run(['docker', 'container', 'inspect', container]).stdout)[0]
         binding = details['NetworkSettings']['Ports']['22/tcp']
         assert len(binding) == 1 and binding[0]['HostIp'] == '127.0.0.1'
+        report['stage'] = 'ssh-readiness'
         port = int(binding[0]['HostPort'])
         deadline = time.monotonic() + 20
         while True:
@@ -120,6 +165,7 @@ CMD ["/bin/sh", "-c", "ssh-keygen -q -t ed25519 -N '' -f /etc/ssh/ssh_host_ed255
                 raise RuntimeError('Private SSH endpoint did not become ready')
             time.sleep(.2)
         socket = '/tmp/webmux-remote-owner.sock'
+        report['stage'] = 'remote-owner'
         marker = 'WM_REMOTE_RELAY_' + nonce
         run([*ssh, shlex.join(['tmux', '-S', socket, 'new-session', '-d', '-s', 'provider', '/bin/sh', '-c', f'printf "{marker}\\n"; exec /bin/sleep 600'])])
         probe = shlex.join(['tmux', '-S', socket, 'list-panes', '-t', '=provider', '-F', '#{pane_pid}'])
@@ -138,11 +184,14 @@ CMD ["/bin/sh", "-c", "ssh-keygen -q -t ed25519 -N '' -f /etc/ssh/ssh_host_ed255
         if args.chromium:
             environment['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] = str(args.chromium.resolve(strict=True))
         print('Running native WebMux/browser local Stop across the SSH relay.', flush=True)
+        report['stage'] = 'browser'
+        report['nativeBrowserAttempted'] = True
         with (output / 'browser.log').open('w') as browser_log:
             result = subprocess.run(['npm', '--prefix', 'webmux', 'run', 'test:e2e:go', '--', 'openrig-stop-relay.spec.ts',
                                      '--output=' + str(output / 'browser')], cwd=repo, env=environment,
                                     stdout=browser_log, stderr=subprocess.STDOUT, timeout=120)
         assert result.returncode == 0, 'Native browser case failed; inspect browser.log'
+        report['stage'] = 'verification'
         receipts = list((output / 'browser').rglob('checked-stop-relay.json'))
         assert len(receipts) == 1, 'Missing native browser proof (a skipped test is not acceptance)'
         proof = json.loads(receipts[0].read_text())
@@ -159,8 +208,12 @@ CMD ["/bin/sh", "-c", "ssh-keygen -q -t ed25519 -N '' -f /etc/ssh/ssh_host_ed255
         assert run([*ssh, 'readlink /proc/' + pid + '/exe']).stdout.strip() == executable
         report['checks']['remotePersistentPIDSurvivesAfterBrowserTest'] = True
         report['passed'] = True
+        report['stage'] = 'complete'
     except Exception as error:
         report['error'] = str(error)
+        report['errorType'] = type(error).__name__
+        if report['stage'] == 'image-build' and isinstance(error, subprocess.TimeoutExpired):
+            report['daemonBuildCompletion'] = 'unconfirmed after Docker client timeout'
     finally:
         try:
             if container:
