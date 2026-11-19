@@ -1,0 +1,22 @@
+{
+  "issue": 452,
+  "canonicalBase": "b0b3f3545203e461fd4ef79d5059c9d6c597b46c",
+  "incoming": "14ad699b57b62ef556f4e76b74362d447bd8e6b1",
+  "retainedInputHeads": {
+    "547": "d37ca20a2f3daecd07c67b07d73c404ac052ba96",
+    "551": "4623b2290d4664b752bd6c2fe9b4b4b9928717cf",
+    "553": "14ad699b57b62ef556f4e76b74362d447bd8e6b1"
+  },
+  "unchangedGitTrees": {
+    ".github": "234c92ccce824924836110e5c5b222fbf42dd7ae",
+    "scripts": "1ad6a587f815d09e3c341953b290c982c5233c19",
+    "webmux": "e6e3695de3074c0ef32f1b4a03eeca98750c8890",
+    "tests": "996dc44eabfa2ccca4cfd5a9545d8c6b316f608c"
+  },
+  "restoredHistoricalDocuments": {
+    "docs/validation/rig-relay-timeout-evidence-2026-11-19/README.md": "19f3634d89f0649639b4ce92f38bc4d6220317b8878c099f4b82767066367d23",
+    "docs/validation/rig-relay-timeout-evidence-2026-11-19/receipt.json": "a7f1fdacad9b0fbfdfe726cd8ac3517155e683ed33d5a040d732e4ca96035c26"
+  },
+  "nativeRunsStarted": 0,
+  "scope": "Ancestry/document retention only; no new runtime, native recovery or release qualification."
+}
