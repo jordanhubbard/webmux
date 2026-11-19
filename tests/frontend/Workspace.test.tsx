@@ -28,6 +28,7 @@ vi.mock('@frontend/utils/api', () => ({
     getCoordination: vi.fn().mockResolvedValue({ agents: [], messages: [] }),
     getClients: vi.fn().mockResolvedValue([]),
     createSession: vi.fn(),
+    attachCoordinatedAgent: vi.fn(),
     deleteSession: vi.fn(),
     reconnectSession: vi.fn(),
     moveSession: vi.fn().mockResolvedValue({}),
@@ -91,10 +92,62 @@ describe('Workspace', () => {
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     vi.mocked(api.getRigChanges).mockReset().mockResolvedValue({ contract: 'webmux-rig-changes/v1', available: false, changed: false });
     vi.mocked(api.getRigObservations).mockReset().mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'webmux', defaultView: 'all', enabledProviders: [], providers: [], projects: [], seats: [], messages: [], errors: {} } satisfies CoordinationStatus);
+    vi.mocked(api.getCoordination).mockReset().mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'webmux', defaultView: 'all', enabledProviders: [], providers: [], projects: [], seats: [], messages: [], errors: {} });
+    vi.mocked(api.attachCoordinatedAgent).mockReset();
     vi.mocked(api.moveSession).mockReset().mockResolvedValue(mockSessions[0]);
   });
 
   const defaultProps = { fontSize: 14, termCols: 80, termRows: 24, globalAutoScroll: true, globalAutoScrollVersion: 0, onGlobalAutoScrollChange: vi.fn(), globalLock: false, globalLockVersion: 0, onGlobalLockChange: vi.fn() };
+
+  it('opens a canonical seat from the grid navigator at the chosen empty cell', async () => {
+    const { api } = await import('@frontend/utils/api');
+    vi.mocked(api.getCoordination).mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'rig', defaultView: 'all', enabledProviders: ['rig'], providers: [], messages: [], errors: {},
+      projects: [{ provider: 'rig', id: 'project', name: 'research', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: [] }],
+      seats: [{ provider: 'rig', id: 'stable-seat', projectId: 'project', projectName: 'research', name: 'worker', host: 'localhost', runtime: 'codex', state: 'running', openable: true, managed: true }],
+    });
+    const opened = { ...mockSessions[0], row: 1, col: 1 };
+    vi.mocked(api.attachCoordinatedAgent).mockImplementation(async () => {
+      vi.mocked(api.getSessions).mockResolvedValue([opened]);
+      return opened;
+    });
+    render(<Workspace {...defaultProps} />, { wrapper });
+    fireEvent.click(await screen.findByText('Coordinated sessions'));
+    fireEvent.click(await screen.findByRole('button', { name: 'worker · localhost · running · Rig' }));
+    expect(api.attachCoordinatedAgent).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('add-cell-1-1'));
+    await screen.findByTestId('terminal-s1');
+    expect(api.attachCoordinatedAgent).toHaveBeenCalledExactlyOnceWith('rig', 'stable-seat', { row: 1, col: 1 });
+    expect(api.createSession).not.toHaveBeenCalled();
+    expect(api.moveSession).not.toHaveBeenCalled();
+  });
+
+  it('reveals an existing seat without moving or remounting its terminal', async () => {
+    const { api } = await import('@frontend/utils/api');
+    const existing = { ...mockSessions[0], row: 3, col: 4, rig: { seat_id: 'stable-seat', target: 'native-target', project: 'research', name: 'worker', host: 'localhost', runtime: 'codex' } };
+    vi.mocked(api.getSessions).mockResolvedValue([existing]);
+    vi.mocked(api.getCoordination).mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'rig', defaultView: 'all', enabledProviders: ['rig'], providers: [], messages: [], errors: {},
+      projects: [{ provider: 'rig', id: 'project', name: 'research', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: [] }],
+      seats: [{ provider: 'rig', id: 'stable-seat', projectId: 'project', projectName: 'research', name: 'worker', host: 'localhost', runtime: 'codex', state: 'running', openable: true, managed: true }],
+    });
+    vi.mocked(api.attachCoordinatedAgent).mockResolvedValue(existing);
+    render(<Workspace {...defaultProps} />, { wrapper });
+    const terminal = await screen.findByTestId('terminal-s1');
+    fireEvent.click(screen.getByText('Coordinated sessions'));
+    fireEvent.click(await screen.findByRole('button', { name: 'worker · localhost · running · Rig' }));
+    await waitFor(() => expect(api.attachCoordinatedAgent).toHaveBeenCalledExactlyOnceWith('rig', 'stable-seat', undefined));
+    expect(screen.getByTestId('terminal-s1')).toBe(terminal);
+    expect(api.moveSession).not.toHaveBeenCalled();
+    expect(api.createSession).not.toHaveBeenCalled();
+    expect(screen.queryByText('Choose an empty grid cell to open worker.')).not.toBeInTheDocument();
+  });
+
+  it('does not expose or query the navigator without coordination permission', async () => {
+    const { api } = await import('@frontend/utils/api');
+    render(<Workspace {...defaultProps} canManageRig={false} />, { wrapper });
+    await screen.findByTestId('add-cell-0-0');
+    expect(screen.queryByText('Coordinated sessions')).not.toBeInTheDocument();
+    expect(api.getCoordination).not.toHaveBeenCalled();
+  });
 
   it('hides a retained local terminal immediately and restores it from the dock without remounting', async () => {
     const { api } = await import('@frontend/utils/api');

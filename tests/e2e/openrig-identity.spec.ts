@@ -47,11 +47,15 @@ test('logical Rig seat keeps its viewer and layout after an explicit native rebi
   type Viewer = { id: string; row: number; col: number; rig: { target: string; seat_id?: string } };
   const observe = async () => (await (await request.get('/api/coordination?provider=rig')).json() as { seats: Seat[] }).seats.find(s => s.projectId === rigId && s.name === 'agents.external');
   const open = async () => {
-    await page.getByRole('button', { name: 'Coordination', exact: true }).click();
-    const panel = page.getByRole('region', { name: 'Coordination', exact: true });
-    await panel.getByLabel('Show sessions').selectOption('rig');
+    const summary = page.locator('summary').filter({ hasText: 'Coordinated sessions' });
+    await summary.click();
+    const navigator = page.locator('details').filter({ has: summary });
     const response = page.waitForResponse(r => r.request().method() === 'POST' && r.url().endsWith('/api/coordination/attach'));
-    await panel.getByRole('article', { name: `agents.external in ${project}` }).getByRole('button', { name: 'Open session', exact: true }).click();
+    await navigator.getByRole('button', { name: /^agents\.external · / }).click();
+    if (!viewer) {
+      await expect(page.getByText('Choose an empty grid cell to open agents.external.')).toBeVisible();
+      await page.getByTestId('add-cell-0-0').first().click();
+    }
     const reply = await response;
     expect(reply.status()).toBe(200);
     return await reply.json() as Viewer;
