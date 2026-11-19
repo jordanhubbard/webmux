@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { CoordinationDialog, type CoordinationStatus } from '@frontend/components/CoordinationDialog';
 import { CoordinationCreationUnconfirmedError, CoordinationTrustRequiredError } from '@frontend/utils/api';
 
-const mocks = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn(), attach: vi.fn(), browse: vi.fn(), pods: vi.fn(), updateConfig: vi.fn(), send: vi.fn(), sendStatus: vi.fn(), drain: vi.fn() }));
+const mocks = vi.hoisted(() => ({ status: vi.fn(), create: vi.fn(), attach: vi.fn(), browse: vi.fn(), pods: vi.fn(), updateConfig: vi.fn(), send: vi.fn(), sendScope: vi.fn(), inspectSend: vi.fn(), dismissSend: vi.fn(), sendStatus: vi.fn(), drain: vi.fn() }));
 vi.mock('@frontend/utils/api', async importOriginal => ({ ...await importOriginal<typeof import('@frontend/utils/api')>(), api: {
   getCoordination: mocks.status,
   createCoordinatedAgent: mocks.create,
@@ -12,6 +12,9 @@ vi.mock('@frontend/utils/api', async importOriginal => ({ ...await importOrigina
   getRigProjectPods: mocks.pods,
   updateConfig: mocks.updateConfig,
   sendCoordinationMessage: mocks.send,
+  getCoordinationSendScope: mocks.sendScope,
+  inspectCoordinationSend: mocks.inspectSend,
+  dismissCoordinationSend: mocks.dismissSend,
   getCoordinationSendStatus: mocks.sendStatus,
   drainCoordinationRemote: mocks.drain,
 } }));
@@ -27,6 +30,10 @@ const emptyStatus = (): CoordinationStatus => ({
 });
 
 beforeEach(() => {
+  sessionStorage.clear();
+  mocks.sendScope.mockResolvedValue({ scope: "a".repeat(64) });
+  mocks.inspectSend.mockImplementation(async (id: string) => ({ requestId: id, requestState: "unobserved", queued: false, submitted: false, target: "" }));
+  mocks.dismissSend.mockImplementation(async (id: string) => ({ requestId: id, requestState: "cancelled", queued: false, submitted: false, target: "" }));
   vi.clearAllMocks();
   mocks.status.mockResolvedValue(emptyStatus());
   mocks.create.mockResolvedValue({ target: 'new-seat', session: { id: 'viewer' } });
@@ -39,7 +46,7 @@ beforeEach(() => {
     mocks.status.mockResolvedValue({ ...previous, ...(patch.enabled_providers ? { enabledProviders: patch.enabled_providers } : {}), ...(patch.default_launch_provider ? { defaultLaunchProvider: patch.default_launch_provider } : {}), ...(patch.default_view ? { defaultView: patch.default_view } : {}) });
     return { app };
   });
-  mocks.send.mockResolvedValue({ target: 'sparky:session-1', sendId: 'send-1', state: 'queued', queued: true, submitted: true });
+  mocks.send.mockImplementation(async (input) => ({ requestId: input.requestId, requestState: 'completed', target: input.target, sendId: 'send-1', state: 'queued', queued: true, submitted: true }));
   mocks.sendStatus.mockResolvedValue({ state: 'landed', confirmation: 'accepted', submitted: true });
   mocks.drain.mockResolvedValue({ remote: 'sparky', target: 'local:conductor-1', fetched: 2, written: 1, duplicates: 1, unknown: 0, woke: true, messages: [] });
 });
@@ -341,7 +348,7 @@ it('queues Agent Deck instructions and collects remote completions into a conduc
   fireEvent.click(within(remote).getByRole('button', { name: 'Send instruction' }));
   fireEvent.change(within(remote).getByLabelText('Instruction for worker'), { target: { value: 'Run the focused review' } });
   fireEvent.click(within(remote).getByRole('button', { name: 'Queue instruction' }));
-  await waitFor(() => expect(mocks.send).toHaveBeenCalledWith('agent-deck', 'sparky:worker-1', 'Run the focused review', true));
+  await waitFor(() => expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({ provider: 'agent-deck', target: 'sparky:worker-1', message: 'Run the focused review', queue: true, requestId: expect.any(String) })));
   expect(await within(remote).findByRole('status')).toHaveTextContent('queued');
 
   fireEvent.click(screen.getByRole('button', { name: 'Collect completions' }));
@@ -458,7 +465,7 @@ it('shows all owners together and routes colliding IDs to the original provider'
   expect(within(native).queryByRole('textbox')).toBeNull();
   fireEvent.change(within(deck).getByLabelText('Instruction for agent-deck worker'), { target: { value: 'review the change' } });
   fireEvent.click(within(deck).getByRole('button', { name: 'Queue instruction' }));
-  await waitFor(() => expect(mocks.send).toHaveBeenCalledWith('agent-deck', 'same-id', 'review the change', true));
+  await waitFor(() => expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({ provider: 'agent-deck', target: 'same-id', message: 'review the change', queue: true, requestId: expect.any(String) })));
   await waitFor(() => expect(within(deck).getByRole('status')).toHaveTextContent('queued'));
   expect(within(rig).queryByRole('status')).toBeNull();
   fireEvent.click(within(rig).getByRole('button', { name: 'Open session' }));
@@ -496,7 +503,7 @@ it('keeps the owning target unchanged across repeated delivery polls', async () 
     value.projects = [{ provider: 'agent-deck', id: 'project', name: 'project', host: 'localhost', state: 'active', historical: false, seatCount: 1, runningCount: 1 }];
     value.seats = [{ provider: 'agent-deck', id: 'local:worker', projectId: 'project', projectName: 'project', name: 'worker', host: 'localhost', runtime: 'codex', state: 'running', openable: true, managed: true }];
     mocks.status.mockResolvedValue(value);
-    mocks.send.mockResolvedValue({ target: 'local:worker', sendId: 'pending', state: 'queued', queued: true, submitted: false });
+    mocks.send.mockImplementation(async input => ({ requestId: input.requestId, requestState: 'completed', target: 'local:worker', sendId: 'pending', state: 'queued', queued: true, submitted: false }));
     mocks.sendStatus.mockResolvedValue({ state: 'queued', submitted: false });
     render(<CoordinationDialog onClose={() => {}} />);
     await act(async () => {});
@@ -721,4 +728,121 @@ it('refreshes the selected project namespace without creating a session or chang
   expect(screen.getByLabelText('Project')).toHaveValue('empty');
   expect(mocks.pods).toHaveBeenCalledTimes(2);
   expect(mocks.create).not.toHaveBeenCalled();
+});
+
+
+function instructionStatus() {
+  const value = emptyStatus();
+  value.defaultView = 'agent-deck'; value.defaultLaunchProvider = 'agent-deck'; value.providers[1].available = true;
+  value.projects = [{ provider: 'agent-deck', id: 'project', name: 'project', host: 'localhost', state: 'active', historical: false, seatCount: 1, runningCount: 1 }];
+  value.seats = [{ provider: 'agent-deck', id: 'local:worker', projectId: 'project', projectName: 'project', name: 'worker', host: 'localhost', runtime: 'codex', state: 'running', openable: true, managed: true }];
+  mocks.status.mockResolvedValue(value);
+}
+async function queueOriginalInstruction() {
+  const button = await screen.findByRole('button', { name: 'Send instruction' });
+  await waitFor(() => expect(button).toBeEnabled());
+  fireEvent.click(button);
+  fireEvent.change(screen.getByLabelText('Instruction for worker'), { target: { value: 'Original instruction only' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Queue instruction' }));
+  await waitFor(() => expect(mocks.send).toHaveBeenCalledOnce());
+}
+it('retains the original instruction identity, target, body and queue choice after a lost response', async () => {
+  instructionStatus(); mocks.send.mockRejectedValueOnce(new Error('reply lost'));
+  render(<CoordinationDialog onClose={() => {}} />);
+  await queueOriginalInstruction();
+  expect(await screen.findByRole('alert')).toHaveTextContent('reply lost');
+  expect(within(screen.getByRole('article', { name: 'worker in project' })).getByRole('status')).toHaveTextContent('outcome unknown');
+  const original = { ...mocks.send.mock.calls[0][0] };
+  expect(sessionStorage.getItem(`webmux-coordination-send:${'a'.repeat(64)}`)).toBe(original.requestId);
+  expect(JSON.stringify(sessionStorage)).not.toContain(original.message);
+  fireEvent.change(screen.getByLabelText('Instruction for worker'), { target: { value: 'Changed form must not replace it' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Continue original request' }));
+  await waitFor(() => expect(mocks.send).toHaveBeenCalledTimes(2));
+  expect(mocks.send.mock.calls[1][0]).toEqual(original);
+  expect(original).toEqual(expect.objectContaining({ provider: 'agent-deck', target: 'local:worker', message: 'Original instruction only', queue: true }));
+});
+it('restores the owner-scoped saved request on remount without another send', async () => {
+  instructionStatus(); mocks.send.mockRejectedValueOnce(new Error('reply lost'));
+  const first = render(<CoordinationDialog onClose={() => {}} />);
+  await queueOriginalInstruction(); await screen.findByRole('alert');
+  const original = { ...mocks.send.mock.calls[0][0] };
+  first.unmount();
+  mocks.inspectSend.mockResolvedValue({ requestId: original.requestId, requestState: 'completed', request: original, target: original.target, sendId: 'original-owner-send', state: 'queued', queued: true, submitted: false });
+  render(<CoordinationDialog onClose={() => {}} />);
+  await waitFor(() => expect(mocks.inspectSend).toHaveBeenCalledWith(original.requestId, "a".repeat(64)));
+  await screen.findByText('Original instruction only');
+  expect(mocks.send).toHaveBeenCalledOnce();
+  expect(screen.queryByRole('button', { name: 'Continue original request' })).toBeNull();
+});
+it('keeps an unobserved ID until its dismissal fence is confirmed', async () => {
+  instructionStatus(); const id = 'c19a6ca1-ce5c-4c51-9750-1e7ab6f6fcaa'; const key = `webmux-coordination-send:${'a'.repeat(64)}`;
+  sessionStorage.setItem(key, id);
+  let finish!: (value: unknown) => void;
+  mocks.dismissSend.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  render(<CoordinationDialog onClose={() => {}} />);
+  await screen.findByRole('region', { name: 'Saved instruction' });
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss saved request and compose another' }));
+  await waitFor(() => expect(mocks.dismissSend).toHaveBeenCalledWith(id, "a".repeat(64)));
+  expect(sessionStorage.getItem(key)).toBe(id); expect(mocks.send).not.toHaveBeenCalled();
+  await act(async () => finish({ requestId: id, requestState: 'cancelled', queued: false, submitted: false, target: '' }));
+  await waitFor(() => expect(sessionStorage.getItem(key)).toBeNull());
+  await queueOriginalInstruction();
+  expect(mocks.send.mock.calls[0][0].requestId).not.toBe(id);
+});
+it('does not dispatch when the browser cannot retain the request identity', async () => {
+  instructionStatus(); render(<CoordinationDialog onClose={() => {}} />);
+  const button = await screen.findByRole('button', { name: 'Send instruction' });
+  await waitFor(() => expect(button).toBeEnabled());
+  fireEvent.click(button);
+  fireEvent.change(screen.getByLabelText('Instruction for worker'), { target: { value: 'Keep this unsent' } });
+  const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('storage disabled'); });
+  try {
+    fireEvent.click(screen.getByRole('button', { name: 'Queue instruction' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('storage disabled');
+    expect(mocks.send).not.toHaveBeenCalled();
+  } finally { write.mockRestore(); }
+});
+it('does not restore a different owner browser scope', async () => {
+  instructionStatus(); sessionStorage.setItem(`webmux-coordination-send:${'b'.repeat(64)}`, 'c19a6ca1-ce5c-4c51-9750-1e7ab6f6fcaa');
+  render(<CoordinationDialog onClose={() => {}} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Send instruction' })).toBeEnabled());
+  expect(mocks.inspectSend).not.toHaveBeenCalled(); expect(mocks.send).not.toHaveBeenCalled();
+});
+
+
+it('does not expose a restored instruction from a different owner scope', async () => {
+  instructionStatus(); const id = 'c19a6ca1-ce5c-4c51-9750-1e7ab6f6fcaa'; const key = `webmux-coordination-send:${'a'.repeat(64)}`;
+  sessionStorage.setItem(key, id);
+  mocks.inspectSend.mockResolvedValue({ requestId: id, requestState: 'completed', target: 'local:worker', queued: true, submitted: false,
+    request: { requestId: id, scope: 'b'.repeat(64), provider: 'agent-deck', target: 'local:worker', message: 'Other owner secret', queue: true } });
+  render(<CoordinationDialog onClose={() => {}} />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('original send outcome is unconfirmed');
+  expect(screen.queryByText('Other owner secret')).toBeNull();
+  expect(sessionStorage.getItem(key)).toBe(id); expect(mocks.send).not.toHaveBeenCalled();
+});
+it('retains the original pointer when a dismissal response is lost', async () => {
+  instructionStatus(); const id = 'c19a6ca1-ce5c-4c51-9750-1e7ab6f6fcaa'; const key = `webmux-coordination-send:${'a'.repeat(64)}`;
+  sessionStorage.setItem(key, id); mocks.dismissSend.mockRejectedValueOnce(new Error('fence response lost'));
+  render(<CoordinationDialog onClose={() => {}} />);
+  await screen.findByRole('region', { name: 'Saved instruction' });
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss saved request and compose another' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('fence response lost');
+  expect(sessionStorage.getItem(key)).toBe(id); expect(mocks.send).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss saved request and compose another' }));
+  await waitFor(() => expect(sessionStorage.getItem(key)).toBeNull());
+  expect(mocks.dismissSend.mock.calls).toEqual([[id, 'a'.repeat(64)], [id, 'a'.repeat(64)]]);
+});
+
+
+it('does not label an in-flight owner request as not dispatched or delivered', async () => {
+  instructionStatus(); let finish!: (value: unknown) => void;
+  mocks.send.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  render(<CoordinationDialog onClose={() => {}} />);
+  await queueOriginalInstruction();
+  const seat = screen.getByRole('article', { name: 'worker in project' });
+  expect(within(seat).getByRole('status')).toHaveTextContent('request in progress');
+  expect(within(seat).getByRole('status')).not.toHaveTextContent('not dispatched');
+  const original = { ...mocks.send.mock.calls[0][0] };
+  await act(async () => finish({ requestId: original.requestId, requestState: 'completed', target: original.target, sendId: 'native-first', state: 'queued', queued: true, submitted: false }));
+  expect(within(seat).getByRole('status')).toHaveTextContent('queued');
 });
