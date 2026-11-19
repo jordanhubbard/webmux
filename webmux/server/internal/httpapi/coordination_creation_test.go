@@ -107,30 +107,45 @@ func TestNativeTrustRefusalReturnsTypedConflictWithoutViewer(t *testing.T) {
 		}
 	}
 	t.Setenv("PATH", bins+string(os.PathListSeparator)+os.Getenv("PATH"))
-	for _, mode := range []string{"new", "existing"} {
-		for _, token := range []string{"", strings.Repeat("a", 64)} {
-			body := map[string]any{"provider": "rig", "mode": mode, "projectName": "project", "projectId": "01JQPWV4E7QP26M799M3S0MR6E", "context": "agents", "name": "coder", "workspace": "/work", "host": "localhost", "runtime": "codex"}
-			if token != "" {
-				body["trustRequest"] = token
-			}
-			encoded, _ := json.Marshal(body)
-			response := request(handler, "POST", "/api/coordination/agents", string(encoded), "")
-			requireStatus(t, response, 409)
-			var result struct {
-				Blocked coordinationCreationBlocked `json:"blocked"`
-				Error   string                      `json:"error"`
-				Session json.RawMessage             `json:"session"`
-			}
-			if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil || !validCoordinationBlocked(result.Blocked) || len(result.Session) != 0 || !strings.Contains(result.Error, "native Codex") {
-				t.Fatalf("invalid owner-action response: %s", response.Body.String())
-			}
-			var forwarded map[string]any
-			raw, _ := os.ReadFile(input)
-			if json.Unmarshal(raw, &forwarded) != nil || (token != "" && forwarded["trustRequest"] != token) || forwarded["cwd"] != "/work" {
-				t.Fatalf("changed saved selection: %s", raw)
-			}
-			if len(s.sessions.List("anonymous")) != 0 {
-				t.Fatal("blocked creation opened a viewer")
+	for _, tracked := range []bool{false, true} {
+		for _, mode := range []string{"new", "existing"} {
+			for _, token := range []string{"", strings.Repeat("a", 64)} {
+				body := map[string]any{"provider": "rig", "mode": mode, "projectName": "project", "projectId": "01JQPWV4E7QP26M799M3S0MR6E", "context": "agents", "name": "coder", "workspace": "/work", "host": "localhost", "runtime": "codex"}
+				endpoint := "/api/coordination/agents"
+				publicID := "22222222-2222-4222-8222-222222222222"
+				if mode == "existing" {
+					publicID = "33333333-3333-4333-8333-333333333333"
+				}
+				if tracked {
+					body["creationRequestId"] = publicID
+					body["row"], body["col"] = 1, 2
+					endpoint = "/api/coordination/creation-requests/" + publicID
+				}
+				if token != "" {
+					body["trustRequest"] = token
+				}
+				encoded, _ := json.Marshal(body)
+				response := request(handler, "POST", endpoint, string(encoded), "")
+				requireStatus(t, response, 409)
+				var result struct {
+					Blocked coordinationCreationBlocked `json:"blocked"`
+					Error   string                      `json:"error"`
+					Session json.RawMessage             `json:"session"`
+				}
+				if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil || !validCoordinationBlocked(result.Blocked) || len(result.Session) != 0 || !strings.Contains(result.Error, "native Codex") {
+					t.Fatalf("invalid owner-action response: %s", response.Body.String())
+				}
+				var forwarded map[string]any
+				raw, _ := os.ReadFile(input)
+				if json.Unmarshal(raw, &forwarded) != nil || (token != "" && forwarded["trustRequest"] != token) || forwarded["cwd"] != "/work" {
+					t.Fatalf("changed saved selection: %s", raw)
+				}
+				if tracked && (forwarded["creationRequestId"] != publicID || forwarded["row"] != float64(1) || forwarded["col"] != float64(2)) {
+					t.Fatalf("changed original public request or grid position: %s", raw)
+				}
+				if len(s.sessions.List("anonymous")) != 0 {
+					t.Fatal("blocked creation opened a viewer")
+				}
 			}
 		}
 	}
