@@ -243,7 +243,13 @@ func (o *owner) handle(connection net.Conn) {
 
 // Serve owns the lifetime mutex and the ConPTY/job, not the startup controller.
 // Losing the startup reply or every viewer never terminates an established job.
-func Serve(ctx context.Context, input io.Reader, output io.Writer, start func(Launch) (Terminal, error)) error {
+func Serve(ctx context.Context, input io.Reader, output io.Writer, start func(Launch) (Terminal, error)) (startupErr error) {
+	phase, ready := "owner-config", false
+	defer func() {
+		if startupErr != nil && !ready {
+			_ = writeFrame(output, frame{Kind: "ready", Error: phase, Code: int(startupCode(startupErr))})
+		}
+	}()
 	var c Config
 	if err := readFrame(input, &c); err != nil {
 		return err
@@ -251,33 +257,39 @@ func Serve(ctx context.Context, input io.Reader, output io.Writer, start func(La
 	if err := validate(c); err != nil {
 		return err
 	}
+	phase = "owner-root"
 	if err := prepareRoot(c.Root); err != nil {
 		return err
 	}
+	phase = "owner-lock"
 	release, err := ownSession(c.Session)
 	if err != nil {
-		_ = writeFrame(output, frame{Kind: "ready", Error: err.Error()})
-		return nil
+		return err
 	}
 	defer release()
+	phase = "owner-temp"
 	dir, err := os.MkdirTemp("", "wmp-")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(dir)
+	phase = "owner-secure-temp"
 	if err := secureCreatedDirectory(dir); err != nil {
 		return err
 	}
 	endpoint := filepath.Join(dir, "s")
+	phase = "owner-listen"
 	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: endpoint, Net: "unix"})
 	if err != nil {
 		return err
 	}
 	defer listener.Close()
+	phase = "owner-identity"
 	id, err := instance()
 	if err != nil {
 		return err
 	}
+	phase = "owner-image"
 	self, err := os.Executable()
 	if err != nil {
 		return err
@@ -287,19 +299,21 @@ func Serve(ctx context.Context, input io.Reader, output io.Writer, start func(La
 		return err
 	}
 	digest := sha256.Sum256(image)
+	phase = "owner-screen"
 	screen, err := screenstate.NewWithProfile(c.Launch.Cols, c.Launch.Rows, screenstate.XtermUnderlineRendererProfile)
 	if err != nil {
 		return err
 	}
 	defer screen.Close()
 	o := &owner{identity: Identity{Session: c.Session, Instance: id, Endpoint: endpoint, OwnerPID: os.Getpid(), BinarySHA256: hex.EncodeToString(digest[:]), Replay: "screen-v3"}, key: c.Key, viewers: map[*subscriber]bool{}, screen: screen, changed: make(chan struct{})}
+	phase = "owner-record"
 	if err := writeRecord(c.Root, c.Key, o.identity); err != nil {
 		return err
 	}
 	defer os.Remove(filepath.Join(c.Root, "identity.json"))
+	phase = "owner-terminal"
 	p, err := start(c.Launch)
 	if err != nil {
-		_ = writeFrame(output, frame{Kind: "ready", Error: "native terminal creation failed"})
 		return err
 	}
 	o.terminal = p
@@ -319,11 +333,13 @@ func Serve(ctx context.Context, input io.Reader, output io.Writer, start func(La
 			}
 		}
 	}()
+	phase = "owner-record"
 	if err := writeRecord(c.Root, c.Key, o.identity); err != nil {
 		return err
 	}
 	// A broken startup pipe means its caller disappeared, not that the job
 	// disappeared. The authenticated record remains the recovery rendezvous.
+	ready = true
 	_ = writeFrame(output, frame{Kind: "ready", Identity: &o.identity})
 	if closer, ok := output.(io.Closer); ok {
 		_ = closer.Close()
