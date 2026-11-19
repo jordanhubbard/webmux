@@ -9,10 +9,11 @@ interface ConnectionDialogProps {
   suggestedRow?: number;
   suggestedCol?: number;
   localFirst?: boolean;
+  onChooseExistingSeat?: () => void;
   onChooseCoordinator?: (provider: 'agent-deck' | 'rig', host: string) => void;
 }
 
-export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCol, localFirst = false, onChooseCoordinator }: ConnectionDialogProps) {
+export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCol, localFirst = false, onChooseCoordinator, onChooseExistingSeat }: ConnectionDialogProps) {
   const remoteDetailsRef = useRef<HTMLDetailsElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
   const [hosts, setHosts] = useState<HostEntry[]>([]);
@@ -149,6 +150,7 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
     <Dialog title="Connect to Host" onClose={onClose} dismissible={!submitting}>
 
       <form onSubmit={handleConnect} style={styles.form}>
+        {onChooseExistingSeat && <button type="button" onClick={onChooseExistingSeat} disabled={submitting}>Open existing agent seat</button>}
         {onChooseCoordinator && <label style={styles.field}>Coordinator
           <select aria-label="Coordinator" style={styles.input} value="none" onChange={event => {
             if (event.target.value !== 'none') onChooseCoordinator(event.target.value as 'agent-deck' | 'rig', hostname.trim() || 'localhost');

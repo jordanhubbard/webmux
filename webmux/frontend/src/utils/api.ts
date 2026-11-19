@@ -205,7 +205,7 @@ export const api = {
   createServerSession: (server: string) => request<Session>(`/servers/${encodeURIComponent(server)}/sessions`, { method: 'POST', body: JSON.stringify({ transport: 'local' }) }),
   reconnectServerSession: (server: string, id: string) => request<Session>(`/servers/${encodeURIComponent(server)}/sessions/${encodeURIComponent(id)}/reconnect`, { method: 'POST', body: '{}' }),
   sendServerMessage: (server: string, id: string, message: string) => request<{ queued: boolean; processed: boolean }>(`/servers/${encodeURIComponent(server)}/sessions/${encodeURIComponent(id)}/messages`, { method: 'POST', body: JSON.stringify({ message }) }),
-  getCoordination: (provider?: string) => request<CoordinationStatus>(`/coordination${provider ? `?provider=${encodeURIComponent(provider)}` : ''}`),
+  getCoordination: (provider?: string, signal?: AbortSignal) => request<CoordinationStatus>(`/coordination${provider ? `?provider=${encodeURIComponent(provider)}` : ''}`, signal ? { signal } : undefined),
   previewRigStop: (target: string, reason: string) => request<RigStopPreview>('/coordination/stop/preview', { method: 'POST', body: JSON.stringify({ provider: 'rig', target, reason }) }),
   executeRigStop: (id: string) => request<RigStopReceipt>('/coordination/stop', { method: 'POST', body: JSON.stringify({ id, confirm: true }) }),
   getRigChanges: (signal?: AbortSignal) => request<{ contract: string; available: boolean; changed: boolean }>('/coordination/changes', { signal }),
