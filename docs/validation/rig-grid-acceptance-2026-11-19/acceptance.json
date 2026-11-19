@@ -1,0 +1,235 @@
+{
+  "issue": 194,
+  "decision": "Six grid integration requirements and stated local two-seat acceptance scenario complete; full roadmap/release remains incomplete.",
+  "auditBaseline": "4f4bf33acc4ed57275a1c33bb649bdd1bb35dbb0",
+  "attachmentNativeSource": "170994dc8d165fee0c9b93ad5b9dca10a21a3284",
+  "requirements": [
+    {
+      "item": 1,
+      "result": "complete",
+      "evidence": "README.md requirement table"
+    },
+    {
+      "item": 2,
+      "result": "complete",
+      "evidence": "README.md requirement table"
+    },
+    {
+      "item": 3,
+      "result": "complete",
+      "evidence": "README.md requirement table"
+    },
+    {
+      "item": 4,
+      "result": "complete",
+      "evidence": "README.md requirement table"
+    },
+    {
+      "item": 5,
+      "result": "complete",
+      "evidence": "README.md requirement table"
+    },
+    {
+      "item": 6,
+      "result": "complete",
+      "evidence": "README.md requirement table"
+    }
+  ],
+  "baselineSourceReconciliation": [
+    {
+      "source": "bb16ac823a40b3d15f4b55fc55c91318ec803b3e",
+      "path": "webmux/frontend",
+      "gitObject": "2772eb5348a4bb2bbc1a53b908c3934e2c5109ae",
+      "currentEqual": true
+    },
+    {
+      "source": "25b28d35251e4094eff05f071aaffdee3749ed08",
+      "path": "webmux/server",
+      "gitObject": "cd88fbcc85f57e5aca5fa4c9512192afa15e9ff9",
+      "currentEqual": true
+    },
+    {
+      "source": "25b28d35251e4094eff05f071aaffdee3749ed08",
+      "path": "tests/frontend",
+      "gitObject": "cfe6b7469cc6f6626c8488f3f45f773b90573196",
+      "currentEqual": true
+    },
+    {
+      "source": "bb16ac823a40b3d15f4b55fc55c91318ec803b3e",
+      "path": "tests/e2e/openrig.spec.ts",
+      "gitObject": "5ff2d26fd83f3243d06674c135c6f63ffa94765e",
+      "currentEqual": true
+    },
+    {
+      "source": "bb16ac823a40b3d15f4b55fc55c91318ec803b3e",
+      "path": "tests/e2e/agent-integration.spec.ts",
+      "gitObject": "960a93d052f2bd2978a368f047babfcef2efd92a",
+      "currentEqual": true
+    },
+    {
+      "source": "bb16ac823a40b3d15f4b55fc55c91318ec803b3e",
+      "path": "tests/e2e/openrig-host.spec.ts",
+      "gitObject": "3628f7cec1315c360e9a7a7269315d626c5d3f45",
+      "currentEqual": true
+    },
+    {
+      "source": "bb16ac823a40b3d15f4b55fc55c91318ec803b3e",
+      "path": "tests/e2e/openrig-activity.spec.ts",
+      "gitObject": "d2ded69238afe66d834fd675ffab0f7a2e111848",
+      "currentEqual": true
+    },
+    {
+      "source": "bb16ac823a40b3d15f4b55fc55c91318ec803b3e",
+      "path": "tests/e2e/broadcast-scope.spec.ts",
+      "gitObject": "a5954af2f83f4e8003f727d7a584c2786447bd75",
+      "currentEqual": true
+    },
+    {
+      "source": "e9492ada103fb4f75f3342def80da94871ecf8d5",
+      "path": "webmux/frontend/src/components/RigStopDialog.tsx",
+      "gitObject": "cdf568753ac4bacff1b60d41fa551a2de8381778",
+      "currentEqual": true
+    },
+    {
+      "source": "e9492ada103fb4f75f3342def80da94871ecf8d5",
+      "path": "webmux/server/internal/httpapi/rig_stop.go",
+      "gitObject": "dd2435719252e8f6f7d3e64258e72abe6d2b4675",
+      "currentEqual": true
+    },
+    {
+      "source": "e9492ada103fb4f75f3342def80da94871ecf8d5",
+      "path": "webmux/server/internal/openrigcoord/rig-stop.mts",
+      "gitObject": "00b97e5ed725bb2d3ad12ddc4bde464e877b70f2",
+      "currentEqual": true
+    }
+  ],
+  "followupProductionDelta": {
+    "file": "webmux/frontend/src/components/RigSeatStatus.tsx",
+    "addedLines": 4,
+    "removedLines": 0,
+    "behavior": "Display only recognized attachment availability for a current observation matching the saved manager/attachment/tmux binding; otherwise unknown. Visibly name the saved execution host in the same strip without crowding the project/seat header; unverified hosts stay unknown.",
+    "backendProviderTransportAuthLifecycleChanges": false
+  },
+  "finalSourceSHA256": {
+    "docs/agent-views.md": "0c3b85021641cbcecedc32ab7ff10e2cd4d1881415e47991554a9f0a3ccffe96",
+    "tests/e2e/agent-integration.spec.ts": "9c84b5ab288183fe3e5278f95e26e2eeb7b565cbd7c0ae0f2bc49876a959dc91",
+    "tests/e2e/openrig-activity.spec.ts": "bcec9eb19943f8592ec8c76799e70c406b6721077d08484a2eb67bd507e9ce70",
+    "tests/e2e/openrig-notifications.spec.ts": "78da26eaa781e55d74169d1eff7e81ef9ae386d4107c0a4ce98213e5c732ac6b",
+    "tests/e2e/openrig.spec.ts": "e3303f79e2c8f242d5547158feaddb015c30dd2e0880bd999f62a7ebf38aae2c",
+    "tests/frontend/RigSeatStatus.test.tsx": "9626cfe27b2eb6a046e6a007d692754c867c54b51e0a722616b6b5d59e628083",
+    "webmux/frontend/src/components/RigSeatStatus.tsx": "13d6083d3007cd5d5a32fd50c094ac099a183c79dd5182d396b8d289e8854b35"
+  },
+  "localGates": {
+    "frontendTests": 464,
+    "finalStatusUnitTests": 15,
+    "strictTypeScriptProjects": 5,
+    "frontendLint": true,
+    "frontendBuild": true,
+    "baselineGoServerRace": {
+      "pass": 537,
+      "skip": 11
+    },
+    "baselineNamedBackendPasses": [
+      "TestConcurrentGridAllocationAndOwnerCompaction",
+      "TestTrackedNativeCreationPreservesPublicIdentityAndPlacement",
+      "TestManagedRigAgentsUseOrdinaryPersistentGridTiles",
+      "TestManagedRigPlacementPreservesSeatAndRejectsOccupiedCell",
+      "TestRigLogicalRebindRejectsOccupiedPlacementBeforeDetaching",
+      "TestRigLogicalIdentityUpgradesExactAddressViewer",
+      "TestRigStopReviewEligibilityRequiresNativeOwnershipAndQualifiedAttachment",
+      "TestRigStopDurableClaimConsumesConcurrentAndReconstructedRequests",
+      "TestRigStopLostResponseBlocksNewReviewsAcrossOwnersAndPortChanges",
+      "TestRigStopInterruptedDispatchRemainsUncertainAfterPreviewExpires",
+      "TestRigStopConfirmedNoEffectAllowsOnlyANewExplicitReview",
+      "TestRigStopOwnerExpiryStorageAndPartialReceiptRefusals"
+    ],
+    "parentNegative": "New attachment-state regression fails against original parent; original log retained."
+  },
+  "nativeFollowup": {
+    "platform": "macOS ARM64",
+    "provider": "Published Rig0.6.14, builtin terminals and synthetic Node providers; actual tmux/Chrome",
+    "passed": 11,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0,
+    "attemptsPerCase": 1,
+    "cases": [
+      "home gives a fresh 2 by 2 terminal grid the page without coordinator inventory",
+      "coordination lives in its own tab and leaves the terminal grid intact",
+      "Agent Deck UI queues work and drains remote completion records",
+      "managed agents enroll, exchange attributed Rig messages and reuse ordinary grid terminals",
+      "real diagnostic dashboard is optional and detaching preserves its daemon",
+      "coordination groups provider-owned sessions in keyboard-expandable projects",
+      "integration enablement, launch owner and inventory view persist independently",
+      "All sessions keeps overlapping provider IDs separate and fits a narrow screen",
+      "grid observes native Rig bootstrap and lifecycle without inferring provider readiness",
+      "native Rig notification refreshes canonical tile state while fallback timers are paused",
+      "real tmux discovery, browser attachment, reload and scratch shell"
+    ],
+    "reportSHA256": {
+      "native-openrig-report.json": "e8e02851909d7bf512eebdcea593d5f9f077cd1a9d2b344bc5ba6ccdee997168",
+      "native-openrig-activity-report.json": "9b3ccd2292ef72070eca3ff01e1d85453f214e29eaf95a98836c703d944e4335",
+      "native-openrig-notifications-report.json": "054af9ca42ec85cd93dc1e6853d94d79fbc4376c1fd443be4ba07881c3f4f0fe",
+      "native-agent-integration-report.json": "1afa7ef2ef9fcbf51c70829ede5ff69b86e468926b07f992af17ccbe646fd937"
+    }
+  },
+  "compositeNativeEvidence": {
+    "twoAuthenticatedCodexSeats": {
+      "source": "536992fcaf171fba0f33a75ead4accdbe72d58a0",
+      "rawSHA256": "86fc03b2cde80c51a61e7c7bdc2f0c7dc37648cb603d9bf774894760429e232b",
+      "checks": {
+        "explicitNativeTrustReviewWithPolicyPreserved": true,
+        "twoActualNativeCodingSeats": true,
+        "chosenCellsPreserved": true,
+        "twoDistinctOriginalConversations": true,
+        "providerPIDsAndPanePIDsPreserved": true,
+        "creationDuplicatesRetainViewers": true,
+        "nativePrefixesPreserved": true,
+        "originalConversationRecallWithoutTools": true,
+        "ordinaryInputAndOwnershipPreserved": true
+      },
+      "receipt": "../rig-grid-coding-2026-11-19/receipt.json"
+    },
+    "authenticatedCheckedStop": {
+      "source": "e9492ada103fb4f75f3342def80da94871ecf8d5",
+      "rawSHA256": "223c10b80503597fd1832ec1f3500320c38d95901605d1de3617ef38fbe3d8b0",
+      "controls": 27,
+      "checkedStopViewerSiblingRetained": true,
+      "receipt": "../codex-tracked-trust-2026-11-19/receipt.json"
+    },
+    "linuxRawReceiptSHA256": {
+      "observed-tmux-provenance.json": "5be02ea69259c1630af35ffc11aba4c7132427cc4aa0aea15f86252fe71bf89e",
+      "native-rig-activity.json": "6e1740051e7e83e04497cbc1cd50316d5f1ac1d9f2226a712507d6256b397a09",
+      "canonical-rig-seat.json": "b894882fd5c06fd6a0281e07e87818f7f4f26c91ce7ec6ac5d27aefcb26b151e",
+      "native-project-broadcast-receipts.json": "3ff92ffca120b21d1fc25a885d478b7e8a3495430fa2da2bc6242d58aaee8c77"
+    },
+    "broadcastScope": "Actual Go/PTY byte files with explicitly synthetic canonical metadata; native creation separately verifies canonical project bindings. Not a Rig/Agent Deck bridge."
+  },
+  "cleanup": {
+    "observedPIDsAllExited": 236,
+    "retainedInactiveHomes": 4,
+    "allDaemonShutdownsClean": true,
+    "allPrivateTmuxDirectoriesRemoved": true
+  },
+  "retention": {
+    "archiveReadbackFiles": 84,
+    "auditSHA256": "d06732507eca9e37729dec67e8c78d37d6f7451bac3e38955c189bac19c46e55",
+    "baselineAuditSHA256": "89613b391cdf2e739251d92a58827dc1ffc91305f5c68da809714371c11df89f",
+    "earlierNativeSource": "9a495158e4e7843ecc71ca163bf513b96486bd74",
+    "excludedAgentsDisabledInvocation": "Original run skipped because opt-in flag was absent. Retained and excluded; separately enabled run passed, followed by full final-source rerun with all eleven cases active.",
+    "initialTestSetup": "An initial wrong-cwd edit failed and the following unchanged test run is excluded from negative proof; actual parent-failure log is retained separately."
+  },
+  "noNewActionsDispatched": true,
+  "remainingOutsideThisIssue": [
+    "#318 host reboot/update/crash recovery matrix",
+    "#438 remaining native ownership/policy/platform qualification",
+    "#246 opt-in Rig/Agent Deck shared-owner queue/event bridge",
+    "authenticated Linux/Windows ARM64 coding recovery",
+    "full authentication/mobile/distribution/exact-release qualification"
+  ],
+  "integrationReconciliation": {
+    "main": "eb2e0ce98d50e0dc694c6b7ea2faa947859210e8",
+    "changeSinceAuditBaseline": "Documentation only; source and tests preserved through normal branch merge.",
+    "runtimeAndTestTreesEqualNativeSource": true
+  }
+}

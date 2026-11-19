@@ -332,10 +332,14 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   authorization choices and physical cross-project acceptance remain separate,
   unqualified work.
 
-- [#194](https://github.com/jordanhubbard/webmux/issues/194): remaining canonical
-  Rig discovery, lifecycle/provenance contract and optional Agents-pane
-  reconciliation. Its grid-centered UI work landed in #196; the issue remains
-  open for its other acceptance requirements. Controller queries, lifecycle
+- [#194](https://github.com/jordanhubbard/webmux/issues/194): all six grid
+  integration requirements and the two-seat scenario have a
+  [source-bound acceptance audit](validation/rig-grid-acceptance-2026-11-19/README.md).
+  It combines actual two-Codex conversations, selected-cell/viewer identity,
+  canonical status and reviewed Stop with native navigation/coexistence and
+  explicit broadcast-recipient evidence. Execution host and attachment availability now appear
+  separately in the tile status strip. Full recovery #318, remaining native lifecycle #438,
+  the opt-in bridge #246 and release gates remain open. Controller queries, lifecycle
   calls, diagnostic views and new launchers now pin their configured coordinator
   despite an unrelated CLI host selection
   ([scope and qualification](openrig.md#coordinator-selection-scope)).
@@ -460,8 +464,8 @@ The [Rig grid integration](validation/rig-grid-integration-2026-11-17/README.md)
 reconciles #432/#433/#435/#437/#440/#441/#444/#446 with local native coverage and
 a hidden-grid observation fix. This implementation is in `main` through #568.
 The original macOS fixture follow-up #431 is closed. Source-specific evidence,
-the remaining #194 acceptance and final #429 reconciliation stay distinct from
-full roadmap and release acceptance.
+the [completed six-part #194 audit](validation/rig-grid-acceptance-2026-11-19/README.md)
+and #429 disposition stay distinct from full roadmap and release acceptance.
 
 Ordinary-local Windows Stop/Hide is composed under #541, including a
 [preparation-save error-state repair](validation/windows-local-preparation-save-2026-11-19/README.md).
