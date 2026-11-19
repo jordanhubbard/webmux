@@ -27,6 +27,11 @@ jobs:
           df -h . /tmp
           free -m
           nproc
+          mkdir -p webmux/test-results/mosh-provisioning
+          {
+            cat /proc/self/limits
+            cat /proc/sys/fs/file-nr
+          } > webmux/test-results/mosh-provisioning/worker-limits.txt
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: webmux/server/go.mod
@@ -39,7 +44,11 @@ jobs:
       - name: Configure bounded Ubuntu mirrors
         run: sudo -n env GITHUB_ACTIONS=true python3 scripts/configure-ci-apt.py
       - name: Install native tools
+        shell: bash
         run: |
+          # Keep the original command's failure status while preserving early
+          # provisioning output even when npm/browser/test setup never starts.
+          exec > >(tee webmux/test-results/mosh-provisioning/install.log) 2>&1
           sudo -n apt-get update
           sudo -n apt-get install -y openssh-server mosh tmux libevent-dev libncurses-dev
           curl --fail --location --retry 3 --output "$RUNNER_TEMP/tmux-3.4.tar.gz" https://github.com/tmux/tmux/releases/download/3.4/tmux-3.4.tar.gz
@@ -69,7 +78,9 @@ jobs:
           test "$failed" -eq 0
       - name: Retain native tool identities
         if: always()
-        run: python3 scripts/native-components.py --output webmux/test-results/mosh-tools.json
+        run: |
+          mkdir -p webmux/test-results
+          python3 scripts/native-components.py --output webmux/test-results/mosh-tools.json
       - name: Preserve diagnostic evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

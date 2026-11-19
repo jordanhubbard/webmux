@@ -1,0 +1,138 @@
+{
+  "schema": "webmux-input-preservation/v1",
+  "canonicalRuntimeSource": "b155f4ca58a895c17fbaf8dc484ae44478bcac51",
+  "compositionBase": "a382564398a102b00ce4447b2eb6fdafc3f76d7f",
+  "inputHead": "312881c1957a2bf6851fe1eadf16b9c66f8dac96",
+  "resolution": [
+    {
+      "commit": "1eaff2d93d3100b4a3e32a250f425a55697867ac",
+      "topic": "Launchd fixture",
+      "disposition": "Three implementation/test files already match the input byte for byte; retain current roadmap and receipts."
+    },
+    {
+      "commit": "720b452e38fd102081daecbe0f0b6f0aad726fa6",
+      "topic": "Safe Windows phases and live application",
+      "disposition": "Retain the current closed formatter and granular owner stages, including process-exit/Win32 error separation. Restore malformed-owner, private-payload and native startup controls; append the original persistent-child application case alongside the unchanged current case."
+    },
+    {
+      "commit": "cc4316cb9c891037e09b87939ea3d04e90da8299",
+      "topic": "Native workflow gate",
+      "disposition": "Retain the current required native fixture and later resource controls."
+    },
+    {
+      "commit": "d4b3e457e8cf13f89861b632378df8d8e8e3b6c7",
+      "topic": "Job observation",
+      "disposition": "Restore read-only current-job membership and immediate-job flags after owner creation failure, with fixed recognized labels. Neither observations nor breakaway bits establish a cause or parent-job policy."
+    },
+    {
+      "commit": "b07e4db9a86749589987680d88bde1789440a3c7",
+      "topic": "Native application and original evidence",
+      "disposition": "Restore the original rich case and child driver byte for byte; keep current owned browser teardown. Historical receipts retain original source and target scope."
+    },
+    {
+      "commit": "18010565c998514481b2f805b137c3628c196eb6",
+      "topic": "Preparation save failure",
+      "disposition": "Broker and lifecycle tests already match the input byte for byte."
+    },
+    {
+      "commit": "4eee1bffd70d5588769567ddd04a7373aefca39d",
+      "topic": "Save-failure evidence",
+      "disposition": "Restore all three original historical records verbatim."
+    },
+    {
+      "commit": "025d24503acfbbfb2aeb5d102fd9746be76f009e",
+      "topic": "Disposable SYSTEM fixture",
+      "disposition": "Retain existing account/source/image/task cleanup guards. Require both application cases without skips/retries/flakes and bind the restored child driver hash. All original task/caller deadlines remain unchanged."
+    },
+    {
+      "commit": "1a1aa14ca4ed6d6867f9a9f359210c0aa0b7ef9e",
+      "topic": "Required CI fixture",
+      "disposition": "Retain the required CI gate and later browser/resource controls."
+    },
+    {
+      "commit": "475f2ffa528a615ac993a799dea21be7e8c7cc96",
+      "topic": "Native Codex settings guard",
+      "disposition": "Six capture/resume/API implementation and test files already match the input. Retain later project/pod discovery in runner.mts; the native guard sections are unchanged."
+    },
+    {
+      "commit": "312881c1957a2bf6851fe1eadf16b9c66f8dac96",
+      "topic": "Guard adoption evidence",
+      "disposition": "Restore both historical adoption documents verbatim."
+    }
+  ],
+  "historicalFiles": [
+    {
+      "path": "docs/validation/codex-policy-guard-adoption-2026-11-19/README.md",
+      "sha256": "8acc689ab8fae46158c5661950253adf5d0dc24d43b02ad75f24d637046a0317",
+      "identicalToInput": true
+    },
+    {
+      "path": "docs/validation/codex-policy-guard-adoption-2026-11-19/receipt.json",
+      "sha256": "e7d45b570694d346d691a7630e8dee37ca34be2c930a61f8cb739bb863a86fbe",
+      "identicalToInput": true
+    },
+    {
+      "path": "docs/validation/windows-local-stop-2026-11-18/preparation-save.json",
+      "sha256": "b7cbcdb6f58ff498afcc7244477631422871883b28eb5d014206dc6903f5ef3c",
+      "identicalToInput": true
+    },
+    {
+      "path": "docs/validation/windows-local-stop-2026-11-18/preparation-save.md",
+      "sha256": "7b2504945ceb4f2ea4bca4762c38dfcaf5fb55efc925cb1b023fb1053aaaa364",
+      "identicalToInput": true
+    },
+    {
+      "path": "docs/validation/windows-local-stop-2026-11-18/raw-archive-retrieval.json",
+      "sha256": "8c06f62d367ed7ad85548e5b1f439222529eb109464a336a27dcd887872e7476",
+      "identicalToInput": true
+    },
+    {
+      "path": "docs/validation/windows-startup-diagnostics-2026-11-18/README.md",
+      "sha256": "0691bddd504707828927dd3c56c0841ff47326c9ebd22eb28ed2c8469bc60f4a",
+      "identicalToInput": true
+    },
+    {
+      "path": "docs/validation/windows-startup-diagnostics-2026-11-18/hosted-fixture.json",
+      "sha256": "7bfb2427b10d5b74b4364ffc266f749c258346b2a5a992bccaa50bea553f9522",
+      "identicalToInput": true
+    },
+    {
+      "path": "docs/validation/windows-startup-diagnostics-2026-11-18/job-observation.json",
+      "sha256": "42a2a34493300c1526d3b20dfc9f610e7da2c538cadb7598313643bb707f2671",
+      "identicalToInput": true
+    },
+    {
+      "path": "docs/validation/windows-startup-diagnostics-2026-11-18/native-application.json",
+      "sha256": "ad764a25e3749133a2c658b03453dccd0891bef5b1fce38d3e0f93d3217224d3",
+      "identicalToInput": true
+    },
+    {
+      "path": "docs/validation/windows-startup-diagnostics-2026-11-18/native-application.md",
+      "sha256": "240c47cdd0b75c84ea0086d18c90beeb251ee26214f4d24cbf8ea3d40250ffc6",
+      "identicalToInput": true
+    },
+    {
+      "path": "docs/validation/windows-startup-diagnostics-2026-11-18/receipt.json",
+      "sha256": "2d35e56841cb45b790711b12a02d68cb8cf32ea05f89e0b6be7b58e7fc2c61a5",
+      "identicalToInput": true
+    }
+  ],
+  "protectedCases": {
+    "existingBasicCaseBodySHA256": "e611c04730e3ef24d8581e5ea15f2a47dca98a26b0bdc2877c383869f5162f0f",
+    "existingBasicCaseBodyUnchanged": true,
+    "restoredRichCaseBodySHA256": "ac7d80d93b854efadb8a2b12a0cd1285dae3118607d0708f7ef045434a634e47",
+    "restoredRichCaseBodyIdenticalTo511": true,
+    "restoredChildDriverSHA256": "49f0ea9b6fd46473430a366333279cae1120b945e77b064a921c3aa0ffbab2d9",
+    "original90SecondCaseDeadlineAnd60SecondIndependentExpiryRetained": true,
+    "qualifierRequiresBothCasesNoSkipsFlakes": true,
+    "originalCallerAndTaskDeadlinesUnchanged": true
+  },
+  "verification": {
+    "strictTypeScript": "passed all five maintained strict projects",
+    "go": "Go1.27.4: Darwin common diagnostic tests passed; Windows AMD64/ARM64 cross-compile and vet passed; no Windows execution",
+    "nativeWindows": "pending fresh committed-source CI; historical passes are not current-source acceptance",
+    "localGoSummarySHA256": "e4b301375185be431e9067f5d64a68d4a4f4716caa17192f954d55df70c269df",
+    "strictTypeScriptLogSHA256": "a532da0999acc78f26f553c132bbbc45d6dc20d51ae61e6a19ddd9e04d0d7f94"
+  },
+  "scope": "Input preservation for #452/#543/#541/#539. No authenticated recovery, private native deadline, signing, policy enforcement or release acceptance is inferred."
+}
