@@ -1,0 +1,40 @@
+{
+  "recordedUTC": "2026-11-18T03:21:25.908162+00:00",
+  "parent": "0c4e5e76014f7451385b085ec2fc5422a16bdcc4",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "e6b0cb65cc801aeb0952d06747f3760330b7c936a0b2ba17f2ec517215b293b0",
+    "webmux/server/internal/browser/navigation_trace_test.go": "a0ac505312dd2d9e9719349d114fdf3a8b67a07f279c09f48c510b3b847b4e8d",
+    "webmux/server/internal/browser/navigation_trace_controls_test.go": "92135bdcdb95ea9e2eb0022c084ea77ac539151b4c4e78c19bc5ba938a8d0821",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "4fff230c39551a0cb179013890fd029154c4791df42ca93a97214f7493a34128",
+    "webmux/server/internal/browser/navigation_output_test.go": "08ee201b5f79aa325920aaf42b897c011c53f76a1b500527377d8642e3f20d01",
+    ".github/workflows/browser-navigation.yml": "a1cd996c6feffaa5bfead4ddb99c7a8a530b143ab1f7c8e4fda38e834684d0f1",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "507d55e5e53efefff9e87836eb6fc429b802b9d4573dabda91a2aac6ca8484d7",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-factory-summary.json": "1c32f80a5ae5d448467822b24c5c2025c43e330e25230cec55aea98afb0c382e",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-network-output-summary.json": "a3347e5486477099b36ded8a88e289db705d6925ee8ed70813d62cba52065516"
+  },
+  "privateReceiptSHA256": {
+    "nav282-trace-network-output-final-full.log": "7d0fe11e2002cad26d3593f3dd54dd15d2bc3a468b2593861f037ed11df7a7ce",
+    "nav282-trace-network-output-final-full-binding.json": "33614daa4761f4b22425b1c2543f11081bd9d5db8cb50eb5c9548013c43e6a5b",
+    "nav282-trace-network-output-final-samples-binding.json": "63ecc847579844033f788c1e53923a3556763fe2ae55814f921fac343496327a",
+    "nav282-trace-network-output-final-browser-race.log": "6161cc786e82e72342c4e767f930846de03b49c9d2d3af59202a2034946586fe",
+    "nav282-trace-network-output-final-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-trace-network-output-final-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-0c4e5e7-fast.zip": "bf39bc9cb1746830510ab12ee78610214d7c23b04f7149dcedcf5f877f7e71b0",
+    "pr442-0c4e5e7-fast-summary.json": "a7b5ecf8491b995762e7ca1267a3ca1694d434587064100b8a9738f868958ab8",
+    "pr442-0c4e5e7-fast-analysis.log": "d14e93943f81d009f89e7168dbc940af4323a7ca207f6cb2fed7a1738b933c8e",
+    "nav282-trace-network-output-final-sample-1.log": "f121c0648d158f484dbc5da9acc1ac48b595177340888ba0de409ae6dc056383",
+    "nav282-trace-network-output-final-sample-2.log": "633aed92c3c8dec34806cfc7262ca8a9676156b48422e65c72cf2690898d38c5",
+    "nav282-trace-network-output-final-sample-3.log": "1559c3f511c1cfcf95320c26c9eb6fa7dac1e8de1e353a55458552aef7936ec3"
+  },
+  "chromiumTag": "158.0.8127.18",
+  "chromiumCommit": "6449d9f9a6a906edff724b7b220199b3fde4615c",
+  "chromiumSourceSHA256": {
+    "content_browser_network_service_instance_impl.cc": "b53768e93a5bcd7986bbad89b0854047edbcdaf84c903487f85ba06451211178",
+    "content_browser_loader_reconnectable_url_loader_factory.cc": "7f9e6d6a195e2c31b5f0cbb84a05c6683a0880b86c7c038e6250bfc2898546a4",
+    "chrome_browser_net_profile_network_context_service.cc": "3e8d8c050af9fafb831cff02c886f4cb0591d8c457829b6b39cd69fcfe4185f2",
+    "content_browser_storage_partition_impl.cc": "63823a84aca8ad2fdde3aa96eddaa5bbefee579357026da2d52609f4fcc5c6c4",
+    "content_browser_loader_url_loader_factory_utils.cc": "eb842a491f332820fb44ca91f0871c7d710c9719c24cb9daad4ad41b953766db"
+  },
+  "checks": "ok  \tgithub.com/jordanhubbard/webmux/server/internal/browser\t1.706s;44ordinaryMacfirstloads+4StopcontrolsPASS;8positiveboundedoutputreadertrialswithzerorestartreports;2explicitWindowsNetLogskips;privacy/splitline/sourcefilter/phase/bounds+Darwin/WindowsbrowservetPASS.",
+  "scope": "Twoextraanonymousfixtureconditionsonlyobserveexistingallocatoroutput;originalconditionsretained. No loggingflags/protections/runtime/ordinaryCI/deadline/bufferchanges. Extra4fixedcontextcreationscopesaftertrial. ExpectedWindows50records. NativeWindowssignalPENDING;absenceofreportnotproofnofailure;nocause/fix/merge/release."
+}

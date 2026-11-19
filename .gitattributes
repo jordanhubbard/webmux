@@ -4,3 +4,9 @@ webmux/server/internal/thirdparty/vt/** -text
 webmux/server/internal/thirdparty/vt/testdata/*.raw binary -whitespace
 webmux/server/internal/thirdparty/vt/testdata/corpus/*.bin binary -whitespace
 webmux/server/internal/thirdparty/vt/testdata/unicode/*.txt -whitespace
+
+# Retained ultraviolet originals and their manifest are byte-preserved too.
+webmux/server/internal/thirdparty/ultraviolet/** -text
+
+# The diagnostic upstream patch is verified by its exact source bytes.
+docs/validation/vt-runtime-unwind-2026-11-18/go-guard.patch -text

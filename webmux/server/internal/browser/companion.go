@@ -77,9 +77,9 @@ type companion struct {
 	pendingInputRelease         bool
 }
 
-func newCompanion(ctx context.Context, profile string) (*companion, error) {
+func newCompanion(ctx context.Context, profile string, navigation *navigationTrace) (*companion, error) {
 	id := chromedp.FromContext(ctx).Target.TargetID
-	b := &companion{navigation: newNavigationTrace(), root: ctx, current: ctx, tabs: map[target.ID]context.Context{id: ctx}, cancels: map[target.ID]context.CancelFunc{}, profile: profile, width: Width, height: Height, dialogs: map[target.ID]*Dialog{}, choosers: map[target.ID]*FileChooser{}, downloads: map[string]*Download{}}
+	b := &companion{navigation: navigation, root: ctx, current: ctx, tabs: map[target.ID]context.Context{id: ctx}, cancels: map[target.ID]context.CancelFunc{}, profile: profile, width: Width, height: Height, dialogs: map[target.ID]*Dialog{}, choosers: map[target.ID]*FileChooser{}, downloads: map[string]*Download{}}
 	b.watchTab(ctx)
 	directory := filepath.Join(profile, "downloads")
 	if err := os.MkdirAll(directory, 0700); err != nil {

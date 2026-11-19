@@ -1,0 +1,80 @@
+[
+  {
+    "name": "pending-enabled-no-extended",
+    "data": "\u001b[4m\u001b7\u001b[0m\u001b8\u001b[59mABCDEFGH",
+    "future": "\u001b[59mX\u001b8Y"
+  },
+  {
+    "name": "pending-hidden-curly",
+    "data": "\u001b7\u001b[4:3;58;5;9m\u001b8ABCDEFGH",
+    "future": "́\u001b[2b"
+  },
+  {
+    "name": "wrapped-flag-transition",
+    "data": "\u001b[4m\u001b7\u001b[0m\u001b8\u001b[59mABCDEFGH\u001b[1;58;5;4mX",
+    "future": "\u001b[59mY\u001b8Z"
+  },
+  {
+    "name": "saved-past-edge-grow-after-attach",
+    "data": "\u001b[4m\u001b7\u001b[0m\u001b8\u001b[59mABCDEFGH\u001b7\r",
+    "futureResizes": [
+      [
+        12,
+        4
+      ]
+    ],
+    "future": "\u001b8X\u001b[59mY"
+  },
+  {
+    "name": "active-past-edge-grow-after-attach",
+    "data": "\u001b7\u001b[4:3;58;5;9m\u001b8ABCDEFGH",
+    "futureResizes": [
+      [
+        12,
+        4
+      ]
+    ],
+    "future": "\u001b[2bX"
+  },
+  {
+    "name": "alt-saved-past-edge-grow-after-attach",
+    "data": "\u001b[4m\u001b7\u001b[0m\u001b8\u001b[59mABCDEFGH\u001b[?1049h\u001b]8;id=live;https://example.test/live\u0007\u001b[4:3mALT",
+    "futureResizes": [
+      [
+        12,
+        4
+      ]
+    ],
+    "future": "\u001b[?1049lX\u001b[59mY"
+  },
+  {
+    "name": "protected-charset-saved",
+    "data": "\u001b[1\"q\u001b(0\u001b[4m\u001b7\u001b[0m\u001b8\u001b[59mqqq\u001b7\u001b[0\"q\u001b(B\u001b[0m",
+    "future": "\u001b8qq\u001b[?2K"
+  },
+  {
+    "name": "markerless-link-alt-hidden",
+    "data": "\u001b]8;id=live;https://example.test/live\u0007\u001b7\u001b[?1049h\u001b[4:3m\u001b8ABC",
+    "future": "\u001b[?1049lX\u001b[59mY"
+  },
+  {
+    "name": "protection-sgr-reset",
+    "data": "\u001b[1\"qA\u001b[0mB",
+    "future": "\r\u001b[?2K"
+  },
+  {
+    "name": "rep-wide-edit-orphan-mark",
+    "data": "ABC\u001b7\u001b[4:3m\u001b8日Z\u001b[D\u001b[@",
+    "future": "\u001b[2b́\u001b[59mX"
+  },
+  {
+    "name": "sgr-orphan-marks",
+    "data": "A\u001b[31ḿ̀",
+    "future": "\u001b[2bX\u001b[4:3ḿ\u001b[2bY"
+  },
+  {
+    "name": "cursor-orphan-mark",
+    "data": "日Z\u001b[D́X",
+    "future": "\u001b[2ĆY"
+  }
+]

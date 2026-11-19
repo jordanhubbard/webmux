@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog } from './Dialog';
+import { RigStopDialog } from './RigStopDialog';
 import './CoordinationDialog.css';
-import { api } from '../utils/api';
+import { api, CoordinationCreationUnconfirmedError, CoordinationTrustRequiredError, type CoordinationCreateRequest } from '../utils/api';
+import { executionHostLabel } from '../utils/sessionIdentity';
 import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
 import type { Session } from '../types';
 
@@ -12,7 +14,17 @@ export interface CoordinationProject {
   provider: string; id: string; name: string; host: string; state: string; historical: boolean;
   readOnly?: boolean; seatCount: number; runningCount: number; detail?: string; contexts?: string[]; attentionCount?: number;
 }
+export interface RigActivity {
+  state: string; evidenceSource: string; sampledAt: string; stale?: boolean; generationProvenance?: string;
+}
 export interface CoordinationSeat {
+  canReviewStop?: boolean;
+  enrollmentOrigin?: string; enrollmentSource?: string; enrollmentId?: string; enrollmentObservedAt?: string;
+  startupStatus?: string; agentActivity?: RigActivity;
+  logicalId?: string; attachmentTarget?: string; managerTarget?: string;
+  tmuxServerFlag?: string; tmuxServerValue?: string;
+  senderAddress?: string;
+  rigHostId?: string;
   provider: string; id: string; projectId: string; projectName: string; name: string; host: string;
   observationState?: string; observedAt?: string; workspace?: string; runtime: string; state: string; transportState?: string; openable: boolean; managed: boolean;
   managerSessionId?: string; nativeSessionId?: string; context?: string; parentId?: string; parentName?: string;
@@ -49,10 +61,19 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const [statusError, setStatusError] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [pendingCreation, setPendingCreation] = useState<CoordinationCreateRequest | null>(null);
+  const [pendingCreationStage, setPendingCreationStage] = useState<'project' | 'agent'>('project');
+  const [trustRequest, setTrustRequest] = useState<string | null>(null);
+  const [trustReviewed, setTrustReviewed] = useState(false);
+  const [trustRetryUnknown, setTrustRetryUnknown] = useState(false);
+  const [creationResponseUnknown, setCreationResponseUnknown] = useState(false);
+  const [stopSeat, setStopSeat] = useState<CoordinationSeat | null>(null);
   const [mode, setMode] = useState<'existing' | 'new'>('new');
   const [projectID, setProjectID] = useState('');
   const [projectName, setProjectName] = useState<string | null>(null);
   const [context, setContext] = useState('');
+  const [podRefresh, setPodRefresh] = useState(0);
+  const [podState, setPodState] = useState<{ key: string; pods: string[]; loading: boolean; error: string }>({ key: '', pods: [], loading: false, error: '' });
   const [name, setName] = useState<string | null>(null);
   const [purpose, setPurpose] = useState('builder');
   const [host, setHost] = useState(initialHost);
@@ -102,7 +123,23 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const seats = status.seats.filter(value => value.provider === provider);
   const providerMessages = status.messages.filter(value => view === 'all' || value.provider === view);
   const selectedProject = projects.find(value => value.id === projectID);
-  const contexts = selectedProject?.contexts || [];
+  const launchProjects = projects.filter(value => provider === 'rig' || !value.historical);
+  const podKey = `${projectID}\0${selectedProject?.name ?? ''}`;
+  const podsReady = provider !== 'rig' || (podState.key === podKey && !podState.loading && !podState.error);
+  const contexts = provider === 'rig' ? (podsReady ? podState.pods : []) : selectedProject?.contexts || [];
+  useEffect(() => {
+    if (provider !== 'rig' || mode !== 'existing' || !selectedProject) return;
+    let current = true;
+    setPodState({ key: podKey, pods: [], loading: true, error: '' });
+    void api.getRigProjectPods(projectID, selectedProject.name).then(value => {
+      if (!current) return;
+      if (value.projectId !== projectID || value.projectName !== selectedProject.name) throw new Error('Rig returned a different project. Refresh and choose again.');
+      setPodState({ key: podKey, pods: value.pods, loading: false, error: '' });
+    }).catch((error: unknown) => {
+      if (current) setPodState({ key: podKey, pods: [], loading: false, error: error instanceof Error ? error.message : 'Rig pods could not be verified.' });
+    });
+    return () => { current = false; };
+  }, [provider, mode, projectID, selectedProject?.name, podKey, podRefresh]);
   const hostOptions = useMemo(() => [...new Set(['localhost', ...projects.map(value => value.host), ...seats.map(value => value.host)])].filter(Boolean), [projects, seats]);
   const drainRemotes = useMemo(() => [...new Set(status.projects.filter(value => value.provider === 'agent-deck').map(value => value.host).filter(value => value && value !== 'localhost'))], [status.projects]);
   const drainTargets = status.seats.filter(value => value.provider === 'agent-deck').filter(value => value.canReceive && value.id.startsWith('local:'));
@@ -160,17 +197,47 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
     catch (err) { setError(String(err)); }
     finally { setBusy(false); }
   };
-  const restartSeat = async (seat: CoordinationSeat) => {
+  const createSeat = async (submitted: CoordinationCreateRequest) => {
+    const input = { ...submitted };
+    const supportsTracking = status?.providers.find(value => value.id === input.provider)?.capabilities.includes('native-creation-requests');
+    if (!input.creationRequestId && !input.inspect && !input.trustRequest && !input.continueOriginal
+      && supportsTracking && input.provider === 'rig' && input.runtime === 'codex' && (!input.host || input.host === 'localhost')) {
+      // getRandomValues also works on HTTP origins where randomUUID is absent.
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 15) | 64; bytes[8] = (bytes[8] & 63) | 128;
+      const hex = Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('');
+      input.creationRequestId = [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');
+    }
     setBusy(true); setError('');
     try {
-      const launched = await api.createCoordinatedAgent({
-        provider: seat.provider, mode: 'existing', projectId: seat.projectId, projectName: seat.projectName,
-        context: seat.context, name: seat.name, host: seat.host, workspace: seat.workspace || '', runtime: seat.runtime, ...position,
-      });
+      const launched = await api.createCoordinatedAgent(input);
+      if (launched.creation) {
+        // Retain the submitted values even if the form is edited afterward.
+        setPendingCreation({ ...input, inspect: undefined });
+        setPendingCreationStage(launched.creation.stage); setCreationResponseUnknown(false);
+        setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false);
+        return;
+      }
+      setPendingCreation(null); setCreationResponseUnknown(false); setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false);
       revealSession(launched.session);
-    } catch (err) { setError(String(err)); }
+    } catch (err) {
+      if (err instanceof CoordinationTrustRequiredError) {
+        setPendingCreation({ ...input, inspect: undefined });
+        setTrustRequest(err.requestId); setTrustReviewed(false); setTrustRetryUnknown(false); setCreationResponseUnknown(false);
+      } else if (input.trustRequest) {
+        // Keep the saved selection after a transport or validation failure.
+        setTrustReviewed(false); setTrustRetryUnknown(true); setError(String(err));
+      } else if (err instanceof CoordinationCreationUnconfirmedError) {
+        setPendingCreation({ ...input, inspect: undefined, continueOriginal: true });
+        setCreationResponseUnknown(true); setError(String(err));
+      } else { setPendingCreation(null); setCreationResponseUnknown(false); setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false); setError(String(err)); }
+    }
     finally { setBusy(false); }
   };
+  const restartSeat = async (seat: CoordinationSeat) => createSeat({
+    provider: seat.provider, mode: 'existing', projectId: seat.projectId, projectName: seat.projectName,
+    context: seat.context, name: seat.name, host: seat.host, workspace: seat.workspace || '', runtime: seat.runtime, ...position,
+  });
   const browse = async (path?: string) => {
     setBusy(true); setError('');
     try {
@@ -245,7 +312,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
           <option value="all">All sessions</option><option value="webmux">WebMux</option><option value="agent-deck">Agent Deck</option><option value="rig">Rig</option>
         </select></label>
         {view !== status.defaultView && <button type="button" disabled={busy} onClick={() => void savePreferences({ default_view: view as CoordinationStatus['defaultView'] })}>Make default view</button>}
-        <button type="button" disabled={busy} onClick={() => void refresh()}>Refresh projects and sessions</button>
+        <button type="button" disabled={busy} onClick={() => { setPodRefresh(value => value + 1); void refresh(); }}>Refresh projects and sessions</button>
       </div>
       <div className="coordination-toolbar">
         <label>Launch owner<select aria-label="Launch owner" disabled={busy} value={provider || 'webmux'} onChange={event => chooseProvider(event.target.value)}>
@@ -267,12 +334,36 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
         <p>No external coordinator is required. Agent Deck adds managed projects and guarded instruction queues. Rig adds team topology and peer messaging. Enable either or both above; existing sessions keep their owner.</p>
         <button type="button" onClick={() => { setActivePane('terminals'); onClose(); }}>Open terminals and servers</button>
       </section>}
+      {pendingCreation && trustRequest && <section role="status" aria-label="Codex project trust required">
+        <h3>Review this folder's trust in native Codex</h3>
+        <p>Codex reported disabled project settings for <code>{pendingCreation.workspace}</code> when this request was checked. The original request for {pendingCreation.name} in {pendingCreation.projectName} is saved. The blocked check started no coding session.</p>
+        {trustRetryUnknown && <p>The last retry did not confirm its outcome. The coding session may already be starting or running. The saved original request is retained.</p>}
+        <p>On the computer running WebMux, use your native Codex account to run the review command below. Confirm “Trust and continue” for this folder, wait for the main Codex screen, then exit without starting a task. This one-time review session uses workspace-write and on-request approval; WebMux checks your intended project settings again when you retry.</p>
+        <pre><code>{`codex --no-daemon --sandbox workspace-write --ask-for-approval on-request -C '${pendingCreation.workspace.replace(/'/g, "'\\''")}'`}</code></pre>
+        <label><input type="checkbox" checked={trustReviewed} disabled={busy} onChange={event => setTrustReviewed(event.target.checked)} />I reviewed project trust in native Codex and exited the review session</label>
+        <button type="button" disabled={busy || !trustReviewed} onClick={() => void createSeat({ ...pendingCreation, inspect: undefined, trustRequest })}>Retry original request after trust review</button>
+        <button type="button" disabled={busy} onClick={() => { setPendingCreation(null); setTrustRequest(null); setTrustReviewed(false); setTrustRetryUnknown(false); }}>Dismiss notice</button>
+      </section>}
+      {pendingCreation && !trustRequest && creationResponseUnknown && <section role="status" aria-label="Creation response not confirmed">
+        <h3>Creation response is not confirmed</h3>
+        <p>The original request for {pendingCreation.name} in {pendingCreation.projectName} is saved. The coding session may already be starting or running. Continuing uses the same selection and may execute it for the first time if it never arrived. Dismissing this notice does not cancel the request.</p>
+        <button type="button" disabled={busy} onClick={() => void createSeat({ ...pendingCreation, continueOriginal: true, inspect: undefined })}>Continue original creation request</button>
+        <button type="button" disabled={busy} onClick={() => { setPendingCreation(null); setCreationResponseUnknown(false); }}>Dismiss notice</button>
+      </section>}
+      {pendingCreation && !trustRequest && !creationResponseUnknown && <section role="status" aria-label={pendingCreationStage === 'agent' ? 'Session creation pending' : 'Project creation pending'}>
+        <h3>{pendingCreationStage === 'agent' ? 'Session creation is not yet confirmed' : 'Project creation is not yet confirmed'}</h3>
+        <p>{pendingCreationStage === 'agent'
+          ? `The original request for ${pendingCreation.name} in ${pendingCreation.projectName} is saved. The session may already be starting or running. Checking reuses that request and does not create a replacement.`
+          : `The original request for ${pendingCreation.projectName} is saved. Checking it may finish the original creation if it was not received. No agent starts until the project is confirmed.`}</p>
+        <button type="button" disabled={busy} onClick={() => void createSeat({ ...pendingCreation, inspect: true })}>Check and complete original request</button>
+        <button type="button" disabled={busy} onClick={() => setPendingCreation(null)}>Dismiss notice</button>
+      </section>}
       {provider && provider !== 'webmux' && <>
 
       <form id="coordination-create-seat" onSubmit={event => {
-        event.preventDefault(); setBusy(true); setError('');
+        event.preventDefault(); if (busy || pendingCreation || (provider === 'rig' && mode === 'existing' && (!podsReady || !context))) return;
         const input = { provider, mode, projectId: mode === 'existing' ? projectID : undefined, projectName: mode === 'existing' ? selectedProject?.name || '' : resolvedProjectName, context: mode === 'existing' ? context : undefined, name: resolvedName, host, workspace, runtime, ...position };
-        void api.createCoordinatedAgent(input).then(value => revealSession(value.session)).catch(err => setError(String(err))).finally(() => setBusy(false));
+        void createSeat(input);
       }}>
         <h3>Start a coding agent</h3>
         <p>Choose your code folder and an agent. WebMux opens its terminal there so you can describe the task. Localhost is the computer running WebMux.</p>
@@ -283,11 +374,17 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
         </div>
         <fieldset className="coordination-choice"><legend>Where should this agent belong?</legend>
           <label><input type="radio" name="coordination-mode" checked={mode === 'new'} onChange={() => setMode('new')} /> Start a new project</label>
-          <label><input type="radio" name="coordination-mode" checked={mode === 'existing'} onChange={() => setMode('existing')} disabled={projects.filter(value => !value.historical).length === 0} /> Add an agent to an existing project</label>
+          <label><input type="radio" name="coordination-mode" checked={mode === 'existing'} onChange={() => setMode('existing')} disabled={launchProjects.length === 0} /> Add an agent to an existing project</label>
         </fieldset>
         {mode === 'existing' && <div className="coordination-fields">
-          <label>Project<select required value={projectID} onChange={event => setProjectID(event.target.value)}><option value="">Choose a project</option>{projects.filter(value => !value.historical).map(value => <option key={value.id} value={value.id}>{value.name} · {value.host} · {value.state}</option>)}</select></label>
-          {provider === 'rig' && <label>Rig pod<select required value={context} onChange={event => setContext(event.target.value)}><option value="">Choose a pod</option>{contexts.map(value => <option key={value} value={value}>{value}</option>)}</select></label>}
+          <label>Project<select required value={projectID} onChange={event => setProjectID(event.target.value)}><option value="">Choose a project</option>{launchProjects.map(value => <option key={value.id} value={value.id}>{value.name} · {value.host} · {value.state}</option>)}</select></label>
+          {provider === 'rig' && <>
+            <label>Rig pod<select required disabled={!podsReady} value={context} onChange={event => setContext(event.target.value)}><option value="">Choose a pod</option>{contexts.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+            <button type="button" disabled={podState.key === podKey && podState.loading} onClick={() => setPodRefresh(value => value + 1)}>Refresh pods</button>
+            {!podsReady && !podState.error && <p role="status">Checking this project's current pods…</p>}
+            {podState.key === podKey && podState.error && <p role="alert">{podState.error}</p>}
+            {podsReady && contexts.length === 0 && <p>No pods are defined in this project. Add a pod in Rig, then refresh.</p>}
+          </>}
         </div>}
         <details open={!launchOnly || undefined}><summary>Optional names and session role</summary>
         <div className="coordination-fields coordination-names">
@@ -299,7 +396,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
         <p className="coordination-hint">Names are editable labels, not commands. We suggest a project from your folder and a session from the agent and purpose. The purpose names the session; give the agent its instructions after it opens.</p>
         </details>
         {browser && <section className="coordination-browser" aria-label={`Workspaces on ${host}`}><div><strong>{host}</strong> · <code>{browser.path}</code> {browser.repository && <span className="coordination-repository">Git repository</span>}</div><div className="coordination-browser-actions"><button type="button" onClick={chooseFolder}>Choose this folder</button>{browser.parent && <button type="button" onClick={() => void browse(browser.parent!)}>Parent folder</button>}<button type="button" aria-pressed={showAllFolders} onClick={() => setShowAllFolders(value => !value)}>{showAllFolders ? 'Hide hidden folders' : 'Show all'}</button></div><ul>{browser.entries.filter(entry => showAllFolders || !entry.name.startsWith('.')).map(entry => <li key={entry.path}><button type="button" onClick={() => void browse(entry.path)}>{entry.name}/</button>{entry.repository && <span>Git repository</span>}</li>)}</ul></section>}
-        <p><button type="submit" disabled={busy || !selectedProvider?.available || !selectedProvider.enabled || !selectedProvider.capabilities.includes('launch') || (mode === 'existing' && (!selectedProject || (provider === 'rig' && !context)))}>{busy ? 'Connecting…' : 'Start agent and open terminal'}</button></p>
+        <p><button type="submit" disabled={busy || !!pendingCreation || !selectedProvider?.available || !selectedProvider.enabled || !selectedProvider.capabilities.includes('launch') || (mode === 'existing' && (!selectedProject || (provider === 'rig' && (!podsReady || !context))))}>{busy ? 'Connecting…' : 'Start agent and open terminal'}</button></p>
       </form>
       </>}
       {!launchOnly && <>
@@ -314,9 +411,11 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
               <details className="coordination-identity"><summary>Project details</summary><code>{project.id}</code>{project.detail && <p>{project.detail}</p>}</details>
               {projectSeats.length === 0 ? <p>No sessions in this project.</p> : <ul aria-label={`${project.name} sessions`} className="coordination-workers">
                 {projectSeats.map(seat => <li key={`${seat.provider}:${seat.id}`}><article aria-label={`${seat.name} in ${seat.projectName}`} className={seat.attention ? 'coordination-worker-attention' : undefined}>
-                  <strong>{seat.name}</strong> {seat.managed && <span className="coordination-rig">{seat.provider === 'rig' ? 'Rig-managed' : 'Agent Deck-managed'}</span>}{seat.role && seat.role !== 'session' && <span className="coordination-role">{seat.role}</span>}{seat.attention && <span className="coordination-attention">Needs attention</span>}
+                  <strong>{seat.name}</strong> {seat.managed && <span className="coordination-rig">{seat.provider === 'rig' ? 'WebMux launch record' : 'Agent Deck-managed'}</span>}{seat.role && seat.role !== 'session' && <span className="coordination-role">{seat.role}</span>}{seat.attention && <span className="coordination-attention">Needs attention</span>}
                   <dl className="coordination-worker-facts">
-                    <div><dt>Host</dt><dd>{seat.host}</dd></div><div><dt>Runtime</dt><dd>{seat.runtime}</dd></div>
+                    {seat.provider === 'rig' && <div><dt>Enrollment</dt><dd title="Manager-reported enrollment lineage; this does not authorize lifecycle actions or establish ownership of a remote provider.">{seat.enrollmentSource === 'rig-session-registry' && seat.enrollmentOrigin === 'launched' ? 'Launched by Rig' : seat.enrollmentSource === 'rig-session-registry' && seat.enrollmentOrigin === 'claimed' ? 'Adopted by Rig' : 'Unknown'}</dd></div>}
+                    <div><dt>Host</dt><dd>{executionHostLabel(seat.host)}</dd></div><div><dt>Runtime</dt><dd>{seat.runtime}</dd></div>
+                    {seat.rigHostId && <div><dt>Rig host identity</dt><dd><code>{seat.rigHostId}</code></dd></div>}
                     <div><dt>{seat.provider === 'rig' ? (seat.observationState && seat.observationState !== 'current' ? 'Last observed Rig lifecycle' : 'Rig lifecycle') : 'State'}</dt><dd>{seat.state}{seat.substate ? ` · ${seat.substate}` : ''}{seat.exitCode !== undefined ? ` · exit ${seat.exitCode}` : ''}</dd></div>{seat.context && <div><dt>Context</dt><dd>{seat.context}</dd></div>}
                     {seat.observedAt && <div><dt>Host observation</dt><dd>{seat.observationState} · {new Date(seat.observedAt).toLocaleString()}</dd></div>}
                     {seat.transportState && <div><dt>Attachment transport</dt><dd>{seat.transportState}</dd></div>}
@@ -331,6 +430,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
                       : seat.managed && seat.provider === 'rig' && seat.state === 'detached' && seat.transportState === 'unavailable' && seat.workspace ? <><p>The attachment has ended. Reconnecting attaches a surviving provider or starts a new conversation if none remains.</p><button type="button" disabled={busy} onClick={() => void restartSeat(seat)}>Reconnect attachment and open</button></>
                         : <span className="coordination-unavailable">No attach transport reported by this provider</span>}
                   {seat.provider === 'agent-deck' && seat.openable && <button type="button" disabled={busy} onClick={() => { setComposerTarget(current => current === `${seat.provider}:${seat.id}` ? '' : `${seat.provider}:${seat.id}`); setInstruction(''); }}>{composerTarget === `${seat.provider}:${seat.id}` ? 'Cancel instruction' : 'Send instruction'}</button>}
+                  {seat.provider === 'rig' && seat.canReviewStop && <button type="button" disabled={busy} onClick={() => setStopSeat(seat)}>Review local seat Stop</button>}
                   {composerTarget === `${seat.provider}:${seat.id}` && <form className="coordination-composer" onSubmit={event => { event.preventDefault(); void sendInstruction(seat); }}>
                     <label>Instruction for {seat.name}<textarea required value={instruction} onChange={event => setInstruction(event.target.value)} placeholder="Describe the bounded task or question" /></label>
                     <label className="coordination-inline"><input type="checkbox" checked={queueInstruction} onChange={event => setQueueInstruction(event.target.checked)} /> Queue safely until the target can accept input</label>
@@ -339,7 +439,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
                   {deliveries[`${seat.provider}:${seat.id}`] && <p role="status" className="coordination-delivery">Delivery: {deliveries[`${seat.provider}:${seat.id}`].state || deliveries[`${seat.provider}:${seat.id}`].verdict || deliveries[`${seat.provider}:${seat.id}`].delivery || 'accepted'}{deliveries[`${seat.provider}:${seat.id}`].confirmation ? ` · ${deliveries[`${seat.provider}:${seat.id}`].confirmation}` : ''}{deliveries[`${seat.provider}:${seat.id}`].reason ? ` · ${deliveries[`${seat.provider}:${seat.id}`].reason}` : ''}</p>}
                 </article></li>)}
               </ul>}
-              {project.provider !== 'webmux' && !project.historical && !project.readOnly && <button type="button" disabled={busy || (project.provider === 'rig' && (project.contexts?.length ?? 0) === 0)} onClick={() => { chooseProvider(project.provider); setMode('existing'); setProjectID(project.id); setHost(project.host); document.getElementById('coordination-create-seat')?.scrollIntoView({ block: 'nearest' }); }}>Create session in this project</button>}
+              {project.provider !== 'webmux' && (!project.historical || project.provider === 'rig') && !project.readOnly && <button type="button" disabled={busy} onClick={() => { chooseProvider(project.provider); setMode('existing'); setProjectID(project.id); setHost(project.host); document.getElementById('coordination-create-seat')?.scrollIntoView({ block: 'nearest' }); }}>Create session in this project</button>}
             </details>;
           })}
         </div>
@@ -360,6 +460,7 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
 
       <details><summary>Provider contracts</summary><ul>{status.providers.map(value => <li key={value.id}><strong>{value.label}</strong> · <code>{value.contract}</code> · {value.capabilities.join(', ')}</li>)}</ul></details>
       {status.enabledProviders.includes('rig') && (view === 'all' || view === 'rig') && <details><summary>Rig diagnostics</summary><p><a href="?panel=openrig" target="_blank" rel="noreferrer">Open Rig text dashboard (Rig provider only)</a></p></details>}
+      {stopSeat && <RigStopDialog seat={stopSeat} onClose={() => setStopSeat(null)} onComplete={() => { void refresh(); }} />}
       </>}
     </div>
   </>;

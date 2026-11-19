@@ -1,0 +1,1060 @@
+{
+  "artifactSHA256": "ff936557d91c9f4deeb4a0a595c8356ce6ddce06c3f5a4f1ffb50337b9295057",
+  "records": [
+    {
+      "phase": "full",
+      "mode": "direct-child-original",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-child",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 49,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 33
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-child-original",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-child",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-netlog",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-screenshot",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 38,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 42,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 41,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-websocket",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 49,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 0,
+        "lines": 0,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      },
+      "networkSandbox": {
+        "observed": true,
+        "appContainer": true,
+        "processCount": 1
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 36,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "full",
+      "mode": "direct-screenshot",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-netlog",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 48,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 46,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 0,
+        "lines": 0,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      },
+      "networkSandbox": {
+        "observed": true,
+        "appContainer": true,
+        "processCount": 1
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 42,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "full",
+      "mode": "direct-websocket",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "sample-1",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 49,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 33
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 51,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 43,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 53,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 0,
+        "lines": 0,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      },
+      "networkSandbox": {
+        "observed": true,
+        "appContainer": true,
+        "processCount": 1
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 46,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 50,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 42,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 50,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 0,
+        "lines": 0,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      },
+      "networkSandbox": {
+        "observed": true,
+        "appContainer": true,
+        "processCount": 1
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 47,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-2",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 48,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 33
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 39,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 50,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 44,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 40,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 53,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 0,
+        "lines": 0,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      },
+      "networkSandbox": {
+        "observed": true,
+        "appContainer": true,
+        "processCount": 1
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 51,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 48,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 0,
+        "lines": 0,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      },
+      "networkSandbox": {
+        "observed": true,
+        "appContainer": true,
+        "processCount": 1
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 51,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 33
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 47,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 39,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 48,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 48,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 0,
+        "lines": 0,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      },
+      "networkSandbox": {
+        "observed": true,
+        "appContainer": true,
+        "processCount": 1
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 46,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 40,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 47,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-loading-log-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 49,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 5,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32,
+      "processOutput": {
+        "sandboxExecutableAccessDeniedReports": 0,
+        "startupExecutableDeniedReports": 0,
+        "navigationExecutableDeniedReports": 0,
+        "afterNavigationExecutableDeniedReports": 0,
+        "bytes": 0,
+        "lines": 0,
+        "droppedBytes": 0,
+        "droppedLines": 0,
+        "pendingBytes": 0,
+        "networkServiceRestartReports": 0,
+        "startupReports": 0,
+        "navigationReports": 0,
+        "afterNavigationReports": 0
+      },
+      "networkSandbox": {
+        "observed": true,
+        "appContainer": true,
+        "processCount": 1
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 46,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "full",
+      "mode": "worker-subprocess-saved",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "worker-subprocess-temporary",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    }
+  ],
+  "failedTraceRecords": [],
+  "phaseCounts": {
+    "full": 23,
+    "sample-1": 9,
+    "sample-2": 9,
+    "sample-3": 9
+  },
+  "qualifiedHead": "89ee7197d20bca5e23db03cbfae615b97960973d",
+  "run": 44234329737,
+  "job": 134566686789,
+  "navigationArtifact": 14397076311,
+  "accessArtifact": 14396847380,
+  "scope": "PARENTCOMPONENTnativeWindowsproofonly. 46ordinary+4StopPASS;8actualAppContainertokens/zeroaccessdenial/restart. Browserpackageandpreparationhelpersbyte-identicalincombinedcandidate;wholecombinedWindowsacceptancePENDING.",
+  "accessReceipt": {
+    "schema": 1,
+    "changed": true,
+    "capability": "lpacChromeInstallFiles",
+    "capabilitySID": "S-1-15-3-1024-2302894289-466761758-1166120688-1039016420-2430351297-4240214049-4028510897-3317428798",
+    "allowedRights": "ReadAndExecute,Synchronize",
+    "scope": "selected-owned-playwright-chromium-bundle",
+    "beforeExecutableCapabilityAllow": false,
+    "afterExecutableCapabilityAllow": true,
+    "executableSHA256": "dafaf388c1194eb610fc5706ba986eb38e5ebedb1fae44f39569e20940a3bae2",
+    "otherRulesOwnerGroupProtectionUnchanged": true,
+    "nativeSandboxAcceptance": "not-established-by-ACL-receipt"
+  },
+  "scopeReceipt": {
+    "schema": 1,
+    "platform": "windows",
+    "ownedFixtureCapabilityGrant": true,
+    "outsideInstallRootRefused": true,
+    "reparsePointRefused": true,
+    "explicitCapabilityDenialRefused": true,
+    "idempotent": true,
+    "privateProfileACLAndBytesUnchanged": true,
+    "nativeBrowserAcceptance": "not-established-by-scope-controls"
+  },
+  "exactParentChecks": [
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329898/job/134569732618",
+      "name": "Attach release bundles",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329898/job/134569663341",
+      "name": "Verify native release artifacts",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329898/job/134566687172",
+      "name": "Package (macos-arm64)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329898/job/134566687208",
+      "name": "Native bundle (macos-arm64)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329898/job/134566687094",
+      "name": "Package (ubuntu-22.04)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329711/job/134566687335",
+      "name": "Frontend and Tooling Tests",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329711/job/134566687361",
+      "name": "Dependency audit",
+      "state": "FAILURE"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329898/job/134566687423",
+      "name": "Native bundle (windows-2022)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329711/job/134566687359",
+      "name": "Windows Tests and Build",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329711/job/134566687330",
+      "name": "Go Server (ubuntu-22.04)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329898/job/134566687197",
+      "name": "Native bundle (ubuntu-22.04)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329711/job/134566687264",
+      "name": "Go Server (macos-arm64)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329711/job/134566687292",
+      "name": "Go Server (windows-2022)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329711/job/134566687415",
+      "name": "Virtual USB kernel integration",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329711/job/134566686889",
+      "name": "Build",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329898/job/134566686821",
+      "name": "Native bundle (windows-11-arm)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/jordanhubbard/webmux/actions/runs/44234329737/job/134566686789",
+      "name": "Windows first-navigation diagnostics",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://dashboard.gitguardian.com",
+      "name": "GitGuardian Security Checks",
+      "state": "SUCCESS"
+    }
+  ]
+}

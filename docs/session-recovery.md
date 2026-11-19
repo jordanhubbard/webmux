@@ -2545,3 +2545,339 @@ loopback-document timeline under #282, omitting tokens, internal profile keys,
 images, clipboard and file bodies. Browser behavior, actions and deadlines are
 unchanged; a later pass cannot by itself establish that this historical failure
 was fixed.
+
+
+### Windows ARM64 native component qualification candidate (2026-11-17)
+
+[#456](https://github.com/jordanhubbard/webmux/issues/456) adds an independent
+Windows 11 ARM64 server/UV/VT and real ConPTY renderer gate, with exact source,
+tool/capture PE architecture and raw result receipts. Existing race gates remain
+unchanged. The renderer browser's architecture is recorded separately to avoid
+calling emulation native browser execution. The [candidate scope](validation/windows-arm64-native-2026-11-17/README.md)
+has portable admission controls and strict types passing; native execution is
+pending. This does not establish authenticated ARM64 conversation or
+installed-service recovery, and does not close #318 or the earlier #450 panic.
+
+### Windows installed-service conversation recovery (2026-11-17)
+
+The CI-built main artifact `8f5d3225fac65804554a65bc08381a03a70654fe` passed
+authenticated ZIP/WinSW LocalSystem recovery with Codex 0.153.0 on Windows 11
+AMD64. An actual controller crash preserved the owner/root/CLI identities and a
+fresh native conversation answer. An actual guest reboot preserved native-file
+and transcript prefixes, automatically started the service, and offered explicit
+native recovery without starting a coding process. The browser's Resume action
+continued the original conversation/project/policy; fresh answers and duplicate
+requests were verified through another ordinary service restart.
+
+See [source bindings, controls and limits](validation/windows-installed-recovery-2026-11-17/README.md).
+This newer artifact does not resolve the earlier image's Defender classification
+or qualify other service accounts, every CLI/profile, different-executable
+updates or Windows ARM64 hardware. Broader #318 remains open.
+
+
+## Public native Rig/Codex original-operation recovery (2026-11-18)
+
+The [public qualification](validation/codex-public-recovery-2026-11-18/README.md)
+now covers native-owned local Codex creation and recorded-conversation recovery
+through the actual Go/Chrome application on macOS with Rig 0.7.18, Codex 0.169.0,
+Node 24 and the default native owner policy. Existing adopted seats remain
+adopted. Logging captures the original native generation/file and snapshot;
+a pending operation freezes that reference and approved request.
+
+A surviving original process is verified and reattached without Resume. After
+owned coding-process loss and browser-confirmed Stop of its idle seat, the
+public action prepares the exact original-only request before the broker banks
+its intent. Actual controller SIGKILL during dispatch retains uncertainty.
+Ordinary duplicates post nothing; explicit completion reuses the original UUID,
+body, review and native conversation across reconstruction. The original
+conversation recalls the removed challenge without tools, retains its native
+prefix and owner environment/policy, and appends fresh tool results. The same
+terminal log paths and byte prefixes, viewer and sibling survive; checked Stop
+and cleanup pass.
+
+This qualifies that explicit idle-seat Stop path and controller restart/crash
+scope. It does not qualify automatic cleanup of every orphaned seat, an actual
+different-executable service upgrade or host reboot for this Rig/Codex flow,
+restricted policies, unobserved interactive changes, selected profiles/graphs
+or all platforms. The earlier native Windows and other-manager results above
+keep their separate versioned scopes. Full #318 acceptance remains open.
+
+## Native Rig/Codex installed-service executable upgrade (2026-11-18)
+
+The [installed-service qualification](validation/codex-service-upgrade-2026-11-18/README.md)
+now covers a real macOS launchd service upgraded through the shipped Make
+installer from the retained capture-capable executable to a clean build with
+public original-conversation recovery. Both identify as version 1.4.5; their
+installed executable hashes and server PIDs differ. App signatures verify and
+the executable payloads match their respective inputs after the documented
+signing-metadata normalization. The baseline retains its original dirty-build
+provenance; this is not a released-version or notarized-package migration.
+
+An actual native coding conversation, provider PID, pane and viewer survive
+replacement. The new server captures that same conversation; public survivor
+reattachment sends no native Resume. After owned Codex loss and explicit checked
+Stop of its idle seat, actual service SIGKILL during recovery dispatch causes
+launchd to restart the private service automatically. Ordinary duplicates send
+no native POST; explicit completion retains the original UUID/body/revision.
+The native conversation recalls the removed challenge without tools and fresh
+correlated tools verify its original model, owner environment, default
+full-access/never policy and four allowed writes. Native history and the same
+terminal log paths retain their original byte prefixes and append. Sibling,
+viewer, duplicate and private cleanup checks pass; the user's live service
+retains its PID.
+
+This extends the macOS default-owner service scope. Native Rig/Codex host
+reboot, restricted policies, selected profiles/permission graphs, broader
+startup settings, platforms/service accounts and release-package upgrades
+remain open. Earlier failed probe attempts remain excluded and retained by
+hash. Required review/current-head CI and full #318/#438/release acceptance
+remain separate requirements.
+
+## Native Rig/Codex restricted-policy recovery (2026-11-18)
+
+Additional [never-approval qualification](validation/codex-never-recovery-2026-11-18/README.md)
+passes the same public lifecycle for workspace-write/never and read-only/never
+on clean source d453528, with fresh before/after policy/environment probes and
+32 lifecycle controls. The original failed read-only checker receipt is retained
+alongside its separate corrected offline audit; no extra coding turn was used.
+
+The [restricted-policy qualification](validation/codex-restricted-recovery-2026-11-18/README.md)
+now covers actual public Go/Chrome recovery on macOS with native workspace-write
+and read-only policies, both with on-request approval and network disabled.
+Every native coding turn retains the original policy and model. Fresh correlated
+tool outputs before and after recovery prove owner HOME/tmp/PATH, paired Rig,
+tool discovery and inherited values without manager-only values.
+
+Workspace-write allows the project and configured extra root, while denying
+writes outside those roots, into protected git/configuration directories and
+into the excluded owner TMPDIR. Read-only denies all six write targets. Both
+deny a connection to a fixture endpoint proven available outside the sandbox.
+Denied files remain absent and allowed files contain the expected bytes after
+cleanup. Codex's read-only journal omits the default false network field; the
+verifier requires its exact recorded shape, the resolved network-disabled plan
+and actual EPERM network results. The original failed schema-verification run
+remains retained and excluded; a fresh complete run passes.
+
+Both cases pass original-operation creation uncertainty/duplicates, graceful
+controller restart with the same provider, survivor reattachment without Resume,
+owned CLI loss plus explicit checked Stop of its idle seat, and controller
+SIGKILL during public original-only recovery. Explicit completion retains the
+original native UUID/body/revision. The original conversation recalls the removed
+challenge without tools, retains its native history prefix and appends fresh
+tool results under the same policy. Terminal-log paths/prefixes, viewer, sibling,
+consumed-duplicate and private daemon/tmux cleanup checks pass.
+
+Project trust is reviewed in the native CLI without a model turn. The read-only
+fixture temporarily uses workspace-write only for that private trust setup,
+then restores the final read-only configuration before managed creation; its
+configuration hash and all actual coding policies are checked. A disabled
+project layer still refuses before an owner launch/member POST. Public trust
+refusal guidance is tracked in [#529](https://github.com/jordanhubbard/webmux/issues/529).
+
+This does not extend the installed-service upgrade receipt to restricted
+policies or qualify native Rig/Codex host reboot, other policy variants,
+interactive escalation/permission changes, selected profiles/permission graphs,
+broader startup settings or all platforms. The native account stays in its
+original home; the private browser is loopback auth-none. Full #318/#438,
+review/current-head CI and release acceptance remain open.
+
+The later [interactive-permission guard](validation/codex-interactive-policy-2026-11-19/README.md)
+addresses #539: a native Read Only selection previously became the original
+workspace-write/never policy after recovery. Applied-settings journal records
+now refuse structured Resume when current settings differ, including a change
+without another model turn. Native controller-crash/survivor and later CLI-loss
+cases verify refusal before any Resume POST. A fresh unchanged workspace-write/never
+case still passes public original-conversation recovery and its restart/crash,
+tool, log-prefix and duplicate controls. This preserves manual choices rather
+than adding dynamic permission-profile or graph translation. The qualification
+records both earlier failed harness attempts and bounded-evidence fallback.
+
+## Native Codex project trust and original creation retry (2026-11-18)
+
+[#529](https://github.com/jordanhubbard/webmux/issues/529) now has an implemented,
+[native-qualified public flow](validation/codex-project-trust-2026-11-18/README.md).
+For a disabled project configuration layer encountered before preparing a
+native coding launch, the API returns HTTP 409 with a typed blocked selection.
+Its request ID is a durable selection fingerprint; the member's native operation
+is reserved after the owner policy can be resolved. The original empty Rig
+namespace may already exist. This differs from HTTP 202 for an already uncertain
+native creation.
+
+The browser retains the submitted values, shows a safely quoted native review
+command for the original folder, and requires confirmation before retry. On the
+computer running WebMux, the native owner can use the displayed qualified CLI:
+
+```sh
+codex --no-daemon --sandbox workspace-write --ask-for-approval on-request -C '/path/to/project'
+```
+
+Confirm the exact folder's “Trust and continue” prompt, wait for the main native
+screen, then exit without starting a task. Those flags apply to the temporary
+review CLI. WebMux re-resolves the intended project policy after that CLI exits.
+The application itself never executes the review command or grants trust.
+
+Owner-checked, fsynced private records preserve the selected topology, member,
+folder and environment across controller reconstruction. A retry token is
+checked against the original browser selection before topology allocation and
+against the original native selection before owner resolution. Ordinary
+duplicates and status refresh start no observer and send no creation POST, even
+after native trust becomes enabled. An explicit premature retry still refuses
+the disabled layer. The original empty Rig namespace may already exist; the
+blocked check starts no coding member or viewer.
+
+Actual Go/Chrome/native qualification executes the displayed command for a
+folder containing an apostrophe and a space, confirms native trust without a
+model turn, and preserves the intended read-only configuration byte for byte.
+The test discards an actual public HTTP 202 response after approved creation.
+The UI preserves uncertainty and the original selection; another ordinary
+request posts nothing and starts no observer. Deliberate continuation reaches
+the existing original-operation inspection flow. All member, topology and
+recovery POSTs retain their respective original UUIDs/bodies.
+
+The same run passes read-only/on-request coding, survivor reattachment after
+restart, owned CLI loss plus explicit idle-seat Stop, controller SIGKILL during
+original recovery, exact-conversation no-tool recall, fresh owner environment
+and denied-write/network probes, native/terminal log prefixes, duplicates,
+sibling/viewer retention and private cleanup. Review/merge remains required.
+Loss of the initial public creation response before a trust selection is known
+now has separate [#530 native qualification](validation/codex-initial-response-loss-2026-11-18/README.md). Broader
+#438/#318 startup/profile/platform, service/reboot and release acceptance
+remains open.
+
+
+## Lost initial native creation response (#530)
+
+The browser now assigns a separate public request UUID before a qualified local
+Rig/Codex creation. It posts to the dedicated native creation-request endpoint;
+an older server cannot execute a legacy launch by silently ignoring the new
+identity. Inventory advertises this path only for the pinned Rig 0.7.18 build
+on Node 24. Other provider routes retain their existing behavior.
+
+Before topology allocation, the controller durably binds that UUID in the
+current owner's private namespace to the submitted project, pod, member, host,
+folder, runtime and grid position. A changed selection or a legacy/adopted member
+refuses before a member launch. Both first dispatch and continuation require the
+native path; the public UUID never replaces a native operation UUID.
+
+Transport loss, response JSON failure, an incomplete success response, or an
+unclassified server error retains the submitted selection. The dialog offers
+an explicit continuation using the same UUID and values. If the request never
+arrived, this can perform its first native execution. If native dispatch was
+already consumed, the existing journal returns uncertainty without another
+POST; a returned native operation then uses the existing explicit inspection
+flow. There is no automatic retry or fallback to a legacy endpoint. A refusal
+of a continuation does not prove that the first request had no effect.
+
+Contract, runner-process, API and UI tests cover these boundaries, including
+explicit grid placement and inventory refresh changing suggested names. The
+separate [native qualification](validation/codex-initial-response-loss-2026-11-18/README.md)
+passes 24 actual Go/Chrome/native controls on clean 1c58810 code. With project
+trust already reviewed, the first browser request is not delivered; after a
+controller restart, the same public UUID executes for the first time. The test
+then discards the actual initial native/public creation responses and preserves
+uncertainty. Ordinary duplicates and controller reconstruction send no creation
+POST and start no account observer. Changed selections refuse before topology.
+Explicit continuation and subsequent native inspection retain the original
+request, node, provider and conversation.
+
+The same run proves native coding, restart survivor reattachment, owned CLI loss
+plus explicit idle-seat Stop, controller SIGKILL during original recovery,
+no-tool recall, read-only/on-request restrictions, retained owner environment,
+native/terminal log prefixes, duplicates, sibling/viewer retention and cleanup.
+The live case uses normal initial viewer placement; explicit placement is covered
+by contract tests. The earlier #529 receipt remains a separate trust-retry case.
+[#530](https://github.com/jordanhubbard/webmux/issues/530) awaits review/merge;
+broader #438/#318 and release acceptance remain open.
+
+
+## Linux observer signal delivery follow-up (#533)
+
+Bounded disposable-fixture diagnostics exposed a signal-thread panic and forced
+cleanup even when the earlier policy assertions passed. The policy helper now
+permits only addressless signal-pair send/receive forms with restricted flags;
+endpoint creation, connections, addressed I/O, message/descriptor transfer and
+process/exec/filter replacement remain denied. Strict qualification refuses
+panics, forced cleanup, incomplete diagnostics and unexpected exits.
+
+The [native receipt](validation/codex-observer-signal-2026-11-18/README.md) binds
+646c4ce to actual AMD64/ARM64 kernel controls and twelve native startup cases.
+All 24 subprocesses stop without panic or forced kill, and full/read/workspace
+policy snapshots and late-integration denials remain unchanged. These are
+disposable unauthenticated startup controls, with no model turn. Authenticated
+Linux coding/conversation recovery under #523 and broad #438/#318 acceptance
+remain open. The earlier stdout EOF lacked stderr; the recorded signal defect
+is repaired, while that exact historical exit cause remains unproven.
+
+
+## Windows native active-tool executable upgrade (2026-11-18)
+
+The [native receipt](validation/windows-functional-upgrade-2026-11-18/README.md)
+qualifies a private user-run Windows AMD64/Codex 0.153.0 case with explicit
+cmd.exe tools and read-only/never policy. An actual active Python tool survives
+replacement of main8f by clean 5fad: provider, native CLI and tool PIDs, creation
+times and image hashes stay unchanged. The original native tool session exits
+zero after release without Resume or duplicate launch. Fresh no-tool recall and
+a new tool read follow through the replacement controller.
+
+After owned provider loss, explicit Reconnect opens the wait screen; the public
+Resume action targets the original conversation, project, model, policy and
+profile roots without replaying the initial prompt. Fresh no-tool recall and
+actual tool results verify the new nonce and both filesystem write denials.
+Repeating the same recovery action across another controller crash remains
+consumed, with the provider/native CLI, sibling environment and two persistent
+browser pages retained. All 28 captured transcript/native-journal prefixes match.
+
+This is scoped functional evidence, not complete Windows acceptance. The legacy
+default PowerShell and loopback-denial failures in #538 remain open. On that
+5fad candidate, public local session DELETE detached durable jobs while removing
+saved entries. #541 subsequently adds the qualified Stop/hide workflow below. The first fixture cleanup
+therefore found live owners; verified explicit private-owner termination was
+required. Final checks find all 23 recorded processes gone and no holders for
+ten fixture image/log files. Failed attempts and the initial partial cleanup are
+retained alongside the passing results. Installed-service/MSI upgrades, other
+accounts/policies, authenticated ARM64, additional reboot coverage and the full
+#318 roadmap audit remain separate requirements.
+
+The separate [native stop-confirmation check](validation/windows-stop-confirmation-2026-11-18/README.md)
+repairs a prerequisite for #541: `nativeprovider.Stop` retains the original
+Windows process handle and confirms owner exit after the authenticated stopping
+acknowledgement. Cancellation/unobservable completion remains an error. Actual
+ConPTY root/child teardown, ten repetitions of both new controls, a failing
+acknowledgement-only negative control and the full native-provider package pass.
+That component receipt does not expose the application workflow. The subsequent
+implementation and native application qualification are described below.
+
+### Explicit local Windows close and Stop (#541)
+
+The local Windows Close control now offers **Hide and keep running** or a
+separate **Stop terminal and close** action. Hide persists the existing minimized
+session; it remains in the window list with its authenticated recovery path.
+The server refuses DELETE until the original owned provider's stop is confirmed.
+Controller shutdown remains a viewer detach. Rig, Agent Deck, SSH and other
+manager-owned sessions retain their existing lifecycle routes.
+
+The broker banks a native session/key and execution-host/account scope before
+launch, so a failed post-launch save retains recoverable access. A private owner
+snapshot binds instance, endpoint, image digest, PID and creation time. The
+browser receives only a selection fingerprint. Stop requires a deliberate
+request with a UUID and matching selection; its original target and intent are
+saved before authenticated dispatch. Pending/uncertain stops block automatic
+restore, reconnect and terminal input. Ordinary duplicates only inspect the
+original process; deliberate continuation addresses the same original target.
+Lost replies or failed result saves retain the intent. A different host/account
+or stale owner refuses rather than selecting a replacement. No browser-supplied
+PID or executable is accepted.
+
+Broker/API and browser-component tests cover ownership, pre/post-dispatch save
+failures, reconstruction without a new launch, concurrent requests, original-only
+continuation, stale selections, metadata redaction and lost replies. Native
+application [qualification](validation/windows-local-stop-2026-11-18/README.md)
+now passes Hide/restore, same-process authenticated Codex work across controller
+loss, old-client DELETE refusal, lost Stop replies, durable uncertainty and
+original-only inspection across another crash, unchanged siblings, two live
+viewers and retained logs. The first viewer case exposed stale minimized layout;
+the corrected workspace refresh passes its failing-before integration regression
+and a fresh native two-viewer run. All four private fixture terminals stop via
+the product protocol; final checks find all twenty recorded process objects gone
+and zero file holders. Exact-source review/CI and integration remain required;
+the earlier component receipt alone does not close #541.

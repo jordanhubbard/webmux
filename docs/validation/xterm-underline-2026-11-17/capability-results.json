@@ -1,0 +1,86 @@
+{
+  "recorded_utc": "2026-11-17T18:41:37.684978+00:00",
+  "based_on_commit": "a4f292039b8907185ab5527f03aa9b98e7c4477f",
+  "scope": "Local renderer, application and portable broker qualification. Windows-specific contracts/captures compiled and vetted only; actual Windows execution pending. No native coding-session/release acceptance implied.",
+  "candidate_owner_replay": "screen-v3",
+  "candidate_viewer_max_profile": "webmux-xterm-state-v2",
+  "default_screen_new": "legacy; fresh Windows owner explicitly opts into v2",
+  "checks": {
+    "renderer_suite": "1344 passed4.5m",
+    "snapshot_comparisons": 1341,
+    "all_initial_continued_recaptured_equal": true,
+    "bare_reference_comparisons": 253,
+    "bare_reference_breakdown": "126 underline inputs x whole/byte-split=252;1 legacy ANSI protection/SGR/selective-erase control",
+    "bare_reference_parser_hyperlink_and_reset_unmodified": true,
+    "other_reference_profile": "Established shared hyperlink-retention adapter; never snapshot adapter",
+    "no_replayed_queries": true,
+    "scratch_entries_at_each_snapshot_boundary_max": 1,
+    "application_contract_suite": "3 passed15.0s; actual app/Go server with injected metadata/output",
+    "application_contracts": [
+      {
+        "advertised": "webmux-xterm-state-v2",
+        "required": "webmux-xterm-state-v1",
+        "attachments": 2,
+        "staleTokenIgnored": true,
+        "generatedInput": [],
+        "scope": "Actual app/Go server with injected handshake/output frames; not a native producer test"
+      },
+      {
+        "advertised": "webmux-xterm-state-v2",
+        "required": "webmux-xterm-state-v2",
+        "attachments": 2,
+        "staleTokenIgnored": true,
+        "generatedInput": [],
+        "rawUnderlineClass": "xterm-underline-0",
+        "scope": "Actual app/Go server with injected handshake/output frames; not a native producer test"
+      }
+    ],
+    "affected_race": "Screen7.919s/session14.746s/replayfilter2.191s/terminal1.387s PASS",
+    "vet": "Darwin root and Windows AMD64 root PASS; Windows compile coverage only",
+    "frontend_tests": "372 passed",
+    "frontend_build": "PASS",
+    "strict_typescript_source_inventory": "PASS",
+    "frontend_lint": "PASS",
+    "provenance": "241 VT originals15 explicit patches;104 UV originals3 explicit patches unchanged and verified"
+  },
+  "exact_played_go_fixture_inventory": {
+    "fixtures": 1088,
+    "bytes": 2697081,
+    "sha256": "1d2a67f8e6d7145967c8b1796754cd7d3f78fef44559321144ab7fb88ef31918",
+    "worker": 0,
+    "scope": "Exact generated JSON used by the recorded renderer run, including original bytes, snapshots, metadata and nonce values. Bare variants reuse these same Go snapshots."
+  },
+  "renderer_receipt_inventory_sha256": "c0406f91f8aface9b41cc59f63f91783bb02a3457d71f58f40a0cf6179411d92",
+  "xterm_sha256": "14903579ff54664cd72f8e8699e6961a6272c21863ec1c3b118cdc8af5d4a972",
+  "source_sha256": {
+    "tests/e2e/screen-replay.spec.ts": "5f7eaba4850fae54aaa1f36e24dcc2af3d6421397e6e093dc7644383115ea094",
+    "tests/e2e/terminal-replay.spec.ts": "42e36d67912b618ed14cac7a0e4404cf1fc4c2c52ed43125b40fe8860b1f6e0a",
+    "webmux/frontend/src/components/Terminal.tsx": "019e89d13131224f28ed7f481b8234a19243dc60a529b6801a8dae32361fcfc7",
+    "webmux/frontend/src/utils/terminalSnapshotProfile.ts": "f13c891d5d660c8ff12c3a4842ddab6ac719bb6dad813084767c21a05d8ad77f",
+    "webmux/server/internal/screenstate/ansi.go": "5a7b03409c03302279b31bff210a9cf1eb9b1be0773150630d40ef58250de32b",
+    "webmux/server/internal/screenstate/renderer_profile.go": "e9838ce8833ce029ed3839e24db176b26bbc250419f80463758495438d0a9236",
+    "webmux/server/internal/screenstate/renderer_profile_test.go": "7fc9c6c50da0b6b2e712a09489b9e1c371b5fcd80be35bb837ed02335c4907be",
+    "webmux/server/internal/screenstate/testdata/replay-fixtures/main.go": "d546791f6669c9511f47702e3a5b636f43560b913f95c77dc4e74f86f812ddb2",
+    "webmux/server/internal/session/viewers.go": "52c3d4b5e1a9ca991ff10f54793ba6f066944ded3549e1344b3c99422b9025d6",
+    "webmux/server/internal/session/snapshot_profile_test.go": "7c9c261c448a522a46dac31e403cedf140916a08463a79908b1240ac490276d5",
+    "webmux/server/internal/terminal/provider_windows.go": "65400274dbb5f4982dcaa2e04768f18014b90c778fdab28add0057e96f00c95d",
+    "webmux/server/internal/nativeprovider/server_windows.go": "7b8c7550959f40993171683c835bcb5d14db382abfbc0bac615b7f3530f2193b",
+    "webmux/server/internal/nativeprovider/client_windows.go": "f13820dfe59572d1e4a0b89b47698820cd85ea45b652a7493af05bd8ad7986b2",
+    "webmux/server/internal/nativeprovider/client_profile_windows_test.go": "f1714f2cb472b1eeede42c4766bd7204e5efdc449033c4edc496200c552f31eb",
+    "webmux/server/internal/nativeprovider/native_windows_test.go": "303ae998e281176842db650709376ecde9f8235e69311e87a344c2d43a934ec8",
+    "webmux/server/internal/nativeprovider/snapshot_windows_test.go": "eb214f369358d3e7a29ffd1763c6c5166b341bec53b698a168b48d6f0c0abc9f"
+  },
+  "windows_native_execution": {
+    "status": "NOT YET EXECUTED for this candidate",
+    "planned_conpty_cases": 28,
+    "additional_hidden_state_producer_cases": 6,
+    "capture_requirements": "v3 identity, fresh v2 metadata/tokens, initial/continued/recaptured actual streams and starts1. Observe current-client ANSI-only attach acceptance/refusal; do not assume ConPTY preserves hidden flags."
+  },
+  "remaining": [
+    "Execute new Windows native contracts and actual28ConPTY cases on exact source",
+    "Inspect real producer state normalization and actual requirements/legacy refusal results",
+    "Verify native and application acceptance at their actual scopes",
+    "All final exact-head hosted gates, including audit429",
+    "Broader355/318 native coding-session lifecycle and release requirements"
+  ]
+}

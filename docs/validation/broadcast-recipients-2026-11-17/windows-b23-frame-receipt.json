@@ -1,0 +1,35 @@
+{
+  "selectedOriginalHex": "7879",
+  "explicitlyIncludedLaterHex": "79",
+  "ordinaryAfterModeOffHex": "62",
+  "outboundFramesHex": [
+    {
+      "fixture": "Broadcast A",
+      "frames": [
+        "1b5b4f",
+        "1b5b49",
+        "78",
+        "1b5b4f",
+        "1b5b49",
+        "79",
+        "1b5b4f"
+      ]
+    },
+    {
+      "fixture": "Broadcast B",
+      "frames": [
+        "1b5b4f",
+        "1b5b49",
+        "62"
+      ]
+    },
+    {
+      "fixture": "Broadcast C",
+      "frames": [
+        "1b5b4f",
+        "79"
+      ]
+    }
+  ],
+  "receiptSource": "Actual PTY child append-only byte files, not terminal screen text"
+}

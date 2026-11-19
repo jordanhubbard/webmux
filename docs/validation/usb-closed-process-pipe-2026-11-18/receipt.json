@@ -1,0 +1,40 @@
+{
+  "sourceParent": "789b125d27ba797c6d4d68bfbcc3ddad8966aee4",
+  "nativeFailure": {
+    "source": "7b1d5ae82c950588469ad96a572c3cb55456259a",
+    "run": 44297064754,
+    "job": 134776754451,
+    "step": "Repeat Windows SSH CLI lifecycle",
+    "test": "TestRealSSHTransportAndHostKeyRejection/true",
+    "error": "relay: read |0: file already closed"
+  },
+  "sourceSHA256": {
+    "webmux/server/internal/usbforward/relay.go": "4a941b895c288ed6433920a2025995e59437df4c50c053883d753e4852a21a95",
+    "webmux/server/internal/usbforward/relay_test.go": "6aa4762a45b358c328b0b16fd33d5365ed5abe102ba4845cc07137426758e656"
+  },
+  "parentRegression": {
+    "failedAsRequired": true,
+    "originalImplementationSHA256": "96cd48964dfc8c3fa45a8c76f055f5009d4db1c741d811fe4bc935f79f3ccada",
+    "sameTestSourceUsed": true,
+    "bothBareAndPathWrappedClosedSentinelsFail": true
+  },
+  "local": {
+    "platform": "darwin-arm64",
+    "go": "go version go1.27.3 darwin/arm64",
+    "targetedRaceRepetitions": 20,
+    "targetedRace": "pass",
+    "fullUSBForwardRace": "pass",
+    "vet": "pass",
+    "preservedErrors": [
+      "invalid USB forwarding protocol",
+      "unexpected EOF",
+      "permission denied"
+    ],
+    "whitespace": "pass"
+  },
+  "limits": [
+    "Native Windows repair qualification is pending unchanged exact-head SSH repetition.",
+    "The change recognizes os.ErrClosed only after the established relay handshake; handshake/host-key refusals and malformed/truncated frames remain failures.",
+    "No changes to native counts/deadlines, required CI workflow or dependency audit/release gates."
+  ]
+}

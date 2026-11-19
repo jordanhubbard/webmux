@@ -1,7 +1,15 @@
+.browser-companion-layer { position: fixed; inset: 0; pointer-events: none; }
+.browser-companion-layer > .browser-companion { pointer-events: auto; }
+.browser-pane-move { cursor: move !important; touch-action: none; }
+.browser-pane-resize { position: fixed; z-index: 901; pointer-events: auto; touch-action: none; }
+.browser-pane-resize-edge { cursor: ew-resize; }
+.browser-pane-resize-edge:hover, .browser-pane-resize-edge:focus-visible { background: #ac9bff88; }
+.browser-pane-resize-corner { cursor: nwse-resize; padding: 0; border: 1px solid #7c6af7; border-radius: 3px; color: #eee; background: #303052; line-height: 1; }
+.browser-pane-resize:focus-visible { outline: 2px solid #ac9bff; outline-offset: 2px; }
 .browser-companion {
-  position: fixed; z-index: 900; right: 8px; top: 64px; bottom: 8px;
+  box-sizing: border-box; position: fixed; z-index: 900; right: 8px; top: 64px; bottom: 8px;
   width: min(880px, 65vw); min-width: 340px; max-width: calc(100vw - 16px);
-  display: flex; flex-direction: column; overflow: auto; resize: horizontal;
+  display: flex; flex-direction: column; overflow: auto; resize: none;
   color: #ddd; background: #111124; border: 1px solid #7c6af7;
   border-radius: 8px; box-shadow: 0 8px 32px #0008; font: 13px system-ui;
 }
@@ -43,3 +51,28 @@
 .browser-page-text { flex: 0 0 auto; max-height: 50vh; overflow: auto; padding: 12px; overflow-wrap: anywhere; }
 .browser-page-text h2 { font-size: 16px; }
 .browser-page-text li { margin-block: 6px; }
+
+.browser-settings { flex: 0 0 auto; }
+.browser-settings > summary { padding: 8px; cursor: pointer; }
+.browser-settings .browser-profiles { padding-top: 0; }
+
+@media (max-width: 650px) {
+  .browser-companion, .browser-companion.browser-expanded {
+    inset: 0; width: 100%; max-width: none; min-width: 0;
+    box-sizing: border-box; border-radius: 0; resize: none;
+  }
+  .browser-companion header {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 8px; gap: 6px;
+  }
+  .browser-companion header div { grid-column: 1 / -1; min-width: 0; }
+  .browser-companion header button { min-width: 0; padding: 6px; font-size: 12px; }
+  .browser-companion button, .browser-companion select,
+  .browser-companion input { min-height: 44px; box-sizing: border-box; }
+  .browser-companion input { font-size: 16px; max-width: 100%; }
+  .browser-settings > summary { min-height: 44px; box-sizing: border-box; }
+  .browser-address { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .browser-address input { grid-column: 1 / 4; width: 100%; }
+  .browser-profiles label { min-width: 0; max-width: 100%; }
+  .browser-profiles select { max-width: 100%; }
+}

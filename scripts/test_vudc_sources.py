@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import urllib.error
 
-from vudc_sources import acquire, retry_delay
+from vudc_sources import acquire, retry_delay, BUNDLED_SOURCES, LIMIT
 
 
 class Acquisition(unittest.TestCase):
@@ -100,6 +100,65 @@ class Acquisition(unittest.TestCase):
         self.assertEqual(retry_delay({'Retry-After': 'Wed, 01 Jan 2020 00:00:00 GMT'}, 1), 0)
         with self.assertRaisesRegex(RuntimeError, 'invalid'):
             retry_delay({'Retry-After': 'garbage'}, 1)
+
+    def test_repository_bundle_builds_a_cold_cache_without_network(self):
+        manifest = json.loads((Path(__file__).resolve().parents[1] / 'tests/usb-vudc-sources.json').read_text())
+        first = self.root / 'offline'
+        first.mkdir()
+        def no_network(*args, **kwargs):
+            self.fail('bundled fixture sources must not use the network')
+        acquire(manifest, first, self.cache, opener=no_network)
+        receipt = json.loads((first / 'source-acquisition.json').read_text())
+        self.assertTrue(receipt['passed'])
+        self.assertEqual(len(receipt['files']), 8)
+        self.assertTrue(all(f['from_bundle'] and not f['from_cache'] and not f['attempts'] for f in receipt['files']))
+        for name, expected in manifest['files'].items():
+            self.assertEqual(hashlib.sha256((first / name).read_bytes()).hexdigest(), expected)
+            self.assertEqual((first / name).read_bytes(), (BUNDLED_SOURCES / manifest['commit'] / name).read_bytes())
+        second = self.root / 'offline-cache'
+        second.mkdir()
+        acquire(manifest, second, self.cache, opener=no_network, bundle=None)
+        reused = json.loads((second / 'source-acquisition.json').read_text())
+        self.assertTrue(all(f['from_cache'] and not f['from_bundle'] for f in reused['files']))
+
+    def test_corrupt_and_oversize_bundles_fail_without_network_or_cache(self):
+        for name, data in [('corrupt', b'wrong'), ('oversize', b'x' * (LIMIT + 1))]:
+            with self.subTest(name=name):
+                bundle = self.root / ('bundle-' + name)
+                directory = bundle / self.manifest['commit']
+                directory.mkdir(parents=True)
+                (directory / 'vudc.c').write_bytes(data)
+                target = self.root / name
+                target.mkdir()
+                with self.assertRaisesRegex(RuntimeError, 'checksum/size mismatch'):
+                    acquire(self.manifest, target, self.cache, bundle=bundle,
+                            opener=lambda *a, **k: self.fail('corrupt bundle must not fall back to network'))
+                self.assertEqual(list(self.cache.iterdir()), [])
+                failed = json.loads((target / 'source-acquisition.json').read_text())
+                self.assertFalse(failed['passed'])
+                self.assertTrue(failed['files'][0]['from_bundle'])
+
+    def test_linked_and_nonregular_bundle_entries_are_refused(self):
+        bundle = self.root / 'unsafe-bundle'
+        directory = bundle / self.manifest['commit']
+        directory.mkdir(parents=True)
+        source = directory / 'vudc.c'
+        original = self.root / 'pinned'
+        original.write_bytes(b'pinned')
+        source.symlink_to(original)
+        def no_network(*args, **kwargs):
+            self.fail('unsafe bundle must not fall back to network')
+        for kind in ['linked', 'directory', 'missing']:
+            target = self.root / kind
+            target.mkdir()
+            with self.assertRaisesRegex(RuntimeError, 'linked|regular file|incomplete'):
+                acquire(self.manifest, target, self.cache, bundle=bundle, opener=no_network)
+            self.assertEqual(list(self.cache.iterdir()), [])
+            if kind == 'linked':
+                source.unlink()
+                source.mkdir()
+            elif kind == 'directory':
+                source.rmdir()
 
 
 if __name__ == '__main__':

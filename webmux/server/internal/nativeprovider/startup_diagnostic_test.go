@@ -1,0 +1,45 @@
+package nativeprovider
+
+import (
+	"fmt"
+	"strings"
+	"syscall"
+	"testing"
+)
+
+func TestStartupDiagnosticRetainsOnlyRecognizedEvidence(t *testing.T) {
+	private := "private-argv-key-path"
+	if got := startupCode(fmt.Errorf("%s: %w", private, syscall.Errno(5))); got != 5 {
+		t.Fatalf("lost wrapped OS code: %d", got)
+	}
+	if got := startupDiagnostic("owner-listen", 10047, 0); got != "phase=owner-listen os=address_family_not_supported exit=none" {
+		t.Fatal(got)
+	}
+	if got := startupDiagnostic("bootstrap-start", 0, 0xc0000142); !strings.Contains(got, "exit=dll_initialization_failed") {
+		t.Fatal(got)
+	}
+	if got := startupDiagnostic("bootstrap-owner-exit", 0xc0000142, 0); !strings.Contains(got, "os=unavailable exit=dll_initialization_failed") {
+		t.Fatal(got)
+	}
+	if got := startupDiagnostic("bootstrap-owner-exit", 2, 0); !strings.Contains(got, "os=unavailable exit=exit_code_2") {
+		t.Fatalf("an owner process exit was misreported as a Win32 error: %s", got)
+	}
+	got := startupDiagnostic(private, 0x12345678, 0x87654321)
+	if got != "phase=unavailable os=unavailable exit=unavailable" || strings.Contains(got, private) {
+		t.Fatalf("unrecognized child evidence leaked: %q", got)
+	}
+}
+
+func TestStartupJobObservationPhasesRemainSanitized(t *testing.T) {
+	for _, phase := range []string{
+		"bootstrap-owner-start-outside-job",
+		"bootstrap-owner-start-immediate-job-unreadable",
+		"bootstrap-owner-start-immediate-job-breakaway",
+		"bootstrap-owner-start-immediate-job-no-breakaway",
+	} {
+		got := startupDiagnostic(phase, 5, 0)
+		if got != "phase="+phase+" os=access_denied exit=none" {
+			t.Fatalf("lost safe job observation: %s", got)
+		}
+	}
+}

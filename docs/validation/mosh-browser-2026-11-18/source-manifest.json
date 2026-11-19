@@ -1,0 +1,85 @@
+{
+  "recordedUTC": "2026-11-18T07:36:47.699024+00:00",
+  "issue": 468,
+  "base": "8e90c3ba68f1e037c592a24b4c22e463cc53e071",
+  "qualificationSource": "SHA-identified workingtree; local dirty build is not a runtime build of the unchanged base commit. Hosted exact-head evidence required after publication.",
+  "sourceSHA256": {
+    ".github/workflows/ci.yml": "57a80f7fa0fb5433c1e73ab220921245dda468d6b22ae569c0637ce5e29d3fc9",
+    "docs/browser-companion.md": "6610e2224ac07cb20f3e5ecd93b9967ec1c116ee342fbdb87ff1af0e9c7f62ba",
+    "docs/roadmap.md": "12a349a7f82d822f60220291611601892c381b0dbcb1e8513452f4e43e246cdc",
+    "docs/validation/mosh-browser-2026-11-18/README.md": "7bb732aa070ff6d068bf89cb230dae6b02bb2d59048d822aa031aaa76eb366e6",
+    "tests/e2e/mosh-browser.spec.ts": "196d3934765313042e86bec7a923744b26ec1c9a2073003c9a215b54d7c8fe49",
+    "tests/e2e/start-server.mts": "1adcfa16b865c583fd0c96c3ffdde941739b33571e57ced698c79261156d6384",
+    "webmux/server/internal/browseropen/opener.go": "083059afdeb9159ad5a6ae976514d43a0338b587f182464e659811bb2128d94c",
+    "webmux/server/internal/browseropen/protocol.go": "7f03e101537425602bb05138d8b9bc343b1e2e3d8ff9f0d4bbd2fb1b459ca22b",
+    "webmux/server/internal/httpapi/websocket.go": "58b2c68c31193f1c43d03d6e8f1442fef843df92129ba9400e8d9be7f3308003",
+    "webmux/server/internal/recovery/browser.go": "5429f87b8cb8f241e6eaaa60adf289956f1d4a0c0bfdb9e073abd75867e73042",
+    "webmux/server/internal/recovery/browser_test.go": "fe6a713ef4e638e571d598c0a9f745889c39e509126b4405f38e56d7de1423fe",
+    "webmux/server/internal/recovery/cache.go": "6f784ecaf0d9a680dc0f2059e9be0a35e85035d657360bb0c8125604bfd132db",
+    "webmux/server/internal/recovery/provider_unix.go": "d670ef927c59f1f83fac582533048405ef0341a2fbc6a621e4d84745affec2a5",
+    "webmux/server/internal/recovery/rpc.go": "85a53b07057b82099c1c1b4a0e2ab7e229a2903c6f5ab18bf49aba9aa459d2e6",
+    "webmux/server/internal/session/broker.go": "1c43b9f761fbce2d9ecaf2384af87f70d6d0c4a55b45ada5d6f00e84f23e13de",
+    "webmux/server/internal/session/browser_control.go": "c6cf66326b424c91b50df01f3b0f4e803467362998f65d055822d50857984fc3",
+    "webmux/server/internal/session/browser_control_test.go": "a4fb39a03baefc78d06091e1e0f3317608bfb826a7e91f48c45cb8f7fdacd9ce",
+    "webmux/server/internal/session/model.go": "fe17a4c670f97ad22d6bfabf2bb989cf88b492b37a9d286573e91832ebca9fb8",
+    "webmux/server/internal/session/recovery_control.go": "d31a93f6f8f4c62ea5138c9cdd705113eae83a6b19e9e6baae5e6ce5ae6a92c4",
+    "webmux/server/internal/session/viewers.go": "f951496a477b9902f19cc6c2a05dbce3b1451ba134ecd1d886ac5be9d559df21",
+    "webmux/server/internal/terminal/recovery.go": "0c6b7904ca09a0482879ddd48978aa9106865929ae62cba373eb5e6af454c58e"
+  },
+  "nativeLocalBinarySHA256": "34bd2df76de306d08ce75e2f5046253495ea672ff1ebe9ae6d598be42dd9f3d0",
+  "hostPlatform": "macOS ARM64",
+  "nativeVersions": {
+    "mosh": "mosh 1.4.0 [build mosh 1.4.0]",
+    "tmux": "tmux 3.8",
+    "ssh": "OpenSSH_10.5p1, LibreSSL 3.3.6"
+  },
+  "checks": {
+    "fullServerRace": "PASS",
+    "serverVet": "PASS",
+    "strictTypeScript": "PASS",
+    "frontendLint": "PASS",
+    "frontendAndHelperBuild": "PASS",
+    "nativeBrowserCases": 8,
+    "existingCIGatesAndDeadlinesUnchanged": true
+  },
+  "nativeReceipt": {
+    "nativeMosh": true,
+    "loggingDisabled": true,
+    "noLaunchURLInTerminalOutput": true,
+    "automaticPanel": true,
+    "callbackOnOriginalHost": true,
+    "callbackViaSSH": true,
+    "acknowledgedNotReplayed": true,
+    "providerStopped": true,
+    "moshServerExited": true,
+    "sshDaemonExited": true
+  },
+  "nativeReceiptSHA256": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+  "parentNegative": {
+    "head": "8e90c3ba68f1e037c592a24b4c22e463cc53e071",
+    "exit": 1,
+    "actualMoshPTYStarted": true,
+    "expectedFailure": "Automatic sign-in panel absent at15-second assertion",
+    "applicationSourceOverlay": false,
+    "testOnlyOverlay": [
+      "tests/e2e/mosh-browser.spec.ts",
+      "tests/e2e/start-server.mts"
+    ],
+    "sameFinalTestSource": true,
+    "ownedCleanupPassed": true,
+    "unreachedAssertionsAreNotEvidenceOfFailure": true,
+    "receiptSHA256": "f8870f6185a64c762cfca5cc9456e075f4fb2508aa5c56d3817e85913b186ddb"
+  },
+  "privateLogSHA256": {
+    "mosh468-final-race.log": "b49e5611bdce9d100128bace797af65dd0a8dd077d851ae8aa41bb7a83ad7198",
+    "mosh468-final-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "mosh468-final2-types.log": "bfbdeb0b9d52b9f5fa57d9bcbafdf0c45c715936935db99e8f5fb542c0d290f0",
+    "mosh468-final2-browser.log": "3f93408b7c9d97d70cba466b5281047dccababeba066b0e110edc926564e8512",
+    "mosh468-final-lint.log": "a6d413fb36e8645661145aecac8d27dc160bdd0b77844fd8b52122d1798bcd52",
+    "mosh468-frontend-build.log": "8fcff08f2d97540ed999fff0a638b76d0c8fe7b89ca27125baa0339d4619c6d5",
+    "mosh468-parent-final-native.log": "70de68770c356f992ce1dd4e4179e7b8d1c945376af953772abae6fd82d2db7d"
+  },
+  "acceptedRuntimeTemporaryFilesystem": "local APFS; Go cache/log evidence retained on NAS",
+  "intermediateFailedLogRetained": "mosh468-server-race.log; incomplete dependency setup/NAS runtime temporary state, not admitted as qualification",
+  "scope": "Real owned loopback SSH/Mosh/PTY/Chrome callback acceptance with logging off. Not physical remote-host, real IDP/hardware/SSO/client-cert/assistive or Windows Mosh acceptance. Linux hosted exact-head gate and audit429 remain required."
+}

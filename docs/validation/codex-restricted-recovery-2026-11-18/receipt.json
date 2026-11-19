@@ -1,0 +1,453 @@
+{
+  "scope": "Actual macOS public Rig/Codex original-conversation recovery under workspace-write/on-request and read-only/on-request native owner policies, with fresh allowed/denied write and denied-network tool results before and after recovery. Native account in place; private loopback auth-none browser.",
+  "sourceRevision": "8a09da3789d42c58114dacedc6c328cfff1768fe",
+  "passed": true,
+  "binarySHA256": "d47642387a9c9c90324842e89d58f5881d414a9d451b4c730af0c95b9b573ab5",
+  "buildProducerSelfReport": {
+    "version": "1.4.5",
+    "revision": "8a09da3789d42c58114dacedc6c328cfff1768fe",
+    "modified": false,
+    "provenance": "build-producer-self-report",
+    "attested": false
+  },
+  "sourcesSHA256": {
+    "webmux/server/internal/openrigcoord/rig-native-launch.mts": "9424088b4082a8f04724f9e3029f3b6d4b1ef58101c4319c9ab77d2e7975bac9",
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "e68d505f8b1810f92c16a91cf46d76e5e4f9c38e9d8915a724ce0fa95eecfee1",
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": "b6217395e932162b2e16d50829ad40338d8a4814a84dbd07496afb8af8d86cc9",
+    "webmux/server/internal/openrigcoord/rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "ee18fb484c048c845afa9f8f841e2b62cce46dd5ea9eba5c1f91b7087cfcc486",
+    "webmux/server/internal/openrigcoord/rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "webmux/server/internal/openrigcoord/runner.mts": "0f01ed0fbcac77d4eaf8fd84503d52bf34ce8bd47c6dda087ba53d33a44c53cd",
+    "webmux/server/internal/openrigcoord/coord.go": "7a4f17d2b36f29cb9a4d39268f7d94f7f41a0aef7d60f84a18c74e3d375530cb",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "webmux/server/internal/openrigcoord/codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "webmux/server/internal/openrigcoord/codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+    "webmux/server/internal/httpapi/coordination_creation.go": "ca6f7f4f8c662b37a8bddf25e8caac7431bb250d4eb3657bce14e71d52e24135",
+    "webmux/server/internal/httpapi/coordination_providers.go": "10f163fcc9d52654d395c51e2e4a0a74a478f8367129e157674d5a4e06afb478",
+    "webmux/server/internal/httpapi/openrig.go": "cd78603493cdcf833414c1081baa0ef09ebc072b5113aa537d26f1192622fa7f",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "83ef008e0bc74599fb5f9f864d21bec151d7c2cf061bf2fbe15f483cf5b06df6",
+    "webmux/frontend/src/utils/api.ts": "96bf8fb9d9f01014498ea42ca78e2e986319ec9786dd29f1a4c397e718713e1d",
+    "webmux/server/internal/session/native_rig_reference.go": "15e35ef463160eebc6ced21064c88d3702ac1c2a74782a66301323979b19fc08",
+    "webmux/server/internal/session/native_rig_recovery.go": "5352dc2e4bf4f7858d69351ab3adba76f5f4bc6113b13b88a421c91bd02e82f2",
+    "webmux/server/internal/session/managed_evidence.go": "7a543f14facb1ed5938a0cdf701fd50144e923ab7bbe89e27319047e71c1ff9c",
+    "webmux/server/internal/session/managed_capture.go": "359ab3faf353549508fb432ff8668caafead22a8e1f8e0939953c0ae203e7900",
+    "webmux/server/internal/session/managed_recovery.go": "bf9068ce0bec82653c84e87fc3efebbc3306f3d6b6dd641961ef66af4c29b062",
+    "webmux/server/internal/session/recovery.go": "c066ccb5e0c6b02a3801f002b6e1dc06f3bc17d3e972871ff28314a63138ca53",
+    "webmux/server/internal/session/recovery_control.go": "560cfee99916dfd6aa1dc6304478f47e6d9926c13762ef35d399be9de9d0bf0d",
+    "webmux/server/internal/session/model.go": "7e91f7a4e9743efcf5977e408b0faf21d9e4485270336329ea16b5bb920d3293",
+    "webmux/server/internal/httpapi/native_rig_recovery.go": "5d206f2bdbfdf13e2438a76a95f9f5ce578308e1a7b9ca5dfa6414082f737c08",
+    "webmux/server/internal/httpapi/rig_recovery.go": "0a7323a4d72bd22d9043a8e7fadf7b3ac17be32648773dc134c5ac29bef224bc",
+    "webmux/server/internal/httpapi/sessions.go": "a4abf105ef398f2d0584077a217269c28833e4217213c9a03b0a378c29676f52",
+    "webmux/server/internal/httpapi/coordination_service.go": "896718a1c32b156fb8d3a8aa9c35c62c1d2ef71bbea753f37f31f3b0cd00b585",
+    "webmux/server/internal/httpapi/server.go": "f15d486b299fa23b6b722de239ee08c71dde662f8ca0e08ce26067cdecb25ad3",
+    "webmux/frontend/src/components/RecoveryDialog.tsx": "cb3e1b08e6541af5e5e1cdf2948bcc95f55605ea701830437911a611214acb48",
+    "webmux/frontend/src/types/index.ts": "0e1ca849089d4645c6db7f039e4eaeced843cc6b2fa796c359db65e5efc601ca",
+    "webmux/server/internal/recovery/state.go": "4ab1020a33edc1a4757bc35f7433163a8d146868b8f80834d6b1d3a0df9fd1ef"
+  },
+  "cases": [
+    {
+      "policy": "workspace-write",
+      "approval": "on-request",
+      "passed": true,
+      "projectPolicySHA256": "1e0f548b3a3eceb5c202d02157d9c0cd9b91e4924315f647dd1bcbf08ecd8e1a",
+      "nativeProjectTrust": {
+        "nativeInteractiveCLI": true,
+        "trustChoiceReviewed": true,
+        "noModelTurnSubmitted": true,
+        "projectPolicySHA256": "1e0f548b3a3eceb5c202d02157d9c0cd9b91e4924315f647dd1bcbf08ecd8e1a"
+      },
+      "rawReceipt": "restricted-native-wm-restricted-native-uqqg8yrw.json",
+      "rawSHA256": "1fd9f77c598d293b09c6967c81dd8040fefb1f0c5c1593474478aa71fc72ffb8",
+      "probeSHA256": "4ce0591305844cd9aa4228f27c6c95de13b7089fce9c245c04f82fecc12dc19c",
+      "browserDriverSHA256": "bfd891a7e9ab36c5e1ca25ddcf823e6cf3faf9e68585f4e4e608709ca8b411dd",
+      "loadedBrowserDriverSHA256": "bfd891a7e9ab36c5e1ca25ddcf823e6cf3faf9e68585f4e4e608709ca8b411dd",
+      "toolProbeSHA256": "27c54829a73fd29692be47bffa50aa0d42f014a1bc4355527f28c516c04c9462",
+      "preloadSHA256": "cb092b84a4a630a45aed0debe0318b3f3e0b424c731d992e208743f8593dcb8c",
+      "gateSHA256": "b8d1ee4e58b07971abda17875e1fff15e79717d6712f971969149604cbeb7e81",
+      "checks": {
+        "nativeUncertaintyHasOneOriginalNodeAndNoViewer": true,
+        "frozenNativeOperationAcrossExplicitChecks": true,
+        "readyDuplicateRetainsProviderAndViewer": true,
+        "actualNativeCodingChallenge": true,
+        "gracefulControllerRestartRetainsOriginalProvider": true,
+        "publicSurvivorReattachmentSendsNoResume": true,
+        "publicBrokerRetainsOriginalNativeConversation": true,
+        "onlyOwnedNativeProviderKilled": true,
+        "actualControllerSigkillDuringOriginalDispatch": true,
+        "ordinaryRecoveryDuplicateAfterCrashDoesNotPost": true,
+        "explicitPublicCompletionUsesSameNativeRequest": true,
+        "sameNativeConversationRecallWithoutTools": true,
+        "nativeHistoryPrefixAndAppendRetained": true,
+        "consumedRecoveryDuplicatePreservesProviderAndSibling": true,
+        "finalCheckedStopAndViewerAndSiblingRetained": true,
+        "sameTerminalLogPathsAndPrefixesRetained": true
+      },
+      "networkPositiveControl": true,
+      "nativeWitnesses": [
+        {
+          "passed": true,
+          "contexts": 4,
+          "nativeNodeMatches": true,
+          "correlatedProbeOutputs": 1,
+          "policy": {
+            "type": "workspaceWrite",
+            "networkAccess": false,
+            "writableRoots": [
+              "<fixture>/extra root"
+            ],
+            "excludeSlashTmp": true,
+            "excludeTmpdirEnvVar": true
+          },
+          "approval": "on-request",
+          "observedNativePolicy": {
+            "type": "workspace-write",
+            "writable_roots": [
+              "<fixture>/extra root"
+            ],
+            "network_access": false,
+            "exclude_tmpdir_env_var": true,
+            "exclude_slash_tmp": true
+          },
+          "allowedWrites": 2,
+          "deniedWrites": 4,
+          "networkDenied": true,
+          "writeResults": {
+            "project": "allowed",
+            "extra": "allowed",
+            "outside": {
+              "errno": 1
+            },
+            "git": {
+              "errno": 1
+            },
+            "tmpdir": {
+              "errno": 1
+            },
+            "config": {
+              "errno": 1
+            }
+          },
+          "environmentChecks": {
+            "homePreserved": true,
+            "tmpPreserved": true,
+            "ownerPathRetainedAsSuffix": true,
+            "pairedRigFound": true,
+            "managerToolPathAbsent": true,
+            "ownerToolFound": true,
+            "ownerToolRuns": true,
+            "inheritedValueMatches": true,
+            "managerOnlyValueAbsent": true
+          },
+          "nativeSessionSHA256": "f9364ee4d8d1d7537ffdf0e242e955b9c0c90bd908a898eb003b5a544f333a89"
+        },
+        {
+          "passed": true,
+          "contexts": 4,
+          "nativeNodeMatches": true,
+          "correlatedProbeOutputs": 1,
+          "policy": {
+            "type": "workspaceWrite",
+            "networkAccess": false,
+            "writableRoots": [
+              "<fixture>/extra root"
+            ],
+            "excludeSlashTmp": true,
+            "excludeTmpdirEnvVar": true
+          },
+          "approval": "on-request",
+          "observedNativePolicy": {
+            "type": "workspace-write",
+            "writable_roots": [
+              "<fixture>/extra root"
+            ],
+            "network_access": false,
+            "exclude_tmpdir_env_var": true,
+            "exclude_slash_tmp": true
+          },
+          "allowedWrites": 2,
+          "deniedWrites": 4,
+          "networkDenied": true,
+          "writeResults": {
+            "project": "allowed",
+            "extra": "allowed",
+            "outside": {
+              "errno": 1
+            },
+            "git": {
+              "errno": 1
+            },
+            "tmpdir": {
+              "errno": 1
+            },
+            "config": {
+              "errno": 1
+            }
+          },
+          "environmentChecks": {
+            "homePreserved": true,
+            "tmpPreserved": true,
+            "ownerPathRetainedAsSuffix": true,
+            "pairedRigFound": true,
+            "managerToolPathAbsent": true,
+            "ownerToolFound": true,
+            "ownerToolRuns": true,
+            "inheritedValueMatches": true,
+            "managerOnlyValueAbsent": true
+          },
+          "nativeSessionSHA256": "f9364ee4d8d1d7537ffdf0e242e955b9c0c90bd908a898eb003b5a544f333a89"
+        }
+      ],
+      "sameNativeConversation": true,
+      "sameUUIDBodyNativeResumePosts": 5,
+      "historyPrefixBytes": 207143,
+      "historyPrefixSHA256": "05178102a3651be655b493323cd636b8c9574a76c27dd0387617a983689e0b33",
+      "terminalLogs": [
+        {
+          "file": "session-cce8dca7-8f08-4399-a9cd-2ac365a38231-20261118T212713Z-g1-4cb5d360.log",
+          "prefixSHA256": "989a0b45ce2ed7e0971b43315adf8882d57130407e0a961660004c7412777829",
+          "prefixBytes": 23796,
+          "finalBytes": 35887
+        }
+      ],
+      "postCleanupFileOracleMatchesProbe": true,
+      "cleanup": {
+        "passed": true,
+        "originalDaemonPIDAbsent": true,
+        "daemonStateRemoved": true,
+        "shutdownPhase": "complete",
+        "shutdownOutcome": "clean",
+        "shutdownReceiptSHA256": "8c5facd6f802794458e03c7cc642b670da3f6de9c58b392b360821ec078103e0",
+        "privateTmuxStopped": true
+      },
+      "versions": {
+        "rig": "0.7.18 (3bf87c62)",
+        "codex": "0.169.0",
+        "node": "24.21.0",
+        "tmux": "3.8",
+        "chrome": "158.0.8127.36"
+      }
+    },
+    {
+      "policy": "read-only",
+      "approval": "on-request",
+      "passed": true,
+      "projectPolicySHA256": "503103d4727b27e92408283f98d111bd6871c5ab2f2b5bbdca74d62a96592a03",
+      "nativeProjectTrust": {
+        "nativeInteractiveCLI": true,
+        "trustChoiceReviewed": true,
+        "nativeUpdaterSkipped": true,
+        "noModelTurnSubmitted": true,
+        "bootstrapPolicy": "workspace-write/on-request, no model turn",
+        "finalPolicyRestoredBeforeManagedCreation": true,
+        "projectPolicySHA256": "503103d4727b27e92408283f98d111bd6871c5ab2f2b5bbdca74d62a96592a03"
+      },
+      "rawReceipt": "readonly-native-wm-readonly-native-9xc2x470.json",
+      "rawSHA256": "edc0286867737c4a51cb7baf0d0cc6086cb089be694a9cc3986f8dbfa7403c45",
+      "probeSHA256": "fa5274939e2fb82f00cbc66df336edde5e4ebf9e22914ddf40f2da5b51d9c8d3",
+      "browserDriverSHA256": "bfd891a7e9ab36c5e1ca25ddcf823e6cf3faf9e68585f4e4e608709ca8b411dd",
+      "loadedBrowserDriverSHA256": "bfd891a7e9ab36c5e1ca25ddcf823e6cf3faf9e68585f4e4e608709ca8b411dd",
+      "toolProbeSHA256": "522ce8026835a1f2eb76c091ba2be15a8343e074aa97343f843b343caf34ac90",
+      "preloadSHA256": "80c644e824b3b8fbe482fc91849c23019515edbd2d7c5b1720c4831ed5f87e20",
+      "gateSHA256": "2868fdb590ee1596a237a45813a9a6b702eea57fbbd271fd4b7a35f2c5a33e8e",
+      "checks": {
+        "nativeUncertaintyHasOneOriginalNodeAndNoViewer": true,
+        "frozenNativeOperationAcrossExplicitChecks": true,
+        "readyDuplicateRetainsProviderAndViewer": true,
+        "actualNativeCodingChallenge": true,
+        "gracefulControllerRestartRetainsOriginalProvider": true,
+        "publicSurvivorReattachmentSendsNoResume": true,
+        "publicBrokerRetainsOriginalNativeConversation": true,
+        "onlyOwnedNativeProviderKilled": true,
+        "actualControllerSigkillDuringOriginalDispatch": true,
+        "ordinaryRecoveryDuplicateAfterCrashDoesNotPost": true,
+        "explicitPublicCompletionUsesSameNativeRequest": true,
+        "sameNativeConversationRecallWithoutTools": true,
+        "nativeHistoryPrefixAndAppendRetained": true,
+        "consumedRecoveryDuplicatePreservesProviderAndSibling": true,
+        "finalCheckedStopAndViewerAndSiblingRetained": true,
+        "sameTerminalLogPathsAndPrefixesRetained": true
+      },
+      "networkPositiveControl": true,
+      "nativeWitnesses": [
+        {
+          "passed": true,
+          "contexts": 4,
+          "nativeNodeMatches": true,
+          "correlatedProbeOutputs": 1,
+          "policy": {
+            "type": "readOnly",
+            "networkAccess": false
+          },
+          "approval": "on-request",
+          "observedNativePolicy": {
+            "type": "read-only"
+          },
+          "allowedWrites": 0,
+          "deniedWrites": 6,
+          "networkDenied": true,
+          "writeResults": {
+            "project": {
+              "errno": 1
+            },
+            "extra": {
+              "errno": 1
+            },
+            "outside": {
+              "errno": 1
+            },
+            "git": {
+              "errno": 1
+            },
+            "tmpdir": {
+              "errno": 1
+            },
+            "config": {
+              "errno": 1
+            }
+          },
+          "environmentChecks": {
+            "homePreserved": true,
+            "tmpPreserved": true,
+            "ownerPathRetainedAsSuffix": true,
+            "pairedRigFound": true,
+            "managerToolPathAbsent": true,
+            "ownerToolFound": true,
+            "ownerToolRuns": true,
+            "inheritedValueMatches": true,
+            "managerOnlyValueAbsent": true
+          },
+          "nativeSessionSHA256": "995166d1e24a71208d2f1fcc384c78bc427c248317aa8759439f7462f249164d"
+        },
+        {
+          "passed": true,
+          "contexts": 4,
+          "nativeNodeMatches": true,
+          "correlatedProbeOutputs": 1,
+          "policy": {
+            "type": "readOnly",
+            "networkAccess": false
+          },
+          "approval": "on-request",
+          "observedNativePolicy": {
+            "type": "read-only"
+          },
+          "allowedWrites": 0,
+          "deniedWrites": 6,
+          "networkDenied": true,
+          "writeResults": {
+            "project": {
+              "errno": 1
+            },
+            "extra": {
+              "errno": 1
+            },
+            "outside": {
+              "errno": 1
+            },
+            "git": {
+              "errno": 1
+            },
+            "tmpdir": {
+              "errno": 1
+            },
+            "config": {
+              "errno": 1
+            }
+          },
+          "environmentChecks": {
+            "homePreserved": true,
+            "tmpPreserved": true,
+            "ownerPathRetainedAsSuffix": true,
+            "pairedRigFound": true,
+            "managerToolPathAbsent": true,
+            "ownerToolFound": true,
+            "ownerToolRuns": true,
+            "inheritedValueMatches": true,
+            "managerOnlyValueAbsent": true
+          },
+          "nativeSessionSHA256": "995166d1e24a71208d2f1fcc384c78bc427c248317aa8759439f7462f249164d"
+        }
+      ],
+      "sameNativeConversation": true,
+      "sameUUIDBodyNativeResumePosts": 5,
+      "historyPrefixBytes": 202927,
+      "historyPrefixSHA256": "bf9aeabe1aacc61c65016fca9f4c69bd996e9fb62a2b0aa24133656cc3c8847d",
+      "terminalLogs": [
+        {
+          "file": "session-44f73792-5d92-41da-8417-9b6af37da628-20261118T213927Z-g1-14aadca6.log",
+          "prefixSHA256": "574f47060d2a5e2f9844098b59029ee490c4015f1b09d8ce35d9e4a78afba876",
+          "prefixBytes": 40079,
+          "finalBytes": 48035
+        }
+      ],
+      "postCleanupFileOracleMatchesProbe": true,
+      "cleanup": {
+        "passed": true,
+        "originalDaemonPIDAbsent": true,
+        "daemonStateRemoved": true,
+        "shutdownPhase": "complete",
+        "shutdownOutcome": "clean",
+        "shutdownReceiptSHA256": "fbfe3446edd7693f5cc078320323fe71a5e16fda7ec6e159e5800f6cf2683867",
+        "privateTmuxStopped": true
+      },
+      "versions": {
+        "rig": "0.7.18 (3bf87c62)",
+        "codex": "0.169.0",
+        "node": "24.21.0",
+        "tmux": "3.8",
+        "chrome": "158.0.8127.36"
+      }
+    }
+  ],
+  "untrustedProjectRefusal": {
+    "passed": true,
+    "rawReceipt": "readonly-native-wm-readonly-native-r9uj2w1m.json",
+    "rawSHA256": "86c2d63fbc8214737ec24282a4c417b08506ba39129316fd80c840c64a53dbbc",
+    "status": 502,
+    "code": "native_project_trust_required",
+    "noOwnerLaunchRecord": true,
+    "noNativeMemberPOST": true,
+    "nativeTrustGuardUnchanged": true
+  },
+  "excludedAttempts": [
+    {
+      "receipt": "readonly-native-wm-readonly-native-6igz3220.json",
+      "SHA256": "a57bc2e82fdce3c64842e7df16adf1add0dba72ea1573b9d54b688158b21fb90",
+      "passed": false,
+      "probeSHA256": "25dfc7dae49c5345480b655422bc0755a4162fec37d502aeb58a8c06ae3ef86e",
+      "browserPassed": true
+    },
+    {
+      "receipt": "readonly-native-wm-readonly-native-8m4dqpsw.json",
+      "SHA256": "3dfaf8b59ba60867bd5b4621ffd49e181a908041eb0cf969e458bc7799fe4e82",
+      "passed": false,
+      "probeSHA256": "2c110ba25a49eea036511f148d8fcd00c96dba17235047bdb07af179d0380efc",
+      "browserPassed": null
+    },
+    {
+      "receipt": "readonly-native-wm-readonly-native-qwnj0fez.json",
+      "SHA256": "6daf071304632df9efc5c12f45bb6e1ffeb55c9eb2b3ac4f312e0b2e1fa9da0a",
+      "passed": false,
+      "probeSHA256": "9c90211315b3c2ec490eec30607f719b19b13209b0b992e03ec620f24b45ffe9",
+      "browserPassed": false
+    },
+    {
+      "receipt": "readonly-native-wm-readonly-native-r9uj2w1m.json",
+      "SHA256": "86c2d63fbc8214737ec24282a4c417b08506ba39129316fd80c840c64a53dbbc",
+      "passed": false,
+      "probeSHA256": "76d26862d4e6ad5b73313122a27f296188df68eb6243a3f0a23c737781e8a549",
+      "browserPassed": false
+    }
+  ],
+  "remaining": [
+    "Other policy variants, native interactive approval/escalation behavior, unobserved interactive policy changes",
+    "Selected profiles, permission graphs and broader startup options",
+    "Restricted-policy installed-service upgrades and native Rig/Codex host reboot",
+    "Authenticated broader Linux/Windows/native ARM64 compositions",
+    "Required review/current-head CI and full roadmap/release acceptance"
+  ],
+  "nativeReadOnlyJournalFormat": "Codex 0.169.0 omits default network_access:false in read-only turn_context sandbox_policy. Exact recorded type plus resolved networkAccess:false plan and fresh EPERM network probes are required."
+}

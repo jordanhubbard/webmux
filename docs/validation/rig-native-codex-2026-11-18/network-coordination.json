@@ -1,0 +1,94 @@
+{
+  "scope": "Explicit read-only filesystem plus enabled networking, authenticated native Codex/Rig contract and manager-restart survivor conversation. Not a default owner-policy change, WebMux creation implementation, provider-loss recovery or reboot.",
+  "versions": {
+    "codex": "codex-cli 0.169.0",
+    "rig": "0.7.18 (3bf87c62)",
+    "node": "v24.21.0",
+    "tmux": "tmux 3.8"
+  },
+  "platform": "macOS ARM64",
+  "declaredPermissions": {
+    "filesystem": {
+      "/": "read"
+    },
+    "network_access": true,
+    "approval": "never"
+  },
+  "nativePolicy": {
+    "approval_policy": "never",
+    "sandbox_policy": {
+      "type": "read-only",
+      "network_access": true
+    },
+    "file_system_sandbox_policy": {
+      "kind": "restricted",
+      "entries": [
+        {
+          "path": {
+            "type": "path",
+            "path": "/"
+          },
+          "access": "read"
+        }
+      ]
+    }
+  },
+  "nativeWitness": {
+    "passed": true,
+    "nativeContexts": 3,
+    "actualChallengeRead": true,
+    "actualWriteRefusal": true,
+    "verifiedCoordinatorReplies": 2,
+    "rememberedMarkerReply": true,
+    "scope": "Native policy/tool witness only; restart and process provenance require separate evidence.",
+    "nativeSessionSHA256": "0362b6f58e1858c898b30966fb819d245cfaac7e3fb89dcd1fa8d572dcec030d",
+    "challengeSHA256": "06bd4e08446492876669bf297ed3c9128cc811aaca48cf3de00fba70c4a14695"
+  },
+  "independentSandboxControl": {
+    "networkDisabled": {
+      "read": "read-control",
+      "writeErrno": 1,
+      "networkErrno": 1,
+      "outputFileExists": false
+    },
+    "networkEnabled": {
+      "read": "read-control",
+      "writeErrno": 1,
+      "loopbackHTTPStatus": 200,
+      "outputFileExists": false
+    },
+    "serverStopped": true
+  },
+  "managerChecks": {
+    "freshChallengeReadByActualProvider": true,
+    "noWritableFileCreated": true,
+    "toolWriteRefusalVisible": true,
+    "sameUUIDRetainsSameNativeOccupant": true,
+    "siblingRetainsOriginalPID": true,
+    "managerRestartKeepsOriginalOccupantAndPanePID": true
+  },
+  "rawProbe": {
+    "passed": false,
+    "failedAssertion": "terminal viewport contains the challenge twice after the TUI collapses the earlier answer",
+    "overridden": false
+  },
+  "cleanup": {
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true
+  },
+  "sourceBindings": {
+    "verifierSHA256": "240bde874320ed60b5ea727294cffc17b4edfd3d04bf6320691149fb827b1fb0",
+    "probeSHA256": "c825ae6271b8e830a45fc1a6479a87cfeebcc1157876170a70f586f60fd1a24c",
+    "privateReportSHA256": "f2e1fca7b4e6f16a28e2bb85f291aad1cd3f6b6e92e8d7f846d11fdea45aec63",
+    "sandboxProbeSHA256": "3fd79281bc710843e73bab18a60cd69a39e4450a48dae94f5e2ac972c6dec1d6",
+    "sandboxReportSHA256": "9a034266e5012489c37e80ad74ef5f850fb8ae13c1131f055e11958b3befc11d"
+  },
+  "limits": [
+    "Native tool witness is separately verified; the full viewport-based private fixture remains failed and is not claimed green.",
+    "No selected coding PID check after Stop: the viewport assertion prevented that later checked-Stop phase; finally cleanup stopped the owned fixture.",
+    "Manager restart keeps the native occupant, original pane PID and conversation; this is survivor continuity, not native CLI-loss recovery.",
+    "The verifier checks native records, not authentication/process/restart provenance; those facts require separate fixture evidence.",
+    "The native daemon reports an unavailable lsof ownership query on its private PATH; only its newly allocated private home/socket are used.",
+    "No silent promotion from network-disabled read-only; policy conversion must preserve the owner choice or require explicit review."
+  ]
+}

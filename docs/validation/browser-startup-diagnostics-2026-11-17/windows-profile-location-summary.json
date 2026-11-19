@@ -1,0 +1,300 @@
+{
+  "head": "540d7d29d37cd9f66546e27c7e838e8b92d0f3ae",
+  "job": 134457805203,
+  "artifact": 14381264619,
+  "cases": [
+    {
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-screenshot",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 438,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 484,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 484,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 1334,
+          "sequence": 1,
+          "event": "document_response",
+          "matchesRequested": true,
+          "status": 200
+        },
+        {
+          "stage": "navigation",
+          "ms": 1334,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "accepted"
+        }
+      ]
+    },
+    {
+      "profileLocation": "home-temporary",
+      "mode": "direct-home",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 401,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 401,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 401,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 511,
+          "sequence": 1,
+          "event": "document_failed",
+          "errorClass": "aborted",
+          "canceled": true
+        },
+        {
+          "stage": "navigation",
+          "ms": 511,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "aborted"
+        }
+      ]
+    },
+    {
+      "profileLocation": "system-temporary",
+      "mode": "direct-screenshot",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 396,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 595,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 595,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 1313,
+          "sequence": 1,
+          "event": "document_response",
+          "matchesRequested": true,
+          "status": 200
+        },
+        {
+          "stage": "navigation",
+          "ms": 1313,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "accepted"
+        }
+      ]
+    },
+    {
+      "profileLocation": "system-temporary",
+      "mode": "direct",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 398,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 398,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 398,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 518,
+          "sequence": 1,
+          "event": "document_failed",
+          "errorClass": "aborted",
+          "canceled": true
+        },
+        {
+          "stage": "navigation",
+          "ms": 518,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "aborted"
+        }
+      ]
+    },
+    {
+      "profileLocation": "home-saved",
+      "mode": "worker-subprocess-saved",
+      "platform": "windows",
+      "architecture": "amd64",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 382,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 385,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 569,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 1326,
+          "sequence": 1,
+          "event": "document_response",
+          "matchesRequested": true,
+          "status": 200
+        },
+        {
+          "stage": "navigation",
+          "ms": 1326,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "accepted"
+        }
+      ]
+    },
+    {
+      "profileLocation": "home-temporary",
+      "mode": "worker-subprocess-temporary",
+      "platform": "windows",
+      "architecture": "amd64",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "dropped": 0,
+      "importantEvents": [
+        {
+          "stage": "startup",
+          "ms": 365,
+          "sequence": 0,
+          "event": "startup_blank_ready",
+          "errorClass": "accepted"
+        },
+        {
+          "stage": "ready",
+          "ms": 400,
+          "sequence": 0,
+          "event": "worker_ready"
+        },
+        {
+          "stage": "navigation",
+          "ms": 456,
+          "sequence": 1,
+          "event": "navigate_request"
+        },
+        {
+          "stage": "navigation",
+          "ms": 1264,
+          "sequence": 1,
+          "event": "document_response",
+          "matchesRequested": true,
+          "status": 200
+        },
+        {
+          "stage": "navigation",
+          "ms": 1264,
+          "sequence": 1,
+          "event": "navigate_ack",
+          "errorClass": "accepted"
+        }
+      ]
+    }
+  ],
+  "interpretation": "Both plain direct profile locations abort. Both screenshot controls pass here, but preceding d3ab2aa screenshot control fails. Application initial saved worker also aborts. No profile-placement or screenshot fix is established.",
+  "application": {
+    "phase": "initial-saved-worker",
+    "outerEvents": 30,
+    "dropped": 0,
+    "startupBlankReadyMs": 399,
+    "workerReadyMs": 438,
+    "navigateRequestMs": 576,
+    "documentCanceledAbortedMs": 689,
+    "targetRemainsBlank": true
+  }
+}

@@ -69,6 +69,7 @@ func (r *run) stop() {
 }
 
 type entry struct {
+	localStopBusy    bool
 	requiredRenderer string
 	rendererToken    string
 	shellHelper      string
@@ -78,6 +79,7 @@ type entry struct {
 	shellInstance    string
 	replayScreen     replayScreen
 	browserRequest   Event
+	browserControlID string
 	browserExpires   time.Time
 	value            Session
 	run              *run
@@ -94,22 +96,26 @@ type entry struct {
 // not hold it. A run pointer is a generation token: old output and exit events
 // can never mutate a reconnected or deleted session.
 type Broker struct {
-	controlDir    string
-	mu            sync.Mutex
-	store         *storage.Store
-	logger        *slog.Logger
-	launch        launchFunc
-	entries       map[string]*entry
-	order         []string
-	closed        bool
-	workers       sync.WaitGroup
-	openLog       func(string, string, bool) (transcriptSink, error)
-	agents        *agent.Service
-	agentMu       sync.Mutex
-	policyStop    chan struct{}
-	policyStarted bool
-	activity      map[agentActivityKey]pendingAgentActivity
-	activityWake  chan struct{}
+	localOwners     bool
+	localOwnerScope string
+	stopLocal       terminal.LocalOwnerOperation
+	inspectLocal    terminal.LocalOwnerOperation
+	controlDir      string
+	mu              sync.Mutex
+	store           *storage.Store
+	logger          *slog.Logger
+	launch          launchFunc
+	entries         map[string]*entry
+	order           []string
+	closed          bool
+	workers         sync.WaitGroup
+	openLog         func(string, string, bool) (transcriptSink, error)
+	agents          *agent.Service
+	agentMu         sync.Mutex
+	policyStop      chan struct{}
+	policyStarted   bool
+	activity        map[agentActivityKey]pendingAgentActivity
+	activityWake    chan struct{}
 }
 
 func New(store *storage.Store, logger *slog.Logger) (*Broker, error) {
@@ -132,6 +138,20 @@ func New(store *storage.Store, logger *slog.Logger) (*Broker, error) {
 		return nil, err
 	}
 	broker.controlDir = controlDir
+	broker.localOwners = runtime.GOOS == "windows"
+	if broker.localOwners {
+		broker.localOwnerScope, _ = terminal.LocalExecutionScope()
+	}
+	broker.stopLocal, broker.inspectLocal = terminal.StopLocalOwner, terminal.InspectLocalOwner
+	for _, e := range broker.entries {
+		if broker.localOwners && ordinaryLocal(e.value) {
+			e.value.LocalOwnerManaged = true
+		}
+		e.value.LocalOwnerAvailable = broker.localOwners && broker.localOwnerScope != ""
+		if e.value.LocalScope != "" && e.value.LocalScope != broker.localOwnerScope {
+			e.value.LocalOwnerAvailable = false
+		}
+	}
 	return broker, nil
 }
 func newBroker(store *storage.Store, logger *slog.Logger, launch launchFunc) (*Broker, error) {
@@ -177,6 +197,9 @@ func (b *Broker) Restore() error {
 	b.startPolicyLocked()
 	for _, id := range b.order {
 		e := b.entries[id]
+		if e.value.LocalOwnerManaged && (!e.value.LocalOwnerAvailable || e.value.LocalStop != nil) {
+			continue
+		}
 		if e.run != nil {
 			continue
 		}
@@ -328,8 +351,36 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 	}
 	// A failed launch is a created session in state=error, matching the browser's
 	// reconnect flow. The transient password is never copied into session state.
+	if b.localOwners && ordinaryLocal(e.value) {
+		// The durable provider outlives a viewer Close. Bank its recovery key
+		// before launch so a failed post-launch save cannot orphan its job.
+		if b.localOwnerScope == "" {
+			delete(b.entries, id)
+			b.order = b.order[:len(b.order)-1]
+			return Session{}, invalid("the Windows execution host/account cannot be verified; no local job was started")
+		}
+		key, keyErr := recovery.NewInstance()
+		if keyErr != nil {
+			delete(b.entries, id)
+			b.order = b.order[:len(b.order)-1]
+			return Session{}, keyErr
+		}
+		e.value.RecoveryKey = key
+		e.value.LocalScope = b.localOwnerScope
+		e.value.LocalOwnerManaged, e.value.LocalOwnerAvailable = true, true
+		if err := b.persistLocked(); err != nil {
+			delete(b.entries, id)
+			b.order = b.order[:len(b.order)-1]
+			return Session{}, err
+		}
+	}
 	_ = b.startLocked(e, request.Password, initial)
 	if err := b.persistLocked(); err != nil {
+		if e.value.LocalOwnerManaged {
+			// The pre-launch entry/key remains recoverable on disk. Keep its
+			// live in-memory identity too; Close would only detach the viewer.
+			return e.value.clone(), err
+		}
 		delete(b.entries, id)
 		b.order = b.order[:len(b.order)-1]
 		if e.run != nil {
@@ -346,6 +397,18 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 }
 
 func (b *Broker) startLocked(e *entry, password, initial string) error {
+	if e.value.LocalStop != nil {
+		return ErrLocalStopRequired
+	}
+	if e.value.LocalOwnerManaged && e.value.LocalScope != "" && e.value.LocalScope != b.localOwnerScope {
+		return invalid("this local terminal belongs to a different execution host/account; retain its logs and recover on the original host")
+	}
+	if b.localOwners && ordinaryLocal(e.value) {
+		if b.localOwnerScope == "" {
+			return invalid("the Windows execution host/account cannot be verified; retain this session for recovery")
+		}
+		e.value.LocalOwnerManaged, e.value.LocalOwnerAvailable = true, true
+	}
 	if e.value.RecoveryKey == "" {
 		key, err := recovery.NewInstance()
 		if err != nil {
@@ -353,17 +416,31 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 		}
 		e.value.RecoveryKey = key
 	}
+	if e.value.LocalOwnerManaged && b.localOwners {
+		e.value.LocalScope = b.localOwnerScope
+		if err := b.persistLocked(); err != nil {
+			e.value.State = "error"
+			e.value.UpdatedAt = now()
+			return err
+		}
+	}
 	e.shellReady = false
 	e.shellInstance = ""
 	e.shellHelper, e.shellPlatform = "", ""
 	e.historyRestored = false
 	e.browserRequest = nil
+	e.browserControlID = ""
 	e.generation++
 	e.value.State = "connecting"
 	e.value.UpdatedAt = now()
 	e.scrollback = ""
 	e.scrollbackUnits = 0
 	e.replayScreen = replayScreen{}
+	if e.value.LocalOwnerManaged {
+		// An uncertain attachment must not retain authority over an earlier
+		// owner: the attempted launch may have discovered a replacement.
+		e.value.LocalOwner = nil
+	}
 	p, err := b.launch(e.value.launchRequest(), password)
 	if err != nil {
 		b.logger.Warn("terminal launch failed", "session_id", e.value.ID, "error", err)
@@ -373,6 +450,15 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 		e.value.State = "error"
 		e.value.UpdatedAt = now()
 		return err
+	}
+	if e.value.LocalOwnerManaged {
+		if source, ok := p.(interface {
+			LocalOwnerTarget() *terminal.LocalOwnerTarget
+		}); ok {
+			if target := source.LocalOwnerTarget(); target != nil && target.Session == e.value.ID && target.Scope == b.localOwnerScope {
+				e.value.LocalOwner = target
+			}
+		}
 	}
 	renderer, token := "", ""
 	if source, ok := p.(interface{ SnapshotProfile() (string, string) }); ok {
@@ -460,6 +546,10 @@ func (b *Broker) reconnect(owner, id, password string, expected *RigIdentity, ar
 	if expected != nil && (e.value.Rig == nil || *e.value.Rig != *expected) {
 		b.mu.Unlock()
 		return Session{}, ErrRecoveryConflict
+	}
+	if e.value.LocalStop != nil {
+		b.mu.Unlock()
+		return Session{}, ErrLocalStopRequired
 	}
 	if e.value.Rig != nil && expected == nil {
 		b.mu.Unlock()
@@ -597,6 +687,10 @@ func (b *Broker) deleteSession(owner, id string, code int, reason string) error 
 		b.mu.Unlock()
 		return err
 	}
+	if ordinaryLocal(e.value) && e.value.LocalOwnerManaged && (e.value.LocalStop == nil || e.value.LocalStop.Outcome != "stopped" || e.value.LocalOwner == nil || e.value.LocalStop.Target != *e.value.LocalOwner) {
+		b.mu.Unlock()
+		return ErrLocalStopRequired
+	}
 	oldOrder := append([]string{}, b.order...)
 	oldPositions := map[*entry][2]int{}
 	delete(b.entries, id)
@@ -667,6 +761,9 @@ func (b *Broker) input(owner, id, data string, requireConnected bool) error {
 		return ErrClosed
 	}
 	e, err := b.ownedLocked(owner, id)
+	if err == nil && e.value.LocalStop != nil {
+		err = ErrLocalStopRequired
+	}
 	var current *run
 	if err == nil && e.run != nil {
 		current = e.run
@@ -868,16 +965,8 @@ func (b *Broker) output(id string, r *run, data string) {
 		if err != nil {
 			continue
 		}
-		e.browserRequest = Event{"type": "browser_open", "session_id": id, "url": url, "request_id": requestID}
-		e.browserExpires = time.Now().Add(5 * time.Minute)
-		if viewer := e.viewers[e.focus]; viewer != nil {
-			viewer.send(e.browserRequest)
-		} else {
-			for _, viewer := range e.viewers {
-				viewer.send(e.browserRequest)
-				break
-			}
-		}
+		e.browserControlID = ""
+		b.publishBrowserRequestLocked(e, requestID, url, time.Now().Add(5*time.Minute))
 	}
 	if r.log != nil {
 		if err := r.log.append(data); err != nil {

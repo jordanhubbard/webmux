@@ -1,0 +1,30 @@
+{
+  "code": "41f846d314578807aa41eb777ae4dcc2a92ab5d1",
+  "publishedFixtureInput": "283d35d0ce8e44db4acd5033fbae225a35bd2d03",
+  "strictProjects": 5,
+  "helpers": 263,
+  "helperFailuresSkips": 0,
+  "browserCases": {
+    "browser-accessible-actions.spec.ts": 1,
+    "browser-companion.spec.ts": 7,
+    "browser-mobile.spec.ts": 1,
+    "browser-profiles.spec.ts": 1,
+    "browser-workspace.spec.ts": 1
+  },
+  "browserFilesIsolated": true,
+  "browserRetries": 0,
+  "helperMerge": {
+    "base": "e19b88b998f3501716ad01d0d37b28aa30093ed3",
+    "incoming": "283d35d0ce8e44db4acd5033fbae225a35bd2d03",
+    "allExistingHelperArgumentsRetainedInOrder": true,
+    "onlyAddedHelper": "scripts/terminal-lifecycle.test.mts"
+  },
+  "browserLogSHA256": {
+    "browser-accessible-actions.log": "e21eaef9a46816cbb72d1953c84890131b7a60171512053ea2467dd53b08054d",
+    "browser-companion.log": "71fef33fc44c0332db9c6d1457dbec78a3f6ead2001534b9bac10bcd88c2c3ff",
+    "browser-mobile.log": "a3222cbc7799d87111f43188e6b2b7711aac7356c7677f2ba53073ab5b296f3e",
+    "browser-profiles.log": "655082dffb2b3ba42b88cde9949b16ef0986e76be029e5f3bac99fdb57ae5142",
+    "browser-workspace.log": "cfe6c256187e6b841a11bc343c0a6f1bd2bd929944772115129ad5ce67902e62"
+  },
+  "scope": "Actual macOS Go/Chrome application cases using normal builder and private tmux. Not a Windows native startup pass; new543 application gate remains pending on Windows."
+}

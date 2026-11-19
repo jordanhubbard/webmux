@@ -1,0 +1,26 @@
+File: vt450-combined-windows-amd64.test.exe
+Type: cpu
+Time: 2026-11-18 16:54:30 PST
+Duration: 600.01s, Total samples = 783.62s (130.60%)
+Showing nodes accounting for 463.91s, 59.20% of 783.62s total
+Dropped 1840 nodes (cum <= 3.92s)
+Showing top 18 nodes out of 204
+      flat  flat%   sum%        cum   cum%
+   113.30s 14.46% 14.46%    113.31s 14.46%  runtime.semasleep
+    94.43s 12.05% 26.51%     94.47s 12.06%  runtime.semawakeup
+    38.03s  4.85% 31.36%     38.03s  4.85%  runtime.sysUnusedOS
+    37.63s  4.80% 36.16%       130s 16.59%  runtime.preemptM
+    35.32s  4.51% 40.67%     57.36s  7.32%  tuios.dev/vt_test.invariants
+    18.99s  2.42% 43.09%     18.99s  2.42%  runtime.memmove
+    17.22s  2.20% 45.29%     27.94s  3.57%  runtime.tryDeferToSpanScan
+    17.01s  2.17% 47.46%     63.88s  8.15%  runtime.scanObject
+    16.23s  2.07% 49.53%     16.24s  2.07%  tuios.dev/vt.(*grid).CellAt (inline)
+    12.77s  1.63% 51.16%     21.67s  2.77%  tuios.dev/vt.(*Scrollback).decodeInto
+    10.16s  1.30% 52.46%    241.16s 30.78%  runtime.gcDrain
+     8.61s  1.10% 53.56%      8.61s  1.10%  runtime.memclrNoHeapPointers
+     8.55s  1.09% 54.65%     11.80s  1.51%  runtime.findObject
+     8.25s  1.05% 55.70%      8.28s  1.06%  runtime.(*lfstack).pop
+     7.13s  0.91% 56.61%     15.23s  1.94%  tuios.dev/vt.(*logicalLine).walk
+     7.10s  0.91% 57.52%      8.70s  1.11%  runtime.typePointers.next
+     6.87s  0.88% 58.40%      6.87s  0.88%  runtime.spanClass.sizeclass (inline)
+     6.31s  0.81% 59.20%     10.30s  1.31%  runtime.mallocgcTinySC2

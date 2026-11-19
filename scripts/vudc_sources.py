@@ -3,12 +3,35 @@ import datetime
 import email.utils
 import hashlib
 import json
+from pathlib import Path
 import socket
 import time
 import urllib.error
 import urllib.request
 
 LIMIT = 1 << 20
+BUNDLED_SOURCES = Path(__file__).resolve().parents[1] / 'tests/fixtures/usbip-vudc-sources'
+
+
+def bundled_source(bundle, commit, name):
+    if bundle is None:
+        return None
+    for directory in (bundle, bundle / commit):
+        if directory.is_symlink():
+            raise RuntimeError('refusing linked fixture source bundle')
+        if directory.exists() and not directory.is_dir():
+            raise RuntimeError('fixture source bundle is not a directory')
+    source = bundle / commit / name
+    if source.is_symlink():
+        raise RuntimeError('refusing linked fixture source bundle entry')
+    if not source.exists():
+        if (bundle / commit).exists():
+            raise RuntimeError('fixture source bundle is incomplete: ' + name)
+        return None
+    if not source.is_file():
+        raise RuntimeError('fixture source bundle entry is not a regular file')
+    with source.open('rb') as stream:
+        return stream.read(LIMIT + 1)
 
 
 def retry_delay(headers, attempt):
@@ -29,8 +52,11 @@ def retry_delay(headers, attempt):
 
 
 def acquire(manifest, root, cache, *, opener=urllib.request.urlopen,
-            sleep=time.sleep, clock=time.monotonic):
-    """Write a receipt even on failure; only verified bytes enter the cache."""
+            sleep=time.sleep, clock=time.monotonic, bundle=BUNDLED_SOURCES):
+    """Prefer verified cache/bundled bytes, retaining bounded network fallback.
+
+    Write a receipt even on failure; only verified bytes enter the cache.
+    """
     began = clock()
     receipt = {'passed': False, 'commit': manifest['commit'], 'budget_seconds': 90,
                'max_attempts': 3, 'files': []}
@@ -45,7 +71,7 @@ def acquire(manifest, root, cache, *, opener=urllib.request.urlopen,
         for name, expected in manifest['files'].items():
             url = f"https://raw.githubusercontent.com/torvalds/linux/{manifest['commit']}/drivers/usb/usbip/{name}"
             item = {'name': name, 'url': url, 'expected_sha256': expected,
-                    'from_cache': False, 'attempts': []}
+                    'from_cache': False, 'from_bundle': False, 'attempts': []}
             receipt['files'].append(item)
             save()
             cached = cache / (manifest['commit'] + '-' + name)
@@ -55,6 +81,9 @@ def acquire(manifest, root, cache, *, opener=urllib.request.urlopen,
                 data = cached.read_bytes()
                 item['from_cache'] = True
             else:
+                data = bundled_source(bundle, manifest['commit'], name)
+                item['from_bundle'] = data is not None
+            if not item['from_cache'] and not item['from_bundle']:
                 for attempt in range(1, 4):
                     remaining = 90 - (clock() - began)
                     if remaining <= 0:

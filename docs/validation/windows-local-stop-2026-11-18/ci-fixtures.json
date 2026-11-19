@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "issue": 541,
+  "separateOpenGap": 543,
+  "scope": "Browser-fixture cleanup adaptation to the unchanged production Stop/retain contract; not a repair of hosted native provider startup or a new native coding-conversation qualification.",
+  "modifiedSourcesOver": "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+  "sourceSHA256": {
+    ".gitignore": "ae3860a9e3a26044c98ba6499cd883acb14d49faa5363a609e2f676509ed121c",
+    "webmux/package.json": "d69ffd777076770b1a6f5318f0a26570702da48b2c78433f9a05d433cb142f21",
+    "tests/e2e/start-server.mts": "505abb9645359097cec4e2cabe3612b9b7bad1ea68d3e59cb1a2282bdb4b2b48",
+    "tests/e2e/terminal-lifecycle.mts": "645bb06ea504115a880f3570896cb5b9ac999835ff6340e5b9a563974d4fc83c",
+    "webmux/scripts/browser-test-home.mts": "a231907856151acdbc4eea85d1377488fce6c5d4be699a011a9286cbf696d65f",
+    "webmux/scripts/terminal-lifecycle.test.mts": "20d284a304396cb35c92fae4bbcf4bd766ffcd30117d81a03e3c1aec544d5802",
+    "tests/e2e/browser-accessible-actions.spec.ts": "1c52d13664be2fe6181e235fc81bf97a03102ae93214285329832fbeba3a2dd4",
+    "tests/e2e/browser-companion.spec.ts": "a3afe978341cee5175df7634b0a8dd6b0dd85a17df40229c6cbfce6664cb734e",
+    "tests/e2e/browser-mobile.spec.ts": "366f17a443e52aae63da44bde6278151cc2bfc57c70ef78aeea6c226fe68ad3c",
+    "tests/e2e/browser-profiles.spec.ts": "a3eb5c1a8f5d73e15eba88b338bab0789edbe827f21e614b8564b8abfb8fd7b2",
+    "tests/e2e/browser-workspace.spec.ts": "c2064eede9ef251f40a6795a3a992baa527b040e2ae200b0a480ede4d30c50be"
+  },
+  "baselineEvidence": {
+    "run": 44449205787,
+    "job": 135308708838,
+    "conclusion": "success",
+    "unconfirmedProviderStartupWarningsPresent": true
+  },
+  "failedIntegrationEvidence": {
+    "run": 44453505091,
+    "job": 135322901102,
+    "failures": [
+      "unscoped Session tools selector sees retained unavailable sessions",
+      "mobile browser worker keeps fixture origin open after ignored DELETE409"
+    ]
+  },
+  "validation": {
+    "localHelperTests": {
+      "tests": 252,
+      "pass": 252,
+      "fail": 0,
+      "skip": 0,
+      "concurrency": 1,
+      "compilerOnlyGOFLAGS": "-p=1"
+    },
+    "localBrowserCases": {
+      "cases": 11,
+      "pass": 11,
+      "fail": 0,
+      "actualGoAndChrome": true,
+      "newSkips": 0,
+      "existingAssertionsAndDeadlinesRetained": true
+    },
+    "nativeWindowsControls": {
+      "node": "v26.13.0",
+      "tests": 11,
+      "pass": 11,
+      "fail": 0,
+      "skip": 0,
+      "nativeDirectoryRetentionExercised": true,
+      "sourceSHA256": {
+        "tests/e2e/terminal-lifecycle.mts": "645bb06ea504115a880f3570896cb5b9ac999835ff6340e5b9a563974d4fc83c",
+        "webmux/scripts/browser-test-home.mts": "a231907856151acdbc4eea85d1377488fce6c5d4be699a011a9286cbf696d65f",
+        "webmux/scripts/terminal-lifecycle.test.mts": "20d284a304396cb35c92fae4bbcf4bd766ffcd30117d81a03e3c1aec544d5802"
+      },
+      "scope": "Native Node control tests and filesystem behavior; mocked lifecycle API responses, not native provider startup."
+    },
+    "strictTypeScriptProjects": 5
+  },
+  "behavior": {
+    "browserCleanup": "Original selected viewer lease; if released, observe availability and claim only as that viewer without force; refuse foreign ownership.",
+    "terminalCleanup": "Freeze original UUID/selection; confirm matching original Stop or inspect existing intent; never automatically continue uncertain Stop. Delete only after confirmed Stop.",
+    "unavailableOrUncertain": "Retain saved access, minimize and attach an explicit receipt; no Stop/delete for an unavailable owner.",
+    "windowsNextFixture": "Rename complete previous home into ignored retained directory; no destructive fallback if rename fails.",
+    "otherOwners": "Existing delete contract retained; Unix private tmux teardown remains owned by outer runner."
+  },
+  "privateArchive": {
+    "files": 18,
+    "manifestSHA256": "81e1e2f9da60fbc99432980ea391df02f1c0b4c27a0c3d657aa46007c48c21c7"
+  },
+  "limits": [
+    "Full hosted exact-head CI for this correction remains pending.",
+    "Generic native provider startup timeouts are present in both prior green and failing hosted runs; their cause remains unknown under #543.",
+    "The first local browser run exposed released-lease cleanup409; failed raw evidence retained; corrected eleven-case run passes.",
+    "Native application Stop/recovery evidence remains bound to the separate original application receipt.",
+    "No production ownership rule, protection/service/account setting, CLI installation, auth storage or reboot was changed."
+  ]
+}

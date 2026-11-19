@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../utils/api';
+import { executionHostLabel } from '../utils/sessionIdentity';
 import type { RecoveryRequest, SessionRecovery } from '../types';
 import { Dialog } from './Dialog';
 import './RecoveryDialog.css';
@@ -15,12 +16,18 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
   const [approveManaged, setApproveManaged] = useState(false);
   const [shareContext, setShareContext] = useState(false);
   const [context, setContext] = useState('');
+  const [originalRequest, setOriginalRequest] = useState<RecoveryRequest | null>(null);
+  useEffect(() => setOriginalRequest(null), [sessionId]);
   useEffect(() => {
     const controller = new AbortController();
     setValue(null); setError('');
     setApproveReplay(false); setApproveManaged(false); setShareContext(false); setContext('');
     api.getSessionRecovery(sessionId, controller.signal).then(result => {
-      if (!controller.signal.aborted) setValue(result);
+      if (!controller.signal.aborted) {
+        setValue(result);
+        if (result.managed_original_request) setOriginalRequest(result.managed_original_request);
+        else setOriginalRequest(null);
+      }
     }).catch((cause: unknown) => {
       if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Cannot load recorded work');
     });
@@ -28,6 +35,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
   }, [sessionId, refresh]);
   const managerName = value?.lifecycle_owner === 'rig' ? 'Rig' : 'Agent Deck';
   const activity = value?.state?.activity;
+  const pendingOriginal = value?.managed_original_request ?? originalRequest;
   const recordedRoots = Object.entries(activity?.configuration?.roots ?? {}).filter(([name]) => name !== 'HOME');
   const refreshPreview = () => { setApproveReplay(false); setApproveManaged(false); setShareContext(false); setContext(''); setRefresh(count => count + 1); };
   const perform = async (kind: RecoveryRequest['kind']) => {
@@ -41,11 +49,24 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
       token[6] = (token[6] & 15) | 64; token[8] = (token[8] & 63) | 128;
       const hex = Array.from(token, byte => byte.toString(16).padStart(2, '0')).join('');
       const id = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-      await api.recoverSession(sessionId, { id, kind, revision: value.state.revision,
+      const request: RecoveryRequest = { id, kind, revision: value.state.revision,
         host_revision: value.host_revision, instance: value.instance,
-        confirm: kind === 'managed' ? approveManaged : kind === 'replay' ? approveReplay : shareContext, ...(selected ? { context: selected } : {}) });
+        confirm: kind === 'managed' ? approveManaged : kind === 'replay' ? approveReplay : shareContext, ...(selected ? { context: selected } : {}) };
+      if (kind === 'managed' && value.managed_original_contract) setOriginalRequest({ ...request, inspect: true });
+      const result = await api.recoverSession(sessionId, request);
+      if (result.outcome === 'uncertain') { refreshPreview(); return; }
       onClose();
     } catch (cause) { setActionError(cause instanceof Error ? cause.message : 'Cannot continue this work'); refreshPreview(); }
+    finally { setBusy(false); }
+  };
+  const completeOriginal = async () => {
+    if (!pendingOriginal || !approveManaged || busy) return;
+    setBusy(true); setActionError('');
+    try {
+      const result = await api.recoverSession(sessionId, { ...pendingOriginal, inspect: true, confirm: true });
+      if (result.outcome === 'consumed') onClose();
+      else refreshPreview();
+    } catch (cause) { setActionError(cause instanceof Error ? cause.message : 'Cannot check the original Rig recovery'); refreshPreview(); }
     finally { setBusy(false); }
   };
   const setAutomatic = async (enabled: boolean) => {
@@ -63,7 +84,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
         <p>{value.message}</p>
         {value.warning && <p role="status">{value.warning}</p>}
         <dl className="recovery-details">
-          <dt>Execution host</dt><dd>{value.hostname}{!value.manager_target && ` · ${value.transport.toUpperCase()}`}</dd>
+          <dt>Execution host</dt><dd>{executionHostLabel(value.hostname)}{!value.manager_target && ` · ${value.transport.toUpperCase()}`}</dd>
           <dt>Session manager</dt><dd>{value.lifecycle_owner === 'webmux' ? 'WebMux' : value.lifecycle_owner}</dd>
           {value.manager_target && <><dt>Managed session</dt><dd>{value.manager_target}</dd></>}
           {value.manager_directory && <><dt>Managed project directory</dt><dd>{value.manager_directory}</dd></>}
@@ -100,8 +121,17 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
           <h3>Previous terminal output</h3>
           <pre className="recovery-history" tabIndex={0} aria-label="Previous terminal output">{value.history}</pre>
         </> : <p>No retained terminal output is available. Existing native conversation information is shown above when recorded.</p>}
-        {!activity && !value.can_resume_managed && <p>{value.manager_native_session ? 'Resume this recorded conversation through its session manager. Retained terminal output is available below when recorded.' : 'No reliable command was recorded. Use any retained output to recover this session manually.'}</p>}
-        {value.can_resume_managed && <>
+        {!activity && !value.can_resume_managed && !pendingOriginal && <p>{value.manager_native_session ? 'Resume this recorded conversation through its session manager. Retained terminal output is available below when recorded.' : 'No reliable command was recorded. Use any retained output to recover this session manually.'}</p>}
+        {pendingOriginal && <section role="status" aria-label="Rig recovery pending">
+          <p>The original Rig recovery is not yet confirmed. Completion reuses its recorded conversation, launch settings and original request.</p>
+          <label className="recovery-consent"><input type="checkbox" checked={approveManaged} disabled={busy}
+            onChange={event => setApproveManaged(event.target.checked)} />
+            I approve checking and completing the original Rig recovery request
+          </label>
+          <div className="recovery-actions"><button type="button" disabled={busy || !approveManaged}
+            onClick={() => void completeOriginal()}>Check and complete original Rig recovery</button></div>
+        </section>}
+        {value.can_resume_managed && !pendingOriginal && <>
           <p>{managerName} will verify the recorded destination and policy, then reattach a surviving process or resume the recorded conversation. No terminal output will be sent to the coding service.</p>
           <label className="recovery-consent"><input type="checkbox" checked={approveManaged} disabled={busy}
             onChange={event => setApproveManaged(event.target.checked)} />

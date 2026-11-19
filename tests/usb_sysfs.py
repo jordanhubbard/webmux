@@ -5,7 +5,13 @@ from pathlib import Path
 
 def imported_disk(block_root=Path('/sys/class/block')):
     for entry in block_root.iterdir():
-        resolved = entry.resolve()
+        try:
+            resolved = entry.resolve()
+        except OSError as error:
+            # Detach can remove a link after iterdir yielded its name.
+            if error.errno in (errno.ENOENT, errno.ENODEV):
+                continue
+            raise
         if 'vhci_hcd' not in str(resolved) or (entry / 'partition').exists():
             continue
         for parent in resolved.parents:
@@ -19,3 +25,26 @@ def imported_disk(block_root=Path('/sys/class/block')):
             if serial == 'webmux-ci-storage':
                 return Path('/dev', entry.name)
     return None
+
+
+def imported_disk_with_payload(expected, discover=imported_disk):
+    """Ready only after the current fixture disk opens and returns exact bytes.
+
+    sysfs registration can precede /dev creation, or disappear during detach.
+    Re-discover on the next existing poll; do not retry bad bytes or other I/O.
+    """
+    if not expected:
+        raise ValueError('A nonempty fixture payload is required')
+    disk = discover()
+    if disk is None:
+        return None
+    try:
+        with disk.open('rb', buffering=0) as source:
+            actual = source.read(len(expected))
+    except OSError as error:
+        if error.errno in (errno.ENOENT, errno.ENODEV):
+            return None
+        raise
+    if actual != expected:
+        raise RuntimeError('Imported fixture payload mismatch')
+    return disk

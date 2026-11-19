@@ -60,7 +60,11 @@ func replay(st *snapshot.State, under *underlay, repeat bool, profile string) (E
 	}
 	var b bytes.Buffer
 	b.Grow(st.Width * (st.Height + len(st.Scrollback)) * 2)
-	w := &vtWriter{b: &b, width: st.Width}
+	enhanced := profile == XtermUnderlineRendererProfile
+	if !enhanced && hasIndependentUnderline(st) {
+		return EncodedSnapshot{}, ErrUnsupported
+	}
+	w := &vtWriter{b: &b, width: st.Width, enhanced: enhanced}
 	// Guest colors precede both grids: palette/default changes affect cells
 	// drawn earlier as well as subsequent output. They are normalized RGB
 	// setters, never terminal queries or private application requests.
@@ -172,7 +176,7 @@ func replay(st *snapshot.State, under *underlay, repeat bool, profile string) (E
 	// leaves the cursor where it is with the wrap armed, which no cursor
 	// movement can do.
 	w.cup(cx, cy)
-	if st.PendingWrap || st.CursorX >= st.Width {
+	if !enhanced && (st.PendingWrap || st.CursorX >= st.Width) {
 		x := min(st.CursorX, st.Width-1)
 		w.reprint(st.Screen, activeProtection, x, st.CursorY, cx+x-st.CursorX, cy)
 		w.resetPen()
@@ -195,7 +199,13 @@ func replay(st *snapshot.State, under *underlay, repeat bool, profile string) (E
 	}
 	w.protect(st.PenProtected)
 	if st.Pen != nil {
-		w.pen(*st.Pen)
+		if enhanced {
+			// The real saved slots are installed. No more scratch saves or
+			// cell repainting: the tail restores flags and logical columns.
+			w.plainPen(*st.Pen)
+		} else {
+			w.pen(*st.Pen)
+		}
 	}
 	if st.TitlesKnown {
 		b.WriteString("\x1b]2;")
@@ -217,6 +227,17 @@ func replay(st *snapshot.State, under *underlay, repeat bool, profile string) (E
 	}
 	if len(st.PendingInput) <= vt.MaxPendingInput {
 		b.Write(st.PendingInput)
+	}
+	if enhanced {
+		if w.unsupported {
+			return EncodedSnapshot{}, ErrUnsupported
+		}
+		packet, token, err := underlineTail(st, repeat)
+		if err != nil {
+			return EncodedSnapshot{}, err
+		}
+		b.WriteString(packet)
+		return EncodedSnapshot{Data: b.Bytes(), RequiredRenderer: XtermUnderlineRendererProfile, RendererToken: token}, nil
 	}
 	if repeat {
 		// Xterm clears REP after every control. Reprint the last cluster only
@@ -288,11 +309,15 @@ func replay(st *snapshot.State, under *underlay, repeat bool, profile string) (E
 // vtWriter writes rows of cells, keeping track of the pen and the link it
 // last set so a run of cells painted the same way costs one SGR.
 type vtWriter struct {
-	b         *bytes.Buffer
-	width     int
-	cur       snapshot.StyleState
-	set       bool // cur was written; false means the pen is the default
-	protected bool
+	b             *bytes.Buffer
+	width         int
+	cur           snapshot.StyleState
+	set           bool // cur was written; false means the pen is the default
+	protected     bool
+	enhanced      bool
+	unsupported   bool
+	wideLead      bool
+	scratchParams string
 }
 
 // rows writes rows from the cursor down. absolute places each row with a
@@ -326,6 +351,14 @@ func (w *vtWriter) rows(rows [][]snapshot.CellState, wraps []bool, absolute bool
 // otherwise trailing blanks are left out. lead prints at least the first
 // cell, so a row a wrapped row carries on into starts on the next line.
 func (w *vtWriter) row(row []snapshot.CellState, full, lead bool, protection []bool) {
+	filler := w.wideLead
+	w.wideLead = false
+	if w.enhanced && lead {
+		// Consume the preceding row's pending wrap before a scratch RC
+		// could clamp its logical column. The first real cell replaces it.
+		w.b.WriteString(" \b")
+		lead = false
+	}
 	n := min(len(row), w.width)
 	end := n
 	if !full {
@@ -335,6 +368,9 @@ func (w *vtWriter) row(row []snapshot.CellState, full, lead bool, protection []b
 		if lead && end == 0 && n > 0 {
 			end = 1
 		}
+	}
+	if filler {
+		end = max(end, min(2, n))
 	}
 	for x := 0; x < end; x++ {
 		c := row[x]
@@ -368,7 +404,27 @@ func (w *vtWriter) row(row []snapshot.CellState, full, lead bool, protection []b
 			w.mode(7, false)
 		}
 		w.protect(x < len(protection) && protection[x])
-		if c.Content == "" && c.Width == 1 && x < w.width-1 {
+		if c.Width == 0 && c.Content != "" {
+			// A standalone zero-width codepoint consumes a column in xterm
+			// when its parser join state is empty. Reset that state without
+			// changing the pen before painting this cell.
+			w.b.WriteString("\x1b[" + strconv.Itoa(x+1) + "G")
+		}
+		if w.enhanced && c.Content == "" && c.Width == 1 && x == w.width-1 && full {
+			// A wide print at the final column leaves a genuine null cell
+			// there and consumes the wrap. The following row replaces its
+			// temporary wide glyph; printing a space here would lose REP's
+			// distinction between null and an explicitly printed blank.
+			if w.width < 2 {
+				w.unsupported = true
+				return
+			}
+			w.pen(c.StyleState)
+			w.b.WriteString("日\b\b")
+			w.wideLead = true
+			continue
+		}
+		if c.Content == "" && c.Width == 1 && (x < w.width-1 || w.enhanced) {
 			// Keep a null cell distinct from an explicitly printed space:
 			// xterm's REP reads the source cell's literal string.
 			w.pen(c.StyleState)
@@ -421,12 +477,24 @@ func (w *vtWriter) resetPen() {
 	if w.cur.LinkURL != "" {
 		w.b.WriteString("\x1b]8;;\x1b\\")
 	}
+	if w.protected {
+		w.b.WriteString("\x1b[0\"q")
+		w.protected = false
+	}
 	w.b.WriteString("\x1b[0m")
 	w.cur, w.set = snapshot.StyleState{}, false
 }
 
 // pen sets the pen to s: one SGR from a reset, and the link when it changed.
 func (w *vtWriter) pen(s snapshot.StyleState) {
+	if w.enhanced && s.UnderlineFlags != 0 {
+		w.independentPen(s)
+		return
+	}
+	w.plainPen(s)
+}
+
+func (w *vtWriter) plainPen(s snapshot.StyleState) {
 	if s.LinkURL != w.cur.LinkURL || s.LinkParams != w.cur.LinkParams {
 		w.b.WriteString("\x1b]8;")
 		w.b.WriteString(s.LinkParams)
@@ -460,6 +528,9 @@ func (w *vtWriter) pen(s snapshot.StyleState) {
 	sgrColor(w.b, s.BgColor, 40, 100, "48")
 	sgrColor(w.b, s.UlColor, -1, -1, "58")
 	w.b.WriteByte('m')
+	if w.protected {
+		w.b.WriteString("\x1b[1\"q")
+	}
 	w.cur, w.set = s, true
 }
 
@@ -691,7 +762,7 @@ func (w *vtWriter) savedCursor(c *snapshot.SavedCursorState, grid [][]snapshot.C
 		y -= top
 	}
 	w.cup(max(x, 0), max(y, 0))
-	if c.PendingWrap || c.X >= w.width {
+	if !w.enhanced && (c.PendingWrap || c.X >= w.width) {
 		column := min(c.X, w.width-1)
 		w.reprint(grid, protection, column, c.Y, x+column-c.X, y)
 	}

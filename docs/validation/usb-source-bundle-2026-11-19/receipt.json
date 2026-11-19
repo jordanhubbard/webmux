@@ -1,0 +1,57 @@
+{
+  "issue": 550,
+  "base": "4860c2222ad51f1c5cc1c8bb8be754888e2c7645",
+  "originalCI": 44476780483,
+  "failedUSBJob": 135399141113,
+  "originalArtifact": 14505939988,
+  "originalArtifactDigest": "sha256:bf9e6ee6696b47804a3c2f84b16fcbd7d74fba4fd1cd0e82e3ddc4c2c5a9eb53",
+  "originalFailure": {
+    "phase": "fixture source acquisition, before guest/native tests",
+    "file": "vudc_rx.c",
+    "httpStatuses": [
+      429,
+      429,
+      429
+    ],
+    "attempts": 3,
+    "elapsedSeconds": 13.218
+  },
+  "sourceCommit": "e8f897f4afef0031fe618a8e94127a0934896aba",
+  "sourceManifestUnchanged": true,
+  "sourceFiles": 8,
+  "sourceBytes": 60152,
+  "allOriginalSHA256AndSPDXHeadersRetained": true,
+  "upstreamLicenseAndProvenanceIncluded": true,
+  "originalParentColdNetworkControl": {
+    "parent": "4860c2222ad51f1c5cc1c8bb8be754888e2c7645",
+    "parentModuleSHA256": "291d4657cf1cd8f257c48f419ceaab957af432b40c9e72a1062c0936a64623f1",
+    "realRepositoryBundlePresent": true,
+    "parentStillRequiresNetworkOnColdCache": true,
+    "blockedTransportAttempts": 3,
+    "noActualNetworkOrNativeKernelTest": true
+  },
+  "local": {
+    "acquisitionControls": 11,
+    "qualifierBuilderControls": 9,
+    "failures": 0,
+    "skips": 0,
+    "coldBundleAll8NoNetwork": true,
+    "cacheReuseWithBundleDisabled": true,
+    "corruptOversizeLinkedNonregularIncompleteBundleRefused": true,
+    "syntaxAndDiff": "PASS"
+  },
+  "unchangedBounds": {
+    "perSourceBytes": 1048576,
+    "networkAttempts": 3,
+    "networkBudgetSeconds": 90,
+    "requestAndWaitSeconds": 20,
+    "nativeKernelAndUSBAcceptance": "unchanged"
+  },
+  "sourceSHA256": {
+    "scripts/vudc_sources.py": "fdaee26a2a148f677948a74e2c32177350f02c07c637b5c6d62cc9bcfbeb5900",
+    "scripts/test_vudc_sources.py": "0e33b810dbb9702cdfcc0529abede8fdd6bea950998753b5a087e93148dd6ce9",
+    "tests/usb-vudc-sources.json": "a7a2b6a82181d5ff91e6ede8d1817df2411b30ae54d4ae805efa12299aefa3ca"
+  },
+  "nativeUSBCurrentSource": "NOT RUN; combine with required signed HTTPS relay provisioning #549 before final exact-source native gates",
+  "scope": "Pinned offline fixture input and local refusal/transport controls. Not guest-kernel/nativeUSB, runtime dependency/license clearance or release acceptance."
+}

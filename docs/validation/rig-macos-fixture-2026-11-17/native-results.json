@@ -1,0 +1,53 @@
+{
+  "issue": 431,
+  "production_source": "8f5d3225fac65804554a65bc08381a03a70654fe",
+  "platform": "darwin-arm64",
+  "tools": {
+    "node": "24.21.0",
+    "tmux": "3.8",
+    "rig": "@openrig/cli@0.6.14 (df1c1517)",
+    "browser": "Google Chrome 157.0.8103.79"
+  },
+  "fixture_sha256": "ec47c609e07aebc7e10480c09fe8bf450e1f8b0a7fdd6abaf13b9c7c1df21fb0",
+  "test_source_sha256": "6c922d020b758148ccb81a048759bcd70c7660e004476d57fdb7dcba1647806d",
+  "test_assertions_changed": false,
+  "results": {
+    "original_baseline": {
+      "passed": 0,
+      "failed": 2,
+      "log_sha256": "72b99832e12b9fc39ccbdd2d85086d7f20106434d27f5dc88cca33a7f139faa4"
+    },
+    "isolated_tmux_probe": {
+      "config": "/dev/null",
+      "fresh_server_global_mouse": "on",
+      "mutation_commands_before_read": 0,
+      "owned_server_stopped": true
+    },
+    "initial_fixture_trace": {
+      "global_mouse_before_daemon": "on",
+      "receipt_sha256": "9a540814c21486b2145b7afdc0bd5b302ac7bdb2e1198f2f79a6a8facf9e614d"
+    },
+    "corrected_full_suite": {
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 55.2,
+      "log_sha256": "8cfd76a3a9ded5c65d61116ee5915f3e2ed0b7993fe09c27aa2b0bf1c8ed5068",
+      "cleanup": {
+        "private_tmux_directory_removed": true,
+        "daemon_state_removed": true
+      }
+    },
+    "strict_typescript": {
+      "exit_code": 0,
+      "log_sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1"
+    },
+    "combined_with_pr432": {
+      "production_source": "4b89fe6e7d9d994651b80a5372cf1a8fffdf8909",
+      "passed": 8,
+      "failed": 1,
+      "failure": "Ninth external-seat test hit the shared address request budget after the existing suite; UI reports Too many requests. Fixture repair preserved the first eight outcomes.",
+      "log_sha256": "16b50825943daeaf8e8a3ab9bd9b2f931bf20c63e57c9d4675fb5853b2f321e2"
+    }
+  }
+}

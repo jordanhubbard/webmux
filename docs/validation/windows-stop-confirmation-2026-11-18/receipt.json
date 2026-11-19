@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "issue": 541,
+  "scope": "Native Windows stop-acknowledgement barrier only; public local Stop/delete/detach lifecycle is not implemented or qualified by this change.",
+  "source": {
+    "parent": "b3bed017c615917335dc060b0486d0f1cf6610af",
+    "modifiedSources": {
+      "webmux/server/internal/nativeprovider/client_windows.go": "0047c1a88d8e5cc2651498fe2018c22de5706c4bfe13fc4f081c06d457fd7695",
+      "webmux/server/internal/nativeprovider/native_windows_test.go": "833fe3be26ca1a887308859014f6475025e7f29345fb38ecc16ed9696398d9f7"
+    },
+    "positiveBinarySHA256": "ada4e0d55b10540a774f2dbb432a806d7beb27d4d8da479ded77962ea2e72b1c",
+    "scope": "Dirty source bound by SHA, not a clean release build. Compiler-only GOMAXPROCS=2/GOFLAGS=-p=1; native runtime not overridden.",
+    "negativeBinarySHA256": "3dcc5346a24946eacd4ab3f0197278694784e1a5225a9d4146dad6a728b6be99",
+    "arm64CrossBuildSHA256": "52f04fe00b9d3ef55af5bebf22dc660781a016dfdc4f7b0b5e0d6f4b4d08b657",
+    "existingTestBodiesUnchanged": true
+  },
+  "platform": "Native Windows 11 Enterprise AMD64 10.0.26100",
+  "nativeResults": [
+    {
+      "label": "negative",
+      "exit": 1,
+      "expectedExit": 1,
+      "elapsedSeconds": 0.103,
+      "binarySHA256": "3dcc5346a24946eacd4ab3f0197278694784e1a5225a9d4146dad6a728b6be99",
+      "args": [
+        "-test.v",
+        "-test.run=^TestStopAcknowledgementDoesNotConfirmOwnerExit$",
+        "-test.timeout=30s"
+      ]
+    },
+    {
+      "label": "positive",
+      "exit": 0,
+      "expectedExit": 0,
+      "elapsedSeconds": 13.932,
+      "binarySHA256": "ada4e0d55b10540a774f2dbb432a806d7beb27d4d8da479ded77962ea2e72b1c",
+      "args": [
+        "-test.v",
+        "-test.run=^(TestStopAcknowledgementDoesNotConfirmOwnerExit|TestNativeStopConfirmsOwnerAndJobExit)$",
+        "-test.count=10",
+        "-test.timeout=3m"
+      ]
+    },
+    {
+      "label": "package",
+      "exit": 0,
+      "expectedExit": 0,
+      "elapsedSeconds": 55.447,
+      "binarySHA256": "ada4e0d55b10540a774f2dbb432a806d7beb27d4d8da479ded77962ea2e72b1c",
+      "args": [
+        "-test.v",
+        "-test.timeout=10m"
+      ]
+    }
+  ],
+  "negativeControl": "Restoring the parent acknowledgement-only Stop implementation makes the same live-owner test fail; raw retained.",
+  "positive": {
+    "tests": {
+      "TestStopAcknowledgementDoesNotConfirmOwnerExit": 10,
+      "TestNativeStopConfirmsOwnerAndJobExit": 10
+    },
+    "actualConPTYRootAndChildExitChecked": true,
+    "sameOriginalOwnerHandleRetained": true,
+    "cancelledUnconfirmedStopDoesNotReturnSuccess": true
+  },
+  "package": {
+    "topLevelTests": 20,
+    "passEventsIncludingSubtests": 76,
+    "failures": 0,
+    "skips": 0,
+    "topLevelInventoryComplete": true,
+    "existingTestBodiesByteIdentical": true
+  },
+  "validation": [
+    "Windows AMD64/ARM64 CGO0 cross-build",
+    "Windows-target go vet",
+    "Source and native binary hashes verified",
+    "All native source-defined top-level tests executed; no skipped/failed/forced-cleanup checks"
+  ],
+  "cleanup": {
+    "driverAndRuntimeProcessesGone": 4,
+    "temporaryProviderRootsRemoved": 50,
+    "forcedOwnerCleanup": false
+  },
+  "rawEvidenceSHA256": {
+    "driver.py": "591a12632578f480a39c299bb3d42e4bf9f2024a85684da6bdee191613bf84d9",
+    "driver.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "running.json": "e64c3c1efe9b7cd3db63b9e755b3bcdb3169aff051513d1824c292eb1a3d4b98",
+    "results.json": "6557b0cca041093fdbd1bf573f8edd4fce67e340b1b5a887cf2f33e428dc77fd",
+    "done.json": "a6904d2b39f573703e5f4e917aca9a871429c53a4b7428dbd7166f8a063b3902",
+    "negative.log": "7582f6ca005f2b999d1d9ce61911925a0dc9e9cf6bcae805485dd58ca1333a2a",
+    "positive.log": "29d3e022ac4809855731a5913ecfd80e1dce06bc17562abd15d14feae738bdff",
+    "package.log": "418a0de31e049eb3f748e036bbfd15f431fbbb48749ae99a46c58379dfadab59"
+  },
+  "remaining": [
+    "Wire an explicit owner-bound Stop into the API/UI, preserving authenticated access when detaching.",
+    "Persist before dispatch; preserve pending/uncertain intent and owner isolation across failures/controller loss.",
+    "Qualify actual application Stop, sibling/viewer preservation and retained logs; controller close must remain detach.",
+    "No change to the failed legacy shell/network policy checks, unresolved private Windows VT timeout, authenticated ARM64 scope, reboot or full release acceptance."
+  ]
+}

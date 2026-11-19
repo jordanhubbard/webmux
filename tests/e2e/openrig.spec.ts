@@ -17,15 +17,6 @@ test('home gives a fresh 2 by 2 terminal grid the page without coordinator inven
   expect(coordinationRequests).toBe(0);
 });
 
-test.afterAll(() => {
-  if (process.env.WEBMUX_REAL_OPENRIG !== '1') return;
-  const executable = path.resolve(__dirname, '.test-home', 'openrig-bin', 'rig');
-  if (!existsSync(executable)) return;
-  // Stop before Playwright terminates the web-server process group. Waiting for
-  // the server's exit handler alone can leave the detached Rig daemon behind.
-  const stopped = spawnSync(executable, ['daemon', 'stop'], { timeout: 15000, encoding: 'utf8' });
-  expect(stopped.status, stopped.stdout + stopped.stderr).toBe(0);
-});
 
 test('coordination lives in its own tab and leaves the terminal grid intact', async ({ page, request }) => {
   const original = await (await request.get('/api/sessions')).json();
@@ -102,9 +93,19 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   page.setDefaultTimeout(10_000);
   const home = path.resolve(__dirname, '.test-home');
   const project = 'browser-workload';
+  const rig = path.join(home, 'openrig-bin/rig');
+  const version = spawnSync(rig, ['--version'], { encoding: 'utf8', timeout: 15000 });
+  expect(version.status, version.stderr).toBe(0);
+  const structuredAttachment = version.stdout.trim() === '0.7.18 (3bf87c62)';
+  const socket = spawnSync('tmux', ['display-message', '-p', '-t', 'webmux-fixture-path', '#{socket_path}'], {
+    env: { ...process.env, TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') },
+    encoding: 'utf8', timeout: 5000,
+  });
+  expect(socket.status, socket.stderr).toBe(0);
+  expect(path.isAbsolute(socket.stdout.trim())).toBe(true);
   const sessions: string[] = [];
   let workloadCompleted = false;
-  type Agent = { name: string; id: string; state: string; openable: boolean; managerSessionId?: string; nativeSessionId?: string };
+  type Agent = { managerTarget: string; senderAddress?: string; managed: boolean; enrollmentOrigin: string; attachmentTarget: string; name: string; id: string; state: string; openable: boolean; managerSessionId?: string; nativeSessionId?: string };
   type Session = { id: string; row: number; col: number; openrig_view?: string; rig?: { target: string; project: string; name: string; host: string; runtime: string } };
   const status = async () => {
     const value = await (await request.get('/api/coordination')).json() as { seats: (Agent & { provider: string })[]; messages: { provider: string; from: string; to: string; body: string }[] };
@@ -154,33 +155,40 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       await dialog.getByRole('combobox', { name: 'Coding agent', exact: true }).selectOption('codex');
       const response = page.waitForResponse(value => value.url().endsWith('/api/coordination/agents') && value.request().method() === 'POST');
       await dialog.getByRole('button', { name: 'Start agent and open terminal', exact: true }).click();
-      expect((await response).status()).toBe(200);
+      const reply = await response;
+      expect(reply.status(), (await reply.text()).slice(0, 6000)).toBe(200);
       await expect(dialog).toHaveCount(0);
       const agent = (await status()).seats.find(value => value.name === name)!;
+      expect(agent.managed).toBe(true); expect(agent.enrollmentOrigin).toBe('claimed');
       const listing: Session[] = await (await request.get('/api/sessions')).json();
       const session = listing.find(value => value.openrig_view === `managed:${agent.id}`)!;
       if (index === 0) expect([session.row, session.col]).toEqual([0, 0]);
       sessions.push(session.id);
-      expect(session.rig).toEqual({ target: agent.id, project, name, host: 'localhost', runtime: 'codex', workspace: home });
+      expect(session.rig).toEqual({ target: agent.managerTarget, seat_id: agent.id, attachment_target: agent.attachmentTarget,
+        ...(structuredAttachment ? { tmux_server_flag: '-S', tmux_server_value: socket.stdout.trim() } : {}),
+        project, name, host: 'localhost', runtime: 'codex', workspace: home });
       const terminal = page.getByTestId(`tile-cell-${session.id}`);
       await expect(page.getByTestId('workspace-scroll')).toBeVisible();
       await expect(terminal).toBeInViewport({ ratio: 0.1 });
       await expect(terminal.locator('.xterm-helper-textarea')).toBeFocused();
-      await expect(terminal.getByLabel('Rig-managed worker')).toHaveAttribute('title', new RegExp(project));
+      await expect(terminal.getByLabel('Rig viewer')).toHaveAttribute('title', new RegExp(project));
+      await expect(terminal.getByLabel('Rig seat status')).toContainText('Enrollment Adopted by Rig');
       await expect(terminal.getByText(`${project} / ${name}`, { exact: true })).toBeVisible();
       await expect(page).toHaveTitle(new RegExp(project));
       await expect(terminal.locator('.xterm-rows')).toContainText('FIXTURE_READY');
-      await expect(terminal.locator('.xterm-rows')).toContainText(agent.id);
+      await expect(terminal.locator('.xterm-rows')).toContainText(agent.managerTarget);
     }
     const agents = (await status()).seats;
     const coder = agents.find(value => value.name === 'coder')!;
     const reviewer = agents.find(value => value.name === 'reviewer')!;
+    const coderAddress = coder.senderAddress ?? coder.managerTarget;
+    const reviewerAddress = reviewer.senderAddress ?? reviewer.managerTarget;
     expect(agents).toHaveLength(2);
     expect(agents.every(value => value.openable)).toBe(true);
     const tmuxEnv = { ...process.env, TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') };
     const observed = spawnSync('go', ['test', './internal/rigobservation', '-run', '^TestPublishedRigObservation$', '-count=1', '-v'], {
       cwd: path.resolve(__dirname, '../../webmux/server'),
-      env: { ...tmuxEnv, PATH: `${path.join(home, 'openrig-bin')}${path.delimiter}${process.env.PATH ?? ''}`, WEBMUX_TEST_RIG_TARGET: coder.id },
+      env: { ...tmuxEnv, PATH: `${path.join(home, 'openrig-bin')}${path.delimiter}${process.env.PATH ?? ''}`, WEBMUX_TEST_RIG_TARGET: coder.managerTarget },
       encoding: 'utf8', timeout: 30_000,
     });
     expect(observed.status, observed.stdout + observed.stderr).toBe(0);
@@ -191,15 +199,15 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       expect(result.status, result.stderr).toBe(0);
       return result.stdout.trim();
     };
-    expect(tmux('display-message', '-p', '-t', coder.id, '#{mouse}')).toBe('1');
+    expect(tmux('display-message', '-p', '-t', coder.attachmentTarget, '#{mouse}')).toBe('1');
     expect(tmux('show-option', '-gv', 'mouse')).toBe('off');
     expect(tmux('display-message', '-p', '-t', 'webmux-fixture-path', '#{mouse}')).toBe('0');
-    tmux('set-option', '-t', coder.id, 'mouse', 'off');
+    tmux('set-option', '-t', coder.attachmentTarget, 'mouse', 'off');
     expect((await openAgent('coder')).id).toBe(sessions[0]);
-    expect(tmux('display-message', '-p', '-t', coder.id, '#{mouse}')).toBe('1');
-    tmux('send-keys', '-t', coder.id, 'WM_SCROLL_OLD', 'Enter');
-    for (let index = 0; index < 40; index++) tmux('send-keys', '-t', coder.id, `WM_SCROLL_${index}`, 'Enter');
-    tmux('send-keys', '-t', coder.id, 'WM_SCROLL_NEW', 'Enter');
+    expect(tmux('display-message', '-p', '-t', coder.attachmentTarget, '#{mouse}')).toBe('1');
+    tmux('send-keys', '-t', coder.attachmentTarget, 'WM_SCROLL_OLD', 'Enter');
+    for (let index = 0; index < 40; index++) tmux('send-keys', '-t', coder.attachmentTarget, `WM_SCROLL_${index}`, 'Enter');
+    tmux('send-keys', '-t', coder.attachmentTarget, 'WM_SCROLL_NEW', 'Enter');
     const scrollTile = page.getByTestId(`tile-cell-${sessions[0]}`);
     const rows = scrollTile.locator('.xterm-rows');
     await expect(rows).toContainText('WM_SCROLL_NEW');
@@ -210,18 +218,24 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     const box = (await screen.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     for (let index = 0; index < 20; index++) await page.mouse.wheel(0, -120);
-    await expect.poll(() => tmux('display-message', '-p', '-t', coder.id, '#{pane_in_mode}')).toBe('1');
-    await expect(rows).toContainText('WM_SCROLL_OLD');
+    await expect.poll(() => tmux('display-message', '-p', '-t', coder.attachmentTarget, '#{pane_in_mode}')).toBe('1');
+    // Native history depth varies with pane size. Keep using real wheel input
+    // until the marker is visible, within the existing assertion deadline.
+    await expect.poll(async () => {
+      const visible = await rows.textContent() ?? '';
+      if (!visible.includes('WM_SCROLL_OLD')) await page.mouse.wheel(0, -120);
+      return visible;
+    }, { intervals: [50] }).toContain('WM_SCROLL_OLD');
     expect(await workspace.evaluate(el => ({ x: el.scrollLeft, y: el.scrollTop }))).toEqual(beforeWheel);
-    tmux('send-keys', '-t', coder.id, 'q');
+    tmux('send-keys', '-t', coder.attachmentTarget, 'q');
     const nonce = randomBytes(16).toString('hex');
     const terminal = page.getByTestId(`tile-cell-${sessions[0]}`);
     await terminal.locator('.xterm-helper-textarea').focus();
-    await page.keyboard.insertText(`fixture-send ${reviewer.id} WM_CHALLENGE:${coder.id}:${nonce}`);
+    await page.keyboard.insertText(`fixture-send ${reviewerAddress} WM_CHALLENGE:${coderAddress}:${nonce}`);
     await page.keyboard.press('Enter');
     // The ACK is generated by the peer only after receiving Rig's tmux delivery.
     await expect(terminal.locator('.xterm-rows')).toContainText(`WM_ACK:${nonce}`, { timeout: 30_000 });
-    await expect.poll(async () => (await status()).messages.some(value => value.from === reviewer.id && value.to === coder.id && value.body.includes(`WM_ACK:${nonce}`))).toBe(true);
+    await expect.poll(async () => (await status()).messages.some(value => value.from === reviewerAddress && value.to === coderAddress && value.body.includes(`WM_ACK:${nonce}`))).toBe(true);
     const dialog = await openDialog();
     await expect(dialog).toContainText(`WM_ACK:${nonce}`);
     await page.keyboard.press('Escape');
@@ -267,9 +281,9 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
     expect(previousId).toBeTruthy();
     const detachReceipts: { cycle: number; killedAt: string; absence: NativeAbsenceProof; managerSessionId: string; challenge: string }[] = [];
     for (let reconnect = 0; reconnect < 2; reconnect++) {
-      const pane = tmux('display-message', '-p', '-t', coder.id, '#{pane_id}');
+      const pane = tmux('display-message', '-p', '-t', coder.attachmentTarget, '#{pane_id}');
       const killedAt = Date.now();
-      const stopped = spawnSync('tmux', ['kill-session', '-t', `=${coder.id}`], { env: tmuxEnv, timeout: 5000 });
+      const stopped = spawnSync('tmux', ['kill-session', '-t', `=${coder.attachmentTarget}`], { env: tmuxEnv, timeout: 5000 });
       expect(stopped.status).toBe(0);
       let absence: NativeAbsenceProof | null = null;
       try {
@@ -281,7 +295,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
             env: { ...process.env, OPENRIG_HOST_SELECTED: 'local' }, timeout: 10000, encoding: 'utf8', maxBuffer: 1 << 20,
           });
           expect(native.status, native.stderr).toBe(0);
-          absence = nativeAbsenceProof(JSON.parse(native.stdout) as unknown, coder.id, pane, killedAt);
+          absence = nativeAbsenceProof(JSON.parse(native.stdout) as unknown, coder.managerTarget, pane, killedAt);
           return absence !== null;
         }, { timeout: 15000 }).toBe(true);
         await expect.poll(async () => (await status()).seats.find(value => value.id === coder.id)!.state).toBe('detached');
@@ -308,10 +322,10 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       const challenge = randomBytes(16).toString('hex');
       const replacementTerminal = page.getByTestId(`tile-cell-${coderSession.id}`);
       await replacementTerminal.locator('.xterm-helper-textarea').focus();
-      await page.keyboard.insertText(`fixture-send ${reviewer.id} WM_CHALLENGE:${coder.id}:${challenge}`);
+      await page.keyboard.insertText(`fixture-send ${reviewerAddress} WM_CHALLENGE:${coderAddress}:${challenge}`);
       await page.keyboard.press('Enter');
       await expect(replacementTerminal.locator('.xterm-rows')).toContainText(`WM_ACK:${challenge}`, { timeout: 30000 });
-      await expect.poll(async () => (await status()).messages.some(value => value.from === reviewer.id && value.to === coder.id && value.body.includes(`WM_ACK:${challenge}`))).toBe(true);
+      await expect.poll(async () => (await status()).messages.some(value => value.from === reviewerAddress && value.to === coderAddress && value.body.includes(`WM_ACK:${challenge}`))).toBe(true);
       detachReceipts.push({ cycle: reconnect, killedAt: new Date(killedAt).toISOString(), absence: absence!, managerSessionId: current.managerSessionId!, challenge });
     }
     const receipt = info.outputPath('rig-detach-receipts.json');
@@ -346,14 +360,31 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
   const home = path.resolve(__dirname, '.test-home');
   const daemon = readFileSync(path.join(home, 'openrig-daemon-url'), 'utf8');
   let id: string | null = null;
+  // This fixture has no authenticated provider. Retain bounded client input,
+  // including terminal reports, so startup navigation failures can be traced
+  // without replacing the native TUI or changing its readiness deadline.
+  const started = Date.now();
+  let stage = 'connecting';
+  const clientFrames: { ms: number; stage: string; frame: unknown }[] = [];
+  let droppedFrames = 0;
+  page.on('websocket', socket => socket.on('framesent', event => {
+    if (clientFrames.length >= 128) { droppedFrames++; return; }
+    const text = typeof event.payload === 'string' ? event.payload : event.payload.toString('utf8');
+    if (Buffer.byteLength(text) > 2048) { droppedFrames++; return; }
+    try { clientFrames.push({ ms: Date.now() - started, stage, frame: JSON.parse(text) }); }
+    catch { clientFrames.push({ ms: Date.now() - started, stage, frame: { unparsedBytes: Buffer.byteLength(text) } }); }
+  }));
   try {
     await page.goto('/?panel=openrig');
     const terminal = page.getByTestId('openrig-terminal');
     await page.getByRole('button', { name: 'Connect dashboard', exact: true }).click();
     await expect(terminal.locator('.xterm-rows')).toContainText('EXPLORER');
+    expect(readFileSync(path.join(home, 'openrig-tui-url'), 'utf8')).toBe(daemon);
+    stage = 'awaiting-native-live-page';
     // Rig also renders EXPLORER while startup is probing. Input then owns
     // startup navigation and can disable automatic entry into the live page.
     await expect(terminal.locator('.xterm-rows')).toContainText('TOPOLOGY');
+    stage = 'requesting-topology';
     await terminal.locator('.xterm-helper-textarea').focus();
     await page.keyboard.type(':topology');
     await page.keyboard.press('Enter');
@@ -372,10 +403,21 @@ test('real diagnostic dashboard is optional and detaching preserves its daemon',
     expect((await (await request.get('/api/openrig')).json()).session).toBeNull();
     expect((await request.get(`${daemon}/healthz`)).ok()).toBe(true);
   } finally {
+    const terminal = page.getByTestId('openrig-terminal');
+    const screen = await terminal.locator('.xterm-rows').textContent({ timeout: 500 }).catch(() => null);
+    const diagnostic = info.outputPath('native-dashboard-startup.json');
+    writeFileSync(diagnostic, JSON.stringify({
+      scope: 'Unauthenticated isolated Rig fixture; client frames and final rendered text only',
+      stage, elapsedMs: Date.now() - started, clientFrames, droppedFrames,
+      session: await terminal.getAttribute('data-session-id', { timeout: 500 }).catch(() => null),
+      viewport: page.viewportSize(), screen: screen?.slice(-32768) ?? null,
+      expectedDaemon: daemon,
+      selectedDashboardEndpoint: existsSync(path.join(home, 'openrig-tui-url')) ? readFileSync(path.join(home, 'openrig-tui-url'), 'utf8') : null,
+    }, null, 2));
+    await info.attach('native-dashboard-startup', { contentType: 'application/json', path: diagnostic });
     if (id) await request.delete(`/api/sessions/${id}`);
   }
 });
-
 
 test('coordination groups provider-owned sessions in keyboard-expandable projects', async ({ page }) => {
   await page.route(/\/api\/coordination(?:\?.*)?$/, route => route.fulfill({ json: {
@@ -412,7 +454,6 @@ test('coordination groups provider-owned sessions in keyboard-expandable project
   expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
 });
 
-
 test('integration enablement, launch owner and inventory view persist independently', async ({ page, request }) => {
   const original = await (await request.get('/api/config')).json();
   let launches = 0;
@@ -439,10 +480,10 @@ test('integration enablement, launch owner and inventory view persist independen
     await expect(panel.getByLabel('Enable Agent Deck')).toBeChecked();
     expect(launches).toBe(0);
   } finally {
-    expect((await request.put('/api/config', { data: { app: { coordination: original.app.coordination } } })).ok()).toBe(true);
+    const restored = await request.put('/api/config', { data: { app: { coordination: original.app.coordination } } });
+    expect(restored.ok(), await restored.text()).toBe(true);
   }
 });
-
 
 test('All sessions keeps overlapping provider IDs separate and fits a narrow screen', async ({ page }, info) => {
   const providers = ['webmux', 'agent-deck', 'rig'];

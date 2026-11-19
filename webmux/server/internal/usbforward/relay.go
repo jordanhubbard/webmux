@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -319,7 +320,7 @@ func (r *relay) run(listener net.Listener) error {
 	// A canceled peer can close the pipe before cancellation reaches this
 	// relay context. Treat that transport closure like EOF, but retain malformed
 	// frame and truncated-payload errors.
-	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrClosedPipe) || errors.Is(err, net.ErrClosed) || canceled {
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrClosedPipe) || errors.Is(err, net.ErrClosed) || errors.Is(err, os.ErrClosed) || canceled {
 		return nil
 	}
 	return err

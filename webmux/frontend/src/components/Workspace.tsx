@@ -1,7 +1,9 @@
 import { movePair } from '../utils/movePair';
 import { AddSessionCell } from './AddSessionCell';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useRigObservations } from '../utils/useRigObservations';
 import { Tile } from './Tile';
+import { LocalTerminalCloseDialog } from './LocalTerminalCloseDialog';
 import { ConnectionDialog } from './ConnectionDialog';
 import { CoordinationDialog } from './CoordinationDialog';
 import { WorkspaceMinimap } from './WorkspaceMinimap';
@@ -147,6 +149,8 @@ export function Workspace({
   onGlobalLockChange,
 }: WorkspaceProps) {
   const [sessions, setSessions] = useState<Session[]>([]);
+  const { activePane } = useWorkspacePane();
+  const rigObservations = useRigObservations(activePane === 'terminals' && canManageRig && sessions.some(session => !!session.rig && session.rig.provider !== 'agent-deck'));
   const [managedClients, setManagedClients] = useState<ManagedClient[]>([]);
   const [savedHosts, setSavedHosts] = useState<HostEntry[]>([]);
   const refreshManagedClients = useCallback(() => {
@@ -168,6 +172,7 @@ export function Workspace({
   }, []);
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
+  const [localClose, setLocalClose] = useState<Session | null>(null);
   const [coordinator, setCoordinator] = useState<'agent-deck' | 'rig' | null>(null);
   const [coordinatorHost, setCoordinatorHost] = useState('localhost');
   const [themeOverrides, setThemeOverrides] = useState<Map<string, string>>(() => loadSessionThemeOverrides());
@@ -177,8 +182,7 @@ export function Workspace({
   const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(new Set());
   const [sessionToReveal, setSessionToReveal] = useState<{ id: string; request: number } | null>(null);
   const sessionRequestRef = useRef(0);
-  const { focusedSessionId, setFocusedSessionId, broadcastMode, broadcastExcluded, setBroadcastRecipients, toggleBroadcastExclude } = useInputBroadcast();
-  const { activePane } = useWorkspacePane();
+  const { focusedSessionId, setFocusedSessionId, broadcastMode, broadcastScope, isBroadcastRecipient, setBroadcastRecipients, toggleBroadcastExclude } = useInputBroadcast();
   useEffect(() => () => { document.title = appName; }, [appName]);
 
   useEffect(() => {
@@ -274,11 +278,16 @@ export function Workspace({
 
   const handleClose = useCallback((id: string) => {
     if (movePendingRef.current) return;
+    const value = sessions.find(session => session.id === id);
+    if (value?.local_lifecycle?.contract === 'webmux-local-provider-lifecycle/v1') {
+      setLocalClose(value);
+      return;
+    }
     api.deleteSession(id)
       .then(() => api.getSessions())
       .then(setSessions)
       .catch(err => setOperationError(`Could not delete session: ${String(err)}`));
-  }, []);
+  }, [sessions]);
 
   const handleReconnect = useCallback((id: string) => {
     api.reconnectSession(id).then(updated => {
@@ -645,10 +654,11 @@ export function Workspace({
       {operationError && <div role="alert">{operationError} <button onClick={() => setOperationError('')}>Dismiss</button></div>}
       {broadcastMode && <div role="group" aria-label="Type to All recipients" style={{ padding: '5px 10px', background: '#3a2a1a', color: '#f1d494', display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
         <strong>Type to All recipients</strong>
+        {broadcastScope === 'selected' && <span>New sessions stay unselected until you choose them.</span>}
         <button type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), sessions.map(s => s.id))}>All</button>
         {[...new Set(sessions.flatMap(s => s.rig ? [s.rig.project] : []))].sort().map(project => <button key={project} type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), sessions.filter(s => s.rig?.project === project).map(s => s.id))}>Project: {project}</button>)}
         <button type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), [])}>None</button>
-        {sessions.map(session => <label key={session.id} style={{ whiteSpace: 'nowrap' }}><input type="checkbox" checked={!broadcastExcluded.has(session.id)} onChange={() => toggleBroadcastExclude(session.id)} />{session.rig ? `${session.rig.project}/${session.rig.name}` : session.title}</label>)}
+        {sessions.map(session => <label key={session.id} style={{ whiteSpace: 'nowrap' }}><input type="checkbox" checked={isBroadcastRecipient(session.id)} onChange={() => toggleBroadcastExclude(session.id)} />{session.rig ? `${session.rig.project}/${session.rig.name}` : session.title}</label>)}
       </div>}
       {sessions.length > 0 && (
         <div style={styles.dock} role="toolbar" aria-label="Terminal layout">
@@ -734,6 +744,7 @@ export function Workspace({
               >
                 <Tile
                   session={session}
+                  rigObservations={rigObservations}
                   canManageHosts={canManageHosts}
                   managedClient={savedHosts.some(host => host.id === session.host_id && host.hostname === session.hostname && host.username === session.username && (host.port || 22) === (session.port || 22))
                     ? managedClients.find(client => client.host_id && client.host_id === session.host_id) : undefined}
@@ -798,6 +809,8 @@ export function Workspace({
         )}
 
         {dialogPos && coordinator && <CoordinationDialog position={dialogPos} initialProvider={coordinator} initialHost={coordinatorHost} launchOnly onBack={() => setCoordinator(null)} onClose={() => setDialogPos(null)} />}
+        {localClose && <LocalTerminalCloseDialog key={localClose.id} session={localClose} onClose={() => setLocalClose(null)}
+          onChanged={() => loadSessions()} />}
         {dialogPos && !coordinator && (
           <ConnectionDialog
             localFirst

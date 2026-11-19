@@ -135,7 +135,7 @@ func prepareRemoteRecovery(value *browserConnect) bool {
 	}
 	recording := false
 	ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
-	response := remoteRecoveryRPC(ctx, args, recovery.RPCRequest{Protocol: 1, SessionID: value.Request.SessionID, Key: key, Operation: "ensure", Recording: &recording, Seed: seed})
+	response := remoteRecoveryRPC(ctx, args, recovery.RPCRequest{Protocol: 1, SessionID: value.Request.SessionID, Key: key, Operation: "ensure", Recording: &recording, Seed: seed, BrowserControl: value.Request.Transport == "mosh"})
 	cancel()
 	if response.Error != "" {
 		fmt.Fprintln(os.Stderr, "[WebMux] Work recovery is unavailable on this host:", response.Error)

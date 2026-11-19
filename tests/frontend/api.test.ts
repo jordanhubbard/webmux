@@ -52,6 +52,75 @@ describe('api utilities', () => {
       clearStorage();
     });
 
+    it('preserves tracked uncertainty for lost, malformed and ambiguous replies without a fallback POST', async () => {
+      const { api, CoordinationCreationUnconfirmedError } = await import('@frontend/utils/api');
+      const input = { provider: 'rig', mode: 'new' as const, projectName: 'project', name: 'coder', host: 'localhost', workspace: '/work', runtime: 'codex', creationRequestId: '2d438c43-c962-4b1d-b8ed-a35e07a8e964', row: 1, col: 2 };
+      const operation = { state: 'uncertain', stage: 'agent', code: 'native_create_response_unavailable', operationId: '11111111-1111-4111-8111-111111111111' };
+      const cases = [
+        () => Promise.reject(new Error('lost reply')),
+        () => Promise.resolve({ ok: true, status: 200, json: async () => { throw new Error('truncated JSON'); } }),
+        ...[null, {}, { session: {} }, { creation: { ...operation, operationId: 'foreign' } }, { creation: operation, session: { id: 'ambiguous' } }]
+          .map(body => () => Promise.resolve({ ok: true, status: 200, json: async () => body })),
+        () => Promise.resolve({ ok: false, status: 502, json: async () => ({ error: 'unknown failure' }) }),
+        () => Promise.resolve({ ok: false, status: 409, json: async () => ({ error: 'viewer full after creation' }) }),
+      ];
+      for (const reply of cases) {
+        fetchSpy.mockImplementationOnce(reply);
+        await expect(api.createCoordinatedAgent(input)).rejects.toBeInstanceOf(CoordinationCreationUnconfirmedError);
+      }
+      expect(fetchSpy).toHaveBeenCalledTimes(cases.length);
+      for (const call of fetchSpy.mock.calls) {
+        expect(call[0]).toBe('/api/coordination/creation-requests/' + input.creationRequestId);
+        expect(JSON.parse(call[1].body)).toEqual(input);
+      }
+    });
+
+    it('accepts confirmed tracked replies and clears only a first explicit pre-dispatch refusal', async () => {
+      const { api, CoordinationCreationUnconfirmedError } = await import('@frontend/utils/api');
+      const input = { provider: 'rig', mode: 'new' as const, projectName: 'project', name: 'coder', host: 'localhost', workspace: '/work', runtime: 'codex', creationRequestId: '2d438c43-c962-4b1d-b8ed-a35e07a8e964' };
+      for (const result of [{ target: 'original', session: { id: 'viewer' } }, { creation: { state: 'uncertain', stage: 'agent', code: 'native_create_response_unavailable', operationId: '11111111-1111-4111-8111-111111111111' } }]) {
+        fetchSpy.mockResolvedValueOnce({ ok: true, status: 200, json: async () => result });
+        await expect(api.createCoordinatedAgent(input)).resolves.toEqual(result);
+      }
+      fetchSpy.mockResolvedValue({ ok: false, status: 400, json: async () => ({ error: 'preflight refused', refused: { state: 'refused', code: 'invalid_creation_request' } }) });
+      const initial = await api.createCoordinatedAgent(input).catch(error => error);
+      expect(initial).not.toBeInstanceOf(CoordinationCreationUnconfirmedError);
+      expect(String(initial)).toContain('preflight refused');
+      for (const continuation of [{ continueOriginal: true }, { inspect: true }, { trustRequest: 'a'.repeat(64) }]) {
+        await expect(api.createCoordinatedAgent({ ...input, ...continuation })).rejects.toBeInstanceOf(CoordinationCreationUnconfirmedError);
+      }
+    });
+
+    it('types a local native trust refusal while preserving the selected retry token', async () => {
+      const { api, CoordinationTrustRequiredError } = await import('@frontend/utils/api');
+      const requestId = 'a'.repeat(64);
+      const input = { provider: 'rig', mode: 'new' as const, projectName: 'project', name: 'coder', host: 'localhost', workspace: '/work', runtime: 'codex', trustRequest: requestId };
+      fetchSpy.mockResolvedValue({ ok: false, status: 409, json: async () => ({ error: 'Review trust', blocked: { state: 'blocked', code: 'native_project_trust_required', requestId } }) });
+      const error = await api.createCoordinatedAgent(input).catch(value => value);
+      expect(error).toBeInstanceOf(CoordinationTrustRequiredError);
+      expect(error.requestId).toBe(requestId);
+      expect(JSON.parse(fetchSpy.mock.calls[0][1].body)).toEqual(input);
+    });
+
+    it('does not reinterpret malformed, ambiguous, remote or unrelated failures as native trust authority', async () => {
+      const { api, CoordinationTrustRequiredError } = await import('@frontend/utils/api');
+      const input = { provider: 'rig', mode: 'new' as const, projectName: 'project', name: 'coder', host: 'localhost', workspace: '/work', runtime: 'codex' };
+      const blocked = { state: 'blocked', code: 'native_project_trust_required', requestId: 'a'.repeat(64) };
+      for (const [status, body, selected] of [
+        [502, { error: 'native failure', blocked }, input],
+        [409, { error: 'native failure', blocked: { ...blocked, requestId: '../foreign' } }, input],
+        [409, { error: 'native failure', blocked: { ...blocked, code: 'foreign' } }, input],
+        [409, { error: 'native failure', blocked, session: {} }, input],
+        [409, { error: 'native failure', blocked }, { ...input, host: 'remote' }],
+        [409, { error: 'native failure', blocked }, { ...input, provider: 'agent-deck' }],
+      ] as const) {
+        fetchSpy.mockResolvedValue({ ok: false, status, json: async () => body });
+        const error = await api.createCoordinatedAgent(selected).catch(value => value);
+        expect(error).not.toBeInstanceOf(CoordinationTrustRequiredError);
+        expect(String(error)).toContain('native failure');
+      }
+    });
+
     it('getAuthStatus calls correct endpoint', async () => {
       fetchSpy.mockResolvedValue({
         ok: true,

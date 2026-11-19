@@ -1,0 +1,96 @@
+{
+  "scope": "Actual fresh managed Codex launches through the supported Rig launch_wrapper with these modules; native per-thread workspace policy controls and authenticated coding. Not WebMux creation/UI integration or recovery qualification.",
+  "platform": "macOS ARM64",
+  "codexVersion": "codex-cli 0.169.0",
+  "rigVersion": "0.7.18 (3bf87c62)",
+  "nodeVersion": "v24.21.0",
+  "sources": {
+    "codex-launch-policy.mts": "104cbcf5a0d23b693d85b505a81d5d22951352896cbac6337c5c660454b83254",
+    "codex-launch-wrapper.mts": "3fce62867bcca49b3789af89fe40882e23549ba9297440576b103d5f279a27ed",
+    "codex-launch-policy.test.mts": "6f1713edf1ed65983f0175a305af19ac5d847cbcf5b06a4485c582c7ccc1bc56",
+    "nativePlanResolverSHA256": "7caabfd523808f4f3f78c2b22dd304d0e5969049c6d0b1435ca681e99066d561",
+    "auditPrefixSHA256": "04b4489444c442970194c25a100e23927be4165e18bafc69de01a5ffc6124de2"
+  },
+  "nativeCases": [
+    {
+      "networkAccess": false,
+      "checks": {
+        "freshChallengeReadByActualProvider": true,
+        "projectAndOwnerExtraWritable": true,
+        "otherAndGeneratedRootsNotWritable": true,
+        "wrapperReplacedByNativeExecutable": true,
+        "nativeIdentityRetained": true,
+        "nativePolicyAndCorrelatedTools": true,
+        "sameUUIDRetainsSameNativeOccupant": true,
+        "siblingRetainsOriginalPID": true,
+        "checkedStopEndsOnlyNativeCodingSeat": true
+      },
+      "nativeWitness": {
+        "passed": true,
+        "contexts": 2,
+        "nativeNodeMatches": true,
+        "coordinatorReachable": false,
+        "correlatedProbeOutputs": 1,
+        "allowedWrites": 2,
+        "deniedWrites": 5,
+        "allDenialsEPERM": true,
+        "nativeSessionSHA256": "92a52bd0b1b3bdcf96eb05d8279ad1aa89615f80650b9ba6c4d61c3be0ff1ce2"
+      },
+      "checkedManagerNodeMatchesNativeProvider": true,
+      "privateTmuxStopped": true,
+      "daemonStateRemoved": true,
+      "sourceUnchanged": true,
+      "privateReportSHA256": "a0f972b83243f952e581f31f2425f562820f0b5b6dec7ce71606bca28ea7dc6b",
+      "probeSHA256": "9598aed3d4e04c383a3a9b7941f93ac920da186b9b0fc27bbcfb8c9861cec544"
+    },
+    {
+      "networkAccess": true,
+      "checks": {
+        "freshChallengeReadByActualProvider": true,
+        "projectAndOwnerExtraWritable": true,
+        "otherAndGeneratedRootsNotWritable": true,
+        "wrapperReplacedByNativeExecutable": true,
+        "nativeIdentityRetained": true,
+        "nativePolicyAndCorrelatedTools": true,
+        "sameUUIDRetainsSameNativeOccupant": true,
+        "siblingRetainsOriginalPID": true,
+        "checkedStopEndsOnlyNativeCodingSeat": true
+      },
+      "nativeWitness": {
+        "passed": true,
+        "contexts": 2,
+        "nativeNodeMatches": true,
+        "coordinatorReachable": true,
+        "correlatedProbeOutputs": 1,
+        "allowedWrites": 2,
+        "deniedWrites": 5,
+        "allDenialsEPERM": true,
+        "nativeSessionSHA256": "ec2a9726f74bcf96d41c439bdc24047ae0270ee2e64de91f60432252731627f1"
+      },
+      "checkedManagerNodeMatchesNativeProvider": true,
+      "privateTmuxStopped": true,
+      "daemonStateRemoved": true,
+      "sourceUnchanged": true,
+      "privateReportSHA256": "d444f2b8c77b269366768abb8686e08dceb495df5942ef50e011a3fbb080f23a",
+      "probeSHA256": "a3c90e56db1b2cc45fbf981f3ff36362eae6067823635f2ef025f99d91190131"
+    }
+  ],
+  "localValidation": {
+    "helpersPassed": 166,
+    "launchPolicyControls": 8,
+    "strictTypeScriptProjects": 5,
+    "installedLockIdentities": 272,
+    "whitespace": "pass"
+  },
+  "limits": [
+    "Not wired into WebMux creation or packaged into Go; no caller authorization, journal/manifest persistence or production readiness claim.",
+    "Workspace policy comes from documented native per-thread overrides projected through the existing-account native observer; it is not qualification of selected configuration profiles or the owner default workspace-write configuration.",
+    "Current wrapper accepts fresh launches only. Resume/fork/selected profiles/unknown arguments refuse; it supplies no recovery authority and cannot be activated on a path requiring them yet.",
+    "Current native evidence covers workspace-write with network false/true, explicit extra root and both temporary-root exclusions. Read-only/full-access and non-default service tier have unit controls, not actual native qualification of this wrapper.",
+    "No Linux/Windows wrapper, provider-loss, manager/host failure or reboot recovery qualification.",
+    "Observation startup integration and named/inherited permission graph limitations remain as documented by #508.",
+    "Failed, incomplete and source-unbound harness reports remain retained privately and are excluded from these positive cases."
+  ],
+  "sourceRevision": "4995a071e06d519ba3e345c6202beb9eb8a9e852",
+  "historicalScope": "Fresh-launch baseline at 4995a07; current source and native resume evidence are in ../codex-native-resume-2026-11-18/receipt.json."
+}

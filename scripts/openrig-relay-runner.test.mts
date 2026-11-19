@@ -5,9 +5,36 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 const runner = path.resolve(import.meta.dirname, '../webmux/server/internal/openrigcoord/runner.mts');
-for (const [host, runtime] of [['worker', 'codex'], ['localhost', 'codex'], ['worker', 'claude-code'], ['legacy', 'codex']]) {
-  test(`relay registration and launch grammar for ${host}/${runtime}`, { skip: process.platform === 'win32' ? 'Executes the POSIX shell/tmux launcher; qualified on macOS and Linux.' : false }, () => {
+test('native trust retries reject changed project selections before any topology or manager query', { skip: process.platform === 'win32' }, () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'wm-trust-selection-'));
+  try {
+    const bin = path.join(root, 'bin'), state = path.join(root, 'state'), cwd = path.join(root, 'project');
+    fs.mkdirSync(bin); fs.mkdirSync(state, { mode: 0o700 }); fs.mkdirSync(cwd);
+    const records = path.join(state, 'trust-requests'); fs.mkdirSync(records, { mode: 0o700 });
+    const requestId = 'a'.repeat(64), calls = path.join(root, 'manager-called');
+    const selection = { mode: 'new', rigId: '', rigName: 'original', pod: '', name: 'coder', host: 'localhost', cwd, runtime: 'codex' };
+    fs.writeFileSync(path.join(records, requestId + '.json'), JSON.stringify(selection), { mode: 0o600 });
+    fs.writeFileSync(path.join(bin, 'tmux'), '#!/bin/sh\nprintf "tmux 3.8\\n"\n', { mode: 0o700 });
+    fs.writeFileSync(path.join(bin, 'rig'), `#!${process.execPath}\nif(process.argv[2]==='--version'){console.log('0.7.18 (3bf87c62)')}else{require('node:fs').writeFileSync(${JSON.stringify(calls)},'called');console.error('manager-probe-control');process.exitCode=77}\n`, { mode: 0o700 });
+    const invoke = (change: object) => spawnSync(process.execPath, [runner, 'create', state], {
+      input: JSON.stringify({ ...selection, trustRequest: requestId, ...change }), encoding: 'utf8', timeout: 5000,
+      env: { ...process.env, PATH: bin + path.delimiter + process.env.PATH },
+    });
+    for (const change of [{ rigName: 'replacement' }, { name: 'replacement' }, { cwd: root },
+      { mode: 'existing', rigId: '01JQPWV4E7QP26M799M3S0MR6E', pod: 'agents' }, { trustRequest: 'b'.repeat(64) }]) {
+      const result = invoke(change);
+      assert.equal(result.status, 1); assert.match(result.stderr, /native_create_original_request_changed/);
+      assert.equal(fs.existsSync(calls), false, 'A changed selection must not allocate a project before rejecting its token');
+    }
+    const original = invoke({});
+    assert.equal(original.status, 1); assert.match(original.stderr, /manager-probe-control/);
+    assert.equal(fs.existsSync(calls), true, 'The matching original must pass the selection gate');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+for (const [host, runtime, modern, mismatch] of [['worker', 'codex', false, false], ['localhost', 'codex', false, false], ['worker', 'claude-code', false, false], ['legacy', 'codex', false, false], ['localhost', 'codex', true, false], ['localhost', 'codex', true, true]] as const) {
+  test(`relay registration and launch grammar for ${host}/${runtime} modern=${modern} mismatch=${mismatch}`, { skip: process.platform === 'win32' ? 'Executes the POSIX shell/tmux launcher; qualified on macOS and Linux.' : false }, () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wm-relay-contract-'));
     const bin = path.join(dir, 'bin'); fs.mkdirSync(bin);
     const stub = `#!${process.execPath}
@@ -16,9 +43,11 @@ const name=path.basename(process.argv[1]),a=process.argv.slice(2),root=process.e
 fs.appendFileSync(path.join(root,'calls'),JSON.stringify([name,...a])+'\\n');
 if(name==='rig'){
  if(process.env.OPENRIG_HOST_SELECTED!=='local'){console.error('wrong selected host');process.exit(8);}
+ if(a[0]==='--version'){console.log(process.env.WM_MODERN==='1'?'0.7.18 (3bf87c62)':'0.6.14 (df1c1517)');process.exit(0);}
  if(a[0]==='up') console.log(JSON.stringify({rigId:'01M5H000000000000000000000'}));
+ if(a[0]==='ps') console.log(JSON.stringify(a.includes('--nodes')?[{rigId:'01M5H000000000000000000000',podNamespace:'agents',logicalId:'agents.previous'}]:[{rigId:'01M5H000000000000000000000',name:'test',rigName:'test',lifecycleState:'running'}]));
  if(a[0]==='attach'&&a.includes('--help')){console.log(process.env.WM_LEGACY==='1'?'--self --rig':'--self --rig --relay-ssh-host --relay-tmux-session');process.exit(0);}
- if(a[0]==='attach') {const tmux=process.env.TEST_TMUX;console.log(JSON.stringify({ok:true,attachmentType:'tmux',sessionName:tmux,senderAddress:'canonical@test',sessionId:'private-session',env:{OPENRIG_URL:'http://127.0.0.1:4567',OPENRIG_SESSION_NAME:'canonical@test'}}));}
+ if(a[0]==='attach') {const tmux=process.env.TEST_TMUX;console.log(JSON.stringify({ok:true,attachmentType:'tmux',sessionName:process.env.WM_MISMATCH==='1'?'another-physical-session':tmux,senderAddress:'canonical@test',sessionId:'private-session',env:{OPENRIG_URL:'http://127.0.0.1:4567',OPENRIG_SESSION_NAME:'canonical@test'}}));}
 }else if(name==='codex'||name==='claude'){
  if(process.env.OPENRIG_HOST_SELECTED!=='local'||process.env.OPENRIG_URL!=='http://127.0.0.1:4567'||process.env.OPENRIG_SESSION_NAME!=='canonical@test')process.exit(9);
 }else if(name==='ssh'){
@@ -31,11 +60,39 @@ if(name==='rig'){
 }
 `;
     for (const name of ['rig', 'ssh', 'tmux', 'codex', 'claude']) fs.writeFileSync(path.join(bin,name),stub,{mode:0o700});
+    if (modern) {
+      // This control covers the earlier managed-launch record migration and
+      // relay grammar, not native topology allocation (qualified separately).
+      fs.mkdirSync(path.join(dir, 'test'));
+      const rigId = '01M5H000000000000000000000';
+      fs.writeFileSync(path.join(dir, 'test', 'project.json'), JSON.stringify({ rigId }), { mode: 0o600 });
+      const scope = createHash('sha256').update(dir).digest('hex').slice(0, 10);
+      const member = `agent-${createHash('sha256').update(host).digest('hex').slice(0, 8)}`;
+      const tmux = `wm-${scope}-${rigId.slice(-8).toLowerCase()}-${member}`;
+      // A stopped adopted record must stay on its original attach path, even
+      // when this CLI also supports native creation for new local members.
+      fs.writeFileSync(path.join(dir, tmux + '.agent.json'), JSON.stringify({ target: tmux, tmux, rigId, sessionId: 'original-adopted-session', project: 'test', rigName: 'test', pod: 'agents', name: 'agent', host, cwd: dir, runtime }), { mode: 0o600 });
+    }
     try {
-      const result = spawnSync(process.execPath,[runner,'create',dir],{input:JSON.stringify({project:'test',name:'agent',host,cwd:dir,runtime}),env:{...process.env,WM_RELAY_TEST:dir,OPENRIG_HOST_SELECTED:'webmux-qa-shadow',WM_LEGACY:host==='legacy'?'1':'0',PATH:`${bin}:${process.env.PATH}`},encoding:'utf8',timeout:20000});
+      const result = spawnSync(process.execPath,[runner,'create',dir],{input:JSON.stringify({project:'test',name:'agent',host,cwd:dir,runtime}),env:{...process.env,WM_RELAY_TEST:dir,WM_MODERN:modern?'1':'0',WM_MISMATCH:mismatch?'1':'0',OPENRIG_HOST_SELECTED:'webmux-qa-shadow',WM_LEGACY:host==='legacy'?'1':'0',PATH:`${bin}:${process.env.PATH}`},encoding:'utf8',timeout:20000});
+      if(mismatch){
+        assert.notEqual(result.status,0);
+        const calls=fs.readFileSync(path.join(dir,'calls'),'utf8').trim().split('\n').map(line=>JSON.parse(line) as string[]);
+        assert(!calls.some(a=>a[0]==='codex'));
+        return;
+      }
       assert.equal(result.status,0,result.stdout+result.stderr);
-      assert.equal(JSON.parse(result.stdout).target,'canonical@test');
+      const registered=JSON.parse(result.stdout) as {target:string;tmux:string;nativeOwned?:boolean};
+      if (modern) assert.equal(registered.nativeOwned, undefined, 'Existing adopted record must not gain native ownership');
+      assert.equal(registered.target,modern?registered.tmux:'canonical@test');
       const calls=fs.readFileSync(path.join(dir,'calls'),'utf8').trim().split('\n').map(line=>JSON.parse(line) as string[]);
+      if (host === 'localhost' && runtime === 'codex') {
+        const coding = calls.filter(a => a[0] === 'codex');
+        assert.equal(coding.length, 1);
+        // Only the identity prompt is supplied; permissions come from native
+        // owner configuration rather than a WebMux network/sandbox override.
+        assert.equal(coding[0].length, 2); assert.match(coding[0][1], /^You are agent,/);
+      }
       const attach=calls.find(a=>a[0]==='rig'&&a[1]==='attach'&&!a.includes('--help'))!;
       const expected=host!=='localhost'&&host!=='legacy'&&runtime==='codex';
       assert.equal(attach.includes('--relay-ssh-host'),expected);
@@ -51,6 +108,10 @@ if(name==='rig'){
         const saved=fs.readdirSync(dir).find(name=>name.endsWith('.remote.json'))!;
         const commands=JSON.parse(fs.readFileSync(path.join(dir,saved),'utf8')) as {setup:string;run:string};
         assert(commands.setup.includes('export OPENRIG_HOST_SELECTED=local'));
+        if (runtime === 'codex') {
+          assert(commands.setup.includes('codex '));
+          assert.equal(commands.setup.includes('sandbox_workspace_write'), false);
+        }
         assert.match(commands.setup,/tmux set-option -t 'wm-[a-z0-9-]+' mouse on/);
         assert.match(commands.run,/tmux set-option -t 'wm-[a-z0-9-]+' mouse on && exec tmux attach-session/);
         if (!expected) assert.match(calls.filter(a=>a[0]==='ssh').at(-1)!.at(-1)!,/tmux set-option -t 'wm-[a-z0-9-]+' mouse on/);

@@ -21,6 +21,12 @@ func Open(args []string) error {
 	if len(args) != 1 || !ValidURL(args[0]) {
 		return errors.New("webmux-open expects one HTTP or HTTPS URL")
 	}
+	if os.Getenv("WEBMUX_BROWSER_CONTROL") == "1" {
+		if err := recovery.QueueBrowserRequest(os.Getenv("WEBMUX_RECOVERY_SESSION"), os.Getenv("WEBMUX_RECOVERY_KEY"), args[0]); err != nil {
+			return errors.New("Cannot queue the terminal-host browser request; use the printed sign-in link")
+		}
+		return nil
+	}
 	ttys := []string{"/dev/tty"}
 	if runtime.GOOS == "windows" {
 		ttys = []string{"CONOUT$"}

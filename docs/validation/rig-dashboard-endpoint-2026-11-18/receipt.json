@@ -1,0 +1,32 @@
+{
+  "scope": "Real Go/Chrome/published Rig0.6.14 fixture endpoint binding; no authenticated coding claim",
+  "sourceRevision": "8439744cdb425992b5e36cf52e7b6235f822d70e",
+  "issue": 525,
+  "observedFailure": {
+    "run": 44372260604,
+    "job": 135041940170,
+    "stage": "awaiting-native-live-page",
+    "framesBeforeReadiness": 1,
+    "onlyResizeNoInput": true,
+    "nativeTarget": "http://127.0.0.1:7433",
+    "nativeReportedDaemonStopped": true,
+    "receiptSHA256": "2f2e79e3e3206573241aa31a1ccbe8e49cc58d3f98bef5e03e878d013ec1baf4"
+  },
+  "fix": "Set OPENRIG_URL to the fixture daemon endpoint after it starts; record the URL used at native TUI entry and require it to match the original fixture daemon.",
+  "positive": {
+    "fullNativeBrowserCasesPassed": 8,
+    "sameAssertionDeadlines": true,
+    "endpointMatchesFixture": true,
+    "detachPreservesDaemonHealth": true,
+    "receiptSHA256": "0e877f4dfa2deb003fb6aab6dc5483e031d8d4a11f48a9d739b4e3d5d57c1129",
+    "logSHA256": "b5535efe00809f60beef64e6a1e55de11c0c0b22b3abe380713b4f064837222f"
+  },
+  "sourceSHA256": {
+    "tests/e2e/openrig-fixture.mts": "f7634112eec87ee03b272a565dd2741fb51c91fe54eaa35ac83104423a4ef196",
+    "tests/e2e/openrig.spec.ts": "a6bd8190b8be0549c1f04e4b237020bf7e7216ed5902e224d7ba370e8e1d942b"
+  },
+  "limits": [
+    "Hosted failure proves misrouting, not why native recorded-home endpoint discovery fell back in that run.",
+    "New hosted current-head qualification and review are required; wheel issue524 and full roadmap/release remain separate."
+  ]
+}

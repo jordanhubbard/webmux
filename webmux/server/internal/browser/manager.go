@@ -26,6 +26,7 @@ type client struct {
 	in           io.WriteCloser
 	lines        *bufio.Scanner
 	done         chan struct{}
+	exitErr      error // Written before done closes; read only after receiving done.
 	owner        string
 	stopped      chan struct{}
 	once         sync.Once
@@ -159,7 +160,7 @@ func (m *Manager) StartProfile(s session.Session, store *storage.Store, profile 
 	}
 	c.lines.Buffer(make([]byte, 4096), MaxMessageBytes)
 	m.clients[s.ID] = c
-	go func() { _ = cmd.Wait(); _ = in.Close(); close(c.done) }()
+	go func() { c.exitErr = cmd.Wait(); _ = in.Close(); close(c.done) }()
 	return nil
 }
 
@@ -311,6 +312,9 @@ func (m *Manager) EndControlled(id, viewer, token string) error {
 	c.close()
 	select {
 	case <-c.done:
+		if c.exitErr != nil {
+			return errors.New("Browser worker exited with an error; private-file cleanup could not be confirmed on the terminal host")
+		}
 		return nil
 	case <-time.After(22 * time.Second):
 		return errors.New("Browser is still stopping; wait before reopening its saved profile")

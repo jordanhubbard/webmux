@@ -25,7 +25,7 @@ export async function startOpenRigFixture(home: string): Promise<() => void> {
   const executable = path.join(directory, 'rig');
   // Keep transport/sender identity for clients launched by the managed runner.
   // Isolate the tmux server even when the wrapper is called by the test process.
-  fs.writeFileSync(executable, `#!/bin/sh\nexport OPENRIG_HOME=${quote(rigHome)}\nexport HOME=${quote(rigHome)}\nexport TMUX_TMPDIR=${quote(process.env.TMUX_TMPDIR ?? '')}\nexec ${quote(process.execPath)} ${quote(cli)} "$@"\n`, { mode: 0o700 });
+  fs.writeFileSync(executable, `#!/bin/sh\nexport OPENRIG_HOME=${quote(rigHome)}\nexport HOME=${quote(rigHome)}\nexport TMUX_TMPDIR=${quote(process.env.TMUX_TMPDIR ?? '')}\nif [ "$1" = tui ]; then printf '%s' "$OPENRIG_URL" > ${quote(path.join(home, 'openrig-tui-url'))}; fi\nexec ${quote(process.execPath)} ${quote(cli)} "$@"\n`, { mode: 0o700 });
   fs.writeFileSync(path.join(directory, 'codex'), `#!${process.execPath}
 const { execFileSync } = require('node:child_process');
 const readline = require('node:readline');
@@ -38,7 +38,7 @@ readline.createInterface({ input: process.stdin, terminal: false }).on('line', r
   try {
     const send = line.match(/^fixture-send (\\S+) (.+)$/);
     if (send) { console.log(run(['send', send[1], send[2], '--json'])); return; }
-    const challenge = line.match(/WM_CHALLENGE:([a-z0-9-]+):([a-f0-9]+)/);
+    const challenge = line.match(/WM_CHALLENGE:([a-zA-Z0-9_.@-]+):([a-f0-9]+)/);
     if (challenge) console.log(run(['send', challenge[1], 'WM_ACK:' + challenge[2], '--json']));
   } catch (error) { console.log('FIXTURE_ERROR ' + error.message); }
 });
@@ -46,13 +46,21 @@ readline.createInterface({ input: process.stdin, terminal: false }).on('line', r
   // Simulate an already-running tmux server whose PATH predates the service's
   // dedicated Rig/provider wrappers. Managed launchers must bind the service
   // PATH explicitly, and project shutdown must preserve this unrelated session.
-  const sentinel = spawnSync('tmux', ['-f', '/dev/null', 'new-session', '-d', '-s', 'webmux-fixture-path', '/bin/sleep 600'], { encoding: 'utf8', timeout: 5000 });
+  // tmux 3.8 enables mouse globally by default. Begin with it explicitly off
+  // in this private server so the browser test proves managed attachments only
+  // enable their own session, preserving unrelated sessions and global options.
+  const tmuxConfig = path.join(rigHome, 'tmux.conf');
+  fs.writeFileSync(tmuxConfig, 'set-option -g mouse off\n');
+  const sentinel = spawnSync('tmux', ['-f', tmuxConfig, 'new-session', '-d', '-s', 'webmux-fixture-path', '/bin/sleep 600'], { encoding: 'utf8', timeout: 5000 });
   if (sentinel.status !== 0) throw new Error(`Cannot start isolated tmux fixture: ${sentinel.stderr}`);
   fs.writeFileSync(path.join(home, 'openrig-tmux-directory'), process.env.TMUX_TMPDIR ?? '');
   process.env.PATH = `${directory}${path.delimiter}${process.env.PATH ?? ''}`;
   const result = spawnSync(executable, ['daemon', 'start', '--host', '127.0.0.1', '--port', String(address.port), '--no-kernel'], { encoding: 'utf8', timeout: 30000 });
   if (result.status !== 0) throw new Error(`Cannot start real OpenRig daemon: ${result.stdout} ${result.stderr}`);
-  fs.writeFileSync(path.join(home, 'openrig-daemon-url'), `http://127.0.0.1:${address.port}`);
+  // The native TUI consumes OPENRIG_URL and otherwise falls back to 7433;
+  // it does not discover this fixture's randomly allocated daemon port.
+  process.env.OPENRIG_URL = `http://127.0.0.1:${address.port}`;
+  fs.writeFileSync(path.join(home, 'openrig-daemon-url'), process.env.OPENRIG_URL);
   return () => {
     spawnSync(executable, ['daemon', 'stop'], { timeout: 15000, stdio: 'ignore' });
   };

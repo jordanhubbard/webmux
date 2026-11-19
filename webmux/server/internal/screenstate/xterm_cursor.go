@@ -11,7 +11,7 @@ type xtermCursorProfile struct{ unsupported bool }
 // installXtermCursorProfile preserves the frontend's origin mode on cursor
 // restore and clamps the saved position without re-arming its pending wrap.
 // The dependency's generic VT restore reinstates both saved values instead.
-func installXtermCursorProfile(e *vt.Emulator) *xtermCursorProfile {
+func installXtermCursorProfile(e *vt.Emulator, underline bool) *xtermCursorProfile {
 	profile := &xtermCursorProfile{}
 	origin := e.GetModes()[6]
 	// DEC mode callbacks run after the dependency has restored its full pen.
@@ -37,7 +37,9 @@ func installXtermCursorProfile(e *vt.Emulator) *xtermCursorProfile {
 		pen := saved.Pen
 		savedExtended := pen.Underline != 0 || pen.UnderlineColor != nil || saved.Link.URL != ""
 		liveExtended := live.Underline != 0 || live.UnderlineColor != nil || liveLink.URL != ""
-		if savedExtended {
+		if underline {
+			pen = vt.XtermRestoredPen(saved.Pen, saved.Link, live, liveLink)
+		} else if savedExtended {
 			// xterm saves foreground/background flags, but leaves the current
 			// extended underline object in place. Both must agree on whether an
 			// underline is enabled for vt's single underline field to represent it.

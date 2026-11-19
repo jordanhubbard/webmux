@@ -1,3 +1,4 @@
+import { disposeFixtureTerminal, observeFixtureBrowser } from './terminal-lifecycle.mts';
 import { test, expect } from '@playwright/test';
 import http from 'node:http';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -69,6 +70,7 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
  const created = await request.post('/api/sessions', { data: { transport: 'local' } });
  expect(created.ok()).toBe(true); const { id } = await created.json();
  const endpoint = `/api/sessions/${id}/browser`;
+ const endFixtureBrowser = observeFixtureBrowser(page, request, id);
  let controller: { viewer?: string; controlToken?: string } = {};
  page.on('request', outgoing => {
   if (new URL(outgoing.url()).pathname !== endpoint || outgoing.method() !== 'POST') return;
@@ -190,11 +192,11 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   await expect.poll(() => uploaded.length, { timeout: 15_000 }).toBe(file.length); expect(uploaded).toEqual(file);
   await expect(page.getByRole('dialog', { name: 'Upload files to this page' })).not.toBeVisible();
   await click(60, 220);
-  await page.locator('.browser-companion summary').click();
+  await page.locator('.browser-companion footer summary').click();
   const save = page.getByRole('button', { name: 'Save browser-proof.bin', exact: true }); await expect(save).toBeEnabled({ timeout: 15_000 });
   const received = page.waitForEvent('download'); await save.click(); const downloaded = await received;
   expect(readFileSync((await downloaded.path())!)).toEqual(downloadBytes);
-  await page.locator('.browser-companion summary').click();
+  await page.locator('.browser-companion footer summary').click();
   const originalTab = await page.getByLabel('Remote browser page').inputValue();
   await page.getByRole('textbox', { name: 'Remote browser URL' }).fill(origin + '/second'); await page.getByRole('button', { name: 'Go', exact: true }).click();
   await expect.poll(async () => (await (await request.post(endpoint, { data: { action: 'frame' } })).json()).url).toBe(origin + '/second');
@@ -258,7 +260,12 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   const receipt = info.outputPath('browser-workspace-action-trace.json');
   writeFileSync(receipt, JSON.stringify({ timeline, dropped }));
   await info.attach('browser-workspace-action-trace', { path: receipt, contentType: 'application/json' });
-  await request.delete(`/api/sessions/${id}`);
-  await new Promise<void>(resolve => server.close(() => resolve()));
+  try {
+    await endFixtureBrowser();
+    await disposeFixtureTerminal(request, id, info);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>(resolve => server.close(() => resolve()));
+  }
  }
 });

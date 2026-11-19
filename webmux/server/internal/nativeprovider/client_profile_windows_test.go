@@ -13,18 +13,28 @@ import (
 )
 
 func TestClientNegotiatesOnlyWithAdvertisedRendererOwner(t *testing.T) {
+	v1, v2, token := screenstate.XtermRendererProfile, screenstate.XtermUnderlineRendererProfile, strings.Repeat("a", 32)
 	for _, tc := range []struct {
-		name, replay, offered, required, token string
-		accepted                               bool
+		name, replay, offered, sent, required, token, replyReplay string
+		accepted                                                  bool
 	}{
-		{"legacy-ordinary", "screen-v1", screenstate.XtermRendererProfile, "", "", true},
-		{"modern-ordinary", "screen-v2", screenstate.XtermRendererProfile, "", "", true},
-		{"modern-profile", "screen-v2", screenstate.XtermRendererProfile, screenstate.XtermRendererProfile, strings.Repeat("a", 32), true},
-		{"legacy-unsolicited", "screen-v1", screenstate.XtermRendererProfile, screenstate.XtermRendererProfile, strings.Repeat("a", 32), false},
-		{"modern-unsolicited", "screen-v2", "", screenstate.XtermRendererProfile, strings.Repeat("a", 32), false},
-		{"unknown", "screen-v2", screenstate.XtermRendererProfile, "unknown", strings.Repeat("a", 32), false},
-		{"invalid-token", "screen-v2", screenstate.XtermRendererProfile, screenstate.XtermRendererProfile, strings.Repeat("X", 32), false},
-		{"orphan-token", "screen-v2", screenstate.XtermRendererProfile, "", strings.Repeat("a", 32), false},
+		{name: "legacy-ordinary", replay: "screen-v1", offered: v1, accepted: true},
+		{name: "legacy-new-controller", replay: "screen-v1", offered: v2, accepted: true},
+		{name: "modern-ordinary", replay: "screen-v2", offered: v1, sent: v1, accepted: true},
+		{name: "modern-profile", replay: "screen-v2", offered: v1, sent: v1, required: v1, token: token, accepted: true},
+		{name: "downlevel-old-owner", replay: "screen-v2", offered: v2, sent: v1, required: v1, token: token, accepted: true},
+		{name: "old-owner-v2-unsolicited", replay: "screen-v2", offered: v2, sent: v1, required: v2, token: token},
+		{name: "v3-v2-profile", replay: "screen-v3", offered: v2, sent: v2, required: v2, token: token, accepted: true},
+		{name: "v3-v1-requirement", replay: "screen-v3", offered: v2, sent: v2, required: v1, token: token, accepted: true},
+		{name: "v3-older-viewer", replay: "screen-v3", offered: v1, sent: v1, required: v1, token: token, accepted: true},
+		{name: "v3-unsolicited-v2", replay: "screen-v3", offered: v1, sent: v1, required: v2, token: token},
+		{name: "v3-unoffered-profile", replay: "screen-v3", required: v2, token: token},
+		{name: "v3-version-changed", replay: "screen-v3", replyReplay: "screen-v2", offered: v2, sent: v2, required: v1, token: token},
+		{name: "legacy-unsolicited", replay: "screen-v1", offered: v1, required: v1, token: token},
+		{name: "modern-unsolicited", replay: "screen-v2", required: v1, token: token},
+		{name: "unknown", replay: "screen-v2", offered: v1, sent: v1, required: "unknown", token: token},
+		{name: "invalid-token", replay: "screen-v3", offered: v2, sent: v2, required: v2, token: strings.Repeat("X", 32)},
+		{name: "orphan-token", replay: "screen-v3", offered: v2, sent: v2, token: token},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// AF_UNIX has a short pathname limit on Windows. Go's TempDir
@@ -59,16 +69,20 @@ func TestClientNegotiatesOnlyWithAdvertisedRendererOwner(t *testing.T) {
 					done <- err
 					return
 				}
-				if tc.replay == "screen-v1" || tc.offered == "" {
+				if tc.sent == "" {
 					if _, ok := request["renderer"]; ok {
 						done <- context.Canceled
 						return
 					}
-				} else if request["renderer"] != tc.offered {
+				} else if request["renderer"] != tc.sent {
 					done <- context.Canceled
 					return
 				}
-				if err := writeFrame(c, frame{Kind: "attached", Identity: &identity, RequiredRenderer: tc.required, RendererToken: tc.token}); err != nil {
+				replyIdentity := identity
+				if tc.replyReplay != "" {
+					replyIdentity.Replay = tc.replyReplay
+				}
+				if err := writeFrame(c, frame{Kind: "attached", Identity: &replyIdentity, RequiredRenderer: tc.required, RendererToken: tc.token}); err != nil {
 					done <- err
 					return
 				}

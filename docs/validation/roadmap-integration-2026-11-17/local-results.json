@@ -1,0 +1,86 @@
+{
+  "sourceCheckpoint": "fd8563073a59538acff460cf912f97ded5acfe2d",
+  "platform": "darwin/arm64",
+  "frontend": {
+    "files": 41,
+    "tests": 398,
+    "types": "PASS",
+    "lint": "PASS",
+    "build": "PASS"
+  },
+  "helperTests": 92,
+  "pythonControls": {
+    "sysfs": 3,
+    "pinnedSourceCache": 8,
+    "aptRetry": 3,
+    "persistentSourceCacheAdmission": 8,
+    "total": 22,
+    "scope": "Unit controls; expected checksum-refusal traceback is a negative control, not native kernel proof."
+  },
+  "go": {
+    "fullServerRace": "PASS",
+    "darwinVet": "PASS",
+    "windowsAMD64Vet": "PASS",
+    "ultravioletRaceAndVet": "PASS",
+    "retainedVTRaceSeconds": 119.192,
+    "retainedVTSnapshotRaceSeconds": 1.177,
+    "retainedVTGeneratorRaceSeconds": 1.144,
+    "retainedVTVet": "PASS"
+  },
+  "nativeBrowserCases": {
+    "total": 13,
+    "specs": [
+      {
+        "spec": "openrig.spec.ts",
+        "name": "int452-legacy-combined",
+        "exit": 0
+      },
+      {
+        "spec": "openrig-host.spec.ts",
+        "name": "int452-host-combined",
+        "exit": 0
+      },
+      {
+        "spec": "openrig-identity.spec.ts",
+        "name": "int452-identity-combined",
+        "exit": 0
+      },
+      {
+        "spec": "openrig-activity.spec.ts",
+        "name": "int452-activity-combined",
+        "exit": 0
+      },
+      {
+        "spec": "openrig-notifications.spec.ts",
+        "name": "int452-notifications-combined",
+        "exit": 0
+      },
+      {
+        "spec": "agent-integration.spec.ts",
+        "name": "int452-agents-combined",
+        "exit": 0
+      }
+    ],
+    "fixtureSHA256": "ec47c609e07aebc7e10480c09fe8bf450e1f8b0a7fdd6abaf13b9c7c1df21fb0",
+    "fixtureOverlay": false,
+    "runtimeOverlay": false,
+    "scope": "Native published Rig df1, tmux, Chrome, observed Node, and fixture AD routing; not authenticated-provider, remote, or lifecycle-bridge acceptance."
+  },
+  "screenReplay": {
+    "tests": 1356,
+    "result": "PASS",
+    "scope": "Real Chrome renderer/snapshot comparisons: 259 bare references and 1094 references sharing the hyperlink lifecycle profile. All references keep snapshot parser profile disabled; shared hyperlink references are not unmodified bare renderers. Local run is not Windows ConPTY acceptance.",
+    "comparisonReceipts": 1353,
+    "bareReferenceComparisons": 259,
+    "sharedHyperlinkReferenceComparisons": 1094,
+    "lifecycleChecks": 3
+  },
+  "nativeApplicationBuild": "PASS",
+  "provenance": {
+    "vtUpstreamFiles": 241,
+    "vtPatchedFiles": 16,
+    "uvUpstreamFiles": 104,
+    "uvPatchedFiles": 3
+  },
+  "scope": "Combined runtime/test sources frozen at checkpoint with only the CI repeat step as a working edit. Hosted combined-head qualification pending."
+}

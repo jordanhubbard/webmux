@@ -7,10 +7,19 @@ export type AgentRuntimeStatus = 'waiting' | 'working' | 'unknown' | 'stale';
 export type AgentStatusSource = 'hook' | 'tmux' | 'webmux' | 'none';
 
 export interface RigIdentity {
+  seat_id?: string; attachment_target?: string;
+  tmux_server_flag?: string; tmux_server_value?: string;
+  rig_host_id?: string;
   provider?: string; target: string; project: string; name: string; host: string; runtime: string; workspace?: string;
 }
 
 export interface Session {
+	local_lifecycle?: {
+	  contract: 'webmux-local-provider-lifecycle/v1';
+	  state: 'running' | 'unavailable' | 'requested' | 'uncertain' | 'stopped';
+	  selection?: string;
+	  operation_id?: string;
+	};
   rig?: RigIdentity;
   companion?: 'openrig';
   openrig_view?: string;
@@ -53,6 +62,7 @@ export interface RecoveryActivity {
 }
 
 export interface SessionRecovery {
+  managed_original_contract?: boolean; managed_original_request?: RecoveryRequest;
   manager_target?: string; manager_directory?: string; manager_profile?: string; manager_snapshot_id?: string;
   manager_native_session?: string; manager_native_state_file?: string; manager_native_source?: string; manager_native_observed_at?: string;
   waiting?: boolean; host_revision?: number; instance?: string; warning?: string;
@@ -65,7 +75,7 @@ export interface SessionRecovery {
 
 export interface RecoveryRequest {
   id: string; kind: 'native' | 'replay' | 'shell' | 'managed'; revision: number; host_revision: number;
-  instance: string; confirm: boolean; context?: string;
+  instance: string; confirm: boolean; context?: string; inspect?: boolean;
 }
 
 export interface TerminalTheme {

@@ -11,7 +11,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { installTerminalQuerySuppressors, isTerminalLocalInput, shouldSuppressTerminalInput } from '../utils/terminalInput';
 import { TERMINAL_FONTS_LOADED_EVENT, loadTerminalFontFamily, normalizeTerminalFontFamily } from '../utils/terminalFont';
-import { installTerminalSnapshotProfile, XTERM_SNAPSHOT_PROFILE, type TerminalSnapshotProfile } from '../utils/terminalSnapshotProfile';
+import { installTerminalSnapshotProfile, XTERM_UNDERLINE_SNAPSHOT_PROFILE, isTerminalSnapshotProfile, type TerminalSnapshotProfile } from '../utils/terminalSnapshotProfile';
 import { retainActiveTerminalHyperlink } from '../utils/terminalHyperlinks';
 import { scrollTerminalPages } from '../utils/terminalScroll';
 
@@ -300,12 +300,12 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
         // Queue the reset with output so old asynchronous writes cannot re-enable modes.
         // viewer_id marks an initial snapshot; connected marks a new PTY run.
         if (msg.viewer_id || msg.state === 'connected') {
-          if (msg.snapshot_profile && (msg.snapshot_profile !== XTERM_SNAPSHOT_PROFILE || !snapshotProfileRef.current || !/^[a-f0-9]{32}$/.test(msg.snapshot_token ?? ''))) {
+          if (msg.snapshot_profile && (!isTerminalSnapshotProfile(msg.snapshot_profile) || !snapshotProfileRef.current || !/^[a-f0-9]{32}$/.test(msg.snapshot_token ?? ''))) {
             setInputError('Reload WebMux to restore this terminal; the existing job is still running');
             wsHandleRef.current?.close();
             break;
           }
-          snapshotProfileRef.current?.setToken(msg.snapshot_profile ? msg.snapshot_token : undefined);
+          snapshotProfileRef.current?.setToken(msg.snapshot_profile ? msg.snapshot_token : undefined, msg.snapshot_profile);
           termRef.current?.write('\x18\x1bc');
         }
         if (msg.state) onStateChangeRef.current(msg.state);
@@ -385,9 +385,17 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     });
 
     const hyperlinkProfile = retainActiveTerminalHyperlink(term);
-    try { snapshotProfileRef.current = installTerminalSnapshotProfile(term); }
+    try {
+      const profile = installTerminalSnapshotProfile(term);
+      try {
+        // Advertise v2 only after its pinned private attribute/cursor layout
+        // qualifies. Failed installation leaves no parser hook behind.
+        profile.setToken(undefined, XTERM_UNDERLINE_SNAPSHOT_PROFILE);
+        snapshotProfileRef.current = profile;
+      } catch (error) { profile.dispose(); throw error; }
+    }
     catch (error) { console.error(error); snapshotProfileRef.current = null; }
-    setRenderer({ ready: true, profile: snapshotProfileRef.current ? XTERM_SNAPSHOT_PROFILE : undefined });
+    setRenderer({ ready: true, profile: snapshotProfileRef.current ? XTERM_UNDERLINE_SNAPSHOT_PROFILE : undefined });
     const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon(openLink);
     const searchAddon = new SearchAddon();

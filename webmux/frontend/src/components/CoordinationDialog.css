@@ -1,6 +1,7 @@
 .coordination-dialog { padding: 0 18px 18px; font-size: 13px; line-height: 1.5; min-width: 0; }
 .coordination-dialog a { color: #b8aaff; }
 .coordination-dialog code { overflow-wrap: anywhere; }
+.coordination-dialog pre { white-space: pre-wrap; }
 .coordination-dialog summary { cursor: pointer; color: #bdb5ed; }
 .coordination-dialog button { background: #6653cf; border: 1px solid #9785ff; border-radius: 4px; color: white; padding: 6px 12px; cursor: pointer; margin-top: 6px; }
 .coordination-dialog button:disabled { opacity: 0.5; cursor: default; }

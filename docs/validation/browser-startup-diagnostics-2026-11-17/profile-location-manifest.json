@@ -1,0 +1,20 @@
+{
+  "recordedUTC": "2026-11-17T23:43:36.490250+00:00",
+  "parent": "d3ab2aa887ba7b7afcac5a2c265ca1478793ec1f",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "ee60784b300a8629eafc2f922eee1c82afc4fd24e0d9c4faa75f9dea86c28670",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-component-summary.json": "158638ba913b5c1f1d8692b2443419c6bb0d134c53d975427b381a8e58c7f4e0",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-profile-location-summary.json": "3a054f78fe9029d590acde2f9ff5dd70125a6134e41698ed35de2e892815d587",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "e6ce6d70f2a3f5edfd78bdadfd365ca83e366ea8667a460fceb5f1075033d2bf"
+  },
+  "privateReceiptSHA256": {
+    "nav282-profile-location.log": "76249ee7ffd73007e0d99428279b90e421c862bfd2016504f28f1903cc8efdf9",
+    "nav282-profile-location-browser-race.log": "954fa03f893196432b46204f64b036d611c62d85175e3f4f25b29a3842ebbf51",
+    "nav282-profile-location-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-profile-location-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-d3ab2aa-windows-artifact.zip": "98b1c82e3c075aa9345349eef36a7c576286c7fe229ea3c988268b7cb78d0d2d"
+  },
+  "checks": "Native six fresh-profile first loads PASS3.225s; one navigate and fixture hit each; no cleanup errors. APFS browser package race PASS1.555s; Darwin/Windows AMD64 browser vet PASS. Only optional Go test/evidence changed; prior runtime checks remain historical, not rerun.",
+  "excludedAttempt": "First unit-race command incorrectly used NFS for runtime TempDir. Saved-profile locking/cleanup failed there. Retained nav282-profile-location-browser-race-unqualified-nfs.log; corrected APFS -exec environment passes without changing assertions.",
+  "scope": "Profile-placement factor probe; original execution roots and existing four cases preserved. Windows matched-home outcomes pending; no causal/runtime-fix claim."
+}

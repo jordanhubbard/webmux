@@ -59,9 +59,10 @@ func (b *Broker) syncRecovery(e *entry, r *run) {
 		return
 	}
 	recording := r.log.active()
+	browserAck := e.value.LastBrowserAck
 	b.mu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	response := controller.RecoveryRPC(ctx, recovery.RPCRequest{Operation: "policy", Recording: &recording})
+	response := controller.RecoveryRPC(ctx, recovery.RPCRequest{Operation: "policy", Recording: &recording, BrowserAck: browserAck})
 	cancel()
 	b.mu.Lock()
 	var automatic *RecoveryRequest
@@ -96,6 +97,7 @@ func (b *Broker) applyRecoverySnapshotLocked(e *entry, r *run, response recovery
 		}
 	}
 	r.recoveryReady = true
+	b.applyBrowserControlLocked(e, r, response.BrowserRequest, response.BrowserObservedAt)
 	if response.Revision == r.recoveryRevision {
 		return
 	}
@@ -193,6 +195,7 @@ func (b *Broker) applyRecoverySnapshotLocked(e *entry, r *run, response recovery
 }
 
 type RecoveryRequest struct {
+	Inspect      bool   `json:"inspect,omitempty"`
 	ID           string `json:"id"`
 	Kind         string `json:"kind"`
 	Revision     uint64 `json:"revision"`
@@ -204,6 +207,7 @@ type RecoveryRequest struct {
 
 type RecoveryResult struct {
 	Outcome string `json:"outcome"`
+	Code    string `json:"code,omitempty"`
 }
 
 func (b *Broker) Recover(owner, id string, input RecoveryRequest) (RecoveryResult, error) {
@@ -220,6 +224,10 @@ func (b *Broker) Recover(owner, id string, input RecoveryRequest) (RecoveryResul
 		b.mu.Unlock()
 		return RecoveryResult{}, ErrClosed
 	}
+	if e.value.LocalStop != nil {
+		b.mu.Unlock()
+		return RecoveryResult{}, ErrLocalStopRequired
+	}
 	r := e.run
 	controller, ok := r.process.(recoveryController)
 	if !ok || e.value.Rig != nil || e.value.Agent() || e.value.Transport == "exec" {
@@ -230,7 +238,7 @@ func (b *Broker) Recover(owner, id string, input RecoveryRequest) (RecoveryResul
 		b.mu.Unlock()
 		return RecoveryResult{}, &config.ValidationError{Message: "Invalid recovery action or oversized context."}
 	}
-	if input.Kind != "native" && input.Kind != "shell" && input.Kind != "replay" || input.Kind == "replay" && !input.Confirm || input.Context != "" && (!input.Confirm || input.Kind != "native") {
+	if input.Inspect || input.Kind != "native" && input.Kind != "shell" && input.Kind != "replay" || input.Kind == "replay" && !input.Confirm || input.Context != "" && (!input.Confirm || input.Kind != "native") {
 		b.mu.Unlock()
 		return RecoveryResult{}, &config.ValidationError{Message: "Command replay and transcript handoff require explicit approval."}
 	}

@@ -21,7 +21,7 @@ func (s *Server) sessionError(w http.ResponseWriter, err error, message string) 
 		writeError(w, access.Status, access.Message)
 	case errors.Is(err, session.ErrNotFound):
 		writeError(w, 404, "Session not found")
-	case errors.Is(err, session.ErrRecoveryConflict):
+	case errors.Is(err, session.ErrRecoveryConflict), errors.Is(err, session.ErrLocalStopRequired):
 		writeError(w, 409, err.Error())
 	case errors.As(err, &validation):
 		writeError(w, 400, validation.Error())
@@ -31,6 +31,25 @@ func (s *Server) sessionError(w http.ResponseWriter, err error, message string) 
 		s.logger.Error(message, "error", err)
 		writeError(w, 500, message)
 	}
+}
+
+func (s *Server) stopLocalSession(w http.ResponseWriter, r *http.Request, owner string) {
+	var input session.LocalStopRequest
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	result, err := s.sessions.StopLocal(ctx, owner, r.PathValue("id"), input)
+	if err != nil {
+		s.sessionError(w, err, "Could not confirm the original local stop")
+		return
+	}
+	status := http.StatusOK
+	if result.Outcome != "stopped" {
+		status = http.StatusAccepted
+	}
+	writeJSON(w, status, result)
 }
 func (s *Server) listSessions(w http.ResponseWriter, r *http.Request, owner string) {
 	writeJSON(w, 200, s.sessions.List(owner))
@@ -45,6 +64,11 @@ func (s *Server) getSession(w http.ResponseWriter, r *http.Request, owner string
 }
 
 func (s *Server) getSessionRecovery(w http.ResponseWriter, r *http.Request, owner string) {
+	// Opening this owner-scoped preview may refresh native identity while its
+	// original process is live. No account observer or provider is started.
+	if saved, err := s.sessions.Get(owner, r.PathValue("id")); err == nil && saved.Rig != nil && saved.Rig.Host == "localhost" && saved.Rig.Runtime == "codex" && saved.Rig.TmuxServerFlag != "" {
+		_ = s.captureRigRecovery(r.Context(), owner, saved.ID)
+	}
 	value, err := s.sessions.Recovery(owner, r.PathValue("id"))
 	if err != nil {
 		s.sessionError(w, err, "Failed to read session recovery")
@@ -71,7 +95,14 @@ func (s *Server) recoverSession(w http.ResponseWriter, r *http.Request, owner st
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 45*time.Second)
 		defer cancel()
-		value, err = s.sessions.RecoverManaged(ctx, owner, r.PathValue("id"), input, s.planManagedRecovery)
+		saved, getErr := s.sessions.Get(owner, r.PathValue("id"))
+		if getErr != nil {
+			err = getErr
+		} else if saved.Rig != nil && saved.Rig.NativeRigRecovery != "" {
+			value, err = s.sessions.RecoverRigNative(ctx, owner, saved.ID, input, s.nativeRigRecoveryOperation)
+		} else {
+			value, err = s.sessions.RecoverManaged(ctx, owner, r.PathValue("id"), input, s.planManagedRecovery)
+		}
 	} else {
 		value, err = s.sessions.Recover(owner, r.PathValue("id"), input)
 	}
@@ -80,7 +111,11 @@ func (s *Server) recoverSession(w http.ResponseWriter, r *http.Request, owner st
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, 200, value)
+	status := 200
+	if value.Outcome == "uncertain" {
+		status = 202
+	}
+	writeJSON(w, status, value)
 }
 
 func (s *Server) patchRecovery(w http.ResponseWriter, r *http.Request, owner string) {
@@ -221,6 +256,9 @@ func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, s
 		return coordinationLaunch{}, fmt.Errorf("The %s lifecycle manager is unavailable or disabled. Retained logs are preserved; reconnect through that manager.", id)
 	}
 	target := saved.Target
+	if id == "rig" && saved.SeatID != "" {
+		target = saved.SeatID
+	}
 	if id != "rig" {
 		prefix := id + ":"
 		if !strings.HasPrefix(target, prefix) {
@@ -248,7 +286,11 @@ func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, s
 	if err != nil {
 		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager could not reattach the original session: %w. Retained logs are preserved; recover it through that manager.", err)
 	}
-	if launch.Provider != id || launch.Target != target || saved.Host != "" && saved.Host != launch.Host || saved.Workspace != "" && saved.Workspace != launch.Workspace || saved.Runtime != "" && saved.Runtime != launch.Runtime {
+	expectedTarget := target
+	if id == "rig" {
+		expectedTarget = saved.Target
+	}
+	if launch.TmuxServerFlag != saved.TmuxServerFlag || launch.TmuxServerValue != saved.TmuxServerValue || launch.Provider != id || launch.Target != expectedTarget || saved.SeatID != "" && launch.SeatID != saved.SeatID || saved.AttachmentTarget != "" && launch.AttachmentTarget != saved.AttachmentTarget || saved.Host != "" && saved.Host != launch.Host || saved.Workspace != "" && saved.Workspace != launch.Workspace || saved.Runtime != "" && saved.Runtime != launch.Runtime {
 		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager's session destination changed. Review its host, project and coding CLI before opening a new viewer; retained logs are preserved.")
 	}
 	profile := func(value string) string {
@@ -259,6 +301,13 @@ func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, s
 	}
 	if profile(saved.ManagerProfile) != profile(launch.Profile) {
 		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager's recorded profile changed. Review it through that manager; retained logs are preserved.")
+	}
+	if saved.NativeRigRecovery != "" {
+		argv, err := s.nativeRigOriginalAttachment(ctx, owner, saved)
+		if err != nil {
+			return coordinationLaunch{}, fmt.Errorf("Rig could not verify the original native conversation: %w", err)
+		}
+		launch.Argv = argv
 	}
 	return launch, nil
 }

@@ -1,0 +1,49 @@
+{
+  "source_sha256": "1a302bc30491f82247af323feeb6dd5b734e67cb4470d183d8a5b6c0819157e6",
+  "apt_exit": 0,
+  "vendor_requests": 0,
+  "original_vendor_unchanged": true,
+  "signed_inrelease": {
+    "name": "archive.ubuntu.com_ubuntu_dists_jammy_InRelease",
+    "sha256": "c14060cd8c6d625874dfcb9523a35a395bf4865c28b6b6a82569ef326fe92dc6"
+  },
+  "scope": "Real APT update with Ubuntu Signed-By keyring, empty private lists/cache and strict error handling; live 503 third-party feed excluded and never contacted.",
+  "source_files": {
+    "scripts/configure-ci-apt.py": "1a302bc30491f82247af323feeb6dd5b734e67cb4470d183d8a5b6c0819157e6",
+    "tests/test_ci_apt.py": "9c77d0969ef3ee20bc909dd6ac520a6acabf3441755611b8fee961231743bc48",
+    ".github/workflows/ci.yml": "a29c32f3295017992d7e79155a67e1d6856066a1945a142d61912b4d469c1702"
+  },
+  "logs": {
+    "unit-tests.log": "c8904f75939074499eaa0d8a5add9f1fd5007a4e4e5e75cc9b1ce324d8f4b69c",
+    "signed-update.log": "21df5c2cf595209bf05bbcbf938879931c994720ea3f3195e4a7839b0fbbda53",
+    "signature.log": "a1d47d955e3f4564ae5adb461de07f277974ecfda5fb7d6f33a5d4f474bf90b9"
+  },
+  "unit_tests": 7,
+  "independent_gpgv_exit": 0,
+  "key_fingerprint_suffix": "871920D1991BC93C",
+  "hosted_native_ci": "pending exact-head Linux execution",
+  "entrypoint_guard_followup": {
+    "change": "Canonicalize /etc/apt on both sides so macOS /etc aliases remain guarded; same correction as combined source 1bd474d in PR494.",
+    "current_script_sha256": "87b74c97379a35dd63ffdbcf3b01fbbca548d0f18a202aac76d53639617cc93f",
+    "linux": {
+      "passed": 7,
+      "skipped": 0,
+      "log_sha256": "bba69393211f4e9c0af4bc3ed09a15509753129438f4a83e1fe47a01ef65333e"
+    },
+    "macos": {
+      "host": "puck.local",
+      "passed": 6,
+      "skipped": 1,
+      "skip": "APT executable unavailable",
+      "log_sha256": "57b641959f5cc3c9c3564318a165ac0dadbb1fd0d6a7538063e9e72831d63c85"
+    },
+    "scope": "Only the CLI system-path comparison changed; original source/index receipt above remains tied to its original script digest. New-head hosted checks remain required."
+  },
+  "prior_source_hosted_kernel": {
+    "source": "cc5d3d6504649e291c75b67302ec8182e8e2346b",
+    "run": 44286524931,
+    "job": 134740499929,
+    "conclusion": "success",
+    "scope": "Signed Ubuntu24 provisioning and complete native USB kernel fixture; full Linux22 desktop job still required."
+  }
+}

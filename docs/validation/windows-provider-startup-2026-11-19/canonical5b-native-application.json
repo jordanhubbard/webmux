@@ -1,0 +1,61 @@
+{
+  "head": "5b7ea98494f786293dbc306a46bd7bcc2023d5ee",
+  "packagingRun": 44463057788,
+  "packagingArchiveSHA256": "48c0d66d1985569966fafa3f2d8971f39954c10228b56e06785ef22fd0580be7",
+  "applicationSHA256": "232419d8eead10221377ac8eaab7c9b0507e91100dd786cb89661ba90496b8f9",
+  "testSourceSHA256": {
+    "tests/e2e/windows-local-provider.spec.ts": "a1c7ce621a79418ea3b72236d41cd25456163457cf3b4d10ce87e841532d52a1",
+    "tests/e2e/terminal-lifecycle.mts": "645bb06ea504115a880f3570896cb5b9ac999835ff6340e5b9a563974d4fc83c",
+    "webmux/package.json": "b59aa48ddbc62b6d1f7a9462d130c3cfa884a43527ebd5fe0a21bbe3d88d48e2"
+  },
+  "testBodyChanged": false,
+  "actualWindowsApplicationShellGate": true,
+  "passed": 1,
+  "skipped": 0,
+  "retries": 0,
+  "flaky": 0,
+  "durationMs": 4833,
+  "assertions": {
+    "freshShellOutput": true,
+    "markerAbsentFromInput": true,
+    "ownerAndRootGone": true,
+    "deletedAfterStop": true
+  },
+  "cleanup": {
+    "restartManager": {
+      "registerExit": 0,
+      "queryExit": 0,
+      "needed": 0,
+      "files": 2,
+      "noHolders": true
+    },
+    "sessionsAfterCleanup": 0,
+    "allFourApplicationAssertions": true,
+    "nativeTestDurationMs": 4833,
+    "appAndHelperSHA256Match": true,
+    "portAvailable": true,
+    "recordedProcessChecks": [
+      {
+        "role": "driver",
+        "absent": true,
+        "openError": 87
+      },
+      {
+        "role": "controller",
+        "absent": true,
+        "openError": 87
+      },
+      {
+        "role": "browserTest",
+        "absent": true,
+        "openError": 87
+      }
+    ],
+    "providerDirectoryExists": true,
+    "providerDirectoryEntries": [],
+    "finishedUTC": 1795067939.2760012
+  },
+  "hostedCIRun": 44463053201,
+  "hostedCIConclusion": "failure",
+  "scope": "Canonical5b original Packaging executable and unchanged application test on private native WindowsAMD64/Edge/Node26 loopback fixture. No authenticated coding CLI, sandbox-policy, service/MSI, reboot or ARM64 acceptance; no hosted failure erased."
+}

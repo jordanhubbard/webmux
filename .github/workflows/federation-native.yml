@@ -1,0 +1,125 @@
+name: Native federation diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: Independent fresh fixture samples; retain every outcome
+        type: choice
+        options: ['1', '10']
+        default: '1'
+  pull_request:
+    paths:
+      - 'tests/e2e/*federation*'
+      - 'webmux/frontend/src/components/ServerWorkspace*'
+      - 'webmux/frontend/src/components/Terminal*'
+      - 'webmux/server/internal/httpapi/federation*'
+      - '.github/workflows/federation-native.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  windows-federation:
+    name: Windows federation lifecycle evidence
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: webmux/package-lock.json
+      - name: Check fixture worker resources
+        shell: pwsh
+        run: |
+          $volumes = @($PWD.Path, $env:RUNNER_TEMP, $env:LOCALAPPDATA) | ForEach-Object { [IO.Path]::GetPathRoot($_).TrimEnd('\') } | Select-Object -Unique
+          foreach ($volume in $volumes) {
+            Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='$volume'" | Select-Object DeviceID, Size, FreeSpace
+          }
+          Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize, FreePhysicalMemory
+      - run: npm ci
+        working-directory: webmux
+      - run: npx playwright install chromium
+        working-directory: webmux
+      - name: Prepare protected Windows Chromium access
+        shell: pwsh
+        working-directory: webmux
+        run: |
+          $browser = (node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())").Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the qualified Chromium executable.' }
+          $cache = Join-Path $env:LOCALAPPDATA 'ms-playwright'
+          if ($env:PLAYWRIGHT_BROWSERS_PATH) {
+            if (-not [IO.Path]::IsPathRooted($env:PLAYWRIGHT_BROWSERS_PATH)) { throw 'Expected an absolute owned Playwright cache.' }
+            $cache = $env:PLAYWRIGHT_BROWSERS_PATH
+          }
+          & ../scripts/test-windows-chromium-sandbox.ps1 -TestRoot (Join-Path $env:RUNNER_TEMP 'federation-sandbox-controls') -ReceiptPath (Join-Path $env:RUNNER_TEMP 'federation-sandbox-scope.json')
+          & ../scripts/prepare-windows-chromium-sandbox.ps1 -BrowserPath $browser -InstallRoot $cache -ReceiptPath (Join-Path $env:RUNNER_TEMP 'federation-sandbox-access.json')
+      - run: npm run build --workspace=frontend
+        working-directory: webmux
+      - name: Retain independent native federation outcomes
+        shell: pwsh
+        working-directory: webmux
+        env:
+          WEBMUX_FEDERATION_DIAGNOSTICS: '1'
+          FEDERATION_SAMPLES: ${{ inputs.samples || '1' }}
+        run: |
+          $samples = 0
+          if (-not [int]::TryParse($env:FEDERATION_SAMPLES, [ref]$samples) -or $samples -notin @(1, 10)) { throw 'Choose one or ten independent samples.' }
+          $hostArch = (go env GOHOSTARCH).Trim()
+          $targetArch = (go env GOARCH).Trim()
+          $nodeArch = (node -p process.arch).Trim()
+          if ($hostArch -ne 'amd64' -or $targetArch -ne 'amd64' -or $nodeArch -ne 'x64') { throw 'Expected native Windows AMD64 tools.' }
+          New-Item -ItemType Directory -Path test-results/federation-native -Force | Out-Null
+          [pscustomobject]@{head=(git rev-parse HEAD).Trim(); node=(node --version).Trim(); goHost=$hostArch; goTarget=$targetArch; nodeArch=$nodeArch; samples=$samples} | ConvertTo-Json | Set-Content test-results/federation-native/source.json
+          $env:WEBMUX_FEDERATION_DIAGNOSTIC_CONTROL = 'fail-before-revocation'
+          try {
+            npm run test:e2e:go -- server-federation.spec.ts --output=test-results/federation-native/control
+            $controlExit = $LASTEXITCODE
+          } finally { Remove-Item Env:WEBMUX_FEDERATION_DIAGNOSTIC_CONTROL }
+          $controls = @(Get-ChildItem test-results/federation-native/control -Recurse -Filter federation-diagnostics.json)
+          if ($controlExit -eq 0 -or $controls.Count -ne 1) { throw 'Expected the controlled assertion failure and its receipt.' }
+          $control = Get-Content $controls[0].FullName -Raw | ConvertFrom-Json
+          if ($control.completed -or $control.phase -ne 'diagnostic-control-before-revocation' -or $control.peer.exited -or @($control.starts).Count -ne 2 -or @($control.starts | Where-Object presence -ne 'exists').Count -ne 0) { throw 'Controlled failure was not observed before fixture cleanup.' }
+          $env:WEBMUX_FEDERATION_DIAGNOSTIC_CONTROL = 'offscreen-replay'
+          try {
+            npm run test:e2e:go -- server-federation.spec.ts --output=test-results/federation-native/offscreen-control
+            $visibilityExit = $LASTEXITCODE
+          } finally { Remove-Item Env:WEBMUX_FEDERATION_DIAGNOSTIC_CONTROL }
+          $visibilityReceipts = @(Get-ChildItem test-results/federation-native/offscreen-control -Recurse -Filter federation-diagnostics.json)
+          $barrierReceipts = @(Get-ChildItem test-results/federation-native/offscreen-control -Recurse -Filter offscreen-replay-control.json)
+          if ($visibilityExit -eq 0 -or $visibilityReceipts.Count -ne 1 -or $barrierReceipts.Count -ne 1) { throw 'Expected the offscreen assertion failure and both native control receipts.' }
+          $visibility = Get-Content $visibilityReceipts[0].FullName -Raw | ConvertFrom-Json
+          $barrier = Get-Content $barrierReceipts[0].FullName -Raw | ConvertFrom-Json
+          $before = @($visibility.views | Where-Object role -eq 'peer')
+          $after = @($visibility.visibilityProbe.after | Where-Object role -eq 'peer')
+          if ($visibility.completed -or $visibility.phase -ne 'diagnostic-offscreen-replay' -or $visibility.peer.exited -or @($visibility.starts).Count -ne 2 -or @($visibility.starts | Where-Object presence -ne 'exists').Count -ne 0) { throw 'Offscreen control did not retain the original live providers and failure.' }
+          if (-not $barrier.originalBlankAssertionFailed -or -not $barrier.armed -or $barrier.callbackError -or $barrier.held -lt 1 -or $barrier.held -ne $barrier.delivered) { throw 'Real replay callbacks did not cross the scheduling barrier unchanged or the expected assertion did not fail.' }
+          if ($before.Count -ne 1 -or -not $before[0].blank -or $before[0].screen.visibleHeight -ne 0 -or $before[0].viewer -ne 'Viewer: connected' -or $after.Count -ne 1 -or $after[0].blank -or $after[0].readyPIDs -notcontains $barrier.expectedPID) { throw 'Visibility did not expose the original provider marker.' }
+          if (-not $visibility.visibilityProbe.scrollCompleted -or -not $visibility.visibilityProbe.traceComplete -or $visibility.visibilityProbe.newReceivedFrames -ne 0 -or $visibility.visibilityProbe.newOutputFrames -ne 0 -or $visibility.visibilityProbe.newSockets -ne 0) { throw 'Visibility control received new transport data or did not retain a complete trace.' }
+          $failed = $false
+          foreach ($trial in 1..$samples) {
+            $output = "test-results/federation-native/sample-$trial"
+            npm run test:e2e:go -- server-federation.spec.ts "--output=$output"
+            if ($LASTEXITCODE -ne 0) { $failed = $true }
+            $receipts = @(Get-ChildItem $output -Recurse -Filter federation-diagnostics.json -ErrorAction SilentlyContinue)
+            if ($receipts.Count -ne 1) { $failed = $true }
+          }
+          if ($failed) { throw 'One or more native federation samples failed or did not retain evidence.' }
+      - name: Preserve bounded native evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: federation-native-windows
+          include-hidden-files: true
+          path: |
+            webmux/test-results/federation-native/**/*.json
+            ${{ runner.temp }}/federation-sandbox-scope.json
+            ${{ runner.temp }}/federation-sandbox-access.json

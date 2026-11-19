@@ -1,0 +1,29 @@
+{
+  "recordedUTC": "2026-11-18T00:08:13.091898+00:00",
+  "parent": "540d7d29d37cd9f66546e27c7e838e8b92d0f3ae",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "0ff00d44594ea5e7116f9717fb3f7ae3d1a8715e4b37d4f2f4e08ee6880c1614",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "3f528721f3f9692230776608a5b9b31bc12e9e40f3825db2f68195836236ffb0",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-profile-location-summary.json": "7c479937bbd7eb4fbe14f0bc3fc44dd3492ed807cc9867c1e7585934f56f8790",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-transport-summary.json": "c8c95ae8d2f00e35bb11e4df0010e639247456f9dd37bba286dc5c03cb4a0c52"
+  },
+  "privateReceiptSHA256": {
+    "nav282-transport-factor.log": "2212991f09ce285980332b09d053e3f566ef5ebd4bbaa65d467bdc18e1defa25",
+    "nav282-transport-browser-race.log": "9fbcc65dcb09b145039d9e2caf49446157cc7493aa565982db4d75a61435e196",
+    "nav282-transport-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-transport-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-540d7d2-windows-artifact.zip": "02136579941b14b5c80408bf1e97e133debd1cad9b910a0666c5cb91f01720b5"
+  },
+  "privateNativeRecordSHA256": {
+    "direct": "ab391eeb1541f3857138944d4f85a538ad037aa37b3578ed9e48223476aaf880",
+    "direct-screenshot": "2594eb3e6a5cb506f5c988a63923ba97adfdcd84c52e29e51d60d65a85104381",
+    "direct-home": "e62e2c7d012e8873d1d3211ec9f5acb62cedd8d2bfc186b4c9f93d5c59b5ffff",
+    "direct-home-screenshot": "6064f1708222444b72655cf609554b77c09e761c7b0cabc794a969c69e58a102",
+    "direct-websocket": "22fd01b8240a5feb0b3834b8f018da4870112be8fcceaff77c4ceccaa012d98e",
+    "direct-home-websocket": "1b8e359ecb7d44582fd16ed7d40c338b18a1b87c264fa8d15a739cc69add46fe",
+    "worker-subprocess-temporary": "fb3f950bbcc52e42750e62faec6bd7402b01ce00043e20822d56e22fc62b22f7",
+    "worker-subprocess-saved": "c7eed6a5d7706dfd36364169f3a1e1c0889d4dc5e00d298a68eae30d89805c33"
+  },
+  "checks": "Native8freshfirstloadsPASS7.931s,1fixturehit/1navigateeach,no cleanup failure. APFS browser package race and Darwin/WindowsAMD64 browser vet PASS. Optional test/evidence changes only; production runtime/private pipes unchanged.",
+  "scope": "Ephemeral loopback WebSocket test controls use anonymous fresh profiles. Comparison also changes startup handshake/readiness; cannot isolate pure wire behavior or justify production listener. Windows outcomes pending; abort cause unproven."
+}

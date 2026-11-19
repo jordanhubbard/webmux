@@ -1,0 +1,146 @@
+{
+  "scope": "Exact reviewed original-only native recovery preparation across separate Go coordinator invocations before first dispatch; not a public recovery API/UI or actual application crash/reboot result",
+  "sourceRevision": "4dc175bbdffe200e3013dbdfa69f45c43df233aa",
+  "passed": true,
+  "moduleSHA256": {
+    "codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "rig-native-create.mts": "ee18fb484c048c845afa9f8f841e2b62cce46dd5ea9eba5c1f91b7087cfcc486",
+    "rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+    "rig-native-resume.mts": "b6217395e932162b2e16d50829ad40338d8a4814a84dbd07496afb8af8d86cc9",
+    "runner.mts": "c5bb40b046ba36eaa6d4ce2d2055af126cfb83915e65cab6fc0c4161436370f5",
+    "coord.go": "8ce1b63b110b9d05f3de36e92564d3d375adf76d91ac7b7fc9e6b5c25af7c965"
+  },
+  "rawReceipt": "native-create-factory-wm438prepared-njpdnje1.json",
+  "rawSHA256": "afac3e5939e7624d4d6eb8aff83c1b02d4c7cd558fc925041e3d8379f262b1da",
+  "probeSHA256": "9040c3b3db9135865da6bb1ae7e27a840a8169057278b864ba2e65df769f4d7a",
+  "controllerDriverSHA256": "a258456f8266e572e6416b109bd1702e432ebdc4b98757ab30ec88210fbb3d22",
+  "controllerDriverSourceSHA256": "ea37cbbdd338f09da0bfb1127a28ce78479dad1d82d4b8474c6304d64e549046",
+  "controllerRuntime": "v24.21.0",
+  "nativeVersions": {
+    "nodeVersion": "v24.21.0",
+    "rigVersion": "0.7.18 (3bf87c62)",
+    "tmuxVersion": "tmux 3.8",
+    "codexVersion": "codex-cli 0.169.0"
+  },
+  "checks": {
+    "onlyOriginalCreationHelperKilledBeforeHandoff": true,
+    "sameOriginalEnrollmentAndReconstructedHandoffAfterHelperLoss": true,
+    "environmentSocketRemovedAfterHandoff": true,
+    "noPlaintextFixtureValueInDurableState": true,
+    "actualDefaultNativeOwnerPolicyUsed": true,
+    "actualNativeArgvPreservesOwnerPolicy": true,
+    "freshChallengeReadByActualProvider": true,
+    "projectAndOwnerExtraWritable": true,
+    "ownerFullAccessNotNarrowed": true,
+    "wrapperReplacedByNativeExecutable": true,
+    "nativeIdentityRetained": true,
+    "nativeOwnerEnvironmentPreserved": true,
+    "nativePolicyAndCorrelatedTools": true,
+    "duplicateFactoryAndExplicitInspectRetainNativeOccupant": true,
+    "siblingRetainsOriginalPID": true,
+    "snapshotBindsOriginalConversation": true,
+    "preparedAcrossFreshGoInvocationsWithoutDispatchOrHandoff": true,
+    "explicitCompletionCanBeFirstNativePostAfterPreparation": true,
+    "embeddedGoCoordinatorUsesOwnerNamespace": true,
+    "originalOnlyReviewMatchesBankedConversation": true,
+    "newControllerInvocationReusesOriginalBytesAndOperation": true,
+    "unconfirmedNativeResponseNeverBecomesSuccess": true,
+    "sharedHandoffDurableHashOnlyReceipt": true,
+    "freshEnvironmentHandoffConsumed": true,
+    "originalResumeInspectedWithoutRepost": true,
+    "sameConversationRecallWithoutTools": true,
+    "originalNativeLogPrefixAndEnvironmentRetained": true,
+    "duplicateResumeRetainsBothNativeProcesses": true,
+    "sameOriginalOperationReplayedWithoutNativeEffect": true,
+    "checkedStopEndsOnlyNativeCodingSeat": true
+  },
+  "controllerResults": [
+    {
+      "state": "prepared",
+      "code": "native_resume_prepared",
+      "posted": false
+    },
+    {
+      "state": "prepared",
+      "code": "native_resume_prepared",
+      "posted": false
+    },
+    {
+      "state": "uncertain",
+      "code": "native_resume_response_unavailable",
+      "posted": true
+    },
+    {
+      "state": "uncertain",
+      "code": "native_resume_already_dispatched",
+      "posted": false,
+      "previouslyConfirmed": false
+    },
+    {
+      "state": "uncertain",
+      "code": "native_resume_unconfirmed",
+      "posted": true,
+      "nativeCode": "operation_in_progress"
+    },
+    {
+      "state": "confirmed",
+      "code": "already_running_original",
+      "posted": true
+    },
+    {
+      "state": "confirmed",
+      "code": "already_running_original",
+      "posted": true
+    }
+  ],
+  "privateTmuxStopped": true,
+  "daemonStateRemoved": true,
+  "sourceUnchanged": true,
+  "excludedAttempts": [
+    {
+      "rawReceipt": "native-create-factory-wm438prepared-jnwmaqi5.json",
+      "reason": "Go PATH selected unqualified Node26, despite separate explicit SDK24 version report. Refused before bank/POST. Diagnostic daemon restart was read-only and stopped; post-cleanup transport_unavailable was not the original failure cause."
+    },
+    {
+      "rawReceipt": "native-create-factory-wm438prepared-vxbanqfs.json",
+      "reason": "Added native review confirms stopped, but Go still selected Node26 and refused selection. No bank/POST. v3 pins and reports the actual controller runtime, retaining exact Node24 contract."
+    }
+  ],
+  "limits": [
+    "Public broker retention/HTTP/UI original-operation completion remain open",
+    "No actual application crash/service update/reboot",
+    "Default macOS native account in place; broader policies/platforms unqualified",
+    "Required hosted CI/review and full roadmap remain open"
+  ],
+  "runtimeRefusal": {
+    "scope": "Actual exported Go coordinator refusal on native Node26 before Rig call, owner observer or native request artifacts",
+    "passed": true,
+    "nodeVersion": "v26.8.1",
+    "code": "native_resume_runtime_unqualified",
+    "driverSHA256": "a258456f8266e572e6416b109bd1702e432ebdc4b98757ab30ec88210fbb3d22",
+    "noRigCall": true,
+    "noNativeRequestArtifacts": true,
+    "foreignDirectoryNotCreated": true,
+    "rawReceipt": "native-node26-refusal.json",
+    "rawSHA256": "74fb05927beb03997be00e7cf23e62f11e24ce4a6cb63b50c7426a8919ee14da"
+  },
+  "localChecks": {
+    "helpers": 226,
+    "strictTypeScriptProjects": 5,
+    "affectedGoRace": true,
+    "affectedGoVet": true,
+    "windowsARM64CrossBuild": true,
+    "logSHA256": {
+      "native-capture-all-helpers-final.log": "ce86ed9d1a1852fd3ebfd4fa67f1dd7eda8c2d940c73ed72a131e1673450c6fb",
+      "native-prepare-types-final.log": "bfbdeb0b9d52b9f5fa57d9bcbafdf0c45c715936935db99e8f5fb542c0d290f0",
+      "native-prepare-go-race-final.log": "af9cb0ce66bab0224ce9397d1552224173173be44f2da38947b256f4b54d40ab",
+      "native-prepared-vet-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native-prepared-windows-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  }
+}

@@ -1,0 +1,514 @@
+{
+  "scope": "Native Linux AMD64/ARM64 observer signal-pair repair and strict disposable startup controls. No authenticated coding, conversation recovery, reboot or installed-service claim.",
+  "sourceRevision": "646c4cea2fd11af314481f64bf28afb05b444bb0",
+  "run": 44424131750,
+  "passed": true,
+  "sourcesSHA256": {
+    "webmux/server/internal/nativeobserve/helper_linux.go": "08282348a7dad26d450f19c92e4840a5a95b5d57539f59dc4909e795fd959777",
+    "webmux/server/internal/nativeobserve/helper_linux_test.go": "7a1fc2ffccef1c7ffe6f196781d02082a175f0256b327d83b348587b20a2690b",
+    "webmux/server/internal/nativeobserve/helper.go": "5772de1b277b9ce508eada1fdb062a4d40d472bcf5b83baa12dfe0920accca5d",
+    "webmux/server/internal/nativeobserve/reference.go": "9dda34d2ae04cb985df3d5a9501937a901ab3f39d857b908cf23e53e0e28d9c0",
+    "scripts/qualify-codex-observer-startup.py": "2d082f6d5c23d23657e4138cb56db33d6fc08809fe0453a887607996fb04991b",
+    "scripts/qualify-codex-observation-isolation.py": "d21a263f5cc2930d3678c8a9e2b56c2806d6f462b1e7d4775b627c5f1952c66b",
+    "scripts/test_codex_observer_process.py": "090e2ba8ab7490b6d0694436e431ffd8a6390728d2a4e58b9ef6fa57a74e5142",
+    ".github/workflows/codex-observation-native.yml": "fcff1a58af49f59c218beffa35001cfaaf7f107a4f892dec1eaa459ffff75a40",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/cmd/webmux/main.go": "59af43dbc0831b0c4c5bc042b582a770f7d3a83a746c164272a8a5f29ca001f9"
+  },
+  "architectures": {
+    "amd64": {
+      "passed": true,
+      "machine": "x86_64",
+      "rawSHA256": {
+        "provenance.json": "ae4410f75186df2d6d1f4e7be7cf52a956e657ceee07a131db3b2a128825da92",
+        "native-controls.json": "1b2a257d34c35d60f121f9837278e7f99a89e3cac454f4649193a376a9a1f9e2",
+        "worker.json": "53700473c081cdb938343a8e9b582ae3809cb093a08e6166203539df9cf9e964",
+        "kernel-tests.jsonl": "349f51762ec490dca2faa42ffae65dd974735d7dfeca1afe911457a2530b580b"
+      },
+      "nativeBinary": {
+        "version": "codex-cli 0.169.0",
+        "arch": "x64",
+        "nativeSHA256": "b452ca20f838a8855a88a41050ee4a694033fff4ea3ecdad5633e6e0e8d13f2b",
+        "helperSHA256": "9d8cfb2fff91c021035793b73e85401539b1acd4d0d03d38b188adb418a372bc",
+        "package": {
+          "name": "@openai/codex-linux-x64",
+          "version": "0.169.0-linux-x64",
+          "integrity": "sha512-o05NyAOCDygSPRo1yinzxvkRSdmsZyBD9E7mbpmjRanSfM8lypqWtQgEo4XfNkwhuCR2aFu8mlGOsQGFXVbVww==",
+          "resolved": "https://registry.npmjs.org/@openai/codex/-/codex-0.169.0-linux-x64.tgz"
+        }
+      },
+      "cases": [
+        {
+          "mode": "full",
+          "guarded": false,
+          "accountStartsNoMCP": true,
+          "projectMatches": true,
+          "lateProcessStarted": true,
+          "httpRequests": 1,
+          "policy": {
+            "cwd": "<fixture>/project",
+            "runtimeWorkspaceRoots": [
+              "<fixture>/project",
+              "<fixture>/extra"
+            ],
+            "sandbox": {
+              "type": "dangerFullAccess"
+            },
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "model": "gpt-6.1-sol",
+            "modelProvider": "openai",
+            "reasoningEffort": null,
+            "serviceTier": null,
+            "activePermissionProfile": null
+          },
+          "configUnchanged": true,
+          "noTurn": true,
+          "accountStopped": true,
+          "policyStopped": true
+        },
+        {
+          "mode": "full",
+          "guarded": true,
+          "accountStartsNoMCP": true,
+          "projectMatches": true,
+          "lateProcessStarted": false,
+          "httpRequests": 0,
+          "policy": {
+            "cwd": "<fixture>/project",
+            "runtimeWorkspaceRoots": [
+              "<fixture>/project",
+              "<fixture>/extra"
+            ],
+            "sandbox": {
+              "type": "dangerFullAccess"
+            },
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "model": "gpt-6.1-sol",
+            "modelProvider": "openai",
+            "reasoningEffort": null,
+            "serviceTier": null,
+            "activePermissionProfile": null
+          },
+          "configUnchanged": true,
+          "noTurn": true,
+          "accountStopped": true,
+          "policyStopped": true
+        },
+        {
+          "mode": "read",
+          "guarded": false,
+          "accountStartsNoMCP": true,
+          "projectMatches": true,
+          "lateProcessStarted": true,
+          "httpRequests": 1,
+          "policy": {
+            "cwd": "<fixture>/project",
+            "runtimeWorkspaceRoots": [
+              "<fixture>/project",
+              "<fixture>/extra"
+            ],
+            "sandbox": {
+              "type": "readOnly",
+              "networkAccess": false
+            },
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "model": "gpt-6.1-sol",
+            "modelProvider": "openai",
+            "reasoningEffort": null,
+            "serviceTier": null,
+            "activePermissionProfile": null
+          },
+          "configUnchanged": true,
+          "noTurn": true,
+          "accountStopped": true,
+          "policyStopped": true
+        },
+        {
+          "mode": "read",
+          "guarded": true,
+          "accountStartsNoMCP": true,
+          "projectMatches": true,
+          "lateProcessStarted": false,
+          "httpRequests": 0,
+          "policy": {
+            "cwd": "<fixture>/project",
+            "runtimeWorkspaceRoots": [
+              "<fixture>/project",
+              "<fixture>/extra"
+            ],
+            "sandbox": {
+              "type": "readOnly",
+              "networkAccess": false
+            },
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "model": "gpt-6.1-sol",
+            "modelProvider": "openai",
+            "reasoningEffort": null,
+            "serviceTier": null,
+            "activePermissionProfile": null
+          },
+          "configUnchanged": true,
+          "noTurn": true,
+          "accountStopped": true,
+          "policyStopped": true
+        },
+        {
+          "mode": "workspace",
+          "guarded": false,
+          "accountStartsNoMCP": true,
+          "projectMatches": true,
+          "lateProcessStarted": true,
+          "httpRequests": 1,
+          "policy": {
+            "cwd": "<fixture>/project",
+            "runtimeWorkspaceRoots": [
+              "<fixture>/project",
+              "<fixture>/extra"
+            ],
+            "sandbox": {
+              "type": "workspaceWrite",
+              "writableRoots": [
+                "<fixture>/extra"
+              ],
+              "networkAccess": false,
+              "excludeTmpdirEnvVar": true,
+              "excludeSlashTmp": true
+            },
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "model": "gpt-6.1-sol",
+            "modelProvider": "openai",
+            "reasoningEffort": null,
+            "serviceTier": null,
+            "activePermissionProfile": null
+          },
+          "configUnchanged": true,
+          "noTurn": true,
+          "accountStopped": true,
+          "policyStopped": true
+        },
+        {
+          "mode": "workspace",
+          "guarded": true,
+          "accountStartsNoMCP": true,
+          "projectMatches": true,
+          "lateProcessStarted": false,
+          "httpRequests": 0,
+          "policy": {
+            "cwd": "<fixture>/project",
+            "runtimeWorkspaceRoots": [
+              "<fixture>/project",
+              "<fixture>/extra"
+            ],
+            "sandbox": {
+              "type": "workspaceWrite",
+              "writableRoots": [
+                "<fixture>/extra"
+              ],
+              "networkAccess": false,
+              "excludeTmpdirEnvVar": true,
+              "excludeSlashTmp": true
+            },
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "model": "gpt-6.1-sol",
+            "modelProvider": "openai",
+            "reasoningEffort": null,
+            "serviceTier": null,
+            "activePermissionProfile": null
+          },
+          "configUnchanged": true,
+          "noTurn": true,
+          "accountStopped": true,
+          "policyStopped": true
+        }
+      ],
+      "kernelRequiredControlsPassed": [
+        "TestChangedExecutableRefused",
+        "TestNativeGuardEffects/false",
+        "TestNativeGuardEffects/true",
+        "TestReferenceRefusesAnExistingSharedDirectory",
+        "TestReferenceReplacesLinkWithoutFollowingIt",
+        "TestSnapshotIsPrivateImmutableAndNeverRepairedOverCorruption"
+      ],
+      "nativeProcesses": {
+        "count": 12,
+        "panics": 0,
+        "forcedCleanup": 0,
+        "unexpectedExits": 0,
+        "allStderrComplete": true,
+        "allAliveUntilIntentionalCleanup": true,
+        "allCleaned": true
+      },
+      "oldDiagnosticRun": {
+        "run": 44422641292,
+        "sourceRevision": "6cea5d84c7a7d156902da76f0ca0073742a908c5",
+        "rawSHA256": "dde437adc1935a0d0f7e0c78f24f5f24d047de090d6c84ede22ae7829e1e95fe",
+        "originalPassedField": true,
+        "newAudit": "REJECT: native_diagnostic_panic",
+        "observedSignalThreadPanics": 3,
+        "forcedCleanup": 3,
+        "originalArtifactUnchanged": true
+      }
+    },
+    "arm64": {
+      "passed": true,
+      "machine": "aarch64",
+      "rawSHA256": {
+        "provenance.json": "feed9a81401f140bac7bd1218fe785a429ef9daa3db93b2cef6b922e6cb8d2b0",
+        "native-controls.json": "f8a92b17cf9b15095ba57a431d0a7e6d65a98a6530cf0cced30ba49dde8a15fc",
+        "worker.json": "ddb1330f0ea8320fb8e08b28b13ab16ce4537779e97895ac509ee5b06ebb3f45",
+        "kernel-tests.jsonl": "61d30c063a0ff689140ef9bc17073f222d723dce5d4bf7c37ca52e400dc7b1c5"
+      },
+      "nativeBinary": {
+        "version": "codex-cli 0.169.0",
+        "arch": "arm64",
+        "nativeSHA256": "3bb41c9a80187773e2a59278d4fc355b1a163c31bb5a79581e37d4fe428af047",
+        "helperSHA256": "99e9092071619d7cff26f79b9afab52b8aaf2d72b1971d998aa383f72d070bec",
+        "package": {
+          "name": "@openai/codex-linux-arm64",
+          "version": "0.169.0-linux-arm64",
+          "integrity": "sha512-NZ/DaQUpcQmxmqee7Z9uC1rzw3GhSbooawcaTe1LN5Yk+WlinUKGdTXJgClRT/9ogQEEM9TWxYzvxPfj5G/xFg==",
+          "resolved": "https://registry.npmjs.org/@openai/codex/-/codex-0.169.0-linux-arm64.tgz"
+        }
+      },
+      "cases": [
+        {
+          "mode": "full",
+          "guarded": false,
+          "accountStartsNoMCP": true,
+          "projectMatches": true,
+          "lateProcessStarted": true,
+          "httpRequests": 1,
+          "policy": {
+            "cwd": "<fixture>/project",
+            "runtimeWorkspaceRoots": [
+              "<fixture>/project",
+              "<fixture>/extra"
+            ],
+            "sandbox": {
+              "type": "dangerFullAccess"
+            },
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "model": "gpt-6.1-sol",
+            "modelProvider": "openai",
+            "reasoningEffort": null,
+            "serviceTier": null,
+            "activePermissionProfile": null
+          },
+          "configUnchanged": true,
+          "noTurn": true,
+          "accountStopped": true,
+          "policyStopped": true
+        },
+        {
+          "mode": "full",
+          "guarded": true,
+          "accountStartsNoMCP": true,
+          "projectMatches": true,
+          "lateProcessStarted": false,
+          "httpRequests": 0,
+          "policy": {
+            "cwd": "<fixture>/project",
+            "runtimeWorkspaceRoots": [
+              "<fixture>/project",
+              "<fixture>/extra"
+            ],
+            "sandbox": {
+              "type": "dangerFullAccess"
+            },
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "model": "gpt-6.1-sol",
+            "modelProvider": "openai",
+            "reasoningEffort": null,
+            "serviceTier": null,
+            "activePermissionProfile": null
+          },
+          "configUnchanged": true,
+          "noTurn": true,
+          "accountStopped": true,
+          "policyStopped": true
+        },
+        {
+          "mode": "read",
+          "guarded": false,
+          "accountStartsNoMCP": true,
+          "projectMatches": true,
+          "lateProcessStarted": true,
+          "httpRequests": 1,
+          "policy": {
+            "cwd": "<fixture>/project",
+            "runtimeWorkspaceRoots": [
+              "<fixture>/project",
+              "<fixture>/extra"
+            ],
+            "sandbox": {
+              "type": "readOnly",
+              "networkAccess": false
+            },
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "model": "gpt-6.1-sol",
+            "modelProvider": "openai",
+            "reasoningEffort": null,
+            "serviceTier": null,
+            "activePermissionProfile": null
+          },
+          "configUnchanged": true,
+          "noTurn": true,
+          "accountStopped": true,
+          "policyStopped": true
+        },
+        {
+          "mode": "read",
+          "guarded": true,
+          "accountStartsNoMCP": true,
+          "projectMatches": true,
+          "lateProcessStarted": false,
+          "httpRequests": 0,
+          "policy": {
+            "cwd": "<fixture>/project",
+            "runtimeWorkspaceRoots": [
+              "<fixture>/project",
+              "<fixture>/extra"
+            ],
+            "sandbox": {
+              "type": "readOnly",
+              "networkAccess": false
+            },
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "model": "gpt-6.1-sol",
+            "modelProvider": "openai",
+            "reasoningEffort": null,
+            "serviceTier": null,
+            "activePermissionProfile": null
+          },
+          "configUnchanged": true,
+          "noTurn": true,
+          "accountStopped": true,
+          "policyStopped": true
+        },
+        {
+          "mode": "workspace",
+          "guarded": false,
+          "accountStartsNoMCP": true,
+          "projectMatches": true,
+          "lateProcessStarted": true,
+          "httpRequests": 1,
+          "policy": {
+            "cwd": "<fixture>/project",
+            "runtimeWorkspaceRoots": [
+              "<fixture>/project",
+              "<fixture>/extra"
+            ],
+            "sandbox": {
+              "type": "workspaceWrite",
+              "writableRoots": [
+                "<fixture>/extra"
+              ],
+              "networkAccess": false,
+              "excludeTmpdirEnvVar": true,
+              "excludeSlashTmp": true
+            },
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "model": "gpt-6.1-sol",
+            "modelProvider": "openai",
+            "reasoningEffort": null,
+            "serviceTier": null,
+            "activePermissionProfile": null
+          },
+          "configUnchanged": true,
+          "noTurn": true,
+          "accountStopped": true,
+          "policyStopped": true
+        },
+        {
+          "mode": "workspace",
+          "guarded": true,
+          "accountStartsNoMCP": true,
+          "projectMatches": true,
+          "lateProcessStarted": false,
+          "httpRequests": 0,
+          "policy": {
+            "cwd": "<fixture>/project",
+            "runtimeWorkspaceRoots": [
+              "<fixture>/project",
+              "<fixture>/extra"
+            ],
+            "sandbox": {
+              "type": "workspaceWrite",
+              "writableRoots": [
+                "<fixture>/extra"
+              ],
+              "networkAccess": false,
+              "excludeTmpdirEnvVar": true,
+              "excludeSlashTmp": true
+            },
+            "approvalPolicy": "never",
+            "approvalsReviewer": "user",
+            "model": "gpt-6.1-sol",
+            "modelProvider": "openai",
+            "reasoningEffort": null,
+            "serviceTier": null,
+            "activePermissionProfile": null
+          },
+          "configUnchanged": true,
+          "noTurn": true,
+          "accountStopped": true,
+          "policyStopped": true
+        }
+      ],
+      "kernelRequiredControlsPassed": [
+        "TestChangedExecutableRefused",
+        "TestNativeGuardEffects/false",
+        "TestNativeGuardEffects/true",
+        "TestReferenceRefusesAnExistingSharedDirectory",
+        "TestReferenceReplacesLinkWithoutFollowingIt",
+        "TestSnapshotIsPrivateImmutableAndNeverRepairedOverCorruption"
+      ],
+      "nativeProcesses": {
+        "count": 12,
+        "panics": 0,
+        "forcedCleanup": 0,
+        "unexpectedExits": 0,
+        "allStderrComplete": true,
+        "allAliveUntilIntentionalCleanup": true,
+        "allCleaned": true
+      },
+      "oldDiagnosticRun": {
+        "run": 44422641292,
+        "sourceRevision": "6cea5d84c7a7d156902da76f0ca0073742a908c5",
+        "rawSHA256": "65db50e4a6f499ad1a0258ccc37985c3c54e7d8d12a226b9b783176038a14194",
+        "originalPassedField": true,
+        "newAudit": "REJECT: native_diagnostic_panic",
+        "observedSignalThreadPanics": 3,
+        "forcedCleanup": 3,
+        "originalArtifactUnchanged": true
+      }
+    }
+  },
+  "diagnosticControls": {
+    "unitTests": 7,
+    "localUnitResult": "PASS",
+    "CIUnitStep": "PASS on both architectures",
+    "retainedStderrTailBoundBytes": 32768,
+    "panicFlagSurvivesTailTruncation": true,
+    "rpcDeadlineSeconds": 12,
+    "cleanupGraceSeconds": 3,
+    "capturesOnlyOptedInDisposableFixtures": true
+  },
+  "remaining": [
+    "Review, merge and exact-head full CI; Windows retained VT runtime failure #450 remains open",
+    "Original 1d2be5b ARM64 early stdout EOF had no stderr; the exact historical exit cause is not recoverable from that artifact",
+    "Authenticated Linux creation/environment-handoff/conversation recovery #523 remains separate",
+    "Broader #438/#318 policy/profile/route/platform/service/reboot and complete release-roadmap acceptance"
+  ]
+}

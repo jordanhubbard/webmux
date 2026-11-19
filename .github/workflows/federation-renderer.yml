@@ -1,0 +1,44 @@
+name: Native federation renderer contract
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'webmux/server/internal/httpapi/federation*'
+      - 'webmux/server/internal/httpapi/main_test.go'
+      - '.github/workflows/federation-renderer.yml'
+      - 'scripts/qualify-federation-renderer.ps1'
+
+permissions:
+  contents: read
+
+jobs:
+  native-renderer:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
+      - name: Check native worker and resources
+        shell: pwsh
+        run: |
+          Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'" | Select-Object DeviceID, Size, FreeSpace
+          Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize, FreePhysicalMemory
+          if ((go env GOHOSTOS).Trim() -ne 'windows' -or (go env GOHOSTARCH).Trim() -ne 'amd64' -or (go env GOARCH).Trim() -ne 'amd64') { throw 'Expected native Windows AMD64 tools.' }
+      - name: Exercise native renderer-required owner through federation
+        shell: pwsh
+        run: |
+          ./scripts/qualify-federation-renderer.ps1 -OutputDirectory "$env:RUNNER_TEMP/federation-renderer"
+      - name: Retain native contract outcome
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: federation-renderer-native-windows
+          path: |
+            ${{ runner.temp }}/federation-renderer/tests.jsonl
+            ${{ runner.temp }}/federation-renderer/exit-code.txt

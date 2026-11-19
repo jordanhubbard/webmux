@@ -1,0 +1,44 @@
+{
+  "recorded_utc": "2026-11-18T11:17:45.480439+00:00",
+  "candidate_source": "c11bf3e01232892447288512153f83f1bc8745c8",
+  "inputs": {
+    "signin_recovery_497": "4e55003ca13808ee68ab496d87be96d68c1aa878",
+    "apt_controls_498": "f9b26c79c16f7620977a0f55ea4ff20f7ba308c9",
+    "vt_exit_diagnostics_499": "d65e0c9e6767883468af9d73580bb54d6578dca6"
+  },
+  "unchanged_from_497": {
+    "webmux": "67776cb7d88ad74ce400c551efe00cc8beb0b327",
+    "tests/e2e": "3352e2b3f3f91823be8a99ec8ff7f1a475ef1c7c",
+    "scripts/configure-ci-apt.py": "fc13c2b86c870c51134de5c239106a8a7de1a886",
+    ".github/workflows/ci.yml": "3300a9ea8e6f17222c86870dec88b99457672b7b"
+  },
+  "local_validation": {
+    "node": "24.21.0",
+    "platform": "darwin-arm64",
+    "strict_typescript_projects": 5,
+    "frontend_lint": "pass",
+    "frontend_tests": {
+      "files": 42,
+      "passed": 418
+    },
+    "application_build": "pass",
+    "apt_unit_controls": {
+      "passed": 6,
+      "skipped": 1,
+      "skip_reason": "native APT unavailable on macOS"
+    },
+    "vt_exit_controls": {
+      "passed": 3,
+      "skipped": 1,
+      "skip_reason": "high-bit Win32 exit status requires native Windows"
+    },
+    "workflow_yaml": "pass",
+    "diff_whitespace": "pass"
+  },
+  "limits": [
+    "No fresh combined-source hosted qualification in this receipt.",
+    "No native Windows authenticated coding recovery claim.",
+    "No repair or upstream attribution for the retained Windows VT failure.",
+    "Dependency audit #429 and all release gates remain required."
+  ]
+}

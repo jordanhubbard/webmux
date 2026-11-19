@@ -1,0 +1,89 @@
+name: Native Mosh cleanup diagnostics
+
+on:
+  push:
+    branches: ['diagnostics/mosh-cleanup-468']
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/mosh-browser-diagnostics.yml'
+      - 'tests/e2e/mosh-browser.spec.ts'
+      - 'webmux/scripts/private-test-tmux.mts'
+
+permissions:
+  contents: read
+
+jobs:
+  mosh:
+    name: Native Linux Mosh and owned cleanup
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Record worker headroom
+        run: |
+          df -h . /tmp
+          free -m
+          nproc
+          mkdir -p webmux/test-results/mosh-provisioning
+          {
+            cat /proc/self/limits
+            cat /proc/sys/fs/file-nr
+          } > webmux/test-results/mosh-provisioning/worker-limits.txt
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: webmux/package-lock.json
+      - name: Configure bounded Ubuntu mirrors
+        run: sudo -n env GITHUB_ACTIONS=true python3 scripts/configure-ci-apt.py
+      - name: Install native tools
+        shell: bash
+        run: |
+          # Keep the original command's failure status while preserving early
+          # provisioning output even when npm/browser/test setup never starts.
+          exec > >(tee webmux/test-results/mosh-provisioning/install.log) 2>&1
+          sudo -n apt-get update
+          sudo -n apt-get install -y openssh-server mosh tmux libevent-dev libncurses-dev
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/tmux-3.4.tar.gz" https://github.com/tmux/tmux/releases/download/3.4/tmux-3.4.tar.gz
+          echo "551ab8dea0bf505c0ad6b7bb35ef567cdde0ccb84357df142c254f35a23e19aa  $RUNNER_TEMP/tmux-3.4.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/tmux-3.4.tar.gz" -C "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP/tmux-3.4"
+          ./configure --prefix="$RUNNER_TEMP/webmux-tmux"
+          make -j2
+          make install
+          echo "$RUNNER_TEMP/webmux-tmux/bin" >> "$GITHUB_PATH"
+      - run: npm ci
+        working-directory: webmux
+      - run: npx playwright install --with-deps chromium
+        working-directory: webmux
+      - name: Build exact application
+        working-directory: webmux
+        run: npm run build
+      - name: Exercise twenty independent real Mosh cleanup samples
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_MOSH: '1'
+        run: |
+          failed=0
+          for trial in {1..20}; do
+            npm run test:e2e -- mosh-browser.spec.ts --output="test-results/mosh-cleanup/trial-$trial" || failed=1
+          done
+          test "$failed" -eq 0
+      - name: Retain native tool identities
+        if: always()
+        run: |
+          mkdir -p webmux/test-results
+          python3 scripts/native-components.py --output webmux/test-results/mosh-tools.json
+      - name: Preserve diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: mosh-cleanup-linux
+          path: webmux/test-results

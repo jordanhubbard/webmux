@@ -8,9 +8,20 @@ code flows; state-bound localhost OAuth can use the callback relay. See
 [CLI authentication](authentication-handoff.md) for the flow and prerequisites.
 
 Each terminal also retains a **Tools → Open browser** action. It opens a resizable
-companion drawer, leaving the terminal running beside it. Choose **Use browser on
-terminal host** in the sign-in panel when you need this fallback. The drawer
-identifies the terminal and host where the browser runs. A redirect alone is not
+companion pane, leaving the terminal running beside it. On desktop, choose **Undock browser**
+to move it inside the workspace, or **Dock browser** to return it to the right
+edge. Drag the **Move** button or the resize handle. Focus either handle and use
+arrow keys for the same controls; hold Shift for larger steps. **Expand browser**
+temporarily fills the workspace and restores the previous size and position.
+The same page and control lease remain active while arranging the pane.
+
+Layout preferences survive hiding, reopening and reloading. Only the docking
+mode, size and position are stored for this browser device; URLs, sessions,
+profiles and control credentials are excluded. On small screens the pane fills
+the display, retaining desktop preferences for a larger display.
+
+Choose **Use browser on terminal host** in the sign-in panel when you need this
+fallback. The pane identifies the terminal and host where the browser runs. A redirect alone is not
 evidence that authentication succeeded.
 
 The page executes on the shell host: `localhost` callbacks reach the CLI there.
@@ -24,7 +35,8 @@ its temporary profile, including cookies. Deleting the terminal or stopping
 WebMux also ends its browser. A worker expires after 30 minutes without viewer
 activity. Profiles never import the host's everyday browser credentials.
 
-Temporary profiles are the default. For an explicit saved profile, enter a name,
+Temporary profiles are the default. Open **Browser settings** to configure saved
+profiles. For an explicit saved profile, enter a name,
 choose **Create saved profile**, then **Open selected profile**. Opening a selected
 profile ends the current worker first. Saved cookies and site storage survive
 worker and server restarts. The registry is scoped to the signed-in WebMux owner
@@ -60,6 +72,13 @@ WebMux: these guarantees require browser worker protocol 3.
 
 Use **Expand browser** for a full workspace, or resize the drawer. The Chromium
 viewport follows the available area instead of scaling a fixed desktop layout.
+On narrow screens the companion fills the screen, with an address row below the
+navigation buttons and touch-sized controls. **Browser settings** holds profile
+setup; controller ownership and **Return to terminal** remain directly available.
+Scroll the companion when the screen or keyboard leaves less vertical room.
+The [small-screen qualification](validation/browser-mobile-2026-11-17/README.md)
+covers browser-emulated touch and reduced heights, with physical-device keyboard
+and assistive-technology acceptance still open under #110.
 Back, forward, reload, stop, new tab, close tab, and tab selection are available.
 **Find text** searches the page, with previous/next matches. Cmd/Ctrl+F, R, T and
 W provide page search, reload, new tab and close/hide respectively.
@@ -117,14 +136,25 @@ This does not claim that remote hardware authentication is supported.
   also route into the sign-in panel. No user startup files or OS associations change.
 - SSH probes for the matching helper with verified host keys and key/agent access
   before starting a browser-linked shell. Missing support leaves a normal shell
-  silently; clicked links still open the sign-in panel. Mosh uses manual link
-  clicks because its terminal protocol does not reliably carry the launch control
-  sequence.
-- Launch requests travel through the existing PTY, including through local tmux,
+  silently; clicked links still open the sign-in panel.
+- New Mosh terminals with the matching terminal-host helper carry automatic
+  browser requests through the existing authenticated SSH control channel.
+  This works with logging disabled; Mosh's screen protocol does not have to carry
+  a browser escape sequence. After updating the terminal-host helper, create a
+  new Mosh terminal to get the shell integration. Existing providers are not
+  restarted automatically. Older/missing helpers retain manual link clicks.
+- Local and SSH launch requests travel through the existing PTY, including through local tmux,
   without a public listener or bearer token in the shell. The focused viewer
   receives the request; an unacknowledged request is retained for up to five
   minutes so reconnecting can open it. Owner-checked acknowledgements prevent
   replay after it has been delivered.
+- Mosh keeps its latest pending request sealed in the terminal host's private
+  control cache for a five-minute delivery window. Only the opaque acknowledged
+  request ID is saved by the controller. Acknowledgements clear that exact host
+  request and preserve a newer replacement. Durably acknowledged requests stay
+  dismissed across reconnects and controller restarts. The normal SSH control synchronization
+  removes acknowledged or expired pending records. No new listener or polling
+  loop is added, and the request is separate from terminal activity capture.
 - Terminal viewers consume ANSI/DEC mode queries (DECRQM) in the parser, alongside
   the existing identity/status/color query policy. Multiple viewers must not send
   duplicate replies into a shell or broadcast them into another terminal. Programs
@@ -259,7 +289,9 @@ provider/hardware authentication acceptance remain open in #110.
 
 Choose **Read page text** to open a keyboard-focusable text view of the selected
 page’s Chromium accessibility names and roles. Headings, links, buttons and form
-labels appear in document order and can be read with the local screen reader.
+labels appear in accessibility-tree order within each document and can be read
+with the local screen reader. Embedded documents follow the selected page’s
+document.
 **Close page text** returns focus to remote-page input. No new keyboard shortcut
 is reserved.
 
@@ -270,7 +302,8 @@ selected button, link or toggle's page click behavior. Use the viewport for
 controls that need a different gesture. Text fields offer focus without an
 activation action; their existing contents are not included in the text view.
 
-This is an on-demand snapshot of the root document, not a live DOM mirror.
+This is an on-demand snapshot of the selected page, including supported
+same-origin, cross-origin and nested frames.
 Read it again after dynamic page changes. Navigation or a different selected tab
 hides the old snapshot. An action consumes its references, including failed or
 interrupted actions: read again before another action rather than retrying an
@@ -285,9 +318,10 @@ release until the dialog can accept it. Queued page input is refused rather
 than sent into the page after dismissing the dialog.
 
 Only the current controller can read or act, with the lease checked again at
-dispatch. The worker binds each opaque reference to its target, document and
-URL; it verifies the current accessible name, role and availability and refuses
-replaced, renamed, disabled or stale controls. Native DOM identifiers stay in
+dispatch. Each opaque reference is bound to the selected tab and its actual
+frame/document ancestry. The worker verifies that ancestry, the document that
+currently owns the native node, and its accessible name, role and availability.
+It refuses moved, replaced, renamed, disabled or stale controls. Native DOM identifiers stay in
 the worker; HTTP requests cannot supply selectors or JavaScript. Existing
 owner, SSH and worker-channel boundaries apply.
 
@@ -296,14 +330,22 @@ names limited to 2048 UTF-8 bytes and tree depth to 32. The view reports when
 content was cut off. Ignored nodes, duplicate inline glyph runs, editable values
 and editable descendants are omitted; markup is displayed as text. Action
 references are bounded by that same entry limit and replaced on each reading.
-The view does not expose iframe documents, forward a local screen reader to
-the remote OS, or establish real identity-provider acceptance. Those broader
-accessibility and authentication requirements remain under #110.
+Frame discovery is also bounded to 32 documents and 32 temporary iframe
+attachments per request. Unavailable, unproven or excess frames are omitted;
+read again or use the viewport when content is truncated. Temporary attachments
+detach without closing or navigating the frame. Chromium site isolation and
+frame sandbox restrictions stay enabled. A matching URL, name or browser
+context in a different tab does not grant access to its controls.
+
+This text view does not forward a local screen reader to the remote OS or
+establish real identity-provider acceptance. Those broader accessibility and
+authentication requirements remain under #110.
 
 Actual macOS/Chromium qualification covers the visible Focus/Activate flow,
 native typing (including a closed shadow root), single-use activation, link
 navigation, disabled controls, page-initiated navigation and renamed controls.
-See [qualification scope](validation/browser-actions-2026-11-17/README.md).
+See [root-control qualification](validation/browser-actions-2026-11-17/README.md)
+and [frame-control qualification](validation/browser-frames-2026-11-18/README.md).
 
 ## Opt-in navigation diagnostics
 

@@ -18,10 +18,11 @@ func TestOpenRigRequiresAdministratorAndReportsMissingInstallation(t *testing.T)
 	_, handler := fixture(t, "local")
 	t.Setenv("PATH", t.TempDir())
 	requireStatus(t, request(handler, "GET", "/api/openrig", "", ""), 401)
+	requireStatus(t, request(handler, "GET", "/api/coordination/changes", "", ""), 401)
 	admin := responseToken(t, request(handler, "POST", "/api/auth/bootstrap", `{"username":"owner","password":"owner-password"}`, ""))
 	requireStatus(t, request(handler, "POST", "/api/auth/register", `{"username":"member","password":"member-password"}`, admin), 201)
 	member := responseToken(t, request(handler, "POST", "/api/auth/login", `{"username":"member","password":"member-password"}`, ""))
-	for _, endpoint := range []struct{ method, path string }{{"GET", "/api/coordination"}, {"POST", "/api/coordination/agents"}, {"POST", "/api/coordination/workspaces"}, {"POST", "/api/coordination/attach"}, {"POST", "/api/coordination/messages"}, {"POST", "/api/coordination/send-status"}, {"POST", "/api/coordination/drain"}, {"GET", "/api/openrig"}, {"GET", "/api/openrig/agents"}, {"POST", "/api/openrig/attach"}, {"POST", "/api/openrig/proof/stop"}} {
+	for _, endpoint := range []struct{ method, path string }{{"GET", "/api/coordination/changes"}, {"GET", "/api/coordination"}, {"POST", "/api/coordination/agents"}, {"POST", "/api/coordination/workspaces"}, {"POST", "/api/coordination/rig/pods"}, {"POST", "/api/coordination/attach"}, {"POST", "/api/coordination/stop/preview"}, {"POST", "/api/coordination/stop"}, {"POST", "/api/coordination/messages"}, {"POST", "/api/coordination/send-status"}, {"POST", "/api/coordination/drain"}, {"GET", "/api/openrig"}, {"GET", "/api/openrig/agents"}, {"POST", "/api/openrig/attach"}, {"POST", "/api/openrig/proof/stop"}} {
 		requireStatus(t, request(handler, endpoint.method, endpoint.path, "", member), 403)
 	}
 	requireStatus(t, request(handler, "GET", "/api/openrig", "", admin), 200)

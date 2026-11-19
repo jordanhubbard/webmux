@@ -353,7 +353,7 @@ func TestRigSSHSeatRefusalExplainsTheWayBack(t *testing.T) {
 	}
 	data, _ := os.ReadFile(calls)
 	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
-		if !strings.HasPrefix(line, "ps ") {
+		if line != "--version" && !strings.HasPrefix(line, "ps ") {
 			t.Fatal("refusing a reattachment ran a Rig mutation", line)
 		}
 	}
@@ -513,8 +513,72 @@ func TestAgentDeckLocalProfileScopesAttachmentAndOwnership(t *testing.T) {
 	}
 }
 
+func TestAgentDeckLocalProfileScopesMessagesAndCompletions(t *testing.T) {
+	for _, profile := range []string{"work", "default"} {
+		t.Run(profile, func(t *testing.T) {
+			t.Setenv("AGENTDECK_PROFILE", "unrelated")
+			executable, calls := fakeAgentDeck(t)
+			script, err := os.ReadFile(executable)
+			if err != nil {
+				t.Fatal(err)
+			}
+			text := strings.ReplaceAll(string(script), `"id":"local-1","title"`, `"id":"local-1","profile":"`+profile+`","title"`)
+			commands := []string{
+				"session ownership inspect local-1 --json",
+				"inbox peek --json local-1",
+				"session send local-1 --message-file - --json --require-input-prompt --queue",
+				"session send-status send-local --json",
+				"remote drain sparky --into local-1 --json",
+			}
+			for _, command := range commands {
+				text = strings.ReplaceAll(text, `"`+command+`")`, `"-p `+profile+` `+command+`")`)
+			}
+			if err := os.WriteFile(executable, []byte(text), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			p := &agentDeckProvider{executable: executable}
+			launch, err := p.Attach(context.Background(), "local:local-1")
+			if err != nil || !reflect.DeepEqual(launch.Argv, []string{executable, "-p", profile, "session", "attach", "local-1"}) {
+				t.Fatal("attachment did not override the unrelated ambient profile", launch, err)
+			}
+			if live, err := p.Survives(context.Background(), "local:local-1"); err != nil || !live {
+				t.Fatal("ownership did not override the unrelated ambient profile", live, err)
+			}
+			status, err := p.Status(context.Background())
+			if err != nil || len(status.Errors) != 0 || len(status.Messages) != 1 {
+				t.Fatal("inbox did not use the owning local profile", status, err)
+			}
+			queued, err := p.Send(context.Background(), coordinationSendRequest{Target: "local:local-1", Message: "profile-scoped review", Queue: true})
+			if err != nil || queued.SendID != "send-local" || !queued.Queued || queued.Submitted {
+				t.Fatal("send lost the local profile or guarded queue semantics", queued, err)
+			}
+			delivery, err := p.SendStatus(context.Background(), "local:local-1", "send-local")
+			if err != nil || delivery["state"] != "landed" || delivery["message"] != nil {
+				t.Fatal("delivery lookup lost its profile or exposed the body", delivery, err)
+			}
+			drain, err := p.Drain(context.Background(), "sparky", "local:local-1")
+			if err != nil || drain.Written != 1 || len(drain.Messages) != 1 || drain.Messages[0].SourceRemote != "sparky" {
+				t.Fatal("drain lost its local destination profile or remote provenance", drain, err)
+			}
+			data, err := os.ReadFile(calls)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, command := range commands {
+				if !strings.Contains("\n"+string(data), "\n-p "+profile+" "+command+"\n") || strings.Contains("\n"+string(data), "\n"+command+"\n") {
+					t.Fatalf("operation escaped its owning profile: %q", command)
+				}
+			}
+			body, err := os.ReadFile(calls + ".message")
+			if err != nil || string(body) != "profile-scoped review" || strings.Contains(string(data), "profile-scoped review") {
+				t.Fatal("message must be passed only over stdin", err)
+			}
+		})
+	}
+}
+
 func TestAgentDeckDuplicateProfileIDsDoNotSelectAnArbitraryRegistry(t *testing.T) {
-	executable, _ := fakeAgentDeck(t)
+	executable, calls := fakeAgentDeck(t)
 	script, err := os.ReadFile(executable)
 	if err != nil {
 		t.Fatal(err)
@@ -534,6 +598,19 @@ func TestAgentDeckDuplicateProfileIDsDoNotSelectAnArbitraryRegistry(t *testing.T
 	}
 	if live, err := p.Survives(context.Background(), "local:local-1"); err == nil || live {
 		t.Fatal("ambiguous profile used for process ownership", live, err)
+	}
+	if _, err := p.Send(context.Background(), coordinationSendRequest{Target: "local:local-1", Message: "must not send", Queue: true}); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatal("ambiguous profile accepted a message", err)
+	}
+	if _, err := p.SendStatus(context.Background(), "local:local-1", "send-local"); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatal("ambiguous profile selected a delivery registry", err)
+	}
+	if _, err := p.Drain(context.Background(), "sparky", "local:local-1"); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+		t.Fatal("ambiguous profile accepted remote completions", err)
+	}
+	data, err := os.ReadFile(calls)
+	if err != nil || strings.Contains(string(data), "session send") || strings.Contains(string(data), "remote drain") {
+		t.Fatal("ambiguous identity reached a messaging operation", err)
 	}
 }
 
@@ -565,9 +642,40 @@ func TestRigInventoryKeepsLifecycleIndependentOfAttachment(t *testing.T) {
 				t.Fatal(status)
 			}
 			seat := status.Seats[0]
-			if seat.State != tc.wantState || seat.TransportState != tc.wantTransport || seat.Openable != tc.wantOpenable || seat.ID != "seat-1" {
+			if seat.State != tc.wantState || seat.TransportState != tc.wantTransport || seat.Openable != tc.wantOpenable || seat.ID != localRigSeatID("rig-1", "worker") {
 				t.Fatalf("canonical inventory changed by relay observation: %+v", seat)
 			}
 		})
+	}
+}
+
+func TestRigExecutionHostRequiresLaunchEvidence(t *testing.T) {
+	for _, host := range []string{"", "localhost", "worker.example"} {
+		var raw rigStatusEnvelope
+		if err := json.Unmarshal([]byte(`{"seats":[{"canonicalSessionName":"external-seat","logicalId":"agents.worker","rigId":"rig-one","host":"untrusted-default","hostSelfId":"opaque-native-host","openable":true,"tmuxTarget":"external-seat"}]}`), &raw); err != nil {
+			t.Fatal(err)
+		}
+		if host != "" {
+			raw.Agents = []managedRigAgent{{Target: "external-seat", Host: host, Connected: true}}
+		}
+		seat := rigCoordinationStatus(raw).Seats[0]
+		if seat.Host != host || seat.RigHostID != "opaque-native-host" || !seat.Openable {
+			t.Fatalf("host inferred from attachment instead of launch evidence: %+v", seat)
+		}
+	}
+	var raw rigStatusEnvelope
+	if err := json.Unmarshal([]byte(`{"seats":[{"rigId":"rig-one","logicalId":"worker","hostSelfId":"bad\nidentity"}]}`), &raw); err != nil {
+		t.Fatal(err)
+	}
+	if seat := rigCoordinationStatus(raw).Seats[0]; seat.RigHostID != "" || seat.Host != "" {
+		t.Fatal("unbounded/control-bearing host identity was admitted", seat)
+	}
+}
+
+func TestRigNativeRecoveryRejectsUnknownHostBeforeCallingManager(t *testing.T) {
+	p := &rigProvider{home: t.TempDir(), owner: "owner"}
+	action, err := p.PlanNativeRecovery(context.Background(), session.RigIdentity{Target: "external-seat", RigHostID: "localhost", Runtime: "claude-code"})
+	if err == nil || action != nil || !strings.Contains(err.Error(), "execution host is unverified") {
+		t.Fatal("opaque identity became a recovery destination", err)
 	}
 }

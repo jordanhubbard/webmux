@@ -102,7 +102,8 @@ The Coordination tab groups workers under expandable project headings. Each
 worker shows its registered name (such as coder or reviewer), execution host,
 runtime and observed state. Expand or collapse a project with its summary button
 or Enter/Space; **Open session** attaches an existing viewer and **Restart
-provider and open** is reserved for a stopped managed Rig seat.
+provider and open** appears for a stopped seat with a WebMux launch record and
+registered workspace. A WebMux launch record is not native Rig lifecycle ownership.
 A worker name is the registered name, not an inferred permission or capability.
 
 Opening a managed terminal records its coordinator target, project, name, host
@@ -111,8 +112,9 @@ host separately from the terminal's editable title and transport badge. For
 remote workers the viewer still attaches locally to an SSH relay: its EXEC
 transport is not a claim that the provider executes locally. Existing tiles gain
 this metadata when opened again from Coordination. Renaming an ordinary terminal
-does not make it Rig-managed. Tile identity is retained registration metadata,
-not a live activity or verified-process indicator; consult Coordination for state.
+does not turn it into a Rig viewer. Tile identity is retained registration metadata,
+not a live activity or verified-process indicator. The separate tile status strip
+labels current lifecycle, bootstrap and activity observations.
 
 ## One coordinator, multiple execution hosts
 
@@ -190,6 +192,12 @@ completion records from registered remotes without consuming the remote copy;
 source-host attribution stays attached to every imported record. The toolbar
 badge and project/session rows surface waiting, completed, and failed work that
 needs attention.
+
+Local Agent Deck messaging, delivery lookup, inbox reads and completion collection
+select the discovered session profile, including an explicit `default` profile.
+Ambiguous session IDs across profiles are refused for targeted actions; remote
+session actions retain their registered-remote routing. See the
+[profile-routing qualification](validation/agent-deck-profile-routing-2026-11-17/README.md).
 
 Rig provides canonical topology and peer messaging. Both integrations can be enabled together. They retain separate ownership and
 project databases; a shared-agent identity and event bridge is future work. Additional coordinators can implement
@@ -270,6 +278,29 @@ This is a provenance repair under #194. Broader canonical inventory/adoption,
 notifications and lifecycle qualification remain open; remote Rig reporting
 through the outbound client (#200) and identity/event bridging (#246) remain
 separate features.
+
+## Execution-host evidence for external seats
+
+The [#430](https://github.com/jordanhubbard/webmux/issues/430) candidate keeps an
+externally enrolled Rig seat's execution host unknown until a trusted launch
+record supplies it. A local tmux attachment may front SSH; it establishes where
+the viewer connects, not where the coding process executes. The native Rig
+`hostSelfId`, when available, is retained separately as `rigHostId` in inventory
+and `rig_host_id` in terminal metadata. It is an opaque identity, never an SSH
+destination. WebMux-created local and SSH seats retain their recorded hosts.
+
+Opening an external viewer, reloading or reopening its tile preserves that
+uncertainty and the original provider. Recovery previews show **Unknown execution
+host** and do not offer native resume for an unverified destination. Explicitly
+opening the canonical seat also corrects an older viewer's inferred localhost
+label while reusing that viewer. Missing or unsupported recovery evidence still
+leaves retained logs and manager-based recovery available.
+
+The [qualification record](validation/rig-host-provenance-2026-11-17/README.md)
+includes real Rig enrollment, ordinary terminal input, reload/reopen and one
+unchanged process. It uses a synthetic terminal, not an authenticated coding
+conversation. The broader macOS Rig browser suite has two failures reproduced
+on unchanged main, tracked separately in [#431](https://github.com/jordanhubbard/webmux/issues/431).
 
 ## Rig owner workflow
 
@@ -388,3 +419,227 @@ The ordinary installed coordinator is kept intact during private qualification.
 Native lifecycle, reboot, policy and input-delivery evidence is required before
 this candidate becomes the supported minimum. Rig and built-in coordination
 retain their independent ownership and lifecycle.
+
+## Canonical local seat identity
+
+Local Rig inventory uses an opaque `local-rig/<key>` seat ID derived from the
+canonical Rig ID and logical node ID. The key is scoped to this controller's
+configured local coordinator. `projectId` and `logicalId` describe that canonical
+identity. `managerTarget` is Rig's current session address; `attachmentTarget`
+is the current tmux attachment address. Neither address is the logical seat ID.
+The existing authenticated `host-rig/<client>/<key>` remote namespace is separate.
+An opaque host self-ID remains diagnostic metadata, never an SSH destination.
+
+Created viewers persist `rig.seat_id`, alongside the native manager `rig.target`
+and `rig.attachment_target`. These are not coding-conversation IDs. Opening an
+older exact-address viewer can add its freshly resolved canonical key without
+creating a second viewer. Old API clients may still request an exact current
+session address; missing or ambiguous canonical identities fail closed.
+
+After an external owner explicitly rebinds a logical seat in Rig, **Open
+session** follows fresh canonical inventory and reuses the viewer, retained
+history and grid position. It detaches the previous viewer client, leaving the
+old provider alone. A hidden viewer keeps its saved cell when free, falls back
+to another free cell when occupied, and refuses a full grid. Placement failures
+do not detach a running viewer.
+
+Transport reconnect and controller startup reattachment require the original
+canonical seat and native destination. They refuse a changed binding instead
+of following it automatically. An attachment change discards cached native
+process/conversation references; existing lifecycle-manager validation still
+owns any later native recovery. This does not adopt providers, infer execution
+hosts or qualify authenticated coding conversations.
+
+The [native identity qualification](validation/rig-seat-identity-2026-11-17/README.md)
+records an explicit provider-owned unclaim/rebind with stable seat/viewer/layout,
+changed attachment, exact input routing, retained history and preserved old
+provider. Broader lifecycle, adoption and change-notification work remains under
+[#194](https://github.com/jordanhubbard/webmux/issues/194).
+
+
+## Canonical activity in grid tiles
+
+Rig tiles show Rig lifecycle, bootstrap status and activity as separate observations.
+`Bootstrap ready` means Rig completed startup; it does not establish that a coding
+provider can accept an instruction. Fresh, generation-resolved runtime hooks can
+report agent running, idle or needing input. Terminal output is labelled as output;
+other observational sources remain activity estimates. Silence, a connected viewer
+and a surviving tmux session never become provider readiness claims.
+
+The grid reads Rig facts every ten seconds only when an authorized workspace has
+Rig viewers. It does not enable an integration, query Agent Deck or read message
+bodies. Requests do not overlap, have a twenty-second deadline, and expire the
+previous response after thirty seconds. A failed or partially failed discovery
+clears positive observations. Activity samples older than thirty seconds, more
+than five seconds ahead of the browser clock, stale, or of unresolved hook
+occupant provenance are unknown. Clock disagreement can therefore conservatively
+hide activity. These bounds are WebMux display limits, not Rig freshness promises.
+
+Each logical seat is matched by its canonical ID. Activity and bootstrap facts
+also require the viewer's saved manager and attachment targets to match current
+inventory. A changed binding needs explicit Open before those facts can describe
+that viewer. Logical lifecycle can still report `detached` after Rig removes a
+stopped seat's attachment. Missing or duplicate identities remain unknown. These
+checks do not add an atomic occupant-conditional lifecycle contract.
+
+Raw activity evidence, prompt text, runtime event bodies, hook tokens and resume
+tokens are omitted from the observation projection. The terminal-first empty
+workspace, ordinary terminals and Agent Deck tiles keep their existing behavior.
+The older standalone navigator remains unmounted, as established by #228.
+
+The [native activity validation](validation/rig-seat-activity-2026-11-17/README.md)
+covers actual builtin terminal seats, a native seat stop, sibling survival and
+viewer placement. Hook attention and stale/rebind behavior have deterministic
+coverage; authenticated coding-provider readiness remains unqualified.
+
+### Native Stop contract still needed
+
+A private WebMux launch record is not native Rig lifecycle ownership. Current
+WebMux launchers use Rig's adopted/claimed enrollment path; native `rig seat stop`
+refuses those sessions. For an SSH launch, the local tmux process is a relay whose
+exit does not terminate the remote persistent provider. An isolated native test
+confirmed that one natively launched terminal can be stopped without affecting its
+sibling, while an adopted terminal is refused and stays alive.
+
+Published Rig 0.6.14 accepts a stop reference plus reason/operator but no atomic
+expected rig/node/session or occupant-generation precondition. A separate WebMux
+preflight cannot protect a reviewed occupant from replacement before that native
+command executes. Issue #438 tracks ownership, conditional identity and remote
+effect requirements before a Stop control can ship. Hide, reconnect and native
+recovery keep their existing separate contracts; this activity UI adds no stop
+action and does not complete #194.
+
+
+## Enrollment origin and launch records
+
+The **Rig** badge identifies a viewer linked to a recorded Rig seat. It does not
+claim that Rig launched the process or can stop it. Coordination labels its saved
+WebMux launcher as **WebMux launch record**, independently of manager-reported
+**Launched by Rig**, **Adopted by Rig**, or unknown enrollment. Tiles show the same
+enrollment distinction only when their saved native binding matches inventory.
+A changed binding or unavailable observation shows unknown for that viewer.
+
+The optional coordination fields are `enrollmentOrigin` (`launched`, `claimed`,
+`unknown`), `enrollmentSource` (`rig-session-registry`, `unavailable`),
+`enrollmentId` and `enrollmentObservedAt`. The enrollment ID is a Rig registration
+record, not a coding conversation or a resume token. Existing `managed` remains
+compatible: it means a WebMux private launch record for Rig seats. A native Rig
+launch can therefore have `managed: false`; a WebMux-launched process enrolled
+with `attach --self` can have `managed: true` and `enrollmentOrigin: claimed`.
+
+This read-only projection is qualified for published OpenRig 0.6.14 (df1c1517).
+It joins the manager's node inventory and session registry within each immutable
+rig ID, checks the logical seat, node, latest enrollment and native address, and
+uses that build's greatest-session-ULID selection rule. History, conflicting
+bindings, duplicate identities and malformed rows cannot establish current
+lineage. Other builds, including the separate native recovery qualification,
+remain unknown until their enrollment contract is qualified. Native recovery's
+existing version and policy checks are unchanged.
+
+Only display discovery requests these facts. Attach, survival and recovery reads
+keep their original discovery path without enrollment HTTP requests. The reader
+uses GET against the local daemon port reported by the configured CLI, refuses
+redirects, caps each response at 512 KiB and each sweep at 8 MiB, uses two rig
+workers (up to four simultaneous requests), and has an eight-second deadline.
+At most 256 seats, 32 rigs and 4096 rows per response are accepted; excessive or
+incomplete inventories degrade to unknown. One failed rig does not lend its
+lineage to another. Host-client Rig observations retain their existing protocol
+and report no enrollment origin through it.
+
+Raw session tokens, prompt or activity evidence, and event bodies are not copied
+to the public projection. Manager-reported enrollment describes registration
+lineage; it neither proves provider liveness nor grants authority to stop a local
+or remote provider. The conditional Stop, native launch/adopt and remote ownership
+requirements in #438 remain open. See the [native enrollment validation](validation/rig-enrollment-origin-2026-11-17/README.md).
+
+
+## Live local Rig changes
+
+The #443 candidate refreshes visible Rig tiles when the qualified local daemon
+reports a change. It re-reads canonical inventory before updating the tile; an
+event itself never establishes lifecycle or provider readiness. Empty workspaces
+and ordinary terminal workspaces do not subscribe. Closing or disabling the
+workspace cancels its wait. Canonical polling and stale-observation expiry remain
+the fallback when the optional stream is unavailable or its build is unqualified.
+
+This path is qualified for local OpenRig 0.6.14 (df1c1517). Other builds and remote
+host notifications remain outside this qualification. It performs no lifecycle
+action, adoption or Agent Deck bridge. See [native notification evidence](validation/rig-change-notifications-2026-11-17/README.md)
+for the paused-fallback-timer browser case, cancellation, bounds and remaining
+integration gates.
+
+
+## Combined grid and Agents qualification
+
+The [Rig integration candidate](validation/rig-grid-integration-2026-11-17/README.md)
+reconciles canonical seat identity/activity/enrollment and notifications with the
+observed Agents pane. Its live case keeps a real Rig terminal seat and a separate
+observed tmux terminal active through navigation, reload and viewer closure,
+without transferring ownership. Hidden terminal panes now suspend Rig metadata
+observation while their terminal viewers stay mounted. This remains a candidate
+pending hosted/review/audit gates; the broader lifecycle, recovery and bridge
+requirements remain separate.
+
+## Checked local seat Stop
+
+The checked Stop candidate under #438 requires the published OpenRig CLI and
+daemon `0.7.18 (3bf87c62)`, a native local Unix manager, and `lsof`/`ps` process
+and listener evidence. Linux also requires `readlink` and the manager's
+`/proc/<pid>/exe` link; Node 24's `MainThread` thread name is not executable
+identity. The manager's stamped build, OS owner, listener PID,
+process start and daemon entry point are checked before a review is issued and
+again before dispatch. Unverified, tunneled or changed destinations refuse.
+
+For a running seat whose native enrollment says **Launched by Rig**, choose
+**Review local seat Stop** in Coordination, supply a reason, inspect the
+current destination and explicitly confirm. The reviewed node and enrollment
+IDs are passed unchanged to Rig's `seat-stop.v1` checked HTTP operation. Rig
+owns the final binding/occupant guard and terminal effects. Typing protection
+and other native refusals remain effective.
+
+The stated effect is the manager-owned local tmux seat and all its attached
+viewers. Jobs outside that session, including remote providers, may continue.
+The viewer's grid tile, placement and retained log stay available. Native
+**Adopted by Rig** seats are ineligible; a WebMux launch record does not grant
+lifecycle authority. WebMux-created adopted launchers, including their SSH
+relays, remain ineligible. A [controlled SSH relay qualification](validation/rig-stop-relay-2026-11-18/README.md)
+uses a native Rig terminal whose owner starts an actual SSH transport: confirmed
+Stop ends that local transport while the remote Linux tmux process survives.
+Native WebMux launch conversion, authenticated remote coding and host-failure
+acceptance remain open under #438/#194/#318.
+
+A review expires after three minutes. Before dispatch, WebMux durably claims
+the immutable native enrollment, with private owner-scoped reviews/results and
+an enrollment-wide claim that also covers another admin or a changed daemon
+port. File contents and directory links are synced before lifecycle dispatch.
+Duplicate requests return the retained result. A lost response or interrupted
+controller leaves an uncertain consumed claim, including after the review
+expires; no automatic retry is offered. A confirmed no-effect refusal permits
+a new explicit review. A detach receipt is distinct from a kill attempt.
+
+[Qualification and limits](validation/rig-checked-stop-2026-11-18/README.md)
+cover real native replacement/adoption refusal, selected-seat termination,
+sibling survival, retained layout/history and duplicate receipts. The CI
+fixture installs 0.7.18 separately from the existing 0.6.14 compatibility lane.
+These synthetic terminal controls do not qualify authenticated coding-session
+recovery, a remote provider Stop, or an installed manager upgrade. Optional
+manager dependency review remains part of #91; the isolated 0.7.18 audit
+snapshot records the existing Hono static-middleware advisory separately from
+WebMux's unchanged dependency-audit gate #429.
+
+### Choose a pod in an existing Rig project
+
+With the qualified Rig 0.7.18 integration, an empty pod can receive its first
+agent. Click the desired empty grid cell, choose **Rig** as the coordinator, then
+choose **Add an agent to an existing project**. Select the project and its current
+**Rig pod**, choose the code folder and start the agent. Stopped projects remain
+selectable when Rig confirms that their namespace still exists.
+
+**Refresh pods** rereads that project's current definitions, including pods that
+have no seats. Discovery starts no agent. If the project was archived or a chosen
+pod was removed, WebMux refuses the launch; refresh the choices before trying
+again. It does not create a replacement project or guess a default pod.
+
+The legacy integration continues to expose its observed pod choices. The native
+empty-pod contract and live qualification are recorded in
+[canonical empty-pod selection](validation/rig-empty-pods-2026-11-18/README.md).

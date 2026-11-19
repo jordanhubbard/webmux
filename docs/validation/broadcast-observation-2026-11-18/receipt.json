@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "recordedUTC": "2026-11-18T16:50:17.724654+00:00",
+  "parent": "a9cf258425f91f91669d5292e0cbeef8a7958e2c",
+  "testFile": "tests/e2e/broadcast-scope.spec.ts",
+  "testSHA256": "79e7efed12939e3422b99511521b336ad18f9d22bf5d1923c61ec86f95403e27",
+  "productionAndScriptsUnchanged": true,
+  "hostedFailure": {
+    "run": 44345417984,
+    "job": 134946382229,
+    "artifact": 14446817607,
+    "artifactSHA256": "d6b0096afffbcef2a16289ef0935c9d62f4c7de7beab954a12f0355e4028df9a",
+    "childBHex": "62",
+    "observedBFrames": []
+  },
+  "local": {
+    "platform": "Darwin ARM64",
+    "node": "24.21.0",
+    "go": "1.27.4",
+    "tmux": "3.8",
+    "realGoChromeNormalPass": true,
+    "controlledOriginalExpectedFail": true,
+    "controlledFixedPass": true,
+    "strictE2ETypesPass": true,
+    "frontendBuildPass": true,
+    "whitespacePass": true
+  },
+  "control": "Only observer recording of B is held until first typedHex read, then released through a microtask. Actual browser/WebSocket/server/PTY/append-only child files remain real. No wire delay, sleeps, product changes or timeout changes.",
+  "receipts": {
+    "normal-fixed": {
+      "selectedOriginalHex": "7879",
+      "explicitlyIncludedLaterHex": "79",
+      "ordinaryAfterModeOffHex": "62",
+      "outboundFramesHex": [
+        {
+          "fixture": "Broadcast A",
+          "frames": [
+            "78",
+            "79"
+          ]
+        },
+        {
+          "fixture": "Broadcast B",
+          "frames": [
+            "62"
+          ]
+        },
+        {
+          "fixture": "Broadcast C",
+          "frames": [
+            "79"
+          ]
+        }
+      ],
+      "receiptSource": "Actual PTY child append-only byte files, not terminal screen text"
+    },
+    "controlled-original": {
+      "selectedOriginalHex": "7879",
+      "explicitlyIncludedLaterHex": "79",
+      "ordinaryAfterModeOffHex": "62",
+      "outboundFramesHex": [
+        {
+          "fixture": "Broadcast A",
+          "frames": [
+            "78",
+            "79"
+          ]
+        },
+        {
+          "fixture": "Broadcast B",
+          "frames": []
+        },
+        {
+          "fixture": "Broadcast C",
+          "frames": [
+            "79"
+          ]
+        }
+      ],
+      "observationControl": {
+        "heldB": true,
+        "releasedB": false
+      },
+      "receiptSource": "Actual PTY child append-only byte files, not terminal screen text"
+    },
+    "controlled-fixed": {
+      "selectedOriginalHex": "7879",
+      "explicitlyIncludedLaterHex": "79",
+      "ordinaryAfterModeOffHex": "62",
+      "outboundFramesHex": [
+        {
+          "fixture": "Broadcast A",
+          "frames": [
+            "78",
+            "79"
+          ]
+        },
+        {
+          "fixture": "Broadcast B",
+          "frames": [
+            "62"
+          ]
+        },
+        {
+          "fixture": "Broadcast C",
+          "frames": [
+            "79"
+          ]
+        }
+      ],
+      "observationControl": {
+        "heldB": true,
+        "releasedB": true
+      },
+      "receiptSource": "Actual PTY child append-only byte files, not terminal screen text"
+    }
+  },
+  "filesSHA256": {
+    "candidate.spec.ts": "79e7efed12939e3422b99511521b336ad18f9d22bf5d1923c61ec86f95403e27",
+    "e2e-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "controlled-original.spec.ts": "1a1b2094bcc65a112f2ff37550332da7d69d91f21981e7b8ef06131d59d36443",
+    "controlled-fixed.log": "fd264d8090dc92a1ad83a301fbd748de01c7067c01b8256d7b7d6f1acb6a8b9f",
+    "normal-fixed.log": "813eedbdfcf601889070663c000241b30b169f3a56265551542f8856af961f5a",
+    "frontend-build.log": "4d9455011abede633c729b87bc7839be3af94ccba46471fde7a4be529dd45d79",
+    "controlled-original.log": "328ff88a80da348228cde0039dc7d0182274c5ce42b7f31c36ca7223cc0f9ee9",
+    "controlled-fixed.spec.ts": "6e98e1d8278541ec2a87d3f517a517f67d1964a270904967813d3ca262437c0f"
+  },
+  "scope": "Two-channel receipt ordering in the native broadcast test. No product-routing repair or universal lifecycle/security/release claim. Full hosted exact-head checks remain required.",
+  "preparationNote": "First local control-preparation command used the wrong relative path and did not instrument the test. That invocation ran the normal fixed source and passed; retained as normal-fixed, not as a counterfactual."
+}

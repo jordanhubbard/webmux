@@ -6,7 +6,17 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn, spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { runWithPrivateTmux } from '../webmux/scripts/private-test-tmux.mts';
+import { runWithPrivateTmux, socketIsStopped } from '../webmux/scripts/private-test-tmux.mts';
+
+// The parent polls for this pathname. Publish only complete contents: observing
+// an empty file would bind the live-listener fixture in the parent's cwd.
+const receiptPublisher = `
+function publishReceipt(value) {
+  const pending = process.env.RECEIPT + '.pending';
+  fs.writeFileSync(pending, value);
+  fs.renameSync(pending, process.env.RECEIPT);
+}
+`;
 
 test('outer browser runner cleans real tmux after success, failure, fixture death and interruption', {
   skip: process.platform === 'win32', timeout: 30_000,
@@ -21,10 +31,11 @@ test('outer browser runner cleans real tmux after success, failure, fixture deat
   fs.writeFileSync(fixture, `
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
+${receiptPublisher}
 const created = spawnSync('tmux', ['-f', '/dev/null', 'new-session', '-d', '-P', '-F', '#{pane_pid}', '-s', 'browser-test', 'sleep 60'], { encoding: 'utf8' });
 if (created.status !== 0) throw new Error(created.stderr);
 const server = spawnSync('tmux', ['display-message', '-p', '#{pid}'], { encoding: 'utf8' });
-fs.writeFileSync(process.env.RECEIPT, JSON.stringify({ directory: process.env.TMUX_TMPDIR, pane: Number(created.stdout.trim()), server: Number(server.stdout.trim()) }));
+publishReceipt(JSON.stringify({ directory: process.env.TMUX_TMPDIR, pane: Number(created.stdout.trim()), server: Number(server.stdout.trim()) }));
 if (process.argv[2] === 'killed') process.kill(process.pid, 'SIGKILL');
 else if (process.argv[2] === 'wait') setInterval(() => {}, 1000);
 else process.exit(Number(process.argv[2]));
@@ -54,7 +65,7 @@ else process.exit(Number(process.argv[2]));
     fs.unlinkSync(receipt);
     const wrapper = path.join(root, 'wrapper.mts');
     const moduleURL = pathToFileURL(path.resolve(import.meta.dirname, '../webmux/scripts/private-test-tmux.mts')).href;
-    fs.writeFileSync(wrapper, `import { runWithPrivateTmux } from ${JSON.stringify(moduleURL)};
+    fs.writeFileSync(wrapper, `import { runWithPrivateTmux, socketIsStopped } from ${JSON.stringify(moduleURL)};
 process.exitCode = await runWithPrivateTmux(process.execPath, [${JSON.stringify(fixture)}, 'wait'], {cwd: ${JSON.stringify(root)}, env: process.env});`);
     const child = spawn(process.execPath, [wrapper], { env, stdio: 'inherit' });
     const exited = new Promise<number | null>((resolve, reject) => { child.once('exit', resolve); child.once('error', reject); });
@@ -119,27 +130,52 @@ test('failed shutdown preserves a listening socket and reports unexpected probe 
   const fixture = path.join(root, 'fixture.mts');
   const receipt = path.join(root, 'receipt');
   const release = path.join(root, 'release');
+  const opened = path.join(root, 'opened');
+  const publish = path.join(root, 'publish');
   fs.writeFileSync(fixture, `import fs from 'node:fs';
-fs.writeFileSync(process.env.RECEIPT, process.env.TMUX_TMPDIR);
+${receiptPublisher}
+// Hold the real open-before-write window until the parent has observed it.
+const write = fs.writeFileSync;
+fs.writeFileSync = (file, value) => {
+  const fd = fs.openSync(file, 'w');
+  write(process.env.OPENED, 'opened');
+  const blocker = new Int32Array(new SharedArrayBuffer(4));
+  while (!fs.existsSync(process.env.PUBLISH)) Atomics.wait(blocker, 0, 0, 5);
+  fs.writeSync(fd, value);
+  fs.closeSync(fd);
+};
+publishReceipt(process.env.TMUX_TMPDIR);
+fs.writeFileSync = write;
 const timer = setInterval(() => { if (fs.existsSync(process.env.RELEASE)) clearInterval(timer); }, 20);
 `);
-  const env = { ...process.env, PATH: bin + path.delimiter + process.env.PATH, RECEIPT: receipt, RELEASE: release };
+  const env = { ...process.env, PATH: bin + path.delimiter + process.env.PATH, RECEIPT: receipt, RELEASE: release, OPENED: opened, PUBLISH: publish };
   let directory: string | undefined;
   const server = net.createServer(connection => connection.destroy());
+  let refused: Promise<void> | undefined;
   try {
     const run = runWithPrivateTmux(process.execPath, [fixture], { cwd: root, env });
     // Attach rejection handling before yielding to avoid an unhandled rejection.
-    const refused = assert.rejects(run, /Cannot stop private test tmux/);
+    refused = assert.rejects(run, /Cannot stop private test tmux/);
+    void refused.catch(() => {}); // Keep readiness failures as the first failure.
     const deadline = Date.now() + 5000;
+    while (!fs.existsSync(opened) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 20));
+    assert(fs.existsSync(opened), 'fixture opened the receipt staging file');
+    assert.equal(fs.existsSync(receipt), false, 'receipt is invisible until its contents are complete');
+    fs.writeFileSync(publish, 'publish');
     while (!fs.existsSync(receipt) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 20));
     assert(fs.existsSync(receipt));
-    directory = fs.readFileSync(receipt, 'utf8');
+    const recorded = fs.readFileSync(receipt, 'utf8');
+    assert(path.isAbsolute(recorded), 'published receipt identifies an absolute private directory');
+    assert(fs.statSync(recorded).isDirectory());
+    directory = recorded;
     const socketDirectory = path.join(directory, `tmux-${process.getuid!()}`);
     fs.mkdirSync(socketDirectory);
     const socket = path.join(socketDirectory, 'default');
     await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(socket, resolve); });
+    const bound = fs.statSync(socket);
     fs.writeFileSync(release, 'go');
     await refused;
+    assert.equal(fs.statSync(socket).ino, bound.ino, 'failed cleanup preserves the selected socket identity');
     assert(fs.statSync(socket).isSocket(), 'live listener must not be unlinked');
     assert(server.listening);
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
@@ -152,10 +188,31 @@ fs.writeFileSync(process.env.RECEIPT, process.env.TMUX_TMPDIR);`);
     await assert.rejects(runWithPrivateTmux(process.execPath, [fixture], { cwd: root, env }), { code: 'ENOTDIR' });
     assert(fs.existsSync(fs.readFileSync(receipt, 'utf8')), 'unexpected probe error preserves evidence');
   } finally {
+    fs.writeFileSync(publish, 'publish');
     fs.writeFileSync(release, 'go');
+    await refused?.catch(() => {});
     if (server.listening) await new Promise<void>(resolve => server.close(() => resolve()));
     if (directory) fs.rmSync(directory, { recursive: true, force: true });
     if (fs.existsSync(receipt)) fs.rmSync(fs.readFileSync(receipt, 'utf8'), { recursive: true, force: true });
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
+test('socket shutdown probe requires absence after a reset and rejects unrelated errors', async t => {
+  for (const [event, expected] of [['ECONNRESET', false], ['connect', false], ['ECONNREFUSED', true], ['ENOENT', true], ['ENOTDIR', 'reject']] as const) {
+    await t.test(event, async context => {
+      const socket = new net.Socket();
+      context.mock.method(net, 'createConnection', () => {
+        queueMicrotask(() => {
+          if (event === 'connect') socket.emit('connect');
+          else socket.emit('error', Object.assign(new Error(event), { code: event }));
+        });
+        return socket;
+      });
+      if (expected === 'reject') await assert.rejects(socketIsStopped('owned-test-socket'), { code: event });
+      else assert.equal(await socketIsStopped('owned-test-socket'), expected);
+      assert.equal(socket.destroyed, true, 'every probe releases its connection');
+    });
   }
 });

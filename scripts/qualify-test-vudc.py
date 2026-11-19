@@ -56,12 +56,27 @@ def admits_repair(status, log):
             and 'PASS: held native reply discarded; replacement import and exact payload verified' in log)
 
 
+def build_fixture(source, kernel, build, cache, options):
+    # The cache may outlive one disposable build, but acquire() verifies every
+    # restored byte against the source manifest before compilation.
+    subprocess.run([sys.executable, str(source / 'scripts/build-test-vudc.py'),
+                    '--kernel', kernel, '--build-root', str(build),
+                    '--source-cache', str(cache), *options], check=True, timeout=450)
+
+
+def admits_webmux(status, log):
+    return (status == 0 and kernel_clean(log)
+            and 'PASS: virtual USB enumeration, read/write, detach, interruption and worker cleanup' in log
+            and 'PASS: dashboard pairing, controller-loss continuity, owner Stop and confirmed listener release' in log)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--kernel', required=True)
     parser.add_argument('--vm-runner', required=True, type=Path)
     parser.add_argument('--binary', required=True, type=Path)
     parser.add_argument('--build-root', required=True, type=Path)
+    parser.add_argument('--source-cache', type=Path, help='optional persistent checksum-verified public source cache')
     args = parser.parse_args()
     if (platform.system() != 'Linux' or os.geteuid() != 0
             or os.environ.get('GITHUB_ACTIONS') != 'true'
@@ -133,9 +148,8 @@ def main():
     for name, options in [('unpatched', ['--unpatched', '--hold-replies']),
                           ('corrected-held', ['--hold-replies']), ('corrected', [])]:
         build = root / name
-        subprocess.run([sys.executable, str(source / 'scripts/build-test-vudc.py'), '--kernel', args.kernel,
-                        '--build-root', str(build), '--source-cache', str(root / 'source-cache'),
-                        *options], check=True, timeout=450)
+        build_fixture(source, args.kernel, build,
+                      args.source_cache.resolve() if args.source_cache else root / 'source-cache', options)
         receipt = json.loads((build / 'receipt.json').read_text())
         install(build / 'usbip-vudc.ko')
         if name == 'unpatched':
@@ -145,8 +159,7 @@ def main():
         else:
             guest('direct-20', receipt, ['--direct-control'], lambda status, log:
                   status == 0 and 'PASS: 20 direct USB/IP enumeration, read/write and detach cycles' in log)
-            guest('webmux-ssh', receipt, [], lambda status, log:
-                  status == 0 and 'PASS: virtual USB enumeration, read/write, detach, interruption and worker cleanup' in log)
+            guest('webmux-ssh', receipt, [], admits_webmux)
 
 
 if __name__ == '__main__':

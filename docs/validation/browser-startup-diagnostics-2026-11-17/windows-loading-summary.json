@@ -1,0 +1,2110 @@
+{
+  "head": "35205bde765723f61eafe6599233c483ecd03340",
+  "run": 44226836358,
+  "job": 134541944433,
+  "artifact": 14393024153,
+  "artifactSHA256": "e03679b0256f5a0e52a11fdf376973cd3d621f1121889c70301551c73daae630",
+  "phaseCounts": {
+    "full": 21,
+    "sample-1": 7,
+    "sample-2": 7,
+    "sample-3": 7
+  },
+  "records": [
+    {
+      "phase": "full",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 64,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 33
+    },
+    {
+      "phase": "full",
+      "mode": "direct-child-original",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-child",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-child-original",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-child",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-netlog",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-screenshot",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 41,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-loading-late",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 38,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 55,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-websocket",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "full",
+      "mode": "direct-netlog",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-screenshot",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 45,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "failure": "browser_trace_capture_error",
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 57,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 218,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": "incomplete_or_truncated"
+      },
+      "flowAliases": 33
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 48,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 35
+    },
+    {
+      "phase": "full",
+      "mode": "direct-websocket",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "full",
+      "mode": "direct",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded"
+    },
+    {
+      "phase": "sample-1",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 61,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 33
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 49,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-loading-late",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 50,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 191,
+        "matchedEvents": 3,
+        "identityLimit": null,
+        "errorClass": "incomplete_or_truncated"
+      },
+      "flowAliases": 38
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 54,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 41,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-loading-late",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 53,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 191,
+        "matchedEvents": 3,
+        "identityLimit": null,
+        "errorClass": "incomplete_or_truncated"
+      },
+      "flowAliases": 38
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 52,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-2",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "controlConfirmed": false,
+      "stopIssued": false,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 47,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 35
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 46,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "failure": "browser_trace_capture_error",
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 64,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 218,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": "incomplete_or_truncated"
+      },
+      "flowAliases": 33
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 47,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 35
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 51,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-loading-late",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 38,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 32
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 55,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-3",
+      "mode": "controlled-stop-trace",
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "controlConfirmed": false,
+      "stopIssued": false,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 48,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 35
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-late",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "failure": "fixture_document_not_loaded",
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 41,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 28
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "failure": "browser_trace_capture_error",
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 57,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 334,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": "incomplete_or_truncated"
+      },
+      "flowAliases": 11
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 56,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 37,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 17
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-loading-late",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "failure": "browser_trace_capture_error",
+      "traceLoading": true,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 55,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 174,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": "incomplete_or_truncated"
+      },
+      "flowAliases": 42
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "capture": {
+        "endAcknowledged": true,
+        "endElapsedMs": 54,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "identityLimit": null,
+        "errorClass": null
+      },
+      "flowAliases": 39
+    },
+    {
+      "phase": "full",
+      "mode": "worker-subprocess-saved",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    },
+    {
+      "phase": "full",
+      "mode": "worker-subprocess-temporary",
+      "loaded": true,
+      "fixtureRequests": 1,
+      "navigateCalls": 1
+    }
+  ],
+  "completeUnexplainedLoadingAborts": [
+    {
+      "phase": "full",
+      "transport": "pipe",
+      "profileLocation": "home-temporary",
+      "mode": "direct-home-trace-loading-late",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "failure": "fixture_document_not_loaded",
+      "browserTrace": {
+        "endElapsedMs": 38,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "bytes": 121672,
+        "scanned": 579,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "events": [
+          {
+            "name": "NavigationRequest::Create",
+            "phase": "X",
+            "relativeUs": 0
+          },
+          {
+            "name": "NavigationRequest::NavigationRequest",
+            "phase": "X",
+            "relativeUs": 14,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 0,
+            "netError": 0,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "Navigator::Navigate",
+            "phase": "B",
+            "relativeUs": 384
+          },
+          {
+            "name": "FrameTreeNode::CancelRestartingBackForwardCacheNavigation",
+            "phase": "X",
+            "relativeUs": 399
+          },
+          {
+            "name": "NavigationRequest::BeginNavigation",
+            "phase": "X",
+            "relativeUs": 4313
+          },
+          {
+            "name": "NavigationRequest::BeginNavigationImpl",
+            "phase": "X",
+            "relativeUs": 4342
+          },
+          {
+            "name": "NavigationRequest::StartNavigation",
+            "phase": "X",
+            "relativeUs": 4347
+          },
+          {
+            "name": "WebContentsImpl::DidStartNavigation",
+            "phase": "X",
+            "relativeUs": 4440,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 3,
+            "netError": 0,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "NavigationRequest::WillStartRequest",
+            "phase": "X",
+            "relativeUs": 6237
+          },
+          {
+            "name": "NavigationThrottleRegistryImpl::RegisterNavigationThrottles",
+            "phase": "X",
+            "relativeUs": 6241
+          },
+          {
+            "name": "NavigationThrottleRunner::ProcessInternal",
+            "phase": "X",
+            "relativeUs": 6566,
+            "throttleEvent": 1
+          },
+          {
+            "name": "NavigationRequest::OnStartChecksComplete",
+            "phase": "X",
+            "relativeUs": 6731
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Start",
+            "phase": "X",
+            "relativeUs": 6973
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateInterceptors",
+            "phase": "X",
+            "relativeUs": 6979
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Restart",
+            "phase": "X",
+            "relativeUs": 7003
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateThrottlingLoaderAndStart",
+            "phase": "X",
+            "relativeUs": 7186
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateURLLoaderThrottles",
+            "phase": "X",
+            "relativeUs": 7188
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 7487
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "X",
+            "relativeUs": 7501
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "X",
+            "relativeUs": 7952
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 22583
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "X",
+            "relativeUs": 22589
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "X",
+            "relativeUs": 22598
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "I",
+            "relativeUs": 27488
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "X",
+            "relativeUs": 27489
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "X",
+            "relativeUs": 27491
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "X",
+            "relativeUs": 33843,
+            "urlClass": "browser_internal",
+            "matchesRequested": false
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "X",
+            "relativeUs": 34039,
+            "urlClass": "browser_internal",
+            "matchesRequested": false
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 34459
+          },
+          {
+            "name": "FrameTreeNode::DidStopLoading",
+            "phase": "X",
+            "relativeUs": 37225
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 43336
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "I",
+            "relativeUs": 44196
+          },
+          {
+            "name": "FrameTreeNode::DidStopLoading",
+            "phase": "X",
+            "relativeUs": 50650
+          },
+          {
+            "name": "NavigationURLLoaderImpl::MaybeCreateLoaderForResponse",
+            "phase": "X",
+            "relativeUs": 528343
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 528386
+          },
+          {
+            "name": "NavigationURLLoaderImpl::NotifyRequestFailed",
+            "phase": "X",
+            "relativeUs": 534228
+          },
+          {
+            "name": "NavigationRequest::OnRequestFailedInternal",
+            "phase": "X",
+            "relativeUs": 534237
+          },
+          {
+            "name": "FrameTreeNode::CancelRestartingBackForwardCacheNavigation",
+            "phase": "X",
+            "relativeUs": 534959
+          },
+          {
+            "name": "NavigationRequest::~NavigationRequest",
+            "phase": "X",
+            "relativeUs": 534993
+          },
+          {
+            "name": "WebContentsImpl::DidFinishNavigation",
+            "phase": "X",
+            "relativeUs": 535033,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 10,
+            "netError": -3,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "FrameTreeNode::DidStopLoading",
+            "phase": "X",
+            "relativeUs": 535871
+          },
+          {
+            "name": "RenderFrameHostImpl::ResetChildren",
+            "phase": "X",
+            "relativeUs": 536299,
+            "frame": 1
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 1034366
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "X",
+            "relativeUs": 1034371
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "X",
+            "relativeUs": 1034392
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "X",
+            "relativeUs": 1035998,
+            "urlClass": "browser_internal",
+            "matchesRequested": false
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 1257945
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "X",
+            "relativeUs": 1257949
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "X",
+            "relativeUs": 1257964
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "X",
+            "relativeUs": 1259129,
+            "urlClass": "browser_internal",
+            "matchesRequested": false
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 1300795
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 1381340
+          },
+          {
+            "name": "NavigationRequest::NavigationRequest",
+            "phase": "s",
+            "relativeUs": 14,
+            "flow": 1
+          },
+          {
+            "name": "NavigationRequest::NavigationRequest",
+            "phase": "f",
+            "relativeUs": 4313,
+            "flow": 1
+          },
+          {
+            "name": "NavigationRequest::BeginNavigation",
+            "phase": "s",
+            "relativeUs": 4313,
+            "flow": 2
+          },
+          {
+            "name": "NavigationRequest::BeginNavigation",
+            "phase": "f",
+            "relativeUs": 4342,
+            "flow": 2
+          },
+          {
+            "name": "NavigationRequest::BeginNavigationImpl",
+            "phase": "s",
+            "relativeUs": 4342,
+            "flow": 3
+          },
+          {
+            "name": "NavigationRequest::BeginNavigationImpl",
+            "phase": "f",
+            "relativeUs": 4347,
+            "flow": 3
+          },
+          {
+            "name": "NavigationRequest::StartNavigation",
+            "phase": "s",
+            "relativeUs": 4347,
+            "flow": 4
+          },
+          {
+            "name": "NavigationRequest::StartNavigation",
+            "phase": "f",
+            "relativeUs": 6237,
+            "flow": 4
+          },
+          {
+            "name": "NavigationRequest::WillStartRequest",
+            "phase": "s",
+            "relativeUs": 6237,
+            "flow": 5
+          },
+          {
+            "name": "NavigationRequest::WillStartRequest",
+            "phase": "f",
+            "relativeUs": 6731,
+            "flow": 5
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Start",
+            "phase": "s",
+            "relativeUs": 6973,
+            "flow": 6
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Start",
+            "phase": "f",
+            "relativeUs": 6979,
+            "flow": 6
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateInterceptors",
+            "phase": "s",
+            "relativeUs": 6979,
+            "flow": 7
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateInterceptors",
+            "phase": "f",
+            "relativeUs": 7003,
+            "flow": 7
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Restart",
+            "phase": "s",
+            "relativeUs": 7003,
+            "flow": 8
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Restart",
+            "phase": "f",
+            "relativeUs": 7186,
+            "flow": 8
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateThrottlingLoaderAndStart",
+            "phase": "s",
+            "relativeUs": 7186,
+            "flow": 9
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateThrottlingLoaderAndStart",
+            "phase": "f",
+            "relativeUs": 7188,
+            "flow": 9
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "s",
+            "relativeUs": 7487,
+            "flow": 10
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "f",
+            "relativeUs": 7501,
+            "flow": 10
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "s",
+            "relativeUs": 7501,
+            "flow": 11
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "f",
+            "relativeUs": 7952,
+            "flow": 11
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "s",
+            "relativeUs": 22583,
+            "flow": 12
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "f",
+            "relativeUs": 22589,
+            "flow": 12
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "s",
+            "relativeUs": 22589,
+            "flow": 13
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "f",
+            "relativeUs": 22598,
+            "flow": 13
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "s",
+            "relativeUs": 27488,
+            "flow": 14
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "f",
+            "relativeUs": 27489,
+            "flow": 14
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "s",
+            "relativeUs": 27489,
+            "flow": 15
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "f",
+            "relativeUs": 27491,
+            "flow": 15
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "s",
+            "relativeUs": 22598,
+            "flow": 16
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "f",
+            "relativeUs": 33843,
+            "flow": 16
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "s",
+            "relativeUs": 27491,
+            "flow": 17
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "f",
+            "relativeUs": 34039,
+            "flow": 17
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "s",
+            "relativeUs": 33843,
+            "flow": 18
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "f",
+            "relativeUs": 43336,
+            "flow": 18
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "s",
+            "relativeUs": 34039,
+            "flow": 19
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "f",
+            "relativeUs": 44196,
+            "flow": 19
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateURLLoaderThrottles",
+            "phase": "s",
+            "relativeUs": 7188,
+            "flow": 20
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateURLLoaderThrottles",
+            "phase": "f",
+            "relativeUs": 528343,
+            "flow": 20
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "s",
+            "relativeUs": 7952,
+            "flow": 21
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "f",
+            "relativeUs": 528386,
+            "flow": 21
+          },
+          {
+            "name": "NavigationURLLoaderImpl::MaybeCreateLoaderForResponse",
+            "phase": "s",
+            "relativeUs": 528343,
+            "flow": 22
+          },
+          {
+            "name": "NavigationURLLoaderImpl::MaybeCreateLoaderForResponse",
+            "phase": "f",
+            "relativeUs": 534228,
+            "flow": 22
+          },
+          {
+            "name": "NavigationRequest::OnStartChecksComplete",
+            "phase": "s",
+            "relativeUs": 6731,
+            "flow": 23
+          },
+          {
+            "name": "NavigationRequest::OnStartChecksComplete",
+            "phase": "f",
+            "relativeUs": 534237,
+            "flow": 23
+          },
+          {
+            "name": "NavigationRequest::OnRequestFailedInternal",
+            "phase": "s",
+            "relativeUs": 534237,
+            "flow": 24
+          },
+          {
+            "name": "NavigationRequest::OnRequestFailedInternal",
+            "phase": "f",
+            "relativeUs": 534993,
+            "flow": 24
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "s",
+            "relativeUs": 1034366,
+            "flow": 25
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "f",
+            "relativeUs": 1034371,
+            "flow": 25
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "s",
+            "relativeUs": 1034371,
+            "flow": 26
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "f",
+            "relativeUs": 1034392,
+            "flow": 26
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "s",
+            "relativeUs": 1034392,
+            "flow": 27
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "f",
+            "relativeUs": 1035998,
+            "flow": 27
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "s",
+            "relativeUs": 1257945,
+            "flow": 28
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "f",
+            "relativeUs": 1257949,
+            "flow": 28
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "s",
+            "relativeUs": 1257949,
+            "flow": 29
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "f",
+            "relativeUs": 1257964,
+            "flow": 29
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "s",
+            "relativeUs": 1257964,
+            "flow": 30
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "f",
+            "relativeUs": 1259129,
+            "flow": 30
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "s",
+            "relativeUs": 1035998,
+            "flow": 31
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "f",
+            "relativeUs": 1300795,
+            "flow": 31
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "s",
+            "relativeUs": 1259129,
+            "flow": 32
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "f",
+            "relativeUs": 1381340,
+            "flow": 32
+          },
+          {
+            "name": "NavigationRequest",
+            "phase": "b",
+            "relativeUs": 48,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 0,
+            "netError": 0,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "NavigationRequest",
+            "phase": "e",
+            "relativeUs": 534995
+          }
+        ]
+      },
+      "traceLoading": true,
+      "traceStartStage": "after_blank"
+    },
+    {
+      "phase": "sample-2",
+      "transport": "pipe",
+      "profileLocation": "system-temporary",
+      "mode": "direct-trace-loading-late",
+      "platform": "windows",
+      "architecture": "amd64",
+      "browserProduct": "Chrome/158.0.8127.18",
+      "loaded": false,
+      "fixtureRequests": 0,
+      "navigateCalls": 1,
+      "targetSelection": "initial",
+      "failure": "fixture_document_not_loaded",
+      "browserTrace": {
+        "endElapsedMs": 38,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "bytes": 121462,
+        "scanned": 580,
+        "dropped": 0,
+        "matchedEvents": 4,
+        "events": [
+          {
+            "name": "NavigationRequest::Create",
+            "phase": "X",
+            "relativeUs": 0
+          },
+          {
+            "name": "NavigationRequest::NavigationRequest",
+            "phase": "X",
+            "relativeUs": 14,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 0,
+            "netError": 0,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "Navigator::Navigate",
+            "phase": "B",
+            "relativeUs": 268
+          },
+          {
+            "name": "FrameTreeNode::CancelRestartingBackForwardCacheNavigation",
+            "phase": "X",
+            "relativeUs": 286
+          },
+          {
+            "name": "NavigationRequest::BeginNavigation",
+            "phase": "X",
+            "relativeUs": 3653
+          },
+          {
+            "name": "NavigationRequest::BeginNavigationImpl",
+            "phase": "X",
+            "relativeUs": 3683
+          },
+          {
+            "name": "NavigationRequest::StartNavigation",
+            "phase": "X",
+            "relativeUs": 3688
+          },
+          {
+            "name": "WebContentsImpl::DidStartNavigation",
+            "phase": "X",
+            "relativeUs": 3917,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 3,
+            "netError": 0,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "NavigationRequest::WillStartRequest",
+            "phase": "X",
+            "relativeUs": 4899
+          },
+          {
+            "name": "NavigationThrottleRegistryImpl::RegisterNavigationThrottles",
+            "phase": "X",
+            "relativeUs": 4904
+          },
+          {
+            "name": "NavigationThrottleRunner::ProcessInternal",
+            "phase": "X",
+            "relativeUs": 5222,
+            "throttleEvent": 1
+          },
+          {
+            "name": "NavigationRequest::OnStartChecksComplete",
+            "phase": "X",
+            "relativeUs": 5439
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Start",
+            "phase": "X",
+            "relativeUs": 5635
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateInterceptors",
+            "phase": "X",
+            "relativeUs": 5642
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Restart",
+            "phase": "X",
+            "relativeUs": 5664
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateThrottlingLoaderAndStart",
+            "phase": "X",
+            "relativeUs": 5852
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateURLLoaderThrottles",
+            "phase": "X",
+            "relativeUs": 5853
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 6044
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "X",
+            "relativeUs": 6050
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "X",
+            "relativeUs": 6538
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 12766
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 35727
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "X",
+            "relativeUs": 35729
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "X",
+            "relativeUs": 35736
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "I",
+            "relativeUs": 41860
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "X",
+            "relativeUs": 41861
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "X",
+            "relativeUs": 41864
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "X",
+            "relativeUs": 47483,
+            "urlClass": "browser_internal",
+            "matchesRequested": false
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "X",
+            "relativeUs": 47786,
+            "urlClass": "browser_internal",
+            "matchesRequested": false
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 102884
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 106769
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 107758
+          },
+          {
+            "name": "NavigationURLLoaderImpl::MaybeCreateLoaderForResponse",
+            "phase": "X",
+            "relativeUs": 108507
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 108655
+          },
+          {
+            "name": "FrameTreeNode::DidStopLoading",
+            "phase": "X",
+            "relativeUs": 110281
+          },
+          {
+            "name": "NavigationURLLoaderImpl::NotifyRequestFailed",
+            "phase": "X",
+            "relativeUs": 110599
+          },
+          {
+            "name": "NavigationRequest::OnRequestFailedInternal",
+            "phase": "X",
+            "relativeUs": 110607
+          },
+          {
+            "name": "FrameTreeNode::CancelRestartingBackForwardCacheNavigation",
+            "phase": "X",
+            "relativeUs": 111456
+          },
+          {
+            "name": "NavigationRequest::~NavigationRequest",
+            "phase": "X",
+            "relativeUs": 111479
+          },
+          {
+            "name": "WebContentsImpl::DidFinishNavigation",
+            "phase": "X",
+            "relativeUs": 111527,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 10,
+            "netError": -3,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "FrameTreeNode::DidStopLoading",
+            "phase": "X",
+            "relativeUs": 112614
+          },
+          {
+            "name": "RenderFrameHostImpl::ResetChildren",
+            "phase": "X",
+            "relativeUs": 113126,
+            "frame": 1
+          },
+          {
+            "name": "FrameTreeNode::DidStopLoading",
+            "phase": "X",
+            "relativeUs": 118480
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 839076
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "X",
+            "relativeUs": 839080
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "X",
+            "relativeUs": 839098
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "X",
+            "relativeUs": 840892,
+            "urlClass": "browser_internal",
+            "matchesRequested": false
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 1026243
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "X",
+            "relativeUs": 1026247
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "X",
+            "relativeUs": 1026259
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "X",
+            "relativeUs": 1027629,
+            "urlClass": "browser_internal",
+            "matchesRequested": false
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 1072790
+          },
+          {
+            "name": "ThrottlingURLLoader::~ThrottlingURLLoader",
+            "phase": "X",
+            "relativeUs": 1106126
+          },
+          {
+            "name": "NavigationRequest::NavigationRequest",
+            "phase": "s",
+            "relativeUs": 14,
+            "flow": 1
+          },
+          {
+            "name": "NavigationRequest::NavigationRequest",
+            "phase": "f",
+            "relativeUs": 3653,
+            "flow": 1
+          },
+          {
+            "name": "NavigationRequest::BeginNavigation",
+            "phase": "s",
+            "relativeUs": 3653,
+            "flow": 2
+          },
+          {
+            "name": "NavigationRequest::BeginNavigation",
+            "phase": "f",
+            "relativeUs": 3683,
+            "flow": 2
+          },
+          {
+            "name": "NavigationRequest::BeginNavigationImpl",
+            "phase": "s",
+            "relativeUs": 3683,
+            "flow": 3
+          },
+          {
+            "name": "NavigationRequest::BeginNavigationImpl",
+            "phase": "f",
+            "relativeUs": 3688,
+            "flow": 3
+          },
+          {
+            "name": "NavigationRequest::StartNavigation",
+            "phase": "s",
+            "relativeUs": 3688,
+            "flow": 4
+          },
+          {
+            "name": "NavigationRequest::StartNavigation",
+            "phase": "f",
+            "relativeUs": 4899,
+            "flow": 4
+          },
+          {
+            "name": "NavigationRequest::WillStartRequest",
+            "phase": "s",
+            "relativeUs": 4899,
+            "flow": 5
+          },
+          {
+            "name": "NavigationRequest::WillStartRequest",
+            "phase": "f",
+            "relativeUs": 5439,
+            "flow": 5
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Start",
+            "phase": "s",
+            "relativeUs": 5635,
+            "flow": 6
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Start",
+            "phase": "f",
+            "relativeUs": 5642,
+            "flow": 6
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateInterceptors",
+            "phase": "s",
+            "relativeUs": 5642,
+            "flow": 7
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateInterceptors",
+            "phase": "f",
+            "relativeUs": 5664,
+            "flow": 7
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Restart",
+            "phase": "s",
+            "relativeUs": 5664,
+            "flow": 8
+          },
+          {
+            "name": "NavigationURLLoaderImpl::Restart",
+            "phase": "f",
+            "relativeUs": 5852,
+            "flow": 8
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateThrottlingLoaderAndStart",
+            "phase": "s",
+            "relativeUs": 5852,
+            "flow": 9
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateThrottlingLoaderAndStart",
+            "phase": "f",
+            "relativeUs": 5853,
+            "flow": 9
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "s",
+            "relativeUs": 6044,
+            "flow": 10
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "f",
+            "relativeUs": 6050,
+            "flow": 10
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "s",
+            "relativeUs": 6050,
+            "flow": 11
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "f",
+            "relativeUs": 6538,
+            "flow": 11
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "s",
+            "relativeUs": 35727,
+            "flow": 12
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "f",
+            "relativeUs": 35729,
+            "flow": 12
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "s",
+            "relativeUs": 35729,
+            "flow": 13
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "f",
+            "relativeUs": 35736,
+            "flow": 13
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "s",
+            "relativeUs": 41860,
+            "flow": 14
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "f",
+            "relativeUs": 41861,
+            "flow": 14
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "s",
+            "relativeUs": 41861,
+            "flow": 15
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "f",
+            "relativeUs": 41864,
+            "flow": 15
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "s",
+            "relativeUs": 35736,
+            "flow": 16
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "f",
+            "relativeUs": 47483,
+            "flow": 16
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "s",
+            "relativeUs": 41864,
+            "flow": 17
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "f",
+            "relativeUs": 47786,
+            "flow": 17
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "s",
+            "relativeUs": 47483,
+            "flow": 18
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "f",
+            "relativeUs": 106769,
+            "flow": 18
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "s",
+            "relativeUs": 47786,
+            "flow": 19
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "f",
+            "relativeUs": 107758,
+            "flow": 19
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateURLLoaderThrottles",
+            "phase": "s",
+            "relativeUs": 5853,
+            "flow": 20
+          },
+          {
+            "name": "NavigationURLLoaderImpl::CreateURLLoaderThrottles",
+            "phase": "f",
+            "relativeUs": 108507,
+            "flow": 20
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "s",
+            "relativeUs": 6538,
+            "flow": 21
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "f",
+            "relativeUs": 108655,
+            "flow": 21
+          },
+          {
+            "name": "NavigationURLLoaderImpl::MaybeCreateLoaderForResponse",
+            "phase": "s",
+            "relativeUs": 108507,
+            "flow": 22
+          },
+          {
+            "name": "NavigationURLLoaderImpl::MaybeCreateLoaderForResponse",
+            "phase": "f",
+            "relativeUs": 110599,
+            "flow": 22
+          },
+          {
+            "name": "NavigationRequest::OnStartChecksComplete",
+            "phase": "s",
+            "relativeUs": 5439,
+            "flow": 23
+          },
+          {
+            "name": "NavigationRequest::OnStartChecksComplete",
+            "phase": "f",
+            "relativeUs": 110607,
+            "flow": 23
+          },
+          {
+            "name": "NavigationRequest::OnRequestFailedInternal",
+            "phase": "s",
+            "relativeUs": 110607,
+            "flow": 24
+          },
+          {
+            "name": "NavigationRequest::OnRequestFailedInternal",
+            "phase": "f",
+            "relativeUs": 111479,
+            "flow": 24
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "s",
+            "relativeUs": 839076,
+            "flow": 25
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "f",
+            "relativeUs": 839080,
+            "flow": 25
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "s",
+            "relativeUs": 839080,
+            "flow": 26
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "f",
+            "relativeUs": 839098,
+            "flow": 26
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "s",
+            "relativeUs": 839098,
+            "flow": 27
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "f",
+            "relativeUs": 840892,
+            "flow": 27
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "s",
+            "relativeUs": 1026243,
+            "flow": 28
+          },
+          {
+            "name": "ThrottlingURLLoader::ThrottlingURLLoader",
+            "phase": "f",
+            "relativeUs": 1026247,
+            "flow": 28
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "s",
+            "relativeUs": 1026247,
+            "flow": 29
+          },
+          {
+            "name": "ThrottlingURLLoader::Start",
+            "phase": "f",
+            "relativeUs": 1026259,
+            "flow": 29
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "s",
+            "relativeUs": 1026259,
+            "flow": 30
+          },
+          {
+            "name": "ThrottlingURLLoader::StartNow",
+            "phase": "f",
+            "relativeUs": 1027629,
+            "flow": 30
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "s",
+            "relativeUs": 840892,
+            "flow": 31
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "f",
+            "relativeUs": 1072790,
+            "flow": 31
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "s",
+            "relativeUs": 1027629,
+            "flow": 32
+          },
+          {
+            "name": "ThrottlingURLLoader::OnReceiveResponse",
+            "phase": "f",
+            "relativeUs": 1106126,
+            "flow": 32
+          },
+          {
+            "name": "NavigationRequest",
+            "phase": "b",
+            "relativeUs": 48,
+            "navigation": 1,
+            "frame": 1,
+            "mainFrame": true,
+            "urlClass": "fixture",
+            "matchesRequested": true,
+            "state": 0,
+            "netError": 0,
+            "committed": false,
+            "browserInitiated": true
+          },
+          {
+            "name": "NavigationRequest",
+            "phase": "e",
+            "relativeUs": 111482
+          }
+        ]
+      },
+      "traceLoading": true,
+      "traceStartStage": "after_blank"
+    }
+  ],
+  "scope": "42records. Fullordinarydocuments12loaded/8failed;sampleddocuments13loaded/5failed. 2deliberateStopcontrolsPASS/2abortedbeforefixturewithoutStopandFAIL. All28traceflushesendacknowledged/complete/nodataloss/max64ms;6loadingprojectionsTRUNCATEDandFAILED/excludedfrompathacceptance. Twoordinaryloadingabortscomplete/lossless/4matches,StartNowfollowingnavloaderstartupthenfailurebeforeanyfixturehit. Stillnocauseorfixproof;StartNowcaninternalredirectbeforefactorycall;loadingXeventswithoutidentityassociationaretemporalevidence."
+}

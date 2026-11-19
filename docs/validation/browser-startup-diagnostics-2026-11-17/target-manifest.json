@@ -1,0 +1,33 @@
+{
+  "recordedUTC": "2026-11-18T01:08:05.802179+00:00",
+  "parent": "351f65364833d82922cfc0e88831b8ac50a6a1e3",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "dfe79cf35a97a8b1bf94a7800174189ec49aae0f81b5119afe59dc3e0ce2a361",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "5fbd2241382837ad13239c24f7a6541893ad06f15619b3687beb6f4d576243e4",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-target-summary.json": "c820b2af745cd13b49ce4e2ec57f1a8b06371504d62d7c155404a83a5b33be08",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-transport-summary.json": "9f85434e9eb0e2d69fda037e066ec00617b8679a9c15f5635f4aa7af70e02ada"
+  },
+  "privateReceiptSHA256": {
+    "nav282-target-factor.log": "e2caaabe71704b127b8eac518d44f3e4077479e3d2437dfb7dbc2187a3353925",
+    "nav282-target-browser-race.log": "e329bd1b564a6f933d5e813ea4c5bf6af11bacc4480a360be7319d5b3f0d2e2c",
+    "nav282-target-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-target-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-351f653-windows-artifact.zip": "a95af192f799e5b32502d55b5114ffc0299888781ccec270d06e682c75c558f4"
+  },
+  "privateNativeRecordSHA256": {
+    "direct": "5ffe7c7c9faecf8a0f376a830eeb315f2ac3b13809d4ec86ebd0d766f386d3df",
+    "direct-screenshot": "06e897bc34377ff1fafb18ec4a837ca6e528761de9b8d624ae649f5fbb81c1be",
+    "direct-home": "a53c98b6db9cfc358340709959ea312c0ce7da787d8c8a3eec0256523cb2111e",
+    "direct-home-screenshot": "a103c1512a27deef84100e2287a2b558236e4f10c4698eaf1d73c40ebb23a41e",
+    "direct-websocket": "775b46ba80fbd74eb5e994d561aa5e56f75cb52aa0ad6b3bebbc6502e1d8b048",
+    "direct-home-websocket": "106053f74b6a36d33023463a0a79b01a4bc78af241658c85476add852543eded",
+    "direct-child": "fde3a753da4c55b3cdea8396f75d1657814ebee2855cdbecd11896ec42a9ecfa",
+    "direct-child-original": "80995891d900e07e17b1cf3a6297bee6edf928c300176123a11d09c3d5375483",
+    "direct-home-child": "80fec832572d2ac042a669c963fbaeef77786786ed17a7384f22c8fbe9052f66",
+    "direct-home-child-original": "e56ff19c45a821357121e8da8d8bc8777cf0ceef6e41ab71c63fcd60d9b76637",
+    "worker-subprocess-temporary": "2a501789fcc19dcaf5e5ec211697ad2d4eecc37b1c6ad1c0aaa0ca674884c4d7",
+    "worker-subprocess-saved": "6aa4fb255a4d0600e55a8ba5b1d1f8efc93db0686ad4ced66d76e81a85d22013"
+  },
+  "checks": "Twelve fresh native macOS ARM64 first loads PASS9.915s, one fixture request/navigation each, no cleanup errors or dropped events. Browser race PASS1.553s; Darwin/WindowsAMD64 browser vet PASS. Runtime and workflow unchanged.",
+  "scope": "Four matched pipe controls create the same additional initialized child target and differ only in selected original/child navigation target. Same Browser/BrowserContextID and distinct target IDs asserted. Windows target-control outcomes pending; no cause/fix or production listener claim."
+}

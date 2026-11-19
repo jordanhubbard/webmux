@@ -1,0 +1,28 @@
+{
+  "issue": 546,
+  "parent": "312881c1957a2bf6851fe1eadf16b9c66f8dac96",
+  "originalFailure": {
+    "source": "67019a3f8361a472b987a6c3ac206235b9d3c0d0",
+    "run": 44471142427,
+    "job": 135380639885,
+    "artifact": 14505783073,
+    "artifactSHA256": "3bcfa07332dcbdd7d2aea2bc2dfbfd2751b9312d35f813ca0b3adf309b323cd7",
+    "qualifierSHA256": "131bb56dea3f057f70aaee01bf80500d48b075bb6f9693c34935ae22b7d3b805",
+    "outcome": "Local checked Stop browser case passed; Docker build timed out at unchanged 180 seconds before relay qualification. Partial output was absent; actual cause unknown."
+  },
+  "fixedRealSubprocessControls": 4,
+  "parentControl": "Original inner run body extracted unchanged by AST; rename and explicit log parameter only. Timeout-output assertion fails; all three ordinary result controls pass.",
+  "yaml": "Ruby standard YAML parser PASS; Python PyYAML unavailable, no dependency installed.",
+  "sourceSHA256": {
+    "scripts/qualify-rig-stop-relay.py": "3f8c5aa77de91dc32af460f0a1ace1202e78313be31d0dddf891d27108f87a9c",
+    "scripts/test_qualify_rig_stop_relay.py": "30e05dc000b5478f3022c865c7afa8fccef8d122d276b7f59216659549bedb76",
+    ".github/workflows/ci.yml": "0206e00e6c86aa3a09a8452c75faf14d8d7da15258bb366cc84a73db48485e6a"
+  },
+  "boundaries": [
+    "Existing 180-second Docker build and all other operation timeouts unchanged.",
+    "TimeoutExpired is rethrown; command failure remains failure and existing cleanup runs.",
+    "No Docker/native/coding/SSH fixture was started in these controls.",
+    "Original failed run retained; no unchanged rerun. Complete relay qualification and actual build-cause diagnosis remain required.",
+    "Initial parent-control setup also checked new start metadata and therefore had an unrelated missing-key error; assertion removed from success control and final isolated regression rerun retained."
+  ]
+}

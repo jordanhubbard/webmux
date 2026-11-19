@@ -1,0 +1,282 @@
+{
+  "composition": {
+    "base": "c195e020d3ee176b00b976cb76a22d23c6b9e5b3",
+    "incoming": "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+    "codeMerge": "4ef30092ae3f2f12908a3dfef53495fe2647de20",
+    "conflictResolution": "Only docs/roadmap table: retain original native policy guard row and incoming Windows lifecycle row.",
+    "canonicalPR500": "Remainsc195 while originalARM44454594171 is live; this preparation is separate."
+  },
+  "sourceReview": {
+    "recordedUTC": "2026-11-19T04:24:29.647529+00:00",
+    "publishedInput": "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+    "composedImplementation": "4ef30092ae3f2f12908a3dfef53495fe2647de20",
+    "publicSourceBindings": [
+      {
+        "file": "docs/roadmap.md",
+        "sha256": "b7c0270572b5a7232c94acf08ebca26da87ba8f8702763e1fedeab57c9464413",
+        "matches": [
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "docs/session-recovery.md",
+        "sha256": "6698fcaa06074b0a88d373fb5d482620bda23c32ecf3d922288ec7de1bf023d7",
+        "matches": [
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "tests/frontend/LocalTerminalCloseDialog.test.tsx",
+        "sha256": "aea42acd1cd5c2ce29cfd9e825d10706135cd54ce4da0049dee2250989739eea",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "tests/frontend/Workspace.test.tsx",
+        "sha256": "19dbe8b8103fc059ba9af5efa48f45d01a19b4d87fb561e4141ba806a4373ec7",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2"
+        ]
+      },
+      {
+        "file": "webmux/frontend/src/components/LocalTerminalCloseDialog.tsx",
+        "sha256": "914d30b1df30e7df399fa64bcf931ced66f56dc1180f2ed62d7756997805bf86",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/frontend/src/components/Tile.tsx",
+        "sha256": "638352cdad82ab77de530e0dcdbd8a934ae24ceacaa57a48710b5bf1eede354d",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/frontend/src/components/Workspace.tsx",
+        "sha256": "d2aef6ff6ab9e7f55516785c270a70c6606b877f6523ab7d1baf6ae17968773a",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2"
+        ]
+      },
+      {
+        "file": "webmux/frontend/src/types/index.ts",
+        "sha256": "51679eaaf11a029ff034041833144bea54976dd9facc297d3ab7dc0285cf1a46",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/frontend/src/utils/api.ts",
+        "sha256": "653e1ce2f982f9e7cbaeef58ed43e2d3d2e60b638f35a5184b435ea52de1edcc",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/httpapi/local_lifecycle_test.go",
+        "sha256": "f233d4ba92dbc27fa16974bae62f3c929232b1e569d28d98218c985194a2544d",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/httpapi/server.go",
+        "sha256": "99954f9796ffabacd024f23817f9d697ba5b9c595efdc3904ec1f29c1101656c",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/httpapi/sessions.go",
+        "sha256": "84c1a3ed8918d75c4015ed542fd03c6c8889191c06d4e935e3d5333c3feebf58",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/session/broker.go",
+        "sha256": "7511eb97d71c0311be50feeefe8910e130b844f75993c14c670e3fb00b75a5ae",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/session/local_lifecycle.go",
+        "sha256": "e90ff081a3625a7b45816085fd1ed95f50556033824c9819faa00700514c8028",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/session/local_lifecycle_test.go",
+        "sha256": "6ee0e895ecfe4d85a12e2db6c0968b9713032db93d76fbafdd976de31ebb27c6",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/session/model.go",
+        "sha256": "a584b86317372c939cd337530f89749bc8539fcc7020ec773e09bd8f1de7dd60",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/session/recovery_control.go",
+        "sha256": "98218b3767ca0854987cef64b6b85062974250551aa9d25e43e8a8285066907e",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/terminal/local_owner.go",
+        "sha256": "33083c48a3ebdf53b3e6a85dbfd2aa2077169a7cacab46a5d52c249612edc8c0",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/terminal/local_owner_other.go",
+        "sha256": "6339e514710c043cffeb1dbed36fa28fbbe00b7c879baace746c136cb932559a",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/terminal/local_owner_windows.go",
+        "sha256": "4b5aace6f841659e705552046051d9a0d432d9bb1150c302cf08ccd5dff3d7d5",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/terminal/local_owner_windows_test.go",
+        "sha256": "5518e3f4345c5531225af5475ddcd2bdbac669f84a887aa4b44c0ca1c8dcb320",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      },
+      {
+        "file": "webmux/server/internal/terminal/provider_windows.go",
+        "sha256": "20a765d4b9f48f1d5e290a38e2319ad00dfdc413ae9520048fdd82a14a10c6fa",
+        "matches": [
+          "b2b9fcebc338c8d54c45a93e9dab088354d9f082",
+          "346de8a111494934f2091f9bf623827cef0b2ea2",
+          "a7a6298dd67fae33360983e6044bff62ef5a22ba"
+        ]
+      }
+    ],
+    "allNonDocBindingsMatchPublishedB2": true,
+    "openrigCoordinatorTreeIdentical4b": true,
+    "VTTreeIdenticalC195": true,
+    "sourceReview": "Frozen original owner/session/instance/process-creation/host/account/image; durable intent before authenticated Stop; inspection avoids redispatch; Stop awaits original process object; live DELETE guarded; controller shutdown remains detach. New unit/fault/concurrency tests inspected.",
+    "nativeRawReview": "Not independently audited. Public146-file manifest and runtime-source hashes verified, but raw archive retrieval pointer not available in public receipt or inspected local/NAS project roots. Owner-reported native outcomes retain source scope.",
+    "scope": "Source review/composition and provenance, not independent adoption of native authenticated Windows claims or full-roadmap acceptance."
+  },
+  "localQuality": {
+    "source": "4ef30092ae3f2f12908a3dfef53495fe2647de20",
+    "recordedUTC": "2026-11-19T04:27:16.174176+00:00",
+    "strictTypeScriptProjects": 5,
+    "frontendTests": 450,
+    "frontendFiles": 44,
+    "frontendLintBuild": "PASS",
+    "defaultHelpers": 252,
+    "defaultHelpersFailSkip": 0,
+    "finalClientInstallMilliseconds": 6138.721542,
+    "retainedHelperFailure": "First default run251pass/1 Make client-install timeout at30s; standalone fresh-cache build23.891s and bounded-two-file fresh-cache helper252pass/client29.820s; final unchanged default252pass/client6.139s after other owned builds ended. Causeunproven; no deadline/runner-policy/product changes; issue542 remainsopen.",
+    "racePackages": [
+      "ok  \tgithub.com/jordanhubbard/webmux/server/internal/session\t15.709s",
+      "ok  \tgithub.com/jordanhubbard/webmux/server/internal/httpapi\t69.158s",
+      "ok  \tgithub.com/jordanhubbard/webmux/server/internal/terminal\t1.463s"
+    ],
+    "goTargetingCorrection": "First command also named Windows-only nativeprovider on macOS, causing a setup error. Three valid macOS race packages passed; Windows package was then separately vetted/cross-compiled, with no local native Windows run claim.",
+    "vet": "macOS session/httpapi/terminal and Windows AMD64 session/httpapi/nativeprovider/terminal PASS",
+    "crossBuilds": [
+      "Windows AMD64 nativeprovider tests",
+      "Windows ARM64 nativeprovider tests",
+      "Windows ARM64 cmd/webmux"
+    ],
+    "nativeWindowsExecution": "Not performed by local cross-build checks",
+    "logSHA256": {
+      "local-js.log": "82dd5bce7a2c7361db6c4605184dad72c0cab372fad77565acc85296ccfdbc6b",
+      "local-frontend.log": "931ee941e80c57c469d3372d3681078814204e7830e424ecc28061ce197afc7c",
+      "local-go.log": "6812fb76cfb456fb7433ad67245052100a2fa880bd23a8ce925120d0b0c1e47d",
+      "vet-and-windows-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "default-helpers-after-builds.log": "720b9d3272503e2387739f7a2f8643cfdcadd8e8fab086bfff9ffb162b82ccc1",
+      "client-cold-summary.json": "64e2b28a6986672b1777cfd359c404b9aa79954227281d872d361cb82afe0a6e",
+      "client-cold-stderr.jsonl": "f3f369fda3f20cac58250d53d168664b7bb312fb39f67f508c9846c3b44a1710",
+      "bounded-helpers-summary.json": "99433d612962a7b3bb73c56e15266dec29fde9377beab0c55b907bba559a1086",
+      "bounded-helpers.log": "9c2504aa9b357394d0582ce65c859b5723441067b270cd90ffa4cc8c9ee69c13"
+    }
+  },
+  "baseNineGates": {
+    "head": "c195e020d3ee176b00b976cb76a22d23c6b9e5b3",
+    "recordedUTC": "2026-11-19T04:25:35.726480+00:00",
+    "nineOriginalWorkflowsSuccess": true,
+    "rawZIPs": 26,
+    "NASReadbackVerified": true,
+    "all8CIJobsSuccess": true,
+    "summarySHA256": {
+      "six-gates-summary.json": "3669422895e6881a1e996e637ca0145ae421956347094b5e8bf087a718718ede",
+      "vt-diagnostic-summary.json": "86715d368a781ad05942d89e1d2dad5033dac113a765a03ac4f0520910aa3867",
+      "native-vt-inventory-summary.json": "bf397ceee4837f86d1dccb421d4a031a1205df31134ce5e735f0d74eaf884669",
+      "packaging-summary.json": "978c988b708f00511a8bf29719c2d053e88fe0be94952e1b9a14183e119e36b2",
+      "repository-native-upload-verifier.json": "9c8c8cf0969f3ae85942ab990f8f07387b374e0975ebecc946bd84e2263449b0",
+      "nas-readback-summary.json": "4f4275b88916b0b2fcaf90d115b5f94ab55f3601d56badde0c60c6f8a2764dd3",
+      "ci-semantic.log": "47729d8873266ba95b9d90ba4afca43ecacd0997664119ffecdaf1174ec78ce1",
+      "ci-jobs.json": "8201b1d4db54700f5eadebfcdf7d3f24ec89d7f20dc41dd255265710926a0d01"
+    },
+    "remaining": [
+      {
+        "conclusion": "",
+        "databaseId": 44454594171,
+        "event": "pull_request",
+        "headSha": "c195e020d3ee176b00b976cb76a22d23c6b9e5b3",
+        "status": "in_progress",
+        "workflowName": "Windows ARM64 native qualification"
+      }
+    ],
+    "scope": "Nine exactc195 scoped workflow artifacts and NAS readbacks verified; originalARM44454594171 remains live. No fullroadmap/release/nativeAuthLinuxARM/AMXrepair claim."
+  },
+  "scope": "Prepared Stop/Hide composition and local/source admission only. Incoming authenticated Windows raw evidence still needs an accessible frozen-archive pointer for independent audit. No fresh combined hosted, main/release, originalAMX/privateVT repair or broader native acceptance claim."
+}

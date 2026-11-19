@@ -259,7 +259,9 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 		case "clipboard_reply":
 			_ = s.sessions.ClipboardReply(owner, id, viewer.ID, message.RequestID, message.Data)
 		case "browser_ack":
-			s.sessions.AcknowledgeBrowser(owner, id, message.Data)
+			if err := s.sessions.AcknowledgeBrowser(owner, id, message.Data); err != nil {
+				viewer.Notify(session.Event{"type": "input_error", "session_id": id, "message": "Could not remember that this sign-in link was opened; it may appear again after reconnecting."})
+			}
 		case "input":
 			if message.Data != "" {
 				err := s.sessions.InputIfConnected(owner, id, message.Data)

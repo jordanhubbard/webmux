@@ -45,15 +45,29 @@ type underlay struct {
 func validSize(cols, rows int) bool { return cols >= 1 && cols <= 500 && rows >= 1 && rows <= 200 }
 
 func New(cols, rows int) (*Screen, error) {
+	return NewWithProfile(cols, rows, "")
+}
+
+// NewWithProfile opts a mirror into a separately qualified renderer model.
+// Owners must still negotiate the profile required by each encoded image.
+// New retains the production v1 model until native/app acceptance is complete.
+func NewWithProfile(cols, rows int, renderer string) (*Screen, error) {
+	if renderer != "" && renderer != XtermRendererProfile && renderer != XtermUnderlineRendererProfile {
+		return nil, ErrUnsupported
+	}
 	if !validSize(cols, rows) {
 		return nil, errors.New("invalid terminal snapshot dimensions")
 	}
 	e := vt.NewEmulator(cols, rows)
 	e.EnableXtermNoWrap()
-	profile := installXtermCursorProfile(e)
+	underline := renderer == XtermUnderlineRendererProfile
+	if underline {
+		e.EnableXtermUnderline()
+	}
+	profile := installXtermCursorProfile(e, underline)
 	installXtermHyperlinks(e)
 	e.SetScrollbackMaxLines(min(512, max(1, historyCells/cols)))
-	return &Screen{emulator: e, profile: profile, filter: replayfilter.Filter{Xterm: true}}, nil
+	return &Screen{emulator: e, profile: profile, filter: replayfilter.Filter{Xterm: true, XtermUnderline: underline}}, nil
 }
 
 func (s *Screen) Feed(data []byte) error {
@@ -133,7 +147,7 @@ func (i Image) Bytes() ([]byte, error) {
 // BytesForProfile only emits an extension when explicitly requested. The
 // legacy Bytes API remains fail-closed for parser state ANSI cannot reseed.
 func (i Image) BytesForProfile(profile string) (EncodedSnapshot, error) {
-	if profile != "" && profile != XtermRendererProfile {
+	if profile != "" && profile != XtermRendererProfile && profile != XtermUnderlineRendererProfile {
 		return EncodedSnapshot{}, ErrUnsupported
 	}
 	if i.state == nil {

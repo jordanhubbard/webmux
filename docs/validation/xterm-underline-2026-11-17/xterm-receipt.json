@@ -1,0 +1,10 @@
+{
+  "captured_at": "2026-11-17T16:51:37.784Z",
+  "browser": "157.0.8103.79",
+  "xterm_sha256": "14903579ff54664cd72f8e8699e6961a6272c21863ec1c3b118cdc8af5d4a972",
+  "qualifier_sha256": "b92dbb3dbe7e600714371d8b5e212f958c05ce38acf244ba3d95197fbf9ae90c",
+  "fixture_sha256": "796a3c31fb433099465c9f031d71ac9d107560caeefb82a5ca1a08a9b09db7de",
+  "output_sha256": "796a3c31fb433099465c9f031d71ac9d107560caeefb82a5ca1a08a9b09db7de",
+  "cases": 126,
+  "scope": "Unmodified xterm model reference. No snapshot adapter installed; no native/application qualification implied."
+}

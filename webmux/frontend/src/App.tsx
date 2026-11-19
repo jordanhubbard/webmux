@@ -240,6 +240,8 @@ function AuthenticatedApp({
               themes={themes}
               globalTheme={globalTheme}
               onAgentAccessDenied={handleAgentAccessDenied}
+              onOpenTerminals={() => setActivePane('terminals')}
+              onOpenCoordination={canManageSettings ? () => setActivePane('coordination') : undefined}
             />
           </div>
         )}
@@ -256,6 +258,8 @@ function AuthenticatedApp({
                 themes={themes}
                 globalTheme={globalTheme}
                 onAgentAccessDenied={handleAgentAccessDenied}
+                onOpenTerminals={() => setActivePane('terminals')}
+                onOpenCoordination={canManageSettings ? () => setActivePane('coordination') : undefined}
               />
             </div>
           )

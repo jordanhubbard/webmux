@@ -1,0 +1,339 @@
+{
+  "artifactSource": "4b0d4b0ec699bc6d34b48fa7a9f9911481879557",
+  "compositionSource": "e8cfb623ac39865e83683486a1e4e478d6de50a2",
+  "sourceBindingsSHA256": {
+    "webmux/package-lock.json": "45c39a2a9b254ac87a33b6ca83f90cda1bf9dbdb1a0f90038cd0024b45e015fa",
+    "webmux/package.json": "ffe447206e2569761ddb1ff9fe753852a8b7858aa560db43746dd10d577e807c",
+    "webmux/frontend/package.json": "cbec8ca43319221f87f7f45cac994b25aa623700c04f084ce0084dec066dc167",
+    "webmux/frontend/vite.config.ts": "bc1cf301e6f35bdc8d4100a93ecdf5977b29d6f807072bf7d9d467b04551cb78",
+    "scripts/package-native.mts": "e0b63fde750b09ca3b0f062124780ac36a08ac3bb9a49197cb072b49401d052a",
+    "webmux/server/cmd/build/main.go": "4bf19625eb43c1af4dc281c73b4a61196358b5cff36bdbfabdf5b74da84eb0e2"
+  },
+  "primaryStatus": {
+    "recordedUTC": "2026-11-19T03:00:35.764273+00:00",
+    "npm": {
+      "version": "4.0.7"
+    },
+    "cve": {
+      "state": "PUBLISHED",
+      "dateUpdated": "2026-10-19T16:40:19.321Z"
+    },
+    "advisory": {
+      "withdrawn_at": "2026-11-18T15:38:56Z",
+      "updated_at": "2026-11-18T15:38:58Z",
+      "vulnerabilities": [
+        {
+          "package": {
+            "ecosystem": "npm",
+            "name": "picomatch"
+          },
+          "vulnerable_version_range": "<= 4.0.7",
+          "first_patched_version": null,
+          "vulnerable_functions": []
+        }
+      ]
+    }
+  },
+  "lockBoundary": {
+    "picomatchEntry": {
+      "version": "4.0.7",
+      "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.7.tgz",
+      "integrity": "sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=12"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/jonschlinkert"
+      }
+    },
+    "allDirectPicomatchEdges": [
+      {
+        "parent": "node_modules/fdir",
+        "version": "6.5.0",
+        "dev": true,
+        "edge": "peerDependencies",
+        "range": "^3 || ^4"
+      },
+      {
+        "parent": "node_modules/tinyglobby",
+        "version": "0.2.17",
+        "dev": true,
+        "edge": "dependencies",
+        "range": "^4.0.4"
+      },
+      {
+        "parent": "node_modules/vite",
+        "version": "8.3.5",
+        "dev": true,
+        "edge": "dependencies",
+        "range": "^4.0.7"
+      },
+      {
+        "parent": "node_modules/vitest",
+        "version": "5.1.0",
+        "dev": true,
+        "edge": "dependencies",
+        "range": "^4.0.7"
+      }
+    ],
+    "note": "Committed lockfile edges; installed npm-ls topology under shared fixture links was rejected as evidence."
+  },
+  "genericMatcher": {
+    "recordedUTC": "2026-11-19T02:58:04.327817+00:00",
+    "head": "4b0d4b0ec699bc6d34b48fa7a9f9911481879557",
+    "picomatchVersion": "4.0.7",
+    "sourceSHA256": {
+      "package.json": "479b70b87aa7b44344d62c8a459ae7e53dd2bca6c61f1396bd55e63e9de73fc6",
+      "index.js": "02ae26406508e28f9ba0865be16cf77f0b33de6c4d4d49c212c4176df1d5625a",
+      "lib/parse.js": "4e1e05447668aa1e94366c5516a2bcd8f5fff800cc92b1d0cd7d77703b8618c4",
+      "lib/picomatch.js": "fdd249d7ffff853f3bb1c77eafc8baa1a437bea85a94c35877b83c6a40d9ca94"
+    },
+    "cases": [
+      {
+        "case": "normal-extension",
+        "pattern": "**/*.{ts,tsx}",
+        "inputLength": 20,
+        "timedOut": false,
+        "exit": 0,
+        "compiledRegex": "^(?:(?:^|\\/|(?:(?:(?!(?:^|\\/)\\.).)*?)\\/)(?!\\.)(?=.)[^/]*?\\.(ts|tsx))$",
+        "logSHA256": "13525f1f080aee75a189421e06e43725b77559969c73acecc96c217866f99c98",
+        "matched": true,
+        "elapsedMS": 0.024125000000001506
+      },
+      {
+        "case": "normal-test",
+        "pattern": "../../tests/frontend/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+        "inputLength": 38,
+        "timedOut": false,
+        "exit": 0,
+        "compiledRegex": "^(?:\\.\\.\\/\\.\\.\\/tests\\/frontend(?:\\/(?!\\.)(?:(?:(?!(?:^|\\/)\\.).)*?)\\/|\\/|$)(?!\\.)(?=.)[^/]*?\\.(test|spec)\\.(?:c|m)?(?:\\[jt\\]|[jt])s(?:x)?)$",
+        "logSHA256": "8070eefa981a3db2f07b35ecb2c195e5a8f40dab8b9995985c991e5e598c8f0e",
+        "matched": true,
+        "elapsedMS": 0.0673339999999989
+      },
+      {
+        "case": "star-repeat-suffix",
+        "pattern": "+(*)b",
+        "inputLength": 36,
+        "timedOut": true,
+        "deadlineSeconds": 2,
+        "ownedChildKilledAndWaited": true,
+        "compiledRegex": "^(?:(?=.)(?:[^/]*?)+b)$",
+        "logSHA256": "b0bbf83405cb4b4cf55da9052388655d8fe7b3b21c38ac5e0c4216f898d6fe5f"
+      },
+      {
+        "case": "star-a-repeat",
+        "pattern": "+(*a)",
+        "inputLength": 37,
+        "timedOut": true,
+        "deadlineSeconds": 2,
+        "ownedChildKilledAndWaited": true,
+        "compiledRegex": "^(?:(?=.)(?:[^/]*?a)+)$",
+        "logSHA256": "1d2b26597868418e21a61d38f1b2d8e8386845760f306b14b917448900647376"
+      },
+      {
+        "case": "a-star-repeat",
+        "pattern": "+(a*)b",
+        "inputLength": 36,
+        "timedOut": true,
+        "deadlineSeconds": 2,
+        "ownedChildKilledAndWaited": true,
+        "compiledRegex": "^(?:(?=.)(?:a[^/]*?)+b)$",
+        "logSHA256": "1a3c39ee1a39fe66e8049fff8dd08b27b075b62a60a8cd04431ababd710c6017"
+      },
+      {
+        "case": "word-overlap",
+        "pattern": "+(ab|abab)",
+        "inputLength": 61,
+        "timedOut": false,
+        "exit": 0,
+        "compiledRegex": "^(?:(?=.)(?:ab|abab)+)$",
+        "logSHA256": "0b3b21d5c48c1847f0933e4fc67ffefa0528e99664235e55454890f8a1378a6c",
+        "matched": false,
+        "elapsedMS": 37.021
+      }
+    ],
+    "scope": "Generic installed4.0.7 matcher still exhibits bounded child-process CPU failures; no algorithm repair or product reachability conclusion from these probes alone. Native runtime, dependency audit and external installed manager packages are separate."
+  },
+  "packagedBrowser": {
+    "head": "4b0d4b0ec699bc6d34b48fa7a9f9911481879557",
+    "binarySHA256": "39177d774127a8d3690db2a7acd330454f2232daffe05dc6202308de31f9c0e6",
+    "archiveSHA256": "12eb126c2d54f13daf6761b2ef73c4e20ac82f7139ab0e216e8b0ba318c17c74",
+    "packagingRun": 44445866139,
+    "scope": "Actual macOS packaged server embedded UI served through private loopback; compare all final production build outputs to module graph. No coding/auth/service/platform/security-remediation claim.",
+    "assets": [
+      {
+        "name": "assets/index-Ce3DSbGP.js",
+        "actualSHA256": "7c7ba97ee1836761128700d738338fc388f9cc582545dfab2849be0cf5587b75",
+        "expectedSHA256": "7c7ba97ee1836761128700d738338fc388f9cc582545dfab2849be0cf5587b75",
+        "matches": true
+      },
+      {
+        "name": "assets/novnc-CDzVFeD5.js",
+        "actualSHA256": "1f10fed97e30fb6b3968c3d71e619daa9714fa12433d8be1a205805061250e88",
+        "expectedSHA256": "1f10fed97e30fb6b3968c3d71e619daa9714fa12433d8be1a205805061250e88",
+        "matches": true
+      },
+      {
+        "name": "assets/xterm-DZ21y8cg.js",
+        "actualSHA256": "23e6994e053079dc65387a0b49ad497780884d9d4e6ddf38fb782f8df0daa04a",
+        "expectedSHA256": "23e6994e053079dc65387a0b49ad497780884d9d4e6ddf38fb782f8df0daa04a",
+        "matches": true
+      },
+      {
+        "name": "assets/index-C54IehIr.css",
+        "actualSHA256": "7b0211ed1a6b2eda01914b7468f9b99cf814aaace174ef20936497fd5dfedccb",
+        "expectedSHA256": "7b0211ed1a6b2eda01914b7468f9b99cf814aaace174ef20936497fd5dfedccb",
+        "matches": true
+      },
+      {
+        "name": "assets/xterm-B5LH8GIb.css",
+        "actualSHA256": "15c2f3681b0ca2bae719cc7a7ffd318f45189c9795d1a340a2288fa2df12d2ed",
+        "expectedSHA256": "15c2f3681b0ca2bae719cc7a7ffd318f45189c9795d1a340a2288fa2df12d2ed",
+        "matches": true
+      },
+      {
+        "name": "index.html",
+        "actualSHA256": "d6d367e595577e3691f71ce2383155c423f308ca9c8359a788064cea85bc917a",
+        "expectedSHA256": "d6d367e595577e3691f71ce2383155c423f308ca9c8359a788064cea85bc917a",
+        "matches": true
+      }
+    ],
+    "build": {
+      "version": "1.4.5",
+      "revision": "4b0d4b0ec699bc6d34b48fa7a9f9911481879557",
+      "modified": false,
+      "provenance": "build-producer-self-report",
+      "attested": false
+    },
+    "allOutputBytesMatchProductionModuleGraph": true,
+    "moduleCount": 145,
+    "noPicomatchModules": true,
+    "serverExit": 0,
+    "serverStopped": true
+  },
+  "nativeArchiveBoundary": {
+    "head": "4b0d4b0ec699bc6d34b48fa7a9f9911481879557",
+    "packagingRun": 44445866139,
+    "archives": [
+      {
+        "name": "webmux-1.4.5-darwin-arm64-native.tar.gz",
+        "sha256": "2bc304413a9e4c65144be1caf5a6f712158cad767751ff3babf060c0d3412e81",
+        "members": 20,
+        "nodeRuntimeOrAdjacentJSFiles": 0,
+        "globToolingInBrowserInventory": false,
+        "browserDependencyCount": 9
+      },
+      {
+        "name": "webmux-client-1.4.5-darwin-arm64-native.tar.gz",
+        "sha256": "97521f8bea381f25c963cbe9f0606ef844880a273e83a3eb8f3af76986ecdf62",
+        "members": 8,
+        "nodeRuntimeOrAdjacentJSFiles": 0,
+        "globToolingInBrowserInventory": false,
+        "browserDependencyCount": 0
+      },
+      {
+        "name": "webmux-server-1.4.5-darwin-arm64-native.tar.gz",
+        "sha256": "12eb126c2d54f13daf6761b2ef73c4e20ac82f7139ab0e216e8b0ba318c17c74",
+        "members": 19,
+        "nodeRuntimeOrAdjacentJSFiles": 0,
+        "globToolingInBrowserInventory": false,
+        "browserDependencyCount": 9
+      },
+      {
+        "name": "webmux-1.4.5-linux-x64-native.tar.gz",
+        "sha256": "75e9cafeaba8971f4bcb18fdb5515d447c3561327b8128ee5c4356750599a484",
+        "members": 13,
+        "nodeRuntimeOrAdjacentJSFiles": 0,
+        "globToolingInBrowserInventory": false,
+        "browserDependencyCount": 9
+      },
+      {
+        "name": "webmux-client-1.4.5-linux-x64-native.tar.gz",
+        "sha256": "7ec0bb96a7c6b08301f002d81491837a4ef09007ee4bf49261196068aca56c3d",
+        "members": 8,
+        "nodeRuntimeOrAdjacentJSFiles": 0,
+        "globToolingInBrowserInventory": false,
+        "browserDependencyCount": 0
+      },
+      {
+        "name": "webmux-server-1.4.5-linux-x64-native.tar.gz",
+        "sha256": "772cefec20c8a618263b0effce3707bbb086d74dcafcb10ccfc1c4d9eb8fe3eb",
+        "members": 12,
+        "nodeRuntimeOrAdjacentJSFiles": 0,
+        "globToolingInBrowserInventory": false,
+        "browserDependencyCount": 9
+      },
+      {
+        "name": "webmux-1.4.5-windows-arm64-native.zip",
+        "sha256": "e33b524bca1bc710e0376767d499845fa593b61290aed24a88e4597530b7f186",
+        "members": 17,
+        "nodeRuntimeOrAdjacentJSFiles": 0,
+        "globToolingInBrowserInventory": false,
+        "browserDependencyCount": 9
+      },
+      {
+        "name": "webmux-client-1.4.5-windows-arm64-native.zip",
+        "sha256": "2c50ea781cf2a1927ba50df9ed30c02194dc07b414b102ef752f7487defd66f1",
+        "members": 8,
+        "nodeRuntimeOrAdjacentJSFiles": 0,
+        "globToolingInBrowserInventory": false,
+        "browserDependencyCount": 0
+      },
+      {
+        "name": "webmux-server-1.4.5-windows-arm64-native.zip",
+        "sha256": "af93b3bb7459a184a96783bb9c5bc105b4afbbc3dbbcf8e46f155a878c6bfa0e",
+        "members": 16,
+        "nodeRuntimeOrAdjacentJSFiles": 0,
+        "globToolingInBrowserInventory": false,
+        "browserDependencyCount": 9
+      },
+      {
+        "name": "webmux-1.4.5-windows-x64-native.zip",
+        "sha256": "e7daa5c0209894195292153f3a625125f15f0ea736f755496df804ecad383d92",
+        "members": 17,
+        "nodeRuntimeOrAdjacentJSFiles": 0,
+        "globToolingInBrowserInventory": false,
+        "browserDependencyCount": 9
+      },
+      {
+        "name": "webmux-client-1.4.5-windows-x64-native.zip",
+        "sha256": "e0c078c126cd1eca5bda9bc44da8a449687d210139563a93e7a02699255d45e3",
+        "members": 8,
+        "nodeRuntimeOrAdjacentJSFiles": 0,
+        "globToolingInBrowserInventory": false,
+        "browserDependencyCount": 0
+      },
+      {
+        "name": "webmux-server-1.4.5-windows-x64-native.zip",
+        "sha256": "3e90ff521786122d6cc5ca8ae90a894e99078459fefc384c8a429425df5bc38b",
+        "members": 16,
+        "nodeRuntimeOrAdjacentJSFiles": 0,
+        "globToolingInBrowserInventory": false,
+        "browserDependencyCount": 9
+      }
+    ],
+    "opaqueInstallers": [
+      {
+        "name": "webmux-1.4.5-windows-arm64-native.msi",
+        "sha256": "a5be4832ba61bbd7705998ca247adc1cf76055e34bb8bcb5cdcc7a2a6acb67af",
+        "scope": "Checksum and independent packaging install-smoke jobs only; not separately unpacked here."
+      },
+      {
+        "name": "webmux-1.4.5-windows-x64-native.msi",
+        "sha256": "8bfe73e6363735c873f4176b87f8731f62ccc4f4b7fc8b7771ee5be7216d9e24",
+        "scope": "Checksum and independent packaging install-smoke jobs only; not separately unpacked here."
+      }
+    ],
+    "scope": "Actual12 server/all/client native tar/ZIP manifests and component inventories; actual macOS embedded-browser bytes checked separately. External operator-managed CLI/manager/runtime dependencies and generic matcher semantics are not cleared."
+  },
+  "moduleGraphSHA256": "560f9bf6017366bed32702f82e39dc5a8634d35edda51f16ef3bbfa9e67d67b1",
+  "proposedRuntimeDisposition": "No vulnerable matcher code in inspected native archives or byte-matched embedded browser; source-build tooling and arbitrary operator-installed packages require separate disposition.",
+  "issue429": "Open; no supported upstream patch, algorithm repair, audit suppression or release waiver is established by this runtime-boundary proof.",
+  "identicalGitTrees": {
+    "webmux/frontend": "a49d96d74e7915c9cfd35883939d60c59d682001",
+    "webmux/vendor/guacamole-common-js": "2ec059e1f2f4b8d41a6a520ce8c9f8ab2a047c98"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "recordedUTC": "2026-11-18T17:56:44.784345+00:00",
+  "parent": "5763dfd247428eb0f181ac139c723fb0032826ff",
+  "originalTestByteIdenticalTo511Head": "84f4ee1c2878634ac3eaffbc79f59a31cc12828d",
+  "testFile": "tests/e2e/openrig.spec.ts",
+  "testSHA256": "3b41a309261fc59d30e0ec541b79ee43bc7a4543fd87079ed927dafad2484653",
+  "productionAndScriptsByteIdenticalToParent": true,
+  "hostedFailure": {
+    "run": 44352721234,
+    "job": 134972447375,
+    "marker": "WM_SCROLL_OLD",
+    "copyModeDisplay": "60/73",
+    "wheelEvents": 20
+  },
+  "nativeCLI": {
+    "version": "0.6.14 (df1c1517)",
+    "packageVersion": "0.6.14",
+    "packageIntegrity": "sha512-NVG3qEe1xTbG/5Edurf288AUNFw6swN4v72cGg8Ekh9jaZXD7+pen8Diak2RFTNMj3YPoRcLRI1s6gZx6wwrgg==",
+    "packageLockSHA256": "8c0f856b27c302b39d9c18c85d7c6ebb68b71e2e1f0066aff3f8454c949e7215",
+    "entrySHA256": "d234371ba866b7e1dee9e781730bd6657f696ffecd161963cfc3bb1ea20ab671"
+  },
+  "local": {
+    "platform": "Darwin ARM64",
+    "node": "24.21.0",
+    "go": "1.27.4",
+    "tmux": "3.8",
+    "originalAssertionsControlledFailure": true,
+    "sameHistoryFixedFullManagedWorkflowPass": true,
+    "normalUninstrumentedManagedWorkflowPass": true,
+    "allEightRealRigBrowserTestsPass": true,
+    "strictE2ETypesPass": true,
+    "frontendBuildPass": true,
+    "whitespacePass": true
+  },
+  "controlledHistory": {
+    "controlled-original": {
+      "fixtureLines": 100,
+      "wheelEvents": 20,
+      "nativeBefore": "202|20||0",
+      "afterInitialTwenty": "202|20|95|1",
+      "nativeAfter": "202|20|95|1",
+      "oldMarkerVisible": false,
+      "workspaceBefore": {
+        "x": 8,
+        "y": 0
+      },
+      "workspaceAfter": {
+        "x": 8,
+        "y": 0
+      }
+    },
+    "controlled-fixed": {
+      "fixtureLines": 100,
+      "wheelEvents": 38,
+      "nativeBefore": "202|20||0",
+      "afterInitialTwenty": "202|20|95|1",
+      "nativeAfter": "202|20|185|1",
+      "oldMarkerVisible": true,
+      "workspaceBefore": {
+        "x": 8,
+        "y": 0
+      },
+      "workspaceAfter": {
+        "x": 8,
+        "y": 0
+      }
+    }
+  },
+  "method": "Control increases fixture input from40to100lines, retaining real published CLI/Go/browser/tmux and actual mouse events. Original20wheel assumption fails; fixed source continues actual wheel input within the same default5second assertion deadline. No native copy-mode navigation shortcut, sleeps, frame filtering or product change. Finalsourceusesoriginal40linefixture without instrumentation.",
+  "deadlines": {
+    "originalAndFinalAssertionMilliseconds": 5000,
+    "originalAndFinalManagedTestMilliseconds": 120000
+  },
+  "retainedPreparationOutcomes": [
+    "Initial expected-negative run failed at old marker and retained raw95/202 terminal output, but body-only attachment was not persisted by list reporter. A second negative run added explicit receipt-file persistence and reproduced the same failure; both source variants/logs remain.",
+    "One controlled-fixed launch used repository root instead of nested npm workspace and exited254 before any test; retained separately as controlled-fixed-setup.log, excluded from native qualification."
+  ],
+  "fileSHA256": {
+    "candidate.spec.ts": "3b41a309261fc59d30e0ec541b79ee43bc7a4543fd87079ed927dafad2484653",
+    "e2e-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "controlled-original.spec.ts": "82c3fcb51d651de229c17cc5de1bbf0d8751b28c1c343bda49be331cc8860f6f",
+    "controlled-original-initial.log": "66f2b438ee018498a718d8b5e50e01ea7a27f0ad6082f58f603c0ab904ffe214",
+    "quality.json": "8600549314fa449ee715fbd3127a567296542f9bef20e51fa6d8c73f99c2e61c",
+    "controlled-fixed-initial.spec.ts": "df1056731592e4fdd8fd6d49ae08fdd66e3ebd3a1786143dc5837b42e2a7a95d",
+    "controlled-fixed.log": "7a1b9bed740bd50f27a9c761eadbb8519e7af96fc49c3e472fe95999e23c6b92",
+    "full-native.log": "9194d841fc4cbd4ab84de91799fa899b386d4aa86cc2739d900f9501dbe7f1ab",
+    "e2e-types-verified.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "normal-fixed.log": "48ac125cb7616ce5bc7dffdb517a775d914b8d93aff8d71a9cdcc54bdeaeddec",
+    "frontend-build.log": "dfa441ccbe7546bf18c508de6777c7980d728ba24f8c8532868df2609e15c45b",
+    "controlled-original.log": "3d9b41bd58b835584814268fbe5e17e8563e19b58fcf9a55bfd0e6a32ca0c904",
+    "npm-install.log": "ec863edd1902f393f89dbae6292f427d2c3217791ca8a62b9adbcdc6e529b47b",
+    "controlled-fixed.spec.ts": "291f43f6ddf1a6afb630e84d2bf1edf1c2023ff2d438b11731e144ecefaf6357",
+    "controlled-original-initial.spec.ts": "23e0a8c6f389ac985fcea18cb4329db2daa9c1d1cdc28be0dede21151aa26e57",
+    "controlled-fixed-setup.log": "992072affc2fed37283cb03112c1a381104c3c5ea0502de326214b8d79b85edc"
+  },
+  "scope": "Actual published Rig/Tmux/Go/browser fixture workflow; coding children are controlled line-oriented fixtures, not authenticated native Codex conversations. Original Linux dashboard startup cause remains unproven despite local Mac full-suite pass. Audit429/current-head CI/review/fullroadmap gates remain required."
+}

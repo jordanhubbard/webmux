@@ -1,0 +1,110 @@
+{
+  "recordedUTC": "2026-11-18T02:26:06.370685+00:00",
+  "parent": "82480584f94d0419f5a01602aca3b80fde9d02c6",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "e6dcdbd437dc4cb298fee2f83b573db43aa20b5aa21aa188dbc9edf09dee7230",
+    "webmux/server/internal/browser/navigation_trace_test.go": "9f403ccbd2f0441d726f396f7188d02cb6f0162ee8bb1f4da2ef1ad79e808b0e",
+    "webmux/server/internal/browser/navigation_trace_controls_test.go": "84bed07f7bccd66a8d78ef23a3687975ba8cc50c27479b865cb1f44f3adc474c",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "4fff230c39551a0cb179013890fd029154c4791df42ca93a97214f7493a34128",
+    ".github/workflows/browser-navigation.yml": "d4dff42cb31ac27f0789e185a14de99a2922845c456eea5b683772cf481da360",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "f7d441762bdcc14ea0b22668a37bfd57222b1ac6efbddcffbcae3512400cfceb",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-position-summary.json": "f1f5502915cd99f58b77b74bba8504e6f3455f9e0690e5cea410f9a4cab5624a",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-sampling-summary.json": "c7a2b27b6e437715db228cd91f9e5c8e63f4a9fc850e2b1e79a21d36b5ee5304"
+  },
+  "privateReceiptSHA256": {
+    "nav282-trace-position-final-full.log": "4d46bd18d115dbf101e8a280c014de9ba350c0993125fdfdd57d4eaac5607010",
+    "nav282-trace-position-final-full-binding.json": "fd0d57a613c861593ac7ffe429f1be17cae3cf275cf4d0d8ebad543a84541e19",
+    "nav282-trace-position-final-samples-binding.json": "66540f136e5d1ba8bcc11e0d4d3a90e56315cc57022320fc5dc45dcfa5196949",
+    "nav282-trace-position-final-browser-race.log": "c127df52d9b188c5bb1ffa83ee12c3f478f8643e2572760bfc59293f6099b966",
+    "nav282-trace-position-final-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-trace-position-final-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-8248058-fast-windows.zip": "d52d8467a73eb585decaf56ad0f02d768d12e268f2945914ec455fb8689127b6",
+    "pr442-8248058-fast-job.log": "aea668503095bf9fb9bb144228103b333adae54bb9d0703e8544b67f66bc0319",
+    "nav282-trace-position-final-sample-1.log": "d5797830c71b40c67fc2541afdd3ef361e2ed7015c1b03ab9e4e36a5e805f5ec",
+    "nav282-trace-position-final-sample-2.log": "4fcfce6f2a47596c11ae2ab3c8e332db6bdfc9e4b3e9fe35a4a2f3c83415cee5",
+    "nav282-trace-position-final-sample-3.log": "1af9ecfba6d1ae300993077c9dbe9104572cb02296cfc101a66a05bdbdd98bfa"
+  },
+  "rounds": [
+    {
+      "trial": 1,
+      "records": [
+        {
+          "mode": "direct-trace",
+          "SHA256": "fd5be1df501fcaf053410e47bb81e4305f462099d52d253ced1718f2584264d5"
+        },
+        {
+          "mode": "direct-home-trace",
+          "SHA256": "39ae21093d188e081566082f3c4c8bf34f806eb089805429af2e5b82a3869ee3"
+        },
+        {
+          "mode": "direct-trace-late",
+          "SHA256": "7e4ed637b58e4da5803afd482d06ffc57fd678ac059e51071d4d34e0aa3596a6"
+        },
+        {
+          "mode": "direct-home-trace-late",
+          "SHA256": "3f5772cff3eef36ce8f6211ee0ef96a02be5840cbc46ad58efeebf53827958c5"
+        },
+        {
+          "mode": "controlled-stop-trace",
+          "SHA256": "700504d35e9ef42bdb980d4ead66a839c3b445b97357833f7082462a0e9485c4"
+        }
+      ],
+      "logSHA256": "d5797830c71b40c67fc2541afdd3ef361e2ed7015c1b03ab9e4e36a5e805f5ec"
+    },
+    {
+      "trial": 2,
+      "records": [
+        {
+          "mode": "direct-trace",
+          "SHA256": "5c35cbc742364167a3ffa142a5ee2910e06adb810e68582d158b1fc8dd53bf12"
+        },
+        {
+          "mode": "direct-home-trace",
+          "SHA256": "001a58a86a16968d23f6811fe8e3e1c5207c1018f515d81eb889c8da480a578f"
+        },
+        {
+          "mode": "direct-trace-late",
+          "SHA256": "29df7a5a17eba0248d86e57d7f1a01a2c9dd2828fc6461cb8aa01a3d8e703519"
+        },
+        {
+          "mode": "direct-home-trace-late",
+          "SHA256": "79310608e643231daa8afd033f13a67674e969bbac2bc014222c2d3a738d3f6a"
+        },
+        {
+          "mode": "controlled-stop-trace",
+          "SHA256": "8875ee822a15f285bbc818bf3e19714125f858d02bc5fa6a81afeaeefb2351da"
+        }
+      ],
+      "logSHA256": "4fcfce6f2a47596c11ae2ab3c8e332db6bdfc9e4b3e9fe35a4a2f3c83415cee5"
+    },
+    {
+      "trial": 3,
+      "records": [
+        {
+          "mode": "direct-trace",
+          "SHA256": "041cf59d8f5d8a00c54d7b5da70d780370f3e7262902a3dfec2a3a1b8dee644f"
+        },
+        {
+          "mode": "direct-home-trace",
+          "SHA256": "073b534049ae1afaf60230d0fb19a6cdf5d7ada94df5db8eebee7d702392824c"
+        },
+        {
+          "mode": "direct-trace-late",
+          "SHA256": "4fb4b9eb2b5dfbc473b93165a74d9307e85cc718153716b7b87288977df3c016"
+        },
+        {
+          "mode": "direct-home-trace-late",
+          "SHA256": "0cec88e4fa245bdc88144b6f6430419bc2e632a872967ca8783b939ae849652e"
+        },
+        {
+          "mode": "controlled-stop-trace",
+          "SHA256": "ae3b324e66051bf5b0a0b9de9ce3ac5ef775aaa89b47ee32091090a7e38a4b22"
+        }
+      ],
+      "logSHA256": "1af9ecfba6d1ae300993077c9dbe9104572cb02296cfc101a66a05bdbdd98bfa"
+    }
+  ],
+  "checks": "FinalsourcefullnativeMac16ordinary+1intentionalPASS8.263s;3rounds12ordinary+3intentionalPASS;2Windows-onlyNetLogSKIPSexplicit. Sourcefull/sampleshashesequalandbefore/afterbound;allcapturesendacknowledged+complete/0loss/0drops/stagelabelsverified. Browserrace1.690s+host/WindowsbrowservetPASS. YAMLfullmatrix/unmaskedfailures/3rounds4conditions/JSON/privacy/links/whitespace verified.",
+  "scope": "Pairedanonymousobserverplacement beforetarget vsaftertarget/explicitblank,at2profilelocations;sameallocator/tracecaps/onefixture navigation. Test-onlycallorder+fixedstage/flusherrorclasses;runtimeandoriginalCIunchanged. No sleeps/replay/newproductionreadinessbarrier/deadlineincrease. ActualWindowslatecapturePENDING.",
+  "excluded": "Firstlocalsampleloadedfixturebuttraceflushreturnednoevents/completionwithin5sec;recorded as incomplete capture,not navigationfailure. AddedendAcknowledged/fixederrorClassmetadata andreranfull+3rounds/race/vetPASS;5secdiagnosticdrain unchanged. Initialprivate full-run template scope mislabeled14whileactual16ordinarycasespassed;finalhelper/receiptandartifactcounts use16."
+}

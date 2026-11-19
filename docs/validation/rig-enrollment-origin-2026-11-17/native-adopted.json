@@ -1,0 +1,23 @@
+{
+  "contract": "openrig-cli/0.6.14",
+  "rigVersion": "0.6.14 (df1c1517)",
+  "tmuxVersion": "tmux 3.8",
+  "nodeVersion": "v24.21.0",
+  "browserVersion": "157.0.8103.79",
+  "platform": "darwin",
+  "architecture": "arm64",
+  "externalEnrollment": true,
+  "enrollmentOrigin": "claimed",
+  "enrollmentSource": "rig-session-registry",
+  "webmuxLaunchRecord": false,
+  "target": "wm-external-9471b43c2e",
+  "originalPID": "81087",
+  "finalPID": "81087",
+  "starts": 1,
+  "host": "",
+  "rigHostID": "host-9b2fe88a",
+  "viewerReused": true,
+  "recoveryHost": "",
+  "canResumeManaged": false,
+  "scope": "Real isolated Rig/tmux + app/browser using an owned synthetic Node terminal. No authenticated CLI or remote execution claimed."
+}

@@ -1,0 +1,75 @@
+{
+  "recordedUTC": "2026-11-18T10:47:27.720700+00:00",
+  "issue": 452,
+  "qualifiedApplicationSourceCommit": "de11beee37e07b0bd5b7b275d3ea9b00095a603d",
+  "pinnedInputs": [
+    {
+      "pr": 494,
+      "head": "1bd474db21705a71ea35eb6fb1837dda21819ee7"
+    },
+    {
+      "pr": 488,
+      "head": "855c5c3c89ba4841c1b329b1d66e50dd6037625b"
+    },
+    {
+      "pr": 483,
+      "head": "27f7dfed6f0252bd0bb6b64e95eaa535cd14447e"
+    }
+  ],
+  "allInputAncestorsVerified": true,
+  "sourceSHA256": {
+    "CHANGELOG.md": "79de3c0bfb01eb510fa203086ef67d5156de6e77a92d14f9009f6c75bb643956",
+    "README.md": "6bb3f9442923a102f3790437af6f879c180cfa1d55b97f193024edf66d9ea588",
+    "docs/roadmap.md": "8c882004465a06453c35cea340c4aba4eb8b6a39e9a199c3bc249db9e5660883",
+    "docs/usb-forwarding.md": "d2af6c72c49609e3ccdf8a42841634643043ce883eea9d126abc4c3d3cdfcf64",
+    "docs/validation/usb-dashboard-2026-11-18/README.md": "7cdbd01ff004f61d56ffcebea181accaef07459a83589d86318e9ecde5c94009",
+    "docs/validation/usb-dashboard-2026-11-18/local-checks.json": "2735036751953deb2ca31a01083b8784a3cb4b99abc3664239d44a9af2813f89",
+    "docs/validation/usb-dashboard-2026-11-18/native-checks.json": "5b6149516f88ef19eeed73571ac795ad39679b7d15dfd7498ca4fc9b88fc0a38",
+    "scripts/qualify-test-vudc.py": "d801c33c6c3e7c8e4c29e460363c8ec9c1592ab4fd9b59fd9ece709dd15dad55",
+    "scripts/test_qualify_vudc.py": "a9df77605d86e3e29035dca47e5854637264000a81c5369721fdc5a0a05651fb",
+    "tests/e2e/usb-forwarding.spec.ts": "3b6008177d00ec93668efcb2182055e8cf54d86bf3c9431afd23180056d5c66d",
+    "tests/frontend/USBForwardDialog.test.tsx": "1984aa9cee6adee9d52b58598ff7359c969115567210942a611d831d280670c0",
+    "tests/usb-kernel.py": "c3705033c720799e52ce5993ee4e27f2615e2b69174c9710dddf1dfa9a9d734f",
+    "webmux/frontend/src/components/USBForwardDialog.css": "ba23d6879ae5942f0f0b9a974bc8f23762ca745e76dad9d64ba21d8764c0835a",
+    "webmux/frontend/src/components/USBForwardDialog.tsx": "ed88cbe326c49b8adb45162405520cf54950526721cb7b00d5e9d86d5a4669e0",
+    "webmux/frontend/src/utils/api.ts": "cbfeed5fe1005a8b49c702357ba5eda7b4854443d47b48696257c923aaf39d01",
+    "webmux/server/internal/httpapi/server.go": "c82ff9c1fe281ecdbacbd6be4f30051e656cf71b020d7280061ee4e4619ac623",
+    "webmux/server/internal/httpapi/usb_forwardings.go": "39c449a5b10371eb230a38358a324f3192f811930d2ee5fa876c64c317b9dbae",
+    "webmux/server/internal/httpapi/usb_forwardings_test.go": "9ef3449b2074578fd8e0ecab8f453ff4344c4b7286642af678d4ea83cd14710a",
+    "webmux/server/internal/usbforward/cli.go": "5e5a8153e1f9bc5d50774e52ba79d2ef271d37430bb2ce5e0f29ffa94e14c8cc",
+    "webmux/server/internal/usbforward/dashboard.go": "0be75eaa9a584e2da5f3974bf4440b6d1f9fb856fd7761f030ee6c0236ca18d8",
+    "webmux/server/internal/usbforward/dashboard_test.go": "8e9f34748b30eaafdcaca972f71ffc2b6689b5f0852ded11e5693741db88c1aa",
+    "webmux/server/internal/usbforward/leases.go": "aeb53bb15d289af928269dfb3730aa5ae94243ca1dc0425c0ce381c88ffeed3b",
+    "webmux/server/internal/usbforward/leases_test.go": "96c9f5516e2a11760bb4f0207299e415fc885c86427031ff723cf6605047de7b",
+    "webmux/server/internal/usbforward/ssh_test.go": "3beeb9d32e320dfef976920a3404c3c64de4be8a75befc41b9d7c2b811fbd138",
+    "docs/validation/roadmap-usb-2026-11-18/README.md": "f00a7cb252130498b04dc29c674ad7c556b5e5957b8173778a65e956d2c55de4"
+  },
+  "privateEvidenceSHA256": {
+    "int452-usb-types.log": "bfbdeb0b9d52b9f5fa57d9bcbafdf0c45c715936935db99e8f5fb542c0d290f0",
+    "int452-usb-frontend.log": "632fbe5c2d7524e11316a6ef68c8906292bad90bbdfed18dfe73ca7c9f9dd02c",
+    "int452-usb-windows-crosscompile.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "int452-usb-go-root.log": "172d3ba5aa9d24bf9c2179a6a516e2b3cb77c89ef47b300e34ef66122edd9baa",
+    "int452-usb-helpers-lint.log": "e069d19e6e7cf27ee6fd3bbfd0814552b340508defd6b4009e1873ffaf45fb34",
+    "int452-usb-sysfs.log": "cfde3c61da8429b59d709c5ea87d1e880b82c2e23bbe72468065e727f16c2dd5",
+    "int452-usb-native-browser.log": "ae10d15004e4725bfb05cbff433791febd349967414699138affdc4089847eda",
+    "int452-usb-build.log": "96661a5d01eafd97bc1ef3675371039cc8703bbdbfa59141c106977b2d9a6662",
+    "int452-usb-go-vt-uv.log": "4912e4c9c5e25f97b09b0b76794c6c11cd531d17b7a64dcebfa24fd6c30af864"
+  },
+  "windowsPE": {
+    "amd64": {
+      "machine": "0x8664",
+      "sha256": "9f0b244d66ad3253a6d8fdad956677cce2a99f1afea8901fbd5a2f1b79a8be12",
+      "scope": "cross-compilation only"
+    },
+    "arm64": {
+      "machine": "0xaa64",
+      "sha256": "7b4b1283b03aa768ea0287d6fc5ee07752371d18e2fe65942abf5b457c0b8bc6",
+      "scope": "cross-compilation only"
+    }
+  },
+  "nativeMoshReceiptSHA256": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+  "workflowsUnchangedFromBase": true,
+  "local": "all server/VT/UV race+vet;416frontend;129helpers;strictTS/lint/build;17wrapper/cachecontrols;sysfscontrols;3actualMacbrowsercases;2WindowsPEcrosscompiles PASS",
+  "hostedExactCombined": "pending",
+  "releaseReady": false
+}

@@ -14,9 +14,14 @@ only reconnects the viewer transport. Rig's own session status and attention
 are shown separately from the WebMux viewer connection state. When Rig has no
 verified activity state, WebMux reports it as unknown.
 
-With **Type to All** enabled, the recipient strip above the grid lets you
-select all terminals, one Rig project, individual tiles, or none. The selected
-names remain visible while typing.
+With **Type to All** enabled, input initially goes to all registered terminals.
+The recipient strip lets you choose all current terminals, one Rig project,
+individual tiles, or none. After a choice, recipients stay fixed: new terminals
+remain unselected until you choose them. **None** stays empty as terminals open,
+and reconnecting the same viewer keeps its selection. The selected names remain
+visible while typing. Turning broadcast off restores input to its own terminal.
+See the [routing qualification](validation/broadcast-recipients-2026-11-17/README.md)
+for controls and acceptance limits.
 
 The top-bar **Coordination** dialog provides provider selection, canonical
 project/session status, remote workspace browsing, and creation. Rig messages
@@ -32,6 +37,18 @@ open a scratch shell beside it.
 The agent attach sessions are internal WebMux sessions. They do not appear in
 the normal terminal grid, do not occupy terminal layout cells, and are launched
 with `exec_argv` instead of shell-interpolated command strings.
+
+The pane labels attached terminals **Observed tmux** and separate ordinary
+terminals **Scratch shell**. Runtime badges identify the configured socket group;
+they do not establish the program's identity or Rig ownership. Each row shows
+its activity source: **Hook report**, **WebMux report**, **tmux activity
+estimate**, or **Source unknown**. Waiting/activity reports do not establish
+canonical Rig readiness. Sorting by waiting and activity uses these same reports.
+
+Use **Terminal grid** to return to the main layout or **Coordinated sessions**
+to inspect project identity and provider lifecycle. The latter is available to
+administrators with Coordination access. Navigation preserves the observed
+viewer and its tmux process; it does not adopt, launch or stop an agent.
 
 ## Runtime Requirements
 
@@ -262,3 +279,11 @@ server {
 
 Use your normal TLS, authentication, and network controls for any real
 deployment.
+
+
+The [combined Rig grid candidate](validation/rig-grid-integration-2026-11-17/README.md)
+also qualifies an active Rig terminal seat alongside the observed Node terminal.
+Their provider PIDs, distinct identities and viewers survive navigation/reload;
+viewer closure preserves the native Rig provider until explicit fixture cleanup.
+This adds coexistence evidence without adopting the observed terminal or enabling
+an Agent Deck/Rig bridge.

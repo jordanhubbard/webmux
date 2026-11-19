@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { WorkspacePaneProvider, useWorkspacePane } from '@frontend/contexts/WorkspacePaneContext';
+import type { CoordinationStatus } from '@frontend/components/CoordinationDialog';
 import { Workspace } from '@frontend/components/Workspace';
 import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
 import type { ReactNode, Ref } from 'react';
@@ -18,6 +20,11 @@ const terminalFocusFns = vi.hoisted(() => new Map<string, ReturnType<typeof vi.f
 vi.mock('@frontend/utils/api', () => ({
   api: {
     getSessions: vi.fn().mockResolvedValue([]),
+    getSession: vi.fn(),
+    setMinimized: vi.fn(),
+    stopLocalSession: vi.fn(),
+    getRigChanges: vi.fn(),
+    getRigObservations: vi.fn(),
     getCoordination: vi.fn().mockResolvedValue({ agents: [], messages: [] }),
     getClients: vi.fn().mockResolvedValue([]),
     createSession: vi.fn(),
@@ -82,10 +89,63 @@ describe('Workspace', () => {
     sessionStorage.clear();
     const { api } = await import('@frontend/utils/api');
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    vi.mocked(api.getRigChanges).mockReset().mockResolvedValue({ contract: 'webmux-rig-changes/v1', available: false, changed: false });
+    vi.mocked(api.getRigObservations).mockReset().mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'webmux', defaultView: 'all', enabledProviders: [], providers: [], projects: [], seats: [], messages: [], errors: {} } satisfies CoordinationStatus);
     vi.mocked(api.moveSession).mockReset().mockResolvedValue(mockSessions[0]);
   });
 
   const defaultProps = { fontSize: 14, termCols: 80, termRows: 24, globalAutoScroll: true, globalAutoScrollVersion: 0, onGlobalAutoScrollChange: vi.fn(), globalLock: false, globalLockVersion: 0, onGlobalLockChange: vi.fn() };
+
+  it('hides a retained local terminal immediately and restores it from the dock without remounting', async () => {
+    const { api } = await import('@frontend/utils/api');
+    let local = { ...mockSessions[0], transport: 'local' as const, local_lifecycle: {
+      contract: 'webmux-local-provider-lifecycle/v1' as const, state: 'running' as const, selection: 'a'.repeat(64),
+    } };
+    vi.mocked(api.getSessions).mockImplementation(async () => [local]);
+    vi.mocked(api.getSession).mockImplementation(async () => local);
+    vi.mocked(api.setMinimized).mockImplementation(async (_id, minimized) => { local = { ...local, minimized }; return local; });
+    render(<Workspace {...defaultProps} />, { wrapper });
+    await screen.findByTestId('terminal-s1');
+    const terminal = screen.getByTestId('terminal-s1');
+    fireEvent.click(screen.getByTitle('Hide or stop local terminal'));
+    await screen.findByRole('button', { name: 'Stop terminal and close' });
+    fireEvent.click(screen.getByRole('button', { name: 'Hide and keep running' }));
+    await waitFor(() => expect(screen.getByTestId('tile-cell-s1')).toHaveStyle({ visibility: 'hidden' }));
+    expect(screen.getByTestId('terminal-s1')).toBe(terminal);
+    expect(api.stopLocalSession).not.toHaveBeenCalled();
+    expect(api.deleteSession).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('dock-s1'));
+    await waitFor(() => expect(api.setMinimized).toHaveBeenLastCalledWith('s1', false));
+    expect(screen.getByTestId('tile-cell-s1')).not.toHaveStyle({ visibility: 'hidden' });
+    expect(screen.getByTestId('terminal-s1')).toBe(terminal);
+  });
+
+  it('cancels hidden-grid Rig observation and resumes it without remounting the terminal', async () => {
+    const { api } = await import('@frontend/utils/api');
+    vi.mocked(api.getSessions).mockResolvedValue([{ ...mockSessions[0], rig: {
+      provider: 'rig', target: 'native', project: 'demo', name: 'seat', host: 'localhost', runtime: 'terminal', seat_id: 'local-rig/native',
+    } }]);
+    vi.mocked(api.getRigChanges).mockImplementationOnce(() => new Promise(() => {}));
+    function SwitchPane() {
+      const { setActivePane } = useWorkspacePane();
+      return <><button onClick={() => setActivePane('agents')}>Hide grid for test</button><button onClick={() => setActivePane('terminals')}>Show grid for test</button></>;
+    }
+    render(<WorkspacePaneProvider availablePanes={['terminals', 'agents']}><SwitchPane /><Workspace {...defaultProps} /></WorkspacePaneProvider>, { wrapper });
+    await waitFor(() => expect(api.getRigChanges).toHaveBeenCalledTimes(1));
+    const terminal = screen.getByTestId('terminal-s1');
+    const signal = vi.mocked(api.getRigChanges).mock.calls[0][0];
+    expect(signal?.aborted).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Hide grid for test' }));
+    await waitFor(() => expect(signal?.aborted).toBe(true));
+    expect(screen.getByTestId('terminal-s1')).toBe(terminal);
+    expect(api.getRigChanges).toHaveBeenCalledTimes(1);
+    expect(api.getRigObservations).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Show grid for test' }));
+    await waitFor(() => expect(api.getRigChanges).toHaveBeenCalledTimes(2));
+    expect(api.getRigObservations).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('terminal-s1')).toBe(terminal);
+    expect(api.deleteSession).not.toHaveBeenCalled();
+  });
 
   it('starts with a 2 by 2 grid and does not fetch coordinator inventories', async () => {
     render(<Workspace {...defaultProps} />, { wrapper });

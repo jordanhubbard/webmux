@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, RefObject } from 'react';
 import type { ConnectionState, Session } from '../types';
+import { executionHostLabel } from '../utils/sessionIdentity';
 
 export interface WorkspaceOverviewTile {
   id: string;
@@ -29,7 +30,7 @@ const PAD = 12;
 export function WorkspaceMinimap({ scrollRef, sessions, numCols, numRows, tileWidth, tileHeight, gap }: WorkspaceMinimapProps) {
   const tiles = sessions.map(s => ({
     id: s.id,
-    title: s.rig ? `${s.rig.project}/${s.rig.name} on ${s.rig.host}` : s.title,
+    title: s.rig ? `${s.rig.project}/${s.rig.name} on ${executionHostLabel(s.rig.host)}` : s.title,
     state: s.state,
     x: s.col * tileWidth + (s.col + 1) * gap,
     y: s.row * tileHeight + (s.row + 1) * gap,

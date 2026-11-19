@@ -1,0 +1,218 @@
+{
+  "codeSource": "5a0256d29cf6d9e6fba863915edcffb0a6704532",
+  "buildProducerSelfReport": {
+    "version": "1.4.5",
+    "revision": "5a0256d29cf6d9e6fba863915edcffb0a6704532",
+    "modified": false,
+    "provenance": "build-producer-self-report",
+    "attested": false
+  },
+  "binarySHA256": "fad88095c29cabe9956ba6dec134f2cdd18269c9b248e96c9f10005b697c7b9a",
+  "sourceBindingsSHA256": {
+    "webmux/server/internal/openrigcoord/rig-native-launch.mts": "fd74271f961f5d183b600d0c7eaae030aa2b8f237d458694a10d86dcef6f056c",
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "b8aac78c18616b14d5c08f43591bdbbb5821b40a9f99ad89d35d7f3b743384c3",
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": "4b99af6829ae9d216b24b2a527d1104a193698a3c48a6849fdf8a6c5d1e9229c",
+    "webmux/server/internal/openrigcoord/rig-native-project.mts": "fda93157136230995a3619c3e3713a53eb5ba9ab34cece33c7735983a699dd7c",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "e715cebb9fe49811aa4a5f0348af704ade1ad9f2bb31e9696a569623236069b1",
+    "webmux/server/internal/openrigcoord/rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "webmux/server/internal/openrigcoord/runner.mts": "34fb00870efe3953093a57c02e2d1b72fedaa122a3e36e017f08b474dad4400a",
+    "webmux/server/internal/openrigcoord/coord.go": "126d49d671e3eaea833ae8ca4266acd3f54413a4c8944481e421a433f8a4b9d2",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "webmux/server/internal/openrigcoord/codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "webmux/server/internal/openrigcoord/codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "webmux/server/internal/openrigcoord/codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd",
+    "webmux/server/internal/httpapi/coordination_creation.go": "70bd8849ce8be36112dd7470e71770ab0558505e45b25d23b9adb733bf07d19b",
+    "webmux/server/internal/httpapi/coordination_providers.go": "4f9a06a3bd2ee472a6bc08e969baf30b4f0f2a61ea5e54828499084edfa8e557",
+    "webmux/server/internal/httpapi/openrig.go": "16b3b5f4037c03fdf4e38547a0d02082340ff393ca5a59e3f46cbd7ad7a7dd35",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "6840f6bdfff8c0c955df18614cb2c7a9ef6e955bdce4402dda47d8ff6089020e",
+    "webmux/frontend/src/utils/api.ts": "4b22d73f9926ade62743a814c0df93588607bf5a50c01e13dba841fb2606bca7",
+    "webmux/server/internal/session/native_rig_reference.go": "15e35ef463160eebc6ced21064c88d3702ac1c2a74782a66301323979b19fc08",
+    "webmux/server/internal/session/native_rig_recovery.go": "5352dc2e4bf4f7858d69351ab3adba76f5f4bc6113b13b88a421c91bd02e82f2",
+    "webmux/server/internal/session/managed_evidence.go": "7a543f14facb1ed5938a0cdf701fd50144e923ab7bbe89e27319047e71c1ff9c",
+    "webmux/server/internal/session/managed_capture.go": "359ab3faf353549508fb432ff8668caafead22a8e1f8e0939953c0ae203e7900",
+    "webmux/server/internal/session/managed_recovery.go": "bf9068ce0bec82653c84e87fc3efebbc3306f3d6b6dd641961ef66af4c29b062",
+    "webmux/server/internal/session/recovery.go": "c066ccb5e0c6b02a3801f002b6e1dc06f3bc17d3e972871ff28314a63138ca53",
+    "webmux/server/internal/session/recovery_control.go": "560cfee99916dfd6aa1dc6304478f47e6d9926c13762ef35d399be9de9d0bf0d",
+    "webmux/server/internal/session/model.go": "7e91f7a4e9743efcf5977e408b0faf21d9e4485270336329ea16b5bb920d3293",
+    "webmux/server/internal/httpapi/native_rig_recovery.go": "a61d81af18ac966f4e69dfd53eeab16fcb398715e45b8c01b82e283a2d5b2da2",
+    "webmux/server/internal/httpapi/rig_recovery.go": "0a7323a4d72bd22d9043a8e7fadf7b3ac17be32648773dc134c5ac29bef224bc",
+    "webmux/server/internal/httpapi/sessions.go": "a4abf105ef398f2d0584077a217269c28833e4217213c9a03b0a378c29676f52",
+    "webmux/server/internal/httpapi/coordination_service.go": "896718a1c32b156fb8d3a8aa9c35c62c1d2ef71bbea753f37f31f3b0cd00b585",
+    "webmux/server/internal/httpapi/server.go": "0fe4a9ac22c8e1f63698525f42a04fdd0a472cf443504b51622c47548f17b61c",
+    "webmux/frontend/src/components/RecoveryDialog.tsx": "cb3e1b08e6541af5e5e1cdf2948bcc95f55605ea701830437911a611214acb48",
+    "webmux/frontend/src/types/index.ts": "0e1ca849089d4645c6db7f039e4eaeced843cc6b2fa796c359db65e5efc601ca",
+    "webmux/server/internal/recovery/state.go": "4ab1020a33edc1a4757bc35f7433163a8d146868b8f80834d6b1d3a0df9fd1ef"
+  },
+  "nativeCases": [
+    {
+      "case": "changed-tools",
+      "source": "5a0256d29cf6d9e6fba863915edcffb0a6704532",
+      "nativeConversation": "01a1f1a3-c725-7442-8e4e-d1690346d9e7",
+      "browserChecks": 12,
+      "nativeContexts": 2,
+      "appliedSettings": 3,
+      "correlatedToolOutputs": 1,
+      "sourceBindings": 35,
+      "binarySHA256": "fad88095c29cabe9956ba6dec134f2cdd18269c9b248e96c9f10005b697c7b9a",
+      "nativeJournalSHA256": "3b28bd0631a91df0a2b62b6f361f375b49de55caa6d86d3b731f13590ccade8e",
+      "originalRawReceiptSHA256": "36178ba8cf5421b446e1be863a2d86738d909c58714b909f1d4a01c1384aceba",
+      "privateTmuxStopped": true,
+      "actualReadOnlyWriteDenials": 6,
+      "networkDenied": true,
+      "refusedBeforeNativeResume": true,
+      "manualChoiceExplained": true,
+      "originalSurvivorReattachedWithoutResume": true
+    },
+    {
+      "case": "changed-no-turn",
+      "source": "5a0256d29cf6d9e6fba863915edcffb0a6704532",
+      "nativeConversation": "01a1f1a5-2661-73f3-958d-eb8a66875ccb",
+      "browserChecks": 12,
+      "nativeContexts": 2,
+      "appliedSettings": 3,
+      "correlatedToolOutputs": 1,
+      "sourceBindings": 35,
+      "binarySHA256": "fad88095c29cabe9956ba6dec134f2cdd18269c9b248e96c9f10005b697c7b9a",
+      "nativeJournalSHA256": "80a5641796e91535ec2ba070fbf7c95edfbf7b7f7d54d4ba338cf1fcb317429e",
+      "originalRawReceiptSHA256": "0e2efd1727f83be071cf190f1cfd16e240363d6c908683b0a33d775fe897c151",
+      "privateTmuxStopped": true,
+      "noModelTurnAfterPermissionChange": true,
+      "earlierWorkspaceWrites": 2,
+      "refusedBeforeNativeResume": true,
+      "manualChoiceExplained": true,
+      "originalSurvivorReattachedWithoutResume": true
+    },
+    {
+      "case": "unchanged",
+      "source": "5a0256d29cf6d9e6fba863915edcffb0a6704532",
+      "nativeConversation": "01a1f1a6-c92b-7740-a234-c3057809272b",
+      "browserChecks": 16,
+      "nativeContexts": 4,
+      "appliedSettings": 4,
+      "correlatedToolOutputs": 2,
+      "sourceBindings": 35,
+      "binarySHA256": "fad88095c29cabe9956ba6dec134f2cdd18269c9b248e96c9f10005b697c7b9a",
+      "nativeJournalSHA256": "cac0af95881651a8b7205bf335248f33e7e76de855b6341800a93a1704cefc92",
+      "originalRawReceiptSHA256": "9b1de28651c7dbef3cddf923b3565ffbcfadf0552a6687b8844f6afbc19d9c9b",
+      "privateTmuxStopped": true,
+      "sameNativeConversationRecallWithoutTools": true,
+      "freshBeforeAfterTools": true,
+      "eachAllowedWrites": 2,
+      "eachDeniedWrites": 4,
+      "eachNetworkDenied": true,
+      "controllerSigkillDuringDispatch": true
+    }
+  ],
+  "localChecks": {
+    "head": "5a0256d29cf6d9e6fba863915edcffb0a6704532",
+    "strictTypeScriptProjects": 5,
+    "helperTests": 252,
+    "helperFailSkip": 0,
+    "goRacePackages": {
+      "openrigcoord": "4.401s",
+      "httpapi": "67.011s",
+      "session": "15.923s",
+      "recovery": "15.022s"
+    },
+    "goVet": "same four affected packages PASS",
+    "build": "normal go run ./cmd/build; clean producer source and 35 runtime/frontend source bindings checked by native fixture",
+    "retainedVTUVAndFrontendUnchangedFrom6156": true,
+    "setupFailure": "Initial new worktree lacked frontend dependency link; retained first typecheck log; correctly linked existing dependencies without installing through links."
+  },
+  "originalFailure": {
+    "source": "6156a5adf350df484ae41f2649094f1e62542dac",
+    "packagingRun": 44437267233,
+    "binarySHA256": "aaa9eb679a214dfd28a8af0a26ebad6023cf62fec62a1e67d1f15744e75b719c",
+    "rawReceiptSHA256": "8217d709094c69283e03f03e318d1ae0046aaa74982471a3a2866d874d6f6a7f",
+    "nativeJournalSHA256": "53f3a88973df789fd96d0db8e3828f034d4a03a7057544fe776fc9e87a4b8d6e",
+    "sameNativeConversation": true,
+    "beforePolicy": "read-only/on-request",
+    "beforeDeniedWrites": 6,
+    "afterPolicy": "workspace-write/never",
+    "afterAllowedWrites": 2,
+    "bothNetworkDenied": true,
+    "rawBrowserPassedMeans": "Original lifecycle assertions only; independent native tool and context audit establishes failed policy acceptance."
+  },
+  "historicalNativeAdmission": {
+    "scope": "Current code applied to retained original native journals/manifests; no fresh native coding or lifecycle claim.",
+    "cases": [
+      {
+        "case": "public-native-recovery2-wm-public-native-recovery2-vzp9vaxr.json",
+        "passed": true
+      },
+      {
+        "case": "restricted-native-wm-restricted-native-uqqg8yrw.json",
+        "passed": true
+      },
+      {
+        "case": "readonly-native-wm-readonly-native-9xc2x470.json",
+        "passed": true
+      },
+      {
+        "case": "never-wm-never-workspace-native-k7jett1a.json",
+        "passed": true
+      },
+      {
+        "case": "never-wm-never-readonly-native-q4be5rbk.json",
+        "passed": true
+      }
+    ]
+  },
+  "failedHarnessAttempts": [
+    {
+      "error": "Error: ready duplicate changed provider/viewer or reposted",
+      "rawReceiptSHA256": "0fdb8494a8077a40327dfec1deee653c22bf36bd287871c9aa323b9b2db46bc4",
+      "loadedBrowserDriverSHA256": "f924f2f028ca6b71fc862469b43d36af1df438630eb40084698776fd6b7558e2",
+      "privateTmuxStopped": true,
+      "qualified": false
+    },
+    {
+      "error": "Error: controller stop timeout",
+      "rawReceiptSHA256": "965547e77ae7190c20079c0bd9f7199def3337c9a4a7cb6e98b2c315802571e8",
+      "loadedBrowserDriverSHA256": "bc033f346157517c916a54a9a05c114b253e2d5de9c06e496957c3919a1599a4",
+      "privateTmuxStopped": true,
+      "qualified": false
+    }
+  ],
+  "retainedRawArchives": [
+    {
+      "archive": "wm-interactive-policy-qetahwtq.tar.gz",
+      "sha256": "81a329f06151ca630f7a7a0893f728db6fe8ace2f82c4790fd0bbbc2845f8ee1",
+      "NASReadbackVerified": true
+    },
+    {
+      "archive": "wm-policy539-changed-tools-4cf7g8m4.tar.gz",
+      "sha256": "a95039a76c591c3064d5e45c7f290d108d59d8fba848271f89ce894d6312f4de",
+      "NASReadbackVerified": true
+    },
+    {
+      "archive": "wm-policy539-changed-tools-fsxnik6h.tar.gz",
+      "sha256": "1c0dc80d56250593af66082112f41aba3eb206867416ef8093d842e662412ae1",
+      "NASReadbackVerified": true
+    },
+    {
+      "archive": "wm-policy539-changed-tools-79qik8pm.tar.gz",
+      "sha256": "bcd5160d68a198cf6a20a89a1292d826d53e8eb0b70052f97410753679544cfd",
+      "NASReadbackVerified": true
+    },
+    {
+      "archive": "wm-policy539-changed-no-turn-yailtxz5.tar.gz",
+      "sha256": "fbea48fd11f59bd05e4663c49997e0e6ba59a16bd1a434ba922ba2c453d63aa7",
+      "NASReadbackVerified": true
+    },
+    {
+      "archive": "wm-policy539-unchanged-4s8vcipb.tar.gz",
+      "sha256": "d46ae3e8f31d67ce7ed6fff13ca9b83701d38f6ac8f75c57231deb89cd471052",
+      "NASReadbackVerified": true
+    }
+  ],
+  "qualificationScope": "Actual macOS Go/Chrome/Rig0.7.18/Codex0.169 policy-change refusal and unchanged workspace-write/never public original-conversation lifecycle; no reboot, other platform, selected-profile support or full roadmap/release claim.",
+  "hostedReviewHeadQualification": "pending at publication; parent6156 ten green workflows do not qualify this new guard",
+  "runtimeLimits": {
+    "maximumJournalBytes": 33554432,
+    "maximumRecordBytes": 1048576,
+    "incompleteUnstableOrUnrecognizedJournal": "Refuse structured native Resume and retain manual recovery; never substitute launch settings or another conversation."
+  }
+}

@@ -18,6 +18,17 @@ import (
 
 type gridOp func(g *grid, b *uv.Buffer)
 
+// diagnosticGridCell keeps a nil cell's label without calling its String method.
+// A typed nil *uv.Cell implements fmt.Stringer: fmt calls String, recovers the
+// nil dereference, then prints <nil>. An untyped nil prints the same bytes
+// without that fault. Actual grid operations still receive the original cell.
+func diagnosticGridCell(c *uv.Cell) any {
+	if c == nil {
+		return nil
+	}
+	return c
+}
+
 func randomGridCell(rng *rand.Rand) *uv.Cell {
 	switch rng.Intn(8) {
 	case 0:
@@ -53,13 +64,13 @@ func randomGridOp(rng *rand.Rand, w, h int) (string, gridOp) {
 	switch rng.Intn(9) {
 	case 0, 1, 2:
 		x, y, c := rng.Intn(w+1)-1, rng.Intn(h+1)-1, randomGridCell(rng)
-		return fmt.Sprintf("SetCell(%d,%d,%v)", x, y, c), func(g *grid, b *uv.Buffer) {
+		return fmt.Sprintf("SetCell(%d,%d,%v)", x, y, diagnosticGridCell(c)), func(g *grid, b *uv.Buffer) {
 			g.SetCell(x, y, c)
 			b.SetCell(x, y, c)
 		}
 	case 3:
 		c, area := randomGridCell(rng), randomArea(rng, w, h)
-		return fmt.Sprintf("FillArea(%v,%v)", c, area), func(g *grid, b *uv.Buffer) {
+		return fmt.Sprintf("FillArea(%v,%v)", diagnosticGridCell(c), area), func(g *grid, b *uv.Buffer) {
 			g.FillArea(c, area)
 			b.FillArea(c, area)
 		}
@@ -71,13 +82,13 @@ func randomGridOp(rng *rand.Rand, w, h int) (string, gridOp) {
 		}
 	case 5:
 		y, n, c, area := rng.Intn(h), rng.Intn(h+1), randomGridCell(rng), randomArea(rng, w, h)
-		return fmt.Sprintf("InsertLineArea(%d,%d,%v,%v)", y, n, c, area), func(g *grid, b *uv.Buffer) {
+		return fmt.Sprintf("InsertLineArea(%d,%d,%v,%v)", y, n, diagnosticGridCell(c), area), func(g *grid, b *uv.Buffer) {
 			g.InsertLineArea(y, n, c, area)
 			b.InsertLineArea(y, n, c, area)
 		}
 	case 6:
 		y, n, c, area := rng.Intn(h), rng.Intn(h+1), randomGridCell(rng), randomArea(rng, w, h)
-		return fmt.Sprintf("DeleteLineArea(%d,%d,%v,%v)", y, n, c, area), func(g *grid, b *uv.Buffer) {
+		return fmt.Sprintf("DeleteLineArea(%d,%d,%v,%v)", y, n, diagnosticGridCell(c), area), func(g *grid, b *uv.Buffer) {
 			g.DeleteLineArea(y, n, c, area)
 			b.DeleteLineArea(y, n, c, area)
 		}
@@ -163,7 +174,7 @@ func TestGridFillAreaMatchesUVBuffer(t *testing.T) {
 				x, y, c := rng.Intn(w+2)-1, rng.Intn(h), cellOfWidth(rng)
 				g.SetCell(x, y, c)
 				b.SetCell(x, y, c)
-				gridsAgree(t, g, b, fmt.Sprintf("seed %d op %d SetCell(%d,%d,%v)", seed, i, x, y, c))
+				gridsAgree(t, g, b, fmt.Sprintf("seed %d op %d SetCell(%d,%d,%v)", seed, i, x, y, diagnosticGridCell(c)))
 				continue
 			}
 			c := cellOfWidth(rng)
@@ -174,7 +185,7 @@ func TestGridFillAreaMatchesUVBuffer(t *testing.T) {
 			area := uv.Rect(x0, rng.Intn(h+1)-1, x1-x0+1, 1+rng.Intn(h+1))
 			g.FillArea(c, area)
 			b.FillArea(c, area)
-			gridsAgree(t, g, b, fmt.Sprintf("seed %d op %d FillArea(%v,%v)", seed, i, c, area))
+			gridsAgree(t, g, b, fmt.Sprintf("seed %d op %d FillArea(%v,%v)", seed, i, diagnosticGridCell(c), area))
 		}
 	}
 }

@@ -1,0 +1,57 @@
+{
+  "head": "91db99f5ddf421efb0ee52707397531c0d5ebf6c",
+  "job": 134469774228,
+  "artifact": 14384096253,
+  "cacheKey": "Linux-webmux-vudc-sources-v1-3ca9a592306ba69f332f60d67014e4a2ca0c57c158087bcce33318b7717ad8e3",
+  "acquisitions": [
+    {
+      "path": "corrected/source-acquisition.json",
+      "verifiedFiles": 8,
+      "cacheHits": 8,
+      "networkAttempts": 0
+    },
+    {
+      "path": "corrected-held/source-acquisition.json",
+      "verifiedFiles": 8,
+      "cacheHits": 8,
+      "networkAttempts": 0
+    },
+    {
+      "path": "unpatched/source-acquisition.json",
+      "verifiedFiles": 8,
+      "cacheHits": 8,
+      "networkAttempts": 0
+    }
+  ],
+  "nativeResults": [
+    {
+      "control": "unpatched",
+      "exit": 1,
+      "admitted": true,
+      "module_sha256": "fd8a3c726992231073b2f82e2fc48585f3b1d8f6ab913ffd644925b641aa3012",
+      "srcversion": "0E77E9FAE1ED8C902094921"
+    },
+    {
+      "control": "corrected-held",
+      "exit": 0,
+      "admitted": true,
+      "module_sha256": "b3159f95270e75a0822411ace8ecc54b01db402a51a431a2ac34217564316892",
+      "srcversion": "AFA0841746AD954FEFE2CCF"
+    },
+    {
+      "control": "direct-20",
+      "exit": 0,
+      "admitted": true,
+      "module_sha256": "63b791ba18898cda92febc83476c531f065aa512e794705162f8eb76fc71fbf6",
+      "srcversion": "CEF310F2896192F4A8FAE09"
+    },
+    {
+      "control": "webmux-ssh",
+      "exit": 0,
+      "admitted": true,
+      "module_sha256": "63b791ba18898cda92febc83476c531f065aa512e794705162f8eb76fc71fbf6",
+      "srcversion": "CEF310F2896192F4A8FAE09"
+    }
+  ],
+  "crossJobRestoreVerified": true
+}

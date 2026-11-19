@@ -121,6 +121,15 @@ are disabled until a current report supplies an attachment target. Revoking a
 client or unlinking/deleting its saved host removes its inventory authority;
 existing viewers are not provider-stop commands.
 
+The published `0.7.18 (3bf87c62)` observer uses source
+`openrig-cli/0.7.18` and carries a validated absolute Unix tmux socket with
+each attachable seat. The host resolves standard defaults and labels before
+reporting them; the controller preserves that socket in the SSH attachment
+and saved viewer identity. A socket change requires explicit Open. Older
+controllers reject this source identifier instead of discarding its socket.
+Legacy `openrig-cli/0.6.14` reports retain their existing attachment contract.
+Socket paths are argument data and are quoted across SSH's shell boundary.
+
 
 ## Remote Rig qualification
 

@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "qualifiedSource": "8f5d3225fac65804554a65bc08381a03a70654fe",
+  "packagingRun": 44125272035,
+  "artifact": 14346284768,
+  "archiveSha256": "8eb55ac872c74a63e4271fa60a712b1dddfc8b8fdc36fc96c2ec54678c81e382",
+  "serverSha256": "e796eed792dbe78c30401ffdd8a795dd3cfb52671004981213f7676369da5434",
+  "codexSha256": "0f8ed9678bca539aa6517adb0c8d50ad9a94ff5df4d21e149ae700d219fff69d",
+  "platform": "Windows 11 Pro AMD64 10.0.26200.9974",
+  "installation": "ZIP / WinSW 2.12.0 / LocalSystem",
+  "nativeCLI": "Codex 0.153.0",
+  "model": "gpt-6-astra",
+  "sandbox": "read-only",
+  "approval": "never",
+  "windowsSandbox": "unelevated",
+  "nativeConversation": "01a1ed45-ddaa-7dc2-9eed-014336f1511c",
+  "nativeFinalAnswers": 5,
+  "toolCalls": 0,
+  "controllerCrash": {
+    "oldControllerPID": 4988,
+    "newControllerPID": 316,
+    "ownerPID": 3968,
+    "rootPID": 3420,
+    "codexPID": 5072,
+    "startedAt": "2026-11-18T06:15:57.7810398Z",
+    "completedAt": "2026-11-18T06:16:10.6822339Z",
+    "identitiesPreserved": true,
+    "freshAnswerVerified": true
+  },
+  "guestReboot": {
+    "previousBoot": "2026-11-11T09:08:25.5063430Z",
+    "currentBoot": "2026-11-18T06:19:12.5000000Z",
+    "serviceAutoStarted": true,
+    "codingProcessesBeforeApproval": 0,
+    "preservedPrefixes": [
+      {
+        "sha256": "d06edb95184d9d9ea4fac9cb59626169b3aab06ed9b084dc32f90e189157324f",
+        "preserved": true,
+        "length": 63779
+      },
+      {
+        "sha256": "cadf29510e882b4be9ab11d47686d7244752df61576cc649e959c27441790606",
+        "preserved": true,
+        "length": 26863
+      },
+      {
+        "sha256": "e5155109dd371195525fb21760242a68d7161fdba9e106897c9c7fea1c5fc062",
+        "preserved": true,
+        "length": 18957
+      }
+    ],
+    "browserAction": "native",
+    "outcome": "consumed",
+    "ownerPID": 4708,
+    "rootPID": 1836,
+    "codexPID": 4880,
+    "freshAnswerVerified": true
+  },
+  "ordinaryServiceRestart": {
+    "startedAt": "2026-11-18T06:28:17.0338834Z",
+    "completedAt": "2026-11-18T06:28:18.6266105Z",
+    "identitiesPreserved": true,
+    "freshAnswerVerified": true
+  },
+  "duplicateRequest": {
+    "sameObservedBrowserRequest": true,
+    "beforeAndAfterServiceRestart": "consumed",
+    "nativeProcessNotDuplicated": true
+  },
+  "cleanup": {
+    "completedAt": "2026-11-18T06:32:03.9913057Z",
+    "serviceRemoved": true,
+    "serviceDirectoryRemoved": true,
+    "firewallRemoved": true,
+    "ownerExited": true,
+    "rootExited": true,
+    "codexExited": true,
+    "remainingOwnedApplicationProcesses": 0,
+    "antivirusEnabled": true,
+    "realTimeProtectionEnabled": true,
+    "matchingComponentDetections": 0,
+    "signature": "1.463.353.0",
+    "serverSha256": "e796eed792dbe78c30401ffdd8a795dd3cfb52671004981213f7676369da5434",
+    "codexSha256": "0f8ed9678bca539aa6517adb0c8d50ad9a94ff5df4d21e149ae700d219fff69d",
+    "privateEvidenceRetained": true
+  },
+  "evidenceHashes": {
+    "artifact-binding.json": "415063ab0afec0001b91ec6b61c3a801cb3270464a8702efb33e820dc72aaf97",
+    "before-interruption-browser.json": "f9c4b725dacb1fb3923850fd02b768f1ca0dbcefac5aefe78ef1f97365668abf",
+    "after-controller-answer-browser.json": "0d4fee12daf1d1fb17ce0d2a673329a7c5bae694a67dff1b2667b2ba6626db3b",
+    "after-reboot-waiting-browser.json": "99cd3624f46f7313b95b41baa0cf3f60b6020afd24bfa88907adb3ea770235bc",
+    "after-reboot-resume-browser.json": "f3065c20f83eae35e55b56202ca6cbb1ae4cdb4fbbd18d516739e79169a5d084",
+    "after-reboot-answer-browser.json": "dbc11d1fa16f1cc40fa39b14da1db2123bb703bc4b28eb54a815be9c4127b43c",
+    "observed-recovery-request.json": "e7506f9a662fec62e035311ca9e55ec3223237fe90bc662862fba6f64b68adfc",
+    "duplicate-recovery-request.json": "57caff8d3ce734985107a6cd124fc0c23107ac6d1a5559409cbcef14b0f41109",
+    "native-before-interruption.json": "c0ee73c9e55f09e3363e788873d082bbcb7010f4da72ba65c221c882446c2ae1",
+    "native-after-controller-crash.json": "77b73007a13471ba68505a482505038077ac52078570632b2a209ec7fbda37df",
+    "native-after-reboot-resume.json": "84613373b3f6150a649bc021c3a747f41af3020dcd230f3b8ee859520b8d9e10",
+    "native-after-service-restart.json": "463edf31a3c9f3ed7e410cce9bbb5bce05e676819c28810ae1d7cbdbeea8d541",
+    "cleanup-receipt.json": "3c0b86ccc0458d4c77d05652c0a011dfbd0bdecb7f591cb0700391f735fa8b9a"
+  }
+}

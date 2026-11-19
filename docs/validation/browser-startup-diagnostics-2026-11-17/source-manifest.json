@@ -1,0 +1,93 @@
+{
+  "source_parent": "8f5d3225fac65804554a65bc08381a03a70654fe",
+  "windows_failure_browser_source_matches_parent": true,
+  "baseline": {
+    "head": "8f5d3225fac65804554a65bc08381a03a70654fe",
+    "results": [
+      {
+        "iteration": 1,
+        "exit": 0,
+        "output": "nav282-baseline-1"
+      },
+      {
+        "iteration": 2,
+        "exit": 0,
+        "output": "nav282-baseline-2"
+      },
+      {
+        "iteration": 3,
+        "exit": 0,
+        "output": "nav282-baseline-3"
+      },
+      {
+        "iteration": 4,
+        "exit": 0,
+        "output": "nav282-baseline-4"
+      },
+      {
+        "iteration": 5,
+        "exit": 0,
+        "output": "nav282-baseline-5"
+      }
+    ]
+  },
+  "initial_instrumented_runs": {
+    "results": [
+      {
+        "iteration": 1,
+        "exit": 0,
+        "output": "nav282-candidate-1"
+      },
+      {
+        "iteration": 2,
+        "exit": 0,
+        "output": "nav282-candidate-2"
+      },
+      {
+        "iteration": 3,
+        "exit": 0,
+        "output": "nav282-candidate-3"
+      }
+    ]
+  },
+  "final_native_exit": 0,
+  "parent_negative": {
+    "runtime_head": "8f5d3225fac65804554a65bc08381a03a70654fe",
+    "test_sha256": "e4595a79475daa1357b0b0cde16fb5e25c1c34de65c65005f3fb5a84702fcf2d",
+    "exit": 1,
+    "valid_negative_control": true,
+    "runtime_source_overlay": false,
+    "test_overlay_restored": true,
+    "worktree_clean": true,
+    "first_events": [
+      {
+        "ms": 0,
+        "sequence": 0,
+        "event": "observer_ready",
+        "target": "AB55CC595D0F430748FDD0763BABB133"
+      }
+    ]
+  },
+  "default_off_control": {
+    "exit": 0,
+    "test_sha256": "e4595a79475daa1357b0b0cde16fb5e25c1c34de65c65005f3fb5a84702fcf2d",
+    "frames": 16,
+    "no_navigation_diagnostics_on_wire": true,
+    "phases": [
+      "initial-saved-worker",
+      "replacement-saved-worker",
+      "replacement-temporary-worker"
+    ]
+  },
+  "sources": {
+    "webmux/server/internal/browser/navigation_diagnostics.go": "955de20fba8ce573a67f51bf3fce7f50deb3084cb4c6e213344dc75926e196fe",
+    "webmux/server/internal/browser/navigation_diagnostics_test.go": "e0a76e285740ab980f43ac6dace5e4d5bdc33e39d93569699e3ee83d70e1808e",
+    "webmux/server/internal/browser/worker.go": "ecfc350625b8f8b3ea8e8869db1960cfbb6a3cb88c6e6c45bdd3763b64b4c022",
+    "webmux/server/internal/browser/companion.go": "b75ba8bbb009a89af2637a1c224693534dafcd1316982e02465a5b8ccb411528",
+    "tests/e2e/browser-profiles.spec.ts": "e4595a79475daa1357b0b0cde16fb5e25c1c34de65c65005f3fb5a84702fcf2d"
+  },
+  "artifacts": {
+    "windows-abort-summary.json": "8aafd452b6b20e201ad6b99679d06b3ef6fa3771de10562b97a867234666e6b0",
+    "native-summary.json": "7881b9c8dce3f7a101ba2b1b52b3556b3372d0faa58041ac3ac6714e253d9e51"
+  }
+}

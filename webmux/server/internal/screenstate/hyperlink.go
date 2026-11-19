@@ -24,11 +24,10 @@ func installXtermHyperlinks(e *vt.Emulator) {
 		}
 		params := strings.TrimFunc(parts[1], func(r rune) bool { return unicode.IsSpace(r) || r == 0xfeff })
 		uri := parts[2]
-		pen, _ := e.CursorPen()
 		if uri == "" {
 			// xterm ignores an empty URI with nonempty parameters.
 			if params == "" {
-				e.RestoreCursorPen(pen, uv.Link{})
+				e.SetXtermHyperlink(uv.Link{})
 			}
 			return true
 		}
@@ -43,7 +42,7 @@ func installXtermHyperlinks(e *vt.Emulator) {
 			serial++
 			id = namespace + strconv.FormatUint(serial, 10)
 		}
-		e.RestoreCursorPen(pen, uv.Link{URL: uri, Params: "id=" + id})
+		e.SetXtermHyperlink(uv.Link{URL: uri, Params: "id=" + id})
 		return true
 	})
 }

@@ -1,0 +1,51 @@
+{
+  "scope": "Actual native Rig/WebMux/browser/local SSH relay and an isolated Linux SSH/tmux endpoint; synthetic persistent sleep provider, no authenticated coding recovery or physical-host failure qualification.",
+  "checks": {
+    "actualSSHTransportObserved": true,
+    "localRelayStopped": true,
+    "localSSHPIDExited": true,
+    "remotePersistentPIDUnchanged": true,
+    "remoteExecutableUnchanged": true,
+    "siblingUnchanged": true,
+    "duplicateConsumed": true,
+    "viewerLayoutAndHistoryRetained": true,
+    "remotePersistentPIDSurvivesAfterBrowserTest": true,
+    "ownedContainerRemoved": true,
+    "ownedImageRemoved": true,
+    "generatedClientKeyRemoved": true
+  },
+  "passed": true,
+  "baseImage": "ubuntu@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852",
+  "image": "sha256:a00917c03452f6ff51d9c0536cda24b35eae97259831f334393a7272a5f7f23e",
+  "remoteVersions": "Linux aarch64\ntmux 3.4",
+  "remotePackageVersions": "openssh-server\t1:9.6p1-3ubuntu13.20\ntmux\t3.4-1ubuntu0.2",
+  "browserProofSHA256": "e8c2527578619aa920c4e1b68034f50582df9d67e7b6604ba39abb92dfe6fbc4",
+  "localRuntime": {
+    "rig": "0.7.18 (3bf87c62)",
+    "node": "v24.21.0",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "browser": "158.0.8127.36"
+  },
+  "nativeBinarySHA256": "30cda7f837315c651dbf337f2f259b47778d7d8aee245f03c0b5b227cfcdea1c",
+  "sourceSHA256": {
+    "scripts/qualify-rig-stop-relay.py": "131bb56dea3f057f70aaee01bf80500d48b075bb6f9693c34935ae22b7d3b805",
+    "tests/e2e/openrig-stop-relay.spec.ts": "d8885ca3e28ecd03675a93d527e0f78ebb7b3195b9b5acb9be08370a5adac28a",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "d5f3f7bdd28b43b0a90aa681310e59f318999789177ad430c217e1f97d61b5ba",
+    "webmux/server/internal/httpapi/rig_stop.go": "165e212e9fc6d110fea927128bdb7c6e61a6cb92d6b54f214b7746a95f69ff6a"
+  },
+  "qualifierSHA256": "131bb56dea3f057f70aaee01bf80500d48b075bb6f9693c34935ae22b7d3b805",
+  "runtimeApplicationBase": "d871ac60421c37485f7044f5323f3a71291d7a65",
+  "qualificationSourceBinding": "sourceSHA256; exact-commit hosted acceptance pending",
+  "hostedAcceptance": "pending",
+  "nativeBrowser": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "retries": 0,
+    "caseSeconds": 6.1,
+    "totalSeconds": 10.8
+  },
+  "ciWorkflowSHA256": "31f1c0d755c44e5dd722eee3a5a6def4c52fb7b717bd9091582475b19a1fc033",
+  "privateReceiptSHA256": "e45540c63bbd5c66f626df2b873db4600b476d1c1147b171a51d3d928d29c172"
+}

@@ -3,7 +3,9 @@ package vt
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 	"testing"
@@ -216,16 +218,27 @@ func TestParseKittyCommandUndecodable(t *testing.T) {
 }
 
 // responseReader collects everything an emulator writes back to its guest.
-// The response pipe blocks a writer until it is read, so it has to be read
-// the whole time the test writes.
+// The owning test closes the emulator and joins the response reader at cleanup.
 type responseReader struct {
-	mu  sync.Mutex
-	buf strings.Builder
+	mu   sync.Mutex
+	buf  strings.Builder
+	done <-chan struct{}
 }
 
-func readResponses(e *Emulator) *responseReader {
-	r := &responseReader{}
+func readResponses(t *testing.T, e *Emulator) *responseReader {
+	t.Helper()
+	done := make(chan struct{})
+	r := &responseReader{done: done}
+	t.Cleanup(func() {
+		_ = e.Close()
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Error("response reader did not stop at test cleanup")
+		}
+	})
 	go func() {
+		defer close(done)
 		p := make([]byte, 4096)
 		for {
 			n, err := e.Read(p)
@@ -238,6 +251,35 @@ func readResponses(e *Emulator) *responseReader {
 		}
 	}()
 	return r
+}
+
+func TestResponseReaderStopsAtOwnerCleanup(t *testing.T) {
+	var emu *Emulator
+	var reader *responseReader
+	t.Cleanup(func() {
+		if emu != nil {
+			_ = emu.Close()
+		}
+	})
+	t.Run("owner", func(t *testing.T) {
+		emu = NewEmulator(80, 24)
+		reader = readResponses(t, emu)
+		if _, err := emu.WriteString("\x1b[c"); err != nil {
+			t.Fatal(err)
+		}
+		reader.waitFor(t, "\x1b[?")
+	})
+	if emu == nil { // The owner subtest may be excluded by -run.
+		return
+	}
+	select {
+	case <-reader.done:
+	default:
+		t.Fatal("response reader survived its owning test")
+	}
+	if _, err := emu.WriteString("after cleanup"); !errors.Is(err, io.ErrClosedPipe) {
+		t.Fatalf("emulator survived its owning test: %v", err)
+	}
 }
 
 func (r *responseReader) String() string {
@@ -288,7 +330,7 @@ func TestKittyPayloadErrorAnswered(t *testing.T) {
 						passed = append(passed, cmd)
 					})
 				}
-				r := readResponses(e)
+				r := readResponses(t, e)
 				if _, err := e.Write([]byte("\x1b_G" + tt.apc + "\x1b\\")); err != nil {
 					t.Fatalf("Write: %v", err)
 				}
@@ -324,7 +366,7 @@ func TestKittyPayloadErrorAnswered(t *testing.T) {
 func TestKittyIcatProbeBatchAnswered(t *testing.T) {
 	e := NewEmulator(80, 24)
 	e.SetCellSize(10, 20)
-	r := readResponses(e)
+	r := readResponses(t, e)
 
 	batch := "\x1b_Ga=q,f=24,s=1,v=1,S=3,i=1;MTIz\x1b\\" +
 		"\x1b_Ga=q,f=24,t=t,s=1,v=1,S=86,i=2;L3Zhci9mb2xkZXJzL3c2L2h6YjBqenFkNjQ3YnptMnZfa2c1azZrODAwMDBnbi9UL2tpdHR5LXR0eS1ncmFwaGljcy1wcm90b2NvbC01NDUwMjE4NTY\x1b\\" +

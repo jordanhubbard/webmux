@@ -108,6 +108,15 @@ func (o *openGrapheme) disarm() {
 
 // handlePrint handles printable characters.
 func (e *Emulator) handlePrint(r rune) {
+	if e.xtermUnderline && !e.openGrapheme.active && len(e.grapheme) == 0 && r >= utf8.RuneSelf {
+		if _, width := ansi.FirstGraphemeCluster(string(r), ansi.GraphemeWidth); width == 0 {
+			// Without parser join state xterm stores a zero-width codepoint
+			// in its own cell, consuming one column. It must not be pulled
+			// back onto a character preceding a control sequence.
+			e.handleGraphemeWithin(string(r), 0, 0, e.scr.Width())
+			return
+		}
+	}
 	if r >= ansi.SP && r < ansi.DEL {
 		if len(e.grapheme) > 0 {
 			// If we have a grapheme buffer, flush it before handling the ASCII character.
@@ -392,7 +401,8 @@ func (e *Emulator) extendOpenGrapheme() {
 		}
 		rewriteKittyPlaceholder(&cell, left, e.kittyImageIDTranslator, &e.kittyPlaceholderMemo, e.openGrapheme.x, e.openGrapheme.y)
 	}
-	e.scr.SetCell(e.openGrapheme.x, e.openGrapheme.y, &cell)
+	cell = e.xtermPrintedCell(cell)
+	e.setXtermPrintedCell(e.openGrapheme.x, e.openGrapheme.y, &cell)
 	e.markPrinted(e.openGrapheme.x, e.openGrapheme.y, width)
 	e.openGrapheme.baseASCII = 0
 	e.openGrapheme.base = cluster
@@ -513,7 +523,8 @@ func (e *Emulator) attachZeroWidth(content string) printOutcome {
 		// The mark joins a character already printed, which keeps the
 		// protection it was printed with.
 		was := e.scr.buf.Protected(tx, y)
-		e.scr.SetCell(tx, y, &cell)
+		cell = e.xtermPrintedCell(cell)
+		e.setXtermPrintedCell(tx, y, &cell)
 		if was {
 			e.scr.buf.setProtected(tx, y, max(cell.Width, 1), true)
 		}
@@ -577,6 +588,7 @@ func (e *Emulator) printASCIIRun(run []byte) {
 			Style: e.scr.cursorPen(),
 			Link:  e.scr.cursorLink(),
 		}
+		cell = e.xtermPrintedCell(cell)
 		if row := e.scr.buf.Row(y); row != nil && narrowRun(row[x:x+n]) {
 			// Every cell being overwritten is one column wide, so no
 			// double-width character is cut, and Screen.SetCell and
@@ -598,7 +610,7 @@ func (e *Emulator) printASCIIRun(run []byte) {
 		} else {
 			for k := range n {
 				cell.Content = asciiStr[run[k]]
-				e.scr.SetCell(x+k, y, &cell)
+				e.setXtermPrintedCell(x+k, y, &cell)
 			}
 		}
 		e.markPrinted(x, y, n)
@@ -820,7 +832,11 @@ func (e *Emulator) handleGraphemeWithin(content string, width, left, right int) 
 	// not the line will wrap, the cursor is left standing on the cell just
 	// drawn, and a zero-width arrival has to know that to combine with the
 	// right cell. ghostty keeps its pending-wrap flag this way.
-	parked := x+cell.Width >= right
+	advance := cell.Width
+	if e.xtermUnderline && advance == 0 {
+		advance = 1
+	}
+	parked := x+advance >= right
 	if parked {
 		e.parkedX, e.parkedY = x, y
 	} else {
@@ -831,7 +847,7 @@ func (e *Emulator) handleGraphemeWithin(content string, width, left, right int) 
 		x = right - 1
 	} else {
 		e.atPhantom = false
-		x += cell.Width
+		x += advance
 	}
 
 	// NOTE: We don't reset the phantom state here, we handle it up above.

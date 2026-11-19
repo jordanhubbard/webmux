@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -97,6 +100,45 @@ func TestRemoteRigAuthenticatedCheckinReconnectAndRevocation(t *testing.T) {
 	}
 	if _, err := provider.Launch(context.Background(), coordinationLaunchRequest{ProjectID: status.Projects[0].ID}); err == nil {
 		t.Fatal("observed project allowed a launch")
+	}
+	if _, err := exec.LookPath("ssh"); err == nil && runtime.GOOS != "windows" {
+		root := t.TempDir()
+		marker := filepath.Join(root, "must-not-execute")
+		socket := filepath.Join(root, "socket with 'quotes; $(touch "+marker+")")
+		modern := *report
+		modern.Source = rigobservation.StructuredSource
+		modern.Seats = append([]rigobservation.Seat(nil), report.Seats...)
+		modern.Seats[0].TmuxServerFlag, modern.Seats[0].TmuxServerValue = "-S", socket
+		send(one, &modern)
+		wait(func(status coordinationProviderStatus) bool {
+			return len(status.Seats) == 1 && status.Seats[0].TmuxServerValue == socket
+		})
+		launch, err := provider.Attach(context.Background(), id)
+		if err != nil || launch.TmuxServerValue != socket || launch.TmuxServerFlag != "-S" {
+			t.Fatal("remote attachment lost server identity", launch, err)
+		}
+		output := filepath.Join(root, "argv")
+		if err := os.WriteFile(filepath.Join(root, "tmux"), []byte("#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$RIG_REMOTE_TEST_ARGV\"\n"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		// Exercise SSH's shell-command boundary locally with a recording tmux;
+		// no remote connection or real tmux mutation occurs in this control.
+		command := exec.Command("/bin/sh", "-c", launch.Argv[len(launch.Argv)-1])
+		command.Env = append(os.Environ(), "PATH="+root, "RIG_REMOTE_TEST_ARGV="+output)
+		if data, err := command.CombinedOutput(); err != nil {
+			t.Fatal(err, string(data))
+		}
+		data, err := os.ReadFile(output)
+		if err != nil || string(data) != "-S\n"+socket+"\nattach-session\n-t\n=original-pane\n" {
+			t.Fatal("SSH command changed literal socket data", string(data), err)
+		}
+		if _, err := os.Stat(marker); !os.IsNotExist(err) {
+			t.Fatal("socket text executed as shell syntax", err)
+		}
+		send(one, report)
+		wait(func(status coordinationProviderStatus) bool {
+			return len(status.Seats) == 1 && status.Seats[0].TmuxServerFlag == ""
+		})
 	}
 	second := enroll()
 	two := dial(second)

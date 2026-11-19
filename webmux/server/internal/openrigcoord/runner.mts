@@ -1,16 +1,27 @@
 // WebMux owns the control plane; SSH carries each remote CLI's terminal and a
 // loopback-only reverse forward. No remote daemon or provider credentials copied.
 import fs from 'node:fs';
+import { observeRigEnrollments } from './rig-enrollment.mts';
+import { rigTmuxAttachment, type RigAttachmentNode } from './rig-attachment.mts';
 import type { RigRecoveryIdentity } from './rig-recovery.mts';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
-type Agent = { target: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string };
-type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string };
+type Agent = { target: string; senderAddress?: string; project: string; rigId?: string; rigName?: string; pod?: string; name: string; host: string; cwd: string; runtime: string; tmux: string; remotePort?: number; sessionId?: string; nativeOwned?: true; nativeNodeId?: string; logicalId?: string; creationOperationId?: string };
+type Input = { mode?: 'new' | 'existing'; project?: string; rigId?: string; rigName?: string; pod?: string; name?: string; host?: string; cwd?: string; runtime?: string; path?: string; inspect?: boolean; trustRequest?: string; creationRequestId?: string; continueOriginal?: boolean; row?: number; col?: number };
+class BlockedCreation extends Error {
+  value: { state: 'blocked'; code: 'native_project_trust_required'; requestId: string };
+  constructor(value: BlockedCreation['value']) { super('native_creation_blocked'); this.value = value; }
+}
+class PendingCreation extends Error {
+  value: { state: 'uncertain'; stage: 'project' | 'agent'; code: string; operationId: string };
+  constructor(code: string, operationId: string, stage: 'project' | 'agent' = 'project') { super('native_creation_pending'); this.value = { state: 'uncertain', stage, code, operationId }; }
+}
 type RigRow = { rigId?: string; name?: string; rigName?: string; nodeCount?: number; runningCount?: number; status?: string; lifecycleState?: string; latestSnapshot?: string | null };
-type NodeRow = { rigId?: string; rigName?: string; logicalId?: string; podNamespace?: string; canonicalSessionName?: string; runtime?: string; sessionStatus?: string; lifecycleState?: string; tmuxAttachCommand?: string | null };
+type AgentActivity = { state?: string; evidenceSource?: string; sampledAt?: string; stale?: boolean; generationProvenance?: string };
+type NodeRow = RigAttachmentNode & { nodeId?: string; agentActivity?: AgentActivity; startupStatus?: string; rigId?: string; rigName?: string; logicalId?: string; podNamespace?: string; hostSelfId?: string | null; runtime?: string; sessionStatus?: string; lifecycleState?: string };
 const [action, directory] = process.argv.slice(2);
 if (!directory) throw new Error('Missing coordination state directory');
 // Controller commands follow the configured coordinator endpoint. A user's
@@ -26,8 +37,35 @@ const write = (file: string, data: unknown) => {
 };
 const records = (): Agent[] => fs.readdirSync(directory).filter(f => f.endsWith('.agent.json')).map(f => JSON.parse(fs.readFileSync(path.join(directory, f), 'utf8')) as Agent);
 const entries = <T,>(value: T[] | { entries?: T[] }): T[] => Array.isArray(value) ? value : value.entries ?? [];
-const rigRows = (archived = false): RigRow[] => entries(JSON.parse(run('rig', ['ps', ...(archived ? ['--include-archived'] : []), '--json', '--fields', 'rigId,name,rigName,nodeCount,runningCount,status,lifecycleState,latestSnapshot'])) as RigRow[] | { entries?: RigRow[] });
-const nodeRows = (): NodeRow[] => entries(JSON.parse(run('rig', ['ps', '--nodes', '-A', '--json', '--fields', 'rigId,rigName,logicalId,podNamespace,canonicalSessionName,runtime,sessionStatus,lifecycleState,tmuxAttachCommand'])) as NodeRow[] | { entries?: NodeRow[] });
+const observationArgs = action === 'observations' ? ['--no-cleanup'] : [];
+const rigRows = (archived = false): RigRow[] => entries(JSON.parse(run('rig', ['ps', ...observationArgs, ...(archived ? ['--include-archived'] : []), '--json', '--fields', 'rigId,name,rigName,nodeCount,runningCount,status,lifecycleState,latestSnapshot'])) as RigRow[] | { entries?: RigRow[] });
+// Project before enrichment so neither seats nor legacy agent rows carry raw
+// evidence, runtime event text, or provider secrets.
+const activityFacts = (activity?: AgentActivity): AgentActivity | undefined => activity ? { state: activity.state, evidenceSource: activity.evidenceSource, sampledAt: activity.sampledAt, stale: activity.stale, generationProvenance: activity.generationProvenance } : undefined;
+let structuredAttachments: boolean | undefined;
+const structuredAttachmentBuild = () => {
+  if (structuredAttachments === undefined) {
+    try { structuredAttachments = run('rig', ['--version']).trim() === '0.7.18 (3bf87c62)'; }
+    catch { structuredAttachments = false; }
+  }
+  return structuredAttachments;
+};
+const nodeRows = (): NodeRow[] => {
+  structuredAttachmentBuild();
+  const fields = 'rigId,rigName,logicalId,podNamespace,hostSelfId,canonicalSessionName,runtime,sessionStatus,lifecycleState,tmuxAttachCommand,startupStatus,agentActivity'
+    + (structuredAttachments ? ',attachmentType,tmuxServerArgs' : '');
+  // 0.7.18 emits structured attachment fields in full JSON but its CLI
+  // --fields allow-list omits them. Project immediately; never export the
+  // remaining full inventory (including recovery/runtime metadata).
+  return entries(JSON.parse(run('rig', ['ps', '--nodes', '-A', ...observationArgs, '--json', ...(structuredAttachments ? ['--full'] : ['--fields', fields])])) as NodeRow[] | { entries?: NodeRow[] })
+    .map(node => ({
+      rigId: node.rigId, rigName: node.rigName, logicalId: node.logicalId, podNamespace: node.podNamespace,
+      hostSelfId: node.hostSelfId, canonicalSessionName: node.canonicalSessionName, runtime: node.runtime,
+      sessionStatus: node.sessionStatus, lifecycleState: node.lifecycleState, tmuxAttachCommand: node.tmuxAttachCommand,
+      startupStatus: node.startupStatus, agentActivity: activityFacts(node.agentActivity),
+      ...(structuredAttachments ? { nodeId: node.nodeId, attachmentType: node.attachmentType, tmuxServerArgs: node.tmuxServerArgs } : {}),
+    }));
+};
 const identifier = (value: string, field: string) => {
   if (!/^[a-z][a-z0-9-]{0,47}$/.test(value)) throw new Error(`${field}: use a letter followed by letters, digits or hyphens (48 characters maximum).`);
   return value;
@@ -86,25 +124,60 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const args = ['-c', browser, requested, host];
     const output = host === 'localhost' ? run('python3', args) : run('ssh', [...sshArgs, host, `python3 -c ${q(browser)} ${q(requested)} ${q(host)}`]);
     console.log(output);
-  } else if (action === 'status') {
+  } else if (action === 'project-pods') {
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as { projectId: string; projectName: string };
+    if (structuredAttachmentBuild()) {
+      const { readRigProjectPods } = await import('./rig-project-pods.mts');
+      console.log(JSON.stringify(await readRigProjectPods(input.projectId, input.projectName, { run })));
+    } else {
+      // Preserve the published legacy contract, which exposes only observed pods.
+      const rig = rigRows().filter(value => value.rigId === input.projectId);
+      if (rig.length !== 1 || (rig[0].rigName || rig[0].name) !== input.projectName) throw new Error('The selected Rig project is unavailable.');
+      const pods = [...new Set(nodeRows().filter(value => value.rigId === input.projectId).map(value => value.podNamespace).filter((value): value is string => !!value))].sort();
+      console.log(JSON.stringify({ projectId: input.projectId, projectName: input.projectName, pods, source: 'legacy-seats' }));
+    }
+  } else if (action === 'stop-preview') {
+    const { reviewRigStop } = await import('./rig-stop.mts');
+    console.log(JSON.stringify(await reviewRigStop(run, JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-stop.mts').RigStopSelection)));
+  } else if (action === 'stop-execute') {
+    const { executeRigStop } = await import('./rig-stop.mts');
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as { review: import('./rig-stop.mts').RigStopReview; reason: string; operator: string };
+    console.log(JSON.stringify(await executeRigStop(run, input.review, input.reason, input.operator)));
+  } else if (action === 'status' || action === 'status-enrollment' || action === 'observations') {
     let rigs: RigRow[];
     let nodes: NodeRow[];
     try { rigs = rigRows(true); nodes = nodeRows(); }
     catch { throw new Error('Canonical Rig discovery requires OpenRig CLI 0.6.14 or newer and a reachable daemon.'); }
     const managed = records();
-    const agents = managed.map(agent => ({ ...agent, ...(nodes.find(e => e.canonicalSessionName === agent.target) ?? {}), connected: (() => { try { run('tmux', ['has-session', '-t', `=${agent.tmux}`], 3000); return true; } catch { return false; } })() }));
-    const seats = nodes.map(node => {
-      const agent = managed.find(value => value.target === node.canonicalSessionName);
-      const match = typeof node.tmuxAttachCommand === 'string' ? /^tmux attach(?:-session)? -t ([a-zA-Z0-9_.:@-]{1,256})$/.exec(node.tmuxAttachCommand) : null;
-      return { ...node, managed: Boolean(agent), host: agent?.host, cwd: agent?.cwd, name: agent?.name, openable: Boolean(match), tmuxTarget: match?.[1] };
+    const agents = managed.map(agent => {
+      const matches = nodes.filter(node => agent.logicalId ? node.rigId === agent.rigId && node.logicalId === agent.logicalId : node.canonicalSessionName === agent.target);
+      const node = matches.length === 1 ? matches[0] : undefined;
+      const attachment = node ? rigTmuxAttachment(node, structuredAttachments === true) : undefined;
+      const connected = (() => {
+        // A canonical inventory must select its exact server. Only the legacy
+        // agents-only protocol may use the environment-selected namespace.
+        if (matches.length && !attachment || structuredAttachments && !attachment) return false;
+        try {
+          run('tmux', [...(attachment?.tmuxServerFlag ? [attachment.tmuxServerFlag, attachment.tmuxServerValue] : []),
+            'has-session', '-t', `=${attachment?.tmuxTarget ?? agent.tmux}`], 3000);
+          return true;
+        } catch { return false; }
+      })();
+      return { ...agent, ...(node ?? {}), connected };
+    });
+    const enrollments = action === 'status' ? [] : await observeRigEnrollments(run, nodes);
+    const seats = nodes.map((node, index) => {
+      const agent = managed.find(value => value.logicalId ? value.rigId === node.rigId && value.logicalId === node.logicalId : value.target === node.canonicalSessionName);
+      const attachment = rigTmuxAttachment(node, structuredAttachments === true);
+      return { ...node, ...enrollments[index], ...attachment, checkedStop: structuredAttachments === true, managed: Boolean(agent), host: agent?.host, cwd: agent?.cwd, name: agent?.name, openable: Boolean(attachment) };
     });
     const messages: { from: string; to: string; body: string; time: string; state: string }[] = [];
-    for (const agent of agents.slice(0, 16)) {
-      const rows = JSON.parse(run('rig', ['queue', 'outbox-list', agent.target, '--limit', '8', '--json'])) as { senderSession: string; destinationSession: string; body: string; tsDispatched: string; deliveryState: string }[];
+    for (const agent of (action === 'observations' ? [] : agents.slice(0, 16))) {
+      const rows = JSON.parse(run('rig', ['queue', 'outbox-list', agent.senderAddress ?? agent.target, '--limit', '8', '--json'])) as { senderSession: string; destinationSession: string; body: string; tsDispatched: string; deliveryState: string }[];
       for (const row of rows) messages.push({ from: row.senderSession, to: row.destinationSession, body: row.body.slice(0, 2000), time: row.tsDispatched, state: row.deliveryState });
     }
     messages.sort((a, b) => b.time.localeCompare(a.time));
-    console.log(JSON.stringify({ rigs, seats, agents, messages: messages.slice(0, 24), contract: 'openrig-cli/0.6.14' }));
+    console.log(JSON.stringify({ rigs, seats, agents, nativeCreationRequests: structuredAttachments === true && Number(process.versions.node.split('.')[0]) === 24 && ['darwin', 'linux'].includes(process.platform), messages: messages.slice(0, 24), contract: 'openrig-cli/0.6.14' }));
   } else if (action === 'recovery-observe') {
     const { observeRigRecovery } = await import('./rig-recovery.mts');
     const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
@@ -125,6 +198,62 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const { prepareRigNativeRecovery, executeRigNativeRecovery } = await import('./rig-recovery.mts');
     const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
     console.log(JSON.stringify(await (action === 'recovery-prepare' ? prepareRigNativeRecovery : executeRigNativeRecovery)(run, identity)));
+  } else if (action === 'native-recovery-resume' || action === 'native-recovery-attachment') {
+    const { verifyRigNativeCodexReference, observeRigNativeOriginalAttachment } = await import('./rig-native-capture.mts');
+    const { resumeRigNativeCodex } = await import('./rig-native-resume.mts');
+    const { nativeCreateArtifacts } = await import('./rig-native-create.mts');
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as { identity: RigRecoveryIdentity; operationId?: string; prepare?: boolean; inspect?: boolean };
+    const identity = input.identity;
+    if (!identity.native_rig_recovery) throw new Error('native_resume_reference_missing');
+    const reference = JSON.parse(identity.native_rig_recovery) as import('./rig-native-capture.mts').NativeCodexRecoveryReference;
+    const matches = records().filter(agent => agent.nativeOwned === true && agent.target === identity.target
+      && agent.host === identity.host && agent.cwd === identity.workspace && agent.runtime === identity.runtime
+      && agent.rigId === reference.rigId && agent.nativeNodeId === reference.nodeId && agent.logicalId === `${reference.pod}.${reference.member}`);
+    if (matches.length !== 1) throw new Error('native_resume_original_agent_unavailable');
+    const selection = { directory, identity, rigId: reference.rigId, nodeId: reference.nodeId, pod: reference.pod, member: reference.member, cwd: reference.cwd };
+    await verifyRigNativeCodexReference(selection, reference, { run });
+    const surviving = (input.prepare || action === 'native-recovery-attachment') ? await observeRigNativeOriginalAttachment(selection, reference, { run }) : undefined;
+    if (surviving) console.log(JSON.stringify({ state: input.prepare ? 'surviving' : 'attached', code: 'native_original_surviving', posted: false,
+      operationId: input.operationId, nativeSessionId: reference.nativeSessionId, logicalId: `${reference.pod}.${reference.member}`, attachment: surviving }));
+    else if (action === 'native-recovery-attachment') throw new Error('native_resume_original_not_running');
+    else {
+      if (!input.operationId) throw new Error('native_resume_selection_invalid');
+      const observationHelper = process.platform === 'linux' ? JSON.parse(nativeCreateArtifacts.read(path.join(directory, '.native-codex-observer.json')).toString('utf8')) as import('./codex-owner-plan.mts').CodexObservationHelper : undefined;
+      const result = await resumeRigNativeCodex({ directory, rigId: reference.rigId, nodeId: reference.nodeId, pod: reference.pod, member: reference.member,
+        cwd: reference.cwd, snapshotId: reference.snapshotId, historySessionId: reference.historySessionId, nativeSessionId: reference.nativeSessionId,
+        sessionName: reference.sessionName, reference, operationId: input.operationId, prepare: input.prepare, inspect: input.inspect }, { run, observationHelper });
+      if (result.state !== 'confirmed') console.log(JSON.stringify(result));
+      else {
+        const attachment = await observeRigNativeOriginalAttachment(selection, reference, { run });
+        console.log(JSON.stringify(attachment ? { ...result, attachment } : { ...result, state: 'uncertain', code: 'native_resume_attachment_unverified' }));
+      }
+    }
+  } else if (action === 'native-recovery-observe') {
+    const { captureRigNativeCodex } = await import('./rig-native-capture.mts');
+    const identity = JSON.parse(fs.readFileSync(0, 'utf8')) as RigRecoveryIdentity;
+    const matches = records().filter(agent => agent.nativeOwned === true && agent.target === identity.target
+      && agent.host === identity.host && agent.cwd === identity.workspace && agent.runtime === identity.runtime);
+    if (matches.length !== 1) throw new Error('native_recovery_original_agent_unavailable');
+    const agent = matches[0], logical = agent.logicalId?.split('.');
+    if (!agent.rigId || !agent.nativeNodeId || logical?.length !== 2 || agent.pod !== logical[0]) throw new Error('native_recovery_original_agent_unavailable');
+    console.log(JSON.stringify(await captureRigNativeCodex({ directory, identity, rigId: agent.rigId, nodeId: agent.nativeNodeId,
+      pod: logical[0], member: logical[1], cwd: agent.cwd }, { run })));
+  } else if (action === 'native-project') {
+    const { createRigNativeProject } = await import('./rig-native-project.mts');
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-native-project.mts').NativeRigProjectInput;
+    console.log(JSON.stringify(await createRigNativeProject({ ...input, directory }, { run })));
+  } else if (action === 'native-resume') {
+    const { resumeRigNativeCodex } = await import('./rig-native-resume.mts');
+    const { nativeCreateArtifacts } = await import('./rig-native-create.mts');
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-native-resume.mts').NativeCodexResumeInput;
+    const observationHelper = process.platform === 'linux' ? JSON.parse(nativeCreateArtifacts.read(path.join(directory, '.native-codex-observer.json')).toString('utf8')) as import('./codex-owner-plan.mts').CodexObservationHelper : undefined;
+    console.log(JSON.stringify(await resumeRigNativeCodex({ ...input, directory }, { run, observationHelper })));
+  } else if (action === 'native-create') {
+    const { createRigNativeCodex, nativeCreateArtifacts } = await import('./rig-native-create.mts');
+    const input = JSON.parse(fs.readFileSync(0, 'utf8')) as import('./rig-native-create.mts').NativeCodexCreateInput;
+    // The authenticated caller's owner namespace always wins over input paths.
+    const observationHelper = process.platform === 'linux' ? JSON.parse(nativeCreateArtifacts.read(path.join(directory, '.native-codex-observer.json')).toString('utf8')) as import('./codex-owner-plan.mts').CodexObservationHelper : undefined;
+    console.log(JSON.stringify(await createRigNativeCodex({ ...input, directory }, { run, observationHelper })));
   } else if (action === 'create') {
     const input = JSON.parse(fs.readFileSync(0, 'utf8')) as Input;
     const mode = input.mode ?? 'new';
@@ -136,6 +265,30 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const runtime = input.runtime ?? 'codex';
     if (!['codex', 'claude-code'].includes(runtime)) throw new Error('Unsupported agent runtime.');
     const local = host === 'localhost';
+    if (input.trustRequest !== undefined && (!/^[a-f0-9]{64}$/.test(input.trustRequest) || !structuredAttachmentBuild()
+      || !local || runtime !== 'codex')) throw new Error('The saved native trust request is unavailable for this selection.');
+    if (input.continueOriginal !== undefined && (typeof input.continueOriginal !== 'boolean' || !input.creationRequestId)) throw new Error('native_http_create_invalid_continuation');
+    let publicRequest: { requireNative(native: boolean): void } | undefined;
+    if (input.creationRequestId !== undefined) {
+      const { retainHttpCreateRequest } = await import('./rig-http-create.mts');
+      publicRequest = retainHttpCreateRequest(directory, input.creationRequestId, {
+        mode, rigId: input.rigId ?? '', rigName: input.rigName ?? input.project ?? '', pod: input.pod ?? '',
+        name, host, cwd, runtime, row: input.row ?? null, col: input.col ?? null,
+      }, structuredAttachmentBuild());
+    }
+    const trustSelection = Buffer.from(JSON.stringify({ mode, rigId: input.rigId ?? '', rigName: input.rigName ?? input.project ?? '',
+      pod: input.pod ?? '', name, host, cwd, runtime }));
+    if (input.trustRequest) {
+      // Bind the browser selection BEFORE the topology allocator. A changed
+      // project/name must not allocate a namespace and only then fail the
+      // member's saved-selection check.
+      const { nativeCreateArtifacts: artifacts } = await import('./rig-native-create.mts');
+      try {
+        const requests = artifacts.ownedRoot(path.join(directory, 'trust-requests'));
+        if (!artifacts.read(path.join(requests, input.trustRequest + '.json')).equals(trustSelection)) throw new Error();
+      } catch { throw new Error('native_create_original_request_changed'); }
+    }
+    if (input.inspect && (!structuredAttachmentBuild() || (mode !== 'new' && !(mode === 'existing' && local && runtime === 'codex')))) throw new Error('This request has no supported original creation to inspect.');
     // Older published coordinators retain their existing transport, with no
     // remote identity claim. Explicit relay enrollment needs both new options.
     const attachHelp = !local && runtime === 'codex' ? run('rig', ['attach', '--help']) : '';
@@ -151,12 +304,16 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     if (mode === 'existing') {
       rigId = input.rigId ?? '';
       if (!/^[0-9A-HJKMNP-TV-Z]{26}$/.test(rigId)) throw new Error('Choose a canonical Rig project.');
-      const canonical = rigRows().find(value => value.rigId === rigId);
+      const canonical = rigRows(structuredAttachmentBuild()).find(value => value.rigId === rigId);
       if (!canonical) throw new Error('The selected Rig project is no longer available. Refresh and choose again.');
       rig = canonical.rigName || canonical.name || '';
       if (!rig || (input.rigName && input.rigName !== rig)) throw new Error('The selected Rig identity changed. Refresh and choose again.');
       pod = identifier(input.pod ?? '', 'Rig pod');
-      if (!nodeRows().some(value => value.rigId === rigId && value.podNamespace === pod)) throw new Error('The selected Rig pod is no longer available. Refresh and choose again.');
+      if (structuredAttachmentBuild()) {
+        const { readRigProjectPods } = await import('./rig-project-pods.mts');
+        const namespace = await readRigProjectPods(rigId, rig, { run });
+        if (!namespace.pods.includes(pod)) throw new Error('The selected Rig pod is no longer available. Refresh and choose again.');
+      } else if (!nodeRows().some(value => value.rigId === rigId && value.podNamespace === pod)) throw new Error('The selected Rig pod is no longer available. Refresh and choose again.');
       project = rig;
     } else {
       project = identifier(input.rigName ?? input.project ?? '', 'Rig name');
@@ -167,14 +324,38 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       const spec = path.join(projectDir, 'rig.yaml');
       const projectState = path.join(projectDir, 'project.json');
       const saved = fs.existsSync(projectState) ? (JSON.parse(fs.readFileSync(projectState, 'utf8')) as { rigId?: string }) : undefined;
-      const savedRig = saved?.rigId ? rigRows(true).find(value => value.rigId === saved.rigId) : undefined;
-      if (!saved?.rigId || !savedRig || savedRig.lifecycleState === 'stopped') {
-        write(spec, { version: '0.2', name: rig, summary: `Coordinated project ${project}`, pods: [{ id: pod, label: project, members: [] }], edges: [] });
-        const result = JSON.parse(run('rig', ['up', spec, '--yes', '--json'])) as { rigId?: string };
-        if (!result.rigId || !/^[0-9A-HJKMNP-TV-Z]{26}$/.test(result.rigId)) throw new Error('Coordinator did not create the project.');
-        write(projectState, result);
+      const nativeOriginal = path.join(directory, 'projects', crypto.createHash('sha256').update(project).digest('hex'), 'original.json');
+      if (structuredAttachmentBuild()) {
+        const { createRigNativeProject } = await import('./rig-native-project.mts');
+        const { nativeCreateArtifacts: artifacts } = await import('./rig-native-create.mts');
+        const requests = artifacts.ownedRoot(path.join(directory, 'project-requests'));
+        const key = crypto.createHash('sha256').update(JSON.stringify([project, name, host])).digest('hex');
+        const original = path.join(requests, key + '.json');
+        if (input.inspect && !fs.existsSync(original)) throw new Error('The original project creation request is unavailable.');
+        artifacts.publish(original, Buffer.from(JSON.stringify({ contract: 'webmux-project-launch/v1', project, name, host, cwd, runtime })));
+        if (input.inspect || fs.existsSync(nativeOriginal) || !saved?.rigId) {
+          // Namespace allocation is controller-local even for an SSH member.
+          // Every member retains its own execution-host cwd below.
+          const result = await createRigNativeProject({ directory, name: project, cwd: directory, inspect: input.inspect }, { run });
+          if (result.state !== 'recorded' || !result.rigId) throw new PendingCreation(result.code, result.operationId);
+          rigId = result.rigId;
+        } else {
+          // Keep earlier WebMux launch records attached to their original rig;
+          // a stopped/missing namespace is not authority to allocate another.
+          const originalRig = rigRows().find(value => value.rigId === saved.rigId);
+          if (!originalRig || (originalRig.rigName || originalRig.name) !== rig) throw new Error('The saved project is unavailable. Recover its original Rig project or choose another project.');
+          rigId = saved.rigId;
+        }
+      } else {
+        const savedRig = saved?.rigId ? rigRows(true).find(value => value.rigId === saved.rigId) : undefined;
+        if (!saved?.rigId || !savedRig || savedRig.lifecycleState === 'stopped') {
+          write(spec, { version: '0.2', name: rig, summary: `Coordinated project ${project}`, pods: [{ id: pod, label: project, members: [] }], edges: [] });
+          const result = JSON.parse(run('rig', ['up', spec, '--yes', '--json'])) as { rigId?: string };
+          if (!result.rigId || !/^[0-9A-HJKMNP-TV-Z]{26}$/.test(result.rigId)) throw new Error('Coordinator did not create the project.');
+          write(projectState, result);
+        }
+        rigId = (JSON.parse(fs.readFileSync(projectState, 'utf8')) as { rigId: string }).rigId;
       }
-      rigId = (JSON.parse(fs.readFileSync(projectState, 'utf8')) as { rigId: string }).rigId;
     }
     const mapping = records().find(agent => (agent.rigId === rigId || (!agent.rigId && agent.project === project)) && agent.host === host);
     if (mapping && mapping.cwd !== cwd) throw new Error(`Rig ${rig} already maps ${host} to ${mapping.cwd}. Use that directory or choose another topology.`);
@@ -182,11 +363,30 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     const tmux = `wm-${scope}-${rigId.slice(-8).toLowerCase()}-${member}`;
     const target = tmux;
     const recordFile = path.join(directory, `${tmux}.agent.json`);
-    const existing = records().find(a => a.tmux === tmux);
+    const existing = records().find(a => a.tmux === tmux || (a.nativeOwned === true && a.rigId === rigId && a.pod === pod && a.name === name && a.host === host));
     let alive = false;
     try { run('tmux', ['has-session', '-t', `=${tmux}`], 3000); alive = true; } catch { /* A stopped relay can be explicitly reconnected. */ }
     if (existing && (existing.cwd !== cwd || existing.runtime !== runtime || existing.rigId !== rigId)) throw new Error('This agent has a different topology, directory or runtime. Choose another name.');
-    if (existing && alive) {
+    const native = existing?.nativeOwned === true || (!existing && structuredAttachmentBuild() && local && runtime === 'codex');
+    publicRequest?.requireNative(native);
+    if (input.inspect && mode === 'existing' && !native) throw new Error('This session has no original native creation request to inspect.');
+    if (native) {
+      const { launchRigNativeCodex } = await import('./rig-native-launch.mts');
+      const { nativeCreateArtifacts } = await import('./rig-native-create.mts');
+      const observationHelper = process.platform === 'linux' ? JSON.parse(nativeCreateArtifacts.read(path.join(directory, '.native-codex-observer.json')).toString('utf8')) as import('./codex-owner-plan.mts').CodexObservationHelper : undefined;
+      const result = await launchRigNativeCodex({ directory, rigId, pod, member, cwd, inspect: input.inspect, trustRequest: input.trustRequest }, { run, observationHelper });
+      if (result.state === 'blocked') {
+        const requests = nativeCreateArtifacts.ownedRoot(path.join(directory, 'trust-requests'));
+        nativeCreateArtifacts.publish(path.join(requests, result.requestId + '.json'), trustSelection);
+        throw new BlockedCreation({ state: 'blocked', code: result.code, requestId: result.requestId });
+      }
+      if (result.state !== 'attached') throw new PendingCreation(result.code, result.operationId, 'agent');
+      const agent: Agent = { target: result.target, senderAddress: result.target, project, rigId, rigName: rig, pod, name, host, cwd,
+        runtime, tmux: result.target, sessionId: result.sessionId, nativeOwned: true, nativeNodeId: result.nodeId, logicalId: `${pod}.${member}`, creationOperationId: result.operationId };
+      run('tmux', [result.tmuxServerFlag, result.tmuxServerValue, 'set-option', '-t', result.target, 'mouse', 'on'], 3000);
+      write(recordFile, agent);
+      console.log(JSON.stringify(agent));
+    } else if (existing && alive) {
       if (existing.cwd !== cwd || existing.runtime !== runtime) throw new Error('This agent already exists with a different directory or runtime. Choose another name.');
       run('tmux', ['has-session', '-t', `=${tmux}`], 3000);
       run('tmux', ['set-option', '-t', tmux, 'mouse', 'on'], 3000);
@@ -209,7 +409,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       const attached = path.join(directory, `${tmux}.attached.json`);
       const launcher = path.join(directory, `${tmux}.sh`);
       const role = `You are ${name}, a WebMux coordinated agent in Rig ${rig} (${rigId}), executing on ${host} in ${cwd}. OpenRig is already connected through OPENRIG_URL and OPENRIG_SESSION_NAME. Run rig whoami --json and rig ps --nodes --rig ${rig} --json to discover teammates. Use rig send <canonicalSessionName> <message> for coordination; do not override sender identity. Rig identity is shared, files are host-local. Keep the owner's project instructions and permission policy. Report READY and wait for the owner or a teammate. Do not launch other agents automatically.`;
-      const cli = runtime === 'codex' ? `codex -c sandbox_workspace_write.network_access=true ${q(role)}` : `claude --append-system-prompt ${q(role)} ${q('Verify your coordination identity, discover teammates, report READY and wait.')}`;
+      const cli = runtime === 'codex' ? `codex ${q(role)}` : `claude --append-system-prompt ${q(role)} ${q('Verify your coordination identity, discover teammates, report READY and wait.')}`;
       const attach = `rig attach --self --rig ${q(rigId)} ${existing ? `--node ${q((existing.pod ?? pod) + '.' + member)}` : `--pod ${q(pod)} --member ${q(member)}`} --runtime ${q(runtime)} --cwd ${q(cwd)}${relayIdentity ? ` --relay-ssh-host ${q(host)} --relay-tmux-session ${q(tmux)}` : ''} --json`;
       // Get the actual daemon URL from the supported attach response, not a
       // guessed service port. Node writes a shell-quoted env file from JSON.
@@ -252,11 +452,18 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       const deadline = Date.now() + 10000;
       while (!fs.existsSync(attached) && Date.now() < deadline) await delay(100);
       if (!fs.existsSync(attached)) throw new Error('Agent did not register with the coordinator.');
-      const registration = JSON.parse(fs.readFileSync(attached, 'utf8')) as { ok?: boolean; error?: string; attachmentType?: string; sessionId?: string; env?: { OPENRIG_SESSION_NAME?: string } };
+      const registration = JSON.parse(fs.readFileSync(attached, 'utf8')) as { ok?: boolean; error?: string; attachmentType?: string; sessionId?: string; sessionName?: string; env?: { OPENRIG_SESSION_NAME?: string } };
       if (registration.ok === false || registration.attachmentType !== 'tmux' || !registration.sessionId) throw new Error(registration.error || 'Agent transport registration failed.');
       agent.sessionId = registration.sessionId;
       if (typeof registration.env?.OPENRIG_SESSION_NAME !== 'string') throw new Error('Coordinator did not return a sender address.');
-      agent.target = registration.env.OPENRIG_SESSION_NAME;
+      if (!/^[a-zA-Z0-9_.:@-]{1,256}$/.test(registration.env.OPENRIG_SESSION_NAME)) throw new Error('Coordinator returned an invalid sender address.');
+      agent.senderAddress = registration.env.OPENRIG_SESSION_NAME;
+      if (structuredAttachmentBuild()) {
+        if (registration.sessionName !== tmux) throw new Error('Coordinator did not verify the created physical tmux session.');
+        agent.target = registration.sessionName;
+      } else {
+        agent.target = registration.env.OPENRIG_SESSION_NAME;
+      }
       // Keep a registered seat discoverable even if provider startup fails.
       // The owner can fix authentication and explicitly reconnect that seat.
       write(recordFile, agent);
@@ -266,6 +473,14 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
     }
   } else throw new Error('Unknown coordinator action');
 } catch (error) {
-  console.error(error instanceof Error ? error.message.slice(0, 3000) : String(error).slice(0, 3000));
-  process.exitCode = 1;
+  if (error instanceof BlockedCreation) {
+    console.log(JSON.stringify({ blocked: error.value }));
+  } else if (error instanceof PendingCreation) {
+    console.log(JSON.stringify({ creation: error.value }));
+  } else {
+    console.error((action === 'native-resume' || action === 'native-recovery-resume')
+      ? error instanceof Error && /^native_(?:resume|create)_[a-z_]+$/.test(error.message) ? error.message : 'native_resume_original_unavailable'
+      : error instanceof Error ? error.message.slice(0, 3000) : String(error).slice(0, 3000));
+    process.exitCode = 1;
+  }
 }

@@ -1,0 +1,74 @@
+{
+  "recordedUTC": "2026-11-18T04:53:27.080883+00:00",
+  "base": "10b365c6a5405848d1630d6fbd2f096a830a5998",
+  "sourceSHA256": {
+    "webmux/frontend/src/components/BrowserCompanion.css": "01c60bc98150953cba2c7eedf13c2e604281b562db970c0b2856dad3056ee5ff",
+    "webmux/frontend/src/components/BrowserCompanion.tsx": "a41b18b8aab335956dda1c0e3f7d4feac80f1717d3ba84f0f84cdd93d6575a0c",
+    "tests/e2e/browser-mobile.spec.ts": "497ea60a6d95353af87e95bccd7e454acae813c7d2bc464ad544e780764bbf01",
+    "tests/e2e/browser-workspace.spec.ts": "dd9f394e3f01f6cec6ad491708049ecd13e4fa9521150df90cb0a3ff22139c00"
+  },
+  "lockfileSHA256": "45c39a2a9b254ac87a33b6ca83f90cda1bf9dbdb1a0f90038cd0024b45e015fa",
+  "checks": [
+    {
+      "name": "types",
+      "exit": 0
+    },
+    {
+      "name": "lint",
+      "exit": 0
+    },
+    {
+      "name": "tests",
+      "exit": 0
+    },
+    {
+      "name": "build",
+      "exit": 0
+    },
+    {
+      "name": "browser",
+      "exit": 0
+    }
+  ],
+  "frontendTests": 398,
+  "nativeBrowserCases": 4,
+  "baselineAddressWidthPixels": 95.6875,
+  "minimumAddressWidthPixels": 180,
+  "mobileViewports": [
+    {
+      "width": 320,
+      "height": 568
+    },
+    {
+      "width": 568,
+      "height": 320
+    },
+    {
+      "width": 390,
+      "height": 400
+    }
+  ],
+  "touchSideEffects": 3,
+  "browserVersion": "158.0.8127.36",
+  "runtimeOverlay": false,
+  "browserWorkerOrLaunchFixtureOverlay": false,
+  "privateLogSHA256": {
+    "mobile454-baseline-browser.log": "54d1e60355fcd5001258b3418c9dfc064896fb8ba65cc2b98a7e685ea26f47f2",
+    "mobile454-final-types.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "mobile454-final-lint.log": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+    "mobile454-final-tests.log": "dd0e7964f43d6519d763bff67c8cd1c848ebb46b6f5546865623fadf248fd24a",
+    "mobile454-final-build.log": "f6a14891c6954fd018101966dd9e37269290816b8502598d36ebd67cd17ccf03",
+    "mobile454-final-browser.log": "680c3588f8538ce24204f881a539e5433d8c14bd5c862575394b142b16e840ed"
+  },
+  "privateScreenshotSHA256": {
+    "page-390x400.png": "1adc90ff775c520972866d5d9307897f001f09490f241172d0ec0d4b50f20647",
+    "page-568x320.png": "d61f2c21cec3687e2417db00a64018c2f6d27edeaa0b8ed9095269b1b990e36d",
+    "page-320x568.png": "a5cdc135ee75426eabb1f73b03c63cc7dae3f539fc40c7f37204358b97564a2c",
+    "portrait.png": "b36977fcb7fd37a000ed351abaf3e04030164e9ad880b38af2bbed423087c463"
+  },
+  "screenshotsVisuallyInspected": [
+    "portrait.png",
+    "page-568x320.png"
+  ],
+  "limits": "Native macOS application and Chrome with emulated touch/reduced heights; no physical mobile device, native keyboard, mobile Safari, assistive-technology or external identity-provider qualification. Hosted exact-head checks pending; unchanged #429 audit remains required."
+}

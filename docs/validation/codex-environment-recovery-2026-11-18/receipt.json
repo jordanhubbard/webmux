@@ -1,0 +1,93 @@
+{
+  "scope": "Private native macOS Codex original-conversation recovery with current environment-bearing wrapper and prototype fresh handoff; no public WebMux recovery activation",
+  "sourceRevision": "b9de5bf7add2f8920b368b14774ca8a8bd2be90f",
+  "passed": true,
+  "nativeVersions": {
+    "nodeVersion": "v24.21.0",
+    "rigVersion": "0.7.18 (3bf87c62)",
+    "tmuxVersion": "tmux 3.8",
+    "codexVersion": "codex-cli 0.169.0"
+  },
+  "moduleSHA256": {
+    "codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "codex-launch-policy.mts": "03130f6b51ba4b07e9e3ed827a0ebb597a917800611d66bdc218a78cb797756e",
+    "codex-launch-wrapper.mts": "b1735ad98f53c00fca23e018ed29f53f2721681c1ec2ee16c5ef3ed030a888a9",
+    "rig-native-create.mts": "8e5e4562609ca356e01a3d274eb7ad7168d8e068703db5b7456308c69c125b0b",
+    "rig-create-intent.mts": "00ffce7b9606f8cc6216111f967e54e3d1558920555afe9866799368af3e20b1",
+    "rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "codex-launch-environment.mts": "1e579a98d443bf4ff4a54aaf7c1af301434a0462b18e76535754806489bfb608",
+    "codex-environment-channel.mts": "63a93faa394dc593254bac7f032010ea9ff1329d12fe13b3a17cc05679d2c2bd"
+  },
+  "rawReceipt": "native-create-factory-wm438envresume-p_n19he0.json",
+  "rawSHA256": "8ebc40e87b48a755e9411e53b36d7f66651fca707ef292a328a01b4241865b25",
+  "probeSHA256": "bc168891c8a4c8dfabf9350d807565dfccb4d5569d18f5941b03ef5fea2dde0f",
+  "handoffBridgeSHA256": "eefb1e47829ead8439b158f0dd6b730417a4089278e42799b037d811273d232a",
+  "checks": {
+    "onlyOriginalCreationHelperKilledBeforeHandoff": true,
+    "sameOriginalEnrollmentAndReconstructedHandoffAfterHelperLoss": true,
+    "environmentSocketRemovedAfterHandoff": true,
+    "noPlaintextFixtureValueInDurableState": true,
+    "actualDefaultNativeOwnerPolicyUsed": true,
+    "actualNativeArgvPreservesOwnerPolicy": true,
+    "freshChallengeReadByActualProvider": true,
+    "projectAndOwnerExtraWritable": true,
+    "ownerFullAccessNotNarrowed": true,
+    "wrapperReplacedByNativeExecutable": true,
+    "nativeIdentityRetained": true,
+    "nativeOwnerEnvironmentPreserved": true,
+    "nativePolicyAndCorrelatedTools": true,
+    "duplicateFactoryAndExplicitInspectRetainNativeOccupant": true,
+    "siblingRetainsOriginalPID": true,
+    "snapshotBindsOriginalConversation": true,
+    "freshEnvironmentHandoffConsumed": true,
+    "originalResumeInspectedWithoutRepost": true,
+    "sameConversationRecallWithoutTools": true,
+    "originalNativeLogPrefixAndEnvironmentRetained": true,
+    "duplicateResumeRetainsBothNativeProcesses": true,
+    "checkedStopEndsOnlyNativeCodingSeat": true
+  },
+  "resumeResponse": {
+    "status": null,
+    "state": "uncertain",
+    "reason": "original_10s_response_deadline",
+    "reposted": false
+  },
+  "resumedEnvironment": {
+    "homePreserved": true,
+    "tmpPreserved": true,
+    "ownerPathRetainedAsSuffix": true,
+    "pairedRigFound": true,
+    "managerToolPathAbsent": true,
+    "ownerToolFound": true,
+    "ownerToolRuns": true,
+    "inheritedValueMatches": true,
+    "managerOnlyValueAbsent": true
+  },
+  "policy": {
+    "type": "danger-full-access",
+    "approval": "never",
+    "allowedWrites": 4,
+    "deniedWrites": 0
+  },
+  "cleanup": {
+    "privateTmuxStopped": true,
+    "daemonStateRemoved": true,
+    "sourceUnchanged": true
+  },
+  "excludedAttempts": [
+    {
+      "raw": "native-create-factory-wm438envresume-bwhi1d5f.json",
+      "reason": "10s response timeout aborted the probe; native request finished after11561ms, not accepted as a successful receipt"
+    },
+    {
+      "raw": "native-create-factory-wm438envresume-o45dkwvm.json",
+      "reason": "Recall verifier required event_msg user prompt; this native session recorded exact response_item user prompt. Partial progress retained; full run failed and excluded."
+    }
+  ],
+  "limits": [
+    "Fresh environment bridge is a private prototype, not a public or durable recovery action.",
+    "Original resume response remains uncertain; explicit read-only inspection observed original dispatch without repost. Later two duplicate requests tested already-running behavior only.",
+    "Authenticated macOS default full-access owner only; no restricted-policy enforcement or Linux/Windows acceptance from this receipt.",
+    "No browser/controller crash, process upgrade, host reboot, public native-owned creation/readiness/attachment, or full release claim."
+  ]
+}

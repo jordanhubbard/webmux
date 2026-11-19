@@ -1,0 +1,38 @@
+{
+  "recordedUTC": "2026-11-18T03:33:32.145783+00:00",
+  "parent": "9708ffc5bdcc4d55e5c1492e7f66ac34115e1678",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "e6b0cb65cc801aeb0952d06747f3760330b7c936a0b2ba17f2ec517215b293b0",
+    "webmux/server/internal/browser/navigation_trace_test.go": "dbca0f07de21a6ecf0f098ad2f5e11f0cbe94f67f92d9145b5e1ec39af871f0b",
+    "webmux/server/internal/browser/navigation_trace_controls_test.go": "90ed298e90f9e1d22f380f29f260068048d81deb868b6a16184a7f0d6f4e817a",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "4fff230c39551a0cb179013890fd029154c4791df42ca93a97214f7493a34128",
+    "webmux/server/internal/browser/navigation_output_test.go": "26d218dee2a4d972d6995fd4da82575cbf0360ca01f23b2579fc81255ca134f9",
+    ".github/workflows/browser-navigation.yml": "a1cd996c6feffaa5bfead4ddb99c7a8a530b143ab1f7c8e4fda38e834684d0f1",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/README.md": "b6c3cfcec8041e373f38d98678735abc25b069918e774916af33ce4947b200fb",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/windows-restart-summary.json": "72f205b37cb056823fb4c053345b1b392eb3c8738d695e421d0fda8aca6618a3",
+    "docs/validation/browser-startup-diagnostics-2026-11-17/native-sandbox-signal-summary.json": "664adc4da8f11e4cc8fa5af3abe66616d464236301488998c160c2c4442c6d9b"
+  },
+  "privateReceiptSHA256": {
+    "nav282-trace-sandbox-signal-full.log": "38c72a650ba73c84f3e8ea65cd81d2e777e4cb39cd16abc33355cfd76afd951f",
+    "nav282-trace-sandbox-signal-full-binding.json": "2c3965a09fc8b4fcb30a6298c76f46cc4718adf939499fc4cab000588612553c",
+    "nav282-trace-sandbox-signal-samples-binding.json": "d5c00dde8f18bdcc0657204b0230f9e7b00bbbbb9f04f7cf05d152eaf0b402ed",
+    "nav282-trace-sandbox-signal-browser-race.log": "3f9835e14f1c69588cb5f1a2a562a68de006b3fb3f6914d34ede745241e37308",
+    "nav282-trace-sandbox-signal-host-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "nav282-trace-sandbox-signal-windows-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "pr442-9708ffc-fast.zip": "31a7bcda1948d43c8527882c3f99ffe9b2a694e1d075aeb6160eccb63fee534a",
+    "pr442-9708ffc-fast-summary.json": "83d9f7621176b6ba85ab3a154f6c0f2abea7e7964c2e399c6c3c08339c6ccd88",
+    "pr442-9708ffc-fast-analysis.log": "34ed978b2e009e6fadba72ad6198779cbd6ef623c2128e6f83ca0ed150c759b4",
+    "nav282-trace-sandbox-signal-sample-1.log": "06b482c2c080e03c16efa45fa792088774b7bf1217531ec95b44788c5d7d357d",
+    "nav282-trace-sandbox-signal-sample-2.log": "68b12c87a99b0ca0a4c8d520396ca8bc51ad242dac8e2fc27bf313a17a8a13d9",
+    "nav282-trace-sandbox-signal-sample-3.log": "749f82b01ad061d5472740c652b51e8e891a44539f0f369499187f10bbebb8a8"
+  },
+  "matchingChromiumCommit": "6449d9f9a6a906edff724b7b220199b3fde4615c",
+  "chromiumSourceSHA256": {
+    "services_network_cors_cors_url_loader.cc": "58dc505bb9c631dfed10133b33db18d90068f1178f69a0580bc9a289b467d9e6",
+    "services_network_url_loader.cc": "018165a4ab9b6397ef63ee7f47c1f369c901e652d2c1e926f0573af7099c5532",
+    "sandbox_policy_win_sandbox_win.cc": "3b8720f6cf3722431ab0b30034e5f48a1d961e418429416132fa863c641f1e42",
+    "sandbox_policy_win_lpac_capability.h": "b5a5daac8c2ab607a3718240d9ed5fed1c072ea112cbb9a7978feee331af410e"
+  },
+  "checks": "ok  \tgithub.com/jordanhubbard/webmux/server/internal/browser\t1.629s;44ordinarynativeMac+4StopPASS;allcapturescomplete/lossless/zerodrops;16positivefixtureURLnetworkconstructors;8positiveboundedoutputtrials;2explicitWindowsNetLogskips;source/severity/splitline/privacy/phase/bounds+DarwinWindowsbrowservetPASS.",
+  "scope": "OnlyadditionalfixedoutputcounterandsinglefixtureURLmatchingconstructorprojectedfromexistingdata. No allocator/category/placement/command/flag/deadline/buffer/workflow/runtime/ACL/protectionchangefrom970. WindowsPENDING;noaccessdenial/rootcause/fix/merge/releaseclaim."
+}

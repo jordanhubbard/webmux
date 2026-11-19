@@ -1,0 +1,43 @@
+{
+  "issue": 539,
+  "source": "475f2ffa528a615ac993a799dea21be7e8c7cc96",
+  "parent": "1a1aa14ca4ed6d6867f9a9f359210c0aa0b7ef9e",
+  "adoptedFrom": "5a0256d29cf6d9e6fba863915edcffb0a6704532",
+  "productionFilesByteIdenticalToReviewedSource": {
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": true,
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": true,
+    "webmux/server/internal/httpapi/native_rig_recovery.go": true
+  },
+  "runnerNativeRecoveryActionByteIdentical": true,
+  "otherRunnerDifference": "Canonical project-pod discovery is outside this feature branch; recovery action matches.",
+  "sourceSHA256": {
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "b8aac78c18616b14d5c08f43591bdbbb5821b40a9f99ad89d35d7f3b743384c3",
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": "4b99af6829ae9d216b24b2a527d1104a193698a3c48a6849fdf8a6c5d1e9229c",
+    "webmux/server/internal/httpapi/native_rig_recovery.go": "a61d81af18ac966f4e69dfd53eeab16fcb398715e45b8c01b82e283a2d5b2da2",
+    "webmux/server/internal/openrigcoord/runner.mts": "741895f635a65005145cab83d4d25c5e7e0ffab4636e45d5410f85faa2da9cd5"
+  },
+  "checks": {
+    "focusedNode": 24,
+    "fullDefaultHelperTests": 261,
+    "helperFailSkip": 0,
+    "strictTypeScriptProjects": 5,
+    "parentGoPublicFallbackRegression": "FAIL expected: retained manual choice/new-Resume refusal message missing",
+    "fixedGoPublicRaceRepetitions": 20,
+    "httpapiRace": "PASS 53.090s",
+    "openrigcoordRace": "PASS 4.384s",
+    "windowsAMD64Vet": "PASS"
+  },
+  "existingNativeEvidence": {
+    "source": "5a0256d29cf6d9e6fba863915edcffb0a6704532",
+    "publishedAt": "4b0d4b0ec699bc6d34b48fa7a9f9911481879557",
+    "report": "https://github.com/jordanhubbard/webmux/blob/4b0d4b0ec699bc6d34b48fa7a9f9911481879557/docs/validation/codex-interactive-policy-2026-11-19/README.md",
+    "scope": "Three original native macOS/Rig0.7.18/Codex0.169.0 cases;40 lifecycle/browser controls. Historical source evidence, not a fresh run on this adoption."
+  },
+  "boundaries": [
+    "Original applied-settings records are read locally; no new native observation/model turn or authentication copy in this adoption.",
+    "Existing protocol fixture tests inject an approved policy check while retaining their original ownership/duplicate assertions; new controls cover actual journal drift and refusal.",
+    "No new native coding/Windows policy enforcement or combined-source qualification is claimed.",
+    "Exact final-head CI, ARM64, review and stacked integration remain required.",
+    "The negative Go overlay exercises public fallback wording, not the original native policy-loss reproduction. That actual reproduction remains bound to original6156/native report."
+  ]
+}

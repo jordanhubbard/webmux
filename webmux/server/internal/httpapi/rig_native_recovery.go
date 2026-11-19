@@ -9,6 +9,9 @@ import (
 )
 
 func (p *rigProvider) PlanNativeRecovery(ctx context.Context, saved session.RigIdentity) (func(context.Context) ([]string, error), error) {
+	if saved.Host == "" {
+		return nil, managedRecoveryError("Rig execution host is unverified. Recover through Rig on the original execution host.")
+	}
 	if isRemoteRigTarget(saved.Target) {
 		return nil, managedRecoveryError("Remote Rig conversations must be recovered through Rig on the execution host.")
 	}
@@ -46,7 +49,7 @@ func (p *rigProvider) PlanNativeRecovery(ctx context.Context, saved session.RigI
 		if err != nil {
 			return nil, err
 		}
-		if launch.Provider != "rig" || launch.Target != saved.Target || launch.Host != saved.Host || launch.Workspace != saved.Workspace || launch.Runtime != saved.Runtime || launch.Profile != "" && launch.Profile != saved.ManagerProfile {
+		if launch.TmuxServerFlag != saved.TmuxServerFlag || launch.TmuxServerValue != saved.TmuxServerValue || launch.Provider != "rig" || launch.Target != saved.Target || launch.Host != saved.Host || launch.Workspace != saved.Workspace || launch.Runtime != saved.Runtime || launch.Profile != "" && launch.Profile != saved.ManagerProfile {
 			return nil, managedRecoveryError("The Rig viewer destination changed after recovery.")
 		}
 		return launch.Argv, nil

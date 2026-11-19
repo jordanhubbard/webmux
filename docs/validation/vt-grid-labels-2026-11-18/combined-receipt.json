@@ -1,0 +1,51 @@
+{
+  "scope": "Integrate the already merged/qualified PR503 nil-label mitigation into the native recovery candidate. This does not repair or attribute Windows heap corruption.",
+  "combinedParent": "0b5149394038f83af8ff0823d7aad6616160f420",
+  "importedCommit": "473da1123a96dc10f9740ef57361c2b3571cf812",
+  "originalPR": 503,
+  "originalImportedSourceHashesMatch": true,
+  "sourcesSHA256": {
+    "webmux/server/internal/thirdparty/vt/grid_test.go": "9dc02e74681ee83cf5c27bdc727a3ca964925b13b171cb17ab17162072246395",
+    "webmux/server/internal/thirdparty/vt/WEBMUX.md": "1823130164e2ba74c8f8768f617e61a118eab0bb95ae26cc9130acc6db7277a2",
+    "webmux/server/internal/thirdparty/vt/WEBMUX_UPSTREAM.json": "c160accba97e1e6f0c728a8d72620b5e31aecf5d884491acc376829172113b2a",
+    "docs/validation/vt-grid-labels-2026-11-18/README.md": "716734ae2163ba42d0e735c8a323e6d5d9345795350b1998995e4473d927ac7d"
+  },
+  "sourceInversion": {
+    "sourceCommit": "473da1123a96dc10f9740ef57361c2b3571cf812",
+    "combinedParent": "0b5149394038f83af8ff0823d7aad6616160f420",
+    "diagnosticArguments": 6,
+    "restoresCombinedParentByteForByte": true,
+    "beforeSHA256": "d3507565091f3e906d18dbd0acc03199e7ca68de3fa9da8a7ed68f60b0d515a8",
+    "afterSHA256": "9dc02e74681ee83cf5c27bdc727a3ca964925b13b171cb17ab17162072246395"
+  },
+  "combinedLabelProbe": {
+    "passed": true,
+    "scope": "Disposable build overlays count nil String dispatch and hash labels; existing grid assertions/seeds/operations unchanged. Not a Windows crash reproduction or runtime repair. Original Windows binary assembly separately confirms the nil receiver load.",
+    "rows": [
+      {
+        "variant": "before",
+        "labels": 36040,
+        "hash": "b6b7477a3f6d11b0a65d071ebbcb14d9f74b4cc2bc3ea5c8ff97c8d86fedb82c",
+        "nilStringCalls": 2486,
+        "logSHA256": "09f6f04f4f6ef0e87c0a7c340d45e09c2eca5d566b8b3065702a1c3dd2a2439f"
+      },
+      {
+        "variant": "after",
+        "labels": 36040,
+        "hash": "b6b7477a3f6d11b0a65d071ebbcb14d9f74b4cc2bc3ea5c8ff97c8d86fedb82c",
+        "nilStringCalls": 0,
+        "logSHA256": "7258ff4340db482c3f0ed2bf5a8f76e678b4faba5ee9a7df3b3e0f1519003c88"
+      }
+    ]
+  },
+  "privateProbeSHA256": "876c84af0a39eedb93844a513fa69f7dab51a78154650e933700b1ef43b93a63",
+  "localChecks": {
+    "fullVTRace": "PASS; root119.512s, snapshot/vtgen cached valid",
+    "fullVTVet": "PASS",
+    "vtProvenance": "241 original files,17 patched PASS",
+    "uvProvenance": "104 original files,7 patched PASS"
+  },
+  "nativeQualificationOnCombinedRevision": "pending; inherited PR503 native evidence is scoped to473da11",
+  "runtimeRepairClaim": false,
+  "releaseReady": false
+}

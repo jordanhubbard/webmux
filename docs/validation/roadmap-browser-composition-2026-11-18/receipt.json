@@ -1,0 +1,215 @@
+{
+  "schema": 1,
+  "recordedUTC": "2026-11-18T14:39:49.791693+00:00",
+  "compositionCommit": "bc8cb0c54b2d3262242979a294044c10cc8c7949",
+  "issue": 452,
+  "canonicalPR": 500,
+  "inputs": [
+    {
+      "pr": 500,
+      "head": "789b125d27ba797c6d4d68bfbcc3ddad8966aee4",
+      "role": "prior canonical qualification"
+    },
+    {
+      "pr": 506,
+      "head": "51e8997913c8652a8f7b31e362d1c62afccab97c",
+      "role": "closed process-pipe relay handling"
+    },
+    {
+      "pr": 509,
+      "head": "a4e7ca358e2acd3c48458ce3b5786f1c44c0514d",
+      "role": "owned iframe accessible actions"
+    },
+    {
+      "pr": 512,
+      "head": "dea22c342c2ed0e8118f758cfaa58e464ebdb33e",
+      "role": "verified Windows process exit before cleanup"
+    },
+    {
+      "pr": 515,
+      "head": "6ceeca4ecf1d047cf816ece0e61c1ea9ed6558de",
+      "role": "disappearing sysfs entry resolution"
+    },
+    {
+      "pr": 516,
+      "head": "b4a83587cb09b64f2d48e31da68b537190f2267e",
+      "role": "docking/layout and settled-viewport assertions"
+    }
+  ],
+  "allInputCommitsRetained": true,
+  "mergeConflicts": false,
+  "applicationTrees": {
+    "webmux/frontend": "471510f92e2b56d8fda4ccce9f293a423f9ec1d2",
+    "webmux/server": "2f3beee5892ef0b9beb37f4d62881cfa42400cad",
+    "webmux/scripts": "9f93affe825aa8ac44c0cf55239bcc5ac799bca2",
+    "scripts": "ebbd3876cc0d1bca034d4703206c240738afce9b",
+    "tests": "f793015a0720518a15b8b1b64fcc0d1b0cd39072"
+  },
+  "changedSourceFiles": [
+    {
+      "path": ".github/workflows/browser-navigation.yml",
+      "sha256": "795cde719dd9c54e5ccf3287d48fb7cd2caf34cc449468b1a69c925c7422a42e"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "efca160a115af9bba044a46b4d37e0b3be96a70552047397b8fe061d3dead1d7"
+    },
+    {
+      "path": "tests/e2e/browser-accessible-actions.spec.ts",
+      "sha256": "7d0697a9d13fc5ec74148baededfce5a7320e058fa767b661aca236a2fb8d689"
+    },
+    {
+      "path": "tests/e2e/browser-pane-layout.spec.ts",
+      "sha256": "a212da868e802fdc25fdbb33e67d741d8a6a07562e628eef1df59af93503894d"
+    },
+    {
+      "path": "tests/frontend/BrowserPaneLayout.test.tsx",
+      "sha256": "5d547db366b71e5d631cc398415706316bc5651f26fa8a15ec4c7f53ff0ec1e2"
+    },
+    {
+      "path": "tests/test_usb_sysfs.py",
+      "sha256": "0e29b5779f320e2e5250613f158eee1dbe3e20dc931f976e11eec23e59e58a10"
+    },
+    {
+      "path": "tests/usb_sysfs.py",
+      "sha256": "a78c6e1111ff377538a8799208d8b9ca522fde69a53ed0591f4646ae9bab57e1"
+    },
+    {
+      "path": "webmux/frontend/src/components/BrowserCompanion.css",
+      "sha256": "d1d053b67583e1614957b8b7c52ba970095a639123d08a138ad463b68d86fc3a"
+    },
+    {
+      "path": "webmux/frontend/src/components/BrowserCompanion.tsx",
+      "sha256": "b56f7e1111b19cae6fa1ac5966ea55d9f3fdec006f346da9485af48fcb87f564"
+    },
+    {
+      "path": "webmux/frontend/src/utils/browserPaneLayout.ts",
+      "sha256": "c85cf5258e2fe93ddb05e306010b99640155f7daf78fea99a8bb3b7dca1c8b19"
+    },
+    {
+      "path": "webmux/frontend/src/utils/useBrowserPaneLayout.ts",
+      "sha256": "7cd13091246f5c3cf50f0f38178cfc0621a2860012bb94714d0714a6b03d1e9a"
+    },
+    {
+      "path": "webmux/server/internal/browser/accessibility.go",
+      "sha256": "954be03e1c33ed7a3c71f024c63405de77a7834d0656ddf8472859a1fdae8ae8"
+    },
+    {
+      "path": "webmux/server/internal/browser/manager.go",
+      "sha256": "0ddfd0ca760b5ff1939388b2f54ec4e0541166c14d8a21661904fa3a59acb65e"
+    },
+    {
+      "path": "webmux/server/internal/browser/manager_test.go",
+      "sha256": "e9e6961f4962669a1c41d9aed1dcc1f58964372f91ca927818c1b6dd0ebabcd7"
+    },
+    {
+      "path": "webmux/server/internal/browser/navigation_cleanup_handles_windows_test.go",
+      "sha256": "99d853bf7a2a2ce4538a6cd4d17242111df3d9d103edf57cbed6b46cddb64f34"
+    },
+    {
+      "path": "webmux/server/internal/browser/navigation_cleanup_other_test.go",
+      "sha256": "a51b7b0ce7070a8ce58e6a5bfab1f9e679742fd8aee2e8cd90cdd08669aedbf5"
+    },
+    {
+      "path": "webmux/server/internal/browser/navigation_cleanup_test.go",
+      "sha256": "7609bcb1c740b23dea37a1fd3e961294d6b7275c6bea5c7c58afeeb6adb93806"
+    },
+    {
+      "path": "webmux/server/internal/browser/navigation_native_test.go",
+      "sha256": "89db873461ec019b343b7d8677170c4714f3fb473fe1264c5729e73ed2896f2d"
+    },
+    {
+      "path": "webmux/server/internal/browser/navigation_trace_lifetime_test.go",
+      "sha256": "b7dd6884369f9a2e9e2f6cfe4d82d1786f39e4a2e7b441203da69937a20a9aed"
+    },
+    {
+      "path": "webmux/server/internal/browser/navigation_trace_test.go",
+      "sha256": "09f93ab6a32d8de151ec6250fb4d1c29e490852ffaa6465b8fb2c7e298bfcd06"
+    },
+    {
+      "path": "webmux/server/internal/browser/page_actions.go",
+      "sha256": "b166943474c86e4b37ed32e22d20e362076467aa40580d3d6c30cee0236b28ed"
+    },
+    {
+      "path": "webmux/server/internal/browser/page_frames.go",
+      "sha256": "d906bf9ddcfb76d4ada7085f36024e1401baed2ff7b69dccbacfd73b2f239e7b"
+    },
+    {
+      "path": "webmux/server/internal/browser/page_frames_native_test.go",
+      "sha256": "096d000d581009042eb2feee9057a084372f86eb16dbbfc9386831585c4db1b7"
+    },
+    {
+      "path": "webmux/server/internal/browser/page_frames_test.go",
+      "sha256": "626a3856285b4d68356522e6e54061bee4b112ffd63a3e1593e22537587b8b77"
+    },
+    {
+      "path": "webmux/server/internal/browser/process_exit.go",
+      "sha256": "868019bbbea2aaabbf2ab2be3d9110e81087beac0af597672d7ad21b8fa6b19b"
+    },
+    {
+      "path": "webmux/server/internal/browser/process_exit_other.go",
+      "sha256": "02956c3a776af248bc8f846298941704439a82eac64110f0c590556b4fcd0b13"
+    },
+    {
+      "path": "webmux/server/internal/browser/process_exit_windows.go",
+      "sha256": "baf250e59f20cfd0b38dc200855e4d8bc8bb6213604b857dabad2bd659afa2af"
+    },
+    {
+      "path": "webmux/server/internal/browser/process_exit_windows_test.go",
+      "sha256": "359125a094d85b5e26338dc4324e200eaeb2a9f1c01b8e567b13cc72da516cff"
+    },
+    {
+      "path": "webmux/server/internal/browser/worker.go",
+      "sha256": "0b4e5d6db9f1a1a8dab0d67e5190cd11bb759939676590c276360d38ce08a8c4"
+    },
+    {
+      "path": "webmux/server/internal/thirdparty/vt/WEBMUX.md",
+      "sha256": "1823130164e2ba74c8f8768f617e61a118eab0bb95ae26cc9130acc6db7277a2"
+    },
+    {
+      "path": "webmux/server/internal/thirdparty/vt/WEBMUX_UPSTREAM.json",
+      "sha256": "c160accba97e1e6f0c728a8d72620b5e31aecf5d884491acc376829172113b2a"
+    },
+    {
+      "path": "webmux/server/internal/thirdparty/vt/grid_test.go",
+      "sha256": "9dc02e74681ee83cf5c27bdc727a3ca964925b13b171cb17ab17162072246395"
+    },
+    {
+      "path": "webmux/server/internal/usbforward/relay.go",
+      "sha256": "4a941b895c288ed6433920a2025995e59437df4c50c053883d753e4852a21a95"
+    },
+    {
+      "path": "webmux/server/internal/usbforward/relay_test.go",
+      "sha256": "6aa4762a45b358c328b0b16fd33d5365ed5abe102ba4845cc07137426758e656"
+    }
+  ],
+  "runtimeAndFrontendByteIdenticalToNativeControlCommit": "9d7614f8eb1d47196ffbd37562e61ec3203466ca",
+  "nativeControl": {
+    "testsPassed": 30,
+    "skips": 0,
+    "failures": 0,
+    "scope": "Production allocator, 25 actual frame subcases, saved cookie, worker cleanup, controller exit status and trace-owner lifetime under race on macOS Chrome."
+  },
+  "acceptance": "Local composition qualification; exact combined-head hosted checks, audit, review and remaining roadmap acceptance are not inferred.",
+  "local": {
+    "frontendTests": 425,
+    "frontendFiles": 43,
+    "helperTests": 129,
+    "helperSkips": 0,
+    "strictTSProjects": 5,
+    "frontendLint": "PASS",
+    "fullApplicationBuild": "PASS",
+    "serverRaceTestPackages": 31,
+    "hostVet": "PASS",
+    "windowsAMD64Vet": "PASS",
+    "browserCrossCompiles": [
+      "windows/amd64",
+      "windows/arm64"
+    ],
+    "actualBrowserWorkflows": 4,
+    "usbSysfsTests": 13,
+    "usbQualifierTests": 9,
+    "workflowYAMLSyntax": "PASS",
+    "whitespace": "PASS"
+  }
+}

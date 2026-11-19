@@ -102,7 +102,7 @@ func temporaryProfile() (string, error) {
 }
 
 // Worker is also run on SSH hosts. It exposes no listener and exits on stdin EOF.
-func Worker(in io.Reader, out io.Writer) error {
+func Worker(in io.Reader, out io.Writer) (result error) {
 	scanner := bufio.NewScanner(in)
 	scanner.Buffer(make([]byte, 4096), MaxMessageBytes)
 	if !scanner.Scan() {
@@ -117,6 +117,7 @@ func Worker(in io.Reader, out io.Writer) error {
 		key = first.ProfileKey
 		first.Action = "frame"
 	}
+	canRemove := true
 	profile, err := temporaryProfile()
 	if key != "" {
 		if err == nil {
@@ -128,7 +129,13 @@ func Worker(in io.Reader, out io.Writer) error {
 			defer lock.Close()
 		}
 	} else if err == nil {
-		defer os.RemoveAll(profile)
+		defer func() {
+			if canRemove {
+				if err := os.RemoveAll(profile); err != nil {
+					result = errors.Join(result, errors.New("Cannot remove private temporary browser files"))
+				}
+			}
+		}()
 	}
 	if err != nil {
 		message := "Cannot open the private saved browser profile; it may be in use or unavailable on the terminal host."
@@ -145,51 +152,48 @@ func Worker(in io.Reader, out io.Writer) error {
 		if err != nil {
 			return err
 		}
-		defer os.RemoveAll(files)
-	}
-	// Retain Chromium's normal isolation and safe-browsing defaults. The generic
-	// automation defaults disable protections that are useful for an auth browser.
-	opts := []chromedp.ExecAllocatorOption{
-		chromedp.NoFirstRun, chromedp.NoDefaultBrowserCheck, chromedp.Headless,
-		chromedp.UserDataDir(profile), chromedp.WindowSize(Width, Height),
-		chromedp.Flag("no-sandbox", false), chromedp.Flag("enable-automation", true),
-		chromedp.Flag("disable-backgrounding-occluded-windows", true),
-		chromedp.Flag("disable-renderer-backgrounding", true),
-		chromedp.Flag("disable-background-timer-throttling", true),
-		chromedp.Flag("disable-dev-shm-usage", true),
-	}
-	if path := os.Getenv("WEBMUX_BROWSER_EXECUTABLE"); path != "" {
-		opts = append(opts, chromedp.ExecPath(path))
-	}
-	alloc, stop := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer stop()
-	root, cancel := chromedp.NewContext(alloc)
-	defer cancel()
-	if key != "" {
-		// Ordinary context cancellation terminates Chromium before its cookie store
-		// necessarily reaches disk. Close through CDP before cancelling its owner.
 		defer func() {
-			closing, finish := context.WithTimeout(root, 5*time.Second)
-			defer finish()
-			_ = chromedp.Cancel(closing)
+			if canRemove {
+				if err := os.RemoveAll(files); err != nil {
+					result = errors.Join(result, errors.New("Cannot remove private browser transfer files"))
+				}
+			}
 		}()
 	}
+	alloc, stop := chromedp.NewExecAllocator(context.Background(), workerAllocatorOptions(profile)...)
+	root, cancel := chromedp.NewContext(alloc)
+	defer func() {
+		if err := closeBrowserProcesses(root, cancel, stop, key != ""); err != nil {
+			canRemove = false
+			result = errors.Join(result, err)
+		}
+	}()
+
 	// Start outside an operation timeout: cancelling the first Run context would
 	// otherwise tear down the browser after a successful first response.
+	navigation := newNavigationTrace()
 	startup := time.AfterFunc(20*time.Second, cancel)
-	err = chromedp.Do(root, chromedp.EmulateViewport(Width, Height), chromedp.Navigate("about:blank"))
+	err = chromedp.Do(root, chromedp.EmulateViewport(Width, Height), chromedp.Func(func(ctx context.Context, target *chromedp.Target) error {
+		// Observe before the explicit startup navigation. No extra CDP commands or
+		// URL-bearing browser logs are enabled; diagnostics remain opt-in.
+		navigation.startup(string(target.TargetID))
+		navigation.watch(root)
+		return nil
+	}), chromedp.Navigate("about:blank"))
 	startup.Stop()
+	navigation.startupResult(err)
 	if err != nil {
-		_ = json.NewEncoder(out).Encode(Frame{Error: "Cannot start Chromium. Install Chrome/Chromium on the terminal host and run as a non-root user."})
+		_ = json.NewEncoder(out).Encode(Frame{Error: "Cannot start Chromium. Install Chrome/Chromium on the terminal host and run as a non-root user.", NavigationDiagnostics: navigation.snapshot()})
 		return err
 	}
-	browser, err := newCompanion(root, files)
+	browser, err := newCompanion(root, files, navigation)
 	if err != nil {
 		return err
 	}
 	if err := chromedp.Do(root, protocolAction(page.SetInterceptFileChooserDialog, page.SetInterceptFileChooserDialogParams{Enabled: true})); err != nil {
 		return err
 	}
+	navigation.ready()
 	requests := make(chan Request)
 	done := make(chan struct{})
 	defer close(done)
@@ -366,4 +370,23 @@ func perform(ctx context.Context, req Request, width, height int64) error {
 		return errors.New("unknown browser action")
 	}
 	return chromedp.Do(ctx, actions...)
+}
+
+// Shared by the worker and its native component qualification controls.
+func workerAllocatorOptions(profile string) []chromedp.ExecAllocatorOption {
+	// Retain Chromium's normal isolation and safe-browsing defaults. The generic
+	// automation defaults disable protections that are useful for an auth browser.
+	opts := []chromedp.ExecAllocatorOption{
+		chromedp.NoFirstRun, chromedp.NoDefaultBrowserCheck, chromedp.Headless,
+		chromedp.UserDataDir(profile), chromedp.WindowSize(Width, Height),
+		chromedp.Flag("no-sandbox", false), chromedp.Flag("enable-automation", true),
+		chromedp.Flag("disable-backgrounding-occluded-windows", true),
+		chromedp.Flag("disable-renderer-backgrounding", true),
+		chromedp.Flag("disable-background-timer-throttling", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
+	}
+	if path := os.Getenv("WEBMUX_BROWSER_EXECUTABLE"); path != "" {
+		opts = append(opts, chromedp.ExecPath(path))
+	}
+	return opts
 }

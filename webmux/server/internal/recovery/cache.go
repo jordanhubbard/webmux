@@ -16,17 +16,19 @@ import (
 // HostState is scoped to an execution-host account and a stable WebMux session.
 // Control survives logging pause; activity capture is gated by Recording.
 type HostState struct {
-	KeyDigest string        `json:"key_digest"`
-	Recording bool          `json:"recording"`
-	Revision  uint64        `json:"revision"`
-	Command   *Event        `json:"command,omitempty"`
-	CLI       *Event        `json:"cli,omitempty"`
-	Complete  *Event        `json:"complete,omitempty"`
-	Shell     *Event        `json:"shell,omitempty"`
-	Provider  *Event        `json:"provider,omitempty"`
-	Control   *Event        `json:"control,omitempty"`
-	Consumed  []string      `json:"consumed,omitempty"`
-	Replay    *ReplayIntent `json:"replay,omitempty"`
+	BrowserControl bool            `json:"browser_control,omitempty"`
+	BrowserRequest *BrowserRequest `json:"browser_request,omitempty"`
+	KeyDigest      string          `json:"key_digest"`
+	Recording      bool            `json:"recording"`
+	Revision       uint64          `json:"revision"`
+	Command        *Event          `json:"command,omitempty"`
+	CLI            *Event          `json:"cli,omitempty"`
+	Complete       *Event          `json:"complete,omitempty"`
+	Shell          *Event          `json:"shell,omitempty"`
+	Provider       *Event          `json:"provider,omitempty"`
+	Control        *Event          `json:"control,omitempty"`
+	Consumed       []string        `json:"consumed,omitempty"`
+	Replay         *ReplayIntent   `json:"replay,omitempty"`
 }
 
 type ReplayIntent struct {

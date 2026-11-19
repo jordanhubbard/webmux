@@ -1,0 +1,100 @@
+{
+  "rig_version": "0.6.14 (df1c1517)",
+  "tmux_version": "tmux 3.8",
+  "result": "probe complete",
+  "claimed_stop_refused": true,
+  "socket_removed": true,
+  "daemon_state_removed": true,
+  "source_sha256": "ca865b3ee8455a8fb6704c03265beef1b744654d0df942c872123f22eb3b052a",
+  "scope": "Isolated owned native builtin terminal siblings plus one adopted synthetic Node terminal; no authenticated coding provider.",
+  "native_stop_sibling_survived": true,
+  "adopted_stop_refusal_preserved_both_processes": true,
+  "before_stop": {
+    "entries": [
+      {
+        "rigId": "01M7NQ0XV3KPXQDNNC18KY64M5",
+        "rigName": "identity-probe",
+        "logicalId": "agents.first",
+        "canonicalSessionName": "agents-first@identity-probe",
+        "runtime": "terminal",
+        "sessionStatus": "running",
+        "lifecycleState": "running",
+        "tmuxAttachCommand": "tmux attach -t agents-first@identity-probe"
+      },
+      {
+        "rigId": "01M7NQ0XV3KPXQDNNC18KY64M5",
+        "rigName": "identity-probe",
+        "logicalId": "agents.sibling",
+        "canonicalSessionName": "agents-sibling@identity-probe",
+        "runtime": "terminal",
+        "sessionStatus": "running",
+        "lifecycleState": "running",
+        "tmuxAttachCommand": "tmux attach -t agents-sibling@identity-probe"
+      }
+    ],
+    "totalNodes": 2,
+    "truncated": false
+  },
+  "after_managed_stop": {
+    "entries": [
+      {
+        "rigId": "01M7NQ0XV3KPXQDNNC18KY64M5",
+        "rigName": "identity-probe",
+        "logicalId": "agents.first",
+        "canonicalSessionName": "agents-first@identity-probe",
+        "runtime": "terminal",
+        "sessionStatus": "exited",
+        "lifecycleState": "detached",
+        "tmuxAttachCommand": null
+      },
+      {
+        "rigId": "01M7NQ0XV3KPXQDNNC18KY64M5",
+        "rigName": "identity-probe",
+        "logicalId": "agents.sibling",
+        "canonicalSessionName": "agents-sibling@identity-probe",
+        "runtime": "terminal",
+        "sessionStatus": "running",
+        "lifecycleState": "running",
+        "tmuxAttachCommand": "tmux attach -t agents-sibling@identity-probe"
+      }
+    ],
+    "totalNodes": 2,
+    "truncated": false
+  },
+  "after_refused_stop": {
+    "entries": [
+      {
+        "rigId": "01M7NQ0XV3KPXQDNNC18KY64M5",
+        "rigName": "identity-probe",
+        "logicalId": "agents.first",
+        "canonicalSessionName": "agents-first@identity-probe",
+        "runtime": "terminal",
+        "sessionStatus": "exited",
+        "lifecycleState": "detached",
+        "tmuxAttachCommand": null
+      },
+      {
+        "rigId": "01M7NQ0XV3KPXQDNNC18KY64M5",
+        "rigName": "identity-probe",
+        "logicalId": "agents.sibling",
+        "canonicalSessionName": "agents-sibling@identity-probe",
+        "runtime": "terminal",
+        "sessionStatus": "running",
+        "lifecycleState": "running",
+        "tmuxAttachCommand": "tmux attach -t agents-sibling@identity-probe"
+      },
+      {
+        "rigId": "01M7NQ0XV3KPXQDNNC18KY64M5",
+        "rigName": "identity-probe",
+        "logicalId": "agents.claimed",
+        "canonicalSessionName": "identity-claimed",
+        "runtime": "codex",
+        "sessionStatus": "running",
+        "lifecycleState": "running",
+        "tmuxAttachCommand": "tmux attach -t identity-claimed"
+      }
+    ],
+    "totalNodes": 3,
+    "truncated": false
+  }
+}

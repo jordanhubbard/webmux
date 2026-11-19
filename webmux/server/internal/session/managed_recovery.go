@@ -25,6 +25,9 @@ func managedInstance(identity RigIdentity) string {
 // Native managed recovery supports qualified local Claude references owned by
 // Agent Deck or Rig. Unsupported evidence retains manual recovery.
 func managedNativeSupported(identity RigIdentity) bool {
+	if _, ok := NativeRigReference(identity); ok {
+		return true
+	}
 	if validRigRecoveryReference(identity) && identity.ManagerProcess != "" && identity.ManagerProfile == "default" {
 		var process rigProcessReference
 		return json.Unmarshal([]byte(identity.ManagerProcess), &process) == nil && process.NativeIdentitySource == "process-argv" && process.ExecutablePath != ""
@@ -51,7 +54,11 @@ func (b *Broker) RecoverManaged(ctx context.Context, owner, id string, input Rec
 		b.mu.Unlock()
 		return RecoveryResult{}, ErrClosed
 	}
-	if input.Kind != "managed" || !input.Confirm || input.Context != "" || input.HostRevision != 0 || !regexp.MustCompile(`(?i)^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`).MatchString(input.ID) {
+	if e.value.Rig != nil && e.value.Rig.NativeRigRecovery != "" {
+		b.mu.Unlock()
+		return RecoveryResult{}, invalid("This Rig conversation requires original-operation recovery.")
+	}
+	if input.Inspect || input.Kind != "managed" || !input.Confirm || input.Context != "" || input.HostRevision != 0 || !regexp.MustCompile(`(?i)^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`).MatchString(input.ID) {
 		b.mu.Unlock()
 		return RecoveryResult{}, invalid("Managed native recovery requires explicit approval and does not accept transcript contents.")
 	}

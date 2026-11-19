@@ -2,7 +2,10 @@ package browser
 
 import (
 	"context"
+	"errors"
+	"io"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/jordanhubbard/webmux/server/internal/session"
@@ -52,5 +55,33 @@ func TestCallbackWorkerUsesTrustedTransportWithoutSecrets(t *testing.T) {
 	}
 	if _, err := WorkerCommand(context.Background(), session.Session{Transport: "local"}, nil, "--auth-callback; evil"); err == nil {
 		t.Fatal("accepted shell text")
+	}
+}
+
+func TestEndControlledRetainsAuthorizationAndReportsWorkerExitFailure(t *testing.T) {
+	for _, failed := range []bool{false, true} {
+		in, out := io.Pipe()
+		t.Cleanup(func() { in.Close(); out.Close() })
+		c := &client{in: out, done: make(chan struct{}), stopped: make(chan struct{})}
+		if failed {
+			c.exitErr = errors.New("private-provider-url?credential=do-not-relay")
+		}
+		close(c.done)
+		viewer := strings.Repeat("a", 32)
+		control, err := c.control.control(viewer, "", true, false, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		m := &Manager{clients: map[string]*client{"fixture": c}}
+		if err := m.EndControlled("fixture", strings.Repeat("b", 32), control.Token); !errors.Is(err, ErrControl) || m.clients["fixture"] != c {
+			t.Fatal("controller denial did not preserve the browser")
+		}
+		err = m.EndControlled("fixture", viewer, control.Token)
+		if (err != nil) != failed {
+			t.Fatalf("worker exit status lost: failed=%t err=%v", failed, err)
+		}
+		if err != nil && (strings.Contains(err.Error(), "credential") || strings.Contains(err.Error(), "provider-url")) {
+			t.Fatal("private worker error relayed")
+		}
 	}
 }

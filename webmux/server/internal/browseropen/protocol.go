@@ -3,17 +3,17 @@ package browseropen
 
 import (
 	"encoding/base64"
-	"net/url"
 	"strings"
+
+	"github.com/jordanhubbard/webmux/server/internal/recovery"
 )
 
 const Prefix = "\x1b]777;webmux-browser;"
-const MaxURL = 16384
+const MaxURL = recovery.MaxBrowserURL
 const maxPacket = MaxURL*4/3 + 16
 
 func ValidURL(raw string) bool {
-	u, err := url.Parse(raw)
-	return len(raw) <= MaxURL && err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Hostname() != "" && u.User == nil
+	return recovery.ValidBrowserURL(raw)
 }
 
 func Packet(raw string) string {

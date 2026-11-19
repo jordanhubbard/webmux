@@ -1,0 +1,44 @@
+{
+  "base": "2618d8de244b86780a4dbec2b091a34679a245e1",
+  "publishedCAInput": "14ad699b57b62ef556f4e76b74362d447bd8e6b1",
+  "supplementaryActualOpenSSLControlsFrom": "ade44230fb25724261380ca3dac8f99b1e5a9d78",
+  "publishedBuildGeneratorASTIdentical": true,
+  "nativeMainASTIdentical2618": true,
+  "boundedLoggerASTIdentical2618": true,
+  "USBManifestAcquisitionAndHostAPTByteIdentical2618": true,
+  "localMac": {
+    "passed": 14,
+    "explicitAPTPlatformSkip": 1
+  },
+  "isolatedLinuxNormal": {
+    "passed": 15,
+    "skipped": 0
+  },
+  "isolatedLinuxUnavailableDefaultCAPaths": {
+    "passed": 15,
+    "skipped": 0
+  },
+  "LinuxControlScope": "Existing AMD64 container on ARM64 Docker host; emulated CPU, network disabled, read-only source, no install/pull",
+  "historicalUSB2618": {
+    "run": 44483208381,
+    "job": 135420216749,
+    "artifact": 14509830766,
+    "digest": "sha256:c51bcaf4a71750d4ccdd8aac463a774ffdc8997833b58f0536e1d7dda6ae9eb6",
+    "nativeControlsAdmitted": 4,
+    "initialBundledSources": 8,
+    "acquisitionNetworkAttempts": 0,
+    "scope": "2618 actual disposable kernel evidence, not new composed source acceptance"
+  },
+  "ownerCAInputNativeAPT": {
+    "head": "14ad699b57b62ef556f4e76b74362d447bd8e6b1",
+    "run": 44484153258,
+    "jobs": [
+      135423338957,
+      135423339322
+    ],
+    "bootstrapControlsPassedPerOS": 9,
+    "skips": 0,
+    "scope": "Original14ad Ubuntu22.04/24.04 controls, not new composed source acceptance"
+  },
+  "scope": "Prepared combined candidate with unchanged native contracts. Full native relay and exact-source cohort still required."
+}

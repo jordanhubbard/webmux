@@ -1,0 +1,129 @@
+name: Native Codex observation controls
+
+on:
+  pull_request:
+    paths:
+      - 'webmux/server/internal/nativeobserve/**'
+      - 'webmux/server/internal/openrigcoord/**'
+      - 'webmux/server/cmd/webmux/main.go'
+      - 'webmux/server/go.*'
+      - 'scripts/qualify-codex-observ*.py'
+      - 'scripts/test_codex_observer_process.py'
+      - '.github/workflows/codex-observation-native.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'webmux/server/internal/nativeobserve/**'
+      - 'webmux/server/internal/openrigcoord/**'
+      - 'webmux/server/cmd/webmux/main.go'
+      - 'scripts/qualify-codex-observ*.py'
+      - 'scripts/test_codex_observer_process.py'
+      - '.github/workflows/codex-observation-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  observation:
+    name: Linux observation (${{ matrix.goarch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            goarch: amd64
+            nodearch: x64
+            machine: x86_64
+            triple: x86_64-unknown-linux-musl
+          - runner: ubuntu-24.04-arm
+            goarch: arm64
+            nodearch: arm64
+            machine: aarch64
+            triple: aarch64-unknown-linux-musl
+    env:
+      WM_EXPECTED_GOARCH: ${{ matrix.goarch }}
+      WM_EXPECTED_NODEARCH: ${{ matrix.nodearch }}
+      WM_EXPECTED_MACHINE: ${{ matrix.machine }}
+      WM_NATIVE_TRIPLE: ${{ matrix.triple }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Record worker identity and headroom
+        env:
+          WM_OBSERVER_RECEIPTS: ${{ runner.temp }}/webmux-native-observation
+        run: |
+          echo "WM_OBSERVER_RECEIPTS=$WM_OBSERVER_RECEIPTS" >> "$GITHUB_ENV"
+          mkdir -p "$WM_OBSERVER_RECEIPTS"
+          python3 - <<'PY'
+          import json, os, pathlib, platform, shutil, subprocess
+          root = pathlib.Path(os.environ['WM_OBSERVER_RECEIPTS'])
+          memory = {line.split(':')[0]: int(line.split()[1]) for line in pathlib.Path('/proc/meminfo').read_text().splitlines() if line.startswith(('MemTotal:', 'MemAvailable:'))}
+          space = shutil.disk_usage(root)
+          receipt = {'scope': 'Native startup and policy snapshot controls; no authenticated coding or recovery claim',
+                     'machine': platform.machine(), 'kernel': platform.release(), 'freeBytes': space.free,
+                     'memoryKiB': memory, 'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()}
+          (root / 'worker.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          assert platform.machine() == os.environ['WM_EXPECTED_MACHINE']
+          assert space.free >= 2 * 1024**3 and memory['MemAvailable'] >= memory['MemTotal'] * .05
+          if space.free < 10 * 1024**3:
+              print('::warning::Native observation worker has less than 10 GiB free; inventorying this job workspace.')
+              subprocess.run(['du', '-sk', str(root), os.environ['GITHUB_WORKSPACE']], timeout=20, check=True)
+          PY
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          architecture: ${{ matrix.nodearch }}
+      - name: Require native toolchains
+        run: |
+          test "$(go env GOHOSTARCH)" = "$WM_EXPECTED_GOARCH"
+          test "$(go env GOARCH)" = "$WM_EXPECTED_GOARCH"
+          node -e 'if(process.arch!==process.env.WM_EXPECTED_NODEARCH||process.versions.node.split(".")[0]!=="24")process.exit(1)'
+      - name: Test disposable observer process diagnostics
+        run: python3 -m unittest discover -s scripts -p test_codex_observer_process.py -v
+      - name: Test kernel enforcement and build the actual controller helper
+        working-directory: webmux/server
+        run: |
+          set -o pipefail
+          go test -race -count=1 -json ./internal/nativeobserve | tee "$WM_OBSERVER_RECEIPTS/kernel-tests.jsonl"
+          go build -o "$WM_OBSERVER_RECEIPTS/webmux" ./cmd/webmux
+      - name: Install pinned native CLI without package scripts
+        run: npm install --prefix "$WM_OBSERVER_RECEIPTS/native" --ignore-scripts --no-audit --no-fund @openai/codex@0.169.0
+      - name: Record native binary and package provenance
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {execFileSync} from 'node:child_process';
+          const root=process.env.WM_OBSERVER_RECEIPTS, name='@openai/codex-linux-'+process.arch;
+          const native=fs.realpathSync(path.join(root,'native/node_modules',name,'vendor',process.env.WM_NATIVE_TRIPLE,'bin/codex'));
+          const bytes=fs.readFileSync(native),machine=process.arch==='arm64'?0xb7:0x3e;
+          if(bytes.subarray(0,4).toString()!=='\x7fELF'||bytes[4]!==2||bytes[5]!==1||bytes.readUInt16LE(18)!==machine)throw Error('native ELF architecture mismatch');
+          const lock=JSON.parse(fs.readFileSync(path.join(root,'native/package-lock.json'),'utf8'));
+          const entry=lock.packages['node_modules/'+name];
+          if(!entry?.integrity?.startsWith('sha512-')||entry.version!=='0.169.0-linux-'+process.arch)throw Error('native package identity mismatch');
+          const version=execFileSync(native,['--version'],{encoding:'utf8',timeout:5000}).trim();if(version!=='codex-cli 0.169.0')throw Error('native CLI version mismatch');
+          const receipt={version,arch:process.arch,nativeSHA256:crypto.createHash('sha256').update(bytes).digest('hex'),helperSHA256:crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'webmux'))).digest('hex'),package:{name,version:entry.version,integrity:entry.integrity,resolved:entry.resolved}};
+          fs.writeFileSync(path.join(root,'provenance.json'),JSON.stringify(receipt,null,2)+'\n');
+          fs.appendFileSync(process.env.GITHUB_ENV,'WM_NATIVE_CODEX='+native+'\n');
+          JS
+      - name: Qualify real native startup and permission snapshots
+        run: |
+          python3 scripts/qualify-codex-observation-isolation.py \
+            --codex "$WM_NATIVE_CODEX" --node "$(command -v node)" \
+            --helper "$WM_OBSERVER_RECEIPTS/webmux" \
+            --output "$WM_OBSERVER_RECEIPTS/native-controls.json"
+      - name: Preserve every outcome
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: codex-observation-${{ matrix.goarch }}
+          path: |
+            ${{ env.WM_OBSERVER_RECEIPTS }}/*.json
+            ${{ env.WM_OBSERVER_RECEIPTS }}/*.jsonl
+          if-no-files-found: error

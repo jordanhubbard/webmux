@@ -11,6 +11,12 @@ var ErrClosed = errors.New("session broker is shutting down")
 
 // RigIdentity is recorded only from the server coordinator, never a terminal title.
 type RigIdentity struct {
+	NativeRigRecovery     string `json:"native_rig_recovery,omitempty" yaml:"native_rig_recovery,omitempty"`
+	TmuxServerFlag        string `json:"tmux_server_flag,omitempty" yaml:"tmux_server_flag,omitempty"`
+	TmuxServerValue       string `json:"tmux_server_value,omitempty" yaml:"tmux_server_value,omitempty"`
+	AttachmentTarget      string `json:"attachment_target,omitempty" yaml:"attachment_target,omitempty"`
+	SeatID                string `json:"seat_id,omitempty" yaml:"seat_id,omitempty"`
+	RigHostID             string `json:"rig_host_id,omitempty" yaml:"rig_host_id,omitempty"`
 	ManagerProcess        string `json:"manager_process,omitempty" yaml:"manager_process,omitempty"`
 	ManagerRigID          string `json:"manager_rig_id,omitempty" yaml:"manager_rig_id,omitempty"`
 	ManagerNodeID         string `json:"manager_node_id,omitempty" yaml:"manager_node_id,omitempty"`
@@ -34,44 +40,60 @@ type RigIdentity struct {
 }
 
 type Session struct {
-	TranscriptEnabled *bool           `json:"transcript_enabled,omitempty" yaml:"transcript_enabled,omitempty"`
-	RecoveryKey       string          `json:"-" yaml:"recovery_key,omitempty"`
-	Recovery          *recovery.State `json:"recovery,omitempty" yaml:"recovery,omitempty"`
-	Rig               *RigIdentity    `json:"rig,omitempty" yaml:"rig,omitempty"`
-	OpenRigView       string          `json:"openrig_view,omitempty" yaml:"openrig_view,omitempty"`
-	Companion         string          `json:"companion,omitempty" yaml:"companion,omitempty"`
-	BrowserLocal      bool            `json:"browser_local,omitempty" yaml:"browser_local,omitempty"`
-	ID                string          `json:"id" yaml:"id"`
-	Kind              string          `json:"kind" yaml:"kind"`
-	Owner             string          `json:"owner" yaml:"owner"`
-	Transport         string          `json:"transport" yaml:"transport"`
-	HostID            string          `json:"host_id" yaml:"host_id"`
-	Hostname          string          `json:"hostname" yaml:"hostname"`
-	Port              int             `json:"port" yaml:"port"`
-	Username          string          `json:"username" yaml:"username"`
-	KeyID             string          `json:"key_id" yaml:"key_id"`
-	ExecCommand       string          `json:"exec_command,omitempty" yaml:"exec_command,omitempty"`
-	ExecArgv          []string        `json:"exec_argv,omitempty" yaml:"exec_argv,omitempty"`
-	ExecCwd           string          `json:"exec_cwd,omitempty" yaml:"exec_cwd,omitempty"`
-	Cols              int             `json:"cols" yaml:"cols"`
-	Rows              int             `json:"rows" yaml:"rows"`
-	Row               int             `json:"row" yaml:"row"`
-	Col               int             `json:"col" yaml:"col"`
-	State             string          `json:"state" yaml:"state"`
-	CreatedAt         string          `json:"created_at" yaml:"created_at"`
-	UpdatedAt         string          `json:"updated_at" yaml:"updated_at"`
-	Title             string          `json:"title" yaml:"title"`
-	ProjectLabel      string          `json:"project_label,omitempty" yaml:"project_label,omitempty"`
-	Persistent        bool            `json:"persistent" yaml:"persistent"`
-	Minimized         bool            `json:"minimized" yaml:"minimized"`
-	Workspace         string          `json:"workspace,omitempty" yaml:"workspace,omitempty"`
-	AgentID           string          `json:"agent_id,omitempty" yaml:"agent_id,omitempty"`
-	AgentRole         string          `json:"agent_role,omitempty" yaml:"agent_role,omitempty"`
-	AgentSessionName  string          `json:"agent_session_name,omitempty" yaml:"agent_session_name,omitempty"`
+	LocalOwnerManaged   bool                       `json:"-" yaml:"local_owner_managed,omitempty"`
+	LocalScope          string                     `json:"-" yaml:"local_scope,omitempty"`
+	LocalOwnerAvailable bool                       `json:"-" yaml:"-"`
+	LocalOwner          *terminal.LocalOwnerTarget `json:"-" yaml:"local_owner,omitempty"`
+	LocalStop           *LocalStopIntent           `json:"-" yaml:"local_stop,omitempty"`
+	LocalLifecycle      *LocalLifecycle            `json:"local_lifecycle,omitempty" yaml:"-"`
+	LastBrowserAck      string                     `json:"-" yaml:"last_browser_ack,omitempty"`
+	TranscriptEnabled   *bool                      `json:"transcript_enabled,omitempty" yaml:"transcript_enabled,omitempty"`
+	RecoveryKey         string                     `json:"-" yaml:"recovery_key,omitempty"`
+	Recovery            *recovery.State            `json:"recovery,omitempty" yaml:"recovery,omitempty"`
+	Rig                 *RigIdentity               `json:"rig,omitempty" yaml:"rig,omitempty"`
+	OpenRigView         string                     `json:"openrig_view,omitempty" yaml:"openrig_view,omitempty"`
+	Companion           string                     `json:"companion,omitempty" yaml:"companion,omitempty"`
+	BrowserLocal        bool                       `json:"browser_local,omitempty" yaml:"browser_local,omitempty"`
+	ID                  string                     `json:"id" yaml:"id"`
+	Kind                string                     `json:"kind" yaml:"kind"`
+	Owner               string                     `json:"owner" yaml:"owner"`
+	Transport           string                     `json:"transport" yaml:"transport"`
+	HostID              string                     `json:"host_id" yaml:"host_id"`
+	Hostname            string                     `json:"hostname" yaml:"hostname"`
+	Port                int                        `json:"port" yaml:"port"`
+	Username            string                     `json:"username" yaml:"username"`
+	KeyID               string                     `json:"key_id" yaml:"key_id"`
+	ExecCommand         string                     `json:"exec_command,omitempty" yaml:"exec_command,omitempty"`
+	ExecArgv            []string                   `json:"exec_argv,omitempty" yaml:"exec_argv,omitempty"`
+	ExecCwd             string                     `json:"exec_cwd,omitempty" yaml:"exec_cwd,omitempty"`
+	Cols                int                        `json:"cols" yaml:"cols"`
+	Rows                int                        `json:"rows" yaml:"rows"`
+	Row                 int                        `json:"row" yaml:"row"`
+	Col                 int                        `json:"col" yaml:"col"`
+	State               string                     `json:"state" yaml:"state"`
+	CreatedAt           string                     `json:"created_at" yaml:"created_at"`
+	UpdatedAt           string                     `json:"updated_at" yaml:"updated_at"`
+	Title               string                     `json:"title" yaml:"title"`
+	ProjectLabel        string                     `json:"project_label,omitempty" yaml:"project_label,omitempty"`
+	Persistent          bool                       `json:"persistent" yaml:"persistent"`
+	Minimized           bool                       `json:"minimized" yaml:"minimized"`
+	Workspace           string                     `json:"workspace,omitempty" yaml:"workspace,omitempty"`
+	AgentID             string                     `json:"agent_id,omitempty" yaml:"agent_id,omitempty"`
+	AgentRole           string                     `json:"agent_role,omitempty" yaml:"agent_role,omitempty"`
+	AgentSessionName    string                     `json:"agent_session_name,omitempty" yaml:"agent_session_name,omitempty"`
 }
 
 func (s Session) Agent() bool { return s.AgentID != "" && s.AgentRole != "" }
 func (s Session) clone() Session {
+	if s.LocalOwner != nil {
+		copy := *s.LocalOwner
+		s.LocalOwner = &copy
+	}
+	if s.LocalStop != nil {
+		copy := *s.LocalStop
+		s.LocalStop = &copy
+	}
+	s.LocalLifecycle = localLifecycle(s)
 	if s.TranscriptEnabled != nil {
 		enabled := *s.TranscriptEnabled
 		s.TranscriptEnabled = &enabled

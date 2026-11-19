@@ -1,0 +1,109 @@
+{
+  "recordedUTC": "2026-11-18T07:21:16.665748+00:00",
+  "issue": 461,
+  "base": "447554456ff5e1dde3000b13c5d08e35bbfdee69",
+  "localSourceCheckpoint": "b23caaac1b20ad8a347b01d64a72d404bd9956c5",
+  "qualificationWorkingEdit": "Exact typed-input comparison separates only complete CSI I/O terminal-local focus frames, based on retained native Windows evidence. Every raw frame remains persisted. Application source unchanged.",
+  "sourceSHA256": {
+    "webmux/frontend/src/contexts/InputBroadcastContext.tsx": "b2b0b25a52e1a9275f023a6cd514c8614d0f47c9af0e5a97cfcfda53a45272d3",
+    "webmux/frontend/src/components/Workspace.tsx": "52275a02fc48fecc3ea09bed978484753e1e3c764485bca6165e0a88babc19d8",
+    "webmux/frontend/src/components/Tile.tsx": "f32d2616607a35a2fe8227a3764255ea3ead3e775866789639a474a0a9041b48",
+    "webmux/frontend/src/components/HelpDialog.tsx": "a70827a953d862b3ee946fdc67fd6cc7ede0c7fdd8386533cff644dfa218b015",
+    "tests/frontend/InputBroadcastContext.test.tsx": "0711dea0a5171a850d1fc610f7a8b019eb6f4095d93a5c52c9c30c0f09f8db52",
+    "tests/e2e/broadcast-scope.spec.ts": "928b157f5c33fa5877dffa886db6cf5299763a9e292afa4bf21b0ee5fd6796ff",
+    "tests/e2e/broadcast-terminal-fixture.mts": "9f75cbfede6a69679d27aa658c233d7c615253ad5d145df99c99ad644d03e096"
+  },
+  "lockfileSHA256": "45c39a2a9b254ac87a33b6ca83f90cda1bf9dbdb1a0f90038cd0024b45e015fa",
+  "hostPlatform": "darwin/arm64",
+  "parentNegative": {
+    "head": "447554456ff5e1dde3000b13c5d08e35bbfdee69",
+    "testSHA256": "615298f84dfdb356be1229a8a44943a99a9be16f375c3a0241eead6d358ee07e",
+    "exit": 1,
+    "scope": "Final same regression controls on unchanged parent context; intended failure. No runtime overlay.",
+    "failed": 7,
+    "passed": 3,
+    "controlBodiesRetainedUnchanged": true
+  },
+  "originalSevenTestBodiesRetainedVerbatim": true,
+  "originalTestBodySHA256": "9bff7b406c732240a6c9965a56abb860a6a0bfe6b9d159dddc47c8154272e2e5",
+  "contextControls": 19,
+  "frontendTests": 410,
+  "frontendFiles": 41,
+  "strictTypes": "PASS",
+  "lint": "PASS",
+  "frontendBuild": "PASS",
+  "nativeBrowserCases": 5,
+  "nativeReceipt": {
+    "selectedOriginalHex": "7879",
+    "explicitlyIncludedLaterHex": "79",
+    "ordinaryAfterModeOffHex": "62",
+    "outboundFramesHex": [
+      {
+        "fixture": "Broadcast A",
+        "frames": [
+          "78",
+          "79"
+        ]
+      },
+      {
+        "fixture": "Broadcast B",
+        "frames": [
+          "62"
+        ]
+      },
+      {
+        "fixture": "Broadcast C",
+        "frames": [
+          "79"
+        ]
+      }
+    ],
+    "receiptSource": "Actual PTY child append-only byte files, not terminal screen text"
+  },
+  "nativeReceiptSHA256": "864daa9268dc1fad675fe70293dfa2a2a7d6c225a51885313c6c3d958ac4cd75",
+  "privateLogSHA256": {
+    "broadcast461-parent-final-unit.log": "13982fa398c2c03c4647b7a74a0a5fd88547e568fd83d3bcc04a919f29137ac5",
+    "broadcast461-evidence-types.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "broadcast461-final4-lint.log": "a6d413fb36e8645661145aecac8d27dc160bdd0b77844fd8b52122d1798bcd52",
+    "broadcast461-final4-tests.log": "65520d310b524c7f56ac501020b9c5f777a3a8f5052c39c1ef8897b955d1a31e",
+    "broadcast461-final2-build.log": "466d2d54a07fcf3aa9554a008dd7f2bb1758deb84c365052ac69809291609ecb",
+    "broadcast461-evidence-browser.log": "20303c67c835e2939e13a9c9e4e0ea9f4c45e5748791fc64856535b853a879f2",
+    "broadcast461-hex-types.log": "bfbdeb0b9d52b9f5fa57d9bcbafdf0c45c715936935db99e8f5fb542c0d290f0",
+    "broadcast461-hex-browser.log": "807cf02f4c7fb3bbab835161a0ed3a758a90880b8ee19eb9687403d56ccf4d94",
+    "broadcast461-focus-types.log": "bfbdeb0b9d52b9f5fa57d9bcbafdf0c45c715936935db99e8f5fb542c0d290f0",
+    "broadcast461-focus-browser.log": "ddc84785afcc7daedf4b7fcf95cf0d18da4676c515d53a971608a48ba2b2a12e"
+  },
+  "runtimeOverlay": false,
+  "existingMouseFixtureOverlay": false,
+  "localAcceptanceScope": "MacOS ARM64 real Chrome and controlled PTYs. Latest test passes strict types and five native cases, with only exact CSI I/O focus frames separated from typed input. Unchanged application retains410 frontend tests/types/lint/build. Windows new-head qualification pending. No authenticated provider lifecycle claim.",
+  "hosted752": {
+    "ci": 44251840078,
+    "successJobs": 6,
+    "failureJobs": [
+      "Dependency audit429",
+      "Windows Tests and Build: new broadcast exact WebSocket-frame assertion"
+    ],
+    "windowsPTYAssertions": "Passed before WebSocket assertion failed",
+    "windowsFrameCause": "Not yet established; default failure rendering displays identical strings. Next head retains exact comparison using hex, with raw frame receipt persisted in finally.",
+    "packaging": {
+      "run": 44251843940,
+      "conclusion": "SUCCESS"
+    },
+    "diagnostics": {
+      "run": 44251847801,
+      "conclusion": "SUCCESS"
+    }
+  },
+  "hostedB23Windows": {
+    "run": 44255018607,
+    "artifact": 14406571587,
+    "artifactSHA256": "090e814e34e2fa9f9959196c5f694cc6c7dc6b912bf0ef4455ef6d8773cdcfdd",
+    "conclusion": "Exact raw-frame typing oracle fails due to legitimate focus reports; actual PTY receipt checks pass",
+    "extraFramesHex": [
+      "1b5b49",
+      "1b5b4f"
+    ],
+    "rawReceiptSHA256": "38117a70c36c9df90cda1a80a7a5098f0ca75d4db9005d809e63c5cf51d14c59",
+    "source": "windows-b23-frame-receipt.json"
+  }
+}

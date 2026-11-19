@@ -138,22 +138,41 @@ func (b *companion) readPage(ctx context.Context, req Request, frame *Frame) err
 		if req.Target == "" || req.Target != string(target.TargetID) {
 			return errors.New("The selected page changed; read the current page again")
 		}
-		before, err := pageDocument(ctx, target)
+		frames, err := discoverPageFrames(ctx, target)
+		defer frames.close()
 		if err != nil {
 			return err
 		}
-		depth := int64(32)
-		tree, err := cdp.Call(ctx, target, accessibility.GetFullAXTree, accessibility.GetFullAXTreeParams{Depth: &depth})
-		if err != nil {
-			return err
+		text := &PageText{Nodes: []PageTextNode{}, Truncated: frames.truncated}
+		elements := map[string]pageElement{}
+		for _, f := range frames.frames {
+			if len(text.Nodes) >= maxPageTextNodes {
+				text.Truncated = true
+				break
+			}
+			depth := int64(32 - len(f.chain()) + 1)
+			tree, err := cdp.Call(ctx, f.target, accessibility.GetFullAXTree, accessibility.GetFullAXTreeParams{Depth: &depth, FrameID: f.document.frame})
+			if err != nil {
+				if f.parent == nil {
+					return err
+				}
+				text.Truncated = true
+				continue
+			}
+			if err := f.validate(ctx); err != nil {
+				return errPageElementChanged
+			}
+			child, bound, err := bindPageElements(tree.Nodes, f.document)
+			if err != nil {
+				return err
+			}
+			appendFrameText(text, elements, child, bound, f)
 		}
-		after, err := pageDocument(ctx, target)
-		if err != nil || before != after {
-			return errPageElementChanged
-		}
-		text, elements, err := bindPageElements(tree.Nodes, before)
-		if err != nil {
-			return err
+		// Navigation during a later frame read must invalidate earlier refs.
+		for _, f := range frames.frames {
+			if err := f.validate(ctx); err != nil {
+				return errPageElementChanged
+			}
 		}
 		frame.PageText, b.elements = text, elements
 		return nil

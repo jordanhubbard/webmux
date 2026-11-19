@@ -26,9 +26,13 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/session"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 	"github.com/jordanhubbard/webmux/server/internal/upload"
+	"github.com/jordanhubbard/webmux/server/internal/usbforward"
 )
 
 type Server struct {
+	rigCaptureCursor   int
+	rigChangesMu       sync.Mutex
+	rigChangesOwners   map[string]bool
 	browserProfileMu   sync.Mutex
 	clientMu           sync.Mutex
 	clientSockets      map[string]*clientConnection
@@ -36,6 +40,7 @@ type Server struct {
 	coordinationOnce   sync.Once
 	coordinationCancel context.CancelFunc
 	macSetup           macsetup.Manager
+	usbLeases          usbforward.LeaseManager
 	restart            func() error
 	handoffs           authhandoff.Manager
 	browsers           browser.Manager
@@ -92,7 +97,7 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil), clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
+	return &Server{usbLeases: usbforward.LeaseManager{Store: store}, restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil), clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
 }
 
 func (s *Server) RestoreSessions() error {
@@ -135,6 +140,7 @@ func (s *Server) Close() error {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.registerFederation(mux)
+	s.registerUSBForwardings(mux)
 	mux.Handle("GET /api/setup/macos", s.protected(false, s.getMacSetup))
 	mux.Handle("POST /api/setup/macos", s.protected(false, s.macSetupAction))
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
@@ -183,15 +189,21 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PATCH /api/sessions/{id}", s.protected(false, s.patchSession))
 	mux.Handle("DELETE /api/sessions/{id}", s.protected(false, s.deleteSession))
 	mux.Handle("POST /api/sessions/{id}/reconnect", s.protected(false, s.reconnectSession))
+	mux.Handle("POST /api/sessions/{id}/local-stop", s.protected(false, s.stopLocalSession))
 	mux.Handle("GET /api/session-recovery/{id}", s.protected(false, s.getSessionRecovery))
 	mux.Handle("POST /api/session-recovery/{id}", s.protected(false, s.recoverSession))
 	mux.Handle("PATCH /api/session-recovery/{id}", s.protected(false, s.patchRecovery))
 	mux.HandleFunc("GET /api/term/{id}", s.terminalSocket)
 	mux.Handle("GET /api/agents/config", s.protected(false, s.getAgentConfig))
+	mux.Handle("GET /api/coordination/changes", s.protected(false, s.getRigChanges))
 	mux.Handle("GET /api/coordination", s.protected(false, s.getCoordination))
 	mux.Handle("POST /api/coordination/agents", s.protected(false, s.createCoordinatedAgent))
+	mux.Handle("POST /api/coordination/creation-requests/{requestId}", s.protected(false, s.createCoordinatedAgent))
 	mux.Handle("POST /api/coordination/workspaces", s.protected(false, s.browseCoordinationWorkspaces))
+	mux.Handle("POST /api/coordination/rig/pods", s.protected(false, s.coordinationRigPods))
 	mux.Handle("POST /api/coordination/attach", s.protected(false, s.attachManagedRig))
+	mux.Handle("POST /api/coordination/stop/preview", s.protected(false, s.previewRigStop))
+	mux.Handle("POST /api/coordination/stop", s.protected(false, s.executeRigStop))
 	mux.Handle("POST /api/coordination/messages", s.protected(false, s.sendCoordinationMessage))
 	mux.Handle("POST /api/coordination/send-status", s.protected(false, s.coordinationSendStatus))
 	mux.Handle("POST /api/coordination/drain", s.protected(false, s.drainCoordinationRemote))
@@ -223,7 +235,7 @@ func (s *Server) Handler() http.Handler {
 	interactive := newLimiter(1800, globalWindow).wrap(mux)
 	return s.cors(apiPaths(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, pattern := mux.Handler(r)
-		if pattern == "GET /api/servers" || pattern == "GET /api/servers/{server}/sessions" || pattern == "GET /api/federation/sessions" {
+		if pattern == "GET /api/coordination" || pattern == "GET /api/coordination/changes" || pattern == "GET /api/servers" || pattern == "GET /api/servers/{server}/sessions" || pattern == "GET /api/federation/sessions" {
 			discovery.ServeHTTP(w, r)
 			return
 		}

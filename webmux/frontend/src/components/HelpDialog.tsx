@@ -44,7 +44,7 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
           <Row label="Copy / Paste" desc="Use the Copy and Paste toolbar buttons or desktop shortcuts: Cmd+C / Cmd+V on Mac, Ctrl+Shift+C / Ctrl+Shift+V elsewhere. Ctrl+V also pastes on Windows/Linux; Ctrl+C interrupts when no text is selected. Screenshots pasted into the terminal are transferred as files." />
           <Row label="Image and file drops" desc="Drop up to 16 files onto a terminal, or paste a screenshot. Files are delivered to that terminal’s host and their quoted paths are inserted without pressing Enter or broadcasting to other terminals. Each file may be at most 10 MiB." />
           <Row label="Remote clipboard" desc="Terminal OSC 52 text-copy requests update the desktop clipboard when this terminal has focus and the browser permits it. Compatible applications can read the clipboard only from the focused terminal when the browser permits it. These requests are excluded from transcripts and reconnect replay." />
-          <Row label="Type to All" desc="Pasted text is broadcast when Type to All is enabled. Clicks, dragging, and scrolling stay in their own terminal. Pointer hover is never sent to applications." />
+          <Row label="Type to All" desc="Pasted text follows the Type to All recipients. Clicks, dragging, and scrolling stay in their own terminal. Pointer hover is never sent to applications." />
         </Section>
 
         <Section title="Keyboard Input">
@@ -53,13 +53,13 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
           <Row label="Search icon" desc="Search a terminal's scrollback using the magnifying glass in its toolbar. Enter finds the next match; Shift+Enter finds the previous match while the search field is focused." />
           <Row label="Log" desc="Start or pause transcript logging using Log in the terminal toolbar. Resuming appends to the current launch's log." />
           <Row label="Session tabs" desc="Show or minimize a terminal using its tab above the workspace. Click directly in a terminal to focus it." />
-          <Row label="Type to All" desc="When enabled (orange bar), every keystroke is sent to all open sessions simultaneously. Click the button again to disable." />
+          <Row label="Type to All" desc="When enabled (orange bar), keystrokes go to the selected terminals. Choose recipients above the grid; new sessions stay unselected after a choice." />
         </Section>
 
         <Section title="Controls">
           <Row label="Coordination tab" desc="Start a coding agent in a folder, or open an existing coordinated session. WebMux suggests editable project and purpose-based session names." />
           <Row label="Session tools" desc="Open a browser, sign in, manage a host client, or change one terminal’s theme." />
-          <Row label="Type to All" desc="Toggle broadcast mode — sends input to every session at once." />
+          <Row label="Type to All" desc="Toggle broadcast mode. Input follows the current recipients." />
           <Row label="Display → A− / A+" desc="Decrease or increase the terminal font size (8–32 px, persisted)." />
           <Row label="Display → C− / C+" desc="Decrease or increase terminal columns in steps of 10 (40–240)." />
           <Row label="Display → R− / R+" desc="Decrease or increase terminal rows in steps of 5 (10–80)." />

@@ -85,7 +85,15 @@ func TestAgentActivityDebouncesAndIgnoresOldLaunch(t *testing.T) {
 	}
 	file := filepath.Join(store.Home, "data", "agent-status", "alpha", base64.RawURLEncoding.EncodeToString([]byte("other-task"))+".json")
 	eventually(t, func() bool { _, err := os.Stat(file); return err == nil })
-	data, err := os.ReadFile(file)
+	// Match the production agent status reader. On Windows, publication may
+	// become visible before Root.Rename closes its DELETE-capable handle;
+	// absolute os.ReadFile does not share DELETE, while Root readers do.
+	root, err := os.OpenRoot(filepath.Dir(file))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	data, err := root.ReadFile(filepath.Base(file))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { RigSeatStatus } from './RigSeatStatus';
+import type { CoordinationSeat } from './CoordinationDialog';
 import { Terminal, type TerminalHandle } from './Terminal';
 import { AuthHandoff } from './AuthHandoff';
 import { BrowserCompanion } from './BrowserCompanion';
@@ -16,6 +18,7 @@ import type { Session, ConnectionState, NamedTheme, ManagedClient } from '../typ
 
 interface TileProps {
   session: Session;
+  rigObservations?: CoordinationSeat[];
   canManageHosts?: boolean;
   managedClient?: ManagedClient;
   onManagedClientChanged?: () => void;
@@ -46,6 +49,7 @@ interface TileProps {
 
 export function Tile({
   session,
+  rigObservations,
   canManageHosts = true,
   managedClient,
   onManagedClientChanged,
@@ -91,8 +95,8 @@ export function Tile({
   const identity = sessionIdentity({ ...session, project_label: projectLabel });
   useEffect(() => { setProjectLabel(session.project_label); }, [session.project_label]);
   const editProject = () => { setProjectDraft(projectLabel || ''); setProjectError(''); setShowTools(false); setShowProject(true); };
-  const { focusedSessionId, broadcastMode, broadcastExcluded, toggleBroadcastExclude } = useInputBroadcast();
-  const isExcluded = broadcastExcluded.has(session.id);
+  const { focusedSessionId, broadcastMode, isBroadcastRecipient, toggleBroadcastExclude } = useInputBroadcast();
+  const isExcluded = !isBroadcastRecipient(session.id);
   const termHandleRef = useRef<TerminalHandle>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const showScrollStrip = useTouchLikeViewport();
@@ -225,7 +229,7 @@ export function Tile({
           )}
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
           {session.transport === 'ssh' && managedClient && <span style={{ ...styles.transport, color: managedClient.online ? '#50fa7b' : '#aaa' }} title={`Managed host ${managedClient.online ? 'connected' : 'offline'}`}>Host {managedClient.online ? '●' : '○'}</span>}
-          {session.rig && <span aria-label={session.rig.provider === 'agent-deck' ? 'Agent Deck-managed worker' : 'Rig-managed worker'} title={`${identity.source} · ${identity.project} · ${identity.name} · ${identity.host} · ${session.rig.target}`} style={{ ...styles.transport, color: '#c5b8ff' }}>{identity.source}</span>}
+          {session.rig && <span aria-label={session.rig.provider === 'agent-deck' ? 'Agent Deck-managed worker' : 'Rig viewer'} title={`${identity.source} · ${identity.project} · ${identity.name} · ${identity.host} · ${session.rig.target}`} style={{ ...styles.transport, color: '#c5b8ff' }}>{identity.source}</span>}
           {!session.rig && <button style={{ ...styles.browserBtn, flexShrink: 0 }} onClick={editProject}>{identity.project ? 'Edit project' : 'Set project'}</button>}
         </div>
         <div style={styles.chromeRight}>
@@ -263,17 +267,21 @@ export function Tile({
             onClick={() => onLockToggle?.(session.id)}
             title={locked ? 'Locked (click to unlock)' : 'Unlocked (click to lock)'}
           >{locked ? '\ud83d\udd12' : '\ud83d\udd13'}</button>
-          {(state === 'disconnected' || state === 'error') && (
+          {(state === 'disconnected' || state === 'error') && session.local_lifecycle?.operation_id && (
+            <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onClose(session.id)} title="Review original local stop">Review stop</button>
+          )}
+          {(state === 'disconnected' || state === 'error') && !session.local_lifecycle?.operation_id && (
             <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onReconnect(session.id)} title={session.rig ? 'Reconnect viewer transport' : 'Reconnect'}>{'\u21ba'}</button>
           )}
           <button
             style={{ ...styles.chromeBtn, color: locked ? '#444' : '#ff8888', cursor: locked ? 'not-allowed' : 'pointer' }}
             onClick={() => { if (!locked) onClose(session.id); }}
-            title={locked ? 'Window is locked' : session.rig ? 'Detach viewer; seat keeps running' : 'Close'}
+            title={locked ? 'Window is locked' : session.rig ? 'Detach viewer; seat keeps running' : session.local_lifecycle ? 'Hide or stop local terminal' : 'Close'}
           >{'\u2715'}</button>
         </div>
       </div>
 
+      <RigSeatStatus session={session} observations={rigObservations} />
       {handoff && <AuthHandoff key={handoff.key} session={session} url={handoff.url}
         onDismiss={() => { if (handoff.requestId) termHandleRef.current?.acknowledgeBrowser(handoff.requestId); setHandoff(null); termHandleRef.current?.focus(); }}
         onCompanion={url => { setBrowserNavigation({ url }); setShowBrowser(true); }} />}

@@ -1,0 +1,32 @@
+{
+  "qualifiedHead": "10b365c6a5405848d1630d6fbd2f096a830a5998",
+  "windowsServer": {
+    "run": 44239091558,
+    "job": 134582276245,
+    "conclusion": "success",
+    "artifact": 14399197924,
+    "artifactSHA256": "80b2394d8abecce6def963e0fd9e5d46c953d791c01b0c74a43c7a7802215f61",
+    "nativeConPTYCases": 28,
+    "nativeCasesSkipped": 0,
+    "rendererAndLifecycleChecks": 1384,
+    "threeStageComparisonReceipts": 1381,
+    "allInitialContinuedRecapturedEqual": true,
+    "bareReferenceComparisons": 259,
+    "sharedHyperlinkReferenceComparisons": 1122,
+    "allReferencesExcludeSnapshotParserProfile": true,
+    "sharedHyperlinkReferenceMethodsUnchanged": false
+  },
+  "protectedNavigation": {
+    "run": 44239091498,
+    "artifact": 14398568422,
+    "artifactSHA256": "5b8391911479f2c62f55bfdab3d4922c13f4a3dcbbfd4b0168df49129037ba1c",
+    "ordinaryFreshFirstLoads": 46,
+    "deliberateStopControls": 4,
+    "completeLosslessEndAcknowledgedTraces": 36,
+    "observedNetworkServiceAppContainerPrimaryTokens": 8,
+    "sandboxExecutableAccessDeniedReports": 0,
+    "networkServiceRestartReports": 0,
+    "permissionArtifact": 14398384333
+  },
+  "scope": "Exact combined-head native Windows component qualification. Broader #318 coding-session and #450 earlier panic acceptance remain separate; this is not a passing overall dependency audit or release gate."
+}

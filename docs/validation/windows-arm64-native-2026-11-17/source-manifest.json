@@ -1,0 +1,65 @@
+{
+  "recordedUTC": "2026-11-18T05:44:08.338501+00:00",
+  "issue": 456,
+  "base": "3b80d0d4174a366f8fc0a3d0175b30e0323377b8",
+  "sourceSHA256": {
+    ".github/workflows/windows-arm-native.yml": "3366ace494d094ea195707a01b4f26bc6d73a53498820fed0cc6155873fb0406",
+    "scripts/windows-native-architecture.mts": "f449ee33e0a081e42bffd1e53237711cb0375b2bb0487c50409fae5b7ba2e5fb",
+    "scripts/windows-native-architecture.test.mts": "0a51e8daef2dd1a576f630045f3e64d94e9673c207e05df1d9623766adc09fe9"
+  },
+  "unchangedExistingWorkflows": {
+    ".github/workflows/ci.yml": "d8d60771fc3369574a494a6a5301fccb27b0141b25454cd9be320993fb1cb4ee",
+    ".github/workflows/packaging.yml": "26d8206985dc195c89c5e423e3033a3b29c84d158e8c6c1983f859598135413f"
+  },
+  "lockfileSHA256": "45c39a2a9b254ac87a33b6ca83f90cda1bf9dbdb1a0f90038cd0024b45e015fa",
+  "existingCollectorSHA256": "ee00a971284fab1243a5475579e5ce7fa453fe2442c3b86bc9bf7bfb27f4a56d",
+  "localAdmissionTestCount": 2,
+  "localAdmissionResult": "PASS",
+  "strictProjectTypes": "PASS",
+  "workflowYAML": "PASS",
+  "nativeWindowsARM64Result": "PENDING",
+  "scope": "New native architecture/capture qualification gate and portable admission controls. No native Windows, physical device, authenticated provider or broad #318 completion claim.",
+  "rendererBinding": "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH points to the exact PE-inspected Chromium image; default headless-shell architecture is not substituted.",
+  "originalArmSourceCheckpoint": "2e0fdd3f60dbfcb89f296f8a2853b98d141ff268",
+  "inputHeads": {
+    "ARM64Qualification": "2e0fdd3f60dbfcb89f296f8a2853b98d141ff268",
+    "USBReadiness": "3b80d0d4174a366f8fc0a3d0175b30e0323377b8",
+    "WindowsVTBudget": "52a8527e7e8a3e0ed0d0af09eadbd9457eae9854"
+  },
+  "inheritedNativeEvidence": {
+    "windowsVT": {
+      "head": "52a8527",
+      "run": 44242847564,
+      "artifact": 14400652297,
+      "tenRunsSameNonRaceProcess": "PASS",
+      "packageElapsedSeconds": 234.947,
+      "scope": "Aggregate-budget correction, not #450 panic repair."
+    },
+    "usb": {
+      "head": "3b80d0d",
+      "run": 44244114652,
+      "artifact": 14400937228,
+      "negativeHeldReplyDirect20RealSSH": "PASS",
+      "scope": "Disposable virtual kernel; not physical devices."
+    }
+  },
+  "aggregateBudget": {
+    "minutes": 60,
+    "previousMinutes": 30,
+    "basis": {
+      "head": "2e0fdd3f60dbfcb89f296f8a2853b98d141ff268",
+      "run": 44242526435,
+      "job": 134593581688,
+      "conclusion": "cancelled at 30-minute job deadline",
+      "artifact": 14401767083,
+      "artifactSHA256": "3177669a6a8ecc2efa1832c800768eac237cea3deda598c79d1795b1df2e9a23",
+      "nativeConPTYCasePasses": 28,
+      "rendererExpectedCases": 1384,
+      "rendererCompletedCases": 735,
+      "completedComparisonsEqualAtAllThreePhases": true,
+      "rendererComplete": false,
+      "scope": "Partial run only. Original renderer executable selection was not explicitly pinned; does not qualify newer source or authenticated recovery."
+    },
+    "unchanged": "All test cases, individual assertion/native suite/browser deadlines, single worker and zero retries; existing CI/packaging/audit bytes unchanged."
+  }
+}

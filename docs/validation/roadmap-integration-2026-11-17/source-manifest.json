@@ -1,0 +1,49 @@
+{
+  "recordedUTC": "2026-11-18T04:38:08.190560+00:00",
+  "issue": 452,
+  "sourceCheckpoint": "fd8563073a59538acff460cf912f97ded5acfe2d",
+  "inputHeads": {
+    "428": "f2af9dc691909e4fc9f1920ae325edd8ca5b02ac",
+    "442": "89ee7197d20bca5e23db03cbfae615b97960973d",
+    "447": "ffa3a17b8d8ace9da38e4c142079bfc41aeb9737",
+    "449": "7f9f6bc853b85468e3801984f3bec1e89feeb5e1"
+  },
+  "allInputHeadsAncestors": true,
+  "trackedNonDocsSourceSHA256": "6a5d6a5dd67fe6c85867b0e6c9bcb8d1ca212991b29a68dfffe4425f655fdecc",
+  "trackedNonDocsFileCount": 1013,
+  "qualificationWorkingEdits": {
+    ".github/workflows/ci.yml": "60a30ae1fc2e660792a329e8a4cbb9da4ecf0a07216cc95f839902b290f7925b"
+  },
+  "browserComponentByteIdentityTo": "89ee7197d20bca5e23db03cbfae615b97960973d",
+  "browserComponentIdentityScope": "All browser package Go files and both Windows permission helpers; not whole combined runtime qualification.",
+  "lockfileSHA256": "45c39a2a9b254ac87a33b6ca83f90cda1bf9dbdb1a0f90038cd0024b45e015fa",
+  "privateReceiptSHA256": {
+    "int452-node-final-helpers-build.log": "e5860f969d7833e23636516499bf2dab6de9d26c91cc62deba5abf309ed7d6f0",
+    "int452-node-final-types.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "int452-node-final-frontend-lint.log": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+    "int452-node-final-frontend-test.log": "b23aa9dda7a3151d2a9008d57d64b369ba317947ebdb2803f0ecc679bdccc188",
+    "int452-node-final-helpers-test.log": "0b710109463b81b2745fd5e18e8edc6ea23333a9704476ca49f39939df2125f7",
+    "int452-node-final-frontend-build.log": "f9120582630a1bd843d7f99550ae9ad15dae3b11b2078e346267fd5606c8039e",
+    "int452-local-node-final.json": "bc9fec5c9b5f8e9e6c6b0398304770ad0b0fa83bcc8a21402a68d9641a646fdd",
+    "int452-local-model.json": "e3aaff154379cef0feb175a60a0ad77937edae361760c8b77a5d637ebdabc132",
+    "int452-native-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "int452-go-race-combined.log": "6a8786ddb701479a744782ec1767962d21255217326f9d17f6725985ba742052",
+    "int452-host-vet-combined.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "int452-windows-vet-combined.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "int452-ultraviolet-race.log": "8c5be127e05a4f45aa6bdbb7952a6ea7439a0876ccdbfc0aa0348225eb24ecd9",
+    "int452-ultraviolet-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "int452-vt-race.log": "4f468a301fad37d79a37beed4a2b9f97d5374bdcfc050b3103e6ca2c7a060b1b",
+    "int452-vt-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "int452-native-combined.json": "95dfef5eaa3b0ab70f1a359040730a6a4b2cb6b93be11a53cbbd8ffc9ce973af",
+    "int452-screen-replay.log": "49cd771c99badcd72e036e5342bd480856cf1359238cd583fa97b8acb7606467",
+    "int452-screen-replay.json": "1c8078ab062e80ecba9a383720d316570dbddd74d4ab0c32e9bfe7cd78394a4c",
+    "int452-legacy-combined.log": "be8d1689c2eccc70a325726b9f791d579edeb91b43dee22b96aa50308e7a49d9",
+    "int452-host-combined.log": "6b7207e77b4e78d76573083e94a4ec448da8f6d91bc2b69c5bb435826872da16",
+    "int452-identity-combined.log": "a2523b6ac9989b38f8de327e0afb1ac60ea12c1fdd5bc3387335b84d14b6719a",
+    "int452-activity-combined.log": "6549e0e104c60a318ddf94a9973eb94a977b743aeb1db1954b4c0b2edc4acc44",
+    "int452-notifications-combined.log": "c2df89afba56b70e734af2d35c14abb2dab682ee7761e7929390d94038a79664",
+    "int452-agents-combined.log": "86cde32937182997d4221cdac6fcf8d1d44fd6ab31d8af3f1fb1bfe8b198ddce"
+  },
+  "notes": "No source/test overlays. The initial type check lacked the frontend node_modules link; both workspace paths were configured and the failed log retained. Hosted combined-head Windows/ARM/kernel acceptance remains required; the separate #450 panic is not declared fixed.",
+  "sourceDigestAlgorithm": "SHA256 of sorted tracked paths excluding docs/ and *.md; each UTF-8 path + NUL + working-tree bytes (symlink target bytes for symlinks; Git object ID for gitlinks) + NUL."
+}

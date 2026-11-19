@@ -1,0 +1,59 @@
+{
+  "issue": 549,
+  "parent": "4623b2290d4664b752bd6c2fe9b4b4b9928717cf",
+  "diagnosticFailure": {
+    "source": "d37ca20a2f3daecd07c67b07d73c404ac052ba96",
+    "run": 44475746089,
+    "job": 135395735588,
+    "artifact": 14507292453,
+    "artifactSHA256": "4ed86f81c598e75e2264e25c08dea2d872c0dfb9a4785b83d2ab5f1e54822f01",
+    "observed": "Pinned base downloaded/extracted in about2s. HTTP archive.ubuntu.com index acquisition consumes remaining Docker180 budget; apt install/relay/browser not reached. Detailed cause of earlier missing-output failures is not established."
+  },
+  "pinnedBase": {
+    "baseImage": "ubuntu@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852",
+    "verifiedAMD64RootLayerSHA256": "7a48b8f0e5c73d0cc2a85b008978396aa19d253dc1b96fdb0b769ee6dcbeca4a",
+    "compressedBytes": 29767612,
+    "caBundlePresent": false,
+    "ubuntuArchiveKeyringPresent": true,
+    "osRelease": "PRETTY_NAME=\"Ubuntu 24.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.5 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\n",
+    "scope": "Read-only public OCI layer inspection; no Docker container, build, native coding or account credential copied."
+  },
+  "localChecks": {
+    "relayTests": 9,
+    "relayPass": 8,
+    "relaySkip": 1,
+    "aptHelperTests": 7,
+    "aptHelperPass": 6,
+    "aptHelperSkip": 1,
+    "skips": "Both require APT executable absent on macOS; actual effective source selection must execute in Linux CI.",
+    "mainFixtureAST": "Unchanged outside Docker build-input generation, including180-second build, all native assertions/ownership/cleanup.",
+    "existingAptHelper": "Old/new configure produce byte-identical configuration at the same owned temporary root.",
+    "diffCheck": "PASS",
+    "parentNegative": "Exact462 exporter fails the valid-system-bundle plus empty-default-store regression with original trust-roots refusal. Corrected exporter passes; no AttributeError/missing-API negative.",
+    "aptWorkflowYAML": "PASS; required9 relay/bootstrap controls added on Ubuntu22.04 and24.04 before native signed APT outcomes. No existing command removed."
+  },
+  "sourceSHA256": {
+    "scripts/configure-ci-apt.py": "fdc5c885e57b65483c95774f25d684c513e3a722a60a486f8b533847333d7bc1",
+    "scripts/qualify-rig-stop-relay.py": "90616b630cebb7c8858bc01d6df98fd2706b50c5c8458f9a0c3342788d00eaa8",
+    "scripts/test_qualify_rig_stop_relay.py": "b2a38858b9e85635e7e5263d1c3b3f8b5ca2109b04a9f2218d77d459e4b68257",
+    ".github/workflows/ci-apt.yml": "f10e4f2af7ce435fd5b2e36207448c59b07742f06803132350f9a2156d3c75ca"
+  },
+  "boundaries": [
+    "Public host CA certificates only, exported through SSLContext; no private key/native account credential is copied.",
+    "Pinned Ubuntu image and archive signing keyring, all original suites/components and openssh-server/tmux packages retained; TLS/signature bypasses absent.",
+    "Original sources retained; APT selects only generated signed official HTTPS sources with explicit public PEM CAInfo.",
+    "No host APT configuration changed. No Docker/native/coding/SSH fixture started by local tests; public OCI layer was only hash-verified and read.",
+    "Existing180-second build and all operation/Stop/SSH/browser deadlines unchanged.",
+    "HTTPS container build and actual complete relay qualification remain required on changed source; no pass claimed before native CI."
+  ],
+  "reference": "https://manpages.debian.org/testing/apt/apt-transport-https.1.en.html",
+  "initialCandidate": "4623b2290d4664b752bd6c2fe9b4b4b9928717cf",
+  "linuxCAEnumerationFailure": {
+    "run": 44479889268,
+    "job": 135409295257,
+    "artifact": 14508284295,
+    "artifactSHA256": "37b34deae8af318715f0717739c471c923ec614e56d787f263ccf4068e038219",
+    "observed": "Three CA-dependent unit controls fail at unavailable/oversized enumeration guard; no relay output directory or Docker build. Exact rejected count is not logged. Earlier checked-local-Stop browser case passed.",
+    "repair": "Explicitly load standard public system PEM bundle when present; default-store export remains for other hosts. Record chosen trust source; keep malformed/empty/oversized refusal."
+  }
+}

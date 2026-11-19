@@ -4,6 +4,7 @@ import { api, type BrowserFrame, type BrowserAction, type BrowserProfile, type B
 import { copyDesktopText } from '../utils/terminalClipboard';
 import { handoffLink } from '../utils/authHandoff';
 import { Dialog } from './Dialog';
+import { useBrowserPaneLayout } from '../utils/useBrowserPaneLayout';
 import type { Session } from '../types';
 import './BrowserCompanion.css';
 
@@ -54,6 +55,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   const pageTextPanel = useRef<HTMLElement>(null);
   const findInput = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState(false);
+  const pane = useBrowserPaneLayout(expanded);
   const mounted = useRef(true);
   const pending = useRef(0);
   const queue = useRef<Promise<void>>(Promise.resolve());
@@ -215,9 +217,12 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   };
 
   return createPortal(
-    <aside className={`browser-companion${expanded ? ' browser-expanded' : ''}`} aria-label={`Browser for ${session.title}`} onKeyDown={event => event.stopPropagation()}>
+    <div className="browser-companion-layer" style={{ zIndex: pane.active ? 902 : 901 }} onPointerDownCapture={pane.activate} onFocusCapture={pane.activate} onKeyDown={event => event.stopPropagation()}>
+    <aside id={pane.id} className={`browser-companion${expanded ? ' browser-expanded' : ''}${pane.layout.mode === 'floating' ? ' browser-floating' : ''}`} style={pane.style} aria-label={`Browser for ${session.title}`}>
       <header>
         <div><strong>Browser · {session.title}</strong><small>Runs on {session.transport === 'local' || session.browser_local ? 'the WebMux server' : `${session.username ? `${session.username}@` : ''}${session.hostname}`} · {frame?.profileName ? `Saved profile: ${frame.profileName}` : 'Temporary profile'}</small></div>
+        {!pane.narrow && <button type="button" onClick={pane.toggleDock} disabled={expanded}>{pane.layout.mode === 'floating' ? 'Dock browser' : 'Undock browser'}</button>}
+        {!pane.narrow && !expanded && pane.layout.mode === 'floating' && <button type="button" className="browser-pane-move" aria-label="Move browser pane" title="Drag to move; use arrow keys when focused (Shift moves farther)" {...pane.move}>Move</button>}
         <button onClick={() => setExpanded(value => !value)} aria-expanded={expanded}>{expanded ? 'Restore browser size' : 'Expand browser'}</button>
         <button onClick={onHide}>Return to terminal</button>
         <button onClick={() => void end()} disabled={busy || !controlled}>End browser</button>
@@ -226,32 +231,37 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         <span role="status">{controlled ? 'You control this browser' : 'View only'}</span>
         {controlled ? <button onClick={() => void act({ action: 'release' })}>Release control</button>
           : <button disabled={!ready} onClick={() => { if (frame?.control?.available || window.confirm('Take control from the other viewer?')) void act({ action: 'claim', force: true }); }}>Take control</button>}
-        <label>Profile <select aria-label="Browser profile" value={selectedProfile} onChange={event => setSelectedProfile(event.target.value)}>
-          <option value="">Temporary</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
-        </select></label>
-        <button disabled={busy || !controlled} onClick={async () => {
-          setBusy(true); setReady(false); await queue.current;
-          try { await api.endBrowser(session.id); control.current = false; setFrame(undefined); await act({ action: 'start', profileId: selectedProfile }); }
-          catch (err) { setError(String(err)); } finally { setBusy(false); }
-        }}>Open selected profile</button>
-        <input aria-label="New browser profile name" value={profileName} onChange={event => setProfileName(event.target.value)} maxLength={64} />
-        <button disabled={busy || !profileName.trim()} onClick={async () => {
-          setBusy(true);
-          try { const profile = await api.createBrowserProfile(session.id, profileName); setProfiles(values => [...values, profile]); setSelectedProfile(profile.id); setProfileName(''); }
-          catch (err) { setError(String(err)); } finally { setBusy(false); }
-        }}>Create saved profile</button>
-        <button disabled={busy || !selectedProfile} onClick={async () => {
-          if (!window.confirm('Delete this saved profile and its cookies on the execution host? End browsers using it first.')) return;
-          setBusy(true);
-          try { await api.deleteBrowserProfile(session.id, selectedProfile); setProfiles(values => values.filter(value => value.id !== selectedProfile)); setSelectedProfile(''); }
-          catch (err) { setError(String(err)); } finally { setBusy(false); }
-        }}>Delete saved profile</button>
-        <small>Saved profiles keep sign-in cookies on the execution host after ending. Temporary profiles and transfer files are cleared when the worker exits.</small>
       </div>
+      <details className="browser-settings">
+        <summary>Browser settings</summary>
+        <div className="browser-profiles">
+          <label>Profile <select aria-label="Browser profile" value={selectedProfile} onChange={event => setSelectedProfile(event.target.value)}>
+            <option value="">Temporary</option>{profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
+          </select></label>
+          <button disabled={busy || !controlled} onClick={async () => {
+            setBusy(true); setReady(false); await queue.current;
+            try { await api.endBrowser(session.id); control.current = false; setFrame(undefined); await act({ action: 'start', profileId: selectedProfile }); }
+            catch (err) { setError(String(err)); } finally { setBusy(false); }
+          }}>Open selected profile</button>
+          <input aria-label="New browser profile name" value={profileName} onChange={event => setProfileName(event.target.value)} maxLength={64} />
+          <button disabled={busy || !profileName.trim()} onClick={async () => {
+            setBusy(true);
+            try { const profile = await api.createBrowserProfile(session.id, profileName); setProfiles(values => [...values, profile]); setSelectedProfile(profile.id); setProfileName(''); }
+            catch (err) { setError(String(err)); } finally { setBusy(false); }
+          }}>Create saved profile</button>
+          <button disabled={busy || !selectedProfile} onClick={async () => {
+            if (!window.confirm('Delete this saved profile and its cookies on the execution host? End browsers using it first.')) return;
+            setBusy(true);
+            try { await api.deleteBrowserProfile(session.id, selectedProfile); setProfiles(values => values.filter(value => value.id !== selectedProfile)); setSelectedProfile(''); }
+            catch (err) { setError(String(err)); } finally { setBusy(false); }
+          }}>Delete saved profile</button>
+          <small>Saved profiles keep sign-in cookies on the execution host after ending. Temporary profiles and transfer files are cleared when the worker exits.</small>
+        </div>
+      </details>
       {error ? <div role="alert" className="browser-message">{error} <button onClick={() => void act({ action: 'start' })}>Reconnect browser</button></div>
         : !frame && <div role="status" className="browser-message">Starting browser on the terminal host…</div>}
       <fieldset className="browser-controls" disabled={!controlled || busy}>
-      <form className="browser-navigation" onSubmit={event => {
+      <form className="browser-navigation browser-address" onSubmit={event => {
         event.preventDefault(); addressEditing.current = false;
         if (!address.trim()) return;
         const url = /^https?:\/\//i.test(address.trim()) ? address.trim() : `https://${address.trim()}`;
@@ -388,6 +398,10 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         <input aria-label="Choose files for page" type="file" multiple={frame.fileChooser.multiple} disabled={busy} onChange={event => void upload(event.target.files)} />
         <button onClick={() => void act({ action: 'cancel_upload' })}>Cancel</button>
       </Dialog>}
-    </aside>, document.body,
+    </aside>
+    {!pane.narrow && !expanded && (pane.layout.mode === 'docked'
+      ? <div role="separator" aria-label="Resize browser width" aria-orientation="vertical" aria-controls={pane.id} aria-valuemin={0} aria-valuemax={2560} aria-valuenow={pane.rect.width} aria-valuetext={`${pane.rect.width} pixels`} tabIndex={0} className="browser-pane-resize browser-pane-resize-edge" style={pane.resizeStyle} title="Drag to resize; use Left/Right arrows when focused" {...pane.resize} />
+      : <button type="button" aria-label="Resize browser pane" aria-controls={pane.id} className="browser-pane-resize browser-pane-resize-corner" style={pane.resizeStyle} title="Drag to resize; use arrow keys when focused (Shift resizes farther)" {...pane.resize}><span aria-hidden="true">↘</span></button>)}
+    </div>, document.body,
   );
 }

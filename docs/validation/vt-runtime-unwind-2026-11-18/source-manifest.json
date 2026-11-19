@@ -1,0 +1,43 @@
+{
+  "recordedUTC": "2026-11-18T10:00:34.924074+00:00",
+  "issue": 450,
+  "base": "45151c356368b52eb20ccea92a34866472041e31",
+  "sourceSHA256": {
+    ".github/workflows/windows-vt-diagnostics.yml": "686d3dd8d236608b70ca1d86d6c3429eec430d3a58ac32cfa8723eca8f705734",
+    "docs/validation/vt-runtime-unwind-2026-11-18/go-guard.patch": "75477d4f91502a4b9c3bf71e0ec7fa815e4cd89e7c76053cb348ae585351b939",
+    "docs/validation/vt-runtime-unwind-2026-11-18/GO-LICENSE.txt": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "docs/validation/vt-runtime-unwind-2026-11-18/README.md": "9cccee9f3b6c7a4bb63a34072d18682a6cf06a0efafab8b8f489eb899756a268",
+    ".github/workflows/ci.yml": "454d1dcf1039cbd5f67fad1045576f532e31243ad8ae9eeb39045dcdd0c9c6a2",
+    ".gitattributes": "e3ddf1b6d702f83f99e62f7368b600c19c314a26d69073bff98217a4be562ad9"
+  },
+  "upstream": {
+    "change": 863173,
+    "statusAtInspection": "NEW",
+    "revision": "071f5c2ee6820eef88de81c20700d9772d64e4b8",
+    "masterChange": 824724,
+    "masterStatus": "MERGED",
+    "masterRevision": "d58290fefd4a6d0f68b291d598af908654221389"
+  },
+  "localPatchVerification": {
+    "result": "PASS on private file copy; original installed SDK unchanged",
+    "beforeGitBlob": "40547b8113fffb5a27aa9a2e02af5efebd6090f2",
+    "afterGitBlob": "3423a660b5b5b112993cd64d1ab75a0c12c363a5",
+    "beforeSHA256": "19742597c5c6375893852292cc846127eac45759e9e397e8c10bb897fb470397",
+    "afterSHA256": "aea5a9d09fec009dab1158f0710321cd6c0d9079f427afdc89e8628e53910084"
+  },
+  "native": "Corrected harness qualification pending. Initial44280465179 ran zero VT cases (dotted flags split) and refused CRLF-converted patch; artifact14417165945 retains harness failures only.",
+  "originalProjectSourcesAndGatesUnchanged": "Project/VT source and required test command/assertions/deadlines unchanged. Core CI additionally records read-only CPU/XSTATE facts and retains them beside original repeat JSON.",
+  "localCrossCompilation": {
+    "target": "Windows AMD64 runtime tests",
+    "peMachine": "0x8664",
+    "diagnosticGuardStringPresent": true,
+    "imageSHA256": "9740f9ae36a2abc08ef9f1fb91919947fd3f7a482e5be5aee0acb121aae61446",
+    "scope": "Cross-compilation only; not run locally. Installed source unchanged."
+  },
+  "windowsCheckoutSimulation": {
+    "coreAutoCrlf": true,
+    "coreEol": "crlf",
+    "patchSHA256Preserved": true,
+    "quotedDottedTestFlags": true
+  }
+}

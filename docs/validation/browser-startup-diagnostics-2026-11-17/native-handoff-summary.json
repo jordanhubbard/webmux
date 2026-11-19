@@ -1,0 +1,624 @@
+{
+  "platform": "darwin/arm64",
+  "browserProduct": "Chrome/158.0.8127.36",
+  "sourceSHA256": {
+    "webmux/server/internal/browser/navigation_native_test.go": "2b31f3987b74d1e05de25c7d9f10590adac17d97530be04ea63b2fc0ecf8a17d",
+    "webmux/server/internal/browser/navigation_trace_test.go": "d04b33f1b0ed15e79bc9bc190613bbc04a3f13408b138c3b4f855c6fd02ef06b",
+    "webmux/server/internal/browser/navigation_trace_controls_test.go": "92135bdcdb95ea9e2eb0022c084ea77ac539151b4c4e78c19bc5ba938a8d0821",
+    "webmux/server/internal/browser/navigation_netlog_test.go": "4fff230c39551a0cb179013890fd029154c4791df42ca93a97214f7493a34128"
+  },
+  "records": [
+    {
+      "phase": "full",
+      "mode": "controlled-stop-trace",
+      "SHA256": "66a7abb009e95bb5ab1f90ecb8f4961f90764e823759783ff2e46fce5e3eb2e9",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "trace": {
+        "endElapsedMs": 15,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 79
+    },
+    {
+      "phase": "full",
+      "mode": "direct-child-original",
+      "SHA256": "80469bad0edbe3be10177c502286bc0649a2f44a1c33f5339c38bb77bd0c8824",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-child",
+      "SHA256": "2764eed2b9d0141bfbe2c204821c76f00c304f98a0e00435f9e1825f110422b5",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-child-original",
+      "SHA256": "1a77ef94378d266a4f5a36f75b5260893a7af657de276434f6e51cec6b315334",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-child",
+      "SHA256": "530a56d914d2a0586445d30ca20e209cf175a51cf758b1e06ada9c54d1717907",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-screenshot",
+      "SHA256": "39868eac45ac776b5fd2cbfe673f944a8e6c63e90a974f241848468edbd9b1b1",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-late",
+      "SHA256": "c178eeb0124ae9a8b637df2ae0eb69a77753f2a8e09be9578a3decf2c422e952",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 64
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace-loading-late",
+      "SHA256": "647cdcfd3222eaac5d2ccf621b893050cd9547fb98441ffe95467ee2b93615ae",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 12,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 70,
+      "loadingHandoffs": {
+        "ThrottlingURLLoader::StartNow": 4,
+        "CorsURLLoaderFactory::CreateLoaderAndStart": 2
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-trace",
+      "SHA256": "e04dc31fa183fb2066c754d6a74a0375f4b831499c57cade9ff278d470d08dbe",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 96
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home-websocket",
+      "SHA256": "283e35da488759e0bffc51a48eb6b4d48d704ffcef55403f5d47c19473f37b96",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-home",
+      "SHA256": "afe9a0485c77dc7586137b6a16f4446dcd76f447c582b2bd9dbd4785b72db913",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-screenshot",
+      "SHA256": "45833936c02bc1a1f82236a54be9bcc2a09489e8b7c3a704863dd1ccf537a03e",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-late",
+      "SHA256": "9008db21d12d8f8f0ba2aaefe1b388d190020ed97b2fadab8f5c8ac8d9dfd008",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 10,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 64
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace-loading-late",
+      "SHA256": "d7ffafa863cc6aae17a518dc418eb490616a91a57fc727fcc0122f10899789fe",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 72,
+      "loadingHandoffs": {
+        "ThrottlingURLLoader::StartNow": 6,
+        "CorsURLLoaderFactory::CreateLoaderAndStart": 2
+      }
+    },
+    {
+      "phase": "full",
+      "mode": "direct-trace",
+      "SHA256": "3334e503bf55418d610b98ee9fcdc400addcb9373eed0f89321ab502c8103b73",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 14,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 96
+    },
+    {
+      "phase": "full",
+      "mode": "direct-websocket",
+      "SHA256": "e616b72a8028f57afef5537c64dd7910e820b7f09b24e73fda55c46175474e42",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "direct",
+      "SHA256": "29032a862eca4eca977a9e56a472ee462dca775a2b49f5d9926b0a1a8012f02b",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "worker-subprocess-saved",
+      "SHA256": "657791718365c8a7f886c6738ad06e3cc7673b2fb17ebbcb84f04ba7e1fd9a07",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "full",
+      "mode": "worker-subprocess-temporary",
+      "SHA256": "1c52b2b53cb9dc603f28e644f708f5dc25faaecb715c1e76aec223ab12167e14",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true
+    },
+    {
+      "phase": "sample-1",
+      "mode": "controlled-stop-trace",
+      "SHA256": "8d1201c712727ad8da906896977c539823fa44bbe86b7e2ff7e2b4625f9dcb65",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 79
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-late",
+      "SHA256": "d1296cf1a714759b63ad674260ee872eb188f4008e0280adc2d12660dbed2a4e",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 64
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace-loading-late",
+      "SHA256": "f85f811bb6d9c9f88a9daa35a18f459674e98846feb2ee6e456c645344f46694",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 12,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 70,
+      "loadingHandoffs": {
+        "ThrottlingURLLoader::StartNow": 4,
+        "CorsURLLoaderFactory::CreateLoaderAndStart": 2
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-home-trace",
+      "SHA256": "b74a9b52cf4168fb7dbd5bae5f578cdff05fcebf49873b6d8e13aca7b7ad23d9",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 96
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-late",
+      "SHA256": "8a2804ca12555d958567d893b87d91885964e1cfa3dcc26029205b5f5b9c1e39",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 64
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace-loading-late",
+      "SHA256": "5c878b16903131fffac4f0833c21675939043571e3561e39cb59f17970a6764a",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 12,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 72,
+      "loadingHandoffs": {
+        "ThrottlingURLLoader::StartNow": 6,
+        "CorsURLLoaderFactory::CreateLoaderAndStart": 2
+      }
+    },
+    {
+      "phase": "sample-1",
+      "mode": "direct-trace",
+      "SHA256": "7b45e2310836d49ccfab3d90e618d63910333f932696100519ebc8c91ceb72d3",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 14,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 96
+    },
+    {
+      "phase": "sample-2",
+      "mode": "controlled-stop-trace",
+      "SHA256": "99436aca912906068d25a432c6b763696edd1dba5f39fc75de880ae2ec9c938b",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "trace": {
+        "endElapsedMs": 12,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 79
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-late",
+      "SHA256": "9ffcd3f615fa137bc9df3131e228644347d5608d53b4954b21c6b0a238a32d4c",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 64
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace-loading-late",
+      "SHA256": "7428bfe5027c9649462f86469ab5b1ab1d32d7806b6cb357a4d8207450bef4df",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 14,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 73,
+      "loadingHandoffs": {
+        "ThrottlingURLLoader::StartNow": 6,
+        "CorsURLLoaderFactory::CreateLoaderAndStart": 3
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-home-trace",
+      "SHA256": "ee69e25f284aa689cd138ca1a7fd6076c55b5efcd4c32120423a066d994596a7",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 96
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-late",
+      "SHA256": "a7966795e374aad866307a8b8a6eaa705fafa41a522a9fa92728d281ee379343",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 11,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 64
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace-loading-late",
+      "SHA256": "b18bd0bcc5903b8ca8c1f42308fee959ed5f1f598fbb2df8e53f01fefeb3c539",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 73,
+      "loadingHandoffs": {
+        "ThrottlingURLLoader::StartNow": 6,
+        "CorsURLLoaderFactory::CreateLoaderAndStart": 3
+      }
+    },
+    {
+      "phase": "sample-2",
+      "mode": "direct-trace",
+      "SHA256": "9d90b5f6a7ff3f0e79a0d0cb30015c720c2d7018570d7b4ad34dac57172a7bc8",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 14,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 96
+    },
+    {
+      "phase": "sample-3",
+      "mode": "controlled-stop-trace",
+      "SHA256": "6812f26b4eaa980cbf95a777cbd2cb7563ac3204967482fdbe7133e05e5096d3",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "controlConfirmed": true,
+      "stopIssued": true,
+      "trace": {
+        "endElapsedMs": 12,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 79
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-late",
+      "SHA256": "93f94ac0b614fe8c8156772d119131727e1029e79bd5c2066de1e1af4540327f",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 12,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 64
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace-loading-late",
+      "SHA256": "5099690b2ba15244b018f80b6f28426cc45dc11b064b5c89f7b74ba1aca76373",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 72,
+      "loadingHandoffs": {
+        "ThrottlingURLLoader::StartNow": 6,
+        "CorsURLLoaderFactory::CreateLoaderAndStart": 2
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-home-trace",
+      "SHA256": "3e5af0badac51b7a7ccf9c243b3076bc58e983e0ae1d23d6bb8259822c391656",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 96
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-late",
+      "SHA256": "94ed0f927428b8cebafa28220c488db10ca813152bb942f72caa6f5054da5626",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 10,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 64
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace-loading-late",
+      "SHA256": "97588f8260ab361034cbecc8f46692eebda72196231b8cedfdaf85fd4c645930",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 73,
+      "loadingHandoffs": {
+        "ThrottlingURLLoader::StartNow": 6,
+        "CorsURLLoaderFactory::CreateLoaderAndStart": 3
+      }
+    },
+    {
+      "phase": "sample-3",
+      "mode": "direct-trace",
+      "SHA256": "7353b4b08528550e1ce8956930d1a0f967e941384aed62bde0c85d9b1480ac8c",
+      "fixtureRequests": 1,
+      "navigateCalls": 1,
+      "loaded": true,
+      "trace": {
+        "endElapsedMs": 13,
+        "endAcknowledged": true,
+        "complete": true,
+        "dataLoss": false,
+        "dropped": 0,
+        "matchedEvents": 4
+      },
+      "projectedEvents": 96
+    }
+  ],
+  "ordinaryLoads": 36,
+  "intentionalControls": 4,
+  "explicitWindowsOnlyNetLogSkips": 2,
+  "scope": "Finalsource36ordinaryfirstloads+4deliberateStopcontrolsPASS;allcapturescomplete/endacknowledged/lossless/zerodrops. All8loadingconditionshavepositiveStartNowandnetworkCorsFactoryXscopes. NOTWindowsqualification/cause/fix."
+}

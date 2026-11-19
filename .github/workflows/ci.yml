@@ -30,13 +30,15 @@ jobs:
       - name: Test Ubuntu package mirror configuration
         run: python3 -m unittest discover -s tests -p test_ci_apt.py
       - name: Configure Ubuntu package mirrors and network bounds
-        run: sudo -n python3 scripts/configure-ci-apt.py
+        run: sudo -n env GITHUB_ACTIONS=true python3 scripts/configure-ci-apt.py
       - name: Install native kernel USB fixture prerequisites
         run: |
           sudo -n apt-get update
           # Hosted Azure kernels omit gadget drivers. Boot an isolated generic
           # kernel with matching modules instead of mutating the host kernel.
-          sudo -n apt-get install -y openssh-server qemu-system-x86 busybox-static python3-venv "linux-image-$USB_TEST_KERNEL" "linux-modules-extra-$USB_TEST_KERNEL" "linux-tools-$USB_TEST_KERNEL"
+          # This console-only guest needs no recommended GUI/audio stack.
+          # Keep QEMU tools explicit while leaving native budgets unchanged.
+          sudo -n apt-get install -y --no-install-recommends openssh-server qemu-system-x86 qemu-utils busybox-static python3-venv "linux-image-$USB_TEST_KERNEL" "linux-modules-extra-$USB_TEST_KERNEL" "linux-tools-$USB_TEST_KERNEL"
           for module in usbip-vudc g_mass_storage vhci-hcd; do
             modinfo -k "$USB_TEST_KERNEL" -F filename "$module"
           done
@@ -45,12 +47,17 @@ jobs:
       - name: Build CLI and separate worker
         working-directory: webmux/server
         run: go build -o "$RUNNER_TEMP/webmux" ./cmd/webmux
+      - name: Reuse checksum-verified virtual USB source files
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ${{ runner.temp }}/webmux-vudc-source-cache
+          key: ${{ runner.os }}-webmux-vudc-sources-v1-${{ hashFiles('tests/usb-vudc-sources.json') }}
       - name: Qualify virtual gadget teardown and USB over SSH
         run: |
           sudo -n apt-get install -y build-essential "linux-headers-$USB_TEST_KERNEL"
           df -Pk "$RUNNER_TEMP" /tmp
           python3 scripts/test_qualify_vudc.py
-          sudo -n env GITHUB_ACTIONS=true PATH="$RUNNER_TEMP/virtme/bin:/usr/sbin:/usr/bin:/sbin:/bin" python3 scripts/qualify-test-vudc.py --kernel "$USB_TEST_KERNEL" --vm-runner "$RUNNER_TEMP/virtme/bin/vng" --binary "$RUNNER_TEMP/webmux" --build-root "$RUNNER_TEMP/webmux-vudc"
+          sudo -n env GITHUB_ACTIONS=true PATH="$RUNNER_TEMP/virtme/bin:/usr/sbin:/usr/bin:/sbin:/bin" python3 scripts/qualify-test-vudc.py --kernel "$USB_TEST_KERNEL" --vm-runner "$RUNNER_TEMP/virtme/bin/vng" --binary "$RUNNER_TEMP/webmux" --build-root "$RUNNER_TEMP/webmux-vudc" --source-cache "$RUNNER_TEMP/webmux-vudc-source-cache"
       - name: Preserve virtual gadget qualification evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -132,6 +139,14 @@ jobs:
         run: go test -race ./...
       - name: Verify terminal engine provenance
         run: python3 scripts/verify-vt-provenance.py
+      - name: Verify retained cell model provenance
+        run: python3 scripts/verify-uv-provenance.py
+      - name: Test retained cell model
+        working-directory: webmux/server/internal/thirdparty/ultraviolet
+        run: go test -race ./...
+      - name: Vet retained cell model
+        working-directory: webmux/server/internal/thirdparty/ultraviolet
+        run: go vet ./...
       - name: Test retained terminal engine
         working-directory: webmux/server/internal/thirdparty/vt
         run: go test -race ./...
@@ -197,13 +212,44 @@ jobs:
         run: npm run build --workspace=frontend
       - name: Configure Ubuntu package mirrors and network bounds
         if: runner.os == 'Linux'
-        run: sudo -n python3 scripts/configure-ci-apt.py
+        run: sudo -n env GITHUB_ACTIONS=true python3 scripts/configure-ci-apt.py
       - name: Install browser for Go tests
         if: runner.os == 'Linux'
         working-directory: webmux
         run: |
           npx playwright install --with-deps chromium
           sudo -n apt-get install -y tmux
+      - name: Update Ubuntu C library security baseline
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          . /etc/os-release
+          test "$ID" = ubuntu
+          test "$VERSION_ID" = 22.04
+          package="libc6:$(dpkg --print-architecture)"
+          evidence="$RUNNER_TEMP/webmux-ci-libc"
+          mkdir -p "$evidence"
+          # Playwright's preceding --with-deps refreshes the signed APT indexes.
+          dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' "$package" > "$evidence/before.txt"
+          apt-cache policy "$package" > "$evidence/candidate.txt"
+          sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y --only-upgrade --no-remove --no-install-recommends "$package"
+          dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' "$package" > "$evidence/after.txt"
+          installed=$(dpkg-query -W -f='${Version}' "$package")
+          echo 'USN-9065-1 requires Jammy libc6 >= 2.35-0ubuntu3.18'
+          cat "$evidence/after.txt"
+          dpkg --compare-versions "$installed" ge 2.35-0ubuntu3.18
+      - name: Verify native iframe ownership and control dispatch
+        if: runner.os == 'Linux'
+        shell: bash
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_BROWSER: '1'
+        run: |
+          set -o pipefail
+          export WEBMUX_BROWSER_EXECUTABLE="$(node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())")"
+          cd server
+          go test -race ./internal/browser -run '^TestNativePageFrameControls$' -count=1 -timeout=2m -json | tee "$RUNNER_TEMP/browser-frame-controls.jsonl"
       - name: Install qualified tmux for Rig coordination
         if: runner.os == 'Linux'
         run: |
@@ -230,7 +276,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo -n apt-get update
-          sudo -n apt-get install -y openssh-server tmux xvfb x11vnc x11-xserver-utils x11-utils xdotool xclip guacd libguac-client-rdp0 freerdp2-shadow-x11
+          sudo -n apt-get install -y openssh-server mosh tmux xvfb x11vnc x11-xserver-utils x11-utils xdotool xclip guacd libguac-client-rdp0 freerdp2-shadow-x11
       - name: Verify real agent workflows and screenshot repeatability
         if: runner.os == 'Linux'
         working-directory: webmux
@@ -249,6 +295,12 @@ jobs:
           ssh_result=0
           npm run test:e2e:go -- ssh-integration.spec.ts --output=test-results/ssh-go || ssh_result=1
           exit "$ssh_result"
+      - name: Verify automatic browser launch through real Mosh
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_MOSH: '1'
+        run: npm run test:e2e:go -- mosh-browser.spec.ts --output=test-results/mosh-go
       - name: Verify managed agents through the published Rig CLI
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux
@@ -259,6 +311,38 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/webmux-openrig" --no-audit --no-fund @openrig/cli@0.6.14
           export WEBMUX_OPENRIG_CLI="$RUNNER_TEMP/webmux-openrig/node_modules/@openrig/cli/dist/bin-wrapper.js"
           npm run test:e2e:go -- openrig.spec.ts --output=test-results/openrig-go
+          node ../scripts/qualify-openrig-fixture-lifecycle.mts test-results/rig-worker-lifecycle
+          npm run test:e2e:go -- openrig-host.spec.ts --output=test-results/openrig-host-go
+          npm run test:e2e:go -- openrig-identity.spec.ts --output=test-results/openrig-identity-go
+          npm run test:e2e:go -- openrig-activity.spec.ts --output=test-results/openrig-activity-go
+          npm run test:e2e:go -- openrig-notifications.spec.ts --output=test-results/openrig-notifications-go
+          WEBMUX_REAL_AGENTS=1 npm run test:e2e:go -- agent-integration.spec.ts --output=test-results/agents-rig-coexistence
+      - name: Preserve native Rig browser diagnostics
+        if: ${{ always() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: native-rig-browser-diagnostics
+          path: webmux/test-results/openrig-go/
+          if-no-files-found: warn
+      - name: Verify checked local Rig Stop with the published native contract
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
+        working-directory: webmux
+        env:
+          WEBMUX_REAL_OPENRIG: '1'
+          OPENRIG_HOST_SELECTED: 'webmux-ci-unrelated-selection'
+        run: |
+          python3 -m unittest discover -s ../scripts -p test_rig_stop_relay.py -v
+          python3 -m unittest discover -s ../scripts -p test_qualify_rig_stop_relay.py -v
+          df -Pk "$RUNNER_TEMP" "$PWD" "$(npm config get cache)"
+          sudo -n apt-get install -y lsof
+          npm install --prefix "$RUNNER_TEMP/webmux-openrig-stop" --ignore-scripts --no-audit --no-fund @openrig/cli@0.7.18
+          export WEBMUX_OPENRIG_CLI="$RUNNER_TEMP/webmux-openrig-stop/node_modules/@openrig/cli/dist/bin-wrapper.js"
+          mkdir -p test-results
+          cp -f "$RUNNER_TEMP/webmux-openrig-stop/package-lock.json" test-results/openrig-stop-install-lock.json
+          test "$(node "$WEBMUX_OPENRIG_CLI" --version)" = '0.7.18 (3bf87c62)'
+          npm run test:e2e:go -- openrig-stop.spec.ts --output=test-results/openrig-checked-stop
+          df -Pk "$(docker info --format '{{.DockerRootDir}}')" "$RUNNER_TEMP" "$PWD"
+          python3 ../scripts/qualify-rig-stop-relay.py --cli "$WEBMUX_OPENRIG_CLI" --output "$PWD/test-results/openrig-stop-relay"
       - name: Verify real VNC interoperability through Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux
@@ -274,6 +358,13 @@ jobs:
         run: |
           sudo -n apt-get install -y build-essential pkg-config libcairo2-dev libjpeg-turbo8-dev libpng-dev uuid-dev libssl-dev freerdp2-dev libpango1.0-dev
           python3 scripts/build-guacd.py --prefix "$RUNNER_TEMP/webmux-guacd" --build-root "$RUNNER_TEMP/webmux-guacd-build"
+      - name: Verify live native component inventory
+        if: ${{ !cancelled() && runner.os == 'Linux' && steps.rdp-proxy.outcome == 'success' }}
+        env:
+          WEBMUX_NATIVE_COMPONENTS_GUACD: ${{ runner.temp }}/webmux-guacd/sbin/guacd
+          WEBMUX_NATIVE_COMPONENTS_OUTPUT: ${{ runner.temp }}/webmux-native-components
+          LD_LIBRARY_PATH: ${{ runner.temp }}/webmux-guacd/lib
+        run: python3 scripts/test_native_components_live.py
       - name: Verify RDP startup registration ordering
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.rdp-proxy.outcome == 'success' }}
         run: |
@@ -299,6 +390,9 @@ jobs:
             ${{ runner.temp }}/webmux-guacd-build/*.log
             ${{ runner.temp }}/webmux-guacd-build/*.json
             ${{ runner.temp }}/webmux-guacd-build/*.txt
+            ${{ runner.temp }}/webmux-native-components
+            ${{ runner.temp }}/webmux-ci-libc
+            ${{ runner.temp }}/browser-frame-controls.jsonl
             test-results
 
   test:
@@ -323,6 +417,12 @@ jobs:
       - name: Type check
         run: npm run typecheck
         working-directory: webmux
+
+      - name: Test native component inventory controls
+        run: python3 -m unittest discover -s scripts -p test_native_components.py
+
+      - name: Verify native Codex qualification witness controls
+        run: python3 -m unittest discover -s tests -p test_native_codex_launch_witness.py -v
 
       - name: Verify native TypeScript 7 source discovery
         timeout-minutes: 5
@@ -421,19 +521,71 @@ jobs:
         run: npm test
         working-directory: webmux
 
+      - name: Repeat retained Windows terminal failure context
+        shell: pwsh
+        working-directory: webmux/server/internal/thirdparty/vt
+        run: |
+          $context = @{ source = (git rev-parse HEAD); goVersion = (go version); cpu = @(); enabledXStateFeatures = 'unavailable' }
+          try { $context.cpu = @(Get-CimInstance Win32_Processor -ErrorAction Stop | Select-Object Name, Manufacturer, NumberOfCores, NumberOfLogicalProcessors) } catch { $context.cpuState = 'unavailable' }
+          try {
+            Add-Type -TypeDefinition 'using System.Runtime.InteropServices; public static class WebMuxVtCpu { [DllImport("kernel32.dll")] public static extern ulong GetEnabledXStateFeatures(); }' -ErrorAction Stop
+            $context.enabledXStateFeatures = ('0x{0:x}' -f [WebMuxVtCpu]::GetEnabledXStateFeatures())
+          } catch { $context.xstateState = 'unavailable' }
+          $context | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 "$env:RUNNER_TEMP/webmux-vt-runtime-context.json"
+          go test -json . -count=10 -timeout=10m | Tee-Object -FilePath "$env:RUNNER_TEMP/webmux-vt-repeat.jsonl"
+          if ($LASTEXITCODE -ne 0) { throw 'Native Windows VT repetition failed' }
+
+      - name: Preserve Windows terminal repetition receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-vt-repeat
+          path: |
+            ${{ runner.temp }}/webmux-vt-repeat.jsonl
+            ${{ runner.temp }}/webmux-vt-runtime-context.json
+
       - name: Build
         run: npm run build
         working-directory: webmux
 
       - name: Install Playwright Chromium
+        id: windows_browser_tools
         run: npx playwright install chromium
         working-directory: webmux
 
+      - name: Prepare protected Windows Chromium access
+        shell: pwsh
+        working-directory: webmux
+        run: |
+          $browser = (node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())").Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the qualified Chromium executable.' }
+          $cache = Join-Path $env:LOCALAPPDATA 'ms-playwright'
+          if ($env:PLAYWRIGHT_BROWSERS_PATH) {
+            if (-not [IO.Path]::IsPathRooted($env:PLAYWRIGHT_BROWSERS_PATH)) { throw 'Expected an absolute owned Playwright cache.' }
+            $cache = $env:PLAYWRIGHT_BROWSERS_PATH
+          }
+          & ../scripts/test-windows-chromium-sandbox.ps1 -TestRoot (Join-Path $env:RUNNER_TEMP 'chromium-sandbox-scope-controls') -ReceiptPath (Join-Path $PWD 'test-results/chromium-sandbox-scope.json')
+          & ../scripts/prepare-windows-chromium-sandbox.ps1 -BrowserPath $browser -InstallRoot $cache -ReceiptPath (Join-Path $PWD 'test-results/chromium-sandbox-access.json')
       - name: Run browser tests against Go
         run: npm run test:e2e:go
         working-directory: webmux
         env:
           WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS: '1'
+
+      - name: Observe native application worker resources
+        if: ${{ !cancelled() && steps.windows_browser_tools.outcome == 'success' }}
+        shell: pwsh
+        run: |
+          Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object DeviceID, Size, FreeSpace
+          foreach ($sample in 1..3) {
+            Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize, FreePhysicalMemory
+            Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -Filter "Name='_Total'" | Select-Object PercentProcessorTime
+            if ($sample -lt 3) { Start-Sleep -Seconds 5 }
+          }
+      - name: Qualify connected local application in disposable hosted fixture
+        if: ${{ !cancelled() && steps.windows_browser_tools.outcome == 'success' }}
+        shell: pwsh
+        run: ./scripts/qualify-windows-local-application.ps1 -OutputDirectory "$env:RUNNER_TEMP/webmux-native-local-application"
 
       - name: Stress Windows terminal reconnect
         run: npm run test:e2e:go -- terminal-mouse.spec.ts --grep restart --repeat-each=10 --output=test-results/reconnect-stress
@@ -442,6 +594,25 @@ jobs:
       - name: Check Go screenshot repeatability
         run: npm run test:visual
         working-directory: webmux
+
+      - name: Qualify first browser navigation components
+        if: ${{ !cancelled() && steps.windows_browser_tools.outcome == 'success' }}
+        timeout-minutes: 5
+        working-directory: webmux
+        shell: pwsh
+        env:
+          WEBMUX_REAL_BROWSER: '1'
+          WEBMUX_BROWSER_REQUIRE_NETWORK_APPCONTAINER: '1'
+          WEBMUX_BROWSER_NAVIGATION_DIAGNOSTICS: '1'
+        run: |
+          $env:WEBMUX_BROWSER_EXECUTABLE = (node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())").Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve the qualified Chromium executable.' }
+          $env:WEBMUX_BROWSER_NAVIGATION_ARTIFACT_DIR = Join-Path $PWD 'test-results/native-first-navigation'
+          Push-Location server
+          try {
+            go test ./internal/browser -run '^(TestNativeFirstNavigationComponents|TestNativeNavigationTraceCancellation)$' -count=1 -timeout=3m -v
+            if ($LASTEXITCODE -ne 0) { throw 'Native first-navigation component qualification failed.' }
+          } finally { Pop-Location }
 
       - name: Preserve browser parity evidence
         if: always()
@@ -453,3 +624,4 @@ jobs:
             tests/e2e/.visual-baseline
             webmux/test-results
             test-results
+            ${{ runner.temp }}/webmux-native-local-application/public

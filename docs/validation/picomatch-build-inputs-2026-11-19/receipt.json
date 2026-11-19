@@ -1,0 +1,85 @@
+{
+  "recordedUTC": "2026-11-19T04:05:07.900032+00:00",
+  "head": "c195e020d3ee176b00b976cb76a22d23c6b9e5b3",
+  "nativeNodeVersion": "v24.21.0",
+  "instrumentation": "Private synchronous Node module load hook wraps published picomatch entry and callable properties; no installed file changes. Positive entry/makeRe controls. Observational record of these build/test invocations, not exhaustive coverage of arbitrary configs/devservers.",
+  "buildCalls": 1,
+  "testCalls": 13,
+  "buildPatterns": [
+    "**/.env",
+    "**/.env.*",
+    "**/*.{crt,pem,key,p12,pfx,cer,der}",
+    "**/.npmrc",
+    "**/.yarnrc.yml",
+    "**/.git/**"
+  ],
+  "testAdditionalPatternLiterals": [
+    "**",
+    "**/.git/**",
+    "**/.vitest-secret-token",
+    "**/node_modules/**",
+    "*.{test,spec}.?(c|m)[jt]s?(x)",
+    "..",
+    "../../tests/frontend/**/*.{test,spec}.?(c|m)[jt]s?(x)",
+    "frontend",
+    "tests"
+  ],
+  "allObservedPatternOrigins": "Vite/Vitest defaults, repository test include literal, and tinyglobby subdivisions of that literal. No observed browser/API/terminal user content becomes a compile pattern.",
+  "frontendTests": 444,
+  "testFiles": 43,
+  "productionModules": 145,
+  "allSixFinalBuildOutputsExactlyEqualUninstrumented4b": true,
+  "sourceSHA256": {
+    "webmux/package-lock.json": "45c39a2a9b254ac87a33b6ca83f90cda1bf9dbdb1a0f90038cd0024b45e015fa",
+    "webmux/package.json": "ffe447206e2569761ddb1ff9fe753852a8b7858aa560db43746dd10d577e807c",
+    "webmux/frontend/package.json": "cbec8ca43319221f87f7f45cac994b25aa623700c04f084ce0084dec066dc167",
+    "webmux/frontend/vite.config.ts": "bc1cf301e6f35bdc8d4100a93ecdf5977b29d6f807072bf7d9d467b04551cb78"
+  },
+  "installedDependencySourceSHA256": {
+    "picomatch/index.js": "02ae26406508e28f9ba0865be16cf77f0b33de6c4d4d49c212c4176df1d5625a",
+    "picomatch/lib/picomatch.js": "fdd249d7ffff853f3bb1c77eafc8baa1a437bea85a94c35877b83c6a40d9ca94",
+    "picomatch/lib/parse.js": "4e1e05447668aa1e94366c5516a2bcd8f5fff800cc92b1d0cd7d77703b8618c4",
+    "vite/dist/node/chunks/node.js": "5d40302b2d86ff8f3501df6503a69908dce2c2eab4ce03c154cd8745c0bec5f2",
+    "vitest/dist/chunks/index.Di8au7q4.js": "30444e3faa04d61f6641ebbb1fa4604edf338c69c460d24d5dcb37dee712db01",
+    "vitest/dist/chunks/cli-api.COfZo8lK.js": "a42f8ed8a242f47856eae9bbbb1ea403dc15279b1bb8c2dd59286513e6c12193",
+    "tinyglobby/dist/index.mjs": "fc1bed0d5da56d4638002af7deaf6d179e183a85de648c180839ca36b21b3b50",
+    "fdir/dist/index.mjs": "4a0266bf60373bc08bcac35a813587ead767864b3a80b5dca10bff999e05e32d"
+  },
+  "privateSHA256": {
+    "build-trace.jsonl": "da4554ac3ecf0c9e9565579a43be43b26dc1a46ef8601078330546aba4068915",
+    "frontend-module-graph-c195.json": "cc0f8249c68af7cc002c844cf919b8f6fdf47aa1b2b1c1fa5d4648b50f568883",
+    "control.jsonl": "f51ddf67f42c557c2eca911e705a53ed7f7639fc66b822817d84a4e9439b3862",
+    "test-trace.jsonl": "73674185591cd96330486cf4ef457d57b9f81259caa2f8e663a05d52050ef41d",
+    "frontend-module-graph.mjs": "db8dbc3e81344ec09569573888415f2fe860bfcc44cd729184bbe03f5e60f673",
+    "tests.log": "8d357c98fed3e3cd409d1830763f760fd76c7c12985e7480877692ce1470f530",
+    "trace-picomatch.mjs": "c0e20c218bae1495361fd05ce03e0d17dc270821d41fcec34365d7b97e6b0dfa",
+    "build.log": "9c88711e70eb3165c58ac55e190240ca31c64b9af01de5a6472386153c8950fc"
+  },
+  "scope": "Trusted build/test inputs and inspected native runtime boundary support a not-present runtime disposition. Generic4.0.7 behavior is not repaired; arbitrary patterns, modified plugins/configs and development servers remain out of this evidence scope. No release waiver or issue closure.",
+  "staticInputReview": [
+    {
+      "file": "vite/dist/node/chunks/node.js",
+      "line": 37957,
+      "finding": "The production-build call compiles resolved server.fs.deny configuration; observed values equal locked Vite defaults. Browser requests are match subjects, not patterns for this call."
+    },
+    {
+      "file": "vitest/dist/chunks/index.Di8au7q4.js",
+      "line": 6333,
+      "finding": "Project file discovery forwards configured include/exclude literals to tinyglobby. The committed include is fixed; default excludes are locked dependency code."
+    },
+    {
+      "file": "tinyglobby/dist/index.mjs",
+      "line": 217,
+      "finding": "Compile processed pattern/ignore lists once, then pass crawled paths to returned match functions. Paths from directory contents do not become compile patterns on this path."
+    }
+  ],
+  "classificationReview": {
+    "nativeRuntime": "Not present in all twelve inspected archives and byte-matched embedded UI; two MSI files keep checksum/install-smoke scope only.",
+    "currentBuildTest": "No untrusted pattern-definition API in the reviewed default production build/test paths. Config/source/plugin authors have the existing authority to execute JavaScript during builds; arbitrary edited configurations and development-server deployments require their own review.",
+    "genericMatcher": "Three of six retained repeated-extglob probes still timeout; no algorithm repair or arbitrary-pattern safety claim.",
+    "advisoryReconciliation": "Pinned upstream maintainer recommends trusted patterns; GitHub withdrawal and unchanged gate reflect reclassification. CVE PUBLISHED is retained, not mislabeled rejected.",
+    "releaseGate": "Exactc195 unchanged audit job succeeded; full original CI and native cohort still live. No waiver, override, downgrade, version substitution or threshold change.",
+    "recommendedDisposition": "Resolve repository exposure by runtime non-presence plus trusted build-input boundary after current exact-head required checks and review; do not claim generic4.0.7 repaired."
+  },
+  "upstreamMaintainerCommentSHA256": "4ecc5faef2c524e068e4195ba5c8619ce4c048d0c0f09598f4ef2affef12402d"
+}

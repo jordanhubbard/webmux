@@ -4,7 +4,10 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawn, spawnSync } from 'node:child_process';
 import { startOpenRigFixture } from './openrig-fixture.mts';
+import { prepareBrowserTestHome } from '../../webmux/scripts/browser-test-home.mts';
+import { prebuiltBrowserFixture } from '../../webmux/scripts/prebuilt-browser-fixture.mts';
 
+const prebuilt = prebuiltBrowserFixture(process.env, process.platform);
 const testHome = path.resolve(import.meta.dirname, '.test-home');
 const defaultsDir = path.resolve(import.meta.dirname, '../../webmux/config.defaults');
 if (process.platform !== 'win32' && !process.env.TMUX_TMPDIR) {
@@ -15,8 +18,11 @@ if (authMode !== 'none' && authMode !== 'local') throw new Error(`Unsupported br
 
 // Initialize before starting the server: Playwright's globalSetup runs AFTER its
 // webServer starts. Never remove watched storage from a running server, including
-// during teardown (especially on Windows). The next launch clears this fixture.
-fs.rmSync(testHome, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+// during teardown (especially on Windows). Preserve prior Windows homes because
+// an unconfirmed native owner can outlive the controller; Unix fixtures use the
+// outer runner's private tmux teardown before their next allocation.
+const retainedHome = prepareBrowserTestHome(testHome, process.platform === 'win32');
+if (retainedHome) console.error(`Retained previous Windows fixture home for original-provider recovery: ${retainedHome}`);
 for (const directory of ['config', 'logs', 'data']) {
   fs.mkdirSync(path.join(testHome, directory), { recursive: true });
 }
@@ -24,6 +30,10 @@ for (const entry of fs.readdirSync(defaultsDir, { withFileTypes: true })) {
   if (entry.isDirectory()) continue;
   let content = fs.readFileSync(path.join(defaultsDir, entry.name), 'utf8');
   if (entry.name === 'auth.yaml') content = content.replace('mode: local', `mode: ${authMode}`);
+  if (entry.name === 'app.yaml' && prebuilt) {
+    if (!content.includes('  listen_host: 0.0.0.0')) throw new Error('Expected the fixture listener default');
+    content = content.replace('  listen_host: 0.0.0.0', '  listen_host: 127.0.0.1');
+  }
   if (entry.name === 'app.yaml' && process.env.WEBMUX_REAL_OPENRIG === '1') content = content.replace('enabled_providers: []', 'enabled_providers: [rig]');
   if (entry.name === 'app.yaml' && process.env.WEBMUX_VISUAL_PARITY === '1') {
     if (!content.includes('    port: 4822')) throw new Error('Expected the default guacd port in the visual fixture');
@@ -46,8 +56,8 @@ process.env.WEBMUX_HOME = testHome;
 const testRequire = createRequire(path.resolve(import.meta.dirname, '../../webmux/package.json'));
 const { chromium } = testRequire('playwright-core') as { chromium: { executablePath(): string } };
 process.env.WEBMUX_BROWSER_EXECUTABLE ||= process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || chromium.executablePath();
-if (process.env.WEBMUX_REAL_SSH === '1') {
-  if (process.platform !== 'linux') throw new Error('The real SSH fixture requires Linux');
+if (process.env.WEBMUX_REAL_SSH === '1' || process.env.WEBMUX_REAL_MOSH === '1') {
+  if (process.platform !== 'linux' && !(process.env.WEBMUX_REAL_MOSH === '1' && process.platform === 'darwin')) throw new Error('The real SSH/Mosh fixture requires Linux, or macOS for Mosh');
   const directory = path.join(testHome, 'ssh-bin');
   fs.mkdirSync(directory, { mode: 0o700 });
   const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
@@ -57,13 +67,15 @@ if (process.env.WEBMUX_REAL_SSH === '1') {
   fs.writeFileSync(path.join(directory, 'ssh'), `#!/bin/sh\nexec /usr/bin/ssh ${args.map(quote).join(' ')} "$@"\n`, { mode: 0o700 });
   process.env.PATH = `${directory}${path.delimiter}${process.env.PATH ?? ''}`;
 }
-if (process.env.WEBMUX_VISUAL_PARITY === '1' || process.env.WEBMUX_REAL_VNC === '1' || process.env.WEBMUX_REAL_RDP === '1') process.env.WEBMUX_ALLOW_LOCAL_TARGETS = '1';
-const binary = path.join(testHome, process.platform === 'win32' ? 'webmux.exe' : 'webmux');
-const build = spawnSync('go', ['run', './cmd/build', '-o', binary], {
-  cwd: path.resolve(import.meta.dirname, '../../webmux/server'), stdio: 'inherit',
-});
-if (build.error) throw build.error;
-if (build.status !== 0) process.exit(build.status ?? 1);
+if (process.env.WEBMUX_VISUAL_PARITY === '1' || process.env.WEBMUX_REAL_VNC === '1' || process.env.WEBMUX_REAL_RDP === '1' || process.env.WEBMUX_REAL_MOSH === '1') process.env.WEBMUX_ALLOW_LOCAL_TARGETS = '1';
+const binary = prebuilt ?? path.join(testHome, process.platform === 'win32' ? 'webmux.exe' : 'webmux');
+if (!prebuilt) {
+  const build = spawnSync('go', ['run', './cmd/build', '-o', binary], {
+    cwd: path.resolve(import.meta.dirname, '../../webmux/server'), stdio: 'inherit',
+  });
+  if (build.error) throw build.error;
+  if (build.status !== 0) process.exit(build.status ?? 1);
+}
 const stopOpenRig = process.env.WEBMUX_REAL_OPENRIG === '1' ? await startOpenRigFixture(testHome) : () => {};
 const child = spawn(binary, [], { stdio: 'inherit', env: { ...process.env, WEBMUX_COORDINATION_DISABLED: process.env.WEBMUX_REAL_OPENRIG === '1' ? '0' : '1', WEBMUX_ROOT: '', WEBMUX_DEBUG_TERMINAL: '1' } });
 for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => child.kill(signal));

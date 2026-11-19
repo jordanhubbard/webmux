@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/jordanhubbard/webmux/server/internal/openrigcoord"
 	"github.com/jordanhubbard/webmux/server/internal/openrigproof"
@@ -75,6 +76,7 @@ func (s *Server) attachOpenRig(w http.ResponseWriter, r *http.Request, owner str
 	argv := []string{path, "tui"}
 	switch body.View {
 	case "dashboard":
+		argv = rigDashboardArgv(r.Context(), path)
 	case "agent":
 		agents, err := readOpenRigAgents(r.Context(), path)
 		if err != nil {
@@ -244,18 +246,23 @@ func (s *Server) getOpenRigAgents(w http.ResponseWriter, r *http.Request, owner 
 
 // Managed agents attach through a server-verified transport, never arbitrary argv.
 type managedRigAgent struct {
-	Target    string `json:"target"`
-	Project   string `json:"project"`
-	RigID     string `json:"rigId"`
-	RigName   string `json:"rigName"`
-	Pod       string `json:"pod"`
-	Name      string `json:"name"`
-	Host      string `json:"host"`
-	Cwd       string `json:"cwd"`
-	Runtime   string `json:"runtime"`
-	Tmux      string `json:"tmux"`
-	SessionID string `json:"sessionId,omitempty"`
-	Connected bool   `json:"connected,omitempty"`
+	NativeOwned         bool   `json:"nativeOwned,omitempty"`
+	NativeNodeID        string `json:"nativeNodeId,omitempty"`
+	LogicalID           string `json:"logicalId,omitempty"`
+	CreationOperationID string `json:"creationOperationId,omitempty"`
+	SenderAddress       string `json:"senderAddress,omitempty"`
+	Target              string `json:"target"`
+	Project             string `json:"project"`
+	RigID               string `json:"rigId"`
+	RigName             string `json:"rigName"`
+	Pod                 string `json:"pod"`
+	Name                string `json:"name"`
+	Host                string `json:"host"`
+	Cwd                 string `json:"cwd"`
+	Runtime             string `json:"runtime"`
+	Tmux                string `json:"tmux"`
+	SessionID           string `json:"sessionId,omitempty"`
+	Connected           bool   `json:"connected,omitempty"`
 }
 
 func (s *Server) attachManagedRig(w http.ResponseWriter, r *http.Request, owner string) {
@@ -324,6 +331,10 @@ func (s *Server) getCoordination(w http.ResponseWriter, r *http.Request, owner s
 	providers := []coordinationProvider{}
 	if os.Getenv("WEBMUX_COORDINATION_DISABLED") != "1" {
 		providers = s.coordinationProviders(owner)
+	}
+	// Grid observation polling must not query Agent Deck or read message bodies.
+	if r.URL.Query().Get("observations") == "rig" && os.Getenv("WEBMUX_COORDINATION_DISABLED") != "1" {
+		providers = []coordinationProvider{&rigProvider{home: s.store.Home, owner: owner, server: s, factsOnly: true}}
 	}
 	selected := r.URL.Query().Get("provider")
 	if selected == "" {
@@ -478,29 +489,66 @@ func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, 
 	if !s.openRigAccess(w, owner) {
 		return
 	}
+	// Only this endpoint admits browser-generated identities. An old server's
+	// unknown route cannot silently execute a legacy launch while ignoring them.
+	tracked := r.PathValue("requestId") != ""
+	refuse := func(status int, message string) {
+		if tracked {
+			writeJSON(w, status, map[string]any{"error": message, "refused": map[string]string{"state": "refused", "code": "invalid_creation_request"}})
+		} else {
+			writeError(w, status, message)
+		}
+	}
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 8192))
 	if err != nil {
-		writeError(w, 400, "Invalid coordination request.")
+		refuse(400, "Invalid coordination request.")
 		return
 	}
-	var request struct {
-		coordinationLaunchRequest
-		Row *int `json:"row"`
-		Col *int `json:"col"`
-	}
+	var request coordinationLaunchRequest
 	if json.Unmarshal(body, &request) != nil || request.Provider == "" || (request.Row == nil) != (request.Col == nil) {
-		writeError(w, 400, "Invalid coordination request.")
+		refuse(400, "Invalid coordination request.")
+		return
+	}
+	if tracked {
+		if !creationOperationID.MatchString(request.CreationRequestID) || request.CreationRequestID != r.PathValue("requestId") ||
+			request.Provider != "rig" || request.Runtime != "codex" || (request.Host != "" && request.Host != "localhost") ||
+			(request.Mode != "new" && request.Mode != "existing") || (runtime.GOOS != "darwin" && runtime.GOOS != "linux") ||
+			(request.Row != nil && (*request.Row < 0 || *request.Col < 0)) {
+			refuse(400, "This endpoint requires an original local native Codex creation request.")
+			return
+		}
+	} else if request.CreationRequestID != "" || request.ContinueOriginal {
+		refuse(400, "Use the native creation request endpoint for an original request identity.")
+		return
+	}
+	if request.Inspect && (request.Provider != "rig" || (request.Mode != "new" && !(request.Mode == "existing" && request.Runtime == "codex" && (request.Host == "" || request.Host == "localhost")))) {
+		refuse(400, "Only an original Rig creation request can be inspected here.")
+		return
+	}
+	if request.TrustRequest != "" && (!creationSelectionID.MatchString(request.TrustRequest) || request.Provider != "rig" || request.Runtime != "codex" ||
+		(request.Host != "" && request.Host != "localhost") || (request.Mode != "new" && request.Mode != "existing")) {
+		refuse(400, "Only the saved local Codex request can be retried after a trust review.")
 		return
 	}
 	provider := s.coordinationProvider(owner, request.Provider)
 	if provider == nil || !provider.Descriptor().Available {
-		writeError(w, 409, "The selected coordination provider is unavailable.")
+		refuse(409, "The selected coordination provider is unavailable.")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 75*time.Second)
 	defer cancel()
-	launch, err := provider.Launch(ctx, request.coordinationLaunchRequest)
+	launch, err := provider.Launch(ctx, request)
 	if err != nil {
+		var blocked *coordinationCreationNeedsOwner
+		if errors.As(err, &blocked) {
+			writeJSON(w, http.StatusConflict, map[string]any{"error": blocked.Error(), "blocked": blocked.Blocked})
+			return
+		}
+		var pending *coordinationCreationPending
+		if errors.As(err, &pending) {
+			writeJSON(w, http.StatusAccepted, map[string]any{"creation": pending.Creation})
+			return
+		}
 		writeError(w, 502, "Coordination: "+err.Error())
 		return
 	}
@@ -509,7 +557,11 @@ func (s *Server) createCoordinatedAgent(w http.ResponseWriter, r *http.Request, 
 		s.sessionError(w, err, "Session was created. Open it from Coordination after making room in the grid.")
 		return
 	}
-	writeJSON(w, 200, map[string]any{"target": launch.Target, "session": value})
+	publicTarget := launch.Target
+	if launch.SeatID != "" {
+		publicTarget = launch.SeatID
+	}
+	writeJSON(w, 200, map[string]any{"target": publicTarget, "session": value})
 }
 func (s *Server) browseCoordinationWorkspaces(w http.ResponseWriter, r *http.Request, owner string) {
 	if !s.openRigAccess(w, owner) {
@@ -576,9 +628,22 @@ func (s *Server) coordinationProvider(owner, id string) coordinationProvider {
 
 func (s *Server) attachCoordinationTerminal(parent context.Context, owner string, launch coordinationLaunch, row, col *int) (session.Session, error) {
 	if launch.Provider == "rig" && !launch.Remote && len(launch.Argv) >= 4 {
+		// set-option does not accept tmux's '=name' exact-match syntax.
+		// Resolve a verified session ID on this socket first, so it cannot
+		// prefix-match another session if the named seat disappeared.
+		args, err := rigTmuxArgs(launch.TmuxServerFlag, launch.TmuxServerValue, "display-message", launch.AttachmentTarget, "-p", "#{session_id}")
+		if err != nil {
+			return session.Session{}, err
+		}
 		ctx, cancel := context.WithTimeout(parent, 3*time.Second)
 		defer cancel()
-		if err := exec.CommandContext(ctx, launch.Argv[0], "set-option", "-t", strings.TrimPrefix(launch.Argv[3], "="), "mouse", "on").Run(); err != nil {
+		output, err := exec.CommandContext(ctx, launch.Argv[0], args...).Output()
+		if err != nil || !rigTmuxSessionID.MatchString(strings.TrimSpace(string(output))) {
+			return session.Session{}, fmt.Errorf("coordinated terminal session identity is unavailable")
+		}
+		server, _ := rigTmuxServerArgs(launch.TmuxServerFlag, launch.TmuxServerValue)
+		args = append(server, "set-option", "-t", strings.TrimSpace(string(output)), "mouse", "on")
+		if err := exec.CommandContext(ctx, launch.Argv[0], args...).Run(); err != nil {
 			return session.Session{}, fmt.Errorf("enable coordinated terminal scrollback: %w", err)
 		}
 	}
@@ -591,6 +656,10 @@ func (s *Server) attachCoordinationTerminal(parent context.Context, owner string
 		identityProvider = ""
 	}
 	identity := session.RigIdentity{Provider: identityProvider, Target: viewerTarget, Project: launch.Project, Name: launch.Name, Host: launch.Host, Runtime: launch.Runtime, Workspace: launch.Workspace, ManagerProfile: launch.Profile}
+	identity.RigHostID = launch.RigHostID
+	identity.SeatID = launch.SeatID
+	identity.AttachmentTarget = launch.AttachmentTarget
+	identity.TmuxServerFlag, identity.TmuxServerValue = launch.TmuxServerFlag, launch.TmuxServerValue
 	if launch.Provider == "agent-deck" {
 		identity.NativeSessionID, identity.NativeStateFile = launch.NativeSession, launch.NativeStateFile
 	}
@@ -631,6 +700,9 @@ func discoverCoordination(ctx context.Context, providers []coordinationProvider,
 			check, cancel := context.WithTimeout(ctx, 20*time.Second)
 			defer cancel()
 			results[index].status, results[index].err = provider.Status(check)
+			if descriptor.ID == "rig" && results[index].err == nil && results[index].status.NativeCreationRequests {
+				results[index].descriptor.Capabilities = append(results[index].descriptor.Capabilities, "native-creation-requests")
+			}
 			// Adapter identity is authoritative even when a CLI omits attribution.
 			for i := range results[index].status.Projects {
 				results[index].status.Projects[i].Provider = descriptor.ID

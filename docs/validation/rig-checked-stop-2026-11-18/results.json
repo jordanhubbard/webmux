@@ -1,0 +1,118 @@
+{
+  "parent": "f5179beb7b332c29ae95e3c58eeaa99b2b3b60ea",
+  "sourceSHA256": {
+    ".github/workflows/ci.yml": "26198953baf4011b96a7caac24f826fdbad703dd785fee200bb083d9daf52c90",
+    "docs/openrig.md": "89e0ff8b151658000409c4e3167d0e1e7b520c14806df0ed666e6f80afdb1cd5",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "a298d621b1dde07ead08b5f7b21bfed5a322e1d4837b7813d95c9df2a234a728",
+    "webmux/frontend/src/utils/api.ts": "fb832cb13fbfbf97d4f020c26ce6b03061252d35acc9b53a201ba3602955ecbb",
+    "webmux/package.json": "69c8e88b5087f6e8541fb709cd91bc4f73006c24f24c00f783c88c208a0118b7",
+    "webmux/server/internal/httpapi/coordination_providers.go": "dfdf36282f611dbae6ba1b4b0b6e6eb96efe755db056249a965e7e60540b3b50",
+    "webmux/server/internal/httpapi/openrig_test.go": "6195035aa508889da59d87d661ca61b2d0df781e1c449d6dafa53619a4fbd737",
+    "webmux/server/internal/httpapi/server.go": "c70cade0b2378475ac1bd858a042e92736000e19240e840ba96b728bc5e02a2e",
+    "webmux/server/internal/openrigcoord/coord.go": "c2db86304f4c497f3972ff64f9408fb39c6f3e7321862a824cc9b4e9c2d6824c",
+    "webmux/server/internal/openrigcoord/runner.mts": "06eec29f9321341ade27a8145a293fc1e287e1cec2ddf704d2ddf1e7a2d69df4",
+    "scripts/rig-stop.test.mts": "371a0025e82d8e5ddc871e414acae555a3dd2957d83cf228428a683c88ffd821",
+    "tests/e2e/openrig-stop.spec.ts": "0a2584c019ddc1715514d467daf589701a7418c4a76851b80e93ffc0ef110309",
+    "tests/frontend/RigStopDialog.test.tsx": "6f32187c790c94205742e7a536b4b54d68baa924814162829a4f97bf8a71ca0e",
+    "webmux/frontend/src/components/RigStopDialog.tsx": "fb0b73825915801a52d457d08069053f100a2e4cc5e3a953d82ad2bd30d62dc3",
+    "webmux/server/internal/httpapi/rig_stop.go": "bed0ba2b3c94af5bb9b1cb9acf6f9bfb9bc101f779eb1737fb60743626f3bd28",
+    "webmux/server/internal/httpapi/rig_stop_test.go": "8483d55c6f156f2b1593297ef0db14dd482c44543a0daf1db4c91f02a93e47af",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "73960414f86b6da1ff9f724399fb8fe81fc303ad7e7384cb790f0dc80d2c6d4b"
+  },
+  "privateReceiptSHA256": {
+    "checked-stop-webmux-durable.log": "263d1c9a4601ae3f2228c39506f051d2d046436a42467f132168bda944da3a15",
+    "checked-stop-webmux-durable/openrig-stop-checked-local-c9922-y-the-confirmed-native-seat-chromium/checked-stop.json": "9bbc56a3921907dc85c41067a225cbfe04d084f2cfe74ca2d3ee52ada7216d31",
+    "checked-stop-helpers-final.log": "556f4f440702b96b4209a4c2fb24cd42c97bb3a1a458bea7550a279f3dd71e5f",
+    "checked-stop-frontend.log": "542d2e40f5824287679628270191d4586a7309ccd0f822efbe2d3f23e16642b0",
+    "checked-stop-native-receipt.json": "24a093e400789c72cf031db9ff337c7bda98b8fb09f6eea8072e29343c117c3f",
+    "package-audit.json": "b1bf4e4749f77591c5b6cd1579c07637cd87440911c389088fdffdac0255949b"
+  },
+  "native": {
+    "rig": "0.7.18 (3bf87c62)",
+    "node": "v24.21.0",
+    "tmux": "tmux 3.8",
+    "browser": "158.0.8127.36",
+    "rigId": "01M7PTEDAJAG5V43SQTRDGJ85Z",
+    "viewer": "1565b714-c85d-4bcf-955b-ec4b853753c1",
+    "originalPID": "87021",
+    "replacementPID": "88060",
+    "siblingPID": "87049",
+    "adoptedPID": "88411",
+    "staleReviewRefused": true,
+    "adoptedReviewRefused": true,
+    "confirmedSeatStopped": true,
+    "siblingAndAdoptedSurvive": true,
+    "retainedLayoutAndHistory": true,
+    "duplicateConsumed": true,
+    "receipt": {
+      "id": "d9773b7c12bdb0219231f0a5a8689b0897edbae5cd2827c19d9e24074c02b1f6",
+      "state": "stopped",
+      "code": "stopped",
+      "posted": true,
+      "stopPhase": "kill_attempted"
+    },
+    "scope": "Actual private native Rig/tmux/browser. Synthetic terminal/sleep fixtures only; not authenticated coding, remote SSH relay or managed launch conversion acceptance."
+  },
+  "checks": {
+    "helperTestsPassed": 118,
+    "frontendTestsPassed": 402,
+    "strictTypeScriptProjects": 5,
+    "affectedGoRace": [
+      "httpapi",
+      "openrigcoord"
+    ],
+    "affectedGoVet": [
+      "httpapi",
+      "openrigcoord"
+    ],
+    "frontendLint": true,
+    "workflowYAMLParsed": true,
+    "build": true
+  },
+  "nativeContract": "seat-stop.v1",
+  "qualifiedDaemonCommit": "3bf87c62a24fcb0a441334d7f8b0b1f2687ecf64",
+  "remaining": [
+    "Hosted Linux checked-stop fixture and exact-head CI pending.",
+    "WebMux-created adopted launchers/SSH relays are ineligible; native launch conversion and actual remote-relay acceptance remain open in #438/#194.",
+    "No authenticated coding-session recovery or installed CLI upgrade qualification.",
+    "Optional manager dependency review under #91 includes one moderate Hono static-middleware advisory propagated across three vendor package records; no general reachability or security-clearance claim.",
+    "Unchanged first-party dependency audit #429 and normal review/merge/release gates remain."
+  ],
+  "linuxManagerIdentityFollowup": {
+    "reason": "Linux Node24 ps comm is MainThread; first hosted native Stop preview refused local_manager_unverified",
+    "failedRun": 44263510039,
+    "failedJob": 134662317906,
+    "failedArtifact": 14411040439,
+    "parentHead": "6d178b5e0331615edaf2b94f434980eb02a031b0",
+    "kernelProbe": {
+      "version": "v24.21.0",
+      "platform": "linux",
+      "uid": 0,
+      "record": "0 Wed Nov 18 08:26:35 2026 MainThread",
+      "executable": "/qual/node"
+    },
+    "officialLinuxARM64NodeTarSHA256": "6ad1325edbdb5649c379b75a237147a666c95d4f9ae8d340fef2d1575d289ad2",
+    "adapterSHA256": "d5f3f7bdd28b43b0a90aa681310e59f318999789177ad430c217e1f97d61b5ba",
+    "helperTestsPassed": 121,
+    "strictTypeScriptProjectsPassed": 5,
+    "affectedGoRaceAndVetPassed": [
+      "httpapi",
+      "openrigcoord"
+    ],
+    "adapterControlsOnLinuxARM64Node24": {
+      "passed": 20,
+      "skipped": 0,
+      "scope": "Node native runtime in isolated Ubuntu24 container; command/HTTP adapter fixtures, not full native Rig/browser acceptance"
+    },
+    "mainThreadControlFailsParent": true,
+    "macNativeBrowser": {
+      "passed": 1,
+      "skipped": 0,
+      "seconds": 10.3,
+      "scope": "actual Rig0.7.18/tmux3.8/browser; synthetic terminal/sleep"
+    },
+    "hostedNativeLinuxFollowup": "pending; no new-head native Linux success claim",
+    "vendorLockRetention": "Copy install lock before version/native assertions, so failed checks retain resolved dependencies."
+  },
+  "sourceSnapshotCommit": "6fa9435a6f9a8e106f402b9a3dfee3346474d8d8"
+}

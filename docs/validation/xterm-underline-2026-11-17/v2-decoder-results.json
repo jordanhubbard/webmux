@@ -1,0 +1,42 @@
+{
+  "recorded_utc": "2026-11-17T17:20:15.202090+00:00",
+  "scope": "Isolated, unadvertised v2 combined flags/REP codec/decoder primitive. Target starts from reference input; tests deliberately perturb current pen flags. Not Go ANSI snapshot restoration, native ConPTY, production/app attach or release acceptance.",
+  "production_enabled": false,
+  "reference_snapshot_adapter_installed": false,
+  "xterm_sha256": "14903579ff54664cd72f8e8699e6961a6272c21863ec1c3b118cdc8af5d4a972",
+  "source_sha256": {
+    "webmux/frontend/src/utils/terminalSnapshotProfile.ts": "90fa0bd16d5cf0ee57b6c118eaf07ce18b06db55a59c56f1943eb5d0ee87b23a",
+    "webmux/server/internal/screenstate/renderer_profile.go": "dd600dd7fd3e2df13e4ae96476e97420748fc909e38da6359090377563a344c2",
+    "webmux/server/internal/screenstate/renderer_profile_test.go": "0afb73949775a27d797e0638c5fd20c5e98c1667d507160d4361ff50516e9206",
+    "tests/e2e/screen-replay.spec.ts": "5d61353415d79d9de589c18f0c84fca796181598d9b449fbcf0cfa1b0c5eee12"
+  },
+  "renderer_controls": {
+    "controls": 256,
+    "failures": [],
+    "splits": 79,
+    "invalid": 16,
+    "badEncoding": 4,
+    "clearedRepeat": true,
+    "reusedRefused": true,
+    "disarmed": true,
+    "disposed": true,
+    "replies": []
+  },
+  "local_checks": {
+    "screen_race": "PASS, 5.077s",
+    "screen_vet": "PASS",
+    "frontend_tests": "372 passed",
+    "production_browser_and_decoder_suite": "412 passed, 1.4m; final small decoder/test hardening then rechecked targeted 2 tests, 12.6s",
+    "strict_typescript_source_inventory": "PASS, after final changes",
+    "frontend_lint": "PASS, after final changes"
+  },
+  "remaining": [
+    "Complete cell/saved-slot-safe ANSI painting including final pending wrap",
+    "Finalize v2 packet semantics after full encoder proof",
+    "Versioned owner/controller/viewer capability compatibility",
+    "Actual frontend initial/continued/second-attach acceptance",
+    "Real ConPTY hidden-state captures and same-job/legacy-refusal acceptance",
+    "Full final exact-head gates before merge"
+  ],
+  "source_checkpoint": "37ca51eac241433f7f276bad006bf80bd119a775"
+}

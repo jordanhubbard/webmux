@@ -1,0 +1,81 @@
+{
+  "recordedUTC": "2026-11-18T10:15:43.286162+00:00",
+  "issue": 468,
+  "base": "45151c356368b52eb20ccea92a34866472041e31",
+  "sourceSHA256": {
+    ".github/workflows/mosh-browser-diagnostics.yml": "9bd4747702d9f73dd71ddc90f5d8b55abe951f089b0c7f9442410673dfdd658d",
+    "tests/e2e/mosh-browser.spec.ts": "33baa2832c1d6012946bd3c1e4c8db8896a54d1df8431cd18b9f3b01fd0fc6b1",
+    "docs/validation/mosh-cleanup-2026-11-18/README.md": "6940d5e5b647260519afd2ac4dd79e16fea38da677f9d4fbb3fa3909989d51f2",
+    "webmux/scripts/private-test-tmux.mts": "cabb806b165310fd2ba21781e4846d6d9d06605476b04a14ac9d8fc71fca1fc2",
+    "scripts/private-test-tmux.test.mts": "415695f1b6f6efeb71363874d73bdc61680a77827ac6f5173894e654a6ee17b7"
+  },
+  "nativeParentFailure": {
+    "run": 44273583502,
+    "artifact": 14415120434,
+    "functionalFlagsPass": true,
+    "providerStopped": false,
+    "causeMaskedByFinalBoolean": true,
+    "causeEstablished": false
+  },
+  "initialDiagnostic": {
+    "source": "169eb6d7c2f7081dc8397c27a71a4d33501b9db1",
+    "run": 44278236979,
+    "conclusion": "success",
+    "independentTrials": 1,
+    "artifact": 14416370727,
+    "artifactSHA256": "c4ab5017071c47c3e0a6e0af80bda9818931df84d86e3ff84f0e43540989e7ff",
+    "allTenReceiptFlagsTrue": true,
+    "doesNotEstablishRepair": true
+  },
+  "currentLocal": {
+    "strictTypecheck": "PASS",
+    "publicPlaywrightReporterExpectedFailureControl": "PASS cause retained; not native acceptance",
+    "priorMacMosh": "PASS on169 source before explicit-cause/kill-result-reporting delta"
+  },
+  "cohort": {
+    "independentFreshBackends": 20,
+    "allFailuresRetained": true,
+    "testTimeoutSeconds": 120,
+    "jobTimeoutMinutes": 12,
+    "retries": 0,
+    "sourceSignInPrivacyAckAndCleanupAssertionsPreserved": true,
+    "nativeResult": "Pending on reset-probe correction"
+  },
+  "privateEvidenceSHA256": {
+    "mosh468-cleanup-local-checks.json": "2bb0d9fa6dda9cd6d36dac88ee1726dd1a1ce0df824109daae539b7d6ced5b5a",
+    "mosh468-cleanup-cause-final-types.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "mosh468-cause-probe-report.json": "fd4db0a787df87cd9d0f39f52c5f05afde751340a58d2727a879c03f812d9819",
+    "mosh468-cause-probe-result.json": "7596d3ba26408b96e79b658adcce7a9160a087d4aeb4af9d64303473ad81c243"
+  },
+  "repairClaim": false,
+  "priorCohort": {
+    "source": "895933e6d3f8d4991836d7d704c3c227abc39998",
+    "run": 44283713352,
+    "artifact": 14418327193,
+    "artifactSHA256": "34c2823801636eee5e34e6c808d3b96c6de26981412769e6eb6675a02ccc4997",
+    "trials": 20,
+    "failures": {
+      "trial-5": {
+        "nativeMosh": true,
+        "loggingDisabled": true,
+        "noLaunchURLInTerminalOutput": true,
+        "automaticPanel": true,
+        "callbackOnOriginalHost": true,
+        "callbackViaSSH": true,
+        "acknowledgedNotReplayed": true,
+        "providerStopped": false,
+        "moshServerExited": true,
+        "sshDaemonExited": true
+      }
+    },
+    "cause": "connect ECONNRESET during socketIsStopped; reset must not count as stopped"
+  },
+  "probeCorrection": {
+    "ECONNRESET": false,
+    "ENOENT": true,
+    "ECONNREFUSED": true,
+    "connected": false,
+    "unexpectedError": "throw",
+    "localControls": "9 PASS"
+  }
+}

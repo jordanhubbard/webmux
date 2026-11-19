@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/screenstate"
+	"golang.org/x/sys/windows"
 )
 
 func connect(ctx context.Context, i Identity, key, operation string, cols, rows int, renderer string) (net.Conn, frame, error) {
@@ -39,8 +40,17 @@ func connect(ctx context.Context, i Identity, key, operation string, cols, rows 
 	}
 	defer stopContext()
 	request := frame{Protocol: 1, Kind: operation, Session: i.Session, Instance: i.Instance, Key: key, Cols: cols, Rows: rows}
-	if operation == "attach" && i.Replay == "screen-v2" {
-		request.Renderer = renderer
+	if operation == "attach" {
+		switch i.Replay {
+		case "screen-v3":
+			request.Renderer = renderer
+		case "screen-v2":
+			request.Renderer = renderer
+			if renderer == screenstate.XtermUnderlineRendererProfile {
+				request.Renderer = screenstate.XtermRendererProfile
+			}
+			// Strict screen-v1 owners predate the renderer field. Omit it entirely.
+		}
 	}
 	if err := writeFrame(c, request); err != nil {
 		return nil, frame{}, err
@@ -68,11 +78,14 @@ func connect(ctx context.Context, i Identity, key, operation string, cols, rows 
 	if reply.Kind != want {
 		return nil, frame{}, errors.New("invalid native provider response")
 	}
-	if operation == "attach" && reply.Identity.Replay != "screen-v1" && reply.Identity.Replay != "screen-v2" {
+	if operation == "attach" && reply.Identity.Replay != "screen-v1" && reply.Identity.Replay != "screen-v2" && reply.Identity.Replay != "screen-v3" {
 		return nil, frame{}, errors.New("native provider cannot restore a complete terminal view; keep the existing job and recover manually")
 	}
+	if operation == "attach" && reply.Identity.Replay != i.Replay {
+		return nil, frame{}, errors.New("native provider replay capability changed")
+	}
 	if reply.RequiredRenderer != "" {
-		if request.Renderer != screenstate.XtermRendererProfile || reply.Identity.Replay != "screen-v2" || reply.RequiredRenderer != request.Renderer || len(reply.RendererToken) != 32 {
+		if request.Renderer == "" || !screenstate.RendererSupports(request.Renderer, reply.RequiredRenderer) || (reply.Identity.Replay != "screen-v2" && reply.Identity.Replay != "screen-v3") || (reply.RequiredRenderer == screenstate.XtermUnderlineRendererProfile && reply.Identity.Replay != "screen-v3") || len(reply.RendererToken) != 32 {
 			return nil, frame{}, errors.New("unnegotiated native snapshot profile")
 		}
 		if decoded, err := hex.DecodeString(reply.RendererToken); err != nil || hex.EncodeToString(decoded) != reply.RendererToken {
@@ -103,11 +116,43 @@ func Probe(ctx context.Context, i Identity, key string) (Identity, error) {
 	return *result.Identity, nil
 }
 func Stop(ctx context.Context, i Identity, key string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if i.OwnerPID <= 0 {
+		return errors.New("invalid native provider owner")
+	}
+	// Retain the original process object before dispatch. A later PID reuse
+	// must not make us wait on, or report the state of, another process.
+	handle, err := windows.OpenProcess(windows.SYNCHRONIZE, false, uint32(i.OwnerPID))
+	if err != nil {
+		return errors.New("native provider owner exit cannot be observed; stop was not dispatched")
+	}
+	defer windows.CloseHandle(handle)
 	c, _, err := connect(ctx, i, key, "stop", 0, 0, "")
 	if c != nil {
 		_ = c.Close()
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	// "stopping" acknowledges the authenticated request before the owner
+	// closes its terminal/job. It is not proof that teardown has completed.
+	for {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(errors.New("native provider stop acknowledged; owner exit remains unconfirmed"), err)
+		}
+		status, err := windows.WaitForSingleObject(handle, 25)
+		if err != nil {
+			return errors.New("native provider stop acknowledged; owner exit could not be observed")
+		}
+		if status == windows.WAIT_OBJECT_0 {
+			return nil
+		}
+		if status != uint32(windows.WAIT_TIMEOUT) {
+			return errors.New("native provider stop acknowledged; owner exit remains unconfirmed")
+		}
+	}
 }
 
 type Client struct {
@@ -129,7 +174,7 @@ func Attach(ctx context.Context, i Identity, key string, cols, rows int) (*Clien
 
 // AttachWithProfile negotiates extensions before receiving any snapshot output.
 func AttachWithProfile(ctx context.Context, i Identity, key string, cols, rows int, renderer string) (*Client, error) {
-	if renderer != "" && renderer != screenstate.XtermRendererProfile {
+	if !screenstate.RendererProfileKnown(renderer) {
 		return nil, errors.New("unknown native snapshot profile")
 	}
 	if !validSize(cols, rows) {
