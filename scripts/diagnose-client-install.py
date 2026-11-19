@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import shlex
 import shutil
 import signal
@@ -28,7 +29,11 @@ def proxy(log, executable, args):
     child = subprocess.Popen([executable, *args])
     record(log, dict(event='go-start', unix=time.time(), proxyPID=os.getpid(),
                      parentPID=os.getppid(), childPID=child.pid,
-                     action=args[0] if args and args[0] in ['build', 'test', 'env', 'version', 'run'] else 'other'))
+                     action=args[0] if args and args[0] in ['build', 'test', 'env', 'version', 'run'] else 'other',
+                     trimpath='-trimpath' in args,
+                     cgo=os.environ.get('CGO_ENABLED', 'unset') if os.environ.get('CGO_ENABLED', 'unset') in ['0', '1', 'unset'] else 'other',
+                     workload=('client' if './cmd/webmux-client' in args else
+                               'launchd-fixture' if any(value.endswith('/tests/fixtures/launchd-native/main.go') for value in args) else 'other')))
     status = child.wait()
     record(log, dict(event='go-exit', unix=time.time(), childPID=child.pid,
                      elapsedSeconds=time.monotonic() - started, status=status))
@@ -46,6 +51,47 @@ def write_proxy(output, executable):
                         str(output / 'go-events.jsonl'), executable]) + ' "$@"\n')
     wrapper.chmod(0o700)
     return wrapper
+
+
+def compiler_packages(output, allowed_pids):
+    """Keep package IDs only, never complete compiler argv or source paths."""
+    packages = []
+    for line in output.splitlines():
+        fields = line.split(None, 1)
+        if len(fields) != 2 or not fields[0].isdigit() or int(fields[0]) not in allowed_pids:
+            continue
+        try:
+            args = shlex.split(fields[1])
+        except ValueError:
+            continue
+        if not args or Path(args[0]).name != 'compile' or '-p' not in args:
+            continue
+        index = args.index('-p') + 1
+        if (index < len(args) and len(args[index]) <= 256
+                and re.fullmatch(r'[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*', args[index])
+                and all(part not in ['.', '..'] for part in args[index].split('/'))):
+            packages.append(dict(pid=int(fields[0]), package=args[index]))
+    return packages
+
+
+def sample_compilers(processes):
+    # Ask for argv only for observed descendants whose executable is compile.
+    # Parse before recording: neither argv nor private source/output paths leave
+    # this function. A vanished compiler is a normal sampling race.
+    pids = {p['pid'] for p in processes if p['executable'] == 'compile'}
+    if not pids:
+        return dict(state='none', packages=[])
+    if len(pids) > 128:
+        return dict(state='over-bound', packages=[])
+    try:
+        result = subprocess.run(['/bin/ps', '-p', ','.join(map(str, sorted(pids))), '-o', 'pid=,args='],
+                                capture_output=True, text=True, timeout=3)
+    except subprocess.TimeoutExpired:
+        return dict(state='timed-out', packages=[])
+    if len(result.stdout) > 1024 * 1024:
+        return dict(state='over-bound', packages=[])
+    return dict(state='sampled' if result.returncode == 0 else 'unavailable',
+                packages=compiler_packages(result.stdout, pids))
 
 
 def observe(command, cwd, env, output, label, limit):
@@ -78,7 +124,8 @@ def observe(command, cwd, env, output, label, limit):
                                   executable=Path(r[3]).name) for r in rows if int(r[0]) in owned]
                 if not sample_path.exists() or sample_path.stat().st_size < 8 * 1024**2:
                     record(sample_path, dict(elapsedSeconds=time.monotonic() - start,
-                                            loadAverage=os.getloadavg(), processes=processes))
+                                            loadAverage=os.getloadavg(), processes=processes,
+                                            compiler=sample_compilers(processes)))
                     samples += 1
                 else:
                     dropped += 1
@@ -140,12 +187,13 @@ def main():
     env = dict(os.environ, GOCACHE=str(cache),
                PATH=str(wrapper.parent) + os.pathsep + os.environ.get('PATH', ''))
     go_environment = json.loads(subprocess.check_output(
-        [go, 'env', '-json', 'GOOS', 'GOARCH', 'GOHOSTARCH'], cwd=repo / 'webmux/server',
+        [go, 'env', '-json', 'GOOS', 'GOARCH', 'GOHOSTARCH', 'CGO_ENABLED'], cwd=repo / 'webmux/server',
         env=env, text=True, timeout=10))
     node_environment = json.loads(subprocess.check_output(
         ['node', '-p', 'JSON.stringify({platform:process.platform,architecture:process.arch,version:process.version})'],
         text=True, timeout=10))
-    if (go_environment != dict(GOOS='darwin', GOARCH='arm64', GOHOSTARCH='arm64')
+    architecture = {key: go_environment.get(key) for key in ['GOOS', 'GOARCH', 'GOHOSTARCH']}
+    if (architecture != dict(GOOS='darwin', GOARCH='arm64', GOHOSTARCH='arm64')
             or node_environment['platform'] != 'darwin' or node_environment['architecture'] != 'arm64'):
         raise SystemExit('Comparison requires native ARM64 Go and Node')
     files = ['Makefile', 'scripts/make-controls.test.mts', 'webmux/server/go.mod',
@@ -154,7 +202,7 @@ def main():
                    cacheMode=args.cache_mode, sourceSHA256={p: hashlib.sha256((repo / p).read_bytes()).hexdigest() for p in files},
                    toolVersions=dict(go=subprocess.check_output([go, 'version'], text=True, timeout=10).strip(),
                                      goEnvironment=go_environment, node=node_environment,
-                                     python=platform.python_version()),
+                                     python=platform.python_version(), cpuCount=os.cpu_count()),
                    phases=[], helperCommand=['npm', 'run', 'test:helpers'],
                    scope='Diagnostic only. Unchanged full helper suite/default concurrency/30-second Make install limit. '
                          'PATH Go proxy changes tool lookup and adds observation overhead but no Go flags. Fresh cache conditions do not prove '
