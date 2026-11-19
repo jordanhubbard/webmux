@@ -1,0 +1,152 @@
+{
+  "issue": 473,
+  "auditedMain": "d8159018d301dba60ee2e873e0b3bac2b0d75346",
+  "recordedUTC": "2026-11-19T22:43:47.188709+00:00",
+  "productionAndProcessControlSHA256": {
+    "webmux/server/internal/browser/manager.go": "0ddfd0ca760b5ff1939388b2f54ec4e0541166c14d8a21661904fa3a59acb65e",
+    "webmux/server/internal/browser/process_exit.go": "868019bbbea2aaabbf2ab2be3d9110e81087beac0af597672d7ad21b8fa6b19b",
+    "webmux/server/internal/browser/process_exit_other.go": "02956c3a776af248bc8f846298941704439a82eac64110f0c590556b4fcd0b13",
+    "webmux/server/internal/browser/process_exit_windows.go": "baf250e59f20cfd0b38dc200855e4d8bc8bb6213604b857dabad2bd659afa2af",
+    "webmux/server/internal/browser/process_exit_windows_test.go": "359125a094d85b5e26338dc4324e200eaeb2a9f1c01b8e567b13cc72da516cff",
+    "webmux/server/internal/browser/worker.go": "0b4e5d6db9f1a1a8dab0d67e5190cd11bb759939676590c276360d38ce08a8c4"
+  },
+  "byteEqualAcrossRuntimeRepairTraceCorrectionAndCurrent": true,
+  "currentTraceAndNativeNavigationSourcesByteEqualQualifiedDEA": [
+    "webmux/server/internal/browser/navigation_native_test.go",
+    "webmux/server/internal/browser/navigation_trace_test.go",
+    "webmux/server/internal/browser/navigation_trace_lifetime_test.go"
+  ],
+  "nativeEvidence": [
+    {
+      "label": "original",
+      "source": "8e90c3ba68f1e037c592a24b4c22e463cc53e071",
+      "run": 44258246960,
+      "artifact": 14408200737,
+      "archiveSHA256": "c88881a431fa85b386f5f00aa41a04cc3294468399d06ee4c05d1a5b5f66e3cc",
+      "runConclusion": "failure",
+      "records": 23,
+      "detail": {
+        "originalFailedRecordSHA256": "b69d8659af7fc332907a90e2ec802850e356508f3b7212c0b292ef890337cfc1",
+        "loadedOnceBeforeCleanupFailure": true
+      }
+    },
+    {
+      "label": "diagnosticBaseline",
+      "source": "1a131ca526a1edddcf24128d56d20ecf3c8ea894",
+      "run": 44309028494,
+      "artifact": 14430880126,
+      "archiveSHA256": "10fc2480df8a9aa0f92a5805d2a7738cd86a75ccd4cbcdd1fac8d058184a0e3d",
+      "runConclusion": "failure",
+      "records": 150,
+      "detail": {
+        "failedObservedTrials": [
+          32,
+          35,
+          98,
+          99
+        ],
+        "actualFailedFileMembership": {
+          "state": "queried",
+          "processesVerified": 9,
+          "identityRejected": 0,
+          "processesUnavailable": 0,
+          "exitedProcesses": 8,
+          "processesCaptured": 1,
+          "snapshotUnavailable": 0,
+          "handlesExamined": 361,
+          "duplicateFailed": 83,
+          "filesUnqueryable": 0,
+          "matchedHandles": 1,
+          "matchedProcesses": 1
+        },
+        "trial35RecordSHA256": "c51703198f0594314534df6be2a7c78469f5f1ace91ad53e7aa40ab6db1c44f3",
+        "membershipLimits": "Owned-process exact-file membership; not identification of a particular deny-delete handle or completeness of handle enumeration."
+      }
+    },
+    {
+      "label": "runtimeRepair",
+      "source": "43016312ff368f8b8512bfb7174e5d7d8ba45d36",
+      "run": 44314149768,
+      "artifact": 14431414653,
+      "archiveSHA256": "1ba9b53f8d8a1b4b3958185a3f4afe704d6bc63b2a4cd7760be273f719891bcf",
+      "runConclusion": "failure",
+      "records": 150,
+      "detail": {
+        "observedSamples": 100,
+        "sampleFailures": 0,
+        "allIndependentObservedChildrenExited": true,
+        "separateTraceFailures": [
+          "direct-home-trace.json",
+          "direct-trace.json",
+          "trace-sample-1/direct-home-trace.json",
+          "trace-sample-1/direct-trace.json",
+          "trace-sample-2/direct-home-trace.json",
+          "trace-sample-2/direct-trace.json",
+          "trace-sample-3/direct-home-trace.json",
+          "trace-sample-3/direct-trace.json"
+        ],
+        "traceFailureRecordSHA256": {
+          "direct-home-trace.json": "4daf74e57d5e9f53491c592b2149ac26ce96b2a14b683162f145514ae4de215f",
+          "direct-trace.json": "3d0f118a4b00ff2d75f2b60155dd0bab3e9dc28a32066612c813098e95aafdc5",
+          "trace-sample-1/direct-home-trace.json": "0560de9ec6afecefd49677015c41fc0ee5f6a29280984e0159b865b6cda4f21b",
+          "trace-sample-1/direct-trace.json": "e10e9941ebf51f4d782195254965577b35d79a5e6d28895b0b67a93ebff783ed",
+          "trace-sample-2/direct-home-trace.json": "17979288ad6ba39e6593210c7538567833ba52065c0508f2ec6b73866c7270b6",
+          "trace-sample-2/direct-trace.json": "5e94d449faeebb41fea800e82dee5ca582051711366a7aa4e01251a518317655",
+          "trace-sample-3/direct-home-trace.json": "d9ddddad9f3d9438fa9bf6b61a2db1006e19e8724d95dad2a2a7f7429b2de282",
+          "trace-sample-3/direct-trace.json": "28f85146b74d3ab1a358e2da413bb03110c19177d7ee1622fbaad54caeb327aa"
+        }
+      }
+    },
+    {
+      "label": "traceCorrection",
+      "source": "dea22c342c2ed0e8118f758cfaa58e464ebdb33e",
+      "run": 44316027924,
+      "artifact": 14433006376,
+      "archiveSHA256": "84d92f7d9ceb4a2ee9928f282c006ca4807daea669233d7858a7001be8ff60bc",
+      "runConclusion": "success",
+      "records": 50,
+      "detail": {
+        "loads": 46,
+        "stopControls": 4,
+        "cleanupFailures": 0,
+        "directExitVerifiedRecords": 44,
+        "singleRequestAndNavigation": true
+      }
+    },
+    {
+      "label": "laterIntegration",
+      "source": "84a331a8aa0848a247543b6c3abb7b8b23c1a871",
+      "run": 44591424467,
+      "artifact": 14566070667,
+      "archiveSHA256": "f8371065847a450d9adbbdbb97b70369f5b72d468e2a09f859829c0fface11d2",
+      "runConclusion": "success",
+      "records": 23,
+      "detail": {
+        "loads": 22,
+        "stopControls": 1,
+        "cleanupFailures": 0,
+        "directExitVerifiedRecords": 20,
+        "singleRequestAndNavigation": true
+      }
+    }
+  ],
+  "nativeControlledCasesPassedWithoutSkip": [
+    "TestBrowserProcessExitWaitsForOwnedChildAndPreservesSibling",
+    "TestFirstNavigationHandleSnapshotOwnedFileAndIdentityRefusal",
+    "TestFirstNavigationTraceReleasePreservesBrowserWithoutOpeningTarget"
+  ],
+  "nativeControlLogSHA256": "f177ffdf427ae95bddfa1226aefc6d258d9f67f9f1ce64857ed2e925d91df494",
+  "oldTraceHelperNegativeSHA256": "48a31997732afab8f39759d17c5ed9e8491dd529cc1090e26273c5c9179b4dce",
+  "currentCriticalSourcesByteEqualLaterIntegratedMain84": true,
+  "laterWindowsBrowserJob": {
+    "run": 44591424467,
+    "job": 135798140947,
+    "conclusion": "success"
+  },
+  "scope": [
+    "Sanitized Windows cleanup diagnostics and owned-process synchronization repair only; no complete historical/all-causes navigation repair.",
+    "Original baseline four failures and eight separate trace-helper failures remain failed.",
+    "No new native/hosted jobs or sampling; current evidence inspection only. Native executions retain original source attribution.",
+    "No fresh whole-current-main executable, authenticated coding, broader282/318/security or release acceptance."
+  ]
+}

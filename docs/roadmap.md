@@ -45,6 +45,12 @@ also completes #543's Windows connected-shell fixture, #466's regular-file
 inventory admission and #517's frozen Ubuntu qualification-image libc minimum.
 Their broader recovery, vulnerability/license and deployment boundaries remain.
 
+Windows private browser cleanup #473 also has completed
+[native acceptance](validation/browser-process-exit-2026-11-18/README.md#integrated-acceptance--2026-11-19):
+verified owned-child exit precedes one-shot private-file removal. Original
+cleanup and trace-helper failures remain retained; broader navigation #282 and
+recovery/release acceptance remain open.
+
 ### Recover active work after interruption
 
 [#318](https://github.com/jordanhubbard/webmux/issues/318) adds session-state

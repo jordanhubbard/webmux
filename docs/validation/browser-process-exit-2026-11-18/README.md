@@ -1,8 +1,9 @@
 # Wait for owned Windows browser processes before private-file removal
 
-This is a proposed repair under [#473](https://github.com/jordanhubbard/webmux/issues/473),
-stacked on diagnostic #510 (`1a131ca526a1edddcf24128d56d20ecf3c8ea894`). Native Windows
-qualification of this repair is required before claiming completion.
+This records the cleanup repair under [#473](https://github.com/jordanhubbard/webmux/issues/473),
+originally stacked on diagnostic #510 (`1a131ca526a1edddcf24128d56d20ecf3c8ea894`).
+Scoped acceptance completed on 2026-11-19 after integration. The final audit
+below retains the earlier proposed behavior, original failures and their limits.
 
 ## Established evidence
 
@@ -115,3 +116,36 @@ as do Windows AMD64/ARM64 test cross-compiles. The production shutdown, worker,
 manager and native process-wait control files are unchanged from the 100-sample
 source. Fresh hosted qualification of the trace correction remains necessary;
 the old run's overall failure is retained and is not relabeled green.
+
+## Integrated acceptance — 2026-11-19
+
+[#473 is closed](https://github.com/jordanhubbard/webmux/issues/473#issuecomment-7024309888)
+after auditing main `d8159018d301dba60ee2e873e0b3bac2b0d75346`. The
+[acceptance receipt](acceptance-2026-11-19.json) binds five original native
+packets and the relevant current source equality:
+
+- The original `8e90c3b` profile-removal failure follows a successful single load,
+  request and navigation. The diagnostic `1a131ca` cohort retains all four failed
+  trials and the exact-file membership observation described above.
+- The `4301631` runtime repair passes all 100 observed cleanup samples with all
+  independently observed children exited. Its enclosing run remains failed for
+  eight separate early-trace helper ownership errors.
+- The `dea22c3` trace correction passes all 50 native records: 46 single-request
+  loads and four confirmed cancellation controls, with zero cleanup failures.
+  Actual native selected-child/sibling/identity/deadline, held-file/refusal and
+  trace-owner-lifetime controls pass without skips. The old trace-helper
+  negative remains retained.
+- Later integrated main `84a331a` has successful full CI and Windows browser
+  qualification. Its 23 component receipts contain 22 single-request loads and
+  one confirmed cancellation, with zero cleanup failures.
+
+The six production/process-control files are byte-equal from the 100-sample
+source through the trace correction to audited main. Relevant navigation and
+trace-helper sources also match the later integrated native qualification.
+Current-source equality does not relabel those original native executions as
+fresh current-main executions or constitute independent signed VCS attestation.
+
+No new hosted jobs or native sampling were started for this audit. This closes
+the scoped owned-child cleanup correction after review and integration. It does
+not establish every historical navigation cause under #282, authenticated
+recovery, broader platform/security coverage or full roadmap/release acceptance.
