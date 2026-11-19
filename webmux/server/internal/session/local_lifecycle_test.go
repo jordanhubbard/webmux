@@ -298,6 +298,59 @@ func TestLocalCreationBanksKeyBeforeLaunchAndRetainsPostLaunchSaveFailure(t *tes
 		t.Fatal("original provider cannot be recovered")
 	}
 }
+func TestLocalPreparationSaveFailureRetainsErrorAndBankedKey(t *testing.T) {
+	b, store, _ := localFixture(t)
+	id, err := uuid()
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := strings.Repeat("c", 32)
+	e := &entry{value: Session{ID: id, Owner: "owner", Transport: "local", Hostname: "localhost",
+		State: "connecting", Persistent: true, Cols: 80, Rows: 24, RecoveryKey: key,
+		LocalScope: b.localOwnerScope, LocalOwnerManaged: true, LocalOwnerAvailable: true}}
+	b.entries[id], b.order = e, []string{id}
+	var launches atomic.Int32
+	original := b.launch
+	b.launch = func(req terminal.LaunchRequest, password string) (process, error) {
+		launches.Add(1)
+		if req.SessionID != id || req.RecoveryKey != key {
+			t.Error("preparation failure changed the original session or key")
+		}
+		return original(req, password)
+	}
+	// Create banks the entry/key before startLocked and saves its result after
+	// that call. Fail only the intervening preparation save, using the real
+	// store rather than a timing-dependent filesystem race or a save stub.
+	if err := b.persistLocked(); err != nil {
+		t.Fatal(err)
+	}
+	restore := blockSessionSave(t, store)
+	err = b.startLocked(e, "", "")
+	restore()
+	if err == nil || launches.Load() != 0 || e.run != nil {
+		t.Fatalf("failed preparation dispatched work: launches=%d err=%v", launches.Load(), err)
+	}
+	if err := b.persistLocked(); err != nil {
+		t.Fatal(err)
+	}
+	var saved document
+	if err := store.ReadSessions(&saved); err != nil {
+		t.Fatal(err)
+	}
+	if len(saved.Sessions) != 1 || saved.Sessions[0].ID != id || saved.Sessions[0].RecoveryKey != key ||
+		saved.Sessions[0].LocalScope != b.localOwnerScope || saved.Sessions[0].State != "error" {
+		t.Fatalf("transient preparation failure lost its observable error or original access: %+v", saved.Sessions)
+	}
+	if got := b.List("owner"); len(got) != 1 || got[0].State != "error" {
+		t.Fatalf("failed preparation still appears to be connecting: %+v", got)
+	}
+	reconnected, err := b.Reconnect("owner", id, "")
+	if err != nil || launches.Load() != 1 || reconnected.ID != id || reconnected.State != "connecting" ||
+		b.entries[id].run == nil || reconnected.LocalLifecycle == nil || reconnected.LocalLifecycle.Selection == "" {
+		t.Fatalf("explicit recovery did not start the original session once: launches=%d session=%+v err=%v", launches.Load(), reconnected, err)
+	}
+}
+
 func TestLocalCreationFailedInitialSaveStartsNothing(t *testing.T) {
 	b, store, _ := localFixture(t)
 	var calls atomic.Int32

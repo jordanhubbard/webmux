@@ -419,6 +419,8 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 	if e.value.LocalOwnerManaged && b.localOwners {
 		e.value.LocalScope = b.localOwnerScope
 		if err := b.persistLocked(); err != nil {
+			e.value.State = "error"
+			e.value.UpdatedAt = now()
 			return err
 		}
 	}
