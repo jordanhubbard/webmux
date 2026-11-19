@@ -54,6 +54,25 @@ source of truth. WebMux's private launch records enrich that inventory but do
 not create a second, stale project list. Running, stopped, and historical Rig
 topologies remain visible with their provider IDs.
 
+## Choose broadcast recipients
+
+**Type to All** shows its recipients before input is sent. Project buttons use
+coordinator-observed project identity and keep providers, profiles and execution
+destinations separate. Identical display names do not join different projects.
+Each coordinated viewer shows its owner and execution host; ambiguous labels
+also show the viewer identity. Unknown execution hosts stay unknown.
+
+Choosing a project, individual viewers, **None**, or **All** selects the viewers
+present at that moment. Newly opened viewers stay unselected, and project renames
+do not redirect that choice. The initial broadcast default still includes all
+registered terminals until you make an explicit recipient choice. Ordinary input
+with broadcast off remains at its source terminal.
+
+Older records and new launches without an observed canonical project identity
+remain individually selectable. Reopen the viewer from Coordination to refresh
+its canonical metadata before using a project button. Project names, viewer
+transport and launch-form input are not used to invent missing identity.
+
 ## Start an agent
 
 1. Open **Coordination**, enable **Agent Deck** or **Rig** and select it as **Launch owner**, and choose the folder containing your code. Use **Browse**

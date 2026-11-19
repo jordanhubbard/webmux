@@ -218,7 +218,7 @@ func (p *rigProvider) remoteAttach(_ context.Context, target string) (coordinati
 		selection = " -S '" + strings.ReplaceAll(row.seat.TmuxServerValue, "'", "'\\''") + "'"
 	}
 	args = append(args, "--", host, "exec tmux"+selection+" attach-session -t '="+row.seat.TmuxTarget+"'")
-	return coordinationLaunch{TmuxServerFlag: row.seat.TmuxServerFlag, TmuxServerValue: row.seat.TmuxServerValue, Provider: "rig", Target: target, Project: row.seat.RigName, Name: row.seat.LogicalID, Title: row.seat.LogicalID + " · " + host + " · " + row.seat.RigName, Host: user + "@" + host + ":" + strconv.Itoa(port), Runtime: row.seat.Runtime, Argv: args, Remote: true}, nil
+	return coordinationLaunch{TmuxServerFlag: row.seat.TmuxServerFlag, TmuxServerValue: row.seat.TmuxServerValue, Provider: "rig", ProjectID: remoteRigPrefix + row.client.ID + "/" + row.seat.RigID, Target: target, Project: row.seat.RigName, Name: row.seat.LogicalID, Title: row.seat.LogicalID + " · " + host + " · " + row.seat.RigName, Host: user + "@" + host + ":" + strconv.Itoa(port), Runtime: row.seat.Runtime, Argv: args, Remote: true}, nil
 }
 
 func isRemoteRigTarget(target string) bool { return strings.HasPrefix(target, remoteRigPrefix) }

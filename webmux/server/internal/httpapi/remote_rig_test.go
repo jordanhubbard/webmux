@@ -94,7 +94,7 @@ func TestRemoteRigAuthenticatedCheckinReconnectAndRevocation(t *testing.T) {
 	}
 	if _, err := exec.LookPath("ssh"); err == nil {
 		launch, err := provider.Attach(context.Background(), id)
-		if err != nil || !launch.Remote || !strings.Contains(strings.Join(launch.Argv, " "), "-p 2222 -l dev -- same-worker.example exec tmux attach-session -t '=original-pane'") {
+		if err != nil || launch.ProjectID != status.Projects[0].ID || !launch.Remote || !strings.Contains(strings.Join(launch.Argv, " "), "-p 2222 -l dev -- same-worker.example exec tmux attach-session -t '=original-pane'") {
 			t.Fatal(launch, err)
 		}
 	}

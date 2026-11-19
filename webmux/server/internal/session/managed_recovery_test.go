@@ -16,7 +16,7 @@ func managedActionFixture(t *testing.T) (*Broker, *storage.Store, Session, Recov
 	t.Helper()
 	b, store, _ := fixture(t)
 	enableLogging(t, store)
-	identity := RigIdentity{Provider: "agent-deck", Target: "agent-deck:local:seat", Host: "localhost", Runtime: "claude", Workspace: t.TempDir(), NativeSessionID: "08bbfe0e-d31c-4cb6-9d18-546eea56a08c", NativeStateFile: filepath.Join(t.TempDir(), "state.jsonl")}
+	identity := RigIdentity{ProjectID: "local:canonical-project", Provider: "agent-deck", Target: "agent-deck:local:seat", Host: "localhost", Runtime: "claude", Workspace: t.TempDir(), NativeSessionID: "08bbfe0e-d31c-4cb6-9d18-546eea56a08c", NativeStateFile: filepath.Join(t.TempDir(), "state.jsonl")}
 	s, err := b.EnsureRigTerminal("owner", identity.Target, "coder", []string{"attach"}, identity)
 	if err != nil {
 		t.Fatal(err)
@@ -59,6 +59,9 @@ func TestManagedRecoveryConsumesBeforeAttachmentAndNeverDuplicates(t *testing.T)
 		t.Fatal(err)
 	}
 	defer restored.Close()
+	if value, err := restored.Get("owner", s.ID); err != nil || value.Rig == nil || value.Rig.ProjectID != "local:canonical-project" {
+		t.Fatal("canonical project identity lost on controller reconstruction", value, err)
+	}
 	if _, err := restored.RecoverManaged(context.Background(), "owner", s.ID, input, plan); err != nil || actions != 1 {
 		t.Fatal("consumed receipt lost across restart", actions, err)
 	}
