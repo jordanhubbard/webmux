@@ -1,0 +1,47 @@
+{
+  "issue": 549,
+  "parent": "d37ca20a2f3daecd07c67b07d73c404ac052ba96",
+  "diagnosticFailure": {
+    "source": "d37ca20a2f3daecd07c67b07d73c404ac052ba96",
+    "run": 44475746089,
+    "job": 135395735588,
+    "artifact": 14507292453,
+    "artifactSHA256": "4ed86f81c598e75e2264e25c08dea2d872c0dfb9a4785b83d2ab5f1e54822f01",
+    "observed": "Pinned base downloaded/extracted in about2s. HTTP archive.ubuntu.com index acquisition consumes remaining Docker180 budget; apt install/relay/browser not reached. Detailed cause of earlier missing-output failures is not established."
+  },
+  "pinnedBase": {
+    "baseImage": "ubuntu@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852",
+    "verifiedAMD64RootLayerSHA256": "7a48b8f0e5c73d0cc2a85b008978396aa19d253dc1b96fdb0b769ee6dcbeca4a",
+    "compressedBytes": 29767612,
+    "caBundlePresent": false,
+    "ubuntuArchiveKeyringPresent": true,
+    "osRelease": "PRETTY_NAME=\"Ubuntu 24.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.5 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\n",
+    "scope": "Read-only public OCI layer inspection; no Docker container, build, native coding or account credential copied."
+  },
+  "localChecks": {
+    "relayTests": 8,
+    "relayPass": 7,
+    "relaySkip": 1,
+    "aptHelperTests": 7,
+    "aptHelperPass": 6,
+    "aptHelperSkip": 1,
+    "skips": "Both require APT executable absent on macOS; actual effective source selection must execute in Linux CI.",
+    "mainFixtureAST": "Unchanged outside Docker build-input generation, including180-second build, all native assertions/ownership/cleanup.",
+    "existingAptHelper": "Old/new configure produce byte-identical configuration at the same owned temporary root.",
+    "diffCheck": "PASS"
+  },
+  "sourceSHA256": {
+    "scripts/configure-ci-apt.py": "fdc5c885e57b65483c95774f25d684c513e3a722a60a486f8b533847333d7bc1",
+    "scripts/qualify-rig-stop-relay.py": "09a260e3948c99002b0c6ad46d40fa4c0d7dc311d1b14e1799331a529a3103a7",
+    "scripts/test_qualify_rig_stop_relay.py": "3406321fce972e123aa88dd575f94eb8f2d7b4397178745b315c167a76718802"
+  },
+  "boundaries": [
+    "Public host CA certificates only, exported through SSLContext; no private key/native account credential is copied.",
+    "Pinned Ubuntu image and archive signing keyring, all original suites/components and openssh-server/tmux packages retained; TLS/signature bypasses absent.",
+    "Original sources retained; APT selects only generated signed official HTTPS sources with explicit public PEM CAInfo.",
+    "No host APT configuration changed. No Docker/native/coding/SSH fixture started by local tests; public OCI layer was only hash-verified and read.",
+    "Existing180-second build and all operation/Stop/SSH/browser deadlines unchanged.",
+    "HTTPS container build and actual complete relay qualification remain required on changed source; no pass claimed before native CI."
+  ],
+  "reference": "https://manpages.debian.org/testing/apt/apt-transport-https.1.en.html"
+}
