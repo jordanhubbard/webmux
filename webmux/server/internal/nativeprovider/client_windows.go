@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/screenstate"
+	"golang.org/x/sys/windows"
 )
 
 func connect(ctx context.Context, i Identity, key, operation string, cols, rows int, renderer string) (net.Conn, frame, error) {
@@ -115,11 +116,43 @@ func Probe(ctx context.Context, i Identity, key string) (Identity, error) {
 	return *result.Identity, nil
 }
 func Stop(ctx context.Context, i Identity, key string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if i.OwnerPID <= 0 {
+		return errors.New("invalid native provider owner")
+	}
+	// Retain the original process object before dispatch. A later PID reuse
+	// must not make us wait on, or report the state of, another process.
+	handle, err := windows.OpenProcess(windows.SYNCHRONIZE, false, uint32(i.OwnerPID))
+	if err != nil {
+		return errors.New("native provider owner exit cannot be observed; stop was not dispatched")
+	}
+	defer windows.CloseHandle(handle)
 	c, _, err := connect(ctx, i, key, "stop", 0, 0, "")
 	if c != nil {
 		_ = c.Close()
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	// "stopping" acknowledges the authenticated request before the owner
+	// closes its terminal/job. It is not proof that teardown has completed.
+	for {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(errors.New("native provider stop acknowledged; owner exit remains unconfirmed"), err)
+		}
+		status, err := windows.WaitForSingleObject(handle, 25)
+		if err != nil {
+			return errors.New("native provider stop acknowledged; owner exit could not be observed")
+		}
+		if status == windows.WAIT_OBJECT_0 {
+			return nil
+		}
+		if status != uint32(windows.WAIT_TIMEOUT) {
+			return errors.New("native provider stop acknowledged; owner exit remains unconfirmed")
+		}
+	}
 }
 
 type Client struct {

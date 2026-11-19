@@ -2826,3 +2826,12 @@ ten fixture image/log files. Failed attempts and the initial partial cleanup are
 retained alongside the passing results. Installed-service/MSI upgrades, other
 accounts/policies, authenticated ARM64, additional reboot coverage and the full
 #318 roadmap audit remain separate requirements.
+
+The separate [native stop-confirmation check](validation/windows-stop-confirmation-2026-11-18/README.md)
+repairs a prerequisite for #541: `nativeprovider.Stop` retains the original
+Windows process handle and confirms owner exit after the authenticated stopping
+acknowledgement. Cancellation/unobservable completion remains an error. Actual
+ConPTY root/child teardown, ten repetitions of both new controls, a failing
+acknowledgement-only negative control and the full native-provider package pass.
+This does not yet expose an application Stop action or change window deletion;
+#541's API/UI, durable-intent and ownership acceptance remain open.
