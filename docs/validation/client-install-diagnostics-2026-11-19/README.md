@@ -14,7 +14,9 @@ limit and original assertions. A failing suite or observer returns nonzero and
 fails its job; artifacts are retained on failure. Neither case is a retry for a
 green result.
 
-The Go proxy forwards the original arguments and exit result. It records only
+The Go proxy is selected through a private PATH prefix: Make assigns `GO := go`,
+so setting an environment `GO` would not instrument its build. The proxy forwards
+the original arguments and exit result. It records only
 closed action labels, process IDs, timestamps and elapsed time; it adds no Go
 flags. The observer samples descendant process names, parent IDs and CPU times,
 plus host load averages. Process samples are capped at 8 MiB, with dropped
@@ -33,7 +35,7 @@ samples, Go timing events and helper output. They exclude the cache and the warm
 client executable. No native coding credentials are used or copied.
 
 Interpret the source, cache condition, actual test result and any skips together.
-The fresh cache conditions, proxy startup and sampling overhead do not recreate
+The fresh cache conditions, changed Go lookup path, proxy startup and sampling overhead do not recreate
 the original worker or prove its historical cache state or scheduler cause. A
 passing diagnostic is not a repaired #542, authenticated recovery or release
 acceptance. Keep the original failures and compare actual build progress with

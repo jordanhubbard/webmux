@@ -28,13 +28,24 @@ def proxy(log, executable, args):
     child = subprocess.Popen([executable, *args])
     record(log, dict(event='go-start', unix=time.time(), proxyPID=os.getpid(),
                      parentPID=os.getppid(), childPID=child.pid,
-                     action=args[0] if args and args[0] in ['build', 'test', 'env', 'version'] else 'other'))
+                     action=args[0] if args and args[0] in ['build', 'test', 'env', 'version', 'run'] else 'other'))
     status = child.wait()
     record(log, dict(event='go-exit', unix=time.time(), childPID=child.pid,
                      elapsedSeconds=time.monotonic() - started, status=status))
     if status < 0:
         os.kill(os.getpid(), -status)
     return status
+
+
+def write_proxy(output, executable):
+    directory = output / 'proxy-bin'
+    directory.mkdir(mode=0o700)
+    wrapper = directory / 'go'
+    wrapper.write_text('#!/bin/sh\nexec ' + ' '.join(shlex.quote(x) for x in
+                       [sys.executable, str(Path(__file__).resolve()), 'proxy',
+                        str(output / 'go-events.jsonl'), executable]) + ' "$@"\n')
+    wrapper.chmod(0o700)
+    return wrapper
 
 
 def observe(command, cwd, env, output, label, limit):
@@ -115,12 +126,11 @@ def main():
         raise SystemExit('Go is required')
     cache = output / 'go-cache'
     cache.mkdir(mode=0o700)
-    wrapper = output / 'go-proxy'
-    wrapper.write_text('#!/bin/sh\nexec ' + ' '.join(shlex.quote(x) for x in
-                       [sys.executable, str(Path(__file__).resolve()), 'proxy',
-                        str(output / 'go-events.jsonl'), go]) + ' "$@"\n')
-    wrapper.chmod(0o700)
-    env = dict(os.environ, GOCACHE=str(cache), GO=shlex.quote(str(wrapper)))
+    wrapper = write_proxy(output, go)
+    # Makefile assigns GO := go, so an environment GO override is ineffective.
+    # Resolve the real tool first, then observe PATH lookups without adding flags.
+    env = dict(os.environ, GOCACHE=str(cache),
+               PATH=str(wrapper.parent) + os.pathsep + os.environ.get('PATH', ''))
     go_environment = json.loads(subprocess.check_output(
         [go, 'env', '-json', 'GOOS', 'GOARCH', 'GOHOSTARCH'], cwd=repo / 'webmux/server',
         env=env, text=True, timeout=10))
@@ -139,7 +149,7 @@ def main():
                                      python=platform.python_version()),
                    phases=[], helperCommand=['npm', 'run', 'test:helpers'],
                    scope='Diagnostic only. Unchanged full helper suite/default concurrency/30-second Make install limit. '
-                         'GO proxy adds observation overhead but no Go flags. Fresh cache conditions do not prove '
+                         'PATH Go proxy changes tool lookup and adds observation overhead but no Go flags. Fresh cache conditions do not prove '
                          'the historical cache state or timeout cause. No production service or authentication changes.')
     try:
         if args.cache_mode == 'warm':
