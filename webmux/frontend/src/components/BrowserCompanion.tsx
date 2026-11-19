@@ -52,6 +52,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   const [findMessage, setFindMessage] = useState('');
   const [pageText, setPageText] = useState<{ session: string; target: string; url: string; text: BrowserPageText }>();
   const [pageActionStatus, setPageActionStatus] = useState('');
+  const pageTextGeneration = useRef(0);
   const pageTextPanel = useRef<HTMLElement>(null);
   const findInput = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState(false);
@@ -79,7 +80,10 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
       if (action.profileId !== undefined) profileChoice.current.id = action.profileId;
       else if (profileChoice.current.id !== undefined) action = { ...action, profileId: profileChoice.current.id };
     }
-    if (!['frame', 'read_page', 'claim', 'resize'].includes(action.action)) {
+    // Reading again replaces native control references. Retire the previous
+    // controls before queueing the refresh so they cannot dispatch stale IDs.
+    if (!['frame', 'claim', 'resize'].includes(action.action)) {
+      pageTextGeneration.current++;
       setPageText(undefined);
       setPageActionStatus('');
     }
@@ -92,7 +96,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
     if (action.action === 'mouse_move' && coalesced.current) {
       coalesced.current.action = action; return queue.current;
     }
-    const item = { action };
+    const item = { action, pageTextGeneration: pageTextGeneration.current };
     coalesced.current = action.action === 'mouse_move' ? item : null;
     pending.current++;
     queue.current = queue.current.then(async () => {
@@ -107,7 +111,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
         if (result.protocol === 3) profileChoice.current.id = result.profileId ?? '';
         if (!control.current) dragging.current = null;
         const { file, clipboard, pageText: text, ...metadata } = result;
-        if (text) setPageText({ session: session.id, target: result.target, url: result.url, text });
+        if (text && item.pageTextGeneration === pageTextGeneration.current) setPageText({ session: session.id, target: result.target, url: result.url, text });
         setFrame(previous => ({ ...metadata, url: metadata.url || previous?.url || '', target: metadata.target || previous?.target || '', tabs: metadata.tabs ?? previous?.tabs ?? [],
           width: metadata.width || previous?.width, height: metadata.height || previous?.height,
           image: metadata.image || (!metadata.target || previous?.target === metadata.target ? previous?.image : undefined) }));

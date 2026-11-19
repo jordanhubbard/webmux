@@ -128,8 +128,27 @@ test('browser supports interactive pages, dialogs, clipboard, files, navigation 
   await expect(readable).not.toContainText('hidden accessibility control');
   const staleRead = await (await controlledPost({ action: 'read_page', target: 'another-tab' })).json();
   expect(staleRead.error).toContain('selected page changed'); expect(staleRead.pageText).toBeUndefined();
-  // A stale read invalidates the old references. Refresh before using them.
-  await page.getByRole('button', { name: 'Read page text', exact: true }).click();
+  // Hold the replacement snapshot after the worker has invalidated the old
+  // references. Old controls must disappear before this response can arrive.
+  let releaseRefresh!: () => void;
+  let refreshArrived!: () => void;
+  const refreshHeld = new Promise<void>(resolve => { releaseRefresh = resolve; });
+  const refreshReady = new Promise<void>(resolve => { refreshArrived = resolve; });
+  const browserRoute = `**${endpoint}`;
+  await page.route(browserRoute, async route => {
+   if (route.request().postDataJSON()?.action !== 'read_page') { await route.continue(); return; }
+   const response = await route.fetch();
+   refreshArrived();
+   await refreshHeld;
+   await route.fulfill({ response });
+  });
+  try {
+   await page.getByRole('button', { name: 'Read page text', exact: true }).click();
+   await refreshReady;
+   await expect(readable).not.toBeVisible();
+  } finally { releaseRefresh(); }
+  await expect(readable).toBeVisible();
+  await page.unroute(browserRoute);
   await readable.getByRole('button', { name: 'Focus Accessible input', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Type into remote page' })).toBeFocused();
   await page.keyboard.type('typed through accessible focus');
