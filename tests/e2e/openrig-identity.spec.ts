@@ -132,3 +132,110 @@ test('logical Rig seat keeps its viewer and layout after an explicit native rebi
     }
   }
 });
+
+test('two existing Rig seats keep chosen cells beside an ordinary terminal through reload and reconnect', async ({ page, request }, info) => {
+  test.skip(process.env.WEBMUX_REAL_OPENRIG !== '1', 'Requires isolated published Rig and tmux');
+  test.setTimeout(90_000);
+  const home = path.resolve(__dirname, '.test-home');
+  const rig = path.join(home, 'openrig-bin/rig');
+  const suffix = randomBytes(5).toString('hex');
+  const project = `grid-${suffix}`;
+  const env = { ...process.env, OPENRIG_HOST_SELECTED: 'local', TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') };
+  const run = (binary: string, args: string[]) => {
+    const result = spawnSync(binary, args, { env, encoding: 'utf8', timeout: 15000 });
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    return result.stdout.trim();
+  };
+  const spec = path.join(home, `${project}.json`);
+  writeFileSync(spec, JSON.stringify({ version: '0.2', name: project, pods: [{ id: 'agents', label: project,
+    members: ['first', 'second'].map(id => ({ id, label: id, agent_ref: 'builtin:terminal', profile: 'none', runtime: 'terminal', cwd: home })) }], edges: [] }));
+  const { rigId } = JSON.parse(run(rig, ['up', spec, '--yes', '--json'])) as { rigId: string };
+  type Seat = { id: string; projectId: string; logicalId: string; attachmentTarget: string; openable: boolean };
+  type Viewer = { id: string; row: number; col: number; rig?: { project_id?: string; seat_id?: string } };
+  const observe = async () => (await (await request.get('/api/coordination?provider=rig')).json() as { seats: Seat[] }).seats.filter(seat => seat.projectId === rigId);
+  const viewers: Viewer[] = [];
+  const originalConfig = await (await request.get('/api/config')).json();
+  const input = path.join(home, `${project}-ordinary.bin`);
+  writeFileSync(input, Buffer.alloc(0), { flag: 'wx', mode: 0o600 });
+  let ordinary = '';
+  try {
+    expect((await request.put('/api/config', { data: { app: { session_logging: { enabled: true } } } })).ok()).toBe(true);
+    await expect.poll(async () => (await observe()).filter(seat => seat.openable).length).toBe(2);
+    const seats = await observe();
+    const pids = new Map(seats.map(seat => [seat.id, run('tmux', ['display-message', '-p', '-t', seat.attachmentTarget, '#{pane_pid}'])]));
+    const response = await request.post('/api/sessions', { data: { transport: 'exec', hostname: 'localhost', username: `grid-${suffix}`, row: 0, col: 0,
+      exec_command: `"${process.execPath}" "${path.resolve(__dirname, 'broadcast-terminal-fixture.mts')}" "${input}"` } });
+    const local = await response.json() as Viewer;
+    ordinary = local.id;
+    expect(response.status()).toBe(201);
+    expect(local.rig).toBeUndefined();
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.goto('/');
+    const ordinaryTile = page.getByTestId(`tile-cell-${ordinary}`);
+    await expect(ordinaryTile.locator('.xterm-rows')).toContainText('BROADCAST READY');
+    await ordinaryTile.locator('.xterm-helper-textarea').focus();
+    await page.keyboard.type('x');
+    await expect.poll(() => readFileSync(input, 'utf8')).toBe('x');
+    for (const [index, [row, col]] of [[0, 1], [1, 0]].entries()) {
+      const seat = seats.find(value => value.logicalId === `agents.${index === 0 ? 'first' : 'second'}`)!;
+      expect(seat).toBeTruthy();
+      await page.getByTestId(`add-cell-${row}-${col}`).first().click();
+      await page.getByRole('button', { name: 'Open existing agent seat', exact: true }).click();
+      await expect(page.getByText(`Choose a coordinated seat for row ${row + 1}, column ${col + 1}.`)).toBeVisible();
+      const navigator = page.locator('details').filter({ has: page.locator('summary').filter({ hasText: 'Coordinated sessions' }) });
+      const attached = page.waitForResponse(value => value.request().method() === 'POST' && value.url().endsWith('/api/coordination/attach'));
+      await navigator.getByRole('button', { name: new RegExp(`^agents\\.${index === 0 ? 'first' : 'second'} · `) }).click();
+      const reply = await attached;
+      expect(reply.status()).toBe(200);
+      const opened = await reply.json() as Viewer;
+      const viewer: Viewer = { id: opened.id, row: opened.row, col: opened.col, rig: opened.rig };
+      viewers.push(viewer);
+      expect([viewer.row, viewer.col]).toEqual([row, col]);
+      expect(viewer.rig?.project_id).toBe(rigId);
+      expect(viewer.rig?.seat_id).toBe(seat.id);
+      const tile = page.getByTestId(`tile-cell-${viewer.id}`);
+      await expect(tile.getByLabel('Rig seat status')).toContainText('Enrollment Launched by Rig');
+      const marker = `GRID_${suffix}_${index}`;
+      await tile.locator('.xterm-helper-textarea').focus();
+      await page.keyboard.type(`printf '%s%s\\n' 'GRID_' '${suffix}_${index}'`);
+      await page.keyboard.press('Enter');
+      await expect(tile.locator('.xterm-rows')).toContainText(marker);
+    }
+    const snapshot = async () => {
+      const all = await (await request.get('/api/sessions')).json() as Viewer[];
+      expect(all.filter(viewer => viewer.rig?.project_id === rigId)).toHaveLength(2);
+      for (const viewer of viewers) expect(all.find(value => value.id === viewer.id)).toMatchObject(viewer);
+      expect(all.find(value => value.id === ordinary)).toMatchObject({ row: 0, col: 0 });
+      expect(all.find(value => value.id === ordinary)?.rig).toBeUndefined();
+      const current = await observe();
+      expect(current.map(seat => seat.id).sort()).toEqual(seats.map(seat => seat.id).sort());
+      for (const seat of current) expect(run('tmux', ['display-message', '-p', '-t', seat.attachmentTarget, '#{pane_pid}'])).toBe(pids.get(seat.id));
+    };
+    await page.reload();
+    await snapshot();
+    for (const viewer of viewers) {
+      expect((await request.post(`/api/sessions/${viewer.id}/reconnect`, { data: {} })).status()).toBe(200);
+      const tile = page.getByTestId(`tile-cell-${viewer.id}`);
+      await expect(tile.locator('.xterm-rows')).toContainText(`GRID_${suffix}_${viewers.indexOf(viewer)}`);
+      const recovery = await (await request.get(`/api/session-recovery/${viewer.id}`)).json();
+      expect(recovery.history).toContain(`GRID_${suffix}_${viewers.indexOf(viewer)}`);
+    }
+    await snapshot();
+    await ordinaryTile.locator('.xterm-helper-textarea').focus();
+    await page.keyboard.type('y');
+    await expect.poll(() => readFileSync(input, 'utf8')).toBe('xy');
+    writeFileSync(info.outputPath('native-grid-placement.json'), JSON.stringify({ platform: process.platform, architecture: process.arch,
+      rig: run(rig, ['--version']), node: process.version, browser: page.context().browser()?.version(), rigId,
+      viewers, providerPIDs: Object.fromEntries(pids), providerPIDsUnchanged: true, canonicalSeatsUnchanged: true,
+      ordinary: { id: ordinary, row: 0, col: 0, inputHex: readFileSync(input).toString('hex'), rigIdentityAbsent: true },
+      retainedHistory: true, scope: 'Actual published Rig builtin shells and ordinary Node PTY. No authenticated coding-conversation, remote-host or reboot claim.' }, null, 2));
+  } finally {
+    try {
+      for (const viewer of viewers) await request.delete(`/api/sessions/${viewer.id}`);
+      if (ordinary) await request.delete(`/api/sessions/${ordinary}`);
+      expect((await request.put('/api/config', { data: { app: { session_logging: originalConfig.app.session_logging } } })).ok()).toBe(true);
+    } finally {
+      run(rig, ['down', rigId]);
+    }
+  }
+});

@@ -1,0 +1,57 @@
+{
+  "base": "25b28d35251e4094eff05f071aaffdee3749ed08",
+  "change": "Only appended acceptance test and documentation; production source unchanged",
+  "testSHA256": "14a8e121140d18640323abd841df60ff65113630d83db18da73e80a5d380584e",
+  "originalTestPrefixUnchanged": true,
+  "platform": "darwin",
+  "architecture": "arm64",
+  "rig": "0.6.14 (df1c1517)",
+  "node": "v24.22.2",
+  "browser": "158.0.8127.36",
+  "stats": {
+    "startTime": "2026-11-19T21:19:17.801Z",
+    "duration": 57882.066999999995,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "chosenCells": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      0
+    ]
+  ],
+  "ordinaryCell": [
+    0,
+    0
+  ],
+  "ordinaryInputHex": "7879",
+  "ordinaryRigIdentityAbsent": true,
+  "providerPIDsUnchanged": true,
+  "canonicalSeatsUnchanged": true,
+  "retainedHistory": true,
+  "fullRigMetadataAndViewerIDsPreserved": true,
+  "strictTypeScriptProjects": 5,
+  "nativeRawSHA256": "2656e34570dc5088a11736497c3870c97573eaf8282c63a628cff97fc3f03fe8",
+  "binarySHA256": "ba36d3e6c6389adaa5548c06c0f2af617c3d2d3bf2d02c4a984dd8e537a05052",
+  "buildAttested": false,
+  "testFailuresRetained": [
+    "Initial test expected200 instead of documented201 for ordinary session creation",
+    "Next test compared full API object including terminal resize dimensions/timestamps; corrected to stable viewer/grid/fullRig fields"
+  ],
+  "unchanged": {
+    "originalCase": true,
+    "productBehavior": true,
+    "nativeCaseDeadlineSeconds": 90,
+    "retries": 0
+  },
+  "cleanup": "All observed fixture PIDs exited; Rig daemon shutdown clean/complete/no failures; inactive fixture home retained",
+  "scope": "Actual published Rig builtin shells and ordinary Node PTY. No authenticated coding-conversation, remote-host or reboot claim.",
+  "issue194Complete": false,
+  "releaseComplete": false
+}
