@@ -20,6 +20,22 @@ class AptConfigurationTest(unittest.TestCase):
         (root / "sources.list.d").mkdir()
         return root
 
+    def test_hosted_mirrors_use_azure_without_redirecting_arm64_ports(self):
+        # Both runner formats and release/security pockets must avoid the
+        # central endpoints; ARM64 needs the separate ports archive.
+        for uri in [
+            "http://azure.archive.ubuntu.com/ubuntu",
+            "https://azure.archive.ubuntu.com/ubuntu/",
+            "http://archive.ubuntu.com/ubuntu",
+            "https://security.ubuntu.com/ubuntu/",
+            "mirror+file:/etc/apt/apt-mirrors.txt",
+            "mirror+file:/etc/apt/apt-mirrors-security.txt",
+        ]:
+            with self.subTest(uri=uri):
+                self.assertEqual(module.ubuntu_uri(uri), "https://azure.archive.ubuntu.com/ubuntu/")
+        self.assertEqual(module.ubuntu_uri("http://ports.ubuntu.com/ubuntu-ports"),
+                         "https://ports.ubuntu.com/ubuntu-ports/")
+
     def test_legacy_sources_preserve_suites_keys_and_third_parties(self):
         root = self.fixture()
         original = "deb [arch=amd64 signed-by=/keys/ubuntu.gpg] http://azure.archive.ubuntu.com/ubuntu jammy main\ndeb http://security.ubuntu.com/ubuntu jammy-security main\ndeb http://127.0.0.1:9/unavailable stable main\n"
@@ -28,8 +44,8 @@ class AptConfigurationTest(unittest.TestCase):
         module.configure(root)
         self.assertEqual(source.read_text(), original)
         selected = (root / "webmux-ci-sources/ubuntu.list").read_text()
-        self.assertIn("[arch=amd64 signed-by=/keys/ubuntu.gpg] https://archive.ubuntu.com/ubuntu/ jammy main", selected)
-        self.assertIn("https://security.ubuntu.com/ubuntu/ jammy-security main", selected)
+        self.assertIn("[arch=amd64 signed-by=/keys/ubuntu.gpg] https://azure.archive.ubuntu.com/ubuntu/ jammy main", selected)
+        self.assertIn("https://azure.archive.ubuntu.com/ubuntu/ jammy-security main", selected)
         self.assertNotIn("unavailable", selected)
         settings = (root / "apt.conf.d/99-webmux-ci-network").read_text()
         for setting in ['Acquire::https::Timeout "30";', 'Dpkg::Lock::Timeout "120";', 'APT::Update::Error-Mode "any";', 'Dir::Etc::sourcelist "-";']:
@@ -49,11 +65,11 @@ class AptConfigurationTest(unittest.TestCase):
         self.assertEqual(source.read_text(), original)
         self.assertEqual(mirror.read_text(), "http://azure.archive.ubuntu.com/ubuntu/\n")
         self.assertNotIn("microsoft", selected)
-        for value in ["URIs: https://archive.ubuntu.com/ubuntu/", "Suites: noble noble-updates", "Architectures: amd64", "Signed-By: /keys/ubuntu.gpg", "Signed-By: \n -----BEGIN PGP PUBLIC KEY BLOCK-----\n .\n key-body\n -----END PGP PUBLIC KEY BLOCK-----"]:
+        for value in ["URIs: https://azure.archive.ubuntu.com/ubuntu/", "Suites: noble noble-updates", "Architectures: amd64", "Signed-By: /keys/ubuntu.gpg", "Signed-By: \n -----BEGIN PGP PUBLIC KEY BLOCK-----\n .\n key-body\n -----END PGP PUBLIC KEY BLOCK-----"]:
             self.assertIn(value, selected)
 
     def test_disabled_and_lookalike_sources_do_not_become_ubuntu(self):
-        for uri in ["https://archive.ubuntu.com.evil.invalid/ubuntu", "https://archive.ubuntu.com/ubuntu-evil", "https://user@archive.ubuntu.com/ubuntu", "https://archive.ubuntu.com:443/ubuntu", "https://archive.ubuntu.com/ubuntu?mirror=evil"]:
+        for uri in ["https://azure.archive.ubuntu.com.evil.invalid/ubuntu", "https://azure.archive.ubuntu.com/ubuntu-evil", "https://user@azure.archive.ubuntu.com/ubuntu", "https://archive.ubuntu.com.evil.invalid/ubuntu", "https://archive.ubuntu.com/ubuntu-evil", "https://user@archive.ubuntu.com/ubuntu", "https://archive.ubuntu.com:443/ubuntu", "https://archive.ubuntu.com/ubuntu?mirror=evil"]:
             self.assertIsNone(module.ubuntu_uri(uri), uri)
         root = self.fixture()
         (root / "sources.list.d/disabled.sources").write_text("Types: deb\nURIs: https://archive.ubuntu.com/ubuntu\nSuites: jammy\nEnabled: no\n")
@@ -101,8 +117,8 @@ class AptConfigurationTest(unittest.TestCase):
         lists.mkdir()
         result = subprocess.run(["apt-get", "-c", str(root / "apt.conf.d/99-webmux-ci-network"), "-o", f"Dir::State::Lists={lists}", "-o", "Debug::NoLocking=1", "update", "--print-uris"], text=True, capture_output=True, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("https://archive.ubuntu.com/ubuntu/dists/jammy/InRelease", result.stdout)
-        self.assertIn("https://security.ubuntu.com/ubuntu/dists/jammy-security/InRelease", result.stdout)
+        self.assertIn("https://azure.archive.ubuntu.com/ubuntu/dists/jammy/InRelease", result.stdout)
+        self.assertIn("https://azure.archive.ubuntu.com/ubuntu/dists/jammy-security/InRelease", result.stdout)
         self.assertNotIn("127.0.0.1", result.stdout)
         self.assertNotIn("unavailable", result.stdout)
 
