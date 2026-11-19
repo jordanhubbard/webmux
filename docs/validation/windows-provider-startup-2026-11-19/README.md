@@ -35,3 +35,18 @@ operation counts are unchanged. Private authenticated conversation evidence,
 #541 raw-archive review, #538 shell/network scope, #536/#450 and full roadmap or
 release acceptance remain separate. No claim about Defender or outer-job cause
 is inferred from the generic baseline warning.
+
+The first native application run at `5b7ea984` failed in CI run44463053201,
+Windows Tests and Build job135354201758, before browser input: public state was
+error rather than connected. The safe diagnostic was
+`phase=bootstrap-owner-start os=access_denied exit=exit_failure`. This identifies
+the second-hop `exec.Cmd.Start` failure, without identifying which OS operation
+or policy rejected it. The record-lookup file-not-found diagnostic is subsequent
+evidence of no published record. The original failed browser ZIP and job log are
+retained separately from successful workflow artifacts.
+
+Prepared formatter correction `ea43787` distinguishes a process exit status in
+the owner-exit frame from a Win32 error: exit 2 is not ERROR_FILE_NOT_FOUND.
+The regression fails on the parent and passes twenty race repetitions; Windows
+AMD64 vet passes. This does not change the observed owner-start access-denied
+evidence or repair startup. Canonical `5b7ea984` remains the source of that run.

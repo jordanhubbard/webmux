@@ -4,7 +4,8 @@ Implementation `e19b88b` repairs the additional pre-launch save boundary in #541
 After Create banks a session/key, a transient failure in startLocked's preparation
 save could leave the final saved session connecting even though no job launched.
 That failure now sets error and an updated timestamp. The original session, host
-scope, key and access record remain; no job starts until explicit continuation.
+scope, key and access record remain. In the tested fault/retry sequence, no job
+starts before the explicit retry. Configured Persistent/Restore policy is unchanged.
 
 The [receipt](receipt.json) binds a deterministic real-store fault sequence:
 bank the entry, block the intervening preparation write, restore storage for the
