@@ -83,7 +83,7 @@ export function useCoordinationSendIntent(enabled: boolean, returned: (target: s
       if (sessionStorage.getItem(key) !== id) throw new Error('Cannot retain this instruction identity in the browser. Nothing was sent.');
       const original = { id, scope, input: { ...input, requestId: id, scope } };
       save(original);
-      returned(input.target, { requestId: id, requestState: 'pending', target: input.target, queued: false, submitted: false });
+      returned(input.target, { requestId: id, requestState: 'pending', requestCode: 'awaiting_response', target: input.target, queued: false, submitted: false });
       await invoke(original);
     } catch (reason) { setError(String(reason)); }
     finally { inFlight.current = false; setBusy(false); }

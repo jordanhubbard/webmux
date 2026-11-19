@@ -832,3 +832,17 @@ it('retains the original pointer when a dismissal response is lost', async () =>
   await waitFor(() => expect(sessionStorage.getItem(key)).toBeNull());
   expect(mocks.dismissSend.mock.calls).toEqual([[id, 'a'.repeat(64)], [id, 'a'.repeat(64)]]);
 });
+
+
+it('does not label an in-flight owner request as not dispatched or delivered', async () => {
+  instructionStatus(); let finish!: (value: unknown) => void;
+  mocks.send.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  render(<CoordinationDialog onClose={() => {}} />);
+  await queueOriginalInstruction();
+  const seat = screen.getByRole('article', { name: 'worker in project' });
+  expect(within(seat).getByRole('status')).toHaveTextContent('request in progress');
+  expect(within(seat).getByRole('status')).not.toHaveTextContent('not dispatched');
+  const original = { ...mocks.send.mock.calls[0][0] };
+  await act(async () => finish({ requestId: original.requestId, requestState: 'completed', target: original.target, sendId: 'native-first', state: 'queued', queued: true, submitted: false }));
+  expect(within(seat).getByRole('status')).toHaveTextContent('queued');
+});

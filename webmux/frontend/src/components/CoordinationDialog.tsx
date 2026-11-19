@@ -42,6 +42,7 @@ export interface CoordinationSendResult {
   confirmation?: string; reason?: string; queued: boolean; submitted: boolean;
 }
 function deliveryLabel(value: CoordinationSendResult) {
+  if (value.requestCode === 'awaiting_response') return 'request in progress';
   switch (value.requestState) {
     case 'unobserved': return 'not observed';
     case 'pending': return 'not dispatched';
@@ -308,7 +309,9 @@ export function CoordinationDialog({ onClose, position, inline = false, initialP
   const content = <>
     {sendIntent.pending && <section aria-label="Saved instruction" className="coordination-delivery" aria-live="polite">
       <strong>Saved instruction{sendIntent.pending.input ? ` for ${sendIntent.pending.input.target}` : ''}</strong>
-      <p>{sendIntent.pending.outcome?.requestState === 'completed' ? 'The owner returned a send receipt. Delivery progress is shown on its session.'
+      <p>{sendIntent.busy && !sendIntent.pending.outcome ? 'Waiting for the original request outcome.'
+        : sendIntent.pending.outcome?.requestState === 'pending' ? 'The saved instruction has not been dispatched. Continue only the original request, or dismiss it.'
+        : sendIntent.pending.outcome?.requestState === 'completed' ? 'The owner returned a send receipt. Delivery progress is shown on its session.'
         : sendIntent.pending.outcome?.requestState === 'refused' ? 'This request was refused before provider dispatch.'
           : sendIntent.pending.outcome?.requestState === 'cancelled' ? 'The original instruction was stopped before dispatch and will not be sent.'
             : 'Its outcome is not confirmed. The original request stays saved; no new instruction is sent automatically.'}</p>
