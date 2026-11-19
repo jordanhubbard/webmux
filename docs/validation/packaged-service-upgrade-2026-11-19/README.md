@@ -42,3 +42,14 @@ roadmap acceptance and release remain open. No live user service, credential,
 version, tag or publication is changed.
 
 Refs #318, #438, #452, #539.
+
+A second independent case on the same immutable packaged inputs passes the same
+19 controls under **read-only/on-request**. Both actual tool outputs deny all six
+writes and networking; original conversation recall without tools, owner
+identity/environment, service replacement/SIGKILL/automatic restart, history/log
+prefixes, duplicates, siblings and cleanup remain verified. The
+[read-only receipt](readonly-receipt.json) records that case and all three raw
+archive hashes/NAS readbacks, including the rejected original attempt. Each of
+its three prompts has one observed CR after recipient readiness. This extends
+policy coverage on source4b; it is not fresh native qualification of the later
+Windows lifecycle composition.

@@ -1,0 +1,10 @@
+{
+  "head": "4ef30092ae3f2f12908a3dfef53495fe2647de20",
+  "productionModules": 146,
+  "compileCalls": 1,
+  "patternsEqualC195FixedViteDefaults": true,
+  "allSixFinalOutputsMatchActualFrontendBuildOnDisk": true,
+  "sourceGraphSHA256": "776f2c80655ea645f3e497ebeec62f391c33c5a24c931de29ec4ac85e9abcc4f",
+  "traceSHA256": "33b53588fac886c2f4b3183ef1db5977e1abe9baeb26a67e5235c30aef903ddc",
+  "scope": "Fresh preparation frontend build only; no packagedGo HTTP/native archive claim for4ef."
+}

@@ -69,3 +69,9 @@ Optional operator-installed Rig/other CLIs, Node packages, source-development
 servers, external tools and their deployed inventories are separate products
 and configurations. This is not global dependency, vendor, license or security
 clearance under #91. Full roadmap and release acceptance remain open.
+
+The subsequent [default build-input review](../picomatch-build-inputs-2026-11-19/README.md)
+adds actual compile-pattern traces, a full 444-test pass, static origin checks and
+six unchanged final asset hashes on sourcec195. It proposes the repository
+classification for #429 review, with generic matcher and external-deployment
+limits retained.
