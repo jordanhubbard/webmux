@@ -1,0 +1,87 @@
+{
+  "issue": 484,
+  "auditedMain": "567f0e99b19ba706543c96e511f842424af970c5",
+  "recordedUTC": "2026-11-19T22:52:00.482669+00:00",
+  "localProxyControls": {
+    "observedHeadBefore": "7539aef21685012a4b640f36eedd5339a2646f9c",
+    "observedHeadAfter": "567f0e99b19ba706543c96e511f842424af970c5",
+    "concurrentDelta": [
+      "docs/validation/bridge-owner-queue-2026-11-19/README.md",
+      "docs/validation/bridge-owner-queue-2026-11-19/receipt.json"
+    ],
+    "allTrackedCodeByteEqualAcrossHeads": true,
+    "nativeToolchain": "go1.27.4 darwin/arm64",
+    "controls": [
+      {
+        "label": "forwarding-removed",
+        "exit": 1,
+        "expectedQueryAssertionFailures": 3,
+        "logSHA256": "caa84a8a95ddbe57d9a602bf315368b5aa818f2f0ef4dd7e9e5aae44da2726ca"
+      },
+      {
+        "label": "current",
+        "exit": 0,
+        "race": true,
+        "logSHA256": "88670b2573f29dcb39c55a0843c06a62b2de7a3ec195f27e70f37e8105b9aa53"
+      }
+    ],
+    "test": "TestFederationTerminalForwardsOnlyRendererCapability",
+    "method": "Original local driver reached its final HEAD equality guard after both expected test outcomes. The guard rejected a concurrent docs-only merge. Review verified exact tracked-code equality; no rerun or relabeled exact-whole-head claim.",
+    "newHostedJobs": 0
+  },
+  "onlyRendererForwardingRemovedInNegative": true,
+  "nativeRenderer": {
+    "source": "0056000940ec0dbc96a010c3b88d349759c51c48",
+    "run": 44541552813,
+    "artifact": 14537598551,
+    "archiveSHA256": "7210e1a844997cac50385efee67c5da6a50ec798b15fd330a304d0d7036d771b",
+    "testJSONLSHA256": "dc7dd25deb686dc5219b3c7397952a72ee31c4b7a0a921ffd3b07245391223a9",
+    "namedNativeTest": "TestFederationNativeRendererProfilePreservesOwner",
+    "passes": 1,
+    "skips": 0,
+    "failures": 0,
+    "nativeExit": 0,
+    "conclusion": "success",
+    "scope": "Actual Windows AMD64 ConPTY owner, synthetic child, federated WebSocket replay and continued output; no browser pixel or authenticated coding qualification."
+  },
+  "nativeSourceByteEqualCurrentPaths": [
+    "webmux/server/internal/httpapi/federation.go",
+    "webmux/server/internal/httpapi/federation_test.go",
+    "webmux/server/internal/httpapi/federation_renderer_windows_test.go",
+    "webmux/server/internal/httpapi/federation_renderer_helper_test.go",
+    ".github/workflows/federation-renderer.yml",
+    "scripts/qualify-federation-renderer.ps1",
+    "webmux/server/internal/nativeprovider",
+    "webmux/server/internal/screenstate"
+  ],
+  "proxyProductionByteEqualOriginal95b": true,
+  "fullOriginalFixCISuccess": {
+    "source": "0056000940ec0dbc96a010c3b88d349759c51c48",
+    "run": 44541506649,
+    "conclusion": "success"
+  },
+  "sourceSHA256": {
+    "webmux/server/internal/httpapi/federation.go": "2f39be097dae6f2ad70a03a9f4a8c4b6f0cea27566f47c5e293b2dd6df6168ed",
+    "webmux/server/internal/httpapi/federation_test.go": "ad6692e931351f70e174e6d49d7512f44d44e71138334871c4e9a6adf80dbd8c",
+    "webmux/server/internal/httpapi/federation_renderer_windows_test.go": "6d296e0aad1ae25ea7d4bee851b3fc0fc8b9467ced83ef20404855aa0e55c369",
+    "webmux/server/internal/httpapi/federation_renderer_helper_test.go": "d6c8f99694e4b9cac90531b2578337f008b3442d30abac9dd4a4ef063351a51b",
+    ".github/workflows/federation-renderer.yml": "becf1ca8c73e24d3b0b1981e9bac8c7c4cb673a50f291b11aecad97fecf2cccd",
+    "scripts/qualify-federation-renderer.ps1": "f0abb412a3f22c909c6dfeca70b11b5bd128e354e3f1513294815b741a364fb9"
+  },
+  "acceptance": {
+    "onlyCapabilityForwardedToConfiguredRoute": true,
+    "browserTokensCookiesOriginsAndArbitraryQueriesExcluded": true,
+    "firstValueAndUnknownSelectionPreserved": true,
+    "nativeAbsentUnknownOlderViewerRefused": true,
+    "nativeOwnerAndShellPIDPreserved": true,
+    "nativeReplayRecaptureContinuedInputOutputAndCrossOwnerIsolationPassed": true,
+    "providerInventoryUnchanged": true
+  },
+  "limits": [
+    "Local controls retain concurrent docs-only HEAD transition and exact tracked-code equality; no relabeled whole-head execution.",
+    "Native execution stays attributed to005, with exact relevant source equality on current main; no fresh current-main native executable or independent signed VCS attestation.",
+    "Original95f native result remains historical; current native proof uses later composed005 with augmented v2 coverage.",
+    "Renderer selection is separate from478blank rendered replay; this audit does not establish its historical cause or full355/427/318/release acceptance.",
+    "No new hosted or native Windows jobs."
+  ]
+}
