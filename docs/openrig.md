@@ -337,6 +337,24 @@ on unchanged main, tracked separately in [#431](https://github.com/jordanhubbard
 
 ## Rig owner workflow
 
+To open an existing seat at a particular position, click that empty grid cell
+and choose **Open existing agent seat**. The **Coordinated sessions** navigator
+shows the selected row and column; choose the seat there. Opening an existing
+visible seat reveals its current tile instead of creating another provider or
+moving it into the requested cell. An occupied destination refuses placement.
+The navigator is also available above the terminal grid; **Manage coordination**
+opens the detailed inventory and lifecycle controls.
+
+The [native placement case](validation/rig-grid-placement-2026-11-19/README.md)
+opens two existing seats at different chosen cells and preserves both providers,
+viewers and history through reload/reconnect beside an ordinary local terminal.
+
+To create a seat, choose Rig as the coordinator in the desired empty cell and
+complete the launch form. Ordinary host connections remain available from the
+same cell. An existing tile can be moved without changing its canonical seat.
+
+For the detailed coordination workflow:
+
 1. Click **Coordination**, choose **Rig** as the Launch owner, and inspect
    its projects and sessions. Use **Make default launch owner** to keep that launch preference. The same default is available under
    **Settings → Coordination**.
@@ -518,17 +536,22 @@ checks do not add an atomic occupant-conditional lifecycle contract.
 Raw activity evidence, prompt text, runtime event bodies, hook tokens and resume
 tokens are omitted from the observation projection. The terminal-first empty
 workspace, ordinary terminals and Agent Deck tiles keep their existing behavior.
-The older standalone navigator remains unmounted, as established by #228.
+The compact **Coordinated sessions** navigator is mounted above the grid. Its
+inventory loads only while expanded in the active workspace; it is separate
+from the tile observations described above. The empty home does not fetch
+coordinator inventory until the owner asks to open existing seats.
 
 The [native activity validation](validation/rig-seat-activity-2026-11-17/README.md)
 covers actual builtin terminal seats, a native seat stop, sibling survival and
 viewer placement. Hook attention and stale/rebind behavior have deterministic
 coverage; authenticated coding-provider readiness remains unqualified.
 
-### Native Stop contract still needed
+<a id="native-stop-contract-still-needed"></a>
 
-A private WebMux launch record is not native Rig lifecycle ownership. Current
-WebMux launchers use Rig's adopted/claimed enrollment path; native `rig seat stop`
+### Legacy Stop limitation
+
+A private WebMux launch record is not native Rig lifecycle ownership. The legacy
+Rig 0.6.14 launch path uses adopted/claimed enrollment; native `rig seat stop`
 refuses those sessions. For an SSH launch, the local tmux process is a relay whose
 exit does not terminate the remote persistent provider. An isolated native test
 confirmed that one natively launched terminal can be stopped without affecting its
@@ -537,10 +560,12 @@ sibling, while an adopted terminal is refused and stays alive.
 Published Rig 0.6.14 accepts a stop reference plus reason/operator but no atomic
 expected rig/node/session or occupant-generation precondition. A separate WebMux
 preflight cannot protect a reviewed occupant from replacement before that native
-command executes. Issue #438 tracks ownership, conditional identity and remote
-effect requirements before a Stop control can ship. Hide, reconnect and native
-recovery keep their existing separate contracts; this activity UI adds no stop
-action and does not complete #194.
+command executes. That build remains ineligible for WebMux's checked Stop
+control. The separately qualified Rig 0.7.18 contract supports the
+[reviewed local Stop action](#checked-local-seat-stop) below. Hide, transport
+reconnect and native recovery retain their separate contracts; the activity
+display grants no lifecycle authority. Broader ownership and remote-effect
+acceptance remains under #438.
 
 
 ## Enrollment origin and launch records
@@ -609,8 +634,9 @@ reconciles canonical seat identity/activity/enrollment and notifications with th
 observed Agents pane. Its live case keeps a real Rig terminal seat and a separate
 observed tmux terminal active through navigation, reload and viewer closure,
 without transferring ownership. Hidden terminal panes now suspend Rig metadata
-observation while their terminal viewers stay mounted. This remains a candidate
-pending hosted/review/audit gates; the broader lifecycle, recovery and bridge
+observation while their terminal viewers stay mounted. This implementation is
+integrated in main through #568; its original report retains the candidate's
+source and qualification limits. The broader lifecycle, recovery and bridge
 requirements remain separate.
 
 ## Checked local seat Stop
