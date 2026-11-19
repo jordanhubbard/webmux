@@ -47,9 +47,32 @@ child exit before independent expiry. An identical Stop request must remain
 idempotent. Cleanup follows the existing Stop/retain contract. An unconfirmed
 launch fails this gate and retains its recovery record.
 
-That application gate has not yet run on the hosted final source. It does not
-authenticate a coding CLI or replace the separate
+At cc4316c, [hosted run 44461807506](https://github.com/jordanhubbard/webmux/actions/runs/44461807506)
+fails the new application gate: bootstrap starts, but independent owner creation
+returns Windows error 5. The same job skips recovery component cases after its
+breakaway permission probe is denied. Those skips do not prove recovery. The
+precise application failure cause remains unproven. Raw logs and artifacts are
+retained; the gate is still required and no unchanged failed run was retried.
+
+The follow-up adds read-only job observations only on owner creation failure:
+outside jobs, immediate job allows/disallows breakaway, in a job with unreadable
+limits, or unknown membership. These are closed labels with no arbitrary text,
+paths, tokens or job names. Immediate job flags cannot establish restrictions in
+all parent jobs. Process flags, deadlines, failure exit status and ownership
+remain unchanged. The Windows APIs are documented by Microsoft:
+[IsProcessInJob](https://learn.microsoft.com/en-us/windows/win32/api/jobapi/nf-jobapi-isprocessinjob)
+and [QueryInformationJobObject](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-queryinformationjobobject).
+
+This application gate does not authenticate a coding CLI or replace the separate
 [native conversation/application evidence](../windows-local-stop-2026-11-18/README.md).
 CI and the actual #543 diagnosis remain required. No new login, authentication
 storage read/copy, CLI installation, installed service/account/protection/firewall
 change or reboot occurred during this component qualification.
+
+The job-observation follow-up passes three native AMD64 top-level controls / 23
+pass events with zero failures/skips and no runtime overrides. The malformed
+image control retains the original failure exit status and exactly one safe
+reply. AMD64/ARM64 cross-builds and Windows-target vet pass. See the separate
+[source-bound receipt](job-observation.json); the earlier full-package receipt
+continues to describe its original image. No persistent owner is started by
+these focused checks.

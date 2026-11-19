@@ -1,0 +1,37 @@
+{
+  "base": "cc4316cb9c891037e09b87939ea3d04e90da8299",
+  "scope": "Read-only bootstrap job observations after owner process creation failure; diagnosis still open",
+  "sourceSHA256": {
+    "webmux/server/internal/nativeprovider/startup_windows.go": "cff771a97782e415da1a1f8deac51db659121354b0bd720fd57349c4d228da87",
+    "webmux/server/internal/nativeprovider/lifecycle_windows.go": "1c68a17f837d9c329c6bba20f91ad414b0b17488325b361d6a2a77180ab9b1db",
+    "webmux/server/internal/nativeprovider/startup_windows_test.go": "440e901cc578f419485b2e71a23b9940ff4800794685fa0b0b2a533d3b850508"
+  },
+  "nativeAMD64": {
+    "toolchain": "go1.27.4",
+    "imageSHA256": "c583baa802c53ebf6be3d32d1ac265af63440ce27840b01755e7aa243f57c6c4",
+    "topLevelTests": 3,
+    "passEvents": 23,
+    "failures": 0,
+    "skips": 0,
+    "runtimeOverrides": [],
+    "observation": "immediate job allows breakaway",
+    "ownerFailureControl": "Malformed image; original error retained; exactly one sanitized owner failure reply"
+  },
+  "crossBuilds": [
+    "windows/amd64",
+    "windows/arm64"
+  ],
+  "vet": "windows/amd64 nativeprovider PASS",
+  "hostedBaselineFailure": {
+    "run": 44461807506,
+    "head": "cc4316cb9c891037e09b87939ea3d04e90da8299",
+    "phase": "owner_process",
+    "win32Code": 5,
+    "cause": "unproven"
+  },
+  "limits": [
+    "Immediate job flags cannot establish all parent job restrictions",
+    "No launch flag, retry, deadline, ownership or service/protection changes",
+    "Focused native checks only; previous full-package receipt remains source-bound to its original image"
+  ]
+}

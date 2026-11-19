@@ -275,6 +275,8 @@ func Bootstrap(ctx context.Context, input io.Reader, output io.Writer) (resultEr
 				return finish(frame{Kind: "ready", Error: failure.Error(), Code: int(code)})
 			}
 		}
+		reporting = false
+		_ = writeFrame(output, startupFailureFrame(ownerProcessFailurePhase(), err))
 		return err
 	}
 	_ = command.Process.Release()
