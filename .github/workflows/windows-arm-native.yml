@@ -115,6 +115,38 @@ jobs:
         env:
           WEBMUX_SCREEN_REPLAY_ONLY: '1'
         run: npm run test:e2e -- screen-replay.spec.ts --workers=2 --fully-parallel
+      - name: Verify headroom before the application build
+        shell: pwsh
+        run: |
+          $memory = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+          $drives = @('C', ([IO.Path]::GetPathRoot($env:GITHUB_WORKSPACE).TrimEnd('\').TrimEnd(':'))) | Select-Object -Unique
+          $space = @($drives | ForEach-Object { Get-PSDrive -Name $_ -ErrorAction Stop | Select-Object Name, Used, Free })
+          @{ freeMemoryKiB = $memory.FreePhysicalMemory; totalMemoryKiB = $memory.TotalVisibleMemorySize; drives = $space } |
+            ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 "$env:WEBMUX_ARM_RECEIPTS/application-worker-health.json"
+          foreach ($drive in $space) { if ($drive.Free -lt 2GB) { throw 'Insufficient application build disk headroom' } }
+          if ($memory.FreePhysicalMemory -lt ($memory.TotalVisibleMemorySize * 0.05)) { throw 'Insufficient application build memory headroom' }
+      - name: Build application frontend
+        working-directory: webmux
+        run: npm run build --workspace=frontend
+      - name: Qualify native ARM64 local application connection and Stop
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP 'webmux-arm64-local-application'
+          ./scripts/qualify-windows-local-application.ps1 -OutputDirectory $output
+          $public = Join-Path $output 'public'
+          $receipt = Get-Content -Raw (Join-Path $public 'application-receipt.json') | ConvertFrom-Json
+          if ($receipt.osArchitecture -ne 'Arm64') { throw 'Application qualification requires a native ARM64 OS' }
+          node scripts/windows-native-architecture.mts --application (Join-Path $public 'webmux-app.exe') --browser "$env:PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" --output (Join-Path $public 'application-architecture.json')
+          if ($LASTEXITCODE -ne 0) { throw 'Native application architecture admission failed' }
+          $architecture = Get-Content -Raw (Join-Path $public 'application-architecture.json') | ConvertFrom-Json
+          if ($architecture.images.application.machine -ne 'arm64' -or $architecture.images.application.sha256 -ne $receipt.imageSHA256) { throw 'Native application image does not match the executed fixture' }
+      - name: Preserve ARM64 native application receipts
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-arm64-native-application
+          path: ${{ runner.temp }}/webmux-arm64-local-application/public
+          if-no-files-found: warn
       - name: Preserve ARM64 native qualification receipts
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
