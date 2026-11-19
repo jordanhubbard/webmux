@@ -51,6 +51,21 @@ verified owned-child exit precedes one-shot private-file removal. Original
 cleanup and trace-helper failures remain retained; broader navigation #282 and
 recovery/release acceptance remain open.
 
+Federated renderer capability forwarding #484 has completed its
+[native acceptance audit](validation/federation-profile-acceptance-2026-11-19/README.md),
+including credential/query isolation and a profile-requiring original ConPTY
+owner. The separate #478 qualification follow-up is now closed after the
+[native visibility-oracle audit](validation/federation-lifecycle-2026-11-18/README.md#integrated-acceptance--2026-11-19).
+That audit preserves uncertainty about the geometry-free historical occurrence;
+broader recovery and release acceptance remain open.
+
+The [current Rig routing qualification](validation/rig-routing-current-2026-11-19/README.md)
+keeps #464/#469 open: the original legacy 13-case workload passes, while modern
+Rig passes 12 cases and refuses synthetic Codex in its tracked native-creation
+path. #603 tracks the remaining modern workload. The response observer now
+reveals the actual refusal without changing the original success assertion;
+separate authenticated native receipts retain their own scope.
+
 ### Recover active work after interruption
 
 [#318](https://github.com/jordanhubbard/webmux/issues/318) adds session-state
