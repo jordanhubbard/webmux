@@ -1,8 +1,9 @@
+import { disposeFixtureTerminal } from './terminal-lifecycle.mts';
 import { test, expect } from '@playwright/test';
 import http from 'node:http';
 import { execFileSync } from 'node:child_process';
 
-test('accessible controls retain live identity, refuse stale references and dispatch once', async ({ request }) => {
+test('accessible controls retain live identity, refuse stale references and dispatch once', async ({ request }, info) => {
  test.setTimeout(90_000);
  let presses = 0, dynamicPresses = 0, linkDocuments = 0, label = 'Original action', observed = '';
  let automaticNavigation = false;
@@ -199,7 +200,7 @@ test('accessible controls retain live identity, refuse stale references and disp
   expect(presses).toBe(1);
  } finally {
   await request.delete(endpoint, { data: { viewer, controlToken: token } }).catch(() => {});
-  await request.delete(`/api/sessions/${id}`).catch(() => {});
+  await disposeFixtureTerminal(request, id, info);
   if (process.platform !== 'win32') { try { execFileSync('tmux', ['kill-session', '-t', `webmux-${id}`]); } catch { /* already closed */ } }
   site.closeAllConnections();
   await new Promise<void>(resolve => site.close(() => resolve()));

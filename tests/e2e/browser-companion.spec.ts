@@ -1,3 +1,4 @@
+import { disposeFixtureTerminal, observeFixtureBrowser } from './terminal-lifecycle.mts';
 import { test, expect, type Page } from '@playwright/test';
 import http from 'node:http';
 import { writeFileSync, rmSync } from 'node:fs';
@@ -94,6 +95,7 @@ test(`browser companion routes ${scenario} authentication and completes a loopba
   const created = await request.post('/api/sessions', { data: { transport: 'local', cols: 80, rows: 24 } });
   expect(created.ok()).toBe(true);
   const session = await created.json();
+  const endFixtureBrowser = observeFixtureBrowser(page, request, session.id);
   if (interruptFirstFrames) {
     await page.route(`**/api/sessions/${session.id}/browser`, async route => {
       if (route.request().method() !== 'POST') { await route.continue(); return; }
@@ -171,7 +173,7 @@ test(`browser companion routes ${scenario} authentication and completes a loopba
         await expect(choice).toBeVisible({ timeout: 1000 });
       }).toPass({ timeout: 10_000 });
     } else {
-      await page.getByRole('button', { name: 'Session tools', exact: true }).click();
+      await page.getByTestId(`tile-cell-${session.id}`).getByRole('button', { name: 'Session tools', exact: true }).click();
       await page.getByRole('button', { name: 'Open browser', exact: true }).click();
     }
     if (process.platform !== 'win32') {
@@ -253,7 +255,7 @@ test(`browser companion routes ${scenario} authentication and completes a loopba
     await page.screenshot({ path: 'test-results/browser-companion.png' });
     await page.getByRole('button', { name: 'Return to terminal' }).click();
     await expect(viewport).not.toBeVisible();
-    await page.getByRole('button', { name: 'Session tools', exact: true }).click();
+    await page.getByTestId(`tile-cell-${session.id}`).getByRole('button', { name: 'Session tools', exact: true }).click();
     await page.getByRole('button', { name: 'Open browser', exact: true }).click();
     await expect(viewport).toBeVisible();
     const reopened = await request.post(`/api/sessions/${session.id}/browser`, { data: { action: 'frame' } });
@@ -283,11 +285,15 @@ test(`browser companion routes ${scenario} authentication and completes a loopba
     }
     await idleViewer?.close();
     rmSync(launchConfig, { force: true });
-    await request.delete(`/api/sessions/${session.id}`).catch(() => { /* the request fixture may already be closed after a timeout */ });
-    // Local terminals intentionally persist in tmux after disconnection.
-    try { execFileSync('tmux', ['kill-session', '-t', `webmux-${session.id}`]); } catch { /* already exited */ }
-    identity.closeAllConnections(); callback.closeAllConnections();
-    await Promise.all([new Promise<void>(resolve => identity.close(() => resolve())), new Promise<void>(resolve => callback.close(() => resolve()))]);
+    try {
+      await endFixtureBrowser();
+      await disposeFixtureTerminal(request, session.id, info);
+    } finally {
+      // Local Unix terminals intentionally persist in tmux after disconnection.
+      if (process.platform !== 'win32') { try { execFileSync('tmux', ['kill-session', '-t', `webmux-${session.id}`]); } catch { /* already exited */ } }
+      identity.closeAllConnections(); callback.closeAllConnections();
+      await Promise.all([new Promise<void>(resolve => identity.close(() => resolve())), new Promise<void>(resolve => callback.close(() => resolve()))]);
+    }
   }
 });
 

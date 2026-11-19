@@ -1,3 +1,4 @@
+import { disposeFixtureTerminal, observeFixtureBrowser } from './terminal-lifecycle.mts';
 import { test, expect } from '@playwright/test';
 import http from 'node:http';
 
@@ -16,6 +17,7 @@ test('small browser companion keeps address entry and page controls usable', asy
   const created = await request.post('/api/sessions', { data: { transport: 'local' } });
   expect(created.ok()).toBe(true);
   const { id } = await created.json() as { id: string };
+  const endFixtureBrowser = observeFixtureBrowser(page, request, id);
   try {
     await page.goto('/');
     await page.getByTestId(`tile-cell-${id}`).getByRole('button', { name: 'Session tools', exact: true }).click();
@@ -66,7 +68,12 @@ test('small browser companion keeps address entry and page controls usable', asy
     await expect(companion).toHaveCount(0);
     await expect(page.getByTestId(`tile-cell-${id}`)).toBeVisible();
   } finally {
-    await request.delete(`/api/sessions/${id}`);
-    await new Promise<void>(resolve => site.close(() => resolve()));
+    try {
+      await endFixtureBrowser();
+      await disposeFixtureTerminal(request, id, info);
+    } finally {
+      site.closeAllConnections();
+      await new Promise<void>(resolve => site.close(() => resolve()));
+    }
   }
 });

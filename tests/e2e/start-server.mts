@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawn, spawnSync } from 'node:child_process';
 import { startOpenRigFixture } from './openrig-fixture.mts';
+import { prepareBrowserTestHome } from '../../webmux/scripts/browser-test-home.mts';
 
 const testHome = path.resolve(import.meta.dirname, '.test-home');
 const defaultsDir = path.resolve(import.meta.dirname, '../../webmux/config.defaults');
@@ -15,8 +16,11 @@ if (authMode !== 'none' && authMode !== 'local') throw new Error(`Unsupported br
 
 // Initialize before starting the server: Playwright's globalSetup runs AFTER its
 // webServer starts. Never remove watched storage from a running server, including
-// during teardown (especially on Windows). The next launch clears this fixture.
-fs.rmSync(testHome, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+// during teardown (especially on Windows). Preserve prior Windows homes because
+// an unconfirmed native owner can outlive the controller; Unix fixtures use the
+// outer runner's private tmux teardown before their next allocation.
+const retainedHome = prepareBrowserTestHome(testHome, process.platform === 'win32');
+if (retainedHome) console.error(`Retained previous Windows fixture home for original-provider recovery: ${retainedHome}`);
 for (const directory of ['config', 'logs', 'data']) {
   fs.mkdirSync(path.join(testHome, directory), { recursive: true });
 }

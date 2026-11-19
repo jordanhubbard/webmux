@@ -143,6 +143,12 @@ Remaining #318 work, in order:
    results remain separate from authenticated conversation recovery. Remote native resume is
    manual by owner decision. Unqualified cases must
    continue to offer explicit fallback with retained logs.
+   Hosted Windows browser fixtures also report unconfirmed native-provider
+   startup, including on the last green baseline. [#543](https://github.com/jordanhubbard/webmux/issues/543)
+   tracks diagnosis and an actual connected-shell application gate. The
+   [browser-fixture lifecycle repair](validation/windows-local-stop-2026-11-18/ci-fixtures.md)
+   retains unresolved access and closes owned browser workers; it does not
+   qualify the unconfirmed native launch.
 2. Codex in default shared-daemon mode is manual-only by owner decision: no
    observation point preserves launch mode and sandbox policy after interactive
    switches. Revisit when [openai/codex#60625](https://github.com/openai/codex/issues/60625)
