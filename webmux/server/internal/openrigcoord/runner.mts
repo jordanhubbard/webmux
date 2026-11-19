@@ -209,7 +209,7 @@ print(json.dumps({'host': sys.argv[2], 'path': p, 'parent': os.path.dirname(p) i
       const observationHelper = process.platform === 'linux' ? JSON.parse(nativeCreateArtifacts.read(path.join(directory, '.native-codex-observer.json')).toString('utf8')) as import('./codex-owner-plan.mts').CodexObservationHelper : undefined;
       const result = await resumeRigNativeCodex({ directory, rigId: reference.rigId, nodeId: reference.nodeId, pod: reference.pod, member: reference.member,
         cwd: reference.cwd, snapshotId: reference.snapshotId, historySessionId: reference.historySessionId, nativeSessionId: reference.nativeSessionId,
-        sessionName: reference.sessionName, operationId: input.operationId, prepare: input.prepare, inspect: input.inspect }, { run, observationHelper });
+        sessionName: reference.sessionName, reference, operationId: input.operationId, prepare: input.prepare, inspect: input.inspect }, { run, observationHelper });
       if (result.state !== 'confirmed') console.log(JSON.stringify(result));
       else {
         const attachment = await observeRigNativeOriginalAttachment(selection, reference, { run });

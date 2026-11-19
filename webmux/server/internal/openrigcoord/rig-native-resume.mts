@@ -6,10 +6,12 @@ import { createHash } from 'node:crypto';
 import { nativeCreateArtifacts as artifacts, openRigNativeCodexRecoveryHandoff, type NativeCodexCreateInput } from './rig-native-create.mts';
 import { reviewRigCreateManager, type RigCreateManager, type RigStopRun } from './rig-stop.mts';
 import type { CodexObservationHelper } from './codex-owner-plan.mts';
+import { verifyRigNativeCodexResumePolicy, type NativeCodexRecoveryReference } from './rig-native-capture.mts';
 
 export interface NativeCodexResumeInput extends Omit<NativeCodexCreateInput, 'inspect'> {
   operationId: string; nodeId: string; snapshotId: string; historySessionId: string;
   nativeSessionId: string; sessionName: string; inspect?: boolean; prepare?: boolean;
+  reference?: NativeCodexRecoveryReference;
 }
 export interface NativeCodexResumeResult {
   state: 'prepared' | 'confirmed' | 'uncertain'; code: string; posted: boolean;
@@ -21,6 +23,7 @@ interface Dependencies {
   run: RigStopRun; fetcher?: typeof fetch; observationHelper?: CodexObservationHelper;
   review?: () => Promise<RigCreateManager>;
   handoff?: typeof openRigNativeCodexRecoveryHandoff;
+  verifyPolicy?: (input: NativeCodexResumeInput) => void;
 }
 const ulid = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -148,11 +151,20 @@ export async function resumeRigNativeCodex(input: NativeCodexResumeInput, deps: 
   // its own operation. Preparation creates no environment channel, observes no
   // account and dispatches nothing. Explicit completion after a controller
   // loss can then use the same bytes even before the first native POST.
+  const verifyPolicy = deps.verifyPolicy ?? ((value: NativeCodexResumeInput) => {
+    const ref = value.reference;
+    if (!ref || ref.rigId !== value.rigId || ref.nodeId !== value.nodeId || ref.pod !== value.pod || ref.member !== value.member
+      || ref.cwd !== value.cwd || ref.nativeSessionId !== value.nativeSessionId || ref.sessionName !== value.sessionName
+      || ref.snapshotId !== value.snapshotId || ref.historySessionId !== value.historySessionId) return refuse('reference_missing');
+    verifyRigNativeCodexResumePolicy(value.directory, ref);
+  });
+  verifyPolicy(input);
   if (input.prepare) return { ...summary, state: 'prepared', code: 'native_resume_prepared', posted: false };
   const handoff = await (deps.handoff ?? openRigNativeCodexRecoveryHandoff)(input, { run: deps.run, fetcher, observationHelper: deps.observationHelper });
   try {
     if (handoff.manager.managerIdentity !== manager.managerIdentity || handoff.manager.port !== manager.port
       || handoff.manager.processIdentity !== manager.processIdentity) return refuse();
+    verifyPolicy(input);
     if (!consume(dispatched, json({ operationId: input.operationId, requestSHA256: digest(saved.requestText) }), input.inspect === true)) {
       return { ...summary, state: 'uncertain', code: 'native_resume_already_dispatched', posted: false };
     }
