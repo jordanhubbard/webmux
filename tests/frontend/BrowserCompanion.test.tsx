@@ -348,3 +348,29 @@ it('focuses and activates named page controls with opaque references and clears 
   expect(screen.getByText('Remote control activated. Read page text again for updated controls.')).toHaveAttribute('role', 'status');
  } finally { view.unmount(); }
 });
+
+it('retires accessible controls while a replacement snapshot is pending', async () => {
+ const frame = { protocol: 3, control: { owned: true, available: false }, image: 'fixture', url: 'https://example.com/work', tabs: [], target: 'one' };
+ const snapshot = (element: string) => ({ ...frame, pageText: { nodes: [{ role: 'textbox', name: 'Search', depth: 1, element, canFocus: true }], truncated: false } });
+ let completeRefresh!: (value: ReturnType<typeof snapshot>) => void;
+ let reads = 0;
+ fixture.action.mockReset().mockImplementation(async (_id, request) => {
+  if (request.action !== 'read_page') return frame;
+  if (++reads === 1) return snapshot('old-reference');
+  return new Promise<ReturnType<typeof snapshot>>(resolve => { completeRefresh = resolve; });
+ });
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Read page text' })); });
+  expect(screen.getByRole('button', { name: 'Focus Search' })).toBeEnabled();
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Read page text' })); });
+  expect(reads).toBe(2);
+  expect(screen.queryByRole('region', { name: 'Remote page text' })).toBeNull();
+  expect(fixture.action.mock.calls.filter(call => call[1].action === 'focus_element')).toHaveLength(0);
+  await act(async () => { completeRefresh(snapshot('fresh-reference')); });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Focus Search' })); });
+  expect(fixture.action).toHaveBeenCalledWith('test', { action: 'focus_element', target: 'one', element: 'fresh-reference' });
+  expect(screen.getByRole('textbox', { name: 'Type into remote page' })).toHaveFocus();
+ } finally { view.unmount(); }
+});

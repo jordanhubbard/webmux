@@ -79,7 +79,9 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
       if (action.profileId !== undefined) profileChoice.current.id = action.profileId;
       else if (profileChoice.current.id !== undefined) action = { ...action, profileId: profileChoice.current.id };
     }
-    if (!['frame', 'read_page', 'claim', 'resize'].includes(action.action)) {
+    // Reading again replaces native control references. Retire the previous
+    // controls before queueing the refresh so they cannot dispatch stale IDs.
+    if (!['frame', 'claim', 'resize'].includes(action.action)) {
       setPageText(undefined);
       setPageActionStatus('');
     }
