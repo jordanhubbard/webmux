@@ -1,0 +1,208 @@
+{
+  "issue": 478,
+  "auditedMain": "629478cdd5984a21056bd3526490970361ec9a91",
+  "recordedUTC": "2026-11-19T23:03:30.880411+00:00",
+  "assertionInventory": {
+    "assertions": 81,
+    "originalIssueAssertions": 75,
+    "allOriginalAssertionsPreservedInOrder": true,
+    "unchangedAfterOnlyVisibilityLocatorNormalization": true,
+    "sourceSnapshots": [
+      "original.ts",
+      "before.ts",
+      "fixed.ts",
+      "current.ts"
+    ],
+    "method": "AST comparison of every expect matcher and argument; normalize visibleRows to original row locator and one equivalent descendant selector. No assertion, expected value or deadline normalization."
+  },
+  "assertionAuditScriptSHA256": "13bc52d05ed1d9423f3619589ee4d3a2115fb568422fa0b77f86a01bae778f53",
+  "nativeEvidence": [
+    {
+      "label": "original",
+      "run": 44267347627,
+      "artifact": 14412470818,
+      "source": "d871ac60421c37485f7044f5323f3a71291d7a65",
+      "archiveSHA256": "8523e8b810eaf9076a63ea02cbbd4f02cc24a475e8414c6fac8a1cb9ee492c19",
+      "conclusion": "failure",
+      "diagnosticRecords": 0,
+      "detail": {
+        "originalLostStackArtifactRetained": true,
+        "originalMissingGeometryNotReconstructed": true
+      },
+      "receiptSHA256": {}
+    },
+    {
+      "label": "spontaneous-pack",
+      "run": 44273974857,
+      "artifact": 14412934196,
+      "source": "28f32b5eebddb52b5d2381d343fd0dbdb2c395f3",
+      "archiveSHA256": "5991ed00c54ba4ab26d387ecf1be218bca3acdca27152d9c86e9d7e1c782e034",
+      "conclusion": "failure",
+      "diagnosticRecords": 11,
+      "detail": {
+        "phase": "pack",
+        "bothAPIsAndViewsConnected": true,
+        "bothOriginalFixtureProvidersPresent": true,
+        "peerReplayBytes": 49,
+        "noFurtherPeerFramesMilliseconds": 5029,
+        "failedRecordSHA256": "89bcd6249dec7b764dc04960e980c39f8a740b6ad5a09fe958249b67cf27b4fe",
+        "historicalGeometryAbsent": true
+      },
+      "receiptSHA256": {
+        "webmux/webmux/webmux/test-results/federation-native/control/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "ad584c89947183bf1186a2e93944706aa21389e7315ffcda2729ddc70208ec34",
+        "webmux/webmux/webmux/test-results/federation-native/sample-1/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "2b5aa6f7a151c097bbf2ef466303679cd020e26195ea53d551f42bdc93dd7712",
+        "webmux/webmux/webmux/test-results/federation-native/sample-10/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "89bcd6249dec7b764dc04960e980c39f8a740b6ad5a09fe958249b67cf27b4fe",
+        "webmux/webmux/webmux/test-results/federation-native/sample-2/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "7812c8f6497eb283ce8c2759d3360caf2c8cee161995bfad03dd930a3e6054b8",
+        "webmux/webmux/webmux/test-results/federation-native/sample-3/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "a23c9f48d7eff51c2a253c577cf3e0a80e09001cebfaebe4aa5b739ed23c7af0",
+        "webmux/webmux/webmux/test-results/federation-native/sample-4/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "39d6d483efbf7a46114d887c18cec9dbb9835d055c5fb82cbe0730dbc8413dc8",
+        "webmux/webmux/webmux/test-results/federation-native/sample-5/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "004b9fe95b9bed5444b04c4b73f436bc43b8925c9165d079450e11586e57d7a5",
+        "webmux/webmux/webmux/test-results/federation-native/sample-6/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "ac6eeb1edc915839586af4d3d6ef492560e3d8b7d49ea7142e07cf2a913d61c5",
+        "webmux/webmux/webmux/test-results/federation-native/sample-7/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "341b1d59f483f6d9cf5cf28a368ec9598bf1eaeb4c5e47a1b0c8d7df54925423",
+        "webmux/webmux/webmux/test-results/federation-native/sample-8/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "7da0310fbb8d0f56bf3d7a3666e1c4d239ff4e21646c99f4bc12500c49150ae1",
+        "webmux/webmux/webmux/test-results/federation-native/sample-9/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "f93db5f19e8b0fe912c5bfdbe945c6add604e5072b71c0aa6b3e9adbee85d251"
+      }
+    },
+    {
+      "label": "offscreen-before",
+      "run": 44280531734,
+      "artifact": 14417565130,
+      "source": "fea9cb81c727c4f21995c83bb2fcb3d991ba7857",
+      "archiveSHA256": "31800c52188150c5e8ad01c0e1890ab60b955f00d94478bfef07ca4c51b96f6a",
+      "conclusion": "success",
+      "diagnosticRecords": 3,
+      "detail": {
+        "regularLifecycleSamples": 1,
+        "regularSamplesComplete": true,
+        "expectedFailureControls": 2,
+        "negativeUnscrolledBlankMarkerRevealedOnlyByVisibility": true,
+        "completeTraceZeroNewFramesOrSockets": true,
+        "originalProviderPIDAfterVisibility": true,
+        "strictOriginalBlankAssertionFlag": false,
+        "sourceMetadata": {
+          "head": "fea9cb81c727c4f21995c83bb2fcb3d991ba7857",
+          "node": "v24.22.2",
+          "goHost": "amd64",
+          "goTarget": "amd64",
+          "nodeArch": "x64",
+          "samples": 1
+        },
+        "offscreenReceiptSHA256": "51dec97aac878103674218dbca8dacc8552e176d920f6ff23114e1c719df08a6",
+        "barrierReceiptSHA256": "2efed6278cfd1393db5bc62bcb2d4ec12aa1e81c7bf9ae031696538aef2374b1"
+      },
+      "receiptSHA256": {
+        "webmux/webmux/webmux/test-results/federation-native/control/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "3160bba11077542ea5bc32915c27241c5229b365ae4716f3268672849528348c",
+        "webmux/webmux/webmux/test-results/federation-native/offscreen-control/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "51dec97aac878103674218dbca8dacc8552e176d920f6ff23114e1c719df08a6",
+        "webmux/webmux/webmux/test-results/federation-native/sample-1/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "d9f66aaba74815ef82d1297129ce9e21a8c146b581dfad1d2f6c720a5c534db6"
+      }
+    },
+    {
+      "label": "corrected-ten",
+      "run": 44281407842,
+      "artifact": 14416877918,
+      "source": "2f9a13d84ac27f126769d100c71ce7ef884414bd",
+      "archiveSHA256": "6ff87688bff75171d721e4ef46b3fdccda9bfe6550eb6c617c13c80e42efee88",
+      "conclusion": "success",
+      "diagnosticRecords": 12,
+      "detail": {
+        "regularLifecycleSamples": 10,
+        "regularSamplesComplete": true,
+        "expectedFailureControls": 2,
+        "negativeUnscrolledBlankMarkerRevealedOnlyByVisibility": true,
+        "completeTraceZeroNewFramesOrSockets": true,
+        "originalProviderPIDAfterVisibility": true,
+        "strictOriginalBlankAssertionFlag": true,
+        "sourceMetadata": {
+          "head": "2f9a13d84ac27f126769d100c71ce7ef884414bd",
+          "node": "v24.22.2",
+          "goHost": "amd64",
+          "goTarget": "amd64",
+          "nodeArch": "x64",
+          "samples": 10
+        },
+        "offscreenReceiptSHA256": "c5fe75ea7cfec772f59a0e96fa74777aca5fb7c6ba1169a1ddd1648cf9d32a3f",
+        "barrierReceiptSHA256": "6f7121b5f968725328ea78c7a75fd5b7193bd4c31e7e695268e276a7fccbfd6d"
+      },
+      "receiptSHA256": {
+        "webmux/webmux/webmux/test-results/federation-native/control/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "c90baab1189a390ee6ce193d5155fe1af02b0317dd926de9cd03bf3c696f681c",
+        "webmux/webmux/webmux/test-results/federation-native/offscreen-control/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "c5fe75ea7cfec772f59a0e96fa74777aca5fb7c6ba1169a1ddd1648cf9d32a3f",
+        "webmux/webmux/webmux/test-results/federation-native/sample-1/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "bb9f5fafd242f5c236909956b9957eda1e2a6ff4602d76adf265fe43bede464f",
+        "webmux/webmux/webmux/test-results/federation-native/sample-10/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "fbf70759caaa6b4cfe0da3d3b62b160c645a051cc4eb811d9c921ad0bdc887a7",
+        "webmux/webmux/webmux/test-results/federation-native/sample-2/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "604e2d07d4354ec393bcea76554ececa7f66971292e4ab4f05793d7d440db611",
+        "webmux/webmux/webmux/test-results/federation-native/sample-3/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "d1e7ddf53c24d88aa054253828ed2bef42d8c282c5872ddd3e9a1d174810b3b6",
+        "webmux/webmux/webmux/test-results/federation-native/sample-4/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "cf7006eeccf232e902d807415f04d06d39648d35382dc2626930e10cc1d535ed",
+        "webmux/webmux/webmux/test-results/federation-native/sample-5/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "0330d98e692a706968f17638e2f2d957a9ec0e92c21dcd370e5d72817532abb2",
+        "webmux/webmux/webmux/test-results/federation-native/sample-6/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "7b398d06efad10dda7eb0eee6b87ccbf5708f3d82467b8cf1455fa42fd3cbf05",
+        "webmux/webmux/webmux/test-results/federation-native/sample-7/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "700bd6dce1d0d686311e793b68299dc8702c9d8c43090c4ba2cb568c9d22fe1a",
+        "webmux/webmux/webmux/test-results/federation-native/sample-8/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "9439aa94492adac41d8ae8dfc609610a357bb0bb3060929bbb43ad372bdf0635",
+        "webmux/webmux/webmux/test-results/federation-native/sample-9/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "2ca5872c529d75f76fca254db4210ae88968b5c126bb7a40dd63568b22a0e00d"
+      }
+    },
+    {
+      "label": "integrated",
+      "run": 44541541564,
+      "artifact": 14538867224,
+      "source": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "archiveSHA256": "40505638f1b8fa9ba6b8c1e96ecfc5186b3dea0cd2cdc1ce366c0983dc42df43",
+      "conclusion": "success",
+      "diagnosticRecords": 3,
+      "detail": {
+        "regularLifecycleSamples": 1,
+        "regularSamplesComplete": true,
+        "expectedFailureControls": 2,
+        "negativeUnscrolledBlankMarkerRevealedOnlyByVisibility": true,
+        "completeTraceZeroNewFramesOrSockets": true,
+        "originalProviderPIDAfterVisibility": true,
+        "strictOriginalBlankAssertionFlag": true,
+        "sourceMetadata": {
+          "head": "0056000940ec0dbc96a010c3b88d349759c51c48",
+          "node": "v24.22.2",
+          "goHost": "amd64",
+          "goTarget": "amd64",
+          "nodeArch": "x64",
+          "samples": 1
+        },
+        "offscreenReceiptSHA256": "f51d3e53aec561c345e8f2ef171b11dd5e5431a4eedb3bb14853f96410349719",
+        "barrierReceiptSHA256": "a423b5504a94a709f8b83c478818ea0c77036c686947ecba28aa8b8479b8782e"
+      },
+      "receiptSHA256": {
+        "webmux/webmux/webmux/test-results/federation-native/control/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "ae980e13089e40a5044a1f6a1e03fa4e135fe01245bca90fae4c12751a12b746",
+        "webmux/webmux/webmux/test-results/federation-native/offscreen-control/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "f51d3e53aec561c345e8f2ef171b11dd5e5431a4eedb3bb14853f96410349719",
+        "webmux/webmux/webmux/test-results/federation-native/sample-1/server-federation-two-serv-69ef0-thout-duplicating-providers-chromium/federation-diagnostics.json": "9d6c08775d2137d0bbdeb391bc077580ef8b2b560330c8e77eb6415901a4f739"
+      }
+    }
+  ],
+  "currentRelevantSourcesByteEqualIntegrated005": [
+    "tests/e2e/server-federation.spec.ts",
+    "tests/e2e/federation-diagnostics.ts",
+    "tests/e2e/federation-diagnostic-facts.mts",
+    "tests/e2e/federation-replay-control.ts",
+    "tests/e2e/federation-fixture.mts",
+    ".github/workflows/federation-native.yml",
+    "webmux/server/internal/httpapi/federation.go",
+    "webmux/frontend/src/components/ServerWorkspace.tsx",
+    "webmux/frontend/src/components/Terminal.tsx"
+  ],
+  "originalCaseDeadlineMilliseconds": 90000,
+  "currentCaseDeadlineMilliseconds": 90000,
+  "currentDefaultMatcherDeadlineMilliseconds": 5000,
+  "fullIntegratedCISuccess": {
+    "source": "0056000940ec0dbc96a010c3b88d349759c51c48",
+    "run": 44541506649,
+    "conclusion": "success"
+  },
+  "acceptance": {
+    "originalFailureRetainedAndNewStacksPreserved": true,
+    "spontaneousPackProviderTransportAndDOMDistinguished": true,
+    "controlledNativeOffscreenDOMHazardEstablished": true,
+    "visibilityOnlyOracleCorrectionQualified": true,
+    "allOriginalAssertionsPreserved": true,
+    "noProviderReplayRestartOrDeadlineWideningInCorrection": true
+  },
+  "limits": [
+    "The spontaneous historical Pack sample has no geometry; its unique cause cannot be reconstructed or proven by later green runs.",
+    "Established correction is the independently reproduced offscreen DOM measurement hazard, not a claim that every historical failure had that cause or a production transport repair.",
+    "Actual native Windows Go/Chrome flow uses synthetic exec fixture children; separate from ConPTY renderer protocol and authenticated coding recovery.",
+    "Deliberately failed control children are admitted only by their explicit verifier; original ordinary failing runs remain failed.",
+    "Only retained original artifacts/source analysis; zero new hosted or native Windows jobs and no fresh whole-current-main executable/full-roadmap/release claim."
+  ]
+}

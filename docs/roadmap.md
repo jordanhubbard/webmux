@@ -54,8 +54,10 @@ recovery/release acceptance remain open.
 Federated renderer capability forwarding #484 has completed its
 [native acceptance audit](validation/federation-profile-acceptance-2026-11-19/README.md),
 including credential/query isolation and a profile-requiring original ConPTY
-owner. The historical blank-rendered-replay cause under #478 remains separate
-and open; broader recovery and release acceptance are unchanged.
+owner. The separate #478 qualification follow-up is now closed after the
+[native visibility-oracle audit](validation/federation-lifecycle-2026-11-18/README.md#integrated-acceptance--2026-11-19).
+That audit preserves uncertainty about the geometry-free historical occurrence;
+broader recovery and release acceptance remain open.
 
 ### Recover active work after interruption
 
