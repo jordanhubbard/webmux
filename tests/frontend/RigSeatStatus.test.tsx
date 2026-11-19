@@ -85,6 +85,8 @@ it('keeps attachment availability separate from lifecycle, activity and the save
   for (const patch of [
     { transportState: undefined },
     { transportState: 'unexpected' },
+    { transportState: 'toString' },
+    { transportState: '__proto__' },
     { transportState: 'available', observationState: 'offline' },
     { transportState: 'available', managerTarget: 'replacement' },
     { transportState: 'available', tmuxServerFlag: '-S', tmuxServerValue: '/tmp/replacement' },

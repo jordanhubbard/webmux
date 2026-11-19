@@ -39,7 +39,7 @@ export function RigSeatStatus({ session, observations = [] }: { session: Session
     } else if (activity.evidenceSource === 'terminal_activity' && activity.state === 'running') label = 'Terminal output observed';
     else if (activity.state !== 'unknown' && ['running', 'idle', 'needs_input'].includes(activity.state)) label = `Activity estimate: ${activity.state.replace(/_/g, ' ')}`;
   }
-  const attachment = bindingMatches ? ({ available: 'available', unavailable: 'unavailable', reported: 'reported' } as Record<string, string>)[seat?.transportState || ''] || 'unknown' : 'unknown';
+  const attachment = bindingMatches && seat?.transportState && ['available', 'unavailable', 'reported'].includes(seat.transportState) ? seat.transportState : 'unknown';
   const startup = ({ pending: 'pending', ready: 'ready', attention_required: 'needs attention', failed: 'failed' } as Record<string, string>)[bindingMatches ? seat?.startupStatus || '' : ''] || 'unknown';
   const enrollment = bindingMatches && seat?.enrollmentSource === 'rig-session-registry' ? ({ launched: 'Launched by Rig', claimed: 'Adopted by Rig' } as Record<string, string>)[seat.enrollmentOrigin || ''] || 'unknown' : 'unknown';
   const attention = seat?.state === 'attention_required' || (bindingMatches && (seat?.startupStatus === 'attention_required' || seat?.startupStatus === 'failed'))
