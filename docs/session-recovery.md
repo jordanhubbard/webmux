@@ -2681,6 +2681,17 @@ broader startup settings or all platforms. The native account stays in its
 original home; the private browser is loopback auth-none. Full #318/#438,
 review/current-head CI and release acceptance remain open.
 
+The later [interactive-permission guard](validation/codex-interactive-policy-2026-11-19/README.md)
+addresses #539: a native Read Only selection previously became the original
+workspace-write/never policy after recovery. Applied-settings journal records
+now refuse structured Resume when current settings differ, including a change
+without another model turn. Native controller-crash/survivor and later CLI-loss
+cases verify refusal before any Resume POST. A fresh unchanged workspace-write/never
+case still passes public original-conversation recovery and its restart/crash,
+tool, log-prefix and duplicate controls. This preserves manual choices rather
+than adding dynamic permission-profile or graph translation. The qualification
+records both earlier failed harness attempts and bounded-evidence fallback.
+
 ## Native Codex project trust and original creation retry (2026-11-18)
 
 [#529](https://github.com/jordanhubbard/webmux/issues/529) now has an implemented,
