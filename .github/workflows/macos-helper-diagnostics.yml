@@ -46,6 +46,15 @@ jobs:
           free = int(re.search(r'System-wide memory free percentage: (\d+)%', pressure).group(1))
           assert free >= 10, 'Insufficient diagnostic memory headroom'
           PY
+      - name: Install the private tmux fixture prerequisite
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'
+          HOMEBREW_NO_AUTOREMOVE: '1'
+          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: '1'
+        run: |
+          brew install tmux
+          tmux -V
       - name: Install unchanged helper dependencies
         working-directory: webmux
         run: npm ci
