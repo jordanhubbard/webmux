@@ -33,6 +33,13 @@ generic matcher limitations remain. The [source bindings and scope](validation/r
 preserve the separate #318, #438 and #246 acceptance gaps. Integration does not
 complete those items or the overall roadmap and does not cut a release.
 
+The integrated fixture follow-ups #535, #524 and #525 and USB follow-ups #505
+and #459 have completed their scoped acceptance audits and are closed. Their
+[acceptance reconciliation](validation/scoped-acceptance-2026-11-19/README.md)
+binds the original failures, controls and native results to the relevant current
+sources. This does not qualify the whole current main revision or the release;
+the changed-source private Windows VT timeout under #536 remains unresolved.
+
 ### Recover active work after interruption
 
 [#318](https://github.com/jordanhubbard/webmux/issues/318) adds session-state

@@ -1,0 +1,455 @@
+{
+  "schema": 1,
+  "auditedMain": "4f4bf33acc4ed57275a1c33bb649bdd1bb35dbb0",
+  "method": "Read original retained raw artifacts and live source/run/artifact bindings; verify relevant current source equality. Run 13 portable sysfs controls locally. No new native attempts or hosted jobs.",
+  "closedScopedFollowups": [
+    {
+      "issue": 535,
+      "state": "CLOSED",
+      "auditedMain": "4f4bf33acc4ed57275a1c33bb649bdd1bb35dbb0",
+      "privateDetailedAuditSHA256": "525edcaf3e0d01c17cd9a20b47146600e342772de4becf46e38aefe3e6bdae48",
+      "evidence": {
+        "nativeEvidence": {
+          "originalFailure": {
+            "run": 44429823292,
+            "artifact": 14486805700,
+            "source": "47c72614a05412c072fb0563ffb5ac9f15a6e261",
+            "conclusion": "failure",
+            "archiveSHA256": "4a418a98c45fbc257581365737d12f5e6876d92035a1f568f08cf2da5702f786",
+            "serverJSONLSHA256": "ff636e99a428eae57f6694244dc34f0d19bd3af806b6d93af07d99bd4ce24998",
+            "architecture": {
+              "GOOS": "windows",
+              "GOARCH": "arm64",
+              "GOHOSTARCH": "arm64"
+            },
+            "controls": {
+              "TestStatusReaderSharesPendingRenameDeleteHandle": {},
+              "TestAgentActivityDebouncesAndIgnoresOldLaunch": {
+                "run": 1,
+                "output": 3,
+                "fail": 1
+              }
+            },
+            "serverFailEvents": 2,
+            "topLevelPass": 473
+          },
+          "originalFix": {
+            "run": 44431315343,
+            "artifact": 14488348131,
+            "source": "cc8aaa8d5bb3ab4adc07e196f1c505c1dc5e98c3",
+            "conclusion": "success",
+            "archiveSHA256": "7ae7b49c3d5945cfde41dd560594c641fd20a31d97a0304e567158056feef86a",
+            "serverJSONLSHA256": "73c3c1346b58a81354f9270267a50942a1ecbd57e2ddadbcc37064889fef5f23",
+            "architecture": {
+              "GOOS": "windows",
+              "GOARCH": "arm64",
+              "GOHOSTARCH": "arm64"
+            },
+            "controls": {
+              "TestStatusReaderSharesPendingRenameDeleteHandle": {
+                "run": 1,
+                "output": 2,
+                "pass": 1
+              },
+              "TestAgentActivityDebouncesAndIgnoresOldLaunch": {
+                "run": 1,
+                "output": 2,
+                "pass": 1
+              }
+            },
+            "serverFailEvents": 0,
+            "topLevelPass": 475
+          },
+          "laterComposition": {
+            "run": 44608762013,
+            "artifact": 14574383516,
+            "source": "bb16ac823a40b3d15f4b55fc55c91318ec803b3e",
+            "conclusion": "success",
+            "archiveSHA256": "e84ec98c61992a26b1576896a72f31c0968110dafdba2fc38605c832da685521",
+            "serverJSONLSHA256": "246d12027f5bf629f6cadc5f351a3e5cd09c8b5e1954eb2b6cb8d2dbdf1f20ad",
+            "architecture": {
+              "GOOS": "windows",
+              "GOARCH": "arm64",
+              "GOHOSTARCH": "arm64"
+            },
+            "controls": {
+              "TestStatusReaderSharesPendingRenameDeleteHandle": {
+                "run": 1,
+                "output": 2,
+                "pass": 1
+              },
+              "TestAgentActivityDebouncesAndIgnoresOldLaunch": {
+                "run": 1,
+                "output": 2,
+                "pass": 1
+              }
+            },
+            "serverFailEvents": 0,
+            "topLevelPass": 495
+          }
+        },
+        "acceptance": {
+          "originalFailureRetained": true,
+          "onlyAsyncReaderAPIChanged": true,
+          "assertionsAndDeadlinesUnchanged": true,
+          "deterministicNativeWindowsNegativeAndProductionPositivePassed": true,
+          "nativeARM64AndFullOriginalFixCIPassed": true,
+          "newHostedExecutions": 0
+        },
+        "originalFixFullCI": {
+          "run": 44431309239,
+          "source": "cc8aaa8d5bb3ab4adc07e196f1c505c1dc5e98c3",
+          "conclusion": "success",
+          "jobs": [
+            {
+              "name": "Windows Tests and Build",
+              "conclusion": "success",
+              "serverSteps": []
+            },
+            {
+              "name": "Virtual USB kernel integration",
+              "conclusion": "success",
+              "serverSteps": []
+            },
+            {
+              "name": "Go Server (ubuntu-22.04)",
+              "conclusion": "success",
+              "serverSteps": [
+                {
+                  "name": "Test native server with race detector",
+                  "conclusion": "success"
+                },
+                {
+                  "name": "Vet native server",
+                  "conclusion": "success"
+                }
+              ]
+            },
+            {
+              "name": "Go Server (macos-arm64)",
+              "conclusion": "success",
+              "serverSteps": [
+                {
+                  "name": "Test native server with race detector",
+                  "conclusion": "success"
+                },
+                {
+                  "name": "Vet native server",
+                  "conclusion": "success"
+                }
+              ]
+            },
+            {
+              "name": "Build",
+              "conclusion": "success",
+              "serverSteps": []
+            },
+            {
+              "name": "Go Server (windows-2022)",
+              "conclusion": "success",
+              "serverSteps": [
+                {
+                  "name": "Test native server with race detector",
+                  "conclusion": "success"
+                },
+                {
+                  "name": "Vet native server",
+                  "conclusion": "success"
+                }
+              ]
+            },
+            {
+              "name": "Frontend and Tooling Tests",
+              "conclusion": "success",
+              "serverSteps": []
+            },
+            {
+              "name": "Dependency audit",
+              "conclusion": "success",
+              "serverSteps": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "issue": 524,
+      "state": "CLOSED",
+      "auditedMain": "4f4bf33acc4ed57275a1c33bb649bdd1bb35dbb0",
+      "privateDetailedAuditSHA256": "da34b41d71b688348354b3514be9be05808311572c06f840cb107484f12a4251",
+      "evidence": {
+        "originalFailure": {
+          "run": 44352721234,
+          "job": 134972447375,
+          "rawLogSHA256": "422af47c5ebb9d1d1fa89d2a1ba4d5f1748f3aea985c9479a449b8d4c2dd498c"
+        },
+        "nativeLargerHistoryControls": {
+          "controlled-original": {
+            "observation": {
+              "fixtureLines": 100,
+              "wheelEvents": 20,
+              "nativeBefore": "202|20||0",
+              "afterInitialTwenty": "202|20|95|1",
+              "nativeAfter": "202|20|95|1",
+              "oldMarkerVisible": false,
+              "workspaceBefore": {
+                "x": 8,
+                "y": 0
+              },
+              "workspaceAfter": {
+                "x": 8,
+                "y": 0
+              }
+            },
+            "receiptSHA256": "39adc71125a21debdcb270e9c92b49c55734ce0cc230d3333fdc59738e3dd5e5"
+          },
+          "controlled-fixed": {
+            "observation": {
+              "fixtureLines": 100,
+              "wheelEvents": 38,
+              "nativeBefore": "202|20||0",
+              "afterInitialTwenty": "202|20|95|1",
+              "nativeAfter": "202|20|185|1",
+              "oldMarkerVisible": true,
+              "workspaceBefore": {
+                "x": 8,
+                "y": 0
+              },
+              "workspaceAfter": {
+                "x": 8,
+                "y": 0
+              }
+            },
+            "receiptSHA256": "4a5fe8f6b6cb93a333414a97c594c68a6d87d1c28ddaae32b50ffd180f35c1da"
+          }
+        },
+        "laterNativeLinux": {
+          "source": "bb16ac823a40b3d15f4b55fc55c91318ec803b3e",
+          "run": 44608762275,
+          "job": 135859402246,
+          "step": "Verify managed agents through the published Rig CLI",
+          "conclusion": "success",
+          "logSHA256": "b20e306eeb25827e3517f68fb3f24a722f501017bb625831064b5baada76ee43",
+          "managedCaseSeconds": 55.2,
+          "publishedCLI": "0.6.14",
+          "fullRigCasesPassed": 8
+        },
+        "wheelSectionByteEqualOriginalFixLaterNativeAndMain": "6511136f96f9e5776d444de389dec75a4a155adeda15a4decf9c9a46d6af3e54"
+      }
+    },
+    {
+      "issue": 525,
+      "state": "CLOSED",
+      "auditedMain": "4f4bf33acc4ed57275a1c33bb649bdd1bb35dbb0",
+      "privateDetailedAuditSHA256": "3cc91f36432a4fadffcf1c29b3cddbf40f1bb0d1d82901d55a3ca12312d94898",
+      "evidence": {
+        "negativeOldWorkerCleanup": {
+          "unexpectedTests": 2,
+          "reportSHA256": "dc4464989b9282eeef719808d5c9945d9b0561a539831f09f9beafa3400798b5",
+          "logSHA256": "0794ebb9a84f205c16eda126b952cbd19ef2decb6e53809308bcd33616b3a014"
+        },
+        "nativeLinux": {
+          "source": "bb16ac823a40b3d15f4b55fc55c91318ec803b3e",
+          "run": 44608762275,
+          "artifact": 14572004539,
+          "archiveSHA256": "7653daad320059253af1279df96ae4a1e62c826d2e45c7c0f8f8d633a4d7dabd",
+          "memberSHA256": {
+            "webmux/webmux/webmux/test-results/rig-worker-lifecycle/run-c806446c-2e2b-40bc-a616-589bec16fc44/summary.json": "d763e4eb51ffb4356fcecb72e2f3e00fd76af6507aad8dec3ef8028a879cc546",
+            "webmux/webmux/webmux/test-results/rig-worker-lifecycle/run-c806446c-2e2b-40bc-a616-589bec16fc44/original-daemon.json": "44c6e7604347d024332ca0cd3e754ecc51580a197d1e466807892b03b91b0e7a",
+            "webmux/webmux/webmux/test-results/rig-worker-lifecycle/run-c806446c-2e2b-40bc-a616-589bec16fc44/replacement-worker.json": "dada8284c7e0e87ce377d080b8cdc17c5f34e1c9cbc8c4d71c9d6e034a122217",
+            "webmux/webmux/webmux/test-results/rig-worker-lifecycle/run-c806446c-2e2b-40bc-a616-589bec16fc44/report.json": "a799dda38001b3b810606c715faa3a92c97b8ab1768faeb8a0631821c3ad4fe4",
+            "webmux/webmux/webmux/test-results/rig-worker-lifecycle/run-c806446c-2e2b-40bc-a616-589bec16fc44/browser/openrig-lifecycle-aa6751b5-456b9-aching-preserves-its-daemon-chromium/native-dashboard-startup.json": "d0e5d18d865091fb231a59abc179645e52e2f1b5783956aa0bb2b6ca616b05bd"
+          },
+          "summary": {
+            "intentionalFailures": 1,
+            "dashboardPassed": true,
+            "replacementWorker": true,
+            "originalDaemonPreserved": true,
+            "daemonStoppedAfterRun": true
+          },
+          "workerChanged": true,
+          "originalPIDAndPortPreserved": true,
+          "normalRigCasesPassed": 8,
+          "rawJobLogSHA256": "b20e306eeb25827e3517f68fb3f24a722f501017bb625831064b5baada76ee43"
+        },
+        "currentRelevantSourcesByteEqualNative": {
+          "scripts/qualify-openrig-fixture-lifecycle.mts": "ce0c2fc11a172ecdc4bd8c54b4debf151fe42634041ea51464a8ef240cf3af5e",
+          "tests/e2e/stop-openrig.mts": "e7a6b1f9f98fb706c1a6d8465d65e4af253a669529a56ded64b2f9dfa833ca1e",
+          "tests/e2e/openrig-fixture.mts": "f7634112eec87ee03b272a565dd2741fb51c91fe54eaa35ac83104423a4ef196"
+        },
+        "currentDashboardBodySHA256": "753bbec2484f7af3b6b69f0e574b3b40d1707194ebf40fdb8ecf6e57c4a889d8"
+      }
+    },
+    {
+      "issue": 505,
+      "state": "CLOSED",
+      "auditedMain": "4f4bf33acc4ed57275a1c33bb649bdd1bb35dbb0",
+      "privateDetailedAuditSHA256": "a0fb0667d2b095106e010d001f752047c122854932161e82c64252dda9ca7685",
+      "evidence": {
+        "originalFailure": {
+          "source": "7b1d5ae82c950588469ad96a572c3cb55456259a",
+          "run": 44297064754,
+          "job": 134776754451,
+          "rawLogSHA256": "4ae684c8d643b1fcb50f355e6295ddaa1ab44d2acf3a7b564df2301f32fb4b7a"
+        },
+        "counterfactual": {
+          "parentSHA256": "96cd48964dfc8c3fa45a8c76f055f5009d4db1c741d811fe4bc935f79f3ccada",
+          "negativeReceiptSHA256": "220197599d7bdf78a2ca52d7655ce5232c6ba52081d3be5ea4f0ae12a3fd07a7",
+          "bareAndWrappedFailureRetained": true
+        },
+        "currentSourceSHA256": {
+          "webmux/server/internal/usbforward/relay.go": "4a941b895c288ed6433920a2025995e59437df4c50c053883d753e4852a21a95",
+          "webmux/server/internal/usbforward/relay_test.go": "6aa4762a45b358c328b0b16fd33d5365ed5abe102ba4845cc07137426758e656"
+        },
+        "originalSSHTestBodiesPreserved": true,
+        "nativeWindows": {
+          "source": "84a331a8aa0848a247543b6c3abb7b8b23c1a871",
+          "run": 44591424467,
+          "job": 135798140830,
+          "rawLogSHA256": "74b33e67930eee656836c09a4506a26b7ef1871784530d9153d00843944308a0",
+          "step": "Repeat Windows SSH CLI lifecycle",
+          "conclusion": "success",
+          "topLevelPasses": 3,
+          "count": 3,
+          "fullCISuccess": true
+        }
+      }
+    },
+    {
+      "issue": 459,
+      "state": "CLOSED",
+      "auditedMain": "4f4bf33acc4ed57275a1c33bb649bdd1bb35dbb0",
+      "privateDetailedAuditSHA256": "f0fde7c1ab09664c3c094bb964563f62a2e614b56cb60e12183fc4a95cbda9ff",
+      "evidence": {
+        "nativeEvidence": [
+          {
+            "source": "52a8527e7e8a3e0ed0d0af09eadbd9457eae9854",
+            "run": 44242847564,
+            "artifact": 14399524652,
+            "archiveSHA256": "f321598e9f7739bb490f3cd48618f485a8ff5c8d548e3a10dcf723932ef99656",
+            "conclusion": "failure",
+            "results": [
+              {
+                "control": "unpatched",
+                "exit": 1,
+                "admitted": true,
+                "module_sha256": "fd8a3c726992231073b2f82e2fc48585f3b1d8f6ab913ffd644925b641aa3012",
+                "srcversion": "0E77E9FAE1ED8C902094921"
+              },
+              {
+                "control": "corrected-held",
+                "exit": 1,
+                "admitted": false,
+                "module_sha256": "b3159f95270e75a0822411ace8ecc54b01db402a51a431a2ac34217564316892",
+                "srcversion": "AFA0841746AD954FEFE2CCF"
+              }
+            ],
+            "logSHA256": {
+              "corrected-held.log": "3c526b86a3b53bff80ff7bd72def738ec1017bd8a8a2bcf7d6e3bccf1de9e110",
+              "unpatched.log": "81414dc1bca0fac87846a248623df3a7ee74a0ca28beaf8e1bc9013b1a922b31"
+            }
+          },
+          {
+            "source": "3b80d0d4174a366f8fc0a3d0175b30e0323377b8",
+            "run": 44244114652,
+            "artifact": 14400937228,
+            "archiveSHA256": "765381fd9000d03d988da8ba717990d97dbc52bcf5724b21f36d5fc691a8e6c8",
+            "conclusion": "failure",
+            "results": [
+              {
+                "control": "unpatched",
+                "exit": 1,
+                "admitted": true,
+                "module_sha256": "fd8a3c726992231073b2f82e2fc48585f3b1d8f6ab913ffd644925b641aa3012",
+                "srcversion": "0E77E9FAE1ED8C902094921"
+              },
+              {
+                "control": "corrected-held",
+                "exit": 0,
+                "admitted": true,
+                "module_sha256": "b3159f95270e75a0822411ace8ecc54b01db402a51a431a2ac34217564316892",
+                "srcversion": "AFA0841746AD954FEFE2CCF"
+              },
+              {
+                "control": "direct-20",
+                "exit": 0,
+                "admitted": true,
+                "module_sha256": "63b791ba18898cda92febc83476c531f065aa512e794705162f8eb76fc71fbf6",
+                "srcversion": "CEF310F2896192F4A8FAE09"
+              },
+              {
+                "control": "webmux-ssh",
+                "exit": 0,
+                "admitted": true,
+                "module_sha256": "63b791ba18898cda92febc83476c531f065aa512e794705162f8eb76fc71fbf6",
+                "srcversion": "CEF310F2896192F4A8FAE09"
+              }
+            ],
+            "logSHA256": {
+              "corrected-held.log": "73d15ee42eb4cd7903877785be0a523d7d9a80850b21ab6d699c07617e3e274e",
+              "direct-20.log": "25c86d0cd73a35cc544f0a1aa951e40287ad6091c08e13fa50b4905d64d0900e",
+              "unpatched.log": "5e1ecbec8419aba6ac80059b63266b8b47778f4b38cce976aad1b4c21ce74511",
+              "webmux-ssh.log": "050c758e82feb1edbae408f73606493a2f5653e0d804bd401951845d34c62950"
+            }
+          },
+          {
+            "source": "84a331a8aa0848a247543b6c3abb7b8b23c1a871",
+            "run": 44591424467,
+            "artifact": 14564133209,
+            "archiveSHA256": "0891653477eb28c62c8da7b465a8eac506614423e90215f43f52b469174f2e5a",
+            "conclusion": "success",
+            "results": [
+              {
+                "control": "unpatched",
+                "exit": 1,
+                "admitted": true,
+                "module_sha256": "fd8a3c726992231073b2f82e2fc48585f3b1d8f6ab913ffd644925b641aa3012",
+                "srcversion": "0E77E9FAE1ED8C902094921"
+              },
+              {
+                "control": "corrected-held",
+                "exit": 0,
+                "admitted": true,
+                "module_sha256": "b3159f95270e75a0822411ace8ecc54b01db402a51a431a2ac34217564316892",
+                "srcversion": "AFA0841746AD954FEFE2CCF"
+              },
+              {
+                "control": "direct-20",
+                "exit": 0,
+                "admitted": true,
+                "module_sha256": "63b791ba18898cda92febc83476c531f065aa512e794705162f8eb76fc71fbf6",
+                "srcversion": "CEF310F2896192F4A8FAE09"
+              },
+              {
+                "control": "webmux-ssh",
+                "exit": 0,
+                "admitted": true,
+                "module_sha256": "63b791ba18898cda92febc83476c531f065aa512e794705162f8eb76fc71fbf6",
+                "srcversion": "CEF310F2896192F4A8FAE09"
+              }
+            ],
+            "logSHA256": {
+              "corrected-held.log": "f75041216082cfb03af1af2fbe6640da22dc8332810c0dffe1864f6c40e9e3a6",
+              "direct-20.log": "36557b74f9f8a1e1815eba4169e4d5034ba469bb9f48ff170f06fe59e8c87ef1",
+              "unpatched.log": "cb16927a37360a6ae993214be7756f2026890f0b692e6dc069c6b93709412551",
+              "webmux-ssh.log": "482710f3d8b63f91d869c3c2d0082880494e96ad7fc1ef2a2f5f0c02469d3287"
+            }
+          }
+        ],
+        "originalReadinessFunctionASTPreserved": true,
+        "allOriginalPortableTestsASTPreserved": true,
+        "currentTestsExit": 0,
+        "currentTestsLogSHA256": "12432e3f2144de6442b08260928b136d7c84f8ea1c0e872de597473b4ab8c318",
+        "currentCriticalSourcesByteEqualLaterNative": true
+      }
+    }
+  ],
+  "newHostedExecutions": 0,
+  "limits": [
+    "Native execution remains attributed to each original source, not a fresh current-main executable.",
+    "Original failed runs and rejected setup attempts remain retained.",
+    "Private detailed audits and original evidence have NAS digest readback.",
+    "Current-main aggregate qualification, full recovery/grid/policy/platform acceptance and release remain open.",
+    "No version, tag, publication, installed-service, signing or protection changes."
+  ]
+}
