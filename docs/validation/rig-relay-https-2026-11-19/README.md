@@ -27,11 +27,21 @@ generated HTTPS sources while retaining the base's original source files.
 TLS verification and Ubuntu package-signature verification stay enabled. Missing
 or oversized public trust roots refuse the build rather than lowering trust.
 
-Local checks pass 13 tests, with two explicit skips because this macOS host has
+Local checks pass 14 tests, with two explicit skips because this macOS host has
 no APT executable. Controls cover public CA parsing, build-context exclusion,
 signed HTTPS sources, normal command results and preserved partial timeout
 output. Linux CI must execute both effective-APT-selection checks and the
 original complete relay qualification. No native pass is claimed here.
+
+The initial `4623b22` Linux run stopped in three CA-dependent controls before
+the Docker/relay qualifier started. Its combined unavailable/oversized guard
+does not record the rejected count. The exporter now explicitly loads the
+standard public system PEM bundle when present, retaining the existing default
+store on other hosts. It records the chosen public trust source. Empty,
+malformed and oversized trust still refuse. A regression supplies a valid public
+bundle and an empty Python default store: the parent refuses, while the corrected
+export succeeds without changing TLS verification. Native Linux execution of
+this follow-up remains required.
 
 The Docker build still has its original 180-second deadline. All native relay,
 SSH, ownership, sibling and cleanup assertions, and their operation deadlines,

@@ -95,10 +95,35 @@ class RelayBuildInputs(unittest.TestCase):
             with self.subTest(count=len(certificates)):
                 root = self.fixture()
                 context = SimpleNamespace(get_ca_certs=lambda **kwargs: certificates)
-                with patch.object(module.ssl, 'create_default_context', return_value=context):
+                with patch.object(module, 'SYSTEM_CA_BUNDLE', root / 'absent-system-bundle'), \
+                        patch.object(module.ssl, 'create_default_context', return_value=context):
                     with self.assertRaisesRegex(RuntimeError, 'unavailable|oversized'):
                         module.write_build_inputs(root)
                 self.assertEqual(list(root.iterdir()), [])
+        for content, error in [(b'x' * (4 * 1024 * 1024 + 1), RuntimeError),
+                               (b'not a public certificate', ssl.SSLError)]:
+            with self.subTest(system_bundle_bytes=len(content)):
+                root = self.fixture()
+                public_bundle = root / 'system.pem'
+                public_bundle.write_bytes(content)
+                with patch.object(module, 'SYSTEM_CA_BUNDLE', public_bundle):
+                    with self.assertRaises(error):
+                        module.write_build_inputs(root)
+                self.assertFalse((root / 'Dockerfile').exists())
+
+    def test_system_bundle_is_used_when_python_default_store_is_empty(self):
+        original = self.fixture()
+        module.write_build_inputs(original)
+        public_bundle = original / 'ca-certificates.crt'
+        empty_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        self.assertEqual(empty_context.get_ca_certs(), [])
+        root = self.fixture()
+        with patch.object(module, 'SYSTEM_CA_BUNDLE', public_bundle, create=True), \
+                patch.object(module.ssl, 'create_default_context', return_value=empty_context):
+            receipt = module.write_build_inputs(root)
+        self.assertGreater(receipt['publicHostCAUniqueCertificates'], 0)
+        self.assertEqual((root / 'ca-certificates.crt').read_bytes(), public_bundle.read_bytes())
+        self.assertEqual(receipt['publicHostCATrustSource'], 'system-public-pem-bundle')
 
     def test_context_does_not_admit_generated_private_key_or_other_files(self):
         root = self.fixture()

@@ -20,15 +20,27 @@ import time
 import uuid
 
 BASE_IMAGE = 'ubuntu@sha256:fe81560990fae86dc4743202b2cb4d3df98d0bcf949173cecef15ce1127ef852'
+SYSTEM_CA_BUNDLE = Path('/etc/ssl/certs/ca-certificates.crt')
 
 
 def write_build_inputs(output):
     # The pinned minimal image has the Ubuntu archive keyring, but no CA
     # bundle. Export public trust anchors only; no private keys or native
     # account state enter the build context.
-    certificates = ssl.create_default_context().get_ca_certs(binary_form=True)
-    if not certificates or len(certificates) > 4096:
-        raise RuntimeError('Public host CA trust roots unavailable or oversized')
+    if SYSTEM_CA_BUNDLE.is_file():
+        if SYSTEM_CA_BUNDLE.stat().st_size > 4 * 1024 * 1024:
+            raise RuntimeError('Public host CA bundle oversized')
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.load_verify_locations(cafile=str(SYSTEM_CA_BUNDLE))
+        trust_source = 'system-public-pem-bundle'
+    else:
+        context = ssl.create_default_context()
+        trust_source = 'python-default-public-store'
+    certificates = context.get_ca_certs(binary_form=True)
+    if not certificates:
+        raise RuntimeError('Public host CA trust roots unavailable')
+    if len(certificates) > 4096:
+        raise RuntimeError('Public host CA trust roots oversized')
     bundle = ''.join(ssl.DER_cert_to_PEM_cert(cert) for cert in sorted(set(certificates))).encode('ascii')
     if len(bundle) > 4 * 1024 * 1024:
         raise RuntimeError('Public host CA bundle oversized')
@@ -70,6 +82,7 @@ Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 """)
     (output / 'Dockerfile').write_text(dockerfile)
     return {'baseImage': BASE_IMAGE, 'publicHostCAUniqueCertificates': len(set(certificates)),
+            'publicHostCATrustSource': trust_source,
             'publicHostCABundleSHA256': hashlib.sha256(bundle).hexdigest(),
             'ubuntuSourcesSHA256': hashlib.sha256(sources.encode()).hexdigest(),
             'aptSettingsSHA256': hashlib.sha256(settings.encode()).hexdigest(),

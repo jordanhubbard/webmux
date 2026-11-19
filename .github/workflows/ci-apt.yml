@@ -6,6 +6,8 @@ on:
     paths:
       - 'scripts/configure-ci-apt.py'
       - 'scripts/qualify-ci-apt.py'
+      - 'scripts/qualify-rig-stop-relay.py'
+      - 'scripts/test_qualify_rig_stop_relay.py'
       - 'tests/test_ci_apt.py'
       - '.github/workflows/ci-apt.yml'
 
@@ -31,6 +33,8 @@ jobs:
           free -m
       - name: Test source selection and preserved configuration
         run: python3 -m unittest discover -s tests -p test_ci_apt.py -v
+      - name: Test relay HTTPS bootstrap and command failure controls
+        run: python3 -B scripts/test_qualify_rig_stop_relay.py -v
       - name: Qualify actual signed APT updates and failure controls
         run: sudo -n python3 scripts/qualify-ci-apt.py --output "$RUNNER_TEMP/apt-source-controls"
       - name: Retain native APT outcomes
