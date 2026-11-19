@@ -1,6 +1,6 @@
 # WebMux active roadmap
 
-Reviewed 2026-11-17 against the implementation, qualification receipts and GitHub
+Reviewed 2026-11-19 against the implementation, qualification receipts and GitHub
 issue states. GitHub issues track implementation and remaining acceptance work.
 
 ## Current reliability work
@@ -12,16 +12,26 @@ this checkpoint enter `main` for fix-forward work in a Claude session. This is
 an integration handoff, not completed acceptance: #318 remains open and first
 priority ahead of the other reliability and integration follow-ups.
 
-### Combined candidate qualification
+### Integrated implementation and remaining qualification
 
-[#452](https://github.com/jordanhubbard/webmux/issues/452) composes the independent
+[#452](https://github.com/jordanhubbard/webmux/issues/452) tracks the independent
 underline/snapshot profile, Rig/Agents integration, owning-profile routing and
-Windows Chromium AppContainer installation repair. Local combined-source race,
-renderer and native coordinator checks pass. Earlier canonicalc195 completed all
-ten exact-head workflows; the newer Windows Stop/Hide and startup-gate composition
-requires fresh qualification. #429 retains exposure-classification review. The [source bindings and scope](validation/roadmap-integration-2026-11-17/README.md)
-preserve the separate #318, #438 and #246 acceptance gaps. This candidate does
-not mark those items or the overall roadmap complete and does not cut a release.
+Windows Chromium AppContainer installation repair. The implementation stack,
+including ordinary-local Windows Stop/Hide and the required hosted application
+gate, entered `main` through [#568](https://github.com/jordanhubbard/webmux/pull/568).
+Its qualified input `0056000` passed all ten original workflows; that evidence
+retains its own source and platform limits. The later native ARM64 application
+gate [#571](https://github.com/jordanhubbard/webmux/pull/571), Windows diagnostic
+input retention [#575](https://github.com/jordanhubbard/webmux/pull/575), and browser
+refresh race repair [#574](https://github.com/jordanhubbard/webmux/pull/574) also
+merged after their original checks passed.
+
+Each later main revision still needs its own applicable checks and package
+reconciliation. [#429](https://github.com/jordanhubbard/webmux/issues/429) retains
+the bounded runtime/build-input review and final-source reconciliation; its
+generic matcher limitations remain. The [source bindings and scope](validation/roadmap-integration-2026-11-17/README.md)
+preserve the separate #318, #438 and #246 acceptance gaps. Integration does not
+complete those items or the overall roadmap and does not cut a release.
 
 ### Recover active work after interruption
 
@@ -55,10 +65,10 @@ Current evidence and limits:
 | Named native CLIs | Real exact-conversation continuation passed for qualified Codex, Claude Code, Cursor agent and OpenCode versions, with fresh remembered-marker responses and original project/configuration checks. In-process conversation switches are followed for Codex (direct process), Claude (scoped hooks) and Cursor (open chat store); OpenCode 1.19.5 exposes no selection to observe, so its recovery stays an explicit choice ([anomalyco/opencode#54329](https://github.com/anomalyco/opencode/issues/54329)). This does not qualify every invocation or platform. |
 | Ordinary local/SSH/mosh lifecycle | Real controller restart/update/SIGKILL and disposable guest reboot checks passed, including retained history and no duplicate execution. |
 | Local managed recovery | Real Agent Deck/Claude and Rig/Claude process-loss continuation passed. Rig additionally passed original executable/settings checks and an in-flight controller-loss test that refused unsafe retries. |
-| Native Rig/Codex public recovery | Passed on macOS with Rig 0.7.18/Codex 0.169.0 and the default owner policy: actual coding, graceful controller restart with unchanged provider, owned CLI loss plus explicit idle-seat checked Stop, public original-only Resume, controller SIGKILL during dispatch, exact-conversation no-tool recall, retained native/terminal log prefixes and duplicate/sibling controls ([qualification](validation/codex-public-recovery-2026-11-18/README.md)). Public restart/crash recovery also passes with native read-only/on-request and workspace-write/on-request policies, fresh allowed/denied filesystem and denied-network probes, and retained owner environment ([restricted-policy qualification](validation/codex-restricted-recovery-2026-11-18/README.md)). The same public lifecycle now also passes workspace-write/never and read-only/never with fresh before/after policy probes and 32 lifecycle controls ([never-approval qualification](validation/codex-never-recovery-2026-11-18/README.md)). A separate real launchd/Make functional executable upgrade passes survivor reattachment and original recovery after service SIGKILL/automatic restart with the default policy ([service qualification](validation/codex-service-upgrade-2026-11-18/README.md)). An interactive permission change now refuses structured native Resume before dispatch, including a switch without another model turn; surviving original processes still reattach with their current permissions ([native qualification](validation/codex-interactive-policy-2026-11-19/README.md)). Review/integration, native Rig/Codex host reboot, other policy/platform combinations and release-package migration remain open. |
-| Native Windows Codex executable upgrade | Private user-run AMD64/Codex 0.153.0 active tool survives main8f-to-5fad controller replacement with unchanged process identities; public original-conversation Resume after provider loss, fresh filesystem restrictions, retained prefixes and durable duplicate/sibling controls pass ([qualification](validation/windows-functional-upgrade-2026-11-18/README.md)). Local Stop/hide now passes scoped [native application qualification](validation/windows-local-stop-2026-11-18/README.md) and awaits review/integration (#541). Legacy default-shell/network limitations (#538), installed-package upgrades and authenticated ARM64 remain open. |
-| Linux native Codex startup inspection | AMD64/ARM64 kernel controls and twelve disposable native startup cases pass with the #533 signal-pair repair: no panic/forced cleanup, unchanged policy snapshots and retained network/process denials ([qualification](validation/codex-observer-signal-2026-11-18/README.md)). This does not qualify authenticated Linux coding/conversation recovery under #523; review/integration remains open. |
-| Native Codex project trust | Implemented and qualified through actual Go/Chrome/native Codex: typed pre-launch refusal, durable owner-scoped selection, manual native trust review with unchanged intended policy, deliberate frozen retry, and uncertainty after a discarded public retry response. Ordinary duplicates/status refresh do not re-observe the account or launch automatically; changed selections fail before topology allocation ([qualification](validation/codex-project-trust-2026-11-18/README.md)). #529 awaits review/merge. Initial creation-response loss has separate [native qualification](validation/codex-initial-response-loss-2026-11-18/README.md): never-received request, lost actual native/public response, frozen original continuation, no-observer/no-POST duplicates, controller reconstruction and subsequent exact-conversation recovery. #530 awaits review/merge. |
+| Native Rig/Codex public recovery | Passed on macOS with Rig 0.7.18/Codex 0.169.0 and the default owner policy: actual coding, graceful controller restart with unchanged provider, owned CLI loss plus explicit idle-seat checked Stop, public original-only Resume, controller SIGKILL during dispatch, exact-conversation no-tool recall, retained native/terminal log prefixes and duplicate/sibling controls ([qualification](validation/codex-public-recovery-2026-11-18/README.md)). Public restart/crash recovery also passes with native read-only/on-request and workspace-write/on-request policies, fresh allowed/denied filesystem and denied-network probes, and retained owner environment ([restricted-policy qualification](validation/codex-restricted-recovery-2026-11-18/README.md)). The same public lifecycle now also passes workspace-write/never and read-only/never with fresh before/after policy probes and 32 lifecycle controls ([never-approval qualification](validation/codex-never-recovery-2026-11-18/README.md)). A separate real launchd/Make functional executable upgrade passes survivor reattachment and original recovery after service SIGKILL/automatic restart with the default policy ([service qualification](validation/codex-service-upgrade-2026-11-18/README.md)). An interactive permission change now refuses structured native Resume before dispatch, including a switch without another model turn; surviving original processes still reattach with their current permissions ([native qualification](validation/codex-interactive-policy-2026-11-19/README.md)). The implementation is integrated through #568; native Rig/Codex host reboot, other policy/platform combinations and release-package migration remain open. |
+| Native Windows Codex executable upgrade | Private user-run AMD64/Codex 0.153.0 active tool survives main8f-to-5fad controller replacement with unchanged process identities; public original-conversation Resume after provider loss, fresh filesystem restrictions, retained prefixes and durable duplicate/sibling controls pass ([qualification](validation/windows-functional-upgrade-2026-11-18/README.md)). Local Stop/hide now passes scoped [native application qualification](validation/windows-local-stop-2026-11-18/README.md) and is integrated through #568; #541 retains its remaining acceptance audit. Legacy default-shell/network limitations (#538), installed-package upgrades and authenticated ARM64 remain open. |
+| Linux native Codex startup inspection | AMD64/ARM64 kernel controls and twelve disposable native startup cases pass with the #533 signal-pair repair: no panic/forced cleanup, unchanged policy snapshots and retained network/process denials ([qualification](validation/codex-observer-signal-2026-11-18/README.md)). This does not qualify authenticated Linux coding/conversation recovery under #523. The startup inspection implementation is integrated through #568. |
+| Native Codex project trust | Implemented and qualified through actual Go/Chrome/native Codex: typed pre-launch refusal, durable owner-scoped selection, manual native trust review with unchanged intended policy, deliberate frozen retry, and uncertainty after a discarded public retry response. Ordinary duplicates/status refresh do not re-observe the account or launch automatically; changed selections fail before topology allocation ([qualification](validation/codex-project-trust-2026-11-18/README.md)). #529 implementation is integrated through #568. Initial creation-response loss has separate [native qualification](validation/codex-initial-response-loss-2026-11-18/README.md): never-received request, lost actual native/public response, frozen original continuation, no-observer/no-POST duplicates, controller reconstruction and subsequent exact-conversation recovery. #530 implementation is integrated through #568. |
 | Rig conversation after reboot | Passed on a Linux guest with Rig 0.6.14 (9d0200f3)/Claude 2.1.322: host-reboot detection, approved Resume through Rig, once-only receipt, original settings/roots and a fresh remembered-marker answer. Startup now starts the Rig manager before restoring managed viewers. |
 | Managed shell job after reboot | Real Agent Deck shell-job guest reboot passed: manager/project/log identity retained, explicit fallback, no automatic restart and no duplicate execution after reconnects. This is not native coding-conversation recovery. |
 | Remote managed-host failure | Passed for Agent Deck 1.16.39 remotes and `--ssh` sessions against a hung, rebooted and powered-off guest: clear fallback naming the unreachable remote, bounded startup, unaffected local sessions, retained transcripts, no duplicate execution. Surviving remote sessions now reattach after a WebMux restart. Remote native resume stays with the execution host's own manager (owner decision). |
@@ -136,10 +146,11 @@ Remaining #318 work, in order:
    native application checks pass lost replies, unresolved-stop reconstruction,
    sibling/viewer retention, original job teardown and retained logs; the exposed
    minimized-layout bug is fixed and requalified
-   ([qualification](validation/windows-local-stop-2026-11-18/README.md)). Review,
-   exact-source CI and integration remain required. Installed-package different-executable upgrades and
+   ([qualification](validation/windows-local-stop-2026-11-18/README.md)). This implementation
+   is integrated through #568; applicable current-source checks remain required.
+   Installed-package different-executable upgrades and
    authenticated ARM64 conversation recovery remain open. A separate
-   [native ARM64 component candidate](validation/windows-arm64-native-2026-11-17/README.md)
+   [native ARM64 component qualification](validation/windows-arm64-native-2026-11-17/README.md)
    under #456 adds architecture-bound server/ConPTY qualification; its native
    results remain separate from authenticated conversation recovery. Remote native resume is
    manual by owner decision. Unqualified cases must
@@ -187,12 +198,15 @@ and prove that slow or failed manager queries still fail. Production launchd
 commands and deadlines are unchanged; real private launchd replacement remains
 part of qualification.
 
-The shared Node fake's per-query interpreter startup still reached the unchanged
-one-second query deadline in hosted CI. #324 is reopened. A prepared native fake
-now passes all seventeen affected controls and all 253 helper tests at default
-concurrency; blocked-Node, cold-start, failed-query and hung-query controls retain
-the production boundaries. Hosted CI remains pending
+The shared Node fake's per-query interpreter startup reached the unchanged
+one-second query deadline in hosted CI, reopening #324. The prepared native fake
+passed all seventeen affected controls and all 253 helper tests at default
+concurrency on the Mac qualifier. Hosted helper checks subsequently passed, and
+the fix entered main through #568. #324 is closed; blocked-Node, cold-start,
+failed-query and hung-query controls retain the production boundaries
 ([qualification](validation/launchd-native-fixture-2026-11-18/README.md)).
+The Linux hosted suite explicitly skips its separate native macOS launchd service
+case; a fixture pass does not establish native service or #318 acceptance.
 
 ### Windows packaging reliability
 
@@ -241,12 +255,12 @@ initial/continued/second-attachment renderer comparisons matched, with no
 replayed queries and an unmodified reference renderer. Portable/parser and
 controlled-terminal tests have separate scopes from native ConPTY captures;
 see the [qualified sources and limits](validation/xterm-nowrap-2026-11-17/README.md).
-Hidden or contradictory underline flags are being implemented in draft
+Hidden or contradictory underline flags are implemented through
 [#428](https://github.com/jordanhubbard/webmux/pull/428) under
 [#427](https://github.com/jordanhubbard/webmux/issues/427): opt-in value-copy
 state, bounded v2 snapshot encoding, bare-renderer comparisons and capability
-negotiation. The first 28-case native capture exposed one combining-cell
-recapture mismatch. The correction now passes all 28 fresh ConPTY cases and
+negotiation, integrated into `main` through #568. The first 28-case native capture
+exposed one combining-cell recapture mismatch. The correction now passes all 28 fresh ConPTY cases and
 1,384 renderer/lifecycle checks. The unchanged audit now passes after advisory withdrawal; #429 classification review remains open;
 broader native coding-session acceptance remains separate. See the
 [current scope](validation/xterm-underline-2026-11-17/README.md).
@@ -318,15 +332,16 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   calls, diagnostic views and new launchers now pin their configured coordinator
   despite an unrelated CLI host selection
   ([scope and qualification](openrig.md#coordinator-selection-scope)).
-  Candidate [#430](https://github.com/jordanhubbard/webmux/issues/430) keeps an
+  [#430](https://github.com/jordanhubbard/webmux/issues/430) keeps an
   external seat's unverified execution host separate from its local viewer
   transport and native Rig host identity. Its native input/reopen control and
-  persisted recovery metadata are qualified separately; the broader macOS
-  mouse-isolation and diagnostic-endpoint failures remain under
-  [#431](https://github.com/jordanhubbard/webmux/issues/431).
-  Candidate [#443](https://github.com/jordanhubbard/webmux/issues/443) adds bounded
+  persisted recovery metadata are qualified separately. The original macOS
+  mouse-isolation and diagnostic-endpoint fixture failures were resolved under
+  closed [#431](https://github.com/jordanhubbard/webmux/issues/431).
+  [#443](https://github.com/jordanhubbard/webmux/issues/443) adds bounded
   local change notifications that invalidate canonical inventory, with real Rig
-  browser coverage while fallback timers are paused;
+  browser coverage while fallback timers are paused. These implementations
+  entered main through #568; retain their source-specific
   [qualification and remaining gates](validation/rig-change-notifications-2026-11-17/README.md).
 - [#200](https://github.com/jordanhubbard/webmux/issues/200): remote Rig state over
   the outbound managed-host client. An opt-in bounded canonical-seat report now
@@ -434,17 +449,23 @@ keyboard/paste receipts and existing mouse lifecycle checks. See the
 qualification remains under #110.
 
 
-The [Rig grid integration candidate](validation/rig-grid-integration-2026-11-17/README.md)
-reconciles pending #432/#433/#435/#437/#440/#441/#444/#446 with final local native
-coverage and a hidden-grid observation fix. It remains subject to current-head qualification,
-review and #429 exposure classification; it does not close the broader roadmap or authorize
-a release.
+The [Rig grid integration](validation/rig-grid-integration-2026-11-17/README.md)
+reconciles #432/#433/#435/#437/#440/#441/#444/#446 with local native coverage and
+a hidden-grid observation fix. This implementation is in `main` through #568.
+The original macOS fixture follow-up #431 is closed. Source-specific evidence,
+the remaining #194 acceptance and final #429 reconciliation stay distinct from
+full roadmap and release acceptance.
 
 Ordinary-local Windows Stop/Hide is composed under #541, including a
 [preparation-save error-state repair](validation/windows-local-preparation-save-2026-11-19/README.md).
-Native application startup on hosted Windows remains under
-[#543](https://github.com/jordanhubbard/webmux/issues/543): bounded phase/error
-diagnostics and a mandatory fresh-shell/confirmed-Stop browser gate are prepared,
-with [native execution still pending](validation/windows-provider-startup-2026-11-19/README.md).
-Browser-companion anchors and passing ConPTY unit/capture tests do not close that
-application gap. Full recovery, native archive review and release remain open.
+Native application startup work under
+[#543](https://github.com/jordanhubbard/webmux/issues/543) includes bounded
+phase/error diagnostics and a mandatory fresh-shell/confirmed-Stop browser gate.
+The [original preparation and limits](validation/windows-provider-startup-2026-11-19/README.md)
+remain historical; later actual application gates pass on disposable hosted
+AMD64 and ARM64 VMs, including both mandatory local-shell/Stop cases under #571.
+These use the guarded SYSTEM fixture and do not establish authenticated user
+coding recovery, installed-service upgrades or native ARM64 browser execution.
+Browser-companion anchors and ConPTY captures remain separate evidence. Full
+recovery under #318, applicable current-source checks and release acceptance stay
+open.
