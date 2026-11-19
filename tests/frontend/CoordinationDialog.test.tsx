@@ -111,7 +111,12 @@ it('uses canonical Rig topology and state instead of stale private project recor
   await waitFor(() => expect(mocks.attach).toHaveBeenCalledWith('rig', 'canonical-seat', undefined));
 });
 
-it('keeps native trust review separate from uncertainty and retries only the reviewed original selection', async () => {
+it.each([false, true])('keeps native trust review and its original selection through uncertainty (tracked: %s)', async tracked => {
+  if (tracked) {
+    const status = emptyStatus();
+    status.providers[0].capabilities.push('native-creation-requests');
+    mocks.status.mockResolvedValue(status);
+  }
   const requestId = 'a'.repeat(64);
   mocks.create.mockRejectedValueOnce(new CoordinationTrustRequiredError(requestId));
   const close = vi.fn(); render(<CoordinationDialog onClose={close} />);
@@ -128,6 +133,10 @@ it('keeps native trust review separate from uncertainty and retries only the rev
   expect(retry()).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Start agent and open terminal' })).toBeDisabled();
   const original = mocks.create.mock.calls[0][0];
+  if (tracked) {
+    expect(original.creationRequestId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(original.creationRequestId).not.toBe(requestId);
+  } else expect(original.creationRequestId).toBeUndefined();
   fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'edited-project' } });
   fireEvent.change(screen.getByLabelText('Session name'), { target: { value: 'edited-coder' } });
   fireEvent.change(screen.getByLabelText('Code folder'), { target: { value: '/work/edited' } });
