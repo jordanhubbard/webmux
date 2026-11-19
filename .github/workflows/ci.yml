@@ -156,7 +156,7 @@ jobs:
       - name: Repeat Windows SSH CLI lifecycle
         if: runner.os == 'Windows'
         working-directory: webmux/server
-        run: go test -race ./internal/usbforward -run TestRealSSHTransportAndHostKeyRejection -count=3
+        run: go test -race -v ./internal/usbforward -run TestRealSSHTransportAndHostKeyRejection -count=3
       - name: Repeat native Windows resize acceptance
         if: runner.os == 'Windows'
         working-directory: webmux/server
