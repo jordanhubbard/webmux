@@ -50,6 +50,7 @@ test('grid observes native Rig bootstrap and lifecycle without inferring provide
     await page.goto('/');
     const tile = page.getByTestId(`tile-cell-${viewer}`);
     const status = tile.getByLabel('Rig seat status');
+    await expect(tile.getByLabel('Rig viewer')).toHaveText('Rig · Unknown execution host');
     await expect(status).toContainText('Rig running · Attachment unknown · Bootstrap ready');
     await expect(status).toContainText('Enrollment Launched by Rig');
     await expect(status).not.toContainText('Agent running');
