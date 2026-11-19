@@ -1,0 +1,394 @@
+{
+  "issues": [
+    464,
+    469,
+    603
+  ],
+  "states": {
+    "464": "OPEN",
+    "469": "OPEN",
+    "603": "OPEN"
+  },
+  "baselineSource": "694c000f79e820bb8059bafc6befbc90392c9b77",
+  "observerSource": "fcab74bfbdd3a3d8d01a41b8c7edd7154df12263",
+  "recordedUTC": "2026-11-19T23:36:17.060922+00:00",
+  "fullModernCompatibilityQualified": false,
+  "originalThirteenCaseInventory": {
+    "method": "Reconcile each original471/f517 case by exact title. Replace initial omitted-flag skips with explicitly enabled coexistence executions, and use the changed-observer managed case result. Preserve every original result; no aggregate source-head relabeling.",
+    "legacy": {
+      "passed": 13,
+      "failed": 0,
+      "cases": [
+        {
+          "title": "home gives a fresh 2 by 2 terminal grid the page without coordinator inventory",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "fde18bd96d00829d9753b0351d7a327418fcdc644d1376a4f2cdbbb669232d09"
+        },
+        {
+          "title": "coordination lives in its own tab and leaves the terminal grid intact",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "fde18bd96d00829d9753b0351d7a327418fcdc644d1376a4f2cdbbb669232d09"
+        },
+        {
+          "title": "Agent Deck UI queues work and drains remote completion records",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "fde18bd96d00829d9753b0351d7a327418fcdc644d1376a4f2cdbbb669232d09"
+        },
+        {
+          "title": "managed agents enroll, exchange attributed Rig messages and reuse ordinary grid terminals",
+          "status": "passed",
+          "retry": 0,
+          "source": "fcab74bfbdd3a3d8d01a41b8c7edd7154df12263",
+          "reportSHA256": "c94e4587307b14c0602dddd535d8254e249bf81103154fee9a7062acd21fde71",
+          "observer": "Tracked or legacy response category/status; original HTTP200 assertion preserved"
+        },
+        {
+          "title": "real diagnostic dashboard is optional and detaching preserves its daemon",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "fde18bd96d00829d9753b0351d7a327418fcdc644d1376a4f2cdbbb669232d09"
+        },
+        {
+          "title": "coordination groups provider-owned sessions in keyboard-expandable projects",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "fde18bd96d00829d9753b0351d7a327418fcdc644d1376a4f2cdbbb669232d09"
+        },
+        {
+          "title": "integration enablement, launch owner and inventory view persist independently",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "fde18bd96d00829d9753b0351d7a327418fcdc644d1376a4f2cdbbb669232d09"
+        },
+        {
+          "title": "All sessions keeps overlapping provider IDs separate and fits a narrow screen",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "fde18bd96d00829d9753b0351d7a327418fcdc644d1376a4f2cdbbb669232d09"
+        },
+        {
+          "title": "an external Rig seat keeps its execution host unknown across viewer recovery",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "2746d7dc54925baa7805dc7fe975d43466cf839817ce8468ddd7c9556767c035"
+        },
+        {
+          "title": "logical Rig seat keeps its viewer and layout after an explicit native rebind",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "578dd9e8aa70841c0fdc59f5417dd4ea1e7eb1478091e7b80cc91066a9ec641b"
+        },
+        {
+          "title": "grid observes native Rig bootstrap and lifecycle without inferring provider readiness",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "c6bade2f44ad79217186209fd4d0a1ac7ef543b4001a2e574dd96db7d2ab34cf"
+        },
+        {
+          "title": "native Rig notification refreshes canonical tile state while fallback timers are paused",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "dbc645aed6c7bf6203bcb6f047f47c9aa338fd920c454f4aaa06585dba424588"
+        },
+        {
+          "title": "real tmux discovery, browser attachment, reload and scratch shell",
+          "status": "passed",
+          "retry": 0,
+          "source": "fcab74bfbdd3a3d8d01a41b8c7edd7154df12263",
+          "reportSHA256": "c8948c54605b3740ccf09acd9b65ec19906a9b25555bc534934c9fcf6d4ab889",
+          "fixture": "WEBMUX_REAL_AGENTS=1; initial omitted-flag skip retained"
+        }
+      ]
+    },
+    "modern": {
+      "passed": 12,
+      "failed": 1,
+      "cases": [
+        {
+          "title": "home gives a fresh 2 by 2 terminal grid the page without coordinator inventory",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "e021a9e188f593f7e2cd77dc85658f8b73b889f757a73a77ac9709c3d6af38c2"
+        },
+        {
+          "title": "coordination lives in its own tab and leaves the terminal grid intact",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "e021a9e188f593f7e2cd77dc85658f8b73b889f757a73a77ac9709c3d6af38c2"
+        },
+        {
+          "title": "Agent Deck UI queues work and drains remote completion records",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "e021a9e188f593f7e2cd77dc85658f8b73b889f757a73a77ac9709c3d6af38c2"
+        },
+        {
+          "title": "managed agents enroll, exchange attributed Rig messages and reuse ordinary grid terminals",
+          "status": "failed",
+          "retry": 0,
+          "source": "fcab74bfbdd3a3d8d01a41b8c7edd7154df12263",
+          "reportSHA256": "b4f34168ffe0b8290d7e4c9427e2d8d2428dc7b4a6e32341679b0be134bf9d7a",
+          "observer": "Tracked or legacy response category/status; original HTTP200 assertion preserved"
+        },
+        {
+          "title": "real diagnostic dashboard is optional and detaching preserves its daemon",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "e021a9e188f593f7e2cd77dc85658f8b73b889f757a73a77ac9709c3d6af38c2"
+        },
+        {
+          "title": "coordination groups provider-owned sessions in keyboard-expandable projects",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "e021a9e188f593f7e2cd77dc85658f8b73b889f757a73a77ac9709c3d6af38c2"
+        },
+        {
+          "title": "integration enablement, launch owner and inventory view persist independently",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "e021a9e188f593f7e2cd77dc85658f8b73b889f757a73a77ac9709c3d6af38c2"
+        },
+        {
+          "title": "All sessions keeps overlapping provider IDs separate and fits a narrow screen",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "e021a9e188f593f7e2cd77dc85658f8b73b889f757a73a77ac9709c3d6af38c2"
+        },
+        {
+          "title": "an external Rig seat keeps its execution host unknown across viewer recovery",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "a9e5a37e862e3e74844a1436a32435d9b6162b48de69d21b51a65b13e3a69251"
+        },
+        {
+          "title": "logical Rig seat keeps its viewer and layout after an explicit native rebind",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "a97b70e05d776429b94b8ed893dccb5ceac4b9f53eb4864183fe4fa1817b1305"
+        },
+        {
+          "title": "grid observes native Rig bootstrap and lifecycle without inferring provider readiness",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "3136426fdff02c36f88984fb1596bfca847600856c934f823f172248baf9310f"
+        },
+        {
+          "title": "native Rig notification refreshes canonical tile state while fallback timers are paused",
+          "status": "passed",
+          "retry": 0,
+          "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+          "reportSHA256": "d6649071662d747891c00ef81265b667ce801a21623b062d622d647bbabb5d4f"
+        },
+        {
+          "title": "real tmux discovery, browser attachment, reload and scratch shell",
+          "status": "passed",
+          "retry": 0,
+          "source": "fcab74bfbdd3a3d8d01a41b8c7edd7154df12263",
+          "reportSHA256": "8520b9e3e6da6d2a672dd9be66b63273033d5265dda7e84d590f8bbd6de4de4e",
+          "fixture": "WEBMUX_REAL_AGENTS=1; initial omitted-flag skip retained"
+        }
+      ]
+    }
+  },
+  "initialCurrentFileInventory": {
+    "passed": 25,
+    "failed": 1,
+    "skipped": 2,
+    "note": "Additional current two-seat grid case passed on each build; ordinary coexistence cases initially skipped because WEBMUX_REAL_AGENTS was omitted. All original reports retained."
+  },
+  "additionalCurrentCases": {
+    "modern": [
+      {
+        "title": "two existing Rig seats keep chosen cells beside an ordinary terminal through reload and reconnect",
+        "status": "passed",
+        "retry": 0,
+        "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+        "reportSHA256": "a97b70e05d776429b94b8ed893dccb5ceac4b9f53eb4864183fe4fa1817b1305"
+      }
+    ],
+    "legacy": [
+      {
+        "title": "two existing Rig seats keep chosen cells beside an ordinary terminal through reload and reconnect",
+        "status": "passed",
+        "retry": 0,
+        "source": "694c000f79e820bb8059bafc6befbc90392c9b77",
+        "reportSHA256": "578dd9e8aa70841c0fdc59f5417dd4ea1e7eb1478091e7b80cc91066a9ec641b"
+      }
+    ]
+  },
+  "coexistenceCorrection": {
+    "source": "fcab74bfbdd3a3d8d01a41b8c7edd7154df12263",
+    "fixtureCorrection": "Enable WEBMUX_REAL_AGENTS=1 as required by the original ordinary-tmux coexistence case; original skipped reports retained.",
+    "results": [
+      {
+        "build": "modern",
+        "exit": 0,
+        "stats": {
+          "startTime": "2026-11-19T23:34:10.183Z",
+          "duration": 12800.314,
+          "expected": 1,
+          "skipped": 0,
+          "unexpected": 0,
+          "flaky": 0
+        },
+        "reportSHA256": "8520b9e3e6da6d2a672dd9be66b63273033d5265dda7e84d590f8bbd6de4de4e",
+        "runnerLogSHA256": "a9566ea819625f4b0aed2e436d957fd0d0392180288a8a95647e8585b5abfab5"
+      },
+      {
+        "build": "legacy",
+        "exit": 0,
+        "stats": {
+          "startTime": "2026-11-19T23:34:23.296Z",
+          "duration": 13746.559,
+          "expected": 1,
+          "skipped": 0,
+          "unexpected": 0,
+          "flaky": 0
+        },
+        "reportSHA256": "c8948c54605b3740ccf09acd9b65ec19906a9b25555bc534934c9fcf6d4ab889",
+        "runnerLogSHA256": "e5d72ff65b4db00cc62795c33020a9c6f18649b9476aa548a7ed942ff249837a"
+      }
+    ]
+  },
+  "observerValidation": {
+    "source": "fcab74bfbdd3a3d8d01a41b8c7edd7154df12263",
+    "results": [
+      {
+        "build": "modern",
+        "exit": 1,
+        "stats": {
+          "startTime": "2026-11-19T23:27:59.768Z",
+          "duration": 10194.662,
+          "expected": 0,
+          "skipped": 0,
+          "unexpected": 1,
+          "flaky": 0
+        },
+        "elapsedSeconds": 10.503796750097536,
+        "responses": [
+          {
+            "role": "coder",
+            "route": "tracked-native-creation",
+            "status": 502
+          }
+        ],
+        "runnerLogSHA256": "048288790a3e29c92434467ce19b3be309660dd06ce20392da7c03c2b99b9a0a",
+        "reportSHA256": "b4f34168ffe0b8290d7e4c9427e2d8d2428dc7b4a6e32341679b0be134bf9d7a"
+      },
+      {
+        "build": "legacy",
+        "exit": 0,
+        "stats": {
+          "startTime": "2026-11-19T23:28:10.272Z",
+          "duration": 57400.074,
+          "expected": 1,
+          "skipped": 0,
+          "unexpected": 0,
+          "flaky": 0
+        },
+        "elapsedSeconds": 57.70934458402917,
+        "responses": [
+          {
+            "role": "coder",
+            "route": "legacy-agent-creation",
+            "status": 200
+          },
+          {
+            "role": "reviewer",
+            "route": "legacy-agent-creation",
+            "status": 200
+          }
+        ],
+        "runnerLogSHA256": "e4238c1e72bddd70db421a9418daf0d616c49b2aa004e7028cab3ef9aa52b908",
+        "reportSHA256": "c94e4587307b14c0602dddd535d8254e249bf81103154fee9a7062acd21fde71"
+      }
+    ],
+    "scope": "Only response observation improved. Modern native qualification refusal remains an ordinary failed managed case, not accepted lifecycle coverage.",
+    "newHostedJobs": 0
+  },
+  "modernCLISourceAdmission": {
+    "package": "@openrig/cli",
+    "version": "0.7.18 (3bf87c62)",
+    "tarballSHA256": "ebe5cece0aa0bc1d0a5b14aecb4ba15e18e7d9ccd9eb9f5127a92b02f15418ce",
+    "publishedFilesByteEqualExistingInstallation": 5625,
+    "selectedInstalledCodeUnmodified": true,
+    "dependencySetup": "Use existing complete local installation; no package install or global CLI change.",
+    "scope": "Source admission only, not vulnerability/license clearance."
+  },
+  "sourceValidation": {
+    "baseline": "694c000f79e820bb8059bafc6befbc90392c9b77",
+    "observerSource": "fcab74bfbdd3a3d8d01a41b8c7edd7154df12263",
+    "onlyResponsePredicateAndSanitizedAttachmentChanged": true,
+    "allOriginalAssertionsDeadlinesWorkloadAndProductionCodeUnchanged": true,
+    "baselineSpecSHA256": "e3303f79e2c8f242d5547158feaddb015c30dd2e0880bd999f62a7ebf38aae2c",
+    "observerSpecSHA256": "ce8277df851380c1ed009742b453e2d547d62e1f9c8a51e016be5a9b18feecbe",
+    "attachmentKeys": [
+      "role",
+      "route",
+      "status"
+    ],
+    "strictE2ETypeScriptExit": 0
+  },
+  "otherLocalChecks": {
+    "nativeTwoRealTmuxServerRestoreRebindPassed": true,
+    "nativeManagerIsProtocolFixture": true,
+    "goBoundaryControlsPassed": 4,
+    "helperControlsPassed": 33,
+    "strictE2ETypeScriptPassed": true,
+    "logSHA256": {
+      "two-socket-native.log": "4b5d531dda6a131b790f5bc8c6966bc2124bbc8f2cca432d41740363ca1b7457",
+      "protocol-controls.log": "0c44cdef3c83989dd9f431ff37b09d03c93883963af844e1203b720f03511975",
+      "helper-controls.log": "c4b191f759de7e795657e9d93b769a44bb8b2c013d0c166d3d5f5464fe9f226d",
+      "frontend-build.log": "4ea84471cb0480ea77738744a2a459cc7eb453865517d32fe8f01a506d9336df"
+    }
+  },
+  "rejectedSetup": [
+    {
+      "kind": "Tarball-only CLI missing daemon yaml dependency",
+      "testsExecuted": 0,
+      "correction": "Existing complete installation; all5625 published code files byte-equal; no dependency installation or global update."
+    },
+    {
+      "kind": "Focused grep selected no tests",
+      "testsExecuted": 0,
+      "correction": "Use actual Playwright full-title substring; rejected discovery retained."
+    },
+    {
+      "kind": "Coexistence flag initially omitted, then incorrectly named",
+      "testsExecuted": 0,
+      "correction": "Read source guard and use exact WEBMUX_REAL_AGENTS=1; all original skipped records retained."
+    }
+  ],
+  "remaining": "Modern tracked native creation correctly refuses synthetic Codex as qualified_codex_unavailable. Actual current modern managed lifecycle remains unqualified under603; do not spoof native qualification, bypass policy, swap providers or drop the workload.",
+  "limits": [
+    "Actual pinned Rig0.6.14/0.7.18, Go/tmux/Chrome with synthetic interactive providers; not authenticated coding conversation qualification.",
+    "Only test response observation and allowlisted attachment change. All original assertions, deadlines and production code remain byte-preserved.",
+    "Modern ordinary managed case remains failed at HTTP502. Observer diagnostic validation does not waive that gate.",
+    "No new hosted jobs, installed CLI/dependency upgrade, account copying, service/protection changes or release publication.",
+    "Full roadmap/release remains incomplete."
+  ]
+}

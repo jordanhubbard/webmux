@@ -1,5 +1,10 @@
 # Rig attachment, messaging and dashboard destinations
 
+The [current qualification refresh](../rig-routing-current-2026-11-19/README.md)
+retains the historical 26-case result below and records a current modern
+managed-creation refusal. #469 remains open under the tracked native-creation
+workload follow-up #603; the observer correction does not qualify that failure.
+
 Issue #469 fixes three boundaries exposed by the published OpenRig 0.7.18 browser qualification. A managed enrollment's physical `sessionName` now identifies its tmux attachment; `env.OPENRIG_SESSION_NAME` remains the separate messaging address. Both are validated before launching the provider, and message history is queried using the messaging address. The dashboard reads the healthy local daemon endpoint without starting or reconfiguring it, so the TUI does not silently select its default port.
 
 The bounded host observer now admits the exact 0.7.18 build's full structured JSON, projects only public identity fields, and carries an absolute socket in `openrig-cli/0.7.18` reports. Older controllers reject that source identifier. Current controllers preserve the socket through SSH argument quoting and saved destination comparisons. Legacy reports retain their existing source and behavior. The observer's three-second, 128 KiB and 256-seat limits remain unchanged.
