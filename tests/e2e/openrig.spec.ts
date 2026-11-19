@@ -153,9 +153,18 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       await dialog.getByLabel('Run on host', { exact: true }).fill('localhost');
       await dialog.getByLabel('Code folder', { exact: true }).fill(home);
       await dialog.getByRole('combobox', { name: 'Coding agent', exact: true }).selectOption('codex');
-      const response = page.waitForResponse(value => value.url().endsWith('/api/coordination/agents') && value.request().method() === 'POST');
+      const response = page.waitForResponse(value => {
+        if (value.request().method() !== 'POST') return false;
+        const pathname = new URL(value.url()).pathname;
+        return structuredAttachment
+          ? /^\/api\/coordination\/creation-requests\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(pathname)
+          : pathname === '/api/coordination/agents';
+      });
       await dialog.getByRole('button', { name: 'Start agent and open terminal', exact: true }).click();
       const reply = await response;
+      await info.attach('managed-creation-response', { contentType: 'application/json', body: JSON.stringify({
+        role: name, route: structuredAttachment ? 'tracked-native-creation' : 'legacy-agent-creation', status: reply.status(),
+      }) });
       expect(reply.status(), (await reply.text()).slice(0, 6000)).toBe(200);
       await expect(dialog).toHaveCount(0);
       const agent = (await status()).seats.find(value => value.name === name)!;
