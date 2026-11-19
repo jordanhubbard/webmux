@@ -121,6 +121,26 @@ describe('Workspace', () => {
     expect(api.moveSession).not.toHaveBeenCalled();
   });
 
+  it('offers existing seats from a clicked cell and retains that requested position', async () => {
+    const { api } = await import('@frontend/utils/api');
+    vi.mocked(api.getCoordination).mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'rig', defaultView: 'all', enabledProviders: ['rig'], providers: [], messages: [], errors: {},
+      projects: [{ provider: 'rig', id: 'project', name: 'research', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: [] }],
+      seats: [{ provider: 'rig', id: 'stable-seat', projectId: 'project', projectName: 'research', name: 'worker', host: 'localhost', runtime: 'codex', state: 'running', openable: true, managed: true }],
+    });
+    const opened = { ...mockSessions[0], row: 1, col: 0 };
+    vi.mocked(api.attachCoordinatedAgent).mockImplementation(async () => { vi.mocked(api.getSessions).mockResolvedValue([opened]); return opened; });
+    render(<Workspace {...defaultProps} />, { wrapper });
+    fireEvent.click(await screen.findByTestId('add-cell-1-0'));
+    expect(api.getCoordination).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('button', { name: 'Open existing agent seat' }));
+    await screen.findByText('Choose a coordinated seat for row 2, column 1.');
+    fireEvent.click(await screen.findByRole('button', { name: 'worker · localhost · running · Rig' }));
+    await screen.findByTestId('terminal-s1');
+    expect(api.attachCoordinatedAgent).toHaveBeenCalledExactlyOnceWith('rig', 'stable-seat', { row: 1, col: 0 });
+    expect(api.createSession).not.toHaveBeenCalled();
+    expect(api.moveSession).not.toHaveBeenCalled();
+  });
+
   it('reveals an existing seat without moving or remounting its terminal', async () => {
     const { api } = await import('@frontend/utils/api');
     const existing = { ...mockSessions[0], row: 3, col: 4, rig: { seat_id: 'stable-seat', target: 'native-target', project: 'research', name: 'worker', host: 'localhost', runtime: 'codex' } };
@@ -132,7 +152,8 @@ describe('Workspace', () => {
     vi.mocked(api.attachCoordinatedAgent).mockResolvedValue(existing);
     render(<Workspace {...defaultProps} />, { wrapper });
     const terminal = await screen.findByTestId('terminal-s1');
-    fireEvent.click(screen.getByText('Coordinated sessions'));
+    fireEvent.click(screen.getByTestId('add-cell-3-5'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Open existing agent seat' }));
     fireEvent.click(await screen.findByRole('button', { name: 'worker · localhost · running · Rig' }));
     await waitFor(() => expect(api.attachCoordinatedAgent).toHaveBeenCalledExactlyOnceWith('rig', 'stable-seat', undefined));
     expect(screen.getByTestId('terminal-s1')).toBe(terminal);

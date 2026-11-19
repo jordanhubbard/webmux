@@ -174,9 +174,11 @@ export function Workspace({
   const [loading, setLoading] = useState(true);
   const [dialogPos, setDialogPos] = useState<{ row: number; col: number } | null>(null);
   const [seatSelection, setSeatSelection] = useState<{ provider: string; target: string; name: string } | null>(null);
+  const [seatPosition, setSeatPosition] = useState<{ row: number; col: number } | null>(null);
+  const [navigatorRequest, setNavigatorRequest] = useState(0);
   const [openingSeat, setOpeningSeat] = useState(false);
   const openingSeatRef = useRef(false);
-  useEffect(() => { if (!canManageRig) setSeatSelection(null); }, [canManageRig]);
+  useEffect(() => { if (!canManageRig) { setSeatSelection(null); setSeatPosition(null); } }, [canManageRig]);
   const [localClose, setLocalClose] = useState<Session | null>(null);
   const [coordinator, setCoordinator] = useState<'agent-deck' | 'rig' | null>(null);
   const [coordinatorHost, setCoordinatorHost] = useState('localhost');
@@ -249,7 +251,7 @@ export function Workspace({
     try {
       const session = await api.attachCoordinatedAgent(provider, target, position);
       if (session.minimized) await api.setMinimized(session.id, false);
-      setSeatSelection(null);
+      setSeatSelection(null); setSeatPosition(null);
       loadSessions(session.id);
     } finally { openingSeatRef.current = false; setOpeningSeat(false); }
   }, [canManageRig, loadSessions]);
@@ -259,6 +261,7 @@ export function Workspace({
     const existing = sessionsRef.current.some(session => session.rig && (session.rig.provider || 'rig') === provider
       && (session.rig.seat_id === target || session.rig.target === target || session.rig.target === `${provider}:${target}`));
     if (existing) await openCoordinatedSeat(provider, target);
+    else if (seatPosition) await openCoordinatedSeat(provider, target, seatPosition);
     else { setDialogPos(null); setSeatSelection({ provider, target, name }); }
   };
 
@@ -675,10 +678,10 @@ export function Workspace({
 
   return (
     <div style={styles.shell}>
-      {canManageRig && <RigNavigator active={activePane === 'terminals'} disabled={openingSeat} onOpen={selectCoordinatedSeat} onManage={() => setActivePane('coordination')} />}
-      {canManageRig && seatSelection && <div role="status">
-        Choose an empty grid cell to open {seatSelection.name}.
-        <button type="button" disabled={openingSeat} onClick={() => setSeatSelection(null)}>Cancel seat placement</button>
+      {canManageRig && <RigNavigator active={activePane === 'terminals'} disabled={openingSeat} openRequest={navigatorRequest} onOpen={selectCoordinatedSeat} onManage={() => setActivePane('coordination')} />}
+      {canManageRig && (seatSelection || seatPosition) && <div role="status">
+        {seatSelection ? `Choose an empty grid cell to open ${seatSelection.name}.` : `Choose a coordinated seat for row ${seatPosition!.row + 1}, column ${seatPosition!.col + 1}.`}
+        <button type="button" disabled={openingSeat} onClick={() => { setSeatSelection(null); setSeatPosition(null); }}>Cancel seat placement</button>
       </div>}
       {operationError && <div role="alert">{operationError} <button onClick={() => setOperationError('')}>Dismiss</button></div>}
       {broadcastMode && <div role="group" aria-label="Type to All recipients" style={{ padding: '5px 10px', background: '#3a2a1a', color: '#f1d494', display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>
@@ -822,7 +825,7 @@ export function Workspace({
                 if (seatSelection) {
                   void openCoordinatedSeat(seatSelection.provider, seatSelection.target, pos)
                     .catch(error => setOperationError(`Could not open the selected seat: ${String(error)}`));
-                } else { setCoordinator(null); setDialogPos(pos); }
+                } else { setSeatPosition(null); setCoordinator(null); setDialogPos(pos); }
               }}
             />
           ))}
@@ -849,6 +852,9 @@ export function Workspace({
         {dialogPos && !coordinator && (
           <ConnectionDialog
             localFirst
+            onChooseExistingSeat={canManageRig ? () => {
+              setSeatSelection(null); setSeatPosition(dialogPos); setDialogPos(null); setNavigatorRequest(value => value + 1);
+            } : undefined}
             onChooseCoordinator={canManageRig ? (provider, host) => { setCoordinatorHost(host); setCoordinator(provider); } : undefined}
             onConnect={handleAddSession}
             onClose={() => setDialogPos(null)}

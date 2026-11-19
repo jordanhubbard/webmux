@@ -68,6 +68,10 @@ topologies remain visible with their provider IDs.
 4. Select **Start agent and open terminal**. Its terminal opens in the ordinary
    grid; give the agent its actual task there.
 
+In an empty grid cell, choose **Open existing agent seat** to select a canonical
+seat for that position. The Coordinator selector continues to offer creating a
+new agent; Localhost and remote connections remain separate choices.
+
 In the terminal grid, expand **Coordinated sessions** to see projects and seats
 from enabled integrations. Selecting a seat reveals its existing viewer. For a
 seat without an open viewer, choose an empty grid cell to place it, or choose

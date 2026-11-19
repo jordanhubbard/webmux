@@ -5,9 +5,9 @@ import type { CoordinationProject, CoordinationSeat } from './CoordinationDialog
 
 const lifecycleLabel = (seat: CoordinationSeat) => seat.observationState && seat.observationState !== 'current' ? `last observed ${seat.state}; ${seat.observationState}` : seat.state;
 
-export function RigNavigator({ onOpen, onManage, active = true, disabled = false }: {
+export function RigNavigator({ onOpen, onManage, active = true, disabled = false, openRequest = 0 }: {
   onOpen: (provider: string, target: string, name?: string) => Promise<void>; onManage: () => void;
-  active?: boolean; disabled?: boolean;
+  active?: boolean; disabled?: boolean; openRequest?: number;
 }) {
   const [projects, setProjects] = useState<CoordinationProject[]>([]);
   const [seats, setSeats] = useState<CoordinationSeat[]>([]);
@@ -16,6 +16,9 @@ export function RigNavigator({ onOpen, onManage, active = true, disabled = false
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
+  useEffect(() => {
+    if (openRequest > 0) { setLoading(true); setExpanded(true); }
+  }, [openRequest]);
   useEffect(() => {
     if (!active || !expanded) return;
     let current = true;
@@ -46,8 +49,8 @@ export function RigNavigator({ onOpen, onManage, active = true, disabled = false
     void refresh();
     window.addEventListener('webmux-sessions-changed', changed);
     return () => { current = false; setLoading(true); request?.abort(); clearTimeout(timer); window.removeEventListener('webmux-sessions-changed', changed); };
-  }, [active, expanded]);
-  return <details open={expanded} onToggle={event => { setLoading(true); setExpanded(event.currentTarget.open); }} style={{ background: '#141428', border: '1px solid #333366', borderRadius: 4, margin: '8px 8px 0', padding: '5px 8px', flexShrink: 0 }}>
+  }, [active, expanded, openRequest]);
+  return <details open={expanded} onToggle={event => { const open = event.currentTarget.open; if (open !== expanded) { setLoading(true); setExpanded(open); } }} style={{ background: '#141428', border: '1px solid #333366', borderRadius: 4, margin: '8px 8px 0', padding: '5px 8px', flexShrink: 0 }}>
     <summary style={{ cursor: 'pointer', color: '#c5b8ff' }}>Coordinated sessions{!loading && ` (${seats.length})`}</summary>
     {error && <p role="status">Coordination status unavailable: {error}</p>}
     {loading && expanded && <p role="status">Checking coordinated sessions…</p>}
