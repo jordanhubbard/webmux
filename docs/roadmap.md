@@ -152,8 +152,12 @@ Remaining #318 work, in order:
    Fixed startup phases now preserve safe failure evidence, with all 23 native
    provider tests/91 pass events and a failing parent-code control. A new
    application browser gate requires a connected owner, fresh child output and
-   confirmed Stop/child exit; hosted execution and the actual cause remain
-   pending ([scope](validation/windows-startup-diagnostics-2026-11-18/README.md)).
+   confirmed Stop/child exit. That unchanged gate passes on private native
+   Windows AMD64; hosted execution fails with owner creation error5 and an
+   observed bootstrap job that disallows breakaway. Positive native qualification
+   now has a separate explicit configuration; fixture-only green CI cannot
+   establish it. Review/integration and broader acceptance remain open
+   ([scope](validation/windows-startup-diagnostics-2026-11-18/native-application.md)).
 2. Codex in default shared-daemon mode is manual-only by owner decision: no
    observation point preserves launch mode and sandbox policy after interactive
    switches. Revisit when [openai/codex#60625](https://github.com/openai/codex/issues/60625)
@@ -192,7 +196,8 @@ The shared Node fake's per-query interpreter startup still reached the unchanged
 one-second query deadline in hosted CI. #324 is reopened. A prepared native fake
 now passes all seventeen affected controls and all 253 helper tests at default
 concurrency; blocked-Node, cold-start, failed-query and hung-query controls retain
-the production boundaries. Hosted CI remains pending
+the production boundaries. Exact-head cc4316c and d4b3e45 hosted frontend/tooling
+jobs pass; review/integration remains pending
 ([qualification](validation/launchd-native-fixture-2026-11-18/README.md)).
 
 ### Windows packaging reliability

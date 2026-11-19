@@ -24,6 +24,7 @@
   },
   "include": [
     "playwright.config.ts",
+    "playwright.native-windows.config.ts",
     "../tests/e2e/**/*.ts"
   ]
 }

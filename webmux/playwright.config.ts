@@ -11,6 +11,9 @@ const VISUAL_PARITY = process.env.WEBMUX_VISUAL_PARITY === '1';
 export default defineConfig({
   testDir: '../tests/e2e',
   testMatch: SCREEN_REPLAY_ONLY ? 'screen-replay.spec.ts' : '*.spec.ts',
+  // Independent providers require a host whose outer jobs permit breakaway.
+  // Keep their positive application qualification in the native configuration.
+  testIgnore: '**/*.native.spec.ts',
   timeout: 30_000,
   retries: 0,
   workers: 1,

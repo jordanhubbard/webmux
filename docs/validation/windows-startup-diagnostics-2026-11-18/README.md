@@ -76,3 +76,10 @@ reply. AMD64/ARM64 cross-builds and Windows-target vet pass. See the separate
 [source-bound receipt](job-observation.json); the earlier full-package receipt
 continues to describe its original image. No persistent owner is started by
 these focused checks.
+
+The subsequent [native application qualification](native-application.md)
+passes the unchanged gate on the private target. Hosted d4b3e45 evidence records
+the bootstrap's restrictive immediate job and owner creation error5. Normal
+fixture discovery and positive native qualification now have separate
+configurations; the explicit native gate retains its assertions and still
+fails on that restrictive hosted runner. Broader acceptance remains open.
