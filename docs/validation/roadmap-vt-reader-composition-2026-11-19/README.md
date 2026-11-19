@@ -5,7 +5,7 @@ Merge `e6d9645b24b77ea7414487460c1737a332eaefb7` composes published owner
 preparation branch. The incoming VT changes affect two test files and their
 retained-source provenance. Production sources are unchanged. The complete VT
 tree equals the published owner's tree; provenance verifies VT 241/19 and UV
-104/7. The canonical PR #500 remains separate.
+104/7. The later merge `d7a6908f5f1910f6d2447faf7af22f98f7289fc7` also includes policy guard #540 (`4b0d4b0`).
 
 Go parser AST ranges independently establish that all thirteen pre-existing
 test bodies in those two files are byte-identical after normalizing only the
@@ -37,8 +37,19 @@ there is no timeout-cause, private-suite-pass or #450 corruption-repair claim.
 private loopback connection, failing the planned strict network prerequisite;
 no application upgrade or recovery case was started by that preflight.
 
-Separate [PR #540](https://github.com/jordanhubbard/webmux/pull/540) contains the
-native interactive-permission guard. It is not part of this preparation merge.
+[PR #540](https://github.com/jordanhubbard/webmux/pull/540) supplies the native
+interactive-permission guard. Its four original hosted workflows pass with 19
+raw artifact ZIP digests and NAS readbacks independently verified. The combined
+source passes all five strict TypeScript projects, 252 helper tests, four affected
+Go race suites and vet, plus both provenance checks. An initial client-install
+helper test exceeded its existing 30-second limit; unchanged isolated and full
+suite runs pass, and the original failure remains retained with cause unproven.
+The production coordinator, API, recovery and frontend trees equal `4b0d4b0`.
+
+The [packaged private service upgrade](../packaged-service-upgrade-2026-11-19/README.md)
+qualifies actual packaged6156-to4b macOS service replacement and service SIGKILL
+with unchanged workspace-write/never and real native tools. It retains the failed
+first harness attempt. It does not qualify a notarized version upgrade or reboot.
 Fresh combined Windows checks, review/integration, broader roadmap acceptance,
 security/distribution requirements and release remain open. No runtime overlay,
 version, tag or publication change is introduced.

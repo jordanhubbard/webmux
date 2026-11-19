@@ -117,5 +117,84 @@
   "oldCanonicalGateScope": "Canonical6156 ten gates remain source-bound; fresh composed Windows/full roadmap acceptance pending.",
   "nativeWindowsPreflight538": "Imported original0c75 receipt retains strict legacy-unelevated loopback denial failure. No new application upgrade or strict Windows network qualification is claimed.",
   "privateDeadline536": "Original/private ten-minute deadline remains failed, even though retained reader stacks are corrected; no cause/repair claim.",
-  "nativeInteractivePolicy539": "Separate draftPR540 source4b0d4b0 has native policy refusal proof, observer and Packaging green; CI/ARM original runs live. Not integrated in this composition."
+  "nativeInteractivePolicy539": {
+    "mergedCode": "d7a6908f5f1910f6d2447faf7af22f98f7289fc7",
+    "incoming": "4b0d4b0ec699bc6d34b48fa7a9f9911481879557",
+    "fourGates": {
+      "head": "4b0d4b0ec699bc6d34b48fa7a9f9911481879557",
+      "recordedUTC": "2026-11-19T03:28:15.757606+00:00",
+      "allFourOriginalWorkflowsSuccess": true,
+      "rawZIPs": 19,
+      "NASReadbackVerified": true,
+      "runs": [
+        {
+          "run": 44445804970,
+          "head": "4b0d4b0ec699bc6d34b48fa7a9f9911481879557",
+          "conclusion": "success"
+        },
+        {
+          "run": 44445866139,
+          "head": "4b0d4b0ec699bc6d34b48fa7a9f9911481879557",
+          "conclusion": "success"
+        },
+        {
+          "run": 44445862123,
+          "head": "4b0d4b0ec699bc6d34b48fa7a9f9911481879557",
+          "conclusion": "success"
+        },
+        {
+          "run": 44445804996,
+          "head": "4b0d4b0ec699bc6d34b48fa7a9f9911481879557",
+          "conclusion": "success"
+        }
+      ],
+      "summarySHA256": {
+        "observer-summary.json": "5f97d7015340b7923090d182dc729cb9a78b079d20babd541940d585602b19db",
+        "packaging-summary.json": "676b5d117c6cff9ce2aecf781f4a363889ec7615347567a8e239945bd359ef4c",
+        "repository-native-upload-verifier.json": "aba70c4fb9bc6d648354e638b749b134a178de924f1a4bc31f1d1af3b5891ad8",
+        "ci-semantic.log": "f9253aae736ae3a334afc222aa72d93eb1a9a6883d69e7cca8e451ce1010e715",
+        "arm-summary.json": "adaed2ab83cd895cedf6fe6044f2c14b8983425769c8e5f18b6969eea05c743e",
+        "native-status-controls-summary.json": "5291f6ad258df64ec4c9e1e8f2860b9bc9760349433fac9b92711d4a0a0a8b95",
+        "nas-readback-summary.json": "94f53ffe5c243b7a5c534cf00fefc33b1a38a2a13bcd2ec55cb03d27a5282d5e"
+      },
+      "scope": "Exact4b CI/Packaging/nativeARM/nativeLinux startup artifact semantics verified. ARM browser remains AMD64-emulated. Authenticated Linux/ARM coding, privateWindows deadline, AMX repair and fullroadmap/release acceptance remain separate."
+    }
+  },
+  "combinedLocalAdmission": {
+    "recordedUTC": "2026-11-19T03:52:27.186455+00:00",
+    "head": "d7a6908f5f1910f6d2447faf7af22f98f7289fc7",
+    "strictTypeScriptProjects": 5,
+    "helperTests": 252,
+    "helpersFailSkip": 0,
+    "firstHelperAttempt": "251pass/1 timeout in default Make client-install at existing30s; isolatedunchanged passed10.639s; fullunchanged secondpasses252/252. Causeunproven; original log retained.",
+    "goRace": [
+      "ok  \tgithub.com/jordanhubbard/webmux/server/internal/openrigcoord\t8.809s",
+      "ok  \tgithub.com/jordanhubbard/webmux/server/internal/httpapi\t68.861s",
+      "ok  \tgithub.com/jordanhubbard/webmux/server/internal/session\t16.249s",
+      "ok  \tgithub.com/jordanhubbard/webmux/server/internal/recovery\t15.203s"
+    ],
+    "goVet": "samefourpackagesPASS exit0",
+    "provenance": [
+      "Verified 241 upstream files; 19 explicitly patched files",
+      "Verified 104 ultraviolet upstream files; 7 explicitly patched files"
+    ],
+    "logSHA256": {
+      "combined-policy-quality.log": "4881f1df9170436adcc9053a6f23d4ca2d0853df9afe6286cac2d336ab784861",
+      "client-install-investigation.log": "c755023595c00a096aa1d4a02ec1e6bcc3c9e334cb8ccbb065a2b94b3b67a8ae",
+      "combined-policy-helpers-second.log": "7005822909739a9480255ef9ed62f0181b05ec9779b6886c354b32b81decf793",
+      "combined-policy-go.log": "3c8af3215749b2311540802ff2c0f56ffd6f3eebb7f23a0ba70b16b9aaf560ff",
+      "combined-policy-provenance-final.log": "de5a5b44e4d3d53b662ac3b7f3cd447d72cdd2c9befde0ac252e706251f85083"
+    },
+    "sameRuntimeProductionAs4b": true,
+    "VTProductionUnchangedFromPublished0c75": true,
+    "scope": "Local combined admission only; fresh hosted exact combined checks pending."
+  },
+  "packagedServiceUpgrade": "../packaged-service-upgrade-2026-11-19/receipt.json",
+  "combinedRuntimeTreesEqual4b": {
+    "webmux/frontend": "a49d96d74e7915c9cfd35883939d60c59d682001",
+    "webmux/server/internal/openrigcoord": "984a5bb917443538f416809954bdb8cd70426961",
+    "webmux/server/internal/httpapi": "bcf7b3216b5b562ded075d3118146b0bab74c2d2",
+    "webmux/server/internal/session": "93f29a2ef4e855607a659609536429492d0c1746",
+    "webmux/server/internal/recovery": "4160a58c552e2ccfc0ff452867cf39090e1b40b0"
+  }
 }
