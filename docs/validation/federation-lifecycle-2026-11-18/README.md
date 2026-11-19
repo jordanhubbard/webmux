@@ -1,5 +1,12 @@
 # Federation lifecycle visibility and diagnostics
 
+The qualification follow-up [#478 is closed](https://github.com/jordanhubbard/webmux/issues/478#issuecomment-7024703723)
+after the integrated acceptance audit below. The historical sections retain the
+original failures and pending dispositions as recorded at those checkpoints.
+The established correction is the independently reproduced offscreen DOM
+measurement hazard; the geometry-free historical sample is not uniquely
+attributed to it.
+
 Issue #478 retains a native Windows failure in which the initial remote
 provider marker was visible, but a later reconnect/refresh expected that same
 marker and received a blank terminal. The original catch block replaced the
@@ -89,3 +96,42 @@ added sleep or replay/reconnect request. The full native macOS case passes
 blank assertion and recovers the old marker solely on visibility. The control
 receipt is now written only for that exact matcher failure with blank actual
 text. Native Windows qualification of the corrected lifecycle is pending.
+
+## Integrated acceptance — 2026-11-19
+
+The [acceptance receipt](acceptance-2026-11-19.json) audits main
+`629478cdd5984a21056bd3526490970361ec9a91` against five original native packets.
+Original immutable ZIPs, live source/run bindings and relevant current source
+equality were independently checked. No new hosted or native Windows jobs ran.
+
+The spontaneous Pack failure remains failed. Its raw receipt shows both
+connected APIs/views, the two original fixture providers present and 49 peer
+replay bytes delivered, followed by 5,029 ms without further peer receive,
+close or error frames while rendered rows were blank. Its missing geometry is
+not reconstructed or inferred from later passing runs.
+
+The native offscreen intervention proves the measurement hazard independently:
+the original five-second blank-text assertion fails, then visibility alone
+reveals the same PID marker with a complete trace and zero new frames or sockets.
+The corrected `2f9a13d` Windows run `44281407842` passes ten complete ordinary
+lifecycle samples while both deliberate negative controls remain failures
+admitted by their explicit verifier. Later integrated `0056000` native run
+`44541541564` also passes both controls and the full ordinary workflow; its full
+CI passes. These exercise real Windows Go/Chrome with synthetic exec fixture
+children, separate from native ConPTY renderer and authenticated coding evidence.
+
+An AST comparison preserves all 75 original issue-source assertions in order.
+All 81 pre-fix matchers and arguments are unchanged after normalizing only the
+visibility lookup and one equivalent descendant selector. The 90-second case
+limit, five-second matcher default, explicit timeouts and protected Chromium
+settings remain. No new native input, replay or reconnect is part of the
+visibility correction. The native test and its diagnostics/barrier/fixture,
+workflow, proxy and terminal/workspace sources match the qualified composition.
+
+This completes the qualification follow-up for the established invalid DOM
+oracle after correction and full native lifecycle qualification. It does not
+claim a unique cause for every historical blank occurrence or a production
+transport repair. Native executions retain their original source attribution;
+no fresh whole-current-main, authenticated recovery or full-roadmap/release
+acceptance is claimed. The original ordinary failures remain failed, and #484's
+capability propagation and #473's private-file cleanup remain separate evidence.
