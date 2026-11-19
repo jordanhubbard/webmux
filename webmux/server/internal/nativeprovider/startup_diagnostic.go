@@ -20,6 +20,7 @@ func startupCode(err error) uint32 {
 func startupDiagnostic(phase string, code, exit uint32) string {
 	switch phase {
 	case "bootstrap-config", "bootstrap-start", "bootstrap-pipe", "bootstrap-owner-start", "bootstrap-owner-reply", "bootstrap-owner-wait", "bootstrap-owner-exit",
+		"bootstrap-owner-start-outside-job", "bootstrap-owner-start-immediate-job-unreadable", "bootstrap-owner-start-immediate-job-breakaway", "bootstrap-owner-start-immediate-job-no-breakaway",
 		"bootstrap-reply", "startup-probe", "record-lookup", "record-probe", "owner-config", "owner-root", "owner-lock", "owner-temp",
 		"owner-secure-temp", "owner-listen", "owner-identity", "owner-image", "owner-screen", "owner-record", "owner-terminal":
 	default:

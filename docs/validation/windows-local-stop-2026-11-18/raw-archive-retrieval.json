@@ -1,0 +1,10 @@
+{
+  "scope": "Frozen original b2b9fce native raw evidence; no rerun/new qualification",
+  "archiveSHA256": "d1c7749305b4ca881b497df278a872479679680317b0b081a197c44622882aad",
+  "archiveBytes": 2031411,
+  "manifestSHA256": "f141ca92e790a12afae23c72e554f026e5b37fa8e56dfe3f0f0bec4afeeeacc5",
+  "verifiedFiles": 146,
+  "verifiedUTC": "2026-11-19T05:27:19.958018+00:00",
+  "retrieval": "Private shared roadmap handoff: pending_codex_launch_policy_438.nativeEvidenceHandoff541; archive/rawRoot and manifest paths there.",
+  "verification": "Original146 files and tar members match manifest; packaging/digest verification only. Independent semantic review remains required."
+}

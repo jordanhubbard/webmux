@@ -29,3 +29,17 @@ func TestStartupDiagnosticRetainsOnlyRecognizedEvidence(t *testing.T) {
 		t.Fatalf("unrecognized child evidence leaked: %q", got)
 	}
 }
+
+func TestStartupJobObservationPhasesRemainSanitized(t *testing.T) {
+	for _, phase := range []string{
+		"bootstrap-owner-start-outside-job",
+		"bootstrap-owner-start-immediate-job-unreadable",
+		"bootstrap-owner-start-immediate-job-breakaway",
+		"bootstrap-owner-start-immediate-job-no-breakaway",
+	} {
+		got := startupDiagnostic(phase, 5, 0)
+		if got != "phase="+phase+" os=access_denied exit=none" {
+			t.Fatalf("lost safe job observation: %s", got)
+		}
+	}
+}

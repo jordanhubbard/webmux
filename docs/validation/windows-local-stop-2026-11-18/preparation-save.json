@@ -1,0 +1,65 @@
+{
+  "issue": 541,
+  "source": "18010565c998514481b2f805b137c3628c196eb6",
+  "adoptedFrom": "e19b88b998f3501716ad01d0d37b28aa30093ed3",
+  "parent": "b07e4db9a86749589987680d88bde1789440a3c7",
+  "sourceSHA256": {
+    "webmux/server/internal/session/broker.go": "c2e35c7f4b50bae93b3379efe9c5da433b9cb9af3c6f8dc9e59dc6b68db0afbb",
+    "webmux/server/internal/session/local_lifecycle_test.go": "4f1cb2532cb5f3c18c4eb09486290e6f5c73e31476bb87327d877629cd0739c6"
+  },
+  "behavior": "Failed pre-launch preparation save marks existing entry error and updates timestamp; original ID/key/scope retained; no launch before successful save.",
+  "macOS": {
+    "parentRegression": "FAIL expected persisted connecting/zero launches",
+    "fixedRaceRepetitions": 20,
+    "affectedRacePackages": [
+      "internal/session",
+      "internal/httpapi"
+    ],
+    "affectedRace": "PASS",
+    "windowsAMD64Vet": "PASS"
+  },
+  "nativeWindowsAMD64": {
+    "toolchain": "go1.27.4",
+    "scope": "Real Windows store/filesystem failures with mocked process; no native provider/ConPTY/coding session started",
+    "cases": [
+      {
+        "case": "negative",
+        "pid": 1632,
+        "exit": 1,
+        "expectedExit": 1,
+        "count": 1,
+        "passEvents": 0,
+        "skipEvents": 0,
+        "imageSHA256": "d313878e3dceb4ddfd30e7940df20851f85c7adefb2248e8e8f9090a6bb13c55"
+      },
+      {
+        "case": "fixed",
+        "pid": 2444,
+        "exit": 0,
+        "expectedExit": 0,
+        "count": 20,
+        "passEvents": 60,
+        "skipEvents": 0,
+        "imageSHA256": "c4fd218fa7af61747257a6f6ce61c6305c773d72b0666a323534d196af5a3f9a"
+      }
+    ],
+    "runtimeOverrides": [],
+    "cleanup": {
+      "files": 2,
+      "registerExit": 0,
+      "queryExit": 0,
+      "needed": 0,
+      "noHolders": true
+    }
+  },
+  "limits": [
+    "New test exercises broker Create preparation/final-save sequence directly, not an injected HTTP Create request",
+    "Existing initial-save and post-launch-save controls retained unchanged",
+    "Explicit retry in this sequence starts original session once; configured restoration policy unchanged",
+    "Original authenticated native evidence remains bound to its historical source; not rerun or promoted to current-head acceptance",
+    "First negative overlay setup used a wrong relative path and ran no tests; failed setup/raw retained and excluded; corrected parent overlay fails the actual regression"
+  ],
+  "currentCI": "Pending exact final source head, review and stacked integration",
+  "priorSaveControlsByteIdentical": true,
+  "parentBrokerSHA256": "7511eb97d71c0311be50feeefe8910e130b844f75993c14c670e3fb00b75a5ae"
+}
