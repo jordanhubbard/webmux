@@ -265,7 +265,8 @@
     "publishedReportRedaction": "Only the Build ID header containing the private native absolute path is omitted. Original reports/profile/archive remain retained by hash.",
     "cause": "Unknown. CPU-profile attribution is diagnostic evidence; it does not prove reader-leak causality, runtime corruption or a repair."
   },
-  "nativeChangedSourceQualification": "pending after clean commit/build; original10x/10min and complete old inventory plus new lifecycle controls remain required",
+  "nativeChangedSourceQualification": "Hosted required/stock/guard full inventories and all8 CI jobs pass on5fadbbc; privateVM full10x/10min still times out. See native-results.json.",
   "runtimeRepairClaim": false,
-  "releaseReady": false
+  "releaseReady": false,
+  "stackProbeCorrection": "See native-results.json: original local after-probe used the old func1 name; corrected all-closure probe and native full-stack matching validate reader lifetime. Original raw outputs remain retained."
 }

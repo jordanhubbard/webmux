@@ -1,0 +1,265 @@
+{
+  "qualificationSourceRevision": "5fadbbc5a4fbe2212fde1e6e5c54f42c2bf91c27",
+  "scope": "Hosted full native inventories and demonstrated test-reader lifetime repair; private Windows VM full10x deadline still fails. No full-private-suite, timeout-cause or runtime-corruption repair claim.",
+  "fullCI": {
+    "run": 44434794421,
+    "conclusion": "success",
+    "jobs": {
+      "Go Server (macos-arm64)": "success",
+      "Build": "success",
+      "Go Server (ubuntu-22.04)": "success",
+      "Dependency audit": "success",
+      "Virtual USB kernel integration": "success",
+      "Go Server (windows-2022)": "success",
+      "Windows Tests and Build": "success",
+      "Frontend and Tooling Tests": "success"
+    },
+    "rawReportSHA256": "a498dbec1d79eb9e7f98590f6a8b15655b16ed9c21c17f8b7e24762367bff5a4"
+  },
+  "requiredHostedWindowsVT": {
+    "passed": true,
+    "source": "5fadbbc5a4fbe2212fde1e6e5c54f42c2bf91c27",
+    "requiredRun": 44434794421,
+    "artifact": 14489380971,
+    "passEvents": 21930,
+    "passedIdentities": 2193,
+    "allOldIdentitiesAndCountsPreserved": true,
+    "added": {
+      "TestRepliesReaderStopsAtOwnerCleanup": 10,
+      "TestRepliesReaderStopsAtOwnerCleanup/blocked_read": 10,
+      "TestRepliesReaderStopsAtOwnerCleanup/blocked_read/owner": 10,
+      "TestRepliesReaderStopsAtOwnerCleanup/reply_queue_backpressure": 10,
+      "TestRepliesReaderStopsAtOwnerCleanup/reply_queue_backpressure/owner": 10,
+      "TestResponseReaderStopsAtOwnerCleanup": 10,
+      "TestResponseReaderStopsAtOwnerCleanup/owner": 10
+    },
+    "sameSkips": {
+      "TestDepDiffVT": 10,
+      "TestDepDiffResize": 10,
+      "TestGhosttyParkedCursorJoinsLines": 10
+    },
+    "context": {
+      "enabledXStateFeatures": "0x8e7",
+      "source": "5fadbbc5a4fbe2212fde1e6e5c54f42c2bf91c27",
+      "goVersion": "go version go1.27.4 windows/amd64",
+      "cpu": [
+        {
+          "Name": "AMD EPYC 9V45 96-Core Processor                ",
+          "Manufacturer": "AuthenticAMD",
+          "NumberOfCores": 2,
+          "NumberOfLogicalProcessors": 4
+        }
+      ]
+    },
+    "rawSHA256": "df126617dc0e890e26f144171c6054a23b43a1e0e8bd41a7eb4b4ffae2666cd4",
+    "elapsedSeconds": 225.582
+  },
+  "hostedStockGuard": {
+    "source": "5fadbbc5a4fbe2212fde1e6e5c54f42c2bf91c27",
+    "run": 44434798810,
+    "phases": {
+      "stock": {
+        "nativeProcess": {
+          "platform": "win32",
+          "started": true,
+          "exit_code": 0,
+          "windows_exit_hex": "0x00000000",
+          "spawn_error": null,
+          "elapsed_seconds": 281.328
+        },
+        "executableSHA256": "abd17ded9cbf77185eda1a562671c11a3066ba66a7888cc419f10090365583d5",
+        "rawSHA256": "bfddfc2945279c21df54bcf230158eef69008fb845e94171fc11198c5acbbd18",
+        "passEvents": 21930,
+        "passedIdentities": 2193,
+        "skipEvents": 30,
+        "sameInventoryAsRequired": true
+      },
+      "guard": {
+        "nativeProcess": {
+          "platform": "win32",
+          "started": true,
+          "exit_code": 0,
+          "windows_exit_hex": "0x00000000",
+          "spawn_error": null,
+          "elapsed_seconds": 275.797
+        },
+        "executableSHA256": "dee5716f4b8d3b15439b7d98d065796593625a2117e6f2319440ed4bfe4645ab",
+        "rawSHA256": "f5ea008da85a255662372a5544b70fbfd00ca1341dd85b5aa94f8c217b8a115a",
+        "passEvents": 21930,
+        "passedIdentities": 2193,
+        "skipEvents": 30,
+        "sameInventoryAsRequired": true
+      }
+    },
+    "worker": {
+      "compilerSHA256": "8328d44e29aafb5779e4424c639fa18cbd0a437cf71faa0b0f1ccc7b2c6fb98c",
+      "freeMemoryKiB": 13786032,
+      "freeDiskBytes": 86249500672,
+      "source": "5fadbbc5a4fbe2212fde1e6e5c54f42c2bf91c27",
+      "enabledXStateFeatures": "0xe7",
+      "cpu": [
+        {
+          "Name": "INTEL(R) XEON(R) PLATINUM 8573C",
+          "Manufacturer": "GenuineIntel",
+          "NumberOfCores": 2,
+          "NumberOfLogicalProcessors": 4
+        }
+      ],
+      "totalMemoryKiB": 16771836,
+      "stockVersion": "go version go1.27.4 windows/amd64"
+    }
+  },
+  "diagnosticArtifact": 14488158598,
+  "privateWindowsVM": {
+    "passed": false,
+    "nativeProcess": {
+      "platform": "win32",
+      "started": true,
+      "exit_code": 2,
+      "windows_exit_hex": "0x00000002",
+      "spawn_error": null,
+      "elapsed_seconds": 600.156
+    },
+    "driverExit": 1,
+    "binarySHA256": "1225de52ab53d4d73e7cdc9a25b4000bad284c70334c8fa2b04fe85cedc05bf1",
+    "goVersion": "1.27.4",
+    "cgoEnabled": false,
+    "allRuntimeControlsUnsetIncludingGOMAXPROCS": true,
+    "profileFlags": [],
+    "count": 10,
+    "deadlineMinutes": 10,
+    "trackedFixtureFiles": 19,
+    "cwd": "Owned bundle root containing testdata",
+    "passEvents": 15131,
+    "passedIdentities": 1927,
+    "passCountDistribution": {
+      "8": 1642,
+      "7": 285
+    },
+    "inventoryComplete": false,
+    "assertionFailureFramesBeforeTimeout": 0,
+    "activeTestAtTimeout": "TestVTGen_Sweep",
+    "supervisorControls": 4,
+    "supervisorControlsExit": 0,
+    "os": {
+      "Caption": "Microsoft Windows 11 Enterprise",
+      "Version": "10.0.26100",
+      "BuildNumber": "26100"
+    },
+    "cpu": [
+      {
+        "Name": "Intel Xeon Processor (Icelake)",
+        "NumberOfCores": 4,
+        "NumberOfLogicalProcessors": 4
+      },
+      {
+        "Name": "Intel Xeon Processor (Icelake)",
+        "NumberOfCores": 4,
+        "NumberOfLogicalProcessors": 4
+      },
+      {
+        "Name": "Intel Xeon Processor (Icelake)",
+        "NumberOfCores": 4,
+        "NumberOfLogicalProcessors": 4
+      },
+      {
+        "Name": "Intel Xeon Processor (Icelake)",
+        "NumberOfCores": 4,
+        "NumberOfLogicalProcessors": 4
+      }
+    ],
+    "metadataObservation": {
+      "machine": {
+        "Manufacturer": "Apache Software Foundation",
+        "Model": "CloudStack KVM Hypervisor",
+        "HypervisorPresent": true,
+        "NumberOfLogicalProcessors": 16
+      },
+      "sampledAt": "2026-11-19T01:22:31.6371943Z",
+      "limits": {
+        "currentMetadataProcessInJob": true,
+        "cpuRateQuerySucceeded": true,
+        "cpuRateQueryError": null,
+        "immediateJobCpuControlFlags": 0,
+        "immediateJobCpuRateOrWeight": 0,
+        "scope": "Read-only metadata in a separate SSH process; does not prove every nested limit or the live VT process limit.",
+        "allGroupsActiveProcessors": 16,
+        "enabledXStateFeatures": "0xe7"
+      }
+    },
+    "artifactsSHA256": {
+      "native-stdout.raw": "9e22770389ae6356b8d61d1f708ac787d2bac6821ac99b296a3b67b63e16c28c",
+      "native-stderr.raw": "a57cf907e81ea8d28efa9cf804de68886645d7726612936f3eb850d602bd7a9f",
+      "native-process.json": "f494b87d6fb8dd5ec5ddad6dc57c9bc4240975c480b6e8b46814550364469c99",
+      "controls-stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "controls-stderr.log": "335f2bf4e77d99ee538f695dfbc9c911f49237a92d6cb28fa93e208487bff717"
+    },
+    "archiveSHA256": "fe2100b3c1099463e0c4b445b0e2333eceaa3afb93e66da3c7ac35e52d47e2df",
+    "scope": "Private VM result stays failed. Separate SSH metadata query does not establish live VT/nested/hypervisor CPU limits; no overload cause is inferred.",
+    "lifetimeControlPassesBeforeTimeout": {
+      "TestRepliesReaderStopsAtOwnerCleanup": 8,
+      "TestResponseReaderStopsAtOwnerCleanup": 8
+    }
+  },
+  "nativeReaderFrameAudit": {
+    "counts": {
+      "original": {
+        "readResponses": 170,
+        "replies": 81,
+        "closureOrdinals": [
+          "1"
+        ]
+      },
+      "profile": {
+        "readResponses": 170,
+        "replies": 90,
+        "closureOrdinals": [
+          "1"
+        ]
+      },
+      "fixed": {
+        "readResponses": 0,
+        "replies": 0,
+        "closureOrdinals": []
+      }
+    },
+    "method": "Match every anonymous closure ordinal for each helper in the complete timeout stderr; no assumption that the new reader remains func1.",
+    "causalityClaim": false
+  },
+  "stackProbeCorrection": {
+    "originalAfterProbeScope": "Original local after-probe counted func1, which became the cleanup closure after the helper changed. Its zero count alone was insufficient reader evidence. Original receipt/logs remain unchanged.",
+    "correctedScope": "Corrected local after-probe matches every helper closure ordinal, including the actual reader func2. Both owner-lifetime probes pass0->0; negative controls remain expected failures. Compiled native symbols independently identify func2 reader/deferwrap.",
+    "correctedControls": {
+      "go": "go version go1.27.4 darwin/arm64",
+      "controls": [
+        {
+          "label": "after-owner-lifetimes",
+          "exit": 0,
+          "expectedFailure": false,
+          "logSHA256": "1d3f9a8a94c378973c965c432e50926a30f77223f32b31f5ed92772c3c773e9b"
+        },
+        {
+          "label": "without-owner-cleanup",
+          "exit": 1,
+          "expectedFailure": true,
+          "logSHA256": "960a0f8977e40f949d22547dbe6562b0aee5ecc6208ad6d18ae346e9cc3bcb6b"
+        },
+        {
+          "label": "without-reply-send-cancellation",
+          "exit": 1,
+          "expectedFailure": true,
+          "logSHA256": "61a957de8d9bfcbfb88ec2f492424cdafda41d0cf4fc5d8d2add740e57bea766"
+        }
+      ],
+      "beforeReceiptSHA256": "03b84dda2ea8a489bd441b5491a21c69afa88ac44e1704d8970de2ca6814af10",
+      "productionSourcesUnmodifiedByOverlays": true
+    },
+    "correctedDriverSHA256": "e1f2e8ea8be256508c2b23ce75dba53f31e6bee7e314040db56f89a59d2c0ab7",
+    "correctedControlReceiptSHA256": "f1ed897f32d17c186e8c664129c027fac6263eae09b3c28ddd1553daabbe6469",
+    "doneChannelRegressionTests": "Unaffected: all100race repetitions and required/stock/guard native lifecycle checks pass."
+  },
+  "windowsTimeoutResolved": false,
+  "original450CorruptionCause": "unknown",
+  "runtimeRepairClaim": false,
+  "releaseReady": false
+}

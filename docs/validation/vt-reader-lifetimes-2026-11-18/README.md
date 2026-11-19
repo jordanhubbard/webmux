@@ -52,8 +52,43 @@ Only the Build ID header containing a private native path is removed from the
 published reports; the original reports, executable, profile and raw archive
 are retained by hash.
 
-The changed-source native full inventory and hosted gates remain pending after
-a clean commit/build. The reader-resource defect is demonstrated independently;
-neither this patch nor the profile attributes or repairs the original Windows
-corruption in [#450](https://github.com/jordanhubbard/webmux/issues/450). Broader
+## Changed-source native results
+
+[Full CI 44434794421](https://github.com/jordanhubbard/webmux/actions/runs/44434794421)
+passes all eight jobs on clean `5fadbbc`. The required Windows repetition and
+[stock/guard diagnostics](https://github.com/jordanhubbard/webmux/actions/runs/44434798810)
+each have exactly 21,930 passing test events: all 2,186 original identities and
+seven new lifecycle identities repeated ten times, plus the same three existing
+skips repeated ten times. Native diagnostic exits are zero, executable hashes
+match and guard absence/presence verifies. The required worker is AMD EPYC 9V45;
+the diagnostic worker reports Xeon 8573C with XState 0xe7, differing from the
+original failure's 0x608e7 context. This does not reproduce that original context.
+
+The private Windows 11 VM still fails the unchanged deadline, exiting 2 after
+600.156 seconds, active in TestVTGen_Sweep. It has 15,131 pass events and no
+assertion-failure frame before timeout; its inventory remains incomplete. All
+19 fixtures, cwd and native runtime-control absence verify. The cross-build has
+CGO disabled, while hosted stock uses CGO enabled. No passing private-suite or
+performance-repair claim is made. Its four supervisor controls pass.
+
+The complete original timeout stack retains 170 Kitty readers and 81 conformance
+readers; the changed-source stack retains none of either helper, matching every
+anonymous-closure ordinal. This independently demonstrates native fixture-reader
+cleanup while the deadline failure remains. The VM reports CloudStack KVM and
+16 logical processors. A separate SSH metadata process reports no CPU-rate flags
+on its immediate job; live VT/nested/hypervisor limits are not established, so
+this does not establish a timeout or overload cause.
+
+The original local after-probe used the old func1 name, which became the cleanup
+closure when the helper changed. Its zero count alone was insufficient reader
+evidence. A corrected probe matches every helper closure, including the actual
+func2 reader, and passes; its destructive negative controls still fail. Compiled
+native symbols and the ordinal-independent full-stack audit provide separate
+checks. Original probe logs/receipts stay retained. Done-channel regression tests
+are unaffected. [native-results.json](native-results.json) binds every result,
+correction, inventory, worker context and raw archive.
+
+The reader-resource defect is demonstrated independently; neither this patch nor
+the profile attributes or repairs the private deadline or original corruption in
+[#450](https://github.com/jordanhubbard/webmux/issues/450). Keep #536 open. Broader
 recovery, review/integration and release acceptance remain open.
