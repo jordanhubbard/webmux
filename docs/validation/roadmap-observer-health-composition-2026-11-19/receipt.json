@@ -1,7 +1,6 @@
 {
   "schema": "webmux-roadmap-observer-health-composition/v1",
   "codeSource": "0d5dac6fd5f56f4c89f948de9944525f9825436b",
-  "canonicalSourceUnchanged": "47c72614a05412c072fb0563ffb5ac9f15a6e261",
   "inputs": {
     "windowsFixture": "cc8aaa8d5bb3ab4adc07e196f1c505c1dc5e98c3",
     "publishedOwner": "16cdbcf24d726f99897bf3314eee1042947d7c07"
@@ -169,5 +168,6 @@
     "scope": "Preparation only; actual composed-head native Linux/hosted checks pending; owner component646 independently verified."
   },
   "freshComposedNativeQualification": "pending",
-  "broaderAcceptance": "Review, current-head native/hosted gates, authenticated Linux, interactive permission changes, selected profiles, native platform/service/reboot, security/vendor/signing and release requirements remain separate. No Go runtime adoption or450cause/repair claim."
+  "broaderAcceptance": "Review, current-head native/hosted gates, authenticated Linux, interactive permission changes, selected profiles, native platform/service/reboot, security/vendor/signing and release requirements remain separate. No Go runtime adoption or450cause/repair claim.",
+  "previousCanonicalSource": "47c72614a05412c072fb0563ffb5ac9f15a6e261"
 }

@@ -3,7 +3,8 @@
 This preparation retains canonical `47c7261`, Windows fixture correction
 `cc8aaa8` (#535) and published owner `16cdbcf`. Its implementation merge is
 `0d5dac6fd5f56f4c89f948de9944525f9825436b`; this receipt adds documentation.
-Canonical draft #500 remains separate until fresh qualification succeeds.
+Canonical draft #500 can track this preparation while its fresh exact-head
+qualification runs. Main, merge and release acceptance remain separate.
 
 ## Corrected evidence boundary
 
@@ -24,7 +25,7 @@ with a deterministic native DELETE-handle control and unchanged assertions.
 
 The #533 change allows only addressless, read/write-equivalent send/receive on
 already connected descriptors, with restricted flags and canonical NULL
-address/length words. Socket creation/connections, addressed I/O, message or
+address/length words. External socket creation/connections, addressed I/O, message or
 file-descriptor transfer, child creation, later exec and filter replacement
 remain denied. It repairs the native signal pair's data path. The diagnostic
 checker now rejects panic, forced cleanup, incomplete stderr and unexpected
