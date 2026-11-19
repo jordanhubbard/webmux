@@ -2817,9 +2817,9 @@ consumed, with the provider/native CLI, sibling environment and two persistent
 browser pages retained. All 28 captured transcript/native-journal prefixes match.
 
 This is scoped functional evidence, not complete Windows acceptance. The legacy
-default PowerShell and loopback-denial failures in #538 remain open. Public local
-session DELETE detaches durable jobs while removing saved entries; #541 tracks
-explicit stop and retained authenticated access. The first fixture cleanup
+default PowerShell and loopback-denial failures in #538 remain open. On that
+5fad candidate, public local session DELETE detached durable jobs while removing
+saved entries. #541 subsequently adds the qualified Stop/hide workflow below. The first fixture cleanup
 therefore found live owners; verified explicit private-owner termination was
 required. Final checks find all 23 recorded processes gone and no holders for
 ten fixture image/log files. Failed attempts and the initial partial cleanup are
@@ -2833,8 +2833,8 @@ Windows process handle and confirms owner exit after the authenticated stopping
 acknowledgement. Cancellation/unobservable completion remains an error. Actual
 ConPTY root/child teardown, ten repetitions of both new controls, a failing
 acknowledgement-only negative control and the full native-provider package pass.
-This does not yet expose an application Stop action or change window deletion;
-#541's API/UI, durable-intent and ownership acceptance remain open.
+That component receipt does not expose the application workflow. The subsequent
+implementation and native application qualification are described below.
 
 ### Explicit local Windows close and Stop (#541)
 
@@ -2860,5 +2860,13 @@ PID or executable is accepted.
 Broker/API and browser-component tests cover ownership, pre/post-dispatch save
 failures, reconstruction without a new launch, concurrent requests, original-only
 continuation, stale selections, metadata redaction and lost replies. Native
-application qualification of this complete workflow and exact-source review/CI
-remain required; the earlier component Stop receipt alone does not close #541.
+application [qualification](validation/windows-local-stop-2026-11-18/README.md)
+now passes Hide/restore, same-process authenticated Codex work across controller
+loss, old-client DELETE refusal, lost Stop replies, durable uncertainty and
+original-only inspection across another crash, unchanged siblings, two live
+viewers and retained logs. The first viewer case exposed stale minimized layout;
+the corrected workspace refresh passes its failing-before integration regression
+and a fresh native two-viewer run. All four private fixture terminals stop via
+the product protocol; final checks find all twenty recorded process objects gone
+and zero file holders. Exact-source review/CI and integration remain required;
+the earlier component receipt alone does not close #541.
