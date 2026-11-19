@@ -1,0 +1,71 @@
+{
+  "recordedUTC": "2026-11-19T20:45:23.215759+00:00",
+  "issue": 587,
+  "base": "96af7d2b9097153b447c0faeba0babed01743ae2",
+  "changedProductionFiles": [],
+  "originalWindowsFailure": {
+    "head": "3d64d1028df3029b4832b4fd46b766470ee5a584",
+    "run": 44606680342,
+    "job": 135852111154,
+    "logSHA256": "ec6fafcc9598e75b537e6d60bc25ecaee128ff33873e91c9d96eb27f48f5ad58",
+    "artifact": 14571967509,
+    "artifactSHA256": "a8b25d5d43fc05949af727bb0ab856e9ac91e5426405bea17532d307899701d4",
+    "expected": {
+      "width": 878,
+      "height": 593
+    },
+    "received": {
+      "width": 878,
+      "height": 648
+    }
+  },
+  "nativeMechanism": {
+    "originalOracleResult": "FAIL at exactgeometryassertion after5seconds",
+    "captured": {
+      "width": 878,
+      "height": 598
+    },
+    "actual": {
+      "width": 878,
+      "height": 653
+    },
+    "logSHA256": "51b0168f467d82a22f3c1359a953bdaf2b19aaf1aceca6bb62ed7605ff588d5e",
+    "failedSetupRetained": "The initial frame-only synthetic notice did not remain visible long enough to reach the geometry assertion. Its log, source and complete inactive fixture home remain retained. Holding the notice across worker replies is a changed setup."
+  },
+  "correctedNative": {
+    "passed": true,
+    "caseSeconds": 4.6,
+    "wholeInvocationSeconds": 13.428654917050153,
+    "sourceSHA256": "9953c1af2acc705eaab5302fc50791ae3031aca19a4ee42789056034a5ed3c16",
+    "logSHA256": "d2cfa2cc1eadb9916d6e62abd59baf11cc2f29db9dc169cd004513646e31efdf",
+    "geometry": {
+      "captured": {
+        "width": 878,
+        "height": 598
+      },
+      "visible": {
+        "width": 878,
+        "height": 653
+      },
+      "native": {
+        "width": 878,
+        "height": 653
+      },
+      "scope": "Synthetic transient worker-error response with real Go/Chromium viewport resizing; no extra navigation."
+    },
+    "geometrySHA256": "97da38be8ff4952711646c8590f2246f39f0dc420422b716fcfc87c9f738ae05",
+    "binarySHA256": "ee319c5fbd4511a5de9252230c8f505d7248d75f5581da7f959ba66bdeb0eb3e",
+    "scope": "Actual macOS ARM64 Go/Chrome/browser worker with a synthetic transient error reply. The entire layout/input/navigation/control lifecycle case passed. No native Windows rerun or current Windows repair claim."
+  },
+  "strictProjects": 5,
+  "deadlines": {
+    "caseSeconds": 120,
+    "geometrySeconds": 5,
+    "unchanged": true
+  },
+  "limits": [
+    "The obsolete-measurement mechanism is reproduced; the original Windows transient trigger remains unproven.",
+    "Normal review and exact-head checks remain required.",
+    "Broader #110 mobile, provider and assistive-technology acceptance remains open."
+  ]
+}

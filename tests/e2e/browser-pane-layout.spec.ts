@@ -1,5 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Route } from '@playwright/test';
 import http from 'node:http';
+import { writeFileSync } from 'node:fs';
 
 test('browser docking preserves the live page, control and desktop layout', async ({ page, request }, info) => {
   test.setTimeout(120_000);
@@ -42,12 +43,39 @@ test('browser docking preserves the live page, control and desktop layout', asyn
   };
   const image = page.getByAltText('Interactive remote browser viewport');
   const pressPage = async (count: number) => {
+    // A recoverable worker error changes the viewport while the live page,
+    // browser control and navigation remain owned by the original session.
+    let notice = count === 1;
+    const temporaryNotice = async (route: Route) => {
+      const response = await route.fetch();
+      const body = await response.json();
+      await route.fulfill({ response, json: notice
+        ? { ...body, error: 'Temporary layout qualification notice.' } : body });
+    };
+    if (count === 1) {
+      await page.route('**' + endpoint, temporaryNotice);
+      await expect(companion.getByRole('alert')).toContainText('Temporary layout qualification notice.');
+    }
     await image.scrollIntoViewIfNeeded();
-    const dimensions = await image.evaluate(element => ({ width: element.clientWidth, height: element.clientHeight }));
-    await expect.poll(async () => {
+    let dimensions = await image.evaluate(element => ({ width: element.clientWidth, height: element.clientHeight }));
+    if (count === 1) {
+      notice = false;
+      await expect(companion.getByRole('alert')).toHaveCount(0);
+      await page.unroute('**' + endpoint, temporaryNotice);
+      await expect.poll(async () => (await frame()).height).not.toBe(Math.max(240, Math.round(dimensions.height)));
+      const geometry = info.outputPath('transient-viewport-geometry.json');
+      writeFileSync(geometry, JSON.stringify({ captured: dimensions,
+        visible: await image.evaluate(element => ({ width: element.clientWidth, height: element.clientHeight })),
+        native: await frame().then(({ width, height }) => ({ width, height })), scope: 'Synthetic transient worker-error response with real Go/Chromium viewport resizing; no extra navigation.' }));
+      await info.attach('transient-viewport-geometry', { path: geometry, contentType: 'application/json' });
+    }
+    // The notice and other live controls can change the visible viewport.
+    // Retry the exact native/DOM comparison against the current measurement.
+    await expect(async () => {
+      dimensions = await image.evaluate(element => ({ width: element.clientWidth, height: element.clientHeight }));
       const current = await frame();
-      return { width: current.width, height: current.height };
-    }).toEqual({ width: Math.max(320, Math.round(dimensions.width)), height: Math.max(240, Math.round(dimensions.height)) });
+      expect({ width: current.width, height: current.height }).toEqual({ width: Math.max(320, Math.round(dimensions.width)), height: Math.max(240, Math.round(dimensions.height)) });
+    }).toPass({ timeout: 5000 });
     await expect.poll(async () => image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBe(Math.max(320, Math.round(dimensions.width)));
     const natural = await image.evaluate(element => ({ width: (element as HTMLImageElement).naturalWidth, height: (element as HTMLImageElement).naturalHeight }));
     await image.click({ position: { x: 80 * dimensions.width / natural.width, y: 30 * dimensions.height / natural.height } });
