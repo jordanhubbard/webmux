@@ -1,0 +1,222 @@
+{
+  "issue": 542,
+  "qualifiedCodeHead": "6a205c2b3c102d33413cd994dc708ba94dfd461f",
+  "base": "694ee835b3b46fd56e4c7a4aa75588a1ca00f367",
+  "fixtureSourceSHA256": "5176f1dba574ba1f7b60297d0f726352bf1003c973b7684bff6e221621dd2b4f",
+  "actualProductionBuildAndDeadlineAndSchedulingUnchanged": true,
+  "local": {
+    "source": "6a205c2b3c102d33413cd994dc708ba94dfd461f",
+    "execution": "local native macOS ARM64; existing user machine; NOT disposable hosted CI",
+    "sourceUnchanged": true,
+    "originalWorkloadAndDeadlinesUnchanged": true,
+    "noHostedDispatch": true,
+    "cases": [
+      {
+        "condition": "cold",
+        "case": "\u2714 default Make install delivers only the client executable and does not require server tooling (2323.546125ms)",
+        "pass": 266,
+        "fail": 0,
+        "skip": 0,
+        "GoActions": [
+          {
+            "workload": "launchd-fixture",
+            "trimpath": false,
+            "CGOOverride": "0",
+            "seconds": 8.12543704197742,
+            "status": 0
+          },
+          {
+            "workload": "launchd-fixture",
+            "trimpath": false,
+            "CGOOverride": "0",
+            "seconds": 7.281782791018486,
+            "status": 0
+          },
+          {
+            "workload": "client",
+            "trimpath": false,
+            "CGOOverride": "unset",
+            "seconds": 2.2098395419307053,
+            "status": 0
+          }
+        ],
+        "logSHA256": "8519d034f3237b15135ae6bb2b3778d9397d8208c2a6f6895367a949441a7a54"
+      },
+      {
+        "condition": "warm",
+        "case": "\u2714 default Make install delivers only the client executable and does not require server tooling (269.738ms)",
+        "pass": 266,
+        "fail": 0,
+        "skip": 0,
+        "GoActions": [
+          {
+            "workload": "client",
+            "trimpath": false,
+            "CGOOverride": "unset",
+            "seconds": 3.6687049160245806,
+            "status": 0
+          },
+          {
+            "workload": "launchd-fixture",
+            "trimpath": false,
+            "CGOOverride": "0",
+            "seconds": 0.21542995795607567,
+            "status": 0
+          },
+          {
+            "workload": "launchd-fixture",
+            "trimpath": false,
+            "CGOOverride": "0",
+            "seconds": 0.25925262505188584,
+            "status": 0
+          },
+          {
+            "workload": "client",
+            "trimpath": false,
+            "CGOOverride": "unset",
+            "seconds": 0.13429720792919397,
+            "status": 0
+          }
+        ],
+        "logSHA256": "9f0c61102e3a3f0f3a719fa15907033fdd5f2ae10aca544eb3ef37dd489ffe67"
+      }
+    ],
+    "scope": "Fixture build-profile/cache reuse improvement with local native proof only. No reproduction or claimed repair of historical hosted timeout; no new broad platform/recovery/release qualification."
+  },
+  "cacheProfileControl": {
+    "source": "694ee835b3b46fd56e4c7a4aa75588a1ca00f367",
+    "startedUTC": "2026-11-19T21:43:03.987083+00:00",
+    "scope": "Local compiler-cache mechanism experiment only. Four fresh private caches; change fixture preparation trimpath/CGO independently, then inspect the unchanged default client build cache status. No install/service/provider, global cache deletion, real client build flag change, helper scheduling/deadline change, model/account or hosted dispatch.",
+    "fixtureSHA256": "7da446ee00fcc59f17cda6fd606e8f25a098581a16f5b2d68c0e68f10d741fbc",
+    "cases": [
+      {
+        "fixtureTrimpath": true,
+        "fixtureCGO": "0",
+        "clientCGO": "1",
+        "freshPrivateCache": true,
+        "fixtureBuildExit": 0,
+        "seconds": 2.6120193749666214,
+        "clientDefaultDependencyCache": {
+          "runtime": {
+            "stale": true,
+            "reason": "stale dependency: internal/goarch"
+          },
+          "reflect": {
+            "stale": true,
+            "reason": "stale dependency: internal/goarch"
+          },
+          "encoding/json": {
+            "stale": true,
+            "reason": "stale dependency: internal/goarch"
+          },
+          "crypto/x509": {
+            "stale": true,
+            "reason": "stale dependency: internal/goarch"
+          },
+          "net/http": {
+            "stale": true,
+            "reason": "stale dependency: internal/goarch"
+          }
+        }
+      },
+      {
+        "fixtureTrimpath": false,
+        "fixtureCGO": "0",
+        "clientCGO": "1",
+        "freshPrivateCache": true,
+        "fixtureBuildExit": 0,
+        "seconds": 2.188355083926581,
+        "clientDefaultDependencyCache": {
+          "runtime": {
+            "stale": false,
+            "reason": ""
+          },
+          "reflect": {
+            "stale": false,
+            "reason": ""
+          },
+          "encoding/json": {
+            "stale": false,
+            "reason": ""
+          },
+          "crypto/x509": {
+            "stale": true,
+            "reason": "stale dependency: math/rand/v2"
+          },
+          "net/http": {
+            "stale": true,
+            "reason": "stale dependency: bufio"
+          }
+        }
+      },
+      {
+        "fixtureTrimpath": true,
+        "fixtureCGO": "1",
+        "clientCGO": "1",
+        "freshPrivateCache": true,
+        "fixtureBuildExit": 0,
+        "seconds": 2.226487417006865,
+        "clientDefaultDependencyCache": {
+          "runtime": {
+            "stale": true,
+            "reason": "stale dependency: internal/goarch"
+          },
+          "reflect": {
+            "stale": true,
+            "reason": "stale dependency: internal/goarch"
+          },
+          "encoding/json": {
+            "stale": true,
+            "reason": "stale dependency: internal/goarch"
+          },
+          "crypto/x509": {
+            "stale": true,
+            "reason": "stale dependency: internal/goarch"
+          },
+          "net/http": {
+            "stale": true,
+            "reason": "stale dependency: internal/goarch"
+          }
+        }
+      },
+      {
+        "fixtureTrimpath": false,
+        "fixtureCGO": "1",
+        "clientCGO": "1",
+        "freshPrivateCache": true,
+        "fixtureBuildExit": 0,
+        "seconds": 2.2887734579853714,
+        "clientDefaultDependencyCache": {
+          "runtime": {
+            "stale": false,
+            "reason": ""
+          },
+          "reflect": {
+            "stale": false,
+            "reason": ""
+          },
+          "encoding/json": {
+            "stale": false,
+            "reason": ""
+          },
+          "crypto/x509": {
+            "stale": true,
+            "reason": "stale dependency: math/rand/v2"
+          },
+          "net/http": {
+            "stale": true,
+            "reason": "stale dependency: bufio"
+          }
+        }
+      }
+    ],
+    "finishedUTC": "2026-11-19T21:43:13.305468+00:00"
+  },
+  "strictProjectsPassed": 5,
+  "originalHostedFailuresRetained": [
+    44597559558,
+    44609660909
+  ],
+  "newHostedJobs": 0,
+  "scope": "Private fixture cache-profile efficiency only. No hosted timeout reproduction/repair claim, new native Windows/Linux qualification, or full roadmap/release completion."
+}

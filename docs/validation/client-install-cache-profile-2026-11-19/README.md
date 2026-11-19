@@ -31,7 +31,16 @@ full helper scheduling, 30-second install assertion, one-second service queries,
 production service behavior and distributed build profiles remain unchanged.
 No extra client prebuild or cache preparation is added to the helper suite.
 
-Local changed-source qualification is pending. No new hosted jobs are permitted
-by the owner's local-resource instruction. Earlier hosted failures and all local
-controls remain retained; #542 and the complete roadmap/release acceptance stay
-open until their required scope is demonstrated.
+Local changed-source qualification passes all 266 helpers in both fresh-cache
+conditions, with no skips, and all five strict TypeScript projects. The cold
+client case takes 2,323.546 ms; the local baseline takes 4,430.854 ms. Warm takes
+269.738 ms (baseline 225.211 ms). These are individual local observations, not
+statistical timing guarantees. The cache-reuse control is the deterministic
+mechanism evidence. The new observer records the existing fixture CGO 0 setting
+and matching path profile; real client arguments remain unchanged.
+
+[The source-bound receipt](receipt.json) retains the code revision, exact source
+hashes and raw-log hashes. No new hosted jobs are permitted by the owner's
+local-resource instruction. Earlier hosted failures and all local controls
+remain retained; #542 and the complete roadmap/release acceptance stay open
+until their required scope is demonstrated.
