@@ -1,0 +1,271 @@
+{
+  "scope": "Test-owned VT response-reader lifetime fix. Original tests/assertions/seeds/count/deadline preserved; production unchanged. Not attribution/repair of Windows deadline or #450 corruption.",
+  "sourceParent": "16cdbcf24d726f99897bf3314eee1042947d7c07",
+  "sourcesSHA256": {
+    "webmux/server/internal/thirdparty/vt/conform_report_test.go": "1e659884ff15d1d890913df1075ba82ce0e5b46ba8792a6c921218a64124af7f",
+    "webmux/server/internal/thirdparty/vt/kitty_payload_test.go": "befb3d31bbbc4b3ddc2ea29acb9b26143a4d73236f880ba87995fa0cb8a5f7b0",
+    "webmux/server/internal/thirdparty/vt/WEBMUX.md": "f96d9a71f0e6b5e298e669b93360bfeeb99f3b9f37af17d1dbf333ffa8988cf5",
+    "webmux/server/internal/thirdparty/vt/WEBMUX_UPSTREAM.json": "1e000b451d67954332d3a1e8a68c4a7c8d38228a6be09942eb65237e4cafa569",
+    "scripts/verify-vt-provenance.py": "3e86b9588adc6c892fad2f52434c19692a28e66bc94a3e6cd74723b33be08966",
+    "scripts/verify-uv-provenance.py": "f414eb7c067b11a680e891b386171d9bb8fc633557acefa09b3c0ba0d3afbbed"
+  },
+  "originalLifetimeProbe": {
+    "expectedFailure": true,
+    "exit": 1,
+    "bothOwnerReadersSurvive": true,
+    "bothExplicitCloseControlsPass": true,
+    "sourceRevision": "16cdbcf24d726f99897bf3314eee1042947d7c07",
+    "logSHA256": "8d60573d8c3cc9a443b070399fe3e6080e44edae48fdbf2ce7ca9f68e8a72613",
+    "overlayOnly": true,
+    "driverSHA256": "51ea81413b5ba56147667d2a3b3d9ac755d1684e1e5b40a750b5a36c43792437"
+  },
+  "controls": {
+    "go": "go version go1.27.4 darwin/arm64",
+    "controls": [
+      {
+        "label": "after-owner-lifetimes",
+        "exit": 0,
+        "expectedFailure": false,
+        "logSHA256": "0f66d2d34ddeab1973bd2e772660384b791148064da2292d0e5da85946d06e09"
+      },
+      {
+        "label": "without-owner-cleanup",
+        "exit": 1,
+        "expectedFailure": true,
+        "logSHA256": "e1e275be53fc9e870987b9472a13a8ed55d3e02add24ebfbec793d6c05a2f68d"
+      },
+      {
+        "label": "without-reply-send-cancellation",
+        "exit": 1,
+        "expectedFailure": true,
+        "logSHA256": "43004422d89fcccc880e2a9d2e3911fcb55e167fb9beef6a72b8bbaa32b4ca9b"
+      }
+    ],
+    "beforeReceiptSHA256": "03b84dda2ea8a489bd441b5491a21c69afa88ac44e1704d8970de2ca6814af10",
+    "productionSourcesUnmodifiedByOverlays": true,
+    "driverSHA256": "58940ea3420a5dc7f21637d1b0671910b6ea050950015f71b4038be69b296124"
+  },
+  "sourceInversion": {
+    "parent": "16cdbcf24d726f99897bf3314eee1042947d7c07",
+    "files": [
+      {
+        "file": "webmux/server/internal/thirdparty/vt/conform_report_test.go",
+        "allPreexistingTestBodiesByteIdenticalAfterHelperCallNormalization": true,
+        "reducedOriginalSHA256": "bc43855efa7b426d3050414787d779db6c40e2d13400f54f9febede129f7af41",
+        "beforeSHA256": "5a397ee5af4da9c8e106beba0d13fa9fdfb386f01bf03c892d6d15122846ca80",
+        "afterSHA256": "1e659884ff15d1d890913df1075ba82ce0e5b46ba8792a6c921218a64124af7f"
+      },
+      {
+        "file": "webmux/server/internal/thirdparty/vt/kitty_payload_test.go",
+        "allPreexistingTestBodiesByteIdenticalAfterHelperCallNormalization": true,
+        "reducedOriginalSHA256": "f70fb1dc245f58b39f96c29c3a750a8ba6f307e7bf4860922f7bfa043fa4122a",
+        "beforeSHA256": "21b50d598207e1451cb0132d152fae0ec57e56860f40194312f3213f9b87af8c",
+        "afterSHA256": "befb3d31bbbc4b3ddc2ea29acb9b26143a4d73236f880ba87995fa0cb8a5f7b0"
+      }
+    ],
+    "originalResponseWaitMilliseconds": 300,
+    "originalNativeFullCount": 10,
+    "originalNativeDeadlineMinutes": 10,
+    "productionCodeChanged": false
+  },
+  "local": {
+    "fullVTRace": {
+      "exit": 0,
+      "logSHA256": "83f8e73f90fa689f997d4e7515cedb6f47ebb17c1c714f0c91880670d555252d",
+      "rootElapsedSeconds": 126.088,
+      "packages": 3
+    },
+    "fullVTVet": {
+      "exit": 0,
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "finalSourceLifetimeRace100": {
+      "exit": 0,
+      "count": 100,
+      "logSHA256": "3e213dbe7869c6f5a1f6d17f553d77e3492bbb17eb536805dd05776ee255d505",
+      "elapsedSeconds": 2.187
+    },
+    "vtProvenance": {
+      "original": 241,
+      "patched": 19,
+      "passed": true
+    },
+    "uvProvenance": {
+      "original": 104,
+      "patched": 7,
+      "passed": true
+    }
+  },
+  "originalWindowsProfile": {
+    "diagnosticOnly": true,
+    "sourceRevision": "f4c2651fb4dd28686bab76e2caad69ee5fd0a450",
+    "binarySHA256": "d6c1960e537ab6165946ec468ea817358295fd2a20abd2cb15b24d95b11bbd04",
+    "goVersion": "1.27.4",
+    "cgoEnabled": false,
+    "profileFlags": [
+      "-test.cpuprofile=cpu.pprof"
+    ],
+    "fullCount": 10,
+    "deadlineMinutes": 10,
+    "runtimeControlsUnset": true,
+    "passed": false,
+    "nativeProcess": {
+      "platform": "win32",
+      "started": true,
+      "exit_code": 2,
+      "windows_exit_hex": "0x00000002",
+      "spawn_error": null,
+      "elapsed_seconds": 600.578
+    },
+    "driverExit": 1,
+    "activeTestAtTimeout": "TestUnicode_ClusterSurvivesAWriteBoundary",
+    "supervisorControls": 4,
+    "supervisorControlsExit": 0,
+    "profileDurationSeconds": 600.01,
+    "sampleSeconds": 783.62,
+    "topRows": [
+      {
+        "function": "runtime.semasleep",
+        "flat": "113.30s",
+        "flatPercent": "14.46%",
+        "cumulative": "113.31s",
+        "cumulativePercent": "14.46%"
+      },
+      {
+        "function": "runtime.semawakeup",
+        "flat": "94.43s",
+        "flatPercent": "12.05%",
+        "cumulative": "94.47s",
+        "cumulativePercent": "12.06%"
+      },
+      {
+        "function": "runtime.sysUnusedOS",
+        "flat": "38.03s",
+        "flatPercent": "4.85%",
+        "cumulative": "38.03s",
+        "cumulativePercent": "4.85%"
+      },
+      {
+        "function": "runtime.preemptM",
+        "flat": "37.63s",
+        "flatPercent": "4.80%",
+        "cumulative": "130s",
+        "cumulativePercent": "16.59%"
+      },
+      {
+        "function": "tuios.dev/vt_test.invariants",
+        "flat": "35.32s",
+        "flatPercent": "4.51%",
+        "cumulative": "57.36s",
+        "cumulativePercent": "7.32%"
+      },
+      {
+        "function": "runtime.memmove",
+        "flat": "18.99s",
+        "flatPercent": "2.42%",
+        "cumulative": "18.99s",
+        "cumulativePercent": "2.42%"
+      },
+      {
+        "function": "runtime.tryDeferToSpanScan",
+        "flat": "17.22s",
+        "flatPercent": "2.20%",
+        "cumulative": "27.94s",
+        "cumulativePercent": "3.57%"
+      },
+      {
+        "function": "runtime.scanObject",
+        "flat": "17.01s",
+        "flatPercent": "2.17%",
+        "cumulative": "63.88s",
+        "cumulativePercent": "8.15%"
+      },
+      {
+        "function": "tuios.dev/vt.(*grid).CellAt (inline)",
+        "flat": "16.23s",
+        "flatPercent": "2.07%",
+        "cumulative": "16.24s",
+        "cumulativePercent": "2.07%"
+      },
+      {
+        "function": "tuios.dev/vt.(*Scrollback).decodeInto",
+        "flat": "12.77s",
+        "flatPercent": "1.63%",
+        "cumulative": "21.67s",
+        "cumulativePercent": "2.77%"
+      },
+      {
+        "function": "runtime.gcDrain",
+        "flat": "10.16s",
+        "flatPercent": "1.30%",
+        "cumulative": "241.16s",
+        "cumulativePercent": "30.78%"
+      },
+      {
+        "function": "runtime.memclrNoHeapPointers",
+        "flat": "8.61s",
+        "flatPercent": "1.10%",
+        "cumulative": "8.61s",
+        "cumulativePercent": "1.10%"
+      },
+      {
+        "function": "runtime.findObject",
+        "flat": "8.55s",
+        "flatPercent": "1.09%",
+        "cumulative": "11.80s",
+        "cumulativePercent": "1.51%"
+      },
+      {
+        "function": "runtime.(*lfstack).pop",
+        "flat": "8.25s",
+        "flatPercent": "1.05%",
+        "cumulative": "8.28s",
+        "cumulativePercent": "1.06%"
+      },
+      {
+        "function": "tuios.dev/vt.(*logicalLine).walk",
+        "flat": "7.13s",
+        "flatPercent": "0.91%",
+        "cumulative": "15.23s",
+        "cumulativePercent": "1.94%"
+      },
+      {
+        "function": "runtime.typePointers.next",
+        "flat": "7.10s",
+        "flatPercent": "0.91%",
+        "cumulative": "8.70s",
+        "cumulativePercent": "1.11%"
+      },
+      {
+        "function": "runtime.spanClass.sizeclass (inline)",
+        "flat": "6.87s",
+        "flatPercent": "0.88%",
+        "cumulative": "6.87s",
+        "cumulativePercent": "0.88%"
+      },
+      {
+        "function": "runtime.mallocgcTinySC2",
+        "flat": "6.31s",
+        "flatPercent": "0.81%",
+        "cumulative": "10.30s",
+        "cumulativePercent": "1.31%"
+      }
+    ],
+    "artifactsSHA256": {
+      "native-stdout.raw": "4f905ead67dbaf2934ab9efa6e5d1af3cf37504635a4c92c37291e22cd558457",
+      "native-stderr.raw": "b53c5c0a55741d863359bd71b7fa01411397e00cfedc3d4ca37a8c4386248924",
+      "native-process.json": "af27c13d8cc942821dee75a056dfaacc92d5de7a8ea7464047ac3f83a5754a7e",
+      "controls-stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "controls-stderr.log": "2c47142883e8e32cac82624537a739efcc0fe881c693c6e58cdd60748cbdf65d",
+      "cpu.pprof": "826ff9659813ea4cec7d835c08828dc0c4c29660c64fe7afbf2dba6c207aa0d8"
+    },
+    "archiveSHA256": "0490af5af1f4fa8a0e58e6ce4dd80fa9a47ff3df7dadaab85a09049e864e95be",
+    "topReportOriginalSHA256": "95f471a4e23de10da468c134a496aa996ff1627c240f75914415da1e81dc8029",
+    "cumulativeReportOriginalSHA256": "5b1a6821d2b6963268a31cfeb0d0c852f636974a2274b7c1891b67b4611a0f83",
+    "publishedReportRedaction": "Only the Build ID header containing the private native absolute path is omitted. Original reports/profile/archive remain retained by hash.",
+    "cause": "Unknown. CPU-profile attribution is diagnostic evidence; it does not prove reader-leak causality, runtime corruption or a repair."
+  },
+  "nativeChangedSourceQualification": "pending after clean commit/build; original10x/10min and complete old inventory plus new lifecycle controls remain required",
+  "runtimeRepairClaim": false,
+  "releaseReady": false
+}

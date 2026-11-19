@@ -87,3 +87,14 @@ The label bytes, nil operation inputs, seeds and assertions remain unchanged.
 This avoids unnecessary recovered nil faults in diagnostics; it does not modify
 terminal behavior or repair the Windows Go runtime. The file hash is recorded
 as an explicit local test-only patch.
+
+## Test-owned response readers (#536)
+
+The conformance reply and Kitty response helpers register emulator Close and
+reader join with their owning test. Reply forwarding also cancels a blocked
+channel send during cleanup. Existing response expectations, inputs, assertions,
+300 ms reply waits, seeds, operation counts and production code stay unchanged.
+Lifecycle controls cover blocked reads, reply-queue backpressure, completion
+before owner return and the closed emulator. Both test files are explicitly
+recorded patches. This repairs a demonstrated test-resource leak; it does not
+attribute the private Windows timeout or original #450 corruption.

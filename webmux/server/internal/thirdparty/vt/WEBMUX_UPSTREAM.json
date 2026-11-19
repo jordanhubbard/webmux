@@ -269,6 +269,8 @@
     "snapshot/state.go": "b40a538b132ca311edb0ead5ff1adab7905419094f6e15a7cdec8cefea0f356e",
     "snapshot/apply.go": "8053a96f72bafac0bbe197db9f8d52d6763b675c36deeb5de9b1fb32a6d10f30",
     "csi.go": "5bea786bf1b70835fc6c203551bb227f5e072613c86bf46c9ef0205bb626bfdf",
-    "grid_test.go": "9dc02e74681ee83cf5c27bdc727a3ca964925b13b171cb17ab17162072246395"
+    "grid_test.go": "9dc02e74681ee83cf5c27bdc727a3ca964925b13b171cb17ab17162072246395",
+    "conform_report_test.go": "1e659884ff15d1d890913df1075ba82ce0e5b46ba8792a6c921218a64124af7f",
+    "kitty_payload_test.go": "befb3d31bbbc4b3ddc2ea29acb9b26143a4d73236f880ba87995fa0cb8a5f7b0"
   }
 }
