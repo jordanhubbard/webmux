@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "scope": "Private user-run Windows AMD64 native Codex functional executable-upgrade and provider-loss recovery. No installed-service/MSI/reboot/ARM qualification. Overall Windows acceptance remains incomplete.",
+  "issues": [
+    318,
+    538,
+    541
+  ],
+  "platform": "Windows 11 Enterprise AMD64 10.0.26100",
+  "nativeCLI": {
+    "version": "0.153.0",
+    "SHA256": "0f8ed9678bca539aa6517adb0c8d50ad9a94ff5df4d21e149ae700d219fff69d",
+    "model": "gpt-6-astra",
+    "sandbox": "read-only",
+    "approval": "never",
+    "windowsSandbox": "unelevated",
+    "account": "Existing account used in place; no credential copying or new login",
+    "nativeSessionId": "01a1f18e-4e05-76b1-b676-d27fc1c92312",
+    "completedTurns": 12,
+    "journalSHA256BeforeCleanup": "1771479a9315a2e9c47132a53e33df2a9e84dffc63bdf3fc6ac6a469d27d7167"
+  },
+  "baseline": {
+    "build": {
+      "version": "1.4.5",
+      "revision": "8f5d3225fac65804554a65bc08381a03a70654fe",
+      "modified": false,
+      "provenance": "build-producer-self-report",
+      "attested": false
+    },
+    "executableSHA256": "e796eed792dbe78c30401ffdd8a795dd3cfb52671004981213f7676369da5434",
+    "artifact": 14346284768,
+    "run": 44125272035
+  },
+  "candidate": {
+    "build": {
+      "version": "1.4.5",
+      "revision": "5fadbbc5a4fbe2212fde1e6e5c54f42c2bf91c27",
+      "modified": false,
+      "provenance": "build-producer-self-report",
+      "attested": false
+    },
+    "executableSHA256": "a5d7ee023d5faf3f6f0fe3e19bafd604f3ae6ea77d4ac2645e35290f7f6b240a"
+  },
+  "activeUpgrade": {
+    "result": "PASS",
+    "controllerPIDBefore": 1224,
+    "controllerPIDAfter": 10380,
+    "unchangedProcessIdentities": 9,
+    "providerOwnerPID": 3264,
+    "nativeCLIPID": 3120,
+    "activePythonPID": 2248,
+    "sameCreationTimesAndImageHashes": true,
+    "nativeToolLaunches": 1,
+    "originalToolSession": 95007,
+    "originalToolWaits": 7,
+    "startEndNonceMatched": true,
+    "exit": 0,
+    "resumeActionNeeded": false
+  },
+  "providerLossRecovery": {
+    "result": "PASS",
+    "explicitReconnectRequired": true,
+    "originalNativeSelectorOnly": true,
+    "initialPromptNotReplayed": true,
+    "publicActionOutcome": "consumed",
+    "sameConversationRecallWithoutTools": true,
+    "freshReadAndFilesystemDenials": true,
+    "nativeProfileRootsPreserved": true,
+    "newProviderOwnerPID": 2144,
+    "oneNativeCLIInOwnedTree": true
+  },
+  "durableDuplicates": {
+    "result": "PASS",
+    "sameOriginalActionID": true,
+    "outcomes": [
+      "consumed",
+      "consumed",
+      "consumed"
+    ],
+    "controllerPIDAfterSecondCrash": 10832,
+    "sameProviderAndNativeCLIIdentities": true,
+    "siblingProviderUnchanged": true,
+    "siblingEnvironmentMarkerRetained": true,
+    "twoPersistentBrowserPagesRetained": true
+  },
+  "history": {
+    "result": "PASS",
+    "allRecordedPrefixesMatch": true,
+    "prefixChecks": 28,
+    "transcriptFiles": 6,
+    "nativeJournalRetained": true,
+    "note": "Original transcript files remain retained; controller restarts add transcript files."
+  },
+  "cleanup": {
+    "fixtureCleanup": "PASS after explicit verified owner termination",
+    "publicDeleteStopsJob": false,
+    "publicDeleteStatus": [
+      204,
+      204
+    ],
+    "initialResourceHolders": 5,
+    "explicitPrivateOwnersStopped": [
+      2144,
+      11048
+    ],
+    "recordedProcessesGone": 23,
+    "resourceHoldersAfter": 0,
+    "restartManagerFilesChecked": 10,
+    "privateControllerAndTunnelPortsClosed": true,
+    "deniedCanariesAbsent": true,
+    "directWriteControlsPassed": true,
+    "evidenceRetained": true
+  },
+  "limitations": [
+    "Legacy native default PowerShell fails 0xc0000142; explicitly selected cmd.exe tools qualified here.",
+    "Preflight private-loopback denial failed; external-network denial unmeasured. Strict network-policy acceptance remains failed/open under 538.",
+    "Public local session deletion detaches the provider; it does not stop the job. Lifecycle/discoverability follow-up 541 remains open.",
+    "Absolute-executable launch initially bypassed WebMux capture; retained as rejected harness setup, exited cleanly before captured launch of the same native ID.",
+    "The sibling screen text path was overwritten by the generic main-tile footer; actual retained sibling transcript bytes independently prove the marker output.",
+    "Some TUI prompts remained pending after the first CR. Qualifier submitted only the observed pending input; raw input frames/attempts retained. Cause unproven.",
+    "No installed-service/MSI, ARM64, physical reboot, other CLI/profile, original Windows VT timeout repair, or full roadmap/release acceptance claim."
+  ],
+  "privateEvidence": {
+    "files": 219,
+    "manifestSHA256": "787765bb7b63e5aa610b7272fe8c758bf1a8191c433ff99cacdc193ee11868ab",
+    "scope": "Frozen private native events/journal/transcripts, driver sources, PID/image/creation snapshots, browser/action receipts, failed attempts, initial partial cleanup and final owner cleanup. Native authentication files are not included."
+  },
+  "probeScriptSHA256": {
+    "probe-active.py": "776336dd69ea2ab35fa8d07f4095ab910d3e4dc42d0ed7373abe212a3bed829f",
+    "probe-policy-fs.py": "f6fbd83901c5a3d8f941f9a6456e343877cee1eb7692894eda55141b40ffd5b8",
+    "probe-policy.py": "17789737d0b8fc5cce2c0f39084f5022d0022b58eb33ae8904805c36191abc8d",
+    "probe-read.py": "f9be5dd1f45f4ae7819d366f361907f3b63378d65193ba8d73ca7acddad3a6a8"
+  }
+}

@@ -1,0 +1,149 @@
+{
+  "schema": 1,
+  "issue": 541,
+  "scope": "Actual native Windows ordinary-local Hide, Stop, lost response and unresolved-stop reconstruction; scoped draft PR qualification, not release acceptance.",
+  "platform": "Native Windows 11 Enterprise AMD64 10.0.26100; existing authenticated Codex 0.153.0 account in place",
+  "builds": [
+    {
+      "source": "a7a6298dd67fae33360983e6044bff62ef5a22ba",
+      "clean": true,
+      "imageSHA256": "679e284d447fd5d3b692ccca336136cdc3999829db311f9edfb3d9d857bf0c9f",
+      "bytes": 25073152,
+      "frontendSHA256": "6df06e84a72ec1d04898f74880a24616c6b4093beca1de87248635c07aaf93ab"
+    },
+    {
+      "sha256": "488852f6542141c2aa85e84bb949bd0af68f1c7aabcc756c5efe7613fa841e49",
+      "bytes": 25073152,
+      "source": "346de8a111494934f2091f9bf623827cef0b2ea2",
+      "clean": true
+    }
+  ],
+  "backendSourceIdenticalBetweenBuilds": true,
+  "results": {
+    "liveDeleteGuard": 409,
+    "survivingProcessIdentitiesAcrossHiddenControllerRestart": 11,
+    "nativeConversationCompletedTurns": 4,
+    "actualToolCalls": 1,
+    "actualToolExit": 0,
+    "originalConversationMarkerRecallAfterRestart": true,
+    "lostStopReply": "Original exact selection/UUID retained; original native job exits; duplicate stop body returns stopped before/after controller crash; saved session retained until confirmed close.",
+    "unresolvedStop": "Paused only verified private provider; actual handshake timeout returns uncertain; controller crash/restart restores same original operation without launching/reattaching provider; UI inspect returns uncertain while original alive; after resume, queued original Stop completes and UI inspection confirms stopped then deletes.",
+    "pausedThreadsResumed": 12,
+    "pauseElapsedSeconds": 36.84299999999348,
+    "pauseHardBoundSeconds": 40,
+    "nativeContinuationStopRedispatchesAfterRestart": 0,
+    "fixedTwoViewerHideAndRestore": {
+      "selectionUnchanged": true,
+      "outputFramesBeforeStop": [
+        88,
+        83
+      ],
+      "socketClosesBeforeStop": 0,
+      "socketClosesAfterStop": 2,
+      "stopStatus": 200,
+      "deletedSessionStatus": 404
+    },
+    "preservedTerminalLogs": 7,
+    "preservedNativeJournals": 1,
+    "finalPrefixComparisons": 14,
+    "allPrefixComparisonsMatch": true,
+    "ownedTerminalSessionsStoppedViaProductProtocol": 4,
+    "originalProcessObjectsGone": 20,
+    "restartManagerFiles": 12,
+    "restartManagerHolders": 0,
+    "privateListenerAndTunnelGone": true
+  },
+  "regressions": {
+    "nativeIdentityTest": "TestLocalOwnerCreationAndImageRefuseRetargeting PASS; no Go runtime overrides",
+    "hideNegative": "New Workspace integration test fails original a7: expected hidden, observed visible. Original native viewer case independently exposes same unsynchronized Hide state. Raw failure retained.",
+    "hideFix": "Reuse existing request-ordered loadSessions to update both session records and minimized layout. All 437 frontend tests, TypeScript, lint and production build pass. Native two-viewer rerun passes on clean346 image.",
+    "fixtureLimits": "The first viewer harness also used the wrong WebSocket URL filter; its zero counters do not prove viewer continuity. Corrected harness observes /api/term/ and waits for actual hidden/visible layout and retained output. Hidden pre-fix fixture was stopped through authenticated public API. Initial uncompressed transfer timed out at 21,411,840 bytes; partial retained and never executed. Completed compressed transfer is hash-verified."
+  },
+  "sourceFilesSHA256": {
+    "docs/roadmap.md": "b7c0270572b5a7232c94acf08ebca26da87ba8f8702763e1fedeab57c9464413",
+    "docs/session-recovery.md": "6698fcaa06074b0a88d373fb5d482620bda23c32ecf3d922288ec7de1bf023d7",
+    "tests/frontend/LocalTerminalCloseDialog.test.tsx": "aea42acd1cd5c2ce29cfd9e825d10706135cd54ce4da0049dee2250989739eea",
+    "tests/frontend/Workspace.test.tsx": "19dbe8b8103fc059ba9af5efa48f45d01a19b4d87fb561e4141ba806a4373ec7",
+    "webmux/frontend/src/components/LocalTerminalCloseDialog.tsx": "914d30b1df30e7df399fa64bcf931ced66f56dc1180f2ed62d7756997805bf86",
+    "webmux/frontend/src/components/Tile.tsx": "638352cdad82ab77de530e0dcdbd8a934ae24ceacaa57a48710b5bf1eede354d",
+    "webmux/frontend/src/components/Workspace.tsx": "d2aef6ff6ab9e7f55516785c270a70c6606b877f6523ab7d1baf6ae17968773a",
+    "webmux/frontend/src/types/index.ts": "51679eaaf11a029ff034041833144bea54976dd9facc297d3ab7dc0285cf1a46",
+    "webmux/frontend/src/utils/api.ts": "653e1ce2f982f9e7cbaeef58ed43e2d3d2e60b638f35a5184b435ea52de1edcc",
+    "webmux/server/internal/httpapi/local_lifecycle_test.go": "f233d4ba92dbc27fa16974bae62f3c929232b1e569d28d98218c985194a2544d",
+    "webmux/server/internal/httpapi/server.go": "99954f9796ffabacd024f23817f9d697ba5b9c595efdc3904ec1f29c1101656c",
+    "webmux/server/internal/httpapi/sessions.go": "84c1a3ed8918d75c4015ed542fd03c6c8889191c06d4e935e3d5333c3feebf58",
+    "webmux/server/internal/session/broker.go": "7511eb97d71c0311be50feeefe8910e130b844f75993c14c670e3fb00b75a5ae",
+    "webmux/server/internal/session/local_lifecycle.go": "e90ff081a3625a7b45816085fd1ed95f50556033824c9819faa00700514c8028",
+    "webmux/server/internal/session/local_lifecycle_test.go": "6ee0e895ecfe4d85a12e2db6c0968b9713032db93d76fbafdd976de31ebb27c6",
+    "webmux/server/internal/session/model.go": "a584b86317372c939cd337530f89749bc8539fcc7020ec773e09bd8f1de7dd60",
+    "webmux/server/internal/session/recovery_control.go": "98218b3767ca0854987cef64b6b85062974250551aa9d25e43e8a8285066907e",
+    "webmux/server/internal/terminal/local_owner.go": "33083c48a3ebdf53b3e6a85dbfd2aa2077169a7cacab46a5d52c249612edc8c0",
+    "webmux/server/internal/terminal/local_owner_other.go": "6339e514710c043cffeb1dbed36fa28fbbe00b7c879baace746c136cb932559a",
+    "webmux/server/internal/terminal/local_owner_windows.go": "4b5aace6f841659e705552046051d9a0d432d9bb1150c302cf08ccd5dff3d7d5",
+    "webmux/server/internal/terminal/local_owner_windows_test.go": "5518e3f4345c5531225af5475ddcd2bdbac669f84a887aa4b44c0ca1c8dcb320",
+    "webmux/server/internal/terminal/provider_windows.go": "20a765d4b9f48f1d5e290a38e2319ad00dfdc413ae9520048fdd82a14a10c6fa"
+  },
+  "privateArchive": {
+    "files": 146,
+    "manifestSHA256": "f141ca92e790a12afae23c72e554f026e5b37fa8e56dfe3f0f0bec4afeeeacc5",
+    "binaryReferences": {
+      "local-stop541-app-346de8a.exe": "488852f6542141c2aa85e84bb949bd0af68f1c7aabcc756c5efe7613fa841e49",
+      "local-stop541-app-a7a6298.exe": "679e284d447fd5d3b692ccca336136cdc3999829db311f9edfb3d9d857bf0c9f"
+    },
+    "excludedNeverExecutedBinaryReferences": {
+      "local-stop541-app-stale-web-not-executed.exe": "dbe3a4ef9e69ac2837785b2d524d71bdb5c463fb9c70734e344b881f81cd39c6"
+    }
+  },
+  "ciAtReceipt": [
+    {
+      "conclusion": "",
+      "databaseId": 44454764833,
+      "headSha": "346de8a111494934f2091f9bf623827cef0b2ea2",
+      "status": "in_progress",
+      "workflowName": "CI"
+    },
+    {
+      "conclusion": "",
+      "databaseId": 44454737179,
+      "headSha": "346de8a111494934f2091f9bf623827cef0b2ea2",
+      "status": "in_progress",
+      "workflowName": "Windows ARM64 native qualification"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 44454737115,
+      "headSha": "346de8a111494934f2091f9bf623827cef0b2ea2",
+      "status": "completed",
+      "workflowName": ".github/workflows/codex-observation-native.yml"
+    },
+    {
+      "conclusion": "",
+      "databaseId": 44453505091,
+      "headSha": "a7a6298dd67fae33360983e6044bff62ef5a22ba",
+      "status": "in_progress",
+      "workflowName": "CI"
+    },
+    {
+      "conclusion": "",
+      "databaseId": 44453035747,
+      "headSha": "a7a6298dd67fae33360983e6044bff62ef5a22ba",
+      "status": "in_progress",
+      "workflowName": "Windows ARM64 native qualification"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 44453035449,
+      "headSha": "a7a6298dd67fae33360983e6044bff62ef5a22ba",
+      "status": "completed",
+      "workflowName": ".github/workflows/codex-observation-native.yml"
+    }
+  ],
+  "limits": [
+    "Full exact-source CI, native ARM64 and review/merge remain pending.",
+    "Unresolved native application case crashes after the timeout is persisted, not during persistence or dispatch; broker fault/concurrency tests separately cover those boundaries.",
+    "Deliberate original-only continuation is covered by broker/UI tests; actual paused native case completes its queued first Stop without continuation.",
+    "Other accounts, managed/Rig/SSH lifecycle owners, service/MSI upgrades and authenticated ARM64 are not newly qualified here.",
+    "Earlier legacy default-shell/network failures (#538), private VT timeout (#536), original corruption cause (#450), full #318/#438 and release completion remain open.",
+    "No auth file read/copy, new login, CLI update, reboot, service/account/firewall/Defender or sandbox-default changes."
+  ]
+}

@@ -224,6 +224,10 @@ func (b *Broker) Recover(owner, id string, input RecoveryRequest) (RecoveryResul
 		b.mu.Unlock()
 		return RecoveryResult{}, ErrClosed
 	}
+	if e.value.LocalStop != nil {
+		b.mu.Unlock()
+		return RecoveryResult{}, ErrLocalStopRequired
+	}
 	r := e.run
 	controller, ok := r.process.(recoveryController)
 	if !ok || e.value.Rig != nil || e.value.Agent() || e.value.Transport == "exec" {

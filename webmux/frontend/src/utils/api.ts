@@ -264,6 +264,9 @@ export const api = {
 
   // Sessions
   getSessions: () => request<Session[]>('/sessions'),
+  getSession: (id: string) => request<Session>(`/sessions/${id}`),
+  stopLocalSession: (id: string, action: { id: string; selection: string; mode: 'stop' | 'inspect' | 'continue'; confirm: boolean }) =>
+    request<{ outcome: 'stopped' | 'uncertain'; message?: string; session: Session }>(`/sessions/${id}/local-stop`, { method: 'POST', body: JSON.stringify(action) }),
   createSession: (req: CreateSessionRequest) =>
     request<Session>('/sessions', { method: 'POST', body: JSON.stringify(req) }),
   deleteSession: (id: string) =>

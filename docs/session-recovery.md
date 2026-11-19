@@ -2807,3 +2807,77 @@ disposable unauthenticated startup controls, with no model turn. Authenticated
 Linux coding/conversation recovery under #523 and broad #438/#318 acceptance
 remain open. The earlier stdout EOF lacked stderr; the recorded signal defect
 is repaired, while that exact historical exit cause remains unproven.
+
+
+## Windows native active-tool executable upgrade (2026-11-18)
+
+The [native receipt](validation/windows-functional-upgrade-2026-11-18/README.md)
+qualifies a private user-run Windows AMD64/Codex 0.153.0 case with explicit
+cmd.exe tools and read-only/never policy. An actual active Python tool survives
+replacement of main8f by clean 5fad: provider, native CLI and tool PIDs, creation
+times and image hashes stay unchanged. The original native tool session exits
+zero after release without Resume or duplicate launch. Fresh no-tool recall and
+a new tool read follow through the replacement controller.
+
+After owned provider loss, explicit Reconnect opens the wait screen; the public
+Resume action targets the original conversation, project, model, policy and
+profile roots without replaying the initial prompt. Fresh no-tool recall and
+actual tool results verify the new nonce and both filesystem write denials.
+Repeating the same recovery action across another controller crash remains
+consumed, with the provider/native CLI, sibling environment and two persistent
+browser pages retained. All 28 captured transcript/native-journal prefixes match.
+
+This is scoped functional evidence, not complete Windows acceptance. The legacy
+default PowerShell and loopback-denial failures in #538 remain open. On that
+5fad candidate, public local session DELETE detached durable jobs while removing
+saved entries. #541 subsequently adds the qualified Stop/hide workflow below. The first fixture cleanup
+therefore found live owners; verified explicit private-owner termination was
+required. Final checks find all 23 recorded processes gone and no holders for
+ten fixture image/log files. Failed attempts and the initial partial cleanup are
+retained alongside the passing results. Installed-service/MSI upgrades, other
+accounts/policies, authenticated ARM64, additional reboot coverage and the full
+#318 roadmap audit remain separate requirements.
+
+The separate [native stop-confirmation check](validation/windows-stop-confirmation-2026-11-18/README.md)
+repairs a prerequisite for #541: `nativeprovider.Stop` retains the original
+Windows process handle and confirms owner exit after the authenticated stopping
+acknowledgement. Cancellation/unobservable completion remains an error. Actual
+ConPTY root/child teardown, ten repetitions of both new controls, a failing
+acknowledgement-only negative control and the full native-provider package pass.
+That component receipt does not expose the application workflow. The subsequent
+implementation and native application qualification are described below.
+
+### Explicit local Windows close and Stop (#541)
+
+The local Windows Close control now offers **Hide and keep running** or a
+separate **Stop terminal and close** action. Hide persists the existing minimized
+session; it remains in the window list with its authenticated recovery path.
+The server refuses DELETE until the original owned provider's stop is confirmed.
+Controller shutdown remains a viewer detach. Rig, Agent Deck, SSH and other
+manager-owned sessions retain their existing lifecycle routes.
+
+The broker banks a native session/key and execution-host/account scope before
+launch, so a failed post-launch save retains recoverable access. A private owner
+snapshot binds instance, endpoint, image digest, PID and creation time. The
+browser receives only a selection fingerprint. Stop requires a deliberate
+request with a UUID and matching selection; its original target and intent are
+saved before authenticated dispatch. Pending/uncertain stops block automatic
+restore, reconnect and terminal input. Ordinary duplicates only inspect the
+original process; deliberate continuation addresses the same original target.
+Lost replies or failed result saves retain the intent. A different host/account
+or stale owner refuses rather than selecting a replacement. No browser-supplied
+PID or executable is accepted.
+
+Broker/API and browser-component tests cover ownership, pre/post-dispatch save
+failures, reconstruction without a new launch, concurrent requests, original-only
+continuation, stale selections, metadata redaction and lost replies. Native
+application [qualification](validation/windows-local-stop-2026-11-18/README.md)
+now passes Hide/restore, same-process authenticated Codex work across controller
+loss, old-client DELETE refusal, lost Stop replies, durable uncertainty and
+original-only inspection across another crash, unchanged siblings, two live
+viewers and retained logs. The first viewer case exposed stale minimized layout;
+the corrected workspace refresh passes its failing-before integration regression
+and a fresh native two-viewer run. All four private fixture terminals stop via
+the product protocol; final checks find all twenty recorded process objects gone
+and zero file holders. Exact-source review/CI and integration remain required;
+the earlier component receipt alone does not close #541.

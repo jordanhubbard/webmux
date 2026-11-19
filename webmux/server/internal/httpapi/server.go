@@ -189,6 +189,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PATCH /api/sessions/{id}", s.protected(false, s.patchSession))
 	mux.Handle("DELETE /api/sessions/{id}", s.protected(false, s.deleteSession))
 	mux.Handle("POST /api/sessions/{id}/reconnect", s.protected(false, s.reconnectSession))
+	mux.Handle("POST /api/sessions/{id}/local-stop", s.protected(false, s.stopLocalSession))
 	mux.Handle("GET /api/session-recovery/{id}", s.protected(false, s.getSessionRecovery))
 	mux.Handle("POST /api/session-recovery/{id}", s.protected(false, s.recoverSession))
 	mux.Handle("PATCH /api/session-recovery/{id}", s.protected(false, s.patchRecovery))

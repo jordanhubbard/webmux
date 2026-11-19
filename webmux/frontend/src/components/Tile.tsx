@@ -267,13 +267,16 @@ export function Tile({
             onClick={() => onLockToggle?.(session.id)}
             title={locked ? 'Locked (click to unlock)' : 'Unlocked (click to lock)'}
           >{locked ? '\ud83d\udd12' : '\ud83d\udd13'}</button>
-          {(state === 'disconnected' || state === 'error') && (
+          {(state === 'disconnected' || state === 'error') && session.local_lifecycle?.operation_id && (
+            <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onClose(session.id)} title="Review original local stop">Review stop</button>
+          )}
+          {(state === 'disconnected' || state === 'error') && !session.local_lifecycle?.operation_id && (
             <button style={{ ...styles.chromeBtn, color: '#caaa4a' }} onClick={() => onReconnect(session.id)} title={session.rig ? 'Reconnect viewer transport' : 'Reconnect'}>{'\u21ba'}</button>
           )}
           <button
             style={{ ...styles.chromeBtn, color: locked ? '#444' : '#ff8888', cursor: locked ? 'not-allowed' : 'pointer' }}
             onClick={() => { if (!locked) onClose(session.id); }}
-            title={locked ? 'Window is locked' : session.rig ? 'Detach viewer; seat keeps running' : 'Close'}
+            title={locked ? 'Window is locked' : session.rig ? 'Detach viewer; seat keeps running' : session.local_lifecycle ? 'Hide or stop local terminal' : 'Close'}
           >{'\u2715'}</button>
         </div>
       </div>

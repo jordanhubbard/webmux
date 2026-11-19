@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -316,6 +317,110 @@ func expectInput(t *testing.T, out *capture, want string) {
 			t.Fatalf("native input %q did not arrive: %q", want, out.text())
 		}
 		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func TestStopAcknowledgementDoesNotConfirmOwnerExit(t *testing.T) {
+	listener, err := net.Listen("unix", filepath.Join(t.TempDir(), "s"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	i := nativeprovider.Identity{Session: randomHex(), Instance: randomHex(), Endpoint: listener.Addr().String(), OwnerPID: os.Getpid()}
+	key := randomHex()
+	handshake := make(chan error, 1)
+	go func() {
+		connection, err := listener.Accept()
+		if err != nil {
+			handshake <- err
+			return
+		}
+		defer connection.Close()
+		var request struct{ Kind, Key, Instance string }
+		if err := readFixtureFrame(connection, &request); err != nil {
+			handshake <- err
+			return
+		}
+		if request.Kind != "stop" || request.Key != key || request.Instance != i.Instance {
+			handshake <- errors.New("wrong stop request")
+			return
+		}
+		if _, err := connection.Write(fixtureFrame(map[string]any{"kind": "stopping", "identity": i})); err != nil {
+			handshake <- err
+			return
+		}
+		// Client closure proves it received the acknowledgement. This fixture
+		// deliberately leaves its owner (the test process) alive afterward.
+		_, err = io.Copy(io.Discard, connection)
+		handshake <- err
+	}()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	result := make(chan error, 1)
+	go func() { result <- nativeprovider.Stop(ctx, i, key) }()
+	select {
+	case err := <-handshake:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("stop acknowledgement handshake did not finish")
+	}
+	cancel()
+	select {
+	case err := <-result:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("live owner was reported stopped: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("unconfirmed stop ignored cancellation")
+	}
+}
+
+func TestNativeStopConfirmsOwnerAndJobExit(t *testing.T) {
+	permitBreakaway(t)
+	c, counter := config(t)
+	script := c.Launch.Args[0]
+	source, err := os.ReadFile(script)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The actual ConPTY job contains both the root and a child, so merely
+	// closing a viewer or terminating the root cannot satisfy this check.
+	source = append(source, []byte("\nconst child=require('child_process').spawn(process.execPath,['-e','setInterval(()=>{},1000)'],{stdio:'ignore'});fs.appendFileSync(process.argv[2],child.pid+'\\n');\n")...)
+	if err := os.WriteFile(script, source, 0600); err != nil {
+		t.Fatal(err)
+	}
+	i := ensure(t, c)
+	cleanupOwner(t, c, i)
+	deadline := time.Now().Add(5 * time.Second)
+	var pids []string
+	for {
+		data, _ := os.ReadFile(counter)
+		pids = strings.Fields(string(data))
+		if len(pids) == 2 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("root and child did not start")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	owner := processHandle(t, i.OwnerPID)
+	var childPID int
+	if _, err := fmt.Sscan(pids[1], &childPID); err != nil {
+		t.Fatal(err)
+	}
+	root, child := processHandle(t, i.RootPID), processHandle(t, childPID)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := nativeprovider.Stop(ctx, i, c.Key); err != nil {
+		t.Fatal(err)
+	}
+	for _, h := range []windows.Handle{owner, root, child} {
+		if status, err := windows.WaitForSingleObject(h, 0); err != nil || status != windows.WAIT_OBJECT_0 {
+			t.Fatalf("stop returned before owned process exited: %d %v", status, err)
+		}
 	}
 }
 
