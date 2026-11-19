@@ -12,7 +12,10 @@ function managerBin() {
   if (nativeBin) return nativeBin;
   const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-launchd-manager-'));
   try {
-    const compiled = spawnSync('go', ['build', '-trimpath', '-o', path.join(bin, 'launchctl'), path.resolve(import.meta.dirname, '../tests/fixtures/launchd-native/main.go')], {
+    // Match the default Make client build's path profile so this private fake
+    // does not populate an incompatible standard-library cache first. Its
+    // readiness receipt binds the actual image hash; no binary is distributed.
+    const compiled = spawnSync('go', ['build', '-o', path.join(bin, 'launchctl'), path.resolve(import.meta.dirname, '../tests/fixtures/launchd-native/main.go')], {
       env: { ...process.env, CGO_ENABLED: '0' }, encoding: 'utf8', timeout: 60_000,
     });
     assert.ifError(compiled.error);
