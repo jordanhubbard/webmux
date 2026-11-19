@@ -1,0 +1,45 @@
+{
+  "base": "d03f23f6a4e3a79e63f4afa415a597395d337810",
+  "publishedFixtureInputs": [
+    "025d24503acfbbfb2aeb5d102fd9746be76f009e",
+    "1a1aa14ca4ed6d6867f9a9f359210c0aa0b7ef9e"
+  ],
+  "preservedGateSource": "5b7ea98494f786293dbc306a46bd7bcc2023d5ee",
+  "gateByteIdentical": true,
+  "sourceSHA256": {
+    "scripts/qualify-windows-local-application.ps1": "303efefaaa48f1484498baa0cf68b826015bdf498fa63e50a6e660a5d3f770da",
+    "tests/e2e/windows-local-provider.native.spec.ts": "a1c7ce621a79418ea3b72236d41cd25456163457cf3b4d10ce87e841532d52a1",
+    "tests/e2e/start-server.mts": "d5b29df533bc5fd27b17ae9739943251346438a5b878497161b65f36b5c08d6e",
+    "webmux/scripts/prebuilt-browser-fixture.mts": "86e314885f7b498513457656190c07132f447547741ab852265416119d6ab8d9",
+    "webmux/playwright.native-windows.config.ts": "92f88805d702fb03a946aadb1bf10a8b20601ae0c3a9b7f82ad57706da9d5df0",
+    ".github/workflows/ci.yml": "253521745809926fee202644f8c8bd93159d5eef21f8065261662b661fb19e6f"
+  },
+  "local": {
+    "strictTypeScriptProjects": 5,
+    "defaultHelpersPassed": 266,
+    "helperFailures": 0,
+    "helperSkips": 0,
+    "normalDiscoveryFiles": 37,
+    "nativeExcludedFromNormalDiscovery": true,
+    "importErrors": 0,
+    "nativePowerShellParentAndGeneratedWorkerParse": "PASS, no task executed on private target",
+    "actualMacNormalGoChromeClipboard": "PASS, prebuilt disabled"
+  },
+  "merge": {
+    "originalHelperArgsPreservedInOrder": true,
+    "newHelper": "scripts/prebuilt-browser-fixture.test.mts",
+    "canonicalGateByteIdentical": true,
+    "adoptedPublishedCommits": [
+      "025d24503acfbbfb2aeb5d102fd9746be76f009e",
+      "1a1aa14ca4ed6d6867f9a9f359210c0aa0b7ef9e"
+    ],
+    "discoverySeparationPairedWithRequiredFullCIStep": true
+  },
+  "nativeCurrentComposition": "PENDING exact-source hosted manual and full CI; original025d historical fixture positive and canonical5b private positive remain separately bound",
+  "preservedFailures": [
+    "canonical5b hosted owner-start ACCESS_DENIED",
+    "first static parse transport WinError206/no parse ran",
+    "unsubstituted worker template parse rejected; generated quoted worker passes"
+  ],
+  "scope": "Required disposable hosted SYSTEM application fixture plus separate normal browser path; not user-account authenticated coding/policy/service/MSI/reboot/ARM64 acceptance"
+}

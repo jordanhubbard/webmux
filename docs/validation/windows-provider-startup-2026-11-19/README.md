@@ -50,3 +50,18 @@ the owner-exit frame from a Win32 error: exit 2 is not ERROR_FILE_NOT_FOUND.
 The regression fails on the parent and passes twenty race repetitions; Windows
 AMD64 vet passes. This does not change the observed owner-start access-denied
 evidence or repair startup. Canonical `5b7ea984` remains the source of that run.
+
+Canonical5b's original Packaging executable now passes the unchanged application
+gate once on the existing private WindowsAMD64 user account (4833ms, zero
+skips/retries/flakes). Its [source-bound receipt](canonical5b-native-application.json)
+includes the four required output/Stop/exit/deletion assertions and final clean
+process, provider-directory, port and Restart Manager checks. This does not erase
+the original hosted CI failure or qualify broader authenticated coding policies.
+
+The subsequent [hosted fixture composition](hosted-composition.json) keeps that
+canonical test byte-identical and pairs explicit native discovery with required
+full-CI execution in a disposable hosted SYSTEM task. Five strict TypeScript
+projects,266 default helpers,37-file normal discovery, native PowerShell parsing
+and actual macOS Go/Chrome clipboard checks pass locally. Original static-check
+setup failures are retained. Exact-source hosted execution remains pending;
+[fixture scope](../windows-startup-diagnostics-2026-11-18/hosted-fixture.md).
