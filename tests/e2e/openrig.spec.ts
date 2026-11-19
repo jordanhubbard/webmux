@@ -105,7 +105,7 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
   expect(path.isAbsolute(socket.stdout.trim())).toBe(true);
   const sessions: string[] = [];
   let workloadCompleted = false;
-  type Agent = { managerTarget: string; senderAddress?: string; managed: boolean; enrollmentOrigin: string; attachmentTarget: string; name: string; id: string; state: string; openable: boolean; managerSessionId?: string; nativeSessionId?: string };
+  type Agent = { managerTarget: string; senderAddress?: string; managed: boolean; enrollmentOrigin: string; attachmentTarget: string; name: string; id: string; projectId: string; rigHostId?: string; state: string; openable: boolean; managerSessionId?: string; nativeSessionId?: string };
   type Session = { id: string; row: number; col: number; openrig_view?: string; rig?: { target: string; project: string; name: string; host: string; runtime: string } };
   const status = async () => {
     const value = await (await request.get('/api/coordination')).json() as { seats: (Agent & { provider: string })[]; messages: { provider: string; from: string; to: string; body: string }[] };
@@ -164,7 +164,9 @@ test('managed agents enroll, exchange attributed Rig messages and reuse ordinary
       const session = listing.find(value => value.openrig_view === `managed:${agent.id}`)!;
       if (index === 0) expect([session.row, session.col]).toEqual([0, 0]);
       sessions.push(session.id);
+      expect(agent.projectId).toBeTruthy();
       expect(session.rig).toEqual({ target: agent.managerTarget, seat_id: agent.id, attachment_target: agent.attachmentTarget,
+        project_id: agent.projectId, ...(agent.rigHostId ? { rig_host_id: agent.rigHostId } : {}),
         ...(structuredAttachment ? { tmux_server_flag: '-S', tmux_server_value: socket.stdout.trim() } : {}),
         project, name, host: 'localhost', runtime: 'codex', workspace: home });
       const terminal = page.getByTestId(`tile-cell-${session.id}`);
