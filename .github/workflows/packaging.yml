@@ -140,6 +140,15 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/package-windows.ps1
+      # Preserve build inputs if a later installer/service phase stalls. These
+      # unqualified diagnostics are outside the native-preview release set.
+      - name: Retain unqualified Windows package inputs
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: unqualified-windows-inputs-${{ matrix.os }}
+          if-no-files-found: error
+          path: dist/*-native.*
       - name: Exercise extracted native runtime
         if: runner.os != 'Windows'
         shell: bash
