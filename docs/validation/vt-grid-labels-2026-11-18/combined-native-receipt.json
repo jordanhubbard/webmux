@@ -1,0 +1,199 @@
+{
+  "sourceRevision": "f4c2651fb4dd28686bab76e2caad69ee5fd0a450",
+  "sourceCleanAtBuild": true,
+  "scope": "Combined PR511 VT qualification after exact PR503 mitigation import; original Windows corruption remains unattributed. Not release readiness or authenticated conversation recovery.",
+  "sourcesSHA256": {
+    "webmux/server/internal/thirdparty/vt/grid_test.go": "9dc02e74681ee83cf5c27bdc727a3ca964925b13b171cb17ab17162072246395",
+    "webmux/server/internal/thirdparty/vt/go.mod": "8c9febd08246841e82ad8c0aee04124598e44b9915d407715939190c020f29e4",
+    "webmux/server/internal/thirdparty/vt/go.sum": "d18bad691274b8019b99cb1254ec2ebd67cdcf8e5b0a6de1921c96284bec4cd4",
+    "webmux/server/internal/thirdparty/vt/WEBMUX_UPSTREAM.json": "c160accba97e1e6f0c728a8d72620b5e31aecf5d884491acc376829172113b2a",
+    "webmux/server/internal/thirdparty/ultraviolet/go.mod": "f7e5b81ab8caff09a79575059afbdd4ae62a2d0b68f620b5448f91dbef71251a",
+    "webmux/server/internal/thirdparty/ultraviolet/go.sum": "b53eccb2da3871981894d0d383630aa7d24b3bcf15f1b777a2a3d088e610886d",
+    "webmux/server/internal/thirdparty/ultraviolet/WEBMUX_UPSTREAM.json": "cddf198885f23528ec62a98df7d64128dd7fe741a78b526d880714ea6910a5ee",
+    "scripts/vt-native-exit.py": "c8d594ff732ad8d00903d2ca829d83643bcd9eda8d9494487f33875895f6a5f7",
+    "tests/test_vt_native_exit.py": "25bc8c054fb00917cf24c930b60f19aacca8d033130661c3496f272088697112",
+    ".github/workflows/windows-vt-diagnostics.yml": "b7116be3e894a40f0cd156a0dd2e1aeeb5076d3dfd6b4d19c89ad60242447931",
+    ".github/workflows/ci.yml": "5a3725d502de6d541c766d01355cfe962a789ce7f39dbcfab5e7f87bec8f1873"
+  },
+  "command": [
+    "vt.test.exe",
+    "-test.v=test2json",
+    "-test.count=10",
+    "-test.timeout=10m"
+  ],
+  "requiredHosted": {
+    "run": 44426943873,
+    "artifact": 14484154611,
+    "scope": "Required Windows VT repetition passed; broader full CI status is separate",
+    "worker": {
+      "source": "f4c2651fb4dd28686bab76e2caad69ee5fd0a450",
+      "cpu": [
+        {
+          "Name": "AMD EPYC 9V74 80-Core Processor                ",
+          "Manufacturer": "AuthenticAMD",
+          "NumberOfCores": 2,
+          "NumberOfLogicalProcessors": 4
+        }
+      ],
+      "goVersion": "go version go1.27.4 windows/amd64",
+      "enabledXStateFeatures": "0x8e7"
+    },
+    "inventory": {
+      "sha256": "82484c666640a946d45fc45bc5e4994b2e1aff797033650f18c49b6efa34d985",
+      "passEvents": 21860,
+      "uniquePassedTests": 2186,
+      "repetitions": 10,
+      "skipEvents": 30,
+      "skips": {
+        "TestDepDiffVT": 10,
+        "TestDepDiffResize": 10,
+        "TestGhosttyParkedCursorJoinsLines": 10
+      },
+      "packageElapsedSeconds": 232.238
+    }
+  },
+  "hostedDiagnostics": {
+    "run": 44426948090,
+    "artifact": 14485451956,
+    "conclusion": "success",
+    "worker": {
+      "cpu": [
+        {
+          "Name": "AMD EPYC 7763 64-Core Processor                ",
+          "Manufacturer": "AuthenticAMD",
+          "NumberOfCores": 2,
+          "NumberOfLogicalProcessors": 4
+        }
+      ],
+      "source": "f4c2651fb4dd28686bab76e2caad69ee5fd0a450",
+      "stockVersion": "go version go1.27.4 windows/amd64",
+      "compilerSHA256": "8328d44e29aafb5779e4424c639fa18cbd0a437cf71faa0b0f1ccc7b2c6fb98c",
+      "freeMemoryKiB": 13647916,
+      "enabledXStateFeatures": "0x807",
+      "freeDiskBytes": 86407454720,
+      "totalMemoryKiB": 16771836
+    },
+    "stock": {
+      "process": {
+        "platform": "win32",
+        "started": true,
+        "exit_code": 0,
+        "windows_exit_hex": "0x00000000",
+        "spawn_error": null,
+        "elapsed_seconds": 266.578
+      },
+      "inventory": {
+        "sha256": "bfca19bda40df28c6f0ec03155fa3fafbb337f5c688a0f69db4d12cb9a191854",
+        "passEvents": 21860,
+        "uniquePassedTests": 2186,
+        "repetitions": 10,
+        "skipEvents": 30,
+        "skips": {
+          "TestDepDiffVT": 10,
+          "TestDepDiffResize": 10,
+          "TestGhosttyParkedCursorJoinsLines": 10
+        },
+        "packageElapsedSeconds": 266.671
+      },
+      "binarySHA256": "281c94bf4d50af60d1a64cbdc3eb9f66f18d73d96e03309beb91b3a3e0721083"
+    },
+    "guard": {
+      "process": {
+        "platform": "win32",
+        "started": true,
+        "exit_code": 0,
+        "windows_exit_hex": "0x00000000",
+        "spawn_error": null,
+        "elapsed_seconds": 274.922
+      },
+      "inventory": {
+        "sha256": "d79a5b85b652c554da3edeaa6a4d4610781ce837e67ba89d053426ef387a9714",
+        "passEvents": 21860,
+        "uniquePassedTests": 2186,
+        "repetitions": 10,
+        "skipEvents": 30,
+        "skips": {
+          "TestDepDiffVT": 10,
+          "TestDepDiffResize": 10,
+          "TestGhosttyParkedCursorJoinsLines": 10
+        },
+        "packageElapsedSeconds": 274.985
+      },
+      "binarySHA256": "8604920c300d6a2ed846c1edbe7323d77e193e969eafb0f017b3fb1f842e698d"
+    },
+    "supervisorControls": 4,
+    "stockGuardAbsentGuardPresent": true,
+    "guardRole": "Private detection overlay only; no release SDK/runtime modification or repair claim"
+  },
+  "equalHostedInventories": true,
+  "hostedInventorySHA256": "39fc47be306507183baac0cd1bafd7f9fa991209b8e2b5b876b691c6ef00d2a0",
+  "privateNativeWindows": {
+    "passed": false,
+    "nativeProcess": {
+      "platform": "win32",
+      "started": true,
+      "exit_code": 2,
+      "windows_exit_hex": "0x00000002",
+      "spawn_error": null,
+      "elapsed_seconds": 600.282
+    },
+    "driverExit": 1,
+    "elapsedSeconds": 600.4839999999967,
+    "binarySHA256": "d6c1960e537ab6165946ec468ea817358295fd2a20abd2cb15b24d95b11bbd04",
+    "stockGoVersion": "1.27.4",
+    "runtimeControlsUnset": true,
+    "supervisorControlsExit": 0,
+    "supervisorControls": 4,
+    "passEvents": 13781,
+    "uniquePassedTests": 1381,
+    "skipEvents": 40,
+    "skips": {
+      "TestTheStreamThatWasReported": 10,
+      "TestDepDiffVT": 10,
+      "TestDepDiffResize": 10,
+      "TestGhosttyParkedCursorJoinsLines": 10
+    },
+    "inventoryMatchesHosted": false,
+    "cpu": [
+      {
+        "Name": "Intel Xeon Processor (Icelake)",
+        "NumberOfCores": 4,
+        "NumberOfLogicalProcessors": 4
+      },
+      {
+        "Name": "Intel Xeon Processor (Icelake)",
+        "NumberOfCores": 4,
+        "NumberOfLogicalProcessors": 4
+      },
+      {
+        "Name": "Intel Xeon Processor (Icelake)",
+        "NumberOfCores": 4,
+        "NumberOfLogicalProcessors": 4
+      },
+      {
+        "Name": "Intel Xeon Processor (Icelake)",
+        "NumberOfCores": 4,
+        "NumberOfLogicalProcessors": 4
+      }
+    ],
+    "architecture": "AMD64",
+    "artifactsSHA256": {
+      "native-stdout.raw": "7209d6223c1dfc5575be847a58f12df4cd379389cf101dbab6e31ea279c6329a",
+      "native-stderr.raw": "91217e264096007822b3c05152b48c0c68d693c4501a59a64afcffd420003baf",
+      "native-process.json": "e712b16ca0e60969ca5e3bb78d971e2cdaea10ffdf350571b7ce206d889b28f9",
+      "controls-stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "controls-stderr.log": "b2b99f39716673b53e217b5e0653cac664e8523055678b12d83bf27838d99894"
+    },
+    "rawArchiveSHA256": "5d7d5390ef7bab2052e027b2cf899eb728b7ddf61c626de08984624223aacfa7",
+    "offlineParser": "Go1.27.4 test2json over retained raw stdout; event timestamps are parsing time, not native execution time. Native elapsedSeconds is authoritative.",
+    "setupAttempt": "Initial detached SSH driver ended during supervisor setup before any VT process started. Process/descendant absence confirmed; original setup files preserved. Foreground launch is a separate recorded attempt, with unchanged stock test binary and inventory/deadline.",
+    "qualification": "REJECTED: incomplete bundle omitted runtime fixtures and did not set cwd; this is retained failed setup evidence, not native acceptance.",
+    "terminalFailure": "test timeout at600s; nativeexit2. Missing fixture errors and partial/different inventory precede timeout. Missing fixture errors explain setup invalidity, not the timeout duration.",
+    "correctedAttempt": "Separate foreground launch stages all19 tracked VT fixture files with hash checks and correct cwd; same executable/count/deadline, result remains pending."
+  },
+  "amxClassTargetCovered": false,
+  "originalFailuresRetained": true,
+  "windowsCorruptionRootCause": "unknown",
+  "runtimeRepairClaim": false,
+  "releaseReady": false
+}
