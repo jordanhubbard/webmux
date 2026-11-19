@@ -1,0 +1,137 @@
+{
+  "nativeSource": "536992fcaf171fba0f33a75ead4accdbe72d58a0",
+  "reconciledMain": "8c3b9abb3dee4ece054aa31f47362fbdd9e03b05",
+  "platform": "darwin/arm64",
+  "versions": {
+    "go": "1.27.4",
+    "node": "24.22.2",
+    "rig": "0.7.18",
+    "codex": "0.169.0",
+    "tmux": "3.8",
+    "chrome": "158.0.8127.36"
+  },
+  "modelObserved": "gpt-6.2-astra",
+  "policy": "read-only",
+  "approval": "on-request",
+  "buildProducerSelfReport": {
+    "version": "1.4.5",
+    "revision": "536992fcaf171fba0f33a75ead4accdbe72d58a0",
+    "modified": false,
+    "provenance": "build-producer-self-report",
+    "attested": false
+  },
+  "passed": true,
+  "checks": {
+    "explicitNativeTrustReviewWithPolicyPreserved": true,
+    "twoActualNativeCodingSeats": true,
+    "chosenCellsPreserved": true,
+    "twoDistinctOriginalConversations": true,
+    "providerPIDsAndPanePIDsPreserved": true,
+    "creationDuplicatesRetainViewers": true,
+    "nativePrefixesPreserved": true,
+    "originalConversationRecallWithoutTools": true,
+    "ordinaryInputAndOwnershipPreserved": true
+  },
+  "ordinary": {
+    "cell": [
+      0,
+      0
+    ],
+    "inputHex": "7879",
+    "rigIdentityAbsent": true
+  },
+  "seats": [
+    {
+      "name": "first",
+      "row": 0,
+      "col": 1,
+      "contexts": 3,
+      "model": "gpt-6.2-astra",
+      "correlatedActualToolProbes": 1,
+      "noToolRecall": true,
+      "nativePrefixSHA256": "7aa093e90328b86764e5b3e326e885cc59b2fdfc2d7eed6a7f2cd944f1e48131",
+      "nativeFinalSHA256": "4430b33a03b5fd1cd39add8b36b823992679d6e5784adeb8e67288a6f8d69b8b",
+      "tileStatus": "Enrollment Launched by Rig \u00b7 Rig running \u00b7 Bootstrap ready \u00b7 Terminal output observed (terminal output)"
+    },
+    {
+      "name": "second",
+      "row": 1,
+      "col": 0,
+      "contexts": 3,
+      "model": "gpt-6.2-astra",
+      "correlatedActualToolProbes": 1,
+      "noToolRecall": true,
+      "nativePrefixSHA256": "84f16e65f34583f99aa10e219cf0712c1636b11eb9b46107e357101bbdf0f4e2",
+      "nativeFinalSHA256": "211f4c530a24d7bbeaab0435aed88138c3d90c82ca4f135ebc6848868eb547cb",
+      "tileStatus": "Enrollment Launched by Rig \u00b7 Rig running \u00b7 Bootstrap ready \u00b7 Agent running (runtime hook)"
+    }
+  ],
+  "identityAssertions": {
+    "distinctNativeConversations": true,
+    "originalViewerAndCanonicalSeatIDsPreserved": true,
+    "originalPaneAndNativePIDsPreserved": true,
+    "sameCreationRequestReturnsOriginalViewer": true,
+    "nativeHistoryPrefixesPreserved": true
+  },
+  "sha256": {
+    "rawResult": "86fc03b2cde80c51a61e7c7bdc2f0c7dc37648cb603d9bf774894760429e232b",
+    "nativeBinary": "e7d557b7b15a34fd67f02ae5e9e8af8984e8f82503868474b8236787aa302649",
+    "nativeAudit": "a28318e793f1cc04faa9f0034e66bce6921a4b05b5894bb906e3e6a20aa3ec40",
+    "driver": {
+      "qualify.py": "09b7f7050fd4868163c3687dbd399ec6de66326de303cf24a661d771368c3792",
+      "browser.mjs": "d09ca3288dddefe6ff5cf1dbc45fe19a386f18355816adf686c3766cfd1f1413",
+      "bootstrap-prefix.py": "c16bc130f009f36d5f36df52ecc610b9ad2d95368f2d7b1f31c39638f7f235eb"
+    },
+    "sources": {
+      "webmux/frontend/src/components/Workspace.tsx": "2e02a960503d46c85f86dfdd4ed354bff5c48a842ee8e665a9d2943e5c79d67c",
+      "webmux/frontend/src/components/CoordinationDialog.tsx": "6840f6bdfff8c0c955df18614cb2c7a9ef6e955bdce4402dda47d8ff6089020e",
+      "webmux/frontend/src/components/ConnectionDialog.tsx": "36c8fa8628827216a8bdc60deccd13718ea563b43a8a0383fbbd69a198c95414",
+      "webmux/frontend/src/components/RigNavigator.tsx": "d0f2eb0b0bdc74031f0920cf4020d1da6b4bd3a0bfd18649dd9c122368770103",
+      "webmux/frontend/src/components/RigSeatStatus.tsx": "38da7b635670248f50ffe2212deb946259725bd03ffe45f6f36a7f387709cf8b",
+      "webmux/server/internal/httpapi/openrig.go": "e6b09f1c047c0fa29ce98785a8e20610466828ca65bf021ea10762280843ff17",
+      "webmux/server/internal/httpapi/coordination_providers.go": "7a9b36bd7ecd35b823ef232d38aabea166b1752222716f724958f1654520b6ba",
+      "webmux/server/internal/httpapi/coordination_creation.go": "70bd8849ce8be36112dd7470e71770ab0558505e45b25d23b9adb733bf07d19b",
+      "webmux/server/internal/openrigcoord/rig-native-create.mts": "e715cebb9fe49811aa4a5f0348af704ade1ad9f2bb31e9696a569623236069b1",
+      "webmux/server/internal/openrigcoord/rig-native-launch.mts": "fd74271f961f5d183b600d0c7eaae030aa2b8f237d458694a10d86dcef6f056c",
+      "webmux/server/internal/openrigcoord/rig-native-capture.mts": "b8aac78c18616b14d5c08f43591bdbbb5821b40a9f99ad89d35d7f3b743384c3",
+      "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+      "webmux/server/internal/openrigcoord/rig-project-pods.mts": "6ce1d4c32589a5699fc6b40d32c2e99296fbcfbbbec8068bcdc1608888cc40ad"
+    },
+    "frontendAssets": {
+      "index.html": "1d783f8d1c51cb9e4be9b8f44c906cd82b45f8aeb41b5fc29cd4826d67ec1a87",
+      "favicon.svg": "03d993c42c6095040b2fba582b043121a0fd4c21a674953193360e1f3db63c6a",
+      "assets/novnc-CDzVFeD5.js": "1f10fed97e30fb6b3968c3d71e619daa9714fa12433d8be1a205805061250e88",
+      "assets/xterm-B5LH8GIb.css": "15c2f3681b0ca2bae719cc7a7ffd318f45189c9795d1a340a2288fa2df12d2ed",
+      "assets/index-C54IehIr.css": "7b0211ed1a6b2eda01914b7468f9b99cf814aaace174ef20936497fd5dfedccb",
+      "assets/index-LW1wVaxL.js": "1cd1826bd458ce2f8cea3eefcc7469fb5920880f81d88e0027c869926a65d5a9",
+      "assets/xterm-DZ21y8cg.js": "23e6994e053079dc65387a0b49ad497780884d9d4e6ddf38fb782f8df0daa04a",
+      "themes/Borland.itermcolors": "6952b05537fafdf4619c4f6d8775fc7a5f147d36ae125e2fdbe963b079d96957",
+      "themes/Amber.itermcolors": "99ad102a53a19ea8aa7711925729ae421178a21595419f5f91e04416cd93c893",
+      "themes/index.json": "11571c3aeac82094dd84f1169f340e426350698e02bcd42acef3374d6df0da3a"
+    },
+    "codexPackageArchive": "8a232260df7a12c5e83e0b4b7659e1c8d9259b41942517bc0068d8ab55c36461",
+    "codexExecutable": "739cda86e15d30a6e2b40cf8dcbbfb988aaf48b305b27065573bb8e9fd41d002"
+  },
+  "cleanup": {
+    "recordedNativePaneManagerPIDsExited": true,
+    "daemonShutdownCleanComplete": true,
+    "privateTmuxStopped": true,
+    "sourceAndPolicyUnchanged": true,
+    "all42PrivateSDKFilesUnchanged": true,
+    "scopedOpenFileObservation": "No fixture holders in lsof stdout; unrelated SMB warning retained in stderr",
+    "inactiveFixtureHomesRetained": true
+  },
+  "retention": {
+    "privateArchiveReadback": true,
+    "designatedFiles": 52,
+    "manifestSHA256": "f4f722b2c05f0be124e90e1337ef721b50e702bdc7bbbd49d8b048424f34ac8d",
+    "originalFailedSetupRetained": true
+  },
+  "qualificationLimits": [
+    "First setup failed on second-seat accessible-name selector; original false result retained. Corrected selector used a fresh fixture, same binary/SDK/probes/deadlines.",
+    "No host reboot, provider loss, service upgrade, remote execution, Linux/Windows coding qualification or complete #194/#318/#438 acceptance.",
+    "Read-only/on-request launch plans and native contexts verified; this scenario does not independently test filesystem or network enforcement.",
+    "CLI account authentication was already in place; private app is loopback-only with fixture auth disabled.",
+    "No Actions dispatch, installed CLI update, authentication copying, account/service/protection change or reboot."
+  ]
+}
