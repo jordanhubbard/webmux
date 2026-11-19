@@ -810,7 +810,7 @@ export function Workspace({
 
         {dialogPos && coordinator && <CoordinationDialog position={dialogPos} initialProvider={coordinator} initialHost={coordinatorHost} launchOnly onBack={() => setCoordinator(null)} onClose={() => setDialogPos(null)} />}
         {localClose && <LocalTerminalCloseDialog key={localClose.id} session={localClose} onClose={() => setLocalClose(null)}
-          onChanged={() => { api.getSessions().then(setSessions).catch(err => setOperationError(String(err))); }} />}
+          onChanged={() => loadSessions()} />}
         {dialogPos && !coordinator && (
           <ConnectionDialog
             localFirst
