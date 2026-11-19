@@ -1,0 +1,86 @@
+{
+  "source": "3920286ed8d70a5736610064d7c60cb13333a3c3",
+  "overall": "FAILED; peer-generated challenge/ACK not proven",
+  "producerProcessExit": 0,
+  "producerReportPassed": false,
+  "processExitAloneIsNotAcceptance": true,
+  "nativeSeats": [
+    {
+      "name": "first",
+      "viewer": "a45a9335-9890-4089-80e9-9fbdd6e6620f",
+      "node": "01M7V3GWCVDKHQW4DVVASVPE4F",
+      "nativeConversation": "01a1f638-772c-7a31-bbed-2613577fd191",
+      "contexts": 3,
+      "successfulCorrelatedCanaryTools": 1,
+      "nativeJournalSHA256": "c66e36daafe4a5fc9a84314191a1a46b4a5d198b69ca373ee6e7da8b4db86597"
+    },
+    {
+      "name": "second",
+      "viewer": "be75e0d4-bf06-43df-9bdc-6ecbf75396c8",
+      "node": "01M7V3JJZT785D4H4V7626QZ1N",
+      "nativeConversation": "01a1f639-5545-72c2-8dd4-617ee0c11316",
+      "contexts": 2,
+      "successfulCorrelatedCanaryTools": 1,
+      "nativeJournalSHA256": "c263d498df3da6dd0b8050b63d81e4fa230f8087c6914a63bebca56a3a29d50f"
+    }
+  ],
+  "model": "gpt-6.2-astra",
+  "nativeContexts": 5,
+  "policy": {
+    "approval": "on-request",
+    "sandbox": "read-only",
+    "networkAccess": false
+  },
+  "nativeSendToolExit": 1,
+  "nativeSendEPERM": true,
+  "delivery": "UNCONFIRMED per actual Rig result; no challenge/ACK in 30-second WebMux message observation",
+  "explicitEscalationApproved": false,
+  "accountCopied": false,
+  "newHostedJobs": 0,
+  "cleanup": {
+    "sampledOwnedPIDsExited": 18,
+    "daemonStopExit": 0,
+    "privateTmuxStopped": true,
+    "sourceAndPolicyAndSDKUnchanged": true
+  },
+  "scope": "Two real native creations and canary tools; failed current peer messaging. Reload/reconnect/loss/history/sibling phases were not reached. Does not replace the failed synthetic original or close #603/#464/#469.",
+  "canaryToolAttempts": {
+    "canaryAttempts": {
+      "first": [
+        {
+          "exit_code": 1,
+          "successfulNonce": false
+        },
+        {
+          "exit_code": 0,
+          "successfulNonce": true
+        }
+      ],
+      "second": [
+        {
+          "exit_code": 0,
+          "successfulNonce": true
+        }
+      ]
+    },
+    "firstFailure": "Native model omitted its required seat argument, then corrected its own tool command. Both outputs retained; one successful correlated tool per seat, not one attempt."
+  },
+  "daemon": {
+    "pid": 62387,
+    "exited": true,
+    "shutdownCleanComplete": true
+  },
+  "archive": "roadmap-rig603-native-managed-3920286",
+  "rawSHA256": {
+    "result.json": "c80e50898060602c70e3418732a353f60f0c4a20fb31bc5568f5ee71dd91b2c7",
+    "browser.mjs": "584cbf5bcfc34c84edee5bc8de3ea4c49b920186f94e25b72c5a81a0d4d710ca",
+    "qualify.py": "859033a81b86f2ce3b5663c86bb9c2d18098ee8a45c2820f9af42adbbfd0a969",
+    "bootstrap-prefix.py": "6c5819215fb83f08f66ce24c940a564aa034f24cd33765b89970e2b297447f0a",
+    "audit.json": "48b405017f1e9756fc4d0f3e16af1d1a73573c4b447a765502eadcd101d3045a",
+    "native-first.jsonl": "c66e36daafe4a5fc9a84314191a1a46b4a5d198b69ca373ee6e7da8b4db86597",
+    "native-second.jsonl": "c263d498df3da6dd0b8050b63d81e4fa230f8087c6914a63bebca56a3a29d50f",
+    "daemon-shutdown.json": "64d4765cbf2c5260be4c48af258076f3b496c4f2d8dd9a08feae118d2759d71e",
+    "admission.json": "6e96506b31ef58e4b03e19b66c9acd399c3cc6704b924297d63dddbccac1f326",
+    "tool-attempts.json": "94c12cfd29c55245ae1fcfdca2db3781cdddf9dda5403b2972cce33c18c909ad"
+  }
+}
