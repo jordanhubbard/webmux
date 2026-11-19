@@ -45,7 +45,7 @@ async function main(): Promise<void> {
   const values = new Map<string, string>();
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index], value = args[index + 1];
-    if (!['--output', '--capture', '--browser'].includes(key) || !value || value.startsWith('--') || values.has(key)) throw new Error('Expected --output FILE [--capture EXE] [--browser EXE]');
+    if (!['--output', '--capture', '--application', '--browser'].includes(key) || !value || value.startsWith('--') || values.has(key)) throw new Error('Expected --output FILE [--capture EXE] [--application EXE] [--browser EXE]');
     values.set(key, value);
   }
   const output = values.get('--output');
@@ -57,8 +57,9 @@ async function main(): Promise<void> {
     node: await requireARM64Image(process.execPath),
     go: await requireARM64Image(path.join(go.GOROOT, 'bin', 'go.exe')),
   };
-  const capture = values.get('--capture'), browser = values.get('--browser');
+  const capture = values.get('--capture'), application = values.get('--application'), browser = values.get('--browser');
   if (capture) images.capture = await requireARM64Image(capture);
+  if (application) images.application = await requireARM64Image(application);
   if (browser) images.browser = await inspectPE(browser);
   await writeFile(output, JSON.stringify({ schema: 1, platform: environment.platform, nodeArchitecture: environment.arch,
     go: { GOOS: go.GOOS, GOARCH: go.GOARCH, GOHOSTARCH: go.GOHOSTARCH }, images,
