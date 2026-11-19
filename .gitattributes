@@ -10,3 +10,6 @@ webmux/server/internal/thirdparty/ultraviolet/** -text
 
 # The diagnostic upstream patch is verified by its exact source bytes.
 docs/validation/vt-runtime-unwind-2026-11-18/go-guard.patch -text
+# Pinned upstream diagnostic bytes must survive Windows checkout unchanged.
+docs/validation/vt-stack-reserve-2026-11-18/go-reserve.patch -text -whitespace
+docs/validation/vt-stack-reserve-2026-11-18/GO-LICENSE.txt -text
