@@ -35,6 +35,8 @@ try {
 $imageSHA = (Get-FileHash -Algorithm SHA256 -LiteralPath $image).Hash.ToLowerInvariant()
 $test = Join-Path $repo 'tests/e2e/windows-local-provider.native.spec.ts'
 $testSHA = (Get-FileHash -Algorithm SHA256 -LiteralPath $test).Hash.ToLowerInvariant()
+$childTest = Join-Path $repo 'tests/e2e/windows-local-child.mts'
+$childTestSHA = (Get-FileHash -Algorithm SHA256 -LiteralPath $childTest).Hash.ToLowerInvariant()
 $browser = (& $node -e "console.log(require('./webmux/node_modules/playwright-core').chromium.executablePath())").Trim()
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $browser)) { throw 'Installed fixture browser is required' }
 $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
@@ -94,7 +96,7 @@ $taskName = 'WebMux-Local-App-' + [guid]::NewGuid().ToString('N')
 $action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$worker`""
 $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-$receipt = @{ source = $sourceHead; imageSHA256 = $imageSHA; testSHA256 = $testSHA;
+$receipt = @{ source = $sourceHead; imageSHA256 = $imageSHA; testSHA256 = $testSHA; childTestSHA256 = $childTestSHA;
     scope = 'Synthetic hosted SYSTEM application fixture; no authenticated coding/session recovery';
     executionAccount = 'SYSTEM'; osArchitecture = [Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString();
     outcome = 'unconfirmed'; taskRemoved = $false }
@@ -113,9 +115,10 @@ try {
     $tests = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
     $account = Get-Content -LiteralPath (Join-Path $public 'account-scope.json') -Raw | ConvertFrom-Json
     if ($account.isSystem -ne $true) { throw 'Actual fixture execution account was not verified' }
-    if ($tests.stats.expected -ne 1 -or $tests.stats.unexpected -ne 0 -or $tests.stats.skipped -ne 0 -or $tests.stats.flaky -ne 0) { throw 'Expected the one native application gate with no skips or retries' }
+    if ($tests.stats.expected -ne 2 -or $tests.stats.unexpected -ne 0 -or $tests.stats.skipped -ne 0 -or $tests.stats.flaky -ne 0) { throw 'Expected both native application gates with no skips or retries' }
     if ((Get-FileHash -Algorithm SHA256 -LiteralPath $image).Hash.ToLowerInvariant() -ne $imageSHA -or
-        (Get-FileHash -Algorithm SHA256 -LiteralPath $test).Hash.ToLowerInvariant() -ne $testSHA) { throw 'Qualification input changed during execution' }
+        (Get-FileHash -Algorithm SHA256 -LiteralPath $test).Hash.ToLowerInvariant() -ne $testSHA -or
+        (Get-FileHash -Algorithm SHA256 -LiteralPath $childTest).Hash.ToLowerInvariant() -ne $childTestSHA) { throw 'Qualification input changed during execution' }
     $receipt.outcome = 'passed'
 } finally {
     Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue

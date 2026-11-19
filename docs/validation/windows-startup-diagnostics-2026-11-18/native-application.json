@@ -1,0 +1,55 @@
+{
+  "applicationSource": "d4b3e457e8cf13f89861b632378df8d8e8e3b6c7",
+  "applicationSHA256": "7f49cecf13bd25398e37d6d6b47333fa4a756e884df594d978d91813c5edd482",
+  "gateBodySHA256": "3a51f4cd5341b251fa1153e10753c962823d6fe6de9f4df4ba631072e01b63ce",
+  "gateRename": "tests/e2e/windows-local-provider.native.spec.ts; body byte-identical",
+  "scope": "Actual Windows AMD64 ordinary-local browser/application output and Stop; installed Edge; Node26; private prebuilt loopback app and private Playwright configuration",
+  "result": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "testDurationMs": 8184,
+    "freshTTYChildOutput": true,
+    "matchingOriginalSelection": true,
+    "authenticatedOriginalStop": true,
+    "childGoneBeforeIndependentExpiry": true,
+    "identicalStopIdempotent": true
+  },
+  "cleanup": {
+    "savedSessions": 0,
+    "controllerTerminatedAfterTest": true,
+    "loopbackPortAvailable": true,
+    "restartManager": {
+      "registerExit": 0,
+      "queryExit": 0,
+      "needed": 0,
+      "files": 2,
+      "noHolders": true
+    },
+    "providerCacheDirectory": "retained empty; no identity.json"
+  },
+  "hostedEvidence": {
+    "run": 44463372933,
+    "job": 135355233042,
+    "head": "d4b3e457e8cf13f89861b632378df8d8e8e3b6c7",
+    "result": "FAIL actual application gate; 9 fixture cases PASS",
+    "observation": "bootstrap immediate job disallows breakaway; owner process creation Windows error5",
+    "componentRecoveryTests": "SKIP due denied breakaway permission probe; not native recovery proof"
+  },
+  "discovery": {
+    "normalFixtureFiles": 36,
+    "nativeWindowsFiles": [
+      "windows-local-provider.native.spec.ts"
+    ],
+    "strictTypeScriptProjects": 5
+  },
+  "boundaries": [
+    "No new coding CLI authentication or authenticated-conversation claim; prior scoped receipts remain separate",
+    "No additional reboot, protection/service/account/firewall or global CLI changes",
+    "Native test assertions, timeouts and body unchanged; new dedicated configuration keeps its explicit gate mandatory when invoked",
+    "Hosted fixture success does not imply independent-provider success; manual hosted qualification still fails this gate",
+    "First discovery attempt without the normal runner NODE_PATH failed imports; corrected discovery has zero errors; both raw results retained",
+    "CIM worker probe timed out; native API fallback measured available RAM and three CPU samples before dispatch"
+  ]
+}
