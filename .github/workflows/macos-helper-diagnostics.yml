@@ -49,6 +49,8 @@ jobs:
       - name: Install unchanged helper dependencies
         working-directory: webmux
         run: npm ci
+      - name: Verify observer process-group cleanup
+        run: python3 -m unittest discover -s scripts -p test_diagnose_client_install.py -v
       - name: Observe the original full helper suite
         run: python3 scripts/diagnose-client-install.py --cache-mode '${{ matrix.cache }}' --output "$RUNNER_TEMP/client-install-${{ matrix.cache }}"
       - name: Preserve original diagnostic outcomes

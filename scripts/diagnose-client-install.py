@@ -84,20 +84,28 @@ def observe(command, cwd, env, output, label, limit):
                     dropped += 1
                 time.sleep(1)
         finally:
-            if child.poll() is None:
-                # Only this freshly created process group; never find/kill by name.
+            # The leader can exit before its descendants. Finish cleanup of
+            # this freshly created group independently of the leader's status.
+            group_remaining = True
+            try:
+                os.killpg(child.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                group_remaining = False
+            cleanup_deadline = time.monotonic() + 3
+            while group_remaining and time.monotonic() < cleanup_deadline:
+                child.poll()
                 try:
-                    os.killpg(child.pid, signal.SIGTERM)
+                    os.killpg(child.pid, 0)
+                except ProcessLookupError:
+                    group_remaining = False
+                    break
+                time.sleep(0.05)
+            if group_remaining:
+                try:
+                    os.killpg(child.pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
-                try:
-                    child.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    try:
-                        os.killpg(child.pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
-                    child.wait(timeout=3)
+            child.wait(timeout=3)
         return dict(command=label, startedUnix=unix_start, status=child.returncode, observerTimedOut=timed_out,
                     elapsedSeconds=time.monotonic() - start, samples=samples,
                     droppedSamples=dropped)

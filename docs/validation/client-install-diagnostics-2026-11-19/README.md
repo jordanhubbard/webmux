@@ -21,8 +21,15 @@ closed action labels, process IDs, timestamps and elapsed time; it adds no Go
 flags. The observer samples descendant process names, parent IDs and CPU times,
 plus host load averages. Process samples are capped at 8 MiB, with dropped
 samples counted. It bounds its own full-suite observation at 900 seconds and
-terminates only its freshly created process group on an observer failure or
-timeout. Existing individual test deadlines remain unchanged.
+cleans up only its freshly created process group, including when its command
+leader has already exited. Descendants get a bounded three-second SIGTERM grace
+before any remaining group members receive SIGKILL; reaping the leader alone is
+not treated as group cleanup. Existing individual test deadlines remain unchanged.
+
+Before the diagnostic, offline real-process regression controls exercise a
+SIGTERM-ignoring descendant after timeout and after successful leader exit, plus
+preservation of a nonzero command result. These use private Python processes;
+they do not run Go, Make install, a service or an authenticated coding session.
 
 The script refuses ordinary user hosts, self-hosted runners, dirty source and
 output outside a new directory below `RUNNER_TEMP`. Headroom is checked before
