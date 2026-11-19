@@ -1,0 +1,75 @@
+{
+  "schema": "webmux-go-reserve-overlay/v1",
+  "role": "Diagnostic test executables only; not an adopted release runtime or established repair",
+  "goVersion": "go1.27.4",
+  "upstreamChange": 828724,
+  "upstreamRevision": "5ec5e90237a6f364d60ad44d2f2d9c08597b8a8e",
+  "upstreamStatus": "NEW",
+  "upstreamURL": "https://go-review.googlesource.com/c/go/+/828724",
+  "patchSHA256": "0f31bcc8dbc737612e3d9ff3d1876c1bfb6e4fd3aca7920c801791a58ea73f33",
+  "licenseSHA256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+  "files": {
+    "src/internal/runtime/syscall/windows/defs_windows_arm64.go": {
+      "beforeSHA256": "1e7e2d6eefb8bb86b88ad4398bd5a490ff80ab3c2ef26ac8c126028b4531bbd1",
+      "afterSHA256": "d9795e0a76e5be5d77d93386948d1a6c0cb313d627236c879b883193ca872624"
+    },
+    "src/runtime/os_windows.go": {
+      "beforeSHA256": "958086f0d0e2376e136f0eb3b2cf34fbc831f72d662c301c50f9499818ccb8d9",
+      "afterSHA256": "bef391ae28260975246dae83bd202ca9db28022960911508d0972a1423424c94"
+    },
+    "src/internal/runtime/syscall/windows/defs_windows.go": {
+      "beforeSHA256": "82a168d384a59b581a2548664a79024c4d0e5c7135e8b8b1c6d367b63e402cd4",
+      "afterSHA256": "c2111d672a107c43fc9537bb9bee7ba06499ece7c1aa121219950185a52e9764"
+    },
+    "src/runtime/signal_unix.go": {
+      "beforeSHA256": "a9dd82ee8b8089ec69dc90cc8a2d3553839db41b3f01807311507c7fc117a3e0",
+      "afterSHA256": "cc3470b40ae3c8ab77920e5074c331e5f0597b44a03057f5149d3895ec43140e"
+    },
+    "src/runtime/export_test.go": {
+      "beforeSHA256": "eebc48f3275516a2e77bb344271a5e7db65efc9bd72bf5df8fd9e5d04e57fd9d",
+      "afterSHA256": "e9cb198289853b38cd15fa0671c56789040c51bc02ecf55928750ba4893679e3"
+    },
+    "src/runtime/stack.go": {
+      "beforeSHA256": "0225942ade2eed1e4ec5a0e813c66b3ed06c142c33c987b2fd9e031a0b871d3d",
+      "afterSHA256": "019b9c623ec9f13ff7b38eb4a4990485de262e18e337542355ac70316ba1ad93"
+    },
+    "src/runtime/proc.go": {
+      "beforeSHA256": "40d15ce858cf058cff92606001a29ee1689db88c121a2f0c283163a0d64a7375",
+      "afterSHA256": "bd92f2aed97c6de8f25dd09796d3fa07c95b832fa01cc28edd06f26edcfbcf91"
+    },
+    "src/runtime/export_windows_test.go": {
+      "beforeSHA256": "729d31fce425818e21e72b7740eb0c26259948d54aa41127e4f0cec60dedf44a",
+      "afterSHA256": "34f72eca048dcad6a5e16bbbc1ad7820c798a0efad725a8eb26aa9b9b8392261"
+    },
+    "src/runtime/preempt.go": {
+      "beforeSHA256": "c50342a043676dab55b58ea9aabc90a04cfb0c0cdd9a70e475239ba9460f5ce3",
+      "afterSHA256": "217d261c9477a41367d096a972fe7846a7892473f4e2c51ea219064d91763ecc"
+    },
+    "src/runtime/signal_windows.go": {
+      "beforeSHA256": "19742597c5c6375893852292cc846127eac45759e9e397e8c10bb897fb470397",
+      "afterSHA256": "1ce4ad9cc9454b7b1e259ea62f19e295cb224bed33fc99b641a2f4ac88bcd7f2"
+    },
+    "src/runtime/cgocall.go": {
+      "beforeSHA256": "80b9f707f90189e5eb2b8c9db4940c0fc63630e2f69757866764d77a1c54b0c6",
+      "afterSHA256": "9dadf69284b61fb0a4d51623b359cf63a27f0ad3a9cb4993790f5a75557f81f0"
+    },
+    "src/runtime/signal_windows_test.go": {
+      "beforeSHA256": "ea70ce13269f2a78aa42e5670fad4206dad0d7ea04a06d829f9bfafbf2b590e5",
+      "afterSHA256": "268047741afb72331d5cb3784ee3706e2b44415cb3cfd87ce42adb0aa1493c81"
+    },
+    "src/internal/runtime/syscall/windows/defs_windows_386.go": {
+      "beforeSHA256": "c218198622b5a9edafd9caf7e32dcad7e9c27c65693fa9157f23572fd9fd11cb",
+      "afterSHA256": "b873cb9fb9fd20db3dcce0f3dccf0e418b80f1703785041b52dfcaaa8b945e51"
+    },
+    "src/internal/runtime/syscall/windows/defs_windows_amd64.go": {
+      "beforeSHA256": "bc8e87e75eadda689c833f8353a4bdc3cad0310d173ca9617d53e13aa841d7b4",
+      "afterSHA256": "b86624f100709b51ad71302fc19b008bad93fe40bd6d26e972c8241526302205"
+    }
+  },
+  "negativeControl": {
+    "path": "src/runtime/stack.go",
+    "removeExactly": "\tif newsize-used < stackNosplit+stackSystemReserve {\n\t\treturn\n\t}\n",
+    "afterSHA256": "3486c57b4fc26551fc0ed2b55b566d27573668878d01438b588a1f82957fa7fe",
+    "purpose": "Intentionally omit shrink headroom accounting in a separate diagnostic executable; TestExceptionReserveSurvivesShrink must reject it."
+  }
+}

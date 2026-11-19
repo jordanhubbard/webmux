@@ -1,0 +1,148 @@
+name: Windows VT stack-reserve comparison
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/windows-vt-reserve.yml
+      - scripts/prepare-vt-reserve-overlay.py
+      - scripts/verify-vt-reserve-result.py
+      - tests/test_vt_reserve_overlay.py
+      - docs/validation/vt-stack-reserve-2026-11-18/**
+
+permissions:
+  contents: read
+
+jobs:
+  comparison:
+    name: Native stock/reserve sample ${{ matrix.sample }}
+    runs-on: windows-2022
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        # One bounded cohort; record actual CPU/XSTATE instead of assuming AMX.
+        sample: [1, 2, 3, 4]
+    env:
+      GOTOOLCHAIN: local
+      GOWORK: 'off'
+      VT_RESERVE_SOURCE: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: webmux/server/go.mod
+          architecture: x64
+          cache-dependency-path: |
+            webmux/server/go.sum
+            webmux/server/internal/thirdparty/vt/go.sum
+            webmux/server/internal/thirdparty/ultraviolet/go.sum
+      - name: Admit native worker and preserve context
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'vt-stack-reserve'
+          New-Item -ItemType Directory -Path $root -ErrorAction Stop | Out-Null
+          "VT_RESERVE_ROOT=$root" >> $env:GITHUB_ENV
+          $memory = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+          $drive = Get-PSDrive -Name C -ErrorAction Stop
+          if ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString() -ne 'X64') { throw 'Native AMD64 Windows required' }
+          if ($drive.Free -lt 5GB -or $memory.FreePhysicalMemory -lt (2 * 1024 * 1024)) { throw 'Insufficient worker headroom' }
+          if ((go version).Trim() -ne 'go version go1.27.4 windows/amd64') { throw 'Expected stock Go1.27.4 AMD64' }
+          if ((@(go env GOOS GOARCH GOHOSTARCH) -join ',') -ne 'windows,amd64,amd64') { throw 'Native toolchain required' }
+          foreach ($name in @('GOGC','GOMEMLIMIT','GODEBUG','GOEXPERIMENT','GOFLAGS')) {
+            if ([Environment]::GetEnvironmentVariable($name)) { throw "Unexpected diagnostic override: $name" }
+          }
+          Add-Type -TypeDefinition @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class ReserveHostContext {
+            [DllImport("kernel32.dll")] public static extern ulong GetEnabledXStateFeatures();
+            [DllImport("kernel32.dll", SetLastError=true)] public static extern bool InitializeContext(IntPtr buffer, uint flags, IntPtr context, ref uint length);
+          }
+          '@
+          [uint32]$length = 0
+          $ok = [ReserveHostContext]::InitializeContext([IntPtr]::Zero, 0x10005f, [IntPtr]::Zero, [ref]$length)
+          $errorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+          $sdk = (go env GOROOT).Trim()
+          @{ source = (git rev-parse HEAD); cpu = @(Get-CimInstance Win32_Processor | Select-Object Name,Manufacturer,NumberOfCores,NumberOfLogicalProcessors); enabledXStateFeatures = ('0x{0:x}' -f [ReserveHostContext]::GetEnabledXStateFeatures()); contextSize = $length; contextCallReturned = $ok; contextError = $errorCode; compilerSHA256 = (Get-FileHash -Algorithm SHA256 "$sdk/bin/go.exe").Hash.ToLowerInvariant(); go = (go env -json GOVERSION GOOS GOARCH GOHOSTARCH GOAMD64 CGO_ENABLED GOFLAGS GOEXPERIMENT | ConvertFrom-Json); freeMemoryKiB = $memory.FreePhysicalMemory; freeDiskBytes = $drive.Free } |
+            ConvertTo-Json -Depth 6 | Set-Content -Encoding utf8 "$root/worker.json"
+          $sdk | Set-Content -Encoding utf8 "$root/stock-root.txt"
+      - name: Verify overlay admission and native status controls
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests -p test_vt_reserve_overlay.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Overlay admission controls failed' }
+          python -m unittest discover -s tests -p test_vt_native_exit.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Native process status controls failed' }
+          python scripts/verify-vt-provenance.py
+          if ($LASTEXITCODE -ne 0) { throw 'Retained VT source provenance failed' }
+      - name: Prepare exact proposal and broken shrink-control overlays
+        shell: pwsh
+        run: |
+          python scripts/prepare-vt-reserve-overlay.py --goroot (Get-Content -Raw "$env:VT_RESERVE_ROOT/stock-root.txt").Trim() --output "$env:VT_RESERVE_ROOT/overlay"
+          if ($LASTEXITCODE -ne 0) { throw 'Exact diagnostic overlay admission failed' }
+      - name: Run proposed runtime regression tests
+        id: runtime
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $root = $env:VT_RESERVE_ROOT
+          $exe = Join-Path $root 'runtime-reserve.test.exe'
+          go test -c -overlay "$root/overlay/reserve-overlay.json" runtime -o $exe
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime regression compilation failed' }
+          go tool test2json -t -p runtime python scripts/vt-native-exit.py "$root/runtime-process.json" $exe '-test.v=test2json' '-test.run=^TestException(StackReserve|AfterStackGrowShrink|ReserveSurvivesShrink)$' '-test.timeout=3m' | Tee-Object -FilePath "$root/runtime.jsonl"
+          if ($LASTEXITCODE -ne 0) { throw 'Proposed runtime regression failed' }
+      - name: Require broken shrink-accounting control to fail precisely
+        id: negative
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $root = $env:VT_RESERVE_ROOT
+          $exe = Join-Path $root 'runtime-broken-shrink.test.exe'
+          go test -c -overlay "$root/overlay/negative-overlay.json" runtime -o $exe
+          if ($LASTEXITCODE -ne 0) { throw 'Negative control compilation failed' }
+          go tool test2json -t -p runtime python scripts/vt-native-exit.py "$root/negative-process.json" $exe '-test.v=test2json' '-test.run=^TestExceptionReserveSurvivesShrink$' '-test.timeout=3m' | Tee-Object -FilePath "$root/negative.jsonl"
+          # The independent verifier requires exit1 plus the exact headroom
+          # failure and an actual shrink. A crash or vacuous pass cannot qualify.
+      - name: Repeat complete stock VT inventory
+        id: stock
+        continue-on-error: true
+        shell: pwsh
+        working-directory: webmux/server/internal/thirdparty/vt
+        run: |
+          $root = $env:VT_RESERVE_ROOT
+          $exe = Join-Path $root 'stock-vt.test.exe'
+          go test -c . -o $exe
+          if ($LASTEXITCODE -ne 0) { throw 'Stock VT compilation failed' }
+          go tool test2json -t -p tuios.dev/vt python "$env:GITHUB_WORKSPACE/scripts/vt-native-exit.py" "$root/stock-process.json" $exe '-test.v=test2json' '-test.count=10' '-test.timeout=10m' | Tee-Object -FilePath "$root/stock.jsonl"
+          if ($LASTEXITCODE -ne 0) { throw 'Stock VT failed; preserve original output' }
+      - name: Repeat identical VT inventory with proposed reserve
+        id: reserve
+        continue-on-error: true
+        shell: pwsh
+        working-directory: webmux/server/internal/thirdparty/vt
+        run: |
+          $root = $env:VT_RESERVE_ROOT
+          $exe = Join-Path $root 'reserve-vt.test.exe'
+          go test -c -overlay "$root/overlay/reserve-overlay.json" . -o $exe
+          if ($LASTEXITCODE -ne 0) { throw 'Reserve VT compilation failed' }
+          if (-not [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($exe)).Contains('runtime: InitializeContext failed; errno=')) { throw 'Reserve implementation missing from executable' }
+          go tool test2json -t -p tuios.dev/vt python "$env:GITHUB_WORKSPACE/scripts/vt-native-exit.py" "$root/reserve-process.json" $exe '-test.v=test2json' '-test.count=10' '-test.timeout=10m' | Tee-Object -FilePath "$root/reserve.jsonl"
+          if ($LASTEXITCODE -ne 0) { throw 'Reserve VT failed; preserve original output' }
+      - name: Verify native comparison and preserve every failed phase
+        if: always()
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'vt-stack-reserve'
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          python scripts/verify-vt-reserve-result.py $root
+          if ($LASTEXITCODE -ne 0) { throw 'Native comparison failed or is incomplete; no release gate is waived' }
+          if ('${{ steps.runtime.outcome }}' -ne 'success' -or '${{ steps.stock.outcome }}' -ne 'success' -or '${{ steps.reserve.outcome }}' -ne 'success') { throw 'A compiler, driver or native phase failed; retain that failure' }
+      - name: Retain sources, native binaries, status words and raw outputs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-vt-reserve-${{ matrix.sample }}
+          path: ${{ runner.temp }}/vt-stack-reserve

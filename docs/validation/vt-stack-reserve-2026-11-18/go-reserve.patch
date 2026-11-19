@@ -1,0 +1,844 @@
+From 5ec5e90237a6f364d60ad44d2f2d9c08597b8a8e Mon Sep 17 00:00:00 2001
+From: Chris Fink <chris@cxjxf.com>
+Date: Mon, 07 Sep 2026 07:44:09 -0400
+Subject: [PATCH] runtime: size the Windows exception stack reserve from the host
+
+Windows delivers exceptions on the faulting goroutine's own stack. Before
+any handler runs, the kernel pushes an EXCEPTION_RECORD and a CONTEXT
+below the faulting SP, and ntdll's dispatcher and sigtramp then run on
+that same stack until sigtrampgo switches to g0. stackSystem reserves
+4096 bytes below every goroutine stack for all of that.
+
+The CONTEXT is not a fixed size. It carries the extended register state
+(XSTATE) of every feature the OS enabled at boot, laid out even for
+threads that never use it: about 1.7 KiB on a typical CPU, 3.4 KiB with
+AVX-512, and 11.7 KiB on Intel Xeons with AMX, whose tile state alone is
+8 KiB. On those hosts the frame overruns the bottom of the goroutine
+stack by several KiB and corrupts whatever the heap put there; CL 824724
+turns that into a throw, but the reserve is still too small.
+
+Measure the reserve at startup instead of fixing it. InitializeContext
+reports the size the kernel will push for this host, so osinit reserves
+that plus 2048 bytes for the exception record, the kernel's alignment,
+and the dispatcher frames below the CONTEXT (up to 1087 bytes measured,
+on arm64). The minimum stack allocation and a Go-computed guard distance
+move with the reserve. The compile-time stackGuard still applies where
+the assembly bootstraps g0 before mstart0 and minit replace its guard,
+and in the linker's nosplit check, which assumes only that floor. Hosts
+whose need is below the floor are unchanged; AVX-512 hosts keep 8 KiB
+minimum stacks with a larger guard; AMX hosts get 16 KiB minimum stacks.
+
+The frame size is a property of the boot-time XSTATE mask: measured on
+the affected hosts, a hardware fault's frame already includes the AMX
+area before EnableProcessOptionalXStateFeatures and is unchanged after
+it, so a startup measurement holds for the life of the process.
+
+shrinkstack also needs the reserve: its quarter-full rule decides from
+the live frames and the nosplit margin alone, and stackMinAlloc only
+guarantees room for the reserve on a nearly empty stack. A goroutine
+with more live frames than that could be shrunk to a stack with less
+headroom below SP than the reserve promises, and resume there into an
+exception before its next stack check. shrinkstack now also refuses a
+shrink that would leave less than the reserve plus the nosplit margin
+below the live frames.
+
+Two runtime tests exercise this end to end, each re-running the test
+binary in a subprocess since a too-small reserve crashes the process:
+one recovers a real hardware fault after a goroutine's stack grows and
+the GC shrinks it, on whatever reserve the host actually has; the other
+forces a reserve and checks shrinkstack never leaves less than it below
+SP, so that coverage does not depend on the builder's CPU having AMX.
+Both fail if no shrink happened, rather than passing vacuously.
+
+Fixes #81238
+
+Change-Id: I46051a7d94205f85193615c2e37a29d5c025f67a
+---
+
+diff --git a/src/internal/runtime/syscall/windows/defs_windows.go b/src/internal/runtime/syscall/windows/defs_windows.go
+index 4170784..b6fa1bb 100644
+--- a/src/internal/runtime/syscall/windows/defs_windows.go
++++ b/src/internal/runtime/syscall/windows/defs_windows.go
+@@ -60,7 +60,10 @@
+ )
+ 
+ const (
+-	ERROR_ACCESS_DENIED = 5
++	ERROR_ACCESS_DENIED       = 5
++	ERROR_NOT_SUPPORTED       = 50
++	ERROR_INVALID_PARAMETER   = 87
++	ERROR_INSUFFICIENT_BUFFER = 122
+ )
+ 
+ const (
+diff --git a/src/internal/runtime/syscall/windows/defs_windows_386.go b/src/internal/runtime/syscall/windows/defs_windows_386.go
+index 6c2271e..051a961 100644
+--- a/src/internal/runtime/syscall/windows/defs_windows_386.go
++++ b/src/internal/runtime/syscall/windows/defs_windows_386.go
+@@ -9,7 +9,11 @@
+ 	"unsafe"
+ )
+ 
+-const CONTEXT_CONTROL = 0x10001
++const (
++	CONTEXT_CONTROL = 0x10001
++	CONTEXT_ALL     = 0x1003f // CONTROL | INTEGER | SEGMENTS | FLOATING_POINT | DEBUG_REGISTERS | EXTENDED_REGISTERS
++	CONTEXT_XSTATE  = 0x10040
++)
+ 
+ type FloatingSaveArea struct {
+ 	ControlWord   uint32
+diff --git a/src/internal/runtime/syscall/windows/defs_windows_amd64.go b/src/internal/runtime/syscall/windows/defs_windows_amd64.go
+index 0181244..0b120b4 100644
+--- a/src/internal/runtime/syscall/windows/defs_windows_amd64.go
++++ b/src/internal/runtime/syscall/windows/defs_windows_amd64.go
+@@ -9,7 +9,11 @@
+ 	"unsafe"
+ )
+ 
+-const CONTEXT_CONTROL = 0x100001
++const (
++	CONTEXT_CONTROL = 0x100001
++	CONTEXT_ALL     = 0x10001f // CONTROL | INTEGER | SEGMENTS | FLOATING_POINT | DEBUG_REGISTERS
++	CONTEXT_XSTATE  = 0x100040
++)
+ 
+ type M128 struct {
+ 	Low  uint64
+diff --git a/src/internal/runtime/syscall/windows/defs_windows_arm64.go b/src/internal/runtime/syscall/windows/defs_windows_arm64.go
+index c05573a..2e6f32f 100644
+--- a/src/internal/runtime/syscall/windows/defs_windows_arm64.go
++++ b/src/internal/runtime/syscall/windows/defs_windows_arm64.go
+@@ -15,7 +15,11 @@
+ // Without LR, we skip over the next-to-bottom function in profiles
+ // when the bottom function is frameless.
+ // So we set both here, to make a working CONTEXT_CONTROL.
+-const CONTEXT_CONTROL = 0x400003
++const (
++	CONTEXT_CONTROL = 0x400003
++	CONTEXT_ALL     = 0x40001f // CONTROL | INTEGER | FLOATING_POINT | DEBUG_REGISTERS | X18
++	CONTEXT_XSTATE  = 0x400020 // CONTEXT_ARM64_XSTATE: SVE/SME state. Defined since the 10.0.26100 SDK (Windows 11 24H2); older kernels reject it.
++)
+ 
+ type Neon128 struct {
+ 	Low  uint64
+diff --git a/src/runtime/cgocall.go b/src/runtime/cgocall.go
+index fab3984..b30e277 100644
+--- a/src/runtime/cgocall.go
++++ b/src/runtime/cgocall.go
+@@ -301,7 +301,7 @@
+ 			mp.g0StackAccurate = true
+ 		}
+ 	}
+-	g0.stackguard0 = g0.stack.lo + stackGuard
++	g0.stackguard0 = g0.stack.lo + stackGuardSize
+ 	g0.stackguard1 = g0.stackguard0
+ }
+ 
+@@ -380,7 +380,7 @@
+ 
+ 	// Restore the old g0 stack bounds
+ 	gp.m.g0.stack = oldStack
+-	gp.m.g0.stackguard0 = oldStack.lo + stackGuard
++	gp.m.g0.stackguard0 = oldStack.lo + stackGuardSize
+ 	gp.m.g0.stackguard1 = gp.m.g0.stackguard0
+ 	gp.m.g0StackAccurate = oldAccurate
+ }
+diff --git a/src/runtime/export_test.go b/src/runtime/export_test.go
+index 1bd2a22..cc33ab2 100644
+--- a/src/runtime/export_test.go
++++ b/src/runtime/export_test.go
+@@ -627,8 +627,8 @@
+ 		// The stack bounds for g0 stack is not always precise.
+ 		// Use an artificially small stack, to trigger a stack overflow
+ 		// without actually run out of the system stack (which may seg fault).
+-		g0.stack.lo = sp - 4096 - stackSystem
+-		g0.stackguard0 = g0.stack.lo + stackGuard
++		g0.stack.lo = sp - 4096 - stackSystemReserve
++		g0.stackguard0 = g0.stack.lo + stackGuardSize
+ 		g0.stackguard1 = g0.stackguard0
+ 
+ 		stackOverflow(nil)
+diff --git a/src/runtime/export_windows_test.go b/src/runtime/export_windows_test.go
+index f44e24b..d043622 100644
+--- a/src/runtime/export_windows_test.go
++++ b/src/runtime/export_windows_test.go
+@@ -7,6 +7,7 @@
+ package runtime
+ 
+ import (
++	"internal/runtime/sys"
+ 	"internal/runtime/syscall/windows"
+ 	"unsafe"
+ )
+@@ -25,3 +26,39 @@
+ func GetCallerFp() uintptr {
+ 	return getcallerfp()
+ }
++
++const (
++	ContextAll       = windows.CONTEXT_ALL
++	ContextAllXState = windows.CONTEXT_ALL | windows.CONTEXT_XSTATE
++
++	ErrorNotSupported       = windows.ERROR_NOT_SUPPORTED
++	ErrorInvalidParameter   = windows.ERROR_INVALID_PARAMETER
++	ErrorInsufficientBuffer = windows.ERROR_INSUFFICIENT_BUFFER
++)
++
++func StackSystemReserve() uintptr { return stackSystemReserve }
++func StackGuardSize() uintptr     { return stackGuardSize }
++func StackMinAlloc() uintptr      { return uintptr(stackMinAlloc) }
++
++// SetStackSystemReserve raises the OS stack reserve for the rest of the
++// process; it never lowers it. See setStackSystemReserve.
++func SetStackSystemReserve(n uintptr) { setStackSystemReserve(n) }
++
++// StackHeadroom reports how many bytes lie between the calling goroutine's
++// stack pointer and the bottom of its stack. It is nosplit so that calling
++// it does not itself pass a stack check, which could grow an undersized
++// stack before the measurement is taken.
++//
++//go:nosplit
++func StackHeadroom() uintptr {
++	return sys.GetCallerSP() - getg().stack.lo
++}
++
++// StackSize reports the size of the calling goroutine's stack allocation.
++// It is nosplit for the same reason as StackHeadroom.
++//
++//go:nosplit
++func StackSize() uintptr {
++	gp := getg()
++	return gp.stack.hi - gp.stack.lo
++}
+diff --git a/src/runtime/os_windows.go b/src/runtime/os_windows.go
+index 59ca989..f21e6fe 100644
+--- a/src/runtime/os_windows.go
++++ b/src/runtime/os_windows.go
+@@ -39,6 +39,7 @@
+ //go:cgo_import_dynamic runtime._GetSystemDirectoryA GetSystemDirectoryA%2 "kernel32.dll"
+ //go:cgo_import_dynamic runtime._GetSystemInfo GetSystemInfo%1 "kernel32.dll"
+ //go:cgo_import_dynamic runtime._GetThreadContext GetThreadContext%2 "kernel32.dll"
++//go:cgo_import_dynamic runtime._InitializeContext InitializeContext%4 "kernel32.dll"
+ //go:cgo_import_dynamic runtime._IsProcessorFeaturePresent IsProcessorFeaturePresent%1 "kernel32.dll"
+ //go:cgo_import_dynamic runtime._SetThreadContext SetThreadContext%2 "kernel32.dll"
+ //go:cgo_import_dynamic runtime._LoadLibraryExW LoadLibraryExW%3 "kernel32.dll"
+@@ -96,6 +97,7 @@
+ 	_GetSystemDirectoryA,
+ 	_GetSystemInfo,
+ 	_GetThreadContext,
++	_InitializeContext,
+ 	_IsProcessorFeaturePresent,
+ 	_SetThreadContext,
+ 	_LoadLibraryExW,
+@@ -485,6 +487,7 @@
+ 	preventErrorDialogs()
+ 
+ 	initExceptionHandler()
++	setStackSystemReserve(exceptionStackReserve())
+ 
+ 	initHighResTimer()
+ 	timeBeginPeriodRetValue = osRelax(false)
+@@ -503,6 +506,80 @@
+ 	stdcall(_SetProcessPriorityBoost, windows.CurrentProcess, 1)
+ }
+ 
++// exceptionStackReserve reports how many bytes below a goroutine's stack
++// pointer Windows may write while dispatching an exception on it.
++//
++// Windows has no alternate signal stack. The kernel pushes an EXCEPTION_RECORD
++// and a CONTEXT onto the faulting thread's stack, and ntdll's dispatcher and
++// the runtime's vectored handler (sigtramp) then run on that same stack until
++// sigtrampgo switches to g0. The CONTEXT is not a fixed size: it carries the
++// extended register state (XSTATE) of every CPU feature the OS has enabled,
++// which is under 2 KiB on a typical client CPU but over 11 KiB on Intel Xeons
++// with AMX, whose 8 KiB tile state is laid out even for threads that never
++// use it. stackSystem's 4 KiB floor was sized for the former. See #81238.
++func exceptionStackReserve() uintptr {
++	// Everything on the stack beyond what InitializeContext counts: the
++	// EXCEPTION_RECORD (152 bytes on amd64 and arm64, 80 on 386), the
++	// alignment the kernel adds to a hardware exception's frame, and the
++	// frames that run below the CONTEXT before sigtrampgo switches to g0
++	// (KiUserExceptionDispatcher, RtlDispatchException,
++	// RtlpCallVectoredHandlers, sigtramp, sigtrampgo). Measured from a real
++	// hardware fault's SP to a local in the first vectored handler, which
++	// stands where sigtramp does, the part beyond the InitializeContext
++	// figure is up to 913 bytes on amd64 (Windows Server 2022 and 2025,
++	// with and without AMX), up to 1087 bytes on arm64 (Windows 11 24H2 on
++	// a Cobalt 100 with SVE enabled), and 309 bytes on 386. A fault at the
++	// bottom of a nosplit chain has exactly the reserve to spare, so this
++	// must cover the worst case: 2048 leaves at least 960 bytes for
++	// sigtramp's and sigtrampgo's own frames on each of the three, and
++	// rounds up for other ntdll builds.
++	const dispatchOverhead = 2048
++
++	// With a nil buffer InitializeContext fails with ERROR_INSUFFICIENT_BUFFER
++	// and stores the size the current CPU's full context needs, XSTATE
++	// included, in n; that is the size the kernel will push. Any other
++	// outcome leaves n undefined, so it must not be trusted.
++	//
++	// Two failures mean that this host has no extended state to push, so the
++	// legacy flags, which every supported Windows version accepts, report the
++	// right size: ERROR_NOT_SUPPORTED, when the kernel defines CONTEXT_XSTATE
++	// but cannot provide it (observed for a defined-but-unavailable flag bit
++	// on amd64); and, on arm64 only, ERROR_INVALID_PARAMETER, because kernels
++	// before Windows 11 24H2 do not define CONTEXT_ARM64_XSTATE at all and
++	// reject the bit the way they reject any undefined one (observed for an
++	// undefined bit on both architectures). On amd64 and 386 the bit has
++	// been defined for as long as Go has run there, so ERROR_INVALID_PARAMETER
++	// can only mean a bug. Anything else is unexpected and fatal, rather than
++	// silently keeping the compile-time floor on a host where it may not be
++	// enough.
++	n, errno := initializeContextSize(windows.CONTEXT_ALL | windows.CONTEXT_XSTATE)
++	switch {
++	case errno == 0:
++	case errno == windows.ERROR_NOT_SUPPORTED,
++		errno == windows.ERROR_INVALID_PARAMETER && GOARCH == "arm64":
++		n, errno = initializeContextSize(windows.CONTEXT_ALL)
++	}
++	if errno != 0 {
++		print("runtime: InitializeContext failed; errno=", errno, "\n")
++		throw("InitializeContext failed")
++	}
++	return uintptr(n) + dispatchOverhead
++}
++
++// initializeContextSize calls InitializeContext with a nil buffer to learn
++// how many bytes a CONTEXT with the given flags needs. Per its documented
++// contract, that succeeds only in the sense of failing with
++// ERROR_INSUFFICIENT_BUFFER and reporting the size; any other outcome
++// leaves the size undefined, so this reports it as an error instead of
++// guessing.
++func initializeContextSize(contextFlags uint32) (n uint32, errno uint32) {
++	stdcall(_InitializeContext, 0, uintptr(contextFlags), 0, uintptr(unsafe.Pointer(&n)))
++	if errno = getlasterror(); errno != windows.ERROR_INSUFFICIENT_BUFFER {
++		return 0, errno
++	}
++	return n, 0
++}
++
+ //go:nosplit
+ func readRandom(r []byte) int {
+ 	n := 0
+@@ -980,7 +1057,7 @@
+ 		throw("bad g0 stack")
+ 	}
+ 	g0.stack.lo = base
+-	g0.stackguard0 = g0.stack.lo + stackGuard
++	g0.stackguard0 = g0.stack.lo + stackGuardSize
+ 	g0.stackguard1 = g0.stackguard0
+ 	// Sanity check the SP.
+ 	stackcheck()
+diff --git a/src/runtime/preempt.go b/src/runtime/preempt.go
+index 2d23c15..25cde3b 100644
+--- a/src/runtime/preempt.go
++++ b/src/runtime/preempt.go
+@@ -174,7 +174,7 @@
+ 			// _Gscan bit and thus own the stack.
+ 			gp.preemptStop = false
+ 			gp.preempt = false
+-			gp.stackguard0 = gp.stack.lo + stackGuard
++			gp.stackguard0 = gp.stack.lo + stackGuardSize
+ 
+ 			// The goroutine was already at a safe-point
+ 			// and we've now locked that in.
+diff --git a/src/runtime/proc.go b/src/runtime/proc.go
+index cfa68d3..616398b 100644
+--- a/src/runtime/proc.go
++++ b/src/runtime/proc.go
+@@ -1029,7 +1029,7 @@
+ 
+ 	mpreinit(mp)
+ 	if mp.gsignal != nil {
+-		mp.gsignal.stackguard1 = mp.gsignal.stack.lo + stackGuard
++		mp.gsignal.stackguard1 = mp.gsignal.stack.lo + stackGuardSize
+ 	}
+ 
+ 	// Add to allm so garbage collector doesn't free g->m
+@@ -1883,7 +1883,7 @@
+ 	}
+ 	// Initialize stack guard so that we can start calling regular
+ 	// Go code.
+-	gp.stackguard0 = gp.stack.lo + stackGuard
++	gp.stackguard0 = gp.stack.lo + stackGuardSize
+ 	// This is the g0, so we can also call go:systemstack
+ 	// functions, which check stackguard1.
+ 	gp.stackguard1 = gp.stackguard0
+@@ -3354,7 +3354,7 @@
+ 	casgstatus(gp, _Grunnable, _Grunning)
+ 	gp.waitsince = 0
+ 	gp.preempt = false
+-	gp.stackguard0 = gp.stack.lo + stackGuard
++	gp.stackguard0 = gp.stack.lo + stackGuardSize
+ 	if !inheritTime {
+ 		mp.p.ptr().schedtick++
+ 	}
+@@ -5041,8 +5041,8 @@
+ 			// Restore the preemption request in case we cleared it in newstack.
+ 			gp.stackguard0 = stackPreempt
+ 		} else {
+-			// Otherwise restore the real stackGuard, we clobbered it in entersyscall/entersyscallblock.
+-			gp.stackguard0 = gp.stack.lo + stackGuard
++			// Otherwise restore the real stackGuardSize, we clobbered it in entersyscall/entersyscallblock.
++			gp.stackguard0 = gp.stack.lo + stackGuardSize
+ 		}
+ 		gp.throwsplit = false
+ 
+@@ -5240,7 +5240,7 @@
+ 	gp := getg().m.curg
+ 
+ 	// See the comments in beforefork.
+-	gp.stackguard0 = gp.stack.lo + stackGuard
++	gp.stackguard0 = gp.stack.lo + stackGuardSize
+ 
+ 	msigrestore(gp.m.sigmask)
+ 
+@@ -5318,14 +5318,14 @@
+ func malg(stacksize int32) *g {
+ 	newg := new(g)
+ 	if stacksize >= 0 {
+-		stacksize = round2(stackSystem + stacksize)
++		stacksize = round2(int32(stackSystemReserve) + stacksize)
+ 		systemstack(func() {
+ 			newg.stack = stackalloc(uint32(stacksize))
+ 			if valgrindenabled {
+ 				newg.valgrindStackID = valgrindRegisterStack(unsafe.Pointer(newg.stack.lo), unsafe.Pointer(newg.stack.hi))
+ 			}
+ 		})
+-		newg.stackguard0 = newg.stack.lo + stackGuard
++		newg.stackguard0 = newg.stack.lo + stackGuardSize
+ 		newg.stackguard1 = ^uintptr(0)
+ 		// Clear the bottom word of the stack. We record g
+ 		// there on gsignal stack during VDSO on ARM and ARM64.
+@@ -5607,7 +5607,7 @@
+ 				gp.valgrindStackID = valgrindRegisterStack(unsafe.Pointer(gp.stack.lo), unsafe.Pointer(gp.stack.hi))
+ 			}
+ 		})
+-		gp.stackguard0 = gp.stack.lo + stackGuard
++		gp.stackguard0 = gp.stack.lo + stackGuardSize
+ 	} else {
+ 		if raceenabled {
+ 			racemalloc(unsafe.Pointer(gp.stack.lo), gp.stack.hi-gp.stack.lo)
+diff --git a/src/runtime/signal_unix.go b/src/runtime/signal_unix.go
+index bb8edae..ed1cec5 100644
+--- a/src/runtime/signal_unix.go
++++ b/src/runtime/signal_unix.go
+@@ -1442,8 +1442,8 @@
+ 	stsp := uintptr(unsafe.Pointer(st.ss_sp))
+ 	gp.m.gsignal.stack.lo = stsp
+ 	gp.m.gsignal.stack.hi = stsp + st.ss_size
+-	gp.m.gsignal.stackguard0 = stsp + stackGuard
+-	gp.m.gsignal.stackguard1 = stsp + stackGuard
++	gp.m.gsignal.stackguard0 = stsp + stackGuardSize
++	gp.m.gsignal.stackguard1 = stsp + stackGuardSize
+ }
+ 
+ // restoreGsignalStack restores the gsignal stack to the value it had
+diff --git a/src/runtime/signal_windows.go b/src/runtime/signal_windows.go
+index c8e6bb3..746df67 100644
+--- a/src/runtime/signal_windows.go
++++ b/src/runtime/signal_windows.go
+@@ -336,7 +336,7 @@
+ 	// g0 stack bounds so we have room to print the traceback. If
+ 	// this somehow overflows the stack, the OS will trap it.
+ 	g0.stack.lo = 0
+-	g0.stackguard0 = g0.stack.lo + stackGuard
++	g0.stackguard0 = g0.stack.lo + stackGuardSize
+ 	g0.stackguard1 = g0.stackguard0
+ 
+ 	print("Exception ", hex(info.ExceptionCode), " ", hex(info.ExceptionInformation[0]), " ", hex(info.ExceptionInformation[1]), " ", hex(r.PC()), "\n")
+diff --git a/src/runtime/signal_windows_test.go b/src/runtime/signal_windows_test.go
+index 96e4748..6316719 100644
+--- a/src/runtime/signal_windows_test.go
++++ b/src/runtime/signal_windows_test.go
+@@ -9,12 +9,15 @@
+ 	"bytes"
+ 	"fmt"
+ 	"internal/testenv"
++	"os"
+ 	"os/exec"
+ 	"path/filepath"
+ 	"runtime"
++	"runtime/debug"
+ 	"strings"
+ 	"syscall"
+ 	"testing"
++	"unsafe"
+ )
+ 
+ func TestVectoredHandlerExceptionInNonGoThread(t *testing.T) {
+@@ -311,3 +314,232 @@
+ 		t.Fatalf("failed: %s\n%s", err, out)
+ 	}
+ }
++
++// TestExceptionStackReserve checks that the per-stack OS reserve covers the
++// CONTEXT the kernel pushes when it dispatches an exception on a goroutine
++// stack, and that the stack guard and minimum stack allocation moved with it.
++// See issue 81238.
++func TestExceptionStackReserve(t *testing.T) {
++	kernel32, err := syscall.LoadDLL("kernel32.dll")
++	if err != nil {
++		t.Fatal(err)
++	}
++	initializeContext, err := kernel32.FindProc("InitializeContext")
++	if err != nil {
++		t.Fatal(err)
++	}
++	// Ask the kernel the same question osinit asked, with the same errno
++	// handling (see exceptionStackReserve).
++	contextSize := func(flags uintptr) (n uint32, errno syscall.Errno) {
++		_, _, e := initializeContext.Call(0, flags, 0, uintptr(unsafe.Pointer(&n)))
++		if errno = e.(syscall.Errno); errno != runtime.ErrorInsufficientBuffer {
++			return 0, errno
++		}
++		return n, 0
++	}
++	flags := uintptr(runtime.ContextAllXState)
++	n, errno := contextSize(flags)
++	switch {
++	case errno == 0:
++	case errno == runtime.ErrorNotSupported,
++		errno == runtime.ErrorInvalidParameter && runtime.GOARCH == "arm64":
++		flags = runtime.ContextAll
++		n, errno = contextSize(flags)
++	}
++	if errno != 0 {
++		t.Fatalf("InitializeContext(%#x): %v", flags, errno)
++	}
++	exceptionRecord := uintptr(152) // EXCEPTION_RECORD on amd64 and arm64
++	if runtime.GOARCH == "386" {
++		exceptionRecord = 80
++	}
++	reserve := runtime.StackSystemReserve()
++	t.Logf("InitializeContext(%#x) = %d bytes; reserve = %d, guard = %d, minimum stack = %d",
++		flags, n, reserve, runtime.StackGuardSize(), runtime.StackMinAlloc())
++	if reserve < uintptr(n)+exceptionRecord {
++		t.Errorf("stack reserve %d cannot hold a %d-byte CONTEXT plus a %d-byte EXCEPTION_RECORD", reserve, n, exceptionRecord)
++	}
++	if runtime.StackGuardSize() < reserve {
++		t.Errorf("stack guard %d is below the reserve %d", runtime.StackGuardSize(), reserve)
++	}
++	if min := runtime.StackMinAlloc(); min <= runtime.StackGuardSize() {
++		t.Errorf("minimum stack %d leaves no room above the guard %d", min, runtime.StackGuardSize())
++	}
++}
++
++// TestExceptionAfterStackGrowShrink exercises a real, recovered hardware
++// fault on a goroutine whose stack grew deep and was then shrunk by the
++// garbage collector, on whatever OS exception reserve this host actually
++// has. The work runs in a re-executed copy of the test binary, because a
++// reserve that turns out to be too small crashes the process (see
++// signal_windows.go's dispatch-below-stack-bottom throw). See issue 81238.
++func TestExceptionAfterStackGrowShrink(t *testing.T) {
++	if os.Getenv("TEST_EXCEPTION_AFTER_STACK_GROW_SHRINK") != "1" {
++		runSelfInSubprocess(t, "TestExceptionAfterStackGrowShrink", "TEST_EXCEPTION_AFTER_STACK_GROW_SHRINK")
++		return
++	}
++	const deepTo = 80
++	const parkAt = 0 // grow, fully return, then park
++	var faulted bool
++	var sizes stackSizes
++	runParkedUnderGC(func(ready chan<- struct{}, resume <-chan struct{}) {
++		faulted = faultAfterParkPoint(0, deepTo, parkAt, [1024]byte{}, ready, resume, &sizes)
++	})
++	sizes.requireShrink(t)
++	if !faulted {
++		t.Fatal("probe did not fault")
++	}
++}
++
++// stackSizes records a goroutine's stack allocation before it parks and
++// right after it resumes, so a test can tell whether the GC actually
++// shrank the stack in between. Without that check, both subprocess tests
++// would pass vacuously if shrinking never happened.
++type stackSizes struct {
++	parked, resumed uintptr
++}
++
++func (s *stackSizes) requireShrink(t *testing.T) {
++	t.Helper()
++	t.Logf("stack %d bytes when parked, %d after resume", s.parked, s.resumed)
++	if s.resumed >= s.parked {
++		t.Fatalf("stack was not shrunk while parked (%d -> %d bytes); the test exercised nothing", s.parked, s.resumed)
++	}
++}
++
++// TestExceptionReserveSurvivesShrink is TestExceptionAfterStackGrowShrink's
++// counterpart that exercises the shrink-time accounting directly, so the
++// coverage does not depend on the builder's CPU having AMX or another large
++// XSTATE area: it forces an OS reserve, then checks that shrinkstack never
++// leaves less than that reserve below SP. It also runs in a re-executed
++// copy of the test binary, since the forced reserve is irreversible for
++// the life of the process.
++func TestExceptionReserveSurvivesShrink(t *testing.T) {
++	if os.Getenv("TEST_EXCEPTION_RESERVE_SURVIVES_SHRINK") != "1" {
++		runSelfInSubprocess(t, "TestExceptionReserveSurvivesShrink", "TEST_EXCEPTION_RESERVE_SURVIVES_SHRINK")
++		return
++	}
++	// 30000 rather than a round number: stackMinAlloc rounds stackMin+
++	// reserve up to the next power of two, so a reserve that is itself
++	// close to a power of two gives the floor far more slack than the
++	// reserve alone needs and never lets a stack get close enough to
++	// shrinkstack's limits to exercise the bug. This value keeps them
++	// close, the way the real AMX figures in issue 81238 happen to.
++	const reserve = 30000
++	runtime.SetStackSystemReserve(reserve)
++
++	// Grow well past any stack size this is likely to end up at, then
++	// return to a point 7 frames deep (about 8 KiB live), so the
++	// allocation is far larger than its live content and a shrink is
++	// attempted, the same shape as issue 81238's shrink example.
++	const deepTo = 80
++	const parkAt = 6
++	var headroom uintptr
++	var sizes stackSizes
++	runParkedUnderGC(func(ready chan<- struct{}, resume <-chan struct{}) {
++		growDeepReturnToParkPoint(0, deepTo, parkAt, [1024]byte{}, ready, resume, &headroom, &sizes)
++	})
++	sizes.requireShrink(t)
++	if headroom < reserve {
++		t.Fatalf("shrinkstack left %d bytes below SP, want at least the %d-byte reserve", headroom, reserve)
++	}
++}
++
++// runSelfInSubprocess re-executes the test binary to run just test, with
++// env set to 1, and fails if that run does.
++func runSelfInSubprocess(t *testing.T, test, env string) {
++	t.Helper()
++	cmd := testenv.CleanCmdEnv(testenv.Command(t, testenv.Executable(t), "-test.run=^"+test+"$", "-test.v"))
++	cmd.Env = append(cmd.Env, env+"=1")
++	out, err := cmd.CombinedOutput()
++	if err != nil || !strings.Contains(string(out), "--- PASS: "+test) {
++		t.Fatalf("subprocess failed: %v\n%s", err, out)
++	}
++}
++
++// runParkedUnderGC runs goroutine on its own goroutine, waits for it to
++// report (via the ready channel it's given) that it has parked, then gives
++// the GC repeated chances to scan and shrink its stack before closing
++// resume and waiting for it to finish. Waiting for ready first matters:
++// without it, the GC loop could run and return before the new goroutine
++// has even started, scanning nothing worth shrinking.
++func runParkedUnderGC(goroutine func(ready chan<- struct{}, resume <-chan struct{})) {
++	ready := make(chan struct{})
++	resume := make(chan struct{})
++	done := make(chan struct{})
++	go func() {
++		goroutine(ready, resume)
++		close(done)
++	}()
++	<-ready
++	for range 8 {
++		runtime.GC()
++	}
++	close(resume)
++	<-done
++}
++
++// growDeepReturnToParkPoint recurses down to deepTo, growing the stack
++// allocation, then unwinds back up to parkAt and blocks there on resume.
++// Frames parkAt+1..deepTo have already returned by the time it blocks, but
++// frames 0..parkAt are still live below the blocked call, so this leaves a
++// controlled, nonzero amount of live stack (about parkAt KiB) inside a
++// stack allocation sized for the much deeper descent.
++//
++// *headroom is filled in with the distance from SP to the stack's bottom
++// immediately on resume, by calling the nosplit runtime.StackHeadroom
++// directly rather than through another function: calling anything else
++// first (even a tiny closure) would pass through that function's own
++// entry stack check, which would grow the stack back if it turned out to
++// be undersized and silently repair exactly the bug this measures. That
++// is the scenario from issue 81238: a goroutine resuming at a faulting
++// instruction without first encountering a stack check. The stack sizes
++// around the park are recorded the same way, for the same reason.
++//
++//go:noinline
++func growDeepReturnToParkPoint(cur, deepTo, parkAt int, ballast [1024]byte, ready chan<- struct{}, resume <-chan struct{}, headroom *uintptr, sizes *stackSizes) {
++	if cur < deepTo {
++		growDeepReturnToParkPoint(cur+1, deepTo, parkAt, ballast, ready, resume, headroom, sizes)
++	}
++	if cur == parkAt {
++		sizes.parked = runtime.StackSize()
++		close(ready)
++		<-resume
++		*headroom = runtime.StackHeadroom()
++		sizes.resumed = runtime.StackSize()
++	}
++}
++
++// faultAfterParkPoint is growDeepReturnToParkPoint's counterpart for a real
++// hardware fault instead of a headroom measurement: debug.SetPanicOnFault
++// and the deferred recover are both armed before blocking, so the only
++// things that run between resume unblocking and the fault are the nosplit
++// stack size read and the faulting read itself, inline, with nothing else
++// entered in between. Calling a separate probe function after resume would
++// have the problem described at growDeepReturnToParkPoint: its entry check
++// would run first and could repair an undersized stack before the fault
++// had the chance to land.
++//
++//go:noinline
++//go:nocheckptr
++func faultAfterParkPoint(cur, deepTo, parkAt int, ballast [1024]byte, ready chan<- struct{}, resume <-chan struct{}, sizes *stackSizes) (faulted bool) {
++	if cur < deepTo {
++		faulted = faultAfterParkPoint(cur+1, deepTo, parkAt, ballast, ready, resume, sizes)
++	}
++	if cur == parkAt {
++		old := debug.SetPanicOnFault(true)
++		defer debug.SetPanicOnFault(old)
++		defer func() {
++			if recover() != nil {
++				faulted = true
++			}
++		}()
++		sizes.parked = runtime.StackSize()
++		close(ready)
++		<-resume
++		sizes.resumed = runtime.StackSize()
++		const unmapped = 0x1000
++		_ = *(*byte)(unsafe.Pointer(uintptr(unmapped)))
++	}
++	return faulted
++}
+diff --git a/src/runtime/stack.go b/src/runtime/stack.go
+index 097b207..0d3c6dc 100644
+--- a/src/runtime/stack.go
++++ b/src/runtime/stack.go
+@@ -102,6 +102,51 @@
+ 	stackGuard = stackNosplit + stackSystem + abi.StackSmall
+ )
+ 
++// The OS reserve below every goroutine stack, the stack guard distance and
++// the minimum stack allocation, in force.
++//
++// They start at the compile-time floors (stackSystem, stackGuard and
++// fixedStack) and may be raised once, before any goroutine stack is
++// allocated, by setStackSystemReserve: some systems need more room below a
++// goroutine's stack than stackSystem grants, and how much is only known at
++// run time. Windows is one: the kernel dispatches every exception on the
++// faulting goroutine's own stack, pushing a CONTEXT whose size depends on
++// the CPU's extended register state (see exceptionStackReserve in
++// os_windows.go).
++//
++// The compile-time stackGuard still applies in two places. The assembly
++// that bootstraps g0 (rt0_go and the thread entry points) sets its guard
++// from const_stackGuard before mstart0 and minit replace it with
++// stackGuardSize, so no architecture's assembly changes for a Windows-only
++// need. And the linker's nosplit check assumes only the floor, which stays
++// valid because stackGuardSize never falls below it.
++var (
++	stackSystemReserve uintptr = stackSystem
++	stackGuardSize     uintptr = stackGuard
++	stackMinAlloc      uint32  = fixedStack
++)
++
++// setStackSystemReserve raises the per-stack OS reserve to n bytes, and with
++// it the stack guard distance and the minimum stack allocation. It must be
++// called from osinit, before the first goroutine stack is allocated, and
++// only raises. Later calls are test-only: they rely on every reader
++// re-deriving its value from the new ones (the next execute resets each
++// goroutine's guard, gfget drops cached stacks of the old size, and the
++// prologue check grows a stack that is now undersized), and on the new
++// reserve being harmless for stacks allocated under the old one.
++func setStackSystemReserve(n uintptr) {
++	n = alignUp(n, 16)
++	if n <= stackSystemReserve {
++		return
++	}
++	stackSystemReserve = n
++	stackGuardSize = stackNosplit + n + abi.StackSmall
++	// Same shape as fixedStack: the smallest power of two that holds the
++	// reserve plus stackMin bytes of Go frames.
++	stackMinAlloc = uint32(round2(int32(stackMin + n)))
++	startingStackSize = stackMinAlloc
++}
++
+ const (
+ 	// stackDebug == 0: no logging
+ 	//            == 1: logging of per-stack operations
+@@ -996,7 +1041,7 @@
+ 
+ 	// Swap out old stack for new one
+ 	gp.stack = new
+-	gp.stackguard0 = new.lo + stackGuard // NOTE: might clobber a preempt request
++	gp.stackguard0 = new.lo + stackGuardSize // NOTE: might clobber a preempt request
+ 	gp.sched.sp = new.hi - used
+ 	gp.stktopsp += adjinfo.delta
+ 
+@@ -1124,7 +1169,7 @@
+ 		if !canPreemptM(thisg.m) {
+ 			// Let the goroutine keep running for now.
+ 			// gp->preempt is set, so it will be preempted next time.
+-			gp.stackguard0 = gp.stack.lo + stackGuard
++			gp.stackguard0 = gp.stack.lo + stackGuardSize
+ 			gogo(&gp.sched) // never return
+ 		}
+ 	}
+@@ -1183,7 +1228,7 @@
+ 	// recheck the bounds on return.)
+ 	if f := findfunc(gp.sched.pc); f.valid() {
+ 		max := uintptr(funcMaxSPDelta(f))
+-		needed := max + stackGuard
++		needed := max + stackGuardSize
+ 		used := gp.stack.hi - gp.sched.sp
+ 		for newsize-used < needed {
+ 			newsize *= 2
+@@ -1314,7 +1359,7 @@
+ 	newsize := oldsize / 2
+ 	// Don't shrink the allocation below the minimum-sized stack
+ 	// allocation.
+-	if newsize < fixedStack {
++	if newsize < uintptr(stackMinAlloc) {
+ 		return
+ 	}
+ 	// Compute how much of the stack is currently in use and only
+@@ -1323,7 +1368,16 @@
+ 	// down to the SP plus the stack guard space that ensures
+ 	// there's room for nosplit functions.
+ 	avail := gp.stack.hi - gp.stack.lo
+-	if used := gp.stack.hi - gp.sched.sp + stackNosplit; used >= avail/4 {
++	used := gp.stack.hi - gp.sched.sp
++	if used+stackNosplit >= avail/4 {
++		return
++	}
++	// The OS reserve must also still fit below the live frames on the
++	// smaller stack. stackMinAlloc only guarantees that for a nearly empty
++	// stack; a goroutine shrunk with more live frames than that could
++	// resume with less headroom than the reserve promises and take an
++	// exception before its next stack check. See #81238.
++	if newsize-used < stackNosplit+stackSystemReserve {
+ 		return
+ 	}
+ 
+@@ -1413,7 +1467,7 @@
+ }
+ 
+ // startingStackSize is the amount of stack that new goroutines start with.
+-// It is a power of 2, and between fixedStack and maxstacksize, inclusive.
++// It is a power of 2, and between stackMinAlloc and maxstacksize, inclusive.
+ // startingStackSize is updated every GC by tracking the average size of
+ // stacks scanned during the GC.
+ var startingStackSize uint32 = fixedStack
+@@ -1442,17 +1496,17 @@
+ 		p.scannedStacks = 0
+ 	}
+ 	if scannedStacks == 0 {
+-		startingStackSize = fixedStack
++		startingStackSize = stackMinAlloc
+ 		return
+ 	}
+-	avg := scannedStackSize/scannedStacks + stackGuard
+-	// Note: we add stackGuard to ensure that a goroutine that
++	avg := scannedStackSize/scannedStacks + uint64(stackGuardSize)
++	// Note: we add stackGuardSize to ensure that a goroutine that
+ 	// uses the average space will not trigger a growth.
+ 	if avg > uint64(maxstacksize) {
+ 		avg = uint64(maxstacksize)
+ 	}
+-	if avg < fixedStack {
+-		avg = fixedStack
++	if avg < uint64(stackMinAlloc) {
++		avg = uint64(stackMinAlloc)
+ 	}
+ 	// Note: maxstacksize fits in 30 bits, so avg also does.
+ 	startingStackSize = uint32(round2(int32(avg)))
