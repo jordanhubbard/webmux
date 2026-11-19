@@ -349,15 +349,16 @@ it('focuses and activates named page controls with opaque references and clears 
  } finally { view.unmount(); }
 });
 
-it('retires accessible controls while a replacement snapshot is pending', async () => {
+it.each([false, true])('retires accessible controls while a replacement snapshot is pending (queued: %s)', async queued => {
  const frame = { protocol: 3, control: { owned: true, available: false }, image: 'fixture', url: 'https://example.com/work', tabs: [], target: 'one' };
  const snapshot = (element: string) => ({ ...frame, pageText: { nodes: [{ role: 'textbox', name: 'Search', depth: 1, element, canFocus: true }], truncated: false } });
  let completeRefresh!: (value: ReturnType<typeof snapshot>) => void;
+ let completeQueued!: (value: ReturnType<typeof snapshot>) => void;
  let reads = 0;
  fixture.action.mockReset().mockImplementation(async (_id, request) => {
   if (request.action !== 'read_page') return frame;
   if (++reads === 1) return snapshot('old-reference');
-  return new Promise<ReturnType<typeof snapshot>>(resolve => { completeRefresh = resolve; });
+  return new Promise<ReturnType<typeof snapshot>>(resolve => { if (reads === 2) completeRefresh = resolve; else completeQueued = resolve; });
  });
  const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
  try {
@@ -368,7 +369,15 @@ it('retires accessible controls while a replacement snapshot is pending', async 
   expect(reads).toBe(2);
   expect(screen.queryByRole('region', { name: 'Remote page text' })).toBeNull();
   expect(fixture.action.mock.calls.filter(call => call[1].action === 'focus_element')).toHaveLength(0);
-  await act(async () => { completeRefresh(snapshot('fresh-reference')); });
+  if (queued) {
+   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Read page text' })); });
+   await act(async () => { completeRefresh(snapshot('superseded-reference')); });
+   expect(reads).toBe(3);
+   expect(screen.queryByRole('region', { name: 'Remote page text' })).toBeNull();
+   await act(async () => { completeQueued(snapshot('fresh-reference')); });
+  } else {
+   await act(async () => { completeRefresh(snapshot('fresh-reference')); });
+  }
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Focus Search' })); });
   expect(fixture.action).toHaveBeenCalledWith('test', { action: 'focus_element', target: 'one', element: 'fresh-reference' });
   expect(screen.getByRole('textbox', { name: 'Type into remote page' })).toHaveFocus();
