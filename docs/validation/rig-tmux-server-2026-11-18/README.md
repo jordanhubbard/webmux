@@ -1,5 +1,10 @@
 # Rig tmux server identity qualification
 
+The [current qualification refresh](../rig-routing-current-2026-11-19/README.md)
+revalidates the two-real-server test. #464 remains open with #469/#603 because
+the full current modern managed-creation workload is not qualified. Historical
+results below retain their original source and scope.
+
 Issue #464 preserves a canonical Rig seat's native tmux socket through viewer attachment, scrollback setup, liveness checks, stored identity, automatic reconnect and controller restore. Explicit Open can rebind a reviewed socket while retaining the same viewer, placement and history. Socket changes clear previous native recovery references and prevent activity/enrollment from being attributed to an older viewer.
 
 The structured path is admitted only for published `0.7.18 (3bf87c62)`. It reads bounded `ps --nodes -A --json --full` output and immediately projects approved fields because this build's `--fields` allow-list omits the server fields. Socket options are validated as data, never shell text. Standard default/label choices are resolved to absolute sockets; malformed selections cannot fall back to the attaching process's environment. The existing0.6.14 human-command grammar remains restricted to its exact canonical session name.

@@ -59,6 +59,13 @@ owner. The separate #478 qualification follow-up is now closed after the
 That audit preserves uncertainty about the geometry-free historical occurrence;
 broader recovery and release acceptance remain open.
 
+The [current Rig routing qualification](validation/rig-routing-current-2026-11-19/README.md)
+keeps #464/#469 open: the original legacy 13-case workload passes, while modern
+Rig passes 12 cases and refuses synthetic Codex in its tracked native-creation
+path. #603 tracks the remaining modern workload. The response observer now
+reveals the actual refusal without changing the original success assertion;
+separate authenticated native receipts retain their own scope.
+
 ### Recover active work after interruption
 
 [#318](https://github.com/jordanhubbard/webmux/issues/318) adds session-state
