@@ -655,7 +655,7 @@ func (s *Server) attachCoordinationTerminal(parent context.Context, owner string
 	if identityProvider == "rig" {
 		identityProvider = ""
 	}
-	identity := session.RigIdentity{Provider: identityProvider, Target: viewerTarget, Project: launch.Project, Name: launch.Name, Host: launch.Host, Runtime: launch.Runtime, Workspace: launch.Workspace, ManagerProfile: launch.Profile}
+	identity := session.RigIdentity{ProjectID: launch.ProjectID, Provider: identityProvider, Target: viewerTarget, Project: launch.Project, Name: launch.Name, Host: launch.Host, Runtime: launch.Runtime, Workspace: launch.Workspace, ManagerProfile: launch.Profile}
 	identity.RigHostID = launch.RigHostID
 	identity.SeatID = launch.SeatID
 	identity.AttachmentTarget = launch.AttachmentTarget

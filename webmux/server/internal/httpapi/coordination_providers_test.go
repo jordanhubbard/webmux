@@ -213,12 +213,18 @@ func TestAgentDeckProviderUsesExactLocalAndRemoteArgv(t *testing.T) {
 	if !reflect.DeepEqual(local.Argv, []string{executable, "session", "attach", "local-1"}) {
 		t.Fatalf("local attach argv: %#v", local.Argv)
 	}
+	if local.ProjectID != "local:webmux" {
+		t.Fatalf("local canonical project lost: %q", local.ProjectID)
+	}
 	remote, err := provider.Attach(context.Background(), "sparky:remote-1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(remote.Argv, []string{executable, "remote", "attach", "sparky", "remote-1"}) {
 		t.Fatalf("remote attach argv: %#v", remote.Argv)
+	}
+	if remote.ProjectID != "sparky:webmux" {
+		t.Fatalf("remote canonical project lost: %q", remote.ProjectID)
 	}
 	launched, err := provider.Launch(context.Background(), coordinationLaunchRequest{
 		Mode: "existing", ProjectID: "sparky:webmux", ProjectName: "webmux", Name: "reviewer",

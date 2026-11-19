@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { WorkspacePaneProvider, useWorkspacePane } from '@frontend/contexts/WorkspacePaneContext';
 import type { CoordinationStatus } from '@frontend/components/CoordinationDialog';
 import { Workspace } from '@frontend/components/Workspace';
-import { InputBroadcastProvider } from '@frontend/contexts/InputBroadcastContext';
+import { InputBroadcastProvider, useInputBroadcast } from '@frontend/contexts/InputBroadcastContext';
 import type { ReactNode, Ref } from 'react';
 
 const mockSessions = [
@@ -98,6 +98,52 @@ describe('Workspace', () => {
   });
 
   const defaultProps = { fontSize: 14, termCols: 80, termRows: 24, globalAutoScroll: true, globalAutoScrollVersion: 0, onGlobalAutoScrollChange: vi.fn(), globalLock: false, globalLockVersion: 0, onGlobalLockChange: vi.fn() };
+
+  it('selects a canonical project destination without including same-named projects or later viewers', async () => {
+    const { api } = await import('@frontend/utils/api');
+    const rig = { project: 'lab', name: 'worker', runtime: 'codex', host: 'foo', target: 'worker-a', project_id: 'rig-a' };
+    const a = { ...mockSessions[0], id: 'a', rig };
+    const b = { ...mockSessions[0], id: 'b', rig: { ...rig, host: 'bar', target: 'worker-b', project_id: 'rig-b' } };
+    const c = { ...mockSessions[0], id: 'c', rig: { ...rig, provider: 'agent-deck', manager_profile: 'work', target: 'local:worker-c', project_id: 'local:lab' } };
+    const personal = { ...c, id: 'personal', rig: { ...c.rig, manager_profile: 'personal', target: 'local:worker-personal' } };
+    vi.mocked(api.getSessions).mockResolvedValue([a, b, c, personal]);
+    function Enable() { const context = useInputBroadcast(); return <button onClick={() => context.setBroadcastMode(true)}>Enable broadcast for test</button>; }
+    render(<><Enable /><Workspace {...defaultProps} canManageRig={false} /></>, { wrapper });
+    await screen.findByTestId('terminal-a');
+    fireEvent.click(screen.getByRole('button', { name: 'Enable broadcast for test' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Project: lab · Rig · foo' }));
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · Rig · foo' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · Rig · bar' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · Agent Deck (work) · foo' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · Agent Deck (personal) · foo' })).not.toBeChecked();
+    const d = { ...a, id: 'd', rig: { ...rig, name: 'new worker', target: 'worker-d' } };
+    vi.mocked(api.getSessions).mockResolvedValue([{ ...a, rig: { ...rig, project: 'renamed' } }, b, c, personal, d]);
+    fireEvent(window, new CustomEvent('webmux-sessions-changed'));
+    await screen.findByTestId('terminal-d');
+    expect(screen.getByRole('checkbox', { name: 'renamed/worker · Rig · foo' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/new worker · Rig · foo' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · Rig · bar' })).not.toBeChecked();
+  });
+
+  it('distinguishes same-host canonical projects and leaves legacy identity ungrouped', async () => {
+    const { api } = await import('@frontend/utils/api');
+    const rig = { project: 'lab', name: 'worker', runtime: 'codex', host: 'foo', target: 'a', project_id: 'project-one' };
+    const a = { ...mockSessions[0], id: 'a', rig };
+    const b = { ...a, id: 'b', rig: { ...rig, target: 'b', project_id: 'project-two' } };
+    const legacy = { ...a, id: 'legacy', rig: { ...rig, target: 'legacy', project_id: undefined, host: '' } };
+    vi.mocked(api.getSessions).mockResolvedValue([a, b, legacy]);
+    function Enable() { const context = useInputBroadcast(); return <button onClick={() => context.setBroadcastMode(true)}>Enable broadcast for test</button>; }
+    render(<><Enable /><Workspace {...defaultProps} canManageRig={false} /></>, { wrapper });
+    await screen.findByTestId('terminal-a');
+    fireEvent.click(screen.getByRole('button', { name: 'Enable broadcast for test' }));
+    const one = screen.getByRole('button', { name: 'Project: lab · Rig · foo · project-one' });
+    expect(screen.getByRole('button', { name: 'Project: lab · Rig · foo · project-two' })).toBeInTheDocument();
+    fireEvent.click(one);
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · Rig · foo · viewer a' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · Rig · foo · viewer b' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · Rig · Unknown execution host' })).not.toBeChecked();
+    expect(screen.getByText(/Project identity or destination unavailable/)).toBeInTheDocument();
+  });
 
   it('opens a canonical seat from the grid navigator at the chosen empty cell', async () => {
     const { api } = await import('@frontend/utils/api');

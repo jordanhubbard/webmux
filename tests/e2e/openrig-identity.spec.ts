@@ -44,7 +44,7 @@ test('logical Rig seat keeps its viewer and layout after an explicit native rebi
     return { enrollment: JSON.parse(readFileSync(file, 'utf8')) as Enrollment, pid: pids[0], starts, input };
   };
   type Seat = { id: string; projectId: string; name: string; managerTarget?: string; attachmentTarget?: string };
-  type Viewer = { id: string; row: number; col: number; rig: { target: string; seat_id?: string } };
+  type Viewer = { id: string; row: number; col: number; rig: { target: string; seat_id?: string; project_id?: string } };
   const observe = async () => (await (await request.get('/api/coordination?provider=rig')).json() as { seats: Seat[] }).seats.find(s => s.projectId === rigId && s.name === 'agents.external');
   const open = async () => {
     const summary = page.locator('summary').filter({ hasText: 'Coordinated sessions' });
@@ -69,6 +69,7 @@ test('logical Rig seat keeps its viewer and layout after an explicit native rebi
     const original = (await observe())!;
     await page.goto('/');
     const firstView = await open(); viewer = firstView.id;
+    expect(firstView.rig.project_id).toBe(rigId);
     expect([firstView.row, firstView.col]).toEqual([0, 0]);
     const tile = page.getByTestId(`tile-cell-${viewer}`);
     await expect(tile.locator('.xterm-rows')).toContainText(`FIRST_READY:${first.pid};`);

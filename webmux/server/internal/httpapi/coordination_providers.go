@@ -270,6 +270,7 @@ type coordinationLaunchRequest struct {
 }
 
 type coordinationLaunch struct {
+	ProjectID        string
 	TmuxServerFlag   string
 	TmuxServerValue  string
 	AttachmentTarget string
@@ -594,7 +595,7 @@ func (p *rigProvider) Launch(ctx context.Context, request coordinationLaunchRequ
 	}
 	return coordinationLaunch{
 		TmuxServerFlag: seat.TmuxServerFlag, TmuxServerValue: seat.TmuxServerValue,
-		SeatID: localRigSeatID(seat.RigID, seat.LogicalID), AttachmentTarget: seat.TmuxTarget,
+		ProjectID: seat.RigID, RigHostID: rigHostID(seat.HostSelfID), SeatID: localRigSeatID(seat.RigID, seat.LogicalID), AttachmentTarget: seat.TmuxTarget,
 		Provider: "rig", Target: agent.Target, Title: agent.Name + " · " + agent.Host + " · " + agent.Project,
 		Project: agent.Project, Name: agent.Name, Host: agent.Host, Workspace: agent.Cwd, Runtime: agent.Runtime,
 		Argv: append([]string{tmux}, args...),
@@ -630,7 +631,7 @@ func (p *rigProvider) Attach(ctx context.Context, target string) (coordinationLa
 		if err != nil {
 			return coordinationLaunch{}, err
 		}
-		return coordinationLaunch{TmuxServerFlag: seat.TmuxServerFlag, TmuxServerValue: seat.TmuxServerValue, SeatID: id, AttachmentTarget: seat.TmuxTarget, Provider: "rig", Target: agent.Target, Title: agent.Name + " · " + agent.Host + " · " + agent.Project, Project: agent.Project, Name: agent.Name, Host: agent.Host, Workspace: agent.Cwd, Runtime: agent.Runtime, Argv: append([]string{tmux}, args...)}, nil
+		return coordinationLaunch{TmuxServerFlag: seat.TmuxServerFlag, TmuxServerValue: seat.TmuxServerValue, ProjectID: seat.RigID, RigHostID: rigHostID(seat.HostSelfID), SeatID: id, AttachmentTarget: seat.TmuxTarget, Provider: "rig", Target: agent.Target, Title: agent.Name + " · " + agent.Host + " · " + agent.Project, Project: agent.Project, Name: agent.Name, Host: agent.Host, Workspace: agent.Cwd, Runtime: agent.Runtime, Argv: append([]string{tmux}, args...)}, nil
 	}
 	{
 		tmux, err := exec.LookPath("tmux")
@@ -641,7 +642,7 @@ func (p *rigProvider) Attach(ctx context.Context, target string) (coordinationLa
 		if name == "" {
 			name = seat.LogicalID
 		}
-		return coordinationLaunch{TmuxServerFlag: seat.TmuxServerFlag, TmuxServerValue: seat.TmuxServerValue, SeatID: id, AttachmentTarget: seat.TmuxTarget, Provider: "rig", Target: target, Title: name + " · Unknown execution host · " + seat.RigName, Project: seat.RigName, Name: name, RigHostID: rigHostID(seat.HostSelfID),
+		return coordinationLaunch{ProjectID: seat.RigID, TmuxServerFlag: seat.TmuxServerFlag, TmuxServerValue: seat.TmuxServerValue, SeatID: id, AttachmentTarget: seat.TmuxTarget, Provider: "rig", Target: target, Title: name + " · Unknown execution host · " + seat.RigName, Project: seat.RigName, Name: name, RigHostID: rigHostID(seat.HostSelfID),
 			Runtime: seat.Runtime, Argv: append([]string{tmux}, args...)}, nil
 	}
 }
@@ -1256,7 +1257,7 @@ func (p *agentDeckProvider) Attach(ctx context.Context, target string) (coordina
 	} else {
 		argv = append([]string{p.executable}, agentDeckLocalArgs(seat.Profile, argv[1:]...)...)
 	}
-	return coordinationLaunch{Provider: "agent-deck", Target: target, Profile: seat.Profile, NativeSession: seat.NativeSession, NativeStateFile: seat.NativeStateFile, Title: seat.Name + " · " + seat.Host + " · " + seat.ProjectName, Project: seat.ProjectName, Name: seat.Name, Host: seat.Host, Workspace: seat.Workspace, Runtime: seat.Runtime, Argv: argv}, nil
+	return coordinationLaunch{Provider: "agent-deck", ProjectID: seat.ProjectID, Target: target, Profile: seat.Profile, NativeSession: seat.NativeSession, NativeStateFile: seat.NativeStateFile, Title: seat.Name + " · " + seat.Host + " · " + seat.ProjectName, Project: seat.ProjectName, Name: seat.Name, Host: seat.Host, Workspace: seat.Workspace, Runtime: seat.Runtime, Argv: argv}, nil
 }
 
 func (p *agentDeckProvider) Launch(ctx context.Context, request coordinationLaunchRequest) (coordinationLaunch, error) {

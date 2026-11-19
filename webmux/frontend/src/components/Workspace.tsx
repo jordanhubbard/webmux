@@ -12,6 +12,7 @@ import { api } from '../utils/api';
 import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { useWorkspacePane } from '../contexts/WorkspacePaneContext';
 import { sessionIdentity } from '../utils/sessionIdentity';
+import { broadcastProjects, broadcastRecipientLabels } from '../utils/broadcastProjects';
 import type { Session, CreateSessionRequest, NamedTheme, ManagedClient, HostEntry } from '../types';
 import { loadSessionThemeOverrides, saveSessionThemeOverrides } from '../utils/themes';
 import { useElementSize, useTouchLikeViewport } from '../utils/viewport';
@@ -625,6 +626,9 @@ export function Workspace({
     };
   }, [draggingId, getGridCell, terminalGridLimit]);
 
+  const broadcastProjectGroups = broadcastProjects(sessions);
+  const recipientLabels = broadcastRecipientLabels(sessions);
+
   const visibleSessions = sessions.filter(s => !collapsedSessions.has(s.id));
 
   // Use occupied columns, excluding the extra column of add-session cells.
@@ -688,9 +692,10 @@ export function Workspace({
         <strong>Type to All recipients</strong>
         {broadcastScope === 'selected' && <span>New sessions stay unselected until you choose them.</span>}
         <button type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), sessions.map(s => s.id))}>All</button>
-        {[...new Set(sessions.flatMap(s => s.rig ? [s.rig.project] : []))].sort().map(project => <button key={project} type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), sessions.filter(s => s.rig?.project === project).map(s => s.id))}>Project: {project}</button>)}
+        {broadcastProjectGroups.map(group => <button key={group.key} type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), group.ids)}>{group.label}</button>)}
         <button type="button" onClick={() => setBroadcastRecipients(sessions.map(s => s.id), [])}>None</button>
-        {sessions.map(session => <label key={session.id} style={{ whiteSpace: 'nowrap' }}><input type="checkbox" checked={isBroadcastRecipient(session.id)} onChange={() => toggleBroadcastExclude(session.id)} />{session.rig ? `${session.rig.project}/${session.rig.name}` : session.title}</label>)}
+        {sessions.some(session => session.rig && !broadcastProjectGroups.some(group => group.ids.includes(session.id))) && <span>Project identity or destination unavailable for some viewers. Select them individually, or reopen them from Coordination to refresh.</span>}
+        {sessions.map(session => <label key={session.id} style={{ whiteSpace: 'nowrap' }}><input type="checkbox" checked={isBroadcastRecipient(session.id)} onChange={() => toggleBroadcastExclude(session.id)} />{recipientLabels.get(session.id)}</label>)}
       </div>}
       {sessions.length > 0 && (
         <div style={styles.dock} role="toolbar" aria-label="Terminal layout">
