@@ -200,18 +200,24 @@ func Ensure(ctx context.Context, c Config) (Identity, bool, error) {
 		return Identity{}, false, errors.New("the outer Windows job does not permit an independent native provider")
 	}
 	startupFailure := securityBlockError(startErr)
+	if startErr != nil {
+		startupFailure = errors.Join(startupFailure, startupReplyError(startupFailureFrame(startupBootstrap, startErr)))
+	}
 	var reply frame
-	if startErr == nil && readFrame(bytes.NewReader(out), &reply) == nil && reply.Kind == "ready" {
-		if reply.Error == "" && reply.Identity != nil {
+	if readFrame(bytes.NewReader(out), &reply) == nil && reply.Kind == "ready" {
+		if startErr == nil && reply.Error == "" && reply.Identity != nil {
 			if i, err := Probe(ctx, *reply.Identity, c.Key); err == nil {
 				return i, i.Instance == previous.Instance, nil
 			}
 		}
-		// Only recognized OS codes become diagnostics. Never expose arbitrary
-		// child error text, which could contain launch credentials.
+		// Only recognized OS blocks and fixed phase labels become diagnostics.
+		// Arbitrary child error text could contain launch credentials.
 		if failure := securityBlockError(syscall.Errno(reply.Code)); failure != nil {
 			startupFailure = failure
 		}
+		startupFailure = errors.Join(startupFailure, startupReplyError(reply))
+	} else if startErr == nil {
+		startupFailure = startupReplyError(startupFailureFrame(startupReply, nil))
 	}
 	// A lost bootstrap reply is not a reason to start another owner. Resolve
 	// the published record, including concurrent creation, within this budget.
@@ -233,7 +239,15 @@ func Ensure(ctx context.Context, c Config) (Identity, bool, error) {
 
 // Bootstrap exits after handing its private startup pipe to the independent
 // owner. No credentials are placed in argv, a durable record or a transcript.
-func Bootstrap(ctx context.Context, input io.Reader, output io.Writer) error {
+func Bootstrap(ctx context.Context, input io.Reader, output io.Writer) (resultErr error) {
+	phase := startupConfig
+	reporting := true
+	defer func() {
+		if reporting && resultErr != nil {
+			_ = writeFrame(output, startupFailureFrame(phase, resultErr))
+		}
+	}()
+	finish := func(reply frame) error { reporting = false; return writeFrame(output, reply) }
 	var c Config
 	if err := readFrame(input, &c); err != nil {
 		return err
@@ -248,6 +262,7 @@ func Bootstrap(ctx context.Context, input io.Reader, output io.Writer) error {
 	}
 	command.Stdin = &payload
 	detached(command)
+	phase = startupOwnerProcess
 	pipe, err := command.StdoutPipe()
 	if err != nil {
 		return err
@@ -257,7 +272,7 @@ func Bootstrap(ctx context.Context, input io.Reader, output io.Writer) error {
 		if failure := securityBlockError(err); failure != nil {
 			var code syscall.Errno
 			if errors.As(err, &code) {
-				return writeFrame(output, frame{Kind: "ready", Error: failure.Error(), Code: int(code)})
+				return finish(frame{Kind: "ready", Error: failure.Error(), Code: int(code)})
 			}
 		}
 		return err
@@ -267,7 +282,7 @@ func Bootstrap(ctx context.Context, input io.Reader, output io.Writer) error {
 	go func() {
 		var reply frame
 		if err := readFrame(pipe, &reply); err != nil {
-			reply = frame{Kind: "ready", Error: "native provider startup reply unavailable"}
+			reply = startupFailureFrame(startupOwnerReply, err)
 		}
 		result <- reply
 	}()
@@ -275,8 +290,8 @@ func Bootstrap(ctx context.Context, input io.Reader, output io.Writer) error {
 	defer cancel()
 	select {
 	case reply := <-result:
-		return writeFrame(output, reply)
+		return finish(reply)
 	case <-ctx.Done():
-		return writeFrame(output, frame{Kind: "ready", Error: "native provider startup is uncertain"})
+		return finish(startupFailureFrame(startupOwnerReply, ctx.Err()))
 	}
 }

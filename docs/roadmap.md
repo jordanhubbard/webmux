@@ -149,6 +149,11 @@ Remaining #318 work, in order:
    [browser-fixture lifecycle repair](validation/windows-local-stop-2026-11-18/ci-fixtures.md)
    retains unresolved access and closes owned browser workers; it does not
    qualify the unconfirmed native launch.
+   Fixed startup phases now preserve safe failure evidence, with all 23 native
+   provider tests/91 pass events and a failing parent-code control. A new
+   application browser gate requires a connected owner, fresh child output and
+   confirmed Stop/child exit; hosted execution and the actual cause remain
+   pending ([scope](validation/windows-startup-diagnostics-2026-11-18/README.md)).
 2. Codex in default shared-daemon mode is manual-only by owner decision: no
    observation point preserves launch mode and sandbox policy after interactive
    switches. Revisit when [openai/codex#60625](https://github.com/openai/codex/issues/60625)
