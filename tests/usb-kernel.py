@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Disposable GitHub Linux VM only: real USB/IP over the shipped SSH relay.
+"""Disposable Linux VM only: real USB/IP over the shipped SSH relay.
 
 No physical device is selected. A USB/IP virtual controller owns a temporary mass
 storage gadget, and the importer must enumerate it below vhci_hcd.
@@ -20,6 +20,7 @@ import time
 import urllib.request
 
 from usb_sysfs import imported_disk, imported_disk_with_payload
+from usb_hold_diagnostics import held_reply_diagnostic
 
 
 def run(*args, check=True):
@@ -50,8 +51,16 @@ def listening(port):
         return False
 
 
-if os.geteuid() != 0 or os.environ.get("GITHUB_ACTIONS") != "true" or socket.gethostname() != "virtme-ng":
-    sys.exit("Run only as root in a disposable GitHub Actions Linux VM.")
+local_parent = os.environ.get('WEBMUX_USB_LOCAL_PARENT_BOOT_ID')
+if local_parent is not None:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+    from usb_fixture_context import local_guest
+    try:
+        local_guest(local_parent)
+    except (OSError, ValueError) as error:
+        sys.exit(str(error))
+if os.geteuid() != 0 or (local_parent is None and os.environ.get("GITHUB_ACTIONS") != "true") or socket.gethostname() != "virtme-ng":
+    sys.exit("Run only as root in a disposable hosted or admitted local virtme Linux VM.")
 binary = str(Path(sys.argv[1]).resolve(strict=True))
 direct_control = sys.argv[2:] == ["--direct-control"]
 stale_control = sys.argv[2:] == ["--stale-control"]
@@ -124,7 +133,12 @@ try:
         before = int(held.read_text())
         (parameters / "webmux_test_hold_replies").write_text("1")
         reader = start("held-read", "dd", f"if={disk}", "of=/dev/null", "bs=4096", "skip=256", "count=1", "iflag=direct", "status=none")
-        until(lambda: int(held.read_text()) > before, "real native completion queued under TX hold")
+        try:
+            until(lambda: int(held.read_text()) > before, "real native completion queued under TX hold")
+        except RuntimeError:
+            print('HELD_REPLY_DIAGNOSTIC ' + json.dumps(
+                held_reply_diagnostic(parameters, before, reader, disk)), flush=True)
+            raise
         assert reader.poll() is None, "direct read completed instead of remaining held"
         print("Genuine native reply queued; direct read is blocked", flush=True)
         ports = re.findall(r"Port (\d+):", run("usbip", "port"))

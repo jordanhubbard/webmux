@@ -1,0 +1,344 @@
+{
+  "scope": "Local test execution and observation; not a repair of the initial held-reply timeout or full release acceptance.",
+  "firstFailedCohort": {
+    "process": {
+      "exit": 1,
+      "elapsed": 142.2824902079301
+    },
+    "results": [
+      {
+        "control": "unpatched",
+        "exit": 1,
+        "admitted": true,
+        "module_sha256": "2198a607b098144710d8b55e5c43e0ea5da7f0c8edf711a28119bbe3e0c7b1e0",
+        "srcversion": "0E77E9FAE1ED8C902094921",
+        "logSHA256": "c3d1c81c31f11ef4d9300645b13c49bf66f2fd6735b0404d6b3990f11cacc13d",
+        "logBytes": 60258,
+        "moduleELFMachine": 183
+      },
+      {
+        "control": "corrected-held",
+        "exit": 1,
+        "admitted": false,
+        "module_sha256": "c837bbbc759463f9ab7fa475e895d66b1616364d24aef75630a78bcda20e23ef",
+        "srcversion": "AFA0841746AD954FEFE2CCF",
+        "logSHA256": "e23d70320dd35bdd42397068c5b9679a347edf0fc054f48b0f5beb788ff8d76b",
+        "logBytes": 58383,
+        "moduleELFMachine": 183
+      }
+    ],
+    "failure": "corrected-held: original30second completion-queue barrier timed out; direct20/SSH unreached"
+  },
+  "changedObserverCohort": {
+    "process": {
+      "exit": 1,
+      "elapsed": 234.30070595804136
+    },
+    "results": [
+      {
+        "control": "unpatched",
+        "exit": 1,
+        "admitted": true,
+        "module_sha256": "9d103c265fdc35e430828af89d6914fae61bdd96c108e3f4bb0cb610f2a4eedc",
+        "srcversion": "0E77E9FAE1ED8C902094921",
+        "logSHA256": "b822fea42894eb32a986d8c37f696232b165128b0d1cf11c59a4e8db24509da5",
+        "logBytes": 60692,
+        "moduleELFMachine": 183
+      },
+      {
+        "control": "corrected-held",
+        "exit": 0,
+        "admitted": true,
+        "module_sha256": "2f0f4dcd63701895f5fb58a9f993cdb8cc855f43b6091851bf304674bc60954a",
+        "srcversion": "AFA0841746AD954FEFE2CCF",
+        "logSHA256": "8a628023595ff738b9dc27d77b4fd0f9f137e6e091e6e7307956f51025f62d3a",
+        "logBytes": 91095,
+        "moduleELFMachine": 183
+      },
+      {
+        "control": "direct-20",
+        "exit": 0,
+        "admitted": true,
+        "module_sha256": "d6f5da840cb7f6e6ece567571eeedf0f3e1566384eb3abb831070d072f1780e5",
+        "srcversion": "CEF310F2896192F4A8FAE09",
+        "logSHA256": "1609d270eb9d8b324b1ff9a9e44de8441359df9a8890d59419d5855c3a9b2644",
+        "logBytes": 144245,
+        "moduleELFMachine": 183
+      },
+      {
+        "control": "webmux-ssh",
+        "exit": 1,
+        "admitted": false,
+        "module_sha256": "d6f5da840cb7f6e6ece567571eeedf0f3e1566384eb3abb831070d072f1780e5",
+        "srcversion": "CEF310F2896192F4A8FAE09",
+        "logSHA256": "a4cb73f481fe09ad85be4368d3a1c0c5fe1ae013aeedb7bc55b065a15fb63bc6",
+        "logBytes": 54632,
+        "moduleELFMachine": 183
+      }
+    ],
+    "failure": "SSH: tracked application defaults omitted from local snapshot; not an admitted native success"
+  },
+  "correctedDefaultsSSHControl": {
+    "exit": 0,
+    "elapsed": 49.39595333393663,
+    "logSHA256": "5b369b2e7ceb96eeb73a3f23dcaa633cf69135c8905e80073d2a281dec47c68b"
+  },
+  "priorCompleteCohort": {
+    "applicationSource": "03e1b2106c6719ccf9cfcbe6c2c8af26ee1adb21",
+    "process": {
+      "exit": 0,
+      "elapsed": 254.60796512500383
+    },
+    "results": [
+      {
+        "control": "unpatched",
+        "exit": 1,
+        "admitted": true,
+        "module_sha256": "33c06a379d0e202ae274998cee1d2bb49d595b0d644a00528237a5c80f52695e",
+        "srcversion": "0E77E9FAE1ED8C902094921",
+        "logSHA256": "5a59940dfccf79eb7e202f80fa795be7fc4b4d02ccb603799ce74b179ce39116",
+        "logBytes": 60726,
+        "moduleELFMachine": 183
+      },
+      {
+        "control": "corrected-held",
+        "exit": 0,
+        "admitted": true,
+        "module_sha256": "363ccbd312a7f3dd1aa1764b972c8aa1877b6e0c8966ad7e0326948efc88c003",
+        "srcversion": "AFA0841746AD954FEFE2CCF",
+        "logSHA256": "3cd19618a74076a67b4049e181373d90e304a9a5b6ce4d8586fe6672452a886a",
+        "logBytes": 91085,
+        "moduleELFMachine": 183
+      },
+      {
+        "control": "direct-20",
+        "exit": 0,
+        "admitted": true,
+        "module_sha256": "a9a4954ecbce13a36619be0508e720849118e5fcb690efa2d0cdb0521a902848",
+        "srcversion": "CEF310F2896192F4A8FAE09",
+        "logSHA256": "11ab6d2ae77468a5aca47d0593733118ecd3a20b89fc4c56333ce2a5114136ab",
+        "logBytes": 144241,
+        "moduleELFMachine": 183
+      },
+      {
+        "control": "webmux-ssh",
+        "exit": 0,
+        "admitted": true,
+        "module_sha256": "a9a4954ecbce13a36619be0508e720849118e5fcb690efa2d0cdb0521a902848",
+        "srcversion": "CEF310F2896192F4A8FAE09",
+        "logSHA256": "8766aac0495e479a5643ff4ece0c490ffa9adcab2e38444cc9dc4727c5d66d51",
+        "logBytes": 73079,
+        "moduleELFMachine": 183
+      }
+    ]
+  },
+  "currentCompleteCohort": {
+    "applicationSource": "4989e16b59e91924d74dd8e83c5fbfa669f6b179",
+    "process": {
+      "exit": 0,
+      "elapsed": 240.70008129102644
+    },
+    "results": [
+      {
+        "control": "unpatched",
+        "exit": 1,
+        "admitted": true,
+        "module_sha256": "9417c34ce7877cc18b239ee765a218b482b5d37f233d798c636247ad04153bad",
+        "srcversion": "0E77E9FAE1ED8C902094921",
+        "logSHA256": "7d31373b1ac35ec0c1f9d1e5e2e527c6689354e353d5d9b8a185d6475f09d669",
+        "logBytes": 60145,
+        "moduleELFMachine": 183
+      },
+      {
+        "control": "corrected-held",
+        "exit": 0,
+        "admitted": true,
+        "module_sha256": "6de381625bf5f1d65047f0883d269dd0018fdfd868b110e4090c2c9d07591919",
+        "srcversion": "AFA0841746AD954FEFE2CCF",
+        "logSHA256": "eae3e7ad2592275f530ef0c544c938c261c05c079a0afc70f794b7083ffde6d6",
+        "logBytes": 90911,
+        "moduleELFMachine": 183
+      },
+      {
+        "control": "direct-20",
+        "exit": 0,
+        "admitted": true,
+        "module_sha256": "151e775c8b386204f17f25ea7cddd2dfce13e1d6eeaf8cd3e05b6ea538debce7",
+        "srcversion": "CEF310F2896192F4A8FAE09",
+        "logSHA256": "9228730dbf64790c8488a7ff7ae0a17e48160fe738081acadede37a208605c0b",
+        "logBytes": 144342,
+        "moduleELFMachine": 183
+      },
+      {
+        "control": "webmux-ssh",
+        "exit": 0,
+        "admitted": true,
+        "module_sha256": "151e775c8b386204f17f25ea7cddd2dfce13e1d6eeaf8cd3e05b6ea538debce7",
+        "srcversion": "CEF310F2896192F4A8FAE09",
+        "logSHA256": "42182b38c78424609836e45429e2564724c1558f7d18009120f973386db65746",
+        "logBytes": 69617,
+        "moduleELFMachine": 183
+      }
+    ]
+  },
+  "currentFixtureSnapshot": {
+    "files": 260,
+    "manifestSHA256": "a19d23c826193ce2dde7836012b6ee63783f8e1f74392d62d66409a6bf75b135",
+    "changedNativeSource": [
+      {
+        "path": "scripts/qualify-test-vudc.py",
+        "sha256": "a59aad43302a87b1b6a543dafb395a35eda3f2561dabfc62a179bb34c7901957"
+      },
+      {
+        "path": "scripts/usb_fixture_context.py",
+        "sha256": "81625eb0a62f47db90e633fb022055f5de47bfd37841403793a00b9d03b5ec0e"
+      },
+      {
+        "path": "scripts/test_usb_fixture_context.py",
+        "sha256": "b1c3c394877230b8cbf40d790f75fde7fb5ef20ef0c2af8e9cdd10e58792cd7f"
+      },
+      {
+        "path": "tests/usb-kernel.py",
+        "sha256": "213c0ac4bde6e7b645756d3a15d6285fad2e11e876f983b50aefd81a1ce6f842"
+      },
+      {
+        "path": "tests/usb_hold_diagnostics.py",
+        "sha256": "04e746e4504a7574cd883594ffd778c19b0185598a8e1e148e17835600d49d24"
+      },
+      {
+        "path": "tests/test_usb_hold_diagnostics.py",
+        "sha256": "3ad83efa718c32c55ec85cc2df03dd4aab6569183def7feadad4cf12f4da0066"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "sha256": "0e10ca0ffc575a426e0861d8d6e6bb036b2eb17e36e77ed4dbc4dd11e617060d"
+      }
+    ]
+  },
+  "currentAcquisition": [
+    {
+      "build": "unpatched",
+      "files": 8,
+      "bundle": 8,
+      "cache": 0,
+      "networkAttempts": 0,
+      "receiptSHA256": "24be6771538356d8df69c6f5db0c9ac96312721dc5cfb12738d303546e81afa1"
+    },
+    {
+      "build": "corrected-held",
+      "files": 8,
+      "bundle": 0,
+      "cache": 8,
+      "networkAttempts": 0,
+      "receiptSHA256": "0ca4b10fb85f36b54b2cfbcfdc12aa45eded20ecb8433e6095fe0bcaa2f50b7f"
+    },
+    {
+      "build": "corrected",
+      "files": 8,
+      "bundle": 0,
+      "cache": 8,
+      "networkAttempts": 0,
+      "receiptSHA256": "0ca4b10fb85f36b54b2cfbcfdc12aa45eded20ecb8433e6095fe0bcaa2f50b7f"
+    }
+  ],
+  "binary": {
+    "source": "4989e16b59e91924d74dd8e83c5fbfa669f6b179",
+    "sha256": "316bd334bcb254ce75be804f0aec8e7c7eb15d895657f53fa6e7e50cac9bb7de",
+    "ELFMachine": 183,
+    "go": "1.27.4",
+    "target": "linux/arm64",
+    "CGO_ENABLED": "0",
+    "vcsModified": false
+  },
+  "execution": {
+    "name": "webmux-usb550-current",
+    "id": "46e4938ed951502e3223845e80ecc3e429964fb7744703441e10a2d116e8bb6c",
+    "prerequisiteImage": "sha256:33ed0fa969e5cb39823e5d80f2cb1fdfc25ea617fbc91ee2ff9b5f6a4641e82d",
+    "privileged": false,
+    "hostMounts": [],
+    "hostDevices": [],
+    "publishedPorts": {},
+    "githubIdentity": false,
+    "base": "4989e16b59e91924d74dd8e83c5fbfa669f6b179",
+    "sourceFiles": 260
+  },
+  "dependency": {
+    "file": "virtme_ng-1.41.tar.gz",
+    "url": "https://files.pythonhosted.org/packages/be/c0/86589448be43550ad8ba372857c7a8cc19639d2d7f60b02d34707e26db62/virtme_ng-1.41.tar.gz",
+    "sha256": "0480a197130963062af11d57a3d602fa0c1bbe6645c5b590f783e3ae639dfefa",
+    "bytes": 884477
+  },
+  "explicitPrivateDependencyPatch": {
+    "package": "virtme-ng",
+    "version": "1.41 plus local explicit modfinder patch; not an unmodified release",
+    "file": "/opt/virtme/lib/python3.12/site-packages/virtme/modfinder.py",
+    "originalSHA256": "1498408cc3adcd7d439766deefded54ff650f08f5b28c01038a09be26d40f45d",
+    "modifiedSHA256": "def5a29c546b1b16083626feb532d9df1ad21a82860f595dbfd58d91c1bd1395",
+    "reason": "Read module filename separately from modprobe options inherited from Docker kernel command line. No USB, native admission or deadline changes.",
+    "realModuleResolution": "['/lib/modules/6.8.0-146-generic/kernel/fs/fuse/virtiofs.ko.zst']"
+  },
+  "exitStatusBootProbe": {
+    "exit": 7,
+    "elapsed": 23.49183020903729
+  },
+  "actualContextRefusals": [
+    {
+      "control": "ordinary-container-refused",
+      "exit": 1,
+      "output": "Run only as root in a disposable hosted or admitted local virtme Linux VM."
+    },
+    {
+      "control": "same-boot-refused",
+      "exit": 1,
+      "output": "USB test must run in a separate booted kernel"
+    },
+    {
+      "control": "claimed-other-boot-without-vm-refused",
+      "exit": 1,
+      "output": "missing virtme guest kernel identity"
+    }
+  ],
+  "unitTests": [
+    {
+      "log": "final-mac-unit.log",
+      "passed": 48,
+      "suites": 5,
+      "sha256": "818d7f5b362b3ebfa3355572cebd39db74871a5ef312fed5f116cdf4fcd04480"
+    },
+    {
+      "log": "final-linux-unit.log",
+      "passed": 48,
+      "suites": 5,
+      "sha256": "a5562df612e483dfc1601fa5d4d1ae7f4f39fff6765befa805c574a3a931a5ff"
+    }
+  ],
+  "initialHeldReplyFailureCause": "Unproven;615remains open. No failure-only diagnostic executed in later passing cases.",
+  "issues": {
+    "550": "open pending disposition of mixed native outcomes",
+    "615": "open; no runtime repair established"
+  },
+  "releaseQualified": false,
+  "sourcePreservation": {
+    "base": "4989e16b59e91924d74dd8e83c5fbfa669f6b179",
+    "nativeWorkloadBytesPreservedAfterRemovingOnlyFailureObserver": true,
+    "originalAdmissionAndBuilderFunctionsUnchanged": [
+      "kernel_clean",
+      "stale_phases_proven",
+      "handshake_clean",
+      "admits_loss",
+      "admits_repair",
+      "build_fixture",
+      "admits_webmux"
+    ],
+    "allExistingWorkflowBytesPreservedAfterRemovingOnlyTwoUnitSteps": true,
+    "allCurrentSnapshotSourceHashesMatch": 260,
+    "applicationGoTree": "d49267f2de5710d338225f1b396fc51c91ec8d21",
+    "currentGoBuildAndOriginalUSBSourcePinsAssertionsUnchanged": true
+  },
+  "actualSourceReadback": {
+    "sourceFilesVerified": 260,
+    "binaryVerified": true,
+    "explicitDependencyPatchVerified": true,
+    "noHostedIdentity": true
+  }
+}
