@@ -17,7 +17,7 @@ the trace observes values 1 and 16. No test or runtime policy is changed.
 | Completed pass events | 17,060 of the reference 21,930; 1,644 identities have nine passes and 283 have eight. |
 | Unreached identities | 266 of 2,193 reference identities have no pass; fuzz seed execution is unreached. |
 | Existing skips | Same three identities, each observed nine times. |
-| Assertion failures before timeout | None; this incomplete inventory still fails acceptance. |
+| Assertion-failure frames before timeout | None observed; this incomplete inventory still fails acceptance. |
 | Native exit supervisor | All four controls pass, including high-bit Windows status retention. |
 | Trace | 93,228,080 bytes; native and retrieved SHA-256 match. |
 | Process cleanup | Same native PID observed while running; absent after completion. |
