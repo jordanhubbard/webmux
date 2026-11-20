@@ -1,0 +1,5 @@
+--- a/virtme/modfinder.py
++++ b/virtme/modfinder.py
+@@ -21 +21 @@
+-_INSMOD_RE = re.compile("insmod (.*[^ ]) *$")
++_INSMOD_RE = re.compile(r"insmod (\S+)(?:\s+.*)?$")

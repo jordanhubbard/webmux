@@ -303,3 +303,11 @@ Each VM compares the loaded module's source identity with the build receipt.
 Logs, admission results and build receipts are retained. This qualifies WebMux's
 opaque relay with the corrected virtual device; it does not qualify the stock
 buggy virtual gadget, every Linux kernel, or every physical peripheral/backend.
+
+Local-resource qualification uses the explicit `--local-container` mode, without
+setting a hosted-runner identity. It requires an unprivileged private container
+and a separate QEMU/virtme boot before running the same native controls. The
+[current local record](validation/usb-local-native-2026-11-19/README.md) retains
+two complete passing cohorts and the earlier failed queue/setup cases separately.
+The unexplained initial held-reply timeout remains under #615; #550 and release
+acceptance remain open. No native deadline or assertion is relaxed.

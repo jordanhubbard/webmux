@@ -13,6 +13,8 @@ import signal
 import subprocess
 import sys
 
+from usb_fixture_context import local_container_boot_id
+
 
 def kernel_clean(log):
     return re.search(r'BUG:|Oops:|Kernel panic|general protection fault', log) is None
@@ -77,12 +79,20 @@ def main():
     parser.add_argument('--binary', required=True, type=Path)
     parser.add_argument('--build-root', required=True, type=Path)
     parser.add_argument('--source-cache', type=Path, help='optional persistent checksum-verified public source cache')
+    parser.add_argument('--local-container', action='store_true',
+                        help='use a disposable unprivileged local Docker container; never set GITHUB_ACTIONS')
     args = parser.parse_args()
+    parent_boot = None
+    if args.local_container:
+        try:
+            parent_boot = local_container_boot_id()
+        except (OSError, ValueError) as error:
+            parser.error(str(error))
     if (platform.system() != 'Linux' or os.geteuid() != 0
-            or os.environ.get('GITHUB_ACTIONS') != 'true'
+            or (parent_boot is None and os.environ.get('GITHUB_ACTIONS') != 'true')
             or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.+_-]*', args.kernel)
             or args.kernel == platform.release()):
-        parser.error('requires a disposable Linux GitHub runner and a separate guest kernel')
+        parser.error('requires a disposable Linux GitHub runner or admitted local container, and a separate guest kernel')
     root = args.build_root.resolve()
     if root.exists() and (not root.is_dir() or any(root.iterdir())):
         parser.error('build-root must be new or empty; preserve previous evidence')
@@ -114,10 +124,15 @@ def main():
 
     def guest(name, receipt, mode, admit):
         log_path = root / (name + '.log')
-        guest_command = shlex.join(['env', 'GITHUB_ACTIONS=true',
+        context = (['GITHUB_ACTIONS=true'] if parent_boot is None else
+                   ['WEBMUX_USB_LOCAL_PARENT_BOOT_ID=' + parent_boot])
+        guest_command = shlex.join(['env', *context,
                                    'WEBMUX_USB_EXPECTED_SRCVERSION=' + receipt['srcversion'],
                                    'python3', str(source / 'tests/usb-kernel.py'), str(binary), *mode])
-        command = ['timeout', '--kill-after=15s', '180s', str(runner), '--run', args.kernel,
+        # The 1.41 sdist's optional prebuilt init is AMD64. Its supported shell
+        # init runs natively on the local ARM64 guest; USB workload is unchanged.
+        runner_options = ['--no-virtme-ng-init'] if parent_boot is not None else []
+        command = ['timeout', '--kill-after=15s', '180s', str(runner), *runner_options, '--run', args.kernel,
                    '--user', 'root', '--empty-passwords', '--memory', '1G', '--cpus', '2',
                    '--verbose', '--exec', guest_command]
         print(f'Running {name}; log: {log_path}', flush=True)
@@ -139,7 +154,10 @@ def main():
         admitted = kernel_clean(output) and bool(admit(status, output))
         results.append({'control': name, 'exit': status, 'admitted': admitted,
                         'module_sha256': receipt['module_sha256'], 'srcversion': receipt['srcversion']})
-        (root / 'receipt.json').write_text(json.dumps({'results': results}, indent=2) + '\n')
+        evidence = {'results': results}
+        if parent_boot is not None:
+            evidence['executionContext'] = 'local unprivileged container; separate QEMU guest; no GitHub identity'
+        (root / 'receipt.json').write_text(json.dumps(evidence, indent=2) + '\n')
         print(output, end='', flush=True)
         if not admitted:
             raise RuntimeError(f'{name}: unexpected native outcome; retained {log_path}')

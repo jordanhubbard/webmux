@@ -27,6 +27,10 @@ jobs:
         run: python3 -m unittest discover -s tests -p test_usb_sysfs.py
       - name: Test pinned USB source acquisition
         run: python3 -m unittest discover -s scripts -p test_vudc_sources.py
+      - name: Test local USB fixture admission
+        run: python3 -m unittest discover -s scripts -p test_usb_fixture_context.py
+      - name: Test held-reply failure observations
+        run: python3 -m unittest discover -s tests -p test_usb_hold_diagnostics.py
       - name: Test Ubuntu package mirror configuration
         run: python3 -m unittest discover -s tests -p test_ci_apt.py
       - name: Configure Ubuntu package mirrors and network bounds

@@ -48,8 +48,12 @@ Their broader recovery, vulnerability/license and deployment boundaries remain.
 The [relay provisioning audit](validation/relay-provisioning-acceptance-2026-11-19/README.md)
 reconciles #545/#546 timeout evidence and #549 signed HTTPS fixture provisioning
 with the retained full native relay and Linux APT controls. #550 remains open:
-its newly corrected nonregular/unbounded cache read has local regression coverage,
-but the changed helper still needs complete native guest qualification. Original
+its corrected nonregular/unbounded cache read now passes the complete local
+QEMU kernel sequence, including all 20 direct cycles and WebMux-over-SSH,
+with the current `4989e16` CLI. The [local record](validation/usb-local-native-2026-11-19/README.md)
+preserves an earlier corrected-held queue timeout under #615, whose cause remains
+unproven; later passes do not establish its repair. Local execution uses an
+explicit isolated-container/guest mode without a hosted identity. Original
 native failures keep their original outcomes and source bindings.
 
 The [Mosh control-channel audit](validation/mosh-acceptance-2026-11-19/README.md)
