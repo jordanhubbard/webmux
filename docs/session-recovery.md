@@ -538,7 +538,8 @@ project's chat directory. Two open chats give no answer. An observed store sets
 `process-state` evidence for that chat; losing it after an observation drops
 current-state confidence (`unavailable`) while keeping the last chat for an
 explicit choice. Before the first observation the launch selector stays.
-Native file descriptors are not observed on Windows.
+Windows Cursor file descriptors are not observed. The Windows Codex observer
+below is separate and does not enable Cursor observation.
 
 `scripts/qualify-recovery-configuration.py --cli cursor --cursor-switch`
 passed on 2026-11-12 with Cursor Agent 2026.11.11-b912975 (which updated
@@ -2881,3 +2882,38 @@ and a fresh native two-viewer run. All four private fixture terminals stop via
 the product protocol; final checks find all twenty recorded process objects gone
 and zero file holders. Exact-source review/CI and integration remain required;
 the earlier component receipt alone does not close #541.
+
+
+### Windows Codex owned-journal observation (2026-11-20)
+
+Windows AMD64 and ARM64 now have a Codex-specific process-file observer. The
+wrapper pins the launched process before its waiter starts, then binds each
+observation to that PID and its creation time. A disposable same-executable
+helper verifies the account, process lifetime and current descendant-parent
+relationships. It enumerates at most 32 processes and 2,048 handles per process.
+Only disk-file names below the configured Codex sessions root are returned;
+the existing journal reader still requires a valid native ID, matching physical
+project directory and a unique conversation. No directory recency heuristic is
+used. Cursor and the Unix observers retain their existing implementations.
+
+Duplicated file handles receive at most `FILE_READ_ATTRIBUTES`, intersected with
+the source handle's rights. They cannot read or write file data. Native handle
+layout, process access, file-query and lifetime failures reject the observation;
+partial results are not accepted. The parent kills only its metadata helper
+at the two-second deadline and rejects oversized or malformed responses. The
+native CLI remains attached directly to its original terminal. A failed scan
+drops current-process confidence while retaining the last known conversation
+for an explicit choice, as before.
+
+The native process-handle interface is version dependent. Unsupported Windows
+layouts or permissions leave observation unavailable; they do not trigger a
+privilege increase or a fallback to the newest journal. Windows' documented
+`GetFileType` distinction between a valid unknown device type and a failed call
+is preserved, so crypto-device handles do not turn a complete scan into a
+spurious failure.
+
+Native fixture controls and the narrower live-process check are recorded in
+[the acceptance report](validation/windows-codex-observation-2026-11-20/report.md).
+They qualify conversation discovery only. Authenticated Windows coding and
+recovery remain open: the first ARM64 Codex 0.169.0 tool attempt failed before
+command dispatch with a sandbox runner `pipe-in` connection timeout.

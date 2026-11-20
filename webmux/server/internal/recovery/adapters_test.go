@@ -148,7 +148,7 @@ func TestMetadataSignatureIsBoundToThePersistedTerminal(t *testing.T) {
 
 func TestCodexIdentityComesFromTheOwningProcessAndMatchingProject(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("native file descriptors are not exposed on Windows")
+		t.Skip("Windows Codex ownership is covered by native helper-process tests")
 	}
 	if runtime.GOOS != "linux" {
 		if _, err := exec.LookPath("lsof"); err != nil {

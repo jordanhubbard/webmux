@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -160,6 +161,16 @@ func RunCLI(name string, args []string) error {
 	if observer != nil {
 		observer.start(cmd.Process.Pid)
 	}
+	var observeCodex func(string) (string, string)
+	if cli == "codex" {
+		// Pin the launched process before Wait can release its OS handle. A
+		// later process reusing this PID must never own this conversation.
+		var closer io.Closer
+		observeCodex, closer = newCodexProcessObserver(cmd.Process.Pid)
+		if closer != nil {
+			defer closer.Close()
+		}
+	}
 	completed := make(chan error, 1)
 	go func() { completed <- cmd.Wait() }()
 	signals := make(chan os.Signal, 4)
@@ -212,7 +223,7 @@ func RunCLI(name string, args []string) error {
 				}
 			}
 			if cli == "codex" {
-				currentID, currentFile := codexSessionForProcess(cmd.Process.Pid, cwd)
+				currentID, currentFile := observeCodex(cwd)
 				observeProcessState(&event, currentID, currentFile)
 			}
 			if event.StateFile != "" {

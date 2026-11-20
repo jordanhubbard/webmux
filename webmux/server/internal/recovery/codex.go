@@ -62,8 +62,12 @@ func codexMeta(file, cwd string) (string, bool) {
 // The owning process's open rollout file is authoritative. Searching for the
 // latest file by directory or timestamp can select another concurrent agent.
 func codexSessionForProcess(pid int, cwd string) (string, string) {
+	return codexSessionFromFiles(processTreeOpenFiles(pid, func(file string) bool { return strings.HasSuffix(file, ".jsonl") }), cwd)
+}
+
+func codexSessionFromFiles(files []string, cwd string) (string, string) {
 	id, path := "", ""
-	for _, file := range processTreeOpenFiles(pid, func(file string) bool { return strings.HasSuffix(file, ".jsonl") }) {
+	for _, file := range files {
 		if candidate, ok := codexMeta(file, cwd); ok {
 			if id != "" && candidate != id {
 				return "", ""

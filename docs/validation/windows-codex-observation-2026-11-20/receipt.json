@@ -1,0 +1,57 @@
+{
+  "scope": "Windows Codex process-owned journal discovery; no authenticated coding or recovery acceptance",
+  "sourceBaseCommit": "1a588b702e78cab0fb99ae11debb8c6ba6ca7875",
+  "sourceState": "modified development checkout; source digests below bind the tested inputs",
+  "goVersion": "go version go1.27.3 darwin/arm64",
+  "sourceSHA256": {
+    "webmux/server/cmd/webmux/main.go": "e0f292151caa3d35c44209ff52ac39056b22ddfc6f04f5383ad8032dc0e07e93",
+    "webmux/server/internal/recovery/cli.go": "26a653f4552b4db6a3ac5c2756260573e13de1102034cdbe1b6bf53ff145c944",
+    "webmux/server/internal/recovery/codex.go": "452cf37c23b94a4c3557e29336c81ace1181f2649860081a3ac665f3c52d630e",
+    "webmux/server/internal/recovery/codex_process_helper.go": "46d0ab4e88a839662b7e10b938b0dde03a48ff17d627b8baa28010f9a33cce88",
+    "webmux/server/internal/recovery/codex_process_other.go": "b8f65e6a88d1e9d997ca31f74515c5024362e6337e33c74c4955e4a41328c641",
+    "webmux/server/internal/recovery/codex_process_windows.go": "e6a407e3c6097cf3264c37d0b65d02b1eca680e28210cb0c149018eb8ac647ea",
+    "webmux/server/internal/recovery/codex_process_windows_test.go": "d01a8585e3079ab8127d13cadde4e5fb9de342737e39d2c1216d22a522d323b7",
+    "webmux/server/internal/recovery/adapters_test.go": "e5e0170c90b8e27b5fac7a794e3baf743d173a60224e8805a0c4d65abea302dd",
+    "webmux/server/go.mod": "e407c447a1e17352633bce624540fe72061987ff7c6f60236d0ca90292104275",
+    "webmux/server/go.sum": "0e3b77832f544c332e04503c5e7f62d488470f8b55e102b97687748c34454ff2"
+  },
+  "binaries": {
+    "windowsARM64App": "1a3c4c369ef29b27351397794afff9b980e356f6933775733b8fd3ab30446fa3",
+    "windowsARM64Tests": "9a91fe7de8dbeacfdc1ced556a8ab9bc41bc30772cc54aa865538703d4576c15",
+    "windowsAMD64Tests": "9045cce9d29f1d880b9040e02462b18aebd26c7ea28d8ad246af28eb6d1dce96"
+  },
+  "nativeTests": {
+    "arm": {
+      "passedTopLevel": 14,
+      "skippedUnixOnlyTopLevel": 1,
+      "failedTopLevel": 0,
+      "observerProcessesAfter": 0,
+      "remoteExecutableHashMatched": true
+    },
+    "x86": {
+      "passedTopLevel": 14,
+      "skippedUnixOnlyTopLevel": 1,
+      "failedTopLevel": 0,
+      "observerProcessesAfter": 0,
+      "remoteExecutableHashMatched": true
+    }
+  },
+  "liveARM64": {
+    "codexVersion": "0.169.0",
+    "normalHelperExit": 0,
+    "aliasHelperExit": 0,
+    "eachReturnedOneExpectedOwnedJournal": true,
+    "changesToNativeConversation": false,
+    "controllerRestartPerformed": false,
+    "rebootPerformed": false
+  },
+  "excludedGate": {
+    "issue": 628,
+    "result": "Failed to create unified exec process: timed out after 15000ms connecting runner pipe-in",
+    "commandDispatched": false,
+    "toolNonceReturned": false,
+    "policyProbeExecuted": false,
+    "requestedCommandHadTrailingDotArgument": true,
+    "authenticatedCodingRecoveryQualified": false
+  }
+}

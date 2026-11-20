@@ -1,0 +1,49 @@
+=== RUN   TestCodexIdentityComesFromTheOwningProcessAndMatchingProject
+    adapters_test.go:151: Windows Codex ownership is covered by native helper-process tests
+--- SKIP: TestCodexIdentityComesFromTheOwningProcessAndMatchingProject (0.00s)
+=== RUN   TestOriginalCLIWindowsNativeExecutable
+--- PASS: TestOriginalCLIWindowsNativeExecutable (0.01s)
+=== RUN   TestOriginalCLIWindowsSkipsShellWrappersAndHelperCopies
+--- PASS: TestOriginalCLIWindowsSkipsShellWrappersAndHelperCopies (0.01s)
+=== RUN   TestOriginalCLIWindowsSkipsSelfAndRelativePATH
+--- PASS: TestOriginalCLIWindowsSkipsSelfAndRelativePATH (0.01s)
+=== RUN   TestCodexUnknownProcessRetainsSelectedConversationWithoutAutomaticConfidence
+--- PASS: TestCodexUnknownProcessRetainsSelectedConversationWithoutAutomaticConfidence (0.00s)
+=== RUN   TestCodexSelectedStateFileRequiresExactIDAndOriginalProject
+--- PASS: TestCodexSelectedStateFileRequiresExactIDAndOriginalProject (0.04s)
+=== RUN   TestWindowsCodexOwnedJournal
+    [private fixture paths omitted from this public projection]
+--- PASS: TestWindowsCodexOwnedJournal (0.39s)
+=== RUN   TestWindowsCodexRejectsAmbiguousOrForeignProfile
+=== RUN   TestWindowsCodexRejectsAmbiguousOrForeignProfile/foreign-profile
+=== RUN   TestWindowsCodexRejectsAmbiguousOrForeignProfile/ambiguous
+--- PASS: TestWindowsCodexRejectsAmbiguousOrForeignProfile (0.30s)
+    --- PASS: TestWindowsCodexRejectsAmbiguousOrForeignProfile/foreign-profile (0.14s)
+    --- PASS: TestWindowsCodexRejectsAmbiguousOrForeignProfile/ambiguous (0.15s)
+=== RUN   TestWindowsCodexRejectsStaleCreationAndExitedProcess
+--- PASS: TestWindowsCodexRejectsStaleCreationAndExitedProcess (0.08s)
+=== RUN   TestWindowsCodexMetadataDuplicateCannotReadOrWriteData
+--- PASS: TestWindowsCodexMetadataDuplicateCannotReadOrWriteData (0.01s)
+=== RUN   TestWindowsCodexWorkerDeadlineAndInvalidResults
+=== RUN   TestWindowsCodexWorkerDeadlineAndInvalidResults/timeout
+=== RUN   TestWindowsCodexWorkerDeadlineAndInvalidResults/overflow
+=== RUN   TestWindowsCodexWorkerDeadlineAndInvalidResults/partial
+=== RUN   TestWindowsCodexWorkerDeadlineAndInvalidResults/mismatch
+--- PASS: TestWindowsCodexWorkerDeadlineAndInvalidResults (0.56s)
+    --- PASS: TestWindowsCodexWorkerDeadlineAndInvalidResults/timeout (0.31s)
+    --- PASS: TestWindowsCodexWorkerDeadlineAndInvalidResults/overflow (0.09s)
+    --- PASS: TestWindowsCodexWorkerDeadlineAndInvalidResults/partial (0.08s)
+    --- PASS: TestWindowsCodexWorkerDeadlineAndInvalidResults/mismatch (0.08s)
+=== RUN   TestWindowsCodexDescendantAndHandleBound
+=== RUN   TestWindowsCodexDescendantAndHandleBound/descendant
+=== RUN   TestWindowsCodexDescendantAndHandleBound/handle-bound
+--- PASS: TestWindowsCodexDescendantAndHandleBound (0.51s)
+    --- PASS: TestWindowsCodexDescendantAndHandleBound/descendant (0.18s)
+    --- PASS: TestWindowsCodexDescendantAndHandleBound/handle-bound (0.32s)
+=== RUN   TestWindowsCodexInvalidFileHandleFailsClosed
+--- PASS: TestWindowsCodexInvalidFileHandleFailsClosed (0.00s)
+=== RUN   TestCodexWindowsSandboxOverridePreservesRestrictions
+--- PASS: TestCodexWindowsSandboxOverridePreservesRestrictions (0.00s)
+=== RUN   TestCodexWindowsSandboxOverrideRejectsOtherTOML
+--- PASS: TestCodexWindowsSandboxOverrideRejectsOtherTOML (0.00s)
+PASS
