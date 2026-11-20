@@ -12,11 +12,19 @@ type ManagedEvidenceCapture func(context.Context, RigIdentity) (RigIdentity, err
 func (b *Broker) CaptureManagedRecovery(ctx context.Context, owner, id string, capture ManagedEvidenceCapture) error {
 	b.mu.Lock()
 	e, err := b.ownedLocked(owner, id)
+	// A preview must not wait behind an authorized recovery or recapture its
+	// frozen destination. Recheck below after taking the operation lock too.
+	pending := err == nil && (nativeRigPending(e.value.Recovery) || b.nativeRecoveryJobActiveLocked(id))
+	// Capture is opportunistic. Take the operation lock without waiting while
+	// still holding mu, so job registration cannot race this pending check.
+	locked := err == nil && !pending && e.logOperation.TryLock()
 	b.mu.Unlock()
 	if err != nil {
 		return err
 	}
-	e.logOperation.Lock()
+	if !locked {
+		return nil
+	}
 	defer e.logOperation.Unlock()
 	b.mu.Lock()
 	if b.closed || b.entries[id] != e {

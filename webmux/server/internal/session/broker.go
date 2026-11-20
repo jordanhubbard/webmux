@@ -116,6 +116,8 @@ type Broker struct {
 	policyStarted   bool
 	activity        map[agentActivityKey]pendingAgentActivity
 	activityWake    chan struct{}
+
+	nativeRecoveryJobs map[string]*nativeRecoveryJob
 }
 
 func New(store *storage.Store, logger *slog.Logger) (*Broker, error) {
@@ -1089,6 +1091,9 @@ func (b *Broker) Close() error {
 		return nil
 	}
 	b.closed = true
+	for _, job := range b.nativeRecoveryJobs {
+		job.cancel()
+	}
 	close(b.policyStop)
 	var processes []process
 	for _, e := range b.entries {

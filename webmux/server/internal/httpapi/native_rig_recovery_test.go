@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/session"
 )
@@ -76,6 +77,23 @@ print(json.dumps(v))
 	var result session.RecoveryResult
 	if json.Unmarshal(first.Body.Bytes(), &result) != nil || result.Outcome != "uncertain" {
 		t.Fatal(first.Body.String())
+	}
+	// The response now acknowledges the durable original before native work
+	// finishes. Observe its persisted terminal uncertainty without dispatching
+	// another operation before asserting ordinary replay and explicit Check.
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		view, err = s.sessions.Recovery("anonymous", saved.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if view.State.Intent != nil && view.State.Intent.Outcome == "uncertain" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("original native worker did not settle")
+		}
+		time.Sleep(time.Millisecond)
 	}
 	raw, err := os.ReadFile(log)
 	if err != nil {
