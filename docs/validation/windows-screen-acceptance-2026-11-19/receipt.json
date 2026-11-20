@@ -1,0 +1,382 @@
+{
+  "auditedHead": "9c6a549b671a6a58d179614857ff5cc246b70b3f",
+  "nativeSource": "0056000940ec0dbc96a010c3b88d349759c51c48",
+  "recordedUTC": "2026-11-20T01:26:06.605971+00:00",
+  "amd64Screen": {
+    "artifact": 14539750988,
+    "run": 44541506649,
+    "digest": "sha256:d2e1155d51b101a7276608fb6f2cdb17d959b4080dcdeafd5cc1f6b8ccaea4a0",
+    "uploadedFiles": 2773,
+    "captures": 28,
+    "legacyProbes": {
+      "hidden-plain-curly-restore": true,
+      "hidden-enabled-reset": true,
+      "hidden-link-only": true,
+      "hidden-1048": true,
+      "hidden-1049": false,
+      "hidden-wide-edit": true
+    },
+    "comparisonReports": 1381,
+    "referenceProfiles": {
+      "shared-hyperlink": 1122,
+      "bare": 259
+    },
+    "snapshotReferenceAdapter": false,
+    "allThreeStagesEqual": true,
+    "replayReplies": 0,
+    "nativeFailSkip": 0,
+    "capturePEMachine": "0x8664",
+    "captureImageSHA256": "ff1e448e51fd7c6ce1cf892142ef9dad8c7ca5a09c66f642ec7f21f281b468ac",
+    "decoder": {
+      "controls": 256,
+      "failures": [],
+      "splits": 79,
+      "cursorSplits": 107,
+      "invalid": 24,
+      "badEncoding": 4,
+      "clearedRepeat": true,
+      "reusedRefused": true,
+      "disarmed": true,
+      "disposed": true,
+      "replies": []
+    },
+    "hyperlinkLifecycle": {
+      "before": {
+        "stock": null,
+        "fixed": "https://example.test/alt"
+      },
+      "continued": "https://example.test/alt",
+      "resetSize": 0,
+      "maxHeld": 1,
+      "maxClosed": 0,
+      "directResetSize": 0,
+      "scrolled": "https://example.test/scroll",
+      "disposedSize": 0
+    }
+  },
+  "arm64Screen": {
+    "artifact": 14540981112,
+    "run": 44537924499,
+    "digest": "sha256:ea02cef54012a5041afa1904be531851e1b3b56205a63a84189d957e46fcc29d",
+    "uploadedFiles": 2781,
+    "captures": 28,
+    "legacyProbes": {
+      "hidden-plain-curly-restore": true,
+      "hidden-enabled-reset": true,
+      "hidden-link-only": true,
+      "hidden-1048": true,
+      "hidden-1049": false,
+      "hidden-wide-edit": true
+    },
+    "comparisonReports": 1381,
+    "referenceProfiles": {
+      "shared-hyperlink": 1122,
+      "bare": 259
+    },
+    "snapshotReferenceAdapter": false,
+    "allThreeStagesEqual": true,
+    "replayReplies": 0,
+    "nativeFailSkip": 0,
+    "capturePEMachine": "0xaa64",
+    "captureImageSHA256": "46fd457a9e83b3af069a638eb2d2aaecc9a9924d86a4e11c87e8f4a595a740fa",
+    "decoder": {
+      "controls": 256,
+      "failures": [],
+      "splits": 79,
+      "cursorSplits": 107,
+      "invalid": 24,
+      "badEncoding": 4,
+      "clearedRepeat": true,
+      "reusedRefused": true,
+      "disarmed": true,
+      "disposed": true,
+      "replies": []
+    },
+    "hyperlinkLifecycle": {
+      "before": {
+        "stock": null,
+        "fixed": "https://example.test/alt"
+      },
+      "continued": "https://example.test/alt",
+      "resetSize": 0,
+      "maxHeld": 1,
+      "maxClosed": 0,
+      "directResetSize": 0,
+      "scrolled": "https://example.test/scroll",
+      "disposedSize": 0
+    },
+    "browserArchitecture": "amd64 emulated; no native ARM64 browser claim",
+    "controlledProtocolParents": [
+      "TestClientNegotiatesOnlyWithAdvertisedRendererOwner",
+      "TestSnapshotAcceptanceAndRefusalPreserveOwnerTerminal",
+      "TestSnapshotRendererNegotiationPreservesOwnedTerminal",
+      "TestUnderlineRendererNegotiationPreservesOwnedTerminal",
+      "TestSnapshotProfilePrecedesReplayAndPreservesJob",
+      "TestSnapshotProfileTransitionClosesOnlyIncompatibleViewers",
+      "TestSlowViewerCannotBlockTerminal"
+    ],
+    "ordinaryNativeProviderSkips": [
+      "TestNativeProviderConcurrentCreationLostReplyAndUncertainState",
+      "TestNativeProviderSurvivesControllerJobLossAndOwnerCrashIsExplicit",
+      "TestNativeProviderScreenReattachmentAndContinuedInput",
+      "TestNativeProviderContinuationState",
+      "TestNativeProviderSavedCursorCaptures",
+      "TestNativeProviderSecurityReplyRetainsUncertainOwnership",
+      "TestNativeProviderSecurityReplyStillFindsSurvivor",
+      "TestNativeProviderStartupFailureReportsSanitizedPhase"
+    ]
+  },
+  "vtRepetition": {
+    "artifact": 14538863682,
+    "run": 44541506649,
+    "digest": "sha256:c239dad45e4b4c7fc9c6ebfc1b558a7d31a4eaa9a68d2d784a41c7b9c2d2aafa",
+    "uploadedFiles": 2,
+    "originalCorrectedSource": "52a8527e7e8a3e0ed0d0af09eadbd9457eae9854",
+    "originalCorrectedArtifact": 14400652297,
+    "originalCorrectedDigest": "sha256:0dc60c0f70ccb957d26982a84a3299248a59f4ced5017ce504b87ce027a5597c",
+    "originalIdentities": 2186,
+    "currentIdentities": 2193,
+    "originalPassEvents": 21860,
+    "currentPassEvents": 21930,
+    "eachIdentityPasses": 10,
+    "originalElapsed": 234.947,
+    "currentElapsed": 291.4,
+    "preservedSkips": {
+      "TestDepDiffVT": 10,
+      "TestDepDiffResize": 10,
+      "TestGhosttyParkedCursorJoinsLines": 10
+    },
+    "addedIdentities": [
+      "TestRepliesReaderStopsAtOwnerCleanup",
+      "TestRepliesReaderStopsAtOwnerCleanup/blocked_read",
+      "TestRepliesReaderStopsAtOwnerCleanup/blocked_read/owner",
+      "TestRepliesReaderStopsAtOwnerCleanup/reply_queue_backpressure",
+      "TestRepliesReaderStopsAtOwnerCleanup/reply_queue_backpressure/owner",
+      "TestResponseReaderStopsAtOwnerCleanup",
+      "TestResponseReaderStopsAtOwnerCleanup/owner"
+    ],
+    "worker": {
+      "goVersion": "go version go1.27.4 windows/amd64",
+      "cpu": [
+        {
+          "Name": "AMD EPYC 9V74 80-Core Processor                ",
+          "Manufacturer": "AuthenticAMD",
+          "NumberOfCores": 2,
+          "NumberOfLogicalProcessors": 4
+        }
+      ],
+      "enabledXStateFeatures": "0x807",
+      "source": "0056000940ec0dbc96a010c3b88d349759c51c48"
+    }
+  },
+  "originalFourMinuteFailures": [
+    {
+      "path": "original-92a-vt.log",
+      "sha256": "ceb841b126584b5eba2b9666e415a98970428d78764a735dba49bb27f14b5ae5",
+      "bytes": 553747,
+      "job": {
+        "id": 134586983884,
+        "run_id": 44240510077,
+        "head_sha": "92a9a4de280d613e14001ee576f2c4b4ef19b3ad",
+        "status": "completed",
+        "conclusion": "failure",
+        "html_url": "https://github.com/jordanhubbard/webmux/actions/runs/44240510077/job/134586983884",
+        "started_at": "2026-11-18T04:54:20Z",
+        "completed_at": "2026-11-18T05:04:26Z"
+      }
+    },
+    {
+      "path": "original-443-vt.log",
+      "sha256": "cc9025ad394e521336e5a0a641e6d13729d6834d3082cfdde29cc43efca82b19",
+      "bytes": 554043,
+      "job": {
+        "id": 134589455925,
+        "run_id": 44241259740,
+        "head_sha": "443ea62e8c10ade1dd8ed1699a07a4422d22a553",
+        "status": "completed",
+        "conclusion": "failure",
+        "html_url": "https://github.com/jordanhubbard/webmux/actions/runs/44241259740/job/134589455925",
+        "started_at": "2026-11-18T05:01:06Z",
+        "completed_at": "2026-11-18T05:10:53Z"
+      }
+    }
+  ],
+  "identicalSourceObjects": [
+    {
+      "path": "webmux/server/internal/screenstate",
+      "gitObject": "7fa40f328c10a79c15c019d56d4631304e1ec750"
+    },
+    {
+      "path": "webmux/server/internal/replayfilter",
+      "gitObject": "55739697d2677fdea906a9b3e4571c55abbaba6c"
+    },
+    {
+      "path": "webmux/server/internal/nativeprovider",
+      "gitObject": "b8bf573d422765c3ec77126bed360c3310fb8f5b"
+    },
+    {
+      "path": "webmux/server/internal/thirdparty/vt",
+      "gitObject": "c863c6a7a1b807df1cf034d8a8a1a36a29d72f60"
+    },
+    {
+      "path": "webmux/server/internal/thirdparty/ultraviolet",
+      "gitObject": "294b4d5e4f40b5bc02770196295dc11ed0280128"
+    },
+    {
+      "path": "webmux/server/go.mod",
+      "gitObject": "27bb28608d34897b9ec67661a5b53ae7a067503d"
+    },
+    {
+      "path": "webmux/server/go.sum",
+      "gitObject": "f78dce81ea68956b6298e95beb732e70b6b63d8a"
+    },
+    {
+      "path": "webmux/package-lock.json",
+      "gitObject": "f18ab6505e59b175161cbd2b465a174992a4341e"
+    },
+    {
+      "path": "webmux/frontend/src/utils/terminalSnapshotProfile.ts",
+      "gitObject": "4b8a95a34cc473b8b54ee928614c03c18b352740"
+    },
+    {
+      "path": "webmux/frontend/src/utils/terminalHyperlinks.ts",
+      "gitObject": "d30522d2cd3e45803bc6d0cc773b73be4e532301"
+    },
+    {
+      "path": "webmux/frontend/src/components/Terminal.tsx",
+      "gitObject": "9b01069b1bd14dfb1d367b42b706705df1149f9a"
+    },
+    {
+      "path": "tests/e2e/screen-replay.spec.ts",
+      "gitObject": "ee45e8d2a5a18576aafe9ee03578cb7f9d8e2677"
+    },
+    {
+      "path": "scripts/qualify-xterm-underline.mts",
+      "gitObject": "f1ed66139d8b57e3a25a14aaa16da3e18f10fcbd"
+    }
+  ],
+  "originalTestBodyPreservation": [
+    {
+      "file": "conform_report_test.go",
+      "originalTests": 7,
+      "normalizedOriginalSHA256": "6661740328d75232463e1ac310b377236e3fb22393cce06214947c43e48e4960",
+      "allOriginalBodiesPreserved": true
+    },
+    {
+      "file": "kitty_payload_test.go",
+      "originalTests": 6,
+      "normalizedOriginalSHA256": "d27f8b26595dc6fe00e94053c27f0aab96af239180452f69d043d0ff1f38637e",
+      "allOriginalBodiesPreserved": true
+    }
+  ],
+  "gridDiagnosticInversionExact": true,
+  "currentLocalRace": {
+    "testAndSubtestPasses": 89,
+    "topLevelPasses": 34,
+    "failSkip": 0,
+    "logSHA256": "a1d9069bda1055c51f9bf53eb1a7822eee9c98ef7feccec9779b5b5f0ef21371"
+  },
+  "originalSuccessfulWorkflows": [
+    {
+      "id": 44537924499,
+      "name": "Windows ARM64 native qualification",
+      "head_sha": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/jordanhubbard/webmux/actions/runs/44537924499",
+      "run_attempt": 1,
+      "updated_at": "2026-11-19T14:35:18Z"
+    },
+    {
+      "id": 44541506649,
+      "name": "CI",
+      "head_sha": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/jordanhubbard/webmux/actions/runs/44541506649",
+      "run_attempt": 1,
+      "updated_at": "2026-11-19T14:37:43Z"
+    },
+    {
+      "id": 44541516230,
+      "name": "Packaging",
+      "head_sha": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/jordanhubbard/webmux/actions/runs/44541516230",
+      "run_attempt": 1,
+      "updated_at": "2026-11-19T14:22:17Z"
+    },
+    {
+      "id": 44541524823,
+      "name": "Browser startup diagnostics",
+      "head_sha": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/jordanhubbard/webmux/actions/runs/44541524823",
+      "run_attempt": 1,
+      "updated_at": "2026-11-19T14:17:36Z"
+    },
+    {
+      "id": 44541533377,
+      "name": "Native Mosh cleanup diagnostics",
+      "head_sha": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/jordanhubbard/webmux/actions/runs/44541533377",
+      "run_attempt": 1,
+      "updated_at": "2026-11-19T14:18:52Z"
+    },
+    {
+      "id": 44541541564,
+      "name": "Native federation diagnostics",
+      "head_sha": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/jordanhubbard/webmux/actions/runs/44541541564",
+      "run_attempt": 1,
+      "updated_at": "2026-11-19T14:16:19Z"
+    },
+    {
+      "id": 44541552813,
+      "name": "Native federation renderer contract",
+      "head_sha": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/jordanhubbard/webmux/actions/runs/44541552813",
+      "run_attempt": 1,
+      "updated_at": "2026-11-19T14:15:47Z"
+    },
+    {
+      "id": 44541560493,
+      "name": "Windows VT runtime diagnostics",
+      "head_sha": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/jordanhubbard/webmux/actions/runs/44541560493",
+      "run_attempt": 1,
+      "updated_at": "2026-11-19T14:23:05Z"
+    },
+    {
+      "id": 44541568596,
+      "name": "Native Codex observation controls",
+      "head_sha": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/jordanhubbard/webmux/actions/runs/44541568596",
+      "run_attempt": 1,
+      "updated_at": "2026-11-19T14:15:36Z"
+    },
+    {
+      "id": 44541577712,
+      "name": "Ubuntu APT source controls",
+      "head_sha": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/jordanhubbard/webmux/actions/runs/44541577712",
+      "run_attempt": 1,
+      "updated_at": "2026-11-19T14:14:46Z"
+    }
+  ],
+  "scope": "Screen mirror, v2 renderer state and aggregate VT suite budget only. No current whole-main native run, native ARM browser, full coding lifecycle, AMX corruption repair, private Ice Lake deadline repair or release acceptance."
+}
