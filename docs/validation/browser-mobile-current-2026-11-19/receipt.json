@@ -1,0 +1,207 @@
+{
+  "issue": 454,
+  "source": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+  "productionSource": "2bf7d7c7dddeb8eb45d7fedbd7938af6c9ad9fc1",
+  "productionDelta": "None. Only a new maintained native mobile page-text regression is added. Existing original files/assertions/deadlines unchanged.",
+  "nativePlatform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+  "architecture": "arm64",
+  "versions": {
+    "node": "v24.22.2",
+    "go": "go version go1.27.4 darwin/arm64",
+    "chrome": "Google Chrome 158.0.8127.36",
+    "tmux": "tmux 3.8"
+  },
+  "viewports": [
+    [
+      320,
+      568
+    ],
+    [
+      568,
+      320
+    ],
+    [
+      390,
+      400
+    ]
+  ],
+  "cases": [
+    {
+      "label": "parent-page-text",
+      "test": "browser-mobile-page-text.spec.ts",
+      "title": "small browser page-text controls retain native typing focus",
+      "source": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+      "passed": 1,
+      "skipped": 0,
+      "retries": 0,
+      "seconds": 10.984,
+      "reportSHA256": "c2711e1ba41e3ddd97f4809f69f02429dc5633caad61cdcf2e1549d7c50be4d4",
+      "binarySHA256": "489daac37730bb3b1f04f83f62db294612e14d0055a1877660bfac2e21e6872d"
+    },
+    {
+      "label": "original-mobile",
+      "test": "browser-mobile.spec.ts",
+      "title": "small browser companion keeps address entry and page controls usable",
+      "source": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+      "passed": 1,
+      "skipped": 0,
+      "retries": 0,
+      "seconds": 6.545,
+      "reportSHA256": "7056369addde1b0479b762a907d104234f4859d344c28b149a678c8ee6483903",
+      "binarySHA256": "489daac37730bb3b1f04f83f62db294612e14d0055a1877660bfac2e21e6872d",
+      "portraitAddressWidth": 225
+    },
+    {
+      "label": "profiles",
+      "test": "browser-profiles.spec.ts",
+      "title": "saved Chromium profile survives worker replacement while viewer control is exclusive",
+      "source": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+      "passed": 1,
+      "skipped": 0,
+      "retries": 0,
+      "seconds": 4.699,
+      "reportSHA256": "148b71900283162a4dca5f97679f65dcf7421347db3403f85d313f23689772f2",
+      "binarySHA256": "489daac37730bb3b1f04f83f62db294612e14d0055a1877660bfac2e21e6872d"
+    },
+    {
+      "label": "pane-layout",
+      "test": "browser-pane-layout.spec.ts",
+      "title": "browser docking preserves the live page, control and desktop layout",
+      "source": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+      "passed": 1,
+      "skipped": 0,
+      "retries": 0,
+      "seconds": 7.821,
+      "reportSHA256": "6d364445313cf96edaf38f61c223eeb8ad5952034d288df1e81583c78b69394b",
+      "binarySHA256": "489daac37730bb3b1f04f83f62db294612e14d0055a1877660bfac2e21e6872d"
+    },
+    {
+      "label": "workspace",
+      "test": "browser-workspace.spec.ts",
+      "title": "browser supports interactive pages, dialogs, clipboard, files, navigation and tabs",
+      "source": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+      "passed": 1,
+      "skipped": 0,
+      "retries": 0,
+      "seconds": 18.419,
+      "reportSHA256": "aabe54b6dda6ed10fb94c564a1fa8df126ad231eb5ff182b16a5d59f78cce720",
+      "binarySHA256": "489daac37730bb3b1f04f83f62db294612e14d0055a1877660bfac2e21e6872d"
+    },
+    {
+      "label": "accessible-actions",
+      "test": "browser-accessible-actions.spec.ts",
+      "title": "accessible controls retain live identity, refuse stale references and dispatch once",
+      "source": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+      "passed": 1,
+      "skipped": 0,
+      "retries": 0,
+      "seconds": 12.025,
+      "reportSHA256": "1b176258a56c970e0d194680acef7d7275874d511694e418b5791c408e1d170b",
+      "binarySHA256": "489daac37730bb3b1f04f83f62db294612e14d0055a1877660bfac2e21e6872d"
+    }
+  ],
+  "pageText": "All three sizes: native accessible activation once per tap,44px minimum button height, no horizontal overflow, real field focus/continued typing, Shift+Esc to address and return to original terminal. The parent-page-text label is a successful current baseline, not an expected-failure case.",
+  "originalParentNegative": {
+    "source": "10b365c6a5405848d1630d6fbd2f096a830a5998",
+    "addressPixels": 95.6875,
+    "minimumPixels": 180,
+    "logSHA256": "54d1e60355fcd5001258b3418c9dfc064896fb8ba65cc2b98a7e685ea26f47f2",
+    "originalFailureRetained": true
+  },
+  "local": {
+    "frontendTestsPassed": 472,
+    "strictTypeScriptProjects": 5,
+    "frontendLint": "PASS",
+    "frontendBuild": "PASS"
+  },
+  "visuallyInspected": [
+    "portrait.png",
+    "page-568x320.png",
+    "page-text-568x320.png"
+  ],
+  "lifecycle": "Each file has a fresh private controller/tmux namespace; prior executable holders absent before home preservation; final executable has no holders. Original fixture cleanup assertions pass. Inactive homes remain locally retained.",
+  "binaryIdentityLimit": "Retained executable bytes are independently hashed; linker source/version observations remain producer self-reports, not independent VCS attestation.",
+  "newHostedJobs": 0,
+  "nativeAccountCopies": 0,
+  "scope": "Actual native macOS application/Chrome worker with browser-emulated touch, portrait/landscape/reduced heights and synthetic HTTP page/profile state. No physical mobile keyboard, Safari/iOS/Android device, assistive technology, real identity-provider or hardware-key acceptance. Broader110/318 and release remain open.",
+  "binaries": {
+    "parent-page-text": {
+      "sha256": "489daac37730bb3b1f04f83f62db294612e14d0055a1877660bfac2e21e6872d",
+      "producerRevision": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+      "producerModified": false,
+      "attested": false
+    },
+    "original-mobile": {
+      "sha256": "489daac37730bb3b1f04f83f62db294612e14d0055a1877660bfac2e21e6872d",
+      "producerRevision": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+      "producerModified": false,
+      "attested": false
+    },
+    "profiles": {
+      "sha256": "489daac37730bb3b1f04f83f62db294612e14d0055a1877660bfac2e21e6872d",
+      "producerRevision": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+      "producerModified": false,
+      "attested": false
+    },
+    "pane-layout": {
+      "sha256": "489daac37730bb3b1f04f83f62db294612e14d0055a1877660bfac2e21e6872d",
+      "producerRevision": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+      "producerModified": false,
+      "attested": false
+    },
+    "workspace": {
+      "sha256": "489daac37730bb3b1f04f83f62db294612e14d0055a1877660bfac2e21e6872d",
+      "producerRevision": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+      "producerModified": false,
+      "attested": false
+    },
+    "accessible-actions": {
+      "sha256": "489daac37730bb3b1f04f83f62db294612e14d0055a1877660bfac2e21e6872d",
+      "producerRevision": "2a17db11bc036bf2adc6344182a055ef2c1d70db",
+      "producerModified": false,
+      "attested": false
+    }
+  },
+  "screenshots": [
+    {
+      "case": "parent-page-text",
+      "name": "page-text-320x568.png",
+      "sha256": "abcf850f4f65095b14772509fc8f9156a673ae86bf51bf23c93a07ea88e627fa"
+    },
+    {
+      "case": "parent-page-text",
+      "name": "page-text-390x400.png",
+      "sha256": "4398a79cea300208c3883cfbc8ef443f7834606c12032099f38f5b1a09630035"
+    },
+    {
+      "case": "parent-page-text",
+      "name": "page-text-568x320.png",
+      "sha256": "b922f63d6c1d8523bbed0ebe03d1ab42387e9f7c7b3c78eedf20509d6b874782"
+    },
+    {
+      "case": "original-mobile",
+      "name": "page-390x400.png",
+      "sha256": "f2d8a0879d18f112552d462ab1c1f2b2a65fbebd423bfdbed7119243a8b04a6c"
+    },
+    {
+      "case": "original-mobile",
+      "name": "portrait.png",
+      "sha256": "b36977fcb7fd37a000ed351abaf3e04030164e9ad880b38af2bbed423087c463"
+    },
+    {
+      "case": "original-mobile",
+      "name": "page-568x320.png",
+      "sha256": "a0b760435cc7ccae9281aa3fabd60417e54d3265b96f69e1a3c6bb50b632e625"
+    },
+    {
+      "case": "original-mobile",
+      "name": "page-320x568.png",
+      "sha256": "e06f6e5b4898964b1e9927d12fff5fe7e1a96441e5d42e701aaeb23d0bb102c5"
+    },
+    {
+      "case": "pane-layout",
+      "name": "floating-browser.png",
+      "sha256": "b7aba5bbfdae98751bfa2c1bc4e414b482dfa795211832f25355c9df2f5ce76d"
+    }
+  ]
+}

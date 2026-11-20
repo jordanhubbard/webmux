@@ -58,6 +58,12 @@ acceptance. Twenty source-bound native samples and current protocol/ownership
 controls pass. Historical provisioning and cleanup failures retain their original
 outcomes; broader external-provider and physical-device #110 acceptance stays open.
 
+The [current small-screen native audit](validation/browser-mobile-current-2026-11-19/README.md)
+completes #454 with all four original browser regressions plus page-text typing
+and pane-layout controls. Portrait, landscape and reduced-height views pass on
+native macOS/Chrome; physical mobile keyboard, Safari, assistive and external
+provider/device #110 qualification remain open.
+
 Windows private browser cleanup #473 also has completed
 [native acceptance](validation/browser-process-exit-2026-11-18/README.md#integrated-acceptance--2026-11-19):
 verified owned-child exit precedes one-shot private-file removal. Original
