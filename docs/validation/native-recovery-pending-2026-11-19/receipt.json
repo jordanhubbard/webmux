@@ -1,0 +1,109 @@
+{
+  "issue": 608,
+  "issueRemainsOpen": true,
+  "status": "UNQUALIFIED; native gates remain failed, code candidate is draft only",
+  "baselineSource": "c11a6e7e565cded095efe71c315ad99eeb7991a9",
+  "candidateNativeSource": "25a77dd4b39c780885bb8a086b7340a332b29774",
+  "candidateCodeCommit": "9bb560e",
+  "baselineObserverMilliseconds": 10000,
+  "serverRequestBudgetMilliseconds": 45000,
+  "nativeOwnerRequestTimeoutMilliseconds": 10000,
+  "timeoutsChanged": false,
+  "diagnosticCollectionWindowMilliseconds": 50000,
+  "diagnosticFinalReadAdditionalMilliseconds": 230,
+  "singleOriginalRequest": {
+    "httpElapsedMilliseconds": 16977,
+    "status": 202,
+    "response": {
+      "outcome": "uncertain",
+      "code": "native_resume_response_unavailable"
+    },
+    "firstReplacementPIDObservedMilliseconds": 8069,
+    "firstCanonicalReplacementReadyMilliseconds": 18078,
+    "lastSnapshotMilliseconds": 50230,
+    "requestsRecorded": 1,
+    "journalPrefixRetained": true,
+    "siblingNativePIDUnchanged": true,
+    "activeConversationProof": "Replacement running row eventually reports the expected codex_id with startup ready; old journal alone was not used as current identity proof.",
+    "noPostResumeModelRecallClaim": true
+  },
+  "codeCandidate": {
+    "behavior": "Return typed pending on one-use environment acknowledgement; read native readiness before the same keyed original confirmation. No new UUID/body, account/policy bypass or deadline change.",
+    "nativeResult": "FAILED at unchanged10s gate before local dispatch marker; handoff return alone is insufficient.",
+    "nativeIntentFiles": 1,
+    "nativeDispatchMarkers": 0,
+    "handoffAcknowledgments": 0,
+    "requiredNext": "Bank the original intent durably, run authorized owner preparation under a broker-owned bounded lifetime, and keep previews/duplicate checks nonblocking. Reverify exact live identity before confirmed completion. Preserve existing deadlines/guards and qualify both loss cycles."
+  },
+  "checks": {
+    "helperTestsPassed": 269,
+    "nativeResumeUnitTestsPassed": 16,
+    "strictTypeScriptProjects": 5,
+    "lint": true,
+    "vet": true,
+    "GoRacePass": 548,
+    "GoRaceSkip": 11,
+    "passiveObserverControls": 9,
+    "parentModuleNegative": "Old c11 native-resume module loaded by a private Node load hook fails the new no-extra-handoff/readiness regression. Not an original released executable.",
+    "rejectedChecksRetained": "Initial strict compile exposed union typing, corrected. Initial helper run267/268 lacked/usr/sbin on the qualifier PATH; causal lsof ENOENT vs complete PATH control verified with unchanged production observer/assertions."
+  },
+  "cleanup": {
+    "privateFixturesInactive": 3,
+    "scopedOpenFileAndTmuxControls": true,
+    "nativeSDKFilesUnchanged": 42,
+    "intendedProjectPolicyUnchanged": true,
+    "nativeAuthStoreCopied": false
+  },
+  "retention": {
+    "archiveName": "roadmap-native-recovery608-c11-25a77dd",
+    "files": 162,
+    "bytes": 50097002,
+    "manifestSHA256": "f5d18e06ecc77f8dc6a3abd93b48ea46214ef6ef79905e78217310f027f188fa",
+    "readbackAllSHA256": true
+  },
+  "limits": [
+    "All original overall failures stay false",
+    "Zero of two candidate loss cycles verified",
+    "Peer messaging is separately unqualified; no escalation or unchanged send retry",
+    "No host reboot, service upgrade, Linux/Windows authenticated coding or release acceptance",
+    "No hosted Actions jobs"
+  ],
+  "sourceSHA256": {
+    "webmux/frontend/src/components/Workspace.tsx": "2e02a960503d46c85f86dfdd4ed354bff5c48a842ee8e665a9d2943e5c79d67c",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "9cd6b6fc904c0e3f7bc86b5f1bfa4299b5dff8a737b1c1acca3b50520dfc566f",
+    "webmux/frontend/src/components/ConnectionDialog.tsx": "36c8fa8628827216a8bdc60deccd13718ea563b43a8a0383fbbd69a198c95414",
+    "webmux/frontend/src/components/RigNavigator.tsx": "d0f2eb0b0bdc74031f0920cf4020d1da6b4bd3a0bfd18649dd9c122368770103",
+    "webmux/frontend/src/components/RigSeatStatus.tsx": "13d6083d3007cd5d5a32fd50c094ac099a183c79dd5182d396b8d289e8854b35",
+    "webmux/server/internal/httpapi/openrig.go": "38e7991462af4a9c358ad8e06353279b519a6e5aa959649ff204e0ecc32ce575",
+    "webmux/server/internal/httpapi/coordination_providers.go": "7a9b36bd7ecd35b823ef232d38aabea166b1752222716f724958f1654520b6ba",
+    "webmux/server/internal/httpapi/coordination_creation.go": "70bd8849ce8be36112dd7470e71770ab0558505e45b25d23b9adb733bf07d19b",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "e715cebb9fe49811aa4a5f0348af704ade1ad9f2bb31e9696a569623236069b1",
+    "webmux/server/internal/openrigcoord/rig-native-launch.mts": "fd74271f961f5d183b600d0c7eaae030aa2b8f237d458694a10d86dcef6f056c",
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "b8aac78c18616b14d5c08f43591bdbbb5821b40a9f99ad89d35d7f3b743384c3",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/rig-project-pods.mts": "6ce1d4c32589a5699fc6b40d32c2e99296fbcfbbbec8068bcdc1608888cc40ad",
+    "webmux/server/internal/httpapi/sessions.go": "84c1a3ed8918d75c4015ed542fd03c6c8889191c06d4e935e3d5333c3feebf58",
+    "webmux/server/internal/httpapi/native_rig_recovery.go": "a61d81af18ac966f4e69dfd53eeab16fcb398715e45b8c01b82e283a2d5b2da2",
+    "webmux/server/internal/session/native_rig_recovery.go": "5352dc2e4bf4f7858d69351ab3adba76f5f4bc6113b13b88a421c91bd02e82f2",
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": "4b99af6829ae9d216b24b2a527d1104a193698a3c48a6849fdf8a6c5d1e9229c"
+  },
+  "candidateSourceSHA256": {
+    "webmux/frontend/src/components/Workspace.tsx": "2e02a960503d46c85f86dfdd4ed354bff5c48a842ee8e665a9d2943e5c79d67c",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "9cd6b6fc904c0e3f7bc86b5f1bfa4299b5dff8a737b1c1acca3b50520dfc566f",
+    "webmux/frontend/src/components/ConnectionDialog.tsx": "36c8fa8628827216a8bdc60deccd13718ea563b43a8a0383fbbd69a198c95414",
+    "webmux/frontend/src/components/RigNavigator.tsx": "d0f2eb0b0bdc74031f0920cf4020d1da6b4bd3a0bfd18649dd9c122368770103",
+    "webmux/frontend/src/components/RigSeatStatus.tsx": "13d6083d3007cd5d5a32fd50c094ac099a183c79dd5182d396b8d289e8854b35",
+    "webmux/server/internal/httpapi/openrig.go": "38e7991462af4a9c358ad8e06353279b519a6e5aa959649ff204e0ecc32ce575",
+    "webmux/server/internal/httpapi/coordination_providers.go": "7a9b36bd7ecd35b823ef232d38aabea166b1752222716f724958f1654520b6ba",
+    "webmux/server/internal/httpapi/coordination_creation.go": "70bd8849ce8be36112dd7470e71770ab0558505e45b25d23b9adb733bf07d19b",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "e715cebb9fe49811aa4a5f0348af704ade1ad9f2bb31e9696a569623236069b1",
+    "webmux/server/internal/openrigcoord/rig-native-launch.mts": "fd74271f961f5d183b600d0c7eaae030aa2b8f237d458694a10d86dcef6f056c",
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "b8aac78c18616b14d5c08f43591bdbbb5821b40a9f99ad89d35d7f3b743384c3",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/rig-project-pods.mts": "6ce1d4c32589a5699fc6b40d32c2e99296fbcfbbbec8068bcdc1608888cc40ad",
+    "webmux/server/internal/httpapi/sessions.go": "84c1a3ed8918d75c4015ed542fd03c6c8889191c06d4e935e3d5333c3feebf58",
+    "webmux/server/internal/httpapi/native_rig_recovery.go": "a61d81af18ac966f4e69dfd53eeab16fcb398715e45b8c01b82e283a2d5b2da2",
+    "webmux/server/internal/session/native_rig_recovery.go": "5352dc2e4bf4f7858d69351ab3adba76f5f4bc6113b13b88a421c91bd02e82f2",
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": "4392fd613215737f1c570d45f7ca6f3af29ca3e24692901d95dfbd34e5de9d16"
+  }
+}
