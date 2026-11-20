@@ -21,7 +21,13 @@ def main():
     parser.add_argument('--source-cache', type=Path, help='private per-qualification verified source cache')
     parser.add_argument('--unpatched', action='store_true')
     parser.add_argument('--hold-replies', action='store_true')
+    parser.add_argument('--prequeue-control', action='store_true')
+    parser.add_argument('--legacy-hold-counter', action='store_true')
     args = parser.parse_args()
+    if args.prequeue_control and (not args.hold_replies or args.unpatched):
+        parser.error('prequeue control requires the corrected held-reply fixture')
+    if args.legacy_hold_counter and not args.prequeue_control:
+        parser.error('legacy counter is only available in the explicit prequeue control')
     if platform.system() != 'Linux' or not re.fullmatch(r'[A-Za-z0-9.+_-]+', args.kernel):
         parser.error('requires Linux and a kernel release name')
     root = args.build_root.resolve()
@@ -35,7 +41,10 @@ def main():
     root.mkdir(parents=True, exist_ok=True)
     acquire(manifest, root, args.source_cache.resolve() if args.source_cache else root / 'source-cache')
     patches = {}
-    for name, enabled in [('usb-vudc-dequeue.patch', True), ('usb-vudc-schedule.patch', args.hold_replies), ('usb-vudc.patch', not args.unpatched)]:
+    schedule = 'usb-vudc-schedule-legacy.patch' if args.legacy_hold_counter else 'usb-vudc-schedule.patch'
+    prequeue = 'usb-vudc-prequeue-legacy.patch' if args.legacy_hold_counter else 'usb-vudc-prequeue.patch'
+    for name, enabled in [('usb-vudc-dequeue.patch', True), (schedule, args.hold_replies),
+                          (prequeue, args.prequeue_control), ('usb-vudc.patch', not args.unpatched)]:
         if enabled:
             patch = (tests / name).read_bytes()
             subprocess.run(['patch', '--batch', '--fuzz=0', '-p1'], cwd=root, input=patch, check=True, timeout=10)

@@ -58,6 +58,42 @@ def admits_repair(status, log):
             and 'PASS: held native reply discarded; replacement import and exact payload verified' in log)
 
 
+def admits_counter_gap(status, log):
+    if status != 1 or not kernel_clean(log) or not handshake_clean(log):
+        return False
+    try:
+        record = lambda prefix: json.loads(next(line[len(prefix):] for line in log.splitlines() if line.startswith(prefix)))
+        pre = record('PREQUEUE_CONTROL ')
+        state = record('HELD_REPLY_DIAGNOSTIC ')
+        return (type(pre['queued']) is int and pre['queued'] > 0
+                and type(pre['before']) is int and pre['before'] == 0 and pre['readerBlocked'] is True
+                and type(state['before']) is int and state['before'] == 0 and int(state['counter']['text']) == 0
+                and all(not state[k]['truncated'] for k in ['counter', 'hold', 'prequeuePause', 'queuedCompletions'])
+                and state['hold']['text'].strip() in {'Y', '1'}
+                and state['prequeuePause']['text'].strip() in {'N', '0'}
+                and int(state['queuedCompletions']['text']) > 0 and state['readerExit'] is None
+                and 'Loaded gadget srcversion verified:' in log
+                and 'Timed out: real native completion queued under TX hold' in log
+                and 'Genuine native reply queued; direct read is blocked' not in log
+                and 'PASS: held native reply discarded;' not in log)
+    except (StopIteration, ValueError, KeyError, TypeError):
+        return False
+
+
+def admits_counted_prequeue(status, log):
+    if not admits_repair(status, log):
+        return False
+    try:
+        record = lambda prefix: json.loads(next(line[len(prefix):] for line in log.splitlines() if line.startswith(prefix)))
+        pre, after = record('PREQUEUE_CONTROL '), record('PREQUEUE_COUNTER ')
+        return (type(pre['queued']) is int and pre['queued'] > 0
+                and type(pre['before']) is int and pre['before'] == 0 and pre['readerBlocked'] is True
+                and type(after['held']) is int and type(after['queued']) is int
+                and after['held'] == after['queued'] > 0)
+    except (StopIteration, ValueError, KeyError, TypeError):
+        return False
+
+
 def build_fixture(source, kernel, build, cache, options):
     # The cache may outlive one disposable build, but acquire() verifies every
     # restored byte against the source manifest before compilation.
@@ -178,6 +214,20 @@ def main():
             guest('direct-20', receipt, ['--direct-control'], lambda status, log:
                   status == 0 and 'PASS: 20 direct USB/IP enumeration, read/write and detach cycles' in log)
             guest('webmux-ssh', receipt, [], admits_webmux)
+
+    # Separate causal controls: the original four native outcomes above are
+    # mandatory. The legacy hook must miss a real prequeued completion, while
+    # the current hook must pass the unchanged full repair admission.
+    for name, extra, admit in [
+            ('legacy-counter-prequeue', ['--legacy-hold-counter'], admits_counter_gap),
+            ('held-counter-prequeue', [], admits_counted_prequeue)]:
+        build = root / name
+        build_fixture(source, args.kernel, build,
+                      args.source_cache.resolve() if args.source_cache else root / 'source-cache',
+                      ['--hold-replies', '--prequeue-control', *extra])
+        receipt = json.loads((build / 'receipt.json').read_text())
+        install(build / 'usbip-vudc.ko')
+        guest(name, receipt, ['--prequeue-control'], admit)
 
 
 if __name__ == '__main__':

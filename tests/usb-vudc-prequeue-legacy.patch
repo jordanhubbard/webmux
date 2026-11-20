@@ -1,0 +1,44 @@
+--- a/vudc_tx.c
++++ b/vudc_tx.c
+@@ -30,0 +31,27 @@
++
++
++/* Causal control only: pause native TX before arming the original hold. */
++static bool webmux_pause_tx;
++module_param_named(webmux_test_pause_tx, webmux_pause_tx, bool, 0600);
++static atomic_t webmux_prequeued_replies = ATOMIC_INIT(0);
++static int webmux_prequeued_get(char *buffer, const struct kernel_param *kp)
++{
++	(void)kp;
++	return sysfs_emit(buffer, "%d\n", atomic_read(&webmux_prequeued_replies));
++}
++static const struct kernel_param_ops webmux_prequeued_ops = {
++	.get = webmux_prequeued_get,
++};
++module_param_cb(webmux_test_prequeued_replies, &webmux_prequeued_ops, NULL, 0400);
++static void webmux_sample_prequeued(struct vudc *udc)
++{
++	struct tx_item *item;
++	unsigned long flags;
++	unsigned int count = 0;
++	spin_lock_irqsave(&udc->lock_tx, flags);
++	list_for_each_entry(item, &udc->tx_queue, tx_entry)
++		if (item->type == TX_SUBMIT)
++			count++;
++	atomic_set(&webmux_prequeued_replies, count);
++	spin_unlock_irqrestore(&udc->lock_tx, flags);
++}
+@@ -209,0 +237,4 @@
++		if (READ_ONCE(webmux_pause_tx)) {
++			spin_unlock_irqrestore(&udc->lock_tx, flags);
++			return total_size;
++		}
+@@ -248,0 +280,8 @@
++		if (READ_ONCE(webmux_hold_replies) || READ_ONCE(webmux_pause_tx))
++			webmux_sample_prequeued(udc);
++		if (READ_ONCE(webmux_pause_tx)) {
++			wait_event_interruptible_timeout(udc->tx_waitq,
++				!READ_ONCE(webmux_pause_tx) || kthread_should_stop(),
++				msecs_to_jiffies(10));
++			continue;
++		}

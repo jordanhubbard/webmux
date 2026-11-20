@@ -1,9 +1,10 @@
+--- a/vudc.h
++++ b/vudc.h
+@@ -66,0 +67 @@
++	bool webmux_held_counted;
 --- a/vudc_tx.c
 +++ b/vudc_tx.c
-@@ -11,6 +11,23 @@
- 
- #include "usbip_common.h"
- #include "vudc.h"
+@@ -13,0 +14,33 @@
 +#include <linux/moduleparam.h>
 +#include <linux/atomic.h>
 +
@@ -21,38 +22,41 @@
 +	.get = webmux_held_get,
 +};
 +module_param_cb(webmux_test_held_replies, &webmux_held_ops, NULL, 0400);
- 
- static inline void setup_base_pdu(struct usbip_header_basic *base,
- 				  __u32 command, __u32 seqnum)
-@@ -190,6 +207,10 @@
- 
- 	spin_lock_irqsave(&udc->lock_tx, flags);
- 	while (!list_empty(&udc->tx_queue)) {
++
++/* Count each real held completion once, including replies queued before hold. */
++static void webmux_mark_held(struct tx_item *item)
++{
++	if (item->type == TX_SUBMIT && !item->webmux_held_counted) {
++		item->webmux_held_counted = true;
++		atomic_inc(&webmux_held_replies);
++	}
++}
++/* Caller holds lock_tx. */
++static void webmux_mark_queued_held(struct vudc *udc)
++{
++	struct tx_item *item;
++	list_for_each_entry(item, &udc->tx_queue, tx_entry)
++		webmux_mark_held(item);
++}
+@@ -192,0 +226,5 @@
 +		if (READ_ONCE(webmux_hold_replies)) {
++			webmux_mark_queued_held(udc);
 +			spin_unlock_irqrestore(&udc->lock_tx, flags);
 +			return total_size;
 +		}
- 		txi = list_first_entry(&udc->tx_queue, struct tx_item,
- 				       tx_entry);
- 		list_del(&txi->tx_entry);
-@@ -225,6 +246,12 @@
- 	int ret;
- 
- 	while (!kthread_should_stop()) {
+@@ -227,0 +266,10 @@
 +		if (READ_ONCE(webmux_hold_replies)) {
++			unsigned long flags;
++			spin_lock_irqsave(&udc->lock_tx, flags);
++			webmux_mark_queued_held(udc);
++			spin_unlock_irqrestore(&udc->lock_tx, flags);
 +			wait_event_interruptible_timeout(udc->tx_waitq,
 +				!READ_ONCE(webmux_hold_replies) || kthread_should_stop(),
 +				msecs_to_jiffies(10));
 +			continue;
 +		}
- 		if (usbip_event_happened(&udc->ud))
- 			break;
- 		ret = v_send_ret(udc);
-@@ -281,4 +308,6 @@
- 	txi->s = urb_p;
- 
- 	list_add_tail(&txi->tx_entry, &udc->tx_queue);
+@@ -284 +332,3 @@
 -}
 +	if (READ_ONCE(webmux_hold_replies))
-+		atomic_inc(&webmux_held_replies);
++		webmux_mark_held(txi);
 +}

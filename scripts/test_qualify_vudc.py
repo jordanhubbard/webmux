@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import copy
 
 spec = importlib.util.spec_from_file_location('vudc', Path(__file__).with_name('qualify-test-vudc.py'))
 module = importlib.util.module_from_spec(spec)
@@ -139,6 +140,62 @@ class NativeAdmission(unittest.TestCase):
                       'Kernel panic - not syncing', 'general protection fault'):
             self.assertFalse(module.kernel_clean('PASS: transport completed\n' + fault))
         self.assertTrue(module.kernel_clean('module verification failed: signature missing - tainting kernel'))
+
+
+class HeldCounterAdmission(unittest.TestCase):
+    pre = {'queued': 1, 'before': 0, 'readerBlocked': True}
+    state = {'before': 0, 'counter': {'text': '0\n', 'truncated': False},
+             'hold': {'text': 'Y\n', 'truncated': False},
+             'prequeuePause': {'text': 'N\n', 'truncated': False},
+             'queuedCompletions': {'text': '1\n', 'truncated': False}, 'readerExit': None}
+
+    def failure(self, state=None, pre=None):
+        return ('Loaded gadget srcversion verified: fixture\nPREQUEUE_CONTROL ' + json.dumps(self.pre if pre is None else pre)
+                + '\nHELD_REPLY_DIAGNOSTIC ' + json.dumps(self.state if state is None else state)
+                + '\nRuntimeError: Timed out: real native completion queued under TX hold\n')
+
+    def test_counter_gap_requires_real_queued_reply_hold_and_unpaused_transmitter(self):
+        log = self.failure()
+        self.assertTrue(module.admits_counter_gap(1, log))
+        self.assertTrue(module.admits_counter_gap(1, log.replace('\n', '\r\n')))
+        for status in [0, 2, 124, -9]:
+            self.assertFalse(module.admits_counter_gap(status, log))
+        for key in self.state:
+            state = copy.deepcopy(self.state)
+            del state[key]
+            self.assertFalse(module.admits_counter_gap(1, self.failure(state)))
+        for key, value in [('counter', '1\n'), ('hold', 'N\n'), ('prequeuePause', 'Y\n'), ('queuedCompletions', '0\n')]:
+            state = copy.deepcopy(self.state)
+            state[key]['text'] = value
+            self.assertFalse(module.admits_counter_gap(1, self.failure(state)))
+            state = copy.deepcopy(self.state)
+            state[key]['truncated'] = True
+            self.assertFalse(module.admits_counter_gap(1, self.failure(state)))
+
+    def test_unrelated_timeout_handshake_or_kernel_fault_cannot_establish_counter_gap(self):
+        log = self.failure()
+        for marker in ['PREQUEUE_CONTROL', 'HELD_REPLY_DIAGNOSTIC', 'Loaded gadget srcversion verified:',
+                       'real native completion queued under TX hold']:
+            self.assertFalse(module.admits_counter_gap(1, log.replace(marker, 'other')))
+        for error in ['BUG: fault', 'Oops: fault', 'Kernel panic', 'recv different busid',
+                      'Genuine native reply queued; direct read is blocked']:
+            self.assertFalse(module.admits_counter_gap(1, log + error))
+        state = copy.deepcopy(self.state)
+        state['readerExit'] = 1
+        self.assertFalse(module.admits_counter_gap(1, self.failure(state)))
+        pre = copy.deepcopy(self.pre)
+        pre['queued'] = 0
+        self.assertFalse(module.admits_counter_gap(1, self.failure(pre=pre)))
+
+    def test_fixed_counter_requires_original_repair_and_actual_prequeue_comparison(self):
+        repair = '\n'.join(NativeAdmission.phases + NativeAdmission.repaired)
+        log = repair + '\nPREQUEUE_CONTROL ' + json.dumps(self.pre) + '\nPREQUEUE_COUNTER ' + json.dumps({'held': 1, 'queued': 1})
+        self.assertTrue(module.admits_counted_prequeue(0, log))
+        self.assertFalse(module.admits_counted_prequeue(1, log))
+        self.assertFalse(module.admits_counted_prequeue(0, repair))
+        self.assertFalse(module.admits_counted_prequeue(0, log.replace('"held": 1', '"held": 2')))
+        for marker in NativeAdmission.phases + NativeAdmission.repaired:
+            self.assertFalse(module.admits_counted_prequeue(0, log.replace(marker, 'other')))
 
 
 if __name__ == '__main__':

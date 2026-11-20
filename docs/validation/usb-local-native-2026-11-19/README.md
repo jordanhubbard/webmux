@@ -1,5 +1,10 @@
 # Local USB kernel qualification
 
+> Historical #618 checkpoint. The [held-counter correction](../usb-held-counter-2026-11-19/README.md)
+> supersedes its pending #550/#615 disposition with a reproduced counter gap,
+> a native repair and a complete six-control result. The original failed/passing
+> receipts and their source/platform limits remain unchanged below.
+
 The USB qualifier can now run under the local-resource instruction without
 claiming a GitHub Actions identity. `--local-container` admits a disposable,
 unprivileged Linux Docker container and verifies that USB operations run inside
