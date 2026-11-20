@@ -1,5 +1,7 @@
 # Automatic browser launch through Mosh
 
+The [current acceptance audit](../mosh-acceptance-2026-11-19/README.md) reconciles the original native executions with current source and retains all earlier failures. Pending-at-the-time statements below remain historical evidence.
+
 [#468](https://github.com/jordanhubbard/webmux/issues/468) implements the remaining
 Mosh launch feature under #110. New Mosh providers enable a browser control path
 in their shell helpers. A helper seals its latest pending URL in the private
