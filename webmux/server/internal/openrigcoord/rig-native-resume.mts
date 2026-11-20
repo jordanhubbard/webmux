@@ -24,6 +24,8 @@ interface Dependencies {
   review?: () => Promise<RigCreateManager>;
   handoff?: typeof openRigNativeCodexRecoveryHandoff;
   verifyPolicy?: (input: NativeCodexResumeInput) => void;
+  readinessNow?: () => number;
+  readinessWait?: (milliseconds: number) => Promise<void>;
 }
 const ulid = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -169,11 +171,27 @@ export async function resumeRigNativeCodex(input: NativeCodexResumeInput, deps: 
     // able to send that first POST with the original owner operation UUID.
     const pending = () => ({ ...summary, state: 'uncertain' as const, code: 'native_resume_pending', posted: false });
     try {
-      const current = await request(fetcher, manager.port, `/api/rigs/${input.rigId}/sessions`);
-      if (current.status !== 200) return pending();
-      const live = rows(current.value).filter(row => row.nodeId === input.nodeId && row.status === 'running');
-      if (live.length > 1 || (live.length === 1 && (!ulid.test(String(live[0].id)) || live[0].sessionName !== input.sessionName
-        || live[0].resumeType !== 'codex_id' || live[0].resumeToken !== input.nativeSessionId || live[0].startupStatus !== 'ready'))) return pending();
+      // Observe the current replacement for at most three seconds within the
+      // existing response window. Immediate pending replies can exhaust all
+      // explicit Checks before the owner has joined its native process. This
+      // observes only GETs; it opens no account channel and dispatches nothing.
+      const now = deps.readinessNow ?? (() => performance.now());
+      const wait = deps.readinessWait ?? ((milliseconds: number) => new Promise<void>(resolve => setTimeout(resolve, milliseconds)));
+      const end = now() + 3000, observation = AbortSignal.timeout(3000);
+      for (;;) {
+        const current = await request(fetcher, manager.port, `/api/rigs/${input.rigId}/sessions`, undefined, observation);
+        if (current.status !== 200) return pending();
+        const live = rows(current.value).filter(row => row.nodeId === input.nodeId && row.status === 'running');
+        if (live.length === 0) break; // Retain crash-before-first-POST completion.
+        if (live.length !== 1 || !ulid.test(String(live[0].id)) || live[0].sessionName !== input.sessionName) return pending();
+        const row = live[0];
+        if (row.resumeType === 'codex_id' && row.resumeToken === input.nativeSessionId && row.startupStatus === 'ready') break;
+        if ((row.resumeToken != null && row.resumeToken !== input.nativeSessionId)
+          || (row.resumeType != null && row.resumeType !== 'codex_id')) return pending();
+        const remaining = end - now();
+        if (remaining <= 0) return pending();
+        await wait(Math.min(250, remaining));
+      }
     } catch { return pending(); }
   }
   if (input.prepare) return { ...summary, state: 'prepared', code: 'native_resume_prepared', posted: false };

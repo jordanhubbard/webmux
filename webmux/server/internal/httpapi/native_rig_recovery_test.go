@@ -114,7 +114,13 @@ print(json.dumps(v))
 		t.Fatal("refreshed preview changed original request")
 	}
 	complete, _ := json.Marshal(view.ManagedOriginalRequest)
-	requireStatus(t, request(handler, "POST", endpoint, string(complete), ""), 200)
+	completion := request(handler, "POST", endpoint, string(complete), "")
+	if completion.Code == 202 {
+		// Persisting uncertainty and releasing the original worker are separate
+		// transitions. This Check may only observe that worker settling.
+		completion = request(handler, "POST", endpoint, string(complete), "")
+	}
+	requireStatus(t, completion, 200)
 	requireStatus(t, request(handler, "POST", endpoint, string(complete), ""), 200)
 	final, _ := os.ReadFile(log)
 	lines := strings.Split(strings.TrimSpace(string(final)), "\n")

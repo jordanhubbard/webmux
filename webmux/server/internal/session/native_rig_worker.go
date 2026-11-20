@@ -63,7 +63,7 @@ func (b *Broker) BeginRigNativeRecovery(ctx context.Context, owner, id string, i
 			return RecoveryResult{}, ErrRecoveryConflict
 		}
 		b.mu.Unlock()
-		return waitNativeRecovery(ctx, job)
+		return waitNativeRecovery(ctx, job, input.Inspect)
 	}
 	// Ordinary duplicates remain read-only. Once preparation has settled,
 	// explicit completion uses the existing full live-original checks again.
@@ -125,12 +125,26 @@ func (b *Broker) BeginRigNativeRecovery(ctx context.Context, owner, id string, i
 		}
 		b.mu.Unlock()
 	}()
-	return waitNativeRecovery(ctx, job)
+	return waitNativeRecovery(ctx, job, input.Inspect)
 }
 
-func waitNativeRecovery(ctx context.Context, job *nativeRecoveryJob) (RecoveryResult, error) {
+func waitNativeRecovery(ctx context.Context, job *nativeRecoveryJob, inspect bool) (RecoveryResult, error) {
 	select {
 	case <-job.banked:
+		if inspect {
+			// An explicit Check observes progress for a bounded part of the
+			// existing response window. It never starts another native call
+			// alongside the original worker. Ordinary replay stays immediate.
+			timer := time.NewTimer(3 * time.Second)
+			defer timer.Stop()
+			select {
+			case <-job.done:
+				return job.result, job.err
+			case <-ctx.Done():
+				return RecoveryResult{}, ctx.Err()
+			case <-timer.C:
+			}
+		}
 		return RecoveryResult{Outcome: "uncertain", Code: "original_operation_pending"}, nil
 	case <-job.done:
 		return job.result, job.err

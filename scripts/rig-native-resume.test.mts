@@ -30,11 +30,13 @@ function fixture(t: { after(fn: () => void): void }) {
   } };
   const review = { ok: true, contract: 'startup-history.v1', intent: 'resume-original', rigId, nodeId, logicalId: 'agents.alpha',
     snapshotId, historySessionId, revision: 'a'.repeat(64), observed: { state: 'stopped' } };
-  const posts: string[] = []; let gets = 0, handoffs = 0, closed = 0, lose = false, replay = false, foreignReply = false, busy = false, ownerReady = true;
+  const posts: string[] = []; let gets = 0, handoffs = 0, closed = 0, lose = false, replay = false, foreignReply = false, busy = false, ownerReady = true, now = 0;
   const operationFile = path.join(original, 'recovery-operations', operationId + '.json');
   const marker = path.join(original, 'recovery-operations', operationId + '.dispatched');
   const deps = {
     verifyPolicy: () => {},
+    readinessNow: () => now,
+    readinessWait: async (milliseconds: number) => { now += milliseconds; },
     run: () => { throw new Error('No arbitrary command may be replayed'); }, review: async () => manager,
     handoff: async () => { handoffs++; return { alreadyDelivered: false, manager, wait: async () => { await new Promise<void>(resolve => setImmediate(resolve)); return true; }, close: async () => { closed++; } }; },
     fetcher: (async (url: string | URL | Request, init?: RequestInit) => {
@@ -58,7 +60,7 @@ function fixture(t: { after(fn: () => void): void }) {
   };
   return { input, deps, review, snapshot, posts, operationFile, marker, manager,
     lose: () => { lose = true; }, replay: () => { lose = false; replay = true; }, foreign: () => { foreignReply = true; }, busy: () => { busy = true; },
-    ownerReady: (value: boolean) => { ownerReady = value; }, counts: () => ({ gets, handoffs, closed }) };
+    ownerReady: (value: boolean) => { ownerReady = value; }, clock: () => now, counts: () => ({ gets, handoffs, closed }) };
 }
 posixTest('native resume banks exact identity/revision/body and consumes authority before dispatch', async t => {
   const f = fixture(t), result = await resumeRigNativeCodex(f.input, f.deps);
@@ -203,9 +205,12 @@ posixTest('new worker handoff returns pending before owner reply, then unready i
   assert.equal(aborted, true); assert.equal(f.posts.length, 1);
   f.ownerReady(false); f.deps.fetcher = normalFetch;
   f.deps.handoff = async () => { throw Error('An unjoined original must not reopen the owner account'); };
+  const beforeWait = f.counts();
   const check = await resumeRigNativeCodex({ ...f.input, inspect: true }, f.deps);
   assert.equal(check.state, 'uncertain'); assert.equal(check.code, 'native_resume_pending'); assert.equal(check.posted, false);
   assert.equal(f.posts.length, 1);
+  assert.equal(f.clock(), 3000, 'read-only readiness observation stays bounded');
+  assert.equal(f.counts().gets - beforeWait.gets, 13);
   // Readiness permits only confirmation using the immutable body/UUID. The
   // owner's replay guard still supplies the decisive exact-original proof.
   f.ownerReady(true); f.replay();
@@ -213,6 +218,22 @@ posixTest('new worker handoff returns pending before owner reply, then unready i
   const complete = await resumeRigNativeCodex({ ...f.input, inspect: true }, f.deps);
   assert.equal(complete.state, 'confirmed'); assert.equal(complete.code, 'already_running_original');
   assert.equal(f.posts.length, 2); assert.equal(f.posts[1], f.posts[0]);
+});
+
+posixTest('explicit Check observes joining readiness before confirming only the original operation', async t => {
+  const f = fixture(t); f.lose(); await resumeRigNativeCodex(f.input, f.deps);
+  f.ownerReady(false); f.replay();
+  const advance = f.deps.readinessWait, before = f.counts();
+  f.deps.readinessWait = async milliseconds => {
+    assert.equal(f.posts.length, 1, 'readiness observation dispatched another POST');
+    assert.equal(f.counts().handoffs, before.handoffs, 'readiness observation reopened the account');
+    await advance(milliseconds);
+    if (f.clock() >= 1500) f.ownerReady(true);
+  };
+  const complete = await resumeRigNativeCodex({ ...f.input, inspect: true }, f.deps);
+  assert.equal(complete.state, 'confirmed'); assert.equal(f.clock(), 1500);
+  assert.equal(f.posts.length, 2); assert.equal(f.posts[1], f.posts[0]);
+  assert.equal(f.counts().gets - before.gets, 7);
 });
 
 posixTest('readiness cannot confirm a foreign current conversation or skip original owner confirmation', async t => {
