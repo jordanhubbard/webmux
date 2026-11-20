@@ -1,5 +1,7 @@
 # Offline pinned USB fixture sources
 
+The [current audit](../relay-provisioning-acceptance-2026-11-19/README.md) retains later native bundle evidence and fixes the newly found nonregular cache-read gap. #550 remains open for the changed helper's full native guest qualification.
+
 The original4860 USB job135399141113 fails before its guest/kernel acceptance.
 Its source receipt shows vudc_rx.c receiving HTTP429 on all three attempts; total
 acquisition is13.218s of the unchanged90-second budget. The earlier checksum

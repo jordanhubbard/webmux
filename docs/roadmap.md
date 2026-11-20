@@ -45,6 +45,13 @@ also completes #543's Windows connected-shell fixture, #466's regular-file
 inventory admission and #517's frozen Ubuntu qualification-image libc minimum.
 Their broader recovery, vulnerability/license and deployment boundaries remain.
 
+The [relay provisioning audit](validation/relay-provisioning-acceptance-2026-11-19/README.md)
+reconciles #545/#546 timeout evidence and #549 signed HTTPS fixture provisioning
+with the retained full native relay and Linux APT controls. #550 remains open:
+its newly corrected nonregular/unbounded cache read has local regression coverage,
+but the changed helper still needs complete native guest qualification. Original
+native failures keep their original outcomes and source bindings.
+
 Windows private browser cleanup #473 also has completed
 [native acceptance](validation/browser-process-exit-2026-11-18/README.md#integrated-acceptance--2026-11-19):
 verified owned-child exit precedes one-shot private-file removal. Original
