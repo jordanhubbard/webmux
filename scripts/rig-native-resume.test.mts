@@ -30,15 +30,21 @@ function fixture(t: { after(fn: () => void): void }) {
   } };
   const review = { ok: true, contract: 'startup-history.v1', intent: 'resume-original', rigId, nodeId, logicalId: 'agents.alpha',
     snapshotId, historySessionId, revision: 'a'.repeat(64), observed: { state: 'stopped' } };
-  const posts: string[] = []; let gets = 0, handoffs = 0, closed = 0, lose = false, replay = false, foreignReply = false, busy = false;
+  const posts: string[] = []; let gets = 0, handoffs = 0, closed = 0, lose = false, replay = false, foreignReply = false, busy = false, ownerReady = true;
   const operationFile = path.join(original, 'recovery-operations', operationId + '.json');
   const marker = path.join(original, 'recovery-operations', operationId + '.dispatched');
   const deps = {
     verifyPolicy: () => {},
     run: () => { throw new Error('No arbitrary command may be replayed'); }, review: async () => manager,
-    handoff: async () => { handoffs++; return { alreadyDelivered: false, manager, wait: async () => true, close: async () => { closed++; } }; },
+    handoff: async () => { handoffs++; return { alreadyDelivered: false, manager, wait: async () => { await new Promise<void>(resolve => setImmediate(resolve)); return true; }, close: async () => { closed++; } }; },
     fetcher: (async (url: string | URL | Request, init?: RequestInit) => {
-      if (init?.method !== 'POST') { gets++; return new Response(JSON.stringify(String(url).includes('/snapshots/') ? snapshot : review)); }
+      if (init?.method !== 'POST') {
+        gets++;
+        const sessions = [{ id: '01JQPWV4E7QP26M799M3S0MR6J', nodeId, status: 'running', sessionName: input.sessionName,
+          resumeType: ownerReady ? 'codex_id' : null, resumeToken: ownerReady ? nativeSessionId : null,
+          startupStatus: ownerReady ? 'ready' : 'pending' }];
+        return new Response(JSON.stringify(String(url).endsWith('/sessions') ? sessions : String(url).includes('/snapshots/') ? snapshot : review));
+      }
       const text = String(init.body), body = JSON.parse(text); posts.push(text);
       assert.equal(JSON.parse(artifacts.read(operationFile).toString()).requestText, text);
       assert.deepEqual(JSON.parse(artifacts.read(marker).toString()), { operationId, requestSHA256: createHash('sha256').update(text).digest('hex') });
@@ -52,7 +58,7 @@ function fixture(t: { after(fn: () => void): void }) {
   };
   return { input, deps, review, snapshot, posts, operationFile, marker, manager,
     lose: () => { lose = true; }, replay: () => { lose = false; replay = true; }, foreign: () => { foreignReply = true; }, busy: () => { busy = true; },
-    counts: () => ({ gets, handoffs, closed }) };
+    ownerReady: (value: boolean) => { ownerReady = value; }, counts: () => ({ gets, handoffs, closed }) };
 }
 posixTest('native resume banks exact identity/revision/body and consumes authority before dispatch', async t => {
   const f = fixture(t), result = await resumeRigNativeCodex(f.input, f.deps);
@@ -74,7 +80,7 @@ posixTest('lost response survives invocation loss; duplicates do nothing and exp
   f.review.revision = 'd'.repeat(64); f.replay();
   const inspected = await resumeRigNativeCodex({ ...f.input, inspect: true }, f.deps);
   assert.equal(inspected.state, 'confirmed'); assert.equal(inspected.code, 'already_running_original');
-  assert.equal(f.posts[1], f.posts[0]); assert.equal(f.counts().gets, before.gets);
+  assert.equal(f.posts[1], f.posts[0]); assert.equal(f.counts().gets, before.gets + 1, 'one read-only readiness query before confirming the original keyed request');
 });
 posixTest('changed conversation and foreign snapshot wrapper cannot select a new native original', async t => {
   const f = fixture(t); await resumeRigNativeCodex(f.input, f.deps);
@@ -172,4 +178,66 @@ posixTest('ordinary duplicate never rechecks policy or reopens a handoff', async
   f.deps.verifyPolicy = () => { throw Error('must not inspect an ordinary duplicate'); };
   const counts = f.counts(); assert.equal((await resumeRigNativeCodex(f.input, f.deps)).posted, false);
   assert.deepEqual(f.counts(), counts); assert.equal(f.posts.length, 1);
+});
+
+posixTest('new worker handoff returns pending before owner reply, then unready inspection neither posts nor observes the account', async t => {
+  const f = fixture(t); let acknowledged!: (value: boolean) => void, posted!: () => void, aborted = false;
+  const ack = new Promise<boolean>(resolve => { acknowledged = resolve; });
+  const dispatch = new Promise<void>(resolve => { posted = resolve; });
+  f.deps.handoff = async () => ({ alreadyDelivered: false, manager: f.manager, wait: () => ack, close: async () => {} });
+  const normalFetch = f.deps.fetcher;
+  f.deps.fetcher = (async (url: string | URL | Request, init?: RequestInit) => {
+    if (init?.method !== 'POST') return normalFetch(url, init);
+    // The owner has reserved this exact operation before requesting its one-use
+    // environment. It deliberately has not finished its joined native proof.
+    const text = String(init.body); f.posts.push(text);
+    assert.equal(JSON.parse(artifacts.read(f.operationFile).toString()).requestText, text);
+    assert.equal(fs.existsSync(f.marker), true);
+    posted();
+    return new Promise<Response>((_resolve, reject) => init.signal!.addEventListener('abort', () => { aborted = true; reject(Error('response observation cancelled')); }, { once: true }));
+  }) as typeof fetch;
+  const first = resumeRigNativeCodex(f.input, f.deps);
+  await dispatch; acknowledged(true);
+  const pending = await first;
+  assert.equal(pending.state, 'uncertain'); assert.equal(pending.code, 'native_resume_pending'); assert.equal(pending.posted, true);
+  assert.equal(aborted, true); assert.equal(f.posts.length, 1);
+  f.ownerReady(false); f.deps.fetcher = normalFetch;
+  f.deps.handoff = async () => { throw Error('An unjoined original must not reopen the owner account'); };
+  const check = await resumeRigNativeCodex({ ...f.input, inspect: true }, f.deps);
+  assert.equal(check.state, 'uncertain'); assert.equal(check.code, 'native_resume_pending'); assert.equal(check.posted, false);
+  assert.equal(f.posts.length, 1);
+  // Readiness permits only confirmation using the immutable body/UUID. The
+  // owner's replay guard still supplies the decisive exact-original proof.
+  f.ownerReady(true); f.replay();
+  f.deps.handoff = async () => ({ alreadyDelivered: true, manager: f.manager, wait: async () => true, close: async () => {} });
+  const complete = await resumeRigNativeCodex({ ...f.input, inspect: true }, f.deps);
+  assert.equal(complete.state, 'confirmed'); assert.equal(complete.code, 'already_running_original');
+  assert.equal(f.posts.length, 2); assert.equal(f.posts[1], f.posts[0]);
+});
+
+posixTest('readiness cannot confirm a foreign current conversation or skip original owner confirmation', async t => {
+  const f = fixture(t); f.lose(); await resumeRigNativeCodex(f.input, f.deps);
+  const normalFetch = f.deps.fetcher;
+  f.deps.fetcher = (async (url: string | URL | Request, init?: RequestInit) => String(url).endsWith('/sessions')
+    ? new Response(JSON.stringify([{ id: snapshotId, nodeId, status: 'running', sessionName: f.input.sessionName,
+      resumeType: 'codex_id', resumeToken: operationId, startupStatus: 'ready' }])) : normalFetch(url, init)) as typeof fetch;
+  const before = f.counts().handoffs;
+  assert.equal((await resumeRigNativeCodex({ ...f.input, inspect: true }, f.deps)).state, 'uncertain');
+  assert.equal(f.counts().handoffs, before); assert.equal(f.posts.length, 1);
+  f.deps.fetcher = normalFetch; f.replay(); f.foreign();
+  const result = await resumeRigNativeCodex({ ...f.input, inspect: true }, f.deps);
+  assert.equal(result.state, 'uncertain', 'a ready token alone is never a confirmation'); assert.equal(f.posts.length, 2);
+});
+
+posixTest('explicit completion can deliver the first owner POST after a crash between local claim and HTTP dispatch', async t => {
+  const f = fixture(t);
+  await resumeRigNativeCodex({ ...f.input, prepare: true }, f.deps);
+  const saved = JSON.parse(artifacts.read(f.operationFile).toString());
+  artifacts.publish(f.marker, Buffer.from(JSON.stringify({ operationId, requestSHA256: createHash('sha256').update(saved.requestText).digest('hex') })));
+  const originalFetch = f.deps.fetcher;
+  f.deps.fetcher = (async (url: string | URL | Request, init?: RequestInit) => String(url).endsWith('/sessions')
+    ? new Response('[]') : originalFetch(url, init)) as typeof fetch;
+  const result = await resumeRigNativeCodex({ ...f.input, inspect: true }, f.deps);
+  assert.equal(result.state, 'confirmed'); assert.equal(f.posts.length, 1);
+  assert.equal(f.posts[0], saved.requestText); assert.equal(JSON.parse(f.posts[0]).operationId, operationId);
 });
