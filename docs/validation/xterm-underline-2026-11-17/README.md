@@ -1,5 +1,12 @@
 # Independent underline-state model checkpoint — 2026-11-17
 
+> Historical checkpoint: the pending screen/renderer and dependency-advisory
+> statements below describe this earlier source. The
+> [2026-11-19 acceptance record](../windows-screen-acceptance-2026-11-19/README.md)
+> supersedes those gates with original qualified native uploads, current source
+> equality and explicit lifecycle limits. Native coding-session recovery remains
+> separate under #318.
+
 This is an incomplete implementation of #427 under #355/#318. The candidate
 now selects the opt-in model for fresh Windows native owners (`screen-v3`),
 and the frontend advertises v2 after validating its renderer layout. Existing

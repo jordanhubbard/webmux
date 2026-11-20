@@ -283,55 +283,39 @@ coding-session recovery in #318 remains separate and unqualified.
 
 ### Windows screen restoration
 
-[#355](https://github.com/jordanhubbard/webmux/issues/355) tracks screen-state
-restoration separately from native conversation recovery. Saved-cursor restores
-now preserve the frontend's live extended underline style/color, including
-1048/1049 and batched modes. Unrepresentable hidden or contradictory underline
-flags explicitly refuse new attachments while preserving the existing job;
-a full terminal reset repairs the mirror. The portable browser suite covers
-40 initial/continued/second-attachment comparisons, and Windows CI now runs the
-same renderer against real ConPTY captures. See the
-[scope and controls](session-recovery.md#saved-underline-restoration-2026-11-16).
-Guest palette/default colors now have a bounded metadata path, preserving
-indexed cells across later palette changes without replaying color queries.
-The portable renderer suite has 51 cases; Windows CI adds nine real ConPTY
-captures ([color scope](session-recovery.md#guest-palette-and-default-colors-2026-11-16)).
-Bounded OSC 8 hyperlink targets, Unicode IDs and link groups now survive initial
-attachment, continued output and a second attachment through [#405](https://github.com/jordanhubbard/webmux/pull/405).
-The production renderer retains the current markerless hyperlink with bounded
-lifecycle cleanup. Its gate passes 61 portable comparisons, 13 actual ConPTY
-cases and an independent renderer lifecycle control
-([hyperlink evidence](validation/screen-links-2026-11-17/README.md)).
-No-wrap cursor, resize and retained REP parser-state restoration are implemented
-through [#422](https://github.com/jordanhubbard/webmux/pull/422), addressing
-[#421](https://github.com/jordanhubbard/webmux/issues/421) and
-[#424](https://github.com/jordanhubbard/webmux/issues/424). The opt-in engine
-preserves addressed versus advanced edge cursors, wide-cell overlap, saved and
-alternate-screen state, edits, margins and resize truncation. A versioned
-renderer profile restores parser state that ANSI cannot safely reseed. Required
-capabilities and a one-use token precede snapshot output; older incompatible
-viewers are refused while the same job continues.
+[#355](https://github.com/jordanhubbard/webmux/issues/355) and
+[#427](https://github.com/jordanhubbard/webmux/issues/427) meet the scoped screen
+mirror and independent underline/extended-state requirements. The bounded
+mirror preserves visible and future terminal state independently of the output
+tail. Explicit v1/v2 capability negotiation and one-use snapshot metadata refuse
+unsupported states or older incompatible viewers while the same job continues.
 
-The exact PR head passed all 17 required outcomes, including fresh Windows
-server/protocol contracts and all 22 actual ConPTY controls. All 431 retained
-initial/continued/second-attachment renderer comparisons matched, with no
-replayed queries and an unmodified reference renderer. Portable/parser and
-controlled-terminal tests have separate scopes from native ConPTY captures;
-see the [qualified sources and limits](validation/xterm-nowrap-2026-11-17/README.md).
-Hidden or contradictory underline flags are implemented through
-[#428](https://github.com/jordanhubbard/webmux/pull/428) under
-[#427](https://github.com/jordanhubbard/webmux/issues/427): opt-in value-copy
-state, bounded v2 snapshot encoding, bare-renderer comparisons and capability
-negotiation, integrated into `main` through #568. The first 28-case native capture
-exposed one combining-cell recapture mismatch. The correction now passes all 28 fresh ConPTY cases and
-1,384 renderer/lifecycle checks. The unchanged audit now passes after advisory withdrawal; #429 classification review remains open;
-broader native coding-session acceptance remains separate. See the
-[current scope](validation/xterm-underline-2026-11-17/README.md).
-The unchanged dependency gate passes;
-[#429](https://github.com/jordanhubbard/webmux/issues/429) retains source-bound
-runtime/build-input classification review, without claiming the matcher repaired.
-Other unqualified OSC display features and the broader native coding-session
-lifecycle remain under #355/#318.
+The [current acceptance record](validation/windows-screen-acceptance-2026-11-19/README.md)
+verifies original source005 AMD64 and ARM64 native uploads: 28 actual ConPTY
+captures and 1,381 initial/continued/recaptured comparisons per architecture.
+Each upload has 259 bare-xterm comparisons and 1,122 production-hyperlink-reference
+comparisons; neither reference uses the snapshot adapter. ARM64 capture is
+native, but its browser is AMD64 under emulation. Ordinary server tests' native
+lifecycle skips remain separate from dedicated capture passes.
+
+The screen, filter, owner, retained VT/ultraviolet, renderer and dependency sources
+are unchanged at audited main9c6a549. Current component race and provenance gates
+pass. The original source005's ten hosted workflows passed; this audit did not
+dispatch hosted jobs or qualify the entire current application on Windows.
+
+[#458](https://github.com/jordanhubbard/webmux/issues/458) also meets its scoped
+aggregate-budget requirement: all ten full non-race VT repetitions and original
+assertions remain intact, with per-test JSON and always-retained artifacts.
+The final native suite took 291.4 seconds within the ten-minute allowance.
+Both original four-minute failures remain retained as failures. The earlier
+runtime corruption (#450) and private Ice Lake timeout (#536) remain unresolved.
+
+Historical milestones remain in the [no-wrap](validation/xterm-nowrap-2026-11-17/README.md),
+[hyperlink](validation/screen-links-2026-11-17/README.md), and
+[underline](validation/xterm-underline-2026-11-17/README.md) records. The specific
+dependency advisory under #429 is closed. Broader native coding-session recovery
+and release acceptance remain under #318 and their existing follow-up issues.
+Unsupported display features remain explicit attachment refusals.
 
 ## Runtime compatibility implementation
 
