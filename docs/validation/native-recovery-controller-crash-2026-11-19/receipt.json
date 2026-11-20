@@ -1,0 +1,214 @@
+{
+  "issue": 617,
+  "status": "PASS for scoped native broker/controller reconstruction; full roadmap and release remain incomplete",
+  "executedSource": "4989e16b59e91924d74dd8e83c5fbfa669f6b179",
+  "integrationBaseline": "28aa877d651793e58fc5b3031e49729e20128441",
+  "sourceReconciliation": "Application tree under webmux and ordinary PTY fixture are unchanged; intervening main changes are separate USB qualification/workflow/docs.",
+  "binarySHA256": "e3d77603d74b6ebcaf9afdc2d564d23c1cca26728d60d3af38494d78233813d0",
+  "sourceSHA256": {
+    "webmux/frontend/src/components/Workspace.tsx": "2e02a960503d46c85f86dfdd4ed354bff5c48a842ee8e665a9d2943e5c79d67c",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "9cd6b6fc904c0e3f7bc86b5f1bfa4299b5dff8a737b1c1acca3b50520dfc566f",
+    "webmux/frontend/src/components/ConnectionDialog.tsx": "36c8fa8628827216a8bdc60deccd13718ea563b43a8a0383fbbd69a198c95414",
+    "webmux/frontend/src/components/RigNavigator.tsx": "d0f2eb0b0bdc74031f0920cf4020d1da6b4bd3a0bfd18649dd9c122368770103",
+    "webmux/frontend/src/components/RigSeatStatus.tsx": "13d6083d3007cd5d5a32fd50c094ac099a183c79dd5182d396b8d289e8854b35",
+    "webmux/server/internal/httpapi/openrig.go": "38e7991462af4a9c358ad8e06353279b519a6e5aa959649ff204e0ecc32ce575",
+    "webmux/server/internal/httpapi/coordination_providers.go": "7a9b36bd7ecd35b823ef232d38aabea166b1752222716f724958f1654520b6ba",
+    "webmux/server/internal/httpapi/coordination_creation.go": "70bd8849ce8be36112dd7470e71770ab0558505e45b25d23b9adb733bf07d19b",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "e715cebb9fe49811aa4a5f0348af704ade1ad9f2bb31e9696a569623236069b1",
+    "webmux/server/internal/openrigcoord/rig-native-launch.mts": "fd74271f961f5d183b600d0c7eaae030aa2b8f237d458694a10d86dcef6f056c",
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "b8aac78c18616b14d5c08f43591bdbbb5821b40a9f99ad89d35d7f3b743384c3",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/rig-project-pods.mts": "6ce1d4c32589a5699fc6b40d32c2e99296fbcfbbbec8068bcdc1608888cc40ad",
+    "webmux/server/internal/httpapi/sessions.go": "7ffc1ef984dc1571f16dc4435fa8157641ca1b0de3bc4acc77ade5b0442dab80",
+    "webmux/server/internal/httpapi/native_rig_recovery.go": "a61d81af18ac966f4e69dfd53eeab16fcb398715e45b8c01b82e283a2d5b2da2",
+    "webmux/server/internal/session/native_rig_recovery.go": "5352dc2e4bf4f7858d69351ab3adba76f5f4bc6113b13b88a421c91bd02e82f2",
+    "webmux/server/internal/openrigcoord/rig-native-resume.mts": "f370662ed2f0f0b2436e000570eb822526d6c353650d59e4ad65b77a1b056e6b",
+    "webmux/server/internal/session/native_rig_worker.go": "16b03f3f62c73b12e98840e688e45b173f9481418c54fcc4c0340ddf55d00b39",
+    "webmux/server/internal/session/managed_capture.go": "dc21d031c93ec34c5e2becd6ec788e5e195b21d138b6def6875fb3f14545823e",
+    "webmux/server/internal/session/broker.go": "f6f248a98c6f8867e7ee32f340c97b4707abd55e57f1f846e1f08bc4276f25a6",
+    "webmux/server/internal/session/transcript.go": "740b2021ea7848733d49626295f84267bc08256b1a21b0af4d92aad3f7f5b457",
+    "webmux/server/internal/session/managed_restore.go": "8c65231a351f0d7732a2b3225c1df8ee3f8ac51a454ab1f7b2f88f4e77566ee1",
+    "webmux/server/internal/session/recovery.go": "c066ccb5e0c6b02a3801f002b6e1dc06f3bc17d3e972871ff28314a63138ca53",
+    "webmux/server/internal/httpapi/server.go": "16c252645b535366517d9a0ca81824f4812385b54b5757e1e51bc9ad1b16cf93",
+    "webmux/frontend/src/components/RecoveryDialog.tsx": "cb3e1b08e6541af5e5e1cdf2948bcc95f55605ea701830437911a611214acb48",
+    "webmux/frontend/src/components/TerminalActions.tsx": "5ebfdca43e423fc290e478b6c0fb582506420f4b084ffce8bc18fc5044d93ea4"
+  },
+  "driverSHA256": {
+    "qualify.py": "d619288fe97243beaa44b87f5c287583490df8c31bba984cb1e819a3dd0e5bef",
+    "browser.mjs": "3af8a4b64f86d8770d064d74dc04bf0a07575c07005585038d28accfdd28c1be",
+    "bootstrap-prefix.py": "0548b652358aa0a82f6fcb622514ffed2fa1a86862e47ca7fc22cda8c23bddfa"
+  },
+  "driverFilesUnchanged": true,
+  "driverAdmission": {
+    "originalDriverSHA256": "8012708678d8afe60064023416b923dfe5ee78e1014142efbc786aea9548fe13",
+    "crashDriverSHA256": "3af8a4b64f86d8770d064d74dc04bf0a07575c07005585038d28accfdd28c1be",
+    "allOriginalLinesRetainedInOrderExceptDescriptiveScope": true,
+    "originalResponseObserverMilliseconds": 10000,
+    "originalExplicitCheckLimit": 6,
+    "originalOuterTimeoutSeconds": 660,
+    "newAssertions": [
+      "actual immutable pre-dispatch absence after controller exit",
+      "actual acknowledged post-handoff and unjoined-owner boundary",
+      "same persisted original UUID/body after browser/controller reconstruction",
+      "same consumed request returns consumed after third private controller crash"
+    ]
+  },
+  "privateControllerSIGKILLs": 3,
+  "distinctControllerProcesses": 4,
+  "boundaries": [
+    {
+      "phase": "banked_before_native_dispatch",
+      "signal": "SIGKILL",
+      "oldControllerAbsentBeforeReplacement": true,
+      "samePreparedIntentAfterExit": true,
+      "ledgerBefore": {
+        "intent": {
+          "bytes": 1062,
+          "sha256": "541a80f6b85ae1b369fb1a7e16bc4094ec6208ebefcbd2542dd0a2b13a3e1a53"
+        },
+        "dispatched": null,
+        "handoff": null,
+        "confirmed": null
+      },
+      "ledgerAfterExit": {
+        "intent": {
+          "bytes": 1062,
+          "sha256": "541a80f6b85ae1b369fb1a7e16bc4094ec6208ebefcbd2542dd0a2b13a3e1a53"
+        },
+        "dispatched": null,
+        "handoff": null,
+        "confirmed": null
+      },
+      "ordinaryDuplicateHTTPStatus": 202,
+      "ordinaryDuplicateOutcome": "uncertain",
+      "originalRequestReconstructed": true
+    },
+    {
+      "phase": "after_environment_handoff_before_confirmation",
+      "signal": "SIGKILL",
+      "oldControllerAbsentBeforeReplacement": true,
+      "samePreparedIntentAfterExit": true,
+      "ledgerBefore": {
+        "intent": {
+          "bytes": 1062,
+          "sha256": "84ab341e5d79a0b1e577ca963c102e644df39571f35bfd4295b82cc4c0d93697"
+        },
+        "dispatched": {
+          "bytes": 137,
+          "sha256": "3d3ddf5dce4ddf3d6bbe5bd65e863585f59055b8870811f1578a0460fa66f182"
+        },
+        "handoff": {
+          "bytes": 185,
+          "sha256": "27009ca66f4380e18c1bd7d46f8ad66849a0d68c7c3ca4f84e44d8c71a8f5fb2"
+        },
+        "confirmed": null
+      },
+      "ledgerAfterExit": {
+        "intent": {
+          "bytes": 1062,
+          "sha256": "84ab341e5d79a0b1e577ca963c102e644df39571f35bfd4295b82cc4c0d93697"
+        },
+        "dispatched": {
+          "bytes": 137,
+          "sha256": "3d3ddf5dce4ddf3d6bbe5bd65e863585f59055b8870811f1578a0460fa66f182"
+        },
+        "handoff": {
+          "bytes": 185,
+          "sha256": "27009ca66f4380e18c1bd7d46f8ad66849a0d68c7c3ca4f84e44d8c71a8f5fb2"
+        },
+        "confirmed": null
+      },
+      "ordinaryDuplicateHTTPStatus": 202,
+      "ordinaryDuplicateOutcome": "uncertain",
+      "originalRequestReconstructed": true
+    },
+    {
+      "phase": "consumed_request_controller_reconstruction",
+      "signal": "SIGKILL",
+      "oldControllerAbsentBeforeReplacement": true,
+      "samePreparedIntentAfterExit": true,
+      "ledgerBefore": {
+        "intent": {
+          "bytes": 1062,
+          "sha256": "84ab341e5d79a0b1e577ca963c102e644df39571f35bfd4295b82cc4c0d93697"
+        },
+        "dispatched": {
+          "bytes": 137,
+          "sha256": "3d3ddf5dce4ddf3d6bbe5bd65e863585f59055b8870811f1578a0460fa66f182"
+        },
+        "handoff": {
+          "bytes": 185,
+          "sha256": "27009ca66f4380e18c1bd7d46f8ad66849a0d68c7c3ca4f84e44d8c71a8f5fb2"
+        },
+        "confirmed": {
+          "bytes": 227,
+          "sha256": "191674ca03110cf4dd18fdb94a007a873bbe3247ad5a2080a339465d83d93c32"
+        }
+      },
+      "ledgerAfterExit": null,
+      "ordinaryDuplicateHTTPStatus": 200,
+      "ordinaryDuplicateOutcome": "consumed",
+      "originalRequestReconstructed": false
+    }
+  ],
+  "verifiedNativeLossCycles": 2,
+  "initialCorrelatedNativeTools": 2,
+  "originalConversationRecallWithoutToolsAfterEachLoss": true,
+  "firstSeatNativeProcesses": 3,
+  "unchangedSiblingProcess": true,
+  "nativeSessionRows": 4,
+  "originalNativeRequests": 2,
+  "immutableDispatchClaims": 2,
+  "nativeConfirmations": 2,
+  "environmentAcknowledgments": 2,
+  "ledgerMode": "0600",
+  "oneRetainedLogNameAcrossLossesAndControllerReconstruction": true,
+  "logPrefixesUnchangedAndAppended": true,
+  "initialHTTPMilliseconds": [
+    2030.689,
+    1720.91
+  ],
+  "explicitChecksPerLoss": [
+    3,
+    2
+  ],
+  "maximumHTTPMilliseconds": 4678.705,
+  "originalResponseObserverMilliseconds": 10000,
+  "originalCheckLimit": 6,
+  "originalOuterBudgetSeconds": 660,
+  "serverWorkerBudgetMilliseconds": 45000,
+  "originalDeadlinesAndAssertionsRetained": true,
+  "projectPolicy": "read-only/on-request in all native contexts and unchanged project file; no fresh independent enforcement probe in this case",
+  "nativeSDKFilesUnchanged": 42,
+  "nativeAccount": "Existing authenticated Rig0.7.18/Codex0.169 account/runtime used in place",
+  "nativeProjectTrust": "Explicit temporary-project review; intended project policy unchanged",
+  "webmuxAuthentication": "Private loopback auth-none; no WebMux SSO qualification",
+  "ordinaryPTYInputHex": "7879",
+  "cleanup": {
+    "privateTmuxInactive": true,
+    "scopedLsofExit": 1,
+    "scopedLsofOutputBytes": 0,
+    "privateBinaryAbsent": true,
+    "processesReferencingPrivateRoot": 0,
+    "ownerEnvironmentChannelAbsent": true
+  },
+  "retention": {
+    "archiveName": "roadmap-native-recovery617-crash-4989e16",
+    "manifestSHA256": "e3421052a2a06c89e1dbc907a330ee5670530dfd04bca71e14628be812d360b2",
+    "files": 75,
+    "bytes": 23595948,
+    "readbackAllSHA256": true
+  },
+  "rejectedPreparation": "Initial driver admission preparation used server cwd and failed before reading/changing drivers or starting native work. Corrected at owning worktree root; record retained.",
+  "noAuthStoreCopy": true,
+  "globalSDKUpgrades": 0,
+  "hostReboots": 0,
+  "installedServiceChanges": 0,
+  "ActionsRunsStarted": 0,
+  "limits": [
+    "Scoped macOS ARM64 native pending/consumed controller reconstruction only",
+    "Full318/438 policy/provider/platform/reboot/package migration remains incomplete",
+    "Full603/464/469 and separately policy-blocked peer challenge/ACK remain open",
+    "No claim of ordinary exec-process survival, installed-service upgrade, independent policy enforcement, Linux/Windows recovery or release acceptance"
+  ]
+}

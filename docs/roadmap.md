@@ -100,6 +100,13 @@ PR #612 closes #608 and the discovered log-continuity defect #614. The original
 remain unchanged. Peer-message acceptance, full #603/#464/#469, broader
 #318/#438 lifecycle recovery and release acceptance remain open.
 
+The separate [native controller-reconstruction qualification](validation/native-recovery-controller-crash-2026-11-19/README.md)
+completes #617: actual SIGKILL after the original request is banked but before
+native dispatch, after environment handoff but before confirmation, and after
+consumption. Both loss cycles recover the same original conversation/request and
+retained log; pending duplicates stay pending and consumed replay stays read-only.
+This scoped macOS acceptance does not complete #318/#438 or release qualification.
+
 ### Recover active work after interruption
 
 [#318](https://github.com/jordanhubbard/webmux/issues/318) adds session-state
