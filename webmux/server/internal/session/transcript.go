@@ -31,6 +31,7 @@ type transcriptLog struct {
 	mu              sync.Mutex
 	queue           chan string
 	done            chan struct{}
+	previous        <-chan struct{}
 	closing         bool
 	queuedBytes     int
 	reason          string
@@ -78,6 +79,12 @@ func (l *transcriptLog) stop(reason string) {
 func (b *Broker) writeTranscript(id string, r *run, l *transcriptLog, sink transcriptSink) {
 	defer b.workers.Done()
 	defer close(l.done)
+	if l.previous != nil {
+		// A native attachment may exit while its accepted output is still
+		// draining. Its stop boundary precedes the new resume boundary, without
+		// holding the broker lock or blocking the replacement PTY's reader.
+		<-l.previous
+	}
 	var failure error
 	for data := range l.queue {
 		l.mu.Lock()
@@ -198,12 +205,16 @@ func (b *Broker) openTranscriptLocked(e *entry, r *run) *transcriptLog {
 		return nil
 	}
 	l := &transcriptLog{path: path, name: name, queue: make(chan string, 256), done: make(chan struct{})}
+	if resumed {
+		l.previous = r.log.done
+	}
 	action := "started"
 	if resumed {
 		action = "resumed"
 	}
 	_ = l.append(fmt.Sprintf("[webmux transcript %s %s session=%s launch=%d]\r\n", action, now(), id, r.generation))
 	r.log = l
+	e.lastTranscript = l
 	if e.value.Recovery == nil {
 		e.value.Recovery = &recovery.State{Version: 1}
 	}
@@ -217,6 +228,25 @@ func (b *Broker) openTranscriptLocked(e *entry, r *run) *transcriptLog {
 	b.workers.Add(1)
 	go b.writeTranscript(e.value.ID, r, l, sink)
 	return l
+}
+
+// Only a revalidated native-original attachment inherits the existing viewer's
+// transcript across process generations. Ordinary reconnects keep their own
+// launch logs. A persisted reference must name this session's file, never an
+// arbitrary pathname or another session's transcript.
+func (b *Broker) nativeTranscriptLocked(e *entry) *transcriptLog {
+	if e.value.Recovery == nil || len(e.value.Recovery.Transcripts) == 0 {
+		return nil
+	}
+	names := e.value.Recovery.Transcripts
+	name := names[len(names)-1]
+	if len(name) > 255 || strings.ContainsAny(name, `/\`) || !strings.HasPrefix(name, "session-"+safeSessionID(e.value.ID)+"-") || !strings.HasSuffix(name, ".log") {
+		return nil
+	}
+	if previous := e.lastTranscript; previous != nil && previous.name == name {
+		return previous
+	}
+	return &transcriptLog{name: name, path: filepath.Join(b.store.Home, "logs", "sessions", name), closing: true}
 }
 
 func (b *Broker) transcriptErrorLocked(id string, r *run, l *transcriptLog, err error) {
