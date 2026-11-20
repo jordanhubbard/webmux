@@ -34,6 +34,7 @@ export interface CoordinationSeat {
 export interface CoordinationMessage {
   provider?: string; from: string; to: string; body: string; time: string; state: string;
   kind?: string; level?: string; sourceRemote?: string;
+  turnFingerprint?: string; sourceProfile?: string; inboxProfile?: string;
 }
 export interface CoordinationSendResult {
   requestId?: string; requestState?: 'unobserved' | 'pending' | 'uncertain' | 'completed' | 'refused' | 'cancelled'; requestCode?: string;

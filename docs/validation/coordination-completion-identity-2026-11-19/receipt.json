@@ -1,0 +1,212 @@
+{
+  "issue": 623,
+  "parentIssue": 246,
+  "base": "ef63792bcd6c607877661621de1e3e33a320339e",
+  "scope": "Additive native completion evidence retention in Peek and Drain; full Rig/Agent Deck bridge remains incomplete.",
+  "qualifiedSourceSHA256": {
+    "webmux/server/internal/httpapi/coordination_providers.go": "d0bb43c1710736f3432e2af025ccda67df0e7e4119d8d2bec41104a18ab2b2af",
+    "webmux/server/internal/httpapi/coordination_event_identity_test.go": "8862f64808e26f24b473ddb52eeb74450c2d62624115af571b6031a449e1de6a",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "5647368f7d8a39aa78ae00a000a6a9b80afa300fb34f578b415c00cb743b3888"
+  },
+  "sourceBinding": "Native binary built from these product bytes with modified=true; docs-only publication does not claim a clean packaged/current-main native acceptance.",
+  "native": {
+    "passed": true,
+    "architecture": "arm64",
+    "macOS": "27.2",
+    "agentDeckVersion": "1.16.39",
+    "agentDeckSHA256": "e6a08a50d40d4a14494fd461a966b28976d46dcbce4766fee1e8c2061958913b",
+    "webmuxSHA256": "0d62b5edd96a90f0ff06c36f4593049d56a2beaa113ad9ae95bef616c7450d06",
+    "webmuxBuild": "Go1.27.4 darwin/arm64 CGO1, unembedded development executable with explicit source asset root; base ef63792, vcs.modified=true, bound to qualified file hashes. Not a signed/packaged release.",
+    "workerExits": [
+      0,
+      7
+    ],
+    "nativeCompletionKinds": [
+      "finished",
+      "finished"
+    ],
+    "nativeCompletionStatuses": [
+      "ok",
+      "fail"
+    ],
+    "nativeFingerprintCount": 2,
+    "exactNativeFingerprintsAndProfilesPreservedInBothHTTPReads": true,
+    "selectedInboxProfile": "work",
+    "ambientProfile": "unrelated",
+    "nativePeekRecordsUnchanged": true,
+    "nativeProducerRerun": false,
+    "parentNativeStopConfirmed": true,
+    "parentPayloadExited": true,
+    "parentStillStoppedDuringReview": true,
+    "privateAPIServerExit": 0,
+    "nativeBinariesUnchanged": true,
+    "authMode": "Both private loopback trusted-mode and default local-auth mode checked. Local-auth anonymous401/admin200/member403; temporary HTTP fixture users only, no coding-provider login.",
+    "remoteDrainNativeAcceptance": false,
+    "codingConversationAcceptance": false,
+    "bridgeAcceptance": false,
+    "authenticatedAPIReview": {
+      "mode": "local",
+      "anonymousStatus": 401,
+      "fixtureAdminBootstrapSucceeded": true,
+      "fixtureMemberStatus": 403,
+      "credentialsPersistedInReport": false,
+      "passed": true,
+      "nativeFingerprintsAndProfilesPreserved": true,
+      "inboxUnchanged": true,
+      "serverExit": 0
+    }
+  },
+  "nativeSource": {
+    "revision": "d62c2898d623e5353392a06f9a77c19f97b33438",
+    "files": [
+      {
+        "path": "internal/session/transition_notifier.go",
+        "blobSHA1": "e28fce1982a0b1814131e5c712629afebe3e3146",
+        "sha256": "7645a7ca18a1a51cda7bd78d585a100157da738ca5ccf7eba185042bb6a4f8fe"
+      },
+      {
+        "path": "internal/session/inbox_outbox.go",
+        "blobSHA1": "5cf634087f604d9d30a72bc48f60951e0526af6c",
+        "sha256": "9521c530a35213883f71356951d30acd93caa4fa65907b56b7dca5b957bc006a"
+      },
+      {
+        "path": "internal/session/event_fingerprint.go",
+        "blobSHA1": "361a87aacd0195c58e8843848dbaf9247a5a4cf6",
+        "sha256": "465bea01f179c376eb24e3dec44527c9ec39553fc73b2e5313db99615c0ee898"
+      },
+      {
+        "path": "cmd/agent-deck/main.go",
+        "blobSHA1": "f81d46e6bb618877b5f672a1bc043e3b5643d96e",
+        "sha256": "eb4d11089993461c6af00be4a370add8d3fc325e7d5a8890ffd6763389b7f71d"
+      },
+      {
+        "path": "cmd/agent-deck/notify_daemon_cmd.go",
+        "blobSHA1": "8d3ddbcc3e75499642a3424b50805e78ecfe4606",
+        "sha256": "a718ed7437978a2c9c3887fccf287014bea56b1656333184be9420eb021fa1cd"
+      },
+      {
+        "path": "cmd/agent-deck/conductor_notify_cmd.go",
+        "blobSHA1": "bca48e7516e7053d4134f0a0c21073e568b6177e",
+        "sha256": "ccb01defb6da3631d662f9a1fcb1f8b23dc4d2fb85cc12f325615da6d143548b"
+      },
+      {
+        "path": "internal/session/done_sentinel.go",
+        "blobSHA1": "d0931d930c0460c0e6c6872313aa235c8d2feaf7",
+        "sha256": "5821be488aa8960ac123a7a3509fbbfb02b4d945dff87666af7b8d129803ac68"
+      },
+      {
+        "path": "internal/session/issue1186_done_emit_test.go",
+        "blobSHA1": "3603f2e05da8cd0fde5914cdcf29033f665ddc1a",
+        "sha256": "fb5fbc0f2df8677e4a01adb3292d853dd0545ec6b11ac7fccfad278f0872a037"
+      },
+      {
+        "path": "cmd/agent-deck/issue1186_done_signal_test.go",
+        "blobSHA1": "895de4882b612d5cec6201747b0c2e000d27e213",
+        "sha256": "dd8012aaf91db21671d000a93057cac9d253689a3d73b428dbc21177c74e58e2"
+      },
+      {
+        "path": "cmd/agent-deck/runtask_cmd.go",
+        "blobSHA1": "5fdfadbb41e128f66c05d581786f86a48128cc29",
+        "sha256": "c4575eac28664872f40f03395af2e27c9681be68786c4cff5ec90df0dd20dec0"
+      },
+      {
+        "path": "internal/session/taskworker.go",
+        "blobSHA1": "a3bb46b6b6c80b402734de73270979ac16333ef3",
+        "sha256": "d18c023c6046236679829fc3d7a7e379af6662e47457e3a09f457f451f506c36"
+      }
+    ]
+  },
+  "checks": {
+    "goRace": {
+      "command": "go test -race ./internal/httpapi ./internal/config ./internal/session",
+      "exit": 0,
+      "packageSeconds": {
+        "httpapi": 72.676,
+        "config": 4.066,
+        "session": 24.67
+      },
+      "completedToolSession": 13183
+    },
+    "goVet": {
+      "command": "go vet ./...",
+      "exit": 0,
+      "completedToolSession": 50205
+    },
+    "strictTypeScript": {
+      "exit": 0,
+      "projects": 5,
+      "completedToolSession": 92386
+    },
+    "frontendLint": {
+      "exit": 0,
+      "completedToolSession": 3437
+    },
+    "frontendTests": {
+      "exit": 0,
+      "files": 44,
+      "passedTests": 472,
+      "completedToolSession": 39869
+    },
+    "frontendBuild": {
+      "exit": 0,
+      "completedToolSession": 31995
+    },
+    "nativeServerBuild": {
+      "exit": 0,
+      "completedToolSession": 35619
+    },
+    "negativeControls": [
+      {
+        "control": "original-parent",
+        "exit": 1,
+        "expectedFailure": true
+      },
+      {
+        "control": "drop-native-turn",
+        "exit": 1,
+        "expectedFailure": true
+      },
+      {
+        "control": "drop-native-profile",
+        "exit": 1,
+        "expectedFailure": true
+      },
+      {
+        "control": "drop-inbox-profile",
+        "exit": 1,
+        "expectedFailure": true
+      }
+    ],
+    "setupCommandCorrections": "Initial frontend lint/standalone tsc paths pointed outside the hoisted dependencies; normal package commands then passed. No source/SDK changes or waived checks."
+  },
+  "failedNativeFixtureSetupsRetained": [
+    {
+      "stage": "initial-private-server",
+      "passed": false,
+      "error": "Private server exited"
+    },
+    {
+      "stage": "asset-root-corrected-default-auth",
+      "passed": false,
+      "error": "HTTP Error 401: Unauthorized"
+    },
+    {
+      "stage": "private-config-seeded-integration-disabled",
+      "passed": false,
+      "error": "({}, [])"
+    }
+  ],
+  "privateEvidence": "_build/coordination-event246-current/",
+  "invariants": [
+    "Native turn fingerprint and source profile remain opaque/optional; no fabricated identity from text/timestamp.",
+    "Selected inbox profile is separate from native source profile and absent when unknown.",
+    "Repeated observations and duplicate native fingerprints remain records, not consumption or broker deduplication.",
+    "Existing provider/remote/recipient, rendering fallbacks, attention and owning profile command selection remain intact.",
+    "No native queue-file mutation, coding login/model turn, installed SDK or service/protection change, reboot, hosted dispatch, tag or release."
+  ],
+  "remaining": [
+    "Supported Rig external delivery/event adapter, explicit opt-in topology and one lifecycle owner.",
+    "Verified host/provider/profile/native binding and authorization, durable correlation/uncertain-delivery and full native bridge acceptance.",
+    "Actual remote Drain/native remote-host and coding-conversation cases remain outside this local shell-task record check."
+  ]
+}

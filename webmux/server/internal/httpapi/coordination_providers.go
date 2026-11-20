@@ -191,15 +191,21 @@ type coordinationSeat struct {
 }
 
 type coordinationMessage struct {
-	Provider     string `json:"provider,omitempty"`
-	From         string `json:"from"`
-	To           string `json:"to"`
-	Body         string `json:"body"`
-	Time         string `json:"time"`
-	State        string `json:"state"`
-	Kind         string `json:"kind,omitempty"`
-	Level        string `json:"level,omitempty"`
-	SourceRemote string `json:"sourceRemote,omitempty"`
+	// Native turn identity is opaque evidence, not a globally qualified event
+	// ID or proof of delivery. Keep its source profile separate from the local
+	// inbox profile selected for peek/drain; missing native values stay absent.
+	TurnFingerprint string `json:"turnFingerprint,omitempty"`
+	SourceProfile   string `json:"sourceProfile,omitempty"`
+	InboxProfile    string `json:"inboxProfile,omitempty"`
+	Provider        string `json:"provider,omitempty"`
+	From            string `json:"from"`
+	To              string `json:"to"`
+	Body            string `json:"body"`
+	Time            string `json:"time"`
+	State           string `json:"state"`
+	Kind            string `json:"kind,omitempty"`
+	Level           string `json:"level,omitempty"`
+	SourceRemote    string `json:"sourceRemote,omitempty"`
 }
 
 type coordinationProviderStatus struct {
@@ -686,20 +692,22 @@ type agentDeckSession struct {
 }
 
 type agentDeckInboxEvent struct {
-	ChildSessionID string `json:"child_session_id"`
-	ChildTitle     string `json:"child_title"`
-	FromStatus     string `json:"from_status"`
-	ToStatus       string `json:"to_status"`
-	Timestamp      string `json:"timestamp"`
-	Substate       string `json:"substate"`
-	ExitCode       *int   `json:"exit_code"`
-	Kind           string `json:"kind"`
-	DoneStatus     string `json:"done_status"`
-	DoneSummary    string `json:"done_summary"`
-	Tier           string `json:"tier"`
-	Text           string `json:"text"`
-	DeliveryResult string `json:"delivery_result"`
-	SourceRemote   string `json:"source_remote"`
+	TurnFingerprint string `json:"turn_fingerprint"`
+	Profile         string `json:"profile"`
+	ChildSessionID  string `json:"child_session_id"`
+	ChildTitle      string `json:"child_title"`
+	FromStatus      string `json:"from_status"`
+	ToStatus        string `json:"to_status"`
+	Timestamp       string `json:"timestamp"`
+	Substate        string `json:"substate"`
+	ExitCode        *int   `json:"exit_code"`
+	Kind            string `json:"kind"`
+	DoneStatus      string `json:"done_status"`
+	DoneSummary     string `json:"done_summary"`
+	Tier            string `json:"tier"`
+	Text            string `json:"text"`
+	DeliveryResult  string `json:"delivery_result"`
+	SourceRemote    string `json:"source_remote"`
 }
 
 type agentDeckRemote struct {
@@ -1038,28 +1046,9 @@ func (p *agentDeckProvider) status(ctx context.Context, allRemotes bool, only st
 			continue
 		}
 		for _, record := range records {
-			from := agentDeckQualified(record.SourceRemote, record.ChildSessionID)
-			body := record.Text
-			if body == "" {
-				body = record.DoneSummary
-			}
-			state := record.DeliveryResult
-			if state == "" {
-				state = record.ToStatus
-			}
-			kind := record.Kind
-			if kind == "" {
-				kind = "transition"
-			}
-			level := record.Tier
-			if level == "" {
-				level = "urgent"
-			}
-			status.Messages = append(status.Messages, coordinationMessage{
-				Provider: "agent-deck", From: from, To: seat.ID, Body: body, Time: record.Timestamp,
-				State: state, Kind: kind, Level: level, SourceRemote: record.SourceRemote,
-			})
-			if level == "urgent" || record.DoneStatus == "fail" {
+			message := agentDeckEventMessage(record, seat.ID, seat.Profile)
+			status.Messages = append(status.Messages, message)
+			if message.Level == "urgent" || record.DoneStatus == "fail" {
 				status.Attention++
 			}
 		}
@@ -1176,7 +1165,7 @@ func (p *agentDeckProvider) SendStatus(ctx context.Context, target, sendID strin
 	return result, nil
 }
 
-func agentDeckEventMessage(record agentDeckInboxEvent, target string) coordinationMessage {
+func agentDeckEventMessage(record agentDeckInboxEvent, target, inboxProfile string) coordinationMessage {
 	from := agentDeckQualified(record.SourceRemote, record.ChildSessionID)
 	body := record.Text
 	if body == "" {
@@ -1194,7 +1183,7 @@ func agentDeckEventMessage(record agentDeckInboxEvent, target string) coordinati
 	if level == "" {
 		level = "urgent"
 	}
-	return coordinationMessage{Provider: "agent-deck", From: from, To: target, Body: body, Time: record.Timestamp, State: state, Kind: kind, Level: level, SourceRemote: record.SourceRemote}
+	return coordinationMessage{Provider: "agent-deck", From: from, To: target, Body: body, Time: record.Timestamp, State: state, Kind: kind, Level: level, SourceRemote: record.SourceRemote, TurnFingerprint: record.TurnFingerprint, SourceProfile: record.Profile, InboxProfile: inboxProfile}
 }
 
 func (p *agentDeckProvider) Drain(ctx context.Context, remoteName, target string) (coordinationDrainResult, error) {
@@ -1234,7 +1223,7 @@ func (p *agentDeckProvider) Drain(ctx context.Context, remoteName, target string
 		result.WriterDetail = output.Writer.Detail
 	}
 	for _, record := range output.Records {
-		result.Messages = append(result.Messages, agentDeckEventMessage(record, target))
+		result.Messages = append(result.Messages, agentDeckEventMessage(record, target, seat.Profile))
 	}
 	return result, nil
 }

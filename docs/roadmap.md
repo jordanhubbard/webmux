@@ -395,6 +395,10 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   [source-bound local/native qualification](validation/coordination-send-intent-2026-11-19/README.md)
   covers real queue acceptance and delayed-request dismissal. The shared-identity
   and completion-event bridge under #246 remains separate and incomplete.
+  [Native completion evidence retention](validation/coordination-completion-identity-2026-11-19/README.md)
+  preserves the owner-provided turn fingerprint/source profile and selected inbox
+  profile through Peek/Drain; no global identity or bridge completion is implied.
+
 
 - [#264](https://github.com/jordanhubbard/webmux/issues/264): the [strict source
   coverage gate](typescript.md) uses compiler CLIs and is qualified separately
