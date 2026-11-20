@@ -1,0 +1,22 @@
+WARNING: Units below are uncalibrated trace-clock seconds. Embedded monotonic/wall clocks disagree with the decoded trace scale by about 8.5% in this run. Do not interpret these totals as wall time or normalize them to waive the native timeout. See README.md.
+
+Type: delay
+Showing nodes accounting for 1.82s, 100% of 1.82s total
+Dropped 182 nodes (cum <= 0.01s)
+Showing top 15 nodes out of 52
+      flat  flat%   sum%        cum   cum%
+         0     0%     0%      1.82s   100%  syscall.SyscallN
+     1.82s   100%   100%      1.82s   100%  syscall.syscalln
+         0     0%   100%      1.53s 83.90%  internal/poll.(*FD).execIO
+         0     0%   100%      1.50s 82.12%  internal/poll.(*FD).Write
+         0     0%   100%      1.50s 82.12%  internal/poll.(*FD).Write.func1
+         0     0%   100%      1.50s 82.12%  os.(*File).Write
+         0     0%   100%      1.50s 82.12%  os.(*File).write
+         0     0%   100%      1.50s 82.12%  syscall.WriteFile
+         0     0%   100%      1.50s 82.12%  syscall.writeFile
+         0     0%   100%      1.27s 69.89%  testing.tRunner
+         0     0%   100%      0.95s 52.00%  fmt.Fprintf
+         0     0%   100%      0.94s 51.45%  testing.(*chattyPrinter).Updatef
+         0     0%   100%      0.55s 30.11%  runtime/trace.(*traceMultiplexer).startLocked.func1
+         0     0%   100%      0.52s 28.34%  testing.(*T).Run
+         0     0%   100%      0.42s 23.10%  testing.(*T).report

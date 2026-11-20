@@ -1,0 +1,22 @@
+WARNING: Units below are uncalibrated trace-clock seconds. Embedded monotonic/wall clocks disagree with the decoded trace scale by about 8.5% in this run. Do not interpret these totals as wall time or normalize them to waive the native timeout. See README.md.
+
+Type: delay
+Showing nodes accounting for 1.82s, 100% of 1.82s total
+Dropped 182 nodes (cum <= 0.01s)
+Showing top 15 nodes out of 52
+      flat  flat%   sum%        cum   cum%
+     1.82s   100%   100%      1.82s   100%  syscall.syscalln
+         0     0%   100%      0.02s  1.14%  bufio.(*Scanner).Scan
+         0     0%   100%      0.95s 52.00%  fmt.Fprintf
+         0     0%   100%      0.03s  1.78%  internal/poll.(*FD).Read
+         0     0%   100%      0.03s  1.78%  internal/poll.(*FD).Read.func1
+         0     0%   100%      1.50s 82.12%  internal/poll.(*FD).Write
+         0     0%   100%      1.50s 82.12%  internal/poll.(*FD).Write.func1
+         0     0%   100%      1.53s 83.90%  internal/poll.(*FD).execIO
+         0     0%   100%      0.08s  4.37%  main.main
+         0     0%   100%      0.03s  1.78%  os.(*File).Read
+         0     0%   100%      1.50s 82.12%  os.(*File).Write
+         0     0%   100%      0.03s  1.78%  os.(*File).read
+         0     0%   100%      1.50s 82.12%  os.(*File).write
+         0     0%   100%      0.28s 15.45%  os.Open
+         0     0%   100%      0.28s 15.45%  os.OpenFile

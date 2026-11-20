@@ -92,3 +92,9 @@ The reader-resource defect is demonstrated independently; neither this patch nor
 the profile attributes or repairs the private deadline or original corruption in
 [#450](https://github.com/jordanhubbard/webmux/issues/450). Keep #536 open. Broader
 recovery, review/integration and release acceptance remain open.
+
+A later [scheduler-trace diagnostic](../vt-scheduler-clock-2026-11-19/README.md)
+also times out with the same executable and workload. Its embedded monotonic and
+wall snapshots expose an approximately 8.5% discrepancy in the decoded trace
+clock scale; derived delays remain explicitly uncalibrated. This new measurement
+limitation does not change any earlier outcome or establish a timeout cause.

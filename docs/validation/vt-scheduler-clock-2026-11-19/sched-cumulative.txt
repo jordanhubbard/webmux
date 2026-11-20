@@ -1,0 +1,22 @@
+WARNING: Units below are uncalibrated trace-clock seconds. Embedded monotonic/wall clocks disagree with the decoded trace scale by about 8.5% in this run. Do not interpret these totals as wall time or normalize them to waive the native timeout. See README.md.
+
+Type: delay
+Showing nodes accounting for 17.83s, 28.08% of 63.49s total
+Dropped 1286 nodes (cum <= 0.32s)
+Showing top 15 nodes out of 211
+      flat  flat%   sum%        cum   cum%
+         0     0%     0%     32.94s 51.88%  testing.tRunner
+    13.11s 20.66% 20.66%     13.11s 20.66%  runtime.systemstack_switch
+     0.37s  0.58% 21.23%     10.82s 17.03%  runtime.mallocgc
+         0 0.0029% 21.24%      9.64s 15.18%  tuios.dev/vt_test.conserveProblem
+         0     0% 21.24%      9.42s 14.84%  runtime.gcBgMarkWorker
+     2.27s  3.58% 24.81%      8.94s 14.07%  tuios.dev/vt.(*Emulator).Write
+     1.33s  2.09% 26.90%      7.57s 11.93%  runtime.gcMarkDone
+         0     0% 26.90%      6.13s  9.65%  tuios.dev/vt_test.TestResizeConservesText
+     0.01s 0.012% 26.92%      6.12s  9.64%  runtime.gcMarkTermination
+         0     0% 26.92%      6.09s  9.59%  tuios.dev/vt.(*Emulator).WriteString
+         0     0% 26.92%      5.80s  9.13%  tuios.dev/vt.TestPenDiffMatchesStyleDiff
+         0     0% 26.92%      5.60s  8.82%  runtime.bgsweep
+     0.71s  1.12% 28.04%      5.20s  8.19%  tuios.dev/vt.(*seqParser).Advance
+     0.02s 0.029% 28.07%      5.19s  8.17%  runtime.gcStart
+     0.01s 0.0089% 28.08%      4.91s  7.73%  tuios.dev/vt_test.logicalLinesAt
