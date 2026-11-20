@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/session"
 )
@@ -77,6 +78,23 @@ print(json.dumps(v))
 	if json.Unmarshal(first.Body.Bytes(), &result) != nil || result.Outcome != "uncertain" {
 		t.Fatal(first.Body.String())
 	}
+	// The response now acknowledges the durable original before native work
+	// finishes. Observe its persisted terminal uncertainty without dispatching
+	// another operation before asserting ordinary replay and explicit Check.
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		view, err = s.sessions.Recovery("anonymous", saved.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if view.State.Intent != nil && view.State.Intent.Outcome == "uncertain" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("original native worker did not settle")
+		}
+		time.Sleep(time.Millisecond)
+	}
 	raw, err := os.ReadFile(log)
 	if err != nil {
 		t.Fatal(err)
@@ -96,7 +114,13 @@ print(json.dumps(v))
 		t.Fatal("refreshed preview changed original request")
 	}
 	complete, _ := json.Marshal(view.ManagedOriginalRequest)
-	requireStatus(t, request(handler, "POST", endpoint, string(complete), ""), 200)
+	completion := request(handler, "POST", endpoint, string(complete), "")
+	if completion.Code == 202 {
+		// Persisting uncertainty and releasing the original worker are separate
+		// transitions. This Check may only observe that worker settling.
+		completion = request(handler, "POST", endpoint, string(complete), "")
+	}
+	requireStatus(t, completion, 200)
 	requireStatus(t, request(handler, "POST", endpoint, string(complete), ""), 200)
 	final, _ := os.ReadFile(log)
 	lines := strings.Split(strings.TrimSpace(string(final)), "\n")

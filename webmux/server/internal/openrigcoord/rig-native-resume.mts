@@ -24,6 +24,8 @@ interface Dependencies {
   review?: () => Promise<RigCreateManager>;
   handoff?: typeof openRigNativeCodexRecoveryHandoff;
   verifyPolicy?: (input: NativeCodexResumeInput) => void;
+  readinessNow?: () => number;
+  readinessWait?: (milliseconds: number) => Promise<void>;
 }
 const ulid = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -49,9 +51,10 @@ const rows = (value: unknown) => {
   if (!Array.isArray(value) || value.length > 4096 || !value.every(object)) return refuse();
   return value;
 };
-async function request(fetcher: typeof fetch, port: number, route: string, body?: string) {
+async function request(fetcher: typeof fetch, port: number, route: string, body?: string, cancellation?: AbortSignal) {
   const response = await fetcher(`http://127.0.0.1:${port}${route}`, {
-    method: body === undefined ? 'GET' : 'POST', redirect: 'error', signal: AbortSignal.timeout(10000),
+    method: body === undefined ? 'GET' : 'POST', redirect: 'error',
+    signal: cancellation ? AbortSignal.any([AbortSignal.timeout(10000), cancellation]) : AbortSignal.timeout(10000),
     ...(body === undefined ? {} : { headers: { 'content-type': 'application/json' }, body }),
   });
   if (!response.body) return refuse();
@@ -159,6 +162,38 @@ export async function resumeRigNativeCodex(input: NativeCodexResumeInput, deps: 
     verifyRigNativeCodexResumePolicy(value.directory, ref);
   });
   verifyPolicy(input);
+  if (saved && input.inspect && fs.existsSync(dispatched)) {
+    // Readiness is only a reason to ask the owner to confirm the SAME keyed
+    // operation. It grants no launch authority. An unjoined replacement still
+    // has an empty token: do not queue a POST behind its in-flight restore.
+    // Absence is different: a controller may have consumed its local claim
+    // before the owner received anything. Explicit completion must still be
+    // able to send that first POST with the original owner operation UUID.
+    const pending = () => ({ ...summary, state: 'uncertain' as const, code: 'native_resume_pending', posted: false });
+    try {
+      // Observe the current replacement for at most three seconds within the
+      // existing response window. Immediate pending replies can exhaust all
+      // explicit Checks before the owner has joined its native process. This
+      // observes only GETs; it opens no account channel and dispatches nothing.
+      const now = deps.readinessNow ?? (() => performance.now());
+      const wait = deps.readinessWait ?? ((milliseconds: number) => new Promise<void>(resolve => setTimeout(resolve, milliseconds)));
+      const end = now() + 3000, observation = AbortSignal.timeout(3000);
+      for (;;) {
+        const current = await request(fetcher, manager.port, `/api/rigs/${input.rigId}/sessions`, undefined, observation);
+        if (current.status !== 200) return pending();
+        const live = rows(current.value).filter(row => row.nodeId === input.nodeId && row.status === 'running');
+        if (live.length === 0) break; // Retain crash-before-first-POST completion.
+        if (live.length !== 1 || !ulid.test(String(live[0].id)) || live[0].sessionName !== input.sessionName) return pending();
+        const row = live[0];
+        if (row.resumeType === 'codex_id' && row.resumeToken === input.nativeSessionId && row.startupStatus === 'ready') break;
+        if ((row.resumeToken != null && row.resumeToken !== input.nativeSessionId)
+          || (row.resumeType != null && row.resumeType !== 'codex_id')) return pending();
+        const remaining = end - now();
+        if (remaining <= 0) return pending();
+        await wait(Math.min(250, remaining));
+      }
+    } catch { return pending(); }
+  }
   if (input.prepare) return { ...summary, state: 'prepared', code: 'native_resume_prepared', posted: false };
   const handoff = await (deps.handoff ?? openRigNativeCodexRecoveryHandoff)(input, { run: deps.run, fetcher, observationHelper: deps.observationHelper });
   try {
@@ -168,9 +203,27 @@ export async function resumeRigNativeCodex(input: NativeCodexResumeInput, deps: 
     if (!consume(dispatched, json({ operationId: input.operationId, requestSHA256: digest(saved.requestText) }), input.inspect === true)) {
       return { ...summary, state: 'uncertain', code: 'native_resume_already_dispatched', posted: false };
     }
+    const acknowledgement = handoff.wait();
     try {
-      const response = await request(fetcher, manager.port, route, saved.requestText), value = response.value;
-      const acknowledged = await handoff.wait();
+      const cancellation = new AbortController();
+      const reply = request(fetcher, manager.port, route, saved.requestText, cancellation.signal);
+      // The owner consumes this one-use environment only after accepting the
+      // original operation and starting its selected worker. Its joined native
+      // proof may take longer. Return uncertainty at that event, without waiting
+      // out the HTTP deadline or changing it. Aborting this response is not an
+      // owner cancellation, and the immutable dispatch claim stays consumed.
+      const first = await Promise.race([
+        reply.then(response => ({ kind: 'reply' as const, response })),
+        (handoff.alreadyDelivered ? new Promise<never>(() => {}) : acknowledgement.then(async accepted => accepted
+          ? { kind: 'handoff' as const } : { kind: 'reply' as const, response: await reply })),
+      ]);
+      if (first.kind === 'handoff') {
+        cancellation.abort();
+        void reply.catch(() => {});
+        return { ...summary, state: 'uncertain', code: 'native_resume_pending', posted: true };
+      }
+      const response = first.response, value = response.value;
+      const acknowledged = await acknowledgement;
       if (response.status === 200 && object(value) && value.ok === true && value.operationId === input.operationId
         && value.rigId === input.rigId && value.nodeId === input.nodeId
         && ((value.code === 'already_running_original' && value.nativeEffect === false)
@@ -191,7 +244,7 @@ export async function resumeRigNativeCodex(input: NativeCodexResumeInput, deps: 
       return { ...summary, state: 'uncertain', code: 'native_resume_unconfirmed', posted: true,
         ...(object(value) && typeof value.code === 'string' && /^[a-z_]{1,64}$/.test(value.code) ? { nativeCode: value.code } : {}) };
     } catch {
-      await handoff.wait();
+      await acknowledgement;
       return { ...summary, state: 'uncertain', code: 'native_resume_response_unavailable', posted: true };
     }
   } finally { await handoff.close(); }

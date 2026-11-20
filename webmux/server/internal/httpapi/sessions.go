@@ -99,7 +99,7 @@ func (s *Server) recoverSession(w http.ResponseWriter, r *http.Request, owner st
 		if getErr != nil {
 			err = getErr
 		} else if saved.Rig != nil && saved.Rig.NativeRigRecovery != "" {
-			value, err = s.sessions.RecoverRigNative(ctx, owner, saved.ID, input, s.nativeRigRecoveryOperation)
+			value, err = s.sessions.BeginRigNativeRecovery(ctx, owner, saved.ID, input, s.nativeRigRecoveryOperation)
 		} else {
 			value, err = s.sessions.RecoverManaged(ctx, owner, r.PathValue("id"), input, s.planManagedRecovery)
 		}

@@ -89,6 +89,7 @@ type entry struct {
 	focus            string
 	generation       uint64
 	logOperation     sync.Mutex
+	lastTranscript   *transcriptLog
 }
 
 // Broker owns sessions and PTYs. Viewers do not own process lifetime. All map,
@@ -116,6 +117,8 @@ type Broker struct {
 	policyStarted   bool
 	activity        map[agentActivityKey]pendingAgentActivity
 	activityWake    chan struct{}
+
+	nativeRecoveryJobs map[string]*nativeRecoveryJob
 }
 
 func New(store *storage.Store, logger *slog.Logger) (*Broker, error) {
@@ -397,6 +400,10 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 }
 
 func (b *Broker) startLocked(e *entry, password, initial string) error {
+	return b.startWithTranscriptLocked(e, password, initial, nil)
+}
+
+func (b *Broker) startWithTranscriptLocked(e *entry, password, initial string, transcript *transcriptLog) error {
 	if e.value.LocalStop != nil {
 		return ErrLocalStopRequired
 	}
@@ -468,7 +475,7 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 	if source, ok := p.(interface{ BrowserOnServer() bool }); ok {
 		e.value.BrowserLocal = source.BrowserOnServer()
 	}
-	r := &run{process: p, initial: initial, first: true, input: make(chan string, 256), stopped: make(chan struct{}), generation: e.generation, replayUntil: time.Now().Add(1500 * time.Millisecond)}
+	r := &run{process: p, log: transcript, initial: initial, first: true, input: make(chan string, 256), stopped: make(chan struct{}), generation: e.generation, replayUntil: time.Now().Add(1500 * time.Millisecond)}
 	e.run = r
 	logging := b.loggingEnabledLocked()
 	if e.value.TranscriptEnabled != nil {
@@ -596,7 +603,13 @@ func (b *Broker) reconnect(owner, id, password string, expected *RigIdentity, ar
 			return Session{}, err
 		}
 	}
-	err = b.startLocked(e, password, "")
+	var transcript *transcriptLog
+	if expected != nil {
+		if _, native := NativeRigReference(*expected); native {
+			transcript = b.nativeTranscriptLocked(e)
+		}
+	}
+	err = b.startWithTranscriptLocked(e, password, "", transcript)
 	if err == nil {
 		b.markAttachReadyLocked(e)
 		if expected != nil {
@@ -1089,6 +1102,9 @@ func (b *Broker) Close() error {
 		return nil
 	}
 	b.closed = true
+	for _, job := range b.nativeRecoveryJobs {
+		job.cancel()
+	}
 	close(b.policyStop)
 	var processes []process
 	for _, e := range b.entries {
