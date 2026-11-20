@@ -1,5 +1,7 @@
 # Signed HTTPS provisioning for the isolated Rig relay
 
+Current scoped acceptance is reconciled in the [relay provisioning audit](../relay-provisioning-acceptance-2026-11-19/README.md). The original observations and pending-at-the-time statements below remain historical evidence.
+
 The diagnostic source `d37ca20` retains the original timeout output from
 [CI 44475746089](https://github.com/jordanhubbard/webmux/actions/runs/44475746089).
 The pinned Ubuntu image downloads and extracts in about two seconds. The build

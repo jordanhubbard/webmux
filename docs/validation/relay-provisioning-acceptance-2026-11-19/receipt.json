@@ -1,0 +1,212 @@
+{
+  "baseline": "a29daa0c533e75195f6ab58b103d69200cbeb67f",
+  "relayNativeSource": "0056000940ec0dbc96a010c3b88d349759c51c48",
+  "relayFollowupsSupported": [
+    545,
+    546,
+    549
+  ],
+  "usb550State": "OPEN: cache admission correction locally proven; changed helper has not run the complete native guest gate",
+  "nativeArtifacts": [
+    {
+      "name": "browser-parity-linux",
+      "id": 14541391132,
+      "run": 44541506649,
+      "source": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "zipSHA256": "a3c69b30da137edc6c8c9b4f863e60d1fe7d7f00bb1772441efecc9327313930",
+      "verifiedMembers": 3009
+    },
+    {
+      "name": "virtual-usb-gadget-build",
+      "id": 14538203680,
+      "run": 44541506649,
+      "source": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "zipSHA256": "f0fdaf0f10f1fcd5e040623728b9891dc5e45394bf9ab04d8dee53f40c827fcd",
+      "verifiedMembers": 14
+    },
+    {
+      "name": "apt-source-controls-ubuntu-22.04",
+      "id": 14539191395,
+      "run": 44541577712,
+      "source": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "zipSHA256": "42cc9c9d8541ea49f39c6832b4644395312a0f0f1e5ffb3a1c3633230bf903a1",
+      "verifiedMembers": 4
+    },
+    {
+      "name": "apt-source-controls-ubuntu-24.04",
+      "id": 14539405603,
+      "run": 44541577712,
+      "source": "0056000940ec0dbc96a010c3b88d349759c51c48",
+      "zipSHA256": "726dfb4d51df938049727f80865eed9a9cce34009cefe365370e0e9cd09bbe26",
+      "verifiedMembers": 4
+    }
+  ],
+  "unchangedRelaySourceSHA256": {
+    "scripts/qualify-rig-stop-relay.py": "c64277a32ccd5b6f95173b9886b221542029d5253f2f45ffb4a61d34091e805d",
+    "scripts/test_qualify_rig_stop_relay.py": "82108ae90e34c4e2749e80c13eaf6efd078eb8626abf1148be8e09cf3a5af08e",
+    "scripts/test_rig_stop_relay.py": "390300d32994b160102b9ce4b401120fbec5cb305470cb90110363d4f8b8fad8",
+    "scripts/configure-ci-apt.py": "cde88db08a747efc7e2097c44bca1d90bb51c69bd8eaa06351def9bd450efa14",
+    "tests/e2e/openrig-stop-relay.spec.ts": "0e1629efb614588935f087adc99d6809f2fb13706089f7c098fb96499b63def3",
+    "webmux/server/internal/openrigcoord/rig-stop.mts": "63a2f0b7cc8c8ac6fe201d1b07c79ff8bd731fdf01b665684a2625226e3608e8",
+    "webmux/server/internal/httpapi/rig_stop.go": "165e212e9fc6d110fea927128bdb7c6e61a6cb92d6b54f214b7746a95f69ff6a"
+  },
+  "relay": {
+    "head": "0056000940ec0dbc96a010c3b88d349759c51c48",
+    "run": 44541506649,
+    "artifact": 14541391132,
+    "artifactDigest": "sha256:a3c69b30da137edc6c8c9b4f863e60d1fe7d7f00bb1772441efecc9327313930",
+    "all12ActualBrowserRemoteAndCleanupChecks": true,
+    "sourceHashesMatchExactGitSource": true,
+    "browserReceiptSHA256": "19a2bc531eb9ecd434fcf21a3f85c834ef6159fd10fe0ef85a4a4f2086fe18a9",
+    "qualifierSHA256": "c64277a32ccd5b6f95173b9886b221542029d5253f2f45ffb4a61d34091e805d",
+    "nativeBinarySHA256RecordedByQualifier": "96dda90243fac99bfd1d0f57c89e481681c03b5ef5391a942a0d2b1a63850960",
+    "nativeBinaryIndependentlyAvailable": false,
+    "localRuntime": {
+      "rig": "0.7.18 (3bf87c62)",
+      "node": "v24.22.3",
+      "platform": "linux",
+      "architecture": "x64",
+      "browser": "158.0.8127.18"
+    },
+    "remoteVersions": "Linux x86_64\ntmux 3.4",
+    "remotePackageVersions": "openssh-server\t1:9.6p1-3ubuntu13.20\ntmux\t3.4-1ubuntu0.2",
+    "signedHTTPSBuildInputsVerified": true,
+    "publicCAUniqueCertificates": 120,
+    "buildSeconds": 8.916616619000024,
+    "buildDeadlineSeconds": 180,
+    "scope": "Exact final005 actual native WebMux/Rig/browser/localSSH relay to isolated Linux tmux/synthetic sleep owner, including cleanup. Not authenticated coding recovery, physical host reboot/failure, bridge, full roadmap or release acceptance."
+  },
+  "usbHistorical": {
+    "head": "0056000940ec0dbc96a010c3b88d349759c51c48",
+    "run": 44541506649,
+    "artifact": 14538203680,
+    "artifactDigest": "sha256:f0fdaf0f10f1fcd5e040623728b9891dc5e45394bf9ab04d8dee53f40c827fcd",
+    "sourceAcquisition": {
+      "unpatched": {
+        "verifiedFiles": 8,
+        "fromCache": 0,
+        "fromBundle": 8,
+        "networkAttempts": 0
+      },
+      "corrected-held": {
+        "verifiedFiles": 8,
+        "fromCache": 8,
+        "fromBundle": 0,
+        "networkAttempts": 0
+      },
+      "corrected": {
+        "verifiedFiles": 8,
+        "fromCache": 8,
+        "fromBundle": 0,
+        "networkAttempts": 0
+      }
+    },
+    "nativeKernelControls": [
+      {
+        "control": "unpatched",
+        "exit": 1,
+        "admitted": true,
+        "module_sha256": "fd8a3c726992231073b2f82e2fc48585f3b1d8f6ab913ffd644925b641aa3012",
+        "srcversion": "0E77E9FAE1ED8C902094921"
+      },
+      {
+        "control": "corrected-held",
+        "exit": 0,
+        "admitted": true,
+        "module_sha256": "b3159f95270e75a0822411ace8ecc54b01db402a51a431a2ac34217564316892",
+        "srcversion": "AFA0841746AD954FEFE2CCF"
+      },
+      {
+        "control": "direct-20",
+        "exit": 0,
+        "admitted": true,
+        "module_sha256": "63b791ba18898cda92febc83476c531f065aa512e794705162f8eb76fc71fbf6",
+        "srcversion": "CEF310F2896192F4A8FAE09"
+      },
+      {
+        "control": "webmux-ssh",
+        "exit": 0,
+        "admitted": true,
+        "module_sha256": "63b791ba18898cda92febc83476c531f065aa512e794705162f8eb76fc71fbf6",
+        "srcversion": "CEF310F2896192F4A8FAE09"
+      }
+    ],
+    "logSHA256": {
+      "unpatched": "de18cbe61133df7d0399b902f40a5ddde79cadbfc37c2da5f2fd75f5ce979141",
+      "corrected-held": "420be8cd1713d765e4b451ad86895b85fb39681cdfd7673dda5767a53d450845",
+      "direct-20": "28640726608c1434d8fa4086b5958a6f1da9a7e388e88e322a7b4c1f22a3b81c",
+      "webmux-ssh": "87ed112e547f421aeab92265224a67b549fd3d62778bcb3857c75d732479f34d"
+    },
+    "qualifierSHA256": "d801c33c6c3e7c8e4c29e460363c8ec9c1592ab4fd9b59fd9ece709dd15dad55",
+    "scope": "Actual source-bound disposable native Linux kernel controls, retained unpatched negative and corrected held/direct20/WebMuxSSH positives. Not full roadmap/release acceptance."
+  },
+  "diagnosticOriginal": {
+    "run": 44475746089,
+    "source": "d37ca20a2f3daecd07c67b07d73c404ac052ba96",
+    "artifact": 14507292453,
+    "zipSHA256": "4ed86f81c598e75e2264e25c08dea2d872c0dfb9a4785b83d2ab5f1e54822f01",
+    "result": "FAILED; HTTP index acquisition consumed the unchanged180s build bound; native relay not reached",
+    "olderMissingOutputFailures": "67019/312 remain failure; their detailed cause is unproven",
+    "daemonBuildCompletionAfterTimeout": "UNCONFIRMED; image absent at inspection is not daemon completion"
+  },
+  "nativeAPTBootstrap": {
+    "run": 44541577712,
+    "ubuntu": [
+      "22.04",
+      "24.04"
+    ],
+    "relayControlsPerHost": 15,
+    "skips": 0,
+    "logSHA256": "2a589f88b0c7262109eec5fecfecd3c96b29a71a6a5fea7ff05e3289eaa753fe"
+  },
+  "currentLocalControls": [
+    {
+      "suite": "test_vudc_sources",
+      "passed": 13,
+      "skipped": 0,
+      "logSHA256": "cc6437044166ad93913021bedeed278cfc6f0d64bc55643e093f6df47302113d"
+    },
+    {
+      "suite": "test_qualify_vudc",
+      "passed": 9,
+      "skipped": 0,
+      "logSHA256": "04786d9d06876c0aff5d0e32ecb957f21cc01a7ad0232a59db3656e3604d1ece"
+    },
+    {
+      "suite": "test_rig_stop_relay",
+      "passed": 4,
+      "skipped": 0,
+      "logSHA256": "6949eef164df1b470e1519046bb368dbeec1e073f35f6aed4661c11014e24fd5"
+    },
+    {
+      "suite": "test_qualify_rig_stop_relay",
+      "passed": 10,
+      "skipped": 1,
+      "logSHA256": "e3c0d25b361f8cd27bd120a113b0697a3ccc261e7aebf232aab7f9793425949b"
+    },
+    {
+      "suite": "host-apt-controls",
+      "passed": 7,
+      "skipped": 1,
+      "logSHA256": "711e0dfc1d2b9acc22bdea687d2e7442d57274f31b2fdeb552897d0df8198bba"
+    }
+  ],
+  "cacheFix": {
+    "realParentFIFOControl": "Actual child times out5s; original code unchanged",
+    "changedFIFOControl": "Refuses regular-file violation without writer/network",
+    "readBoundBytes": 1048577,
+    "descriptorCheckBeforeRead": true,
+    "nativeDeadlinesOrSourcePinsChanged": false,
+    "allOriginalAcquisitionMethodsVerbatim": true,
+    "allOtherAcquisitionCodeRecoveredByLiteralReversal": true,
+    "sourceFiles": 8,
+    "sourceBytes": 60152,
+    "licenseAndSPDXSourceBytesUnchanged": true,
+    "source": "1d3652578f57c32e856b90a280699e25e9f75d00",
+    "sourceSHA256": {
+      "scripts/vudc_sources.py": "cfe71eb09a390e5258405b71ebd35e70b6efb45ae8ef0bff356dcfce9fdb025b",
+      "scripts/test_vudc_sources.py": "f4e6efaf3f9fbbf485dc16b447eae83de558e2744644687e8f1ca9cabd33ceb5"
+    }
+  },
+  "scope": "Relay diagnostics and signed HTTPS fixture provisioning only. Entire current-main native/release acceptance is not asserted. Historical USB native results retain005 source; new cache guards are not relabelled as native-qualified. Original failures remain failures. No new hosted jobs or host protection/account/service changes."
+}

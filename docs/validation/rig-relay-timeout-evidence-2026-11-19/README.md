@@ -1,5 +1,7 @@
 # Retain timed-out Rig relay fixture evidence
 
+Current scoped acceptance is reconciled in the [relay provisioning audit](../relay-provisioning-acceptance-2026-11-19/README.md). The original observations and pending-at-the-time statements below remain historical evidence.
+
 The original [integration CI run](https://github.com/jordanhubbard/webmux/actions/runs/44471142427)
 at `67019a3` passed its checked local Rig Stop browser case, then hit the
 180-second Docker build limit while preparing the isolated SSH/tmux endpoint.

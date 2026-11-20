@@ -3,14 +3,33 @@ import datetime
 import email.utils
 import hashlib
 import json
+import os
 from pathlib import Path
 import socket
+import stat
 import time
 import urllib.error
 import urllib.request
 
 LIMIT = 1 << 20
 BUNDLED_SOURCES = Path(__file__).resolve().parents[1] / 'tests/fixtures/usbip-vudc-sources'
+
+
+def read_regular_source(source, label):
+    if source.is_symlink():
+        raise RuntimeError('refusing linked fixture ' + label)
+    # A FIFO must not block open, and the descriptor must still name a regular
+    # file after open. NOFOLLOW also refuses a link substituted after the check.
+    flags = (os.O_RDONLY | getattr(os, 'O_BINARY', 0)
+             | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_NOFOLLOW', 0))
+    descriptor = os.open(source, flags)
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise RuntimeError('fixture ' + label + ' is not a regular file')
+        with os.fdopen(descriptor, 'rb', closefd=False) as stream:
+            return stream.read(LIMIT + 1)
+    finally:
+        os.close(descriptor)
 
 
 def bundled_source(bundle, commit, name):
@@ -28,10 +47,7 @@ def bundled_source(bundle, commit, name):
         if (bundle / commit).exists():
             raise RuntimeError('fixture source bundle is incomplete: ' + name)
         return None
-    if not source.is_file():
-        raise RuntimeError('fixture source bundle entry is not a regular file')
-    with source.open('rb') as stream:
-        return stream.read(LIMIT + 1)
+    return read_regular_source(source, 'source bundle entry')
 
 
 def retry_delay(headers, attempt):
@@ -78,8 +94,8 @@ def acquire(manifest, root, cache, *, opener=urllib.request.urlopen,
             if cached.is_symlink():
                 raise RuntimeError('refusing linked fixture cache entry')
             if cached.exists():
-                data = cached.read_bytes()
                 item['from_cache'] = True
+                data = read_regular_source(cached, 'cache entry')
             else:
                 data = bundled_source(bundle, manifest['commit'], name)
                 item['from_bundle'] = data is not None

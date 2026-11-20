@@ -1,5 +1,7 @@
 # Rig Stop relay fixture build timeout
 
+Current scoped acceptance is reconciled in the [relay provisioning audit](../relay-provisioning-acceptance-2026-11-19/README.md). The original observations and pending-at-the-time statements below remain historical evidence.
+
 On original source67019, CI44471142427 Linux job135380639885 passes the real local
 checked-Stop browser case. Its following SSH relay fixture times out building
 the disposable Docker image after the original180-second bound, before SSH or
