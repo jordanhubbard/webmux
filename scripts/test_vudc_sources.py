@@ -1,7 +1,10 @@
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 import urllib.error
@@ -87,6 +90,56 @@ class Acquisition(unittest.TestCase):
         self.manifest['commit'] = 'b' * 40
         with self.assertRaisesRegex(RuntimeError, 'checksum/size mismatch'):
             self.build('oversize', [b'x' * ((1 << 20) + 1)])
+
+    @unittest.skipUnless(hasattr(os, 'mkfifo'), 'requires Unix FIFO support')
+    def test_cached_fifo_is_refused_without_blocking_or_network(self):
+        self.cache.mkdir()
+        cached = self.cache / (self.manifest['commit'] + '-vudc.c')
+        os.mkfifo(cached)
+        root = self.root / 'fifo'
+        root.mkdir()
+        # Bound the child itself so the old blocking cache read fails this
+        # control without hanging the test runner or needing a FIFO writer.
+        command = [sys.executable, '-c',
+                   'import json,sys; from pathlib import Path; from vudc_sources import acquire; '
+                   'acquire(json.loads(sys.argv[1]),Path(sys.argv[2]),Path(sys.argv[3]),'
+                   'opener=lambda *a,**k: (_ for _ in ()).throw(AssertionError("network used")))',
+                   json.dumps(self.manifest), str(root), str(self.cache)]
+        result = subprocess.run(command, cwd=Path(__file__).resolve().parent,
+                                capture_output=True, text=True, timeout=5)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('cache entry is not a regular file', result.stderr)
+        receipt = json.loads((root / 'source-acquisition.json').read_text())
+        self.assertFalse(receipt['passed'])
+        self.assertEqual(receipt['error_type'], 'RuntimeError')
+        self.assertEqual(receipt['files'][0]['attempts'], [])
+        self.assertFalse((root / 'vudc.c').exists())
+
+    def test_linked_directory_and_oversized_cache_entries_refuse_without_fallback(self):
+        self.cache.mkdir()
+        cached = self.cache / (self.manifest['commit'] + '-vudc.c')
+        original = self.root / 'pinned-cache'
+        original.write_bytes(b'pinned')
+        for kind in ['linked', 'directory', 'oversize']:
+            with self.subTest(kind=kind):
+                if kind == 'linked':
+                    cached.symlink_to(original)
+                elif kind == 'directory':
+                    cached.mkdir()
+                else:
+                    cached.write_bytes(b'x' * (LIMIT + 1))
+                try:
+                    with self.assertRaisesRegex(RuntimeError, 'linked|regular file|checksum/size mismatch'):
+                        self.build('cache-' + kind, [])
+                    self.assertEqual(original.read_bytes(), b'pinned')
+                    receipt = json.loads((self.root / ('cache-' + kind) / 'source-acquisition.json').read_text())
+                    self.assertFalse(receipt['passed'])
+                    self.assertEqual(receipt['files'][0]['attempts'], [])
+                finally:
+                    if kind == 'directory':
+                        cached.rmdir()
+                    else:
+                        cached.unlink()
 
     def test_global_budget_applies_across_retries(self):
         now = [0]
