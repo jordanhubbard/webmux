@@ -73,6 +73,13 @@ path. #603 tracks the remaining modern workload. The response observer now
 reveals the actual refusal without changing the original success assertion;
 separate authenticated native receipts retain their own scope.
 
+The [native viewer/loss record](validation/rig-native-viewer-loss-2026-11-19/README.md)
+verifies real coding-conversation continuity through reload and native viewer
+navigation. Its overall gate remains failed: attachment-loss recovery reaches
+durable dispatch/handoff without an observed response inside the unchanged
+10-second observer. #608 tracks the unproven final outcome; no completed loss
+cycle, peer-message acceptance or full #603/#318 recovery is claimed.
+
 ### Recover active work after interruption
 
 [#318](https://github.com/jordanhubbard/webmux/issues/318) adds session-state

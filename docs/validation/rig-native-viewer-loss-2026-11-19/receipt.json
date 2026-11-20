@@ -1,0 +1,141 @@
+{
+  "issues": [
+    603,
+    464,
+    469
+  ],
+  "issuesRemainOpen": true,
+  "overallResult": "FAILED; original attachment-loss recovery outcome is unproven",
+  "executedSource": "a29daa0c533e75195f6ab58b103d69200cbeb67f",
+  "integrationBase": "34c30304403d7ebe6044be0524e4cfe1550c6e23",
+  "serverFrontendAndRelevantTestsEqualAtIntegration": true,
+  "nativePlatform": "macOS ARM64",
+  "rigVersion": "0.7.18 (3bf87c62)",
+  "codexVersion": "0.169.0",
+  "nativeModel": "gpt-6.2-astra",
+  "policy": {
+    "sandbox": "read-only",
+    "approval": "on-request",
+    "launchPlanNetworkAccess": false,
+    "independentEnforcementProbesInThisRun": false
+  },
+  "nativeSeats": [
+    {
+      "name": "first",
+      "contexts": 3,
+      "successfulCorrelatedCanaryTools": 1,
+      "toolAttemptExits": [
+        0
+      ],
+      "nativeJournalSHA256": "189e77dd7ec5882e2a18e872805d2d39fefe837fa987b685b44901daa0481e7b"
+    },
+    {
+      "name": "second",
+      "contexts": 3,
+      "successfulCorrelatedCanaryTools": 1,
+      "toolAttemptExits": [
+        0
+      ],
+      "nativeJournalSHA256": "cb93ec5b7d442f71a9d8d60cc8306cfdb5b111cb2f5516701db7c732c2a3b2f6"
+    }
+  ],
+  "initialViewerReload": {
+    "bothOriginalConversationsRecallWithoutTools": true,
+    "bothNativeJournalPrefixesRetained": true,
+    "originalViewerAndProviderIdentityCheckedBeforeIntentionalNavigation": true,
+    "ordinaryTerminalOwnershipPreserved": true
+  },
+  "navigation": {
+    "offscreenRevealSameViewerAndFocus": true,
+    "minimizeRestoreAvoidsOccupiedCell": true,
+    "detachReopenCanonicalConversationAndHistory": true,
+    "noDuplicateViewers": true,
+    "siblingNativePIDUnchanged": true,
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "attachmentLoss": {
+    "plannedCycles": 2,
+    "verifiedCompletedCycles": 0,
+    "attemptedCycles": 1,
+    "lostSeatHasNoStopAction": true,
+    "siblingStillOffersReviewedStop": true,
+    "nativeResumeIntentRecords": 1,
+    "nativeDispatchClaims": 1,
+    "environmentHandoffAcknowledgments": 1,
+    "nativeConfirmationFileObserved": false,
+    "responseObserverMilliseconds": 10000,
+    "responseWithinObserver": "NOT OBSERVED",
+    "originalOperationFinalOutcome": "UNPROVEN; cleanup followed observer timeout",
+    "newOperationOrAutomaticRedispatchAttempted": false
+  },
+  "peerMessaging": {
+    "qualified": false,
+    "newSendAttempted": false,
+    "scope": "Separate PR606 retains actual native read-only/network-disabled Rig send EPERM and unconfirmed delivery; no unchanged retry or escalation here"
+  },
+  "observerControls": {
+    "recordedNativePositiveAndNegativeControls": 7,
+    "allPassed": true,
+    "successRequiresCorrelatedExit0AndExpectedSeatNonceNodeCwd": true
+  },
+  "sourceSHA256": {
+    "webmux/frontend/src/components/Workspace.tsx": "2e02a960503d46c85f86dfdd4ed354bff5c48a842ee8e665a9d2943e5c79d67c",
+    "webmux/frontend/src/components/CoordinationDialog.tsx": "9cd6b6fc904c0e3f7bc86b5f1bfa4299b5dff8a737b1c1acca3b50520dfc566f",
+    "webmux/frontend/src/components/ConnectionDialog.tsx": "36c8fa8628827216a8bdc60deccd13718ea563b43a8a0383fbbd69a198c95414",
+    "webmux/frontend/src/components/RigNavigator.tsx": "d0f2eb0b0bdc74031f0920cf4020d1da6b4bd3a0bfd18649dd9c122368770103",
+    "webmux/frontend/src/components/RigSeatStatus.tsx": "13d6083d3007cd5d5a32fd50c094ac099a183c79dd5182d396b8d289e8854b35",
+    "webmux/server/internal/httpapi/openrig.go": "38e7991462af4a9c358ad8e06353279b519a6e5aa959649ff204e0ecc32ce575",
+    "webmux/server/internal/httpapi/coordination_providers.go": "7a9b36bd7ecd35b823ef232d38aabea166b1752222716f724958f1654520b6ba",
+    "webmux/server/internal/httpapi/coordination_creation.go": "70bd8849ce8be36112dd7470e71770ab0558505e45b25d23b9adb733bf07d19b",
+    "webmux/server/internal/openrigcoord/rig-native-create.mts": "e715cebb9fe49811aa4a5f0348af704ade1ad9f2bb31e9696a569623236069b1",
+    "webmux/server/internal/openrigcoord/rig-native-launch.mts": "fd74271f961f5d183b600d0c7eaae030aa2b8f237d458694a10d86dcef6f056c",
+    "webmux/server/internal/openrigcoord/rig-native-capture.mts": "b8aac78c18616b14d5c08f43591bdbbb5821b40a9f99ad89d35d7f3b743384c3",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+    "webmux/server/internal/openrigcoord/rig-project-pods.mts": "6ce1d4c32589a5699fc6b40d32c2e99296fbcfbbbec8068bcdc1608888cc40ad"
+  },
+  "frontendAssetSHA256": {
+    "index.html": "be6bf2db4ae51657d6b0ebe54442caedb78d63de1096a8bed3643cc9179488f7",
+    "favicon.svg": "03d993c42c6095040b2fba582b043121a0fd4c21a674953193360e1f3db63c6a",
+    "assets/novnc-CDzVFeD5.js": "1f10fed97e30fb6b3968c3d71e619daa9714fa12433d8be1a205805061250e88",
+    "assets/xterm-B5LH8GIb.css": "15c2f3681b0ca2bae719cc7a7ffd318f45189c9795d1a340a2288fa2df12d2ed",
+    "assets/index-C54IehIr.css": "7b0211ed1a6b2eda01914b7468f9b99cf814aaace174ef20936497fd5dfedccb",
+    "assets/index-BhkpwG72.js": "4772b9076f3c6c6f0fbfac5e090076f94ef646965b4809dcc843aa41e6415616",
+    "assets/xterm-DZ21y8cg.js": "23e6994e053079dc65387a0b49ad497780884d9d4e6ddf38fb782f8df0daa04a",
+    "themes/Borland.itermcolors": "6952b05537fafdf4619c4f6d8775fc7a5f147d36ae125e2fdbe963b079d96957",
+    "themes/Amber.itermcolors": "99ad102a53a19ea8aa7711925729ae421178a21595419f5f91e04416cd93c893",
+    "themes/index.json": "11571c3aeac82094dd84f1169f340e426350698e02bcd42acef3374d6df0da3a"
+  },
+  "binarySHA256": "15443339b4640051449eb7422fe2a962350db9a0b27b732dec71a51b5a05cb54",
+  "buildIdentity": "Clean-source producer self-report; not attested",
+  "driverSHA256": {
+    "qualify.py": "d81959e5ff508ea903df29f6b9986670075be69d29ea8ad674dcd910e8936a1b",
+    "browser.mjs": "e5bb78cb27098163f8d9f7c6ed2424af966c20e4d97989e4d2e54a3ff7badfea",
+    "bootstrap-prefix.py": "5b96121cd8aea626749e609c71661f3ac4d6de56e0b84605217f8c35b5ba8de6"
+  },
+  "driverBeforeAfterEqual": true,
+  "rawResultSHA256": "349ae03901dc77298a6d066f5504c8ee924b7aca28ad47fa4da7daafc0d429cd",
+  "sdkFilesUnchanged": 42,
+  "projectPolicyUnchanged": true,
+  "sourceUnchanged": true,
+  "cleanup": {
+    "completedPrivateFixtures": 6,
+    "allInactiveAfterScopedOpenFileAndTmuxControls": true,
+    "daemonStopExit": 0,
+    "retainedInactiveSocketInodes": true,
+    "credentialOrAccountStoreCopied": false
+  },
+  "retention": {
+    "archiveName": "roadmap-rig603-native-viewer-loss-a29daa0",
+    "files": 160,
+    "bytes": 47967938,
+    "manifestSHA256": "0d5b6668be9470b763c9725952b806d9171de262082ccccc6f5d86543e292123",
+    "allReadbackSHA256": true
+  },
+  "hostedJobsDispatched": 0,
+  "releaseChanged": false,
+  "scope": "Independent native creation/viewer continuity and failed attachment-loss gate. Not full modern workload, authenticated reboot, package upgrade, cross-host or release acceptance.",
+  "recoveryFollowup": 608
+}
