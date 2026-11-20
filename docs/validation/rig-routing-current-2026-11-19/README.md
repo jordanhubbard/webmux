@@ -76,6 +76,16 @@ any original matrix result or close #603, #464 or #469.
 Later main `94ee2e9` adds durable coordination-send handling; this probe retains
 its executed `3920286` source and does not qualify those newer public wrappers.
 
+A subsequent [native viewer/loss record](../rig-native-viewer-loss-2026-11-19/README.md)
+verifies two real canary tools, original no-tool conversation recall and native
+offscreen/minimized/detach-reopen behavior. Its overall result remains failed:
+an original attachment-loss recovery reaches durable dispatch and environment
+handoff but exceeds the unchanged 10-second response observer. The final native
+outcome is unproven after fixture cleanup; no completed loss cycle is claimed.
+[#608](https://github.com/jordanhubbard/webmux/issues/608) tracks retaining the
+same request's outcome without extending the failed gate or redispatching.
+The separate peer-messaging failure above is not retried or waived.
+
 The remaining work is actual current modern native-creation qualification.
 Native version/account spoofing, policy bypass, provider substitution or dropping
 the managed case would not establish it. Older 26-case receipts retain their
