@@ -266,6 +266,13 @@ Ambiguous session IDs across profiles are refused for targeted actions; remote
 session actions retain their registered-remote routing. See the
 [profile-routing qualification](validation/agent-deck-profile-routing-2026-11-17/README.md).
 
+Completion messages also retain optional `turnFingerprint` and `sourceProfile`
+from the native record, separately from the selected recipient `inboxProfile`.
+Missing native values stay absent; these are evidence fields, not global event
+IDs or verified host bindings. Peek remains non-consuming. See the
+[native completion identity check](validation/coordination-completion-identity-2026-11-19/README.md).
+
+
 Rig provides canonical topology and peer messaging. Both integrations can be enabled together. They retain separate ownership and
 project databases; a shared-agent identity and event bridge is future work. Additional coordinators can implement
 the same internal status, launch, attach, messaging, delivery-status, and drain
