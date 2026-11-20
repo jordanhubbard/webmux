@@ -38,7 +38,11 @@ and #459 have completed their scoped acceptance audits and are closed. Their
 [acceptance reconciliation](validation/scoped-acceptance-2026-11-19/README.md)
 binds the original failures, controls and native results to the relevant current
 sources. This does not qualify the whole current main revision or the release;
-the changed-source private Windows VT timeout under #536 remains unresolved.
+the changed-source private Windows VT timeout under #536 remains unresolved. A
+separate [scheduler-trace diagnostic](validation/vt-scheduler-clock-2026-11-19/README.md)
+retains the failure and exposes a decoded-trace clock discrepancy against its
+embedded monotonic/wall snapshots. Clock interpretation and the deadline cause
+remain open; no runtime or test-budget workaround is applied.
 
 The [native-platform follow-up audit](validation/native-platform-acceptance-2026-11-19/README.md)
 also completes #543's Windows connected-shell fixture, #466's regular-file

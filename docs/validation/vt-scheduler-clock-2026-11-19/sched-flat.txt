@@ -1,0 +1,22 @@
+WARNING: Units below are uncalibrated trace-clock seconds. Embedded monotonic/wall clocks disagree with the decoded trace scale by about 8.5% in this run. Do not interpret these totals as wall time or normalize them to waive the native timeout. See README.md.
+
+Type: delay
+Showing nodes accounting for 34.39s, 54.16% of 63.49s total
+Dropped 1286 nodes (cum <= 0.32s)
+Showing top 15 nodes out of 211
+      flat  flat%   sum%        cum   cum%
+    13.11s 20.66% 20.66%     13.11s 20.66%  runtime.systemstack_switch
+     4.57s  7.19% 27.85%      4.57s  7.19%  runtime.goschedIfBusy
+     4.23s  6.66% 34.51%      4.24s  6.67%  runtime.gcTrigger.test
+     2.27s  3.58% 38.09%      8.94s 14.07%  tuios.dev/vt.(*Emulator).Write
+     1.75s  2.75% 40.84%      4.72s  7.44%  runtime.growslice
+     1.68s  2.65% 43.49%      1.89s  2.98%  sync.(*Mutex).Unlock
+     1.33s  2.09% 45.58%      7.57s 11.93%  runtime.gcMarkDone
+     1.02s  1.61% 47.19%      1.02s  1.61%  runtime.(*scavengerState).init.func2
+     0.77s  1.21% 48.40%      0.96s  1.51%  tuios.dev/vt.(*Scrollback).readContent
+     0.71s  1.12% 49.52%      5.20s  8.19%  tuios.dev/vt.(*seqParser).Advance
+     0.65s  1.03% 50.55%      0.99s  1.55%  fmt.(*pp).printArg
+     0.60s  0.94% 51.49%      0.60s  0.94%  github.com/charmbracelet/ultraviolet.colorEqual
+     0.59s  0.93% 52.42%      2.61s  4.11%  tuios.dev/vt_test.cellKey
+     0.56s  0.88% 53.30%      0.65s  1.03%  sync.(*RWMutex).Unlock
+     0.55s  0.86% 54.16%      1.46s  2.30%  runtime.mapassign_fast64

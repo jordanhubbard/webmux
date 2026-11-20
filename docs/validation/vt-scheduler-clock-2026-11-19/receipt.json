@@ -1,0 +1,341 @@
+{
+  "issue": 536,
+  "baseMain": "93face27003d096e6c7dc4dea67240266ecebb6e",
+  "scope": "Distinct trace-only diagnostic; original native failure remains failed. No timeout/corruption repair or release acceptance.",
+  "inventory": {
+    "sourceRevision": "5fadbbc5a4fbe2212fde1e6e5c54f42c2bf91c27",
+    "currentMainVTTreeIdentical": true,
+    "VTTree": "c863c6a7a1b807df1cf034d8a8a1a36a29d72f60",
+    "binarySHA256": "1225de52ab53d4d73e7cdc9a25b4000bad284c70334c8fa2b04fe85cedc05bf1",
+    "diagnosticOnly": true,
+    "profileFlags": [
+      "-test.trace=trace.out"
+    ],
+    "nativeProcess": {
+      "platform": "win32",
+      "started": true,
+      "exit_code": 2,
+      "windows_exit_hex": "0x00000002",
+      "spawn_error": null,
+      "elapsed_seconds": 600.25
+    },
+    "passed": false,
+    "supervisorControlsExit": 0,
+    "trackedFixtures": 19,
+    "runtimeControlsUnsetIncludingGOMAXPROCS": true,
+    "completedPassEvents": 17060,
+    "completedPassedIdentities": 1927,
+    "passRepetitionDistribution": {
+      "9": 1644,
+      "8": 283
+    },
+    "skipEvents": 27,
+    "skippedIdentities": {
+      "TestDepDiffVT": 9,
+      "TestDepDiffResize": 9,
+      "TestGhosttyParkedCursorJoinsLines": 9
+    },
+    "assertionFailureFramesBeforeTimeout": 0,
+    "convertedTestFailureEvents": [],
+    "fuzzSeedPasses": 0,
+    "activeAtTimeout": "TestVTGen_Metamorphic (1s)",
+    "timeoutPanic": true,
+    "nativePassFramesEqualConvertedEvents": true,
+    "conversionTimeFields": "Time fields are post-hoc conversion clocks, not native execution timestamps. Elapsed is parsed from native PASS frames.",
+    "traceBytes": 93228080,
+    "traceSHA256": "c9c456a2521d35bfc1d61403dcca0e8e2050db8d921cae14a72e15bb9039bcf3",
+    "nativeWorkingSetMaximumMiB": 84.57421875,
+    "observedGuestCPUPercent": [
+      31,
+      19,
+      24,
+      10,
+      13,
+      17,
+      23,
+      20
+    ],
+    "minimumObservedAvailableMemoryGiB": 57.90993118286133,
+    "minimumObservedFreeDiskGiB": 17.27806854248047,
+    "scope": "Unchanged stock Go1.27.4 CGO0 executable, original full count10/deadline10m and all19fixtures; trace collection only. Separate from earlier failures and CGO1 hosted results. No repair or acceptance waiver.",
+    "expectedPassedIdentities": 2193,
+    "expectedPassEvents": 21930,
+    "expectedIdentityObservedRepetitionsIncludingZero": {
+      "9": 1644,
+      "8": 283,
+      "0": 266
+    },
+    "referenceInventorySHA256": "df126617dc0e890e26f144171c6054a23b43a1e0e8bd41a7eb4b4ffae2666cd4",
+    "inventoryComplete": false,
+    "sameObservedNativeProcessUntilExit": true,
+    "nativeAbsentAfterCompletion": true
+  },
+  "clockComparison": {
+    "snapshots": 585,
+    "first": {
+      "traceNs": 617878523770450,
+      "monoNs": 569494633473900,
+      "wallTimestamp": "2026-11-19T19:05:58.7648512-08:00"
+    },
+    "last": {
+      "traceNs": 618528875308385,
+      "monoNs": 570094064410100,
+      "wallTimestamp": "2026-11-19T19:15:58.1954877-08:00"
+    },
+    "decodedTraceDeltaSeconds": 650.351537935,
+    "embeddedMonoDeltaSeconds": 599.4309362,
+    "embeddedWallDeltaSeconds": 599.430636,
+    "traceToMonoRatio": 1.084948237836711,
+    "perIntervalRatioMin": 1.0719346612756937,
+    "perIntervalRatioMedian": 1.0849204317506889,
+    "perIntervalRatioMax": 1.095686158612694,
+    "nativeProcessElapsedSeconds": 600.25,
+    "interpretation": "Observed conversion/clock disagreement in this trace. No corrected timing, time-budget change, host fault or original timeout attribution follows."
+  },
+  "traceAnalysis": {
+    "traceSHA256": "c9c456a2521d35bfc1d61403dcca0e8e2050db8d921cae14a72e15bb9039bcf3",
+    "parserExit": 0,
+    "eventCounts": {
+      "Sync": 586,
+      "StateTransition": 3281762,
+      "Metric": 6366075,
+      "RangeBegin": 237764,
+      "RangeEnd": 237762,
+      "Label": 260013,
+      "RangeActive": 63
+    },
+    "firstEventNs": 617878452367988,
+    "lastEventNs": 618529504502406,
+    "spanSeconds": 651.052134418,
+    "metrics": {
+      "/sched/gomaxprocs:threads": {
+        "sampleCount": 36081,
+        "first": "Value{Uint64(16)}",
+        "last": "Value{Uint64(16)}",
+        "values": {
+          "Value{Uint64(16)}": 35703,
+          "Value{Uint64(1)}": 378
+        },
+        "minimum": 1,
+        "maximum": 16
+      },
+      "/gc/heap/goal:bytes": {
+        "sampleCount": 17294,
+        "first": "Value{Uint64(6954314)}",
+        "last": "Value{Uint64(8544778)}",
+        "minimum": 6954314,
+        "maximum": 43546106
+      },
+      "/memory/classes/heap/objects:bytes": {
+        "sampleCount": 6312700,
+        "first": "Value{Uint64(3442592)}",
+        "last": "Value{Uint64(8986416)}",
+        "minimum": 3442592,
+        "maximum": 41495456
+      }
+    },
+    "ranges": {
+      "stop-the-world (start trace)": {
+        "count": 1,
+        "sumSeconds": 4.3942e-05,
+        "maximumSeconds": 4.3942e-05,
+        "medianSeconds": 4.3942e-05,
+        "p99Seconds": 4.3942e-05
+      },
+      "stop-the-world (GC sweep termination)": {
+        "count": 17294,
+        "sumSeconds": 3.436828813,
+        "maximumSeconds": 0.006812217,
+        "medianSeconds": 0.00016129,
+        "p99Seconds": 0.000910509
+      },
+      "GC mark assist": {
+        "count": 25081,
+        "sumSeconds": 3.120288032,
+        "maximumSeconds": 0.021675596,
+        "medianSeconds": 8.2431e-05,
+        "p99Seconds": 0.001120399
+      },
+      "GC concurrent mark phase": {
+        "count": 17293,
+        "sumSeconds": 82.155009689,
+        "maximumSeconds": 1.11771019,
+        "medianSeconds": 0.00397418,
+        "p99Seconds": 0.014230469
+      },
+      "stop-the-world (GC mark termination)": {
+        "count": 17293,
+        "sumSeconds": 11.303086933,
+        "maximumSeconds": 0.578669039,
+        "medianSeconds": 0.000309286,
+        "p99Seconds": 0.004365371
+      },
+      "GC incremental sweep": {
+        "count": 159892,
+        "sumSeconds": 0.789243203,
+        "maximumSeconds": 0.001719843,
+        "medianSeconds": 1.091e-06,
+        "p99Seconds": 0.000110205
+      },
+      "stop-the-world (GOMAXPROCS)": {
+        "count": 252,
+        "sumSeconds": 0.039298927,
+        "maximumSeconds": 0.000903763,
+        "medianSeconds": 3.6106e-05,
+        "p99Seconds": 0.000813593
+      },
+      "stop-the-world (read mem stats)": {
+        "count": 656,
+        "sumSeconds": 0.076116568,
+        "maximumSeconds": 0.004754912,
+        "medianSeconds": 4.0372e-05,
+        "p99Seconds": 0.001863972
+      }
+    },
+    "unmatchedRangeEnds": {},
+    "unfinishedRanges": [
+      {
+        "name": "GC concurrent mark phase",
+        "scope": "None"
+      },
+      {
+        "name": "GC mark assist",
+        "scope": "Goroutine(25813)"
+      }
+    ],
+    "observedRunnableToRunningLatency": {
+      "count": 766910,
+      "sumSeconds": 65.392462774,
+      "maximumSeconds": 0.578371357,
+      "medianSeconds": 6.249e-06,
+      "p99Seconds": 0.000877479
+    },
+    "clockWarning": "Decoded trace span disagrees with native supervisor elapsed. Trace seconds are uncalibrated here; do not equate with wall time or normalize as a repair.",
+    "interpretation": "Range durations and scheduler delays are elapsed trace time, can overlap, and include OS/host descheduling. They do not identify the cause, prove CPU work, establish host-side limits, or qualify a failed inventory."
+  },
+  "traceAnalysisUnits": "Uncalibrated decoded trace-clock units, not wall time. Ranges and waits overlap; unfinished ranges excluded from completed durations.",
+  "archive": {
+    "sha256": "83a6abe754f3c34e3c07670f894debb4ede0dcb1d807a159ccbd86902b223116",
+    "bytes": 51003381,
+    "allInputAndOutputHashesVerified": true,
+    "runnerMatchesStagedHash": true,
+    "fixturesVerified": 19
+  },
+  "currentInputs": {
+    "scripts/vt-native-exit.py": {
+      "currentMatchesQualificationSource": true,
+      "sha256": "c8d594ff732ad8d00903d2ca829d83643bcd9eda8d9494487f33875895f6a5f7"
+    },
+    "tests/test_vt_native_exit.py": {
+      "currentMatchesQualificationSource": true,
+      "sha256": "25bc8c054fb00917cf24c930b60f19aacca8d033130661c3496f272088697112"
+    },
+    "webmux/server/go.mod": {
+      "currentMatchesQualificationSource": true,
+      "sha256": "e407c447a1e17352633bce624540fe72061987ff7c6f60236d0ca90292104275"
+    },
+    "webmux/server/go.sum": {
+      "currentMatchesQualificationSource": true,
+      "sha256": "0e3b77832f544c332e04503c5e7f62d488470f8b55e102b97687748c34454ff2"
+    }
+  },
+  "profileConversions": {
+    "sched": {
+      "profileSHA256": "67d1fffaa3e26d48286580e2eb224439d55a0b40905266cdaf47ea4349497a73",
+      "conversionExit": 0,
+      "reports": {
+        "flat": {
+          "rawSHA256": "da4d568f7004b53c51c1655010b2329bb02f9b9424f573e5bb482cf8fba4b209",
+          "publishedSHA256": "da4d568f7004b53c51c1655010b2329bb02f9b9424f573e5bb482cf8fba4b209",
+          "removedBuildIDLines": 0
+        },
+        "cumulative": {
+          "rawSHA256": "6346bd7baaee811c64a0a695918478dd82e556394a508f34227e3174e4cd27c0",
+          "publishedSHA256": "6346bd7baaee811c64a0a695918478dd82e556394a508f34227e3174e4cd27c0",
+          "removedBuildIDLines": 0
+        }
+      }
+    },
+    "sync": {
+      "profileSHA256": "4abb00b14c4b52479185ff4df830832f10ecd493dc9b631d09f4b3ea9c6cd67c",
+      "conversionExit": 0,
+      "reports": {
+        "flat": {
+          "rawSHA256": "b87892e4b7e1e53c0c49861726f454dd3f357086299c2eab4e8556b2fe4679b2",
+          "publishedSHA256": "b87892e4b7e1e53c0c49861726f454dd3f357086299c2eab4e8556b2fe4679b2",
+          "removedBuildIDLines": 0
+        },
+        "cumulative": {
+          "rawSHA256": "fa4f36499e72bf566c419f9741d3f36cb592ba547b4c139547dbd76be678f83c",
+          "publishedSHA256": "fa4f36499e72bf566c419f9741d3f36cb592ba547b4c139547dbd76be678f83c",
+          "removedBuildIDLines": 0
+        }
+      }
+    },
+    "syscall": {
+      "profileSHA256": "f1fff19bf8018cc28a5110f5ba3b20a89dee9cb6ec35dc6869e8d86cb944f495",
+      "conversionExit": 0,
+      "reports": {
+        "flat": {
+          "rawSHA256": "52f2abc09d2da6c1a43674334c5787db2da6146226704fa265ac2126dc460119",
+          "publishedSHA256": "52f2abc09d2da6c1a43674334c5787db2da6146226704fa265ac2126dc460119",
+          "removedBuildIDLines": 0
+        },
+        "cumulative": {
+          "rawSHA256": "706da0eadd2cacfc9583f77b44a0523998b9a8ba2ba2da30caef9193c6c926a8",
+          "publishedSHA256": "706da0eadd2cacfc9583f77b44a0523998b9a8ba2ba2da30caef9193c6c926a8",
+          "removedBuildIDLines": 0
+        }
+      }
+    }
+  },
+  "publicReportSHA256": {
+    "sched-cumulative.txt": "f3e7db49829eb981ad911bf6210daa131aff946c65dae87a8b7941b406b037e8",
+    "sched-flat.txt": "1c360cb3f482e214e0b7b5038f60f6e012aa953b31e547318b0f618fc3cb007e",
+    "sync-cumulative.txt": "13d8527a08eaa1dfeddd95bec98992c2733e715e1dc1b5afefd53fb942b319f9",
+    "sync-flat.txt": "933e2fd6afa164fdb091e890608748216ea661e51c84106930c8e113ab067b23",
+    "syscall-cumulative.txt": "89ee72885acb067c68e2fd0349cb39f688dd989b88e80a1e3ed8c49298cb1d52",
+    "syscall-flat.txt": "57336ecd60cc995f4ee932ffbb6ea4da30e0ceb5d1d9f9c73603d6505626ea33"
+  },
+  "clockSnapshotsSHA256": "0d8406c3e64bdc4f19fa96fca01719bf455332e13b91ef72c605e59c272ff059",
+  "reviewedGo1274SourcesSHA256": {
+    "runtime/tracetime.go": "cfbb13de9ff44421db13f43ab22780f9da3a878982ea5671834b8ff0ee4c196f",
+    "runtime/runtime.go": "fe478d164989b5cd5783c9820d99879623780ba353f836f499238e76efb24fd8",
+    "runtime/os_windows.go": "958086f0d0e2376e136f0eb3b2cf34fbc831f72d662c301c50f9499818ccb8d9",
+    "testing/testing.go": "27c59df1832eae458ab8d2d4b6a6252bbd1ea2a3001734910d1ce2decff16f81",
+    "internal/trace/event.go": "4a09fc9f8f67a526c5b63965af4d8999a803bb18cf650c2b18d59732245ed277",
+    "internal/trace/gc.go": "6bccb3ca448d282a8cc7537e4776bb094738e00159299a540db86d53c51bbddb",
+    "runtime/proc.go": "40d15ce858cf058cff92606001a29ee1689db88c121a2f0c283163a0d64a7375",
+    "testing/allocs.go": "4fa935b51bd22e94d35d285234c4fb42329708348901915565990e64e8864a72"
+  },
+  "resourceAndTransferLimits": {
+    "preflightGuestCPUPercent": [
+      11,
+      9,
+      18
+    ],
+    "preflightFreeDiskGiB": 17.379878997802734,
+    "preflightFreeDiskFraction": 0.03485595358779276,
+    "diskWarning": true,
+    "selectedEvidenceInventoryFiles": 69,
+    "selectedEvidenceInventoryLogicalBytes": 32474465,
+    "nothingDeleted": true,
+    "hostReservationsCapsOvercommitAndLiveJobAncestors": "unknown",
+    "first45sTransfer": "Incomplete 15109120-byte fragment retained; SFTP relative-path refusal also retained. Same immutable archive resumed with absolute Windows SFTP path; final full native SHA256 verified. No native rerun.",
+    "readHandleLengths": "First directory-metadata sample retained; later samples use actual read-handle lengths without changing producer."
+  },
+  "privateEvidence": "_build/vt536-trace-current/",
+  "notChanged": [
+    "Executable/test sources and fixtures",
+    "Full count10/deadline10m/inventory/seeds/assertions",
+    "Launch GC/GOMAXPROCS/GOEXPERIMENT environment",
+    "Intended native coding policy/accounts/auth stores",
+    "Installed SDK/services/protection/affinity/hypervisor",
+    "Hosted jobs/tags/releases"
+  ],
+  "remaining": [
+    "Reconcile trace-clock conversion independently before interpreting elapsed profile magnitudes.",
+    "Establish original private deadline cause and qualify a demonstrated correction through the full unchanged native inventory/deadline.",
+    "Keep original failures and separate CGO0/CGO1 build contexts; no #450 attribution."
+  ]
+}

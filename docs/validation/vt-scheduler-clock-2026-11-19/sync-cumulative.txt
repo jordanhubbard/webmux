@@ -1,0 +1,22 @@
+WARNING: Units below are uncalibrated trace-clock seconds. Embedded monotonic/wall clocks disagree with the decoded trace scale by about 8.5% in this run. Do not interpret these totals as wall time or normalize them to waive the native timeout. See README.md.
+
+Type: delay
+Showing nodes accounting for 2156.04s, 97.82% of 2204.08s total
+Dropped 584 nodes (cum <= 11.02s)
+Showing top 15 nodes out of 28
+      flat  flat%   sum%        cum   cum%
+  2092.48s 94.94% 94.94%   2092.48s 94.94%  runtime.chanrecv1
+         0     0% 94.94%   1285.06s 58.30%  runtime.(*wakeableSleep).sleep
+         0     0% 94.94%    827.22s 37.53%  testing.tRunner
+         0     0% 94.94%    719.75s 32.66%  testing.(*T).Run
+         0     0% 94.94%    650.66s 29.52%  runtime.traceStartReadCPU.func1
+         0     0% 94.94%    650.03s 29.49%  main.main
+         0     0% 94.94%    650.03s 29.49%  testing.(*M).Run
+         0     0% 94.94%    650.03s 29.49%  testing.runTests
+         0     0% 94.94%    650.03s 29.49%  testing.runTests.func1
+         0     0% 94.94%    638.10s 28.95%  runtime.(*traceAdvancerState).start.func1
+         0     0% 94.94%     87.66s  3.98%  testing.Benchmark
+    63.56s  2.88% 97.82%     63.56s  2.88%  sync.(*Cond).Wait
+         0     0% 97.82%     63.56s  2.88%  tuios.dev/vt.(*Emulator).Read
+         0     0% 97.82%     63.56s  2.88%  tuios.dev/vt.(*bufPipe).Read
+         0     0% 97.82%     51.94s  2.36%  tuios.dev/vt_test.TestResizeCostDoesNotScaleWithMarks
