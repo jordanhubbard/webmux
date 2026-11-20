@@ -63,9 +63,10 @@ if os.geteuid() != 0 or (local_parent is None and os.environ.get("GITHUB_ACTIONS
     sys.exit("Run only as root in a disposable hosted or admitted local virtme Linux VM.")
 binary = str(Path(sys.argv[1]).resolve(strict=True))
 direct_control = sys.argv[2:] == ["--direct-control"]
-stale_control = sys.argv[2:] == ["--stale-control"]
+stale_control = sys.argv[2:] in [["--stale-control"], ["--prequeue-control"]]
+prequeue_control = sys.argv[2:] == ["--prequeue-control"]
 if sys.argv[2:] and not (direct_control or stale_control):
-    sys.exit("Expected an optional --direct-control or --stale-control flag.")
+    sys.exit("Expected an optional --direct-control, --stale-control or --prequeue-control flag.")
 modules = ["usbip_vudc", "g_mass_storage", "vhci_hcd"]
 if any(Path("/sys/module", module).exists() for module in modules):
     sys.exit("Fixture requires a fresh VM with no existing USB forwarding modules.")
@@ -131,8 +132,23 @@ try:
         parameters = Path("/sys/module/usbip_vudc/parameters")
         held = parameters / "webmux_test_held_replies"
         before = int(held.read_text())
-        (parameters / "webmux_test_hold_replies").write_text("1")
-        reader = start("held-read", "dd", f"if={disk}", "of=/dev/null", "bs=4096", "skip=256", "count=1", "iflag=direct", "status=none")
+        if prequeue_control:
+            # Stop TX first, leaving the original hold/counter disabled. One
+            # real completion can block the next SCSI stage; no reply is made
+            # up and the counter must still equal its original baseline.
+            paused = parameters / "webmux_test_pause_tx"
+            pending = parameters / "webmux_test_prequeued_replies"
+            paused.write_text("1")
+            reader = start("held-read", "dd", f"if={disk}", "of=/dev/null", "bs=4096", "skip=256", "count=1", "iflag=direct", "status=none")
+            until(lambda: int(pending.read_text()) > 0, "genuine native completion queued before hold")
+            assert reader.poll() is None
+            assert int(held.read_text()) == before, "hold counter changed while hold was disabled"
+            print("PREQUEUE_CONTROL " + json.dumps({"queued": int(pending.read_text()), "before": before, "readerBlocked": True}), flush=True)
+            (parameters / "webmux_test_hold_replies").write_text("1")
+            paused.write_text("0")
+        else:
+            (parameters / "webmux_test_hold_replies").write_text("1")
+            reader = start("held-read", "dd", f"if={disk}", "of=/dev/null", "bs=4096", "skip=256", "count=1", "iflag=direct", "status=none")
         try:
             until(lambda: int(held.read_text()) > before, "real native completion queued under TX hold")
         except RuntimeError:
@@ -140,6 +156,14 @@ try:
                 held_reply_diagnostic(parameters, before, reader, disk)), flush=True)
             raise
         assert reader.poll() is None, "direct read completed instead of remaining held"
+        if prequeue_control:
+            def counted_queue():
+                return int(held.read_text()) - before == int(pending.read_text()) > 0
+            until(counted_queue, "held counter matches the actual native completion queue")
+            time.sleep(0.05)  # Multiple unchanged 10ms TX hold iterations.
+            until(counted_queue, "held counter still matches the actual native completion queue")
+            assert reader.poll() is None and paused.read_text().strip() in {"N", "0"}
+            print("PREQUEUE_COUNTER " + json.dumps({"held": int(held.read_text()) - before, "queued": int(pending.read_text())}), flush=True)
         print("Genuine native reply queued; direct read is blocked", flush=True)
         ports = re.findall(r"Port (\d+):", run("usbip", "port"))
         assert len(ports) == 1, "Expected exactly one control import"

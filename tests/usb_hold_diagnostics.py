@@ -15,6 +15,8 @@ def held_reply_diagnostic(parameters, before, reader, disk):
         'before': before,
         'counter': read(parameters / 'webmux_test_held_replies'),
         'hold': read(parameters / 'webmux_test_hold_replies'),
+        'queuedCompletions': read(parameters / 'webmux_test_prequeued_replies'),
+        'prequeuePause': read(parameters / 'webmux_test_pause_tx'),
         'readerExit': reader.poll(),
         'readerWait': read(Path('/proc', str(reader.pid), 'wchan')),
         'readerStack': read(Path('/proc', str(reader.pid), 'stack')),

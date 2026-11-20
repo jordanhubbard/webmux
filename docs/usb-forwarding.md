@@ -309,5 +309,10 @@ setting a hosted-runner identity. It requires an unprivileged private container
 and a separate QEMU/virtme boot before running the same native controls. The
 [current local record](validation/usb-local-native-2026-11-19/README.md) retains
 two complete passing cohorts and the earlier failed queue/setup cases separately.
-The unexplained initial held-reply timeout remains under #615; #550 and release
-acceptance remain open. No native deadline or assertion is relaxed.
+The [counter-gap correction](validation/usb-held-counter-2026-11-19/README.md)
+under #615 adds a causal legacy/fixed pair and counts each real held completion
+once, including replies already queued at arming. All six controls succeed on
+the corrected candidate, completing #550's changed-cache guest qualification.
+The original timeout remains a failed historical execution with its exact
+interleaving unrecorded. Broader release acceptance remains separate; no native
+deadline or original I/O/admission assertion is relaxed.

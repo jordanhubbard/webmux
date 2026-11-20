@@ -1,0 +1,331 @@
+{
+  "nativeProcess": {
+    "exit": 0,
+    "elapsed": 343.2041405000491
+  },
+  "controls": [
+    {
+      "control": "unpatched",
+      "exit": 1,
+      "admitted": true,
+      "module_sha256": "9b5be539aedfeb8850f7740b397d67560874da5506eabf5905fe7cd5230cfbd7",
+      "srcversion": "8155689B3E61A753E0BD9F4",
+      "moduleELFMachine": 183,
+      "logSHA256": "eb6e34f494b29ef7391f80bfba410eeeef97ccd20f4d38c5b3de4b3bdd03a605"
+    },
+    {
+      "control": "corrected-held",
+      "exit": 0,
+      "admitted": true,
+      "module_sha256": "129acb54c4b08ca9bd14b75a05f0f43f6762a468ffb9c07de67796a6bb338633",
+      "srcversion": "F0D920B3D254D6CA1D6EC9A",
+      "moduleELFMachine": 183,
+      "logSHA256": "187cd15a79b004d58b9f48d3ece935edc03c7dce09fa752ca61800c9e354f9e5"
+    },
+    {
+      "control": "direct-20",
+      "exit": 0,
+      "admitted": true,
+      "module_sha256": "e5d4321a526ce084deae9404ffa5fe51b51c385e63cbed51cdf04f91960f88c2",
+      "srcversion": "CEF310F2896192F4A8FAE09",
+      "moduleELFMachine": 183,
+      "logSHA256": "1b420d409991b6fbc284c891d2eeb81c620e5014d2ad08b00565f6a3bcbb922c"
+    },
+    {
+      "control": "webmux-ssh",
+      "exit": 0,
+      "admitted": true,
+      "module_sha256": "e5d4321a526ce084deae9404ffa5fe51b51c385e63cbed51cdf04f91960f88c2",
+      "srcversion": "CEF310F2896192F4A8FAE09",
+      "moduleELFMachine": 183,
+      "logSHA256": "fb4b45c419dd9d52880c4b370df6f844f960d3a5428d7b7326aa074aabf9ec9d"
+    },
+    {
+      "control": "legacy-counter-prequeue",
+      "exit": 1,
+      "admitted": true,
+      "module_sha256": "57910d0db247c3ad33766f885373f0c9a10af8600a0be6af700a19e422194265",
+      "srcversion": "81F7FEC69AE6011BE3F26A2",
+      "moduleELFMachine": 183,
+      "logSHA256": "791a495edf763401c57a8fd5e0b5162b6b87c8f9c80062472ca4d739a2de7e44",
+      "prequeue": {
+        "queued": 1,
+        "before": 0,
+        "readerBlocked": true
+      },
+      "observedGap": {
+        "before": 0,
+        "counter": {
+          "text": "0\n",
+          "truncated": false
+        },
+        "hold": {
+          "text": "Y\n",
+          "truncated": false
+        },
+        "queuedCompletions": {
+          "text": "1\n",
+          "truncated": false
+        },
+        "prequeuePause": {
+          "text": "N\n",
+          "truncated": false
+        },
+        "readerExit": null,
+        "readerWait": {
+          "text": "__flush_work",
+          "truncated": false
+        }
+      }
+    },
+    {
+      "control": "held-counter-prequeue",
+      "exit": 0,
+      "admitted": true,
+      "module_sha256": "2ae343e7d0f560e96ac4deaf55776ef73fbf0ca123edf4efe504512b57f5f3e5",
+      "srcversion": "4A6625688A9EBA89A565AA9",
+      "moduleELFMachine": 183,
+      "logSHA256": "5fabb9768a656bfaea11124f611bcaa0a6c5c483743612ea8bc0c60a128ce924",
+      "prequeue": {
+        "queued": 1,
+        "before": 0,
+        "readerBlocked": true
+      },
+      "counter": {
+        "held": 1,
+        "queued": 1
+      }
+    }
+  ],
+  "acquisition": [
+    {
+      "build": "unpatched",
+      "bundle": 8,
+      "cache": 0,
+      "networkAttempts": 0
+    },
+    {
+      "build": "corrected-held",
+      "bundle": 0,
+      "cache": 8,
+      "networkAttempts": 0
+    },
+    {
+      "build": "corrected",
+      "bundle": 0,
+      "cache": 8,
+      "networkAttempts": 0
+    },
+    {
+      "build": "legacy-counter-prequeue",
+      "bundle": 0,
+      "cache": 8,
+      "networkAttempts": 0
+    },
+    {
+      "build": "held-counter-prequeue",
+      "bundle": 0,
+      "cache": 8,
+      "networkAttempts": 0
+    }
+  ],
+  "sourceSnapshot": {
+    "files": 263,
+    "manifestSHA256": "91abc0950c0a95a58dc7b14ec88816ee9a509e38842e0f9e2d50e37350eff10f",
+    "changedFiles": [
+      {
+        "path": "scripts/build-test-vudc.py",
+        "sha256": "ca0c42dc8a81a0a6ea2496707117f3c04778f20549c6dd8f55e010b381db5f49"
+      },
+      {
+        "path": "scripts/qualify-test-vudc.py",
+        "sha256": "78ebceebe5b4cc25a63bbdd33f658086ac7500f872af823b0883c964ffce3afa"
+      },
+      {
+        "path": "scripts/test_qualify_vudc.py",
+        "sha256": "61b779bf4f31baa573ca27aa825fed4a911a4146a35565922710c9d07a6d4e1e"
+      },
+      {
+        "path": "tests/usb-kernel.py",
+        "sha256": "b1fce2bdc6f7d171d8af325f3f1f79d62e327481c4b975c1ad4d4808251ed72e"
+      },
+      {
+        "path": "tests/usb_hold_diagnostics.py",
+        "sha256": "7abf896e8799c26b3aec6afdbaebb7107624913d9c7037c7308d6090a12ff7c9"
+      },
+      {
+        "path": "tests/usb-vudc-schedule.patch",
+        "sha256": "c8a047df46b7c632d9fde6f2ce61bd5b9fcdc792a77ae437a39926a3a01b9fa4"
+      },
+      {
+        "path": "tests/usb-vudc-schedule-legacy.patch",
+        "sha256": "2a790c52429ec918bac7152bfd2364079d1d931eb8b783644ea7e59f6e346983"
+      },
+      {
+        "path": "tests/usb-vudc-prequeue.patch",
+        "sha256": "ba1cc71ef6b9ae2d241aa402244e8eefed84cfade8bc167e12a78f0bce3df567"
+      },
+      {
+        "path": "tests/usb-vudc-prequeue-legacy.patch",
+        "sha256": "a6354e49ce9ee5a5399ad0007de6fc747292e7e982c5cf3342638d2f7be2b9f6"
+      }
+    ]
+  },
+  "sourcePreservation": {
+    "base": "ee13bcef05c762484855a3c7d78346e6ad12f52f",
+    "allOriginalNativeAdmissionAndBuilderFunctionsByteIdentical": [
+      "kernel_clean",
+      "stale_phases_proven",
+      "handshake_clean",
+      "admits_loss",
+      "admits_repair",
+      "build_fixture",
+      "admits_webmux"
+    ],
+    "allOriginalUnitTestClassesByteIdentical": [
+      "PersistentSourceCache",
+      "NativeAdmission"
+    ],
+    "originalNativeWorkloadBytesExactAfterRemovingOnlyExplicitPrequeueDispatchBranchesAndChecks": true,
+    "sourcePinsAndRuntimeGoUnchanged": true
+  },
+  "legacyEquivalence": {
+    "allAppliedUpstreamAndLegacyHookBytesEqual": true,
+    "files": [
+      {
+        "path": "vudc_transfer.c",
+        "sha256": "f9c5ba690a16556539f5cd99b1207661e86d132a4148733346ba4000445428e5"
+      },
+      {
+        "path": "GPL-2.0",
+        "sha256": "f6b78c087c3ebdf0f3c13415070dd480a3f35d8fc76f3d02180a407c1c812f79"
+      },
+      {
+        "path": "vudc.h",
+        "sha256": "8ac3bbd08233bf25b17b6633197e74915b024f3c15a64ece8a8dedc9cb716115"
+      },
+      {
+        "path": "provenance.json",
+        "sha256": "cf6a474bf12d02b0f1776d59a3c2e89177d2dada16c15ffcaf80344c3e541a71"
+      },
+      {
+        "path": "vudc_sysfs.c",
+        "sha256": "fb7a2add97dd1b0523e0201db0e01967f17e85acd925bef0b967b991b0541f74"
+      },
+      {
+        "path": "vudc_tx.c",
+        "sha256": "ddb4fccb769d619f8705007b6c4d9bbe93f47d5a1bc267d4f88dfbdf8c0769f9"
+      },
+      {
+        "path": "usbip_common.h",
+        "sha256": "19d22e2f8642c2fdbdd913a7e523ca487e40f04d6cc920e35de69f9f232d5b20"
+      },
+      {
+        "path": "vudc_main.c",
+        "sha256": "343c32e1b09f386cc0445232dfb38cbf18ad1ac967338ca9893812eb4dd38d8d"
+      },
+      {
+        "path": "vudc_rx.c",
+        "sha256": "29025089da237844c6df30eb10076206231efe3af3141d4888bf5690e19062e4"
+      },
+      {
+        "path": "vudc_dev.c",
+        "sha256": "78edeb5a3ec546133cd132d65e4b3a5de2c0f3ceb9985c299180598194926dd5"
+      }
+    ]
+  },
+  "units": [
+    {
+      "log": "final-mac-unit.log",
+      "passes": 51,
+      "sha256": "39ed764698d030b53fb56b53265cfe9d992d492919c1f1d2bb6e3f3497168f73"
+    },
+    {
+      "log": "final-linux-unit.log",
+      "passes": 51,
+      "sha256": "4bc2b4a1bb17260b1c3822b0d66d3dd2f6f682cfec5c499d158a32d8caf996e5"
+    }
+  ],
+  "pairedPrototype": [
+    {
+      "variant": "old",
+      "exit": 1,
+      "prequeue": {
+        "queued": 1,
+        "before": 0,
+        "readerBlocked": true
+      },
+      "moduleSHA256": "e41decaaa1369ff16dbf64b65ca60568da02522120415612c64cfe58036e5bc2",
+      "srcversion": "613BDB64C58A957EB06B5BE",
+      "workloadSHA256": "0eacb36e0344ebbd74857085c8e0f62e123869bfbfebe221603099d0988bd6b2",
+      "logSHA256": "6f378ff2bf4145e2014a1912c140e5dd03f8cb440d0697daf8e913469f4635f7",
+      "expectedDiagnosticFailure": true
+    },
+    {
+      "variant": "count-held",
+      "exit": 0,
+      "prequeue": {
+        "queued": 1,
+        "before": 0,
+        "readerBlocked": true
+      },
+      "moduleSHA256": "091f16199bf09ea64b88571b107f49c02414d33999394a16ec9967d2b237cd86",
+      "srcversion": "07DF42E7860B42241867E1A",
+      "workloadSHA256": "0eacb36e0344ebbd74857085c8e0f62e123869bfbfebe221603099d0988bd6b2",
+      "logSHA256": "c92ae997d66980ddf107d585c39853357a89d009c495d272a879e6301439c8fd",
+      "originalNativeRepairAdmission": true
+    }
+  ],
+  "pairedPrototypeProcess": {
+    "exit": 0,
+    "elapsed": 100.91745633399114
+  },
+  "preservedSetupFailures": [
+    {
+      "phase": "two-completion precondition",
+      "process": {
+        "exit": 1,
+        "elapsed": 78.4353519580327
+      },
+      "logSHA256": "5c4aaf3704108168c76fb9412d3502986d5418b9e2acff4d91244029f7a787d8",
+      "admittedAsNativeCounterGap": false
+    },
+    {
+      "phase": "two-completion precondition with bounded observation",
+      "process": {
+        "exit": 1,
+        "elapsed": 62.265653542010114
+      },
+      "logSHA256": "1169890e4685704dc2aa5c9160e7f94fcd845965268981513e4cb7acad6fb4d2",
+      "admittedAsNativeCounterGap": false
+    }
+  ],
+  "context": {
+    "name": "webmux-usb615-final",
+    "id": "8ab481e58f446130003387b67453ab4e1486919b222eb6ca1d128f62f58b4957",
+    "image": "sha256:33ed0fa969e5cb39823e5d80f2cb1fdfc25ea617fbc91ee2ff9b5f6a4641e82d",
+    "sourceFiles": 263,
+    "privileged": false,
+    "hostMounts": [],
+    "hostDevices": [],
+    "publishedPorts": {},
+    "githubIdentity": false
+  },
+  "actualReadback": {
+    "sourceFiles": 263,
+    "executableVerified": true,
+    "explicitRunnerPatchVerified": true,
+    "hostedIdentity": false
+  },
+  "runtime": {
+    "source": "4989e16b59e91924d74dd8e83c5fbfa669f6b179",
+    "sha256": "316bd334bcb254ce75be804f0aec8e7c7eb15d895657f53fa6e7e50cac9bb7de",
+    "ELFMachine": 183,
+    "goTree": "d49267f2de5710d338225f1b396fc51c91ec8d21",
+    "target": "linux/arm64",
+    "Go": "1.27.4",
+    "CGO_ENABLED": 0
+  },
+  "historicalFailure": "Original uninstrumented timeout remains failed. Exact interleaving unrecorded; consistent with the independently reproduced and repaired gap.",
+  "scope": "Disposable test-hook counter and its causal/native qualification. Raw source pins, runtime Go, original I/O/admissions/deadlines retained. No whole-roadmap, physical-device or release acceptance."
+}
