@@ -21,7 +21,8 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 )
 
-// LaunchRequest is internal session state, never an unvalidated HTTP request.
+// LaunchRequest carries internal session state; address fields are validated
+// again before constructing a terminal or companion SSH command.
 // Passwords are separate so they cannot accidentally enter persisted sessions.
 type LaunchRequest struct {
 	RecoveryKey                          string             `json:"-"`
@@ -124,9 +125,6 @@ func isLoopbackHost(hostname string) bool {
 	return false
 }
 
-var hostname = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9.])?$|^\[[0-9a-fA-F:]+\]$`)
-var username = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
-
 func (p planner) env(name string) string {
 	for i := len(p.environment) - 1; i >= 0; i-- {
 		key, value, ok := strings.Cut(p.environment[i], "=")
@@ -139,26 +137,11 @@ func (p planner) env(name string) string {
 
 func (p planner) build(request LaunchRequest, password, keyPath, moshServer string) (Command, error) {
 	var command Command
-	if request.Hostname == "" {
-		return command, errors.New("Hostname is required")
-	}
-	if len(request.Hostname) > 255 {
-		return command, errors.New("Hostname too long")
-	}
-	if !hostname.MatchString(request.Hostname) {
-		return command, errors.New("Invalid hostname: " + request.Hostname)
-	}
-	if len(request.Username) > 64 {
-		return command, errors.New("Username too long")
-	}
-	if request.Username != "" && !username.MatchString(request.Username) {
-		return command, errors.New("Invalid username: " + request.Username)
+	if err := ValidateSSHAddress(request.Hostname, request.Username, request.Port); err != nil {
+		return command, err
 	}
 	if request.Port == 0 {
 		request.Port = 22
-	}
-	if request.Port < 1 || request.Port > 65535 {
-		return command, errors.New("port must be an integer between 1 and 65535")
 	}
 	if err := dimensions(request.Cols, request.Rows); err != nil {
 		return command, err
@@ -365,6 +348,9 @@ func shellQuote(value string) string { return "'" + strings.ReplaceAll(value, "'
 // helpers (including on Windows SSH hosts) leave the normal shell available.
 func remoteBrowserAvailable(r LaunchRequest, keyPath string) bool {
 	if r.Transport != "ssh" && r.Transport != "mosh" && r.Transport != "" {
+		return false
+	}
+	if ValidateSSHAddress(r.Hostname, r.Username, r.Port) != nil {
 		return false
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

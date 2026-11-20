@@ -204,15 +204,15 @@ func recoverySSHArgs(request LaunchRequest, controlPath string) ([]string, error
 	if request.Transport != "ssh" && request.Transport != "mosh" && request.Transport != "" {
 		return nil, errors.New("this transport's lifecycle provider owns recovery")
 	}
-	if !hostname.MatchString(request.Hostname) || request.Username != "" && !username.MatchString(request.Username) {
+	if err := ValidateSSHAddress(request.Hostname, request.Username, request.Port); err != nil {
+		if request.Port != 0 && (request.Port < 1 || request.Port > 65535) {
+			return nil, errors.New("invalid execution-host SSH port")
+		}
 		return nil, errors.New("invalid execution-host identity")
 	}
 	port := request.Port
 	if port == 0 {
 		port = 22
-	}
-	if port < 1 || port > 65535 {
-		return nil, errors.New("invalid execution-host SSH port")
 	}
 	args := []string{"-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=5", "-o", "ServerAliveInterval=5", "-o", "ServerAliveCountMax=2", "-p", strconv.Itoa(port)}
 	if controlPath != "" {
