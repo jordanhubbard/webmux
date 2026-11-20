@@ -85,12 +85,16 @@ path. #603 tracks the remaining modern workload. The response observer now
 reveals the actual refusal without changing the original success assertion;
 separate authenticated native receipts retain their own scope.
 
-The [native viewer/loss record](validation/rig-native-viewer-loss-2026-11-19/README.md)
+The original [native viewer/loss record](validation/rig-native-viewer-loss-2026-11-19/README.md)
 verifies real coding-conversation continuity through reload and native viewer
-navigation. Its overall gate remains failed: attachment-loss recovery reaches
-durable dispatch/handoff without an observed response inside the unchanged
-10-second observer. #608 tracks the unproven final outcome; no completed loss
-cycle, peer-message acceptance or full #603/#318 recovery is claimed.
+navigation; its initial attachment-loss gate remains recorded as failed.
+The [qualified native recovery follow-up](validation/native-recovery-pending-2026-11-19/README.md)
+now passes both original-conversation loss cycles, no-tool canary recall,
+unchanged sibling identity and the same retained transcript path/prefixes.
+PR #612 closes #608 and the discovered log-continuity defect #614. The original
+10-second observer, six-Check limit, 45-second budget and earlier failed reports
+remain unchanged. Peer-message acceptance, full #603/#464/#469, broader
+#318/#438 lifecycle recovery and release acceptance remain open.
 
 ### Recover active work after interruption
 
