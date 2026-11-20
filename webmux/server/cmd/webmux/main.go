@@ -62,6 +62,9 @@ func main() {
 }
 
 func run() (resultErr error) {
+	if len(os.Args) == 2 && os.Args[1] == recovery.CodexFilesHelper {
+		return recovery.RunCodexFilesHelper()
+	}
 	if len(os.Args) >= 2 && os.Args[1] == nativeobserve.Helper {
 		return nativeobserve.Run(os.Args[2:])
 	}
