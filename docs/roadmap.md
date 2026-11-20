@@ -109,6 +109,12 @@ consumption. Both loss cycles recover the same original conversation/request and
 retained log; pending duplicates stay pending and consumed replay stays read-only.
 This scoped macOS acceptance does not complete #318/#438 or release qualification.
 
+The [observer integration audit](validation/observer-acceptance-2026-11-19/README.md)
+verifies integrated bounded diagnostics and reproduced signal-I/O/notification
+repairs. Both retained native architectures and fresh local ARM64 controls pass.
+#533 remains open because the exact original stderr-less exit cause is unproven;
+authenticated Linux coding/recovery remains open under #523.
+
 ### Recover active work after interruption
 
 [#318](https://github.com/jordanhubbard/webmux/issues/318) adds session-state

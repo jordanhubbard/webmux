@@ -1,0 +1,133 @@
+{
+  "issue": 533,
+  "publicationBase": "93face27003d096e6c7dc4dea67240266ecebb6e",
+  "qualifiedSource": "0056000940ec0dbc96a010c3b88d349759c51c48",
+  "run": 44541568596,
+  "liveRunConclusion": "success",
+  "qualifiedSourceCheckConclusions": {
+    "Attach release bundles": "skipped",
+    "Verify native release artifacts": "success",
+    "GitGuardian Security Checks": "success",
+    "Native APT controls (ubuntu-22.04)": "success",
+    "Native APT controls (ubuntu-24.04)": "success",
+    "Linux observation (amd64)": "success",
+    "Linux observation (arm64)": "success",
+    "Stock and fail-fast diagnostic runtime": "success",
+    "native-renderer": "success",
+    "Windows federation lifecycle evidence": "success",
+    "Native Linux Mosh and owned cleanup": "success",
+    "Windows first-navigation diagnostics": "success",
+    "Native bundle (ubuntu-22.04)": "success",
+    "Package (macos-arm64)": "success",
+    "Native bundle (macos-arm64)": "success",
+    "Native bundle (windows-2022)": "success",
+    "Native bundle (windows-11-arm)": "success",
+    "Package (ubuntu-22.04)": "success",
+    "Dependency audit": "success",
+    "Frontend and Tooling Tests": "success",
+    "Go Server (macos-arm64)": "success",
+    "Go Server (windows-2022)": "success",
+    "Go Server (ubuntu-22.04)": "success",
+    "Windows Tests and Build": "success",
+    "Virtual USB kernel integration": "success",
+    "Build": "success",
+    "Windows ARM64 server and ConPTY": "success"
+  },
+  "sourceSHA256": {
+    ".github/workflows/codex-observation-native.yml": "fcff1a58af49f59c218beffa35001cfaaf7f107a4f892dec1eaa459ffff75a40",
+    "scripts/qualify-codex-observation-isolation.py": "d21a263f5cc2930d3678c8a9e2b56c2806d6f462b1e7d4775b627c5f1952c66b",
+    "scripts/qualify-codex-observer-startup.py": "2d082f6d5c23d23657e4138cb56db33d6fc08809fe0453a887607996fb04991b",
+    "scripts/test_codex_observer_process.py": "090e2ba8ab7490b6d0694436e431ffd8a6390728d2a4e58b9ef6fa57a74e5142",
+    "webmux/server/go.mod": "e407c447a1e17352633bce624540fe72061987ff7c6f60236d0ca90292104275",
+    "webmux/server/go.sum": "0e3b77832f544c332e04503c5e7f62d488470f8b55e102b97687748c34454ff2",
+    "webmux/server/internal/nativeobserve/helper.go": "5772de1b277b9ce508eada1fdb062a4d40d472bcf5b83baa12dfe0920accca5d",
+    "webmux/server/internal/nativeobserve/helper_linux.go": "bc426ee6629c3104abf3b6ba2aa104dbb19461cc2e2cba343763f4d9a8536dd3",
+    "webmux/server/internal/nativeobserve/helper_linux_test.go": "e57f5876a998ffb437a02b5639c5627958b71af771162e7a03bc5187a3e45e36",
+    "webmux/server/internal/nativeobserve/helper_other.go": "719a4fe9b55870a61c42e877d014d53043a9ef8f7a37f4fb74a1b6153fd57359",
+    "webmux/server/internal/nativeobserve/notification_linux_test.go": "0e57cc6888e5e631b7bbb6f171ea426369f1b3f1da0fb598e680e754d985f8df",
+    "webmux/server/internal/nativeobserve/reference.go": "9dda34d2ae04cb985df3d5a9501937a901ab3f39d857b908cf23e53e0e28d9c0",
+    "webmux/server/internal/nativeobserve/reference_test.go": "f234e2d4869af6f1776ff3bd3ad99e428da573a364a8f664437aeafb6b44cd43",
+    "webmux/server/internal/openrigcoord/codex-owner-plan.mts": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1"
+  },
+  "qualifiedSourcesByteIdenticalToPublicationBase": true,
+  "nativeArchitectures": {
+    "amd64": {
+      "artifactId": 14538537406,
+      "artifactSHA256": "cefa9bd37c6573ac58198777e2be482cadd117cf45e9667482effadbb60effce",
+      "rawFileSHA256": {
+        "provenance.json": "42fede98a75f03e16f92b1f2764b594a8d5588a2c288e0feb70edf38c193d85d",
+        "native-controls.json": "cc4d29dbb2eb2f0f8d4b8337ca0a5df02f3d0cf6f5325b1b0305467a9775f809",
+        "worker.json": "50d25a0cc08e8974494e3106251a51ff1daec16a995ae669505ae0733656785b",
+        "kernel-tests.jsonl": "a31fd96805d7b9bb9bf038ee75d0f77941d6feea37945459974a82fb7b3b0152"
+      },
+      "cases": 6,
+      "processes": 12,
+      "allEightKernelGroupsPass": true,
+      "liveWithdrawalVerified": true,
+      "nativeSHA256": "b452ca20f838a8855a88a41050ee4a694033fff4ea3ecdad5633e6e0e8d13f2b",
+      "helperSHA256": "2ccfd507177473d8c3e7ec9994dc152ed096635ce91e54151426c626de250553",
+      "allPoliciesAndDiagnosticsAdmitted": true,
+      "rejectedNegativeMutations": [
+        "stderrComplete",
+        "cleanupEscalated",
+        "exitBeforeCleanup",
+        "stderrPanicObserved"
+      ]
+    },
+    "arm64": {
+      "artifactId": 14537309276,
+      "artifactSHA256": "6b9e30364d006506666dc633d1cc18d433fbd472c68a4a49f7b1f70ba7629759",
+      "rawFileSHA256": {
+        "provenance.json": "47d1c771d0ab0f225a8a6ea921c51b058601f9927619accdb7cff67a5cb9eaee",
+        "native-controls.json": "c576cae126768f7647769a2dcb82929fa89f6a904b8a1db798f0fd6c1878d5c2",
+        "worker.json": "ef5b529041acd546e0fc54cfe3655524a0b9fef7a777ef638fa39143ea25319f",
+        "kernel-tests.jsonl": "d3e160d73d2215b41ed46343edd056f670d044cd4e6d346b47540562cd8b8bd8"
+      },
+      "cases": 6,
+      "processes": 12,
+      "allEightKernelGroupsPass": true,
+      "liveWithdrawalVerified": true,
+      "nativeSHA256": "3bb41c9a80187773e2a59278d4fc355b1a163c31bb5a79581e37d4fe428af047",
+      "helperSHA256": "dd9055da9ac2ce24eaa8e5463e528a8b18a4600753a4a54e631329c53f8781f4",
+      "allPoliciesAndDiagnosticsAdmitted": true,
+      "rejectedNegativeMutations": [
+        "stderrComplete",
+        "cleanupEscalated",
+        "exitBeforeCleanup",
+        "stderrPanicObserved"
+      ]
+    }
+  },
+  "originalRejectedCohorts": {
+    "amd64": {
+      "nativeControlsSHA256": "dde437adc1935a0d0f7e0c78f24f5f24d047de090d6c84ede22ae7829e1e95fe",
+      "rejected": "native_diagnostic_panic"
+    },
+    "arm64": {
+      "nativeControlsSHA256": "65db50e4a6f499ad1a0258ccc37985c3c54e7d8d12a226b9b783176038a14194",
+      "rejected": "native_diagnostic_panic"
+    },
+    "canonical31ac": {
+      "nativeControlsSHA256": "1659e90218412876bceecadfc99d7deb50b1519f2880a4ea1500d89c775cb8b3",
+      "rejected": "native_diagnostic_exit",
+      "originalKillBranch": "unproven"
+    }
+  },
+  "newLocalARM64": {
+    "source": "ee13bcef05c762484855a3c7d78346e6ad12f52f",
+    "kernel": "5.15.0-203-generic",
+    "currentHelperAndQualifierSixCasesPass": true,
+    "nativeGoRace": true,
+    "receiptsSHA256": {
+      "observation-isolation.json": "4c714803f663a462932346eaecb56256e8a570e576e9d06faaa85d3c1104ae92",
+      "kernel-tests.log": "5a2c2d3436168e4f8ebd3c5eadbf7643cc9345eaa3978741fd16d9de1bb40b04",
+      "kernel-race-tests.jsonl": "f06ba7207a2e7fe3024a0085fd32ff2510db178486fb604c7909aba9e1363911",
+      "observer-python-tests.log": "4f7af9695a08771f9738a39b57a0cf30c001e7db492424dbb81b8b244211c30e",
+      "rig-native-preflight.txt": "2e3b7d5eecd8fddb88e9f0b287523b8c837ed11e7e590587d42b61b3d614c7c2",
+      "browser-smoke.txt": "d04e66bba9aac6b4a73e56a62edc219113ef34f52531e78e70df142b45951afc"
+    }
+  },
+  "historicalLimit": "The exact branch of the original stderr-less EOF or canonical31ac SIGKILL remains unproven; original failures retain their outcomes. The reproduced signal-I/O and withdrawn-notification defects are repaired with unchanged enforcement, policy and deadlines.",
+  "scope": "Integrated diagnostic/runtime observer controls only; #533 incomplete historical-causality requirement, authenticated Linux #523, full current-main and release qualification remain open.",
+  "issueDisposition": "OPEN: original exact stderr-less EOF/SIGKILL causality remains unproven; integrated reproduced-defect controls pass"
+}
