@@ -1,0 +1,276 @@
+{
+  "baseline": "34c30304403d7ebe6044be0524e4cfe1550c6e23",
+  "nativeSource": "0056000940ec0dbc96a010c3b88d349759c51c48",
+  "issuesSupported": [
+    468,
+    561
+  ],
+  "unchangedAuthAPIEntries": true,
+  "sessionModelDelta": "Only the added RigIdentity.ProjectID field; literal removal recovers exact005 model bytes. Browser session/ack fields unchanged.",
+  "newerBrowserCompanionScope": "Read-page generation code changed after005; it is not used by this automatic AuthHandoff fixture and is not qualified by these receipts.",
+  "native": {
+    "run": 44541533377,
+    "artifact": 14538168257,
+    "digest": "sha256:e12985b58f69df63bf44ee9eff3202895e4cd58d97fbef4fafb02eeae5c8ff7a",
+    "uploadedMembersVerified": 63,
+    "distinctNativeTrials": 20,
+    "jobLogOneTestInvocations": 20,
+    "jobLogPasses": 20,
+    "flags": [
+      "acknowledgedNotReplayed",
+      "automaticPanel",
+      "callbackOnOriginalHost",
+      "callbackViaSSH",
+      "loggingDisabled",
+      "moshServerExited",
+      "nativeMosh",
+      "noLaunchURLInTerminalOutput",
+      "providerStopped",
+      "sshDaemonExited"
+    ],
+    "receiptSHA256": {
+      "mosh-cleanup/trial-1/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-10/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-11/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-12/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-13/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-14/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-15/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-16/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-17/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-18/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-19/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-2/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-20/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-3/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-4/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-5/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-6/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-7/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-8/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b",
+      "mosh-cleanup/trial-9/mosh-browser-real-Mosh-car-ab823-wledges-it-across-reconnect-chromium/native-mosh-browser-receipt.json": "542f4a2c3bd09dde45d2838fe7df6312eee337c867875b0ae99243664831e88b"
+    },
+    "sourceBinding": "Workflow/test/product input component hashes verified; native executable is not independently rehashed from this diagnostics ZIP."
+  },
+  "provisioning": {
+    "firstRun": 44521398749,
+    "diagnosticRun": 44522389452,
+    "diagnosticSource": "db82695a13cec4d4b10bb8f78f372a6b30ebdbc2",
+    "diagnosticArtifact": 14529375698,
+    "diagnosticDigest": "sha256:f08e8e5cd89de6d97472c91c85b7cbb5e74532d283e4ef184a6da898e164af83",
+    "failedOriginalFileBytes": {
+      "mosh-provisioning/install.log": 1756,
+      "mosh-provisioning/worker-limits.txt": 1350,
+      "mosh-tools.json": 3297
+    },
+    "nativeMoshExecutedInFailures": false,
+    "setupFailureNotSuppressed": true,
+    "inventoryRepairObservedOnNativeLinux": true,
+    "availabilityRecoveryAPT": 44526242446,
+    "sameSourceRecoveryMosh": 44526859801,
+    "recoverySamples": 20,
+    "externalAvailabilityChangePreviouslyObserved": "Existing endpoint HEAD observations changed from TLS/no-header timeouts to200; paired same-source native APT and Mosh transitions are retained. Exact historical select11 network/resource cause remains unattributed; no code/mirror/trust/deadline repair is asserted.",
+    "currentNativeSourceUsesLaterAPT": "005 native Mosh20 and nativeAPT77712 qualify later helper composition independently of db; no inherited whole-head success claim."
+  },
+  "local": {
+    "goRaceTopLevelPassed": 22,
+    "goRaceIncludingSubtestsPassed": 41,
+    "goRaceFailures": 0,
+    "goRaceSkips": 0,
+    "tmuxControlsPassed": 9,
+    "workflowFailureAndExclusiveInventory": {
+      "controlledOriginalAPTFailureExit": 100,
+      "onlyUpdateCommandCalled": true,
+      "installOutputRetained": true,
+      "alwaysInventoryExit": 0,
+      "inventoryExclusiveRepeatExit": 2,
+      "firstInventorySHA256": "e447877b06a8077cf4919d77b6b3d0fff987983966a58015dc8428e228ed1427",
+      "firstInventoryPreserved": true,
+      "actualNativeMoshOrAPTInvoked": false,
+      "inventoryScope": "Actual local macOS version inventory; not LinuxMosh acceptance",
+      "workflowJobMinutes": 12,
+      "installLogByteCap": null,
+      "retentionScope": "12-minute existing job bound and bounded inventory version probes; install tee has no separate byte cap. No byte-bounded install log claim."
+    }
+  },
+  "scope": "Completes scoped Mosh automatic host-control/ack and provisioning-evidence/disposition requirements. Original failures remain failures. No physical remotehost/realIDP/hardware/nativeSSO/clientcertificate/assistive/WindowsMosh acceptance or complete110/318/438/429/release claim. No new hosted jobs, copied accounts or host/service/protection/policy changes.",
+  "historicalControls": {
+    "featureParent": {
+      "head": "8e90c3ba68f1e037c592a24b4c22e463cc53e071",
+      "exit": 1,
+      "actualMoshPTYStarted": true,
+      "expectedFailure": "Automatic sign-in panel absent at15-second assertion",
+      "applicationSourceOverlay": false,
+      "testOnlyOverlay": [
+        "tests/e2e/mosh-browser.spec.ts",
+        "tests/e2e/start-server.mts"
+      ],
+      "sameFinalTestSource": true,
+      "ownedCleanupPassed": true,
+      "unreachedAssertionsAreNotEvidenceOfFailure": true,
+      "receiptSHA256": "f8870f6185a64c762cfca5cc9456e075f4fb2508aa5c56d3817e85913b186ddb"
+    },
+    "parentLogSHA256": "70de68770c356f992ce1dd4e4179e7b8d1c945376af953772abae6fd82d2db7d",
+    "parentBinarySHA256": "659afc45496427dd59df0854be842289488e66d34789a8464c5b217cefcfd5cf",
+    "priorCleanupCohort": {
+      "source": "895933e6d3f8d4991836d7d704c3c227abc39998",
+      "run": 44283713352,
+      "artifact": 14418327193,
+      "zipSHA256": "34c2823801636eee5e34e6c808d3b96c6de26981412769e6eb6675a02ccc4997",
+      "nativeTrials": 20,
+      "passed": 19,
+      "failedTrial": 5,
+      "failedProviderStopped": false,
+      "resetObservedInOriginalJobLog": true
+    },
+    "earlierMasked451FailureCauseEstablished": false,
+    "historicalEndpointRecovery": {
+      "scope": "one current macOS HEAD per original endpoint, no retries; not native APT/source qualification or historical CI cause",
+      "probes": [
+        {
+          "name": "archive-jammy",
+          "exit": 0,
+          "http": 200,
+          "timeConnect": 0.076399,
+          "timeTLS": 0.126576,
+          "stderr": ""
+        },
+        {
+          "name": "security-jammy",
+          "exit": 0,
+          "http": 200,
+          "timeConnect": 0.076327,
+          "timeTLS": 0.123031,
+          "stderr": ""
+        }
+      ]
+    },
+    "scope": "All negative/failure outcomes preserved. Reset-probe correction is not attribution of the older masked cleanup failure. Historical endpoint200s are not current availability claims."
+  },
+  "sourceFiles": [
+    {
+      "path": "webmux/server/internal/browseropen/opener.go",
+      "sha256": "083059afdeb9159ad5a6ae976514d43a0338b587f182464e659811bb2128d94c"
+    },
+    {
+      "path": "webmux/server/internal/browseropen/protocol.go",
+      "sha256": "7f03e101537425602bb05138d8b9bc343b1e2e3d8ff9f0d4bbd2fb1b459ca22b"
+    },
+    {
+      "path": "webmux/server/internal/browseropen/protocol_test.go",
+      "sha256": "a907ddc49797cdf31504378d0a9779082b06ef283ddfae25f7365b70b9d19e9a"
+    },
+    {
+      "path": "webmux/server/internal/browseropen/shell_unix.go",
+      "sha256": "557b0e499f708ab8ac14822e1a09ef958353e02e81d4e05f1cfd9450a7b5c1c5"
+    },
+    {
+      "path": "webmux/server/internal/browseropen/shell_unix_test.go",
+      "sha256": "21c5fc7b8689330ece5dc4ff491d769b5d684ea7bba60a703163d034fb1e60fd"
+    },
+    {
+      "path": "webmux/server/internal/recovery/browser.go",
+      "sha256": "5429f87b8cb8f241e6eaaa60adf289956f1d4a0c0bfdb9e073abd75867e73042"
+    },
+    {
+      "path": "webmux/server/internal/recovery/browser_test.go",
+      "sha256": "fe6a713ef4e638e571d598c0a9f745889c39e509126b4405f38e56d7de1423fe"
+    },
+    {
+      "path": "webmux/server/internal/recovery/cache.go",
+      "sha256": "6f784ecaf0d9a680dc0f2059e9be0a35e85035d657360bb0c8125604bfd132db"
+    },
+    {
+      "path": "webmux/server/internal/recovery/provider_unix.go",
+      "sha256": "d670ef927c59f1f83fac582533048405ef0341a2fbc6a621e4d84745affec2a5"
+    },
+    {
+      "path": "webmux/server/internal/recovery/rpc.go",
+      "sha256": "85a53b07057b82099c1c1b4a0e2ab7e229a2903c6f5ab18bf49aba9aa459d2e6"
+    },
+    {
+      "path": "webmux/server/internal/session/broker.go",
+      "sha256": "c2e35c7f4b50bae93b3379efe9c5da433b9cb9af3c6f8dc9e59dc6b68db0afbb"
+    },
+    {
+      "path": "webmux/server/internal/session/browser_control.go",
+      "sha256": "c6cf66326b424c91b50df01f3b0f4e803467362998f65d055822d50857984fc3"
+    },
+    {
+      "path": "webmux/server/internal/session/browser_control_test.go",
+      "sha256": "a4fb39a03baefc78d06091e1e0f3317608bfb826a7e91f48c45cb8f7fdacd9ce"
+    },
+    {
+      "path": "webmux/server/internal/session/browser_test.go",
+      "sha256": "26e27557b7cd52598461e12501576c8564139648c3f95c616d705c1d841f1d87"
+    },
+    {
+      "path": "webmux/server/internal/session/recovery_control.go",
+      "sha256": "98218b3767ca0854987cef64b6b85062974250551aa9d25e43e8a8285066907e"
+    },
+    {
+      "path": "webmux/server/internal/session/viewers.go",
+      "sha256": "f951496a477b9902f19cc6c2a05dbce3b1451ba134ecd1d886ac5be9d559df21"
+    },
+    {
+      "path": "webmux/server/internal/terminal/recovery.go",
+      "sha256": "0c6b7904ca09a0482879ddd48978aa9106865929ae62cba373eb5e6af454c58e"
+    },
+    {
+      "path": "webmux/server/internal/httpapi/websocket.go",
+      "sha256": "58b2c68c31193f1c43d03d6e8f1442fef843df92129ba9400e8d9be7f3308003"
+    },
+    {
+      "path": "webmux/server/internal/httpapi/auth_handoff.go",
+      "sha256": "6674eba4021f5160442b8321ab320b1181137280e3b1428b09ef40d83b5e3ed3"
+    },
+    {
+      "path": "webmux/server/internal/authhandoff/handoff.go",
+      "sha256": "51f64b49cd72c0eb248dd520582e182083c37b799daf6466ea088590dfd88dc2"
+    },
+    {
+      "path": "tests/e2e/mosh-browser.spec.ts",
+      "sha256": "33baa2832c1d6012946bd3c1e4c8db8896a54d1df8431cd18b9f3b01fd0fc6b1"
+    },
+    {
+      "path": "tests/e2e/auth-handoff-fixture.mts",
+      "sha256": "47ad3e199178fe6f0c4ffefcb54417c87b38bcbfc93c6cccf0b99a5f9b65ac92"
+    },
+    {
+      "path": "webmux/scripts/private-test-tmux.mts",
+      "sha256": "cabb806b165310fd2ba21781e4846d6d9d06605476b04a14ac9d8fc71fca1fc2"
+    },
+    {
+      "path": "scripts/private-test-tmux.test.mts",
+      "sha256": "c2747ce71197b1d1b5c8f98332e7fd39026a04807871b35fef4911122ff7d824"
+    },
+    {
+      "path": ".github/workflows/mosh-browser-diagnostics.yml",
+      "sha256": "56b73d00f542cf7e3077058b0bf9801a74a3681f2d99c2b6a19a80dcd4ec3e55"
+    },
+    {
+      "path": "scripts/native-components.py",
+      "sha256": "731ad27d599379a396273c55a74ecfdbc819650a787f72f985d5124db71dfa75"
+    },
+    {
+      "path": "scripts/configure-ci-apt.py",
+      "sha256": "cde88db08a747efc7e2097c44bca1d90bb51c69bd8eaa06351def9bd450efa14"
+    },
+    {
+      "path": "scripts/qualify-ci-apt.py",
+      "sha256": "c42d60e8a01e52cef7841c4bea0279b28d50d5cd6cb763f3e5c9ef6d0506a804"
+    },
+    {
+      "path": "webmux/frontend/src/components/Terminal.tsx",
+      "sha256": "019e89d13131224f28ed7f481b8234a19243dc60a529b6801a8dae32361fcfc7"
+    },
+    {
+      "path": "webmux/frontend/src/components/AuthHandoff.tsx",
+      "sha256": "749d53d1f009cfbf504ebe0ed7e147957f3e163c17d16efa1e9d1915a5a6520b"
+    },
+    {
+      "path": "webmux/frontend/src/utils/authHandoff.ts",
+      "sha256": "599d05203e390bccf9b7f417c03372accc6c8b79708b24d518cedda7bef116f1"
+    }
+  ]
+}

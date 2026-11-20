@@ -52,6 +52,12 @@ its newly corrected nonregular/unbounded cache read has local regression coverag
 but the changed helper still needs complete native guest qualification. Original
 native failures keep their original outcomes and source bindings.
 
+The [Mosh control-channel audit](validation/mosh-acceptance-2026-11-19/README.md)
+completes #468 automatic launch/acknowledgement and #561 provisioning-evidence
+acceptance. Twenty source-bound native samples and current protocol/ownership
+controls pass. Historical provisioning and cleanup failures retain their original
+outcomes; broader external-provider and physical-device #110 acceptance stays open.
+
 Windows private browser cleanup #473 also has completed
 [native acceptance](validation/browser-process-exit-2026-11-18/README.md#integrated-acceptance--2026-11-19):
 verified owned-child exit precedes one-shot private-file removal. Original

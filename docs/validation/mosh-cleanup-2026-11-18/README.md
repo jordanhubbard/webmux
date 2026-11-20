@@ -1,5 +1,7 @@
 # Native Mosh cleanup diagnosis
 
+The [current acceptance audit](../mosh-acceptance-2026-11-19/README.md) reconciles the original native executions with current source and retains all earlier failures. Pending-at-the-time statements below remain historical evidence.
+
 Combined source `45151c356368b52eb20ccea92a34866472041e31`, Linux CI
 `44273583502`, passes the real Mosh sign-in, private SSH callback, logging-off,
 no-URL and acknowledgment controls, but reports `providerStopped: false`.
