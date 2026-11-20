@@ -1,5 +1,7 @@
 # Browser companion on small screens
 
+The [current native acceptance](../browser-mobile-current-2026-11-19/README.md) includes the original regressions and additional page-text typing coverage. Earlier source bindings and pending-at-the-time statements below remain historical evidence.
+
 [#454](https://github.com/jordanhubbard/webmux/issues/454) addresses a reproduced
 part of [#110](https://github.com/jordanhubbard/webmux/issues/110). At the combined
 candidate `10b365c`, the real application gives the URL input only 95.6875 pixels
