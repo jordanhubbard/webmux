@@ -24,7 +24,7 @@ describe('server management', () => {
     fireEvent.change(screen.getByLabelText('Server URL'), { target: { value: 'https://new' } });
     fireEvent.change(screen.getByLabelText('Credential', { exact: true }), { target: { value: 'a'.repeat(40) } });
     fireEvent.click(screen.getByRole('button', { name: 'Save server' }));
-    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith('new', { name: 'New host', url: 'https://new', allow_http: false, coordination_owner: '', token_env: '', credential: 'a'.repeat(40) }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith('new', { name: 'New host', url: 'https://new', allow_http: false, coordination_owner: '', coordination_messages: false, token_env: '', credential: 'a'.repeat(40) }));
     await waitFor(() => expect(changed).toHaveBeenCalled());
     expect(screen.queryByDisplayValue('a'.repeat(40))).not.toBeInTheDocument();
   });
@@ -52,7 +52,7 @@ describe('server management', () => {
     fireEvent.change(screen.getByLabelText('Grant name'), { target: { value: 'controller' } });
     fireEvent.change(screen.getByLabelText('Credential', { exact: true }), { target: { value: 'c'.repeat(40) } });
     fireEvent.click(screen.getByRole('button', { name: 'Save grant' }));
-    await waitFor(() => expect(mocks.grant).toHaveBeenCalledWith('controller', { owner: 'owner', coordination: false, credential: 'c'.repeat(40), token_env: '' }));
+    await waitFor(() => expect(mocks.grant).toHaveBeenCalledWith('controller', { owner: 'owner', coordination: false, coordination_messages: false, source_node_id: '', source_owner: '', credential: 'c'.repeat(40), token_env: '' }));
   });
 });
 
@@ -171,4 +171,17 @@ describe('coordination sharing authorization', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save grant' }));
     await waitFor(() => expect(mocks.grant).toHaveBeenCalledWith('incoming', expect.objectContaining({ owner: 'owner', coordination: true })));
   });
+});
+
+it('requires explicit message scope in the incoming grant editor', async () => {
+  mocks.directory.mockResolvedValue({ servers: [], grants: [{ id: 'incoming', owner: 'owner', token_env: 'TOKEN', credential_ready: true }] });
+  render(<ServersDialog onClose={vi.fn()} onChanged={vi.fn()} currentUser="owner" />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit grant incoming' }));
+  expect(screen.getByLabelText('Allow incoming coordination messages')).toBeDisabled();
+  fireEvent.click(screen.getByLabelText('Allow project coordination summaries'));
+  fireEvent.click(screen.getByLabelText('Allow incoming coordination messages'));
+  fireEvent.change(screen.getByLabelText('Sending node ID'), { target: { value: 'a'.repeat(32) } });
+  fireEvent.change(screen.getByLabelText('Sending account'), { target: { value: 'sender-account' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save grant' }));
+  await waitFor(() => expect(mocks.grant).toHaveBeenCalledWith('incoming', expect.objectContaining({ coordination: true, coordination_messages: true, source_node_id: 'a'.repeat(32), source_owner: 'sender-account' })));
 });

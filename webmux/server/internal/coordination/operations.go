@@ -44,6 +44,9 @@ func validateRequest(r Request) bool {
 // denials. A lost response can be retried without duplicating a message or
 // acquiring a worker later under an old request. No external work is executed.
 func (s *Service) Execute(node, token string, inputs []MemberInput, request Request) (Result, error) {
+	return s.ExecuteRouted(node, token, inputs, request, nil)
+}
+func (s *Service) ExecuteRouted(node, token string, inputs []MemberInput, request Request, route *RemoteRoute) (Result, error) {
 	if !validateRequest(request) {
 		return Result{}, ErrInvalid
 	}
@@ -93,7 +96,11 @@ func (s *Service) Execute(node, token string, inputs []MemberInput, request Requ
 		if err = put(bucket(tx, "members"), member.Ref.Key(), member); err != nil {
 			return err
 		}
-		result, err = apply(tx, member, request, now)
+		if request.Action == "message" && request.Target != nil && request.Target.Node != node {
+			result, err = queueRemote(tx, member, request, route, now)
+		} else {
+			result, err = apply(tx, member, request, now)
+		}
 		if err != nil {
 			return err
 		}

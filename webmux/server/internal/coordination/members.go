@@ -213,7 +213,7 @@ func (s *Service) AgentView(node, token string, inputs []MemberInput, after uint
 	return view, admitted
 }
 func buildView(tx *bolt.Tx, owner string, self *Member, after uint64, now time.Time) (View, error) {
-	view := View{Scope: "node-local", Contract: Contract, Enabled: enabled(tx), Self: self, Members: []Member{}, Claims: []Claim{}, Inbox: []Message{}, Outbox: []Message{}, Resources: []ResourceView{}, NextCursor: after}
+	view := View{HistoryEpoch: string(bucket(tx, "meta").Get([]byte("history_epoch"))), Scope: "node-local", Contract: Contract, Enabled: enabled(tx), Self: self, Members: []Member{}, Claims: []Claim{}, Inbox: []Message{}, Outbox: []Message{}, Resources: []ResourceView{}, NextCursor: after}
 	members, err := readAll[Member](bucket(tx, "members"))
 	if err != nil {
 		return view, err

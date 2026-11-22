@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -26,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	plane "github.com/jordanhubbard/webmux/server/internal/coordination"
+	"github.com/jordanhubbard/webmux/server/internal/coordinationclient"
 	"github.com/jordanhubbard/webmux/server/internal/discovery"
 )
 
@@ -66,9 +69,10 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 	secret := nodeNetworkSecret(t, dir)
 	var b *Server
 	var bh http.Handler
+	var nativeAccess []coordinationclient.Access
 	if os.Getenv("WEBMUX_COORDINATION_PEER_NETWORK") == "1" {
 		deterministicCoordinationGit(t)
-		b, bh, _, _, _ = coordinationAPI(t)
+		b, bh, _, _, nativeAccess = coordinationAPI(t)
 	} else {
 		b, bh = fixture(t, "local")
 		federationAccounts(t, b)
@@ -108,6 +112,8 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 	var mu sync.Mutex
 	proofs := map[net.Conn]bool{}
 	proofCount, bearerCount := 0, 0
+	messageAdmits, messageStatuses := 0, 0
+	lostMessageReply := false
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		connection, ok := r.Context().Value(nodeNetworkConnectionKey{}).(net.Conn)
 		if !ok {
@@ -164,8 +170,80 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 					return
 				}
 				directory.Grants[0].Coordination = r.URL.Path == "/_qualification/share-coordination"
+				if !directory.Grants[0].Coordination {
+					directory.Grants[0].CoordinationMessages = false
+				}
 				if err = b.store.WriteConfig("servers.yaml", directory); err != nil {
 					w.WriteHeader(500)
+					return
+				}
+			case "/_qualification/allow-messages":
+				if os.Getenv("WEBMUX_COORDINATION_MESSAGE_NETWORK") != "1" || !plane.ValidSenderScope(r.URL.Query().Get("source_node"), "owner") {
+					w.WriteHeader(400)
+					return
+				}
+				directory, err := b.serverDirectory()
+				if err != nil {
+					t.Error(err)
+					w.WriteHeader(500)
+					return
+				}
+				directory.Grants[0].Coordination = true
+				directory.Grants[0].CoordinationMessages = true
+				directory.Grants[0].SourceNode = r.URL.Query().Get("source_node")
+				directory.Grants[0].SourceOwner = "owner"
+				if err = b.store.WriteConfig("servers.yaml", directory); err != nil {
+					t.Error(err)
+					w.WriteHeader(500)
+					return
+				}
+			case "/_qualification/complete-message":
+				if os.Getenv("WEBMUX_COORDINATION_MESSAGE_NETWORK") != "1" {
+					w.WriteHeader(404)
+					return
+				}
+				id, target := r.URL.Query().Get("record"), r.URL.Query().Get("session")
+				found := false
+				for _, access := range nativeAccess {
+					if access.Subject.Session == target && access.Subject.Owner == "owner" {
+						viewResponse := request(b.CoordinationAgentHandler(), "GET", "/view", "", access.Capability)
+						var view plane.View
+						if json.Unmarshal(viewResponse.Body.Bytes(), &view) != nil {
+							t.Error("invalid recipient view")
+							w.WriteHeader(500)
+							return
+						}
+						count := 0
+						for _, message := range view.Inbox {
+							if message.ID == id {
+								count++
+								text, err := b.sessions.Scrollback("owner", target)
+								if err != nil || strings.Contains(text, message.Text) {
+									t.Error("remote message entered terminal")
+									w.WriteHeader(500)
+									return
+								}
+							}
+						}
+						if count != 1 {
+							t.Error("remote inbox admission not unique", count)
+							w.WriteHeader(500)
+							return
+						}
+						for _, action := range []string{"delivered", "acknowledge", "complete"} {
+							result := request(b.CoordinationAgentHandler(), "POST", "/act", directoryJSON(plane.Request{ID: "native-remote-" + action, Action: action, Record: id}), access.Capability)
+							if result.Code != 200 || !strings.Contains(result.Body.String(), "recorded") {
+								t.Error("explicit recipient receipt failed")
+								w.WriteHeader(500)
+								return
+							}
+						}
+						found = true
+						break
+					}
+				}
+				if !found {
+					w.WriteHeader(404)
 					return
 				}
 			case "/_qualification/stop":
@@ -180,6 +258,48 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 				flusher.Flush()
 			}
 			return
+		}
+		if os.Getenv("WEBMUX_COORDINATION_MESSAGE_NETWORK") == "1" && r.URL.Path == coordinationMessagesPath {
+			data, err := io.ReadAll(io.LimitReader(r.Body, (16<<10)+1))
+			if err != nil {
+				t.Error(err)
+				w.WriteHeader(500)
+				return
+			}
+			var exchange coordinationMessageExchange
+			if json.Unmarshal(data, &exchange) != nil {
+				w.WriteHeader(400)
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(data))
+			mu.Lock()
+			drop := false
+			if exchange.Operation == "admit" {
+				messageAdmits++
+				if !lostMessageReply {
+					lostMessageReply = true
+					drop = true
+				}
+			} else {
+				messageStatuses++
+			}
+			mu.Unlock()
+			if drop {
+				recorded := httptest.NewRecorder()
+				bh.ServeHTTP(recorded, r)
+				if recorded.Code != 200 {
+					t.Error("native message admission failed", recorded.Code)
+					w.WriteHeader(500)
+					return
+				}
+				connection, _, err := w.(http.Hijacker).Hijack()
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				_ = connection.Close()
+				return
+			}
 		}
 		bh.ServeHTTP(w, r)
 	})
@@ -209,6 +329,12 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 	defer mu.Unlock()
 	if proofCount < 4 || bearerCount < 4 {
 		t.Fatal("incomplete wire workload", proofCount, bearerCount)
+	}
+	if os.Getenv("WEBMUX_COORDINATION_MESSAGE_NETWORK") == "1" {
+		if messageAdmits != 1 || messageStatuses < 1 || !lostMessageReply {
+			t.Fatal("lost message reply did not reconcile through status", messageAdmits, messageStatuses)
+		}
+		t.Logf("native remote messaging: one admit request, %d receipt status requests, deliberately dropped first committed reply, one recipient inbox record, explicit delivered/acknowledged/completed and no terminal input", messageStatuses)
 	}
 	t.Logf("native receiver observed %d proofs and %d requests with bearer credentials, all on proven TLS connections", proofCount, bearerCount)
 }

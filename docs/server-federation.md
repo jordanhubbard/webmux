@@ -105,10 +105,29 @@ subsequent views immediately. A receiving refusal clears retained data; a networ
 outage can retain a clearly stale observation until its 30-second expiry. Pending,
 invalid, disabled or unavailable context does not mean that remote work is absent.
 
-This is project discovery/context. Remote messages, claims and reservations still
-need their separate durable mutation/authority protocol. A remote availability
+These permissions authorize project context only. Cross-node claims and
+reservations still require separate authority. A remote availability
 summary does not acquire that worker. See [session coordination](session-coordination.md)
 and the [two-host protocol receipt](validation/coordination-peers-2026-11-21/README.md).
+
+## Allow coordination messages
+
+After enabling summaries, edit the outgoing verified peer and select **Allow
+coordination messages to this peer**. On the receiving server edit its incoming
+grant, select **Allow incoming coordination messages**, and enter the sending
+server's node ID and mapped local account. The management dialog displays this
+server's node ID below **Incoming access**. Preserve the distinct sending and
+receiving accounts even when their names match. Each direction requires its own
+configuration; existing summary and terminal permissions do not enable messages.
+
+The corresponding file fields are `coordination_messages: true` on the outgoing
+entry and incoming grant, plus `source_node_id` and `source_owner` on the grant.
+The grant still requires `coordination: true`. Messages append only to a live
+same-project recipient's coordination inbox. Recipients explicitly record
+delivery, acknowledgment and completion. A queued or uncertain transport is not
+proof of delivery. Removing permission stops future attempts, while an existing
+in-flight admission may already have committed. See the
+[durable protocol and recovery rules](session-coordination.md#durable-messages-across-nodes).
 
 ## Configure a pair through files
 
