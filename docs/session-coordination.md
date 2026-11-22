@@ -6,8 +6,9 @@ a scoped local CLI to ordinary local/exec sessions, attaches native MCP guidance
 through qualified ordinary CLI aliases, and records all broker session identities.
 It supports local actions plus separately authorized cross-node context,
 messages, advisory conflicts and shared reservations. SSH/mosh project context
-can now be verified on its execution host; remote agent access, managed-provider
-onboarding and complete real-agent acceptance remain open in the
+can now be verified on its execution host. Key-authenticated SSH sessions also
+have a native-qualified scoped CLI channel on the tested macOS/Linux topology;
+managed-provider onboarding and complete real-agent acceptance remain open in the
 [roadmap](roadmap.md).
 
 ## Ordinary session interface
@@ -94,13 +95,59 @@ a helper supporting the new operation. Older or unavailable helpers remain
 remain `working-directory-unobserved`. Provider-owned attachment viewers remain
 excluded from this ordinary-session path.
 
-This supplies verified project context, not a remote capability channel. SSH/
-mosh members still report `execution-host-onboarding-pending` and receive no
-local-only capability file. The [native SSH component result](validation/coordination-ssh-project-2026-11-22/README.md)
+The [repository RPC component result](validation/coordination-ssh-project-2026-11-22/README.md)
 proves production RPC authentication, repository identity and a branch change
-between macOS and Linux. Remote MCP transport/guidance, full broker/provider
-onboarding, Windows native acceptance and managed/native agent qualification
-remain required under #630.
+between macOS and Linux. It is separate from the scoped channel below.
+
+## Private SSH coordination channel
+
+The controller issues only the new session's coordination capability. Its SSH
+bootstrap authenticates with the selected execution-host account, prepares a
+private Unix socket directory, and installs an SSH stream-local reverse forward
+to the controller's private loopback agent listener. The remote host opens no TCP
+coordination listener. Administrator and federation credentials are not supplied.
+
+Before publishing the remote locator, the helper reads a real scoped view through
+the forward and checks its complete node/account/session/incarnation identity.
+Only then does it atomically replace the access file and start or reattach the
+existing provider. A refused probe preserves the old file. If an installation
+reply is uncertain, the new private forward remains with its owning SSH run
+because the file might already have been published. Closing that run closes its
+private master. Each run has its own control path, so an older close cannot
+terminate a newer run's connection.
+
+Normal qualified native aliases use the same CLI/MCP client and private locator
+as local sessions. MCP reloads access on every call. A shell-only
+`ssh-stream-local-configured` observation means the channel was configured and
+verified, not that a coding agent adopted its tools. Without that observation the
+member remains `execution-host-onboarding-pending`; native alias policy/version
+statuses remain separate. No terminal input, startup prompt, native tool approval
+override or per-session coordination toggle is injected.
+
+The bootstrap capability probe honors the original SSH command's selected
+`accept-new` first-use policy; fixed background RPCs keep strict host-key checking.
+A read-only, authenticated query of the provider's current pane supplies initial
+directory context even if a shell event happened before attachment with capture
+off. This live directory/status metadata is not persisted as recovery history.
+
+The [native channel qualification](validation/coordination-ssh-channel-2026-11-22/README.md)
+passes ordinary SSH startup, scoped view/action, a fresh private known-host file,
+reconnect using the exact retained pane PID, access replacement and private-master
+shutdown. Its forwarding-refusal control leaves an ordinary usable shell without
+advertising a configured channel. No installed service or existing provider was
+restarted. The [corrected-stack qualification](validation/coordination-ssh-channel-integration-2026-11-22/README.md)
+repeats those cases and proves public account deletion refuses the retained SSH
+CLI's reads and actions while preserving its original pane and terminal lifecycle.
+
+This requires compatible helpers at both ends, supported SSH multiplexing/
+stream-local forwarding, and a private POSIX socket path of at most 100 bytes.
+Older/refusing helpers leave normal SSH available. Password-authenticated startup,
+native Mosh/Windows, unexpected tunnel-loss repair, existing agents that lack an
+MCP channel, actual coding-agent adoption and complete controller-restart/claim/
+message/reservation continuity remain acceptance work under #630. Existing cache
+artifacts may remain after a run; session capabilities still require a live,
+authorized broker subject. Native per-run socket-cache retention/cleanup policy
+needs completion before broad lifecycle closure.
 
 ## Authorized peer discovery
 

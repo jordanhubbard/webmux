@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,6 +27,7 @@ import (
 const LeaseProtocolHeader = "X-Webmux-Coordination-Lease"
 
 type Access struct {
+	Socket       string           `json:"socket,omitempty"`
 	Contract     string           `json:"contract"`
 	Endpoint     string           `json:"endpoint"`
 	Capability   string           `json:"capability"`
@@ -37,6 +39,15 @@ func Locator(session, key string) (string, error) {
 	if len(session) > 128 || session == "" || strings.ContainsAny(session, "/\\.:\x00\r\n") || len(key) < 32 {
 		return "", errors.New("session coordination locator is unavailable")
 	}
+	root, err := cacheRoot()
+	if err != nil {
+		return "", err
+	}
+	mac := hmac.New(sha256.New, []byte(key))
+	_, _ = mac.Write([]byte("webmux-coordination-locator/v1"))
+	return filepath.Join(root, "webmux", "coordination", session, hex.EncodeToString(mac.Sum(nil))+".json"), nil
+}
+func cacheRoot() (string, error) {
 	root := os.Getenv("WEBMUX_COORDINATION_CACHE_HOME")
 	if root == "" {
 		var err error
@@ -48,9 +59,7 @@ func Locator(session, key string) (string, error) {
 	if !filepath.IsAbs(root) {
 		return "", errors.New("invalid coordination cache root")
 	}
-	mac := hmac.New(sha256.New, []byte(key))
-	_, _ = mac.Write([]byte("webmux-coordination-locator/v1"))
-	return filepath.Join(root, "webmux", "coordination", session, hex.EncodeToString(mac.Sum(nil))+".json"), nil
+	return root, nil
 }
 func WriteAccess(name string, access Access) error {
 	if err := os.MkdirAll(filepath.Dir(name), 0700); err != nil {
@@ -174,6 +183,11 @@ func Request(ctx context.Context, access Access, method, path string, body io.Re
 	request.Header.Set(LeaseProtocolHeader, "1")
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = nil
+	if access.Socket != "" {
+		transport.DialContext = func(ctx context.Context, _, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "unix", access.Socket)
+		}
+	}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport, Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	response, err := client.Do(request)
@@ -268,6 +282,9 @@ func AdmissionError(result coordination.Result) error {
 }
 
 func validateAccess(access Access) error {
+	if access.Socket != "" {
+		return validateSocketAccess(access)
+	}
 	endpoint, err := url.Parse(access.Endpoint)
 	if err != nil || endpoint.Scheme != "http" || (endpoint.Hostname() != "127.0.0.1" && endpoint.Hostname() != "::1") || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" || (endpoint.Path != "" && endpoint.Path != "/") {
 		return errors.New("coordination capability requires the local agent endpoint")

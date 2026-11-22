@@ -160,6 +160,22 @@ func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {
 	if !recovery.Verify(event, e.value.RecoveryKey) {
 		return
 	}
+	if event.Kind == "coordination" {
+		if e.value.CoordinationRemote() {
+			if event.Coordination == "ssh-stream-local-configured" {
+				e.value.CoordinationChannel = event.Coordination
+			}
+			if coordinationObservedDirectory(event) {
+				observation := CoordinationObservation{Directory: event.Cwd}
+				if e.value.CoordinationActivity != nil {
+					observation = *e.value.CoordinationActivity
+					observation.Directory = event.Cwd
+				}
+				e.value.CoordinationActivity = &observation
+			}
+		}
+		return
+	}
 	// Keep only live directory/interface routing independently of recording.
 	// Command text, argv and conversation identifiers remain behind the log gate.
 	if (event.Kind == "shell" || event.Kind == "command" || event.Kind == "cli") && coordinationObservedDirectory(event) {

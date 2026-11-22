@@ -52,6 +52,7 @@ func (s Session) CoordinationRemote() bool {
 }
 
 type Session struct {
+	CoordinationChannel  string                     `json:"-" yaml:"-"`
 	CoordinationActivity *CoordinationObservation   `json:"-" yaml:"-"`
 	CoordinationLive     bool                       `json:"-" yaml:"-"` // Broker-observed viewer/run state, never restored as authority.
 	LocalOwnerManaged    bool                       `json:"-" yaml:"local_owner_managed,omitempty"`

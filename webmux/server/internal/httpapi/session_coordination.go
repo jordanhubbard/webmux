@@ -175,6 +175,12 @@ func (s *Server) coordinationInputs(node string, snapshots []session.Session) []
 			}
 			if snapshot.CoordinationRemote() {
 				input.Interface = "execution-host-onboarding-pending"
+				if snapshot.CoordinationChannel != "" {
+					input.Interface = "execution-host-cli; " + snapshot.CoordinationChannel
+				}
+				if snapshot.CoordinationActivity != nil && snapshot.CoordinationActivity.Interface != "" {
+					input.Interface += "; " + snapshot.CoordinationActivity.Interface
+				}
 			}
 			observation := s.sessionCoord.bindings[coordinationBindingKey(snapshot)]
 			input.Project = observation.project
@@ -200,7 +206,7 @@ func (s *Server) coordinationNode() (string, error) {
 	return policy.ID, err
 }
 func (s *Server) provisionCoordination(node string, snapshots []session.Session, current session.Session) (*terminal.CoordinationAccess, error) {
-	if !coordinationLocal(current) || s.sessionCoord.endpoint == "" || !s.federationOwnerAllowed(current.Owner) {
+	if (!coordinationLocal(current) && !current.CoordinationRemote()) || s.sessionCoord.endpoint == "" || !s.federationOwnerAllowed(current.Owner) {
 		return nil, nil
 	}
 	inputs := s.coordinationInputs(node, snapshots)
@@ -240,7 +246,7 @@ func (s *Server) provisionCoordination(node string, snapshots []session.Session,
 	if err = coordinationclient.WriteAccess(name, access); err != nil {
 		return nil, err
 	}
-	if current.RecoveryKey != "" {
+	if coordinationLocal(current) && current.RecoveryKey != "" {
 		locator, err := coordinationclient.Locator(current.ID, current.RecoveryKey)
 		if err != nil {
 			return nil, err
