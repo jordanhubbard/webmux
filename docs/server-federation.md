@@ -6,9 +6,11 @@ project bindings and persistence. A browser connected to one server can select
 workspace keeps its existing terminal grid. Administrators can open **Manage
 servers** from the toolbar even before any peers exist. The server selector appears after the first peer is configured.
 
-Connections are opened on demand. There is no distributed mesh, shared home
-directory, automatic discovery, or requirement for Rig or Agent Deck. Those
-coordinators remain optional for task assignment and provider lifecycle work.
+Connections are opened on demand. [Network discovery](network-discovery.md)
+shows unverified candidate nodes in Manage servers; authenticated connections
+still require explicit configuration. There is no distributed mesh or shared
+home directory. Rig and Agent Deck remain optional for task assignment and
+provider lifecycle work.
 
 ## Manage connections in the UI
 

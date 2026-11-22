@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type ManagedServer, type ServerGrant, type ServerDirectory } from '../utils/api';
+import { api, type ManagedServer, type ServerGrant, type ServerDirectory, type NodeDiscovery } from '../utils/api';
 import { Dialog } from './Dialog';
 import './ServersDialog.css';
 
@@ -18,6 +18,8 @@ function serverIdentity(url: string, directory: ServerDirectory) {
 
 export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddServer = false }: { initiallyAddServer?: boolean; onClose: () => void; onChanged: () => Promise<void>; currentUser: string | null }) {
   const [directory, setDirectory] = useState<ServerDirectory | null>(null);
+  const [discovery, setDiscovery] = useState<NodeDiscovery | null>(null);
+  const [discoveryError, setDiscoveryError] = useState('');
   const [editor, setEditor] = useState<Editor | null>(() => initiallyAddServer ? emptyEditor('server') : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -26,7 +28,10 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
   useEffect(() => {
     let canceled = false;
     void api.getServerDirectory().then(value => { if (!canceled) setDirectory(value); }).catch(error => { if (!canceled) setError(String(error)); });
-    return () => { canceled = true; };
+    const refreshDiscovery = () => { void api.getDiscoveredNodes().then(value => { if (!canceled) { setDiscovery(value); setDiscoveryError(''); } }).catch(() => { if (!canceled) setDiscoveryError('Cannot load network discovery. Manual connections remain available.'); }); };
+    refreshDiscovery();
+    const timer = window.setInterval(refreshDiscovery, 15000);
+    return () => { canceled = true; window.clearInterval(timer); };
   }, []);
   const run = async (action: () => Promise<void>) => {
     setBusy(true); setError(''); setNotice('');
@@ -93,6 +98,21 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
             <button disabled={busy} onClick={() => { void run(async () => { const sessions = await api.getServerSessions(server.id); setNotice(`${server.name}: connection successful, ${sessions.length} sessions available.`); }); }}>Test connection to {server.name}</button>
             <button disabled={busy} onClick={() => remove('server', server.id)}>Remove {server.name}</button>
           </div>
+        </section>)}
+        <h3>Nearby servers</h3>
+        <p>Network announcements are unverified. Confirm the server address and identity before sharing a credential. Discovery does not grant access.</p>
+        {discoveryError && <p role="status">{discoveryError}</p>}
+        {discovery?.error && <p role="status">{discovery.error}</p>}
+        {discovery && !discovery.started && !discovery.error && <p>Network discovery is inactive for this listener.</p>}
+        {discovery?.started && !discovery.policy.browse && <p>Network browsing is disabled by server policy.</p>}
+        {discovery?.started && discovery.policy.browse && discovery.candidates.length === 0 && <p>No nearby servers discovered. You can still add a server manually.</p>}
+        {discovery?.candidates.map(node => <section key={`${node.instance}/${node.address}`} aria-label={`${node.host} discovered server`}>
+          <strong>{node.host}</strong><p>{node.address}:{node.port} · Unverified announcement</p>
+          <p>Claimed node ID: {node.claimed_id}</p>
+          <button disabled={busy || !directory} onClick={() => {
+            const url = `${node.tls ? 'https' : 'http'}://${node.host}:${node.port}`;
+            edit('server'); setEditor({ ...emptyEditor('server'), name: node.host, url });
+          }}>Configure connection to {node.host}</button>
         </section>)}
         <h3>Incoming access</h3>
         <p>Grant a trusted WebMux server access to one local account’s terminals. Terminals run as the WebMux service user.</p>

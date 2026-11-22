@@ -58,6 +58,14 @@ Ordered implementation and acceptance:
   multicast/peers and duplicate or uncertain delivery. Publish supported
   boundaries and evidence before marking either requirement complete.
 
+The [architecture decision](coordination-architecture.md) selects a built-in
+coordination plane with optional existing provider lifecycle adapters; real
+agent-facing channel evaluation remains open. The
+[node discovery implementation checkpoint](network-discovery.md) adds a server-owned DNS-SD candidate browser and server-management visibility. It keeps
+announcements untrusted and retains manual enrollment. Authenticated node-identity
+reconciliation, automatic coordination and native two-host acceptance remain
+open; this checkpoint does not complete any of the requirements above.
+
 ## Current reliability work
 
 **First priority: [#318](https://github.com/jordanhubbard/webmux/issues/318).**

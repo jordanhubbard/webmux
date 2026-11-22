@@ -130,6 +130,8 @@ export interface ConnectedServer { id: string; name: string }
 
 export interface ManagedServer extends ConnectedServer { url: string; allow_http: boolean; token_env: string; credential_ready: boolean }
 export interface ServerGrant { id: string; owner: string; token_env: string; credential_ready: boolean }
+export interface DiscoveredNode { instance: string; claimed_id: string; host: string; address: string; port: number; tls: boolean; last_seen: string; expires: string }
+export interface NodeDiscovery { contract: string; started: boolean; error: string; policy: { version: number; id: string; browse: boolean; advertise: boolean; interfaces: string[] | null }; candidates: DiscoveredNode[] }
 export interface ServerDirectory { servers: ManagedServer[]; grants: ServerGrant[] }
 export interface ServerCredentialInput { token_env: string; credential: string }
 
@@ -206,6 +208,7 @@ export const api = {
   getSessionRecovery: (id: string, signal?: AbortSignal) => request<SessionRecovery>(`/session-recovery/${encodeURIComponent(id)}`, { signal, cache: 'no-store' }),
   recoverSession: (id: string, input: RecoveryRequest) => request<{ outcome: string; code?: string }>(`/session-recovery/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify(input) }),
   setAutoRecovery: (id: string, enabled: boolean) => request<{ auto_resume: boolean }>(`/session-recovery/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ auto_resume: enabled }) }),
+  getDiscoveredNodes: () => request<NodeDiscovery>('/discovered-nodes'),
   getServerDirectory: () => request<ServerDirectory>('/server-directory'),
   saveServer: (id: string, input: ServerCredentialInput & { name: string; url: string; allow_http: boolean }) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
   deleteServer: (id: string) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'DELETE' }),

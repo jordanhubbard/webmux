@@ -21,6 +21,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/authhandoff"
 	"github.com/jordanhubbard/webmux/server/internal/browser"
 	"github.com/jordanhubbard/webmux/server/internal/desktop"
+	"github.com/jordanhubbard/webmux/server/internal/discovery"
 	"github.com/jordanhubbard/webmux/server/internal/macsetup"
 	"github.com/jordanhubbard/webmux/server/internal/netguard"
 	"github.com/jordanhubbard/webmux/server/internal/session"
@@ -30,6 +31,9 @@ import (
 )
 
 type Server struct {
+	nodes              *discovery.NodeBrowser
+	nodePolicy         discovery.NodePolicy
+	nodeDiscoveryError string
 	rigCaptureCursor   int
 	rigChangesMu       sync.Mutex
 	rigChangesOwners   map[string]bool
@@ -131,6 +135,9 @@ func (s *Server) StartSlave(host string, port int) error {
 	return err
 }
 func (s *Server) Close() error {
+	if s.nodes != nil {
+		_ = s.nodes.Close()
+	}
 	if s.coordinationCancel != nil {
 		s.coordinationCancel()
 	}
@@ -140,6 +147,7 @@ func (s *Server) Close() error {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.registerFederation(mux)
+	mux.Handle("GET /api/discovered-nodes", s.protected(false, s.getDiscoveredNodes))
 	s.registerUSBForwardings(mux)
 	mux.Handle("GET /api/setup/macos", s.protected(false, s.getMacSetup))
 	mux.Handle("POST /api/setup/macos", s.protected(false, s.macSetupAction))
