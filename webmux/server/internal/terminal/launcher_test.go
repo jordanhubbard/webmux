@@ -320,7 +320,7 @@ func TestCoordinationEnvironmentDoesNotCrossSessionBoundary(t *testing.T) {
 		t.Run(platform, func(t *testing.T) {
 			p := testPlanner()
 			p.platform = platform
-			p.environment = append(p.environment, "WEBMUX_COORDINATION_FILE=foreign-file", "WEBMUX_COORDINATION_CLI=foreign-cli", "WEBMUX_COORDINATION_TOKEN=foreign-token")
+			p.environment = append(p.environment, "WEBMUX_COORDINATION_FILE=foreign-file", "WEBMUX_COORDINATION_CLI=foreign-cli", "WEBMUX_COORDINATION_TOKEN=foreign-token", "TMUX=foreign-tmux", "TMUX_PANE=foreign-pane")
 			if platform == "windows" {
 				p.environment = append(p.environment, "WebMux_Coordination_File=foreign-mixed-case")
 			}

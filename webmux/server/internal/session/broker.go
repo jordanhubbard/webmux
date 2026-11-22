@@ -405,6 +405,7 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 }
 
 func (b *Broker) startWithTranscriptLocked(e *entry, password, initial string, transcript *transcriptLog) error {
+	e.value.CoordinationActivity = nil
 	if e.value.LocalStop != nil {
 		return ErrLocalStopRequired
 	}

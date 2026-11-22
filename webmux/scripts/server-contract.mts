@@ -662,7 +662,8 @@ async function sessionCoordinationContract(): Promise<void> {
   const marker = path.join(temporary, 'coordination-client-ready');
   const fixturePath = path.join(temporary, 'coordination-client.mjs');
   await writeFile(fixturePath, `import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { createInterface } from 'node:readline';
 import { writeFileSync } from 'node:fs';
 assert.ok(process.env.WEBMUX_COORDINATION_FILE);
 assert.ok(process.env.WEBMUX_COORDINATION_CLI);
@@ -673,6 +674,35 @@ assert.equal(view.contract, 'webmux-session-coordination/v1');
 assert.equal(view.scope, 'node-local');
 assert.equal(view.self.ref.owner, 'owner');
 assert.ok(!result.stdout.includes('wmc1.'));
+const mcp = spawn(process.env.WEBMUX_COORDINATION_CLI, ['coordinate', 'mcp'], { stdio: ['pipe', 'pipe', 'pipe'] });
+const pending = new Map();
+let rpcID = 0;
+const lines = createInterface({ input: mcp.stdout });
+lines.on('line', line => {
+  const response = JSON.parse(line);
+  const waiter = pending.get(response.id);
+  if (waiter) { pending.delete(response.id); response.error ? waiter.reject(new Error(JSON.stringify(response.error))) : waiter.resolve(response.result); }
+});
+function rpc(method, params) {
+  const id = ++rpcID;
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('MCP response timeout: ' + method)), 5000);
+    pending.set(id, { resolve: value => { clearTimeout(timer); resolve(value); }, reject: error => { clearTimeout(timer); reject(error); } });
+    mcp.stdin.write(JSON.stringify({ jsonrpc: '2.0', id, method, params }) + String.fromCharCode(10));
+  });
+}
+try {
+  const initialized = await rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'ordinary-child-contract', version: '1' } });
+  assert.ok(initialized.instructions.includes('before starting work'));
+  mcp.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + String.fromCharCode(10));
+  const tools = await rpc('tools/list', {});
+  assert.equal(tools.tools.length, 2);
+  const context = await rpc('tools/call', { name: 'webmux_coordination_view', arguments: {} });
+  assert.ok(!context.isError);
+  assert.ok(JSON.stringify(context).includes('node-local'));
+  assert.ok(!JSON.stringify(context).includes('wmc1.'));
+} finally { mcp.stdin.end(); lines.close(); }
+
 writeFileSync(${JSON.stringify(marker)}, 'scoped CLI completed before any browser viewer opened', { mode: 0o600 });
 console.log('coordination-cli-ready');
 setTimeout(() => {}, 30000);
@@ -1121,7 +1151,7 @@ try {
   await desktopContract();
   await vncContract();
   await rdpContract();
-  console.log('Go: HTTP, templates, terminal WebSocket, scoped session coordination, agent, VNC/RDP and restart contracts passed');
+  console.log('Go: HTTP, templates, terminal WebSocket, scoped session coordination CLI/MCP, agent, VNC/RDP and restart contracts passed');
 } finally {
   await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }

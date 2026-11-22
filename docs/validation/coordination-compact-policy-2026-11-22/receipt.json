@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Preserve explicit compact Codex MCP/transport options on the combined native adapter and account-revocation foundation; parser evidence, not a new native agent workflow",
+  "foundation_head": "65c41be4b1d2fc896763dd6caab82ff85b588906",
+  "original_mcp_head": "0f909dbd0271f95a482d86c79a9e98ba5f7ba09d",
+  "native_cli": "codex-cli 0.171.0",
+  "source_sha256": {
+    "webmux/server/internal/coordinationclient/native.go": "e39d5ff04d1a309954eb431d805d37048db439d43ab4fb2e71f81f667faec158",
+    "webmux/server/internal/coordinationclient/native_test.go": "7ba1ebb9a529557facc373ec12ffac425e2fa52bcba3a4b7f0b6a4598400541e",
+    "webmux/server/internal/coordinationmcp/server.go": "4cd12ead2c13c4853ceed1f7ccf3aa9c3c50a079eb18f612660bb2b339294f00",
+    "webmux/server/internal/httpapi/session_coordination.go": "bb57d773785b895bdb15096b460b857fd3b5ca927729dd2824b722fc78bf5b0d",
+    "webmux/server/internal/httpapi/session_coordination_test.go": "9858c7a16598713060e0665a64375e19c32b5605f848d8500b2e6b6c2bb8782f"
+  },
+  "evidence": [
+    {
+      "private_path": "_build/integrate-native-mcp630/compact-before.log",
+      "exit_code": 1,
+      "sha256": "ec96692dd5cb1e790cc2bd19e97510ade49726607232a3f882443853dcfbc0b9",
+      "source_scope": "original adapter with added regressions"
+    },
+    {
+      "private_path": "_build/integrate-native-mcp630/compact-after.log",
+      "exit_code": 0,
+      "sha256": "a6014c14b5c5a27b90da28c3fd0d1295c16be02fa20ad52b76546eaf85407550",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-native-mcp630/go-test.log",
+      "exit_code": 0,
+      "sha256": "075c7b32ce6bc7453453c76c3bd4dcc9d30cf888d8c658a3106aa6b357b43da9",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-native-mcp630/client-mcp-race.log",
+      "exit_code": 0,
+      "sha256": "6d050cfc35291e51c244bd7292554573c165cb571bdf72b9ae57844c89534291",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-native-mcp630/api-session-race.log",
+      "exit_code": 0,
+      "sha256": "71a4b45e07980fcdfcfe4d320c7ae7209e6b7f7a7a20c6d22c007b895318e81b",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-native-mcp630/vet.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-native-mcp630/typecheck.log",
+      "exit_code": 0,
+      "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-native-mcp630/server-contract.log",
+      "exit_code": 0,
+      "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f",
+      "source_scope": "fixed combined source"
+    }
+  ],
+  "native_syntax": [
+    {
+      "case": "compact",
+      "exit_code": 0,
+      "server_names": [
+        "fixture"
+      ],
+      "stderr_bytes": 0
+    },
+    {
+      "case": "assigned",
+      "exit_code": 0,
+      "server_names": [
+        "fixture"
+      ],
+      "stderr_bytes": 0
+    },
+    {
+      "case": "spaced",
+      "exit_code": 0,
+      "server_names": [
+        "fixture"
+      ],
+      "stderr_bytes": 0
+    },
+    {
+      "case": "quoted-root-exploration",
+      "exit_code": 0,
+      "server_names": [],
+      "stderr_bytes": 0
+    }
+  ],
+  "native_syntax_sha256": "e4c0d632744aa0afa38b0d087c54692fa9312908513b926bf86cbc68a0096908",
+  "limitations": [
+    "The quoted-root syntax exploration listed no fixture server and was not treated as an accepted MCP configuration form.",
+    "API race selection executed scoped HTTP API controls; recovery/session/terminal packages reported no selected tests.",
+    "No model or native coding-agent workflow was started by the new parser controls.",
+    "Hosted checks must pass on the updated head before #637 merges.",
+    "Managed/SSH/cross-node/discovered and remaining platform/distribution acceptance stay open."
+  ]
+}

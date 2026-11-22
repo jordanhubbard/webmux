@@ -2,10 +2,11 @@
 
 The server now owns a durable, enabled-by-default coordination ledger under
 [#630](https://github.com/jordanhubbard/webmux/issues/630). This checkpoint exposes
-a scoped local CLI to ordinary local/exec sessions and records all broker session
-identities. Its advertised scope is `node-local`. It does not complete automatic
-native-agent awareness, managed/SSH execution-host onboarding, or cross-node
-coordination. The [roadmap](roadmap.md) requirements remain open.
+a scoped local CLI to ordinary local/exec sessions, attaches native MCP guidance
+through qualified ordinary CLI aliases, and records all broker session identities.
+Its advertised scope is `node-local`. Managed/SSH execution-host onboarding,
+cross-node coordination and full real-agent acceptance remain open in the
+[roadmap](roadmap.md).
 
 ## Ordinary session interface
 
@@ -29,8 +30,9 @@ For an already running shell that predates the new environment variables, use
 `webmux coordinate` from the installed executable. `guide` prints instructions
 and the subject, never the bearer capability. Do not copy the private access file
 into logs, prompts, repositories or another session. Reading a guide is not proof
-that a native agent has adopted it; the registry explicitly reports startup
-guidance as pending.
+that a native agent has adopted it. The registry distinguishes available aliases,
+configured MCP, preserved explicit policy, unqualified versions and unavailable
+interfaces. A configured launch is separate from a successful tool invocation.
 
 `view` returns same-account, same-verified-project peers, active claims, inbox,
 outbox and heavy-worker availability. Inbox/outbox windows contain at most 100
@@ -61,6 +63,49 @@ do not run or stop jobs: participating workers must honor expiry and fencing.
 There is one resource, `node:<node_id>:heavy`, shared across accounts on this
 node; another account/project sees occupancy but not the holder's identity.
 
+## Native agent startup and MCP
+
+The existing execution-host `codex` and `claude` aliases attach a session-scoped
+stdio MCP server when the native version and invocation are qualified. Native
+startup instructions ask the agent to inspect project peers before work, register
+claims, negotiate overlap, acknowledge handoffs and reserve heavy workers. The
+native tools are `webmux_coordination_view` and `webmux_coordination_act`;
+`webmux coordinate mcp` runs the stdio adapter. It uses the pinned official
+[MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk/tree/v1.8.0), with
+bounded frames and the existing loopback capability client. It reloads private
+access per call so a surviving MCP pipe can follow controller endpoint changes.
+Tool errors preserve refused admission, lease expiry and claim-conflict semantics.
+The adapter owns no provider and runs no job or terminal input.
+
+Native macOS ARM64 acceptance covers Codex 0.171.0 and Claude 2.1.327 launched
+independently through ordinary broker-owned PTYs, with transcript recording off
+and no browser. Each called the scoped MCP view, resolved a verified Git project
+and discovered its three same-account members. See the
+[native receipt](validation/agent-coordination-2026-11-21/README.md). These are two
+separate single-agent startup checks on one host; a simultaneous two-agent
+claim/handoff/reservation workflow remains pending.
+
+Codex 0.171.0's default gRPC code-mode host timed out in native qualification.
+Keeping the host enabled and selecting its supported non-gRPC transport passed.
+The version-specific adapter adds `--disable code_mode_host_grpc` automatically;
+explicit CLI transport selectors are preserved. It does not change sandbox,
+approval, model or credential settings. This adjustment is part of the qualified
+boundary, not a general statement about other Codex versions.
+
+MCP configuration is supplied only for that launch, using
+[Codex configuration overrides](https://developers.openai.com/codex/mcp) or
+[Claude's native MCP configuration](https://code.claude.com/docs/en/mcp).
+No user/project configuration or credential home is rewritten. Only private
+interface locations and an expected session ID enter the native server definition;
+bearer/recovery keys do not enter launch arguments. Existing native restrictions
+such as safe/bare/restricted mode, strict/explicit MCP configuration, remote mode
+or explicit tool selection pass through with a visible policy-preserved status.
+Other native versions remain visible as unqualified. Aliases are required;
+absolute-path bypasses, older helpers and already running agents do not gain a
+new MCP connection automatically. Existing running shells retain CLI locator
+access. Live native-agent notification push and manager-specific channels remain
+separate work; startup guidance asks agents to check at natural work boundaries.
+
 ## Membership, repository identity and authority
 
 Membership retains node/account/session/logical-incarnation identity. The
@@ -78,6 +123,11 @@ missing or ambiguous repository identities fail closed. A shared remote is a
 local identity witness, not remote-server authentication. Public explicit mapping
 configuration and execution-host inspection for managed/SSH sessions are pending.
 Ordinary shells without a trusted observed working directory remain unverified.
+Minimal signed live directory/interface observations are retained independently
+of transcript recording, without saving command text/argv as recovery history.
+The resulting verified project binding remains durable coordination state. New
+PTYs discard inherited outer tmux routing; durable tmux panes explicitly override
+shared-server coordination locations and bind to their own session identity.
 
 The agent API lives on a separate literal-loopback HTTP listener with only
 `GET /view` and `POST /act`. Its HMAC capability is scoped to the node, account,
@@ -122,8 +172,8 @@ admission, ordinary PTY child launches and the production executable's CLI befor
 any browser opens. These test children are controlled fixtures, not independently
 started coding agents.
 
-Remaining #630/#631 work includes native agent startup guidance and supported
-inbox channels; independently started ordinary and managed agents; SSH/remote
+Remaining #630/#631 work includes complete live native inbox/notification and
+existing-agent onboarding; independently started ordinary/managed pairs; SSH/remote
 execution-host provisioning; cross-node membership, delivery and shared authority;
 explicit project mappings; platform custody/sandbox acceptance; full native LAN
 discovery and reconnect qualification; and the complete two-real-host workflow.
@@ -138,3 +188,13 @@ coordination, and restoring/reconnecting its broker entry cannot provision acces
 under the removed account. In unauthenticated mode, only the `anonymous` owner
 qualifies. The [account-removal regression](validation/coordination-account-revocation-2026-11-22/README.md)
 records the original failure and corrected ordinary-session/race results.
+
+## Explicit native configuration
+
+The native Codex adapter preserves explicit MCP configuration in compact
+`-cKEY=VALUE`, spaced `-c KEY=VALUE` and assigned `-c=KEY=VALUE` forms. An explicit
+transport choice likewise prevents its default compatibility override. The
+[compact-option qualification](validation/coordination-compact-policy-2026-11-22/README.md)
+records the original regressions and isolated native parser evidence. These
+checks preserve user choices; they do not qualify the explicitly selected gRPC
+transport that failed the earlier native bootstrap experiment.

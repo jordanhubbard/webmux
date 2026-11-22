@@ -3,6 +3,7 @@ package recovery
 // Activity describes one observed command, not a reconstructed process image.
 // NativeEvidence distinguishes the original selector from observed native state.
 type Activity struct {
+	Coordination    string               `json:"coordination,omitempty" yaml:"coordination,omitempty"`
 	Configuration   *NativeConfiguration `json:"configuration,omitempty" yaml:"configuration,omitempty"`
 	Platform        string               `json:"platform,omitempty" yaml:"platform,omitempty"`
 	Replayable      bool                 `json:"replayable" yaml:"replayable"`
