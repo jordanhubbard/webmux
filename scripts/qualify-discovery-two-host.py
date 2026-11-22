@@ -37,6 +37,9 @@ env={k:v for k,v in os.environ.items() if k in ('PATH','TMPDIR','LANG','TZ')}
 env.update(WEBMUX_TEST_NODE_ROLE=i['role'],WEBMUX_TEST_NODE_ID=i['id'],WEBMUX_TEST_NODE_EXPECTED=i['expected'],WEBMUX_TEST_NODE_OUTPUT=str(output))
 if i.get('legacy'):env['WEBMUX_TEST_NODE_LOOKUP']='1'
 if i.get('instance_records'):env['WEBMUX_TEST_NODE_INSTANCE_RECORDS']='1'
+if i.get('host_control'):
+ env['WEBMUX_TEST_NODE_HOST']='webmux-qualification-'+i['id'][:16]
+ if i['role']!='advertise':env['WEBMUX_TEST_NODE_EXPECT_AMBIGUITY']=i['ambiguity_protocol']
 with log.open('xb') as f:
  p=subprocess.Popen([str(binary),'-test.run=^TestNodeNativeEndpoint$','-test.v','-test.timeout=20s'],env=env,stdout=f,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL)
  try:
@@ -51,7 +54,7 @@ with log.open('xb') as f:
    try:p.wait(timeout=3)
    except subprocess.TimeoutExpired:p.kill();p.wait()
 print(log.read_text(),end='',flush=True)
-records={name:json.loads((output/name).read_text()) for name in ('observed.json','observed-all.json','listener-lookups.json','listener-lookup-results.json','listener-instance-records.json','failed-snapshot.json') if (output/name).exists()}
+records={name:json.loads((output/name).read_text()) for name in ('observed.json','observed-all.json','listener-lookups.json','listener-lookup-results.json','listener-instance-records.json','listener-ambiguity.json','failed-snapshot.json') if (output/name).exists()}
 print('NATIVE_DISCOVERY_END='+json.dumps({'exit_code':result,'records':records}),flush=True)
 sys.exit(result)
 '''
@@ -147,10 +150,13 @@ class Qualification:
     async def phase(self, name, linux_role, mac_role):
         own, peer = secrets.token_hex(16), secrets.token_hex(16)
         legacy = self.args.legacy_listeners and mac_role != 'bonjour-advertise'
-        instance_records = self.args.legacy_instance_records and mac_role != 'bonjour-advertise'
+        host_control = self.args.host_selection_controls and mac_role != 'bonjour-advertise'
+        instance_records = (self.args.legacy_instance_records or host_control) and mac_role != 'bonjour-advertise'
         process = await self.remote({'operation': 'run', 'phase': name, 'role': linux_role,
                                     'id': peer, 'expected': own, 'sha256': self.linux_hash,
-                                    'legacy': legacy, 'instance_records': instance_records})
+                                    'legacy': legacy, 'instance_records': instance_records,
+                                    'host_control': host_control,
+                                    'ambiguity_protocol': self.args.ambiguity_protocol})
         first, rest = b'', b''
         mac = None
         result = {'name': name, 'passed': False, 'mac_role': mac_role, 'linux_role': linux_role,
@@ -174,8 +180,10 @@ class Qualification:
                     env.update(WEBMUX_TEST_NODE_ROLE=mac_role, WEBMUX_TEST_NODE_ID=own,
                                WEBMUX_TEST_NODE_EXPECTED=peer,
                                WEBMUX_TEST_NODE_OUTPUT=str(self.output / (name + '-mac')))
-                    if legacy:
+                    if legacy or host_control:
                         env['WEBMUX_TEST_NODE_LOOKUP'] = '1'
+                    if host_control and mac_role != 'browse':
+                        env['WEBMUX_TEST_NODE_COMPETING_AD'] = '1'
                     if instance_records:
                         env['WEBMUX_TEST_NODE_INSTANCE_RECORDS'] = '1'
                     argv = [str(self.output / 'discovery-darwin-arm64.test'),
@@ -209,6 +217,21 @@ class Qualification:
                 result['bonjour_running_until_cleanup'] and mac.returncode == -signal.SIGINT)
             result['passed'] = mac_ok and process.returncode == end['exit_code'] == 0 and mac_observed and linux_observed
             result['legacy_listeners_requested'] = legacy
+            result['host_selection_controls_requested'] = host_control
+            if host_control:
+                result['linux_host_mode'] = 'fresh synthetic alias for isolated unambiguous lookup'
+                result['linux_host_lookup_verified'] = (
+                    mac_role == 'advertise' or local.get('listener-lookups.json') == {'http': True, 'https': True})
+                result['mac_host_ambiguity_refused'] = (
+                    linux_role == 'advertise' or end['records'].get('listener-ambiguity.json') == {
+                        'protocol': self.args.ambiguity_protocol, 'refused': True, 'code': 'ambiguous_listener'})
+                result['owned_mac_competitor_verified'] = (
+                    mac_role == 'browse' or (
+                        local.get('competing-advertiser.json', {}).get('Port') == 19312 and
+                        local['competing-advertiser.json']['HTTPPort'] == 19309 and
+                        local['competing-advertiser.json']['ID'] not in (own, peer)))
+                result['passed'] = result['passed'] and result['linux_host_lookup_verified'] and result[
+                    'mac_host_ambiguity_refused'] and result['owned_mac_competitor_verified']
             result['legacy_instance_records_requested'] = instance_records
             if instance_records:
                 expected = {'_webmux._tcp': 19310, '_webmuxs._tcp': 19311}
@@ -283,7 +306,15 @@ def main():
                         help='Also resolve the production endpoints HTTP/HTTPS listener records')
     parser.add_argument('--legacy-instance-records', action='store_true',
                         help='Require exact peer instance HTTP/HTTPS records independently of host-only selection')
+    parser.add_argument('--host-selection-controls', action='store_true',
+                        help='Verify a fresh Linux alias and refusal of an owned competing macOS advertisement')
+    parser.add_argument('--ambiguity-protocol', choices=('https', 'http'), default='https',
+                        help='Protocol refused by the explicit host-selection control')
     args = parser.parse_args()
+    if args.host_selection_controls and args.legacy_listeners:
+        parser.error('Host selection controls are separate from the unchanged exact-port lookup qualification')
+    if args.ambiguity_protocol != 'https' and not args.host_selection_controls:
+        parser.error('Ambiguity protocol requires host selection controls')
     if not args.output.is_absolute() or not args.remote_root.is_absolute():
         parser.error('Output and remote directory must be absolute')
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.@-]*', args.ssh_host):

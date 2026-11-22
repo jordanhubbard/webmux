@@ -2,12 +2,16 @@ package discovery
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -43,6 +47,43 @@ func TestNodeNativeEndpoint(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	var interfaces []string
+	if selected := os.Getenv("WEBMUX_TEST_NODE_INTERFACES"); selected != "" {
+		interfaces = strings.Split(selected, ",")
+	}
+	if os.Getenv("WEBMUX_TEST_NODE_COMPETING_AD") == "1" {
+		if runtime.GOOS != "darwin" || role == "browse" {
+			t.Fatal("owned competing advertisement requires a macOS advertiser")
+		}
+		// Prepare an independently identified, owned competitor before the
+		// original primary endpoint's observation clock starts. It declares
+		// metadata only; both registrations are closed by this fixture.
+		var nonce [16]byte
+		if _, err := rand.Read(nonce[:]); err != nil {
+			t.Fatal(err)
+		}
+		competingID := hex.EncodeToString(nonce[:])
+		if competingID == id || competingID == expected {
+			t.Fatal("competing identity unexpectedly collided")
+		}
+		host, err := os.Hostname()
+		if err != nil {
+			t.Fatal(err)
+		}
+		control, stop := context.WithTimeout(context.Background(), 15*time.Second)
+		defer stop()
+		options := NodeOptions{ID: competingID, Host: host, Interfaces: interfaces, HTTPPort: 19309, Port: 19312, TLS: true, Advertise: true}
+		competitor, err := StartNodes(control, options)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := competitor.Close(); err != nil {
+				t.Error(err)
+			}
+		}()
+		write("competing-advertiser.json", options)
+	}
 	duration := 8 * time.Second
 	if role == "advertise" {
 		duration = 12 * time.Second
@@ -59,10 +100,7 @@ func TestNodeNativeEndpoint(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	options := NodeOptions{ID: id, Host: host, HTTPPort: 19310, Port: 19311, TLS: true, Browse: role != "advertise", Advertise: role != "browse"}
-	if selected := os.Getenv("WEBMUX_TEST_NODE_INTERFACES"); selected != "" {
-		options.Interfaces = strings.Split(selected, ",")
-	}
+	options := NodeOptions{ID: id, Host: host, Interfaces: interfaces, HTTPPort: 19310, Port: 19311, TLS: true, Browse: role != "advertise", Advertise: role != "browse"}
 	endpoint, err := StartNodes(ctx, options)
 	if err != nil {
 		t.Fatal(err)
@@ -99,6 +137,16 @@ func TestNodeNativeEndpoint(t *testing.T) {
 						t.Fatal(err)
 					}
 					write("listener-instance-records.json", records)
+				}
+				if protocol := os.Getenv("WEBMUX_TEST_NODE_EXPECT_AMBIGUITY"); protocol != "" {
+					if protocol != "https" && protocol != "http" {
+						t.Fatal("unknown ambiguity control protocol")
+					}
+					got, err := Resolve(ctx, strings.TrimSuffix(candidate.Host, "."), protocol == "http")
+					if got != "" || !errors.Is(err, ErrAmbiguousListener) {
+						t.Fatalf("host-only lookup did not refuse the owned competing %s listener: %v", protocol, err)
+					}
+					write("listener-ambiguity.json", map[string]any{"protocol": protocol, "refused": true, "code": "ambiguous_listener"})
 				}
 				if os.Getenv("WEBMUX_TEST_NODE_LOOKUP") == "1" {
 					// Resolve the hostname actually returned by DNS-SD. On macOS

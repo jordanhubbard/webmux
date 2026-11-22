@@ -100,6 +100,17 @@ only this server's registrations. The standalone build remains `CGO_ENABLED=0`
 using pinned PureGo bindings; no `dns-sd` helper process is launched. Browsing
 continues through Pion. Linux and Windows retain their existing transport.
 
+## Host-only listener selection
+
+A bare `.local` host observes listener advertisements for up to three seconds.
+If multiple instances advertise different ports for the preferred protocol,
+lookup refuses the ambiguity and requests an explicit URL with a port. Equal-port
+duplicates remain usable; updates replace the same instance. HTTP still requires
+explicit permission. A bounded inventory overflow also refuses selection.
+Explicit URL/port inputs bypass this lookup. These untrusted observations never
+authorize a node. The [native ambiguity controls](validation/discovery-ambiguity-2026-11-22/README.md)
+verify both HTTPS and HTTP refusal separately from exact per-instance discovery.
+
 ## Expiry and bounds
 
 The current Pion dependency reports additions/changes, deduplicates identical
