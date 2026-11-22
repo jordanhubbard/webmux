@@ -40,25 +40,27 @@ func validSavedCredential(value string) bool {
 
 // Explicit response types keep credentials out of every directory read API.
 type managedPeer struct {
-	CoordinationMessages bool         `json:"coordination_messages,omitempty"`
-	CoordinationOwner    string       `json:"coordination_owner,omitempty"`
-	ID                   string       `json:"id"`
-	Name                 string       `json:"name"`
-	URL                  string       `json:"url"`
-	AllowHTTP            bool         `json:"allow_http"`
-	TokenEnv             string       `json:"token_env"`
-	CredentialReady      bool         `json:"credential_ready"`
-	Identity             nodeIdentity `json:"identity"`
+	CoordinationReservations bool         `json:"coordination_reservations,omitempty"`
+	CoordinationMessages     bool         `json:"coordination_messages,omitempty"`
+	CoordinationOwner        string       `json:"coordination_owner,omitempty"`
+	ID                       string       `json:"id"`
+	Name                     string       `json:"name"`
+	URL                      string       `json:"url"`
+	AllowHTTP                bool         `json:"allow_http"`
+	TokenEnv                 string       `json:"token_env"`
+	CredentialReady          bool         `json:"credential_ready"`
+	Identity                 nodeIdentity `json:"identity"`
 }
 type managedGrant struct {
-	CoordinationMessages bool   `json:"coordination_messages,omitempty"`
-	SourceNode           string `json:"source_node_id,omitempty"`
-	SourceOwner          string `json:"source_owner,omitempty"`
-	Coordination         bool   `json:"coordination,omitempty"`
-	ID                   string `json:"id"`
-	Owner                string `json:"owner"`
-	TokenEnv             string `json:"token_env"`
-	CredentialReady      bool   `json:"credential_ready"`
+	CoordinationReservations bool   `json:"coordination_reservations,omitempty"`
+	CoordinationMessages     bool   `json:"coordination_messages,omitempty"`
+	SourceNode               string `json:"source_node_id,omitempty"`
+	SourceOwner              string `json:"source_owner,omitempty"`
+	Coordination             bool   `json:"coordination,omitempty"`
+	ID                       string `json:"id"`
+	Owner                    string `json:"owner"`
+	TokenEnv                 string `json:"token_env"`
+	CredentialReady          bool   `json:"credential_ready"`
 }
 
 func (s *Server) getServerDirectory(w http.ResponseWriter, r *http.Request, owner string) {
@@ -73,10 +75,10 @@ func (s *Server) getServerDirectory(w http.ResponseWriter, r *http.Request, owne
 	peers := []managedPeer{}
 	grants := []managedGrant{}
 	for _, p := range d.Servers {
-		peers = append(peers, managedPeer{CoordinationMessages: p.CoordinationMessages, CoordinationOwner: p.CoordinationOwner, ID: p.ID, Name: p.Name, URL: p.URL, AllowHTTP: p.AllowHTTP, TokenEnv: p.TokenEnv, CredentialReady: validSavedCredential(serverCredential(p.TokenEnv, p.Credential)), Identity: p.Identity})
+		peers = append(peers, managedPeer{CoordinationReservations: p.CoordinationReservations, CoordinationMessages: p.CoordinationMessages, CoordinationOwner: p.CoordinationOwner, ID: p.ID, Name: p.Name, URL: p.URL, AllowHTTP: p.AllowHTTP, TokenEnv: p.TokenEnv, CredentialReady: validSavedCredential(serverCredential(p.TokenEnv, p.Credential)), Identity: p.Identity})
 	}
 	for _, g := range d.Grants {
-		grants = append(grants, managedGrant{CoordinationMessages: g.CoordinationMessages, SourceNode: g.SourceNode, SourceOwner: g.SourceOwner, Coordination: g.Coordination, ID: g.ID, Owner: g.Owner, TokenEnv: g.TokenEnv, CredentialReady: validSavedCredential(serverCredential(g.TokenEnv, g.Credential))})
+		grants = append(grants, managedGrant{CoordinationReservations: g.CoordinationReservations, CoordinationMessages: g.CoordinationMessages, SourceNode: g.SourceNode, SourceOwner: g.SourceOwner, Coordination: g.Coordination, ID: g.ID, Owner: g.Owner, TokenEnv: g.TokenEnv, CredentialReady: validSavedCredential(serverCredential(g.TokenEnv, g.Credential))})
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, map[string]any{"servers": peers, "grants": grants})
@@ -124,13 +126,14 @@ func (s *Server) saveServerPeer(w http.ResponseWriter, r *http.Request, owner st
 		return
 	}
 	var body struct {
-		CoordinationMessages *bool   `json:"coordination_messages"`
-		CoordinationOwner    *string `json:"coordination_owner"`
-		Name                 string  `json:"name"`
-		URL                  string  `json:"url"`
-		AllowHTTP            bool    `json:"allow_http"`
-		TokenEnv             string  `json:"token_env"`
-		Credential           string  `json:"credential"`
+		CoordinationReservations *bool   `json:"coordination_reservations"`
+		CoordinationMessages     *bool   `json:"coordination_messages"`
+		CoordinationOwner        *string `json:"coordination_owner"`
+		Name                     string  `json:"name"`
+		URL                      string  `json:"url"`
+		AllowHTTP                bool    `json:"allow_http"`
+		TokenEnv                 string  `json:"token_env"`
+		Credential               string  `json:"credential"`
 	}
 	if !decodeJSON(w, r, &body) {
 		return
@@ -148,12 +151,18 @@ func (s *Server) saveServerPeer(w http.ResponseWriter, r *http.Request, owner st
 		if body.CoordinationOwner != nil {
 			p.CoordinationOwner = *body.CoordinationOwner
 		}
+		if body.CoordinationReservations != nil {
+			p.CoordinationReservations = *body.CoordinationReservations
+		}
 		if body.CoordinationMessages != nil {
 			p.CoordinationMessages = *body.CoordinationMessages
 		}
 		for i, old := range d.Servers {
 			if old.ID == p.ID {
 				p.TokenEnv, p.Credential = updateServerCredential(body.TokenEnv, body.Credential, old.TokenEnv, old.Credential)
+				if body.CoordinationReservations == nil && (body.CoordinationOwner == nil || *body.CoordinationOwner == old.CoordinationOwner) {
+					p.CoordinationReservations = old.CoordinationReservations
+				}
 				if body.CoordinationMessages == nil && (body.CoordinationOwner == nil || *body.CoordinationOwner == old.CoordinationOwner) {
 					p.CoordinationMessages = old.CoordinationMessages
 				}
@@ -196,13 +205,14 @@ func (s *Server) saveServerGrant(w http.ResponseWriter, r *http.Request, owner s
 		return
 	}
 	var body struct {
-		CoordinationMessages *bool   `json:"coordination_messages"`
-		SourceNode           *string `json:"source_node_id"`
-		SourceOwner          *string `json:"source_owner"`
-		Coordination         *bool   `json:"coordination"`
-		Owner                string  `json:"owner"`
-		TokenEnv             string  `json:"token_env"`
-		Credential           string  `json:"credential"`
+		CoordinationReservations *bool   `json:"coordination_reservations"`
+		CoordinationMessages     *bool   `json:"coordination_messages"`
+		SourceNode               *string `json:"source_node_id"`
+		SourceOwner              *string `json:"source_owner"`
+		Coordination             *bool   `json:"coordination"`
+		Owner                    string  `json:"owner"`
+		TokenEnv                 string  `json:"token_env"`
+		Credential               string  `json:"credential"`
 	}
 	if !decodeJSON(w, r, &body) {
 		return
@@ -219,6 +229,9 @@ func (s *Server) saveServerGrant(w http.ResponseWriter, r *http.Request, owner s
 		g := serverGrant{ID: r.PathValue("grant"), Owner: body.Owner, TokenEnv: body.TokenEnv, Credential: body.Credential}
 		if body.Coordination != nil {
 			g.Coordination = *body.Coordination
+		}
+		if body.CoordinationReservations != nil {
+			g.CoordinationReservations = *body.CoordinationReservations
 		}
 		if body.CoordinationMessages != nil {
 			g.CoordinationMessages = *body.CoordinationMessages
@@ -238,11 +251,15 @@ func (s *Server) saveServerGrant(w http.ResponseWriter, r *http.Request, owner s
 				if body.SourceOwner == nil {
 					g.SourceOwner = old.SourceOwner
 				}
+				if body.CoordinationReservations == nil && same {
+					g.CoordinationReservations = old.CoordinationReservations
+				}
 				if body.CoordinationMessages == nil && same {
 					g.CoordinationMessages = old.CoordinationMessages
 				}
 				if body.Coordination != nil && !*body.Coordination {
 					g.CoordinationMessages = false
+					g.CoordinationReservations = false
 				}
 				if body.Coordination == nil && old.Owner == g.Owner {
 					g.Coordination = old.Coordination

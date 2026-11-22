@@ -254,7 +254,7 @@ func (s *Service) RemoteRecords(node string) ([]RemoteRecord, error) {
 		if string(meta.Get([]byte("version"))) == "1" {
 			return nil // Normal maintenance performs the atomic legacy migration.
 		}
-		if string(meta.Get([]byte("version"))) != "2" || len(meta.Get([]byte("key"))) != 32 || !validHex(string(meta.Get([]byte("history_epoch"))), 16) {
+		if (string(meta.Get([]byte("version"))) != "2" && string(meta.Get([]byte("version"))) != "3") || len(meta.Get([]byte("key"))) != 32 || !validHex(string(meta.Get([]byte("history_epoch"))), 16) {
 			return errors.New("invalid remote outbox authority metadata")
 		}
 		for _, name := range buckets {

@@ -241,7 +241,7 @@ func buildView(tx *bolt.Tx, owner string, self *Member, after uint64, now time.T
 		r.Occupied = true
 		r.Fence = held.Fence
 		r.Expires = &held.Expires
-		if held.Actor.Owner == owner && (self == nil || held.Project == projectID(*self)) {
+		if reservationOwner(held) == owner && (self == nil || held.Project == projectID(*self)) {
 			r.Holder = &held.Actor
 		}
 	}

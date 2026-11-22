@@ -142,3 +142,20 @@ func TestAdmissionErrorRequiresCompletePeerClaimContext(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestAdmissionErrorRefusesHistoricalAndUncertainLease(t *testing.T) {
+	for _, status := range []string{"reserved", "renewed"} {
+		if err := AdmissionError(coordination.Result{Status: status, Lease: &coordination.LeaseCheck{Current: false}}); err == nil {
+			t.Fatal("historical outcome granted work", status)
+		}
+	}
+	if err := AdmissionError(coordination.Result{Status: "reservation-pending"}); err == nil {
+		t.Fatal("pending intent granted a lease")
+	}
+}
+
+func TestAdmissionErrorRefusesUnverifiedLegacyLease(t *testing.T) {
+	if err := AdmissionError(coordination.Result{Status: "reserved"}); err == nil {
+		t.Fatal("legacy result granted work without current lease evidence")
+	}
+}

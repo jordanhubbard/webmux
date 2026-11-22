@@ -170,6 +170,67 @@ func TestCoordinationPeerNativeNetworkClient(t *testing.T) {
 		}
 		t.Log("native two-host message passed: durable admission, lost reply, status reconciliation, explicit recipient receipts, exact request retry; ordinary PTY child fixtures, not LLM agent pair acceptance")
 	}
+
+	if os.Getenv("WEBMUX_COORDINATION_RESERVATION_NETWORK") == "1" {
+		node, err := a.coordinationNode()
+		if err != nil {
+			t.Fatal(err)
+		}
+		deniedRequest := plane.Request{ID: "native-reservation-disabled", Action: "reserve", Resource: "node:" + manifest.NodeID + ":heavy"}
+		response := request(agent, "POST", "/act", directoryJSON(deniedRequest), access[0].Capability)
+		requireStatus(t, response, 200)
+		var denied plane.Result
+		if json.Unmarshal(response.Body.Bytes(), &denied) != nil || denied.Status != "peer-unavailable" {
+			t.Fatal("native summary/message scope acquired reservation authority", response.Body.String())
+		}
+		requireStatus(t, request(ah, "PUT", "/api/servers/remote", directoryJSON(map[string]any{"name": "Native coordination peer", "url": manifest.Original, "coordination_reservations": true}), admin), 204)
+		control("/_qualification/allow-reservations?source_node=" + node)
+		deadline := time.Now().Add(20 * time.Second)
+		ready := false
+		for time.Now().Before(deadline) {
+			v := view()
+			if len(v.Peers) == 1 && v.Peers[0].Snapshot != nil && v.Peers[0].Snapshot.Reservations {
+				ready = true
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		if !ready {
+			t.Fatal("native shared reservation permission not observed")
+		}
+		pair := &coordinationPair{a: a, agent: agent, access: access, secret: secret}
+		intent := deniedRequest
+		intent.ID = "native-remote-worker-reserve"
+		pending := sharedHTTPAct(t, pair, intent)
+		if pending.Status != "reservation-pending" || pending.Shared == nil || pending.Shared.Transport != "uncertain" || pending.Lease != nil {
+			t.Fatal("lost native grant reply did not remain uncertain", pending)
+		}
+		granted := sharedHTTPAct(t, pair, intent)
+		if granted.Status != "reserved" || granted.Fence != 1 || granted.Lease == nil || !granted.Lease.Current {
+			t.Fatal("native exact grant recovery failed", granted)
+		}
+		control("/_qualification/local-worker?phase=contend")
+		renewal := plane.Request{ID: "native-remote-worker-renew", Action: "renew-reservation", Resource: intent.Resource, Record: granted.Record, Fence: granted.Fence}
+		renewed := sharedHTTPAct(t, pair, renewal)
+		if renewed.Status != "renewed" || renewed.Fence != 1 || renewed.Record != granted.Record || renewed.Lease == nil || !renewed.Lease.Current {
+			t.Fatal("native original-fence renewal failed", renewed)
+		}
+		released := sharedHTTPAct(t, pair, plane.Request{ID: "native-remote-worker-release", Action: "release-reservation", Resource: intent.Resource, Record: granted.Record, Fence: granted.Fence})
+		if released.Status != "released" {
+			t.Fatal("native release failed", released)
+		}
+		old := sharedHTTPAct(t, pair, intent)
+		if old.Status != "reserved" || old.Lease == nil || old.Lease.Current || !old.Expires.Equal(*granted.Expires) {
+			t.Fatal("native old receipt revived a released grant", old)
+		}
+		control("/_qualification/local-worker?phase=after")
+		renewal.ID = "native-stale-worker-renew"
+		lost := sharedHTTPAct(t, pair, renewal)
+		if lost.Status != "lease-lost" {
+			t.Fatal("native stale remote fence renewed", lost)
+		}
+		t.Log("native shared worker protocol passed: explicit separate permission, lost grant reply recovered by status, local/remote contention, original-fence renewal, release, historical receipt refused, local fence advancement and stale remote renewal refusal; ordinary PTY/API fixtures, not real coding-agent job acceptance")
+	}
 	control("/_qualification/revoke-coordination")
 	if got := waitState("unauthorized").Peers[0]; got.Snapshot != nil {
 		t.Fatal("native revocation retained data")

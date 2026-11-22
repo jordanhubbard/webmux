@@ -138,6 +138,11 @@ func (s *Server) exportCoordinationSnapshot(w http.ResponseWriter, r *http.Reque
 		snapshot.SourceNode = grant.SourceNode
 		snapshot.SourceOwner = grant.SourceOwner
 	}
+	if view.Enabled && grant.CoordinationReservations {
+		snapshot.Reservations = true
+		snapshot.SourceNode = grant.SourceNode
+		snapshot.SourceOwner = grant.SourceOwner
+	}
 	writeJSON(w, 200, snapshot)
 }
 func (s *Server) fetchCoordinationSnapshot(ctx context.Context, job coordinationPeerJob) (plane.ProjectSnapshot, string) {

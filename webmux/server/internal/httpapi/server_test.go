@@ -38,6 +38,9 @@ func fixture(t *testing.T, mode string) (*Server, http.Handler) {
 func request(handler http.Handler, method, path, body, token string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	if path == "/act" {
+		req.Header.Set("X-Webmux-Coordination-Lease", "1")
+	}
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}

@@ -443,6 +443,10 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 		if !decodeJSON(w, r, &operation) {
 			return
 		}
+		if (operation.Action == "reserve" || operation.Action == "renew-reservation" || operation.Action == "release-reservation") && r.Header.Get(coordinationclient.LeaseProtocolHeader) != "1" {
+			writeError(w, 428, "Update the coordination client: lease protocol 1 and current-lease checks are required")
+			return
+		}
 	} else if raw := r.URL.Query().Get("after"); raw != "" {
 		after, err = strconv.ParseUint(raw, 10, 64)
 		if err != nil {
@@ -453,6 +457,9 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 	var route *plane.RemoteRoute
 	if operation.Action == "message" && operation.Target != nil && operation.Target.Node != node {
 		route = s.coordinationMessageRoute(ref, *operation.Target, s.coordinationInputs(node, snapshots))
+	}
+	if target, shared := plane.ReservationTarget(operation); shared && target != node {
+		route = s.coordinationReservationRoute(ref, operation, s.coordinationInputs(node, snapshots))
 	}
 	var peers []plane.ClaimPeer
 	if operation.Action == "claim" {
@@ -473,6 +480,14 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.coordinationError(w, err)
 		return
+	}
+	if result, ok := response.(plane.Result); ok && result.Shared != nil {
+		result, err = s.resolveCoordinationReservation(r.Context(), node, token, operation)
+		if err != nil {
+			s.coordinationError(w, err)
+			return
+		}
+		response = result
 	}
 	if view, ok := response.(plane.View); ok {
 		s.attachCoordinationPeers(&view, ref.Owner)

@@ -76,8 +76,9 @@ does not complete the cross-host or managed-agent workflow. The
 now has native macOS/Linux background project-discovery and revocation evidence.
 The [durable inbox and claim extensions](session-coordination.md#durable-messages-across-nodes)
 add separate message permissions, explicit receipts, cross-node advisory conflicts
-and stable overlap events, with ordinary PTY protocol qualification. Shared worker
-authority and the complete real-agent workflow remain open.
+and stable overlap events, with ordinary PTY protocol qualification. The [shared reservation extension](session-coordination.md#shared-heavy-worker-reservations)
+adds single-node authority and explicit remote permissions; full real-agent job
+acceptance and the complete workflow remain open.
 
 ## Current reliability work
 
