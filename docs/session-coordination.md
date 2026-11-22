@@ -102,9 +102,9 @@ remote additions to one view to 3 MiB. Capacity limits report unavailable contex
 with `cache-capacity`/`view-capacity` reasons; they do not silently truncate a peer
 membership list. Large-context pagination and scale qualification remain open.
 A controller restart begins with pending observations and refetches; the cache is
-not a second durable owner of remote state. Local reservation tools refuse remote resource IDs. Remote messages require the
-separate permissions and durable protocol below. Cross-node overlap notifications
-and reservation authority remain required before the full workflow is complete.
+not a second durable owner of remote state. Local reservation tools refuse remote resource IDs. Remote messages and overlap notices require the
+separate permissions and durable protocols below. Remote/shared reservation
+authority and real-agent acceptance remain required before the full workflow is complete.
 
 The [macOS/Linux qualification](validation/coordination-peers-2026-11-21/README.md)
 uses independent real Git repositories/worktrees and ordinary PTY fixtures on two
@@ -168,7 +168,60 @@ broker or ledger lock. Shutdown cancels and joins the worker before ledger close
 The [native protocol receipt](validation/coordination-messages-2026-11-21/README.md)
 covers macOS/Linux delivery with a deliberately lost committed reply, exact retry
 and explicit recipient completion using ordinary PTY fixtures. Real coding-agent
-handoffs, cross-node claims/overlap and shared-worker acceptance remain open.
+handoffs, real-agent overlap negotiation and shared-worker acceptance remain open.
+
+## Cross-node claim checks and overlap notices
+
+A `claim` stays in its originating ledger. The response also includes conflicts
+from current authorized same-project peers and `peer_claim_checks` with full node
+and receiving-account identity. Remote claims use the same task/branch exact-name
+and file/directory containment rules as local claims, including conservative case
+folding when either filesystem requires it. Different local and receiving account
+names retain their separate identities. Unexpired advisory claims still count
+when their owner is inactive; they expire by lease, not by an assumed disconnect.
+These checks never confer an exclusive file lock or a remote worker lease.
+
+Each check reports its snapshot `state` and `notification_policy` (`allowed` or
+`unavailable`). Current context is a point-in-time observation, not proof that
+another node cannot claim concurrently. The source's network request start plus
+the remaining lease at `authority_time` bounds remote claim lifetime; transit and
+clock offset cannot extend it. The normal snapshot TTL also applies. Clockless
+older summaries remain readable discovery context but cannot establish a complete
+ownership check. A missing/stale/disabled/unavailable peer is not an empty claim
+list. The local claim is recorded, while the CLI/MCP tool reports incomplete
+remote context as non-success and requires rechecking before overlapping edits.
+A new intent can renew the original claim and check current context; an exact
+retry always returns its original frozen conflicts/context result.
+
+After each background peer refresh, the server reconciles still-active local
+claims against remote observations. This detects simultaneous claims made before
+either node had refreshed. It records a durable local `overlap` event labeled
+`transport: peer-observation`, even when only summary permission is available.
+That label means this node observed a conflict; it does not assert that the peer
+has received or acknowledged a message. No terminal text is injected.
+
+Separate message permissions plus the peer's `overlap_notices` capability allow
+an immutable notice to enter the remote claimant's coordination inbox. The
+sender rechecks its live session/project and original unexpired claim before new
+transmission; the receiver rechecks its active recipient and matching unexpired
+claim before first admission. Release or a different claim cycle refuses stale
+notifications. A request cannot forge the internal `overlap` kind through `/act`.
+These envelopes use the durable message worker, history epoch, status-before-replay
+and explicit receipt protocol above. A summary permission never grants sending.
+`notification_policy: allowed` describes available permission, not delivery.
+
+Both controllers derive the same recipient-specific event ID from the original
+two claim IDs. A local observation and a later authenticated notice coalesce into
+one inbox entry, changing its transport to `remote-inbox` while retaining explicit
+receipts. If the recipient already reviewed and completed the observed conflict,
+a later delivery reports that event's existing completion; this is acknowledgment
+of the same overlap event, not proof of external task execution. Renewal, repeated
+refreshes and reconnect/reconstruction do not create another event in that claim
+cycle. A released/expired claim reacquired with new intent has a new claim ID.
+
+The [macOS/Linux protocol receipt](validation/coordination-claims-2026-11-22/README.md)
+qualifies ordinary PTY fixtures, including claims created before peer refresh.
+Real coding-agent overlap negotiation and shared-worker acceptance remain open.
 
 ## Native agent startup and MCP
 
@@ -285,8 +338,8 @@ started coding agents.
 
 Remaining #630/#631 work includes complete live native inbox/notification and
 existing-agent onboarding; independently started ordinary/managed pairs; SSH/remote
-execution-host provisioning; real-agent cross-node delivery, claims/overlap and
-shared reservation authority;
+execution-host provisioning; real-agent cross-node delivery/overlap and shared
+reservation authority;
 explicit project mappings; platform custody/sandbox acceptance; full native LAN
 discovery and reconnect qualification; and the complete two-real-host workflow.
 No roadmap checkbox is completed by this checkpoint.

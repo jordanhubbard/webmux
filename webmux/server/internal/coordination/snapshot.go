@@ -9,37 +9,40 @@ import (
 // ProjectSnapshot is read-only context exported by a node/account authority.
 // It contains no capability, inbox, outbox, request receipt or process control.
 type ProjectSnapshot struct {
-	Messaging    bool           `json:"messaging,omitempty"`
-	SourceNode   string         `json:"source_node_id,omitempty"`
-	SourceOwner  string         `json:"source_owner,omitempty"`
-	HistoryEpoch string         `json:"history_epoch,omitempty"`
-	Contract     string         `json:"contract"`
-	Node         string         `json:"node_id"`
-	Owner        string         `json:"owner"`
-	Project      string         `json:"project_id"`
-	Enabled      bool           `json:"enabled"`
-	Members      []Member       `json:"members"`
-	Claims       []Claim        `json:"claims"`
-	Resources    []ResourceView `json:"resources"`
+	AuthorityTime  time.Time      `json:"authority_time,omitempty"`
+	OverlapNotices bool           `json:"overlap_notices,omitempty"`
+	Messaging      bool           `json:"messaging,omitempty"`
+	SourceNode     string         `json:"source_node_id,omitempty"`
+	SourceOwner    string         `json:"source_owner,omitempty"`
+	HistoryEpoch   string         `json:"history_epoch,omitempty"`
+	Contract       string         `json:"contract"`
+	Node           string         `json:"node_id"`
+	Owner          string         `json:"owner"`
+	Project        string         `json:"project_id"`
+	Enabled        bool           `json:"enabled"`
+	Members        []Member       `json:"members"`
+	Claims         []Claim        `json:"claims"`
+	Resources      []ResourceView `json:"resources"`
 }
 
 type PeerView struct {
-	Server   string           `json:"server_id"`
-	Name     string           `json:"name"`
-	Node     string           `json:"node_id"`
-	Owner    string           `json:"owner"`
-	Project  string           `json:"project_id"`
-	Mode     string           `json:"mode"` // read-only summary; messaging requires separate permissions.
-	State    string           `json:"state"`
-	Reason   string           `json:"reason,omitempty"`
-	Observed *time.Time       `json:"observed,omitempty"`
-	Expires  *time.Time       `json:"expires,omitempty"`
-	Snapshot *ProjectSnapshot `json:"snapshot,omitempty"`
+	Requested *time.Time       `json:"requested,omitempty"`
+	Server    string           `json:"server_id"`
+	Name      string           `json:"name"`
+	Node      string           `json:"node_id"`
+	Owner     string           `json:"owner"`
+	Project   string           `json:"project_id"`
+	Mode      string           `json:"mode"` // read-only summary; messaging requires separate permissions.
+	State     string           `json:"state"`
+	Reason    string           `json:"reason,omitempty"`
+	Observed  *time.Time       `json:"observed,omitempty"`
+	Expires   *time.Time       `json:"expires,omitempty"`
+	Snapshot  *ProjectSnapshot `json:"snapshot,omitempty"`
 }
 
 func ValidProjectSelector(project string) bool { return validText(project, 256) }
 func Snapshot(view View, node, owner, project string) ProjectSnapshot {
-	out := ProjectSnapshot{HistoryEpoch: view.HistoryEpoch, Contract: Contract, Node: node, Owner: owner, Project: project, Enabled: view.Enabled, Members: []Member{}, Claims: []Claim{}, Resources: []ResourceView{}}
+	out := ProjectSnapshot{AuthorityTime: view.AuthorityTime, HistoryEpoch: view.HistoryEpoch, Contract: Contract, Node: node, Owner: owner, Project: project, Enabled: view.Enabled, Members: []Member{}, Claims: []Claim{}, Resources: []ResourceView{}}
 	if !view.Enabled {
 		return out
 	}
@@ -97,8 +100,11 @@ func (s ProjectSnapshot) Valid(node, owner, project string) bool {
 	}
 	seen = map[string]bool{}
 	for _, claim := range s.Claims {
-		_, valid := canonicalResource(claim.Kind, claim.Resource)
-		if !valid || !validRef(claim.Actor) || claim.Actor.Node != node || claim.Actor.Owner != owner || claim.Project != project || !validHex(claim.ID, 32) || claim.Expires.IsZero() || seen[claim.ID] {
+		canonical, valid := canonicalResource(claim.Kind, claim.Resource)
+		if !valid || canonical != claim.Resource || !validRef(claim.Actor) || claim.Actor.Node != node || claim.Actor.Owner != owner || claim.Project != project || !validHex(claim.ID, 32) || claim.Expires.IsZero() || seen[claim.ID] {
+			return false
+		}
+		if !s.AuthorityTime.IsZero() && (!claim.Expires.After(s.AuthorityTime) || claim.Expires.After(s.AuthorityTime.Add(900*time.Second))) {
 			return false
 		}
 		seen[claim.ID] = true

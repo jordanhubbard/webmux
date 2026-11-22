@@ -232,6 +232,11 @@ func AdmissionError(result coordination.Result) error {
 	if len(result.Conflicts) != 0 {
 		return errors.New("claim recorded with overlapping ownership; negotiate before editing")
 	}
+	for _, peer := range result.PeerClaims {
+		if peer.State != "current" {
+			return errors.New("claim recorded with incomplete remote ownership context; recheck peers before editing")
+		}
+	}
 	return nil
 }
 

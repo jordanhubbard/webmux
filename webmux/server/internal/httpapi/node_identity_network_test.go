@@ -113,6 +113,7 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 	proofs := map[net.Conn]bool{}
 	proofCount, bearerCount := 0, 0
 	messageAdmits, messageStatuses := 0, 0
+	overlapAdmits, overlapStatuses := 0, 0
 	lostMessageReply := false
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		connection, ok := r.Context().Value(nodeNetworkConnectionKey{}).(net.Conn)
@@ -231,12 +232,34 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 							return
 						}
 						for _, action := range []string{"delivered", "acknowledge", "complete"} {
-							result := request(b.CoordinationAgentHandler(), "POST", "/act", directoryJSON(plane.Request{ID: "native-remote-" + action, Action: action, Record: id}), access.Capability)
+							result := request(b.CoordinationAgentHandler(), "POST", "/act", directoryJSON(plane.Request{ID: "native-remote-" + id + "-" + action, Action: action, Record: id}), access.Capability)
 							if result.Code != 200 || !strings.Contains(result.Body.String(), "recorded") {
 								t.Error("explicit recipient receipt failed")
 								w.WriteHeader(500)
 								return
 							}
+						}
+						found = true
+						break
+					}
+				}
+				if !found {
+					w.WriteHeader(404)
+					return
+				}
+			case "/_qualification/claim-overlap":
+				if os.Getenv("WEBMUX_COORDINATION_CLAIM_NETWORK") != "1" {
+					w.WriteHeader(404)
+					return
+				}
+				found := false
+				for _, access := range nativeAccess {
+					if access.Subject.Owner == "owner" && access.Subject.Session == r.URL.Query().Get("session") {
+						result := request(b.CoordinationAgentHandler(), "POST", "/act", directoryJSON(plane.Request{ID: "native-overlap-directory", Action: "claim", Kind: "directory", Resource: "native-overlap"}), access.Capability)
+						if result.Code != 200 || !strings.Contains(result.Body.String(), "claimed") {
+							t.Error("native remote claim failed")
+							w.WriteHeader(500)
+							return
 						}
 						found = true
 						break
@@ -274,7 +297,13 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 			r.Body = io.NopCloser(bytes.NewReader(data))
 			mu.Lock()
 			drop := false
-			if exchange.Operation == "admit" {
+			if exchange.Envelope.Kind == "overlap" {
+				if exchange.Operation == "admit" {
+					overlapAdmits++
+				} else {
+					overlapStatuses++
+				}
+			} else if exchange.Operation == "admit" {
 				messageAdmits++
 				if !lostMessageReply {
 					lostMessageReply = true
@@ -333,6 +362,12 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 	if os.Getenv("WEBMUX_COORDINATION_MESSAGE_NETWORK") == "1" {
 		if messageAdmits != 1 || messageStatuses < 1 || !lostMessageReply {
 			t.Fatal("lost message reply did not reconcile through status", messageAdmits, messageStatuses)
+		}
+		if os.Getenv("WEBMUX_COORDINATION_CLAIM_NETWORK") == "1" {
+			if overlapAdmits != 1 || overlapStatuses < 1 {
+				t.Fatal("native overlap notice workload incomplete", overlapAdmits, overlapStatuses)
+			}
+			t.Logf("native overlap: %d admit and %d status requests; original claim-cycle identity and explicit completion", overlapAdmits, overlapStatuses)
 		}
 		t.Logf("native remote messaging: one admit request, %d receipt status requests, deliberately dropped first committed reply, one recipient inbox record, explicit delivered/acknowledged/completed and no terminal input", messageStatuses)
 	}
