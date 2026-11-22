@@ -101,6 +101,10 @@
       "task_filter": [
         4907,
         4941
+      ],
+      "empty_token_map_bypass": [
+        2113,
+        2126
       ]
     },
     "scope": "Pinned source/authorization audit only; no native adapter or live credential qualification",
@@ -110,6 +114,34 @@
       "WebMux requires trusted server projection and per-account canonical project bindings"
     ],
     "native_authorization_acceptance": false,
+    "mac_or_fleet_mutations": false
+  },
+  "project_graph_wire_audit": {
+    "observed_at": "2026-11-22T19:52:23.845247+00:00",
+    "revision": "99925eaff54076310b58f15e0fb4ba9079746673",
+    "path": "src/mac/observability_console.py",
+    "sha256": "ec11c5ebd1aae742071135e45e0ad2aa06d27826fd8eeaeb3aa4a43cf3667ee2",
+    "line_ranges": {
+      "graph_builder": [
+        584,
+        752
+      ],
+      "project_name_and_found": [
+        601,
+        611
+      ],
+      "cross_project_edges": [
+        676,
+        722
+      ]
+    },
+    "retrieval": "GitHub pinned source; no local MAC/NAS filesystem accessed",
+    "findings": [
+      "found is bool(nonempty project name), not project/repository verification",
+      "Dependency SQL join can return foreign project identifiers, titles and states",
+      "Bounded graph is missing attempt/lease, machine/session, source-roadmap and write-scope facts"
+    ],
+    "native_acceptance": false,
     "mac_or_fleet_mutations": false
   }
 }

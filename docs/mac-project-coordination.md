@@ -113,6 +113,30 @@ MAC claim/lease workflow. The read adapter never borrows Rocky, Natasha or
 Bullwinkle's worker credentials. This audit adds an implementation prerequisite;
 it does not establish a shipped adapter or a live authorization qualification.
 
+### Project-graph wire boundary
+
+The inspected `mac.dashboard.observe.project_graph.v1` builder is useful input,
+not a ready-made account-scoped response. Its
+[pinned implementation](https://github.com/jordanhubbard/mac/blob/99925eaff54076310b58f15e0fb4ba9079746673/src/mac/observability_console.py#L584)
+requires these explicit mappings and controls:
+
+| Upstream observation | Meaning and adapter requirement |
+| --- | --- |
+| `project`, `found` | `project` is a stripped project-name key used in task selection. `found` is `bool(name)`, even for a nonempty name with no matching tasks. Neither proves a canonical repository binding or project existence. Establish that binding separately; never auto-enroll from a successful graph read. |
+| `graph.nodes` | Bounded task observations: ID, title, state, numeric priority, owner agent ID, timestamps, hold flag and dependency join policy. These fields do not establish a machine/session, attempt lease, source-roadmap revision, declared write scope or admission reason. Mark those facts unavailable until separately joined and qualified. |
+| `graph.edges` | The builder includes blockers outside the selected node set, including their ID, title, project and state. The SQL join is not restricted to the selected project. A raw graph proxy would expose those foreign details. Resolve each endpoint against authorized project membership before returning an edge; do not trust graph selection as an authorization boundary. Represent withheld dependencies only as unresolved counts/reasons without their identifiers or content. |
+| `omitted`, `omitted_live`, `omitted_edges`, `truncated` | Preserve incompleteness explicitly. A blocker outside the bounded node set can belong to this project or another project; do not infer membership or absence from omission. A bounded view cannot prove there are no conflicts or higher-priority tasks. |
+| `degraded`, missing `graph` | A failed graph section omits `graph`. Keep unavailable/degraded distinct from a successfully observed empty task set; do not substitute an empty success response. |
+
+The API's [authorization helper](https://github.com/jordanhubbard/mac/blob/99925eaff54076310b58f15e0fb4ba9079746673/src/mac/api.py#L2113)
+also returns without a principal when the configured token map is empty. Before
+enabling the authenticated adapter, qualify refusal with both absent and invalid
+credentials, success with the intended read identity, and refusal after its
+revocation. These controls must use a safe read route and reveal no fleet data to
+an unauthorized caller. A configured bearer header and HTTP 200 are insufficient.
+This is a pinned-source finding; the live fleet's authentication configuration
+was not tested or changed.
+
 ### Execution authority contracts
 
 Read-only source inspection used MAC revision
