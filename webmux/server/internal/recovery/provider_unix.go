@@ -71,6 +71,9 @@ func ensureProvider(ctx context.Context, id, key, helper string) (Event, error) 
 			browserControl = "1"
 		}
 		args = append(args, "-e", quote("WEBMUX_BROWSER_CONTROL="+browserControl))
+		// A shared tmux server may retain another pane's coordination locations.
+		// Resolve this pane through its own recovery identity, never inherited FILE.
+		args = append(args, "-e", quote("WEBMUX_COORDINATION_FILE="), "-e", quote("WEBMUX_COORDINATION_EXPECTED_SESSION="+id), "-e", quote("WEBMUX_COORDINATION_CLI="+helper), "-e", quote("WEBMUX_COORDINATION_CACHE_HOME="+os.Getenv("WEBMUX_COORDINATION_CACHE_HOME")))
 		// Explicit environment overrides prevent a shared tmux server from
 		// accidentally passing another terminal's key or wait policy to a pane.
 		wait := "0"

@@ -26,6 +26,8 @@ func TestProviderReattachesAndSerializesConcurrentCreation(t *testing.T) {
 	t.Setenv("TMUX", "")
 	t.Setenv("TMUX_PANE", "")
 	t.Setenv("SHELL", "/bin/bash")
+	t.Setenv("WEBMUX_COORDINATION_FILE", "/another-session/private.json")
+	t.Setenv("WEBMUX_COORDINATION_EXPECTED_SESSION", "another-session")
 	t.Cleanup(func() {
 		_ = exec.Command(tmux, "kill-server").Run()
 		_ = os.RemoveAll(dir)
@@ -60,6 +62,12 @@ func TestProviderReattachesAndSerializesConcurrentCreation(t *testing.T) {
 		t.Fatalf("concurrent reconnects created %d providers", created)
 	}
 	target := "=webmux-" + testHostSession
+	for key, want := range map[string]string{"WEBMUX_COORDINATION_FILE": "", "WEBMUX_COORDINATION_EXPECTED_SESSION": testHostSession, "WEBMUX_COORDINATION_CLI": helper} {
+		value, err := exec.Command(tmux, "show-environment", "-t", target, key).Output()
+		if err != nil || strings.TrimSpace(string(value)) != key+"="+want {
+			t.Fatalf("pane inherited foreign coordination identity for %s: %v", key, err)
+		}
+	}
 	pid, err := exec.Command(tmux, "list-panes", "-t", target, "-F", "#{pane_pid}").Output()
 	if err != nil || strings.TrimSpace(string(pid)) == "" {
 		t.Fatal("provider did not start", err)

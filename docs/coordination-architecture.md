@@ -70,8 +70,10 @@ independently launched ordinary agents; they are not established by this decisio
 2. Extend the [durable node-local coordination checkpoint](session-coordination.md)
    through cross-node authority, execution-host provisioning and full native
    project isolation, stale identity and restart/reconnect acceptance.
-3. Inspect and test real agent-facing interfaces across ordinary and managed
-   launches while preserving original policies, credentials and lifecycle owners.
+3. Extend the [native alias MCP checkpoint](session-coordination.md) beyond its
+   scoped ordinary macOS Codex/Claude startup checks: managed/SSH execution hosts,
+   existing running agents, platform custody and supported live inbox channels.
+   Preserve original policies, credentials and lifecycle owners.
 4. Qualify two independently started real agents on two real authorized WebMux
    hosts: automatic project discovery, overlap notification, acknowledged handoff
    and shared heavy-worker reservation, plus all negative controls in #630/#631.
