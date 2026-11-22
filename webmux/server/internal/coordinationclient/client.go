@@ -23,6 +23,8 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/coordination"
 )
 
+const LeaseProtocolHeader = "X-Webmux-Coordination-Lease"
+
 type Access struct {
 	Contract     string           `json:"contract"`
 	Endpoint     string           `json:"endpoint"`
@@ -145,16 +147,35 @@ func Request(ctx context.Context, access Access, method, path string, body io.Re
 	if (route.Path == "/view" && method != "GET") || (route.Path == "/act" && method != "POST") {
 		return errors.New("invalid coordination method")
 	}
+	timeout := 5 * time.Second
+	if route.Path == "/act" {
+		if body == nil {
+			return errors.New("coordination operation requires a JSON body")
+		}
+		data, err := io.ReadAll(io.LimitReader(body, (16<<10)+1))
+		if err != nil || len(data) > 16<<10 {
+			return errors.New("coordination operation exceeds 16 KiB")
+		}
+		var operation struct {
+			Action string `json:"action"`
+		}
+		_ = json.Unmarshal(data, &operation)
+		if operation.Action == "reserve" || operation.Action == "renew-reservation" || operation.Action == "release-reservation" {
+			timeout = 12 * time.Second
+		}
+		body = bytes.NewReader(data)
+	}
 	request, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(access.Endpoint, "/")+path, body)
 	if err != nil {
 		return err
 	}
 	request.Header.Set("Authorization", "Bearer "+access.Capability)
 	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set(LeaseProtocolHeader, "1")
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = nil
 	defer transport.CloseIdleConnections()
-	client := &http.Client{Transport: transport, Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	client := &http.Client{Transport: transport, Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	response, err := client.Do(request)
 	if err != nil {
 		return errors.New("local coordination service is unavailable")
@@ -225,6 +246,12 @@ func AdmissionError(result coordination.Result) error {
 	case "updated", "claimed", "released", "admitted", "recorded", "reserved", "renewed":
 	default:
 		return errors.New("coordination operation was not admitted: " + result.Status)
+	}
+	if (result.Status == "reserved" || result.Status == "renewed") && (result.Lease == nil || !result.Lease.Current || result.Expires == nil || result.Expires.IsZero()) {
+		return errors.New("a verified current lease and expiry are required before work; historical or older-controller success is insufficient")
+	}
+	if result.Lease != nil && !result.Lease.Current {
+		return errors.New("reservation is not a current verified lease; do not run work under its original receipt")
 	}
 	if result.Expires != nil && !time.Now().Before(*result.Expires) {
 		return errors.New("original coordination admission has expired; it did not acquire a new lease")

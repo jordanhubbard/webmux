@@ -102,9 +102,9 @@ remote additions to one view to 3 MiB. Capacity limits report unavailable contex
 with `cache-capacity`/`view-capacity` reasons; they do not silently truncate a peer
 membership list. Large-context pagination and scale qualification remain open.
 A controller restart begins with pending observations and refetches; the cache is
-not a second durable owner of remote state. Local reservation tools refuse remote resource IDs. Remote messages and overlap notices require the
-separate permissions and durable protocols below. Remote/shared reservation
-authority and real-agent acceptance remain required before the full workflow is complete.
+not a second durable owner of remote state. Remote reservation actions require separate authority permission. Remote messages and overlap notices require the
+separate permissions and durable protocols below. Shared reservations now use the single-authority protocol below; full real-agent
+acceptance remains required before the complete workflow is finished.
 
 The [macOS/Linux qualification](validation/coordination-peers-2026-11-21/README.md)
 uses independent real Git repositories/worktrees and ordinary PTY fixtures on two
@@ -223,6 +223,87 @@ The [macOS/Linux protocol receipt](validation/coordination-claims-2026-11-22/REA
 qualifies ordinary PTY fixtures, including claims created before peer refresh.
 Real coding-agent overlap negotiation and shared-worker acceptance remain open.
 
+## Shared heavy-worker reservations
+
+Every `node:<node_id>:heavy` resource has exactly one authority: that node's
+retained coordination ledger. Local and authorized remote reserve/renew/release
+requests use the same atomic reservation record and monotonically increasing
+fence, across accounts and projects. A peer's availability summary is never a
+lease, and no reservation starts a job or takes over a provider. Participating
+workers must honor the authority node, history epoch, original record/fence and
+expiry; stop work before release or lease loss.
+
+The outgoing peer and incoming grant must separately enable
+`coordination_reservations`, in addition to the mapped local account, enrolled
+HTTPS identity and incoming summary permission. The incoming grant binds
+`source_node_id`/`source_owner` to its receiving `owner`. Message permission does
+not enable reservations, and reservation permission does not enable inbox writes.
+A fresh reserve or renew requires a current snapshot advertising `reservations`
+for that source namespace and a verified project available on the receiving
+account. If several accounts on the same node are eligible, provide `target`
+as a matching peer member ref to select the account; ambiguous selection is
+refused. The worker resource itself remains node-wide. Other accounts see
+occupancy/fence/expiry, not the foreign holder. Visibility uses the receiving
+account, preserving a differently named source account's full identity.
+
+Use the existing `reserve`, `renew-reservation`, `release-reservation` actions
+with that remote resource ID. The source atomically freezes the exact request,
+selected peer/node/account/key/project and receiving history epoch before network
+I/O. Responses include `shared_reservation` with the durable `intent_id`,
+authority identity and transport. `reservation-pending`, `uncertain` and
+`authorization-unavailable` do not grant work. Retry the identical intent with
+the same `request_id` to resolve uncertainty; do not create another reserve ID
+as an automatic retry. Coordination does not require a browser.
+
+The fixed HTTPS endpoint is
+`POST /api/federation/coordination/reservations`, with `operation: status|admit`
+and an immutable envelope. Before mutation bytes, the source commits uncertainty
+and rechecks its current live session/project. After interruption or a lost reply,
+it queries the original receipt first; authenticated absence in the same history
+permits exact replay. The authority atomically records every outcome, including
+busy/project/lease denials. Old busy IDs cannot acquire a later free worker, and
+old renew IDs cannot extend the original grant. `history-changed` or disappearance
+of a known outcome (`history-lost`) stops replay. Current configuration supplies
+credentials; the saved intent never stores a bearer or silently changes scope.
+
+A successful original outcome is historical evidence. Work requires both an
+unexpired returned `expires` and `lease.current: true`. The source verifies the
+exact authority record/fence is still held and uses request start plus the
+remaining authority duration as a conservative local deadline. Clock offsets and
+transit cannot extend it. That deadline is frozen on first receipt and cannot be
+extended by status queries or retries; a new renew intent is required. Releasing
+or replacing the lease makes an old successful receipt non-current. A known local
+release also fences delayed replies from reviving that lease. Status/network
+failure removes current verification; workers must not infer a grant from the
+old `reserved`/`renewed` status. A changed source project cannot keep using its
+old grant. A live original holder may still release its retained record/fence
+after changing projects, using its frozen receiving scope.
+
+Local reservation replies also include the current-lease check. Lease-aware
+clients automatically declare `X-Webmux-Coordination-Lease: 1` on the private
+interface. Older clients receive HTTP 428 for reserve/renew/release, rather than
+ignoring current-lease evidence. New clients refuse positive results lacking a
+current lease and expiry, including replies from older controllers. Ordinary
+view/claim/message compatibility remains separate. Reservation calls have a
+12-second client budget to cover the bounded four-second source inspection and
+six-second two-host exchange; ordinary client calls retain five seconds. The
+private server retains its ten-second write bound, so a boundary timeout remains
+uncertain and must be resolved under the original ID. Envelopes/replies are
+limited to 32 KiB; redirects and proxies remain refused. Shutdown/restart preserves
+intent, outcome, history and fences without dispatching jobs.
+
+Schema 3 adds scoped remote reservation intent receipts and receiving-account
+custody semantics, preserving version-1/2 signing keys, history epoch, messages,
+request receipts and fences through an atomic upgrade. Older binaries refuse
+schema 3. Do not downgrade by deleting the ledger or reset/roll back authority
+while workers may still hold leases. Fresh-history recovery requires operational
+reconciliation; fencing is meaningful within the authority's retained epoch.
+
+The [native protocol receipt](validation/coordination-reservations-2026-11-22/README.md)
+uses ordinary PTY/API fixtures on macOS and Linux. Two real coding agents honoring
+the resource while running their own jobs, managed/SSH onboarding and complete
+reconnect/discovery acceptance remain open.
+
 ## Native agent startup and MCP
 
 The existing execution-host `codex` and `claude` aliases attach a session-scoped
@@ -315,7 +396,9 @@ operation receipts and monotonically increasing reservation fences persist. Sche
 version 2 atomically upgrades an intact version-1 ledger with remote outbox/inbox
 indexes and a random receiver history epoch, preserving signing keys, existing
 receipts and fences. Missing version-2 buckets are corruption, never recreated.
-Older binaries cannot read version 2; do not downgrade by deleting authority data.
+Schema 3 additionally records remote reservation intents and receiving-account
+custody. Older binaries cannot read the upgraded authority; do not downgrade by
+deleting its data.
 Admission and its receipt commit in one transaction. Clock rollback, missing
 buckets, invalid key material and changed node identity fail closed rather than
 reinitializing authority. A ledger failure leaves ordinary terminal startup
@@ -338,8 +421,8 @@ started coding agents.
 
 Remaining #630/#631 work includes complete live native inbox/notification and
 existing-agent onboarding; independently started ordinary/managed pairs; SSH/remote
-execution-host provisioning; real-agent cross-node delivery/overlap and shared
-reservation authority;
+execution-host provisioning; real-agent cross-node delivery/overlap and shared-worker
+execution acceptance;
 explicit project mappings; platform custody/sandbox acceptance; full native LAN
 discovery and reconnect qualification; and the complete two-real-host workflow.
 No roadmap checkbox is completed by this checkpoint.

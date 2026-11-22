@@ -78,7 +78,7 @@ func TestMCPGuidanceToolsAndAdmissionSemantics(t *testing.T) {
 	if err != nil || !result.IsError {
 		t.Fatal("busy was treated as admission", result, err)
 	}
-	for _, refused := range []string{`{"status":"reserved","expires":"2000-01-01T00:00:00Z"}`, `{"status":"claimed","conflicts":[{"id":"existing-claim"}]}`, `{"status":"claimed","peer_claim_checks":[{"node_id":"remote","owner":"mapped","state":"pending","notification_policy":"unavailable"}]}`} {
+	for _, refused := range []string{`{"status":"reserved","lease":{"current":false,"authority_node_id":"remote","history_epoch":"epoch"}}`, `{"status":"reservation-pending"}`, `{"status":"reserved","expires":"2000-01-01T00:00:00Z"}`, `{"status":"claimed","conflicts":[{"id":"existing-claim"}]}`, `{"status":"claimed","peer_claim_checks":[{"node_id":"remote","owner":"mapped","state":"pending","notification_policy":"unavailable"}]}`} {
 		mu.Lock()
 		response = refused
 		mu.Unlock()

@@ -24,26 +24,28 @@ import (
 // Federation configuration is administrator-managed. Read APIs never return
 // credentials. Each inbound credential selects exactly one local session owner.
 type serverPeer struct {
-	CoordinationMessages bool         `yaml:"coordination_messages,omitempty" json:"coordination_messages,omitempty"`
-	CoordinationOwner    string       `yaml:"coordination_owner,omitempty" json:"coordination_owner,omitempty"`
-	ID                   string       `yaml:"id" json:"id"`
-	Name                 string       `yaml:"name" json:"name"`
-	URL                  string       `yaml:"url" json:"-"`
-	TokenEnv             string       `yaml:"token_env,omitempty" json:"-"`
-	Credential           string       `yaml:"credential,omitempty" json:"-"`
-	AllowHTTP            bool         `yaml:"allow_http" json:"-"`
-	Identity             nodeIdentity `yaml:"identity,omitempty" json:"identity"`
-	DiscoveredAddress    string       `yaml:"discovered_address,omitempty" json:"-"`
+	CoordinationReservations bool         `yaml:"coordination_reservations,omitempty" json:"coordination_reservations,omitempty"`
+	CoordinationMessages     bool         `yaml:"coordination_messages,omitempty" json:"coordination_messages,omitempty"`
+	CoordinationOwner        string       `yaml:"coordination_owner,omitempty" json:"coordination_owner,omitempty"`
+	ID                       string       `yaml:"id" json:"id"`
+	Name                     string       `yaml:"name" json:"name"`
+	URL                      string       `yaml:"url" json:"-"`
+	TokenEnv                 string       `yaml:"token_env,omitempty" json:"-"`
+	Credential               string       `yaml:"credential,omitempty" json:"-"`
+	AllowHTTP                bool         `yaml:"allow_http" json:"-"`
+	Identity                 nodeIdentity `yaml:"identity,omitempty" json:"identity"`
+	DiscoveredAddress        string       `yaml:"discovered_address,omitempty" json:"-"`
 }
 type serverGrant struct {
-	CoordinationMessages bool   `yaml:"coordination_messages,omitempty" json:"coordination_messages,omitempty"`
-	SourceNode           string `yaml:"source_node_id,omitempty" json:"source_node_id,omitempty"`
-	SourceOwner          string `yaml:"source_owner,omitempty" json:"source_owner,omitempty"`
-	Coordination         bool   `yaml:"coordination,omitempty" json:"coordination,omitempty"`
-	ID                   string `yaml:"id"`
-	Owner                string `yaml:"owner"`
-	TokenEnv             string `yaml:"token_env,omitempty"`
-	Credential           string `yaml:"credential,omitempty" json:"-"`
+	CoordinationReservations bool   `yaml:"coordination_reservations,omitempty" json:"coordination_reservations,omitempty"`
+	CoordinationMessages     bool   `yaml:"coordination_messages,omitempty" json:"coordination_messages,omitempty"`
+	SourceNode               string `yaml:"source_node_id,omitempty" json:"source_node_id,omitempty"`
+	SourceOwner              string `yaml:"source_owner,omitempty" json:"source_owner,omitempty"`
+	Coordination             bool   `yaml:"coordination,omitempty" json:"coordination,omitempty"`
+	ID                       string `yaml:"id"`
+	Owner                    string `yaml:"owner"`
+	TokenEnv                 string `yaml:"token_env,omitempty"`
+	Credential               string `yaml:"credential,omitempty" json:"-"`
 }
 type serverDirectory struct {
 	Version int           `yaml:"version"`
@@ -79,7 +81,7 @@ func validateServerDirectory(d serverDirectory) error {
 		if !federationID.MatchString(p.ID) || seen[p.ID] || p.Name == "" || !validServerCredential(p.TokenEnv, p.Credential) || err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") || (u.Scheme != "https" && !(u.Scheme == "http" && p.AllowHTTP)) {
 			return errors.New("invalid server directory entry (unique ID, name, origin URL and credential or token_env required; HTTP requires allow_http)")
 		}
-		if p.CoordinationMessages && p.CoordinationOwner == "" {
+		if (p.CoordinationMessages || p.CoordinationReservations) && p.CoordinationOwner == "" {
 			return errors.New("coordination messages require a local coordination account mapping")
 		}
 		if p.CoordinationOwner != "" && (len(p.CoordinationOwner) > 256 || strings.ContainsFunc(p.CoordinationOwner, unicode.IsControl) || p.Identity == (nodeIdentity{}) || u.Scheme != "https") {
@@ -107,7 +109,7 @@ func validateServerDirectory(d serverDirectory) error {
 	seen = map[string]bool{}
 	tokens := map[string]bool{}
 	for _, g := range d.Grants {
-		if g.CoordinationMessages && (!g.Coordination || !plane.ValidSenderScope(g.SourceNode, g.SourceOwner)) {
+		if (g.CoordinationMessages || g.CoordinationReservations) && (!g.Coordination || !plane.ValidSenderScope(g.SourceNode, g.SourceOwner)) {
 			return errors.New("coordination messages require summary permission and a source node/account binding")
 		}
 		token := serverCredential(g.TokenEnv, g.Credential)
@@ -324,6 +326,7 @@ func (s *Server) federationMessage(w http.ResponseWriter, r *http.Request, owner
 }
 func (s *Server) registerFederation(mux *http.ServeMux) {
 	mux.Handle("POST "+coordinationMessagesPath, s.federationInbound(s.exchangeCoordinationMessage))
+	mux.Handle("POST "+coordinationReservationsPath, s.federationInbound(s.exchangeCoordinationReservation))
 	mux.Handle("POST "+coordinationSnapshotPath, s.federationInbound(s.exportCoordinationSnapshot))
 	mux.Handle("GET /api/servers", s.protected(false, s.listServers))
 	mux.Handle("GET /api/server-directory", s.protected(false, s.getServerDirectory))

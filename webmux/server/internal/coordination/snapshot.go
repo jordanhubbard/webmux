@@ -9,6 +9,7 @@ import (
 // ProjectSnapshot is read-only context exported by a node/account authority.
 // It contains no capability, inbox, outbox, request receipt or process control.
 type ProjectSnapshot struct {
+	Reservations   bool           `json:"reservations,omitempty"`
 	AuthorityTime  time.Time      `json:"authority_time,omitempty"`
 	OverlapNotices bool           `json:"overlap_notices,omitempty"`
 	Messaging      bool           `json:"messaging,omitempty"`
@@ -78,7 +79,7 @@ func (s ProjectSnapshot) Valid(node, owner, project string) bool {
 	if s.Contract != Contract || s.Node != node || s.Owner != owner || s.Project != project || !validHex(node, 16) || !validText(owner, 256) || !ValidProjectSelector(project) {
 		return false
 	}
-	if s.Messaging && (!s.Enabled || !ValidSenderScope(s.SourceNode, s.SourceOwner) || !validHex(s.HistoryEpoch, 16)) {
+	if (s.Messaging || s.Reservations) && (!s.Enabled || !ValidSenderScope(s.SourceNode, s.SourceOwner) || !validHex(s.HistoryEpoch, 16)) {
 		return false
 	}
 	if s.HistoryEpoch != "" && !validHex(s.HistoryEpoch, 16) {
