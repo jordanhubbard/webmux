@@ -64,10 +64,13 @@ jobs:
             'TestShutdownDuringCoordinationProvisioningStartsNoProvider',
             'TestRevokedAgentDuringProvisioningStartsNoProvider',
             'TestPendingTerminalLaunchCannotSurviveDeletionOrShutdown',
-            'TestPendingTerminalLaunchKeepsLatestGeometry'
+            'TestPendingTerminalLaunchKeepsLatestGeometry',
+            'TestLaunchProvisionIsAtomicAcrossMembershipRefresh',
+            'TestAtomicLaunchProvisionRetainsAuthorityGuards',
+            'TestLaunchProvisionDoesNotWithdrawUnrelatedMembers'
           )
           $pattern = '^(' + ($tests -join '|') + ')$'
-          go test -json ./internal/session ./internal/httpapi -run $pattern -count=10 -failfast | Tee-Object -FilePath "$env:COORDINATION_RECEIPTS/tests.jsonl"
+          go test -json ./internal/coordination ./internal/session ./internal/httpapi -run $pattern -count=10 -failfast | Tee-Object -FilePath "$env:COORDINATION_RECEIPTS/tests.jsonl"
           if ($LASTEXITCODE -ne 0) { throw 'Native coordination repetition failed; retain the original failure.' }
           $events = @(Get-Content "$env:COORDINATION_RECEIPTS/tests.jsonl" | ForEach-Object { $_ | ConvertFrom-Json })
           $counts = @{}

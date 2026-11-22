@@ -1,0 +1,126 @@
+{
+  "schema": "webmux.pending_launch_registration.v1",
+  "recorded_at": "2026-11-22T19:29:23.585456+00:00",
+  "base_revision": "8e15aa08a14469fc5aae3ec806007a18b93372e1",
+  "sources_sha256": {
+    "webmux/server/internal/coordination/members.go": "3955ef154b6d49fb09eed9726ab8032c4943e1cab75466c5db52caffeb545a75",
+    "webmux/server/internal/coordination/provision_test.go": "29286f1f02f7f114574556f39a75a4c82a72c5dc2d83062dd1ba7691440ec3dd",
+    "webmux/server/internal/httpapi/session_coordination.go": "3c57f215dc5a715a60b2135f0935eb23737f8000ffffda2b36e11e2b7c0ede0a",
+    "webmux/server/internal/httpapi/session_coordination_test.go": "db7742a6f49a886aa4fe43be7685309a835b740bf1cb712aebfc0f7f0f8bf112",
+    "webmux/server/internal/session/broker.go": "7f6ca5e64f75c1beeefc81c704487f6a3d732d6414284c408901a3d48bfd6d0b",
+    "webmux/server/internal/session/coordination.go": "fbf70e6a78ce474a020b006ecf6dc45da0312e9fb800d594712b6d93b38b0b41",
+    "webmux/server/internal/session/launch_coordination_test.go": "785210b2f44f6a2f73afb8fbe4504948f51dd7f34dedf420ef59e7505e9d971a",
+    "webmux/server/internal/coordinationclient/client.go": "3ed484079dbf86638bfef1df175dad313d1b74a863b4bf3c90c031ff167f487c",
+    "webmux/server/internal/coordinationclient/transport_error.go": "1aa48f96c837450a8fa2db4a3657889bcea9acd71c41fdd6e62a27b97a514867",
+    "webmux/server/internal/coordinationclient/transport_error_test.go": "1809dfdada19b0d04f65b1f3e096c9feb6531c0b35ed3e60a2d21cb68e3affca"
+  },
+  "sources_unchanged": true,
+  "checks": [
+    {
+      "name": "full-go",
+      "command": [
+        "go",
+        "test",
+        "./..."
+      ],
+      "cwd": "webmux/server",
+      "exit_code": 0,
+      "elapsed_seconds": 167.068,
+      "log": "qualification-v4-full-go.log",
+      "log_sha256": "a84b877514ad203ade79033bd3e54412377777d255029e354ec536b3e4074c68"
+    },
+    {
+      "name": "session-client-race",
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "./internal/coordination",
+        "./internal/session",
+        "./internal/coordinationclient"
+      ],
+      "cwd": "webmux/server",
+      "exit_code": 0,
+      "elapsed_seconds": 0.765,
+      "log": "qualification-v4-session-client-race.log",
+      "log_sha256": "c77628c29c8ffcb58920d9d0be78c9d4214c7c9d447c04df6006bc19dbbafd6c"
+    },
+    {
+      "name": "coordination-api-race",
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "./internal/httpapi",
+        "-run",
+        "TestCoordination",
+        "-count=1"
+      ],
+      "cwd": "webmux/server",
+      "exit_code": 0,
+      "elapsed_seconds": 118.675,
+      "log": "qualification-v4-coordination-api-race.log",
+      "log_sha256": "c73e6b5eab5676f9ef0528317e1178fed53a3b3ce6776a5afce0b799bacd29c4"
+    },
+    {
+      "name": "contract",
+      "command": [
+        "node",
+        "scripts/server-contract.mts"
+      ],
+      "cwd": "webmux",
+      "exit_code": 0,
+      "elapsed_seconds": 11.483,
+      "log": "qualification-v4-contract.log",
+      "log_sha256": "02dd422159a5cc00a17a106ad5bfc6affc09a88bc8beec6ad83c0a7c7ef2317c"
+    },
+    {
+      "name": "vet",
+      "command": [
+        "go",
+        "vet",
+        "./internal/coordination",
+        "./internal/session",
+        "./internal/coordinationclient",
+        "./internal/httpapi"
+      ],
+      "cwd": "webmux/server",
+      "exit_code": 0,
+      "elapsed_seconds": 0.586,
+      "log": "qualification-v4-vet.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "diff",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "elapsed_seconds": 0.028,
+      "log": "qualification-v4-diff.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "split_transaction_control": {
+    "kind": "deliberate split-transaction mutation control; not a historical checkout",
+    "command": [
+      "go",
+      "test",
+      "-overlay",
+      "split-launch-provision-overlay.json",
+      "./internal/coordination",
+      "-run",
+      "^TestLaunchProvisionIsAtomicAcrossMembershipRefresh$",
+      "-count=1"
+    ],
+    "exit_code": 1,
+    "expected_interleaving_failure": true,
+    "candidate_source_sha256": "3955ef154b6d49fb09eed9726ab8032c4943e1cab75466c5db52caffeb545a75",
+    "mutation_source_sha256": "409de9cbdff05d6fbfa7593d784172b306d68783461cbb3a3f82858c4aea436f"
+  },
+  "local_passed": true,
+  "native_windows_current_source": "pending expanded110-event repetition; earlier80-pass run is not current qualification"
+}

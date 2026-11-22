@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -100,7 +101,7 @@ func coordinationAPIRepository(t *testing.T, repo string) (*Server, http.Handler
 	}{records}); err != nil {
 		t.Fatal(err)
 	}
-	s, err := New(old.store, Options{Name: "coordination-fixture"})
+	s, err := New(old.store, Options{Name: "coordination-fixture", Logger: slog.New(slog.NewTextHandler(t.Output(), &slog.HandlerOptions{Level: slog.LevelDebug}))})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -250,7 +251,7 @@ func TestCoordinationSessionChild(t *testing.T) {
 		t.Skip("explicit native ordinary-session child")
 	}
 	if os.Getenv("WEBMUX_COORDINATION_FILE") == "" || os.Getenv("WEBMUX_COORDINATION_CLI") == "" {
-		t.Fatal("ordinary session lacked automatically provisioned interface")
+		t.Fatalf("ordinary session lacked automatically provisioned interface (file=%v cli=%v)", os.Getenv("WEBMUX_COORDINATION_FILE") != "", os.Getenv("WEBMUX_COORDINATION_CLI") != "")
 	}
 	var out bytes.Buffer
 	if err := coordinationclient.Run([]string{"view"}, strings.NewReader(""), &out); err != nil {

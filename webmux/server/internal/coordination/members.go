@@ -20,6 +20,10 @@ func sameProject(a, b Member) bool {
 	return a.Ref.Owner == b.Ref.Owner && projectID(a) != "" && projectID(a) == projectID(b)
 }
 func syncMembers(tx *bolt.Tx, node string, inputs []MemberInput, now time.Time) error {
+	return updateMembers(tx, node, inputs, now, true)
+}
+
+func updateMembers(tx *bolt.Tx, node string, inputs []MemberInput, now time.Time, complete bool) error {
 	seen := map[string]bool{}
 	for _, input := range inputs {
 		if !validRef(input.Ref) || input.Ref.Node != node || !validBinding(input.Project) || !validText(input.ExecutionHost, 1024) || !validText(input.Transport, 64) {
@@ -72,6 +76,9 @@ func syncMembers(tx *bolt.Tx, node string, inputs []MemberInput, now time.Time) 
 			}
 		}
 	}
+	if !complete {
+		return nil
+	}
 	for _, old := range previous {
 		if !seen[old.Ref.Key()] && old.Revoked == nil {
 			old.Present = false
@@ -119,23 +126,63 @@ func (s *Service) Provision(node string, input MemberInput) (string, error) {
 		if err := initialize(tx, node, now); err != nil {
 			return err
 		}
-		if !enabled(tx) {
-			return ErrDisabled
+		token, err = provisionCapability(tx, node, input, false)
+		return err
+	})
+	return token, err
+}
+
+// ProvisionLaunch registers only the broker-validated pending participant and
+// issues its interface in one transaction. A launch snapshot can become stale
+// outside the broker lock, so it cannot withdraw or update other participants.
+// Issuance does not make the pending member active; requests still require the
+// current broker run. Ordinary Provision retains its active-member requirement.
+func (s *Service) ProvisionLaunch(node string, input MemberInput) (string, error) {
+	db, err := s.database()
+	if err != nil {
+		return "", err
+	}
+	var token string
+	var provisionErr error
+	err = db.Update(func(tx *bolt.Tx) error {
+		now := s.Now()
+		if err := initialize(tx, node, now); err != nil {
+			return err
 		}
-		if !validRef(input.Ref) || input.Ref.Node != node {
-			return ErrInvalid
-		}
-		member, exists, err := get[Member](bucket(tx, "members"), input.Ref.Key())
+		now, err := authorityTime(tx, now)
 		if err != nil {
 			return err
 		}
-		if !exists || member.Revoked != nil || !member.Present || !member.Active {
-			return ErrUnauthorized
+		input.Active = false
+		if err := updateMembers(tx, node, []MemberInput{input}, now, false); err != nil {
+			return err
 		}
-		token = capability(tx, member.Ref)
+		token, provisionErr = provisionCapability(tx, node, input, true)
+		// Retain authoritative observations even when issuance is disabled or
+		// refused, matching Sync followed by Provision's previous behavior.
 		return nil
 	})
-	return token, err
+	if err != nil {
+		return "", err
+	}
+	return token, provisionErr
+}
+
+func provisionCapability(tx *bolt.Tx, node string, input MemberInput, pendingLaunch bool) (string, error) {
+	if !enabled(tx) {
+		return "", ErrDisabled
+	}
+	if !validRef(input.Ref) || input.Ref.Node != node {
+		return "", ErrInvalid
+	}
+	member, exists, err := get[Member](bucket(tx, "members"), input.Ref.Key())
+	if err != nil {
+		return "", err
+	}
+	if !exists || member.Revoked != nil || !member.Present || (!pendingLaunch && !member.Active) {
+		return "", ErrUnauthorized
+	}
+	return capability(tx, member.Ref), nil
 }
 func (s *Service) SetEnabled(node string, value bool) error {
 	db, err := s.database()
