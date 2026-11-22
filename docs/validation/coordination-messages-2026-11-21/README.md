@@ -55,3 +55,18 @@ backoff tuning, live native notifications/existing-agent onboarding, cross-node
 claims/overlap and shared reservation authority, independently started real-agent
 handoffs, managed/SSH provisioning, platform custody/distribution and full LAN
 reconnect acceptance remain open. No roadmap checkbox is completed here.
+
+## Revocation fixture ordering follow-up
+
+The original PR-head Windows ARM64 server run failed
+[the revocation control](https://github.com/jordanhubbard/webmux/actions/runs/45000609614/job/137141101284):
+the new intent returned `peer-unavailable` before the test could establish its
+pending outbox. The test canceled background maintenance immediately before
+requiring a current snapshot. Cancellation can finish an in-flight fetch as
+unavailable/stale, which is a valid refusal under the production freshness rules.
+The fixture now cancels and joins its isolated source workers before establishing
+the snapshots used by this control. This removes that setup race without changing
+production behavior, source eligibility, deadlines or revocation assertions.
+The original failed run remains failed; the correction's hosted native acceptance
+is a separate gate. The source-bound receipt above retains the original runtime
+and native protocol evidence rather than rewriting that history.

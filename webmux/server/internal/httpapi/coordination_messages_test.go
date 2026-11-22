@@ -131,6 +131,12 @@ func TestCoordinationRemoteMessageLostHTTPSReplyUsesStatusAndExplicitReceipts(t 
 
 func TestCoordinationRemoteMessagePermissionsAndRevocation(t *testing.T) {
 	p := peerPair(t)
+	// Quiesce the isolated source before establishing fresh snapshots. Canceling
+	// an in-flight background fetch later can correctly mark its cache stale,
+	// which is unrelated to the outgoing-revocation assertion below.
+	p.a.sessionCoord.cancel()
+	<-p.a.sessionCoord.done
+	p.a.sessionCoord.cancel = nil
 	p.mapOwner(t, "owner")
 	p.share(t, true)
 	p.refresh(t)
@@ -147,10 +153,6 @@ func TestCoordinationRemoteMessagePermissionsAndRevocation(t *testing.T) {
 	if repeat.Body.String() != denied.Body.String() {
 		t.Fatal("permission upgraded a frozen denial")
 	}
-	// Stop only the isolated source fixture's maintenance workers, retaining its broker.
-	p.a.sessionCoord.cancel()
-	<-p.a.sessionCoord.done
-	p.a.sessionCoord.cancel = nil
 	operation.ID = "revoked-before-dispatch"
 	response := request(p.agent, "POST", "/act", directoryJSON(operation), p.access[0].Capability)
 	requireStatus(t, response, 200)
