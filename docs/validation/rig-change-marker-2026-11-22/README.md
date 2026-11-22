@@ -10,8 +10,7 @@ the original five-second marker wait. Its log remains privately retained in
 The fixture used `echo $$ > marker`. Shell redirection creates `marker` before
 `echo` writes its contents. The Go observer breaks on any successful ReadFile,
 including an empty file; an early empty read therefore produces the observed
-failure path without using the five-second budget. A partial numeric PID could
-also name the wrong process during cleanup.
+failure path without using the five-second budget.
 
 The fixture now writes a sibling `.pending` file, closes it, then publishes it
 with `/bin/mv -f`. The original observer, five-second startup deadline,
