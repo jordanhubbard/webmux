@@ -24,6 +24,11 @@ With sibling-file/rename publication, the destination remains absent until a
 complete exact writer PID is available. [Both control results](causal-control.json)
 are retained. Run `python3 control.py` on a POSIX host to reproduce them.
 
+Thirty repetitions of the original native cancellation test pass, as does the
+full Node 24 Go suite with the pending SSH implementation absent from the
+checkout. [Source and qualification hashes](receipt.json) bind that isolated
+result and preserve the earlier full-suite failure separately.
+
 This proves a race in the original fixture and removes that race. Earlier failed
 invocations did not retain marker contents, so their exact interleavings remain
 unproven. Passing reruns do not reconstruct those historical observations.
