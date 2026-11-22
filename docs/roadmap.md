@@ -65,7 +65,11 @@ agent-facing channel evaluation remains open. The
 announcements untrusted and retains manual enrollment. Authenticated HTTPS node/
 account identity and address migration now have a native macOS/Linux component
 result; complete discovered two-host acceptance and automatic coordination remain
-open; this checkpoint does not complete any of the requirements above.
+open; this checkpoint does not complete any of the requirements above. The
+[built-in coordination checkpoint](session-coordination.md) adds a durable
+node-local ledger and scoped ordinary-session CLI. Real-agent onboarding,
+managed/SSH interfaces and cross-node coordination still require implementation
+and acceptance.
 
 ## Current reliability work
 

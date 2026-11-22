@@ -314,3 +314,34 @@ func TestWindowsLocalUsesNativeProviderWithoutTmux(t *testing.T) {
 		t.Fatal("accepted an unowned Windows local terminal")
 	}
 }
+
+func TestCoordinationEnvironmentDoesNotCrossSessionBoundary(t *testing.T) {
+	for _, platform := range []string{"linux", "darwin", "windows"} {
+		t.Run(platform, func(t *testing.T) {
+			p := testPlanner()
+			p.platform = platform
+			p.environment = append(p.environment, "WEBMUX_COORDINATION_FILE=foreign-file", "WEBMUX_COORDINATION_CLI=foreign-cli", "WEBMUX_COORDINATION_TOKEN=foreign-token")
+			if platform == "windows" {
+				p.environment = append(p.environment, "WebMux_Coordination_File=foreign-mixed-case")
+			}
+			r := testRequest()
+			r.Transport, r.ExecCommand = "exec", "echo ready"
+			for _, provision := range []bool{false, true} {
+				if provision {
+					r.Coordination = &CoordinationAccess{File: "/private/own.json", CLI: "/installed/webmux"}
+				}
+				c, err := p.build(r, "", "", "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if strings.Contains(strings.Join(c.Env, "\n"), "foreign-") {
+					t.Fatal("inherited another session's coordination access")
+				}
+				own := strings.Contains(strings.Join(c.Env, "\n"), "WEBMUX_COORDINATION_FILE=/private/own.json")
+				if own != provision || strings.Contains(strings.Join(c.Args, " "), "own.json") {
+					t.Fatal("scoped interface missing or present in argv")
+				}
+			}
+		})
+	}
+}

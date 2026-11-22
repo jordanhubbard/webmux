@@ -21,11 +21,18 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 )
 
+// CoordinationAccess locates the session-scoped interface without carrying a bearer in argv.
+type CoordinationAccess struct {
+	File string
+	CLI  string
+}
+
 // LaunchRequest is internal session state, never an unvalidated HTTP request.
 // Passwords are separate so they cannot accidentally enter persisted sessions.
 type LaunchRequest struct {
-	RecoveryKey                          string             `json:"-"`
-	RecoverySeed                         *recovery.Activity `json:"-"`
+	Coordination                         *CoordinationAccess `json:"-"`
+	RecoveryKey                          string              `json:"-"`
+	RecoverySeed                         *recovery.Activity  `json:"-"`
 	SessionID                            string
 	Hostname, Username, Transport, KeyID string
 	Port, Cols, Rows                     int
@@ -167,11 +174,14 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 	// Remove inherited TERM rather than relying on duplicate-variable behavior.
 	for i := len(command.Env) - 1; i >= 0; i-- {
 		key, _, _ := strings.Cut(command.Env[i], "=")
-		if key == "TERM" || strings.HasPrefix(key, "WEBMUX_RECOVERY_") || p.platform == "windows" && (strings.EqualFold(key, "TERM") || strings.HasPrefix(strings.ToUpper(key), "WEBMUX_RECOVERY_")) {
+		if key == "TERM" || strings.HasPrefix(key, "WEBMUX_RECOVERY_") || strings.HasPrefix(key, "WEBMUX_COORDINATION_") || p.platform == "windows" && (strings.EqualFold(key, "TERM") || (strings.HasPrefix(strings.ToUpper(key), "WEBMUX_RECOVERY_") || strings.HasPrefix(strings.ToUpper(key), "WEBMUX_COORDINATION_"))) {
 			command.Env = append(command.Env[:i], command.Env[i+1:]...)
 		}
 	}
 	command.Env = append(command.Env, "TERM=xterm-256color")
+	if request.Coordination != nil {
+		command.Env = append(command.Env, "WEBMUX_COORDINATION_FILE="+request.Coordination.File, "WEBMUX_COORDINATION_CLI="+request.Coordination.CLI)
+	}
 	if request.RecoveryKey != "" {
 		command.Env = append(command.Env, "WEBMUX_RECOVERY_KEY="+request.RecoveryKey, "WEBMUX_RECOVERY_SESSION="+request.SessionID)
 		if request.RecoverySeed != nil {
