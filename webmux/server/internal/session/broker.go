@@ -1168,6 +1168,9 @@ func (b *Broker) coordinationSnapshotLocked() []Session {
 	out := make([]Session, 0, len(b.order))
 	for _, id := range b.order {
 		value := b.entries[id].value.clone()
+		if run := b.entries[id].run; run != nil {
+			value.CoordinationRun = run.generation
+		}
 		value.CoordinationLive = b.entries[id].run != nil && (value.State == "connected" || value.State == "connecting")
 		out = append(out, value)
 	}

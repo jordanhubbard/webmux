@@ -40,13 +40,15 @@ func (p *coordinationRepositoryProcess) RecoveryRPC(_ context.Context, request r
 }
 
 func TestRemoteCoordinationRepositoryBindsCurrentRunAndDirectory(t *testing.T) {
-	for _, boundary := range []string{"success", "owner", "directory", "destination", "port", "username", "key", "replaced-run", "inactive", "provider", "cancelled", "old-helper", "unverified-source"} {
+	for _, boundary := range []string{"success", "old-snapshot", "owner", "directory", "destination", "port", "username", "key", "replaced-run", "inactive", "provider", "cancelled", "old-helper", "unverified-source"} {
 		t.Run(boundary, func(t *testing.T) {
 			b, _, _ := fixture(t)
 			project := &coordination.Binding{ID: "verified-fixture", Repository: "example.test/team/repo", Worktree: "/remote-only/project", Source: "verified-git"}
 			var mutate func()
+			inspections := 0
 			p := &coordinationRepositoryProcess{fakeProcess: fake()}
 			p.inspect = func(request recovery.RPCRequest) recovery.RPCResponse {
+				inspections++
 				if request.CoordinationDirectory != "/remote-only/project" || request.Action != nil || request.Recording != nil {
 					t.Error("inspection carried an action or a directory not observed on this session", request.Operation)
 				}
@@ -76,7 +78,7 @@ func TestRemoteCoordinationRepositoryBindsCurrentRunAndDirectory(t *testing.T) {
 			e := b.entries[snapshot.ID]
 			e.value.State = "connected"
 			e.value.CoordinationActivity = &CoordinationObservation{Directory: "/remote-only/project", CLI: "claude"}
-			snapshot = e.value.clone()
+			snapshot = b.coordinationSnapshotLocked()[0]
 			originalRun := e.run
 			b.mu.Unlock()
 			t.Cleanup(func() {
@@ -84,6 +86,12 @@ func TestRemoteCoordinationRepositoryBindsCurrentRunAndDirectory(t *testing.T) {
 				e.run = originalRun
 				b.mu.Unlock()
 			})
+			if snapshot.CoordinationRun == 0 || !snapshot.CoordinationLive {
+				t.Fatal("live snapshot omitted broker generation")
+			}
+			if boundary == "old-snapshot" {
+				snapshot.CoordinationRun--
+			}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			mutate = func() {
@@ -113,6 +121,9 @@ func TestRemoteCoordinationRepositoryBindsCurrentRunAndDirectory(t *testing.T) {
 				}
 			}
 			binding, err := b.InspectCoordinationRepository(ctx, snapshot)
+			if boundary == "old-snapshot" && inspections != 0 {
+				t.Error("stale run snapshot started a network lookup")
+			}
 			if boundary == "success" {
 				if err != nil || binding == nil || *binding != *project {
 					t.Fatal(binding, err)

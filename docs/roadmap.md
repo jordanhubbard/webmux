@@ -98,7 +98,12 @@ Native ordinary SSH shell/CLI startup, first-use trust, same-provider reconnect,
 refused forwarding and owned-master shutdown pass between macOS and Linux.
 The [native SSH agent checkpoint](validation/coordination-ssh-agent-2026-11-22/README.md)
 adds independently audited real Claude view/work calls through the ordinary SSH
-alias under an explicit two-tool native approval profile. Broader coding-agent
+alias under an explicit two-tool native approval profile. A
+[persistent native SSH reconnect](validation/coordination-ssh-native-reconnect-2026-11-22/README.md)
+now preserves the actual Claude/MCP processes and conversation across planned
+reconnect, stops the old master and verifies new scoped calls. The
+[corrected-stack reconnect result](validation/coordination-ssh-reconnect-integration-2026-11-22/README.md)
+adds completed-turn process evidence and stale project-cache regression controls. Broader coding-agent
 adoption, managed/password/Mosh/Windows paths and the complete
 restart/durable-work lifecycle remain open under #630; this does not complete a
 roadmap checkbox.

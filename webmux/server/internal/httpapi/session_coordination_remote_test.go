@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -44,6 +45,12 @@ func TestRemoteCoordinationProjectExpiresAndDoesNotCrossSessionAccountOrDestinat
 		t.Fatal("current execution-host context missing or claimed onboarding", input)
 	}
 	for name, change := range map[string]func(*session.Session){
+		"activity": func(v *session.Session) {
+			copy := *v.CoordinationActivity
+			copy.Interface = "mcp-configured"
+			v.CoordinationActivity = &copy
+		},
+		"run":           func(v *session.Session) { v.CoordinationRun++ },
 		"owner":         func(v *session.Session) { v.Owner = "other" },
 		"session":       func(v *session.Session) { v.ID = "other" },
 		"incarnation":   func(v *session.Session) { v.CreatedAt = "recreated" },
@@ -112,5 +119,89 @@ func TestCoordinationSubsetRefreshPreservesOtherOwnersContext(t *testing.T) {
 	s.pruneCoordinationBindings([]session.Session{a})
 	if _, exists := s.sessionCoord.bindings[key]; exists {
 		t.Fatal("removed session's context was not pruned")
+	}
+}
+
+func TestCoordinationBindingRejectsSupersededObservations(t *testing.T) {
+	for _, oldSuccess := range []bool{false, true} {
+		t.Run(fmt.Sprint(oldSuccess), func(t *testing.T) {
+			s, _ := fixture(t, "local")
+			snapshot := session.Session{ID: "remote", Owner: "owner", Transport: "ssh", Hostname: "host", CoordinationActivity: &session.CoordinationObservation{Directory: "/work"}}
+			key := coordinationBindingKey(snapshot)
+			policy := s.coordinationBindingsPolicy()
+			old := s.beginCoordinationBinding(key, policy)
+			current := s.beginCoordinationBinding(key, policy)
+			fresh := &plane.Binding{ID: "fresh", Source: "verified-git"}
+			s.finishCoordinationBinding(key, current, fresh, true)
+			var stale *plane.Binding
+			if oldSuccess {
+				stale = &plane.Binding{ID: "stale", Source: "verified-git"}
+			}
+			s.finishCoordinationBinding(key, old, stale, true)
+			input := s.coordinationInputs("node", []session.Session{snapshot})[0]
+			if input.Project == nil || input.Project.ID != "fresh" {
+				t.Fatal("older observation replaced current project", input)
+			}
+		})
+	}
+}
+func TestCoordinationBindingWithdrawalInvalidatesInFlightAndPreparedLookups(t *testing.T) {
+	s, _ := fixture(t, "local")
+	policy := s.coordinationBindingsPolicy()
+	request := s.beginCoordinationBinding("inflight", policy)
+	s.withdrawCoordinationBindings()
+	s.finishCoordinationBinding("inflight", request, &plane.Binding{ID: "stale"}, true)
+	if len(s.sessionCoord.bindings) != 0 {
+		t.Error("in-flight lookup restored withdrawn context")
+	}
+	if s.beginCoordinationBinding("prepared", policy) != nil {
+		t.Error("prepared lookup survived withdrawal")
+	}
+	current := s.beginCoordinationBinding("fresh", s.coordinationBindingsPolicy())
+	if current == nil {
+		t.Fatal("fresh lookup rejected after policy epoch change")
+	}
+	s.finishCoordinationBinding("fresh", current, &plane.Binding{ID: "fresh"}, true)
+	if s.sessionCoord.bindings["fresh"].project == nil {
+		t.Fatal("fresh verification lost")
+	}
+}
+
+func TestCoordinationBindingPolicyPathsInvalidatePendingResults(t *testing.T) {
+	for _, mode := range []string{"policy-api", "maintenance", "refresh"} {
+		t.Run(mode, func(t *testing.T) {
+			s, h := fixture(t, "local")
+			federationAccounts(t, s)
+			node, err := s.coordinationNode()
+			if err != nil {
+				t.Fatal(err)
+			}
+			policy := s.coordinationBindingsPolicy()
+			pending := s.beginCoordinationBinding("old", policy)
+			if mode == "policy-api" {
+				requireStatus(t, request(h, "PUT", "/api/session-coordination/policy", `{"enabled":false}`, token(t, s, "owner")), 204)
+			} else {
+				if err := s.sessionCoord.service.SetEnabled(node, false); err != nil {
+					t.Fatal(err)
+				}
+				if mode == "maintenance" {
+					if err := s.maintainSessionCoordination(context.Background()); err != nil {
+						t.Fatal(err)
+					}
+				} else {
+					s.refreshCoordinationBindings(context.Background(), nil)
+				}
+			}
+			if err := s.sessionCoord.service.SetEnabled(node, true); err != nil {
+				t.Fatal(err)
+			}
+			s.finishCoordinationBinding("old", pending, &plane.Binding{ID: "stale"}, true)
+			if len(s.sessionCoord.bindings) != 0 {
+				t.Error("pre-disable observation survived reenabling")
+			}
+			if s.beginCoordinationBinding("prepared", policy) != nil {
+				t.Error("pre-disable preparation survived reenabling")
+			}
+		})
 	}
 }

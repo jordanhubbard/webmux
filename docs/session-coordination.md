@@ -80,11 +80,11 @@ account, port, key selection and directory observation before and after the RPC.
 Network/Git work occurs outside its lock. The existing four-second rotating
 maintenance budget includes each remote query's two-second limit. A failed
 refresh clears that observation; an unrefreshed remote observation expires after
-25 seconds. Cache entries are scoped to the session, owner and destination and
-discarded against the complete broker inventory, so one account's partial refresh
+25 seconds. Cache entries are scoped to the session, owner, destination, live broker run and
+authenticated activity. Superseded lookups cannot replace newer observations. Entries are discarded against the complete broker inventory, so one account's partial refresh
 does not evict another account's context. Global disable prevents new refresh
-rounds and clears cached verification; requests already in flight retain their
-original bounds. No project binding is restored as
+rounds, clears cached verification and invalidates prepared/in-flight cache
+updates; requests already in flight retain their original bounds. No project binding is restored as
 current authority after controller restart. Observed path syntax follows the
 execution host, including Windows and Unix paths, rather than the controller OS.
 
@@ -143,7 +143,15 @@ The [native SSH agent qualification](validation/coordination-ssh-agent-2026-11-2
 also passes two real Claude Code 2.1.319 runs through the ordinary alias. An
 independent audit checks actual scoped view/work results and the matching source
 ledger. This uses an explicit two-tool native approval profile; other permission
-policies and native agent reconnect/restart remain unqualified.
+policies remain unqualified. The
+[persistent native SSH reconnect qualification](validation/coordination-ssh-native-reconnect-2026-11-22/README.md)
+keeps the same Claude and stdio MCP process alive across a planned reconnect
+between completed turns. It verifies the old SSH master stops before new native
+view/work calls succeed through refreshed access. The
+[corrected-stack reconnect qualification](validation/coordination-ssh-reconnect-integration-2026-11-22/README.md)
+additionally observes the same processes after the completed second turn and
+regresses stale project-cache writes. Full controller restart,
+unexpected tunnel loss and interrupted delivery remain unqualified.
 
 This requires compatible helpers at both ends, supported SSH multiplexing/
 stream-local forwarding, and a private POSIX socket path of at most 100 bytes.

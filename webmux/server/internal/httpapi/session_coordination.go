@@ -33,9 +33,14 @@ type sessionCoordination struct {
 	endpoint       string
 	bindingsMu     sync.RWMutex
 	bindings       map[string]coordinationProjectObservation
+	bindingsPolicy *coordinationBindingRequest
 }
 
+// Nonzero size gives every observation and withdrawal a distinct identity.
+type coordinationBindingRequest struct{ marker byte }
+
 type coordinationProjectObservation struct {
+	request *coordinationBindingRequest
 	project *plane.Binding
 	expires time.Time // Remote verification cannot survive an unavailable host indefinitely.
 }
@@ -64,7 +69,10 @@ func coordinationBindingKey(s session.Session) string {
 	if s.CoordinationRemote() {
 		// The same hostname/path may refer to different accounts, ports, SSH
 		// key selections and runs. Never share a remote verification by path.
-		key += "\x00" + s.Owner + "\x00" + s.ID + "\x00" + s.CreatedAt + "\x00" + s.Username + "\x00" + strconv.Itoa(s.Port) + "\x00" + s.KeyID
+		key += "\x00" + s.Owner + "\x00" + s.ID + "\x00" + s.CreatedAt + "\x00" + s.Username + "\x00" + strconv.Itoa(s.Port) + "\x00" + s.KeyID + "\x00" + strconv.FormatUint(s.CoordinationRun, 10)
+		if activity := s.CoordinationActivity; activity != nil {
+			key += "\x00" + activity.CLI + "\x00" + activity.Version + "\x00" + activity.Interface
+		}
 	}
 	return key
 }
@@ -91,7 +99,44 @@ func (s *Server) pruneCoordinationBindings(snapshots []session.Session) {
 	}
 	s.sessionCoord.bindingsMu.Unlock()
 }
+func (s *Server) coordinationBindingsPolicy() *coordinationBindingRequest {
+	s.sessionCoord.bindingsMu.RLock()
+	defer s.sessionCoord.bindingsMu.RUnlock()
+	return s.sessionCoord.bindingsPolicy
+}
+func (s *Server) beginCoordinationBinding(key string, policy *coordinationBindingRequest) *coordinationBindingRequest {
+	s.sessionCoord.bindingsMu.Lock()
+	defer s.sessionCoord.bindingsMu.Unlock()
+	if s.sessionCoord.bindingsPolicy != policy {
+		return nil
+	}
+	request := &coordinationBindingRequest{}
+	previous := s.sessionCoord.bindings[key]
+	previous.request = request
+	s.sessionCoord.bindings[key] = previous
+	return request
+}
+func (s *Server) finishCoordinationBinding(key string, request *coordinationBindingRequest, binding *plane.Binding, remote bool) {
+	s.sessionCoord.bindingsMu.Lock()
+	defer s.sessionCoord.bindingsMu.Unlock()
+	// A later-started lookup, pruning or policy withdrawal invalidates this result.
+	if current, exists := s.sessionCoord.bindings[key]; !exists || current.request != request {
+		return
+	}
+	expires := time.Time{}
+	if remote {
+		expires = time.Now().Add(25 * time.Second)
+	}
+	s.sessionCoord.bindings[key] = coordinationProjectObservation{request: request, project: binding, expires: expires}
+}
+func (s *Server) withdrawCoordinationBindings() {
+	s.sessionCoord.bindingsMu.Lock()
+	defer s.sessionCoord.bindingsMu.Unlock()
+	clear(s.sessionCoord.bindings)
+	s.sessionCoord.bindingsPolicy = &coordinationBindingRequest{}
+}
 func (s *Server) refreshCoordinationBindings(ctx context.Context, snapshots []session.Session) int {
+	policy := s.coordinationBindingsPolicy()
 	accounts, err := auth.LoadConfig(s.store)
 	if err != nil {
 		return len(snapshots)
@@ -102,9 +147,7 @@ func (s *Server) refreshCoordinationBindings(ctx context.Context, snapshots []se
 	}
 	enabled, err := s.sessionCoord.service.Enabled(node)
 	if err != nil || !enabled {
-		s.sessionCoord.bindingsMu.Lock()
-		clear(s.sessionCoord.bindings)
-		s.sessionCoord.bindingsMu.Unlock()
+		s.withdrawCoordinationBindings()
 		return len(snapshots)
 	}
 	seen := map[string]bool{}
@@ -124,6 +167,10 @@ func (s *Server) refreshCoordinationBindings(ctx context.Context, snapshots []se
 			continue
 		}
 		seen[key] = true
+		request := s.beginCoordinationBinding(key, policy)
+		if request == nil {
+			continue
+		}
 		var binding *plane.Binding
 		if snapshot.CoordinationRemote() {
 			probe, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -132,13 +179,7 @@ func (s *Server) refreshCoordinationBindings(ctx context.Context, snapshots []se
 		} else {
 			binding, _ = plane.InspectRepository(ctx, directory)
 		}
-		s.sessionCoord.bindingsMu.Lock()
-		expires := time.Time{}
-		if snapshot.CoordinationRemote() {
-			expires = time.Now().Add(25 * time.Second)
-		}
-		s.sessionCoord.bindings[key] = coordinationProjectObservation{project: binding, expires: expires}
-		s.sessionCoord.bindingsMu.Unlock()
+		s.finishCoordinationBinding(key, request, binding, snapshot.CoordinationRemote())
 	}
 	return len(snapshots)
 }
@@ -337,9 +378,7 @@ func (s *Server) maintainSessionCoordination(parent context.Context) error {
 		s.sessionCoord.peers.withdraw()
 		// Global disable also stops execution-host Git queries. Keep live
 		// membership/revocation current without retaining verified context.
-		s.sessionCoord.bindingsMu.Lock()
-		clear(s.sessionCoord.bindings)
-		s.sessionCoord.bindingsMu.Unlock()
+		s.withdrawCoordinationBindings()
 		return s.sessions.WithCoordinationSnapshot(func(all []session.Session) error {
 			return s.sessionCoord.service.Sync(node, s.coordinationInputs(node, all))
 		})
@@ -468,6 +507,7 @@ func (s *Server) setSessionCoordinationPolicy(w http.ResponseWriter, r *http.Req
 		err = s.sessionCoord.service.SetEnabled(node, *input.Enabled)
 		if err == nil && !*input.Enabled {
 			s.sessionCoord.peers.withdraw()
+			s.withdrawCoordinationBindings()
 		}
 	}
 	if err != nil {

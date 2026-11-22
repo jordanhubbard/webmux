@@ -47,7 +47,7 @@ func (b *Broker) InspectCoordinationRepository(ctx context.Context, snapshot Ses
 // Caller holds b.mu. Snapshot fields originate only with this broker.
 func (b *Broker) coordinationRepositoryCurrent(e *entry, snapshot Session) bool {
 	if b.closed || e == nil || e.run == nil || !snapshot.CoordinationRemote() || !e.value.CoordinationRemote() ||
-		e.value.State != "connected" || snapshot.CoordinationActivity == nil || snapshot.CoordinationActivity.Directory == "" || e.value.CoordinationActivity == nil {
+		e.value.State != "connected" || e.run.generation != snapshot.CoordinationRun || snapshot.CoordinationActivity == nil || snapshot.CoordinationActivity.Directory == "" || e.value.CoordinationActivity == nil {
 		return false
 	}
 	v := e.value

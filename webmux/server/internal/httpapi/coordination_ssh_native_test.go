@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -32,8 +33,9 @@ func TestCoordinationSSHNativeBootstrap(t *testing.T) {
 	host, user, root, helper, dir := os.Getenv("WEBMUX_SSH_COORD_HOST"), os.Getenv("WEBMUX_SSH_COORD_USER"), os.Getenv("WEBMUX_SSH_COORD_ROOT"), os.Getenv("WEBMUX_SSH_COORD_HELPER"), os.Getenv("WEBMUX_SSH_COORD_DIR")
 	native := os.Getenv("WEBMUX_SSH_COORD_NATIVE_CLAUDE") == "1"
 	revocation := os.Getenv("WEBMUX_SSH_COORD_REVOKE_ACCOUNT") == "1"
-	if native && (os.Getenv("WEBMUX_SSH_COORD_REFUSE") == "1" || os.Getenv("WEBMUX_SSH_COORD_RECONNECT") == "1" || revocation) {
-		t.Fatal("qualify native adoption separately from shell refusal/reconnect/account controls")
+	reconnect := os.Getenv("WEBMUX_SSH_COORD_RECONNECT") == "1"
+	if native && (os.Getenv("WEBMUX_SSH_COORD_REFUSE") == "1" || revocation) {
+		t.Fatal("qualify native adoption separately from shell refusal/account controls")
 	}
 	if host == "" || user == "" || !filepath.IsAbs(root) || !filepath.IsAbs(helper) || !filepath.IsAbs(dir) {
 		t.Fatal("explicit SSH fixture identity and absolute owned paths required")
@@ -170,11 +172,59 @@ print(json.dumps({'prefix':prefix,'tmux':tmux,'name':name,'socket_cache':socket_
 		nativeTools = []string{prefix + "view", prefix + "act"}
 		prompt := "Inspect the current project context and available collaboration interface before work. Register your current task with text exactly: native SSH channel qualification. Do not read or edit files, run shell commands, delegate, or launch another agent. Report only what the available interface confirms and then stop."
 		args := []string{"claude", "--print", "--output-format", "stream-json", "--verbose", "--max-turns", "12", "--allowedTools", nativeTools[0], nativeTools[1], "--", prompt}
+		if reconnect {
+			args = append(args[:len(args)-2], "--input-format", "stream-json", "--replay-user-messages")
+		}
 		words := make([]string, len(args))
 		for i, arg := range args {
 			words[i] = quote(arg)
 		}
 		command = "cd " + quote(remote.Project) + " && " + strings.Join(words, " ") + " > " + quote(root+"/native.jsonl") + " 2> " + quote(root+"/native.stderr") + "; printf '%s' \"$?\" > " + quote(root+"/native.exit") + "\r"
+		if reconnect {
+			// A fixture-owned producer holds stdin open between two native turns.
+			// It supplies task text only; the ordinary alias still provisions MCP.
+			driver := `import json,pathlib,sys,time
+p=pathlib.Path(sys.argv[1]);i=json.loads((p/'first.json').read_text());print(json.dumps(i),flush=True)
+deadline=time.monotonic()+180
+while not (p/'second.json').exists() and time.monotonic()<deadline:time.sleep(.05)
+if (p/'second.json').exists():
+ print((p/'second.json').read_text(),flush=True)
+ # Keep the original stream alive until the controller witnesses completed work.
+ while not (p/'finish').exists() and time.monotonic()<deadline:time.sleep(.05)`
+			message := map[string]any{"type": "user", "message": map[string]any{"role": "user", "content": prompt}}
+			code := `import json,pathlib,sys;i=json.load(sys.stdin);p=pathlib.Path(i['root']);(p/'driver.py').write_text(i['driver']);(p/'first.json').write_text(json.dumps(i['message']))`
+			runSSH("python3 -c "+quote(code), map[string]any{"root": root, "driver": driver, "message": message})
+			command = "cd " + quote(remote.Project) + " && { python3 " + quote(root+"/driver.py") + " " + quote(root) + " | " + strings.Join(words, " ") + " > " + quote(root+"/native.jsonl") + " 2> " + quote(root+"/native.stderr") + " & job=$!; printf '%s' \"$job\" > " + quote(root+"/native-launch.pid") + "; wait \"$job\"; printf '%s' \"$?\" > " + quote(root+"/native.exit") + "; }\r"
+		}
+	}
+	captureNative := func(waitSeconds int) bool {
+		code := `import json,pathlib,time,sys;p=pathlib.Path(` + fmt.Sprintf("%q", root) + `);deadline=time.monotonic()+float(sys.argv[1])
+while not (p/'native.exit').exists() and time.monotonic()<deadline:time.sleep(.05)
+print(json.dumps({key:(p/name).read_text() if (p/name).exists() else '' for key,name in [('exit','native.exit'),('stdout','native.jsonl'),('stderr','native.stderr')]}))`
+		var result struct{ Exit, Stdout, Stderr string }
+		if err := json.Unmarshal(runSSH("python3 -c "+quote(code)+" "+strconv.Itoa(waitSeconds), nil), &result); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "native.jsonl"), []byte(result.Stdout), 0600); err != nil {
+			t.Fatal(err)
+		}
+		_ = os.WriteFile(filepath.Join(dir, "native.stderr"), []byte(result.Stderr), 0600)
+		node, _ := s.coordinationNode()
+		data, _ := json.MarshalIndent(map[string]any{"subject": coordinationRef(node, created), "tools": nativeTools, "task": "native SSH channel qualification"}, "", "  ")
+		if err := os.WriteFile(filepath.Join(dir, "expected.json"), data, 0600); err != nil {
+			t.Fatal(err)
+		}
+		return result.Exit == "0" && !strings.Contains(result.Stdout, "wmc1.")
+	}
+	if native {
+		t.Cleanup(func() {
+			if t.Failed() {
+				captureNative(0)
+			}
+		})
 	}
 	if refused {
 		command = "if \"$WEBMUX_COORDINATION_CLI\" coordinate view >/dev/null 2>&1; then printf unexpected; else printf unavailable; fi > " + quote(root+"/shell-result") + "\r"
@@ -216,30 +266,7 @@ assert p.read_text()=='unavailable'`
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	if native {
-		code := `import json,pathlib,time;p=pathlib.Path(` + fmt.Sprintf("%q", root) + `);deadline=time.monotonic()+10
-while not (p/'native.exit').exists() and time.monotonic()<deadline:time.sleep(.05)
-print(json.dumps({key:(p/name).read_text() if (p/name).exists() else '' for key,name in [('exit','native.exit'),('stdout','native.jsonl'),('stderr','native.stderr')]}))`
-		var result struct{ Exit, Stdout, Stderr string }
-		if err := json.Unmarshal(runSSH("python3 -c "+quote(code), nil), &result); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.MkdirAll(dir, 0700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(dir, "native.jsonl"), []byte(result.Stdout), 0600); err != nil {
-			t.Fatal(err)
-		}
-		_ = os.WriteFile(filepath.Join(dir, "native.stderr"), []byte(result.Stderr), 0600)
-		if result.Exit != "0" || strings.Contains(result.Stdout, "wmc1.") {
-			t.Fatal("native CLI failed or exposed a capability; private transcript retained")
-		}
-		node, _ := s.coordinationNode()
-		data, _ := json.MarshalIndent(map[string]any{"subject": coordinationRef(node, created), "tools": nativeTools, "task": "native SSH channel qualification"}, "", "  ")
-		if err := os.WriteFile(filepath.Join(dir, "expected.json"), data, 0600); err != nil {
-			t.Fatal(err)
-		}
-	}
+
 	if !passed {
 		text, _ := s.sessions.Scrollback(owner, created.ID)
 		t.Fatalf("remote scoped CLI did not update its broker subject: %s", text)
@@ -257,10 +284,66 @@ print(json.dumps({key:(p/name).read_text() if (p/name).exists() else '' for key,
 			}
 		}
 	}
-	if !refused && os.Getenv("WEBMUX_SSH_COORD_RECONNECT") == "1" {
+	if !refused && reconnect {
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+		initial, _ := json.MarshalIndent(view, "", "  ")
+		if err := os.WriteFile(filepath.Join(dir, "view.json"), initial, 0600); err != nil {
+			t.Fatal(err)
+		}
+		identity := func() string {
+			code := `import json,pathlib
+p=pathlib.Path(` + fmt.Sprintf("%q", root) + `);parent=int((p/'native-launch.pid').read_text());rows={}
+for d in pathlib.Path('/proc').iterdir():
+ if not d.name.isdigit():continue
+ try:
+  stat=(d/'stat').read_text();tail=stat[stat.rindex(')')+2:].split();rows[int(d.name)]=(int(tail[1]),tail[19],(d/'comm').read_text().strip())
+ except (OSError,ValueError):pass
+owned={parent}
+for _ in range(20):owned.update(pid for pid,row in rows.items() if row[0] in owned)
+cli=[];mcp=[]
+for pid in sorted(owned):
+ if pid not in rows:continue
+ row=rows[pid]
+ if row[2].startswith('claude'):cli.append({'pid':pid,'start':row[1]})
+ try:
+  args=(pathlib.Path('/proc')/str(pid)/'cmdline').read_bytes().split(b'\x00')
+  if args[1:3]==[b'coordinate',b'mcp']:mcp.append({'pid':pid,'start':row[1]})
+ except OSError:pass
+# The production native-launch wrapper and Claude both use comm='claude'.
+# The actual native process is the direct parent of its stdio MCP child.
+assert len(mcp)==1, 'expected one scoped MCP child'
+native=rows[mcp[0]['pid']][0];actual=[c for c in cli if c['pid']==native]
+assert len(actual)==1 and all(c['pid'] in (parent,native) for c in cli), 'unexpected native process tree'
+print(json.dumps({'cli':actual[0],'mcp':mcp[0],'launcher':{'pid':parent,'start':rows[parent][1]}},sort_keys=True))`
+			return strings.TrimSpace(string(runSSH("python3 -c "+quote(code), nil)))
+		}
+		var nativeBefore string
+		if native {
+			// Do not cut a turn's in-flight response: reconnect between completed
+			// turns while the same stdin stream, CLI and MCP process remain live.
+			code := `import json,pathlib,time
+p=pathlib.Path(` + fmt.Sprintf("%q", root+"/native.jsonl") + `);deadline=time.monotonic()+10
+while time.monotonic()<deadline:
+ events=[]
+ for line in p.read_text().splitlines():
+  try:events.append(json.loads(line))
+  except ValueError:pass
+ if any(e.get('type')=='result' and e.get('subtype')=='success' and not e.get('is_error') for e in events):break
+ time.sleep(.05)
+else:raise RuntimeError('first native turn did not complete')`
+			runSSH("python3 -c "+quote(code), nil)
+			nativeBefore = identity()
+		}
 		paneCommand := quote(remote.Tmux) + " -L " + quote(remote.Name) + " display-message -p -t " + quote("=webmux-"+created.ID+":") + " " + quote("#{pane_pid}")
 		before := strings.TrimSpace(string(runSSH(paneCommand, nil)))
 		oldControl := s.sessions.SSHControlPath(created.ID)
+		oldMaster, err := exec.Command(realSSH, "-S", oldControl, "-O", "check", "--", host).CombinedOutput()
+		oldPID := regexp.MustCompile(`pid=([0-9]+)`).FindSubmatch(oldMaster)
+		if err != nil || len(oldPID) != 2 {
+			t.Fatal("old private SSH master identity unavailable")
+		}
 		if _, err := s.sessions.Reconnect(owner, created.ID, ""); err != nil {
 			t.Fatal(err)
 		}
@@ -277,15 +360,43 @@ print(json.dumps({key:(p/name).read_text() if (p/name).exists() else '' for key,
 		if !configured || oldControl == s.sessions.SSHControlPath(created.ID) {
 			t.Fatal("reconnect did not establish its own verified channel/run")
 		}
+		oldStopped := false
+		deadline = time.Now().Add(3 * time.Second)
+		for time.Now().Before(deadline) {
+			state, err := exec.Command("/bin/ps", "-o", "stat=", "-p", string(oldPID[1])).Output()
+			if err != nil || strings.TrimSpace(string(state)) == "" || strings.HasPrefix(strings.TrimSpace(string(state)), "Z") {
+				oldStopped = true
+				break
+			}
+			time.Sleep(25 * time.Millisecond)
+		}
+		if !oldStopped {
+			t.Fatal("reconnect left the old private SSH master running")
+		}
 		after := strings.TrimSpace(string(runSSH(paneCommand, nil)))
 		if before == "" || before != after {
 			t.Fatal("reconnect replaced the existing remote provider")
 		}
 		second := strings.ReplaceAll(strings.ReplaceAll(command, "native-ssh-work-1", "native-ssh-work-2"), "native SSH channel qualification", "native SSH channel reconnected")
-		if err := s.sessions.Input(owner, created.ID, second); err != nil {
+		if native {
+			if nativeBefore != identity() {
+				t.Fatal("reconnect replaced the live native CLI or MCP child")
+			}
+			prompt := "Recheck your current project and collaboration interface now. Register your current task with text exactly: native SSH channel reconnected. Do not read or edit files, run shell commands, delegate, or launch another agent. Report only what the interface confirms and then stop."
+			message := map[string]any{"type": "user", "message": map[string]any{"role": "user", "content": prompt}}
+			code := `import json,pathlib,sys;i=json.load(sys.stdin);pathlib.Path(i['file']).write_text(json.dumps(i['message']))`
+			runSSH("python3 -c "+quote(code), map[string]any{"file": root + "/second.json", "message": message})
+			data, _ := json.MarshalIndent(map[string]any{"native_before": json.RawMessage(nativeBefore), "native_after": json.RawMessage(identity()), "pane_before": before, "pane_after": after, "control_replaced": oldControl != s.sessions.SSHControlPath(created.ID), "old_master_stopped": oldStopped}, "", "  ")
+			if err := os.WriteFile(filepath.Join(dir, "reconnect.json"), data, 0600); err != nil {
+				t.Fatal(err)
+			}
+		} else if err := s.sessions.Input(owner, created.ID, second); err != nil {
 			t.Fatal(err)
 		}
 		deadline = time.Now().Add(20 * time.Second)
+		if native {
+			deadline = time.Now().Add(120 * time.Second)
+		}
 		updated := false
 		for time.Now().Before(deadline) {
 			node, _ := s.coordinationNode()
@@ -295,7 +406,7 @@ print(json.dumps({key:(p/name).read_text() if (p/name).exists() else '' for key,
 				t.Fatal(err)
 			}
 			for _, member := range view.Members {
-				if member.Ref.Session == created.ID && member.Task == "native SSH channel reconnected" {
+				if member.Ref.Session == created.ID && member.Task == "native SSH channel reconnected" && member.Project != nil && member.ProjectStatus == "verified-git" {
 					updated = true
 				}
 			}
@@ -308,7 +419,49 @@ print(json.dumps({key:(p/name).read_text() if (p/name).exists() else '' for key,
 			text, _ := s.sessions.Scrollback(owner, created.ID)
 			t.Fatalf("retained shell did not use its refreshed access: %s", text)
 		}
-		t.Log("reconnect replaced only the private SSH channel, preserved the exact remote pane PID, and the existing shell used its new locator")
+		if native {
+			// The old process identities must still hold after the second native
+			// result, not merely in the idle interval before dispatching that turn.
+			code := `import json,pathlib,time
+p=pathlib.Path(` + fmt.Sprintf("%q", root+"/native.jsonl") + `);deadline=time.monotonic()+10
+while time.monotonic()<deadline:
+ events=[]
+ for line in p.read_text().splitlines():
+  try:events.append(json.loads(line))
+  except ValueError:pass
+ if sum(e.get('type')=='result' and e.get('subtype')=='success' and not e.get('is_error') for e in events)==2:break
+ time.sleep(.05)
+else:raise RuntimeError('second native turn did not complete')`
+			runSSH("python3 -c "+quote(code), nil)
+			completed := identity()
+			if completed != nativeBefore {
+				t.Fatal("completed second turn did not retain the original native CLI and MCP child")
+			}
+			data, err := os.ReadFile(filepath.Join(dir, "reconnect.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var continuity map[string]json.RawMessage
+			if err := json.Unmarshal(data, &continuity); err != nil {
+				t.Fatal(err)
+			}
+			continuity["native_completed"] = json.RawMessage(completed)
+			data, err = json.MarshalIndent(continuity, "", "  ")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "reconnect.json"), data, 0600); err != nil {
+				t.Fatal(err)
+			}
+			code = `import pathlib;pathlib.Path(` + fmt.Sprintf("%q", root+"/finish") + `).write_text('finished')`
+			runSSH("python3 -c "+quote(code), nil)
+			t.Log("reconnect and the completed second turn preserve the exact original pane, Claude and MCP process identities; the same conversation updated its task again")
+		} else {
+			t.Log("reconnect replaced only the private SSH channel, preserved the exact remote pane PID, and the existing shell used its new locator")
+		}
+	}
+	if native && !captureNative(10) {
+		t.Fatal("native CLI failed or exposed a capability; private transcript retained")
 	}
 	if revocation {
 		paneCommand := quote(remote.Tmux) + " -L " + quote(remote.Name) + " display-message -p -t " + quote("=webmux-"+created.ID+":") + " " + quote("#{pane_pid}")
@@ -358,7 +511,11 @@ assert p.read_text()=='view-refusedact-refused'`
 		t.Fatal(err)
 	}
 	data, _ := json.MarshalIndent(view, "", "  ")
-	if err := os.WriteFile(filepath.Join(dir, "view.json"), data, 0600); err != nil {
+	viewName := "view.json"
+	if native && reconnect {
+		viewName = "view-reconnected.json"
+	}
+	if err := os.WriteFile(filepath.Join(dir, viewName), data, 0600); err != nil {
 		t.Fatal(err)
 	}
 	text, _ := s.sessions.Scrollback(owner, created.ID)
