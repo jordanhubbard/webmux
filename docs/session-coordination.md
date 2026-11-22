@@ -318,13 +318,31 @@ access per call so a surviving MCP pipe can follow controller endpoint changes.
 Tool errors preserve refused admission, lease expiry and claim-conflict semantics.
 The adapter owns no provider and runs no job or terminal input.
 
+For native inbox waiting, `webmux_coordination_view` accepts `after` and optional
+`wait_seconds` (0–30). Use the last `next_cursor` to wait for new entries without
+shell sleeps. The adapter polls the existing scoped API at bounded intervals,
+reloads private access each time, and returns on arrival, cancellation, refusal
+or its deadline plus at most one bounded read request. Waiting never advances
+message receipts. Callers that omit the field retain immediate-view semantics.
+Native policy may still require approval for MCP tools: provisioning an interface
+is not permission to bypass that policy. Supported exact versions include Claude
+2.1.319 with its separately qualified explicit session-tool allowlist. See the
+[two-host native qualification record](validation/coordination-native-pair-2026-11-22/README.md)
+for tested policies, failed attempts and remaining gates.
+
 Native macOS ARM64 acceptance covers Codex 0.171.0 and Claude 2.1.327 launched
 independently through ordinary broker-owned PTYs, with transcript recording off
 and no browser. Each called the scoped MCP view, resolved a verified Git project
 and discovered its three same-account members. See the
-[native receipt](validation/agent-coordination-2026-11-21/README.md). These are two
-separate single-agent startup checks on one host; a simultaneous two-agent
-claim/handoff/reservation workflow remains pending.
+[native receipt](validation/agent-coordination-2026-11-21/README.md). Those are two
+separate single-agent startup checks on one host. The later
+[two-host native workflow](validation/coordination-native-pair-2026-11-22/README.md)
+qualifies Claude 2.1.327/macOS and 2.1.319/Linux under explicit scoped-tool
+permissions: real counterpart discovery, conflict/busy checks, acknowledged
+handoff and a guarded coding/verification job under the shared fence. Codex's
+read-only/never mutation refusal remains a failed workflow attempt with unchanged
+policy. Managed/SSH, other permissions and discovered/restart acceptance remain
+open.
 
 Codex 0.171.0's default gRPC code-mode host timed out in native qualification.
 Keeping the host enabled and selecting its supported non-gRPC transport passed.

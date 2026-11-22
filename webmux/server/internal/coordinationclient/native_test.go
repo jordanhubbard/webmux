@@ -37,6 +37,7 @@ func TestNativeBootstrapPreservesPolicyAndCredentials(t *testing.T) {
 	}{
 		{"codex", "codex-cli 0.171.0", []string{"--sandbox", "read-only", "-a", "never", "resume", "original-id", "owner prompt"}},
 		{"claude", "2.1.327 (Claude Code)", []string{"--permission-mode", "plan", "--resume", "original-id", "owner prompt"}},
+		{"claude", "2.1.319 (Claude Code)", []string{"--permission-mode", "plan", "--resume", "original-id", "owner prompt"}},
 	} {
 		got, status := NativeLaunch(tc.cli, tc.version, helper, tc.args)
 		if status != "mcp-configured" || len(got) <= len(tc.args) || !reflect.DeepEqual(got[len(got)-len(tc.args):], tc.args) {
