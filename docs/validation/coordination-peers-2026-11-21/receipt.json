@@ -1,0 +1,134 @@
+{
+  "scope": "Native macOS/Linux background authorized project discovery and revocation using real Git repositories/worktrees and ordinary PTY fixtures; read-only context, not native coding-agent collaboration or remote mutation/authority",
+  "qualifiedAtUTC": "2026-11-22T07:30:30.237910+00:00",
+  "sourceBaseCommit": "0f909dbd0271f95a482d86c79a9e98ba5f7ba09d",
+  "sourceSha256": {
+    "tests/frontend/ServersDialog.test.tsx": "d5a29fa364c5a21fa4e7007203c051a74900ab17aaddf51b86bcf7ccd3ba8967",
+    "webmux/frontend/src/components/ServersDialog.tsx": "eb361684abea2519328fc254ebd8c78519ac305f1a04264304e75d56b3e184a5",
+    "webmux/frontend/src/utils/api.ts": "b1fa4b148d4347f6be18aa08611131d5845ea41bda5343d17ecdd9ccbb212696",
+    "webmux/server/internal/coordination/model.go": "b9fd95675489213a32ce98fd6d28c8dc60405a92010c125a557ffcbed990268c",
+    "webmux/server/internal/coordination/snapshot.go": "f653bb423a9d1355904a6380bb0c07968dda63d294942f89492680be55752909",
+    "webmux/server/internal/coordination/snapshot_test.go": "08a4bf7e7b32a606d374a592bb294df17f1b88436551bfb9a3abed7a2d1fa8d4",
+    "webmux/server/internal/coordinationmcp/server.go": "54d6f68102fcb1e0daec7474ab6e9de0bc77519f9be4a9f35aee1da97988af58",
+    "webmux/server/internal/httpapi/coordination_peers.go": "0aa01d5aa4388436b4292f78d38b5d6b857d0beaaff9a7072a2b8599026a4355",
+    "webmux/server/internal/httpapi/coordination_peers_network_test.go": "03d8a4f73cccb88c1d6265cd2ca0949f7d39d3dd2b51285b5b8cc4862f8bf36b",
+    "webmux/server/internal/httpapi/coordination_peers_test.go": "b86737fb192744c3554950067bc61892b967505e0d7e88f9a9b0a63a22ea2162",
+    "webmux/server/internal/httpapi/federation.go": "40dce8c6ef513ecbddcf29d2d597655d6774e806c8d8d3b61664873ac3bb0fee",
+    "webmux/server/internal/httpapi/node_identity_network_test.go": "3bb5d24fdf127a73d07fc687e80d24ffe1bc91a7136d9b0c7f1db6978080a166",
+    "webmux/server/internal/httpapi/server_directory.go": "f4b7e514535ef400ff90747aaf2d4350bec4b8f39869dccb6d0fb11f97f2e37d",
+    "webmux/server/internal/httpapi/session_coordination.go": "50d161cba41fb40b5e67ac4895ce5c73790301ddf034a01f452e89cb1961aae2",
+    "webmux/server/internal/httpapi/session_coordination_test.go": "357e5b296bee847dd789d093bc67bc6c1843f972cf8e6046976248afd26c9ae2"
+  },
+  "checks": [
+    {
+      "command": "Node 24.22.2 PATH go test -p 4 -count=1 ./...",
+      "exit_code": 0,
+      "evidence": "_build/coordination-peers630/go-test-final.log",
+      "evidenceSha256": "efbe3e9b17b3dedeab6dab436cfb445897b622a76e9f51eedda067724ed68542"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "evidence": "_build/coordination-peers630/go-vet-final.log",
+      "evidenceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test -race ./internal/coordination ./internal/coordinationmcp ./internal/httpapi -run 'Test(ProjectSnapshot|MCP|CoordinationPeer|CoordinationSharing|CoordinationLate)' -count=1 -v",
+      "exit_code": 0,
+      "evidence": "_build/coordination-peers630/race-final.log",
+      "evidenceSha256": "652c3f3c794928ac4a4a682f8feb8f714b5686f61e140a58a7ad3df26a2453b9"
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run typecheck",
+      "exit_code": 0,
+      "evidence": "_build/coordination-peers630/typecheck-final.log",
+      "evidenceSha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1"
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run lint --workspace=frontend",
+      "exit_code": 0,
+      "evidence": "_build/coordination-peers630/frontend-lint.log",
+      "evidenceSha256": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b"
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run test --workspace=frontend",
+      "exit_code": 0,
+      "evidence": "_build/coordination-peers630/frontend-test.log",
+      "evidenceSha256": "433aebb57a08c73be1686efdec3143ecc7344f21d417e291344c0302d7674f10"
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run build --workspace=frontend",
+      "exit_code": 0,
+      "evidence": "_build/coordination-peers630/frontend-build.log",
+      "evidenceSha256": "25d5689ca3a000df9297c1c77cf846f4f03a1bf385ad319e10e5f83f5041d5f7"
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run test:contract",
+      "exit_code": 0,
+      "evidence": "_build/coordination-peers630/contract-qualified.log",
+      "evidenceSha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f"
+    }
+  ],
+  "frontend": {
+    "files": 44,
+    "tests": 479
+  },
+  "native": {
+    "controller": "darwin/arm64",
+    "receiver": "linux/arm64",
+    "clientExit": 0,
+    "receiverExit": 0,
+    "scope": "two native host processes; real routed end-to-end TLS; isolated explicitly trusted fixture certificate; independent Git repositories and linked worktrees; ordinary PTY test children; no browser and no manual refresh",
+    "candidateSource": "explicit configured connection; no mDNS acceptance",
+    "authority": "read-only project summaries; remote mutations and reservations remain unavailable",
+    "sameConnectionWitness": "actual accepted net.Conn; proof must succeed before bearer arrives",
+    "proofs": 7,
+    "bearerRequests": 6,
+    "temporaryGrantRemoved": true,
+    "temporaryCredentialFilesRemoved": true,
+    "clientBinarySha256": "ddcb4b4f30296f79ff8d2fdd6eb713866fcb62d0d0f0b37ff1af5e9cc25894ab",
+    "receiverBinarySha256": "71d02e9fb3d30a9051a7101db059686b2a4a10217fae4da6534d05b84966fe09",
+    "transferVerified": true,
+    "clientOutput": "=== RUN   TestCoordinationPeerNativeNetworkClient\n    coordination_peers_network_test.go:108: native two-host background pinned HTTPS project discovery passed (no browser or manual refresh): terminal-only refusal, explicit node/account sharing, two same-project remote PTY members, foreign-account isolation and revocation; no native coding-agent or remote-mutation acceptance\n--- PASS: TestCoordinationPeerNativeNetworkClient (31.21s)\nPASS\n",
+    "receiverOutput": "=== RUN   TestNodeIdentityNativeNetworkServer\n    node_identity_network_test.go:213: native receiver observed 7 proofs and 6 requests with bearer credentials, all on proven TLS connections\n--- PASS: TestNodeIdentityNativeNetworkServer (43.14s)\nPASS\n",
+    "clientOutputSha256": "e166d8226bd9ea9808c58cf64dcf7f4a553bb284bf128d757bdebe8ab125471b",
+    "receiverOutputSha256": "8aa3f87456580a696af8c4dd92334718bf4dff96129defae68ff8ad59c23dc0d"
+  },
+  "crossCompilation": {
+    "exit_code": 0,
+    "scope": "compile-only Windows ARM64 server and HTTP API tests",
+    "sha256": {
+      "webmux-windows-arm64.exe": "aff2e258993800016702103ddce9ed11cb65d1a8e04f8deba2c002cdf404efe9",
+      "httpapi-windows-final.test.exe": "b3df2746f77b26b813014186a0ce9348b981977665ba3d336dd3d45a667d3e80"
+    }
+  },
+  "parentWindowsFix": {
+    "pr": 637,
+    "failedHead": "f46fd9db7567228a868a3b3f41b2169a3eebfea1",
+    "fix": "0f909db",
+    "scope": "test-only JSON path escaping and native absolute-directory fixtures; no runtime guard or recording policy change",
+    "localFocusedRaceExit": 0,
+    "windowsTestCompilationExit": 0,
+    "hostedNativeStatus": "pending; not claimed as passing",
+    "failedJobURL": "https://github.com/jordanhubbard/webmux/actions/runs/44995182903/job/137124570608"
+  },
+  "limits": {
+    "snapshotBytes": 1048576,
+    "cachedPayloadBytes": 16777216,
+    "viewRemotePayloadBytes": 3145728,
+    "freshnessSeconds": 30,
+    "refreshIntervalSeconds": 10,
+    "refreshBudgetSeconds": 6,
+    "requestBudgetSeconds": 5,
+    "networkConcurrency": 4
+  },
+  "remaining": [
+    "durable cross-node messages, acknowledgments and receipts",
+    "cross-node claims/overlap notifications and shared reservation authority",
+    "two independently started real coding agents exchanging work across hosts",
+    "managed/SSH and existing running-agent onboarding",
+    "explicit repository mappings and large-context pagination/scale",
+    "native Windows/Linux custody, sandbox and distribution acceptance",
+    "complete mDNS/discovered two-host restart/reconnect workflow"
+  ]
+}

@@ -56,18 +56,24 @@ func coordinationGit(t *testing.T, dir string, args ...string) {
 	}
 }
 func coordinationAPI(t *testing.T) (*Server, http.Handler, http.Handler, []session.Session, []coordinationclient.Access) {
+	return coordinationAPIRepository(t, "")
+}
+func coordinationAPIRepository(t *testing.T, repo string) (*Server, http.Handler, http.Handler, []session.Session, []coordinationclient.Access) {
 	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("Git required for verified project control")
 	}
 	t.Setenv("WEBMUX_COORDINATION_CACHE_HOME", t.TempDir())
 	t.Setenv("WEBMUX_TEST_COORDINATION_CHILD", "1")
-	repo := t.TempDir()
-	coordinationGit(t, repo, "init")
-	coordinationGit(t, repo, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "commit", "--allow-empty", "-m", "root")
-	coordinationGit(t, repo, "remote", "add", "origin", "https://example.test/team/shared.git")
+	if repo == "" {
+		repo = t.TempDir()
+		coordinationGit(t, repo, "init")
+		coordinationGit(t, repo, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "commit", "--allow-empty", "-m", "root")
+		coordinationGit(t, repo, "remote", "add", "origin", "https://example.test/team/shared.git")
+		linked := filepath.Join(repo, ".worktrees", "peer")
+		coordinationGit(t, repo, "worktree", "add", "-b", "peer", linked, "HEAD")
+	}
 	linked := filepath.Join(repo, ".worktrees", "peer")
-	coordinationGit(t, repo, "worktree", "add", "-b", "peer", linked, "HEAD")
 	old, _ := fixture(t, "local")
 	federationAccounts(t, old)
 	if err := old.store.WriteConfig("app.yaml", map[string]any{"app": map[string]any{"session_logging": map[string]any{"enabled": false}}}); err != nil {

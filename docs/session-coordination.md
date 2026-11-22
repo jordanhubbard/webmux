@@ -4,8 +4,9 @@ The server now owns a durable, enabled-by-default coordination ledger under
 [#630](https://github.com/jordanhubbard/webmux/issues/630). This checkpoint exposes
 a scoped local CLI to ordinary local/exec sessions, attaches native MCP guidance
 through qualified ordinary CLI aliases, and records all broker session identities.
-Its advertised scope is `node-local`. Managed/SSH execution-host onboarding,
-cross-node coordination and full real-agent acceptance remain open in the
+Its action scope is `node-local`, with explicitly authorized read-only peer
+summaries. Managed/SSH execution-host onboarding, cross-node mutations and full
+real-agent acceptance remain open in the
 [roadmap](roadmap.md).
 
 ## Ordinary session interface
@@ -62,6 +63,55 @@ to 120 seconds, with a 15–900 second range. Claims do not lock files. Reservat
 do not run or stop jobs: participating workers must honor expiry and fencing.
 There is one resource, `node:<node_id>:heavy`, shared across accounts on this
 node; another account/project sees occupancy but not the holder's identity.
+
+## Authorized peer discovery
+
+[Connected-server coordination controls](server-federation.md#share-project-coordination-context)
+map one local account to an enrolled HTTPS receiving node/account and separately
+authorize incoming project summaries. Legacy terminal grants remain unchanged.
+The session's verified repository ID selects remote context; matching folder
+names or terminal titles never establish a match. The `members`/`claims` fields
+remain local. The nested `peers` field preserves the remote node/account/session
+identities and a `mode` of `read-only`. An account may be mapped to a differently
+named receiving account; other local accounts see none of that mapping's data.
+
+Summaries contain matching members/tasks/branches/worktrees, advisory claims and
+node heavy-worker availability. Inbox/outbox content, request receipts, capability
+files and credential values are never exported. Requests use one fixed endpoint,
+`POST /api/federation/coordination/snapshot`, with a project selector. Its incoming
+grant must explicitly permit coordination, and end-to-end HTTPS is required.
+Each response is checked against the enrolled node, receiving account, requested
+project and resource authority. The receiving node exports only its local ledger;
+cycles in the connection graph do not recurse or confer transitive access.
+
+The server refreshes context on its ten-second maintenance timer with four
+network workers, a six-second aggregate budget and a five-second per-request
+budget (covering the receiver's bounded Git inspection). A rotating cursor keeps
+slow nodes/projects from starving the rest. No browser is needed. Agent requests
+read cached summaries and never hold the broker lock during network traffic.
+Only `current` denotes a recent point-in-time summary; it grants no lease or
+liveness guarantee. `pending`, `stale`, `invalid`, `unauthorized`, `disabled` and
+`unavailable` require reporting incomplete context. Network failures retain an
+explicitly stale snapshot for at most 30 seconds from its last successful fetch.
+Receiving refusals/disabled policy clear data; a late old response cannot revive
+context after a refusal. Local mapping, credential, identity or endpoint edits
+invalidate the corresponding cache key on subsequent reads.
+
+Each remote response is limited to 1 MiB, retained remote payloads to 16 MiB and
+remote additions to one view to 3 MiB. Capacity limits report unavailable context
+with `cache-capacity`/`view-capacity` reasons; they do not silently truncate a peer
+membership list. Large-context pagination and scale qualification remain open.
+A controller restart begins with pending observations and refetches; the cache is
+not a second durable owner of remote state. The local mutation tools refuse
+remote resource IDs/targets. Cross-node handoffs, overlap notifications and
+reservation authority remain required before the full workflow is complete.
+
+The [macOS/Linux qualification](validation/coordination-peers-2026-11-21/README.md)
+uses independent real Git repositories/worktrees and ordinary PTY fixtures on two
+native hosts. Background refresh discovers authorized project peers, preserves
+foreign-account isolation and observes revocation without a browser or manual
+refresh. This is protocol and ordinary-session context acceptance; two real coding
+agents exchanging work across hosts remain a separate gate.
 
 ## Native agent startup and MCP
 
@@ -174,7 +224,7 @@ started coding agents.
 
 Remaining #630/#631 work includes complete live native inbox/notification and
 existing-agent onboarding; independently started ordinary/managed pairs; SSH/remote
-execution-host provisioning; cross-node membership, delivery and shared authority;
+execution-host provisioning; cross-node delivery, mutations and shared authority;
 explicit project mappings; platform custody/sandbox acceptance; full native LAN
 discovery and reconnect qualification; and the complete two-real-host workflow.
 No roadmap checkbox is completed by this checkpoint.
@@ -198,3 +248,12 @@ transport choice likewise prevents its default compatibility override. The
 records the original regressions and isolated native parser evidence. These
 checks preserve user choices; they do not qualify the explicitly selected gRPC
 transport that failed the earlier native bootstrap experiment.
+
+## Peer mapping revocation
+
+Once refresh observes a mapping's removal, its in-flight responses cannot populate
+a re-enabled mapping. Re-enabling the same configuration leaves context pending
+until a fresh fetch succeeds. Refused, disabled and invalid observations also
+retire requests from the previous authorization period. The
+[controlled TLS regression](validation/coordination-peer-mapping-revocation-2026-11-22/README.md)
+records the original failure, recovery check and limits of this qualification.
