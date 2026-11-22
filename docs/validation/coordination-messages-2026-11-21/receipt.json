@@ -1,0 +1,150 @@
+{
+  "scope": "Durable cross-node coordination inbox admission and explicit receipts; native macOS/Linux ordinary PTY fixtures, not real coding-agent collaboration or remote claims/reservations",
+  "qualifiedAtUTC": "2026-11-22T07:57:37.886261+00:00",
+  "sourceBaseCommit": "aed530f5cbecd4fdd052c0532da16aeb568c3e8c",
+  "sourceSha256": {
+    "tests/frontend/ServersDialog.test.tsx": "307f9c4ad7469c8c836d9e344933102d40605e7d8b71d41ffd2b499dfa17192c",
+    "webmux/frontend/src/components/ServersDialog.tsx": "9b85408c114a58fba2ba7972780a0d712a774273bda2aa8bfbc16ed6e31dd492",
+    "webmux/frontend/src/utils/api.ts": "90d24973d5844b0fee5526d75cc58b65daa983af961daf963be8e25bff386dfb",
+    "webmux/server/internal/coordination/members.go": "9e42c644cbf853557c7a54567e0a889bbae261f0d0722feed544f3a4d7e1d80d",
+    "webmux/server/internal/coordination/model.go": "f5b565b54a97b3dfc3903646083c53cb0f5ea49c77dcc2d3d2bf7e0204486234",
+    "webmux/server/internal/coordination/operations.go": "72d09329e74893788e09f1473de7136258c7781af4b8f6539f43b40ae14fff84",
+    "webmux/server/internal/coordination/remote.go": "3dc4cded365400a5d6413f126dadbd8583fef7731f15f30e0031ec07d2e47705",
+    "webmux/server/internal/coordination/remote_test.go": "9d9c346c50735f4c6bd724298a79fc66948061e0905e624a015ba6470ee361bf",
+    "webmux/server/internal/coordination/snapshot.go": "98f0a1ee46069dbc4fc1bc68c92837cac977cbd2d5a977454d4588f56c31ec9d",
+    "webmux/server/internal/coordination/store.go": "12566d67e11705ae6bc0dfb5aea1c2deddd5dab55500f1302e3131fd6e38d9d8",
+    "webmux/server/internal/coordinationmcp/server.go": "226c45eb7a0b558e9d32f3bb13cdb9323e8ed754881b3b737b4f2948719c3afb",
+    "webmux/server/internal/httpapi/coordination_messages.go": "b3b9073d0858cad23ea22b6a0b5e512ac465d329d30d64838c1b016c27b6be65",
+    "webmux/server/internal/httpapi/coordination_messages_test.go": "abb4a7eb2a7f9a649c69c7c2ead2c39161128a36f6dac628fc8130dcc9492f32",
+    "webmux/server/internal/httpapi/coordination_peers.go": "a7f05920cae33ab557019f51a1f15a92dd08440f8755f552251a2d847e40344a",
+    "webmux/server/internal/httpapi/coordination_peers_network_test.go": "1771bfa5b39a3f0979e6b8bd3f8bf1ff671839deab1b7e957bf9578b74a960ba",
+    "webmux/server/internal/httpapi/federation.go": "f057e4be68a0af3c453382eb0002beb52f82ac137e6ff25d56dcfc997c821a61",
+    "webmux/server/internal/httpapi/node_identity_network_test.go": "3cb69f31b5e310989ab22e2400672c9afbcd75efe7bb90bcbdbb403505a48774",
+    "webmux/server/internal/httpapi/server_directory.go": "b684dc1796f86b9df8c0d6eae20c52294b43b3092a5af551971250b18a233e19",
+    "webmux/server/internal/httpapi/session_coordination.go": "5e040208de70432b1fb881916b10ed1d9a4ff6df4763fb2d9499445f82ab7313"
+  },
+  "checks": [
+    {
+      "command": "Node 24.22.2 PATH go test -p 4 -count=1 ./...",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-messaging630/go-test-final.log",
+        "sha256": "0d42d7d06c5bc1c014c735e1d6655287b896b0d9e5454e4790c804e62917bef8"
+      }
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-messaging630/go-vet-final.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "command": "go test -race ./internal/coordination ./internal/coordinationmcp ./internal/httpapi -run 'TestRemote|TestCoordinationRemoteMessage|TestMCP' -count=1",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-messaging630/race-final.log",
+        "sha256": "af43e38ca1d5cab5eafb3494965ad507429e55b6c008ebd4078acae9d64e6d08"
+      }
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run typecheck",
+      "exit_code": 0
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run lint --workspace=frontend",
+      "exit_code": 0
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run test --workspace=frontend",
+      "exit_code": 0,
+      "files": 44,
+      "tests": 480
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run build --workspace=frontend",
+      "exit_code": 0,
+      "warning": "Existing bundle chunk size warning"
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run test:contract",
+      "exit_code": 0
+    },
+    {
+      "command": "GOOS=windows GOARCH=arm64 go test -c ./internal/httpapi",
+      "exit_code": 0,
+      "scope": "cross-compilation only"
+    }
+  ],
+  "native": {
+    "controller": "darwin/arm64",
+    "receiver": "linux/arm64",
+    "clientExit": 0,
+    "receiverExit": 0,
+    "roles": "TestCoordinationPeerNativeNetworkClient / TestNodeIdentityNativeNetworkServer",
+    "environment": "WEBMUX_NODE_NETWORK_ROLE=client|server WEBMUX_COORDINATION_PEER_NETWORK=1 WEBMUX_COORDINATION_MESSAGE_NETWORK=1; isolated directory and explicit routed receiver bind",
+    "scope": "ordinary broker-owned PTY child fixtures; independent deterministic real Git repositories and linked worktrees; fixed pinned HTTPS endpoints; same-connection identity proof before bearer; isolated fixture TLS trust; no browser/manual maintenance calls",
+    "admitRequests": 1,
+    "receiptStatusRequests": 2,
+    "deliberatelyLostCommittedReplies": 1,
+    "recipientInboxRecords": 1,
+    "explicitRecipientStates": [
+      "delivered",
+      "acknowledged",
+      "completed"
+    ],
+    "connectionProofs": 13,
+    "credentialRequests": 12,
+    "localBinary": {
+      "path": "_build/coordination-messaging630/native/httpapi-darwin.test",
+      "sha256": "9ec483a2d36ac2289b3ded5547fdf88f3e9b0d572894598183aebb3b86d52bc1"
+    },
+    "receiverBinary": {
+      "path": "_build/coordination-messaging630/native/httpapi-linux.test",
+      "sha256": "54de320269f22eb46331142bb562fda3d3ba41bb9072e52f00eb1d55a0d41526"
+    },
+    "receiverTransferSha256Verified": true,
+    "clientLog": {
+      "path": "_build/coordination-messaging630/native/run-final/client.log",
+      "sha256": "148a048d9616e84cb8122c7eb75afe9325cbf2dc85a54a1d6a905453b7af4f83"
+    },
+    "serverLog": {
+      "path": "_build/coordination-messaging630/native/run-final/server.log",
+      "sha256": "e34eb818447016b91504f71cfebb22f2d8df546333766e9b58a90a0c19cea876"
+    },
+    "receiverArtifacts": "/home/jkh/.cache/webmux/qualification/coordination-messaging630/run-final",
+    "fixtureCredentialsRemoved": true,
+    "fixtureProcessesExited": true,
+    "installedServicesChanged": false
+  },
+  "recovery": {
+    "schema": 2,
+    "legacyMigration": "atomic intact version 1 upgrade, preserves signing key, receipts and fences",
+    "receiverHistoryEpoch": "random 128-bit per authority history",
+    "unknownOutcome": "status query before exact replay; authenticated absent in same epoch and fresh live source/project required",
+    "historyLoss": "history-changed/history-lost are terminal, no automatic replay",
+    "executionGuarantee": "unique inbox admission for retained history; no exactly-once external work guarantee"
+  },
+  "limits": {
+    "envelopeBytes": 16384,
+    "receiptBytes": 32768,
+    "textBytes": 8192,
+    "intervalSeconds": 2,
+    "batchSeconds": 8,
+    "recordSeconds": 5,
+    "networkConcurrency": 4
+  },
+  "remaining": [
+    "cross-node claims and overlap notifications",
+    "remote/shared reservation authority",
+    "real independently started coding agents collaborating across hosts",
+    "live notifications and existing-agent onboarding",
+    "managed/SSH execution-host provisioning",
+    "explicit repository mappings",
+    "retention, large-context pagination/scale and retry backoff tuning",
+    "platform custody/sandbox/distribution acceptance",
+    "complete LAN discovery/reconnect qualification"
+  ],
+  "hostedStatus": "pending on publication; Windows cross-compilation is not native acceptance"
+}

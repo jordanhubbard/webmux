@@ -9,14 +9,18 @@ import (
 // ProjectSnapshot is read-only context exported by a node/account authority.
 // It contains no capability, inbox, outbox, request receipt or process control.
 type ProjectSnapshot struct {
-	Contract  string         `json:"contract"`
-	Node      string         `json:"node_id"`
-	Owner     string         `json:"owner"`
-	Project   string         `json:"project_id"`
-	Enabled   bool           `json:"enabled"`
-	Members   []Member       `json:"members"`
-	Claims    []Claim        `json:"claims"`
-	Resources []ResourceView `json:"resources"`
+	Messaging    bool           `json:"messaging,omitempty"`
+	SourceNode   string         `json:"source_node_id,omitempty"`
+	SourceOwner  string         `json:"source_owner,omitempty"`
+	HistoryEpoch string         `json:"history_epoch,omitempty"`
+	Contract     string         `json:"contract"`
+	Node         string         `json:"node_id"`
+	Owner        string         `json:"owner"`
+	Project      string         `json:"project_id"`
+	Enabled      bool           `json:"enabled"`
+	Members      []Member       `json:"members"`
+	Claims       []Claim        `json:"claims"`
+	Resources    []ResourceView `json:"resources"`
 }
 
 type PeerView struct {
@@ -25,7 +29,7 @@ type PeerView struct {
 	Node     string           `json:"node_id"`
 	Owner    string           `json:"owner"`
 	Project  string           `json:"project_id"`
-	Mode     string           `json:"mode"` // read-only; remote mutations are not yet implemented.
+	Mode     string           `json:"mode"` // read-only summary; messaging requires separate permissions.
 	State    string           `json:"state"`
 	Reason   string           `json:"reason,omitempty"`
 	Observed *time.Time       `json:"observed,omitempty"`
@@ -35,7 +39,7 @@ type PeerView struct {
 
 func ValidProjectSelector(project string) bool { return validText(project, 256) }
 func Snapshot(view View, node, owner, project string) ProjectSnapshot {
-	out := ProjectSnapshot{Contract: Contract, Node: node, Owner: owner, Project: project, Enabled: view.Enabled, Members: []Member{}, Claims: []Claim{}, Resources: []ResourceView{}}
+	out := ProjectSnapshot{HistoryEpoch: view.HistoryEpoch, Contract: Contract, Node: node, Owner: owner, Project: project, Enabled: view.Enabled, Members: []Member{}, Claims: []Claim{}, Resources: []ResourceView{}}
 	if !view.Enabled {
 		return out
 	}
@@ -69,6 +73,12 @@ func Snapshot(view View, node, owner, project string) ProjectSnapshot {
 }
 func (s ProjectSnapshot) Valid(node, owner, project string) bool {
 	if s.Contract != Contract || s.Node != node || s.Owner != owner || s.Project != project || !validHex(node, 16) || !validText(owner, 256) || !ValidProjectSelector(project) {
+		return false
+	}
+	if s.Messaging && (!s.Enabled || !ValidSenderScope(s.SourceNode, s.SourceOwner) || !validHex(s.HistoryEpoch, 16)) {
+		return false
+	}
+	if s.HistoryEpoch != "" && !validHex(s.HistoryEpoch, 16) {
 		return false
 	}
 	if !s.Enabled && (len(s.Members) != 0 || len(s.Claims) != 0 || len(s.Resources) != 0) {

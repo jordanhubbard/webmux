@@ -100,10 +100,48 @@ func TestCoordinationPeerNativeNetworkClient(t *testing.T) {
 	if json.Unmarshal(foreign.Body.Bytes(), &isolated) != nil || len(isolated.Peers) != 0 {
 		t.Fatal("foreign account borrowed native peer credential")
 	}
+	if os.Getenv("WEBMUX_COORDINATION_MESSAGE_NETWORK") == "1" {
+		node, err := a.coordinationNode()
+		if err != nil {
+			t.Fatal(err)
+		}
+		requireStatus(t, request(ah, "PUT", "/api/servers/remote", directoryJSON(map[string]any{"name": "Native coordination peer", "url": manifest.Original, "coordination_messages": true}), admin), 204)
+		control("/_qualification/allow-messages?source_node=" + node)
+		deadline := time.Now().Add(20 * time.Second)
+		var ready plane.View
+		for time.Now().Before(deadline) {
+			ready = view()
+			if len(ready.Peers) == 1 && ready.Peers[0].Snapshot != nil && ready.Peers[0].Snapshot.Messaging {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		if len(ready.Peers) != 1 || ready.Peers[0].Snapshot == nil || !ready.Peers[0].Snapshot.Messaging {
+			t.Fatal("native message permission not observed")
+		}
+		target := ready.Peers[0].Snapshot.Members[1].Ref
+		intent := plane.Request{ID: "native-cross-host-message", Action: "message", Kind: "handoff", Target: &target, Text: "Native remote inbox: review the ownership change."}
+		sent := request(agent, "POST", "/act", directoryJSON(intent), access[0].Capability)
+		requireStatus(t, sent, 200)
+		var result plane.Result
+		if json.Unmarshal(sent.Body.Bytes(), &result) != nil || result.Transport != "pending" {
+			t.Fatal("native outbox admission failed", sent.Body.String())
+		}
+		pair := &coordinationPair{a: a, agent: agent, access: access, secret: secret}
+		coordinationMessageWait(t, pair, result.Record, "admitted", "remote-admitted")
+		control("/_qualification/complete-message?record=" + result.Record + "&session=" + target.Session)
+		coordinationMessageWait(t, pair, result.Record, "completed", "remote-admitted")
+		repeat := request(agent, "POST", "/act", directoryJSON(intent), access[0].Capability)
+		requireStatus(t, repeat, 200)
+		if repeat.Body.String() != sent.Body.String() {
+			t.Fatal("native exact intent retry changed admission")
+		}
+		t.Log("native two-host message passed: durable admission, lost reply, status reconciliation, explicit recipient receipts, exact request retry; ordinary PTY child fixtures, not LLM agent pair acceptance")
+	}
 	control("/_qualification/revoke-coordination")
 	if got := waitState("unauthorized").Peers[0]; got.Snapshot != nil {
 		t.Fatal("native revocation retained data")
 	}
 	control("/_qualification/stop")
-	t.Log("native two-host background pinned HTTPS project discovery passed (no browser or manual refresh): terminal-only refusal, explicit node/account sharing, two same-project remote PTY members, foreign-account isolation and revocation; no native coding-agent or remote-mutation acceptance")
+	t.Log("native two-host background pinned HTTPS project discovery passed (no browser or manual refresh): terminal-only refusal, explicit node/account sharing, two same-project remote PTY members, foreign-account isolation and revocation; no native coding-agent acceptance")
 }

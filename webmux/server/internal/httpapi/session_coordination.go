@@ -21,15 +21,17 @@ import (
 )
 
 type sessionCoordination struct {
-	peers         coordinationPeerCache
-	bindingCursor int // Owned only by the maintenance goroutine.
-	service       *plane.Service
-	once          sync.Once
-	cancel        context.CancelFunc
-	done          chan struct{}
-	endpoint      string
-	bindingsMu    sync.RWMutex
-	bindings      map[string]*plane.Binding
+	messagesCursor int // Owned only by the message delivery worker.
+	messagesWake   chan struct{}
+	peers          coordinationPeerCache
+	bindingCursor  int // Owned only by the maintenance goroutine.
+	service        *plane.Service
+	once           sync.Once
+	cancel         context.CancelFunc
+	done           chan struct{}
+	endpoint       string
+	bindingsMu     sync.RWMutex
+	bindings       map[string]*plane.Binding
 }
 
 func coordinationRef(node string, s session.Session) plane.Ref {
@@ -208,8 +210,12 @@ func (s *Server) StartSessionCoordination() {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.sessionCoord.cancel = cancel
 	s.sessionCoord.done = make(chan struct{})
+	s.sessionCoord.messagesWake = make(chan struct{}, 1)
+	messageDone := make(chan struct{})
+	go func() { defer close(messageDone); s.runCoordinationMessages(ctx) }()
 	go func() {
 		defer close(s.sessionCoord.done)
+		defer func() { <-messageDone }()
 		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 		lastError := ""
@@ -408,6 +414,10 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	var route *plane.RemoteRoute
+	if operation.Action == "message" && operation.Target != nil && operation.Target.Node != node {
+		route = s.coordinationMessageRoute(ref, *operation.Target, s.coordinationInputs(node, snapshots))
+	}
 	var response any
 	err = s.sessions.WithCoordinationSnapshot(func(all []session.Session) error {
 		inputs := s.coordinationInputs(node, all)
@@ -416,7 +426,7 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 			response = view
 			return e
 		}
-		result, e := s.sessionCoord.service.Execute(node, token, inputs, operation)
+		result, e := s.sessionCoord.service.ExecuteRouted(node, token, inputs, operation, route)
 		response = result
 		return e
 	})
@@ -427,6 +437,9 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 	if view, ok := response.(plane.View); ok {
 		s.attachCoordinationPeers(&view, ref.Owner)
 		response = view
+	}
+	if result, ok := response.(plane.Result); ok && result.Transport == "pending" {
+		s.wakeCoordinationMessages()
 	}
 	writeJSON(w, 200, response)
 }
