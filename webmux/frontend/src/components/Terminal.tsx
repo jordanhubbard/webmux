@@ -439,9 +439,17 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
     });
 
     // Route input through the broadcast context instead of sending directly
+    let localWheelInput = false;
+    term.attachCustomWheelEventHandler(() => {
+      // Set this inside xterm's callback: browser microtask checkpoints can
+      // otherwise clear a capture-phase flag before xterm's bubble listener.
+      localWheelInput = true;
+      queueMicrotask(() => { localWheelInput = false; });
+      return true;
+    });
     const dataListener = term.onData((data: string) => {
       if (shouldSuppressTerminalInput(data)) return;
-      if (localPasteRef.current || isTerminalLocalInput(data)) wsHandleRef.current?.send({ type: 'input', data });
+      if (localPasteRef.current || localWheelInput || isTerminalLocalInput(data)) wsHandleRef.current?.send({ type: 'input', data });
       else routeInputRef.current(sessionId, data);
     });
 
@@ -465,7 +473,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
         });
       }
     };
-    termEl.addEventListener('wheel', wheelHandler, { passive: true });
+    termEl.addEventListener('wheel', wheelHandler, { capture: true, passive: true });
 
     const el = containerRef.current;
     const focusHandler = () => {
@@ -492,7 +500,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       resizeListener.dispose();
       bellListener.dispose();
       terminalQuerySuppressor.dispose();
-      termEl.removeEventListener('wheel', wheelHandler);
+      termEl.removeEventListener('wheel', wheelHandler, true);
       el.removeEventListener('mousedown', clickHandler);
       el.removeEventListener('focusin', focusHandler);
       el.removeEventListener('focusout', cancelClipboardRead);
@@ -614,6 +622,7 @@ export const Terminal = forwardRef<TerminalHandle, TerminalProps>(function Termi
       </div>}
       <div
         ref={containerRef}
+        data-terminal-session={sessionId}
         data-1p-ignore
         style={{
           width: '100%',

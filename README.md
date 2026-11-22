@@ -68,6 +68,12 @@ In **Connect to Host**, choose **Localhost · tmux** under **Quick Connect** to 
 
 Local terminals use the same terminal emulator and workspace as remote SSH sessions. They run as the OS user running WebMux (not the browser's login name). Each terminal has its own `webmux-<session-id>` tmux session; reconnecting or restarting WebMux reattaches to that shell. A machine reboot ends the running shell, and recovery creates a new one.
 
+Two-finger or wheel scrolling without modifiers goes to the selected terminal,
+including while the pointer is over another terminal or empty grid space. Hold
+**Shift** to pan the terminal grid horizontally and vertically instead. Wheel
+input stays with its window even when **Type to All** is enabled. The same routing
+is available in connected-server terminal views.
+
 The wheel scrolls a local or Rig-managed terminal's tmux pane history. WebMux enables tmux mouse mode for those sessions when it attaches, without changing other tmux sessions. For tmux reached through SSH or another independently managed connection, enable tmux mouse mode there (`tmux set -g mouse on`) to use wheel scrolling; `Ctrl+B` then `[` enters copy mode from the keyboard.
 
 The **Pack** button stays above the local terminal grid and compacts visible
