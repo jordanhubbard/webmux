@@ -80,14 +80,20 @@ func WriteAccess(name string, access Access) error {
 	}
 	return os.Rename(file.Name(), name)
 }
-func Load() (Access, error) {
+func AccessPath() (string, error) {
 	name := os.Getenv("WEBMUX_COORDINATION_FILE")
-	if name == "" {
-		var err error
-		name, err = Locator(os.Getenv("WEBMUX_RECOVERY_SESSION"), os.Getenv("WEBMUX_RECOVERY_KEY"))
-		if err != nil {
-			return Access{}, err
+	if name != "" {
+		if !filepath.IsAbs(name) {
+			return "", errors.New("coordination access file must use an absolute location")
 		}
+		return name, nil
+	}
+	return Locator(os.Getenv("WEBMUX_RECOVERY_SESSION"), os.Getenv("WEBMUX_RECOVERY_KEY"))
+}
+func Load() (Access, error) {
+	name, err := AccessPath()
+	if err != nil {
+		return Access{}, err
 	}
 	info, err := os.Stat(name)
 	if err != nil {
@@ -103,6 +109,13 @@ func Load() (Access, error) {
 	var access Access
 	if json.Unmarshal(data, &access) != nil || access.Contract != coordination.Contract || access.Capability == "" {
 		return Access{}, errors.New("invalid coordination access file")
+	}
+	expected := os.Getenv("WEBMUX_COORDINATION_EXPECTED_SESSION")
+	if expected == "" {
+		expected = os.Getenv("WEBMUX_RECOVERY_SESSION")
+	}
+	if expected != "" && access.Subject.Session != expected {
+		return Access{}, errors.New("coordination interface belongs to another session")
 	}
 	if err := validateAccess(access); err != nil {
 		return Access{}, err
@@ -201,20 +214,25 @@ func Run(args []string, in io.Reader, out io.Writer) error {
 		if json.Unmarshal(response.Bytes(), &result) != nil {
 			return errors.New("invalid coordination operation result")
 		}
-		switch result.Status {
-		case "updated", "claimed", "released", "admitted", "recorded", "reserved", "renewed":
-		default:
-			return errors.New("coordination operation was not admitted: " + result.Status)
-		}
-		if result.Expires != nil && !time.Now().Before(*result.Expires) {
-			return errors.New("original coordination admission has expired; it did not acquire a new lease")
-		}
-		if len(result.Conflicts) != 0 {
-			return errors.New("claim recorded with overlapping ownership; negotiate before editing")
-		}
-		return nil
+		return AdmissionError(result)
 	}
-	return errors.New("usage: webmux coordinate [view|guide|act]; act reads a JSON request with a stable request_id from stdin")
+	return errors.New("usage: webmux coordinate [view|guide|act|mcp]; act reads a JSON request with a stable request_id from stdin")
+}
+
+// AdmissionError preserves denial, expiry and advisory-conflict semantics for all clients.
+func AdmissionError(result coordination.Result) error {
+	switch result.Status {
+	case "updated", "claimed", "released", "admitted", "recorded", "reserved", "renewed":
+	default:
+		return errors.New("coordination operation was not admitted: " + result.Status)
+	}
+	if result.Expires != nil && !time.Now().Before(*result.Expires) {
+		return errors.New("original coordination admission has expired; it did not acquire a new lease")
+	}
+	if len(result.Conflicts) != 0 {
+		return errors.New("claim recorded with overlapping ownership; negotiate before editing")
+	}
+	return nil
 }
 
 func validateAccess(access Access) error {

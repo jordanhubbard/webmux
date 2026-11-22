@@ -42,8 +42,8 @@ func coordinationDirectory(s session.Session) string {
 	if !coordinationLocal(s) {
 		return ""
 	}
-	if s.Recovery != nil && s.Recovery.Activity != nil && s.Recovery.Activity.Cwd != "" {
-		return s.Recovery.Activity.Cwd
+	if s.CoordinationActivity != nil && s.CoordinationActivity.Directory != "" {
+		return s.CoordinationActivity.Directory
 	}
 	return s.ExecCwd
 }
@@ -97,7 +97,10 @@ func (s *Server) coordinationInputs(node string, snapshots []session.Session) []
 		input.Interface = "execution-host-onboarding-pending"
 		input.ProjectStatus = "execution-host-verification-pending"
 		if coordinationLocal(snapshot) {
-			input.Interface = "local-cli; native-agent-startup-guidance-pending"
+			input.Interface = "local-cli+mcp; native-alias-bootstrap-available"
+			if snapshot.CoordinationActivity != nil && snapshot.CoordinationActivity.Interface != "" {
+				input.Interface = "local-cli; " + snapshot.CoordinationActivity.Interface
+			}
 			if s.sessionCoord.endpoint == "" {
 				input.Interface = "local-interface-unavailable"
 			}
@@ -142,7 +145,7 @@ func (s *Server) provisionCoordination(node string, snapshots []session.Session,
 		return nil, err
 	}
 	access := coordinationclient.Access{Contract: plane.Contract, Endpoint: s.sessionCoord.endpoint, Capability: token, Subject: ref, Instructions: []string{
-		"This interface currently coordinates this node only. Cross-node coordination and automatic native-agent startup guidance remain pending.",
+		"This interface currently coordinates this node only. Cross-node coordination remains pending. Qualified native aliases attach MCP guidance; other launch paths require separate acceptance.",
 		"Use the WebMux coordinate view command to discover verified project peers and read the coordination inbox.",
 		"Use coordinate act with a JSON request on stdin. Preserve request_id across uncertain retries; use a fresh ID for new work.",
 		"Claim file, directory, branch or task ownership before overlapping work. Claims are advisory and do not prevent edits.",
@@ -358,12 +361,23 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 		s.coordinationError(w, err)
 		return
 	}
+	// Resolve the caller first, then its same-account peers. Two ordinary
+	// agents can discover each other before the first background maintenance tick.
+	own := []session.Session{}
 	for _, snapshot := range snapshots {
 		if coordinationRef(node, snapshot) == ref {
-			s.refreshCoordinationBindings(r.Context(), []session.Session{snapshot})
+			own = append(own, snapshot)
 			break
 		}
 	}
+	for _, snapshot := range snapshots {
+		if snapshot.Owner == ref.Owner && coordinationRef(node, snapshot) != ref {
+			own = append(own, snapshot)
+		}
+	}
+	inspect, cancel := context.WithTimeout(r.Context(), 4*time.Second)
+	s.refreshCoordinationBindings(inspect, own)
+	cancel()
 	var operation plane.Request
 	after := uint64(0)
 	if r.Method == "POST" {

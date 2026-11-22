@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jordanhubbard/webmux/server/internal/coordinationclient"
 	"golang.org/x/term"
 )
 
@@ -149,6 +150,8 @@ func RunCLI(name string, args []string) error {
 			observations = observer.observations
 		}
 	}
+	helper, _ := os.Executable()
+	launchArgs, event.Coordination = coordinationclient.NativeLaunch(cli, version, helper, launchArgs)
 	cmd := exec.Command(binary, launchArgs...)
 	cmd.Dir = cwd
 	// Commands launched by a coding CLI do not own its terminal's foreground

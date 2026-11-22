@@ -62,7 +62,7 @@ func TestLegacySessionLocatorAndPrivateGuide(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	access := Access{Contract: coordination.Contract, Endpoint: "http://127.0.0.1:12345", Capability: "wmc1.fixture.private", Instructions: []string{"Read the scoped inbox."}}
+	access := Access{Contract: coordination.Contract, Endpoint: "http://127.0.0.1:12345", Capability: "wmc1.fixture.private", Subject: coordination.Ref{Session: id}, Instructions: []string{"Read the scoped inbox."}}
 	if err = WriteAccess(locator, access); err != nil {
 		t.Fatal(err)
 	}

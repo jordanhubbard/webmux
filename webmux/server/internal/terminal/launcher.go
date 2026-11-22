@@ -171,10 +171,13 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 		return command, err
 	}
 	command = Command{Dir: p.home, Cols: request.Cols, Rows: request.Rows, Env: append([]string{}, p.environment...)}
-	// Remove inherited TERM rather than relying on duplicate-variable behavior.
+	// A new PTY must not inherit another terminal's control/metadata routing.
 	for i := len(command.Env) - 1; i >= 0; i-- {
 		key, _, _ := strings.Cut(command.Env[i], "=")
-		if key == "TERM" || strings.HasPrefix(key, "WEBMUX_RECOVERY_") || strings.HasPrefix(key, "WEBMUX_COORDINATION_") || p.platform == "windows" && (strings.EqualFold(key, "TERM") || (strings.HasPrefix(strings.ToUpper(key), "WEBMUX_RECOVERY_") || strings.HasPrefix(strings.ToUpper(key), "WEBMUX_COORDINATION_"))) {
+		if p.platform == "windows" {
+			key = strings.ToUpper(key)
+		}
+		if key == "TERM" || key == "TMUX" || key == "TMUX_PANE" || strings.HasPrefix(key, "WEBMUX_RECOVERY_") || strings.HasPrefix(key, "WEBMUX_COORDINATION_") {
 			command.Env = append(command.Env[:i], command.Env[i+1:]...)
 		}
 	}

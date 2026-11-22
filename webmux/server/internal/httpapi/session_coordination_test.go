@@ -224,7 +224,7 @@ func TestCoordinationSessionChild(t *testing.T) {
 		t.Fatal("scoped client returned invalid/public secret metadata")
 	}
 	_, _ = io.WriteString(os.Stdout, "COORDINATION_CHILD_READY\n")
-	time.Sleep(60 * time.Second)
+	time.Sleep(180 * time.Second)
 }
 
 func TestCoordinationRestoredFlagsDoNotReauthorizeStaleCapability(t *testing.T) {
@@ -249,4 +249,20 @@ func TestCoordinationRestoredFlagsDoNotReauthorizeStaleCapability(t *testing.T) 
 	}
 	defer restored.Close()
 	requireStatus(t, request(restored.CoordinationAgentHandler(), "GET", "/view", "", access[0].Capability), 401)
+}
+
+func TestCoordinationAgentRefreshesPeersBeforeMaintenance(t *testing.T) {
+	s, _, agent, _, access := coordinationAPI(t)
+	s.sessionCoord.bindingsMu.Lock()
+	clear(s.sessionCoord.bindings)
+	s.sessionCoord.bindingsMu.Unlock()
+	response := request(agent, "GET", "/view", "", access[0].Capability)
+	requireStatus(t, response, 200)
+	var view plane.View
+	if err := json.Unmarshal(response.Body.Bytes(), &view); err != nil {
+		t.Fatal(err)
+	}
+	if len(view.Members) != 2 || view.Self == nil || view.Self.ProjectStatus != "verified-git" {
+		t.Fatal("cold agent view did not discover linked-worktree peer", len(view.Members))
+	}
 }

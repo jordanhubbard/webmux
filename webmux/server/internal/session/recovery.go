@@ -160,6 +160,15 @@ func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {
 	if !recovery.Verify(event, e.value.RecoveryKey) {
 		return
 	}
+	// Keep only live directory/interface routing independently of recording.
+	// Command text, argv and conversation identifiers remain behind the log gate.
+	if (event.Kind == "shell" || event.Kind == "command" || event.Kind == "cli") && filepath.IsAbs(event.Cwd) {
+		observation := &CoordinationObservation{Directory: event.Cwd}
+		if event.Kind == "cli" {
+			observation.CLI, observation.Version, observation.Interface = event.CLI, event.Version, event.Coordination
+		}
+		e.value.CoordinationActivity = observation
+	}
 	if event.Kind == "shell" {
 		if r.recoveryControl != nil && r.recoveryControl.Instance == event.Instance {
 			copy := *r.recoveryControl
@@ -250,6 +259,7 @@ func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {
 		}
 		a.CLI, a.CLIVersion, a.NativeSessionID, a.NativeStateFile = event.CLI, event.Version, event.SessionID, event.StateFile
 		a.NativeEvidence = event.NativeEvidence
+		a.Coordination = event.Coordination
 		a.Configuration = event.Configuration.Clone()
 		a.ShellInstance = event.Instance
 		a.Platform = event.Platform

@@ -27,6 +27,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/browseropen"
 	appconfig "github.com/jordanhubbard/webmux/server/internal/config"
 	"github.com/jordanhubbard/webmux/server/internal/coordinationclient"
+	"github.com/jordanhubbard/webmux/server/internal/coordinationmcp"
 	"github.com/jordanhubbard/webmux/server/internal/httpapi"
 	"github.com/jordanhubbard/webmux/server/internal/macsetup"
 	"github.com/jordanhubbard/webmux/server/internal/nativeobserve"
@@ -62,6 +63,11 @@ func main() {
 }
 
 func run() (resultErr error) {
+	if len(os.Args) == 3 && os.Args[1] == "coordinate" && os.Args[2] == "mcp" {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		return coordinationmcp.Run(ctx)
+	}
 	if len(os.Args) >= 2 && os.Args[1] == "coordinate" {
 		return coordinationclient.Run(os.Args[2:], os.Stdin, os.Stdout)
 	}
