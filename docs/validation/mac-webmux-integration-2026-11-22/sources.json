@@ -77,5 +77,39 @@
   "upstream_heads_consulted": {
     "agent_deck": "19794eb803749a12ce2371de0ff7ae1dc3d65392",
     "rig": "2b73674c99ab003a82f487cc1396426dcc3706f9"
+  },
+  "authorization_audit": {
+    "observed_at": "2026-11-22T19:43:06.776433+00:00",
+    "revision": "99925eaff54076310b58f15e0fb4ba9079746673",
+    "path": "src/mac/api.py",
+    "git_blob": "c3a2800b71cd346f6a3cfec1c0d87598814b13f8",
+    "sha256": "9d995b8f1c62ca4153b910dc526f47ae650e67ff907299fc0f16ff75dfa3efc2",
+    "retrieval": "GitHub pinned source; no local MAC/NAS filesystem accessed",
+    "line_ranges": {
+      "tenant_read_contract": [
+        91,
+        104
+      ],
+      "ordinary_get_scope": [
+        2037,
+        2038
+      ],
+      "project_graph": [
+        4549,
+        4565
+      ],
+      "task_filter": [
+        4907,
+        4941
+      ]
+    },
+    "scope": "Pinned source/authorization audit only; no native adapter or live credential qualification",
+    "findings": [
+      "MAC intentionally returns fleet-wide reads; tenant binding constrains writes",
+      "Caller project/tenant filters are selection, not receiving-account authorization",
+      "WebMux requires trusted server projection and per-account canonical project bindings"
+    ],
+    "native_authorization_acceptance": false,
+    "mac_or_fleet_mutations": false
   }
 }
