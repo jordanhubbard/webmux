@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "scope": "native POSIX Rig cancellation fixture readiness; production code unchanged",
+  "source_commit": "fc0532e",
+  "node": "v24.22.2",
+  "source_sha256": {
+    "webmux/server/internal/openrigcoord/changes_test.go": "d1c4e3d6441ec13739751f8d77413de57db9e5aa6ba350760d5d29b2af1d9da5",
+    "docs/validation/rig-change-marker-2026-11-22/control.py": "035a5cf36362dbdf02d96e3aab3a060f8fdfc2bf73e109d6bdf95ebfc7960fa2"
+  },
+  "gates": {
+    "causal_control": {
+      "exit_code": 0,
+      "sha256": "9de1ace85089717ae5f9da37e9a9487865a7174a12c1cc8c0c69e988566761c5"
+    },
+    "original_cancellation_test": {
+      "count": 30,
+      "exit_code": 0,
+      "log_sha256": "dff93d9e82451b57b53cfce732c1410321ce3c2b9b2c56e154f607568c909273"
+    },
+    "isolated_full_go_suite": {
+      "command": "go test -p 4 -count=1 ./...",
+      "exit_code": 0,
+      "log_sha256": "9205f3bc4d68662d15f69dca53368bc4505097bc169083da1ac9d0f08f22f2a3",
+      "ssh_project_changes_present": false
+    },
+    "main_based_full_go_suite": {
+      "source_commit": "7f68d48",
+      "command": "go test -p 4 -count=1 ./...",
+      "exit_code": 0,
+      "log_sha256": "6bd8022ba3a4570de5b0401574ae17510f46989f4745daf9eaa70ddcb7f93186"
+    }
+  },
+  "failed_original_fixture": {
+    "source": "SSH project candidate full suite before this fixture change",
+    "exit_code": 1,
+    "test_elapsed_seconds": 0.41,
+    "failure": "native CLI child did not start",
+    "log_sha256": "11c8724c6b61b5becb1909916ebb66fa9b0d2cc579e8f9c91e0a07b398da00bb",
+    "historical_marker_contents": "not retained; exact interleaving unproven"
+  }
+}
