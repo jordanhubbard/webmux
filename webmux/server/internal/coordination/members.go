@@ -153,6 +153,23 @@ func (s *Service) SetEnabled(node string, value bool) error {
 		return bucket(tx, "meta").Put([]byte("enabled"), setting)
 	})
 }
+
+// Enabled reads global policy without changing membership from a stale snapshot.
+func (s *Service) Enabled(node string) (bool, error) {
+	db, err := s.database()
+	if err != nil {
+		return false, err
+	}
+	var value bool
+	err = db.Update(func(tx *bolt.Tx) error {
+		if err := initialize(tx, node, s.Now()); err != nil {
+			return err
+		}
+		value = enabled(tx)
+		return nil
+	})
+	return value, err
+}
 func (s *Service) OwnerView(node, owner string, inputs []MemberInput) (View, error) {
 	db, err := s.database()
 	if err != nil {
