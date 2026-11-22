@@ -226,7 +226,7 @@ capabilities and live continuity have replacement evidence.
   its principal/route contracts are recorded separately in the source manifest.
 - WebMux base `86911d0828ca35f27bd4f108ad6ee6ca26265970`: current provider adapter,
   session coordination and recovery documentation, roadmap and retained native
-  receipts. The earlier [MCP comparison](validation/coordination-architecture-selection-2026-11-22/README.md)
+  receipts. The earlier [MCP comparison](https://github.com/jordanhubbard/webmux/blob/22dd1965b8bc88ece69ed8e6f15360aa0be9b5a9/docs/validation/coordination-architecture-selection-2026-11-22/README.md)
   qualifies only its stated interface probes.
 - Agent Deck [installed-revision conductor](https://github.com/asheshgoplani/agent-deck/blob/f36e77d6170b8d8b54f50c960c3f16e8a2c5df19/docs/conductor/README.md),
   [watchers](https://github.com/asheshgoplani/agent-deck/blob/f36e77d6170b8d8b54f50c960c3f16e8a2c5df19/docs/WATCHER-SETUP.md)
