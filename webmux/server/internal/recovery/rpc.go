@@ -7,9 +7,11 @@ import (
 	"errors"
 	"io"
 	"net"
+	"runtime"
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/coordination"
+	"github.com/jordanhubbard/webmux/server/internal/coordinationclient"
 )
 
 const maxRPCBytes = 256 << 10
@@ -18,16 +20,18 @@ const recoveryWorkerTimeout = 25 * time.Second
 // RPCRequest travels through a local pipe or authenticated SSH stdin. Keys must
 // never appear in a URL, command-line argument, terminal input or transcript.
 type RPCRequest struct {
-	CoordinationDirectory string          `json:"coordination_directory,omitempty"`
-	BrowserControl        bool            `json:"browser_control,omitempty"`
-	BrowserAck            string          `json:"browser_ack,omitempty"`
-	Protocol              int             `json:"protocol"`
-	SessionID             string          `json:"session_id"`
-	Key                   string          `json:"key"`
-	Operation             string          `json:"operation"`
-	Recording             *bool           `json:"recording,omitempty"`
-	Action                *RecoveryAction `json:"action,omitempty"`
-	Seed                  *Activity       `json:"seed,omitempty"`
+	CoordinationAccess    *coordinationclient.Access `json:"coordination_access,omitempty"`
+	CoordinationChannel   string                     `json:"coordination_channel,omitempty"`
+	CoordinationDirectory string                     `json:"coordination_directory,omitempty"`
+	BrowserControl        bool                       `json:"browser_control,omitempty"`
+	BrowserAck            string                     `json:"browser_ack,omitempty"`
+	Protocol              int                        `json:"protocol"`
+	SessionID             string                     `json:"session_id"`
+	Key                   string                     `json:"key"`
+	Operation             string                     `json:"operation"`
+	Recording             *bool                      `json:"recording,omitempty"`
+	Action                *RecoveryAction            `json:"action,omitempty"`
+	Seed                  *Activity                  `json:"seed,omitempty"`
 }
 
 type RecoveryAction struct {
@@ -40,15 +44,18 @@ type RecoveryAction struct {
 }
 
 type RPCResponse struct {
-	CoordinationProject *coordination.Binding `json:"coordination_project,omitempty"`
-	BrowserRequest      *BrowserRequest       `json:"browser_request,omitempty"`
-	BrowserObservedAt   int64                 `json:"browser_observed_at,omitempty"`
-	Protocol            int                   `json:"protocol"`
-	Revision            uint64                `json:"revision,omitempty"`
-	Recording           bool                  `json:"recording"`
-	Events              []Event               `json:"events,omitempty"`
-	Outcome             string                `json:"outcome,omitempty"`
-	Error               string                `json:"error,omitempty"`
+	CoordinationDirectory string                `json:"coordination_directory,omitempty"`
+	CoordinationPlatform  string                `json:"coordination_platform,omitempty"`
+	CoordinationSocket    string                `json:"coordination_socket,omitempty"`
+	CoordinationProject   *coordination.Binding `json:"coordination_project,omitempty"`
+	BrowserRequest        *BrowserRequest       `json:"browser_request,omitempty"`
+	BrowserObservedAt     int64                 `json:"browser_observed_at,omitempty"`
+	Protocol              int                   `json:"protocol"`
+	Revision              uint64                `json:"revision,omitempty"`
+	Recording             bool                  `json:"recording"`
+	Events                []Event               `json:"events,omitempty"`
+	Outcome               string                `json:"outcome,omitempty"`
+	Error                 string                `json:"error,omitempty"`
 }
 
 func readRPC(input io.Reader, value any) error {
@@ -134,12 +141,34 @@ func hostRPC(ctx context.Context, request RPCRequest) (RPCResponse, error) {
 		}
 		request.Operation = "snapshot"
 	}
+	if request.Operation == "coordination-prepare" {
+		// Same authenticated execution-account provisioning boundary as ensure,
+		// without starting a provider before its scoped channel is ready.
+		if err := InitializeHostEvidence(request.SessionID, request.Key, false, nil); err != nil {
+			return RPCResponse{}, err
+		}
+	}
 	// Authenticate before returning state or connecting to a waiting worker.
 	state, err := updateHostState(request.SessionID, request.Key, false, nil)
 	if err != nil {
 		return RPCResponse{}, err
 	}
 	switch request.Operation {
+	case "coordination-observe":
+		directory, err := coordinationProviderDirectory(ctx, request.SessionID)
+		return RPCResponse{CoordinationDirectory: directory, CoordinationPlatform: runtime.GOOS}, err
+	case "coordination-prepare":
+		name, err := coordinationclient.PrepareSocket(request.SessionID, request.Key, request.CoordinationChannel)
+		return RPCResponse{CoordinationSocket: name}, err
+	case "coordination-install":
+		if request.CoordinationAccess == nil {
+			return RPCResponse{}, errors.New("missing scoped coordination access")
+		}
+		err := coordinationclient.InstallSocket(ctx, request.SessionID, request.Key, request.CoordinationChannel, *request.CoordinationAccess)
+		if err != nil {
+			return RPCResponse{}, err
+		}
+		return RPCResponse{Outcome: "coordination-installed"}, nil
 	case "coordination-project":
 		// Only the authenticated controller chooses this directory, from its
 		// signed live shell observation. No agent-facing API accepts a path or

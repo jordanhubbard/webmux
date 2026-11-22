@@ -92,6 +92,14 @@ Native macOS-to-Linux production RPC qualification passes. Remote agent access
 and managed-provider onboarding remain open; verified project context does not
 establish those capabilities.
 
+The [private SSH channel checkpoint](validation/coordination-ssh-channel-2026-11-22/README.md)
+adds automatic scoped startup through an authenticated private socket forward.
+Native ordinary SSH shell/CLI startup, first-use trust, same-provider reconnect,
+refused forwarding and owned-master shutdown pass between macOS and Linux.
+Coding-agent adoption, managed/password/Mosh/Windows paths and the complete
+restart/durable-work lifecycle remain open under #630; this does not complete a
+roadmap checkbox.
+
 ## Current reliability work
 
 **First priority: [#318](https://github.com/jordanhubbard/webmux/issues/318).**

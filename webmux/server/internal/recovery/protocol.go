@@ -43,7 +43,7 @@ type Event struct {
 
 func (e Event) Validate() error {
 	switch e.Coordination {
-	case "", "mcp-configured", "mcp-policy-preserved", "mcp-version-unqualified", "mcp-interface-unavailable":
+	case "", "mcp-configured", "mcp-policy-preserved", "mcp-version-unqualified", "mcp-interface-unavailable", "ssh-stream-local-configured":
 	default:
 		return errors.New("unknown coordination interface evidence")
 	}
@@ -56,7 +56,7 @@ func (e Event) Validate() error {
 		return err
 	}
 	switch e.Kind {
-	case "shell", "command", "complete", "cli", "provider", "control":
+	case "shell", "command", "complete", "cli", "provider", "control", "coordination":
 	default:
 		return errors.New("unknown recovery event")
 	}

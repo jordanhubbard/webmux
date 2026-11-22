@@ -30,6 +30,7 @@ type CoordinationAccess struct {
 // LaunchRequest is internal session state, never an unvalidated HTTP request.
 // Passwords are separate so they cannot accidentally enter persisted sessions.
 type LaunchRequest struct {
+	controlPath                          string              // Private to this run, never serialized or persisted.
 	Coordination                         *CoordinationAccess `json:"-"`
 	RecoveryKey                          string              `json:"-"`
 	RecoverySeed                         *recovery.Activity  `json:"-"`
@@ -47,6 +48,14 @@ type Launcher struct {
 }
 
 func (l Launcher) Launch(request LaunchRequest, password string) (*Process, error) {
+	request.controlPath = SSHControlPath(l.ControlDir, request.SessionID)
+	if request.Coordination != nil && l.ControlDir != "" && (request.Transport == "ssh" || request.Transport == "mosh" || request.Transport == "") {
+		generation, err := recovery.NewInstance()
+		if err != nil {
+			return nil, err
+		}
+		request.controlPath = SSHControlPath(l.ControlDir, request.SessionID+"/"+generation)
+	}
 	keyPath, moshServer := "", ""
 	if request.Transport != "exec" && request.Transport != "local" && request.KeyID != "" {
 		var document struct {
@@ -90,14 +99,14 @@ func (l Launcher) Launch(request LaunchRequest, password string) (*Process, erro
 	if err != nil {
 		return nil, err
 	}
-	command, err := (planner{controlPath: SSHControlPath(l.ControlDir, request.SessionID), browserShell: browserShell, platform: runtime.GOOS, home: home, environment: os.Environ(), lookup: exec.LookPath, currentUser: currentUser}).build(request, password, keyPath, moshServer)
+	command, err := (planner{controlPath: request.controlPath, browserShell: browserShell, platform: runtime.GOOS, home: home, environment: os.Environ(), lookup: exec.LookPath, currentUser: currentUser}).build(request, password, keyPath, moshServer)
 	if err != nil {
 		return nil, err
 	}
 	local := request.Transport == "local" || command.Path == browserShell
 	if !local && password == "" && (request.Transport == "ssh" || request.Transport == "" || request.Transport == "mosh") {
 		// Probe in the PTY child, not under the broker's lock during restore.
-		payload, err := json.Marshal(browserConnect{Request: request, KeyPath: keyPath, Path: command.Path, Args: command.Args, ControlPath: SSHControlPath(l.ControlDir, request.SessionID)})
+		payload, err := json.Marshal(browserConnect{Request: request, KeyPath: keyPath, Path: command.Path, Args: command.Args, ControlPath: request.controlPath})
 		if err != nil {
 			return nil, err
 		}
@@ -106,6 +115,10 @@ func (l Launcher) Launch(request LaunchRequest, password string) (*Process, erro
 	process, err := startLaunch(request, command)
 	if process != nil {
 		process.browserLocal = local
+		process.controlPath = request.controlPath
+		if !local && request.Coordination != nil && l.ControlDir != "" {
+			process.controlClose = func() { closeCoordinationMaster(request, request.controlPath) }
+		}
 		if request.Transport != "exec" && (local || password == "") {
 			process.recovery = func(ctx context.Context, rpc recovery.RPCRequest) recovery.RPCResponse {
 				return l.Recovery(ctx, request, local, rpc)

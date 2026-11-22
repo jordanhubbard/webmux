@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "ordinary key-authenticated SSH shell/CLI channel on native macOS ARM64 to Linux ARM64; not coding-agent or full roadmap acceptance",
+  "source_sha256": {
+    "webmux/server/internal/coordinationclient/client.go": "9c3e38e9135397ab838d558a5402a6fe340bd4eefbdc09a8735940a0dbb3657e",
+    "webmux/server/internal/coordinationclient/socket.go": "2e576dd114bbccfcecfba785185dbe1afdef16aad947e98af3e0795bbe58ea6a",
+    "webmux/server/internal/coordinationclient/socket_unix_test.go": "91d7211019b61f69336f7cc91028cb02d5f35d4cc3cc032b5acf6fc337f391b1",
+    "webmux/server/internal/httpapi/coordination_ssh_native_test.go": "d1b883a40318435b0ed3ff1c1a211222318946e41b3b436d645db0c3974f6ae6",
+    "webmux/server/internal/httpapi/main_test.go": "9981c25f8bd75d26ca3168319374194afc79ce76b6d191c1023c8fb74cb3cf79",
+    "webmux/server/internal/httpapi/session_coordination.go": "96cc7e310802440b2f0e1c33cc6b174b75d22f1db01bf8801d45e0a7003f2095",
+    "webmux/server/internal/recovery/coordination_directory_unix.go": "54599bf9eed95a3eb72d0a707ce4257aa739183503f1786331484d292d5c6dfa",
+    "webmux/server/internal/recovery/coordination_directory_unix_test.go": "3e7003ba353e014140fd1014a1bb69c477e6ca4170efc1d14ea0fa177c47ec17",
+    "webmux/server/internal/recovery/coordination_directory_windows.go": "ce268b6c9637c62e7fb6f4bc2813512b2b4dfcd292deebcc8b6e3eaa963e1026",
+    "webmux/server/internal/recovery/coordination_socket_unix_test.go": "1638880cc1610f64c465ecc769a9697c466ad0403e1d9e13d72372106c40a314",
+    "webmux/server/internal/recovery/protocol.go": "8b519d21d88e5ef6476f12a579d83a165a67e8acc1317c6c18ac12a0abf84327",
+    "webmux/server/internal/recovery/rpc.go": "1cfcb3a907123ae138fae06ea713a0bb6cfb0410df4a95dd4e6d0c84ad416eb9",
+    "webmux/server/internal/session/broker.go": "b617f2d79ed3ebebd41bf2b9e13003669490457031954410fd71f6e391c27ef4",
+    "webmux/server/internal/session/model.go": "8fdadc72e3275e933de56e8b33bb670c0f616910a1a84500c98814cd6f8d749c",
+    "webmux/server/internal/session/recovery.go": "8b43a30494c26e4e987bef501cfe0e29d75db581a4ba0fbf0f41505b675b6cea",
+    "webmux/server/internal/session/recovery_test.go": "96b4122ed8cf15b44959191bdf838075b83e3cef597734bcbad94f331bc63300",
+    "webmux/server/internal/terminal/coordination.go": "c8b45ca0d61c735dd5024db7fec84542f316f51b87e833ff92bf9256a872271f",
+    "webmux/server/internal/terminal/coordination_test.go": "2918b61f4b7ae0f0891f402cd34ccdb8b98309bee8823cc79a8b6fbbdba9f8d2",
+    "webmux/server/internal/terminal/launcher.go": "ef90e0ee37da2b991afefc151da3c79c291d7908240469ca07a98ca825e25e43",
+    "webmux/server/internal/terminal/process.go": "c2c2200d5a393676ff9bb5a36cbd4d56aa6b484837dfa0354253329823c8ac0b",
+    "webmux/server/internal/terminal/recovery.go": "eb2ece624f0ea7e2f67bac11563e0e8792d5a089abd0d7512c211a065104821c"
+  },
+  "executable_sha256": {
+    "webmux-linux-arm64": "1e95af9da64dfebeb7d5846f5016210773f946706623800aa8f2539c8f9bb081",
+    "httpapi-windows-arm64.test.exe": "1a77b4df123b50dfa96ff28a53d6eca562b67c58168b1cf86d291481c670a70e"
+  },
+  "evidence": [
+    {
+      "private_path": "_build/coordination-ssh-channel630/native-run1.log",
+      "exit_code": 0,
+      "sha256": "d191018b72aa136b3847f36a350da85ac5394321a226d93470e5d274b5b6fb31"
+    },
+    {
+      "private_path": "_build/coordination-ssh-channel630/native-run2.log",
+      "exit_code": 0,
+      "sha256": "2e7977651c9edf826a21ca3681f2bd4af0d0ee9b48beb909b399827765a65028"
+    },
+    {
+      "private_path": "_build/coordination-ssh-channel630/native-run3-refuse.log",
+      "exit_code": 1,
+      "sha256": "fc8d1550787f9c57ce584bb334679ce2ea88eb9766ab131f091bf7acbdd238c1"
+    },
+    {
+      "private_path": "_build/coordination-ssh-channel630/native-run4-refuse.log",
+      "exit_code": 1,
+      "sha256": "1ab475e622ac9cf8e0cbd7cad6ee95d8a46e74994a44e3637056cd7b38392cb0"
+    },
+    {
+      "private_path": "_build/coordination-ssh-channel630/native-run5-refuse.log",
+      "exit_code": 0,
+      "sha256": "9dd7e4298fca6c33c6cf71e234deff455949bc4f96ae13903f9428f2755d2508"
+    },
+    {
+      "private_path": "_build/coordination-ssh-channel630/native-run6-reconnect.log",
+      "exit_code": 0,
+      "sha256": "27b68eb6cdf72398aa68b239202a24d40abd5fa67798bb3649b389f7bbf64c3e"
+    },
+    {
+      "private_path": "_build/coordination-ssh-channel630/native-run7-first-use.log",
+      "exit_code": 0,
+      "sha256": "529c62896846b12ecba932c81f9438f279dc49a03085bc599047649971939d43"
+    },
+    {
+      "private_path": "_build/coordination-ssh-channel630/go-test-final.log",
+      "exit_code": 0,
+      "sha256": "4ede245226dd410dfb2f1c23b8fbc9872a2f7dca70bedcd1dc0232f33d47f21a"
+    },
+    {
+      "private_path": "_build/coordination-ssh-channel630/reviewed-race.log",
+      "exit_code": 0,
+      "sha256": "1959ff4ad7ae4c894f2340393a9b5960d1fd37f31f846de84751b7df348b8bb9"
+    }
+  ],
+  "native_controls": {
+    "ordinary_default_startup": "pass",
+    "scoped_view_and_work_action_on_verified_remote_project": "pass",
+    "forward_refusal_keeps_shell_usable_without_configured_interface": "pass",
+    "fresh_private_known_host_file": "pass",
+    "reconnect_preserves_exact_remote_pane_pid": "pass",
+    "retained_shell_uses_new_access": "pass",
+    "per_run_private_master_exits_on_close": "pass"
+  },
+  "original_failed_controls": {
+    "run3": "refusal harness required a live directory observation; the initial shell event can precede client attachment while capture is off",
+    "run4": "new read-only query used =session without a window separator; actual tmux returned an empty pane format with exit 0",
+    "resolution": "authenticated bounded provider directory query uses exact session current-window selector =session:; original startup wait remains 35 seconds"
+  },
+  "quality_gates": {
+    "full_go_node24": "pass",
+    "focused_race": "pass",
+    "vet": "pass",
+    "windows_arm64": "test compilation only; no native target acceptance"
+  },
+  "remaining": [
+    "native coding-agent adoption on SSH",
+    "password SSH bootstrap",
+    "native Mosh and Windows",
+    "unexpected tunnel-loss repair",
+    "existing agents without an MCP channel",
+    "full controller restart and durable claims/messages/reservations",
+    "bounded per-run socket-cache retention/cleanup",
+    "managed-provider onboarding",
+    "complete #630/#631 workflow"
+  ]
+}
