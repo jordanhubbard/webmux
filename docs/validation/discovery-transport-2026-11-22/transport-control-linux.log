@@ -1,0 +1,32 @@
+=== RUN   TestMulticastTransportControl
+=== RUN   TestMulticastTransportControl/lo
+=== RUN   TestMulticastTransportControl/lo/udp4
+    transport_control_test.go:41: production socket joined; native loopback enabled; unique DNS question sent
+    transport_control_test.go:41: exact question received; socket transport control only
+=== RUN   TestMulticastTransportControl/lo/udp6
+    transport_control_test.go:41: send: write udp [::]:42748->[ff02::fb%lo]:5353: sendmsg: network is unreachable
+=== RUN   TestMulticastTransportControl/enP7s7
+=== RUN   TestMulticastTransportControl/enP7s7/udp4
+    transport_control_test.go:41: production socket joined; native loopback enabled; unique DNS question sent
+    transport_control_test.go:41: exact question received; socket transport control only
+=== RUN   TestMulticastTransportControl/enP7s7/udp6
+    transport_control_test.go:41: production socket joined; native loopback enabled; unique DNS question sent
+    transport_control_test.go:41: exact question received; socket transport control only
+=== RUN   TestMulticastTransportControl/wlP9s9
+=== RUN   TestMulticastTransportControl/wlP9s9/udp4
+    transport_control_test.go:41: production socket joined; native loopback enabled; unique DNS question sent
+    transport_control_test.go:41: exact question received; socket transport control only
+=== RUN   TestMulticastTransportControl/wlP9s9/udp6
+    transport_control_test.go:41: production socket joined; native loopback enabled; unique DNS question sent
+    transport_control_test.go:41: exact question received; socket transport control only
+--- FAIL: TestMulticastTransportControl (0.00s)
+    --- FAIL: TestMulticastTransportControl/lo (0.00s)
+        --- PASS: TestMulticastTransportControl/lo/udp4 (0.00s)
+        --- FAIL: TestMulticastTransportControl/lo/udp6 (0.00s)
+    --- PASS: TestMulticastTransportControl/enP7s7 (0.00s)
+        --- PASS: TestMulticastTransportControl/enP7s7/udp4 (0.00s)
+        --- PASS: TestMulticastTransportControl/enP7s7/udp6 (0.00s)
+    --- PASS: TestMulticastTransportControl/wlP9s9 (0.00s)
+        --- PASS: TestMulticastTransportControl/wlP9s9/udp4 (0.00s)
+        --- PASS: TestMulticastTransportControl/wlP9s9/udp6 (0.00s)
+FAIL
