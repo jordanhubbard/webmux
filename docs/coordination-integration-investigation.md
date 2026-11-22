@@ -180,11 +180,24 @@ The next step is admission through MAC for independently launched interactive
 sessions, followed by authority-side scope/priority enforcement and project-native
 publication integration. Reading state must not silently enroll or dispatch work.
 
-A shared NAS checkout is not the coordination protocol. Even healthy storage
-would not resolve competing task/lease authorities or two sessions editing one
-worktree. Keep per-owner workspaces and canonical publication controls. The
-current failed NAS integrity gate independently prohibits unique-data cutover
-and deleting local originals.
+The read adapter has a concrete authorization boundary: the inspected MAC
+principal contract intentionally exposes fleet-wide reads even for a
+tenant-bound credential. A project/tenant query filter is not a row permission.
+WebMux therefore needs a trusted server projection with verified project/account
+bindings, fixed upstream reads and an output-field allowlist before exposing
+that data to browsers or ordinary agent channels. Foreign tasks, shared-worker
+activity and cross-project dependencies must not leak through related objects
+or stale caches. The [read authorization audit](mac-project-coordination.md#read-authorization-audit)
+pins the actual source and required negative controls. Read access also does
+not authorize dispatch or impersonating a named worker.
+
+A shared NAS checkout is not the coordination protocol. Storage alone does not
+resolve competing task/lease authorities or two sessions editing one worktree.
+Keep per-owner workspaces and canonical publication controls. The owner's
+2026-11-22 authorization supersedes the earlier degraded-NAS integrity hold;
+degraded status is not itself a migration blocker. Actual client I/O, active
+writer coordination and owner runtime/cutover validation remain operational
+requirements, independently of the execution-authority design.
 
 ## Acceptance before consolidation is called complete
 
@@ -209,6 +222,8 @@ capabilities and live continuity have replacement evidence.
 - MAC local revision `99925eaff54076310b58f15e0fb4ba9079746673`: `src/mac/services.py`
   (`claim_task`), `src/mac/review_service.py`, project/dependency/integration
   contracts, book chapters 1/3/4/5/6/8/11/16 and ADRs 0025/0034.
+  The subsequent authorization audit re-read pinned `src/mac/api.py` from GitHub;
+  its principal/route contracts are recorded separately in the source manifest.
 - WebMux base `86911d0828ca35f27bd4f108ad6ee6ca26265970`: current provider adapter,
   session coordination and recovery documentation, roadmap and retained native
   receipts. The earlier [MCP comparison](validation/coordination-architecture-selection-2026-11-22/README.md)

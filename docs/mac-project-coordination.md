@@ -75,6 +75,46 @@ attempt/head at publication; the browser cannot be the enforcement boundary.
 
 ## Existing capability and gaps
 
+### Read authorization audit
+
+At the inspected MAC revision, a tenant binding constrains writes; reads
+intentionally expose fleet state. Ordinary project/dashboard GET routes require
+`read` scope. The project-graph handler discards the authenticated principal
+before building its result, and task listing accepts optional caller-supplied
+tenant/project filters. These are selection filters, not principal-derived row
+authorization. See [the pinned principal contract](https://github.com/jordanhubbard/mac/blob/99925eaff54076310b58f15e0fb4ba9079746673/src/mac/api.py#L91),
+[GET scope selection](https://github.com/jordanhubbard/mac/blob/99925eaff54076310b58f15e0fb4ba9079746673/src/mac/api.py#L2037),
+[project graph](https://github.com/jordanhubbard/mac/blob/99925eaff54076310b58f15e0fb4ba9079746673/src/mac/api.py#L4549)
+and [task selection](https://github.com/jordanhubbard/mac/blob/99925eaff54076310b58f15e0fb4ba9079746673/src/mac/api.py#L4907).
+
+For this contract, a WebMux server is a trusted projection boundary. An
+operator-owned read credential stays in local server configuration; browsers,
+ordinary sessions and their MCP/CLI surfaces receive only the authorized
+projection. A receiving account/session must map to a verified canonical MAC
+project and repository binding. A project display name, tenant field or query
+argument cannot establish that permission. Use fixed upstream operations and
+an explicit output-field allowlist; do not expose an arbitrary fleet API proxy.
+The adapter must qualify the actual installed authority's authentication and
+capabilities before enabling this mode, including refusal after credential
+revocation. An HTTP 200 alone does not prove that a read principal was enforced.
+
+For example, a WebMux account bound only to project Alpha must not receive
+project Beta's tasks, worker activity, transcripts or dependency details merely
+because the server's MAC read credential can see them. This applies to related
+objects and error responses as well as the selected task list. Cross-project
+edges, shared workers, ambiguous project names, pagination/truncation, stale
+cache entries, foreign accounts and changed bindings need explicit negative
+controls. Hidden or unavailable facts remain unknown; filtering cannot turn
+missing evidence into proof that no conflicting work exists.
+
+Read permission grants neither dispatch nor a fleet worker's identity.
+Interactive admission uses a separately authorized participant and supported
+MAC claim/lease workflow. The read adapter never borrows Rocky, Natasha or
+Bullwinkle's worker credentials. This audit adds an implementation prerequisite;
+it does not establish a shipped adapter or a live authorization qualification.
+
+### Execution authority contracts
+
 Read-only source inspection used MAC revision
 `99925eaff54076310b58f15e0fb4ba9079746673` and Literate AI revision
 `ebf88985be10f733dd64f469b7cd4aa685ce9083`. It did not dispatch tasks, change fleet
