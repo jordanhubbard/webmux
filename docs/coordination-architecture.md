@@ -72,6 +72,10 @@ identity/address-migration evidence and unresolved native macOS multicast failur
 The [transport diagnostics](validation/discovery-transport-2026-11-22/README.md)
 retain those failures. Manual authenticated peers remain available when multicast
 is unavailable; a working SSH route does not complete LAN discovery acceptance.
+The later [native Bonjour adapter qualification](validation/discovery-bonjour-2026-11-22/README.md)
+adds bidirectional macOS/Linux node and exact legacy-instance component evidence.
+It retains the failed raw self-loop and host-only listener-selection controls;
+it does not complete discovered/enrolled native-agent acceptance.
 
 ## Ownership and migration rules
 

@@ -3,11 +3,16 @@ package discovery
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/pion/mdns/v2"
 )
 
 // Two independent hosts use distinct IDs and private output directories. This
@@ -54,7 +59,7 @@ func TestNodeNativeEndpoint(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	options := NodeOptions{ID: id, Host: host, Port: 19311, TLS: true, Browse: role != "advertise", Advertise: role != "browse"}
+	options := NodeOptions{ID: id, Host: host, HTTPPort: 19310, Port: 19311, TLS: true, Browse: role != "advertise", Advertise: role != "browse"}
 	if selected := os.Getenv("WEBMUX_TEST_NODE_INTERFACES"); selected != "" {
 		options.Interfaces = strings.Split(selected, ",")
 	}
@@ -88,6 +93,42 @@ func TestNodeNativeEndpoint(t *testing.T) {
 			if candidate.ClaimedID == expected && !observed {
 				write("observed.json", candidate)
 				t.Log("observed the exact independently advertised native peer")
+				if os.Getenv("WEBMUX_TEST_NODE_INSTANCE_RECORDS") == "1" {
+					records, err := nativePeerListenerRecords(ctx, candidate)
+					if err != nil {
+						t.Fatal(err)
+					}
+					write("listener-instance-records.json", records)
+				}
+				if os.Getenv("WEBMUX_TEST_NODE_LOOKUP") == "1" {
+					// Resolve the hostname actually returned by DNS-SD. On macOS
+					// Bonjour owns the current host name and its address records.
+					host := strings.TrimSuffix(candidate.Host, ".")
+					results := make([]map[string]any, 0, 2)
+					for _, allowHTTP := range []bool{false, true} {
+						scheme, port := "https", "19311"
+						if allowHTTP {
+							scheme, port = "http", "19310"
+						}
+						want := (&url.URL{Scheme: scheme, Host: net.JoinHostPort(host, port)}).String()
+						got, err := Resolve(ctx, host, allowHTTP)
+						errText := ""
+						if err != nil {
+							errText = err.Error()
+						}
+						results = append(results, map[string]any{"allow_http": allowHTTP, "want": want, "got": got, "error": errText})
+						write("listener-lookup-results.json", results)
+						if err != nil || got != want {
+							actual, _ := url.Parse(got)
+							actualPort := ""
+							if actual != nil {
+								actualPort = actual.Port()
+							}
+							t.Fatalf("native peer listener lookup differed (allowHTTP=%t, expectedPort=%s, actualPort=%s): %v", allowHTTP, port, actualPort, err)
+						}
+					}
+					write("listener-lookups.json", map[string]bool{"https": true, "http": true})
+				}
 				observed = true
 				if role == "browse" {
 					write("observed-all.json", matching)
@@ -106,4 +147,52 @@ func TestNodeNativeEndpoint(t *testing.T) {
 		case <-ticker.C:
 		}
 	}
+}
+
+// Inspect the exact peer's legacy records on the real network, independently of
+// host-only selection when another server advertises the same system hostname.
+func nativePeerListenerRecords(ctx context.Context, peer Candidate) (map[string]uint16, error) {
+	v4, v6, err := multicastSockets()
+	if err != nil {
+		return nil, err
+	}
+	conn, err := mdns.NewServer(packet4(v4), packet6(v6), mdns.WithCacheRefresh(false))
+	if err != nil {
+		closeSockets(v4, v6)
+		return nil, err
+	}
+	defer conn.Close()
+	found := make(chan mdns.ServiceEvent, 32)
+	names := map[string]string{clearService: peer.Instance + " HTTP", secureService: peer.Instance + " HTTPS"}
+	conn.OnServiceDiscovered(func(event mdns.ServiceEvent) {
+		if names[event.Instance.Service] != event.Instance.Instance || !strings.EqualFold(strings.TrimSuffix(event.Instance.Host, "."), strings.TrimSuffix(peer.Host, ".")) {
+			return
+		}
+		select {
+		case found <- event:
+		default:
+		}
+	})
+	for service := range names {
+		if err := conn.Browse(ctx, service); err != nil {
+			return nil, err
+		}
+	}
+	records := map[string]uint16{}
+	for len(records) < len(names) {
+		select {
+		case event := <-found:
+			want := uint16(19311)
+			if event.Instance.Service == clearService {
+				want = 19310
+			}
+			if event.Instance.Port != want {
+				return nil, fmt.Errorf("exact native listener instance advertises port %d instead of %d", event.Instance.Port, want)
+			}
+			records[event.Instance.Service] = event.Instance.Port
+		case <-ctx.Done():
+			return nil, fmt.Errorf("exact native listener records not observed within the original observation bound: %w", ctx.Err())
+		}
+	}
+	return records, nil
 }

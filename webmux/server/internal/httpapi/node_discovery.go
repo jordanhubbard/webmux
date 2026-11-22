@@ -37,9 +37,14 @@ func (s *Server) getDiscoveredNodes(w http.ResponseWriter, r *http.Request, owne
 		return
 	}
 	candidates := []discovery.Candidate{}
-	if s.nodes != nil {
+	started, discoveryError := s.nodes != nil, s.nodeDiscoveryError
+	if started && s.nodes.Err() != nil {
+		started = false
+		discoveryError = "Network discovery unavailable; manually configured peers remain available"
+	}
+	if started {
 		candidates = s.nodes.Snapshot(time.Now())
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, 200, map[string]any{"contract": "webmux-node-discovery/v1", "policy": s.nodePolicy, "started": s.nodes != nil, "error": s.nodeDiscoveryError, "candidates": candidates})
+	writeJSON(w, 200, map[string]any{"contract": "webmux-node-discovery/v1", "policy": s.nodePolicy, "started": started, "error": discoveryError, "candidates": candidates})
 }

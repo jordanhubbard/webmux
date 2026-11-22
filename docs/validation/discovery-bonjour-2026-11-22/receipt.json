@@ -1,0 +1,460 @@
+{
+  "scope": "Native production StartNodes component discovery and exact legacy instance records; no HTTP listeners, TLS handshake or enrollment",
+  "base_commit": "effc55f17e1f00b9bdb66c6edac8cd25211339d0",
+  "related_issues": [
+    631,
+    659,
+    660
+  ],
+  "node_and_exact_instance_qualification": {
+    "exit_code": 0,
+    "passed": true,
+    "primary": {
+      "kernel": "Darwin",
+      "machine": "arm64"
+    },
+    "remote": {
+      "kernel": "Linux",
+      "machine": "aarch64"
+    },
+    "source_inventory_unchanged": true,
+    "source_sha256": {
+      "scripts/qualify-discovery-two-host.py": "0b67d8454e70e8c3f7b670360acf7121c226910dbf4498d4c0053f58f53cf9e1",
+      "webmux/server/internal/discovery/discovery.go": "29402d3044e6f8e8888a25ed2b3bebdeb11d047bbf92a36ad461ca15fe36dec8",
+      "webmux/server/internal/discovery/discovery_test.go": "fb850bd07323805f54bea6687605e35227ab035728a1a1fc1762ae09d263a20a",
+      "webmux/server/internal/discovery/native_announcements_darwin.go": "6b465bbd6863e0baa2f496caaa8714807ed9117fffcbefce8601b4e26d47af3f",
+      "webmux/server/internal/discovery/native_announcements_darwin_test.go": "30f924b46752e10bd1e2f67de2aeb8939ba9d5ae6b6231d90e56addbcdfbbf42",
+      "webmux/server/internal/discovery/native_announcements_other.go": "eff09deacfe1fcbd208691c3026599c972fb5e483f8a1dae1e370a687bb9dee0",
+      "webmux/server/internal/discovery/native_bonjour_test.go": "ae0d4860051daf7aee50654a7e51d4f45d58785787908795cb6c7e5ebe9dd29f",
+      "webmux/server/internal/discovery/native_endpoint_test.go": "3c688196cd2c65a0c532b29b9ea9821503e905a3acee52499fb7df8b09d3a47b",
+      "webmux/server/internal/discovery/nodes.go": "6feb100e8b629a2c40d800657dafa3b30af3a593936483e32dbd9e8698c1f101",
+      "webmux/server/internal/discovery/nodes_test.go": "587dfdd13c5fe7a628b1774db0d453ef6f6fc6a8124cf68cb4ca791be3e12947",
+      "webmux/server/internal/discovery/policy.go": "6f28e23d3b120466554b38049e91c66d150e548b3c2206297325e2d7533f57f0",
+      "webmux/server/internal/discovery/transport_control_test.go": "7d31fa3839626e2a4b97a865e0a78224b6a5b615e908f7d795f0d78c31788701",
+      "webmux/server/go.mod": "2ec1c2dac473a2aa6a91b3e2dbefb0a0343a0dbdc4b170962310666c72d33e20",
+      "webmux/server/go.sum": "35bd3d38f7dc0ee72c6bff43127f8054f8933528769622962ec47fc549b7d897"
+    },
+    "binary_sha256": {
+      "darwin": "bcd35994cde6a4dfef94ddff451c871d626d10221feb428d04a83649d52943e1",
+      "linux": "65e8c1650c6b36c7829e9d23793f97f0a635e7b86054797554f5e759731c4b4a"
+    },
+    "phases": [
+      {
+        "name": "forward",
+        "passed": true,
+        "mac_role": "browse",
+        "linux_role": "advertise",
+        "mac_exit_code": 0,
+        "linux_exit_code": 0,
+        "node_observed_by_browsers": {
+          "mac": true,
+          "linux": null
+        },
+        "candidate_address_families": {
+          "mac": [
+            4
+          ],
+          "linux": []
+        },
+        "legacy_instance_records_requested": true,
+        "legacy_listeners_requested": false,
+        "legacy_instance_records_verified": true
+      },
+      {
+        "name": "reverse",
+        "passed": true,
+        "mac_role": "advertise",
+        "linux_role": "browse",
+        "mac_exit_code": 0,
+        "linux_exit_code": 0,
+        "node_observed_by_browsers": {
+          "mac": null,
+          "linux": true
+        },
+        "candidate_address_families": {
+          "mac": [],
+          "linux": [
+            4
+          ]
+        },
+        "legacy_instance_records_requested": true,
+        "legacy_listeners_requested": false,
+        "legacy_instance_records_verified": true
+      },
+      {
+        "name": "duplex",
+        "passed": true,
+        "mac_role": "both",
+        "linux_role": "both",
+        "mac_exit_code": 0,
+        "linux_exit_code": 0,
+        "node_observed_by_browsers": {
+          "mac": true,
+          "linux": true
+        },
+        "candidate_address_families": {
+          "mac": [
+            4
+          ],
+          "linux": [
+            4,
+            6
+          ]
+        },
+        "legacy_instance_records_requested": true,
+        "legacy_listeners_requested": false,
+        "legacy_instance_records_verified": true
+      },
+      {
+        "name": "bonjour-control",
+        "passed": true,
+        "mac_role": "bonjour-advertise",
+        "linux_role": "browse",
+        "mac_exit_code": -2,
+        "linux_exit_code": 0,
+        "node_observed_by_browsers": {
+          "mac": null,
+          "linux": true
+        },
+        "candidate_address_families": {
+          "mac": [],
+          "linux": [
+            4
+          ]
+        },
+        "legacy_instance_records_requested": false,
+        "legacy_listeners_requested": false
+      }
+    ]
+  },
+  "additional_source_sha256": {
+    "webmux/server/internal/httpapi/node_discovery.go": "c40e30955316cc8f7eb6659837c93823f930d517c85d2840f083a9253cf58f7e"
+  },
+  "native_registration_controls_same_binary": {
+    "exit_code": 0,
+    "binary_sha256": "bcd35994cde6a4dfef94ddff451c871d626d10221feb428d04a83649d52943e1",
+    "test": "TestNativeBonjourRegistrationControls",
+    "interface": "en0",
+    "cgo_enabled": false
+  },
+  "quality_checks": {
+    "full_go_node24": {
+      "exit_code": 0,
+      "private_log": "_build/discovery-darwin631/bonjour-go-full-published.log",
+      "sha256": "27b6ef90c6c503a7b32aa1d31fccc9765ed0218fdae92fe107bee77ad57a9722"
+    },
+    "discovery_race": {
+      "exit_code": 0,
+      "private_log": "_build/discovery-darwin631/bonjour-race-qualified.log",
+      "sha256": "4b9369678260782c2913d67e6942ae4ebc235131f6eb667de8a9fafe4e5c4c74"
+    },
+    "api_node_race": {
+      "exit_code": 0,
+      "private_log": "_build/discovery-darwin631/bonjour-api-race-final.log",
+      "sha256": "8c0ab10ae07eca6cfa5a4ccdd2159680f70171fb823d73ab0668cbb3a7b7bcc9"
+    },
+    "vet_all": {
+      "exit_code": 0,
+      "private_log": "_build/discovery-darwin631/bonjour-vet-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "vet_final_native_controls": {
+      "exit_code": 0,
+      "private_log": "_build/discovery-darwin631/bonjour-vet-qualified.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "production_server_contract": {
+      "exit_code": 0,
+      "private_log": "_build/discovery-darwin631/bonjour-contract-final.log",
+      "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f"
+    },
+    "standalone_cgo0_build": {
+      "exit_code": 0,
+      "private_log": "_build/discovery-darwin631/bonjour-standalone-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native_registration_race": {
+      "exit_code": 0,
+      "private_log": "_build/discovery-darwin631/bonjour-native-controls-race-qualified.log",
+      "sha256": "5e77b005d3a92d643487eeac853fbd50a8afe7731de5e4adb5637f8839973cfb"
+    }
+  },
+  "cross_compilation_sha256": {
+    "darwin_amd64": "ee3f418205cf8ffd91d2f124e752d976b37a6b81409d46875a3183410e3ca01e",
+    "windows_arm64": "4e8541f38e574f7f193046dc95d53393cb153e21aa09287890e4d4c74e17ee1c",
+    "linux_arm64": "65e8c1650c6b36c7829e9d23793f97f0a635e7b86054797554f5e759731c4b4a"
+  },
+  "standalone_server_sha256": "a90f6c5c15626d6a246c61c2b8e6d92b6bca0217fdad5d0be6a50247342838af",
+  "dependency_boundaries": {
+    "linux": {
+      "exit_code": 0,
+      "purego_link_dependency": false
+    },
+    "windows": {
+      "exit_code": 0,
+      "purego_link_dependency": false
+    },
+    "darwin": {
+      "exit_code": 0,
+      "purego_link_dependency": true
+    }
+  },
+  "host_only_selection": {
+    "exit_code": 1,
+    "passed": false,
+    "tracked_by": 660,
+    "production_sources_match_current": true,
+    "phases": [
+      {
+        "name": "forward",
+        "passed": true,
+        "mac_role": "browse",
+        "linux_role": "advertise",
+        "mac_exit_code": 0,
+        "linux_exit_code": 0,
+        "node_observed_by_browsers": {
+          "mac": true,
+          "linux": null
+        },
+        "candidate_address_families": {
+          "mac": [
+            4
+          ],
+          "linux": []
+        },
+        "legacy_instance_records_requested": true,
+        "legacy_listeners_requested": true,
+        "legacy_instance_records_verified": true,
+        "legacy_listeners_verified": true,
+        "lookups": [
+          {
+            "browser": "mac",
+            "allow_http": false,
+            "expected_port": 19311,
+            "actual_port": 19311,
+            "error": ""
+          },
+          {
+            "browser": "mac",
+            "allow_http": true,
+            "expected_port": 19310,
+            "actual_port": 19310,
+            "error": ""
+          }
+        ]
+      },
+      {
+        "name": "reverse",
+        "passed": false,
+        "mac_role": "advertise",
+        "linux_role": "browse",
+        "mac_exit_code": 0,
+        "linux_exit_code": 1,
+        "node_observed_by_browsers": {
+          "mac": null,
+          "linux": true
+        },
+        "candidate_address_families": {
+          "mac": [],
+          "linux": []
+        },
+        "legacy_instance_records_requested": true,
+        "legacy_listeners_requested": true,
+        "legacy_instance_records_verified": true,
+        "legacy_listeners_verified": false,
+        "lookups": [
+          {
+            "browser": "linux",
+            "allow_http": false,
+            "expected_port": 19311,
+            "actual_port": 8443,
+            "error": ""
+          }
+        ]
+      },
+      {
+        "name": "duplex",
+        "passed": false,
+        "mac_role": "both",
+        "linux_role": "both",
+        "mac_exit_code": 0,
+        "linux_exit_code": 1,
+        "node_observed_by_browsers": {
+          "mac": true,
+          "linux": true
+        },
+        "candidate_address_families": {
+          "mac": [
+            4
+          ],
+          "linux": []
+        },
+        "legacy_instance_records_requested": true,
+        "legacy_listeners_requested": true,
+        "legacy_instance_records_verified": true,
+        "legacy_listeners_verified": false,
+        "lookups": [
+          {
+            "browser": "mac",
+            "allow_http": false,
+            "expected_port": 19311,
+            "actual_port": 19311,
+            "error": ""
+          },
+          {
+            "browser": "mac",
+            "allow_http": true,
+            "expected_port": 19310,
+            "actual_port": 19310,
+            "error": ""
+          },
+          {
+            "browser": "linux",
+            "allow_http": false,
+            "expected_port": 19311,
+            "actual_port": 8443,
+            "error": ""
+          }
+        ]
+      },
+      {
+        "name": "bonjour-control",
+        "passed": true,
+        "mac_role": "bonjour-advertise",
+        "linux_role": "browse",
+        "mac_exit_code": -2,
+        "linux_exit_code": 0,
+        "node_observed_by_browsers": {
+          "mac": null,
+          "linux": true
+        },
+        "candidate_address_families": {
+          "mac": [],
+          "linux": [
+            4
+          ]
+        },
+        "legacy_instance_records_requested": false,
+        "legacy_listeners_requested": false,
+        "lookups": []
+      }
+    ]
+  },
+  "other_retained_failed_commands": {
+    "unchanged_same_host_native_roundtrips": {
+      "exit_code": 1,
+      "private_log": "_build/discovery-darwin631/bonjour-original-native-roundtrips.log",
+      "sha256": "a14fea9bf04543d422a2cbbcf40df5b92f43ee27c19ffc7cc60a1c2faca0a7ad"
+    },
+    "initial_cgo0_collision_control_newer_must_lose_assumption": {
+      "exit_code": 1,
+      "private_log": "_build/discovery-darwin631/bonjour-native-controls-cgo0-final.log",
+      "sha256": "0acbc58ce13d2c32380a8a2e4a64d947ce8642d54c953f95f11b0539bba46c19"
+    },
+    "first_broad_go_run_system_node26": {
+      "exit_code": 1,
+      "private_log": "_build/discovery-darwin631/bonjour-go-full.log",
+      "sha256": "62dc33ea1f5fe7d8c5049c722dd5d37f36e71800825b6bfb6ca24d9776bf9aa6"
+    },
+    "direct_api_wrong_library_alias": {
+      "exit_code": 2,
+      "private_log": "_build/discovery-darwin631/bonjour-api-control-darwin.log",
+      "sha256": "ac6fe305c80bbf53e0a6d7717a7c4c7465851daaa19cd122de372ac3e3d4eba1"
+    },
+    "direct_api_wrong_slice_stack_argument": {
+      "exit_code": 2,
+      "private_log": "_build/discovery-darwin631/bonjour-api-system-control-darwin.log",
+      "sha256": "5331f78980b6204ce4b9aeaeecc7e5169b21c72649f717b40d60fb83a09b61ca"
+    }
+  },
+  "private_artifact_sha256": {
+    "_build/discovery-darwin631/qualified-bonjour-published/bonjour-control-linux.log": "41c7066b4e62d51391de3b69d3393d25f310d135be9ba4f15f97848c2f063326",
+    "_build/discovery-darwin631/qualified-bonjour-published/bonjour-control-mac.log": "1ce1a7416c826da79ec65e561484295b9f22884d516878369534b33add480f08",
+    "_build/discovery-darwin631/qualified-bonjour-published/build-darwin.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "_build/discovery-darwin631/qualified-bonjour-published/build-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "_build/discovery-darwin631/qualified-bonjour-published/duplex-linux.log": "839ebfe071d708c8e17070218d046612c7f6b1ff224e503ee6e92ea7ff6cbb80",
+    "_build/discovery-darwin631/qualified-bonjour-published/duplex-mac/listener-instance-records.json": "0ca2f992056d272e07079f9c3a98d46c32b2d0091af7c3c3d70bf0e3861f30ad",
+    "_build/discovery-darwin631/qualified-bonjour-published/duplex-mac/observed-all.json": "f688ca9b3e567b896f65c69739b45f20be5c789e520898d349cc10285c1bc1f4",
+    "_build/discovery-darwin631/qualified-bonjour-published/duplex-mac/observed.json": "c1a17b8e7aa70991625d0f7ff54587599963ced00ee8e5f93f3122928aabd817",
+    "_build/discovery-darwin631/qualified-bonjour-published/duplex-mac/ready.json": "aa1a08385bbaf78571401f8d13c298aa617c77f4831e4ad5397907c3133591de",
+    "_build/discovery-darwin631/qualified-bonjour-published/duplex-mac.log": "558f28a979c14b44e74dcfe3c6d52f671510deac77149390288cd6d76e1fa8df",
+    "_build/discovery-darwin631/qualified-bonjour-published/forward-linux.log": "0eeb8ab3241306f7da84fb85a80bca03d8ad939cc45be64f3dcc5e61219c8d52",
+    "_build/discovery-darwin631/qualified-bonjour-published/forward-mac/listener-instance-records.json": "0ca2f992056d272e07079f9c3a98d46c32b2d0091af7c3c3d70bf0e3861f30ad",
+    "_build/discovery-darwin631/qualified-bonjour-published/forward-mac/observed-all.json": "c97d24aa778b959412db91660e76f9964edf3230b1b26107a61938112f0f6c49",
+    "_build/discovery-darwin631/qualified-bonjour-published/forward-mac/observed.json": "fab374f43b8fc53343320f850dc9a8030d8dc878cadb22ca72bd5975386a1798",
+    "_build/discovery-darwin631/qualified-bonjour-published/forward-mac/ready.json": "02f59cdc0eb406f294014632b75f9605beaf78516d7af84563d0ad3032de609b",
+    "_build/discovery-darwin631/qualified-bonjour-published/forward-mac.log": "c4c1c0c3d04b7dca1f9604f9dda4aa8c69e9fdc8ca76641db57884afc0c42920",
+    "_build/discovery-darwin631/qualified-bonjour-published/go-version.log": "c6f1c8d54aedc3afa72560d934397ad6c33b28f1b4d3546ec53176439b2397d5",
+    "_build/discovery-darwin631/qualified-bonjour-published/native-registration-controls-result.json": "be6b12fb5e50a39f64cafb140455aaf22b3a2484208f82e37a5b5617393097c4",
+    "_build/discovery-darwin631/qualified-bonjour-published/native-registration-controls.log": "34b7a3c7855e20b41060ecd23e34bf219668da7c99bcb222772b219eb3651f6e",
+    "_build/discovery-darwin631/qualified-bonjour-published/receipt.json": "e91673958a65c09cb643f270b4f9c1fb1c47b6994a380d4c2d3a71a2936cdf51",
+    "_build/discovery-darwin631/qualified-bonjour-published/remote-prepare.log": "e8559cc652d6145897339adf6714e6d31b0be9667573bbe04618333896f8d182",
+    "_build/discovery-darwin631/qualified-bonjour-published/reverse-linux.log": "b14453c13049261c2f94a19992f9499935bff084e6c75e8d6e4bbe7f8b834619",
+    "_build/discovery-darwin631/qualified-bonjour-published/reverse-mac/ready.json": "184ff365a2330173cb4e7356ab98e3c43da2780ea2fde69c0608a0a963160ef2",
+    "_build/discovery-darwin631/qualified-bonjour-published/reverse-mac.log": "a4442da10c44b1592c18d7af4488514399c67d655c2c6026e0a16411d6bf921e",
+    "_build/discovery-darwin631/qualified-bonjour-published/transfer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/bonjour-control-linux.log": "79743353ede4bc2e017d269dd4249cd95cdbe3aa6da6eb58330b5d2bc8a47100",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/bonjour-control-mac.log": "b13aacde0b69f356f5c9808a88f861ad9593fe76615dd67bd97f66d2fe58cbb0",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/build-darwin.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/build-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/duplex-linux.log": "004ef0282f9384eee28d75f47cb1784f827a89715ec3be5dac6e151b6433c92e",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/duplex-mac/listener-instance-records.json": "0ca2f992056d272e07079f9c3a98d46c32b2d0091af7c3c3d70bf0e3861f30ad",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/duplex-mac/listener-lookup-results.json": "832cc1cd23dde595cf0b0a0ece78f35128646fef5d558f5737f7943ebeadc386",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/duplex-mac/listener-lookups.json": "02c3054d8c045e24d1391f485899355595c1bdd718c63415bcbb6d9e375358c8",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/duplex-mac/observed-all.json": "98f9081ba1ba909dda81f42d54dcdb3619186fb67c50ae367127dcd69bb29e5c",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/duplex-mac/observed.json": "2d3a887a5de0d67c2147ab3392f0acfbabdb40532b2775966d11e9075ef619d7",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/duplex-mac/ready.json": "2b8a77a676acf0ea70a34ac5df452b004de0e07132ccade2d624ea81d5282b9f",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/duplex-mac.log": "97c3776c753d901e5790bc1a1f55995f1c13e34954b6b84565b9af7d33b01c70",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/forward-linux.log": "269c7bcae86010bd23fcc164a828a8df36a3f9b53df093875bf3d6b56455ad74",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/forward-mac/listener-instance-records.json": "0ca2f992056d272e07079f9c3a98d46c32b2d0091af7c3c3d70bf0e3861f30ad",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/forward-mac/listener-lookup-results.json": "832cc1cd23dde595cf0b0a0ece78f35128646fef5d558f5737f7943ebeadc386",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/forward-mac/listener-lookups.json": "02c3054d8c045e24d1391f485899355595c1bdd718c63415bcbb6d9e375358c8",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/forward-mac/observed-all.json": "3e73dca99203edebb71271c45b425c2e50b0cecdaee87c260efeb139f9800ab6",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/forward-mac/observed.json": "1898ebacb61915b0637978603759297a551e0f83ce720d40601324497a19eb7b",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/forward-mac/ready.json": "747cdf8d6d80c5503c61328678bc4fa2453fa9edacbb5745a21f03588902e01a",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/forward-mac.log": "7f6b1fb3a4e5885f6376f9bb5264156491b0f04c7a7c669704e01c86d1e90dd8",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/go-version.log": "c6f1c8d54aedc3afa72560d934397ad6c33b28f1b4d3546ec53176439b2397d5",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/receipt.json": "30394c143e291f9b997031f4105d9f47b90075975e3a461dabcd580f3afdcc07",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/remote-prepare.log": "e8559cc652d6145897339adf6714e6d31b0be9667573bbe04618333896f8d182",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/reverse-linux.log": "659e0ae4e67f7cca680e86dee88b0dfbea8636a6f60759aff8ca0e4316133bf0",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/reverse-mac/ready.json": "3d5be167e2fd50171d9e769a9b3502b00c057dd02c911547e6ec40121495a4c2",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/reverse-mac.log": "b0f87a248ea71cd1d8876fbd243ad7df511628e8ed02557a425d29ac41b66502",
+    "_build/discovery-darwin631/qualified-bonjour-host-selection-final/transfer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/bonjour-control-linux.log": "03c0bfb0bcce56cd01cf17b3632aff22096fddb4ad62d539f918d07c23adce82",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/bonjour-control-mac.log": "51b9b5f43ce1d8da09a9ced6810bf42574719d38a778fe65ffd61672857f4ac2",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/build-darwin.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/build-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/duplex-linux.log": "4af4bdee7301f909e12b46a9ad6219325937a1e334479dd9f3425ab7f99db19a",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/duplex-mac/observed.json": "d7403e4f0249d576172bacdf479e7838fd1a13ae092948c05506dcd57d3c69b2",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/duplex-mac/ready.json": "ee4e2fcefad35a6c0e3c856598b8b610395d98e9c5a7c798a1f1fe92078330c5",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/duplex-mac.log": "d55859e93893932e64c5cf920e6cedc4a81a50a72760e3da908d5d2ea0be7350",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/forward-linux.log": "29cd699246bc73beabb56064ce05f2bd47b5f561a5d4821bf8321df9c7ad576e",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/forward-mac/observed.json": "ba2c0f65a751311e65ff69567c37b7ec0a851d9b26413052597e1e5574d4eb11",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/forward-mac/ready.json": "29d96fb46bfc2a343cc27f26d692ffd9df18972f5b20a8a3c89f8198f6c445c2",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/forward-mac.log": "f50ea760aa00e4b3bb0e12545b7ea1425e066e8698371f6a3372f524df347832",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/go-version.log": "c6f1c8d54aedc3afa72560d934397ad6c33b28f1b4d3546ec53176439b2397d5",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/receipt.json": "0620f238ad0de553fa59b44bce054d2c8116d6f60acd6f2bf0bbbeff02e77d0d",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/remote-prepare.log": "e8559cc652d6145897339adf6714e6d31b0be9667573bbe04618333896f8d182",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/reverse-linux.log": "5383e537cf27ebe31d62435647fe7eedb1f687fdaa9b74bbd5dd9329ac73cc33",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/reverse-mac/ready.json": "56860b3aa4cc10d51ad5b6515b7aba197cc93897b497c8e680d6cb6feeab7efc",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/reverse-mac.log": "7945edd4f628ca06b5bac9d644d8a1e3903bc807dad07ebb139d92533cc23e48",
+    "_build/discovery-darwin631/qualified-bonjour-instance-records/transfer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "_build/discovery-darwin631/manifest-controls-published/controls-result.json": "6f69fc0d3baa96ce754188ee3e8eedcd701c86921684c96e94c3f60b20a8dec8",
+    "_build/discovery-darwin631/manifest-controls-published/existing-output-refusal.log": "e1456acc17baecd9d0ba7998a22ce367199c89711fb195fd439a36b60f8126b2",
+    "_build/discovery-darwin631/manifest-controls-published/receipt.json": "bcace810e7945d91d3e2748b9e83e6f81ed6db766d53c7f61b70c4d8b890b077",
+    "_build/discovery-darwin631/manifest-controls-published/scripts/qualify-discovery-two-host.py": "0b67d8454e70e8c3f7b670360acf7121c226910dbf4498d4c0053f58f53cf9e1",
+    "_build/discovery-darwin631/bonjour-api-collision-cgo0.log": "615f675101cf1822c6932f04b5a5345b5ff29f05bb86c74479a6755cf0e7e30c",
+    "_build/discovery-darwin631/bonjour-api-collision-cgo1.log": "1d12484be27f27b96f8486706b53182be84ef286098d7a3f69ae52420d962d56",
+    "_build/discovery-darwin631/native-dependency-boundaries.json": "ab4d6acfc87505c056afc25ff4baeafaf4775668e39a90e0ac53a40b0de86654",
+    "_build/discovery-darwin631/bonjour-standalone-buildinfo.log": "eccfb6e16a283af860fa20ca45895bc582b9bfee7deff76ed62db6f4056121a7",
+    "_build/discovery-darwin631/bonjour-health-published.log": "c04c2ac179082cc490964062ace567239bf948439bc19ff0eddf61452524123f"
+  },
+  "limitations": [
+    "Declared HTTP/TLS port metadata is not a listening HTTP/TLS service.",
+    "IPv6 candidate records do not prove IPv6 multicast transport.",
+    "Host-only lookup remains ambiguous; no wrong port is accepted by qualification.",
+    "Native daemon can reject either colliding registration; no prior-owner priority is promised.",
+    "Windows ARM64 and Darwin AMD64 execution are not qualified here.",
+    "Full discovered/enrolled and agent lifecycle acceptance under #631/#630 remains open."
+  ]
+}

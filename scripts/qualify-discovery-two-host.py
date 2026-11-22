@@ -35,6 +35,8 @@ log=root/(i['phase']+'.log');output=root/i['phase']
 if output.exists() or log.exists():raise RuntimeError('fixture output already exists')
 env={k:v for k,v in os.environ.items() if k in ('PATH','TMPDIR','LANG','TZ')}
 env.update(WEBMUX_TEST_NODE_ROLE=i['role'],WEBMUX_TEST_NODE_ID=i['id'],WEBMUX_TEST_NODE_EXPECTED=i['expected'],WEBMUX_TEST_NODE_OUTPUT=str(output))
+if i.get('legacy'):env['WEBMUX_TEST_NODE_LOOKUP']='1'
+if i.get('instance_records'):env['WEBMUX_TEST_NODE_INSTANCE_RECORDS']='1'
 with log.open('xb') as f:
  p=subprocess.Popen([str(binary),'-test.run=^TestNodeNativeEndpoint$','-test.v','-test.timeout=20s'],env=env,stdout=f,stderr=subprocess.STDOUT,stdin=subprocess.DEVNULL)
  try:
@@ -49,7 +51,7 @@ with log.open('xb') as f:
    try:p.wait(timeout=3)
    except subprocess.TimeoutExpired:p.kill();p.wait()
 print(log.read_text(),end='',flush=True)
-records={name:json.loads((output/name).read_text()) for name in ('observed.json','observed-all.json','failed-snapshot.json') if (output/name).exists()}
+records={name:json.loads((output/name).read_text()) for name in ('observed.json','observed-all.json','listener-lookups.json','listener-lookup-results.json','listener-instance-records.json','failed-snapshot.json') if (output/name).exists()}
 print('NATIVE_DISCOVERY_END='+json.dumps({'exit_code':result,'records':records}),flush=True)
 sys.exit(result)
 '''
@@ -75,14 +77,15 @@ class Qualification:
         self.output = args.output
         self.output.mkdir(mode=0o700, parents=False, exist_ok=False)
         self.receipt = {'passed': False, 'phases': []}
-        self.sources = [Path(__file__).resolve()]
-        self.sources += sorted((self.root / 'webmux/server/internal/discovery').glob('*.go'))
-        self.sources += [self.root / 'webmux/server' / name for name in ('go.mod', 'go.sum')]
         self.receipt['sources_before'] = self.source_hashes()
         self.linux_hash = None
 
     def source_hashes(self):
-        return {str(p.relative_to(self.root)): digest(p) for p in self.sources}
+        # Re-enumerate so additions and removals also invalidate the manifest.
+        sources = [Path(__file__).resolve()]
+        sources += sorted((self.root / 'webmux/server/internal/discovery').glob('*.go'))
+        sources += [self.root / 'webmux/server' / name for name in ('go.mod', 'go.sum')]
+        return {str(p.relative_to(self.root)): digest(p) for p in sources}
 
     def command(self, name, argv, **kwargs):
         result = subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
@@ -143,8 +146,11 @@ class Qualification:
 
     async def phase(self, name, linux_role, mac_role):
         own, peer = secrets.token_hex(16), secrets.token_hex(16)
+        legacy = self.args.legacy_listeners and mac_role != 'bonjour-advertise'
+        instance_records = self.args.legacy_instance_records and mac_role != 'bonjour-advertise'
         process = await self.remote({'operation': 'run', 'phase': name, 'role': linux_role,
-                                    'id': peer, 'expected': own, 'sha256': self.linux_hash})
+                                    'id': peer, 'expected': own, 'sha256': self.linux_hash,
+                                    'legacy': legacy, 'instance_records': instance_records})
         first, rest = b'', b''
         mac = None
         result = {'name': name, 'passed': False, 'mac_role': mac_role, 'linux_role': linux_role,
@@ -168,6 +174,10 @@ class Qualification:
                     env.update(WEBMUX_TEST_NODE_ROLE=mac_role, WEBMUX_TEST_NODE_ID=own,
                                WEBMUX_TEST_NODE_EXPECTED=peer,
                                WEBMUX_TEST_NODE_OUTPUT=str(self.output / (name + '-mac')))
+                    if legacy:
+                        env['WEBMUX_TEST_NODE_LOOKUP'] = '1'
+                    if instance_records:
+                        env['WEBMUX_TEST_NODE_INSTANCE_RECORDS'] = '1'
                     argv = [str(self.output / 'discovery-darwin-arm64.test'),
                             '-test.run=^TestNodeNativeEndpoint$', '-test.v', '-test.timeout=20s']
                 mac = await asyncio.create_subprocess_exec(
@@ -192,9 +202,26 @@ class Qualification:
                 'observed.json', {}).get('claimed_id') == peer
             linux_observed = linux_role == 'advertise' or end['records'].get(
                 'observed.json', {}).get('claimed_id') == own
+            result['node_observed_by_browsers'] = {
+                'mac': None if mac_role in ('advertise', 'bonjour-advertise') else mac_observed,
+                'linux': None if linux_role == 'advertise' else linux_observed}
             mac_ok = mac.returncode == 0 if mac_role != 'bonjour-advertise' else (
                 result['bonjour_running_until_cleanup'] and mac.returncode == -signal.SIGINT)
             result['passed'] = mac_ok and process.returncode == end['exit_code'] == 0 and mac_observed and linux_observed
+            result['legacy_listeners_requested'] = legacy
+            result['legacy_instance_records_requested'] = instance_records
+            if instance_records:
+                expected = {'_webmux._tcp': 19310, '_webmuxs._tcp': 19311}
+                result['legacy_instance_records_verified'] = (
+                    (mac_role == 'advertise' or local.get('listener-instance-records.json') == expected) and
+                    (linux_role == 'advertise' or end['records'].get('listener-instance-records.json') == expected))
+                result['passed'] = result['passed'] and result['legacy_instance_records_verified']
+            if legacy:
+                expected = {'http': True, 'https': True}
+                result['legacy_listeners_verified'] = (
+                    (mac_role == 'advertise' or local.get('listener-lookups.json') == expected) and
+                    (linux_role == 'advertise' or end['records'].get('listener-lookups.json') == expected))
+                result['passed'] = result['passed'] and result['legacy_listeners_verified']
             result['candidate_address_families'] = {}
             for label, records in [('mac', local), ('linux', end['records'])]:
                 addresses = [ipaddress.ip_address(c['address'].split('%')[0])
@@ -252,6 +279,10 @@ def main():
     parser.add_argument('--remote-root', type=Path, required=True,
                         help='New absolute private directory; its parent must already exist')
     parser.add_argument('--bonjour-control', action='store_true', help='Also test native macOS advertisement')
+    parser.add_argument('--legacy-listeners', action='store_true',
+                        help='Also resolve the production endpoints HTTP/HTTPS listener records')
+    parser.add_argument('--legacy-instance-records', action='store_true',
+                        help='Require exact peer instance HTTP/HTTPS records independently of host-only selection')
     args = parser.parse_args()
     if not args.output.is_absolute() or not args.remote_root.is_absolute():
         parser.error('Output and remote directory must be absolute')
