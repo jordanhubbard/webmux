@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Diagnostic layer integration, source consistency, race/vet and compile checks; no new native multicast run or transport fix",
+  "parent_head": "fbee2e0d5bef57aecb34cefa4436e865b31bf548",
+  "original_diagnostic_head": "54a4f74f8bc227abedf4031c7f87a0bd21a83407",
+  "go": "go version go1.27.4 darwin/arm64",
+  "source_sha256": {
+    "webmux/server/internal/discovery/transport_control_test.go": "7d31fa3839626e2a4b97a865e0a78224b6a5b615e908f7d795f0d78c31788701",
+    "webmux/server/internal/discovery/discovery.go": "29402d3044e6f8e8888a25ed2b3bebdeb11d047bbf92a36ad461ca15fe36dec8",
+    "webmux/server/internal/discovery/nodes.go": "5bc031f432818f7c6767f0e524b226e335c995953fbf06b48fb60f8dda82fbfa",
+    "webmux/server/internal/discovery/discovery_test.go": "fb850bd07323805f54bea6687605e35227ab035728a1a1fc1762ae09d263a20a",
+    "webmux/server/internal/discovery/nodes_test.go": "587dfdd13c5fe7a628b1774db0d453ef6f6fc6a8124cf68cb4ca791be3e12947",
+    "webmux/server/go.mod": "2f76dbb6ea1fe15260d271fb8bf6593d986d5ab83c08f7d4627e5a6c12a1a12d",
+    "webmux/server/go.sum": "ee6a5eeea5cf2a0b2768348d078eb8d941ba3229896169cedf8185d35a2d690f"
+  },
+  "evidence": [
+    {
+      "private_path": "_build/integrate-discovery-transport631/discovery-race.log",
+      "exit_code": 0,
+      "sha256": "df8e696a2b85785f31264b0548146d621a32297008d27736956f93fe6e858c19"
+    },
+    {
+      "private_path": "_build/integrate-discovery-transport631/vet.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "private_path": "_build/integrate-discovery-transport631/linux-compile.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "private_path": "_build/integrate-discovery-transport631/windows-compile.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "private_path": "_build/integrate-discovery-transport631/original-source-bindings.json",
+      "exit_code": 0,
+      "sha256": "908a7902526de5808e85d711619e5c6ea89b5131d81a572ae62cdfeb595c7037"
+    }
+  ],
+  "binaries": {
+    "_build/integrate-discovery-transport631/discovery-linux-arm64.test": "fecb1b93ff370a058be9d6329f6e342ad52df90eba90d0d866c7bac153cd1eb9",
+    "_build/integrate-discovery-transport631/discovery-windows-arm64.test.exe": "db299124e64d1c17172ccb82d177b86d61a8ebe8224e9188110cec936db6d9b9"
+  },
+  "commands": [
+    "go test -race -count=1 ./internal/discovery",
+    "go vet ./internal/discovery",
+    "GOOS=linux GOARCH=arm64 go test -c ./internal/discovery",
+    "GOOS=windows GOARCH=arm64 go test -c ./internal/discovery"
+  ],
+  "limitations": [
+    "The diagnostic is opt-in and skipped without its explicit interface selection.",
+    "No new native multicast probe; original failed native commands remain failed.",
+    "Linux/Windows artifacts are compile evidence only.",
+    "Fresh hosted checks and parent delivery remain merge gates.",
+    "#631 and complete discovered two-host workflow acceptance remain open."
+  ]
+}

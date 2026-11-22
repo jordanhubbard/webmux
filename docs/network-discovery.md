@@ -120,6 +120,16 @@ assertion, deadline or multicast requirement was relaxed. This is failed local
 network evidence, not a native success or an established cause. The same-host
 fixture would not establish two-host acceptance even if it passed.
 
+The [2026-11-22 transport diagnosis](validation/discovery-transport-2026-11-22/README.md)
+reproduces both failures and adds a bounded, opt-in control using the production
+socket setup. This Mac receives IPv4 loopback traffic but times out receiving
+its own multicast questions on both physical interfaces and both address
+families, despite successful joins/sends. The same Linux binary's physical
+interface controls pass on IPv4 and IPv6; IPv6 loopback has a separate send
+failure. The complete commands' failed outcomes remain retained. This narrows
+investigation below candidate parsing without establishing a cause or changing
+network policy. No product binding patch was justified.
+
 A cross-compiled source-bound Linux ARM64 test binary passed on the existing
 Sparky worker, including the original listener advertisement and the new node
 multicast round trip (no multicast skips). This is a single Linux host with two

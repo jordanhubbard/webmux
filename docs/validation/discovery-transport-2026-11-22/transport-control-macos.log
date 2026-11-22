@@ -1,0 +1,35 @@
+=== RUN   TestMulticastTransportControl
+=== RUN   TestMulticastTransportControl/lo0
+=== RUN   TestMulticastTransportControl/lo0/udp4
+    transport_control_test.go:41: production socket joined; native loopback enabled; unique DNS question sent
+    transport_control_test.go:41: exact question received; socket transport control only
+=== RUN   TestMulticastTransportControl/lo0/udp6
+    transport_control_test.go:41: production socket joined; native loopback enabled; unique DNS question sent
+    transport_control_test.go:41: exact question not received: read udp [::]:5353: raw-read udp6 [::]:5353: i/o timeout
+=== RUN   TestMulticastTransportControl/en0
+=== RUN   TestMulticastTransportControl/en0/udp4
+    transport_control_test.go:41: production socket joined; native loopback enabled; unique DNS question sent
+    transport_control_test.go:41: exact question not received: read udp 0.0.0.0:5353: raw-read udp4 0.0.0.0:5353: i/o timeout
+=== RUN   TestMulticastTransportControl/en0/udp6
+    transport_control_test.go:41: production socket joined; native loopback enabled; unique DNS question sent
+    transport_control_test.go:41: exact question not received: read udp [::]:5353: raw-read udp6 [::]:5353: i/o timeout
+=== RUN   TestMulticastTransportControl/en1
+=== RUN   TestMulticastTransportControl/en1/udp4
+    transport_control_test.go:41: production socket joined; native loopback enabled; unique DNS question sent
+    transport_control_test.go:41: exact question not received: read udp 0.0.0.0:5353: raw-read udp4 0.0.0.0:5353: i/o timeout
+=== RUN   TestMulticastTransportControl/en1/udp6
+    transport_control_test.go:41: production socket joined; native loopback enabled; unique DNS question sent
+    transport_control_test.go:41: exact question not received: read udp [::]:5353: raw-read udp6 [::]:5353: i/o timeout
+--- FAIL: TestMulticastTransportControl (5.01s)
+    --- FAIL: TestMulticastTransportControl/lo0 (1.00s)
+        --- PASS: TestMulticastTransportControl/lo0/udp4 (0.00s)
+        --- FAIL: TestMulticastTransportControl/lo0/udp6 (1.00s)
+    --- FAIL: TestMulticastTransportControl/en0 (2.00s)
+        --- FAIL: TestMulticastTransportControl/en0/udp4 (1.00s)
+        --- FAIL: TestMulticastTransportControl/en0/udp6 (1.00s)
+    --- FAIL: TestMulticastTransportControl/en1 (2.00s)
+        --- FAIL: TestMulticastTransportControl/en1/udp4 (1.00s)
+        --- FAIL: TestMulticastTransportControl/en1/udp6 (1.00s)
+FAIL
+FAIL	github.com/jordanhubbard/webmux/server/internal/discovery	5.215s
+FAIL

@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Native same-host multicast socket diagnosis; not two-host discovery/enrollment acceptance",
+  "source_sha256": {
+    "webmux/server/internal/discovery/transport_control_test.go": "7d31fa3839626e2a4b97a865e0a78224b6a5b615e908f7d795f0d78c31788701",
+    "webmux/server/internal/discovery/discovery.go": "29402d3044e6f8e8888a25ed2b3bebdeb11d047bbf92a36ad461ca15fe36dec8",
+    "webmux/server/internal/discovery/nodes.go": "5bc031f432818f7c6767f0e524b226e335c995953fbf06b48fb60f8dda82fbfa",
+    "webmux/server/internal/discovery/discovery_test.go": "fb850bd07323805f54bea6687605e35227ab035728a1a1fc1762ae09d263a20a",
+    "webmux/server/internal/discovery/nodes_test.go": "587dfdd13c5fe7a628b1774db0d453ef6f6fc6a8124cf68cb4ca791be3e12947",
+    "webmux/server/go.mod": "2f76dbb6ea1fe15260d271fb8bf6593d986d5ab83c08f7d4627e5a6c12a1a12d",
+    "webmux/server/go.sum": "ee6a5eeea5cf2a0b2768348d078eb8d941ba3229896169cedf8185d35a2d690f"
+  },
+  "go": "go1.27.4",
+  "macos": {
+    "version": "27.2.1",
+    "arch": "arm64",
+    "controls": {
+      "lo0": {
+        "udp4": "pass",
+        "udp6": "receive-timeout"
+      },
+      "en0": {
+        "udp4": "receive-timeout",
+        "udp6": "receive-timeout"
+      },
+      "en1": {
+        "udp4": "receive-timeout",
+        "udp6": "receive-timeout"
+      }
+    },
+    "native_dns_sd": "both original tests failed"
+  },
+  "linux": {
+    "arch": "arm64",
+    "binary_sha256": "fecb1b93ff370a058be9d6329f6e342ad52df90eba90d0d866c7bac153cd1eb9",
+    "controls": {
+      "lo": {
+        "udp4": "pass",
+        "udp6": "send-network-unreachable"
+      },
+      "enP7s7": {
+        "udp4": "pass",
+        "udp6": "pass"
+      },
+      "wlP9s9": {
+        "udp4": "pass",
+        "udp6": "pass"
+      }
+    },
+    "native_dns_sd": "both original tests passed"
+  },
+  "logs": [
+    {
+      "path": "transport-control-macos.log",
+      "exit_code": 1,
+      "sha256": "0b1617c4ec831424e29daa6e07970f311003857218d4ae9a37e5c103f34a86b4"
+    },
+    {
+      "path": "transport-control-linux.log",
+      "exit_code": 1,
+      "sha256": "a499b3b5ccfb3f577c143e592db0c378cf9ac443a2f0e7de3a984b819a43da4d"
+    },
+    {
+      "path": "native-roundtrip-20261122.log",
+      "exit_code": 1,
+      "sha256": "719cc878a32b73da1c611992988d339ebab951b6e57eeb139306c84f17da1053"
+    },
+    {
+      "path": "native-roundtrip-linux-20261122.log",
+      "exit_code": 0,
+      "sha256": "7d5915c2ec9397ef24741781f52575230f211e3be955fd6526dece1d91627722"
+    }
+  ],
+  "quality_gates": {
+    "discovery_race": "pass",
+    "discovery_vet": "pass",
+    "linux_arm64_compile": "pass",
+    "windows_arm64_compile": "pass; compilation only"
+  },
+  "cause": "Unproven. Physical-interface native multicast reception fails on this Mac; no product change or OS network reconfiguration applied."
+}
