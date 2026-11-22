@@ -22,6 +22,12 @@
       "exit_code": 0,
       "log_sha256": "9205f3bc4d68662d15f69dca53368bc4505097bc169083da1ac9d0f08f22f2a3",
       "ssh_project_changes_present": false
+    },
+    "main_based_full_go_suite": {
+      "source_commit": "7f68d48",
+      "command": "go test -p 4 -count=1 ./...",
+      "exit_code": 0,
+      "log_sha256": "6bd8022ba3a4570de5b0401574ae17510f46989f4745daf9eaa70ddcb7f93186"
     }
   },
   "failed_original_fixture": {
