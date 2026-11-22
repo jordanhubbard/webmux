@@ -20,17 +20,30 @@ per-session opt-in, including agents independently started on different WebMux
 nodes. WebMux should discover other WebMux nodes on the local network through
 mDNS/DNS-SD rather than requiring their addresses to be entered individually.
 
-The completed [architecture evaluation](coordination-architecture.md) selects the
-built-in WebMux plane and retains Agent Deck/Rig as optional lifecycle adapters.
-Its provider comparison records actual interfaces, deployment costs and native
-version/platform boundaries. Neither provider nor their proposed bridge under
-[#246](https://github.com/jordanhubbard/webmux/issues/246) is a prerequisite for
-ordinary-node coordination. Managed onboarding and full native acceptance remain
-separate requirements; existing agents retain their lifecycle owners.
+The [provider comparison](coordination-architecture.md) records Agent Deck/Rig
+interfaces and deployment costs. The #664 authority amendment converges the
+interactive surface with MAC's existing worker pool: projects retain roadmap and
+Literate AI delivery authority; MAC-connected projects use MAC for execution;
+WebMux provides human/agent access to that same authority. Standalone WebMux
+remains explicit. The [convergence contract](mac-project-coordination.md) records
+required bindings, limits and ordered acceptance. This integration is unfinished.
+Issue #630 is closed in the tracker; its historical component evidence does not
+complete the unchecked workflow requirements below. #664 tracks the clarified
+project-authority outcome and reconciliation of those remaining requirements.
 
 Ordered implementation and acceptance:
 
-- [x] **Evaluate the coordination architecture** under
+- [ ] **Converge project coordination with MAC** under
+  [#664](https://github.com/jordanhubbard/webmux/issues/664). Bind source roadmap
+  items and revisions to canonical MAC projects, tasks, attempts, leases and
+  WebMux sessions. Show local and remote activity, duplicate/conflicting scopes
+  and priority/dependency reasons through the same authority. Deliver read-only
+  visibility, interactive participant admission, authority-side scope/priority
+  gates and project-native review/publication integration in that order. Qualify
+  real agents and a human view across three hosts, including stale/offline
+  participants and lost-lease publication refusal. Preserve conversations and
+  lifecycle owners; do not create another independently editable backlog.
+- [x] **Compare provider coordination interfaces** under
   [#630](https://github.com/jordanhubbard/webmux/issues/630). Explain what Agent
   Deck and Rig actually contribute, inspect and test their relevant interfaces,
   and compare them with a built-in approach. Record capabilities, gaps,
@@ -68,8 +81,8 @@ Ordered implementation and acceptance:
 
 The [architecture decision](coordination-architecture.md) includes source-bound
 native provider-interface comparison and lifecycle-preservation rules. Architecture
-selection is complete; managed/existing-agent onboarding and full workflow
-acceptance remain open. The
+comparison is complete within its original scope; MAC convergence,
+managed/existing-agent onboarding and full workflow acceptance remain open. The
 [node discovery implementation checkpoint](network-discovery.md) adds a server-owned DNS-SD candidate browser and server-management visibility. It keeps
 announcements untrusted and retains manual enrollment. Authenticated HTTPS node/
 account identity and address migration now have a native macOS/Linux component
