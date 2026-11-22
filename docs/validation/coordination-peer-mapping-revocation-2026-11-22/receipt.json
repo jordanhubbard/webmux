@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Controlled real-TLS cache authorization-period regression and corrected peer integration; not new two-host native or mDNS acceptance",
+  "parent_head": "52d6697a48ac7ad5110de5f82a35763648487ba2",
+  "original_peer_head": "aed530f5cbecd4fdd052c0532da16aeb568c3e8c",
+  "source_sha256": {
+    "webmux/server/internal/httpapi/coordination_peers.go": "6a6894564ff03299ae61bd9fe97051ba380fa85563a010a91f0f862227e8c81c",
+    "webmux/server/internal/httpapi/coordination_peers_test.go": "6bbeafaab9f4f83a6dff00c4dcd53247d7215f036d1ea681206f0bfda7e15c0b",
+    "webmux/server/internal/httpapi/session_coordination.go": "84c67e2edc069b56af0ce785580b5064d0371f304bac6606ae9303a2c2f3c9b7",
+    "webmux/server/internal/httpapi/session_coordination_test.go": "763f8226c438161c5f99caa3aff052cf6b1de5d96759644295614088e632a110",
+    "webmux/server/internal/coordinationclient/native.go": "e39d5ff04d1a309954eb431d805d37048db439d43ab4fb2e71f81f667faec158"
+  },
+  "evidence": [
+    {
+      "private_path": "_build/integrate-coordination-peers630/mapping-before.log",
+      "exit_code": 1,
+      "sha256": "b1c87d2f329c88b00b8c84b29d404906df494a17252969b45e90a72a1fd3867e",
+      "source_scope": "original peer cache with new regression"
+    },
+    {
+      "private_path": "_build/integrate-coordination-peers630/mapping-build-failure.log",
+      "exit_code": 1,
+      "sha256": "78fa9aca9fbc60f3ba55d773847919a8f5d4fdec29abb4608c241df061225d09",
+      "source_scope": "intermediate source: added scope field required a keyed job initializer"
+    },
+    {
+      "private_path": "_build/integrate-coordination-peers630/mapping-after.log",
+      "exit_code": 0,
+      "sha256": "542ab5f64fa392ed508df116f0949746f576b7c91f05747714887279bfccbf2e",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-peers630/go-test.log",
+      "exit_code": 0,
+      "sha256": "caa6af8df6997cc84ed0c1f9cab77b98d0af60a55cd16a843f33817009a9978f",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-peers630/peer-api-race.log",
+      "exit_code": 0,
+      "sha256": "38da0e3d3c4a31fc2a267fe7e039d716dba4a8889e2b2809b9abf9abee4c88db",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-peers630/vet.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-peers630/typecheck.log",
+      "exit_code": 0,
+      "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-peers630/frontend-lint.log",
+      "exit_code": 0,
+      "sha256": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-peers630/frontend-test.log",
+      "exit_code": 0,
+      "sha256": "401fd856772bc415c905ed6963ff4299e3336b522696afcec0bf7d1a49ec0eb6",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-peers630/frontend-build.log",
+      "exit_code": 0,
+      "sha256": "4435994408c6fd04ee3dbfc2f936e9eb91d4826f29016b6fde7a5267fbf66d64",
+      "source_scope": "fixed combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-peers630/server-contract.log",
+      "exit_code": 0,
+      "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f",
+      "source_scope": "fixed combined source"
+    }
+  ],
+  "limitations": [
+    "Removal is observed by refresh before the delayed response is released; this does not assert immediate observation of external configuration changes.",
+    "Original native peer-component receipt describes its earlier binary, not this corrected build.",
+    "Fresh hosted checks and parent PR delivery must pass before merging the updated #638 head.",
+    "Complete native/managed/cross-node mutation/discovered workflow requirements remain open."
+  ]
+}

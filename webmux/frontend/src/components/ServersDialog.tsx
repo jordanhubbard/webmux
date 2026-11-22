@@ -3,8 +3,8 @@ import { api, type ManagedServer, type ServerGrant, type ServerDirectory, type N
 import { Dialog } from './Dialog';
 import './ServersDialog.css';
 
-type Editor = { kind: 'server' | 'grant'; existing: boolean; id: string; name: string; url: string; owner: string; allow_http: boolean; token_env: string; credential: string };
-const emptyEditor = (kind: Editor['kind']): Editor => ({ kind, existing: false, id: '', name: '', url: '', owner: '', allow_http: false, token_env: '', credential: '' });
+type Editor = { coordination_owner: string; coordination: boolean; verified: boolean; kind: 'server' | 'grant'; existing: boolean; id: string; name: string; url: string; owner: string; allow_http: boolean; token_env: string; credential: string };
+const emptyEditor = (kind: Editor['kind']): Editor => ({ coordination_owner: '', coordination: false, verified: false, kind, existing: false, id: '', name: '', url: '', owner: '', allow_http: false, token_env: '', credential: '' });
 
 function serverIdentity(url: string, directory: ServerDirectory) {
   const parsed = new URL(url);
@@ -40,7 +40,8 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
   const reload = async () => { setDirectory(await api.getServerDirectory()); await onChanged(); };
   const edit = (kind: Editor['kind'], entry?: ManagedServer | ServerGrant) => {
     setError(''); setNotice(''); setShowCredential(false);
-    setEditor({ ...emptyEditor(kind), owner: currentUser || 'anonymous', ...entry, kind, existing: !!entry, credential: '' });
+    const peer = entry && 'url' in entry ? entry : undefined;
+    setEditor({ ...emptyEditor(kind), owner: currentUser || 'anonymous', ...entry, coordination_owner: peer?.coordination_owner ?? '', coordination: entry && 'coordination' in entry ? !!entry.coordination : false, verified: !!peer?.identity?.node_id, kind, existing: !!entry, credential: '' });
   };
   const remove = (kind: Editor['kind'], id: string) => {
     if (!window.confirm(kind === 'server' ? `Remove ${id}? Its terminal processes will keep running on that server.` : `Remove incoming grant ${id}? This revokes the other server’s access.`)) return;
@@ -57,8 +58,8 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
           if (input.kind === 'server') {
             if (!directory) throw new Error('Wait for the server directory to load, then retry.');
             const identity = serverIdentity(input.url, directory);
-            await api.saveServer(input.existing ? input.id : identity.id, { name: input.name.trim() || identity.name, url: input.url, allow_http: input.allow_http, token_env: input.token_env, credential: input.credential });
-          } else await api.saveServerGrant(input.id, { owner: input.owner, token_env: input.token_env, credential: input.credential });
+            await api.saveServer(input.existing ? input.id : identity.id, { name: input.name.trim() || identity.name, url: input.url, allow_http: input.allow_http, coordination_owner: input.coordination_owner, token_env: input.token_env, credential: input.credential });
+          } else await api.saveServerGrant(input.id, { owner: input.owner, coordination: input.coordination, token_env: input.token_env, credential: input.credential });
           // Discard the transient credential immediately after a successful save.
           setEditor(null); setShowCredential(false);
           await reload(); setNotice('Saved. Credentials stay on this server and are never returned to the browser.');
@@ -70,9 +71,12 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
             <label>Server URL<input data-dialog-autofocus required type="url" placeholder="https://builder.example.net:8443" value={editor.url} onChange={e => setEditor({ ...editor, url: e.target.value })} /></label>
             <label>Name (optional)<input placeholder="Defaults to the server address" value={editor.name} onChange={e => setEditor({ ...editor, name: e.target.value })} /></label>
             <label className="servers-check"><input type="checkbox" checked={editor.allow_http} onChange={e => setEditor({ ...editor, allow_http: e.target.checked })} />Allow HTTP for a trusted private network or tunnel</label>
+            {editor.verified ? <><label>Coordination account on this server<input placeholder="Leave empty to disable" value={editor.coordination_owner} onChange={e => setEditor({ ...editor, coordination_owner: e.target.value })} /></label><p>This local account may discover same-project sessions and claims from the verified receiving account. Its incoming grant must also allow project coordination summaries. Remote coordination actions are not available yet.</p></> : <p>Verify the HTTPS node identity after saving to enable project coordination summaries.</p>}
           </> : <>
             <label>Grant name<input data-dialog-autofocus required pattern="[A-Za-z0-9][A-Za-z0-9_-]{0,63}" maxLength={64} disabled={editor.existing} value={editor.id} onChange={e => setEditor({ ...editor, id: e.target.value })} /></label>
             <label>Session owner<input required value={editor.owner} onChange={e => setEditor({ ...editor, owner: e.target.value })} /></label>
+            <label className="servers-check"><input type="checkbox" checked={editor.coordination} onChange={e => setEditor({ ...editor, coordination: e.target.checked })} />Allow project coordination summaries</label>
+            <p>When enabled, this trusted server may read this account’s verified project peers, claims and worker availability over HTTPS. Inbox messages and credentials are not shared.</p>
           </>}
           <p>Use the same credential in the outgoing server entry and the receiving server’s incoming grant. Each direction needs its own entry and grant. Copy a generated credential before saving; it cannot be viewed again afterward.</p>
           <label>{editor.existing ? 'Replacement credential' : 'Credential'}<input type={showCredential ? 'text' : 'password'} autoComplete="new-password" minLength={32} maxLength={4096} value={editor.credential} onChange={e => setEditor({ ...editor, credential: e.target.value })} placeholder={editor.existing ? 'Leave blank to keep the current credential' : 'At least 32 characters'} /></label>
@@ -93,6 +97,7 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
         {directory?.servers.map(server => <section key={server.id} aria-label={`${server.name} configuration`}>
           <strong>{server.name}</strong><p>{server.url}</p>
           <p>{server.credential_ready ? 'Credential configured' : 'Credential unavailable — edit this server to supply a credential.'}</p>
+          {server.coordination_owner && <p>Project coordination account: {server.coordination_owner} · Summaries only</p>}
           {server.identity?.node_id ? <p>Verified node: {server.identity.node_id} · Account: {server.identity.owner}. Nearby address changes require the same verified identity.</p> : <p>Node identity has not been verified. Manual connection settings are retained.</p>}
           <div className="servers-actions">
             <button disabled={busy} onClick={() => edit('server', server)}>Edit {server.name}</button>
@@ -121,6 +126,7 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
         <button disabled={busy || !directory} onClick={() => edit('grant')}>Add incoming grant</button>
         {directory?.grants.map(grant => <section key={grant.id} aria-label={`${grant.id} incoming grant`}>
           <strong>{grant.id}</strong><p>Owner: {grant.owner} · {grant.credential_ready ? 'Credential configured' : 'Credential unavailable'}</p>
+          <p>{grant.coordination ? 'Project coordination summaries allowed over HTTPS' : 'Terminal access only'}</p>
           <div className="servers-actions"><button disabled={busy} onClick={() => edit('grant', grant)}>Edit grant {grant.id}</button><button disabled={busy} onClick={() => remove('grant', grant.id)}>Remove grant {grant.id}</button></div>
         </section>)}
       </>}

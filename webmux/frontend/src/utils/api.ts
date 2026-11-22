@@ -128,8 +128,8 @@ export interface MacSetup {
 
 export interface ConnectedServer { id: string; name: string }
 
-export interface ManagedServer extends ConnectedServer { url: string; allow_http: boolean; token_env: string; credential_ready: boolean; identity?: { node_id: string; owner: string; tls_key_sha256: string } }
-export interface ServerGrant { id: string; owner: string; token_env: string; credential_ready: boolean }
+export interface ManagedServer extends ConnectedServer { coordination_owner?: string; url: string; allow_http: boolean; token_env: string; credential_ready: boolean; identity?: { node_id: string; owner: string; tls_key_sha256: string } }
+export interface ServerGrant { coordination?: boolean; id: string; owner: string; token_env: string; credential_ready: boolean }
 export interface DiscoveredNode { instance: string; claimed_id: string; host: string; address: string; port: number; tls: boolean; last_seen: string; expires: string }
 export interface NodeDiscovery { contract: string; started: boolean; error: string; policy: { version: number; id: string; browse: boolean; advertise: boolean; interfaces: string[] | null }; candidates: DiscoveredNode[] }
 export interface ServerDirectory { servers: ManagedServer[]; grants: ServerGrant[] }
@@ -211,9 +211,9 @@ export const api = {
   verifyServerIdentity: (id: string) => request<void>(`/servers/${encodeURIComponent(id)}/verify-identity`, { method: 'POST', body: '{}' }),
   getDiscoveredNodes: () => request<NodeDiscovery>('/discovered-nodes'),
   getServerDirectory: () => request<ServerDirectory>('/server-directory'),
-  saveServer: (id: string, input: ServerCredentialInput & { name: string; url: string; allow_http: boolean }) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
+  saveServer: (id: string, input: ServerCredentialInput & { name: string; url: string; allow_http: boolean; coordination_owner?: string }) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
   deleteServer: (id: string) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-  saveServerGrant: (id: string, input: ServerCredentialInput & { owner: string }) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
+  saveServerGrant: (id: string, input: ServerCredentialInput & { owner: string; coordination?: boolean }) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
   deleteServerGrant: (id: string) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   getServers: () => request<{ version: number; servers: ConnectedServer[] }>('/servers'),
   getServerSessions: (server: string) => request<Session[]>(`/servers/${encodeURIComponent(server)}/sessions`),

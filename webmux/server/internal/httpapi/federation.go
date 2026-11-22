@@ -23,6 +23,7 @@ import (
 // Federation configuration is administrator-managed. Read APIs never return
 // credentials. Each inbound credential selects exactly one local session owner.
 type serverPeer struct {
+	CoordinationOwner string       `yaml:"coordination_owner,omitempty" json:"coordination_owner,omitempty"`
 	ID                string       `yaml:"id" json:"id"`
 	Name              string       `yaml:"name" json:"name"`
 	URL               string       `yaml:"url" json:"-"`
@@ -33,10 +34,11 @@ type serverPeer struct {
 	DiscoveredAddress string       `yaml:"discovered_address,omitempty" json:"-"`
 }
 type serverGrant struct {
-	ID         string `yaml:"id"`
-	Owner      string `yaml:"owner"`
-	TokenEnv   string `yaml:"token_env,omitempty"`
-	Credential string `yaml:"credential,omitempty" json:"-"`
+	Coordination bool   `yaml:"coordination,omitempty" json:"coordination,omitempty"`
+	ID           string `yaml:"id"`
+	Owner        string `yaml:"owner"`
+	TokenEnv     string `yaml:"token_env,omitempty"`
+	Credential   string `yaml:"credential,omitempty" json:"-"`
 }
 type serverDirectory struct {
 	Version int           `yaml:"version"`
@@ -71,6 +73,9 @@ func validateServerDirectory(d serverDirectory) error {
 		u, err := url.Parse(p.URL)
 		if !federationID.MatchString(p.ID) || seen[p.ID] || p.Name == "" || !validServerCredential(p.TokenEnv, p.Credential) || err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") || (u.Scheme != "https" && !(u.Scheme == "http" && p.AllowHTTP)) {
 			return errors.New("invalid server directory entry (unique ID, name, origin URL and credential or token_env required; HTTP requires allow_http)")
+		}
+		if p.CoordinationOwner != "" && (len(p.CoordinationOwner) > 256 || strings.ContainsFunc(p.CoordinationOwner, unicode.IsControl) || p.Identity == (nodeIdentity{}) || u.Scheme != "https") {
+			return errors.New("coordination requires an enrolled HTTPS peer and a local account mapping")
 		}
 		if p.Identity != (nodeIdentity{}) && (!validNodePin(p.Identity) || u.Scheme != "https") {
 			return errors.New("invalid pinned server identity; HTTPS is required")
@@ -310,6 +315,7 @@ func (s *Server) federationMessage(w http.ResponseWriter, r *http.Request, owner
 	writeJSON(w, 202, map[string]any{"queued": true, "processed": false, "session_id": current.ID, "source": source})
 }
 func (s *Server) registerFederation(mux *http.ServeMux) {
+	mux.Handle("POST "+coordinationSnapshotPath, s.federationInbound(s.exportCoordinationSnapshot))
 	mux.Handle("GET /api/servers", s.protected(false, s.listServers))
 	mux.Handle("GET /api/server-directory", s.protected(false, s.getServerDirectory))
 	mux.Handle("PUT /api/servers/{server}", s.protected(false, s.saveServerPeer))

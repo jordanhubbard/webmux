@@ -64,8 +64,15 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 		t.Fatal("explicit non-loopback fixture bind address and directory required")
 	}
 	secret := nodeNetworkSecret(t, dir)
-	b, bh := fixture(t, "local")
-	federationAccounts(t, b)
+	var b *Server
+	var bh http.Handler
+	if os.Getenv("WEBMUX_COORDINATION_PEER_NETWORK") == "1" {
+		deterministicCoordinationGit(t)
+		b, bh, _, _, _ = coordinationAPI(t)
+	} else {
+		b, bh = fixture(t, "local")
+		federationAccounts(t, b)
+	}
 	federationConfig(t, b, serverDirectory{Version: 1, Grants: []serverGrant{{ID: "qualification", Owner: "owner", Credential: secret}}})
 	policy, err := discovery.LoadNodePolicy(b.store)
 	if err != nil {
@@ -146,6 +153,21 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 			switch r.URL.Path {
 			case "/_qualification/move":
 				_ = original.Close()
+			case "/_qualification/share-coordination", "/_qualification/revoke-coordination":
+				if os.Getenv("WEBMUX_COORDINATION_PEER_NETWORK") != "1" {
+					w.WriteHeader(404)
+					return
+				}
+				directory, err := b.serverDirectory()
+				if err != nil {
+					w.WriteHeader(500)
+					return
+				}
+				directory.Grants[0].Coordination = r.URL.Path == "/_qualification/share-coordination"
+				if err = b.store.WriteConfig("servers.yaml", directory); err != nil {
+					w.WriteHeader(500)
+					return
+				}
 			case "/_qualification/stop":
 				defer stop.Do(func() { close(stopped) })
 			default:
