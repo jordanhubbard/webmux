@@ -141,7 +141,12 @@ The [native SSH agent qualification](validation/coordination-ssh-agent-2026-11-2
 also passes two real Claude Code 2.1.319 runs through the ordinary alias. An
 independent audit checks actual scoped view/work results and the matching source
 ledger. This uses an explicit two-tool native approval profile; other permission
-policies and native agent reconnect/restart remain unqualified.
+policies remain unqualified. The
+[persistent native SSH reconnect qualification](validation/coordination-ssh-native-reconnect-2026-11-22/README.md)
+keeps the same Claude and stdio MCP process alive across a planned reconnect
+between completed turns. It verifies the old SSH master stops before new native
+view/work calls succeed through refreshed access. Full controller restart,
+unexpected tunnel loss and interrupted delivery remain unqualified.
 
 This requires compatible helpers at both ends, supported SSH multiplexing/
 stream-local forwarding, and a private POSIX socket path of at most 100 bytes.

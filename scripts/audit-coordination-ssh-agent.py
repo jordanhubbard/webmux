@@ -74,12 +74,87 @@ def audit(root):
                                  'terminal.log', 'native.stderr')})
 
 
+def audit_reconnect(root):
+    result = audit(root)
+    expected = json.loads((root / 'expected.json').read_text())
+    indexed_events = [(i, json.loads(line)) for i, line in enumerate(
+        (root / 'native.jsonl').read_text().replace('\r', '').splitlines()) if line.strip()]
+    events = [event for _, event in indexed_events]
+    calls = pair.calls(root / 'native.jsonl')
+    continuity = json.loads((root / 'reconnect.json').read_text())
+    ledger = json.loads((root / 'view-reconnected.json').read_text())
+    view_name, act_name = expected['tools']
+
+    def require(name, condition):
+        result['evidence'][name] = bool(condition)
+        if not condition:
+            result['failures'].append(name)
+
+    before, after = continuity.get('native_before', {}), continuity.get('native_after', {})
+    require('same_live_cli_and_mcp_processes', before == after and all(
+        isinstance(before.get(k, {}).get('pid'), int) and before[k]['pid'] > 0
+        and str(before[k].get('start', '')).isdigit() for k in ('cli', 'mcp', 'launcher'))
+        and before.get('cli') != before.get('mcp'))
+    require('same_provider_new_control', continuity.get('control_replaced') is True
+            and continuity.get('old_master_stopped') is True
+            and continuity.get('pane_before')
+            and continuity.get('pane_before') == continuity.get('pane_after'))
+    inits = [e for e in events if e.get('type') == 'system' and e.get('subtype') == 'init']
+    results = [e for e in events if e.get('type') == 'result']
+    # Claude stream-json emits init for each input turn. Conversation identity
+    # and the independently observed live process identities establish continuity.
+    require('one_native_conversation_two_successful_turns', len(inits) == 2
+            and len(results) == 2 and inits[0].get('session_id')
+            and all(e.get('session_id') == inits[0]['session_id'] for e in inits + results)
+            and all(e.get('subtype') == 'success' and e.get('is_error') is False
+                    for e in results)
+            and all(any(s.get('name') == view_name.split('__')[1]
+                        and s.get('status') == 'connected' and s.get('source') == 'dynamic'
+                        for s in e.get('mcp_servers', [])) for e in inits))
+    actions = [c for c in calls if c['name'] == act_name and not c.get('is_error')
+               and c['args'].get('action') == 'work' and pair.outcomes(c, 'updated')]
+    first = [c for c in actions if c['args'].get('text') == expected['task']]
+    second = [c for c in actions if c['args'].get('text') == 'native SSH channel reconnected'
+              and c['args'].get('request_id')]
+    views = [c for c in calls if c['name'] == view_name and not c.get('is_error')
+             and any(v.get('contract') == 'webmux-session-coordination/v1'
+                     and v.get('enabled') is True
+                     and v.get('self', {}).get('ref') == expected['subject']
+                     and v.get('self', {}).get('task') == expected['task']
+                     and v.get('self', {}).get('project_status') == 'verified-git'
+                     and v.get('self', {}).get('project', {}).get('repository')
+                     == 'example.test/team/native-ssh-channel'
+                     for v in pair.objects(c['output']))]
+    init_indices = [i for i, e in indexed_events
+                    if e.get('type') == 'system' and e.get('subtype') == 'init']
+    result_indices = [i for i, e in indexed_events if e.get('type') == 'result']
+    require('fresh_view_and_action_after_reconnect', len(init_indices) == 2
+            and len(result_indices) == 2 and any(
+        a['index'] < result_indices[0] < init_indices[1] < v['index']
+        < b['index'] < result_indices[1]
+        and a['args'].get('request_id') != b['args']['request_id']
+        for a in first for v in views for b in second))
+    require('source_confirms_reconnected_task', any(
+        m.get('ref') == expected['subject']
+        and m.get('task') == 'native SSH channel reconnected'
+        and m.get('interface_state') == 'interface-confirmed'
+        and m.get('project_status') == 'verified-git'
+        and m.get('project', {}).get('repository') == 'example.test/team/native-ssh-channel'
+        for m in ledger.get('members', [])))
+    for name in ('reconnect.json', 'view-reconnected.json'):
+        result['source_hashes'][name] = hashlib.sha256((root / name).read_bytes()).hexdigest()
+    result['passed'] = not result['failures']
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('root', type=Path)
     parser.add_argument('--output', type=Path)
+    parser.add_argument('--reconnect', action='store_true',
+                        help='Also require one persistent native CLI/MCP pair across SSH reconnect')
     args = parser.parse_args()
-    result = audit(args.root)
+    result = audit_reconnect(args.root) if args.reconnect else audit(args.root)
     data = json.dumps(result, indent=2) + '\n'
     if args.output:
         args.output.write_text(data)
