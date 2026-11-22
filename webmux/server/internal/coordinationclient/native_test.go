@@ -2,6 +2,7 @@ package coordinationclient
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,6 +27,7 @@ func nativeAccess(t *testing.T) string {
 }
 func TestNativeBootstrapPreservesPolicyAndCredentials(t *testing.T) {
 	name := nativeAccess(t)
+	encodedName, _ := json.Marshal(name)
 	helper := filepath.Join(t.TempDir(), "webmux")
 	t.Setenv("CLAUDE_CODE_SAFE_MODE", "")
 	t.Setenv("CLAUDE_CODE_SIMPLE", "")
@@ -41,7 +43,7 @@ func TestNativeBootstrapPreservesPolicyAndCredentials(t *testing.T) {
 			t.Fatal("original launch changed", status, got)
 		}
 		joined := strings.Join(got, " ")
-		if strings.Contains(joined, "private-capability") || !strings.Contains(joined, "coordinate") || !strings.Contains(joined, name) {
+		if strings.Contains(joined, "private-capability") || !strings.Contains(joined, "coordinate") || !strings.Contains(joined, string(encodedName)) {
 			t.Fatal("missing scoped server or credential leaked")
 		}
 		for _, flag := range []string{"--safe-mode", "--bare", "--restricted", "--strict-mcp-config", "--mcp-config=owner.json", "--remote=ws://127.0.0.1:3333", "--tools="} {

@@ -210,20 +210,21 @@ func TestCoordinationRoutingWithoutTranscriptRecording(t *testing.T) {
 	if err := store.WriteConfig("app.yaml", map[string]any{"app": map[string]any{"session_logging": map[string]any{"enabled": false}}}); err != nil {
 		t.Fatal(err)
 	}
+	directory := filepath.Join(t.TempDir(), "live-coordination-project")
 	s := create(t, b, "owner")
 	p := <-launched
-	sendRecovery(t, b, s.ID, p, recovery.Event{Kind: "cli", Instance: "current", Cwd: "/live-coordination-project", CLI: "codex", Version: "codex-cli 0.171.0", Coordination: "mcp-configured", Argv: []string{"codex", "private-unrecorded-prompt"}})
+	sendRecovery(t, b, s.ID, p, recovery.Event{Kind: "cli", Instance: "current", Cwd: directory, CLI: "codex", Version: "codex-cli 0.171.0", Coordination: "mcp-configured", Argv: []string{"codex", "private-unrecorded-prompt"}})
 	eventually(t, func() bool {
 		v, _ := b.Get("owner", s.ID)
 		return v.CoordinationActivity != nil && v.CoordinationActivity.Interface == "mcp-configured"
 	})
 	current, _ := b.Get("owner", s.ID)
-	if current.CoordinationActivity.Directory != "/live-coordination-project" || current.Recovery != nil {
+	if current.CoordinationActivity.Directory != directory || current.Recovery != nil {
 		t.Fatal("minimal routing depended on transcript capture")
 	}
 	current.CoordinationActivity.Directory = "changed-clone"
 	again, _ := b.Get("owner", s.ID)
-	if again.CoordinationActivity.Directory != "/live-coordination-project" {
+	if again.CoordinationActivity.Directory != directory {
 		t.Fatal("snapshot mutated live observation")
 	}
 	// Force an ordinary persistence transition and verify the private live routing
