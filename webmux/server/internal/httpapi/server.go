@@ -163,6 +163,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.registerFederation(mux)
 	mux.Handle("GET /api/session-coordination", s.protected(false, s.getSessionCoordination))
+	mux.Handle("GET /api/session-coordination/policy", s.protected(false, s.getSessionCoordinationPolicy))
 	mux.Handle("PUT /api/session-coordination/policy", s.protected(false, s.setSessionCoordinationPolicy))
 	mux.HandleFunc("POST "+nodeIdentityPath, s.proveNodeIdentity)
 	mux.Handle("POST /api/servers/{server}/verify-identity", s.protected(false, s.enrollNodePeer))

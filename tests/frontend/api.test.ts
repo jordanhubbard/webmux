@@ -12,6 +12,18 @@ describe('api utilities', () => {
     vi.resetModules();
   });
 
+  it('rejects malformed coordination policies instead of treating an unknown state as disabled', async () => {
+    const { api } = await import('@frontend/utils/api');
+    const fetchMock = vi.fn(); vi.stubGlobal('fetch', fetchMock);
+    for (const value of [null, {}, { enabled: false }, { contract: 'webmux-session-coordination-policy/v1', enabled: 'false' }]) {
+      fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => value });
+      await expect(api.getSessionCoordinationPolicy()).rejects.toThrow('invalid coordination policy');
+    }
+    const value = { contract: 'webmux-session-coordination-policy/v1', enabled: false };
+    fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => value });
+    await expect(api.getSessionCoordinationPolicy()).resolves.toEqual(value);
+  });
+
   describe('buildWsUrl', () => {
     it('builds ws:// URL for http origin', async () => {
       const { buildWsUrl } = await import('@frontend/utils/api');

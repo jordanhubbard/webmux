@@ -334,7 +334,7 @@ export function TopBar({
             <span>Cluster</span>
             {serverSelector}
             {onAddServer && <button style={styles.iconBtn} onClick={onAddServer}>Add server</button>}
-            <button style={styles.iconBtn} onClick={onManageServers} title="Edit or remove server connections and incoming access grants">Manage servers</button>
+            <button style={styles.iconBtn} onClick={onManageServers} title="Manage server connections, automatic coordination and incoming access grants">Manage servers</button>
             {onRefreshServers && <button style={styles.iconBtn} disabled={refreshingServers} onClick={() => {
               setRefreshingServers(true);
               // The application displays directory errors beside the workspace.
