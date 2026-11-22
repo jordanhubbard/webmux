@@ -20,6 +20,12 @@ func (s *Server) StartNodeDiscovery(host string, httpPort, httpsPort int) {
 	if err == nil {
 		s.nodes, err = discovery.StartNodes(context.Background(), discovery.NodeOptions{ID: p.ID, Browse: p.Browse, Advertise: p.Advertise, Interfaces: p.Interfaces, Host: host, HTTPPort: httpPort, Port: port, TLS: httpsPort > 0})
 	}
+	if err == nil && p.Browse && s.nodes != nil {
+		ctx, cancel := context.WithCancel(context.Background())
+		s.nodePeersCancel = cancel
+		s.nodePeersDone = make(chan struct{})
+		go func() { defer close(s.nodePeersDone); s.maintainNodePeers(ctx) }()
+	}
 	if err != nil {
 		s.nodeDiscoveryError = "Network discovery unavailable; manually configured peers remain available"
 		s.logger.Warn("WebMux node discovery unavailable", "error", err)

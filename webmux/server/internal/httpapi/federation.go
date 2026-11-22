@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+	"net/netip"
 	"net/url"
 	"os"
 	"regexp"
@@ -22,12 +23,14 @@ import (
 // Federation configuration is administrator-managed. Read APIs never return
 // credentials. Each inbound credential selects exactly one local session owner.
 type serverPeer struct {
-	ID         string `yaml:"id" json:"id"`
-	Name       string `yaml:"name" json:"name"`
-	URL        string `yaml:"url" json:"-"`
-	TokenEnv   string `yaml:"token_env,omitempty" json:"-"`
-	Credential string `yaml:"credential,omitempty" json:"-"`
-	AllowHTTP  bool   `yaml:"allow_http" json:"-"`
+	ID                string       `yaml:"id" json:"id"`
+	Name              string       `yaml:"name" json:"name"`
+	URL               string       `yaml:"url" json:"-"`
+	TokenEnv          string       `yaml:"token_env,omitempty" json:"-"`
+	Credential        string       `yaml:"credential,omitempty" json:"-"`
+	AllowHTTP         bool         `yaml:"allow_http" json:"-"`
+	Identity          nodeIdentity `yaml:"identity,omitempty" json:"identity"`
+	DiscoveredAddress string       `yaml:"discovered_address,omitempty" json:"-"`
 }
 type serverGrant struct {
 	ID         string `yaml:"id"`
@@ -63,10 +66,28 @@ func validateServerDirectory(d serverDirectory) error {
 		return errors.New("server directory permits at most 32 peers and 32 grants")
 	}
 	seen := map[string]bool{"local": true, "all": true}
+	identities := map[nodeIdentity]bool{}
 	for _, p := range d.Servers {
 		u, err := url.Parse(p.URL)
 		if !federationID.MatchString(p.ID) || seen[p.ID] || p.Name == "" || !validServerCredential(p.TokenEnv, p.Credential) || err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") || (u.Scheme != "https" && !(u.Scheme == "http" && p.AllowHTTP)) {
 			return errors.New("invalid server directory entry (unique ID, name, origin URL and credential or token_env required; HTTP requires allow_http)")
+		}
+		if p.Identity != (nodeIdentity{}) && (!validNodePin(p.Identity) || u.Scheme != "https") {
+			return errors.New("invalid pinned server identity; HTTPS is required")
+		}
+		if p.Identity != (nodeIdentity{}) {
+			// Certificate renewals do not create a second node/account identity.
+			for enrolled := range identities {
+				if enrolled.NodeID == p.Identity.NodeID && enrolled.Owner == p.Identity.Owner {
+					return errors.New("duplicate verified node and receiving account")
+				}
+			}
+			identities[p.Identity] = true
+		}
+		if p.DiscoveredAddress != "" {
+			if address, err := netip.ParseAddr(p.DiscoveredAddress); err != nil || !address.IsValid() || p.Identity == (nodeIdentity{}) {
+				return errors.New("invalid discovered peer address")
+			}
 		}
 		seen[p.ID] = true
 	}
@@ -111,7 +132,7 @@ func (s *Server) federationGrant(r *http.Request) (serverGrant, bool) {
 	}
 	for _, g := range d.Grants {
 		expected := serverCredential(g.TokenEnv, g.Credential)
-		if len(expected) >= 32 && subtle.ConstantTimeCompare([]byte(token), []byte(expected)) == 1 && s.federationOwnerAllowed(g.Owner) {
+		if len(expected) >= 32 && subtle.ConstantTimeCompare([]byte(token), []byte(expected)) == 1 && s.federationOwnerAllowed(g.Owner) && s.nodeRequestScope(r, g) {
 			return g, true
 		}
 	}
@@ -196,13 +217,22 @@ func (s *Server) proxyServer(w http.ResponseWriter, r *http.Request, owner strin
 	defer cancel()
 	r = r.Clone(ctx)
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	var transport *http.Transport
+	if peer.Identity != (nodeIdentity{}) {
+		transport = http.DefaultTransport.(*http.Transport).Clone()
+		transport.Proxy = nil // Identity binding requires a direct end-to-end TLS connection.
+		transport.ForceAttemptHTTP2 = false
+		transport.DialTLSContext = s.nodePeerDialer(peer, token)
+		defer transport.CloseIdleConnections()
+	}
 	proxy := &httputil.ReverseProxy{
 		Rewrite: func(p *httputil.ProxyRequest) {
 			p.SetURL(target)
 			p.Out.URL.Path = path
 			p.Out.URL.RawPath = ""
 			p.Out.URL.RawQuery = ""
-			p.Out.Header = http.Header{"Authorization": {"Bearer " + token}, "Content-Type": {"application/json"}}
+			p.Out.Header = nodeScopeHeaders(peer, token)
+			p.Out.Header.Set("Content-Type", "application/json")
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			writeError(w, 502, "Connected server is unavailable")
@@ -222,6 +252,9 @@ func (s *Server) proxyServer(w http.ResponseWriter, r *http.Request, owner strin
 			r.Header = http.Header{"Content-Type": {"application/json"}}
 			return nil
 		},
+	}
+	if transport != nil {
+		proxy.Transport = transport
 	}
 	proxy.ServeHTTP(w, r)
 }
@@ -326,7 +359,11 @@ func (s *Server) serverTerminal(w http.ResponseWriter, r *http.Request) {
 	if profile := r.URL.Query().Get("snapshot_profile"); profile != "" {
 		target.RawQuery = url.Values{"snapshot_profile": {profile}}.Encode()
 	}
-	upstream, _, err := (&websocket.Dialer{HandshakeTimeout: 5 * time.Second}).DialContext(r.Context(), target.String(), http.Header{"Authorization": {"Bearer " + token}})
+	dialer := &websocket.Dialer{HandshakeTimeout: 5 * time.Second}
+	if peer.Identity != (nodeIdentity{}) {
+		dialer.NetDialTLSContext = s.nodePeerDialer(peer, token)
+	}
+	upstream, _, err := dialer.DialContext(r.Context(), target.String(), nodeScopeHeaders(peer, token))
 	if err != nil {
 		writeError(w, 502, "Connected server terminal is unavailable")
 		return

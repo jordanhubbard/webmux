@@ -3,6 +3,7 @@ package httpapi
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"io"
@@ -31,6 +32,9 @@ import (
 )
 
 type Server struct {
+	nodePeersCancel    context.CancelFunc
+	nodePeersDone      chan struct{}
+	peerRoots          *x509.CertPool // nil uses the OS trust store; isolated embedded clients may supply roots.
 	nodes              *discovery.NodeBrowser
 	nodePolicy         discovery.NodePolicy
 	nodeDiscoveryError string
@@ -135,6 +139,10 @@ func (s *Server) StartSlave(host string, port int) error {
 	return err
 }
 func (s *Server) Close() error {
+	if s.nodePeersCancel != nil {
+		s.nodePeersCancel()
+		<-s.nodePeersDone
+	}
 	if s.nodes != nil {
 		_ = s.nodes.Close()
 	}
@@ -147,6 +155,8 @@ func (s *Server) Close() error {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.registerFederation(mux)
+	mux.HandleFunc("POST "+nodeIdentityPath, s.proveNodeIdentity)
+	mux.Handle("POST /api/servers/{server}/verify-identity", s.protected(false, s.enrollNodePeer))
 	mux.Handle("GET /api/discovered-nodes", s.protected(false, s.getDiscoveredNodes))
 	s.registerUSBForwardings(mux)
 	mux.Handle("GET /api/setup/macos", s.protected(false, s.getMacSetup))

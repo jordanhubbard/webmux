@@ -1,7 +1,8 @@
 # Network node discovery
 
 Implementation checkpoint for [#631](https://github.com/jordanhubbard/webmux/issues/631).
-Native network acceptance and authenticated identity reconciliation remain open.
+Full native discovery and agent-workflow acceptance remain open. Authenticated
+HTTPS identity enrollment and address reconciliation are implemented.
 
 WebMux browses `_webmux-node._tcp.local` in the server process, independently of
 open browser tabs or optional agent providers. Eligible network listeners also
@@ -19,13 +20,48 @@ is `WebMux-<id>`. TXT contains exactly `v=1`, `id=<id>` and `tls=0|1`.
 The SRV record identifies the selected HTTP or HTTPS listener's actual port.
 Advertisements contain no account, project, session, credential or agent state.
 
-An advertised ID is an **unverified claim**, not proof of identity. Candidates
-never change a saved peer's address, deduplicate configured peers, initiate HTTP
-requests, forward credentials, or authorize session access. Multiple addresses
-and duplicate display names stay separate until an authenticated identity
-exchange can reconcile them. That exchange, durable peer identity pins and
-address migration remain required work under #631. The existing owner-scoped
-federation grant is still necessary; it does not authorize coordination APIs.
+An advertised ID is an **unverified claim**, not proof of identity. Raw candidates
+do not authorize session access or change a saved peer. Administrators can use
+**Manage servers → Verify identity** on an already configured HTTPS peer. The
+receiving server proves possession of that peer's existing owner-grant credential
+on a fresh, TLS-bound challenge. The controller pins the persistent node ID,
+receiving account and TLS public-key SHA-256 in `servers.yaml`. It refuses a second
+entry for the same verified node/account; separate accounts remain distinct.
+
+The proof request contains a domain-separated HMAC selector and challenge proof,
+never the bearer credential. The response HMAC binds a fresh nonce, node/account
+identity and TLS exporter material. Every subsequent pinned HTTP or WebSocket
+connection repeats the proof on the **same TLS connection** before sending a
+bearer credential. A separate preflight connection would leave a verification/use
+gap. Relayed responses from another TLS connection, replayed challenges, changed
+nodes, accounts or TLS keys fail closed. Requests also name the original node and
+account at admission, so reassignment between proof and use cannot expose a
+foreign account. The proof grants no additional configuration/coordinator access.
+
+With network browsing enabled, the server reconciles enrolled HTTPS peers in the
+background. It prefers a reachable existing endpoint. When that endpoint is lost,
+it can try matching candidates and persist a new origin/address only after proof
+of the original node, TLS key and receiving account. No bearer credential is sent
+while evaluating candidates. Interface policy scopes DNS-SD browsing and
+advertising; a routed candidate still has to prove the original enrolled
+identity. The original peer/session namespace remains intact;
+multiple interfaces do not create extra peers or providers. Concurrent edits,
+removals and credential changes refuse the stale update. The loop runs without
+an open browser, checks at most four peers per ten-second round, limits a round
+to eight seconds, limits each dial/proof to three seconds and tries at most four
+candidates per peer. Both peer and candidate windows rotate to avoid a fixed
+unavailable/spoofed prefix starving the directory.
+
+HTTPS still validates certificates against the OS trust store and the advertised
+hostname, including when dialing a discovered address directly. There is no TLS
+verification bypass. Enrollment/reconciliation requires direct end-to-end HTTPS;
+a TLS-terminating proxy's different exporter context is refused. TLS passthrough
+can retain the end-to-end channel. Certificate renewals using the same key retain
+the pin; key replacement or deliberate account/node reassignment requires removal
+and explicit enrollment again. Ordinary connection edits preserve the pin.
+Manual HTTP peers remain supported as before, but cannot enroll a verified node
+identity or migrate automatically. These boundaries are intentional; discovery
+must not turn an unauthenticated advertisement into credential forwarding.
 
 ## Server policy
 
@@ -92,7 +128,7 @@ retained privately in `_build/discovery631/linux-native-final.log`; the transfer
 binary occupies about 6.3 MiB under the worker's private qualification directory.
 No installed WebMux service or active agent was restarted.
 
-The complete frontend suite passes (44 files, 474 tests), as do strict TypeScript
+The complete frontend suite passes (44 files, 476 tests), as do strict TypeScript
 checks, frontend lint/build, discovery/API race controls and targeted Go vet.
 An ambient Node 26 full Go run failed the existing native-create owner-directory
 fixture. A Node 24 run then failed the existing Rig child-start cancellation
@@ -101,8 +137,22 @@ Original full-run failures remain in `_build/discovery631/go-test*.log`; the
 clean run does not establish the original child-start failure cause. Follow-up
 [#633](https://github.com/jordanhubbard/webmux/issues/633) tracks that failure.
 
-Before closing #631, qualify two real network hosts, supported Windows/Linux/macOS
-boundaries, policy/interface changes, isolated multicast, departure and address
-changes, duplicate/spoofed announcements, authenticated identity enrollment and
-reconciliation. Automatic session participation and agent-aware delivery are
-separate unfinished requirements under #630.
+The native identity component additionally passes between a macOS ARM64 client
+and a Linux ARM64 receiver over a routed connection, using isolated real WebMux
+API instances, an ephemeral
+fixture trust root and a random temporary grant. It proves enrollment, HTTP use
+on the same TLS connection, original endpoint loss, authenticated address/port
+migration and controller reconstruction with unchanged peer/account identity.
+The receiver records seven proofs and five bearer requests, all on proven TLS
+connections. The fixture grant is removed afterward. This does not establish OS
+trust-store installation, native WebSocket networking on both platforms, mDNS on
+the Mac, installed-package/host reboot, or real coding-agent coordination.
+The opt-in harness is `node_identity_network_test.go`; private raw logs and exact
+binary digests are retained under `_build/node-identity631/`.
+
+Before closing #631, qualify the complete discovered/enrolled two-host workflow,
+supported Windows/Linux/macOS boundaries, policy/interface changes, isolated
+multicast, departure and address changes, duplicate/spoofed announcements and
+background reconciliation with actual discovery events. Automatic session
+participation and agent-aware delivery are separate unfinished requirements
+under #630.

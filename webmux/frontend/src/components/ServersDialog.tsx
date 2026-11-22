@@ -93,8 +93,10 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
         {directory?.servers.map(server => <section key={server.id} aria-label={`${server.name} configuration`}>
           <strong>{server.name}</strong><p>{server.url}</p>
           <p>{server.credential_ready ? 'Credential configured' : 'Credential unavailable — edit this server to supply a credential.'}</p>
+          {server.identity?.node_id ? <p>Verified node: {server.identity.node_id} · Account: {server.identity.owner}. Nearby address changes require the same verified identity.</p> : <p>Node identity has not been verified. Manual connection settings are retained.</p>}
           <div className="servers-actions">
             <button disabled={busy} onClick={() => edit('server', server)}>Edit {server.name}</button>
+            {server.url.startsWith('https://') && <button disabled={busy || !server.credential_ready} onClick={() => { void run(async () => { await api.verifyServerIdentity(server.id); await reload(); setNotice(`${server.name}: node and receiving account identity verified.`); }); }}>Verify identity of {server.name}</button>}
             <button disabled={busy} onClick={() => { void run(async () => { const sessions = await api.getServerSessions(server.id); setNotice(`${server.name}: connection successful, ${sessions.length} sessions available.`); }); }}>Test connection to {server.name}</button>
             <button disabled={busy} onClick={() => remove('server', server.id)}>Remove {server.name}</button>
           </div>
