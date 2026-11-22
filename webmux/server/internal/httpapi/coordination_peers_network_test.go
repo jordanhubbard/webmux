@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	plane "github.com/jordanhubbard/webmux/server/internal/coordination"
+	"github.com/jordanhubbard/webmux/server/internal/coordinationclient"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -127,7 +128,7 @@ func TestCoordinationPeerNativeNetworkClient(t *testing.T) {
 		if json.Unmarshal(sent.Body.Bytes(), &result) != nil || result.Transport != "pending" {
 			t.Fatal("native outbox admission failed", sent.Body.String())
 		}
-		pair := &coordinationPair{a: a, agent: agent, access: access, secret: secret}
+		pair := &coordinationPair{a: a, agent: agent, access: access, remote: []coordinationclient.Access{{Subject: target}}, secret: secret}
 		coordinationMessageWait(t, pair, result.Record, "admitted", "remote-admitted")
 		control("/_qualification/complete-message?record=" + result.Record + "&session=" + target.Session)
 		coordinationMessageWait(t, pair, result.Record, "completed", "remote-admitted")
@@ -135,6 +136,37 @@ func TestCoordinationPeerNativeNetworkClient(t *testing.T) {
 		requireStatus(t, repeat, 200)
 		if repeat.Body.String() != sent.Body.String() {
 			t.Fatal("native exact intent retry changed admission")
+		}
+
+		if os.Getenv("WEBMUX_COORDINATION_CLAIM_NETWORK") == "1" {
+			claim := plane.Request{ID: "native-overlap-file", Action: "claim", Kind: "file", Resource: "native-overlap/file.go"}
+			response := request(agent, "POST", "/act", directoryJSON(claim), access[0].Capability)
+			requireStatus(t, response, 200)
+			var initial plane.Result
+			if json.Unmarshal(response.Body.Bytes(), &initial) != nil || initial.Status != "claimed" || len(initial.Conflicts) != 0 || len(initial.PeerClaims) != 1 || initial.PeerClaims[0].State != "current" {
+				t.Fatal("native initial claim scope failed", response.Body.String())
+			}
+			control("/_qualification/claim-overlap?session=" + target.Session)
+			incoming, outgoing := waitPeerOverlap(t, pair)
+			if incoming.Transport != "peer-observation" || incoming.Overlap == nil {
+				t.Fatal("native local event provenance missing")
+			}
+			coordinationMessageWait(t, pair, outgoing.ID, "admitted", "remote-admitted")
+			control("/_qualification/complete-message?record=" + outgoing.ID + "&session=" + target.Session)
+			coordinationMessageWait(t, pair, outgoing.ID, "completed", "remote-admitted")
+			claim.ID = "native-overlap-check"
+			response = request(agent, "POST", "/act", directoryJSON(claim), access[0].Capability)
+			requireStatus(t, response, 200)
+			var checked plane.Result
+			if json.Unmarshal(response.Body.Bytes(), &checked) != nil || checked.Record != initial.Record || len(checked.Conflicts) != 1 || checked.Conflicts[0].Actor != target {
+				t.Fatal("native fresh claim conflict not reported", response.Body.String())
+			}
+			repeat := request(agent, "POST", "/act", directoryJSON(claim), access[0].Capability)
+			requireStatus(t, repeat, 200)
+			if repeat.Body.String() != response.Body.String() {
+				t.Fatal("native claim retry changed result")
+			}
+			t.Log("native cross-host claims passed: concurrent claims before refresh, browser-independent overlap reconciliation, local observation and one remote notice, explicit recipient completion, fresh conflict check and frozen retry; ordinary PTY fixtures, not real coding-agent acceptance")
 		}
 		t.Log("native two-host message passed: durable admission, lost reply, status reconciliation, explicit recipient receipts, exact request retry; ordinary PTY child fixtures, not LLM agent pair acceptance")
 	}

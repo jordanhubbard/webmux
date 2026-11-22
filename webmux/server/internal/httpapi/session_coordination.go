@@ -294,7 +294,27 @@ func (s *Server) maintainSessionCoordination(parent context.Context) error {
 	if err != nil {
 		return err
 	}
-	return s.refreshCoordinationPeers(parent, s.coordinationInputs(node, latest))
+	if err = s.refreshCoordinationPeers(parent, s.coordinationInputs(node, latest)); err != nil {
+		return err
+	}
+	latest, err = s.coordinationSnapshots()
+	if err != nil {
+		return err
+	}
+	inputs := s.coordinationInputs(node, latest)
+	peers := map[string][]plane.ClaimPeer{}
+	for _, input := range inputs {
+		if _, exists := peers[input.Ref.Owner]; !exists {
+			peers[input.Ref.Owner] = s.coordinationClaimPeers(input.Ref.Owner, inputs)
+		}
+	}
+	err = s.sessions.WithCoordinationSnapshot(func(all []session.Session) error {
+		return s.sessionCoord.service.ReconcileClaims(node, s.coordinationInputs(node, all), peers)
+	})
+	if err == nil {
+		s.wakeCoordinationMessages()
+	}
+	return err
 }
 func (s *Server) coordinationError(w http.ResponseWriter, err error) {
 	switch {
@@ -434,6 +454,10 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 	if operation.Action == "message" && operation.Target != nil && operation.Target.Node != node {
 		route = s.coordinationMessageRoute(ref, *operation.Target, s.coordinationInputs(node, snapshots))
 	}
+	var peers []plane.ClaimPeer
+	if operation.Action == "claim" {
+		peers = s.coordinationClaimPeers(ref.Owner, s.coordinationInputs(node, snapshots))
+	}
 	var response any
 	err = s.sessions.WithCoordinationSnapshot(func(all []session.Session) error {
 		inputs := s.coordinationInputs(node, all)
@@ -442,7 +466,7 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 			response = view
 			return e
 		}
-		result, e := s.sessionCoord.service.ExecuteRouted(node, token, inputs, operation, route)
+		result, e := s.sessionCoord.service.ExecuteWithPeers(node, token, inputs, operation, route, peers)
 		response = result
 		return e
 	})
@@ -454,7 +478,7 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 		s.attachCoordinationPeers(&view, ref.Owner)
 		response = view
 	}
-	if result, ok := response.(plane.Result); ok && result.Transport == "pending" {
+	if result, ok := response.(plane.Result); ok && (result.Transport == "pending" || operation.Action == "claim" && result.Status == "claimed") {
 		s.wakeCoordinationMessages()
 	}
 	writeJSON(w, 200, response)

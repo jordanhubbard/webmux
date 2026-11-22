@@ -130,3 +130,15 @@ func TestActRejectsBusyExpiredAndOverlappingAdmissions(t *testing.T) {
 		t.Fatal("message admission was relabeled as delivery")
 	}
 }
+
+func TestAdmissionErrorRequiresCompletePeerClaimContext(t *testing.T) {
+	for _, state := range []string{"pending", "unavailable", "stale", "unauthorized", "disabled", "invalid"} {
+		result := coordination.Result{Status: "claimed", PeerClaims: []coordination.PeerClaimCheck{{State: state}}}
+		if err := AdmissionError(result); err == nil {
+			t.Fatal("incomplete claim context reported success", state)
+		}
+	}
+	if err := AdmissionError(coordination.Result{Status: "claimed", PeerClaims: []coordination.PeerClaimCheck{{State: "current"}}}); err != nil {
+		t.Fatal(err)
+	}
+}

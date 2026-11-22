@@ -74,7 +74,10 @@ qualified ordinary Codex/Claude aliases; [single-host native startup evidence](v
 does not complete the cross-host or managed-agent workflow. The
 [authorized peer-context extension](session-coordination.md#authorized-peer-discovery)
 now has native macOS/Linux background project-discovery and revocation evidence.
-Cross-node mutations and the complete real-agent workflow remain open.
+The [durable inbox and claim extensions](session-coordination.md#durable-messages-across-nodes)
+add separate message permissions, explicit receipts, cross-node advisory conflicts
+and stable overlap events, with ordinary PTY protocol qualification. Shared worker
+authority and the complete real-agent workflow remain open.
 
 ## Current reliability work
 

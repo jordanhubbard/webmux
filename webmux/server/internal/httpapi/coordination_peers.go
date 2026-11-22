@@ -134,6 +134,7 @@ func (s *Server) exportCoordinationSnapshot(w http.ResponseWriter, r *http.Reque
 	snapshot := plane.Snapshot(view, node, owner, selector.Project)
 	if view.Enabled && grant.CoordinationMessages {
 		snapshot.Messaging = true
+		snapshot.OverlapNotices = true
 		snapshot.SourceNode = grant.SourceNode
 		snapshot.SourceOwner = grant.SourceOwner
 	}
@@ -245,6 +246,9 @@ func (s *Server) refreshCoordinationPeers(parent context.Context, inputs []plane
 					return
 				}
 				attempted.Add(1)
+				// Anchor remote lease duration before network I/O. Cache authorization
+				// uses scope identity independently of this clock observation.
+				started := time.Now().UTC()
 				requestCtx, stop := context.WithTimeout(ctx, 5*time.Second)
 				snapshot, state := s.fetchCoordinationSnapshot(requestCtx, job)
 				stop()
@@ -262,6 +266,7 @@ func (s *Server) refreshCoordinationPeers(parent context.Context, inputs []plane
 				}
 				if state == "current" {
 					expires := now.Add(coordinationPeerAge)
+					observation.Requested = &started
 					observation.Observed = &now
 					observation.Expires = &expires
 					observation.Snapshot = &snapshot
@@ -350,4 +355,53 @@ func (s *Server) attachCoordinationPeers(view *plane.View, owner string) {
 		}
 		view.Peers = append(view.Peers, observation)
 	}
+}
+
+// Claim context is assembled outside the broker/ledger lock. Agents cannot
+// nominate a source, account mapping, snapshot, route or source clock.
+func (s *Server) coordinationClaimPeers(owner string, inputs []plane.MemberInput) []plane.ClaimPeer {
+	own := []plane.MemberInput{}
+	for _, input := range inputs {
+		if input.Ref.Owner == owner {
+			own = append(own, input)
+		}
+	}
+	jobs, err := s.coordinationPeerJobs(own)
+	if err != nil {
+		unavailable := []plane.ClaimPeer{}
+		seen := map[string]bool{}
+		for _, input := range own {
+			if input.Project != nil && !seen[input.Project.ID] {
+				unavailable = append(unavailable, plane.ClaimPeer{State: "unavailable", Project: input.Project.ID})
+				seen[input.Project.ID] = true
+			}
+		}
+		return unavailable
+	}
+	out := []plane.ClaimPeer{}
+	cache := &s.sessionCoord.peers
+	cache.mu.RLock()
+	defer cache.mu.RUnlock()
+	now := time.Now().UTC()
+	for _, job := range jobs {
+		peer := plane.ClaimPeer{Node: job.peer.Identity.NodeID, Owner: job.peer.Identity.Owner, Project: job.project, State: "pending"}
+		if view, ok := cache.values[job.key]; ok {
+			peer.State = view.State
+			peer.Snapshot = view.Snapshot
+			if view.Requested != nil {
+				peer.Started = *view.Requested
+			}
+			if view.Expires != nil {
+				peer.Expires = *view.Expires
+			}
+			if peer.State == "current" && (peer.Started.IsZero() || !now.Before(peer.Expires)) {
+				peer.State = "unavailable"
+			}
+			if job.peer.CoordinationMessages && peer.Snapshot != nil {
+				peer.Route = &plane.RemoteRoute{Project: job.project, Peer: job.peer.ID, Node: peer.Node, Owner: peer.Owner, TLSKey: job.peer.Identity.TLSKey, Epoch: peer.Snapshot.HistoryEpoch}
+			}
+		}
+		out = append(out, peer)
+	}
+	return out
 }

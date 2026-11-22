@@ -47,6 +47,9 @@ func (s *Service) Execute(node, token string, inputs []MemberInput, request Requ
 	return s.ExecuteRouted(node, token, inputs, request, nil)
 }
 func (s *Service) ExecuteRouted(node, token string, inputs []MemberInput, request Request, route *RemoteRoute) (Result, error) {
+	return s.ExecuteWithPeers(node, token, inputs, request, route, nil)
+}
+func (s *Service) ExecuteWithPeers(node, token string, inputs []MemberInput, request Request, route *RemoteRoute, peers []ClaimPeer) (Result, error) {
 	if !validateRequest(request) {
 		return Result{}, ErrInvalid
 	}
@@ -103,6 +106,16 @@ func (s *Service) ExecuteRouted(node, token string, inputs []MemberInput, reques
 		}
 		if err != nil {
 			return err
+		}
+		if request.Action == "claim" && result.Status == "claimed" {
+			claim, _, e := get[Claim](bucket(tx, "claims"), result.Record)
+			if e != nil {
+				return e
+			}
+			result.PeerClaims, result.Conflicts, e = observeClaim(tx, member, claim, peers, result.Conflicts, now)
+			if e != nil {
+				return e
+			}
 		}
 		return put(bucket(tx, "receipts"), key, receipt{Hash: hash, Result: result})
 	})
