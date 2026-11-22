@@ -3,6 +3,61 @@
 Reviewed 2026-11-19 against the implementation, qualification receipts and GitHub
 issue states. GitHub issues track implementation and remaining acceptance work.
 
+## Automatic session coordination and network discovery
+
+Owner requirement added 2026-11-21. These are planned capabilities; the current
+inventory, terminal messaging and optional integrations do not establish them.
+Every session running under WebMux should participate in coordination without
+per-session opt-in, including agents independently started on different WebMux
+nodes. WebMux should discover other WebMux nodes on the local network through
+mDNS/DNS-SD rather than requiring their addresses to be entered individually.
+
+Agent Deck and Rig were selected without verified evidence that they satisfy
+this goal. Their selection is open for reconsideration: retain, replace or
+remove either integration according to demonstrated requirements and native
+acceptance results. Neither tool, nor their proposed bridge under
+[#246](https://github.com/jordanhubbard/webmux/issues/246), is a prerequisite by
+definition. Existing provider documentation records current behavior, not a
+commitment to use those providers for this work.
+
+Ordered implementation and acceptance:
+
+- [ ] **Evaluate the coordination architecture** under
+  [#630](https://github.com/jordanhubbard/webmux/issues/630). Explain what Agent
+  Deck and Rig actually contribute, inspect and test their relevant interfaces,
+  and compare them with a built-in approach. Record capabilities, gaps,
+  supported runtimes/platforms, maintenance and deployment costs, and the
+  evidence-backed selection. Preserve existing agents and their lifecycle
+  ownership during any migration.
+- [ ] **Discover network nodes** under
+  [#631](https://github.com/jordanhubbard/webmux/issues/631). Advertise and browse
+  WebMux services through mDNS/DNS-SD, reconcile discovered and configured peers
+  by verified node identity, and handle address changes, multiple interfaces,
+  duplicate names and departing nodes. Provide server-wide policy controls and
+  a manual-peer fallback when multicast is unavailable. Discovering a node does
+  not authorize it: retain authenticated enrollment and expose no credentials
+  in advertisements. This is separate from known `.local` hostname resolution
+  completed under #208.
+- [ ] **Coordinate sessions automatically** under
+  [#630](https://github.com/jordanhubbard/webmux/issues/630). Provision agent
+  awareness and an agent-facing coordination interface for ordinary and managed
+  sessions across authorized nodes, without special launch forms or manual
+  session setup. Support project/peer discovery, task/branch/file ownership,
+  overlap notifications, acknowledged handoffs and shared heavy-worker
+  reservations. Preserve server/account/session identity and use verified
+  repository identity or explicit mappings across worktrees and hosts. Keep
+  coordination active without an open browser, retain state through reconnects
+  and restart, and distinguish message admission, delivery, acknowledgment and
+  completion. Do not inject unsolicited text into arbitrary terminal prompts.
+- [ ] **Qualify the complete workflow** under #630/#631 with independently
+  started real agents on two real WebMux hosts: discover nodes, authenticate
+  enrollment, discover project peers without per-session opt-in, detect an
+  overlapping claim, acknowledge a handoff and honor a shared worker reservation.
+  Cover ordinary and managed sessions, restart/reconnect, stale identities,
+  unrelated projects, foreign accounts, untrusted advertisements, unavailable
+  multicast/peers and duplicate or uncertain delivery. Publish supported
+  boundaries and evidence before marking either requirement complete.
+
 ## Current reliability work
 
 **First priority: [#318](https://github.com/jordanhubbard/webmux/issues/318).**
