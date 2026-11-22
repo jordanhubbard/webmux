@@ -201,5 +201,26 @@
         }
       ]
     }
+  },
+  "local_checks": {
+    "full_go": {
+      "command": "go test -count=1 ./...",
+      "exit_code": 0,
+      "node_major": 24,
+      "log_sha256": "811ea95c99e9700de884f38dd035f3f63ba4f251e666815ba280c0f97b131556"
+    },
+    "discovery_race": {
+      "command": "go test -count=1 -race ./internal/discovery",
+      "exit_code": 0
+    },
+    "discovery_vet": {
+      "command": "go vet ./internal/discovery",
+      "exit_code": 0
+    },
+    "server_contract": {
+      "command": "node scripts/server-contract.mts",
+      "node_major": 24,
+      "exit_code": 0
+    }
   }
 }

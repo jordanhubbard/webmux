@@ -74,6 +74,7 @@ expiry, spoofing, native platform, agent-workflow or release qualification.
 MAC convergence remains tracked by #664; discovery does not replace project
 roadmaps or the shared worker-pool authority.
 
-Focused discovery race tests, discovery vet and the production Go API/session
-contract pass. The complete Go suite and hosted checks are separate delivery
-gates; native component passes do not substitute for those gates.
+The complete Go suite (`go test -count=1 ./...`, qualified Node 24), discovery
+race tests, discovery vet and the production Go API/session contract pass. Hosted
+checks remain separate delivery gates; native component passes do not substitute
+for them.
