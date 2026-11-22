@@ -119,7 +119,10 @@ func (s *Server) federationAccess(w http.ResponseWriter, owner string) bool {
 }
 func (s *Server) federationOwnerAllowed(owner string) bool {
 	c, err := auth.LoadConfig(s.store)
-	return err == nil && ((c.Auth.Mode == "none" && owner == "anonymous") || (c.Auth.Mode == "local" && c.HasUser(owner)))
+	return err == nil && federationAccountAllowed(c, owner)
+}
+func federationAccountAllowed(c auth.Config, owner string) bool {
+	return (c.Auth.Mode == "none" && owner == "anonymous") || (c.Auth.Mode == "local" && c.HasUser(owner))
 }
 func (s *Server) federationGrant(r *http.Request) (serverGrant, bool) {
 	d, err := s.serverDirectory()

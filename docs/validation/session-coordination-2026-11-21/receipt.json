@@ -1,0 +1,90 @@
+{
+  "scope": "node-local durable coordination; native controlled ordinary PTY children and production CLI; no native coding-agent or two-host coordination acceptance",
+  "qualifiedAtUTC": "2026-11-22T06:16:05.643185+00:00",
+  "sourceBaseCommit": "e2cf181915b7dd4dbc205e85b276e3021881da0f",
+  "platform": "darwin/arm64",
+  "goVersion": "go version go1.27.4 darwin/arm64",
+  "sourceSha256": {
+    "webmux/scripts/server-contract.mts": "6e00bd82afcbd1e89e6aed6ca24a8b6a7ef4ef670c221f1720f7ac0c896b3584",
+    "webmux/server/cmd/webmux/main.go": "f22f2427e82da45cd297a94e708da455aa524e9e1aca597c04351b9cb07b1045",
+    "webmux/server/go.mod": "0e2b2789975482166915a77681204f97514831630f4012645b27f4c0f0f21c6a",
+    "webmux/server/go.sum": "253bf2c73a23b86a9731f54d07664da405f976a85dc275d35d8edc569e2b8759",
+    "webmux/server/internal/coordination/coordination_test.go": "e8c862ed181a8f860ff83be3dbe73e697cf625442f90c505bd2f7f66767c71e9",
+    "webmux/server/internal/coordination/members.go": "467f2b364ece70d31efe82b82e698ecd1bf353ec99a14763be4a5ea8a997c131",
+    "webmux/server/internal/coordination/model.go": "3f98ab2d5d237d8d5223ca3ebed07d503193765fd8ae653620fcf888a06e911a",
+    "webmux/server/internal/coordination/operations.go": "7db80eeb054374eeb20ab41268116319569e02c9694598d6f4c895c39ed59503",
+    "webmux/server/internal/coordination/repository.go": "05cf55d21e735fa428b1efb2f8606e9a7067e57df020866df0dffe4a951d0abc",
+    "webmux/server/internal/coordination/repository_test.go": "4f385e27e9270c58bedc15cb6ede9379c78bdd23acfaafe6a95d3768e0f4a571",
+    "webmux/server/internal/coordination/store.go": "1ea3b56a879cda4554883e4df52fb9901b5994e67698760e27f6d1173488747a",
+    "webmux/server/internal/coordinationclient/client.go": "f3654924be8959c95941ca0af31f902744ddb6a3dacb2b44151334d6c2c7415d",
+    "webmux/server/internal/coordinationclient/client_test.go": "5759f88b5e4fdfe6309a30849903afe59a42a49e2348dccc7574bca116f5b79a",
+    "webmux/server/internal/httpapi/server.go": "154d3b49ce2e5ac96b2a3aed1969719fc00d9487bac47f2367ee749c0be9a21e",
+    "webmux/server/internal/httpapi/session_coordination.go": "f328030503d6239d024c0f85b4f052eed97abf77ca079e4aa9240ee8dd717159",
+    "webmux/server/internal/httpapi/session_coordination_test.go": "f2d98b123902766b01a0d0e15e34a494dc4065e0248c3250d04c11eeba8342b6",
+    "webmux/server/internal/session/broker.go": "f975a299438d4fbc078c9d6a933de535ac4a8818f380891ec853be14538afc55",
+    "webmux/server/internal/session/model.go": "c6dea0cb5cbf16a97de24c4fcebb3396c294e3d81101a8b76d79e14cfa109161",
+    "webmux/server/internal/terminal/launcher.go": "8f6ba0f0f528dcf69a2c2dd744aae8022093fe5c165f3c8b3234f6390ad4abac",
+    "webmux/server/internal/terminal/launcher_test.go": "9cd0288dada4ecc9f96bdb2dd3ffb1997e3ed6b1f4af3a8b44776532d005144c"
+  },
+  "checks": [
+    {
+      "command": "Node 24.22.2 PATH go test -count=1 ./...",
+      "exit_code": 0,
+      "evidence": "_build/session-coordination630/go-test-final.log",
+      "evidenceSha256": "b7b8a3fff5456e8e01a141a7f745d93b15e5542148565d91aeed3815fcc9afbb"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "evidence": "_build/session-coordination630/go-vet-admitted.log",
+      "evidenceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test -race -count=1 ./internal/coordination ./internal/coordinationclient",
+      "exit_code": 0,
+      "evidence": "_build/session-coordination630/core-race-final.log",
+      "evidenceSha256": "75ec754bb7bd87c03df14ecccf6ac3e4947de9fc789d501ad6b2e5e41d945dd1"
+    },
+    {
+      "command": "go test -race ./internal/terminal ./internal/httpapi -run 'Test(Coordination|DefaultCoordination|ScopedAPI)' -count=1",
+      "exit_code": 0,
+      "evidence": "_build/session-coordination630/api-race-final.log",
+      "evidenceSha256": "9aeb44cc0d2993230142c68e7a6755a4d7983ef203286e57c333eb69771efca6"
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run test:contract",
+      "exit_code": 0,
+      "evidence": "_build/session-coordination630/contract-admitted.log",
+      "evidenceSha256": "fe2aa2589a5d010b45c5097fd5dc7c94305a612c5d7a3300b5a35d6a91209f8a"
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run typecheck",
+      "exit_code": 0,
+      "evidence": "_build/session-coordination630/typecheck.log",
+      "evidenceSha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1"
+    }
+  ],
+  "crossCompilation": {
+    "scope": "compilation only; no native Windows/Linux runtime execution",
+    "exit_code": 0,
+    "binarySha256": {
+      "webmux-linux-arm64": "74251e84c7db01f088589a3fbeab3e94043247e4c9aa13ff2ac4562aee873ebd",
+      "webmux-windows-arm64.exe": "ea8c35b728be47c6ebc0ff5cd514f142bdedd20dcc55c75ae5f4625c280d72c8",
+      "coordination-windows-arm64.test.exe": "fb99c6b8da0bc399e8e94683ad2436112ea7d1cb0dfa0a33dfc6b772aeb5e33b",
+      "coordination-client-windows-arm64.test.exe": "26c07b7efd88aa3e0c8a07edf726f3aeba7edcffc78a0d107d197645b460c2a0"
+    }
+  },
+  "observedOutput": {
+    "core-race-final.log": "ok  \tgithub.com/jordanhubbard/webmux/server/internal/coordination\t5.478s\nok  \tgithub.com/jordanhubbard/webmux/server/internal/coordinationclient\t1.382s\n",
+    "api-race-final.log": "ok  \tgithub.com/jordanhubbard/webmux/server/internal/terminal\t4.167s\nok  \tgithub.com/jordanhubbard/webmux/server/internal/httpapi\t9.770s\n",
+    "contract-admitted.log": "\n> webmux@1.4.5 test:contract\n> node scripts/server-contract.mts\n\nGo: HTTP, templates, terminal WebSocket, scoped session coordination, agent, VNC/RDP and restart contracts passed\n"
+  },
+  "remaining": [
+    "native-agent startup guidance and independently started coding-agent acceptance",
+    "managed/SSH execution-host provisioning and provider-supported inboxes",
+    "cross-node delivery, membership and shared reservation authority",
+    "public explicit repository mappings",
+    "native Windows ACL and sandbox/network qualification",
+    "installed-package and full two-host discovery/reconnect/agent workflow"
+  ]
+}

@@ -41,6 +41,7 @@ type RigIdentity struct {
 }
 
 type Session struct {
+	CoordinationLive    bool                       `json:"-" yaml:"-"` // Broker-observed viewer/run state, never restored as authority.
 	LocalOwnerManaged   bool                       `json:"-" yaml:"local_owner_managed,omitempty"`
 	LocalScope          string                     `json:"-" yaml:"local_scope,omitempty"`
 	LocalOwnerAvailable bool                       `json:"-" yaml:"-"`

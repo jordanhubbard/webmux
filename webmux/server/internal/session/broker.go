@@ -97,26 +97,27 @@ type entry struct {
 // not hold it. A run pointer is a generation token: old output and exit events
 // can never mutate a reconnected or deleted session.
 type Broker struct {
-	localOwners     bool
-	localOwnerScope string
-	stopLocal       terminal.LocalOwnerOperation
-	inspectLocal    terminal.LocalOwnerOperation
-	controlDir      string
-	mu              sync.Mutex
-	store           *storage.Store
-	logger          *slog.Logger
-	launch          launchFunc
-	entries         map[string]*entry
-	order           []string
-	closed          bool
-	workers         sync.WaitGroup
-	openLog         func(string, string, bool) (transcriptSink, error)
-	agents          *agent.Service
-	agentMu         sync.Mutex
-	policyStop      chan struct{}
-	policyStarted   bool
-	activity        map[agentActivityKey]pendingAgentActivity
-	activityWake    chan struct{}
+	coordinationLaunch func([]Session, Session) (*terminal.CoordinationAccess, error)
+	localOwners        bool
+	localOwnerScope    string
+	stopLocal          terminal.LocalOwnerOperation
+	inspectLocal       terminal.LocalOwnerOperation
+	controlDir         string
+	mu                 sync.Mutex
+	store              *storage.Store
+	logger             *slog.Logger
+	launch             launchFunc
+	entries            map[string]*entry
+	order              []string
+	closed             bool
+	workers            sync.WaitGroup
+	openLog            func(string, string, bool) (transcriptSink, error)
+	agents             *agent.Service
+	agentMu            sync.Mutex
+	policyStop         chan struct{}
+	policyStarted      bool
+	activity           map[agentActivityKey]pendingAgentActivity
+	activityWake       chan struct{}
 
 	nativeRecoveryJobs map[string]*nativeRecoveryJob
 }
@@ -448,7 +449,16 @@ func (b *Broker) startWithTranscriptLocked(e *entry, password, initial string, t
 		// owner: the attempted launch may have discovered a replacement.
 		e.value.LocalOwner = nil
 	}
-	p, err := b.launch(e.value.launchRequest(), password)
+	request := e.value.launchRequest()
+	if b.coordinationLaunch != nil {
+		access, err := b.coordinationLaunch(b.coordinationSnapshotLocked(), e.value.clone())
+		if err != nil {
+			b.logger.Warn("session coordination interface unavailable", "session_id", e.value.ID, "error", err)
+		} else {
+			request.Coordination = access
+		}
+	}
+	p, err := b.launch(request, password)
 	if err != nil {
 		b.logger.Warn("terminal launch failed", "session_id", e.value.ID, "error", err)
 		if attempted, fallbackErr := b.fallbackLocked(e, password, initial); attempted {
@@ -1130,4 +1140,30 @@ func (b *Broker) Close() error {
 		err = errors.Join(err, os.RemoveAll(b.controlDir))
 	}
 	return err
+}
+
+// WithCoordinationSnapshot linearizes coordination admission against session
+// mutations. The callback may persist coordination state, but must not call the
+// broker or perform network/provider/repository subprocess work.
+func (b *Broker) WithCoordinationSnapshot(fn func([]Session) error) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.closed {
+		return ErrClosed
+	}
+	return fn(b.coordinationSnapshotLocked())
+}
+func (b *Broker) coordinationSnapshotLocked() []Session {
+	out := make([]Session, 0, len(b.order))
+	for _, id := range b.order {
+		value := b.entries[id].value.clone()
+		value.CoordinationLive = b.entries[id].run != nil && (value.State == "connected" || value.State == "connecting")
+		out = append(out, value)
+	}
+	return out
+}
+func (b *Broker) SetCoordinationLaunch(fn func([]Session, Session) (*terminal.CoordinationAccess, error)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.coordinationLaunch = fn
 }
