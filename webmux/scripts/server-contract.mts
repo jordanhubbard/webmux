@@ -658,6 +658,57 @@ async function slaveContract(): Promise<void> {
   }
 }
 
+async function sessionCoordinationContract(): Promise<void> {
+  const marker = path.join(temporary, 'coordination-client-ready');
+  const fixturePath = path.join(temporary, 'coordination-client.mjs');
+  await writeFile(fixturePath, `import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+assert.ok(process.env.WEBMUX_COORDINATION_FILE);
+assert.ok(process.env.WEBMUX_COORDINATION_CLI);
+const result = spawnSync(process.env.WEBMUX_COORDINATION_CLI, ['coordinate', 'view'], { encoding: 'utf8' });
+assert.equal(result.status, 0, result.stderr);
+const view = JSON.parse(result.stdout);
+assert.equal(view.contract, 'webmux-session-coordination/v1');
+assert.equal(view.scope, 'node-local');
+assert.equal(view.self.ref.owner, 'owner');
+assert.ok(!result.stdout.includes('wmc1.'));
+writeFileSync(${JSON.stringify(marker)}, 'scoped CLI completed before any browser viewer opened', { mode: 0o600 });
+console.log('coordination-cli-ready');
+setTimeout(() => {}, 30000);
+`);
+  const server = await start('local', undefined, { WEBMUX_COORDINATION_CACHE_HOME: path.join(temporary, 'coordination-cache') });
+  let client: SocketProbe | undefined;
+  try {
+    const owner = stringField((await server.request('POST', '/api/auth/bootstrap', { username: 'owner', password: 'password' })).body, 'token');
+    const quote = (value: string): string => process.platform === 'win32' ? `"${value}"` : `'${value.replaceAll("'", `'"'"'`)}'`;
+    const command = `${quote(process.execPath)} ${quote(fixturePath)}`;
+    const created = await server.request('POST', '/api/sessions', { hostname: 'localhost', username: 'fixture', transport: 'exec', exec_command: command }, owner);
+    assert.equal(created.status, 201);
+    const id = stringField(created.body, 'id');
+    const deadline = Date.now() + 10000;
+    while (!(await stat(marker).catch(() => undefined))) {
+      assert.ok(Date.now() < deadline, 'automatically provisioned CLI did not reach the real coordination service without a browser');
+      await delay(20);
+    }
+    const snapshot = await server.request('GET', '/api/session-coordination', undefined, owner);
+    assert.equal(snapshot.status, 200);
+    const state = record(snapshot.body);
+    assert.equal(state.enabled, true);
+    assert.equal(state.scope, 'node-local');
+    assert.ok(Array.isArray(state.members));
+    assert.equal(state.members.length, 1);
+    assert.equal(stringField(record(state.members[0]).ref, 'session_id'), id);
+    assert.ok(!JSON.stringify(snapshot.body).includes('wmc1.'));
+    client = probe(server.socket(`/api/term/${id}?token=${encodeURIComponent(owner)}`));
+    const current = client;
+    await waitSocket(current, () => current.output.includes('coordination-cli-ready'), 'ordinary scoped CLI output');
+    assert.equal((await server.request('PUT', '/api/session-coordination/policy', { enabled: false }, owner)).status, 204);
+    assert.equal(record((await server.request('GET', `/api/sessions/${id}`, undefined, owner)).body).state, 'connected');
+    assert.equal((await server.request('PUT', '/api/session-coordination/policy', { enabled: true }, owner)).status, 204);
+  } finally { client?.socket.terminate(); await server.close(); }
+}
+
 async function terminalContract(): Promise<void> {
   const server = await start('local');
   const clients: SocketProbe[] = [];
@@ -1064,12 +1115,13 @@ try {
   await settingsContract();
   await sessionContract();
   await terminalContract();
+  await sessionCoordinationContract();
   await slaveContract();
   await agentContract();
   await desktopContract();
   await vncContract();
   await rdpContract();
-  console.log('Go: HTTP, templates, terminal WebSocket, agent, VNC/RDP and restart contracts passed');
+  console.log('Go: HTTP, templates, terminal WebSocket, scoped session coordination, agent, VNC/RDP and restart contracts passed');
 } finally {
   await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }

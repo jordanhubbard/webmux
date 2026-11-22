@@ -21,6 +21,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/auth"
 	"github.com/jordanhubbard/webmux/server/internal/authhandoff"
 	"github.com/jordanhubbard/webmux/server/internal/browser"
+	"github.com/jordanhubbard/webmux/server/internal/coordination"
 	"github.com/jordanhubbard/webmux/server/internal/desktop"
 	"github.com/jordanhubbard/webmux/server/internal/discovery"
 	"github.com/jordanhubbard/webmux/server/internal/macsetup"
@@ -32,6 +33,7 @@ import (
 )
 
 type Server struct {
+	sessionCoord       sessionCoordination
 	nodePeersCancel    context.CancelFunc
 	nodePeersDone      chan struct{}
 	peerRoots          *x509.CertPool // nil uses the OS trust store; isolated embedded clients may supply roots.
@@ -105,7 +107,7 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{usbLeases: usbforward.LeaseManager{Store: store}, restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil), clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
+	return &Server{sessionCoord: sessionCoordination{service: coordination.New(store.Home), bindings: map[string]*coordination.Binding{}}, usbLeases: usbforward.LeaseManager{Store: store}, restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil), clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
 }
 
 func (s *Server) RestoreSessions() error {
@@ -139,6 +141,11 @@ func (s *Server) StartSlave(host string, port int) error {
 	return err
 }
 func (s *Server) Close() error {
+	if s.sessionCoord.cancel != nil {
+		s.sessionCoord.cancel()
+		<-s.sessionCoord.done
+	}
+	coordinationErr := s.sessionCoord.service.Close()
 	if s.nodePeersCancel != nil {
 		s.nodePeersCancel()
 		<-s.nodePeersDone
@@ -149,12 +156,14 @@ func (s *Server) Close() error {
 	if s.coordinationCancel != nil {
 		s.coordinationCancel()
 	}
-	return s.closeSocketsAndSessions()
+	return errors.Join(coordinationErr, s.closeSocketsAndSessions())
 }
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.registerFederation(mux)
+	mux.Handle("GET /api/session-coordination", s.protected(false, s.getSessionCoordination))
+	mux.Handle("PUT /api/session-coordination/policy", s.protected(false, s.setSessionCoordinationPolicy))
 	mux.HandleFunc("POST "+nodeIdentityPath, s.proveNodeIdentity)
 	mux.Handle("POST /api/servers/{server}/verify-identity", s.protected(false, s.enrollNodePeer))
 	mux.Handle("GET /api/discovered-nodes", s.protected(false, s.getDiscoveredNodes))

@@ -20,7 +20,7 @@ participation, durable claims or acknowledged handoffs.
 | --- | --- | --- |
 | Agent Deck | Existing managed-session profiles, inventories, attach and ownership checks; remote manager forwarding and recovery have scoped native evidence in [session recovery](session-recovery.md). | Enrollment is provider-specific. Its inventory does not cover every ordinary WebMux shell or independent agent. Adding it as mandatory would add its CLI/tmux and profile management to otherwise standalone nodes. Remote ownership/resume support has version-specific limits. |
 | Rig | Existing canonical seat/project inventory, structured launch/attach, version-qualified native creation, checked Stop and event subscriptions. [Native routing evidence](validation/rig-routing-current-2026-11-19/README.md) distinguishes modern from legacy workloads. | Native agent policy, platform and lifecycle acceptance remains scoped. Its owner queue is not a universal automatic WebMux session inbox. The server adapter materializes a Node runner plus native-launch helpers; tmux, a qualified Rig build and runtime-specific behavior remain operational dependencies. |
-| Built-in WebMux plane | WebMux already owns account/session identities, durable storage, terminal creation, server startup/shutdown and an authenticated peer allowlist. The new Go DNS-SD browser has deterministic/race controls and a real Linux ARM64 multicast round trip using the already-pinned Pion dependency. | Authenticated HTTPS node/account identity and address migration now have a native two-host component result. Durable project/claim/handoff/reservation state, agent-aware channels, scoped capabilities and cross-host coordination replication still need implementation and native acceptance. Built-in discovery alone supplies none of these agent semantics. |
+| Built-in WebMux plane | WebMux already owns account/session identities, durable storage, terminal creation, server startup/shutdown and an authenticated peer allowlist. The new Go DNS-SD browser has deterministic/race controls and a real Linux ARM64 multicast round trip using the already-pinned Pion dependency. | Authenticated HTTPS node/account identity and address migration now have a native two-host component result. A durable node-local project/claim/handoff/reservation ledger and scoped ordinary-session CLI now have controlled process and protocol tests in the [coordination checkpoint](session-coordination.md). Native agent-aware channels and cross-host coordination still need implementation and acceptance. Built-in discovery alone supplies none of these agent semantics. |
 
 Code inspected: provider adapters above,
 [`coordination_service.go`](../webmux/server/internal/httpapi/coordination_service.go),
@@ -67,8 +67,9 @@ independently launched ordinary agents; they are not established by this decisio
    address reconciliation across the full discovered two-host/platform workflow.
    DNS-SD claims never authorize access; the native protocol component result
    does not complete discovery, deployment or agent acceptance.
-2. Implement the durable coordination and capability protocol, project isolation,
-   stale session revocation, conflict rules and restart/reconnect semantics.
+2. Extend the [durable node-local coordination checkpoint](session-coordination.md)
+   through cross-node authority, execution-host provisioning and full native
+   project isolation, stale identity and restart/reconnect acceptance.
 3. Inspect and test real agent-facing interfaces across ordinary and managed
    launches while preserving original policies, credentials and lifecycle owners.
 4. Qualify two independently started real agents on two real authorized WebMux
