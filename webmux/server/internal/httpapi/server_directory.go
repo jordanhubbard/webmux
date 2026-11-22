@@ -40,12 +40,13 @@ func validSavedCredential(value string) bool {
 
 // Explicit response types keep credentials out of every directory read API.
 type managedPeer struct {
-	ID              string `json:"id"`
-	Name            string `json:"name"`
-	URL             string `json:"url"`
-	AllowHTTP       bool   `json:"allow_http"`
-	TokenEnv        string `json:"token_env"`
-	CredentialReady bool   `json:"credential_ready"`
+	ID              string       `json:"id"`
+	Name            string       `json:"name"`
+	URL             string       `json:"url"`
+	AllowHTTP       bool         `json:"allow_http"`
+	TokenEnv        string       `json:"token_env"`
+	CredentialReady bool         `json:"credential_ready"`
+	Identity        nodeIdentity `json:"identity"`
 }
 type managedGrant struct {
 	ID              string `json:"id"`
@@ -66,7 +67,7 @@ func (s *Server) getServerDirectory(w http.ResponseWriter, r *http.Request, owne
 	peers := []managedPeer{}
 	grants := []managedGrant{}
 	for _, p := range d.Servers {
-		peers = append(peers, managedPeer{p.ID, p.Name, p.URL, p.AllowHTTP, p.TokenEnv, validSavedCredential(serverCredential(p.TokenEnv, p.Credential))})
+		peers = append(peers, managedPeer{p.ID, p.Name, p.URL, p.AllowHTTP, p.TokenEnv, validSavedCredential(serverCredential(p.TokenEnv, p.Credential)), p.Identity})
 	}
 	for _, g := range d.Grants {
 		grants = append(grants, managedGrant{g.ID, g.Owner, g.TokenEnv, validSavedCredential(serverCredential(g.TokenEnv, g.Credential))})
@@ -135,6 +136,10 @@ func (s *Server) saveServerPeer(w http.ResponseWriter, r *http.Request, owner st
 		for i, old := range d.Servers {
 			if old.ID == p.ID {
 				p.TokenEnv, p.Credential = updateServerCredential(body.TokenEnv, body.Credential, old.TokenEnv, old.Credential)
+				p.Identity = old.Identity
+				if p.URL == old.URL {
+					p.DiscoveredAddress = old.DiscoveredAddress
+				}
 				d.Servers[i] = p
 				return nil
 			}

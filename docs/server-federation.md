@@ -6,9 +6,11 @@ project bindings and persistence. A browser connected to one server can select
 workspace keeps its existing terminal grid. Administrators can open **Manage
 servers** from the toolbar even before any peers exist. The server selector appears after the first peer is configured.
 
-Connections are opened on demand. There is no distributed mesh, shared home
-directory, automatic discovery, or requirement for Rig or Agent Deck. Those
-coordinators remain optional for task assignment and provider lifecycle work.
+Connections are opened on demand. [Network discovery](network-discovery.md)
+shows unverified candidate nodes in Manage servers; authenticated connections
+still require explicit configuration. There is no distributed mesh or shared
+home directory. Rig and Agent Deck remain optional for task assignment and
+provider lifecycle work.
 
 ## Manage connections in the UI
 
@@ -52,6 +54,24 @@ controller login or disconnect local terminals. Restore the grant or repair the
 peer credential, then reconnect the viewer to its surviving provider. Both
 removal actions require confirmation. These controls are administrator-only in authenticated mode and
 available to operators in trusted `auth.mode: none`, like other settings.
+
+## Verify a node identity
+
+After configuring an HTTPS peer and its matching incoming owner grant, select
+**Verify identity** in Manage servers. WebMux pins the remote node, receiving
+account and TLS key. Pinned HTTP and WebSocket connections prove that original
+identity on the same TLS connection before sending a credential. A changed key,
+node or account is refused; editing the name/address preserves the pin. Remove
+and explicitly enroll again for a deliberate identity change.
+
+When browsing is enabled, a lost enrolled endpoint can migrate to a discovered
+address only after the original identity is verified. This keeps the configured
+peer/session namespace and its account scope. It never creates another provider.
+Manual HTTP peers remain available without identity enrollment or automatic
+migration. End-to-end HTTPS and normal OS certificate trust are required; TLS
+termination between the peers is not supported for pinned connections. See
+[network discovery](network-discovery.md) for the protocol, bounds and current
+native qualification limits.
 
 ## Configure a pair through files
 

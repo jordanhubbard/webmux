@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ServersDialog } from '@frontend/components/ServersDialog';
 
-const mocks = vi.hoisted(() => ({ directory: vi.fn(), save: vi.fn(), remove: vi.fn(), sessions: vi.fn(), grant: vi.fn(), removeGrant: vi.fn() }));
-vi.mock('@frontend/utils/api', () => ({ api: { getServerDirectory: mocks.directory, saveServer: mocks.save, deleteServer: mocks.remove, getServerSessions: mocks.sessions, saveServerGrant: mocks.grant, deleteServerGrant: mocks.removeGrant } }));
+const mocks = vi.hoisted(() => ({ verifyIdentity: vi.fn(), discovery: vi.fn(), directory: vi.fn(), save: vi.fn(), remove: vi.fn(), sessions: vi.fn(), grant: vi.fn(), removeGrant: vi.fn() }));
+vi.mock('@frontend/utils/api', () => ({ api: { verifyServerIdentity: mocks.verifyIdentity, getDiscoveredNodes: mocks.discovery, getServerDirectory: mocks.directory, saveServer: mocks.save, deleteServer: mocks.remove, getServerSessions: mocks.sessions, saveServerGrant: mocks.grant, deleteServerGrant: mocks.removeGrant } }));
 const peer = { id: 'remote', name: 'Builder', url: 'https://builder', allow_http: false, token_env: 'BUILDER_TOKEN', credential_ready: false };
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.verifyIdentity.mockResolvedValue(undefined);
+  mocks.discovery.mockResolvedValue({ started: true, error: '', policy: { browse: true }, candidates: [] });
   mocks.directory.mockResolvedValue({ servers: [peer], grants: [] });
   mocks.save.mockResolvedValue(undefined); mocks.grant.mockResolvedValue(undefined); mocks.remove.mockResolvedValue(undefined);
 });
@@ -98,4 +100,47 @@ it.each([
   fireEvent.change(screen.getByLabelText('Server URL'), { target: { value: url } });
   fireEvent.click(screen.getByRole('button', { name: 'Save server' }));
   await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(id, expect.objectContaining({ name, url })));
+});
+
+it('shows untrusted discovered candidates without enrolling them or enabling HTTP', async () => {
+  mocks.discovery.mockResolvedValue({ started: true, error: '', policy: { browse: true }, candidates: [
+    { instance: 'WebMux-candidate', claimed_id: 'a'.repeat(32), host: 'nearby.local', address: '192.0.2.10', port: 8081, tls: false },
+  ] });
+  render(<ServersDialog onClose={vi.fn()} onChanged={vi.fn()} currentUser="owner" />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Configure connection to nearby.local' }));
+  expect(mocks.save).not.toHaveBeenCalled();
+  expect(mocks.grant).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('Server URL')).toHaveValue('http://nearby.local:8081');
+  expect(screen.getByLabelText('Allow HTTP for a trusted private network or tunnel')).not.toBeChecked();
+  expect(screen.getByLabelText('Credential', { exact: true })).toHaveValue('');
+});
+
+it('preserves manual configuration when network discovery is unavailable', async () => {
+  mocks.discovery.mockRejectedValue(new Error('Multicast unavailable'));
+  render(<ServersDialog onClose={vi.fn()} onChanged={vi.fn()} currentUser="owner" />);
+  expect(await screen.findByText('Cannot load network discovery. Manual connections remain available.')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Add server' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Edit Builder' })).toBeEnabled();
+});
+
+it('verifies the enrolled node and receiving account before showing its pin', async () => {
+  const readyPeer = { ...peer, credential_ready: true };
+  mocks.directory.mockResolvedValue({ servers: [readyPeer], grants: [] });
+  render(<ServersDialog onClose={vi.fn()} onChanged={vi.fn()} currentUser="owner" />);
+  const verify = await screen.findByRole('button', { name: 'Verify identity of Builder' });
+  mocks.directory.mockResolvedValue({ servers: [{ ...readyPeer, identity: { node_id: 'a'.repeat(32), owner: 'owner', tls_key_sha256: 'b'.repeat(64) } }], grants: [] });
+  fireEvent.click(verify);
+  await waitFor(() => expect(mocks.verifyIdentity).toHaveBeenCalledWith('remote'));
+  expect(await screen.findByText(/Verified node: a+ · Account: owner/)).toBeVisible();
+  expect(mocks.save).not.toHaveBeenCalled();
+});
+
+it('keeps the original identity visible when verification fails', async () => {
+  mocks.directory.mockResolvedValue({ servers: [{ ...peer, credential_ready: true, identity: { node_id: 'a'.repeat(32), owner: 'owner', tls_key_sha256: 'b'.repeat(64) } }], grants: [] });
+  mocks.verifyIdentity.mockRejectedValue(new Error('Original identity no longer matches'));
+  render(<ServersDialog onClose={vi.fn()} onChanged={vi.fn()} currentUser="owner" />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Verify identity of Builder' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Original identity no longer matches');
+  expect(screen.getByText(/Verified node: a+ · Account: owner/)).toBeVisible();
+  expect(mocks.save).not.toHaveBeenCalled();
 });
