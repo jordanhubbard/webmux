@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type ManagedServer, type ServerGrant, type ServerDirectory, type NodeDiscovery } from '../utils/api';
 import { Dialog } from './Dialog';
 import './ServersDialog.css';
+import { SessionCoordinationPolicy } from './SessionCoordinationPolicy';
 
 type Editor = { coordination_reservations: boolean; coordination_messages: boolean; source_node_id: string; source_owner: string; coordination_owner: string; coordination: boolean; verified: boolean; kind: 'server' | 'grant'; existing: boolean; id: string; name: string; url: string; owner: string; allow_http: boolean; token_env: string; credential: string };
 const emptyEditor = (kind: Editor['kind']): Editor => ({ coordination_reservations: false, coordination_messages: false, source_node_id: '', source_owner: '', coordination_owner: '', coordination: false, verified: false, kind, existing: false, id: '', name: '', url: '', owner: '', allow_http: false, token_env: '', credential: '' });
@@ -47,7 +48,7 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
     if (!window.confirm(kind === 'server' ? `Remove ${id}? Its terminal processes will keep running on that server.` : `Remove incoming grant ${id}? This revokes the other server’s access.`)) return;
     void run(async () => { if (kind === 'server') await api.deleteServer(id); else await api.deleteServerGrant(id); await reload(); });
   };
-  return <Dialog title="Manage servers" subtitle="Manage your WebMux cluster: add, edit or remove server connections and incoming access." width={700} onClose={onClose} dismissible={!busy}>
+  return <Dialog title="Manage servers" subtitle="Manage server connections, automatic coordination and incoming access." width={700} onClose={onClose} dismissible={!busy}>
     <div className="servers-manager">
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
@@ -106,6 +107,7 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
             <button disabled={busy} onClick={() => remove('server', server.id)}>Remove {server.name}</button>
           </div>
         </section>)}
+        <SessionCoordinationPolicy />
         <h3>Nearby servers</h3>
         <p>Network announcements are unverified. Confirm the server address and identity before sharing a credential. Discovery does not grant access.</p>
         {discoveryError && <p role="status">{discoveryError}</p>}

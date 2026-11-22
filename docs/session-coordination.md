@@ -518,11 +518,20 @@ accounts running under one OS identity are not an OS-level hostile-code boundary
 Native Windows ACL custody and agent sandbox reachability remain qualification
 gates.
 
-Authenticated owners can inspect their registry using
-`GET /api/session-coordination`. Administrators can globally disable admission
-using `PUT /api/session-coordination/policy` with `{"enabled":false}` and re-enable
-with `true`. Disabling does not stop terminals/providers or erase receipts.
-The control currently has an API, with no dedicated settings UI.
+Administrators can inspect their registry using
+`GET /api/session-coordination`. They can use **Manage servers →
+Automatic session coordination** to read and change the server-wide policy.
+The control reads back the authoritative setting after saving. A lost response
+or failed readback shows an unconfirmed state; **Reload coordination policy**
+checks the current value without repeating the write. It does not add a
+per-session opt-in or change optional provider preferences.
+
+`GET /api/session-coordination/policy` returns only the current policy, without
+project queries, peer requests or membership refresh. This read and the existing
+`PUT /api/session-coordination/policy` require administrator access (or the
+existing no-auth administration mode). Set `{"enabled":false}` to disable and
+`{"enabled":true}` to re-enable. The setting persists in the durable ledger.
+Disabling does not stop terminals/providers or erase receipts.
 
 ## Storage and recovery
 

@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ServersDialog } from '@frontend/components/ServersDialog';
 
-const mocks = vi.hoisted(() => ({ verifyIdentity: vi.fn(), discovery: vi.fn(), directory: vi.fn(), save: vi.fn(), remove: vi.fn(), sessions: vi.fn(), grant: vi.fn(), removeGrant: vi.fn() }));
-vi.mock('@frontend/utils/api', () => ({ api: { verifyServerIdentity: mocks.verifyIdentity, getDiscoveredNodes: mocks.discovery, getServerDirectory: mocks.directory, saveServer: mocks.save, deleteServer: mocks.remove, getServerSessions: mocks.sessions, saveServerGrant: mocks.grant, deleteServerGrant: mocks.removeGrant } }));
+const mocks = vi.hoisted(() => ({ policy: vi.fn(), setPolicy: vi.fn(), verifyIdentity: vi.fn(), discovery: vi.fn(), directory: vi.fn(), save: vi.fn(), remove: vi.fn(), sessions: vi.fn(), grant: vi.fn(), removeGrant: vi.fn() }));
+vi.mock('@frontend/utils/api', () => ({ api: { getSessionCoordinationPolicy: mocks.policy, setSessionCoordinationPolicy: mocks.setPolicy, verifyServerIdentity: mocks.verifyIdentity, getDiscoveredNodes: mocks.discovery, getServerDirectory: mocks.directory, saveServer: mocks.save, deleteServer: mocks.remove, getServerSessions: mocks.sessions, saveServerGrant: mocks.grant, deleteServerGrant: mocks.removeGrant } }));
 const peer = { id: 'remote', name: 'Builder', url: 'https://builder', allow_http: false, token_env: 'BUILDER_TOKEN', credential_ready: false };
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.policy.mockResolvedValue({ contract: 'webmux-session-coordination-policy/v1', enabled: true });
+  mocks.setPolicy.mockResolvedValue(undefined);
   mocks.verifyIdentity.mockResolvedValue(undefined);
   mocks.discovery.mockResolvedValue({ started: true, error: '', policy: { browse: true }, candidates: [] });
   mocks.directory.mockResolvedValue({ servers: [peer], grants: [] });

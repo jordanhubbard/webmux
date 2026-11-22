@@ -200,7 +200,18 @@ async function createCoordinatedAgent(input: CoordinationCreateRequest): Promise
   }
 }
 
+export interface SessionCoordinationPolicy { contract: 'webmux-session-coordination-policy/v1'; enabled: boolean }
+async function getSessionCoordinationPolicy(signal?: AbortSignal): Promise<SessionCoordinationPolicy> {
+  const value = await request<Partial<SessionCoordinationPolicy> | null>('/session-coordination/policy', { signal, cache: 'no-store' });
+  if (value?.contract !== 'webmux-session-coordination-policy/v1' || typeof value.enabled !== 'boolean') {
+    throw new Error('The server returned an invalid coordination policy');
+  }
+  return { contract: value.contract, enabled: value.enabled };
+}
+
 export const api = {
+  getSessionCoordinationPolicy,
+  setSessionCoordinationPolicy: (enabled: boolean, signal?: AbortSignal) => request<void>('/session-coordination/policy', { method: 'PUT', signal, body: JSON.stringify({ enabled }) }),
   getUSBForwardings: (signal?: AbortSignal) => request<USBForwardingLease[]>('/usb-forwardings', { signal, cache: 'no-store' }),
   createUSBForwarding: (spec: USBForwardingSpec) => request<USBForwardingTicket>('/usb-forwardings', { method: 'POST', body: JSON.stringify(spec) }),
   stopUSBForwarding: (id: string) => request<USBForwardingLease>(`/usb-forwardings/${encodeURIComponent(id)}/stop`, { method: 'POST' }),
