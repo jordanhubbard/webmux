@@ -15,7 +15,7 @@ import (
 func NativeLaunch(cli, version, helper string, args []string) ([]string, string) {
 	unchanged := func(status string) ([]string, string) { return append([]string(nil), args...), status }
 	fields := strings.Fields(version)
-	qualified := cli == "codex" && len(fields) == 2 && fields[0] == "codex-cli" && fields[1] == "0.171.0" || cli == "claude" && len(fields) >= 1 && fields[0] == "2.1.327"
+	qualified := cli == "codex" && len(fields) == 2 && fields[0] == "codex-cli" && fields[1] == "0.171.0" || cli == "claude" && len(fields) >= 1 && (fields[0] == "2.1.327" || fields[0] == "2.1.319")
 	if !qualified {
 		return unchanged("mcp-version-unqualified")
 	}

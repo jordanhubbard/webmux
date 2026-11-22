@@ -129,6 +129,21 @@ proof of delivery. Removing permission stops future attempts, while an existing
 in-flight admission may already have committed. See the
 [durable protocol and recovery rules](session-coordination.md#durable-messages-across-nodes).
 
+## Allow shared worker reservations
+
+For an enrolled HTTPS peer with a local coordination account, select **Allow
+shared worker reservations on this peer**. On the receiving incoming grant,
+enable summaries and **Allow incoming shared worker reservations**, then bind the
+sending node ID/account. This permission is independent of inbox messaging and
+defaults off. The file field is `coordination_reservations: true` in both entries;
+the incoming grant also needs `coordination`, `source_node_id` and `source_owner`.
+
+Local and remote sessions contend on one authority's heavy-worker lease. A grant
+does not execute a job. Workers must verify the current lease and original fence,
+honor the conservative expiry and stop before release. Older lease-unaware
+clients are explicitly refused. See the
+[authority, retry and compatibility contract](session-coordination.md#shared-heavy-worker-reservations).
+
 ## Configure a pair through files
 
 Use the same WebMux release on both servers. Give each server a distinct

@@ -102,7 +102,7 @@ func initialize(tx *bolt.Tx, node string, now time.Time) error {
 		if string(meta.Get([]byte("node"))) != node {
 			return ErrIdentity
 		}
-		if (string(meta.Get([]byte("version"))) != "1" && string(meta.Get([]byte("version"))) != "2") || len(meta.Get([]byte("key"))) != 32 || (string(meta.Get([]byte("enabled"))) != "1" && string(meta.Get([]byte("enabled"))) != "0") {
+		if (string(meta.Get([]byte("version"))) != "1" && string(meta.Get([]byte("version"))) != "2" && string(meta.Get([]byte("version"))) != "3") || len(meta.Get([]byte("key"))) != 32 || (string(meta.Get([]byte("enabled"))) != "1" && string(meta.Get([]byte("enabled"))) != "0") {
 			return errors.New("invalid coordination database metadata")
 		}
 		required := buckets
@@ -138,6 +138,9 @@ func initialize(tx *bolt.Tx, node string, now time.Time) error {
 		if !validHex(string(meta.Get([]byte("history_epoch"))), 16) {
 			return errors.New("invalid coordination history epoch")
 		}
+		if string(meta.Get([]byte("version"))) == "2" {
+			return meta.Put([]byte("version"), []byte("3"))
+		}
 		return nil
 	}
 	for _, name := range buckets {
@@ -150,7 +153,7 @@ func initialize(tx *bolt.Tx, node string, now time.Time) error {
 	if _, err := rand.Read(key); err != nil {
 		return err
 	}
-	for name, value := range map[string][]byte{"node": []byte(node), "version": []byte("2"), "key": key, "enabled": []byte("1")} {
+	for name, value := range map[string][]byte{"node": []byte(node), "version": []byte("3"), "key": key, "enabled": []byte("1")} {
 		if err := meta.Put([]byte(name), value); err != nil {
 			return err
 		}

@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Current combined-source integration gates and offline integrity/audit checks of the original native run; no new native run",
+  "parent_head": "21c12c4fffbabb7666a7d36f54af4104d9fd98c6",
+  "original_native_pair_head": "ac8f6edb2bb318159595c7420f8b9b5885d03226",
+  "source_sha256": {
+    "webmux/server/internal/coordinationmcp/server.go": "42c34764a247f7bcbbe00081d7ea80f183843d2c489dc22766ea03c8482c629c",
+    "webmux/server/internal/coordinationmcp/server_test.go": "f7888e997c6de6157c450daead3cc6328969d9d409cc9999a7a5bd66a1dabaa1",
+    "webmux/server/internal/coordinationclient/native.go": "51bf3676835935c4d8b083644cb11993c724742705c43bc081063f6931329244",
+    "webmux/server/internal/coordinationclient/native_test.go": "dc26105f7a7f7660474c7a6aad6a1727bcf081274746d79ecd98f63155b95e6c",
+    "webmux/server/internal/httpapi/coordination_native_pair_test.go": "6d4d2e4d1b0596244d864a07a09fb41b1ae853d254b126191534ff3b198bd334",
+    "webmux/server/internal/httpapi/session_coordination_native_test.go": "888705befb273f851a037fc5689b9a9bf06148f38ed8c2c6d5cb81d7b9089883",
+    "scripts/audit-coordination-native-pair.py": "8de1d4b998c26fbf54a61080d8b607c5a906bd635ef04fcf52544ab1ee742b04"
+  },
+  "evidence": [
+    {
+      "private_path": "_build/integrate-coordination-native-pair630/go-test.log",
+      "exit_code": 0,
+      "sha256": "0a51331a528f0df4d5af297b7249ad5952a90eef1134dfadc66d3b1e8a947c6d",
+      "source_scope": "Current combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-native-pair630/core-race.log",
+      "exit_code": 0,
+      "sha256": "0fd47801d70fa9f81cc6f728294ba5afac0151b9ff187a527bec6474c93cbc16",
+      "source_scope": "Current combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-native-pair630/api-race.log",
+      "exit_code": 0,
+      "sha256": "0d4839031dc3a5eb16b491451f471f489700f7731f5e56cce0ce9e0561e656e8",
+      "source_scope": "Current combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-native-pair630/vet.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "Current combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-native-pair630/typecheck.log",
+      "exit_code": 0,
+      "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+      "source_scope": "Current combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-native-pair630/server-contract.log",
+      "exit_code": 0,
+      "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f",
+      "source_scope": "Current combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-native-pair630/original-artifact-bindings.json",
+      "exit_code": 0,
+      "sha256": "5e24c39d84a34ec49f3af27f0e3d81525ebe09f4f54eff23f4d1426e064a6a5b",
+      "source_scope": "Original native artifacts, not current binary execution"
+    },
+    {
+      "private_path": "_build/integrate-coordination-native-pair630/original-native-audit.json",
+      "exit_code": 0,
+      "sha256": "4169db96e1b5bb251352def2e43567c937ba6ee348ce3939e65eef1e766b4ea7",
+      "source_scope": "Original native artifacts, not current binary execution"
+    },
+    {
+      "private_path": "_build/integrate-coordination-native-pair630/original-native-negative-controls.json",
+      "exit_code": 0,
+      "sha256": "326b3f3250b5f06f3996c5477d5795ca0d3a90d4c4af4ac20ade53a7eb04fa01",
+      "source_scope": "Original native artifacts, not current binary execution"
+    }
+  ],
+  "commands": {
+    "full_go": "go test -p 4 -count=1 ./...",
+    "core_race": "go test -race -count=1 ./internal/coordination ./internal/coordinationclient ./internal/coordinationmcp",
+    "api_race": "go test -race -count=1 -run 'Test(Coordination(SharedReservation|Reservation|PeerClaim|PeerClaims|RemoteMessage|MessageRevocation|LateSnapshot|DeletedAccount)|NativeOutputCapture)' ./internal/httpapi",
+    "vet": "go vet ./...",
+    "typecheck": "npm run typecheck",
+    "contract": "npm run test:contract",
+    "original_audit": "python3 scripts/audit-coordination-native-pair.py _build/coordination-native-pair630/pair2 _build/coordination-native-pair630/pair2-verifier --native-transcripts",
+    "original_artifact_bindings": "SHA-256 verification of all 29 retained private artifacts named in the original public receipt",
+    "negative_controls": "Repeat audit against the retained missing_busy, wrong_job_fence and missing_handoff_completion copies; require the corresponding specific failure in each"
+  },
+  "limitations": [
+    "No new native agent, two-host or heavy job run against current combined binaries.",
+    "Original native failures remain failures and original evidence keeps its source binding.",
+    "Fresh hosted checks and parent delivery remain merge gates.",
+    "Current-binary native workflow and broader roadmap acceptance remain open."
+  ]
+}

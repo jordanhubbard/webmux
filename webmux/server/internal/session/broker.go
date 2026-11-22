@@ -406,6 +406,7 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 
 func (b *Broker) startWithTranscriptLocked(e *entry, password, initial string, transcript *transcriptLog) error {
 	e.value.CoordinationActivity = nil
+	e.value.CoordinationChannel = ""
 	if e.value.LocalStop != nil {
 		return ErrLocalStopRequired
 	}
@@ -1103,7 +1104,16 @@ func (b *Broker) audit(event map[string]any) {
 }
 
 // SSHControlPath identifies this backend's private multiplexed connection.
-func (b *Broker) SSHControlPath(id string) string { return terminal.SSHControlPath(b.controlDir, id) }
+func (b *Broker) SSHControlPath(id string) string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if e := b.entries[id]; e != nil && e.run != nil {
+		if p, ok := e.run.process.(interface{ SSHControlPath() string }); ok && p.SSHControlPath() != "" {
+			return p.SSHControlPath()
+		}
+	}
+	return terminal.SSHControlPath(b.controlDir, id)
+}
 
 func (b *Broker) Close() error {
 	b.mu.Lock()
@@ -1158,6 +1168,9 @@ func (b *Broker) coordinationSnapshotLocked() []Session {
 	out := make([]Session, 0, len(b.order))
 	for _, id := range b.order {
 		value := b.entries[id].value.clone()
+		if run := b.entries[id].run; run != nil {
+			value.CoordinationRun = run.generation
+		}
 		value.CoordinationLive = b.entries[id].run != nil && (value.State == "connected" || value.State == "connecting")
 		out = append(out, value)
 	}

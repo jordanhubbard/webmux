@@ -1,0 +1,9 @@
+=== RUN   TestMulticastAdvertisementRoundTrip
+    discovery_test.go:102: Resolve(allowHTTP=false) = "https://webmux-discovery-fixture.local:8443", <nil>; want "https://webmux-discovery-fixture.local:19443"
+--- FAIL: TestMulticastAdvertisementRoundTrip (3.00s)
+=== RUN   TestNodeMulticastRoundTrip
+    nodes_test.go:187: node advertisement not discovered
+--- FAIL: TestNodeMulticastRoundTrip (8.00s)
+FAIL
+FAIL	github.com/jordanhubbard/webmux/server/internal/discovery	11.104s
+FAIL

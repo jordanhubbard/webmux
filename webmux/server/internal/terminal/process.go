@@ -45,6 +45,8 @@ type nativeProcess interface {
 // emits a final display frame during shutdown. Close cancels blocked I/O and
 // discards remaining output; Wait alone preserves output for the reader.
 type Process struct {
+	controlPath  string
+	controlClose func() // Closes only this session's private SSH master.
 	recovery     func(context.Context, recovery.RPCRequest) recovery.RPCResponse
 	browserLocal bool
 	native       nativeProcess
@@ -56,6 +58,8 @@ type Process struct {
 	closeOnce    sync.Once
 	closeErr     error
 }
+
+func (p *Process) SSHControlPath() string { return p.controlPath }
 
 func (p *Process) RecoveryRPC(ctx context.Context, request recovery.RPCRequest) recovery.RPCResponse {
 	if p.recovery == nil {
@@ -128,6 +132,9 @@ func (p *Process) Close() error {
 			err = nil
 		}
 		p.closeErr = errors.Join(err, p.native.Close())
+		if p.controlClose != nil {
+			p.controlClose()
+		}
 	})
 	return p.closeErr
 }

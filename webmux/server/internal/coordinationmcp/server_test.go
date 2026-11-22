@@ -78,7 +78,7 @@ func TestMCPGuidanceToolsAndAdmissionSemantics(t *testing.T) {
 	if err != nil || !result.IsError {
 		t.Fatal("busy was treated as admission", result, err)
 	}
-	for _, refused := range []string{`{"status":"reserved","expires":"2000-01-01T00:00:00Z"}`, `{"status":"claimed","conflicts":[{"id":"existing-claim"}]}`} {
+	for _, refused := range []string{`{"status":"reserved","lease":{"current":false,"authority_node_id":"remote","history_epoch":"epoch"}}`, `{"status":"reservation-pending"}`, `{"status":"reserved","expires":"2000-01-01T00:00:00Z"}`, `{"status":"claimed","conflicts":[{"id":"existing-claim"}]}`, `{"status":"claimed","peer_claim_checks":[{"node_id":"remote","owner":"mapped","state":"pending","notification_policy":"unavailable"}]}`} {
 		mu.Lock()
 		response = refused
 		mu.Unlock()
@@ -101,5 +101,59 @@ func TestMCPGuidanceToolsAndAdmissionSemantics(t *testing.T) {
 	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "webmux_coordination_view", Arguments: map[string]any{}})
 	if err != nil || !result.IsError {
 		t.Fatal("stale access cached or invalid endpoint accepted", result, err)
+	}
+}
+
+func TestMCPInboxWaitCursorCancellationAndRefusal(t *testing.T) {
+	var mu sync.Mutex
+	count := 0
+	mode := "arrival"
+	endpoint := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" || r.URL.Path != "/view" || r.URL.Query().Get("after") != "7" {
+			t.Error("wait changed cursor or invoked mutation")
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		count++
+		if mode == "refuse" {
+			w.WriteHeader(503)
+			return
+		}
+		inbox := []coordination.Message{}
+		if mode == "arrival" && count >= 2 {
+			inbox = append(inbox, coordination.Message{ID: "new-event", Index: 8, State: "admitted"})
+		}
+		_ = json.NewEncoder(w).Encode(coordination.View{Contract: coordination.Contract, Inbox: inbox, NextCursor: 7})
+	}))
+	defer endpoint.Close()
+	file := filepath.Join(t.TempDir(), "access.json")
+	t.Setenv("WEBMUX_COORDINATION_FILE", file)
+	t.Setenv("WEBMUX_COORDINATION_EXPECTED_SESSION", "")
+	t.Setenv("WEBMUX_RECOVERY_SESSION", "")
+	if err := coordinationclient.WriteAccess(file, coordinationclient.Access{Contract: coordination.Contract, Endpoint: endpoint.URL, Capability: "wmc1.wait.fixture"}); err != nil {
+		t.Fatal(err)
+	}
+	view, err := waitView(context.Background(), viewInput{After: 7, WaitSeconds: 2})
+	if err != nil || len(view.Inbox) != 1 || view.Inbox[0].State != "admitted" {
+		t.Fatal(view, err)
+	}
+	mu.Lock()
+	mode = "empty"
+	mu.Unlock()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err = waitView(ctx, viewInput{After: 7, WaitSeconds: 30}); err == nil {
+		t.Fatal("canceled wait continued")
+	}
+	mu.Lock()
+	mode = "refuse"
+	mu.Unlock()
+	if _, err = waitView(context.Background(), viewInput{After: 7, WaitSeconds: 30}); err == nil {
+		t.Fatal("unavailable authority treated as empty inbox")
+	}
+	for _, seconds := range []int{-1, 31} {
+		if _, err = waitView(context.Background(), viewInput{WaitSeconds: seconds}); err == nil {
+			t.Fatal("unbounded wait accepted")
+		}
 	}
 }

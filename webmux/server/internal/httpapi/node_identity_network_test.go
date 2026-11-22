@@ -113,6 +113,9 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 	proofs := map[net.Conn]bool{}
 	proofCount, bearerCount := 0, 0
 	messageAdmits, messageStatuses := 0, 0
+	overlapAdmits, overlapStatuses := 0, 0
+	reservationAdmits, reservationStatuses := 0, 0
+	lostReservationReply := false
 	lostMessageReply := false
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		connection, ok := r.Context().Value(nodeNetworkConnectionKey{}).(net.Conn)
@@ -172,6 +175,7 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 				directory.Grants[0].Coordination = r.URL.Path == "/_qualification/share-coordination"
 				if !directory.Grants[0].Coordination {
 					directory.Grants[0].CoordinationMessages = false
+					directory.Grants[0].CoordinationReservations = false
 				}
 				if err = b.store.WriteConfig("servers.yaml", directory); err != nil {
 					w.WriteHeader(500)
@@ -231,7 +235,7 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 							return
 						}
 						for _, action := range []string{"delivered", "acknowledge", "complete"} {
-							result := request(b.CoordinationAgentHandler(), "POST", "/act", directoryJSON(plane.Request{ID: "native-remote-" + action, Action: action, Record: id}), access.Capability)
+							result := request(b.CoordinationAgentHandler(), "POST", "/act", directoryJSON(plane.Request{ID: "native-remote-" + id + "-" + action, Action: action, Record: id}), access.Capability)
 							if result.Code != 200 || !strings.Contains(result.Body.String(), "recorded") {
 								t.Error("explicit recipient receipt failed")
 								w.WriteHeader(500)
@@ -246,6 +250,71 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 					w.WriteHeader(404)
 					return
 				}
+			case "/_qualification/claim-overlap":
+				if os.Getenv("WEBMUX_COORDINATION_CLAIM_NETWORK") != "1" {
+					w.WriteHeader(404)
+					return
+				}
+				found := false
+				for _, access := range nativeAccess {
+					if access.Subject.Owner == "owner" && access.Subject.Session == r.URL.Query().Get("session") {
+						result := request(b.CoordinationAgentHandler(), "POST", "/act", directoryJSON(plane.Request{ID: "native-overlap-directory", Action: "claim", Kind: "directory", Resource: "native-overlap"}), access.Capability)
+						if result.Code != 200 || !strings.Contains(result.Body.String(), "claimed") {
+							t.Error("native remote claim failed")
+							w.WriteHeader(500)
+							return
+						}
+						found = true
+						break
+					}
+				}
+				if !found {
+					w.WriteHeader(404)
+					return
+				}
+			case "/_qualification/allow-reservations":
+				if os.Getenv("WEBMUX_COORDINATION_RESERVATION_NETWORK") != "1" || !plane.ValidSenderScope(r.URL.Query().Get("source_node"), "owner") {
+					w.WriteHeader(400)
+					return
+				}
+				directory, err := b.serverDirectory()
+				if err != nil {
+					t.Error(err)
+					w.WriteHeader(500)
+					return
+				}
+				directory.Grants[0].Coordination = true
+				directory.Grants[0].CoordinationReservations = true
+				directory.Grants[0].SourceNode = r.URL.Query().Get("source_node")
+				directory.Grants[0].SourceOwner = "owner"
+				if err = b.store.WriteConfig("servers.yaml", directory); err != nil {
+					t.Error(err)
+					w.WriteHeader(500)
+					return
+				}
+			case "/_qualification/local-worker":
+				if os.Getenv("WEBMUX_COORDINATION_RESERVATION_NETWORK") != "1" {
+					w.WriteHeader(404)
+					return
+				}
+				phase := r.URL.Query().Get("phase")
+				if phase != "contend" && phase != "after" {
+					w.WriteHeader(400)
+					return
+				}
+				response := request(b.CoordinationAgentHandler(), "POST", "/act", directoryJSON(plane.Request{ID: "native-local-worker-" + phase, Action: "reserve", Resource: "node:" + policy.ID + ":heavy"}), nativeAccess[0].Capability)
+				var result plane.Result
+				if response.Code != 200 || json.Unmarshal(response.Body.Bytes(), &result) != nil {
+					t.Error("native local worker response failed")
+					w.WriteHeader(500)
+					return
+				}
+				if phase == "contend" && (result.Status != "busy" || result.Fence != 1) || phase == "after" && (result.Status != "reserved" || result.Fence != 2 || result.Lease == nil || !result.Lease.Current) {
+					t.Error("native local/remote authority did not contend", result.Status, result.Fence)
+					w.WriteHeader(500)
+					return
+				}
+				t.Logf("native local worker %s: %s fence %d", phase, result.Status, result.Fence)
 			case "/_qualification/stop":
 				defer stop.Do(func() { close(stopped) })
 			default:
@@ -274,7 +343,13 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 			r.Body = io.NopCloser(bytes.NewReader(data))
 			mu.Lock()
 			drop := false
-			if exchange.Operation == "admit" {
+			if exchange.Envelope.Kind == "overlap" {
+				if exchange.Operation == "admit" {
+					overlapAdmits++
+				} else {
+					overlapStatuses++
+				}
+			} else if exchange.Operation == "admit" {
 				messageAdmits++
 				if !lostMessageReply {
 					lostMessageReply = true
@@ -298,6 +373,48 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 					return
 				}
 				_ = connection.Close()
+				return
+			}
+		}
+		if os.Getenv("WEBMUX_COORDINATION_RESERVATION_NETWORK") == "1" && r.URL.Path == coordinationReservationsPath {
+			data, err := io.ReadAll(io.LimitReader(r.Body, (32<<10)+1))
+			if err != nil {
+				t.Error(err)
+				w.WriteHeader(500)
+				return
+			}
+			var exchange reservationExchange
+			if json.Unmarshal(data, &exchange) != nil {
+				w.WriteHeader(400)
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(data))
+			mu.Lock()
+			drop := false
+			if exchange.Operation == "admit" {
+				reservationAdmits++
+				if !lostReservationReply {
+					lostReservationReply = true
+					drop = true
+				}
+			} else {
+				reservationStatuses++
+			}
+			mu.Unlock()
+			if drop {
+				captured := httptest.NewRecorder()
+				bh.ServeHTTP(captured, r)
+				if captured.Code != 200 {
+					t.Error("native reservation did not commit", captured.Code)
+					w.WriteHeader(500)
+					return
+				}
+				conn, _, err := w.(http.Hijacker).Hijack()
+				if err != nil {
+					t.Error(err)
+					return
+				}
+				_ = conn.Close()
 				return
 			}
 		}
@@ -334,7 +451,19 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 		if messageAdmits != 1 || messageStatuses < 1 || !lostMessageReply {
 			t.Fatal("lost message reply did not reconcile through status", messageAdmits, messageStatuses)
 		}
+		if os.Getenv("WEBMUX_COORDINATION_CLAIM_NETWORK") == "1" {
+			if overlapAdmits != 1 || overlapStatuses < 1 {
+				t.Fatal("native overlap notice workload incomplete", overlapAdmits, overlapStatuses)
+			}
+			t.Logf("native overlap: %d admit and %d status requests; original claim-cycle identity and explicit completion", overlapAdmits, overlapStatuses)
+		}
 		t.Logf("native remote messaging: one admit request, %d receipt status requests, deliberately dropped first committed reply, one recipient inbox record, explicit delivered/acknowledged/completed and no terminal input", messageStatuses)
+	}
+	if os.Getenv("WEBMUX_COORDINATION_RESERVATION_NETWORK") == "1" {
+		if reservationAdmits != 4 || reservationStatuses < 2 || !lostReservationReply {
+			t.Fatal("incomplete native reservation wire workload", reservationAdmits, reservationStatuses)
+		}
+		t.Logf("native shared reservation: %d admit and %d status requests, deliberately lost committed grant reply, remote fence 1, local busy, same-fence renewal, release, old receipt not current, local fence 2 and stale remote renewal refused", reservationAdmits, reservationStatuses)
 	}
 	t.Logf("native receiver observed %d proofs and %d requests with bearer credentials, all on proven TLS connections", proofCount, bearerCount)
 }

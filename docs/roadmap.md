@@ -74,7 +74,44 @@ qualified ordinary Codex/Claude aliases; [single-host native startup evidence](v
 does not complete the cross-host or managed-agent workflow. The
 [authorized peer-context extension](session-coordination.md#authorized-peer-discovery)
 now has native macOS/Linux background project-discovery and revocation evidence.
-Cross-node mutations and the complete real-agent workflow remain open.
+The [durable inbox and claim extensions](session-coordination.md#durable-messages-across-nodes)
+add separate message permissions, explicit receipts, cross-node advisory conflicts
+and stable overlap events, with ordinary PTY protocol qualification. The [shared reservation extension](session-coordination.md#shared-heavy-worker-reservations)
+adds single-node authority and explicit remote permissions. A
+[two-host native Claude workflow](validation/coordination-native-pair-2026-11-22/README.md)
+now proves discovery, overlap/busy behavior, acknowledged handoff and an actual
+guarded fixture job on configured macOS/Linux nodes with explicit scoped-tool
+permissions. Its failed policy/capture attempts remain separate. Managed/SSH,
+existing-agent onboarding, native discovery/enrollment, restart/reconnect and the
+complete workflow gates remain open.
+
+The [SSH project-context extension](validation/coordination-ssh-project-2026-11-22/README.md)
+now verifies ordinary SSH/mosh repository context through the authenticated
+execution-host RPC, with destination/run revalidation and expiring observations.
+Native macOS-to-Linux production RPC qualification passes. Remote agent access
+and managed-provider onboarding remain open; verified project context does not
+establish those capabilities.
+
+The [private SSH channel checkpoint](validation/coordination-ssh-channel-2026-11-22/README.md)
+adds automatic scoped startup through an authenticated private socket forward.
+Native ordinary SSH shell/CLI startup, first-use trust, same-provider reconnect,
+refused forwarding and owned-master shutdown pass between macOS and Linux.
+The [native SSH agent checkpoint](validation/coordination-ssh-agent-2026-11-22/README.md)
+adds independently audited real Claude view/work calls through the ordinary SSH
+alias under an explicit two-tool native approval profile. A
+[persistent native SSH reconnect](validation/coordination-ssh-native-reconnect-2026-11-22/README.md)
+now preserves the actual Claude/MCP processes and conversation across planned
+reconnect, stops the old master and verifies new scoped calls. The
+[corrected-stack reconnect result](validation/coordination-ssh-reconnect-integration-2026-11-22/README.md)
+adds completed-turn process evidence and stale project-cache regression controls. A
+[production controller restart](validation/coordination-controller-restart-2026-11-22/README.md)
+also retains the same native processes, task, claim ID/expiry and history epoch;
+the native agent releases its retained claim after startup restore. The
+[corrected-stack restart result](validation/coordination-controller-restart-integration-2026-11-22/README.md)
+extends that evidence through completion of the post-restart turn. Broader coding-agent
+adoption, managed/password/Mosh/Windows paths and the complete
+restart/durable-work lifecycle remain open under #630; this does not complete a
+roadmap checkbox.
 
 ## Current reliability work
 

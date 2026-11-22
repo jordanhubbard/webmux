@@ -412,3 +412,86 @@ func TestCoordinationLateSnapshotCannotResurrectRemovedMapping(t *testing.T) {
 		t.Fatal("fresh verification did not restore the reactivated mapping")
 	}
 }
+
+func TestCoordinationLateSnapshotCannotSurviveGlobalDisable(t *testing.T) {
+	for _, mode := range []string{"maintenance", "policy-api", "direct-refresh"} {
+		t.Run(mode, func(t *testing.T) {
+			var armed, delayed atomic.Bool
+			ready, release := make(chan struct{}), make(chan struct{})
+			var once sync.Once
+			defer once.Do(func() { close(release) })
+			p := peerPairHook(t, "owner", func(next http.Handler, w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == coordinationSnapshotPath && armed.Load() && delayed.CompareAndSwap(false, true) {
+					captured := httptest.NewRecorder()
+					next.ServeHTTP(captured, r)
+					if captured.Code != 200 {
+						t.Error("initial snapshot was refused")
+					}
+					close(ready)
+					select {
+					case <-release:
+					case <-r.Context().Done():
+						return
+					}
+					for name, values := range captured.Header() {
+						w.Header()[name] = values
+					}
+					w.WriteHeader(captured.Code)
+					_, _ = w.Write(captured.Body.Bytes())
+					return
+				}
+				next.ServeHTTP(w, r)
+			})
+			p.a.sessionCoord.cancel()
+			<-p.a.sessionCoord.done
+			p.a.sessionCoord.cancel = nil
+			p.mapOwner(t, "owner")
+			p.share(t, true)
+			p.refresh(t)
+			if got := p.view(t, 0).Peers; len(got) != 1 || got[0].State != "current" {
+				t.Fatal("initial peer context missing", got)
+			}
+			node, _ := p.a.coordinationNode()
+			inputs := mustCoordinationInputs(t, p.a, node)
+			armed.Store(true)
+			done := make(chan error, 1)
+			go func() { done <- p.a.refreshCoordinationPeers(context.Background(), inputs) }()
+			select {
+			case <-ready:
+			case <-time.After(3 * time.Second):
+				t.Fatal("delayed snapshot did not arrive")
+			}
+			if mode == "policy-api" {
+				requireStatus(t, request(p.ah, "PUT", "/api/session-coordination/policy", `{"enabled":false}`, token(t, p.a, "owner")), 204)
+			} else {
+				if err := p.a.sessionCoord.service.SetEnabled(node, false); err != nil {
+					t.Fatal(err)
+				}
+				if mode == "direct-refresh" {
+					if err := p.a.refreshCoordinationPeers(context.Background(), inputs); err != nil {
+						t.Fatal(err)
+					}
+				} else {
+					p.refresh(t) // Observe persisted policy without starting another network request.
+				}
+			}
+			once.Do(func() { close(release) })
+			select {
+			case err := <-done:
+				if err != nil {
+					t.Fatal(err)
+				}
+			case <-time.After(3 * time.Second):
+				t.Fatal("old snapshot did not finish")
+			}
+			requireStatus(t, request(p.ah, "PUT", "/api/session-coordination/policy", `{"enabled":true}`, token(t, p.a, "owner")), 204)
+			if got := p.view(t, 0).Peers; len(got) != 1 || got[0].State != "pending" || got[0].Snapshot != nil {
+				t.Fatal("pre-disable context survived without a fresh peer observation", got)
+			}
+			p.refresh(t)
+			if got := p.view(t, 0).Peers; len(got) != 1 || got[0].State != "current" || got[0].Snapshot == nil {
+				t.Fatal("fresh peer observation did not recover", got)
+			}
+		})
+	}
+}

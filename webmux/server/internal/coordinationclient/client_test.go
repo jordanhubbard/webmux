@@ -130,3 +130,32 @@ func TestActRejectsBusyExpiredAndOverlappingAdmissions(t *testing.T) {
 		t.Fatal("message admission was relabeled as delivery")
 	}
 }
+
+func TestAdmissionErrorRequiresCompletePeerClaimContext(t *testing.T) {
+	for _, state := range []string{"pending", "unavailable", "stale", "unauthorized", "disabled", "invalid"} {
+		result := coordination.Result{Status: "claimed", PeerClaims: []coordination.PeerClaimCheck{{State: state}}}
+		if err := AdmissionError(result); err == nil {
+			t.Fatal("incomplete claim context reported success", state)
+		}
+	}
+	if err := AdmissionError(coordination.Result{Status: "claimed", PeerClaims: []coordination.PeerClaimCheck{{State: "current"}}}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAdmissionErrorRefusesHistoricalAndUncertainLease(t *testing.T) {
+	for _, status := range []string{"reserved", "renewed"} {
+		if err := AdmissionError(coordination.Result{Status: status, Lease: &coordination.LeaseCheck{Current: false}}); err == nil {
+			t.Fatal("historical outcome granted work", status)
+		}
+	}
+	if err := AdmissionError(coordination.Result{Status: "reservation-pending"}); err == nil {
+		t.Fatal("pending intent granted a lease")
+	}
+}
+
+func TestAdmissionErrorRefusesUnverifiedLegacyLease(t *testing.T) {
+	if err := AdmissionError(coordination.Result{Status: "reserved"}); err == nil {
+		t.Fatal("legacy result granted work without current lease evidence")
+	}
+}

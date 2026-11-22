@@ -153,6 +153,23 @@ func (s *Service) SetEnabled(node string, value bool) error {
 		return bucket(tx, "meta").Put([]byte("enabled"), setting)
 	})
 }
+
+// Enabled reads global policy without changing membership from a stale snapshot.
+func (s *Service) Enabled(node string) (bool, error) {
+	db, err := s.database()
+	if err != nil {
+		return false, err
+	}
+	var value bool
+	err = db.Update(func(tx *bolt.Tx) error {
+		if err := initialize(tx, node, s.Now()); err != nil {
+			return err
+		}
+		value = enabled(tx)
+		return nil
+	})
+	return value, err
+}
 func (s *Service) OwnerView(node, owner string, inputs []MemberInput) (View, error) {
 	db, err := s.database()
 	if err != nil {
@@ -213,7 +230,7 @@ func (s *Service) AgentView(node, token string, inputs []MemberInput, after uint
 	return view, admitted
 }
 func buildView(tx *bolt.Tx, owner string, self *Member, after uint64, now time.Time) (View, error) {
-	view := View{HistoryEpoch: string(bucket(tx, "meta").Get([]byte("history_epoch"))), Scope: "node-local", Contract: Contract, Enabled: enabled(tx), Self: self, Members: []Member{}, Claims: []Claim{}, Inbox: []Message{}, Outbox: []Message{}, Resources: []ResourceView{}, NextCursor: after}
+	view := View{AuthorityTime: now, HistoryEpoch: string(bucket(tx, "meta").Get([]byte("history_epoch"))), Scope: "node-local", Contract: Contract, Enabled: enabled(tx), Self: self, Members: []Member{}, Claims: []Claim{}, Inbox: []Message{}, Outbox: []Message{}, Resources: []ResourceView{}, NextCursor: after}
 	members, err := readAll[Member](bucket(tx, "members"))
 	if err != nil {
 		return view, err
@@ -241,7 +258,7 @@ func buildView(tx *bolt.Tx, owner string, self *Member, after uint64, now time.T
 		r.Occupied = true
 		r.Fence = held.Fence
 		r.Expires = &held.Expires
-		if held.Actor.Owner == owner && (self == nil || held.Project == projectID(*self)) {
+		if reservationOwner(held) == owner && (self == nil || held.Project == projectID(*self)) {
 			r.Holder = &held.Actor
 		}
 	}

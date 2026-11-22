@@ -92,27 +92,29 @@ type Claim struct {
 	Expires  time.Time `json:"expires"`
 }
 type Message struct {
-	Transport    string     `json:"transport,omitempty"`
-	ID           string     `json:"id"`
-	Index        uint64     `json:"index"`
-	From         Ref        `json:"from"`
-	To           Ref        `json:"to"`
-	Project      string     `json:"project"`
-	Kind         string     `json:"kind"`
-	Text         string     `json:"text"`
-	State        string     `json:"state"`
-	Created      time.Time  `json:"created"`
-	Delivered    *time.Time `json:"delivered,omitempty"`
-	Acknowledged *time.Time `json:"acknowledged,omitempty"`
-	Completed    *time.Time `json:"completed,omitempty"`
+	Overlap      *OverlapNotice `json:"overlap,omitempty"`
+	Transport    string         `json:"transport,omitempty"`
+	ID           string         `json:"id"`
+	Index        uint64         `json:"index"`
+	From         Ref            `json:"from"`
+	To           Ref            `json:"to"`
+	Project      string         `json:"project"`
+	Kind         string         `json:"kind"`
+	Text         string         `json:"text"`
+	State        string         `json:"state"`
+	Created      time.Time      `json:"created"`
+	Delivered    *time.Time     `json:"delivered,omitempty"`
+	Acknowledged *time.Time     `json:"acknowledged,omitempty"`
+	Completed    *time.Time     `json:"completed,omitempty"`
 }
 type Reservation struct {
-	ID       string    `json:"id"`
-	Resource string    `json:"resource"`
-	Actor    Ref       `json:"actor"`
-	Project  string    `json:"project"`
-	Fence    uint64    `json:"fence"`
-	Expires  time.Time `json:"expires"`
+	Custodian string    `json:"custodian,omitempty"`
+	ID        string    `json:"id"`
+	Resource  string    `json:"resource"`
+	Actor     Ref       `json:"actor"`
+	Project   string    `json:"project"`
+	Fence     uint64    `json:"fence"`
+	Expires   time.Time `json:"expires"`
 }
 type ResourceView struct {
 	ID        string     `json:"id"`
@@ -134,31 +136,36 @@ type Request struct {
 	LeaseSeconds int    `json:"lease_seconds,omitempty"`
 }
 type Result struct {
-	Transport string     `json:"transport,omitempty"`
-	Status    string     `json:"status"`
-	Record    string     `json:"record_id,omitempty"`
-	State     string     `json:"state,omitempty"`
-	Fence     uint64     `json:"fence,omitempty"`
-	Expires   *time.Time `json:"expires,omitempty"`
-	Conflicts []Claim    `json:"conflicts,omitempty"`
+	Shared     *SharedReservation `json:"shared_reservation,omitempty"`
+	Lease      *LeaseCheck        `json:"lease,omitempty"`
+	PeerClaims []PeerClaimCheck   `json:"peer_claim_checks,omitempty"`
+	Transport  string             `json:"transport,omitempty"`
+	Status     string             `json:"status"`
+	Record     string             `json:"record_id,omitempty"`
+	State      string             `json:"state,omitempty"`
+	Fence      uint64             `json:"fence,omitempty"`
+	Expires    *time.Time         `json:"expires,omitempty"`
+	Conflicts  []Claim            `json:"conflicts,omitempty"`
 }
 type View struct {
-	HistoryEpoch string         `json:"history_epoch,omitempty"`
-	Peers        []PeerView     `json:"peers,omitempty"`
-	Scope        string         `json:"scope"`
-	Contract     string         `json:"contract"`
-	Enabled      bool           `json:"enabled"`
-	Self         *Member        `json:"self,omitempty"`
-	Members      []Member       `json:"members"`
-	Claims       []Claim        `json:"claims"`
-	Inbox        []Message      `json:"inbox"`
-	Outbox       []Message      `json:"outbox"`
-	NextCursor   uint64         `json:"next_cursor"`
-	Resources    []ResourceView `json:"resources"`
+	AuthorityTime time.Time      `json:"authority_time"`
+	HistoryEpoch  string         `json:"history_epoch,omitempty"`
+	Peers         []PeerView     `json:"peers,omitempty"`
+	Scope         string         `json:"scope"`
+	Contract      string         `json:"contract"`
+	Enabled       bool           `json:"enabled"`
+	Self          *Member        `json:"self,omitempty"`
+	Members       []Member       `json:"members"`
+	Claims        []Claim        `json:"claims"`
+	Inbox         []Message      `json:"inbox"`
+	Outbox        []Message      `json:"outbox"`
+	NextCursor    uint64         `json:"next_cursor"`
+	Resources     []ResourceView `json:"resources"`
 }
 type receipt struct {
-	Hash   string `json:"hash"`
-	Result Result `json:"result"`
+	Reservation *ReservationIntent `json:"reservation_intent,omitempty"`
+	Hash        string             `json:"hash"`
+	Result      Result             `json:"result"`
 }
 
 func canonicalResource(kind, resource string) (string, bool) {

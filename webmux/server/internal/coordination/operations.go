@@ -47,6 +47,9 @@ func (s *Service) Execute(node, token string, inputs []MemberInput, request Requ
 	return s.ExecuteRouted(node, token, inputs, request, nil)
 }
 func (s *Service) ExecuteRouted(node, token string, inputs []MemberInput, request Request, route *RemoteRoute) (Result, error) {
+	return s.ExecuteWithPeers(node, token, inputs, request, route, nil)
+}
+func (s *Service) ExecuteWithPeers(node, token string, inputs []MemberInput, request Request, route *RemoteRoute, peers []ClaimPeer) (Result, error) {
 	if !validateRequest(request) {
 		return Result{}, ErrInvalid
 	}
@@ -89,12 +92,29 @@ func (s *Service) ExecuteRouted(node, token string, inputs []MemberInput, reques
 				admitted = ErrInvalid
 				return nil
 			}
+			if saved.Reservation != nil {
+				result = sharedResult(tx, saved, now)
+				return nil
+			}
 			result = saved.Result
-			return nil
+			return decorateLease(tx, node, member.Ref, request, &result, now)
 		}
 		member.Awareness = "interface-confirmed"
 		if err = put(bucket(tx, "members"), member.Ref.Key(), member); err != nil {
 			return err
+		}
+		if target, shared := ReservationTarget(request); shared && target != node {
+			var intent *ReservationIntent
+			result, intent, err = queueReservation(tx, member, request, route, now)
+			if err != nil {
+				return err
+			}
+			saved := receipt{Hash: hash, Result: result, Reservation: intent}
+			if err = put(bucket(tx, "receipts"), key, saved); err != nil {
+				return err
+			}
+			result = sharedResult(tx, saved, now)
+			return nil
 		}
 		if request.Action == "message" && request.Target != nil && request.Target.Node != node {
 			result, err = queueRemote(tx, member, request, route, now)
@@ -104,7 +124,20 @@ func (s *Service) ExecuteRouted(node, token string, inputs []MemberInput, reques
 		if err != nil {
 			return err
 		}
-		return put(bucket(tx, "receipts"), key, receipt{Hash: hash, Result: result})
+		if request.Action == "claim" && result.Status == "claimed" {
+			claim, _, e := get[Claim](bucket(tx, "claims"), result.Record)
+			if e != nil {
+				return e
+			}
+			result.PeerClaims, result.Conflicts, e = observeClaim(tx, member, claim, peers, result.Conflicts, now)
+			if e != nil {
+				return e
+			}
+		}
+		if err = put(bucket(tx, "receipts"), key, receipt{Hash: hash, Result: result}); err != nil {
+			return err
+		}
+		return decorateLease(tx, node, member.Ref, request, &result, now)
 	})
 	if err != nil {
 		return result, err
@@ -257,7 +290,10 @@ func claimWork(tx *bolt.Tx, actor Member, r Request, now time.Time) (Result, err
 	return Result{Status: "claimed", Record: claim.ID, Expires: &claim.Expires, Conflicts: conflicts}, nil
 }
 func reserveWorker(tx *bolt.Tx, actor Member, r Request, now time.Time) (Result, error) {
-	resource := "node:" + actor.Ref.Node + ":heavy"
+	return reserveWorkerAt(tx, actor.Ref.Node, actor.Ref.Owner, actor, r, now)
+}
+func reserveWorkerAt(tx *bolt.Tx, node, owner string, actor Member, r Request, now time.Time) (Result, error) {
+	resource := "node:" + node + ":heavy"
 	if r.Resource != resource {
 		return Result{Status: "unknown-resource"}, nil
 	}
@@ -281,7 +317,7 @@ func reserveWorker(tx *bolt.Tx, actor Member, r Request, now time.Time) (Result,
 		}
 		fence++
 		duration, _ := leaseDuration(r.LeaseSeconds)
-		held = Reservation{ID: digest([]byte("reserve\n" + actor.Ref.Key() + "\n" + r.ID)), Resource: resource, Actor: actor.Ref, Project: projectID(actor), Fence: fence, Expires: now.Add(duration)}
+		held = Reservation{Custodian: owner, ID: digest([]byte("reserve\n" + actor.Ref.Key() + "\n" + r.ID)), Resource: resource, Actor: actor.Ref, Project: projectID(actor), Fence: fence, Expires: now.Add(duration)}
 		if err = bucket(tx, "fences").Put([]byte(resource), sequence(fence)); err != nil {
 			return Result{}, err
 		}
@@ -290,7 +326,7 @@ func reserveWorker(tx *bolt.Tx, actor Member, r Request, now time.Time) (Result,
 		}
 		return Result{Status: "reserved", Record: held.ID, Fence: held.Fence, Expires: &held.Expires}, nil
 	}
-	if !active || held.ID != r.Record || held.Actor != actor.Ref || held.Fence != r.Fence {
+	if !active || held.ID != r.Record || held.Actor != actor.Ref || reservationOwner(held) != owner || held.Fence != r.Fence {
 		return Result{Status: "lease-lost"}, nil
 	}
 	if r.Action == "release-reservation" {

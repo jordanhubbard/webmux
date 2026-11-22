@@ -26,20 +26,30 @@ func (r RemoteRoute) Valid() bool {
 }
 
 type WireMessage struct {
-	Contract string `json:"contract"`
-	ID       string `json:"message_id"`
-	Request  string `json:"request_id"`
-	Epoch    string `json:"history_epoch"`
-	From     Ref    `json:"from"`
-	To       Ref    `json:"to"`
-	Project  string `json:"project_id"`
-	Kind     string `json:"kind"`
-	Text     string `json:"text"`
+	Contract string         `json:"contract"`
+	ID       string         `json:"message_id"`
+	Request  string         `json:"request_id"`
+	Epoch    string         `json:"history_epoch"`
+	From     Ref            `json:"from"`
+	To       Ref            `json:"to"`
+	Project  string         `json:"project_id"`
+	Kind     string         `json:"kind"`
+	Text     string         `json:"text"`
+	Overlap  *OverlapNotice `json:"overlap,omitempty"`
 }
 
 func (w WireMessage) Hash() string { data, _ := json.Marshal(w); return digest(data) }
 func (w WireMessage) Valid() bool {
-	return w.Contract == MessageContract && validHex(w.ID, 32) && validHex(w.Epoch, 16) && validRef(w.From) && validRef(w.To) && w.From.Node != w.To.Node && ValidProjectSelector(w.Project) && w.ID == digest([]byte("message\n"+w.From.Key()+"\n"+w.Request)) && validateRequest(Request{ID: w.Request, Action: "message", Target: &w.To, Kind: w.Kind, Text: w.Text})
+	kind := w.Kind
+	if w.Overlap != nil {
+		if !w.Overlap.valid(w) {
+			return false
+		}
+		kind = "message"
+	} else if kind == "overlap" {
+		return false
+	}
+	return w.Contract == MessageContract && validHex(w.ID, 32) && validHex(w.Epoch, 16) && validRef(w.From) && validRef(w.To) && w.From.Node != w.To.Node && ValidProjectSelector(w.Project) && w.ID == digest([]byte("message\n"+w.From.Key()+"\n"+w.Request)) && validateRequest(Request{ID: w.Request, Action: "message", Target: &w.To, Kind: kind, Text: w.Text})
 }
 
 type SenderScope struct{ Node, Owner, ReceiverOwner string }
@@ -111,7 +121,13 @@ func queueRemote(tx *bolt.Tx, actor Member, r Request, route *RemoteRoute, now t
 	if !envelope.Valid() {
 		return Result{}, ErrInvalid
 	}
-	message := Message{ID: envelope.ID, From: envelope.From, To: envelope.To, Project: envelope.Project, Kind: envelope.Kind, Text: envelope.Text, State: "admitted", Transport: "pending", Created: now}
+	return queueRemoteEnvelope(tx, actor, envelope, route, now)
+}
+func queueRemoteEnvelope(tx *bolt.Tx, actor Member, envelope WireMessage, route *RemoteRoute, now time.Time) (Result, error) {
+	if !envelope.Valid() || route == nil || !route.Valid() || envelope.From != actor.Ref || envelope.Project != projectID(actor) || route.Project != envelope.Project || route.Node != envelope.To.Node || route.Owner != envelope.To.Owner || route.Epoch != envelope.Epoch {
+		return Result{}, ErrInvalid
+	}
+	message := Message{Overlap: envelope.Overlap, ID: envelope.ID, From: envelope.From, To: envelope.To, Project: envelope.Project, Kind: envelope.Kind, Text: envelope.Text, State: "admitted", Transport: "pending", Created: now}
 	if _, err := addMessage(tx, message); err != nil {
 		return Result{}, err
 	}
@@ -184,12 +200,36 @@ func (s *Service) Exchange(node string, scope SenderScope, inputs []MemberInput,
 			return err
 		}
 		accepted := found && target.Ref == w.To && target.Present && target.Active && target.Revoked == nil && projectID(target) == w.Project
+		if accepted && w.Overlap != nil {
+			claim, exists, e := get[Claim](bucket(tx, "claims"), w.Overlap.Recipient.ID)
+			if e != nil {
+				return e
+			}
+			accepted = exists && now.Before(claim.Expires) && w.Overlap.Recipient.matches(claim)
+		}
 		if accepted {
-			_, err = addMessage(tx, Message{ID: w.ID, From: w.From, To: w.To, Project: w.Project, Kind: w.Kind, Text: w.Text, State: "admitted", Transport: "remote-inbox", Created: now})
+			existing, present, e := get[Message](bucket(tx, "messages"), w.ID)
+			if e != nil {
+				return e
+			}
+			if present {
+				if w.Overlap == nil || existing.Transport != "peer-observation" || existing.From != w.From || existing.To != w.To || existing.Project != w.Project || existing.Kind != w.Kind || existing.Text != w.Text {
+					return errors.New("unexpected remote inbox message collision")
+				}
+				existing.Transport = "remote-inbox"
+				existing.Overlap = w.Overlap
+				if e = put(bucket(tx, "messages"), w.ID, existing); e != nil {
+					return e
+				}
+				out.State, out.Delivered, out.Acknowledged, out.Completed = existing.State, existing.Delivered, existing.Acknowledged, existing.Completed
+			}
+			_, err = addMessage(tx, Message{Overlap: w.Overlap, ID: w.ID, From: w.From, To: w.To, Project: w.Project, Kind: w.Kind, Text: w.Text, State: "admitted", Transport: "remote-inbox", Created: now})
 			if err != nil {
 				return err
 			}
-			out.State = "admitted"
+			if !present {
+				out.State = "admitted"
+			}
 		} else {
 			out.State = "refused"
 		}
@@ -214,7 +254,7 @@ func (s *Service) RemoteRecords(node string) ([]RemoteRecord, error) {
 		if string(meta.Get([]byte("version"))) == "1" {
 			return nil // Normal maintenance performs the atomic legacy migration.
 		}
-		if string(meta.Get([]byte("version"))) != "2" || len(meta.Get([]byte("key"))) != 32 || !validHex(string(meta.Get([]byte("history_epoch"))), 16) {
+		if (string(meta.Get([]byte("version"))) != "2" && string(meta.Get([]byte("version"))) != "3") || len(meta.Get([]byte("key"))) != 32 || !validHex(string(meta.Get([]byte("history_epoch"))), 16) {
 			return errors.New("invalid remote outbox authority metadata")
 		}
 		for _, name := range buckets {
@@ -293,6 +333,21 @@ func (s *Service) BeginRemoteAttempt(node, id string, inputs []MemberInput) (boo
 		if !exists || actor.Revoked != nil || !actor.Present || projectID(actor) != record.Envelope.Project {
 			record.Terminal = true
 			record.Transport = "sender-revoked"
+		} else if record.Envelope.Overlap != nil {
+			claim, exists, e := get[Claim](bucket(tx, "claims"), record.Envelope.Overlap.Sender.ID)
+			if e != nil {
+				return e
+			}
+			if !exists || !now.Before(claim.Expires) || !record.Envelope.Overlap.Sender.matches(claim) {
+				record.Terminal = true
+				record.Transport = "claim-expired"
+			} else if !actor.Active {
+				record.Transport = "sender-inactive"
+			} else {
+				allowed = true
+				record.Attempted = true
+				record.Transport = "uncertain"
+			}
 		} else if !actor.Active {
 			record.Transport = "sender-inactive"
 		} else {

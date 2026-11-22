@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Corrected #649 integration, stale project observation fix #651, and planned native SSH reconnect between completed turns; not full #630/#631 acceptance",
+  "corrected_parent": "b8776a173b3d302dfed4666e87d4d59131fa36a6",
+  "integrated_original": "d670d56c3528b8e5993d04c494b83f1e01c66cff",
+  "source_sha256": {
+    "scripts/audit-coordination-native-pair.py": "8de1d4b998c26fbf54a61080d8b607c5a906bd635ef04fcf52544ab1ee742b04",
+    "scripts/audit-coordination-ssh-agent.py": "a0af7f0d4850cbd160f76f3e55672b670ce0bea32f89888a595e2f8a29f85317",
+    "webmux/server/go.mod": "2f76dbb6ea1fe15260d271fb8bf6593d986d5ab83c08f7d4627e5a6c12a1a12d",
+    "webmux/server/go.sum": "ee6a5eeea5cf2a0b2768348d078eb8d941ba3229896169cedf8185d35a2d690f",
+    "webmux/server/internal/httpapi/coordination_ssh_native_test.go": "7bd8b9af09f71f4fa82fec3b8d3fefad736ff18cb755fff8453ce1bb7d393be5",
+    "webmux/server/internal/httpapi/session_coordination.go": "91e6a90608b08feb2c518d5b86be1f4a18722760cbf12212ba18c24e4b558949",
+    "webmux/server/internal/httpapi/session_coordination_remote_test.go": "ec5615a8acfaae47349ca9272cea47359f8b42f5ba0259a431fcf768fe8a636a",
+    "webmux/server/internal/session/broker.go": "73e13bc960047dc9e1e4d53442c18f38a7d19d8fb97db0bbe41426185de79adf",
+    "webmux/server/internal/session/coordination.go": "89d5ea616039f5406dae58b89dbb80bc46dbae3f83dddda4b41d1af38de5a00f",
+    "webmux/server/internal/session/coordination_test.go": "31b13e00e9abcf40f0ba4ad02f2b9ef8a43c271f8d0bca4f76d793f39ea86ada",
+    "webmux/server/internal/session/model.go": "c4340a8bdd6e6235daf2febc82bb44878a8baca553acddc1afee32873a7166ff"
+  },
+  "regression_before": {
+    "exit_code": 1,
+    "scope": "Original cache namespace and unconditional commit extracted into production begin/finish methods before guards; controlled failures for run namespace, old failure/success, in-flight and prepared withdrawal",
+    "private_path": "_build/integrate-coordination-ssh-reconnect630/cache-regression-before.log",
+    "sha256": "d34a39d5980c61334c615d41b370c05d60509ec0caaf6400454d89f32c2db44d",
+    "baseline_patch": {
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/cache-regression-baseline.patch",
+      "sha256": "f87fe34047ada0032beac3b93e59bc450ef1ebe00319a4fe8466d2b4ee7e79d7"
+    }
+  },
+  "original_current_stack_native_failure": {
+    "native_test_exit_code": 0,
+    "audit_exit_code": 1,
+    "failures": [
+      "source_confirms_reconnected_task"
+    ],
+    "native_test": {
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/native/test.log",
+      "sha256": "e8f2819f1b219c4415b3259b57ffbffcc8710d3408003e588d360793059da2c0"
+    },
+    "audit": {
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/native/audit.json",
+      "sha256": "d0533657d5bce47efb28ec8093b2cd53146cae89b00b2fa168f57a0ec9d54ff6"
+    },
+    "source_hashes": {
+      "expected.json": "3403d9aa713bb49d6a24b9128fc35d12306316add9733ea63f4f03c04ba3bb8e",
+      "native.jsonl": "1333b6d882a27a6c1a61f29ca5a4c6f71e5513ed1a5c3cc02ba8b54dd5d564f7",
+      "view.json": "313d89bae500dcb908226f90c458257a9abe2d44b34c2b37cf9308c6f0cab002",
+      "terminal.log": "6670e4c96e404b2944fe94548aff2bec3d890ccec77293ad5257207ec1c4b3f3",
+      "native.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "reconnect.json": "ea2f5daeb7aaf33891a309d6aa42dafce700706c4b9e2bcbc1c4906594fd83e2",
+      "view-reconnected.json": "de075e8068c02ac3e5a1c17dcb802024e098639443dd2b362bde6abebcdc78ee"
+    },
+    "cause_boundary": "Second source-ledger observation lacked project verification; exact historical interleaving was not captured"
+  },
+  "native": {
+    "scope": "current-source project-cache fix and native SSH reconnect, after completed second turn",
+    "helper_sha256": "34c4d17542f9a23c171491ec916be6159a418d12a607ff483c75fd2a4a7a1996",
+    "transfer_verified": true,
+    "test_sha256": "567bdb0885d25ff5a2e8a905191560decca20345d034e208ce052969102c1e41",
+    "native_test_exit_code": 0,
+    "audit_exit_code": 0,
+    "native_cli": "Claude Code 2.1.319 Linux ARM64",
+    "duration_seconds": 21.54,
+    "native_test": {
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/native-final/test.log",
+      "sha256": "5fff54e0e43adfe27dbfe6fc990ea0cb6a9aa5ca129e9c7495adbbfe369da9b7"
+    },
+    "final_independent_audit": {
+      "passed": true,
+      "evidence": {
+        "native_connected_dynamic_server": true,
+        "native_scoped_verified_view": true,
+        "native_work_after_view": true,
+        "source_ledger_confirms_task": true,
+        "only_approved_tools_and_discovery": true,
+        "all_tool_calls_completed": true,
+        "native_success": true,
+        "capability_not_in_output": true,
+        "same_live_cli_and_mcp_processes": true,
+        "same_live_processes_after_second_turn": true,
+        "same_provider_new_control": true,
+        "one_native_conversation_two_successful_turns": true,
+        "fresh_view_and_action_after_reconnect": true,
+        "source_confirms_reconnected_task": true
+      },
+      "failures": [],
+      "native_tool_call_count": 5,
+      "source_hashes": {
+        "expected.json": "844e0704e4237ffc8acdeb0b436b8f07522a8b8c44c74e82cf23b3d3ef5cd865",
+        "native.jsonl": "6a2294d7df076586accde7971de5d9817e8d14a10f59e6d02b0590514fbac879",
+        "view.json": "fabaef6e4d62719ab08c48080986bf1edb8531644e2ad74337983031c90000de",
+        "terminal.log": "5f6bcedb09f49409da8dbc6d0bb4f9960ba9fa10a3ba7005895d346a01fbcb87",
+        "native.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "reconnect.json": "5fd30f78f508201ac3b8d287ec83740530928853daddabc942d7ef31b0c15bbd",
+        "view-reconnected.json": "c8a66c4b0bd223e874963b36fc05ac5dfc9ec07f11b45f1297d7b6290b092a65"
+      }
+    },
+    "final_audit_exit_code": 0,
+    "audit": {
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/native-final/audit-final.json",
+      "sha256": "ad3718e5d711871868570aaf04153878ea762d8d87a5262503ae981eb820c3cb"
+    }
+  },
+  "negative_controls": {
+    "changed_claude_pid": [
+      "same_live_cli_and_mcp_processes"
+    ],
+    "changed_mcp_start": [
+      "same_live_cli_and_mcp_processes"
+    ],
+    "changed_launcher_start": [
+      "same_live_cli_and_mcp_processes"
+    ],
+    "same_control": [
+      "same_provider_new_control"
+    ],
+    "old_master_alive": [
+      "same_provider_new_control"
+    ],
+    "changed_pane": [
+      "same_provider_new_control"
+    ],
+    "missing_completed_identity": [
+      "same_live_processes_after_second_turn"
+    ],
+    "changed_completed_identity": [
+      "same_live_processes_after_second_turn"
+    ],
+    "boolean_pid": [
+      "same_live_cli_and_mcp_processes"
+    ],
+    "false_second_success": [
+      "one_native_conversation_two_successful_turns"
+    ],
+    "new_conversation": [
+      "one_native_conversation_two_successful_turns"
+    ],
+    "missing_second_view": [
+      "all_tool_calls_completed",
+      "fresh_view_and_action_after_reconnect"
+    ],
+    "missing_second_action": [
+      "all_tool_calls_completed",
+      "fresh_view_and_action_after_reconnect"
+    ],
+    "duplicate_request_id": [
+      "fresh_view_and_action_after_reconnect"
+    ],
+    "lost_reconnected_task": [
+      "source_confirms_reconnected_task"
+    ],
+    "lost_verified_project": [
+      "source_confirms_reconnected_task"
+    ],
+    "calls_before_second_turn": [
+      "fresh_view_and_action_after_reconnect"
+    ]
+  },
+  "boolean_pid_control_before_fix": {
+    "audit_incorrectly_passed": true,
+    "private_path": "_build/integrate-coordination-ssh-reconnect630/audit-bool-before.json",
+    "sha256": "74d7c97071ad2aab7db3a99a2d50c8d891b1eafe33029afaf26f1d4776d848c4"
+  },
+  "validation": {
+    "go-test-final.log": {
+      "command": "PATH=<Node24>/bin:$PATH go test ./...",
+      "exit_code": 0,
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/go-test-final.log",
+      "sha256": "a3ad9c09370a7ea68d5f1004aca14023d82063897b81b770c289ad4b1888aa9a"
+    },
+    "vet-final.log": {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/vet-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "race-final.log": {
+      "command": "go test -race ./internal/coordination ./internal/coordinationclient ./internal/coordinationmcp ./internal/session ./internal/httpapi",
+      "exit_code": 0,
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/race-final.log",
+      "sha256": "35970214bcf6e85fc331e178ab12d19d9592f44a05b75d0f5a1e9cfee05c9b88"
+    },
+    "cache-race-after.log": {
+      "command": "go test -race ./internal/httpapi ./internal/session ./internal/coordination ./internal/coordinationclient -run <project-cache and peer controls> -count=1",
+      "exit_code": 0,
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/cache-race-after.log",
+      "sha256": "f818ca796f0043bcea4451e41de2eeeff76042b6cfb914e7395fe8f86bfae326"
+    },
+    "typecheck-final.log": {
+      "command": "npm run typecheck",
+      "exit_code": 0,
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/typecheck-final.log",
+      "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1"
+    },
+    "contract-final.log": {
+      "command": "npm run test:contract",
+      "exit_code": 0,
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/contract-final.log",
+      "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f"
+    },
+    "linux-build-final.log": {
+      "command": "GOOS=linux GOARCH=arm64 go build ./cmd/webmux",
+      "exit_code": 0,
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/linux-build-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native-test-build-final.log": {
+      "command": "go test -race -c ./internal/httpapi",
+      "exit_code": 0,
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/native-test-build-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "windows-compile-final.log": {
+      "command": "GOOS=windows GOARCH=arm64 go test -c ./internal/session",
+      "exit_code": 0,
+      "private_path": "_build/integrate-coordination-ssh-reconnect630/windows-compile-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "python_compile_exit_code": 0,
+  "whitespace_exit_code": 0,
+  "remaining": [
+    "unexpected tunnel loss and interrupted delivery",
+    "production-controller restart and complete durable lifecycle",
+    "managed/existing-agent onboarding",
+    "password SSH, Mosh and Windows",
+    "discovered/enrolled two-real-controller acceptance"
+  ],
+  "delivery": "Feature-head hosted checks and main delivery remain separate gates"
+}

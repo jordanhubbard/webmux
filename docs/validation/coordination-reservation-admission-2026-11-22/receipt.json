@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Controlled real-TLS reservation revocation during recovery/admission; no new native LLM, two-host or heavy-job acceptance",
+  "parent_head": "912423826eda171c40caaeb0b7461e46bea097e2",
+  "original_reservation_head": "623315a16c6c5a3247abe4c02b17194c16499bc4",
+  "source_sha256": {
+    "webmux/server/internal/httpapi/coordination_reservations.go": "f4b238cc6610e85767aad287b29d7061f428860f6f29475159820d4897871f01",
+    "webmux/server/internal/httpapi/coordination_reservations_test.go": "ee9c8414bb37a55bde553d79c772bffb6dfe689dd2936066ce7b19551b38de05",
+    "webmux/server/internal/coordination/shared_reservations.go": "c0b84684d54537613752c4c53497fade03b1e815d37c3be0e6d3193d3ce298d2",
+    "webmux/server/internal/coordination/shared_reservations_test.go": "46640835f8d117673b1bfb8cb88e755dc62168f8af5e43aefffba149f1cf5cd6",
+    "webmux/server/internal/httpapi/coordination_peers.go": "9fc5f79f56162d8cb8995aca01adfccdf8824751719fd4831910d994f6c70339",
+    "webmux/server/internal/httpapi/coordination_messages.go": "ea69ef0596d99f46e8721f62b32721a430ea4941c2e82cccb2ed54a22a08e9ed",
+    "webmux/frontend/src/components/ServersDialog.tsx": "3448e52da602193f64860526dddde059739e6cafb42c335253d1c2ff96595323",
+    "webmux/frontend/src/utils/api.ts": "bfd2b61fa107f3be6dc457cb566f781e80af10ad2feaf7e5c27c11c085fda0fe",
+    "tests/frontend/ServersDialog.test.tsx": "5b9514512b20a3ce91564367456618caf16caa8c71eb7312cbd1e219cd7ca4a5"
+  },
+  "evidence": [
+    {
+      "private_path": "_build/integrate-coordination-reservations630/revocation-before.log",
+      "exit_code": 1,
+      "sha256": "6a5babb27edcc8b4eb67eefecff395749e256878efc90d4c1448380eaf5fd12a",
+      "source_scope": "original resolver with initial delayed-absence control"
+    },
+    {
+      "private_path": "_build/integrate-coordination-reservations630/status-revocation-before.log",
+      "exit_code": 1,
+      "sha256": "c8cbf43db378154749e97a7f1b822ed8ff5b83625cf2fa569fd1d799c3dfd44b",
+      "source_scope": "original resolver with delayed absence and known-grant controls"
+    },
+    {
+      "private_path": "_build/integrate-coordination-reservations630/recovery-before.log",
+      "exit_code": 1,
+      "sha256": "902e25846d229ba5d7817bd7d61a86c6483fff2e37c7455eaeb5c38942aad35a",
+      "source_scope": "original resolver with all three final controls before cosmetic naming edits"
+    },
+    {
+      "private_path": "_build/integrate-coordination-reservations630/recovery-after.log",
+      "exit_code": 0,
+      "sha256": "5088981a3dbc04c1db67807ca739c715ad0657cf7ffe581620ce028181e7149f",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-reservations630/go-test.log",
+      "exit_code": 0,
+      "sha256": "110515f258b7615b96b59f9592f8b807b6933910ec7a05f4f483eda28cbddf3d",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-reservations630/core-race.log",
+      "exit_code": 0,
+      "sha256": "a26dcd27d82326f1d6b4598ba9bd167beeb362b0284917f7150d26cb8762137c",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-reservations630/api-race.log",
+      "exit_code": 0,
+      "sha256": "85de96b4e2bd86f944eab91bce2c498335be50bd2095b204de780cab47e3f0a1",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-reservations630/vet.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-reservations630/typecheck.log",
+      "exit_code": 0,
+      "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-reservations630/frontend-lint.log",
+      "exit_code": 0,
+      "sha256": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-reservations630/frontend-test.log",
+      "exit_code": 0,
+      "sha256": "96e9b0cd31655a27f1eac28678efd814f41bd1e25c357cfbd77d513f51c812a1",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-reservations630/frontend-build.log",
+      "exit_code": 0,
+      "sha256": "2c0204e14e47e0b4c7af1f0e631e2b13cba084a435cc399f333caee6095ab34e",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-reservations630/server-contract.log",
+      "exit_code": 0,
+      "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f",
+      "source_scope": "final corrected combined source"
+    }
+  ],
+  "commands": {
+    "regression": "go test -count=1 -run ^TestCoordinationSharedReservationRevocationDuringRecovery$ ./internal/httpapi",
+    "full_go": "go test -p 4 -count=1 ./...",
+    "core_race": "go test -race -count=1 ./internal/coordination ./internal/coordinationclient ./internal/coordinationmcp",
+    "api_race": "go test -race -count=1 -run 'TestCoordination(SharedReservation|Reservation|PeerClaim|PeerClaims|RemoteMessage|MessageRevocation|LateSnapshot|DeletedAccount)' ./internal/httpapi",
+    "vet": "go vet ./...",
+    "typecheck": "npm run typecheck",
+    "frontend_lint": "npm run lint --workspace=frontend",
+    "frontend_test": "npm run test --workspace=frontend",
+    "frontend_build": "npm run build --workspace=frontend",
+    "contract": "npm run test:contract"
+  },
+  "limitations": [
+    "An admission already in flight may commit at the authority; revocation withholds source current-lease permission rather than retracting its history.",
+    "The absent-attempt boundary is explicitly simulated by a durable marker, not a new crash run.",
+    "Earlier native protocol evidence remains bound to its original binaries.",
+    "Fresh hosted checks and parent delivery remain separate merge gates.",
+    "Full roadmap acceptance remains open."
+  ]
+}

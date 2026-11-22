@@ -1,0 +1,189 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Corrected SSH project integration, real-TLS global policy withdrawal controls and fresh current-source native Linux read-only SSH RPC; not remote native agent onboarding",
+  "parent_head": "8d9926ed533855c4a9f9e8648fd1beb7f1208dd4",
+  "original_ssh_project_head": "2bfb0cdbc91fed51ab72e96cb665e31d8a0ac186",
+  "source_sha256": {
+    "webmux/server/internal/httpapi/session_coordination.go": "0ebf687ccfa3a88e3659ba74112df6c0d373c2a4841a64996c3b6b80a83adc49",
+    "webmux/server/internal/httpapi/coordination_peers.go": "3f2c849ea59405bad35cf8791d7867da9dc78a1524e15de422be1d351cf60ba8",
+    "webmux/server/internal/httpapi/coordination_peers_test.go": "45ebb75f9f25709a3c69ea314a17ec67080176dd80edbff19f1fb96a863a0c51",
+    "webmux/server/internal/httpapi/session_coordination_remote_test.go": "953a87dfca399114abeb380689745470d7e5cf634d68805ffc6147459c9cb63d",
+    "webmux/server/internal/coordination/members.go": "2570d8fb634267bb8275cfc975c320bc28de1d54fb3b57ebae2fa6460c9a73d2",
+    "webmux/server/internal/session/coordination.go": "bde50477609f8c65e2e632a0a42dc74fc241417df366dd70c8a4981651bee12f",
+    "webmux/server/internal/session/coordination_test.go": "e05c6e9856890e8e89d88ed5413ac3a2a85f49e4fa8e196de80760568d7a806e",
+    "webmux/server/internal/session/recovery.go": "cd00a6c2fd7e26a95bb885a9ec725fa76deaaf0e28e47b9d7178a6f4b36445a5",
+    "webmux/server/internal/recovery/rpc.go": "d9de8cb55e476a12d670fd87009015ea293ed11f866764bf2186c4651df0d046",
+    "webmux/server/internal/recovery/coordination_test.go": "84dda4f1932c0ee53581ba2852579a750da0bfd251500442ecbd124f3ef6ad41",
+    "scripts/qualify-coordination-ssh-project.py": "98685440d67bde06d507dc474bf9163dfe543fef229013bbc9da5fa2188ed446"
+  },
+  "evidence": [
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/global-disable-before.log",
+      "exit_code": 1,
+      "sha256": "812e53bcd50461442569885c0a9498f1930845f31a7ed4e6db53afbe4411f8ab",
+      "source_scope": "combined SSH source with policy API and maintenance regressions, before cache correction"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/global-disable-direct-before.log",
+      "exit_code": 1,
+      "sha256": "ac37ea18f2fd08e04a94d9460d2d6b9f658e34e2d5fdeefd4b7c4629450ccceb",
+      "source_scope": "combined SSH source with disabled direct-refresh regression, before cache correction"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/global-disable-after.log",
+      "exit_code": 0,
+      "sha256": "f6cf105d581996308b23bb7854f9f716d801b168b74199621ff53ca112fdd952",
+      "source_scope": "cache correction before adding queued-job scope check"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/go-test-final.log",
+      "exit_code": 0,
+      "sha256": "47e2deffd62ce8e72cb47d62dec293c62329b3153d4f46f35bfb2ac947064c91",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/api-race-final.log",
+      "exit_code": 0,
+      "sha256": "efb697f92a2cf312376ca42e12833390f0f0e5c0fedc7e65b0c7ca144c013f84",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/vet-final.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/server-contract-final.log",
+      "exit_code": 0,
+      "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/linux-build-final.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/transfer-bindings-final.json",
+      "exit_code": 0,
+      "sha256": "28c3440474b9cd84ed6270a9bd3f75572877721cb72bfab0b22b5726c7cdb9fc",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/native-rpc-final.json",
+      "exit_code": 0,
+      "sha256": "98a07879d8fde4a794f73ab809dd3093903d2c775b4d66108aeae7a395e3004e",
+      "source_scope": "final corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/core-session-race.log",
+      "exit_code": 0,
+      "sha256": "c6d470992ae0495ba1b7f37c488cffc38977ffac730a29a558059de3dea39229",
+      "source_scope": "unchanged component source before peer-cache correction"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/typecheck.log",
+      "exit_code": 0,
+      "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+      "source_scope": "unchanged component source before peer-cache correction"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/linux-test-build.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "unchanged component source before peer-cache correction"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/go-test.log",
+      "exit_code": 0,
+      "sha256": "557fcf284a03128175f26be0d4d4c1e347bc24b65efbacc046721677b5759690",
+      "source_scope": "successful source/qualification before peer-cache correction; not final-binary proof"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/api-race.log",
+      "exit_code": 0,
+      "sha256": "33bdc52994a596fe00011762601f363a33f0071676edfddd07fe615cc0da94f1",
+      "source_scope": "successful source/qualification before peer-cache correction; not final-binary proof"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/vet.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "successful source/qualification before peer-cache correction; not final-binary proof"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/server-contract.log",
+      "exit_code": 0,
+      "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f",
+      "source_scope": "successful source/qualification before peer-cache correction; not final-binary proof"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/native-rpc.json",
+      "exit_code": 0,
+      "sha256": "1f421d5c71c764be931bfeeede9283bbffad8cb743da2fd4bb0fe0ad817f954a",
+      "source_scope": "successful source/qualification before peer-cache correction; not final-binary proof"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-project630/transfer-bindings.json",
+      "exit_code": 0,
+      "sha256": "1daa9eb6f6c89cabb9c113b11f1e052944a7614010091f310e53f4efe81a3b2e",
+      "source_scope": "successful source/qualification before peer-cache correction; not final-binary proof"
+    }
+  ],
+  "final_native_binaries": {
+    "_build/integrate-coordination-ssh-project630/webmux-linux-arm64-final": "e4573d6778db7ac17b65b125454db9ba34097d6ccca108b1da451d6ce6de1f12",
+    "_build/integrate-coordination-ssh-project630/recovery-linux-arm64.test": "6fca058de77b1971c18976318fcb9cefb5bf20607deb8c9b488a79b99e0d15fe"
+  },
+  "commands": {
+    "full_go": "go test -p 4 -count=1 ./...",
+    "core_race": "go test -race -count=1 ./internal/coordination ./internal/coordinationclient ./internal/coordinationmcp ./internal/session ./internal/recovery",
+    "api_race": "go test -race -count=1 -run 'Test(RemoteCoordination|DisabledCoordination|Coordination(SubsetRefresh|SharedReservation|Reservation|PeerClaim|PeerClaims|RemoteMessage|MessageRevocation|LateSnapshot|DeletedAccount))' ./internal/httpapi",
+    "vet": "go vet ./...",
+    "typecheck": "npm run typecheck",
+    "contract": "npm run test:contract",
+    "native": "python3 scripts/qualify-coordination-ssh-project.py with newly transferred source-bound executables, a new private fixture directory and existing authenticated SSH transport"
+  },
+  "native_result": {
+    "version": 1,
+    "scope": "production read-only repository RPC over SSH; no agent onboarding",
+    "repository_id": "2f81007e1a654751917d138b77410f01b803fba15097bcad2bf9fcd1efc06f29",
+    "repository": "example.test/team/native-ssh-project",
+    "recording": false,
+    "initial_branch": "rpc-original",
+    "changed_branch": "rpc-changed",
+    "same_project_after_branch_change": true,
+    "controls": [
+      {
+        "control": "foreign-key",
+        "result": "refused"
+      },
+      {
+        "control": "foreign-session",
+        "result": "refused"
+      },
+      {
+        "control": "missing-path",
+        "result": "refused"
+      },
+      {
+        "control": "relative-path",
+        "result": "refused"
+      },
+      {
+        "control": "non-repository",
+        "result": "refused"
+      }
+    ],
+    "qualifier_sha256": "98685440d67bde06d507dc474bf9163dfe543fef229013bbc9da5fa2188ed446"
+  },
+  "limitations": [
+    "A request already started may finish; its withdrawn peer scope cannot commit into current context.",
+    "Native evidence is fixed read-only project RPC only, not full broker/provider SSH/mosh or remote agent onboarding.",
+    "The first native success and broad checks before cache correction remain retained with their earlier source scope.",
+    "Fresh hosted checks and parent delivery remain merge gates.",
+    "Full discovered/managed/reconnect and wider roadmap acceptance remain open."
+  ]
+}

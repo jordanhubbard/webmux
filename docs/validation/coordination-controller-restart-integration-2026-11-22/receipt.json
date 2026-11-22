@@ -1,0 +1,219 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Corrected #650 integration, graceful production controller restart between completed native turns for a task and advisory claim; full #630/#631 acceptance remains open",
+  "corrected_production_parent": "0d332c2443d135775c4d30f3e3f7c4a6bd85436c",
+  "original_integrated_head": "70b00a1d97862c11e030664913cc1440095d3022",
+  "production_changes_vs_corrected_parent": [],
+  "source_sha256": {
+    "webmux/server/internal/httpapi/coordination_controller_restart_native_test.go": "e66851b3487f76853e44da29b2b1000f512a057d22f274a471e330b893afa428",
+    "webmux/server/internal/httpapi/coordination_ssh_native_test.go": "d3c05d9306ee85abcee9564549e731be2bf9fd9eb8b1dac0ef2859a679f011a4",
+    "scripts/audit-coordination-controller-restart.py": "ecf16ad3e05a0960b80bfad1e31ff0c764a4359c00aab85513a1579d0340a321",
+    "scripts/audit-coordination-ssh-agent.py": "a0af7f0d4850cbd160f76f3e55672b670ce0bea32f89888a595e2f8a29f85317",
+    "scripts/audit-coordination-native-pair.py": "8de1d4b998c26fbf54a61080d8b607c5a906bd635ef04fcf52544ab1ee742b04",
+    "webmux/server/go.mod": "2f76dbb6ea1fe15260d271fb8bf6593d986d5ab83c08f7d4627e5a6c12a1a12d",
+    "webmux/server/go.sum": "ee6a5eeea5cf2a0b2768348d078eb8d941ba3229896169cedf8185d35a2d690f"
+  },
+  "shared_setup": {
+    "parent": "0d332c2443d135775c4d30f3e3f7c4a6bd85436c",
+    "production_changes": [],
+    "shared_setup_byte_identical": true,
+    "setup_sha256": "796ee9992b7adbf74350d46ddf30b710140f8536a2c9ec4403946db45c269c2c",
+    "final_production_changes": []
+  },
+  "main_ancestry": {
+    "main": "2efc9b97451a57669271a4bb5b3b07af946afb5a",
+    "merge": "a59bc82c2176bc8d5472e23e63c7a552ef70f95b",
+    "reviewed_tree": "5d5e86c55474352b7a5b44e67a7a5a7e003aaf6c",
+    "integrated_tree": "5d5e86c55474352b7a5b44e67a7a5a7e003aaf6c",
+    "unchanged": true
+  },
+  "native": {
+    "scope": "Corrected-stack production-controller graceful restart, quoted fixture task strings, native process identities after completed second turn",
+    "source_sha256": "5264e4cbda2264cf0a44aa0a47c27c009d91f9ed59b8a8dd1b9cb78dade9d8f6",
+    "test_sha256": "6c40c569eaf0908b828f87d315448cac2ce020e1825d61d86f5f6fdfa789b2bb",
+    "remote_helper_sha256": "34c4d17542f9a23c171491ec916be6159a418d12a607ff483c75fd2a4a7a1996",
+    "remote_helper_unchanged_production_parent": "0d332c2443d135775c4d30f3e3f7c4a6bd85436c",
+    "native_test_exit_code": 0,
+    "audit_exit_code": 0,
+    "native_cli": "Claude Code 2.1.319 Linux ARM64",
+    "duration_seconds": 26.68,
+    "native_test": {
+      "private_path": "_build/integrate-coordination-controller-restart630/native-final/test.log",
+      "sha256": "ca62669ae2d7351b3197e58f86849c2df77dcdf2f32b16e07f7abee11a1467be"
+    },
+    "audit": {
+      "private_path": "_build/integrate-coordination-controller-restart630/native-final/audit.json",
+      "sha256": "d35ca5e565a1630e9d0102607f4624f5e79ae0db29c8d1d24efd0506e6ce2c2e"
+    },
+    "independent_audit": {
+      "passed": true,
+      "evidence": {
+        "native_connected_dynamic_server": true,
+        "native_scoped_verified_view": true,
+        "native_work_after_view": true,
+        "source_ledger_confirms_task": true,
+        "only_approved_tools_and_discovery": true,
+        "all_tool_calls_completed": true,
+        "native_success": true,
+        "capability_not_in_output": true,
+        "same_native_processes": true,
+        "same_processes_after_completed_second_turn": true,
+        "different_production_controllers_same_pane": true,
+        "same_history_epoch": true,
+        "original_claim_retained_exactly": true,
+        "task_retained_before_new_native_turn": true,
+        "one_conversation_two_successful_turns": true,
+        "native_retained_claim_view_and_release": true,
+        "native_work_on_both_controllers": true,
+        "no_recreated_claim": true,
+        "source_confirms_resumed_task_and_release": true
+      },
+      "failures": [],
+      "native_tool_call_count": 7,
+      "source_hashes": {
+        "expected.json": "221ce01cea75174ec32078b4a41250cafbee54d0e438976b123e1ba58f15384e",
+        "native.jsonl": "c6d79df911a168942f6480c5d8d424eeba02fbe425a8685c64c18148adcdcbe9",
+        "view.json": "895fabb7a7197fb0ec03784a783bd42ce739e3103f17b366860673c7dba6a6a2",
+        "terminal.log": "6a39397f892af789c14a1f136d4134c3ab656770c9e023ac27ba79bc6a25ea48",
+        "native.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "restart.json": "a89f2d89364c66c50781d53d50ad34f45376f6527efac64cf3e5d698abfbd104",
+        "view-restored.json": "226848bc244030101e03ce997a2606c73f597cb27a92951e686b16d0ae3fde68",
+        "view-after.json": "e9b80e67bdf50e1bdb41ff81d041014c5bffb6cbaf7fd0ac06b51c8a5491eaa4"
+      }
+    }
+  },
+  "negative_controls": {
+    "same_controller": [
+      "different_production_controllers_same_pane"
+    ],
+    "new_cli": [
+      "same_native_processes"
+    ],
+    "new_mcp": [
+      "same_native_processes"
+    ],
+    "new_pane": [
+      "different_production_controllers_same_pane"
+    ],
+    "changed_epoch": [
+      "same_history_epoch"
+    ],
+    "lost_task": [
+      "task_retained_before_new_native_turn"
+    ],
+    "lost_restored_project": [
+      "task_retained_before_new_native_turn"
+    ],
+    "replaced_claim": [
+      "original_claim_retained_exactly"
+    ],
+    "extended_claim": [
+      "original_claim_retained_exactly"
+    ],
+    "missing_view_result": [
+      "all_tool_calls_completed",
+      "native_retained_claim_view_and_release",
+      "native_work_on_both_controllers"
+    ],
+    "missing_work_result": [
+      "all_tool_calls_completed",
+      "native_work_on_both_controllers"
+    ],
+    "missing_release_result": [
+      "all_tool_calls_completed",
+      "native_retained_claim_view_and_release"
+    ],
+    "new_conversation": [
+      "one_conversation_two_successful_turns"
+    ],
+    "claim_not_released": [
+      "source_confirms_resumed_task_and_release"
+    ],
+    "lost_final_project": [
+      "source_confirms_resumed_task_and_release"
+    ],
+    "missing_completed_identity": [
+      "same_processes_after_completed_second_turn"
+    ],
+    "changed_completed_identity": [
+      "same_processes_after_completed_second_turn"
+    ],
+    "changed_completed_pane": [
+      "same_processes_after_completed_second_turn"
+    ],
+    "boolean_native_pid": [
+      "same_native_processes"
+    ],
+    "boolean_controller_pid": [
+      "different_production_controllers_same_pane"
+    ],
+    "false_second_success": [
+      "one_conversation_two_successful_turns"
+    ],
+    "static_second_server": [
+      "one_conversation_two_successful_turns"
+    ],
+    "lost_second_native_project": [
+      "native_retained_claim_view_and_release",
+      "native_work_on_both_controllers"
+    ]
+  },
+  "failed_current_stack_attempt": {
+    "native_test_exit_code": 1,
+    "audit": "not run after native failure",
+    "duration_seconds": 127.5,
+    "reason": "Native registered exactly native SSH restart qualification including the instruction word; unchanged 120-second gate expired before restart",
+    "correction": "Explicitly quoted task and request-ID values in both fixture prompts; assertions, deadlines and approval profile unchanged",
+    "native_test": {
+      "private_path": "_build/integrate-coordination-controller-restart630/native/test.log",
+      "sha256": "7c19750f8c1492ee890af60a4da51c31f7dae03208b7f287326d2349610f5df0"
+    },
+    "original_fixture": {
+      "private_path": "_build/integrate-coordination-controller-restart630/controller-before-prompt-fix.go",
+      "sha256": "b4e9d72ab30c82cb7601626240c4ba71f8c0d97d0bc05ad2834585d610526abe"
+    },
+    "last_source_view": {
+      "private_path": "_build/integrate-coordination-controller-restart630/native/last-view.json",
+      "sha256": "61250815afd1ed895fdecbbc1350d5e4ae995fdf14fa0045fa2bb6f42957d312"
+    },
+    "native_transcript": {
+      "private_path": "_build/integrate-coordination-controller-restart630/native/native.jsonl",
+      "sha256": "858339fa6728ed04a9c3295fa1d796a20368804ee65a8f11817a68beaedd6422"
+    }
+  },
+  "validation": {
+    "source-build.log": {
+      "exit_code": 0,
+      "command": "go build -race ./cmd/webmux",
+      "private_path": "_build/integrate-coordination-controller-restart630/source-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "test-build-final.log": {
+      "exit_code": 0,
+      "command": "go test -race -c ./internal/httpapi",
+      "private_path": "_build/integrate-coordination-controller-restart630/test-build-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "vet-final.log": {
+      "exit_code": 0,
+      "command": "go vet ./internal/httpapi",
+      "private_path": "_build/integrate-coordination-controller-restart630/vet-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "parent_validation": {
+    "receipt": "../coordination-ssh-reconnect-integration-2026-11-22/receipt.json",
+    "scope": "Production unchanged; retain original full Go, core/channel/session/API race, vet, TypeScript, production contract and Windows compilation evidence scopes. Fresh native run instruments the current fixtures and production controller."
+  },
+  "python_compile_exit_code": 0,
+  "whitespace_exit_code": 0,
+  "remaining": [
+    "SIGKILL and interrupted/uncertain delivery",
+    "full native message/receipt/reservation durability",
+    "unexpected tunnel loss",
+    "managed/existing agents and other transports/platforms",
+    "discovered/enrolled two-real-controller workflow"
+  ],
+  "delivery": "Exact-head hosted checks and main merge remain separate gates"
+}

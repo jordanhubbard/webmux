@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Corrected SSH channel integration, fresh current-source native ordinary SSH/CLI and public account revocation; not coding-agent adoption or full production controller restart",
+  "parent_head": "ff0e7ed072d2659fee5a67dec741d53dbc6f2f67",
+  "original_channel_head": "ed3b63a87bd5ec36f6fac4d9090623f86369b64a",
+  "source_sha256": {
+    "webmux/server/internal/httpapi/session_coordination.go": "664c76a8053c685751508f1c79ab832b835736b31691c9eeaebbfadaab455115",
+    "webmux/server/internal/httpapi/coordination_ssh_native_test.go": "2a29e31233e47da1e5673b077e4cf636e3cdcd071f4bb56771ebeb609cec1fa1",
+    "webmux/server/internal/coordinationclient/socket.go": "2e576dd114bbccfcecfba785185dbe1afdef16aad947e98af3e0795bbe58ea6a",
+    "webmux/server/internal/coordinationclient/client.go": "9c3e38e9135397ab838d558a5402a6fe340bd4eefbdc09a8735940a0dbb3657e",
+    "webmux/server/internal/recovery/rpc.go": "1cfcb3a907123ae138fae06ea713a0bb6cfb0410df4a95dd4e6d0c84ad416eb9",
+    "webmux/server/internal/recovery/coordination_directory_unix.go": "54599bf9eed95a3eb72d0a707ce4257aa739183503f1786331484d292d5c6dfa",
+    "webmux/server/internal/terminal/coordination.go": "c8b45ca0d61c735dd5024db7fec84542f316f51b87e833ff92bf9256a872271f",
+    "webmux/server/internal/terminal/launcher.go": "ef90e0ee37da2b991afefc151da3c79c291d7908240469ca07a98ca825e25e43",
+    "webmux/server/internal/terminal/recovery.go": "eb2ece624f0ea7e2f67bac11563e0e8792d5a089abd0d7512c211a065104821c",
+    "webmux/server/internal/session/broker.go": "b617f2d79ed3ebebd41bf2b9e13003669490457031954410fd71f6e391c27ef4"
+  },
+  "evidence": [
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/go-test-final.log",
+      "exit_code": 0,
+      "sha256": "37cb9daab07cf7ca66ae390e63ca090ab5a814b25bec3ea183074ac94ac5f975",
+      "source_scope": "final source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/vet-final.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "final source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/windows-compile.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "final source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/native-current-manifest.json",
+      "exit_code": 0,
+      "sha256": "029b7f20a5246feed657eaa9352603d78cddbb94d293ebed7cb3ee38cd5cf7c6",
+      "source_scope": "final source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/final-transfer-verification.json",
+      "exit_code": 0,
+      "sha256": "e38e9b0d045d0ed0da4444d4a24df0969f749788599d77a9b65ca6b0d3aca3ed",
+      "source_scope": "final source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/go-test.log",
+      "exit_code": 0,
+      "sha256": "a330880cad8f9731e825300fdba405a6aa7360effcec00fdfb8f5503fda80cc5",
+      "source_scope": "unchanged production/component sources before native-only account-control extension"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/core-channel-race.log",
+      "exit_code": 0,
+      "sha256": "22ef4ad1931bee6318c8dace57ceecc1614dcc1a1cd5234f5cae91aa444f9961",
+      "source_scope": "unchanged production/component sources before native-only account-control extension"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/api-race.log",
+      "exit_code": 0,
+      "sha256": "63629402a0d2490ae040ed00e34137a10da22c128a251b90a5876c5174d569d7",
+      "source_scope": "unchanged production/component sources before native-only account-control extension"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/vet.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "unchanged production/component sources before native-only account-control extension"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/typecheck.log",
+      "exit_code": 0,
+      "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+      "source_scope": "unchanged production/component sources before native-only account-control extension"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/server-contract.log",
+      "exit_code": 0,
+      "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f",
+      "source_scope": "unchanged production/component sources before native-only account-control extension"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/linux-build.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "unchanged production/component sources before native-only account-control extension"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/native-manifest.json",
+      "exit_code": 0,
+      "sha256": "36e22485a0c4ccdf10fb0a2976b83e540bc318fc947eeaeb0816d8b527bf4d00",
+      "source_scope": "first three successful native cases before extending the fixture account control"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/native-current-account-revocation/test.log",
+      "exit_code": 0,
+      "sha256": "564d970537a98d76b04a601441fb86213e02e858a50211ebeab9a001e63a9545",
+      "source_scope": "final race-instrumented native fixture; real Linux SSH and scoped CLI"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/native-current-reconnect/test.log",
+      "exit_code": 0,
+      "sha256": "ef3d493356d372792ce0815be64490e075e82b822f3cf19ed3431f544f756e9f",
+      "source_scope": "final race-instrumented native fixture; real Linux SSH and scoped CLI"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/native-current-first-use/test.log",
+      "exit_code": 0,
+      "sha256": "87cd698aa6d0326bf599e50239db0fb768f637f37bf73ab67dabc2febdbb65e6",
+      "source_scope": "final race-instrumented native fixture; real Linux SSH and scoped CLI"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-channel630/native-current-refused/test.log",
+      "exit_code": 0,
+      "sha256": "21bf7b2c9c5409d563b5e7028f88445477621c021e4c2f44a8905e378a0c5079",
+      "source_scope": "final race-instrumented native fixture; real Linux SSH and scoped CLI"
+    }
+  ],
+  "native_binaries": {
+    "_build/integrate-coordination-ssh-channel630/webmux-linux-arm64": "f30ff0d9fc13ff3e590b17c850ea13b8e9c5d79e4c2eb658c4798c85bd12c15c",
+    "_build/integrate-coordination-ssh-channel630/httpapi-darwin-current-race.test": "27c2180670dcc101f76d47088e9844b976368044409cad1fa5fd3fc94f5e45c0"
+  },
+  "native_cases": [
+    {
+      "name": "account-revocation",
+      "exit_code": 0,
+      "log_path": "_build/integrate-coordination-ssh-channel630/native-current-account-revocation/test.log",
+      "log_sha256": "564d970537a98d76b04a601441fb86213e02e858a50211ebeab9a001e63a9545"
+    },
+    {
+      "name": "reconnect",
+      "exit_code": 0,
+      "log_path": "_build/integrate-coordination-ssh-channel630/native-current-reconnect/test.log",
+      "log_sha256": "ef3d493356d372792ce0815be64490e075e82b822f3cf19ed3431f544f756e9f"
+    },
+    {
+      "name": "first-use",
+      "exit_code": 0,
+      "log_path": "_build/integrate-coordination-ssh-channel630/native-current-first-use/test.log",
+      "log_sha256": "87cd698aa6d0326bf599e50239db0fb768f637f37bf73ab67dabc2febdbb65e6"
+    },
+    {
+      "name": "refused",
+      "exit_code": 0,
+      "log_path": "_build/integrate-coordination-ssh-channel630/native-current-refused/test.log",
+      "log_sha256": "21bf7b2c9c5409d563b5e7028f88445477621c021e4c2f44a8905e378a0c5079"
+    }
+  ],
+  "commands": {
+    "full_go": "go test -p 4 -count=1 ./...",
+    "core_race": "go test -race -count=1 ./internal/coordination ./internal/coordinationclient ./internal/coordinationmcp ./internal/session ./internal/recovery ./internal/terminal",
+    "api_race": "go test -race -count=1 -run 'Test(RemoteCoordination|DisabledCoordination|Coordination(SubsetRefresh|SharedReservation|Reservation|PeerClaim|PeerClaims|RemoteMessage|MessageRevocation|LateSnapshot|DeletedAccount))' ./internal/httpapi",
+    "vet": "go vet ./...",
+    "typecheck": "npm run typecheck",
+    "contract": "npm run test:contract",
+    "native": "Race-instrumented httpapi test executable -test.run=^TestCoordinationSSHNativeBootstrap$ -test.v; explicit isolated native fixture plus each of RECONNECT, FIRST_USE, REFUSE or REVOKE_ACCOUNT controls",
+    "windows_compile": "GOOS=windows GOARCH=arm64 go test -c ./internal/httpapi"
+  },
+  "limitations": [
+    "Native fixtures use an isolated helper/home/cache/tmux namespace over existing authenticated SSH.",
+    "No native coding-agent adoption or complete production restart acceptance in this layer.",
+    "Windows compilation is not native Windows execution.",
+    "Password, native Mosh, unexpected tunnel repair, existing-agent/managed/discovered workflow and wider roadmap acceptance remain open.",
+    "Fresh hosted checks and corrected parent delivery remain merge gates."
+  ]
+}
