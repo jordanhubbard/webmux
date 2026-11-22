@@ -1,0 +1,166 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Graceful native production-controller restart between completed native SSH turns; task and original file claim continuity, not full roadmap acceptance",
+  "parent_commit": "d670d56c3528b8e5993d04c494b83f1e01c66cff",
+  "topology": "macOS ARM64 production source to Linux ARM64 native Claude Code 2.1.319",
+  "permission_profile": "Explicit native allowlist of the two scoped coordination tools; other permission policies unqualified",
+  "source_sha256": {
+    "webmux/server/internal/httpapi/coordination_controller_restart_native_test.go": "62f856a5c5f17a9738091c655170f8bdd86c0bf8ae172e8e70828efce74e5431",
+    "webmux/server/internal/httpapi/coordination_ssh_native_test.go": "3c94e76906aa9ee1e022e2247b02ccff7c81184d23c55d6ef5a7824bd8acff8a",
+    "scripts/audit-coordination-controller-restart.py": "b104af0c7370ea4372966c0ca501e6ee9f18536ab6d128cdf2cf4bb3e0101d6b",
+    "scripts/audit-coordination-ssh-agent.py": "74eea4dd3de98eade38fcbad48580ea7a839ff09f48cb90478c044ea70eafa3e",
+    "scripts/audit-coordination-native-pair.py": "8de1d4b998c26fbf54a61080d8b607c5a906bd635ef04fcf52544ab1ee742b04"
+  },
+  "executable_sha256": {
+    "webmux-darwin-arm64": "1fa45ba3b77e9f9359c3461be5ba28797fc61a997c4a38d21f6a8f6c4e8af7cf",
+    "webmux-linux-arm64": "1e95af9da64dfebeb7d5846f5016210773f946706623800aa8f2539c8f9bb081"
+  },
+  "runs": [
+    {
+      "name": "run1",
+      "exit_code": 1,
+      "private_path": "_build/coordination-controller-restart630/native-run1.log",
+      "sha256": "703d9a126c0ca5a61f43845138735cfafa2d14be5aa1a1330bcf169139686ce3",
+      "result": "Setup failure before controller launch: remote cache/helper no longer existed; helper restaged and SHA-256 verified."
+    },
+    {
+      "name": "run2",
+      "exit_code": 1,
+      "private_path": "_build/coordination-controller-restart630/native-run2.log",
+      "sha256": "3f626339d9994c82186b7aaa2b2f729f9307e53d454d60e7459264e350993b1e",
+      "result": "Original observation loop hits production public API rate limit; changed to one poll per second without weakening the limit."
+    },
+    {
+      "name": "run3",
+      "exit_code": 1,
+      "private_path": "_build/coordination-controller-restart630/native-run3.log",
+      "sha256": "5ce5f7eeb78b5d04f2e57b89e5624515fbcb07b6460a40b45bdeca86b961ce37",
+      "result": "Original observation deadline expires before task launch: fixture waited for scratch Git repository before sending its cd command."
+    },
+    {
+      "name": "run4",
+      "exit_code": 0,
+      "private_path": "_build/coordination-controller-restart630/native-run4.log",
+      "sha256": "1ab05447e19604f331a15bdfd656ea8a4a4c351771be308856953c4d2dac93db",
+      "result": "Final native source and independent audit pass."
+    }
+  ],
+  "audit": {
+    "passed": true,
+    "evidence": {
+      "native_connected_dynamic_server": true,
+      "native_scoped_verified_view": true,
+      "native_work_after_view": true,
+      "source_ledger_confirms_task": true,
+      "only_approved_tools_and_discovery": true,
+      "all_tool_calls_completed": true,
+      "native_success": true,
+      "capability_not_in_output": true,
+      "same_native_processes": true,
+      "different_production_controllers_same_pane": true,
+      "same_history_epoch": true,
+      "original_claim_retained_exactly": true,
+      "task_retained_before_new_native_turn": true,
+      "one_conversation_two_successful_turns": true,
+      "native_retained_claim_view_and_release": true,
+      "native_work_on_both_controllers": true,
+      "no_recreated_claim": true,
+      "source_confirms_resumed_task_and_release": true
+    },
+    "failures": [],
+    "native_tool_call_count": 7,
+    "source_hashes": {
+      "expected.json": "e4e014228bf5efe75804754a2bf9cadb742ed791c197b01c70c63b382028d92c",
+      "native.jsonl": "efbc77e120d783f81ae003ba5582a392b4433fe35e406ae2860c879957da9c5c",
+      "view.json": "1467f978e1940aade935d88cf9816a8a2f9e49eee409bcb1cd2a78d1872f523a",
+      "terminal.log": "88ae12391f25b40c2cb01615919e76e88893fd20e0d0c6b44018bbbd2255621f",
+      "native.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "restart.json": "1a60e672352c4a0b34a59b9bd50a16882312e93a5ada73f2fe42e1fb2247cec0",
+      "view-restored.json": "09b97f931a6b38bed5b5eb13bb08513a462c6e2b56e11e573d7a23aba80af7c7",
+      "view-after.json": "4a086b72f1ac2ce750dce670b1cfc27f9c5f2bd4554a7d0943326977a6a50275"
+    }
+  },
+  "negative_controls": {
+    "same_controller": [
+      "different_production_controllers_same_pane"
+    ],
+    "new_cli": [
+      "same_native_processes"
+    ],
+    "new_mcp": [
+      "same_native_processes"
+    ],
+    "new_pane": [
+      "different_production_controllers_same_pane"
+    ],
+    "changed_epoch": [
+      "same_history_epoch"
+    ],
+    "lost_task": [
+      "task_retained_before_new_native_turn"
+    ],
+    "replaced_claim": [
+      "original_claim_retained_exactly"
+    ],
+    "extended_claim": [
+      "original_claim_retained_exactly"
+    ],
+    "missing_view_result": [
+      "all_tool_calls_completed",
+      "native_retained_claim_view_and_release",
+      "native_work_on_both_controllers"
+    ],
+    "missing_work_result": [
+      "all_tool_calls_completed",
+      "native_work_on_both_controllers"
+    ],
+    "missing_release_result": [
+      "all_tool_calls_completed",
+      "native_retained_claim_view_and_release"
+    ],
+    "new_conversation": [
+      "one_conversation_two_successful_turns"
+    ],
+    "claim_not_released": [
+      "source_confirms_resumed_task_and_release"
+    ]
+  },
+  "remaining": [
+    "SIGKILL and interrupted/uncertain delivery",
+    "complete message/receipt/reservation native restart continuity",
+    "managed/existing-agent onboarding",
+    "unexpected tunnel loss, password SSH, Mosh and Windows",
+    "complete discovered/enrolled two-host workflow"
+  ],
+  "additional_private_evidence": [
+    {
+      "private_path": "_build/coordination-controller-restart630/run4/controller-before.log",
+      "sha256": "a1790c1da9499938f2cfd919acba6120edef426862419ecf8a1773c0cde4f3bb"
+    },
+    {
+      "private_path": "_build/coordination-controller-restart630/run4/controller-after.log",
+      "sha256": "86b4842cf4f15d379d1473ed64fefaa78ecb1b6beb36c208b1c8f8500ff504dc"
+    },
+    {
+      "private_path": "_build/coordination-controller-restart630/run4/created.json",
+      "sha256": "829251f7bcae22f5e859c9d60db3adabcc0b37ef8ab5291c88481977811c8d14"
+    }
+  ],
+  "validation": {
+    "go_suite": {
+      "command": "PATH=<Node24>/bin:$PATH go test -p 4 -count=1 ./...",
+      "working_directory": "webmux/server",
+      "exit_code": 0,
+      "private_path": "_build/coordination-controller-restart630/go-test.log",
+      "sha256": "7e842ce4a8c81ed0dabcf0ee186b63676d5484a5b2f9527662ecf232abf73a54"
+    },
+    "vet": {
+      "command": "go vet ./internal/httpapi",
+      "working_directory": "webmux/server",
+      "exit_code": 0
+    },
+    "python_compile_exit_code": 0,
+    "negative_control_count": 13
+  }
+}

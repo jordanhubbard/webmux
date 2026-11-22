@@ -145,7 +145,11 @@ policies remain unqualified. The
 [persistent native SSH reconnect qualification](validation/coordination-ssh-native-reconnect-2026-11-22/README.md)
 keeps the same Claude and stdio MCP process alive across a planned reconnect
 between completed turns. It verifies the old SSH master stops before new native
-view/work calls succeed through refreshed access. Full controller restart,
+view/work calls succeed through refreshed access. The
+[production controller restart qualification](validation/coordination-controller-restart-2026-11-22/README.md)
+also preserves that native process pair, task, original claim ID/expiry and
+history epoch through two separate production executable processes; the native
+agent then releases its retained claim. SIGKILL, message/reservation continuity,
 unexpected tunnel loss and interrupted delivery remain unqualified.
 
 This requires compatible helpers at both ends, supported SSH multiplexing/

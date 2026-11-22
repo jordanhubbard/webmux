@@ -101,7 +101,10 @@ adds independently audited real Claude view/work calls through the ordinary SSH
 alias under an explicit two-tool native approval profile. A
 [persistent native SSH reconnect](validation/coordination-ssh-native-reconnect-2026-11-22/README.md)
 now preserves the actual Claude/MCP processes and conversation across planned
-reconnect, stops the old master and verifies new scoped calls. Broader coding-agent
+reconnect, stops the old master and verifies new scoped calls. A
+[production controller restart](validation/coordination-controller-restart-2026-11-22/README.md)
+also retains the same native processes, task, claim ID/expiry and history epoch;
+the native agent releases its retained claim after startup restore. Broader coding-agent
 adoption, managed/password/Mosh/Windows paths and the complete
 restart/durable-work lifecycle remain open under #630; this does not complete a
 roadmap checkbox.

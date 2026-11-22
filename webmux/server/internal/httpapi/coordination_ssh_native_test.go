@@ -57,21 +57,7 @@ func TestCoordinationSSHNativeBootstrap(t *testing.T) {
 		}
 		return out
 	}
-	setup := `import json,os,pathlib,secrets,shlex,shutil,subprocess,sys,tempfile
-i=json.load(sys.stdin);root=pathlib.Path(i['root']);root.mkdir(mode=0o700)
-(root/'home').mkdir();(root/'cache').mkdir(mode=0o700);(root/'bin').mkdir()
-socket_cache=tempfile.mkdtemp(prefix='wmcc-'); tmux=shutil.which('tmux'); assert tmux
-name='wmcc-'+secrets.token_hex(8)
-(root/'bin/tmux').write_text('#!/bin/sh\nexec '+shlex.quote(tmux)+' -L '+shlex.quote(name)+' "$@"\n')
-(root/'bin/tmux').chmod(0o700)
-repo=root/'project';repo.mkdir()
-env={k:v for k,v in os.environ.items() if not k.upper().startswith('GIT_')};env.update(GIT_CONFIG_GLOBAL='/dev/null',GIT_CONFIG_NOSYSTEM='1')
-def git(*args):subprocess.run(['git','-c','core.hooksPath=/dev/null','-C',str(repo),*args],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
-git('init');git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','--allow-empty','-m','SSH coordination fixture');git('remote','add','origin','https://example.test/team/native-ssh-channel.git')
-values={'HOME':str(root/'home'),'SHELL':'/bin/bash','WEBMUX_RECOVERY_CACHE_HOME':str(root/'cache'),'WEBMUX_COORDINATION_CACHE_HOME':socket_cache,'PATH':str(root/'bin')+':'+os.environ['PATH']}
-if i.get('native'):values['CLAUDE_CONFIG_DIR']=os.environ.get('CLAUDE_CONFIG_DIR',str(pathlib.Path.home()/'.claude'))
-prefix='env '+' '.join(shlex.quote(k+'='+v) for k,v in values.items())+' '+shlex.quote(i['helper'])
-print(json.dumps({'prefix':prefix,'tmux':tmux,'name':name,'socket_cache':socket_cache,'project':str(repo)}))`
+	setup := nativeSSHSetup
 	var remote struct {
 		Prefix, Tmux, Name, Project string
 		SocketCache                 string `json:"socket_cache"`
@@ -447,3 +433,20 @@ else:raise RuntimeError('first native turn did not complete')`
 		}
 	}
 }
+
+// Shared by the broker and separate production-process qualification fixtures.
+const nativeSSHSetup = `import json,os,pathlib,secrets,shlex,shutil,subprocess,sys,tempfile
+i=json.load(sys.stdin);root=pathlib.Path(i['root']);root.mkdir(mode=0o700)
+(root/'home').mkdir();(root/'cache').mkdir(mode=0o700);(root/'bin').mkdir()
+socket_cache=tempfile.mkdtemp(prefix='wmcc-'); tmux=shutil.which('tmux'); assert tmux
+name='wmcc-'+secrets.token_hex(8)
+(root/'bin/tmux').write_text('#!/bin/sh\nexec '+shlex.quote(tmux)+' -L '+shlex.quote(name)+' "$@"\n')
+(root/'bin/tmux').chmod(0o700)
+repo=root/'project';repo.mkdir()
+env={k:v for k,v in os.environ.items() if not k.upper().startswith('GIT_')};env.update(GIT_CONFIG_GLOBAL='/dev/null',GIT_CONFIG_NOSYSTEM='1')
+def git(*args):subprocess.run(['git','-c','core.hooksPath=/dev/null','-C',str(repo),*args],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
+git('init');git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','--allow-empty','-m','SSH coordination fixture');git('remote','add','origin','https://example.test/team/native-ssh-channel.git')
+values={'HOME':str(root/'home'),'SHELL':'/bin/bash','WEBMUX_RECOVERY_CACHE_HOME':str(root/'cache'),'WEBMUX_COORDINATION_CACHE_HOME':socket_cache,'PATH':str(root/'bin')+':'+os.environ['PATH']}
+if i.get('native'):values['CLAUDE_CONFIG_DIR']=os.environ.get('CLAUDE_CONFIG_DIR',str(pathlib.Path.home()/'.claude'))
+prefix='env '+' '.join(shlex.quote(k+'='+v) for k,v in values.items())+' '+shlex.quote(i['helper'])
+print(json.dumps({'prefix':prefix,'tmux':tmux,'name':name,'socket_cache':socket_cache,'project':str(repo)}))`
