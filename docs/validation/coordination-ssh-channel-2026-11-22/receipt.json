@@ -33,47 +33,62 @@
     {
       "private_path": "_build/coordination-ssh-channel630/native-run1.log",
       "exit_code": 0,
-      "sha256": "d191018b72aa136b3847f36a350da85ac5394321a226d93470e5d274b5b6fb31"
+      "sha256": "d191018b72aa136b3847f36a350da85ac5394321a226d93470e5d274b5b6fb31",
+      "source_scope": "earlier implementation/control revision; final source hashes do not assert an identical earlier harness"
     },
     {
       "private_path": "_build/coordination-ssh-channel630/native-run2.log",
       "exit_code": 0,
-      "sha256": "2e7977651c9edf826a21ca3681f2bd4af0d0ee9b48beb909b399827765a65028"
+      "sha256": "2e7977651c9edf826a21ca3681f2bd4af0d0ee9b48beb909b399827765a65028",
+      "source_scope": "earlier implementation/control revision; final source hashes do not assert an identical earlier harness"
     },
     {
       "private_path": "_build/coordination-ssh-channel630/native-run3-refuse.log",
       "exit_code": 1,
-      "sha256": "fc8d1550787f9c57ce584bb334679ce2ea88eb9766ab131f091bf7acbdd238c1"
+      "sha256": "fc8d1550787f9c57ce584bb334679ce2ea88eb9766ab131f091bf7acbdd238c1",
+      "source_scope": "earlier implementation/control revision; final source hashes do not assert an identical earlier harness"
     },
     {
       "private_path": "_build/coordination-ssh-channel630/native-run4-refuse.log",
       "exit_code": 1,
-      "sha256": "1ab475e622ac9cf8e0cbd7cad6ee95d8a46e74994a44e3637056cd7b38392cb0"
+      "sha256": "1ab475e622ac9cf8e0cbd7cad6ee95d8a46e74994a44e3637056cd7b38392cb0",
+      "source_scope": "earlier implementation/control revision; final source hashes do not assert an identical earlier harness"
     },
     {
       "private_path": "_build/coordination-ssh-channel630/native-run5-refuse.log",
       "exit_code": 0,
-      "sha256": "9dd7e4298fca6c33c6cf71e234deff455949bc4f96ae13903f9428f2755d2508"
+      "sha256": "9dd7e4298fca6c33c6cf71e234deff455949bc4f96ae13903f9428f2755d2508",
+      "source_scope": "earlier implementation/control revision; final source hashes do not assert an identical earlier harness"
     },
     {
       "private_path": "_build/coordination-ssh-channel630/native-run6-reconnect.log",
       "exit_code": 0,
-      "sha256": "27b68eb6cdf72398aa68b239202a24d40abd5fa67798bb3649b389f7bbf64c3e"
+      "sha256": "27b68eb6cdf72398aa68b239202a24d40abd5fa67798bb3649b389f7bbf64c3e",
+      "source_scope": "earlier implementation/control revision; final source hashes do not assert an identical earlier harness"
     },
     {
       "private_path": "_build/coordination-ssh-channel630/native-run7-first-use.log",
       "exit_code": 0,
-      "sha256": "529c62896846b12ecba932c81f9438f279dc49a03085bc599047649971939d43"
+      "sha256": "529c62896846b12ecba932c81f9438f279dc49a03085bc599047649971939d43",
+      "source_scope": "final reviewed source"
     },
     {
       "private_path": "_build/coordination-ssh-channel630/go-test-final.log",
       "exit_code": 0,
-      "sha256": "4ede245226dd410dfb2f1c23b8fbc9872a2f7dca70bedcd1dc0232f33d47f21a"
+      "sha256": "4ede245226dd410dfb2f1c23b8fbc9872a2f7dca70bedcd1dc0232f33d47f21a",
+      "source_scope": "final reviewed source"
     },
     {
       "private_path": "_build/coordination-ssh-channel630/reviewed-race.log",
       "exit_code": 0,
-      "sha256": "1959ff4ad7ae4c894f2340393a9b5960d1fd37f31f846de84751b7df348b8bb9"
+      "sha256": "1959ff4ad7ae4c894f2340393a9b5960d1fd37f31f846de84751b7df348b8bb9",
+      "source_scope": "final reviewed source"
+    },
+    {
+      "private_path": "_build/coordination-ssh-channel630/native-run8-final-refuse.log",
+      "exit_code": 0,
+      "sha256": "29c61957adc54272371758e0dc1d4d3a1d963cc94cf5670df3ac4ac1a112ae66",
+      "source_scope": "final reviewed source"
     }
   ],
   "native_controls": {
@@ -106,5 +121,9 @@
     "bounded per-run socket-cache retention/cleanup",
     "managed-provider onboarding",
     "complete #630/#631 workflow"
-  ]
+  ],
+  "final_source_native_cases": {
+    "startup_first_use_reconnect_and_master_exit": "native-run7-first-use.log",
+    "forward_refusal_shell_and_master_exit": "native-run8-final-refuse.log"
+  }
 }
