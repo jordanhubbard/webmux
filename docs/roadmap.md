@@ -77,8 +77,13 @@ now has native macOS/Linux background project-discovery and revocation evidence.
 The [durable inbox and claim extensions](session-coordination.md#durable-messages-across-nodes)
 add separate message permissions, explicit receipts, cross-node advisory conflicts
 and stable overlap events, with ordinary PTY protocol qualification. The [shared reservation extension](session-coordination.md#shared-heavy-worker-reservations)
-adds single-node authority and explicit remote permissions; full real-agent job
-acceptance and the complete workflow remain open.
+adds single-node authority and explicit remote permissions. A
+[two-host native Claude workflow](validation/coordination-native-pair-2026-11-22/README.md)
+now proves discovery, overlap/busy behavior, acknowledged handoff and an actual
+guarded fixture job on configured macOS/Linux nodes with explicit scoped-tool
+permissions. Its failed policy/capture attempts remain separate. Managed/SSH,
+existing-agent onboarding, native discovery/enrollment, restart/reconnect and the
+complete workflow gates remain open.
 
 ## Current reliability work
 
