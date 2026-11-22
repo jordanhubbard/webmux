@@ -92,6 +92,7 @@ type Claim struct {
 	Expires  time.Time `json:"expires"`
 }
 type Message struct {
+	Transport    string     `json:"transport,omitempty"`
 	ID           string     `json:"id"`
 	Index        uint64     `json:"index"`
 	From         Ref        `json:"from"`
@@ -133,6 +134,7 @@ type Request struct {
 	LeaseSeconds int    `json:"lease_seconds,omitempty"`
 }
 type Result struct {
+	Transport string     `json:"transport,omitempty"`
 	Status    string     `json:"status"`
 	Record    string     `json:"record_id,omitempty"`
 	State     string     `json:"state,omitempty"`
@@ -141,17 +143,18 @@ type Result struct {
 	Conflicts []Claim    `json:"conflicts,omitempty"`
 }
 type View struct {
-	Peers      []PeerView     `json:"peers,omitempty"`
-	Scope      string         `json:"scope"`
-	Contract   string         `json:"contract"`
-	Enabled    bool           `json:"enabled"`
-	Self       *Member        `json:"self,omitempty"`
-	Members    []Member       `json:"members"`
-	Claims     []Claim        `json:"claims"`
-	Inbox      []Message      `json:"inbox"`
-	Outbox     []Message      `json:"outbox"`
-	NextCursor uint64         `json:"next_cursor"`
-	Resources  []ResourceView `json:"resources"`
+	HistoryEpoch string         `json:"history_epoch,omitempty"`
+	Peers        []PeerView     `json:"peers,omitempty"`
+	Scope        string         `json:"scope"`
+	Contract     string         `json:"contract"`
+	Enabled      bool           `json:"enabled"`
+	Self         *Member        `json:"self,omitempty"`
+	Members      []Member       `json:"members"`
+	Claims       []Claim        `json:"claims"`
+	Inbox        []Message      `json:"inbox"`
+	Outbox       []Message      `json:"outbox"`
+	NextCursor   uint64         `json:"next_cursor"`
+	Resources    []ResourceView `json:"resources"`
 }
 type receipt struct {
 	Hash   string `json:"hash"`

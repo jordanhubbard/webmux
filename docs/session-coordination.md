@@ -102,9 +102,9 @@ remote additions to one view to 3 MiB. Capacity limits report unavailable contex
 with `cache-capacity`/`view-capacity` reasons; they do not silently truncate a peer
 membership list. Large-context pagination and scale qualification remain open.
 A controller restart begins with pending observations and refetches; the cache is
-not a second durable owner of remote state. The local mutation tools refuse
-remote resource IDs/targets. Cross-node handoffs, overlap notifications and
-reservation authority remain required before the full workflow is complete.
+not a second durable owner of remote state. Local reservation tools refuse remote resource IDs. Remote messages require the
+separate permissions and durable protocol below. Cross-node overlap notifications
+and reservation authority remain required before the full workflow is complete.
 
 The [macOS/Linux qualification](validation/coordination-peers-2026-11-21/README.md)
 uses independent real Git repositories/worktrees and ordinary PTY fixtures on two
@@ -112,6 +112,68 @@ native hosts. Background refresh discovers authorized project peers, preserves
 foreign-account isolation and observes revocation without a browser or manual
 refresh. This is protocol and ordinary-session context acceptance; two real coding
 agents exchanging work across hosts remain a separate gate.
+
+## Durable messages across nodes
+
+A summary alone grants no message authority. The outgoing peer must explicitly
+set `coordination_messages: true` with a mapped local account and enrolled HTTPS
+identity. Its receiving grant must separately set `coordination_messages: true`,
+`coordination: true`, `source_node_id` and `source_owner`. That credential trusts
+one sending controller to assert members only within this node/account namespace;
+the receiving account remains the grant's `owner`. A current project snapshot
+must advertise matching message permission and a nonempty `history_epoch` before
+a fresh message is queued. The recipient must be an active member in that verified
+project. Incoming admission rechecks its live broker membership and project.
+
+The existing scoped `message` action accepts the remote member's full `ref`.
+Its atomic local result is `status: admitted, transport: pending`: this proves
+only durable local queuing. The outbox subsequently reports `uncertain`,
+`remote-admitted`, `authorization-unavailable`, `sender-inactive`, `sender-revoked`,
+`refused`, `history-changed` or `history-lost` as appropriate. An inactive sender
+holds new delivery; removed/revoked/project-changed logical senders cannot send.
+A known admitted message's receipt can still be queried after the sender stops.
+Receipt `state` advances only through the recipient's explicit `delivered`,
+`acknowledge`, `complete` actions. Viewing an inbox does not advance it. Pending
+and uncertain transports are not delivery acknowledgments. Messages never type
+terminal input, start a provider, execute commands or reserve workers.
+
+The dedicated fixed endpoint is `POST /api/federation/coordination/messages` with
+`operation: status|admit` and an immutable `envelope`. Each call uses the enrolled
+same-connection TLS identity proof before the bearer credential. There are no
+redirects or proxy routing. Current configuration supplies credentials; durable
+outboxes retain only the selected peer, receiving node/account, pinned TLS key,
+project and receiver history epoch. Changing account mapping, identity or outgoing
+permission stops further network attempts. An attempt already in flight may have
+committed; revocation cannot retract it. Each direction needs its own grant.
+
+Before sending delivery bytes, the source commits `uncertain`. After interruption
+or a lost response it queries the exact message receipt first. An authenticated
+`absent` in the same history epoch permits replay of the identical envelope/ID
+only after another live source/project check and a fresh sharing authorization
+check immediately before admission. A known admitted message that
+becomes absent reports `history-lost`; a fresh receiver database reports
+`history-changed`. Neither causes automatic replay. The receiver atomically stores
+accepted/refused outcomes and deduplicates exact envelope retries. Conflicting
+payloads under one ID are refused. Original request results remain frozen even
+if permissions later change. This guarantees unique inbox admission for retained
+history, not exactly-once execution of external work.
+
+The message worker requires no browser. It wakes after queuing or every two
+seconds, with four network workers, an eight-second batch budget and five-second
+per-record budget. It polls an active-ID index rather than scanning historical
+completed message text. Federation message envelopes are limited to 64 KiB to
+allow JSON escaping of valid text and bounded identity fields; receipts are
+limited to 32 KiB. The ordinary agent action API retains its 16 KiB input bound,
+and message text retains its 8 KiB semantic limit. Long-term retention, large-outbox
+pagination/scale and backoff tuning remain open. No network occurs under the
+broker or ledger lock. Shutdown cancels and joins the worker before ledger close.
+
+The [native protocol receipt](validation/coordination-messages-2026-11-21/README.md)
+covers macOS/Linux delivery with a deliberately lost committed reply, exact retry
+and explicit recipient completion using ordinary PTY fixtures. Real coding-agent
+handoffs, cross-node claims/overlap and shared-worker acceptance remain open.
+The [admission follow-up](validation/coordination-message-admission-2026-11-22/README.md)
+covers revocation during status recovery and valid text expanded by JSON encoding.
 
 ## Native agent startup and MCP
 
@@ -201,7 +263,11 @@ The lazy ledger is `$WEBMUX_HOME/data/coordination/state.db`, backed by pinned
 [bbolt](https://pkg.go.dev/go.etcd.io/bbolt). New directories/files use 0700/0600
 where Unix permissions apply. One service owns a database file at a time. Stable
 capability signing material, policy, membership, claims, inboxes/outboxes,
-operation receipts and monotonically increasing reservation fences persist.
+operation receipts and monotonically increasing reservation fences persist. Schema
+version 2 atomically upgrades an intact version-1 ledger with remote outbox/inbox
+indexes and a random receiver history epoch, preserving signing keys, existing
+receipts and fences. Missing version-2 buckets are corruption, never recreated.
+Older binaries cannot read version 2; do not downgrade by deleting authority data.
 Admission and its receipt commit in one transaction. Clock rollback, missing
 buckets, invalid key material and changed node identity fail closed rather than
 reinitializing authority. A ledger failure leaves ordinary terminal startup
@@ -224,7 +290,8 @@ started coding agents.
 
 Remaining #630/#631 work includes complete live native inbox/notification and
 existing-agent onboarding; independently started ordinary/managed pairs; SSH/remote
-execution-host provisioning; cross-node delivery, mutations and shared authority;
+execution-host provisioning; real-agent cross-node delivery, claims/overlap and
+shared reservation authority;
 explicit project mappings; platform custody/sandbox acceptance; full native LAN
 discovery and reconnect qualification; and the complete two-real-host workflow.
 No roadmap checkbox is completed by this checkpoint.

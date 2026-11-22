@@ -131,7 +131,13 @@ func (s *Server) exportCoordinationSnapshot(w http.ResponseWriter, r *http.Reque
 	}
 	// No network/peer aggregation occurs here: cyclic node connections cannot
 	// recurse, and grants never transitively share another node's data.
-	writeJSON(w, 200, plane.Snapshot(view, node, owner, selector.Project))
+	snapshot := plane.Snapshot(view, node, owner, selector.Project)
+	if view.Enabled && grant.CoordinationMessages {
+		snapshot.Messaging = true
+		snapshot.SourceNode = grant.SourceNode
+		snapshot.SourceOwner = grant.SourceOwner
+	}
+	writeJSON(w, 200, snapshot)
 }
 func (s *Server) fetchCoordinationSnapshot(ctx context.Context, job coordinationPeerJob) (plane.ProjectSnapshot, string) {
 	var snapshot plane.ProjectSnapshot

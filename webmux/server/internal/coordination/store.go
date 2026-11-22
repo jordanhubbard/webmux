@@ -18,7 +18,8 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var buckets = []string{"meta", "members", "claims", "messages", "inboxes", "outboxes", "receipts", "reservations", "fences"}
+var legacyBuckets = []string{"meta", "members", "claims", "messages", "inboxes", "outboxes", "receipts", "reservations", "fences"}
+var buckets = append(append([]string{}, legacyBuckets...), "remote_outbox", "remote_inbox", "remote_active")
 
 // Service has one owner per WEBMUX_HOME, like the session broker. All persistent
 // transitions use one serializable transaction; no network/provider work occurs
@@ -101,10 +102,14 @@ func initialize(tx *bolt.Tx, node string, now time.Time) error {
 		if string(meta.Get([]byte("node"))) != node {
 			return ErrIdentity
 		}
-		if string(meta.Get([]byte("version"))) != "1" || len(meta.Get([]byte("key"))) != 32 || (string(meta.Get([]byte("enabled"))) != "1" && string(meta.Get([]byte("enabled"))) != "0") {
+		if (string(meta.Get([]byte("version"))) != "1" && string(meta.Get([]byte("version"))) != "2") || len(meta.Get([]byte("key"))) != 32 || (string(meta.Get([]byte("enabled"))) != "1" && string(meta.Get([]byte("enabled"))) != "0") {
 			return errors.New("invalid coordination database metadata")
 		}
-		for _, name := range buckets {
+		required := buckets
+		if string(meta.Get([]byte("version"))) == "1" {
+			required = legacyBuckets
+		}
+		for _, name := range required {
 			if bucket(tx, name) == nil {
 				return errors.New("missing coordination database bucket")
 			}
@@ -112,6 +117,26 @@ func initialize(tx *bolt.Tx, node string, now time.Time) error {
 		clock, exists, err := get[time.Time](meta, "clock")
 		if err != nil || !exists || clock.IsZero() {
 			return errors.New("invalid coordination authority clock")
+		}
+		if string(meta.Get([]byte("version"))) == "1" {
+			for _, name := range []string{"remote_outbox", "remote_inbox", "remote_active"} {
+				if _, err := tx.CreateBucket([]byte(name)); err != nil {
+					return err
+				}
+			}
+			epoch := make([]byte, 16)
+			if _, err := rand.Read(epoch); err != nil {
+				return err
+			}
+			if err := meta.Put([]byte("history_epoch"), []byte(hex.EncodeToString(epoch))); err != nil {
+				return err
+			}
+			if err := meta.Put([]byte("version"), []byte("2")); err != nil {
+				return err
+			}
+		}
+		if !validHex(string(meta.Get([]byte("history_epoch"))), 16) {
+			return errors.New("invalid coordination history epoch")
 		}
 		return nil
 	}
@@ -125,10 +150,17 @@ func initialize(tx *bolt.Tx, node string, now time.Time) error {
 	if _, err := rand.Read(key); err != nil {
 		return err
 	}
-	for name, value := range map[string][]byte{"node": []byte(node), "version": []byte("1"), "key": key, "enabled": []byte("1")} {
+	for name, value := range map[string][]byte{"node": []byte(node), "version": []byte("2"), "key": key, "enabled": []byte("1")} {
 		if err := meta.Put([]byte(name), value); err != nil {
 			return err
 		}
+	}
+	epoch := make([]byte, 16)
+	if _, err := rand.Read(epoch); err != nil {
+		return err
+	}
+	if err := meta.Put([]byte("history_epoch"), []byte(hex.EncodeToString(epoch))); err != nil {
+		return err
 	}
 	return put(meta, "clock", now)
 }
