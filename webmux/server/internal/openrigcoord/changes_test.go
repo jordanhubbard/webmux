@@ -76,7 +76,9 @@ func TestChangeWaitCancellationTerminatesHungCLIChild(t *testing.T) {
 	}
 	marker := filepath.Join(bin, "child.pid")
 	t.Setenv("WEBMUX_CHANGE_CHILD_PID", marker)
-	rig := "#!/bin/sh\nif [ \"$1\" = --version ]; then echo '0.6.14 (df1c1517)'; else echo $$ > \"$WEBMUX_CHANGE_CHILD_PID\"; exec /bin/sleep 30; fi\n"
+	// Redirection creates the destination before echo writes it. Publishing by
+	// rename keeps the unchanged reader from observing an empty/partial PID.
+	rig := "#!/bin/sh\nif [ \"$1\" = --version ]; then echo '0.6.14 (df1c1517)'; else echo $$ > \"$WEBMUX_CHANGE_CHILD_PID.pending\" && /bin/mv -f \"$WEBMUX_CHANGE_CHILD_PID.pending\" \"$WEBMUX_CHANGE_CHILD_PID\" || exit 97; exec /bin/sleep 30; fi\n"
 	if err = os.WriteFile(filepath.Join(bin, "rig"), []byte(rig), 0700); err != nil {
 		t.Fatal(err)
 	}
