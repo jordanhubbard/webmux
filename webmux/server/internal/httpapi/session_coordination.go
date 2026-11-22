@@ -21,6 +21,7 @@ import (
 )
 
 type sessionCoordination struct {
+	peers         coordinationPeerCache
 	bindingCursor int // Owned only by the maintenance goroutine.
 	service       *plane.Service
 	once          sync.Once
@@ -145,7 +146,7 @@ func (s *Server) provisionCoordination(node string, snapshots []session.Session,
 		return nil, err
 	}
 	access := coordinationclient.Access{Contract: plane.Contract, Endpoint: s.sessionCoord.endpoint, Capability: token, Subject: ref, Instructions: []string{
-		"This interface currently coordinates this node only. Cross-node coordination remains pending. Qualified native aliases attach MCP guidance; other launch paths require separate acceptance.",
+		"This interface supports local actions and explicitly authorized remote project summaries. Remote summaries are read-only; remote messages, claims and reservations remain pending. Qualified native aliases attach MCP guidance; other launch paths require separate acceptance.",
 		"Use the WebMux coordinate view command to discover verified project peers and read the coordination inbox.",
 		"Use coordinate act with a JSON request on stdin. Preserve request_id across uncertain retries; use a fresh ID for new work.",
 		"Claim file, directory, branch or task ownership before overlapping work. Claims are advisory and do not prevent edits.",
@@ -249,7 +250,8 @@ func (s *Server) maintainSessionCoordination(parent context.Context) error {
 	if err != nil {
 		return err
 	}
-	return s.sessions.WithCoordinationSnapshot(func(all []session.Session) error {
+	enabled := false
+	err = s.sessions.WithCoordinationSnapshot(func(all []session.Session) error {
 		if err := s.sessionCoord.service.Sync(node, s.coordinationInputs(node, all)); err != nil {
 			return err
 		}
@@ -260,8 +262,21 @@ func (s *Server) maintainSessionCoordination(parent context.Context) error {
 				}
 			}
 		}
-		return nil
+		view, e := s.sessionCoord.service.OwnerView(node, "", s.coordinationInputs(node, all))
+		enabled = view.Enabled
+		return e
 	})
+	if err != nil {
+		return err
+	}
+	if !enabled {
+		return nil
+	}
+	latest, err := s.coordinationSnapshots()
+	if err != nil {
+		return err
+	}
+	return s.refreshCoordinationPeers(parent, s.coordinationInputs(node, latest))
 }
 func (s *Server) coordinationError(w http.ResponseWriter, err error) {
 	switch {
@@ -306,6 +321,7 @@ func (s *Server) getSessionCoordination(w http.ResponseWriter, r *http.Request, 
 		s.coordinationError(w, err)
 		return
 	}
+	s.attachCoordinationPeers(&view, owner)
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, view)
 }
@@ -407,6 +423,10 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.coordinationError(w, err)
 		return
+	}
+	if view, ok := response.(plane.View); ok {
+		s.attachCoordinationPeers(&view, ref.Owner)
+		response = view
 	}
 	writeJSON(w, 200, response)
 }

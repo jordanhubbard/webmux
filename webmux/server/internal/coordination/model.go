@@ -141,6 +141,7 @@ type Result struct {
 	Conflicts []Claim    `json:"conflicts,omitempty"`
 }
 type View struct {
+	Peers      []PeerView     `json:"peers,omitempty"`
 	Scope      string         `json:"scope"`
 	Contract   string         `json:"contract"`
 	Enabled    bool           `json:"enabled"`

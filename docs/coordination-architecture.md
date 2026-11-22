@@ -67,9 +67,10 @@ independently launched ordinary agents; they are not established by this decisio
    address reconciliation across the full discovered two-host/platform workflow.
    DNS-SD claims never authorize access; the native protocol component result
    does not complete discovery, deployment or agent acceptance.
-2. Extend the [durable node-local coordination checkpoint](session-coordination.md)
-   through cross-node authority, execution-host provisioning and full native
-   project isolation, stale identity and restart/reconnect acceptance.
+2. Extend the [authorized cross-node context checkpoint](session-coordination.md#authorized-peer-discovery)
+   through durable cross-node mutations/authority, execution-host provisioning
+   and full native stale identity and restart/reconnect acceptance. Project
+   discovery now has native two-host background protocol acceptance.
 3. Extend the [native alias MCP checkpoint](session-coordination.md) beyond its
    scoped ordinary macOS Codex/Claude startup checks: managed/SSH execution hosts,
    existing running agents, platform custody and supported live inbox channels.

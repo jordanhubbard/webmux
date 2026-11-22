@@ -6,7 +6,7 @@ project bindings and persistence. A browser connected to one server can select
 workspace keeps its existing terminal grid. Administrators can open **Manage
 servers** from the toolbar even before any peers exist. The server selector appears after the first peer is configured.
 
-Connections are opened on demand. [Network discovery](network-discovery.md)
+Terminal connections are opened on demand. Authorized coordination summaries refresh in the server without a browser. [Network discovery](network-discovery.md)
 shows unverified candidate nodes in Manage servers; authenticated connections
 still require explicit configuration. There is no distributed mesh or shared
 home directory. Rig and Agent Deck remain optional for task assignment and
@@ -72,6 +72,43 @@ migration. End-to-end HTTPS and normal OS certificate trust are required; TLS
 termination between the peers is not supported for pinned connections. See
 [network discovery](network-discovery.md) for the protocol, bounds and current
 native qualification limits.
+
+## Share project coordination context
+
+Project summaries have a separate node-level permission. Existing incoming grants
+retain their terminal access and do not acquire coordination sharing implicitly.
+All eligible sessions for a mapped local account participate automatically; there
+is no per-session switch.
+
+1. Configure the HTTPS peer and matching incoming grant, then use **Verify
+   identity** to enroll its receiving node/account.
+2. On the receiving server, edit the incoming grant and select **Allow project
+   coordination summaries** for its existing local owner.
+3. On the controller, edit the verified peer and enter an existing local account
+   in **Coordination account on this server**. Leave it empty to disable sharing
+   toward that account. The local account and receiving account can have different
+   names; WebMux retains both identities.
+
+The mapped account's coordination view includes read-only `peers` entries for its
+verified projects. They contain that receiving account's matching session/task,
+branch/worktree, claim and worker-availability metadata. Private inbox/outbox
+messages, admission receipts, capabilities and server credentials are excluded.
+Other local accounts cannot borrow the peer credential. Each direction requires
+its own mapping and receiving permission; connections do not transitively expose
+another node's summaries.
+
+Background refresh uses the pinned, same-connection HTTPS identity proof before
+sending the existing server credential. HTTP-only/manual unverified peers remain
+available for their terminal contract. The coordination controls require an
+enrolled HTTPS identity. Removing a local mapping removes its peer context from
+subsequent views immediately. A receiving refusal clears retained data; a network
+outage can retain a clearly stale observation until its 30-second expiry. Pending,
+invalid, disabled or unavailable context does not mean that remote work is absent.
+
+This is project discovery/context. Remote messages, claims and reservations still
+need their separate durable mutation/authority protocol. A remote availability
+summary does not acquire that worker. See [session coordination](session-coordination.md)
+and the [two-host protocol receipt](validation/coordination-peers-2026-11-21/README.md).
 
 ## Configure a pair through files
 

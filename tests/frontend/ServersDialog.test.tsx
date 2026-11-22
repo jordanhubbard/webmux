@@ -24,7 +24,7 @@ describe('server management', () => {
     fireEvent.change(screen.getByLabelText('Server URL'), { target: { value: 'https://new' } });
     fireEvent.change(screen.getByLabelText('Credential', { exact: true }), { target: { value: 'a'.repeat(40) } });
     fireEvent.click(screen.getByRole('button', { name: 'Save server' }));
-    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith('new', { name: 'New host', url: 'https://new', allow_http: false, token_env: '', credential: 'a'.repeat(40) }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith('new', { name: 'New host', url: 'https://new', allow_http: false, coordination_owner: '', token_env: '', credential: 'a'.repeat(40) }));
     await waitFor(() => expect(changed).toHaveBeenCalled());
     expect(screen.queryByDisplayValue('a'.repeat(40))).not.toBeInTheDocument();
   });
@@ -52,7 +52,7 @@ describe('server management', () => {
     fireEvent.change(screen.getByLabelText('Grant name'), { target: { value: 'controller' } });
     fireEvent.change(screen.getByLabelText('Credential', { exact: true }), { target: { value: 'c'.repeat(40) } });
     fireEvent.click(screen.getByRole('button', { name: 'Save grant' }));
-    await waitFor(() => expect(mocks.grant).toHaveBeenCalledWith('controller', { owner: 'owner', credential: 'c'.repeat(40), token_env: '' }));
+    await waitFor(() => expect(mocks.grant).toHaveBeenCalledWith('controller', { owner: 'owner', coordination: false, credential: 'c'.repeat(40), token_env: '' }));
   });
 });
 
@@ -143,4 +143,32 @@ it('keeps the original identity visible when verification fails', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Original identity no longer matches');
   expect(screen.getByText(/Verified node: a+ · Account: owner/)).toBeVisible();
   expect(mocks.save).not.toHaveBeenCalled();
+});
+
+
+describe('coordination sharing authorization', () => {
+  it('requires a verified node before showing the local account mapping', async () => {
+    render(<ServersDialog onClose={vi.fn()} onChanged={vi.fn()} currentUser="owner" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Builder' }));
+    expect(screen.queryByLabelText('Coordination account on this server')).not.toBeInTheDocument();
+    expect(screen.getByText(/Verify the HTTPS node identity after saving/)).toBeVisible();
+  });
+  it('saves an explicit local-account mapping for an enrolled peer', async () => {
+    mocks.directory.mockResolvedValue({ servers: [{ ...peer, identity: { node_id: 'a'.repeat(32), owner: 'remote-owner', tls_key_sha256: 'b'.repeat(64) } }], grants: [] });
+    render(<ServersDialog onClose={vi.fn()} onChanged={vi.fn()} currentUser="owner" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Builder' }));
+    expect(screen.getByLabelText('Coordination account on this server')).toHaveValue('');
+    fireEvent.change(screen.getByLabelText('Coordination account on this server'), { target: { value: 'owner' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save server' }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith('remote', expect.objectContaining({ coordination_owner: 'owner' })));
+  });
+  it('keeps existing incoming grants terminal-only until sharing is selected', async () => {
+    mocks.directory.mockResolvedValue({ servers: [], grants: [{ id: 'incoming', owner: 'owner', token_env: 'TOKEN', credential_ready: true }] });
+    render(<ServersDialog onClose={vi.fn()} onChanged={vi.fn()} currentUser="owner" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit grant incoming' }));
+    expect(screen.getByLabelText('Allow project coordination summaries')).not.toBeChecked();
+    fireEvent.click(screen.getByLabelText('Allow project coordination summaries'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save grant' }));
+    await waitFor(() => expect(mocks.grant).toHaveBeenCalledWith('incoming', expect.objectContaining({ owner: 'owner', coordination: true })));
+  });
 });

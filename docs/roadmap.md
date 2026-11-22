@@ -71,7 +71,10 @@ node-local ledger and scoped ordinary-session CLI. Real-agent onboarding,
 managed/SSH interfaces and cross-node coordination still require implementation
 and acceptance. The native MCP extension now attaches startup guidance through
 qualified ordinary Codex/Claude aliases; [single-host native startup evidence](validation/agent-coordination-2026-11-21/README.md)
-does not complete the cross-host or managed-agent workflow.
+does not complete the cross-host or managed-agent workflow. The
+[authorized peer-context extension](session-coordination.md#authorized-peer-discovery)
+now has native macOS/Linux background project-discovery and revocation evidence.
+Cross-node mutations and the complete real-agent workflow remain open.
 
 ## Current reliability work
 
