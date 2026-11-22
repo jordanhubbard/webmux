@@ -103,7 +103,12 @@ alias under an explicit two-tool native approval profile. A
 now preserves the actual Claude/MCP processes and conversation across planned
 reconnect, stops the old master and verifies new scoped calls. The
 [corrected-stack reconnect result](validation/coordination-ssh-reconnect-integration-2026-11-22/README.md)
-adds completed-turn process evidence and stale project-cache regression controls. Broader coding-agent
+adds completed-turn process evidence and stale project-cache regression controls. A
+[production controller restart](validation/coordination-controller-restart-2026-11-22/README.md)
+also retains the same native processes, task, claim ID/expiry and history epoch;
+the native agent releases its retained claim after startup restore. The
+[corrected-stack restart result](validation/coordination-controller-restart-integration-2026-11-22/README.md)
+extends that evidence through completion of the post-restart turn. Broader coding-agent
 adoption, managed/password/Mosh/Windows paths and the complete
 restart/durable-work lifecycle remain open under #630; this does not complete a
 roadmap checkbox.

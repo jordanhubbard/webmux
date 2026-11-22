@@ -150,7 +150,14 @@ between completed turns. It verifies the old SSH master stops before new native
 view/work calls succeed through refreshed access. The
 [corrected-stack reconnect qualification](validation/coordination-ssh-reconnect-integration-2026-11-22/README.md)
 additionally observes the same processes after the completed second turn and
-regresses stale project-cache writes. Full controller restart,
+regresses stale project-cache writes. The
+[production controller restart qualification](validation/coordination-controller-restart-2026-11-22/README.md)
+also preserves that native process pair, task, original claim ID/expiry and
+history epoch through two separate production executable processes; the native
+agent then releases its retained claim. The
+[corrected-stack restart qualification](validation/coordination-controller-restart-integration-2026-11-22/README.md)
+observes the original processes and pane again after the completed post-restart turn.
+SIGKILL, message/reservation continuity,
 unexpected tunnel loss and interrupted delivery remain unqualified.
 
 This requires compatible helpers at both ends, supported SSH multiplexing/
