@@ -1,0 +1,20 @@
+[
+  {
+    "publication": "legacy-direct-redirection",
+    "while_writer_paused": {
+      "read_succeeds": true,
+      "bytes": 0,
+      "legacy_loop_breaks_without_pid": true
+    },
+    "after_publication": "complete exact writer PID"
+  },
+  {
+    "publication": "atomic-rename",
+    "while_writer_paused": {
+      "read_succeeds": false,
+      "bytes": null,
+      "legacy_loop_breaks_without_pid": false
+    },
+    "after_publication": "complete exact writer PID"
+  }
+]
