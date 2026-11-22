@@ -1,0 +1,64 @@
+{
+  "scope": "Automated terminal-grid wheel routing on macOS ARM64; physical trackpad and broader platform acceptance pending",
+  "runtime": {
+    "os": "Darwin",
+    "arch": "arm64",
+    "node_major": 24,
+    "browser": "Google Chrome 158.0.8127.36"
+  },
+  "source_sha256": {
+    "webmux/frontend/src/utils/gridWheel.ts": "8cd010df2e835ad1ed05dc95d68deb93de86ad301a278443d036b8d5409166b5",
+    "webmux/frontend/src/components/Terminal.tsx": "e9f0740a157de6b21811f853d88a1973f723fe1e29526c58fcb7fae5182c30a7",
+    "webmux/frontend/src/components/Workspace.tsx": "d69a7844bdf388bfe5982946a2fcd38f7f85821c84aab052204b0d226b647155",
+    "webmux/frontend/src/components/ServerWorkspace.tsx": "44d3b3e5390e453ecc901d0ec72805878b6789a3692613e068e9b12e5fd303d3",
+    "webmux/frontend/src/components/BrowserCompanion.tsx": "6103ec9badf12a3c2bf38755a5536c3f3a98cc99d69598cedd5a60a1358774b9",
+    "tests/frontend/gridWheel.test.ts": "c7f117151688f7c357aebe1a0a8c042960bba9d41237de43f9c5c78b671ab120",
+    "tests/e2e/grid-wheel.spec.ts": "1ec3160f025e2aa50f298578ae40deebcf8316bb84f7cfb3e65a3850e65fc37f",
+    "tests/e2e/scroll-terminal-fixture.mts": "a7657aa17839339423a03a1268ed03cb548cccb0787e5698201d4b988b046354"
+  },
+  "bundle_sha256": {
+    "novnc-CDzVFeD5.js": "1f10fed97e30fb6b3968c3d71e619daa9714fa12433d8be1a205805061250e88",
+    "index-JjAd8Gpi.js": "ae0f35a4bd0fbfa6a42fef4514e00786c2a67095ece2bfab4166c1581f5ac5fd",
+    "xterm-DZ21y8cg.js": "23e6994e053079dc65387a0b49ad497780884d9d4e6ddf38fb782f8df0daa04a"
+  },
+  "browser_server_sha256": "5e780f5eed946db8118ce5ab686465a7779490211958b95c6252badaa40d4885",
+  "checks": [
+    {
+      "name": "frontend-unit-delivery",
+      "exit_code": 0
+    },
+    {
+      "name": "typecheck-delivery",
+      "exit_code": 0
+    },
+    {
+      "name": "lint-delivery",
+      "exit_code": 0
+    },
+    {
+      "name": "frontend-production-build",
+      "exit_code": 0
+    },
+    {
+      "name": "browser-wheel-mouse-tmux-embedded-browser",
+      "exit_code": 0,
+      "passed": 8
+    }
+  ],
+  "unit_tests_passed": 488,
+  "log_sha256": {
+    "frontend-unit-delivery.log": "8fe58be482245e9032fedf467f8c4f9ddd66d7ea9d81fe18f003753d97f7d411",
+    "typecheck-delivery.log": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+    "lint-delivery.log": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+    "browser-callback-qualified.log": "bf405250bb35fd876dbb8d3f099fb889d4f34fbc1cdae2a8030a2484ff07378b",
+    "frontend-build-qualified.log": "c58b380c14ad3444bfee7ea6baad4a91529c358857b09ddf6889553daeccb4d6"
+  },
+  "limitations": [
+    "Physical gesture-capable trackpad not exercised",
+    "Native Windows and other browser/platform gesture acceptance remain open",
+    "Connected-server hook uses the same routing helper; this receipt is not native cross-host gesture acceptance",
+    "Parent PR #670 remains blocked by the unresolved Windows scoped-API failure under #669"
+  ],
+  "base_revision": "0b0f93026ef2e2ccaf2122201d1c4262e35a1f21",
+  "roadmap_revision": "c0b74457733377e49f95d1a06d9e826c2560752d"
+}

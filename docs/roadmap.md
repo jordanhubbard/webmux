@@ -11,6 +11,11 @@ issue states. GitHub issues track implementation and remaining acceptance work.
   window. Holding **Shift** while two-finger scrolling pans the entire 2D grid.
   A gesture must scroll its intended target without also scrolling the other.
 
+The [terminal-grid implementation checkpoint](validation/trackpad-scroll-2026-11-22/README.md)
+passes automated browser wheel, mouse, tmux and keyboard-broadcast isolation
+controls. Physical trackpad and remaining platform/surface acceptance are still
+open; this does not complete #661.
+
 ## Automatic session coordination and network discovery
 
 Owner requirement added 2026-11-21. These are planned capabilities; the current
