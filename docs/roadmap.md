@@ -12,17 +12,17 @@ per-session opt-in, including agents independently started on different WebMux
 nodes. WebMux should discover other WebMux nodes on the local network through
 mDNS/DNS-SD rather than requiring their addresses to be entered individually.
 
-Agent Deck and Rig were selected without verified evidence that they satisfy
-this goal. Their selection is open for reconsideration: retain, replace or
-remove either integration according to demonstrated requirements and native
-acceptance results. Neither tool, nor their proposed bridge under
-[#246](https://github.com/jordanhubbard/webmux/issues/246), is a prerequisite by
-definition. Existing provider documentation records current behavior, not a
-commitment to use those providers for this work.
+The completed [architecture evaluation](coordination-architecture.md) selects the
+built-in WebMux plane and retains Agent Deck/Rig as optional lifecycle adapters.
+Its provider comparison records actual interfaces, deployment costs and native
+version/platform boundaries. Neither provider nor their proposed bridge under
+[#246](https://github.com/jordanhubbard/webmux/issues/246) is a prerequisite for
+ordinary-node coordination. Managed onboarding and full native acceptance remain
+separate requirements; existing agents retain their lifecycle owners.
 
 Ordered implementation and acceptance:
 
-- [ ] **Evaluate the coordination architecture** under
+- [x] **Evaluate the coordination architecture** under
   [#630](https://github.com/jordanhubbard/webmux/issues/630). Explain what Agent
   Deck and Rig actually contribute, inspect and test their relevant interfaces,
   and compare them with a built-in approach. Record capabilities, gaps,
@@ -58,9 +58,10 @@ Ordered implementation and acceptance:
   multicast/peers and duplicate or uncertain delivery. Publish supported
   boundaries and evidence before marking either requirement complete.
 
-The [architecture decision](coordination-architecture.md) selects a built-in
-coordination plane with optional existing provider lifecycle adapters; real
-agent-facing channel evaluation remains open. The
+The [architecture decision](coordination-architecture.md) includes source-bound
+native provider-interface comparison and lifecycle-preservation rules. Architecture
+selection is complete; managed/existing-agent onboarding and full workflow
+acceptance remain open. The
 [node discovery implementation checkpoint](network-discovery.md) adds a server-owned DNS-SD candidate browser and server-management visibility. It keeps
 announcements untrusted and retains manual enrollment. Authenticated HTTPS node/
 account identity and address migration now have a native macOS/Linux component
