@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Controlled real-TLS message admission regressions; not new native LLM or two-host acceptance",
+  "parent_head": "3b26ed98cb2f296b5fc61f17d0eb886cb73ef863",
+  "original_message_head": "af35f7676a371f128e63c242e02fe05f2ebb3201",
+  "source_sha256": {
+    "webmux/server/internal/httpapi/coordination_messages.go": "ea69ef0596d99f46e8721f62b32721a430ea4941c2e82cccb2ed54a22a08e9ed",
+    "webmux/server/internal/httpapi/coordination_messages_test.go": "20ab045995137e9ee38feefa193192ff934d9d965820362eddfac00c10646622",
+    "webmux/server/internal/httpapi/coordination_peers.go": "fc5b39ec23fca55f06e04e0b104dd9f9f9c3cf4fdc25247f61765c1b58ea89af",
+    "webmux/server/internal/coordination/remote.go": "3dc4cded365400a5d6413f126dadbd8583fef7731f15f30e0031ec07d2e47705",
+    "webmux/server/internal/coordination/remote_test.go": "9d9c346c50735f4c6bd724298a79fc66948061e0905e624a015ba6470ee361bf"
+  },
+  "evidence": [
+    {
+      "private_path": "_build/integrate-coordination-messaging630/revocation-before.log",
+      "exit_code": 1,
+      "sha256": "b8202d459752519934f0a203533101414222fb901d9be3e159d55324b65abfd9",
+      "source_scope": "original messaging source with revocation regression"
+    },
+    {
+      "private_path": "_build/integrate-coordination-messaging630/revocation-after.log",
+      "exit_code": 0,
+      "sha256": "4d2e94f1a273de2809ddf1a27a0f8a3159b8b72da2fb971c3ed2fbf2227a4588",
+      "source_scope": "permission recheck before final envelope adjustment"
+    },
+    {
+      "private_path": "_build/integrate-coordination-messaging630/escaped-before.log",
+      "exit_code": 1,
+      "sha256": "8803ef71585a5a725fce75b493893be4ff64d8c80c4f892a6926051546109c6a",
+      "source_scope": "permission recheck with original 16 KiB federation envelope bound"
+    },
+    {
+      "private_path": "_build/integrate-coordination-messaging630/final-regressions.log",
+      "exit_code": 0,
+      "sha256": "6050e08f8c624b54d95c0fcb53d78da88c1eeca3239ef1ea5dcb09f03b7ccf71",
+      "source_scope": "final corrected source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-messaging630/go-test-final.log",
+      "exit_code": 0,
+      "sha256": "ea5be9a3c7f751070aa5026f04976d251c47baac07f4e24129a524f7881fba13",
+      "source_scope": "final corrected source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-messaging630/message-api-race-final.log",
+      "exit_code": 0,
+      "sha256": "bf9f84a1dd7ddd0552071baf4f6436be5cc98c64b2c77e9b3c8f3426166b8a30",
+      "source_scope": "final corrected source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-messaging630/vet-final.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "final corrected source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-messaging630/server-contract-final.log",
+      "exit_code": 0,
+      "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f",
+      "source_scope": "final corrected source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-messaging630/ledger-race.log",
+      "exit_code": 0,
+      "sha256": "8b846f646a40e987f143f062d747b1d5595af541704b6fc790879598cb2d15d3",
+      "source_scope": "unchanged component source before final HTTP envelope adjustment"
+    },
+    {
+      "private_path": "_build/integrate-coordination-messaging630/typecheck.log",
+      "exit_code": 0,
+      "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+      "source_scope": "unchanged component source before final HTTP envelope adjustment"
+    },
+    {
+      "private_path": "_build/integrate-coordination-messaging630/frontend-lint.log",
+      "exit_code": 0,
+      "sha256": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+      "source_scope": "unchanged component source before final HTTP envelope adjustment"
+    },
+    {
+      "private_path": "_build/integrate-coordination-messaging630/frontend-test.log",
+      "exit_code": 0,
+      "sha256": "1595c2fb874f55b21b46861b176c93d203450a97adc52b196200a4b15aa6b671",
+      "source_scope": "unchanged component source before final HTTP envelope adjustment"
+    },
+    {
+      "private_path": "_build/integrate-coordination-messaging630/frontend-build.log",
+      "exit_code": 0,
+      "sha256": "47844c8a78e87d073608d83be45a38eaf37540842a3bdb515dd1350a881f8f19",
+      "source_scope": "unchanged component source before final HTTP envelope adjustment"
+    }
+  ],
+  "commands": {
+    "final_regressions": "go test -count=1 -run 'TestCoordination(MessageRevocationDuringStatusPreventsAdmission|RemoteMessagePreservesValidEscapedText)$' ./internal/httpapi",
+    "full_go": "go test -p 4 -count=1 ./...",
+    "api_race": "go test -race -count=1 -run 'TestCoordination(RemoteMessage|MessageRevocation|LateSnapshot|DeletedAccount)' ./internal/httpapi",
+    "vet": "go vet ./...",
+    "contract": "npm run test:contract"
+  },
+  "limitations": [
+    "Authorization is checked before a new admission RPC; this does not retract an RPC already in flight.",
+    "The durable attempt marker is established explicitly in a controlled fixture, not through a new actual crash.",
+    "Earlier native protocol evidence remains bound to its original build.",
+    "Fresh hosted checks and corrected parent delivery are separate merge gates.",
+    "Full roadmap and native collaboration acceptance remain open."
+  ]
+}

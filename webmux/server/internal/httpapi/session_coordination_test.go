@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,6 +19,34 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/coordinationclient"
 	"github.com/jordanhubbard/webmux/server/internal/session"
 )
+
+func TestCoordinationDeletedAccountLosesAuthorityWithoutStoppingTerminal(t *testing.T) {
+	s, h, agent, records, access := coordinationAPI(t)
+	const subject = 2 // The non-admin account, with an existing ordinary child.
+	requireStatus(t, request(agent, "GET", "/view", "", access[subject].Capability), 200)
+	requireStatus(t, request(h, "DELETE", "/api/auth/users/other", "", token(t, s, "owner")), 204)
+	requireStatus(t, request(agent, "GET", "/view", "", access[subject].Capability), 401)
+	requireStatus(t, request(agent, "POST", "/act", `{"request_id":"deleted-account-work","action":"work","text":"must not be admitted"}`, access[subject].Capability), 401)
+	if live, err := s.sessions.Get("other", records[subject].ID); err != nil || live.State != "connected" || live.CreatedAt != records[subject].CreatedAt {
+		t.Fatal("account deletion changed the existing terminal lifecycle", err)
+	}
+	if err := s.maintainSessionCoordination(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	node, _ := s.coordinationNode()
+	if _, err := s.sessionCoord.service.Subject(node, access[subject].Capability); err == nil {
+		t.Fatal("maintenance retained a deleted account's ledger authority")
+	}
+	// A retained broker entry may later be restored/reconnected by its lifecycle
+	// owner. That must not renew coordination authority for a removed account.
+	if _, err := s.sessions.Reconnect("other", records[subject].ID, ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.sessionCoord.service.Subject(node, access[subject].Capability); err == nil {
+		t.Fatal("reconnect renewed a deleted account's coordination authority")
+	}
+	requireStatus(t, request(agent, "GET", "/view", "", access[0].Capability), 200)
+}
 
 func coordinationGit(t *testing.T, dir string, args ...string) {
 	t.Helper()

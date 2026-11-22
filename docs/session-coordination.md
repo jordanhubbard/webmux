@@ -149,7 +149,8 @@ committed; revocation cannot retract it. Each direction needs its own grant.
 Before sending delivery bytes, the source commits `uncertain`. After interruption
 or a lost response it queries the exact message receipt first. An authenticated
 `absent` in the same history epoch permits replay of the identical envelope/ID
-only after another live source/project check. A known admitted message that
+only after another live source/project check and a fresh sharing authorization
+check immediately before admission. A known admitted message that
 becomes absent reports `history-lost`; a fresh receiver database reports
 `history-changed`. Neither causes automatic replay. The receiver atomically stores
 accepted/refused outcomes and deduplicates exact envelope retries. Conflicting
@@ -160,8 +161,10 @@ history, not exactly-once execution of external work.
 The message worker requires no browser. It wakes after queuing or every two
 seconds, with four network workers, an eight-second batch budget and five-second
 per-record budget. It polls an active-ID index rather than scanning historical
-completed message text. HTTP envelopes are limited to 16 KiB and receipts to
-32 KiB; message text retains its 8 KiB limit. Long-term retention, large-outbox
+completed message text. Federation message envelopes are limited to 64 KiB to
+allow JSON escaping of valid text and bounded identity fields; receipts are
+limited to 32 KiB. The ordinary agent action API retains its 16 KiB input bound,
+and message text retains its 8 KiB semantic limit. Long-term retention, large-outbox
 pagination/scale and backoff tuning remain open. No network occurs under the
 broker or ledger lock. Shutdown cancels and joins the worker before ledger close.
 
@@ -169,6 +172,8 @@ The [native protocol receipt](validation/coordination-messages-2026-11-21/README
 covers macOS/Linux delivery with a deliberately lost committed reply, exact retry
 and explicit recipient completion using ordinary PTY fixtures. Real coding-agent
 handoffs, cross-node claims/overlap and shared-worker acceptance remain open.
+The [admission follow-up](validation/coordination-message-admission-2026-11-22/README.md)
+covers revocation during status recovery and valid text expanded by JSON encoding.
 
 ## Native agent startup and MCP
 
@@ -290,3 +295,32 @@ shared reservation authority;
 explicit project mappings; platform custody/sandbox acceptance; full native LAN
 discovery and reconnect qualification; and the complete two-real-host workflow.
 No roadmap checkbox is completed by this checkpoint.
+
+## Account removal
+
+Coordination admission follows the current WebMux account policy. Removing a
+local account refuses its old coordination capability without stopping its
+terminal. Background maintenance marks that retained membership inactive for
+coordination, and restoring/reconnecting its broker entry cannot provision access
+under the removed account. In unauthenticated mode, only the `anonymous` owner
+qualifies. The [account-removal regression](validation/coordination-account-revocation-2026-11-22/README.md)
+records the original failure and corrected ordinary-session/race results.
+
+## Explicit native configuration
+
+The native Codex adapter preserves explicit MCP configuration in compact
+`-cKEY=VALUE`, spaced `-c KEY=VALUE` and assigned `-c=KEY=VALUE` forms. An explicit
+transport choice likewise prevents its default compatibility override. The
+[compact-option qualification](validation/coordination-compact-policy-2026-11-22/README.md)
+records the original regressions and isolated native parser evidence. These
+checks preserve user choices; they do not qualify the explicitly selected gRPC
+transport that failed the earlier native bootstrap experiment.
+
+## Peer mapping revocation
+
+Once refresh observes a mapping's removal, its in-flight responses cannot populate
+a re-enabled mapping. Re-enabling the same configuration leaves context pending
+until a fresh fetch succeeds. Refused, disabled and invalid observations also
+retire requests from the previous authorization period. The
+[controlled TLS regression](validation/coordination-peer-mapping-revocation-2026-11-22/README.md)
+records the original failure, recovery check and limits of this qualification.

@@ -18,6 +18,11 @@ import (
 
 const coordinationMessagesPath = "/api/federation/coordination/messages"
 
+// An allowed 8 KiB text can expand sixfold under JSON HTML escaping. This
+// bounded envelope budget includes that expansion and the fixed identity fields;
+// WireMessage validation still enforces the original semantic field limits.
+const coordinationMessageExchangeLimit = 64 << 10
+
 type coordinationMessageExchange struct {
 	Operation string            `json:"operation"`
 	Envelope  plane.WireMessage `json:"envelope"`
@@ -31,7 +36,7 @@ func (s *Server) exchangeCoordinationMessage(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var input coordinationMessageExchange
-	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
+	r.Body = http.MaxBytesReader(w, r.Body, coordinationMessageExchangeLimit)
 	if !decodeJSON(w, r, &input) {
 		return
 	}
@@ -210,6 +215,13 @@ func (s *Server) deliverCoordinationMessage(ctx context.Context, node string, re
 	})
 	if err != nil || !allowed {
 		return err
+	}
+	// Status recovery and repository inspection may have waited while the
+	// operator revoked sharing or changed the peer's credential/endpoint.
+	// A new admission must use current authorization, not that earlier snapshot.
+	peer, token, ok = s.coordinationMessagePeer(record)
+	if !ok {
+		return s.sessionCoord.service.RemoteTransport(node, record.Envelope.ID, "authorization-unavailable", false)
 	}
 	receipt, err := s.fetchCoordinationReceipt(ctx, peer, token, "admit", record.Envelope)
 	if err != nil {

@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jordanhubbard/webmux/server/internal/auth"
 	plane "github.com/jordanhubbard/webmux/server/internal/coordination"
 	"github.com/jordanhubbard/webmux/server/internal/coordinationclient"
 	"github.com/jordanhubbard/webmux/server/internal/discovery"
@@ -59,10 +60,17 @@ func (s *Server) coordinationSnapshots() ([]session.Session, error) {
 	return out, err
 }
 func (s *Server) refreshCoordinationBindings(ctx context.Context, snapshots []session.Session) int {
+	accounts, err := auth.LoadConfig(s.store)
+	if err != nil {
+		return len(snapshots)
+	}
 	seen := map[string]bool{}
 	for i, snapshot := range snapshots {
 		if ctx.Err() != nil {
 			return i
+		}
+		if !federationAccountAllowed(accounts, snapshot.Owner) {
+			continue
 		}
 		directory := coordinationDirectory(snapshot)
 		if directory == "" {
@@ -82,6 +90,7 @@ func (s *Server) refreshCoordinationBindings(ctx context.Context, snapshots []se
 }
 func (s *Server) coordinationInputs(node string, snapshots []session.Session) []plane.MemberInput {
 	inputs := make([]plane.MemberInput, 0, len(snapshots))
+	accounts, accountErr := auth.LoadConfig(s.store)
 	s.sessionCoord.bindingsMu.RLock()
 	defer s.sessionCoord.bindingsMu.RUnlock()
 	for _, snapshot := range snapshots {
@@ -96,7 +105,10 @@ func (s *Server) coordinationInputs(node string, snapshots []session.Session) []
 		if transport == "" {
 			transport = "unavailable"
 		}
-		input := plane.MemberInput{Ref: coordinationRef(node, snapshot), Active: snapshot.CoordinationLive, Transport: transport, ExecutionHost: host}
+		// A retained terminal may outlive its WebMux account. Keep its lifecycle
+		// intact while refusing authority under the removed account's identity.
+		active := snapshot.CoordinationLive && accountErr == nil && federationAccountAllowed(accounts, snapshot.Owner)
+		input := plane.MemberInput{Ref: coordinationRef(node, snapshot), Active: active, Transport: transport, ExecutionHost: host}
 		input.Interface = "execution-host-onboarding-pending"
 		input.ProjectStatus = "execution-host-verification-pending"
 		if coordinationLocal(snapshot) {
@@ -124,7 +136,7 @@ func (s *Server) coordinationNode() (string, error) {
 	return policy.ID, err
 }
 func (s *Server) provisionCoordination(node string, snapshots []session.Session, current session.Session) (*terminal.CoordinationAccess, error) {
-	if !coordinationLocal(current) || s.sessionCoord.endpoint == "" {
+	if !coordinationLocal(current) || s.sessionCoord.endpoint == "" || !s.federationOwnerAllowed(current.Owner) {
 		return nil, nil
 	}
 	inputs := s.coordinationInputs(node, snapshots)
@@ -191,7 +203,7 @@ func (s *Server) EnableSessionCoordination(endpoint string) {
 			}
 			inputs := s.coordinationInputs(node, all)
 			for i := range inputs {
-				if inputs[i].Ref.Session == current.ID {
+				if inputs[i].Ref.Session == current.ID && s.federationOwnerAllowed(current.Owner) {
 					inputs[i].Active = true
 				}
 			}
@@ -376,6 +388,10 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 	ref, err := s.sessionCoord.service.Subject(node, token)
 	if err != nil {
 		s.coordinationError(w, err)
+		return
+	}
+	if !s.federationOwnerAllowed(ref.Owner) {
+		s.coordinationError(w, plane.ErrUnauthorized)
 		return
 	}
 	snapshots, err := s.coordinationSnapshots()

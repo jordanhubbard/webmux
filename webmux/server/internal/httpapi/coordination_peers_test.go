@@ -342,3 +342,73 @@ func TestCoordinationLateSnapshotCannotResurrectRefusedScope(t *testing.T) {
 		t.Fatal("late response resurrected revoked context")
 	}
 }
+
+func TestCoordinationLateSnapshotCannotResurrectRemovedMapping(t *testing.T) {
+	var delayed atomic.Bool
+	admitted, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	defer once.Do(func() { close(release) })
+	p := peerPairHook(t, "owner", func(real http.Handler, w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == coordinationSnapshotPath && delayed.CompareAndSwap(false, true) {
+			captured := httptest.NewRecorder()
+			real.ServeHTTP(captured, r)
+			close(admitted)
+			select {
+			case <-release:
+			case <-r.Context().Done():
+				return
+			}
+			for name, values := range captured.Header() {
+				w.Header()[name] = values
+			}
+			w.WriteHeader(captured.Code)
+			_, _ = w.Write(captured.Body.Bytes())
+			return
+		}
+		real.ServeHTTP(w, r)
+	})
+	p.mapOwner(t, "owner")
+	p.share(t, true)
+	snapshots, err := p.a.coordinationSnapshots()
+	if err != nil {
+		t.Fatal(err)
+	}
+	node, err := p.a.coordinationNode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	inputs := p.a.coordinationInputs(node, snapshots)
+	done := make(chan error, 1)
+	go func() { done <- p.a.refreshCoordinationPeers(context.Background(), inputs) }()
+	select {
+	case <-admitted:
+	case <-time.After(3 * time.Second):
+		t.Fatal("first snapshot was not admitted")
+	}
+	// Revoke while the first response is still in flight, before there is any
+	// cached value to prune. An old request must not populate the new mapping.
+	p.mapOwner(t, "")
+	if err := p.a.refreshCoordinationPeers(context.Background(), inputs); err != nil {
+		t.Fatal(err)
+	}
+	if len(p.view(t, 0).Peers) != 0 {
+		t.Fatal("removed mapping still exposed a peer")
+	}
+	once.Do(func() { close(release) })
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("old fetch did not finish")
+	}
+	p.mapOwner(t, "owner")
+	if got := p.view(t, 0).Peers; len(got) != 1 || got[0].State != "pending" || got[0].Snapshot != nil {
+		t.Fatal("late response populated a reactivated mapping before fresh verification")
+	}
+	p.refresh(t)
+	if got := p.view(t, 0).Peers; len(got) != 1 || got[0].State != "current" || got[0].Snapshot == nil {
+		t.Fatal("fresh verification did not restore the reactivated mapping")
+	}
+}

@@ -28,6 +28,11 @@ func NativeLaunch(cli, version, helper string, args []string) ([]string, string)
 			break
 		}
 		key, value, assigned := strings.Cut(arg, "=")
+		// Codex also accepts -cKEY=VALUE. Inspect that spelling without changing
+		// the owner's argv or mistaking Claude's unrelated -c option for it.
+		if cli == "codex" && strings.HasPrefix(arg, "-c") && arg != "-c" && !strings.HasPrefix(arg, "-c=") {
+			key, value, assigned = "-c", arg[2:], true
+		}
 		switch key {
 		case "--safe-mode", "--bare", "--restricted", "--strict-mcp-config", "--mcp-config", "--remote", "--remote-auth-token-env", "--setting-sources", "--tools", "--agent", "--bg", "--background":
 			return unchanged("mcp-policy-preserved")

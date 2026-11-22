@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -180,6 +181,151 @@ func TestCoordinationRemoteMessagePermissionsAndRevocation(t *testing.T) {
 	p.share(t, false)
 	wire := plane.WireMessage{}
 	requireStatus(t, request(p.bh, "POST", coordinationMessagesPath, directoryJSON(coordinationMessageExchange{"admit", wire}), p.secret), 403)
+}
+
+func TestCoordinationMessageRevocationDuringStatusPreventsAdmission(t *testing.T) {
+	var delayed atomic.Bool
+	var admits atomic.Int64
+	statusReady, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	defer once.Do(func() { close(release) })
+	p := peerPairHook(t, "owner", func(next http.Handler, w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == coordinationMessagesPath {
+			var body coordinationMessageExchange
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Error(err)
+				return
+			}
+			data, _ := json.Marshal(body)
+			r.Body = io.NopCloser(bytes.NewReader(data))
+			if body.Operation == "admit" {
+				admits.Add(1)
+			}
+			if body.Operation == "status" && delayed.CompareAndSwap(false, true) {
+				captured := httptest.NewRecorder()
+				next.ServeHTTP(captured, r)
+				var receipt plane.RemoteReceipt
+				if captured.Code != 200 || json.Unmarshal(captured.Body.Bytes(), &receipt) != nil || receipt.State != "absent" {
+					t.Error("status did not prove authenticated absence")
+				}
+				close(statusReady)
+				select {
+				case <-release:
+				case <-r.Context().Done():
+					return
+				}
+				for name, values := range captured.Header() {
+					w.Header()[name] = values
+				}
+				w.WriteHeader(captured.Code)
+				_, _ = w.Write(captured.Body.Bytes())
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+	// Own dispatch deterministically; the receiver and its real TLS API stay live.
+	p.a.sessionCoord.cancel()
+	<-p.a.sessionCoord.done
+	p.a.sessionCoord.cancel = nil
+	p.messaging(t, true)
+	target := p.remote[0].Subject
+	response := request(p.agent, "POST", "/act", directoryJSON(plane.Request{ID: "revoke-during-status", Action: "message", Target: &target, Kind: "handoff", Text: "Review after permission check"}), p.access[0].Capability)
+	requireStatus(t, response, 200)
+	var result plane.Result
+	if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil || result.Transport != "pending" {
+		t.Fatal("message was not queued", err)
+	}
+	node, _ := p.a.coordinationNode()
+	// Simulate interruption after the durable attempted marker, before sending.
+	if allowed, err := p.a.sessionCoord.service.BeginRemoteAttempt(node, result.Record, mustCoordinationInputs(t, p.a, node)); err != nil || !allowed {
+		t.Fatal("could not retain the uncertainty boundary", err)
+	}
+	records, err := p.a.sessionCoord.service.RemoteRecords(node)
+	if err != nil || len(records) != 1 || !records[0].Attempted {
+		t.Fatal("attempt marker was not durable", err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- p.a.deliverCoordinationMessage(context.Background(), node, records[0]) }()
+	select {
+	case <-statusReady:
+	case <-time.After(3 * time.Second):
+		t.Fatal("status query did not arrive")
+	}
+	setOutgoing := func(enabled bool) {
+		t.Helper()
+		requireStatus(t, request(p.ah, "PUT", "/api/servers/remote", directoryJSON(map[string]any{"name": "Remote", "url": p.tls.URL, "coordination_messages": enabled}), token(t, p.a, "owner")), 204)
+	}
+	setOutgoing(false)
+	once.Do(func() { close(release) })
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("status recovery did not finish")
+	}
+	if admits.Load() != 0 {
+		t.Fatal("a new admission was transmitted after outgoing permission was removed")
+	}
+	coordinationMessageWait(t, p, result.Record, "admitted", "authorization-unavailable")
+	setOutgoing(true)
+	if err := p.a.maintainCoordinationMessages(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	coordinationMessageWait(t, p, result.Record, "admitted", "remote-admitted")
+	if admits.Load() != 1 {
+		t.Fatal("restored permission did not deliver exactly one admission")
+	}
+}
+
+func TestCoordinationRemoteMessagePreservesValidEscapedText(t *testing.T) {
+	p := peerPair(t)
+	p.a.sessionCoord.cancel()
+	<-p.a.sessionCoord.done
+	p.a.sessionCoord.cancel = nil
+	p.messaging(t, true)
+	target, _ := json.Marshal(p.remote[0].Subject)
+	text := strings.Repeat("<", 8192)
+	// Raw JSON is a supported ordinary CLI input. It fits the agent API limit,
+	// but JSON's HTML escaping expands the later wire envelope substantially.
+	body := `{"request_id":"escaped-remote-message","action":"message","kind":"message","target":` + string(target) + `,"text":"` + text + `"}`
+	response := request(p.agent, "POST", "/act", body, p.access[0].Capability)
+	requireStatus(t, response, 200)
+	var result plane.Result
+	if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil || result.Transport != "pending" {
+		t.Fatal("valid raw message was not queued", err)
+	}
+	if err := p.a.maintainCoordinationMessages(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	node, _ := p.a.coordinationNode()
+	records, err := p.a.sessionCoord.service.RemoteRecords(node)
+	if err != nil || len(records) != 1 || !records[0].Admitted {
+		t.Fatal("valid escaped message was not admitted remotely", err)
+	}
+	viewResponse := request(p.b.CoordinationAgentHandler(), "GET", "/view", "", p.remote[0].Capability)
+	requireStatus(t, viewResponse, 200)
+	var view plane.View
+	if err := json.Unmarshal(viewResponse.Body.Bytes(), &view); err != nil {
+		t.Fatal(err)
+	}
+	count := 0
+	for _, message := range view.Inbox {
+		if message.ID == result.Record {
+			count++
+			if message.Text != text {
+				t.Fatal("wire encoding changed the message text")
+			}
+		}
+	}
+	if count != 1 {
+		t.Fatal("expected exactly one complete escaped message in the recipient inbox")
+	}
+	oversized := strings.Replace(body, "escaped-remote-message", "oversized-remote-message", 1)
+	oversized = strings.Replace(oversized, text, text+"<", 1)
+	requireStatus(t, request(p.agent, "POST", "/act", oversized, p.access[0].Capability), 400)
 }
 func mustCoordinationInputs(t *testing.T, s *Server, node string) []plane.MemberInput {
 	t.Helper()

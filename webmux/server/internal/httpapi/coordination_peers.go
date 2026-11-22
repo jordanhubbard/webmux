@@ -23,17 +23,23 @@ const coordinationSnapshotPath = "/api/federation/coordination/snapshot"
 const coordinationPeerAge = 30 * time.Second
 
 type coordinationPeerCache struct {
-	barriers map[string]time.Time // A late response cannot resurrect data after refusal.
-	sizes    map[string]int
-	total    int
-	mu       sync.RWMutex
-	values   map[string]plane.PeerView
-	cursor   int // Fair rotation; protected by mu.
+	scopes map[string]*coordinationPeerScope
+	sizes  map[string]int
+	total  int
+	mu     sync.RWMutex
+	values map[string]plane.PeerView
+	cursor int // Fair rotation; protected by mu.
 }
+
+// Pointer identity distinguishes continuous authorization from a later identical
+// mapping. Keeping the key also makes these tokens nonzero-sized allocations.
+type coordinationPeerScope struct{ key string }
+
 type coordinationPeerJob struct {
 	key, project string
 	peer         serverPeer
 	token        string
+	scope        *coordinationPeerScope
 }
 
 func coordinationPeerKey(peer serverPeer, token, project string) string {
@@ -64,7 +70,7 @@ func (s *Server) coordinationPeerJobs(inputs []plane.MemberInput) ([]coordinatio
 			token := serverCredential(peer.TokenEnv, peer.Credential)
 			key := coordinationPeerKey(peer, token, input.Project.ID)
 			if !seen[key] {
-				jobs = append(jobs, coordinationPeerJob{key, input.Project.ID, peer, token})
+				jobs = append(jobs, coordinationPeerJob{key: key, project: input.Project.ID, peer: peer, token: token})
 				seen[key] = true
 			}
 		}
@@ -187,18 +193,28 @@ func (s *Server) refreshCoordinationPeers(parent context.Context, inputs []plane
 	cache.mu.Lock()
 	if cache.values == nil {
 		cache.values = map[string]plane.PeerView{}
-		cache.barriers = map[string]time.Time{}
+		cache.scopes = map[string]*coordinationPeerScope{}
 		cache.sizes = map[string]int{}
 	}
 	keep := map[string]bool{}
-	for _, job := range jobs {
+	for i, job := range jobs {
 		keep[job.key] = true
+		if cache.scopes[job.key] == nil {
+			cache.scopes[job.key] = &coordinationPeerScope{key: job.key}
+		}
+		jobs[i].scope = cache.scopes[job.key]
+	}
+	// Invalidate requests even when their first response has not populated a
+	// cached value yet. A later reactivation must obtain a fresh observation.
+	for key := range cache.scopes {
+		if !keep[key] {
+			delete(cache.scopes, key)
+		}
 	}
 	for key := range cache.values {
 		if !keep[key] {
 			cache.total -= cache.sizes[key]
 			delete(cache.sizes, key)
-			delete(cache.barriers, key)
 			delete(cache.values, key)
 		}
 	}
@@ -229,19 +245,20 @@ func (s *Server) refreshCoordinationPeers(parent context.Context, inputs []plane
 					return
 				}
 				attempted.Add(1)
-				started := time.Now()
 				requestCtx, stop := context.WithTimeout(ctx, 5*time.Second)
 				snapshot, state := s.fetchCoordinationSnapshot(requestCtx, job)
 				stop()
 				now := time.Now().UTC()
 				observation := plane.PeerView{Server: job.peer.ID, Name: job.peer.Name, Node: job.peer.Identity.NodeID, Owner: job.peer.Identity.Owner, Project: job.project, Mode: "read-only", State: state}
 				cache.mu.Lock()
-				if state == "unauthorized" || state == "disabled" || state == "invalid" {
-					cache.barriers[job.key] = now
-				}
-				if (state == "current" || state == "unavailable") && started.Before(cache.barriers[job.key]) {
+				if cache.scopes[job.scope.key] != job.scope {
 					cache.mu.Unlock()
 					continue
+				}
+				if state == "unauthorized" || state == "disabled" || state == "invalid" {
+					// Every response already in flight belongs to the old scope.
+					// New requests can recover without wall-clock ordering checks.
+					cache.scopes[job.key] = &coordinationPeerScope{key: job.key}
 				}
 				if state == "current" {
 					expires := now.Add(coordinationPeerAge)

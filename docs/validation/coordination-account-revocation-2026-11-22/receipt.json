@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Deleted WebMux account coordination admission and retained ordinary-session behavior; not full native/managed/discovered acceptance",
+  "integration_base": "677c4a886c6b092290add4de7d908fce4e06bfd0",
+  "original_feature_head": "8fd6f01c47c3bf47dee768ff29c934e5140ce40c",
+  "pre_fix_combined_tree": "7b902e77c2ed15bbd330a41fe112211dc87ad65f",
+  "source_sha256": {
+    "webmux/server/internal/httpapi/federation.go": "fe83c00a27f8def812a9db53f7870184cd3b5f78e08babe3cc195d86b587ad94",
+    "webmux/server/internal/httpapi/session_coordination.go": "8d405e9b71267bf46872e7262dac9c7f11c67703c2d11edd288e65e4f6a29d55",
+    "webmux/server/internal/httpapi/session_coordination_test.go": "93ba8df49246231168be243e4a800a44b26f925a931ef19c04e33b73d5f1d363"
+  },
+  "regression": "TestCoordinationDeletedAccountLosesAuthorityWithoutStoppingTerminal",
+  "evidence": [
+    {
+      "private_path": "_build/integrate-coordination630/deleted-account-before.log",
+      "exit_code": 1,
+      "sha256": "b52387e584444292cdc16e6a2cbe95c0cb1e2fbd0178fc2d5575afda7ebba9b4",
+      "source_scope": "new regression on original product source; expected 401 received 200"
+    },
+    {
+      "private_path": "_build/integrate-coordination630/deleted-account-after.log",
+      "exit_code": 0,
+      "sha256": "45cd2e3e09f9ac1f12e7d90aebc550c69d04ab8801c83cd1bb92ce780a25a28c",
+      "source_scope": "fixed source"
+    },
+    {
+      "private_path": "_build/integrate-coordination630/go-test-fixed.log",
+      "exit_code": 0,
+      "sha256": "b72859f48cfb1244d9aae4bdc4d092ac64b843f80d560c06c90ff2e0106f4d24",
+      "source_scope": "fixed source"
+    },
+    {
+      "private_path": "_build/integrate-coordination630/api-race-fixed.log",
+      "exit_code": 0,
+      "sha256": "c7439ad703c7a67f6e81511a2385f5df6ff74dc0d55efe3091adb13fa4e02bd7",
+      "source_scope": "fixed source"
+    },
+    {
+      "private_path": "_build/integrate-coordination630/server-contract-fixed.log",
+      "exit_code": 0,
+      "sha256": "fe2aa2589a5d010b45c5097fd5dc7c94305a612c5d7a3300b5a35d6a91209f8a",
+      "source_scope": "fixed source"
+    },
+    {
+      "private_path": "_build/integrate-coordination630/vet-fixed.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "fixed source"
+    },
+    {
+      "private_path": "_build/integrate-coordination630/core-race.log",
+      "exit_code": 0,
+      "sha256": "124fc415979b28e1533a5a68a2b45693acbfdb96765b50f1cebb3af183a4bbc3",
+      "source_scope": "combined main/PR source before the account fix; affected source unchanged by fix"
+    },
+    {
+      "private_path": "_build/integrate-coordination630/typecheck.log",
+      "exit_code": 0,
+      "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+      "source_scope": "combined main/PR source before the account fix; affected source unchanged by fix"
+    }
+  ],
+  "limitations": [
+    "Ordinary PTY fixtures, not real native coding-agent account-removal acceptance",
+    "Managed/execution-host/cross-node authorization and complete discovered workflow remain separate gates",
+    "Hosted checks must be rerun on the corrected feature head before merging #635"
+  ]
+}
