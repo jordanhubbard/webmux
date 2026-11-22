@@ -96,7 +96,10 @@ The [private SSH channel checkpoint](validation/coordination-ssh-channel-2026-11
 adds automatic scoped startup through an authenticated private socket forward.
 Native ordinary SSH shell/CLI startup, first-use trust, same-provider reconnect,
 refused forwarding and owned-master shutdown pass between macOS and Linux.
-Coding-agent adoption, managed/password/Mosh/Windows paths and the complete
+The [native SSH agent checkpoint](validation/coordination-ssh-agent-2026-11-22/README.md)
+adds independently audited real Claude view/work calls through the ordinary SSH
+alias under an explicit two-tool native approval profile. Broader coding-agent
+adoption, managed/password/Mosh/Windows paths and the complete
 restart/durable-work lifecycle remain open under #630; this does not complete a
 roadmap checkbox.
 

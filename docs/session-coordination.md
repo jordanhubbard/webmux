@@ -139,11 +139,17 @@ restarted. The [corrected-stack qualification](validation/coordination-ssh-chann
 repeats those cases and proves public account deletion refuses the retained SSH
 CLI's reads and actions while preserving its original pane and terminal lifecycle.
 
+The [native SSH agent qualification](validation/coordination-ssh-agent-2026-11-22/README.md)
+also passes two real Claude Code 2.1.319 runs through the ordinary alias. An
+independent audit checks actual scoped view/work results and the matching source
+ledger. This uses an explicit two-tool native approval profile; other permission
+policies and native agent reconnect/restart remain unqualified.
+
 This requires compatible helpers at both ends, supported SSH multiplexing/
 stream-local forwarding, and a private POSIX socket path of at most 100 bytes.
 Older/refusing helpers leave normal SSH available. Password-authenticated startup,
 native Mosh/Windows, unexpected tunnel-loss repair, existing agents that lack an
-MCP channel, actual coding-agent adoption and complete controller-restart/claim/
+MCP channel, broader coding-agent adoption and complete controller-restart/claim/
 message/reservation continuity remain acceptance work under #630. Existing cache
 artifacts may remain after a run; session capabilities still require a live,
 authorized broker subject. Native per-run socket-cache retention/cleanup policy

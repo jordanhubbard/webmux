@@ -2,6 +2,8 @@ package httpapi
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,12 +23,18 @@ import (
 
 // Real SSH, provider bootstrap and scoped client calls. The fixture changes only
 // helper resolution and tmux namespace; no installed helper/configuration or
-// existing provider is changed. This is not native coding-agent acceptance.
+// existing provider is changed. Optional native Claude mode requires a separate
+// transcript audit; shell-only mode is not coding-agent adoption evidence.
 func TestCoordinationSSHNativeBootstrap(t *testing.T) {
 	if os.Getenv("WEBMUX_TEST_SSH_COORDINATION") != "1" {
 		t.Skip("opt-in native SSH execution-host fixture")
 	}
 	host, user, root, helper, dir := os.Getenv("WEBMUX_SSH_COORD_HOST"), os.Getenv("WEBMUX_SSH_COORD_USER"), os.Getenv("WEBMUX_SSH_COORD_ROOT"), os.Getenv("WEBMUX_SSH_COORD_HELPER"), os.Getenv("WEBMUX_SSH_COORD_DIR")
+	native := os.Getenv("WEBMUX_SSH_COORD_NATIVE_CLAUDE") == "1"
+	revocation := os.Getenv("WEBMUX_SSH_COORD_REVOKE_ACCOUNT") == "1"
+	if native && (os.Getenv("WEBMUX_SSH_COORD_REFUSE") == "1" || os.Getenv("WEBMUX_SSH_COORD_RECONNECT") == "1" || revocation) {
+		t.Fatal("qualify native adoption separately from shell refusal/reconnect/account controls")
+	}
 	if host == "" || user == "" || !filepath.IsAbs(root) || !filepath.IsAbs(helper) || !filepath.IsAbs(dir) {
 		t.Fatal("explicit SSH fixture identity and absolute owned paths required")
 	}
@@ -62,13 +70,14 @@ env={k:v for k,v in os.environ.items() if not k.upper().startswith('GIT_')};env.
 def git(*args):subprocess.run(['git','-c','core.hooksPath=/dev/null','-C',str(repo),*args],env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
 git('init');git('-c','user.name=Fixture','-c','user.email=fixture@example.test','commit','--allow-empty','-m','SSH coordination fixture');git('remote','add','origin','https://example.test/team/native-ssh-channel.git')
 values={'HOME':str(root/'home'),'SHELL':'/bin/bash','WEBMUX_RECOVERY_CACHE_HOME':str(root/'cache'),'WEBMUX_COORDINATION_CACHE_HOME':socket_cache,'PATH':str(root/'bin')+':'+os.environ['PATH']}
+if i.get('native'):values['CLAUDE_CONFIG_DIR']=os.environ.get('CLAUDE_CONFIG_DIR',str(pathlib.Path.home()/'.claude'))
 prefix='env '+' '.join(shlex.quote(k+'='+v) for k,v in values.items())+' '+shlex.quote(i['helper'])
 print(json.dumps({'prefix':prefix,'tmux':tmux,'name':name,'socket_cache':socket_cache,'project':str(repo)}))`
 	var remote struct {
 		Prefix, Tmux, Name, Project string
 		SocketCache                 string `json:"socket_cache"`
 	}
-	if err := json.Unmarshal(runSSH("python3 -c "+quote(setup), map[string]string{"root": root, "helper": helper}), &remote); err != nil {
+	if err := json.Unmarshal(runSSH("python3 -c "+quote(setup), map[string]any{"root": root, "helper": helper, "native": native}), &remote); err != nil {
 		t.Fatal(err)
 	}
 	cleanup := func() {
@@ -101,7 +110,6 @@ print(json.dumps({'prefix':prefix,'tmux':tmux,'name':name,'socket_cache':socket_
 	if err := s.store.WriteConfig("app.yaml", map[string]any{"app": map[string]any{"session_logging": map[string]any{"enabled": false}}}); err != nil {
 		t.Fatal(err)
 	}
-	revocation := os.Getenv("WEBMUX_SSH_COORD_REVOKE_ACCOUNT") == "1"
 	owner := "owner"
 	var refusedReads, refusedActions atomic.Int64
 	handler := s.CoordinationAgentHandler()
@@ -150,6 +158,24 @@ print(json.dumps({'prefix':prefix,'tmux':tmux,'name':name,'socket_cache':socket_
 		t.Fatalf("normal SSH bootstrap did not configure its private channel: %s", text)
 	}
 	command := "cd " + quote(remote.Project) + " && \"$WEBMUX_COORDINATION_CLI\" coordinate view && printf '%s\\n' " + quote(`{"request_id":"native-ssh-work-1","action":"work","text":"native SSH channel qualification"}`) + " | \"$WEBMUX_COORDINATION_CLI\" coordinate act && printf '\\nSSH_COORDINATION_ACTION_DONE\\n'\r"
+	var nativeTools []string
+	if native {
+		node, e := s.coordinationNode()
+		if e != nil {
+			t.Fatal(e)
+		}
+		ref := coordinationRef(node, created)
+		sum := sha256.Sum256([]byte(ref.Key()))
+		prefix := "mcp__webmux_" + hex.EncodeToString(sum[:6]) + "__webmux_coordination_"
+		nativeTools = []string{prefix + "view", prefix + "act"}
+		prompt := "Inspect the current project context and available collaboration interface before work. Register your current task with text exactly: native SSH channel qualification. Do not read or edit files, run shell commands, delegate, or launch another agent. Report only what the available interface confirms and then stop."
+		args := []string{"claude", "--print", "--output-format", "stream-json", "--verbose", "--max-turns", "12", "--allowedTools", nativeTools[0], nativeTools[1], "--", prompt}
+		words := make([]string, len(args))
+		for i, arg := range args {
+			words[i] = quote(arg)
+		}
+		command = "cd " + quote(remote.Project) + " && " + strings.Join(words, " ") + " > " + quote(root+"/native.jsonl") + " 2> " + quote(root+"/native.stderr") + "; printf '%s' \"$?\" > " + quote(root+"/native.exit") + "\r"
+	}
 	if refused {
 		command = "if \"$WEBMUX_COORDINATION_CLI\" coordinate view >/dev/null 2>&1; then printf unexpected; else printf unavailable; fi > " + quote(root+"/shell-result") + "\r"
 	}
@@ -157,6 +183,9 @@ print(json.dumps({'prefix':prefix,'tmux':tmux,'name':name,'socket_cache':socket_
 		t.Fatal(err)
 	}
 	deadline = time.Now().Add(25 * time.Second)
+	if native {
+		deadline = time.Now().Add(120 * time.Second)
+	}
 	var view plane.View
 	passed := false
 	if refused {
@@ -186,6 +215,30 @@ assert p.read_text()=='unavailable'`
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
+	}
+	if native {
+		code := `import json,pathlib,time;p=pathlib.Path(` + fmt.Sprintf("%q", root) + `);deadline=time.monotonic()+10
+while not (p/'native.exit').exists() and time.monotonic()<deadline:time.sleep(.05)
+print(json.dumps({key:(p/name).read_text() if (p/name).exists() else '' for key,name in [('exit','native.exit'),('stdout','native.jsonl'),('stderr','native.stderr')]}))`
+		var result struct{ Exit, Stdout, Stderr string }
+		if err := json.Unmarshal(runSSH("python3 -c "+quote(code), nil), &result); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "native.jsonl"), []byte(result.Stdout), 0600); err != nil {
+			t.Fatal(err)
+		}
+		_ = os.WriteFile(filepath.Join(dir, "native.stderr"), []byte(result.Stderr), 0600)
+		if result.Exit != "0" || strings.Contains(result.Stdout, "wmc1.") {
+			t.Fatal("native CLI failed or exposed a capability; private transcript retained")
+		}
+		node, _ := s.coordinationNode()
+		data, _ := json.MarshalIndent(map[string]any{"subject": coordinationRef(node, created), "tools": nativeTools, "task": "native SSH channel qualification"}, "", "  ")
+		if err := os.WriteFile(filepath.Join(dir, "expected.json"), data, 0600); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if !passed {
 		text, _ := s.sessions.Scrollback(owner, created.ID)
@@ -338,6 +391,10 @@ assert p.read_text()=='view-refusedact-refused'`
 	if refused {
 		t.Log("forward refusal preserved a usable ordinary SSH shell, no scoped interface, pending onboarding and private master cleanup")
 	} else {
-		t.Log("real SSH startup provisioned a private authenticated channel before provider start; remote ordinary CLI read its view and updated its verified execution-host project membership; private master exits on close; no native coding-agent or restart acceptance")
+		if native {
+			t.Log("real remote Claude launched through the ordinary shell alias and updated its verified SSH member; audit the retained native transcript before accepting MCP adoption")
+		} else {
+			t.Log("real SSH startup provisioned a private authenticated channel before provider start; remote ordinary CLI read its view and updated its verified execution-host project membership; private master exits on close; no native coding-agent or restart acceptance")
+		}
 	}
 }
