@@ -98,6 +98,7 @@ type entry struct {
 // not hold it. A run pointer is a generation token: old output and exit events
 // can never mutate a reconnected or deleted session.
 type Broker struct {
+	provisionMu        sync.Mutex
 	coordinationLaunch func([]Session, Session) (*terminal.CoordinationAccess, error)
 	localOwners        bool
 	localOwnerScope    string
@@ -468,27 +469,48 @@ func (b *Broker) startWithTranscriptLocked(e *entry, password, initial string, t
 		e.value.LocalOwner = nil
 	}
 	request := e.value.launchRequest()
-	if b.coordinationLaunch != nil {
-		access, err := b.coordinationLaunch(b.coordinationSnapshotLocked(), e.value.clone())
-		if err != nil {
-			b.logger.Warn("session coordination interface unavailable", "session_id", e.value.ID, "error", err)
-		} else {
-			request.Coordination = access
-		}
-	}
-	// Native provider startup must not hold the global broker lock.
+	coordinationLaunch := b.coordinationLaunch
+	launch := b.launch
+	// Both coordination provisioning and native provider startup can perform
+	// blocking I/O. Reserve this generation before releasing the broker lock.
 	generation := e.generation
 	done := make(chan struct{})
 	e.launchDone = done
 	b.workers.Add(1) // Shutdown also waits for unpublished launches.
-	b.mu.Unlock()
-	p, err := b.launch(request, password)
-	b.mu.Lock()
 	defer func() {
 		e.launchDone = nil
 		close(done)
 		b.workers.Done()
 	}()
+	b.mu.Unlock()
+	var access *terminal.CoordinationAccess
+	var provisionErr error
+	if coordinationLaunch != nil {
+		access, provisionErr = b.provisionCoordinationLaunch(e, generation, coordinationLaunch)
+	}
+	b.mu.Lock()
+	// Deletion/shutdown during provisioning must not start a late provider.
+	if b.closed {
+		return ErrClosed
+	}
+	if b.entries[e.value.ID] != e || e.generation != generation {
+		return ErrRecoveryConflict
+	}
+	if e.value.Agent() {
+		if _, denied := b.agents.Access(e.value.AgentID); denied != nil {
+			e.value.State = "error"
+			e.value.UpdatedAt = now()
+			return denied
+		}
+	}
+	if provisionErr != nil {
+		b.logger.Warn("session coordination interface unavailable", "session_id", e.value.ID, "error", provisionErr)
+	} else {
+		request.Coordination = access
+	}
+	b.mu.Unlock()
+	p, err := launch(request, password)
+	b.mu.Lock()
 	if b.closed || b.entries[e.value.ID] != e || e.generation != generation {
 		// A late provider cannot resurrect a deleted or closed session.
 		b.mu.Unlock()

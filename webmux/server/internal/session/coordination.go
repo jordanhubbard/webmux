@@ -6,7 +6,30 @@ import (
 
 	"github.com/jordanhubbard/webmux/server/internal/coordination"
 	"github.com/jordanhubbard/webmux/server/internal/recovery"
+	"github.com/jordanhubbard/webmux/server/internal/terminal"
 )
+
+// Provisioning may sync a ledger and fsync access files. Serialize its snapshots
+// separately so it never blocks reads of an already running terminal. Take a
+// fresh snapshot after acquiring this lock, not before waiting behind another
+// provisioner: otherwise an older inventory could withdraw a newer interface.
+// The caller holds no broker lock and revalidates the generation before launch.
+func (b *Broker) provisionCoordinationLaunch(e *entry, generation uint64, provision func([]Session, Session) (*terminal.CoordinationAccess, error)) (*terminal.CoordinationAccess, error) {
+	b.provisionMu.Lock()
+	defer b.provisionMu.Unlock()
+	b.mu.Lock()
+	if b.closed {
+		b.mu.Unlock()
+		return nil, ErrClosed
+	}
+	if b.entries[e.value.ID] != e || e.generation != generation {
+		b.mu.Unlock()
+		return nil, ErrRecoveryConflict
+	}
+	all, current := b.coordinationSnapshotLocked(), e.value.clone()
+	b.mu.Unlock()
+	return provision(all, current)
+}
 
 // InspectCoordinationRepository binds a fixed, read-only SSH/mosh RPC to the
 // broker's current live session and authenticated directory observation. Network
