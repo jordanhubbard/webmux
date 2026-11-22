@@ -44,6 +44,13 @@ type RigIdentity struct {
 // recording. It is never persisted as recovery history or returned in session JSON.
 type CoordinationObservation struct{ Directory, CLI, Version, Interface string }
 
+// CoordinationRemote identifies ordinary sessions whose repository must be
+// inspected through their authenticated execution-host channel. Provider-owned
+// viewers must not inherit the authority of the local attachment process.
+func (s Session) CoordinationRemote() bool {
+	return (s.Transport == "ssh" || s.Transport == "mosh") && s.Rig == nil && !s.Agent() && s.Companion == "" && s.OpenRigView == ""
+}
+
 type Session struct {
 	CoordinationActivity *CoordinationObservation   `json:"-" yaml:"-"`
 	CoordinationLive     bool                       `json:"-" yaml:"-"` // Broker-observed viewer/run state, never restored as authority.

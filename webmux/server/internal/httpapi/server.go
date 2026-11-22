@@ -107,7 +107,7 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{sessionCoord: sessionCoordination{service: coordination.New(store.Home), bindings: map[string]*coordination.Binding{}}, usbLeases: usbforward.LeaseManager{Store: store}, restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil), clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
+	return &Server{sessionCoord: sessionCoordination{service: coordination.New(store.Home), bindings: map[string]coordinationProjectObservation{}}, usbLeases: usbforward.LeaseManager{Store: store}, restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil), clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
 }
 
 func (s *Server) RestoreSessions() error {

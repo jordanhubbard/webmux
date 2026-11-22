@@ -4,9 +4,10 @@ The server now owns a durable, enabled-by-default coordination ledger under
 [#630](https://github.com/jordanhubbard/webmux/issues/630). This checkpoint exposes
 a scoped local CLI to ordinary local/exec sessions, attaches native MCP guidance
 through qualified ordinary CLI aliases, and records all broker session identities.
-Its action scope is `node-local`, with explicitly authorized read-only peer
-summaries. Managed/SSH execution-host onboarding, cross-node mutations and full
-real-agent acceptance remain open in the
+It supports local actions plus separately authorized cross-node context,
+messages, advisory conflicts and shared reservations. SSH/mosh project context
+can now be verified on its execution host; remote agent access, managed-provider
+onboarding and complete real-agent acceptance remain open in the
 [roadmap](roadmap.md).
 
 ## Ordinary session interface
@@ -63,6 +64,43 @@ to 120 seconds, with a 15–900 second range. Claims do not lock files. Reservat
 do not run or stop jobs: participating workers must honor expiry and fencing.
 There is one resource, `node:<node_id>:heavy`, shared across accounts on this
 node; another account/project sees occupancy but not the holder's identity.
+
+## SSH and mosh repository context
+
+Ordinary SSH/mosh sessions now resolve an authenticated live directory on the
+execution host through a fixed `coordination-project` recovery RPC. The request
+uses the existing session authentication over SSH stdin; it carries no shell
+command and does not expose an agent-facing path selector. The receiving helper
+runs the same bounded, read-only Git verification as local sessions. A matching
+directory on the controller cannot establish remote repository identity.
+
+The broker checks the live run, owner/incarnation, transport, SSH destination,
+account, port, key selection and directory observation before and after the RPC.
+Network/Git work occurs outside its lock. The existing four-second rotating
+maintenance budget includes each remote query's two-second limit. A failed
+refresh clears that observation; an unrefreshed remote observation expires after
+25 seconds. Cache entries are scoped to the session, owner and destination and
+discarded against the complete broker inventory, so one account's partial refresh
+does not evict another account's context. Global disable prevents new refresh
+rounds and clears cached verification; requests already in flight retain their
+original bounds. No project binding is restored as
+current authority after controller restart. Observed path syntax follows the
+execution host, including Windows and Unix paths, rather than the controller OS.
+
+This read-only query works with transcript recording disabled and does not add
+remote directory/command history to the execution-host recovery cache. It needs
+a helper supporting the new operation. Older or unavailable helpers remain
+`execution-host-verification-unavailable`; missing live directory observations
+remain `working-directory-unobserved`. Provider-owned attachment viewers remain
+excluded from this ordinary-session path.
+
+This supplies verified project context, not a remote capability channel. SSH/
+mosh members still report `execution-host-onboarding-pending` and receive no
+local-only capability file. The [native SSH component result](validation/coordination-ssh-project-2026-11-22/README.md)
+proves production RPC authentication, repository identity and a branch change
+between macOS and Linux. Remote MCP transport/guidance, full broker/provider
+onboarding, Windows native acceptance and managed/native agent qualification
+remain required under #630.
 
 ## Authorized peer discovery
 
@@ -174,6 +212,9 @@ and explicit recipient completion using ordinary PTY fixtures. Real coding-agent
 handoffs, real-agent overlap negotiation and shared-worker acceptance remain open.
 The [admission follow-up](validation/coordination-message-admission-2026-11-22/README.md)
 covers revocation during status recovery and valid text expanded by JSON encoding.
+Global policy withdrawal also clears retained peer observations and invalidates
+preparing, queued and in-flight fetch authorization. Re-enabling requires a fresh
+peer observation; a delayed pre-disable response cannot restore current context.
 
 ## Cross-node claim checks and overlap notices
 

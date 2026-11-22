@@ -32,7 +32,12 @@ type sessionCoordination struct {
 	done           chan struct{}
 	endpoint       string
 	bindingsMu     sync.RWMutex
-	bindings       map[string]*plane.Binding
+	bindings       map[string]coordinationProjectObservation
+}
+
+type coordinationProjectObservation struct {
+	project *plane.Binding
+	expires time.Time // Remote verification cannot survive an unavailable host indefinitely.
 }
 
 func coordinationRef(node string, s session.Session) plane.Ref {
@@ -43,25 +48,63 @@ func coordinationLocal(s session.Session) bool {
 	return (s.Transport == "local" || s.Transport == "exec") && s.Rig == nil && !s.Agent() && s.Companion == "" && s.OpenRigView == ""
 }
 func coordinationDirectory(s session.Session) string {
-	if !coordinationLocal(s) {
+	if !coordinationLocal(s) && !s.CoordinationRemote() {
 		return ""
 	}
 	if s.CoordinationActivity != nil && s.CoordinationActivity.Directory != "" {
 		return s.CoordinationActivity.Directory
 	}
+	if s.CoordinationRemote() {
+		return ""
+	}
 	return s.ExecCwd
 }
 func coordinationBindingKey(s session.Session) string {
-	return s.Transport + "\x00" + s.Hostname + "\x00" + coordinationDirectory(s)
+	key := s.Transport + "\x00" + s.Hostname + "\x00" + coordinationDirectory(s)
+	if s.CoordinationRemote() {
+		// The same hostname/path may refer to different accounts, ports, SSH
+		// key selections and runs. Never share a remote verification by path.
+		key += "\x00" + s.Owner + "\x00" + s.ID + "\x00" + s.CreatedAt + "\x00" + s.Username + "\x00" + strconv.Itoa(s.Port) + "\x00" + s.KeyID
+	}
+	return key
 }
 func (s *Server) coordinationSnapshots() ([]session.Session, error) {
 	var out []session.Session
 	err := s.sessions.WithCoordinationSnapshot(func(all []session.Session) error { out = all; return nil })
 	return out, err
 }
+
+// Pruning requires the complete broker inventory. Owner/agent refreshes below
+// intentionally inspect subsets and must not evict another owner's context.
+func (s *Server) pruneCoordinationBindings(snapshots []session.Session) {
+	current := make(map[string]bool, len(snapshots))
+	for _, snapshot := range snapshots {
+		if coordinationDirectory(snapshot) != "" {
+			current[coordinationBindingKey(snapshot)] = true
+		}
+	}
+	s.sessionCoord.bindingsMu.Lock()
+	for key := range s.sessionCoord.bindings {
+		if !current[key] {
+			delete(s.sessionCoord.bindings, key)
+		}
+	}
+	s.sessionCoord.bindingsMu.Unlock()
+}
 func (s *Server) refreshCoordinationBindings(ctx context.Context, snapshots []session.Session) int {
 	accounts, err := auth.LoadConfig(s.store)
 	if err != nil {
+		return len(snapshots)
+	}
+	node, err := s.coordinationNode()
+	if err != nil {
+		return 0
+	}
+	enabled, err := s.sessionCoord.service.Enabled(node)
+	if err != nil || !enabled {
+		s.sessionCoord.bindingsMu.Lock()
+		clear(s.sessionCoord.bindings)
+		s.sessionCoord.bindingsMu.Unlock()
 		return len(snapshots)
 	}
 	seen := map[string]bool{}
@@ -81,9 +124,20 @@ func (s *Server) refreshCoordinationBindings(ctx context.Context, snapshots []se
 			continue
 		}
 		seen[key] = true
-		binding, _ := plane.InspectRepository(ctx, directory)
+		var binding *plane.Binding
+		if snapshot.CoordinationRemote() {
+			probe, cancel := context.WithTimeout(ctx, 2*time.Second)
+			binding, _ = s.sessions.InspectCoordinationRepository(probe, snapshot)
+			cancel()
+		} else {
+			binding, _ = plane.InspectRepository(ctx, directory)
+		}
 		s.sessionCoord.bindingsMu.Lock()
-		s.sessionCoord.bindings[key] = binding
+		expires := time.Time{}
+		if snapshot.CoordinationRemote() {
+			expires = time.Now().Add(25 * time.Second)
+		}
+		s.sessionCoord.bindings[key] = coordinationProjectObservation{project: binding, expires: expires}
 		s.sessionCoord.bindingsMu.Unlock()
 	}
 	return len(snapshots)
@@ -111,7 +165,7 @@ func (s *Server) coordinationInputs(node string, snapshots []session.Session) []
 		input := plane.MemberInput{Ref: coordinationRef(node, snapshot), Active: active, Transport: transport, ExecutionHost: host}
 		input.Interface = "execution-host-onboarding-pending"
 		input.ProjectStatus = "execution-host-verification-pending"
-		if coordinationLocal(snapshot) {
+		if coordinationLocal(snapshot) || snapshot.CoordinationRemote() {
 			input.Interface = "local-cli+mcp; native-alias-bootstrap-available"
 			if snapshot.CoordinationActivity != nil && snapshot.CoordinationActivity.Interface != "" {
 				input.Interface = "local-cli; " + snapshot.CoordinationActivity.Interface
@@ -119,8 +173,18 @@ func (s *Server) coordinationInputs(node string, snapshots []session.Session) []
 			if s.sessionCoord.endpoint == "" {
 				input.Interface = "local-interface-unavailable"
 			}
-			input.Project = s.sessionCoord.bindings[coordinationBindingKey(snapshot)]
+			if snapshot.CoordinationRemote() {
+				input.Interface = "execution-host-onboarding-pending"
+			}
+			observation := s.sessionCoord.bindings[coordinationBindingKey(snapshot)]
+			input.Project = observation.project
+			if snapshot.CoordinationRemote() && !time.Now().Before(observation.expires) {
+				input.Project = nil
+			}
 			input.ProjectStatus = "repository-unverified"
+			if snapshot.CoordinationRemote() {
+				input.ProjectStatus = "execution-host-verification-unavailable"
+			}
 			if coordinationDirectory(snapshot) == "" {
 				input.ProjectStatus = "working-directory-unobserved"
 			} else if input.Project != nil {
@@ -160,7 +224,7 @@ func (s *Server) provisionCoordination(node string, snapshots []session.Session,
 		return nil, err
 	}
 	access := coordinationclient.Access{Contract: plane.Contract, Endpoint: s.sessionCoord.endpoint, Capability: token, Subject: ref, Instructions: []string{
-		"This interface supports local actions and explicitly authorized remote project summaries. Remote summaries are read-only; remote messages, claims and reservations remain pending. Qualified native aliases attach MCP guidance; other launch paths require separate acceptance.",
+		"This interface supports local actions and explicitly authorized remote project context, messages, overlap notices and heavy-worker reservations. Respect each peer's permissions and report incomplete or unavailable context. Qualified native aliases attach MCP guidance; other launch paths require separate acceptance.",
 		"Use the WebMux coordinate view command to discover verified project peers and read the coordination inbox.",
 		"Use coordinate act with a JSON request on stdin. Preserve request_id across uncertain retries; use a fresh ID for new work.",
 		"Claim file, directory, branch or task ownership before overlapping work. Claims are advisory and do not prevent edits.",
@@ -255,6 +319,26 @@ func (s *Server) maintainSessionCoordination(parent context.Context) error {
 	if err != nil {
 		return err
 	}
+	node, err := s.coordinationNode()
+	if err != nil {
+		return err
+	}
+	enabled, err := s.sessionCoord.service.Enabled(node)
+	if err != nil {
+		return err
+	}
+	if !enabled {
+		s.sessionCoord.peers.withdraw()
+		// Global disable also stops execution-host Git queries. Keep live
+		// membership/revocation current without retaining verified context.
+		s.sessionCoord.bindingsMu.Lock()
+		clear(s.sessionCoord.bindings)
+		s.sessionCoord.bindingsMu.Unlock()
+		return s.sessions.WithCoordinationSnapshot(func(all []session.Session) error {
+			return s.sessionCoord.service.Sync(node, s.coordinationInputs(node, all))
+		})
+	}
+	s.pruneCoordinationBindings(snapshots)
 	ctx, cancel := context.WithTimeout(parent, 4*time.Second)
 	if len(snapshots) > 0 {
 		offset := s.sessionCoord.bindingCursor % len(snapshots)
@@ -264,11 +348,7 @@ func (s *Server) maintainSessionCoordination(parent context.Context) error {
 		s.sessionCoord.bindingCursor = (offset + max(1, processed)) % len(snapshots)
 	}
 	cancel()
-	node, err := s.coordinationNode()
-	if err != nil {
-		return err
-	}
-	enabled := false
+	enabled = false
 	err = s.sessions.WithCoordinationSnapshot(func(all []session.Session) error {
 		if err := s.sessionCoord.service.Sync(node, s.coordinationInputs(node, all)); err != nil {
 			return err
@@ -380,6 +460,9 @@ func (s *Server) setSessionCoordinationPolicy(w http.ResponseWriter, r *http.Req
 	node, err := s.coordinationNode()
 	if err == nil {
 		err = s.sessionCoord.service.SetEnabled(node, *input.Enabled)
+		if err == nil && !*input.Enabled {
+			s.sessionCoord.peers.withdraw()
+		}
 	}
 	if err != nil {
 		s.coordinationError(w, err)

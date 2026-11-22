@@ -162,7 +162,7 @@ func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {
 	}
 	// Keep only live directory/interface routing independently of recording.
 	// Command text, argv and conversation identifiers remain behind the log gate.
-	if (event.Kind == "shell" || event.Kind == "command" || event.Kind == "cli") && filepath.IsAbs(event.Cwd) {
+	if (event.Kind == "shell" || event.Kind == "command" || event.Kind == "cli") && coordinationObservedDirectory(event) {
 		observation := &CoordinationObservation{Directory: event.Cwd}
 		if event.Kind == "cli" {
 			observation.CLI, observation.Version, observation.Interface = event.CLI, event.Version, event.Coordination
@@ -290,6 +290,29 @@ func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {
 		b.logger.Warn("save recovery activity", "session_id", e.value.ID, "error", err)
 	}
 	b.broadcastLocked(e, Event{"type": "recovery_status", "session_id": e.value.ID, "recovery": state.Clone()})
+}
+
+// Recognition follows the observed execution host, not the controller OS. The
+// selected host's InspectRepository subsequently validates/resolves the path.
+func coordinationObservedDirectory(event recovery.Event) bool {
+	switch event.Platform {
+	case "linux", "darwin", "freebsd":
+		return strings.HasPrefix(event.Cwd, "/")
+	case "windows":
+		value := strings.ReplaceAll(event.Cwd, "\\", "/")
+		if len(value) >= 3 && ((value[0] >= 'A' && value[0] <= 'Z') || (value[0] >= 'a' && value[0] <= 'z')) && value[1:3] == ":/" {
+			return true
+		}
+		if strings.HasPrefix(value, "//") {
+			parts := strings.Split(strings.TrimPrefix(value, "//"), "/")
+			return len(parts) >= 2 && parts[0] != "" && parts[1] != "" && parts[0] != "." && parts[0] != ".." && parts[1] != "." && parts[1] != ".."
+		}
+		return false
+	case "":
+		return filepath.IsAbs(event.Cwd) // Legacy native observations.
+	default:
+		return false
+	}
 }
 
 func (b *Broker) restoreRecoveryHistoryLocked(e *entry, r *run) {

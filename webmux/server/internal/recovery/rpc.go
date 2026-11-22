@@ -8,6 +8,8 @@ import (
 	"io"
 	"net"
 	"time"
+
+	"github.com/jordanhubbard/webmux/server/internal/coordination"
 )
 
 const maxRPCBytes = 256 << 10
@@ -16,15 +18,16 @@ const recoveryWorkerTimeout = 25 * time.Second
 // RPCRequest travels through a local pipe or authenticated SSH stdin. Keys must
 // never appear in a URL, command-line argument, terminal input or transcript.
 type RPCRequest struct {
-	BrowserControl bool            `json:"browser_control,omitempty"`
-	BrowserAck     string          `json:"browser_ack,omitempty"`
-	Protocol       int             `json:"protocol"`
-	SessionID      string          `json:"session_id"`
-	Key            string          `json:"key"`
-	Operation      string          `json:"operation"`
-	Recording      *bool           `json:"recording,omitempty"`
-	Action         *RecoveryAction `json:"action,omitempty"`
-	Seed           *Activity       `json:"seed,omitempty"`
+	CoordinationDirectory string          `json:"coordination_directory,omitempty"`
+	BrowserControl        bool            `json:"browser_control,omitempty"`
+	BrowserAck            string          `json:"browser_ack,omitempty"`
+	Protocol              int             `json:"protocol"`
+	SessionID             string          `json:"session_id"`
+	Key                   string          `json:"key"`
+	Operation             string          `json:"operation"`
+	Recording             *bool           `json:"recording,omitempty"`
+	Action                *RecoveryAction `json:"action,omitempty"`
+	Seed                  *Activity       `json:"seed,omitempty"`
 }
 
 type RecoveryAction struct {
@@ -37,14 +40,15 @@ type RecoveryAction struct {
 }
 
 type RPCResponse struct {
-	BrowserRequest    *BrowserRequest `json:"browser_request,omitempty"`
-	BrowserObservedAt int64           `json:"browser_observed_at,omitempty"`
-	Protocol          int             `json:"protocol"`
-	Revision          uint64          `json:"revision,omitempty"`
-	Recording         bool            `json:"recording"`
-	Events            []Event         `json:"events,omitempty"`
-	Outcome           string          `json:"outcome,omitempty"`
-	Error             string          `json:"error,omitempty"`
+	CoordinationProject *coordination.Binding `json:"coordination_project,omitempty"`
+	BrowserRequest      *BrowserRequest       `json:"browser_request,omitempty"`
+	BrowserObservedAt   int64                 `json:"browser_observed_at,omitempty"`
+	Protocol            int                   `json:"protocol"`
+	Revision            uint64                `json:"revision,omitempty"`
+	Recording           bool                  `json:"recording"`
+	Events              []Event               `json:"events,omitempty"`
+	Outcome             string                `json:"outcome,omitempty"`
+	Error               string                `json:"error,omitempty"`
 }
 
 func readRPC(input io.Reader, value any) error {
@@ -136,6 +140,12 @@ func hostRPC(ctx context.Context, request RPCRequest) (RPCResponse, error) {
 		return RPCResponse{}, err
 	}
 	switch request.Operation {
+	case "coordination-project":
+		// Only the authenticated controller chooses this directory, from its
+		// signed live shell observation. No agent-facing API accepts a path or
+		// Git command. Inspect on this execution host, never on the controller.
+		project, err := coordination.InspectRepository(ctx, request.CoordinationDirectory)
+		return RPCResponse{CoordinationProject: project}, err
 	case "snapshot":
 	case "policy":
 		if request.Recording == nil {

@@ -85,6 +85,13 @@ permissions. Its failed policy/capture attempts remain separate. Managed/SSH,
 existing-agent onboarding, native discovery/enrollment, restart/reconnect and the
 complete workflow gates remain open.
 
+The [SSH project-context extension](validation/coordination-ssh-project-2026-11-22/README.md)
+now verifies ordinary SSH/mosh repository context through the authenticated
+execution-host RPC, with destination/run revalidation and expiring observations.
+Native macOS-to-Linux production RPC qualification passes. Remote agent access
+and managed-provider onboarding remain open; verified project context does not
+establish those capabilities.
+
 ## Current reliability work
 
 **First priority: [#318](https://github.com/jordanhubbard/webmux/issues/318).**

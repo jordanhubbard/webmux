@@ -23,6 +23,7 @@ const coordinationSnapshotPath = "/api/federation/coordination/snapshot"
 const coordinationPeerAge = 30 * time.Second
 
 type coordinationPeerCache struct {
+	policy *coordinationPeerScope // Invalidates preparation across global policy withdrawal.
 	scopes map[string]*coordinationPeerScope
 	sizes  map[string]int
 	total  int
@@ -40,6 +41,18 @@ type coordinationPeerJob struct {
 	peer         serverPeer
 	token        string
 	scope        *coordinationPeerScope
+}
+
+// withdraw discards both retained observations and authorization for requests
+// already in flight or still preparing their jobs.
+func (c *coordinationPeerCache) withdraw() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.policy = &coordinationPeerScope{key: "policy"}
+	clear(c.scopes)
+	clear(c.values)
+	clear(c.sizes)
+	c.total, c.cursor = 0, 0
 }
 
 func coordinationPeerKey(peer serverPeer, token, project string) string {
@@ -191,12 +204,28 @@ func (s *Server) fetchCoordinationSnapshot(ctx context.Context, job coordination
 	return snapshot, "current"
 }
 func (s *Server) refreshCoordinationPeers(parent context.Context, inputs []plane.MemberInput) error {
+	cache := &s.sessionCoord.peers
+	cache.mu.RLock()
+	policy := cache.policy
+	cache.mu.RUnlock()
+	node, err := s.coordinationNode()
+	if err != nil {
+		return err
+	}
+	enabled, err := s.sessionCoord.service.Enabled(node)
+	if err != nil || !enabled {
+		cache.withdraw()
+		return err
+	}
 	jobs, err := s.coordinationPeerJobs(inputs)
 	if err != nil {
 		return err
 	}
-	cache := &s.sessionCoord.peers
 	cache.mu.Lock()
+	if cache.policy != policy {
+		cache.mu.Unlock()
+		return nil
+	}
 	if cache.values == nil {
 		cache.values = map[string]plane.PeerView{}
 		cache.scopes = map[string]*coordinationPeerScope{}
@@ -249,6 +278,12 @@ func (s *Server) refreshCoordinationPeers(parent context.Context, inputs []plane
 			for job := range queue {
 				if ctx.Err() != nil {
 					return
+				}
+				cache.mu.RLock()
+				allowed := cache.policy == policy && cache.scopes[job.key] == job.scope
+				cache.mu.RUnlock()
+				if !allowed {
+					continue
 				}
 				attempted.Add(1)
 				// Anchor remote lease duration before network I/O. Cache authorization
