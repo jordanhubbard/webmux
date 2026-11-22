@@ -69,6 +69,7 @@ func (r *run) stop() {
 }
 
 type entry struct {
+	launchDone       chan struct{}
 	localStopBusy    bool
 	requiredRenderer string
 	rendererToken    string
@@ -199,8 +200,14 @@ func (b *Broker) Restore() error {
 		return ErrClosed
 	}
 	b.startPolicyLocked()
-	for _, id := range b.order {
+	for _, id := range append([]string(nil), b.order...) {
+		if b.closed {
+			return ErrClosed
+		}
 		e := b.entries[id]
+		if e == nil {
+			continue
+		}
 		if e.value.LocalOwnerManaged && (!e.value.LocalOwnerAvailable || e.value.LocalStop != nil) {
 			continue
 		}
@@ -379,6 +386,12 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 		}
 	}
 	_ = b.startLocked(e, request.Password, initial)
+	if b.closed {
+		return Session{}, ErrClosed
+	}
+	if b.entries[id] != e {
+		return Session{}, ErrNotFound
+	}
 	if err := b.persistLocked(); err != nil {
 		if e.value.LocalOwnerManaged {
 			// The pre-launch entry/key remains recoverable on disk. Keep its
@@ -405,6 +418,9 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 }
 
 func (b *Broker) startWithTranscriptLocked(e *entry, password, initial string, transcript *transcriptLog) error {
+	if e.launchDone != nil {
+		return ErrRecoveryConflict
+	}
 	e.value.CoordinationActivity = nil
 	e.value.CoordinationChannel = ""
 	if e.value.LocalStop != nil {
@@ -460,9 +476,42 @@ func (b *Broker) startWithTranscriptLocked(e *entry, password, initial string, t
 			request.Coordination = access
 		}
 	}
+	// Native provider startup must not hold the global broker lock.
+	generation := e.generation
+	done := make(chan struct{})
+	e.launchDone = done
+	b.workers.Add(1) // Shutdown also waits for unpublished launches.
+	b.mu.Unlock()
 	p, err := b.launch(request, password)
+	b.mu.Lock()
+	defer func() {
+		e.launchDone = nil
+		close(done)
+		b.workers.Done()
+	}()
+	if b.closed || b.entries[e.value.ID] != e || e.generation != generation {
+		// A late provider cannot resurrect a deleted or closed session.
+		b.mu.Unlock()
+		if p != nil {
+			_ = p.Close()
+		}
+		b.mu.Lock()
+		if b.closed {
+			return ErrClosed
+		}
+		return ErrRecoveryConflict
+	}
+	if err == nil && e.value.Agent() {
+		if _, denied := b.agents.Access(e.value.AgentID); denied != nil {
+			b.mu.Unlock()
+			_ = p.Close()
+			b.mu.Lock()
+			return denied
+		}
+	}
 	if err != nil {
 		b.logger.Warn("terminal launch failed", "session_id", e.value.ID, "error", err)
+		e.launchDone = nil // Failed launch ended; fallback may reserve a new generation.
 		if attempted, fallbackErr := b.fallbackLocked(e, password, initial); attempted {
 			return fallbackErr
 		}
@@ -478,6 +527,11 @@ func (b *Broker) startWithTranscriptLocked(e *entry, password, initial string, t
 				e.value.LocalOwner = target
 			}
 		}
+	}
+	// A viewer may resize while provider startup is outside the lock. Apply
+	// that saved geometry before publishing the process as the current run.
+	if request.Cols != e.value.Cols || request.Rows != e.value.Rows {
+		_ = p.Resize(e.value.Cols, e.value.Rows)
 	}
 	renderer, token := "", ""
 	if source, ok := p.(interface{ SnapshotProfile() (string, string) }); ok {
@@ -622,6 +676,12 @@ func (b *Broker) reconnect(owner, id, password string, expected *RigIdentity, ar
 		}
 	}
 	err = b.startWithTranscriptLocked(e, password, "", transcript)
+	if b.closed {
+		return Session{}, ErrClosed
+	}
+	if b.entries[id] != e {
+		return Session{}, ErrNotFound
+	}
 	if err == nil {
 		b.markAttachReadyLocked(e)
 		if expected != nil {

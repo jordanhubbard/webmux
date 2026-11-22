@@ -534,13 +534,20 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 		s.coordinationError(w, err)
 		return
 	}
-	ref, err := s.sessionCoord.service.Subject(node, token)
+	ref, err := s.sessionCoord.service.ResolveCapabilitySubject(node, token)
 	if err != nil {
 		s.coordinationError(w, err)
 		return
 	}
 	if !s.federationOwnerAllowed(ref.Owner) {
 		s.coordinationError(w, plane.ErrUnauthorized)
+		return
+	}
+	if err := s.sessions.WaitCoordinationLaunch(r.Context(), ref.Owner, ref.Session); err != nil {
+		if errors.Is(err, session.ErrNotFound) {
+			err = plane.ErrUnauthorized
+		}
+		s.coordinationError(w, err)
 		return
 	}
 	snapshots, err := s.coordinationSnapshots()

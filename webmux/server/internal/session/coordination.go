@@ -55,3 +55,34 @@ func (b *Broker) coordinationRepositoryCurrent(e *entry, snapshot Session) bool 
 		v.Username == snapshot.Username && v.Port == snapshot.Port && v.KeyID == snapshot.KeyID && v.RecoveryKey == snapshot.RecoveryKey &&
 		*v.CoordinationActivity == *snapshot.CoordinationActivity
 }
+
+// WaitCoordinationLaunch waits for this caller's provider, not another session.
+// Admission still rechecks the full incarnation in WithCoordinationSnapshot.
+func (b *Broker) WaitCoordinationLaunch(ctx context.Context, owner, id string) error {
+	for {
+		b.mu.Lock()
+		if b.closed {
+			b.mu.Unlock()
+			return ErrClosed
+		}
+		e, err := b.ownedLocked(owner, id)
+		if err != nil {
+			b.mu.Unlock()
+			return err
+		}
+		done := e.launchDone
+		live := e.run != nil && (e.value.State == "connected" || e.value.State == "connecting")
+		b.mu.Unlock()
+		if done == nil {
+			if !live {
+				return ErrNotFound
+			}
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-done:
+		}
+	}
+}
