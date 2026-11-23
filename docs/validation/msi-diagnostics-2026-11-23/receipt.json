@@ -1,0 +1,66 @@
+{
+  "schema": "webmux.msi-interrupted-diagnostics-qualification.v1",
+  "observed_at": "2026-11-23T09:00:39.351451+00:00",
+  "issue": 685,
+  "source_revision_before_receipt_commit": "90a8f03abfa20c0fba00a013558cc4f5830c442c",
+  "source_sha256": {
+    ".github/workflows/packaging.yml": "2f865bffdec2aceee52de120e06ba132267d4312cd87ba0bf4ae299744ce8793",
+    "scripts/snapshot-msi-diagnostics.ps1": "e5948bc16852779ccc3c8472b110a324327c39479d711bd2ead88f9c94496f2b",
+    "scripts/snapshot-msi-diagnostics.test.ps1": "7a37667c6ffa0cb47b9ab49c49cb01135519bffead46d96ef8dbf10dddc6d283",
+    "scripts/qualification-process.ps1": "d271bac1b8f4287aa9125836c8a3b3658339a0ad19744d192e50c72250a57749",
+    "scripts/qualification-process.test.ps1": "9f289477adb84c882389b94d06ce4bd3591cbf3627cdc91f872864553b1d524f"
+  },
+  "baseline": {
+    "run_id": 45137659456,
+    "job_id": 137567698686,
+    "source_revision": "19936773333e98415b4a80a035ec908b0ae33677",
+    "conclusion": "cancelled",
+    "annotation": "The job has exceeded the maximum execution time of 30m0s",
+    "last_step": "Snapshot interrupted Windows service fixtures",
+    "previous_msi_service_step": "success",
+    "job_log": "unavailable: log not found",
+    "exact_blocked_operation": "unverified"
+  },
+  "local_host": "macOS ARM64",
+  "local_tool": {
+    "name": "PowerShell",
+    "version": "7.7.0",
+    "source": "Official PowerShell/PowerShell v7.7.0 release",
+    "archive_sha256": "76449f078f30193fce9cdf6610b77fda14f4224cafcbdf230245ec0dab9ef10d",
+    "checksum_manifest_verified": true
+  },
+  "checks": [
+    {
+      "command": "pwsh -NoProfile -File scripts/snapshot-msi-diagnostics.test.ps1",
+      "exit_code": 0,
+      "scope": "Real filesystem, controlled service query, field allowlist, known fixtures, 200-line tails, unrelated logs and directory-link refusal"
+    },
+    {
+      "command": "pwsh -NoProfile -File scripts/qualification-process.test.ps1",
+      "exit_code": 0,
+      "scope": "Real subprocess argument fidelity, exit 42 refusal, 5-second hung process-tree termination and argument-free progress"
+    },
+    {
+      "command": "Controlled copy of collector without directory-link guard, same snapshot test",
+      "exit_code": 1,
+      "classification": "expected negative control",
+      "failure": "Snapshot did not retain exactly the known fixture logs.",
+      "production_source_changed": false
+    },
+    {
+      "command": "Parse packaging workflow with installed js-yaml and inspect failed/cancelled MSI condition and 20-second helper invocation",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "limits": [
+    "No native Windows execution claimed by these local checks; both PowerShell tests are wired into native Windows packaging.",
+    "No exact diagnosis of the original stalled operation; the new parent deadline bounds CIM and filesystem collection.",
+    "Original MSI/service tests and packaging acceptance gates are retained.",
+    "The first tool download checksum read assumed UTF-8; manifest is UTF-16. Correct BOM decoding verified the SHA-256 before extraction/execution."
+  ],
+  "installed_service_or_nas_mutation": false
+}

@@ -1,0 +1,43 @@
+{
+  "schema": "webmux.browser-layout-route-qualification.v1",
+  "observed_at": "2026-11-23T08:18:07.622559+00:00",
+  "scope": "Browser-layout test interceptor lifecycle, not runtime behavior",
+  "source_sha256": {
+    "tests/e2e/browser-pane-layout.spec.ts": "500fbe1d1005cb33737dc387d734fa7cea06b3e20fe6dc1d2e02765e5d329a39"
+  },
+  "native_failure": {
+    "head": "1ef67d6dec589daf7a9674b0a54dcedd63a1d1e3",
+    "url": "https://github.com/jordanhubbard/webmux/actions/runs/45132217314/job/137550079382",
+    "message": "route.fulfill: Route is already handled!",
+    "phase": "initial page input",
+    "failed_log_sha256": "eebb772dda5f4c0c9b487c95eaccd265db46c996c2a6607af9aba0997ae3dc0e"
+  },
+  "checks": [
+    {
+      "command": "npm run typecheck",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run build",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run test:e2e -- browser-pane-layout.spec.ts",
+      "exit_code": 0,
+      "tests_passed": 1,
+      "elapsed_seconds": 18.1,
+      "scope": "Installed macOS Google Chrome 158.0.8127.36 with isolated profile and actual Go/browser worker"
+    }
+  ],
+  "preserved_assertions": [
+    "Synthetic transient worker error and recovery",
+    "Actual native browser frame matches DOM viewport geometry",
+    "Input reaches the same original page after resize and reload",
+    "Single browser start and navigation; stable control lease",
+    "Dock/floating/expanded/mobile geometry and persisted layout"
+  ],
+  "native_Windows_fix_verified": false,
+  "runtime_changes": false,
+  "installed_service_changes": false,
+  "NAS_access": false
+}

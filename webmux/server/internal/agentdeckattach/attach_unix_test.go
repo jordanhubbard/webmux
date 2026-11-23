@@ -47,7 +47,7 @@ func TestStalledVersionChildGroupIsTerminated(t *testing.T) {
 	t.Setenv("WM_ATTACH_CHILD", marker)
 	// Deliberately outlast the former 300 ms startup assumption. Publish the
 	// complete PID atomically so readiness cannot observe a partially written ID.
-	path := fake(t, "sleep 1\nsleep 30 &\necho $! > \"$WM_ATTACH_CHILD.next\"\nmv \"$WM_ATTACH_CHILD.next\" \"$WM_ATTACH_CHILD\"\nwait\n")
+	path := fake(t, "sleep 1\nsleep 30 &\necho $! > \"$WM_ATTACH_CHILD.next\"\nmv -f \"$WM_ATTACH_CHILD.next\" \"$WM_ATTACH_CHILD\"\nwait\n")
 	ctx, cancel := context.WithCancel(context.Background())
 	finished := make(chan struct{})
 	var checkErr error
