@@ -1,0 +1,83 @@
+{
+  "schema": "webmux.architecture-evidence-reconciliation.v1",
+  "observed_at": "2026-11-23T09:57:23.914728+00:00",
+  "issue": 656,
+  "PR": 657,
+  "base_main": "4069f49939a349c5e8ccd4d28e4cdace7c2d09fd",
+  "historical_evidence_commit": "ca9252608a00aed498e7207ba58d8fcd492622f7",
+  "historical_receipt_sha256": "27179ae0442906ffd0fadc544b2ad4d193c607debd3f2720abec8a3fa8c9aa6e",
+  "historical_receipt_unchanged": true,
+  "qualifier_sha256": "bc7dfd416409a9408110197c06def6b2d21e82b5544d43406473e0a1e09e9e03",
+  "qualifier_unchanged": true,
+  "controls": {
+    "python_compile": "passed",
+    "optimized_python": {
+      "exit_code": 2,
+      "output_not_created": true
+    },
+    "existing_output": {
+      "exit_code": 1,
+      "receipt_unchanged": true,
+      "no_extra_files_created": true
+    },
+    "native_provider_calls_in_guard_controls": 0
+  },
+  "current_application_native_client": {
+    "schema": "webmux.provider-comparison-current-client.v1",
+    "observed_at": "2026-11-23T09:55:51.959616+00:00",
+    "scope": "Actual native WebMux stdio initialize/list/unavailable read only; Agent Deck and Rig not rerun",
+    "qualified_application_source_revision": "611647cd597dc4f0fbbd57d863dd175dabbc4fce",
+    "binary_sha256": "02a12b2965313567bf1a1caeef70f98b06aebc3fd524b45cce38f08dbbccaf08",
+    "qualifier_sha256": "bc7dfd416409a9408110197c06def6b2d21e82b5544d43406473e0a1e09e9e03",
+    "application_subtree": "fafbd134e94c2e04fe355ce6a1cf16d0b20f937f",
+    "matches_main_4069f49_application": true,
+    "result": {
+      "exit_code": 0,
+      "server_info": {
+        "name": "webmux-coordination",
+        "version": "webmux-session-coordination/v1"
+      },
+      "protocol_version": "2025-11-25",
+      "sent_methods": [
+        "initialize",
+        "notifications/initialized",
+        "tools/list",
+        "tools/call"
+      ],
+      "controlled_read": "webmux_coordination_view",
+      "controlled_refusal": true,
+      "metadata_backend_requests": 0,
+      "tool_names": [
+        "webmux_coordination_act",
+        "webmux_coordination_view"
+      ]
+    },
+    "backend_requests": [],
+    "raw_sha256": {
+      "webmux-protocol.json": "5234be5c0b4ac2d946484a50ae83d1cda18e7655650c800192069f9a311b887f",
+      "webmux-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "installed_runtime_or_profile_changed": false,
+    "MAC_source_or_state_changed": false,
+    "NAS_IO": false,
+    "native_execution_repeated_for_agent_deck_or_rig": false
+  },
+  "decision_reconciliation": {
+    "source_requirements_authority": "Each project roadmap/issues and Literate AI delivery gates",
+    "connected_execution_authority": "MAC",
+    "interactive_surface": "WebMux human and agent interfaces",
+    "standalone_backend": "bounded built-in WebMux ledger",
+    "optional_lifecycle_owners": [
+      "Agent Deck",
+      "Rig"
+    ],
+    "shared_MAC_admission_or_three_host_acceptance_claimed": false,
+    "673": "OPEN prerequisite; canonical MAC record route/source owner unresolved",
+    "674": "OPEN read view not complete",
+    "664": "OPEN convergence outcome"
+  },
+  "scope_limit": "Architecture comparison delivery only. Historical native provider scopes are not expanded into all tool behavior or current native lifecycle qualification.",
+  "NAS_IO": false,
+  "MAC_source_or_state_mutation": false,
+  "new_hosted_workflow": false
+}

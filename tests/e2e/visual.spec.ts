@@ -235,3 +235,59 @@ test('active RDP pixels and input render identically across Go runs', async ({ p
     finally { await desktop.close(); }
   }
 });
+
+
+test('selected desktop owns wheel input and Shift pans the graphics grid without remote input', async ({ page, request }) => {
+  test.skip(process.env.WEBMUX_E2E_AUTH === 'local', 'Desktop uses the trusted fixture');
+  await page.setViewportSize({ width: 1000, height: 600 });
+  const vnc = await startVisualVnc();
+  const rdp = await startVisualRdp();
+  let vncId: string | undefined; let rdpId: string | undefined;
+  const wheelCount = () => [vnc.pointers.filter(mask => (mask & 120) !== 0).length, rdp.pointers.filter(args => (Number(args[2]) & 24) !== 0).length];
+  try {
+    const a = await request.post('/api/vnc/sessions', { data: { hostname: '127.0.0.1', vnc_port: vnc.port, row: 0, col: 0 } });
+    expect(a.ok()).toBe(true); vncId = (await a.json()).id;
+    const b = await request.post('/api/rdp/sessions', { data: { hostname: '127.0.0.1', rdp_port: 3389, rdp_username: 'visual-user', row: 2, col: 3 } });
+    expect(b.ok()).toBe(true); rdpId = (await b.json()).id;
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Desktops', exact: true }).click();
+    const grid = page.getByTestId('graphics-scroll');
+    const first = page.locator(`[data-desktop-session="${vncId}"]`);
+    const second = page.locator(`[data-desktop-session="${rdpId}"]`);
+    await expect(first.locator('canvas')).toBeAttached();
+    await expect(second.locator('canvas[width="640"]')).toBeAttached();
+    await expect(first).toHaveAttribute('data-selected', 'true');
+    await expect.poll(() => first.locator('canvas').evaluate(node => Array.from((node as HTMLCanvasElement).getContext('2d')!.getImageData(0, 0, 1, 1).data))).toEqual([48, 80, 112, 255]);
+    await expect.poll(() => second.locator('canvas[width="640"]').evaluate(node => Array.from((node as HTMLCanvasElement).getContext('2d')!.getImageData(0, 0, 1, 1).data))).toEqual([48, 80, 112, 255]);
+    const position = () => grid.evaluate(node => [node.scrollLeft, node.scrollTop]);
+    const hoverEmptyCell = async () => {
+      const rect = (await grid.boundingBox())!;
+      await page.mouse.move(rect.x + 500, rect.y + 100);
+    };
+    await hoverEmptyCell();
+    const initial = await position(); const before = wheelCount();
+    await page.mouse.wheel(0, 120);
+    await expect.poll(() => wheelCount()[0]).toBeGreaterThan(before[0]);
+    expect(wheelCount()[1]).toBe(before[1]); expect(await position()).toEqual(initial);
+    // Select the remote desktop's chrome without enabling thumbnail clicks.
+    await second.locator('span').filter({ hasText: '127.0.0.1' }).first().click();
+    await expect(second).toHaveAttribute('data-selected', 'true');
+    await grid.evaluate(node => { node.scrollLeft = 0; node.scrollTop = 0; });
+    await hoverEmptyCell(); const next = wheelCount();
+    await page.mouse.wheel(0, -120);
+    await expect.poll(() => wheelCount()[1]).toBeGreaterThan(next[1]);
+    expect(wheelCount()[0]).toBe(next[0]); expect(await position()).toEqual([0, 0]);
+    const beforeShift = wheelCount();
+    await page.keyboard.down('Shift');
+    try { await page.mouse.wheel(100, 100); } finally { await page.keyboard.up('Shift'); }
+    await expect.poll(async () => (await position()).every(value => value > 0)).toBe(true);
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    expect(wheelCount()).toEqual(beforeShift);
+    expect(vnc.keys).toEqual([]); expect(rdp.keys).toEqual([]);
+    expect(vnc.errors).toEqual([]); expect(rdp.errors).toEqual([]);
+  } finally {
+    if (vncId) expect((await request.delete(`/api/vnc/sessions/${vncId}`)).ok()).toBe(true);
+    if (rdpId) expect((await request.delete(`/api/rdp/sessions/${rdpId}`)).ok()).toBe(true);
+    await vnc.close(); await rdp.close();
+  }
+});

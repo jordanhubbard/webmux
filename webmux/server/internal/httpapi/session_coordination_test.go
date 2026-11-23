@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -99,7 +101,7 @@ func coordinationAPIRepository(t *testing.T, repo string) (*Server, http.Handler
 	}{records}); err != nil {
 		t.Fatal(err)
 	}
-	s, err := New(old.store, Options{Name: "coordination-fixture"})
+	s, err := New(old.store, Options{Name: "coordination-fixture", Logger: slog.New(slog.NewTextHandler(t.Output(), &slog.HandlerOptions{Level: slog.LevelDebug}))})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,7 +251,7 @@ func TestCoordinationSessionChild(t *testing.T) {
 		t.Skip("explicit native ordinary-session child")
 	}
 	if os.Getenv("WEBMUX_COORDINATION_FILE") == "" || os.Getenv("WEBMUX_COORDINATION_CLI") == "" {
-		t.Fatal("ordinary session lacked automatically provisioned interface")
+		t.Fatalf("ordinary session lacked automatically provisioned interface (file=%v cli=%v)", os.Getenv("WEBMUX_COORDINATION_FILE") != "", os.Getenv("WEBMUX_COORDINATION_CLI") != "")
 	}
 	var out bytes.Buffer
 	if err := coordinationclient.Run([]string{"view"}, strings.NewReader(""), &out); err != nil {
@@ -300,4 +302,29 @@ func TestCoordinationAgentRefreshesPeersBeforeMaintenance(t *testing.T) {
 	if len(view.Members) != 2 || view.Self == nil || view.Self.ProjectStatus != "verified-git" {
 		t.Fatal("cold agent view did not discover linked-worktree peer", len(view.Members))
 	}
+}
+
+func TestCoordinationLiveBrokerRevalidatesStaleInactiveMembership(t *testing.T) {
+	s, _, handler, _, access := coordinationAPI(t)
+	node, err := s.coordinationNode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshots, err := s.coordinationSnapshots()
+	if err != nil {
+		t.Fatal(err)
+	}
+	inputs := s.coordinationInputs(node, snapshots)
+	// Maintenance can observe a provider before it has been published. That
+	// cached inactive bit is not the authority once its broker run is live.
+	for i := range inputs {
+		inputs[i].Active = false
+	}
+	if err := s.sessionCoord.service.Sync(node, inputs); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.sessionCoord.service.Subject(node, access[0].Capability); !errors.Is(err, plane.ErrUnauthorized) {
+		t.Fatalf("inactive ledger granted authority: %v", err)
+	}
+	requireStatus(t, request(handler, "GET", "/view", "", access[0].Capability), 200)
 }

@@ -1,0 +1,88 @@
+{
+  "schema": "webmux-scoped-validation/v1",
+  "issue": 625,
+  "baseCommit": "724245532b7b5e0f5e1df411d72aebe61144b9f5",
+  "status": "draft-qualification-held",
+  "sourceSHA256": {
+    "webmux/server/internal/terminal/ssh_address.go": "039873ee468135db636ac072cf0e1a598a70e3ef37e64050de32c043a4325f0e",
+    "webmux/server/internal/terminal/launcher.go": "6dd5523b8a93ed3d320634ef58ad22bf83dfe97f9bd493932c4b14cc639ba356",
+    "webmux/server/internal/terminal/recovery.go": "f97e05d155f258abf3426903598a05a8c0889ccb1de78a97b700dab9f84c5cf2",
+    "webmux/server/internal/browser/manager.go": "f076af4e105e9c257ba39cb1de28d3defda2644e53559780f1f23083718d2499",
+    "webmux/server/internal/terminalfiles/transfer.go": "dfd52f535fe8a53ae6174d98ea0c292700d02fb2b079fc7d116efbe54d8e4f45",
+    "webmux/server/internal/terminal/ssh_validation_test.go": "ec6b8b16fde4140a7c4f9f9520029e0a107b53b32624bacf25b60caabe322775",
+    "webmux/server/internal/browser/ssh_validation_test.go": "de4b280572723ba1b347d7d67470fa68900b469fadae5fc13063e228a06b0446",
+    "webmux/server/internal/terminalfiles/ssh_validation_test.go": "612483b361441ead7b975aa890ff94717dfabc8f3df40e379e3d7598c47e78e8",
+    "webmux/server/internal/httpapi/ssh_helper_validation_test.go": "4c4b8a5959f6059fb6af4fe13c9e94c51d053fae941d441359c52013d98fbde2"
+  },
+  "checks": {
+    "originalParentRegressions": "failed as expected: invalid persisted metadata reaches controlled SSH executable witness",
+    "correctedFocusedRegressions": "passed before the three final default-port/empty-user and recovery-length tests were added",
+    "serverVet": "passed before the three final tests were added",
+    "nativeParentAndCandidateBuilds": "passed; development binaries only",
+    "fullServerRace": "failed: native-create Node major mismatch and recovery process observation timeout",
+    "finalAddedTests": "not run; worker overload hold",
+    "nativeHTTPPersistenceRestartBoundary": "prepared, not run; worker overload hold"
+  },
+  "nativeBuilds": [
+    {
+      "mode": "parent",
+      "exit": 0,
+      "sha256": "dda19ad736c39e69c2f6e82685e24e1b3c8efa97e1addc286fdbe82555483af3",
+      "nativeGoVersion": "1.27.4",
+      "sourceOverlay": true
+    },
+    {
+      "mode": "candidate",
+      "exit": 0,
+      "sha256": "83ab17a62bae458a411d5c105004bd8ee2f605023c425edff313b1f6dd131ab6",
+      "nativeGoVersion": "1.27.4",
+      "sourceOverlay": false
+    }
+  ],
+  "workerHealth": {
+    "source": "Native Mach CPU ticks and getloadavg; no process-table enumeration",
+    "logicalCPUs": 12,
+    "samples": [
+      {
+        "utc": "2026-11-20T04:30:12.966832+00:00",
+        "cpuPercent": 84.72432979261508,
+        "loadAverage1m5m15m": [
+          444.16015625,
+          935.66748046875,
+          366.22802734375
+        ]
+      },
+      {
+        "utc": "2026-11-20T04:30:17.982463+00:00",
+        "cpuPercent": 78.66328257191202,
+        "loadAverage1m5m15m": [
+          499.40087890625,
+          938.9599609375,
+          370.7265625
+        ]
+      },
+      {
+        "utc": "2026-11-20T04:30:22.990534+00:00",
+        "cpuPercent": 87.25985844287159,
+        "loadAverage1m5m15m": [
+          548.29638671875,
+          941.79931640625,
+          375.05810546875
+        ]
+      }
+    ]
+  },
+  "evidenceSHA256": {
+    "parent-regression.log": "6a59d57c07014014f2a1602efb9fde3d44b7bd320b426a78adb932cb66c8ed99",
+    "parent-probe-regression.log": "00afb198cc5f9e4f75829769bed066b308c8b6e3ce0078b8d6593c55132dd13d",
+    "corrected-regression.log": "1256a6cd5c3d89bf93583979ba3b31f5505d11a72f64c5442683bd648662fad7",
+    "go-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "go-race.log": "6568b047f788d1556ad521ea43b5eb4fe0173c9c642873e1907a12207de93236",
+    "native-create-observe.log": "43ee9ea1453914dcdcf2eb65c5cd88697d6abf657007483c1530d7c73643e0a9",
+    "recovery-observe.log": "a1df487d4ec2dccb81735a0bd2786fcce0dcee35966ae6b1befda575d4fdbf08",
+    "native-boundary.py": "d473d6ea331f6ec7166bdbab00fa2a264ec2adbf836cdd627b5fa227b34926a1"
+  },
+  "privateEvidenceRoot": "_build/ssh-address625-current",
+  "privacy": "Raw parent HTTP regression includes an expired fixture control lease token and is not published. Only hashes of private logs are published. No coding-provider authentication or SSH network connection was attempted.",
+  "releaseQualified": false
+}

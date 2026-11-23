@@ -1,0 +1,128 @@
+{
+  "schema": "webmux.coordination_provisioning_validation.v1",
+  "recorded_at": "2026-11-22T18:50:43.578005+00:00",
+  "issue": 669,
+  "base_revision": "fea5c3daff851eec9f0891f53c74d07fa85e2ad4",
+  "sources_sha256": {
+    "webmux/server/internal/session/broker.go": "7f6ca5e64f75c1beeefc81c704487f6a3d732d6414284c408901a3d48bfd6d0b",
+    "webmux/server/internal/session/coordination.go": "fbf70e6a78ce474a020b006ecf6dc45da0312e9fb800d594712b6d93b38b0b41",
+    "webmux/server/internal/session/launch_coordination_test.go": "785210b2f44f6a2f73afb8fbe4504948f51dd7f34dedf420ef59e7505e9d971a",
+    "webmux/server/internal/coordinationclient/client.go": "3ed484079dbf86638bfef1df175dad313d1b74a863b4bf3c90c031ff167f487c",
+    "webmux/server/internal/coordinationclient/transport_error.go": "1aa48f96c837450a8fa2db4a3657889bcea9acd71c41fdd6e62a27b97a514867",
+    "webmux/server/internal/coordinationclient/transport_error_test.go": "1809dfdada19b0d04f65b1f3e096c9feb6531c0b35ed3e60a2d21cb68e3affca"
+  },
+  "sources_unchanged_during_qualification": true,
+  "tools": {
+    "go": "go version go1.27.4 darwin/arm64",
+    "node": "v24.22.2"
+  },
+  "baseline_control": {
+    "baseline_head": "fea5c3daff851eec9f0891f53c74d07fa85e2ad4",
+    "command": [
+      "go",
+      "test",
+      "-overlay",
+      "provisioning-control-overlay.json",
+      "./internal/session",
+      "-run",
+      "^Test(CoordinationSnapshotDoesNotWaitForInterfaceProvisioning|RevokedAgentDuringProvisioningStartsNoProvider)$",
+      "-count=1"
+    ],
+    "exit_code": 1,
+    "both_expected_failures_observed": true,
+    "log_sha256": "34d898cb7d8944572fd5b70394f12876ab8ff5687297be6d50e08b9271f9fc50",
+    "overridden_sources": [
+      "webmux/server/internal/session/broker.go",
+      "webmux/server/internal/session/coordination.go"
+    ]
+  },
+  "checks": [
+    {
+      "name": "full-go",
+      "command": [
+        "go",
+        "test",
+        "./..."
+      ],
+      "cwd": "webmux/server",
+      "exit_code": 0,
+      "elapsed_seconds": 222.465,
+      "log": "qualification-v2-full-go.log",
+      "log_sha256": "aa24d8b518be997477f864250087689abb9f3149ba059dfb81ec5fc62e2763fb"
+    },
+    {
+      "name": "session-client-race",
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "./internal/session",
+        "./internal/coordinationclient"
+      ],
+      "cwd": "webmux/server",
+      "exit_code": 0,
+      "elapsed_seconds": 42.565,
+      "log": "qualification-v2-session-client-race.log",
+      "log_sha256": "37c8ae153aa79aaf533ce5de17e4ccff86bace5996d5c67d0f30bbe3253ec90b"
+    },
+    {
+      "name": "coordination-api-race",
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "./internal/httpapi",
+        "-run",
+        "TestCoordination",
+        "-count=1"
+      ],
+      "cwd": "webmux/server",
+      "exit_code": 0,
+      "elapsed_seconds": 175.626,
+      "log": "qualification-v2-coordination-api-race.log",
+      "log_sha256": "fdcfa331539d9eef3dd070198a73d9a298e5121522d1f5c3de7458f36f6afe54"
+    },
+    {
+      "name": "contract",
+      "command": [
+        "node",
+        "scripts/server-contract.mts"
+      ],
+      "cwd": "webmux",
+      "exit_code": 0,
+      "elapsed_seconds": 15.482,
+      "log": "qualification-v2-contract.log",
+      "log_sha256": "02dd422159a5cc00a17a106ad5bfc6affc09a88bc8beec6ad83c0a7c7ef2317c"
+    },
+    {
+      "name": "vet",
+      "command": [
+        "go",
+        "vet",
+        "./internal/session",
+        "./internal/coordinationclient",
+        "./internal/httpapi"
+      ],
+      "cwd": "webmux/server",
+      "exit_code": 0,
+      "elapsed_seconds": 0.533,
+      "log": "qualification-v2-vet.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "diff",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "elapsed_seconds": 0.042,
+      "log": "qualification-v2-diff.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "local_passed": true,
+  "native_windows": "pending CI on this source; earlier revision observations are separate"
+}

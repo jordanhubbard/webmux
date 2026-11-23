@@ -1,3 +1,5 @@
+import { installGridWheel } from '../utils/gridWheel';
+import { useInputBroadcast } from '../contexts/InputBroadcastContext';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { Terminal } from './Terminal';
 import { Dialog } from './Dialog';
@@ -67,6 +69,12 @@ export function ServerWorkspace({ servers, selected, fontSize, fontFamily, theme
   const [packed, setPacked] = useState(() => sessionStorage.getItem('webmux-server-packed') === 'true');
   const [creating, setCreating] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { focusedSessionId } = useInputBroadcast();
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (root) return installGridWheel(root, () => focusedSessionId);
+  }, [focusedSessionId]);
+
   const [overview, setOverview] = useState({ tiles: [] as WorkspaceOverviewTile[], width: 0, height: 0 });
   const mounted = useRef(true);
   const targets = servers.filter(server => selected === 'all' || server.id === selected);

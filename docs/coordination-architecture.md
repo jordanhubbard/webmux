@@ -1,26 +1,45 @@
 # Automatic session coordination architecture
 
-Decision completed 2026-11-22 for the architecture-evaluation item in
-[#630](https://github.com/jordanhubbard/webmux/issues/630), with review tracked by
-[#656](https://github.com/jordanhubbard/webmux/issues/656).
+Provider-interface comparison completed 2026-11-22 under
+[#656](https://github.com/jordanhubbard/webmux/issues/656). The proposed project-authority
+amendment below responds to the design direction clarified in
+[#664](https://github.com/jordanhubbard/webmux/issues/664); its adapters and full
+native acceptance remain unfinished.
 
-WebMux's Go server owns the node/account/session coordination plane. Retain
-Agent Deck and Rig as optional lifecycle owners for their existing managed
-sessions. Reuse the already-pinned Pion DNS-SD library for node discovery and the
-existing authenticated HTTPS enrollment/directory for peer authorization. The
-[source-bound comparison](validation/coordination-architecture-selection-2026-11-22/README.md)
-completes architecture selection. Automatic managed/existing-agent onboarding,
-complete discovery and full workflow acceptance remain implementation gates.
+**Each project owns its roadmap and delivery method. MAC is the shared execution
+authority for MAC-connected projects. WebMux is the interactive human and agent
+surface onto that worker pool.** The built-in WebMux ledger remains a bounded
+standalone backend and a source of transport/session observations, rather than a
+second task/lease authority for a MAC-connected project.
+
+WebMux retains node/account/session identity, terminal presentation, authenticated
+peer access and DNS-SD discovery. Agent Deck, Rig and existing fleet workers retain
+their lifecycle owners. The
+[source-bound provider comparison](validation/coordination-architecture-selection-2026-11-22/README.md)
+remains valid within its tested scope; it did not compare MAC or establish shared
+project priority, admission or publication authority. The
+[project coordination contract](mac-project-coordination.md) defines the authority
+mapping, delivery order, current gaps and three-host acceptance requirements.
+
+The deeper [four-product investigation](coordination-integration-investigation.md)
+revisits necessity, overlap and alternatives; it is the basis for this proposed
+amendment. It gives Rig workflow semantics and Agent Deck conductors their full
+scope, beyond the earlier MCP catalog comparison.
 
 ## What was inspected and tested
 
-The current installed binaries report Agent Deck 1.16.34 and Rig 0.6.14
+At the pinned comparison checkpoint, the installed binaries reported Agent Deck 1.16.34 and Rig 0.6.14
 (`9d0200f3`). Their native MCP processes were tested in empty private HOME/XDG
-profiles alongside a current-source WebMux executable built from `3cacedc`.
+profiles alongside a prototype WebMux executable built from `3cacedc`.
+That prototype comparison does not qualify the runtime on this branch.
 Each completed initialize, tool discovery and a controlled unavailable read.
 Agent Deck's catalog used only a fixture-owned, non-executable MCP definition;
 its disabled-Recall control exited with the expected refusal. All evidence is
 bound to executable/source hashes and exact protocol responses in the receipt.
+The final repeatable qualifier also preserves failed diagnostics, refuses output
+reuse and refuses optimized Python before producing output. Its historical
+receipt remains pinned to the actual inputs; publishing it does not turn those
+inputs into a fresh execution of this branch or of every provider capability.
 
 Agent Deck's Go build records revision
 `f36e77d6170b8d8b54f50c960c3f16e8a2c5df19`, matching the inspected release source.
@@ -44,9 +63,10 @@ queue mutation, live conversation or existing provider configuration was accesse
 
 | Candidate | Demonstrated contribution | Fit and deployment/maintenance costs |
 | --- | --- | --- |
-| Agent Deck | Existing profiles, managed-session inventory, attach/ownership and native recovery adapters; configurable MCP catalog. The installed Recall server advertises three search/show/context tools. | Its profile/configuration and conversation-index scopes require explicit mapping to WebMux accounts and verified projects. Recall's three tools do not implement WebMux claims, acknowledged inbox receipts or worker fences. Its configuration/restart path cannot establish automatic awareness while preserving existing agents. Requiring it on every node adds another CLI, tmux/profile management and native configuration compatibility. |
-| Rig | Existing topology, managed launch/attach, owner queue and recovery adapters. The installed MCP server advertises 23 tools, including five queue operations and manager lifecycle/terminal operations. | Rig seat/daemon identity needs an adapter to WebMux node/account/session identity and project authority. Its queue is useful provider-owned work state; the inspected MCP surface does not expose WebMux's fenced worker-resource contract. Its daemon, Node/native dependencies, tmux and version-specific launch wrappers add deployment and upgrade work. Keep lifecycle operations with their owner. |
-| Built-in WebMux plane | Existing WebMux identities, private session capabilities, durable ledger, separately authorized peer context/messages/claims/reservations, authenticated execution-host project observations and scoped CLI/MCP. The current MCP server exposes two coordination tools and refuses reads without private access. | Ships with the Go server/helper, avoiding a mandatory manager on otherwise ordinary nodes. WebMux owns schema, transport, revocation, retention and resource-bound maintenance. Runtime-specific native policies, sandbox reachability, managed-provider channels and platform custody still require dedicated adapters and acceptance. |
+| Agent Deck | Profiles, managed sessions, native recovery, remote deck management, conductors/watchers, worktree helpers and MCP/skill tooling. The separate Recall server exposes search/show/context. | Its profile/configuration and conversation-index scopes require explicit mapping to WebMux accounts and verified projects. Recall's three tools do not implement WebMux claims, acknowledged inbox receipts or worker fences. Its configuration/restart path cannot establish automatic awareness while preserving existing agents. Requiring it on every node adds another CLI, tmux/profile management and native configuration compatibility. |
+| Rig | Topology, managed launch/attach and continuity, durable owned work/handoffs, workflow dependency graphs and typed receipts, cross-host routing/rosters and human routes. The earlier native MCP probe exposes only part of that product. | Rig seat/daemon identity needs an adapter to WebMux node/account/session identity and project authority. Its host-owned queue/workflow model overlaps MAC and needs an explicit delegation/authority boundary. Installed remote-pinned workflow execution is refused; no global project write-scope/resource guarantee is established by its MCP catalog. Its daemon, Node/native dependencies, tmux and version-specific launch wrappers add deployment and upgrade work. Keep lifecycle operations with their owner. |
+| Built-in WebMux plane | Existing WebMux identities, private session capabilities, durable ledger, separately authorized peer context/messages/claims/reservations, authenticated execution-host project observations and scoped CLI/MCP. The pinned native comparison exposes two coordination tools and refuses reads without private access. | Ships with the Go server/helper, avoiding a mandatory manager on otherwise ordinary nodes. WebMux owns schema, transport, revocation, retention and resource-bound maintenance. Runtime-specific native policies, sandbox reachability, managed-provider channels and platform custody still require dedicated adapters and acceptance. |
+| MAC execution authority | Project/task ledger, canonical machine/worker identities, task-attempt leases, dependencies, evidence/review/publication and integration observations/findings. | Reuse the existing fleet for connected projects. The interactive-session adapter, source-roadmap mapping and strict project priority/write-scope admission still require implementation and qualification. MAC dispatch classes are scheduling hints, not proof of roadmap ordering or arbitrary file exclusivity. |
 
 The existing adapters inspected include
 [`coordination_providers.go`](../webmux/server/internal/httpapi/coordination_providers.go),
@@ -72,10 +92,17 @@ identity/address-migration evidence and unresolved native macOS multicast failur
 The [transport diagnostics](validation/discovery-transport-2026-11-22/README.md)
 retain those failures. Manual authenticated peers remain available when multicast
 is unavailable; a working SSH route does not complete LAN discovery acceptance.
+The later [native Bonjour adapter qualification](https://github.com/jordanhubbard/webmux/blob/22dd1965b8bc88ece69ed8e6f15360aa0be9b5a9/docs/validation/discovery-bonjour-2026-11-22/README.md)
+adds bidirectional macOS/Linux node and exact legacy-instance component evidence.
+It retains the failed raw self-loop and host-only listener-selection controls;
+it does not complete discovered/enrolled native-agent acceptance.
 
 ## Ownership and migration rules
 
-The built-in plane owns coordination records and scoped authority. Existing
+For a MAC-connected project, task admission, leases and execution mutations go
+through MAC; WebMux stores scoped bindings, observations and receipts. It must
+not grant a competing local lease or silently fall back on hub loss. Standalone
+projects explicitly retain the built-in backend and its documented limits. Existing
 Agent Deck/Rig agents retain their lifecycle owner, native policy, credentials,
 conversation identity and provider state. The architecture comparison performed
 no migration, restart, adoption, message send or global native configuration
@@ -93,6 +120,15 @@ controls before changing existing agents.
 
 ## Acceptance work after this decision
 
+The project-authority amendment adds the ordered #664 gates in the
+[convergence contract](mac-project-coordination.md#delivery-order-and-acceptance).
+Read-only visibility precedes interactive admission. Source priority/dependency
+changes and stale-lease publication refusal must be enforced by the execution
+and project-native authorities, not inferred from a WebMux inventory. Three
+real hosts must share the same project/task/attempt identities. Existing
+#630/#631 component receipts do not prove these additional requirements.
+
+
 The remaining roadmap items require complete discovered/enrolled two-host
 acceptance, automatic ordinary and managed participation, verified or explicitly
 mapped projects, and full native stale-identity, revocation, restart/reconnect and
@@ -100,5 +136,5 @@ uncertain-delivery controls. Durable messages, advisory claims and shared worker
 reservations must be observed through actual native calls and authoritative
 receipts throughout that workflow. Native sandbox/permission boundaries remain
 authoritative. Retention/scale and all stated transport/platform gaps remain
-tracked under #630/#631. Completing architecture selection closes none of those
+tracked under #664/#631, retaining #630's historical requirements. Completing architecture selection closes none of those
 implementation or qualification requirements.

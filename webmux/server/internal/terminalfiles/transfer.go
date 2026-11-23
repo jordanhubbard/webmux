@@ -18,6 +18,7 @@ import (
 
 	"github.com/jordanhubbard/webmux/server/internal/session"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
+	"github.com/jordanhubbard/webmux/server/internal/terminal"
 	"github.com/jordanhubbard/webmux/server/internal/upload"
 )
 
@@ -35,6 +36,9 @@ func remoteCommand(name string) (string, error) {
 func Command(ctx context.Context, s session.Session, store *storage.Store, controlPath, filename string) (*exec.Cmd, error) {
 	command, err := remoteCommand(filename)
 	if err != nil {
+		return nil, err
+	}
+	if err := terminal.ValidateSSHAddress(s.Hostname, s.Username, s.Port); err != nil {
 		return nil, err
 	}
 	args := []string{"-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", "-o", "ConnectTimeout=8", "-o", "ClearAllForwardings=yes", "-o", "RemoteCommand=none", "-o", "RequestTTY=no", "-p", strconv.Itoa(s.Port)}
