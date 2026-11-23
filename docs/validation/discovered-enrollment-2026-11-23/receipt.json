@@ -1,0 +1,143 @@
+{
+  "scope": "Native macOS ARM64 controller to Linux ARM64 receiving API fixtures: actual mDNS/API discovery, explicit authenticated enrollment and automatic background endpoint migration.",
+  "qualified_commit": "cb4e678",
+  "prior_main": "2c2f2a4c97fc9de769c07825d386ff644c525076",
+  "production_code_changed": false,
+  "runs": {
+    "attempt1-20261123T1035": {
+      "passed": true,
+      "sources_unchanged": true,
+      "race_primary": null,
+      "without_advertisement": null,
+      "server_exit_code": 0,
+      "binary_sha256": {
+        "darwin": "e1aad9fc3158d96991088efedf6775916b31f3d348f94412f228a14bd97f1239",
+        "linux": "49953bae4abadbee00ff73a6eb69b482928a70188081f2857af6c73eb51d9af5"
+      },
+      "commands": {
+        "build-darwin": {
+          "exit_code": 0
+        },
+        "build-linux": {
+          "exit_code": 0
+        },
+        "remote-prepare": {
+          "exit_code": 0
+        },
+        "transfer": {
+          "exit_code": 0
+        },
+        "client": {
+          "exit_code": 0
+        }
+      },
+      "error": null,
+      "qualified_commit": "ab7145a7d9bd8e9744a501639db8b91d13de5b7b",
+      "private_receipt_sha256": "f95818d4b617467e3576fe969b1c10e87191726182eb979507610ff69df84e80",
+      "client_log_sha256": "e57db30e8b094fde78382ae1f5e9a04a914404b54f12f8da3b47c30f12fa8bf5",
+      "receiver_log_sha256": "b406977d21f581b8b777b85102e4b800cdaf8332177414294d813c8d5f80d019",
+      "observed_proofs": 7,
+      "observed_bearer_requests": 5,
+      "independent_same_connection_witness_observed": true
+    },
+    "silent-cb4e678": {
+      "passed": false,
+      "sources_unchanged": true,
+      "race_primary": false,
+      "without_advertisement": true,
+      "server_exit_code": null,
+      "binary_sha256": {
+        "darwin": "7897dfc0c0093029572fb5cae8b85426194e6f56ab37099644554f2f73e3d199",
+        "linux": "6df03caf7843e789f6255b8da9f4a4ff713766999ab4e1b5bb0d36d58a850a6e"
+      },
+      "commands": {
+        "build-darwin": {
+          "exit_code": 0
+        },
+        "build-linux": {
+          "exit_code": 0
+        },
+        "remote-prepare": {
+          "exit_code": 0
+        },
+        "transfer": {
+          "exit_code": 0
+        },
+        "client": {
+          "exit_code": 1
+        }
+      },
+      "error": "client failed; retain private output",
+      "qualified_commit": "cb4e67835d3c9d1d732173597a7d0ddb2f1e0282",
+      "private_receipt_sha256": "22ddd04032cf4a58127d9a958a929290810dc1116bdf7fdce0c5d26bd7084bfa",
+      "client_log_sha256": "bb84749b4e52a5bb1b5b9b5dcc1ed7af186b0b11ffea3c12f89b52ef53a16ae2",
+      "owned_receiver_cleanup_exit_code": -15,
+      "expected_discovery_refusal_observed": true,
+      "positive_result": false
+    },
+    "race-cb4e678": {
+      "passed": true,
+      "sources_unchanged": true,
+      "race_primary": true,
+      "without_advertisement": false,
+      "server_exit_code": 0,
+      "binary_sha256": {
+        "darwin": "947b6d36f09d1e3a8d3706d76a9d01428f0c55a2fcc85e40ecf8febff51b5e82",
+        "linux": "6df03caf7843e789f6255b8da9f4a4ff713766999ab4e1b5bb0d36d58a850a6e"
+      },
+      "commands": {
+        "build-darwin": {
+          "exit_code": 0
+        },
+        "build-linux": {
+          "exit_code": 0
+        },
+        "remote-prepare": {
+          "exit_code": 0
+        },
+        "transfer": {
+          "exit_code": 0
+        },
+        "client": {
+          "exit_code": 0
+        }
+      },
+      "error": null,
+      "qualified_commit": "cb4e67835d3c9d1d732173597a7d0ddb2f1e0282",
+      "private_receipt_sha256": "cdf249745b642e444278a8b192cc47b9706e11e1e0872ef8e10a7c645261f7a2",
+      "client_log_sha256": "e57db30e8b094fde78382ae1f5e9a04a914404b54f12f8da3b47c30f12fa8bf5",
+      "receiver_log_sha256": "c89e2f8da7ef1ecbb3b36546bb0779f3543f3daebfd7b708c064b32855e361e2",
+      "observed_proofs": 7,
+      "observed_bearer_requests": 5,
+      "independent_same_connection_witness_observed": true
+    }
+  },
+  "checks": {
+    "api-race-cb4e678.log": {
+      "exit_code": 0,
+      "sha256": "6d8f942f00e3f014e9f98eb36bd83d8d72af697e90e9c52a98eac6b06aa05fd3"
+    },
+    "api-vet-cb4e678.log": {
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "windows-test-compile-cb4e678.log": {
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scope": "Windows ARM64 test cross-compilation only; no native execution"
+    },
+    "existing-output-control-cb4e678.json": {
+      "exit_code": 0,
+      "sha256": "5217c277376635be0f61886e43fceb2bc8de2610c40edab7524f8fc17871ecd7"
+    }
+  },
+  "limits": [
+    "Isolated production API/discovery components, not installed cmd/webmux services or browser/agent acceptance.",
+    "Fixture-only trust pool and newly generated temporary grant; OS trust and account stores unchanged.",
+    "macOS-controller/Linux-receiver direction only; receiver is not race-enabled.",
+    "Owned listener/advertisement rebind and controller-store reconstruction, not service/host reboot.",
+    "Original direct-candidate workload and ninety-second receiver deadline retained.",
+    "No new hosted jobs; all new commit/merge subjects include [skip ci].",
+    "Full631 and MAC664 acceptance remain open; no NAS I/O or cutover."
+  ]
+}
