@@ -13,6 +13,30 @@ until full qualification. #318 remains open. See the current
 below retain their original scope and must not be read as completing the remaining
 native managed-reboot or remote acceptance work.
 
+## Restarting an unresponsive local application (#693)
+
+Opening **Recover** displays a history preview. A connected provider proves that
+its terminal exists, not that the application is consuming input. The dialog
+separates the user-assigned window label from the last observed working directory.
+
+For an ordinary local Unix terminal with one verified tmux pane, **Restart
+terminal** is available after explicit confirmation. This ends work in that
+terminal, discards pending input, and starts a fresh PTY in the existing window.
+Retained transcripts and saved native conversations remain available. Automatic
+resume is disabled for this restart. Refresh the dialog once the replacement is
+ready, then choose a verified native conversation or **Start a shell**. If no
+reliable conversation ID was recorded, use the coding tool's session picker.
+Starting a shell or a new CLI is not reported as resuming the old conversation.
+
+Restart binds the owner, broker and host revisions, and the selected tmux server,
+session, window, pane and root process. A final tmux-side comparison refuses a
+changed provider. Repeated requests cannot restart the replacement. Input queued
+in WebMux is invalidated before dispatch; replacing the PTY also discards unread
+input in the old terminal driver. Authentication keys travel over stdin, not
+process arguments. SSH, Mosh, managed seats, Windows native providers and
+multi-pane providers retain their existing lifecycle controls; this action does
+not stop those providers.
+
 ## Recovery evidence
 
 Each terminal owns a persisted recovery descriptor alongside its saved launch

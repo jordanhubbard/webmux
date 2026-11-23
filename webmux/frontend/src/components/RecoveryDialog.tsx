@@ -12,6 +12,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
   const [refresh, setRefresh] = useState(0);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [approveRestart, setApproveRestart] = useState(false);
   const [approveReplay, setApproveReplay] = useState(false);
   const [approveManaged, setApproveManaged] = useState(false);
   const [shareContext, setShareContext] = useState(false);
@@ -21,7 +22,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
   useEffect(() => {
     const controller = new AbortController();
     setValue(null); setError('');
-    setApproveReplay(false); setApproveManaged(false); setShareContext(false); setContext('');
+    setApproveRestart(false); setApproveReplay(false); setApproveManaged(false); setShareContext(false); setContext('');
     api.getSessionRecovery(sessionId, controller.signal).then(result => {
       if (!controller.signal.aborted) {
         setValue(result);
@@ -37,10 +38,11 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
   const activity = value?.state?.activity;
   const pendingOriginal = value?.managed_original_request ?? originalRequest;
   const recordedRoots = Object.entries(activity?.configuration?.roots ?? {}).filter(([name]) => name !== 'HOME');
-  const refreshPreview = () => { setApproveReplay(false); setApproveManaged(false); setShareContext(false); setContext(''); setRefresh(count => count + 1); };
+  const refreshPreview = () => { setApproveRestart(false); setApproveReplay(false); setApproveManaged(false); setShareContext(false); setContext(''); setRefresh(count => count + 1); };
   const perform = async (kind: RecoveryRequest['kind']) => {
-    if (!value?.state || !value.instance || value.host_revision == null || busy) return;
-    if (kind === 'managed' ? !value.can_resume_managed || !approveManaged : !value.waiting) return;
+    if (!value?.state || value.host_revision == null || busy) return;
+    if (kind === 'restart' ? !value.can_restart || !value.restart_selection || !approveRestart : !value.instance) return;
+    if (kind === 'managed' ? !value.can_resume_managed || !approveManaged : kind !== 'restart' && !value.waiting) return;
     setBusy(true); setActionError('');
     try {
       const selected = kind === 'native' && shareContext ? context : '';
@@ -50,11 +52,11 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
       const hex = Array.from(token, byte => byte.toString(16).padStart(2, '0')).join('');
       const id = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
       const request: RecoveryRequest = { id, kind, revision: value.state.revision,
-        host_revision: value.host_revision, instance: value.instance,
-        confirm: kind === 'managed' ? approveManaged : kind === 'replay' ? approveReplay : shareContext, ...(selected ? { context: selected } : {}) };
+        host_revision: value.host_revision, instance: kind === 'restart' ? value.restart_selection! : value.instance!,
+        confirm: kind === 'restart' ? approveRestart : kind === 'managed' ? approveManaged : kind === 'replay' ? approveReplay : shareContext, ...(selected ? { context: selected } : {}) };
       if (kind === 'managed' && value.managed_original_contract) setOriginalRequest({ ...request, inspect: true });
       const result = await api.recoverSession(sessionId, request);
-      if (result.outcome === 'uncertain') { refreshPreview(); return; }
+      if (result.outcome === 'uncertain' || kind === 'restart') { refreshPreview(); return; }
       onClose();
     } catch (cause) { setActionError(cause instanceof Error ? cause.message : 'Cannot continue this work'); refreshPreview(); }
     finally { setBusy(false); }
@@ -85,6 +87,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
         {value.warning && <p role="status">{value.warning}</p>}
         <dl className="recovery-details">
           <dt>Execution host</dt><dd>{executionHostLabel(value.hostname)}{!value.manager_target && ` · ${value.transport.toUpperCase()}`}</dd>
+          {value.project_label && <><dt>Window label</dt><dd>{value.project_label} (label only; see the observed working directory below)</dd></>}
           <dt>Session manager</dt><dd>{value.lifecycle_owner === 'webmux' ? 'WebMux' : value.lifecycle_owner}</dd>
           {value.manager_target && <><dt>Managed session</dt><dd>{value.manager_target}</dd></>}
           {value.manager_directory && <><dt>Managed project directory</dt><dd>{value.manager_directory}</dd></>}
@@ -96,7 +99,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
           </>}
           {value.manager_native_state_file && <><dt>Managed native state file</dt><dd>{value.manager_native_state_file}</dd></>}
           {value.manager_native_observed_at && <><dt>Managed conversation observation</dt><dd>{new Date(value.manager_native_observed_at).toLocaleString()}</dd></>}
-          {activity?.cwd && <><dt>Working directory</dt><dd>{activity.cwd}</dd></>}
+          {activity?.cwd && <><dt>Last observed working directory</dt><dd>{activity.cwd}</dd></>}
           {activity?.observed_at && <><dt>Last observation</dt><dd>{new Date(activity.observed_at).toLocaleString()}</dd></>}
           {activity && <><dt>Evidence</dt><dd>{activity.source === 'cli-native-state' ? 'Native coding CLI metadata' : 'Shell observation'}</dd></>}
         </dl>
@@ -117,6 +120,17 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
           {activity.native_state_file && <><dt>Native state file</dt><dd>{activity.native_state_file}</dd></>}
           {recordedRoots.length > 0 && <><dt>Original CLI paths</dt><dd>{recordedRoots.map(([name, path]) => <div key={name}>{name}: {path || '(empty)'}</div>)}</dd></>}
         </dl>}
+        {value.can_restart && <section aria-label="Restart unresponsive terminal">
+          <h3>Application not responding?</h3>
+          <p>Restart ends all work in this terminal and opens a fresh terminal. Pending keystrokes and unsaved application state are discarded. Retained logs and saved native conversations remain available. This does not automatically resume the old conversation.</p>
+          {!activity?.native_session_id && <p>No reliable conversation ID is recorded. After restarting, choose Start a shell and use the coding tool’s session picker to find your saved work.</p>}
+          <label className="recovery-consent"><input type="checkbox" checked={approveRestart} disabled={busy}
+            onChange={event => setApproveRestart(event.target.checked)} />
+            I approve ending this terminal’s work and discarding pending input on {value.hostname}
+          </label>
+          <div className="recovery-actions"><button type="button" disabled={busy || !approveRestart}
+            onClick={() => void perform('restart')}>Restart terminal</button></div>
+        </section>}
         {value.history_available ? <>
           <h3>Previous terminal output</h3>
           <pre className="recovery-history" tabIndex={0} aria-label="Previous terminal output">{value.history}</pre>

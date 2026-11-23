@@ -27,6 +27,9 @@ func (b *Broker) ClipboardReply(owner, id, viewerID, requestID, text string) err
 		return ErrClosed
 	}
 	r := e.run
+	if r.restarting.Load() {
+		return ErrRecoveryWaiting
+	}
 	query := r.clipboardRead
 	if query == nil || query.id != requestID || query.viewer != viewerID || e.focus != viewerID || e.viewers[viewerID] == nil || time.Now().After(query.expires) {
 		return ErrNotFound
@@ -45,7 +48,7 @@ func (b *Broker) ClipboardReply(owner, id, viewerID, requestID, text string) err
 	case <-r.stopped:
 		r.inputBytes.Add(-size)
 		return ErrClosed
-	case r.input <- data:
+	case r.input <- terminalInput{data: data, epoch: r.inputEpoch.Load()}:
 		return nil
 	default:
 		r.inputBytes.Add(-size)

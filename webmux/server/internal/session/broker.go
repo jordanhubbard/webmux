@@ -33,7 +33,17 @@ type process interface {
 	Wait() terminal.Exit
 }
 type launchFunc func(terminal.LaunchRequest, string) (process, error)
+type terminalInput struct {
+	data  string
+	epoch uint64
+}
+
 type run struct {
+	restartOldInstance string
+	inputEpoch         atomic.Uint64
+	restarting         atomic.Bool
+	inputGate          chan struct{}
+
 	recoveryPolling  bool
 	recoveryReady    bool
 	recoveryRevision uint64
@@ -49,7 +59,7 @@ type run struct {
 	initial          string
 	timer            *time.Timer
 	first            bool
-	input            chan string
+	input            chan terminalInput
 	stopped          chan struct{}
 	stopOnce         sync.Once
 	inputBytes       atomic.Int64
@@ -563,7 +573,7 @@ func (b *Broker) startWithTranscriptLocked(e *entry, password, initial string, t
 	if source, ok := p.(interface{ BrowserOnServer() bool }); ok {
 		e.value.BrowserLocal = source.BrowserOnServer()
 	}
-	r := &run{process: p, log: transcript, initial: initial, first: true, input: make(chan string, 256), stopped: make(chan struct{}), generation: e.generation, replayUntil: time.Now().Add(1500 * time.Millisecond)}
+	r := &run{process: p, log: transcript, initial: initial, first: true, input: make(chan terminalInput, 256), inputGate: make(chan struct{}, 1), stopped: make(chan struct{}), generation: e.generation, replayUntil: time.Now().Add(1500 * time.Millisecond)}
 	e.run = r
 	logging := b.loggingEnabledLocked()
 	if e.value.TranscriptEnabled != nil {
@@ -872,8 +882,13 @@ func (b *Broker) input(owner, id, data string, requireConnected bool) error {
 		err = ErrLocalStopRequired
 	}
 	var current *run
+	var epoch uint64
 	if err == nil && e.run != nil {
 		current = e.run
+		epoch = current.inputEpoch.Load()
+		if current.restarting.Load() {
+			err = ErrRecoveryWaiting
+		}
 		if current.recoveryControl != nil && current.recoveryControl.Mode == "waiting" {
 			err = ErrRecoveryWaiting
 		}
@@ -899,7 +914,7 @@ func (b *Broker) input(owner, id, data string, requireConnected bool) error {
 		return ErrInputBusy
 	}
 	select {
-	case current.input <- data:
+	case current.input <- terminalInput{data: data, epoch: epoch}:
 		b.mu.Lock()
 		if e := b.entries[id]; !b.closed && e != nil && e.run == current {
 			b.recordAgentActivityLocked(e, current, true)
@@ -930,8 +945,18 @@ func (b *Broker) writeInput(r *run) {
 		case <-r.stopped:
 			return
 		case data := <-r.input:
-			r.inputBytes.Add(-int64(len(data)))
-			if _, err := r.process.Write([]byte(data)); err != nil {
+			r.inputBytes.Add(-int64(len(data.data)))
+			select {
+			case r.inputGate <- struct{}{}:
+			case <-r.stopped:
+				return
+			}
+			var err error
+			if !r.restarting.Load() && data.epoch == r.inputEpoch.Load() {
+				_, err = r.process.Write([]byte(data.data))
+			}
+			<-r.inputGate
+			if err != nil {
 				return
 			}
 		}
