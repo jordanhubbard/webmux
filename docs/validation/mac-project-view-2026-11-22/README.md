@@ -42,3 +42,15 @@ provider; it preserves the same provider start record after access refusal.
 The native stdio contract checks the added tool and unbound-project refusal.
 These are distinct scopes, not a claim that the live WebMux project has completed
 human/agent enrollment or that source roadmap/conflict/order requirements are done.
+
+`shared-native.json` records the later real-MAC shared-consumer run. Eight task
+identities matched between the real browser API and MCP; the production UI in
+Chrome also displayed eight shared identities without route interception. Local
+source commit/ref/dirty observations were displayed separately and stayed unlinked
+to MAC tasks/roadmap revisions. The default-off native harness preserves private
+raw receipts and screenshots outside the repository. The actual page had no
+owned workers, so no positive native worker/machine/session join is claimed.
+The isolated test sessions do not enroll the live WebMux project or establish
+three-host participation. Package/API/MCP race tests, vet, strict TypeScript,
+24 frontend tests, production build and the updated controlled browser workflow
+passed; Windows API cross-compilation passed without native execution.

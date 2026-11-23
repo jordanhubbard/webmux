@@ -19,11 +19,14 @@ const ProjectPageLimit = 8
 // SessionProjectObservation is the same read-only DTO for browser and agent
 // consumers. Retained sessions and observed MAC tasks are not implicitly joined.
 type SessionProjectObservation struct {
-	Schema       string               `json:"schema"`
-	Subject      coordination.Ref     `json:"subject"`
-	Project      ProjectObservation   `json:"project"`
-	Sessions     []SessionObservation `json:"sessions"`
-	HistoryState string               `json:"standalone_history_state"`
+	Schema         string               `json:"schema"`
+	Subject        coordination.Ref     `json:"subject"`
+	Project        ProjectObservation   `json:"project"`
+	Sessions       []SessionObservation `json:"sessions"`
+	HistoryState   string               `json:"standalone_history_state"`
+	Source         *SourceObservation   `json:"source"`
+	SourceState    string               `json:"source_state"`
+	SourceTaskLink string               `json:"source_task_link_state"`
 }
 
 type ProjectTask struct {

@@ -21,6 +21,7 @@ test('project activity exposes incomplete observations and clears them on access
       if (refused) { await route.fulfill({ status: 503, json: { error: 'MAC project observation is unavailable' } }); return; }
       await route.fulfill({ json: {
         schema: 'webmux.mac.session-project-view.v1', subject: { node_id: 'node', owner: 'fixture', session_id: id, incarnation: 'run' }, standalone_history_state: 'retained_unreconciled',
+        source_state: 'observed', source_task_link_state: 'unlinked', source: { schema: 'webmux.mac.source-observation.v1', worktree: '/controlled/project', ref: 'refs/heads/review', commit: 'a'.repeat(40), detached: false, dirty: true, observed_at: '2026-11-23T07:00:00Z' },
         project: { schema: 'webmux.mac.project-observation.v1', project_key: 'Controlled project', observed_at: '2026-11-23T07:00:00Z', coverage: 'incomplete', reported_total: 12, next_offset: null,
           conflict_verdict: 'unknown', ordering_verdict: 'unknown', unavailable_tasks: 1, unavailable_workers: 0, adapter_omitted_tasks: 0, upstream_omitted_tasks: 0, withheld_dependencies: 1,
           tasks: [{ task: { task_id: 'controlled-task', title: '<img src=x onerror="execute()">', state: 'running', priority: 10, attempt_count: 2, lease_observation: 'observed_expired', leased_until: null }, worker: null, worker_state: 'unavailable' }], dependencies: [] },
@@ -39,12 +40,15 @@ test('project activity exposes incomplete observations and clears them on access
     await expect(dialog.getByText(/Coverage: incomplete/)).toBeVisible();
     await expect(dialog.getByRole('heading', { name: 'Are we working in roadmap order?' })).toBeVisible();
     await expect(dialog.getByText(/Assessment: unknown. The source roadmap/)).toBeVisible();
+    await expect(dialog.getByText(/Worktree: \/controlled\/project/)).toBeVisible();
+    await expect(dialog.getByText(/not linked to a MAC task or roadmap revision/)).toBeVisible();
     await page.screenshot({ path: info.outputPath('mac-project-view.png'), fullPage: true });
     refused = true;
     await dialog.getByRole('button', { name: 'Refresh project' }).click();
     await expect(dialog.getByRole('alert')).toHaveText('MAC project observation is unavailable');
     await expect(dialog.getByText('controlled-task', { exact: true })).toHaveCount(0);
     await expect(dialog.getByText('Controlled project', { exact: true })).toHaveCount(0);
+    await expect(dialog.getByText(/Worktree: \/controlled\/project/)).toHaveCount(0);
     const live = await request.get(`/api/sessions/${id}`).then(result => result.json());
     expect(live.created_at).toBe(created.created_at); expect(live.state).toBe('connected');
     expect(fs.readFileSync(starts, 'utf8')).toBe(provider);

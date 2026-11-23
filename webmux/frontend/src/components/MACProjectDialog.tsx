@@ -45,6 +45,14 @@ export function MACProjectDialog({ sessionId, onClose }: { sessionId: string; on
         <ul>{value.sessions.map(item => <li key={`${item.session.node_id}:${item.session.session_id}:${item.session.incarnation}`}>
           {item.session.session_id} — {item.execution_host} · {item.transport} · {item.availability.replace(/_/g, ' ')}. MAC task link: {item.mac_link_state}. Observed {item.observed_at}.
         </li>)}</ul>
+        <h3>Source context</h3>
+        {value.source_state === 'observed' && value.source ? <>
+          <p>Worktree: {value.source.worktree}<br />
+            {value.source.detached ? 'Detached HEAD' : `Branch: ${value.source.ref.replace(/^refs\/heads\//, '')}`}<br />
+            Commit: <code>{value.source.commit}</code><br />
+            {value.source.dirty ? 'Uncommitted or untracked changes observed.' : 'No uncommitted or ordinary untracked changes observed.'} Observed {value.source.observed_at}.</p>
+          <p>The commit identifies Git history, not the contents of uncommitted changes. This source observation is not linked to a MAC task or roadmap revision.</p>
+        </> : <p>{value.source_state === 'execution_host_unavailable' ? 'Source inspection on this execution host is unavailable.' : 'Verified source context is unavailable.'} A displayed session path alone does not verify source identity.</p>}
         <h3>Are we duplicating work or conflicting?</h3>
         <p>Assessment: {value.project.conflict_verdict}. Task scope, source changes and ownership have not been reconciled. Standalone history is retained and unreconciled.</p>
         <h3>Are we working in roadmap order?</h3>

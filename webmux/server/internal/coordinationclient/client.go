@@ -160,7 +160,7 @@ func Request(ctx context.Context, access Access, method, path string, body io.Re
 	}
 	timeout := 5 * time.Second
 	if route.Path == "/project" {
-		timeout = 22 * time.Second
+		timeout = 30 * time.Second // Bounded project collection plus local Git metadata.
 	}
 	if route.Path == "/act" {
 		if body == nil {

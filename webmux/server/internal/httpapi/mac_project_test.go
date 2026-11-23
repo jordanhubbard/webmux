@@ -83,6 +83,9 @@ func TestMACProjectBrowserAndAgentShareScopedReadAndRefuseCompetingAuthority(t *
 		if got.Project.ConflictVerdict != "unknown" || got.Project.OrderingVerdict != "unknown" || got.Project.ProjectExistence != "unverified" {
 			t.Fatal("empty observation claimed project/order/conflict certainty", got.Project)
 		}
+		if got.SourceState != "observed" || got.Source == nil || got.Source.RepositoryID != repository.ID || got.Source.Worktree != repository.Worktree || got.Source.Commit == "" || got.SourceTaskLink != "unlinked" {
+			t.Fatal("missing verified source or invented task linkage", got.SourceState, got.SourceTaskLink)
+		}
 		for _, session := range got.Sessions {
 			if session.Session.Owner != "owner" || session.MACLinkState != "unlinked" || session.MACWorkerID != nil {
 				t.Fatal("account or session/worker boundary lost", session)
@@ -91,6 +94,13 @@ func TestMACProjectBrowserAndAgentShareScopedReadAndRefuseCompetingAuthority(t *
 		if response.Header().Get("Cache-Control") != "no-store" || strings.Contains(response.Body.String(), secret) || strings.Contains(response.Body.String(), directory) || strings.Contains(response.Body.String(), publisher.URL) {
 			t.Fatal("secret/local configuration exposed or cached")
 		}
+	}
+	remote := records[0]
+	remote.Transport = "ssh"
+	// This path really exists locally: inspecting it would create a convincing
+	// but incorrect source result for a remote execution host.
+	if source, state := s.macSourceForSession(t.Context(), remote, repository); source != nil || state != "execution_host_unavailable" {
+		t.Fatal("remote execution path was inspected locally", state)
 	}
 	before := reads.Load()
 	requireStatus(t, request(browser, "GET", path, "", token(t, s, "other")), 404)

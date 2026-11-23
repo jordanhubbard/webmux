@@ -139,6 +139,23 @@ func (r *Runtime) ObserveSession(owner string, member coordination.Member) (Sess
 	return r.bindings.ObserveSession(owner, member)
 }
 
+// ObserveSource is only for a worktree verified on this execution host. The
+// caller must not pass a remote path to the local Git inspector. This observes
+// Git metadata; it never establishes a task/attempt/source-roadmap association.
+func (r *Runtime) ObserveSource(ctx context.Context, owner string, repository *coordination.Binding) (SourceObservation, error) {
+	if mode, err := r.Backend(owner, repository); err != nil || mode != "mac" {
+		return SourceObservation{}, ErrUnmapped
+	}
+	source, err := r.bindings.ObserveSource(ctx, owner, repository)
+	if err != nil {
+		return SourceObservation{}, err
+	}
+	if err := r.current(); err != nil {
+		return SourceObservation{}, err
+	}
+	return source, nil
+}
+
 func (r *Runtime) ObserveProject(ctx context.Context, owner string, repository *coordination.Binding, offset, limit int) (ProjectObservation, error) {
 	mode, err := r.Backend(owner, repository)
 	if err != nil {

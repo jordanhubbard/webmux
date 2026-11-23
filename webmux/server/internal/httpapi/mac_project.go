@@ -74,6 +74,8 @@ func (s *Server) serveMACProject(w http.ResponseWriter, r *http.Request, owner, 
 // path. No request can choose the receiving account, MAC origin or project key.
 func (s *Server) macProjectForSession(ctx context.Context, owner, id string, expected *plane.Ref, offset int) (maccoord.SessionProjectObservation, error) {
 	var empty maccoord.SessionProjectObservation
+	ctx, cancelRead := context.WithTimeout(ctx, 25*time.Second)
+	defer cancelRead()
 	if !s.federationOwnerAllowed(owner) {
 		return empty, plane.ErrUnauthorized
 	}
@@ -117,6 +119,7 @@ func (s *Server) macProjectForSession(ctx context.Context, owner, id string, exp
 	if err != nil {
 		return empty, err
 	}
+	source, sourceState := s.macSourceForSession(ctx, current, repository)
 	retained, err := s.sessionCoord.service.ProjectInventory(owner, repository)
 	if err != nil {
 		return empty, err
@@ -161,5 +164,19 @@ func (s *Server) macProjectForSession(ctx context.Context, owner, id string, exp
 	if enabled, err := s.sessionCoord.service.Enabled(node); err != nil || !enabled {
 		return empty, plane.ErrDisabled
 	}
-	return maccoord.SessionProjectObservation{Schema: "webmux.mac.session-project-view.v1", Subject: ref, Project: observed, Sessions: sessions, HistoryState: "retained_unreconciled"}, nil
+	if err := ctx.Err(); err != nil {
+		return empty, err
+	}
+	return maccoord.SessionProjectObservation{Schema: "webmux.mac.session-project-view.v1", Subject: ref, Project: observed, Sessions: sessions, HistoryState: "retained_unreconciled", Source: source, SourceState: sourceState, SourceTaskLink: "unlinked"}, nil
+}
+
+func (s *Server) macSourceForSession(ctx context.Context, current session.Session, repository *plane.Binding) (*maccoord.SourceObservation, string) {
+	if !coordinationLocal(current) {
+		return nil, "execution_host_unavailable"
+	}
+	source, err := s.macObserver.ObserveSource(ctx, current.Owner, repository)
+	if err != nil {
+		return nil, "unavailable"
+	}
+	return &source, "observed"
 }

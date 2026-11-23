@@ -116,6 +116,15 @@ inventory includes revoked incarnations without reviving them. Broker presence
 does not establish MAC participation or task execution. Late session responses,
 failed refreshes and revoked access clear the displayed facts. Each next page
 replaces the preceding fresh observation instead of fabricating an atomic list.
+Source context names the subject session's verified local worktree, surrounding
+Git commit/ref and dirty state. It is sampled after authorized MAC collection
+under the shared read budget. A remote/managed execution path is never inspected
+on the WebMux server; its source section remains unavailable until that execution
+host has a supported source-observation channel. Source inspection failures do
+not turn a valid MAC task observation into a fabricated clean source result.
+The source observation remains explicitly unlinked to MAC tasks and roadmap
+revisions; a commit does not identify uncommitted worktree content.
+
 Conflict and ordering assessments remain explicitly unknown; source-roadmap and
 session/worker links remain unverified. These remaining requirements keep #674 open.
 
@@ -124,3 +133,36 @@ separates controlled cases, deliberate mutation controls and real bounded MAC
 reads. Native reads use a private explicit fleet-root test context, with no new
 project, task, worker, provider, credential or service mutation. They do not
 establish a live WebMux product binding or finish the human/agent acceptance.
+
+## Native shared-consumer qualification
+
+`TestNativeMACSharedBrowserAndMCPRead` skips unless
+`WEBMUX_MAC_NATIVE_SHARED_READ=1`. It takes the same explicit original read-only
+enrollment, origin, publisher PID and private task selection described in the
+binding qualification, plus `WEBMUX_MAC_NATIVE_PUBLISHER_FINGERPRINT`. It creates
+only disposable local WebMux sessions, an operator test policy and scoped WebMux
+capability files. Both the browser route and real MCP tool call the already-running
+MAC publisher. Their authorized task identities, source context, unknown
+assessments, refusal after private test-policy changes and preserved provider
+incarnations are checked. MAC worker registration, task dispatch, credential or
+installed service changes do not occur.
+
+With `WEBMUX_MAC_NATIVE_SHARED_BROWSER=1`, the same test mounts the production
+frontend build in its isolated server and invokes `mac-project-native-browser.mts`.
+Supply an absolute `WEBMUX_MAC_NATIVE_BROWSER_NODE` and
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`. The helper receives only the temporary
+WebMux browser token over stdin; the MAC token stays in the trusted server.
+Chrome opens the real terminal Project action and checks the actual network
+response, rendered task IDs, source commit and unknown assessments. No route is
+intercepted. Full app defaults and distinct fixture tile rows are used for this
+UI exercise; API-only fixtures intentionally have minimal settings.
+
+`WEBMUX_MAC_NATIVE_SHARED_RECEIPT` and
+`WEBMUX_MAC_NATIVE_SHARED_BROWSER_ARTIFACTS` select private **local** receipt and
+artifact paths. Screenshots, DOM/errors and task data can contain private project
+information and must not be published. Public qualification keeps only selected
+metadata and hashes in `shared-native.json`. The actual qualification uses an
+explicit user-supplied fleet test context, not a live WebMux project enrollment.
+All observed task owners in that bounded page were unowned: it qualifies neither
+a positive native worker/machine join nor three-host participation. Those gaps
+and source-roadmap/conflict/order requirements remain open.

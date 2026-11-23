@@ -204,6 +204,9 @@ export interface MACProjectView {
   schema: 'webmux.mac.session-project-view.v1';
   subject: { node_id: string; owner: string; session_id: string; incarnation: string };
   standalone_history_state: string;
+  source_state?: string;
+  source_task_link_state?: string;
+  source?: { schema: 'webmux.mac.source-observation.v1'; worktree: string; ref: string; commit: string; detached: boolean; dirty: boolean; observed_at: string } | null;
   project: {
     schema: 'webmux.mac.project-observation.v1'; project_key: string; observed_at: string;
     coverage: string; reported_total: number; next_offset: number | null;
