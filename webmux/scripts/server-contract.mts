@@ -696,7 +696,11 @@ try {
   assert.ok(initialized.instructions.includes('before starting work'));
   mcp.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + String.fromCharCode(10));
   const tools = await rpc('tools/list', {});
-  assert.equal(tools.tools.length, 2);
+  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ['webmux_coordination_act', 'webmux_coordination_view', 'webmux_mac_project_view']);
+  assert.equal(tools.tools.find(tool => tool.name === 'webmux_mac_project_view').annotations.readOnlyHint, true);
+  const project = await rpc('tools/call', { name: 'webmux_mac_project_view', arguments: { offset: 0 } });
+  assert.equal(project.isError, true); // No MAC binding exists in this isolated standalone fixture.
+  assert.ok(!JSON.stringify(project).includes('wmc1.'));
   const context = await rpc('tools/call', { name: 'webmux_coordination_view', arguments: {} });
   assert.ok(!context.isError);
   assert.ok(JSON.stringify(context).includes('node-local'));
