@@ -143,8 +143,12 @@ controller retains the enrolled peer/account/key identity after listener movemen
 and controller reconstruction; the independent receiver witnesses same-connection
 proof before every bearer use. A fresh silent-advertiser control fails at the
 discovery gate. These are isolated API components with explicit fixture trust,
-not installed-service, OS trust-store, browser, reverse-platform or real-agent
+not installed-service, OS trust-store, browser or real-agent
 acceptance. Full #631 remains open.
+The [reverse-role follow-up](validation/discovered-enrollment-2026-11-23/README.md#reverse-roles-and-polling-budget-control)
+also qualifies the Linux ARM64 controller/macOS ARM64 receiver direction, with
+an independent proof/bearer witness and an explicit silent-advertiser refusal.
+Other platform and complete application/workflow acceptance remain open.
 
 Deterministic tests cover malformed/foreign/self announcements, duplicate TXT
 keys, unrelated service/domain, credential metadata refusal, invalid endpoints,
