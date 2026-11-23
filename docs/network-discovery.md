@@ -89,6 +89,28 @@ Manual peers remain the fallback on isolated networks. Discovery does not bypass
 HTTPS certificate verification, and choosing an HTTP candidate does not check the
 connection form's explicit HTTP permission on the operator's behalf.
 
+On macOS, the server registers node and legacy listener services directly with
+the system Bonjour API. Bonjour owns the current hostname/address records and
+interface changes; the raw `Host` hint is not a separately registered alias.
+Explicit interface policy becomes native interface indexes. Stable instance names
+are not automatically renamed on collision. Startup waits up to three seconds
+for registration acknowledgments after submitting the requests; rejection or a
+later daemon/socket failure reports discovery unavailable. Cancellation releases
+only this server's registrations. The standalone build remains `CGO_ENABLED=0`
+using pinned PureGo bindings; no `dns-sd` helper process is launched. Browsing
+continues through Pion. Linux and Windows retain their existing transport.
+
+## Host-only listener selection
+
+A bare `.local` host observes listener advertisements for up to three seconds.
+If multiple instances advertise different ports for the preferred protocol,
+lookup refuses the ambiguity and requests an explicit URL with a port. Equal-port
+duplicates remain usable; updates replace the same instance. HTTP still requires
+explicit permission. A bounded inventory overflow also refuses selection.
+Explicit URL/port inputs bypass this lookup. These untrusted observations never
+authorize a node. The [native ambiguity controls](validation/discovery-ambiguity-2026-11-22/README.md)
+verify both HTTPS and HTTP refusal separately from exact per-instance discovery.
+
 ## Expiry and bounds
 
 The current Pion dependency reports additions/changes, deduplicates identical
@@ -102,6 +124,16 @@ preserves scoped IPv6 link-local addresses. It does not assert complete network
 inventory or protection against advertisement flooding/spoofing.
 
 ## Validation and remaining acceptance
+
+The [native Bonjour adapter qualification](validation/discovery-bonjour-2026-11-22/README.md)
+adds production-component discovery in both directions and simultaneously between
+macOS ARM64 and Linux ARM64. The browsers also find each fresh peer's exact legacy
+HTTP/HTTPS instance records. Actual local registration conflict and cancellation
+controls pass. This does not complete authenticated discovery/enrollment or the
+remaining platform and lifecycle gates below. Host-only legacy lookup can still
+choose another listener sharing the system hostname; [#660](https://github.com/jordanhubbard/webmux/issues/660)
+tracks that separate failed compatibility control. Exact node candidates retain
+their own instance, ID and port.
 
 Deterministic tests cover malformed/foreign/self announcements, duplicate TXT
 keys, unrelated service/domain, credential metadata refusal, invalid endpoints,

@@ -1,0 +1,142 @@
+{
+  "scope": "Production StartNodes component endpoints on native Darwin ARM64 and Linux ARM64; no HTTP listeners or enrollment",
+  "base_commit": "ca9252608a00aed498e7207ba58d8fcd492622f7",
+  "qualification_exit_code": 1,
+  "passed": false,
+  "sources_unchanged": true,
+  "source_sha256": {
+    "scripts/qualify-discovery-two-host.py": "13cd94cfed3ec974d72f3f76dbed9aec954d6721713036154688f231a61b0d93",
+    "webmux/server/internal/discovery/discovery.go": "29402d3044e6f8e8888a25ed2b3bebdeb11d047bbf92a36ad461ca15fe36dec8",
+    "webmux/server/internal/discovery/discovery_test.go": "fb850bd07323805f54bea6687605e35227ab035728a1a1fc1762ae09d263a20a",
+    "webmux/server/internal/discovery/native_endpoint_test.go": "7e26c52b6b40090b9d0686f0a7a0aa8857be8863eb8c71c46d8b164df2da6c35",
+    "webmux/server/internal/discovery/nodes.go": "5bc031f432818f7c6767f0e524b226e335c995953fbf06b48fb60f8dda82fbfa",
+    "webmux/server/internal/discovery/nodes_test.go": "587dfdd13c5fe7a628b1774db0d453ef6f6fc6a8124cf68cb4ca791be3e12947",
+    "webmux/server/internal/discovery/policy.go": "6f28e23d3b120466554b38049e91c66d150e548b3c2206297325e2d7533f57f0",
+    "webmux/server/internal/discovery/transport_control_test.go": "7d31fa3839626e2a4b97a865e0a78224b6a5b615e908f7d795f0d78c31788701",
+    "webmux/server/go.mod": "2f76dbb6ea1fe15260d271fb8bf6593d986d5ab83c08f7d4627e5a6c12a1a12d",
+    "webmux/server/go.sum": "ee6a5eeea5cf2a0b2768348d078eb8d941ba3229896169cedf8185d35a2d690f"
+  },
+  "binary_sha256": {
+    "darwin": "539d48772281a95bac7d847bedd3050ea1daf219017ed70f792d3626bc6eaa1b",
+    "linux": "caf61b8386f1dfa03a7f64f6ca673224f9cc8cf102c50c4d5d15067824045149"
+  },
+  "primary": {
+    "kernel": "Darwin",
+    "machine": "arm64"
+  },
+  "remote": {
+    "kernel": "Linux",
+    "machine": "aarch64"
+  },
+  "commands": {
+    "go-version": {
+      "exit_code": 0
+    },
+    "build-darwin": {
+      "exit_code": 0
+    },
+    "build-linux": {
+      "exit_code": 0
+    },
+    "transfer": {
+      "exit_code": 0
+    }
+  },
+  "phases": [
+    {
+      "name": "forward",
+      "passed": true,
+      "mac_role": "browse",
+      "linux_role": "advertise",
+      "mac_exit_code": 0,
+      "linux_exit_code": 0,
+      "candidate_address_families": {
+        "mac": [
+          4
+        ],
+        "linux": []
+      }
+    },
+    {
+      "name": "reverse",
+      "passed": false,
+      "mac_role": "advertise",
+      "linux_role": "browse",
+      "mac_exit_code": 0,
+      "linux_exit_code": 1,
+      "candidate_address_families": {
+        "mac": [],
+        "linux": []
+      }
+    },
+    {
+      "name": "duplex",
+      "passed": false,
+      "mac_role": "both",
+      "linux_role": "both",
+      "mac_exit_code": 0,
+      "linux_exit_code": 1,
+      "candidate_address_families": {
+        "mac": [
+          4
+        ],
+        "linux": []
+      }
+    },
+    {
+      "name": "bonjour-control",
+      "passed": true,
+      "mac_role": "bonjour-advertise",
+      "linux_role": "browse",
+      "mac_exit_code": -2,
+      "linux_exit_code": 0,
+      "candidate_address_families": {
+        "mac": [],
+        "linux": [
+          4
+        ]
+      }
+    }
+  ],
+  "quality_checks": {
+    "race": {
+      "exit_code": 0,
+      "log_sha256": "560f33ec8fe001f042572f831a8e49746948d3cf62ea78999b506b056dd02f21"
+    },
+    "vet": {
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "private_evidence": {
+    "_build/discovery-darwin631/qualified-two-host/bonjour-control-linux.log": "fca0ec792e03d0e5734550ca21705ff5a7e447f1d5979007733cb44ccf5b190d",
+    "_build/discovery-darwin631/qualified-two-host/bonjour-control-mac.log": "1ea00be0f0bc3e88f1b3e0fe2e44ca4d1890832ed6d3ca6ebce9b74169c1bf74",
+    "_build/discovery-darwin631/qualified-two-host/build-darwin.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "_build/discovery-darwin631/qualified-two-host/build-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "_build/discovery-darwin631/qualified-two-host/duplex-linux.log": "12798e93b7e9f7fa388b5c6c49523b7e06858bbaef9b9ef7faa859aa6c0eb830",
+    "_build/discovery-darwin631/qualified-two-host/duplex-mac/observed-all.json": "4d30b025237e6808c0a9768601ad9589f3c5e2f8ff7b12e3dc87141792a5deae",
+    "_build/discovery-darwin631/qualified-two-host/duplex-mac/observed.json": "7102b2164e35b14f42e63a0a23d27f989f0fce64af9a79f8a7e937820d3ab193",
+    "_build/discovery-darwin631/qualified-two-host/duplex-mac/ready.json": "f088b38259386080dea826a1998e780227a1a7626b09b3031ee377a0733480aa",
+    "_build/discovery-darwin631/qualified-two-host/duplex-mac.log": "4ef033ebf26aa94b62c9e57b0574c245c511ab973fa46ef12762988f2870e11c",
+    "_build/discovery-darwin631/qualified-two-host/forward-linux.log": "18d528615727f4290ea3fc4031c822fd6321aecf098dc8afed18358e49291611",
+    "_build/discovery-darwin631/qualified-two-host/forward-mac/observed-all.json": "22e0fb1f9b27d7ce868288837de633a72c2eb6ec12dcedd2e451a1a0659aa40f",
+    "_build/discovery-darwin631/qualified-two-host/forward-mac/observed.json": "e1d9165c8371a2360ec995ad4fb1592a2d905f82e0e8a6718784aca9488c82f4",
+    "_build/discovery-darwin631/qualified-two-host/forward-mac/ready.json": "fe3775477bcfd8ae2d9a5a0e33dff0d9aa6898cb3630bcce8990f62729da62fc",
+    "_build/discovery-darwin631/qualified-two-host/forward-mac.log": "07229da32942379620fc7c77395e15d798ddd930b7bcceb5e3369fa234248934",
+    "_build/discovery-darwin631/qualified-two-host/go-version.log": "c6f1c8d54aedc3afa72560d934397ad6c33b28f1b4d3546ec53176439b2397d5",
+    "_build/discovery-darwin631/qualified-two-host/receipt.json": "4840c5f501f410efcbbc2d0625e3d1dc18f8d7fb5c30086bae38756fb7a9502a",
+    "_build/discovery-darwin631/qualified-two-host/remote-prepare.log": "e8559cc652d6145897339adf6714e6d31b0be9667573bbe04618333896f8d182",
+    "_build/discovery-darwin631/qualified-two-host/reverse-linux.log": "5ef92f05ca02f38b80c826339848f6e31d403d7c18c45f58ae62b8cbba2f6b06",
+    "_build/discovery-darwin631/qualified-two-host/reverse-mac/ready.json": "4454dad9522aac3d60a61948a0e87277140ec61a22b65fafe25c62f2d7bad0f2",
+    "_build/discovery-darwin631/qualified-two-host/reverse-mac.log": "9c5d897663d348df5329030fad4b8592c4cafd42e6e424115360554daf7773c3",
+    "_build/discovery-darwin631/qualified-two-host/transfer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "windows_arm64_test_binary_sha256": "238cd2407b18d037e1cc468dd126299f0517e737d4683a8992a01064171b4a8f",
+  "limitations": [
+    "Reverse and simultaneous Go discovery fail on this Mac; cause of absent multicast reads remains unproven.",
+    "Observed IPv4 candidate records do not prove IPv6 multicast transport.",
+    "Advertised TLS capability and port are fixture metadata, not a listening or verified TLS service.",
+    "No authentication, enrollment, HTTP reconciliation, network change, expiry or Windows native acceptance is established.",
+    "Bonjour control uses the system dns-sd command separately from unchanged production Go discovery."
+  ]
+}

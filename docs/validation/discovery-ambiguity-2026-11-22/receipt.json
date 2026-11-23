@@ -1,0 +1,226 @@
+{
+  "scope": "Native host-only listener selection controls; no authenticated enrollment or complete roadmap acceptance",
+  "runs": {
+    "https": {
+      "passed": true,
+      "sources_unchanged": true,
+      "source_sha256": {
+        "scripts/qualify-discovery-two-host.py": "617b57b22a708aa78d823ec46fbd2a638a66b727f8ba5b19ecff865b6d798d84",
+        "webmux/server/internal/discovery/discovery.go": "550b38bb4a8cad870a398c013c73c4f8a522847b6ec96f8f2192e334397c64a4",
+        "webmux/server/internal/discovery/discovery_test.go": "fb850bd07323805f54bea6687605e35227ab035728a1a1fc1762ae09d263a20a",
+        "webmux/server/internal/discovery/listener_selection_test.go": "32a557ebdb5ab51a1e1b5c181b73ecf62b07a567d5cfdb341a7f5ca9c0cea8ca",
+        "webmux/server/internal/discovery/native_announcements_darwin.go": "6b465bbd6863e0baa2f496caaa8714807ed9117fffcbefce8601b4e26d47af3f",
+        "webmux/server/internal/discovery/native_announcements_darwin_test.go": "30f924b46752e10bd1e2f67de2aeb8939ba9d5ae6b6231d90e56addbcdfbbf42",
+        "webmux/server/internal/discovery/native_announcements_other.go": "eff09deacfe1fcbd208691c3026599c972fb5e483f8a1dae1e370a687bb9dee0",
+        "webmux/server/internal/discovery/native_bonjour_test.go": "ae0d4860051daf7aee50654a7e51d4f45d58785787908795cb6c7e5ebe9dd29f",
+        "webmux/server/internal/discovery/native_endpoint_test.go": "539d086b334b323f862c2f28566b41ed5241890b3f40a8da9596dd9b8f179dd4",
+        "webmux/server/internal/discovery/nodes.go": "6feb100e8b629a2c40d800657dafa3b30af3a593936483e32dbd9e8698c1f101",
+        "webmux/server/internal/discovery/nodes_test.go": "587dfdd13c5fe7a628b1774db0d453ef6f6fc6a8124cf68cb4ca791be3e12947",
+        "webmux/server/internal/discovery/policy.go": "6f28e23d3b120466554b38049e91c66d150e548b3c2206297325e2d7533f57f0",
+        "webmux/server/internal/discovery/transport_control_test.go": "7d31fa3839626e2a4b97a865e0a78224b6a5b615e908f7d795f0d78c31788701",
+        "webmux/server/go.mod": "2ec1c2dac473a2aa6a91b3e2dbefb0a0343a0dbdc4b170962310666c72d33e20",
+        "webmux/server/go.sum": "35bd3d38f7dc0ee72c6bff43127f8054f8933528769622962ec47fc549b7d897"
+      },
+      "binary_sha256": {
+        "darwin": "92de7f02344d215700c14c1b812ce46d6bd459f3dd080cecdd6f734213fe7c32",
+        "linux": "33e3a2c0942aaf7cdb4a4eeb9f4de1c1cf8ae44750454d24cd77f17c0c95e051"
+      },
+      "runtime": {
+        "primary": {
+          "kernel": "Darwin",
+          "machine": "arm64"
+        },
+        "remote": {
+          "kernel": "Linux",
+          "machine": "aarch64"
+        }
+      },
+      "phases": [
+        {
+          "name": "forward",
+          "passed": true,
+          "mac_exit_code": 0,
+          "linux_exit_code": 0,
+          "linux_host_lookup_verified": true,
+          "mac_host_ambiguity_refused": true,
+          "owned_mac_competitor_verified": true,
+          "legacy_instance_records_verified": true,
+          "candidate_address_families": {
+            "mac": [
+              4
+            ],
+            "linux": []
+          }
+        },
+        {
+          "name": "reverse",
+          "passed": true,
+          "mac_exit_code": 0,
+          "linux_exit_code": 0,
+          "linux_host_lookup_verified": true,
+          "mac_host_ambiguity_refused": true,
+          "owned_mac_competitor_verified": true,
+          "legacy_instance_records_verified": true,
+          "candidate_address_families": {
+            "mac": [],
+            "linux": [
+              4
+            ]
+          }
+        },
+        {
+          "name": "duplex",
+          "passed": true,
+          "mac_exit_code": 0,
+          "linux_exit_code": 0,
+          "linux_host_lookup_verified": true,
+          "mac_host_ambiguity_refused": true,
+          "owned_mac_competitor_verified": true,
+          "legacy_instance_records_verified": true,
+          "candidate_address_families": {
+            "mac": [
+              4
+            ],
+            "linux": [
+              4,
+              6
+            ]
+          }
+        },
+        {
+          "name": "bonjour-control",
+          "passed": true,
+          "mac_exit_code": -2,
+          "linux_exit_code": 0,
+          "candidate_address_families": {
+            "mac": [],
+            "linux": [
+              4
+            ]
+          }
+        }
+      ]
+    },
+    "http": {
+      "passed": true,
+      "sources_unchanged": true,
+      "source_sha256": {
+        "scripts/qualify-discovery-two-host.py": "617b57b22a708aa78d823ec46fbd2a638a66b727f8ba5b19ecff865b6d798d84",
+        "webmux/server/internal/discovery/discovery.go": "550b38bb4a8cad870a398c013c73c4f8a522847b6ec96f8f2192e334397c64a4",
+        "webmux/server/internal/discovery/discovery_test.go": "fb850bd07323805f54bea6687605e35227ab035728a1a1fc1762ae09d263a20a",
+        "webmux/server/internal/discovery/listener_selection_test.go": "32a557ebdb5ab51a1e1b5c181b73ecf62b07a567d5cfdb341a7f5ca9c0cea8ca",
+        "webmux/server/internal/discovery/native_announcements_darwin.go": "6b465bbd6863e0baa2f496caaa8714807ed9117fffcbefce8601b4e26d47af3f",
+        "webmux/server/internal/discovery/native_announcements_darwin_test.go": "30f924b46752e10bd1e2f67de2aeb8939ba9d5ae6b6231d90e56addbcdfbbf42",
+        "webmux/server/internal/discovery/native_announcements_other.go": "eff09deacfe1fcbd208691c3026599c972fb5e483f8a1dae1e370a687bb9dee0",
+        "webmux/server/internal/discovery/native_bonjour_test.go": "ae0d4860051daf7aee50654a7e51d4f45d58785787908795cb6c7e5ebe9dd29f",
+        "webmux/server/internal/discovery/native_endpoint_test.go": "539d086b334b323f862c2f28566b41ed5241890b3f40a8da9596dd9b8f179dd4",
+        "webmux/server/internal/discovery/nodes.go": "6feb100e8b629a2c40d800657dafa3b30af3a593936483e32dbd9e8698c1f101",
+        "webmux/server/internal/discovery/nodes_test.go": "587dfdd13c5fe7a628b1774db0d453ef6f6fc6a8124cf68cb4ca791be3e12947",
+        "webmux/server/internal/discovery/policy.go": "6f28e23d3b120466554b38049e91c66d150e548b3c2206297325e2d7533f57f0",
+        "webmux/server/internal/discovery/transport_control_test.go": "7d31fa3839626e2a4b97a865e0a78224b6a5b615e908f7d795f0d78c31788701",
+        "webmux/server/go.mod": "2ec1c2dac473a2aa6a91b3e2dbefb0a0343a0dbdc4b170962310666c72d33e20",
+        "webmux/server/go.sum": "35bd3d38f7dc0ee72c6bff43127f8054f8933528769622962ec47fc549b7d897"
+      },
+      "binary_sha256": {
+        "darwin": "92de7f02344d215700c14c1b812ce46d6bd459f3dd080cecdd6f734213fe7c32",
+        "linux": "33e3a2c0942aaf7cdb4a4eeb9f4de1c1cf8ae44750454d24cd77f17c0c95e051"
+      },
+      "runtime": {
+        "primary": {
+          "kernel": "Darwin",
+          "machine": "arm64"
+        },
+        "remote": {
+          "kernel": "Linux",
+          "machine": "aarch64"
+        }
+      },
+      "phases": [
+        {
+          "name": "forward",
+          "passed": true,
+          "mac_exit_code": 0,
+          "linux_exit_code": 0,
+          "linux_host_lookup_verified": true,
+          "mac_host_ambiguity_refused": true,
+          "owned_mac_competitor_verified": true,
+          "legacy_instance_records_verified": true,
+          "candidate_address_families": {
+            "mac": [
+              4
+            ],
+            "linux": []
+          }
+        },
+        {
+          "name": "reverse",
+          "passed": true,
+          "mac_exit_code": 0,
+          "linux_exit_code": 0,
+          "linux_host_lookup_verified": true,
+          "mac_host_ambiguity_refused": true,
+          "owned_mac_competitor_verified": true,
+          "legacy_instance_records_verified": true,
+          "candidate_address_families": {
+            "mac": [],
+            "linux": [
+              4
+            ]
+          }
+        },
+        {
+          "name": "duplex",
+          "passed": true,
+          "mac_exit_code": 0,
+          "linux_exit_code": 0,
+          "linux_host_lookup_verified": true,
+          "mac_host_ambiguity_refused": true,
+          "owned_mac_competitor_verified": true,
+          "legacy_instance_records_verified": true,
+          "candidate_address_families": {
+            "mac": [
+              4
+            ],
+            "linux": [
+              4,
+              6
+            ]
+          }
+        },
+        {
+          "name": "bonjour-control",
+          "passed": true,
+          "mac_exit_code": -2,
+          "linux_exit_code": 0,
+          "candidate_address_families": {
+            "mac": [],
+            "linux": [
+              4
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "local_checks": {
+    "full_go": {
+      "command": "go test -count=1 ./...",
+      "exit_code": 0,
+      "node_major": 24,
+      "log_sha256": "811ea95c99e9700de884f38dd035f3f63ba4f251e666815ba280c0f97b131556"
+    },
+    "discovery_race": {
+      "command": "go test -count=1 -race ./internal/discovery",
+      "exit_code": 0
+    },
+    "discovery_vet": {
+      "command": "go vet ./internal/discovery",
+      "exit_code": 0
+    },
+    "server_contract": {
+      "command": "node scripts/server-contract.mts",
+      "node_major": 24,
+      "exit_code": 0
+    }
+  }
+}

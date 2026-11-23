@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pion/mdns/v2"
@@ -180,12 +181,9 @@ func resolveMulticast(ctx context.Context, host string, allowHTTP bool) (Endpoin
 	defer server.Close()
 	query, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	found := make(chan mdns.ServiceEvent, 8)
+	listeners := &multicastListeners{}
 	server.OnServiceDiscovered(func(event mdns.ServiceEvent) {
-		select {
-		case found <- event:
-		default:
-		}
+		listeners.observeHost(host, event)
 	})
 	if err := server.Browse(query, secureService); err != nil {
 		return Endpoint{}, err
@@ -193,46 +191,105 @@ func resolveMulticast(ctx context.Context, host string, allowHTTP bool) (Endpoin
 	if err := server.Browse(query, clearService); err != nil {
 		return Endpoint{}, err
 	}
-	var secure, clear *Endpoint
-	preferred := secureService
-	if allowHTTP {
-		preferred = clearService
+	return collectMulticastEndpoints(ctx, query, host, allowHTTP, listeners)
+}
+
+// ErrAmbiguousListener means host-only discovery cannot identify one listener.
+// Callers must supply an explicit URL/port rather than select an arbitrary peer.
+var ErrAmbiguousListener = errors.New("multiple WebMux listeners advertised for this host; supply an explicit URL with a port")
+
+var errIncompleteListenerDiscovery = errors.New("WebMux listener discovery was incomplete; supply an explicit URL with a port")
+
+const maxListenerInstances = 256
+
+type listenerIdentity struct {
+	service, instance string
+}
+
+type multicastListeners struct {
+	mu         sync.Mutex
+	instances  map[listenerIdentity]Endpoint
+	incomplete bool
+}
+
+func matchingListenerEvent(host string, event mdns.ServiceEvent) bool {
+	s := event.Instance
+	return (s.Service == secureService || s.Service == clearService) && s.Port != 0 &&
+		len(s.Instance) > 0 && len(s.Instance) <= 63 &&
+		strings.EqualFold(strings.TrimSuffix(s.Host, "."), strings.TrimSuffix(host, "."))
+}
+
+// Accumulate listener state synchronously: address refreshes do not consume an
+// event queue, and a flood cannot displace a different listener's observation.
+func (listeners *multicastListeners) observeHost(host string, event mdns.ServiceEvent) {
+	if !matchingListenerEvent(host, event) {
+		return
 	}
-	for {
-		select {
-		case event := <-found:
-			if !strings.EqualFold(strings.TrimSuffix(event.Instance.Host, "."), strings.TrimSuffix(host, ".")) {
-				continue
-			}
-			if event.Instance.Port == 0 {
-				continue
-			}
-			endpoint := Endpoint{Port: int(event.Instance.Port)}
-			switch event.Instance.Service {
-			case secureService:
-				endpoint.Scheme = "https"
-				secure = &endpoint
-			case clearService:
-				endpoint.Scheme = "http"
-				clear = &endpoint
-			default:
-				continue
-			}
-			if event.Instance.Service == preferred {
-				return endpoint, nil
-			}
-		case <-query.Done():
-			endpoint, chooseErr := choose(secure, clear, allowHTTP)
-			if chooseErr == nil {
-				return endpoint, nil
-			}
-			if clear != nil {
-				return Endpoint{}, fmt.Errorf("discover %s: %w", host, chooseErr)
-			}
-			if allowHTTP {
-				return Endpoint{Scheme: "http", Port: 8080}, nil
-			}
-			return Endpoint{Scheme: "https", Port: 8443}, nil
+	listeners.mu.Lock()
+	defer listeners.mu.Unlock()
+	s := event.Instance
+	key := listenerIdentity{service: s.Service, instance: s.Instance}
+	if listeners.instances == nil {
+		listeners.instances = make(map[listenerIdentity]Endpoint)
+	}
+	if _, exists := listeners.instances[key]; !exists && len(listeners.instances) >= maxListenerInstances {
+		listeners.incomplete = true
+		return
+	}
+	scheme := "https"
+	if s.Service == clearService {
+		scheme = "http"
+	}
+	// Updates replace the same instance; duplicate addresses and a changed port
+	// on one instance must not be mistaken for multiple current listeners.
+	listeners.instances[key] = Endpoint{Scheme: scheme, Port: int(s.Port)}
+}
+
+func (listeners *multicastListeners) choose(allowHTTP bool) (Endpoint, error) {
+	listeners.mu.Lock()
+	defer listeners.mu.Unlock()
+	if listeners.incomplete {
+		return Endpoint{}, errIncompleteListenerDiscovery
+	}
+	var secure, clear *Endpoint
+	var secureAmbiguous, clearAmbiguous bool
+	for _, endpoint := range listeners.instances {
+		if endpoint.Scheme == "https" {
+			secureAmbiguous = secureAmbiguous || (secure != nil && secure.Port != endpoint.Port)
+			secure = &endpoint
+		} else {
+			clearAmbiguous = clearAmbiguous || (clear != nil && clear.Port != endpoint.Port)
+			clear = &endpoint
 		}
 	}
+	if (allowHTTP && clear != nil && clearAmbiguous) || ((!allowHTTP || clear == nil) && secureAmbiguous) {
+		return Endpoint{}, ErrAmbiguousListener
+	}
+	endpoint, err := choose(secure, clear, allowHTTP)
+	if err == nil || clear != nil {
+		return endpoint, err
+	}
+	// Preserve documented defaults for older servers with no usable records.
+	if allowHTTP {
+		return Endpoint{Scheme: "http", Port: 8080}, nil
+	}
+	return Endpoint{Scheme: "https", Port: 8443}, nil
+}
+
+func collectMulticastEndpoints(parent, query context.Context, host string, allowHTTP bool, listeners *multicastListeners) (Endpoint, error) {
+	// Every callback commits directly to the bounded state above. Wait for the
+	// full observation window before taking one coherent selection snapshot.
+	select {
+	case <-parent.Done():
+		return Endpoint{}, parent.Err()
+	case <-query.Done():
+	}
+	if err := parent.Err(); err != nil {
+		return Endpoint{}, err
+	}
+	endpoint, err := listeners.choose(allowHTTP)
+	if err != nil {
+		return Endpoint{}, fmt.Errorf("discover %s: %w", host, err)
+	}
+	return endpoint, nil
 }
