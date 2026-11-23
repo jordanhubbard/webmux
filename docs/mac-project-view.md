@@ -113,7 +113,13 @@ The terminal's Project button loads on demand, including while disconnected.
 The dialog shows reported task priorities, scoped worker/machine identities,
 lease observations, omissions and withheld dependencies. Retained session
 inventory includes revoked incarnations without reviving them. Broker presence
-does not establish MAC participation or task execution. Late session responses,
+does not establish MAC participation or task execution. Task owner and lease IDs,
+authority time, worker status/health and last-seen/update/deletion times remain
+visible even when a historical owner is offline or its details cannot be joined.
+Session details retain node, account, incarnation, broker activity, revocation,
+projection time and unqualified freshness. Missing/zero observation times say
+`not observed`; neither a recent projection nor a hostname proves current work,
+freshness or a local/remote canonical machine link. Late session responses,
 failed refreshes and revoked access clear the displayed facts. Each next page
 replaces the preceding fresh observation instead of fabricating an atomic list.
 Source context names the subject session's verified local worktree, surrounding

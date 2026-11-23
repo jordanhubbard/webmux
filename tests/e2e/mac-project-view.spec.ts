@@ -25,8 +25,8 @@ test('project activity exposes incomplete observations and clears them on access
         roadmap_state: 'observed_committed_snapshot', roadmap: { schema: 'webmux.mac.source-roadmap-observation.v1', path: 'docs/roadmap.md', commit: 'a'.repeat(40), blob: 'b'.repeat(40), sha256: 'c'.repeat(64), text: '# Source intent\n<script>execute()</script>', working_copy_dirty: true, task_link_state: 'unlinked', observed_at: '2026-11-23T07:00:00Z' },
         project: { schema: 'webmux.mac.project-observation.v1', project_key: 'Controlled project', observed_at: '2026-11-23T07:00:00Z', coverage: 'incomplete', reported_total: 12, next_offset: null,
           conflict_verdict: 'unknown', ordering_verdict: 'unknown', unavailable_tasks: 1, unavailable_workers: 0, adapter_omitted_tasks: 0, upstream_omitted_tasks: 0, withheld_dependencies: 1,
-          tasks: [{ task: { task_id: 'controlled-task', title: '<img src=x onerror="execute()">', state: 'running', priority: 10, attempt_count: 2, lease_observation: 'observed_expired', leased_until: null }, worker: null, worker_state: 'unavailable' }], dependencies: [] },
-        sessions: [{ session: { node_id: 'node', session_id: id, incarnation: 'run' }, execution_host: 'puck.local', transport: 'exec', availability: 'present', mac_link_state: 'unlinked', observed_at: '2026-11-23T07:00:00Z' }],
+          tasks: [{ task: { task_id: 'controlled-task', title: '<img src=x onerror="execute()">', state: 'running', priority: 10, owner_worker_id: 'historical-owner', attempt_count: 2, lease_id: 'historical-lease', authority_time: '2026-11-23T07:00:00Z', updated_at: '2026-11-22T04:00:00Z', observed_at: '2026-11-23T07:00:00Z', lease_observation: 'observed_expired', leased_until: null }, worker: null, worker_state: 'unavailable' }], dependencies: [] },
+        sessions: [{ session: { node_id: 'node', owner: 'fixture', session_id: id, incarnation: 'run' }, execution_host: 'puck.local', transport: 'exec', availability: 'revoked', broker_active: false, mac_link_state: 'unlinked', observed_at: '2026-11-23T06:00:00Z', projected_at: '2026-11-23T07:00:00Z', revoked_at: '2026-11-23T06:30:00Z', freshness: 'unqualified' }],
       } });
     });
     await page.goto('/');
@@ -39,6 +39,12 @@ test('project activity exposes incomplete observations and clears them on access
     await expect(dialog.getByRole('cell', { name: '<img src=x onerror="execute()"> controlled-task', exact: true })).toBeVisible();
     await expect(dialog.locator('img')).toHaveCount(0);
     await expect(dialog.getByText(/Coverage: incomplete/)).toBeVisible();
+    await expect(dialog.getByText(/Owner: historical-owner/)).toBeVisible();
+    await expect(dialog.getByText(/Lease ID: historical-lease/)).toBeVisible();
+    await expect(dialog.getByText(/puck.local.*revoked.*MAC task link: unlinked/)).toBeVisible();
+    await dialog.getByText('Session identity and observation', { exact: true }).click();
+    await expect(dialog.getByText(/Node: node.*Account: fixture.*Incarnation: run/)).toBeVisible();
+    await expect(dialog.getByText(/Revoked: 2026-11-23T06:30:00Z/)).toBeVisible();
     await expect(dialog.getByRole('heading', { name: 'Are we working in roadmap order?' })).toBeVisible();
     await expect(dialog.getByText(/Assessment: unknown. The source roadmap/)).toBeVisible();
     await expect(dialog.getByText(/Worktree: \/controlled\/project/)).toBeVisible();
@@ -54,6 +60,8 @@ test('project activity exposes incomplete observations and clears them on access
     await expect(dialog.getByText('Controlled project', { exact: true })).toHaveCount(0);
     await expect(dialog.getByText(/Worktree: \/controlled\/project/)).toHaveCount(0);
     await expect(dialog.getByLabel('Source roadmap text')).toHaveCount(0);
+    await expect(dialog.getByText(/Owner: historical-owner/)).toHaveCount(0);
+    await expect(dialog.getByText(/Revoked: 2026-11-23T06:30:00Z/)).toHaveCount(0);
     const live = await request.get(`/api/sessions/${id}`).then(result => result.json());
     expect(live.created_at).toBe(created.created_at); expect(live.state).toBe('connected');
     expect(fs.readFileSync(starts, 'utf8')).toBe(provider);

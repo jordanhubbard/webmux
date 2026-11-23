@@ -13,8 +13,8 @@ function observation(id = 'one'): MACProjectView {
     roadmap_state: 'observed_committed_snapshot', roadmap: { schema: 'webmux.mac.source-roadmap-observation.v1', path: 'docs/roadmap.md', commit: 'a'.repeat(40), blob: 'b'.repeat(40), sha256: 'c'.repeat(64), text: '# Source intent\n<script>execute()</script>', working_copy_dirty: true, task_link_state: 'unlinked', observed_at: '2026-11-23T07:00:00Z' },
     project: { schema: 'webmux.mac.project-observation.v1', project_key: `project-${id}`, observed_at: '2026-11-23T07:00:00Z', coverage: 'incomplete', reported_total: 4, next_offset: 1,
       conflict_verdict: 'unknown', ordering_verdict: 'unknown', unavailable_tasks: 1, unavailable_workers: 1, adapter_omitted_tasks: 0, upstream_omitted_tasks: 0, withheld_dependencies: 1,
-      tasks: [{ task: { task_id: 'task-one', title: '<img src=x onerror="execute()">', state: 'running', priority: 10, attempt_count: 2, lease_observation: 'observed_unexpired', leased_until: '2026-11-23T08:00:00Z' }, worker: { worker_id: 'canonical-worker', worker_name: 'Rocky', machine_id: 'canonical-machine', machine_hostname: 'puck', availability: 'observed' }, worker_state: 'observed' }], dependencies: [] },
-    sessions: [{ session: { node_id: 'node', session_id: id, incarnation: 'run' }, execution_host: 'puck.local', transport: 'local', availability: 'present', mac_link_state: 'unlinked', observed_at: '2026-11-23T07:00:00Z' }],
+      tasks: [{ task: { task_id: 'task-one', title: '<img src=x onerror="execute()">', state: 'running', priority: 10, owner_worker_id: 'canonical-worker', attempt_count: 2, lease_id: 'lease-one', authority_time: '2026-11-23T07:00:00Z', updated_at: '2026-11-22T04:00:00Z', observed_at: '2026-11-23T07:00:00Z', lease_observation: 'observed_unexpired', leased_until: '2026-11-23T08:00:00Z' }, worker: { worker_id: 'canonical-worker', worker_name: 'Rocky', machine_id: 'canonical-machine', machine_hostname: 'puck', availability: 'observed', worker_status: 'offline', health_status: 'unhealthy', worker_last_seen: '2026-11-20T01:00:00Z', worker_updated_at: '2026-11-22T04:00:00Z', worker_deleted_at: null, machine_last_seen: '2026-11-20T02:00:00Z', freshness: 'unqualified', observed_at: '2026-11-23T07:00:00Z' }, worker_state: 'observed' }], dependencies: [] },
+    sessions: [{ session: { node_id: 'node', owner: 'owner', session_id: id, incarnation: 'run' }, execution_host: 'puck.local', transport: 'local', availability: 'present', broker_active: false, mac_link_state: 'unlinked', observed_at: '2026-11-23T07:00:00Z', projected_at: '2026-11-23T07:00:01Z', revoked_at: null, freshness: 'unqualified' }],
   };
 }
 afterEach(() => vi.restoreAllMocks());
@@ -29,6 +29,13 @@ it('loads from the terminal action only when requested and displays qualified ta
   expect(document.querySelector('img')).toBeNull();
   expect(screen.getByText(/Rocky \(canonical-worker\)/)).toBeDefined();
   expect(screen.getByText(/puck.local.*MAC task link: unlinked/)).toBeDefined();
+  expect(screen.getByText(/Reported status: offline; health: unhealthy/)).toBeDefined();
+  expect(screen.getByText(/Worker last seen: 2026-11-20T01:00:00Z/)).toBeDefined();
+  expect(screen.getByText(/Machine last seen: 2026-11-20T02:00:00Z/)).toBeDefined();
+  expect(screen.getByText(/Lease ID: lease-one/)).toBeDefined();
+  expect(screen.getByText(/Authority time: 2026-11-23T07:00:00Z/)).toBeDefined();
+  expect(screen.getByText(/Node: node.*Account: owner.*Incarnation: run/)).toBeDefined();
+  expect(screen.getByText(/Broker reports active: no/)).toBeDefined();
   expect(screen.getByText(/Showing 1 tasks.*reports 4/)).toBeDefined();
   expect(screen.getByText(/Some tasks or worker observations/)).toBeDefined();
   expect(screen.getByText(/Assessment: unknown. Task scope/)).toBeDefined();
@@ -41,6 +48,36 @@ it('loads from the terminal action only when requested and displays qualified ta
   expect(screen.getByText(/Working-copy changes to this roadmap are not included/)).toBeDefined();
   expect(screen.getByText(/does not verify issue status or grant admission/)).toBeDefined();
   expect(load).toHaveBeenCalledOnce();
+});
+
+it('retains deleted owners and revoked incarnations without promoting old or missing timestamps to current activity', async () => {
+  const value = observation();
+  value.project.tasks[0].worker!.availability = 'deleted';
+  value.project.tasks[0].worker!.worker_deleted_at = '2026-11-22T05:00:00Z';
+  value.sessions[0].availability = 'revoked';
+  value.sessions[0].revoked_at = '2026-11-22T06:00:00Z';
+  value.sessions[0].observed_at = '0001-01-01T00:00:00Z';
+  vi.spyOn(api, 'getMACProject').mockResolvedValue(value);
+  render(<MACProjectDialog sessionId="one" onClose={vi.fn()} />);
+  expect(await screen.findByText('project-one')).toBeDefined();
+  expect(screen.getByText(/Owner: canonical-worker/)).toBeDefined();
+  expect(screen.getByText(/Availability: deleted/)).toBeDefined();
+  expect(screen.getByText(/Deleted: 2026-11-22T05:00:00Z/)).toBeDefined();
+  expect(screen.getByText(/puck.local.*revoked.*Observed not observed/)).toBeDefined();
+  expect(screen.getByText(/Revoked: 2026-11-22T06:00:00Z/)).toBeDefined();
+  expect(screen.getByText(/retained task owner is not proof of current execution/)).toBeDefined();
+  expect(screen.queryByText(/0001-/)).toBeNull();
+});
+
+it('keeps an authorized task owner visible when worker details cannot be joined', async () => {
+  const value = observation();
+  value.project.tasks[0].worker = null;
+  value.project.tasks[0].worker_state = 'unavailable';
+  vi.spyOn(api, 'getMACProject').mockResolvedValue(value);
+  render(<MACProjectDialog sessionId="one" onClose={vi.fn()} />);
+  expect(await screen.findByText(/Owner: canonical-worker/)).toBeDefined();
+  expect(screen.getByText(/Worker details: unavailable/)).toBeDefined();
+  expect(screen.queryByText(/Reported status:/)).toBeNull();
 });
 
 it('removes prior facts on refresh failure and does not retain a successful project view', async () => {

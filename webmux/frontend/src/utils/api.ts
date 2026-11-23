@@ -214,11 +214,11 @@ export interface MACProjectView {
     coverage: string; reported_total: number; next_offset: number | null;
     conflict_verdict: string; ordering_verdict: string; unavailable_tasks: number;
     unavailable_workers: number; adapter_omitted_tasks: number; upstream_omitted_tasks: number; withheld_dependencies: number;
-    tasks: { task: { task_id: string; title: string; state: string; priority: number; attempt_count: number; lease_observation: string; leased_until: string | null };
-      worker: { worker_id: string; worker_name: string; machine_id: string; machine_hostname: string; availability: string } | null; worker_state: string }[];
+    tasks: { task: { task_id: string; title: string; state: string; priority: number; owner_worker_id: string | null; attempt_count: number; lease_id: string | null; lease_observation: string; leased_until: string | null; authority_time: string; updated_at: string; observed_at: string };
+      worker: { worker_id: string; worker_name: string; machine_id: string; machine_hostname: string; availability: string; worker_status: string; health_status: string; worker_last_seen: string; worker_updated_at: string; worker_deleted_at: string | null; machine_last_seen: string; freshness: string; observed_at: string } | null; worker_state: string }[];
     dependencies: { from_task_id: string; to_task_id: string; reported_verdict: string; reported_join_policy: string }[];
   };
-  sessions: { session: { node_id: string; session_id: string; incarnation: string }; execution_host: string; transport: string; availability: string; mac_link_state: string; observed_at: string }[];
+  sessions: { session: { node_id: string; owner: string; session_id: string; incarnation: string }; execution_host: string; transport: string; availability: string; broker_active: boolean; mac_link_state: string; observed_at: string; projected_at: string; revoked_at: string | null; freshness: string }[];
 }
 async function getMACProject(sessionId: string, offset: number, signal?: AbortSignal): Promise<MACProjectView> {
   const value = await request<MACProjectView>(`/session-coordination/projects/${encodeURIComponent(sessionId)}?offset=${offset}`, { signal, cache: 'no-store' });

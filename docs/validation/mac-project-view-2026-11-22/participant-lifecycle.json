@@ -1,0 +1,47 @@
+{
+  "schema": "webmux.mac.project-lifecycle-ui-qualification.v1",
+  "observed_at": "2026-11-23T08:55:03.005659+00:00",
+  "issue": 674,
+  "pr": 682,
+  "source_revision_before_receipt_commit": "01e9caa9bf70389b703df8fa47bb934ea063b940",
+  "source_sha256": {
+    "webmux/frontend/src/utils/api.ts": "6f81c8fc983f269bc927c90ec648fb92b693a45365e6d8487230c8153508acf1",
+    "webmux/frontend/src/components/MACProjectDialog.tsx": "855cf1c18a28cb6a7980c1d2ad1e9ccbde856fde849ed91e707e0723a3ce3f7a",
+    "tests/frontend/MACProjectDialog.test.tsx": "436e6f0b434632d96ce3a01a2e5d0801f8c559b44c869298588a7a0abd13a4fd",
+    "tests/e2e/mac-project-view.spec.ts": "acd578c00f13d6c972522d9ea30b4885d58d25faedbff2c58c4e089202130f15"
+  },
+  "checks": {
+    "strict_typescript_all_maintained_projects": "passed",
+    "frontend_lint": "passed",
+    "focused_frontend_tests": {
+      "result": "passed",
+      "tests": 26
+    },
+    "production_build": "passed; existing chunk-size advisory",
+    "controlled_chrome_real_go_browser": {
+      "result": "passed",
+      "tests": 1,
+      "duration_seconds": 3.8,
+      "provider_start_and_incarnation_preserved": true
+    }
+  },
+  "coverage": [
+    "task owner retained when worker join unavailable",
+    "worker reported status, health, last-seen, update, deletion and observation times",
+    "task lease ID, attempt counter, authority clock and observation times",
+    "session node/account/incarnation and revocation retained",
+    "zero broker observation time never presented as recent presence",
+    "failed refresh clears lifecycle details with other project facts"
+  ],
+  "limitations": [
+    "Browser project DTO is controlled in this test; real scoped MAC reads are qualified separately.",
+    "No positive native worker/machine/session join is established by these tests.",
+    "Freshness remains unqualified; names do not classify canonical local or remote machines.",
+    "No admission, conflict/order enforcement, enrollment or three-host acceptance."
+  ],
+  "runtime_mutations": {
+    "installed_webmux_service": false,
+    "mac_authority": false,
+    "nas_io": false
+  }
+}
