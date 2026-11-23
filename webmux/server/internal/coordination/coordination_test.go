@@ -43,7 +43,12 @@ type harness struct {
 
 func fixture(t *testing.T) *harness {
 	t.Helper()
-	h := &harness{home: t.TempDir(), inputs: membersFixture(), now: time.Now().UTC()}
+	return fixtureAt(t, time.Now().UTC())
+}
+
+func fixtureAt(t *testing.T, now time.Time) *harness {
+	t.Helper()
+	h := &harness{home: t.TempDir(), inputs: membersFixture(), now: now}
 	h.s = New(h.home)
 	h.s.Now = func() time.Time { return h.now }
 	t.Cleanup(func() { _ = h.s.Close() })

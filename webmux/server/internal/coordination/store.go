@@ -190,6 +190,16 @@ func capability(tx *bolt.Tx, ref Ref) string {
 	return "wmc1." + payload + "." + sign(bucket(tx, "meta").Get([]byte("key")), payload)
 }
 func authenticate(tx *bolt.Tx, token string) (Member, error) {
+	member, err := authenticateIdentity(tx, token)
+	if err == nil && !member.Active {
+		return member, ErrUnauthorized
+	}
+	return member, err
+}
+
+// authenticateIdentity verifies provenance and revocation, not live authority.
+// Only broker-bound admission may use it before checking the current live run.
+func authenticateIdentity(tx *bolt.Tx, token string) (Member, error) {
 	var member Member
 	if len(token) > 2048 {
 		return member, ErrUnauthorized
@@ -210,7 +220,7 @@ func authenticate(tx *bolt.Tx, token string) (Member, error) {
 	if err != nil {
 		return member, err
 	}
-	if !exists || member.Ref != ref || !member.Present || !member.Active || member.Revoked != nil {
+	if !exists || member.Ref != ref || !member.Present || member.Revoked != nil {
 		return member, ErrUnauthorized
 	}
 	return member, nil
@@ -228,6 +238,17 @@ func sequence(n uint64) []byte {
 }
 
 func (s *Service) Subject(node, token string) (Ref, error) {
+	return s.subject(node, token, true)
+}
+
+// ResolveCapabilitySubject authenticates identity for broker-bound admission.
+// It grants no read/action authority: the caller must revalidate the live broker
+// incarnation through AgentView/Execute with an authoritative session snapshot.
+func (s *Service) ResolveCapabilitySubject(node, token string) (Ref, error) {
+	return s.subject(node, token, false)
+}
+
+func (s *Service) subject(node, token string, requireActive bool) (Ref, error) {
 	db, err := s.database()
 	if err != nil {
 		return Ref{}, err
@@ -241,7 +262,10 @@ func (s *Service) Subject(node, token string) (Ref, error) {
 		if !enabled(tx) {
 			return ErrDisabled
 		}
-		member, err := authenticate(tx, token)
+		member, err := authenticateIdentity(tx, token)
+		if err == nil && requireActive && !member.Active {
+			err = ErrUnauthorized
+		}
 		if err != nil {
 			return err
 		}
