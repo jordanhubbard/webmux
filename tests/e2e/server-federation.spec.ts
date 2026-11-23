@@ -43,6 +43,11 @@ test('two servers share interactive terminal views, messages and failure state w
   if (offscreenControl) await installFederationReplayBarrier(page);
   let completed = false;
   const ids: string[] = [];
+  // Hold the real policy response through directory save/connection feedback.
+  // Independent status messages must coexist without ambiguous assertions.
+  let releasePolicyResponse!: () => void;
+  const policyResponseGate = new Promise<void>(resolve => { releasePolicyResponse = resolve; });
+  const policyResponses: Promise<void>[] = [];
   const stopPeer = async () => {
     if (peer.exitCode !== null || peer.signalCode !== null) return;
     const exited = new Promise<void>(resolve => peer.once('exit', () => resolve()));
@@ -51,6 +56,15 @@ test('two servers share interactive terminal views, messages and failure state w
     try { await exited; } finally { clearTimeout(timer); }
   };
   try {
+    await page.route('**/api/session-coordination/policy', route => {
+      const response = (async () => {
+        const upstream = await route.fetch();
+        await policyResponseGate;
+        await route.fulfill({ response: upstream });
+      })();
+      policyResponses.push(response);
+      return response;
+    });
     await expect.poll(async () => {
       try { return (await request.get(`${peerURL}/api/health`, { timeout: 1000 })).status(); } catch { return 0; }
     }, { timeout: 15000, message: 'Peer WebMux should become healthy' }).toBe(200);
@@ -77,12 +91,17 @@ test('two servers share interactive terminal views, messages and failure state w
     await manager.getByLabel('Allow HTTP for a trusted private network or tunnel').check();
     await manager.getByLabel('Credential', { exact: true }).fill(fs.readFileSync(path.join(controllerHome, 'federation-token'), 'utf8'));
     await manager.getByRole('button', { name: 'Save server', exact: true }).click();
-    await expect(manager.getByRole('status')).toContainText('Saved');
+    await expect(manager.getByRole('status', { name: 'Server directory status' })).toContainText('Saved');
+    const policy = manager.getByRole('region', { name: 'Automatic session coordination' });
+    await expect(policy.getByRole('status')).toHaveText('Loading coordination policy…');
     const directory = await request.get('/api/server-directory').then(response => response.json());
     const peerID = directory.servers.find((server: { url: string }) => server.url === peerURL)?.id as string;
     expect(peerID).toBeTruthy();
     await manager.getByRole('button', { name: 'Test connection to Other host' }).click();
-    await expect(manager.getByRole('status')).toContainText('connection successful');
+    await expect(manager.getByRole('status', { name: 'Server directory status' })).toContainText('connection successful');
+    await expect(policy.getByRole('status')).toHaveText('Loading coordination policy…');
+    releasePolicyResponse();
+    await expect(policy.getByLabel('Enable automatic session coordination')).toBeVisible();
     await page.screenshot({ path: path.resolve(__dirname, '../../webmux/test-results/server-management.png'), fullPage: true });
     await page.keyboard.press('Escape');
     const selector = page.getByRole('combobox', { name: 'Server view' });
@@ -182,7 +201,7 @@ test('two servers share interactive terminal views, messages and failure state w
     await manager.getByLabel('Replacement credential').fill(fs.readFileSync(path.join(controllerHome, 'federation-token'), 'utf8'));
     observation.phase('credential-repair');
     await manager.getByRole('button', { name: 'Save server', exact: true }).click();
-    await expect(manager.getByRole('status')).toContainText('Saved');
+    await expect(manager.getByRole('status', { name: 'Server directory status' })).toContainText('Saved');
     await page.keyboard.press('Escape');
     await page.getByRole('group', { name: 'WebMux cluster' }).getByRole('button', { name: 'Refresh servers', exact: true }).click();
     await expect(await visibleRows(remote)).toContainText(`FEDERATION_READY:${providerPid}`);
@@ -285,6 +304,9 @@ test('two servers share interactive terminal views, messages and failure state w
     console.error('Federation peer diagnostics bytes:', Buffer.byteLength(diagnostics));
     throw error;
   } finally {
+    releasePolicyResponse();
+    await Promise.allSettled(policyResponses);
+    await page.unroute('**/api/session-coordination/policy');
     let observationError: unknown;
     try { await observation.capture(completed, peer, Buffer.byteLength(diagnostics)); }
     catch (error) { observationError = error; console.error('Federation diagnostic capture failed'); }

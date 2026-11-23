@@ -51,7 +51,7 @@ export function ServersDialog({ onClose, onChanged, currentUser, initiallyAddSer
   return <Dialog title="Manage servers" subtitle="Manage server connections, automatic coordination and incoming access." width={700} onClose={onClose} dismissible={!busy}>
     <div className="servers-manager">
       {error && <p role="alert">{error}</p>}
-      {notice && <p role="status">{notice}</p>}
+      {notice && <p role="status" aria-label="Server directory status">{notice}</p>}
       {editor ? <form onSubmit={event => {
         event.preventDefault();
         const input = editor;
