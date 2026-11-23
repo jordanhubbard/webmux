@@ -4,7 +4,7 @@ export function installGridWheel(root: HTMLElement, selectedSession: () => strin
   const forwarded = new WeakSet<Event>();
   const nativeControl = (event: WheelEvent) => event.target instanceof Element
     && !event.target.closest('[data-terminal-session]')
-    && Boolean(event.target.closest('input, textarea, select, button'));
+    && Boolean(event.target.closest('input, textarea, select'));
   const otherModifier = (event: WheelEvent) => event.ctrlKey || event.metaKey || event.altKey;
   const capture = (event: WheelEvent) => {
     if (forwarded.has(event) || otherModifier(event)) return;
@@ -19,12 +19,12 @@ export function installGridWheel(root: HTMLElement, selectedSession: () => strin
     }
     if (nativeControl(event) || (event.target instanceof Element && event.target.closest('[data-wheel-native]'))) return;
     const id = selectedSession();
-    const windows = root.querySelectorAll<HTMLElement>('[data-terminal-session]');
-    const selected = Array.from(windows).find(element => element.dataset.terminalSession === id);
-    const surface = selected?.querySelector<HTMLElement>('.xterm-screen');
+    const windows = root.querySelectorAll<HTMLElement>('[data-terminal-session], [data-desktop-session]');
+    const selected = Array.from(windows).find(element => (element.dataset.terminalSession ?? element.dataset.desktopSession) === id);
+    const surface = selected?.querySelector<HTMLElement>('[data-wheel-surface], .xterm-screen');
     if (!surface || !(event.target instanceof Node) || surface.contains(event.target)) return;
     // Keep the selected session as the gesture owner even over another tile or
-    // grid gap. Native xterm handlers still own scrollback and app mouse input.
+    // grid gap. Native viewer handlers still own scrollback and remote mouse input.
     event.preventDefault();
     event.stopImmediatePropagation();
     const rect = surface.getBoundingClientRect();
