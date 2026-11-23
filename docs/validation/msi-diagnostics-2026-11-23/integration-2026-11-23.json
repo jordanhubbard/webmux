@@ -1,0 +1,53 @@
+{
+  "schema": "webmux.msi-diagnostics-integration.v1",
+  "observed_at": "2026-11-23T10:02:54.392106+00:00",
+  "issue": 685,
+  "pr": 686,
+  "composed_source": "20fe08ebfe135ebadcb2e148482b8c00adfe56f6",
+  "base_main": "deb3575273e9be350dd7a0343436f9efabe9e23a",
+  "native_CI_qualified_source": "822218b07201d4907a66dab2db443c62686ea38b",
+  "qualified_scripts_and_workflow_byte_equal": true,
+  "sha256": {
+    ".github/workflows/packaging.yml": "2f865bffdec2aceee52de120e06ba132267d4312cd87ba0bf4ae299744ce8793",
+    "scripts/qualification-process.ps1": "d271bac1b8f4287aa9125836c8a3b3658339a0ad19744d192e50c72250a57749",
+    "scripts/qualification-process.test.ps1": "9f289477adb84c882389b94d06ce4bd3591cbf3627cdc91f872864553b1d524f",
+    "scripts/snapshot-msi-diagnostics.ps1": "e5948bc16852779ccc3c8472b110a324327c39479d711bd2ead88f9c94496f2b",
+    "scripts/snapshot-msi-diagnostics.test.ps1": "7a37667c6ffa0cb47b9ab49c49cb01135519bffead46d96ef8dbf10dddc6d283"
+  },
+  "historical_native_CI": {
+    "all_applicable_checks_passed": true,
+    "check_count": 18,
+    "release_attachment": "skipped as inapplicable",
+    "Windows_AMD64_packaging_job": 137586192222,
+    "Windows_ARM64_packaging_job": 137586192053,
+    "Windows_ARM64_full_qualification_job": 137586192329,
+    "Windows_browser_job": 137586192394,
+    "run_retried_or_cancelled_for_green": false
+  },
+  "current_local_checks": [
+    {
+      "command": "pwsh -NoProfile -File scripts/snapshot-msi-diagnostics.test.ps1",
+      "exit_code": 0,
+      "scope": "real filesystem, controlled service query, allowlist, known fixture tails and directory-link exclusion"
+    },
+    {
+      "command": "pwsh -NoProfile -File scripts/qualification-process.test.ps1",
+      "exit_code": 0,
+      "scope": "real argument fidelity, exit42 refusal, timeout and descendant termination",
+      "hung_child_exit_code": 137
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "qualification_attribution": "Native Windows results belong to822218b. Current composition reruns local PowerShell checks and retains identical qualified script/workflow bytes; no fresh whole-composition Windows run claimed.",
+  "historical_failure_preserved": {
+    "run": 45137659456,
+    "job": 137567698686,
+    "conclusion": "cancelled after30min job limit",
+    "exact_blocked_operation": "unverified"
+  },
+  "CI_policy": "Local resources; new commit/merge subjects [skip ci]; no new hosted workflow dispatch",
+  "installed_service_MAC_or_NAS_changes": false
+}
