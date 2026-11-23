@@ -31,10 +31,7 @@ func remoteClaim(t *testing.T, r *remoteHarness, request Request) Result {
 }
 func prepareClaims(t *testing.T) *remoteHarness {
 	t.Helper()
-	r := remoteFixture(t)
-	r.source.now = r.source.now.Add(time.Second)
-	r.receiver.Now = func() time.Time { return r.source.now }
-	return r
+	return remoteFixture(t)
 }
 func TestPeerClaimConflictAndPairNoticeCoalescence(t *testing.T) {
 	r := prepareClaims(t)

@@ -1,0 +1,47 @@
+{
+  "recorded_at": "2026-11-22T19:26:11.489799+00:00",
+  "run": 45058789768,
+  "job": 137319825171,
+  "source_metadata": {
+    "goVersion": "go version go1.27.4 windows/amd64",
+    "pullRequestHead": "8e15aa08a14469fc5aae3ec806007a18b93372e1",
+    "repetitions": 10,
+    "run": "45058789768",
+    "goTarget": [
+      "windows",
+      "amd64"
+    ],
+    "source": "607fca9addcbea5180012e37bb9ce4006b6ffae2",
+    "nodeVersion": "v24.22.3"
+  },
+  "passed": false,
+  "root_pass_counts_before_failure": {
+    "TestCoordinationSnapshotDoesNotWaitForOtherTerminalLaunch": 10,
+    "TestCoordinationSnapshotDoesNotWaitForInterfaceProvisioning": 10,
+    "TestCoordinationProvisioningUsesFreshSerializedSnapshot": 10,
+    "TestPendingTerminalLaunchCannotSurviveDeletionOrShutdown": 10,
+    "TestShutdownDuringCoordinationProvisioningStartsNoProvider": 10,
+    "TestRevokedAgentDuringProvisioningStartsNoProvider": 10,
+    "TestPendingTerminalLaunchKeepsLatestGeometry": 10,
+    "TestCoordinationPeerClaimImmediateConflictAndDurableNotices": 1
+  },
+  "failed_root_tests": [
+    {
+      "Time": "2026-11-22T19:07:24.0374371Z",
+      "Action": "fail",
+      "Package": "github.com/jordanhubbard/webmux/server/internal/httpapi",
+      "Test": "TestCoordinationPeerClaimImmediateConflictAndDurableNotices",
+      "Elapsed": 20.99
+    }
+  ],
+  "failure_message": [
+    "            session_coordination_test.go:253: ordinary session lacked automatically provisioned interface\r\n"
+  ],
+  "artifact_sha256": {
+    "source.json": "0fae27bece2d8c085b6aa94b00d196097fbf952863b56377ac2f44426a066e72",
+    "tests.jsonl": "ae978925a181abcc8a18b35bbea4a264b302abcbd2d2510d4bebc6ea89a89fac"
+  },
+  "observation": "A later repetition failed after an earlier80-pass run with identical runtime inputs; do not substitute the earlier success for current qualification.",
+  "run_url": "https://github.com/jordanhubbard/webmux/actions/runs/45058789768",
+  "job_url": "https://github.com/jordanhubbard/webmux/actions/runs/45058789768/job/137319825171"
+}

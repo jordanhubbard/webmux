@@ -1,0 +1,64 @@
+{
+  "scope": "Local source-checked startup coordination qualification; native Windows gate pending",
+  "parent_head": "c98d80cd77fdaf8f3d6587a31fe307842a91695b",
+  "runtime": {
+    "os": "Darwin",
+    "arch": "arm64",
+    "node_major": 24,
+    "go": "go version go1.27.4 darwin/arm64"
+  },
+  "passed": true,
+  "sources_unchanged": true,
+  "changed_source_sha256": {
+    "webmux/server/internal/coordination/coordination_test.go": "6bf647636300db81afd30e85c3dcdbc34c10eb49488db3b0268b281209917856",
+    "webmux/server/internal/coordination/peer_claims_test.go": "f3b37f239d0d77f03ba027c2145f2e5b8f195f0e5a0238852bbf02147913b4d9",
+    "webmux/server/internal/coordination/remote_test.go": "52e4993eff32f4e6ea9f0b795acd503203bd22b6bd1d1db1adf4bac7f85e9ba2",
+    "webmux/server/internal/coordination/store.go": "b387b1de0afdfd6a6bc5ea29777bb1f974ae7594aefd069599b353eff8e14c3d",
+    "webmux/server/internal/httpapi/session_coordination.go": "68589f22b827026632367fa4f492eedf7ee1152f554863d287220c168041c36f",
+    "webmux/server/internal/httpapi/session_coordination_test.go": "4dd7e2b22de84a1207e2247cd654431844ad5462de1fef3a51da15e55cb62c01",
+    "webmux/server/internal/session/agents.go": "ba57051823e5541eab6203dd1e2f0f9f5d17e7647accf3344c60d3183ba1bbd3",
+    "webmux/server/internal/session/broker.go": "d873f9fd70795084bbfbf6375a89097548589298b786351572042fca2fe86a8f",
+    "webmux/server/internal/session/coordination.go": "d98d70b21561c963d96ac45759d233e43640e6de787c4e7e89a8325b50aa5760",
+    "webmux/server/internal/session/launch_coordination_test.go": "3f8a0906c0692b1503f184574d33d24403c2b5023c44aeb788661bb04cf5ea24",
+    "webmux/server/internal/session/openrig.go": "afb4fd0b14ba12b6908acbb27c3d54eea6ee6ba5c2a97897dc9dfd4939375c59"
+  },
+  "monitored_source_count": 844,
+  "checks": [
+    {
+      "name": "full-go",
+      "exit_code": 0,
+      "elapsed_seconds": 178.519
+    },
+    {
+      "name": "race",
+      "exit_code": 0,
+      "elapsed_seconds": 31.664
+    },
+    {
+      "name": "api-race",
+      "exit_code": 0,
+      "elapsed_seconds": 20.546
+    },
+    {
+      "name": "vet",
+      "exit_code": 0,
+      "elapsed_seconds": 0.755
+    },
+    {
+      "name": "contract",
+      "exit_code": 0,
+      "elapsed_seconds": 11.907
+    }
+  ],
+  "log_sha256": {
+    "contract.log": "02dd422159a5cc00a17a106ad5bfc6affc09a88bc8beec6ad83c0a7c7ef2317c",
+    "vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "api-race.log": "1aba02ea3c5034c18b24c831503bd4f9cc8d6b98d915f5a016faea253279d3ef",
+    "full-go.log": "c1e2478229e2869ef486018295521fcca9167e090b391232c40c8cb786d5a28f",
+    "race.log": "87cb76bf2a74da0d78f42019dec0d413666b6b1471e08709df4bd3f7ce564584"
+  },
+  "limitations": [
+    "Controlled contention proves the blocking path, not native Windows resolution",
+    "No complete MAC/project convergence or native lifecycle/release acceptance"
+  ]
+}

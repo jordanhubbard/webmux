@@ -8,6 +8,7 @@ interface VncTileProps {
   vncPassword?: string;
   isDropTarget?: boolean;
   isDragging?: boolean;
+  isSelected?: boolean;
   onDoubleClick: () => void;
   onClose: () => void;
   onReconnect: () => void;
@@ -22,6 +23,7 @@ export function VncTile({
   vncPassword,
   isDropTarget,
   isDragging,
+  isSelected,
   onDoubleClick,
   onClose,
   onReconnect,
@@ -83,7 +85,7 @@ export function VncTile({
         background: '#0d0d1a',
         transition: 'border-color 0.15s, box-shadow 0.15s, opacity 0.15s',
         boxSizing: 'border-box',
-        boxShadow,
+        boxShadow: isSelected ? '0 0 0 2px #e0d6ff' : boxShadow,
         opacity: isDragging ? 0.35 : 1,
       }}
     >

@@ -1,0 +1,89 @@
+name: Native Windows coordination repetition
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/coordination-native.yml'
+      - 'webmux/server/internal/coordination/**'
+      - 'webmux/server/internal/coordinationclient/**'
+      - 'webmux/server/internal/httpapi/**'
+      - 'webmux/server/internal/session/**'
+
+permissions:
+  contents: read
+
+jobs:
+  coordination:
+    name: Native Windows scoped coordination startup
+    runs-on: windows-2022
+    timeout-minutes: 20
+    env:
+      EXPECTED_SOURCE: ${{ github.sha }}
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+      - name: Record native source and worker
+        shell: pwsh
+        run: |
+          if (-not [Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([Runtime.InteropServices.OSPlatform]::Windows)) {
+            throw 'This qualification requires native Windows.'
+          }
+          $source = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $source -ne $env:EXPECTED_SOURCE) { throw 'Unexpected qualification source.' }
+          $receipts = Join-Path $env:RUNNER_TEMP 'webmux-coordination-repetition'
+          New-Item -ItemType Directory -Path $receipts -ErrorAction Stop | Out-Null
+          "COORDINATION_RECEIPTS=$receipts" >> $env:GITHUB_ENV
+          @{
+            source = $source
+            pullRequestHead = $env:EXPECTED_HEAD
+            run = $env:GITHUB_RUN_ID
+            goVersion = (go version)
+            goTarget = @(go env GOOS GOARCH)
+            nodeVersion = (node --version)
+            repetitions = 10
+          } | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 "$receipts/source.json"
+          Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize, FreePhysicalMemory
+          Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object DeviceID, Size, FreeSpace
+      - name: Repeat original peer startup and provisioning regressions
+        shell: pwsh
+        working-directory: webmux/server
+        run: |
+          $tests = @(
+            'TestCoordinationPeerClaimImmediateConflictAndDurableNotices',
+            'TestCoordinationSnapshotDoesNotWaitForOtherTerminalLaunch',
+            'TestCoordinationSnapshotDoesNotWaitForInterfaceProvisioning',
+            'TestCoordinationProvisioningUsesFreshSerializedSnapshot',
+            'TestShutdownDuringCoordinationProvisioningStartsNoProvider',
+            'TestRevokedAgentDuringProvisioningStartsNoProvider',
+            'TestPendingTerminalLaunchCannotSurviveDeletionOrShutdown',
+            'TestPendingTerminalLaunchKeepsLatestGeometry',
+            'TestLaunchProvisionIsAtomicAcrossMembershipRefresh',
+            'TestAtomicLaunchProvisionRetainsAuthorityGuards',
+            'TestLaunchProvisionDoesNotWithdrawUnrelatedMembers'
+          )
+          $pattern = '^(' + ($tests -join '|') + ')$'
+          go test -json ./internal/coordination ./internal/session ./internal/httpapi -run $pattern -count=10 -failfast | Tee-Object -FilePath "$env:COORDINATION_RECEIPTS/tests.jsonl"
+          if ($LASTEXITCODE -ne 0) { throw 'Native coordination repetition failed; retain the original failure.' }
+          $events = @(Get-Content "$env:COORDINATION_RECEIPTS/tests.jsonl" | ForEach-Object { $_ | ConvertFrom-Json })
+          $counts = @{}
+          foreach ($test in $tests) {
+            $passed = @($events | Where-Object { $_.Action -eq 'pass' -and $_.Test -eq $test })
+            $counts[$test] = $passed.Count
+            if ($passed.Count -ne 10) { throw "Expected ten native passes for $test; observed $($passed.Count)." }
+          }
+          @{ source = $env:EXPECTED_SOURCE; passed = $true; counts = $counts } |
+            ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 "$env:COORDINATION_RECEIPTS/verification.json"
+      - name: Preserve native repetition evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-coordination-repetition
+          path: ${{ runner.temp }}/webmux-coordination-repetition

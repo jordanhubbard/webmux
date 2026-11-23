@@ -3,6 +3,19 @@
 Reviewed 2026-11-19 against the implementation, qualification receipts and GitHub
 issue states. GitHub issues track implementation and remaining acceptance work.
 
+## Trackpad scrolling
+
+- [ ] **Scroll the selected window with two fingers** under
+  [#661](https://github.com/jordanhubbard/webmux/issues/661). On a gesture-capable
+  trackpad, two-finger scrolling with no modifiers applies to the selected
+  window. Holding **Shift** while two-finger scrolling pans the entire 2D grid.
+  A gesture must scroll its intended target without also scrolling the other.
+
+The [terminal and desktop implementation checkpoint](validation/trackpad-scroll-2026-11-22/README.md)
+passes automated browser wheel, mouse, tmux and keyboard-broadcast isolation
+controls, plus selected VNC/RDP protocol-input isolation and Shift grid panning. Physical trackpad and remaining platform/surface acceptance are still
+open; this does not complete #661.
+
 ## Automatic session coordination and network discovery
 
 Owner requirement added 2026-11-21. These are planned capabilities; the current
@@ -12,17 +25,30 @@ per-session opt-in, including agents independently started on different WebMux
 nodes. WebMux should discover other WebMux nodes on the local network through
 mDNS/DNS-SD rather than requiring their addresses to be entered individually.
 
-Agent Deck and Rig were selected without verified evidence that they satisfy
-this goal. Their selection is open for reconsideration: retain, replace or
-remove either integration according to demonstrated requirements and native
-acceptance results. Neither tool, nor their proposed bridge under
-[#246](https://github.com/jordanhubbard/webmux/issues/246), is a prerequisite by
-definition. Existing provider documentation records current behavior, not a
-commitment to use those providers for this work.
+The [provider comparison](coordination-architecture.md) records Agent Deck/Rig
+interfaces and deployment costs. The #664 authority amendment converges the
+interactive surface with MAC's existing worker pool: projects retain roadmap and
+Literate AI delivery authority; MAC-connected projects use MAC for execution;
+WebMux provides human/agent access to that same authority. Standalone WebMux
+remains explicit. The [convergence contract](mac-project-coordination.md) records
+required bindings, limits and ordered acceptance. This integration is unfinished.
+Issue #630 is closed in the tracker; its historical component evidence does not
+complete the unchecked workflow requirements below. #664 tracks the clarified
+project-authority outcome and reconciliation of those remaining requirements.
 
 Ordered implementation and acceptance:
 
-- [ ] **Evaluate the coordination architecture** under
+- [ ] **Converge project coordination with MAC** under
+  [#664](https://github.com/jordanhubbard/webmux/issues/664). Bind source roadmap
+  items and revisions to canonical MAC projects, tasks, attempts, leases and
+  WebMux sessions. Show local and remote activity, duplicate/conflicting scopes
+  and priority/dependency reasons through the same authority. Deliver read-only
+  visibility, interactive participant admission, authority-side scope/priority
+  gates and project-native review/publication integration in that order. Qualify
+  real agents and a human view across three hosts, including stale/offline
+  participants and lost-lease publication refusal. Preserve conversations and
+  lifecycle owners; do not create another independently editable backlog.
+- [x] **Compare provider coordination interfaces** under
   [#630](https://github.com/jordanhubbard/webmux/issues/630). Explain what Agent
   Deck and Rig actually contribute, inspect and test their relevant interfaces,
   and compare them with a built-in approach. Record capabilities, gaps,
@@ -58,9 +84,10 @@ Ordered implementation and acceptance:
   multicast/peers and duplicate or uncertain delivery. Publish supported
   boundaries and evidence before marking either requirement complete.
 
-The [architecture decision](coordination-architecture.md) selects a built-in
-coordination plane with optional existing provider lifecycle adapters; real
-agent-facing channel evaluation remains open. The
+The [architecture decision](coordination-architecture.md) includes source-bound
+native provider-interface comparison and lifecycle-preservation rules. Architecture
+comparison is complete within its original scope; MAC convergence,
+managed/existing-agent onboarding and full workflow acceptance remain open. The
 [node discovery implementation checkpoint](network-discovery.md) adds a server-owned DNS-SD candidate browser and server-management visibility. It keeps
 announcements untrusted and retains manual enrollment. Authenticated HTTPS node/
 account identity and address migration now have a native macOS/Linux component

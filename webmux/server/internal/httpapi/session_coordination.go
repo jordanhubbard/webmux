@@ -246,21 +246,32 @@ func (s *Server) coordinationNode() (string, error) {
 	policy, err := discovery.LoadNodePolicy(s.store)
 	return policy.ID, err
 }
-func (s *Server) provisionCoordination(node string, snapshots []session.Session, current session.Session) (*terminal.CoordinationAccess, error) {
-	if (!coordinationLocal(current) && !current.CoordinationRemote()) || s.sessionCoord.endpoint == "" || !s.federationOwnerAllowed(current.Owner) {
+func (s *Server) provisionCoordination(node string, snapshots []session.Session, current session.Session, launching bool) (*terminal.CoordinationAccess, error) {
+	allowed := (coordinationLocal(current) || current.CoordinationRemote()) && s.sessionCoord.endpoint != "" && s.federationOwnerAllowed(current.Owner)
+	if !launching && !allowed {
 		return nil, nil
 	}
 	inputs := s.coordinationInputs(node, snapshots)
 	ref := coordinationRef(node, current)
 	var subject plane.MemberInput
-	for _, input := range inputs {
-		if input.Ref == ref {
-			subject = input
+	for i := range inputs {
+		if inputs[i].Ref == ref {
+			subject = inputs[i]
 			break
 		}
 	}
-	token, err := s.sessionCoord.service.Provision(node, subject)
+	if launching && !allowed {
+		return nil, nil
+	}
+	var token string
+	var err error
+	if launching {
+		token, err = s.sessionCoord.service.ProvisionLaunch(node, subject)
+	} else {
+		token, err = s.sessionCoord.service.Provision(node, subject)
+	}
 	if errors.Is(err, plane.ErrDisabled) || errors.Is(err, plane.ErrUnauthorized) {
+		s.logger.Debug("session coordination interface not issued", "session_id", current.ID, "error", err)
 		return nil, nil
 	}
 	if err != nil {
@@ -312,16 +323,7 @@ func (s *Server) EnableSessionCoordination(endpoint string) {
 			if err != nil {
 				return nil, err
 			}
-			inputs := s.coordinationInputs(node, all)
-			for i := range inputs {
-				if inputs[i].Ref.Session == current.ID && s.federationOwnerAllowed(current.Owner) {
-					inputs[i].Active = true
-				}
-			}
-			if err := s.sessionCoord.service.Sync(node, inputs); err != nil {
-				return nil, err
-			}
-			return s.provisionCoordination(node, all, current)
+			return s.provisionCoordination(node, all, current, true)
 		})
 	})
 }
@@ -400,7 +402,7 @@ func (s *Server) maintainSessionCoordination(parent context.Context) error {
 		}
 		for _, current := range all {
 			if current.CoordinationLive {
-				if _, err := s.provisionCoordination(node, all, current); err != nil {
+				if _, err := s.provisionCoordination(node, all, current, false); err != nil {
 					return err
 				}
 			}
@@ -552,13 +554,20 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 		s.coordinationError(w, err)
 		return
 	}
-	ref, err := s.sessionCoord.service.Subject(node, token)
+	ref, err := s.sessionCoord.service.ResolveCapabilitySubject(node, token)
 	if err != nil {
 		s.coordinationError(w, err)
 		return
 	}
 	if !s.federationOwnerAllowed(ref.Owner) {
 		s.coordinationError(w, plane.ErrUnauthorized)
+		return
+	}
+	if err := s.sessions.WaitCoordinationLaunch(r.Context(), ref.Owner, ref.Session); err != nil {
+		if errors.Is(err, session.ErrNotFound) {
+			err = plane.ErrUnauthorized
+		}
+		s.coordinationError(w, err)
 		return
 	}
 	snapshots, err := s.coordinationSnapshots()

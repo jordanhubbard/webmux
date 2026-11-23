@@ -1,3 +1,4 @@
+import { installGridWheel } from '../utils/gridWheel';
 import { movePair } from '../utils/movePair';
 import { AddSessionCell } from './AddSessionCell';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -220,6 +221,11 @@ export function Workspace({
   const dragPointerRef = useRef({ x: 0, y: 0 });
   const dropTargetRef = useRef<{ row: number; col: number } | null>(null);
   const tileElementRefs = useRef(new Map<string, HTMLDivElement>());
+  useEffect(() => {
+    const root = outerRef.current;
+    if (root) return installGridWheel(root, () => focusedSessionId && !collapsedSessions.has(focusedSessionId) ? focusedSessionId : null);
+  }, [focusedSessionId, collapsedSessions, loading]);
+
   const collapsedSessionsRef = useRef<Set<string>>(new Set());
   useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
   useEffect(() => { draggingIdRef.current = draggingId; }, [draggingId]);
@@ -743,7 +749,7 @@ export function Workspace({
         </div>
       )}
       <div ref={outerRef} style={styles.outer} data-testid="workspace-scroll">
-        <div style={styles.hint}>Hold Shift to scroll</div>
+        <div style={styles.hint}>Two fingers: selected window · Shift: pan grid</div>
         <div
           ref={gridRef}
           style={{
