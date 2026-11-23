@@ -490,6 +490,24 @@ func (s *Server) getSessionCoordination(w http.ResponseWriter, r *http.Request, 
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, view)
 }
+
+// Read policy without refreshing projects, contacting peers or syncing membership.
+func (s *Server) getSessionCoordinationPolicy(w http.ResponseWriter, r *http.Request, owner string) {
+	if !s.federationAccess(w, owner) {
+		return
+	}
+	node, err := s.coordinationNode()
+	var enabled bool
+	if err == nil {
+		enabled, err = s.sessionCoord.service.Enabled(node)
+	}
+	if err != nil {
+		s.coordinationError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 200, map[string]any{"contract": "webmux-session-coordination-policy/v1", "enabled": enabled})
+}
 func (s *Server) setSessionCoordinationPolicy(w http.ResponseWriter, r *http.Request, owner string) {
 	if !s.federationAccess(w, owner) {
 		return
