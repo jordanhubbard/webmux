@@ -1,0 +1,84 @@
+{
+  "schema": "webmux.mac.task-qualification.v1",
+  "observed_at": "2026-11-23T05:59:56.215925+00:00",
+  "scope": "Versioned read-only task identity observation; no product project/session enrollment",
+  "source_sha256": {
+    "webmux/server/internal/maccoord/read_access.go": "ba028dcaa12bbb2990fde4bae4147f156a147fadca97c8fd5b178dc5ec8b6759",
+    "webmux/server/internal/maccoord/task.go": "89fc5d53451b7ab9c051be1a8a2f92ffffbb60e37ca87dbb044fd04d1dd66b06",
+    "webmux/server/internal/maccoord/task_test.go": "cd75187ae2870a9bee510f9f2f27fea85cd9360d065a34b45974d844096cc948",
+    "webmux/server/internal/maccoord/source.go": "a175607132760da27754ed90a8dd30e07bd9dd842f02d638c43a91adc3dec3e3",
+    "webmux/server/internal/maccoord/source_test.go": "bfc423b80baa0517963c23f3c78f3237416844160f216795d55ac2c17f986889",
+    "webmux/server/internal/maccoord/native_read_access_darwin_test.go": "6554477c4d19cd5b3eb1478e7e455baf05449ecf09442bb829be49a6f78a0938"
+  },
+  "installed_MAC_source_revision": "da57461f05ba054e9bc57a42c1889bee47dab1f1",
+  "running_MAC_source_revision": "unattested",
+  "read_only_route_audit": {
+    "api": "src/mac/api.py:4530 dashboard_observe_task -> build_task_drilldown",
+    "builder": "src/mac/observability_console.py:775; SQL query-only task/history/transcript-metadata/command/evidence/review/publication/outcome sections",
+    "outcome": "src/mac/task_outcomes.py:38 task_outcome uses bounded reads; separate write functions are not invoked",
+    "ordinary_task_detail_not_used": "src/mac/services.py:8537 task_detail can invoke task_flow.rebuild_task"
+  },
+  "checks": [
+    {
+      "command": "go test -race ./internal/maccoord -count=1 -timeout=60s",
+      "exit_code": 0,
+      "elapsed_seconds": 8.55,
+      "native_test": "skipped in default package run; separately qualified below"
+    },
+    {
+      "command": "go vet ./internal/maccoord",
+      "exit_code": 0
+    },
+    {
+      "command": "GOOS=windows GOARCH=amd64 go test -c ./internal/maccoord",
+      "exit_code": 0,
+      "classification": "cross-compilation only"
+    },
+    {
+      "command": "go test -race ./internal/maccoord -run '^TestSourceUsesActualRepositoryAndAccount$' -count=1 -timeout=30s",
+      "exit_code": 0,
+      "elapsed_seconds": 2.548,
+      "scope": "Additional nil-context source refusal check"
+    }
+  ],
+  "native": {
+    "observed_at": "2026-11-23T05:58:22.551894Z",
+    "publisher_fingerprint": "dd3e7375c27b124a12430167e8e0c5b8886cd5d372b833fbfa078fde934308c0",
+    "matches_prior_publisher": true,
+    "client_scopes": [
+      "read"
+    ],
+    "task_selection": "User-supplied fleet root, with private explicit test-only project mapping",
+    "projection_sha256": "ba7cbea48670617e5cbbcf89b038923503f291bdf606194a8f00674d87daceda",
+    "projection_schema": "webmux.mac.task-identity.v1",
+    "task_identity_observed": true,
+    "attempt_counter_observed": true,
+    "lease_observation": "unleased",
+    "session_link_state": "unlinked",
+    "machine_identity_state": "unavailable",
+    "source_link_state": "unlinked",
+    "foreign_project_task_refused": true,
+    "missing_task_refused": true,
+    "generic_write_refused": true,
+    "absent_and_invalid_credentials_refused": true,
+    "exit_code": 0,
+    "package_elapsed_seconds": 0.642,
+    "raw_task_and_private_mapping_published": false
+  },
+  "webmux_graph_selection": {
+    "key": "webmux",
+    "node_count": 0,
+    "project_existence_inferred": false
+  },
+  "limitations": [
+    "No active native lease observed; controlled lease-state cases are not live admission evidence",
+    "No canonical machine, WebMux session or roadmap-source join qualified",
+    "No live WebMux product project binding established by this test-only fleet context",
+    "No browser/CLI/MCP product consumer yet",
+    "Installed source revision is distinct from unattested loaded publisher revision"
+  ],
+  "credential_changes": false,
+  "fleet_worker_or_task_changes": false,
+  "service_changes": false,
+  "nas_access": false
+}

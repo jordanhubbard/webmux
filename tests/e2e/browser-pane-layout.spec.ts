@@ -61,7 +61,9 @@ test('browser docking preserves the live page, control and desktop layout', asyn
     if (count === 1) {
       notice = false;
       await expect(companion.getByRole('alert')).toHaveCount(0);
-      await page.unroute('**' + endpoint, temporaryNotice);
+      // This test owns only the notice route. A polling frame can still be in
+      // route.fetch after the alert clears; drain it before removing the route.
+      await page.unrouteAll({ behavior: 'wait' });
       await expect.poll(async () => (await frame()).height).not.toBe(Math.max(240, Math.round(dimensions.height)));
       const geometry = info.outputPath('transient-viewport-geometry.json');
       writeFileSync(geometry, JSON.stringify({ captured: dimensions,
@@ -170,7 +172,10 @@ test('browser docking preserves the live page, control and desktop layout', asyn
     await info.attach('layout-lifecycle', { body: JSON.stringify({ dockWidth, floating, documents, presses, targetPreserved: reopened.target === initial.target, layoutKeys: Object.keys(JSON.parse(storage!)) }), contentType: 'application/json' });
     await page.screenshot({ path: info.outputPath('floating-browser.png') });
   } finally {
-    try { await request.delete(`/api/sessions/${id}`, { timeout: 10_000 }); }
-    finally { site.closeAllConnections(); await new Promise<void>(resolve => site.close(() => resolve())); }
+    try { await page.unrouteAll({ behavior: 'wait' }); }
+    finally {
+      try { await request.delete(`/api/sessions/${id}`, { timeout: 10_000 }); }
+      finally { site.closeAllConnections(); await new Promise<void>(resolve => site.close(() => resolve())); }
+    }
   }
 });
