@@ -130,10 +130,21 @@ adds production-component discovery in both directions and simultaneously betwee
 macOS ARM64 and Linux ARM64. The browsers also find each fresh peer's exact legacy
 HTTP/HTTPS instance records. Actual local registration conflict and cancellation
 controls pass. This does not complete authenticated discovery/enrollment or the
-remaining platform and lifecycle gates below. Host-only legacy lookup can still
-choose another listener sharing the system hostname; [#660](https://github.com/jordanhubbard/webmux/issues/660)
-tracks that separate failed compatibility control. Exact node candidates retain
-their own instance, ID and port.
+remaining platform and lifecycle gates below. The integrated
+[listener-ambiguity controls](validation/discovery-ambiguity-2026-11-22/integration-2026-11-23.json)
+now verify typed refusal for competing host-only listeners under both protocol
+policies; #660 is closed. Original failed receipts retain their outcomes. Exact
+node candidates keep their own instance, ID and port.
+
+The [discovery-driven enrollment qualification](validation/discovered-enrollment-2026-11-23/README.md)
+connects actual native mDNS/API observations to authenticated enrollment and the
+production background migration timer on macOS ARM64/Linux ARM64. A race-enabled
+controller retains the enrolled peer/account/key identity after listener movement
+and controller reconstruction; the independent receiver witnesses same-connection
+proof before every bearer use. A fresh silent-advertiser control fails at the
+discovery gate. These are isolated API components with explicit fixture trust,
+not installed-service, OS trust-store, browser, reverse-platform or real-agent
+acceptance. Full #631 remains open.
 
 Deterministic tests cover malformed/foreign/self announcements, duplicate TXT
 keys, unrelated service/domain, credential metadata refusal, invalid endpoints,
